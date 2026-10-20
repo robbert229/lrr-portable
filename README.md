@@ -17,7 +17,7 @@ and curiosity; nothing in this repository is affiliated with or endorsed by the 
 
 ```
 README.md           This file
-docs/findings/      Reverse-engineering findings, 01–14 (see index below)
+docs/findings/      Reverse-engineering findings, 01–15 (see index below)
 tools/              WAD tooling (rrwad.py: unpack/pack/verify — see tools/README.md)
 docs/decompiles/    Named Ghidra pseudocode corpus (engine-region.c)
 docs/evidence/      Exported REA evidence bundle (address-level citations)
@@ -53,7 +53,8 @@ legally obtained copy of the game.
 - [x] Understand mission / level scripting and data-driven behavior — findings 07, 09
 - [x] Understand the savegame format — finding 08
 - [ ] Eventually: reimplementations or tooling that let the game run on modern systems
-      — started: `tools/rrwad.py` unpacks/repacks both archives byte-identical (2026-10-20)
+      — started: `tools/rrwad.py` (2026-10-20) + compat audit A.1 (finding 15:
+      DDraw+d3drm surface, no version gates; A.2 live test is next)
 
 ## Findings index
 
@@ -73,6 +74,7 @@ legally obtained copy of the game.
 | 12 | [`findings/12-block-text-format.md`](docs/findings/12-block-text-format.md) | `Lego*` block-text config format: scanner, path-lookup API, `.ae` consumers |
 | 13 | [`findings/13-texture-system.md`](docs/findings/13-texture-system.md) | BMP surface loader, name cache, LWO material binding, world tile sets, VRAM budget |
 | 14 | [`findings/14-sound-and-video.md`](docs/findings/14-sound-and-video.md) | WAVE/mmio sound bank, CD-DA music via MCI, AVIFIL32 movies, logo splash |
+| 15 | [`findings/15-compat-audit.md`](docs/findings/15-compat-audit.md) | Modern-compat API-surface audit: wrapper coverage matrix, launch-gate scan, friction list |
 
 Named-pseudocode corpus: [`docs/decompiles/engine-region.c`](docs/decompiles/engine-region.c)
 (114 identified functions, ~7.6k lines; all addresses in the findings resolve here).
