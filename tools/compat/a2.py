@@ -87,7 +87,9 @@ def sha256(path):
 # -- runner discovery ---------------------------------------------------------
 
 def find_runner():
-    """Return {'kind': 'proton'|'umu', 'path': Path} or None."""
+    """Return {'kind': 'proton'|'wine'|'umu', 'path': Path} or None.
+    Proton is preferred: its bootstrap wires the ELF companion modules and
+    sysroot that a bare wine runner from a Proton tree lacks (see finding 16)."""
     if p := os.environ.get("RR_A2_PROTON"):
         return {"kind": "proton", "path": pathlib.Path(p)}
     home = pathlib.Path.home()
@@ -97,9 +99,11 @@ def find_runner():
              home / ".local/share/lutris/runners/wine"]
     for pat in roots:
         for root in (r for r in sorted(home.glob(str(pat.relative_to(home)))) if r.is_dir()):
-            proton = sorted(root.rglob("files/bin/proton")) or sorted(root.rglob("bin/proton"))
-            if proton:
-                return {"kind": "proton", "path": proton[-1]}
+            # a real `proton` script (root or files/bin) always beats bare wine
+            proton = (sorted(root.rglob("proton")) or sorted(root.rglob("files/bin/proton"))
+                      or sorted(root.rglob("bin/proton")))
+            if any(x.is_file() for x in proton):
+                return {"kind": "proton", "path": next(x for x in proton if x.is_file())}
             wine = sorted(root.rglob("files/bin/wine")) or sorted(root.rglob("bin/wine"))
             if wine:
                 return {"kind": "wine", "path": wine[-1]}
@@ -111,9 +115,12 @@ def find_runner():
 
 def runner_version(runner):
     try:
-        out = subprocess.run([str(runner["path"]), "--version"],
+        probe = ["--help"] if runner["kind"] == "proton" else ["--version"]
+        out = subprocess.run([str(runner["path"]), *probe],
                              capture_output=True, text=True, timeout=30)
-        return (out.stdout or out.stderr).strip().splitlines()[0]
+        line = (out.stdout or out.stderr).strip().splitlines()
+        m = re.search(r"[Gg][Ee]-[Pp]roton[-\w]*|wine-[\d.]+", out.stdout + out.stderr)
+        return m.group(0) if m else (line[0] if line else "unknown")
     except Exception:
         return "unknown"
 
@@ -139,6 +146,22 @@ def runner_env(runner):
     else:  # umu-run manages its prefix cache itself
         env["WINEPREFIX"] = str(COMPATDATA / "pfx")
     return env
+
+
+def ensure_proton_compatdata():
+    """Proton builds its own prefix but insists on a pristine compatdata: a pfx
+    left by the bare-wine bootstrap lacks its `version`/`config_info` markers
+    and makes copy_pfx crash (FileExistsError). Move such a pfx aside once and
+    let proton bootstrap from clean — it wires the ELF companions itself."""
+    COMPATDATA.mkdir(parents=True, exist_ok=True)
+    if (COMPATDATA / "version").exists():
+        return  # proton has already built here
+    pfx = COMPATDATA / "pfx"
+    if pfx.exists():
+        aside = DATA / "pfx.unseeded"
+        shutil.rmtree(aside, ignore_errors=True)
+        shutil.move(str(pfx), str(aside))
+        print(f"moved seed prefix aside -> {aside} (proton bootstraps a fresh one)")
 
 
 def bootstrap_wine(runner, env):
@@ -295,6 +318,8 @@ def build_launch(args, game_cmd, bootstrap=True):
     env = runner_env(runner)
     if runner["kind"] == "wine" and bootstrap:
         bootstrap_wine(runner, env)
+    elif runner["kind"] == "proton" and bootstrap:
+        ensure_proton_compatdata()
     if getattr(args, "gamescope", True) and shutil.which("gamescope"):
         exported = sorted(f"{k}={v}" for k, v in env.items() if os.environ.get(k) != v)
         cmd = (["gamescope", "-w", "640", "-h", "480", "-r", "60", "-F", "nearest", "--"]
@@ -343,6 +368,8 @@ def cmd_setup(args):
         raise SystemExit(subprocess.run(cmd, env=env, cwd=STAGE).returncode)
     if runner["kind"] == "wine":
         bootstrap_wine(runner, runner_env(runner))
+    elif runner["kind"] == "proton":
+        ensure_proton_compatdata()
     print(f"prefix under {COMPATDATA} (bootstraps automatically on first run)")
     print("next:   python3 tools/compat/a2.py run")
 
