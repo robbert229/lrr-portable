@@ -24,8 +24,15 @@ public class CreateEngineFunctions extends GhidraScript {
         0x4232e0L,  // EngineTick — frame tick (DAT_00505930)
         0x424d00L,  // EngineShutdown variant A (DAT_00505934)
         0x424cf0L,  // EngineShutdown variant B
+        0x4250c0L,  // MainSimStep — quit gate inside EngineTick
+        0x45a730L,  // ManagerTick — indexed subsystem dispatch
+        0x419b80L,  // MessageDispatch — HUD/event notification hub
+        0x435f5cL,  // ViewContextTick — ticked 3x per frame
+        0x4231f0L,  // EnginePreTick — per-frame housekeeping
     };
-    static final String[] NAMES = { "EngineTick", "EngineShutdown", "EngineShutdownAlt" };
+    static final String[] NAMES = { "EngineTick", "EngineShutdown", "EngineShutdownAlt",
+        "MainSimStep", "ManagerTick", "MessageDispatch", "ViewContextTick",
+        "EnginePreTick" };
 
     @Override
     public void run() throws Exception {

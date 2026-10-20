@@ -119,11 +119,10 @@ confirming mode 10 = asset-loading benchmark. (`FUN_0044dd40(NULL)` in normal mo
 
 ## Next targets
 
-1. `FUN_0045a730(idx, dt)` — identify the indexed manager for idx 0–11
-   (read its dispatch and name the managers).
-2. `FUN_004250c0` — the "main sim" whose 0 return quits the frame.
-3. `FUN_00435f5c` — view-context tick (camera? viewport?).
-4. `FUN_00419b80(msg_id,…)` — the message dispatcher; map the 0x10–0x13 ids
-   and the rest of its callers (likely HUD/event system).
+1. ~~`FUN_0045a730(idx, dt)`~~ resolved: 12-slot positional trackers, not
+   subsystem managers — see [04 — Sim, Input & Events](04-sim-input-and-events.md).
+2. ~~`FUN_004250c0`~~ resolved: input/app-state step (quit gate) — doc 04.
+3. ~~`FUN_00435f5c`~~ resolved: camera state machines — doc 04.
+4. ~~`FUN_00419b80`~~ resolved: config-driven message bus — doc 04.
 5. Entity element layouts (`0x1ec`, `0x14c`…) — first field reads in the
    tick's entity loops will reveal position/health/type offsets.
