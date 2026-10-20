@@ -127,6 +127,15 @@ def runner_env(runner):
     elif runner["kind"] == "wine":
         env["WINEPREFIX"] = str(COMPATDATA / "pfx")
         env["PATH"] = f"{runner['path'].parent}{os.pathsep}{env.get('PATH', '')}"
+        # GE-Proton layout: bin/ and lib64/ sit under a sysroot two levels up;
+        # wined3d's bundled libvkd3d stubs resolve only when LD_LIBRARY_PATH +
+        # WINESYSROOT point there (the `proton` wrapper does this for us)
+        sysroot = runner["path"].resolve().parent.parent
+        env["WINESYSROOT"] = str(sysroot)
+        env["LD_LIBRARY_PATH"] = (f"{sysroot / 'lib64'}:{sysroot / 'lib'}"
+                                  f"{os.pathsep}{env.get('LD_LIBRARY_PATH', '')}"
+                                  if env.get("LD_LIBRARY_PATH")
+                                  else f"{sysroot / 'lib64'}:{sysroot / 'lib'}")
     else:  # umu-run manages its prefix cache itself
         env["WINEPREFIX"] = str(COMPATDATA / "pfx")
     return env
@@ -134,13 +143,28 @@ def runner_env(runner):
 
 def bootstrap_wine(runner, env):
     """A cold wine binary does not bootstrap its prefix — wineboot must run first.
-    (Proton runners do this internally; the bare `wine` kind does not.)"""
+    (Proton runners do this internally; the bare `wine` kind does not, and the
+    GE-Proton wine needs its share/default_pfx seed merged in, same as the
+    `proton` script does — it carries the libvkd3d stub DLLs wined3d imports.)"""
     pfx = pathlib.Path(env["WINEPREFIX"])
-    if (pfx / "drive_c" / "windows").is_dir():
+    if (pfx / "drive_c" / "windows" / "system32" / "libvkd3d-1.dll").is_file():
         return
     print(f"bootstrapping wine prefix {pfx} (one-time)")
-    # this wine chdirs into $WINEPREFIX before populating it — dir must exist first
     pfx.mkdir(parents=True, exist_ok=True)
+    seed = runner["path"].resolve().parent.parent / "share" / "default_pfx"
+    if seed.is_dir():  # merge seed DLLs without clobbering user edits
+        shutil.copytree(seed, pfx, dirs_exist_ok=True, symlinks=True)
+        # seed carries .update-timestamp; without removing it wineboot skips
+        # prefix initialisation entirely (dosdevices/c: stays missing)
+        (pfx / ".update-timestamp").unlink(missing_ok=True)
+    # wineboot creates the dosdevices mounts only when it can drive wineserver
+    # fully — do them up front so a headless bootstrap can't miss them
+    (pfx / "dosdevices").mkdir(exist_ok=True)
+    for drive, target in (("c:", "../drive_c"), ("z:", "/")):
+        link = pfx / "dosdevices" / drive
+        if not link.is_symlink():
+            link.unlink(missing_ok=True)
+            link.symlink_to(target)
     subprocess.run([str(runner["path"]), "wineboot", "-u"], env=env,
                    stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT, timeout=600)
     if not (pfx / "drive_c" / "windows").is_dir():
@@ -256,20 +280,27 @@ def triage_file(path):
 
 
 def build_launch(args, game_cmd, bootstrap=True):
+    """Return (cmd, outer_env). Under gamescope, wine-specific vars are exported
+    *inside* the wrapped command (`env k=v … wine …`): gamescope's compositor
+    breaks — Wayland init fails and it segfaults — when it inherits wine's
+    LD_LIBRARY_PATH/WINE* environment itself."""
     runner = find_runner()
     if runner is None:
         raise SystemExit("no Proton/umu runner found — install one via ProtonUp-Qt "
                          "(or set RR_A2_PROTON / UMU_RUN) and rerun")
     if runner["kind"] == "proton":
-        cmd = [str(runner["path"]), "run"] + game_cmd
+        wine_cmd = [str(runner["path"]), "run"] + game_cmd
     else:  # wine runs exes directly; umu-run takes the exe as its sole argument
-        cmd = [str(runner["path"])] + game_cmd
+        wine_cmd = [str(runner["path"])] + game_cmd
     env = runner_env(runner)
     if runner["kind"] == "wine" and bootstrap:
         bootstrap_wine(runner, env)
     if getattr(args, "gamescope", True) and shutil.which("gamescope"):
-        cmd = ["gamescope", "-w", "640", "-h", "480", "-r", "60", "-F", "nearest", "--"] + cmd
-    return cmd, env
+        exported = sorted(f"{k}={v}" for k, v in env.items() if os.environ.get(k) != v)
+        cmd = (["gamescope", "-w", "640", "-h", "480", "-r", "60", "-F", "nearest", "--"]
+               + ["env"] + exported + wine_cmd)
+        return cmd, dict(os.environ)
+    return wine_cmd, env
 
 
 def cmd_run(args):
