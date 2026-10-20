@@ -129,7 +129,7 @@ New primitives identified: `FUN_00425c30` (transition controller),
 
 ## Next targets
 
-1. `FUN_004589c0` — quit-poll contents (menu/quit dialog wiring).
-2. Message-config origin: xrefs to `DAT_004dc6fc`/`DAT_004dc700` (level-load populates it) + dump defaults.
-3. Entity root `FUN_004525c0` deref chain — entity struct offsets (`*e==2` typed entities, `e+0xfc`, `e+0xcc` flags).
-4. `FUN_00411f00` / `FUN_0048e380` — keyboard layout mapping (text input path).
+1. `FUN_004589c0` — done → [05 — Exit, Selection & Text Input](05-exit-selection-and-text-input.md).
+2. Message-config origin — done: module-static, not level data (doc 05).
+3. Entity root / selection cluster `0x4520d0…0x452da0` (doc 05 §`SelectedEntity`).
+4. `FUN_00411f00` / `FUN_0048e380` — done (doc 05 §`KeyContextCheck`, `KeyToAscii`).

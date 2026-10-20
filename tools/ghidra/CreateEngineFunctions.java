@@ -29,10 +29,20 @@ public class CreateEngineFunctions extends GhidraScript {
         0x419b80L,  // MessageDispatch — HUD/event notification hub
         0x435f5cL,  // ViewContextTick — ticked 3x per frame
         0x4231f0L,  // EnginePreTick — per-frame housekeeping
+        0x4589c0L,  // QuitPoll — quit request poll
+        0x4525c0L,  // SelectedEntity — selection/global entity root
+        0x425c30L,  // TransitionControl — fade/transition controller
+        0x437880L,  // EntityRename
+        0x48e380L,  // KeyToAscii
+        0x411f00L,  // KeyContextCheck
+        0x456240L,  // SystemStateFlags — gated by bit masks
+        0x4199f0L,  // MessagePreCheck — message filter before queueing
     };
     static final String[] NAMES = { "EngineTick", "EngineShutdown", "EngineShutdownAlt",
         "MainSimStep", "ManagerTick", "MessageDispatch", "ViewContextTick",
-        "EnginePreTick" };
+        "EnginePreTick", "QuitPoll", "SelectedEntity", "TransitionControl",
+        "EntityRename", "KeyToAscii", "KeyContextCheck", "SystemStateFlags",
+        "MessagePreCheck" };
 
     @Override
     public void run() throws Exception {
@@ -52,10 +62,18 @@ public class CreateEngineFunctions extends GhidraScript {
                 Address addr = toAddr(TARGETS[i]);
                 Function f = fm.getFunctionAt(addr);
                 if (f == null) {
-                    f = fm.createFunction(NAMES[i], addr, new AddressSet(addr),
-                            SourceType.USER_DEFINED);
-                    created++;
-                    println("Created " + NAMES[i] + " @ " + addr);
+                    Function inner = fm.getFunctionContaining(addr);
+                    if (inner != null) {
+                        // address is mid-body of an existing function; decompile that one
+                        inner.setName(NAMES[i], SourceType.USER_DEFINED);
+                        f = inner;
+                        renamed++;
+                    } else {
+                        f = fm.createFunction(NAMES[i], addr, new AddressSet(addr),
+                                SourceType.USER_DEFINED);
+                        created++;
+                        println("Created " + NAMES[i] + " @ " + addr);
+                    }
                 } else {
                     f.setName(NAMES[i], SourceType.USER_DEFINED);
                     renamed++;
