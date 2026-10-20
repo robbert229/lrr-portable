@@ -117,6 +117,28 @@ public class CreateEngineFunctions extends GhidraScript {
         0x45f7d0L,  // TaskFlushFont
         0x45c040L,  // CrystalQuotaSetup
         0x462800L,  // RewardScoreAdd
+        // --- entity command subsystem (batch 11) ---
+        0x401cf0L,  // CmdRegistryInit
+        0x401cb0L,  // CmdKindByName
+        0x406440L,  // CmdAlloc
+        0x406480L,  // CmdFree
+        0x4064c0L,  // CmdPoolGrow
+        0x4035c0L,  // CmdCreateMove
+        0x4036c0L,  // CmdCreateTarget
+        0x402720L,  // CmdCreateTask
+        0x403610L,  // CmdCreateGated
+        0x404030L,  // CmdLinkHead
+        0x404070L,  // CmdLinkTail
+        0x404190L,  // CmdChainWalk
+        0x407450L,  // IdleQueueRegister
+        0x402220L,  // CmdTickGlobal
+        0x402310L,  // CmdChainPurge
+        0x402100L,  // CmdFlushAll
+        0x402850L,  // MinionCompanionCmd
+        0x403700L,  // CmdCancelByCoords
+        0x402cd0L,  // CmdCancelRef
+        0x402000L,  // CmdMarkMatching
+        0x402060L,  // CmdSetKind
     };
     static final String[] NAMES = { "EngineTick", "EngineShutdown", "EngineShutdownAlt",
         "MainSimStep", "ManagerTick", "MessageDispatch", "ViewContextTick",
@@ -141,7 +163,11 @@ public class CreateEngineFunctions extends GhidraScript {
         "ObjectiveTick", "RewardInit", "TaskBlockInit", "TaskBlockFinish", "TaskSoundsLoad",
         "TaskFontLoad", "TaskBoxImages", "TaskImages", "TaskBoxRect", "TaskFlicPath",
         "TaskImportanceRefresh", "TaskQuotaRefresh", "TaskFlushImages", "TaskFlushFont",
-        "CrystalQuotaSetup", "RewardScoreAdd" };
+        "CrystalQuotaSetup", "RewardScoreAdd", "CmdRegistryInit", "CmdKindByName", "CmdAlloc",
+        "CmdFree", "CmdPoolGrow", "CmdCreateMove", "CmdCreateTarget", "CmdCreateTask",
+        "CmdCreateGated", "CmdLinkHead", "CmdLinkTail", "CmdChainWalk", "IdleQueueRegister",
+        "CmdTickGlobal", "CmdChainPurge", "CmdFlushAll", "MinionCompanionCmd",
+        "CmdCancelByCoords", "CmdCancelRef", "CmdMarkMatching", "CmdSetKind" };
 
     @Override
     public void run() throws Exception {

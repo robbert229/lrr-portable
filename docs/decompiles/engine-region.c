@@ -6967,3 +6967,687 @@ void RewardScoreAdd(float param_1)
 }
 
 
+// ==== CmdRegistryInit @ 00401cf0 ====
+
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+void CmdRegistryInit(void)
+
+{
+  int iVar1;
+  undefined4 *puVar2;
+  
+  puVar2 = &DAT_004b31c8;
+  for (iVar1 = 0xc; iVar1 != 0; iVar1 = iVar1 + -1) {
+    *puVar2 = 0;
+    puVar2 = puVar2 + 1;
+  }
+  _DAT_004b3200 = s_AITask_Type_Goto_004a1918;
+  _DAT_004b3204 = s_AITask_Type_Follow_004a1904;
+  _DAT_004b3208 = s_AITask_Type_FollowAttack_004a18e8;
+  _DAT_004b320c = s_AITask_Type_Collect_004a18d4;
+  _DAT_004b3210 = s_AITask_Type_Gather_004a18c0;
+  _DAT_004b3230 = s_AITask_Type_Clear_004a18ac;
+  _DAT_004b3214 = s_AITask_Type_Deposit_004a1898;
+  _DAT_004b3218 = s_AITask_Type_Dump_004a1884;
+  _DAT_004b321c = s_AITask_Type_Request_004a1870;
+  _DAT_004b3228 = s_AITask_Type_Repair_004a185c;
+  _DAT_004b3220 = s_AITask_Type_Dig_004a184c;
+  _DAT_004b3224 = s_AITask_Type_Dynamite_004a1834;
+  _DAT_004b322c = s_AITask_Type_Reinforce_004a181c;
+  _DAT_004b3234 = s_AITask_Type_Wait_004a1808;
+  _DAT_004b3238 = s_AITask_Type_AnimationWait_004a17ec;
+  _DAT_004b323c = s_AITask_Type_ElecFence_004a17d4;
+  _DAT_004b3240 = s_AITask_Type_Eat_004a17c4;
+  _DAT_004b3244 = s_AITask_Type_GotoEat_004a17b0;
+  _DAT_004b3248 = s_AITask_Type_FindDriver_004a1798;
+  _DAT_004b324c = s_AITask_Type_GetTool_004a1784;
+  _DAT_004b3250 = s_AITask_Type_BirdScarer_004a176c;
+  _DAT_004b3254 = s_AITask_Type_Upgrade_004a1758;
+  _DAT_004b3258 = s_AITask_Type_BuildPath_004a1740;
+  _DAT_004b325c = s_AITask_Type_Train_004a172c;
+  _DAT_004b3260 = s_AITask_Type_Depart_004a1718;
+  _DAT_004b3264 = s_AITask_Type_AttackPath_004a1700;
+  _DAT_004b3268 = s_AITask_Type_AttackRockMonster_004a16e0;
+  _DAT_004b326c = s_AITask_Type_Recharge_004a16c8;
+  _DAT_004b3270 = s_AITask_Type_Dock_004a16b4;
+  _DAT_004b3274 = s_AITask_Type_AttackObject_004a1698;
+  _DAT_004b3278 = s_AITask_Type_FindLoad_004a1680;
+  DAT_004b327c = s_AI_Priority_Crystal_004a166c;
+  DAT_004b3280 = s_AI_Priority_Ore_004a165c;
+  _DAT_004b3284 = s_AI_Priority_DefaultCollect_004a1640;
+  _DAT_004b3288 = s_AI_Priority_Destruction_004a1628;
+  _DAT_004b328c = s_AI_Priority_Construction_004a160c;
+  _DAT_004b3290 = s_AI_Priority_Request_004a15f8;
+  _DAT_004b3294 = s_AI_Priority_Reinforce_004a15e0;
+  _DAT_004b3298 = s_AI_Priority_Repair_004a15cc;
+  _DAT_004b329c = s_AI_Priority_Clearing_004a15b4;
+  _DAT_004b32a0 = s_AI_Priority_Storage_004a15a0;
+  _DAT_004b32a4 = s_AI_Priority_Refining_004a1588;
+  _DAT_004b32a8 = s_AI_Priority_HealthLow_004a1570;
+  _DAT_004b32ac = s_AI_Priority_GetIn_004a155c;
+  _DAT_004b32b0 = s_AI_Priority_Upgrade_004a1548;
+  _DAT_004b32b4 = s_AI_Priority_BuildPath_004a1530;
+  _DAT_004b32b8 = s_AI_Priority_AttackRockMonster_004a1510;
+  _DAT_004b32bc = s_AI_Priority_Barrier_004a14fc;
+  _DAT_004b32c0 = s_AI_Priority_FindLoad_004a14e4;
+  _DAT_004b32c4 = s_AI_Priority_Recharge_004a14cc;
+  _DAT_004b32c8 = s_AI_Priority_UpgradeBuilding_004a14b0;
+  _DAT_004b32cc = s_AI_Priority_Gather_004a149c;
+  _DAT_004b32d0 = s_AI_Priority_Steal_004a1488;
+  _DAT_004b32d4 = s_AI_Priority_Punch_004a1474;
+  _DAT_004b32d8 = s_AI_Priority_Depart_004a1460;
+  _DAT_004b32dc = s_AI_Priority_AttackPath_004a1448;
+  _DAT_004b32e4 = s_AI_Priority_Congregate_004a1430;
+  _DAT_004b32e0 = s_AI_Priority_AttackObject_004a1414;
+  puVar2 = &DAT_004b32e8;
+  for (iVar1 = 0x1b; iVar1 != 0; iVar1 = iVar1 + -1) {
+    *puVar2 = 0x31;
+    puVar2 = puVar2 + 1;
+  }
+  DAT_004b32f8 = 0x3c;
+  _DAT_004b32f4 = 0x28;
+  DAT_004b32e8 = 0x37;
+  _DAT_004b330c = 5;
+  _DAT_004b3308 = 0x14;
+  _DAT_004b3310 = 0xf;
+  _DAT_004b32fc = 0x14;
+  _DAT_004b3300 = 0x46;
+  _DAT_004b3324 = 0x38;
+  _DAT_004b3334 = 99;
+  _DAT_004b333c = 0x5a;
+  _DAT_004b3340 = 0x31;
+  _DAT_004b3338 = 0x31;
+  _DAT_004b3344 = 0;
+  _DAT_004b3348 = 0x14;
+  _DAT_004b3350 = 99;
+  _DAT_004b334c = 0x1e;
+  DAT_004b31f8 = 0;
+  DAT_004b31fc = 0;
+  DAT_004b8060 = 1;
+  return;
+}
+
+
+// ==== CmdKindByName @ 00401cb0 ====
+
+undefined4 CmdKindByName(char *param_1,int *param_2)
+
+{
+  int iVar1;
+  undefined4 *puVar2;
+  int iVar3;
+  
+  iVar3 = 0;
+  puVar2 = &DAT_004b327c;
+  do {
+    iVar1 = __strcmpi(param_1,(char *)*puVar2);
+    if (iVar1 == 0) {
+      *param_2 = iVar3;
+      return 1;
+    }
+    puVar2 = puVar2 + 1;
+    iVar3 = iVar3 + 1;
+  } while (puVar2 < &DAT_004b32e8);
+  return 0;
+}
+
+
+// ==== CmdAlloc @ 00406440 ====
+
+undefined4 * CmdAlloc(undefined4 param_1)
+
+{
+  undefined4 *puVar1;
+  DWORD DVar2;
+  int iVar3;
+  undefined4 *puVar4;
+  
+  if (DAT_004b31f8 == (undefined4 *)0x0) {
+    FUN_004064c0();
+  }
+  puVar1 = DAT_004b31f8;
+  puVar4 = DAT_004b31f8;
+  DAT_004b31f8 = (undefined4 *)DAT_004b31f8[0x19];
+  for (iVar3 = 0x1a; iVar3 != 0; iVar3 = iVar3 + -1) {
+    *puVar4 = 0;
+    puVar4 = puVar4 + 1;
+  }
+  puVar1[0x19] = puVar1;
+  DVar2 = timeGetTime();
+  puVar1[0x14] = DVar2;
+  *puVar1 = param_1;
+  return puVar1;
+}
+
+
+// ==== CmdFree @ 00406480 ====
+
+void CmdFree(int param_1,int param_2)
+
+{
+  if (param_2 == 0) {
+    FUN_00402cd0(param_1);
+  }
+  if ((*(int *)(param_1 + 0x40) != 0) && ((*(uint *)(param_1 + 0x5c) & 0x200) == 0)) {
+    FUN_0048db80(*(int *)(param_1 + 0x40));
+  }
+  *(int *)(param_1 + 100) = DAT_004b31f8;
+  DAT_004b31f8 = param_1;
+  return;
+}
+
+
+// ==== CmdPoolGrow @ 004064c0 ====
+
+void CmdPoolGrow(void)
+
+{
+  int iVar1;
+  int iVar2;
+  undefined4 uVar3;
+  int iVar4;
+  uint uVar5;
+  
+  uVar5 = 1 << ((byte)DAT_004b31fc & 0x1f);
+  uVar3 = FUN_0048dbd0(uVar5 * 0x68);
+  (&DAT_004b31c8)[DAT_004b31fc] = uVar3;
+  iVar1 = (&DAT_004b31c8)[DAT_004b31fc];
+  if (iVar1 != 0) {
+    DAT_004b31fc = DAT_004b31fc + 1;
+    if (1 < uVar5) {
+      iVar4 = uVar5 - 1;
+      iVar2 = iVar1;
+      do {
+        *(int *)(iVar2 + 100) = iVar2 + 0x68;
+        iVar4 = iVar4 + -1;
+        iVar2 = iVar2 + 0x68;
+      } while (iVar4 != 0);
+    }
+    *(int *)(iVar1 + -4 + uVar5 * 0x68) = DAT_004b31f8;
+    DAT_004b31f8 = iVar1;
+  }
+  return;
+}
+
+
+// ==== CmdCreateMove @ 004035c0 ====
+
+void CmdCreateMove(int param_1,undefined4 *param_2,undefined4 param_3)
+
+{
+  int iVar1;
+  int iVar2;
+  
+  iVar1 = CmdAlloc(0);
+  *(undefined4 *)(iVar1 + 8) = *param_2;
+  *(undefined4 *)(iVar1 + 0xc) = param_2[1];
+  *(undefined4 *)(iVar1 + 4) = param_3;
+  iVar2 = FUN_00404190(param_1);
+  if (iVar2 != 0) {
+    *(int *)(iVar2 + 0x60) = iVar1;
+    return;
+  }
+  *(int *)(param_1 + 0x2f0) = iVar1;
+  FUN_00407450(param_1);
+  return;
+}
+
+
+// ==== CmdCreateTarget @ 004036c0 ====
+
+void CmdCreateTarget(int param_1,undefined4 param_2)
+
+{
+  int iVar1;
+  int iVar2;
+  
+  iVar1 = CmdAlloc(2);
+  *(undefined4 *)(iVar1 + 0x10) = param_2;
+  *(undefined4 *)(iVar1 + 0x14) = 0;
+  iVar2 = FUN_00404190(param_1);
+  if (iVar2 != 0) {
+    *(int *)(iVar2 + 0x60) = iVar1;
+    return;
+  }
+  *(int *)(param_1 + 0x2f0) = iVar1;
+  return;
+}
+
+
+// ==== CmdCreateTask @ 00402720 ====
+
+void CmdCreateTask(int *param_1,undefined4 param_2)
+
+{
+  int iVar1;
+  int iVar2;
+  byte bVar3;
+  
+  bVar3 = 2;
+  iVar2 = CmdAlloc(3);
+  *(int **)(iVar2 + 0x10) = param_1;
+  *(undefined4 *)(iVar2 + 0x18) = param_2;
+  iVar1 = *param_1;
+  if (iVar1 == 6) {
+    bVar3 = -((param_1[0xfa] & 0x80000000U) != 0) & 0x12;
+  }
+  else if (iVar1 == 7) {
+    bVar3 = 1;
+  }
+  else if (iVar1 == 9) {
+    bVar3 = 0x10;
+  }
+  else if (iVar1 == 8) {
+    *(undefined4 *)(iVar2 + 0x3c) = 8;
+    bVar3 = 3;
+  }
+  FUN_00404030(iVar2,bVar3);
+  FUN_00402850(param_1);
+  return;
+}
+
+
+// ==== CmdCreateGated @ 00403610 ====
+
+void CmdCreateGated(int param_1,undefined4 param_2)
+
+{
+  int iVar1;
+  int iVar2;
+  
+  if ((*(uint *)(param_1 + 0x3e0) & 0x400) != 0) {
+    iVar1 = CmdAlloc(5);
+    *(undefined4 *)(iVar1 + 0x10) = param_2;
+    iVar2 = FUN_00404190(param_1);
+    if (iVar2 != 0) {
+      *(int *)(iVar2 + 0x60) = iVar1;
+      return;
+    }
+    *(int *)(param_1 + 0x2f0) = iVar1;
+  }
+  return;
+}
+
+
+// ==== CmdLinkHead @ 00404030 ====
+
+void CmdLinkHead(int param_1,int param_2)
+
+{
+  *(int *)(param_1 + 0x60) = DAT_004b3354;
+  DAT_004b3354 = param_1;
+  *(undefined4 *)(param_1 + 0x14) = 0x44bb8000;
+  *(uint *)(param_1 + 0x5c) = *(uint *)(param_1 + 0x5c) & 0xfffffffe | 0x10;
+  *(undefined4 *)(param_1 + 0x1c) = (&DAT_004b32e8)[param_2];
+  *(int *)(param_1 + 0x4c) = param_2;
+  return;
+}
+
+
+// ==== CmdLinkTail @ 00404070 ====
+
+void CmdLinkTail(int param_1)
+
+{
+  *(int *)(param_1 + 0x60) = DAT_004b3358;
+  DAT_004b3358 = param_1;
+  *(undefined4 *)(param_1 + 0x14) = 0x44bb8000;
+  *(uint *)(param_1 + 0x5c) = *(uint *)(param_1 + 0x5c) & 0xffffffee;
+  return;
+}
+
+
+// ==== CmdChainWalk @ 00404190 ====
+
+void CmdChainWalk(int param_1)
+
+{
+  int iVar1;
+  
+  if (*(int *)(param_1 + 0x2f0) != 0) {
+    for (iVar1 = *(int *)(*(int *)(param_1 + 0x2f0) + 0x60); iVar1 != 0;
+        iVar1 = *(int *)(iVar1 + 0x60)) {
+    }
+  }
+  return;
+}
+
+
+// ==== IdleQueueRegister @ 00407450 ====
+
+void IdleQueueRegister(int *param_1)
+
+{
+  int *piVar1;
+  int iVar2;
+  int *piVar3;
+  
+  if (*param_1 == 2) {
+    iVar2 = 0;
+    piVar1 = &DAT_00557a84;
+    do {
+      piVar3 = piVar1;
+      if (param_1 == (int *)*piVar3) break;
+      iVar2 = iVar2 + 1;
+      piVar1 = piVar3 + 2;
+    } while (piVar3 + 2 < &DAT_00557b24);
+    if (iVar2 == 0x14) {
+      iVar2 = 0;
+      piVar1 = &DAT_00557a84;
+      do {
+        piVar3 = piVar1;
+        if (*piVar3 == 0) {
+          *piVar3 = (int)param_1;
+          break;
+        }
+        iVar2 = iVar2 + 1;
+        piVar1 = piVar3 + 2;
+      } while (piVar3 + 2 < &DAT_00557b24);
+      if (iVar2 == 0x14) {
+        return;
+      }
+    }
+    piVar3[1] = 0x41480000;
+  }
+  return;
+}
+
+
+// ==== CmdTickGlobal @ 00402220 ====
+
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+void CmdTickGlobal(void)
+
+{
+  int *piVar1;
+  int iVar2;
+  
+  iVar2 = DAT_004b32ec;
+  if (DAT_004b32ec <= DAT_004b32e8) {
+    iVar2 = DAT_004b32e8;
+  }
+  _DAT_004b3328 = DAT_004b32f8;
+  if ((DAT_004b32f8 < iVar2) && (_DAT_004b3328 = DAT_004b32e8, DAT_004b32e8 < DAT_004b32ec)) {
+    _DAT_004b3328 = DAT_004b32ec;
+  }
+  _DAT_004b3328 = _DAT_004b3328 + 1;
+  if ((DAT_004b8060 & 0x80000000) == 0) {
+    FUN_00406540(&LAB_00404250,&stack0x00000004);
+    for (piVar1 = DAT_004b3354; piVar1 != (int *)0x0; piVar1 = (int *)piVar1[0x18]) {
+      if (((*piVar1 == 10) && ((piVar1[0x17] & 0x200000U) == 0)) &&
+         ((*(float *)(piVar1[4] + 0x340) <= _DAT_0049e014 ||
+          (_DAT_0049e018 <= *(float *)(piVar1[4] + 0x340))))) {
+        piVar1[0x17] = piVar1[0x17] | 0x20;
+      }
+    }
+    FUN_00402310(&DAT_004b3354);
+    FUN_00402310(&DAT_004b3358);
+    DAT_004b3424 = 0;
+    DAT_004b34f0 = 0;
+    FUN_004377b0(&LAB_00404280,&stack0x00000004);
+    FUN_00405c10();
+    FUN_00405950();
+  }
+  return;
+}
+
+
+// ==== CmdChainPurge @ 00402310 ====
+
+void CmdChainPurge(int *param_1)
+
+{
+  int *piVar1;
+  uint uVar2;
+  bool bVar3;
+  int *piVar4;
+  int iVar5;
+  int iVar6;
+  int *piVar7;
+  int iVar8;
+  int *piVar9;
+  int *local_4dc;
+  int local_4d0 [308];
+  
+  local_4dc = (int *)0x0;
+  iVar8 = *param_1;
+  iVar6 = 0;
+  while (iVar5 = iVar6, iVar6 = iVar8, iVar6 != 0) {
+    iVar8 = *(int *)(iVar6 + 0x60);
+    if ((*(byte *)(iVar6 + 0x5c) & 0x20) != 0) {
+      if (iVar5 == 0) {
+        *param_1 = iVar8;
+        CmdFree(iVar6,0);
+        iVar6 = iVar5;
+      }
+      else {
+        *(int *)(iVar5 + 0x60) = iVar8;
+        CmdFree(iVar6,0);
+        iVar6 = iVar5;
+      }
+    }
+  }
+  iVar8 = 0;
+  if ((int *)*param_1 != (int *)0x0) {
+    piVar4 = local_4d0 + 8;
+    piVar7 = (int *)*param_1;
+    do {
+      piVar1 = (int *)piVar7[0x18];
+      if (iVar8 == 300) {
+        iVar8 = 300;
+        local_4dc = piVar7;
+        break;
+      }
+      *piVar4 = (int)piVar7;
+      piVar4 = piVar4 + 1;
+      iVar8 = iVar8 + 1;
+      if (((&DAT_004b7ff4)[piVar7[0x13]] == 0) || ((piVar7[0x17] & 0x10000U) != 0)) {
+        uVar2 = piVar7[0x17];
+        piVar7[0x17] = uVar2 & 0xfff7ffff;
+        if ((uVar2 & 0x30000) == 0) {
+          piVar7[7] = (&DAT_004b32e8)[piVar7[0x13]];
+        }
+        else {
+          piVar7[7] = 99;
+        }
+      }
+      else {
+        piVar7[0x17] = piVar7[0x17] | 0x80000;
+      }
+      if (*piVar7 == 8) {
+        if ((*(byte *)(piVar7 + 0x17) & 8) == 0) {
+          iVar6 = FUN_00432f40(piVar7[2],piVar7[3]);
+          if (iVar6 != 0) {
+            piVar7[7] = 0;
+          }
+        }
+        else {
+          local_4d0[0] = 0;
+          local_4d0[1] = 0;
+          local_4d0[2] = 0;
+          local_4d0[7] = 0;
+          local_4d0[3] = 0xffffffff;
+          local_4d0[4] = 0xffffffff;
+          local_4d0[5] = 0xffffffff;
+          local_4d0[6] = 0xffffffff;
+          bVar3 = false;
+          piVar9 = local_4d0;
+          iVar6 = 4;
+          do {
+            iVar5 = FUN_00432bd0(*piVar9 + piVar7[2],piVar9[1] + piVar7[3]);
+            if (iVar5 != 0) {
+              bVar3 = true;
+            }
+            piVar9 = piVar9 + 2;
+            iVar6 = iVar6 + -1;
+          } while (iVar6 != 0);
+          if (bVar3) {
+            if (piVar7[7] == 0) {
+              piVar7[6] = 0x42c80000;
+            }
+          }
+          else {
+            piVar7[7] = 0;
+          }
+        }
+      }
+      piVar7 = piVar1;
+    } while (piVar1 != (int *)0x0);
+  }
+  if (iVar8 != 0) {
+    FUN_0048de20(local_4d0 + 8,iVar8,4,&LAB_00403f80);
+    iVar8 = iVar8 + -1;
+    iVar6 = 0;
+    if (iVar8 != 0) {
+      piVar4 = local_4d0 + 8;
+      iVar5 = iVar8;
+      do {
+        iVar6 = *piVar4;
+        piVar7 = piVar4 + 1;
+        piVar4 = piVar4 + 1;
+        iVar5 = iVar5 + -1;
+        *(int *)(iVar6 + 0x60) = *piVar7;
+        iVar6 = iVar8;
+      } while (iVar5 != 0);
+    }
+    *(int **)(local_4d0[iVar6 + 8] + 0x60) = local_4dc;
+    *param_1 = local_4d0[8];
+  }
+  return;
+}
+
+
+// ==== CmdFlushAll @ 00402100 ====
+
+void CmdFlushAll(int param_1)
+
+{
+  int iVar1;
+  undefined4 *puVar2;
+  
+  if (param_1 != 0) {
+    DAT_004b8060 = DAT_004b8060 & 0xfffffffd;
+    return;
+  }
+  FUN_00406540(&LAB_004021f0,0);
+  DAT_004b8060 = DAT_004b8060 | 2;
+  DAT_004b3354 = 0;
+  DAT_004b3358 = 0;
+  puVar2 = &DAT_004b34f4;
+  for (iVar1 = 0x12c0; iVar1 != 0; iVar1 = iVar1 + -1) {
+    *puVar2 = 0;
+    puVar2 = puVar2 + 1;
+  }
+  puVar2 = &DAT_004b7ff4;
+  for (iVar1 = 0x1b; iVar1 != 0; iVar1 = iVar1 + -1) {
+    *puVar2 = 0;
+    puVar2 = puVar2 + 1;
+  }
+  return;
+}
+
+
+// ==== MinionCompanionCmd @ 00402850 ====
+
+void MinionCompanionCmd(int *param_1)
+
+{
+  int iVar1;
+  
+  if (*param_1 == 6) {
+    iVar1 = CmdAlloc(3);
+    *(int **)(iVar1 + 0x10) = param_1;
+    FUN_00402060(iVar1,0x15);
+    CmdLinkTail(iVar1);
+    *(uint *)(iVar1 + 0x5c) = *(uint *)(iVar1 + 0x5c) | 0x2000;
+  }
+  return;
+}
+
+
+// ==== CmdCancelByCoords @ 00403700 ====
+
+void CmdCancelByCoords(int param_1,int param_2,int param_3,int param_4)
+
+{
+  int *piVar1;
+  
+  for (piVar1 = DAT_004b3354; piVar1 != (int *)0x0; piVar1 = (int *)piVar1[0x18]) {
+    if (((*piVar1 == 7) && (piVar1[0xb] == param_1)) &&
+       ((param_2 == 0 || ((param_3 == piVar1[8] && (param_4 == piVar1[9])))))) {
+      piVar1[0x17] = piVar1[0x17] | 0x20;
+    }
+  }
+  return;
+}
+
+
+// ==== CmdCancelRef @ 00402cd0 ====
+
+void CmdCancelRef(int *param_1)
+
+{
+  int *piVar1;
+  
+  if (*param_1 == 0x13) {
+    if (param_1[0x16] != 0) {
+      FUN_00406540(&LAB_00402d30,&param_1);
+      return;
+    }
+  }
+  else {
+    piVar1 = DAT_004b3354;
+    if (param_1[0x16] != 0) {
+      for (; piVar1 != (int *)0x0; piVar1 = (int *)piVar1[0x18]) {
+        if ((*piVar1 == 0x13) && ((int *)param_1[0x16] == piVar1)) {
+          piVar1[0x17] = piVar1[0x17] | 0x20;
+        }
+      }
+    }
+  }
+  return;
+}
+
+
+// ==== CmdMarkMatching @ 00402000 ====
+
+void CmdMarkMatching(int param_1,int param_2,int *param_3)
+
+{
+  int *piVar1;
+  
+  for (piVar1 = DAT_004b3354; piVar1 != (int *)0x0; piVar1 = (int *)piVar1[0x18]) {
+    if (*piVar1 == param_1) {
+      if ((param_2 != 0) && (param_2 == piVar1[4])) {
+        piVar1[0x17] = piVar1[0x17] | 0x10000;
+      }
+      if (((param_3 != (int *)0x0) && (*param_3 == piVar1[2])) && (param_3[1] == piVar1[3])) {
+        piVar1[0x17] = piVar1[0x17] | 0x10000;
+      }
+    }
+  }
+  return;
+}
+
+
+// ==== CmdSetKind @ 00402060 ====
+
+void CmdSetKind(int param_1,int param_2)
+
+{
+  undefined4 uVar1;
+  
+  if ((*(uint *)(param_1 + 0x5c) & 0x30000) == 0) {
+    uVar1 = (&DAT_004b32e8)[param_2];
+    *(int *)(param_1 + 0x4c) = param_2;
+    *(undefined4 *)(param_1 + 0x1c) = uVar1;
+    return;
+  }
+  *(undefined4 *)(param_1 + 0x1c) = 99;
+  *(int *)(param_1 + 0x4c) = param_2;
+  return;
+}
+
+
