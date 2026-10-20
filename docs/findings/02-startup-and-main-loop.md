@@ -57,11 +57,11 @@ while (!quit) {
 | Triplet registration mechanism | observed |
 | dt calculation and loop constants | observed |
 | `FUN_0041fb50`'s float table = game-rule constants | **inferred** — constants like `0.3e-1`, `0.7e-1` smell like speeds/friction, not proven |
-| What `LAB_004232e0` (tick) does internally | unknown — next target |
+| What `LAB_004232e0` (tick) does internally | **resolved** — decompiled; see [03 — Engine Tick](03-engine-tick.md) |
 | `FUN_00488b50` = Direct3D device init | inferred from HAL message adjacency |
 
 ## Next targets (priority order)
 
-1. `LAB_004232e0` tick — decompile by file-offset or via `analyze_function`; split the game-logic region.
+1. ~~`LAB_004232e0` tick~~ done via headless `analyzeHeadless` + `tools/ghidra/CreateEngineFunctions.java` — see [03 — Engine Tick](03-engine-tick.md).
 2. The `.map` / `.blx` / `.lwo` loaders (consumer side of the resource loader).
 3. Save/load: grep strings for `SAVE`/`.sv` under `Data\`.
