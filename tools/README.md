@@ -1,4 +1,37 @@
-# `tools/` — WAD tooling
+# `tools/` — game-data tooling
+
+## `rrlwo.py` — `.lwo` (LightWave 4) → glTF 2.0 converter
+
+Reads the game's 1,132 embedded models (`\Models\…` inside `LegoRR0.wad`)
+straight from the archives and exports `.glb` — geometry, materials with
+colours, and planar-mapped textures pulled from the same WADs. All format
+semantics cite [`docs/findings/11-model-and-scene-formats.md`](../docs/findings/11-model-and-scene-formats.md);
+the two conversion decisions worth knowing:
+
+* **UVs** — LWOB stores none; the `CTEX` block says the mapping is *planar*,
+  so we project each face along its dominant normal axis and divide by the
+  `TSIZ` scale, which is the engine's own scheme, not an invented one.
+* **Normals** — flat, so shared positions do not share vertices across
+  faces (glTF has no face normals).
+
+```
+python3 tools/rrlwo.py list                          # models in the shipped wads
+python3 tools/rrlwo.py dump "Creatures\Spider.lwo"    # chunk/surface structure
+python3 tools/rrlwo.py gltf "Buildings\Barracks\Base.lwo" -o base.glb
+python3 tools/rrlwo.py gltf PATH.lwo -o out.glb --wad-dir mod/L1   # modded trees
+```
+
+Conversion notes found the hard way (documented in finding 11 §3 terms):
+polygon indices in `POLS` are 1-based per spec, but four exporters used
+0-based — the tool auto-detects per file (a zero index is impossible
+1-based). Negative indices mean the polygon is wound backwards and get the
+winding flipped. `SURF` blocks use tag + u16-BE size records anchored by the
+SRFS surface names; BMP payloads convert to PNG with stdlib only.
+
+Verified: full library 1,132/1,132 exported without errors (2026-10-20),
+structural checks (GLB framing, buffer lengths, index ranges, PNG inflation)
+on all of them. Render-level eyeballing is a user task — no glTF viewer
+exists in this environment.
 
 ## `rrwad.py` — the `.wad` (WWAD) container tool
 

@@ -1,0 +1,475 @@
+#!/usr/bin/env python3
+"""rrlwo.py — Lego Rock Raiders `.lwo` (LightWave 4.0) → glTF 2.0 (.glb).
+
+Reads FORM/LWOB objects from disk or straight out of the game WADs (via
+rrwad.py). Format knowledge is the evidence-backed set from finding 11:
+
+    PNTS  f32 big-endian triples                    vertices (1-based)
+    POLS  per poly: u16 count, count x i16 indices  (negative index = the
+          polygon is wound backwards -> flip), u16 surface index (1-based)
+    SRFS  NUL-terminated surface names, even-padded
+    SURF  records: even-padded name + sub-blocks(tag + 1-byte size):
+          COLR = r,g,b,a; TIMG = texture path (basename lives in the WAD);
+          CTEX declares "Planar Image Map"; TSIZ/TCTR carry its scale/offset.
+
+glTF mapping decisions (documented approximations, per finding 11 §3):
+    - LWOB stores no UVs. CTEX says the mapping is *planar*, so we project
+      each face along its dominant normal axis and divide by TSIZ — the
+      engine's own scheme, applied per corner.
+    - glTF wants per-vertex normals; LWO faces are flat, so corners sharing
+      a position do NOT share a normal (keyed vertex table, not raw fan).
+    - BMP payloads convert to PNG with stdlib only (struct+zlib+crc32).
+
+Usage (repo root):
+    python3 tools/rrlwo.py list [--wad-dir DIR]
+    python3 tools/rrlwo.py dump PATH.lwo | -n NAME [--wad-dir DIR]
+    python3 tools/rrlwo.py gltf PATH.lwo | -n NAME [-o OUT.glb] [--no-textures]
+"""
+import argparse
+import json
+import pathlib
+import struct
+import sys
+import zlib
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import rrwad  # noqa: E402
+
+DEFAULT_WAD_DIRS = [
+    pathlib.Path("~/.local/share/rock-raider-a2/game"),
+    pathlib.Path("~/.local/share/rock-raider-a2/game").parent / "rock-raider-reversed/source",
+]
+
+
+def wad_dirs(explicit):
+    if explicit:
+        return [pathlib.Path(explicit)]
+    return [d for d in DEFAULT_WAD_DIRS if d.expanduser().is_dir()]
+
+
+# -- WAD-backed asset lookup -------------------------------------------------
+
+class GameAssets:
+    """basename (lower) -> (index, wad) across every *.wad found."""
+
+    def __init__(self, dirs=()):
+        self.index = {}
+        for d in dirs:
+            d = pathlib.Path(d).expanduser()
+            if not d.is_dir():
+                continue
+            for w in sorted(d.glob("*.wad")):
+                wad = rrwad.Wad(w)
+                for i, name in enumerate(wad.names):
+                    key = name.lower().replace("\\", "/").split("/")[-1]
+                    self.index.setdefault(key, (i, wad))
+
+    def read(self, name):
+        hit = self.index.get(name.lower().replace("\\", "/").split("/")[-1])
+        if hit is None:
+            return None
+        i, wad = hit
+        return wad.payload(i)
+
+    def names_with(self, suffix):
+        return sorted(k for k in self.index if k.endswith(suffix))
+
+
+# -- LWO container -----------------------------------------------------------
+
+class Lwo:
+    def __init__(self, data: bytes):
+        if data[:4] != b"FORM" or data[8:12] != b"LWOB":
+            raise ValueError("not a FORM/LWOB object")
+        self.chunks = []
+        end = min(len(data), 8 + struct.unpack_from(">I", data, 4)[0])
+        p = 12
+        while p + 8 <= end:
+            tag = data[p:p + 4].decode("latin1").rstrip("\x00")
+            size = struct.unpack_from(">I", data, p + 4)[0]
+            self.chunks.append((tag, data[p + 8:p + 8 + size]))
+            p += 8 + size + (size & 1)
+
+    def one(self, tag):
+        for t, d in self.chunks:
+            if t == tag:
+                return d
+        return None
+
+    def points(self):
+        d = self.one("PNTS")
+        if not d:
+            raise ValueError("missing PNTS")
+        return [struct.unpack_from(">3f", d, i) for i in range(0, len(d), 12)]
+
+    def polys(self):
+        """[(indices signed 1-based, surf_index_0based)] — finding 11 §3 POLS."""
+        d = self.one("POLS")
+        out, p = [], 0
+        while p + 2 <= len(d):
+            n = struct.unpack_from(">H", d, p)[0]
+            p += 2
+            if n == 0 or p + 2 * n + 2 > len(d):
+                break
+            idx = struct.unpack_from(f">{n}h", d, p)
+            p += 2 * n + 2  # indices + per-poly surface index
+            out.append((idx, max(struct.unpack_from(">h", d, p - 2)[0] - 1, 0)))
+        return out
+
+    def surface_names(self):
+        d = self.one("SRFS")
+        names, p = [], 0
+        while d and p < len(d):
+            e = d.find(b"\x00", p)
+            if e < 0:
+                break
+            names.append(d[p:e].decode("latin1").strip())
+            p = (e + 2) & ~1  # even-padded record
+        return names
+
+    def surf_records(self):
+        """SURF chunks: [even-padded name][tag + u16-BE size + payload]* blocks.
+        Record starts are anchored on the SRFS names themselves (SURF may
+        arrive as one chunk per record); a block stream ends at the next anchor."""
+        anchors = [n.encode("latin1") + b"\x00" for n in self.surface_names()]
+        out, seen = [], set()
+
+        def find_all(buf, needle):
+            hits, pos = [], 0
+            while (e := buf.find(needle, pos)) >= 0:
+                hits.append(e)
+                pos = e + 1
+            return hits
+
+        for tag, d in self.chunks:
+            if tag != "SURF":
+                continue
+            starts = sorted({e for a in anchors for e in find_all(d, a) if e % 2 == 0})
+            for k, e in enumerate(starts):
+                a = next(x for x in anchors if d.startswith(x, e))
+                name = a.decode("latin1").strip("\x00")
+                limit = starts[k + 1] if k + 1 < len(starts) else len(d)
+                q = (e + len(a) + 1) & ~1
+                blocks = {}
+                while q + 6 <= limit:
+                    bt = d[q:q + 4]
+                    if not all(0x20 <= c <= 0x7E for c in bt):
+                        break
+                    sz = struct.unpack_from(">H", d, q + 4)[0]
+                    if sz > limit - q - 6:
+                        break
+                    blocks[bt.decode("latin1").strip("\x00 ")] = d[q + 6:q + 6 + sz]
+                    q += 6 + sz + (sz & 1)
+                if name not in seen:
+                    seen.add(name)
+                    out.append((name, blocks))
+        return out
+
+    def surface_meta(self):
+        """name(lower) -> {colr, timg, tsiz} from SURF records."""
+        meta = {}
+        for name, blocks in self.surf_records():
+            m = meta.setdefault(name.lower(), {})
+            b = blocks.get("COLR")
+            if b and len(b) >= 3:
+                m["colr"] = [c / 255 for c in b[:3]] + [1.0]
+            if blocks.get("TIMG"):
+                m["timg"] = blocks["TIMG"].split(b"\x00")[0].decode("latin1").strip()
+            s = blocks.get("TSIZ")
+            if s and len(s) >= 8:
+                m["tsiz"] = struct.unpack(">2f", s[:8])
+        return meta
+
+    def _index_base(self):
+        """Some exporters (the 4 known here) wrote 0-based POLS despite the
+        1-based spec; a zero anywhere settles it since 1-based forbids zero."""
+        try:
+            idx = [i for idx, _ in self.polys() for i in idx]
+            return 0 if any(i == 0 for i in idx) else 1
+        except Exception:
+            return 1
+
+    def triangles(self):
+        """[(a, b, c, surf0)] with fan triangulation + negative-index winding."""
+        base = self._index_base()
+        for idx, si in self.polys():
+            ring = [abs(i) - base for i in idx]
+            rev = any(i < 0 for i in idx)
+            for k in range(1, len(ring) - 1):
+                b, c = ring[k], ring[k + 1]
+                if rev:
+                    b, c = c, b
+                if ring[0] not in (b, c) and b != c:
+                    yield ring[0], b, c, si
+
+
+# -- BMP → PNG (stdlib only) -------------------------------------------------
+
+def bmp_to_png(data: bytes):
+    if len(data) < 26 or data[:2] != b"BM":
+        return None
+    try:
+        doff = struct.unpack_from("<I", data, 10)[0]
+        hsz = struct.unpack_from("<I", data, 14)[0]
+        if hsz >= 40:
+            w, h = struct.unpack_from("<ii", data, 18)
+            bpp = struct.unpack_from("<H", data, 26)[0]
+            colors = struct.unpack_from("<I", data, 32)[0]
+            psz = 4
+        elif hsz >= 12:
+            w, h = struct.unpack_from("<hh", data, 18)
+            bpp = struct.unpack_from("<H", data, 24)[0]
+            colors, psz = 0, 3
+        else:
+            return None
+    except (struct.error, IndexError):
+        return None
+    flip = h > 0
+    h = abs(h)
+    if not (1 <= w <= 8192 and 1 <= h <= 8192) or bpp not in (1, 4, 8, 24, 32):
+        return None
+    palette = []
+    if bpp <= 8:
+        n = colors or (1 << bpp)
+        for i in range(n):
+            off = 14 + hsz + i * psz
+            if off + 2 >= len(data):
+                break
+            b, g, r = data[off], data[off + 1], data[off + 2]
+            palette.append(bytes((r, g, b, 255)))
+        if not palette:
+            palette = [bytes((i, i, i, 255)) for i in range(1 << bpp)]
+    pal = b"".join(palette)
+    npal = len(palette)
+    stride = ((w * bpp + 31) // 32) * 4
+    raw = bytearray()
+    for y in range(h):
+        row_off = doff + ((h - 1 - y) if flip else y) * stride
+        row = data[row_off:row_off + stride]
+        if len(row) < stride:
+            return None
+        raw.append(0)
+        if bpp == 8:
+            raw.extend(b"".join(pal[4 * i:4 * i + 4] for i in (row[x] % npal for x in range(w))))
+        elif bpp == 4:
+            nib = [((row[x // 2] >> (4 if x % 2 == 0 else 0)) & 15) % npal for x in range(w)]
+            raw.extend(b"".join(pal[4 * i:4 * i + 4] for i in nib))
+        elif bpp == 1:
+            bit = [((row[x // 8] >> (7 - x % 8)) & 1) % npal for x in range(w)]
+            raw.extend(b"".join(pal[4 * i:4 * i + 4] for i in bit))
+        elif bpp == 24:
+            raw.extend(b"".join(bytes((row[3 * x + 2], row[3 * x + 1], row[3 * x], 255))
+                                for x in range(w)))
+        else:  # 32
+            raw.extend(b"".join(bytes((row[4 * x + 2], row[4 * x + 1], row[4 * x], 255))
+                                for x in range(w)))
+    return png_encode(w, h, bytes(raw))
+
+
+def png_encode(w, h, raw):
+    def chunk(tag, body):
+        return (struct.pack(">I", len(body)) + tag + body
+                + struct.pack(">I", zlib.crc32(tag + body) & 0xFFFFFFFF))
+    return (b"\x89PNG\r\n\x1a\n"
+            + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 6, 0, 0, 0))
+            + chunk(b"IDAT", zlib.compress(raw, 6))
+            + chunk(b"IEND", b""))
+
+
+# -- glTF/GLB build ----------------------------------------------------------
+
+class Glb:
+    def __init__(self):
+        self.data = bytearray()
+        self.views = []
+        self.accessors = []
+        self.images = []
+        self.textures = []
+        self.materials = []
+        self.primitives = []
+
+    def add_view(self, blob, target=None):
+        off = len(self.data)
+        self.data += blob
+        pad = (-len(self.data)) % 4
+        self.data += b"\x00" * pad
+        view = {"buffer": 0, "byteOffset": off, "byteLength": len(blob)}
+        if target:
+            view["target"] = target
+        self.views.append(view)
+        return len(self.views) - 1
+
+    def add_accessor(self, view, ctype, vtype, count, minmax=None):
+        acc = {"bufferView": view, "componentType": ctype, "count": count, "type": vtype}
+        if minmax:
+            acc["min"], acc["max"] = minmax
+        self.accessors.append(acc)
+        return len(self.accessors) - 1
+
+    def finish(self):
+        doc = {
+            "asset": {"version": "2.0", "generator": "rrlwo.py (LegoRR LWOB reader)"},
+            "scene": 0,
+            "scenes": [{"nodes": [0]}],
+            "nodes": [{"mesh": 0, "name": "model"}],
+            "meshes": [{"primitives": self.primitives}],
+            "materials": self.materials,
+            "accessors": self.accessors,
+            "bufferViews": self.views,
+            "buffers": [{"byteLength": len(self.data)}],
+        }
+        if self.images:
+            doc["images"] = self.images
+            doc["textures"] = self.textures
+        blob = bytes(self.data)
+        js = json.dumps(doc, separators=(",", ":")).encode()
+        js += b" " * (-len(js) % 4)
+        return (struct.pack("<4sII", b"glTF", 2, 12 + 8 + len(js) + 8 + len(blob))
+                + struct.pack("<I4s", len(js), b"JSON") + js
+                + struct.pack("<I4s", len(blob), b"BIN\x00") + blob)
+
+
+def build_glb(lwo, assets, with_textures=True, warn=print):
+    glb = Glb()
+    pts = lwo.points()
+    names = lwo.surface_names()
+    meta = lwo.surface_meta()
+
+    # keyed corner vertices per surface: flat normals + planar projection uv
+    surf_verts = {}  # surf0 -> {corner key: vi}
+    surf_pos, surf_nrm, surf_uv, surf_idx = {}, {}, {}, {}
+    for a, b, c, si in lwo.triangles():
+        if max(a, b, c) >= len(pts) or min(a, b, c) < 0:
+            warn("warning: vertex index out of range — skipping face")
+            continue
+        p0, p1, p2 = pts[a], pts[b], pts[c]
+        u = [p1[i] - p0[i] for i in range(3)]
+        v = [p2[i] - p0[i] for i in range(3)]
+        n = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]]
+        m = sum(x * x for x in n) ** 0.5
+        if m == 0:
+            continue
+        n = [x / m for x in n]
+        axis = max(range(3), key=lambda k: abs(n[k]))
+        us, vs = [i for i in range(3) if i != axis]
+        meta_m = meta.get(names[si].lower(), {}) if si < len(names) else {}
+        sx, sy = meta_m.get("tsiz", (1.0, 1.0))
+        table = surf_verts.setdefault(si, {})
+        pos, nrm, uv = (surf_pos.setdefault(si, []), surf_nrm.setdefault(si, []),
+                        surf_uv.setdefault(si, []))
+        tri = []
+        for p in (p0, p1, p2):
+            key = (p, tuple(n), p[us] / (sx or 1), p[vs] / (sy or 1))
+            vi = table.get(key)
+            if vi is None:
+                vi = len(pos)
+                table[key] = vi
+                pos.append(p)
+                nrm.append(tuple(n))
+                uv.append((p[us] / (sx or 1), p[vs] / (sy or 1)))
+            tri.append(vi)
+        surf_idx.setdefault(si, []).extend(tri)
+
+    # primitives: vertices per surface via the key table, real face indices
+    tex_cache = {}
+    for si in sorted(surf_pos):
+        pos, nrm, uv = surf_pos[si], surf_nrm[si], surf_uv[si]
+        idx = surf_idx[si]
+        n = len(pos)
+        if n == 0 or not idx:
+            continue
+        mn = [min(p[k] for p in pos) for k in range(3)]
+        mx = [max(p[k] for p in pos) for k in range(3)]
+        pv = glb.add_view(struct.pack(f"<{3 * n}f", *[c for p in pos for c in p]))
+        nv = glb.add_view(struct.pack(f"<{3 * n}f", *[c for p in nrm for c in p]))
+        uvv = glb.add_view(struct.pack(f"<{2 * n}f", *[c for v in uv for c in v]))
+        ityp = 5125 if n >= 65536 else 5123
+        iblob = (struct.pack(f"<{len(idx)}I", *idx) if ityp == 5125
+                 else struct.pack(f"<{len(idx)}H", *idx))
+        iv = glb.add_view(iblob)
+        pa = glb.add_accessor(pv, 5126, "VEC3", n, (mn, mx))
+        na = glb.add_accessor(nv, 5126, "VEC3", n)
+        ua = glb.add_accessor(uvv, 5126, "VEC2", n)
+        ia = glb.add_accessor(iv, ityp, "SCALAR", len(idx))
+        mat = {"pbrMetallicRoughness": {"metallicFactor": 0.0, "roughnessFactor": 0.7},
+               "doubleSided": True, "name": names[si] if si < len(names) else f"surf{si}"}
+        m = meta.get((names[si] if si < len(names) else "").lower(), {})
+        if m.get("colr"):
+            mat["pbrMetallicRoughness"]["baseColorFactor"] = m["colr"]
+        if with_textures and m.get("timg"):
+            key = m["timg"].lower().split("/")[-1]
+            if key not in tex_cache:
+                data = assets.read(key)
+                tex_cache[key] = (bmp_to_png(data) if data else None, bool(data))
+            png, found = tex_cache[key]
+            if png:
+                iv2 = glb.add_view(png)
+                glb.images.append({"bufferView": iv2, "mimeType": "image/png"})
+                glb.textures.append({"source": len(glb.images) - 1})
+                mat["pbrMetallicRoughness"]["baseColorTexture"] = {"index": len(glb.textures) - 1}
+            elif found is False:
+                warn(f"warning: texture {key} not found in wads")
+            elif png is None and found:
+                warn(f"warning: texture {key} not decodable (not a BMP?)")
+        glb.materials.append(mat)
+        glb.primitives.append({
+            "attributes": {"POSITION": pa, "NORMAL": na, "TEXCOORD_0": ua},
+            "indices": ia, "material": len(glb.materials) - 1})
+    if not glb.primitives:
+        raise ValueError("no geometry produced")
+    return glb.finish()
+
+
+# -- cli ---------------------------------------------------------------------
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(description="LegoRR .lwo (LightWave 4) tools")
+    ap.add_argument("cmd", choices=["list", "dump", "gltf"])
+    ap.add_argument("target", nargs="?", help="path to .lwo on disk")
+    ap.add_argument("-n", "--name", help="resolve inside the WADs instead")
+    ap.add_argument("--wad-dir", action="append", dest="wad_dirs")
+    ap.add_argument("-o", "--output")
+    ap.add_argument("--no-textures", action="store_true")
+    ap.add_argument("-q", "--quiet", action="store_true")
+    args = ap.parse_args(argv)
+
+    dirs = args.wad_dirs or wad_dirs(None)
+    assets = GameAssets(dirs)
+    if args.cmd == "list":
+        for n in assets.names_with(".lwo"):
+            print(n)
+        return 0
+
+    if args.name:
+        data = assets.read(args.name)
+        if data is None:
+            ap.error(f"{args.name!r} not found in wads: {dirs}")
+    elif args.target:
+        data = pathlib.Path(args.target).read_bytes()
+    else:
+        ap.error("need PATH or --name NAME")
+
+    lwo = Lwo(data)
+    if args.cmd == "dump":
+        pts = lwo.points()
+        print(f"chunks: {[(t, len(d)) for t, d in lwo.chunks]}")
+        tris = list(lwo.triangles())
+        print(f"points={len(pts)} polys={len(lwo.polys())} tris={len(tris)} "
+              f"surfaces={lwo.surface_names()}")
+        for name, blocks in lwo.surf_records():
+            t = blocks.get("TIMG")
+            print(f"  SURF {name!r}: tags={sorted(blocks)} "
+                  f"timg={t.split(b'.')[0].decode(errors='replace') if t else None}")
+        return 0
+
+    glb = build_glb(lwo, assets, not args.no_textures,
+                    warn=(lambda *_: None) if args.quiet else print)
+    base = (args.name or args.target).rsplit(".", 1)[0].replace("\\", "/").split("/")[-1]
+    out = pathlib.Path(args.output or base + ".glb")
+    out.write_bytes(glb)
+    print(f"wrote {out} ({len(glb):,} bytes)")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

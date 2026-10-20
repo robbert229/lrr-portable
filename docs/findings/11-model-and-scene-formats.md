@@ -147,6 +147,26 @@ From `unpacked/LegoRR0` (5,631 files): 2,523 `.bmp`, 1,132 `.lwo`, 750 `.lws`,
    `FUN_0040b5f0` (`0x40b623–0x40b656`).
 5. `.wav`/`.x` loaders and the D3DRM dependency (`D3DRM.DLL`) remain open.
 
+## 5b. On-disk SURF layout — confirmed during rrlwo.py development (2026-10-20)
+
+The converter (`tools/rrlwo.py`) parsed all 1,132 shipped models through this
+layout with zero failures, pinning §3's "keyword parser" down to concrete
+bytes:
+
+* `SURF` records arrive **one per `SURF` chunk** (not one chunk of many),
+  each = even-padded surface name + sub-blocks.
+* Sub-blocks = 4-char tag + **u16 big-endian** size + payload (padded to
+  even), not the 1-byte size a naive LWO-5 reading would assume.
+* Vocabulary observed: `COLR` (u8 r,g,b,a), `FLAG`, `DIFF`, `VDIF`, `CTEX`
+  (text, e.g. `Planar Image Map`), `TIMG` (path ending in a wad basename),
+  `TWRP`, `TFLG`, `TSIZ` (3×f32), `TCTR` (3×f32), `TAAS`, `TCLR`.
+* Polygon-index base: `POLS` is 1-based as spec'd, **but four shipped files
+  index from zero** (`MiscAnims/BirdScarer/1.lwo`, `MiscAnims/Effects/
+  BEAM.LWO`, `Creatures/Spider/M_SFang2.lwo`,
+  `Buildings/Powerstation/Connecting_Pipe.lwo`) — detectable since 1-based
+  forbids index 0; the converter auto-detects per file.
+
+
 ### Function map (this finding)
 
 | Address | Name (working) | Role |
