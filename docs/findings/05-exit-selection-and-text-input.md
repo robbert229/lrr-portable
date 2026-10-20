@@ -98,9 +98,7 @@ So `MessageDispatch` = **dedupe-with-live-callback** message bus.
 
 ## Next targets
 
-1. Selection cluster `0x4520d0…0x452da0` — decompile as the next big block
-   (entity pick/selection semantics, links to entity struct offsets).
-2. Input-device region `0x457d7e…` (`FUN_00457d7e`…) — mouse/keyboard device
-   layer behind `DAT_004ffbc0` and the `0x76ab80` key table.
-3. `FUN_00435940` — the "keep running?" probe.
+1. ~~Selection cluster~~ done → [06 — Command Queue & Selection](06-command-queue-and-selection.md).
+2. Input-device region `0x457d7e…` (`DAT_004ffbc0` writer region) — still open.
+3. ~~`FUN_00435940`~~ done: `KeepRunning` — doc 06.
 4. `FUN_00456550` callers — who installs `SystemStateFlags`.

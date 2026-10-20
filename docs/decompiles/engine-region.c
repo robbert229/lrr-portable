@@ -1643,3 +1643,190 @@ undefined4 MessagePreCheck(int param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
+// ==== KeepRunning @ 00435940 ====
+
+undefined4 KeepRunning(void)
+
+{
+  int iVar1;
+  int iVar2;
+  int iVar3;
+  int iVar4;
+  
+  FUN_00431560();
+  iVar1 = FUN_00416d50();
+  iVar2 = FUN_00416d60();
+  FUN_0047b160();
+  iVar3 = FUN_00416d00();
+  if (iVar3 != 0) {
+    FUN_0045fda0();
+    FUN_00460360();
+    FUN_00461410();
+    FUN_004601e0();
+  }
+  FUN_004295f0(1,0,0);
+  FUN_004859b0(DAT_00556140);
+  iVar3 = FUN_0042f0c0();
+  iVar4 = FUN_00416d00();
+  if (iVar4 != 0) {
+    if (iVar1 == 0) {
+      if (iVar2 == 0) goto LAB_004359e5;
+      FUN_00416c80(2);
+      iVar1 = FUN_00416dd0();
+      if (iVar1 != 0) {
+        return 0;
+      }
+    }
+    else {
+      FUN_00416c80(1);
+      iVar1 = FUN_00416dd0();
+      if (iVar1 != 0) {
+        return 0;
+      }
+    }
+    iVar3 = FUN_00416d70();
+  }
+LAB_004359e5:
+  FUN_00416940(1,0);
+  if (iVar3 == 0) {
+    return 0;
+  }
+  iVar1 = FUN_00429890(iVar3);
+  if (iVar1 == 0) {
+    return 0;
+  }
+  FUN_0048db80(iVar3);
+  return 1;
+}
+
+
+// ==== SetSystemStateFlags @ 00456550 ====
+
+undefined4 SetSystemStateFlags(undefined4 *param_1)
+
+{
+  DAT_004ff980 = *param_1;
+  return *param_1;
+}
+
+
+// ==== SelectionRoot @ 004520d0 ====
+
+void SelectionRoot(void)
+
+{
+  int iVar1;
+  undefined4 *puVar2;
+  uint *puVar3;
+  uint uVar4;
+  int iVar5;
+  
+  if (((DAT_00556ecc & 0x100000) == 0) && (uVar4 = 0, DAT_004ff29c != 0)) {
+    puVar2 = &DAT_004ff0d0;
+    do {
+      if ((&DAT_0076ab80)[(byte)(&DAT_004ff0bc)[uVar4]] != '\0') {
+        FUN_00452060(puVar2[-2],puVar2[-1],*puVar2,puVar2 + 1);
+      }
+      uVar4 = uVar4 + 1;
+      puVar2 = puVar2 + 5;
+    } while (uVar4 < DAT_004ff29c);
+  }
+  uVar4 = 0;
+  if (*(int *)(&DAT_004fef20 + DAT_004fef28 * 4) != 0) {
+    do {
+      FUN_0045d870(&DAT_004eaf20 + (DAT_004fef28 * 0x800 + uVar4) * 0x14);
+      uVar4 = uVar4 + 1;
+    } while (uVar4 < *(uint *)(&DAT_004fef20 + DAT_004fef28 * 4));
+  }
+  iVar5 = *(int *)(&DAT_004fef20 + DAT_004fef28 * 4);
+  iVar1 = DAT_004fef28 * 0xa000;
+  *(undefined4 *)(&DAT_004fef20 + DAT_004fef28 * 4) = 0;
+  DAT_004fef28 = (uint)(DAT_004fef28 == 0);
+  *(undefined4 *)(&DAT_004fef20 + DAT_004fef28 * 4) = 0;
+  if (iVar5 != 0) {
+    puVar3 = (uint *)(&DAT_004eaf28 + iVar1);
+    do {
+      switch(puVar3[-2]) {
+      case 1:
+        FUN_004526c0(puVar3[-1],*puVar3);
+        break;
+      case 3:
+        FUN_00452be0();
+        break;
+      case 4:
+        FUN_00452c50(puVar3[-1]);
+        break;
+      case 5:
+      case 6:
+        FUN_004035c0(puVar3[-1],puVar3 + 1,*puVar3);
+        break;
+      case 8:
+        FUN_00403270(&DAT_004fef2c,DAT_004ff298,puVar3 + 1,*puVar3);
+        break;
+      case 9:
+        FUN_00452d60(*puVar3);
+        break;
+      case 10:
+        if (DAT_004ff298 != 0) {
+          FUN_00425d50(DAT_004fef2c);
+        }
+        break;
+      case 0xb:
+        FUN_004295f0(1,0,0);
+        break;
+      case 0xc:
+        FUN_00464fa0(*puVar3,0);
+        break;
+      case 0x13:
+        FUN_00431780(puVar3[1],puVar3[2],*puVar3 & 0xffff,*puVar3 >> 0x10);
+        break;
+      case 0x15:
+        FUN_00439370(puVar3 + 1,0,0,1);
+        break;
+      case 0x17:
+        FUN_00402720(puVar3[-1],0);
+        break;
+      case 0x19:
+        FUN_00403610(puVar3[-1],*puVar3);
+        break;
+      case 0x1b:
+        FUN_004394b0(puVar3 + 1,0,0,1);
+        break;
+      case 0x1d:
+        FUN_00402720(puVar3[-1],0);
+        break;
+      case 0x1f:
+        FUN_0043aea0();
+        break;
+      case 0x21:
+        FUN_004470d0(puVar3[-1]);
+        break;
+      case 0x23:
+        FUN_00452430(puVar3[-1]);
+        break;
+      case 0x25:
+        FUN_00447210(puVar3[-1],*puVar3);
+        break;
+      case 0x2b:
+        FUN_004036c0(puVar3[-1],*puVar3);
+        break;
+      case 0x2d:
+        FUN_004528c0();
+        break;
+      case 0x34:
+        FUN_00439340(puVar3 + 1,0);
+        break;
+      case 0x36:
+        FUN_00439280(puVar3 + 1);
+        break;
+      case 0x40:
+        FUN_00452cc0();
+      }
+      puVar3 = puVar3 + 5;
+      iVar5 = iVar5 + -1;
+    } while (iVar5 != 0);
+  }
+  return;
+}
+
+

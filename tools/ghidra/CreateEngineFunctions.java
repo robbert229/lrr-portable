@@ -37,12 +37,20 @@ public class CreateEngineFunctions extends GhidraScript {
         0x411f00L,  // KeyContextCheck
         0x456240L,  // SystemStateFlags — gated by bit masks
         0x4199f0L,  // MessagePreCheck — message filter before queueing
+        0x435940L,  // KeepRunning — "should the app continue?" probe
+        0x456550L,  // SetSystemStateFlags — sole writer of DAT_004ff980
+        0x4520d0L,  // SelectionRoot — called in EngineTick
+        0x4521d0L,  // SelectionClusterA
+        0x452200L,  // SelectionClusterB
+        0x4521f2L,  // SelectionGateHelper
     };
     static final String[] NAMES = { "EngineTick", "EngineShutdown", "EngineShutdownAlt",
         "MainSimStep", "ManagerTick", "MessageDispatch", "ViewContextTick",
         "EnginePreTick", "QuitPoll", "SelectedEntity", "TransitionControl",
         "EntityRename", "KeyToAscii", "KeyContextCheck", "SystemStateFlags",
-        "MessagePreCheck" };
+        "MessagePreCheck", "KeepRunning", "SetSystemStateFlags",
+        "SelectionRoot", "SelectionClusterA", "SelectionClusterB",
+        "SelectionGateHelper" };
 
     @Override
     public void run() throws Exception {
