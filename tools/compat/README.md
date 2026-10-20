@@ -16,16 +16,22 @@ python3 tools/compat/a2.py shell …     # arbitrary exe/command under the prefi
 
 ## How it runs the game
 
-- **Runner** — discovery order: `$RR_A2_PROTON`, Steam/ProtonUp-Qt `proton`
-  scripts, Lutris wine runners (this box: `ge-proton`, wine 10.0 Staging),
-  `$UMU_RUN`/`umu-run`. First run bootstraps the prefix; `winecfg.exe` via
-  `setup --winecfg` or `shell winecfg.exe` for manual tweaks.
+- **Runner** — discovery order: `$RR_A2_PROTON`, then `proton` *scripts* (Steam
+  compat tools, ProtonUp-Qt, or a Proton tree's root script — this box uses
+  the GE-Proton10-25 script in the Lutris `ge-proton` runner), then bare wine,
+  then `$UMU_RUN`/`umu-run`. Important: a bare wine *binary* from a Proton tree
+  cannot run this game (missing ELF companions — `kernel32 c0000135`), which is
+  why scripts rank above binaries. Prefixes are left to the runner: Proton
+  bootstraps its own and refuses to upgrade foreign ones, so any seed prefix
+  from the old bare-wine path is moved aside on first Proton use.
+  `winecfg.exe` via `setup --winecfg` or `shell winecfg.exe` for manual tweaks.
 - **Prefix/game state** — under `${XDG_DATA_HOME:-~/.local/share}/rock-raider-a2/`:
-  `compatdata/pfx/` (prefix), `game/` (staged copy of `source/`, plus
+  `compatdata/` (Proton-managed), `game/` (staged copy of `source/`, plus
   `.mods/L1/` as the repack working tree), `logs/`, `backups/`.
 - **Display** — wrapped in `gamescope` at 640×480 @ 60 Hz when available
   (the game is hardcoded for that mode, finding 15 §4.3); `--no-gamescope`
-  opts out.
+  opts out. Wine-specific vars are exported *inside* the wrapped command —
+  giving gamescope wine's `LD_LIBRARY_PATH` breaks its Wayland init.
 - **Logs** — `WINEDEBUG=+ddraw,+winmm,-fixme-all` by default (the two
   channels that answer the finding-15 friction list); override the env var
   to widen (`+all` during crash triage).
@@ -43,16 +49,16 @@ candidate for a dgVoodoo `ddraw.dll` override), AVI decode chatter
 data checks, crashes. A run with *no* signature hits is a result too — the
 table is a cross-check, not a checklist that must fill up.
 
-## Verdicts we're collecting (map into finding 16 later)
+## Verdicts — status as of finding 16 (2026-10-20)
 
-| Question | Where answered |
+| Question | Status |
 | --- | --- |
-| Does DDraw/D3DRM render through DXVK's translation? | first `run` + visual check |
-| Which `IDirectDrawN` does the bundled d3drm query? | `+ddraw` log GUID chatter (§5.1) |
-| HAL vs software d3drm device? | perf + `+d3d9`/DXVK log (§5.2) |
-| CDDA failure mode (silent? error dialog spam?) | `+winmm` log, watchdog behaviour |
-| Do the shipped AVIs decode, or need `patch-avi`? | `+avifil`/`vfw` lines + eyeball |
-| Exception-handler reporting (`SetUnhandledExceptionFilter`) | any crash's dialog/log |
+| Does DDraw render through the translation? | **yes** — 467 k trace lines, 6,324 surfaces, game confirmed to launch |
+| Which `IDirectDrawN` gets queried? | **`IDirectDraw4`** (`9c59509a-…` GUID in `ddraw_QueryInterface`) |
+| HAL vs software d3drm device? | open — no D3D errors; needs perf eyeball |
+| CDDA failure mode | open — 25 s automated runs never reach the MCI call |
+| Shipped AVIs decode? | partial — movies go via wine's **quartz**, not `avifil32`; `send_buffer` sample errors seen |
+| Exception-handler reporting | no crashes encountered yet |
 
 ## Patches
 

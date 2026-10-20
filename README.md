@@ -17,7 +17,7 @@ and curiosity; nothing in this repository is affiliated with or endorsed by the 
 
 ```
 README.md           This file
-docs/findings/      Reverse-engineering findings, 01–15 (see index below)
+docs/findings/      Reverse-engineering findings, 01–16 (see index below)
 tools/              WAD tooling (rrwad.py: unpack/pack/verify — see tools/README.md)
                     + compat harness (tools/compat/a2.py — see tools/compat/README.md)
 docs/decompiles/    Named Ghidra pseudocode corpus (engine-region.c)
@@ -53,9 +53,9 @@ legally obtained copy of the game.
       (Fine detail open: `.uv` text grammar, `.flh` container — 11 §6, 14 §5)
 - [x] Understand mission / level scripting and data-driven behavior — findings 07, 09
 - [x] Understand the savegame format — finding 08
-- [ ] Eventually: reimplementations or tooling that let the game run on modern systems
-      — A.1 done (finding 15: DDraw+d3drm surface, no version gates); A.2 harness
-      `tools/compat/a2.py` ready with runner + digest checks found (2026-10-20)
+- [x] Eventually: reimplementations or tooling that let the game run on modern systems
+      — A.1 audit (finding 15) → A.2 live test (finding 16): **the shipped exe launches
+      and renders under GE-Proton via `tools/compat/a2.py run`** (2026-10-20)
 
 ## Findings index
 
@@ -76,6 +76,7 @@ legally obtained copy of the game.
 | 13 | [`findings/13-texture-system.md`](docs/findings/13-texture-system.md) | BMP surface loader, name cache, LWO material binding, world tile sets, VRAM budget |
 | 14 | [`findings/14-sound-and-video.md`](docs/findings/14-sound-and-video.md) | WAVE/mmio sound bank, CD-DA music via MCI, AVIFIL32 movies, logo splash |
 | 15 | [`findings/15-compat-audit.md`](docs/findings/15-compat-audit.md) | Modern-compat API-surface audit: wrapper coverage matrix, launch-gate scan, friction list |
+| 16 | [`findings/16-a2-live-test.md`](docs/findings/16-a2-live-test.md) | **A.2 live test passed**: game launches under GE-Proton10-25; DDraw interface climbing observed (→ `IDirectDraw4`); movies via quartz; CDDA still open |
 
 Named-pseudocode corpus: [`docs/decompiles/engine-region.c`](docs/decompiles/engine-region.c)
 (114 identified functions, ~7.6k lines; all addresses in the findings resolve here).
