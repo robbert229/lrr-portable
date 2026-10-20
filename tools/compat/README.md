@@ -57,7 +57,7 @@ table is a cross-check, not a checklist that must fill up.
 | Which `IDirectDrawN` gets queried? | **`IDirectDraw4`** (`9c59509a-…` GUID in `ddraw_QueryInterface`) |
 | HAL vs software d3drm device? | open — no D3D errors; needs perf eyeball |
 | CDDA failure mode | **moot** — digital media has no CD track; music streams from `Data/Sounds/Streamed` WAVs (finding 17) |
-| Shipped AVIs decode? | **no** — skip silently, `Missing decoder: Intel Indeo 5` (gstreamer path); `patch-avi` optional (finding 17) |
+| Shipped AVIs decode? | **yes now** — was `Missing decoder: Intel Indeo 5`; root cause was two missing sonames killing the sysroot's ffmpeg plugin, auto-fixed by `a2.py` (finding 18) |
 | Mouse grab / menus usable? | **yes** — first mission completed with mouse input (finding 17) |
 | Exception-handler reporting | no crashes encountered yet |
 

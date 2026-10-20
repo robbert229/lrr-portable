@@ -80,7 +80,7 @@ after a clean boot.
 
 - 15 §3 mouse: **works**
 - 15 §4.1 CDDA: **moot on digital media** (no CDDA media present; streamed WAV path instead)
-- 15 §4.2 movies: **blocked on Indeo 5 decoder**, container path is gstreamer, game skips gracefully
+- 15 §4.2 movies: **blocked on Indeo 5 decoder**, container path is gstreamer, game skips gracefully — **resolved in 18** (plugin deps, not codec availability)
 - 16 §open-1 music: answered above
 - 16 §open-2 title movie: answered above (file is `lmi640.avi`, IV50)
 - 16 §open-4 mouse + §open-3 exclusive mode: answered (works)
