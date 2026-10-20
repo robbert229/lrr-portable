@@ -73,8 +73,8 @@ kernel `Xid 51` (BAD_TSG) then `Xid 154` requesting **PF FLR**, after which
 resolved everything; the game was never the cause. If `run` ever exits
 `-6` in gamescope's init again, check `journalctl -k | grep Xid` before
 suspecting the harness. **Note:** this state likely overlapped the 14:58
-session's slow-performance report — perf verdict is provisional; re-judge
-after a clean boot.
+session's slow-performance report; the verdict was re-judged after the clean
+reboot (good enough), with dgVoodoo kept as a documented future avenue only.
 
 ## Findings-index updates implied here
 
@@ -92,5 +92,5 @@ after a clean boot.
 | First mission completable, menus/mouse work | observed |
 | Music audible; not via CDDA (no CD media; streamed WAVs) | observed (log + filesystem) |
 | Movies skipped due to missing Indeo 5 decoder | observed (`Missing decoder:` ×3, ffprobe IV50) |
-| Perf verdict | provisional — driver had logged Xid degradation in the same window |
+| Perf verdict | **good enough as observed** (clean-boot sessions, 2026-10-20). Deferred future work: dgVoodoo as an alternate translation path if ever wanted |
 | CDDA behaviour on physical-CD media | open — would need retail media to test; no evidence required for this distribution |
