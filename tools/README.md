@@ -30,8 +30,9 @@ SRFS surface names; BMP payloads convert to PNG with stdlib only.
 
 Verified: full library 1,132/1,132 exported without errors (2026-10-20),
 structural checks (GLB framing, buffer lengths, index ranges, PNG inflation)
-on all of them. Render-level eyeballing is a user task — no glTF viewer
-exists in this environment.
+on all of them, and a visual check on `Buildings\Barracks\Base.glb` in a
+glTF viewer — flat-shaded meshes with textures, as the design predicts
+(user, 2026-10-20).
 
 ## `rrwad.py` — the `.wad` (WWAD) container tool
 
