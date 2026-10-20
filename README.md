@@ -17,7 +17,7 @@ and curiosity; nothing in this repository is affiliated with or endorsed by the 
 
 ```
 README.md           This file
-docs/findings/      Reverse-engineering findings, 01–11 (see index below)
+docs/findings/      Reverse-engineering findings, 01–12 (see index below)
 docs/decompiles/    Named Ghidra pseudocode corpus (engine-region.c)
 docs/evidence/      Exported REA evidence bundle (address-level citations)
 tools/              Analysis tooling: unwad.py, Ghidra function-naming script
@@ -47,7 +47,8 @@ legally obtained copy of the game.
       — findings 02–06, 10
 - [x] Document the `.wad` archive container format(s) — finding 01
 - [ ] Document asset formats: 3D models, animations, sounds, videos
-      — partial: models/scenes in finding 11; sounds/videos/UV grammar open
+      — partial: models/scenes (11) and `Lego*` block-text configs (12);
+      sounds/videos/UV grammar open
 - [x] Understand mission / level scripting and data-driven behavior — findings 07, 09
 - [x] Understand the savegame format — finding 08
 - [ ] Eventually: reimplementations or tooling that let the game run on modern systems
@@ -67,6 +68,7 @@ legally obtained copy of the game.
 | 09 | [`findings/09-reward-task-manager.md`](docs/findings/09-reward-task-manager.md) | Mission task block, reward overlay, reward-zone save trigger |
 | 10 | [`findings/10-entity-command-primitives.md`](docs/findings/10-entity-command-primitives.md) | Command records, AI task/priority registry, opcode map |
 | 11 | [`findings/11-model-and-scene-formats.md`](docs/findings/11-model-and-scene-formats.md) | LightWave LWO loader, LWSC scene parser, surface/UV pipeline |
+| 12 | [`findings/12-block-text-format.md`](docs/findings/12-block-text-format.md) | `Lego*` block-text config format: scanner, path-lookup API, `.ae` consumers |
 
 Named-pseudocode corpus: [`docs/decompiles/engine-region.c`](docs/decompiles/engine-region.c)
 (114 identified functions, ~7.6k lines; all addresses in the findings resolve here).
