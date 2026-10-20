@@ -247,7 +247,7 @@ def build_launch(args, game_cmd):
         cmd = [str(runner["path"])] + game_cmd
     env = runner_env(runner)
     if getattr(args, "gamescope", True) and shutil.which("gamescope"):
-        cmd = ["gamescope", "-w", "640", "-h", "480", "-F", "60", "--"] + cmd
+        cmd = ["gamescope", "-w", "640", "-h", "480", "-r", "60", "-F", "nearest", "--"] + cmd
     return cmd, env
 
 
