@@ -49,6 +49,10 @@ WINEDEBUG_DEFAULT = "+ddraw,+winmm,-fixme-all"
 # Ordered so the triage summary hits the important classes first.
 # (pattern, hint)  — hint phrasing maps each observation back to finding 15.
 TRIAGE_SIGNATURES = [
+    (re.compile(r"wine: chdir|wine: created| wineserver.*fail", re.I),
+     "wine failed to start — prefix bootstrap incomplete (run `a2.py setup`)"),
+    (re.compile(r"corrupted double-linked list|malloc.*corrupt", re.I),
+     "allocator corruption — treat as env/wine failure, NOT game behaviour"),
     (re.compile(r"c0000005|segmentation fault|unhandled exception", re.I),
      "CRASH — attach the log to a new finding, do not continue blind"),
     (re.compile(r"err:module:import_dll", re.I),
@@ -126,6 +130,21 @@ def runner_env(runner):
     else:  # umu-run manages its prefix cache itself
         env["WINEPREFIX"] = str(COMPATDATA / "pfx")
     return env
+
+
+def bootstrap_wine(runner, env):
+    """A cold wine binary does not bootstrap its prefix — wineboot must run first.
+    (Proton runners do this internally; the bare `wine` kind does not.)"""
+    pfx = pathlib.Path(env["WINEPREFIX"])
+    if (pfx / "drive_c" / "windows").is_dir():
+        return
+    print(f"bootstrapping wine prefix {pfx} (one-time)")
+    # this wine chdirs into $WINEPREFIX before populating it — dir must exist first
+    pfx.mkdir(parents=True, exist_ok=True)
+    subprocess.run([str(runner["path"]), "wineboot", "-u"], env=env,
+                   stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT, timeout=600)
+    if not (pfx / "drive_c" / "windows").is_dir():
+        raise SystemExit("prefix bootstrap failed — check wine installation")
 
 
 # -- staging ------------------------------------------------------------------
@@ -236,7 +255,7 @@ def triage_file(path):
     return hits
 
 
-def build_launch(args, game_cmd):
+def build_launch(args, game_cmd, bootstrap=True):
     runner = find_runner()
     if runner is None:
         raise SystemExit("no Proton/umu runner found — install one via ProtonUp-Qt "
@@ -246,6 +265,8 @@ def build_launch(args, game_cmd):
     else:  # wine runs exes directly; umu-run takes the exe as its sole argument
         cmd = [str(runner["path"])] + game_cmd
     env = runner_env(runner)
+    if runner["kind"] == "wine" and bootstrap:
+        bootstrap_wine(runner, env)
     if getattr(args, "gamescope", True) and shutil.which("gamescope"):
         cmd = ["gamescope", "-w", "640", "-h", "480", "-r", "60", "-F", "nearest", "--"] + cmd
     return cmd, env
@@ -253,7 +274,7 @@ def build_launch(args, game_cmd):
 
 def cmd_run(args):
     if args.dry_run:
-        cmd, env = build_launch(args, ["__preview__"])
+        cmd, env = build_launch(args, ["__preview__"], bootstrap=False)
         print("command:", " ".join(map(str, cmd)))
         keys = ("WINE", "DXVK", "VKD", "STEAM", "UMU", "GAMESCOPE")
         print("env:", {k: v for k, v in sorted(env.items()) if k.startswith(keys)})
@@ -264,7 +285,7 @@ def cmd_run(args):
     log = log_path()
     print(f"launch: {' '.join(map(str, cmd))}\nlogging -> {log}")
     with open(log, "w") as lf:
-        proc = subprocess.Popen(cmd, env=env, stdout=subprocess.PIPE,
+        proc = subprocess.Popen(cmd, env=env, cwd=STAGE, stdout=subprocess.PIPE,
                                 stderr=subprocess.STDOUT, text=True, errors="replace")
         try:
             for line in proc.stdout:
@@ -283,11 +304,14 @@ def cmd_setup(args):
     if args.restage:
         shutil.rmtree(STAGE, ignore_errors=True)
     stage_and_check()
-    if find_runner() is None:
+    runner = find_runner()
+    if runner is None:
         raise SystemExit("runner missing — run `a2.py doctor` first")
     if args.winecfg:
         cmd, env = build_launch(args, ["winecfg.exe"])
-        raise SystemExit(subprocess.run(cmd, env=env).returncode)
+        raise SystemExit(subprocess.run(cmd, env=env, cwd=STAGE).returncode)
+    if runner["kind"] == "wine":
+        bootstrap_wine(runner, runner_env(runner))
     print(f"prefix under {COMPATDATA} (bootstraps automatically on first run)")
     print("next:   python3 tools/compat/a2.py run")
 
@@ -314,7 +338,7 @@ def cmd_doctor(args):
 def cmd_shell(args):
     stage_and_check()
     cmd, env = build_launch(args, list(args.argv))
-    raise SystemExit(subprocess.run(cmd, env=env).returncode)
+    raise SystemExit(subprocess.run(cmd, env=env, cwd=STAGE).returncode)
 
 
 def cmd_triage(args):
