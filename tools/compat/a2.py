@@ -19,6 +19,7 @@ Steam / ProtonUp-Qt installs. See tools/compat/README.md.
 """
 import argparse
 import datetime
+import glob
 import hashlib
 import json
 import os
@@ -61,6 +62,11 @@ TRIAGE_SIGNATURES = [
      "DDraw API errors — translation layer misses; consider dgVoodoo override"),
     (re.compile(r"fixme:ddraw", re.I),
      "unimplemented DDraw calls — usually benign, note which methods"),
+    (re.compile(r"Missing decoder", re.I),
+     "video decoder missing — libgstlibav dropped (missing libbz2/libvpx aliases); "
+     "run `a2.py setup` (finding 18)"),
+    (re.compile(r"err:quartz:send_buffer", re.I),
+     "quartz sample-fetch errors — movie/audio-graph friction, note alongside decode lines"),
     (re.compile(r"cdaudio", re.I),
      "CDDA music path active (finding 15 §4.1) — silent tracks are expected"),
     (re.compile(r"avifil|AVIFile|err:vfw", re.I),
@@ -162,6 +168,43 @@ def ensure_proton_compatdata():
         shutil.rmtree(aside, ignore_errors=True)
         shutil.move(str(pfx), str(aside))
         print(f"moved seed prefix aside -> {aside} (proton bootstraps a fresh one)")
+
+
+def _elf_class(path):
+    try:
+        with open(path, "rb") as f:
+            return f.read(5)[4]  # EI_CLASS: 1=ELF32 2=ELF64
+    except (OSError, IndexError):
+        return 0
+
+
+def ensure_gst_libav_deps(runner):
+    """wine's movie path dies silently if the bundled libgstlibav plugin cannot
+    dlopen, and its ffmpeg backend needs libbz2/libvpx the Proton tree does not
+    ship. Aliase them to correctly-classed host copies and drop the stale gst
+    registry so wine rescans (root cause of the Indeo 'Missing decoder',
+    finding 18)."""
+    changed = False
+    for arch, want in (("i386", 1), ("x86_64", 2)):
+        d = runner["path"].parent / "files" / "lib" / f"{arch}-linux-gnu"
+        if not (d / "gstreamer-1.0" / "libgstlibav.so").exists():
+            continue
+        for soname, globpat in (("libbz2.so.1.0", "libbz2.so.*"),
+                                ("libvpx.so.6", "libvpx.so.*")):
+            link = d / soname
+            if link.exists():
+                continue
+            cands = sorted(set(glob.glob(f"/lib*/{globpat}") + glob.glob(f"/usr/lib*/{globpat}")))
+            host = next((c for c in reversed(cands) if _elf_class(c) == want), None)
+            if host:
+                link.symlink_to(host)
+                changed = True
+                print(f"linked {soname} -> {host} (gst libav deps)")
+    if changed:
+        stale = list(COMPATDATA.glob("gstreamer-1.0/registry.*.bin"))
+        for r in stale:
+            r.unlink()
+            print(f"cleared gst registry {r.name} (wine rebuilds it on next run)")
 
 
 def bootstrap_wine(runner, env):
@@ -320,6 +363,7 @@ def build_launch(args, game_cmd, bootstrap=True):
         bootstrap_wine(runner, env)
     elif runner["kind"] == "proton" and bootstrap:
         ensure_proton_compatdata()
+        ensure_gst_libav_deps(runner)
     if getattr(args, "gamescope", True) and shutil.which("gamescope"):
         exported = sorted(f"{k}={v}" for k, v in env.items() if os.environ.get(k) != v)
         cmd = (["gamescope", "-w", "640", "-h", "480", "-r", "60", "-F", "nearest", "--"]
