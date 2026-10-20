@@ -99,6 +99,7 @@ alignment padding.** Case-insensitive name match over the flat path table is the
 | Binary segments, procedure/string counts | observed (Ghidra) |
 | Dispatcher control flow, strings, xrefs | observed (Ghidra) |
 | WAD file layout, offsets, uncompressed payloads | observed (validated by parsing both archives) |
+| Container round-trip | **proven** — `tools/rrwad.py verify` repacks both shipped archives byte-identical (5,631 + 214 entries) |
 | Runtime slot/context table semantics | observed (Ghidra pseudocode) |
 | Compression codecs `FUN_0049c8e0` / `FUN_0049ca60` | **dormant** — flag=1, stored=original everywhere; codecs never exercised |
 | STD branch = plain `Data\` files | inferred from branch structure + `Data\%s` string |
@@ -107,7 +108,8 @@ alignment padding.** Case-insensitive name match over the flat path table is the
 ## Next steps
 
 - Trace `FUN_0048eb90` (STD/open) — done (see STD branch above); unpacking both archives
-  with `tools/unwad.py` — done.
+  with `tools/rrwad.py` — done; the same tool now also packs/rebuilds and proves the
+  format with byte-identical round-trips (see `tools/README.md`).
 - Payload inventory after unpacking all 5,845 entries:
 
   | Ext | Count | Source |

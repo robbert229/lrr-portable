@@ -1,0 +1,56 @@
+# `tools/` — WAD tooling
+
+## `rrwad.py` — the `.wad` (WWAD) container tool
+
+Full unpack / pack / verify for `LegoRR0.wad` and `LegoRR1.wad`, per the
+format documented in [`docs/findings/01-binary-and-loader-map.md`](../docs/findings/01-binary-and-loader-map.md)
+(§ "WAD container format").
+
+```
+"WWAD" | u32 count | count*NUL names | count*NUL dev-paths | count*16B TOC | data
+TOC entry: flags u32 | orig_len u32 | stored_len u32 | file_offset u32
+```
+
+Commands:
+
+| Command | Purpose |
+| --- | --- |
+| `list WAD` | index listing (`# index size @offset name`) |
+| `unpack WAD DEST` | extract a proper directory tree + hidden `.rrwad.json` manifest (names, dev-paths, flags, sizes, offsets) |
+| `pack MANIFEST -o OUT` | rebuild the archive from the manifest + edited files |
+| `verify WAD` | in-memory round-trip: every archive here packs back **byte-identical** |
+| `extract WAD NAME...` | stream one entry to stdout (case-insensitive name, like the game) |
+
+The manifest is what makes mods lossless: the dev-path strings (`\\ROBW\C\
+Dev\SourceSafe\Lego\Data\…`) are kept verbatim even though the game ignores
+them, so repacked archives are indistinguishable from the originals — except
+for the data you changed, and payload offsets recomputed for new sizes.
+
+Round-trip proof (run 2026-10-20, both shipped archives):
+
+```
+verify: OK — source/LegoRR0.wad round-trips byte-identical (5631 entries, 78,968,800 B)
+verify: OK — source/LegoRR1.wad round-trips byte-identical (214 entries, 3,754,454 B)
+```
+
+Mod workflow:
+
+```sh
+python3 tools/rrwad.py unpack source/LegoRR1.wad mod/L1
+# edit mod/L1/Lego.cfg (or any entry)
+python3 tools/rrwad.py pack mod/L1/.rrwad.json -o mod/LegoRR1.wad
+```
+
+Notes:
+
+* Nothing is compressed in the shipped files (`stored == original`, flags all
+  `1`); the engine's dormant compression codecs stay untested (finding 01).
+* Cross-wad shadowing (`LegoRR1` beats `LegoRR0`, scan order `9→0` per
+  finding 01) is decided by mount order at runtime, not by entry order —
+  repacking either archive never changes which file the game opens.
+* Name lookups are case-insensitive `__strcmpi` with no collisions observed
+  in either archive, so extracted trees are safe on case-insensitive
+  filesystems.
+* `unwad.py` is the earlier extract-only script from the finding-01 work;
+  `rrwad.py` supersedes it (it also converts `foo\bar.bmp` names into real
+  directories instead of literal backslash files).

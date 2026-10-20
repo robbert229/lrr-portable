@@ -18,6 +18,7 @@ and curiosity; nothing in this repository is affiliated with or endorsed by the 
 ```
 README.md           This file
 docs/findings/      Reverse-engineering findings, 01–14 (see index below)
+tools/              WAD tooling (rrwad.py: unpack/pack/verify — see tools/README.md)
 docs/decompiles/    Named Ghidra pseudocode corpus (engine-region.c)
 docs/evidence/      Exported REA evidence bundle (address-level citations)
 tools/              Analysis tooling: unwad.py, Ghidra function-naming script
@@ -52,6 +53,7 @@ legally obtained copy of the game.
 - [x] Understand mission / level scripting and data-driven behavior — findings 07, 09
 - [x] Understand the savegame format — finding 08
 - [ ] Eventually: reimplementations or tooling that let the game run on modern systems
+      — started: `tools/rrwad.py` unpacks/repacks both archives byte-identical (2026-10-20)
 
 ## Findings index
 
