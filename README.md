@@ -17,7 +17,7 @@ and curiosity; nothing in this repository is affiliated with or endorsed by the 
 
 ```
 README.md           This file
-docs/findings/      Reverse-engineering findings, 01–13 (see index below)
+docs/findings/      Reverse-engineering findings, 01–14 (see index below)
 docs/decompiles/    Named Ghidra pseudocode corpus (engine-region.c)
 docs/evidence/      Exported REA evidence bundle (address-level citations)
 tools/              Analysis tooling: unwad.py, Ghidra function-naming script
@@ -46,9 +46,9 @@ legally obtained copy of the game.
 - [x] Map the high-level architecture of `LegoRR.exe` (engine, game logic, rendering)
       — findings 02–06, 10
 - [x] Document the `.wad` archive container format(s) — finding 01
-- [ ] Document asset formats: 3D models, animations, sounds, videos
-      — partial: models/scenes (11), `Lego*` configs (12), textures (13);
-      sounds/videos and UV grammar open
+- [x] Document asset formats: 3D models, animations, sounds, videos
+      — findings 11–14: models/scenes, `Lego*` configs, textures, audio, video.
+      (Fine detail open: `.uv` text grammar, `.flh` container — 11 §6, 14 §5)
 - [x] Understand mission / level scripting and data-driven behavior — findings 07, 09
 - [x] Understand the savegame format — finding 08
 - [ ] Eventually: reimplementations or tooling that let the game run on modern systems
@@ -70,6 +70,7 @@ legally obtained copy of the game.
 | 11 | [`findings/11-model-and-scene-formats.md`](docs/findings/11-model-and-scene-formats.md) | LightWave LWO loader, LWSC scene parser, surface/UV pipeline |
 | 12 | [`findings/12-block-text-format.md`](docs/findings/12-block-text-format.md) | `Lego*` block-text config format: scanner, path-lookup API, `.ae` consumers |
 | 13 | [`findings/13-texture-system.md`](docs/findings/13-texture-system.md) | BMP surface loader, name cache, LWO material binding, world tile sets, VRAM budget |
+| 14 | [`findings/14-sound-and-video.md`](docs/findings/14-sound-and-video.md) | WAVE/mmio sound bank, CD-DA music via MCI, AVIFIL32 movies, logo splash |
 
 Named-pseudocode corpus: [`docs/decompiles/engine-region.c`](docs/decompiles/engine-region.c)
 (114 identified functions, ~7.6k lines; all addresses in the findings resolve here).
