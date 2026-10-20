@@ -61,6 +61,46 @@ public class CreateEngineFunctions extends GhidraScript {
         0x42c120L,  // LoadLayerL
         0x42c060L,  // LoadLayerM
         0x42f6f0L,  // CellInitPass — per-cell post-init sweep
+        // --- savegame / checkpoint region (batch 8) ---
+        0x417a90L,  // SavReadSlot
+        0x417bd0L,  // SavWriteSlot
+        0x417df0L,  // SavRefreshSlots
+        0x417e50L,  // SavSlotCtx
+        0x417e70L,  // SavBuildCtx
+        0x417e90L,  // SavGetSlot
+        0x417ea0L,  // SavSetSlot
+        0x417eb0L,  // SavMarkRecord
+        0x417f40L,  // SavWriteRecord
+        0x417f90L,  // SavRecordPtr
+        0x417fc0L,  // SavCommit
+        0x4173e0L,  // SavTreeLoad
+        0x4172f0L,  // SavTreeWalk2
+        0x4171c0L,  // SavTreeWalk
+        0x416e70L,  // SavClearVisited
+        0x4179b0L,  // SavMenuList
+        0x417090L,  // LevelNodeGet
+        0x416f40L,  // ListHasItem
+        0x417020L,  // ListGetNode
+        0x416ed0L,  // ListAddName
+        0x416fb0L,  // ListSetNode
+        0x415a10L,  // SaveMenuBuild
+        0x4161f0L,  // LoadMenuBuild
+        0x416d60L,  // IsInGame
+        0x416e00L,  // ActiveObjectList
+        0x416e20L,  // ListFindName
+        0x462270L,  // CheckpointStep
+        0x4177e0L,  // SavObjSerialize
+        0x417700L,  // SavObjCallbackB
+        // --- checkpoint blob + OSF module (batch 9) ---
+        0x45fda0L,  // CheckpointBlobBuild
+        0x4601e0L,  // CheckpointBlobFree
+        0x4601f0L,  // CheckpointBlobGet
+        0x461790L,  // RewardDisplayTick
+        0x461dd0L,  // RewardZoneCheck
+        0x459190L,  // OsfAdd
+        0x4592e0L,  // OsfSnapshot
+        0x4593e0L,  // OsfWrite
+        0x458be0L,  // ObjectiveTick
     };
     static final String[] NAMES = { "EngineTick", "EngineShutdown", "EngineShutdownAlt",
         "MainSimStep", "ManagerTick", "MessageDispatch", "ViewContextTick",
@@ -73,7 +113,16 @@ public class CreateEngineFunctions extends GhidraScript {
         "MapFileReadHeader", "MapFileGetCell", "LoadPredugLayer",
         "LoadErodeCryoreLayers", "LoadEmergeLayer", "LoadPathAiLayers",
         "LoadFallinLayer", "LoadBlockPointers", "LoadTerrainMap",
-        "LoadLayerL", "LoadLayerM", "CellInitPass" };
+        "LoadLayerL", "LoadLayerM", "CellInitPass",
+        "SavReadSlot", "SavWriteSlot", "SavRefreshSlots", "SavSlotCtx", "SavBuildCtx",
+        "SavGetSlot", "SavSetSlot", "SavMarkRecord", "SavWriteRecord", "SavRecordPtr",
+        "SavCommit", "SavTreeLoad", "SavTreeWalk2", "SavTreeWalk", "SavClearVisited",
+        "SavMenuList", "LevelNodeGet", "ListHasItem", "ListGetNode", "ListAddName",
+        "ListSetNode", "SaveMenuBuild", "LoadMenuBuild", "IsInGame", "ActiveObjectList",
+        "ListFindName", "CheckpointStep", "SavObjSerialize", "SavObjCallbackB",
+        "CheckpointBlobBuild", "CheckpointBlobFree", "CheckpointBlobGet",
+        "RewardDisplayTick", "RewardZoneCheck", "OsfAdd", "OsfSnapshot", "OsfWrite",
+        "ObjectiveTick" };
 
     @Override
     public void run() throws Exception {
