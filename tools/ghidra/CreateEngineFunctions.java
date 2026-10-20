@@ -101,6 +101,22 @@ public class CreateEngineFunctions extends GhidraScript {
         0x4592e0L,  // OsfSnapshot
         0x4593e0L,  // OsfWrite
         0x458be0L,  // ObjectiveTick
+        // --- reward/task manager (batch 10) ---
+        0x45f7f0L,  // RewardInit
+        0x45f030L,  // TaskBlockInit
+        0x45f750L,  // TaskBlockFinish
+        0x45f1f0L,  // TaskSoundsLoad
+        0x45f230L,  // TaskFontLoad
+        0x45f290L,  // TaskBoxImages
+        0x45f3e0L,  // TaskImages
+        0x45f530L,  // TaskBoxRect
+        0x45f5f0L,  // TaskFlicPath
+        0x4600a0L,  // TaskImportanceRefresh
+        0x460140L,  // TaskQuotaRefresh
+        0x45f7b0L,  // TaskFlushImages
+        0x45f7d0L,  // TaskFlushFont
+        0x45c040L,  // CrystalQuotaSetup
+        0x462800L,  // RewardScoreAdd
     };
     static final String[] NAMES = { "EngineTick", "EngineShutdown", "EngineShutdownAlt",
         "MainSimStep", "ManagerTick", "MessageDispatch", "ViewContextTick",
@@ -122,7 +138,10 @@ public class CreateEngineFunctions extends GhidraScript {
         "ListFindName", "CheckpointStep", "SavObjSerialize", "SavObjCallbackB",
         "CheckpointBlobBuild", "CheckpointBlobFree", "CheckpointBlobGet",
         "RewardDisplayTick", "RewardZoneCheck", "OsfAdd", "OsfSnapshot", "OsfWrite",
-        "ObjectiveTick" };
+        "ObjectiveTick", "RewardInit", "TaskBlockInit", "TaskBlockFinish", "TaskSoundsLoad",
+        "TaskFontLoad", "TaskBoxImages", "TaskImages", "TaskBoxRect", "TaskFlicPath",
+        "TaskImportanceRefresh", "TaskQuotaRefresh", "TaskFlushImages", "TaskFlushFont",
+        "CrystalQuotaSetup", "RewardScoreAdd" };
 
     @Override
     public void run() throws Exception {
