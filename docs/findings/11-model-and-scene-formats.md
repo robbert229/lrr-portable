@@ -139,10 +139,12 @@ From `unpacked/LegoRR0` (5,631 files): 2,523 `.bmp`, 1,132 `.lwo`, 750 `.lws`,
 2. **`SURF` field mapping** — the keyword parser is identified but the exact
    per-surface settings record (colour format, TIMG/BMP binding, sequence
    pairs) needs one more pass over `FUN_0048c820`.
-3. **`Lego*` block reader** — shared between `.ae`, `.ptl`, and possibly
-   config; find the generic reader (candidates: `FUN_004877e0`, `FUN_0048dc80`).
-4. **Textures** — `TIMG` binding from surfaces to `.bmp` names, and the
-   `LWO:NOTEXTURE` placeholder (`0x4a1dbc`, used from `0x40b623–0x40b656`).
+3. ~~`Lego*` block reader~~ resolved by finding 12 (`FUN_00478e60` scanner +
+   `FUN_004792e0`-style path lookups over WAD-read buffers).
+4. ~~Textures~~ resolved by finding 13: `TIMG` names are bound at model-open in
+   the material pass `FUN_00480ac0` → `FUN_00481820` → cache `FUN_00482e70`;
+   `LWO:NOTEXTURE` (`0x4a1dbc`) is the stub passed by entity registration
+   `FUN_0040b5f0` (`0x40b623–0x40b656`).
 5. `.wav`/`.x` loaders and the D3DRM dependency (`D3DRM.DLL`) remain open.
 
 ### Function map (this finding)
