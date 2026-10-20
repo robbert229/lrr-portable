@@ -20,7 +20,7 @@ The launch also resolved three static unknowns, by observation:
 | §5.1 COM GUID versions | The binary QIs `DirectDrawCreate`'s object to **`IID_IDirectDraw4`** (GUID `9c59509a-39bd-11d1-8c4a-00c04fd930c5`), after a first hop through `IID_IDirectDraw`; surfaces requested as v1/v3/v4/v7 variants | log: `ddraw1_QueryInterface … riid {9c59509a-…}` + `ddraw_surface_create … version 4.` |
 | §5.2 D3DRM device flavor | Not directly traced, but rendering works through the bundled `D3DRM.DLL`'s DDraw path — no D3D device errors, no `wined3d` D3D calls in the log | absence of any `d3d*:` component output |
 | §4.1 CDDA music | **Not yet exercised** — an unattended 25 s session never reaches level load, so the MCI call was never issued (`cdaudio`: 0 occurrences). Still a live question | `grep -ic cdaudio` → 0 |
-| §4.2 Movies | Movies play (or attempt) via wine's **quartz** graph, not `avifil32`: `quartz:send_buffer … hr 0x80040211` ×2 = a decoder pin failing to deliver samples, consistent with the old-codecs friction predicted. `avifil`: 0 occurrences | `err:quartz:send_buffer` |
+| §4.2 Movies | Movies play (or attempt) via wine's **quartz** graph, not `avifil32`: `quartz:send_buffer … hr 0x80040211` ×2 = a decoder pin failing to deliver samples, consistent with the old-codecs friction predicted. `avifil`: 0 occurrences. **Superseded by 17:** the real blocker is a missing Indeo 5 decoder in the gstreamer layer | `err:quartz:send_buffer` |
 
 ## Environment engineering the binary itself required
 
@@ -48,13 +48,17 @@ Three host-side facts, none about the game:
 
 ## Open questions for the interactive session
 
-1. Music: does `FUN_00489210`'s `mciSendStringA("play cdaudio…")` fail silently,
-   show an error dialog, or hit the 4 s watchdog loop (finding 14)?
-2. Title screen: do the intro AVIs show (quartz errors above may mean silent
-   black frames with gameplay otherwise fine, or vice versa)?
+1. ~~Music: does `FUN_00489210`'s `mciSendStringA("play cdaudio…")` fail silently,
+   show an error dialog, or hit the 4 s watchdog loop (finding 14)?~~
+   **Answered (17):** no CDDA media exists on this distribution — music streams
+   from bundled WAVs and the MCI path is never taken.
+2. ~~Title screen: do the intro AVIs show?~~ **Answered (17):** no — missing
+   Indeo 5 decoder, game skips gracefully (`lmi640.avi`, IV50).
 3. Exclusive-mode behaviour at 640×480 under gamescope (vs windowed `--no-gamescope`).
-4. Mouse grab: DInput was traced 62×; responsiveness/unclickability need eyes.
-5. Palette-tile fidelity check on `World\WorldTextures\*Split*` (finding 15 §4.5).
+   **Answered (17):** works; first mission completed in exclusive mode.
+4. ~~Mouse grab: DInput was traced 62×; responsiveness/unclickability need eyes.~~
+   **Answered (17):** menus and gameplay respond normally.
+5. Palette-tile fidelity check on `World\WorldTextures\*Split*` (finding 15 §4.5). Still open.
 
 ### Confidence
 
