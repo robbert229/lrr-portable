@@ -15,7 +15,8 @@ chunk set, not the later LW0/LW1 (LW5+) format.
 - `.lwo` → binary LightWave object (`FORM` / `LWOB`), read at runtime.
 - `.lws` → LightWave scene **text** (`LWSC`), read at runtime; composes objects,
   parent/child bindings, and animation envelopes.
-- `.uv` → companion text file with per-object UV/track data, read alongside `.lwo`.
+- `.uv` → companion text sidecar, loaded alongside `.lwo`; supplies surface
+  texture paths and per-corner UV coordinates — fully documented in finding 19.
 - `.ae` → `Lego* { … }` block-text files; no magic/string references found in the
   executable (see §6 — likely consumed indirectly or editor-side).
 - `.wav` / `.bmp` → standard formats, loaded via `%s.wav` (`0x4aae5c`) and the
@@ -37,9 +38,11 @@ FUN_00472cd0 (entity creation)        FUN_004885c0
 ```
 
 `FUN_0048d7c0` (`0x48d7c0`–`0x48d86b`) zero-allocates a 32-byte model struct and
-hands out its fields to the loader: `+4` vertex array, `+0x10`/`+0x14` polygon
-data, `+0x18` surface table, `+0x1c` debug/verbose flag. The loader is also the
-only place the format string `%s.lwo` (`0x4afc98`) is referenced.
+hands out its fields to the loader: `+4` vertex count, `+8` polygon count,
+`+0xc` surface count, `+0x10` vertex array, `+0x14` polygon metadata, `+0x18`
+surface table, `+0x1c` the `.uv` sidecar stream (see §2 and finding 19). The
+loader is also the only place the format string `%s.lwo` (`0x4afc98`) is
+referenced.
 
 ## 2. LWO file loader — `FUN_0048d2c0` (`0x48d2c0`–`0x48d7b9`)
 
@@ -72,10 +75,15 @@ Debug logging when verbose: `LW OBJECT %s %d\n` (`0x4afc50`); failure anywhere:
 `Error in Lightwave file %s` (`0x4afc64`).
 
 When the model header has a UV slot (`param_6 != 0`), the loader **also** opens
-`%s.uv` (`0x4afc90`) for the same base name and parses it via `FUN_0047fb60` →
-`FUN_0048eb90`. The unpacked `.uv` files are line-based text
-(`2\r\n3\r\nHand R X…`), i.e. small named-channel tables; their field-level
-grammar is not yet fully mapped (open item).
+`%s.uv` (`0x4afc90`) for the same base name — the existence check goes through
+the generic load helper `FUN_0047fb60`, and the resulting stream handle is
+stored in model slot `+0x1c` (`*param_6` is written only, never read here).
+Model teardown (`FUN_0048d870`) merely closes the stream. The only consumer is
+the mesh builder: `FUN_00480ac0` calls `FUN_00481c50(model, uvTable)` iff the
+stream is present — that is the actual `.uv` text parser, not `FUN_0047fb60`
+or `FUN_0048eb90` (an earlier note here conflated those load helpers with the
+parser). Field-level grammar, engine semantics, and 60/60 corpus validation:
+**finding 19**.
 
 ## 3. Chunk layouts (from handler pseudocode)
 
@@ -134,8 +142,11 @@ From `unpacked/LegoRR0` (5,631 files): 2,523 `.bmp`, 1,132 `.lwo`, 750 `.lws`,
 
 ## 6. Open items / next work
 
-1. **`.uv` grammar** — parse rules inside `FUN_0048eb90`/`FUN_0048eae0`; the
-   text layout (channel count header + named tracks) needs field-level docs.
+1. ~~**`.uv` grammar**~~ resolved by **finding 19**: line-stream grammar in
+   `FUN_00481c50` (single consumer, called from `FUN_00480ac0` when
+   `model+0x1c` is set); per-surface texture-path overrides + per-corner UV
+   with v-negation and vertex duplication; names and trailing keyframe blocks
+   never read. Validated 60/60 against the shipped corpus.
 2. **`SURF` field mapping** — the keyword parser is identified but the exact
    per-surface settings record (colour format, TIMG/BMP binding, sequence
    pairs) needs one more pass over `FUN_0048c820`.
@@ -183,4 +194,10 @@ bytes:
 | `0x4765c0` | AssembleSceneAnimation | scene/anim worker |
 | `0x47f6e0` | FOpenWadOrDisk | file open: FS or WAD, `"rb"` |
 | `0x47f980` | FRead | chunk reader |
+| `0x47fb60` | FLoadCheck | existence check / load-into-memory helper (used for `.uv` open) |
+| `0x480ac0` | BuildEntityMesh | mesh/material pass — sole consumer of the `.uv` stream |
+| `0x481c50` | ParseUV | `.uv` line-stream parser (finding 19) |
+| `0x480050` | ReadLine | CRLF line reader (`buf, size, stream`) |
+| `0x4774b0` | TokenizeLine | whitespace tokenizer, returns token count |
+| `0x48d870` | FreeModel | model teardown (closes `.uv` stream unread) |
 | `0x48dbd0` / `0x48db80` | MemAlloc / MemFree | heap |

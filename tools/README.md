@@ -11,6 +11,11 @@ the two conversion decisions worth knowing:
 * **UVs** — LWOB stores none; the `CTEX` block says the mapping is *planar*,
   so we project each face along its dominant normal axis and divide by the
   `TSIZ` scale, which is the engine's own scheme, not an invented one.
+  Exception: the 60 models that ship a `.uv` sidecar get real per-corner UVs
+  from it — see [`docs/findings/19-uv-grammar.md`](../docs/findings/19-uv-grammar.md)
+  (the converter currently exports those models without sidecar data; the
+  sidecar's surface-path overrides would change their textures, and the
+  per-corner UVs replace the planar projection).
 * **Normals** — flat, so shared positions do not share vertices across
   faces (glTF has no face normals).
 
