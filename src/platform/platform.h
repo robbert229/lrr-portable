@@ -81,6 +81,24 @@ int  platform_pump_events(PlatformWindow* win, PlatformEvent* out, int cap);
  * (PLATFORM_EVENT_QUIT, or PLATFORM_EVENT_KEYDOWN for PLATFORM_KEY_ESC). */
 int  platform_poll_events(PlatformWindow* win);
 
+/* --- Audio (DirectSound analog, finding 14 §1) ---------------------------
+ * The corpus's SFX path is DIRECTSOUNDCreate + buffers (WINMM mmio decode);
+ * miniwin ships no DirectSound, so the reconstruction's audio surface here
+ * is a mono-16-bit-PCM submit interface over SDL's audio stream (the winapi
+ * reference build would map onto DirectSound ord 1). One shot per play. */
+typedef struct PlatformAudio PlatformAudio;
+
+PlatformAudio* platform_audio_open(void);
+void           platform_audio_close(PlatformAudio* a);
+
+/* Play one shot: mono 16-bit signed PCM, `frames` frames at `sample_rate`
+ * Hz. Returns 0 on success, -1 on failure (device/stream unavailable). */
+int  platform_audio_play(PlatformAudio* a, const int16_t* pcm, int frames,
+                         int sample_rate);
+
+/* Stop / clear pending output. */
+void platform_audio_stop(PlatformAudio* a);
+
 /* Commit a framebuffer (RGBA32 byte order R,G,B,A on little-endian) to the
  * window. `pixels`/`pitch` are what the DDraw surface Lock handed back. */
 void platform_present_pixels(PlatformWindow* win,

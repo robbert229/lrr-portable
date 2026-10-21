@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "platform/platform.h"
+#include "audio.hpp"
 #include "engine.hpp"
 #include "frameloop.hpp"
 #include "input.hpp"
@@ -83,6 +84,19 @@ int LegorrrRun(void)
                 (void*)rock, (void*)ui);
     }
 
+    /* Audio: open the DirectSound-analog surface + play a real corpus wav. */
+    AudioPlayer ap = {};
+    int audio_status = audio_open(&ap);
+    int sfx_frames = 0;
+    if (audio_status == 0) {
+        sfx_frames = audio_play_named(&ap, "Sounds\\Buildings\\elec5.wav");
+        fprintf(log, "frameloop: audio on, startup sfx elec5.wav -> %d frames\n",
+                sfx_frames);
+    } else {
+        fprintf(log, "frameloop: audio unavailable (headless?) rc=%d\n",
+                audio_status);
+    }
+
     const float dt = 1.0f / 30.0f;
     /* Interactive proof: the arrow keys pan the blitted texture. */
     int rock_x = 24, rock_y = 24;
@@ -118,6 +132,10 @@ int LegorrrRun(void)
         if (input_key_edge(&input, PLATFORM_KEY_DOWN))  { rock_y += 8; }
         if (input_key_edge(&input, PLATFORM_KEY_LEFT))  { rock_x -= 8; }
         if (input_key_edge(&input, PLATFORM_KEY_RIGHT)) { rock_x += 8; }
+        /* Space re-triggers the SFX (interactive audio proof). */
+        if (ap.dev != NULL && input_key_edge(&input, ' ')) {
+            audio_play_named(&ap, "Sounds\\Buildings\\elec5.wav");
+        }
         if (rock_x < 0) { rock_x = 0; }
         if (rock_y < 0) { rock_y = 0; }
         if (rock_x > WINDOW_W - 64) { rock_x = WINDOW_W - 64; }
@@ -155,6 +173,7 @@ int LegorrrRun(void)
             "exit=%s\n", frames, ctx.state, ctx.tickers_ran, stop);
 
     EngineShutdown(&ctx);
+    audio_close(&ap);
     texture_cache_clear();
     surface_destroy(&surf);
     platform_destroy_window(win);

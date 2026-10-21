@@ -226,6 +226,14 @@ fills `cur` (edges vs `prev` per findings 04/05), and the **arrow keys pan
 the blitted texture**. Unit coverage for the capture/mirror/two-frame flow
 lives in `input_test`.
 
+**Audio playback** (2026-10-21): the merged sound bank now plays. The seam
+gains a DirectSound-analog audio surface (`platform.h` `PlatformAudio`, one
+shot = mono 16-bit PCM over SDL), and `src/gods98/audio.*` converts any bank
+sound (8/16-bit, mono/stereo, any rate) and submits it. The frame loop plays
+a startup SFX and re-triggers it with **Space**. `audio_test` (suite
+`audio`, `SDL_AUDIODRIVER=dummy`) covers the conversion (incl. 8-bit and
+stereo-mixdown) and a real `.wav` play.
+
 ```sh
 cd path/to/legally-owned/game
 LEGORRR_AUTOSTOP_FRAMES=600 ../lrr-portable/build/src/LegoRR

@@ -199,3 +199,92 @@ void platform_screenshot(PlatformWindow* pw, const void* pixels, int pitch,
     fprintf(stderr, "platform: screenshot %s (frame %d) %s\n", path, frame,
             "saved");
 }
+
+/* ------------------------------------------------------------------ *
+ *  Audio — SDL3 audio-stream device (mono 16-bit PCM submit).
+ * ------------------------------------------------------------------ */
+
+struct PlatformAudio {
+    SDL_AudioStream*  stream;
+    SDL_AudioDeviceID dev;
+    int               ok;
+};
+
+PlatformAudio* platform_audio_open(void)
+{
+    if (!SDL_InitSubSystem(SDL_INIT_AUDIO)) {
+        fprintf(stderr, "platform: SDL_InitSubSystem(AUDIO): %s\n",
+                SDL_GetError());
+        return NULL;
+    }
+    SDL_AudioSpec spec;
+    memset(&spec, 0, sizeof(spec));
+    spec.format   = SDL_AUDIO_S16;
+    spec.channels = 2;   /* output; source is per-play mono 16-bit */
+    spec.freq     = 44100;
+
+    PlatformAudio* a = (PlatformAudio*)calloc(1, sizeof(PlatformAudio));
+    if (a == NULL) {
+        return NULL;
+    }
+    a->stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK,
+                                          &spec, NULL, NULL);
+    if (a->stream == NULL) {
+        fprintf(stderr, "platform: SDL_OpenAudioDeviceStream: %s\n",
+                SDL_GetError());
+        free(a);
+        return NULL;
+    }
+    /* Device streams open *paused* — without this nothing would ever play. */
+    SDL_ResumeAudioStreamDevice(a->stream);
+    a->ok = 1;
+    SDL_AudioDeviceID dev = SDL_GetAudioStreamDevice(a->stream);
+    fprintf(stderr, "platform: audio stream live on device %u\n",
+            (unsigned)dev);
+    return a;
+}
+
+void platform_audio_close(PlatformAudio* a)
+{
+    if (a == NULL) {
+        return;
+    }
+    if (a->stream != NULL) {
+        SDL_DestroyAudioStream(a->stream);
+    }
+    if (a->dev != 0) {
+        SDL_CloseAudioDevice(a->dev);
+    }
+    a->stream = NULL;
+    a->ok = 0;
+    free(a);
+}
+
+int platform_audio_play(PlatformAudio* a, const int16_t* pcm, int frames,
+                        int sample_rate)
+{
+    if (a == NULL || a->stream == NULL || pcm == NULL || frames <= 0
+        || sample_rate <= 0) {
+        return -1;
+    }
+    SDL_AudioSpec src;
+    memset(&src, 0, sizeof(src));
+    src.format   = SDL_AUDIO_S16;
+    src.channels = 1;
+    src.freq     = sample_rate;
+    if (!SDL_SetAudioStreamFormat(a->stream, &src, NULL)) {
+        return -1;
+    }
+    if (!SDL_PutAudioStreamData(a->stream, pcm, frames * 2)) {
+        return -1;
+    }
+    return 0;
+}
+
+void platform_audio_stop(PlatformAudio* a)
+{
+    if (a == NULL || a->stream == NULL) {
+        return;
+    }
+    SDL_ClearAudioStream(a->stream);
+}
