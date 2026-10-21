@@ -72,7 +72,7 @@ legally obtained copy of the game.
 
 ## Current status (2026-10-21)
 
-Research is complete: all 22 findings shipped, every format shipped in the wads is
+Research is complete: all 23 findings shipped, every format shipped in the wads is
 documented address-level — including the two that exist but are never loaded
 (`.x` XOF-text leftovers, `.blx` editor-only) — and the `Lego*` block-text system that
 `.ae` belongs to (finding 12). The game runs and is playable through the Proton wrapper,
@@ -83,6 +83,18 @@ On the reconstruction side, the engine scaffold, frame loop, input, audio and
 now the **game layer** (level `.map` loading, objectives/advisor, savegames —
 findings 07/08/22) build and pass their suites natively; see the
 *Reconstruction build* section below.
+
+Finding 23 (2026-10-21) closed the **front-end**: the boot→main-menu machine
+(`MenuBuild`, the modal `MenuRunLoop`, the `FrontEndActive` gate, menu-enter /
+state-change, the level-chain + start-level entries, and the options/movie
+callbacks) is decompiled, named (50 functions appended to
+`docs/decompiles/engine-region.c`; REA evidence in
+`docs/evidence/legorr-frontend.bundle`), and the shipped `Lego.cfg` menu/level
+grammar documented — including the two config hard requirements the port does
+not yet meet: the **`::` path separator** and the **`Levels::<name>` level
+vocabulary** (this is the root cause of the `Lego.cfg` integration blocker
+below, not a parse bug — the parser handles the file, the query form was
+wrong).
 
 The fresh verify pass (finding 20, 2026-10-20) re-derived the critical path — PE entry
 (`0x48f000`) → WinMain (`FUN_004777a0`) → init → frame loop → engine tick (`0x4232e0`) —
@@ -96,11 +108,15 @@ Open threads, in order of value:
    only link-by-link; repacking a modified `.uv` (e.g. a `GC_Larm.uv` pilot re-skin) and
    observing the change in-game has not been done.
 2. Deferred: dgVoodoo as a perf option; the `Steam.lwo` point-only sprites as glTF.
-3. Reconstruction next: the *live-mod proof* (thread 1), model-aware entity
-   rendering on top of the merged LWO loader (#30), and the winapi reference
-   build. Campaign flow, command/AI, selection, reward save+advance, the
-   advisor/incident bus wiring, and the software level renderer are in —
-   finding 22's runtime side is wired through the engine's message bus.
+3. Reconstruction next: the **front-end/menu boot** (finding 23 — port
+   `MenuBuild`/`MenuRunLoop`/the `FrontEndActive` gate into `src/game/`,
+   fix the `::` tokenizer + StartLevel name resolution), the *reward-screen
+   save-zone clicks* (finishing finding 09), the live-mod proof (thread 1),
+   model-aware entity rendering on top of the merged LWO loader (#30), and
+   the winapi reference build. Campaign flow, command/AI, selection, reward
+   save+advance, the advisor/incident bus wiring, and the software level
+   renderer are in — finding 22's runtime side is wired through the engine's
+   message bus.
 
 ## Findings index
 
@@ -128,6 +144,7 @@ Open threads, in order of value:
 | 20 | [`findings/20-verify-pass.md`](docs/findings/20-verify-pass.md) | **Fresh verify pass** (2026-10-20): critical path re-derived in a clean session; corpus byte-identical; `DAT_00505814` = `.wad` prefix, not install dir; CRT entry `0x48f000` |
 | 21 | [`findings/21-flh-container.md`](docs/findings/21-flh-container.md) | **`.flh` closed**: FLIC-family overlay container — 136 B header, `0xF1FA` chunk stream from `0x80`, RGB555 FLI16 keyframe (opcode 25) + word-diff deltas (opcode 27) + hold chunks, 555→565 on write; validated 18/18 files, 469/469 chunks, rendered frame check |
 | 22 | [`findings/22-research-crumbs.md`](docs/findings/22-research-crumbs.md) | **Last open questions closed**: message registry = startup catalog (`FUN_00419230`, 40 `Info_*` names) + `InfoMessages` config population (`FUN_00434c10`); `DAT_004ffbc0` relabeled as the objective state word (not input devices); D3DRM is software-path-only (no HAL device referenced anywhere) |
+| 23 | [`findings/23-front-end-and-menu.md`](docs/findings/23-front-end-and-menu.md) | **Front-end & menus closed**: the boot→main-menu machine — `MenuBuild @ 0x4140c0`, the modal `MenuRunLoop`/`MenuTick`, the `FrontEndActive` gate, `MenuEnter`/`FrontEndStateChange`, the level-chain + start-level entries, and the options/movie callbacks, with the config grammar. Plus the two port blockers: the **`::` path separator** (`DAT_004aab18` = `"::"`) and the shipped level-name vocabulary (`Levels::<name>` via `StartLevel`/`NextLevel`, never `Level01`) — which together root-caused the `Lego.cfg` integration blocker |
 
 Named-pseudocode corpus: [`docs/decompiles/engine-region.c`](docs/decompiles/engine-region.c)
 (114 named functions covering the engine/game-logic region — findings 01–10).
@@ -376,12 +393,17 @@ accessors read width/height/voxels at the corpus offsets
 byte (`+0x04`), and the camera grid-expiry prefers the bound level. The demo
 binds `game.level` after load. `engine_bind_test` (suite `enginebind`) covers
 the accessors + view terrain pick.
-⚠️ Integration blocker found, **handed back to the game layer**: the shipped
-`Lego.cfg` groups don't resolve through `block.*`'s path lookup — their own
-`level_test --real` probe counts **0** level groups, and the cfg's key
-spellings are case-inconsistent (`CryoreMap` vs `CryOreMap`, `PredugMap` vs
-`PreDugMap`). The binding + view code is ready for a live level the moment
-the loader resolves shipped configs.
+⚠️ Integration blocker — **root-caused in finding 23**: the shipped
+`Lego.cfg` groups don't resolve through `block.*`'s space-split path lookup for
+two reasons, and neither is a parse bug — the parser handles the file, the
+*query form* was wrong. (a) the game's config path language is **`::`-separated**
+(`DAT_004aab18` = `"::"`, `BlockFindPath` 0x4792e0), so `Lego*`
+`Levels::Tutorial01 SurfaceMap` must tokenize to `Lego* Levels Tutorial01
+SurfaceMap`; and (b) shipped level names are `Levels::<name>` tokens sourced
+from `StartLevel`/`TutorialStartLevel`/`NextLevel` — `Level01` (the old probe /
+demo default) does not exist in shipped data. The menu layer needs a
+`::`-aware tokenizer (or a shim in the level loader) and StartLevel-driven name
+resolution before "New Game" can boot a real level.
 
 **Game layer — levels, objectives, savegames** (2026-10-21): the mission
 plumbing that sits on top of the engine (findings 07/08/22) is now
