@@ -81,23 +81,74 @@ int platform_window_height(PlatformWindow* pw)
     return pw != NULL ? pw->h : 0;
 }
 
-int platform_poll_events(PlatformWindow* pw)
+int platform_pump_events(PlatformWindow* pw, PlatformEvent* out, int cap)
 {
-    if (pw == NULL) {
-        return 1;
+    if (pw == NULL || out == NULL || cap <= 0) {
+        return 0;
     }
     SDL_Event e;
-    int quit = 0;
+    int n = 0;
     while (SDL_PollEvent(&e)) {
+        if (n >= cap) {
+            break;
+        }
+        PlatformEvent* ev = &out[n];
+        ev->kind = PLATFORM_EVENT_NONE;
+        ev->code = 0;
+        ev->mx = 0;
+        ev->my = 0;
         if (e.type == SDL_EVENT_QUIT
             || e.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED) {
-            quit = 1;
+            ev->kind = PLATFORM_EVENT_QUIT;
+            ++n;
         } else if (e.type == SDL_EVENT_KEY_DOWN
-                   && e.key.key == SDLK_ESCAPE) {
-            quit = 1; /* conventional demo quit key */
+                   || e.type == SDL_EVENT_KEY_UP) {
+            /* Printable ASCII passes through (canonical vocabulary); the
+             * navigation controls map to the stable codes in platform.h. */
+            SDL_Keycode kc = e.key.key;
+            int code = 0;
+            if (kc >= 0x20 && kc <= 0x7e) {
+                code = (int)kc;
+            } else if (kc == SDLK_UP) {
+                code = PLATFORM_KEY_UP;
+            } else if (kc == SDLK_DOWN) {
+                code = PLATFORM_KEY_DOWN;
+            } else if (kc == SDLK_LEFT) {
+                code = PLATFORM_KEY_LEFT;
+            } else if (kc == SDLK_RIGHT) {
+                code = PLATFORM_KEY_RIGHT;
+            } else if (kc == SDLK_ESCAPE) {
+                code = PLATFORM_KEY_ESC;
+            }
+            if (code != 0) {
+                ev->kind = (e.type == SDL_EVENT_KEY_DOWN)
+                               ? PLATFORM_EVENT_KEYDOWN
+                               : PLATFORM_EVENT_KEYUP;
+                ev->code = code;
+                ++n;
+            }
+        } else if (e.type == SDL_EVENT_MOUSE_MOTION) {
+            ev->kind = PLATFORM_EVENT_MOUSE;
+            ev->mx = e.motion.x;
+            ev->my = e.motion.y;
+            ++n;
         }
     }
-    return quit;
+    return n;
+}
+
+int platform_poll_events(PlatformWindow* pw)
+{
+    PlatformEvent evb[32];
+    int n = platform_pump_events(pw, evb, 32);
+    for (int i = 0; i < n; ++i) {
+        if (evb[i].kind == PLATFORM_EVENT_QUIT
+            || (evb[i].kind == PLATFORM_EVENT_KEYDOWN
+                && evb[i].code == PLATFORM_KEY_ESC)) {
+            return 1;
+        }
+    }
+    return 0;
 }
 
 void platform_present_pixels(PlatformWindow* pw,

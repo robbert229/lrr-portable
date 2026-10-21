@@ -37,6 +37,8 @@
 #include <cstdint>
 #include <cstddef>
 
+#include "platform/platform.h"  /* PlatformEvent + canonical key codes */
+
 #define INPUT_KEY_COUNT 256
 
 typedef struct InputState {
@@ -68,7 +70,18 @@ void input_reset(InputState* s);
  * refill. Edges are then cur != 0 && prev == 0. */
 void input_begin_frame(InputState* s);
 
-/* EnginePreTick tail: snapshot cur into the text mirror and clear cur. */
+/* Device capture — the "writer" half (finding 05's device layer, deferred
+ * from PR #8 to the frame loop). Consumes a batch of platform events into
+ * the current-frame tables: KEYDOWN sets cur[code], KEYUP clears,
+ * MOUSE updates mouse_x/y. Canonical codes come from platform.h. */
+void input_capture_events(InputState* s, const PlatformEvent* evs, int count);
+
+/* EnginePreTick tail: snapshot cur into the text mirror (cur kept for the
+ * tick's MainSimStep edges; the frame boundary clears it via
+ * input_begin_frame at the end of the loop). */
+void input_mirror(InputState* s);
+
+/* Snapshot cur into the text mirror and clear cur. */
 void input_mirror_and_clear(InputState* s);
 
 int  input_key_down(const InputState* s, int key);
@@ -83,9 +96,11 @@ uint32_t input_key_to_ascii(const InputState* s, uint32_t scancode);
 uint32_t input_key_context(const InputState* s, uint32_t key);
 
 /* EnginePreTick text pump: for each key edge allowed by the context filter,
- * append its ASCII character to buf (capacity cap); then the mirror+clear
- * tail runs. Advances *len_out. */
-void input_text_pump(InputState* s, char* buf, int cap, int* len_out);
+ * append its ASCII character to buf (capacity cap); when `clear` is set the
+ * mirror/+clear tail runs (corpus EnginePreTick), otherwise only the mirror
+ * (frame-loop model: the frame boundary clears). Advances *len_out. */
+void input_text_pump(InputState* s, char* buf, int cap, int* len_out,
+                     int clear);
 
 /* QuitPoll machine (FUN_004589c0): corner-dwell quit gesture. Feeds the
  * mouse position against the corner rectangle; enter/leave counters on the

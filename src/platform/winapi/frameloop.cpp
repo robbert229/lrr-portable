@@ -44,6 +44,12 @@ int platform_poll_events(PlatformWindow* win)
     return 1;
 }
 
+int platform_pump_events(PlatformWindow* win, PlatformEvent* out, int cap)
+{
+    (void)win; (void)out; (void)cap;
+    return 0;
+}
+
 void platform_present_pixels(PlatformWindow* win, const void* pixels, int pitch,
                              int width, int height)
 {

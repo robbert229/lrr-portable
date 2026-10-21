@@ -40,6 +40,29 @@
 
 typedef struct PlatformWindow PlatformWindow;
 
+/* --- Canonical key codes (platform-neutral event vocabulary) --------------
+ * The engine's input tables (findings 04/05) are indexed by 1-byte codes.
+ * Printable ASCII (0x20..0x7e) passes through; non-printable controls get
+ * stable codes < 0x100 here, with each backend mapping its own scancodes. */
+#define PLATFORM_KEY_UP    0x80
+#define PLATFORM_KEY_DOWN  0x81
+#define PLATFORM_KEY_LEFT  0x82
+#define PLATFORM_KEY_RIGHT 0x83
+#define PLATFORM_KEY_ESC   0x1b /* ASCII ESC */
+
+#define PLATFORM_EVENT_NONE    0
+#define PLATFORM_EVENT_KEYDOWN 1
+#define PLATFORM_EVENT_KEYUP   2
+#define PLATFORM_EVENT_MOUSE   3
+#define PLATFORM_EVENT_QUIT    4
+
+typedef struct PlatformEvent {
+    int kind;   /* PLATFORM_EVENT_* */
+    int code;   /* canonical key code (KEYDOWN/KEYUP) */
+    int mx;     /* absolute mouse x (MOUSE) */
+    int my;     /* absolute mouse y (MOUSE) */
+} PlatformEvent;
+
 PlatformWindow* platform_create_window(const char* title, int width, int height);
 void            platform_destroy_window(PlatformWindow* win);
 
@@ -50,8 +73,12 @@ void* platform_window_hwnd(PlatformWindow* win);
 int  platform_window_width(PlatformWindow* win);
 int  platform_window_height(PlatformWindow* win);
 
-/* Pump platform events (SDL); returns 1 when the app should quit
- * (window close / ESC). */
+/* Pump platform events into `out` (up to cap); returns the number written.
+ * A PLATFORM_EVENT_QUIT entry counts toward that total. */
+int  platform_pump_events(PlatformWindow* win, PlatformEvent* out, int cap);
+
+/* Convenience: pump and report whether the app should quit
+ * (PLATFORM_EVENT_QUIT, or PLATFORM_EVENT_KEYDOWN for PLATFORM_KEY_ESC). */
 int  platform_poll_events(PlatformWindow* win);
 
 /* Commit a framebuffer (RGBA32 byte order R,G,B,A on little-endian) to the

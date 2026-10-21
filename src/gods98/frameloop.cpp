@@ -6,6 +6,7 @@
 #include "platform/platform.h"
 #include "engine.hpp"
 #include "frameloop.hpp"
+#include "input.hpp"
 #include "resource.hpp"
 #include "surface.hpp"
 #include "texture.hpp"
@@ -83,19 +84,44 @@ int LegorrrRun(void)
     }
 
     const float dt = 1.0f / 30.0f;
+    /* Interactive proof: the arrow keys pan the blitted texture. */
+    int rock_x = 24, rock_y = 24;
+
     long frames = 0;
     int quit = 0;
     const char* stop = "closed";
     while (!quit) {
-        quit = platform_poll_events(win);
+        /* 1. Device capture for this frame (the finding-05 "writer" half):
+         *    platform events -> canonical codes -> input tables. */
+        PlatformEvent evbuf[32];
+        int nev = platform_pump_events(win, evbuf, 32);
+        input_capture_events(&input, evbuf, nev);
+        for (int i = 0; i < nev; ++i) {
+            if (evbuf[i].kind == PLATFORM_EVENT_QUIT
+                || (evbuf[i].kind == PLATFORM_EVENT_KEYDOWN
+                    && evbuf[i].code == PLATFORM_KEY_ESC)) {
+                quit = 1;
+                stop = "quit/ESC";
+                break;
+            }
+        }
         if (quit) {
-            stop = "quit/ESC";
             break;
         }
         if (frame_cap > 0 && frames >= frame_cap) {
             stop = "autostop";
             break;
         }
+
+        /* 2. Fine-grained pan via key edges (cur vs prev). */
+        if (input_key_edge(&input, PLATFORM_KEY_UP))    { rock_y -= 8; }
+        if (input_key_edge(&input, PLATFORM_KEY_DOWN))  { rock_y += 8; }
+        if (input_key_edge(&input, PLATFORM_KEY_LEFT))  { rock_x -= 8; }
+        if (input_key_edge(&input, PLATFORM_KEY_RIGHT)) { rock_x += 8; }
+        if (rock_x < 0) { rock_x = 0; }
+        if (rock_y < 0) { rock_y = 0; }
+        if (rock_x > WINDOW_W - 64) { rock_x = WINDOW_W - 64; }
+        if (rock_y > WINDOW_H - 64) { rock_y = WINDOW_H - 64; }
 
         EngineTick(&ctx, dt);
 
@@ -106,11 +132,11 @@ int LegorrrRun(void)
             surface_draw_sweep(pixels, pitch, WINDOW_W, WINDOW_H, (int)frames);
             if (rock != NULL) {
                 surface_blit_texture(pixels, pitch, WINDOW_W, WINDOW_H,
-                                     rock, 24, 24);
+                                     rock, rock_x, rock_y);
             }
             if (ui != NULL) {
                 surface_blit_texture(pixels, pitch, WINDOW_W, WINDOW_H,
-                                     ui, 24 + 64 + 8, 24);
+                                     ui, rock_x + 64 + 8, rock_y);
             }
             platform_screenshot(win, pixels, pitch, WINDOW_W, WINDOW_H,
                                 (int)frames);
@@ -119,6 +145,10 @@ int LegorrrRun(void)
         }
         Sleep((DWORD)FRAME_MS);
         ++frames;
+
+        /* 3. Frame boundary: this frame's keys become prev; cur clears for
+         *    the next capture (edge semantics, findings 04/05). */
+        input_begin_frame(&input);
     }
 
     fprintf(log, "frameloop: %ld frames, gauged state=0x%08x, tickers=%d, "

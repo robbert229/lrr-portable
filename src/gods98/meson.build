@@ -1,4 +1,7 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
+gods98_incs = [include_directories('.'), include_directories('..'),
+               miniwin_inc]
+
 gods98_lib = static_library('gods98',
   'gods98.cpp',
   'engine.cpp',
@@ -9,8 +12,7 @@ gods98_lib = static_library('gods98',
   'input.cpp',
   'surface.cpp',
   'frameloop.cpp',
-  include_directories : [include_directories('.'), include_directories('..'),
-                         miniwin_inc],
+  include_directories : gods98_incs,
   dependencies : [platsub_deps],
   install : false)
 
@@ -22,44 +24,26 @@ gods98_dep = declare_dependency(link_with : gods98_lib,
 #   meson setup build -Dtest_wads_dir=/path/to/shipped/game
 #   meson test -C build --suite resource
 if get_option('platform') == 'native'
-  resource_test = executable('resource_test',
-    'test_resource.cpp',
-    include_directories : include_directories('.'),
-    link_with : gods98_lib,
-    install : false)
+  test_exes = []
+  foreach exe : [['resource', 'test_resource.cpp'], ['texture', 'test_texture.cpp'],
+                 ['sound', 'test_sound.cpp'], ['input', 'test_input.cpp']]
+    test_name = exe[0]
+    t = executable(test_name + '_test', exe[1],
+      include_directories : gods98_incs,
+      dependencies : [platsub_deps],
+      link_with : gods98_lib,
+      install : false)
+    test_exes += [[test_name, t]]
+  endforeach
+
   test_wads = get_option('test_wads_dir')
-  test('resource', resource_test,
-    args : test_wads == '' ? [] : ['--real', test_wads],
-    suite : 'resource')
-
-  # Texture loader validation (finding 13): synthetic BMP round trips always;
-  # real-wad checks compare pixel hashes against PIL-derived references.
-  texture_test = executable('texture_test',
-    'test_texture.cpp',
-    include_directories : include_directories('.'),
-    link_with : gods98_lib,
-    install : false)
-  test('texture', texture_test,
-    args : test_wads == '' ? [] : ['--real', test_wads],
-    suite : 'texture')
-
-  # Sound loader validation (finding 14): synthetic RIFF/WAVE round trips
-  # always; real-wad checks parse all 387 shipped .wav and match the five
-  # reference entries against wave-module-derived PCM hashes.
-  sound_test = executable('sound_test',
-    'test_sound.cpp',
-    include_directories : include_directories('.'),
-    link_with : gods98_lib,
-    install : false)
-  test('sound', sound_test,
-    args : test_wads == '' ? [] : ['--real', test_wads],
-    suite : 'sound')
-
-  # Input core (findings 04/05): pure state-machine tests, no game data.
-  input_test = executable('input_test',
-    'test_input.cpp',
-    include_directories : include_directories('.'),
-    link_with : gods98_lib,
-    install : false)
-  test('input', input_test, suite : 'input')
+  foreach tinfo : test_exes
+    if tinfo[0] == 'resource' or tinfo[0] == 'texture' or tinfo[0] == 'sound'
+      test(tinfo[0], tinfo[1],
+        args : test_wads == '' ? [] : ['--real', test_wads],
+        suite : tinfo[0])
+    else
+      test(tinfo[0], tinfo[1], suite : tinfo[0])
+    endif
+  endforeach
 endif

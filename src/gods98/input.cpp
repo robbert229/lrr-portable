@@ -31,8 +31,44 @@ void input_begin_frame(InputState* s)
         s->prev[i] = s->cur[i];
         s->cur[i] = 0;
     }
-    /* mouse slots are read by the quit machine; they stay until cursor
-     * capture overwrites them (device layer, frame-loop milestone). */
+}
+
+void input_capture_events(InputState* s, const PlatformEvent* evs, int count)
+{
+    if (s == NULL || evs == NULL) {
+        return;
+    }
+    for (int i = 0; i < count; ++i) {
+        const PlatformEvent* e = &evs[i];
+        switch (e->kind) {
+        case PLATFORM_EVENT_KEYDOWN:
+            if (e->code >= 0 && e->code < INPUT_KEY_COUNT) {
+                s->cur[e->code] = 1;
+            }
+            break;
+        case PLATFORM_EVENT_KEYUP:
+            if (e->code >= 0 && e->code < INPUT_KEY_COUNT) {
+                s->cur[e->code] = 0;
+            }
+            break;
+        case PLATFORM_EVENT_MOUSE:
+            s->mouse_x = e->mx;
+            s->mouse_y = e->my;
+            break;
+        default:
+            break;
+        }
+    }
+}
+
+void input_mirror(InputState* s)
+{
+    if (s == NULL) {
+        return;
+    }
+    for (int i = 0; i < INPUT_KEY_COUNT; ++i) {
+        s->mirror[i] = s->cur[i];
+    }
 }
 
 void input_mirror_and_clear(InputState* s)
@@ -100,7 +136,7 @@ uint32_t input_key_context(const InputState* s, uint32_t key)
     return s->context_filter[key];
 }
 
-void input_text_pump(InputState* s, char* buf, int cap, int* len_out)
+void input_text_pump(InputState* s, char* buf, int cap, int* len_out, int clear)
 {
     if (s == NULL) {
         return;
@@ -119,8 +155,11 @@ void input_text_pump(InputState* s, char* buf, int cap, int* len_out)
             }
         }
     }
-    /* EnginePreTick tail: snapshot + clear. */
-    input_mirror_and_clear(s);
+    if (clear) {
+        input_mirror_and_clear(s);
+    } else {
+        input_mirror(s);
+    }
 }
 
 /* QuitPoll machine — corpus FUN_004589c0. Modeled on finding 05 (dwell

@@ -219,6 +219,13 @@ knobs: `LEGORRR_WAD_DIR`, `LEGORRR_AUTOSTOP_FRAMES` (headless/CI), and
 `LEGORRR_SCREENSHOT=<path>` (PPM of the last frame). Run it from the game
 directory (or set `LEGORRR_WAD_DIR`) — it exits cleanly on ESC/close.
 
+**Interactive input** (2026-10-21): the window now captures keyboard/mouse
+into the engine's `input.*` tables (the finding-05 device-writer half):
+platform events pump into a canonical-key vocabulary, `input_capture_events`
+fills `cur` (edges vs `prev` per findings 04/05), and the **arrow keys pan
+the blitted texture**. Unit coverage for the capture/mirror/two-frame flow
+lives in `input_test`.
+
 ```sh
 cd path/to/legally-owned/game
 LEGORRR_AUTOSTOP_FRAMES=600 ../lrr-portable/build/src/LegoRR
