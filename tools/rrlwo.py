@@ -11,11 +11,16 @@ rrwad.py). Format knowledge is the evidence-backed set from finding 11:
     SURF  records: even-padded name + sub-blocks(tag + 1-byte size):
           COLR = r,g,b,a; TIMG = texture path (basename lives in the WAD);
           CTEX declares "Planar Image Map"; TSIZ/TCTR carry its scale/offset.
+    .uv   text sidecar loaded next to the .lwo: s texture-path lines that
+          override each surface's TIMG + per-polygon-corner "u v" blocks with
+          v negated (finding 19; name lines and keyframe tail ignored).
 
 glTF mapping decisions (documented approximations, per finding 11 §3):
     - LWOB stores no UVs. CTEX says the mapping is *planar*, so we project
       each face along its dominant normal axis and divide by TSIZ — the
-      engine's own scheme, applied per corner.
+      engine's own scheme, applied per corner. Models with a `.uv` sidecar
+      instead get the engine's real per-corner UVs (v negated as stored)
+      and their sidecar texture paths replace the LWO TIMG — per finding 19.
     - glTF wants per-vertex normals; LWO faces are flat, so corners sharing
       a position do NOT share a normal (keyed vertex table, not raw fan).
     - BMP payloads convert to PNG with stdlib only (struct+zlib+crc32).
@@ -23,7 +28,8 @@ glTF mapping decisions (documented approximations, per finding 11 §3):
 Usage (repo root):
     python3 tools/rrlwo.py list [--wad-dir DIR]
     python3 tools/rrlwo.py dump PATH.lwo | -n NAME [--wad-dir DIR]
-    python3 tools/rrlwo.py gltf PATH.lwo | -n NAME [-o OUT.glb] [--no-textures]
+    python3 tools/rrlwo.py gltf PATH.lwo | -n NAME [-o OUT.glb]
+                                 [--no-textures] [--no-uv]
 """
 import argparse
 import json
@@ -50,10 +56,15 @@ def wad_dirs(explicit):
 # -- WAD-backed asset lookup -------------------------------------------------
 
 class GameAssets:
-    """basename (lower) -> (index, wad) across every *.wad found."""
+    """basename (lower) -> (index, wad) across every *.wad found, plus exact
+    full-path resolution so a pathed lookup can never land on a same-named
+    file from another folder (the game resolves full paths; TIMG lookups give
+    only basenames)."""
 
     def __init__(self, dirs=()):
         self.index = {}
+        self.by_path = {}
+        self.full_names = {}
         for d in dirs:
             d = pathlib.Path(d).expanduser()
             if not d.is_dir():
@@ -61,18 +72,34 @@ class GameAssets:
             for w in sorted(d.glob("*.wad")):
                 wad = rrwad.Wad(w)
                 for i, name in enumerate(wad.names):
-                    key = name.lower().replace("\\", "/").split("/")[-1]
+                    full = name.lower().replace("\\", "/")
+                    key = full.split("/")[-1]
                     self.index.setdefault(key, (i, wad))
+                    self.by_path.setdefault(full, (i, wad))
+                    self.full_names.setdefault(full, name)
 
     def read(self, name):
-        hit = self.index.get(name.lower().replace("\\", "/").split("/")[-1])
+        full = name.lower().replace("\\", "/")
+        hit = self.by_path.get(full) or self.index.get(full.split("/")[-1])
+        if hit is None:
+            return None
+        i, wad = hit
+        return wad.payload(i)
+
+    def read_exact(self, name):
+        """Path-exact only — sidecars must never fall back to a same-named
+        file from another folder (`.uv` belongs to the model it sits next to)."""
+        hit = self.by_path.get(name.lower().replace("\\", "/"))
         if hit is None:
             return None
         i, wad = hit
         return wad.payload(i)
 
     def names_with(self, suffix):
-        return sorted(k for k in self.index if k.endswith(suffix))
+        """Full original-case names ending in `suffix` (ambiguous basenames
+        would collide; the full path is what --name/-n must take back)."""
+        return sorted(self.full_names[f] for f in self.full_names
+                      if f.endswith(suffix.lower()))
 
 
 # -- LWO container -----------------------------------------------------------
@@ -190,17 +217,82 @@ class Lwo:
             return 1
 
     def triangles(self):
-        """[(a, b, c, surf0)] with fan triangulation + negative-index winding."""
+        """[(a, b, c, surf0, poly_idx, (corner_a, corner_b, corner_c))] with fan
+        triangulation + negative-index winding. Corner indices are ring positions
+        in POLS order (swapped with the winding) so `.uv` corner data lines up."""
         base = self._index_base()
-        for idx, si in self.polys():
+        for pi, (idx, si) in enumerate(self.polys()):
             ring = [abs(i) - base for i in idx]
             rev = any(i < 0 for i in idx)
             for k in range(1, len(ring) - 1):
+                ca, cb, cc = 0, k, k + 1
                 b, c = ring[k], ring[k + 1]
                 if rev:
                     b, c = c, b
+                    cb, cc = cc, cb
                 if ring[0] not in (b, c) and b != c:
-                    yield ring[0], b, c, si
+                    yield ring[0], b, c, si, pi, (ca, cb, cc)
+
+
+# -- .uv sidecar (finding 19) --------------------------------------------------
+
+def parse_uv(data: bytes):
+    """Parse a `.uv` sidecar per finding 19 §3. Line layout:
+
+        1      version (ignored)            2      surface count s
+        3..    s name lines (ignored)       ...    s texture paths -> TIMG override
+        2+2s   polygon count m             then m blocks: "polyIdx count" +
+               count lines "u v z", with v negated as the engine stores it.
+        tail   keyframe blocks — ignored, like the engine's parser.
+
+    Raises ValueError if the data does not match the grammar. Returns
+    {"surfaces", "names", "paths", "polys": {poly_idx: [(u, -v), ...]}}.
+    Blank lines never reach the engine's state machine (FUN_00481c50 skips
+    zero-token lines), so drop them here too."""
+    lines = [ln for ln in data.decode("latin1").replace("\r\n", "\n").split("\n")
+             if ln.strip()]
+    if len(lines) < 4:
+        raise ValueError("too short to be a .uv file")
+    try:
+        s = int(lines[1])
+    except ValueError:
+        raise ValueError("missing surface-count header")
+    if s < 1 or len(lines) < 2 + 2 * s + 2:
+        raise ValueError("header counts inconsistent with line count")
+    names = [ln.strip() for ln in lines[2:2 + s]]
+    paths = [ln.strip() for ln in lines[2 + s:2 + 2 * s]]
+    try:
+        m = int(lines[2 + 2 * s])
+    except ValueError:
+        raise ValueError("missing polygon-count line")
+    polys, q, expect = {}, 3 + 2 * s, 0
+    while expect < m and q < len(lines):
+        tok = lines[q].split()
+        if len(tok) < 2:
+            break
+        try:
+            bi, cnt = int(tok[0]), int(tok[1])
+        except ValueError:
+            break
+        if bi != expect or q + 1 + cnt > len(lines):
+            break  # tail blocks or out-of-order: engine reaches nothing either
+        corners = []
+        for k in range(cnt):
+            t = lines[q + 1 + k].split()
+            if len(t) < 2:
+                raise ValueError(f"block {bi} corner {k}: expected 'u v [z]'")
+            corners.append((float(t[0]), -float(t[1])))  # v negated (§4)
+        polys[bi] = corners
+        q += 1 + cnt
+        expect += 1
+    return {"surfaces": s, "names": names, "paths": paths,
+            "polys": polys, "polys_header": m}
+
+
+def uv_sibling(name):
+    """`x\\y.lwo` -> `x\\y.uv`; anything else -> None."""
+    base, _, ext = name.rpartition(".")
+    return base + ".uv" if ext.lower() == "lwo" else None
 
 
 # -- BMP → PNG (stdlib only) -------------------------------------------------
@@ -329,16 +421,31 @@ class Glb:
                 + struct.pack("<I4s", len(blob), b"BIN\x00") + blob)
 
 
-def build_glb(lwo, assets, with_textures=True, warn=print):
+def build_glb(lwo, assets, with_textures=True, warn=print, uv=None):
     glb = Glb()
     pts = lwo.points()
     names = lwo.surface_names()
     meta = lwo.surface_meta()
 
+    # .uv sidecar semantics (finding 19): the path lines replace each surface's
+    # TIMG name — the engine's own override — and the blocks give per-corner UV.
+    uv_polys = {}
+    if uv:
+        if uv["surfaces"] != len(names):
+            warn(f"warning: .uv header says {uv['surfaces']} surfaces, model has "
+                 f"{len(names)} — misaligned sidecar")
+        if uv["polys_header"] != len(lwo.polys()):
+            warn(f"warning: .uv header says {uv['polys_header']} polys, model has "
+                 f"{len(lwo.polys())} — misaligned sidecar")
+        for i, p in enumerate(uv["paths"][:len(names)]):
+            if p:
+                meta.setdefault(names[i].lower(), {})["timg"] = p
+        uv_polys = uv["polys"]
+
     # keyed corner vertices per surface: flat normals + planar projection uv
     surf_verts = {}  # surf0 -> {corner key: vi}
     surf_pos, surf_nrm, surf_uv, surf_idx = {}, {}, {}, {}
-    for a, b, c, si in lwo.triangles():
+    for a, b, c, si, pi, corners in lwo.triangles():
         if max(a, b, c) >= len(pts) or min(a, b, c) < 0:
             warn("warning: vertex index out of range — skipping face")
             continue
@@ -354,19 +461,24 @@ def build_glb(lwo, assets, with_textures=True, warn=print):
         us, vs = [i for i in range(3) if i != axis]
         meta_m = meta.get(names[si].lower(), {}) if si < len(names) else {}
         sx, sy = meta_m.get("tsiz", (1.0, 1.0))
+        puvs = uv_polys.get(pi)
         table = surf_verts.setdefault(si, {})
-        pos, nrm, uv = (surf_pos.setdefault(si, []), surf_nrm.setdefault(si, []),
-                        surf_uv.setdefault(si, []))
+        pos, nrm, uv_ = (surf_pos.setdefault(si, []), surf_nrm.setdefault(si, []),
+                         surf_uv.setdefault(si, []))
         tri = []
-        for p in (p0, p1, p2):
-            key = (p, tuple(n), p[us] / (sx or 1), p[vs] / (sy or 1))
+        for p, ci in zip((p0, p1, p2), corners):
+            # sidecar UV wins where present (the vertex-duplication seam break is
+            # then automatic: same position + different uv keys as a new vertex)
+            fu = puvs[ci] if puvs and ci < len(puvs) else (p[us] / (sx or 1),
+                                                           p[vs] / (sy or 1))
+            key = (p, tuple(n), fu)
             vi = table.get(key)
             if vi is None:
                 vi = len(pos)
                 table[key] = vi
                 pos.append(p)
                 nrm.append(tuple(n))
-                uv.append((p[us] / (sx or 1), p[vs] / (sy or 1)))
+                uv_.append(fu)
             tri.append(vi)
         surf_idx.setdefault(si, []).extend(tri)
 
@@ -416,7 +528,8 @@ def build_glb(lwo, assets, with_textures=True, warn=print):
             "attributes": {"POSITION": pa, "NORMAL": na, "TEXCOORD_0": ua},
             "indices": ia, "material": len(glb.materials) - 1})
     if not glb.primitives:
-        raise ValueError("no geometry produced")
+        raise ValueError("no faces (point-only polygons — particle sprite)"
+                         if lwo.polys() else "no geometry")
     return glb.finish()
 
 
@@ -430,6 +543,8 @@ def main(argv=None):
     ap.add_argument("--wad-dir", action="append", dest="wad_dirs")
     ap.add_argument("-o", "--output")
     ap.add_argument("--no-textures", action="store_true")
+    ap.add_argument("--no-uv", action="store_true",
+                    help="ignore the .uv sidecar (planar UV, LWO texture only)")
     ap.add_argument("-q", "--quiet", action="store_true")
     args = ap.parse_args(argv)
 
@@ -449,25 +564,49 @@ def main(argv=None):
     else:
         ap.error("need PATH or --name NAME")
 
-    lwo = Lwo(data)
+    warn = (lambda *_: None) if args.quiet else print
+    uv = None
+    if not args.no_uv:
+        uvn = uv_sibling(args.name or args.target)
+        blob = assets.read_exact(uvn) if (uvn and args.name) else None
+        if blob is None and uvn and args.target:
+            sib = pathlib.Path(args.target).with_suffix(".uv")
+            blob = (sib.read_bytes() if sib.is_file()
+                    else assets.read_exact(uvn))
+        if blob is not None:
+            try:
+                uv = parse_uv(blob)
+            except ValueError as e:
+                warn(f"warning: .uv sidecar not understood ({e}) — exporting without it")
+
+    lwo = None
+    try:
+        lwo = Lwo(data)
+    except ValueError:
+        ap.error("not a FORM/LWOB object — pass a .lwo (or wad entry) as target")
     if args.cmd == "dump":
         pts = lwo.points()
         print(f"chunks: {[(t, len(d)) for t, d in lwo.chunks]}")
         tris = list(lwo.triangles())
         print(f"points={len(pts)} polys={len(lwo.polys())} tris={len(tris)} "
               f"surfaces={lwo.surface_names()}")
+        if uv:
+            print(f"uv: surfaces={uv['surfaces']} polys={len(uv['polys'])} "
+                  f"(v negated as stored; tail keyframes ignored)")
+            for i, p in enumerate(uv["paths"]):
+                print(f"  tex[{i}] {p}")
         for name, blocks in lwo.surf_records():
             t = blocks.get("TIMG")
             print(f"  SURF {name!r}: tags={sorted(blocks)} "
                   f"timg={t.split(b'.')[0].decode(errors='replace') if t else None}")
         return 0
 
-    glb = build_glb(lwo, assets, not args.no_textures,
-                    warn=(lambda *_: None) if args.quiet else print)
+    glb = build_glb(lwo, assets, not args.no_textures, warn, uv)
     base = (args.name or args.target).rsplit(".", 1)[0].replace("\\", "/").split("/")[-1]
     out = pathlib.Path(args.output or base + ".glb")
     out.write_bytes(glb)
-    print(f"wrote {out} ({len(glb):,} bytes)")
+    note = f", uv sidecar applied ({uv['surfaces']} surfaces)" if uv else ""
+    print(f"wrote {out} ({len(glb):,} bytes{note})")
     return 0
 
 

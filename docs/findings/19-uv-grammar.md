@@ -152,14 +152,10 @@ grammar above with the paired `.lwo` counts:
 
 ## 7. Implications for tooling
 
-- A `.uv`-aware converter must: (a) replace each surface texture name with
-  the sidecar path line; (b) emit per-corner uv from the blocks in POLS ring
-  order, negating v; (c) honour vertex duplication semantics naturally by
-  keying vertices with uv (as `rrlwo.py`'s keyed-vertex table already does);
-  (d) ignore names and tail.
-- `rrlwo.py` currently ignores `.uv`; the override (a) is a one-line effect
-  with visible results, (b) needs the keyed (u,v) extension. Both are
-  deferred follow-on work — the grammar itself is now settled.
+- `.uv` support landed in `rrlwo.py` (2026-10-20): surface-path overrides and
+  per-corner UVs are applied automatically (v negated, keyed vertices handle
+  the duplication), `--no-uv` opts out, and `dump` reports the sidecar. All
+  60 models verified.
 - A `.uv` *writer* (round-trip) is straightforward from this grammar, but the
   tail keyframe blocks are only reconstructible exactly if the source
   LightWave scene is available; the 6-float rows imply position+rotation per

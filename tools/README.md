@@ -4,26 +4,35 @@
 
 Reads the game's 1,132 embedded models (`\Models\…` inside `LegoRR0.wad`)
 straight from the archives and exports `.glb` — geometry, materials with
-colours, and planar-mapped textures pulled from the same WADs. All format
-semantics cite [`docs/findings/11-model-and-scene-formats.md`](../docs/findings/11-model-and-scene-formats.md);
-the two conversion decisions worth knowing:
+colours, and textures pulled from the same WADs. All format semantics cite
+[`docs/findings/11-model-and-scene-formats.md`](../docs/findings/11-model-and-scene-formats.md);
+the conversion decisions worth knowing:
 
-* **UVs** — LWOB stores none; the `CTEX` block says the mapping is *planar*,
-  so we project each face along its dominant normal axis and divide by the
-  `TSIZ` scale, which is the engine's own scheme, not an invented one.
-  Exception: the 60 models that ship a `.uv` sidecar get real per-corner UVs
-  from it — see [`docs/findings/19-uv-grammar.md`](../docs/findings/19-uv-grammar.md)
-  (the converter currently exports those models without sidecar data; the
-  sidecar's surface-path overrides would change their textures, and the
-  per-corner UVs replace the planar projection).
+* **UVs (planar)** — LWOB stores none; the `CTEX` block says the mapping is
+  *planar*, so we project each face along its dominant normal axis and divide
+  by the `TSIZ` scale, which is the engine's own scheme, not an invented one.
+* **`.uv` sidecars** — the 60 models that ship one get the engine's real
+  behaviour instead of the planar guess (see
+  [`docs/findings/19-uv-grammar.md`](../docs/findings/19-uv-grammar.md)):
+  each surface's texture path is overridden by the sidecar's path line, and
+  per-corner UVs (stored `v`, negated as the engine stores it) replace the
+  projection in POLS ring order. Shared vertices needing different uv
+  duplicate automatically through the keyed-vertex table — the same seam
+  break the engine performs. Name lines and the trailing keyframe blocks are
+  ignored, exactly like the engine's parser; `--no-uv` opts out.
 * **Normals** — flat, so shared positions do not share vertices across
   faces (glTF has no face normals).
 
+Lookups resolve by **full path first** (`list` prints full paths, and `-n`
+takes them back); the engine's own path layer works the same way. Sidecars
+only ever resolve exactly — `.uv` belongs to the model beside it.
+
 ```
-python3 tools/rrlwo.py list                          # models in the shipped wads
-python3 tools/rrlwo.py dump "Creatures\Spider.lwo"    # chunk/surface structure
+python3 tools/rrlwo.py list                          # full paths of models in the wads
+python3 tools/rrlwo.py dump "Creatures\LavaMonster\Arml.lwo"   # incl. uv summary
 python3 tools/rrlwo.py gltf "Buildings\Barracks\Base.lwo" -o base.glb
 python3 tools/rrlwo.py gltf PATH.lwo -o out.glb --wad-dir mod/L1   # modded trees
+python3 tools/rrlwo.py gltf -n NAME.lwo -o out.glb --no-uv        # ignore sidecars
 ```
 
 Conversion notes found the hard way (documented in finding 11 §3 terms):
@@ -33,11 +42,21 @@ polygon indices in `POLS` are 1-based per spec, but four exporters used
 winding flipped. `SURF` blocks use tag + u16-BE size records anchored by the
 SRFS surface names; BMP payloads convert to PNG with stdlib only.
 
-Verified: full library 1,132/1,132 exported without errors (2026-10-20),
-structural checks (GLB framing, buffer lengths, index ranges, PNG inflation)
-on all of them, and a visual check on `Buildings\Barracks\Base.glb` in a
-glTF viewer — flat-shaded meshes with textures, as the design predicts
-(user, 2026-10-20).
+Verified: 1,129/1,132 exported, with 3 `*/Steam.lwo` skipped as point-only
+particle sprites (single-vertex `POLS` polygons, not fan geometry — a data
+fact of those files, flagged explicitly since 2026-10-20) and all 60 `.uv`
+sidecar models exported with their real per-corner UVs and overridden
+texture paths applied. Structural checks (GLB framing, buffer lengths, index
+ranges, PNG inflation) on every model, and a visual check on
+`Buildings\Barracks\Base.glb` in a glTF viewer — flat-shaded meshes with
+textures, as the design predicts (user, 2026-10-20).
+
+> Correction note: the original 1,132/1,132 batch (2026-10-20, finding 11
+> tooling) looked entries up **by basename**, which silently fed duplicate-
+> basename models (`arml.lwo` exists under five creature folders, `Steam.lwo`
+> under three) the *first* same-named file instead of their own. Exact-path
+> resolution landed with the `.uv` pass; per-entry payloads are verified
+> correct from then on.
 
 ## `rrwad.py` — the `.wad` (WWAD) container tool
 
