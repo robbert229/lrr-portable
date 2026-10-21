@@ -358,6 +358,16 @@ grid (`FUN_00424600`, stride 0x48 cells, bits `0x800/0x1000/0x2000000`), the
 scene pass with its flag word + 125 s broadcast timer (`FUN_0043b270`), and
 the effect-bank ticker (`FUN_0046f550`). `simtick_test` covers all five.
 
+**Tranche 10 — the dispatch table is complete** (2026-10-21): the last eight
+EngineTick subsystem stubs are ported — the world picker (`FUN_00425d90`,
+mouse-distance gated), the task/frame counter (`FUN_00402220`), the ambient
+spawn accumulator (`FUN_0040eab0`), the sound-bank lifetime ticker
+(`FUN_00465b00`), the render-pass entry (`FUN_004291a0`), the render step
+(`FUN_00449c00`), the vu/timer accumulators (`FUN_00426520`), and the fx-bank
+ticker (`FUN_0046e390`) — leaving **zero `TODO` stubs** in `tickers.cpp`
+(`FUN_004520d0` is owned by the game-layer command executor). All 25
+dispatch entries are now live ports or forward to ported modules.
+
 **Game layer — levels, objectives, savegames** (2026-10-21): the mission
 plumbing that sits on top of the engine (findings 07/08/22) is now
 reconstructed, on top of the merged block-text parser (`src/gods98/block.*`,

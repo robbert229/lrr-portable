@@ -43,6 +43,20 @@ static int tree_poke(int /*idx*/, int /*bits*/)
     return 0;
 }
 
+static int s_pick_n = 0;
+static int pick_poke(int /*x*/, int /*y*/)
+{
+    ++s_pick_n;
+    return 0;
+}
+
+static int s_spawn_n = 0;
+static int spawn_poke(int /*slot*/)
+{
+    ++s_spawn_n;
+    return 0;
+}
+
 static int s_scene_n = 0;
 static void scene_bcast(int /*word*/)
 {
@@ -59,6 +73,9 @@ int main(void)
     EngineContext ctx = {};
     EngineState st = {};
     ctx.state_block = &st;
+    InputState in = {};
+    input_reset(&in);
+    ctx.input = &in;
 
     /* mute timer: a word change resets the 25 s timer and re-arms. */
     simtick_set_mute_word(0);
@@ -221,6 +238,51 @@ int main(void)
     s_tree_n = 0;
     simtick_bitfield_tree(treebase, 1);
     CHECK(s_tree_n == 0, "tree: counts only via hook");
+
+    /* ---- tranche 10 ------------------------------------------------- */
+    /* FUN_00425d90 mouse world pick: gate bits + distance threshold. */
+    ctx.state = 2u | 0x1000u;
+    simtick_set_pick_hook(pick_poke);
+    s_pick_n = 0;
+    ctx.input->mouse_x = 60;
+    ctx.input->mouse_y = 40;
+    simtick_mouse_world(&ctx, 0.1f);
+    CHECK(simtick_mouse_picks() == 1 && s_pick_n == 1,
+          "mouse: pick fired past the distance threshold");
+    ctx.state = 0x100u;
+    simtick_set_pick_hook(NULL);
+    simtick_mouse_world(&ctx, 0.1f); /* gated by 0x100 */
+    CHECK(simtick_mouse_picks() == 1, "mouse: gated by state 0x100");
+
+    /* FUN_004402220 frame counter bumps monotonically. */
+    {
+        uint32_t f0 = simtick_frame();
+        simtick_frame_counter(&ctx);
+        CHECK(simtick_frame() == f0 + 1, "frame: counter incremented");
+    }
+
+    /* FUN_0040eab0 ambient spawn: fires after the accumulator threshold. */
+    simtick_set_spawn_hook(spawn_poke);
+    s_spawn_n = 0;
+    simtick_ambient_spawn(&ctx, 0.6f);
+    simtick_ambient_spawn(&ctx, 0.6f);
+    CHECK(simtick_spawn_calls() == 1 && s_spawn_n == 1,
+          "spawn: fired after ~1 s of accumulation");
+    simtick_set_spawn_hook(NULL);
+
+    /* FUN_00449c00 render step increments the ordered-step census. */
+    {
+        int r0 = simtick_render_steps();
+        simtick_render_step(&ctx);
+        CHECK(simtick_render_steps() == r0 + 1, "renderstep: one");
+
+        /* FUN_00426520 vu meter clears the debug bit 0x400 each frame. */
+        ctx.debug |= 0x400u;
+        ctx.input->cur[0x2d] = 0;
+        simtick_vu_meter(&ctx, 0.1f);
+        CHECK((ctx.debug & 0x400u) == 0, "vumeter: debug bit cleared");
+        ctx.debug = 0;
+    }
 
     /* ---- tranche 9 ------------------------------------------------- */
     /* FUN_004665c0 single post-step. */
