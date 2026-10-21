@@ -70,7 +70,7 @@ legally obtained copy of the game.
       — A.1 audit (finding 15) → A.2 live test (finding 16): **the shipped exe launches
       and renders under GE-Proton via `tools/compat/a2.py run`** (2026-10-20)
 
-## Current status (2026-10-20)
+## Current status (2026-10-21)
 
 Research is complete: all 22 findings shipped, every format shipped in the wads is
 documented address-level — including the two that exist but are never loaded
@@ -79,7 +79,12 @@ documented address-level — including the two that exist but are never loaded
 and the toolchain (unpack/pack byte-exact, model+uv convert **and** write, live launcher)
 is regression-verified against the shipped corpus.
 
-A fresh verify pass (finding 20, 2026-10-20) re-derived the critical path — PE entry
+On the reconstruction side, the engine scaffold, frame loop, input, audio and
+now the **game layer** (level `.map` loading, objectives/advisor, savegames —
+findings 07/08/22) build and pass their suites natively; see the
+*Reconstruction build* section below.
+
+The fresh verify pass (finding 20, 2026-10-20) re-derived the critical path — PE entry
 (`0x48f000`) → WinMain (`FUN_004777a0`) → init → frame loop → engine tick (`0x4232e0`) —
 in a clean Ghidra session: no contradicting evidence, and the named corpus reproduces
 byte-identical (7,653 lines, `diff` exit 0). It corrected one finding-02 reading:
@@ -91,6 +96,8 @@ Open threads, in order of value:
    only link-by-link; repacking a modified `.uv` (e.g. a `GC_Larm.uv` pilot re-skin) and
    observing the change in-game has not been done.
 2. Deferred: dgVoodoo as a perf option; the `Steam.lwo` point-only sprites as glTF.
+3. Reconstruction next: the entity/AI layer (findings 09/10) that consumes the loaded
+   grid + objectives, and the winapi reference build against real DirectX headers.
 
 ## Findings index
 
@@ -136,11 +143,12 @@ SHA-256 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`).
 - **Interactive analysis**: REA (Ghidra provider). Findings cite addresses, not guesses:
   every claim traces to a pseudocode block or an evidence record.
 
-## Reconstruction build (stub)
+## Reconstruction build
 
 Meson build with one source tree and two platform backends (ADR 0004). The
 `native` build is green and the driver (`src/main.cpp`) now exercises the
-**engine scaffold** (2026-10-20): `EngineTick`/`EnginePreTick`/`KeepRunning`/
+**engine scaffold** plus the **game layer** (levels, objectives, savegames —
+findings 07/08/22): `EngineTick`/`EnginePreTick`/`KeepRunning`/
 `MainSimStep`/`EngineShutdown` in `src/gods98/engine.*` mirror the corpus's
 critical path (`0x4232e0`, `0x4231f0`, `0x435940`, `0x4250c0`, `0x424cf0/0x424d00`)
 over the `DAT_005560d4` state block, and `src/gods98/tickers.cpp` reproduces the
@@ -284,6 +292,53 @@ It replaces the camera module's `message_dispatch` stub (the grid-expiry now
 fires into the real bus) and the air-beat tick path dispatches `0x11`/`0x12`.
 `message_test` (suite `message`) covers gates, dedupe/exceptions, cooldown and
 the cap.
+
+**Game layer — levels, objectives, savegames** (2026-10-21): the mission
+plumbing that sits on top of the engine (findings 07/08/22) is now
+reconstructed, on top of the merged block-text parser (`src/gods98/block.*`,
+finding 12, #14). Three new modules in `src/game/`:
+
+- **Level loading** (`src/game/level.*`, finding 07): `level_load` reads a
+  level group's ~35 config keys from `Lego.cfg` into the 0x284-byte level
+  block, then the 17-arg `MapLoadPipeline` port materialises the ten `.map`
+  grids into the w×h×0x48 voxel array — TerrainCreate (grid + physical 0x28
+  block table), the nine layer writers (erosion/cryo, surface, path/AI,
+  emerge, predug, fallin flags, block pointers, layer L/M records) and the
+  CellInitPass sweep, all in the corpus's positional key→loader order.
+  `.map` files are read raw and cells accessed in place (`level_map_cell`,
+  finding 07 §format).
+- **Objective/advisor** (`src/game/objective.*`, finding 22): the
+  `fun_00457d40` config loader (advisor-suppression keys → word bits
+  0x10/0x20/0x80, crystal/ore/block/timer/construction targets at the
+  corpus offsets), the checker/announcer/state-machine triplet with the
+  full runtime bit flow (0x1 pending / 0x2 achieved / 0x4 failed /
+  failed-with-crystals, 0x8 announced-once) and the seconds×25 timer rule.
+- **Savegames** (`src/game/savegame.*`, finding 08): `Saves\\<slot>.sav`
+  (0xB0 header + 5 × 0x3190 records) and `Saves\\<slot>.osf` (`'RO'` magic,
+  count, 20-byte entries) with the slot context, mark/write/commit, the
+  12,684-byte checkpoint blob (reward + 10-task table, Level03 tutorial
+  byte), the `CheckpointStep` bootstrap-commit flow, and `OsfAdd`/snapshot/
+  write.
+
+`GameContext` (`src/game/game.hpp`) carries the corpus globals these
+modules share (`DAT_005560c4` config, `DAT_005560d4` level block,
+`DAT_00556ed0` cheat word, `DAT_004ffbc0` objective word, the save tables)
+so tests run isolated. The frame loop now loads `LEGORRR_LEVEL` (default
+`Level01`) from `Lego.cfg`, runs the objective tick per frame, and exposes
+`S` (build blob + commit slot) and `L` (`CheckpointStep`). Three suites use
+synthetic fixtures only:
+
+```sh
+meson test -C build --suite level
+meson test -C build --suite objective
+meson test -C build --suite savegame
+```
+
+Passing `-Dtest_wads_dir=<game>` adds real-wad probing to `level_test`,
+mirroring the resource/texture/sound/block suites: it mounts the shipped
+wads and reports how many Lego.cfg groups resolve a `SurfaceMap`.
+Best-effort — the fixtures are the guaranteed coverage, and the probe is
+skipped when no game data is present.
 
 ```sh
 cd path/to/legally-owned/game

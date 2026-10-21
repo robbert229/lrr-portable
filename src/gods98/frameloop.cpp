@@ -3,6 +3,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "game/game.hpp"
+#include "game/level.hpp"
+#include "game/objective.hpp"
+#include "game/savegame.hpp"
 #include "platform/platform.h"
 #include "audio.hpp"
 #include "engine.hpp"
@@ -46,6 +50,30 @@ int LegorrrRun(void)
         }
         return 0;
     }
+
+    /* --- Game layer: config DB + level load (findings 07/12/22) ---------- */
+    GameContext game;
+    game_context_init(&game);
+    game.cfg = block_open("Lego.cfg");
+    const char* level_name = env_get("LEGORRR_LEVEL", "Level01");
+    if (game.cfg != NULL) {
+        fprintf(log, "frameloop: config Lego.cfg loaded\n");
+        game.level = level_load(game.cfg, level_name);
+        if (game.level != NULL) {
+            fprintf(log, "frameloop: level %s loaded: %dx%d grid, voxel stride "
+                         "0x48, objective word 0x%08x\n",
+                    level_name, level_width(game.level), level_height(game.level),
+                    game.level->objective);
+        } else {
+            fprintf(log, "frameloop: level %s load FAILED (maps/config missing)\n",
+                    level_name);
+        }
+    } else {
+        fprintf(log, "frameloop: Lego.cfg not found (wads need mounted game data)\n");
+    }
+    int save_loaded = save_read_slot(&game, SAVE_DEFAULT_SLOT, 0);
+    fprintf(log, "frameloop: save slot %d %s\n", SAVE_DEFAULT_SLOT,
+            save_loaded ? "loaded" : "bootstrap");
 
     EngineState state = {};
     InputState  input = {};
@@ -170,10 +198,38 @@ int LegorrrRun(void)
             audio_set_loop_pan(&ap, pan);
             audio_update(&ap);
         }
+        /* Game layer proof-of-life:
+         *  'S' — build the checkpoint blob + commit it to the active slot
+         *  'L' — run CheckpointStep (bootstrap slot 5 + write-through)      */
+        if (game.level != NULL && input_key_edge(&input, 's')) {
+            checkpoint_blob_build(&game);
+            save_set_current_record(&game, 0);
+            save_write_record(&game, 0, game.checkpoint_blob);
+            save_mark_record(&game, 0);
+            save_commit(&game);
+            fprintf(log, "frameloop: saved blob to slot %d record 0 (0x%x bytes)\n",
+                    SAVE_DEFAULT_SLOT, SAVE_BLOB_SIZE);
+        }
+        if (game.level != NULL && input_key_edge(&input, 'l')) {
+            game.save_slot = -1; /* force the bootstrap path */
+            save_set_current_record(&game, 0);
+            checkpoint_step(&game);
+            fprintf(log, "frameloop: checkpoint_step committed slot %d\n",
+                    SAVE_DEFAULT_SLOT);
+        }
         if (rock_x < 0) { rock_x = 0; }
         if (rock_y < 0) { rock_y = 0; }
         if (rock_x > WINDOW_W - 64) { rock_x = WINDOW_W - 64; }
         if (rock_y > WINDOW_H - 64) { rock_y = WINDOW_H - 64; }
+
+        /* Mission plumbing: per-frame objective state machine (finding 22). */
+        if (game.level != NULL) {
+            int resolved = objective_tick(game.level, dt);
+            if (resolved == 0) {
+                fprintf(log, "frameloop: objective resolved (word 0x%08x)\n",
+                        game.level->objective);
+            }
+        }
 
         EngineTick(&ctx, dt);
 
@@ -211,6 +267,13 @@ int LegorrrRun(void)
     texture_cache_clear();
     surface_destroy(&surf);
     platform_destroy_window(win);
+
+    /* Game-layer teardown: checkpoint blob + slot records + level + config. */
+    checkpoint_blob_free(&game);
+    free(game.records);
+    level_destroy(game.level);
+    block_close(game.cfg);
+
     if (log != stderr) {
         fclose(log);
     }
