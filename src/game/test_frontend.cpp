@@ -191,7 +191,7 @@ static void test_gate(void)
     block_close(off);
 }
 
-static FeInput s_small = { 0, 0, 0, 0 };
+static FeInput s_small = { 0, 0, 0, 0, -1, -1, 0 };
 
 static void test_nav_and_actions(void)
 {
@@ -201,37 +201,37 @@ static void test_nav_and_actions(void)
     CHECK(frontend_open(&fe, FE_MENU_MAIN), "nav: open");
     CHECK(fe.sub == 0 && fe.sel == 0, "nav: starts at Menu1 sel 0");
 
-    FeInput in = { 0, 0, 0, 0 };
+    FeInput in = { 0, 0, 0, 0, -1, -1, 0 };
     in.down = 1;
-    CHECK(frontend_tick(&fe, &in) == FE_EVT_NONE && fe.sel == 1, "nav: down -> 1");
+    CHECK(frontend_tick(&fe, &in, NULL) == FE_EVT_NONE && fe.sel == 1, "nav: down -> 1");
     in.down = 0; in.down = 1; in.enter = 0;
     /* go to sel 3 = Quit_Game */
-    frontend_tick(&fe, &in);
-    frontend_tick(&fe, &in);
+    frontend_tick(&fe, &in, NULL);
+    frontend_tick(&fe, &in, NULL);
     CHECK(fe.sel == 3, "nav: down x3 -> Quit_Game");
     in.down = 0; in.enter = 1;
-    CHECK(frontend_tick(&fe, &in) == FE_EVT_NONE && fe.sub == 3,
+    CHECK(frontend_tick(&fe, &in, NULL) == FE_EVT_NONE && fe.sub == 3,
         "nav: Quit_Game -> confirm submenu");
     in.enter = 0;
     /* No -> back to Menu1 */
     in.down = 1;
-    frontend_tick(&fe, &in);
+    frontend_tick(&fe, &in, NULL);
     CHECK(fe.sel == 1, "nav: confirm sel -> No");
     in.down = 0; in.enter = 1;
-    frontend_tick(&fe, &in);
+    frontend_tick(&fe, &in, NULL);
     CHECK(fe.sub == 0, "nav: No -> Menu1");
 
     /* start a level: Menu1 Start_Game -> Menu2 picker -> row 1 (Tran01) */
     in.enter = 0;
     frontend_open(&fe, FE_MENU_MAIN);          /* reset to root */
     in.enter = 1;
-    CHECK(frontend_tick(&fe, &in) == FE_EVT_NONE && fe.sub == 1,
+    CHECK(frontend_tick(&fe, &in, NULL) == FE_EVT_NONE && fe.sub == 1,
         "nav: Start_Game -> picker");
     in.enter = 0; in.down = 1;
-    frontend_tick(&fe, &in);
+    frontend_tick(&fe, &in, NULL);
     CHECK(fe.sel == 1, "nav: picker sel -> Tran01(row1)");
     in.down = 0; in.enter = 1;
-    int ev = (int)frontend_tick(&fe, &in);
+    int ev = (int)frontend_tick(&fe, &in, NULL);
     CHECK(ev == (int)FE_EVT_START_LEVEL, "nav: Enter on row -> START_LEVEL");
     CHECK(strcmp(fe.pending_level, "Tran01") == 0, "nav: pending_level Tran01");
     CHECK(!fe.open, "nav: menu closed after start");
@@ -239,32 +239,32 @@ static void test_nav_and_actions(void)
     /* quit flow: root -> Quit_Game -> Yes */
     frontend_open(&fe, FE_MENU_MAIN);
     in.enter = 0; in.down = 1;
-    FeInput tmp = { 0, 1, 0, 0 };
-    frontend_tick(&fe, &tmp);
-    frontend_tick(&fe, &tmp);
-    frontend_tick(&fe, &tmp);
+    FeInput tmp = { 0, 1, 0, 0, -1, -1, 0 };
+    frontend_tick(&fe, &tmp, NULL);
+    frontend_tick(&fe, &tmp, NULL);
+    frontend_tick(&fe, &tmp, NULL);
     in.down = 0; in.enter = 1;
-    frontend_tick(&fe, &in);                   /* -> confirm */
+    frontend_tick(&fe, &in, NULL);                   /* -> confirm */
     in.enter = 0; in.enter = 1;
-    ev = (int)frontend_tick(&fe, &in);
+    ev = (int)frontend_tick(&fe, &in, NULL);
     CHECK(ev == (int)FE_EVT_QUIT, "nav: Yes -> QUIT");
     CHECK(fe.quit, "nav: quit flag set");
 
     /* esc: back then quit */
     frontend_open(&fe, FE_MENU_MAIN);
     in.enter = 0; in.down = 1;
-    FeInput down_ = { 0, 1, 0, 0 };
-    frontend_tick(&fe, &down_);
-    frontend_tick(&fe, &down_);
-    frontend_tick(&fe, &down_);
+    FeInput down_ = { 0, 1, 0, 0, -1, -1, 0 };
+    frontend_tick(&fe, &down_, NULL);
+    frontend_tick(&fe, &down_, NULL);
+    frontend_tick(&fe, &down_, NULL);
     in = s_small; in.enter = 1;
-    frontend_tick(&fe, &in);      /* -> confirm */
+    frontend_tick(&fe, &in, NULL);      /* -> confirm */
     in.enter = 0; in.esc = 1;
-    CHECK(frontend_tick(&fe, &in) == FE_EVT_NONE && fe.sub == 0,
+    CHECK(frontend_tick(&fe, &in, NULL) == FE_EVT_NONE && fe.sub == 0,
         "nav: esc on confirm -> Menu1");
     in.esc = 0;
-    FeInput esc_ = { 0, 0, 0, 1 };
-    CHECK(frontend_tick(&fe, &esc_) == FE_EVT_QUIT,
+    FeInput esc_ = { 0, 0, 0, 1, -1, -1, 0 };
+    CHECK(frontend_tick(&fe, &esc_, NULL) == FE_EVT_QUIT,
         "nav: esc on root -> QUIT");
     if (cfg != NULL) {
         block_close(cfg);
@@ -278,7 +278,7 @@ static void test_render(void)
     frontend_build(&fe, cfg);
     frontend_open(&fe, FE_MENU_MAIN);
 
-    int w = 320, h = 240;
+    int w = 640, h = 400;
     uint8_t* px = (uint8_t*)calloc((size_t)w * h, 4);
     CHECK(px != NULL, "render: buffer");
     /* clear to black explicitly for deterministic assertions */
@@ -286,23 +286,23 @@ static void test_render(void)
     frontend_render(&fe, NULL, NULL, w, h, px, w * 4);
     uint8_t b[4];
 
-    /* selected row 0 = "Start_Game": auto-centered, 3x5 len 10 -> tw 70,
-     * x = 160 - 35 = 125, y = 56. Highlight bar behind it. */
-    b[0] = px[(54 * w + 121) * 4 + 0];
-    b[1] = px[(54 * w + 121) * 4 + 1];
-    b[2] = px[(54 * w + 121) * 4 + 2];
+    /* selected row 0 = "Start_Game": fixture Menu1 Position 320:200,
+     * AutoCenter TRUE -> x = 320 - 70/2 = 285, y = 200 (3x5 fallback). */
+    b[0] = px[(199 * w + 283) * 4 + 0];
+    b[1] = px[(199 * w + 283) * 4 + 1];
+    b[2] = px[(199 * w + 283) * 4 + 2];
     CHECK(b[0] == 60 && b[1] == 80 && b[2] == 200,
         "render: selection highlight color");
-    /* 'S' of Start_Game at (125,56) is ink (white) */
-    b[0] = px[(56 * w + 125) * 4 + 0];
-    CHECK(b[0] == 255 && px[(56 * w + 125) * 4 + 1] == 255
-        && px[(56 * w + 125) * 4 + 2] == 255, "render: glyph ink");
+    /* 'S' of Start_Game at (285,200) is ink (white) */
+    b[0] = px[(200 * w + 285) * 4 + 0];
+    CHECK(b[0] == 255 && px[(200 * w + 285) * 4 + 1] == 255
+        && px[(200 * w + 285) * 4 + 2] == 255, "render: glyph ink");
 
-    /* non-selected row 3 "Quit_Game" (3x5 len 9 -> tw 63, x = 160 - 31 =
-     * 129), y = 56 + 3*48 = 200; faint color (200,200,160). */
-    b[0] = px[(200 * w + 129) * 4 + 0];
-    CHECK(b[0] == 200 && px[(200 * w + 129) * 4 + 1] == 200
-        && px[(200 * w + 129) * 4 + 2] == 160, "render: faint row ink");
+    /* non-selected item 3 "Quit_Game" (y offset 160 -> y = 360; 3x5 tw
+     * 63 -> x = 320 - 31 = 289); faint color (200,200,160). */
+    b[0] = px[(360 * w + 289) * 4 + 0];
+    CHECK(b[0] == 200 && px[(360 * w + 289) * 4 + 1] == 200
+        && px[(360 * w + 289) * 4 + 2] == 160, "render: faint row ink");
 
     free(px);
     block_close(cfg);
@@ -337,7 +337,7 @@ static void test_font(void)
             "\tMenu { MainMenuFull {\n"
             "\t\tMenuCount 1\n"
             "\t\tMenu1 { AutoCenter FALSE Position 0:0 ItemCount 1\n"
-            "\t\t\tItem1 Next:0:0:LQ:Menu1\n"
+            "\t\t\tItem1 Next:4:4:LQ:Menu1\n"
             "\t\t}\n"
             "\t} }\n"
             "\tLevels { Tran01 { FullName T } }\n"
@@ -353,19 +353,20 @@ static void test_font(void)
             memset(px, 0, (size_t)w * h * 4);
             frontend_render(&fe, &tf, &tf, w, h, px, w * 4);
             /* 'L' (g=44 -> col 4, row 4): cell ink at (4*8+1, 4*4+1) =
-             * (33,17). Item at x=48,y=56 (AutoCenter FALSE). */
-            uint8_t c0 = px[(57 * w + 49) * 4 + 0];   /* 'L' ink */
-            CHECK(c0 == 255 && px[(57 * w + 49) * 4 + 1] == 255
-                && px[(57 * w + 49) * 4 + 2] == 255, "font: L ink");
-            /* advance('L') = maxx+1 = 2 -> 'Q' at x = 48 + 2 = 50 */
-            uint8_t q0 = px[(57 * w + 51) * 4 + 0];
+             * (33,17). Item at Position 0:0 + anchor 4:4 = (4,4). */
+            uint8_t c0 = px[((4 + 1) * w + (4 + 1)) * 4 + 0];   /* 'L' ink */
+            CHECK(c0 == 255 && px[((4 + 1) * w + (4 + 1)) * 4 + 1] == 255
+                && px[((4 + 1) * w + (4 + 1)) * 4 + 2] == 255, "font: L ink");
+            /* advance('L') = maxx+1 = 2 -> 'Q' at x = 4 + 2 = 6, ink at
+             * (6+1, 5) = (7,5) */
+            uint8_t q0 = px[(5 * w + 7) * 4 + 0];
             CHECK(q0 == 255, "font: Q advance ink");
             /* the key pixel of the 'L' cell (its 0,0) is transparent: the
              * selected-row highlight bar behind it shows through (not the
              * red key, not white ink) */
-            uint8_t k = px[(56 * w + 48) * 4 + 0];
-            CHECK(k == 60 && px[(56 * w + 48) * 4 + 1] == 80
-                && px[(56 * w + 48) * 4 + 2] == 200,
+            uint8_t k = px[(4 * w + 4) * 4 + 0];
+            CHECK(k == 60 && px[(4 * w + 4) * 4 + 1] == 80
+                && px[(4 * w + 4) * 4 + 2] == 200,
                 "font: key skipped (highlight shows through)");
             free(px);
         }
@@ -452,13 +453,46 @@ static void test_active_image(void)
         "img: Menu1 has no MenuImage key");
 
     /* Enter on Start_Game (item 0) -> Menu2 (Missions picker) */
-    FeInput in = { 0, 0, 1, 0 };
-    frontend_tick(&fe, &in);
+    FeInput in = { 0, 0, 1, 0, -1, -1, 0 };
+    frontend_tick(&fe, &in, NULL);
     CHECK(fe.sub == 1, "img: navigated to Menu2");
     const char* im = frontend_active_image(&fe);
     CHECK(im != NULL, "img: Menu2 has a MenuImage");
     CHECK(im != NULL && strcmp(im, "Interface\\LevelPicker\\LevelPick.bmp") == 0,
         "img: Menu2 path trimmed of ':0:0:1'");
+    block_close(cfg);
+}
+
+static void test_pointer(void)
+{
+    BlockFile* cfg = s_parse(FIXCFG);
+    FrontEnd fe;
+    frontend_build(&fe, cfg);
+    frontend_open(&fe, FE_MENU_MAIN);
+    CHECK(fe.sel == 0, "ptr: starts at item 0");
+
+    /* hover item 1 ("Training_Missions": Position 320:200, AutoCenter,
+     * 3x5 tw 126 -> x=257, y=240; hit rect ~(253..387, 238..250)) */
+    FeInput ho = { 0, 0, 0, 0, 300, 245, 0 };
+    CHECK(frontend_tick(&fe, &ho, NULL) == FE_EVT_NONE && fe.sel == 1,
+        "ptr: hover selects item 1");
+
+    /* click item 1 -> its Next target (Menu3) */
+    FeInput cl = { 0, 0, 0, 0, 300, 245, 1 };
+    CHECK(frontend_tick(&fe, &cl, NULL) == FE_EVT_NONE && fe.sub == 2,
+        "ptr: click activates Next -> Menu3");
+    CHECK(fe.sel == 0, "ptr: submenu nav resets selection");
+
+    /* click in empty space keeps the menu up with no change */
+    frontend_open(&fe, FE_MENU_MAIN);
+    FeInput miss = { 0, 0, 0, 0, 10, 10, 1 };
+    CHECK(frontend_tick(&fe, &miss, NULL) == FE_EVT_NONE && fe.sel == 0
+        && fe.sub == 0, "ptr: empty-space click is a no-op");
+
+    /* click the selected Start_Game (item 0: x=285, y=200) -> Missions */
+    FeInput start = { 0, 0, 0, 0, 300, 205, 1 };
+    CHECK(frontend_tick(&fe, &start, NULL) == FE_EVT_NONE && fe.sub == 1,
+        "ptr: click Start_Game -> Missions picker");
     block_close(cfg);
 }
 
@@ -477,6 +511,7 @@ int main(int argc, char** argv)
     test_render();
     test_active_image();
     test_font();
+    test_pointer();
 
     if (s_failures == 0) {
         printf("frontend: all tests passed\n");
