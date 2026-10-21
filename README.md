@@ -368,6 +368,21 @@ ticker (`FUN_0046e390`) — leaving **zero `TODO` stubs** in `tickers.cpp`
 (`FUN_004520d0` is owned by the game-layer command executor). All 25
 dispatch entries are now live ports or forward to ported modules.
 
+**Engine <-> level binding** (2026-10-21): `EngineContext.level_block` binds
+a loaded `LevelState` (game/level.h) into the engine; `engine_level_*`
+accessors read width/height/voxels at the corpus offsets
+(`+0x14/+0x18/+0xb8` — the same offsets our `EngineState` grid model uses),
+`view_tick` now takes the context and picks terrain from the voxel surface
+byte (`+0x04`), and the camera grid-expiry prefers the bound level. The demo
+binds `game.level` after load. `engine_bind_test` (suite `enginebind`) covers
+the accessors + view terrain pick.
+⚠️ Integration blocker found, **handed back to the game layer**: the shipped
+`Lego.cfg` groups don't resolve through `block.*`'s path lookup — their own
+`level_test --real` probe counts **0** level groups, and the cfg's key
+spellings are case-inconsistent (`CryoreMap` vs `CryOreMap`, `PredugMap` vs
+`PreDugMap`). The binding + view code is ready for a live level the moment
+the loader resolves shipped configs.
+
 **Game layer — levels, objectives, savegames** (2026-10-21): the mission
 plumbing that sits on top of the engine (findings 07/08/22) is now
 reconstructed, on top of the merged block-text parser (`src/gods98/block.*`,

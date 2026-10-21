@@ -134,8 +134,16 @@ int LegorrrRun(void)
         ENGINE_APP_NORMAL, 0, 0, 0, 1,
         &state, &input,
         { &views[0], &views[1], &views[2] },
+        NULL, /* level_block — bound to game.level below */
         0.0f, 0,
     };
+    /* Engine <-> level binding: the engine sim reads the loaded LevelState
+     * (width/height/voxels) so cameras/tickers see the real terrain. */
+    ctx.level_block = game.level;
+    if (game.level != NULL) {
+        fprintf(log, "frameloop: engine bound to level %dx%d voxel grid\n",
+                engine_level_width(&ctx), engine_level_height(&ctx));
+    }
     /* The finding-22 InfoMessages catalog + bus enabled. */
     message_init_defaults();
 

@@ -102,14 +102,31 @@ void cam_set_facing(CameraHandle* c, const float* r)
  *  FUN_0044a070 velocity blend-> returns 0 (targeted EMA deferred).
  *  FUN_0041f940 / FUN_004369f4 / FUN_004798b0 camera steps -> no-ops/1. */
 
-static int grid_pick(EngineState* /*st*/, const float* pos, int* gx, int* gy)
+static int grid_pick(EngineContext* ctx, const float* pos, int* gx, int* gy)
 {
+    /* with a bound level, cells come from the real voxel grid; terrain uses
+     * the voxel surface byte (+0x04). */
+    if (ctx->level_block != NULL) {
+        int w = engine_level_width(ctx);
+        int h = engine_level_height(ctx);
+        int x = (int)pos[0];
+        int y = (int)pos[1];
+        if (w > 0 && h > 0 && x >= 0 && y >= 0 && x < w && y < h) {
+            *gx = x;
+            *gy = y;
+            return 1;
+        }
+        return 0;
+    }
     *gx = (int)pos[0];
     *gy = (int)pos[1];
     return 1;
 }
-static float terrain_height(EngineState* /*st*/, float /*x*/, float /*y*/)
+static float terrain_height(EngineContext* ctx, float x, float y)
 {
+    if (ctx->level_block != NULL) {
+        return (float)engine_voxel_byte(ctx, (int)x, (int)y, 0x04);
+    }
     return 0.0f;
 }
 static void cam_angle()
@@ -152,11 +169,13 @@ static void view_tail(ViewContext* v, float scale)
     }
 }
 
-void view_tick(ViewContext* v, EngineState* st, float dt, float scale)
+void view_tick(ViewContext* v, EngineContext* ctx, float dt, float scale)
 {
     if (v == NULL) {
         return;
     }
+    EngineState* st = ctx != NULL ? ctx->state_block : NULL;
+    (void)st;
     cam_offset(&v->cam_world, -v->velocity[0], -v->velocity[1],
                -v->velocity[2]);
 
@@ -170,18 +189,18 @@ void view_tick(ViewContext* v, EngineState* st, float dt, float scale)
         cam_get_facing(&v->cam_follow, fac);
         (void)fac;
         int gx = 0, gy = 0;
-        if (!grid_pick(st, pos, &gx, &gy)) {
+        if (!grid_pick(ctx, pos, &gx, &gy)) {
             cam_offset(&v->cam_follow, -v->offset[0], -v->offset[1],
                        -v->offset[2]);
         } else {
             const int edge = g_view_grid_edge;
-            if (gx < edge || (int)st->grid_w - edge <= gx) {
+            if (gx < edge || engine_level_width(ctx) - edge <= gx) {
                 cam_offset(&v->cam_follow, -v->offset[0], 0, 0);
             }
-            if (gy < edge || (int)st->grid_h - edge <= gy) {
+            if (gy < edge || engine_level_height(ctx) - edge <= gy) {
                 cam_offset(&v->cam_follow, 0, -v->offset[1], 0);
             }
-            float h = terrain_height(st, pos[0], pos[1]);
+            float h = terrain_height(ctx, pos[0], pos[1]);
             cam_set_pos(&v->cam_facing, pos[0], pos[1], h);
             cam_angle(); /* rotor; sets yaw below in the corpus */
             float yaw = v->follow_span + (-0.0f);
@@ -247,7 +266,7 @@ void view_views_tick(EngineContext* ctx, float dt, float scale)
     }
     for (int i = 0; i < 3; ++i) {
         if (ctx->views[i] != NULL) {
-            view_tick(ctx->views[i], ctx->state_block, dt, scale);
+            view_tick(ctx->views[i], ctx, dt, scale);
         }
     }
 }

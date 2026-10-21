@@ -93,14 +93,25 @@ void camera_grid_timers(EngineContext* ctx, float dt)
 void camera_grid_expiry(EngineContext* ctx, float dt)
 {
     EngineState* st = ctx != NULL ? ctx->state_block : NULL;
-    if (st == NULL || !g_camera_grid_enabled
-        || st->grid_w == 0 || st->grid_h == 0 || st->grid_cells == NULL) {
+    /* Prefer the bound level's voxel grid (width/height/voxels +0x14/0x18/0xb8). */
+    const uint8_t* cells = NULL;
+    uint32_t gw = 0, gh = 0;
+    if (ctx != NULL && ctx->level_block != NULL) {
+        gw = (uint32_t)engine_level_width(ctx);
+        gh = (uint32_t)engine_level_height(ctx);
+        cells = (const uint8_t*)engine_level_ptr(ctx, 0xb8);
+    } else if (st != NULL) {
+        gw = st->grid_w;
+        gh = st->grid_h;
+        cells = (const uint8_t*)st->grid_cells;
+    }
+    if (!g_camera_grid_enabled || gw == 0 || gh == 0 || cells == NULL) {
         return;
     }
-    for (uint32_t y = 0; y < st->grid_h; ++y) {
-        for (uint32_t x = 0; x < st->grid_w; ++x) {
-            uint32_t idx = y * st->grid_w + x;
-            uint8_t* cell = (uint8_t*)st->grid_cells + idx * 0x48;
+    for (uint32_t y = 0; y < gh; ++y) {
+        for (uint32_t x = 0; x < gw; ++x) {
+            uint32_t idx = y * gw + x;
+            uint8_t* cell = (uint8_t*)cells + idx * 0x48;
             uint32_t busy = *(uint32_t*)(cell + 0x3c);
             if (busy == 0) {
                 continue;

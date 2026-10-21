@@ -90,9 +90,73 @@ typedef struct EngineContext {
     InputState  *input;        /* key tables / text pump / quit-dwell
                                 * (findings 04/05; dwell slots per 22) */
     ViewContext *views[3];     /* DAT_005560e4 / e8 / ec (view.hpp) */
+    void*       level_block;  /* LevelState block when bound (game level) */
+
     float        exit_timer;   /* DAT_00556efc — decremented by scaled dt */
     int          tickers_ran;  /* scaffolding: count of dispatched tickers */
 } EngineContext;
+
+/* --- engine-level binding ------------------------------------------------
+ * The corpus uses ONE 0x284-byte block (DAT_005560d4) for both engine state
+ * and the loaded level (game/level.h). These accessors read the bound level
+ * block at the corpus offsets (width +0x14, height +0x18, voxels +0xb8) so
+ * the engine's camera/view/ticker code sees the real terrain. */
+static inline uint32_t engine_level_u32(const EngineContext* ctx, int off)
+{
+    const uint8_t* b = (const uint8_t*)ctx->level_block;
+    uint32_t v = 0;
+    __builtin_memcpy(&v, b + off, 4);
+    return v;
+}
+
+static inline uintptr_t engine_level_ptr(const EngineContext* ctx, int off)
+{
+    uintptr_t v = 0;
+    __builtin_memcpy(&v, (const uint8_t*)ctx->level_block + off,
+                     sizeof(uintptr_t));
+    return v;
+}
+
+static inline int engine_level_width(const EngineContext* ctx)
+{
+    return (ctx != NULL && ctx->level_block != NULL)
+               ? (int)engine_level_u32(ctx, 0x14) : 0;
+}
+
+static inline int engine_level_height(const EngineContext* ctx)
+{
+    return (ctx != NULL && ctx->level_block != NULL)
+               ? (int)engine_level_u32(ctx, 0x18) : 0;
+}
+
+static inline const uint8_t* engine_level_voxel(const EngineContext* ctx,
+                                                int x, int y)
+{
+    if (ctx == NULL || ctx->level_block == NULL) {
+        return NULL;
+    }
+    int w = engine_level_width(ctx);
+    if (w <= 0 || x < 0 || y < 0) {
+        return NULL;
+    }
+    int h = engine_level_height(ctx);
+    if (x >= w || y >= h || h <= 0) {
+        return NULL;
+    }
+    const uint8_t* voxels = (const uint8_t*)engine_level_ptr(ctx, 0xb8);
+    if (voxels == NULL) {
+        return NULL;
+    }
+    return voxels + ((y * w) + x) * 0x48;
+}
+
+/* byte `off` within a voxel cell (surface byte = +0x04, finding 07). */
+static inline uint8_t engine_voxel_byte(const EngineContext* ctx,
+                                        int x, int y, int off)
+{
+    const uint8_t* v = engine_level_voxel(ctx, x, y);
+    return v != NULL ? v[off] : 0;
+}
 
 /* Frame tick — the triplet slot DAT_00505930 (corpus EngineTick @ 0x4232e0).
  * Returns 0 when the frame loop must quit, 1 otherwise. dt is seconds. */

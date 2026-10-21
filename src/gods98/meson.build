@@ -41,6 +41,7 @@ if get_option('platform') == 'native'
                  ['airbeat', 'test_airbeat.cpp'],
                  ['mainsim', 'test_mainsim.cpp'],
                  ['simtick', 'test_simtick.cpp'],
+                 ['enginebind', 'test_engine_bind.cpp'],
                  ['block', 'test_block.cpp'], ['model', 'test_model.cpp']]
     test_name = exe[0]
     t = executable(test_name + '_test', exe[1],
