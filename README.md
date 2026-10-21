@@ -120,9 +120,10 @@ Open threads, in order of value:
 3. Reconstruction notes: the `.ol` loader is decompile- + corpus-verified
    (grammar and the `ObjectTypeByName` code table, `entity_test --real`
    over all 44 shipped lists); the front-end/menu boot (finding 23, #41),
-   `.ae` entity assembly (#42), model-aware entity rendering (LWO
-   wireframes), the campaign flow, command/AI, selection, reward
-   save+advance, the advisor/incident bus wiring, the software level
+   the `.flh` overlay lane (finding 21 — `flic_test --real` decodes all 40
+   shipped `.flh`), `.ae` entity assembly (#42), model-aware entity
+   rendering (LWO wireframes), the campaign flow, command/AI, selection,
+   reward save+advance, the advisor/incident bus wiring, the software level
    renderer, the engine↔level binding seam, and the AVI movie path
    (#47/#48) are all in.
 
@@ -324,6 +325,18 @@ own 3x5 typeface kept as a headless fallback. **In-game pause** (2026-10-21):
 `Esc` in a level opens the shipped `PausedMenu` overlay (Continue / Options /
 Restart / Quit, with mouse + keyboard like the main menu) instead of quitting
 — Restart reloads the level in place, and `LEGORRR_AUTOPAUSE_FRAMES=N`
+<<<<<<< HEAD
+headlessly opens the pause at frame N for screenshots. The `!Overlay%i`
+FLIC decorations (finding 21 — `avi\PB1.flh` etc.) animate on the menu
+backdrops. **Load slots** (2026-10-21): the Load_A_Saved_Game screen lists
+the on-disk slots (`SaveMenuBuild @ 0x415a10` rows fed by `save_slot_state`)
+— picking one resumes the furthest completed record's campaign level and
+restores its checkpoint (task + reward table) over the seeded mission.
+**Options sliders** (2026-10-21): the Options/Advanced `Slider`/`Cycle`
+items respond to `←`/`→` (and render a live bar+knob / current option) —
+the volume families (SFX/Music/Sound) drive the audio seam, the rest are
+state-only until the engine's option globals are wired. New key:
+=======
 headlessly opens the pause at frame N for screenshots. **Load slots**
 (2026-10-21): the Load_A_Saved_Game screen lists the on-disk slots
 (`SaveMenuBuild @ 0x415a10` rows fed by `save_slot_state`) — picking one
@@ -338,6 +351,7 @@ until the engine's option globals are wired. **Picker scroll** (2026-10-21):
 content height, reset on re-entry); the grafted campaign/tutorial picker rows
 sit on one tall plane, so all 24 campaign levels are now reachable with the
 pointer. New key:
+>>>>>>> origin/main
 **`PLATFORM_KEY_ENTER`** at the seam. Suites: `block` (`::` paths) and
 `frontend` (fixtures + a `--real` probe that builds the whole front end from
 the shipped `Lego.cfg` — 24-level campaign chain, 8 tutorials, 32 picker
@@ -652,6 +666,24 @@ finding 12, #14). Three new modules in `src/game/`:
   suite). Meson owns the soname lists and passes them to the module and the
   probe as defines, so the build and the runtime never drift apart, and
   `libdl` is linked where old glibc needs it.
+- **`.flh` FLIC overlays** (2026-10-21, finding 21): `src/gods98/flic.*` is
+  the port's runtime player for the FLIC-family overlay animations the
+  shipped game shows on its menus — the 18 wad `.flh` files
+  (`Interface\Pointers\*`, `Interface\InfoPanel\HOLO.FLH`,
+  `Interface\Reward\CAPTAIN/CAPTY.FLH`) plus the 11 loose `Data/AVI` copies
+  the front-end `!Overlay%i` entries name (`avi\PB1.flh` etc.). It
+  implements finding 21's coder model exactly: 128-byte header, chunk
+  stream from 0x80, one opcode-25 keyframe (FLI16 byte-RLE) + nFrames
+  opcode-27 delta records (word-based row jumps + skip/control), size-16
+  hold chunks repeating frames, RGB555 storage expanded to RGBA32.
+  `flic_test` (suite `flic`) builds a synthetic 4×4 FLIC and pins
+  keyframe/delta/hold/loop/RGBA pixels end-to-end, and `--real` decodes all
+  **29 wad + 11 loose `.flh` files to EOF (1,802 frames)** with content
+  spot checks (HOLO 158×226, nFrames 81; animated last-frame≠first). The
+  front end now parses and plays the `!Overlay%i` decorations on each
+  submenu (`PlayRandom` picks one), ticking each open flic per frame and
+  blitting its current frame at the configured (x,y) over the menu
+  backdrop.
 
 `GameContext` (`src/game/game.hpp`) carries the corpus globals these
 modules share (`DAT_005560c4` config, `DAT_005560d4` level block,
@@ -683,6 +715,7 @@ meson test -C build --suite render
 meson test -C build --suite bind
 meson test -C build --suite frontend
 meson test -C build --suite movie
+meson test -C build --suite flic
 ```
 Passing `-Dtest_wads_dir=<game>` adds real-wad probing to `level_test` and
 `frontend_test`, mirroring the resource/texture/sound/block suites: they

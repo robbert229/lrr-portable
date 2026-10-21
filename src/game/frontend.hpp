@@ -41,8 +41,11 @@
 extern "C" {
 #endif
 
+struct Flic; /* gods98/flic.hpp — `.flh` overlay player (lazily opened) */
+
 #define FE_ITEMS_MAX      32   /* ItemCount cap — ≥ the 24-level campaign picker */
 #define FE_SUBMENUS_MAX   8    /* MenuCount cap */
+#define FE_OVERLAYS_MAX   5    /* per-submenu `!Overlay%i` cap */
 #define FE_NAME_MAX       48
 #define FE_PATH_MAX       128
 #define FE_LEVEL_NAME_MAX 48
@@ -94,6 +97,16 @@ typedef struct FeItem {
     char  cycle_opts[4][24];
 } FeItem;
 
+/* A front-end FLIC overlay (`!Overlay%i <avi\X.flh>:<SFX>:x:y`, finding
+ * 23 / 14 §5): a small .flh animation blitted onto the menu backdrop. */
+typedef struct FeOverlay {
+    char  path[FE_PATH_MAX];
+    char  sfx[FE_NAME_MAX];
+    int   x, y;
+    Flic* flic;   /* opened player, or NULL (missing file / not started) */
+    int   tried;  /* 1 = open attempted (missing files are not retried) */
+} FeOverlay;
+
 typedef struct FeSubmenu {
     int   item_count;             /* cfg ItemCount + grafted chain rows */
     FeItem items[FE_ITEMS_MAX];
@@ -104,6 +117,9 @@ typedef struct FeSubmenu {
     int   base_x, base_y;         /* Position key (x:y) */
     int   auto_center;            /* AutoCenter TRUE|FALSE */
     int   display_title;          /* DisplayTitle TRUE|FALSE */
+    int   play_random;            /* PlayRandom: one overlay plays per display */
+    FeOverlay overlays[FE_OVERLAYS_MAX];
+    int   overlay_count;
     int   can_scroll;             /* CanScroll TRUE — item plane pans (0x413970) */
     int   scroll;                 /* plane offset in px (<= 0; reset on entry) */
     int   scroll_extent;          /* content height = tallest item + row height */
@@ -153,6 +169,9 @@ typedef struct FrontEnd {
     int  option_changed;            /* 1: a Slider/Cycle value changed this tick */
     char pending_level[FE_LEVEL_NAME_MAX]; /* level group to load (no "Levels::") */
     char resume_level[FE_LEVEL_NAME_MAX];  /* current level (pause Restart)   */
+
+    /* Overlay players open for the currently active submenu (lazily). */
+    const FeSubmenu* overlays_for;  /* which submenu's flics are open     */
 
     /* CanScroll plane pan lives on each FeSubmenu (corpus DAT_005574e0
      * is reset when a menu re-enters — frontend_open clears every sub). */
