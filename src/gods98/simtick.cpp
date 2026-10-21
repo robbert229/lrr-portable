@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
+#include <math.h>
 #include <string.h>
 
 #include "simtick.hpp"
@@ -161,9 +162,7 @@ void simtick_bobbins(EngineContext* c)
 }
 
 /* ---- grid marker sweep (FUN_0044eff0) ----------------------------------- */
-static int s_marker_fired = 0;
-
-int simtick_marker_count(void)
+static int s_marker_fired = 0;int simtick_marker_count(void)
 {
     return s_marker_fired;
 }
@@ -194,4 +193,158 @@ void simtick_marker_sweep(EngineContext* c, float dt, float scale)
     }
     st->sim_marker_flags = 0;
     /* TODO(simtick): render passes FUN_00450b60 / FUN_0044f090. */
+}
+
+/* ---- ManagerTick (corpus FUN_0045a730, finding 04) ---------------------- */
+
+float g_manager_smooth_a = 1.0f;   /* _DAT_0049e5e8 (unpinned; stable EMA) */
+float g_manager_smooth_b = -1.0f;  /* _DAT_0049e5ec (corpus constants unknown) */
+float g_manager_snap     = 1.0f;   /* _DAT_0049e5e0 */
+float g_manager_dt_const = 0.0f;  /* _DAT_0049e5d8 (skip when dt == ) */
+
+static SimtickManagerSlot* s_mgr = NULL; /* table held by pointer (corpus) */
+static int  s_mgr_count = 0;
+static int  (*s_repos)(int, int, int) = NULL;
+static int  (*s_attach)(int, int, int, int) = NULL;
+static int  s_metrics[2] = { 0, 0 };
+static int  s_repos_n = 0, s_attach_n = 0;
+
+static uint32_t s_timer_word = 0;
+static int      s_timer_handles[4] = { 0, 0, 0, 0 }; /* DAT_00500850..5c */
+static const uint32_t s_timer_bits[4] = { 0x10u, 0x20u, 0x40u, 0x80u };
+
+void simtick_manager_clear(void)
+{
+    s_mgr = NULL;
+    s_mgr_count = 0;
+    s_repos = NULL;
+    s_attach = NULL;
+    s_metrics[0] = s_metrics[1] = 0;
+    s_repos_n = s_attach_n = 0;
+    s_timer_word = 0;
+}
+
+void simtick_manager_set_slots(SimtickManagerSlot* slots, int count)
+{
+    simtick_manager_clear();
+    if (slots == NULL) {
+        return;
+    }
+    if (count > SIMTICK_MANAGER_SLOTS) {
+        count = SIMTICK_MANAGER_SLOTS;
+    }
+    s_mgr = slots; /* keep the caller's table (the corpus mutates it in place) */
+    s_mgr_count = count;
+}
+
+void simtick_manager_set_reposition_hook(int (*h)(int, int, int))
+{
+    s_repos = h;
+}
+
+void simtick_manager_set_attach_hook(int (*h)(int, int, int, int))
+{
+    s_attach = h;
+}
+
+void simtick_manager_set_metrics(int mx, int my)
+{
+    s_metrics[0] = mx;
+    s_metrics[1] = my;
+}
+
+int simtick_manager_repositions(void) { return s_repos_n; }
+int simtick_manager_attaches(void)     { return s_attach_n; }
+
+/* Index-9 timer word bits 0x10..0x80 (DAT_00500860) — still armed state. */
+int simtick_manager_timer_bit(int which)
+{
+    if (which < 0 || which > 3) {
+        return 0;
+    }
+    return (s_timer_word & s_timer_bits[which]) != 0;
+}
+
+void simtick_manager_set_timer_word(uint32_t w)
+{
+    s_timer_word = w;
+}
+
+void simtick_manager_tick(int index, float dt, int ingame)
+{
+    if (index < 0 || index >= s_mgr_count) {
+        return;
+    }
+    SimtickManagerSlot* slot = &s_mgr[index];
+
+    /* target select: source B (ints) when flag bit 4, else source A. */
+    float tx, ty;
+    if ((slot->flags & 4u) != 0) {
+        tx = (float)slot->target_b[0];
+        ty = (float)slot->target_b[1];
+    } else {
+        tx = slot->target_a[0];
+        ty = slot->target_a[1];
+    }
+
+    /* exponential smoothing (skip when dt equals the stored constant). */
+    if (dt != g_manager_dt_const) {
+        float denom = g_manager_smooth_a / dt - g_manager_smooth_b;
+        if ((g_manager_smooth_a / dt) == 0.0f) {
+            denom = 1.0f;
+        }
+        if (denom == 0.0f) {
+            denom = 1.0f;
+        }
+        if (fabsf(slot->smoothed[0] - tx) <= g_manager_snap) {
+            slot->smoothed[0] = tx;
+        } else {
+            slot->smoothed[0] =
+                ((g_manager_smooth_a / dt) * slot->smoothed[0] + tx) / denom;
+        }
+        if (fabsf(slot->smoothed[1] - ty) <= g_manager_snap) {
+            slot->smoothed[1] = ty;
+        } else {
+            slot->smoothed[1] =
+                ((g_manager_smooth_a / dt) * slot->smoothed[1] + ty) / denom;
+        }
+    }
+
+    /* truncate to integer coordinates (corpus __ftol paths). */
+    int ix = (int)slot->smoothed[0];
+    int iy = (int)slot->smoothed[1];
+
+    if (slot->mode == 0) {
+        ++s_repos_n;
+        if (s_repos != NULL) {
+            s_repos(slot->handle, ix, iy);
+        }
+        // signal-rep: whatever the corpus does after repositions
+        slot->flags &= ~1u;
+    } else if (slot->mode == 1) {
+        ++s_attach_n;
+        if (s_attach != NULL) {
+            s_attach(slot->handle, s_metrics[0], s_metrics[1], ingame);
+        }
+    }
+
+    /* index 9: stop the four shared timers (DAT_00500860 bits 0x10..0x80). */
+    if (index == 9) {
+        for (int k = 0; k < 4; ++k) {
+            if ((s_timer_word & s_timer_bits[k]) != 0) {
+                s_timer_word &= ~s_timer_bits[k];
+                /* FUN_0047dcb0(timer_handle, 0, &coord, 0) — see hook:
+                 * a stop state is recorded through the reposition hook. */
+                if (s_repos != NULL) {
+                    s_repos(s_timer_handles[k], 0, 0);
+                }
+            }
+        }
+    }
+
+    /* stop-detect: when the integer coords are sub-2 for both axes, clear
+     * the slot flag bit 3 (the corpus's near-zero settle). */
+    if (ix < 2 && ix > -2 && iy < 2 && iy > -2) {
+        slot->flags &= ~8u;
+    }
 }

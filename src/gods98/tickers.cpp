@@ -206,9 +206,10 @@ static const int MANAGER_ORDER[] = { 1, 2, 4, 9, 6, 8, 0xb, 5, 7, 10 };
 
 static void ManagerTick(EngineContext* ctx, int idx, float dt)
 {
-    (void)ctx; (void)dt;
-    /* TODO(game): identified manager for index %d — see corpus FUN_0045a730. */
-    (void)idx;
+    /* ported in simtick.* (FUN_0045a730): positional trackers with the
+     * exponential smoothing; ingame = ~state bit 0x40000 (corpus). */
+    int ingame = ((ctx->state & 0x40000u) == 0) ? 1 : 0;
+    simtick_manager_tick(idx, dt, ingame);
 }
 
 void EngineManagerDispatch(EngineContext* ctx, float dt)

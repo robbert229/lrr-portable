@@ -320,6 +320,15 @@ sweep (`FUN_0044eff0`). Their ticker-table entries now delegate to the
 module; helpers stay hook boundaries. `simtick_test` (suite `simtick`)
 covers all five.
 
+**Tranche 7 — `ManagerTick`** (2026-10-21): simtick grows the 12 positional
+trackers (`FUN_0045a730`, finding 04) — per-slot target selection (source A
+floats / source B ints on flag bit 4), the exponential smoothing
+`prev=(A/dt·prev+t)/(A/dt−B)` with the snap threshold, mode routing (reposition
+vs screen-attach, with the `~state 0x40000` ingame bit), the **index-9
+four-timer stop**, and the near-zero settle that clears flag bit 3. The
+engine's manager dispatch drives it. `simtick_test` covers convergence,
+snap, source-B, mode-1, timer-stop, and settle.
+
 **Game layer — levels, objectives, savegames** (2026-10-21): the mission
 plumbing that sits on top of the engine (findings 07/08/22) is now
 reconstructed, on top of the merged block-text parser (`src/gods98/block.*`,

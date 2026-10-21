@@ -56,6 +56,45 @@ int  simtick_effect_last_fired(void);
 /* marker sweep (0x44eff0) — cells cleared in the last sweep. */
 int  simtick_marker_count(void);
 
+/* --- ManagerTick (corpus FUN_0045a730, finding 04) -----------------------
+ * The 12 positional trackers (stride 0x30, block DAT_00500110): exponential
+ * smoothing of a target into a per-slot smoothed position.
+ */
+#define SIMTICK_MANAGER_SLOTS 12
+
+typedef struct SimtickManagerSlot {
+    int32_t  handle;     /* +0x110 object/sprite handle */
+    int32_t  mode;       /* +0x114 0 = reposition, 1 = screen-attach */
+    float    target_a[2];/* +0x118/0x11c source A (floats) */
+    int32_t  target_b[2];/* +0x120/0x124 source B (ints)     */
+    float    smoothed[2];/* +0x128/0x12c exponential-smoothed */
+    uint32_t flags;      /* +0x13c (bit 4 selects source B)   */
+} SimtickManagerSlot;
+
+void simtick_manager_clear(void);
+void simtick_manager_set_slots(SimtickManagerSlot* slots, int count);
+
+/* One tracked slot: target select -> EMA smoothing -> mode routing.
+ * `ingame` is the engine-state derived flag (corpus ~DAT_00556ecc >> 0x14). */
+void simtick_manager_tick(int index, float dt, int ingame);
+
+/* smoothing model-parameters (corpus _DAT_0049e5e8/e5ec/e5e0/e5d8). */
+extern float g_manager_smooth_a;
+extern float g_manager_smooth_b;
+extern float g_manager_snap;
+extern float g_manager_dt_const;
+
+/* actionable hooks (FUN_0047dcb0 reposition, FUN_00484070 attach). Defaults
+ * are counters; override to observe. */
+void simtick_manager_set_reposition_hook(int (*h)(int handle, int x, int y));
+void simtick_manager_set_attach_hook(int (*h)(int handle, int x, int y,
+                                              int ingame));
+void simtick_manager_set_metrics(int mx, int my); /* FUN_004897d0/004850e0 */
+int  simtick_manager_repositions(void);
+int  simtick_manager_attaches(void);
+int  simtick_manager_timer_bit(int which);        /* index-9 timer word bit */
+void simtick_manager_set_timer_word(uint32_t w);  /* DAT_00500860 seed */
+
 /* bobbins (0x4091e0) — node flags at +0xd0. */
 typedef struct SimtickBobbin {
     struct SimtickBobbin* next;  /* +0x24 */

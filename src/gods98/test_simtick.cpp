@@ -7,6 +7,7 @@
  */
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 
 #include "simtick.hpp"
 
@@ -18,6 +19,13 @@ static void CHECK(int cond, const char* what)
         printf("FAIL: %s\n", what);
         ++s_failures;
     }
+}
+
+static int s_stopped_n = 0;
+static int stop_reposition(int /*handle*/, int /*x*/, int /*y*/)
+{
+    ++s_stopped_n;
+    return 0;
 }
 
 int main(void)
@@ -77,6 +85,68 @@ int main(void)
     CHECK(st.sim_marker_flags == 0, "sweep: flag byte reset");
     simtick_marker_sweep(&ctx, 0.1f, 1.0f); /* disabled -> no re-run */
     CHECK(simtick_marker_count() == 1, "sweep: no re-run when disabled");
+
+    /* ---- ManagerTick (0x45a730) ------------------------------------- */
+
+    /* EMA converges toward the target (stable defaults). */
+    SimtickManagerSlot mg[12] = {};
+    memset(mg, 0, sizeof(mg));
+    mg[0].mode = 0;
+    mg[0].handle = 7;
+    mg[0].target_a[0] = 100.0f;
+    mg[0].target_a[1] = 50.0f;
+    simtick_manager_set_slots(mg, 12);
+    for (int i = 0; i < 60; ++i) {
+        simtick_manager_tick(0, 0.1f, 1);
+    }
+    CHECK(fabsf(mg[0].smoothed[0] - 100.0f) < 1.0f
+          && fabsf(mg[0].smoothed[1] - 50.0f) < 1.0f,
+          "manager: smoothing converges");
+    CHECK(simtick_manager_repositions() == 60, "manager: mode-0 repositioned");
+
+    /* within the snap threshold the target is taken verbatim. */
+    memset(mg, 0, sizeof(mg));
+    simtick_manager_set_slots(mg, 12);
+    mg[0].mode = 0;
+    mg[0].smoothed[0] = 99.6f;
+    mg[0].target_a[0] = 100.0f;
+    simtick_manager_tick(0, 0.1f, 1);
+    CHECK(mg[0].smoothed[0] == 100.0f, "manager: snap verbatim");
+
+    /* source-B int pathway when flag bit 4. */
+    memset(mg, 0, sizeof(mg));
+    simtick_manager_set_slots(mg, 12);
+    mg[0].mode = 1;
+    mg[0].flags = 4u;
+    mg[0].target_b[0] = 33;
+    mg[0].target_b[1] = 44;
+    simtick_manager_set_metrics(200, 100);
+    simtick_manager_tick(0, 0.1f, 1);
+    CHECK(simtick_manager_attaches() == 1, "manager: mode-1 attached");
+    CHECK(mg[0].smoothed[0] > 2.0f && mg[0].smoothed[0] < 4.0f,
+          "manager: source-B int target smoothed");
+
+    /* index 9 stops all four timer bits (via the reposition hook). */
+    memset(mg, 0, sizeof(mg));
+    mg[9].mode = 1; /* attach mode so slot 9 itself doesn't call reposition */
+    simtick_manager_set_slots(mg, 12);
+    simtick_manager_set_reposition_hook(stop_reposition);
+    s_stopped_n = 0;
+    simtick_manager_set_timer_word(0xf0u); /* all four bits 0x10..0x80 */
+    simtick_manager_tick(9, 0.1f, 1);
+    CHECK(simtick_manager_timer_bit(0) == 0 && simtick_manager_timer_bit(1) == 0
+          && simtick_manager_timer_bit(2) == 0 && simtick_manager_timer_bit(3) == 0,
+          "manager: index-9 stops all timers");
+    CHECK(s_stopped_n == 4, "manager: four timer stops via the reposition hook");
+    simtick_manager_set_reposition_hook(NULL);
+
+    /* stop-detect clears flag bit 3 when the smoothed coords settle near 0. */
+    memset(mg, 0, sizeof(mg));
+    simtick_manager_set_slots(mg, 12);
+    mg[0].flags = 8u;
+    mg[0].target_a[0] = mg[0].target_a[1] = 0.0f;
+    simtick_manager_tick(0, 0.1f, 1);
+    CHECK((mg[0].flags & 8u) == 0, "manager: stop-detect clears bit 3");
 
     if (s_failures == 0) {
         printf("simtick_test: PASS\n");
