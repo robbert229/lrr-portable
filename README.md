@@ -308,6 +308,15 @@ edge outputs. The corpus's raw per-key scan slots aren't pinned by the
 findings, so named canonical key bindings are used (documented). `mainsim_test`
 (suite `mainsim`) covers the toggles, outs, air cheat and quit gate.
 
+**Tranche 6 — first subsystem tickers** (2026-10-21):
+`src/gods98/simtick.*` ports a first batch of the remaining dispatch-table
+tickers with fresh decompiles: the mute timer (`FUN_0041ba10`), the
+effect-table dispatch (`FUN_0040aa10`), the bobbin list flag machine
+(`FUN_004091e0`), the post-step cluster (`FUN_0040d450`), and the grid marker
+sweep (`FUN_0044eff0`). Their ticker-table entries now delegate to the
+module; helpers stay hook boundaries. `simtick_test` (suite `simtick`)
+covers all five.
+
 **Game layer — levels, objectives, savegames** (2026-10-21): the mission
 plumbing that sits on top of the engine (findings 07/08/22) is now
 reconstructed, on top of the merged block-text parser (`src/gods98/block.*`,
