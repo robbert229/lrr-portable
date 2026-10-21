@@ -496,6 +496,89 @@ static void test_pointer(void)
     block_close(cfg);
 }
 
+static void test_pause(void)
+{
+    /* Shipped PausedMenu shape: Menu1 (Continue/Options/Quit), Menu2
+     * (Options), Menu3 (quit confirm), Menu4 (restart confirm). */
+    BlockFile* cfg = s_parse(
+        "Lego* {\n"
+        "\tMain { StartLevel Levels::Tran01 }\n"
+        "\tMenu { MainMenuFull {\n"
+        "\t\tMenuCount 1\n"
+        "\t\tMenu1 { ItemCount 1 Item1 Next:0:0:Back:Menu1 }\n"
+        "\t}\n"
+        "\tPausedMenu {\n"
+        "\t\tMenuCount 4\n"
+        "\t\tMenu1 {\n"
+        "\t\t\tTitle Paused\n"
+        "\t\t\tPosition 250:134\n"
+        "\t\t\tItemCount 4\n"
+        "\t\t\tItem1 Trigger:60:50:Continue_Game:1\n"
+        "\t\t\tItem2 Next:60:80:Options:Menu2\n"
+        "\t\t\tItem3 Next:60:140:Restart_Mission:Menu4\n"
+        "\t\t\tItem4 Next:60:170:Quit:Menu3\n"
+        "\t\t}\n"
+        "\t\tMenu2 { Title Options ItemCount 1\n"
+        "\t\t\tItem1 Next:60:180:Back:Menu1 }\n"
+        "\t\tMenu3 { Title Are_you_sure? ItemCount 2\n"
+        "\t\t\tItem1 Trigger:0:60:Yes:1\n"
+        "\t\t\tItem2 Next:0:100:No:Menu1\n"
+        "\t\t}\n"
+        "\t\tMenu4 { Title Restart_Mission? ItemCount 2\n"
+        "\t\t\tItem1 Trigger:0:60:Yes:1\n"
+        "\t\t\tItem2 Next:0:100:No:Menu1\n"
+        "\t\t}\n"
+        "\t} }\n"
+        "\tLevels { Tran01 { FullName T } }\n"
+        "}\n");
+    FrontEnd fe;
+    frontend_build(&fe, cfg);
+    CHECK(frontend_build(&fe, cfg) == 1, "pause: builds");
+    CHECK(frontend_menu(&fe, FE_MENU_PAUSED)->submenu_count == 4,
+        "pause: PausedMenu parses 4 submenus");
+
+    /* Continue_Game (Trigger flag 1) resumes instead of quitting. */
+    frontend_open(&fe, FE_MENU_PAUSED);
+    FeInput enter = { 0, 0, 1, 0, -1, -1, 0 };
+    CHECK(frontend_tick(&fe, &enter, NULL) == FE_EVT_RESUME && !fe.open,
+        "pause: Continue -> RESUME");
+
+    /* Esc on the pause root resumes. */
+    frontend_open(&fe, FE_MENU_PAUSED);
+    FeInput esc = { 0, 0, 0, 1, -1, -1, 0 };
+    CHECK(frontend_tick(&fe, &esc, NULL) == FE_EVT_RESUME && !fe.open,
+        "pause: Esc on root -> RESUME");
+
+    /* Quit = item 4 (sel 3) -> confirm (Menu3) -> Yes -> QUIT. */
+    frontend_open(&fe, FE_MENU_PAUSED);
+    FeInput in = { 0, 1, 0, 0, -1, -1, 0 };
+    frontend_tick(&fe, &in, NULL);            /* sel 1 */
+    frontend_tick(&fe, &in, NULL);            /* sel 2 */
+    frontend_tick(&fe, &in, NULL);            /* sel 3 (Quit) */
+    in.down = 0; in.enter = 1;
+    frontend_tick(&fe, &in, NULL);            /* navigate -> Menu3 */
+    CHECK(fe.sub == 2 && fe.sel == 0,
+        "pause: Quit -> confirm submenu");
+    CHECK(frontend_tick(&fe, &in, NULL) == FE_EVT_QUIT,
+        "pause: Yes on quit confirm -> QUIT");
+
+    /* Restart = item 3 (sel 2) -> confirm (Menu4) -> Yes -> START_LEVEL. */
+    frontend_open(&fe, FE_MENU_PAUSED);
+    snprintf(fe.resume_level, FE_LEVEL_NAME_MAX, "%s", "Tran01");
+    in.down = 1; in.enter = 0;
+    frontend_tick(&fe, &in, NULL);            /* sel 1 */
+    frontend_tick(&fe, &in, NULL);            /* sel 2 (Restart_Mission) */
+    in.down = 0; in.enter = 1;
+    frontend_tick(&fe, &in, NULL);            /* navigate -> Menu4 */
+    CHECK(fe.sub == 3 && fe.sel == 0,
+        "pause: Restart_Mission -> confirm submenu");
+    CHECK(frontend_tick(&fe, &in, NULL) == FE_EVT_START_LEVEL
+        && strcmp(fe.pending_level, "Tran01") == 0,
+        "pause: Yes on restart -> START_LEVEL(resume level)");
+
+    block_close(cfg);
+}
+
 int main(int argc, char** argv)
 {
     for (int a = 1; a < argc; ++a) {
@@ -512,6 +595,7 @@ int main(int argc, char** argv)
     test_active_image();
     test_font();
     test_pointer();
+    test_pause();
 
     if (s_failures == 0) {
         printf("frontend: all tests passed\n");

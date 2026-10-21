@@ -314,9 +314,14 @@ game**: the frame loop blits each submenu's `MenuImage` art behind the
 items, and `frontend_render` draws the labels with the **shipped bitmap
 fonts** — `LoFont` for unselected, `HiFont` for the selected row
 (FUN_0047a470's 10×19 ASCII grid: glyph g = ch-0x20 at (g%10, g/10), cell =
-width/10 × height/19, e.g. 380×817 → 38×43; palette-255 pure-red is the
-colour key; advances re-derived from each cell's ink box) — with the port's
-own 3x5 typeface kept as a headless fallback. New key:
+width/10 × height/19, e.g. 380×817 → 38×43; the colour key is per font —
+Menu_Font* keys palette-255 pure red, MbriefFont* keys white; each glyph
+blits as its measured **ink box**) — with the port's
+own 3x5 typeface kept as a headless fallback. **In-game pause** (2026-10-21):
+`Esc` in a level opens the shipped `PausedMenu` overlay (Continue / Options /
+Restart / Quit, with mouse + keyboard like the main menu) instead of quitting
+— Restart reloads the level in place, and `LEGORRR_AUTOPAUSE_FRAMES=N`
+headlessly opens the pause at frame N for screenshots. New key:
 **`PLATFORM_KEY_ENTER`** at the seam. Suites: `block` (`::` paths) and
 `frontend` (fixtures + a `--real` probe that builds the whole front end from
 the shipped `Lego.cfg` — 24-level campaign chain, 8 tutorials, 32 picker

@@ -180,6 +180,112 @@ static int movie_play_avi(const char* os_path, const char* label,
     return 1;
 }
 
+/* Level load + mission seeding + level intro movie + engine binding. Both
+ * the post-front-end boot path and the pause menu's Restart route here
+ * (finding 07/09 + #47's level cinematics). */
+static void frameloop_load_level(FILE* log, const char* wad_dir,
+                                 int play_movies, PlatformWindow* win,
+                                 DisplaySurface* surf, AudioPlayer* ap,
+                                 int audio_status, int* quit,
+                                 GameContext* game, EngineContext* ctx,
+                                 ViewContext* views, const char* level_name)
+{
+    game->level = level_load(game->cfg, level_name);
+    if (game->level != NULL) {
+        fprintf(log, "frameloop: level %s loaded: %dx%d grid, voxel stride "
+                     "0x48, objective word 0x%08x\n",
+                level_name, level_width(game->level), level_height(game->level),
+                game->level->objective);
+        /* Level intro cinematic — MoviePlayLevelVideo @ 0x415990 reads the
+         * level's `Video` config key and plays it after load (the corpus
+         * plays it inside LevelLoad), same gates as boot. */
+        if (play_movies) {
+            char mp[256], os[512];
+            if (movie_level_video_path(game->cfg, level_name, mp, sizeof(mp))
+                && movie_path_resolve(wad_dir, mp, os, sizeof(os))) {
+                movie_play_avi(os, level_name, win, surf, ap, quit, log);
+                if (audio_status == 0 && !*quit) {
+                    /* the level movie also silenced the ambient */
+                    audio_loop_named(ap, "Sounds\\Iambloop.wav", 0.0f);
+                }
+            }
+        }
+        /* Mission plumbing (finding 09/10): seed the 10-task table +
+         * reward screen from the level's Reward group, then place the
+         * `.ol` object list into the entity tables. */
+        mission_task_init(game, game->cfg, level_name);
+        mission_reward_init(game, game->cfg, level_name);
+        int placed = object_list_load(game, game->cfg, level_name);
+        fprintf(log, "frameloop: mission tasks seeded, %s, %d object(s) "
+                     "placed, crystal quota=%d\n",
+                game->cfg != NULL ? "reward config ok" : "no cfg",
+                placed, game->crystal_quota);
+    } else {
+        fprintf(log, "frameloop: level %s load FAILED (maps/config missing)\n",
+                level_name);
+    }
+    /* Engine <-> level binding: the engine sim reads the loaded LevelState
+     * (width/height/voxels) so cameras/tickers see the real terrain. The
+     * full pointer cannot ride the 32-bit corpus slot on a 64-bit host, so
+     * the resolved voxel pointer is bound here via the game layer — after
+     * the front end chose this level. */
+    ctx->level_block = game->level;
+    ctx->level_voxels = game->level != NULL
+                            ? (const uint8_t*)level_load_ptr(game->level,
+                                                             LEVEL_OFF_VOXELS)
+                            : NULL;
+    ctx->level_terrain = game->level != NULL
+                             ? level_load_ptr(game->level, LEVEL_OFF_TERRAIN)
+                             : NULL;
+    if (game->level != NULL) {
+        fprintf(log, "frameloop: engine bound to level %dx%d, blocksize %.1f, "
+                     "voxels@%sresolved\n",
+                engine_level_width(ctx), engine_level_height(ctx),
+                engine_level_blocksize(ctx),
+                ctx->level_voxels != NULL ? "" : "UN");
+        /* Let the engine's camera grid sweep walk the real voxel grid. */
+        g_camera_grid_enabled = 1;
+    }
+    /* Seed the follow camera at the grid centre so mode-1 starts over the
+     * loaded level instead of the origin. */
+    if (game->level != NULL) {
+        cam_set_pos(&views[0].cam_follow,
+                    (float)engine_level_width(ctx) * 0.5f,
+                    (float)engine_level_height(ctx) * 0.5f, 0.0f);
+    }
+}
+
+/* Draw one front-end frame: frozen level (in-game pause) or a plain fill
+ * (boot menu), then the submenu's MenuImage art + the menu layer. */
+static void frameloop_menu_render(PlatformWindow* win, DisplaySurface* surf,
+                                  FrontEnd* fe, const TextureSurface* hi_font,
+                                  const TextureSurface* lo_font,
+                                  const GameContext* game, int frame)
+{
+    void* pixels = NULL;
+    int   pitch = 0;
+    if (surface_lock(surf, &pixels, &pitch) != 0) {
+        return;
+    }
+    if (game->level != NULL) {
+        level_render_map(game->level, game, 0, 0, WINDOW_W, WINDOW_H,
+                         pixels, pitch);
+    } else {
+        surface_fill(pixels, pitch, WINDOW_W, WINDOW_H, 8, 8, 20);
+    }
+    const char* img = frontend_active_image(fe);
+    if (img != NULL) {
+        TextureSurface* bg = texture_get_or_load(NULL, img);
+        if (bg != NULL) {
+            surface_blit_texture(pixels, pitch, WINDOW_W, WINDOW_H, bg, 0, 0);
+        }
+    }
+    frontend_render(fe, hi_font, lo_font, WINDOW_W, WINDOW_H, pixels, pitch);
+    platform_screenshot(win, pixels, pitch, WINDOW_W, WINDOW_H, frame);
+    platform_present_pixels(win, pixels, pitch, WINDOW_W, WINDOW_H);
+    surface_unlock(surf, pixels);
+}
+
 int LegorrrRun(void)
 {
     const char* wad_dir = env_get("LEGORRR_WAD_DIR", ".");
@@ -188,6 +294,9 @@ int LegorrrRun(void)
     if (frame_cap < 0) {
         frame_cap = 0;
     }
+    /* CI/headless hook: open the pause overlay at this in-game frame (as if
+     * Esc was pressed) so the PausedMenu can be screenshotted. */
+    long autopause = strtol(env_get("LEGORRR_AUTOPAUSE_FRAMES", "0"), NULL, 10);
 
     FILE* log = fopen("legoRR-stub.log", "a");
     if (log == NULL) {
@@ -419,29 +528,8 @@ int LegorrrRun(void)
                 break;
             }
 
-            void* pixels = NULL;
-            int   pitch = 0;
-            if (surface_lock(&surf, &pixels, &pitch) == 0) {
-                surface_fill(pixels, pitch, WINDOW_W, WINDOW_H, 8, 8, 20);
-                /* Background art: blit the active submenu's MenuImage
-                 * (Menu::<name> <Menu%i> MenuImage) behind the menu layer,
-                 * 1:1 at the window origin. */
-                const char* img = frontend_active_image(&fe);
-                if (img != NULL) {
-                    TextureSurface* bg = texture_get_or_load(NULL, img);
-                    if (bg != NULL) {
-                        surface_blit_texture(pixels, pitch, WINDOW_W, WINDOW_H,
-                                             bg, 0, 0);
-                    }
-                }
-                /* fonts + pointer hit-testing already happened above */
-                frontend_render(&fe, hi_font, lo_font,
-                                WINDOW_W, WINDOW_H, pixels, pitch);
-                platform_screenshot(win, pixels, pitch, WINDOW_W, WINDOW_H,
-                                    (int)frames);
-                platform_present_pixels(win, pixels, pitch, WINDOW_W, WINDOW_H);
-                surface_unlock(&surf, pixels);
-            }
+            frameloop_menu_render(win, &surf, &fe, hi_font, lo_font, &game,
+                                  (int)frames);
             Sleep((DWORD)FRAME_MS);
             ++frames;
             input_begin_frame(&input);
@@ -450,71 +538,9 @@ int LegorrrRun(void)
 
     /* --- Deferred level load (the front end chose a level) ------------------ */
     if (!quit && game.cfg != NULL) {
-        game.level = level_load(game.cfg, level_name);
-        if (game.level != NULL) {
-            fprintf(log, "frameloop: level %s loaded: %dx%d grid, voxel stride "
-                         "0x48, objective word 0x%08x\n",
-                    level_name, level_width(game.level), level_height(game.level),
-                    game.level->objective);
-            /* Level intro cinematic — MoviePlayLevelVideo @ 0x415990 reads
-             * the level's `Video` config key and plays it after load (the
-             * corpus plays it inside LevelLoad), same gates as boot. */
-            if (play_movies) {
-                char mp[256], os[512];
-                if (movie_level_video_path(game.cfg, level_name, mp,
-                                           sizeof(mp))
-                    && movie_path_resolve(wad_dir, mp, os, sizeof(os))) {
-                    movie_play_avi(os, level_name, win, &surf, &ap, &quit,
-                                   log);
-                    if (audio_status == 0 && !quit) {
-                        /* the level movie also silenced the ambient */
-                        audio_loop_named(&ap, "Sounds\\Iambloop.wav", 0.0f);
-                    }
-                }
-            }
-            /* Mission plumbing (finding 09/10): seed the 10-task table +
-             * reward screen from the level's Reward group, then place the
-             * `.ol` object list into the entity tables. */
-            mission_task_init(&game, game.cfg, level_name);
-            mission_reward_init(&game, game.cfg, level_name);
-            int placed = object_list_load(&game, game.cfg, level_name);
-            fprintf(log, "frameloop: mission tasks seeded, %s, %d object(s) "
-                         "placed, crystal quota=%d\n",
-                    game.cfg != NULL ? "reward config ok" : "no cfg",
-                    placed, game.crystal_quota);
-        } else {
-            fprintf(log, "frameloop: level %s load FAILED (maps/config missing)\n",
-                    level_name);
-        }
-        /* Engine <-> level binding: the engine sim reads the loaded
-         * LevelState (width/height/voxels) so cameras/tickers see the real
-         * terrain. The full pointer cannot ride the 32-bit corpus slot on a
-         * 64-bit host, so the resolved voxel pointer is bound here via the
-         * game layer — after the front end chose this level. */
-        ctx.level_block = game.level;
-        ctx.level_voxels = game.level != NULL
-                               ? (const uint8_t*)level_load_ptr(game.level,
-                                                                LEVEL_OFF_VOXELS)
-                               : NULL;
-        ctx.level_terrain = game.level != NULL
-                                ? level_load_ptr(game.level, LEVEL_OFF_TERRAIN)
-                                : NULL;
-        if (game.level != NULL) {
-            fprintf(log, "frameloop: engine bound to level %dx%d, blocksize %.1f, "
-                         "voxels@%sresolved\n",
-                    engine_level_width(&ctx), engine_level_height(&ctx),
-                    engine_level_blocksize(&ctx),
-                    ctx.level_voxels != NULL ? "" : "UN");
-            /* Let the engine's camera grid sweep walk the real voxel grid. */
-            g_camera_grid_enabled = 1;
-        }
-        /* Seed the follow camera at the grid centre so mode-1 starts over the
-         * loaded level instead of the origin. */
-        if (game.level != NULL) {
-            cam_set_pos(&views[0].cam_follow,
-                        (float)engine_level_width(&ctx) * 0.5f,
-                        (float)engine_level_height(&ctx) * 0.5f, 0.0f);
-        }
+        frameloop_load_level(log, wad_dir, play_movies, win, &surf, &ap,
+                             audio_status, &quit, &game, &ctx, views,
+                             level_name);
     }
 
     const float dt = 1.0f / 30.0f;
@@ -528,11 +554,9 @@ int LegorrrRun(void)
         int nev = platform_pump_events(win, evbuf, 32);
         input_capture_events(&input, evbuf, nev);
         for (int i = 0; i < nev; ++i) {
-            if (evbuf[i].kind == PLATFORM_EVENT_QUIT
-                || (evbuf[i].kind == PLATFORM_EVENT_KEYDOWN
-                    && evbuf[i].code == PLATFORM_KEY_ESC)) {
+            if (evbuf[i].kind == PLATFORM_EVENT_QUIT) {
                 quit = 1;
-                stop = "quit/ESC";
+                stop = "closed";
                 break;
             }
         }
@@ -542,6 +566,96 @@ int LegorrrRun(void)
         if (frame_cap > 0 && frames >= frame_cap) {
             stop = "autostop";
             break;
+        }
+
+        /* Esc (or the LEGORRR_AUTOPAUSE_FRAMES CI hook) opens the in-game
+         * pause overlay — the shipped PausedMenu — instead of quitting. */
+        if (input_key_edge(&input, PLATFORM_KEY_ESC)
+            || (autopause > 0 && frames == autopause)) {
+            snprintf(fe.resume_level, sizeof(fe.resume_level), "%s",
+                     level_name);
+            frontend_open(&fe, FE_MENU_PAUSED);
+            fprintf(log, "frameloop: paused (Continue / Options / Restart / "
+                         "Quit)\n");
+            int want_reload = 0;
+            while (fe.open && !quit) {
+                PlatformEvent pev[32];
+                int pn = platform_pump_events(win, pev, 32);
+                input_capture_events(&input, pev, pn);
+                for (int i = 0; i < pn; ++i) {
+                    if (pev[i].kind == PLATFORM_EVENT_QUIT) {
+                        quit = 1;
+                        stop = "closed";
+                        break;
+                    }
+                }
+                if (quit) {
+                    break;
+                }
+                if (frame_cap > 0 && frames >= frame_cap) {
+                    quit = 1;
+                    stop = "autostop";
+                    break;
+                }
+                const FeSubmenu* fs = frontend_active_submenu(&fe);
+                TextureSurface* hi_font = NULL, *lo_font = NULL;
+                if (fs != NULL) {
+                    if (fs->hifont[0] != '\0') {
+                        hi_font = texture_get_or_load(NULL, fs->hifont);
+                    }
+                    if (fs->lofont[0] != '\0') {
+                        lo_font = texture_get_or_load(NULL, fs->lofont);
+                    }
+                }
+                FeInput fi;
+                fi.up = input_key_edge(&input, PLATFORM_KEY_UP);
+                fi.down = input_key_edge(&input, PLATFORM_KEY_DOWN);
+                fi.enter = input_key_edge(&input, ' ')
+                           || input_key_edge(&input, PLATFORM_KEY_ENTER);
+                fi.esc = input_key_edge(&input, PLATFORM_KEY_ESC);
+                fi.mouse_x = input.mouse_x;
+                fi.mouse_y = input.mouse_y;
+                fi.click = input_mouse_pressed(&input);
+                FeEvent ev = frontend_tick(&fe, &fi, hi_font);
+                if (ev == FE_EVT_QUIT) {
+                    quit = 1;
+                    stop = "menu quit";
+                    break;
+                }
+                if (ev == FE_EVT_RESUME) {
+                    break;
+                }
+                if (ev == FE_EVT_START_LEVEL) {
+                    want_reload = 1;
+                    break;
+                }
+                frameloop_menu_render(win, &surf, &fe, hi_font, lo_font,
+                                      &game, (int)frames);
+                Sleep((DWORD)FRAME_MS);
+                ++frames;
+                input_begin_frame(&input);
+            }
+            if (want_reload && !quit) {
+                /* Pause -> Restart_Mission: reload the level in place. */
+                fprintf(log, "frameloop: restarting level %s\n", level_name);
+                level_destroy(game.level);
+                game.level = NULL;
+                frameloop_load_level(log, wad_dir, play_movies, win, &surf,
+                                     &ap, audio_status, &quit, &game, &ctx,
+                                     views, level_name);
+            }
+            if (!quit && game.level == NULL) {
+                /* not restarting; Esc from the pause root resumes */
+                fprintf(log, "frameloop: resumed\n");
+            }
+            /* The pause consumed this whole frame (its own loop rendered).
+             * Continue to the next in-game frame without running the game
+             * sim or the level renderer over the menu. */
+            if (!quit || game.level != NULL) {
+                Sleep((DWORD)FRAME_MS);
+                input_begin_frame(&input);
+                continue;
+            }
         }
 
         /* 2. Fine-grained pan via key edges (cur vs prev). */
