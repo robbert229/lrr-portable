@@ -46,7 +46,7 @@ int main(void)
         "}\n");
     write_fixture("M01.ol",
         "LegoOl {\n"
-        "  Digger1 { Type 1 x 3 y 4 z 5 Rot 90 }\n"
+        "  Digger1 { Type 1 x 3 y 4 z 5 Rot 90 Model Data\\Models\\dig.lwo }\n"
         "  WallA   { Type 4 x 10 y 10 }\n"
         "  MinifigA { Type 2 x -2 y 0 }\n"
         "}\n");
@@ -74,6 +74,11 @@ int main(void)
     CHECK(v != NULL && v->x == 3.0f && v->y == 4.0f && v->z == 5.0f, "vehicle pos");
     CHECK(v != NULL && v->rot == 90.0f, "vehicle rot");
     CHECK(v != NULL && v->type == ENTITY_TYPE_VEHICLE, "vehicle type");
+    /* Optional Model key parsed into the slot (model loads lazily; the
+     * fixture file does not exist so the handle stays NULL). */
+    CHECK(strcmp(v->model_path, "Data\\Models\\dig.lwo") == 0,
+          "vehicle model path from the .ol Model key");
+    CHECK(entity_model(v) == NULL, "missing model file -> no handle");
 
     const EntitySlot* b = entity_at(&ctx, ENTITY_TYPE_BUILDING, 0);
     CHECK(b != NULL && strcmp(b->name, "WallA") == 0, "building name");

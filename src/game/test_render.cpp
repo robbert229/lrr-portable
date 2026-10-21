@@ -12,6 +12,7 @@
 #include "game/level.hpp"
 #include "game/render.hpp"
 #include "game/select.hpp"
+#include "gods98/model.hpp"
 
 static int s_failures = 0;
 
@@ -47,6 +48,61 @@ static void is_pixel(uint8_t* buf, int x, int y,
 static uint8_t dim3_8(uint8_t c)
 {
     return (uint8_t)(((unsigned)c * 3u) / 8u);
+}
+
+/* --- tiny synthetic LWO (a diamond quad in x/z) for model-aware tests --- */
+static uint8_t m_buf[1024];
+
+static void m_w16(uint8_t** p, unsigned v)
+{
+    (*p)[0] = (uint8_t)(v >> 8); (*p)[1] = (uint8_t)v; *p += 2;
+}
+static void m_w32(uint8_t** p, unsigned v)
+{
+    (*p)[0] = (uint8_t)(v >> 24); (*p)[1] = (uint8_t)(v >> 16);
+    (*p)[2] = (uint8_t)(v >> 8);  (*p)[3] = (uint8_t)v; *p += 4;
+}
+static void m_wfl(uint8_t** p, float f)
+{
+    uint8_t t[4]; memcpy(t, &f, 4);
+    (*p)[0] = t[3]; (*p)[1] = t[2]; (*p)[2] = t[1]; (*p)[3] = t[0]; *p += 4;
+}
+static void m_wtag(uint8_t** p, const char* t)
+{
+    memcpy(*p, t, 4); *p += 4;
+}
+static uint8_t* m_form_begin(void)
+{
+    uint8_t* p = m_buf;
+    m_wtag(&p, "FORM");
+    m_w32(&p, 0);
+    m_wtag(&p, "LWOB");
+    return p;
+}
+static void m_form_end(uint8_t* p)
+{
+    uint8_t* q = m_buf + 4;
+    m_w32(&q, (unsigned)(p - m_buf - 8));
+}
+/* A single 4-gon diamond in the x/z plane, extent 8. */
+static const void* build_diamond_model(void)
+{
+    uint8_t* p = m_form_begin();
+    m_wtag(&p, "PNTS");
+    m_w32(&p, 48);
+    /* diamond in (x,z): (0,-4),(4,0),(0,4),(-4,0); y = 0 */
+    const float v[12] = { 0, 0, -4,   4, 0, 0,   0, 0, 4,  -4, 0, 0 };
+    for (int i = 0; i < 12; ++i) m_wfl(&p, v[i]);
+    uint8_t pols[16];
+    uint8_t* q = pols;
+    m_w16(&q, 4);
+    m_w16(&q, 1); m_w16(&q, 2); m_w16(&q, 3); m_w16(&q, 4);
+    m_w16(&q, 1); /* surface (1-based -> slot 0) */
+    m_wtag(&p, "POLS");
+    m_w32(&p, (unsigned)(q - pols));
+    for (uint8_t* w = pols; w != q; ) { *p++ = *w++; }
+    m_form_end(p);
+    return model_parse(m_buf, (size_t)(p - m_buf));
 }
 
 /* Write a 2x2 24-bit BI_RGB BMP for the wallpaper blit tests. File rows are
@@ -120,6 +176,20 @@ int main(void)
 
     /* Entity marker: cell (2,2) -> pixel (8,8), type-1 white. */
     is_pixel(buf, 8, 8, 240, 240, 240, "entity marker white");
+
+    /* Model-aware: attach a synthetic LWO diamond; the projected wireframe
+     * right corner of the diamond lands at (14,7) for this buffer. */
+    const void* dm = build_diamond_model();
+    CHECK(dm != NULL, "diamond model parses");
+    if (dm != NULL) {
+        a->model = dm; /* inject directly; entity_set_model covers the loader */
+        level_render_map(lvl, &ctx, -1, -1, PW, PH, buf, PITCH);
+        is_pixel(buf, 14, 7, 240, 240, 240, "model wireframe corner drawn");
+        is_pixel(buf, 8, 7, 240, 240, 240, "model centre marker kept");
+        a->model = NULL;
+        model_free((Model*)dm);
+        level_render_map(lvl, &ctx, -1, -1, PW, PH, buf, PITCH);
+    }
 
     /* Selected entities get a yellow ring around the marker. */
     selection_add(&ctx, a);

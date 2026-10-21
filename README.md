@@ -111,10 +111,10 @@ Open threads, in order of value:
 3. Reconstruction next: the **front-end/menu boot** (finding 23 — port
    `MenuBuild`/`MenuRunLoop`/the `FrontEndActive` gate into `src/game/`,
    fix the `::` tokenizer + StartLevel name resolution), the live-mod proof
-   (thread 1), model-aware entity rendering on top of the merged LWO loader
-   (#30), and the winapi reference build. Campaign flow, command/AI,
-   selection, reward save+advance, the advisor/incident bus wiring, the
-   software level renderer, and the engine↔level binding seam are in.
+   (thread 1), and the winapi reference build. Campaign flow, command/AI,
+   selection, reward save+advance, the advisor/incident bus wiring, model-
+   aware entity rendering (LWO), the software level renderer, and the
+   engine↔level binding seam are in.
 
 ## Findings index
 
@@ -540,6 +540,14 @@ finding 12, #14). Three new modules in `src/game/`:
   `render_test` (suite `render`) asserts the cell colours, the entity
   marker, the selection ring, the cursor outline, and the overlay's dim/
   banner/hover/wallpaper pixels.
+  **Model-aware entities** (2026-10-22, finding 30): the `.ol` loader
+  parses an optional `Model` key per object and resolves it through the LWO
+  loader (`entity_set_model`, one cached `Model*` per path, process-lifetime
+  for the demo); the renderer projects each model's vertices top-down
+  (x,z → screen) and draws its poly wireframe in the entity's colour,
+  replacing the placeholder dot (the dot remains as the no-model fallback).
+  `render_test` builds a synthetic LWO diamond and asserts its projected
+  corner; `entity_test` checks the `Model` key lands in `model_path`.
 
 `GameContext` (`src/game/game.hpp`) carries the corpus globals these
 modules share (`DAT_005560c4` config, `DAT_005560d4` level block,

@@ -4,6 +4,7 @@
 #include "entity.hpp"
 #include "level.hpp"
 #include "render.hpp"
+#include "../gods98/model.hpp"
 #include "../gods98/texture.hpp"
 
 /* --- framebuffer helpers (RGBA32 byte order R,G,B,A on little-endian) --- */
@@ -32,6 +33,72 @@ static void fill_rect(int x0, int y0, int x1, int y1,
     for (int y = y0; y <= y1; ++y) {
         for (int x = x0; x <= x1; ++x) {
             px_set(px_at(x, y, w, h, pixels, pitch), r, g, b);
+        }
+    }
+}
+
+/* Bresenham line, clamped to the framebuffer. */
+static void draw_line(int x0, int y0, int x1, int y1,
+                      int w, int h, void* pixels, int pitch,
+                      uint8_t r, uint8_t g, uint8_t b)
+{
+    int dx = x1 - x0, dy = y1 - y0;
+    int sx = dx < 0 ? -1 : 1;
+    int sy = dy < 0 ? -1 : 1;
+    dx = dx < 0 ? -dx : dx;
+    dy = dy < 0 ? -dy : dy;
+    int err = dx - dy;
+    for (;;) {
+        px_set(px_at(x0, y0, w, h, pixels, pitch), r, g, b);
+        if (x0 == x1 && y0 == y1) {
+            break;
+        }
+        int e2 = 2 * err;
+        if (e2 > -dy) { err -= dy; x0 += sx; }
+        if (e2 < dx)  { err += dx; y0 += sy; }
+    }
+}
+
+/* LWO wireframe, top-down orthographic projection (model x -> screen x,
+ * model z -> screen y), normalized to fit roughly a grid cell. */
+static void draw_model_wire(const Model* m, int px, int py,
+                            int w, int h, void* pixels, int pitch,
+                            uint8_t r, uint8_t g, uint8_t b)
+{
+    if (m == NULL || m->n_verts == 0 || m->verts == NULL) {
+        return;
+    }
+    float minx = m->verts[0], maxx = m->verts[0];
+    float minz = m->verts[2], maxz = m->verts[2];
+    for (size_t i = 1; i < m->n_verts; ++i) {
+        float vx = m->verts[i * 3 + 0];
+        float vz = m->verts[i * 3 + 2];
+        if (vx < minx) minx = vx;
+        if (vx > maxx) maxx = vx;
+        if (vz < minz) minz = vz;
+        if (vz > maxz) maxz = vz;
+    }
+    float cx = (minx + maxx) * 0.5f;
+    float cz = (minz + maxz) * 0.5f;
+    float extent = (maxx - minx) > (maxz - minz) ? (maxx - minx) : (maxz - minz);
+    float scale = extent > 1e-4f ? 12.0f / extent : 1.0f;
+
+    for (size_t p = 0; p < m->n_polys; ++p) {
+        const ModelPoly* poly = &m->polys[p];
+        if (poly->count < 2 || poly->ring == NULL) {
+            continue;
+        }
+        for (uint16_t e = 0; e < poly->count; ++e) {
+            unsigned a = poly->ring[e];
+            unsigned b2 = poly->ring[(e + 1) % poly->count];
+            if (a >= m->n_verts || b2 >= m->n_verts) {
+                continue;
+            }
+            int sx0 = px + (int)((m->verts[a * 3 + 0] - cx) * scale);
+            int sy0 = py + (int)((m->verts[a * 3 + 2] - cz) * scale);
+            int sx1 = px + (int)((m->verts[b2 * 3 + 0] - cx) * scale);
+            int sy1 = py + (int)((m->verts[b2 * 3 + 2] - cz) * scale);
+            draw_line(sx0, sy0, sx1, sy1, w, h, pixels, pitch, r, g, b);
         }
     }
 }
@@ -259,7 +326,17 @@ void level_render_map(const LevelState* lvl, const GameContext* ctx,
             int py = (int)(e->y / (float)gh * (float)h);
             uint8_t r, g, b;
             entity_colour(e->type, &r, &g, &b);
-            fill_rect(px - 2, py - 2, px + 2, py + 2, w, h, pixels, pitch, r, g, b);
+            if (entity_model(e) != NULL) {
+                /* Model-aware: draw the LWO wireframe (top-down) instead of
+                 * the placeholder dot; keep a small centre marker. */
+                draw_model_wire((const Model*)entity_model(e), px, py,
+                                w, h, pixels, pitch, r, g, b);
+                fill_rect(px - 1, py - 1, px + 1, py + 1,
+                          w, h, pixels, pitch, r, g, b);
+            } else {
+                fill_rect(px - 2, py - 2, px + 2, py + 2,
+                          w, h, pixels, pitch, r, g, b);
+            }
             if (e->flags & ENTITY_SELECTED) {
                 /* yellow ring around the marker */
                 fill_rect(px - 4, py - 4, px + 4, py - 4, w, h, pixels, pitch, 250, 220, 60);
