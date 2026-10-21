@@ -56,12 +56,14 @@ struct Flic; /* gods98/flic.hpp — `.flh` overlay player (lazily opened) */
  * cell = image width/10 x height/19. Menu_Font_Hi.bmp is 380x817 -> 38x43. */
 #define FE_FONT_GRID_COLS 10
 #define FE_FONT_GRID_ROWS 19
-/* The colour key is per font — the loader samples it from the image
- * (FUN_0047d9d0; Menu_Font* = palette-255 pure red, MbriefFont* = pure
- * white). fe_font_key() derives it as the dominant colour of the space
- * cell; FE_FONT_KEY is the generic fallback. Glyphs blit as their measured
- * ink box (non-key pixels only), which keeps both the key background and
- * the cells' frame strips out of the render. */
+/* The colour keys are per font — the corpus keys BOTH palette entries 0 and
+ * 255 of each 8bpp face (FUN_0047d9d0 -> FUN_0047e050; Menu_Font* pal-255 =
+ * pure red, MbriefFont* = white). texture_decode records them on the surface
+ * (keys[]/key_count) and fe_font_keys() passes them through; surfaces with
+ * no palette info fall back to the dominant-colour sample of glyph 0's cell
+ * (port-side stand-in). FE_FONT_KEY is the generic default. Glyphs blit as
+ * their measured ink box (non-key pixels only), which keeps both key
+ * colours and the cells' frame strips out of the render. */
 #define FE_FONT_KEY       0xffff0000u
 
 /* Item kinds — MenuItemType @ 0x413e60 (values 0..5; 5 = the "Next" catch-

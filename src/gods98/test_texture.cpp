@@ -118,6 +118,11 @@ static void test_synthetic(void)
         CHECK(t->pixels[1] == px(100, 110, 120, 255), "syn: 8-bit px[1]");
         CHECK(t->pixels[2] == px(10, 20, 30, 255), "syn: 8-bit px[2] (bottom-left)");
         CHECK(t->pixels[3] == px(40, 50, 60, 255), "syn: 8-bit px[3]");
+        /* corpus font keys ride on the surface (FUN_0047d9d0 -> e050):
+         * palette entries 0 and 255; a short table zero-pads to black */
+        CHECK(t->key_count == 2, "syn: 8-bit key_count");
+        CHECK(t->keys[0] == px(10, 20, 30, 255), "syn: key[0] = pal[0]");
+        CHECK(t->keys[1] == px(0, 0, 0, 255), "syn: key[1] zero-padded");
         texture_free(t);
     }
     free(b);
@@ -141,6 +146,26 @@ static void test_synthetic(void)
         CHECK(t->pixels[0] == px(40, 30, 20, 255), "syn: 24-bit px[0] (top)");
         CHECK(t->pixels[1] == px(41, 31, 21, 255), "syn: 24-bit px[1]");
         CHECK(t->pixels[3] == px(30, 20, 10, 255), "syn: 24-bit px[3] (bottom)");
+        CHECK(t->key_count == 0, "syn: 24-bit no keys");
+        texture_free(t);
+    }
+    free(b);
+
+    /* 8-bit 1x1 with a full 256-entry palette: pal[255] is the second key
+     * (the shipped Menu_Font* convention — palette-255 pure red). */
+    uint8_t pal256[256 * 3];
+    memset(pal256, 0, sizeof(pal256));
+    pal256[0] = 5; pal256[1] = 6; pal256[2] = 7;           /* pal[0] */
+    pal256[255 * 3 + 2] = 255;                             /* pal[255] */
+    uint8_t rowsk[4] = { 255, 0, 0, 0 };
+    b = build_bmp(1, 1, 8, 0, pal256, 256, rowsk, &sz);
+    t = texture_decode(b, (uint32_t)sz);
+    CHECK(t != NULL, "syn: keyed bmp");
+    if (t != NULL) {
+        CHECK(t->key_count == 2, "syn: full-pal key_count");
+        CHECK(t->keys[0] == px(7, 6, 5, 255), "syn: key[0] full-pal");
+        CHECK(t->keys[1] == px(255, 0, 0, 255), "syn: key[1] = pal[255]");
+        CHECK(t->pixels[0] == px(255, 0, 0, 255), "syn: keyed px");
         texture_free(t);
     }
     free(b);

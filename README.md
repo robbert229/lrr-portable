@@ -318,8 +318,11 @@ game**: the frame loop blits each submenu's `MenuImage` art behind the
 items, and `frontend_render` draws the labels with the **shipped bitmap
 fonts** — `LoFont` for unselected, `HiFont` for the selected row
 (FUN_0047a470's 10×19 ASCII grid: glyph g = ch-0x20 at (g%10, g/10), cell =
-width/10 × height/19, e.g. 380×817 → 38×43; the colour key is per font —
-Menu_Font* keys palette-255 pure red, MbriefFont* keys white; each glyph
+width/10 × height/19, e.g. 380×817 → 38×43; each 8bpp face keys **both**
+palette entries 0 and 255 transparent (FUN_0047d9d0→FUN_0047e050 — the
+`Menu_Font_*` grid is black + pure red, `MenuFont*` (227,0,0) + (255,35,255);
+surfaces without palette info keep the port's dominant-colour sampler as a
+fallback); each glyph
 blits as its measured **ink box**) — with the port's
 own 3x5 typeface kept as a headless fallback. **In-game pause** (2026-10-21):
 `Esc` in a level opens the shipped `PausedMenu` overlay (Continue / Options /

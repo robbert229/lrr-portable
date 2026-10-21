@@ -399,6 +399,33 @@ static void test_font(void)
                 "font: key skipped (highlight shows through)");
             free(px);
         }
+
+        /* Corpus two-key mode (FUN_0047d9d0 + FUN_0047e050): the blit keys
+         * come from the surface (palette entries 0 and 255), not from
+         * sampling. Keying BOTH the cell background (red) and the ink
+         * (white) blanks every glyph — nothing is drawn. */
+        uint8_t* px2 = (uint8_t*)calloc((size_t)w * h, 4);
+        CHECK(px2 != NULL, "font2: fb");
+        if (px2 != NULL) {
+            memset(px2, 0, (size_t)w * h * 4);
+            tf.key_count = 2;
+            tf.keys[0] = 0xffff0000u;   /* background key */
+            tf.keys[1] = 0xffffffffu;   /* ink key */
+            frontend_render(&fe, &tf, &tf, w, h, px2, w * 4);
+            tf.key_count = 0;
+            int keyed_seen = 0;
+            for (size_t i = 0; i < (size_t)w * h; i++) {
+                uint32_t p = ((uint32_t*)px2)[i];
+                if ((p & 0x00ffffffu) == 0x00ffffffu
+                    || (p & 0x00ffffffu) == 0x00ff0000u) {
+                    keyed_seen = 1;
+                    break;
+                }
+            }
+            CHECK(!keyed_seen, "font2: surface keys key both colours");
+            free(px2);
+        }
+
         block_close(cfg);
     }
     free(tf.pixels);

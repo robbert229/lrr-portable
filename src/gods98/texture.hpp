@@ -28,6 +28,12 @@ typedef struct TextureSurface {
     uint32_t* pixels;      /* width*height, 0xAARRGGBB */
     char*     name;        /* registered cache name, else NULL */
     int32_t   refcount;
+    /* Font colour keys (FUN_0047d9d0 -> FUN_0047e050): an 8bpp face keys
+     * BOTH palette entries 0 and 255 as transparent. key_count is 2 for
+     * surfaces decoded from an 8bpp palettised BMP, else 0 — the caller
+     * falls back to its own heuristic for those. */
+    uint32_t  keys[2];
+    int32_t   key_count;
 } TextureSurface;
 
 /* Decode a full .bmp file buffer. Windows BITMAPINFOHEADER (size >= 40) and
