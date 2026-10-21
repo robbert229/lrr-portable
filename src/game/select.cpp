@@ -1,0 +1,114 @@
+// SPDX-License-Identifier: LGPL-3.0-or-later
+#include <stdio.h>
+#include <string.h>
+
+#include "cmd.hpp"
+#include "game.hpp"
+#include "entity.hpp"
+#include "select.hpp"
+
+int selection_add(GameContext* ctx, EntitySlot* e)
+{
+    if (ctx == NULL || e == NULL) {
+        return 0;
+    }
+    /* Dedupe (FUN_00452610 analog). */
+    for (int i = 0; i < ctx->selection_count; ++i) {
+        if (ctx->selection[i] == e) {
+            return 0;
+        }
+    }
+    if (ctx->selection_count >= SELECTION_MAX) {
+        return 0;
+    }
+    ctx->selection[ctx->selection_count++] = e;
+    e->flags |= ENTITY_SELECTED;
+    return 1;
+}
+
+void selection_remove(GameContext* ctx, const EntitySlot* e)
+{
+    if (ctx == NULL || e == NULL) {
+        return;
+    }
+    for (int i = 0; i < ctx->selection_count; ++i) {
+        if (ctx->selection[i] == e) {
+            ctx->selection[i]->flags &= ~ENTITY_SELECTED;
+            ctx->selection[i] = ctx->selection[ctx->selection_count - 1];
+            --ctx->selection_count;
+            return;
+        }
+    }
+}
+
+void selection_clear(GameContext* ctx)
+{
+    if (ctx == NULL) {
+        return;
+    }
+    for (int i = 0; i < ctx->selection_count; ++i) {
+        ctx->selection[i]->flags &= ~ENTITY_SELECTED;
+    }
+    ctx->selection_count = 0;
+}
+
+int selection_count(const GameContext* ctx)
+{
+    return ctx != NULL ? ctx->selection_count : 0;
+}
+
+EntitySlot* selection_first(const GameContext* ctx)
+{
+    if (ctx == NULL || ctx->selection_count == 0) {
+        return NULL;
+    }
+    return ctx->selection[0];
+}
+
+/* Squared distance between a placed entity and grid cell (cx,cy). */
+static float pick_dist2(const EntitySlot* e, float cx, float cy)
+{
+    float dx = e->x - cx;
+    float dy = e->y - cy;
+    return dx * dx + dy * dy;
+}
+
+EntitySlot* selection_pick(GameContext* ctx, float cx, float cy, float tol)
+{
+    if (ctx == NULL) {
+        return NULL;
+    }
+    EntitySlot* best = NULL;
+    float best_d = tol * tol;
+    for (int t = 0; t < ENTITY_TYPES; ++t) {
+        for (int i = 0; i < ctx->entity_count[t]; ++i) {
+            EntitySlot* e = &ctx->entity[t][i];
+            float d = pick_dist2(e, cx, cy);
+            if (d <= best_d) {
+                best_d = d;
+                best = e;
+            }
+        }
+    }
+    return best;
+}
+
+int selection_cmd_move(GameContext* ctx, float tx, float ty)
+{
+    if (ctx == NULL) {
+        return 0;
+    }
+    int n = 0;
+    for (int i = 0; i < ctx->selection_count; ++i) {
+        cmd_produce(5, ctx->selection[i], 0, (int)tx, (int)ty);
+        ++n;
+    }
+    return n;
+}
+
+void selection_cmd_add(GameContext* ctx, EntitySlot* e)
+{
+    if (ctx != NULL && e != NULL) {
+        cmd_produce(8, e, 0, 0, 0);
+    }
+}

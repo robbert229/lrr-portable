@@ -96,9 +96,19 @@ void*       cmd_rec_next(const void* rec);
  * frame loop calls cmd_context_set once at startup. */
 void cmd_context_set(GameContext* ctx);
 
-/* Queue a 5-dword command record (opcode, entity, param, extra…). */
+/* Producer (FUN_00452060): append a 5-dword command record to the active
+ * buffer; silent drop when the buffer is full. */
+void cmd_produce(int op, const void* a1, int a2, int a3, int a4);
+
+/* Queue a command for an entity (opcode, entity, param, extra…) — the
+ * entity-aware convenience over cmd_produce. */
 void cmd_enqueue(int opcode, const EntitySlot* e, int param,
                  int p1, int p2);
+
+/* Cheat/debug keybinds (FUN_00452010): bind `key` to a command; the
+ * executor's held-key pre-pass produces it whenever `keyheld(key)` is set. */
+void cmd_bind_key(int key, int op, int a1, int a2, int a3, int a4);
+void cmd_keybind_tick(int (*keyheld)(int key));
 
 /* The per-frame executor (FUN_004520d0): dispatch pending records through
  * the opcode switch into the cmd primitives / manager stubs. */

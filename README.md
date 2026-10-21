@@ -98,9 +98,10 @@ Open threads, in order of value:
 2. Deferred: dgVoodoo as a perf option; the `Steam.lwo` point-only sprites as glTF.
 3. Reconstruction next: the *AI execution receivers* — running the behaviour
    ids (`cmd` record `+0x1c`/`kind`) that the command subsystem creates, the
-   entity-manager ticks that drive the mission counters, and the winapi
-   reference build against real DirectX headers. The command primitives,
-   queue executor, task table, award config and save blob are in.
+   entity-manager ticks that drive the mission counters, the reward-screen
+   save-zone clicks (finding 09), and the winapi reference build against real
+   DirectX headers. Command queue + dispatch, selection, task data and save
+   blob are in.
 
 ## Findings index
 
@@ -392,6 +393,18 @@ finding 12, #14). Three new modules in `src/game/`:
   (which run the `+0x1c` behaviour ids — finding 10's open item) remain
   stub boundaries. `cmd_test` (suite `cmd`) covers pool doubling/reuse, the
   registry tables + behaviour defaults, creators, chains and queue dispatch.
+- **Selection + pointer input** (2026-10-21, finding 06): `src/game/select.*`
+  reconstructs the selection cluster (`DAT_004fef2c` array + `DAT_004ff298`
+  count, `SelectedEntity`), add/dedupe/cap + the selected flag, a
+  grid-cell **pick** (the "click the grid → select" path), and the
+  pointer→command routes: opcode-5 (position → `CmdCreateMove`) and
+  opcode-8 (add-to-selection) through the double-buffered queue. The queue
+  executor gained its faithful producer `cmd_produce` (`FUN_00452060`,
+  silent drop when full) and the **cheat-keybind pre-pass** (`cmd_bind_key`
+  + the held-key probe). The demo maps the tracked mouse to a grid cell:
+  `1`–`4` picks the nearest placed entity, `m` moves the selection to the
+  cursor cell, `n` clears. `select_test` (suite `select`) covers add/dedupe,
+  pick, pointer-move dispatch and the op-8 path.
 
 `GameContext` (`src/game/game.hpp`) carries the corpus globals these
 modules share (`DAT_005560c4` config, `DAT_005560d4` level block,
@@ -400,7 +413,8 @@ reward/entity tables) so tests run isolated. The frame loop now loads
 `LEGORRR_LEVEL` (default `Level01`) from `Lego.cfg`, seeds tasks/reward and
 places the `.ol`, runs the mission bridge + objective tick per frame, and
 exposes `S` (build blob + commit slot), `L` (`CheckpointStep`),
-`c`/`o`/`+` (live crystal/ore/score — the entity sim's stand-in). Six
+`c`/`o`/`+` (live crystal/ore/score — the entity sim's stand-in), and the
+selection keys (`1`–`4` pick / `m` move / `n` clear, finding 06). Seven
 suites use synthetic fixtures only:
 
 ```sh
@@ -410,6 +424,7 @@ meson test -C build --suite savegame
 meson test -C build --suite mission
 meson test -C build --suite entity
 meson test -C build --suite cmd
+meson test -C build --suite select
 ```
 
 Passing `-Dtest_wads_dir=<game>` adds real-wad probing to `level_test`,

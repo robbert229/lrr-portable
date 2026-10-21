@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "cmd.hpp"
+#include "select.hpp"
 #include "util.hpp"
 
 /* ------------------------------------------------------------------ *
@@ -444,34 +445,77 @@ static void idle_register(EntitySlot* e)
 
 typedef struct QueueRec {
     int        opcode;
-    EntitySlot* entity;
-    int        param;
-    int        p1;
-    int        p2;
+    const void* a1;    /* arg1: entity ptr for entity ops */
+    int        a2;
+    int        a3;
+    int        a4;
 } QueueRec;
 
 static QueueRec s_queue[2][CMD_QUEUE_CAP];
 static int      s_queue_count[2];
 static int      s_ping; /* active producer block (DAT_004fef28) */
 
+static GameContext* s_ctx = NULL;
+
 void cmd_context_set(GameContext* ctx)
 {
-    (void)ctx;
+    s_ctx = ctx;
     s_ping = 0;
+    for (int i = 0; i < 2; ++i) {
+        s_queue_count[i] = 0;
+    }
+}
+
+void cmd_produce(int op, const void* a1, int a2, int a3, int a4)
+{
+    int block = s_ping;
+    if (s_queue_count[block] >= CMD_QUEUE_CAP) {
+        return; /* queue full: silent drop (FUN_00452060) */
+    }
+    QueueRec* q = &s_queue[block][s_queue_count[block]++];
+    q->opcode = op;
+    q->a1 = a1;
+    q->a2 = a2;
+    q->a3 = a3;
+    q->a4 = a4;
 }
 
 void cmd_enqueue(int opcode, const EntitySlot* e, int param, int p1, int p2)
 {
-    int block = s_ping;
-    if (s_queue_count[block] >= CMD_QUEUE_CAP) {
+    cmd_produce(opcode, e, param, p1, p2);
+}
+
+/* Cheat/debug keybinds (FUN_00452010). */
+#define KEYBIND_MAX 8
+typedef struct KeyBind {
+    int key;
+    int op, a1, a2, a3, a4;
+} KeyBind;
+static KeyBind s_keybinds[KEYBIND_MAX];
+static int     s_keybind_count = 0;
+
+void cmd_bind_key(int key, int op, int a1, int a2, int a3, int a4)
+{
+    if (s_keybind_count >= KEYBIND_MAX) {
         return;
     }
-    QueueRec* q = &s_queue[block][s_queue_count[block]++];
-    q->opcode = opcode;
-    q->entity = (EntitySlot*)e;
-    q->param = param;
-    q->p1 = p1;
-    q->p2 = p2;
+    KeyBind* b = &s_keybinds[s_keybind_count++];
+    b->key = key;
+    b->op = op; b->a1 = a1; b->a2 = a2; b->a3 = a3; b->a4 = a4;
+}
+
+void cmd_keybind_tick(int (*keyheld)(int key))
+{
+    if (keyheld == NULL) {
+        return;
+    }
+    for (int i = 0; i < s_keybind_count; ++i) {
+        KeyBind* b = &s_keybinds[i];
+        if (keyheld(b->key)) {
+            cmd_produce(b->op, (const void*)(uintptr_t)b->a1,
+                        b->a2, b->a3, b->a4);
+        }
+    }
 }
 
 /* Manager-dispatch stubs (the corpus's 0x4526c0/0x452be0/… handlers). */
@@ -483,50 +527,57 @@ static void mgr_stub(const char* what, int a)
 
 void cmd_queue_tick(void)
 {
-    /* 1. Producer block. The corpus's held-key pre-pass (quick-action
-     *    table DAT_004ff0d0) is a stub; records dispatch directly. */
+    /* 1. Producer block: the held-key pre-pass (SelectionRoot step 1 —
+     *    cheat-keybinds; the demo binds keys via cmd_bind_key). */
+    if (s_ctx != NULL && s_ctx->input_keyheld != NULL) {
+        cmd_keybind_tick(s_ctx->input_keyheld);
+    }
+
+    /* 2. Active buffer -> swap (DAT_004fef28). */
     int block = s_ping;
     int count = s_queue_count[block];
-
-    /* 2. Ping-pong swap (DAT_004fef28). */
     s_queue_count[block] = 0;
     s_ping = !s_ping;
 
-    /* 3. The 5-dword opcode switch (finding 10 §"The queue executor"). */
+    /* 3. The opcode switch (finding 06/10 §"The queue executor"). */
     for (int i = 0; i < count; ++i) {
         QueueRec* q = &s_queue[block][i];
+        EntitySlot* ent = (EntitySlot*)q->a1;
         switch (q->opcode) {
         case 5:
         case 6:
-            cmd_create_move(q->entity, (float)q->p1, (float)q->p2, q->param);
+            cmd_create_move(ent, (float)q->a3, (float)q->a4, q->a2);
+            break;
+        case 8:
+            /* add up to N entities to the selection (FUN_00403270 path) */
+            selection_add(s_ctx, ent);
             break;
         case 0x17:
         case 0x1d:
-            cmd_create_task(q->entity);
+            cmd_create_task(ent);
             break;
         case 0x19:
-            cmd_create_gated(q->entity, (void*)(uintptr_t)q->param);
+            cmd_create_gated(ent, (void*)(uintptr_t)q->a2);
             break;
         case 0x2b:
-            cmd_create_target(q->entity, (void*)(uintptr_t)q->param);
+            cmd_create_target(ent, (void*)(uintptr_t)q->a2);
             break;
-        case 1:  mgr_stub("op1",  q->param); break;
+        case 1:  mgr_stub("op1",  q->a2); break;
         case 3:  mgr_stub("op3",  0);        break;
-        case 4:  mgr_stub("op4",  q->param); break;
-        case 8:  mgr_stub("op8",  q->param); break;
-        case 9:  mgr_stub("op9",  q->param); break;
+        case 4:  mgr_stub("op4",  q->a2); break;
+        case 9:  mgr_stub("op9",  q->a2); break;
         case 0xb: mgr_stub("opb",  0);       break;
-        case 0xc: mgr_stub("opc",  q->param); break;
-        case 0x13: mgr_stub("op13", q->param); break;
-        case 0x15: mgr_stub("op15", q->param); break;
-        case 0x1b: mgr_stub("op1b", q->param); break;
+        case 0xc: mgr_stub("opc",  q->a2); break;
+        case 0x13: mgr_stub("op13", q->a2); break;
+        case 0x15: mgr_stub("op15", q->a2); break;
+        case 0x1b: mgr_stub("op1b", q->a2); break;
         case 0x1f: mgr_stub("op1f", 0);       break;
-        case 0x21: mgr_stub("op21", q->param); break;
-        case 0x23: mgr_stub("op23", q->param); break;
-        case 0x25: mgr_stub("op25", q->param); break;
-        case 0x2d: mgr_stub("op2d", 0);       break;
-        case 0x34: mgr_stub("op34", q->param); break;
-        case 0x36: mgr_stub("op36", q->param); break;
+        case 0x21: mgr_stub("op21", q->a2); break;
+        case 0x23: mgr_stub("op23", q->a2); break;
+        case 0x25: mgr_stub("op25", q->a2); break;
+        case 0x2d: mgr_stub("op2d", 0);       break; /* selection filter stub */
+        case 0x34: mgr_stub("op34", q->a2); break;
+        case 0x36: mgr_stub("op36", q->a2); break;
         case 0x40: mgr_stub("op40", 0);       break;
         default:   mgr_stub("unknown", q->opcode); break;
         }
