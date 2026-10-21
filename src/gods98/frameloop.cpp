@@ -7,6 +7,7 @@
 #include "game/ai.hpp"
 #include "game/cmd.hpp"
 #include "game/entity.hpp"
+#include "game/frontend.hpp"
 #include "game/level.hpp"
 #include "game/mission.hpp"
 #include "game/objective.hpp"
@@ -100,32 +101,6 @@ int LegorrrRun(void)
         /* InfoMessages section -> per-id bus sounds (finding 22 §1). */
         message_load_infomessages(game.cfg);
     }
-    const char* level_name = env_get("LEGORRR_LEVEL", "Level01");
-    if (game.cfg != NULL) {
-        fprintf(log, "frameloop: config Lego.cfg loaded\n");
-        game.level = level_load(game.cfg, level_name);
-        if (game.level != NULL) {
-            fprintf(log, "frameloop: level %s loaded: %dx%d grid, voxel stride "
-                         "0x48, objective word 0x%08x\n",
-                    level_name, level_width(game.level), level_height(game.level),
-                    game.level->objective);
-            /* Mission plumbing (finding 09/10): seed the 10-task table +
-             * reward screen from the level's Reward group, then place the
-             * `.ol` object list into the entity tables. */
-            mission_task_init(&game, game.cfg, level_name);
-            mission_reward_init(&game, game.cfg, level_name);
-            int placed = object_list_load(&game, game.cfg, level_name);
-            fprintf(log, "frameloop: mission tasks seeded, %s, %d object(s) "
-                         "placed, crystal quota=%d\n",
-                    game.cfg != NULL ? "reward config ok" : "no cfg",
-                    placed, game.crystal_quota);
-        } else {
-            fprintf(log, "frameloop: level %s load FAILED (maps/config missing)\n",
-                    level_name);
-        }
-    } else {
-        fprintf(log, "frameloop: Lego.cfg not found (wads need mounted game data)\n");
-    }
     int save_loaded = save_read_slot(&game, SAVE_DEFAULT_SLOT, 0);
     fprintf(log, "frameloop: save slot %d %s\n", SAVE_DEFAULT_SLOT,
             save_loaded ? "loaded" : "bootstrap");
@@ -149,34 +124,9 @@ int LegorrrRun(void)
         NULL, /* level_terrain */
         0.0f, 0,
     };
-    /* Engine <-> level binding: the engine sim reads the loaded LevelState
-     * (width/height/voxels) so cameras/tickers see the real terrain. The
-     * full pointer cannot ride the 32-bit corpus slot on a 64-bit host, so
-     * the resolved voxel pointer is bound here via the game layer. */
-    ctx.level_block = game.level;
-    ctx.level_voxels = game.level != NULL
-                           ? (const uint8_t*)level_load_ptr(game.level,
-                                                            LEVEL_OFF_VOXELS)
-                           : NULL;
-    ctx.level_terrain = game.level != NULL
-                            ? level_load_ptr(game.level, LEVEL_OFF_TERRAIN)
-                            : NULL;
-    if (game.level != NULL) {
-        fprintf(log, "frameloop: engine bound to level %dx%d, blocksize %.1f, "
-                     "voxels@%sresolved\n",
-                engine_level_width(&ctx), engine_level_height(&ctx),
-                engine_level_blocksize(&ctx),
-                ctx.level_voxels != NULL ? "" : "UN");
-        /* Let the engine's camera grid sweep walk the real voxel grid. */
-        g_camera_grid_enabled = 1;
-    }
-    /* Seed the follow camera at the grid centre so mode-1 starts over the
-     * loaded level instead of the origin. */
-    if (game.level != NULL) {
-        cam_set_pos(&views[0].cam_follow,
-                    (float)engine_level_width(&ctx) * 0.5f,
-                    (float)engine_level_height(&ctx) * 0.5f, 0.0f);
-    }
+    /* Engine <-> level binding happens after the front end below — the level
+     * loads only once the player picks one — so ctx.level_block/voxels/
+     * terrain are bound there, not here. */
     /* The finding-22 InfoMessages catalog + bus enabled. */
     message_init_defaults();
 
@@ -245,13 +195,139 @@ int LegorrrRun(void)
     airbeat_set_loop(audio_status == 0 ? &ap : NULL,
                      "Sounds\\Vehicles\\Heliloop1.wav");
 
+    /* --- Front-end boot (finding 23): main menu first -----------------------
+     * The ship is modal: the front end runs until the player picks a level
+     * (FE_EVT_START_LEVEL) or quits (FE_EVT_QUIT). The level itself loads
+     * only after the menu closes, and `LEGORRR_LEVEL` (or FrontEnd FALSE in
+     * the cfg) skips the menu straight into a level, like the classic demo. */
+    char level_name[FE_LEVEL_NAME_MAX];
+    FrontEnd fe;
+    int boot_menu = 0;
+    if (game.cfg != NULL) {
+        fprintf(log, "frameloop: config Lego.cfg loaded\n");
+        boot_menu = frontend_build(&fe, game.cfg)
+                 && frontend_enabled(game.cfg)
+                 && env_get("LEGORRR_LEVEL", "")[0] == '\0';
+    } else {
+        fprintf(log, "frameloop: Lego.cfg not found (wads need mounted game data)\n");
+    }
+    snprintf(level_name, sizeof(level_name), "%s",
+             env_get("LEGORRR_LEVEL", "Level01"));
+    long frames = 0;
+    int quit = 0;
+    const char* stop = "closed";
+    if (boot_menu) {
+        frontend_open(&fe, FE_MENU_MAIN);
+        fprintf(log, "frameloop: front end up — main menu (arrows select, "
+                     "Enter/Space act, Esc quits)\n");
+        while (!quit) {
+            PlatformEvent evbuf[32];
+            int nev = platform_pump_events(win, evbuf, 32);
+            input_capture_events(&input, evbuf, nev);
+            for (int i = 0; i < nev; ++i) {
+                if (evbuf[i].kind == PLATFORM_EVENT_QUIT) {
+                    quit = 1;
+                    stop = "closed";
+                    break;
+                }
+            }
+            if (quit || (frame_cap > 0 && frames >= frame_cap)) {
+                if (!quit) {
+                    stop = "autostop";
+                }
+                break;
+            }
+            FeInput fi;
+            fi.up = input_key_edge(&input, PLATFORM_KEY_UP);
+            fi.down = input_key_edge(&input, PLATFORM_KEY_DOWN);
+            fi.enter = input_key_edge(&input, ' ')
+                       || input_key_edge(&input, PLATFORM_KEY_ENTER);
+            fi.esc = input_key_edge(&input, PLATFORM_KEY_ESC);
+            FeEvent ev = frontend_tick(&fe, &fi);
+            if (ev == FE_EVT_QUIT) {
+                quit = 1;
+                stop = "menu quit";
+                break;
+            }
+            if (ev == FE_EVT_START_LEVEL) {
+                snprintf(level_name, sizeof(level_name), "%s", fe.pending_level);
+                fprintf(log, "frameloop: front end picked level %s\n", level_name);
+                break;
+            }
+
+            void* pixels = NULL;
+            int   pitch = 0;
+            if (surface_lock(&surf, &pixels, &pitch) == 0) {
+                surface_fill(pixels, pitch, WINDOW_W, WINDOW_H, 8, 8, 20);
+                frontend_render(&fe, WINDOW_W, WINDOW_H, pixels, pitch);
+                platform_screenshot(win, pixels, pitch, WINDOW_W, WINDOW_H,
+                                    (int)frames);
+                platform_present_pixels(win, pixels, pitch, WINDOW_W, WINDOW_H);
+                surface_unlock(&surf, pixels);
+            }
+            Sleep((DWORD)FRAME_MS);
+            ++frames;
+            input_begin_frame(&input);
+        }
+    }
+
+    /* --- Deferred level load (the front end chose a level) ------------------ */
+    if (!quit && game.cfg != NULL) {
+        game.level = level_load(game.cfg, level_name);
+        if (game.level != NULL) {
+            fprintf(log, "frameloop: level %s loaded: %dx%d grid, voxel stride "
+                         "0x48, objective word 0x%08x\n",
+                    level_name, level_width(game.level), level_height(game.level),
+                    game.level->objective);
+            /* Mission plumbing (finding 09/10): seed the 10-task table +
+             * reward screen from the level's Reward group, then place the
+             * `.ol` object list into the entity tables. */
+            mission_task_init(&game, game.cfg, level_name);
+            mission_reward_init(&game, game.cfg, level_name);
+            int placed = object_list_load(&game, game.cfg, level_name);
+            fprintf(log, "frameloop: mission tasks seeded, %s, %d object(s) "
+                         "placed, crystal quota=%d\n",
+                    game.cfg != NULL ? "reward config ok" : "no cfg",
+                    placed, game.crystal_quota);
+        } else {
+            fprintf(log, "frameloop: level %s load FAILED (maps/config missing)\n",
+                    level_name);
+        }
+        /* Engine <-> level binding: the engine sim reads the loaded
+         * LevelState (width/height/voxels) so cameras/tickers see the real
+         * terrain. The full pointer cannot ride the 32-bit corpus slot on a
+         * 64-bit host, so the resolved voxel pointer is bound here via the
+         * game layer — after the front end chose this level. */
+        ctx.level_block = game.level;
+        ctx.level_voxels = game.level != NULL
+                               ? (const uint8_t*)level_load_ptr(game.level,
+                                                                LEVEL_OFF_VOXELS)
+                               : NULL;
+        ctx.level_terrain = game.level != NULL
+                                ? level_load_ptr(game.level, LEVEL_OFF_TERRAIN)
+                                : NULL;
+        if (game.level != NULL) {
+            fprintf(log, "frameloop: engine bound to level %dx%d, blocksize %.1f, "
+                         "voxels@%sresolved\n",
+                    engine_level_width(&ctx), engine_level_height(&ctx),
+                    engine_level_blocksize(&ctx),
+                    ctx.level_voxels != NULL ? "" : "UN");
+            /* Let the engine's camera grid sweep walk the real voxel grid. */
+            g_camera_grid_enabled = 1;
+        }
+        /* Seed the follow camera at the grid centre so mode-1 starts over the
+         * loaded level instead of the origin. */
+        if (game.level != NULL) {
+            cam_set_pos(&views[0].cam_follow,
+                        (float)engine_level_width(&ctx) * 0.5f,
+                        (float)engine_level_height(&ctx) * 0.5f, 0.0f);
+        }
+    }
+
     const float dt = 1.0f / 30.0f;
     /* Interactive proof: the arrow keys pan the blitted texture. */
     int rock_x = 24, rock_y = 24;
 
-    long frames = 0;
-    int quit = 0;
-    const char* stop = "closed";
     while (!quit) {
         /* 1. Device capture for this frame (the finding-05 "writer" half):
          *    platform events -> canonical codes -> input tables. */

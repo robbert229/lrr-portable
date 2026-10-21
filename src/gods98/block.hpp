@@ -46,12 +46,13 @@ BlockFile* block_parse(char* text, size_t len);
 
 void block_close(BlockFile* bf);
 
-/* Path lookup over space-separated tokens, like the corpus's
- * "%s%s%s%s%s" builders: `block_find(bf, "Lego* Activities FILE")` descends
- * the record tree. Matches are ASCII case-insensitive; a record name
- * containing '*' matches a token that starts with the text before the '*'
- * (first-token position, per FUN_004792e0). First match in document order
- * wins. Returns NULL when no record matches. */
+/* Path lookup over tokens separated by spaces or `::` (the corpus's
+ * DAT_004aab18 = "::" group separator — finding 23), like the corpus's
+ * "%s%s%s%s%s" builders: `block_find(bf, "Lego* Main Menu::MainMenuFull
+ * MenuCount")` descends the record tree. Matches are ASCII case-insensitive;
+ * a record name containing '*' matches a token that starts with the text
+ * before the '*' (first-token position, per FUN_004792e0). First match in
+ * document order wins. Returns NULL when no record matches. */
 BlockRec* block_find(BlockFile* bf, const char* path);
 
 /* Like block_find but requires the record to have children (corpus

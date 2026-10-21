@@ -49,6 +49,7 @@ typedef struct PlatformWindow PlatformWindow;
 #define PLATFORM_KEY_LEFT  0x82
 #define PLATFORM_KEY_RIGHT 0x83
 #define PLATFORM_KEY_ESC   0x1b /* ASCII ESC */
+#define PLATFORM_KEY_ENTER 0x0d /* ASCII CR (menu activate; backends map it) */
 
 #define PLATFORM_EVENT_NONE    0
 #define PLATFORM_EVENT_KEYDOWN 1

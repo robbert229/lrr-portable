@@ -119,6 +119,8 @@ int platform_pump_events(PlatformWindow* pw, PlatformEvent* out, int cap)
                 code = PLATFORM_KEY_RIGHT;
             } else if (kc == SDLK_ESCAPE) {
                 code = PLATFORM_KEY_ESC;
+            } else if (kc == SDLK_RETURN || kc == SDLK_KP_ENTER) {
+                code = PLATFORM_KEY_ENTER;
             }
             if (code != 0) {
                 ev->kind = (e.type == SDL_EVENT_KEY_DOWN)

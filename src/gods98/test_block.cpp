@@ -143,6 +143,51 @@ static void test_comments_braces(void)
     block_close(bf);
 }
 
+static void test_colon_sep(void)
+{
+    /* The shipped Lego.cfg shape: root `Lego*` with sibling `Main`/`Menu`/
+     * `Levels` groups; the exe queries with the `::` group separator
+     * (DAT_004aab18 = "::", finding 23) — "Lego* Main Menu::MainMenuFull
+     * MenuCount". Both ' ' and "::" must tokenize. */
+    BlockFile* bf = parse(
+        "Lego* {\n"
+        "\tMain {\n"
+        "\t\tStartLevel\tLevels::Tran01\n"
+        "\t}\n"
+        "\tMenu {\n"
+        "\t\tMainMenuFull {\n"
+        "\t\t\tMenuCount 5\n"
+        "\t\t\tMenu1 {\n"
+        "\t\t\t\tItemCount 1\n"
+        "\t\t\t\tItem1 Next:0:0:Start_Game:Menu2\n"
+        "\t\t\t}\n"
+        "\t\t}\n"
+        "\t}\n"
+        "\tLevels {\n"
+        "\t\tTran01 {\n"
+        "\t\t\tSurfaceMap x.map\n"
+        "\t\t}\n"
+        "\t}\n"
+        "}\n");
+    CHECK(bf != NULL, "colon: parse");
+    CHECK(val_is(bf, "Lego* Menu::MainMenuFull MenuCount", "5"),
+        "colon: :: menu path");
+    CHECK(val_is(bf, "Lego* Menu MainMenuFull MenuCount", "5"),
+        "colon: space form parity");
+    CHECK(val_is(bf, "Lego* Menu::MainMenuFull Menu1 Item1",
+                 "Next:0:0:Start_Game:Menu2"), "colon: :: nested item");
+    /* the shipped level *address* (StartLevel value) resolves the group: */
+    CHECK(val_is(bf, "Lego* Main StartLevel", "Levels::Tran01"),
+        "colon: StartLevel value kept intact (a value, not a path)");
+    CHECK(val_is(bf, "Lego* Levels::Tran01 SurfaceMap", "x.map"),
+        "colon: Levels::X level address resolves the record");
+    CHECK(block_subgroup(bf, "Lego* Menu::MainMenuFull Menu1") != NULL,
+        "colon: :: subgroup");
+    CHECK(block_find(bf, "Lego* Menu::MainMenuFull MenuNope") == NULL,
+        "colon: miss -> NULL");
+    block_close(bf);
+}
+
 static void test_multiroot(void)
 {
     BlockFile* bf = parse("A { x { y 1 } }\nB { x { y 2 } }\n");
@@ -332,6 +377,7 @@ int main(int argc, char** argv)
 {
     test_basic();
     test_wildcard();
+    test_colon_sep();
     test_comments_braces();
     test_multiroot();
     test_getters();

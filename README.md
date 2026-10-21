@@ -275,6 +275,26 @@ knobs: `LEGORRR_WAD_DIR`, `LEGORRR_AUTOSTOP_FRAMES` (headless/CI), and
 `LEGORRR_SCREENSHOT=<path>` (PPM of the last frame). Run it from the game
 directory (or set `LEGORRR_WAD_DIR`) — it exits cleanly on ESC/close.
 
+**Front end — the main menu** (2026-10-21, finding 23): the native build now
+**boots into the main menu before any level loads**. `src/game/frontend.*`
+ports the corpus's modal front-end: `frontend_build` reads the four menu
+groups (`MainMenuFull`/`SaveMenu`/`PausedMenu`/`OptionsMenu`) with the
+shipped `Menu::<name>` query spelling (the `::` group separator,
+`DAT_004aab18`, is now a `block_find` token boundary too), parses the
+`Item%i` grammar (`Next`/`Trigger`/`Slider`/`Cycle`), and grafts the level
+pickers — **`StartLevel`/`TutorialStartLevel` + `NextLevel` chains** at each
+level's `FrontEndX/Y` scatter — onto the `LevelPick*` submenus.
+`frontend_tick` runs the modal loop one frame: arrows select, Enter/Space
+activates, Esc backs out (root Esc quits); a picker row returns
+`FE_EVT_START_LEVEL` and the **frame loop loads that level afterwards**;
+`FrontEnd FALSE` in `Lego.cfg` (or setting `LEGORRR_LEVEL`) skips the menu
+straight into a level, like the classic demo. `frontend_render` draws the
+items with the port's own 3x5 typeface (README "palette is ours"). New key:
+**`PLATFORM_KEY_ENTER`** at the seam. Suites: `block` (`::` paths) and
+`frontend` (fixtures + a `--real` probe that builds the whole front end from
+the shipped `Lego.cfg` — 24-level campaign chain, 8 tutorials, 32 picker
+rows).
+
 **Interactive input** (2026-10-21): the window now captures keyboard/mouse
 into the engine's `input.*` tables (the finding-05 device-writer half):
 platform events pump into a canonical-key vocabulary, `input_capture_events`
@@ -544,10 +564,12 @@ finding 12, #14). Three new modules in `src/game/`:
 `GameContext` (`src/game/game.hpp`) carries the corpus globals these
 modules share (`DAT_005560c4` config, `DAT_005560d4` level block,
 `DAT_00556ed0` cheat word, `DAT_004ffbc0` objective word, the save/task/
-reward/entity tables) so tests run isolated. The frame loop now loads
-`LEGORRR_LEVEL` (default `Level01`) from `Lego.cfg`, seeds tasks/reward and
-places the `.ol`, runs the mission bridge + objective tick per frame, and
-exposes `S` (build blob + commit slot), `L` (`CheckpointStep`),
+reward/entity tables) so tests run isolated. The build boots into the
+**main menu** first (finding 23); once a level starts — from the menu's
+picker rows or via `LEGORRR_LEVEL` (default `Level01`) — the frame loop
+seeds tasks/reward and places the `.ol`, runs the mission bridge + objective
+tick per frame, and exposes `S` (build blob + commit slot), `L`
+(`CheckpointStep`),
 `c`/`o`/`+` (live crystal/ore/score — the entity sim's stand-in), the
 selection keys (`1`–`4` pick / `m` move / `g` gather-task / `n` clear),
 `y` (toggle the reward overlay) and the **mouse-button click** (reward
@@ -567,13 +589,14 @@ meson test -C build --suite select
 meson test -C build --suite ai
 meson test -C build --suite render
 meson test -C build --suite bind
+meson test -C build --suite frontend
 ```
-
-Passing `-Dtest_wads_dir=<game>` adds real-wad probing to `level_test`,
-mirroring the resource/texture/sound/block suites: it mounts the shipped
-wads and reports how many Lego.cfg groups resolve a `SurfaceMap`.
-Best-effort — the fixtures are the guaranteed coverage, and the probe is
-skipped when no game data is present.
+Passing `-Dtest_wads_dir=<game>` adds real-wad probing to `level_test` and
+`frontend_test`, mirroring the resource/texture/sound/block suites: they
+mount the shipped wads — `level_test` counts Lego.cfg groups resolving a
+`SurfaceMap`, `frontend_test` builds the whole front end (menu count, level
+chains, grafted picker rows). Best-effort — the fixtures are the guaranteed
+coverage, and the probes are skipped when no game data is present.
 
 ```sh
 cd path/to/legally-owned/game
