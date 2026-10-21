@@ -45,6 +45,11 @@ int cmd_rec_behaviour(const void* rec) { return cas_rec(rec)->behaviour; }
 uint32_t cmd_rec_state(const void* rec) { return cas_rec(rec)->state; }
 void* cmd_rec_next(const void* rec) { return cas_rec(rec)->next; }
 
+float cmd_rec_move_x(const void* rec) { return cas_rec(rec)->x; }
+float cmd_rec_move_y(const void* rec) { return cas_rec(rec)->y; }
+float cmd_rec_now(const void* rec) { return cas_rec(rec)->now; }
+void cmd_rec_set_now(void* rec, float v) { as_rec(rec)->now = v; }
+
 /* ------------------------------------------------------------------ *
  *  Pool (CmdPoolGrow/CmdAlloc/CmdFree).
  * ------------------------------------------------------------------ */
@@ -266,6 +271,28 @@ static void idle_register(EntitySlot* e);
 void* cmd_global_head(void)
 {
     return s_global_head;
+}
+
+void cmd_global_unlink(const void* rec)
+{
+    if (rec == NULL || s_global_head == NULL) {
+        return;
+    }
+    CmdRec* prev = NULL;
+    for (CmdRec* cur = s_global_head; cur != NULL; cur = as_rec(cur->next)) {
+        if ((const void*)cur == rec) {
+            if (prev != NULL) {
+                prev->next = cur->next;
+            } else {
+                s_global_head = as_rec(cur->next);
+            }
+            if (s_global_tail == cur) {
+                s_global_tail = prev;
+            }
+            return;
+        }
+        prev = cur;
+    }
 }
 
 /* Append a record to the entity's chain (entity +0x2f0 analog) and link it
