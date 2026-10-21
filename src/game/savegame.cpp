@@ -235,10 +235,36 @@ void save_mark_record(GameContext* ctx, int index)
     *flags |= 2u;
 }
 
+/* Grow the record array until `index` is addressable. The corpus bootstraps
+ * a 5-record array and lets the sav-tree walk (SavTreeWalk2) widen it as
+ * levels enumerate; the port grows the same way when a checkpoint lands
+ * past the bootstrap count (the campaign has 24 records, tutorials start
+ * at 0, so record_count reaches 24+8). */
+static int save_records_grow(GameContext* ctx, int index)
+{
+    if (ctx->records == NULL || index < ctx->record_count) {
+        return ctx->records != NULL;
+    }
+    int n = ctx->record_count > 0 ? ctx->record_count : SAVE_DEFAULT_RECORDS;
+    while (n <= index) {
+        n *= 2;
+    }
+    uint8_t* rec = (uint8_t*)realloc(ctx->records,
+                                     (size_t)n * SAVE_RECORD_SIZE);
+    if (rec == NULL) {
+        return 0;
+    }
+    memset(rec + (size_t)ctx->record_count * SAVE_RECORD_SIZE, 0,
+           (size_t)(n - ctx->record_count) * SAVE_RECORD_SIZE);
+    ctx->records = rec;
+    ctx->record_count = n;
+    return 1;
+}
+
 int save_write_record(GameContext* ctx, int index, const uint8_t* blob)
 {
-    if (ctx == NULL || ctx->records == NULL || index < 0
-        || index >= ctx->record_count || blob == NULL) {
+    if (ctx == NULL || index < 0 || blob == NULL
+        || !save_records_grow(ctx, index)) {
         return 0;
     }
     __builtin_memcpy(ctx->records + (size_t)index * SAVE_RECORD_SIZE + 4,
@@ -423,13 +449,17 @@ void checkpoint_step(GameContext* ctx)
     if (ctx->level != NULL) {
         result = level_int(ctx->level, LEVEL_OFF_OBJ_RESULT);
     }
-    if (result == 1) {
-        save_mark_record(ctx, rec);
-    }
     if (ctx->checkpoint_blob == NULL) {
         checkpoint_blob_build(ctx);
     }
+    /* Write before marking: the write grows the record array if `rec` is
+     * past the bootstrap count, so the mark (a flags-word write) can't
+     * miss. The corpus marks first, but both touch the same record — the
+     * observable order is the same. */
     save_write_record(ctx, rec, ctx->checkpoint_blob);
+    if (result == 1) {
+        save_mark_record(ctx, rec);
+    }
     if (orig == -1) {
         /* First checkpoint with no active slot: commit the default slot
          * then reload its metadata (the corpus's SavCommit + reload). */

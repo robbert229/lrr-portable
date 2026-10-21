@@ -78,6 +78,19 @@ with a zero-filled record array first.
 (`DAT_00556ff8`; roots `DAT_00556fe4/fd0` = menu/game list pairs), consulting each record's
 dirty flag; restore then `FUN_00418110(0)`.
 
+**Record ↔ level** — the index is *per level*, not global: `CheckpointStep` takes it from
+`ListFindName(ActiveObjectList(levelState))` (the current level's position in the active
+sav list), and `SavTreeWalk2` reads the record slot from the tree node itself
+(`*node * 0x3190 + records`), so each level checkpoints to its own record and the array
+widens past the 5-record bootstrap as levels enumerate. The port implements this as
+`fe_record_for_level`/`fe_level_for_record` (port decision: tutorials enumerate records
+`0..tutorial_n-1`, then the campaign chain — one progression-order stand-in for the
+corpus's tree-node ordering), `current_record` is set on every level start so the
+reward-zone autosave and in-game `S` land in the right record, `save_write_record`
+grows the array on demand, and load-slot resume maps the highest completed record
+back through the same table (`resume = max dirty index` remains a port stand-in for
+the tree walk).
+
 ### Menu layer
 
 `SaveMenuBuild @ 0x415a10` builds the save/load lists from config keys `Save_Game_%i` /

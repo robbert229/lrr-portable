@@ -617,9 +617,43 @@ int frontend_build(FrontEnd* fe, BlockFile* cfg)
     return main_ok;
 }
 
-int frontend_enabled(BlockFile* cfg)
+int fe_record_for_level(const FrontEnd* fe, const char* level)
 {
-    if (cfg == NULL) {
+    if (fe == NULL || !fe->built || level == NULL || level[0] == '\0') {
+        return -1;
+    }
+    for (int i = 0; i < fe->tutorial_n; i++) {
+        if (s_strcaseeq(level, fe->tutorial[i])) {
+            return i;
+        }
+    }
+    for (int i = 0; i < fe->campaign_n; i++) {
+        if (s_strcaseeq(level, fe->campaign[i])) {
+            return fe->tutorial_n + i;
+        }
+    }
+    return -1;
+}
+
+int fe_level_for_record(const FrontEnd* fe, int rec, char* out, size_t sz)
+{
+    if (fe == NULL || !fe->built || out == NULL || rec < 0) {
+        return 0;
+    }
+    if (rec < fe->tutorial_n) {
+        snprintf(out, sz, "%s", fe->tutorial[rec]);
+        return 1;
+    }
+    rec -= fe->tutorial_n;
+    if (rec < fe->campaign_n) {
+        snprintf(out, sz, "%s", fe->campaign[rec]);
+        return 1;
+    }
+    return 0;
+}
+
+int frontend_enabled(BlockFile* cfg)
+{    if (cfg == NULL) {
         return 0;
     }
     /* FrontEndActive @ 0x416d00: the cfg flag (loader-mode <3 is Win32). */
