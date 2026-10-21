@@ -139,6 +139,57 @@ public class CreateEngineFunctions extends GhidraScript {
         0x402cd0L,  // CmdCancelRef
         0x402000L,  // CmdMarkMatching
         0x402060L,  // CmdSetKind
+        // --- front-end / menus (batch 12, finding 23) ---
+        0x40a0c0L,  // ScrollingTextDisplay — the main-menu credits/text scroller
+        0x4103d0L,  // MainMenuTextItem — main-menu Credits item callback
+        0x410d50L,  // MenuTextRecordMake — text/cycle item record
+        0x410e20L,  // MenuButtonRecordMake — trigger/button item record
+        0x410fb0L,  // MenuItemImageSet — MenuImage/MenuImageDark surface loading
+        0x411260L,  // ListAppend — grow-and-append on the {ptr,count} lists
+        0x412c00L,  // MenuTick — draw/step one open menu (item record switch)
+        0x413b80L,  // MenuRunLoop — modal menu loop (blocks until close flag +0x28)
+        0x413e20L,  // MenuShow — clear all item +0x28, run the modal loop
+        0x413e60L,  // MenuItemType — item value type tag (cycle/trigger/textinput/slider/…)
+        0x413f00L,  // StrReplace — character replacement (e.g. '_' -> ' ' for titles)
+        0x413f90L,  // MenuItemRecordAlloc — allocate an Item%i record
+        0x414010L,  // LoadItemStrings — load up to 8 item strings when type tag 0x10
+        0x414070L,  // ListAlloc — allocate {ptr,count} list record
+        0x4140c0L,  // MenuBuild — config-driven menu constructor (Menu::<name>)
+        0x414c90L,  // MenuListFindName — strcmpi name search in a list
+        0x414ce0L,  // AvisEnabled — DontPlayAvis gate (boot movies)
+        0x414d30L,  // BrightnessSet — options brightness callback (param/10 RGB)
+        0x414de0L,  // GameSpeedSelect — options discrete-select (FUN_0047b530)
+        0x414df0L,  // VolumeSet — options volume callback (param/9 L/R)
+        0x414e10L,  // OptionMusicDefault — default for DAT_00557038
+        0x414f90L,  // ScrollToSliderIndexStore — float -> 0..5 index, stores DAT_00557030
+        0x415030L,  // ScrollToSliderIndex — float -> 0..5 menu slider index
+        0x415360L,  // ScrollSliderRefresh — DAT_00557030 = ScrollToSliderIndex()
+        0x4150b0L,  // SaveMenuRefresh — rebuild save/load trees (SavTreeLoad)
+        0x415150L,  // OptionsApplyFromSlot — apply saved volume/brightness/speed on load
+        0x415220L,  // FrontEndStartLevel — menu "start level": fade + LevelLoad + ingame bit
+        0x4152c0L,  // SlotSummary — "%i point" completed-game summary for a slot
+        0x415370L,  // OverlayMenuGate — paused/options overlay open gate
+        0x4154b0L,  // LevelChainBuild — StartLevel + NextLevel -> ordered level list
+        0x415700L,  // MoviePlayWait — FLIC frame loop with quit-probe cancellation
+        0x4157c0L,  // MoviePlayLoop — play movie by config key to completion
+        0x415910L,  // MoviePlayNamed — play a named movie (config-key -> path)
+        0x415990L,  // MoviePlayLevelVideo — play <level> Video movie (LevelLoad path)
+        0x415cf0L,  // MovieShownReset — DAT_005574d0 = 0xffffffff
+        0x415d00L,  // SaveMenuLayoutLoad — SaveText/LevelText layout keys + rects
+        0x416150L,  // StreamPlayLevel — trigger Stream_LevelName_Level_%d
+        0x4161a0L,  // StreamPlayTutorial — trigger Stream_LevelName_TLevel_%d
+        0x416910L,  // OptionsWriteToSlot — stash DAT_00557030/34/3c into save context
+        0x416940L,  // OptionsLoadOrDefault — front-end options defaults {1,8,5}
+        0x4169c0L,  // FrontEndStateChange — front-end flow dispatcher (0..4)
+        0x416c80L,  // MenuEnter — reset state + select item + MenuShow
+        0x416d00L,  // FrontEndActive — the front-end gate (Lego.cfg "FrontEnd" && mode<3)
+        0x416d50L,  // SaveSlotOpen — DAT_00557020 != -1
+        0x416d70L,  // FrontEndSelectedAction — selected level name for LevelLoad
+        0x416dd0L,  // QuitMenuProbe — DAT_0055701c != 0 => quit now
+        0x416de0L,  // LevelStartFlag — DAT_00557048 != 0 (advance/start level)
+        0x416df0L,  // MenuOptionsFlag — DAT_0055704c != 0 (options overlay)
+        0x41fa80L,  // StartLevelPilots — spawn Pilot + set in-game bits from menu start
+        0x460220L,  // StartLevelSelected — commit pending level + re-create Pilot
     };
     static final String[] NAMES = { "EngineTick", "EngineShutdown", "EngineShutdownAlt",
         "MainSimStep", "ManagerTick", "MessageDispatch", "ViewContextTick",
@@ -167,7 +218,23 @@ public class CreateEngineFunctions extends GhidraScript {
         "CmdFree", "CmdPoolGrow", "CmdCreateMove", "CmdCreateTarget", "CmdCreateTask",
         "CmdCreateGated", "CmdLinkHead", "CmdLinkTail", "CmdChainWalk", "IdleQueueRegister",
         "CmdTickGlobal", "CmdChainPurge", "CmdFlushAll", "MinionCompanionCmd",
-        "CmdCancelByCoords", "CmdCancelRef", "CmdMarkMatching", "CmdSetKind" };
+        "CmdCancelByCoords", "CmdCancelRef", "CmdMarkMatching", "CmdSetKind",
+        // batch 12 — front-end & menus (finding 23)
+        "ScrollingTextDisplay", "MainMenuTextItem", "MenuTextRecordMake",
+        "MenuButtonRecordMake", "MenuItemImageSet", "ListAppend", "MenuTick",
+        "MenuRunLoop", "MenuShow", "MenuItemType", "StrReplace",
+        "MenuItemRecordAlloc", "LoadItemStrings", "ListAlloc", "MenuBuild",
+        "MenuListFindName", "AvisEnabled", "BrightnessSet", "GameSpeedSelect",
+        "VolumeSet", "OptionMusicDefault", "ScrollToSliderIndexStore",
+        "ScrollToSliderIndex", "ScrollSliderRefresh", "SaveMenuRefresh",
+        "OptionsApplyFromSlot", "FrontEndStartLevel", "SlotSummary",
+        "OverlayMenuGate", "LevelChainBuild", "MoviePlayWait", "MoviePlayLoop",
+        "MoviePlayNamed", "MoviePlayLevelVideo", "MovieShownReset",
+        "SaveMenuLayoutLoad", "StreamPlayLevel", "StreamPlayTutorial",
+        "OptionsWriteToSlot", "OptionsLoadOrDefault", "FrontEndStateChange",
+        "MenuEnter", "FrontEndActive", "SaveSlotOpen", "FrontEndSelectedAction",
+        "QuitMenuProbe", "LevelStartFlag", "MenuOptionsFlag", "StartLevelPilots",
+        "StartLevelSelected" };
 
     @Override
     public void run() throws Exception {
