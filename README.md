@@ -96,12 +96,11 @@ Open threads, in order of value:
    only link-by-link; repacking a modified `.uv` (e.g. a `GC_Larm.uv` pilot re-skin) and
    observing the change in-game has not been done.
 2. Deferred: dgVoodoo as a perf option; the `Steam.lwo` point-only sprites as glTF.
-3. Reconstruction next: the *AI execution receivers* — running the behaviour
-   ids (`cmd` record `+0x1c`/`kind`) that the command subsystem creates, the
-   entity-manager ticks that drive the mission counters, the reward-screen
-   save-zone clicks (finding 09), and the winapi reference build against real
-   DirectX headers. Command queue + dispatch, selection, task data and save
-   blob are in.
+3. Reconstruction next: the *reward-screen save-zone clicks* (finishing
+   finding 09), rendering the loaded level via finding 22 §3's software
+   path, the live-mod proof (thread 1), and the winapi reference build.
+   The command/AI loop (queue → dispatch → execution → mission counters →
+   objectives → save) is now closed end-to-end.
 
 ## Findings index
 
@@ -405,6 +404,20 @@ finding 12, #14). Three new modules in `src/game/`:
   `1`–`4` picks the nearest placed entity, `m` moves the selection to the
   cursor cell, `n` clears. `select_test` (suite `select`) covers add/dedupe,
   pick, pointer-move dispatch and the op-8 path.
+- **AI execution receivers** (2026-10-21, finding 10's open item):
+  `src/game/ai.*` is the entity-manager tick (`FUN_0043b270`) that the
+  decompile corpus does not cover. It reads the command records from the
+  command subsystem and *runs* them with a deterministic, tested subset:
+  **move** (step an entity toward the record coords), **target** (chase the
+  payload entity), and **task** (the behaviour→mission-counter subset —
+  priority kinds Crystal/Ore/DefaultCollect/Construction deposit into
+  `GameContext.mission` when the task elapses, driving the objective checker
+  and save blob). Finished chain heads are unlinked from both the entity
+  chain and the global command list and freed. The exact handler mapping is
+  documented as unverified (the debugger gap); constants are factored so a
+  byte-exact pass can replace the switch. The demo key `g` issues a task for
+  the selection. `ai_test` (suite `ai`) covers move/target stepping,
+  task yields into the counters, and the queue→executor→ai path.
 
 `GameContext` (`src/game/game.hpp`) carries the corpus globals these
 modules share (`DAT_005560c4` config, `DAT_005560d4` level block,
@@ -414,8 +427,8 @@ reward/entity tables) so tests run isolated. The frame loop now loads
 places the `.ol`, runs the mission bridge + objective tick per frame, and
 exposes `S` (build blob + commit slot), `L` (`CheckpointStep`),
 `c`/`o`/`+` (live crystal/ore/score — the entity sim's stand-in), and the
-selection keys (`1`–`4` pick / `m` move / `n` clear, finding 06). Seven
-suites use synthetic fixtures only:
+selection keys (`1`–`4` pick / `m` move / `g` gather-task / `n` clear,
+findings 06/10). Eight suites use synthetic fixtures only:
 
 ```sh
 meson test -C build --suite level
@@ -425,6 +438,7 @@ meson test -C build --suite mission
 meson test -C build --suite entity
 meson test -C build --suite cmd
 meson test -C build --suite select
+meson test -C build --suite ai
 ```
 
 Passing `-Dtest_wads_dir=<game>` adds real-wad probing to `level_test`,

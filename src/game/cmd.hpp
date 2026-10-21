@@ -80,6 +80,10 @@ void  cmd_chain_purge(EntitySlot* e);
  * link_head'd record (tasks land here via CmdLinkHead). */
 void* cmd_global_head(void);
 
+/* Unlink `rec` from the global command list (a record is also chained on
+ * its entity; completion unlinks here before cmd_free). */
+void cmd_global_unlink(const void* rec);
+
 /* --- global tick list ---------------------------------------------------- */
 void cmd_tick_global(void);     /* CmdTickGlobal @ 0x402220 (scoped) */
 
@@ -90,6 +94,13 @@ int         cmd_rec_kind(const void* rec);
 int         cmd_rec_behaviour(const void* rec);
 uint32_t    cmd_rec_state(const void* rec);
 void*       cmd_rec_next(const void* rec);
+
+/* Move-target coords and the "now" timer on a record (semantic accessors;
+ * the corpus stores these at +0x08/+0x0C and +0x14). */
+float cmd_rec_move_x(const void* rec);
+float cmd_rec_move_y(const void* rec);
+float cmd_rec_now(const void* rec);
+void  cmd_rec_set_now(void* rec, float v);
 
 /* --- queue executor ------------------------------------------------------ */
 /* The command layer's queue executor runs from GameContext-owned state; the

@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "game/game.hpp"
+#include "game/ai.hpp"
 #include "game/cmd.hpp"
 #include "game/entity.hpp"
 #include "game/level.hpp"
@@ -313,6 +314,18 @@ int LegorrrRun(void)
                 fprintf(log, "frameloop: move %d selected -> cell (%.1f,%.1f)\n",
                         n, cx, cy);
             }
+            /* 'g' — issue a task (opcode 0x17) for every selected entity;
+             * the AI receivers run it and deposit into the mission
+             * counters (crystal/ore kinds by entity priority). */
+            if (input_key_edge(&input, 'g')) {
+                int n = 0;
+                for (int i = 0; i < game.selection_count; ++i) {
+                    cmd_enqueue(0x17, game.selection[i], 0, 0, 0);
+                    ++n;
+                }
+                fprintf(log, "frameloop: gather task enqueued for %d selected\n",
+                        n);
+            }
         }
         if (rock_x < 0) { rock_x = 0; }
         if (rock_y < 0) { rock_y = 0; }
@@ -320,9 +333,14 @@ int LegorrrRun(void)
         if (rock_y > WINDOW_H - 64) { rock_y = WINDOW_H - 64; }
 
         /* Mission plumbing: per-frame progress bridge, command-queue
-         * executor, and objective state machine (findings 09/10/22). */
+         * executor, AI receivers, and objective state machine
+         * (findings 09/10/22). */
         if (game.level != NULL) {
             cmd_queue_tick();
+            int ai_done = ai_tick(&game, dt);
+            if (ai_done != 0) {
+                fprintf(log, "frameloop: ai commands completed: %d\n", ai_done);
+            }
             int done = mission_update(&game);
             if (done != 0) {
                 fprintf(log, "frameloop: tasks completed this frame (mask 0x%x)\n",
