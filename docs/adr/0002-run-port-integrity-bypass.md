@@ -10,7 +10,7 @@ skips the SHA gate, runs the given binary in place of the staged one, and
 says so loudly in the run log.
 
 Implementation is deferred until a real entry point exists — running the stub
-`src/main.c` binary through Proton adds nothing today. The policy is recorded
+`src/main.cpp` binary through Proton adds nothing today. The policy is recorded
 now so nobody silently weakens the gate when wiring it. A launch of a rebuilt
 binary is marked as `run-port` in the log and triage summary, so evidence
 collected from a port run can never be mistaken for evidence from the shipped

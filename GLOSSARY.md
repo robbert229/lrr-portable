@@ -5,7 +5,7 @@ shipped binary and data archives — the end goal is a **native Linux port** (no
 Wine layer) by adapting the DX6-era API surface to another backend, with a
 Win32/MinGW *reference build* kept for A/B against the original. Everything
 here derives from interoperability research; the repo contains no original
-game content (LGPL-3.0-or-later, ADR 0005).
+game content (LGPL-3.0-or-later).
 
 ## Language
 

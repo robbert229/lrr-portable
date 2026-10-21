@@ -14,7 +14,7 @@ arrive incrementally — an empty subdir still compiles to an empty lib and the
 whole tree stays green — and link order/symbol ownership for the eventual exe
 is decided once, up front, rather than reverse-engineered from one big blob.
 
-**Consequences:** `main.c` is the only file in the top-level `src/` link unit;
+**Consequences:** `main.cpp` is the only file in the top-level `src/` link unit;
 subsystem symbols are owned by their libs. A future sub-split (e.g. render/
 or input/ carved out of `gods98/`) is a new directory + meson target, not a
 rewrite. The stub tree is tracked in git for now; the gitignore-vs-track

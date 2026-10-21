@@ -150,6 +150,6 @@ solely for interoperability research, documentation, and preservation purposes a
 contains no original game content. Do not upload copies of the game anywhere.
 
 The reconstruction source, build system, tooling and documentation in this
-repository are licensed **LGPL-3.0-or-later** (see `LICENSE`, ADR 0005); the
+repository are licensed **LGPL-3.0-or-later** (see `LICENSE`); the
 miniwin adapter is similarly LGPL-3.0. That license covers *our code*, not the
 game's assets or binary.

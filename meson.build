@@ -12,7 +12,7 @@ project('lrr-portable', 'cpp',
 #   native : Linux/macOS via miniwin (SDL3) — the primary end-goal build.
 #   winapi : 32-bit Windows via MinGW + real DX headers — the reference build,
 #            used to A/B our rebuild against the shipped binary under the A.2
-#            harness (docs/adr/0002, 0005).
+#            harness (docs/adr/0002, 0004).
 # Choice is fixed at setup time (a meson option, defaulting to 'native');
 # the winapi backend additionally needs the cross/i686.ini cross file.
 platform = get_option('platform')
