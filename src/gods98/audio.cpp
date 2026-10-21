@@ -9,7 +9,12 @@ int audio_open(AudioPlayer* p)
         return -1;
     }
     p->dev = platform_audio_open();
-    return p->dev != NULL ? 0 : -1;
+    if (p->dev == NULL) {
+        return -1;
+    }
+    p->volume = 1.0f;
+    platform_audio_set_gain(p->dev, p->volume);
+    return 0;
 }
 
 void audio_close(AudioPlayer* p)
@@ -19,6 +24,24 @@ void audio_close(AudioPlayer* p)
     }
     platform_audio_close(p->dev);
     p->dev = NULL;
+    p->loop_sound = NULL;
+}
+
+void audio_set_volume(AudioPlayer* p, float volume)
+{
+    if (p == NULL) {
+        return;
+    }
+    if (volume < 0.0f) {
+        volume = 0.0f;
+    }
+    if (volume > 1.0f) {
+        volume = 1.0f;
+    }
+    p->volume = volume;
+    if (p->dev != NULL) {
+        platform_audio_set_gain(p->dev, volume);
+    }
 }
 
 /* Corpus sounds are all PCM: 8-bit unsigned or 16-bit signed LE, mostly
@@ -89,6 +112,113 @@ int audio_play_sound(AudioPlayer* p, const Sound* s)
     return rc == 0 ? frames : -1;
 }
 
+/* Constant-power balance: pan 0 keeps both channels full; -1/+1 pan fully
+ * to one side. */
+int audio_to_stereo_pan(const Sound* s, float pan, int16_t** out_lr)
+{
+    if (s == NULL || out_lr == NULL) {
+        return -1;
+    }
+    int16_t* mono = NULL;
+    int frames = audio_to_16mono(s, &mono);
+    if (frames <= 0) {
+        return -1;
+    }
+    if (pan < -1.0f) {
+        pan = -1.0f;
+    }
+    if (pan > 1.0f) {
+        pan = 1.0f;
+    }
+    float lw = pan <= 0.0f ? 1.0f : 1.0f - pan;
+    float rw = pan >= 0.0f ? 1.0f : 1.0f + pan;
+    int16_t* lr = (int16_t*)calloc((size_t)frames * 2, 2);
+    if (lr != NULL) {
+        for (int i = 0; i < frames; ++i) {
+            lr[i * 2]     = (int16_t)(mono[i] * lw);
+            lr[i * 2 + 1] = (int16_t)(mono[i] * rw);
+        }
+    }
+    audio_free_pcm(mono);
+    if (lr == NULL) {
+        return -1;
+    }
+    *out_lr = lr;
+    return frames;
+}
+
+int audio_play_sound_3d(AudioPlayer* p, const Sound* s, float pan)
+{
+    if (p == NULL || s == NULL) {
+        return -1;
+    }
+    int16_t* lr = NULL;
+    int frames = audio_to_stereo_pan(s, pan, &lr);
+    if (frames <= 0) {
+        return -1;
+    }
+    int rc = platform_audio_play_stereo(p->dev, lr, frames,
+                                        (int)s->format.sample_rate);
+    audio_free_pcm(lr);
+    return rc == 0 ? frames : -1;
+}
+
+int audio_loop_named(AudioPlayer* p, const char* name, float pan)
+{
+    if (p == NULL || name == NULL) {
+        return -1;
+    }
+    Sound* s = sound_bank_find(name);
+    if (s == NULL) {
+        if (sound_bank_load(name, 0 /* memory */, 1 /* looping */) != 0) {
+            return -1;
+        }
+        s = sound_bank_find(name);
+        if (s == NULL) {
+            return -1;
+        }
+    }
+    p->loop_sound = s;
+    p->loop_pan = pan;
+    p->loop_render_dirty = 1;
+    return 0;
+}
+
+void audio_set_loop_pan(AudioPlayer* p, float pan)
+{
+    if (p == NULL || p->loop_sound == NULL) {
+        return;
+    }
+    if (pan < -1.0f) {
+        pan = -1.0f;
+    }
+    if (pan > 1.0f) {
+        pan = 1.0f;
+    }
+    if (pan != p->loop_pan) {
+        p->loop_pan = pan;
+        p->loop_render_dirty = 1;
+    }
+}
+
+void audio_update(AudioPlayer* p)
+{
+    if (p == NULL) {
+        return;
+    }
+    if (p->loop_sound != NULL && p->loop_render_dirty) {
+        int16_t* lr = NULL;
+        int frames = audio_to_stereo_pan(p->loop_sound, p->loop_pan, &lr);
+        if (frames > 0) {
+            platform_audio_loop(p->dev, lr, frames,
+                                (int)p->loop_sound->format.sample_rate);
+            audio_free_pcm(lr);
+        }
+        p->loop_render_dirty = 0;
+    }
+    platform_audio_refill(p->dev);
+}
+
 int audio_play_named(AudioPlayer* p, const char* name)
 {
     if (p == NULL || name == NULL) {
@@ -113,4 +243,6 @@ void audio_stop(AudioPlayer* p)
         return;
     }
     platform_audio_stop(p->dev);
+    p->loop_sound = NULL;
+    p->loop_render_dirty = 0;
 }

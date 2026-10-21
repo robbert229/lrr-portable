@@ -18,10 +18,19 @@
 
 typedef struct AudioPlayer {
     PlatformAudio* dev;   /* owned platform audio device */
+    float          volume; /* master gain 0..1 */
+    /* looping 3D track: the source sound + current pan; re-rendered and
+     * re-seeded lazily when the pan changes. */
+    Sound*   loop_sound;
+    float    loop_pan;
+    int      loop_render_dirty;
 } AudioPlayer;
 
 int  audio_open(AudioPlayer* p);     /* 0 on success, non-zero otherwise */
 void audio_close(AudioPlayer* p);
+
+/* Master volume 0..1 (FUN_00464ef0 analog); applied to the audio stream. */
+void audio_set_volume(AudioPlayer* p, float volume);
 
 /* Submit one bank sound as a one-shot. Returns the number of frames queued,
  * or -1 on failure. */
@@ -30,11 +39,28 @@ int  audio_play_sound(AudioPlayer* p, const Sound* s);
 /* Load + play by resource name through the sound bank. -1 on failure. */
 int  audio_play_named(AudioPlayer* p, const char* name);
 
+/* 3D-ish one-shot: mono sound spatialized with a -1..1 pan (constant-power
+ * balance; distance falloff via audio_set_volume at the call site). */
+int  audio_play_sound_3d(AudioPlayer* p, const Sound* s, float pan);
+
+/* Start/replace the continuous looping track (finding 14 §1 flag bit 2) for
+ * a sound at pan -1..1. Loads through the bank when given a resource name
+ * (name may be NULL to change only the pan of the current loop). */
+int  audio_loop_named(AudioPlayer* p, const char* name, float pan);
+void audio_set_loop_pan(AudioPlayer* p, float pan);
+
+/* Per-frame: refill the looping stream + re-seed when the pan changed. */
+void audio_update(AudioPlayer* p);
+
 void audio_stop(AudioPlayer* p);
 
 /* Convert a bank Sound to mono 16-bit signed PCM (the seam's transport).
  * Returns frame count; *out is allocated (free with audio_free_pcm). */
 int  audio_to_16mono(const Sound* s, int16_t** out);
+
+/* Constant-power stereo pan of a bank sound: interleaved L,R 16-bit with
+ * pan -1 (left) .. +1 (right), 0 = center. Frames count returned. */
+int  audio_to_stereo_pan(const Sound* s, float pan, int16_t** out_lr);
 
 void audio_free_pcm(int16_t* pcm);
 

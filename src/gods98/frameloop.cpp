@@ -89,9 +89,13 @@ int LegorrrRun(void)
     int audio_status = audio_open(&ap);
     int sfx_frames = 0;
     if (audio_status == 0) {
+        audio_set_volume(&ap, 0.6f);
+        int loop_rc = audio_loop_named(&ap, "Sounds\\Iambloop.wav", 0.0f);
         sfx_frames = audio_play_named(&ap, "Sounds\\Buildings\\elec5.wav");
-        fprintf(log, "frameloop: audio on, startup sfx elec5.wav -> %d frames\n",
-                sfx_frames);
+        fprintf(log,
+                "frameloop: audio on, ambient loop Iambloop.wav rc=%d, "
+                "startup sfx elec5.wav -> %d frames\n",
+                loop_rc, sfx_frames);
     } else {
         fprintf(log, "frameloop: audio unavailable (headless?) rc=%d\n",
                 audio_status);
@@ -135,6 +139,22 @@ int LegorrrRun(void)
         /* Space re-triggers the SFX (interactive audio proof). */
         if (ap.dev != NULL && input_key_edge(&input, ' ')) {
             audio_play_named(&ap, "Sounds\\Buildings\\elec5.wav");
+        }
+        /* '[' / ']' adjust the master volume (FUN_00464ef0 analog). */
+        if (ap.dev != NULL) {
+            if (input_key_edge(&input, '[')) {
+                audio_set_volume(&ap, ap.volume - 0.1f);
+                fprintf(log, "frameloop: volume %0.1f\n", ap.volume);
+            }
+            if (input_key_edge(&input, ']')) {
+                audio_set_volume(&ap, ap.volume + 0.1f);
+                fprintf(log, "frameloop: volume %0.1f\n", ap.volume);
+            }
+            /* The looping ambient's pan follows the blitted texture — the
+             * texture is the sound emitter in this demo. */
+            float pan = (2.0f * (float)rock_x / (float)WINDOW_W) - 1.0f;
+            audio_set_loop_pan(&ap, pan);
+            audio_update(&ap);
         }
         if (rock_x < 0) { rock_x = 0; }
         if (rock_y < 0) { rock_y = 0; }

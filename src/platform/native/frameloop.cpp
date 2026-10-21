@@ -201,13 +201,17 @@ void platform_screenshot(PlatformWindow* pw, const void* pixels, int pitch,
 }
 
 /* ------------------------------------------------------------------ *
- *  Audio — SDL3 audio-stream device (mono 16-bit PCM submit).
+ *  Audio — SDL3 audio-stream device (mono/stereo 16-bit PCM submit).
  * ------------------------------------------------------------------ */
 
 struct PlatformAudio {
     SDL_AudioStream*  stream;
     SDL_AudioDeviceID dev;
     int               ok;
+    int16_t*          loop;      /* owned loop buffer (interleaved L,R) */
+    int               loop_frames;
+    int               loop_rate;
+    int               loop_bytes;
 };
 
 PlatformAudio* platform_audio_open(void)
@@ -220,7 +224,7 @@ PlatformAudio* platform_audio_open(void)
     SDL_AudioSpec spec;
     memset(&spec, 0, sizeof(spec));
     spec.format   = SDL_AUDIO_S16;
-    spec.channels = 2;   /* output; source is per-play mono 16-bit */
+    spec.channels = 2;   /* output; source is per-play mono or stereo */
     spec.freq     = 44100;
 
     PlatformAudio* a = (PlatformAudio*)calloc(1, sizeof(PlatformAudio));
@@ -255,9 +259,23 @@ void platform_audio_close(PlatformAudio* a)
     if (a->dev != 0) {
         SDL_CloseAudioDevice(a->dev);
     }
+    free(a->loop);
     a->stream = NULL;
+    a->loop = NULL;
+    a->loop_frames = 0;
     a->ok = 0;
     free(a);
+}
+
+/* Set the source format of the stream for the current submission. */
+static int a_set_src(PlatformAudio* a, int channels, int rate)
+{
+    SDL_AudioSpec src;
+    memset(&src, 0, sizeof(src));
+    src.format   = SDL_AUDIO_S16;
+    src.channels = channels;
+    src.freq     = rate;
+    return SDL_SetAudioStreamFormat(a->stream, &src, NULL) ? 0 : -1;
 }
 
 int platform_audio_play(PlatformAudio* a, const int16_t* pcm, int frames,
@@ -267,18 +285,92 @@ int platform_audio_play(PlatformAudio* a, const int16_t* pcm, int frames,
         || sample_rate <= 0) {
         return -1;
     }
-    SDL_AudioSpec src;
-    memset(&src, 0, sizeof(src));
-    src.format   = SDL_AUDIO_S16;
-    src.channels = 1;
-    src.freq     = sample_rate;
-    if (!SDL_SetAudioStreamFormat(a->stream, &src, NULL)) {
+    if (a_set_src(a, 1, sample_rate) != 0) {
         return -1;
     }
-    if (!SDL_PutAudioStreamData(a->stream, pcm, frames * 2)) {
+    return SDL_PutAudioStreamData(a->stream, pcm, frames * 2) ? 0 : -1;
+}
+
+int platform_audio_play_stereo(PlatformAudio* a, const int16_t* lr,
+                                int frames, int sample_rate)
+{
+    if (a == NULL || a->stream == NULL || lr == NULL || frames <= 0
+        || sample_rate <= 0) {
         return -1;
     }
-    return 0;
+    if (a_set_src(a, 2, sample_rate) != 0) {
+        return -1;
+    }
+    return SDL_PutAudioStreamData(a->stream, lr, frames * 4) ? 0 : -1;
+}
+
+int platform_audio_loop(PlatformAudio* a, const int16_t* lr,
+                        int frames, int sample_rate)
+{
+    if (a == NULL) {
+        return -1;
+    }
+    free(a->loop);
+    a->loop = NULL;
+    a->loop_frames = 0;
+    a->loop_rate = 0;
+    a->loop_bytes = 0;
+    if (lr == NULL || frames <= 0 || sample_rate <= 0) {
+        return 0; /* stop the loop */
+    }
+    int16_t* copy = (int16_t*)calloc((size_t)frames * 2, 2);
+    if (copy == NULL) {
+        return -1;
+    }
+    memcpy(copy, lr, (size_t)frames * 4);
+    a->loop = copy;
+    a->loop_frames = frames;
+    a->loop_rate = sample_rate;
+    a->loop_bytes = frames * 4;
+    return a_set_src(a, 2, sample_rate); /* seed format for refills */
+}
+
+void platform_audio_refill(PlatformAudio* a)
+{
+    if (a == NULL || a->stream == NULL || a->loop == NULL || a->loop_bytes <= 0) {
+        return;
+    }
+    /* Keep the loop ahead of the drain: re-push once the queue drops below
+     * one full loop. */
+    if (SDL_GetAudioStreamQueued(a->stream) < a->loop_bytes / 2) {
+        a_set_src(a, 2, a->loop_rate);
+        SDL_PutAudioStreamData(a->stream, a->loop, a->loop_bytes);
+    }
+}
+
+int platform_audio_set_gain(PlatformAudio* a, float gain)
+{
+    if (a == NULL || a->stream == NULL) {
+        return -1;
+    }
+    if (gain < 0.0f) {
+        gain = 0.0f;
+    }
+    if (gain > 1.0f) {
+        gain = 1.0f;
+    }
+    return SDL_SetAudioStreamGain(a->stream, gain) ? 0 : -1;
+}
+
+float platform_audio_get_gain(PlatformAudio* a)
+{
+    if (a == NULL || a->stream == NULL) {
+        return 0.0f;
+    }
+    return SDL_GetAudioStreamGain(a->stream);
+}
+
+int platform_audio_queued(PlatformAudio* a)
+{
+    if (a == NULL || a->stream == NULL) {
+        return 0;
+    }
+    return SDL_GetAudioStreamQueued(a->stream);
 }
 
 void platform_audio_stop(PlatformAudio* a)
@@ -286,5 +378,6 @@ void platform_audio_stop(PlatformAudio* a)
     if (a == NULL || a->stream == NULL) {
         return;
     }
+    platform_audio_loop(a, NULL, 0, 0);
     SDL_ClearAudioStream(a->stream);
 }
