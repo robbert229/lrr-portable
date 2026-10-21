@@ -110,6 +110,54 @@ typedef struct GameReward {
     int     display_flics;
 } GameReward;
 
+/* Live mission-progress counters (finding 09 §"RewardScoreAdd"; the corpus
+ * keeps them in the DAT_005557xx score cluster). These feed the objective
+ * checker (level +0x8c/+0xa0 live counts) and the task value slots. */
+typedef struct GameMission {
+    int32_t crystals;       /* live crystal count               */
+    int32_t ore;            /* live ore count                   */
+    int32_t score;          /* mission score                    */
+    int32_t constructions;  /* constructions (ConstructionObjective) */
+    int32_t blocks;         /* walls/blocks built (BlockObjective)     */
+} GameMission;
+
+/* Reward (post-mission) display config (finding 09 — RewardInit keys). The
+ * font/image *handles* are the render lane; the config strings and the
+ * Save/Advance button hit-zones are kept for the save trigger. */
+typedef struct RewardScreen {
+    char  wallpaper[128];
+    int   display;          /* `Display` tri-state, 2 -> 0 */
+    int   centre_text;
+    float scroll_speed;
+    float vert_spacing;
+    char  font_base[64];    /* DAT_00555b3c/config name */
+    char  font_title[64];   /* DAT_00555b44 */
+    char  font_back[64];    /* DAT_00555b4c */
+    char  complete_text[128];
+    char  failed_text[128];
+    char  quit_text[128];
+    int   text_pos[2];      /* `TextPos` token pair */
+    /* SaveButton / AdvanceButton hit zones (corpus DAT_00555b60..b98). */
+    float save_x, save_y;
+    float advance_x, advance_y;
+} RewardScreen;
+
+/* Entity slot model (finding 10 §"EntityPointer"): the corpus keeps four
+ * typed arrays with fixed strides (type 1 vehicle 0x1ec, 2/3 minifigure
+ * 0x74, 4 building/object 0x14c — exposed via entity_stride). The
+ * reconstruction stores a compact record per slot — enough for placement
+ * data and the counts the objective checks consume; the full stride-length
+ * sim record is the future entity layer. */
+#define ENTITY_TYPES 4
+#define ENTITY_CAP 256
+typedef struct EntitySlot {
+    int32_t type;       /* 1..4 */
+    char    name[32];
+    float   x, y, z;
+    float   rot;
+    int32_t flags;      /* reconstruction-side flag word */
+} EntitySlot;
+
 /* Completed-objective `.osf` table (finding 08): 20-byte entries — id, ref,
  * then a 12-byte name slot (OsfAdd zeroes it, then strncpy's up to 0xb
  * characters; the file layout is 5×u32, not the "name[11]+u16 pad" the doc
@@ -149,6 +197,14 @@ typedef struct GameContext {
     /* --- mission task table (DAT_00552990) + reward snapshot ------------ */
     GameTask tasks[GAME_TASK_COUNT]; /* stride 0x210, base self-ref at +0x1CE8 */
     GameReward reward;
+    GameMission mission;         /* live progress counters                 */
+    RewardScreen reward_screen;  /* Reward display keys (finding 09)        */
+    int   crystal_quota;         /* DAT_005007ec (Quota.Crystals, <= 26)   */
+
+    /* --- entity table (finding 10; object list placements) -------------- */
+    EntitySlot   entity[ENTITY_TYPES][ENTITY_CAP]; /* typed entity slots  */
+    int          entity_count[ENTITY_TYPES];
+    int          entity_placed;  /* objects placed from the .ol this level */
 } GameContext;
 
 /* Reset a GameContext to a known-fresh state (zeroed; cfg untouched). */

@@ -35,21 +35,23 @@ float util_atof(const char* s)
 }
 
 /* Split a NUL-terminated token stream produced by `src` into fields.
- * Returns the number of fields written (0..6). */
+ * `|` is a field separator too (the config's pipe-delimited
+ * `file.bmp|x|y` triples, finding 09 §"Config format"). Returns the number
+ * of fields written (0..6). */
 static int util_tokenize_fields(const char* src,
                                 char out[UTIL_QUERY_MAX_FIELDS][256], size_t out_sz)
 {
     int n = 0;
     const char* p = src;
     while (*p != '\0' && n < UTIL_QUERY_MAX_FIELDS) {
-        while (*p != '\0' && util_isspace_c((unsigned char)*p)) {
+        while (*p != '\0' && (util_isspace_c((unsigned char)*p) || *p == '|')) {
             ++p;
         }
         if (*p == '\0') {
             break;
         }
         int i = 0;
-        while (*p != '\0' && !util_isspace_c((unsigned char)*p)
+        while (*p != '\0' && !util_isspace_c((unsigned char)*p) && *p != '|'
                && i < (int)out_sz - 1) {
             out[n][i++] = *p++;
         }

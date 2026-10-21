@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-# Game layer — mission plumbing (findings 07/08/09/22) plus shared helpers.
+# Game layer — mission plumbing (findings 07/08/09/10/22) plus shared helpers.
 #
 # The game layer links against the gods98 static lib for the resource /
 # block-text-config primitives (findings 01/12), so its tests can run the
@@ -12,6 +12,8 @@ game_lib = static_library('game',
   'level.cpp',
   'objective.cpp',
   'savegame.cpp',
+  'mission.cpp',
+  'entity.cpp',
   'util.cpp',
   include_directories : gods98_incs,
   install : false)
@@ -20,15 +22,17 @@ game_dep = declare_dependency(link_with : game_lib,
   include_directories : [include_directories('.'), include_directories('..')])
 
 # Game-layer tests: level (.map load), objective (finding 22), savegame
-# (.sav/.osf) — plus the shared util query helper. All run from loose
-# synthetic fixtures (suite = test workdir); point test_wads_dir at the
-# shipped wads to add a real-data probe to level (best-effort, skipped when
-# data is absent). The block-text parser itself is covered by gods98's
-# `block` suite (finding 12, src/gods98/test_block.cpp).
+# (.sav/.osf), mission (task/reward, finding 09), entity (.ol + tables,
+# finding 10). All run from loose synthetic fixtures (suite = test workdir);
+# point test_wads_dir at the shipped wads to add a real-data probe to level
+# (best-effort, skipped when data is absent). The block-text parser itself
+# is covered by gods98's `block` suite (finding 12, src/gods98/test_block.cpp).
 if get_option('platform') == 'native'
   foreach exe : [['level', 'test_level.cpp'],
                  ['objective', 'test_objective.cpp'],
-                 ['savegame', 'test_savegame.cpp']]
+                 ['savegame', 'test_savegame.cpp'],
+                 ['mission', 'test_mission.cpp'],
+                 ['entity', 'test_entity.cpp']]
     test_name = exe[0]
     t = executable(test_name + '_test', exe[1],
       include_directories : gods98_incs,

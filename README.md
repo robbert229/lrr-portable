@@ -96,8 +96,10 @@ Open threads, in order of value:
    only link-by-link; repacking a modified `.uv` (e.g. a `GC_Larm.uv` pilot re-skin) and
    observing the change in-game has not been done.
 2. Deferred: dgVoodoo as a perf option; the `Steam.lwo` point-only sprites as glTF.
-3. Reconstruction next: the entity/AI layer (findings 09/10) that consumes the loaded
-   grid + objectives, and the winapi reference build against real DirectX headers.
+3. Reconstruction next: the *command/AI execution* layer — the finding-10 opcode/message
+   executor (`FUN_004520d0`), the `+0x1c` behaviour-id switch and the entity managers that
+   drive the task/objective live counters the mission layer exposes today (the `.ol`/task/
+   reward data side is in). Also the winapi reference build against real DirectX headers.
 
 ## Findings index
 
@@ -319,19 +321,41 @@ finding 12, #14). Three new modules in `src/game/`:
   12,684-byte checkpoint blob (reward + 10-task table, Level03 tutorial
   byte), the `CheckpointStep` bootstrap-commit flow, and `OsfAdd`/snapshot/
   write.
+- **Tasks + reward screen + object lists** (2026-10-21, finding 09/10):
+  `src/game/mission.*` ports `TaskBlockInit` — the ten named task slots
+  (Crystals…Score, stride 0x210) seeded from the level's `Reward` group with
+  the six field loaders (Images/BoxImages/Flics/Fonts/Sounds config
+  capture + flag bits), `TaskImportanceRefresh`/`TaskQuotaRefresh`,
+  `CrystalQuotaSetup` (≤26), and the `RewardInit` display keys
+  (Wallpaper/Display/CentreText/ScrollSpeed/VertSpacing/fonts/texts/TextPos
+  plus the Save/Advance button hit-zones). `mission_update` is the
+  live-progress bridge: it feeds crystal/ore counts into the objective
+  checker's slots, advances task values and marks completions. `mission_test`
+  (suite `mission`) covers names, importance/quota, the crystal cap, field
+  loaders, reward keys and completion.
+  `src/game/entity.*` models the corpus's typed entity tables (vehicles
+  0x1ec / minifigures 0x74 / buildings 0x14c strides — `EntityPointer`,
+  finding 10) and loads the `olistfile` `.ol` object list into them
+  (`object_list_load`; grammar best-effort until a shipped `.ol` is
+  cross-checked). `entity_test` (suite `entity`) covers placement and
+  stride/table caps.
 
 `GameContext` (`src/game/game.hpp`) carries the corpus globals these
 modules share (`DAT_005560c4` config, `DAT_005560d4` level block,
-`DAT_00556ed0` cheat word, `DAT_004ffbc0` objective word, the save tables)
-so tests run isolated. The frame loop now loads `LEGORRR_LEVEL` (default
-`Level01`) from `Lego.cfg`, runs the objective tick per frame, and exposes
-`S` (build blob + commit slot) and `L` (`CheckpointStep`). Three suites use
-synthetic fixtures only:
+`DAT_00556ed0` cheat word, `DAT_004ffbc0` objective word, the save/task/
+reward/entity tables) so tests run isolated. The frame loop now loads
+`LEGORRR_LEVEL` (default `Level01`) from `Lego.cfg`, seeds tasks/reward and
+places the `.ol`, runs the mission bridge + objective tick per frame, and
+exposes `S` (build blob + commit slot), `L` (`CheckpointStep`),
+`c`/`o`/`+` (live crystal/ore/score — the entity sim's stand-in). Five
+suites use synthetic fixtures only:
 
 ```sh
 meson test -C build --suite level
 meson test -C build --suite objective
 meson test -C build --suite savegame
+meson test -C build --suite mission
+meson test -C build --suite entity
 ```
 
 Passing `-Dtest_wads_dir=<game>` adds real-wad probing to `level_test`,
