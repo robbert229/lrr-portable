@@ -108,13 +108,13 @@ Open threads, in order of value:
    only link-by-link; repacking a modified `.uv` (e.g. a `GC_Larm.uv` pilot re-skin) and
    observing the change in-game has not been done.
 2. Deferred: dgVoodoo as a perf option; the `Steam.lwo` point-only sprites as glTF.
-3. Reconstruction next: the **front-end/menu boot** (finding 23 — port
-   `MenuBuild`/`MenuRunLoop`/the `FrontEndActive` gate into `src/game/`,
-   fix the `::` tokenizer + StartLevel name resolution), the live-mod proof
-   (thread 1), and the winapi reference build. Campaign flow, command/AI,
-   selection, reward save+advance, the advisor/incident bus wiring, model-
-   aware entity rendering (LWO), the software level renderer, and the
-   engine↔level binding seam are in.
+3. Reconstruction next: the **live-mod proof** (thread 1) and the **winapi
+   reference build** remain (both need their tooling/environment). The
+   front-end/menu boot (finding 23, #41), `.ae` entity assembly (#42),
+   model-aware entity rendering (LWO wireframes), the campaign flow,
+   command/AI, selection, reward save+advance, the advisor/incident bus
+   wiring, the software level renderer, and the engine↔level binding seam
+   are all in.
 
 ## Findings index
 
