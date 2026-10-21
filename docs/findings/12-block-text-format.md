@@ -12,6 +12,10 @@ type: **one generic scanner + a path-lookup API** serve all of them.
 The magic token `Lego*` is *data*, not a signature: the scanner never checks it
 (no string or byte occurrence of `Lego*` exists in the image) — it simply parses
 `name { … }` blocks, so the first token is just whatever the file starts with.
+`*` in data-side names is a **prefix-wildcard matched against the query side**:
+every lookup path begins with the runtime *exe basename* (`"LegoRR"`), so a
+record named `Lego*` answers to `LegoRR …` queries without the name being baked
+into data (§4).
 
 ## 1. Load path
 
@@ -40,9 +44,16 @@ No recursion and no syntax tree. The buffer is indexed **in place**:
    record — i.e. nesting is tracked as a single integer per record, not a tree.
 
 Lookup is **path-based on the token stream**: `FUN_004792e0(handle, "A B C")`
-walks tokens matching each whitespace-separated key segment in order at the
-current depth. Callers build these paths with `"%s%s%s%s%s"` (`0x4aab04`) by
-space-wrapping tokens.
+splits the query on `' '` (`FUN_00477440`, delimiter `DAT_004aab18`) and scans
+the record chain (`+0x14` link). The target is a record whose depth field
+(`record+0xc`, root records 0) equals `segmentCount − 1` and whose name (`+4`)
+matches the **last** segment; the parent chain (`+0x18`) then verifies the
+remaining segments top-down (segment *i* ↔ depth *i − 1*). All segment
+comparisons are `__strcmpi` — **ASCII case-insensitive**; the first segment
+additionally becomes a `__strnicmp` prefix test when the *record* name contains
+`'*'` (an exact match anywhere beats the last prefix-matched fallback). Callers
+build these paths with `"%s%s%s"`/`"%s%s%s%s%s"` (`0x4a4024`/`0x4aab04`),
+always rooted with the exe-name token (§5.1).
 
 ## 3. The query API
 
@@ -73,7 +84,7 @@ constructor.)
 
 | File | Consumer | Evidence |
 | --- | --- | --- |
-| `Lego.cfg` | `LevelLoad` config-DB (`DAT_005560c4`), reward tables, menus | finding 07/09 |
+| `Lego.cfg` | `LevelLoad` config keys, reward tables, menus | finding 07/09; queries via the exe-name root token (`DAT_005560c4` = `"LegoRR"`, §5.1) |
 | `.ae` entity files | entity assembly `FUN_00472cd0` | ext string `"ae"` `0x4a19ce`; path format `%s\%s.%s` `0x4a19b8`; keys below |
 | `.ptl` level scripts | level logic via same API | keys as config groups |
 | `.ol` object lists | level load | `OListFile` key in `Lego.cfg` (e.g. `M01.ol`) |
@@ -86,8 +97,8 @@ From `FUN_00472cd0` (body `0x472cd0–0x473334`), constants at `0x4aaabc–0x4aa
 `Activities`, plus `%s.%s`, `%s_%s`, `ActFrame`. Flow per object:
 
 1. Build `<dir>\<name>.ae` (`%s\%s.%s` + ext `"ae"`), `BlockOpen`.
-2. Read `Activities` subgroup; iterate activity records (`FUN_00478ff0`, chain
-   via `+4`).
+2. Read the `<exe-base> Activities` subgroup (`"%s%s%s"` + `DAT_0076ae20`,
+   §5.1); iterate activity records (`FUN_00478ff0`, chain via `+4`).
 3. For each activity `X`: read `X … FILE` (animation name),
    `X … TRANSCOEF` (float via `FUN_0048d980`, default `DAT_004b8a14`),
    `X … LWSFILE`, `TRIGGER`, `SCALE`, `LOOPING`.
@@ -105,10 +116,25 @@ linking between entity activities and `.lws` scene frames (finding 11 §4).
 
 ## 5. Notes and open items
 
-1. **`FUN_004792e0` walker** — exact matching rules per path segment (case,
-   partials, duplicates) need one focused pass.
+1. **`FUN_004792e0` walker — RESOLVED (2026-10-20).** Matching rules are as
+   described in §2: depth-matched candidate scan over the `+0x14` chain, last
+   segment by name, ancestors verified up the `+0x18` parent chain, ASCII case
+   fold throughout, `name*` prefix wildcard gated to segment index 1. The root
+   token that prefixes every caller-built path is `DAT_0076ae20` =
+   `DAT_005560c4`, which `FUN_0041fa20` pins to `&DAT_00505814` — the command
+   line cut after the last `'\'` with the extension stripped
+   (`GetCommandLineA` at `0x4777a0`), i.e. the **exe basename `LegoRR`** — the
+   same string the resource layer mounts wads under (finding 20). Data roots
+   spelled `Lego*` therefore answer to `LegoRR …` queries by prefix; files may
+   carry sibling roots for other query tokens, e.g. `LegoLow*` in
+   `IceMonster.ae`/`LavaMonster.ae` (confirmed depth-0 sibling).
+   The reconstruction (`src/gods98/block.cpp`) implements these semantics and
+   is corpus-validated: 138/138 shipped block-text files, 12,876 records,
+   digest-identical to an independent token model (meson suite `block`).
 2. `TRUE/FALSE`, float, and list parsing are per-callsite; no central typed
    getter — every consumer casts via `FUN_0048d980` etc.
+   `FUN_00477710` is the one shared boolean parser: `{YES,TRUE,ON}→1`,
+   `{NO,FALSE,OFF}→0`, anything else `2`, strings at `0x4aabe0–0x4a4124`.
 3. Value token limits: fixed 512-B buffers for formatted key paths (visible as
    `local_200/400/…` buffers); keys longer than that would silently truncate.
 4. `DAT_005343ac` read-tap callback suggests a file-change hook (mod/patch or

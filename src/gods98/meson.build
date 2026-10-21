@@ -13,6 +13,7 @@ gods98_lib = static_library('gods98',
   'surface.cpp',
   'frameloop.cpp',
   'audio.cpp',
+  'block.cpp',
   include_directories : gods98_incs,
   dependencies : [platsub_deps, platform_glue_dep],
   install : false)
@@ -28,7 +29,7 @@ if get_option('platform') == 'native'
   test_exes = []
   foreach exe : [['resource', 'test_resource.cpp'], ['texture', 'test_texture.cpp'],
                  ['sound', 'test_sound.cpp'], ['input', 'test_input.cpp'],
-                 ['audio', 'test_audio.cpp']]
+                 ['audio', 'test_audio.cpp'], ['block', 'test_block.cpp']]
     test_name = exe[0]
     t = executable(test_name + '_test', exe[1],
       include_directories : gods98_incs,
@@ -40,7 +41,7 @@ if get_option('platform') == 'native'
 
   test_wads = get_option('test_wads_dir')
   foreach tinfo : test_exes
-    if tinfo[0] == 'resource' or tinfo[0] == 'texture' or tinfo[0] == 'sound'
+    if ['resource', 'texture', 'sound', 'block'].contains(tinfo[0])
       test(tinfo[0], tinfo[1],
         args : test_wads == '' ? [] : ['--real', test_wads],
         suite : tinfo[0])
