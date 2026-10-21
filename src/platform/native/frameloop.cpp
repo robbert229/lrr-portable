@@ -235,7 +235,12 @@ PlatformAudio* platform_audio_open(void)
         free(a);
         return NULL;
     }
+    /* Device streams open *paused* — without this nothing would ever play. */
+    SDL_ResumeAudioStreamDevice(a->stream);
     a->ok = 1;
+    SDL_AudioDeviceID dev = SDL_GetAudioStreamDevice(a->stream);
+    fprintf(stderr, "platform: audio stream live on device %u\n",
+            (unsigned)dev);
     return a;
 }
 
