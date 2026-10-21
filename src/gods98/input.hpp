@@ -50,6 +50,9 @@ typedef struct InputState {
     int32_t  mouse_y;                 /* DAT_0076ab28 */
     int      mouse_press;             /* latched left-press edge (cleared by
                                        * input_begin_frame) */
+    int      mouse_down;              /* level state: 1 while a button is held
+                                       * (corpus mouse-button-held semantics;
+                                       * not cleared per frame) */
 
     /* Corner-dwell quit counters (QuitPoll FUN_004589c0). Slot 0..4 is
      * supplied by the caller — in the original it indexes off the

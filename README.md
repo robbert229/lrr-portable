@@ -325,38 +325,30 @@ own 3x5 typeface kept as a headless fallback. **In-game pause** (2026-10-21):
 `Esc` in a level opens the shipped `PausedMenu` overlay (Continue / Options /
 Restart / Quit, with mouse + keyboard like the main menu) instead of quitting
 — Restart reloads the level in place, and `LEGORRR_AUTOPAUSE_FRAMES=N`
-<<<<<<< HEAD
 headlessly opens the pause at frame N for screenshots. The `!Overlay%i`
 FLIC decorations (finding 21 — `avi\PB1.flh` etc.) animate on the menu
 backdrops. **Load slots** (2026-10-21): the Load_A_Saved_Game screen lists
 the on-disk slots (`SaveMenuBuild @ 0x415a10` rows fed by `save_slot_state`)
 — picking one resumes the furthest completed record's campaign level and
-restores its checkpoint (task + reward table) over the seeded mission.
+restores its checkpoint (task + reward table) over the seeded mission. Each
+level's checkpoint now lands in **its own record** (port of
+`CheckpointStep`'s per-level `ListFindName` index:
+`fe_record_for_level`/`fe_level_for_record` map levels↔records — tutorials
+first, then the campaign chain — and the record array grows on demand), so
+mid-campaign saves neither collide nor resume short.
 **Options sliders** (2026-10-21): the Options/Advanced `Slider`/`Cycle`
 items respond to `←`/`→` (and render a live bar+knob / current option) —
 the volume families (SFX/Music/Sound) drive the audio seam, the rest are
-state-only until the engine's option globals are wired. New key:
-=======
-headlessly opens the pause at frame N for screenshots. **Load slots**
-(2026-10-21): the Load_A_Saved_Game screen lists the on-disk slots
-(`SaveMenuBuild @ 0x415a10` rows fed by `save_slot_state`) — picking one
-resumes the furthest completed record's campaign level and restores its
-checkpoint (task + reward table) over the seeded mission. Each level's
-checkpoint now lands in **its own record** (port of `CheckpointStep`'s
-per-level `ListFindName` index: `fe_record_for_level`/`fe_level_for_record`
-map levels↔records — tutorials first, then the campaign chain — and the
-record array grows on demand), so mid-campaign saves neither collide nor
-resume short. **Options
-sliders** (2026-10-21): the Options/Advanced `Slider`/`Cycle` items respond
-to `←`/`→` (and render a live bar+knob / current option) — the volume
-families (SFX/Music/Sound) drive the audio seam, the rest are state-only
-until the engine's option globals are wired. **Picker scroll** (2026-10-21):
-`CanScroll` sub-menus pan their whole item plane (corpus `FUN_00413970` /
-`DAT_005574e0` model — draw and hit-test share the offset, clamped to the
-content height, reset on re-entry); the grafted campaign/tutorial picker rows
-sit on one tall plane, so all 24 campaign levels are now reachable with the
-pointer. New key:
->>>>>>> origin/main
+state-only until the engine's option globals are wired. **Pointer drag**
+(2026-10-21): holding the left button inside a slider's corpus-style 100×20
+bar rect (`FUN_00411870 @ 0x411870` semantics: value tracks pointer x as
+`round(clamp((mx − x) × 0.01, 0, 1) × (max − min))`, re-evaluated every
+frame the button is held) drags the value; release ends the grab.
+**Picker scroll** (2026-10-21): `CanScroll` sub-menus pan their whole item
+plane (corpus `FUN_00413970` / `DAT_005574e0` model — draw and hit-test
+share the offset, clamped to the content height, reset on re-entry); the
+grafted campaign/tutorial picker rows sit on one tall plane, so all 24
+campaign levels are now reachable with the pointer. New key:
 **`PLATFORM_KEY_ENTER`** at the seam. Suites: `block` (`::` paths) and
 `frontend` (fixtures + a `--real` probe that builds the whole front end from
 the shipped `Lego.cfg` — 24-level campaign chain, 8 tutorials, 32 picker

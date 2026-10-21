@@ -58,6 +58,7 @@ void input_capture_events(InputState* s, const PlatformEvent* evs, int count)
             if (e->button) {
                 s->mouse_press = 1;
             }
+            s->mouse_down = e->held ? 1 : 0;
             break;
         default:
             break;

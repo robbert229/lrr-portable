@@ -735,6 +735,8 @@ void frontend_close(FrontEnd* fe)
 static int fe_item_pick(const FrontEnd* fe, int mx, int my,
                         const TextureSurface* measure, int* out_idx);
 static int fe_scroll_measure(const FeSubmenu* sub);
+static void fe_item_pos(const FrontEnd* fe, const FeItem* it, int i,
+                        int w, const TextureSurface* measure, int* x, int* y);
 
 /* --- activation (Enter or a pointer click resolves to this) -------------- */
 
@@ -916,6 +918,46 @@ FeEvent frontend_tick(FrontEnd* fe, const FeInput* in,
         if (hit) {
             fe->sel = idx;
         }
+
+        /* Slider pointer drag (corpus FUN_00411a00 case 3 routes a held
+         * button through FUN_00411870 every frame): with the pointer held
+         * inside the bar's 100x20 rect anchored at the selected item's
+         * origin, the value continuously tracks pointer x —
+         *   v = round(clamp((mx - x) * 0.01, 0.0, 1.0) * (max - min))
+         * (constants 0x49e170/174/178 = 0.0 / 1.0 / 0.01, rect w/h =
+         * 0x64/0x14). The corpus mouse path omits the +min offset that the
+         * keyboard path keeps; every shipped slider is min 0, and the port
+         * clamps to [min,max] so a hypothetical min>0 row cannot sink below
+         * its floor. */
+        if (in->mdown && fe->sel < sub->item_count) {
+            FeItem* dit = &sub->items[fe->sel];
+            if (dit->kind == FE_ITEM_SLIDER || dit->kind == FE_ITEM_REALSLIDER) {
+                int bx = 0, by = 0;
+                fe_item_pos(fe, dit, fe->sel, 0, measure, &bx, &by);
+                if (in->mouse_x >= bx && in->mouse_x <= bx + 100
+                    && in->mouse_y >= by && in->mouse_y <= by + 20) {
+                    float f = (float)(in->mouse_x - bx) * 0.01f;
+                    if (f < 0.0f) {
+                        f = 0.0f;
+                    }
+                    if (f > 1.0f) {
+                        f = 1.0f;
+                    }
+                    int v = (int)(f * (float)(dit->max - dit->min) + 0.5f);
+                    if (v < dit->min) {
+                        v = dit->min;
+                    }
+                    if (v > dit->max) {
+                        v = dit->max;
+                    }
+                    if (v != dit->value) {
+                        dit->value = v;
+                        fe->option_changed = 1;
+                    }
+                }
+            }
+        }
+
         if (in->click) {
             if (hit) {
                 return fe_activate(fe);

@@ -738,6 +738,32 @@ static void test_options(void)
         CHECK(c[0] == 36 && c[1] == 36, "opt: bar tail is dark");
         free(px);
     }
+
+    /* Slider pointer drag (corpus FUN_00411a00 case 3 -> FUN_00411870,
+     * re-run every frame the button is held): 100x20 bar rect anchored at
+     * item0's origin (250,134); v = round(clamp((mx-x)*0.01, 0, 1) *
+     * (max-min)). Value sits at 7 here. */
+    fe.option_changed = 0;
+    FeInput d1 = { 0, 0, 0, 0, 0, 0, 300, 144, 0, 1 };
+    frontend_tick(&fe, &d1, NULL);
+    CHECK(sl->value == 5 && fe.option_changed == 1,
+        "drag: mid-bar sets the proportional value");
+    FeInput d2 = { 0, 0, 0, 0, 0, 0, 350, 144, 0, 1 };
+    frontend_tick(&fe, &d2, NULL);
+    CHECK(sl->value == 10, "drag: bar right end = max");
+    FeInput d3 = { 0, 0, 0, 0, 0, 0, 250, 144, 0, 1 };
+    frontend_tick(&fe, &d3, NULL);
+    CHECK(sl->value == 0, "drag: bar left end = min");
+    FeInput d4 = { 0, 0, 0, 0, 0, 0, 315, 144, 0, 1 };
+    frontend_tick(&fe, &d4, NULL);
+    frontend_tick(&fe, &d4, NULL);
+    CHECK(sl->value == 7, "drag: tracking is continuous while held");
+    FeInput d5 = { 0, 0, 0, 0, 0, 0, 300, 144, 0, 0 };
+    frontend_tick(&fe, &d5, NULL);
+    CHECK(sl->value == 7, "drag: release leaves the value alone");
+    FeInput d6 = { 0, 0, 0, 0, 0, 0, 300, 165, 0, 1 };
+    frontend_tick(&fe, &d6, NULL);
+    CHECK(sl->value == 7, "drag: past the bar's height no drag");
     block_close(cfg);
 }
 
