@@ -27,7 +27,8 @@ gods98_lib = static_library('gods98',
   install : false)
 
 gods98_dep = declare_dependency(link_with : gods98_lib,
-  include_directories : include_directories('.'))
+  include_directories : include_directories('.'),
+  dependencies : [movie_dl_dep, platsub_deps])
 
 # Resource-loader validation (finding 01). Runs a synthetic WWAD round trip
 # always; point test_wads_dir at the shipped wads to add real-wad checks:
@@ -49,7 +50,7 @@ if get_option('platform') == 'native'
     test_name = exe[0]
     t = executable(test_name + '_test', exe[1],
       include_directories : gods98_incs,
-      dependencies : [platsub_deps],
+      dependencies : [platsub_deps, movie_dl_dep],
       link_with : gods98_lib,
       install : false)
     test_exes += [[test_name, t]]
@@ -57,6 +58,11 @@ if get_option('platform') == 'native'
 
   test_wads = get_option('test_wads_dir')
   foreach tinfo : test_exes
+    # `-Dmovies=disabled` compiles the movie module out (stub); drop its test
+    # from the suite so the test summary reflects the configuration.
+    if get_option('movies').disabled() and tinfo[0] == 'movie'
+      continue
+    endif
     if ['resource', 'texture', 'sound', 'block', 'model', 'entity_ae',
         'movie'].contains(tinfo[0])
       test(tinfo[0], tinfo[1],

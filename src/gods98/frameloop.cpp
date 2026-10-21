@@ -318,7 +318,8 @@ int LegorrrRun(void)
      * software (src/gods98/movie.*, FFmpeg dlopen'd at runtime), so movies
      * play where the runtime libs exist; headless/CI runs
      * (LEGORRR_AUTOSTOP_FRAMES) and LEGORRR_NO_MOVIES skip them. */
-    int play_movies = frame_cap == 0
+    int play_movies = movie_available()
+                      && frame_cap == 0
                       && movie_avis_enabled(game.cfg)
                       && env_get("LEGORRR_NO_MOVIES", "")[0] == '\0';
     if (play_movies) {
