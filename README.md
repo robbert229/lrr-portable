@@ -190,6 +190,21 @@ chain (`resource_set_cd_drive/root/data_dir`, `%c:\%s\%s`, `cd.key`/`delme.dat`
 probes) per finding 01. `input_test` (suite `input`, no game data needed) and a
 `test_cd_fallback` unit in `test_resource` cover both.
 
+**Block-text config parser** (`src/gods98/block.*`, finding 12): the single
+`Lego*` scanner every data file reads through — comment stripping (`;` to end
+of line) with ` \t\r\n`-only tokenizing, nested `name { value }` records with
+container value `"{"`, and rooted case-insensitive path lookup (`block_find`,
+`"LegoRR Activities Activity_Teleport"` — the query side is the exe basename,
+which is why data spells its roots `Lego*` with a prefix-wildcard that the
+corpus gates to the first segment). Typed getters cover string/int/float/bool
+with the corpus vocabulary `{TRUE,YES,ON}→1`, `{FALSE,NO,OFF}→0`, else/missing
+`2`. `block_test` (suite `block`) runs synthetic grammar cases and, with
+`test_wads_dir` set, parses **all 138 shipped block-text entries** (56 `.ae`,
+44 `.ol`, 37 `.ptl`, `Lego.cfg`): 12,876 records digest-identical to an
+independent token model, plus value spot checks (`Barracks.ae`
+`Activity_Teleport = Create`, `IceMonster.ae` `HIGHPOLY` bone map,
+`Lego.cfg Main TextureUsage = 3145728`).
+
 - **`native`** (primary, end goal): compiles the reconstruction C++ against
   **miniwin** (SDL3) — no Wine layer. Host compiler, no cross file. miniwin
   comes in as a sparse git submodule — bootstrap with `tools/setup-miniwin.sh`
