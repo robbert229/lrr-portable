@@ -1,0 +1,97 @@
+// SPDX-License-Identifier: LGPL-3.0-or-later
+#include <ctype.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "gods98/resource.hpp"
+#include "util.hpp"
+
+static int util_isspace_c(int c)
+{
+    return c == ' ' || c == '\t' || c == '\r' || c == '\n';
+}
+
+long util_atoi(const char* s)
+{
+    return s != NULL ? strtol(s, NULL, 10) : 0;
+}
+
+float util_atof(const char* s)
+{
+    return s != NULL ? (float)strtod(s, NULL) : 0.0f;
+}
+
+/* Split a NUL-terminated token stream produced by `src` into fields.
+ * Returns the number of fields written (0..6). */
+static int util_tokenize_fields(const char* src,
+                                char out[UTIL_QUERY_MAX_FIELDS][256], size_t out_sz)
+{
+    int n = 0;
+    const char* p = src;
+    while (*p != '\0' && n < UTIL_QUERY_MAX_FIELDS) {
+        while (*p != '\0' && util_isspace_c((unsigned char)*p)) {
+            ++p;
+        }
+        if (*p == '\0') {
+            break;
+        }
+        int i = 0;
+        while (*p != '\0' && !util_isspace_c((unsigned char)*p)
+               && i < (int)out_sz - 1) {
+            out[n][i++] = *p++;
+        }
+        out[n][i] = '\0';
+        ++n;
+    }
+    return n;
+}
+
+static int util_status_from_count(int n)
+{
+    if (n <= 0) {
+        return 0;
+    }
+    if (n == 3) {
+        return 3;
+    }
+    if (n >= 6) {
+        return 6;
+    }
+    return 2;
+}
+
+int util_query_fields(const char* path_or_value,
+                      char out[UTIL_QUERY_MAX_FIELDS][256], size_t out_sz)
+{
+    for (int i = 0; i < UTIL_QUERY_MAX_FIELDS; ++i) {
+        out[i][0] = '\0';
+    }
+    if (path_or_value == NULL || path_or_value[0] == '\0') {
+        return 0;
+    }
+
+    /* Case (b): the value names a resource. Parse its content when it
+     * opens; otherwise fall through and parse the value inline (case a). */
+    Resource* r = resource_open(path_or_value, RESOURCE_AUTO);
+    if (r != NULL) {
+        int32_t sz = resource_read(r);
+        if (sz > 0) {
+            char* buf = (char*)malloc((size_t)sz + 1);
+            if (buf != NULL) {
+                memcpy(buf, r->data, (size_t)sz);
+                buf[sz] = '\0';
+                int n = util_tokenize_fields(buf, out, out_sz);
+                free(buf);
+                resource_free(r);
+                return util_status_from_count(n);
+            }
+        }
+        resource_free(r);
+    }
+
+    /* Case (a): inline token list (also the path-with-pipes shape some
+     * config keys use). */
+    int n = util_tokenize_fields(path_or_value, out, out_sz);
+    return util_status_from_count(n);
+}
