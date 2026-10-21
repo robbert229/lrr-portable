@@ -230,19 +230,60 @@ void EngineRenderFrame(EngineContext* ctx, float dt, float scale, uint32_t* sim_
 
 /* Air-supply beat mechanic — corpus EngineTick tail. When the air supply
  * drains, the corpus fires notifications ids 0x10..0x13 (air-low / air-out)
- * through the message bus and loops SND_AirBeat (finding 03 §7). The sound
- * side is stubbed here; the notifications ride the message bus. */
+ * through the message bus and loops SND_AirBeat whose pitch/position track
+ * (finding 03 §7). The looping side rides the audio seam (airbeat_set_loop);
+ * the engine has exactly one loop track, so engaging the air beat replaces
+ * whatever was looping (a distinct audible cue for the demo).
+ */
+
+static AudioPlayer* s_air_player = NULL;
+static const char* s_air_sound = NULL;
+static int  s_air_loop_on = 0;
+static int  s_air_prev_low = 0; /* last loop-engagement state */
+
+void airbeat_set_loop(AudioPlayer* p, const char* sound)
+{
+    s_air_player = p;
+    s_air_sound = sound;
+    s_air_loop_on = 0;
+    s_air_prev_low = 0;
+}
+
+int airbeat_loop_active(void)
+{
+    return s_air_loop_on;
+}
+
 void EngineAirBeat(EngineContext* ctx, float scale)
 {
     (void)scale;
     EngineState* s = ctx->state_block;
-    if (s != NULL) {
-        s->air_prev = s->air_beat;
-        if (s->air_beat == 0 && s->air_prev != 0) {
-            message_dispatch(0x12, 0, 0, NULL); /* air out */
-        } else if (s->air_beat != 0) {
-            message_dispatch(0x11, 0, 0, NULL); /* air low */
+    if (s == NULL) {
+        return;
+    }
+    s->air_prev = s->air_beat;
+
+    int low = s->air_beat <= 1;   /* draining / about to run out */
+    int out = s->air_beat == 0;
+
+    if (out) {
+        message_dispatch(0x12, 0, 0, NULL); /* air out */
+    } else if (s->air_prev != 0 && low) {
+        message_dispatch(0x11, 0, 0, NULL); /* air low */
+    }
+
+    if (low != s_air_prev_low) {
+        s_air_prev_low = low;
+        if (low) {
+            s_air_loop_on = 1;
+            if (s_air_player != NULL && s_air_sound != NULL) {
+                audio_loop_named(s_air_player, s_air_sound, 0.0f);
+            }
+        } else {
+            s_air_loop_on = 0;
+            if (s_air_player != NULL) {
+                audio_loop_named(s_air_player, s_air_sound, 0.0f); /* repan */
+            }
         }
     }
-    /* TODO(engine): SND_AirBeat loop + pitch track (FUN_0047c160). */
 }

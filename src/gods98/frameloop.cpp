@@ -15,6 +15,7 @@
 #include "resource.hpp"
 #include "surface.hpp"
 #include "texture.hpp"
+#include "tickers.hpp"
 #include "view.hpp"
 #include "message.hpp"
 
@@ -142,6 +143,12 @@ int LegorrrRun(void)
         fprintf(log, "frameloop: audio unavailable (headless?) rc=%d\n",
                 audio_status);
     }
+    /* Air supply drains in the demo; the air-beat loop + notifications
+     * (0x11/0x12) kick in when it runs low. One loop track, so the air beat
+     * replaces the ambient. */
+    state.air_beat = 3;
+    airbeat_set_loop(audio_status == 0 ? &ap : NULL,
+                     "Sounds\\Vehicles\\Heliloop1.wav");
 
     const float dt = 1.0f / 30.0f;
     /* Interactive proof: the arrow keys pan the blitted texture. */
@@ -197,6 +204,15 @@ int LegorrrRun(void)
             float pan = (2.0f * (float)rock_x / (float)WINDOW_W) - 1.0f;
             audio_set_loop_pan(&ap, pan);
             audio_update(&ap);
+
+            /* demo: air drains every ~2 s so the air-beat loop + the
+             * 0x11/0x12 messages fire, and the air loop audibly replaces
+             * the ambient. */
+            if (frames > 0 && frames % 60 == 0 && state.air_beat > 0) {
+                state.air_beat -= 1;
+                fprintf(log, "frameloop: air=%u airbeat_loop=%d\n",
+                        state.air_beat, airbeat_loop_active());
+            }
         }
         /* Game layer proof-of-life:
          *  'S' — build the checkpoint blob + commit it to the active slot
