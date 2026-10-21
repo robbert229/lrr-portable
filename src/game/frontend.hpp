@@ -215,6 +215,14 @@ int  frontend_build(FrontEnd* fe, BlockFile* cfg);
  * tracks the flag — the loader-mode notion is Win32-side.) */
 int  frontend_enabled(BlockFile* cfg);
 
+/* Checkpoint record <-> level mapping (the port's stand-in for the corpus's
+ * sav-tree node record slots, SavTreeWalk2 / CheckpointStep's ListFindName
+ * index): tutorials take records 0..tutorial_n-1, campaign levels follow
+ * (tutorial_n..tutorial_n+campaign_n-1). Returns -1 / 0 for unknowns so
+ * callers keep the record-0 default. */
+int  fe_record_for_level(const FrontEnd* fe, const char* level);
+int  fe_level_for_record(const FrontEnd* fe, int rec, char* out, size_t sz);
+
 /* Enter the modal menu at `menu`/submenu 0, selection 0. */
 int  frontend_open(FrontEnd* fe, int menu);
 void frontend_close(FrontEnd* fe);

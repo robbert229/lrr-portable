@@ -809,6 +809,34 @@ static void test_scroll(void)
     block_close(cfg);
 }
 
+static void test_records(void)
+{
+    BlockFile* cfg = s_parse(FIXCFG);
+    FrontEnd fe;
+    frontend_init(&fe);
+    CHECK(frontend_build(&fe, cfg) == 1, "rec: builds");
+    CHECK(fe.campaign_n == 2 && fe.tutorial_n == 1, "rec: fixture chains");
+
+    /* tutorials occupy records 0..tutorial_n-1, campaign follows */
+    CHECK(fe_record_for_level(&fe, "MoveTuto01") == 0, "rec: tutorial = record 0");
+    CHECK(fe_record_for_level(&fe, "Tran01") == 1, "rec: campaign starts after tutorials");
+    CHECK(fe_record_for_level(&fe, "Tran02") == 2, "rec: chain position = record");
+    CHECK(fe_record_for_level(&fe, "Nowhere") == -1, "rec: unknown -> -1");
+    CHECK(fe_record_for_level(&fe, "") == -1, "rec: empty -> -1");
+
+    char name[FE_LEVEL_NAME_MAX];
+    name[0] = '\0';
+    CHECK(fe_level_for_record(&fe, 0, name, sizeof name)
+              && strcmp(name, "MoveTuto01") == 0,
+        "rec: inverse maps the tutorial");
+    CHECK(fe_level_for_record(&fe, 2, name, sizeof name)
+              && strcmp(name, "Tran02") == 0,
+        "rec: inverse maps the campaign tail");
+    CHECK(fe_level_for_record(&fe, 77, name, sizeof name) == 0,
+        "rec: out-of-range inverse fails clean");
+    block_close(cfg);
+}
+
 int main(int argc, char** argv)
 {
     for (int a = 1; a < argc; ++a) {
@@ -829,6 +857,7 @@ int main(int argc, char** argv)
     test_slots();
     test_options();
     test_scroll();
+    test_records();
 
     if (s_failures == 0) {
         printf("frontend: all tests passed\n");

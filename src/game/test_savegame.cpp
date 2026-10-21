@@ -198,6 +198,32 @@ int main(void)
     free(ctx.records);
     checkpoint_blob_free(&ctx);
 
+    /* Per-level records: a checkpoint at a campaign position past the
+     * bootstrap count must grow the array and round-trip through the
+     * slot file (the record<->level mapping indexes records by level). */
+    game_context_init(&ctx);
+    save_read_slot(&ctx, 2, 0);  /* absent file: bootstraps a count-5 slot */
+    uint8_t pat[SAVE_BLOB_SIZE];
+    for (size_t i = 0; i < SAVE_BLOB_SIZE; i++) {
+        pat[i] = (uint8_t)(i * 31u + 7u);
+    }
+    CHECK(save_write_record(&ctx, 12, pat) == 1, "growth: write past bootstrap succeeds");
+    CHECK(ctx.record_count >= 13, "growth: record_count grows to fit");
+    uint32_t* f12 = save_record_flags(&ctx, 12);
+    CHECK(f12 != NULL
+              && memcmp(f12 + 1, pat, SAVE_BLOB_SIZE) == 0,
+          "growth: blob lands in record 12");
+    save_mark_record(&ctx, 12);
+    save_commit(&ctx);
+    save_read_slot(&ctx, 2, 0);                /* reload from disk */
+    f12 = save_record_flags(&ctx, 12);
+    CHECK(f12 != NULL && (*f12 & 1u) != 0
+              && memcmp(f12 + 1, pat, SAVE_BLOB_SIZE) == 0,
+          "growth: record 12 round-trips marked");
+    free(ctx.records);
+    ctx.records = NULL;
+    ctx.record_count = 0;
+
     /* Slot menu state (save_slot_state) + checkpoint restore
      * (checkpoint_blob_apply) — finding 08 §"Menu layer". */
     game_context_init(&ctx);

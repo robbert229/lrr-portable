@@ -578,6 +578,14 @@ int LegorrrRun(void)
             }
             if (ev == FE_EVT_START_LEVEL) {
                 snprintf(level_name, sizeof(level_name), "%s", fe.pending_level);
+                /* record<->level mapping (port of CheckpointStep's
+                 * list-index assignment): checkpoints during this level
+                 * land in the level's own record, so mid-campaign saves
+                 * neither collide nor resume short. */
+                game.current_record = fe_record_for_level(&fe, level_name);
+                if (game.current_record < 0) {
+                    game.current_record = 0;
+                }
                 fprintf(log, "frameloop: front end picked level %s\n", level_name);
                 break;
             }
@@ -585,17 +593,19 @@ int LegorrrRun(void)
                 int filled = 0, completed = 0, resume = -1;
                 if (save_slot_state(&game, fe.load_slot, &filled, &completed,
                                     &resume)) {
-                    /* record index -> campaign position (the port's level
-                     * tree stand-in for SavTreeLoad); resume the furthest
-                     * completed record, else start the campaign fresh. */
+                    /* record index -> level (the inverse mapping — the
+                     * port's level-tree stand-in for SavTreeLoad): resume
+                     * the furthest completed record's level, else start
+                     * the campaign fresh. */
                     pending_load_slot = fe.load_slot;
                     pending_load_record = resume >= 0 ? resume : 0;
-                    if (fe.campaign_n > 0) {
-                        int ci = pending_load_record < fe.campaign_n
-                                     ? pending_load_record
-                                     : fe.campaign_n - 1;
+                    if (resume >= 0
+                        && fe_level_for_record(&fe, resume, level_name,
+                                               sizeof(level_name))) {
+                        /* mapped */
+                    } else if (fe.campaign_n > 0) {
                         snprintf(level_name, sizeof(level_name), "%s",
-                                 fe.campaign[ci]);
+                                 fe.campaign[0]);
                     } else {
                         snprintf(level_name, sizeof(level_name), "%s",
                                  "Level01");
@@ -814,19 +824,18 @@ int LegorrrRun(void)
          *  'L' — run CheckpointStep (bootstrap slot 5 + write-through)      */
         if (game.level != NULL && input_key_edge(&input, 's')) {
             checkpoint_blob_build(&game);
-            save_set_current_record(&game, 0);
-            save_write_record(&game, 0, game.checkpoint_blob);
-            save_mark_record(&game, 0);
+            save_write_record(&game, game.current_record,
+                              game.checkpoint_blob);
+            save_mark_record(&game, game.current_record);
             save_commit(&game);
-            fprintf(log, "frameloop: saved blob to slot %d record 0 (0x%x bytes)\n",
-                    SAVE_DEFAULT_SLOT, SAVE_BLOB_SIZE);
+            fprintf(log, "frameloop: saved blob to slot %d record %d (0x%x bytes)\n",
+                    SAVE_DEFAULT_SLOT, game.current_record, SAVE_BLOB_SIZE);
         }
         if (game.level != NULL && input_key_edge(&input, 'l')) {
             game.save_slot = -1; /* force the bootstrap path */
-            save_set_current_record(&game, 0);
             checkpoint_step(&game);
-            fprintf(log, "frameloop: checkpoint_step committed slot %d\n",
-                    SAVE_DEFAULT_SLOT);
+            fprintf(log, "frameloop: checkpoint_step committed slot %d record %d\n",
+                    SAVE_DEFAULT_SLOT, game.current_record);
         }
         /* Mission live-progress keys (finding 09 bridge):
          *  'c' +1 crystal   'o' +1 ore   '+' +10 score

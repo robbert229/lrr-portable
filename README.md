@@ -341,7 +341,12 @@ headlessly opens the pause at frame N for screenshots. **Load slots**
 (2026-10-21): the Load_A_Saved_Game screen lists the on-disk slots
 (`SaveMenuBuild @ 0x415a10` rows fed by `save_slot_state`) — picking one
 resumes the furthest completed record's campaign level and restores its
-checkpoint (task + reward table) over the seeded mission. **Options
+checkpoint (task + reward table) over the seeded mission. Each level's
+checkpoint now lands in **its own record** (port of `CheckpointStep`'s
+per-level `ListFindName` index: `fe_record_for_level`/`fe_level_for_record`
+map levels↔records — tutorials first, then the campaign chain — and the
+record array grows on demand), so mid-campaign saves neither collide nor
+resume short. **Options
 sliders** (2026-10-21): the Options/Advanced `Slider`/`Cycle` items respond
 to `←`/`→` (and render a live bar+knob / current option) — the volume
 families (SFX/Music/Sound) drive the audio seam, the rest are state-only
