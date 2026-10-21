@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "gods98/block.hpp"
+#include "entity.hpp"
 #include "level.hpp"
 #include "mission.hpp"
 #include "objective.hpp"
@@ -463,4 +464,39 @@ int mission_reward_click(GameContext* ctx, int hit_save)
     checkpoint_step(ctx);
     ctx->reward_active = 0;
     return 1;
+}
+
+/* Advance to the parsed `nextlevel` (finding 07): checkpoint the current
+ * progress (the corpus's advance branch calls CheckpointStep too), tear the
+ * level down, and load + re-seed the next one. Returns the next level name
+ * (owned by GameState, i.e. ctx->level after the swap) or NULL when the
+ * chain ends. */
+const char* mission_reward_advance(GameContext* ctx)
+{
+    if (ctx == NULL || ctx->level == NULL || ctx->cfg == NULL) {
+        return NULL;
+    }
+    const char* next = level_next_name(ctx->level);
+    if (next == NULL || next[0] == '\0') {
+        ctx->reward_active = 0; /* final level: just close the overlay */
+        return NULL;
+    }
+    char name[128];
+    snprintf(name, sizeof(name), "%s", next);
+
+    checkpoint_step(ctx); /* save before moving on */
+    level_destroy(ctx->level);
+    ctx->level = NULL;
+    ctx->selection_count = 0;
+    ctx->reward_active = 0;
+    __builtin_memset(&ctx->mission, 0, sizeof(ctx->mission));
+    __builtin_memset(&ctx->tasks, 0, sizeof(ctx->tasks));
+
+    ctx->level = level_load(ctx->cfg, name);
+    if (ctx->level != NULL) {
+        mission_task_init(ctx, ctx->cfg, name);
+        mission_reward_init(ctx, ctx->cfg, name);
+        object_list_load(ctx, ctx->cfg, name);
+    }
+    return ctx->level != NULL ? (const char*)ctx->level->ptr_name : NULL;
 }

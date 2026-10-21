@@ -210,6 +210,10 @@ void        level_destroy(LevelState* s);
 int level_width(const LevelState* s);
 int level_height(const LevelState* s);
 
+/* The parsed `nextlevel` name (level+0xb4), or NULL when the level ends
+ * the campaign chain. Owned by the level block — valid until level_destroy. */
+const char* level_next_name(const LevelState* s);
+
 /* Voxel record pointer for cell (x,y) (or NULL on OOB). */
 uint8_t* level_voxel(const LevelState* s, int x, int y);
 

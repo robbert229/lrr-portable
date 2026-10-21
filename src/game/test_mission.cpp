@@ -25,10 +25,38 @@ static int s_failures = 0;
 
 static const char* FIX = "mission_fixture";
 
+/* Write a 4x4 all-zero .map so levels can load (finding 07). */
+static void write_map4(const char* name)
+{
+    char path[512];
+    snprintf(path, sizeof(path), "%s/%s", FIX, name);
+    FILE* fp = fopen(path, "wb");
+    if (fp == NULL) {
+        return;
+    }
+    const char magic[4] = { 'M', 'A', 'P', ' ' };
+    uint32_t len = 4 * 4 * 2, ww = 4, hh = 4;
+    fwrite(magic, 1, 4, fp);
+    fwrite(&len, 1, 4, fp);
+    fwrite(&ww, 1, 4, fp);
+    fwrite(&hh, 1, 4, fp);
+    for (int i = 0; i < 16; ++i) {
+        uint16_t z = 0;
+        fwrite(&z, 1, 2, fp);
+    }
+    fclose(fp);
+}
+
 int main(void)
 {
     char rmcmd[64]; snprintf(rmcmd, sizeof(rmcmd), "rm -rf %s", FIX); system(rmcmd);
     mkdir(FIX, 0755);
+    write_map4("L01_s.map");
+    write_map4("L01_p.map");
+    write_map4("L01_t.map");
+    write_map4("L02_s.map");
+    write_map4("L02_p.map");
+    write_map4("L02_t.map");
     {
         char path[512];
         snprintf(path, sizeof(path), "%s/Lego.cfg", FIX);
@@ -61,8 +89,17 @@ int main(void)
                 "      Fonts { Crystals FNTX }\n"
                 "      Sounds { Crystals SNDX }\n"
                 "    }\n"
+                "    SurfaceMap L01_s.map\n"
+                "    PredugMap L01_p.map\n"
+                "    TerrainMap L01_t.map\n"
+                "    nextlevel Level02\n"
                 "  }\n"
-                "  Level02 { Reward { Quota { Crystals 100 } } }\n"
+                "  Level02 {\n"
+                "    Reward { Quota { Crystals 100 } }\n"
+                "    SurfaceMap L02_s.map\n"
+                "    PredugMap L02_p.map\n"
+                "    TerrainMap L02_t.map\n"
+                "  }\n"
                 "}\n",
                 fp);
             fclose(fp);
@@ -176,7 +213,28 @@ int main(void)
     CHECK(mission_reward_click(&ctx, 1) != 0, "reward click commits");
     CHECK(mission_reward_active(&ctx) == 0, "overlay closed after the click");
 
-    free(lvl);
+    /* Next-level progression (findings 07/09): advance swaps in Level02. */
+    {
+        LevelState* real = level_load(cfg, "Level01");
+        CHECK(real != NULL, "Level01 loads with its maps");
+        free(lvl);
+        ctx.level = real;
+        mission_reward_set_active(&ctx, 1);
+        const char* nx = mission_reward_advance(&ctx);
+        CHECK(nx != NULL && strcmp(nx, "Level02") == 0,
+              "advance returns the nextlevel name");
+        CHECK(ctx.level != NULL && level_width(ctx.level) == 4,
+              "next level loaded with its grid");
+        CHECK(strcmp((const char*)ctx.level->ptr_name, "Level02") == 0,
+              "level block swapped to Level02");
+        CHECK(mission_reward_active(&ctx) == 0, "overlay closed after advance");
+        /* Level02 ends the campaign chain. */
+        const char* end = mission_reward_advance(&ctx);
+        CHECK(end == NULL, "advance at campaign end returns NULL");
+        level_destroy(ctx.level);
+        ctx.level = NULL;
+    }
+
     block_close(cfg);
     if (s_failures != 0) {
         fprintf(stderr, "mission_test: %d failure(s)\n", s_failures);
