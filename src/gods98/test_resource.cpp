@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h> /* rmdir */
+#include <sys/stat.h> /* mkdir */
 
 #include "resource.hpp"
 
@@ -213,9 +214,70 @@ static void test_real(const char* dir)
     CHECK(miss == NULL, "real: missing == NULL");
 }
 
+/* ------------------------------------------------------------------ *
+ *  CD/STD fallback validation (finding 01, FUN_0047f660).
+ * ------------------------------------------------------------------ */
+
+static void write_file(const char* path, const char* bytes, size_t len)
+{
+    FILE* fp = fopen(path, "wb");
+    if (fp != NULL) {
+        fwrite(bytes, 1, len, fp);
+        fclose(fp);
+    }
+}
+
+static void test_cd_fallback(void)
+{
+    char tmp[] = "/tmp/res_cd_XXXXXX";
+    if (mkdtemp(tmp) == NULL) {
+        printf("SKIP cd-fallback: mkdtemp failed\n");
+        return;
+    }
+    char data_dir[512];
+    snprintf(data_dir, sizeof(data_dir), "%s/Data", tmp);
+    mkdir(data_dir, 0700);
+
+    char cdkey[512], delme[512], cdfile[512];
+    snprintf(cdkey,  sizeof(cdkey),  "%s/cd.key", tmp);
+    snprintf(delme,  sizeof(delme),  "%s/delme.dat", tmp);
+    snprintf(cdfile, sizeof(cdfile), "%s/Data/cdfile.bin", tmp);
+    write_file(cdkey, "", 0);
+    write_file(delme, "", 0);
+    write_file(cdfile, "CDDATA", 6);
+
+    /* Remap the CD root onto the fake tree (host path, not a DOS drive). */
+    resource_set_cd_root(tmp);
+    CHECK(resource_cd_present() == 1, "cd: cd.key present");
+    CHECK(resource_data_present() == 1, "cd: delme.dat present");
+
+    Resource* r = resource_open("cdfile.bin", RESOURCE_AUTO);
+    CHECK(r != NULL && r->branch == RESOURCE_STD_BRANCH, "cd: AUTO fallback");
+    if (r != NULL) {
+        CHECK(resource_read(r) == 6 && memcmp(r->data, "CDDATA", 6) == 0,
+              "cd: AUTO payload");
+        resource_free(r);
+    }
+    CHECK(resource_open("cdfile.bin", RESOURCE_WAD_ONLY) == NULL,
+          "cd: WAD_ONLY does not use the CD fallback");
+    CHECK(resource_open("missing.xyz", RESOURCE_AUTO) == NULL,
+          "cd: missing stays NULL");
+
+    /* Default (no remap) uses "%c:\", which is not a real path on POSIX. */
+    resource_set_cd_root("");
+    CHECK(resource_cd_present() == 0, "cd: default drive-root probe false");
+
+    remove(cdkey);
+    remove(delme);
+    remove(cdfile);
+    rmdir(data_dir);
+    rmdir(tmp);
+}
+
 int main(int argc, char** argv)
 {
     test_synthetic();
+    test_cd_fallback();
 
     const char* real_dir = NULL;
     for (int i = 1; i < argc; ++i) {

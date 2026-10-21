@@ -6,6 +6,7 @@ gods98_lib = static_library('gods98',
   'resource.cpp',
   'texture.cpp',
   'sound.cpp',
+  'input.cpp',
   include_directories : include_directories('.'),
   install : false)
 
@@ -49,4 +50,12 @@ if get_option('platform') == 'native'
   test('sound', sound_test,
     args : test_wads == '' ? [] : ['--real', test_wads],
     suite : 'sound')
+
+  # Input core (findings 04/05): pure state-machine tests, no game data.
+  input_test = executable('input_test',
+    'test_input.cpp',
+    include_directories : include_directories('.'),
+    link_with : gods98_lib,
+    install : false)
+  test('input', input_test, suite : 'input')
 endif
