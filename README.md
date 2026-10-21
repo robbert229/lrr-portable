@@ -97,10 +97,10 @@ Open threads, in order of value:
    observing the change in-game has not been done.
 2. Deferred: dgVoodoo as a perf option; the `Steam.lwo` point-only sprites as glTF.
 3. Reconstruction next: the *reward-screen save-zone clicks* (finishing
-   finding 09), rendering the loaded level via finding 22 §3's software
-   path, the live-mod proof (thread 1), and the winapi reference build.
-   The command/AI loop (queue → dispatch → execution → mission counters →
-   objectives → save) is now closed end-to-end.
+   finding 09), the live-mod proof (thread 1), and the winapi reference
+   build. The command/AI loop is closed, and the level now renders through
+   the port's own software rasterizer (finding 22 §3) with live entity
+   movement.
 
 ## Findings index
 
@@ -440,6 +440,18 @@ finding 12, #14). Three new modules in `src/game/`:
   byte-exact pass can replace the switch. The demo key `g` issues a task for
   the selection. `ai_test` (suite `ai`) covers move/target stepping,
   task yields into the counters, and the queue→executor→ai path.
+- **Software level renderer** (2026-10-21, finding 22 §3): `src/game/render.*`
+  is the port's own rasterizer — D3DRM is confirmed software-only, so the
+  reconstruction draws the level itself. `level_render_map` paints the
+  terrain grid from the voxel array (material colours by the documented
+  cell semantics: dirt/crystal/ore/rock + surface-byte shading), overlays
+  the placed entities as live type-coloured markers (yellow ring when
+  selected) at their current `(x,y)` — so AI movement is visible — and
+  outlines the tracked mouse cell underneath the selection cursor. The
+  palette is ours, not a clone of the shipped one. When a level is loaded
+  the frame loop draws the map instead of the placeholder texture blit.
+  `render_test` (suite `render`) asserts the cell colours, the entity
+  marker, the selection ring and the cursor outline at exact pixels.
 
 `GameContext` (`src/game/game.hpp`) carries the corpus globals these
 modules share (`DAT_005560c4` config, `DAT_005560d4` level block,
@@ -450,7 +462,8 @@ places the `.ol`, runs the mission bridge + objective tick per frame, and
 exposes `S` (build blob + commit slot), `L` (`CheckpointStep`),
 `c`/`o`/`+` (live crystal/ore/score — the entity sim's stand-in), and the
 selection keys (`1`–`4` pick / `m` move / `g` gather-task / `n` clear,
-findings 06/10). Eight suites use synthetic fixtures only:
+findings 06/10), and the software level renderer draws the grid + live
+entities (finding 22 §3). Nine suites use synthetic fixtures only:
 
 ```sh
 meson test -C build --suite level
@@ -461,6 +474,7 @@ meson test -C build --suite entity
 meson test -C build --suite cmd
 meson test -C build --suite select
 meson test -C build --suite ai
+meson test -C build --suite render
 ```
 
 Passing `-Dtest_wads_dir=<game>` adds real-wad probing to `level_test`,
