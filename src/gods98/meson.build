@@ -19,6 +19,7 @@ gods98_lib = static_library('gods98',
   'mainsim.cpp',
   'simtick.cpp',
   'block.cpp',
+  'model.cpp',
   include_directories : gods98_incs,
   dependencies : [platsub_deps, platform_glue_dep],
   install : false)
@@ -40,7 +41,7 @@ if get_option('platform') == 'native'
                  ['airbeat', 'test_airbeat.cpp'],
                  ['mainsim', 'test_mainsim.cpp'],
                  ['simtick', 'test_simtick.cpp'],
-                 ['block', 'test_block.cpp']]
+                 ['block', 'test_block.cpp'], ['model', 'test_model.cpp']]
     test_name = exe[0]
     t = executable(test_name + '_test', exe[1],
       include_directories : gods98_incs,
@@ -52,7 +53,7 @@ if get_option('platform') == 'native'
 
   test_wads = get_option('test_wads_dir')
   foreach tinfo : test_exes
-    if ['resource', 'texture', 'sound', 'block'].contains(tinfo[0])
+    if ['resource', 'texture', 'sound', 'block', 'model'].contains(tinfo[0])
       test(tinfo[0], tinfo[1],
         args : test_wads == '' ? [] : ['--real', test_wads],
         suite : tinfo[0])
