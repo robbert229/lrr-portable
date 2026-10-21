@@ -63,7 +63,10 @@ static void ticker_004313b0(EngineContext* c, float dt, float scale)
 static void ticker_004520d0(EngineContext* c, float dt, float scale)
 {
     (void)c; (void)dt; (void)scale;
-    /* TODO: corpus FUN_004520d0 (selection root) */
+    /* corpus FUN_004520d0 — the per-player command-queue executor
+     * (finding 10 §"The queue executor"). The ported primitives live in
+     * src/game/cmd.cpp and the executor runs from the game layer's per
+     * frame hook (see frameloop.cpp) so gods98 stays linker-independent. */
 }
 
 static void ticker_004091e0(EngineContext* c, float dt, float scale)

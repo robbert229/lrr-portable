@@ -96,10 +96,11 @@ Open threads, in order of value:
    only link-by-link; repacking a modified `.uv` (e.g. a `GC_Larm.uv` pilot re-skin) and
    observing the change in-game has not been done.
 2. Deferred: dgVoodoo as a perf option; the `Steam.lwo` point-only sprites as glTF.
-3. Reconstruction next: the *command/AI execution* layer — the finding-10 opcode/message
-   executor (`FUN_004520d0`), the `+0x1c` behaviour-id switch and the entity managers that
-   drive the task/objective live counters the mission layer exposes today (the `.ol`/task/
-   reward data side is in). Also the winapi reference build against real DirectX headers.
+3. Reconstruction next: the *AI execution receivers* — running the behaviour
+   ids (`cmd` record `+0x1c`/`kind`) that the command subsystem creates, the
+   entity-manager ticks that drive the mission counters, and the winapi
+   reference build against real DirectX headers. The command primitives,
+   queue executor, task table, award config and save blob are in.
 
 ## Findings index
 
@@ -363,6 +364,18 @@ finding 12, #14). Three new modules in `src/game/`:
   (`object_list_load`; grammar best-effort until a shipped `.ol` is
   cross-checked). `entity_test` (suite `entity`) covers placement and
   stride/table caps.
+- **Command subsystem** (2026-10-21, finding 10): `src/game/cmd.*` ports the
+  entity command primitives — the 0x68-byte record doubling **pool**
+  (`CmdAlloc`/`CmdFree`/`CmdPoolGrow`), the **registry** (`CmdRegistryInit`:
+  the 31 AI task-type names + 27 AI priorities in address order and the
+  behaviour table, `CmdKindByName`), the **creators**
+  (`CmdCreateMove`/Target/Gated/Task incl. the type→kind mapping and
+  `MinionCompanionCmd`), the **chain/global-list** link ops, `CmdChainPurge`,
+  `IdleQueueRegister`, and the **queue executor** (the 5-dword opcode switch
+  of `FUN_004520d0`, run in the frame loop). The AI *execution* receivers
+  (which run the `+0x1c` behaviour ids — finding 10's open item) remain
+  stub boundaries. `cmd_test` (suite `cmd`) covers pool doubling/reuse, the
+  registry tables + behaviour defaults, creators, chains and queue dispatch.
 
 `GameContext` (`src/game/game.hpp`) carries the corpus globals these
 modules share (`DAT_005560c4` config, `DAT_005560d4` level block,
@@ -371,7 +384,7 @@ reward/entity tables) so tests run isolated. The frame loop now loads
 `LEGORRR_LEVEL` (default `Level01`) from `Lego.cfg`, seeds tasks/reward and
 places the `.ol`, runs the mission bridge + objective tick per frame, and
 exposes `S` (build blob + commit slot), `L` (`CheckpointStep`),
-`c`/`o`/`+` (live crystal/ore/score — the entity sim's stand-in). Five
+`c`/`o`/`+` (live crystal/ore/score — the entity sim's stand-in). Six
 suites use synthetic fixtures only:
 
 ```sh
@@ -380,6 +393,7 @@ meson test -C build --suite objective
 meson test -C build --suite savegame
 meson test -C build --suite mission
 meson test -C build --suite entity
+meson test -C build --suite cmd
 ```
 
 Passing `-Dtest_wads_dir=<game>` adds real-wad probing to `level_test`,

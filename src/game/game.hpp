@@ -146,16 +146,23 @@ typedef struct RewardScreen {
  * typed arrays with fixed strides (type 1 vehicle 0x1ec, 2/3 minifigure
  * 0x74, 4 building/object 0x14c — exposed via entity_stride). The
  * reconstruction stores a compact record per slot — enough for placement
- * data and the counts the objective checks consume; the full stride-length
- * sim record is the future entity layer. */
+ * data, the counts the objective checks consume, and the command-chain
+ * head (entity +0x2f0) the command subsystem hangs off. `type`/`etype`
+ * carry the corpus entity-type code (1..9; placement kinds 1..4 map to the
+ * four tables, other codes share the last table). */
 #define ENTITY_TYPES 4
 #define ENTITY_CAP 256
 typedef struct EntitySlot {
-    int32_t type;       /* 1..4 */
+    int32_t type;       /* corpus entity-type code (1..9)         */
+    int32_t etype;      /* same, stored for the cmd task mapping  */
     char    name[32];
     float   x, y, z;
     float   rot;
-    int32_t flags;      /* reconstruction-side flag word */
+    int32_t flags;      /* reconstruction-side flag word          */
+    /* --- command layer (finding 10) --- */
+    void*   cmd_head;   /* chain-head command record (entity +0x2f0) */
+    uint32_t flags_3e0; /* mirror of entity +0x3e0 (bit 0x400 gates gated cmds) */
+    uint32_t flags_3e8; /* mirror of entity +0x3e8 (type-6 high bit → kind) */
 } EntitySlot;
 
 /* Completed-objective `.osf` table (finding 08): 20-byte entries — id, ref,
