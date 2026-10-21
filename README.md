@@ -170,6 +170,15 @@ palette clamping, RLE/truncation rejection) and, with `test_wads_dir` set,
 decodes five shipped entries and matches their pixel hashes (reference hashes
 derived pixel-exact from the corpus via Pillow).
 
+**Sound loader** (`src/gods98/sound.*`, finding 14 §1–2): order-independent
+RIFF/WAVE chunk walk (cm full → fmt → data; `LIST`/`cue`/`smpl`/`acid`/`fact`
+tolerated), PCM only, through the resource layer, plus the 600-slot sound bank
+with the corpus's loop/stream flag bits. `sound_test` (suite `sound`) covers
+synthetic WAVs (8/16-bit, stereo, odd-size padding, chunk-order variants,
+junk rejection) and, with `test_wads_dir` set, parses **all 387 shipped
+.wav files** and byte-matches five reference entries against `wave`-module-
+derived PCM hashes.
+
 - **`native`** (primary, end goal): compiles the reconstruction C++ against
   **miniwin** (SDL3) — no Wine layer. Host compiler, no cross file. miniwin
   comes in as a sparse git submodule — bootstrap with `tools/setup-miniwin.sh`

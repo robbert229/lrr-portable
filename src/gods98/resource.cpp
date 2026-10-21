@@ -262,6 +262,17 @@ uint32_t resource_wad_entry_stored(int wad_idx, int entry_idx)
     return s_wads[wad_idx].entries[entry_idx].stored;
 }
 
+const char* resource_wad_entry_name(int wad_idx, int entry_idx)
+{
+    if (wad_idx < 0 || wad_idx >= s_wad_count
+        || entry_idx < 0
+        || (uint32_t)entry_idx >= s_wads[wad_idx].entry_count) {
+        return NULL;
+    }
+    ResourceWad* w = &s_wads[wad_idx];
+    return w->names + w->entries[entry_idx].name_off;
+}
+
 /* Open an entry inside mounted wad `wad_idx` (no payload yet). */
 static Resource* ares_open_wad(int wad_idx, int entry_idx, const char* name)
 {

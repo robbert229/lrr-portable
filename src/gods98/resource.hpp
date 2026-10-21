@@ -70,6 +70,9 @@ int resource_wad_lookup(int wad_idx, const char* name);
 uint32_t resource_wad_entry_count(int wad_idx);
 uint32_t resource_wad_entry_stored(int wad_idx, int entry_idx);
 
+/* Archive-relative name of one TOC entry (or NULL). */
+const char* resource_wad_entry_name(int wad_idx, int entry_idx);
+
 /* Open a resource by name. mode selects the branch policy (see defines).
  * Returns a handle or NULL on failure. */
 Resource* resource_open(const char* name, int mode);
