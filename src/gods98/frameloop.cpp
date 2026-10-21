@@ -39,6 +39,24 @@ static const char* env_get(const char* name, const char* fallback)
     return (v != NULL && v[0] != '\0') ? v : fallback;
 }
 
+static int s_icontains(const char* haystack, const char* needle)
+{
+    if (haystack == NULL || needle == NULL) {
+        return 0;
+    }
+    for (size_t i = 0; haystack[i] != '\0'; i++) {
+        size_t j = 0;
+        while (needle[j] != '\0' && (unsigned char)(haystack[i + j] | 0x20)
+               == (unsigned char)(needle[j] | 0x20)) {
+            ++j;
+        }
+        if (needle[j] == '\0') {
+            return 1;
+        }
+    }
+    return 0;
+}
+
 /* Held-key probe for the executor's cheat-keybind pre-pass (finding 06):
  * reads the current frame's input tables. */
 static const InputState* s_demo_input = NULL;
@@ -536,6 +554,23 @@ int LegorrrRun(void)
             fi.mouse_y = input.mouse_y;
             fi.click = input_mouse_pressed(&input);
             FeEvent ev = frontend_tick(&fe, &fi, hi_font);
+            if (fe.option_changed) {
+                const FeItem* oit = frontend_active_item(&fe);
+                if (oit != NULL) {
+                    int live = (s_icontains(oit->label, "sfx")
+                                || s_icontains(oit->label, "music")
+                                || s_icontains(oit->label, "sound"))
+                               && oit->max > 0;
+                    if (live && ap.dev != NULL) {
+                        audio_set_volume(&ap, (float)oit->value
+                                                / (float)oit->max);
+                    }
+                    fprintf(log, "frameloop: option %s -> %d/%d (%s)\n",
+                            oit->label, oit->value, oit->max,
+                            live ? "audio" : "state");
+                    fe.option_changed = 0;
+                }
+            }
             if (ev == FE_EVT_QUIT) {
                 quit = 1;
                 stop = "menu quit";
@@ -682,6 +717,23 @@ int LegorrrRun(void)
                 fi.mouse_y = input.mouse_y;
                 fi.click = input_mouse_pressed(&input);
                 FeEvent ev = frontend_tick(&fe, &fi, hi_font);
+                if (fe.option_changed) {
+                    const FeItem* oit = frontend_active_item(&fe);
+                    if (oit != NULL) {
+                        int live = (s_icontains(oit->label, "sfx")
+                                    || s_icontains(oit->label, "music")
+                                    || s_icontains(oit->label, "sound"))
+                                   && oit->max > 0;
+                        if (live && ap.dev != NULL) {
+                            audio_set_volume(&ap, (float)oit->value
+                                                    / (float)oit->max);
+                        }
+                        fprintf(log, "frameloop: option %s -> %d/%d (%s)\n",
+                                oit->label, oit->value, oit->max,
+                                live ? "audio" : "state");
+                        fe.option_changed = 0;
+                    }
+                }
                 if (ev == FE_EVT_QUIT) {
                     quit = 1;
                     stop = "menu quit";
