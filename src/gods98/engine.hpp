@@ -66,6 +66,13 @@ typedef struct EngineState {
     void*    grid_cells;     /* +0xb8 grid buffer, cell stride 0x48 */
     float    spawn_interval; /* +0x268 chip-spawn re-arm interval */
     uint32_t spawn_type;     /* +0x26c chip/spawn type (0x14 skips) */
+
+    /* per-subsystem fields used by the ticker ports (simtick.hpp):
+     * marker-sweep grid (+0x8/+0xc/+0x28/+0x73d0 in the level block view). */
+    uint32_t sim_w;           /* +0x08 grid width  */
+    uint32_t sim_h;           /* +0x0c grid height */
+    void*    sim_grid;        /* +0x28 cell buffer, stride 0x28 */
+    uint8_t  sim_marker_flags;/* +0x73d0 flag byte bit 2 enables the sweep */
 } EngineState;
 
 /* Mutable engine context — stands in for the corpus's global window

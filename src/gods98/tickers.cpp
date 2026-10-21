@@ -3,6 +3,7 @@
 
 #include "engine.hpp"
 #include "message.hpp"
+#include "simtick.hpp"
 #include "tickers.hpp"
 
 /* ------------------------------------------------------------------ *
@@ -32,8 +33,7 @@ static void ticker_00424600(EngineContext* c, float dt, float scale)
 
 static void ticker_0040aa10(EngineContext* c, float dt, float scale)
 {
-    (void)c; (void)dt; (void)scale;
-    /* TODO: corpus FUN_0040aa10 */
+    simtick_table_dispatch(c, dt, scale);
 }
 
 static void ticker_0043b270(EngineContext* c, float dt, float scale)
@@ -68,14 +68,14 @@ static void ticker_004520d0(EngineContext* c, float dt, float scale)
 
 static void ticker_004091e0(EngineContext* c, float dt, float scale)
 {
-    (void)c; (void)dt; (void)scale;
-    /* TODO: corpus FUN_004091e0 */
+    (void)dt; (void)scale;
+    simtick_bobbins(c);
 }
 
 static void ticker_0041ba10(EngineContext* c, float dt, float scale)
 {
-    (void)c; (void)dt; (void)scale;
-    /* TODO: corpus FUN_0041ba10 */
+    (void)scale;
+    simtick_mute_timer(c, dt);
 }
 
 static void ticker_004291a0(EngineContext* c, float dt, float scale)
@@ -92,8 +92,8 @@ static void ticker_00449c00(EngineContext* c, float dt, float scale)
 
 static void ticker_0040d450(EngineContext* c, float dt, float scale)
 {
-    (void)c; (void)dt; (void)scale;
-    /* TODO: corpus FUN_0040d450 */
+    (void)dt; (void)scale;
+    simtick_post_cluster(c);
 }
 
 static void ticker_00426520(EngineContext* c, float dt, float scale)
@@ -105,8 +105,7 @@ static void ticker_00426520(EngineContext* c, float dt, float scale)
 
 static void ticker_0044eff0(EngineContext* c, float dt, float scale)
 {
-    (void)c; (void)dt; (void)scale;
-    /* TODO: corpus FUN_0044eff0(state+4, scale) */
+    simtick_marker_sweep(c, dt, scale);
 }
 
 static void ticker_0046e390(EngineContext* c, float dt, float scale)

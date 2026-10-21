@@ -17,6 +17,7 @@ gods98_lib = static_library('gods98',
   'view.cpp',
   'message.cpp',
   'mainsim.cpp',
+  'simtick.cpp',
   'block.cpp',
   include_directories : gods98_incs,
   dependencies : [platsub_deps, platform_glue_dep],
@@ -38,6 +39,7 @@ if get_option('platform') == 'native'
                  ['message', 'test_message.cpp'],
                  ['airbeat', 'test_airbeat.cpp'],
                  ['mainsim', 'test_mainsim.cpp'],
+                 ['simtick', 'test_simtick.cpp'],
                  ['block', 'test_block.cpp']]
     test_name = exe[0]
     t = executable(test_name + '_test', exe[1],
