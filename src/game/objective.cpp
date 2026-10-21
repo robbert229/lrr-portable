@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "gods98/block.hpp"
 #include "level.hpp"
 #include "objective.hpp"
 #include "util.hpp"
@@ -30,17 +31,43 @@ static int obj_strcasecmp(const char* a, const char* b)
     }
 }
 
-static const char* obj_cfg_str(ConfigDb* cfg, const char* level, const char* key,
+static const char* obj_cfg_str(BlockFile* cfg, const char* level, const char* key,
                                char* out, size_t out_sz)
 {
+    if (cfg == NULL || level == NULL) {
+        return NULL;
+    }
     char path[512];
-    snprintf(path, sizeof(path), "%s %s", level, key);
-    const char* v = config_value(cfg, path);
+    snprintf(path, sizeof(path), "%s %s %s", util_root_name(cfg), level, key);
+    const char* v = block_get_strptr(cfg, path);
     if (v == NULL) {
         return NULL;
     }
     snprintf(out, out_sz, "%s", v);
     return out;
+}
+
+/* Corpus FUN_004790d0 typed getter used by the advisor-suppression keys:
+ * boolean vocabulary (TRUE/YES/ON → 1, FALSE/NO/OFF → 0), else strtol. */
+static int obj_typed_int(BlockFile* cfg, const char* level, const char* key, int dflt)
+{
+    char path[512];
+    snprintf(path, sizeof(path), "%s %s %s", util_root_name(cfg), level, key);
+    const char* v = block_get_strptr(cfg, path);
+    if (v == NULL) {
+        return dflt;
+    }
+    if (obj_strcasecmp(v, "TRUE") == 0 || obj_strcasecmp(v, "YES") == 0
+        || obj_strcasecmp(v, "ON") == 0) {
+        return 1;
+    }
+    if (obj_strcasecmp(v, "FALSE") == 0 || obj_strcasecmp(v, "NO") == 0
+        || obj_strcasecmp(v, "OFF") == 0) {
+        return 0;
+    }
+    char* end = NULL;
+    long r = strtol(v, &end, 10);
+    return (end == v) ? 2 : (int)r;
 }
 
 /* Split "a b" / "a,b" value into two longs (block/construction targets). */
@@ -100,7 +127,7 @@ static void obj_set_construction(LevelState* s, long a, long b)
     level_set_int(s, OBJ_OFF_CONSTRUCT_B, (int32_t)b);
 }
 
-void objective_load(ConfigDb* cfg, const char* level_name, LevelState* s)
+void objective_load(BlockFile* cfg, const char* level_name, LevelState* s)
 {
     if (cfg == NULL || s == NULL) {
         return;
@@ -113,17 +140,13 @@ void objective_load(ConfigDb* cfg, const char* level_name, LevelState* s)
     s->objective_pending = 1;
 
     /* Advisor-suppression keys: bit set when the key is NOT 1. */
-    char path[512];
-    snprintf(path, sizeof(path), "%s %s", level_name, K_DONT_ADV);
-    if (config_int(cfg, path, 0) != 1) {
+    if (obj_typed_int(cfg, level_name, K_DONT_ADV, 0) != 1) {
         s->objective |= LVL_OBJECTIVE_NO_ADVISOR;
     }
-    snprintf(path, sizeof(path), "%s %s", level_name, K_DONT_ACH_ADV);
-    if (config_int(cfg, path, 0) != 1) {
+    if (obj_typed_int(cfg, level_name, K_DONT_ACH_ADV, 0) != 1) {
         s->objective |= LVL_OBJECTIVE_NO_ACH_ADV;
     }
-    snprintf(path, sizeof(path), "%s %s", level_name, K_DONT_FAIL_ADV);
-    if (config_int(cfg, path, 0) != 1) {
+    if (obj_typed_int(cfg, level_name, K_DONT_FAIL_ADV, 0) != 1) {
         s->objective |= LVL_OBJECTIVE_NO_FAIL_ADV;
     }
 

@@ -4,9 +4,11 @@
 #include <string.h>
 
 #include "game.hpp"
+#include "gods98/block.hpp"
 #include "gods98/resource.hpp"
 #include "level.hpp"
 #include "savegame.hpp"
+#include "util.hpp"
 
 #if defined(LEGORRR_BACKEND_WINAPI)
 #  define SAVE_SEP '\\'  /* the corpus's "%s\%i.sav" DOS separators */
@@ -254,28 +256,29 @@ static void checkpoint_reward_group(GameContext* ctx, const char* level_name)
         return;
     }
     char path[512];
+    const char* root = util_root_name(ctx->cfg);
     /* Reward/Enable tri-state (2 -> 0). */
-    snprintf(path, sizeof(path), "%s %s %s", level_name, "Reward", "Enable");
-    int en = (int)config_int(ctx->cfg, path, 0);
+    snprintf(path, sizeof(path), "%s %s %s %s", root, level_name, "Reward", "Enable");
+    int en = block_get_bool(ctx->cfg, path);
     if (en == 2) en = 0;
     ctx->reward.enable = en;
 
-    snprintf(path, sizeof(path), "%s %s %s", level_name, "Reward", "Modifier");
-    int mod = (int)config_int(ctx->cfg, path, 0);
+    snprintf(path, sizeof(path), "%s %s %s %s", root, level_name, "Reward", "Modifier");
+    int mod = block_get_int(ctx->cfg, path, 0);
     ctx->reward.modifier = mod;
 
-    snprintf(path, sizeof(path), "%s %s %s", level_name, "Reward", "Timer");
-    float timer = config_float(ctx->cfg, path, LVL_REWARD_TIMER_DEFAULT);
+    snprintf(path, sizeof(path), "%s %s %s %s", root, level_name, "Reward", "Timer");
+    float timer = block_get_float(ctx->cfg, path, LVL_REWARD_TIMER_DEFAULT);
     ctx->reward.timer = timer;
 
-    snprintf(path, sizeof(path), "%s %s %s", level_name, "Reward", "DisplayText");
-    int dt = (int)config_int(ctx->cfg, path, 0);
+    snprintf(path, sizeof(path), "%s %s %s %s", root, level_name, "Reward", "DisplayText");
+    int dt = block_get_bool(ctx->cfg, path);
     ctx->reward.display_text = dt == 2 ? 1 : dt;
-    snprintf(path, sizeof(path), "%s %s %s", level_name, "Reward", "DisplayImages");
-    int di = (int)config_int(ctx->cfg, path, 0);
+    snprintf(path, sizeof(path), "%s %s %s %s", root, level_name, "Reward", "DisplayImages");
+    int di = block_get_bool(ctx->cfg, path);
     ctx->reward.display_images = di == 2 ? 1 : di;
-    snprintf(path, sizeof(path), "%s %s %s", level_name, "Reward", "DisplayFlics");
-    int df = (int)config_int(ctx->cfg, path, 0);
+    snprintf(path, sizeof(path), "%s %s %s %s", root, level_name, "Reward", "DisplayFlics");
+    int df = block_get_bool(ctx->cfg, path);
     ctx->reward.display_flics = df == 2 ? 1 : df;
 }
 

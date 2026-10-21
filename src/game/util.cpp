@@ -12,6 +12,18 @@ static int util_isspace_c(int c)
     return c == ' ' || c == '\t' || c == '\r' || c == '\n';
 }
 
+const char* util_root_name(BlockFile* bf)
+{
+    static char root_buf[64];
+    if (bf == NULL || block_record_count(bf) == 0) {
+        return "Lego*";
+    }
+    BlockRec* r0 = block_record_at(bf, 0);
+    const char* name = r0 ? block_name(r0) : NULL;
+    snprintf(root_buf, sizeof(root_buf), "%s", name != NULL ? name : "Lego*");
+    return root_buf;
+}
+
 long util_atoi(const char* s)
 {
     return s != NULL ? strtol(s, NULL, 10) : 0;

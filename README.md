@@ -339,7 +339,6 @@ mirroring the resource/texture/sound/block suites: it mounts the shipped
 wads and reports how many Lego.cfg groups resolve a `SurfaceMap`.
 Best-effort — the fixtures are the guaranteed coverage, and the probe is
 skipped when no game data is present.
->>>>>>> 6901cde (feat(game): game-layer start — .map levels, objectives/advisor, savegames)
 
 ```sh
 cd path/to/legally-owned/game

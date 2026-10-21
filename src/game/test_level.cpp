@@ -8,7 +8,8 @@
 #include <unistd.h>
 
 #include "game/level.hpp"
-#include "gods98/config.hpp"
+#include "game/util.hpp"
+#include "gods98/block.hpp"
 #include "gods98/resource.hpp"
 
 static int s_failures = 0;
@@ -92,27 +93,28 @@ static int emerge_cell(int x, int y)
 static int real_probe(const char* wad_dir)
 {
     int mounted = resource_mount(wad_dir, "LegoRR");
-    ConfigDb* cfg = mounted > 0 ? config_open("Lego.cfg") : NULL;
+    BlockFile* cfg = mounted > 0 ? block_open("Lego.cfg") : NULL;
     if (cfg == NULL) {
         fprintf(stderr, "level_test: --real probe skipped (no Lego.cfg from %s)\n",
                 wad_dir);
         return 0;
     }
     int levels = 0;
-    for (int i = 0; i < config_roots(cfg); ++i) {
-        const ConfigNode* g = config_root(cfg, i);
+    for (size_t i = 0; i < block_record_count(cfg); ++i) {
+        BlockRec* g = block_record_at(cfg, i);
         if (g == NULL) {
             continue;
         }
         char path[512];
-        snprintf(path, sizeof(path), "%s SurfaceMap", config_node_name(g));
-        if (config_value(cfg, path) != NULL) {
+        snprintf(path, sizeof(path), "%s %s SurfaceMap", util_root_name(cfg),
+                 block_name(g));
+        if (block_get_strptr(cfg, path) != NULL) {
             ++levels;
         }
     }
     fprintf(stderr, "level_test: --real probe: %d level groups in Lego.cfg\n",
             levels);
-    config_close(cfg);
+    block_close(cfg);
     return levels;
 }
 
@@ -168,7 +170,7 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    ConfigDb* cfg = config_open("Lego.cfg");
+    BlockFile* cfg = block_open("Lego.cfg");
     CHECK(cfg != NULL, "open cfg");
     LevelState* s = level_load(cfg, "Level01");
     if (cfg == NULL || s == NULL) {
@@ -227,7 +229,7 @@ int main(int argc, char** argv)
     CHECK(next != NULL && strcmp(next, "Level02") == 0, "nextlevel stored");
 
     level_destroy(s);
-    config_close(cfg);
+    block_close(cfg);
 
     if (s_failures != 0) {
         fprintf(stderr, "level_test: %d failure(s)\n", s_failures);

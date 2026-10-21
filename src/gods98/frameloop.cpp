@@ -54,7 +54,7 @@ int LegorrrRun(void)
     /* --- Game layer: config DB + level load (findings 07/12/22) ---------- */
     GameContext game;
     game_context_init(&game);
-    game.cfg = config_open("Lego.cfg");
+    game.cfg = block_open("Lego.cfg");
     const char* level_name = env_get("LEGORRR_LEVEL", "Level01");
     if (game.cfg != NULL) {
         fprintf(log, "frameloop: config Lego.cfg loaded\n");
@@ -272,7 +272,7 @@ int LegorrrRun(void)
     checkpoint_blob_free(&game);
     free(game.records);
     level_destroy(game.level);
-    config_close(game.cfg);
+    block_close(game.cfg);
 
     if (log != stderr) {
         fclose(log);

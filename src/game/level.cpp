@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "game.hpp"
+#include "gods98/block.hpp"
 #include "gods98/resource.hpp"
 #include "level.hpp"
 #include "objective.hpp"
@@ -687,17 +688,54 @@ static int map_pipeline(LevelState* s, const char** names, const int* biases)
 
 /* ------------------------------------------------------------------ *
  *  Level load @ 0x429890 — config read + pipeline + post-load init.
+ *
+ *  Config paths are rooted at the file's first record (upstream block
+ *  parser keeps the `Lego` root, so a level key reads as
+ *  "Lego* <levelname> <key>", matching the corpus's BlockQueryDefault
+ *  path-building "%s%s%s").
  * ------------------------------------------------------------------ */
 
-static const char* cfg_string(ConfigDb* cfg, const char* level, const char* key,
+/* Typed getter mirroring the corpus's FUN_004790d0: boolean vocabulary
+ * (TRUE/YES/ON → 1, FALSE/NO/OFF → 0), else strtol; missing → dflt. */
+static int lvl_typed_int(BlockFile* cfg, const char* path, int dflt)
+{
+    const char* v = block_get_strptr(cfg, path);
+    if (v == NULL) {
+        return dflt;
+    }
+    if (level_strcasecmp(v, "TRUE") == 0 || level_strcasecmp(v, "YES") == 0
+        || level_strcasecmp(v, "ON") == 0) {
+        return 1;
+    }
+    if (level_strcasecmp(v, "FALSE") == 0 || level_strcasecmp(v, "NO") == 0
+        || level_strcasecmp(v, "OFF") == 0) {
+        return 0;
+    }
+    char* end = NULL;
+    long r = strtol(v, &end, 10);
+    return (end == v) ? 2 : (int)r;
+}
+
+/* Build the config path "<root> <level> <key>", rooted at the file's first
+ * record name (`util_root_name`) — the block parser keeps the top-level
+ * `Lego {…}` record as the root, and the corpus's LevelLoad paths are
+ * relative to it (finding 12, FUN_004792e0). */
+static const char* cfg_path(BlockFile* cfg, const char* level, const char* key,
+                            char* out, size_t out_sz)
+{
+    snprintf(out, out_sz, "%s %s %s", util_root_name(cfg), level, key);
+    return out;
+}
+
+static const char* cfg_string(BlockFile* cfg, const char* level, const char* key,
                               char* out, size_t out_sz)
 {
     if (cfg == NULL || level == NULL || key == NULL) {
         return NULL;
     }
     char path[512];
-    snprintf(path, sizeof(path), "%s %s", level, key);
-    const char* v = config_value(cfg, path);
+    cfg_path(cfg, level, key, path, sizeof(path));
+    const char* v = block_get_strptr(cfg, path);
     if (v == NULL) {
         return NULL;
     }
@@ -705,21 +743,28 @@ static const char* cfg_string(ConfigDb* cfg, const char* level, const char* key,
     return out;
 }
 
-static long cfg_int(ConfigDb* cfg, const char* level, const char* key, long dflt)
+static long cfg_int(BlockFile* cfg, const char* level, const char* key, long dflt)
 {
     char path[512];
-    snprintf(path, sizeof(path), "%s %s", level, key);
-    return config_int(cfg, path, dflt);
+    cfg_path(cfg, level, key, path, sizeof(path));
+    return block_get_int(cfg, path, (int)dflt);
 }
 
-static float cfg_float(ConfigDb* cfg, const char* level, const char* key, float dflt)
+static float cfg_float(BlockFile* cfg, const char* level, const char* key, float dflt)
 {
     char path[512];
-    snprintf(path, sizeof(path), "%s %s", level, key);
-    return config_float(cfg, path, dflt);
+    cfg_path(cfg, level, key, path, sizeof(path));
+    return block_get_float(cfg, path, dflt);
 }
 
-static int map_bias_name(ConfigDb* cfg, const char* level, const char* key,
+static int cfg_typed(BlockFile* cfg, const char* level, const char* key, int dflt)
+{
+    char path[512];
+    cfg_path(cfg, level, key, path, sizeof(path));
+    return lvl_typed_int(cfg, path, dflt);
+}
+
+static int map_bias_name(BlockFile* cfg, const char* level, const char* key,
                          char* out, size_t out_sz)
 {
     out[0] = '\0';
@@ -729,7 +774,7 @@ static int map_bias_name(ConfigDb* cfg, const char* level, const char* key,
     return map_header_value(out);
 }
 
-LevelState* level_load(ConfigDb* cfg, const char* level_name)
+LevelState* level_load(BlockFile* cfg, const char* level_name)
 {
     if (cfg == NULL || level_name == NULL) {
         return NULL;
@@ -746,10 +791,10 @@ LevelState* level_load(ConfigDb* cfg, const char* level_name)
     float blocksize = cfg_float(cfg, level_name, K_BLOCKSIZE, 0.0f);
     level_set_float(s, LEVEL_OFF_BLOCKSIZE, blocksize);
     level_set_float(s, LEVEL_OFF_DIGDEPTH, cfg_float(cfg, level_name, K_DIGDEPTH, 0.0f));
-    level_set_int(s, LEVEL_OFF_USEROOF, (int32_t)cfg_int(cfg, level_name, K_USEROOF, 0));
+    level_set_int(s, LEVEL_OFF_USEROOF, (int32_t)cfg_typed(cfg, level_name, K_USEROOF, 0));
     level_set_float(s, LEVEL_OFF_ROOFHEIGHT, cfg_float(cfg, level_name, K_ROOFHEIGHT, 0.0f));
     level_set_float(s, LEVEL_OFF_ROUGHLEVEL, cfg_float(cfg, level_name, K_ROUGHLEVEL, 0.0f));
-    level_set_int(s, LEVEL_OFF_SAFECAVERNS, (int32_t)cfg_int(cfg, level_name, K_SAFECAVERNS, 0));
+    level_set_int(s, LEVEL_OFF_SAFECAVERNS, (int32_t)cfg_typed(cfg, level_name, K_SAFECAVERNS, 0));
     level_set_float(s, LEVEL_OFF_SELBOXHEIGHT, cfg_float(cfg, level_name, K_SELBOXH, 0.0f));
 
     /* Boulder-animation flavour: 0 = none/default, 1 = any other value. */
@@ -796,8 +841,8 @@ LevelState* level_load(ConfigDb* cfg, const char* level_name)
     objective_load(cfg, level_name, s);
 
     /* --- post-load scalar stores ----------------------------------------- */
-    level_set_int(s, LEVEL_OFF_STARTP, cfg_int(cfg, level_name, K_STARTFP, 0) == 1 ? 1 : 0);
-    level_set_int(s, LEVEL_OFF_NODRAIN, cfg_int(cfg, level_name, K_NODRAIN, 0) == 1 ? 1 : 0);
+    level_set_int(s, LEVEL_OFF_STARTP, cfg_typed(cfg, level_name, K_STARTFP, 0) == 1 ? 1 : 0);
+    level_set_int(s, LEVEL_OFF_NODRAIN, cfg_typed(cfg, level_name, K_NODRAIN, 0) == 1 ? 1 : 0);
     level_set_float(s, LEVEL_OFF_OXYGEN_RATE,
                     cfg_float(cfg, level_name, K_OXYGENRATE, 0.0f) * LVL_OXYGEN_SCALE);
     level_set_float(s, LEVEL_OFF_TOLERANCE,

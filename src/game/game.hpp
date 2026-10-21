@@ -23,7 +23,7 @@
 
 #include <cstdint>
 
-#include "gods98/config.hpp"
+#include "gods98/block.hpp"
 #include "level.hpp"
 
 #ifdef __cplusplus
@@ -124,7 +124,7 @@ static_assert(sizeof(GameOsfEntry) == 20, "osf entry size");
 
 typedef struct GameContext {
     /* --- corpus globals ------------------------------------------------ */
-    ConfigDb*   cfg;          /* DAT_005560c4 — Lego.cfg */
+    BlockFile*  cfg;          /* DAT_005560c4 — Lego.cfg */
     LevelState* level;        /* DAT_005560d4 — current level block */
     uint32_t    cheat;        /* DAT_00556ed0 — level cheat/feature bits */
 

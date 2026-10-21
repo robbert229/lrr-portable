@@ -32,9 +32,7 @@
 
 #ifdef __cplusplus
 extern "C" {
-#endif
-
-/* Objective-slot offsets inside the level block (finding 22). */
+#endif/* Objective-slot offsets inside the level block (finding 22). */
 #define OBJ_SLOT_HANDLE       0xBC  /* 0x54 B of image handles/dims + AVI */
 #define OBJ_OFF_ACH_IMG       0xC8  /* "achieved" image handle (+0xc8)      */
 #define OBJ_OFF_ACH_DIM       0xCC  /* "achieved" image dims (2 floats)    */
@@ -60,7 +58,7 @@ extern "C" {
 
 /* Load `<level>`'s objective config into the block + objective word
  * (corpus FUN_00457d40, called from LevelLoad at 0x42ab0a). */
-void objective_load(ConfigDb* cfg, const char* level_name, LevelState* s);
+void objective_load(BlockFile* cfg, const char* level_name, LevelState* s);
 
 /* Objective checker (corpus FUN_00459050). Returns 1 when every armed goal
  * is satisfied (or the timer expired), 0 while still un-met. `*mark` is set

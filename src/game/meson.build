@@ -19,13 +19,16 @@ game_lib = static_library('game',
 game_dep = declare_dependency(link_with : game_lib,
   include_directories : [include_directories('.'), include_directories('..')])
 
-# Game-layer tests: config (block-text), level (.map load), objective
-# (finding 22), savegame (.sav/.osf). All run from loose synthetic fixtures
-# (suite dir = test workdir); point test_wads_dir at the shipped wads to add
-# real-data checks (best-effort, skipped when data is absent).
+# Game-layer tests: level (.map load), objective (finding 22), savegame
+# (.sav/.osf) — plus the shared util query helper. All run from loose
+# synthetic fixtures (suite = test workdir); point test_wads_dir at the
+# shipped wads to add a real-data probe to level (best-effort, skipped when
+# data is absent). The block-text parser itself is covered by gods98's
+# `block` suite (finding 12, src/gods98/test_block.cpp).
 if get_option('platform') == 'native'
-  foreach exe : [['config', 'test_config.cpp'], ['level', 'test_level.cpp'],
-                 ['objective', 'test_objective.cpp'], ['savegame', 'test_savegame.cpp']]
+  foreach exe : [['level', 'test_level.cpp'],
+                 ['objective', 'test_objective.cpp'],
+                 ['savegame', 'test_savegame.cpp']]
     test_name = exe[0]
     t = executable(test_name + '_test', exe[1],
       include_directories : gods98_incs,

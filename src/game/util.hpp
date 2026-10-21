@@ -23,6 +23,8 @@
 
 #include <cstddef>
 
+#include "gods98/block.hpp"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -33,6 +35,12 @@ extern "C" {
  * Returns the status code described above. */
 int util_query_fields(const char* path_or_value, char out[UTIL_QUERY_MAX_FIELDS][256],
                       size_t out_sz);
+
+/* First root record name of a parsed block file, used as the leading path
+ * segment for `block_find` paths (the block parser keeps the file's first
+ * `name {` record as the root; the game layer reads config relative to it).
+ * Falls back to "Lego*" when the file is empty. */
+const char* util_root_name(BlockFile* bf);
 
 long  util_atoi(const char* s);
 float util_atof(const char* s);

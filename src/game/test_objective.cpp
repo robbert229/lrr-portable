@@ -9,7 +9,7 @@
 
 #include "game/level.hpp"
 #include "game/objective.hpp"
-#include "gods98/config.hpp"
+#include "gods98/block.hpp"
 
 static int s_failures = 0;
 
@@ -61,7 +61,7 @@ int main(void)
         return 1;
     }
 
-    ConfigDb* cfg = config_open("Lego.cfg");
+    BlockFile* cfg = block_open("Lego.cfg");
     CHECK(cfg != NULL, "open cfg");
     if (cfg == NULL) {
         return 1;
@@ -125,7 +125,7 @@ int main(void)
     CHECK((s2->objective & 0x10u) == 0, "generic advisors shown when key = 1");
     CHECK((s2->objective & 0x20u) != 0, "achievement suppression defaulted on");
     level_destroy(s2);
-    config_close(cfg);
+    block_close(cfg);
 
     if (s_failures != 0) {
         fprintf(stderr, "objective_test: %d failure(s)\n", s_failures);

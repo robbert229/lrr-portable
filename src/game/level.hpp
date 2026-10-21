@@ -40,7 +40,7 @@
 #include <cstdint>
 #include <cstddef>
 
-#include "gods98/config.hpp"
+#include "gods98/block.hpp"
 
 #ifdef __cplusplus
 extern "C" {
@@ -203,7 +203,7 @@ static inline void* level_load_ptr(const LevelState* s, int off)
  * LevelState on success (caller frees with level_destroy), NULL on failure.
  */
 const char* level_pending_flush(LevelState** out_level);
-LevelState* level_load(ConfigDb* cfg, const char* level_name);
+LevelState* level_load(BlockFile* cfg, const char* level_name);
 void        level_destroy(LevelState* s);
 
 /* Grid size left in the block after a successful load. */
