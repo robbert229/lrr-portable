@@ -10,6 +10,7 @@
 #include "game/level.hpp"
 #include "game/mission.hpp"
 #include "game/objective.hpp"
+#include "game/render.hpp"
 #include "game/savegame.hpp"
 #include "game/select.hpp"
 #include "platform/platform.h"
@@ -358,15 +359,23 @@ int LegorrrRun(void)
         void* pixels = NULL;
         int   pitch = 0;
         if (surface_lock(&surf, &pixels, &pitch) == 0) {
-            surface_fill(pixels, pitch, WINDOW_W, WINDOW_H, 8, 16, 48);
-            surface_draw_sweep(pixels, pitch, WINDOW_W, WINDOW_H, (int)frames);
-            if (rock != NULL) {
-                surface_blit_texture(pixels, pitch, WINDOW_W, WINDOW_H,
-                                     rock, rock_x, rock_y);
-            }
-            if (ui != NULL) {
-                surface_blit_texture(pixels, pitch, WINDOW_W, WINDOW_H,
-                                     ui, rock_x + 64 + 8, rock_y);
+            if (game.level != NULL) {
+                /* Software level render (finding 22 §3): terrain grid from
+                 * the voxel array + live entity markers + cursor cell. */
+                level_render_map(game.level, &game, input.mouse_x, input.mouse_y,
+                                 WINDOW_W, WINDOW_H, pixels, pitch);
+            } else {
+                surface_fill(pixels, pitch, WINDOW_W, WINDOW_H, 8, 16, 48);
+                surface_draw_sweep(pixels, pitch, WINDOW_W, WINDOW_H,
+                                   (int)frames);
+                if (rock != NULL) {
+                    surface_blit_texture(pixels, pitch, WINDOW_W, WINDOW_H,
+                                         rock, rock_x, rock_y);
+                }
+                if (ui != NULL) {
+                    surface_blit_texture(pixels, pitch, WINDOW_W, WINDOW_H,
+                                         ui, rock_x + 64 + 8, rock_y);
+                }
             }
             platform_screenshot(win, pixels, pitch, WINDOW_W, WINDOW_H,
                                 (int)frames);
