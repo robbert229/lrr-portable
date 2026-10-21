@@ -553,6 +553,7 @@ int LegorrrRun(void)
             fi.mouse_x = input.mouse_x;
             fi.mouse_y = input.mouse_y;
             fi.click = input_mouse_pressed(&input);
+            fi.mdown = input.mouse_down;
             FeEvent ev = frontend_tick(&fe, &fi, hi_font);
             if (fe.option_changed) {
                 const FeItem* oit = frontend_active_item(&fe);
@@ -726,6 +727,7 @@ int LegorrrRun(void)
                 fi.mouse_x = input.mouse_x;
                 fi.mouse_y = input.mouse_y;
                 fi.click = input_mouse_pressed(&input);
+                fi.mdown = input.mouse_down;
                 FeEvent ev = frontend_tick(&fe, &fi, hi_font);
                 if (fe.option_changed) {
                     const FeItem* oit = frontend_active_item(&fe);

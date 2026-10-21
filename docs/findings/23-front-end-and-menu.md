@@ -195,7 +195,30 @@ StartLevelSelected     0x460220   ; commit pending level record → DAT_005529c4
 | `0x416150`/`0x4161a0` | `StreamPlayLevel`/`StreamPlayTutorial` | `Stream_LevelName_Level_%d` / `_TLevel_%d` stream triggers |
 | `0x4103d0` | `MainMenuTextItem` | the main menu's Credits/text item → `ScrollingTextDisplay @ 0x40a0c0` |
 
+## Slider mouse handling — `FUN_00411a00` case 3 / `FUN_00411870 @ 0x411870`
+
+The menu input tick `FUN_00411a00` switches on the item kind; a slider (kind 3) while
+the mouse button is *held* runs `FUN_00411870` every frame — pointer drag, not an edge:
+
+1. The bar rect anchors at `(menu.x + item.x + slider.x1, menu.y + item.y + slider.y1)`
+   with size `0x64 × 0x14` (100×20 px), hit-tested by `FUN_004112e0` (plain
+   rect containment).
+2. Inside the rect: `value = round(clamp((mx − bar.x) × 0.01, 0.0, 1.0) × (max − min))`
+   — the FILD/FISUB/FMUL/FCOM chain uses float constants `0x49e170/174/178` =
+   `0.0` / `1.0` / `0.01` (1/bar-width). The keyboard path keeps the `+min` offset
+   (±1 with clamps); the mouse path omits it — equivalent for the shipped sliders,
+   which all have `lo = 0`.
+3. Outside the rect but left/right of it (the bar-bitmap fields at slider `+9` /
+   `+0xb`), a click steps the value down/up by 1.
+
+Drag is *level* based: the button-held flag gates the call each frame, so the value
+keeps tracking while the pointer slides with the button down. The port matches this
+with `FeInput.mdown`, fed from `InputState.mouse_down` — the native SDL poller reports
+the motion button-mask as `held` and releases it on BUTTON-UP — and the drag block in
+`frontend_tick` clamps to `[min,max]`.
+
 ## Port impact (what a `front-end` pass needs)
+
 
 1. **`block.*` must tokenize `::`** (or the level/menu loaders must translate it).
    This unlocks *every* menu/level query on the shipped `Lego.cfg` and closes the

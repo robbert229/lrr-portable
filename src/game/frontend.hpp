@@ -190,6 +190,7 @@ typedef struct FeInput {
     int mouse_x;      /* pointer x (>= 0 = mouse in use) */
     int mouse_y;      /* pointer y */
     int click;        /* left-button press edge this frame */
+    int mdown;        /* left button held (level state) — slider drag */
 } FeInput;
 
 typedef enum {

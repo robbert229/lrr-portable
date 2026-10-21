@@ -110,6 +110,15 @@ int main(void)
     CHECK(c.mouse_press == 1, "capture: mouse press edge latched");
     CHECK(input_key_edge(&c, 'a'), "capture: edge on fresh prev");
 
+    /* Held level (slider drag): motion carrying buttons down sets it, and a
+     * release clears it — the press *edge* latch stays independent. */
+    PlatformEvent held1 = { PLATFORM_EVENT_MOUSE, 0, 50, 60, 0, 1 };
+    input_capture_events(&c, &held1, 1);
+    CHECK(c.mouse_x == 50 && c.mouse_down == 1, "capture: held motion sets level");
+    PlatformEvent rel = { PLATFORM_EVENT_MOUSE, 0, 50, 60, 0, 0 };
+    input_capture_events(&c, &rel, 1);
+    CHECK(c.mouse_down == 0, "capture: release clears level");
+
     /* text pump with clear=0 keeps cur for MainSimStep (frame-loop model). */
     InputState p = {};
     input_reset(&p);

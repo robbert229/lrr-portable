@@ -134,12 +134,25 @@ int platform_pump_events(PlatformWindow* pw, PlatformEvent* out, int cap)
             ev->mx = e.motion.x;
             ev->my = e.motion.y;
             ev->button = 0;
+            /* held is the level state of any button at this moment; the
+             * press edge stays on `button` so click detection is unchanged */
+            ev->held = (e.motion.state != 0) ? 1 : 0;
             ++n;
         } else if (e.type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
             ev->kind = PLATFORM_EVENT_MOUSE;
             ev->mx = e.button.x;
             ev->my = e.button.y;
             ev->button = 1; /* left/any press edge; latched in the input */
+            ev->held = 1;
+            ++n;
+        } else if (e.type == SDL_EVENT_MOUSE_BUTTON_UP) {
+            /* release emits no motion if the pointer stands still, so the
+             * held level must drop here or drags would phantom on */
+            ev->kind = PLATFORM_EVENT_MOUSE;
+            ev->mx = e.button.x;
+            ev->my = e.button.y;
+            ev->button = 0;
+            ev->held = 0;
             ++n;
         }
     }
