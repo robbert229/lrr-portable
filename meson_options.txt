@@ -14,3 +14,8 @@ option('platform', type : 'combo',
 
 # werror is a Meson built-in option (off by default) — see the comment in
 # meson.build for the warning policy rationale.
+
+# Directory containing the shipped LegoRR0.wad / LegoRR1.wad. When set, the
+# resource-loader test (suite 'resource') also runs real-wad validation.
+option('test_wads_dir', type : 'string', value : '',
+       description : 'Directory with shipped wads for resource_test --real')

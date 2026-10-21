@@ -148,6 +148,19 @@ over the `DAT_005560d4` state block, and `src/gods98/tickers.cpp` reproduces the
 tick's ordered 25-entry subsystem dispatch (finding 03 §4) as fill-in stubs
 (`ticker_<FUN-hex>` ↔ corpus `FUN_<hex>`).
 
+**Resource loader** (`src/gods98/resource.*`, finding 01): mounts
+`<dir>/<prefix>N.wad` for N = 0..9 (the corrected exe-basename prefix), parses
+the WWAD header + TOC, and opens entries by case-insensitive name with
+later-mounts-shadow-earlier resolution (STD/loose-file branch + dormant-codec
+stub included). Validated by `test_resource`: synthetic WWAD round trip always,
+plus real-wad checks (counts 5631/214, payload tags, `.flh` via finding 21) when
+`-Dtest_wads_dir=<dir>` is set:
+
+```sh
+meson setup build -Dtest_wads_dir=/path/to/shipped/game
+meson test -C build --suite resource
+```
+
 - **`native`** (primary, end goal): compiles the reconstruction C++ against
   **miniwin** (SDL3) — no Wine layer. Host compiler, no cross file. miniwin
   comes in as a sparse git submodule — bootstrap with `tools/setup-miniwin.sh`
