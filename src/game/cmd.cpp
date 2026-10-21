@@ -1,0 +1,534 @@
+// SPDX-License-Identifier: LGPL-3.0-or-later
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "cmd.hpp"
+#include "util.hpp"
+
+/* ------------------------------------------------------------------ *
+ *  Command record (finding 10 §"Command record" — corpus stride 0x68).
+ *  The struct is a semantic model, not a byte clone: the corpus packs
+ *  next(+0x60) and free-list link(+0x64) into consecutive 4-byte words and
+ *  payload(+0x10)/buffer(+0x40) as 32-bit pointers; here the record is a
+ *  stable pool object and the links share one `next` slot (a live record is
+ *  never on the free list at the same time). Field names carry the corpus
+ *  offsets.
+ * ------------------------------------------------------------------ */
+
+typedef struct CmdRec {
+    int32_t  type;       /* +0x00 record type (0 move/2 target/3 task/5 gated) */
+    int32_t  param;      /* +0x04 (flag for move, ext args)                   */
+    float    x;          /* +0x08 move coords                                 */
+    float    y;          /* +0x0c                                             */
+    void*    payload;    /* +0x10 entity / target pointer                      */
+    float    now;        /* +0x14 timeGetTime on alloc, 1500.0 on link          */
+    int32_t  param2;     /* +0x18 (task param from the queue)                  */
+    int32_t  behaviour;  /* +0x1c behaviour id = behaviour[kind]                */
+    int32_t  extra;      /* +0x3c (type-8 tasks set 8)                         */
+    void*    buffer;     /* +0x40 owned buffer (freed on cmd_free)             */
+    int32_t  kind;       /* +0x4c kind index                                   */
+    uint32_t state;      /* +0x5c state flags (CMD_STATE_*)                    */
+    void*    next;       /* +0x60 chain link / free-list link when free        */
+} CmdRec;
+
+#define CMD_STRIDE sizeof(CmdRec)
+
+static CmdRec* as_rec(void* p) { return (CmdRec*)p; }
+static const CmdRec* cas_rec(const void* p) { return (const CmdRec*)p; }
+
+int cmd_rec_type(const void* rec) { return cas_rec(rec)->type; }
+const void* cmd_rec_payload(const void* rec) { return cas_rec(rec)->payload; }
+int cmd_rec_kind(const void* rec) { return cas_rec(rec)->kind; }
+int cmd_rec_behaviour(const void* rec) { return cas_rec(rec)->behaviour; }
+uint32_t cmd_rec_state(const void* rec) { return cas_rec(rec)->state; }
+void* cmd_rec_next(const void* rec) { return cas_rec(rec)->next; }
+
+/* ------------------------------------------------------------------ *
+ *  Pool (CmdPoolGrow/CmdAlloc/CmdFree).
+ * ------------------------------------------------------------------ */
+
+#define CMD_POOL_MAX_BLOCKS 12
+static CmdRec* s_blocks[CMD_POOL_MAX_BLOCKS];
+static int     s_pool_level = 0;
+static void*   s_free       = NULL;
+
+static CmdRec* s_global_head = NULL; /* DAT_004b3354 */
+static CmdRec* s_global_tail = NULL; /* DAT_004b3358 */
+static int   s_global_enabled = 1; /* DAT_004b8060 */
+
+static void cmd_pool_grow(void)
+{
+    int level = s_pool_level;
+    if (level >= CMD_POOL_MAX_BLOCKS) {
+        return;
+    }
+    uint32_t n = 1u << (level & 0x1f);
+    CmdRec* block = (CmdRec*)calloc(n, CMD_STRIDE);
+    if (block == NULL) {
+        return;
+    }
+    s_blocks[level] = block;
+    ++s_pool_level;
+    if (n > 1) {
+        for (uint32_t i = 0; i + 1 < n; ++i) {
+            block[i].next = &block[i + 1];
+        }
+    }
+    block[n - 1].next = s_free;
+    s_free = block;
+}
+
+void* cmd_alloc(int type)
+{
+    if (s_free == NULL) {
+        cmd_pool_grow();
+    }
+    if (s_free == NULL) {
+        return NULL;
+    }
+    CmdRec* rec = (CmdRec*)s_free;
+    s_free = rec->next;
+    memset(rec, 0, CMD_STRIDE);
+    rec->next = rec; /* free-list self link while live */
+    rec->type = type;
+    return rec;
+}
+
+void cmd_free(void* rec, int cancel)
+{
+    (void)cancel; /* cancellation side-effects are a stub (CmdCancelRef) */
+    if (rec == NULL) {
+        return;
+    }
+    CmdRec* r = as_rec(rec);
+    if (r->buffer != NULL && (r->state & CMD_STATE_BUFOUT) == 0) {
+        free(r->buffer);
+        r->buffer = NULL;
+    }
+    r->next = s_free;
+    s_free = r;
+}
+
+/* ------------------------------------------------------------------ *
+ *  Registry (CmdRegistryInit / CmdKindByName): 31 AI task types and
+ *  27 AI priorities, in the *address order* CmdRegistryInit writes them.
+ * ------------------------------------------------------------------ */
+
+static const char* const TASK_NAMES[31] = {
+    /* slot = (addr - 0x4b3200)/4 */
+    "Goto", "Follow", "FollowAttack", "Collect", "Gather", "Deposit",
+    "Dump", "Request", "Dig", "Dynamite", "Repair", "Reinforce", "Clear",
+    "Wait", "AnimationWait", "ElecFence", "Eat", "GotoEat", "FindDriver",
+    "GetTool", "BirdScarer", "Upgrade", "BuildPath", "Train", "Depart",
+    "AttackPath", "AttackRockMonster", "Recharge", "Dock", "AttackObject",
+    "FindLoad",
+};
+static const char* const PRIO_NAMES[27] = {
+    /* slot = (addr - 0x4b327c)/4 */
+    "Crystal", "Ore", "DefaultCollect", "Destruction", "Construction",
+    "Request", "Reinforce", "Repair", "Clearing", "Storage", "Refining",
+    "HealthLow", "GetIn", "Upgrade", "BuildPath", "AttackRockMonster",
+    "Barrier", "FindLoad", "Recharge", "UpgradeBuilding", "Gather", "Steal",
+    "Punch", "Depart", "AttackPath", "AttackObject", "Congregate",
+};
+static int8_t s_behaviour[27]; /* DAT_004b32e8 by kind */
+
+static int cmd_strcasecmp(const char* a, const char* b)
+{
+    for (;;) {
+        int ca = (unsigned char)*a++;
+        int cb = (unsigned char)*b++;
+        if (ca >= 'a' && ca <= 'z') ca -= 0x20;
+        if (cb >= 'a' && cb <= 'z') cb -= 0x20;
+        if (ca != cb) return ca - cb;
+        if (ca == 0) return 0;
+    }
+}
+
+void cmd_init(void)
+{
+    for (int i = 0; i < CMD_POOL_MAX_BLOCKS; ++i) {
+        s_blocks[i] = NULL;
+    }
+    s_pool_level = 0;
+    s_free = NULL;
+    s_global_head = NULL;
+    s_global_tail = NULL;
+    s_global_enabled = 1;
+
+    for (int i = 0; i < 27; ++i) {
+        s_behaviour[i] = 0x31;
+    }
+    s_behaviour[0]  = 0x37;
+    s_behaviour[3]  = 0x28;
+    s_behaviour[4]  = 0x3c;
+    s_behaviour[5]  = 0x14;
+    s_behaviour[6]  = 0x46;
+    s_behaviour[8]  = 0x14;
+    s_behaviour[9]  = 5;
+    s_behaviour[10] = 0xf;
+    s_behaviour[15] = 0x38;
+    s_behaviour[19] = 99;
+    s_behaviour[20] = 0x31;
+    s_behaviour[21] = 0x5a;
+    s_behaviour[22] = 0x31;
+    s_behaviour[23] = 0;
+    s_behaviour[24] = 0x14;
+    s_behaviour[25] = 0x1e;
+    s_behaviour[26] = 99;
+}
+
+int cmd_kind_by_name(const char* name, int* out)
+{
+    if (name == NULL || out == NULL) {
+        return 0;
+    }
+    for (int i = 0; i < 27; ++i) {
+        if (cmd_strcasecmp(name, PRIO_NAMES[i]) == 0) {
+            *out = i;
+            return 1;
+        }
+    }
+    return 0;
+}
+
+int cmd_kind_behaviour(int kind)
+{
+    if (kind < 0 || kind >= 27) {
+        return 0x31;
+    }
+    return s_behaviour[kind];
+}
+
+const char* cmd_task_name(int slot)
+{
+    return (slot >= 0 && slot < 31) ? TASK_NAMES[slot] : NULL;
+}
+const char* cmd_priority_name(int slot)
+{
+    return (slot >= 0 && slot < 27) ? PRIO_NAMES[slot] : NULL;
+}
+
+/* ------------------------------------------------------------------ *
+ *  Link / chain primitives.
+ * ------------------------------------------------------------------ */
+
+static void cmd_bind_kind(CmdRec* rec, int kind)
+{
+    if ((rec->state & 0x30000u) == 0) {
+        rec->behaviour = cmd_kind_behaviour(kind);
+    } else {
+        rec->behaviour = 99;
+    }
+    rec->kind = kind;
+}
+
+static void cmd_link_head(CmdRec* rec, int kind)
+{
+    rec->next = s_global_head;
+    s_global_head = rec;
+    rec->now = 1500.0f;
+    rec->state = (rec->state & ~1u) | CMD_STATE_PENDING;
+    cmd_bind_kind(rec, kind);
+}
+
+static void cmd_link_tail(CmdRec* rec)
+{
+    rec->next = NULL;
+    if (s_global_tail != NULL) {
+        s_global_tail->next = rec;
+    } else {
+        s_global_head = rec;
+    }
+    s_global_tail = rec;
+    rec->now = 1500.0f;
+    rec->state &= ~CMD_STATE_PENDING;
+}
+
+void* cmd_chain_walk(const EntitySlot* e)
+{
+    if (e == NULL || e->cmd_head == NULL) {
+        return NULL;
+    }
+    CmdRec* cur = as_rec(e->cmd_head);
+    for (;;) {
+        if (cur->next == NULL) {
+            return cur;
+        }
+        cur = as_rec(cur->next);
+    }
+}
+
+static void idle_register(EntitySlot* e);
+
+void* cmd_global_head(void)
+{
+    return s_global_head;
+}
+
+/* Append a record to the entity's chain (entity +0x2f0 analog) and link it
+ * onto the global list. */
+static void cmd_chain_append(EntitySlot* e, CmdRec* rec, int as_move)
+{
+    CmdRec* tail = as_rec(cmd_chain_walk(e));
+    if (tail != NULL) {
+        tail->next = rec;
+    } else {
+        e->cmd_head = rec;
+    }
+    cmd_link_tail(rec);
+    if (as_move && e->etype == 2) {
+        idle_register(e); /* IdleQueueRegister for fresh move commands */
+    }
+}
+
+/* ------------------------------------------------------------------ *
+ *  Creators (CmdCreateMove/Target/Gated/Task + MinionCompanionCmd).
+ * ------------------------------------------------------------------ */
+
+void cmd_create_move(EntitySlot* e, float x, float y, int flag)
+{
+    if (e == NULL) {
+        return;
+    }
+    CmdRec* rec = (CmdRec*)cmd_alloc(0);
+    if (rec == NULL) {
+        return;
+    }
+    rec->x = x;
+    rec->y = y;
+    rec->param = flag;
+    cmd_chain_append(e, rec, 1);
+}
+
+void cmd_create_target(EntitySlot* e, void* target)
+{
+    if (e == NULL) {
+        return;
+    }
+    CmdRec* rec = (CmdRec*)cmd_alloc(2);
+    if (rec == NULL) {
+        return;
+    }
+    rec->payload = target;
+    rec->now = 0.0f;
+    cmd_chain_append(e, rec, 0);
+}
+
+void cmd_create_gated(EntitySlot* e, void* target)
+{
+    if (e == NULL) {
+        return;
+    }
+    /* Gated commands apply only when entity +0x3e0 & 0x400. */
+    if ((e->flags_3e0 & 0x400u) == 0) {
+        return;
+    }
+    CmdRec* rec = (CmdRec*)cmd_alloc(5);
+    if (rec == NULL) {
+        return;
+    }
+    rec->payload = target;
+    cmd_chain_append(e, rec, 0);
+}
+
+/* Task kind derived from the entity type (FUN_00402720's bVar3 switch). */
+static int task_kind_for(EntitySlot* e)
+{
+    switch (e->etype) {
+    case 6:  return (e->flags_3e8 & 0x80000000u) != 0 ? 0x12 : 0;
+    case 7:  return 1;
+    case 9:  return 0x10;
+    case 8:  return 3;
+    default: return 2;
+    }
+}
+
+void cmd_create_task(EntitySlot* e)
+{
+    if (e == NULL) {
+        return;
+    }
+    CmdRec* rec = (CmdRec*)cmd_alloc(3);
+    if (rec == NULL) {
+        return;
+    }
+    rec->payload = e;
+    rec->param2 = 0;
+    int kind = task_kind_for(e);
+    if (e->etype == 8) {
+        rec->extra = 8; /* type-8 trains set the extra slot */
+    }
+    cmd_link_head(rec, kind);
+    /* MinionCompanionCmd: type-6 minions get a second task (kind 0x15)
+     * linked at the tail, flagged 0x2000. */
+    if (e->etype == 6) {
+        CmdRec* rec2 = (CmdRec*)cmd_alloc(3);
+        if (rec2 != NULL) {
+            rec2->payload = e;
+            cmd_bind_kind(rec2, 0x15);
+            cmd_link_tail(rec2);
+            rec2->state |= CMD_STATE_MINION;
+        }
+    }
+}
+
+/* ------------------------------------------------------------------ *
+ *  Global tick + purge (scoped; AI execution receivers are stubs).
+ * ------------------------------------------------------------------ */
+
+void cmd_chain_purge(EntitySlot* e)
+{
+    if (e == NULL) {
+        return;
+    }
+    CmdRec* cur = as_rec(e->cmd_head);
+    e->cmd_head = NULL;
+    while (cur != NULL) {
+        CmdRec* next = as_rec(cur->next);
+        cmd_free(cur, 1);
+        cur = next;
+    }
+}
+
+void cmd_tick_global(void)
+{
+    if (!s_global_enabled) {
+        return;
+    }
+    /* The corpus's per-command processing (the AI task switch that reads
+     * +0x4c/+0x1c) is a stub boundary (finding 10 §"Still open"). Keep the
+     * structural walk; the global list is drained each tick. */
+    for (CmdRec* cur = s_global_head; cur != NULL; ) {
+        CmdRec* next = as_rec(cur->next);
+        (void)cur->state;
+        cur = next;
+    }
+    s_global_head = NULL;
+    s_global_tail = NULL;
+}
+
+/* ------------------------------------------------------------------ *
+ *  Idle queue table (IdleQueueRegister): type-2 entries.
+ * ------------------------------------------------------------------ */
+
+#define IDLE_TABLE_MAX 20
+static EntitySlot* s_idle[IDLE_TABLE_MAX];
+
+static void idle_register(EntitySlot* e)
+{
+    if (e == NULL || e->etype != 2) {
+        return;
+    }
+    int i = 0;
+    while (i < IDLE_TABLE_MAX && s_idle[i] != e) {
+        ++i;
+    }
+    if (i == IDLE_TABLE_MAX) {
+        for (i = 0; i < IDLE_TABLE_MAX; ++i) {
+            if (s_idle[i] == NULL) {
+                s_idle[i] = e;
+                break;
+            }
+        }
+    }
+    /* timestamps handled by the (future) idle poller */
+}
+
+/* ------------------------------------------------------------------ *
+ *  Queue executor (FUN_004520d0): 5-dword records, ping-pong buffered.
+ * ------------------------------------------------------------------ */
+
+#define CMD_QUEUE_CAP 64
+
+typedef struct QueueRec {
+    int        opcode;
+    EntitySlot* entity;
+    int        param;
+    int        p1;
+    int        p2;
+} QueueRec;
+
+static QueueRec s_queue[2][CMD_QUEUE_CAP];
+static int      s_queue_count[2];
+static int      s_ping; /* active producer block (DAT_004fef28) */
+
+void cmd_context_set(GameContext* ctx)
+{
+    (void)ctx;
+    s_ping = 0;
+}
+
+void cmd_enqueue(int opcode, const EntitySlot* e, int param, int p1, int p2)
+{
+    int block = s_ping;
+    if (s_queue_count[block] >= CMD_QUEUE_CAP) {
+        return;
+    }
+    QueueRec* q = &s_queue[block][s_queue_count[block]++];
+    q->opcode = opcode;
+    q->entity = (EntitySlot*)e;
+    q->param = param;
+    q->p1 = p1;
+    q->p2 = p2;
+}
+
+/* Manager-dispatch stubs (the corpus's 0x4526c0/0x452be0/… handlers). */
+static void mgr_stub(const char* what, int a)
+{
+    (void)what;
+    (void)a;
+}
+
+void cmd_queue_tick(void)
+{
+    /* 1. Producer block. The corpus's held-key pre-pass (quick-action
+     *    table DAT_004ff0d0) is a stub; records dispatch directly. */
+    int block = s_ping;
+    int count = s_queue_count[block];
+
+    /* 2. Ping-pong swap (DAT_004fef28). */
+    s_queue_count[block] = 0;
+    s_ping = !s_ping;
+
+    /* 3. The 5-dword opcode switch (finding 10 §"The queue executor"). */
+    for (int i = 0; i < count; ++i) {
+        QueueRec* q = &s_queue[block][i];
+        switch (q->opcode) {
+        case 5:
+        case 6:
+            cmd_create_move(q->entity, (float)q->p1, (float)q->p2, q->param);
+            break;
+        case 0x17:
+        case 0x1d:
+            cmd_create_task(q->entity);
+            break;
+        case 0x19:
+            cmd_create_gated(q->entity, (void*)(uintptr_t)q->param);
+            break;
+        case 0x2b:
+            cmd_create_target(q->entity, (void*)(uintptr_t)q->param);
+            break;
+        case 1:  mgr_stub("op1",  q->param); break;
+        case 3:  mgr_stub("op3",  0);        break;
+        case 4:  mgr_stub("op4",  q->param); break;
+        case 8:  mgr_stub("op8",  q->param); break;
+        case 9:  mgr_stub("op9",  q->param); break;
+        case 0xb: mgr_stub("opb",  0);       break;
+        case 0xc: mgr_stub("opc",  q->param); break;
+        case 0x13: mgr_stub("op13", q->param); break;
+        case 0x15: mgr_stub("op15", q->param); break;
+        case 0x1b: mgr_stub("op1b", q->param); break;
+        case 0x1f: mgr_stub("op1f", 0);       break;
+        case 0x21: mgr_stub("op21", q->param); break;
+        case 0x23: mgr_stub("op23", q->param); break;
+        case 0x25: mgr_stub("op25", q->param); break;
+        case 0x2d: mgr_stub("op2d", 0);       break;
+        case 0x34: mgr_stub("op34", q->param); break;
+        case 0x36: mgr_stub("op36", q->param); break;
+        case 0x40: mgr_stub("op40", 0);       break;
+        default:   mgr_stub("unknown", q->opcode); break;
+        }
+    }
+}

@@ -17,36 +17,50 @@ int entity_stride(int type)
     }
 }
 
+/* Table index for a corpus entity-type code (placement kinds 1..4 map to
+ * the matching table; 5..9 share the last). */
+static int entity_tab(int type)
+{
+    return (type <= ENTITY_TYPES) ? type - 1 : ENTITY_TYPES - 1;
+}
+
 int entity_count(GameContext* ctx, int type)
 {
-    if (ctx == NULL || type < 1 || type > ENTITY_TYPES) {
+    if (ctx == NULL || type < 1 || type > 9) {
         return 0;
     }
-    return ctx->entity_count[type - 1];
+    return ctx->entity_count[entity_tab(type)];
 }
 
 const EntitySlot* entity_at(GameContext* ctx, int type, int index)
 {
-    if (ctx == NULL || type < 1 || type > ENTITY_TYPES
-        || index < 0 || index >= ctx->entity_count[type - 1]) {
+    if (ctx == NULL || type < 1 || type > 9) {
         return NULL;
     }
-    return &ctx->entity[type - 1][index];
+    int tab = entity_tab(type);
+    if (index < 0 || index >= ctx->entity_count[tab]) {
+        return NULL;
+    }
+    return &ctx->entity[tab][index];
 }
 
 int entity_create(GameContext* ctx, int type, const char* name,
                   float x, float y, float z, float rot)
 {
-    if (ctx == NULL || type < 1 || type > ENTITY_TYPES) {
+    if (ctx == NULL || type < 1 || type > 9) {
         return -1;
     }
-    int* cnt = &ctx->entity_count[type - 1];
+    /* Corpus placement kinds 1..4 map to the four tables; other entity-type
+     * codes (6 minion, 7/8/9) share the last table. */
+    int ti = (type <= ENTITY_TYPES) ? type - 1 : ENTITY_TYPES - 1;
+    int* cnt = &ctx->entity_count[ti];
     if (*cnt >= ENTITY_CAP) {
         return -1;
     }
-    EntitySlot* slot = &ctx->entity[type - 1][*cnt];
+    EntitySlot* slot = &ctx->entity[ti][*cnt];
     __builtin_memset(slot, 0, sizeof(*slot));
     slot->type = type;
+    slot->etype = type;
     slot->x = x;
     slot->y = y;
     slot->z = z;

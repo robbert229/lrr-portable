@@ -14,6 +14,7 @@ game_lib = static_library('game',
   'savegame.cpp',
   'mission.cpp',
   'entity.cpp',
+  'cmd.cpp',
   'util.cpp',
   include_directories : gods98_incs,
   install : false)
@@ -32,7 +33,8 @@ if get_option('platform') == 'native'
                  ['objective', 'test_objective.cpp'],
                  ['savegame', 'test_savegame.cpp'],
                  ['mission', 'test_mission.cpp'],
-                 ['entity', 'test_entity.cpp']]
+                 ['entity', 'test_entity.cpp'],
+                 ['cmd', 'test_cmd.cpp']]
     test_name = exe[0]
     t = executable(test_name + '_test', exe[1],
       include_directories : gods98_incs,

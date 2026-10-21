@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "game/game.hpp"
+#include "game/cmd.hpp"
 #include "game/entity.hpp"
 #include "game/level.hpp"
 #include "game/mission.hpp"
@@ -57,6 +58,8 @@ int LegorrrRun(void)
     /* --- Game layer: config DB + level load (findings 07/12/22) ---------- */
     GameContext game;
     game_context_init(&game);
+    cmd_init();
+    cmd_context_set(&game);
     game.cfg = block_open("Lego.cfg");
     const char* level_name = env_get("LEGORRR_LEVEL", "Level01");
     if (game.cfg != NULL) {
@@ -263,9 +266,10 @@ int LegorrrRun(void)
         if (rock_x > WINDOW_W - 64) { rock_x = WINDOW_W - 64; }
         if (rock_y > WINDOW_H - 64) { rock_y = WINDOW_H - 64; }
 
-        /* Mission plumbing: per-frame progress bridge + objective state
-         * machine (findings 09/22). */
+        /* Mission plumbing: per-frame progress bridge, command-queue
+         * executor, and objective state machine (findings 09/10/22). */
         if (game.level != NULL) {
+            cmd_queue_tick();
             int done = mission_update(&game);
             if (done != 0) {
                 fprintf(log, "frameloop: tasks completed this frame (mask 0x%x)\n",
