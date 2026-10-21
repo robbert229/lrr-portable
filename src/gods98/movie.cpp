@@ -1,0 +1,1007 @@
+// SPDX-License-Identifier: LGPL-3.0-or-later
+/* gods98 engine — AVI movie module (see movie.hpp for the design).
+ *
+ * The FFmpeg binding: no headers, no link dependency. The four versioned
+ * shared libraries are dlopen'd on first use and the ~26-symbol subset is
+ * dlsym'ed once into a table. All library structs are opaque handles except
+ * two deliberately tiny reads:
+ *
+ *   - the AVFrame *prefix* (data[8]/linesize[8]/width/height/nb_samples/
+ *     format) — these members have sat at the top of the struct untouched
+ *     since FFmpeg 0.x and are read by every binding in existence;
+ *   - `sample_rate` in AVCodecParameters (offset 0x88 on the FFmpeg >= 7
+ *     layout, after the 32-byte AVChannelLayout) — sanity-checked against
+ *     8k..192k with a 22050 Hz fallback, and pinned by `movie_test --real`.
+ *
+ * Everything else (format context, codec contexts, packets, sws) is opaque.
+ * The library-strict layering is why the version gate reads libavcodec
+ * >= 61 (FFmpeg 7+): older builds carry the deprecated `channels` fields
+ * that shift the sample-rate offset.
+ */
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "movie.hpp"
+#include "resource.hpp"
+
+/* ------------------------------------------------------------------ *
+ *  FFmpeg runtime binding (native backend only)
+ * ------------------------------------------------------------------ */
+#if defined(LEGORRR_BACKEND_MINIWIN)
+
+#include <dlfcn.h>
+#include <dirent.h>
+#include <sys/stat.h>
+
+typedef struct ff_rat { int num, den; } ff_rat;
+
+/* AVFormatContext prefix — nb_streams/streams at the start of the struct.
+ * Offsets verified empirically against libavformat 62 (FFmpeg 8.1) on this
+ * box; sanity-checked at use so a layout drift fails loudly, not corruptly:
+ *   av_find_best_stream on this build returns the *index* (not a pointer)
+ *   and additionally skips audio streams via an internal codecpar gate, so
+ *   stream selection is walked manually instead. */
+typedef struct ff_fmt {
+    char   _pad[0x2c];
+    int    nb_streams;   /* 0x2c */
+    void** streams;      /* 0x30 */
+} ff_fmt;
+
+/* AVStream prefix — verified leading members: index@0, id@4, codecpar@0x10
+ * (this build keeps a private field between id and codecpar). */
+typedef struct ff_stream {
+    int    index;
+    int    id;
+    int    _pad0;        /* 0x08 */
+    int    _pad1;        /* 0x0c */
+    void*  codecpar;     /* 0x10 — codecpar->codec_type@0, codec_id@4 */
+} ff_stream;
+
+/* AVCodecParameters, FFmpeg >= 7 layout. `sample_rate` at 0x88: every field
+ * up to video_delay (0x60) is a fixed set of ints/enums; then the
+ * 32-byte AVChannelLayout (0x68..0x88); then sample_rate. See header. */
+typedef struct ff_codecpar {
+    int      codec_type;
+    int      codec_id;
+    uint32_t codec_tag;
+    void*    extradata;
+    int      extradata_size;
+    int      format;
+    int64_t  bit_rate;
+    int      bits_per_coded_sample;
+    int      bits_per_raw_sample;
+    int      profile;
+    int      level;
+    int      width;
+    int      height;
+    ff_rat   sample_aspect_ratio;
+    int      field_order;
+    int      color_range;
+    int      color_primaries;
+    int      color_trc;
+    int      color_space;
+    int      chroma_location;
+    int      video_delay;
+    /* AVChannelLayout ch_layout (32 bytes, FFmpeg >= 7) */
+    int      ch_order;
+    int      ch_nb;
+    int64_t  ch_map;
+    int      ch_mask;
+    void*    ch_opaque;
+    /* 0x88 */
+    int      sample_rate;      /* <-- offset 136 */
+    int      block_align;
+    int      frame_size;
+    int      initial_padding;
+    int      trailing_padding;
+    int      seek_preroll;
+} ff_codecpar;
+
+/* AVFrame prefix — data/linesize/width/height/nb_samples/format are the
+ * stable public head of the struct; nothing below format is read. */
+typedef struct ff_frame {
+    uint8_t* data[8];
+    int      linesize[8];
+    uint8_t** extended_data;
+    int      width, height;
+    int      nb_samples;
+    int      format;
+} ff_frame;
+
+/* AVPacket prefix — buf/pts/dts/data/size/stream_index/flags are the
+ * stable public head of the struct (frozen since FFmpeg 3.x). */
+typedef struct ff_pkt {
+    void*    buf;          /* AVBufferRef* */
+    int64_t  pts;
+    int64_t  dts;
+    uint8_t* data;
+    int      size;
+    int      stream_index; /* offset 0x24 */
+    int      flags;
+} ff_pkt;
+
+/* --- opaque library types ----------------------------------------------- */
+typedef struct FFFormatCtx FFFormatCtx;
+typedef struct FFCtx      FFCtx;   /* AVCodecContext */
+typedef struct FFPacket    FFPacket;
+typedef struct FFSws      FFSws;
+typedef struct FFCodec    FFCodec;
+
+/* Decode error / pacing constants (mirror libavutil/error.h for the cases
+ * we branch on). av_read_frame uses negative error codes; EAGAIN is the
+ * standard "need more input" signal. */
+#define FF_EAGAIN (-11)   /* -EAGAIN */
+
+typedef int          (*f_get_pix_fmt)(const char*);
+
+typedef int          (*f_open_in)(FFFormatCtx**, const char*, void*, void*);
+typedef int          (*f_find_info)(FFFormatCtx*, void*);
+typedef void         (*f_close_in)(FFFormatCtx**);
+typedef int          (*f_read_frame)(FFFormatCtx*, FFPacket*);
+typedef ff_rat       (*f_guess_rate)(FFFormatCtx*, void*, ff_frame*);
+typedef unsigned     (*f_codec_version)(void);
+typedef const FFCodec* (*f_find_decoder)(int);
+typedef FFCtx*       (*f_alloc_ctx3)(const FFCodec*);
+typedef int          (*f_params_to_ctx)(FFCtx*, const ff_codecpar*);
+typedef int          (*f_open2)(FFCtx*, const FFCodec*, void*);
+typedef int          (*f_send_pkt)(FFCtx*, const FFPacket*);
+typedef int          (*f_recv_frame)(FFCtx*, ff_frame*);
+typedef void         (*f_free_ctx)(FFCtx**);
+typedef FFPacket*    (*f_pkt_alloc)(void);
+typedef void         (*f_pkt_free)(FFPacket**);
+typedef void         (*f_pkt_unref)(FFPacket*);
+typedef ff_frame*    (*f_frame_alloc)(void);
+typedef void         (*f_frame_free)(ff_frame**);
+typedef void         (*f_frame_unref)(ff_frame*);
+typedef int          (*f_bytes_per_sample)(int);
+typedef int          (*f_sample_fmt_planar)(int);
+typedef void*        (*f_sws_get)(int, int, int, int, int, int, int,
+                                 void*, const double*, const double*);
+typedef int          (*f_sws_scale)(void*, const uint8_t* const*, const int[],
+                                    int, int, uint8_t* const[], const int[]);
+typedef void         (*f_sws_free)(void*);
+
+static struct {
+    int ok;
+    int codec_major;
+    void* fmt_h;
+    void* codec_h;
+    void* util_h;
+    void* scale_h;
+    f_open_in          avformat_open_input;
+    f_find_info        avformat_find_stream_info;
+    f_close_in         avformat_close_input;
+    f_read_frame       av_read_frame;
+    f_guess_rate       av_guess_frame_rate;
+    f_codec_version    avcodec_version;
+    f_find_decoder     avcodec_find_decoder;
+    f_alloc_ctx3       avcodec_alloc_context3;
+    f_params_to_ctx    avcodec_parameters_to_context;
+    f_open2            avcodec_open2;
+    f_send_pkt         avcodec_send_packet;
+    f_recv_frame       avcodec_receive_frame;
+    f_free_ctx         avcodec_free_context;
+    f_pkt_alloc        av_packet_alloc;
+    f_pkt_free         av_packet_free;
+    f_pkt_unref        av_packet_unref;
+    f_frame_alloc      av_frame_alloc;
+    f_frame_free       av_frame_free;
+    f_frame_unref      av_frame_unref;
+    f_bytes_per_sample av_get_bytes_per_sample;
+    f_sample_fmt_planar av_sample_fmt_is_planar;
+    f_get_pix_fmt     av_get_pix_fmt;
+    f_sws_get          sws_getContext;
+    f_sws_scale        sws_scale;
+    f_sws_free         sws_freeContext;
+} ff;
+
+static const char* const k_fmt_libs[] = {
+    "libavformat.so.63", "libavformat.so.62", "libavformat.so.61",
+    "libavformat.so", NULL
+};
+static const char* const k_codec_libs[] = {
+    "libavcodec.so.63", "libavcodec.so.62", "libavcodec.so.61",
+    "libavcodec.so", NULL
+};
+static const char* const k_util_libs[] = {
+    "libavutil.so.61", "libavutil.so.60", "libavutil.so.59",
+    "libavutil.so", NULL
+};
+static const char* const k_scale_libs[] = {
+    "libswscale.so.9", "libswscale.so.8", "libswscale.so.7",
+    "libswscale.so", NULL
+};
+
+#define FF_NEED(ffname, sym, handle)                                        \
+    do {                                                                    \
+        *(void**)(&(ffname)->sym) = dlsym((handle), #sym);                  \
+        if ((ffname)->sym == NULL) {                                        \
+            fprintf(stderr, "movie: dlsym(%s) failed: %s\n", #sym,          \
+                    dlerror());                                             \
+            return 0;                                                       \
+        }                                                                   \
+    } while (0)
+
+static void ff_dlopen_close(void)
+{
+    if (ff.fmt_h != NULL)   { dlclose(ff.fmt_h);   ff.fmt_h   = NULL; }
+    if (ff.codec_h != NULL) { dlclose(ff.codec_h); ff.codec_h = NULL; }
+    if (ff.util_h != NULL)  { dlclose(ff.util_h);  ff.util_h  = NULL; }
+    if (ff.scale_h != NULL) { dlclose(ff.scale_h); ff.scale_h = NULL; }
+}
+
+static int ff_dlopen_open(const char* const* names, void** handle_out)
+{
+    for (int i = 0; names[i] != NULL; ++i) {
+        void* h = dlopen(names[i], RTLD_LAZY | RTLD_LOCAL);
+        if (h != NULL) {
+            *handle_out = h;
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static int ff_bind(void)
+{
+    if (ff.ok) {
+        return 1;
+    }
+    if (!ff_dlopen_open(k_fmt_libs, &ff.fmt_h)
+        || !ff_dlopen_open(k_codec_libs, &ff.codec_h)
+        || !ff_dlopen_open(k_util_libs, &ff.util_h)
+        || !ff_dlopen_open(k_scale_libs, &ff.scale_h)) {
+        fprintf(stderr, "movie: FFmpeg runtime libs not found"
+                        " (libavformat/libavcodec/libavutil/libswscale) — "
+                        "movie playback disabled\n");
+        ff_dlopen_close();
+        return 0;
+    }
+
+    FF_NEED(&ff, avcodec_version, ff.codec_h);
+    ff.codec_major = (int)(ff.avcodec_version() >> 16);
+    if (ff.codec_major < 61) {
+        fprintf(stderr, "movie: FFmpeg %d too old (need libavcodec >= 61, "
+                        "FFmpeg 7+) — movie playback disabled\n",
+                ff.codec_major);
+        ff_dlopen_close();
+        return 0;
+    }
+
+    FF_NEED(&ff, avformat_open_input, ff.fmt_h);
+    FF_NEED(&ff, avformat_find_stream_info, ff.fmt_h);
+    FF_NEED(&ff, avformat_close_input, ff.fmt_h);
+    FF_NEED(&ff, av_read_frame, ff.fmt_h);
+    FF_NEED(&ff, av_guess_frame_rate, ff.fmt_h);
+    FF_NEED(&ff, avcodec_find_decoder, ff.codec_h);
+    FF_NEED(&ff, avcodec_alloc_context3, ff.codec_h);
+    FF_NEED(&ff, avcodec_parameters_to_context, ff.codec_h);
+    FF_NEED(&ff, avcodec_open2, ff.codec_h);
+    FF_NEED(&ff, avcodec_send_packet, ff.codec_h);
+    FF_NEED(&ff, avcodec_receive_frame, ff.codec_h);
+    FF_NEED(&ff, avcodec_free_context, ff.codec_h);
+    FF_NEED(&ff, av_packet_alloc, ff.codec_h);
+    FF_NEED(&ff, av_packet_free, ff.codec_h);
+    FF_NEED(&ff, av_packet_unref, ff.codec_h);
+    FF_NEED(&ff, av_frame_alloc, ff.codec_h);
+    FF_NEED(&ff, av_frame_free, ff.codec_h);
+    FF_NEED(&ff, av_frame_unref, ff.codec_h);
+    FF_NEED(&ff, av_get_bytes_per_sample, ff.util_h);
+    FF_NEED(&ff, av_sample_fmt_is_planar, ff.util_h);
+    FF_NEED(&ff, av_get_pix_fmt, ff.util_h);
+    FF_NEED(&ff, sws_getContext, ff.scale_h);
+    FF_NEED(&ff, sws_scale, ff.scale_h);
+    FF_NEED(&ff, sws_freeContext, ff.scale_h);
+
+    ff.ok = 1;
+    return 1;
+}
+
+int movie_available(void)
+{
+    return ff_bind();
+}
+
+void movie_unload(void)
+{
+    ff_dlopen_close();
+    memset(&ff, 0, sizeof(ff));
+}
+
+/* --- Movie state -------------------------------------------------------- */
+
+struct Movie {
+    int        ok;
+    int        eof;              /* video stream finished (flushed too)   */
+    int        v_flushed;        /* video decoder flushed at EOF           */
+    int        a_flushed;        /* audio decoder flushed at EOF           */
+    int        has_pending;      /* first frame decoded (info prime) and
+                                    still waiting for the caller            */
+    int        width, height;    /* from the first decoded frame           */
+    int        fps_num, fps_den; /* from av_guess_frame_rate               */
+    int        audio_rate;       /* from the audio stream codecpar         */
+
+    FFFormatCtx* fmt;
+    void*      vs;               /* AVStream* video (prefix-cast to read)  */
+    void*      as;               /* AVStream* audio (or NULL)              */
+    int        vstream;          /* packet stream index for video          */
+    int        astream;          /* packet stream index for audio, or -1   */
+    FFCtx*     vctx;             /* video codec context                    */
+    FFCtx*     actx;             /* audio codec context (or NULL)          */
+    FFPacket*  pkt;
+    ff_frame*  vframe;
+    ff_frame*  aframe;
+    FFSws*     sws;              /* video -> RGBA converter                 */
+
+    uint8_t*   rgba;             /* decoded frame buffer (RGBA32)          */
+    int        rgba_pitch;
+
+    int16_t*   audio;            /* accumulated interleaved stereo s16     */
+    int        audio_cap;        /* capacity (frames)                       */
+    int        audio_pos;        /* fill position (frames)                  */
+};
+
+static void movie_audio_reset(struct Movie* m)
+{
+    m->audio_pos = 0;
+}
+
+static void movie_audio_append(struct Movie* m, const int16_t* lr, int frames)
+{
+    if (frames <= 0) {
+        return;
+    }
+    int need = m->audio_pos + frames;
+    if (need > m->audio_cap) {
+        int cap = m->audio_cap ? m->audio_cap : 2048;
+        while (cap < need) {
+            cap *= 2;
+        }
+        int16_t* nb = (int16_t*)realloc(m->audio, (size_t)cap * 2 * 2);
+        if (nb == NULL) {
+            return; /* drop on OOM rather than corrupt */
+        }
+        m->audio = nb;
+        m->audio_cap = cap;
+    }
+    memcpy(m->audio + (size_t)m->audio_pos * 2, lr, (size_t)frames * 2 * 2);
+    m->audio_pos += frames;
+}
+
+/* Normalize one decoded audio frame to interleaved s16 stereo (the seam's
+ * transport). Supports the shipped formats (s16 packed mono/stereo, s16
+ * planar, u8 packed mono); anything else is dropped. */
+static void movie_audio_feed(struct Movie* m, ff_frame* af)
+{
+    int nb = af->nb_samples;
+    int fmt = af->format;
+    int bytes = ff.av_get_bytes_per_sample(fmt);
+    if (nb <= 0 || bytes < 1) {
+        return;
+    }
+    int planar = ff.av_sample_fmt_is_planar(fmt);
+
+    /* Channel count, derived from the frame's buffer geometry (no struct
+     * layout reads): planar has one plane per channel; packed lays
+     * nb_samples*channels into data[0] so channels = linesize/(nb*bytes). */
+    int planes = 0;
+    for (int i = 0; i < 8; ++i) {
+        if (af->data[i] != NULL) {
+            planes = i + 1;
+        }
+    }
+    int ch = planar ? planes : 0;
+    if (!planar && nb > 0 && af->linesize[0] >= nb * bytes) {
+        int c = af->linesize[0] / (nb * bytes);
+        ch = (c >= 1 && c <= 8) ? c : planes;
+    }
+    if (ch < 1) {
+        ch = 1;
+    }
+    if (ch > 2) {
+        ch = 2; /* downmix to the first two channels */
+    }
+
+    if (planar && bytes == 2) {
+        const int16_t* L = (const int16_t*)af->data[0];
+        const int16_t* R = (const int16_t*)(planes >= 2 ? af->data[1]
+                                                         : af->data[0]);
+        int n = nb, off = 0;
+        while (n > 0) {
+            int c = n > 1024 ? 1024 : n;
+            int16_t tmp[2048];
+            for (int i = 0; i < c; ++i) {
+                tmp[2 * i]     = L[off + i];
+                tmp[2 * i + 1] = R[off + i];
+            }
+            movie_audio_append(m, tmp, c);
+            off += c;
+            n -= c;
+        }
+    } else if (!planar && bytes == 2 && ch == 2) {
+        /* already interleaved stereo s16 — pass through */
+        movie_audio_append(m, (const int16_t*)af->data[0], nb);
+    } else if (!planar && bytes == 2 && ch == 1) {
+        /* mono s16 -> duplicated to both channels */
+        const int16_t* s = (const int16_t*)af->data[0];
+        int n = nb, off = 0;
+        while (n > 0) {
+            int c = n > 1024 ? 1024 : n;
+            int16_t tmp[2048];
+            for (int i = 0; i < c; ++i) {
+                tmp[2 * i] = tmp[2 * i + 1] = s[off + i];
+            }
+            movie_audio_append(m, tmp, c);
+            off += c;
+            n -= c;
+        }
+    } else if (!planar && bytes == 1 && ch == 1) {
+        /* u8 mono -> s16 (defensive; shipped codecs are s16) */
+        const uint8_t* s = (const uint8_t*)af->data[0];
+        int n = nb, off = 0;
+        while (n > 0) {
+            int c = n > 1024 ? 1024 : n;
+            int16_t tmp[2048];
+            for (int i = 0; i < c; ++i) {
+                int16_t v = (int16_t)(((int)s[off + i] - 128) << 8);
+                tmp[2 * i] = tmp[2 * i + 1] = v;
+            }
+            movie_audio_append(m, tmp, c);
+            off += c;
+            n -= c;
+        }
+    }
+    /* other layouts: dropped */
+}
+
+/* Produce the current video frame in m->rgba (RGBA32 at the frame's native
+ * size) and fill `out` with it plus the audio FIFO. Leaves the FIFO position
+ * in place (the caller resets it when it consumes the media). */
+static int movie_present(struct Movie* m, MovieOut* out)
+{
+    ff_frame* vf = m->vframe;
+    if (vf->width != m->width || vf->height != m->height) {
+        if (m->sws != NULL) {
+            ff.sws_freeContext(m->sws);
+            m->sws = NULL;
+        }
+        m->width = vf->width;
+        m->height = vf->height;
+    }
+    int w = m->width, h = m->height;
+    if (w <= 0 || h <= 0) {
+        return -1;
+    }
+    if (m->rgba == NULL) {
+        m->rgba = (uint8_t*)malloc((size_t)w * h * 4);
+    } else if (m->rgba_pitch != w * 4) {
+        uint8_t* nb = (uint8_t*)realloc(m->rgba, (size_t)w * h * 4);
+        if (nb == NULL) {
+            return -1;
+        }
+        m->rgba = nb;
+    }
+    if (m->rgba == NULL) {
+        return -1;
+    }
+    m->rgba_pitch = w * 4;
+
+    if (m->sws == NULL) {
+        /* Destination format resolved by name — the AV_PIX_FMT enum values
+         * are not stable across FFmpeg versions (in 8.x AV_PIX_FMT_NV12 took
+         * the slot that was RGBA in 7.x), so hard-coding a number is a real
+         * hazard. av_get_pix_fmt("rgba") returns the build's value, and the
+         * surface's byte order R,G,B,A matches AV_PIX_FMT_RGBA. */
+        int dstfmt = ff.av_get_pix_fmt("rgba");
+        if (dstfmt < 0 || vf->format < 0) {
+            return -1;
+        }
+        m->sws = (FFSws*)ff.sws_getContext(w, h, vf->format, w, h, dstfmt,
+                                           2 /* SWS_BILINEAR */, NULL, NULL,
+                                           NULL);
+    }
+    if (m->sws != NULL) {
+        uint8_t* dst[1] = { m->rgba };
+        int dstp[1] = { w * 4 };
+        ff.sws_scale(m->sws, (const uint8_t* const*)vf->data, vf->linesize,
+                     0, h, dst, dstp);
+    }
+
+    out->rgba = m->rgba;
+    out->rgba_pitch = m->rgba_pitch;
+    out->audio = m->audio;
+    out->audio_frames = m->audio_pos;
+    out->audio_rate = m->audio_rate;
+    return 0;
+}
+
+/* Drain the video decoder after av_read_frame hit EOF: send NULL, then
+ * receive buffered frames one at a time. Returns 1 on a delivered frame,
+ * 0 at true end, -1 on error. */
+static int movie_flush_video(struct Movie* m, MovieOut* out)
+{
+    if (!m->v_flushed) {
+        ff.avcodec_send_packet(m->vctx, NULL);
+        m->v_flushed = 1;
+    }
+    int r = ff.avcodec_receive_frame(m->vctx, m->vframe);
+    if (r == 0) {
+        return movie_present(m, out) == 0 ? 1 : -1;
+    }
+    return 0;
+}
+
+static void movie_flush_audio(struct Movie* m)
+{
+    if (m->actx == NULL || m->a_flushed) {
+        return;
+    }
+    ff.avcodec_send_packet(m->actx, NULL);
+    m->a_flushed = 1;
+    while (ff.avcodec_receive_frame(m->actx, m->aframe) == 0) {
+        movie_audio_feed(m, m->aframe);
+    }
+}
+
+/* The real decode loop: step to the next video frame, accumulating its
+ * audio. Returns 0 framed (out filled), 1 end-of-stream, -1 error. */
+static int movie_decode(struct Movie* m, MovieOut* out)
+{
+    if (m->eof) {
+        return 1;
+    }
+    movie_audio_reset(m);
+    for (;;) {
+        int r = ff.av_read_frame(m->fmt, m->pkt);
+        if (r < 0) {
+            int vr = movie_flush_video(m, out);
+            movie_flush_audio(m);
+            if (vr == 1) {
+                return 0;
+            }
+            m->eof = 1;
+            return 1;
+        }
+        int sidx = ((ff_pkt*)m->pkt)->stream_index;
+        if (sidx == m->vstream) {
+            int e = ff.avcodec_send_packet(m->vctx, m->pkt);
+            ff.av_frame_unref(m->vframe);
+            if (e == 0 || e == FF_EAGAIN) {
+                int rr = ff.avcodec_receive_frame(m->vctx, m->vframe);
+                if (rr == 0) {
+                    ff.av_packet_unref(m->pkt);
+                    return movie_present(m, out);
+                }
+                /* EAGAIN (or error): read more packets before a frame
+                 * emerges; a hard error still surfaces as decode failure. */
+            }
+            ff.av_packet_unref(m->pkt);
+            if (e != 0 && e != FF_EAGAIN) {
+                return -1;
+            }
+        } else if (m->actx != NULL && sidx == m->astream) {
+            int e = ff.avcodec_send_packet(m->actx, m->pkt);
+            if (e == 0 || e == FF_EAGAIN) {
+                while (ff.avcodec_receive_frame(m->actx, m->aframe) == 0) {
+                    movie_audio_feed(m, m->aframe);
+                }
+            }
+            ff.av_packet_unref(m->pkt);
+        } else {
+            ff.av_packet_unref(m->pkt);
+        }
+    }
+}
+
+int movie_next(struct Movie* m, MovieOut* out)
+{
+    memset(out, 0, sizeof(*out));
+    if (m == NULL || !m->ok) {
+        return 1;
+    }
+    if (m->has_pending) {
+        /* The prime (info) decode is still un-consumed — hand it over. */
+        m->has_pending = 0;
+        out->rgba = m->rgba;
+        out->rgba_pitch = m->rgba_pitch;
+        out->audio = m->audio;
+        out->audio_frames = m->audio_pos;
+        out->audio_rate = m->audio_rate;
+        movie_audio_reset(m);
+        return m->eof ? 1 : 0;
+    }
+    return movie_decode(m, out);
+}
+
+Movie* movie_open_path(const char* os_path)
+{
+    if (!ff_bind() || os_path == NULL || os_path[0] == '\0') {
+        return NULL;
+    }
+    FFFormatCtx* fmt = NULL;
+    if (ff.avformat_open_input(&fmt, os_path, NULL, NULL) < 0) {
+        fprintf(stderr, "movie: cannot open %s (FFmpeg)\n", os_path);
+        return NULL;
+    }
+    if (ff.avformat_find_stream_info(fmt, NULL) < 0) {
+        fprintf(stderr, "movie: find_stream_info failed for %s\n", os_path);
+        ff.avformat_close_input(&fmt);
+        return NULL;
+    }
+
+    struct Movie* m = (struct Movie*)calloc(1, sizeof(*m));
+    if (m == NULL) {
+        ff.avformat_close_input(&fmt);
+        return NULL;
+    }
+    m->fmt = fmt;
+    m->astream = -1;
+
+    /* Stream selection: walk ic->streams directly (this build's
+     * av_find_best_stream returns an index — not a pointer — and skips
+     * audio streams through an internal codecpar gate). Field offsets are
+     * verified above in the prefix-struct comments and sanity-checked. */
+    ff_fmt* f = (ff_fmt*)fmt;
+    if (f->nb_streams <= 0 || f->nb_streams > 16) {
+        fprintf(stderr, "movie: format context stream count %d out of range "
+                        "(layout drift?)\n", f->nb_streams);
+        movie_close(m);
+        return NULL;
+    }
+    const int AVMEDIA_TYPE_VIDEO = 0, AVMEDIA_TYPE_AUDIO = 1;
+    for (int i = 0; i < f->nb_streams; ++i) {
+        ff_stream* st = (ff_stream*)f->streams[i];
+        if (st == NULL || st->codecpar == NULL) {
+            continue;
+        }
+        ff_codecpar* par = (ff_codecpar*)st->codecpar;
+        if (par->codec_type < 0 || par->codec_type > 4 || par->codec_id <= 0) {
+            continue; /* layout drift or a stream we cannot describe */
+        }
+        const FFCodec* dec = ff.avcodec_find_decoder(par->codec_id);
+        if (par->codec_type == AVMEDIA_TYPE_VIDEO && m->vs == NULL) {
+            if (dec == NULL) {
+                fprintf(stderr, "movie: no decoder for video codec id 0x%x in "
+                                "%s\n", par->codec_id, os_path);
+                movie_close(m);
+                return NULL;
+            }
+            m->vs = st;
+            m->vstream = i; /* streams-array position == packet stream index
+                             * for the demuxers we care about (AVI sets
+                             * pkt->stream_index from the array position) */
+            m->vctx = ff.avcodec_alloc_context3(dec);
+            if (m->vctx == NULL
+                || ff.avcodec_parameters_to_context(m->vctx, par) < 0
+                || ff.avcodec_open2(m->vctx, dec, NULL) < 0) {
+                fprintf(stderr, "movie: video codec setup failed for %s\n",
+                        os_path);
+                movie_close(m);
+                return NULL;
+            }
+        } else if (par->codec_type == AVMEDIA_TYPE_AUDIO && m->as == NULL) {
+            m->as = st;
+            m->astream = i;
+            m->audio_rate = par->sample_rate;
+            if (m->audio_rate < 8000 || m->audio_rate > 192000) {
+                /* layout read outside sanity — never trust it for pacing */
+                m->audio_rate = 22050;
+            }
+            if (dec != NULL) {
+                m->actx = ff.avcodec_alloc_context3(dec);
+                if (m->actx != NULL) {
+                    if (ff.avcodec_parameters_to_context(m->actx, par) < 0
+                        || ff.avcodec_open2(m->actx, dec, NULL) < 0) {
+                        ff.avcodec_free_context(&m->actx);
+                        m->actx = NULL;
+                        m->astream = -1;
+                        m->audio_rate = 0;
+                    }
+                }
+            }
+        }
+        /* keep scanning: audio (if any) comes after video in an AVI */
+    }
+    if (m->vs == NULL) {
+        fprintf(stderr, "movie: no video stream in %s\n", os_path);
+        movie_close(m);
+        return NULL;
+    }
+
+    m->pkt = ff.av_packet_alloc();
+    m->vframe = ff.av_frame_alloc();
+    m->aframe = ff.av_frame_alloc();
+    if (m->pkt == NULL || m->vframe == NULL || m->aframe == NULL) {
+        movie_close(m);
+        return NULL;
+    }
+
+    ff_rat fr = ff.av_guess_frame_rate(fmt, m->vs, NULL);
+    m->fps_num = fr.num > 0 ? fr.num : 15;
+    m->fps_den = fr.den > 0 ? fr.den : 1;
+
+    m->ok = 1;
+    return m;
+}
+
+void movie_close(struct Movie* m)
+{
+    if (m == NULL) {
+        return;
+    }
+    if (m->sws != NULL) {
+        ff.sws_freeContext(m->sws);
+    }
+    if (m->vctx != NULL) {
+        ff.avcodec_free_context(&m->vctx);
+    }
+    if (m->actx != NULL) {
+        ff.avcodec_free_context(&m->actx);
+    }
+    if (m->pkt != NULL) {
+        ff.av_packet_free(&m->pkt);
+    }
+    if (m->vframe != NULL) {
+        ff.av_frame_free(&m->vframe);
+    }
+    if (m->aframe != NULL) {
+        ff.av_frame_free(&m->aframe);
+    }
+    if (m->fmt != NULL) {
+        ff.avformat_close_input(&m->fmt);
+    }
+    free(m->rgba);
+    free(m->audio);
+    free(m);
+}
+
+int movie_info(struct Movie* m, MovieInfo* out)
+{
+    memset(out, 0, sizeof(*out));
+    if (m == NULL || !m->ok) {
+        return -1;
+    }
+    if (!m->has_pending && !m->eof && m->width == 0) {
+        /* Prime: pull the first frame so dimensions/audio exist before the
+         * caller presents anything. The result is kept for the next
+         * movie_next. */
+        MovieOut first;
+        memset(&first, 0, sizeof(first));
+        int r = movie_decode(m, &first);
+        if (r == 0) {
+            m->has_pending = 1;
+        } else if (r == 1) {
+            m->eof = 1;
+        } else {
+            m->ok = 0;
+        }
+    }
+    out->width = m->width;
+    out->height = m->height;
+    out->fps_num = m->fps_num;
+    out->fps_den = m->fps_den;
+    out->audio_rate = m->audio_rate;
+    out->audio_channels = m->audio_rate > 0 ? 2 : 0;
+    return m->ok ? 0 : -1;
+}
+
+#else /* !LEGORRR_BACKEND_MINIWIN — winapi reference build: the real game's
+         AVIFIL32 plays movies on Windows; this module stays a stub there. */
+
+int movie_available(void) { return 0; }
+void movie_unload(void) { }
+Movie* movie_open_path(const char* os_path) { (void)os_path; return NULL; }
+void movie_close(Movie* m) { (void)m; }
+int movie_info(Movie* m, MovieInfo* out) { (void)m; (void)out; return -1; }
+int movie_next(Movie* m, MovieOut* out) { (void)m; (void)out; return 1; }
+
+#endif /* LEGORRR_BACKEND_MINIWIN */
+
+/* ------------------------------------------------------------------ *
+ *  Platform-neutral helpers: pixels, config surface, filesystem.
+ *  (compiled on every backend)
+ * ------------------------------------------------------------------ */
+
+void movie_scale_rgba(const uint8_t* src, int sw, int sh, int spitch,
+                      uint8_t* dst, int dw, int dh, int dpitch)
+{
+    if (src == NULL || dst == NULL || sw <= 0 || sh <= 0 || dw <= 0
+        || dh <= 0 || dpitch < dw * 4 || spitch < sw * 4) {
+        return;
+    }
+    for (int y = 0; y < dh; ++y) {
+        int sy = (int)(((int64_t)y * sh) / dh);
+        if (sy >= sh) {
+            sy = sh - 1;
+        }
+        const uint8_t* s = src + (size_t)sy * spitch;
+        uint8_t* d = dst + (size_t)y * dpitch;
+        for (int x = 0; x < dw; ++x) {
+            int sx = (int)(((int64_t)x * sw) / dw);
+            if (sx >= sw) {
+                sx = sw - 1;
+            }
+            const uint8_t* p = s + (size_t)sx * 4;
+            d[x * 4 + 0] = p[0];
+            d[x * 4 + 1] = p[1];
+            d[x * 4 + 2] = p[2];
+            d[x * 4 + 3] = p[3];
+        }
+    }
+}
+
+int movie_avis_enabled(BlockFile* cfg)
+{
+    if (cfg == NULL) {
+        return 1; /* no config: the corpus default is to play */
+    }
+    /* AvisEnabled @ 0x414ce0 reads the DontPlayAvis kill switch. */
+    return block_get_bool(cfg, "Lego* Main DontPlayAvis") != 1;
+}
+
+int movie_key_path(BlockFile* cfg, const char* key, char* out, size_t sz)
+{
+    if (cfg == NULL || key == NULL || out == NULL || sz == 0) {
+        return 0;
+    }
+    char path[256];
+    snprintf(path, sizeof(path), "Lego* Main %s", key);
+    const char* v = block_get_strptr(cfg, path);
+    if (v == NULL || v[0] == '\0') {
+        return 0;
+    }
+    /* normalize '\' -> '/' (the config spells `avi\intro.avi`) */
+    size_t i = 0;
+    for (; i < sz - 1 && v[i] != '\0'; ++i) {
+        out[i] = (v[i] == '\\') ? '/' : v[i];
+    }
+    out[i] = '\0';
+    return 1;
+}
+
+int movie_level_video_path(BlockFile* cfg, const char* level,
+                           char* out, size_t sz)
+{
+    if (cfg == NULL || level == NULL || out == NULL || sz == 0) {
+        return 0;
+    }
+    /* shipped layout: root { Levels { <level> { Video … } } } */
+    char path[256];
+    snprintf(path, sizeof(path), "Lego* Levels %s Video", level);
+    const char* v = block_get_strptr(cfg, path);
+    if (v == NULL) {
+        /* fixture/legacy flat shape */
+        snprintf(path, sizeof(path), "Lego* %s Video", level);
+        v = block_get_strptr(cfg, path);
+    }
+    if (v == NULL || v[0] == '\0') {
+        return 0;
+    }
+    size_t i = 0;
+    for (; i < sz - 1 && v[i] != '\0'; ++i) {
+        out[i] = (v[i] == '\\') ? '/' : v[i];
+    }
+    out[i] = '\0';
+    return 1;
+}
+
+/* --- case-insensitive loose-file resolution ---------------------------- */
+
+#if defined(LEGORRR_BACKEND_MINIWIN)
+
+static int m_lower(int c) { return (c >= 'A' && c <= 'Z') ? c + 0x20 : c; }
+static int m_ci_eq(const char* a, const char* b)
+{
+    while (*a != '\0' && *b != '\0') {
+        if (m_lower((unsigned char)*a) != m_lower((unsigned char)*b)) {
+            return 0;
+        }
+        ++a;
+        ++b;
+    }
+    return *a == '\0' && *b == '\0';
+}
+
+/* Resolve `name` under directory `dir`: exact-case path first (stat), else
+ * a case-insensitive readdir match. Writes the resolving path into out (1)
+ * or leaves out untouched (0). */
+static int m_dir_find(const char* dir, const char* name, char* out, size_t sz)
+{
+    if (dir[0] == '\0') {
+        snprintf(out, sz, "%s", name);
+    } else {
+        snprintf(out, sz, "%s/%s", dir, name);
+    }
+    struct stat st;
+    if (stat(out, &st) == 0) {
+        return 1;
+    }
+    DIR* d = opendir(dir);
+    if (d == NULL) {
+        return 0;
+    }
+    int found = 0;
+    struct dirent* e;
+    while ((e = readdir(d)) != NULL) {
+        if (m_ci_eq(e->d_name, name)) {
+            snprintf(out, sz, "%s/%s", dir, e->d_name);
+            found = 1;
+            break;
+        }
+    }
+    closedir(d);
+    return found;
+}
+
+/* Resolve the remaining '/'-separated components of `rel` under `dir`,
+ * matching each directory component case-insensitively (the shipped files
+ * live in `Data/AVI/` — uppercase — while the config values are lowercase). */
+static int movie_path_resolve_tail(const char* dir, const char* rel,
+                                   char* out, size_t sz)
+{
+    char cur[512];
+    snprintf(cur, sizeof(cur), "%s", dir);
+    const char* p = rel;
+    while (*p == '/') {
+        ++p;
+    }
+    while (*p != '\0') {
+        const char* slash = strchr(p, '/');
+        char comp[128];
+        size_t n = slash ? (size_t)(slash - p) : strlen(p);
+        if (n >= sizeof(comp)) {
+            n = sizeof(comp) - 1;
+        }
+        memcpy(comp, p, n);
+        comp[n] = '\0';
+        char nxt[512];
+        if (!m_dir_find(cur, comp, nxt, sizeof(nxt))) {
+            return 0;
+        }
+        snprintf(cur, sizeof(cur), "%s", nxt);
+        p = slash ? slash + 1 : p + n;
+    }
+    if (snprintf(out, sz, "%s", cur) >= (int)sz) {
+        return 0;
+    }
+    return 1;
+}
+
+int movie_path_resolve(const char* base_dir, const char* rel,
+                       char* out, size_t sz)
+{
+    if (base_dir == NULL) {
+        base_dir = ".";
+    }
+    if (rel == NULL || rel[0] == '\0' || out == NULL || sz == 0) {
+        return 0;
+    }
+    /* The config value names the file under the data dir without a "Data"
+     * prefix (`avi\intro.avi`), so try <base>/Data/<rel> first, then the
+     * bare <base>/<rel> (a direct run from the data dir). */
+    char ddir[512];
+    snprintf(ddir, sizeof(ddir), "%s/Data", base_dir);
+    if (m_dir_find(base_dir, "Data", ddir, sizeof(ddir))) {
+        char cand[512];
+        if (movie_path_resolve_tail(ddir, rel, cand, sizeof(cand))) {
+            snprintf(out, sz, "%s", cand);
+            return 1;
+        }
+    }
+    return movie_path_resolve_tail(base_dir, rel, out, sz);
+}
+
+#else /* winapi stub */
+
+int movie_path_resolve(const char* base_dir, const char* rel,
+                       char* out, size_t sz)
+{
+    (void)base_dir;
+    (void)rel;
+    (void)out;
+    (void)sz;
+    return 0;
+}
+
+#endif /* LEGORRR_BACKEND_MINIWIN */

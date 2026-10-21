@@ -82,7 +82,10 @@ is regression-verified against the shipped corpus.
 On the reconstruction side, the engine scaffold, frame loop, input, audio and
 now the **game layer** (level `.map` loading, objectives/advisor, savegames —
 findings 07/08/22) build and pass their suites natively; see the
-*Reconstruction build* section below.
+*Reconstruction build* section below. The **AVI movie path** (findings 14 §4,
+23) has landed too: the boot films (`LegoAvi`/`RRAvi`) and the per-level
+`Video` cinematics play through the port's own software decoder
+(`src/gods98/movie.*` — FFmpeg runtime dlopen'd, no build dependency).
 
 Finding 23 (2026-10-21) closed the **front-end**: the boot→main-menu machine
 (`MenuBuild`, the modal `MenuRunLoop`, the `FrontEndActive` gate, menu-enter /
@@ -588,6 +591,25 @@ finding 12, #14). Three new modules in `src/game/`:
   replacing the placeholder dot (the dot remains as the no-model fallback).
   `render_test` builds a synthetic LWO diamond and asserts its projected
   corner; `entity_test` checks the `Model` key lands in `model_path`.
+- **AVI movies** (2026-10-21, findings 14 §4 + 23): `src/gods98/movie.*`
+  reconstructs the corpus's movie path — `AvisEnabled @ 0x414ce0` (the
+  `DontPlayAvis` gate), `MoviePlayNamed @ 0x415910` (config-key → path), the
+  modal play-until-done/ESC `MoviePlayLoop @ 0x4157c0`, and
+  `MoviePlayLevelVideo @ 0x415990` (the level's `Video` config key). The
+  shipped `Data/AVI/*.avi` files (Indeo5/msvideo1 video, adpcm_ms/pcm audio)
+  are decoded in-process by **FFmpeg's runtime libraries dlopen'd at
+  first use** — no header, no link dependency, so the build stays
+  dependency-free and LGPL-clean; where the libs are absent (or the API
+  version < FFmpeg 7) playback reports unavailable and is skipped. The frame
+  loop plays the boot films before the front-end end (LMI logo `LegoAvi`,
+  then the intro `RRAvi`), gated by `AvisEnabled` / `LEGORRR_NO_MOVIES`,
+  skipped under `LEGORRR_AUTOSTOP_FRAMES`, and plays each level's `Video`
+  cinematic after `level_load`; ESC/Space/Enter/click skips, the audio track
+  feeds the PCM seam, and frames stretch-fill the 640×480 surface.
+  `movie_test` (suite `movie`) covers the config surface + scaler always,
+  decodes a synthetic DIB/rawvideo AVI end-to-end when FFmpeg is present,
+  and with `--real <dir>` pins `Data/AVI/intro.avi` (320×200 @ 15 fps,
+  22050 Hz, 3821 frames).
 
 `GameContext` (`src/game/game.hpp`) carries the corpus globals these
 modules share (`DAT_005560c4` config, `DAT_005560d4` level block,
@@ -618,6 +640,7 @@ meson test -C build --suite ai
 meson test -C build --suite render
 meson test -C build --suite bind
 meson test -C build --suite frontend
+meson test -C build --suite movie
 ```
 Passing `-Dtest_wads_dir=<game>` adds real-wad probing to `level_test` and
 `frontend_test`, mirroring the resource/texture/sound/block suites: they
