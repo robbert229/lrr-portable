@@ -4,7 +4,9 @@
 #include <string.h>
 
 #include "game/game.hpp"
+#include "game/entity.hpp"
 #include "game/level.hpp"
+#include "game/mission.hpp"
 #include "game/objective.hpp"
 #include "game/savegame.hpp"
 #include "platform/platform.h"
@@ -65,6 +67,16 @@ int LegorrrRun(void)
                          "0x48, objective word 0x%08x\n",
                     level_name, level_width(game.level), level_height(game.level),
                     game.level->objective);
+            /* Mission plumbing (finding 09/10): seed the 10-task table +
+             * reward screen from the level's Reward group, then place the
+             * `.ol` object list into the entity tables. */
+            mission_task_init(&game, game.cfg, level_name);
+            mission_reward_init(&game, game.cfg, level_name);
+            int placed = object_list_load(&game, game.cfg, level_name);
+            fprintf(log, "frameloop: mission tasks seeded, %s, %d object(s) "
+                         "placed, crystal quota=%d\n",
+                    game.cfg != NULL ? "reward config ok" : "no cfg",
+                    placed, game.crystal_quota);
         } else {
             fprintf(log, "frameloop: level %s load FAILED (maps/config missing)\n",
                     level_name);
@@ -233,13 +245,32 @@ int LegorrrRun(void)
             fprintf(log, "frameloop: checkpoint_step committed slot %d\n",
                     SAVE_DEFAULT_SLOT);
         }
+        /* Mission live-progress keys (finding 09 bridge):
+         *  'c' +1 crystal   'o' +1 ore   '+' +10 score
+         * These drive the objective checker and task completions in lieu
+         * of the (future) entity sim. */
+        if (game.level != NULL && input_key_edge(&input, 'c')) {
+            mission_set_crystals(&game, game.mission.crystals + 1);
+        }
+        if (game.level != NULL && input_key_edge(&input, 'o')) {
+            mission_set_ore(&game, game.mission.ore + 1);
+        }
+        if (game.level != NULL && input_key_edge(&input, '+')) {
+            mission_add_score(&game, 10);
+        }
         if (rock_x < 0) { rock_x = 0; }
         if (rock_y < 0) { rock_y = 0; }
         if (rock_x > WINDOW_W - 64) { rock_x = WINDOW_W - 64; }
         if (rock_y > WINDOW_H - 64) { rock_y = WINDOW_H - 64; }
 
-        /* Mission plumbing: per-frame objective state machine (finding 22). */
+        /* Mission plumbing: per-frame progress bridge + objective state
+         * machine (findings 09/22). */
         if (game.level != NULL) {
+            int done = mission_update(&game);
+            if (done != 0) {
+                fprintf(log, "frameloop: tasks completed this frame (mask 0x%x)\n",
+                        done);
+            }
             int resolved = objective_tick(game.level, dt);
             if (resolved == 0) {
                 fprintf(log, "frameloop: objective resolved (word 0x%08x)\n",
