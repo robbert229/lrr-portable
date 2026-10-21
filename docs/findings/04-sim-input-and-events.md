@@ -93,8 +93,10 @@ Config-driven message queue (like `SND_*`/HUD events), max **40 message ids**
 
 So: `MessageDispatch(0x10..0x13,…)` = "air low / air beat" notifications the
 tick fires (doc 03 §7); id table and linked families come from level data.
-**Open:** where the 40-entry config is populated (level-load path) and the id
-catalog.
+**Closed (2026-10-20, finding 22):** population is at **startup**, not in the level-
+load path — the 40-name catalog is hardcoded in `FUN_00419230` (installed via the
+message-init callback `FUN_0041fb50`), and sound handles/flags come from the
+`InfoMessages` config section (`FUN_00434c10`). The full catalog is in 22 §1.
 
 ## `ViewContextTick` (`0x435f5c(ctx, state, dt, scale)` — ticked ×3/frame)
 
