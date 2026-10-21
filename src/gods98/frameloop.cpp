@@ -237,13 +237,29 @@ int LegorrrRun(void)
                 }
                 break;
             }
+            /* Bitmap fonts (finding-23 grid): HiFont = selected items,
+             * LoFont = unselected; NULL falls back to the 3x5 face. The
+             * Hi font also measures pointer hit-testing. */
+            TextureSurface* hi_font = NULL, *lo_font = NULL;
+            const FeSubmenu* fs = frontend_active_submenu(&fe);
+            if (fs != NULL) {
+                if (fs->hifont[0] != '\0') {
+                    hi_font = texture_get_or_load(NULL, fs->hifont);
+                }
+                if (fs->lofont[0] != '\0') {
+                    lo_font = texture_get_or_load(NULL, fs->lofont);
+                }
+            }
             FeInput fi;
             fi.up = input_key_edge(&input, PLATFORM_KEY_UP);
             fi.down = input_key_edge(&input, PLATFORM_KEY_DOWN);
             fi.enter = input_key_edge(&input, ' ')
                        || input_key_edge(&input, PLATFORM_KEY_ENTER);
             fi.esc = input_key_edge(&input, PLATFORM_KEY_ESC);
-            FeEvent ev = frontend_tick(&fe, &fi);
+            fi.mouse_x = input.mouse_x;
+            fi.mouse_y = input.mouse_y;
+            fi.click = input_mouse_pressed(&input);
+            FeEvent ev = frontend_tick(&fe, &fi, hi_font);
             if (ev == FE_EVT_QUIT) {
                 quit = 1;
                 stop = "menu quit";
@@ -270,18 +286,7 @@ int LegorrrRun(void)
                                              bg, 0, 0);
                     }
                 }
-                /* Bitmap fonts (finding-23 grid): HiFont = selected items,
-                 * LoFont = unselected; NULL falls back to the 3x5 face. */
-                TextureSurface* hi_font = NULL, *lo_font = NULL;
-                const FeSubmenu* fs = frontend_active_submenu(&fe);
-                if (fs != NULL) {
-                    if (fs->hifont[0] != '\0') {
-                        hi_font = texture_get_or_load(NULL, fs->hifont);
-                    }
-                    if (fs->lofont[0] != '\0') {
-                        lo_font = texture_get_or_load(NULL, fs->lofont);
-                    }
-                }
+                /* fonts + pointer hit-testing already happened above */
                 frontend_render(&fe, hi_font, lo_font,
                                 WINDOW_W, WINDOW_H, pixels, pitch);
                 platform_screenshot(win, pixels, pitch, WINDOW_W, WINDOW_H,
