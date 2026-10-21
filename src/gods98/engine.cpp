@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 #include "camera.hpp"
 #include "engine.hpp"
+#include "mainsim.hpp"
 #include "tickers.hpp"
 #include "view.hpp"
 
@@ -49,9 +50,10 @@ int EngineTick(EngineContext* ctx, float dt)
     /* 4b. The three view contexts (DAT_005560e4/e8/ec — ViewContextTick). */
     view_views_tick(ctx, dt, scale);
 
-    /* 5. Main simulation step — 0 => quit frame (MainSimStep @ 0x4250c0). */
+    /* 5. Main simulation step — 0 => quit frame (MainSimStep @ 0x4250c0,
+     *    ported in mainsim.*). */
     uint32_t sim_out1 = 0, sim_out2 = 0, sim_out3 = 0;
-    if (MainSimStep(ctx, scale, dt, &sim_out1, &sim_out2, &sim_out3) == 0) {
+    if (main_sim_step(ctx, scale, dt, &sim_out1, &sim_out2, &sim_out3) == 0) {
         return 0;
     }
 
@@ -123,34 +125,6 @@ float EngineTimeScale(EngineContext* ctx)
     /* TODO(engine): the real factor (a configuration-derived speed) lives
      * behind the corpus function; 1.0 == game speed. */
     return 1.0f;
-}
-
-/* Main simulation step / quit gate — corpus MainSimStep @ 0x4250c0.
- *
- * Consumes the frame's input + app state. Return 0 quits the frame loop.
- * The real body: quit-poll chain (FUN_004191a0 / FUN_004589a0 / KeepRunning),
- * selected-entity camera tracking, viewport-relative mouse deltas
- * (DAT_005560e4 camera * _DAT_0049e308 …), and the transition trigger
- * (DAT_00556ecc |= 0x2000000). The three outs are the step results the later
- * tickers consume (see corpus lines 731+ where they are zeroed and set).
- */
-int MainSimStep(EngineContext* ctx, float scale, float dt,
-                uint32_t* out1, uint32_t* out2, uint32_t* out3)
-{
-    (void)scale;
-    (void)dt;
-
-    *out1 = 0;
-    *out2 = 0;
-    *out3 = 0;
-
-    if (EngineKeepRunning(ctx) == 0) {
-        return 0;
-    }
-
-    /* TODO(engine): edge detection / camera input / transition state from
-     * the corpus body; set the outs as the observed branches do. */
-    return 1;
 }
 
 /* Engine teardown — triplet slot DAT_00505934 (finding 20). The corpus
