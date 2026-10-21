@@ -99,9 +99,8 @@ float EngineTimeScale(EngineContext* ctx);
 
 /* Main simulation step / quit gate (corpus MainSimStep @ 0x4250c0).
  * Consumes input+app state for the frame; the three outs are the step's
- * results passed to the later subsystem tickers. Returns 0 => quit frame. */
-int MainSimStep(EngineContext* ctx, float scale, float dt,
-                uint32_t* out1, uint32_t* out2, uint32_t* out3);
+ * results passed to the later subsystem tickers. Returns 0 => quit frame.
+ * (Ported into mainsim.* — see main_sim_step.) */
 
 /* Engine teardown (triplet slot DAT_00505934): corpus LAB_00424cf0 is the
  * normal-play stub forwarding to FUN_004250a0; LAB_00424d00 is the full

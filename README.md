@@ -293,6 +293,21 @@ fires into the real bus) and the air-beat tick path dispatches `0x11`/`0x12`.
 `message_test` (suite `message`) covers gates, dedupe/exceptions, cooldown and
 the cap.
 
+**Tranche 4 — air-beat sound hook** (2026-10-21): `EngineAirBeat` drives the
+looped `SND_AirBeat` through the audio seam when the air supply runs low
+(`airbeat_set_loop`), and the finding-03 notifications `0x11`/`0x12` dispatch
+through the bus; the demo drains air so you can hear the cooler-to-air-beat
+change (`airbeat_test`, suite `airbeat`).
+
+**Tranche 5 — `MainSimStep`** (2026-10-21): `src/gods98/mainsim.*` ports the
+input/app-state step (`0x4250c0`, finding 04) — quit gate (keyed to the named
+quit key + `EngineKeepRunning`), the debug/cheat toggles (Frame Rate Monitor
+`0x40`, Memory `0x80`, Sound Effects `0x10`, Music) gated by the debug word
+`0x10`, the air cheat, camera keys (per-view step boundary), and the o1/o2/o3
+edge outputs. The corpus's raw per-key scan slots aren't pinned by the
+findings, so named canonical key bindings are used (documented). `mainsim_test`
+(suite `mainsim`) covers the toggles, outs, air cheat and quit gate.
+
 **Game layer — levels, objectives, savegames** (2026-10-21): the mission
 plumbing that sits on top of the engine (findings 07/08/22) is now
 reconstructed, on top of the merged block-text parser (`src/gods98/block.*`,
