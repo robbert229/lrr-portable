@@ -456,9 +456,13 @@ finding 12, #14). Three new modules in `src/game/`:
   suppression rule; the frame loop displays the hint (with a sound when a
   suppression bit is clear). `mission_incident` is the game layer's path
   into the merged 40-id `Info` bus (#18) — AI gather deposits now dispatch
-  the matching incident ids (`CrystalFound`/`OreSeamFound`/`Constructed`),
-  with demo sound/text hooks on the bus. `objective_test`/`ai_test` cover
-  the stream, the suppression rule and the bus dispatch.
+  the matching incident ids (`CrystalFound`/`OreSeamFound`/`Constructed`).
+  Per-id sounds come from the **`InfoMessages` config section**
+  (`message_load_infomessages`, finding 22 §1 — entries by Info name,
+  `Info_`-prefixed handled, `AlwaysPlaySFX`/short values set the play-always
+  flag), and the demo sound hook plays the configured wav with a stand-in
+  fallback. `objective_test`/`ai_test`/`message_test` cover the stream, the
+  suppression rule, the bus dispatch and the config population.
 - **Reward screen + save-zone clicks** (2026-10-21, finding 09): closes the
   reward overlay's button story. `mission_reward_zone` ports
   `RewardZoneCheck @ 0x461dd0` — the `SaveButton` zone (live when the level
@@ -484,8 +488,13 @@ finding 12, #14). Three new modules in `src/game/`:
   outlines the tracked mouse cell underneath the selection cursor. The
   palette is ours, not a clone of the shipped one. When a level is loaded
   the frame loop draws the map instead of the placeholder texture blit.
+  The **reward overlay** (shown when a mission resolves) dims the level,
+  blits the `Reward Wallpaper` texture stretched to the frame, draws a
+  state banner (achieved/failed/quit + centre-text strip) and the
+  Save/Advance buttons with a bright hover fill on the one under the mouse.
   `render_test` (suite `render`) asserts the cell colours, the entity
-  marker, the selection ring and the cursor outline at exact pixels.
+  marker, the selection ring, the cursor outline, and the overlay's dim/
+  banner/hover/wallpaper pixels.
 
 `GameContext` (`src/game/game.hpp`) carries the corpus globals these
 modules share (`DAT_005560c4` config, `DAT_005560d4` level block,

@@ -4,6 +4,7 @@
 #include "entity.hpp"
 #include "level.hpp"
 #include "render.hpp"
+#include "../gods98/texture.hpp"
 
 /* --- framebuffer helpers (RGBA32 byte order R,G,B,A on little-endian) --- */
 
@@ -32,6 +33,152 @@ static void fill_rect(int x0, int y0, int x1, int y1,
         for (int x = x0; x <= x1; ++x) {
             px_set(px_at(x, y, w, h, pixels, pitch), r, g, b);
         }
+    }
+}
+
+/* --- reward-overlay helpers (finding 09) --------------------------------
+ * The post-mission card (RewardScreen) renders on top of the level: the
+ * frame is dimmed first, the wallpaper texture (get-or-load by config name)
+ * is stretched over it, a state-coloured header band stands for the banner
+ * text (no font renderer — blocks only), and the Save/Advance hit zones get
+ * a hover highlight. Everything here is plain RGBA writes; alpha is always
+ * opaque 255. */
+
+/* One 0xAARRGGBB texture pixel -> framebuffer R,G,B (full alpha). */
+static void px_set_argb(uint32_t argb, uint8_t* px)
+{
+    px[0] = (uint8_t)(argb >> 16); /* R */
+    px[1] = (uint8_t)(argb >> 8);  /* G */
+    px[2] = (uint8_t)(argb);       /* B */
+    px[3] = 255;
+}
+
+/* Scale every RGB channel toward black so the level reads as "behind" the
+ * overlay (deliverable 1). */
+static void dim_framebuffer(int w, int h, void* pixels, int pitch)
+{
+    for (int y = 0; y < h; ++y) {
+        uint8_t* row = (uint8_t*)pixels + (size_t)y * (size_t)pitch;
+        for (int x = 0; x < w; ++x) {
+            uint8_t* p = row + (size_t)x * 4;
+            p[0] = (uint8_t)(((unsigned)p[0] * 3u) / 8u);
+            p[1] = (uint8_t)(((unsigned)p[1] * 3u) / 8u);
+            p[2] = (uint8_t)(((unsigned)p[2] * 3u) / 8u);
+        }
+    }
+}
+
+/* Full-bleed nearest-neighbour blit of the wallpaper (deliverable 2). NULL
+ * (or an empty pixel buffer) is the "no texture" case — the caller keeps
+ * the dimmed frame. */
+static void blit_wallpaper(TextureSurface* t, int w, int h,
+                           void* pixels, int pitch)
+{
+    if (t == NULL || t->pixels == NULL || t->width <= 0 || t->height <= 0) {
+        return;
+    }
+    uint32_t tw = (uint32_t)t->width;
+    uint32_t th = (uint32_t)t->height;
+    for (int y = 0; y < h; ++y) {
+        uint32_t ty = ((uint32_t)y * th) / (uint32_t)h;
+        if (ty >= th) ty = th - 1;
+        const uint32_t* src = t->pixels + ty * tw;
+        uint8_t* row = (uint8_t*)pixels + (size_t)y * (size_t)pitch;
+        for (int x = 0; x < w; ++x) {
+            uint32_t tx = ((uint32_t)x * tw) / (uint32_t)w;
+            if (tx >= tw) tx = tw - 1;
+            px_set_argb(src[tx], row + (size_t)x * 4);
+        }
+    }
+}
+
+/* 1-pixel outline (inclusive corners, matching the old Save/Advance draw). */
+static void outline_rect(int x0, int y0, int x1, int y1,
+                         int w, int h, void* pixels, int pitch,
+                         uint8_t r, uint8_t g, uint8_t b)
+{
+    fill_rect(x0, y0, x1, y0, w, h, pixels, pitch, r, g, b);
+    fill_rect(x0, y1, x1, y1, w, h, pixels, pitch, r, g, b);
+    fill_rect(x0, y0, x0, y1, w, h, pixels, pitch, r, g, b);
+    fill_rect(x1, y0, x1, y1, w, h, pixels, pitch, r, g, b);
+}
+
+/* Only draw rect (x0..x1, y0..y1) when it can actually touch the frame. */
+static int rect_visible(int x0, int y0, int x1, int y1, int w, int h)
+{
+    return x1 >= 0 && y1 >= 0 && x0 < w && y0 < h && x1 >= x0 && y1 >= y0;
+}
+
+/* State banner (deliverable 3): a header band whose colour encodes the
+ * reward state. Achieved (objective result 1) -> complete green; otherwise
+ * the presence of FailedText / QuitText picks the tint; no config -> a
+ * neutral blue header. CentreText + Display gate a light content strip
+ * (the "text line", drawn as a block). */
+static void draw_reward_banner(const RewardScreen* rs, const LevelState* lvl,
+                               int w, int h, void* pixels, int pitch)
+{
+    int bh = h / 8;
+    if (bh < 4) bh = 4;
+    if (bh > 64) bh = 64;
+    if (bh > h) bh = h;
+    if (bh <= 0) {
+        return;
+    }
+
+    int result = (lvl != NULL) ? level_int(lvl, LEVEL_OFF_OBJ_RESULT) : 0;
+    uint8_t br = 28, bg = 52, bb = 96;      /* default header band */
+    if (result == 1) {
+        br = 70; bg = 190; bb = 90;          /* achieved -> complete (green) */
+    } else if (rs != NULL && rs->failed_text[0] != '\0') {
+        br = 200; bg = 70; bb = 60;          /* failed (red) */
+    } else if (rs != NULL && rs->quit_text[0] != '\0') {
+        br = 100; bg = 110; bb = 130;        /* quit (grey-blue) */
+    }
+
+    fill_rect(0, 0, w - 1, bh - 1, w, h, pixels, pitch, br, bg, bb);
+
+    /* Centre-text lane enabled -> light strip at the band's bottom edge. */
+    if (rs != NULL && rs->centre_text != 0 && rs->display != 0) {
+        uint8_t lr = (uint8_t)(br + ((255 - br) >> 1));
+        uint8_t lg = (uint8_t)(bg + ((255 - bg) >> 1));
+        uint8_t lb = (uint8_t)(bb + ((255 - bb) >> 1));
+        fill_rect(0, bh - 1, w - 1, bh - 1, w, h, pixels, pitch, lr, lg, lb);
+    }
+}
+
+/* Save/Advance buttons (deliverable 4): the zone under the mouse is filled
+ * bright, the other keeps a darker outline (hit-test mirrors the zone_hit
+ * math of the reward click handler). */
+static void draw_reward_buttons(const RewardScreen* rs, int mx, int my,
+                                int w, int h, void* pixels, int pitch)
+{
+    if (rs == NULL) {
+        return;
+    }
+    int s_x = (int)rs->save_x,   s_y = (int)rs->save_y;
+    int a_x = (int)rs->advance_x, a_y = (int)rs->advance_y;
+    int s_w = (int)rs->save_w,   s_h = (int)rs->save_h;
+    int a_w = (int)rs->advance_w, a_h = (int)rs->advance_h;
+
+    /* Inline zone_hit: mx in [x, x+w), my in [y, y+h). */
+    int save_hit = s_w > 0 && s_h > 0 && mx >= s_x && mx < s_x + s_w
+                 && my >= s_y && my < s_y + s_h;
+    int adv_hit  = a_w > 0 && a_h > 0 && mx >= a_x && mx < a_x + a_w
+                 && my >= a_y && my < a_y + a_h;
+
+    if (save_hit) {
+        fill_rect(s_x, s_y, s_x + s_w - 1, s_y + s_h - 1,
+                  w, h, pixels, pitch, 150, 255, 150);
+    } else if (rect_visible(s_x, s_y, s_x + s_w, s_y + s_h, w, h)) {
+        outline_rect(s_x, s_y, s_x + s_w, s_y + s_h,
+                     w, h, pixels, pitch, 45, 110, 45);
+    }
+    if (adv_hit) {
+        fill_rect(a_x, a_y, a_x + a_w - 1, a_y + a_h - 1,
+                  w, h, pixels, pitch, 150, 200, 255);
+    } else if (rect_visible(a_x, a_y, a_x + a_w, a_y + a_h, w, h)) {
+        outline_rect(a_x, a_y, a_x + a_w, a_y + a_h,
+                     w, h, pixels, pitch, 45, 80, 120);
     }
 }
 
@@ -123,36 +270,24 @@ void level_render_map(const LevelState* lvl, const GameContext* ctx,
         }
     }
 
-    /* Reward overlay: draw the Save/Advance button zones in screen space so
-     * the zone hit-test (finding 09) has visible targets. */
+    /* Reward overlay (finding 09): dim the level, draw the wallpaper
+     * backdrop, the state banner and the Save/Advance buttons, then stop —
+     * the gameplay cursor outline has no place on the menu. */
     if (ctx->reward_active) {
         const RewardScreen* rs = &ctx->reward_screen;
-        /* Save (green) */
-        fill_rect((int)rs->save_x, (int)rs->save_y,
-                  (int)(rs->save_x + rs->save_w), (int)rs->save_y,
-                  w, h, pixels, pitch, 90, 200, 90);
-        fill_rect((int)rs->save_x, (int)(rs->save_y + rs->save_h),
-                  (int)(rs->save_x + rs->save_w), (int)(rs->save_y + rs->save_h),
-                  w, h, pixels, pitch, 90, 200, 90);
-        fill_rect((int)rs->save_x, (int)rs->save_y,
-                  (int)rs->save_x, (int)(rs->save_y + rs->save_h),
-                  w, h, pixels, pitch, 90, 200, 90);
-        fill_rect((int)(rs->save_x + rs->save_w), (int)rs->save_y,
-                  (int)(rs->save_x + rs->save_w), (int)(rs->save_y + rs->save_h),
-                  w, h, pixels, pitch, 90, 200, 90);
-        /* Advance (blue) */
-        fill_rect((int)rs->advance_x, (int)rs->advance_y,
-                  (int)(rs->advance_x + rs->advance_w), (int)rs->advance_y,
-                  w, h, pixels, pitch, 90, 150, 220);
-        fill_rect((int)rs->advance_x, (int)(rs->advance_y + rs->advance_h),
-                  (int)(rs->advance_x + rs->advance_w), (int)(rs->advance_y + rs->advance_h),
-                  w, h, pixels, pitch, 90, 150, 220);
-        fill_rect((int)rs->advance_x, (int)rs->advance_y,
-                  (int)rs->advance_x, (int)(rs->advance_y + rs->advance_h),
-                  w, h, pixels, pitch, 90, 150, 220);
-        fill_rect((int)(rs->advance_x + rs->advance_w), (int)rs->advance_y,
-                  (int)(rs->advance_x + rs->advance_w), (int)(rs->advance_y + rs->advance_h),
-                  w, h, pixels, pitch, 90, 150, 220);
+        dim_framebuffer(w, h, pixels, pitch);
+
+        if (rs->wallpaper[0] != '\0') {
+            TextureSurface* t = texture_get_or_load(NULL, rs->wallpaper);
+            blit_wallpaper(t, w, h, pixels, pitch);
+            if (t != NULL) {
+                texture_release(t); /* keep only the engine's cached ref */
+            }
+        }
+
+        draw_reward_banner(rs, ctx->level, w, h, pixels, pitch);
+        draw_reward_buttons(rs, mouse_x, mouse_y, w, h, pixels, pitch);
+        return;
     }
 
     /* Cursor cell outline (the selection pick reads the same mapping). */

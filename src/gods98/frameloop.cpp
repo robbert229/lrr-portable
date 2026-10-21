@@ -43,15 +43,20 @@ static int demo_keyheld(int key)
     return s_demo_input != NULL ? input_key_down(s_demo_input, key) : 0;
 }
 
-/* Message-bus demo hooks (finding 22 §1): the game layer's incident
- * dispatches land here — a sound per id (map to a stand-in wav until the
- * shipped sounds are wired) and a text callback for the log. */
+/* Message-bus demo hooks (finding 22 §1): incidents dispatch a per-id
+ * sound configured from the InfoMessages config section (message.c), else
+ * a stand-in wav. */
 static AudioPlayer* s_demo_ap = NULL;
 static void demo_msg_sound(int id, float vol)
 {
-    (void)id;
     (void)vol;
-    if (s_demo_ap != NULL && s_demo_ap->dev != NULL) {
+    if (s_demo_ap == NULL || s_demo_ap->dev == NULL) {
+        return;
+    }
+    const char* snd = message_sound(id);
+    if (snd != NULL && snd[0] != '\0') {
+        audio_play_named(s_demo_ap, snd);
+    } else {
         audio_play_named(s_demo_ap, "Sounds\\Buildings\\elec5.wav");
     }
 }
@@ -90,6 +95,10 @@ int LegorrrRun(void)
     cmd_init();
     cmd_context_set(&game);
     game.cfg = block_open("Lego.cfg");
+    if (game.cfg != NULL) {
+        /* InfoMessages section -> per-id bus sounds (finding 22 §1). */
+        message_load_infomessages(game.cfg);
+    }
     const char* level_name = env_get("LEGORRR_LEVEL", "Level01");
     if (game.cfg != NULL) {
         fprintf(log, "frameloop: config Lego.cfg loaded\n");
