@@ -30,10 +30,10 @@
  * order, with each branch naming its corpus address. Branches whose
  * subjects the port does not model yet (projectile arcs, screen-shake,
  * screen-space effects, riding) are listed as TODOs in finding 10 rather
- * than guessed. Command records keep their role as the *application* layer
- * (they seed the path/link state in the real engine); the port's move/
- * target stepping below stays that application until the path lists are
- * ported — flagged below, no longer presented as "the handler switch".
+ * than guessed. Move commands now flow through the ported path-list mirror
+ * (EntitySlot.wp, corpus +0x24/+0x28/+0x2c) and the +0x3e0 bit-0x8 mover
+ * flag; the corpus *pathfinder* that fills multi-entry lists and the tile
+ * walkability/occupancy queries it drives remain TODO(corpus).
  */
 #ifndef LEGORRR_GAME_AI_HPP
 #define LEGORRR_GAME_AI_HPP
@@ -49,6 +49,10 @@ extern "C" {
 #define AI_MOVE_SPEED_CPS  2.0f
 #define AI_TASK_DURATION   2.0f
 #define AI_TASK_YIELD      2    /* deposit per completed gather task */
+
+/* +0x3e0 bit 0x8 — mover state: raised when a move command is applied
+ * (creator side), cleared on path-list arrival (callback 0x43cd66). */
+#define ENT_FLAG3E0_MOVING 0x00000008u
 
 /* --- activity state (FUN_004409e0 + DAT_004decc4) ---------------------- */
 #define AI_ACTIVITY_COUNT 77
@@ -85,6 +89,14 @@ const char* ai_activity_name(int id);
 /* FUN_004409e0 semantics: set the entity's activity (name-table index),
  * store the param, reset the activity timer. Out-of-range ids ignored. */
 void ai_set_activity(EntitySlot* e, int id, int param);
+
+/* Append a waypoint to the entity's path list (corpus +0x24 buffer, entry
+ * stride 5 dwords — the port stores {x, y, pending} per entry; see
+ * AiWaypoint). Returns the entry index or -1 when the port bound
+ * (AI_WAYPOINTS_MAX) is reached. Move commands seed one entry via
+ * cmd_create_move; a fully popped list restarts, as the corpus rebuilds
+ * the buffer per path command. */
+int ai_path_append(EntitySlot* e, float x, float y);
 
 /* Run the entity-manager tick for `dt` seconds: walk live entities and
  * apply the verified callback branches in corpus order, then step the

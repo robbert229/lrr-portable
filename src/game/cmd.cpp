@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "cmd.hpp"
+#include "ai.hpp"
 #include "select.hpp"
 #include "util.hpp"
 
@@ -328,6 +329,11 @@ void cmd_create_move(EntitySlot* e, float x, float y, int flag)
     rec->x = x;
     rec->y = y;
     rec->param = flag;
+    /* Corpus move state +0x3e0 bit 0x8 is the creator side of the mover
+     * branch; seed the entity path list with this hop (the corpus path
+     * finder that fills multi-entry lists is port-side TODO — finding 10). */
+    e->flags_3e0 |= ENT_FLAG3E0_MOVING;
+    ai_path_append(e, x, y);
     cmd_chain_append(e, rec, 1);
 }
 

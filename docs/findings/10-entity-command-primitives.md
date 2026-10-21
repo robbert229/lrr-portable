@@ -166,11 +166,53 @@ flag `0x80000`), cheat-word flag `0x43c90b` (`DAT_00556ed0` bit 0 gates
 `+0x3ec` bit `0x20` via `FUN_0044c530`), type-1 idle registration
 `0x43c94d` (`FUN_0043a960` into `DAT_004eabcc`, cap 100). The activity mirror
 folds `+0x2ec` sync into `ai_set_activity` because corpus set-sites pair the
-words (point 5).
+words (point 5). Path-list movement (below) mirrors the move branch's
+entity state; its map-side machinery stays TODO.
 
-Documented TODO branches (not guessed): path-list movement internals
-(`+0x24` waypoint list, `+0x3e0` bit 8, `FUN_00432e00` pop, `FUN_00433be0`);
-projectile arcs (`+0x3e0` `0x400000`, `FUN_004755e0`/`FUN_00475120`); screen
+### The move branch / path list (closed 2026-10-21)
+
+The move half of the callback consumes an **entity path list**, not record
+coordinates directly (`callback.s`, branch region `0x43cb40–0x43ce88`):
+
+1. `0x43cb98` reads `ent+0x24` = waypoint buffer pointer and `ent+0x2c` =
+   current index; entries have **stride 5 dwords** (`lea (%eax,%eax,4)`), and
+   the walked target is entry[0]/entry[1] (`ebx`/`ebp` at `0x43cba5–a8`). A
+   null buffer falls back to the stack/command coordinates
+   (`0x43cbb1`–`0x43cbb5`).
+2. Progress is map-driven: `FUN_0048e060` converts float positions to cell
+   indices, `FUN_00432770` answers walkability from the tile record
+   (`DAT_005560d4+0xb8` array, stride `0x48`, width at `+0x14`), and
+   `FUN_0044a2a0` yields the work-object position. When step progress comes
+   back from `FUN_00430ee0` (or `FUN_00431560` + `FUN_00430530`) *nonzero*,
+   the arrival block runs (point 3); a zero return leaves the mover idle.
+3. Arrival (`0x43cd4d–0x43cd90`): `FUN_00403d10(ent, 8, 0, 1)` removes the
+   kind-8 (move) entry from the entity `+0xbc` record list; `+0x3e0` bit
+   `0x8` is cleared (`and $0xfffffff7` at `0x43cd66`); `FUN_00432e00(cell, 0)`
+   clears the tile occupancy bit `0x8000000`; and the path entry's *pending
+   byte flag* is popped — `list + +0x28*20 − 12` (i.e. entry-relative byte 8),
+   read and, when `1`, zeroed (`0x43cd83–0x43cd90`). **The pop is a flag
+   clear, not an index increment or removal** — consumed entries are skipped
+   by their cleared flag.
+4. Port mirror (`src/game/game.hpp` `AiWaypoint`/`EntitySlot.wp`, capped
+   `AI_WAYPOINTS_MAX`): `wp[] = {x, y, pending}` mirrors entry[0]/[1] plus
+   the flag byte; `wp_count`/`wp_index` mirror `+0x28`/`+0x2c` (the corpus
+   `+0x28` doubles as the *entry-to-pop* index at `0x43cd77` — the port keeps
+   one walk index, the exact dual-index semantics remain TODO). The creator
+   side (`cmd_create_move`) raises `+0x3e0` bit 8 and seeds the list with one
+   hop; `ai_tick` walks `wp[wp_index]`, clears `pending` on each arrival, and
+   completes the command with the flag clear when the list runs out
+   (`FUN_0044a2a0`-style carry position and the fallback path stay inside
+   the same branch shape).
+
+Still TODO inside movement: the **pathfinder that fills the buffer**
+(`FUN_00430ee0`/`FUN_00430530` seed/flood region), **walkability** (no tile
+map in the port — the `0x48`-stride records live in unported
+`DAT_005560d4+0xb8`; ties into finding 07's voxel-flag list), the
+**`ent+0xbc` record list** as a distinct structure from the `+0x2f0` chain,
+and `FUN_00432e00`'s tile occupancy writes.
+
+Documented TODO branches (not guessed): projectile arcs (`+0x3e0`
+`0x400000`, `FUN_004755e0`/`FUN_00475120`); screen
 shake (`+0x3e4` `0x40000000`, `DAT_004a48b0`); riding probe `FUN_0043c440`
 (inside `FUN_0044c530`); attached wake target (`+0x364`, `FUN_0044c110`);
 tile `'\t'` probe inside `FUN_0043a960`; the minion task-state machine at
