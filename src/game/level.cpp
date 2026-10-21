@@ -888,6 +888,11 @@ void level_destroy(LevelState* s)
 int level_width(const LevelState* s) { return s ? level_int(s, LEVEL_OFF_WIDTH) : 0; }
 int level_height(const LevelState* s) { return s ? level_int(s, LEVEL_OFF_HEIGHT) : 0; }
 
+const char* level_next_name(const LevelState* s)
+{
+    return s != NULL ? (const char*)s->ptr_next : NULL;
+}
+
 uint8_t* level_voxel(const LevelState* s, int x, int y)
 {
     if (s == NULL || x < 0 || y < 0 || x >= level_width(s) || y >= level_height(s)) {

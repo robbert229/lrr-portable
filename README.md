@@ -98,8 +98,9 @@ Open threads, in order of value:
 2. Deferred: dgVoodoo as a perf option; the `Steam.lwo` point-only sprites as glTF.
 3. Reconstruction next: the *live-mod proof* (thread 1), model-aware entity
    rendering on top of the merged LWO loader (#30), and the winapi reference
-   build. Command/AI, selection, the reward screen's save zone, and the
-   software level renderer are in.
+   build. Command/AI, selection, the reward screen's save + advance (incl.
+   next-level progression), and the software level renderer are in — the
+   campaign loop Level01 → … → next is playable end-to-end.
 
 ## Findings index
 
@@ -458,8 +459,12 @@ finding 12, #14). Three new modules in `src/game/`:
   automatically when an objective resolves (or press `y`), the renderer draws
   the two button rects, and a **real mouse press** (SDL button forwarded
   through `PlatformEvent.button` into the input tables — `input_mouse_pressed`)
-  or `b` commits the checkpoint. `mission_test` covers the zone hit tests
-  and the click path.
+  or `b` commits the checkpoint. **Advance** additionally runs
+  `mission_reward_advance` — the next-level progression: it checkpoints the
+  current progress, tears the level down and loads + re-seeds the parsed
+  `nextlevel` chain (finding 07), so the reward screen now *drives a
+  campaign*. `mission_test` covers the zone hit tests, the click path and
+  the Level01→Level02→campaign-end advance chain.
 - **Software level renderer** (2026-10-21, finding 22 §3): `src/game/render.*`
   is the port's own rasterizer — D3DRM is confirmed software-only, so the
   reconstruction draws the level itself. `level_render_map` paints the

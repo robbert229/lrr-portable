@@ -376,10 +376,16 @@ int LegorrrRun(void)
                     if (mission_reward_zone(&game, input.mouse_x,
                                             input.mouse_y, &hit_save,
                                             &hit_advance)) {
-                        mission_reward_click(&game, hit_save);
-                        fprintf(log, "frameloop: reward %s clicked -> "
-                                     "checkpoint committed\n",
-                                hit_save ? "Save" : "Advance");
+                        if (hit_save) {
+                            mission_reward_click(&game, 1);
+                            fprintf(log, "frameloop: reward Save clicked -> "
+                                         "checkpoint committed\n");
+                        } else {
+                            const char* nm = mission_reward_advance(&game);
+                            fprintf(log, "frameloop: reward Advance clicked -> "
+                                         "%s\n",
+                                    nm != NULL ? nm : "campaign end");
+                        }
                     }
                 }
             }

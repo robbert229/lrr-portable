@@ -95,6 +95,10 @@ int mission_reward_zone(GameContext* ctx, int mx, int my,
  * hit, commit the checkpoint (CheckpointStep). Returns the step result. */
 int mission_reward_click(GameContext* ctx, int hit_save);
 
+/* Advance to the parsed `nextlevel` (finding 07): checkpoints the current
+ * progress, tears the level down, and loads + re-seeds the next one. */
+const char* mission_reward_advance(GameContext* ctx);
+
 #ifdef __cplusplus
 }
 #endif
