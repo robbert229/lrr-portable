@@ -11,9 +11,10 @@ Signature `QuitPoll(edgeA, edgeB, &quitFlag)`. Mechanics:
 - Mouse position: `DAT_0076ab24/ab28` = x, y. `DAT_00556eec` / `DAT_00556ef0` =
   screen-corner rectangles (rect + `0x1d6` × `0x13b` = width/height margins —
   the "corner zone").
-- Cursor state machine on `_DAT_004ffbc0` **input-device mode word**
-  (1/2/4 = alternative device modes; 63 xrefs, all in the `0x457d–0x459x`
-  mouse/input layer — see ledger):
+- Cursor state machine on `_DAT_004ffbc0` **objective state word**
+  (bits 1/2/4 = result states, bit 8 = advisor-hint-pending; all xrefs sit in the
+  objective layer `0x457d–0x4591` — finding 22 corrected the earlier "input-device
+  mode word" label):
   `uVar2` ∈ {0,1,2,3,4} selects a per-mode dwell slot in two counter arrays,
   `DAT_004ffdd8[uVar2]` (enter-count) and `DAT_004ffdf8[uVar2]` (leave-count).
 - Cursor inside corner zone: inject `FUN_0046b770('!')` (0x21), increment
@@ -91,7 +92,7 @@ So `MessageDispatch` = **dedupe-with-live-callback** message bus.
 | Item | State |
 | --- | --- |
 | Corner-dwell quit gesture (counts + key injection `'!'`/`'"'`) | observed, purpose inferred |
-| `DAT_004ffbc0` = input-device mode word (mouse/alt devices) | inferred from usage, writer region `0x457d7e–0x459157` |
+| `DAT_004ffbc0` = objective state word (result bits + config flags; **not** input devices) | observed: four writer/reader functions, all in the objective layer `0x457d7e–0x459157` (finding 22) |
 | Selection cluster `0x4521fe–0x452d9d` = selection manager | observed (xref density) |
 | Message config populated by module code, not level data | observed (all-zero image + xref census) |
 | `DAT_004ff980` installed by `FUN_00456550` | observed |
@@ -99,6 +100,7 @@ So `MessageDispatch` = **dedupe-with-live-callback** message bus.
 ## Next targets
 
 1. ~~Selection cluster~~ done → [06 — Command Queue & Selection](06-command-queue-and-selection.md).
-2. Input-device region `0x457d7e…` (`DAT_004ffbc0` writer region) — still open.
+2. ~~Input-device region `0x457d7e…`~~ done: the word is the level-objective state
+   word, not input devices — [22 — Research crumbs](22-research-crumbs.md) §2.
 3. ~~`FUN_00435940`~~ done: `KeepRunning` — doc 06.
 4. `FUN_00456550` callers — who installs `SystemStateFlags`.
