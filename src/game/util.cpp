@@ -24,6 +24,23 @@ const char* util_root_name(BlockFile* bf)
     return root_buf;
 }
 
+const char* util_level_cfg_path(BlockFile* cfg, const char* level,
+                                const char* suffix, char* out, size_t out_sz)
+{
+    if (cfg == NULL || level == NULL) {
+        return NULL;
+    }
+    const char* root = util_root_name(cfg);
+    snprintf(out, out_sz, "%s Levels %s %s", root, level,
+             suffix != NULL ? suffix : "");
+    if (block_get_strptr(cfg, out) != NULL) {
+        return out;
+    }
+    snprintf(out, out_sz, "%s %s %s", root, level,
+             suffix != NULL ? suffix : "");
+    return block_get_strptr(cfg, out) != NULL ? out : NULL;
+}
+
 long util_atoi(const char* s)
 {
     return s != NULL ? strtol(s, NULL, 10) : 0;

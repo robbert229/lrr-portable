@@ -42,6 +42,16 @@ int util_query_fields(const char* path_or_value, char out[UTIL_QUERY_MAX_FIELDS]
  * Falls back to "Lego*" when the file is empty. */
 const char* util_root_name(BlockFile* bf);
 
+/* Resolve a level-scoped config path against the shipped layout. The shipped
+ * `Lego.cfg` nests every level group under the root's `Levels` container, so
+ * the path is tried through `root Levels <level> <suffix>` first, falling
+ * back to the flat `root <level> <suffix>` (fixture/legacy shape). Returns
+ * the resolving path (written into out) or NULL when neither resolves.
+ * `suffix` is everything after the level name ("SurfaceMap", "Reward Enable",
+ * "Reward Importance", …). */
+const char* util_level_cfg_path(BlockFile* cfg, const char* level,
+                                const char* suffix, char* out, size_t out_sz);
+
 long  util_atoi(const char* s);
 float util_atof(const char* s);
 

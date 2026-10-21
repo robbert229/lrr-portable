@@ -720,11 +720,16 @@ static int lvl_typed_int(BlockFile* cfg, const char* path, int dflt)
  * record name (`util_root_name`) — the block parser keeps the top-level
  * `Lego {…}` record as the root, and the corpus's LevelLoad paths are
  * relative to it (finding 12, FUN_004792e0). */
-static const char* cfg_path(BlockFile* cfg, const char* level, const char* key,
-                            char* out, size_t out_sz)
+
+/* The shipped Lego.cfg nests every level group under the root's `Levels`
+ * container (`Lego* { … Levels { … Level01 { … } } }`), so the flat
+ * `root level key` path misses. Resolve through `Levels` first, then fall
+ * back to the direct shape (the test fixtures and any flatter config).
+ * Returns the resolving path (into out) or NULL. */
+static const char* cfg_resolve_path(BlockFile* cfg, const char* level,
+                                    const char* key, char* out, size_t out_sz)
 {
-    snprintf(out, out_sz, "%s %s %s", util_root_name(cfg), level, key);
-    return out;
+    return util_level_cfg_path(cfg, level, key, out, out_sz);
 }
 
 static const char* cfg_string(BlockFile* cfg, const char* level, const char* key,
@@ -734,7 +739,9 @@ static const char* cfg_string(BlockFile* cfg, const char* level, const char* key
         return NULL;
     }
     char path[512];
-    cfg_path(cfg, level, key, path, sizeof(path));
+    if (cfg_resolve_path(cfg, level, key, path, sizeof(path)) == NULL) {
+        return NULL;
+    }
     const char* v = block_get_strptr(cfg, path);
     if (v == NULL) {
         return NULL;
@@ -746,21 +753,27 @@ static const char* cfg_string(BlockFile* cfg, const char* level, const char* key
 static long cfg_int(BlockFile* cfg, const char* level, const char* key, long dflt)
 {
     char path[512];
-    cfg_path(cfg, level, key, path, sizeof(path));
+    if (cfg_resolve_path(cfg, level, key, path, sizeof(path)) == NULL) {
+        return dflt;
+    }
     return block_get_int(cfg, path, (int)dflt);
 }
 
 static float cfg_float(BlockFile* cfg, const char* level, const char* key, float dflt)
 {
     char path[512];
-    cfg_path(cfg, level, key, path, sizeof(path));
+    if (cfg_resolve_path(cfg, level, key, path, sizeof(path)) == NULL) {
+        return dflt;
+    }
     return block_get_float(cfg, path, dflt);
 }
 
 static int cfg_typed(BlockFile* cfg, const char* level, const char* key, int dflt)
 {
     char path[512];
-    cfg_path(cfg, level, key, path, sizeof(path));
+    if (cfg_resolve_path(cfg, level, key, path, sizeof(path)) == NULL) {
+        return dflt;
+    }
     return lvl_typed_int(cfg, path, dflt);
 }
 
