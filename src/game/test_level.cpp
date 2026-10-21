@@ -106,9 +106,15 @@ static int real_probe(const char* wad_dir)
             continue;
         }
         char path[512];
-        snprintf(path, sizeof(path), "%s %s SurfaceMap", util_root_name(cfg),
-                 block_name(g));
-        if (block_get_strptr(cfg, path) != NULL) {
+        snprintf(path, sizeof(path), "%s Levels %s SurfaceMap",
+                 util_root_name(cfg), block_name(g));
+        int found = block_get_strptr(cfg, path) != NULL;
+        if (!found) {
+            snprintf(path, sizeof(path), "%s %s SurfaceMap",
+                     util_root_name(cfg), block_name(g));
+            found = block_get_strptr(cfg, path) != NULL;
+        }
+        if (found) {
             ++levels;
         }
     }
