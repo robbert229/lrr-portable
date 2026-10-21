@@ -13,6 +13,12 @@ find_package(SDL3 REQUIRED)
 set(ISLE_RENDERER_SDLGPU OFF CACHE BOOL "" FORCE)
 set(ISLE_RENDERER_SOFTWARE ON CACHE BOOL "" FORCE)
 
+# miniwin's OpenGL 1/ES backends reference raw gl*/egl* entry points, which
+# the GLVND "libOpenGL.so" translation lib does NOT export — they live in
+# mesa's libGL.so. Ask CMake for the legacy library so the link line carries
+# -lGL (find_package(OpenGL) must run after this preference).
+set(OpenGL_GL_PREFERENCE LEGACY)
+
 # miniwin's CMakeLists auto-enables its OpenGL/OpenGL-ES d3drm backends when
 # the libs are found on the host (find_package(OpenGL) / find_library GLESv2)
 # and links them PRIVATE — a link dependency meson's cmake bridge cannot

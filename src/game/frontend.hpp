@@ -50,16 +50,16 @@ extern "C" {
 
 /* Bitmap-font layout (FUN_0047a470): a 10-column x 19-row ASCII grid
  * starting at 0x20 (" ") — glyph g = ch-0x20 at (col = g%10, row = g/10),
- * cell = image width/10 x height/19. Palette index 255 maps to pure red
- * (255,0,0) = the transparency key. Menu_Font_Hi.bmp is 380x817 -> 38x43. */
+ * cell = image width/10 x height/19. Menu_Font_Hi.bmp is 380x817 -> 38x43. */
 #define FE_FONT_GRID_COLS 10
 #define FE_FONT_GRID_ROWS 19
+/* The colour key is per font — the loader samples it from the image
+ * (FUN_0047d9d0; Menu_Font* = palette-255 pure red, MbriefFont* = pure
+ * white). fe_font_key() derives it as the dominant colour of the space
+ * cell; FE_FONT_KEY is the generic fallback. Glyphs blit as their measured
+ * ink box (non-key pixels only), which keeps both the key background and
+ * the cells' frame strips out of the render. */
 #define FE_FONT_KEY       0xffff0000u
-/* Shipped font cells are ~40% pure black *and* ~40% key-red background
- * (even the space cell) with the gold/grey glyph ink between — the engine
- * blits each glyph's measured ink box, so neither background colour shows.
- * Skip both so the art shows through the text. */
-#define FE_FONT_BLACK     0xff000000u
 
 /* Item kinds — MenuItemType @ 0x413e60 (values 0..5; 5 = the "Next" catch-
  * all, 1 = Trigger). Slider/Cycle/TextInput parse their banner/label into
@@ -121,11 +121,12 @@ typedef struct FrontEnd {
 
     /* --- runtime (modal menu) state ------------------------------------ */
     int  open;                      /* 1 while the menu loop is showing   */
-    int  menu;                      /* FE_MENU_* (only MAIN is reachable) */
+    int  menu;                      /* FE_MENU_* (MAIN / PAUSED reachable) */
     int  sub;                       /* active submenu index               */
     int  sel;                       /* selected item index                */
     int  quit;                      /* user chose Quit (Yes on the confirm) */
     char pending_level[FE_LEVEL_NAME_MAX]; /* level group to load (no "Levels::") */
+    char resume_level[FE_LEVEL_NAME_MAX];  /* current level (pause Restart)   */
 } FrontEnd;
 
 /* One frame of modal-menu input: key *edges* this frame (the frame loop
@@ -144,6 +145,7 @@ typedef struct FeInput {
 typedef enum {
     FE_EVT_NONE = 0,
     FE_EVT_START_LEVEL,   /* frontend.pending_level holds the level group */
+    FE_EVT_RESUME,        /* close a modal overlay (pause Continue / Esc)   */
     FE_EVT_QUIT,          /* user quit the app from the front end */
 } FeEvent;
 
