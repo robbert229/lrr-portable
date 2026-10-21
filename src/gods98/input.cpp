@@ -11,11 +11,10 @@ void input_reset(InputState* s)
     memset(s->cur, 0, sizeof(s->cur));
     memset(s->prev, 0, sizeof(s->prev));
     memset(s->mirror, 0, sizeof(s->mirror));
-    memset(s->dev_enter, 0, sizeof(s->dev_enter));
-    memset(s->dev_leave, 0, sizeof(s->dev_leave));
+    memset(s->dwell_enter, 0, sizeof(s->dwell_enter));
+    memset(s->dwell_leave, 0, sizeof(s->dwell_leave));
     s->mouse_x = 0;
     s->mouse_y = 0;
-    s->device_mode = 0;
     s->hkl_present = 0;
     memset(s->context_filter, 0, sizeof(s->context_filter));
     s->text_target = NULL;
@@ -124,37 +123,36 @@ void input_text_pump(InputState* s, char* buf, int cap, int* len_out)
     input_mirror_and_clear(s);
 }
 
-/* QuitPoll machine — corpus FUN_004589c0. Modeled on finding 05:
- *   mouse inside the corner rectangle  -> enter[slot]++
- *   mouse outside                      -> leave[slot]++
- *   when the counters balance AND the mouse is beyond the quit rectangle,
- *   the game's quit path runs and closes with quitFlag = KeepRunning()==0.
+/* QuitPoll machine — corpus FUN_004589c0. Modeled on finding 05 (dwell
+ * counters) corrected by finding 22 (the word the original indexes off,
+ * _DAT_004ffbc0, is the objective/advisor flag word, not an input device):
+ *   dwelled in the corner rectangle -> enter[slot]++
+ *   left                               -> leave[slot]++
+ *   gesture completes when the mouse is past the quit rectangle after a
+ *   dwell; the corpus's quit path then probes KeepRunning and only quits
+ *   when that probe agrees (quitFlag = KeepRunning()==0).
  */
-int input_quit_dwell(InputState* s, int mx, int my,
+int input_quit_dwell(InputState* s, int slot, int mx, int my,
                      int rect_x, int rect_y, int rect_w, int rect_h,
                      int quit_w, int quit_h, int keep_running)
 {
     if (s == NULL) {
         return 1;
     }
-    int slot = (int)s->device_mode;
     if (slot < 0 || slot >= 5) {
         slot = 0;
     }
     int inside = mx >= rect_x && mx < rect_x + rect_w
               && my >= rect_y && my < rect_y + rect_h;
     if (inside) {
-        ++s->dev_enter[slot];
-        s->dev_leave[slot] = 0;
+        ++s->dwell_enter[slot];
+        s->dwell_leave[slot] = 0;
     } else {
-        ++s->dev_leave[slot];
+        ++s->dwell_leave[slot];
         /* past the quit rectangle? */
         int past = mx < rect_x || mx > rect_x + rect_w + quit_w
                 || my < rect_y || my > rect_y + rect_h + quit_h;
-        /* gesture = dwelled in the corner (enter > 0) then left past the
-         * edge (leave > 0): the corpus's quit path then probes KeepRunning
-         * and only quits when that probe agrees (quitFlag = KeepRunning==0). */
-        if (past && s->dev_enter[slot] > 0 && s->dev_leave[slot] > 0) {
+        if (past && s->dwell_enter[slot] > 0 && s->dwell_leave[slot] > 0) {
             return keep_running == 0 ? 1 : 0;
         }
     }

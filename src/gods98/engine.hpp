@@ -65,7 +65,8 @@ typedef struct EngineContext {
     uint32_t     debug;        /* DAT_00556ed0 — debug/cheat flag word */
     int32_t      context_mode; /* DAT_00556ec8 — 1 in-game, 0 editor/preview */
     EngineState *state_block;  /* DAT_005560d4 */
-    InputState  *input;        /* key tables / device mode (findings 04/05) */
+    InputState  *input;        /* key tables / text pump / quit-dwell
+                                * (findings 04/05; dwell slots per 22) */
     float        exit_timer;   /* DAT_00556efc — decremented by scaled dt */
     int          tickers_ran;  /* scaffolding: count of dispatched tickers */
 } EngineContext;

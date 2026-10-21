@@ -74,25 +74,24 @@ int main(void)
     input_mirror_and_clear(&m);
     CHECK(m.mirror['x'] == 1 && m.cur['x'] == 0, "mirror_and_clear");
 
-    /* corner-dwell quit machine (findings 04/05 QuitPoll). */
+    /* corner-dwell quit machine (findings 04/05 QuitPoll; slot per 22). */
     InputState q = {};
     input_reset(&q);
-    q.device_mode = 1;
     int rect[4] = { 0, 0, 3, 3 };       /* corner zone */
     int qw = 6, qh = 6;
-    /* dwell inside the corner, then leave past the edge. */
-    CHECK(input_quit_dwell(&q, 1, 1, rect[0], rect[1], rect[2], rect[3],
+    /* dwell inside the corner (slot 1), then leave past the edge. */
+    CHECK(input_quit_dwell(&q, 1, 1, 1, rect[0], rect[1], rect[2], rect[3],
                            qw, qh, 1) == 0, "dwell enter only, no quit");
-    CHECK(q.dev_enter[1] == 1, "dwell enter counter");
-    CHECK(input_quit_dwell(&q, 10, 10, rect[0], rect[1], rect[2], rect[3],
+    CHECK(q.dwell_enter[1] == 1, "dwell enter counter");
+    CHECK(input_quit_dwell(&q, 1, 10, 10, rect[0], rect[1], rect[2], rect[3],
                            qw, qh, 0) == 1, "dwell -> quit when !keep_running");
-    CHECK(q.dev_leave[1] == 1, "dwell leave counter");
-    CHECK(input_quit_dwell(&q, 10, 10, rect[0], rect[1], rect[2], rect[3],
+    CHECK(q.dwell_leave[1] == 1, "dwell leave counter");
+    CHECK(input_quit_dwell(&q, 1, 10, 10, rect[0], rect[1], rect[2], rect[3],
                            qw, qh, 1) == 0, "no quit when keep_running");
     /* never dwelled -> never quits. */
     InputState q2 = {};
     input_reset(&q2);
-    CHECK(input_quit_dwell(&q2, 10, 10, 0, 0, 3, 3, qw, qh, 0) == 0,
+    CHECK(input_quit_dwell(&q2, 0, 10, 10, 0, 0, 3, 3, qw, qh, 0) == 0,
           "no dwell, no quit");
 
     if (s_failures == 0) {

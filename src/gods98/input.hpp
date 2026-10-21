@@ -14,11 +14,14 @@
  * (findings 04/05) turns edges into text via KeyContextCheck (context filter)
  * + KeyToAscii and clears the tables with the mirror trick.
  *
- * Device-mode word (_DAT_004ffbc0): 1/2/4 = alternative device modes, with
- * per-mode enter/leave counters used by the corner-dwell quit machine
- * (QuitPoll FUN_004589c0). The OS-level *writer* of that word (device
- * capture, finding 05's still-open writer region 0x457d7e-0x459157) lands
- * with the frame-loop milestone; this module models the state + consumers.
+ * QuitPoll's dwell machine (FUN_004589c0): corner-dwell quit gesture with
+ * per-slot enter/leave counters. The original indexes those counters off a
+ * word that finding 05 mislabeled an "input-device mode word"
+ * (_DAT_004ffbc0, "1/2/4 = alternative device modes") — finding 22 corrects
+ * it: that word is the **objective/advisor flag word** (0x1 pending / 0x2
+ * achieved / 0x4 failed + config bits), touched only by the objective/
+ * announcer functions. So the dwell slot is supplied by the caller (the
+ * objective layer, finding 09/22), NOT picked from an input device here.
  *
  * Reconstruction notes:
  *  - KeyToAscii ports the no-HKL path exactly (DAT_00549180 == 0: a-z ->
@@ -44,9 +47,11 @@ typedef struct InputState {
     int32_t  mouse_x;                 /* DAT_0076ab24 */
     int32_t  mouse_y;                 /* DAT_0076ab28 */
 
-    uint32_t device_mode;             /* _DAT_004ffbc0 (0..4) */
-    uint32_t dev_enter[5];            /* DAT_004ffdd8 per-mode enter counts */
-    uint32_t dev_leave[5];            /* DAT_004ffdf8 per-mode leave counts */
+    /* Corner-dwell quit counters (QuitPoll FUN_004589c0). Slot 0..4 is
+     * supplied by the caller — in the original it indexes off the
+     * objective/advisor flag word, not an input device (finding 22). */
+    uint32_t dwell_enter[5];          /* enter counts per slot */
+    uint32_t dwell_leave[5];          /* leave counts per slot */
 
     uint8_t  hkl_present;             /* DAT_00549180 analog */
     uint32_t context_filter[INPUT_KEY_COUNT]; /* DAT_004a1f60 analog */
@@ -84,10 +89,12 @@ void input_text_pump(InputState* s, char* buf, int cap, int* len_out);
 
 /* QuitPoll machine (FUN_004589c0): corner-dwell quit gesture. Feeds the
  * mouse position against the corner rectangle; enter/leave counters on the
- * current device-mode slot; returns 1 when the gesture completes (balanced
- * counters and the mouse has moved past the quit rectangle) AND keep_running
- * is 0 — mirroring quitFlag = (KeepRunning() == 0). Returns 0 otherwise. */
-int input_quit_dwell(InputState* s, int mx, int my,
+ * caller-supplied dwell `slot` (0..4; in the original the slot indexes off
+ * the objective/advisor flag word `_DAT_004ffbc0` — finding 22, NOT input
+ * devices); returns 1 when the gesture completes (dwelled in the corner,
+ * then left past the quit rectangle) AND keep_running is 0 — mirroring
+ * quitFlag = (KeepRunning() == 0). Returns 0 otherwise. */
+int input_quit_dwell(InputState* s, int slot, int mx, int my,
                      int rect_x, int rect_y, int rect_w, int rect_h,
                      int quit_w, int quit_h, int keep_running);
 

@@ -178,16 +178,17 @@ junk rejection) and, with `test_wads_dir` set, parses **all 387 shipped
 .wav files** and byte-matches five reference entries against `wave`-module-
 derived PCM hashes.
 
-**Input core + CD/STD fallback** (findings 04/05, 01): `src/gods98/input.*`
+**Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the
 `EnginePreTick` text pump + mirror/clear, and the `QuitPoll` corner-dwell
-machine over the input-device mode word (`_DAT_004ffbc0`); the OS-level device
-*writer* (device capture) rides with the frame-loop milestone. The resource
-layer gained the CD/STD fallback chain (`resource_set_cd_drive/root/data_dir`,
-`%c:\%s\%s`, `cd.key`/`delme.dat` probes) per finding 01. `input_test` (suite
-`input`, no game data needed) and a `test_cd_fallback` unit in `test_resource`
-cover both.
+machine. The `_DAT_004ffbc0` word behind the dwell slots was reclassified by
+finding 22 as the **objective/advisor flag word** (not an input device), so
+the dwell slot is caller-supplied here; the OS-level device *writer* rides
+with the frame-loop milestone. The resource layer gained the CD/STD fallback
+chain (`resource_set_cd_drive/root/data_dir`, `%c:\%s\%s`, `cd.key`/`delme.dat`
+probes) per finding 01. `input_test` (suite `input`, no game data needed) and a
+`test_cd_fallback` unit in `test_resource` cover both.
 
 - **`native`** (primary, end goal): compiles the reconstruction C++ against
   **miniwin** (SDL3) — no Wine layer. Host compiler, no cross file. miniwin
