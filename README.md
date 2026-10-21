@@ -78,6 +78,13 @@ documented address-level — including the two that exist but are never loaded
 and the toolchain (unpack/pack byte-exact, model+uv convert **and** write, live launcher)
 is regression-verified against the shipped corpus.
 
+A fresh verify pass (finding 20, 2026-10-20) re-derived the critical path — PE entry
+(`0x48f000`) → WinMain (`FUN_004777a0`) → init → frame loop → engine tick (`0x4232e0`) —
+in a clean Ghidra session: no contradicting evidence, and the named corpus reproduces
+byte-identical (7,653 lines, `diff` exit 0). It corrected one finding-02 reading:
+`DAT_00505814` holds the exe basename minus `.EXE` (the `.wad` prefix), not the install
+directory; the real data directory is `cwd\Data` (`DAT_005342a8`).
+
 Open threads, in order of value:
 1. **Live mod proof** — the chain grammar → writer → byte-exact repack → launch is proven
    only link-by-link; repacking a modified `.uv` (e.g. a `GC_Larm.uv` pilot re-skin) and
@@ -110,6 +117,7 @@ Open threads, in order of value:
 | 17 | [`findings/17-interactive-a2-session.md`](docs/findings/17-interactive-a2-session.md) | **Playable**: first mission completes; music is streamed WAVs (no CDDA media on digital release); movies skip on missing Indeo 5 decoder; NVIDIA Xid driver-incident notes |
 | 18 | [`findings/18-movies-libav-alias.md`](docs/findings/18-movies-libav-alias.md) | **Movies fixed**: Indeo block was two missing sonames (`libbz2.so.1.0`, `libvpx.so.6`) silently killing wine's ffmpeg plugin — aliases + registry rebuild, automated in `a2.py` |
 | 19 | [`findings/19-uv-grammar.md`](docs/findings/19-uv-grammar.md) | **Last format closed**: `.uv` sidecar grammar in `FUN_00481c50` — surface texture-path overrides + per-corner UV (v negated, vertex duplication); names/keyframe tail structurally unread; validated 60/60 |
+| 20 | [`findings/20-verify-pass.md`](docs/findings/20-verify-pass.md) | **Fresh verify pass** (2026-10-20): critical path re-derived in a clean session; corpus byte-identical; `DAT_00505814` = `.wad` prefix, not install dir; CRT entry `0x48f000` |
 
 Named-pseudocode corpus: [`docs/decompiles/engine-region.c`](docs/decompiles/engine-region.c)
 (114 named functions covering the engine/game-logic region — findings 01–10).
@@ -130,7 +138,14 @@ SHA-256 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`).
 
 ## Reconstruction build (stub)
 
-Meson build with one source tree and two platform backends (ADR 0004):
+Meson build with one source tree and two platform backends (ADR 0004). The
+`native` build is green and the driver (`src/main.cpp`) now exercises the
+**engine scaffold** (2026-10-20): `EngineTick`/`EnginePreTick`/`KeepRunning`/
+`MainSimStep`/`EngineShutdown` in `src/gods98/engine.*` mirror the corpus's
+critical path (`0x4232e0`, `0x4231f0`, `0x435940`, `0x4250c0`, `0x424cf0/0x424d00`)
+over the `DAT_005560d4` state block, and `src/gods98/tickers.cpp` reproduces the
+tick's ordered 25-entry subsystem dispatch (finding 03 §4) as fill-in stubs
+(`ticker_<FUN-hex>` ↔ corpus `FUN_<hex>`).
 
 - **`native`** (primary, end goal): compiles the reconstruction C++ against
   **miniwin** (SDL3) — no Wine layer. Host compiler, no cross file. miniwin

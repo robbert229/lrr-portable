@@ -1,16 +1,16 @@
 # 02 — Startup & Main Loop
 
-**Observations from** `FUN_004777a0` (WinMain body), `FUN_0047f130` (mount), `FUN_0041fa20` / `FUN_00477fd0` (engine registration), and the loop in `FUN_004777a0`. Ghidra 12.1.4, 2026-10-19. All addresses are virtual (image base `0x400000`).
+**Observations from** `FUN_004777a0` (WinMain body — itself called from the CRT `entry` @ `0x48f000`), `FUN_0047f130` (mount), `FUN_0041fa20` / `FUN_00477fd0` (engine registration), and the loop in `FUN_004777a0`. Ghidra 12.1.4, 2026-10-19; re-verified from scratch 2026-10-20 (finding 20). All addresses are virtual (image base `0x400000`).
 
 ## WinMain body: `FUN_004777a0`
 
-1. **Single-instance mutex** — `CreateMutexA(NULL, TRUE, "Lego Rock Raiders %s")`; aborts on `ERROR_ALREADY_EXISTS` (`0xB7`).
-2. **Module directory** — parses `GetCommandLineA()` back to the last `\`, strips quotes, keeps the install directory at `DAT_00505814` (pointer `DAT_00505810`).
+1. **Single-instance mutex** — `CreateMutexA(NULL, TRUE, "Lego Rock Raiders %s")` (name composed by `FUN_0048d9e0` from a format string + `"Mutex"`); a `GetLastError()` of `ERROR_ALREADY_EXISTS` (`0xB7`) skips the *entire* body and returns 0 (i.e. a second instance does nothing).
+2. **Wad prefix from exe basename** — walks `GetCommandLineA()` to the last `\`, copies the **basename** (chars after the last backslash) into `DAT_00505814`, strips quotes in place, then uppercases the extension (`FUN_0049dcd0`) and NUL-terminates at `.EXE` (`FUN_0048da50` ≙ `strstr`). Result: `DAT_00505814 = "LegoRR"` — the prefix used by the mount's `"%s%i.wad"` loop (so `DAT_00505810 = &DAT_00505814`). The data *directory* is built separately in the mount: `getcwd() + "\" + "Data"` → `DAT_005342a8`. *(Corrects an earlier "install directory" reading — finding 20.)*
 3. **Registry** — `SOFTWARE\LEGO Media Games Rock R…`: `StandardParameters`, `NoHALMessage` (HAL-failure popup text default `No DirectX 3D accelerator could be found…`).
 4. **Arg parsing** — `FUN_00477bf0(cmdline, &local_c8c, &local_c90)` → config word pair consumed later.
 5. **Init order**: `FUN_0048b260`, `FUN_004893f0`, **WAD mount** `FUN_0047f130(exedir, local_c90, regkey)`, `FUN_00478df0`, `FUN_0047ed90`.
 6. **Window + device**: `FUN_004783f0(hInst)` (creates window `DAT_00505800`), `FUN_00488b50(local_c8c)`, then `FUN_0049d030(1, flags & 0x2000, flags & 0x40, flags & 0x100, buf)`.
-7. **Engine hook-up**: `FUN_0041fa20(&DAT_00505814)` → registers the callback triplet (below), then the frame loop runs.
+7. **Engine hook-up**: `FUN_0047ec80(DAT_0076ac84)` + `FUN_00485e80(0)` (render/graphics prep), then `FUN_0041fa20(&DAT_00505814)` → registers the callback triplet (below), then the frame loop runs.
 
 ## The callback triplet (the real game module boundary)
 
@@ -20,7 +20,7 @@
 | --- | --- | --- |
 | `DAT_0050592c` | `FUN_0041fb50` | per-frame *init/reset* check — huge local-frame function initializing float constants (`DAT_00556f2c = 0.3e-1` etc.); cleared when it returns 0 (once) |
 | `DAT_00505930` | `LAB_004232e0` | **the frame tick** `f(dt)` |
-| `DAT_00505934` | `LAB_00424d00` (alt `LAB_00424cf0` when `DAT_00505f84 == 10`) | shutdown |
+| `DAT_00505934` | `LAB_00424cf0` (stub → `FUN_004250a0`); `LAB_00424d00` (full teardown) only when `DAT_00505f88 == 10` (loader mode) | shutdown |
 
 The whole game logic lives between `0x41fb50`–`0x424d00`, which explains why Ghidra reports no named functions there (direct-label entry, no data refs). This region is the heart of the executable.
 
@@ -38,7 +38,8 @@ while (!quit) {
   // dt: fixed 0.8333333 if flags&0x80, else timeGetTime delta * 0.025 (25 ms units), clamped to 3.0
   //      flags&0x10 -> 0.0 ; DAT_0050593c override wins when set
 }
-// teardown: FUN_0047ccf0, DestroyWindow, FUN_0047efd0, FUN_00478e20
+// teardown: (*DAT_00505934)(), FUN_0047ccf0, DestroyWindow, FUN_0047efd0, FUN_00478e20,
+//           FUN_00484c90(0), FUN_0048b290, FUN_0048b2f0
 ```
 
 `DAT_00505f84` is the master feature word (`&0x80` fixed-step, `&0x10` pause/skip-time, `&2` alt mode, bits `0x100/0x2000/0x40` gate init calls).
@@ -54,6 +55,8 @@ while (!quit) {
 | Claim | State |
 | --- | --- |
 | WinMain flow, mutex, registry key, window HWND slot | observed |
+| `DAT_00505814` = exe basename − `.EXE` (wad prefix, **not** the install dir) | observed — re-derived 2026-10-20, finding 20 |
+| Shutdown slot: `LAB_00424cf0` (stub→`FUN_004250a0`) for normal play; `LAB_00424d00` when `DAT_00505f88 == 10` | observed — corrected here, finding 20 |
 | Triplet registration mechanism | observed |
 | dt calculation and loop constants | observed |
 | `FUN_0041fb50`'s float table = game-rule constants | **inferred** — constants like `0.3e-1`, `0.7e-1` smell like speeds/friction, not proven |

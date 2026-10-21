@@ -3,5 +3,5 @@
 
 const char* gods98_engine_name(void)
 {
-    return "gods98 (stub)";
+    return "gods98 (engine scaffold 0.2)";
 }
