@@ -22,6 +22,7 @@
 #include <string.h>
 
 #include "frontend.hpp"
+#include "gods98/flic.hpp"
 #include "util.hpp"
 
 static int s_lower(int c) { return (c >= 'A' && c <= 'Z') ? c + 0x20 : c; }
@@ -269,7 +270,7 @@ static void fe_parse_submenu(FrontEnd* fe, FeMenu* m, const char* name,
     char pre[FE_PATH_MAX * 2];
     snprintf(pre, sizeof(pre), "%s Menu::%s %s", util_root_name(fe->cfg),
              name, fe_menu_name_idx(idx));
-    char buf[FE_PATH_MAX * 2], val[FE_NAME_MAX];
+    char buf[FE_PATH_MAX * 2];
 
     snprintf(buf, sizeof(buf), "%s Title", pre);
     if (block_get_strptr(fe->cfg, buf) != NULL) {
@@ -347,6 +348,53 @@ static void fe_parse_submenu(FrontEnd* fe, FeMenu* m, const char* name,
         }
         fe_parse_item(item, &sub->items[j]);
     }
+
+    /* FLIC overlays (`!Overlay%i <avi\X.flh>:<SFX>:x:y`) + PlayRandom —
+     * finding 23's decoration lane; the `.flh` players open lazily at
+     * display time (the paths may be loose Data/AVI copies). */
+    snprintf(buf, sizeof(buf), "%s PlayRandom", pre);
+    sub->play_random = block_get_bool(fe->cfg, buf) == 1;
+    sub->overlay_count = 0;
+    for (int j = 1; j <= FE_OVERLAYS_MAX && sub->overlay_count < FE_OVERLAYS_MAX;
+         ++j) {
+        snprintf(buf, sizeof(buf), "%s !Overlay%d", pre, j);
+        const char* ov = block_get_strptr(fe->cfg, buf);
+        if (ov == NULL || ov[0] == '\0') {
+            continue;
+        }
+        FeOverlay* o = &sub->overlays[sub->overlay_count];
+        o->path[0] = o->sfx[0] = '\0';
+        o->x = o->y = 0;
+        o->flic = NULL;
+        /* value = path:sfx:x:y (path may itself contain ':' — take the
+         * first token as path, then sfx, x, y). */
+        const char* p = ov;
+        const char* c1 = strchr(p, ':');
+        size_t pl = c1 != NULL ? (size_t)(c1 - p) : strlen(p);
+        if (pl >= sizeof(o->path)) {
+            pl = sizeof(o->path) - 1;
+        }
+        memcpy(o->path, p, pl);
+        o->path[pl] = '\0';
+        if (c1 != NULL) {
+            const char* sfx = c1 + 1;
+            const char* c2 = strchr(sfx, ':');
+            size_t sl = c2 != NULL ? (size_t)(c2 - sfx) : strlen(sfx);
+            if (sl >= sizeof(o->sfx)) {
+                sl = sizeof(o->sfx) - 1;
+            }
+            memcpy(o->sfx, sfx, sl);
+            o->sfx[sl] = '\0';
+            if (c2 != NULL) {
+                o->x = (int)strtol(c2 + 1, NULL, 10);
+                const char* c3 = strchr(c2 + 1, ':');
+                if (c3 != NULL && c3[1] != '\0') {
+                    o->y = (int)strtol(c3 + 1, NULL, 10);
+                }
+            }
+        }
+        ++sub->overlay_count;
+    }
 }
 
 static int fe_parse_menu(FrontEnd* fe, int mi, const char* name)
@@ -407,6 +455,74 @@ static void fe_graft_picker(FrontEnd* fe, FeMenu* m, int tutorial)
 
 /* --- public API ----------------------------------------------------------- */
 
+/* Close every open overlay flic (menu switch / close). */
+static void fe_overlay_close_all(FrontEnd* fe)
+{
+    for (int m = 0; m < FE_MENU_COUNT; ++m) {
+        for (int s = 0; s < fe->menus[m].submenu_count; ++s) {
+            FeSubmenu* sub = &fe->menus[m].submenus[s];
+            for (int i = 0; i < sub->overlay_count; ++i) {
+                if (sub->overlays[i].flic != NULL) {
+                    flic_close(sub->overlays[i].flic);
+                    sub->overlays[i].flic = NULL;
+                }
+            }
+        }
+    }
+    fe->overlays_for = NULL;
+}
+
+/* Open (and tick-start) the active submenu's overlay flics. PlayRandom
+ * submenus play one chosen overlay; others play all listed. Missing files
+ * (paths that don't resolve) leave the overlay's flic NULL — a no-op. */
+const FeSubmenu* frontend_active_submenu(const FrontEnd* fe);
+
+static void fe_overlay_open(FrontEnd* fe, const FeSubmenu* sub, int picked)
+{
+    if (fe == NULL || sub == NULL) {
+        return;
+    }
+    for (int i = 0; i < sub->overlay_count; ++i) {
+        FeOverlay* o = (FeOverlay*)&sub->overlays[i];
+        if ((sub->play_random && i != picked) || o->tried) {
+            continue;
+        }
+        o->tried = 1;
+        o->flic = flic_open(o->path);
+    }
+    fe->overlays_for = sub;
+}
+
+/* Ensure the current submenu's overlays are open (re-opening on menu
+ * switches); advances each open flic one frame. */
+static void fe_overlay_step(FrontEnd* fe)
+{
+    if (fe == NULL || !fe->open) {
+        return;
+    }
+    const FeSubmenu* sub = frontend_active_submenu(fe);
+    if (sub == NULL || sub->overlay_count == 0) {
+        if (fe->overlays_for != NULL) {
+            fe_overlay_close_all(fe);
+        }
+        return;
+    }
+    if (fe->overlays_for != sub) {
+        fe_overlay_close_all(fe);
+        /* PlayRandom: pick one overlay per display; the frame counter is a
+         * decent shake. */
+        int picked = sub->play_random
+                         ? (int)(fe->sel * 7919u % (unsigned)sub->overlay_count)
+                         : -1;
+        fe_overlay_open(fe, sub, picked);
+    }
+    for (int i = 0; i < sub->overlay_count; ++i) {
+        if (sub->overlays[i].flic != NULL) {
+            flic_tick_loop(sub->overlays[i].flic, 1);
+        }
+    }
+}
+
 void frontend_init(FrontEnd* fe)
 {
     if (fe == NULL) {
@@ -466,6 +582,7 @@ int frontend_open(FrontEnd* fe, int menu)
     fe->open = 1;
     fe->quit = 0;
     fe->pending_level[0] = '\0';
+    fe_overlay_step(fe); /* open the active submenu's flic overlays */
     return 1;
 }
 
@@ -473,6 +590,7 @@ void frontend_close(FrontEnd* fe)
 {
     if (fe != NULL) {
         fe->open = 0;
+        fe_overlay_close_all(fe);
     }
 }
 
@@ -555,6 +673,7 @@ FeEvent frontend_tick(FrontEnd* fe, const FeInput* in,
     }
     FeSubmenu* sub = &m->submenus[fe->sub];
     if (sub->item_count <= 0) {
+        fe_overlay_step(fe); /* still advance any overlay animations */
         return FE_EVT_NONE;
     }
     if (fe->sel >= sub->item_count) {
@@ -563,6 +682,9 @@ FeEvent frontend_tick(FrontEnd* fe, const FeInput* in,
     if (fe->sel < 0) {
         fe->sel = 0;
     }
+    /* .flh overlay lane (finding 23): open + advance the active submenu's
+     * flics each frame (PlayRandom picks one at open). */
+    fe_overlay_step(fe);
 
     if (in->up) {
         if (fe->sel > 0) {
@@ -614,7 +736,7 @@ FeEvent frontend_tick(FrontEnd* fe, const FeInput* in,
 
 const FeMenu* frontend_menu(const FrontEnd* fe, int menu)
 {
-    static const FeMenu s_empty = { {0}, 0, {{0}} };
+    static const FeMenu s_empty = {};
     if (fe == NULL || menu < 0 || menu >= FE_MENU_COUNT) {
         return &s_empty;
     }
@@ -623,7 +745,7 @@ const FeMenu* frontend_menu(const FrontEnd* fe, int menu)
 
 const FeSubmenu* frontend_active_submenu(const FrontEnd* fe)
 {
-    static const FeSubmenu s_empty = { 0, {{0}}, {0}, {0}, 0, 0, 0, 0 };
+    static const FeSubmenu s_empty = {};
     if (fe == NULL || !fe->open || fe->menu < 0 || fe->menu >= FE_MENU_COUNT) {
         return &s_empty;
     }
@@ -1021,6 +1143,42 @@ void frontend_render(const FrontEnd* fe, const TextureSurface* hi_font,
     const FeSubmenu* sub = frontend_active_submenu(fe);
     if (sub == NULL || sub->item_count <= 0) {
         return;
+    }
+
+    /* .flh overlay lane (finding 23): blit each open overlay's current
+     * frame at its configured (x,y), native size, over the menu backdrop
+     * and under the items. */
+    for (int i = 0; i < sub->overlay_count; ++i) {
+        const FeOverlay* o = &sub->overlays[i];
+        if (o == NULL || o->flic == NULL) {
+            continue;
+        }
+        const uint8_t* frm = flic_frame_rgba(o->flic);
+        if (frm == NULL) {
+            continue;
+        }
+        int fw = flic_width(o->flic), fh = flic_height(o->flic);
+        for (int yy = 0; yy < fh; ++yy) {
+            int dy = o->y + yy;
+            if (dy < 0 || dy >= h) {
+                continue;
+            }
+            const uint8_t* s = frm + (size_t)yy * fw * 4;
+            uint8_t* d = (uint8_t*)px + (size_t)dy * (size_t)pitch
+                         + (size_t)o->x * 4;
+            for (int xx = 0; xx < fw; ++xx) {
+                int dx = o->x + xx;
+                if (dx < 0 || dx >= w) {
+                    continue;
+                }
+                const int oi = xx * 4;
+                d[0] = s[oi + 0];
+                d[1] = s[oi + 1];
+                d[2] = s[oi + 2];
+                d[3] = s[oi + 3];
+                d += 4;
+            }
+        }
     }
 
     if (sub->display_title && sub->title[0] != '\0') {

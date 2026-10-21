@@ -61,6 +61,9 @@ static const char* FIXCFG =
     "\t\t\t\tItem2\t\tNext:0:40:Training_Missions:Menu3\n"
     "\t\t\t\tItem3\t\tTrigger:0:120:Credits:0\n"
     "\t\t\t\tItem4\t\tNext:0:160:Quit_Game:Menu4\n"
+    "\t\t\t\tPlayRandom\tTRUE\n"
+    "\t\t\t\t!Overlay1\tavi\\PB1.flh:SFX_NULL:488:0\n"
+    "\t\t\t\t!Overlay2\tavi\\Rocky.flh:FrontSFX_RockMonster:0:216\n"
     "\t\t\t}\n"
     "\t\t\tMenu2 {\n"
     "\t\t\t\tFullName\tMissions\n"
@@ -159,6 +162,20 @@ static void test_build(void)
         && main->submenus[0].items[2].flag == 0, "build: Credits trigger flag 0");
     CHECK(main->submenus[3].items[0].kind == FE_ITEM_TRIGGER
         && main->submenus[3].items[0].flag == 1, "build: Yes trigger flag 1");
+    /* FLIC overlay lane (finding 23): !Overlay%i path:sfx:x:y + PlayRandom. */
+    CHECK(main->submenus[0].play_random == 1, "build: PlayRandom parsed");
+    CHECK(main->submenus[0].overlay_count == 2, "build: two !Overlay entries");
+    CHECK(strcmp(main->submenus[0].overlays[0].path, "avi\\PB1.flh") == 0
+        && strcmp(main->submenus[0].overlays[0].sfx, "SFX_NULL") == 0
+        && main->submenus[0].overlays[0].x == 488
+        && main->submenus[0].overlays[0].y == 0,
+        "build: overlay0 path/sfx/x/y");
+    CHECK(strcmp(main->submenus[0].overlays[1].path, "avi\\Rocky.flh") == 0
+        && strcmp(main->submenus[0].overlays[1].sfx,
+                  "FrontSFX_RockMonster") == 0
+        && main->submenus[0].overlays[1].x == 0
+        && main->submenus[0].overlays[1].y == 216,
+        "build: overlay1 path/sfx/x/y");
 
     /* picker grafting: Menu2 = campaign rows, Menu3 = tutorial rows */
     const FeSubmenu* pick = &main->submenus[1];
@@ -200,6 +217,18 @@ static void test_nav_and_actions(void)
     frontend_build(&fe, cfg);
     CHECK(frontend_open(&fe, FE_MENU_MAIN), "nav: open");
     CHECK(fe.sub == 0 && fe.sel == 0, "nav: starts at Menu1 sel 0");
+
+    /* Overlay players open lazily on the first tick of the active submenu
+     * (PlayRandom picks one; no fixture files, so the flic stays NULL but
+     * the attempted flag is set — no per-frame retries). */
+    FeInput ov = { 0, 0, 0, 0, -1, -1, 0 };
+    CHECK(frontend_tick(&fe, &ov, NULL) == FE_EVT_NONE, "nav: overlay tick ok");
+    CHECK(fe.menus[FE_MENU_MAIN].submenus[0].overlays[0].tried == 1,
+          "nav: overlay open attempted");
+    CHECK(fe.menus[FE_MENU_MAIN].submenus[0].overlays[0].flic == NULL,
+          "nav: missing overlay file -> no flic (no crash)");
+    CHECK(fe.menus[FE_MENU_MAIN].submenus[0].overlays[0].tried == 1,
+          "nav: overlay open not retried every frame");
 
     FeInput in = { 0, 0, 0, 0, -1, -1, 0 };
     in.down = 1;

@@ -22,6 +22,7 @@ gods98_lib = static_library('gods98',
   'model.cpp',
   'entity.cpp',
   'movie.cpp',
+  'flic.cpp',
   include_directories : gods98_incs,
   dependencies : [platsub_deps, platform_glue_dep],
   install : false)
@@ -46,7 +47,8 @@ if get_option('platform') == 'native'
                  ['simtick', 'test_simtick.cpp'],
                  ['enginebind', 'test_engine_bind.cpp'],
                  ['block', 'test_block.cpp'], ['model', 'test_model.cpp'],
-                 ['entity_ae', 'test_entity.cpp'], ['movie', 'test_movie.cpp']]
+                 ['entity_ae', 'test_entity.cpp'], ['movie', 'test_movie.cpp'],
+                 ['flic', 'test_flic.cpp']]
     test_name = exe[0]
     t = executable(test_name + '_test', exe[1],
       include_directories : gods98_incs,
@@ -64,7 +66,7 @@ if get_option('platform') == 'native'
       continue
     endif
     if ['resource', 'texture', 'sound', 'block', 'model', 'entity_ae',
-        'movie'].contains(tinfo[0])
+        'movie', 'flic'].contains(tinfo[0])
       test(tinfo[0], tinfo[1],
         args : test_wads == '' ? [] : ['--real', test_wads],
         suite : tinfo[0])
