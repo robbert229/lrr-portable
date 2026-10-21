@@ -14,21 +14,16 @@ proj_inc = include_directories('.')
 
 subdir('gods98')
 subdir('game')
-subdir('platform')
+subdir('platform')   # defines platform_entry, platsub_deps, miniwin_inc
 
 platform = get_option('platform')
 if platform == 'native'
-  extra_sources = []
   exe_kwargs = {}
-  # miniwin's public headers (INTERFACE target `miniwin-headers`); meson's
-  # cmake module doesn't propagate its BUILD_INTERFACE include dir, so pin
-  # the include path here at the seam (docs/adr/0004).
-  miniwin_inc = include_directories('../3rdparty/isle-portable/miniwin/include')
+  extra_sources = []
 elif platform == 'winapi'
   windows = import('windows')
-  extra_sources = [windows.compile_resources('version.rc')]
   exe_kwargs = {'win_subsystem' : 'windows'}
-  miniwin_inc = []
+  extra_sources = [windows.compile_resources('version.rc')]
 else
   error('unknown platform: ' + platform)
 endif

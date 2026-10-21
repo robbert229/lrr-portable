@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: LGPL-3.0-or-later
 # Thin bridge so meson's `cmake.subproject('miniwin')` finds the miniwin
 # sources inside the sparse isle-portable submodule. miniwin's own top-level
 # CMakeLists lives at 3rdparty/isle-portable/miniwin/CMakeLists.txt.

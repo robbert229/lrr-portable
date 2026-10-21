@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: LGPL-3.0-or-later
 game_lib = static_library('game',
   'game.cpp',
   include_directories : include_directories('.'),

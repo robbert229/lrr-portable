@@ -21,7 +21,7 @@
 #elif defined(LEGORRR_BACKEND_WINAPI)
 #  include <windows.h>
 #else
-#  error "no backend defined — set meson option backend=native|winapi"
+#  error "no platform defined — set the meson option platform=native|winapi"
 #endif
 
 #endif /* LEGORRR_PLATFORM_H */

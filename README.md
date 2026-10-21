@@ -110,8 +110,9 @@ Meson build with one source tree and two platform backends (ADR 0004):
 
 - **`native`** (primary, end goal): compiles the reconstruction C++ against
   **miniwin** (SDL3) — no Wine layer. Host compiler, no cross file. miniwin
-  comes in as a sparse git submodule: `git submodule update --init --depth 1`
-  then `git -C 3rdparty/isle-portable sparse-checkout set miniwin`.
+  comes in as a sparse git submodule — bootstrap with `tools/setup-miniwin.sh`
+  (blob-none + cone sparse to `miniwin/` only; the sibling game's decompiled
+  source is never written to the working tree).
 - **`winapi`** (reference): cross-compiles the same source to a 32-bit Win32
   `LegoRR.exe` (MinGW-w64) for A/B against the shipped binary under the A.2
   harness — one environment, direct comparison (ADR 0002).
