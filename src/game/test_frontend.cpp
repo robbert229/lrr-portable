@@ -579,6 +579,59 @@ static void test_pause(void)
     block_close(cfg);
 }
 
+static void test_slots(void)
+{
+    BlockFile* cfg = s_parse(
+        "Lego* {\n"
+        "\tMain { StartLevel Levels::Tran01 }\n"
+        "\tMenu { MainMenuFull {\n"
+        "\t\tMenuCount 2\n"
+        "\t\tMenu1 {\n"
+        "\t\t\tAutoCenter TRUE Position 320:200 ItemCount 1\n"
+        "\t\t\tItem1 Next:0:0:Load_A_Saved_Game:Menu2\n"
+        "\t\t}\n"
+        "\t\tMenu2 {\n"
+        "\t\t\tFullName Load_A_Saved_Game\n"
+        "\t\t\tMenuImage Interface\\FrontEnd\\SaveLoad.bmp:0:0:1\n"
+        "\t\t\tAutoCenter FALSE Position 320:200 ItemCount 1\n"
+        "\t\t\tItem1 Next:-314:236:Back:Menu1\n"
+        "\t\t}\n"
+        "\t} }\n"
+        "\tLevels { Tran01 { FullName T FrontEndX 10 FrontEndY 10 } }\n"
+        "}\n");
+    FrontEnd fe;
+    frontend_build(&fe, cfg);
+    FeSlot slots[3];
+    snprintf(slots[0].label, FE_NAME_MAX, "%s", "Slot 1 (empty)");
+    slots[0].id = 1; slots[0].present = 0;
+    snprintf(slots[1].label, FE_NAME_MAX, "%s", "Slot 2");
+    slots[1].id = 2; slots[1].present = 1;
+    snprintf(slots[2].label, FE_NAME_MAX, "%s", "Slot 3");
+    slots[2].id = 3; slots[2].present = 1;
+
+    CHECK(frontend_build_slots(&fe, slots, 3) == 1, "slots: grafted");
+    CHECK(fe.slot_count == 3, "slots: registered count");
+    const FeMenu* m = frontend_menu(&fe, FE_MENU_MAIN);
+    CHECK(m->submenus[1].item_count == 1 + 3,
+        "slots: 3 rows appended on the SaveLoad screen");
+    CHECK(m->submenus[1].items[1].load_slot == 1,
+        "slots: row 1 binds slot 1");
+    CHECK(strcmp(m->submenus[1].items[2].label, "Slot 2") == 0,
+        "slots: row 2 label");
+
+    frontend_open(&fe, FE_MENU_MAIN);
+    FeInput ent = { 0, 0, 1, 0, -1, -1, 0 };
+    frontend_tick(&fe, &ent, NULL);           /* Menu1 item (Load) -> Menu2 */
+    CHECK(fe.sub == 1, "slots: navigated to SaveLoad screen");
+    FeInput down = { 0, 1, 0, 0, -1, -1, 0 };
+    frontend_tick(&fe, &down, NULL);          /* sel 1 = first slot row */
+    ent.down = 0; ent.enter = 1;
+    CHECK(frontend_tick(&fe, &ent, NULL) == FE_EVT_LOAD_GAME
+        && fe.load_slot == 1, "slots: picking slot 1 -> LOAD_GAME");
+
+    block_close(cfg);
+}
+
 int main(int argc, char** argv)
 {
     for (int a = 1; a < argc; ++a) {
@@ -596,6 +649,7 @@ int main(int argc, char** argv)
     test_font();
     test_pointer();
     test_pause();
+    test_slots();
 
     if (s_failures == 0) {
         printf("frontend: all tests passed\n");

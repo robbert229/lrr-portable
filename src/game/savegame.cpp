@@ -331,6 +331,72 @@ void checkpoint_blob_free(GameContext* ctx)
     }
 }
 
+void checkpoint_blob_apply(GameContext* ctx, const uint8_t* blob)
+{
+    if (ctx == NULL || blob == NULL) {
+        return;
+    }
+    int32_t enable = 0, mod = 0;
+    __builtin_memcpy(&enable, blob + 0x00, 4);
+    __builtin_memcpy(&mod, blob + 0x1C0, 4);
+    ctx->reward.enable = enable;
+    ctx->reward.modifier = mod;
+    __builtin_memcpy(ctx->tasks, blob + 0x1CEC,
+                     (size_t)GAME_TASK_COUNT * (size_t)GAME_TASK_STRIDE);
+}
+
+int save_slot_state(GameContext* ctx, int slot, int* out_filled,
+                    int* out_completed, int* out_resume)
+{
+    if (ctx == NULL || slot < 0 || slot >= SAVE_SLOTS) {
+        return 0;
+    }
+    if (out_filled) { *out_filled = 0; }
+    if (out_completed) { *out_completed = 0; }
+    if (out_resume) { *out_resume = -1; }
+    /* Probe the file directly: save_read_slot(_,_,0) would *create* a fresh
+     * slot when the file is absent (finding 08's SavReadSlot bootstrap). */
+    char path[280];
+    save_slot_path(ctx, path, sizeof(path), slot, "sav");
+    FILE* fp = fopen(path, MODE_RB);
+    if (fp == NULL) {
+        return 0;
+    }
+    fclose(fp);
+    if (!save_read_slot(ctx, slot, 0)) {
+        return 0;
+    }
+    int recs = ctx->record_count > 0 ? ctx->record_count : SAVE_DEFAULT_RECORDS;
+    int filled = 0, completed = 0, resume = -1;
+    for (int i = 0; i < recs && i < 256; i++) {
+        uint32_t* fl = save_record_flags(ctx, i);
+        if (fl == NULL) {
+            continue;
+        }
+        const uint8_t* blob = (const uint8_t*)(fl + 1);
+        int present = (*fl & 0x3) != 0;
+        if (!present) {
+            for (size_t b = 0; b < SAVE_BLOB_SIZE; b += 8) {
+                if (blob[b] != 0) {
+                    present = 1;
+                    break;
+                }
+            }
+        }
+        if (present) {
+            filled++;
+            if (*fl & 1) {
+                completed++;
+                resume = i;
+            }
+        }
+    }
+    if (out_filled) { *out_filled = filled; }
+    if (out_completed) { *out_completed = completed; }
+    if (out_resume) { *out_resume = resume; }
+    return 1;
+}
+
 void checkpoint_refresh(GameContext* ctx)
 {
     if (ctx == NULL) {
