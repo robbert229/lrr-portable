@@ -17,9 +17,6 @@
 /* Run the ordered EngineTick subsystem sequence (finding 03 §4). */
 void EngineSubsystemTickers(EngineContext* ctx, float dt, float scale);
 
-/* Camera / move cluster at the top of EngineTick (corpus lines 52-88). */
-void EngineCameraCluster(EngineContext* ctx, float dt, float scale);
-
 /* Indexed manager dispatch (corpus ManagerTick FUN_0045a730). */
 void EngineManagerDispatch(EngineContext* ctx, float dt);
 

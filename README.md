@@ -257,6 +257,15 @@ submits; `audio.*` adds `audio_set_volume` / `audio_play_sound_3d` /
 spatialized by the texture's pan position (the blit is the sound emitter),
 with **`[` `]`** adjusting volume.
 
+**Engine simulation fills** (2026-10-21, first tranche): the EngineTick
+camera/move cluster (`FUN_0046a730`, `FUN_00435a50`, `FUN_00431560`,
+`FUN_0042c440`, `FUN_0042cb70`, `FUN_004261c0` — finding 03 §3) is ported
+into `src/gods98/camera.*` with its observed structure over the `EngineState`
+grid/move-list fields; cross-cutting helpers (message bus `FUN_00419b80`,
+spawn `FUN_0040f190`/`FUN_00438960`, move `FUN_0046a700`) remain stub
+boundaries with corpus addresses. `camera_test` (suite `camera`) covers the
+timer-decrement, grid-expiry, and spawn-countdown logic.
+
 ```sh
 cd path/to/legally-owned/game
 LEGORRR_AUTOSTOP_FRAMES=600 ../lrr-portable/build/src/LegoRR

@@ -197,21 +197,10 @@ void EngineSubsystemTickers(EngineContext* ctx, float dt, float scale)
     }
 }
 
-/* Camera / move cluster at the top of EngineTick — corpus lines 52-88:
- *   FUN_0046a730, FUN_00435a50, FUN_00431560, FUN_0042c440, FUN_0042cb70,
- *   FUN_004261c0, then the screen->world projection solving the camera
- *   position and the force-scale one-shot (ENGINE_STATE_FORCE_SCALE_1).
- */
-void EngineCameraCluster(EngineContext* ctx, float dt, float scale)
-{
-    (void)dt; (void)scale;
-    if ((ctx->state & ENGINE_STATE_FORCE_SCALE_1) != 0) {
-        ctx->state &= ~ENGINE_STATE_FORCE_SCALE_1;
-        /* TODO(engine): one-shot "scale = 1.0 this frame". */
-    }
-    /* TODO(engine): the six camera functions above, once mapped. */
-    (void)ctx;
-}
+/* Camera / move cluster at the top of EngineTick — ported into camera.*
+ * (camera_cluster → camera_move_pipeline / camera_registry_probe /
+ * camera_grid_timers / camera_grid_expiry / camera_spawn_countdown). The
+ * cluster is no longer a ticker here. */
 
 /* Indexed manager dispatch — corpus ManagerTick FUN_0045a730. Under
  * ENGINE_STATE_INDEXED_SUBSYS the corpus calls it with idx
