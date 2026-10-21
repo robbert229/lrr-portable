@@ -76,11 +76,12 @@ static int fixture_roundtrip(void)
     ctx.cfg = cfg;
 
     int placed = object_list_load(&ctx, cfg, "Level01");
-    CHECK(placed == 3, "three objects placed from M01.ol");
+    CHECK(placed == 4, "four .ol records handled (3 entities + camera; Test1 skipped)");
 
     CHECK(entity_count(&ctx, ENTITY_TYPE_VEHICLE) == 1, "one vehicle");
     CHECK(entity_count(&ctx, ENTITY_TYPE_BUILDING) == 1, "one building");
     CHECK(entity_count(&ctx, ENTITY_TYPE_MINIFIG) == 1, "one minifigure");
+    CHECK(entity_count(&ctx, ENTITY_TYPE_SPECIAL) == 0, "no special objects");
 
     const EntitySlot* v = entity_at(&ctx, ENTITY_TYPE_VEHICLE, 0);
     CHECK(v != NULL && strcmp(v->name, "Digger1") == 0, "vehicle name");
@@ -104,17 +105,30 @@ static int fixture_roundtrip(void)
           "Pilot -> minifig + type_name");
     CHECK(m != NULL && strcmp(m->driving, "Digger1") == 0,
           "driving ref captured");
+    CHECK(m != NULL && m->health == 150, ".ol `health` captured");
     /* Optional Model key parses into the slot (the file does not exist, so
      * the handle stays NULL — lazy load). */
     CHECK(m != NULL && strcmp(m->model_path, "Data\\Tools\\dig.lwo") == 0,
           "minifig model path from the .ol Model key");
     CHECK(m != NULL && entity_model(m) == NULL, "missing model file -> NULL");
 
+    /* TVCamera — FUN_0042e020's type -1 branch drives the follow camera
+     * instead of placing an entity. */
+    CHECK(ctx.ol_camera_set == 1, "camera placed");
+    CHECK(ctx.ol_camera_x == 5.0f && ctx.ol_camera_y == 6.0f,
+          "camera xPos/yPos");
+    CHECK(ctx.ol_camera_heading == 30.0f, "camera heading");
+
+    /* Unregistered type name (Test1) — corpus aborts; the port skips. */
+    CHECK(entity_count(&ctx, ENTITY_TYPE_MINIFIG) == 1,
+          "Test1 not placed as a minifig (unregistered)");
+
     /* Corpus strides. */
     CHECK(entity_stride(ENTITY_TYPE_VEHICLE) == 0x1ec, "vehicle stride");
     CHECK(entity_stride(ENTITY_TYPE_MINIFIG) == 0x74, "minifig stride");
     CHECK(entity_stride(ENTITY_TYPE_BUILDING) == 0x14c, "building stride");
-    CHECK(entity_stride(9) == 0, "bad type stride 0");
+    CHECK(entity_stride(ENTITY_TYPE_SPECIAL) == 0x74, "special stride (grouped)");
+    CHECK(entity_stride(20) == 0, "code 20 out of range stride 0");
 
     /* Table-exhaustion is guarded. */
     GameContext cap;
@@ -143,6 +157,7 @@ typedef struct OlRec {
     char  name[64];
     char  type_name[24];
     float x, y, heading;
+    int   health;
     char  driving[40];
 } OlRec;
 
@@ -213,6 +228,7 @@ static int ol_parse_indep(const char* text, OlRec* out, int max)
             if (depth == 1 && n < max) {
                 cur = n;
                 __builtin_memset(&out[cur], 0, sizeof(out[cur]));
+                out[cur].health = 100; /* corpus default (FUN_0042e020) */
                 snprintf(out[cur].name, sizeof(out[cur].name), "%s", toks[0]);
                 ++n;
             }
@@ -231,6 +247,8 @@ static int ol_parse_indep(const char* text, OlRec* out, int max)
                 out[cur].y = (float)strtod(toks[1], NULL);
             } else if (ci_eq(toks[0], "heading")) {
                 out[cur].heading = (float)strtod(toks[1], NULL);
+            } else if (ci_eq(toks[0], "health")) {
+                out[cur].health = (int)strtod(toks[1], NULL);
             } else if (ci_eq(toks[0], "driving")) {
                 snprintf(out[cur].driving, sizeof(out[cur].driving),
                          "%s", toks[1]);
@@ -269,11 +287,85 @@ static uint32_t ol_digest(OlRec* a, int n)
     for (int i = 0; i < n; ++i) {
         char buf[256];
         /* %g round-trips the same strtod float on both sides. */
-        snprintf(buf, sizeof(buf), "%s|%s|%g|%g|%g|%s", a[i].name,
-                 a[i].type_name, a[i].x, a[i].y, a[i].heading, a[i].driving);
+        snprintf(buf, sizeof(buf), "%s|%s|%g|%g|%g|%d|%s", a[i].name,
+                 a[i].type_name, a[i].x, a[i].y, a[i].heading, a[i].health,
+                 a[i].driving);
         h = fnv1a32(h, buf);
     }
     return h;
+}
+
+/* The corpus registry (shipped Lego.cfg VehicleTypes/MiniFigureTypes/
+ * RockMonsterTypes/BuildingTypes + FUN_0042e8b0 specials) — used by the
+ * probe to decide which records the loader can place. */
+static int ol_type_is_unknown(const char* name);
+
+/* Filter records to the ones that become *placed entities*: TVCamera maps
+ * to the follow camera (no entity — FUN_0042e020 type -1), and unregistered
+ * type names (Test1…) are skipped by the port (the corpus aborts). Returns
+ * the number of records kept; `*cameras`/`*unknown` tally the excluded
+ * kinds, and the LAST camera record is captured in out_cam. */
+static int ol_filter_mirrors(OlRec* a, int n, int* cameras, int* unknown,
+                             OlRec* out_cam)
+{
+    int keep = 0;
+    *cameras = 0;
+    *unknown = 0;
+    if (out_cam != NULL) {
+        __builtin_memset(out_cam, 0, sizeof(*out_cam));
+    }
+    for (int i = 0; i < n; ++i) {
+        if (ci_eq(a[i].type_name, "TVCamera")) {
+            ++*cameras;
+            if (out_cam != NULL) {
+                *out_cam = a[i]; /* last one wins, like the loader */
+            }
+            continue;
+        }
+        /* unregistered names = not in the corpus ObjectTypeByName table —
+         * mirror the loader's skip. */
+        if (ol_type_is_unknown(a[i].type_name)) {
+            ++*unknown;
+            continue;
+        }
+        a[keep++] = a[i];
+    }
+    return keep;
+}
+
+static int ol_type_is_unknown(const char* name)
+{
+    if (name == NULL || name[0] == '\0') {
+        return 1;
+    }
+    if (ci_eq(name, "TVCamera") || ci_eq(name, "PowerCrystal")
+        || ci_eq(name, "Ore") || ci_eq(name, "ProcessedOre")
+        || ci_eq(name, "Boulder") || ci_eq(name, "Dynamite")
+        || ci_eq(name, "Barrier") || ci_eq(name, "ElectricFence")
+        || ci_eq(name, "SpiderWeb") || ci_eq(name, "OohScary")
+        || ci_eq(name, "Path") || ci_eq(name, "Pusher")
+        || ci_eq(name, "Freezer") || ci_eq(name, "LaserShot")) {
+        return 0;
+    }
+    static const char* const groups[][13] = {
+        { "Hoverboard", "SmallDigger", "SmallTruck", "SmallCat", "SmallMLP",
+          "SmallHeli", "BullDozer", "WalkerDigger", "LargeMLP",
+          "LargeDigger", "LargeCat", "LargeHeli", NULL },
+        { "Pilot", NULL },
+        { "RockMonster", "TinyRM", "TinyIM", "SmallSpider", "Bat", "Slug",
+          "LavaMonster", "IceMonster", NULL },
+        { "Toolstation", "TeleportPad", "Docks", "Powerstation", "Barracks",
+          "Upgrade", "Geo-dome", "OreRefinery", "Gunstation",
+          "TeleportBIG", NULL },
+    };
+    for (size_t g = 0; g < 4; ++g) {
+        for (size_t i = 0; groups[g][i] != NULL; ++i) {
+            if (ci_eq(groups[g][i], name)) {
+                return 0;
+            }
+        }
+    }
+    return 1;
 }
 
 static int ol_probe(const char* wad_dir)
@@ -296,7 +388,8 @@ static int ol_probe(const char* wad_dir)
      *    GameLevels/Level25/Copy of 25.ol, TutorialLevels/GeoTuto_01/G01.ol
      *    — never named by an OListFile, so the engine never loads them
      *    either; the probe still validates their grammar). */
-    int files = 0, objects = 0, mismatches = 0;
+    int files = 0, objects = 0, mismatches = 0, total_unknown = 0;
+    int total_cameras = 0;
     for (int w = 0; w < resource_mounted_count(); ++w) {
         uint32_t entries = resource_wad_entry_count(w);
         for (uint32_t e = 0; e < entries; ++e) {
@@ -332,16 +425,23 @@ static int ol_probe(const char* wad_dir)
 
             OlRec want[OL_PROBE_MAX];
             int wn = ol_parse_indep(text, want, OL_PROBE_MAX);
-            ol_sort(want, wn);
+            int cameras = 0, unknown = 0;
+            OlRec want_cam;
+            int wn2 = ol_filter_mirrors(want, wn, &cameras, &unknown,
+                                        &want_cam);
+            ol_sort(want, wn2);
 
             GameContext ctx;
             game_context_init(&ctx);
             ctx.cfg = cfg;
             int placed = object_list_load_file(&ctx, ename);
+            (void)placed; /* compared via tables below */
 
+            /* The placed-entity records: types 1..4 map to the four typed
+             * tables, 5..19 to the shared special table (table index 4). */
             OlRec got[OL_PROBE_MAX];
             int gn = 0;
-            for (int t = ENTITY_TYPE_VEHICLE; t <= ENTITY_TYPE_BUILDING; ++t) {
+            for (int t = ENTITY_TYPE_VEHICLE; t <= ENTITY_TYPE_SPECIAL; ++t) {
                 for (int k = 0; k < entity_count(&ctx, t); ++k) {
                     const EntitySlot* s = entity_at(&ctx, t, k);
                     if (s == NULL || gn >= OL_PROBE_MAX) {
@@ -353,6 +453,7 @@ static int ol_probe(const char* wad_dir)
                     got[gn].x = s->x;
                     got[gn].y = s->y;
                     got[gn].heading = s->rot;
+                    got[gn].health = s->health;
                     snprintf(got[gn].driving, sizeof(got[gn].driving),
                              "%s", s->driving);
                     ++gn;
@@ -360,21 +461,38 @@ static int ol_probe(const char* wad_dir)
             }
             ol_sort(got, gn);
 
-            int ok = placed == wn && gn == wn
-                     && ol_digest(got, gn) == ol_digest(want, wn);
+            /* The loader counts camera records in `placed` but places no
+             * entity for them (FUN_0042e020 type -1); the digest is over
+             * the entity records only. */
+            int ok = gn == wn2
+                     && ol_digest(got, gn) == ol_digest(want, wn2);
+            if (cameras > 0) {
+                ok = ok && ctx.ol_camera_set == 1
+                     && ctx.ol_camera_x == want_cam.x
+                     && ctx.ol_camera_y == want_cam.y
+                     && ctx.ol_camera_heading == want_cam.heading;
+            } else {
+                ok = ok && ctx.ol_camera_set == 0;
+            }
             if (!ok) {
                 ++mismatches;
                 fprintf(stderr,
-                        "entity_test: %s: .ol mismatch (placed=%d want=%d "
-                        "got=%d)\n", ename, placed, wn, gn);
-                for (int d = 0; d < wn && d < 3; ++d) {
+                        "entity_test: %s: .ol mismatch (entities got=%d "
+                        "want=%d cameras=%d unknown=%d)\n",
+                        ename, gn, wn2, cameras, unknown);
+                for (int d = 0; d < wn2 && d < 3; ++d) {
                     fprintf(stderr,
                             "  want %-16s type=%-16s x=%.4f y=%.4f h=%.4f "
-                            "d=%s\n",
+                            "hp=%d d=%s\n",
                             want[d].name, want[d].type_name, want[d].x,
-                            want[d].y, want[d].heading, want[d].driving);
+                            want[d].y, want[d].heading, want[d].health,
+                            want[d].driving);
                 }
             }
+            /* unregistered type names may only exist in the orphaned dev
+             * files (Test1…); none in the 34 cfg-referenced lists. */
+            total_unknown += unknown;
+            total_cameras += cameras;
             ++files;
             objects += wn;
             free(text);
@@ -407,10 +525,12 @@ static int ol_probe(const char* wad_dir)
         ctx.cfg = cfg;
         int placed = object_list_load(&ctx, cfg, block_name(g));
         int tables = 0;
-        for (int t = ENTITY_TYPE_VEHICLE; t <= ENTITY_TYPE_BUILDING; ++t) {
+        for (int t = ENTITY_TYPE_VEHICLE; t <= ENTITY_TYPE_SPECIAL; ++t) {
             tables += entity_count(&ctx, t);
         }
-        if (placed < 0 || placed != tables) {
+        /* `placed` counts camera records too, so it is >= the table count;
+         * a level's camera count is bounded by its few TVCameras. */
+        if (placed < 0 || placed < tables || placed - tables > 2) {
             ++wired_fail;
             fprintf(stderr, "entity_test: %s -> %s wired load mismatch "
                             "(placed=%d tables=%d)\n",
@@ -425,10 +545,13 @@ static int ol_probe(const char* wad_dir)
     CHECK(files == 44, "all 44 shipped .ol entries cross-checked");
     CHECK(mismatches == 0, "every .ol grammar/placement digest-identical");
     CHECK(wired_fail == 0, "every referenced OListFile wired (>= 34 levels)");
+    CHECK(total_unknown == 90, "the 90 Test1 records are all unregistered "
+                               "(dev orphans — mirror of the corpus abort)");
     fprintf(stderr, "entity_test: --real probe: %d corpus .ol files, %d "
-                    "objects, %d cfg-wired loads, %s\n",
-            files, objects, wired, mismatches == 0 && wired_fail == 0
-                                       ? "all match" : "MISMATCH");
+                    "object records, %d TVCameras (follow-camera), %d "
+                    "unregistered skips (Test1…), %d cfg-wired loads, %s\n",
+            files, objects, total_cameras, total_unknown, wired,
+            mismatches == 0 && wired_fail == 0 ? "all match" : "MISMATCH");
     return files;
 }
 
@@ -464,7 +587,19 @@ int main(int argc, char** argv)
         "    yPos    14.0\n"
         "    heading 0\n"
         "    driving Digger1\n"
+        "    health  150\n"
         "    Model   Data\\Tools\\dig.lwo\n"
+        "  }\n"
+        "  Cam {\n"
+        "    type    TVCamera\n"
+        "    xPos    5\n"
+        "    yPos    6\n"
+        "    heading 30\n"
+        "  }\n"
+        "  UnknownX {\n"
+        "    type    Test1\n"
+        "    xPos    1\n"
+        "    yPos    2\n"
         "  }\n"
         "}\n");
 

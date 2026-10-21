@@ -22,6 +22,19 @@ skipped; clear, processed with `!` stripped), the startup feature-word
 writes, and the string vocabulary (`"::"` joiner `DAT_004aab18`,
 `-reduceanimation` at `0x4aad04`, kind strings, activity keys).
 
+## `legorr-ol.bundle`
+
+Exported 2026-10-21 from the `.ol` object-list session: `FUN_0042e020`
+(the `.ol` ObjectListLoad consumer) and `FUN_0042e8b0` (ObjectTypeByName —
+the `.ol` `type` name → entity-code resolver), plus the registry
+populators (`FUN_0042cda0` VehicleTypes, `FUN_0042d100` RockMonsterTypes,
+`FUN_0040e490` encyclopedia), the shipped `Lego.cfg` `…Types` groups, and
+the string reads that pinned the `.ol` field keys (`type`/`xpos`/`ypos`/
+`heading`/`health`/`driving`) and the special-object names (Ore,
+ProcessedOre, PowerCrystal, Boulder, Dynamite, Barrier, ElectricFence,
+SpiderWeb, OohScary, Path, Pusher, Freezer, LaserShot, TVCamera). 21
+records. Import with `import_evidence_bundle` or inspect `records` directly.
+
 ## `legorr-frontend.bundle`
 
 Exported 2026-10-21 from the finding-23 session (front-end & menus). 73

@@ -109,19 +109,22 @@ directory; the real data directory is `cwd\Data` (`DAT_005342a8`).
 Open threads, in order of value:
 1. **Winapi reference build** — cross-compile the same `src/` to a 32-bit
    `LegoRR.exe` (MinGW-w64, `-Dplatform=winapi`) for A/B against the shipped
-   binary under `a2.py run --run-port` (ADRs 0002/0004). The one remaining
-   reconstruction item; it needs its tooling/environment (installable in a
-   distrobox/podman container — this box is immutable).
+   binary under `a2.py run --run-port` (ADRs 0002/0004). **PINNED for now
+   (maintainer decision)** — the byte-faithfulness A/B is the remaining
+   milestone but is not being worked at the moment; it needs its
+   tooling/environment (installable in a distrobox/podman container — this
+   box is immutable).
 2. Deferred: dgVoodoo as a perf option; the `Steam.lwo` point-only sprites as
    glTF. (The live-mod proof is not planned — dropped by maintainer
    decision.)
-3. Reconstruction notes: the `.ol` object-list loader is now corpus-verified
-   (`entity_test --real`, all 44 shipped lists); the front-end/menu boot
-   (finding 23, #41), `.ae` entity assembly (#42), model-aware entity
-   rendering (LWO wireframes), the campaign flow, command/AI, selection,
-   reward save+advance, the advisor/incident bus wiring, the software level
-   renderer, the engine↔level binding seam, and the AVI movie path (#47/#48)
-   are all in.
+3. Reconstruction notes: the `.ol` loader is decompile- + corpus-verified
+   (grammar and the `ObjectTypeByName` code table, `entity_test --real`
+   over all 44 shipped lists); the front-end/menu boot (finding 23, #41),
+   `.ae` entity assembly (#42), model-aware entity rendering (LWO
+   wireframes), the campaign flow, command/AI, selection, reward
+   save+advance, the advisor/incident bus wiring, the software level
+   renderer, the engine↔level binding seam, and the AVI movie path
+   (#47/#48) are all in.
 
 ## Findings index
 
@@ -493,15 +496,23 @@ finding 12, #14). Three new modules in `src/game/`:
   checker's slots, advances task values and marks completions. `mission_test`
   (suite `mission`) covers names, importance/quota, the crystal cap, field
   loaders, reward keys and completion.
-  `src/game/entity.*` models the corpus's typed entity tables (vehicles
-  0x1ec / minifigures 0x74 / buildings 0x14c strides — `EntityPointer`,
-  finding 10) and loads the `OListFile` `.ol` object list into them
-  (`object_list_load`, corpus-verified: **all 44 shipped `.ol` entries** —
-  grammar `type <name>` / `xPos` / `yPos` / `heading` / `driving`, 725
-  objects — cross-checked against an independent parser in `entity_test
-  --real`, with the type-name→table code kept as a documented provisional
-  seam until FUN_0042e020 is decompiled). `entity_test` (suite `entity`)
-  covers placement and stride/table caps plus the corpus probe.
+  `src/game/entity.*` models the corpus's entity tables (`EntityPointer`
+  strides) and loads the `OListFile` `.ol` object list into them
+  (`object_list_load`, **decompile- + corpus-verified**): the grammar
+  `type <name>` / `xPos` / `yPos` / `heading` / `health` (default 100) /
+  `driving` was pinned against **all 44 shipped `.ol` entries** (725 object
+  records placed, 44 TVCameras → follow-camera, 90 unregistered dev `Test1`
+  records skipped) by an independent parser in `entity_test --real`, and the
+  `type`-name → code resolution is `FUN_0042e8b0` (`ObjectTypeByName`):
+  codes 1–4 from the shipped `Lego.cfg` `VehicleTypes` / `MiniFigureTypes` /
+  `RockMonsterTypes` / `BuildingTypes` groups, special kinds 5–19
+  (PowerCrystal 6, Boulder 5, Ore/ProcessedOre 7, Dynamite 8, Barrier 9,
+  ElectricFence 11, SpiderWeb 12, OohScary 13, Path 15, Pusher 16,
+  Freezer 17, LaserShot 19), TVCamera −1 (follow camera), unregistered
+  names skipped (the corpus aborts the whole load). The special kinds share
+  a fifth table; the corpus keeps per-kind singletons. `entity_test` (suite
+  `entity`) covers placement, stride/table caps, the camera/health/unknown
+  paths and the corpus probe.
 - **Command subsystem** (2026-10-21, finding 10): `src/game/cmd.*` ports the
   entity command primitives — the 0x68-byte record doubling **pool**
   (`CmdAlloc`/`CmdFree`/`CmdPoolGrow`), the **registry** (`CmdRegistryInit`:
