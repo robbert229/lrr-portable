@@ -92,6 +92,77 @@ void message_set_system_state(uint32_t v)     { s_system_state = v; }
 void message_set_callback(MessageCallback cb) { s_callback = cb; }
 void message_set_sound_hook(MessageSoundHook h) { s_sound = h; }
 
+const char* message_sound(int id)
+{
+    if (id < 0 || id >= MESSAGE_MAX_ID) {
+        return NULL;
+    }
+    return s_cfg[id].sound;
+}
+
+static int msg_streql(const char* a, const char* b)
+{
+    for (;;) {
+        int ca = (unsigned char)*a++;
+        int cb = (unsigned char)*b++;
+        if (ca >= 'a' && ca <= 'z') ca -= 0x20;
+        if (cb >= 'a' && cb <= 'z') cb -= 0x20;
+        if (ca != cb) return 0;
+        if (ca == 0) return 1;
+    }
+}
+
+void message_load_infomessages(BlockFile* cfg)
+{
+    if (cfg == NULL) {
+        return;
+    }
+    /* Find any `InfoMessages` record (nested under Lego*; the parser keeps
+     * document order) and configure each child by its Info name. */
+    size_t n = block_record_count(cfg);
+    for (size_t i = 0; i < n; ++i) {
+        BlockRec* rec = block_record_at(cfg, i);
+        if (rec == NULL || block_name(rec) == NULL
+            || !msg_streql(block_name(rec), "InfoMessages")) {
+            continue;
+        }
+        for (BlockRec* kid = block_first_child(rec); kid != NULL;
+             kid = block_next_sibling(kid)) {
+            const char* nm = block_name(kid);
+            const char* val = block_value(kid);
+            if (nm == NULL) {
+                continue;
+            }
+            /* Entries may carry the Info_ prefix (finding 22's stored
+             * strings are `Info_*`); the catalog is bare. */
+            if (strncmp(nm, "Info_", 5) == 0) {
+                nm += 5;
+            }
+            int id = -1;
+            for (int k = 0; k < MESSAGE_MAX_ID; ++k) {
+                if (msg_streql(nm, s_catalog[k])) {
+                    id = k;
+                    break;
+                }
+            }
+            if (id < 0) {
+                continue;
+            }
+            uint32_t flags = 0;
+            const char* sound = NULL;
+            if (val != NULL && !msg_streql(val, "AlwaysPlaySFX")
+                && strlen(val) >= 4) {
+                sound = val; /* corpus: short/empty flag strings mute */
+            }
+            if (val == NULL || msg_streql(val, "AlwaysPlaySFX")
+                || strlen(val) < 4) {
+                flags |= MESSAGE_FLAG_PLAY_ALWAYS;
+            }
+            message_config_set(id, sound, 0.0f, flags);
+        }
+    }
+}
+
 /* Dedupe-with-live-callback (corpus MessagePreCheck FUN_004199f0). */
 static int message_pre_check(int id)
 {

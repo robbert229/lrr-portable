@@ -25,8 +25,15 @@
 #include <cstdint>
 #include <cstddef>
 
+#include "block.hpp"
+
 #define MESSAGE_MAX_ID 40     /* DAT_004dcd38 cap (0x28) */
 #define MESSAGE_FAMILY {10, 11, 12, 38}
+
+/* Reconstruction flag: entry marked AlwaysPlaySFX — plays regardless of the
+ * game state (finding 22 §1's "play regardless" rule; the corpus bit is
+ * read from the 0x20000 cooldown wiring, this is our own marker). */
+#define MESSAGE_FLAG_PLAY_ALWAYS 0x8000u
 
 /* per-id config (corpus stride 0x14) */
 typedef struct MessageConfig {
@@ -49,6 +56,15 @@ void message_set_flags(uint32_t flags);       /* DAT_004dcd48 */
 void message_set_system_state(uint32_t v);    /* DAT_004ff980 */
 void message_set_callback(MessageCallback cb);
 void message_set_sound_hook(MessageSoundHook hook);
+
+/* Per-id read accessors (tests/diagnostics + the sound hook). */
+const char* message_sound(int id);
+
+/* Populate per-id sounds/cooldowns from the `InfoMessages` config section
+ * (corpus FUN_00434c10, finding 22 §1): each entry keyed by the Info name
+ * carries its sound; an entry whose value is empty/short or `AlwaysPlaySFX`
+ * sets the play-always flag instead. */
+void message_load_infomessages(BlockFile* cfg);
 
 /* fire a message (corpus MessageDispatch). p2/p3/p4 are payload carried to
  * the callback; unused flags are kept for signature fidelity. */

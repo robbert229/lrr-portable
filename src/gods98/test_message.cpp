@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "block.hpp"
 #include "message.hpp"
 
 static int s_failures = 0;
@@ -83,6 +84,31 @@ int main(void)
         message_dispatch(i % 40, 0, 0, NULL); /* walk the 0..39 id space */
     }
     CHECK(message_active_count() == 40, "cap: 40 slots max");
+
+    /* InfoMessages config -> per-id sounds (finding 22 §1, FUN_00434c10). */
+    {
+        char txt[] =
+            "InfoMessages {\n"
+            "  UnderAttack Sounds\\UnderAttack.wav\n"
+            "  Info_CrystalFound Sounds\\Crystal.wav\n"
+            "  LegoManDeath AlwaysPlaySFX\n"
+            "  NotAnEntry Sounds\\Ignored.wav\n"
+            "}\n";
+        BlockFile* bf = block_parse(txt, strlen(txt));
+        CHECK(bf != NULL, "infomessages: parse");
+        message_clear();
+        message_init_defaults();
+        message_load_infomessages(bf);
+        CHECK(message_sound(5) != NULL
+              && strcmp(message_sound(5), "Sounds\\UnderAttack.wav") == 0,
+              "infomessages: UnderAttack sound configured");
+        CHECK(message_sound(0) != NULL
+              && strcmp(message_sound(0), "Sounds\\Crystal.wav") == 0,
+              "infomessages: Info_-prefixed CrystalFound sound configured");
+        CHECK(message_sound(10) == NULL, "infomessages: AlwaysPlaySFX has no sound");
+        CHECK(message_sound(11) == NULL, "infomessages: unknown entries ignored");
+        block_close(bf);
+    }
 
     if (s_failures == 0) {
         printf("message_test: PASS\n");
