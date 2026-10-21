@@ -242,47 +242,67 @@ void block_close(BlockFile* bf)
 
 /* Match one candidate record against a path segment: ASCII case-insensitive
  * exact match, plus — first segment only, per the FUN_004792e0 wildcard gate
- * (iVar3/iVar4 == 1) — prefix match when the *record name* holds '*'. */
-static int seg_match(const BlockRec* r, const char* seg, int first)
+ * (iVar3/iVar4 == 1) — prefix match when the *record name* holds '*'.
+ * `seg`/`len` bound the segment (block_find tokenizes without NUL-splitting,
+ * so segments can carry `::` and are compared length-bounded). */
+static int seg_match_len(const BlockRec* r, const char* seg, size_t len,
+                         int first)
 {
-    if (first && r->name != NULL) {
+    if (r == NULL || r->name == NULL) {
+        return 0;
+    }
+    if (first) {
         const char* star = strchr(r->name, '*');
-        if (star != NULL
-            && s_strnicasecmp(seg, r->name, (size_t)(star - r->name)) == 0) {
-            return 1;
+        if (star != NULL) {
+            size_t plen = (size_t)(star - r->name);
+            return len >= plen
+                && s_strnicasecmp(seg, r->name, plen) == 0;
         }
     }
-    return r->name != NULL && s_strcasecmp(r->name, seg) == 0;
+    return strlen(r->name) == len
+        && s_strnicasecmp(seg, r->name, len) == 0;
 }
 
+/* Path lookup. The corpus builds queries with the exe name as the first
+ * token and `::` as the group separator ("LegoRR Main Menu::MainMenuFull
+ * MenuCount" — DAT_004aab18 = "::", finding 23), so a segment boundary is
+ * either a space or a "::" run; matching is otherwise unchanged. */
 BlockRec* block_find(BlockFile* bf, const char* path)
 {
     if (bf == NULL || path == NULL || *path == '\0') {
         return NULL;
     }
 
-    char* copy = (char*)malloc(strlen(path) + 1);
-    if (copy == NULL) {
-        return NULL;
-    }
-    strcpy(copy, path);
     BlockRec* cur = NULL;
-    char* seg = copy;
     int first = 1;
+    const char* p = path;
 
     for (;;) {
-        char* next = strchr(seg, ' ');
-        if (next != NULL) {
-            *next = '\0';
-            ++next;
+        /* skip separators: spaces and "::" runs (both are boundaries) */
+        while (*p == ' ' || (*p == ':' && p[1] == ':')) {
+            if (*p == ':') {
+                p += 2;
+            } else {
+                ++p;
+            }
         }
+        if (*p == '\0') {
+            break;
+        }
+
+        const char* s = p;
+        while (*p != '\0' && *p != ' '
+               && !(*p == ':' && p[1] == ':')) {
+            ++p;
+        }
+        size_t len = (size_t)(p - s);
 
         /* descend: candidates = children of cur (or roots for the first
          * segment), document order, first match wins */
         BlockRec* cand = (cur == NULL) ? bf->roots : cur->child;
         BlockRec* hit = NULL;
         while (cand != NULL) {
-            if (seg_match(cand, seg, first)) {
+            if (seg_match_len(cand, s, len, first)) {
                 hit = cand;
                 break;
             }
@@ -294,20 +314,8 @@ BlockRec* block_find(BlockFile* bf, const char* path)
         }
         cur = hit;
         first = 0;
-        if (next == NULL) {
-            break;
-        }
-        /* skip repeated separators like the corpus's "%s%s%s%s%s" builders */
-        while (*next == ' ') {
-            ++next;
-        }
-        if (*next == '\0') {
-            break;
-        }
-        seg = next;
     }
 
-    free(copy);
     return cur;
 }
 

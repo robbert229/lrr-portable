@@ -18,6 +18,7 @@ game_lib = static_library('game',
   'select.cpp',
   'ai.cpp',
   'render.cpp',
+  'frontend.cpp',
   'util.cpp',
   include_directories : gods98_incs,
   install : false)
@@ -41,7 +42,8 @@ if get_option('platform') == 'native'
                  ['select', 'test_select.cpp'],
                  ['ai', 'test_ai.cpp'],
                  ['render', 'test_render.cpp'],
-                 ['bind', 'test_bind.cpp']]
+['bind', 'test_bind.cpp'],
+                 ['frontend', 'test_frontend.cpp']]
     test_name = exe[0]
     t = executable(test_name + '_test', exe[1],
       include_directories : gods98_incs + [miniwin_inc],
