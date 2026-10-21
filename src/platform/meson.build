@@ -8,11 +8,11 @@
 platform = get_option('platform')
 
 if platform == 'winapi'
-  platform_entry = files('winapi/entry.cpp')
+  platform_entry = files('winapi/entry.cpp', 'winapi/frameloop.cpp')
   platsub_deps = []
   miniwin_inc = []
 elif platform == 'native'
-  platform_entry = files('native/entry.cpp')
+  platform_entry = files('native/entry.cpp', 'native/frameloop.cpp')
   # miniwin is a CMake project hosted in the sparse isle-portable submodule
   # (3rdparty/isle-portable/miniwin). A thin wrapper at
   # subprojects/miniwin/CMakeLists.txt bridges meson's cmake.subproject to it

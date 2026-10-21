@@ -12,9 +12,11 @@
 
 proj_inc = include_directories('.')
 
+# Order matters: platform defines miniwin_inc / platsub_deps (miniwin headers +
+# SDL3 include paths) consumed by the gods98 lib below.
+subdir('platform')   # defines platform_entry, platsub_deps, miniwin_inc
 subdir('gods98')
 subdir('game')
-subdir('platform')   # defines platform_entry, platsub_deps, miniwin_inc
 
 platform = get_option('platform')
 if platform == 'native'
