@@ -6,12 +6,21 @@ Two REA evidence bundles (JSON) exported from Ghidra analysis sessions of
 
 ## `legorr-rev.bundle`
 
-The canonical findings bundle. 236 recorded observations — function
+The canonical findings bundle. 403 recorded observations — function
 decompilations, address lookups, xref queries, and byte reads — each tied to
-the target digest, so findings 01–22 can be re-verified: import the bundle into
+the target digest, so findings 01–23 can be re-verified: import the bundle into
 a session (`import_evidence_bundle`) or inspect the `records` array directly.
 No game asset bytes are included; entries reference offsets and produce
 analysis text only.
+
+The last export (2026-10-21, entity-ae session) adds the `.ae` assembly
+evidence: the full kind-dispatch body (`FUN_00475930`), the kind-table init
+(`FUN_00472710` at `0x472710`), the token splitter (`FUN_00477440`), the
+activity-loop assembly around the `!`-gate (proving bit `0x400000` of
+`DAT_00505f84` is the `-reduceanimation` feature — set, `!`-activities are
+skipped; clear, processed with `!` stripped), the startup feature-word
+writes, and the string vocabulary (`"::"` joiner `DAT_004aab18`,
+`-reduceanimation` at `0x4aad04`, kind strings, activity keys).
 
 ## `legorr-frontend.bundle`
 
