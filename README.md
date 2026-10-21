@@ -161,6 +161,15 @@ meson setup build -Dtest_wads_dir=/path/to/shipped/game
 meson test -C build --suite resource
 ```
 
+**Texture loader** (`src/gods98/texture.*`, finding 13): decodes Windows BMPs —
+BITMAPINFOHEADER (>= 40) and OS/2 core (12) headers, BI_RGB, 1/4/8-bit paletted
+and 16/24/32-bit — loaded through the resource layer into ARGB8888 surfaces,
+plus the engine's case-insensitive name-keyed get-or-load cache (finding 13 §2).
+`texture_test` (suite `texture`) covers synthetic BMP round trips (all depths,
+palette clamping, RLE/truncation rejection) and, with `test_wads_dir` set,
+decodes five shipped entries and matches their pixel hashes (reference hashes
+derived pixel-exact from the corpus via Pillow).
+
 - **`native`** (primary, end goal): compiles the reconstruction C++ against
   **miniwin** (SDL3) — no Wine layer. Host compiler, no cross file. miniwin
   comes in as a sparse git submodule — bootstrap with `tools/setup-miniwin.sh`
