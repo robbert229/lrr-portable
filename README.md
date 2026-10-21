@@ -336,6 +336,13 @@ which now decrements the merged bus's per-id cooldowns —
 `message_cooldown_tick`), plus the bit-field tree helper (`FUN_0049cf90`);
 their ticker-table entries are wired. `simtick_test` covers all four.
 
+**Tranche 9 — five more tickers** (2026-10-21): the ordered post-step
+(`FUN_004665c0`), the minion activity state machine over the state's `+0x88`
+list (`FUN_004313b0`), the **grid-cell flag pass** over the shared camera
+grid (`FUN_00424600`, stride 0x48 cells, bits `0x800/0x1000/0x2000000`), the
+scene pass with its flag word + 125 s broadcast timer (`FUN_0043b270`), and
+the effect-bank ticker (`FUN_0046f550`). `simtick_test` covers all five.
+
 **Game layer — levels, objectives, savegames** (2026-10-21): the mission
 plumbing that sits on top of the engine (findings 07/08/22) is now
 reconstructed, on top of the merged block-text parser (`src/gods98/block.*`,

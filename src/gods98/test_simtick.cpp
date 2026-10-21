@@ -43,6 +43,17 @@ static int tree_poke(int /*idx*/, int /*bits*/)
     return 0;
 }
 
+static int s_scene_n = 0;
+static void scene_bcast(int /*word*/)
+{
+    ++s_scene_n;
+}
+
+static int minion_dist(int /*h*/, float /*s*/) { return 7; }
+static int s_minion_acts = 0, s_minion_fails = 0;
+static void minion_act(int /*h*/) { ++s_minion_acts; }
+static void minion_fail(void* /*node*/) { ++s_minion_fails; }
+
 int main(void)
 {
     EngineContext ctx = {};
@@ -210,6 +221,66 @@ int main(void)
     s_tree_n = 0;
     simtick_bitfield_tree(treebase, 1);
     CHECK(s_tree_n == 0, "tree: counts only via hook");
+
+    /* ---- tranche 9 ------------------------------------------------- */
+    /* FUN_004665c0 single post-step. */
+    int steps_before = simtick_post_steps_count();
+    simtick_post_step(&ctx);
+    CHECK(simtick_post_steps_count() == steps_before + 1, "poststep: one");
+
+    /* FUN_004313b0 minion states: flag transitions on the distance hook. */
+    {
+        static uintptr_t m1[7] = { 7, 0, 0, 0, 0, 0, 0 }; /* fresh -> act */
+        static uintptr_t m2[7] = { 8, 0, 0, 1u | 2u, 0, 0, 0 }; /* done -> fail */
+        m1[5] = (uintptr_t)m2;
+        st.minion_list = m1;
+        simtick_set_minion_hooks(minion_dist, minion_act, minion_fail);
+        simtick_minion_states(&ctx, 0.1f, 1.0f);
+        CHECK(simtick_minion_actions() == 1, "minion: fresh node acts");
+        CHECK((m1[3] & 1u) != 0, "minion: act flag set");
+        CHECK(simtick_minion_failures() == 1, "minion: done node fails");
+        st.minion_list = NULL;
+        simtick_set_minion_hooks(NULL, NULL, NULL);
+    }
+
+    /* FUN_00424600 grid cell pass clears the cell flags. */
+    {
+        uint8_t g[2 * 0x48];
+        memset(g, 0, sizeof(g));
+        st.grid_w = 2;
+        st.grid_h = 1;
+        st.grid_cells = g;
+        *(uint32_t*)(g + 0x48 + 8) = 0x800u | 0x2000000u; /* 0x1000 clear -> dispatches */
+        int xs[1] = { 1 }, ys[1] = { 0 };
+        simtick_cell_seed(1, xs, ys);
+        simtick_grid_cell_pass(&ctx);
+        CHECK((*(uint32_t*)(g + 0x48 + 8) & (0x800u | 0x1000u | 0x2000000u))
+              == 0, "gridcell: flags cleared");
+        CHECK(simtick_cell_dispatches() == 1, "gridcell: dispatched");
+        st.grid_cells = NULL;
+    }
+
+    /* FUN_0043b270 scene pass: the bit-8 broadcast fires, and the expired
+     * 125 s re-arm broadcast also fires in the same pass (corpus order). */
+    simtick_set_scene_broadcast(scene_bcast);
+    simtick_set_scene_word(0x8u);
+    simtick_scene_pass(&ctx, 1.0f);
+    CHECK(simtick_scene_broadcasts() == 2, "scene: bit-8 + timer-reset fires");
+    CHECK((simtick_scene_word() & 8u) == 0, "scene: bit 8 cleared");
+    simtick_set_scene_broadcast(NULL);
+
+    /* FUN_0046f550 sfx bank: negative timer releases the entry. */
+    {
+        struct { uint32_t i0, i1, i2; float t; } s[2] = {
+            { 1, 2, 3, -1.0f }, { 4, 5, 6, 5.0f },
+        };
+        const void* entries[2] = { &s[0], &s[1] };
+        simtick_sfx_seed(2, entries);
+        simtick_sfx_bank(&ctx, 1.0f);
+        CHECK(simtick_sfx_releases() == 1, "sfx: negative timer released");
+        CHECK(s[0].i0 == 0 && s[1].t == 4.0f, "sfx: cleared + decremented");
+        simtick_sfx_seed(0, NULL);
+    }
 
     if (s_failures == 0) {
         printf("simtick_test: PASS\n");
