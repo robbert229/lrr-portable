@@ -80,6 +80,13 @@ talked to directly. Dev-string cluster confirms the vintage:
 3. Exception handler: `SetUnhandledExceptionFilter` + the `Missing config`
    style dialogs mean crashes *report* — useful when we run it.
 
+**Answers since writing (2026-10-20):** 1 — answered: the object climbs to
+**`IID_IDirectDraw4`** (`9c59509a-…`, observed in the live log, finding 16).
+2 — not directly traced; rendering completes through the bundled DDraw path
+with no `wined3d` D3D calls in the log (finding 16), so the question is only a
+perf unknown and was deferred (dgVoodoo track). 3 — the live sessions of
+16/17/18 never fired the exception path.
+
 ### Confidence
 
 | Claim | Status |

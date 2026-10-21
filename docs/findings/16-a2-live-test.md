@@ -19,7 +19,7 @@ The launch also resolved three static unknowns, by observation:
 | --- | --- | --- |
 | §5.1 COM GUID versions | The binary QIs `DirectDrawCreate`'s object to **`IID_IDirectDraw4`** (GUID `9c59509a-39bd-11d1-8c4a-00c04fd930c5`), after a first hop through `IID_IDirectDraw`; surfaces requested as v1/v3/v4/v7 variants | log: `ddraw1_QueryInterface … riid {9c59509a-…}` + `ddraw_surface_create … version 4.` |
 | §5.2 D3DRM device flavor | Not directly traced, but rendering works through the bundled `D3DRM.DLL`'s DDraw path — no D3D device errors, no `wined3d` D3D calls in the log | absence of any `d3d*:` component output |
-| §4.1 CDDA music | **Not yet exercised** — an unattended 25 s session never reaches level load, so the MCI call was never issued (`cdaudio`: 0 occurrences). Still a live question | `grep -ic cdaudio` → 0 |
+| §4.1 CDDA music | **Not yet exercised** — an unattended 25 s session never reaches level load, so the MCI call was never issued (`cdaudio`: 0 occurrences). **Resolved (17):** moot on digital media — the release carries no CDDA tracks; music plays from `Data/Sounds/Streamed/*.wav` | `grep -ic cdaudio` → 0 |
 | §4.2 Movies | Movies play (or attempt) via wine's **quartz** graph, not `avifil32`: `quartz:send_buffer … hr 0x80040211` ×2 = a decoder pin failing to deliver samples, consistent with the old-codecs friction predicted. `avifil`: 0 occurrences. **Superseded by 17:** the real blocker is a missing Indeo 5 decoder in the gstreamer layer | `err:quartz:send_buffer` |
 
 ## Environment engineering the binary itself required
@@ -67,5 +67,5 @@ Three host-side facts, none about the game:
 | Game launches and drives DDraw under GE-Proton10-25 | observed (user-confirmed launch; 1.48 M-line trace) |
 | Interface climbing to IDirectDraw4 | observed (GUID literals in log) |
 | Movies via quartz, one decoder sample error | observed |
-| CDDA behaviour | **open** — code path not yet reached |
-| Interactive correctness (menus, input, levels) | **open** — first manual session pending |
+| CDDA behaviour | **moot (17)** — digital release ships no CD media; music via streamed WAVs |
+| Interactive correctness (menus, input, levels) | **answered (17)** — first mission completed, input responsive |

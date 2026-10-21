@@ -59,6 +59,24 @@ legally obtained copy of the game.
       — A.1 audit (finding 15) → A.2 live test (finding 16): **the shipped exe launches
       and renders under GE-Proton via `tools/compat/a2.py run`** (2026-10-20)
 
+## Current status (2026-10-20)
+
+Research is complete: all 19 findings shipped, every format shipped in the wads is
+documented address-level — including the two that exist but are never loaded
+(`.x` XOF-text leftovers, `.blx` editor-only) — and the `Lego*` block-text system that
+`.ae` belongs to (finding 12). The game runs and is playable through the Proton wrapper,
+and the toolchain (unpack/pack byte-exact, model+uv convert **and** write, live launcher)
+is regression-verified against the shipped corpus.
+
+Open threads, in order of value:
+1. **Live mod proof** — the chain grammar → writer → byte-exact repack → launch is proven
+   only link-by-link; repacking a modified `.uv` (e.g. a `GC_Larm.uv` pilot re-skin) and
+   observing the change in-game has not been done.
+2. `.flh` container file layout (finding 14 §5).
+3. Small research questions: the 40-entry config population site (finding 04 §Open),
+   the input-device writer region (finding 05), D3DRM HAL-vs-software (perf only).
+4. Deferred: dgVoodoo as a perf option; the `Steam.lwo` point-only sprites as glTF.
+
 ## Findings index
 
 | # | File | Subject |
@@ -78,13 +96,15 @@ legally obtained copy of the game.
 | 13 | [`findings/13-texture-system.md`](docs/findings/13-texture-system.md) | BMP surface loader, name cache, LWO material binding, world tile sets, VRAM budget |
 | 14 | [`findings/14-sound-and-video.md`](docs/findings/14-sound-and-video.md) | WAVE/mmio sound bank, CD-DA music via MCI, AVIFIL32 movies, logo splash |
 | 15 | [`findings/15-compat-audit.md`](docs/findings/15-compat-audit.md) | Modern-compat API-surface audit: wrapper coverage matrix, launch-gate scan, friction list |
-| 16 | [`findings/16-a2-live-test.md`](docs/findings/16-a2-live-test.md) | **A.2 live test passed**: game launches under GE-Proton10-25; DDraw interface climbing observed (→ `IDirectDraw4`); movies via quartz; CDDA still open |
+| 16 | [`findings/16-a2-live-test.md`](docs/findings/16-a2-live-test.md) | **A.2 live test passed**: game launches under GE-Proton10-25; DDraw interface climbing observed (→ `IDirectDraw4`); movies via quartz; CDDA question deferred (→ 17: resolved — digital release carries no CDDA media) |
 | 17 | [`findings/17-interactive-a2-session.md`](docs/findings/17-interactive-a2-session.md) | **Playable**: first mission completes; music is streamed WAVs (no CDDA media on digital release); movies skip on missing Indeo 5 decoder; NVIDIA Xid driver-incident notes |
 | 18 | [`findings/18-movies-libav-alias.md`](docs/findings/18-movies-libav-alias.md) | **Movies fixed**: Indeo block was two missing sonames (`libbz2.so.1.0`, `libvpx.so.6`) silently killing wine's ffmpeg plugin — aliases + registry rebuild, automated in `a2.py` |
 | 19 | [`findings/19-uv-grammar.md`](docs/findings/19-uv-grammar.md) | **Last format closed**: `.uv` sidecar grammar in `FUN_00481c50` — surface texture-path overrides + per-corner UV (v negated, vertex duplication); names/keyframe tail structurally unread; validated 60/60 |
 
 Named-pseudocode corpus: [`docs/decompiles/engine-region.c`](docs/decompiles/engine-region.c)
-(114 identified functions, ~7.6k lines; all addresses in the findings resolve here).
+(114 named functions covering the engine/game-logic region — findings 01–10).
+Functions named by findings 11–19 (loaders, parsers, the asset side) are cited
+with pseudocode in each finding's function map.
 Machine-readable evidence: [`docs/evidence/legorr-rev.bundle`](docs/evidence/legorr-rev.bundle)
 (148 recorded REA observations against `LegoRR.exe`,
 SHA-256 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`).
