@@ -19,12 +19,10 @@ int EngineTick(EngineContext* ctx, float dt)
         dt = 0.0f;
     }
 
-    /* 2. Per-frame housekeeping (EnginePreTick @ 0x4231f0). The corpus runs
-     *    the device pre-ticks (FUN_0047eef0 / FUN_0047f010) just before the
-     *    tick; input_begin_frame is that model here. */
-    if (ctx->input != NULL) {
-        input_begin_frame(ctx->input);
-    }
+    /* 2. Per-frame housekeeping (EnginePreTick @ 0x4231f0). The text pump
+     *    consumes the current frame's captured keys; the frame-loop drives
+     *    the table lifecycle (capture before this, input_begin_frame at the
+     *    frame end) — see frameloop.cpp. */
     EnginePreTick(ctx);
 
     /* 3. Scaled delta: subsystem tickers run scaled time, raw dt drives
@@ -75,7 +73,9 @@ int EngineTick(EngineContext* ctx, float dt)
 
 /* Per-frame housekeeping — corpus EnginePreTick @ 0x4231f0. The real body is
  * text/entity-name input handling (keyboard echo through DAT_00556fa0); the
- * input core (findings 04/05) supplies the text pump + mirror/clear here.
+ * input core (findings 04/05) supplies the text pump. cur is NOT cleared here
+ * (the frame-loop clears it at the frame boundary; the corpus's in-place
+ * clear is incompatible with per-frame device capture).
  */
 void EnginePreTick(EngineContext* ctx)
 {
@@ -86,10 +86,10 @@ void EnginePreTick(EngineContext* ctx)
     int    cap    = ctx->input->text_cap;
     int    len    = ctx->input->text_len;
     if (target != NULL) {
-        input_text_pump(ctx->input, target, cap, &len);
+        input_text_pump(ctx->input, target, cap, &len, 0);
         ctx->input->text_len = len;
     } else {
-        input_mirror_and_clear(ctx->input);
+        input_mirror(ctx->input);
     }
 }
 

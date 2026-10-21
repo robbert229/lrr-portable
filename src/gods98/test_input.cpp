@@ -62,7 +62,7 @@ int main(void)
     t.context_filter['q'] = 1; /* blocked */
     char buf[16] = { 0 };
     int  len = 0;
-    input_text_pump(&t, buf, (int)sizeof(buf), &len);
+    input_text_pump(&t, buf, (int)sizeof(buf), &len, 1);
     CHECK(len == 2 && memcmp(buf, "HI", 2) == 0, "text pump chars");
     CHECK(t.cur['h'] == 0 && t.cur['i'] == 0, "text pump clears cur");
     CHECK(t.mirror['h'] == 1 && t.mirror['i'] == 1, "text pump mirror");
@@ -93,6 +93,50 @@ int main(void)
     input_reset(&q2);
     CHECK(input_quit_dwell(&q2, 0, 10, 10, 0, 0, 3, 3, qw, qh, 0) == 0,
           "no dwell, no quit");
+
+    /* device capture (frame-loop writer + canonical codes from platform.h). */
+    InputState c = {};
+    input_reset(&c);
+    PlatformEvent evs[4] = {
+        { PLATFORM_EVENT_KEYDOWN, 'a', 0, 0 },
+        { PLATFORM_EVENT_KEYDOWN, PLATFORM_KEY_RIGHT, 0, 0 },
+        { PLATFORM_EVENT_MOUSE, 0, 300, 200 },
+        { PLATFORM_EVENT_KEYUP, PLATFORM_KEY_RIGHT, 0, 0 },
+    };
+    input_capture_events(&c, evs, 4);
+    CHECK(c.cur['a'] == 1, "capture: keydown ascii");
+    CHECK(c.cur[PLATFORM_KEY_RIGHT] == 0, "capture: keyup clears");
+    CHECK(c.mouse_x == 300 && c.mouse_y == 200, "capture: mouse");
+    CHECK(input_key_edge(&c, 'a'), "capture: edge on fresh prev");
+
+    /* text pump with clear=0 keeps cur for MainSimStep (frame-loop model). */
+    InputState p = {};
+    input_reset(&p);
+    p.cur['z'] = 1;
+    char pb[8] = { 0 };
+    int  plen = 0;
+    input_text_pump(&p, pb, (int)sizeof(pb), &plen, 0);
+    CHECK(plen == 1 && pb[0] == 'Z', "pump noclear: char uppercased");
+    CHECK(p.cur['z'] == 1, "pump noclear: cur preserved");
+    CHECK(p.mirror['z'] == 1, "pump noclear: mirror set");
+
+    /* two-frame edge flow (capture -> consume -> frame boundary). */
+    InputState f = {};
+    input_reset(&f);
+    PlatformEvent f1 = { PLATFORM_EVENT_KEYDOWN, PLATFORM_KEY_UP, 0, 0 };
+    input_capture_events(&f, &f1, 1);
+    CHECK(input_key_edge(&f, PLATFORM_KEY_UP), "flow: frame1 edge");
+    input_begin_frame(&f); /* frame boundary: cur -> prev, cur cleared */
+    CHECK(!input_key_edge(&f, PLATFORM_KEY_UP), "flow: no edge after boundary (released)");
+    PlatformEvent f2 = { PLATFORM_EVENT_KEYDOWN, PLATFORM_KEY_UP, 0, 0 };
+    input_capture_events(&f, &f2, 1);
+    CHECK(!input_key_edge(&f, PLATFORM_KEY_UP), "flow: held key does not re-edge");
+    PlatformEvent f3 = { PLATFORM_EVENT_KEYUP, PLATFORM_KEY_UP, 0, 0 };
+    input_capture_events(&f, &f3, 1);
+    input_begin_frame(&f); /* boundary after release: prev := cur(all clear) */
+    PlatformEvent f4 = { PLATFORM_EVENT_KEYDOWN, PLATFORM_KEY_UP, 0, 0 };
+    input_capture_events(&f, &f4, 1);
+    CHECK(input_key_edge(&f, PLATFORM_KEY_UP), "flow: press-after-release edges");
 
     if (s_failures == 0) {
         printf("input_test: PASS\n");
