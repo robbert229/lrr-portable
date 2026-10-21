@@ -51,7 +51,8 @@ legally obtained copy of the game.
 - [x] Document the `.wad` archive container format(s) — finding 01
 - [x] Document asset formats: 3D models, animations, sounds, videos
       — findings 11–14: models/scenes, `Lego*` configs, textures, audio, video.
-      (Fine detail open: `.uv` text grammar, `.flh` container — 11 §6, 14 §5)
+      (Fine detail open: `.flh` container — 14 §5. `.uv` grammar closed — 19;
+      `.x` identified as XOF-text leftovers the engine never loads — 11 §6.)
 - [x] Understand mission / level scripting and data-driven behavior — findings 07, 09
 - [x] Understand the savegame format — finding 08
 - [x] Eventually: reimplementations or tooling that let the game run on modern systems

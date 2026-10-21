@@ -17,10 +17,15 @@ chunk set, not the later LW0/LW1 (LW5+) format.
   parent/child bindings, and animation envelopes.
 - `.uv` → companion text sidecar, loaded alongside `.lwo`; supplies surface
   texture paths and per-corner UV coordinates — fully documented in finding 19.
-- `.ae` → `Lego* { … }` block-text files; no magic/string references found in the
-  executable (see §6 — likely consumed indirectly or editor-side).
-- `.wav` / `.bmp` → standard formats, loaded via `%s.wav` (`0x4aae5c`) and the
-  WAD/FS file layer (documentation of these is still open).
+- `.ae` → `Lego* { … }` block-text files, read by the block-text machinery of
+  finding 12 (`FUN_00478e60` scanner over WAD-read buffers) — the earlier
+  "likely editor-side" guess was wrong; they are consumed at runtime.
+- `.wav` / `.bmp` → standard formats: sounds load via `SoundLoad`
+  (`FUN_0047a870`, `%s.wav` at `0x4aae5c`) and textures via the TIMG/TIMG-slot
+  path — both fully documented, respectively, in findings 14 and 13.
+- `.x` → **DirectX X (XOF) text** files (`xof 0302txt 0064` / `xof 0303txt
+  0032`); 164 shipped, but the engine has *no* XOF reader (see §6, item 5) —
+  these are editor-side leftovers.
 
 Internal developer path strings corroborate the pipeline: `WAD Load: %s`,
 `WAD Fail: %s`, and `C:\Dev\SourceSafe\gods98\dx6\god…` (`gods98` — the
@@ -147,16 +152,35 @@ From `unpacked/LegoRR0` (5,631 files): 2,523 `.bmp`, 1,132 `.lwo`, 750 `.lws`,
    `model+0x1c` is set); per-surface texture-path overrides + per-corner UV
    with v-negation and vertex duplication; names and trailing keyframe blocks
    never read. Validated 60/60 against the shipped corpus.
-2. **`SURF` field mapping** — the keyword parser is identified but the exact
-   per-surface settings record (colour format, TIMG/BMP binding, sequence
-   pairs) needs one more pass over `FUN_0048c820`.
+2. ~~**`SURF` field mapping**~~ resolved by **§5b** (record layout and the
+   full sub-block vocabulary, pinned by parsing all 1,132 models) and
+   **finding 19** (the `+8` TIMG-slot override semantics); what that left
+   unresolved is only the unused-in-practice fields' bit meanings.
 3. ~~`Lego*` block reader~~ resolved by finding 12 (`FUN_00478e60` scanner +
    `FUN_004792e0`-style path lookups over WAD-read buffers).
 4. ~~Textures~~ resolved by finding 13: `TIMG` names are bound at model-open in
    the material pass `FUN_00480ac0` → `FUN_00481820` → cache `FUN_00482e70`;
    `LWO:NOTEXTURE` (`0x4a1dbc`) is the stub passed by entity registration
    `FUN_0040b5f0` (`0x40b623–0x40b656`).
-5. `.wav`/`.x` loaders and the D3DRM dependency (`D3DRM.DLL`) remain open.
+5. ~~`.wav`/`.x` loaders and the D3DRM dependency~~ resolved 2026-10-20:
+   * `.wav` — `SoundLoad` (`FUN_0047a870`) + the `mmio` region `0x488c00–
+     0x489330`, closed by finding 14.
+   * `.x` — all 164 shipped `.x` files are **XOF text** (20× `xof 0302txt
+     0064` in `MiscAnims\*`/`Geo-Dome`, 144× `xof 0303txt 0032` for vehicle
+     wheels and `World\ProMeshes\*PM*`), but the engine never loads them:
+     no `xof`/`FileAsObject`/`DXFile` string anywhere in the image, no
+     `"%s.x"` path format, no `dxfile.dll`/`D3D*.dll` import (finding 15
+     shows only `DDRAW`, `DINPUT`, `DSOUND`, `WINMM`, `AVIFIL32` and three
+     named `d3drm.dll` entries), and no text-format data file references an
+     `.x` path. The lone `MiscAnims` string reference (`0x4a3778`, used at
+     `0x421ec5` in `FUN_0041fb50`) is *not* an XOF load: `FUN_004653a0`
+     loops building `"%s_%s_%d.bmp"` candidates for smoke textures — which
+     is exactly `MiscAnims\Smoke\SMOKE0-2.BMP` (all three present in the
+     wad). Verdict: editor-side leftovers shipped by accident; there is
+     nothing to implement.
+   * D3DRM — used only through `Direct3DRMCreate` + two vector helpers via
+     `FUN_004781d0` (finding 15); no runtime question left beyond compat
+     behaviour, covered by findings 15/16.
 
 ## 5b. On-disk SURF layout — confirmed during rrlwo.py development (2026-10-20)
 
