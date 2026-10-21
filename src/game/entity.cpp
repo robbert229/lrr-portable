@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "entity.hpp"
+#include "gods98/model.hpp"
 #include "util.hpp"
 
 int entity_stride(int type)
@@ -84,6 +85,73 @@ static const char* obj_val(BlockFile* bf, const char* root, const char* obj,
     return block_get_strptr(bf, path);
 }
 
+/* --- model cache (finding 30) --------------------------------------------
+ * One parsed LWO model per resource path, process-lifetime for the demo —
+ * models are never freed (documented; the renderer only reads them). */
+#define MODEL_CACHE_MAX 16
+static struct {
+    const char* path;
+    const void* model;
+} s_model_cache[MODEL_CACHE_MAX];
+static int s_model_cache_n = 0;
+
+static char* model_dup(const char* s)
+{
+    size_t n = strlen(s);
+    char* d = (char*)malloc(n + 1);
+    if (d != NULL) {
+        memcpy(d, s, n);
+        d[n] = '\0';
+    }
+    return d;
+}
+
+static const void* model_for_path(const char* path)
+{
+    if (path == NULL || path[0] == '\0') {
+        return NULL;
+    }
+    for (int i = 0; i < s_model_cache_n; ++i) {
+        if (s_model_cache[i].path != NULL
+            && strcmp(s_model_cache[i].path, path) == 0) {
+            return s_model_cache[i].model;
+        }
+    }
+    const void* m = NULL;
+    if (s_model_cache_n < MODEL_CACHE_MAX) {
+        m = model_open(path);
+        char* kept = m != NULL ? model_dup(path) : NULL;
+        if (kept != NULL) {
+            s_model_cache[s_model_cache_n].path = kept;
+            s_model_cache[s_model_cache_n].model = m;
+            ++s_model_cache_n;
+        }
+    }
+    return m;
+}
+
+void entity_set_model(EntitySlot* e, const char* path)
+{
+    if (e == NULL) {
+        return;
+    }
+    e->model_path[0] = '\0';
+    e->model = NULL;
+    if (path != NULL && path[0] != '\0') {
+        int i = 0;
+        for (; i < 63 && path[i] != '\0'; ++i) {
+            e->model_path[i] = path[i];
+        }
+        e->model_path[i] = '\0';
+        e->model = model_for_path(path);
+    }
+}
+
+const void* entity_model(const EntitySlot* e)
+{
+    return e != NULL ? e->model : NULL;
+}
+
 int object_list_load(GameContext* ctx, BlockFile* cfg, const char* level_name)
 {
     if (ctx == NULL || cfg == NULL || level_name == NULL) {
@@ -141,8 +209,16 @@ int object_list_load(GameContext* ctx, BlockFile* cfg, const char* level_name)
         op.y = y ? util_atof(y) : 0.0f;
         op.z = z ? util_atof(z) : 0.0f;
         op.rot = r ? util_atof(r) : 0.0f;
+        /* Optional `Model` key (best-effort grammar, finding 10/30). */
+        const char* mdl = obj_val(ol, rname, name, "Model");
+        if (mdl != NULL) {
+            snprintf(op.model, sizeof(op.model), "%s", mdl);
+        }
 
-        if (entity_create(ctx, op.type, op.name, op.x, op.y, op.z, op.rot) >= 0) {
+        int idx = entity_create(ctx, op.type, op.name, op.x, op.y, op.z, op.rot);
+        if (idx >= 0) {
+            EntitySlot* slot = (EntitySlot*)entity_at(ctx, op.type, idx);
+            entity_set_model(slot, op.model[0] != '\0' ? op.model : NULL);
             ++placed;
         }
     }

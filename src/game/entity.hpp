@@ -36,6 +36,7 @@ typedef struct ObjectPlacement {
     int   type;
     float x, y, z;
     float rot;
+    char  model[128]; /* optional `Model` key (best-effort grammar) */
 } ObjectPlacement;
 
 /* Allocate a slot of `type`; returns the slot index or -1 when the table is
@@ -52,6 +53,15 @@ const EntitySlot* entity_at(GameContext* ctx, int type, int index);
  * entity table. Returns the number of objects placed, or -1 when the
  * resource is missing/unparsable. */
 int object_list_load(GameContext* ctx, BlockFile* cfg, const char* level_name);
+
+/* Attach a model to a slot by resource path (`.ol Model` key). The first
+ * load per path goes through `model_open`; later loads reuse a process-
+ * lifetime cache (the demo never frees models — documented). Empty path
+ * clears. */
+void entity_set_model(EntitySlot* e, const char* path);
+
+/* The parsed LWO Model* for a slot (NULL when none/load failed). */
+const void* entity_model(const EntitySlot* e);
 
 #ifdef __cplusplus
 }

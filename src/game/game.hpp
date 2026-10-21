@@ -168,6 +168,9 @@ typedef struct EntitySlot {
     float   x, y, z;
     float   rot;
     int32_t flags;      /* reconstruction-side flag word          */
+    /* --- model-aware rendering (finding 10/30) ------------------ */
+    char    model_path[64]; /* .ol `Model` key (best-effort)       */
+    const void* model;      /* parsed LWO Model* (entity_model cache) */
     /* --- command layer (finding 10) --- */
     void*   cmd_head;   /* chain-head command record (entity +0x2f0) */
     uint32_t flags_3e0; /* mirror of entity +0x3e0 (bit 0x400 gates gated cmds) */
