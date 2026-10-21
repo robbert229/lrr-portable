@@ -1,18 +1,25 @@
 # The platform seam (docs/adr/0004).
 #
-# One of two entry points is compiled depending on the `platform` option:
-#   native : src/platform/native/entry.cpp — miniwin over SDL3 (primary)
-#   winapi : src/platform/winapi/entry.cpp — real DirectX via MinGW (reference)
-# Both call the backend-neutral `LegorrrMain()` in src/main.cpp.
+# One of two backends is compiled depending on the `platform` option:
+#   native : src/platform/native/ — miniwin over SDL3 (primary)
+#   winapi : src/platform/winapi/ — real DirectX via MinGW (reference)
+# The window/events/present/audio glue (miniwin is a framebuffer seam; it
+# never creates the window, pumps events, presents, or plays audio — app's
+# job) is its own tiny static lib so both the game exe and the per-subsystem
+# tests link it through gods98.
 
 platform = get_option('platform')
 
 if platform == 'winapi'
-  platform_entry = files('winapi/entry.cpp', 'winapi/frameloop.cpp')
+  platform_entry = files('winapi/entry.cpp')
+  platform_glue = static_library('platform_glue',
+    'winapi/frameloop.cpp',
+    include_directories : include_directories('..'),
+    install : false)
   platsub_deps = []
   miniwin_inc = []
 elif platform == 'native'
-  platform_entry = files('native/entry.cpp', 'native/frameloop.cpp')
+  platform_entry = files('native/entry.cpp')
   # miniwin is a CMake project hosted in the sparse isle-portable submodule
   # (3rdparty/isle-portable/miniwin). A thin wrapper at
   # subprojects/miniwin/CMakeLists.txt bridges meson's cmake.subproject to it
@@ -34,6 +41,15 @@ elif platform == 'native'
   miniwin_dep = miniwin_sub.dependency('miniwin')
   miniwin_headers_dep = miniwin_sub.dependency('miniwin-headers')
   platsub_deps = [miniwin_dep, miniwin_headers_dep]
+
+  platform_glue = static_library('platform_glue',
+    'native/frameloop.cpp',
+    include_directories : [include_directories('..'), miniwin_inc],
+    dependencies : [platsub_deps],
+    install : false)
 else
   error('unknown platform: ' + platform)
 endif
+
+platform_glue_dep = declare_dependency(link_with : platform_glue,
+  include_directories : include_directories('..'))

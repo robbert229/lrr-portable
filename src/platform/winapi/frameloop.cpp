@@ -62,3 +62,25 @@ void platform_screenshot(PlatformWindow* win, const void* pixels, int pitch,
     (void)win; (void)pixels; (void)pitch; (void)width; (void)height;
     (void)frame;
 }
+
+PlatformAudio* platform_audio_open(void)
+{
+    return NULL;
+}
+
+void platform_audio_close(PlatformAudio* a)
+{
+    (void)a;
+}
+
+int platform_audio_play(PlatformAudio* a, const int16_t* pcm, int frames,
+                        int sample_rate)
+{
+    (void)a; (void)pcm; (void)frames; (void)sample_rate;
+    return -1;
+}
+
+void platform_audio_stop(PlatformAudio* a)
+{
+    (void)a;
+}

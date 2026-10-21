@@ -12,8 +12,9 @@ gods98_lib = static_library('gods98',
   'input.cpp',
   'surface.cpp',
   'frameloop.cpp',
+  'audio.cpp',
   include_directories : gods98_incs,
-  dependencies : [platsub_deps],
+  dependencies : [platsub_deps, platform_glue_dep],
   install : false)
 
 gods98_dep = declare_dependency(link_with : gods98_lib,
@@ -26,7 +27,8 @@ gods98_dep = declare_dependency(link_with : gods98_lib,
 if get_option('platform') == 'native'
   test_exes = []
   foreach exe : [['resource', 'test_resource.cpp'], ['texture', 'test_texture.cpp'],
-                 ['sound', 'test_sound.cpp'], ['input', 'test_input.cpp']]
+                 ['sound', 'test_sound.cpp'], ['input', 'test_input.cpp'],
+                 ['audio', 'test_audio.cpp']]
     test_name = exe[0]
     t = executable(test_name + '_test', exe[1],
       include_directories : gods98_incs,
@@ -42,6 +44,12 @@ if get_option('platform') == 'native'
       test(tinfo[0], tinfo[1],
         args : test_wads == '' ? [] : ['--real', test_wads],
         suite : tinfo[0])
+    elif tinfo[0] == 'audio'
+      # Headless-safe: never depend on a real audio device in CI.
+      test(tinfo[0], tinfo[1],
+        args : test_wads == '' ? [] : ['--real', test_wads],
+        suite : tinfo[0],
+        env : ['SDL_AUDIODRIVER=dummy'])
     else
       test(tinfo[0], tinfo[1], suite : tinfo[0])
     endif
