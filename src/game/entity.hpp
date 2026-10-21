@@ -1,19 +1,20 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* Game layer — entity table + `.ol` object list (findings 10/07).
+/* Game layer — entity table + `.ol` object list (findings 10/07/12).
  *
  * `EntityPointer` (corpus engine-region.c, 0x42ed70) keeps four typed
  * entity arrays: type 1 = vehicles (stride 0x1ec), type 2 = minifigures
  * (stride 0x74 — DAT_005561d8), type 3 (stride 0x74 — 005561dc),
  * type 4 = buildings/objects (stride 0x14c — 005561e0); the `.ol` object
- * list the LevelLoad `olistfile` key names (`M01.ol`) is a block-text file
+ * list the LevelLoad `OListFile` key names (`M01.ol`) is a block-text file
  * whose top-level `name { … }` records describe placed objects.
  *
- * The corpus's `.ol` consumer (FUN_0042e020) is not decompiled, so this is
- * the *interface* layer: it parses the block structure — one object per
- * top-level record with a `Type` integer and optional `x`/`y`/`z`/`Rot`
- * children — and places them into the typed tables. The field mapping is
- * best-effort until a shipped `.ol` is cross-checked (deferred, finding 07
- * §"Still open": "`.ol`/`.nrn`/`.ptl` resources consumed where?").
+ * The corpus's `.ol` consumer (FUN_0042e020) is not decompiled, so the
+ * numeric type CODES are a documented seam; the *grammar* is not — it is
+ * corpus-verified by `entity_test --real` against all 44 shipped object
+ * lists (root `Lego*`, one record per object named `Object1..` / other
+ * names, fields `type <name>`, `xPos`, `yPos`, `heading`, optional
+ * `driving <ref>`; `Model` appears nowhere in the shipped data and is kept
+ * as the port's extension key).
  */
 #ifndef LEGORRR_GAME_ENTITY_HPP
 #define LEGORRR_GAME_ENTITY_HPP
@@ -33,10 +34,13 @@ extern "C" {
 /* A placed-object record produced by the `.ol` loader. */
 typedef struct ObjectPlacement {
     char  name[64];
-    int   type;
-    float x, y, z;
-    float rot;
-    char  model[128]; /* optional `Model` key (best-effort grammar) */
+    int   type;          /* table code — provisional mapping (seam)    */
+    char  type_name[24]; /* .ol `type` name (e.g. "SmallDigger")       */
+    float x, y, z;       /* xPos, yPos, 0                              */
+    float rot;           /* alias of heading                           */
+    float heading;       /* .ol `heading` (degrees)                    */
+    char  driving[32];   /* .ol `driving` target object name, or ""    */
+    char  model[128];    /* optional `Model` key (port extension)      */
 } ObjectPlacement;
 
 /* Allocate a slot of `type`; returns the slot index or -1 when the table is
@@ -49,10 +53,15 @@ int  entity_stride(int type);
 int  entity_count(GameContext* ctx, int type);
 const EntitySlot* entity_at(GameContext* ctx, int type, int index);
 
-/* Load the level's `.ol` object list (`olistfile` key) from `cfg` into the
+/* Load the level's `.ol` object list (`OListFile` key) from `cfg` into the
  * entity table. Returns the number of objects placed, or -1 when the
  * resource is missing/unparsable. */
 int object_list_load(GameContext* ctx, BlockFile* cfg, const char* level_name);
+
+/* Load a `.ol` object list by resource path directly (the grammar half of
+ * object_list_load, for probes/fixtures that already know the path; the
+ * level wrapper resolves `OListFile` then calls this). */
+int object_list_load_file(GameContext* ctx, const char* olist);
 
 /* Attach a model to a slot by resource path (`.ol Model` key). The first
  * load per path goes through `model_open`; later loads reuse a process-
