@@ -68,6 +68,8 @@ int entity_create(GameContext* ctx, int type, const char* name,
     __builtin_memset(slot, 0, sizeof(*slot));
     slot->type = type;
     slot->etype = type;
+    slot->activity = -1;       /* corpus +0x2e8 NULL pointer = no activity */
+    slot->activity_last = -1;
     slot->x = x;
     slot->y = y;
     slot->z = z;

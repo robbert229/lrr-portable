@@ -114,8 +114,65 @@ commands by position. `CmdMarkMatching @ 0x402000` flags commands matching type+
 
 ## Still open
 
-- Actual execution of `+0x1c` behaviour ids (which code reads record `+0x4c/+0x1c` and runs
-  the AI task switch) — likely in the entity-manager tick, 0x43xxxx.
 - Semantics of record `+0x14` (1500.0f vs `timeGetTime`).
 - Whether opcode bytes are *also* key codes in the pre-switch pass (the byte at
   `DAT_004ff0bc + i` keys the table — producer still unnamed).
+
+## Entity-tick anatomy (closed 2026-10-21)
+
+The open question — "which code reads record `+0x1c` and runs the AI task
+switch" — has a **negative answer: none does.** Decompiles of the shipped exe
+(SHA-256 `c3d8ce23…581e0f`) show:
+
+1. `FUN_0043b270` (scene pass) = flag word `DAT_004dee14` (bit 4 pairs
+   `FUN_00432200`/`FUN_004321a0`, bit 8 `FUN_00439990`) → entity walker
+   `FUN_004377d0(&LAB_0043c810, &dt, 0)` → `FUN_0044bf00(dt)` → a 125 s
+   broadcast timer calling `FUN_00425b40(1)`.
+2. The walker (documented in doc 07) iterates the `DAT_004de790` block table,
+   stride `0x40c`, skipping entities with `+0x3e8 & 0x80000` or dead links
+   (`*ent + 0x408 != ent`); a nonzero callback return ends the walk.
+3. The callback (entry `0x43c810`, ~15 KB, left unattributed by Ghidra) is a
+   per-entity **flag-word behaviour evaluator** on `+0x3e0/+0x3e4/+0x3ec/
+   +0x3e8` — not a command-record switch. `DAT_004b32e8` (numeric behaviour
+   ids) has xrefs *only* inside the command-creation layer
+   (`0x401c00–0x4043ff`), and the callback reads no record `+0x1c` (all
+   `+0x1c` mentions in it are stack-local `+0x1c(%esp)`).
+4. Behaviour lives in three entity slots instead: flag bits, timers
+   (`+0x368`, `+0x2d4`), and the **activity triple** `+0x2e8` (name pointer)
+   `+0x2d8` (param) `+0x2d4` (timer), set by `FUN_004409e0(ent, idx, p)` =
+   `ent+0x2e8 = DAT_004decc4[idx]; ent+0x2d8 = p; ent+0x2d4 = 0`. The table
+   `DAT_004decc4[0..76]` is filled by the initializer at `0x436c2f` with the
+   `Activity_*` name strings (`Activity_Stand`, `Activity_Route`,
+   `Activity_RouteRubble`, … `Activity_Waiting21`; the ordered 77-entry dump
+   reproduces in `src/game/ai.cpp`).
+5. `FUN_00447c40` is activity bookkeeping: early-return when `+0x2e8` equals
+   its mirror `+0x2ec`; otherwise run `FUN_00403f30` (attach a type-`0xe`
+   idle record head-first if the chain head is not `0xe`) unless the name is
+   one of the exclusion set (table entries 0/1/4/6/8/12/17/23), progress the
+   per-type runner, then `+0x2ec = +0x2e8`, `+0x2d4 = 0`. `+0x2ec` is written
+   only at transition sites (`0x438199` pairs it with `+0x2e8` in the
+   minion task-state machine, `0x43c0fe`, `0x43e6cc` immediately before a
+   `FUN_00447c40` call, and inside `FUN_00447c40` itself).
+6. Idiom note: the x87 pattern `fcomps 0.0; fnstsw %ax; test $0x41, %ah`
+   behaves as `je` skip ⇒ value > 0, fall-through ⇒ value <= 0 (verified
+   empirically on this platform); used for timer-expiry tests like
+   `+0x368 <= 0` before `FUN_0044c110`.
+
+Implemented in the port (`src/game/ai.cpp`, corpus branch order):
+activity completion `0x43c845` (incl. bookkeeping + idle-record attach), wake
+timer `0x43c870` (`+0x3e4` bit `0x8000000`; decrement + early return),
+target acquisition `0x43c8b2` (`+0x3ec` `0x40000` → link handle `+0x354`,
+flag `0x80000`), cheat-word flag `0x43c90b` (`DAT_00556ed0` bit 0 gates
+`+0x3ec` bit `0x20` via `FUN_0044c530`), type-1 idle registration
+`0x43c94d` (`FUN_0043a960` into `DAT_004eabcc`, cap 100). The activity mirror
+folds `+0x2ec` sync into `ai_set_activity` because corpus set-sites pair the
+words (point 5).
+
+Documented TODO branches (not guessed): path-list movement internals
+(`+0x24` waypoint list, `+0x3e0` bit 8, `FUN_00432e00` pop, `FUN_00433be0`);
+projectile arcs (`+0x3e0` `0x400000`, `FUN_004755e0`/`FUN_00475120`); screen
+shake (`+0x3e4` `0x40000000`, `DAT_004a48b0`); riding probe `FUN_0043c440`
+(inside `FUN_0044c530`); attached wake target (`+0x364`, `FUN_0044c110`);
+tile `'\t'` probe inside `FUN_0043a960`; the minion task-state machine at
+`0x438150` (indirect jump table `0x438298`, sets activities per state via
+`FUN_00447c40` — the closest thing to the missing "task switch").

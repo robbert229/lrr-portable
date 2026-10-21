@@ -179,6 +179,15 @@ typedef struct EntitySlot {
     void*   cmd_head;   /* chain-head command record (entity +0x2f0) */
     uint32_t flags_3e0; /* mirror of entity +0x3e0 (bit 0x400 gates gated cmds) */
     uint32_t flags_3e8; /* mirror of entity +0x3e8 (type-6 high bit → kind) */
+    /* --- entity-tick state (callback 0x43c810, finding 10) --------- */
+    uint32_t flags_3e4; /* +0x3e4 (bit 0x8000000 = wake-timer running)  */
+    uint32_t flags_3ec; /* +0x3ec (activity/behaviour flags)            */
+    int      activity;       /* +0x2e8: activity-table index, -1 = none */
+    int      activity_last;  /* +0xbb: last completed activity, -1 none */
+    int      activity_param; /* +0x2d8 (activity argument)              */
+    float    activity_timer; /* +0x2d4 (run since activity set)         */
+    float    wake_timer;     /* +0x368 (counts down; early-returns tick) */
+    void*    link_target;    /* +0x354: acquired target-acquire link     */
 } EntitySlot;
 
 /* Completed-objective `.osf` table (finding 08): 20-byte entries — id, ref,
