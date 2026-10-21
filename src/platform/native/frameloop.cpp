@@ -131,6 +131,13 @@ int platform_pump_events(PlatformWindow* pw, PlatformEvent* out, int cap)
             ev->kind = PLATFORM_EVENT_MOUSE;
             ev->mx = e.motion.x;
             ev->my = e.motion.y;
+            ev->button = 0;
+            ++n;
+        } else if (e.type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
+            ev->kind = PLATFORM_EVENT_MOUSE;
+            ev->mx = e.button.x;
+            ev->my = e.button.y;
+            ev->button = 1; /* left/any press edge; latched in the input */
             ++n;
         }
     }

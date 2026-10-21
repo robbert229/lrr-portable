@@ -31,6 +31,7 @@ void input_begin_frame(InputState* s)
         s->prev[i] = s->cur[i];
         s->cur[i] = 0;
     }
+    s->mouse_press = 0;
 }
 
 void input_capture_events(InputState* s, const PlatformEvent* evs, int count)
@@ -54,6 +55,9 @@ void input_capture_events(InputState* s, const PlatformEvent* evs, int count)
         case PLATFORM_EVENT_MOUSE:
             s->mouse_x = e->mx;
             s->mouse_y = e->my;
+            if (e->button) {
+                s->mouse_press = 1;
+            }
             break;
         default:
             break;
@@ -101,6 +105,11 @@ int input_key_released(const InputState* s, int key)
         return 0;
     }
     return s->prev[key] != 0 && s->cur[key] == 0;
+}
+
+int input_mouse_pressed(const InputState* s)
+{
+    return s != NULL ? s->mouse_press : 0;
 }
 
 /* KeyToAscii — corpus FUN_0048e380.

@@ -123,6 +123,38 @@ void level_render_map(const LevelState* lvl, const GameContext* ctx,
         }
     }
 
+    /* Reward overlay: draw the Save/Advance button zones in screen space so
+     * the zone hit-test (finding 09) has visible targets. */
+    if (ctx->reward_active) {
+        const RewardScreen* rs = &ctx->reward_screen;
+        /* Save (green) */
+        fill_rect((int)rs->save_x, (int)rs->save_y,
+                  (int)(rs->save_x + rs->save_w), (int)rs->save_y,
+                  w, h, pixels, pitch, 90, 200, 90);
+        fill_rect((int)rs->save_x, (int)(rs->save_y + rs->save_h),
+                  (int)(rs->save_x + rs->save_w), (int)(rs->save_y + rs->save_h),
+                  w, h, pixels, pitch, 90, 200, 90);
+        fill_rect((int)rs->save_x, (int)rs->save_y,
+                  (int)rs->save_x, (int)(rs->save_y + rs->save_h),
+                  w, h, pixels, pitch, 90, 200, 90);
+        fill_rect((int)(rs->save_x + rs->save_w), (int)rs->save_y,
+                  (int)(rs->save_x + rs->save_w), (int)(rs->save_y + rs->save_h),
+                  w, h, pixels, pitch, 90, 200, 90);
+        /* Advance (blue) */
+        fill_rect((int)rs->advance_x, (int)rs->advance_y,
+                  (int)(rs->advance_x + rs->advance_w), (int)rs->advance_y,
+                  w, h, pixels, pitch, 90, 150, 220);
+        fill_rect((int)rs->advance_x, (int)(rs->advance_y + rs->advance_h),
+                  (int)(rs->advance_x + rs->advance_w), (int)(rs->advance_y + rs->advance_h),
+                  w, h, pixels, pitch, 90, 150, 220);
+        fill_rect((int)rs->advance_x, (int)rs->advance_y,
+                  (int)rs->advance_x, (int)(rs->advance_y + rs->advance_h),
+                  w, h, pixels, pitch, 90, 150, 220);
+        fill_rect((int)(rs->advance_x + rs->advance_w), (int)rs->advance_y,
+                  (int)(rs->advance_x + rs->advance_w), (int)(rs->advance_y + rs->advance_h),
+                  w, h, pixels, pitch, 90, 150, 220);
+    }
+
     /* Cursor cell outline (the selection pick reads the same mapping). */
     if (mouse_x >= 0 && mouse_y >= 0) {
         int cx = mouse_x / cell_w;

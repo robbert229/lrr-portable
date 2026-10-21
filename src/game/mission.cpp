@@ -7,6 +7,7 @@
 #include "level.hpp"
 #include "mission.hpp"
 #include "objective.hpp"
+#include "savegame.hpp"
 #include "util.hpp"
 
 /* The ten named task slots (TaskBlockInit local list). */
@@ -342,6 +343,10 @@ void mission_reward_init(GameContext* ctx, BlockFile* cfg, const char* level_nam
     }
     RewardScreen* rs = &ctx->reward_screen;
     __builtin_memset(rs, 0, sizeof(*rs));
+    rs->save_w = 56.0f;
+    rs->save_h = 20.0f;
+    rs->advance_w = 72.0f;
+    rs->advance_h = 20.0f;
     if (cfg == NULL || level_name == NULL) {
         return;
     }
@@ -397,4 +402,65 @@ void mission_reward_init(GameContext* ctx, BlockFile* cfg, const char* level_nam
             rs->advance_y = (float)util_atoi(f[2]);
         }
     }
+}
+
+int mission_reward_active(const GameContext* ctx)
+{
+    return ctx != NULL ? ctx->reward_active : 0;
+}
+
+void mission_reward_set_active(GameContext* ctx, int on)
+{
+    if (ctx != NULL) {
+        ctx->reward_active = on;
+    }
+}
+
+/* Rect hit-test helper (the corpus's widget zones +w/h, RewardZoneCheck). */
+static int zone_hit(float x, float y, float w, float h, int mx, int my)
+{
+    return mx >= x && mx < x + w && my >= y && my < y + h;
+}
+
+int mission_reward_zone(GameContext* ctx, int mx, int my,
+                        int* hit_save, int* hit_advance)
+{
+    if (ctx == NULL || hit_save == NULL || hit_advance == NULL) {
+        return 0;
+    }
+    *hit_save = 0;
+    *hit_advance = 0;
+    if (!ctx->reward_active || ctx->level == NULL) {
+        return 0;
+    }
+    int result = level_int(ctx->level, LEVEL_OFF_OBJ_RESULT);
+    if (result == 1) {
+        /* achieved: the SaveButton zone is live (RewardZoneCheck branch 1) */
+        if (zone_hit(ctx->reward_screen.save_x, ctx->reward_screen.save_y,
+                     ctx->reward_screen.save_w, ctx->reward_screen.save_h,
+                     mx, my)) {
+            *hit_save = 1;
+            return 1;
+        }
+    } else if (zone_hit(ctx->reward_screen.advance_x, ctx->reward_screen.advance_y,
+                        ctx->reward_screen.advance_w, ctx->reward_screen.advance_h,
+                        mx, my)) {
+        *hit_advance = 1;
+        return 1;
+    }
+    return 0;
+}
+
+int mission_reward_click(GameContext* ctx, int hit_save)
+{
+    if (ctx == NULL) {
+        return 0;
+    }
+    (void)hit_save;
+    /* The corpus's reward-button handler (FUN_00462780) commits the
+     * checkpoint through CheckpointStep; the level name maps to the active
+     * record. */
+    checkpoint_step(ctx);
+    ctx->reward_active = 0;
+    return 1;
 }

@@ -48,6 +48,8 @@ typedef struct InputState {
 
     int32_t  mouse_x;                 /* DAT_0076ab24 */
     int32_t  mouse_y;                 /* DAT_0076ab28 */
+    int      mouse_press;             /* latched left-press edge (cleared by
+                                       * input_begin_frame) */
 
     /* Corner-dwell quit counters (QuitPoll FUN_004589c0). Slot 0..4 is
      * supplied by the caller — in the original it indexes off the
@@ -87,6 +89,10 @@ void input_mirror_and_clear(InputState* s);
 int  input_key_down(const InputState* s, int key);
 int  input_key_edge(const InputState* s, int key);
 int  input_key_released(const InputState* s, int key);
+
+/* Left-button press edge latched this frame (consumed by input_begin_frame).
+ * Returns 1 for one frame after the platform reports MOUSE + button=1. */
+int  input_mouse_pressed(const InputState* s);
 
 /* KeyToAscii (FUN_0048e380): without an HKL this is exactly "uppercase
  * a-z"; level-1 ASCII for keys 0x20..0x7e passes through unchanged. */

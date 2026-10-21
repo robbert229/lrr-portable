@@ -327,6 +327,11 @@ int LegorrrRun(void)
                 fprintf(log, "frameloop: gather task enqueued for %d selected\n",
                         n);
             }
+            /* 'y' toggles the reward overlay manually (finding 09). */
+            if (input_key_edge(&input, 'y')) {
+                mission_reward_set_active(&game,
+                                          !mission_reward_active(&game));
+            }
         }
         if (rock_x < 0) { rock_x = 0; }
         if (rock_y < 0) { rock_y = 0; }
@@ -351,6 +356,32 @@ int LegorrrRun(void)
             if (resolved == 0) {
                 fprintf(log, "frameloop: objective resolved (word 0x%08x)\n",
                         game.level->objective);
+                if (!mission_reward_active(&game)) {
+                    mission_reward_set_active(&game, 1);
+                    fprintf(log, "frameloop: reward screen shown (click its "
+                                 "Save/Advance button)\n");
+                }
+            }
+            /* Reward-screen buttons (finding 09): a real mouse press inside
+             * the Save/Advance zone commits the checkpoint. 'b' is the
+             * keyboard fallback (headless). */
+            if (mission_reward_active(&game)) {
+                int hit_save = 0, hit_advance = 0;
+                int clicked = input_mouse_pressed(&input);
+                if (clicked
+                    || (input_key_edge(&input, 'b')
+                        && mission_reward_zone(&game, input.mouse_x,
+                                               input.mouse_y, &hit_save,
+                                               &hit_advance))) {
+                    if (mission_reward_zone(&game, input.mouse_x,
+                                            input.mouse_y, &hit_save,
+                                            &hit_advance)) {
+                        mission_reward_click(&game, hit_save);
+                        fprintf(log, "frameloop: reward %s clicked -> "
+                                     "checkpoint committed\n",
+                                hit_save ? "Save" : "Advance");
+                    }
+                }
             }
         }
 

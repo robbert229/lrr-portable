@@ -78,6 +78,23 @@ void mission_set_crystals(GameContext* ctx, int32_t v);
 void mission_set_ore(GameContext* ctx, int32_t v);
 void mission_add_score(GameContext* ctx, int32_t v);
 
+/* --- reward screen + save zone (finding 09 display half) ---------------- */
+/* The corpus gates the overlay on the Reward/Enable blob + the button
+ * surfaces; the demo uses a reconstruction-side `reward_active` flag. */
+int  mission_reward_active(const GameContext* ctx);
+void mission_reward_set_active(GameContext* ctx, int on);
+
+/* RewardZoneCheck @ 0x461dd0 port: hit-test the SaveButton (when the level
+ * result index is 1, "achieved") or the AdvanceButton rect against the
+ * mouse position. Returns 1 when the pressed button was hit; *hit_save /
+ * *hit_advance report which. */
+int mission_reward_zone(GameContext* ctx, int mx, int my,
+                        int* hit_save, int* hit_advance);
+
+/* Reward-screen button handler (FUN_00462780): on a saved/advanced zone
+ * hit, commit the checkpoint (CheckpointStep). Returns the step result. */
+int mission_reward_click(GameContext* ctx, int hit_save);
+
 #ifdef __cplusplus
 }
 #endif
