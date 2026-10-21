@@ -234,6 +234,14 @@ a startup SFX and re-triggers it with **Space**. `audio_test` (suite
 `audio`, `SDL_AUDIODRIVER=dummy`) covers the conversion (incl. 8-bit and
 stereo-mixdown) and a real `.wav` play.
 
+**Audio depth** (2026-10-21): volume, looping, and 3D-ish panning.
+`platform.h` gains gain (`SDL_SetAudioStreamGain`), a continuous **loop
+track** (stereo PCM re-seeded on change + per-frame refill), and stereo
+submits; `audio.*` adds `audio_set_volume` / `audio_play_sound_3d` /
+`audio_loop_named` / `audio_update`. The demo loops `Sounds\Iambloop.wav`
+spatialized by the texture's pan position (the blit is the sound emitter),
+with **`[` `]`** adjusting volume.
+
 ```sh
 cd path/to/legally-owned/game
 LEGORRR_AUTOSTOP_FRAMES=600 ../lrr-portable/build/src/LegoRR

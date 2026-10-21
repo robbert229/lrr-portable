@@ -84,8 +84,9 @@ int  platform_poll_events(PlatformWindow* win);
 /* --- Audio (DirectSound analog, finding 14 §1) ---------------------------
  * The corpus's SFX path is DIRECTSOUNDCreate + buffers (WINMM mmio decode);
  * miniwin ships no DirectSound, so the reconstruction's audio surface here
- * is a mono-16-bit-PCM submit interface over SDL's audio stream (the winapi
- * reference build would map onto DirectSound ord 1). One shot per play. */
+ * is a PCM submit interface over SDL's audio stream (the winapi reference
+ * build would map onto DirectSound ord 1). One shot per play; one loop
+ * track; master gain (volume). */
 typedef struct PlatformAudio PlatformAudio;
 
 PlatformAudio* platform_audio_open(void);
@@ -96,7 +97,26 @@ void           platform_audio_close(PlatformAudio* a);
 int  platform_audio_play(PlatformAudio* a, const int16_t* pcm, int frames,
                          int sample_rate);
 
-/* Stop / clear pending output. */
+/* Play one shot: interleaved L,R 16-bit signed PCM (stereo). */
+int  platform_audio_play_stereo(PlatformAudio* a, const int16_t* lr,
+                                int frames, int sample_rate);
+
+/* Seed/replace the continuous loop track (interleaved L,R 16-bit PCM; the
+ * engine re-seeds when pan/volume-source changes). Passing NULL stops it. */
+int  platform_audio_loop(PlatformAudio* a, const int16_t* lr,
+                         int frames, int sample_rate);
+
+/* Keep the loop fed (call once per frame while looping). */
+void platform_audio_refill(PlatformAudio* a);
+
+/* Master gain 0..1 on the audio stream (volume, FUN_00464ef0 analog). */
+int   platform_audio_set_gain(PlatformAudio* a, float gain);
+float platform_audio_get_gain(PlatformAudio* a);
+
+/* Bytes currently buffered in the stream (diagnostics/tests). */
+int  platform_audio_queued(PlatformAudio* a);
+
+/* Stop / clear pending output + the loop track. */
 void platform_audio_stop(PlatformAudio* a);
 
 /* Commit a framebuffer (RGBA32 byte order R,G,B,A on little-endian) to the

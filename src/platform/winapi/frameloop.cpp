@@ -80,6 +80,43 @@ int platform_audio_play(PlatformAudio* a, const int16_t* pcm, int frames,
     return -1;
 }
 
+int platform_audio_play_stereo(PlatformAudio* a, const int16_t* lr,
+                               int frames, int sample_rate)
+{
+    (void)a; (void)lr; (void)frames; (void)sample_rate;
+    return -1;
+}
+
+int platform_audio_loop(PlatformAudio* a, const int16_t* lr,
+                        int frames, int sample_rate)
+{
+    (void)a; (void)lr; (void)frames; (void)sample_rate;
+    return -1;
+}
+
+void platform_audio_refill(PlatformAudio* a)
+{
+    (void)a;
+}
+
+int platform_audio_set_gain(PlatformAudio* a, float gain)
+{
+    (void)a; (void)gain;
+    return -1;
+}
+
+float platform_audio_get_gain(PlatformAudio* a)
+{
+    (void)a;
+    return 0.0f;
+}
+
+int platform_audio_queued(PlatformAudio* a)
+{
+    (void)a;
+    return 0;
+}
+
 void platform_audio_stop(PlatformAudio* a)
 {
     (void)a;

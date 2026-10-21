@@ -39,6 +39,45 @@ static void test_synthetic(void)
     CHECK(audio_open(&p) == 0, "syn: audio_open");
     CHECK(p.dev != NULL, "syn: device returned");
     CHECK(platform_audio_play(p.dev, sine, N, 8000) == 0, "syn: play sine");
+
+    /* Volume (stream gain) set + readback. */
+    CHECK(platform_audio_set_gain(p.dev, 0.35f) == 0, "syn: gain set");
+    float g = platform_audio_get_gain(p.dev);
+    CHECK(g > 0.30f && g < 0.40f, "syn: gain readback");
+
+    /* Continuous loop: seed + refill keeps the queue fed (dummy driver). */
+    static int16_t loopbuf[1600]; /* 0.1 s @ 8 kHz -> stereo */
+    for (int i = 0; i < 800; ++i) {
+        loopbuf[i * 2]     = (int16_t)(12000 * sin(2 * 3.14159265 * 330.0
+                                                  * (double)i / 8000.0));
+        loopbuf[i * 2 + 1] = loopbuf[i * 2];
+    }
+    CHECK(platform_audio_loop(p.dev, loopbuf, 800, 8000) == 0,
+          "syn: loop seed");
+    platform_audio_refill(p.dev);
+    CHECK(platform_audio_queued(p.dev) > 0, "syn: loop queued after refill");
+    platform_audio_stop(p.dev);
+    CHECK(platform_audio_queued(p.dev) == 0, "syn: loop stopped");
+
+    /* Constant-power stereo pan weights. */
+    uint8_t pd[4] = { 0xe8, 0x03, 0xd0, 0x07 }; /* s16 LE: 1000, 2000 */
+    Sound ps = {};
+    ps.format.channels = 1;
+    ps.format.bits_per_sample = 16;
+    ps.format.sample_rate = 44100;
+    ps.data = pd;
+    ps.data_len = 4;
+    int16_t* lr = NULL;
+    int pf = audio_to_stereo_pan(&ps, -1.0f, &lr);
+    CHECK(pf == 2 && lr[0] == 1000 && lr[1] == 0, "syn: pan far-left");
+    audio_free_pcm(lr);
+    pf = audio_to_stereo_pan(&ps, 1.0f, &lr);
+    CHECK(pf == 2 && lr[0] == 0 && lr[1] == 1000, "syn: pan far-right");
+    audio_free_pcm(lr);
+    pf = audio_to_stereo_pan(&ps, 0.0f, &lr);
+    CHECK(pf == 2 && lr[0] == 1000 && lr[1] == 1000, "syn: pan center");
+    audio_free_pcm(lr);
+
     audio_stop(&p);
     audio_close(&p);
 
