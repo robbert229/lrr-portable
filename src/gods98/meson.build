@@ -5,6 +5,7 @@ gods98_lib = static_library('gods98',
   'tickers.cpp',
   'resource.cpp',
   'texture.cpp',
+  'sound.cpp',
   include_directories : include_directories('.'),
   install : false)
 
@@ -36,4 +37,16 @@ if get_option('platform') == 'native'
   test('texture', texture_test,
     args : test_wads == '' ? [] : ['--real', test_wads],
     suite : 'texture')
+
+  # Sound loader validation (finding 14): synthetic RIFF/WAVE round trips
+  # always; real-wad checks parse all 387 shipped .wav and match the five
+  # reference entries against wave-module-derived PCM hashes.
+  sound_test = executable('sound_test',
+    'test_sound.cpp',
+    include_directories : include_directories('.'),
+    link_with : gods98_lib,
+    install : false)
+  test('sound', sound_test,
+    args : test_wads == '' ? [] : ['--real', test_wads],
+    suite : 'sound')
 endif
