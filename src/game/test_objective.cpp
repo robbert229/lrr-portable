@@ -111,6 +111,14 @@ int main(void)
     CHECK((s->objective & 2u) != 0, "achieved bit set");
     CHECK(level_int(s, OBJ_OFF_RESULT_INDEX) == 1, "result index 1");
     CHECK((s->objective & 8u) != 0, "announced bit set");
+    /* Advisor stream text + the suppression decision (finding 22). */
+    CHECK(strstr(objective_stream(s), "Acheived") != NULL,
+          "announcer built the Objective_Acheived stream");
+    CHECK(objective_advisor_shown(s) == 0,
+          "advisor suppressed with the 0x20 default (key absent)");
+    s->objective &= ~LVL_OBJECTIVE_NO_ACH_ADV;
+    CHECK(objective_advisor_shown(s) == 1,
+          "advisor shown once the achieved suppression is cleared");
     objective_tick(s, 0.0f);
     CHECK((s->objective & 8u) == 0, "announced bit cleared by tick");
     objective_announce(s, 2); /* ignored: result already resolved */

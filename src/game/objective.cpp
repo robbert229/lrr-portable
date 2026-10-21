@@ -257,31 +257,65 @@ void objective_announce(LevelState* s, int who)
         return;
     }
     int result = 0;
+    const char* outcome = NULL;
     switch (who) {
     case 0: /* pending */
         s->objective |= LVL_OBJECTIVE_STILL_PENDING;
+        outcome = "Pending";
         result = 0;
         break;
     case 1: /* achieved */
         s->objective_result = 1;
         s->objective |= LVL_OBJECTIVE_ACHIEVED;
+        outcome = "Acheived";
         result = 1;
         break;
     case 2: /* failed */
         s->objective_result = 0;
         s->objective |= LVL_OBJECTIVE_FAILED;
+        outcome = "Failed";
         result = 2;
         break;
     case 3: /* failed-with-crystals */
         s->objective_result = 0;
         s->objective |= LVL_OBJECTIVE_FAILED | LVL_OBJECTIVE_CRYSTALS;
+        outcome = "FailedCrystals";
         result = 2;
         break;
     default:
         return;
     }
     level_set_int(s, OBJ_OFF_RESULT_INDEX, result);
+    /* Advisor stream text (corpus `Stream Objective_%s_%s_%s` ->
+     * DAT_004ffe38 with the outcome, a slot string, and the level name). */
+    {
+        const char* lvl = s->ptr_name != NULL ? (const char*)s->ptr_name : "";
+        snprintf(s->obj_stream, sizeof(s->obj_stream),
+                 "Stream Objective_%s_%d_%s", outcome, result, lvl);
+    }
     s->objective |= LVL_OBJECTIVE_ANNOUNCED; /* hint shown; cleared per-frame */
+}
+
+const char* objective_stream(const LevelState* s)
+{
+    return s != NULL ? s->obj_stream : "";
+}
+
+int objective_advisor_shown(const LevelState* s)
+{
+    if (s == NULL || s->obj_stream[0] == '\0') {
+        return 0;
+    }
+    /* The corpus honours the outcome's suppression bit (0x10 generic /
+     * 0x20 achieved / 0x80 failed) before showing the hint. */
+    uint32_t suppress = LVL_OBJECTIVE_NO_ADVISOR;
+    if (s->objective & LVL_OBJECTIVE_ACHIEVED) {
+        suppress |= LVL_OBJECTIVE_NO_ACH_ADV;
+    }
+    if (s->objective & LVL_OBJECTIVE_FAILED) {
+        suppress |= LVL_OBJECTIVE_NO_FAIL_ADV;
+    }
+    return (s->objective & suppress) == 0 ? 1 : 0;
 }
 
 int objective_tick(LevelState* s, float dt)
