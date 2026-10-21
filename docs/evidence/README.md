@@ -62,3 +62,16 @@ the `DAT_004decc4` activity-table initializer, the `DAT_004b32e8` xref
 sweep (command-creation layer only — the negative result that no tick reads
 record `+0x1c`), and the `test $0x41,%ah` zero-compare idiom. Import with
 `import_evidence_bundle` or inspect `records` directly.
+
+## `legorr-path-list-movement.bundle`
+
+Exported 2026-10-21 from the path-list movement session — 67 retained
+observations, a superset of `legorr-ai-receivers.bundle` (51). The added
+records cover the move-branch decompiles: the tile-flag setter
+(`FUN_00432e00`, bit `0x8000000` on the `0x48`-stride records behind
+`DAT_005560d4+0xb8`), the walkability check (`FUN_00432770`), the
+position/walkability wrapper (`FUN_0044a2a0`), and the record-list consumer
+`FUN_00403d10` (the `+0xbc` kind switches behind the arrival unlink
+`(ent, 8, 0, 1)`). The branch-body addresses themselves (`0x43cb40–0x43ce88`)
+were read from the shipped-image disassembly, not recorded. Import with
+`import_evidence_bundle` or inspect `records` directly.

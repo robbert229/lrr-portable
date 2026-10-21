@@ -59,6 +59,42 @@ int main(void)
     CHECK(mover->x >= 9.9f, "movement arrives near the target");
     CHECK(mover->cmd_head == NULL, "finished move unlinked from the chain");
     CHECK(ai_commands_active(&ctx) == 0, "no live commands after the move");
+    CHECK((mover->flags_3e0 & 0x8u) == 0, "arrival clears the +0x3e0 move flag");
+
+    /* --- path list (corpus +0x24 mirror; creator seeding, arrival pop) --- */
+
+    /* A move command seeds a one-entry path and raises the mover flag. */
+    EntitySlot* walker = place(&ctx, 1, "walker", 0, 0);
+    cmd_create_move(walker, 4.0f, 0.0f, 0);
+    CHECK(walker->wp_count == 1 && walker->wp[0].pending == 1,
+          "move seeds a one-entry path list");
+    CHECK((walker->flags_3e0 & 0x8u) != 0, "move sets the +0x3e0 mover flag");
+    run(&ctx, 2, 0.5f); /* 2 of 4 cells */
+    CHECK(walker->wp_index == 0 && walker->wp[0].pending == 1,
+          "mid-path entry stays pending (pop is arrival-only)");
+    run(&ctx, 3, 0.5f);
+    CHECK(walker->x >= 3.9f, "walker arrives at the waypoint");
+    CHECK(walker->wp[0].pending == 0 && walker->wp_index == 1,
+          "arrival pops the pending flag in place (corpus pop semantics)");
+    CHECK((walker->flags_3e0 & 0x8u) == 0 && walker->cmd_head == NULL,
+          "path exhaustion completes the command and clears the flag");
+
+    /* Multi-waypoint: the tick walks entries in order, popping each. */
+    EntitySlot* courier = place(&ctx, 1, "courier", 0, 0);
+    cmd_create_move(courier, 4.0f, 0.0f, 0);
+    CHECK(ai_path_append(courier, 4.0f, 4.0f) == 1, "waypoint appended");
+    run(&ctx, 4, 0.5f); /* exactly the first hop */
+    CHECK(courier->x >= 3.9f && courier->y < 1.0f, "first waypoint reached");
+    CHECK(courier->wp_index == 1 && courier->wp[0].pending == 0 &&
+              courier->wp[1].pending == 1 && courier->cmd_head != NULL,
+          "pop advances to the second entry, command stays live");
+    CHECK((courier->flags_3e0 & 0x8u) != 0, "mid-path mover flag stays set");
+    run(&ctx, 6, 0.5f);
+    CHECK(courier->x >= 3.9f && courier->y >= 3.9f, "second waypoint reached");
+    CHECK(courier->wp[1].pending == 0 && courier->cmd_head == NULL,
+          "final pop completes the command");
+    CHECK(ai_path_append(courier, 0.0f, 0.0f) == 0,
+          "a fully popped path restarts the buffer");
 
     /* Target execution: A chases B. */
     EntitySlot* chaser = place(&ctx, 2, "chaser", 0, 0);

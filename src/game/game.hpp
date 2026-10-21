@@ -161,6 +161,16 @@ typedef struct RewardScreen {
 #define SELECTION_MAX 100
 /* Selected flag word on EntitySlot.flags (corpus entity +0xfa & 0x200000). */
 #define ENTITY_SELECTED 0x200000u
+/* Path-list entry (corpus entity +0x24 buffer, stride 5 dwords/entry):
+ * x/y are entry[0]/entry[1] read at callback 0x43cba5. The corpus "pending"
+ * byte flag sits at entry+8 (callback 0x43cd83 reads list+idx*20-12 relative
+ * to +0x28); arrival clears that byte — the pop is flag-clear, not removal. */
+#define AI_WAYPOINTS_MAX 16 /* port bound; the corpus list is heap-allocated */
+typedef struct AiWaypoint {
+    float   x, y;
+    uint8_t pending; /* 1 = unarrived; arrival clears it (0x43cd90) */
+} AiWaypoint;
+
 typedef struct EntitySlot {
     int32_t type;       /* corpus entity-type code (1..9)         */
     int32_t etype;      /* same, stored for the cmd task mapping  */
@@ -188,6 +198,10 @@ typedef struct EntitySlot {
     float    activity_timer; /* +0x2d4 (run since activity set)         */
     float    wake_timer;     /* +0x368 (counts down; early-returns tick) */
     void*    link_target;    /* +0x354: acquired target-acquire link     */
+    /* --- path list (corpus +0x24 buffer / +0x28 count / +0x2c index) --- */
+    AiWaypoint wp[AI_WAYPOINTS_MAX];
+    int      wp_count;       /* +0x28: valid entries                      */
+    int      wp_index;       /* +0x2c: entry being walked                 */
 } EntitySlot;
 
 /* Completed-objective `.osf` table (finding 08): 20-byte entries — id, ref,

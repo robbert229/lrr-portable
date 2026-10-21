@@ -119,10 +119,29 @@ static int finish_head(GameContext* ctx, EntitySlot* e)
     return 1;
 }
 
-/* Move/target step: move `e` toward (tx,ty) by speed*dt; 1 when arrived.
- * Port-side application of move/target records — in the corpus these seed
- * the entity path list (+0x24, cleared by FUN_00432e00's pop at 0x43cd87)
- * and the +0x3e0 bit-0x8 flag; the path-list mirror is TODO(corpus). */
+/* Append a waypoint to the entity path list (the corpus +0x24 buffer the
+ * pathfinder fills; port-side pathfinding is TODO(corpus), so move commands
+ * seed this list with their single hop). A finished-and-fully-popped list
+ * restarts, mirroring the buffer being rebuilt per path command. */
+int ai_path_append(EntitySlot* e, float x, float y)
+{
+    if (e == NULL) {
+        return -1;
+    }
+    if (e->wp_index >= e->wp_count) {
+        e->wp_count = 0; /* previous path popped whole: reuse the buffer */
+        e->wp_index = 0;
+    }
+    if (e->wp_count >= AI_WAYPOINTS_MAX) {
+        return -1;
+    }
+    e->wp[e->wp_count].x = x;
+    e->wp[e->wp_count].y = y;
+    e->wp[e->wp_count].pending = 1;
+    return e->wp_count++;
+}
+
+/* Move/target step: move `e` toward (tx,ty) by speed*dt; 1 when arrived. */
 static int step_toward(EntitySlot* e, float tx, float ty, float dt)
 {
     float dx = tx - e->x;
@@ -142,6 +161,35 @@ static int step_toward(EntitySlot* e, float tx, float ty, float dt)
     e->x += (dx / len) * step;
     e->y += (dy / len) * step;
     return 0;
+}
+
+/* Move step over the entity path list — the corpus move branch's shape
+ * (callback 0x43cb98: walk +0x24 buffer at the +0x2c index; a null list
+ * falls back to the command's coordinates at 0x43cbb1). Arrival runs the
+ * corpus pop: the entry's pending byte is cleared (0x43cd90), no entry
+ * removal. When the list runs out the corpus arrives — +0x3e0 bit 0x8 is
+ * cleared (0x43cd66) and the command completes; FUN_00403d10(ent,8,0,1)'s
+ * record-list unlink and FUN_00432e00(cell,0)'s tile-occupancy clear are
+ * TODO(corpus) (the port does not model the +0xbc record list or tile
+ * flags). Returns 1 only when the whole path is walked. */
+static int step_path(EntitySlot* e, float fallback_x, float fallback_y,
+                     float dt)
+{
+    if (e->wp_count == 0) {
+        return step_toward(e, fallback_x, fallback_y, dt);
+    }
+    while (e->wp_index < e->wp_count && e->wp[e->wp_index].pending == 0) {
+        ++e->wp_index; /* skip popped entries */
+    }
+    if (e->wp_index >= e->wp_count) {
+        return 1; /* path exhausted: arrived */
+    }
+    if (!step_toward(e, e->wp[e->wp_index].x, e->wp[e->wp_index].y, dt)) {
+        return 0; /* still walking the current entry */
+    }
+    e->wp[e->wp_index].pending = 0; /* pop = flag clear (0x43cd90) */
+    ++e->wp_index;
+    return e->wp_index >= e->wp_count;
 }
 
 /* Yield a task's deposit into the mission counters by priority kind, and
@@ -262,11 +310,16 @@ int ai_tick(GameContext* ctx, float dt)
                 void* head = e->cmd_head;
                 int type = cmd_rec_type(head);
                 if (type == 0) {
-                    /* Move: step toward the record coordinates. */
-                    if (!step_toward(e, cmd_rec_move_x(head),
-                                     cmd_rec_move_y(head), dt)) {
+                    /* Move: walk the entity path list seeded by the creator.
+                     * +0x3e0 bit 0x8 is the corpus mover-state marker — the
+                     * arrival path clears it (callback 0x43cd66); the tick's
+                     * exact gate condition is TODO(corpus), so it is
+                     * mirrored, not enforced here. */
+                    if (!step_path(e, cmd_rec_move_x(head),
+                                   cmd_rec_move_y(head), dt)) {
                         break; /* still moving */
                     }
+                    e->flags_3e0 &= ~ENT_FLAG3E0_MOVING;
                     done += finish_head(ctx, e);
                 } else if (type == 2) {
                     /* Target: step toward the payload entity. */

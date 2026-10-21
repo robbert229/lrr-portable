@@ -572,14 +572,20 @@ finding 12, #14). Three new modules in `src/game/`:
   (`+0x3ec` `0x40000` → link `+0x354`), the cheat-word flag (`DAT_00556ed0`),
   and type-1 idle registration (`FUN_0043a960`, cap 100) — plus the
   77-entry `DAT_004decc4` activity-name table (`Activity_Stand`…
-  `Activity_Waiting21`) with `FUN_004409e0` set semantics. Move/target
-  stepping stays flagged as the port-side *application* of command records
-  until the corpus path lists (`+0x24`) are ported; remaining flag branches
-  are documented in finding 10 rather than guessed. The demo key `g` issues
-  a task for the selection. `ai_test` (suite `ai`) covers activity
-  set/complete bookkeeping with the idle-record attach, wake-timer freezing,
-  link acquisition, the cheat flag, idle registration, and the
-  queue→executor→move path.
+  `Activity_Waiting21`) with `FUN_004409e0` set semantics. Move commands
+  flow through the **path-list mirror** (finding 10 §move branch): the
+  entity waypoint buffer (`EntitySlot.wp`, corpus `+0x24`/`+0x28`/`+0x2c`,
+  pop = entry pending-flag clear at `0x43cd90`) is seeded one hop by
+  `cmd_create_move` together with the `+0x3e0` bit-8 mover flag; `ai_tick`
+  walks the entries in order, popping each, and completes the command with
+  the flag clear on exhaustion. The corpus *pathfinder* and tile
+  walkability/occupancy (`FUN_00432770`, `FUN_00432e00`) remain TODO with
+  the rest of the flag branches documented in finding 10 rather than
+  guessed. The demo key `g` issues a task for the selection. `ai_test`
+  (suite `ai`) covers activity set/complete bookkeeping with the
+  idle-record attach, wake-timer freezing, link acquisition, the cheat
+  flag, idle registration, single- and multi-waypoint walking with the
+  arrival pop, and the queue→executor→move path.
 - **Advisor + message-bus runtime** (2026-10-21, finding 22): the announcer
   now builds the `Stream Objective_…` advisor text (`DAT_004ffe38` analog)
   on every outcome, and `objective_advisor_shown` applies the 0x10/0x20/0x80
