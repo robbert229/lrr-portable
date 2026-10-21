@@ -218,6 +218,39 @@ const char* level_next_name(const LevelState* s);
 /* Voxel record pointer for cell (x,y) (or NULL on OOB). */
 uint8_t* level_voxel(const LevelState* s, int x, int y);
 
+/* --- tile semantics (entity-callback queries, finding 10) -------------- *
+ * The voxel record fields these read are the ones the layer loaders write
+ * (finding 07): the tile *type* byte is record+2 (the erosion/terrain byte;
+ * the callback compares it against small constants — 1/7/11 block walking,
+ * '\t' = 9 is the idle-registration tile), and record+8 is the flag word. */
+
+#define TILE_FLAG_WALKABLE  0x10u       /* traversable layer bit (+8)   */
+#define TILE_FLAG_BLOCKING  0x40u       /* blocks walking (+8)          */
+#define TILE_FLAG_OCCUPIED  0x8000000u /* reserved by an entity (+8)    */
+#define TILE_TYPE_IDLE      '\t'        /* 9: idle-registration tile    */
+
+/* FUN_0048e060: x87 round-to-nearest float→integer (the control-word
+ * round-to-nearest `fistp` trick). World units are cell units 1:1. */
+int level_cell_of(float v);
+
+/* FUN_00432770 simple mode (param_4 == 0, the walkability check the move
+ * branch calls with): the cell must sit inside a 2-cell grid margin and
+ * have flag 0x10 set, flag 0x40 clear, and a type byte not in {1, 7, 11}.
+ * NULL level (no map loaded) reports *not walkable* — callers that run
+ * without map state (port unit tests, menus) skip the check instead. The
+ * corpus's entity-conditional gates (the +0x334 state object, `+0x3e8`
+ * bit 1, gated-mode `+0x3e0` bit 0x400, and the per-type speed probe
+ * FUN_00469cc0) are TODO(corpus) and treated as pass here. */
+int level_walkable(const LevelState* s, int cx, int cy);
+
+/* FUN_00432e00: set (nonzero) or clear the cell's OCCUPIED flag — the
+ * entity "reservation" bit the mover-state sync raises and the arrival
+ * clears. Bounds-guarded (the corpus writes OOB for bad coords). */
+void level_tile_mark(LevelState* s, int cx, int cy, int set);
+
+/* Cell (x,y) tile type byte (record+2), or -1 when there is no map. */
+int level_tile_type(const LevelState* s, int cx, int cy);
+
 #ifdef __cplusplus
 }
 #endif

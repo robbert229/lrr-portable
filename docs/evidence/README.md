@@ -75,3 +75,16 @@ position/walkability wrapper (`FUN_0044a2a0`), and the record-list consumer
 `(ent, 8, 0, 1)`). The branch-body addresses themselves (`0x43cb40–0x43ce88`)
 were read from the shipped-image disassembly, not recorded. Import with
 `import_evidence_bundle` or inspect `records` directly.
+
+## `legorr-tile-queries.bundle`
+
+Exported 2026-10-21 from the tile-map slice — 68 retained observations, a
+superset of `legorr-path-list-movement.bundle`. The added records cover the
+tile-query decompiles: the walkability check (`FUN_00432770`, the flag
+`0x10`/`0x40` + type `{1,7,11}` simple mode and the mode/neighborhood
+branch), the state reader (`FUN_00469e60`, `+0x334+0x144`), the per-terrain
+speed probe (`FUN_00469cc0`, `+0x334+0x24`), and the idle registration
+(`FUN_0043a960`, the `'\t'` probe and `DAT_004eabcc` table). The occupancy
+setter (`FUN_00432e00`) and the round-to-nearest converter (`FUN_0048e060`)
+come from the earlier sessions' records and the shipped-image disassembly.
+Import with `import_evidence_bundle` or inspect `records` directly.

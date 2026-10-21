@@ -118,7 +118,12 @@ game.
 
 ## Still open
 
-- Exact voxel-flag meanings (`0x4000000`, `0x20000`, `0x20`, `0x200`, `0x20000000`).
+- Voxel-flag meanings partially closed by the move-branch decompile
+  (finding 10 §tile queries): `+8` bit `0x10` = traversable layer, bit
+  `0x40` = blocks walking, bit `0x8000000` = entity reservation
+  (`FUN_00432e00`); `0x4000000` (Predug edge-wall) is written by the port
+  loader but its *reader* (pathfinder) is still unported. Remaining:
+  `0x20`, `0x200`, `0x20000000`.
 - `LoadLayerL`'s appended 0x4C-stride record list (`state+8`, counter `state+0xC`).
 - `TerrainCreate`'s 0x28-stride block-table field semantics (normals, `0x60` sentinel).
 - `.ol`/`.nrn`/`.ptl` resources (`olistfile`, `NERPFile`, `PTLFile` keys) consumed where?

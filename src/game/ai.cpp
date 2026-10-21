@@ -7,6 +7,7 @@
 
 #include "ai.hpp"
 #include "cmd.hpp"
+#include "level.hpp"
 #include "mission.hpp"
 
 /* The command record's mutable `now` doubles as the task countdown for
@@ -141,6 +142,18 @@ int ai_path_append(EntitySlot* e, float x, float y)
     return e->wp_count++;
 }
 
+/* The bound level's voxel grid, or NULL when no map is loaded (the corpus
+ * tick cannot walk an empty grid, so a sub-margin grid counts as absent and
+ * the port-side fallback paths run instead). */
+static const LevelState* grid_of(const GameContext* ctx)
+{
+    if (ctx == NULL || ctx->level == NULL || level_width(ctx->level) < 3 ||
+        level_height(ctx->level) < 3) {
+        return NULL;
+    }
+    return ctx->level;
+}
+
 /* Move/target step: move `e` toward (tx,ty) by speed*dt; 1 when arrived. */
 static int step_toward(EntitySlot* e, float tx, float ty, float dt)
 {
@@ -165,31 +178,51 @@ static int step_toward(EntitySlot* e, float tx, float ty, float dt)
 
 /* Move step over the entity path list — the corpus move branch's shape
  * (callback 0x43cb98: walk +0x24 buffer at the +0x2c index; a null list
- * falls back to the command's coordinates at 0x43cbb1). Arrival runs the
- * corpus pop: the entry's pending byte is cleared (0x43cd90), no entry
- * removal. When the list runs out the corpus arrives — +0x3e0 bit 0x8 is
- * cleared (0x43cd66) and the command completes; FUN_00403d10(ent,8,0,1)'s
- * record-list unlink and FUN_00432e00(cell,0)'s tile-occupancy clear are
- * TODO(corpus) (the port does not model the +0xbc record list or tile
- * flags). Returns 1 only when the whole path is walked. */
-static int step_path(EntitySlot* e, float fallback_x, float fallback_y,
-                     float dt)
+ * falls back to the command's coordinates at 0x43cbb1). With a grid bound,
+ * the mover-state sync marks the entity's own cell occupied every tick
+ * (callback 0x43deed) and the walker only steps while its *current* cell
+ * is walkable (FUN_00432770, checked via 0x43cbe8; unwalkable = no step,
+ * the command stays live). Arrival runs the corpus pop: the entry's pending
+ * byte is cleared (0x43cd90), no entry removal. When the list runs out the
+ * corpus arrives — +0x3e0 bit 0x8 is cleared (0x43cd66), the arrival cell's
+ * occupancy flag is dropped (FUN_00432e00(cell, 0) at 0x43cd72), and the
+ * command completes; FUN_00403d10(ent,8,0,1)'s record-list unlink stays
+ * TODO(corpus) (the port has no +0xbc record list). Returns 1 only when
+ * the whole path is walked. */
+static int step_path(GameContext* ctx, EntitySlot* e, float fallback_x,
+                     float fallback_y, float dt)
 {
+    const LevelState* grid = grid_of(ctx);
+    if (grid != NULL && (e->flags_3e0 & ENT_FLAG3E0_MOVING) != 0) {
+        int cx = level_cell_of(e->x), cy = level_cell_of(e->y);
+        level_tile_mark((LevelState*)grid, cx, cy, 1);
+        if (!level_walkable(grid, cx, cy)) {
+            return 0; /* off-grid or blocked tile: no step this frame */
+        }
+    }
+    int done;
     if (e->wp_count == 0) {
-        return step_toward(e, fallback_x, fallback_y, dt);
+        done = step_toward(e, fallback_x, fallback_y, dt);
+    } else {
+        while (e->wp_index < e->wp_count && e->wp[e->wp_index].pending == 0) {
+            ++e->wp_index; /* skip popped entries */
+        }
+        if (e->wp_index >= e->wp_count) {
+            done = 1; /* path exhausted: arrived */
+        } else if (!step_toward(e, e->wp[e->wp_index].x, e->wp[e->wp_index].y,
+                                dt)) {
+            return 0; /* still walking the current entry */
+        } else {
+            e->wp[e->wp_index].pending = 0; /* pop = flag clear (0x43cd90) */
+            ++e->wp_index;
+            done = e->wp_index >= e->wp_count;
+        }
     }
-    while (e->wp_index < e->wp_count && e->wp[e->wp_index].pending == 0) {
-        ++e->wp_index; /* skip popped entries */
+    if (done && grid != NULL) {
+        level_tile_mark((LevelState*)grid, level_cell_of(e->x),
+                        level_cell_of(e->y), 0); /* arrival clear (0x43cd72) */
     }
-    if (e->wp_index >= e->wp_count) {
-        return 1; /* path exhausted: arrived */
-    }
-    if (!step_toward(e, e->wp[e->wp_index].x, e->wp[e->wp_index].y, dt)) {
-        return 0; /* still walking the current entry */
-    }
-    e->wp[e->wp_index].pending = 0; /* pop = flag clear (0x43cd90) */
-    ++e->wp_index;
-    return e->wp_index >= e->wp_count;
+    return done;
 }
 
 /* Yield a task's deposit into the mission counters by priority kind, and
@@ -277,12 +310,19 @@ static int callback_branches(GameContext* ctx, EntitySlot* e, float dt)
 
     /* 0x43c94d — type-1 idle registration: flag bit 0x40 + empty work and
      * link state -> FUN_0043a960, which moves the entity into the
-     * DAT_004eabcc idle table (cap 100) when it stands on a '\t' tile.
-     * Tile probe TODO(corpus); table/cap/flag-clear byte-exact. */
+     * DAT_004eabcc idle table (cap 100) when it stands on a '\t' tile
+     * (record+2 == 9 after the FUN_004424f0 -> cell round). The tile probe
+     * runs with a bound grid; without a map the registration keeps its
+     * port-side behavior (TODO(corpus)). */
     if (e->type == 1 && (e->flags_3ec & ENT_FLAG3EC_IDLE_REGISTER) != 0 &&
         e->cmd_head == NULL && e->link_target == NULL) {
         e->flags_3ec &= ~ENT_FLAG3EC_IDLE_REGISTER;
-        idle100_register(e);
+        const LevelState* grid = grid_of(ctx);
+        if (grid == NULL ||
+            level_tile_type(grid, level_cell_of(e->x),
+                            level_cell_of(e->y)) == TILE_TYPE_IDLE) {
+            idle100_register(e);
+        }
     }
     return 0;
 }
@@ -315,7 +355,7 @@ int ai_tick(GameContext* ctx, float dt)
                      * arrival path clears it (callback 0x43cd66); the tick's
                      * exact gate condition is TODO(corpus), so it is
                      * mirrored, not enforced here. */
-                    if (!step_path(e, cmd_rec_move_x(head),
+                    if (!step_path(ctx, e, cmd_rec_move_x(head),
                                    cmd_rec_move_y(head), dt)) {
                         break; /* still moving */
                     }
