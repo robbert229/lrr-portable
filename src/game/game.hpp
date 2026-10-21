@@ -168,6 +168,9 @@ typedef struct EntitySlot {
     float   x, y, z;
     float   rot;
     int32_t flags;      /* reconstruction-side flag word          */
+    /* --- .ol grammar (cross-checked, finding 07/10/12) ---------- */
+    char    type_name[24]; /* .ol `type` name (e.g. "SmallDigger") */
+    char    driving[32];   /* .ol `driving` target object (or "")  */
     /* --- model-aware rendering (finding 10/30) ------------------ */
     char    model_path[64]; /* .ol `Model` key (best-effort)       */
     const void* model;      /* parsed LWO Model* (entity_model cache) */

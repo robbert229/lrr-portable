@@ -152,6 +152,59 @@ const void* entity_model(const EntitySlot* e)
     return e != NULL ? e->model : NULL;
 }
 
+/* `.ol` `type` name -> entity table code (provisional seam). The corpus's
+ * .ol consumer (FUN_0042e020) is not decompiled (finding 07 §"Still open"),
+ * so the numeric code is inferred from the shipped object vocabulary and
+ * the four-table semantics of EntityPointer (finding 10), NOT pinned by
+ * decompile evidence. The grammar the code rides on (name, type name,
+ * xPos/yPos/heading, driving) IS corpus-verified (entity_test --real over
+ * all 44 shipped lists); only the code is the seam. */
+static int entity_type_for_name(const char* name)
+{
+    if (name == NULL || name[0] == '\0') {
+        return ENTITY_TYPE_VEHICLE;
+    }
+    char c[24];
+    size_t i = 0;
+    for (; i < sizeof(c) - 1 && name[i] != '\0'; ++i) {
+        char ch = name[i];
+        c[i] = (ch >= 'A' && ch <= 'Z') ? (char)(ch - 'A' + 'a') : ch;
+    }
+    c[i] = '\0';
+
+    if (strcmp(c, "pilot") == 0 || strcmp(c, "test1") == 0) {
+        return ENTITY_TYPE_MINIFIG;
+    }
+    if (strcmp(c, "hoverboard") == 0 || strcmp(c, "smalldigger") == 0
+        || strcmp(c, "smalltruck") == 0 || strcmp(c, "bulldozer") == 0
+        || strcmp(c, "smallheli") == 0 || strcmp(c, "largeheli") == 0
+        || strcmp(c, "largedigger") == 0 || strcmp(c, "walkerdigger") == 0
+        || strcmp(c, "smallcat") == 0 || strcmp(c, "largecat") == 0) {
+        return ENTITY_TYPE_VEHICLE;
+    }
+    if (strcmp(c, "toolstation") == 0 || strcmp(c, "powerstation") == 0
+        || strcmp(c, "barracks") == 0 || strcmp(c, "teleportpad") == 0
+        || strcmp(c, "teleportbig") == 0 || strcmp(c, "gunstation") == 0
+        || strcmp(c, "docks") == 0 || strcmp(c, "geo-dome") == 0
+        || strcmp(c, "upgrade") == 0) {
+        return ENTITY_TYPE_BUILDING;
+    }
+    /* Cameras/crystals (TVCamera, PowerCrystal) and the monster family
+     * (LavaMonster, IceMonster, RockMonster, Bat, SmallSpider) land in the
+     * general-object table provisionally — monsters may carry their own
+     * code in the corpus (not decompiled). */
+    return ENTITY_TYPE_OBJ;
+}
+
+static void ol_strncpy(char* dst, size_t n, const char* src)
+{
+    size_t i = 0;
+    for (; i + 1 < n && src != NULL && src[i] != '\0'; ++i) {
+        dst[i] = src[i];
+    }
+    dst[i] = '\0';
+}
+
 int object_list_load(GameContext* ctx, BlockFile* cfg, const char* level_name)
 {
     if (ctx == NULL || cfg == NULL || level_name == NULL) {
@@ -159,7 +212,7 @@ int object_list_load(GameContext* ctx, BlockFile* cfg, const char* level_name)
     }
     char olist[256] = { 0 };
     char path[512];
-    if (util_level_cfg_path(cfg, level_name, "olistfile", path, sizeof(path))
+    if (util_level_cfg_path(cfg, level_name, "OListFile", path, sizeof(path))
         == NULL) {
         return -1; /* no object list for this level */
     }
@@ -168,6 +221,14 @@ int object_list_load(GameContext* ctx, BlockFile* cfg, const char* level_name)
         return -1; /* no object list for this level */
     }
     snprintf(olist, sizeof(olist), "%s", v);
+    return object_list_load_file(ctx, olist);
+}
+
+int object_list_load_file(GameContext* ctx, const char* olist)
+{
+    if (ctx == NULL || olist == NULL || olist[0] == '\0') {
+        return -1;
+    }
 
     BlockFile* ol = block_open(olist);
     if (ol == NULL) {
@@ -192,32 +253,29 @@ int object_list_load(GameContext* ctx, BlockFile* cfg, const char* level_name)
         ObjectPlacement op;
         __builtin_memset(&op, 0, sizeof(op));
         snprintf(op.name, sizeof(op.name), "%s", name);
-        op.type = ENTITY_TYPE_VEHICLE; /* default */
 
-        const char* t = obj_val(ol, rname, name, "Type");
-        if (t != NULL) {
-            op.type = (int)util_atoi(t);
-            if (op.type < 1) {
-                op.type = ENTITY_TYPE_VEHICLE;
-            }
-        }
-        const char* x = obj_val(ol, rname, name, "x");
-        const char* y = obj_val(ol, rname, name, "y");
-        const char* z = obj_val(ol, rname, name, "z");
-        const char* r = obj_val(ol, rname, name, "Rot");
-        op.x = x ? util_atof(x) : 0.0f;
-        op.y = y ? util_atof(y) : 0.0f;
-        op.z = z ? util_atof(z) : 0.0f;
-        op.rot = r ? util_atof(r) : 0.0f;
-        /* Optional `Model` key (best-effort grammar, finding 10/30). */
-        const char* mdl = obj_val(ol, rname, name, "Model");
-        if (mdl != NULL) {
-            snprintf(op.model, sizeof(op.model), "%s", mdl);
-        }
+        /* Shipped grammar (cross-checked, finding 07/12): `type <name>`,
+         * `xPos`, `yPos`, `heading`, optional `driving <ref>`. `Model` is
+         * the port's extension key (absent from all 44 shipped lists). */
+        const char* t = obj_val(ol, rname, name, "type");
+        ol_strncpy(op.type_name, sizeof(op.type_name), t);
+        op.type = entity_type_for_name(op.type_name);
+        op.x = util_atof(obj_val(ol, rname, name, "xPos"));
+        op.y = util_atof(obj_val(ol, rname, name, "yPos"));
+        op.heading = util_atof(obj_val(ol, rname, name, "heading"));
+        op.z = 0.0f;
+        op.rot = op.heading;
+        ol_strncpy(op.driving, sizeof(op.driving),
+                   obj_val(ol, rname, name, "driving"));
+        ol_strncpy(op.model, sizeof(op.model), obj_val(ol, rname, name, "Model"));
 
-        int idx = entity_create(ctx, op.type, op.name, op.x, op.y, op.z, op.rot);
+        int idx = entity_create(ctx, op.type, op.name, op.x, op.y, op.z,
+                                op.heading);
         if (idx >= 0) {
             EntitySlot* slot = (EntitySlot*)entity_at(ctx, op.type, idx);
+            ol_strncpy(slot->type_name, sizeof(slot->type_name), op.type_name);
+            ol_strncpy(slot->driving, sizeof(slot->driving), op.driving);
+            slot->rot = op.heading;
             entity_set_model(slot, op.model[0] != '\0' ? op.model : NULL);
             ++placed;
         }
