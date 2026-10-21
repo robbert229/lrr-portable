@@ -27,8 +27,8 @@ static void ticker_00402220(EngineContext* c, float dt, float scale)
 
 static void ticker_00424600(EngineContext* c, float dt, float scale)
 {
-    (void)c; (void)dt; (void)scale;
-    /* TODO: corpus FUN_00424600(state, scale) */
+    (void)dt; (void)scale;
+    simtick_grid_cell_pass(c);
 }
 
 static void ticker_0040aa10(EngineContext* c, float dt, float scale)
@@ -38,14 +38,14 @@ static void ticker_0040aa10(EngineContext* c, float dt, float scale)
 
 static void ticker_0043b270(EngineContext* c, float dt, float scale)
 {
-    (void)c; (void)dt; (void)scale;
-    /* TODO: corpus FUN_0043b270 */
+    (void)scale;
+    simtick_scene_pass(c, dt);
 }
 
 static void ticker_0046f550(EngineContext* c, float dt, float scale)
 {
-    (void)c; (void)dt; (void)scale;
-    /* TODO: corpus FUN_0046f550 */
+    (void)scale;
+    simtick_sfx_bank(c, dt);
 }
 
 static void ticker_0040eab0(EngineContext* c, float dt, float scale)
@@ -56,8 +56,7 @@ static void ticker_0040eab0(EngineContext* c, float dt, float scale)
 
 static void ticker_004313b0(EngineContext* c, float dt, float scale)
 {
-    (void)c; (void)dt; (void)scale;
-    /* TODO: corpus FUN_004313b0(state, scale) */
+    simtick_minion_states(c, dt, scale);
 }
 
 static void ticker_004520d0(EngineContext* c, float dt, float scale)
@@ -131,8 +130,8 @@ static void ticker_00465b00(EngineContext* c, float dt, float scale)
 
 static void ticker_004665c0(EngineContext* c, float dt, float scale)
 {
-    (void)c; (void)dt; (void)scale;
-    /* TODO: corpus FUN_004665c0 */
+    (void)dt; (void)scale;
+    simtick_post_step(c);
 }
 
 static void ticker_0044cfa0(EngineContext* c, float dt, float scale)

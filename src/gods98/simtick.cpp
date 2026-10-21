@@ -465,3 +465,193 @@ void simtick_bitfield_tree(int* base, int code)
         scale >>= 1;
     } while ((uint16_t)bits < 0x11u);
 }
+
+/* ---- tranche 9 ---------------------------------------------------------- */
+
+/* FUN_004665c0: a single ordered post-step. */
+static int s_post_n = 0;
+int simtick_post_steps_count(void) { return s_post_n; }
+
+void simtick_post_step(EngineContext* c)
+{
+    (void)c;
+    ++s_post_n;
+    /* TODO(simtick): FUN_004377b0 post-step over LAB_004665e0. */
+}
+
+/* FUN_004313b0: minion activity state machine over the +0x88 list.
+ * Cells are 7 uintptr_t: [0] handle, [3] flags byte, [5] next, [6] state.
+ * (The corpus's u32 slots are a 32-bit artifact; uintptr_t keeps the next
+ * pointer whole on 64-bit hosts.) */
+static void* s_minion_list = NULL;
+static int (*s_minion_dist)(int, float) = NULL;
+static void (*s_minion_act)(int) = NULL;
+static void (*s_minion_fail)(void*) = NULL;
+static int s_minion_actions = 0, s_minion_fails = 0;
+
+void simtick_set_minion_list(void* list)
+{
+    s_minion_list = list;
+}
+void simtick_set_minion_hooks(int (*d)(int, float), void (*a)(int),
+                              void (*f)(void*))
+{
+    s_minion_dist = d;
+    s_minion_act = a;
+    s_minion_fail = f;
+}
+int simtick_minion_actions(void)   { return s_minion_actions; }
+int simtick_minion_failures(void)  { return s_minion_fails; }
+
+void simtick_minion_states(EngineContext* c, float dt, float scale)
+{
+    (void)dt;
+    EngineState* st = c != NULL ? c->state_block : NULL;
+    uintptr_t* node = (uintptr_t*)(st != NULL && st->minion_list != NULL
+                                       ? st->minion_list : s_minion_list);
+    s_minion_actions = s_minion_fails = 0;
+    while (node != NULL) {
+        uintptr_t* next = (uintptr_t*)node[5];
+        float dist = 0.0f;
+        if (s_minion_dist != NULL) {
+            dist = (float)s_minion_dist((int)(uint32_t)node[0], scale);
+        }
+        if (node[6] == 0) {
+            uint8_t* b = (uint8_t*)&node[3];
+            if (((*b & 1u) == 0) && (dist != 0.0f)) {
+                *b = (uint8_t)(*b | 1u);
+                if (s_minion_act != NULL) {
+                    s_minion_act((int)(uint32_t)node[0]);
+                }
+                ++s_minion_actions;
+            } else if ((*b & 2u) == 0) {
+                if (((*b & 4u) != 0) && (dist != 0.0f)) {
+                    *b = (uint8_t)(*b | 2u);
+                    ++s_minion_actions;
+                }
+            } else if (s_minion_fail != NULL) {
+                s_minion_fail(node);
+                ++s_minion_fails;
+            }
+        } else if (s_minion_fail != NULL) {
+            s_minion_fail(node);
+            ++s_minion_fails;
+        }
+        node = next;
+    }
+}
+
+/* FUN_00424600: clear grid-cell flags over the state grid (stride 0x48). */
+static int s_cells_n = 0;
+static int s_cells_x[64], s_cells_y[64];
+static int s_cell_disp = 0;
+
+void simtick_cell_seed(int n, const int* xs, const int* ys)
+{
+    if (n > 64) {
+        n = 64;
+    }
+    s_cells_n = n;
+    for (int i = 0; i < n; ++i) {
+        s_cells_x[i] = xs[i];
+        s_cells_y[i] = ys[i];
+    }
+}
+
+int simtick_cell_dispatches(void) { return s_cell_disp; }
+
+void simtick_grid_cell_pass(EngineContext* c)
+{
+    EngineState* st = c != NULL ? c->state_block : NULL;
+    s_cell_disp = 0;
+    if (st == NULL || st->grid_cells == NULL) {
+        return;
+    }
+    for (int i = 0; i < s_cells_n; ++i) {
+        uint32_t idx = st->grid_w * (uint32_t)s_cells_y[i] + (uint32_t)s_cells_x[i];
+        uint8_t* cell = (uint8_t*)st->grid_cells + idx * 0x48;
+        uint32_t* flags = (uint32_t*)(cell + 8);
+        *flags &= ~0x800u;
+        if ((*flags & 0x1000u) == 0) {
+            ++s_cell_disp; /* FUN_00452060 dispatch hook */
+        }
+        *flags &= ~0x1000u;
+        *flags &= ~0x2000000u;
+    }
+}
+
+/* FUN_0043b270: scene pass with a flag word + a 125 s broadcast timer. */
+static uint32_t s_scene_word = 0;
+static void (*s_scene_broadcast)(int) = NULL;
+static int s_scene_bcasts = 0;
+static float s_scene_timer = 0.0f;
+
+uint32_t simtick_scene_word(void)      { return s_scene_word; }
+void simtick_set_scene_word(uint32_t w) { s_scene_word = w; }
+void simtick_set_scene_broadcast(void (*h)(int)) { s_scene_broadcast = h; }
+int  simtick_scene_broadcasts(void)    { return s_scene_bcasts; }
+
+void simtick_scene_pass(EngineContext* c, float dt)
+{
+    (void)c;
+    if ((s_scene_word & 4u) != 0) {
+        /* TODO(simtick): FUN_00432200 entry pass. */
+    }
+    s_scene_word |= 0x10u;
+    ++s_post_n; /* FUN_004377d0 scene hook step */
+    s_scene_word &= ~0x10u;
+    if ((s_scene_word & 4u) != 0) {
+        /* TODO(simtick): FUN_004321a0 exit pass. */
+    }
+    if ((s_scene_word & 8u) == 0) {
+        s_scene_word &= ~4u;
+    } else {
+        if (s_scene_broadcast != NULL) {
+            s_scene_broadcast(0);
+        }
+        ++s_scene_bcasts;
+        s_scene_word &= ~8u;
+    }
+    s_scene_timer -= dt;
+    if (s_scene_timer <= 0.0f) {
+        s_scene_timer = 125.0f;
+        if (s_scene_broadcast != NULL) {
+            s_scene_broadcast(1);
+        }
+        ++s_scene_bcasts;
+    }
+}
+
+/* FUN_0046f550: effect-bank ticker (stride 0xac entries + stride-4 timers). */
+static const void** s_sfx_entries = NULL;
+static int s_sfx_n = 0;
+static int s_sfx_rels = 0;
+
+void simtick_sfx_seed(int n, const void** entries)
+{
+    s_sfx_n = n > 0 ? n : 0;
+    s_sfx_entries = entries;
+}
+
+int simtick_sfx_releases(void) { return s_sfx_rels; }
+
+void simtick_sfx_bank(EngineContext* c, float dt)
+{
+    (void)c;
+    s_sfx_rels = 0;
+    /* pass 1: active stride-0xac entries -> effect hook. */
+    for (int i = 0; i < s_sfx_n; ++i) {
+        ++s_post_n; /* FUN_0046f920 effect hook */
+    }
+    /* post-step. */
+    ++s_post_n;
+    /* pass 3: stride-4 timer slots: negative timer -> release + reset. */
+    for (int i = 0; i < s_sfx_n; ++i) {
+        float* f = (float*)((uint8_t*)s_sfx_entries[i] + 12);
+        if (*f < 0.0f) {
+            ++s_sfx_rels; /* FUN_004820d0 release hook x2 */
+            *(uint32_t*)((uint8_t*)s_sfx_entries[i] + 0) = 0;
+        }
+        *f -= dt;
+    }
+}

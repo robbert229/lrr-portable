@@ -73,6 +73,9 @@ typedef struct EngineState {
     uint32_t sim_h;           /* +0x0c grid height */
     void*    sim_grid;        /* +0x28 cell buffer, stride 0x28 */
     uint8_t  sim_marker_flags;/* +0x73d0 flag byte bit 2 enables the sweep */
+
+    /* minion activity list (tranche 9, FUN_004313b0 at +0x88). */
+    void* minion_list;
 } EngineState;
 
 /* Mutable engine context — stands in for the corpus's global window

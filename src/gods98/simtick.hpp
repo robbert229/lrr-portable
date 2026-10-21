@@ -109,6 +109,29 @@ int  simtick_editor_steps_run(void);
 void simtick_set_tree_hook(int (*h)(int idx, int bits));       /* 0x49d000 */
 int  simtick_tree_fired(void);
 
+/* --- tranche 9 tickers --------------------------------------------------- */
+void simtick_post_step(EngineContext* c);              /* FUN_004665c0 */
+void simtick_minion_states(EngineContext* c, float dt, float scale); /* 0x4313b0 */
+void simtick_grid_cell_pass(EngineContext* c);         /* FUN_00424600 */
+void simtick_scene_pass(EngineContext* c, float dt);   /* FUN_0043b270 */
+void simtick_sfx_bank(EngineContext* c, float dt);     /* FUN_0046f550 */
+
+/* hooks / state for the tranche-9 tickers */
+int  simtick_post_steps_count(void);
+void simtick_set_minion_list(void* list);              /* state +0x88 */
+void simtick_set_minion_hooks(int (*dist)(int h, float s),
+                              void (*act)(int h),
+                              void (*fail)(void* node));
+int  simtick_minion_actions(void), simtick_minion_failures(void);
+void simtick_cell_seed(int n, const int* xs, const int* ys);
+int  simtick_cell_dispatches(void);
+uint32_t simtick_scene_word(void);
+void simtick_set_scene_word(uint32_t w);
+void simtick_set_scene_broadcast(void (*h)(int));
+int  simtick_scene_broadcasts(void);
+void simtick_sfx_seed(int n, const void** entries);     /* stride 0xac */
+int  simtick_sfx_releases(void);
+
 /* bobbins (0x4091e0) — node flags at +0xd0. */
 typedef struct SimtickBobbin {
     struct SimtickBobbin* next;  /* +0x24 */
