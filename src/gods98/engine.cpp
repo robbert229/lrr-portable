@@ -2,6 +2,7 @@
 #include "camera.hpp"
 #include "engine.hpp"
 #include "tickers.hpp"
+#include "view.hpp"
 
 /* Frame tick — corpus EngineTick @ 0x4232e0. The numbered structure below
  * mirrors finding 03 §"Tick structure" and the first 130 lines of the corpus.
@@ -44,6 +45,9 @@ int EngineTick(EngineContext* ctx, float dt)
      *    interpolation block, screen-space → world projection, and the
      *    force-scale-1.0 one-shot are ported in camera.* (camera_cluster). */
     camera_cluster(ctx, dt, scale);
+
+    /* 4b. The three view contexts (DAT_005560e4/e8/ec — ViewContextTick). */
+    view_views_tick(ctx, dt, scale);
 
     /* 5. Main simulation step — 0 => quit frame (MainSimStep @ 0x4250c0). */
     uint32_t sim_out1 = 0, sim_out2 = 0, sim_out3 = 0;

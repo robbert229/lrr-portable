@@ -144,7 +144,7 @@ Meson build with one source tree and two platform backends (ADR 0004). The
 `MainSimStep`/`EngineShutdown` in `src/gods98/engine.*` mirror the corpus's
 critical path (`0x4232e0`, `0x4231f0`, `0x435940`, `0x4250c0`, `0x424cf0/0x424d00`)
 over the `DAT_005560d4` state block, and `src/gods98/tickers.cpp` reproduces the
-tick's ordered 25-entry subsystem dispatch (finding 03 §4) as fill-in stubs
+tick's ordered subsystem dispatch (finding 03 §4) as fill-in stubs
 (`ticker_<FUN-hex>` ↔ corpus `FUN_<hex>`).
 
 **Resource loader** (`src/gods98/resource.*`, finding 01): mounts
@@ -265,6 +265,15 @@ grid/move-list fields; cross-cutting helpers (message bus `FUN_00419b80`,
 spawn `FUN_0040f190`/`FUN_00438960`, move `FUN_0046a700`) remain stub
 boundaries with corpus addresses. `camera_test` (suite `camera`) covers the
 timer-decrement, grid-expiry, and spawn-countdown logic.
+
+**Tranche 2 — the view contexts** (2026-10-21): `src/gods98/view.*` ports
+`ViewContextTick` (`0x435f5c`, finding 04) — the ×3-per-frame camera state
+machine (modes 1 follow/edge-clamped, 2 scripted-lag, 3 free/cruise with the
+glide-to-stop tail). Camera handles are record-backed (`cam_*`), the pure
+vector math is implemented, and world/object boundaries (grid pick
+`FUN_0044f6d0`, terrain `FUN_0044f940`, EMA blend `FUN_0044a070`) stay stubs.
+`EngineTick` now drives the three views (`DAT_005560e4/e8/ec`); `view_test`
+(suite `view`) covers the vector/glide/edge/blend paths.
 
 ```sh
 cd path/to/legally-owned/game
