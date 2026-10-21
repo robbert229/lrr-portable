@@ -91,8 +91,10 @@ int object_list_load(GameContext* ctx, BlockFile* cfg, const char* level_name)
     }
     char olist[256] = { 0 };
     char path[512];
-    snprintf(path, sizeof(path), "%s %s %s", util_root_name(cfg), level_name,
-             "olistfile");
+    if (util_level_cfg_path(cfg, level_name, "olistfile", path, sizeof(path))
+        == NULL) {
+        return -1; /* no object list for this level */
+    }
     const char* v = block_get_strptr(cfg, path);
     if (v == NULL) {
         return -1; /* no object list for this level */

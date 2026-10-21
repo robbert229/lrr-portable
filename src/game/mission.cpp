@@ -32,42 +32,50 @@ static int strcasecmp_lite(const char* a, const char* b)
     }
 }
 
-/* Path helper: "<root> <level> Reward [<sub>] [<name>]". */
-static void rw_path(char* out, size_t out_sz, const char* root,
+/* Path helper: level-scoped `Reward [<sub>] [<name>]` key, resolved via
+ * util_level_cfg_path (Levels container first, flat fallback). */
+static void rw_path(char* out, size_t out_sz, BlockFile* cfg,
                     const char* level, const char* sub, const char* name)
 {
+    char suffix[400]; /* "Reward" + optional " <sub>" + optional " <name>" */
+    size_t pos = 0;
+    pos += snprintf(suffix + pos, sizeof(suffix) - pos, "Reward");
     if (sub != NULL) {
-        snprintf(out, out_sz, "%s %s %s %s", root, level, "Reward", sub);
-    } else {
-        snprintf(out, out_sz, "%s %s %s", root, level, "Reward");
+        pos += snprintf(suffix + pos, sizeof(suffix) - pos, " %s", sub);
     }
     if (name != NULL) {
-        size_t n = strlen(out);
-        snprintf(out + n, out_sz - n, " %s", name);
+        pos += snprintf(suffix + pos, sizeof(suffix) - pos, " %s", name);
+    }
+    (void)pos;
+    if (util_level_cfg_path(cfg, level, suffix, out, out_sz) == NULL) {
+        out[0] = '\0';
     }
 }
 
 static const char* rw_str(BlockFile* cfg, const char* root, const char* level,
                           const char* sub, const char* name)
 {
+    (void)root;
     char path[512];
-    rw_path(path, sizeof(path), root, level, sub, name);
+    rw_path(path, sizeof(path), cfg, level, sub, name);
     return block_get_strptr(cfg, path);
 }
 
 static int rw_int(BlockFile* cfg, const char* root, const char* level,
                   const char* sub, const char* name, int dflt)
 {
+    (void)root;
     char path[512];
-    rw_path(path, sizeof(path), root, level, sub, name);
+    rw_path(path, sizeof(path), cfg, level, sub, name);
     return block_get_int(cfg, path, dflt);
 }
 
 static float rw_float(BlockFile* cfg, const char* root, const char* level,
                       const char* sub, const char* name, float dflt)
 {
+    (void)root;
     char path[512];
-    rw_path(path, sizeof(path), root, level, sub, name);
+    rw_path(path, sizeof(path), cfg, level, sub, name);
     return block_get_float(cfg, path, dflt);
 }
 

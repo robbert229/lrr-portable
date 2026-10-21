@@ -729,15 +729,7 @@ static int lvl_typed_int(BlockFile* cfg, const char* path, int dflt)
 static const char* cfg_resolve_path(BlockFile* cfg, const char* level,
                                     const char* key, char* out, size_t out_sz)
 {
-    if (cfg == NULL || level == NULL || key == NULL) {
-        return NULL;
-    }
-    snprintf(out, out_sz, "%s Levels %s %s", util_root_name(cfg), level, key);
-    if (block_get_strptr(cfg, out) != NULL) {
-        return out;
-    }
-    snprintf(out, out_sz, "%s %s %s", util_root_name(cfg), level, key);
-    return block_get_strptr(cfg, out) != NULL ? out : NULL;
+    return util_level_cfg_path(cfg, level, key, out, out_sz);
 }
 
 static const char* cfg_string(BlockFile* cfg, const char* level, const char* key,

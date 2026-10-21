@@ -38,7 +38,9 @@ static const char* obj_cfg_str(BlockFile* cfg, const char* level, const char* ke
         return NULL;
     }
     char path[512];
-    snprintf(path, sizeof(path), "%s %s %s", util_root_name(cfg), level, key);
+    if (util_level_cfg_path(cfg, level, key, path, sizeof(path)) == NULL) {
+        return NULL;
+    }
     const char* v = block_get_strptr(cfg, path);
     if (v == NULL) {
         return NULL;
@@ -52,7 +54,9 @@ static const char* obj_cfg_str(BlockFile* cfg, const char* level, const char* ke
 static int obj_typed_int(BlockFile* cfg, const char* level, const char* key, int dflt)
 {
     char path[512];
-    snprintf(path, sizeof(path), "%s %s %s", util_root_name(cfg), level, key);
+    if (util_level_cfg_path(cfg, level, key, path, sizeof(path)) == NULL) {
+        return dflt;
+    }
     const char* v = block_get_strptr(cfg, path);
     if (v == NULL) {
         return dflt;

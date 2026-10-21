@@ -256,30 +256,38 @@ static void checkpoint_reward_group(GameContext* ctx, const char* level_name)
         return;
     }
     char path[512];
-    const char* root = util_root_name(ctx->cfg);
-    /* Reward/Enable tri-state (2 -> 0). */
-    snprintf(path, sizeof(path), "%s %s %s %s", root, level_name, "Reward", "Enable");
-    int en = block_get_bool(ctx->cfg, path);
-    if (en == 2) en = 0;
-    ctx->reward.enable = en;
-
-    snprintf(path, sizeof(path), "%s %s %s %s", root, level_name, "Reward", "Modifier");
-    int mod = block_get_int(ctx->cfg, path, 0);
-    ctx->reward.modifier = mod;
-
-    snprintf(path, sizeof(path), "%s %s %s %s", root, level_name, "Reward", "Timer");
-    float timer = block_get_float(ctx->cfg, path, LVL_REWARD_TIMER_DEFAULT);
-    ctx->reward.timer = timer;
-
-    snprintf(path, sizeof(path), "%s %s %s %s", root, level_name, "Reward", "DisplayText");
-    int dt = block_get_bool(ctx->cfg, path);
-    ctx->reward.display_text = dt == 2 ? 1 : dt;
-    snprintf(path, sizeof(path), "%s %s %s %s", root, level_name, "Reward", "DisplayImages");
-    int di = block_get_bool(ctx->cfg, path);
-    ctx->reward.display_images = di == 2 ? 1 : di;
-    snprintf(path, sizeof(path), "%s %s %s %s", root, level_name, "Reward", "DisplayFlics");
-    int df = block_get_bool(ctx->cfg, path);
-    ctx->reward.display_flics = df == 2 ? 1 : df;
+    /* Reward/Enable tri-state (2 -> 0). Shipped config nests the level
+     * under root -> Levels, so resolve each key through the container. */
+    if (util_level_cfg_path(ctx->cfg, level_name, "Reward Enable", path,
+                            sizeof(path)) != NULL) {
+        int en = block_get_bool(ctx->cfg, path);
+        if (en == 2) en = 0;
+        ctx->reward.enable = en;
+    }
+    if (util_level_cfg_path(ctx->cfg, level_name, "Reward Modifier", path,
+                            sizeof(path)) != NULL) {
+        ctx->reward.modifier = block_get_int(ctx->cfg, path, 0);
+    }
+    if (util_level_cfg_path(ctx->cfg, level_name, "Reward Timer", path,
+                            sizeof(path)) != NULL) {
+        ctx->reward.timer =
+            block_get_float(ctx->cfg, path, LVL_REWARD_TIMER_DEFAULT);
+    }
+    if (util_level_cfg_path(ctx->cfg, level_name, "Reward DisplayText", path,
+                            sizeof(path)) != NULL) {
+        int dt = block_get_bool(ctx->cfg, path);
+        ctx->reward.display_text = dt == 2 ? 1 : dt;
+    }
+    if (util_level_cfg_path(ctx->cfg, level_name, "Reward DisplayImages", path,
+                            sizeof(path)) != NULL) {
+        int di = block_get_bool(ctx->cfg, path);
+        ctx->reward.display_images = di == 2 ? 1 : di;
+    }
+    if (util_level_cfg_path(ctx->cfg, level_name, "Reward DisplayFlics", path,
+                            sizeof(path)) != NULL) {
+        int df = block_get_bool(ctx->cfg, path);
+        ctx->reward.display_flics = df == 2 ? 1 : df;
+    }
 }
 
 void checkpoint_blob_build(GameContext* ctx)
