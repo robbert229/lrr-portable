@@ -8,13 +8,16 @@
  * list the LevelLoad `OListFile` key names (`M01.ol`) is a block-text file
  * whose top-level `name { … }` records describe placed objects.
  *
- * The corpus's `.ol` consumer (FUN_0042e020) is not decompiled, so the
- * numeric type CODES are a documented seam; the *grammar* is not — it is
- * corpus-verified by `entity_test --real` against all 44 shipped object
- * lists (root `Lego*`, one record per object named `Object1..` / other
- * names, fields `type <name>`, `xPos`, `yPos`, `heading`, optional
- * `driving <ref>`; `Model` appears nowhere in the shipped data and is kept
- * as the port's extension key).
+ * The corpus's `.ol` consumer (`FUN_0042e020`) and its type resolver
+ * (`FUN_0042e8b0` = ObjectTypeByName) are decompiled and mirrored here: the
+ * *grammar* is corpus-verified by `entity_test --real` against all 44
+ * shipped object lists (root `Lego*`, one record per object named
+ * `Object1..` / other names, fields `type <name>`, `xPos`, `yPos`,
+ * `heading`, `health` (default 100), optional `driving <ref>`; `Model`
+ * appears nowhere in the shipped data and is kept as the port's extension
+ * key), and the *codes* are decompile-verified — 1..4 from the shipped
+ * `Lego.cfg` `…Types` groups, 5..19 special kinds, TVCamera −1, 0 = not
+ * registered.
  */
 #ifndef LEGORRR_GAME_ENTITY_HPP
 #define LEGORRR_GAME_ENTITY_HPP
@@ -25,22 +28,28 @@
 extern "C" {
 #endif
 
-/* Entity type constants (corpus EntityPointer mapping). */
+/* Entity type constants (ObjectTypeByName FUN_0042e8b0 — decompile-verified).
+ * 1..4 are the four typed tables (the `.ol`-placeable kinds); 5..19 are the
+ * special-object kinds the corpus stores in per-kind singletons, which the
+ * port groups under the shared special table. -1 = TVCamera (follow-camera
+ * branch, no entity); 0 = unregistered. */
 #define ENTITY_TYPE_VEHICLE  1
 #define ENTITY_TYPE_MINIFIG  2
-#define ENTITY_TYPE_OBJ      3
+#define ENTITY_TYPE_OBJ      3   /* creatures/general objects (RockMonsterTypes) */
 #define ENTITY_TYPE_BUILDING 4
+#define ENTITY_TYPE_SPECIAL  5   /* first code of the special-object range */
 
 /* A placed-object record produced by the `.ol` loader. */
 typedef struct ObjectPlacement {
     char  name[64];
-    int   type;          /* table code — provisional mapping (seam)    */
-    char  type_name[24]; /* .ol `type` name (e.g. "SmallDigger")       */
-    float x, y, z;       /* xPos, yPos, 0                              */
-    float rot;           /* alias of heading                           */
-    float heading;       /* .ol `heading` (degrees)                    */
-    char  driving[32];   /* .ol `driving` target object name, or ""    */
-    char  model[128];    /* optional `Model` key (port extension)      */
+    int   type;          /* corpus code (1..19, -1 camera)           */
+    char  type_name[24]; /* .ol `type` name (e.g. "SmallDigger")     */
+    float x, y, z;       /* xPos, yPos, 0                            */
+    float rot;           /* alias of heading                         */
+    float heading;       /* .ol `heading` (degrees)                  */
+    int   health;        /* .ol `health` (default 100)               */
+    char  driving[32];   /* .ol `driving` target object name, or ""  */
+    char  model[128];    /* optional `Model` key (port extension)    */
 } ObjectPlacement;
 
 /* Allocate a slot of `type`; returns the slot index or -1 when the table is

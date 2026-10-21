@@ -74,9 +74,9 @@ int main(void)
     CHECK((a->flags & ENTITY_SELECTED) == 0, "a flag cleared");
     CHECK(selection_first(&ctx) == NULL, "empty selection first is NULL");
 
-    /* Bad-type add rejected; type codes above 4 share the last table. */
-    CHECK(entity_create(&ctx, 6, "m6", 0, 0, 0, 0) >= 0, "minion type 6 placed");
-    CHECK(entity_create(&ctx, 10, "nope", 0, 0, 0, 0) < 0, "type 10 rejected");
+    /* Bad-type add rejected; special codes (5..19) share the last table. */
+    CHECK(entity_create(&ctx, 6, "m6", 0, 0, 0, 0) >= 0, "special code 6 placed");
+    CHECK(entity_create(&ctx, 20, "nope", 0, 0, 0, 0) < 0, "code 20 (out of range) rejected");
 
     if (s_failures != 0) {
         fprintf(stderr, "select_test: %d failure(s)\n", s_failures);

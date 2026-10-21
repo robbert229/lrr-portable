@@ -14,20 +14,26 @@ int entity_stride(int type)
     case ENTITY_TYPE_MINIFIG:  return 0x74;  /* corpus 005561d8 stride */
     case ENTITY_TYPE_OBJ:      return 0x74;  /* corpus 005561dc stride */
     case ENTITY_TYPE_BUILDING: return 0x14c; /* corpus 005561e0 stride */
-    default:                   return 0;
+    default:
+        /* Codes 5..19 are the special-object kinds (FUN_0042e8b0); the
+         * corpus keeps one singleton slot each (DAT_00556368..b0), which the
+         * port groups under the shared special table with the object
+         * stride. */
+        return (type >= 5 && type <= 19) ? 0x74 : 0;
     }
 }
 
-/* Table index for a corpus entity-type code (placement kinds 1..4 map to
- * the matching table; 5..9 share the last). */
+/* Table index for a corpus type code (FUN_0042e8b0):
+ * 1..4 map to the four typed tables, 5..19 map to the special table. */
 static int entity_tab(int type)
 {
-    return (type <= ENTITY_TYPES) ? type - 1 : ENTITY_TYPES - 1;
+    return (type >= 1 && type <= ENTITY_TYPES - 1) ? type - 1
+                                                   : ENTITY_TYPES - 1;
 }
 
 int entity_count(GameContext* ctx, int type)
 {
-    if (ctx == NULL || type < 1 || type > 9) {
+    if (ctx == NULL || type < 1 || type > 19) {
         return 0;
     }
     return ctx->entity_count[entity_tab(type)];
@@ -35,7 +41,7 @@ int entity_count(GameContext* ctx, int type)
 
 const EntitySlot* entity_at(GameContext* ctx, int type, int index)
 {
-    if (ctx == NULL || type < 1 || type > 9) {
+    if (ctx == NULL || type < 1 || type > 19) {
         return NULL;
     }
     int tab = entity_tab(type);
@@ -48,12 +54,12 @@ const EntitySlot* entity_at(GameContext* ctx, int type, int index)
 int entity_create(GameContext* ctx, int type, const char* name,
                   float x, float y, float z, float rot)
 {
-    if (ctx == NULL || type < 1 || type > 9) {
+    if (ctx == NULL || type < 1 || type > 19) {
         return -1;
     }
-    /* Corpus placement kinds 1..4 map to the four tables; other entity-type
-     * codes (6 minion, 7/8/9) share the last table. */
-    int ti = (type <= ENTITY_TYPES) ? type - 1 : ENTITY_TYPES - 1;
+    /* Codes 1..4 map to the four typed tables; the special kinds (5..19)
+     * share the last table (the corpus's per-kind singletons). */
+    int ti = entity_tab(type);
     int* cnt = &ctx->entity_count[ti];
     if (*cnt >= ENTITY_CAP) {
         return -1;
@@ -152,17 +158,82 @@ const void* entity_model(const EntitySlot* e)
     return e != NULL ? e->model : NULL;
 }
 
-/* `.ol` `type` name -> entity table code (provisional seam). The corpus's
- * .ol consumer (FUN_0042e020) is not decompiled (finding 07 §"Still open"),
- * so the numeric code is inferred from the shipped object vocabulary and
- * the four-table semantics of EntityPointer (finding 10), NOT pinned by
- * decompile evidence. The grammar the code rides on (name, type name,
- * xPos/yPos/heading, driving) IS corpus-verified (entity_test --real over
- * all 44 shipped lists); only the code is the seam. */
+/* `.ol` `type` name -> entity table code — DECOMPILE-VERIFIED (finding 07/10).
+ *
+ * The corpus resolver `FUN_0042e8b0` (ObjectTypeByName) matches the name
+ * case-insensitively (__strcmpi) against the four runtime name registries —
+ * populated from the shipped `Lego.cfg` `VehicleTypes` (FUN_0042cda0),
+ * `RockMonsterTypes` (FUN_0042d100, the type-3 general/creature table),
+ * `MiniFigureTypes` and `BuildingTypes` (parallel inits) — and then against
+ * a hardcoded special-object table:
+ *
+ *   1 = VehicleTypes      (Hoverboard, SmallDigger, … 12)
+ *   2 = MiniFigureTypes   (Pilot)
+ *   3 = RockMonsterTypes  (RockMonster, TinyRM, TinyIM, SmallSpider, Bat,
+ *                          Slug, LavaMonster, IceMonster)
+ *   4 = BuildingTypes     (Toolstation, TeleportPad, … Geo-dome, … 10)
+ *   5..19 = special objects (hardcoded in FUN_0042e8b0):
+ *          Boulder=5, PowerCrystal=6, Ore=7(idx 0), ProcessedOre=7(idx 1),
+ *          Dynamite=8, Barrier=9, ElectricFence=11, SpiderWeb=12, OohScary=13,
+ *          Path=15, Pusher=16, Freezer=17, LaserShot=19
+ *   -1 = TVCamera (the .ol loader's camera branch, no entity)
+ *   0  = not registered (the corpus aborts the load; the port skips, see
+ *        object_list_load_file)
+ *
+ * The special-entity codes are stored in the port's shared table index 4
+ * (ENTITY_TYPE_SPECIAL); the corpus keeps one singleton slot each
+ * (DAT_00556368..b0). */
+typedef struct NameCode { const char* name; int code; } NameCode;
+
+static const NameCode s_vehicle_names[] = {
+    { "hoverboard", 1 }, { "smalldigger", 1 }, { "smalltruck", 1 },
+    { "smallcat", 1 },   { "smallmlp", 1 },    { "smallheli", 1 },
+    { "bulldozer", 1 },  { "walkerdigger", 1 }, { "largemlp", 1 },
+    { "largedigger", 1 }, { "largecat", 1 },   { "largeheli", 1 },
+};
+static const NameCode s_minifig_names[] = {
+    { "pilot", 2 },
+};
+static const NameCode s_creature_names[] = {
+    { "rockmonster", 3 }, { "tinyrm", 3 }, { "tinyim", 3 },
+    { "smallspider", 3 }, { "bat", 3 },    { "slug", 3 },
+    { "lavamonster", 3 }, { "icemonster", 3 },
+};
+static const NameCode s_building_names[] = {
+    { "toolstation", 4 }, { "teleportpad", 4 }, { "docks", 4 },
+    { "powerstation", 4 }, { "barracks", 4 },   { "upgrade", 4 },
+    { "geo-dome", 4 },    { "orerefinery", 4 }, { "gunstation", 4 },
+    { "teleportbig", 4 },
+};
+static const NameCode s_special_names[] = {
+    { "boulder", 5 },      { "powercrystal", 6 },  { "ore", 7 },
+    { "processedore", 7 }, { "dynamite", 8 },      { "barrier", 9 },
+    { "electricfence", 11 }, { "spiderweb", 12 },  { "oohscary", 13 },
+    { "path", 15 },        { "pusher", 16 },       { "freezer", 17 },
+    { "lasershot", 19 },
+};
+
+static int nc_find(const NameCode* t, size_t n, const char* folded)
+{
+    for (size_t i = 0; i < n; ++i) {
+        if (strcmp(t[i].name, folded) == 0) {
+            return t[i].code;
+        }
+    }
+    return 0;
+}
+
+/* ASCII case-insensitive compare (the corpus uses __strcmpi for the .ol
+ * type names and driving refs). */
+static int ci_strcmp(const char* a, const char* b);
+
 static int entity_type_for_name(const char* name)
 {
     if (name == NULL || name[0] == '\0') {
-        return ENTITY_TYPE_VEHICLE;
+        return 0; /* unregistered — the corpus aborts, the port skips */
+    }
+    if (ci_strcmp(name, "tvcamera") == 0) {
+        return -1; /* follow-camera branch in FUN_0042e020 */
     }
     char c[24];
     size_t i = 0;
@@ -172,28 +243,23 @@ static int entity_type_for_name(const char* name)
     }
     c[i] = '\0';
 
-    if (strcmp(c, "pilot") == 0 || strcmp(c, "test1") == 0) {
-        return ENTITY_TYPE_MINIFIG;
+    int code = nc_find(s_special_names, 13, c);
+    if (code != 0) {
+        return code;
     }
-    if (strcmp(c, "hoverboard") == 0 || strcmp(c, "smalldigger") == 0
-        || strcmp(c, "smalltruck") == 0 || strcmp(c, "bulldozer") == 0
-        || strcmp(c, "smallheli") == 0 || strcmp(c, "largeheli") == 0
-        || strcmp(c, "largedigger") == 0 || strcmp(c, "walkerdigger") == 0
-        || strcmp(c, "smallcat") == 0 || strcmp(c, "largecat") == 0) {
-        return ENTITY_TYPE_VEHICLE;
+    code = nc_find(s_vehicle_names, 12, c);
+    if (code != 0) {
+        return code;
     }
-    if (strcmp(c, "toolstation") == 0 || strcmp(c, "powerstation") == 0
-        || strcmp(c, "barracks") == 0 || strcmp(c, "teleportpad") == 0
-        || strcmp(c, "teleportbig") == 0 || strcmp(c, "gunstation") == 0
-        || strcmp(c, "docks") == 0 || strcmp(c, "geo-dome") == 0
-        || strcmp(c, "upgrade") == 0) {
-        return ENTITY_TYPE_BUILDING;
+    code = nc_find(s_minifig_names, 1, c);
+    if (code != 0) {
+        return code;
     }
-    /* Cameras/crystals (TVCamera, PowerCrystal) and the monster family
-     * (LavaMonster, IceMonster, RockMonster, Bat, SmallSpider) land in the
-     * general-object table provisionally — monsters may carry their own
-     * code in the corpus (not decompiled). */
-    return ENTITY_TYPE_OBJ;
+    code = nc_find(s_creature_names, 8, c);
+    if (code != 0) {
+        return code;
+    }
+    return nc_find(s_building_names, 10, c);
 }
 
 static void ol_strncpy(char* dst, size_t n, const char* src)
@@ -203,6 +269,28 @@ static void ol_strncpy(char* dst, size_t n, const char* src)
         dst[i] = src[i];
     }
     dst[i] = '\0';
+}
+
+/* ASCII case-insensitive compare (the corpus uses __strcmpi for the .ol
+ * type names and driving refs). */
+static int ci_strcmp(const char* a, const char* b)
+{
+    while (*a != '\0' && *b != '\0') {
+        int ca = (int)(unsigned char)*a;
+        int cb = (int)(unsigned char)*b;
+        if (ca >= 'A' && ca <= 'Z') {
+            ca += 0x20;
+        }
+        if (cb >= 'A' && cb <= 'Z') {
+            cb += 0x20;
+        }
+        if (ca != cb) {
+            return ca - cb;
+        }
+        ++a;
+        ++b;
+    }
+    return (int)(unsigned char)*a - (int)(unsigned char)*b;
 }
 
 int object_list_load(GameContext* ctx, BlockFile* cfg, const char* level_name)
@@ -254,9 +342,10 @@ int object_list_load_file(GameContext* ctx, const char* olist)
         __builtin_memset(&op, 0, sizeof(op));
         snprintf(op.name, sizeof(op.name), "%s", name);
 
-        /* Shipped grammar (cross-checked, finding 07/12): `type <name>`,
-         * `xPos`, `yPos`, `heading`, optional `driving <ref>`. `Model` is
-         * the port's extension key (absent from all 44 shipped lists). */
+        /* Shipped grammar (decompile-verified, FUN_0042e020): `type <name>`,
+         * `xpos` / `ypos`, `heading`, optional `health` (default 100) and
+         * `driving <ref>`. `Model` is the port's extension key (absent from
+         * all 44 shipped lists). */
         const char* t = obj_val(ol, rname, name, "type");
         ol_strncpy(op.type_name, sizeof(op.type_name), t);
         op.type = entity_type_for_name(op.type_name);
@@ -265,9 +354,28 @@ int object_list_load_file(GameContext* ctx, const char* olist)
         op.heading = util_atof(obj_val(ol, rname, name, "heading"));
         op.z = 0.0f;
         op.rot = op.heading;
+        op.health = (int)util_atof(obj_val(ol, rname, name, "health"));
         ol_strncpy(op.driving, sizeof(op.driving),
                    obj_val(ol, rname, name, "driving"));
         ol_strncpy(op.model, sizeof(op.model), obj_val(ol, rname, name, "Model"));
+
+        if (op.type == -1) {
+            /* TVCamera — FUN_0042e020's type -1 branch drives the follow
+             * camera instead of creating an entity (last one wins). */
+            ctx->ol_camera_set = 1;
+            ctx->ol_camera_x = op.x;
+            ctx->ol_camera_y = op.y;
+            ctx->ol_camera_heading = op.heading;
+            ++placed;
+            continue;
+        }
+        if (op.type == 0) {
+            /* Unregistered type name — the corpus aborts the whole load
+             * (FUN_0042e020 breaks and returns 0); the port skips the
+             * record and keeps the rest (dev leftovers like Paul.ol's
+             * Test1 would otherwise kill every load). */
+            continue;
+        }
 
         int idx = entity_create(ctx, op.type, op.name, op.x, op.y, op.z,
                                 op.heading);
@@ -276,6 +384,7 @@ int object_list_load_file(GameContext* ctx, const char* olist)
             ol_strncpy(slot->type_name, sizeof(slot->type_name), op.type_name);
             ol_strncpy(slot->driving, sizeof(slot->driving), op.driving);
             slot->rot = op.heading;
+            slot->health = op.health > 0 ? op.health : 100;
             entity_set_model(slot, op.model[0] != '\0' ? op.model : NULL);
             ++placed;
         }

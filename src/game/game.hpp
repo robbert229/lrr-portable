@@ -155,7 +155,7 @@ typedef struct RewardScreen {
  * head (entity +0x2f0) the command subsystem hangs off. `type`/`etype`
  * carry the corpus entity-type code (1..9; placement kinds 1..4 map to the
  * four tables, other codes share the last table). */
-#define ENTITY_TYPES 4
+#define ENTITY_TYPES 5 /* 4 typed tables + the special-object table (5..19) */
 #define ENTITY_CAP 256
 /* Selection table bound (finding 06: adds cap at 100 entries). */
 #define SELECTION_MAX 100
@@ -168,9 +168,10 @@ typedef struct EntitySlot {
     float   x, y, z;
     float   rot;
     int32_t flags;      /* reconstruction-side flag word          */
-    /* --- .ol grammar (cross-checked, finding 07/10/12) ---------- */
+    /* --- .ol grammar (decompile-verified, FUN_0042e020/e8b0) ----- */
     char    type_name[24]; /* .ol `type` name (e.g. "SmallDigger") */
     char    driving[32];   /* .ol `driving` target object (or "")  */
+    int     health;        /* .ol `health` (default 100)           */
     /* --- model-aware rendering (finding 10/30) ------------------ */
     char    model_path[64]; /* .ol `Model` key (best-effort)       */
     const void* model;      /* parsed LWO Model* (entity_model cache) */
@@ -228,6 +229,10 @@ typedef struct GameContext {
     EntitySlot   entity[ENTITY_TYPES][ENTITY_CAP]; /* typed entity slots  */
     int          entity_count[ENTITY_TYPES];
     int          entity_placed;  /* objects placed from the .ol this level */
+
+    /* --- .ol TVCamera placement (FUN_0042e020 type -1 branch) ----------- */
+    int   ol_camera_set;      /* a TVCamera record was placed (last wins) */
+    float ol_camera_x, ol_camera_y, ol_camera_heading;
 
     /* --- selection manager (finding 06) ----------------------------------- */
     EntitySlot*  selection[SELECTION_MAX]; /* DAT_004fef2c array + count   */
