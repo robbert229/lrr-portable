@@ -55,6 +55,11 @@ extern "C" {
 #define FE_FONT_GRID_COLS 10
 #define FE_FONT_GRID_ROWS 19
 #define FE_FONT_KEY       0xffff0000u
+/* Shipped font cells are ~40% pure black *and* ~40% key-red background
+ * (even the space cell) with the gold/grey glyph ink between — the engine
+ * blits each glyph's measured ink box, so neither background colour shows.
+ * Skip both so the art shows through the text. */
+#define FE_FONT_BLACK     0xff000000u
 
 /* Item kinds — MenuItemType @ 0x413e60 (values 0..5; 5 = the "Next" catch-
  * all, 1 = Trigger). Slider/Cycle/TextInput parse their banner/label into

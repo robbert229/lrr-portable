@@ -764,7 +764,7 @@ static int fe_font_advance(const TextureSurface* f, int cw, int ch, int g)
         for (int xx = 0; xx < cw; xx++) {
             uint32_t p = f->pixels[(size_t)(y0 + yy) * (size_t)f->width
                                    + (x0 + xx)];
-            if (p != FE_FONT_KEY && xx > maxx) {
+            if (p != FE_FONT_KEY && p != FE_FONT_BLACK && xx > maxx) {
                 maxx = xx;
             }
         }
@@ -786,8 +786,8 @@ static void fe_blit_glyph(void* px, int pitch, int w, int h,
         for (int xx = 0; xx < cw; xx++) {
             uint32_t p = f->pixels[(size_t)(sy0 + yy) * (size_t)f->width
                                    + (sx0 + xx)];
-            if (p == FE_FONT_KEY) {
-                continue;                          /* colour-keyed out */
+            if (p == FE_FONT_KEY || p == FE_FONT_BLACK) {
+                continue;                 /* background colours keyed out */
             }
             int dx2 = dx + xx;
             if (dx2 < 0 || dx2 >= w) {
