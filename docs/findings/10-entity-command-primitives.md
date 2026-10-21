@@ -204,17 +204,56 @@ coordinates directly (`callback.s`, branch region `0x43cb40–0x43ce88`):
    (`FUN_0044a2a0`-style carry position and the fallback path stay inside
    the same branch shape).
 
+### Tile queries on the move branch (closed 2026-10-21)
+
+The map-side queries the move branch calls are resolved semantics, ported
+against the port's byte-identical voxel mirror (`LEVEL_VOXEL_STRIDE` = the
+corpus `0x48` record, finding 07):
+
+- `FUN_00432770(ent, cx, cy, mode, gated)` is the walkability check; the
+  move branch calls it with `mode = entitystate & 0x2000000`, `gated = 1`,
+  on the walker's **current** cell (converted by `FUN_0048e060`, which is
+  the x87 round-to-nearest `fistp` trick — a plain round). In the common
+  `mode == 0` shape the answer is: `cx < w-2` and `cy < h-2` (unsigned, so
+  negatives fail), flag-word (`record+8`) bit `0x10` set and bit `0x40`
+  clear, and the type byte (`record+2`) not `1`, `7`, or `11`. The
+  entity-conditional gates — the `+0x334` state object (`FUN_00469e60`
+  reads `+0x334+0x144`; `FUN_00469cc0` reads a per-terrain-type speed table
+  at `+0x334+0x24` and gates on `speed != 0`), the `+0x3e8` bit-1 walker
+  bit, and `+0x3e0` bit `0x400` in gated mode — all live on the unported
+  `+0x334` state objects (TODO, same family as the minion state machine).
+  The nonzero-`mode` branch inspects the four neighbors of a `record+0 == 0`
+  cell (spawn-style) and is not exercised by movement.
+- `FUN_00432e00(cell, v)` sets/clears flag `0x8000000` — the entity
+  *reservation* bit. The mover-state dispatch (`0x43deed`, same tick) marks
+  the walker's own cell while `+0x3e0` bit 8 is up; the arrival block
+  clears the **arrival** cell only (`0x43cd72`), so departure marks persist
+  until reused. Nothing on the walkable path consults `0x8000000` — it
+  feeds the pathfinder (TODO) and the spawn checks.
+- `FUN_0043a960`'s idle probe reads `record+2 == '\t'` (9) at the entity
+  cell (`FUN_004424f0` returns the cell pair) before appending to the
+  `DAT_004eabcc` table — the '\t' TODO in `0x43c94d`'s port branch is
+  closed.
+
+Port surface (`src/game/level.*`): `level_cell_of` (`FUN_0048e060`),
+`level_walkable` (`FUN_00432770` simple mode), `level_tile_mark`
+(`FUN_00432e00`), `level_tile_type`; `ai_tick`'s `step_path` marks the
+current cell occupied and refuses to step off an unwalkable tile (the
+command stays live), clears the occupancy flag on arrival, and the idle
+branch registers only on `'\t'` cells. Without a bound grid every map
+operation falls back to the port-side default (the corpus tick cannot walk
+an empty grid), which is what the mapless unit tests exercise.
+
 Still TODO inside movement: the **pathfinder that fills the buffer**
-(`FUN_00430ee0`/`FUN_00430530` seed/flood region), **walkability** (no tile
-map in the port — the `0x48`-stride records live in unported
-`DAT_005560d4+0xb8`; ties into finding 07's voxel-flag list), the
-**`ent+0xbc` record list** as a distinct structure from the `+0x2f0` chain,
-and `FUN_00432e00`'s tile occupancy writes.
+(`FUN_00430ee0`/`FUN_00430530` seed/flood region — now that walkability
+exists, this is the next slice), the **`ent+0xbc` record list** as a
+distinct structure from the `+0x2f0` chain (behind `FUN_00403d10`'s arrival
+unlink), and the `+0x334` state objects behind the walkability gates above.
 
 Documented TODO branches (not guessed): projectile arcs (`+0x3e0`
 `0x400000`, `FUN_004755e0`/`FUN_00475120`); screen
 shake (`+0x3e4` `0x40000000`, `DAT_004a48b0`); riding probe `FUN_0043c440`
 (inside `FUN_0044c530`); attached wake target (`+0x364`, `FUN_0044c110`);
-tile `'\t'` probe inside `FUN_0043a960`; the minion task-state machine at
-`0x438150` (indirect jump table `0x438298`, sets activities per state via
-`FUN_00447c40` — the closest thing to the missing "task switch").
+the minion task-state machine at `0x438150` (indirect jump table `0x438298`,
+sets activities per state via `FUN_00447c40` — the closest thing to the
+missing "task switch").

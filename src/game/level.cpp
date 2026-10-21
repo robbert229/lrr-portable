@@ -913,3 +913,50 @@ uint8_t* level_voxel(const LevelState* s, int x, int y)
     }
     return voxel_at((LevelState*)s, x, y);
 }
+
+/* FUN_0048e060 — x87 round-to-nearest float→int (control-word trick). */
+int level_cell_of(float v)
+{
+    return (int)__builtin_nearbyintf(v);
+}
+
+int level_walkable(const LevelState* s, int cx, int cy)
+{
+    if (s == NULL) {
+        return 0;
+    }
+    /* Corpus `param < w - 2U` unsigned compare: negatives fail too. */
+    int w = level_width(s), h = level_height(s);
+    if ((unsigned)cx >= (unsigned)w - 2u || (unsigned)cy >= (unsigned)h - 2u) {
+        return 0;
+    }
+    const uint8_t* rec = level_voxel(s, cx, cy);
+    if (rec == NULL) {
+        return 0;
+    }
+    uint32_t flags;
+    __builtin_memcpy(&flags, rec + 0x08, sizeof(flags));
+    int type = (int)(signed char)rec[2];
+    return (flags & TILE_FLAG_WALKABLE) != 0 && (flags & TILE_FLAG_BLOCKING) == 0 &&
+           type != 1 && type != 7 && type != 11;
+}
+
+void level_tile_mark(LevelState* s, int cx, int cy, int set)
+{
+    uint8_t* rec = level_voxel(s, cx, cy);
+    if (rec == NULL) {
+        return;
+    }
+    uint32_t* flags = (uint32_t*)(rec + 0x08);
+    if (set != 0) {
+        *flags |= TILE_FLAG_OCCUPIED;
+    } else {
+        *flags &= ~TILE_FLAG_OCCUPIED;
+    }
+}
+
+int level_tile_type(const LevelState* s, int cx, int cy)
+{
+    const uint8_t* rec = level_voxel(s, cx, cy);
+    return rec != NULL ? (int)(signed char)rec[2] : -1;
+}

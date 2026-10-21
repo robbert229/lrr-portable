@@ -9,6 +9,7 @@
 #include "game/cmd.hpp"
 #include "game/entity.hpp"
 #include "game/game.hpp"
+#include "game/level.hpp"
 #include "game/select.hpp"
 #include "gods98/message.hpp"
 
@@ -215,6 +216,65 @@ int main(void)
     idler->flags_3ec |= 0x40u;
     run(&ctx, 1, 0.5f);
     CHECK(ai_idle_count() == idle0 + 1, "no duplicate registration");
+
+    /* --- tile-map wiring (FUN_00432770 / FUN_00432e00 / '\t' probe) ----- */
+
+    {
+        static uint8_t voxels[16 * 16 * 0x48];
+        LevelState map;
+        memset(&map, 0, sizeof(map));
+        memset(voxels, 0, sizeof(voxels));
+        level_set_int(&map, LEVEL_OFF_WIDTH, 16);
+        level_set_int(&map, LEVEL_OFF_HEIGHT, 16);
+        level_store_ptr(&map, LEVEL_OFF_VOXELS, voxels);
+        ctx.level = &map;
+
+        /* Unwalkable start (no 0x10 layer bit): the move command is live
+         * but the walker must not budge; the mover state marks the cell. */
+        EntitySlot* stuck = place(&ctx, 1, "stuck", 0, 0);
+        cmd_create_move(stuck, 4.0f, 0.0f, 0);
+        run(&ctx, 2, 0.5f);
+        CHECK(stuck->x == 0.0f && stuck->cmd_head != NULL,
+              "unwalkable cell freezes the walker");
+        uint32_t* f00 = (uint32_t*)(voxels + 0 * 16 * 0x48 + 0 * 0x48 + 8);
+        CHECK((*f00 & 0x8000000u) != 0, "move state marks the cell occupied");
+
+        /* Blocked by type: walkable flags everywhere but a type-7 tile at
+         * the walker's cell keeps it put. */
+        for (int cy = 0; cy < 3; ++cy) {
+            for (int cx = 0; cx < 8; ++cx) {
+                uint32_t* f = (uint32_t*)(voxels + (size_t)cy * 16 * 0x48 +
+                                          (size_t)cx * 0x48 + 8);
+                *f |= 0x10u;
+            }
+        }
+        voxels[0 * 16 * 0x48 + 0 * 0x48 + 2] = 7; /* blocked type */
+        run(&ctx, 2, 0.5f);
+        CHECK(stuck->x == 0.0f, "type-7 tile keeps the walker on the tile");
+        voxels[0 * 16 * 0x48 + 0 * 0x48 + 2] = 0;
+        run(&ctx, 5, 0.5f);
+        CHECK(stuck->x >= 3.9f && stuck->cmd_head == NULL,
+              "unblocked walker finishes the move");
+        uint32_t* f40 = (uint32_t*)(voxels + (size_t)(4 * 0x48) + 8);
+        CHECK((*f40 & 0x8000000u) == 0, "arrival clears the occupancy flag");
+        CHECK(*f00 & 0x8000000u, "the departure cell stays marked (corpus "
+                                 "clears only the arrival cell)");
+
+        /* Idle probe (FUN_0043a960): the flag registers only on '\t' cells. */
+        EntitySlot* idler2 = place(&ctx, 1, "idler2", 8, 0);
+        int idle1 = ai_idle_count();
+        idler2->flags_3ec |= 0x40u;
+        run(&ctx, 1, 0.5f);
+        CHECK(ai_idle_count() == idle1,
+              "idle registration blocked off the '\\t' tile");
+        voxels[(size_t)0 * 16 * 0x48 + (size_t)8 * 0x48 + 2] = '\t';
+        idler2->flags_3ec |= 0x40u;
+        run(&ctx, 1, 0.5f);
+        CHECK(ai_idle_count() == idle1 + 1, "idle registration on '\\t' tile");
+
+        ctx.level = NULL;
+        (void)f00;
+    }
 
     if (s_failures != 0) {
         fprintf(stderr, "ai_test: %d failure(s)\n", s_failures);

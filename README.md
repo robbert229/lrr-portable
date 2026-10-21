@@ -578,14 +578,20 @@ finding 12, #14). Three new modules in `src/game/`:
   pop = entry pending-flag clear at `0x43cd90`) is seeded one hop by
   `cmd_create_move` together with the `+0x3e0` bit-8 mover flag; `ai_tick`
   walks the entries in order, popping each, and completes the command with
-  the flag clear on exhaustion. The corpus *pathfinder* and tile
-  walkability/occupancy (`FUN_00432770`, `FUN_00432e00`) remain TODO with
-  the rest of the flag branches documented in finding 10 rather than
-  guessed. The demo key `g` issues a task for the selection. `ai_test`
-  (suite `ai`) covers activity set/complete bookkeeping with the
+  the flag clear on exhaustion. Tile semantics are wired: `level_walkable`
+  (`FUN_00432770`: margin, flag `0x10`/`0x40`, blocked types 1/7/11) gates
+  the walker's current cell, `level_tile_mark` (`FUN_00432e00`) raises the
+  `0x8000000` reservation while moving and drops it on arrival, and the
+  idle registration probes the `'\t'` tile (`FUN_0043a960`) — mapless
+  fallbacks keep the corpus-free unit tests unchanged. The corpus
+  *pathfinder* that fills multi-entry lists (`FUN_00430ee0`/`FUN_00430530`)
+  remains TODO with the rest of the flag branches documented in finding 10
+  rather than guessed. The demo key `g` issues a task for the selection.
+  `ai_test` (suite `ai`) covers activity set/complete bookkeeping with the
   idle-record attach, wake-timer freezing, link acquisition, the cheat
-  flag, idle registration, single- and multi-waypoint walking with the
-  arrival pop, and the queue→executor→move path.
+  flag, idle registration (with the `'\t'` probe and its off-tile block),
+  single- and multi-waypoint walking with the arrival pop, blocked-tile
+  freezes with the occupancy mark/clear, and the queue→executor→move path.
 - **Advisor + message-bus runtime** (2026-10-21, finding 22): the announcer
   now builds the `Stream Objective_…` advisor text (`DAT_004ffe38` analog)
   on every outcome, and `objective_advisor_shown` applies the 0x10/0x20/0x80
