@@ -210,6 +210,47 @@ StartLevelSelected     0x460220   ; commit pending level record → DAT_005529c4
    `src/game/frontend.*` should materialise; the callbacks map onto the existing
    audio/texture/level/savegame modules.
 
+## Menu scrolling — the `CanScroll` flag (`FUN_00413970` @ 0x413970)
+
+`MenuBuild` reads each sub-menu's `CanScroll` key and stores it as bit `0x2` of
+the menu record's flag byte (`+ 0x34`). The gate is checked every frame:
+`param_1 != 0` and `(*byte *)(param_1 + 0x34) & 2`, with a companion
+`DAT_005574dc` zeroed on menu enter.
+
+`FUN_005574e0` (the plane y-offset) accumulates while the pointer is inside the
+`y < 480.0` gate (`0x49e19c`) and no wheel is active (`DAT_0076ab3c/40 == 0`),
+from the pointer y scaled `* 0.2126` minus `50.0` (constants `0x49e1bc` /
+`0x49e1c0`), squared, with a `× 1.5` gain (`0x49e1cc`) and a `× 50.0 / × 0.08`
+re-scale per an x87 comparison against `240.0` (`0x49e1c8`) — and clamps:
+
+```c
+scroll = clamp(scroll, plane_h - 480 /* viewport height */, 0)
+```
+
+(the `* 0.2126 - 50` term crosses zero at y ≈ 235, inside the 200/280 deadzone
+comparison constants `0x49e1b4/b8`, so the plane decelerates into the pointer's
+band and accelerates away from it; the exact flag-tested ordering of the
+×50/×0.08 branch was not fully reconstructed — the port linearises to
+`±min(50, distance-from-band)` which reproduces the clamp + deadzone feel).
+
+**Every consumer adds this to the item y** — `FUN_00412c00` (the per-frame menu
+tick) does `iVar16 + DAT_005574e0` for both text glyphs (`FUN_0047a180`) and the
+pointer hit-test (`FUN_0047dcb0`), so drawing and picking stay aligned as the
+plane pans, and `FUN_00411360` (mouse) reads the same global.
+
+The campaign picker plane is one tall strip (`FrontEndY` scatters 113…2096), so
+this is the *only* mechanism by which the 24th campaign level becomes
+reachable/hittable — no per-item paging.
+
+| Claim | State |
+| --- | --- |
+| `CanScroll` = menu `+0x34` bit `0x2`, gated in `FUN_00413970` | observed |
+| Plane offset = `DAT_005574e0`, clamped `[h-plane_h, 0]`, added to draw + pick | observed |
+| Band gate `y < 480`, deadzone comparisons 200.0/280.0, zero-crossing ~235 | observed (constants read) |
+| Scale 0.2126 / offset 50.0 / gain 1.5 / rescale 50.0 & 0.08 | observed (constants read) |
+| Exact sign/branch ordering of the velocity law | inferred (x87 flags not traced) |
+| Shipped `CanScroll` only on `MainMenuFull Menu1` | observed (data) |
+
 ## Confirmed / unknown ledger
 
 | Claim | State |
