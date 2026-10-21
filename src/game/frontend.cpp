@@ -476,51 +476,17 @@ void frontend_close(FrontEnd* fe)
     }
 }
 
-FeEvent frontend_tick(FrontEnd* fe, const FeInput* in)
+/* Pointer hit-testing (defined with the render helpers below) uses the same
+ * placement arithmetic + measure-font widths as drawing. */
+static int fe_item_pick(const FrontEnd* fe, int mx, int my,
+                        const TextureSurface* measure, int* out_idx);
+
+/* --- activation (Enter or a pointer click resolves to this) -------------- */
+
+static FeEvent fe_activate(FrontEnd* fe)
 {
-    if (fe == NULL || in == NULL || !fe->open) {
-        return FE_EVT_NONE;
-    }
     FeMenu* m = &fe->menus[fe->menu];
-    if (fe->sub < 0 || fe->sub >= m->submenu_count) {
-        fe->sub = 0;
-    }
     FeSubmenu* sub = &m->submenus[fe->sub];
-    if (sub->item_count <= 0) {
-        return FE_EVT_NONE;
-    }
-    if (fe->sel >= sub->item_count) {
-        fe->sel = sub->item_count - 1;
-    }
-    if (fe->sel < 0) {
-        fe->sel = 0;
-    }
-
-    if (in->up) {
-        if (fe->sel > 0) {
-            --fe->sel;
-        }
-    }
-    if (in->down) {
-        if (fe->sel < sub->item_count - 1) {
-            ++fe->sel;
-        }
-    }
-    if (in->esc) {
-        if (fe->sub != 0) {
-            fe->sub = 0;
-            fe->sel = 0;
-        } else {
-            fe->quit = 1;
-            fe->open = 0;
-            return FE_EVT_QUIT;
-        }
-        return FE_EVT_NONE;
-    }
-    if (!in->enter) {
-        return FE_EVT_NONE;
-    }
-
     FeItem* it = &sub->items[fe->sel];
 
     /* picker row: start the selected level */
@@ -552,6 +518,72 @@ FeEvent frontend_tick(FrontEnd* fe, const FeInput* in)
     /* Slider / Cycle / TextInput / plain Trigger (flag 0): no-op this
      * milestone (parsed + rendered, not editable). */
     return FE_EVT_NONE;
+}
+
+FeEvent frontend_tick(FrontEnd* fe, const FeInput* in,
+                      const TextureSurface* measure)
+{
+    if (fe == NULL || in == NULL || !fe->open) {
+        return FE_EVT_NONE;
+    }
+    FeMenu* m = &fe->menus[fe->menu];
+    if (fe->sub < 0 || fe->sub >= m->submenu_count) {
+        fe->sub = 0;
+    }
+    FeSubmenu* sub = &m->submenus[fe->sub];
+    if (sub->item_count <= 0) {
+        return FE_EVT_NONE;
+    }
+    if (fe->sel >= sub->item_count) {
+        fe->sel = sub->item_count - 1;
+    }
+    if (fe->sel < 0) {
+        fe->sel = 0;
+    }
+
+    if (in->up) {
+        if (fe->sel > 0) {
+            --fe->sel;
+        }
+    }
+    if (in->down) {
+        if (fe->sel < sub->item_count - 1) {
+            ++fe->sel;
+        }
+    }
+
+    /* pointer: hover selects; a click activates the hovered row (Enter).
+     * When the pointer is in use but outside every item, a click is a
+     * no-op (the menu stays up). */
+    if (in->mouse_x >= 0 && in->mouse_y >= 0) {
+        int idx = 0;
+        int hit = fe_item_pick(fe, in->mouse_x, in->mouse_y, measure, &idx);
+        if (hit) {
+            fe->sel = idx;
+        }
+        if (in->click) {
+            if (hit) {
+                return fe_activate(fe);
+            }
+            return FE_EVT_NONE;
+        }
+    }
+
+    if (in->esc) {
+        if (fe->sub != 0) {
+            fe->sub = 0;
+            fe->sel = 0;
+        } else {
+            fe->quit = 1;
+            fe->open = 0;
+            return FE_EVT_QUIT;
+        }
+        return FE_EVT_NONE;
+    }
+    if (!in->enter) {
+        return FE_EVT_NONE;
+    }
+    return fe_activate(fe);
 }
 
 const FeMenu* frontend_menu(const FrontEnd* fe, int menu)
@@ -732,7 +764,7 @@ static int fe_font_advance(const TextureSurface* f, int cw, int ch, int g)
         for (int xx = 0; xx < cw; xx++) {
             uint32_t p = f->pixels[(size_t)(y0 + yy) * (size_t)f->width
                                    + (x0 + xx)];
-            if (p != FE_FONT_KEY && xx > maxx) {
+            if (p != FE_FONT_KEY && p != FE_FONT_BLACK && xx > maxx) {
                 maxx = xx;
             }
         }
@@ -754,8 +786,8 @@ static void fe_blit_glyph(void* px, int pitch, int w, int h,
         for (int xx = 0; xx < cw; xx++) {
             uint32_t p = f->pixels[(size_t)(sy0 + yy) * (size_t)f->width
                                    + (sx0 + xx)];
-            if (p == FE_FONT_KEY) {
-                continue;                          /* colour-keyed out */
+            if (p == FE_FONT_KEY || p == FE_FONT_BLACK) {
+                continue;                 /* background colours keyed out */
             }
             int dx2 = dx + xx;
             if (dx2 < 0 || dx2 >= w) {
@@ -819,27 +851,66 @@ static int fe_font_text_width(const char* s, const TextureSurface* f)
     return cx;
 }
 
-/* Item display position: picker rows use their FrontEndX/Y scatter coords;
- * config rows use the port's row layout (56 + i*48, at 48 left or centered
- * on w/2 with the bitmap font when the submenu auto-centers). Row pitch
- * clears the 43px bitmap-font cell. Our layout, not a pixel clone. */
+/* Item display position — the MenuTick @ 0x412c00 arithmetic: each item
+ * draws at (menu.Position.x + item.x [+ centering], menu.Position.y +
+ * item.y); AutoCenter centres the label on the Position column (base_x -
+ * text_width/2), otherwise the item's own x anchor is added (the shipped
+ * Back buttons are e.g. x=-314 on Position 320:200 -> left edge). Picker
+ * rows carry absolute FrontEndX/Y scatter coords (their submenu Position is
+ * 0:0). */
 static void fe_item_pos(const FrontEnd* fe, const FeItem* it, int i,
                         int w, const TextureSurface* measure, int* x, int* y)
 {
+    (void)i;
+    (void)w;
     const FeSubmenu* sub = frontend_active_submenu(fe);
     if (it->level_start) {
         *x = it->x;
         *y = it->y;
         return;
     }
-    int tw = measure != NULL ? fe_font_text_width(it->label, measure)
-                             : fe_text_width(it->label);
+    int bx = (sub != NULL) ? sub->base_x : 0;
+    int by = (sub != NULL) ? sub->base_y : 0;
     if (sub != NULL && sub->auto_center) {
-        *x = w / 2 - tw / 2;
+        int tw = measure != NULL ? fe_font_text_width(it->label, measure)
+                                 : fe_text_width(it->label);
+        *x = bx + it->x - tw / 2;
     } else {
-        *x = 48;
+        *x = bx + it->x;
     }
-    *y = 56 + i * 48;
+    *y = by + it->y;
+}
+
+/* Pointer hit-test over the active submenu's items, using the same
+ * placement arithmetic (fe_item_pos) and measure-font widths as drawing.
+ * Returns 1 and writes the hovered index. */
+static int fe_item_pick(const FrontEnd* fe, int mx, int my,
+                        const TextureSurface* measure, int* out_idx)
+{
+    const FeSubmenu* sub = frontend_active_submenu(fe);
+    if (sub == NULL || sub->item_count <= 0) {
+        return 0;
+    }
+    int cw = 0, chh = 0;
+    if (measure != NULL) {
+        fe_font_cell(measure, &cw, &chh);
+    }
+    int rh = measure != NULL ? chh + 8 : 12;
+    for (int i = 0; i < sub->item_count; i++) {
+        const FeItem* it = &sub->items[i];
+        int x, y;
+        fe_item_pos(fe, it, i, 0, measure, &x, &y);
+        int tw = measure != NULL ? fe_font_text_width(it->label, measure)
+                                 : fe_text_width(it->label);
+        if (mx >= x - 4 && mx <= x + tw + 4
+            && my >= y - 2 && my <= y + rh) {
+            if (out_idx != NULL) {
+                *out_idx = i;
+            }
+            return 1;
+        }
+    }
+    return 0;
 }
 
 void frontend_render(const FrontEnd* fe, const TextureSurface* hi_font,

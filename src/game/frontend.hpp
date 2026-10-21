@@ -55,6 +55,11 @@ extern "C" {
 #define FE_FONT_GRID_COLS 10
 #define FE_FONT_GRID_ROWS 19
 #define FE_FONT_KEY       0xffff0000u
+/* Shipped font cells are ~40% pure black *and* ~40% key-red background
+ * (even the space cell) with the gold/grey glyph ink between — the engine
+ * blits each glyph's measured ink box, so neither background colour shows.
+ * Skip both so the art shows through the text. */
+#define FE_FONT_BLACK     0xff000000u
 
 /* Item kinds — MenuItemType @ 0x413e60 (values 0..5; 5 = the "Next" catch-
  * all, 1 = Trigger). Slider/Cycle/TextInput parse their banner/label into
@@ -124,11 +129,16 @@ typedef struct FrontEnd {
 } FrontEnd;
 
 /* One frame of modal-menu input: key *edges* this frame (the frame loop
- * derives these from input_key_edge; tests drive them directly). */
+ * derives these from input_key_edge; tests drive them directly) plus the
+ * pointer. When mouse coords are >= 0 the cursor follows the items (the
+ * hovered row becomes the selection); `click` activates it like Enter. */
 typedef struct FeInput {
     int up, down;     /* move selection */
-    int enter;        /* activate selection */
+    int enter;        /* activate selection (keyboard) */
     int esc;          /* back one submenu / close */
+    int mouse_x;      /* pointer x (>= 0 = mouse in use) */
+    int mouse_y;      /* pointer y */
+    int click;        /* left-button press edge this frame */
 } FeInput;
 
 typedef enum {
@@ -157,10 +167,14 @@ int  frontend_open(FrontEnd* fe, int menu);
 void frontend_close(FrontEnd* fe);
 
 /* Step the modal menu one frame. Returns the event the frame loop must act
- * on; FE_EVT_NONE while the menu stays up. See frontend_tick in the .cpp
- * for the action table (level picker -> start, Trigger flag -> quit, Next ->
- * navigate submenus, Esc -> back/close). */
-FeEvent frontend_tick(FrontEnd* fe, const FeInput* in);
+ * on; FE_EVT_NONE while the menu stays up. `measure` is the submenu's
+ * HiFont texture (or NULL for the 3x5 fallback width) used for hit-testing
+ * the pointer. See frontend_tick in the .cpp for the action table
+ * (level picker -> start, Trigger flag -> quit, Next -> navigate submenus,
+ * Esc -> back/close). Pointer hover sets the selection; a click activates
+ * the hovered row like Enter. */
+FeEvent frontend_tick(FrontEnd* fe, const FeInput* in,
+                      const TextureSurface* measure);
 
 /* --- accessors ---------------------------------------------------------- */
 
