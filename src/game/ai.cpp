@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
+/* AI execution receivers — port of the FUN_0043b270 entity-tick callback
+ * (entry 0x43c810), decompile-verified 2026-10-21 (finding 10 closed). See
+ * ai.hpp for the anatomy; branch comments carry corpus addresses. */
 #include <stdio.h>
 #include <string.h>
 
@@ -11,7 +14,135 @@
  * timestamp; the executor resets it to AI_TASK_DURATION on first run). */
 #define AI_TOMBSTONE 1000.0f
 
+/* Flag bits the callback branches on (corpus +0x3ec / +0x3e4 words). */
+#define ENT_FLAG3EC_ACTIVITY_DONE  0x00200000u  /* activity ended (0x43c845) */
+#define ENT_FLAG3EC_TARGET_LINK    0x00040000u  /* acquire link pending (0x43c8b2) */
+#define ENT_FLAG3EC_LINKED         0x00080000u  /* link acquired (writes +0x354) */
+#define ENT_FLAG3EC_IDLE_REGISTER  0x00000040u  /* type-1 idle check (0x43c94d) */
+#define ENT_FLAG3EC_VULNERABLE     0x00000020u  /* cheat-gated flag (0x43c90b) */
+#define ENT_FLAG3E4_WAKE_TIMER     0x08000000u  /* +0x368 runs, tick early-return */
+
 static const void* rec_payload(const void* rec) { return cmd_rec_payload(rec); }
+
+/* DAT_004decc4 activity-name table, per the initializer at 0x436c2f. */
+static const char* const s_activity[AI_ACTIVITY_COUNT] = {
+    "Activity_Stand", "Activity_Route", "Activity_RouteRubble",
+    "Activity_RunPanic", "Activity_Drill", "Activity_Teleport",
+    "Activity_Walk", "Activity_Reinforce", "Activity_Reverse",
+    "Activity_TurnLeft", "Activity_TurnRight", "Activity_CantDo",
+    "Activity_Emerge", "Activity_Enter", "Activity_EnterRein",
+    "Activity_Collect", "Activity_Gather", "Activity_Carry",
+    "Activity_CarryRubble", "Activity_Throw", "Activity_CarryTurnLeft",
+    "Activity_CarryTurnRight", "Activity_CarryStand", "Activity_HitLeft",
+    "Activity_HitRight", "Activity_HitFront", "Activity_HitBack",
+    "Activity_HitHard", "Activity_Dynamite", "Activity_Deposit",
+    "Activity_Clear", "Activity_Place", "Activity_Repair",
+    "Activity_Slip", "Activity_Rest", "Activity_Eat",
+    "Activity_Stamp", "Activity_ThrowMan", "Activity_ThrownByRockMonster",
+    "Activity_GetUp", "Activity_BuildPath", "Activity_Upgrade",
+    "Activity_Explode", "Activity_Unpowered", "Activity_FireLaser",
+    "Activity_Freezed", "Activity_FreezeStart", "Activity_FreezeMelt",
+    "Activity_Recharge", "Activity_WakeUp", "Activity_Train",
+    "Activity_FloatOn", "Activity_FloatOff", "Activity_Opening",
+    "Activity_Closing", "Activity_Open",
+    "Activity_Waiting1", "Activity_Waiting2", "Activity_Waiting3",
+    "Activity_Waiting4", "Activity_Waiting5", "Activity_Waiting6",
+    "Activity_Waiting7", "Activity_Waiting8", "Activity_Waiting9",
+    "Activity_Waiting10", "Activity_Waiting11", "Activity_Waiting12",
+    "Activity_Waiting13", "Activity_Waiting14", "Activity_Waiting15",
+    "Activity_Waiting16", "Activity_Waiting17", "Activity_Waiting18",
+    "Activity_Waiting19", "Activity_Waiting20", "Activity_Waiting21"
+};
+
+const char* ai_activity_name(int id)
+{
+    return (id >= 0 && id < AI_ACTIVITY_COUNT) ? s_activity[id] : NULL;
+}
+
+void ai_set_activity(EntitySlot* e, int id, int param)
+{
+    if (e == NULL || id < 0 || id >= AI_ACTIVITY_COUNT) {
+        return; /* corpus indexes the table blindly; clamp the mirror */
+    }
+    e->activity = id;
+    /* Corpus +0x2ec mirrors "last name bookkept by FUN_00447c40"; every
+     * corpus activity-set site re-registers through 447c40 in the same
+     * step, so the fold lands here in the port (see finding 10). */
+    e->activity_last = id;
+    e->activity_param = param;
+    e->activity_timer = 0.0f;
+}
+
+/* FUN_00403f30: if the chain head is not a live idle record (type 0xe),
+ * prepend one so the idle poller sees this entity. */
+static void attach_idle_record(EntitySlot* e)
+{
+    if (e->cmd_head == NULL || cmd_rec_type(e->cmd_head) != 0xe) {
+        void* rec = cmd_alloc(0xe);
+        if (rec != NULL) {
+            cmd_rec_set_next(rec, e->cmd_head);
+            e->cmd_head = rec;
+        }
+    }
+}
+
+/* FUN_0043a960 half: type-1 idle registration into DAT_004eabcc, max 100
+ * (DAT_004ead5c). The tile == '\t' probe needs the path-grid mirror and is
+ * TODO(corpus); the capacity rule and table are byte-exact. */
+#define AI_IDLE_TABLE_MAX 100
+static EntitySlot* s_idle100[AI_IDLE_TABLE_MAX];
+static int s_idle100_n;
+
+int ai_idle_count(void) { return s_idle100_n; }
+
+static void idle100_register(EntitySlot* e)
+{
+    for (int i = 0; i < s_idle100_n; ++i) {
+        if (s_idle100[i] == e) {
+            return;
+        }
+    }
+    if (s_idle100_n < AI_IDLE_TABLE_MAX) {
+        s_idle100[s_idle100_n++] = e;
+    }
+}
+
+/* Finish the chain-head command on `e`: unlink from both structures, free,
+ * advance the chain. */
+static int finish_head(GameContext* ctx, EntitySlot* e)
+{
+    void* rec = e->cmd_head;
+    e->cmd_head = cmd_rec_next(rec);
+    cmd_global_unlink(rec);
+    cmd_free(rec, 0);
+    (void)ctx;
+    return 1;
+}
+
+/* Move/target step: move `e` toward (tx,ty) by speed*dt; 1 when arrived.
+ * Port-side application of move/target records — in the corpus these seed
+ * the entity path list (+0x24, cleared by FUN_00432e00's pop at 0x43cd87)
+ * and the +0x3e0 bit-0x8 flag; the path-list mirror is TODO(corpus). */
+static int step_toward(EntitySlot* e, float tx, float ty, float dt)
+{
+    float dx = tx - e->x;
+    float dy = ty - e->y;
+    float len = (float)__builtin_sqrtf(dx * dx + dy * dy);
+    if (len <= 0.001f) {
+        e->x = tx;
+        e->y = ty;
+        return 1;
+    }
+    float step = AI_MOVE_SPEED_CPS * dt;
+    if (step >= len) {
+        e->x = tx;
+        e->y = ty;
+        return 1;
+    }
+    e->x += (dx / len) * step;
+    e->y += (dy / len) * step;
+    return 0;
+}
 
 /* Yield a task's deposit into the mission counters by priority kind, and
  * report the incident on the message bus (finding 22 §1). */
@@ -36,37 +167,75 @@ static void task_deposit(GameContext* ctx, int kind)
     }
 }
 
-/* Finish the chain-head command on `e`: unlink from both structures, free,
- * advance the chain. */
-static int finish_head(GameContext* ctx, EntitySlot* e)
+/* The verified callback branches, in corpus order. Returns 1 when the
+ * corpus's callback would have returned early (walker moves on). */
+static int callback_branches(GameContext* ctx, EntitySlot* e, float dt)
 {
-    void* rec = e->cmd_head;
-    e->cmd_head = cmd_rec_next(rec);
-    cmd_global_unlink(rec);
-    cmd_free(rec, 0);
-    (void)ctx;
-    return 1;
-}
+    /* 0x43c845 — activity completion: +0x2e8 zeroed, then FUN_00447c40's
+     * bookkeeping (early return when current == last), then flag clear. */
+    if ((e->flags_3ec & ENT_FLAG3EC_ACTIVITY_DONE) != 0) {
+        int current = AI_ACTIVITY_NONE; /* +0x2e8 was zeroed pre-call */
+        if (current != e->activity_last) {
+            /* FUN_00403f30: the zeroed name is outside the eight-name
+             * exception set, so the idle record attach always runs here. */
+            attach_idle_record(e);
+            /* per-type runner progress: object layer, TODO(corpus) */
+            e->activity_last = AI_ACTIVITY_NONE; /* +0xbb = +0x2e8 (0) */
+            e->activity_timer = 0.0f;            /* +0xb5 / +0x2d4 */
+        }
+        e->activity = AI_ACTIVITY_NONE;
+        e->flags_3ec &= ~ENT_FLAG3EC_ACTIVITY_DONE;
+    }
 
-/* Move/target step: move `e` toward (tx,ty) by speed*dt; 1 when arrived. */
-static int step_toward(EntitySlot* e, float tx, float ty, float dt)
-{
-    float dx = tx - e->x;
-    float dy = ty - e->y;
-    float len = (float)__builtin_sqrtf(dx * dx + dy * dy);
-    if (len <= 0.001f) {
-        e->x = tx;
-        e->y = ty;
+    /* 0x43c870 — wake timer: if +0x3e4 bit 0x8000000 is set, tick +0x368
+     * down (FUN_0044c110 wakes the attached entity once expired) and
+     * RETURN — no further behaviour runs this frame.
+     * Attached-entity mirror (+0x364) is TODO(corpus). */
+    if ((e->flags_3e4 & ENT_FLAG3E4_WAKE_TIMER) != 0) {
+        if (!(e->wake_timer > 0.0f)) {
+            /* FUN_0044c110: attached mirror wake. TODO(corpus). */
+        }
+        e->wake_timer -= dt;
         return 1;
     }
-    float step = AI_MOVE_SPEED_CPS * dt;
-    if (step >= len) {
-        e->x = tx;
-        e->y = ty;
-        return 1;
+
+    /* 0x43c8b2 — target acquisition: +0x3ec bit 0x40000 asks FUN_0044a200
+     * for the work object and FUN_00469fc0 whether it is linkable; on
+     * success FUN_00465050 creates the link (handle lands in +0x354),
+     * bit 0x80000 is set, 0x40000 cleared. */
+    if ((e->flags_3ec & ENT_FLAG3EC_TARGET_LINK) != 0) {
+        const void* obj = (e->cmd_head != NULL)
+                              ? rec_payload(e->cmd_head) : NULL;
+        if (obj != NULL) {
+            e->link_target = (void*)obj; /* +0x354 mirror */
+            e->flags_3ec |= ENT_FLAG3EC_LINKED;
+        }
+        e->flags_3ec &= ~ENT_FLAG3EC_TARGET_LINK;
     }
-    e->x += (dx / len) * step;
-    e->y += (dy / len) * step;
+
+    /* 0x43c90b — cheat word DAT_00556ed0 bit 0 (testb $0x1): when set, the
+     * type-2 "can do" probe FUN_0044c530 decides flag bit 0x20; otherwise
+     * the bit is cleared. The riding probe FUN_0043c440 is TODO(corpus),
+     * so the mirror uses "has link" as the can-do approximation. */
+    if ((ctx->cheat & 1u) != 0 && e->type == 2) {
+        if (e->link_target != NULL) {
+            e->flags_3ec |= ENT_FLAG3EC_VULNERABLE;
+        } else {
+            e->flags_3ec &= ~ENT_FLAG3EC_VULNERABLE;
+        }
+    } else {
+        e->flags_3ec &= ~ENT_FLAG3EC_VULNERABLE;
+    }
+
+    /* 0x43c94d — type-1 idle registration: flag bit 0x40 + empty work and
+     * link state -> FUN_0043a960, which moves the entity into the
+     * DAT_004eabcc idle table (cap 100) when it stands on a '\t' tile.
+     * Tile probe TODO(corpus); table/cap/flag-clear byte-exact. */
+    if (e->type == 1 && (e->flags_3ec & ENT_FLAG3EC_IDLE_REGISTER) != 0 &&
+        e->cmd_head == NULL && e->link_target == NULL) {
+        e->flags_3ec &= ~ENT_FLAG3EC_IDLE_REGISTER;
+        idle100_register(e);
+    }
     return 0;
 }
 
@@ -76,10 +245,19 @@ int ai_tick(GameContext* ctx, float dt)
         return 0;
     }
     int done = 0;
-    /* 1. Entity chains: move + target heads are the entity-local view. */
+    /* 1. Entity chains: the callback's flag branches, then the port-side
+     *    application of chain heads (move/target stepping). Corpus order:
+     *    the walker visits type blocks in table order, entities ascending. */
     for (int t = 0; t < ENTITY_TYPES; ++t) {
         for (int i = 0; i < ctx->entity_count[t]; ++i) {
             EntitySlot* e = &ctx->entity[t][i];
+            if (e->type == 0) {
+                continue; /* walker liveness *ent+0x408==ent mirror */
+            }
+            if (callback_branches(ctx, e, dt)) {
+                continue; /* corpus early return (wake-timer state) */
+            }
+            e->activity_timer += dt;
             while (e->cmd_head != NULL) {
                 void* head = e->cmd_head;
                 int type = cmd_rec_type(head);
@@ -98,13 +276,11 @@ int ai_tick(GameContext* ctx, float dt)
                     } else {
                         break;
                     }
-                } else if (type == 3) {
-                    /* Task on an entity chain: run as a timer-only command
-                     * (the deposit half happens via the global pass below
-                     * when the record came through CmdLinkHead). */
-                    done += finish_head(ctx, e);
+                } else if (type == 0xe) {
+                    break; /* idle record: poller territory (finding 10) */
                 } else {
-                    /* Unknown command types: drop them. */
+                    /* Unknown record types: drop them (the task type-3 runs
+                     * in the global pass below, matching CmdLinkHead). */
                     done += finish_head(ctx, e);
                 }
             }

@@ -548,10 +548,9 @@ finding 12, #14). Three new modules in `src/game/`:
   (`CmdCreateMove`/Target/Gated/Task incl. the type→kind mapping and
   `MinionCompanionCmd`), the **chain/global-list** link ops, `CmdChainPurge`,
   `IdleQueueRegister`, and the **queue executor** (the 5-dword opcode switch
-  of `FUN_004520d0`, run in the frame loop). The AI *execution* receivers
-  (which run the `+0x1c` behaviour ids — finding 10's open item) remain
-  stub boundaries. `cmd_test` (suite `cmd`) covers pool doubling/reuse, the
-  registry tables + behaviour defaults, creators, chains and queue dispatch.
+  of `FUN_004520d0`, run in the frame loop). `cmd_test` (suite `cmd`) covers
+  pool doubling/reuse, the registry tables + behaviour defaults, creators,
+  chains and queue dispatch.
 - **Selection + pointer input** (2026-10-21, finding 06): `src/game/select.*`
   reconstructs the selection cluster (`DAT_004fef2c` array + `DAT_004ff298`
   count, `SelectedEntity`), add/dedupe/cap + the selected flag, a
@@ -564,20 +563,26 @@ finding 12, #14). Three new modules in `src/game/`:
   `1`–`4` picks the nearest placed entity, `m` moves the selection to the
   cursor cell, `n` clears. `select_test` (suite `select`) covers add/dedupe,
   pick, pointer-move dispatch and the op-8 path.
-- **AI execution receivers** (2026-10-21, finding 10's open item):
-  `src/game/ai.*` is the entity-manager tick (`FUN_0043b270`) that the
-  decompile corpus does not cover. It reads the command records from the
-  command subsystem and *runs* them with a deterministic, tested subset:
-  **move** (step an entity toward the record coords), **target** (chase the
-  payload entity), and **task** (the behaviour→mission-counter subset —
-  priority kinds Crystal/Ore/DefaultCollect/Construction deposit into
-  `GameContext.mission` when the task elapses, driving the objective checker
-  and save blob). Finished chain heads are unlinked from both the entity
-  chain and the global command list and freed. The exact handler mapping is
-  documented as unverified (the debugger gap); constants are factored so a
-  byte-exact pass can replace the switch. The demo key `g` issues a task for
-  the selection. `ai_test` (suite `ai`) covers move/target stepping,
-  task yields into the counters, and the queue→executor→ai path.
+- **AI execution receivers** (2026-10-21, finding 10 closed): the
+  entity-manager tick (`FUN_0043b270`) is now decompile-covered — its walker
+  runs the per-entity callback at `0x43c810`, which is a **flag-word
+  behaviour evaluator, not a command-record switch** (`DAT_004b32e8` ids have
+  xrefs only in the creation layer; no tick reads a record `+0x1c`).
+  `src/game/ai.*` ports the verified branches in corpus order against entity
+  mirrors: activity completion (`+0x3ec` bit `0x200000` + `FUN_00447c40`
+  bookkeeping + idle-record attach), the wake timer (`+0x3e4` bit
+  `0x8000000`, `+0x368` countdown early-return), target acquisition
+  (`+0x3ec` `0x40000` → link `+0x354`), the cheat-word flag (`DAT_00556ed0`),
+  and type-1 idle registration (`FUN_0043a960`, cap 100) — plus the
+  77-entry `DAT_004decc4` activity-name table (`Activity_Stand`…
+  `Activity_Waiting21`) with `FUN_004409e0` set semantics. Move/target
+  stepping stays flagged as the port-side *application* of command records
+  until the corpus path lists (`+0x24`) are ported; remaining flag branches
+  are documented in finding 10 rather than guessed. The demo key `g` issues
+  a task for the selection. `ai_test` (suite `ai`) covers activity
+  set/complete bookkeeping with the idle-record attach, wake-timer freezing,
+  link acquisition, the cheat flag, idle registration, and the
+  queue→executor→move path.
 - **Advisor + message-bus runtime** (2026-10-21, finding 22): the announcer
   now builds the `Stream Objective_…` advisor text (`DAT_004ffe38` analog)
   on every outcome, and `objective_advisor_shown` applies the 0x10/0x20/0x80

@@ -97,6 +97,89 @@ int main(void)
     CHECK(digger->x >= 4.9f && digger->y >= 4.9f, "queue move executes");
     CHECK(digger->cmd_head == NULL, "queue move unlinked after arrival");
 
+    /* --- verified callback branches (decompile 2026-10-21, finding 10) --- */
+
+    /* Activity table + FUN_004409e0 set semantics. */
+    CHECK(ai_activity_name(AI_ACT_COLLECT) != NULL &&
+              strcmp(ai_activity_name(AI_ACT_COLLECT),
+                     "Activity_Collect") == 0,
+          "activity id 15 is Activity_Collect");
+    CHECK(ai_activity_name(0) != NULL &&
+              strcmp(ai_activity_name(0), "Activity_Stand") == 0,
+          "activity id 0 is Activity_Stand");
+    CHECK(ai_activity_name(-1) == NULL && ai_activity_name(77) == NULL,
+          "out-of-range activity ids have no name");
+    EntitySlot* actor = place(&ctx, 3, "actor", 0, 0);
+    ai_set_activity(actor, AI_ACT_COLLECT, 7);
+    CHECK(actor->activity == AI_ACT_COLLECT && actor->activity_param == 7 &&
+              actor->activity_timer == 0.0f,
+          "ai_set_activity mirrors +0x2e8/+0x2d8/+0x2d4");
+    ai_set_activity(actor, 999, 0);
+    CHECK(actor->activity == AI_ACT_COLLECT, "out-of-range id ignored");
+
+    /* Activity completion (0x43c845 + FUN_00447c40 bookkeeping). */
+    actor->flags_3ec |= 0x00200000u;
+    run(&ctx, 1, 0.5f);
+    CHECK((actor->flags_3ec & 0x00200000u) == 0, "activity-done flag cleared");
+    CHECK(actor->activity == AI_ACTIVITY_NONE &&
+              actor->activity_last == AI_ACTIVITY_NONE,
+          "activity + last reset by bookkeeping");
+    CHECK(actor->cmd_head != NULL && cmd_rec_type(actor->cmd_head) == 0xe,
+          "idle record 0xe attached (FUN_00403f30)");
+    int idle_rec = ai_commands_active(&ctx);
+    run(&ctx, 1, 0.5f);
+    CHECK(ai_commands_active(&ctx) == idle_rec, "idle record is not consumed");
+    actor->flags_3ec |= 0x00200000u;
+    run(&ctx, 1, 0.5f);
+    CHECK(actor->cmd_head != NULL &&
+              cmd_rec_type(actor->cmd_head) == 0xe &&
+              cmd_rec_next(actor->cmd_head) == NULL,
+          "repeat completion: early-return path attaches nothing");
+
+    /* Wake timer (0x43c870): flags tick but movement freezes. */
+    EntitySlot* sleeper = place(&ctx, 1, "sleeper", 0, 0);
+    cmd_create_move(sleeper, 100.0f, 0.0f, 0);
+    sleeper->flags_3e4 |= 0x08000000u;
+    sleeper->wake_timer = 0.3f;
+    run(&ctx, 1, 0.5f);
+    CHECK(sleeper->x == 0.0f, "wake state early-returns (no movement)");
+    CHECK(sleeper->wake_timer > -0.3f && sleeper->wake_timer < -0.1f,
+          "wake timer still decrements");
+    sleeper->flags_3e4 = 0;
+    run(&ctx, 1, 0.5f);
+    CHECK(sleeper->x > 0.0f, "movement resumes when wake flag clears");
+
+    /* Target acquisition (0x43c8b2). */
+    EntitySlot* linker = place(&ctx, 1, "linker", 0, 0);
+    EntitySlot* twin = place(&ctx, 2, "twin", 3, 3);
+    cmd_create_target(linker, (void*)twin);
+    linker->flags_3ec |= 0x00040000u;
+    run(&ctx, 1, 0.5f);
+    CHECK((linker->flags_3ec & 0x00040000u) == 0, "acquire flag consumed");
+    CHECK((linker->flags_3ec & 0x00080000u) != 0, "link flag set");
+    CHECK(linker->link_target == (void*)twin, "link handle mirrors payload");
+
+    /* Cheat-word flag (0x43c90b): type-2 with link only. */
+    EntitySlot* rider = place(&ctx, 2, "rider", 0, 0);
+    rider->link_target = (void*)1; /* "on vehicle" proxy (probe is TODO) */
+    ctx.cheat = 1;
+    run(&ctx, 1, 0.5f);
+    CHECK((rider->flags_3ec & 0x20u) != 0, "cheat + type-2 + link sets 0x20");
+    ctx.cheat = 0;
+    run(&ctx, 1, 0.5f);
+    CHECK((rider->flags_3ec & 0x20u) == 0, "flag cleared when cheat is off");
+
+    /* Idle registration (0x43c94d + FUN_0043a960 table/cap). */
+    EntitySlot* idler = place(&ctx, 1, "idler", 0, 0);
+    int idle0 = ai_idle_count();
+    idler->flags_3ec |= 0x40u;
+    run(&ctx, 1, 0.5f);
+    CHECK(ai_idle_count() == idle0 + 1, "idle table registration");
+    CHECK((idler->flags_3ec & 0x40u) == 0, "idle flag cleared");
+    idler->flags_3ec |= 0x40u;
+    run(&ctx, 1, 0.5f);
+    CHECK(ai_idle_count() == idle0 + 1, "no duplicate registration");
+
     if (s_failures != 0) {
         fprintf(stderr, "ai_test: %d failure(s)\n", s_failures);
         return 1;

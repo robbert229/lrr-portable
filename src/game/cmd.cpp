@@ -49,6 +49,7 @@ float cmd_rec_move_x(const void* rec) { return cas_rec(rec)->x; }
 float cmd_rec_move_y(const void* rec) { return cas_rec(rec)->y; }
 float cmd_rec_now(const void* rec) { return cas_rec(rec)->now; }
 void cmd_rec_set_now(void* rec, float v) { as_rec(rec)->now = v; }
+void cmd_rec_set_next(void* rec, void* next) { as_rec(rec)->next = next; }
 
 /* ------------------------------------------------------------------ *
  *  Pool (CmdPoolGrow/CmdAlloc/CmdFree).

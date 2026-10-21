@@ -1,6 +1,6 @@
 # Evidence Bundle
 
-Two REA evidence bundles (JSON) exported from Ghidra analysis sessions of
+Several REA evidence bundles (JSON) exported from Ghidra analysis sessions of
 `LegoRR.exe` (SHA-256
 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`):
 
@@ -46,4 +46,19 @@ recorded observations: decompilations of `MenuBuild @ 0x4140c0`,
 movie callbacks (`AvisEnabled`, `MoviePlay*`, `BrightnessSet`, `VolumeSet`,
 `GameSpeedSelect`, …), plus the `::` path-delimiter byte read
 (`DAT_004aab18` = `"::"`) and the 50-address naming record. Import with
+`import_evidence_bundle` or inspect `records` directly.
+
+## `legorr-ai-receivers.bundle`
+
+Exported 2026-10-21 from the AI-execution-receivers session (finding 10's
+closed item). 51 recorded observations covering the entity-tick anatomy: the
+scene-pass flag word and 125 s broadcast timer (`FUN_0043b270`), the entity
+walker (`FUN_004377d0`), the post-step ticker (`FUN_0044bf00`), the activity
+setter (`FUN_004409e0`) and bookkeeping (`FUN_00447c40`, `FUN_00403f30`), the
+work-object resolver (`FUN_0044a200`), the idle/wake/cheat helpers
+(`FUN_0043a960`, `FUN_0044c110`, `FUN_0044c530`, `FUN_0043c440`'s call
+sites), the per-type creators (`FUN_004035c0`/`6c0`/`610`, `FUN_00402720`),
+the `DAT_004decc4` activity-table initializer, the `DAT_004b32e8` xref
+sweep (command-creation layer only — the negative result that no tick reads
+record `+0x1c`), and the `test $0x41,%ah` zero-compare idiom. Import with
 `import_evidence_bundle` or inspect `records` directly.

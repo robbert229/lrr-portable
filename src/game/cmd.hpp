@@ -94,6 +94,7 @@ int         cmd_rec_kind(const void* rec);
 int         cmd_rec_behaviour(const void* rec);
 uint32_t    cmd_rec_state(const void* rec);
 void*       cmd_rec_next(const void* rec);
+void        cmd_rec_set_next(void* rec, void* next);
 
 /* Move-target coords and the "now" timer on a record (semantic accessors;
  * the corpus stores these at +0x08/+0x0C and +0x14). */
