@@ -110,13 +110,11 @@ Open threads, in order of value:
 2. Deferred: dgVoodoo as a perf option; the `Steam.lwo` point-only sprites as glTF.
 3. Reconstruction next: the **front-end/menu boot** (finding 23 — port
    `MenuBuild`/`MenuRunLoop`/the `FrontEndActive` gate into `src/game/`,
-   fix the `::` tokenizer + StartLevel name resolution), the *reward-screen
-   save-zone clicks* (finishing finding 09), the live-mod proof (thread 1),
-   model-aware entity rendering on top of the merged LWO loader (#30), and
-   the winapi reference build. Campaign flow, command/AI, selection, reward
-   save+advance, the advisor/incident bus wiring, and the software level
-   renderer are in — finding 22's runtime side is wired through the engine's
-   message bus.
+   fix the `::` tokenizer + StartLevel name resolution), the live-mod proof
+   (thread 1), model-aware entity rendering on top of the merged LWO loader
+   (#30), and the winapi reference build. Campaign flow, command/AI,
+   selection, reward save+advance, the advisor/incident bus wiring, the
+   software level renderer, and the engine↔level binding seam are in.
 
 ## Findings index
 
@@ -500,6 +498,16 @@ finding 12, #14). Three new modules in `src/game/`:
   flag), and the demo sound hook plays the configured wav with a stand-in
   fallback. `objective_test`/`ai_test`/`message_test` cover the stream, the
   suppression rule, the bus dispatch and the config population.
+- **Engine ↔ level binding** (2026-10-22, seam #35 completion): the engine
+  reads the loaded `LevelState` — the *resolved* voxel/terrain pointers are
+  bound at the seam (`EngineContext.level_voxels`, since the 32-bit corpus
+  slot truncates a 64-bit pointer — the raw `+0xb8` word fallback stays for
+  winapi). `engine_level_blocksize` exposes the world scale; the demo seeds
+  the follow camera at the grid centre and enables the camera grid sweep
+  over the real voxel grid. `bind_test` (suite `bind`) loads a fixture
+  level, binds it, and asserts the engine reads its dims/blocksize/voxel
+  bytes, clamps the follow camera inside the level, and walks the real grid
+  in `camera_grid_expiry`.
 - **Reward screen + save-zone clicks** (2026-10-21, finding 09): closes the
   reward overlay's button story. `mission_reward_zone` ports
   `RewardZoneCheck @ 0x461dd0` — the `SaveButton` zone (live when the level
@@ -544,7 +552,8 @@ exposes `S` (build blob + commit slot), `L` (`CheckpointStep`),
 selection keys (`1`–`4` pick / `m` move / `g` gather-task / `n` clear),
 `y` (toggle the reward overlay) and the **mouse-button click** (reward
 save/advance zones, finding 09) — and the software level renderer draws the
-grid + live entities (finding 22 §3). Ten suites use synthetic fixtures
+grid + live entities (finding 22 §3), with the engine bound to the level
+(seam #35). Eleven suites use synthetic fixtures
 only:
 
 ```sh
@@ -557,7 +566,10 @@ meson test -C build --suite cmd
 meson test -C build --suite select
 meson test -C build --suite ai
 meson test -C build --suite render
-```Passing `-Dtest_wads_dir=<game>` adds real-wad probing to `level_test`,
+meson test -C build --suite bind
+```
+
+Passing `-Dtest_wads_dir=<game>` adds real-wad probing to `level_test`,
 mirroring the resource/texture/sound/block suites: it mounts the shipped
 wads and reports how many Lego.cfg groups resolve a `SurfaceMap`.
 Best-effort — the fixtures are the guaranteed coverage, and the probe is

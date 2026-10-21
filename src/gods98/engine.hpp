@@ -91,6 +91,12 @@ typedef struct EngineContext {
                                 * (findings 04/05; dwell slots per 22) */
     ViewContext *views[3];     /* DAT_005560e4 / e8 / ec (view.hpp) */
     void*       level_block;  /* LevelState block when bound (game level) */
+    /* Resolved native pointers the raw +0xb8/+0x04 words cannot carry on a
+     * 64-bit host (the game layer keeps the full pointers in its registry —
+     * engine_level_ptr would read a truncated word). The frame loop fills
+     * these at bind time via level_load_ptr. */
+    const uint8_t* level_voxels;   /* the w*h*0x48 voxel array */
+    const void*    level_terrain;  /* TerrainState (reserved for heights) */
 
     float        exit_timer;   /* DAT_00556efc — decremented by scaled dt */
     int          tickers_ran;  /* scaffolding: count of dispatched tickers */
@@ -129,6 +135,19 @@ static inline int engine_level_height(const EngineContext* ctx)
                ? (int)engine_level_u32(ctx, 0x18) : 0;
 }
 
+/* Blocksize (level +0x1c float) — the world scale the camera/renderer uses
+ * to convert cells to world units. 1.0 when unbound/absent. */
+static inline float engine_level_blocksize(const EngineContext* ctx)
+{
+    if (ctx == NULL || ctx->level_block == NULL) {
+        return 1.0f;
+    }
+    uint32_t raw = engine_level_u32(ctx, 0x1c);
+    float bs;
+    __builtin_memcpy(&bs, &raw, 4);
+    return bs > 0.0f ? bs : 1.0f;
+}
+
 static inline const uint8_t* engine_level_voxel(const EngineContext* ctx,
                                                 int x, int y)
 {
@@ -143,7 +162,12 @@ static inline const uint8_t* engine_level_voxel(const EngineContext* ctx,
     if (x >= w || y >= h || h <= 0) {
         return NULL;
     }
-    const uint8_t* voxels = (const uint8_t*)engine_level_ptr(ctx, 0xb8);
+    /* Prefer the resolved pointer (set at bind); fall back to the raw word
+     * (valid on 32-bit builds where the pointer fits the corpus slot). */
+    const uint8_t* voxels = ctx->level_voxels;
+    if (voxels == NULL) {
+        voxels = (const uint8_t*)engine_level_ptr(ctx, 0xb8);
+    }
     if (voxels == NULL) {
         return NULL;
     }

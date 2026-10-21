@@ -40,11 +40,12 @@ if get_option('platform') == 'native'
                  ['cmd', 'test_cmd.cpp'],
                  ['select', 'test_select.cpp'],
                  ['ai', 'test_ai.cpp'],
-                 ['render', 'test_render.cpp']]
+                 ['render', 'test_render.cpp'],
+                 ['bind', 'test_bind.cpp']]
     test_name = exe[0]
     t = executable(test_name + '_test', exe[1],
-      include_directories : gods98_incs,
-      dependencies : [],
+      include_directories : gods98_incs + [miniwin_inc],
+      dependencies : [platsub_deps],
       link_with : [gods98_lib, game_lib],
       install : false)
     test_wads = get_option('test_wads_dir')

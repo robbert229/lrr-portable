@@ -93,13 +93,17 @@ void camera_grid_timers(EngineContext* ctx, float dt)
 void camera_grid_expiry(EngineContext* ctx, float dt)
 {
     EngineState* st = ctx != NULL ? ctx->state_block : NULL;
-    /* Prefer the bound level's voxel grid (width/height/voxels +0x14/0x18/0xb8). */
+    /* Prefer the bound level's voxel grid (width/height +0x14/0x18, voxels
+     * via the resolved pointer — the raw +0xb8 word truncates on 64-bit). */
     const uint8_t* cells = NULL;
     uint32_t gw = 0, gh = 0;
     if (ctx != NULL && ctx->level_block != NULL) {
         gw = (uint32_t)engine_level_width(ctx);
         gh = (uint32_t)engine_level_height(ctx);
-        cells = (const uint8_t*)engine_level_ptr(ctx, 0xb8);
+        cells = ctx->level_voxels;
+        if (cells == NULL) {
+            cells = (const uint8_t*)engine_level_ptr(ctx, 0xb8);
+        }
     } else if (st != NULL) {
         gw = st->grid_w;
         gh = st->grid_h;

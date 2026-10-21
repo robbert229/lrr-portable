@@ -23,6 +23,7 @@
 #include "texture.hpp"
 #include "tickers.hpp"
 #include "view.hpp"
+#include "camera.hpp"
 #include "message.hpp"
 
 #define WINDOW_W 640
@@ -144,14 +145,37 @@ int LegorrrRun(void)
         &state, &input,
         { &views[0], &views[1], &views[2] },
         NULL, /* level_block — bound to game.level below */
+        NULL, /* level_voxels — resolved at bind (64-bit safe) */
+        NULL, /* level_terrain */
         0.0f, 0,
     };
     /* Engine <-> level binding: the engine sim reads the loaded LevelState
-     * (width/height/voxels) so cameras/tickers see the real terrain. */
+     * (width/height/voxels) so cameras/tickers see the real terrain. The
+     * full pointer cannot ride the 32-bit corpus slot on a 64-bit host, so
+     * the resolved voxel pointer is bound here via the game layer. */
     ctx.level_block = game.level;
+    ctx.level_voxels = game.level != NULL
+                           ? (const uint8_t*)level_load_ptr(game.level,
+                                                            LEVEL_OFF_VOXELS)
+                           : NULL;
+    ctx.level_terrain = game.level != NULL
+                            ? level_load_ptr(game.level, LEVEL_OFF_TERRAIN)
+                            : NULL;
     if (game.level != NULL) {
-        fprintf(log, "frameloop: engine bound to level %dx%d voxel grid\n",
-                engine_level_width(&ctx), engine_level_height(&ctx));
+        fprintf(log, "frameloop: engine bound to level %dx%d, blocksize %.1f, "
+                     "voxels@%sresolved\n",
+                engine_level_width(&ctx), engine_level_height(&ctx),
+                engine_level_blocksize(&ctx),
+                ctx.level_voxels != NULL ? "" : "UN");
+        /* Let the engine's camera grid sweep walk the real voxel grid. */
+        g_camera_grid_enabled = 1;
+    }
+    /* Seed the follow camera at the grid centre so mode-1 starts over the
+     * loaded level instead of the origin. */
+    if (game.level != NULL) {
+        cam_set_pos(&views[0].cam_follow,
+                    (float)engine_level_width(&ctx) * 0.5f,
+                    (float)engine_level_height(&ctx) * 0.5f, 0.0f);
     }
     /* The finding-22 InfoMessages catalog + bus enabled. */
     message_init_defaults();
