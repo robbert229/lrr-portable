@@ -35,6 +35,7 @@ if get_option('platform') == 'native'
                  ['audio', 'test_audio.cpp'], ['camera', 'test_camera.cpp'],
                  ['view', 'test_view.cpp'],
                  ['message', 'test_message.cpp'],
+                 ['airbeat', 'test_airbeat.cpp'],
                  ['block', 'test_block.cpp']]
     test_name = exe[0]
     t = executable(test_name + '_test', exe[1],

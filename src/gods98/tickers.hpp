@@ -12,10 +12,17 @@
 #ifndef LEGORRR_TICKERS_HPP
 #define LEGORRR_TICKERS_HPP
 
+#include "audio.hpp"
 #include "engine.hpp"
 
 /* Run the ordered EngineTick subsystem sequence (finding 03 §4). */
 void EngineSubsystemTickers(EngineContext* ctx, float dt, float scale);
+
+/* Air-beat sound hook (finding 03 §7): point the loop at an AudioPlayer +
+ * SND_AirBeat resource name; NULL player disables audio (messages still
+ * dispatch). airbeat_loop_active() reports the engaged state. */
+void airbeat_set_loop(AudioPlayer* p, const char* sound);
+int  airbeat_loop_active(void);
 
 /* Indexed manager dispatch (corpus ManagerTick FUN_0045a730). */
 void EngineManagerDispatch(EngineContext* ctx, float dt);
