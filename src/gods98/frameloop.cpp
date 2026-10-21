@@ -43,6 +43,24 @@ static int demo_keyheld(int key)
     return s_demo_input != NULL ? input_key_down(s_demo_input, key) : 0;
 }
 
+/* Message-bus demo hooks (finding 22 §1): the game layer's incident
+ * dispatches land here — a sound per id (map to a stand-in wav until the
+ * shipped sounds are wired) and a text callback for the log. */
+static AudioPlayer* s_demo_ap = NULL;
+static void demo_msg_sound(int id, float vol)
+{
+    (void)id;
+    (void)vol;
+    if (s_demo_ap != NULL && s_demo_ap->dev != NULL) {
+        audio_play_named(s_demo_ap, "Sounds\\Buildings\\elec5.wav");
+    }
+}
+static int demo_msg_cb(int id)
+{
+    (void)id; /* the bus appends it to the active queue */
+    return 0; /* unhandled: dedupe callback does not consume */
+}
+
 int LegorrrRun(void)
 {
     const char* wad_dir = env_get("LEGORRR_WAD_DIR", ".");
@@ -174,6 +192,11 @@ int LegorrrRun(void)
         fprintf(log, "frameloop: audio unavailable (headless?) rc=%d\n",
                 audio_status);
     }
+    /* Message bus demo hooks (finding 22): incidents dispatched by the game
+     * layer (AI deposits, advisor hints) land here. */
+    s_demo_ap = &ap;
+    message_set_sound_hook(demo_msg_sound);
+    message_set_callback(demo_msg_cb);
     /* Air supply drains in the demo; the air-beat loop + notifications
      * (0x11/0x12) kick in when it runs low. One loop track, so the air beat
      * replaces the ambient. */
@@ -356,6 +379,16 @@ int LegorrrRun(void)
             if (resolved == 0) {
                 fprintf(log, "frameloop: objective resolved (word 0x%08x)\n",
                         game.level->objective);
+                /* Advisor hint runtime (finding 22): the stream text the
+                 * announcer built; the sound is gated on the outcome's
+                 * suppression bits. */
+                const char* adv = objective_stream(game.level);
+                if (adv[0] != '\0') {
+                    fprintf(log, "frameloop: advisor: %s\n", adv);
+                }
+                if (objective_advisor_shown(game.level) && ap.dev != NULL) {
+                    audio_play_named(&ap, "Sounds\\Buildings\\elec5.wav");
+                }
                 if (!mission_reward_active(&game)) {
                     mission_reward_set_active(&game, 1);
                     fprintf(log, "frameloop: reward screen shown (click its "

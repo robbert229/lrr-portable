@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "gods98/block.hpp"
+#include "gods98/message.hpp"
 #include "entity.hpp"
 #include "level.hpp"
 #include "mission.hpp"
@@ -303,6 +304,12 @@ void mission_set_ore(GameContext* ctx, int32_t v)
 void mission_add_score(GameContext* ctx, int32_t v)
 {
     if (ctx != NULL) ctx->mission.score += v;
+}
+
+void mission_incident(GameContext* ctx, int id)
+{
+    (void)ctx;
+    message_dispatch(id, 0, 0, NULL);
 }
 
 /* Live bridge: write the counters into the level's objective-read slots and

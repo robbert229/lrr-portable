@@ -10,6 +10,7 @@
 #include "game/entity.hpp"
 #include "game/game.hpp"
 #include "game/select.hpp"
+#include "gods98/message.hpp"
 
 static int s_failures = 0;
 
@@ -40,6 +41,8 @@ static void run(GameContext* ctx, int n, float dt)
 int main(void)
 {
     cmd_init();
+    message_clear();
+    message_init_defaults(); /* bus gate on (flags 0x4) + Info catalog */
     GameContext ctx;
     game_context_init(&ctx);
     cmd_context_set(&ctx);
@@ -74,6 +77,7 @@ int main(void)
     CHECK(ctx.mission.ore == ore0, "task not deposited before its duration");
     run(&ctx, 3, 1.0f); /* 2 s duration, dt=1 -> done by the 3rd tick */
     CHECK(ctx.mission.ore == ore0 + AI_TASK_YIELD, "gather deposited ore yield");
+    CHECK(message_active_has(1), "ore deposit fired the OreSeamFound incident");
     CHECK(ai_commands_active(&ctx) == 0, "finished task freed");
 
     /* A flagged minion (kind 0x12) is not a deposit kind: no counter move. */

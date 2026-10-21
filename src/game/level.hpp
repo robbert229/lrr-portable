@@ -122,6 +122,7 @@ typedef struct LevelState {
     uint32_t objective;         /* DAT_004ffbc0 */
     int      objective_pending; /* DAT_004ffe34 (1 = result pending) */
     int      objective_result;  /* DAT_004ffe30 (1 = achieved) */
+    char     obj_stream[80];    /* DAT_004ffe38: "Stream Objective_…" text */
 } LevelState;
 
 /* Objective word bits (finding 22 §2). */

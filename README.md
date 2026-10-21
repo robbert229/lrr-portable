@@ -98,9 +98,9 @@ Open threads, in order of value:
 2. Deferred: dgVoodoo as a perf option; the `Steam.lwo` point-only sprites as glTF.
 3. Reconstruction next: the *live-mod proof* (thread 1), model-aware entity
    rendering on top of the merged LWO loader (#30), and the winapi reference
-   build. Command/AI, selection, the reward screen's save + advance (incl.
-   next-level progression), and the software level renderer are in — the
-   campaign loop Level01 → … → next is playable end-to-end.
+   build. Campaign flow, command/AI, selection, reward save+advance, the
+   advisor/incident bus wiring, and the software level renderer are in —
+   finding 22's runtime side is wired through the engine's message bus.
 
 ## Findings index
 
@@ -450,6 +450,15 @@ finding 12, #14). Three new modules in `src/game/`:
   byte-exact pass can replace the switch. The demo key `g` issues a task for
   the selection. `ai_test` (suite `ai`) covers move/target stepping,
   task yields into the counters, and the queue→executor→ai path.
+- **Advisor + message-bus runtime** (2026-10-21, finding 22): the announcer
+  now builds the `Stream Objective_…` advisor text (`DAT_004ffe38` analog)
+  on every outcome, and `objective_advisor_shown` applies the 0x10/0x20/0x80
+  suppression rule; the frame loop displays the hint (with a sound when a
+  suppression bit is clear). `mission_incident` is the game layer's path
+  into the merged 40-id `Info` bus (#18) — AI gather deposits now dispatch
+  the matching incident ids (`CrystalFound`/`OreSeamFound`/`Constructed`),
+  with demo sound/text hooks on the bus. `objective_test`/`ai_test` cover
+  the stream, the suppression rule and the bus dispatch.
 - **Reward screen + save-zone clicks** (2026-10-21, finding 09): closes the
   reward overlay's button story. `mission_reward_zone` ports
   `RewardZoneCheck @ 0x461dd0` — the `SaveButton` zone (live when the level

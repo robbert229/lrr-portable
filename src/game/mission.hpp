@@ -78,6 +78,10 @@ void mission_set_crystals(GameContext* ctx, int32_t v);
 void mission_set_ore(GameContext* ctx, int32_t v);
 void mission_add_score(GameContext* ctx, int32_t v);
 
+/* Dispatch a message-bus incident id (finding 22 §1): the game layer's path
+ * into the engine's 40-id Info bus (sound/cooldown handled by the bus). */
+void mission_incident(GameContext* ctx, int id);
+
 /* --- reward screen + save zone (finding 09 display half) ---------------- */
 /* The corpus gates the overlay on the Reward/Enable blob + the button
  * surfaces; the demo uses a reconstruction-side `reward_active` flag. */

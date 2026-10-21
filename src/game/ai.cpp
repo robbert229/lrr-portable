@@ -13,19 +13,23 @@
 
 static const void* rec_payload(const void* rec) { return cmd_rec_payload(rec); }
 
-/* Yield a task's deposit into the mission counters by priority kind. */
+/* Yield a task's deposit into the mission counters by priority kind, and
+ * report the incident on the message bus (finding 22 §1). */
 static void task_deposit(GameContext* ctx, int kind)
 {
     switch (kind) {
     case 0: /* Crystal */
         mission_set_crystals(ctx, ctx->mission.crystals + AI_TASK_YIELD);
+        mission_incident(ctx, 0); /* CrystalFound */
         break;
     case 1: /* Ore */
     case 2: /* DefaultCollect */
         mission_set_ore(ctx, ctx->mission.ore + AI_TASK_YIELD);
+        mission_incident(ctx, 1); /* OreSeamFound */
         break;
     case 4: /* Construction */
         ctx->mission.constructions += AI_TASK_YIELD;
+        mission_incident(ctx, 8); /* Constructed */
         break;
     default:
         break; /* other priorities have no counter effect in this subset */

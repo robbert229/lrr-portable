@@ -68,8 +68,17 @@ int objective_check(LevelState* s, int* mark, float dt);
 
 /* Objective-result announcer (corpus FUN_00458670). `who`:
  *   0 pending / 1 achieved / 2 failed / 3 failed-with-crystals.
- * Sets the runtime word bits + result index in the block. */
+ * Sets the runtime word bits + result index in the block, and fills the
+ * advisor stream text (DAT_004ffe38 analog: "Stream Objective_…"). */
 void objective_announce(LevelState* s, int who);
+
+/* The advisor stream text built by the announcer ("" when none). */
+const char* objective_stream(const LevelState* s);
+
+/* Advisor decision (finding 22): should the hint display for the current
+ * outcome? 0 when the outcome's suppression bit (0x10 generic / 0x20
+ * achieved / 0x80 failed) is set or no stream was produced. */
+int objective_advisor_shown(const LevelState* s);
 
 /* Per-frame objective state machine (corpus FUN_00458be0). Consumes the
  * pending-result word and drives checker + announcer when idle. `dt` is the
