@@ -11,6 +11,7 @@
 #include "resource.hpp"
 #include "surface.hpp"
 #include "texture.hpp"
+#include "view.hpp"
 
 #define WINDOW_W 640
 #define WINDOW_H 480
@@ -48,8 +49,18 @@ int LegorrrRun(void)
     EngineState state = {};
     InputState  input = {};
     input_reset(&input);
+    /* The three view contexts (DAT_005560e4/e8/ec): free/cruise cameras with
+     * a glide step; the demo has no world yet, so they tick quietly. */
+    ViewContext views[3] = {};
+    for (int i = 0; i < 3; ++i) {
+        views[i].mode = 3;
+        views[i].step = 8.0f;
+    }
     EngineContext ctx = {
-        ENGINE_APP_NORMAL, 0, 0, 0, 1, &state, &input, 0.0f, 0,
+        ENGINE_APP_NORMAL, 0, 0, 0, 1,
+        &state, &input,
+        { &views[0], &views[1], &views[2] },
+        0.0f, 0,
     };
 
     PlatformWindow* win = platform_create_window("lrr-portable (frame loop)",

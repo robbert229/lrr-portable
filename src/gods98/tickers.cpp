@@ -64,14 +64,6 @@ static void ticker_004520d0(EngineContext* c, float dt, float scale)
     /* TODO: corpus FUN_004520d0 (selection root) */
 }
 
-static void ticker_00435f5c(EngineContext* c, float dt, float scale)
-{
-    (void)c; (void)dt; (void)scale;
-    /* TODO: corpus FUN_00435f5c — one of the three view-context ticks
-     * (DAT_005560e4 / e8 / ec); the table lists the entry three times
-     * because the corpus calls it three times, once per view. */
-}
-
 static void ticker_004091e0(EngineContext* c, float dt, float scale)
 {
     (void)c; (void)dt; (void)scale;
@@ -167,9 +159,6 @@ static const TickerEntry TICKERS[] = {
     { "FUN_0040eab0", ticker_0040eab0, 0 },
     { "FUN_004313b0", ticker_004313b0, 0 },
     { "FUN_004520d0", ticker_004520d0, 0 },
-    { "FUN_00435f5c", ticker_00435f5c, 0 }, /* view A (DAT_005560e4) */
-    { "FUN_00435f5c", ticker_00435f5c, 0 }, /* view B (DAT_005560e8) */
-    { "FUN_00435f5c", ticker_00435f5c, 0 }, /* view C (DAT_005560ec) */
     { "FUN_004091e0", ticker_004091e0, 0 },
     { "FUN_0041ba10", ticker_0041ba10, 0 },
     { "FUN_004291a0", ticker_004291a0, 0 },

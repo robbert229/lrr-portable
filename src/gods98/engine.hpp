@@ -22,6 +22,9 @@
 
 #include "input.hpp"
 
+/* Forward: the view/camera objects (view.hpp behind a cycle-breaking decl). */
+typedef struct ViewContext ViewContext;
+
 /* --- App mode (corpus DAT_00505f88) ------------------------------------ */
 #define ENGINE_APP_NORMAL 0
 #define ENGINE_APP_LOADER 10 /* asset-load benchmark: tick idles, full teardown */
@@ -76,6 +79,7 @@ typedef struct EngineContext {
     EngineState *state_block;  /* DAT_005560d4 */
     InputState  *input;        /* key tables / text pump / quit-dwell
                                 * (findings 04/05; dwell slots per 22) */
+    ViewContext *views[3];     /* DAT_005560e4 / e8 / ec (view.hpp) */
     float        exit_timer;   /* DAT_00556efc — decremented by scaled dt */
     int          tickers_ran;  /* scaffolding: count of dispatched tickers */
 } EngineContext;
