@@ -10,6 +10,7 @@
 #include <math.h>
 
 #include "simtick.hpp"
+#include "message.hpp"
 
 static int s_failures = 0;
 
@@ -25,6 +26,20 @@ static int s_stopped_n = 0;
 static int stop_reposition(int /*handle*/, int /*x*/, int /*y*/)
 {
     ++s_stopped_n;
+    return 0;
+}
+
+static int s_keep_n = 0;
+static int keep_poke(int /*entry*/, int /*a*/, int /*b*/)
+{
+    ++s_keep_n;
+    return 0;
+}
+
+static int s_tree_n = 0;
+static int tree_poke(int /*idx*/, int /*bits*/)
+{
+    ++s_tree_n;
     return 0;
 }
 
@@ -147,6 +162,54 @@ int main(void)
     mg[0].target_a[0] = mg[0].target_a[1] = 0.0f;
     simtick_manager_tick(0, 0.1f, 1);
     CHECK((mg[0].flags & 8u) == 0, "manager: stop-detect clears bit 3");
+
+    /* ---- tranche 8 ------------------------------------------------- */
+    /* cooldown tick (FUN_0041a2c0) decs the message bus cooldown. */
+    message_init_defaults();
+    message_set_flags(0x4u);
+    message_config_set(3, "Sounds\\x.wav", 4.0f, 0);
+    simtick_cooldown_tick(&ctx, 1.5f);
+    CHECK(message_cooldown(3) > 2.4f && message_cooldown(3) < 2.6f,
+          "cooldown: decremented by dt");
+    simtick_cooldown_tick(&ctx, 10.0f);
+    CHECK(message_cooldown(3) < 0.0f, "cooldown: overshoot goes negative");
+    message_config_set(3, "Sounds\\x.wav", 0.0f, 0);
+    simtick_cooldown_tick(&ctx, 1.0f);
+    CHECK(message_cooldown(3) == 0.0f, "cooldown: zero stays zero");
+
+    /* sound keep-alive (FUN_0047aba0): gate + hook. */
+    s_keep_n = 0;
+    simtick_set_keepalive_hook(keep_poke);
+    simtick_set_sound_guards(1, 1);
+    simtick_sound_keepalive(&ctx);
+    CHECK(s_keep_n == 1, "keepalive: poked when sound on + active");
+    simtick_set_sound_guards(0, 1);
+    simtick_sound_keepalive(&ctx);
+    CHECK(s_keep_n == 1, "keepalive: gated off");
+
+    /* editor steps (FUN_0044cfa0). */
+    simtick_set_step_hook(NULL);
+    simtick_set_editor_state(0, 1);
+    simtick_editor_steps(&ctx);
+    CHECK(simtick_editor_steps_run() == 5, "editor: five steps");
+    simtick_set_editor_state(0x100u, 1);
+    simtick_editor_steps(&ctx);
+    CHECK(simtick_editor_steps_run() == 0, "editor: gated by bit 0x100");
+    simtick_set_editor_state(0, 0);
+    simtick_editor_steps(&ctx);
+    CHECK(simtick_editor_steps_run() == 0, "editor: gated by inactive");
+
+    /* bit-field tree (FUN_0049cf90). */
+    simtick_set_tree_hook(tree_poke);
+    s_tree_n = 0;
+    int treebase[16] = {};
+    treebase[8 + 1] = 2; /* low short of entry 0's +1 int = 2 */
+    simtick_bitfield_tree(treebase, 1);
+    CHECK(s_tree_n == 1, "tree: code matched (low short 2)");
+    simtick_set_tree_hook(NULL);
+    s_tree_n = 0;
+    simtick_bitfield_tree(treebase, 1);
+    CHECK(s_tree_n == 0, "tree: counts only via hook");
 
     if (s_failures == 0) {
         printf("simtick_test: PASS\n");

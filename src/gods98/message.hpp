@@ -57,8 +57,14 @@ void message_dispatch(int id, uint32_t p2, uint32_t p3, const void* p4);
 /* advance the bus clock; drives cooldown comparisons. */
 void message_update(float dt);
 
+/* corpus FUN_0041a2c0: decrement every configured cooldown toward 0. */
+void message_cooldown_tick(float dt);
+
 /* active queue census (tests/diagnostics). */
 int  message_active_count(void);
 int  message_active_has(int id);
+
+/* per-id cooldown value (tests/diagnostics). */
+float message_cooldown(int id);
 
 #endif /* LEGORRR_MESSAGE_HPP */

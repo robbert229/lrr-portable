@@ -185,6 +185,17 @@ void message_update(float dt)
     s_now += dt;
 }
 
+/* corpus FUN_0041a2c0: the ticker walks the cooldown array (stride 5 in the
+ * corpus block; per-id here) and decrements toward zero. */
+void message_cooldown_tick(float dt)
+{
+    for (int i = 0; i < MESSAGE_MAX_ID; ++i) {
+        if (s_cfg[i].cooldown > 0.0f) {
+            s_cfg[i].cooldown -= dt;
+        }
+    }
+}
+
 int message_active_count(void)
 {
     return s_queue_count;
@@ -193,4 +204,12 @@ int message_active_count(void)
 int message_active_has(int id)
 {
     return message_queue_find(id) >= 0;
+}
+
+float message_cooldown(int id)
+{
+    if (id < 0 || id >= MESSAGE_MAX_ID) {
+        return 0.0f;
+    }
+    return s_cfg[id].cooldown;
 }
