@@ -152,6 +152,10 @@ typedef struct RewardScreen {
  * four tables, other codes share the last table). */
 #define ENTITY_TYPES 4
 #define ENTITY_CAP 256
+/* Selection table bound (finding 06: adds cap at 100 entries). */
+#define SELECTION_MAX 100
+/* Selected flag word on EntitySlot.flags (corpus entity +0xfa & 0x200000). */
+#define ENTITY_SELECTED 0x200000u
 typedef struct EntitySlot {
     int32_t type;       /* corpus entity-type code (1..9)         */
     int32_t etype;      /* same, stored for the cmd task mapping  */
@@ -212,6 +216,16 @@ typedef struct GameContext {
     EntitySlot   entity[ENTITY_TYPES][ENTITY_CAP]; /* typed entity slots  */
     int          entity_count[ENTITY_TYPES];
     int          entity_placed;  /* objects placed from the .ol this level */
+
+    /* --- selection manager (finding 06) ----------------------------------- */
+    EntitySlot*  selection[SELECTION_MAX]; /* DAT_004fef2c array + count   */
+    int          selection_count;           /* DAT_004ff298 */
+
+    /* --- command-driven hooks -------------------------------------------- */
+    /* Held-key probe for the executor's cheat-keybind pre-pass
+     * (SelectionRoot step 1); set by the frame loop to read the input
+     * tables. NULL disables the pre-pass. */
+    int (*input_keyheld)(int key);
 } GameContext;
 
 /* Reset a GameContext to a known-fresh state (zeroed; cfg untouched). */

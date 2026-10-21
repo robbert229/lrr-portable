@@ -10,6 +10,7 @@
 #include "game/mission.hpp"
 #include "game/objective.hpp"
 #include "game/savegame.hpp"
+#include "game/select.hpp"
 #include "platform/platform.h"
 #include "audio.hpp"
 #include "engine.hpp"
@@ -30,6 +31,14 @@ static const char* env_get(const char* name, const char* fallback)
 {
     const char* v = getenv(name);
     return (v != NULL && v[0] != '\0') ? v : fallback;
+}
+
+/* Held-key probe for the executor's cheat-keybind pre-pass (finding 06):
+ * reads the current frame's input tables. */
+static const InputState* s_demo_input = NULL;
+static int demo_keyheld(int key)
+{
+    return s_demo_input != NULL ? input_key_down(s_demo_input, key) : 0;
 }
 
 int LegorrrRun(void)
@@ -109,6 +118,11 @@ int LegorrrRun(void)
     };
     /* The finding-22 InfoMessages catalog + bus enabled. */
     message_init_defaults();
+
+    /* Selection/command wiring (finding 06): the executor's held-key probe
+     * reads this frame's input tables; a keybind demo for a global op. */
+    game.input_keyheld = demo_keyheld;
+    cmd_bind_key('z', 0x40, 0, 0, 0, 0);
 
     PlatformWindow* win = platform_create_window("lrr-portable (frame loop)",
                                                  WINDOW_W, WINDOW_H);
@@ -260,6 +274,45 @@ int LegorrrRun(void)
         }
         if (game.level != NULL && input_key_edge(&input, '+')) {
             mission_add_score(&game, 10);
+        }
+
+        /* Selection / pointer input (finding 06): the tracked mouse maps to
+         * a grid cell; 1-4 pick the nearest placed entity, 'm' moves the
+         * selection there, 'n' clears. Commands are produced into the
+         * double-buffered queue and dispatched by cmd_queue_tick below. */
+        if (game.level != NULL) {
+            s_demo_input = &input;
+            int lw = level_width(game.level);
+            int lh = level_height(game.level);
+            float cx = lw > 0 ? (float)input.mouse_x / (float)WINDOW_W * (float)lw : 0.0f;
+            float cy = lh > 0 ? (float)input.mouse_y / (float)WINDOW_H * (float)lh : 0.0f;
+
+            if (input_key_edge(&input, 'n')) {
+                selection_clear(&game);
+                fprintf(log, "frameloop: selection cleared\n");
+            }
+            for (int t = 1; t <= 4; ++t) {
+                char k = (char)('0' + t);
+                if (input_key_edge(&input, k)) {
+                    EntitySlot* hit = selection_pick(&game, cx, cy, 3.0f);
+                    if (hit != NULL && (hit->type == t || hit->etype == t)) {
+                        selection_add(&game, hit);
+                        fprintf(log, "frameloop: picked %s (type %d) at cell "
+                                     "(%.1f,%.1f)\n", hit->name, hit->type,
+                                hit->x, hit->y);
+                    } else if (hit != NULL) {
+                        selection_clear(&game);
+                        selection_add(&game, hit);
+                        fprintf(log, "frameloop: picked nearest %s (type %d)\n",
+                                hit->name, hit->type);
+                    }
+                }
+            }
+            if (input_key_edge(&input, 'm')) {
+                int n = selection_cmd_move(&game, cx, cy);
+                fprintf(log, "frameloop: move %d selected -> cell (%.1f,%.1f)\n",
+                        n, cx, cy);
+            }
         }
         if (rock_x < 0) { rock_x = 0; }
         if (rock_y < 0) { rock_y = 0; }
