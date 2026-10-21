@@ -61,6 +61,7 @@ typedef struct PlatformEvent {
     int code;   /* canonical key code (KEYDOWN/KEYUP) */
     int mx;     /* absolute mouse x (MOUSE) */
     int my;     /* absolute mouse y (MOUSE) */
+    int button; /* 1 = button-press edge (MOUSE); 0 = motion/release */
 } PlatformEvent;
 
 PlatformWindow* platform_create_window(const char* title, int width, int height);

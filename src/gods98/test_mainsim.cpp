@@ -26,7 +26,7 @@ static void CHECK(int cond, const char* what)
 static void press(InputState* in, int key)
 {
     input_reset(in);
-    PlatformEvent e = { PLATFORM_EVENT_KEYDOWN, key, 0, 0 };
+    PlatformEvent e = { PLATFORM_EVENT_KEYDOWN, key, 0, 0, 0 };
     input_capture_events(in, &e, 1);
 }
 

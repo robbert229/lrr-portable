@@ -149,6 +149,33 @@ int main(void)
     /* Idempotent: a second update reports nothing new. */
     CHECK(mission_update(&ctx) == 0, "no new completions on second update");
 
+    /* Reward-screen zones (finding 09): SaveButton is live when the level
+     * result is "achieved" (+0x27c == 1), AdvanceButton otherwise. */
+    mission_reward_set_active(&ctx, 1);
+    level_set_int(lvl, LEVEL_OFF_OBJ_RESULT, 1);
+    {
+        int hs = 0, ha = 0;
+        CHECK(mission_reward_zone(&ctx, 15, 15, &hs, &ha) == 1 && hs == 1,
+              "save zone hit when achieved");
+        hs = ha = 0;
+        CHECK(mission_reward_zone(&ctx, 315, 15, &hs, &ha) == 0,
+              "advance zone inert when achieved (corpus branch)");
+        hs = ha = 0;
+        CHECK(mission_reward_zone(&ctx, 200, 200, &hs, &ha) == 0,
+              "no zone hit outside the rects");
+    }
+    level_set_int(lvl, LEVEL_OFF_OBJ_RESULT, 0);
+    {
+        int hs = 0, ha = 0;
+        CHECK(mission_reward_zone(&ctx, 315, 15, &hs, &ha) == 1 && ha == 1,
+              "advance zone hit when not achieved");
+        hs = ha = 0;
+        CHECK(mission_reward_zone(&ctx, 15, 15, &hs, &ha) == 0,
+              "save zone inert when not achieved");
+    }
+    CHECK(mission_reward_click(&ctx, 1) != 0, "reward click commits");
+    CHECK(mission_reward_active(&ctx) == 0, "overlay closed after the click");
+
     free(lvl);
     block_close(cfg);
     if (s_failures != 0) {

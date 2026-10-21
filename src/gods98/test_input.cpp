@@ -98,15 +98,16 @@ int main(void)
     InputState c = {};
     input_reset(&c);
     PlatformEvent evs[4] = {
-        { PLATFORM_EVENT_KEYDOWN, 'a', 0, 0 },
-        { PLATFORM_EVENT_KEYDOWN, PLATFORM_KEY_RIGHT, 0, 0 },
-        { PLATFORM_EVENT_MOUSE, 0, 300, 200 },
-        { PLATFORM_EVENT_KEYUP, PLATFORM_KEY_RIGHT, 0, 0 },
+        { PLATFORM_EVENT_KEYDOWN, 'a', 0, 0, 0 },
+        { PLATFORM_EVENT_KEYDOWN, PLATFORM_KEY_RIGHT, 0, 0, 0 },
+        { PLATFORM_EVENT_MOUSE, 0, 300, 200, 1 },
+        { PLATFORM_EVENT_KEYUP, PLATFORM_KEY_RIGHT, 0, 0, 0 },
     };
     input_capture_events(&c, evs, 4);
     CHECK(c.cur['a'] == 1, "capture: keydown ascii");
     CHECK(c.cur[PLATFORM_KEY_RIGHT] == 0, "capture: keyup clears");
     CHECK(c.mouse_x == 300 && c.mouse_y == 200, "capture: mouse");
+    CHECK(c.mouse_press == 1, "capture: mouse press edge latched");
     CHECK(input_key_edge(&c, 'a'), "capture: edge on fresh prev");
 
     /* text pump with clear=0 keeps cur for MainSimStep (frame-loop model). */
@@ -123,18 +124,18 @@ int main(void)
     /* two-frame edge flow (capture -> consume -> frame boundary). */
     InputState f = {};
     input_reset(&f);
-    PlatformEvent f1 = { PLATFORM_EVENT_KEYDOWN, PLATFORM_KEY_UP, 0, 0 };
+    PlatformEvent f1 = { PLATFORM_EVENT_KEYDOWN, PLATFORM_KEY_UP, 0, 0, 0 };
     input_capture_events(&f, &f1, 1);
     CHECK(input_key_edge(&f, PLATFORM_KEY_UP), "flow: frame1 edge");
     input_begin_frame(&f); /* frame boundary: cur -> prev, cur cleared */
     CHECK(!input_key_edge(&f, PLATFORM_KEY_UP), "flow: no edge after boundary (released)");
-    PlatformEvent f2 = { PLATFORM_EVENT_KEYDOWN, PLATFORM_KEY_UP, 0, 0 };
+    PlatformEvent f2 = { PLATFORM_EVENT_KEYDOWN, PLATFORM_KEY_UP, 0, 0, 0 };
     input_capture_events(&f, &f2, 1);
     CHECK(!input_key_edge(&f, PLATFORM_KEY_UP), "flow: held key does not re-edge");
-    PlatformEvent f3 = { PLATFORM_EVENT_KEYUP, PLATFORM_KEY_UP, 0, 0 };
+    PlatformEvent f3 = { PLATFORM_EVENT_KEYUP, PLATFORM_KEY_UP, 0, 0, 0 };
     input_capture_events(&f, &f3, 1);
     input_begin_frame(&f); /* boundary after release: prev := cur(all clear) */
-    PlatformEvent f4 = { PLATFORM_EVENT_KEYDOWN, PLATFORM_KEY_UP, 0, 0 };
+    PlatformEvent f4 = { PLATFORM_EVENT_KEYDOWN, PLATFORM_KEY_UP, 0, 0, 0 };
     input_capture_events(&f, &f4, 1);
     CHECK(input_key_edge(&f, PLATFORM_KEY_UP), "flow: press-after-release edges");
 

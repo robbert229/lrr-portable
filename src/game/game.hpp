@@ -140,6 +140,11 @@ typedef struct RewardScreen {
     /* SaveButton / AdvanceButton hit zones (corpus DAT_00555b60..b98). */
     float save_x, save_y;
     float advance_x, advance_y;
+    /* Button sizes — the corpus derives these from the widget surface
+     * (image dims, FUN_0047dbf0); defaults cover the demo until the
+     * surface lane exists. */
+    float save_w, save_h;
+    float advance_w, advance_h;
 } RewardScreen;
 
 /* Entity slot model (finding 10 §"EntityPointer"): the corpus keeps four
@@ -211,6 +216,7 @@ typedef struct GameContext {
     GameMission mission;         /* live progress counters                 */
     RewardScreen reward_screen;  /* Reward display keys (finding 09)        */
     int   crystal_quota;         /* DAT_005007ec (Quota.Crystals, <= 26)   */
+    int   reward_active;         /* reward overlay shown (reconstruction)  */
 
     /* --- entity table (finding 10; object list placements) -------------- */
     EntitySlot   entity[ENTITY_TYPES][ENTITY_CAP]; /* typed entity slots  */

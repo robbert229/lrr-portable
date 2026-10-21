@@ -96,11 +96,10 @@ Open threads, in order of value:
    only link-by-link; repacking a modified `.uv` (e.g. a `GC_Larm.uv` pilot re-skin) and
    observing the change in-game has not been done.
 2. Deferred: dgVoodoo as a perf option; the `Steam.lwo` point-only sprites as glTF.
-3. Reconstruction next: the *reward-screen save-zone clicks* (finishing
-   finding 09), the live-mod proof (thread 1), and the winapi reference
-   build. The command/AI loop is closed, and the level now renders through
-   the port's own software rasterizer (finding 22 §3) with live entity
-   movement.
+3. Reconstruction next: the *live-mod proof* (thread 1), model-aware entity
+   rendering on top of the merged LWO loader (#30), and the winapi reference
+   build. Command/AI, selection, the reward screen's save zone, and the
+   software level renderer are in.
 
 ## Findings index
 
@@ -450,6 +449,17 @@ finding 12, #14). Three new modules in `src/game/`:
   byte-exact pass can replace the switch. The demo key `g` issues a task for
   the selection. `ai_test` (suite `ai`) covers move/target stepping,
   task yields into the counters, and the queue→executor→ai path.
+- **Reward screen + save-zone clicks** (2026-10-21, finding 09): closes the
+  reward overlay's button story. `mission_reward_zone` ports
+  `RewardZoneCheck @ 0x461dd0` — the `SaveButton` zone (live when the level
+  result index is "achieved") and `AdvanceButton` zone (otherwise) hit-tested
+  against the tracked mouse, and `mission_reward_click` runs the
+  `FUN_00462780` handler → `CheckpointStep`. The overlay shows
+  automatically when an objective resolves (or press `y`), the renderer draws
+  the two button rects, and a **real mouse press** (SDL button forwarded
+  through `PlatformEvent.button` into the input tables — `input_mouse_pressed`)
+  or `b` commits the checkpoint. `mission_test` covers the zone hit tests
+  and the click path.
 - **Software level renderer** (2026-10-21, finding 22 §3): `src/game/render.*`
   is the port's own rasterizer — D3DRM is confirmed software-only, so the
   reconstruction draws the level itself. `level_render_map` paints the
@@ -470,10 +480,12 @@ reward/entity tables) so tests run isolated. The frame loop now loads
 `LEGORRR_LEVEL` (default `Level01`) from `Lego.cfg`, seeds tasks/reward and
 places the `.ol`, runs the mission bridge + objective tick per frame, and
 exposes `S` (build blob + commit slot), `L` (`CheckpointStep`),
-`c`/`o`/`+` (live crystal/ore/score — the entity sim's stand-in), and the
-selection keys (`1`–`4` pick / `m` move / `g` gather-task / `n` clear,
-findings 06/10), and the software level renderer draws the grid + live
-entities (finding 22 §3). Nine suites use synthetic fixtures only:
+`c`/`o`/`+` (live crystal/ore/score — the entity sim's stand-in), the
+selection keys (`1`–`4` pick / `m` move / `g` gather-task / `n` clear),
+`y` (toggle the reward overlay) and the **mouse-button click** (reward
+save/advance zones, finding 09) — and the software level renderer draws the
+grid + live entities (finding 22 §3). Ten suites use synthetic fixtures
+only:
 
 ```sh
 meson test -C build --suite level
@@ -485,9 +497,7 @@ meson test -C build --suite cmd
 meson test -C build --suite select
 meson test -C build --suite ai
 meson test -C build --suite render
-```
-
-Passing `-Dtest_wads_dir=<game>` adds real-wad probing to `level_test`,
+```Passing `-Dtest_wads_dir=<game>` adds real-wad probing to `level_test`,
 mirroring the resource/texture/sound/block suites: it mounts the shipped
 wads and reports how many Lego.cfg groups resolve a `SurfaceMap`.
 Best-effort — the fixtures are the guaranteed coverage, and the probe is
