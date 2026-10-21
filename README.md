@@ -246,6 +246,20 @@ scan without invalidating what parsed — exactly the reference behaviour.
 20,119 polygons / 3,396 surfaces) against the `rrlwo.py` ground truth, plus
 spot checks (the four 0-based POLS outliers, `Arml.lwo`'s sidecar paths).
 
+**Entity-visual assembly** (`src/gods98/entity.*`, finding 12 §4): the `.ae`
+per-entity activity table the factory `FUN_00472cd0` builds — kind dispatch
+(split `:` with the NOTEXTURE flag, 9-slot table `{NULL,MESH,FRAME,ANIM,ACT,-,-,
+LWS,LWO}`), the `<name>\<basename>.ae` open, root `SCALE`, then the
+`Activities` rows in document order: `FILE` gating, `TRANSCOEF`/`TRIGGER`
+defaults, `LWSFILE`/`LOOPING` bools, `SAMPLE`, and the `!`-key
+reduce-animation gate (feature word bit `0x400000`). Scene instantiation
+(`FUN_00475d10`, `FUN_004765c0`) is a documented seam — the module ends at
+the parsed table. `entity_ae_test` (suite `entity_ae`) runs synthetic
+grammar cases and, with `test_wads_dir` set, assembles **all 56 shipped
+`.ae` files** under both feature modes: 439 rows digest `e4e3630c` (default)
+and 354 rows digest `fc217039` (`-reduceanimation`), cross-checked against
+the `tools/rrae.py` ground-truth model.
+
 - **`native`** (primary, end goal): compiles the reconstruction C++ against
   **miniwin** (SDL3) — no Wine layer. Host compiler, no cross file. miniwin
   comes in as a sparse git submodule — bootstrap with `tools/setup-miniwin.sh`

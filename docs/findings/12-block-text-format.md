@@ -94,21 +94,49 @@ constructor.)
 
 From `FUN_00472cd0` (body `0x472cd0–0x473334`), constants at `0x4aaabc–0x4aab1c`:
 `FRAME`, `SCALE`, `SAMPLE`, `LOOPING`, `LWSFILE`, `TRIGGER`, `TRANSCOEF`, `FILE`,
-`Activities`, plus `%s.%s`, `%s_%s`, `ActFrame`. Flow per object:
+`Activities`, plus `%s.%s`, `%s_%s`, `ActFrame` and the `"::"` path joiner
+`DAT_004aab18` (bytes `3a 3a 00`). Flow per entity (`src/gods98/entity.cpp`):
 
-1. Build `<dir>\<name>.ae` (`%s\%s.%s` + ext `"ae"`), `BlockOpen`.
-2. Read the `<exe-base> Activities` subgroup (`"%s%s%s"` + `DAT_0076ae20`,
-   §5.1); iterate activity records (`FUN_00478ff0`, chain via `+4`).
-3. For each activity `X`: read `X … FILE` (animation name),
-   `X … TRANSCOEF` (float via `FUN_0048d980`, default `DAT_004b8a14`),
-   `X … LWSFILE`, `TRIGGER`, `SCALE`, `LOOPING`.
-4. A leading `!` on an activity name makes it conditional on debug flag
-   `DAT_00505f84 & 0x400000` (the flag masks the `!` away otherwise) —
-   developer switches shipped in data files.
-5. Result record `+0x10 = 4`; downstream: model load (finding 11 §1) and scene
-   assembly.
+1. Opening: `FUN_00472cd0` is the ACT branch (kind 4) of the entity-visual
+   dispatch — `FUN_00475930` matches the kind word case-insensitively against
+   the 9-slot table initialized by `FUN_00472710`:
+   `{NULL, MESH, FRAME, ANIM, ACT, -, -, LWS, LWO}` (indices 0–8; slots 5/6
+   are zero and never match); an optional `:NOTEXTURE` suffix sets the
+   no-texture flag for the mesh kinds. All 13 call sites pass an extended
+   kind (`"MESH"`, `"LWO"`, `"LWS"`, `"ANIM"`, `"ACT"`, `"LWO:NOTEXTURE"`).
+2. The `.ae` path is `<name>\<basename(name)>.ae`: the name argument is
+   copied, split on `'\'` (`FUN_00477440`, delimiter `DAT_004a19c8`), and the
+   last token is re-joined with `"%s\%s.%s"` (`0x4a19b8`) + ext `"ae"`
+   (`0x4a19c4`). `BlockOpen` (`FUN_00478e60`) parses it.
+3. The record is allocated (`FUN_00472950`, result `+0x10 = 4`), then the
+   activity list is read from the `<exe-base> Activities` subgroup (§5.1),
+   iterated in document order (`FUN_00478ff0` + sibling chain).
+4. Each activity record contributes a row keyed on its **value** (the target
+   animation group name, `record+8`); per-row keys are read under
+   `<root>::<group>::<KEY>`:
+   `FILE` (animation/scene base name — without it the activity makes no
+   scene and is omitted), `TRANSCOEF` (float via `FUN_0048d980`, default
+   `DAT_004b8a14` = 0), `TRIGGER` (int via `FUN_0048dad0`, default 0),
+   `LWSFILE` and `LOOPING` (shared bool `FUN_00477710`: `{YES,TRUE,ON}→1`,
+   `{NO,FALSE,OFF}→0`, else 2 — the scene flag is `LWSFILE == TRUE` and
+   `LOOPING != 0`), `SAMPLE` (string, `FUN_00479050`).
+5. A leading `!` on the activity **key** (`record+4`) gates the row on the
+   engine feature word `DAT_00505f84`: when bit `0x400000` is **set** the
+   activity is skipped; when **clear** (the shipped default) it is processed
+   with the `!` stripped. The bit is the `-reduceanimation` standard
+   parameter (`FUN_00477bf0`, string `-reduceanimation` at `0x4aad04`) —
+   reduced-animation mode drops these animation states.
+6. Root-level `SCALE` is read as a float (`<root>::Scale`); a non-zero value
+   is applied through the record vtable (`+0x40`). Scene assembly
+   (`FUN_00475d10`, `FUN_004765c0`, first-row registration `FUN_00473370`)
+   is the downstream seam (§4.3 below) — the ported module ends at the parsed table.
 
-### `.lws`/scene side
+Corpus health: every shipped `.ae` (56/56, all in `LegoRR0.wad`) has exactly the
+grammar above, 439 rows across the 56 files under the default feature word,
+and the reduce-animation variant drops to 354 — both digest-verified by
+meson suite `entity_ae` (`--real`).
+
+### `.lws`/scene side (§4.3)
 
 Scene assembly (`FUN_00475d10`, `FUN_004765c0`) resolves objects through the
 vtable DB (`DAT_00505914 + 0x10`) and reads `ActFrame` entries `%s_%s` — the
@@ -149,5 +177,8 @@ linking between entity activities and `.lws` scene frames (finding 11 §4).
 | `0x479270` / `0x479490` | record alloc / pool grow |
 | `0x4792e0` | BlockFindPath |
 | `0x4790b0` / `0x478ff0` / `0x478f50` | value / subgroup / default-get |
-| `0x472cd0` | AssembleEntityConfig (`.ae` consumer) |
+| `0x472cd0` | AssembleEntityConfig (`.ae` consumer; ACT branch ported as `src/gods98/entity.cpp`) |
+| `0x472710` | kind-table init (sets `DAT_0076add8–adf8`, `DAT_0076ae00/04/08/0c/20`) |
+| `0x475930` | kind dispatch (`FUN_00475930`: `:`-split, NOTEXTURE flag, 9-slot table) |
+| `0x477440` | token splitter (`FUN_00477440`: delimiter string, last-segment out) |
 | `0x475d10` / `0x4765c0` | scene animation assembly |
