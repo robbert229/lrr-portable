@@ -4,6 +4,7 @@ gods98_lib = static_library('gods98',
   'engine.cpp',
   'tickers.cpp',
   'resource.cpp',
+  'texture.cpp',
   include_directories : include_directories('.'),
   install : false)
 
@@ -24,4 +25,15 @@ if get_option('platform') == 'native'
   test('resource', resource_test,
     args : test_wads == '' ? [] : ['--real', test_wads],
     suite : 'resource')
+
+  # Texture loader validation (finding 13): synthetic BMP round trips always;
+  # real-wad checks compare pixel hashes against PIL-derived references.
+  texture_test = executable('texture_test',
+    'test_texture.cpp',
+    include_directories : include_directories('.'),
+    link_with : gods98_lib,
+    install : false)
+  test('texture', texture_test,
+    args : test_wads == '' ? [] : ['--real', test_wads],
+    suite : 'texture')
 endif
