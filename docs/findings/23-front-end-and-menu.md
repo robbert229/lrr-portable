@@ -224,3 +224,31 @@ StartLevelSelected     0x460220   ; commit pending level record → DAT_005529c4
 | `ScrollToSliderIndex*` / `OptionMusicDefault` exact option binding | inferred (structure; names provisional) |
 | `SlotSummary` exact string format `Game %i …` | inferred (format arg — verified signature only) |
 | Boot init `FUN_0041fb50` internal order (movies vs menu) | inferred (callee set; not fully decompiled) |
+
+## Menu render lane (decompile-first ledger, 2026-10-21)
+
+Renderer follow-up session — every visual constant now cites its corpus
+function instead of being invented port-side (the black-background and
+placement bugs that prompted this are both traceable here):
+
+| Behavior | Corpus source | Observed fact |
+| --- | --- | --- |
+| Font cache | `FUN_00410560` | name → cached font object (`+8` slot); miss → `FUN_00479ee0` |
+| Cell size | `FUN_00479ee0` | `cell_w = surface.w / 10`, `cell_h = surface.h / 19` (Hi font 380×817 → 38×43) |
+| Glyph grid | `FUN_0047a470` | `g = ch − 0x20`, index `row = g/10`, `col = g%10`, entry `font + (row + col·19)·16` (PEMA) |
+| Glyph entry | `FUN_00479ee0` | 16-byte `{x,y,w,h}` floats; `w` starts at `cell_w` and is **shrunk by a right-edge pixel scan** while `(px & mask) == key` (the ink-width advance); `h` stays `cell_h` |
+| Line height / tab | `FUN_00479ee0` | `font+0xbe4` = line height, `font+0xbe8 = tab << 3` (final `__ftol` pair) |
+| Colour key / mask | `FUN_0047def0` / `FUN_0047df50` | CCKey value assembled from surface state; mask = `-1 << (32 − depth)` |
+| Surface key source | `FUN_0047d9d0` | probes keys from **sampled image pixels** (start of pixel data and near `+0x3fc`); actual attach in `FUN_0047e050` (open) |
+| String engine | `FUN_0047a1e0` | `%b` → `@[0x…]` icon-in-text, `\t` tab, `\n` line + `font+0xbe4`; returns width |
+| Placement | `MenuTick @ 0x412c00` | item drawn at `(item.x + menu.base_x [+ centre], item.y + menu.base_y)` — base from `Position` (`+0x2c/+0x30`), item offsets `+0x18/+0x1c/+0x20` |
+| Blit flags | `FUN_0047dcb0` | `0x1000000` / `0x1008000` blit-through-slot (key override path) |
+
+Empirical cell structure (rasterized from `Menu_Font_Hi.bmp`): each 38×43 cell
+is ~40% **solid black** (left/top/bottom frame strips) + ~40% **key-red**
+background, with the **gold glyph + dark edge** between — even the space cell
+carries 430 black pixels. The port keys **both** pure red and pure black
+(`FE_FONT_KEY`, `FE_FONT_BLACK`) to reproduce the engine's net rendering
+(clean gold glyphs, no backing) on the art; whether the loader's sampled
+CCKey is the first or last palette pixel (`FUN_0047e050` attach) remains the
+one open item of this ledger.

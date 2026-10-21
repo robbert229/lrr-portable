@@ -55,10 +55,14 @@ extern "C" {
 #define FE_FONT_GRID_COLS 10
 #define FE_FONT_GRID_ROWS 19
 #define FE_FONT_KEY       0xffff0000u
-/* Shipped font cells are ~40% pure black *and* ~40% key-red background
- * (even the space cell) with the gold/grey glyph ink between — the engine
- * blits each glyph's measured ink box, so neither background colour shows.
- * Skip both so the art shows through the text. */
+/* Shipped font cells (Menu_Font_Hi.bmp 380x817) are ~40% pure black + ~40%
+ * key-red with the gold glyph + dark edge between — the engine blits each
+ * glyph's measured ink box so neither backing colour shows. Loader
+ * FUN_00479ee0 measures per-glyph ink by a right-edge scan against the
+ * surface's colour key(`FUN_0047def0` key / `FUN_0047df50` depth mask, the
+ * key itself sampled from the image by FUN_0047d9d0). The port keys both
+ * pure red and pure black (background strips + key) to reproduce the same
+ * clean-glyph net look on the art. */
 #define FE_FONT_BLACK     0xff000000u
 
 /* Item kinds — MenuItemType @ 0x413e60 (values 0..5; 5 = the "Next" catch-
