@@ -87,6 +87,11 @@ typedef struct FeItem {
     int   flag;                /* Trigger flag / Cycle count / slider lo      */
     int   level_start;         /* 1 = grafted picker row: Enter starts a level */
     int   load_slot;           /* 1 = grafted save-slot row: Enter loads it    */
+    /* Slider / Cycle interaction state (Options menus). `value` lives in
+     * [min, max]; cycles min=0, max=count-1 and carry their option texts. */
+    int   min, max, value;
+    int   cycle_count;
+    char  cycle_opts[4][24];
 } FeItem;
 
 typedef struct FeSubmenu {
@@ -142,6 +147,7 @@ typedef struct FrontEnd {
     int  sel;                       /* selected item index                */
     int  quit;                      /* user chose Quit (Yes on the confirm) */
     int  load_slot;                 /* FE_EVT_LOAD_GAME target slot id     */
+    int  option_changed;            /* 1: a Slider/Cycle value changed this tick */
     char pending_level[FE_LEVEL_NAME_MAX]; /* level group to load (no "Levels::") */
     char resume_level[FE_LEVEL_NAME_MAX];  /* current level (pause Restart)   */
 } FrontEnd;
@@ -152,6 +158,7 @@ typedef struct FrontEnd {
  * hovered row becomes the selection); `click` activates it like Enter. */
 typedef struct FeInput {
     int up, down;     /* move selection */
+    int left, right;  /* adjust a Slider/Cycle value */
     int enter;        /* activate selection (keyboard) */
     int esc;          /* back one submenu / close */
     int mouse_x;      /* pointer x (>= 0 = mouse in use) */

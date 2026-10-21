@@ -328,7 +328,11 @@ headlessly opens the pause at frame N for screenshots. **Load slots**
 (2026-10-21): the Load_A_Saved_Game screen lists the on-disk slots
 (`SaveMenuBuild @ 0x415a10` rows fed by `save_slot_state`) — picking one
 resumes the furthest completed record's campaign level and restores its
-checkpoint (task + reward table) over the seeded mission. New key:
+checkpoint (task + reward table) over the seeded mission. **Options
+sliders** (2026-10-21): the Options/Advanced `Slider`/`Cycle` items respond
+to `←`/`→` (and render a live bar+knob / current option) — the volume
+families (SFX/Music/Sound) drive the audio seam, the rest are state-only
+until the engine's option globals are wired. New key:
 **`PLATFORM_KEY_ENTER`** at the seam. Suites: `block` (`::` paths) and
 `frontend` (fixtures + a `--real` probe that builds the whole front end from
 the shipped `Lego.cfg` — 24-level campaign chain, 8 tutorials, 32 picker
