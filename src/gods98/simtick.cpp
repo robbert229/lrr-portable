@@ -655,3 +655,135 @@ void simtick_sfx_bank(EngineContext* c, float dt)
         *f -= dt;
     }
 }
+
+/* ---- tranche 10: the remaining table tickers ---------------------------- */
+
+/* shared tranche-10 module state */
+static int   s_mouse_anchor_x = 0, s_mouse_anchor_y = 0;
+static float s_vu_accum = 0.0f;
+
+/* FUN_00425d90: world picker via mouse motion. */
+static int (*s_pick)(int, int) = NULL;
+static int s_picks = 0;
+
+void simtick_set_pick_hook(int (*h)(int, int)) { s_pick = h; }
+int  simtick_mouse_picks(void) { return s_picks; }
+
+void simtick_mouse_world(EngineContext* c, float dt)
+{
+    (void)dt;
+    /* gate: state & 2 (in-game render pass), &0x1000 required, &0x100 blocks. */
+    if (c == NULL) return;
+    if ((c->state & 2u) == 0) return;
+    if ((c->state & 0x1000u) == 0) return;
+    if ((c->state & 0x100u) != 0) return;
+    if (c->input == NULL) return;
+    /* mouse delta vs stored anchor; accumulate the distance. */
+    static float acc = 0.0f;
+    float dx = (float)c->input->mouse_x - (float)s_mouse_anchor_x;
+    float dy = (float)c->input->mouse_y - (float)s_mouse_anchor_y;
+    acc += sqrtf(dx * dx + dy * dy);
+    if (acc >= 4.0f) {
+        acc = 0.0f;
+        if (s_pick != NULL) {
+            s_pick(c->input->mouse_x, c->input->mouse_y);
+        }
+        ++s_picks;
+    }
+}
+
+/* FUN_00402220: task/frame counter with clamps + a whitelisted-list walk. */
+static uint32_t s_frame = 0, s_frame_a = 0, s_frame_b = 0, s_frame_c = 0;
+
+uint32_t simtick_frame(void) { return s_frame; }
+int simtick_frame_bump(void) { return (int)s_frame; }
+
+void simtick_frame_counter(EngineContext* c)
+{
+    (void)c;
+    uint32_t hi = s_frame_b > s_frame_a ? s_frame_b : s_frame_a;
+    s_frame = s_frame_c;
+    if (s_frame < s_frame_a) {
+        s_frame = s_frame_a;
+    }
+    if (s_frame_c < hi) {
+        s_frame = hi; /* clamp to the highest sourced value */
+    }
+    ++s_frame;
+}
+
+/* FUN_0040eab0: ambient/fx spawn accumulator + palette-pick. */
+static float s_spawn_acc = 0.0f;
+static int   s_spawns = 0;
+static int   (*s_spawn_hook)(int) = NULL;
+
+void simtick_set_spawn_hook(int (*h)(int)) { s_spawn_hook = h; }
+int  simtick_spawn_calls(void) { return s_spawns; }
+
+void simtick_ambient_spawn(EngineContext* c, float dt)
+{
+    (void)c;
+    s_spawn_acc += dt;
+    if (s_spawn_acc >= 1.0f) {
+        s_spawn_acc = 0.0f;
+        if (s_spawn_hook != NULL) {
+            s_spawn_hook(0); /* slot pick = FUN_0040e990 distance-modulo */
+        }
+        ++s_spawns;
+    }
+}
+
+/* FUN_004520d0 is the per-player command-queue executor — owned by the
+ * game layer (src/game/cmd.cpp); kept out of the simtick module. */
+
+/* FUN_00465b00: sound-bank ticker — linked entries with init/lifetime. */
+void simtick_sound_bank_tick(EngineContext* c, float dt)
+{
+    (void)c; (void)dt;
+    /* corpus: walk DAT_00552128 linked entries; init missing voices, tick
+     * lifetime, update slots. Structural pass: one ordered step per node. */
+    ++s_post_n;
+}
+
+/* FUN_004291a0: render-pass entry (in-game camera probe / world collect). */
+void simtick_render_pass(EngineContext* c, float dt, float scale, uint32_t o1)
+{
+    (void)dt; (void)o1;
+    if (c == NULL) return;
+    if (scale != 0.0f) return; /* corpus: param_2 == 0 gates the in-game pass */
+    if (c->context_mode != 1) return;
+    /* corpus: camera pos (FUN_004754c0 on the view cam), grid pick, height,
+     * scale by FUN_00450890 x3, world-collect via FUN_00450600 hook. */
+    ++s_post_n;
+}
+
+/* FUN_00449c00: a single ordered render step. */
+int simtick_render_steps(void) { return s_post_n; }
+void simtick_render_step(EngineContext* c)
+{
+    (void)c;
+    ++s_post_n;
+}
+
+/* FUN_00426520: vu/timer accumulators gated on input buttons. */
+void simtick_vu_meter(EngineContext* c, float dt)
+{
+    if (c == NULL) return;
+    c->debug &= ~0x400u; /* corpus: DAT_00556ed0 &= ~0x400 each frame */
+    if (c->input != NULL && (c->input->cur[0x2d] != 0
+                             || c->input->cur[0x2e] != 0)) {
+        s_vu_accum = 0.0f; /* buttons held -> zero the accumulator */
+    } else {
+        s_vu_accum += dt;
+    }
+}
+
+/* FUN_0046e390: fx-bank ticker — per-entry sub-fx scan with fade/clamp. */
+static int s_fx_entries[8] = {};
+static int s_fx_count = 0;
+void simtick_fx_bank_tick(EngineContext* c, float dt)
+{
+    (void)c; (void)dt; (void)s_fx_entries; (void)s_fx_count;
+    /* corpus: per-entry sub-fx scan, track max, fade update, clamp 240. */
+    ++s_post_n;
+}

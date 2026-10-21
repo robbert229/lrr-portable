@@ -132,6 +132,26 @@ int  simtick_scene_broadcasts(void);
 void simtick_sfx_seed(int n, const void** entries);     /* stride 0xac */
 int  simtick_sfx_releases(void);
 
+/* --- tranche 10: the remaining table tickers ----------------------------- */
+void simtick_mouse_world(EngineContext* c, float dt);      /* FUN_00425d90 */
+void simtick_frame_counter(EngineContext* c);              /* FUN_00402220 */
+void simtick_ambient_spawn(EngineContext* c, float dt);    /* FUN_0040eab0 */
+void simtick_sound_bank_tick(EngineContext* c, float dt);  /* FUN_00465b00 */
+void simtick_render_pass(EngineContext* c, float dt, float scale,
+                         uint32_t o1);                     /* FUN_004291a0 */
+void simtick_render_step(EngineContext* c);                /* FUN_00449c00 */
+void simtick_vu_meter(EngineContext* c, float dt);         /* FUN_00426520 */
+void simtick_fx_bank_tick(EngineContext* c, float dt);     /* FUN_0046e390 */
+
+/* hooks / observable state for tranche-10 tickers */
+void simtick_set_pick_hook(int (*h)(int cx, int cy));
+int  simtick_mouse_picks(void);
+void simtick_set_spawn_hook(int (*h)(int slot));
+int  simtick_spawn_calls(void);
+uint32_t simtick_frame(void);
+int  simtick_frame_bump(void);
+int  simtick_render_steps(void);
+
 /* bobbins (0x4091e0) — node flags at +0xd0. */
 typedef struct SimtickBobbin {
     struct SimtickBobbin* next;  /* +0x24 */
