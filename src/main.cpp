@@ -27,6 +27,8 @@ int LegorrrMain(void)
     /* Engine state + context, initialized to the corpus's startup posture:
      * normal app mode, in-game context, empty feature/state/debug words. */
     EngineState state = {};
+    InputState  input = {};
+    input_reset(&input);
     EngineContext ctx = {
         ENGINE_APP_NORMAL, /* app_mode    DAT_00505f88 */
         0,                 /* feature     DAT_00505f84 */
@@ -34,6 +36,7 @@ int LegorrrMain(void)
         0,                 /* debug       DAT_00556ed0 */
         1,                 /* context     1 = in-game  (DAT_00556ec8) */
         &state,            /* state_block DAT_005560d4 */
+        &input,            /* input       key tables (findings 04/05) */
         0.0f,              /* exit_timer  DAT_00556efc */
         0,                 /* tickers_ran */
     };

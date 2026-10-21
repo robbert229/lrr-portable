@@ -20,6 +20,8 @@
 
 #include <cstdint>
 
+#include "input.hpp"
+
 /* --- App mode (corpus DAT_00505f88) ------------------------------------ */
 #define ENGINE_APP_NORMAL 0
 #define ENGINE_APP_LOADER 10 /* asset-load benchmark: tick idles, full teardown */
@@ -63,6 +65,7 @@ typedef struct EngineContext {
     uint32_t     debug;        /* DAT_00556ed0 — debug/cheat flag word */
     int32_t      context_mode; /* DAT_00556ec8 — 1 in-game, 0 editor/preview */
     EngineState *state_block;  /* DAT_005560d4 */
+    InputState  *input;        /* key tables / device mode (findings 04/05) */
     float        exit_timer;   /* DAT_00556efc — decremented by scaled dt */
     int          tickers_ran;  /* scaffolding: count of dispatched tickers */
 } EngineContext;

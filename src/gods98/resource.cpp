@@ -31,6 +31,83 @@ typedef struct ResourceWad {
 static ResourceWad s_wads[RESOURCE_MAX_WADS];
 static int       s_wad_count = 0;
 
+/* CD/STD fallback state (finding 01). */
+#ifdef LEGORRR_BACKEND_WINAPI
+#  define RES_PATH_SEP '\\' /* the corpus's "%c:\%s\%s" uses DOS separators */
+#else
+#  define RES_PATH_SEP '/'  /* host-native on the POSIX port */
+#endif
+static char  s_cd_drive    = 'A'; /* DAT_005343b4 analog; default mirrors .rdata */
+static char  s_cd_data_dir[RESOURCE_PATH_MAX] = "Data";
+static char  s_cd_root[RESOURCE_PATH_MAX] = ""; /* "" = "%c:\" default */
+
+static const char* ares_cd_path(const char* name, char* out, size_t out_sz)
+{
+    if (s_cd_root[0] != '\0') {
+        snprintf(out, out_sz, "%s%c%s%c%s", s_cd_root, RES_PATH_SEP,
+                 s_cd_data_dir, RES_PATH_SEP, name);
+    } else {
+        snprintf(out, out_sz, "%c:%c%s%c%s", s_cd_drive, RES_PATH_SEP,
+                 s_cd_data_dir, RES_PATH_SEP, name);
+    }
+    return out;
+}
+
+void resource_set_cd_drive(char drive)
+{
+    s_cd_drive = drive;
+}
+
+void resource_set_cd_data_dir(const char* dir)
+{
+    if (dir != NULL && dir[0] != '\0') {
+        snprintf(s_cd_data_dir, sizeof(s_cd_data_dir), "%s", dir);
+    }
+}
+
+void resource_set_cd_root(const char* root)
+{
+    if (root == NULL) {
+        s_cd_root[0] = '\0';
+    } else {
+        snprintf(s_cd_root, sizeof(s_cd_root), "%s", root);
+    }
+}
+
+static const char* ares_cd_root_path(const char* name, char* out, size_t out_sz)
+{
+    if (s_cd_root[0] != '\0') {
+        snprintf(out, out_sz, "%s%c%s", s_cd_root, RES_PATH_SEP, name);
+    } else {
+        snprintf(out, out_sz, "%c:%c%s", s_cd_drive, RES_PATH_SEP, name);
+    }
+    return out;
+}
+
+int resource_cd_present(void)
+{
+    char path[RESOURCE_PATH_MAX];
+    ares_cd_root_path("cd.key", path, sizeof(path));
+    FILE* fp = fopen(path, "rb");
+    if (fp == NULL) {
+        return 0;
+    }
+    fclose(fp);
+    return 1;
+}
+
+int resource_data_present(void)
+{
+    char path[RESOURCE_PATH_MAX];
+    ares_cd_root_path("delme.dat", path, sizeof(path));
+    FILE* fp = fopen(path, "rb");
+    if (fp == NULL) {
+        return 0;
+    }
+    fclose(fp);
+    return 1;
+}
+
 /* ------------------------------------------------------------------ *
  *  Small helpers (no STL, no locale — ASCII fold only).
  * ------------------------------------------------------------------ */
@@ -347,6 +424,17 @@ Resource* resource_open(const char* name, int mode)
             if (r != NULL) {
                 r->mode = mode;
             }
+            return r;
+        }
+    }
+
+    /* CD/STD fallback (AUTO only): "%c:\%s\%s" with the drive letter +
+     * data dir (finding 01, FUN_0047f660). */
+    if (mode == RESOURCE_AUTO && s_cd_drive != 0) {
+        char path[RESOURCE_PATH_MAX];
+        ares_cd_path(name, path, sizeof(path));
+        Resource* r = ares_open_std(path, mode);
+        if (r != NULL) {
             return r;
         }
     }

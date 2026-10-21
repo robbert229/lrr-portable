@@ -38,6 +38,24 @@
 #define RESOURCE_WAD_ONLY 1 /* archive member only */
 #define RESOURCE_STD_ONLY 2 /* loose file only */
 
+/* --- CD/STD fallback state (finding 01, FUN_0047f660) --------------------
+ * The corpus's STD branch is a loose file; when neither a relative file nor
+ * a wad member answers, the game falls back to the CD drive using the
+ * "%c:\%s\%s" builder (one-byte drive letter DAT_005343b4 + data dir).
+ * These are inert for a modern disk install but required for fidelity of the
+ * winapi reference build's behavior.
+ */
+void resource_set_cd_drive(char drive);       /* default 'A' (mirrors .rdata) */
+void resource_set_cd_data_dir(const char* dir); /* default "Data" */
+/* Override the drive-root of the "%c:\%s\%s" builder, e.g. to remap the CD
+ * to a mounted path. Empty string (default) uses "<drive>:\". */
+void resource_set_cd_root(const char* root);
+
+/* Marker-file probes (finding 01): cd.key = CD present, delme.dat = data
+ * installed (CDMissing / DataMissing dialogs in the original). 1 = present. */
+int resource_cd_present(void);
+int resource_data_present(void);
+
 /* An opened resource. `data` is populated by resource_read() and is owned by
  * the handle (freed by resource_free). `mode` is the open() mode requested. */
 typedef struct Resource {
