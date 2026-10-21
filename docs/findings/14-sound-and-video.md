@@ -102,8 +102,7 @@ file-exists check (`FUN_0047fb60`) → registration.
 Not part of AVIFIL32: the `Reward*Flics` config group and `.flh` overlay
 entries (`avi\PB1.flh:SFX_NULL:488:0` style, `!Overlay*` dev switches) drive
 the renderer lane documented in finding 09 (`FUN_00483c80`/`FUN_00484070`
-playback region). `.flh` remains an unanalyzed container if anyone wants the
-next thread.
+playback region). The `.flh` container is documented in finding 21.
 
 ### Function map
 
@@ -130,7 +129,7 @@ next thread.
    handoff was not traced.
 3. AVI frame decode: `AVIStreamGetFrame` returns DIB bytes handed straight to
    the surface blit path (`FUN_0047dcb0` family); no private codec is used.
-4. `.flh` container format: keys + renderer entry known (finding 09), file
-   layout not analyzed.
+4. `.flh` container format — **closed** by finding 21 (2026-10-20): layout,
+   both 16-bit coders, and the RGB555→565 write transform.
 5. MCI: only `play cdaudio from N` and status queries were observed; no
    volume/`set cdaudio` commands in the binary.

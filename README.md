@@ -20,7 +20,7 @@ and curiosity; nothing in this repository is affiliated with or endorsed by the 
 
 ```
 README.md           This file
-docs/findings/      Reverse-engineering findings, 01–19 (see index below)
+docs/findings/      Reverse-engineering findings, 01–21 (see index below)
 tools/              WAD tooling (rrwad.py: unpack/pack/verify — see tools/README.md)
                     + model converter (tools/rrlwo.py: .lwo → glTF 2.0)
                     + compat harness (tools/compat/a2.py — see tools/compat/README.md)
@@ -61,8 +61,9 @@ legally obtained copy of the game.
 - [x] Document the `.wad` archive container format(s) — finding 01
 - [x] Document asset formats: 3D models, animations, sounds, videos
       — findings 11–14: models/scenes, `Lego*` configs, textures, audio, video.
-      (Fine detail open: `.flh` container — 14 §5. `.uv` grammar closed — 19;
-      `.x` identified as XOF-text leftovers the engine never loads — 11 §6.)
+      (Fine detail closed: `.flh` container — 21 (was 14 §5). `.uv` grammar
+      closed — 19; `.x` identified as XOF-text leftovers the engine never
+      loads — 11 §6.)
 - [x] Understand mission / level scripting and data-driven behavior — findings 07, 09
 - [x] Understand the savegame format — finding 08
 - [x] Eventually: reimplementations or tooling that let the game run on modern systems
@@ -71,7 +72,7 @@ legally obtained copy of the game.
 
 ## Current status (2026-10-20)
 
-Research is complete: all 19 findings shipped, every format shipped in the wads is
+Research is complete: all 21 findings shipped, every format shipped in the wads is
 documented address-level — including the two that exist but are never loaded
 (`.x` XOF-text leftovers, `.blx` editor-only) — and the `Lego*` block-text system that
 `.ae` belongs to (finding 12). The game runs and is playable through the Proton wrapper,
@@ -89,10 +90,9 @@ Open threads, in order of value:
 1. **Live mod proof** — the chain grammar → writer → byte-exact repack → launch is proven
    only link-by-link; repacking a modified `.uv` (e.g. a `GC_Larm.uv` pilot re-skin) and
    observing the change in-game has not been done.
-2. `.flh` container file layout (finding 14 §5).
-3. Small research questions: the 40-entry config population site (finding 04 §Open),
+2. Small research questions: the 40-entry config population site (finding 04 §Open),
    the input-device writer region (finding 05), D3DRM HAL-vs-software (perf only).
-4. Deferred: dgVoodoo as a perf option; the `Steam.lwo` point-only sprites as glTF.
+3. Deferred: dgVoodoo as a perf option; the `Steam.lwo` point-only sprites as glTF.
 
 ## Findings index
 
@@ -118,13 +118,14 @@ Open threads, in order of value:
 | 18 | [`findings/18-movies-libav-alias.md`](docs/findings/18-movies-libav-alias.md) | **Movies fixed**: Indeo block was two missing sonames (`libbz2.so.1.0`, `libvpx.so.6`) silently killing wine's ffmpeg plugin — aliases + registry rebuild, automated in `a2.py` |
 | 19 | [`findings/19-uv-grammar.md`](docs/findings/19-uv-grammar.md) | **Last format closed**: `.uv` sidecar grammar in `FUN_00481c50` — surface texture-path overrides + per-corner UV (v negated, vertex duplication); names/keyframe tail structurally unread; validated 60/60 |
 | 20 | [`findings/20-verify-pass.md`](docs/findings/20-verify-pass.md) | **Fresh verify pass** (2026-10-20): critical path re-derived in a clean session; corpus byte-identical; `DAT_00505814` = `.wad` prefix, not install dir; CRT entry `0x48f000` |
+| 21 | [`findings/21-flh-container.md`](docs/findings/21-flh-container.md) | **`.flh` closed**: FLIC-family overlay container — 136 B header, `0xF1FA` chunk stream from `0x80`, RGB555 FLI16 keyframe (opcode 25) + word-diff deltas (opcode 27) + hold chunks, 555→565 on write; validated 18/18 files, 469/469 chunks, rendered frame check |
 
 Named-pseudocode corpus: [`docs/decompiles/engine-region.c`](docs/decompiles/engine-region.c)
 (114 named functions covering the engine/game-logic region — findings 01–10).
 Functions named by findings 11–19 (loaders, parsers, the asset side) are cited
 with pseudocode in each finding's function map.
 Machine-readable evidence: [`docs/evidence/legorr-rev.bundle`](docs/evidence/legorr-rev.bundle)
-(148 recorded REA observations against `LegoRR.exe`,
+(180 recorded REA observations against `LegoRR.exe`,
 SHA-256 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`).
 
 ## Reproducibility
