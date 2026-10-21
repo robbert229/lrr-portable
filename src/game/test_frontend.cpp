@@ -24,6 +24,7 @@
 #include "game/util.hpp"
 #include "gods98/block.hpp"
 #include "gods98/resource.hpp"
+#include "gods98/texture.hpp"
 
 static int s_failures = 0;
 
@@ -282,10 +283,10 @@ static void test_render(void)
     CHECK(px != NULL, "render: buffer");
     /* clear to black explicitly for deterministic assertions */
     memset(px, 0, (size_t)w * h * 4);
-    frontend_render(&fe, w, h, px, w * 4);
+    frontend_render(&fe, NULL, NULL, w, h, px, w * 4);
     uint8_t b[4];
 
-    /* selected row 0 = "Start_Game": auto-centered, len 10 -> tw 70,
+    /* selected row 0 = "Start_Game": auto-centered, 3x5 len 10 -> tw 70,
      * x = 160 - 35 = 125, y = 56. Highlight bar behind it. */
     b[0] = px[(54 * w + 121) * 4 + 0];
     b[1] = px[(54 * w + 121) * 4 + 1];
@@ -297,14 +298,80 @@ static void test_render(void)
     CHECK(b[0] == 255 && px[(56 * w + 125) * 4 + 1] == 255
         && px[(56 * w + 125) * 4 + 2] == 255, "render: glyph ink");
 
-    /* non-selected row 3 "Quit_Game" (len 9 -> 63, x = 160 - 63/2 = 129),
-     * y = 56 + 3*40 = 176; faint color (200,200,160). */
-    b[0] = px[(176 * w + 129) * 4 + 0];
-    CHECK(b[0] == 200 && px[(176 * w + 129) * 4 + 1] == 200
-        && px[(176 * w + 129) * 4 + 2] == 160, "render: faint row ink");
+    /* non-selected row 3 "Quit_Game" (3x5 len 9 -> tw 63, x = 160 - 31 =
+     * 129), y = 56 + 3*48 = 200; faint color (200,200,160). */
+    b[0] = px[(200 * w + 129) * 4 + 0];
+    CHECK(b[0] == 200 && px[(200 * w + 129) * 4 + 1] == 200
+        && px[(200 * w + 129) * 4 + 2] == 160, "render: faint row ink");
 
     free(px);
     block_close(cfg);
+}
+
+/* Synthetic bitmap font: 10x19 grid, cell 8x4 (w=80, h=76); every cell
+ * filled with the key (pure red), one white ink pixel at cell (1,1).
+ * Renders a two-glyph label ("LQ", AutoCenter FALSE so x stays 48) and
+ * asserts: the key is NOT drawn (bg shows through), and each glyph's ink
+ * pixel lands at the measured advance. */
+static void test_font(void)
+{
+    TextureSurface tf;
+    memset(&tf, 0, sizeof(tf));
+    tf.width = FE_FONT_GRID_COLS * 8;   /* 80 */
+    tf.height = FE_FONT_GRID_ROWS * 4;  /* 76 */
+    tf.pixels = (uint32_t*)calloc((size_t)tf.width * tf.height, 4);
+    CHECK(tf.pixels != NULL, "font: buffer");
+    for (int i = 0; i < tf.width * tf.height; i++) {
+        tf.pixels[i] = 0xffff0000u;            /* key: palette-255 red */
+    }
+    if (tf.pixels != NULL) {
+        for (int g = 0; g < FE_FONT_GRID_COLS * FE_FONT_GRID_ROWS; g++) {
+            int col = g % FE_FONT_GRID_COLS, row = g / FE_FONT_GRID_COLS;
+            tf.pixels[(size_t)(row * 4 + 1) * tf.width + (col * 8 + 1)] =
+                0xffffffffu;                    /* ink pixel per cell */
+        }
+
+        BlockFile* cfg = s_parse(
+            "Lego* {\n"
+            "\tMain { StartLevel Levels::Tran01 }\n"
+            "\tMenu { MainMenuFull {\n"
+            "\t\tMenuCount 1\n"
+            "\t\tMenu1 { AutoCenter FALSE Position 0:0 ItemCount 1\n"
+            "\t\t\tItem1 Next:0:0:LQ:Menu1\n"
+            "\t\t}\n"
+            "\t} }\n"
+            "\tLevels { Tran01 { FullName T } }\n"
+            "}\n");
+        FrontEnd fe;
+        frontend_build(&fe, cfg);
+        frontend_open(&fe, FE_MENU_MAIN);
+
+        int w = 160, h = 120;
+        uint8_t* px = (uint8_t*)calloc((size_t)w * h, 4);
+        CHECK(px != NULL, "font: fb");
+        if (px != NULL) {
+            memset(px, 0, (size_t)w * h * 4);
+            frontend_render(&fe, &tf, &tf, w, h, px, w * 4);
+            /* 'L' (g=44 -> col 4, row 4): cell ink at (4*8+1, 4*4+1) =
+             * (33,17). Item at x=48,y=56 (AutoCenter FALSE). */
+            uint8_t c0 = px[(57 * w + 49) * 4 + 0];   /* 'L' ink */
+            CHECK(c0 == 255 && px[(57 * w + 49) * 4 + 1] == 255
+                && px[(57 * w + 49) * 4 + 2] == 255, "font: L ink");
+            /* advance('L') = maxx+1 = 2 -> 'Q' at x = 48 + 2 = 50 */
+            uint8_t q0 = px[(57 * w + 51) * 4 + 0];
+            CHECK(q0 == 255, "font: Q advance ink");
+            /* the key pixel of the 'L' cell (its 0,0) is transparent: the
+             * selected-row highlight bar behind it shows through (not the
+             * red key, not white ink) */
+            uint8_t k = px[(56 * w + 48) * 4 + 0];
+            CHECK(k == 60 && px[(56 * w + 48) * 4 + 1] == 80
+                && px[(56 * w + 48) * 4 + 2] == 200,
+                "font: key skipped (highlight shows through)");
+            free(px);
+        }
+        block_close(cfg);
+    }
+    free(tf.pixels);
 }
 
 /* --- real-wad probe (--real <dir>) ---------------------------------------- */
@@ -336,9 +403,63 @@ static void real_probe(const char* wad_dir)
     fprintf(stderr,
             "frontend_test: --real probe: campaign=%d tutorial=%d picker_rows=%d\n",
             fe.campaign_n, fe.tutorial_n, picker_rows);
+
+    /* Bitmap-font geometry on the shipped fonts (FUN_0047a470 10x19 grid):
+     * Menu_Font_Hi.bmp = 380x817 -> cell 38x43, bg = the red key. */
+    TextureSurface* fhi = texture_load("Interface\\FrontEnd\\Menu_Font_Hi.bmp");
+    CHECK(fhi != NULL, "real: Menu_Font_Hi.bmp loads");
+    if (fhi != NULL) {
+        CHECK(fhi->width % FE_FONT_GRID_COLS == 0
+            && fhi->height % FE_FONT_GRID_ROWS == 0,
+            "real: font dims divide the 10x19 grid");
+        int fcw = fhi->width / FE_FONT_GRID_COLS;
+        int fch = fhi->height / FE_FONT_GRID_ROWS;
+        CHECK(fcw == 38 && fch == 43, "real: Hi font cell = 38x43");
+        size_t key = 0, tot = 0;
+        for (int yy = 0; yy < fhi->height; yy += 7) {
+            for (int xx = 0; xx < fhi->width; xx += 7) {
+                tot++;
+                if (fhi->pixels[(size_t)yy * (size_t)fhi->width + xx]
+                    == FE_FONT_KEY) {
+                    key++;
+                }
+            }
+        }
+        CHECK(key * 100 / (tot > 0 ? tot : 1) >= 40,
+            "real: Hi font bg is the red key (45% sampled)");
+        texture_free(fhi);
+    }
+    TextureSurface* flo = texture_load("Interface\\FrontEnd\\Menu_Font_Lo.bmp");
+    CHECK(flo != NULL, "real: Menu_Font_Lo.bmp loads");
+    if (flo != NULL) {
+        CHECK(flo->width / FE_FONT_GRID_COLS == 38
+            && flo->height / FE_FONT_GRID_ROWS == 43,
+            "real: Lo font cell = 38x43");
+        texture_free(flo);
+    }
     if (cfg != NULL) {
         block_close(cfg);
     }
+}
+
+static void test_active_image(void)
+{
+    BlockFile* cfg = s_parse(FIXCFG);
+    FrontEnd fe;
+    frontend_build(&fe, cfg);
+    frontend_open(&fe, FE_MENU_MAIN);
+    CHECK(frontend_active_image(&fe) == NULL,
+        "img: Menu1 has no MenuImage key");
+
+    /* Enter on Start_Game (item 0) -> Menu2 (Missions picker) */
+    FeInput in = { 0, 0, 1, 0 };
+    frontend_tick(&fe, &in);
+    CHECK(fe.sub == 1, "img: navigated to Menu2");
+    const char* im = frontend_active_image(&fe);
+    CHECK(im != NULL, "img: Menu2 has a MenuImage");
+    CHECK(im != NULL && strcmp(im, "Interface\\LevelPicker\\LevelPick.bmp") == 0,
+        "img: Menu2 path trimmed of ':0:0:1'");
+    block_close(cfg);
 }
 
 int main(int argc, char** argv)
@@ -354,6 +475,8 @@ int main(int argc, char** argv)
     test_gate();
     test_nav_and_actions();
     test_render();
+    test_active_image();
+    test_font();
 
     if (s_failures == 0) {
         printf("frontend: all tests passed\n");

@@ -307,6 +307,32 @@ static void fe_parse_submenu(FrontEnd* fe, FeMenu* m, const char* name,
                  c != NULL ? (int)(c - raw) : (int)strlen(raw), raw);
     }
 
+    /* Bitmap fonts: LoFont = unselected, HiFont = selected (MenuFont is
+     * the measurement face — fall back to it for both when the pair is
+     * absent). */
+    snprintf(buf, sizeof(buf), "%s LoFont", pre);
+    if (block_get_strptr(fe->cfg, buf) != NULL) {
+        snprintf(sub->lofont, FE_PATH_MAX, "%s",
+                 block_get_strptr(fe->cfg, buf));
+    }
+    snprintf(buf, sizeof(buf), "%s HiFont", pre);
+    if (block_get_strptr(fe->cfg, buf) != NULL) {
+        snprintf(sub->hifont, FE_PATH_MAX, "%s",
+                 block_get_strptr(fe->cfg, buf));
+    }
+    if (sub->lofont[0] == '\0' || sub->hifont[0] == '\0') {
+        snprintf(buf, sizeof(buf), "%s MenuFont", pre);
+        const char* mf = block_get_strptr(fe->cfg, buf);
+        if (mf != NULL) {
+            if (sub->lofont[0] == '\0') {
+                snprintf(sub->lofont, FE_PATH_MAX, "%s", mf);
+            }
+            if (sub->hifont[0] == '\0') {
+                snprintf(sub->hifont, FE_PATH_MAX, "%s", mf);
+            }
+        }
+    }
+
     snprintf(buf, sizeof(buf), "%s ItemCount", pre);
     int ic = block_get_int(fe->cfg, buf, 0);
     if (ic > FE_ITEMS_MAX) {
@@ -560,11 +586,18 @@ const FeItem* frontend_active_item(const FrontEnd* fe)
     return &s->items[fe->sel];
 }
 
+const char* frontend_active_image(const FrontEnd* fe)
+{
+    const FeSubmenu* s = frontend_active_submenu(fe);
+    return (s != NULL && s->image[0] != '\0') ? s->image : NULL;
+}
+
 /* --- render -----------------------------------------------------------------
  * Software blit of the active submenu (finding 22 §3 lane). Background and
  * MenuImage blits are the caller's; this draws the item layer with the
- * port's own 3x5 font (scale 2), underscores as spaces, and a selection
- * highlight behind the selected row.
+ * shipped bitmap fonts (HiFont selected / LoFont unselected, FUN_0047a470
+ * 10x19 grid), falling back to the port's own 3x5 typeface when the frame
+ * loop supplies none. Selection = the classic highlight bar + bright face.
  * ------------------------------------------------------------------------- */
 
 /* 3x5 glyphs (5 rows, bit2 = left column). Uppercase + digits + the
@@ -672,11 +705,126 @@ static void fe_fill_rect(void* px, int pitch, int w, int h,
     }
 }
 
+/* --- shipped bitmap-font lane (FUN_0047a470) ------------------------------ */
+
+/* Advance is measured from each cell's ink bounding box (the engine stores
+ * per-glyph float advances in the font object at load; we re-derive the
+ * same numbers from the image). */
+
+static int fe_font_cell(const TextureSurface* f, int* cw, int* ch)
+{
+    if (f == NULL || f->pixels == NULL || f->width < FE_FONT_GRID_COLS
+        || f->height < FE_FONT_GRID_ROWS) {
+        return 0;
+    }
+    *cw = f->width / FE_FONT_GRID_COLS;
+    *ch = f->height / FE_FONT_GRID_ROWS;
+    return 1;
+}
+
+/* Ink width of glyph g (0 when the cell is blank). */
+static int fe_font_advance(const TextureSurface* f, int cw, int ch, int g)
+{
+    int col = g % FE_FONT_GRID_COLS, row = g / FE_FONT_GRID_COLS;
+    int x0 = col * cw, y0 = row * ch;
+    int maxx = -1;
+    for (int yy = 0; yy < ch; yy++) {
+        for (int xx = 0; xx < cw; xx++) {
+            uint32_t p = f->pixels[(size_t)(y0 + yy) * (size_t)f->width
+                                   + (x0 + xx)];
+            if (p != FE_FONT_KEY && xx > maxx) {
+                maxx = xx;
+            }
+        }
+    }
+    return maxx + 1;
+}
+
+static void fe_blit_glyph(void* px, int pitch, int w, int h,
+                          int dx, int dy, const TextureSurface* f,
+                          int cw, int ch, int g)
+{
+    int col = g % FE_FONT_GRID_COLS, row = g / FE_FONT_GRID_COLS;
+    int sx0 = col * cw, sy0 = row * ch;
+    for (int yy = 0; yy < ch; yy++) {
+        int dy2 = dy + yy;
+        if (dy2 < 0 || dy2 >= h) {
+            continue;
+        }
+        for (int xx = 0; xx < cw; xx++) {
+            uint32_t p = f->pixels[(size_t)(sy0 + yy) * (size_t)f->width
+                                   + (sx0 + xx)];
+            if (p == FE_FONT_KEY) {
+                continue;                          /* colour-keyed out */
+            }
+            int dx2 = dx + xx;
+            if (dx2 < 0 || dx2 >= w) {
+                continue;
+            }
+            uint8_t* o = (uint8_t*)px + (size_t)dy2 * (size_t)pitch
+                         + (size_t)dx2 * 4;
+            o[0] = (uint8_t)(p >> 16);
+            o[1] = (uint8_t)(p >> 8);
+            o[2] = (uint8_t)(p);
+            o[3] = (uint8_t)(p >> 24);
+        }
+    }
+}
+
+/* Draw `s` with a bitmap font at (x,y). `_` renders as a space, matching
+ * the shipped menu labels. Returns the advance. */
+static int fe_draw_font_text(void* px, int pitch, int w, int h,
+                             int x, int y, const char* s,
+                             const TextureSurface* f)
+{
+    int cw = 0, chh = 0;
+    if (!fe_font_cell(f, &cw, &chh)) {
+        return 0;
+    }
+    int cx = x;
+    for (int i = 0; s[i] != '\0' && cx < w; ++i) {
+        int c = (unsigned char)s[i];
+        int g = c - 0x20;
+        if (g < 0 || g >= FE_FONT_GRID_COLS * FE_FONT_GRID_ROWS) {
+            cx += cw / 2;
+            continue;
+        }
+        int adv = fe_font_advance(f, cw, chh, g);
+        if (adv <= 0) {
+            adv = (c == ' ') ? cw / 2 : cw;        /* blank cell fallback */
+        }
+        fe_blit_glyph(px, pitch, w, h, cx, y, f, cw, chh, g);
+        cx += adv;
+    }
+    return cx - x;
+}
+
+static int fe_font_text_width(const char* s, const TextureSurface* f)
+{
+    int cw = 0, chh = 0;
+    if (!fe_font_cell(f, &cw, &chh)) {
+        return 0;
+    }
+    int cx = 0;
+    for (int i = 0; s[i] != '\0'; ++i) {
+        int c = (unsigned char)s[i];
+        int g = c - 0x20;
+        if (g < 0 || g >= FE_FONT_GRID_COLS * FE_FONT_GRID_ROWS) {
+            cx += cw / 2;
+            continue;
+        }
+        int adv = fe_font_advance(f, cw, chh, g);
+        cx += adv > 0 ? adv : (c == ' ' ? cw / 2 : cw);
+    }
+    return cx;
+}
+
 /* Item display position: picker rows use their FrontEndX/Y scatter coords;
- * config rows use the port's row layout (56 + i*40, at 48 left or centered
- * on w/2 when the submenu auto-centers). Our layout, not a pixel clone. */
+ * config rows use the port's row layout (56 + i*48, at 48 left or centered
+ * on w/2 with the bitmap font when the submenu auto-centers). Row pitch
+ * clears the 43px bitmap-font cell. Our layout, not a pixel clone. */
 static void fe_item_pos(const FrontEnd* fe, const FeItem* it, int i,
-                        int w, int* x, int* y)
+                        int w, const TextureSurface* measure, int* x, int* y)
 {
     const FeSubmenu* sub = frontend_active_submenu(fe);
     if (it->level_start) {
@@ -684,15 +832,19 @@ static void fe_item_pos(const FrontEnd* fe, const FeItem* it, int i,
         *y = it->y;
         return;
     }
+    int tw = measure != NULL ? fe_font_text_width(it->label, measure)
+                             : fe_text_width(it->label);
     if (sub != NULL && sub->auto_center) {
-        *x = w / 2 - fe_text_width(it->label) / 2;
+        *x = w / 2 - tw / 2;
     } else {
         *x = 48;
     }
-    *y = 56 + i * 40;
+    *y = 56 + i * 48;
 }
 
-void frontend_render(const FrontEnd* fe, int w, int h, void* px, int pitch)
+void frontend_render(const FrontEnd* fe, const TextureSurface* hi_font,
+                     const TextureSurface* lo_font,
+                     int w, int h, void* px, int pitch)
 {
     if (fe == NULL || px == NULL || !fe->open) {
         return;
@@ -703,13 +855,17 @@ void frontend_render(const FrontEnd* fe, int w, int h, void* px, int pitch)
     }
 
     if (sub->display_title && sub->title[0] != '\0') {
-        fe_draw_text(px, pitch, w, h, 8, 8, sub->title, 230, 210, 120);
+        if (hi_font != NULL) {
+            fe_draw_font_text(px, pitch, w, h, 8, 8, sub->title, hi_font);
+        } else {
+            fe_draw_text(px, pitch, w, h, 8, 8, sub->title, 230, 210, 120);
+        }
     }
 
     for (int i = 0; i < sub->item_count; i++) {
         const FeItem* it = &sub->items[i];
         int x, y;
-        fe_item_pos(fe, it, i, w, &x, &y);
+        fe_item_pos(fe, it, i, w, hi_font, &x, &y);
         if (x < 0) {
             x = 8;
         }
@@ -718,13 +874,26 @@ void frontend_render(const FrontEnd* fe, int w, int h, void* px, int pitch)
         }
 
         int selected = (i == fe->sel);
+        const TextureSurface* font = selected ? hi_font : lo_font;
+        int lw = font != NULL ? fe_font_text_width(it->label, font)
+                              : fe_text_width(it->label);
+        int chh = 0;
+        if (font != NULL) {
+            int cw = 0;
+            fe_font_cell(font, &cw, &chh);
+        }
+        int hh = font != NULL ? chh + 8 : 12;
+
         if (selected) {
-            int tw = fe_text_width(it->label);
-            fe_fill_rect(px, pitch, w, h, x - 4, y - 2, tw + 8, 12,
+            fe_fill_rect(px, pitch, w, h, x - 4, y - 2, lw + 8, hh,
                          60, 80, 200);
         }
-        fe_draw_text(px, pitch, w, h, x, y, it->label,
-                     selected ? 255 : 200, selected ? 255 : 200,
-                     selected ? 255 : 160);
+        if (font != NULL) {
+            fe_draw_font_text(px, pitch, w, h, x, y, it->label, font);
+        } else {
+            fe_draw_text(px, pitch, w, h, x, y, it->label,
+                         selected ? 255 : 200, selected ? 255 : 200,
+                         selected ? 255 : 160);
+        }
     }
 }

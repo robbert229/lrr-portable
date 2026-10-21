@@ -302,8 +302,14 @@ level's `FrontEndX/Y` scatter — onto the `LevelPick*` submenus.
 activates, Esc backs out (root Esc quits); a picker row returns
 `FE_EVT_START_LEVEL` and the **frame loop loads that level afterwards**;
 `FrontEnd FALSE` in `Lego.cfg` (or setting `LEGORRR_LEVEL`) skips the menu
-straight into a level, like the classic demo. `frontend_render` draws the
-items with the port's own 3x5 typeface (README "palette is ours"). New key:
+straight into a level, like the classic demo. The menu now **looks like the
+game**: the frame loop blits each submenu's `MenuImage` art behind the
+items, and `frontend_render` draws the labels with the **shipped bitmap
+fonts** — `LoFont` for unselected, `HiFont` for the selected row
+(FUN_0047a470's 10×19 ASCII grid: glyph g = ch-0x20 at (g%10, g/10), cell =
+width/10 × height/19, e.g. 380×817 → 38×43; palette-255 pure-red is the
+colour key; advances re-derived from each cell's ink box) — with the port's
+own 3x5 typeface kept as a headless fallback. New key:
 **`PLATFORM_KEY_ENTER`** at the seam. Suites: `block` (`::` paths) and
 `frontend` (fixtures + a `--real` probe that builds the whole front end from
 the shipped `Lego.cfg` — 24-level campaign chain, 8 tutorials, 32 picker
