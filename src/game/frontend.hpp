@@ -35,6 +35,7 @@
 #include <cstddef>
 
 #include "gods98/block.hpp"
+#include "gods98/texture.hpp"
 
 #ifdef __cplusplus
 extern "C" {
@@ -46,6 +47,14 @@ extern "C" {
 #define FE_PATH_MAX       128
 #define FE_LEVEL_NAME_MAX 48
 #define FE_CHAIN_MAX      24   /* StartLevel/TutorialStartLevel + NextLevel */
+
+/* Bitmap-font layout (FUN_0047a470): a 10-column x 19-row ASCII grid
+ * starting at 0x20 (" ") — glyph g = ch-0x20 at (col = g%10, row = g/10),
+ * cell = image width/10 x height/19. Palette index 255 maps to pure red
+ * (255,0,0) = the transparency key. Menu_Font_Hi.bmp is 380x817 -> 38x43. */
+#define FE_FONT_GRID_COLS 10
+#define FE_FONT_GRID_ROWS 19
+#define FE_FONT_KEY       0xffff0000u
 
 /* Item kinds — MenuItemType @ 0x413e60 (values 0..5; 5 = the "Next" catch-
  * all, 1 = Trigger). Slider/Cycle/TextInput parse their banner/label into
@@ -79,6 +88,8 @@ typedef struct FeSubmenu {
     FeItem items[FE_ITEMS_MAX];
     char  title[FE_NAME_MAX];     /* Title key (underscored display text) */
     char  image[FE_PATH_MAX];     /* MenuImage / MenuImageDark (render lane) */
+    char  lofont[FE_PATH_MAX];    /* LoFont key — unselected items (Menu_Font_Lo.bmp) */
+    char  hifont[FE_PATH_MAX];    /* HiFont key — selected items  (Menu_Font_Hi.bmp) */
     int   base_x, base_y;         /* Position key (x:y) */
     int   auto_center;            /* AutoCenter TRUE|FALSE */
     int   display_title;          /* DisplayTitle TRUE|FALSE */
@@ -157,15 +168,30 @@ const FeMenu* frontend_menu(const FrontEnd* fe, int menu);
 const FeSubmenu* frontend_active_submenu(const FrontEnd* fe);
 const FeItem* frontend_active_item(const FrontEnd* fe);
 
+/* The active submenu's MenuImage path (Menu::<name> <Menu%i> MenuImage,
+ * ":0:0:1" trimmed), or NULL when the submenu has none — the frame loop
+ * uses it to blit the background art behind the menu layer. */
+const char* frontend_active_image(const FrontEnd* fe);
+
 /* --- render (finding 22 §3 lane) ---------------------------------------- */
 
 /* Draw the active submenu into a locked RGBA32 framebuffer (R,G,B,A bytes):
  * item labels at their anchors (AutoCenter → centered on base_x), a
  * selection highlight behind the selected row, and the Title when
  * display_title. The background / MenuImage blit is the caller's (it owns
- * the texture lane); this draws the menu layer only. Map labels replace
- * '_' with ' '. The font is the port's 3x5 (scale 2). */
-void frontend_render(const FrontEnd* fe, int w, int h, void* px, int pitch);
+ * the texture lane). `hi_font`/`lo_font` are the shipped bitmap fonts
+ * (HiFont = selected, LoFont = unselected — the engine keys palette 255
+ * pure red transparent); when NULL the port's own 3x5 typeface is used as
+ * a fallback. Map labels replace '_' with ' '.
+ *
+ * Bitmap fonts (FUN_0047a470, finding-23 session): a 10-column x 19-row
+ * ASCII grid starting at 0x20 — glyph g = ch-0x20 at row g/10, col g%10;
+ * cell size = font width/10 x font height/19. Advance width is measured
+ * from each glyph's ink bounding box (the engine stores per-glyph float
+ * advances in the font object; we re-derive them from the image). */
+void frontend_render(const FrontEnd* fe, const TextureSurface* hi_font,
+                     const TextureSurface* lo_font,
+                     int w, int h, void* px, int pitch);
 
 #ifdef __cplusplus
 }

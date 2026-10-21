@@ -259,7 +259,31 @@ int LegorrrRun(void)
             int   pitch = 0;
             if (surface_lock(&surf, &pixels, &pitch) == 0) {
                 surface_fill(pixels, pitch, WINDOW_W, WINDOW_H, 8, 8, 20);
-                frontend_render(&fe, WINDOW_W, WINDOW_H, pixels, pitch);
+                /* Background art: blit the active submenu's MenuImage
+                 * (Menu::<name> <Menu%i> MenuImage) behind the menu layer,
+                 * 1:1 at the window origin. */
+                const char* img = frontend_active_image(&fe);
+                if (img != NULL) {
+                    TextureSurface* bg = texture_get_or_load(NULL, img);
+                    if (bg != NULL) {
+                        surface_blit_texture(pixels, pitch, WINDOW_W, WINDOW_H,
+                                             bg, 0, 0);
+                    }
+                }
+                /* Bitmap fonts (finding-23 grid): HiFont = selected items,
+                 * LoFont = unselected; NULL falls back to the 3x5 face. */
+                TextureSurface* hi_font = NULL, *lo_font = NULL;
+                const FeSubmenu* fs = frontend_active_submenu(&fe);
+                if (fs != NULL) {
+                    if (fs->hifont[0] != '\0') {
+                        hi_font = texture_get_or_load(NULL, fs->hifont);
+                    }
+                    if (fs->lofont[0] != '\0') {
+                        lo_font = texture_get_or_load(NULL, fs->lofont);
+                    }
+                }
+                frontend_render(&fe, hi_font, lo_font,
+                                WINDOW_W, WINDOW_H, pixels, pitch);
                 platform_screenshot(win, pixels, pitch, WINDOW_W, WINDOW_H,
                                     (int)frames);
                 platform_present_pixels(win, pixels, pitch, WINDOW_W, WINDOW_H);
