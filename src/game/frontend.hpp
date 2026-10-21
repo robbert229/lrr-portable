@@ -120,6 +120,9 @@ typedef struct FeSubmenu {
     int   play_random;            /* PlayRandom: one overlay plays per display */
     FeOverlay overlays[FE_OVERLAYS_MAX];
     int   overlay_count;
+    int   can_scroll;             /* CanScroll TRUE — item plane pans (0x413970) */
+    int   scroll;                 /* plane offset in px (<= 0; reset on entry) */
+    int   scroll_extent;          /* content height = tallest item + row height */
 } FeSubmenu;
 
 typedef struct FeMenu {
@@ -169,6 +172,10 @@ typedef struct FrontEnd {
 
     /* Overlay players open for the currently active submenu (lazily). */
     const FeSubmenu* overlays_for;  /* which submenu's flics are open     */
+
+    /* CanScroll plane pan lives on each FeSubmenu (corpus DAT_005574e0
+     * is reset when a menu re-enters — frontend_open clears every sub). */
+    int  view_w, view_h;            /* render viewport (set each render)  */
 } FrontEnd;
 
 /* One frame of modal-menu input: key *edges* this frame (the frame loop
@@ -255,7 +262,7 @@ const char* frontend_active_image(const FrontEnd* fe);
  * cell size = font width/10 x font height/19. Advance width is measured
  * from each glyph's ink bounding box (the engine stores per-glyph float
  * advances in the font object; we re-derive them from the image). */
-void frontend_render(const FrontEnd* fe, const TextureSurface* hi_font,
+void frontend_render(FrontEnd* fe, const TextureSurface* hi_font,
                      const TextureSurface* lo_font,
                      int w, int h, void* px, int pitch);
 

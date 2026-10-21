@@ -309,6 +309,7 @@ static void fe_parse_submenu(FrontEnd* fe, FeMenu* m, const char* name,
     sub->base_x = sub->base_y = 0;
     sub->auto_center = 0;
     sub->display_title = 0;
+    sub->can_scroll = 0;
     sub->title[0] = sub->image[0] = '\0';
     memset(sub->items, 0, sizeof(sub->items));
     char pre[FE_PATH_MAX * 2];
@@ -340,6 +341,8 @@ static void fe_parse_submenu(FrontEnd* fe, FeMenu* m, const char* name,
     sub->auto_center = block_get_bool(fe->cfg, buf) == 1;
     snprintf(buf, sizeof(buf), "%s DisplayTitle", pre);
     sub->display_title = block_get_bool(fe->cfg, buf) == 1;
+    snprintf(buf, sizeof(buf), "%s CanScroll", pre);
+    sub->can_scroll = block_get_bool(fe->cfg, buf) == 1;
     snprintf(buf, sizeof(buf), "%s MenuImage", pre);
     v = block_get_strptr(fe->cfg, buf);
     if (v != NULL) {
@@ -493,6 +496,14 @@ static void fe_graft_picker(FrontEnd* fe, FeMenu* m, int tutorial)
             it->x = fe_cfg_int(fe->cfg, lvl, "FrontEndX", 0);
             it->y = fe_cfg_int(fe->cfg, lvl, "FrontEndY", 0);
             sub->item_count = base + k + 1;
+        }
+        /* The campaign/tutorial picker plane is taller than any window
+         * (FrontEndY scatters to ~2100), so the receiving sub scrolls —
+         * the corpus gates its rows with the DAT_005574e0 content clamp;
+         * flagging the grafted sub is the port-side equivalent. */
+        if (sub->item_count > base) {
+            sub->can_scroll = 1;
+            sub->scroll_extent = 0;
         }
     }
 }
@@ -669,6 +680,11 @@ int frontend_open(FrontEnd* fe, int menu)
     fe->quit = 0;
     fe->pending_level[0] = '\0';
     fe_overlay_step(fe); /* open the active submenu's flic overlays */
+    /* corpus DAT_005574e0 reset @ 0x413d29: the plane returns to the top
+     * whenever the menu (re-)enters. */
+    for (int i = 0; i < FE_SUBMENUS_MAX; i++) {
+        fe->menus[menu].submenus[i].scroll = 0;
+    }
     return 1;
 }
 
@@ -684,6 +700,7 @@ void frontend_close(FrontEnd* fe)
  * placement arithmetic + measure-font widths as drawing. */
 static int fe_item_pick(const FrontEnd* fe, int mx, int my,
                         const TextureSurface* measure, int* out_idx);
+static int fe_scroll_measure(const FeSubmenu* sub);
 
 /* --- activation (Enter or a pointer click resolves to this) -------------- */
 
@@ -745,6 +762,9 @@ static FeEvent fe_activate(FrontEnd* fe)
         if (idx >= 0 && idx < m->submenu_count) {
             fe->sub = idx;
             fe->sel = 0;
+            /* corpus resets DAT_005574e0 (the plane offset) when a menu
+             * (re-)enters — the port keeps it per submenu. */
+            m->submenus[idx].scroll = 0;
         }
         return FE_EVT_NONE;
     }
@@ -803,6 +823,52 @@ FeEvent frontend_tick(FrontEnd* fe, const FeInput* in,
             if (in->left && dit->value > dit->min) {
                 dit->value--;
                 fe->option_changed = 1;
+            }
+        }
+    }
+
+    /* CanScroll edge pan (corpus FUN_00413970 @ 0x413970 + DAT_005574e0
+     * in FUN_00412c00's item placement): while the cursor is in the outer
+     * bands past the deadzone the item plane scrolls, velocity proportional
+     * to distance from the band edge, clamped to [view_h - content, 0].
+     * The corpus gates y against absolute bands for a 480-high screen
+     * (< 200 scrolls, 200..280 deadzone) and velocity ~(50 - y/4)^2; this
+     * port keeps the 5/12-h + h/12 band shape and linear distance velocity
+     * capped at the corpus's ~50 px/frame. */
+    if (sub->can_scroll) {
+        if (sub->scroll_extent <= 0) {
+            sub->scroll_extent = fe_scroll_measure(sub);
+        }
+        int vh = (fe->view_h > 0) ? fe->view_h : 480;
+        int band = vh / 12;
+        int cy = vh / 2;
+        int lo = vh - sub->scroll_extent;
+        if (lo > 0) {
+            lo = 0;
+        }
+        if (sub->scroll < lo) {
+            sub->scroll = lo;
+        }
+        if (sub->scroll > 0) {
+            sub->scroll = 0;
+        }
+        if (in->mouse_y >= 0) {
+            int d = 0, dir = 0;
+            if (in->mouse_y < cy - band) {
+                d = (cy - band) - in->mouse_y;
+                dir = 1;                       /* show earlier rows */
+            } else if (in->mouse_y > cy + band) {
+                d = in->mouse_y - (cy + band);
+                dir = -1;                      /* show later rows */
+            }
+            if (d > 0) {
+                sub->scroll += dir * (d > 50 ? 50 : d);
+                if (sub->scroll > 0) {
+                    sub->scroll = 0;
+                }
+                if (sub->scroll < lo) {
+                    sub->scroll = lo;
+                }
             }
         }
     }
@@ -1198,18 +1264,39 @@ static void fe_item_pos(const FrontEnd* fe, const FeItem* it, int i,
     if (it->level_start) {
         *x = it->x;
         *y = it->y;
-        return;
-    }
-    int bx = (sub != NULL) ? sub->base_x : 0;
-    int by = (sub != NULL) ? sub->base_y : 0;
-    if (sub != NULL && sub->auto_center) {
-        int tw = measure != NULL ? fe_font_text_width(it->label, measure)
-                                 : fe_text_width(it->label);
-        *x = bx + it->x - tw / 2;
     } else {
-        *x = bx + it->x;
+        int bx = (sub != NULL) ? sub->base_x : 0;
+        int by = (sub != NULL) ? sub->base_y : 0;
+        if (sub != NULL && sub->auto_center) {
+            int tw = measure != NULL ? fe_font_text_width(it->label, measure)
+                                     : fe_text_width(it->label);
+            *x = bx + it->x - tw / 2;
+        } else {
+            *x = bx + it->x;
+        }
+        *y = by + it->y;
     }
-    *y = by + it->y;
+    /* CanScroll plane pan (FUN_00412c00 adds DAT_005574e0 to the item y
+     * in BOTH draw and hit-test paths). */
+    if (sub != NULL && sub->can_scroll) {
+        *y += sub->scroll;
+    }
+}
+
+/* CanScroll content extent (the corpus's menu+8 "plane height"): the
+ * deepest item row of the submenu plus one row height. */
+static int fe_scroll_measure(const FeSubmenu* sub)
+{
+    int maxy = 0;
+    for (int i = 0; i < sub->item_count; i++) {
+        int top = sub->items[i].level_start
+                      ? sub->items[i].y
+                      : sub->base_y + sub->items[i].y;
+        if (top > maxy) {
+            maxy = top;
+        }
+    }
+    return maxy + 16;               /* last row's height (port chrome) */
 }
 
 /* Pointer hit-test over the active submenu's items, using the same
@@ -1244,12 +1331,22 @@ static int fe_item_pick(const FrontEnd* fe, int mx, int my,
     return 0;
 }
 
-void frontend_render(const FrontEnd* fe, const TextureSurface* hi_font,
+void frontend_render(FrontEnd* fe, const TextureSurface* hi_font,
                      const TextureSurface* lo_font,
                      int w, int h, void* px, int pitch)
 {
     if (fe == NULL || px == NULL || !fe->open) {
         return;
+    }
+    /* viewport bookkeeping for the CanScroll bands/clamp (the corpus keeps
+     * its own screen-absolute band constants; we track the window here). */
+    if (fe->view_w != w || fe->view_h != h) {
+        fe->view_w = w;
+        fe->view_h = h;
+        FeSubmenu* act = &fe->menus[fe->menu].submenus[fe->sub];
+        if (act->can_scroll) {
+            act->scroll_extent = 0;            /* re-measure next tick */
+        }
     }
     const FeSubmenu* sub = frontend_active_submenu(fe);
     if (sub == NULL || sub->item_count <= 0) {
@@ -1307,8 +1404,11 @@ void frontend_render(const FrontEnd* fe, const TextureSurface* hi_font,
         if (x < 0) {
             x = 8;
         }
-        if (y < 0) {
+        if (y < 0 && !(sub->can_scroll)) {
             y = 8;
+        }
+        if (sub->can_scroll && (y + 16 < 0 || y >= h)) {
+            continue;   /* scrolled row: outside the plane window */
         }
 
         int selected = (i == fe->sel);

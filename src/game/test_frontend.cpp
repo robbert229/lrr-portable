@@ -741,6 +741,74 @@ static void test_options(void)
     block_close(cfg);
 }
 
+static void test_scroll(void)
+{
+    BlockFile* cfg = s_parse(
+        "Lego* {\n"
+        "\tMain { StartLevel Levels::Lv0 FrontEnd TRUE }\n"
+        "\tMenu { MainMenuFull {\n"
+        "\t\tMenuCount 2\n"
+        "\t\tMenu1 { Title Main AutoCenter TRUE Position 320:200\n"
+        "\t\t\tItemCount 1 Item1 Next:0:0:Start_Game:Menu2 }\n"
+        "\t\tMenu2 { Title Pick AutoCenter FALSE Position 0:0\n"
+        "\t\t\tMenuImage Interface\\LevelPicker\\LevelPick.bmp\n"
+        "\t\t\tItemCount 1 Item1 Trigger:0:0:Back:1 }\n"
+        "\t} }\n"
+        "\tLevels {\n"
+        "\t\tLv0 { FullName Lv0 NextLevel Levels::Lv1 "
+        "FrontEndX 300 FrontEndY 100 }\n"
+        "\t\tLv1 { FullName Lv1 NextLevel Levels::Lv2 "
+        "FrontEndX 300 FrontEndY 900 }\n"
+        "\t\tLv2 { FullName Lv2 FrontEndX 300 FrontEndY 1800 }\n"
+        "\t}\n"
+        "}\n");
+    FrontEnd fe;
+    CHECK(frontend_build(&fe, cfg) == 1, "scr: builds");
+
+    /* graft marked the picker plane scrollable: 3 rows + Back */
+    FeSubmenu* pk = &fe.menus[FE_MENU_MAIN].submenus[1];
+    CHECK(pk->can_scroll == 1 && pk->item_count == 4, "scr: picker scrollable");
+
+    fe.view_w = 640;
+    fe.view_h = 480;                 /* bands 200/280, like the corpus */
+    frontend_open(&fe, FE_MENU_MAIN);
+
+    FeInput enter = { 0, 0, 0, 0, 1, 0, -1, -1, 0 };
+    frontend_tick(&fe, &enter, NULL);
+    CHECK(fe.sub == 1, "scr: into the picker sub");
+
+    FeInput mid = { 0, 0, 0, 0, 0, 0, 320, 240, 0 };
+    frontend_tick(&fe, &mid, NULL);
+    CHECK(pk->scroll == 0, "scr: deadzone stays put");
+
+    /* bottom band: 50 px/tick down to the content clamp 480-1816 = -1336 */
+    FeInput bot = { 0, 0, 0, 0, 0, 0, 320, 460, 0 };
+    frontend_tick(&fe, &bot, NULL);
+    CHECK(pk->scroll == -50, "scr: bottom band pans");
+    for (int i = 0; i < 40 && pk->scroll > -1336; i++) {
+        frontend_tick(&fe, &bot, NULL);
+    }
+    CHECK(pk->scroll == -1336, "scr: clamps at the plane's bottom");
+
+    /* top band pans back up */
+    FeInput top = { 0, 0, 0, 0, 0, 0, 320, 20, 0 };
+    frontend_tick(&fe, &top, NULL);
+    CHECK(pk->scroll == -1286, "scr: top band pans back");
+
+    /* rows off the plane are gone; the visible bottom row starts on click
+     * (Lv2 sits at 1800-1336=464; that y also clamps the scroll back) */
+    FeInput cl = { 0, 0, 0, 0, 0, 0, 310, 464, 1 };
+    FeEvent ev = frontend_tick(&fe, &cl, NULL);
+    CHECK(ev == FE_EVT_START_LEVEL && strcmp(fe.pending_level, "Lv2") == 0,
+        "scr: click follows the scrolled plane");
+
+    /* re-entry resets the plane (corpus MenuShow reset) */
+    frontend_open(&fe, FE_MENU_MAIN);
+    CHECK(pk->scroll == 0, "scr: re-entry resets");
+
+    block_close(cfg);
+}
+
 int main(int argc, char** argv)
 {
     for (int a = 1; a < argc; ++a) {
@@ -760,6 +828,7 @@ int main(int argc, char** argv)
     test_pause();
     test_slots();
     test_options();
+    test_scroll();
 
     if (s_failures == 0) {
         printf("frontend: all tests passed\n");
