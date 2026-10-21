@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "game/game.hpp"
 #include "game/ai.hpp"
@@ -19,6 +20,7 @@
 #include "engine.hpp"
 #include "frameloop.hpp"
 #include "input.hpp"
+#include "movie.hpp"
 #include "resource.hpp"
 #include "surface.hpp"
 #include "texture.hpp"
@@ -66,6 +68,116 @@ static int demo_msg_cb(int id)
 {
     (void)id; /* the bus appends it to the active queue */
     return 0; /* unhandled: dedupe callback does not consume */
+}
+
+/* Monotonic wall clock (ms) — the shell's frame pacing clock (the corpus
+ * uses timeGetTime; the port is libc-portable). */
+static int64_t now_ms(void)
+{
+    struct timespec ts;
+    timespec_get(&ts, TIME_UTC);
+    return (int64_t)ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+}
+
+/* Play one AVI through the software decoder (src/gods98/movie.*) to the full
+ * window: decode -> scale-fill -> present, feed the movie's audio track to
+ * the seam, paced at the movie's fps. Modal like the corpus's
+ * MoviePlayLoop @ 0x4157c0 — steps until done or a skip key (ESC/Space/
+ * Enter/click), and propagates a window quit. Returns 1 when a movie was
+ * played (or skipped after opening), 0 when it could not be opened. */
+static int movie_play_avi(const char* os_path, const char* label,
+                          PlatformWindow* win, DisplaySurface* surf,
+                          AudioPlayer* ap, int* quit, FILE* log)
+{
+    Movie* mv = movie_open_path(os_path);
+    if (mv == NULL) {
+        fprintf(log, "movie: %s: cannot open/decode %s\n", label, os_path);
+        return 0;
+    }
+    MovieInfo mi;
+    if (movie_info(mv, &mi) != 0 || mi.width <= 0 || mi.height <= 0) {
+        fprintf(log, "movie: %s: no video stream in %s\n", label, os_path);
+        movie_close(mv);
+        return 0;
+    }
+    fprintf(log, "movie: %s %s — %dx%d @ %d fps, %d Hz audio\n", label,
+            os_path, mi.width, mi.height,
+            mi.fps_den > 0 && mi.fps_num > 0 ? mi.fps_num / mi.fps_den
+                                             : mi.fps_num,
+            mi.audio_rate);
+
+    /* The movie carries its own soundtrack — silence the demo's ambient
+     * loop while it plays (the caller re-seeds it afterwards). */
+    audio_stop(ap);
+
+    int frame_ms = mi.fps_den > 0 && mi.fps_num > 0
+                       ? 1000 * mi.fps_den / mi.fps_num
+                       : 40;
+    if (frame_ms < 1) {
+        frame_ms = 1;
+    }
+    int64_t next_t = now_ms();
+    int64_t frames = 0;
+    int skipped = 0;
+    while (!*quit && !skipped) {
+        PlatformEvent evb[16];
+        int nev = platform_pump_events(win, evb, 16);
+        for (int i = 0; i < nev; ++i) {
+            if (evb[i].kind == PLATFORM_EVENT_QUIT) {
+                *quit = 1;
+                break;
+            }
+            if (evb[i].kind == PLATFORM_EVENT_KEYDOWN
+                && (evb[i].code == PLATFORM_KEY_ESC
+                    || evb[i].code == ' ' || evb[i].code == PLATFORM_KEY_ENTER)) {
+                skipped = 1;
+                break;
+            }
+            if (evb[i].kind == PLATFORM_EVENT_MOUSE && evb[i].button == 1) {
+                skipped = 1;
+                break;
+            }
+        }
+        if (*quit || skipped) {
+            break;
+        }
+
+        MovieOut out;
+        int r = movie_next(mv, &out);
+        if (r == 1) {
+            break; /* end of movie */
+        }
+        if (r < 0) {
+            fprintf(log, "movie: %s: decode error\n", label);
+            break;
+        }
+        if (ap->dev != NULL && out.audio_frames > 0 && out.audio_rate > 0) {
+            platform_audio_play_stereo(ap->dev, out.audio, out.audio_frames,
+                                       out.audio_rate);
+        }
+        void* pixels = NULL;
+        int   pitch = 0;
+        if (surface_lock(surf, &pixels, &pitch) == 0) {
+            movie_scale_rgba(out.rgba, mi.width, mi.height, out.rgba_pitch,
+                             (uint8_t*)pixels, WINDOW_W, WINDOW_H, pitch);
+            platform_screenshot(win, pixels, pitch, WINDOW_W, WINDOW_H,
+                                (int)frames);
+            platform_present_pixels(win, pixels, pitch, WINDOW_W, WINDOW_H);
+            surface_unlock(surf, pixels);
+        }
+        next_t += frame_ms;
+        int64_t now = now_ms();
+        if (next_t > now) {
+            Sleep((DWORD)(next_t - now));
+        } else if (now - next_t > 2 * frame_ms) {
+            next_t = now; /* fell behind — resync instead of bursting */
+        }
+        ++frames;
+    }
+    movie_close(mv);
+    fprintf(log, "movie: %s done — %lld frames%s\n", label,
+            (long long)frames, skipped ? " (skipped)" : "");
+    return 1;
 }
 
 int LegorrrRun(void)
@@ -195,6 +307,44 @@ int LegorrrRun(void)
     airbeat_set_loop(audio_status == 0 ? &ap : NULL,
                      "Sounds\\Vehicles\\Heliloop1.wav");
 
+    long frames = 0;
+    int quit = 0;
+    const char* stop = "closed";
+
+    /* --- Boot movies (finding 14 §4 + finding 23 callbacks) ----------------
+     * The corpus's boot hub (FUN_0041fb50) plays the LMI logo (`LegoAvi`)
+     * then the intro (`RRAvi`) before the front-end, each gated by
+     * AvisEnabled @ 0x414ce0 (the `DontPlayAvis` kill switch). Decoding is
+     * software (src/gods98/movie.*, FFmpeg dlopen'd at runtime), so movies
+     * play where the runtime libs exist; headless/CI runs
+     * (LEGORRR_AUTOSTOP_FRAMES) and LEGORRR_NO_MOVIES skip them. */
+    int play_movies = frame_cap == 0
+                      && movie_avis_enabled(game.cfg)
+                      && env_get("LEGORRR_NO_MOVIES", "")[0] == '\0';
+    if (play_movies) {
+        char mp[256], os[512];
+        if (movie_key_path(game.cfg, "LegoAvi", mp, sizeof(mp))
+            && movie_path_resolve(wad_dir, mp, os, sizeof(os))) {
+            movie_play_avi(os, "LegoAvi", win, &surf, &ap, &quit, log);
+        } else {
+            fprintf(log, "movieloop: no LegoAvi (%s)\n",
+                    mp[0] != '\0' ? mp : "(no config key)");
+        }
+        if (!quit
+            && movie_key_path(game.cfg, "RRAvi", mp, sizeof(mp))
+            && movie_path_resolve(wad_dir, mp, os, sizeof(os))) {
+            movie_play_avi(os, "RRAvi", win, &surf, &ap, &quit, log);
+        }
+        if (audio_status == 0 && !quit) {
+            /* The movies silenced the ambient; bring it back. */
+            audio_loop_named(&ap, "Sounds\\Iambloop.wav", 0.0f);
+        }
+    } else if (frame_cap == 0) {
+        fprintf(log, "movieloop: boot movies off (%s)\n",
+                movie_avis_enabled(game.cfg)
+                    ? "LEGORRR_NO_MOVIES" : "DontPlayAvis");
+    }
+
     /* --- Front-end boot (finding 23): main menu first -----------------------
      * The ship is modal: the front end runs until the player picks a level
      * (FE_EVT_START_LEVEL) or quits (FE_EVT_QUIT). The level itself loads
@@ -213,9 +363,6 @@ int LegorrrRun(void)
     }
     snprintf(level_name, sizeof(level_name), "%s",
              env_get("LEGORRR_LEVEL", "Level01"));
-    long frames = 0;
-    int quit = 0;
-    const char* stop = "closed";
     if (boot_menu) {
         frontend_open(&fe, FE_MENU_MAIN);
         fprintf(log, "frameloop: front end up — main menu (arrows select, "
@@ -308,6 +455,22 @@ int LegorrrRun(void)
                          "0x48, objective word 0x%08x\n",
                     level_name, level_width(game.level), level_height(game.level),
                     game.level->objective);
+            /* Level intro cinematic — MoviePlayLevelVideo @ 0x415990 reads
+             * the level's `Video` config key and plays it after load (the
+             * corpus plays it inside LevelLoad), same gates as boot. */
+            if (play_movies) {
+                char mp[256], os[512];
+                if (movie_level_video_path(game.cfg, level_name, mp,
+                                           sizeof(mp))
+                    && movie_path_resolve(wad_dir, mp, os, sizeof(os))) {
+                    movie_play_avi(os, level_name, win, &surf, &ap, &quit,
+                                   log);
+                    if (audio_status == 0 && !quit) {
+                        /* the level movie also silenced the ambient */
+                        audio_loop_named(&ap, "Sounds\\Iambloop.wav", 0.0f);
+                    }
+                }
+            }
             /* Mission plumbing (finding 09/10): seed the 10-task table +
              * reward screen from the level's Reward group, then place the
              * `.ol` object list into the entity tables. */

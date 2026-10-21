@@ -13,6 +13,16 @@ find_package(SDL3 REQUIRED)
 set(ISLE_RENDERER_SDLGPU OFF CACHE BOOL "" FORCE)
 set(ISLE_RENDERER_SOFTWARE ON CACHE BOOL "" FORCE)
 
+# miniwin's CMakeLists auto-enables its OpenGL/OpenGL-ES d3drm backends when
+# the libs are found on the host (find_package(OpenGL) / find_library GLESv2)
+# and links them PRIVATE — a link dependency meson's cmake bridge cannot
+# propagate, so the game exe would link against their gl* symbols without the
+# library. Nail those lookups closed to keep the software-only build
+# deterministic (the author's reference machine has no GL/GLES2 dev libs).
+set(CMAKE_DISABLE_FIND_PACKAGE_OpenGL TRUE CACHE BOOL "" FORCE)
+set(OPENGL_ES2_LIBRARY "" CACHE FILEPATH "GLESv2 (disabled — software renderer only)")
+set(OPENGL_ES3_LIBRARY "" CACHE FILEPATH "GLESv3 (disabled — software renderer only)")
+
 add_subdirectory(
   ${CMAKE_CURRENT_SOURCE_DIR}/../../3rdparty/isle-portable/miniwin
   miniwin_build
