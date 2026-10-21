@@ -89,6 +89,12 @@ typedef struct FeItem {
     char  target[FE_NAME_MAX]; /* "Menu%i" target, or the level group name    */
     int   flag;                /* Trigger flag / Cycle count / slider lo      */
     int   level_start;         /* 1 = grafted picker row: Enter starts a level */
+    int   load_slot;           /* 1 = grafted save-slot row: Enter loads it    */
+    /* Slider / Cycle interaction state (Options menus). `value` lives in
+     * [min, max]; cycles min=0, max=count-1 and carry their option texts. */
+    int   min, max, value;
+    int   cycle_count;
+    char  cycle_opts[4][24];
 } FeItem;
 
 /* A front-end FLIC overlay (`!Overlay%i <avi\X.flh>:<SFX>:x:y`, finding
@@ -122,6 +128,16 @@ typedef struct FeMenu {
     FeSubmenu submenus[FE_SUBMENUS_MAX];
 } FeMenu;
 
+#define FE_SLOT_COUNT 6    /* SAVE_SLOTS */
+
+/* A runtime save slot row (SaveMenuBuild @ 0x415a10 builds these from the
+ * `Save_Game_%i` keys): the slot's label + whether it has any records. */
+typedef struct FeSlot {
+    int   id;
+    char  label[FE_NAME_MAX];
+    int   present;
+} FeSlot;
+
 typedef struct FrontEnd {
     BlockFile* cfg;               /* Lego.cfg DB (not owned) */
     FeMenu  menus[FE_MENU_COUNT];   /* main / save / paused / options */
@@ -135,12 +151,19 @@ typedef struct FrontEnd {
     char campaign_label[FE_CHAIN_MAX][FE_NAME_MAX];
     char tutorial_label[FE_CHAIN_MAX][FE_NAME_MAX];
 
+    /* Runtime save/load slot rows (grafted onto the SaveLoad submenus by
+     * frontend_build_slots). */
+    int    slot_count;
+    FeSlot slots[FE_SLOT_COUNT];
+
     /* --- runtime (modal menu) state ------------------------------------ */
     int  open;                      /* 1 while the menu loop is showing   */
     int  menu;                      /* FE_MENU_* (MAIN / PAUSED reachable) */
     int  sub;                       /* active submenu index               */
     int  sel;                       /* selected item index                */
     int  quit;                      /* user chose Quit (Yes on the confirm) */
+    int  load_slot;                 /* FE_EVT_LOAD_GAME target slot id     */
+    int  option_changed;            /* 1: a Slider/Cycle value changed this tick */
     char pending_level[FE_LEVEL_NAME_MAX]; /* level group to load (no "Levels::") */
     char resume_level[FE_LEVEL_NAME_MAX];  /* current level (pause Restart)   */
 
@@ -154,6 +177,7 @@ typedef struct FrontEnd {
  * hovered row becomes the selection); `click` activates it like Enter. */
 typedef struct FeInput {
     int up, down;     /* move selection */
+    int left, right;  /* adjust a Slider/Cycle value */
     int enter;        /* activate selection (keyboard) */
     int esc;          /* back one submenu / close */
     int mouse_x;      /* pointer x (>= 0 = mouse in use) */
@@ -164,6 +188,7 @@ typedef struct FeInput {
 typedef enum {
     FE_EVT_NONE = 0,
     FE_EVT_START_LEVEL,   /* frontend.pending_level holds the level group */
+    FE_EVT_LOAD_GAME,     /* frontend.load_slot holds the save slot id    */
     FE_EVT_RESUME,        /* close a modal overlay (pause Continue / Esc)   */
     FE_EVT_QUIT,          /* user quit the app from the front end */
 } FeEvent;
@@ -186,6 +211,12 @@ int  frontend_enabled(BlockFile* cfg);
 /* Enter the modal menu at `menu`/submenu 0, selection 0. */
 int  frontend_open(FrontEnd* fe, int menu);
 void frontend_close(FrontEnd* fe);
+
+/* Register the runtime save/load slot rows (from save_slot_state) and graft
+ * them onto the SaveLoad submenus (MenuImage contains "SaveLoad" — the
+ * shipped Load_A_Saved_Game screens), after the cfg items. Selecting a row
+ * returns FE_EVT_LOAD_GAME with fe.load_slot = the slot id. */
+int  frontend_build_slots(FrontEnd* fe, const FeSlot* slots, int n);
 
 /* Step the modal menu one frame. Returns the event the frame loop must act
  * on; FE_EVT_NONE while the menu stays up. `measure` is the submenu's

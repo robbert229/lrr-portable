@@ -39,6 +39,24 @@ static const char* env_get(const char* name, const char* fallback)
     return (v != NULL && v[0] != '\0') ? v : fallback;
 }
 
+static int s_icontains(const char* haystack, const char* needle)
+{
+    if (haystack == NULL || needle == NULL) {
+        return 0;
+    }
+    for (size_t i = 0; haystack[i] != '\0'; i++) {
+        size_t j = 0;
+        while (needle[j] != '\0' && (unsigned char)(haystack[i + j] | 0x20)
+               == (unsigned char)(needle[j] | 0x20)) {
+            ++j;
+        }
+        if (needle[j] == '\0') {
+            return 1;
+        }
+    }
+    return 0;
+}
+
 /* Held-key probe for the executor's cheat-keybind pre-pass (finding 06):
  * reads the current frame's input tables. */
 static const InputState* s_demo_input = NULL;
@@ -473,6 +491,25 @@ int LegorrrRun(void)
     }
     snprintf(level_name, sizeof(level_name), "%s",
              env_get("LEGORRR_LEVEL", "Level01"));
+
+    /* Runtime save/load slots (SaveMenuBuild @ 0x415a10 rows): state from
+     * the on-disk slots, grafted onto the SaveLoad screens by the front
+     * end. Slot slots run 1..SAVE_SLOTS-1 (5 is the default/autosave). */
+    int pending_load_slot = -1, pending_load_record = -1;
+    {
+        FeSlot slots[FE_SLOT_COUNT];
+        int sn = 0;
+        for (int s = 1; s < SAVE_SLOTS; s++) {
+            int filled = 0, completed = 0, resume = -1;
+            save_slot_state(&game, s, &filled, &completed, &resume);
+            snprintf(slots[sn].label, FE_NAME_MAX, "Slot %d%s",
+                     s, (filled > 0) ? "" : " (empty)");
+            slots[sn].id = s;
+            slots[sn].present = filled > 0;
+            sn++;
+        }
+        frontend_build_slots(&fe, slots, sn);
+    }
     if (boot_menu) {
         frontend_open(&fe, FE_MENU_MAIN);
         fprintf(log, "frameloop: front end up — main menu (arrows select, "
@@ -517,6 +554,23 @@ int LegorrrRun(void)
             fi.mouse_y = input.mouse_y;
             fi.click = input_mouse_pressed(&input);
             FeEvent ev = frontend_tick(&fe, &fi, hi_font);
+            if (fe.option_changed) {
+                const FeItem* oit = frontend_active_item(&fe);
+                if (oit != NULL) {
+                    int live = (s_icontains(oit->label, "sfx")
+                                || s_icontains(oit->label, "music")
+                                || s_icontains(oit->label, "sound"))
+                               && oit->max > 0;
+                    if (live && ap.dev != NULL) {
+                        audio_set_volume(&ap, (float)oit->value
+                                                / (float)oit->max);
+                    }
+                    fprintf(log, "frameloop: option %s -> %d/%d (%s)\n",
+                            oit->label, oit->value, oit->max,
+                            live ? "audio" : "state");
+                    fe.option_changed = 0;
+                }
+            }
             if (ev == FE_EVT_QUIT) {
                 quit = 1;
                 stop = "menu quit";
@@ -525,6 +579,39 @@ int LegorrrRun(void)
             if (ev == FE_EVT_START_LEVEL) {
                 snprintf(level_name, sizeof(level_name), "%s", fe.pending_level);
                 fprintf(log, "frameloop: front end picked level %s\n", level_name);
+                break;
+            }
+            if (ev == FE_EVT_LOAD_GAME) {
+                int filled = 0, completed = 0, resume = -1;
+                if (save_slot_state(&game, fe.load_slot, &filled, &completed,
+                                    &resume)) {
+                    /* record index -> campaign position (the port's level
+                     * tree stand-in for SavTreeLoad); resume the furthest
+                     * completed record, else start the campaign fresh. */
+                    pending_load_slot = fe.load_slot;
+                    pending_load_record = resume >= 0 ? resume : 0;
+                    if (fe.campaign_n > 0) {
+                        int ci = pending_load_record < fe.campaign_n
+                                     ? pending_load_record
+                                     : fe.campaign_n - 1;
+                        snprintf(level_name, sizeof(level_name), "%s",
+                                 fe.campaign[ci]);
+                    } else {
+                        snprintf(level_name, sizeof(level_name), "%s",
+                                 "Level01");
+                    }
+                    game.save_slot = fe.load_slot;
+                    game.current_record = pending_load_record;
+                    fprintf(log, "frameloop: loading slot %d record %d -> "
+                                 "level %s (%d/%d completed)\n",
+                            pending_load_slot, pending_load_record,
+                            level_name, completed, filled);
+                } else {
+                    snprintf(level_name, sizeof(level_name), "%s",
+                             env_get("LEGORRR_LEVEL", "Level01"));
+                    fprintf(log, "frameloop: slot %d absent — starting fresh "
+                                 "at %s\n", fe.load_slot, level_name);
+                }
                 break;
             }
 
@@ -541,6 +628,19 @@ int LegorrrRun(void)
         frameloop_load_level(log, wad_dir, play_movies, win, &surf, &ap,
                              audio_status, &quit, &game, &ctx, views,
                              level_name);
+        if (pending_load_slot >= 0 && game.level != NULL) {
+            /* Restore the saved checkpoint over the freshly-seeded task
+             * table (the corpus's model is a per-level checkpoint, not an
+             * entity dump — finding 08). The slot's records are still live
+             * in ctx->records from save_slot_state. */
+            uint32_t* fl = save_record_flags(&game, pending_load_record);
+            if (fl != NULL) {
+                checkpoint_blob_apply(&game, (const uint8_t*)(fl + 1));
+                fprintf(log, "frameloop: restored checkpoint slot %d record "
+                             "%d\n", pending_load_slot, pending_load_record);
+            }
+            pending_load_slot = -1;
+        }
     }
 
     const float dt = 1.0f / 30.0f;
@@ -617,6 +717,23 @@ int LegorrrRun(void)
                 fi.mouse_y = input.mouse_y;
                 fi.click = input_mouse_pressed(&input);
                 FeEvent ev = frontend_tick(&fe, &fi, hi_font);
+                if (fe.option_changed) {
+                    const FeItem* oit = frontend_active_item(&fe);
+                    if (oit != NULL) {
+                        int live = (s_icontains(oit->label, "sfx")
+                                    || s_icontains(oit->label, "music")
+                                    || s_icontains(oit->label, "sound"))
+                                   && oit->max > 0;
+                        if (live && ap.dev != NULL) {
+                            audio_set_volume(&ap, (float)oit->value
+                                                    / (float)oit->max);
+                        }
+                        fprintf(log, "frameloop: option %s -> %d/%d (%s)\n",
+                                oit->label, oit->value, oit->max,
+                                live ? "audio" : "state");
+                        fe.option_changed = 0;
+                    }
+                }
                 if (ev == FE_EVT_QUIT) {
                     quit = 1;
                     stop = "menu quit";

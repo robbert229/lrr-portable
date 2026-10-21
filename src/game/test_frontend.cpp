@@ -208,7 +208,7 @@ static void test_gate(void)
     block_close(off);
 }
 
-static FeInput s_small = { 0, 0, 0, 0, -1, -1, 0 };
+static FeInput s_small = { 0, 0, 0, 0, 0, 0, -1, -1, 0 };
 
 static void test_nav_and_actions(void)
 {
@@ -221,7 +221,7 @@ static void test_nav_and_actions(void)
     /* Overlay players open lazily on the first tick of the active submenu
      * (PlayRandom picks one; no fixture files, so the flic stays NULL but
      * the attempted flag is set — no per-frame retries). */
-    FeInput ov = { 0, 0, 0, 0, -1, -1, 0 };
+    FeInput ov = { 0, 0, 0, 0, 0, 0, -1, -1, 0 };
     CHECK(frontend_tick(&fe, &ov, NULL) == FE_EVT_NONE, "nav: overlay tick ok");
     CHECK(fe.menus[FE_MENU_MAIN].submenus[0].overlays[0].tried == 1,
           "nav: overlay open attempted");
@@ -230,7 +230,7 @@ static void test_nav_and_actions(void)
     CHECK(fe.menus[FE_MENU_MAIN].submenus[0].overlays[0].tried == 1,
           "nav: overlay open not retried every frame");
 
-    FeInput in = { 0, 0, 0, 0, -1, -1, 0 };
+    FeInput in = { 0, 0, 0, 0, 0, 0, -1, -1, 0 };
     in.down = 1;
     CHECK(frontend_tick(&fe, &in, NULL) == FE_EVT_NONE && fe.sel == 1, "nav: down -> 1");
     in.down = 0; in.down = 1; in.enter = 0;
@@ -268,7 +268,7 @@ static void test_nav_and_actions(void)
     /* quit flow: root -> Quit_Game -> Yes */
     frontend_open(&fe, FE_MENU_MAIN);
     in.enter = 0; in.down = 1;
-    FeInput tmp = { 0, 1, 0, 0, -1, -1, 0 };
+    FeInput tmp = { 0, 1, 0, 0, 0, 0, -1, -1, 0 };
     frontend_tick(&fe, &tmp, NULL);
     frontend_tick(&fe, &tmp, NULL);
     frontend_tick(&fe, &tmp, NULL);
@@ -282,7 +282,7 @@ static void test_nav_and_actions(void)
     /* esc: back then quit */
     frontend_open(&fe, FE_MENU_MAIN);
     in.enter = 0; in.down = 1;
-    FeInput down_ = { 0, 1, 0, 0, -1, -1, 0 };
+    FeInput down_ = { 0, 1, 0, 0, 0, 0, -1, -1, 0 };
     frontend_tick(&fe, &down_, NULL);
     frontend_tick(&fe, &down_, NULL);
     frontend_tick(&fe, &down_, NULL);
@@ -292,7 +292,7 @@ static void test_nav_and_actions(void)
     CHECK(frontend_tick(&fe, &in, NULL) == FE_EVT_NONE && fe.sub == 0,
         "nav: esc on confirm -> Menu1");
     in.esc = 0;
-    FeInput esc_ = { 0, 0, 0, 1, -1, -1, 0 };
+    FeInput esc_ = { 0, 0, 0, 0, 0, 1, -1, -1, 0 };
     CHECK(frontend_tick(&fe, &esc_, NULL) == FE_EVT_QUIT,
         "nav: esc on root -> QUIT");
     if (cfg != NULL) {
@@ -482,7 +482,7 @@ static void test_active_image(void)
         "img: Menu1 has no MenuImage key");
 
     /* Enter on Start_Game (item 0) -> Menu2 (Missions picker) */
-    FeInput in = { 0, 0, 1, 0, -1, -1, 0 };
+    FeInput in = { 0, 0, 0, 0, 1, 0, -1, -1, 0 };
     frontend_tick(&fe, &in, NULL);
     CHECK(fe.sub == 1, "img: navigated to Menu2");
     const char* im = frontend_active_image(&fe);
@@ -502,24 +502,24 @@ static void test_pointer(void)
 
     /* hover item 1 ("Training_Missions": Position 320:200, AutoCenter,
      * 3x5 tw 126 -> x=257, y=240; hit rect ~(253..387, 238..250)) */
-    FeInput ho = { 0, 0, 0, 0, 300, 245, 0 };
+    FeInput ho = { 0, 0, 0, 0, 0, 0, 300, 245, 0 };
     CHECK(frontend_tick(&fe, &ho, NULL) == FE_EVT_NONE && fe.sel == 1,
         "ptr: hover selects item 1");
 
     /* click item 1 -> its Next target (Menu3) */
-    FeInput cl = { 0, 0, 0, 0, 300, 245, 1 };
+    FeInput cl = { 0, 0, 0, 0, 0, 0, 300, 245, 1 };
     CHECK(frontend_tick(&fe, &cl, NULL) == FE_EVT_NONE && fe.sub == 2,
         "ptr: click activates Next -> Menu3");
     CHECK(fe.sel == 0, "ptr: submenu nav resets selection");
 
     /* click in empty space keeps the menu up with no change */
     frontend_open(&fe, FE_MENU_MAIN);
-    FeInput miss = { 0, 0, 0, 0, 10, 10, 1 };
+    FeInput miss = { 0, 0, 0, 0, 0, 0, 10, 10, 1 };
     CHECK(frontend_tick(&fe, &miss, NULL) == FE_EVT_NONE && fe.sel == 0
         && fe.sub == 0, "ptr: empty-space click is a no-op");
 
     /* click the selected Start_Game (item 0: x=285, y=200) -> Missions */
-    FeInput start = { 0, 0, 0, 0, 300, 205, 1 };
+    FeInput start = { 0, 0, 0, 0, 0, 0, 300, 205, 1 };
     CHECK(frontend_tick(&fe, &start, NULL) == FE_EVT_NONE && fe.sub == 1,
         "ptr: click Start_Game -> Missions picker");
     block_close(cfg);
@@ -568,19 +568,19 @@ static void test_pause(void)
 
     /* Continue_Game (Trigger flag 1) resumes instead of quitting. */
     frontend_open(&fe, FE_MENU_PAUSED);
-    FeInput enter = { 0, 0, 1, 0, -1, -1, 0 };
+    FeInput enter = { 0, 0, 0, 0, 1, 0, -1, -1, 0 };
     CHECK(frontend_tick(&fe, &enter, NULL) == FE_EVT_RESUME && !fe.open,
         "pause: Continue -> RESUME");
 
     /* Esc on the pause root resumes. */
     frontend_open(&fe, FE_MENU_PAUSED);
-    FeInput esc = { 0, 0, 0, 1, -1, -1, 0 };
+    FeInput esc = { 0, 0, 0, 0, 0, 1, -1, -1, 0 };
     CHECK(frontend_tick(&fe, &esc, NULL) == FE_EVT_RESUME && !fe.open,
         "pause: Esc on root -> RESUME");
 
     /* Quit = item 4 (sel 3) -> confirm (Menu3) -> Yes -> QUIT. */
     frontend_open(&fe, FE_MENU_PAUSED);
-    FeInput in = { 0, 1, 0, 0, -1, -1, 0 };
+    FeInput in = { 0, 1, 0, 0, 0, 0, -1, -1, 0 };
     frontend_tick(&fe, &in, NULL);            /* sel 1 */
     frontend_tick(&fe, &in, NULL);            /* sel 2 */
     frontend_tick(&fe, &in, NULL);            /* sel 3 (Quit) */
@@ -608,6 +608,139 @@ static void test_pause(void)
     block_close(cfg);
 }
 
+static void test_slots(void)
+{
+    BlockFile* cfg = s_parse(
+        "Lego* {\n"
+        "\tMain { StartLevel Levels::Tran01 }\n"
+        "\tMenu { MainMenuFull {\n"
+        "\t\tMenuCount 2\n"
+        "\t\tMenu1 {\n"
+        "\t\t\tAutoCenter TRUE Position 320:200 ItemCount 1\n"
+        "\t\t\tItem1 Next:0:0:Load_A_Saved_Game:Menu2\n"
+        "\t\t}\n"
+        "\t\tMenu2 {\n"
+        "\t\t\tFullName Load_A_Saved_Game\n"
+        "\t\t\tMenuImage Interface\\FrontEnd\\SaveLoad.bmp:0:0:1\n"
+        "\t\t\tAutoCenter FALSE Position 320:200 ItemCount 1\n"
+        "\t\t\tItem1 Next:-314:236:Back:Menu1\n"
+        "\t\t}\n"
+        "\t} }\n"
+        "\tLevels { Tran01 { FullName T FrontEndX 10 FrontEndY 10 } }\n"
+        "}\n");
+    FrontEnd fe;
+    frontend_build(&fe, cfg);
+    FeSlot slots[3];
+    snprintf(slots[0].label, FE_NAME_MAX, "%s", "Slot 1 (empty)");
+    slots[0].id = 1; slots[0].present = 0;
+    snprintf(slots[1].label, FE_NAME_MAX, "%s", "Slot 2");
+    slots[1].id = 2; slots[1].present = 1;
+    snprintf(slots[2].label, FE_NAME_MAX, "%s", "Slot 3");
+    slots[2].id = 3; slots[2].present = 1;
+
+    CHECK(frontend_build_slots(&fe, slots, 3) == 1, "slots: grafted");
+    CHECK(fe.slot_count == 3, "slots: registered count");
+    const FeMenu* m = frontend_menu(&fe, FE_MENU_MAIN);
+    CHECK(m->submenus[1].item_count == 1 + 3,
+        "slots: 3 rows appended on the SaveLoad screen");
+    CHECK(m->submenus[1].items[1].load_slot == 1,
+        "slots: row 1 binds slot 1");
+    CHECK(strcmp(m->submenus[1].items[2].label, "Slot 2") == 0,
+        "slots: row 2 label");
+
+    frontend_open(&fe, FE_MENU_MAIN);
+    FeInput ent = { 0, 0, 0, 0, 1, 0, -1, -1, 0 };
+    frontend_tick(&fe, &ent, NULL);           /* Menu1 item (Load) -> Menu2 */
+    CHECK(fe.sub == 1, "slots: navigated to SaveLoad screen");
+    FeInput down = { 0, 1, 0, 0, 0, 0, -1, -1, 0 };
+    frontend_tick(&fe, &down, NULL);          /* sel 1 = first slot row */
+    ent.down = 0; ent.enter = 1;
+    CHECK(frontend_tick(&fe, &ent, NULL) == FE_EVT_LOAD_GAME
+        && fe.load_slot == 1, "slots: picking slot 1 -> LOAD_GAME");
+
+    block_close(cfg);
+}
+
+static void test_options(void)
+{
+    BlockFile* cfg = s_parse(
+        "Lego* {\n"
+        "\tMain { StartLevel Levels::Tran01 FrontEnd TRUE }\n"
+        "\tMenu { MainMenuFull {\n"
+        "\t\tMenuCount 1 Menu1 { AutoCenter TRUE Position 320:200\n"
+        "\t\t\tItemCount 1 Item1 Next:0:0:Back:Menu1 }\n"
+        "\t}\n"
+        "\tPausedMenu {\n"
+        "\t\tMenuCount 2\n"
+        "\t\tMenu1 { Title Paused Position 250:134 ItemCount 1\n"
+        "\t\t\tItem1 Next:60:80:Options:Menu2\n"
+        "\t\t}\n"
+        "\t\tMenu2 { Title Options AutoCenter FALSE Position 250:134\n"
+        "\t\t\tItemCount 3\n"
+        "\t\t\tItem1 Slider:0:0:0:0:SFX_Volume:0:10:bar.bmp\n"
+        "\t\t\tItem2 Cycle:0:40:0:0:Help_Window:2:Off:On\n"
+        "\t\t\tItem3 Next:60:180:Back:Menu1\n"
+        "\t\t}\n"
+        "\t} }\n"
+        "\tLevels { Tran01 { FullName T } }\n"
+        "}\n");
+    FrontEnd fe;
+    CHECK(frontend_build(&fe, cfg) == 1, "opt: builds");
+
+    /* Paused Menu1 -> Options (Menu2) */
+    frontend_open(&fe, FE_MENU_PAUSED);
+    FeInput ein = { 0, 0, 0, 0, 1, 0, -1, -1, 0 };
+    frontend_tick(&fe, &ein, NULL);
+    CHECK(fe.sub == 1, "opt: on the Options submenu");
+
+    FeItem* sl = &fe.menus[FE_MENU_PAUSED].submenus[1].items[0];
+    CHECK(sl->kind == FE_ITEM_SLIDER && sl->min == 0 && sl->max == 10
+        && sl->value == 8, "opt: slider parsed with default 8");
+
+    FeInput r = { 0, 0, 0, 1, 0, 0, -1, -1, 0 };   /* right */
+    fe.option_changed = 0;
+    frontend_tick(&fe, &r, NULL);
+    CHECK(sl->value == 9 && fe.option_changed == 1, "opt: right increments");
+    FeInput l = { 0, 0, 1, 0, 0, 0, -1, -1, 0 };   /* left */
+    frontend_tick(&fe, &l, NULL);
+    frontend_tick(&fe, &l, NULL);
+    CHECK(sl->value == 7, "opt: left decrements (9 -> 7)");
+
+    /* Cycle item */
+    FeInput down = { 0, 1, 0, 0, 0, 0, -1, -1, 0 };
+    frontend_tick(&fe, &down, NULL);
+    FeItem* cy = &fe.menus[FE_MENU_PAUSED].submenus[1].items[1];
+    CHECK(cy->kind == FE_ITEM_CYCLE && cy->cycle_count == 2
+        && cy->value == 0 && strcmp(cy->cycle_opts[1], "On") == 0,
+        "opt: cycle parsed with options");
+    frontend_tick(&fe, &r, NULL);
+    CHECK(cy->value == 1, "opt: cycle right -> option 1");
+    frontend_tick(&fe, &r, NULL);
+    CHECK(cy->value == 1, "opt: cycle clamps at max");
+
+    /* Render the slider widget (3x5 fallback): item0 at Position 250:134,
+     * label "SFX_Volume" tw 70 -> bar x=250+80=330, y=134+6-2=138, width 72;
+     * value 7 -> fill 7*72/10=50 => gold 330..379, dark 380..401. */
+    int w = 480, h = 320;
+    uint8_t* px = (uint8_t*)calloc((size_t)w * h, 4);
+    CHECK(px != NULL, "opt: buffer");
+    if (px != NULL) {
+        memset(px, 0, (size_t)w * h * 4);
+        frontend_render(&fe, NULL, NULL, w, h, px, w * 4);
+        uint8_t c[3];
+        c[0] = px[(140 * w + 334) * 4 + 0];
+        c[1] = px[(140 * w + 334) * 4 + 1];
+        c[2] = px[(140 * w + 334) * 4 + 2];
+        CHECK(c[0] == 210 && c[1] == 180 && c[2] == 70,
+            "opt: bar fill is gold");
+        c[0] = px[(140 * w + 384) * 4 + 0];
+        c[1] = px[(140 * w + 384) * 4 + 1];
+        CHECK(c[0] == 36 && c[1] == 36, "opt: bar tail is dark");
+        free(px);
+    }
+    block_close(cfg);
+}
+
 int main(int argc, char** argv)
 {
     for (int a = 1; a < argc; ++a) {
@@ -625,6 +758,8 @@ int main(int argc, char** argv)
     test_font();
     test_pointer();
     test_pause();
+    test_slots();
+    test_options();
 
     if (s_failures == 0) {
         printf("frontend: all tests passed\n");

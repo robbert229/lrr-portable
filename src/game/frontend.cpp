@@ -162,6 +162,10 @@ static int fe_item_kind(const char* tok)
     return FE_ITEM_NEXT;                 /* "Next" and anything unknown */
 }
 
+/* Slider initial values per banner — the corpus's option defaults
+ * (OptionsLoadOrDefault: speed 1, SFX 8, music 5, brightness 8). */
+static int fe_option_default(const char* banner, int lo, int hi);
+
 /* Split an Item value ("Next:0:0:Start_Game:Menu2", "Trigger:…:Yes:1",
  * "Slider:x1:y1:x2:y2:banner:lo:hi:img…") into ':'-fields. Position x/y are
  * fields 1/2 for every kind; the display label differs per kind (finding 23):
@@ -172,6 +176,8 @@ static void fe_parse_item(const char* value, FeItem* it)
 {
     it->kind = FE_ITEM_NEXT;
     it->x = 0; it->y = 0; it->flag = 0; it->level_start = 0;
+    it->load_slot = 0;
+    it->min = 0; it->max = 0; it->value = 0; it->cycle_count = 0;
     it->label[0] = '\0'; it->target[0] = '\0';
     if (value == NULL) {
         return;
@@ -248,11 +254,49 @@ static void fe_parse_item(const char* value, FeItem* it)
         if (it->label[0] == '\0' && n > 3) {
             snprintf(it->label, FE_NAME_MAX, "%s", fields[3]);
         }
-        if (n > 6 && it->kind == FE_ITEM_SLIDER) {
-            it->flag = (int)strtol(fields[6], NULL, 10);
+        if (it->kind == FE_ITEM_SLIDER) {
+            /* Slider:x1:y1:x2:y2:banner:lo:hi:bar… */
+            it->min = (n > 6) ? (int)strtol(fields[6], NULL, 10) : 0;
+            it->max = (n > 7) ? (int)strtol(fields[7], NULL, 10) : 100;
+            it->flag = it->min;
+            it->value = fe_option_default(it->label, it->min, it->max);
+        } else if (it->kind == FE_ITEM_REALSLIDER) {
+            /* RealSlider:type:x1:y1:x2:y2:banner:lo:hi:step */
+            it->min = (n > 6) ? (int)strtol(fields[6], NULL, 10) : 0;
+            it->max = (n > 7) ? (int)strtol(fields[7], NULL, 10) : 100;
+            it->value = fe_option_default(it->label, it->min, it->max);
+        } else if (it->kind == FE_ITEM_CYCLE) {
+            /* Cycle:x1:y1:x2:y2:banner:count:opt1:opt2:… */
+            int count = (n > 6) ? (int)strtol(fields[6], NULL, 10) : 0;
+            if (count > 4) {
+                count = 4;
+            }
+            it->cycle_count = count;
+            it->min = 0;
+            it->max = count > 0 ? count - 1 : 0;
+            it->value = 0;
+            for (int k = 0; k < count && (7 + k) < n; k++) {
+                snprintf(it->cycle_opts[k], sizeof(it->cycle_opts[0]), "%s",
+                         fields[7 + k]);
+            }
         }
         break;
     }
+}
+
+/* Slider initial values per banner — the corpus's option defaults
+ * (OptionsLoadOrDefault: speed 1, SFX 8, music 5, brightness 8). These are
+ * state until the engine's option globals (DAT_00557030/34/3c) are wired. */
+static int fe_option_default(const char* banner, int lo, int hi)
+{
+    int d = lo;
+    if (s_stristr(banner, "sfx")) { d = 8; }
+    else if (s_stristr(banner, "music")) { d = 5; }
+    else if (s_stristr(banner, "bright")) { d = 8; }
+    else if (s_stristr(banner, "speed")) { d = 1; }
+    if (d < lo) { d = lo; }
+    if (d > hi) { d = hi; }
+    return d;
 }
 
 /* --- menu group building -------------------------------------------------- */
@@ -571,6 +615,48 @@ int frontend_enabled(BlockFile* cfg)
     return block_get_bool(cfg, "Lego* Main FrontEnd") == 1;
 }
 
+int frontend_build_slots(FrontEnd* fe, const FeSlot* slots, int n)
+{
+    if (fe == NULL || slots == NULL || n <= 0) {
+        return 0;
+    }
+    if (n > FE_SLOT_COUNT) {
+        n = FE_SLOT_COUNT;
+    }
+    fe->slot_count = n;
+    for (int i = 0; i < n; i++) {
+        fe->slots[i] = slots[i];
+    }
+    int grafted = 0;
+    /* both the main menu's Load_A_Saved_Game screen and the SaveMenu carry
+     * the slot rows (SaveMenuBuild @ 0x415a10's runtime rows; the screens
+     * are identified by their SaveLoad art). */
+    for (int mi = 0; mi < FE_MENU_COUNT; mi++) {
+        FeMenu* m = &fe->menus[mi];
+        for (int si = 0; si < m->submenu_count; si++) {
+            FeSubmenu* sub = &m->submenus[si];
+            if (!s_stristr(sub->image, "SaveLoad")) {
+                continue;
+            }
+            int base = sub->item_count;
+            for (int k = 0; k < n && base + k < FE_ITEMS_MAX; k++) {
+                FeItem* it = &sub->items[base + k];
+                it->kind = FE_ITEM_NEXT;
+                it->load_slot = slots[k].id;
+                it->level_start = 0;
+                it->flag = 0;
+                it->target[0] = '\0';
+                snprintf(it->label, FE_NAME_MAX, "%s", slots[k].label);
+                it->x = 48;
+                it->y = 96 + k * 40;
+                sub->item_count = base + k + 1;
+            }
+            grafted = 1;
+        }
+    }
+    return grafted;
+}
+
 int frontend_open(FrontEnd* fe, int menu)
 {
     if (fe == NULL || !fe->built) {
@@ -606,6 +692,13 @@ static FeEvent fe_activate(FrontEnd* fe)
     FeMenu* m = &fe->menus[fe->menu];
     FeSubmenu* sub = &m->submenus[fe->sub];
     FeItem* it = &sub->items[fe->sel];
+
+    /* save-slot row: load the slot (FE_EVT_LOAD_GAME, fe.load_slot set) */
+    if (it->load_slot) {
+        fe->load_slot = it->load_slot;
+        fe->open = 0;
+        return FE_EVT_LOAD_GAME;
+    }
 
     /* picker row: start the selected level */
     if (it->level_start) {
@@ -697,6 +790,23 @@ FeEvent frontend_tick(FrontEnd* fe, const FeInput* in,
         }
     }
 
+    /* Slider / Cycle adjustment: left/right steps the value within
+     * [min,max] and flags option_changed for the frame loop to apply. */
+    {
+        FeItem* dit = &sub->items[fe->sel];
+        if (dit->kind == FE_ITEM_SLIDER || dit->kind == FE_ITEM_REALSLIDER
+            || dit->kind == FE_ITEM_CYCLE) {
+            if (in->right && dit->value < dit->max) {
+                dit->value++;
+                fe->option_changed = 1;
+            }
+            if (in->left && dit->value > dit->min) {
+                dit->value--;
+                fe->option_changed = 1;
+            }
+        }
+    }
+
     /* pointer: hover selects; a click activates the hovered row (Enter).
      * When the pointer is in use but outside every item, a click is a
      * no-op (the menu stays up). */
@@ -758,7 +868,8 @@ const FeSubmenu* frontend_active_submenu(const FrontEnd* fe)
 
 const FeItem* frontend_active_item(const FrontEnd* fe)
 {
-    static const FeItem s_empty = { 0, 0, 0, {0}, {0}, 0, 0 };
+    static const FeItem s_empty = { 0, 0, 0, {0}, {0}, 0, 0, 0,
+                                        0, 0, 0, 0, {{0},{0},{0},{0}} };
     const FeSubmenu* s = frontend_active_submenu(fe);
     if (s == NULL || fe->sel < 0 || fe->sel >= s->item_count) {
         return &s_empty;
@@ -1221,6 +1332,35 @@ void frontend_render(const FrontEnd* fe, const TextureSurface* hi_font,
             fe_draw_text(px, pitch, w, h, x, y, it->label,
                          selected ? 255 : 200, selected ? 255 : 200,
                          selected ? 255 : 160);
+        }
+        /* Slider / Cycle widget: a bar + knob for sliders, the current
+         * option text for cycles (the port's own chrome, not the shipped
+         * Vol_* bar art). */
+        if (it->kind == FE_ITEM_SLIDER || it->kind == FE_ITEM_REALSLIDER) {
+            int chh2 = 12;
+            if (font != NULL) {
+                int cw2 = 0;
+                fe_font_cell(font, &cw2, &chh2);
+            }
+            int bx = x + lw + 10, by = y + chh2 / 2 - 2;
+            int bw = 72;
+            int frac = bw;
+            if (it->max > it->min) {
+                frac = (it->value - it->min) * bw / (it->max - it->min);
+            }
+            fe_fill_rect(px, pitch, w, h, bx, by, bw, 6, 36, 36, 40);
+            fe_fill_rect(px, pitch, w, h, bx, by, frac, 6, 210, 180, 70);
+            fe_fill_rect(px, pitch, w, h, bx + frac, by - 1, 3, 8, 255, 255, 255);
+        } else if (it->kind == FE_ITEM_CYCLE && it->cycle_count > 0) {
+            int oi = it->value < it->cycle_count ? it->value : 0;
+            const char* opt = it->cycle_opts[oi];
+            if (font != NULL) {
+                fe_draw_font_text(px, pitch, w, h, x + lw + 10, y, opt, font);
+            } else {
+                fe_draw_text(px, pitch, w, h, x + lw + 10, y, opt,
+                             selected ? 255 : 200, selected ? 255 : 200,
+                             selected ? 255 : 160);
+            }
         }
     }
 }
