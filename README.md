@@ -216,6 +216,21 @@ independent token model, plus value spot checks (`Barracks.ae`
 `Activity_Teleport = Create`, `IceMonster.ae` `HIGHPOLY` bone map,
 `Lego.cfg Main TextureUsage = 3145728`).
 
+**LWO model loader + `.uv` sidecar** (`src/gods98/model.*`, findings 11 §2–3,
+§5b + 19): the LightWave-4-era pipeline entity assembly reads through —
+`FORM/LWOB` chunk walk with PNTS f32-BE points, POLS rings (origin
+auto-detected per file: any zero index anywhere means 0-based, else 1-based;
+negative indices flag reversed winding), SRFS names, SURF records anchored on
+the SRFS names reading only the engine's vocabulary (COLR/TIMG/TSIZ), and the
+`.uv` sidecar grammar: per-surface texture-path lines replace the LWO TIMG,
+per-corner uv blocks attach with v negated, and the keyframe tail stops the
+scan without invalidating what parsed — exactly the reference behaviour.
+`model_test` (suite `model`) runs synthetic loader cases and, with
+`test_wads_dir` set, parses **all 1,132 shipped `.lwo` entries**, applies
+**all 60 `.uv` sidecars**, and digest-checks the corpus (36,506 vertices /
+20,119 polygons / 3,396 surfaces) against the `rrlwo.py` ground truth, plus
+spot checks (the four 0-based POLS outliers, `Arml.lwo`'s sidecar paths).
+
 - **`native`** (primary, end goal): compiles the reconstruction C++ against
   **miniwin** (SDL3) — no Wine layer. Host compiler, no cross file. miniwin
   comes in as a sparse git submodule — bootstrap with `tools/setup-miniwin.sh`

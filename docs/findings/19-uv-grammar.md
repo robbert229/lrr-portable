@@ -19,6 +19,14 @@ earlier "parses it via `FUN_0047fb60` → `FUN_0048eb90`" note conflated the
 *load* helpers with the *parse* — `FUN_0047fb60`/`FUN_0048eb90`/`FUN_0048eae0`
 are the generic open-and-read-everything layer, not the grammar parser.
 
+The reconstruction (`src/gods98/model.cpp`, `model_apply_uv_text`) implements
+this grammar and is corpus-validated: the shipped 60 sidecars all apply and
+digest identically to the `tools/rrlwo.py` reference, path overrides and
+negated-v corner pairs included (meson suite `model`). The engine's
+duplicate-vertex-on-conflict remesh (§2) is a consumer-side consequence of
+corner vs vertex indexing; the port keeps the per-corner table and resolves
+conflicts at draw-assembly time.
+
 ## 1. Evidence chain (load → store → single consumer → teardown)
 
 | Step | Address | Facts |

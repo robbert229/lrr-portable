@@ -31,6 +31,15 @@ Internal developer path strings corroborate the pipeline: `WAD Load: %s`,
 `WAD Fail: %s`, and `C:\Dev\SourceSafe\gods98\dx6\god…` (`gods98` — the
 working title, in `0x4aaf74–0x4ab004`).
 
+The reconstruction (`src/gods98/model.cpp`) implements these semantics and
+is corpus-validated: 1,132/1,132 shipped `.lwo` entries parse, all 60 `.uv`
+sidecars apply, and the corpus view (36,506 vertices / 20,119 polygons /
+3,396 surfaces) digests identically to the `tools/rrlwo.py` reference
+(meson suite `model`). The loader follows *corpus* behaviour where the
+exe's memory layout leaves slack — notably the POLS index origin is
+auto-detected per file (§3: any zero index anywhere selects 0-based)
+rather than assumed 1-based.
+
 ## 1. Model load chain
 
 ```
