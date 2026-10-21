@@ -64,11 +64,8 @@ extern float g_camera_countdown;  /* DAT_00556ed8 */
 int g_move_hook_enabled(void);
 void camera_set_move_hook_enabled(int v);
 
-/* FUN_00419b80 message bus (finding 04) — stub boundary in camera.cpp. */
-void message_dispatch(uint32_t id, uint32_t p2, uint32_t p3, const void* p4);
-
 /* Stub boundaries (corpus addresses; fill one at a time):
  *  FUN_0046a700 / FUN_004377b0 / FUN_0046a4c0 / FUN_0040f190 /
- *  FUN_00438960 / FUN_0043ad50 / FUN_00419b80 */
+ *  FUN_00438960 / FUN_0043ad50 / FUN_00419b80 (message.hpp) */
 
 #endif /* LEGORRR_CAMERA_HPP */
