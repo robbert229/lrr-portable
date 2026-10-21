@@ -101,6 +101,27 @@ void save_slot_path(GameContext* ctx, char* out, size_t out_sz, int slot,
  * until the level tree is walked from config). */
 void save_set_current_record(GameContext* ctx, int index);
 
+/* --- slot menu support (finding 08 §"Menu layer" ×
+ *       SaveMenuBuild @ 0x415a10) ---------------------------------------- */
+
+/* Inspect one slot without changing the live context's active slot:
+ * returns 0 when `Saves\<slot>.sav` does not exist (the slot is absent);
+ * otherwise scans its records and writes:
+ *   *out_filled    — number of records with a marked/non-empty blob,
+ *   *out_completed — number of records whose flags word has |1 (objective
+ *                    achieved at checkpoint, SlotSummary @ 0x4152c0),
+ *   *out_resume    — the highest such record index (the level to resume),
+ *                    or -1 when the slot is empty.
+ * The port maps record index -> campaign level (StartLevel + NextLevel). */
+int save_slot_state(GameContext* ctx, int slot, int* out_filled,
+                    int* out_completed, int* out_resume);
+
+/* Restore a saved checkpoint (the inverse of checkpoint_blob_build): copy
+ * the blob's task table back into ctx->tasks and its Reward/Enable+Modifier
+ * into ctx->reward. Live level state stays fresh — the corpus's model is a
+ * per-level checkpoint, not an entity dump (finding 08). */
+void checkpoint_blob_apply(GameContext* ctx, const uint8_t* blob);
+
 #ifdef __cplusplus
 }
 #endif

@@ -324,7 +324,11 @@ own 3x5 typeface kept as a headless fallback. **In-game pause** (2026-10-21):
 `Esc` in a level opens the shipped `PausedMenu` overlay (Continue / Options /
 Restart / Quit, with mouse + keyboard like the main menu) instead of quitting
 — Restart reloads the level in place, and `LEGORRR_AUTOPAUSE_FRAMES=N`
-headlessly opens the pause at frame N for screenshots. New key:
+headlessly opens the pause at frame N for screenshots. **Load slots**
+(2026-10-21): the Load_A_Saved_Game screen lists the on-disk slots
+(`SaveMenuBuild @ 0x415a10` rows fed by `save_slot_state`) — picking one
+resumes the furthest completed record's campaign level and restores its
+checkpoint (task + reward table) over the seeded mission. New key:
 **`PLATFORM_KEY_ENTER`** at the seam. Suites: `block` (`::` paths) and
 `frontend` (fixtures + a `--real` probe that builds the whole front end from
 the shipped `Lego.cfg` — 24-level campaign chain, 8 tutorials, 32 picker

@@ -197,6 +197,42 @@ int main(void)
 
     free(ctx.records);
     checkpoint_blob_free(&ctx);
+
+    /* Slot menu state (save_slot_state) + checkpoint restore
+     * (checkpoint_blob_apply) — finding 08 §"Menu layer". */
+    game_context_init(&ctx);
+    ctx.level = lvl;
+    task_set_name(&ctx.tasks[1], "Ore");
+    task_set_flags(&ctx.tasks[1], 2);
+    task_set_importance(&ctx.tasks[1], 10.0f);
+    task_set_quota(&ctx.tasks[1], 4);
+    checkpoint_blob_build(&ctx);
+
+    int filled = -1, completed = -1, resume = -2;
+    CHECK(save_slot_state(&ctx, 3, &filled, &completed, &resume) == 1,
+        "slot state: slot 3 file exists");
+    CHECK(filled >= 1 && completed >= 1 && resume == 2,
+        "slot state: record 2 marked+filled is the resume");
+    CHECK(save_slot_state(&ctx, 0, NULL, NULL, NULL) == 0,
+        "slot state: absent slot -> 0");
+
+    /* Restore: clobber a task, apply the blob, expect it back (the blob
+     * copied tasks[1]="Ore" at blob+0x1CEC + 1*0x210). */
+    task_set_name(&ctx.tasks[0], "Clobbered");
+    task_set_flags(&ctx.tasks[0], 0);
+    checkpoint_blob_apply(&ctx, ctx.checkpoint_blob);
+    CHECK(strcmp(task_name(&ctx.tasks[1]), "Ore") == 0
+        && task_flags(&ctx.tasks[1]) == 2 && task_quota(&ctx.tasks[1]) == 4,
+        "blob apply restores the task table");
+
+    /* Saves/5.sav exists from the checkpoint_step above — a real slot. */
+    resume = -2;
+    CHECK(save_slot_state(&ctx, 5, NULL, NULL, &resume) == 1,
+        "slot state: slot 5 exists");
+    CHECK(resume >= 0, "slot state: slot 5 has a resume record");
+
+    free(ctx.records);
+    checkpoint_blob_free(&ctx);
     if (ctx.level != NULL) {
         free(ctx.level);
     }

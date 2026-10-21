@@ -171,6 +171,7 @@ static void fe_parse_item(const char* value, FeItem* it)
 {
     it->kind = FE_ITEM_NEXT;
     it->x = 0; it->y = 0; it->flag = 0; it->level_start = 0;
+    it->load_slot = 0;
     it->label[0] = '\0'; it->target[0] = '\0';
     if (value == NULL) {
         return;
@@ -455,6 +456,48 @@ int frontend_enabled(BlockFile* cfg)
     return block_get_bool(cfg, "Lego* Main FrontEnd") == 1;
 }
 
+int frontend_build_slots(FrontEnd* fe, const FeSlot* slots, int n)
+{
+    if (fe == NULL || slots == NULL || n <= 0) {
+        return 0;
+    }
+    if (n > FE_SLOT_COUNT) {
+        n = FE_SLOT_COUNT;
+    }
+    fe->slot_count = n;
+    for (int i = 0; i < n; i++) {
+        fe->slots[i] = slots[i];
+    }
+    int grafted = 0;
+    /* both the main menu's Load_A_Saved_Game screen and the SaveMenu carry
+     * the slot rows (SaveMenuBuild @ 0x415a10's runtime rows; the screens
+     * are identified by their SaveLoad art). */
+    for (int mi = 0; mi < FE_MENU_COUNT; mi++) {
+        FeMenu* m = &fe->menus[mi];
+        for (int si = 0; si < m->submenu_count; si++) {
+            FeSubmenu* sub = &m->submenus[si];
+            if (!s_stristr(sub->image, "SaveLoad")) {
+                continue;
+            }
+            int base = sub->item_count;
+            for (int k = 0; k < n && base + k < FE_ITEMS_MAX; k++) {
+                FeItem* it = &sub->items[base + k];
+                it->kind = FE_ITEM_NEXT;
+                it->load_slot = slots[k].id;
+                it->level_start = 0;
+                it->flag = 0;
+                it->target[0] = '\0';
+                snprintf(it->label, FE_NAME_MAX, "%s", slots[k].label);
+                it->x = 48;
+                it->y = 96 + k * 40;
+                sub->item_count = base + k + 1;
+            }
+            grafted = 1;
+        }
+    }
+    return grafted;
+}
+
 int frontend_open(FrontEnd* fe, int menu)
 {
     if (fe == NULL || !fe->built) {
@@ -488,6 +531,13 @@ static FeEvent fe_activate(FrontEnd* fe)
     FeMenu* m = &fe->menus[fe->menu];
     FeSubmenu* sub = &m->submenus[fe->sub];
     FeItem* it = &sub->items[fe->sel];
+
+    /* save-slot row: load the slot (FE_EVT_LOAD_GAME, fe.load_slot set) */
+    if (it->load_slot) {
+        fe->load_slot = it->load_slot;
+        fe->open = 0;
+        return FE_EVT_LOAD_GAME;
+    }
 
     /* picker row: start the selected level */
     if (it->level_start) {
@@ -636,7 +686,7 @@ const FeSubmenu* frontend_active_submenu(const FrontEnd* fe)
 
 const FeItem* frontend_active_item(const FrontEnd* fe)
 {
-    static const FeItem s_empty = { 0, 0, 0, {0}, {0}, 0, 0 };
+    static const FeItem s_empty = { 0, 0, 0, {0}, {0}, 0, 0, 0 };
     const FeSubmenu* s = frontend_active_submenu(fe);
     if (s == NULL || fe->sel < 0 || fe->sel >= s->item_count) {
         return &s_empty;
