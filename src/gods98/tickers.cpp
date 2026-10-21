@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 #include <cstddef>
 
+#include "engine.hpp"
+#include "message.hpp"
 #include "tickers.hpp"
 
 /* ------------------------------------------------------------------ *
@@ -227,16 +229,20 @@ void EngineRenderFrame(EngineContext* ctx, float dt, float scale, uint32_t* sim_
 }
 
 /* Air-supply beat mechanic — corpus EngineTick tail. When the air supply
- * crosses under the threshold, fire the air-low / air-empty notifications
- * (corpus FUN_00419b80 ids 0x10..0x13) and drive the looped SND_AirBeat
- * sound; air_prev (+0x204) is written back from air_beat (+0x1fc).
- */
+ * drains, the corpus fires notifications ids 0x10..0x13 (air-low / air-out)
+ * through the message bus and loops SND_AirBeat (finding 03 §7). The sound
+ * side is stubbed here; the notifications ride the message bus. */
 void EngineAirBeat(EngineContext* ctx, float scale)
 {
     (void)scale;
     EngineState* s = ctx->state_block;
     if (s != NULL) {
         s->air_prev = s->air_beat;
+        if (s->air_beat == 0 && s->air_prev != 0) {
+            message_dispatch(0x12, 0, 0, NULL); /* air out */
+        } else if (s->air_beat != 0) {
+            message_dispatch(0x11, 0, 0, NULL); /* air low */
+        }
     }
-    /* TODO(engine): threshold check + notification dispatch + sound hook. */
+    /* TODO(engine): SND_AirBeat loop + pitch track (FUN_0047c160). */
 }

@@ -275,6 +275,16 @@ vector math is implemented, and world/object boundaries (grid pick
 `EngineTick` now drives the three views (`DAT_005560e4/e8/ec`); `view_test`
 (suite `view`) covers the vector/glide/edge/blend paths.
 
+**Tranche 3 — the message bus** (2026-10-21): `src/gods98/message.*` ports
+`MessageDispatch` (`0x419b80`) + `MessagePreCheck` (`0x4199f0`, finding 04)
+— the 40-id dedupe-with-live-callback notification bus, seeded with the
+finding-22 `Info*` catalog, with the auto-cooldown rule + linked family reset
+({10,11,12,38}), the exception-id dedupe skip, and the 40-slot active queue.
+It replaces the camera module's `message_dispatch` stub (the grid-expiry now
+fires into the real bus) and the air-beat tick path dispatches `0x11`/`0x12`.
+`message_test` (suite `message`) covers gates, dedupe/exceptions, cooldown and
+the cap.
+
 ```sh
 cd path/to/legally-owned/game
 LEGORRR_AUTOSTOP_FRAMES=600 ../lrr-portable/build/src/LegoRR

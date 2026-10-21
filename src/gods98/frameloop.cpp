@@ -12,6 +12,7 @@
 #include "surface.hpp"
 #include "texture.hpp"
 #include "view.hpp"
+#include "message.hpp"
 
 #define WINDOW_W 640
 #define WINDOW_H 480
@@ -62,6 +63,8 @@ int LegorrrRun(void)
         { &views[0], &views[1], &views[2] },
         0.0f, 0,
     };
+    /* The finding-22 InfoMessages catalog + bus enabled. */
+    message_init_defaults();
 
     PlatformWindow* win = platform_create_window("lrr-portable (frame loop)",
                                                  WINDOW_W, WINDOW_H);

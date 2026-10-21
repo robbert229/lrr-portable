@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 #include "camera.hpp"
+#include "message.hpp"
 
 /* Reconstruction symbols for corpus globals. */
 float g_camera_scale_14   = 1.0f;   /* DAT_00556f14 */
@@ -163,12 +164,4 @@ int g_move_hook_enabled(void)
 void camera_set_move_hook_enabled(int v)
 {
     g_move_hook_enabled_flag = v != 0;
-}
-
-/* FUN_00419b80 — the message/notification bus (finding 04 §MessageDispatch).
- * Implemented here as a stub until the message module lands. */
-void message_dispatch(uint32_t id, uint32_t p2, uint32_t p3, const void* p4)
-{
-    (void)id; (void)p2; (void)p3; (void)p4;
-    /* TODO(message): corpus FUN_00419b80 — dedupe-with-live-callback bus. */
 }
