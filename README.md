@@ -1,10 +1,13 @@
-# Rock Raider Reversed
+# lrr-portable
 
-Reverse engineering of **Lego Rock Raiders**, a real-time strategy game published by
-LEGO Media International in 1999 for Windows 95/98.
+Portable reconstruction of **Lego Rock Raiders**, a real-time strategy game
+published by LEGO Media International in 1999 for Windows 95/98.
 
-This repository is a research workspace: the goal is to understand how the game works —
-its executable, data formats, and engine behavior — from the shipped binary artifacts.
+The goal is a **native Linux port with no Wine layer** (ADR 0004), built from
+the decompile corpus, by recompiling the game's logic against a
+source-compatible shim (**miniwin**, LGPL, over SDL3) instead of the original
+DirectX. A Win32/MinGW build is kept as a *reference build* for A/B
+comparison against the shipped binary (ADR 0002, 0004).
 
 ## The game
 
@@ -24,8 +27,15 @@ tools/              WAD tooling (rrwad.py: unpack/pack/verify — see tools/READ
 docs/decompiles/    Named Ghidra pseudocode corpus (engine-region.c)
 docs/evidence/      Exported REA evidence bundle (address-level citations)
 tools/              Analysis tooling: unwad.py, Ghidra function-naming script
+docs/adr/           Architecture decision records (build/port decisions)
 source/             (gitignored) the original, unmodified game files
 unpacked/           (gitignored) 5,845 assets extracted from the .wad archives
+cross/              Meson cross files (i686.ini — MinGW-w64 Win32 toolchain)
+meson.build         Reconstruction build (top-level; platform=native|winapi)
+meson_options.txt   Build options (src_root, platform)
+src/                Reconstruction source tree (stubs + gods98 / game / platform)
+subprojects/        miniwin CMake bridge (sparse isle-portable submodule)
+3rdparty/           Dependency submodules (isle-portable, sparse → miniwin/)
 ```
 
 Everything under `source/` is the original game as shipped. It is **not** committed to git
@@ -118,6 +128,35 @@ SHA-256 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`).
 - **Interactive analysis**: REA (Ghidra provider). Findings cite addresses, not guesses:
   every claim traces to a pseudocode block or an evidence record.
 
+## Reconstruction build (stub)
+
+Meson build with one source tree and two platform backends (ADR 0004):
+
+- **`native`** (primary, end goal): compiles the reconstruction C++ against
+  **miniwin** (SDL3) — no Wine layer. Host compiler, no cross file. miniwin
+  comes in as a sparse git submodule — bootstrap with `tools/setup-miniwin.sh`
+  (blob-none + cone sparse to `miniwin/` only; the sibling game's decompiled
+  source is never written to the working tree).
+- **`winapi`** (reference): cross-compiles the same source to a 32-bit Win32
+  `LegoRR.exe` (MinGW-w64) for A/B against the shipped binary under the A.2
+  harness — one environment, direct comparison (ADR 0002).
+
+```sh
+# native (primary)
+meson setup build-native -Dplatform=native
+meson compile -C build-native
+
+# winapi reference build
+meson setup build-winapi --cross-file cross/i686.ini -Dplatform=winapi
+meson compile -C build-winapi
+```
+
+Toolchain requirements: `native` needs SDL3 devel headers and cmake
+(miniwin), `winapi` needs `i686-w64-mingw32-gcc`/`windres`/`ar` (this box is
+immutable — install inside a distrobox/podman Fedora container). Rebuilt
+Win32 binaries run through `a2.py` only via the (not yet wired)
+`run --run-port` interface — ADR 0002, ADR 0004.
+
 As discoveries are made, they should be documented here in the repo (e.g. `docs/` per
 format) with byte-level field tables where possible.
 
@@ -134,3 +173,8 @@ Lego Rock Raiders is © 1999 LEGO Media International. All original game assets 
 property of their respective owners and remain copyright LEGO. This repository exists
 solely for interoperability research, documentation, and preservation purposes and
 contains no original game content. Do not upload copies of the game anywhere.
+
+The reconstruction source, build system, tooling and documentation in this
+repository are licensed **LGPL-3.0-or-later** (see `LICENSE`); the
+miniwin adapter is similarly LGPL-3.0. That license covers *our code*, not the
+game's assets or binary.

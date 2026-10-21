@@ -2,3 +2,7 @@ source/
 unpacked/
 __pycache__/
 *.pyc
+build-*/
+legoRR-stub.log
+
+subprojects/.wraplock

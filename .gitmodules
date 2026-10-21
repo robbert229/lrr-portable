@@ -1,0 +1,4 @@
+[submodule "3rdparty/isle-portable"]
+	path = 3rdparty/isle-portable
+	url = https://github.com/isledecomp/isle-portable.git
+	shallow = true

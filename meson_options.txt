@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: LGPL-3.0-or-later
+# Reconstruction source-tree root (relative to the project root).
+# Relocating the tree is one option + moving the directory — no build rewiring.
+option('src_root', type : 'string', value : 'src',
+       description : 'Directory containing the reconstruction source tree')
+
+# Platform backend that satisfies the DX6-era API surface (finding 15):
+#   native : miniwin (SDL3) — primary, end-goal build, host compiler, no cross file
+#   winapi : MinGW-w64 i686 vs real DirectX headers — reference build for A/B
+option('platform', type : 'combo',
+       choices : ['native', 'winapi'],
+       value : 'native',
+       description : 'Platform backend: miniwin (native) or real DX via MinGW (winapi)')
+
+# werror is a Meson built-in option (off by default) — see the comment in
+# meson.build for the warning policy rationale.
