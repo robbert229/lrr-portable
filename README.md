@@ -329,6 +329,13 @@ four-timer stop**, and the near-zero settle that clears flag bit 3. The
 engine's manager dispatch drives it. `simtick_test` covers convergence,
 snap, source-B, mode-1, timer-stop, and settle.
 
+**Tranche 8 — tickers incl. the cooldown tick** (2026-10-21): simtick adds
+the sound keep-alive (`FUN_0047aba0`), the editor step cluster
+(`FUN_0044cfa0`), and the **message-bus cooldown tick** (`FUN_0041a2c0`,
+which now decrements the merged bus's per-id cooldowns —
+`message_cooldown_tick`), plus the bit-field tree helper (`FUN_0049cf90`);
+their ticker-table entries are wired. `simtick_test` covers all four.
+
 **Game layer — levels, objectives, savegames** (2026-10-21): the mission
 plumbing that sits on top of the engine (findings 07/08/22) is now
 reconstructed, on top of the merged block-text parser (`src/gods98/block.*`,

@@ -119,8 +119,8 @@ static void ticker_0046e390(EngineContext* c, float dt, float scale)
 
 static void ticker_0047aba0(EngineContext* c, float dt, float scale)
 {
-    (void)c; (void)dt; (void)scale;
-    /* TODO: corpus FUN_0047aba0 */
+    (void)dt; (void)scale;
+    simtick_sound_keepalive(c);
 }
 
 static void ticker_00465b00(EngineContext* c, float dt, float scale)
@@ -137,14 +137,14 @@ static void ticker_004665c0(EngineContext* c, float dt, float scale)
 
 static void ticker_0044cfa0(EngineContext* c, float dt, float scale)
 {
-    (void)c; (void)dt; (void)scale;
-    /* TODO: corpus FUN_0044cfa0 */
+    (void)dt; (void)scale;
+    simtick_editor_steps(c);
 }
 
 static void ticker_0041a2c0(EngineContext* c, float dt, float scale)
 {
-    (void)c; (void)dt; (void)scale;
-    /* TODO: corpus FUN_0041a2c0 */
+    (void)scale;
+    simtick_cooldown_tick(c, dt);
 }
 
 typedef struct TickerEntry {

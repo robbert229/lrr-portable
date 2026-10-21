@@ -95,6 +95,20 @@ int  simtick_manager_attaches(void);
 int  simtick_manager_timer_bit(int which);        /* index-9 timer word bit */
 void simtick_manager_set_timer_word(uint32_t w);  /* DAT_00500860 seed */
 
+/* --- tranche 8 tickers ---------------------------------------------------- */
+void simtick_sound_keepalive(EngineContext* c);  /* FUN_0047aba0 */
+void simtick_editor_steps(EngineContext* c);     /* FUN_0044cfa0 */
+void simtick_cooldown_tick(EngineContext* c, float dt); /* FUN_0041a2c0 -> bus */
+void simtick_bitfield_tree(int* base, int code); /* FUN_0049cf90 */
+
+void simtick_set_sound_guards(int sound_on, int active);       /* 0x533878/0x506688 */
+void simtick_set_keepalive_hook(int (*h)(int entry, int a, int b)); /* 0x47abc0 */
+void simtick_set_editor_state(uint32_t word, int active);      /* 0x4eaec8/0x4eadd8 */
+void simtick_set_step_hook(void (*h)(int step));
+int  simtick_editor_steps_run(void);
+void simtick_set_tree_hook(int (*h)(int idx, int bits));       /* 0x49d000 */
+int  simtick_tree_fired(void);
+
 /* bobbins (0x4091e0) — node flags at +0xd0. */
 typedef struct SimtickBobbin {
     struct SimtickBobbin* next;  /* +0x24 */

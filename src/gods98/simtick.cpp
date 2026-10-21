@@ -2,6 +2,7 @@
 #include <math.h>
 #include <string.h>
 
+#include "message.hpp"
 #include "simtick.hpp"
 
 #define SIMTICK_MUTE_RESET 25.0f
@@ -347,4 +348,120 @@ void simtick_manager_tick(int index, float dt, int ingame)
     if (ix < 2 && ix > -2 && iy < 2 && iy > -2) {
         slot->flags &= ~8u;
     }
+}
+
+/* ---- tranche 8: sound keep-alive (FUN_0047aba0) ------------------------- */
+static int s_sound_on = 0, s_sound_active = 0;
+static int (*s_keepalive)(int, int, int) = NULL;
+
+void simtick_set_sound_guards(int sound_on, int active)
+{
+    s_sound_on = sound_on;
+    s_sound_active = active;
+}
+
+void simtick_set_keepalive_hook(int (*h)(int, int, int))
+{
+    s_keepalive = h;
+}
+
+void simtick_sound_keepalive(EngineContext* c)
+{
+    (void)c;
+    /* corpus: if (sound system on && an ambient entry exists) -> poke it. */
+    if (s_sound_on != 0 && s_sound_active != 0 && s_keepalive != NULL) {
+        s_keepalive(0, 0, 0);
+    }
+}
+
+/* ---- tranche 8: editor steps (FUN_0044cfa0) ------------------------------ */
+static uint32_t s_edit_word = 0;
+static int      s_edit_active = 0;
+static int      s_edit_steps = 0;
+static void     (*s_step_hook)(int) = NULL;
+
+void simtick_set_editor_state(uint32_t word, int active)
+{
+    s_edit_word = word;
+    s_edit_active = active;
+}
+
+void simtick_set_step_hook(void (*h)(int))
+{
+    s_step_hook = h;
+}
+
+int simtick_editor_steps_run(void)
+{
+    return s_edit_steps;
+}
+
+void simtick_editor_steps(EngineContext* c)
+{
+    (void)c;
+    s_edit_steps = 0;
+    /* corpus: if (!(DAT_004eaec8 & 0x100) && DAT_004eadd8) -> five passes. */
+    if (((s_edit_word & 0x100u) == 0) && s_edit_active != 0) {
+        for (int i = 1; i <= 5; ++i) {
+            ++s_edit_steps;
+            if (s_step_hook != NULL) {
+                s_step_hook(i);
+            }
+        }
+    }
+}
+
+/* ---- tranche 8: cooldown tick (FUN_0041a2c0 → message bus) --------------- */
+void simtick_cooldown_tick(EngineContext* c, float dt)
+{
+    (void)c;
+    message_cooldown_tick(dt);
+}
+
+/* ---- tranche 8: bit-field tree (FUN_0049cf90) --------------------------- */
+static int (*s_tree_hook)(int, int) = NULL;
+static int s_tree_fired = 0;
+
+void simtick_set_tree_hook(int (*h)(int, int))
+{
+    s_tree_hook = h;
+}
+
+int simtick_tree_fired(void)
+{
+    return s_tree_fired;
+}
+
+void simtick_bitfield_tree(int* base, int code)
+{
+    s_tree_fired = 0;
+    if (base == NULL) {
+        return;
+    }
+    /* corpus 0x49cf90: 16-bit code ladder, 0x80000000.. scale, scanning the
+     * entry stream (stride 4) for a low-short code match. */
+    int      bits = 1;
+    int      acc = 0;
+    uint32_t scale = 0x80000000u;
+    int      target = 0;
+    do {
+        uint32_t n = (uint32_t)code;
+        if (code != 0) {
+            int* entry = base + 8;
+            do {
+                if ((int16_t)(unsigned)(uint32_t)entry[1] == (int16_t)bits) {
+                    if (s_tree_hook != NULL) {
+                        s_tree_hook(acc / (int)scale, bits);
+                    }
+                    ++s_tree_fired;
+                    entry[0] = target;
+                    acc += (int)scale;
+                }
+                entry += 4;
+                --n;
+            } while (n != 0);
+        }
+        ++bits;
+        scale >>= 1;
+    } while ((uint16_t)bits < 0x11u);
 }
