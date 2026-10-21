@@ -25,6 +25,27 @@
 #include "movie.hpp"
 #include "resource.hpp"
 
+/* FFmpeg runtime sonames to dlopen, ';'-joined. The meson toolchain owns
+ * these — the same literals drive the configure-time probe and are passed as
+ * defines (meson.build, `movie_libs`); the lists below are the fallback when
+ * building outside meson (kept in sync by hand). */
+#ifndef LEGORRR_MOVIE_LIBAVFORMAT
+#define LEGORRR_MOVIE_LIBAVFORMAT                                              \
+    "libavformat.so.63;libavformat.so.62;libavformat.so.61;libavformat.so"
+#endif
+#ifndef LEGORRR_MOVIE_LIBAVCODE
+#define LEGORRR_MOVIE_LIBAVCODE                                                \
+    "libavcodec.so.63;libavcodec.so.62;libavcodec.so.61;libavcodec.so"
+#endif
+#ifndef LEGORRR_MOVIE_LIBAVUTIL
+#define LEGORRR_MOVIE_LIBAVUTIL                                                \
+    "libavutil.so.61;libavutil.so.60;libavutil.so.59;libavutil.so"
+#endif
+#ifndef LEGORRR_MOVIE_LIBSWSCALE
+#define LEGORRR_MOVIE_LIBSWSCALE                                               \
+    "libswscale.so.9;libswscale.so.8;libswscale.so.7;libswscale.so"
+#endif
+
 /* ------------------------------------------------------------------ *
  *  FFmpeg runtime binding (native backend only)
  * ------------------------------------------------------------------ */
@@ -33,6 +54,13 @@
 #include <dlfcn.h>
 #include <dirent.h>
 #include <sys/stat.h>
+
+#endif
+
+/* The decoder machinery itself is compiled out when the build is configured
+ * with `-Dmovies=disabled` (LEGORRR_MOVIES_CFG_DISABLED); the binding above
+ * (dlfcn) is still in scope on miniwin for the includes below. */
+#if defined(LEGORRR_BACKEND_MINIWIN) && !defined(LEGORRR_MOVIES_CFG_DISABLED)
 
 typedef struct ff_rat { int num, den; } ff_rat;
 
@@ -196,22 +224,44 @@ static struct {
     f_sws_free         sws_freeContext;
 } ff;
 
-static const char* const k_fmt_libs[] = {
-    "libavformat.so.63", "libavformat.so.62", "libavformat.so.61",
-    "libavformat.so", NULL
-};
-static const char* const k_codec_libs[] = {
-    "libavcodec.so.63", "libavcodec.so.62", "libavcodec.so.61",
-    "libavcodec.so", NULL
-};
-static const char* const k_util_libs[] = {
-    "libavutil.so.61", "libavutil.so.60", "libavutil.so.59",
-    "libavutil.so", NULL
-};
-static const char* const k_scale_libs[] = {
-    "libswscale.so.9", "libswscale.so.8", "libswscale.so.7",
-    "libswscale.so", NULL
-};
+/* Split the ';'-joined soname list and dlopen the first one that resolves.
+ * The lists are owned by meson (movie_libs in meson.build); this is the same
+ * probe the configure-time check runs. */
+static void* ff_dlopen_first(const char* joined)
+{
+    char buf[512];
+    if (joined == NULL || joined[0] == '\0') {
+        return NULL;
+    }
+    size_t n = strlen(joined);
+    if (n >= sizeof(buf)) {
+        n = sizeof(buf) - 1;
+    }
+    memcpy(buf, joined, n);
+    buf[n] = '\0';
+    char* p = buf;
+    for (;;) {
+        while (*p == ';') {
+            ++p;
+        }
+        if (*p == '\0') {
+            break;
+        }
+        char* end = strchr(p, ';');
+        if (end != NULL) {
+            *end = '\0';
+        }
+        void* h = dlopen(p, RTLD_LAZY | RTLD_LOCAL);
+        if (h != NULL) {
+            return h;
+        }
+        if (end == NULL) {
+            break;
+        }
+        p = end + 1;
+    }
+    return NULL;
+}
 
 #define FF_NEED(ffname, sym, handle)                                        \
     do {                                                                    \
@@ -231,30 +281,22 @@ static void ff_dlopen_close(void)
     if (ff.scale_h != NULL) { dlclose(ff.scale_h); ff.scale_h = NULL; }
 }
 
-static int ff_dlopen_open(const char* const* names, void** handle_out)
-{
-    for (int i = 0; names[i] != NULL; ++i) {
-        void* h = dlopen(names[i], RTLD_LAZY | RTLD_LOCAL);
-        if (h != NULL) {
-            *handle_out = h;
-            return 1;
-        }
-    }
-    return 0;
-}
-
 static int ff_bind(void)
 {
     if (ff.ok) {
         return 1;
     }
-    if (!ff_dlopen_open(k_fmt_libs, &ff.fmt_h)
-        || !ff_dlopen_open(k_codec_libs, &ff.codec_h)
-        || !ff_dlopen_open(k_util_libs, &ff.util_h)
-        || !ff_dlopen_open(k_scale_libs, &ff.scale_h)) {
-        fprintf(stderr, "movie: FFmpeg runtime libs not found"
-                        " (libavformat/libavcodec/libavutil/libswscale) — "
-                        "movie playback disabled\n");
+    ff.fmt_h = ff_dlopen_first(LEGORRR_MOVIE_LIBAVFORMAT);
+    ff.codec_h = ff_dlopen_first(LEGORRR_MOVIE_LIBAVCODE);
+    ff.util_h = ff_dlopen_first(LEGORRR_MOVIE_LIBAVUTIL);
+    ff.scale_h = ff_dlopen_first(LEGORRR_MOVIE_LIBSWSCALE);
+    if (ff.fmt_h == NULL || ff.codec_h == NULL || ff.util_h == NULL
+        || ff.scale_h == NULL) {
+        fprintf(stderr,
+                "movie: FFmpeg runtime libs not found (dlopen probe failed on "
+                "%s / %s / %s / %s) — movie playback disabled\n",
+                LEGORRR_MOVIE_LIBAVFORMAT, LEGORRR_MOVIE_LIBAVCODE,
+                LEGORRR_MOVIE_LIBAVUTIL, LEGORRR_MOVIE_LIBSWSCALE);
         ff_dlopen_close();
         return 0;
     }
@@ -786,8 +828,10 @@ int movie_info(struct Movie* m, MovieInfo* out)
     return m->ok ? 0 : -1;
 }
 
-#else /* !LEGORRR_BACKEND_MINIWIN — winapi reference build: the real game's
-         AVIFIL32 plays movies on Windows; this module stays a stub there. */
+#else /* !LEGORRR_BACKEND_MINIWIN || LEGORRR_MOVIES_CFG_DISABLED — the
+         winapi reference build plays movies through the real AVIFIL32 on
+         Windows, and `-Dmovies=disabled` compiles the module out by design;
+         both are stubs here. */
 
 int movie_available(void) { return 0; }
 void movie_unload(void) { }

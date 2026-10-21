@@ -609,7 +609,13 @@ finding 12, #14). Three new modules in `src/game/`:
   `movie_test` (suite `movie`) covers the config surface + scaler always,
   decodes a synthetic DIB/rawvideo AVI end-to-end when FFmpeg is present,
   and with `--real <dir>` pins `Data/AVI/intro.avi` (320×200 @ 15 fps,
-  22050 Hz, 3821 frames).
+  22050 Hz, 3821 frames). The dependency is a **meson feature option**:
+  `-Dmovies=auto|enabled|disabled` (default `auto`) probes the FFmpeg runtime
+  at configure time and reports the result (`enabled` fails the configure if
+  the libs are absent; `disabled` compiles the module out and drops the movie
+  suite). Meson owns the soname lists and passes them to the module and the
+  probe as defines, so the build and the runtime never drift apart, and
+  `libdl` is linked where old glibc needs it.
 
 `GameContext` (`src/game/game.hpp`) carries the corpus globals these
 modules share (`DAT_005560c4` config, `DAT_005560d4` level block,

@@ -19,3 +19,16 @@ option('platform', type : 'combo',
 # resource-loader test (suite 'resource') also runs real-wad validation.
 option('test_wads_dir', type : 'string', value : '',
        description : 'Directory with shipped wads for resource_test --real')
+
+# AVI movie playback (finding 14 §4 / 23) is a *runtime* capability: the port
+# dlopens the FFmpeg shared libraries at first use — no build-time link, no
+# ffmpeg headers (LGPL-clean). This option controls how the build treats that
+# dependency:
+#   auto     (default) probe the runtime at configure time and report status;
+#   enabled  require the runtime — configure fails if dlopen can't find it;
+#   disabled compile the movie module out (stub) and drop the movie suite.
+# The soname lists are owned by meson and passed to both the probe and the
+# module as defines (single source of truth).
+option('movies', type : 'feature',
+       value : 'auto',
+       description : 'AVI movie playback via dlopen of the FFmpeg runtime (auto/enabled/disabled)')
