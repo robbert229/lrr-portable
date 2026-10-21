@@ -30,6 +30,8 @@ Usage (repo root):
     python3 tools/rrlwo.py dump PATH.lwo | -n NAME [--wad-dir DIR]
     python3 tools/rrlwo.py gltf PATH.lwo | -n NAME [-o OUT.glb]
                                  [--no-textures] [--no-uv]
+    python3 tools/rrlwo.py uv   PATH.lwo | -n NAME [-o OUT.uv] [--no-uv]
+                                 # rebuild sidecar; --no-uv = synthesize from model
 """
 import argparse
 import json
@@ -286,13 +288,104 @@ def parse_uv(data: bytes):
         q += 1 + cnt
         expect += 1
     return {"surfaces": s, "names": names, "paths": paths,
-            "polys": polys, "polys_header": m}
+            "polys": polys, "polys_header": m, "tail": lines[q:]}
 
 
 def uv_sibling(name):
     """`x\\y.lwo` -> `x\\y.uv`; anything else -> None."""
     base, _, ext = name.rpartition(".")
     return base + ".uv" if ext.lower() == "lwo" else None
+
+
+def write_uv(lwo, old_uv, warn=print):
+    """Rebuild `.uv` text (finding 19 grammar) for this model.
+
+    Round-trip rules, chosen to match what the engine actually consumes:
+      * version `2`; header counts taken from the *model* (the engine reads
+        positionally against them anyway).
+      * name lines: the sidecar's own where available — they encode material
+        identity (the GC_Larm pilot re-skin) — else the model's SRFS names.
+      * path lines: the sidecar's own path where it had one (round-trip:
+        the file is the texture truth), else a non-empty LWO TIMG, else a
+        `*` placeholder and a warning. A sidecar path that shadows a
+        different TIMG is reported, so the choice to adopt a LWO edit is
+        explicit (`--no-uv` rebuilds from the model alone).
+      * uv blocks: old per-corner values (written back in file form, i.e.
+        negated v) wherever the ring size is unchanged; otherwise synthesized
+        with the planar scheme. Polygons are emitted in POLS order.
+      * tail: the original keyframe lines verbatim when known, else `s`
+        placeholder blocks (the engine parses none of it).
+
+    Returns (text, stats)."""
+    names = lwo.surface_names()
+    s = len(names)
+    polys = lwo.polys()
+    old_names = (old_uv["names"] if old_uv and len(old_uv["names"]) == s else None)
+    old_paths = (old_uv["paths"] if old_uv and len(old_uv["paths"]) == s else None)
+    old_polys = old_uv["polys"] if old_uv else None
+
+    stats = {"surfaces": s, "polys": len(polys), "placeholders": 0,
+             "names": "sidecar" if old_names else "SRFS",
+             "tail": "original" if (old_uv and old_uv["tail"]) else "synthesized"}
+    line = ["2", str(s)]
+    for i in range(s):  # blank name lines would shift the line alignment
+        nm = (old_names or names)[i]
+        if not nm.strip():
+            warn(f"warning: surface {i} has a blank name — wrote placeholder")
+            nm = f"surface{i}"
+        line.append(nm)
+    meta = lwo.surface_meta()
+    for i, nm in enumerate(names):
+        timg = meta.get(nm.lower(), {}).get("timg")
+        if old_paths and old_paths[i]:
+            # sidecar path is the truth for this surface — keep it, but say so
+            # when the LWO disagrees (the engine hides TIMG behind this path).
+            p = old_paths[i]
+            if timg and timg.lower().split("\\")[-1] != p.lower().split("\\")[-1]:
+                warn(f"warning: surface {i}: LWO TIMG {timg!r} is shadowed by "
+                     f"the sidecar path — rerun with --no-uv to adopt the TIMG")
+        else:
+            if timg:
+                p = timg
+            else:
+                p = "*"
+                stats["placeholders"] += 1
+        if " " in p:
+            warn(f"warning: texture path {p!r} contains whitespace — the "
+                 "engine tokenizer keeps only the first token")
+        line.append(p)
+    line.append(str(len(polys)))
+
+    pts = lwo.points()
+    base = lwo._index_base()
+    for pi, (idx, si) in enumerate(polys):
+        ring = [abs(i) - base for i in idx]
+        line.append(f"{pi} {len(ring)}")
+        oldblk = old_polys.get(pi) if old_polys else None
+        if oldblk is not None and len(oldblk) == len(ring):
+            corners = oldblk
+        else:  # synthesize: planar projection onto the polygon plane (finding 11 §3)
+            rp = [pts[vi] if 0 <= vi < len(pts) else (0.0, 0.0, 0.0) for vi in ring]
+            nx = ny = nz = 0.0
+            for k in range(len(rp)):  # Newell normal over the ring
+                x0, y0, z0 = rp[k]
+                x1, y1, z1 = rp[(k + 1) % len(rp)]
+                nx += (y0 - y1) * (z0 + z1)
+                ny += (z0 - z1) * (x0 + x1)
+                nz += (x0 - x1) * (y0 + y1)
+            axis = max(range(3), key=lambda t: abs((nx, ny, nz)[t]))
+            us, vs = [t for t in range(3) if t != axis]
+            sx, sy = (meta.get(names[si].lower(), {}) if si < len(names) else {}
+                      ).get("tsiz", (1.0, 1.0))
+            corners = [(rp[k][us] / (sx or 1), rp[k][vs] / (sy or 1))
+                       for k in range(len(ring))]
+        for eu, ev in corners:
+            vfile = -ev if -ev != 0 else 0.0
+            line.append(f"{eu:.6f} {vfile:.6f} 0")
+
+    line.extend(old_uv["tail"] if (old_uv and old_uv["tail"]) else
+                (["1", "0 0 0 0 0 0"] * s if s else ["0"]))
+    return "\r\n".join(line) + "\r\n", stats
 
 
 # -- BMP → PNG (stdlib only) -------------------------------------------------
@@ -537,7 +630,7 @@ def build_glb(lwo, assets, with_textures=True, warn=print, uv=None):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description="LegoRR .lwo (LightWave 4) tools")
-    ap.add_argument("cmd", choices=["list", "dump", "gltf"])
+    ap.add_argument("cmd", choices=["list", "dump", "gltf", "uv"])
     ap.add_argument("target", nargs="?", help="path to .lwo on disk")
     ap.add_argument("-n", "--name", help="resolve inside the WADs instead")
     ap.add_argument("--wad-dir", action="append", dest="wad_dirs")
@@ -599,6 +692,18 @@ def main(argv=None):
             t = blocks.get("TIMG")
             print(f"  SURF {name!r}: tags={sorted(blocks)} "
                   f"timg={t.split(b'.')[0].decode(errors='replace') if t else None}")
+        return 0
+
+    if args.cmd == "uv":
+        text, stats = write_uv(lwo, uv, warn)
+        base = (args.name or args.target).rsplit(".", 1)[0].replace("\\", "/").split("/")[-1]
+        out = pathlib.Path(args.output or base + ".uv")
+        blob = text.encode("latin1")
+        out.write_bytes(blob)
+        extra = f", {stats['placeholders']} '*' placeholder path(s)" if stats["placeholders"] else ""
+        print(f"wrote {out} ({len(blob):,} bytes): "
+              f"surfaces={stats['surfaces']} polys={stats['polys']} "
+              f"names={stats['names']} tail={stats['tail']}{extra}")
         return 0
 
     glb = build_glb(lwo, assets, not args.no_textures, warn, uv)

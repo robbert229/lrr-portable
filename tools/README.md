@@ -22,6 +22,14 @@ the conversion decisions worth knowing:
   ignored, exactly like the engine's parser; `--no-uv` opts out.
 * **Normals** — flat, so shared positions do not share vertices across
   faces (glTF has no face normals).
+* **Round-trip** (`rrlwo.py uv`) — writes a `.uv` sidecar for a model. With
+  the sidecar present it is kept verbatim where it matters (name lines,
+  tail, corner values — a rebuild is byte-exact for all 60 shipped files);
+  geometry edits get planar-synthesized uv blocks for changed rings, and the
+  keyframe tail is preserved verbatim. `--no-uv` rebuilds purely from the
+  model instead, which drops sidecar-only material names and regenerates
+  the tail (documented lossy trade); a LWO TIMG edit is only reported when
+  a stale sidecar path shadows it, so adopting it stays explicit.
 
 Lookups resolve by **full path first** (`list` prints full paths, and `-n`
 takes them back); the engine's own path layer works the same way. Sidecars
@@ -33,6 +41,7 @@ python3 tools/rrlwo.py dump "Creatures\LavaMonster\Arml.lwo"   # incl. uv summar
 python3 tools/rrlwo.py gltf "Buildings\Barracks\Base.lwo" -o base.glb
 python3 tools/rrlwo.py gltf PATH.lwo -o out.glb --wad-dir mod/L1   # modded trees
 python3 tools/rrlwo.py gltf -n NAME.lwo -o out.glb --no-uv        # ignore sidecars
+python3 tools/rrlwo.py uv -n PATH.lwo -o out.uv                    # write/rebuild sidecar
 ```
 
 Conversion notes found the hard way (documented in finding 11 §3 terms):

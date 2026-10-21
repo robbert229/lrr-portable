@@ -156,7 +156,13 @@ grammar above with the paired `.lwo` counts:
   per-corner UVs are applied automatically (v negated, keyed vertices handle
   the duplication), `--no-uv` opts out, and `dump` reports the sidecar. All
   60 models verified.
-- A `.uv` *writer* (round-trip) is straightforward from this grammar, but the
-  tail keyframe blocks are only reconstructible exactly if the source
-  LightWave scene is available; the 6-float rows imply position+rotation per
-  key, and should round-trip as opaque.
+- `.uv` round-trip writer landed in `rrlwo.py` (`uv` command, 2026-10-20):
+  reconstructing each of the 60 shipped sidecars from model + original yields
+  **byte-identical** files; name lines and tail are kept verbatim (the tail
+  needs no understanding — it is simply opaque, which is also how the engine
+  treats it). Regenerating from the model alone (`--no-uv`) is available but
+  lossy: it loses sidecar-only material names, and synthesizes planar uv and
+  a dummy tail. Verified on `Base.lwo` that a synthesized sidecar exports the
+  exact same uv set as the direct planar projection.
+
+A `.uv` round-trip is now two commands: `uv` to rebuild, `gltf` to check.
