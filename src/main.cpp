@@ -13,7 +13,7 @@
 #include <cstdio>
 
 #include "gods98/gods98.hpp"
-#include "gods98/engine.hpp"
+#include "gods98/frameloop.hpp"
 #include "game/game.hpp"
 
 int LegorrrMain(void)
@@ -24,40 +24,12 @@ int LegorrrMain(void)
         return 1;
     }
 
-    /* Engine state + context, initialized to the corpus's startup posture:
-     * normal app mode, in-game context, empty feature/state/debug words. */
-    EngineState state = {};
-    InputState  input = {};
-    input_reset(&input);
-    EngineContext ctx = {
-        ENGINE_APP_NORMAL, /* app_mode    DAT_00505f88 */
-        0,                 /* feature     DAT_00505f84 */
-        0,                 /* state       DAT_00556ecc */
-        0,                 /* debug       DAT_00556ed0 */
-        1,                 /* context     1 = in-game  (DAT_00556ec8) */
-        &state,            /* state_block DAT_005560d4 */
-        &input,            /* input       key tables (findings 04/05) */
-        0.0f,              /* exit_timer  DAT_00556efc */
-        0,                 /* tickers_ran */
-    };
-
     fprintf(log, "lrr-portable reconstruction scaffold\n");
     fprintf(log, "  gods98 engine: %s\n", gods98_engine_name());
     fprintf(log, "  game layer:   %s\n", game_layer_name());
-
-    /* Run the frame tick a few times, the way the game's frame loop does:
-     * dt in seconds, fixed 1/30 for the smoke run. */
-    const float dt = 1.0f / 30.0f;
-    for (int i = 0; i < 10; ++i) {
-        int rc = EngineTick(&ctx, dt);
-        fprintf(log, "  tick %2d: rc=%d dispatched=%d state=0x%08x air=%u exit_timer=%f\n",
-                i, rc, ctx.tickers_ran, ctx.state, state.air_beat, ctx.exit_timer);
-        if (rc == 0) {
-            break;
-        }
-    }
-
-    EngineShutdown(&ctx);
     fclose(log);
-    return 0;
+
+    /* The visible-milestone frame loop (window + DDraw + real BMPs). Runs
+     * wherever the shipped wads are reachable (cwd or $LEGORRR_WAD_DIR). */
+    return LegorrrRun();
 }

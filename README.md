@@ -202,11 +202,26 @@ probes) per finding 01. `input_test` (suite `input`, no game data needed) and a
 ```sh
 # native (primary)
 meson setup build-native -Dplatform=native
-meson compile -C build-native
+tools/build-miniwin.sh                     # builds the real miniwin archive —
+meson compile -C build-native              # meson's cmake bridge alone leaves
+                                           # libminiwin.a empty (EXCLUDE_FROM_ALL)
 
 # winapi reference build
 meson setup build-winapi --cross-file cross/i686.ini -Dplatform=winapi
 meson compile -C build-winapi
+```
+
+**Frame loop** (2026-10-21): the native build opens a 640×480 window, mounts
+the shipped wads, renders real corpus textures (`ROCKROOF.BMP`,
+`info_path.bmp`) through the texture loader onto a miniwin DirectDraw
+surface, and flips at ~30 fps — the first visible proof of the port. Env
+knobs: `LEGORRR_WAD_DIR`, `LEGORRR_AUTOSTOP_FRAMES` (headless/CI), and
+`LEGORRR_SCREENSHOT=<path>` (PPM of the last frame). Run it from the game
+directory (or set `LEGORRR_WAD_DIR`) — it exits cleanly on ESC/close.
+
+```sh
+cd path/to/legally-owned/game
+LEGORRR_AUTOSTOP_FRAMES=600 ../lrr-portable/build/src/LegoRR
 ```
 
 Toolchain requirements: `native` needs SDL3 devel headers and cmake

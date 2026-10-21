@@ -18,5 +18,9 @@ add_subdirectory(
   miniwin_build
 )
 
-# miniwin's CMakeLists defines the `miniwin` static library (and miniwin-headers);
-# nothing else needed here.
+# miniwin's CMakeLists defines the `miniwin` static library (and miniwin-headers).
+# Upstream marks miniwin EXCLUDE_FROM_ALL (platform backends are opt-in), which
+# makes meson's cmake.subproject — it builds the default `all` target — produce
+# an *empty* archive (nothing references miniwin until the frame loop does).
+# Pull the library back into `all` so meson builds the real one.
+set_target_properties(miniwin PROPERTIES EXCLUDE_FROM_ALL OFF)

@@ -7,7 +7,11 @@ gods98_lib = static_library('gods98',
   'texture.cpp',
   'sound.cpp',
   'input.cpp',
-  include_directories : include_directories('.'),
+  'surface.cpp',
+  'frameloop.cpp',
+  include_directories : [include_directories('.'), include_directories('..'),
+                         miniwin_inc],
+  dependencies : [platsub_deps],
   install : false)
 
 gods98_dep = declare_dependency(link_with : gods98_lib,
