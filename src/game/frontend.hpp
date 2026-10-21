@@ -104,6 +104,9 @@ typedef struct FeSubmenu {
     int   base_x, base_y;         /* Position key (x:y) */
     int   auto_center;            /* AutoCenter TRUE|FALSE */
     int   display_title;          /* DisplayTitle TRUE|FALSE */
+    int   can_scroll;             /* CanScroll TRUE — item plane pans (0x413970) */
+    int   scroll;                 /* plane offset in px (<= 0; reset on entry) */
+    int   scroll_extent;          /* content height = tallest item + row height */
 } FeSubmenu;
 
 typedef struct FeMenu {
@@ -150,6 +153,10 @@ typedef struct FrontEnd {
     int  option_changed;            /* 1: a Slider/Cycle value changed this tick */
     char pending_level[FE_LEVEL_NAME_MAX]; /* level group to load (no "Levels::") */
     char resume_level[FE_LEVEL_NAME_MAX];  /* current level (pause Restart)   */
+
+    /* CanScroll plane pan lives on each FeSubmenu (corpus DAT_005574e0
+     * is reset when a menu re-enters — frontend_open clears every sub). */
+    int  view_w, view_h;            /* render viewport (set each render)  */
 } FrontEnd;
 
 /* One frame of modal-menu input: key *edges* this frame (the frame loop
@@ -236,7 +243,7 @@ const char* frontend_active_image(const FrontEnd* fe);
  * cell size = font width/10 x font height/19. Advance width is measured
  * from each glyph's ink bounding box (the engine stores per-glyph float
  * advances in the font object; we re-derive them from the image). */
-void frontend_render(const FrontEnd* fe, const TextureSurface* hi_font,
+void frontend_render(FrontEnd* fe, const TextureSurface* hi_font,
                      const TextureSurface* lo_font,
                      int w, int h, void* px, int pitch);
 
