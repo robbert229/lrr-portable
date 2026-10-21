@@ -48,7 +48,7 @@ typedef struct ViewContext {
 } ViewContext;
 
 /* Per-frame view update: ViewContextTick(view, state, dt, scale). */
-void view_tick(ViewContext* v, EngineState* st, float dt, float scale);
+void view_tick(ViewContext* v, EngineContext* ctx, float dt, float scale);
 
 /* The corpus ticks the three view objects per frame (finding 03). */
 void view_views_tick(EngineContext* ctx, float dt, float scale);
