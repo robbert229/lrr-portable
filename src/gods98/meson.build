@@ -13,6 +13,7 @@ gods98_lib = static_library('gods98',
   'surface.cpp',
   'frameloop.cpp',
   'audio.cpp',
+  'camera.cpp',
   'block.cpp',
   include_directories : gods98_incs,
   dependencies : [platsub_deps, platform_glue_dep],
@@ -29,7 +30,8 @@ if get_option('platform') == 'native'
   test_exes = []
   foreach exe : [['resource', 'test_resource.cpp'], ['texture', 'test_texture.cpp'],
                  ['sound', 'test_sound.cpp'], ['input', 'test_input.cpp'],
-                 ['audio', 'test_audio.cpp'], ['block', 'test_block.cpp']]
+                 ['audio', 'test_audio.cpp'], ['camera', 'test_camera.cpp'],
+                 ['block', 'test_block.cpp']]
     test_name = exe[0]
     t = executable(test_name + '_test', exe[1],
       include_directories : gods98_incs,

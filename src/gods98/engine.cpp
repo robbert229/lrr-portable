@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
+#include "camera.hpp"
 #include "engine.hpp"
 #include "tickers.hpp"
 
@@ -33,11 +34,16 @@ int EngineTick(EngineContext* ctx, float dt)
     } else {
         scale = EngineTimeScale(ctx) * dt;
     }
+    /* One-shot "force scale 1.0 this frame" (corpus: DAT_00556ecc & 4). */
+    if ((ctx->state & ENGINE_STATE_FORCE_SCALE_1) != 0) {
+        ctx->state &= ~ENGINE_STATE_FORCE_SCALE_1;
+        scale = 1.0f;
+    }
 
-    /* 4. Camera / move cluster (corpus lines 52-88): the camera interpolation
-     *    block, screen-space → world projection, and the force-scale-1.0
-     *    one-shot. Left as a stub — see tickers.cpp EngineCameraCluster. */
-    EngineCameraCluster(ctx, dt, scale);
+    /* 4. Camera / move cluster (corpus lines 52-88): the camera
+     *    interpolation block, screen-space → world projection, and the
+     *    force-scale-1.0 one-shot are ported in camera.* (camera_cluster). */
+    camera_cluster(ctx, dt, scale);
 
     /* 5. Main simulation step — 0 => quit frame (MainSimStep @ 0x4250c0). */
     uint32_t sim_out1 = 0, sim_out2 = 0, sim_out3 = 0;

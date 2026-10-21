@@ -54,6 +54,15 @@ typedef struct EngineState {
     uint32_t air_beat;   /* +0x1fc air-supply beat counter */
     uint32_t air_prev;   /* +0x204 previous air value */
     uint32_t quota_278;  /* +0x278 compared against level_time (finding 03) */
+
+    /* Move-list / grid fields used by the camera cluster (camera.hpp). */
+    void*    move_list;      /* +0x08 ptr, stride 0x4c (cell +0xc float) */
+    uint32_t move_list_count;/* +0x0c */
+    uint32_t grid_w;         /* +0x14 grid width */
+    uint32_t grid_h;         /* +0x18 grid height */
+    void*    grid_cells;     /* +0xb8 grid buffer, cell stride 0x48 */
+    float    spawn_interval; /* +0x268 chip-spawn re-arm interval */
+    uint32_t spawn_type;     /* +0x26c chip/spawn type (0x14 skips) */
 } EngineState;
 
 /* Mutable engine context — stands in for the corpus's global window
