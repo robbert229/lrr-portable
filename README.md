@@ -25,6 +25,7 @@ tools/              WAD tooling (rrwad.py: unpack/pack/verify — see tools/READ
                     + compat harness (tools/compat/a2.py — see tools/compat/README.md)
 docs/decompiles/    Named Ghidra pseudocode corpus (engine-region.c)
 docs/evidence/      Exported REA evidence bundle (address-level citations)
+tools/              Analysis tooling: unwad.py, Ghidra function-naming script
 docs/adr/           Architecture decision records (build/port decisions)
 source/             (gitignored) the original, unmodified game files
 unpacked/           (gitignored) 5,845 assets extracted from the .wad archives
