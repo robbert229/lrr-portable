@@ -242,7 +242,8 @@ corpus `0x48` record, finding 07):
   the walker's own cell while `+0x3e0` bit 8 is up; the arrival block
   clears the **arrival** cell only (`0x43cd72`), so departure marks persist
   until reused. Nothing on the walkable path consults `0x8000000` — it
-  feeds the pathfinder (TODO) and the spawn checks.
+  feeds the pathfinder's blocked gate (now ported inside `ai_path_build`,
+  see "Pathfinder builder") and the spawn checks.
 - `FUN_0043a960`'s idle probe reads `record+2 == '\t'` (9) at the entity
   cell (`FUN_004424f0` returns the cell pair) before appending to the
   `DAT_004eabcc` table — the '\t' TODO in `0x43c94d`'s port branch is
@@ -352,6 +353,46 @@ it, the straight multi-cell flood on a clean grid with its spread marks
 (checked through `ai_wave_flood_count`, the last build's flag-`0x40000`
 cell count), the unreachable target across a full wall, the equal-cells
 case, and the no-grid fallback.
+
+### Real-data validation (2026-10-22, issue #72)
+
+The `--real` probe (`probe_real` in `src/game/test_ai.cpp`, run by meson
+when `test_wads_dir` points at the shipped wads) exercises the builder on
+all 42 shipped level groups: 12 deterministic start/target pairs per
+level — one whole-map span plus strided far-apart samples — and two
+command-path walkers per level ticked to arrival. The wave-flood path is
+checked against a reference oracle that mirrors the pre-port BFS stand-in
+(`b53bc29^`, kept embedded in the test file only) and against the gate
+itself: every produced path stays walkable and unoccupied, steps
+4-neighbour-adjacently, ends on the target cell, and agrees with the
+oracle on reachability and length — agreement that includes reroutes,
+since both algorithms are shortest-path floods over the same gate. All
+84 walkers land on target and pop their lists. The probe found one real
+gap: with the shipped load pipeline a `.map` level had **no walkable
+cells at all**, because the traversable mark (`+0x08` bit `0x10`, the bit
+`FUN_00432770` simple mode reads) is raised only when the predug loader
+runs the cell update `FUN_00430530` on edge-wall cells (`v == 1/3`) — the
+port had ported the loader's 3×3 `0x4000000` OR but not that call's flag
+side (the `else` branch; the type byte is still 0 this early in the
+pipeline, so the type-8/10 branch cannot run). `load_predug` now ports
+it (`predug_wall_cell` in `src/game/level.cpp`): wave-seed the NW 2×2
+footprint's state bytes, mark the eight non-cave neighbours
+`| 0x10 & ~0x400000`, and raise cave `8` / keep `0x40` clear / `0x400000`
+open / the load-time `0x200000` wave flag on the cell; renderer,
+wave-handle, and message calls stay stubbed with the rest of the loading
+passes. The full-map cell-init pass (see finding 07) never raises
+`0x10`, so this is the only load-time source. With that fixed, levels
+expose 16–1888 walkable cells and all criteria pass. Between arrival
+walkers the probe clears the grid's reservation bits: departure marks
+legitimately persist until reused (the corpus clears only the arrival
+cell at `0x43cd72`), so without the reset the second walker's flood is
+blocked by the first walker's trail — expected corpus-side behaviour,
+not a pathfinder finding.
+
+An explicit `--real` run requires the shipped wads and `Lego.cfg` and fails
+on an unloadable level, too few walkable cells or walker arrivals, or a
+coverage total other than 42 levels / 496 pairs / 350 paths / 84 arrivals.
+The synthetic suite still runs alone when `test_wads_dir` is unset.
 
 Still TODO inside movement: the `+0x334`
 state objects behind the walkability gates above (now known: `+0x334` is an

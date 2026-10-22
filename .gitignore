@@ -6,3 +6,5 @@ build-*/
 legoRR-stub.log
 
 subprojects/.wraplock
+
+build/
