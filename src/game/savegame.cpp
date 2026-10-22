@@ -320,9 +320,15 @@ void save_mark_record(GameContext* ctx, int index)
     if (flags == NULL) {
         return;
     }
-    *flags |= 1u;   /* dirty */
-    /* `|2` marks an empty-name/present record (corpus SavMarkRecord). */
-    *flags |= 2u;
+    *flags |= 1u;   /* dirty — always, like the corpus's caller-side gate */
+    /* |2 marks the tutorial range: the corpus's SavMarkRecord ORs it in
+     * only when `index < 8` (0x417ecc's JC and 0x417ef6's JNC both take the
+     * both-bits path for index 0..7; campaign records get |1 only). No
+     * corpus consumer reads |2 — this exists so port .sav files carry the
+     * same bit pattern the shipped record-marking path produces. */
+    if (index < SAVE_TUTORIAL_RECORDS) {
+        *flags |= 2u;
+    }
 }
 
 /* Grow the record array until `index` is addressable. The corpus bootstraps
@@ -506,6 +512,10 @@ int save_slot_state(GameContext* ctx, int slot, int* out_filled,
             continue;
         }
         const uint8_t* blob = (const uint8_t*)(fl + 1);
+        /* "Present" = the record holds a saved checkpoint. |1 is the mark
+         * SlotSummary/SavTreeWalk2 consume; |2 rides along for tutorial
+         * records (index < 8) — a junk-flag tolerant probe plus a nonzero
+         * blob scan. (Corpus-written flags never carry |2 without |1.) */
         int present = (*fl & 0x3) != 0;
         if (!present) {
             for (size_t b = 0; b < SAVE_BLOB_SIZE; b += 8) {

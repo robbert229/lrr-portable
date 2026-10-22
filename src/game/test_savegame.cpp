@@ -324,8 +324,11 @@ int main(void)
         uint32_t* flags = save_record_flags(&ctx, 2);
         CHECK(flags != NULL, "record 2 flags");
         if (flags != NULL) {
+            /* Tutorial-range record (2 < SAVE_TUTORIAL_RECORDS): the corpus's
+             * SavMarkRecord sets BOTH |1 and |2 for this range — pin both
+             * bits through the mark -> write -> reload cycle above. */
             CHECK((*flags & 1u) != 0, "record 2 dirty flag persisted");
-            CHECK((*flags & 2u) != 0, "record 2 empty-mark persisted");
+            CHECK((*flags & 2u) != 0, "record 2 tutorial |2 flag persisted");
         }
         /* Blob payload equality. */
         int32_t ten = 0;
@@ -348,7 +351,16 @@ int main(void)
         CHECK(raw != NULL, "Saves/5.sav written by checkpoint_step");
         free(raw);
         uint32_t* f5 = save_record_flags(&ctx, 4);
+        /* Record 4 is inside the tutorial range — the corpus marks it |1|2.
+         * Also re-read from disk to extend the bit-state pin through the
+         * checkpoint's own mark -> commit(write) -> reload cycle. */
         CHECK(f5 != NULL && (*f5 & 1u) != 0, "checkpoint record marked on achievement");
+        CHECK(f5 != NULL && (*f5 & 2u) != 0,
+              "checkpoint record 4 (tutorial) carries |2");
+        save_read_slot(&ctx, 5, 0); /* reload from the committed file */
+        f5 = save_record_flags(&ctx, 4);
+        CHECK(f5 != NULL && (*f5 & 1u) != 0 && (*f5 & 2u) != 0,
+              "checkpoint tutorial |1|2 survives write -> reload");
     }
 
     free(ctx.records);
@@ -373,9 +385,14 @@ int main(void)
     save_commit(&ctx);
     save_read_slot(&ctx, 2, 0);                /* reload from disk */
     f12 = save_record_flags(&ctx, 12);
+    /* Record 12 is a campaign record (>= SAVE_TUTORIAL_RECORDS): the corpus
+     * marks those with |1 only — SavMarkRecord's `CMP ECX,8` never reaches
+     * the `|2` OR for this range. Pin |1 set and |2 clear through the
+     * mark -> write -> reload cycle. */
     CHECK(f12 != NULL && (*f12 & 1u) != 0
+              && (*f12 & 2u) == 0
               && memcmp(f12 + 1, pat, SAVE_BLOB_SIZE) == 0,
-          "growth: record 12 round-trips marked");
+          "growth: record 12 round-trips marked |1-only (no tutorial |2)");
     free(ctx.records);
     ctx.records = NULL;
     ctx.record_count = 0;

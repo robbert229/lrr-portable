@@ -8,10 +8,22 @@
  *   Saves\<slot>.sav  — 0xB0-byte header + record_count × 0x3190 records
  *   Saves\<slot>.osf  — `'RO'` magic, u32 count, count × 20-byte entries
  *
- * Records: u32 flags (`|1` dirty, `|2` empty-marked) + 0x318c-byte blob
+ * Records: u32 flags + 0x318c-byte blob
  * (the per-frame checkpoint snapshot: reward enable/modifier + the 10-task
  * mission table, built by checkpoint_blob_build). Slots 0–5, slot 5 is the
  * default; record_count defaults to 5 (the corpus's bootstrap value).
+ *
+ * Flags (finding 08 §"Record flag semantics", closing issue #66):
+ *   |1  achieved/dirty — set by SavMarkRecord for any in-range mark; read by
+ *       SavTreeWalk2 (@0x4172f0, load path) and SlotSummary (@0x4152c0,
+ *       save menu "… complete … points" count).
+ *   |2  tutorial-range marker — SavMarkRecord's two immediate ORs set it
+ *       together with |1 iff the record index < SAVE_TUTORIAL_RECORDS
+ *       (the corpus gates on `index < 8` at 0x417ecc and 0x417ef6). The
+ *       shipped front-end's 8-tutorial chain starts at record 0, campaign
+ *       follows — |2 is exactly the "this is a tutorial record" tag. No
+ *       corpus consumer reads it (write-only); the port reproduces the same
+ *       on-disk bit pattern so .sav files stay byte-compatible.
  *
  * Reconstructed from SavReadSlot @ 0x417a90, SavWriteSlot @ 0x417bd0,
  * SavMarkRecord/SavWriteRecord/SavCommit (0x417eb0/40/bd0fc0), the
@@ -43,6 +55,12 @@ extern "C" {
  * active slot 5). */
 #define SAVE_DEFAULT_RECORDS 5
 
+/* First N records are the tutorial levels (record ↔ level mapping, finding
+ * 08). The corpus hard-codes this at 8 in SavMarkRecord (`CMP ECX,8` at
+ * 0x417ec9 / 0x417ef3) — the shipped config's 8-entry TutorialStartLevel
+ * chain — and sets the record's |2 flag exactly for this range. */
+#define SAVE_TUTORIAL_RECORDS 8
+
 /* OSF entry layout (finding 08): id, ref, 11-char name, 3×u16 pad. */
 
 /* --- slot context --------------------------------------------------- */
@@ -70,7 +88,9 @@ void save_commit(GameContext* ctx);
 int save_write_thumbnail(GameContext* ctx, int slot, const void* fb,
                          int pitch, int w, int h);
 
-/* Dirty-mark record `index` (|1, plus |2 for an empty-name record). */
+/* Dirty-mark record `index` (|1 always; |2 additionally when the record is
+ * in the tutorial range, index < SAVE_TUTORIAL_RECORDS — the corpus's
+ * SavMarkRecord branches, see savegame.hpp "Flags"). */
 void save_mark_record(GameContext* ctx, int index);
 
 /* Copy a 0x318c blob into record `index` (SavWriteRecord). */
