@@ -160,6 +160,50 @@ int ai_can_do(const EntitySlot* e)
     return (e != NULL && e->type == 2) ? (ai_activity_probe(e) != 0) : 0;
 }
 
+/* The 0x438150 spawn-dispatch switch (corpus FUN_00437d00 default arm):
+ * type − 8 indexes the byte selector at 0x4382ac — the shipped bytes are
+ * {00 01 04 04 02 02 02 04 03 03 03 03} for types 8..0x13 — and jumps
+ * through the table at 0x438298. Arms 0 (type 8) and 1 (type 9) pin the
+ * +0x334 stats block to DAT_004a98f0 / DAT_004a9a40, selectors 2 and 3
+ * (types 0xc, 0xd, 0xe, 0x10, 0x11, 0x12, 0x13) to DAT_004a9b90, and
+ * selector 4 falls back to the instance-stats attacher FUN_00469c10.
+ * These static templates are the minion "task states": 336 bytes each
+ * (stride 0x150), all-zero in the file apart from the leading dword 0x30,
+ * filled at runtime (config-driven, TODO(corpus) — the port models their
+ * activity capacity per entity, see EntitySlot.activity_cap). */
+int ai_minion_state_for(int type)
+{
+    static const uint8_t selector[12] = {
+        0x00, 0x01, 0x04, 0x04, 0x02, 0x02, 0x02, 0x04, 0x03, 0x03, 0x03, 0x03,
+    };
+    int key = type - 8;
+    if (key < 0 || key > 11) {
+        return AI_TASK_STATE_NONE;
+    }
+    switch (selector[key]) {
+    case 0x00: return AI_TASK_STATE_MINION_1; /* 0x438163 -> DAT_004a98f0 */
+    case 0x01: return AI_TASK_STATE_MINION_2; /* 0x43816f -> DAT_004a9a40 */
+    case 0x02:                                /* 0x43817b -> DAT_004a9b90 */
+    case 0x03:
+        return AI_TASK_STATE_MINION_3;
+    default:  return AI_TASK_STATE_NONE;      /* 0x438187: instance stats */
+    }
+}
+
+/* FUN_0046a060: capacity = *(*(ent+0x334) + 0xcc). The port models the
+ * stats block's +0xcc as EntitySlot.activity_cap (set by the minion
+ * task-state spawn; 0 = unset) falling back to the game-wide default. */
+int ai_activity_cap(const GameContext* ctx, const EntitySlot* e)
+{
+    int cap = (e != NULL && e->activity_cap > 0)
+                  ? e->activity_cap
+                  : ((ctx != NULL) ? ctx->stats_activity_cap : 0);
+    if (cap > AI_ACTIVITY_SLOTS) {
+        cap = AI_ACTIVITY_SLOTS; /* port bound (corpus stores inline) */
+    }
+    return cap;
+}
+
 static int activity_is_special(int v) /* FUN_0044b350's {4,5,7} predicate */
 {
     return v == AI_ACT_DRILL || v == AI_ACT_TELEPORT || v == AI_ACT_REINFORCE;
@@ -169,18 +213,15 @@ static int activity_is_special(int v) /* FUN_0044b350's {4,5,7} predicate */
  * see ai.hpp): cap gate, +0x3f4 = 0 (field not ported — no reader in the
  * ported surface, TODO(corpus)), +0x3ec bit 0x4 refresh, special-entry
  * replace, FIFO append/overwrite. The corpus compares count != cap with
- * cap = FUN_0046a060(ent) = *(state+0xcc) (stats block instance fill
- * TODO(corpus)); the port models it as ctx->stats_activity_cap clamped to
- * the inline span. */
+ * cap = FUN_0046a060(ent) = *(state+0xcc) (the stats-block instance fill is
+ * config-driven; the port models it as the per-entity activity_cap, and
+ * defaults through ctx->stats_activity_cap clamped to the inline span). */
 void ai_activity_grant(GameContext* ctx, EntitySlot* e, int value)
 {
     if (e == NULL) {
         return;
     }
-    int cap = (ctx == NULL) ? 0 : ctx->stats_activity_cap;
-    if (cap > AI_ACTIVITY_SLOTS) {
-        cap = AI_ACTIVITY_SLOTS; /* port bound (corpus stores inline) */
-    }
+    int cap = ai_activity_cap(ctx, e);
     if (cap <= 0) {
         return; /* cap-0 entity: the corpus's grant runs nothing (0x44b38d) */
     }
@@ -792,16 +833,20 @@ static int callback_branches(GameContext* ctx, EntitySlot* e, float dt)
      * at the chain head grants an activity". The branch consumes the flag,
      * installs the record's +0x38 activity onto the entity's permitted-
      * activity list through the FUN_0044b370 setter (append, or in-place
-     * replace when the grant is a special 4/5/7), drops the kind-0x13 grant
-     * records (FUN_00403d10(ent, 0x13, 0, 1) — port-side chain, TODO
-     * corpus record list), and RETURNS: both corpus paths end at 0x43ed80.
-     * The flag's raisers are the minion task-state machinery at 0x438150
-     * (documented TODO) — the ported list is where those grants land. */
+     * replace when the grant is a special 4/5/7), drops the grant records
+     * (FUN_00403d10(ent, 0x13, 0, 1) unlinks every chain record of type
+     * 0x13 with no per-type side effects — cmd_chain_drop), and RETURNS:
+     * both corpus paths end at 0x43ed80. The corpus writer of the +0x3e4
+     * grant bit is NOT the 0x438150 switch (it writes only +0x334) — the
+     * raiser is a computed-value store among the +0x3e4 write census
+     * (finding 10 §"Spawn-dispatch task-state switch"), still TODO. The
+     * ported list is where all these grants land. */
     if ((e->flags_3e4 & ENT_FLAG3E4_ACTIVITY_GRANT) != 0) {
         e->flags_3e4 &= ~ENT_FLAG3E4_ACTIVITY_GRANT;
         if (e->cmd_head != NULL) {
             ai_activity_grant(ctx, e, cmd_rec_activity(e->cmd_head));
         }
+        cmd_chain_drop(e, 0x13); /* corpus 0x43da92: FUN_00403d10(ent, 0x13, 0, 1) */
         return 1;
     }
     return 0;
