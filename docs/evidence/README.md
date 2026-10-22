@@ -434,3 +434,59 @@ Exported 2026-10-22 for finding 85 — 62 retained observations. The cited
 records describe selection-candidate flag, kind, and float gates. They do not
 establish which candidates occur in a live scenario. Import with
 `import_evidence_bundle` or inspect `records` directly.
+
+## `legorr-objective-advisor-inline-markup.bundle`
+
+Exported 2026-10-22 for findings 93–94 — 5 retained observations. Records cover
+objective/advisor stream token table construction and the inline resource,
+sound, and text consumer. Specific level stream contents and audible/displayed
+results remain unverified. Import with `import_evidence_bundle` or inspect
+`records` directly.
+
+## `legorr-config-and-read-buffer-lifecycle.bundle`
+
+Exported 2026-10-22 for findings 95–96 — 10 retained observations. Records
+cover the shared block-text record arena and the whole-file stream-to-buffer
+adapter. Callback effects, short-read behavior, and document reachability at
+shutdown remain unresolved. Import with `import_evidence_bundle` or inspect
+`records` directly.
+
+## `legorr-entity-target-route-markers.bundle`
+
+Exported 2026-10-22 for findings 97–98 — 4 retained observations. Records
+cover two entity target-route setup paths, their route checks, stored pointers,
+and final path markers. Callsite conditions, target identities, and gameplay
+purpose remain unknown. Import with `import_evidence_bundle` or inspect
+`records` directly.
+
+## `upgrade-transition-focused.bundle`
+
+Exported 2026-10-22 for findings 99–100 — 9 retained observations. Records
+cover upgrade admission/payment alternatives and the shared commit path from a
+command case and worker tick. Resource-slot identity and any `Activity_Upgrade`
+animation selection remain unresolved. Import with `import_evidence_bundle` or
+inspect `records` directly.
+
+## `legorr-camera-control-focused.bundle`
+
+Exported 2026-10-22 for findings 101–102 — 13 retained observations selected
+from the camera-control analysis. Records cover gated held-key adjustments,
+config-backed pointer-pan speed/acceleration, and follow-mode bounds. The key
+byte mappings and runtime camera feel remain unverified. Import with
+`import_evidence_bundle` or inspect `records` directly.
+
+## `legorr-olistfile-health-field.bundle`
+
+Exported 2026-10-22 for finding 91 — 5 retained observations. Records cover
+the optional `.ol` health lookup, zero-to-100 default, and entity-field write.
+No range clamp for nonzero values or runtime entity health behavior is
+established. Import with `import_evidence_bundle` or inspect `records`
+directly.
+
+## `legorr-save-write-results-and-count-reset.bundle`
+
+Exported 2026-10-22 for findings 105–106 — 18 retained observations. Records
+cover the save writer's unchecked lower-level write results and the reader's
+record-count mismatch reset/retry path. No short-write fault was forced, and
+successful reinitialization is not established. Import with
+`import_evidence_bundle` or inspect `records` directly.
