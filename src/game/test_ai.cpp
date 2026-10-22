@@ -437,6 +437,46 @@ int main(void)
         CHECK(ai_wave_flood_count() == 5,
               "the seed raises record 12's northwest 2x2 footprint flag");
 
+        /* Move-command path through the executor (T2): the demo's own
+         * route — a selection opcode-5 move dispatches through the queue
+         * executor into CmdCreateMove, which builds the path with the
+         * wave-flood core. On a bound grid with a blocked column in the
+         * way, the command installs a multi-cell wave-built list that
+         * walks around the column, popping waypoints on arrival. */
+        memset(voxels, 0, sizeof(voxels));
+        for (int cy = 0; cy <= 13; ++cy) {
+            for (int cx = 0; cx <= 13; ++cx) {
+                *(uint32_t*)(voxels + ((size_t)cy * 16 + cx) * 0x48 + 8) |= 0x10u;
+            }
+        }
+        for (int cy = 1; cy <= 5; ++cy) {
+            *(uint32_t*)(voxels + ((size_t)cy * 16 + 5) * 0x48 + 8) |= 0x40u;
+        }
+        EntitySlot* mailrun = place(&ctx, 1, "mailrun", 1, 3);
+        selection_add(&ctx, mailrun);
+        selection_cmd_move(&ctx, 9, 3); /* demo 'm': opcode 5 -> CmdCreateMove */
+        cmd_queue_tick(); /* the per-frame executor (FUN_004520d0) */
+        CHECK(mailrun->cmd_head != NULL && cmd_rec_type(mailrun->cmd_head) == 0,
+              "queue move dispatches a move command onto the chain");
+        CHECK(mailrun->wp_count > 1,
+              "the executor move installs a multi-cell wave-built path");
+        CHECK(ai_wave_flood_count() > mailrun->wp_count,
+              "the wave spread marked more cells than the path used");
+        int mail_arrived = 0;
+        for (int t = 0; t < 40 && !mail_arrived; ++t) {
+            run(&ctx, 1, 0.5f);
+            int px = (int)(mailrun->x + 0.5f);
+            int py = (int)(mailrun->y + 0.5f);
+            CHECK(!(px == 5 && py >= 1 && py <= 5),
+                  "the executor move never lands on the blocked column");
+            mail_arrived = mailrun->cmd_head == NULL;
+        }
+        CHECK(mail_arrived && mailrun->x == 9.0f && mailrun->y == 3.0f,
+              "the move command's wave route reroutes around the column");
+        CHECK((mailrun->flags_3e0 & 0x8u) == 0,
+              "arrival clears the +0x3e0 move flag");
+        selection_clear(&ctx);
+
         /* Unreachable target: the blocked column now spans the whole grid,
          * so the wave floods the target side, exhausts, and the traceback
          * never roots at the start. */
