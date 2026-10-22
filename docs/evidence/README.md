@@ -611,3 +611,15 @@ Exported for finding 120. Two function records cover sound-buffer creation, the 
 ## `legorr-sound-buffer-fill.bundle`
 
 Exported for finding 120. One function record covers locking the primary buffer, copying the loaded sample into it, unlocking, and querying buffer state.
+
+## `legorr-sound3d-per-source.bundle`
+
+Exported for finding 121. Four function records cover the DirectSound buffer descriptor, sound-record buffer creation, the tracked-buffer list, and configured distance setter calls.
+
+## `legorr-wav-handoff-memory-copy.bundle`
+
+Exported for finding 122. Three function records cover `FUN_0047b580` allocation and call order, WAV data-chunk seeking, and copying from the MMIO read window into the allocated memory buffer.
+
+## `legorr-avi-frame-row-copy.bundle`
+
+Exported for finding 123. Two function records cover `AVIStreamGetFrame` dispatch and the helper that copies DIB rows into the destination pixel buffer.

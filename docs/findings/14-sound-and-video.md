@@ -121,15 +121,17 @@ playback region). The `.flh` container is documented in finding 21.
 
 ## Notes and open items
 
-1. DirectSound 3D listener acquisition is documented in finding 119: sound initialization queries
-   the primary buffer for IID_IDirectSound3DListener. Later interface vtable calls and per-source 3D
-   buffer setup remain untraced. Finding 120 traces a separate sound-load path that can create two
-   duplicate sample buffers; caller values and playback selection remain open.
-2. The `mmioGetInfo` buffer (`FUN_00489113` region) implies WAVs are parsed
-   **from a memory-mapped view** when loaded from WAD — the exact buffer
-   handoff was not traced.
-3. AVI frame decode: `AVIStreamGetFrame` returns DIB bytes handed straight to
-   the surface blit path (`FUN_0047dcb0` family); no private codec is used.
+1. Sound initialization's listener query is documented in finding 119. Finding 121 adds the
+   per-source buffer descriptor's 3D-control bit and the tracked-buffer distance-update calls;
+   which sounds use 3D positioning and later listener calls remain open. Finding 120 documents
+   optional duplicate sample buffers, while playback selection remains unknown.
+2. Finding 122 traces the in-memory WAV path from the `data` chunk through `mmioGetInfo`'s read
+   window into a `GlobalAlloc` buffer before DirectSound setup. The shared file/WAD open layer is
+   documented in finding 11; runtime WAD-backed loading and Windows' internal file access remain
+   unverified.
+3. Finding 123 traces `AVIStreamGetFrame` output into a row-copy helper and the surface pixel
+   buffer. The helper walks source rows backward while advancing the destination; bottom-up to
+   top-down conversion is an inference, and presentation beyond that buffer remains untraced.
 4. `.flh` container format — **closed** by finding 21 (2026-10-20): layout,
    both 16-bit coders, and the RGB555→565 write transform.
 5. MCI: only `play cdaudio from N` and status queries were observed; no
