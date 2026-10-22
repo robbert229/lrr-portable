@@ -107,10 +107,49 @@ Nothing in the save path serializes vehicles, buildings, or terrain deltas —
 completed-objective list**, matching the game's "mission checkpoint" design where gameplay
 state resets when the checkpoint is applied.
 
+## Slot thumbnails — the `.dat` framebuffer dumps (`FUN_00413b80` @ 0x413b80)
+
+**The write side is closed.** The `.dat` writer is the save-menu confirm path:
+`FUN_00413b80` is the modal save-menu loop (entered via `FUN_00413e20` from
+`FUN_00416c80`, the slot-save action — driven from `FUN_00435940` /
+`FUN_00462030` and boot). It opens by refreshing the slot tables with
+`FUN_00413a60` — per record: `FUN_0048d9e0("%s\\%d.dat", <SaveImage path>,
+slot)` -> `FUN_0047d9d0` (the BMP surface loader) into
+`DAT_004db890[0..7]`, plus the `+0x1BC38` float-scan completion score — and
+on exit, if the selection is in the save list (`DAT_00556fcc`), the slot
+`DAT_004a1f5c >= 0`, and a live game is loaded (`FUN_00460200`'s object with
+`+4 != 0`), it calls `FUN_0047e440(path, game+0x10-surface)` to dump the
+framebuffer once.
+
+`FUN_0047e440 -> FUN_0047c8f0` is a plain BMP writer — the `.dat` is just an
+uncompressed 24bpp BMP with a made-up extension, field for field: `BM`, file
+size = pixels + 54, data offset 54, DIB header 40, positive width/height
+(**bottom-up** rows), planes 1, bpp 24 (`0x18`), comp 0 (BI_RGB), image size
+0, XPel/YPel 1, palette counts 0; surface pixels are component-shifted to
+BGR and copied dword-padded, each surface row `y` landing at file offset
+`(h − 1 − y) × row_bytes`.
+
+The loaded thumbnails are *used* in the item draw path (xref `0x412518`):
+destination rects come from the `Menu::SaveImage` config keys (`Path Saves`,
+`Width/Height 60×45` normal, `BigWidth/BigHeight 80×60` selected, `Pos1..5`
+at `40|95 … 40|335`) scaled by the scroll-plane constants `0x49e190/194`,
+blitted through `FUN_0047dcb0`.
+
+**Port**: `save_write_thumbnail(ctx, slot, fb, pitch, w, h)` in
+`savegame.cpp` reproduces `FUN_0047c8f0`'s layout byte-for-byte (the
+savegame suite round-trips it through `texture_decode`). `LegorrrRun` dumps
+`Saves\<slot>.dat` for the frame it presents when the reward screen's Save
+click commits the checkpoint (`game.save_slot`, defaulting to 5) — the port
+deviation is that it has no save-to-slot menu confirm, so the dump hangs off
+the commit instead. The read/draw side (rendering `Saves/<N>.dat` behind the
+save-menu rows with the SaveImage rects) is not implemented; see Still open.
+
 ## Still open
 
 - Task-table block (`DAT_00552990+0x1CE8`, 0x210/task) field layout.
 - Record flag `|2` semantics (`SavMarkRecord` sets `1` (and `2` when name is empty) — likely "present/empty").
 - `FUN_0047fa50`-based `.osf` restore path (load side only shows the `'RO'` write).
 - Who owns `DAT_00552990` lifetime (created in `LevelLoad`? via `FUN_0048dbd0` — verify xref).
-- `.dat` slot thumbnail writer (found `.dat` read in `FUN_00413a60`, write side elsewhere).
+- `.dat` slot thumbnails: writer closed (see section above); the save-menu
+  draw side (`DAT_004db890` blits, SaveImage `Width/Height/BigWidth/BigHeight/
+  Pos1..5` rects + the scroll-plane scale) is not ported yet.

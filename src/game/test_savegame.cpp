@@ -10,6 +10,7 @@
 #include "game/game.hpp"
 #include "game/level.hpp"
 #include "game/savegame.hpp"
+#include "gods98/texture.hpp"   /* texture_decode: `.dat` round-trip probe */
 
 static int s_failures = 0;
 
@@ -261,6 +262,81 @@ int main(void)
     checkpoint_blob_free(&ctx);
     if (ctx.level != NULL) {
         free(ctx.level);
+    }
+
+    /* --- .dat slot thumbnail (FUN_0047e440 / FUN_0047c8f0 BMP dump) ------
+     * The corpus's save-confirm writes Saves\<slot>.dat; FUN_00413a60 reads
+     * it back with the BMP loader. Prove the writer's exact header layout,
+     * bottom-up rows, and that the port's own decoder round-trips it. */
+    {
+        GameContext tctx;
+        game_context_init(&tctx);
+        uint32_t fb[4 * 3];
+        for (int y = 0; y < 3; ++y) {
+            for (int x = 0; x < 4; ++x) {
+                fb[y * 4 + x] = (255u << 24) | ((uint32_t)(y + 1) << 16)
+                              | ((uint32_t)(x * 2 + 5) << 8)
+                              | (uint32_t)(x + y * 7);
+            }
+        }
+        CHECK(save_write_thumbnail(&tctx, 3, fb, 4 * 4, 4, 3) == 1,
+            "thumb: write Saves/3.dat");
+        size_t sz = 0;
+        uint8_t* b = read_all("Saves/3.dat", &sz);
+        CHECK(b != NULL && sz == 54 + 12 * 3, "thumb: file is 90 bytes");
+        if (b != NULL) {
+            uint32_t u32;
+            int le = 1;
+            (void)le;
+            CHECK(b[0] == 'B' && b[1] == 'M', "thumb: BM magic");
+            memcpy(&u32, b + 2, 4);
+            CHECK(u32 == 54 + 12 * 3, "thumb: file size field");
+            memcpy(&u32, b + 10, 4);
+            CHECK(u32 == 54, "thumb: data offset 54");
+            memcpy(&u32, b + 14, 4);
+            CHECK(u32 == 40, "thumb: DIB header 40");
+            int32_t w32, h32;
+            memcpy(&w32, b + 18, 4);
+            memcpy(&h32, b + 22, 4);
+            CHECK(w32 == 4 && h32 == 3, "thumb: w/h, positive (bottom-up)");
+            CHECK(b[26] == 1 && b[28] == 24, "thumb: planes 1, 24 bpp");
+            memcpy(&u32, b + 30, 4);
+            CHECK(u32 == 0, "thumb: BI_RGB");
+            memcpy(&u32, b + 38, 4);
+            CHECK(u32 == 1, "thumb: XPel 1");
+            /* File row 0 = surface row h-1 (bottom). */
+            int rows_ok = 1, pad = 0;
+            for (int f = 0; f < 3 && rows_ok; ++f) {
+                for (int x = 0; x < 4; ++x) {
+                    uint32_t p = fb[(2 - f) * 4 + x];
+                    uint8_t* q = b + 54 + (size_t)f * 12 + (size_t)x * 3;
+                    if (q[0] != (uint8_t)(p) || q[1] != (uint8_t)(p >> 8)
+                        || q[2] != (uint8_t)(p >> 16)) {
+                        rows_ok = 0;
+                        break;
+                    }
+                }
+            }
+            CHECK(rows_ok, "thumb: bottom-up BGR rows match");
+            (void)pad;
+            /* Round trip through the port's BMP loader (the .dat reader). */
+            TextureSurface* t = texture_decode(b, (uint32_t)sz);
+            CHECK(t != NULL && t->width == 4 && t->height == 3,
+                "thumb: decodes as 24bpp surface");
+            if (t != NULL) {
+                int rt = 1;
+                for (int i = 0; i < 12; ++i) {
+                    if ((t->pixels[i] & 0x00ffffffu)
+                        != (fb[i] & 0x00ffffffu)) {
+                        rt = 0;
+                        break;
+                    }
+                }
+                CHECK(rt, "thumb: round-trips through texture_decode");
+                texture_free(t);
+            }
+            free(b);
+        }
     }
 
     if (s_failures != 0) {

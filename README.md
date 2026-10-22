@@ -633,6 +633,16 @@ finding 12, #14). Three new modules in `src/game/`:
   `nextlevel` chain (finding 07), so the reward screen now *drives a
   campaign*. `mission_test` covers the zone hit tests, the click path and
   the Level01→Level02→campaign-end advance chain.
+- **Save thumbnails** (2026-10-22, finding 08): the corpus's save-confirm
+  dumps a framebuffer thumbnail to `Saves\<slot>.dat` (`FUN_00413b80` →
+  `FUN_0047e440` → `FUN_0047c8f0` — a plain uncompressed 24bpp BMP, bottom-up
+  dword-padded BGR rows). `save_write_thumbnail` reproduces that layout
+  byte-for-byte, and `LegorrrRun` writes the `.dat` for the frame it presents
+  when the reward screen's Save click commits the checkpoint — the port's
+  stand-in trigger for the corpus's save-menu confirm (the port's save menu
+  loads slots; it has no save-to-slot confirm yet). The `savegame` suite
+  checks the exact header fields, the bottom-up row order, and that the
+  dump round-trips through the port's own BMP loader.
 - **Software level renderer** (2026-10-21, finding 22 §3): `src/game/render.*`
   is the port's own rasterizer — D3DRM is confirmed software-only, so the
   reconstruction draws the level itself. `level_render_map` paints the
