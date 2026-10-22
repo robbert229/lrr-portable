@@ -43,6 +43,7 @@ extern "C" {
 #endif
 
 struct Flic; /* gods98/flic.hpp — `.flh` overlay player (lazily opened) */
+struct AudioPlayer; /* gods98/audio.hpp — optional front-end SFX output */
 
 #define FE_ITEMS_MAX      32   /* ItemCount cap — ≥ the 24-level campaign picker */
 #define FE_SUBMENUS_MAX   8    /* MenuCount cap */
@@ -107,7 +108,7 @@ typedef struct FeOverlay {
     char  sfx[FE_NAME_MAX];
     int   x, y;
     Flic* flic;   /* opened player, or NULL (missing file / not started) */
-    int   tried;  /* 1 = open attempted (missing files are not retried) */
+    int   tried;  /* non-random overlays are only opened once per menu visit */
 } FeOverlay;
 
 typedef struct FeSubmenu {
@@ -120,7 +121,7 @@ typedef struct FeSubmenu {
     int   base_x, base_y;         /* Position key (x:y) */
     int   auto_center;            /* AutoCenter TRUE|FALSE */
     int   display_title;          /* DisplayTitle TRUE|FALSE */
-    int   play_random;            /* PlayRandom: one overlay plays per display */
+    int   play_random;            /* PlayRandom: random sequential FLIC playback */
     FeOverlay overlays[FE_OVERLAYS_MAX];
     int   overlay_count;
     int   can_scroll;             /* CanScroll TRUE — item plane pans (0x413970) */
@@ -182,10 +183,14 @@ typedef struct FrontEnd {
 
     /* Overlay players open for the currently active submenu (lazily). */
     const FeSubmenu* overlays_for;  /* which submenu's flics are open     */
+    int  overlay_active;            /* selected overlay index, or -1       */
+    uint32_t overlay_rng;           /* per-front-end LCG state              */
+    struct AudioPlayer* audio;      /* optional SFX player                  */
 
     /* CanScroll plane pan lives on each FeSubmenu (corpus DAT_005574e0
      * is reset when a menu re-enters — frontend_open clears every sub). */
     int  view_w, view_h;            /* render viewport (set each render)  */
+    int  pointer_x, pointer_y;      /* last menu pointer position         */
 } FrontEnd;
 
 /* One frame of modal-menu input: key *edges* this frame (the frame loop
@@ -243,6 +248,7 @@ int  fe_level_for_record(const FrontEnd* fe, int rec, char* out, size_t sz);
 /* Enter the modal menu at `menu`/submenu 0, selection 0. */
 int  frontend_open(FrontEnd* fe, int menu);
 void frontend_close(FrontEnd* fe);
+void frontend_set_audio(FrontEnd* fe, struct AudioPlayer* audio);
 
 /* Register the runtime save/load slot rows (from save_slot_state) and graft
  * them onto the SaveLoad submenus (MenuImage contains "SaveLoad" — the
@@ -275,7 +281,7 @@ const char* frontend_active_image(const FrontEnd* fe);
 
 /* Draw the active submenu into a locked RGBA32 framebuffer (R,G,B,A bytes):
  * item labels at their anchors (AutoCenter → centered on base_x), a
- * selection highlight behind the selected row, and the Title when
+ * selected font for the active row, the pointer graphic, and the Title when
  * display_title. The background / MenuImage blit is the caller's (it owns
  * the texture lane). `hi_font`/`lo_font` are the shipped bitmap fonts
  * (HiFont = selected, LoFont = unselected — the engine keys palette 255

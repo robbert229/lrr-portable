@@ -22,9 +22,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "frontend.hpp"
+#include "gods98/audio.hpp"
 #include "gods98/flic.hpp"
+#include "gods98/texture.hpp"
 #include "util.hpp"
 
 static int s_lower(int c) { return (c >= 'A' && c <= 'Z') ? c + 0x20 : c; }
@@ -578,31 +581,78 @@ static void fe_overlay_close_all(FrontEnd* fe)
                     flic_close(sub->overlays[i].flic);
                     sub->overlays[i].flic = NULL;
                 }
+                sub->overlays[i].tried = 0;
             }
         }
     }
     fe->overlays_for = NULL;
+    fe->overlay_active = -1;
 }
 
-/* Open (and tick-start) the active submenu's overlay flics. PlayRandom
- * submenus play one chosen overlay; others play all listed. Missing files
- * (paths that don't resolve) leave the overlay's flic NULL — a no-op. */
+/* Keep the existing all-overlay handling for submenus without PlayRandom. */
 const FeSubmenu* frontend_active_submenu(const FrontEnd* fe);
 
-static void fe_overlay_open(FrontEnd* fe, const FeSubmenu* sub, int picked)
+static void fe_overlay_open_all(FrontEnd* fe, const FeSubmenu* sub)
 {
     if (fe == NULL || sub == NULL) {
         return;
     }
     for (int i = 0; i < sub->overlay_count; ++i) {
         FeOverlay* o = (FeOverlay*)&sub->overlays[i];
-        if ((sub->play_random && i != picked) || o->tried) {
+        if (o->tried) {
             continue;
         }
         o->tried = 1;
         o->flic = flic_open(o->path);
     }
     fe->overlays_for = sub;
+}
+
+/* FUN_0048e170: the game's 15-bit LCG. Seed this front-end instance from
+ * wall-clock seconds and its address so menu sequences vary between runs
+ * without consuming the gameplay random stream. */
+static uint32_t fe_overlay_random(FrontEnd* fe)
+{
+    fe->overlay_rng = fe->overlay_rng * 0x343fdu + 0x269ec3u;
+    return (fe->overlay_rng >> 16) & 0x7fffu;
+}
+
+static void fe_overlay_play_sfx(FrontEnd* fe, const FeOverlay* o)
+{
+    if (fe == NULL || o == NULL || fe->audio == NULL
+        || o->sfx[0] == '\0' || s_strcaseeq(o->sfx, "SFX_NULL")) {
+        return;
+    }
+
+    /* Overlay values name an SFX alias, while Lego.cfg maps that alias under
+     * Samples to a WAVE resource (often prefixed by '@' for streamed sounds). */
+    char key[FE_NAME_MAX + 32];
+    snprintf(key, sizeof(key), "%s Samples !%s", util_root_name(fe->cfg),
+             o->sfx);
+    const char* resource = block_get_strptr(fe->cfg, key);
+    if (resource == NULL || resource[0] == '\0') {
+        return;
+    }
+    if (resource[0] == '@') {
+        ++resource;
+    }
+    audio_play_named(fe->audio, resource);
+}
+
+static void fe_overlay_start_random(FrontEnd* fe, const FeSubmenu* sub)
+{
+    if (sub->overlay_count <= 0 || fe_overlay_random(fe) % 400u != 0) {
+        return;
+    }
+
+    int picked = (int)(fe_overlay_random(fe) % (uint32_t)sub->overlay_count);
+    FeOverlay* o = (FeOverlay*)&sub->overlays[picked];
+    o->flic = flic_open(o->path);
+    if (o->flic == NULL) {
+        return;
+    }
+    fe->overlay_active = picked;
+    fe_overlay_play_sfx(fe, o);
 }
 
 /* Ensure the current submenu's overlays are open (re-opening on menu
@@ -621,12 +671,26 @@ static void fe_overlay_step(FrontEnd* fe)
     }
     if (fe->overlays_for != sub) {
         fe_overlay_close_all(fe);
-        /* PlayRandom: pick one overlay per display; the frame counter is a
-         * decent shake. */
-        int picked = sub->play_random
-                         ? (int)(fe->sel * 7919u % (unsigned)sub->overlay_count)
-                         : -1;
-        fe_overlay_open(fe, sub, picked);
+        fe->overlays_for = sub;
+        if (!sub->play_random) {
+            fe_overlay_open_all(fe, sub);
+        }
+    }
+    if (sub->play_random) {
+        if (fe->overlay_active >= 0
+            && fe->overlay_active < sub->overlay_count) {
+            FeOverlay* o = (FeOverlay*)&sub->overlays[fe->overlay_active];
+            flic_tick_loop(o->flic, 0);
+            if (flic_eof(o->flic)) {
+                flic_close(o->flic);
+                o->flic = NULL;
+                o->tried = 0;
+                fe->overlay_active = -1;
+            }
+        } else {
+            fe_overlay_start_random(fe, sub);
+        }
+        return;
     }
     for (int i = 0; i < sub->overlay_count; ++i) {
         if (sub->overlays[i].flic != NULL) {
@@ -641,6 +705,12 @@ void frontend_init(FrontEnd* fe)
         return;
     }
     memset(fe, 0, sizeof(*fe));
+    fe->pointer_x = fe->pointer_y = -1;
+    fe->overlay_active = -1;
+    fe->overlay_rng = (uint32_t)time(NULL) ^ (uint32_t)(uintptr_t)fe;
+    if (fe->overlay_rng == 0) {
+        fe->overlay_rng = 1;
+    }
 }
 
 int frontend_build(FrontEnd* fe, BlockFile* cfg)
@@ -766,6 +836,7 @@ int frontend_open(FrontEnd* fe, int menu)
     if (fe == NULL || !fe->built) {
         return 0;
     }
+    fe_overlay_close_all(fe);
     fe->menu = menu;
     fe->sub = 0;
     fe->sel = 0;
@@ -782,6 +853,13 @@ int frontend_open(FrontEnd* fe, int menu)
         fe->menus[menu].submenus[i].scroll = 0;
     }
     return 1;
+}
+
+void frontend_set_audio(FrontEnd* fe, struct AudioPlayer* audio)
+{
+    if (fe != NULL) {
+        fe->audio = audio;
+    }
 }
 
 void frontend_close(FrontEnd* fe)
@@ -811,14 +889,14 @@ static FeEvent fe_activate(FrontEnd* fe)
     /* save-slot row: load the slot (FE_EVT_LOAD_GAME, fe.load_slot set) */
     if (it->load_slot) {
         fe->load_slot = it->load_slot;
-        fe->open = 0;
+        frontend_close(fe);
         return FE_EVT_LOAD_GAME;
     }
 
     /* picker row: start the selected level */
     if (it->level_start) {
         snprintf(fe->pending_level, FE_LEVEL_NAME_MAX, "%s", it->target);
-        fe->open = 0;
+        frontend_close(fe);
         return FE_EVT_START_LEVEL;
     }
 
@@ -830,26 +908,26 @@ static FeEvent fe_activate(FrontEnd* fe)
             switch (fe->sub) {
             case 0:   /* pause Menu1: Continue_Game / Replay_Objective */
                 if (s_stristr(it->label, "continue")) {
-                    fe->open = 0;
+                    frontend_close(fe);
                     return FE_EVT_RESUME;
                 }
                 return FE_EVT_NONE;   /* Replay_Objective: stub */
             case 2:   /* pause Menu3 = quit confirm ("Yes") */
                 fe->quit = 1;
-                fe->open = 0;
+                frontend_close(fe);
                 return FE_EVT_QUIT;
             case 3:   /* pause Menu4 = restart confirm ("Yes") */
                 snprintf(fe->pending_level, FE_LEVEL_NAME_MAX, "%s",
                          fe->resume_level[0] != '\0' ? fe->resume_level
                                                      : it->target);
-                fe->open = 0;
+                frontend_close(fe);
                 return FE_EVT_START_LEVEL;
             default:  /* options submenus: Replay_Objective etc. — stub */
                 return FE_EVT_NONE;
             }
         }
         fe->quit = 1;
-        fe->open = 0;
+        frontend_close(fe);
         return FE_EVT_QUIT;
     }
 
@@ -893,8 +971,8 @@ FeEvent frontend_tick(FrontEnd* fe, const FeInput* in,
     if (fe->sel < 0) {
         fe->sel = 0;
     }
-    /* .flh overlay lane (finding 23): open + advance the active submenu's
-     * flics each frame (PlayRandom picks one at open). */
+    /* .flh overlay lane (finding 23): advance the active clip, or let
+     * PlayRandom's per-tick gate start one configured overlay. */
     fe_overlay_step(fe);
 
     if (in->up) {
@@ -977,6 +1055,8 @@ FeEvent frontend_tick(FrontEnd* fe, const FeInput* in,
      * When the pointer is in use but outside every item, a click is a
      * no-op (the menu stays up). */
     if (in->mouse_x >= 0 && in->mouse_y >= 0) {
+        fe->pointer_x = in->mouse_x;
+        fe->pointer_y = in->mouse_y;
         int idx = 0;
         int hit = fe_item_pick(fe, in->mouse_x, in->mouse_y, measure, &idx);
         if (hit) {
@@ -1036,11 +1116,11 @@ FeEvent frontend_tick(FrontEnd* fe, const FeInput* in,
             fe->sub = 0;
             fe->sel = 0;
         } else if (fe->menu == FE_MENU_PAUSED) {
-            fe->open = 0;             /* pause Esc = resume */
+            frontend_close(fe);       /* pause Esc = resume */
             return FE_EVT_RESUME;
         } else {
             fe->quit = 1;
-            fe->open = 0;
+            frontend_close(fe);
             return FE_EVT_QUIT;
         }
         return FE_EVT_NONE;
@@ -1564,7 +1644,7 @@ void frontend_render(FrontEnd* fe, const TextureSurface* hi_font,
         if (o == NULL || o->flic == NULL) {
             continue;
         }
-        const uint8_t* frm = flic_frame_rgba(o->flic);
+        const uint16_t* frm = flic_frame555(o->flic);
         if (frm == NULL) {
             continue;
         }
@@ -1574,19 +1654,28 @@ void frontend_render(FrontEnd* fe, const TextureSurface* hi_font,
             if (dy < 0 || dy >= h) {
                 continue;
             }
-            const uint8_t* s = frm + (size_t)yy * fw * 4;
+            int sx = o->x < 0 ? -o->x : 0;
+            int ex = fw;
+            if (o->x + ex > w) {
+                ex = w - o->x;
+            }
+            if (sx >= ex) {
+                continue;
+            }
             uint8_t* d = (uint8_t*)px + (size_t)dy * (size_t)pitch
-                         + (size_t)o->x * 4;
-            for (int xx = 0; xx < fw; ++xx) {
-                int dx = o->x + xx;
-                if (dx < 0 || dx >= w) {
-                    continue;
+                         + (size_t)(o->x + sx) * 4;
+            for (int xx = sx; xx < ex; ++xx) {
+                uint16_t c = frm[(size_t)yy * fw + xx];
+                /* FLIC-backed sprites use RGB555 zero as the transparent
+                 * key. Treating every pixel as opaque paints the decoder's
+                 * empty canvas over the menu backdrop. */
+                if (c != 0) {
+                    uint32_t rgba = flic_rgb555_to_rgba(c);
+                    d[0] = (uint8_t)rgba;
+                    d[1] = (uint8_t)(rgba >> 8);
+                    d[2] = (uint8_t)(rgba >> 16);
+                    d[3] = 0xff;
                 }
-                const int oi = xx * 4;
-                d[0] = s[oi + 0];
-                d[1] = s[oi + 1];
-                d[2] = s[oi + 2];
-                d[3] = s[oi + 3];
                 d += 4;
             }
         }
@@ -1618,17 +1707,6 @@ void frontend_render(FrontEnd* fe, const TextureSurface* hi_font,
         const TextureSurface* font = selected ? hi_font : lo_font;
         int lw = font != NULL ? fe_font_text_width(it->label, font)
                               : fe_text_width(it->label);
-        int chh = 0;
-        if (font != NULL) {
-            int cw = 0;
-            fe_font_cell(font, &cw, &chh);
-        }
-        int hh = font != NULL ? chh + 8 : 12;
-
-        if (selected) {
-            fe_fill_rect(px, pitch, w, h, x - 4, y - 2, lw + 8, hh,
-                         60, 80, 200);
-        }
         if (font != NULL) {
             fe_draw_font_text(px, pitch, w, h, x, y, it->label, font);
         } else {
@@ -1664,6 +1742,53 @@ void frontend_render(FrontEnd* fe, const TextureSurface* hi_font,
                              selected ? 255 : 200, selected ? 255 : 200,
                              selected ? 255 : 160);
             }
+        }
+    }
+
+    /* Pointer_Standard is the shipped Aclosed.bmp cursor from Lego.cfg's
+     * Pointers block. Its red tip is the top-left hotspot. */
+    if (fe->pointer_x >= 0 && fe->pointer_y >= 0
+        && fe->pointer_x < w && fe->pointer_y < h) {
+        char key[128];
+        snprintf(key, sizeof(key), "%s Pointers Pointer_Standard",
+                 util_root_name(fe->cfg));
+        const char* pointer = fe->cfg != NULL
+                                  ? block_get_strptr(fe->cfg, key) : NULL;
+        if (pointer == NULL || pointer[0] == '\0') {
+            pointer = "Interface\\Pointers\\Aclosed.bmp";
+        }
+        TextureSurface* cursor = texture_get_or_load(NULL, pointer);
+        if (cursor != NULL) {
+            int ox = fe->pointer_x, oy = fe->pointer_y;
+            for (int yy = 0; yy < cursor->height; ++yy) {
+                int dy = oy + yy;
+                if (dy < 0 || dy >= h) {
+                    continue;
+                }
+                uint8_t* d = (uint8_t*)px + (size_t)dy * pitch;
+                for (int xx = 0; xx < cursor->width; ++xx) {
+                    int dx = ox + xx;
+                    if (dx < 0 || dx >= w) {
+                        continue;
+                    }
+                    uint32_t c = cursor->pixels[(size_t)yy * cursor->width + xx];
+                    int transparent = 0;
+                    for (int k = 0; k < cursor->key_count; ++k) {
+                        if (c == cursor->keys[k]) {
+                            transparent = 1;
+                            break;
+                        }
+                    }
+                    if (!transparent) {
+                        uint8_t* p = d + (size_t)dx * 4;
+                        p[0] = (uint8_t)(c >> 16);
+                        p[1] = (uint8_t)(c >> 8);
+                        p[2] = (uint8_t)c;
+                        p[3] = 0xff;
+                    }
+                }
+            }
+            texture_release(cursor);
         }
     }
 }

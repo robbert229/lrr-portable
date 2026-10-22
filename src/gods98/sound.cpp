@@ -195,6 +195,18 @@ int sound_bank_load(const char* name, int streamed, int looping)
 
 Sound* sound_bank_find(const char* fullname)
 {
+    if (fullname == NULL) {
+        return NULL;
+    }
+    char full[1024];
+    if (!s_has_wav_suffix(fullname)) {
+        size_t n = strlen(fullname);
+        if (n + 5 >= sizeof(full)) {
+            return NULL;
+        }
+        snprintf(full, sizeof(full), "%s.wav", fullname);
+        fullname = full;
+    }
     for (int i = 0; i < s_bank_count; ++i) {
         if (s_strcasecmp(s_bank_names[i], fullname) == 0) {
             return s_bank_sounds[i];
