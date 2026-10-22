@@ -852,7 +852,9 @@ int frontend_build_slots(FrontEnd* fe, const FeSlot* slots, int n)
                 it->target[0] = '\0';
                 snprintf(it->label, FE_NAME_MAX, "%s", slots[k].label);
                 it->x = 48;
-                it->y = 96 + k * 40;
+                /* SaveMenuBuild constructs the slot list with a 0x3c-pixel
+                 * row interval; MenuTick advances each list row by it. */
+                it->y = 96 + k * 60;
                 sub->item_count = base + k + 1;
             }
             grafted = 1;
