@@ -307,3 +307,67 @@ key-state conversion used by text entry. The mode bit meaning, exact window
 procedure target, symbolic DirectInput format, and correspondence between raw
 table indices and Win32 virtual keys remain unresolved. Import with
 `import_evidence_bundle` or inspect `records` directly.
+
+## `legorr-cursor-routing-expansion.bundle`
+
+Exported 2026-10-22 for findings 60–61 — 31 retained observations. Records
+cover Win32 cursor sampling, client-relative coordinate clamping and deltas,
+plus the gameplay screen-to-ray camera route. The bundle supports static
+control-flow claims; it does not establish runtime camera behavior. Import with
+`import_evidence_bundle` or inspect `records` directly.
+
+## `legorr-sound-instance-spatial-expansion.bundle`
+
+Exported 2026-10-22 for findings 62–63 — 70 retained observations. Records
+cover DirectSound distance and rolloff controls, sound-instance buffer
+rotation, stream-mode routing, deferred positional requests and stop cleanup.
+The audible result of these paths was not runtime-tested. Import with
+`import_evidence_bundle` or inspect `records` directly.
+
+## `legorr-wad-stream-contract.bundle`
+
+Exported 2026-10-22 for findings 64–65 — 26 retained observations. Records
+cover WAD open/read/seek/close behavior, per-open materialized buffers, clipped
+item reads and end-relative seek arithmetic. The boundary behavior is derived
+from static code and was not exercised at runtime. Import with
+`import_evidence_bundle` or inspect `records` directly.
+
+## `legorr-options-context-expansion.bundle`
+
+Exported 2026-10-22 for findings 66–67 — 44 retained observations. Records
+cover option globals across six save contexts and option data included in
+save-slot writes. The semantics of individual fields and the `.osf` file role
+remain uncertain. Import with `import_evidence_bundle` or inspect `records`
+directly.
+
+## `legorr-avi-playback-expansion.bundle`
+
+Exported 2026-10-22 for findings 68–69 — 47 retained observations. Records
+cover AVI frame-index timebase arithmetic, stream setup stages, failure state
+and teardown. Playback cadence and user-visible failure outcomes were not
+runtime-tested. Import with `import_evidence_bundle` or inspect `records`
+directly.
+
+## `legorr-activity-state-transitions.bundle`
+
+Exported 2026-10-22 for finding 70 — 14 retained observations. Records cover
+activity-name change dispatch, kind-specific command-chain runners, attached
+object follow-up, and timer/pointer/bit updates. The evaluator entry remains
+unassigned in Ghidra. Import with `import_evidence_bundle` or inspect
+`records` directly.
+
+## `legorr-checkpoint-reader-expansion.bundle`
+
+Exported 2026-10-22 for findings 71–72 — 68 retained observations. Records
+cover save-slot level-marker restoration and `.osf` reader validation and
+return behavior. The findings describe observed static paths, not a complete
+runtime load result. Import with `import_evidence_bundle` or inspect
+`records` directly.
+
+## `legorr-flh-playback-state-machine.bundle`
+
+Exported 2026-10-22 for findings 73–74 — 31 retained observations. Records
+cover caller-gated FLIC stepping and drawing, the reward animation's terminal
+frame behavior, and per-task reward contexts across transitions and exit.
+Runtime playback cadence remains unknown. Import with `import_evidence_bundle`
+or inspect `records` directly.
