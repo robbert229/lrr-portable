@@ -182,6 +182,41 @@ typedef struct AiWaypoint {
     uint8_t pending; /* 1 = unarrived; arrival clears it (0x43cd90) */
 } AiWaypoint;
 
+/* EntitySlot is declared below; the effect lane (which follows) only
+ * holds pointers to it. */
+typedef struct EntitySlot EntitySlot;
+
+/* Screen-space effect lane record (finding 10/120; corpus effect bank
+ * DAT_0050391c, stride 0x2b0). One slot owns one live entity effect —
+ * a projectile arc in flight (kind EFFECT_ARC) or a straight shot
+ * (EFFECT_STRAIGHT). The corpus builds a 50-point cubic-bezier polyline
+ * per arc (FUN_00406820/004065f0) with control points derived from the
+ * {1.0,-1.3} / {0.3,1.0} thread constants scaled against the shot
+ * distance, and samples it by arc length each tick (FUN_004068c0) so the
+ * projectile travels the corpus ballistic curve. */
+#define EFFECT_ARC_POINTS 50   /* corpus count 0x32 */
+#define EFFECT_LANE_CAP   8    /* port bound (the corpus lane holds ~10) */
+#define EFFECT_STRAIGHT   0    /* kind: linear travel (lazer/pusher)     */
+#define EFFECT_ARC        1    /* kind: ballistic arc (freezer shot)     */
+typedef struct EffectSlot {
+    int         active;  /* slot live (corpus +0x2a4 owner mark) */
+    int         kind;    /* EFFECT_STRAIGHT / EFFECT_ARC (record +0x00) */
+    EntitySlot* owner;   /* firing entity (record +0x2a4)  */
+    EntitySlot* target;  /* arc target (+0x2e4 mirror)     */
+    float  sx, sy, sz;   /* start position (record +0x268) */
+    float  tx, ty, tz;   /* target position (port: record +0x274) */
+    float  px, py, pz;   /* current position (sampled each tick) */
+    float  dirx, diry;   /* unit horizontal direction (straight shots) */
+    float  speed;        /* cells/sec (record +0x28c: 4.0 arc / 5.0 straight) */
+    float  progress;     /* distance travelled (record +0x264) */
+    float  total;        /* total arc length (record +0x260) */
+    /* Arc polyline in (horizontal-distance, height) space and its
+     * cumulative segment lengths (record +0x04 region). */
+    float  arc[EFFECT_ARC_POINTS][2];
+    float  arc_len[EFFECT_ARC_POINTS];
+    int    npts;
+} EffectSlot;
+
 typedef struct EntitySlot {
     int32_t type;       /* corpus entity-type code (1..9)         */
     int32_t etype;      /* same, stored for the cmd task mapping  */
@@ -227,6 +262,9 @@ typedef struct EntitySlot {
                                * writer 0x44c0e2, which is not ported)      */
     float    field_340;      /* +0x340 float; the wake mirror sets 100.0
                               * (its general corpus readers are TODO)       */
+    void*    arc_target;     /* +0x2e4: arc target handle (callback 0x43ca8d) */
+    int      arc_slot;       /* lane slot of the entity's in-flight arc, or
+                              * -1 when none (port-side binding) */
     /* --- path list (corpus +0x24 buffer / +0x28 count / +0x2c index) --- */
     AiWaypoint wp[AI_WAYPOINTS_MAX];
     int      wp_count;       /* +0x28: valid entries                      */
@@ -334,6 +372,19 @@ typedef struct GameContext {
      * (SelectionRoot step 1); set by the frame loop to read the input
      * tables. NULL disables the pre-pass. */
     int (*input_keyheld)(int key);
+
+    /* --- screen-space effect lane + viewport shake (finding 120) ---------- *
+     * Corpus: DAT_0050391c effect bank (the projectile/effect records the
+     * callback's arc and shake branches drive), and DAT_004a48b0 — the
+     * global shake amplitude the callback shake branch (0x43ce88) reads and
+     * decays by 0x49e3fc (0.16/s) each tick while an entity holds +0x3e4
+     * bit 0x40000000. The port folds the shake state into the context so
+     * the software renderer can offset the whole frame (screen shake). */
+    EffectSlot effect_lane[EFFECT_LANE_CAP];
+    int   effect_dispatches;  /* lane dispatch counter (tests) */
+    float shake_amp;          /* DAT_004a48b0 (starts 1.0, decayed 0.16/s) */
+    float shake_dx, shake_dy; /* current frame viewport offset (pixels) */
+    int   shake_frame;        /* nonzero while one entity shakes this frame */
 } GameContext;
 
 /* Reset a GameContext to a known-fresh state (zeroed; cfg untouched). */

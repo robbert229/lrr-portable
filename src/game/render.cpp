@@ -318,6 +318,15 @@ void level_render_map(const LevelState* lvl, const GameContext* ctx,
     if (gw <= 0 || gh <= 0) {
         return;
     }
+    /* Screen-space viewport shake (finding 120): the callback shake branch
+     * (0x43ce88) leaves ctx->shake_dx/dy in world units (the corpus scales
+     * the work-object offset by amp*0.1 minus the 10.0 position scale);
+     * convert them to the map's pixel space and offset every drawn element.
+     * A zero offset (no shaking entity) leaves the render byte-identical. */
+    int shx = (ctx->shake_frame != 0)
+                  ? (int)(ctx->shake_dx / (float)gw * (float)w) : 0;
+    int shy = (ctx->shake_frame != 0)
+                  ? (int)(ctx->shake_dy / (float)gh * (float)h) : 0;
     /* Whole-frame background (void) so regions outside the grid are not
      * stale garbage from the previous frame. */
     fill_rect(0, 0, w - 1, h - 1, w, h, pixels, pitch, 8, 16, 48);
@@ -334,8 +343,9 @@ void level_render_map(const LevelState* lvl, const GameContext* ctx,
                 const uint8_t* v = vox + ((size_t)cy * gw + cx) * LEVEL_VOXEL_STRIDE;
                 cell_colour(v, &r, &g, &b);
             }
-            fill_rect(cx * cell_w, cy * cell_h,
-                      cx * cell_w + cell_w - 1, cy * cell_h + cell_h - 1,
+            fill_rect(cx * cell_w + shx, cy * cell_h + shy,
+                      cx * cell_w + cell_w - 1 + shx,
+                      cy * cell_h + cell_h - 1 + shy,
                       w, h, pixels, pitch, r, g, b);
         }
     }
@@ -344,8 +354,8 @@ void level_render_map(const LevelState* lvl, const GameContext* ctx,
     for (int t = 0; t < ENTITY_TYPES; ++t) {
         for (int i = 0; i < ctx->entity_count[t]; ++i) {
             const EntitySlot* e = &ctx->entity[t][i];
-            int px = (int)(e->x / (float)gw * (float)w);
-            int py = (int)(e->y / (float)gh * (float)h);
+            int px = (int)(e->x / (float)gw * (float)w) + shx;
+            int py = (int)(e->y / (float)gh * (float)h) + shy;
             uint8_t r, g, b;
             entity_colour(e->type, &r, &g, &b);
             if (entity_model(e) != NULL) {

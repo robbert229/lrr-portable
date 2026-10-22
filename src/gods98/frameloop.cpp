@@ -7,6 +7,7 @@
 #include "game/game.hpp"
 #include "game/ai.hpp"
 #include "game/cmd.hpp"
+#include "game/effect.hpp"
 #include "game/entity.hpp"
 #include "game/frontend.hpp"
 #include "game/level.hpp"
@@ -1193,6 +1194,31 @@ int LegorrrRun(void)
                 mission_reward_set_active(&game,
                                           !mission_reward_active(&game));
             }
+            /* '4'/'f' — fire an arc projectile from the first selected
+             * entity toward the cursor cell (finding 120: effect lane
+             * projectile arcs — demo hook). */
+            if (input_key_edge(&input, 'f')) {
+                int n = 0;
+                for (int i = 0; i < game.selection_count; ++i) {
+                    EntitySlot* shot = game.selection[i];
+                    EntitySlot* tgt = selection_pick(&game, cx, cy, 3.0f);
+                    if (tgt == shot) {
+                        tgt = NULL;
+                    }
+                    if (ai_fire_arc(&game, shot, tgt) >= 0) {
+                        ++n;
+                    }
+                }
+                fprintf(log, "frameloop: %d arc projectile(s) fired\n", n);
+            }
+            /* 'h' — trigger the impact screen shake on the first selected
+             * entity (finding 120: FUN_004475c0 raiser). */
+            if (input_key_edge(&input, 'h')) {
+                if (game.selection_count > 0) {
+                    ai_shake_raise(&game, game.selection[0]);
+                    fprintf(log, "frameloop: screen shake raised\n");
+                }
+            }
         }
         if (rock_x < 0) { rock_x = 0; }
         if (rock_y < 0) { rock_y = 0; }
@@ -1279,6 +1305,10 @@ int LegorrrRun(void)
                  * the voxel array + live entity markers + cursor cell. */
                 level_render_map(game.level, &game, input.mouse_x, input.mouse_y,
                                  WINDOW_W, WINDOW_H, pixels, pitch);
+                /* Screen-space effect lane draw (finding 120): projectiles
+                 * and effects render on top of the map without touching the
+                 * render path's own state. */
+                effect_lane_draw(&game, WINDOW_W, WINDOW_H, pixels, pitch);
             } else {
                 surface_fill(pixels, pitch, WINDOW_W, WINDOW_H, 8, 16, 48);
                 surface_draw_sweep(pixels, pitch, WINDOW_W, WINDOW_H,

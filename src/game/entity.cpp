@@ -71,6 +71,7 @@ int entity_create(GameContext* ctx, int type, const char* name,
     slot->etype = type;
     slot->activity = -1;       /* corpus +0x2e8 NULL pointer = no activity */
     slot->activity_last = -1;
+    slot->arc_slot = -1;       /* no in-flight arc effect yet (finding 120) */
     slot->x = x;
     slot->y = y;
     slot->z = z;

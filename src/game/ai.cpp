@@ -8,6 +8,7 @@
 
 #include "ai.hpp"
 #include "cmd.hpp"
+#include "effect.hpp"
 #include "level.hpp"
 #include "mission.hpp"
 
@@ -829,6 +830,54 @@ static int callback_branches(GameContext* ctx, EntitySlot* e, float dt)
         }
     }
 
+    /* 0x43ca82 — projectile arc: +0x3e0 bit 0x400000 marks an in-flight
+     * arc (the lane's record for this entity, effect.dll — fired via
+     * ai_arc_dispatch). The callback resolves the record's progress
+     * (corpus: FUN_004755e0/FUN_00475120 step the work-object scene and
+     * the leftover-time test completes the arc) and, when the arc has
+     * reached its target, the branch ends in the corpus completion
+     * (0x43cade): target wake +0x3e8 bit 0x800000, +0x3e0 bit 0x400000
+     * cleared, +0x340 = -1.0, and the record is freed by the lane tick.
+     * A missing target raises only the wake bit (0x43cb25). The port's
+     * effect_lane_tick does the stepping + arrival cleanup; this branch
+     * consumes the flag so the entity's chains do not run mid-arc. */
+    if ((e->flags_3e0 & 0x00400000u) != 0) {
+        if (e->arc_target == NULL) {
+            e->flags_3e8 |= 0x00800000u; /* corpus 0x43cb25 */
+        }
+        return 1; /* arc in flight: nothing else runs for this entity */
+    }
+
+    /* 0x43ce88 — screen shake: +0x3e4 bit 0x40000000 (raised by the
+     * impact/wake handler FUN_004475c0 through ai_shake_raise) makes the
+     * callback draw the work object at a random offset proportional to the
+     * global amplitude DAT_004a48b0 (stated 1.0 in the image), then decay
+     * that amplitude by the constant at 0x49e3fc (0.16) per second, and
+     * once it passes below zero reset it to 1.0 and clear the bit. The
+     * port records the offset on the context (shake_dx/shake_dy) where the
+     * software renderer shifts the frame — the "screen-space effect"
+     * visible as a viewport shake. NOT an early-return branch: the corpus
+     * falls through to the following flag tests, so the entity's chains
+     * keep running this tick. */
+    if ((e->flags_3e4 & 0x40000000u) != 0) {
+        ctx->shake_amp -= 0.16f * dt;
+        if (ctx->shake_amp < 0.0f) {
+            ctx->shake_amp = 1.0f;
+            e->flags_3e4 &= ~0x40000000u;
+        } else {
+            /* The corpus draws the work object at amplitude * 0x49e3f4
+             * (0.1) times the position scale 0x49e3d4 (10.0), in world
+             * units; the software renderer converts those world units to
+             * pixels when it shifts the frame. The sign alternates so the
+             * shake is visible without a runtime RNG. */
+            float off = ctx->shake_amp * 0.1f * 10.0f;
+            int   phase = (int)(ctx->shake_amp * 1000.0f) & 1;
+            ctx->shake_dx = phase ? +off : -off;
+            ctx->shake_dy = phase ? -off : +off;
+            ctx->shake_frame = 1;
+        }
+    }
+
     /* 0x43da62 — deferred command grant: +0x3e4 bit 0x40 marks "the command
      * at the chain head grants an activity". The branch consumes the flag,
      * installs the record's +0x38 activity onto the entity's permitted-
@@ -858,6 +907,10 @@ int ai_tick(GameContext* ctx, float dt)
         return 0;
     }
     int done = 0;
+    /* The shake flag is per-frame: only entities that shook this tick
+     * contribute a viewport offset (cleared here so a quiet frame renders
+     * with no residual offset). */
+    ctx->shake_frame = 0;
     /* 1. Entity chains: the callback's flag branches, then the port-side
      *    application of chain heads (move/target stepping). Corpus order:
      *    the walker visits type blocks in table order, entities ascending. */
@@ -904,6 +957,14 @@ int ai_tick(GameContext* ctx, float dt)
             }
         }
     }
+    /* 1b. Screen-space effect lane: advance every live lane record (the
+     *     effect-bank ticker FUN_0046f550's per-record FUN_0046f920). The
+     *     callback's arc branch (0x43ca82) already consumed in-flight
+     *     entities; arrivals here finish the corpus completion (wake/clear/
+     *     +0x340) and free the records. Straight/arc stepping happens in
+     *     lane space, so the entity chains above never see the projectile
+     *     as a command. */
+    effect_lane_tick(ctx, dt);
     /* 2. Global command list: task records (CmdLinkHead) run their yield.
      *    Move/target records in the global list are the same objects as the
      *    chain heads handled above — already unlinked when completed. */

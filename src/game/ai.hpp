@@ -163,6 +163,23 @@ int ai_activity_probe(const EntitySlot* e);
  * permits drill/teleport/reinforce, else 0. */
 int ai_can_do(const EntitySlot* e);
 
+/* --- entity effects (finding 120) ---------------------------------------- *
+ * The screen-space effect lane (effect.hpp) hosts the projectile arc and
+ * the screen-shake state. These ai-side raisers are what the demo/tests
+ * drive; the lane API itself lives in effect.hpp. */
+
+/* FUN_004475c0's shake raiser: OR +0x3e4 bit 0x40000000 on the entity
+ * (impact/wake sets it when a falling boulder lands — the callback shake
+ * branch 0x43ce88 then decays DAT_004a48b0 and clears it). */
+void ai_shake_raise(GameContext* ctx, EntitySlot* e);
+
+/* FUN_004420d0 / FUN_0046fc70 firer: dispatch an arc projectile from
+ * `shooter` toward `target` into the effect lane and return its slot, or
+ * -1 when the lane is full. The owner's +0x3e0 bit 0x400000 is raised
+ * (the callback arc branch consumes it) and +0x2e4 set to the target
+ * handle; arrival wakes the target (callback completion 0x43cade). */
+int ai_fire_arc(GameContext* ctx, EntitySlot* shooter, EntitySlot* target);
+
 /* --- minion task-state (spawn-dispatch switch 0x438150) ------------------ *
  * The corpus's entity spawn dispatcher (FUN_00437d00) routes minion types
  * through a selector at 0x438150: type − 8 indexes the byte table at
