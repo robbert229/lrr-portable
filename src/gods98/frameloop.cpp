@@ -446,10 +446,12 @@ int LegorrrRun(void)
      * software (src/gods98/movie.*, FFmpeg dlopen'd at runtime), so movies
      * play where the runtime libs exist; headless/CI runs
      * (LEGORRR_AUTOSTOP_FRAMES) and LEGORRR_NO_MOVIES skip them. */
-    int play_movies = movie_available()
-                      && frame_cap == 0
-                      && movie_avis_enabled(game.cfg)
-                      && env_get("LEGORRR_NO_MOVIES", "")[0] == '\0';
+    int avis_enabled = movie_avis_enabled(game.cfg);
+    const char* no_movies = env_get("LEGORRR_NO_MOVIES", "");
+    int play_movies = frame_cap == 0
+                      && avis_enabled
+                      && no_movies[0] == '\0'
+                      && movie_available();
     if (play_movies) {
         char mp[256], os[512];
         if (movie_key_path(game.cfg, "LegoAvi", mp, sizeof(mp))
@@ -469,9 +471,10 @@ int LegorrrRun(void)
             audio_loop_named(&ap, "Sounds\\Iambloop.wav", 0.0f);
         }
     } else if (frame_cap == 0) {
-        fprintf(log, "movieloop: boot movies off (%s)\n",
-                movie_avis_enabled(game.cfg)
-                    ? "LEGORRR_NO_MOVIES" : "DontPlayAvis");
+        const char* reason = !avis_enabled ? "DontPlayAvis"
+                              : no_movies[0] != '\0' ? "LEGORRR_NO_MOVIES"
+                                                     : "FFmpeg runtime unavailable";
+        fprintf(log, "movieloop: boot movies off (%s)\n", reason);
     }
 
     /* --- Front-end boot (finding 23): main menu first -----------------------
