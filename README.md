@@ -252,6 +252,14 @@ Open threads, in order of value:
 | 49 | [`findings/49-model-render-pass-dispatch.md`](docs/findings/49-model-render-pass-dispatch.md) | Model rendering walks ordered child passes through the shared renderer |
 | 50 | [`findings/50-tile-texture-refresh-order.md`](docs/findings/50-tile-texture-refresh-order.md) | Tile texture refresh updates indexed slots in a defined pass order |
 | 51 | [`findings/51-held-key-command-repeat.md`](docs/findings/51-held-key-command-repeat.md) | EnginePreFrame binds key bytes to command records; held keys enqueue again each tick |
+| 52 | [`findings/52-advance-gates-campaign-completion-mark.md`](docs/findings/52-advance-gates-campaign-completion-mark.md) | Reward Advance gates campaign-row completion marks on the current level result |
+| 53 | [`findings/53-nextlevel-builds-campaign-chain-arrays.md`](docs/findings/53-nextlevel-builds-campaign-chain-arrays.md) | Startup builds normal and tutorial level chains by following `NextLevel` references |
+| 54 | [`findings/54-terrain-grid-emits-per-cell-quad-vertices.md`](docs/findings/54-terrain-grid-emits-per-cell-quad-vertices.md) | Terrain initialization builds and submits four vertex records for each grid cell |
+| 55 | [`findings/55-terrain-cell-material-changes-use-bounded-transition-records.md`](docs/findings/55-terrain-cell-material-changes-use-bounded-transition-records.md) | Cell material changes update the surface and vertices, with a gated ten-record path |
+| 56 | [`findings/56-incident-message-template-format.md`](docs/findings/56-incident-message-template-format.md) | Configured incident text compiles underscores, line breaks, and `$token$` spans |
+| 57 | [`findings/57-incident-message-advisor-consumer.md`](docs/findings/57-incident-message-advisor-consumer.md) | Queued incident messages feed the scrolling text widget through a gated consumer |
+| 58 | [`findings/58-win32-message-pump-filter.md`](docs/findings/58-win32-message-pump-filter.md) | Win32 message pump filters selected messages before translation and dispatch |
+| 59 | [`findings/59-directinput-key-state-to-text.md`](docs/findings/59-directinput-key-state-to-text.md) | DirectInput snapshots feed key-edge handling and the text-entry path |
 
 Named-pseudocode corpus: [`docs/decompiles/engine-region.c`](docs/decompiles/engine-region.c)
 (114 named functions covering the engine/game-logic region — findings 01–10).

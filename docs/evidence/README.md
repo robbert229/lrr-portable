@@ -285,3 +285,40 @@ the key-registration producer and its call arguments, queue capacity, and
 command-record `+0x14` initialization/link writes. The meanings and units of
 that record field and the human-facing labels for key-state indices remain
 unknown. Import with `import_evidence_bundle` or inspect `records` directly.
+
+## `legorr-campaign-transition-agent.bundle`
+
+Exported 2026-10-22 for findings 52–53 — 40 retained observations. Records
+cover reward Advance's campaign-row marking gates and startup construction of
+normal/tutorial level chains from `NextLevel` references. The meaning of the
+completion status and low row bits, the configured chain order, and validation
+of cycles or missing references remain open. Import with
+`import_evidence_bundle` or inspect `records` directly.
+
+## `legorr-terrain-geometry-expansion.bundle`
+
+Exported 2026-10-22 for findings 54–55 — 27 retained observations. Records
+cover per-cell four-vertex construction and indexed buffer updates, plus
+material replacement and its bounded ten-record path. Vertex-field meanings,
+visual effects, and the timing semantics of the `0.05` field are not
+established. Import with `import_evidence_bundle` or inspect `records`
+directly.
+
+## `legorr-incident-message-rendering.bundle`
+
+Exported 2026-10-22 for findings 56–57 — 51 retained observations. Records
+cover config-time incident template compilation, token lookup and formatting,
+message-queue admission, and the scrolling text-widget consumer. Token meanings
+and exact runtime scheduling/display remain unresolved; one incoming reference
+to the consumer is omitted from the available caller inventory. Import with
+`import_evidence_bundle` or inspect `records` directly.
+
+## `legorr-win32-input-path.bundle`
+
+Exported 2026-10-22 for findings 58–59 — 87 retained observations. Records
+cover the Win32 message-pump filter and dispatch order, the DirectInput device
+setup and 256-byte keyboard-state polling/reacquire path, and the prior/current
+key-state conversion used by text entry. The mode bit meaning, exact window
+procedure target, symbolic DirectInput format, and correspondence between raw
+table indices and Win32 virtual keys remain unresolved. Import with
+`import_evidence_bundle` or inspect `records` directly.
