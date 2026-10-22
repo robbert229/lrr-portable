@@ -1,10 +1,10 @@
-# 26 — The DDiScene animation hooks: per-frame SFX sample + scene-end entity flag
+# 26 — The DDiScene animation hooks: action-entry SFX sample + scene-end entity flag
 
 Continues finding 25's open ledger. The wipe (finding 24) and every LWS/entity
 animation steps through `FUN_00475140`, and that draw step doesn't just render —
-it fires **two registered callbacks** the game wires up at boot:
+it can fire **two registered callbacks** the game wires up at boot:
 
-- `DAT_0076cd78/7c` — the **per-frame hook** (animation "sample" sound), and
+- `DAT_0076cd78/7c` — the **sample hook** (animation "sample" sound), and
 - `DAT_0076cd80/84` — the **scene-end hook** (entity "animation done" flag).
 
 This finding decodes both callbacks, names their registrars, and closes the
@@ -25,8 +25,8 @@ if (kind(obj) == 4) {
     if (fVar1 && (rec = FUN_00476160(fVar1), obj[5] & 2)) {   // flag bit 1
         name = FUN_004761e0(fVar1);                     // frame record +0x18
         if (name && DAT_0076cd78 && (DAT_0076cd94 & 0x40))
-            (*DAT_0076cd78)(name, obj, DAT_0076cd7c);   // ---------------- per-frame hook
-        obj[5] &= ~2;                                   // clear flag bit 1
+            (*DAT_0076cd78)(name, obj, DAT_0076cd7c);   // sample hook
+        obj[5] &= ~2;                                   // consume pending action-entry bit
     }
 }
 ...
@@ -43,15 +43,16 @@ if (rec) {
 }
 ```
 
-So **per frame** (flag bit 1) it calls `DAT_0076cd78(frame_name, object, user)`,
-and **at scene end** (accumulated time past the object's last frame) it calls
+So on the **next qualifying kind-4 step after action selection** (pending flag
+bit `2`) it may call `DAT_0076cd78(frame_name, object, user)`, and **at scene
+end** (accumulated time past the object's last frame) it calls
 `DAT_0076cd80(object, user)`.
 
-## 2. The per-frame hook = animation SFX sample (`LAB_00464c20`, registered by the SFX-bank init)
+## 2. The sample hook = animation SFX sample (`LAB_00464c20`, registered by the SFX-bank init)
 
 `FUN_00464740` builds the game's **45-slot SFX bank** at `DAT_00502a20`
 (`FUN_00477670(name,0,1)` hashes each `SFX_*` string into a slot) — then, at the
-end, registers the per-frame hook:
+end, registers the sample hook:
 
 ```c
 void FUN_00464740(void) {                    // SFX bank init
@@ -62,7 +63,7 @@ void FUN_00464740(void) {                    // SFX bank init
     DAT_00502a20[0x27]   = sfx("SFX_RockWipe");   // ** index 0x27 = the menu wipe rumble
     ...
     DAT_00502a20[0x2c]   = sfx("SFX_AmbientMusicLoop");
-    FUN_00472920(&LAB_00464c20,0);           // register per-frame hook
+    FUN_00472920(&LAB_00464c20,0);           // register sample hook
 }
 ```
 
@@ -84,8 +85,9 @@ if (rc) FUN_00465050(object, frame_name, 0, 1, 0);
   3D positional DSound submit (bank match/defer logic in `DAT_00502a2c`).
 
 **So `SAMPLE` keys on `.ae`/`.lws` animation frames (finding 12 §4) play through
-this hook:** each animation step hashes the frame's sample name against the
-global 45-slot SFX bank and submits a positional sound. The wipe's own
+this hook:** after a named action is selected, the next qualifying kind-4 step
+hashes its frame's sample name against the global 45-slot SFX bank and may
+submit a positional sound. The wipe's own
 start-rumble is the same bank's slot `0x27` = `SFX_RockWipe` (found only now —
 finding 24 saw the call `FUN_00464f60(0x27,0)` at `FUN_004103f0` but not the
 name). `FUN_00464f60` is the **SFX queue submit** (pushes `(index, arg)` into
@@ -125,16 +127,19 @@ accumulator, finding 24).
 | fn | registers | data | called from | role |
 | --- | --- | --- | --- | --- |
 | `FUN_00472900` | `DAT_0076cd80/84` | user `0` | boot hub `FUN_0041fb50 @ 0x41fd58` | scene-end hook |
-| `FUN_00472920` | `DAT_0076cd78/7c` | user `0`, plus `DAT_0076cd94 \|= 0x40` (hook-enabled bit the draw step tests) | SFX-bank init `FUN_00464740 @ 0x464c11` | per-frame sample hook |
+| `FUN_00472920` | `DAT_0076cd78/7c` | user `0`, plus `DAT_0076cd94 \|= 0x40` (hook-enabled bit the draw step tests) | SFX-bank init `FUN_00464740 @ 0x464c11` | action-entry sample hook |
 
-`FUN_00475140` gates both on flag/pointer presence (`DAT_0076cd80 != 0`,
-`DAT_0076cd78 != 0 && DAT_0076cd94 & 0x40`).
+`FUN_00475140` gates the sample callback on the pending action-entry bit,
+frame/name availability, and `DAT_0076cd78 != 0 && DAT_0076cd94 & 0x40`; it
+clears the pending bit on the qualifying frame path even when the inner hook
+conditions fail. The scene-end callback has its separate pointer/time gate.
+Finding 42 documents the precise consumption conditions and the no-frame case.
 
 ## Key globals
 
 | addr | role (observed) |
 | --- | --- |
-| `DAT_0076cd78/7c` | per-frame SFX-sample hook + its user data |
+| `DAT_0076cd78/7c` | action-entry SFX-sample hook + its user data |
 | `DAT_0076cd80/84` | scene-end entity-flag hook + its user data |
 | `DAT_0076cd94` | hook-enable flag word (bit `0x40`) |
 | `DAT_00502a20` | 45-slot SFX name-hash bank (`SFX_NULL`…`SFX_AmbientMusicLoop`; `0x27` = `SFX_RockWipe`) |
@@ -147,7 +152,7 @@ accumulator, finding 24).
 
 - `src/gods98/sound.*` (finding 14 §1–2) already models the sound bank; the
   **name-hash bank (`DAT_00502a20`) and its `0x27` = `SFX_RockWipe`** mean the
-  wipe's start-rumble (finding 24) has a concrete slot, and the per-frame
+  wipe's start-rumble (finding 24) has a concrete slot, and the action-entry
   `SAMPLE` playback path is now identified end to end.
 - `src/game/ai.cpp` (finding 10) ports the `+0x3e4` flag-word evaluator; the
   scene-end hook's **bit `0x10000`** is a candidate for the "animation
@@ -162,8 +167,8 @@ accumulator, finding 24).
 
 | Claim | State |
 | --- | --- |
-| Per-frame hook called from `FUN_00475140` kind-4 path (flag bit1) | observed (pseudocode) |
-| Per-frame hook = hash frame-name against 45-slot SFX bank, submit positional sound | observed (stub + `FUN_00464c70`/`FUN_00465050`/`FUN_0047ad70`) |
+| Sample hook is eligible on the next qualifying kind-4 step after action selection (pending bit `2`) | observed (`FUN_00475140`; detailed in finding 42) |
+| Sample hook = hash frame-name against 45-slot SFX bank, submit positional sound | observed (stub + `FUN_00464c70`/`FUN_00465050`/`FUN_0047ad70`) |
 | Scene-end hook fires when time > last frame | observed (draw-step compare) |
 | Scene-end hook ORs `0x10000` into `*(obj+0x20)+0x3e4` (owner flag) | observed (instruction decode + `FUN_00473db0`) |
 | `SFX_RockWipe` = bank slot `0x27`, `FUN_00464f60(0x27,0)` = pending-SFX submit | observed (bank order + call at `FUN_004103f0`) |

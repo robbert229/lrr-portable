@@ -205,6 +205,20 @@ and shared draw-step (`FUN_00475140`). Ghidra did not assign the call at
 `0x42503f` to a procedure, so its caller and reachability remain unknown.
 Import with `import_evidence_bundle` or inspect `records` directly.
 
+## `legorr-advisor-animation.bundle`
+
+Exported 2026-10-21 for findings 37–43 — 65 retained observations from the
+Advisor animation-controller and DDiScene hook pass. Records cover controller
+setup and action labels (`FUN_00401000`), request admission/reset and resolved
+request callers (`FUN_004018c0`, `FUN_00401930`), the transition worker and
+per-slot transform (`FUN_00401990`, `FUN_00401b30`), action-window stepping
+(`FUN_00401a70`), sound submission/queue helpers and the sound-name table, and
+the shared scene step/action flag helpers (`FUN_00475140`, `FUN_00473370`,
+`FUN_00473b40`). Caller coverage at `0x423c2c` is unassigned, and the
+`FUN_00475120` decompiler return type conflicts with the caller's machine-level
+x87 result use; the findings retain both limitations. Import with
+`import_evidence_bundle` or inspect `records` directly.
+
 ## `legorr-pathfinder-build.bundle`
 
 Exported 2026-10-21 from the pathfinder slice — 68 retained observations,
