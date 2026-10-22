@@ -108,7 +108,7 @@ playback region). The `.flh` container is documented in finding 21.
 
 | Address | Working name |
 | --- | --- |
-| `0x47a640` / `0x488b50` | DirectSound init (ordinal-1 create) |
+| 0x47a640 / 0x488b50 | DirectSound init and 3D listener QueryInterface (finding 119) |
 | `0x47a870` | SoundLoad (`%s.wav`, slot alloc) |
 | `0x47aad0` | SoundSlotClaim (600 × `0x134` records) |
 | `0x47b580` | SoundLoadInMemory |
@@ -121,9 +121,9 @@ playback region). The `.flh` container is documented in finding 21.
 
 ## Notes and open items
 
-1. DirectSound 3D: only `DirectSoundCreate` is imported — buffers and 3D
-   objects are created through vtable calls after that; the roll-off keys
-   (§1) parameterize it, but the DSOUNDGUID path was not separated.
+1. DirectSound 3D listener acquisition is documented in finding 119: sound initialization queries
+   the primary buffer for IID_IDirectSound3DListener. Later interface vtable calls and per-source 3D
+   buffer setup remain untraced.
 2. The `mmioGetInfo` buffer (`FUN_00489113` region) implies WAVs are parsed
    **from a memory-mapped view** when loaded from WAD — the exact buffer
    handoff was not traced.
