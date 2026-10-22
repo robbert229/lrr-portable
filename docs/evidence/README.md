@@ -208,6 +208,18 @@ setter (`FUN_00432e00`) and the round-to-nearest converter (`FUN_0048e060`)
 come from the earlier sessions' records and the shipped-image disassembly.
 Import with `import_evidence_bundle` or inspect `records` directly.
 
+## `legorr-ddscene-shutdown-reachability.bundle`
+
+Exported 2026-10-21 for findings 33–36 — 33 retained observations. The focused
+records include `FUN_0041fb50` initialization and its shutdown/failure exit,
+the direct caller inventory and exact incoming references for
+`FUN_00472800` (including the second unowned call instruction at `0x42503f`),
+and the animation-name dispatcher (`FUN_00447c40`), paired scene updater
+(`FUN_0046c3f0`), name-set/presence helpers (`FUN_00473370`/`FUN_00473340`),
+and shared draw-step (`FUN_00475140`). Ghidra did not assign the call at
+`0x42503f` to a procedure, so its caller and reachability remain unknown.
+Import with `import_evidence_bundle` or inspect `records` directly.
+
 ## `legorr-pathfinder-build.bundle`
 
 Exported 2026-10-21 from the pathfinder slice — 68 retained observations,
