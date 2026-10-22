@@ -186,6 +186,7 @@ typedef struct FrontEnd {
     /* CanScroll plane pan lives on each FeSubmenu (corpus DAT_005574e0
      * is reset when a menu re-enters — frontend_open clears every sub). */
     int  view_w, view_h;            /* render viewport (set each render)  */
+    int  pointer_x, pointer_y;      /* last menu pointer position         */
 } FrontEnd;
 
 /* One frame of modal-menu input: key *edges* this frame (the frame loop
@@ -275,7 +276,7 @@ const char* frontend_active_image(const FrontEnd* fe);
 
 /* Draw the active submenu into a locked RGBA32 framebuffer (R,G,B,A bytes):
  * item labels at their anchors (AutoCenter → centered on base_x), a
- * selection highlight behind the selected row, and the Title when
+ * selected font for the active row, the pointer graphic, and the Title when
  * display_title. The background / MenuImage blit is the caller's (it owns
  * the texture lane). `hi_font`/`lo_font` are the shipped bitmap fonts
  * (HiFont = selected, LoFont = unselected — the engine keys palette 255

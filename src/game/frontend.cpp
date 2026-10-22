@@ -25,6 +25,7 @@
 
 #include "frontend.hpp"
 #include "gods98/flic.hpp"
+#include "gods98/texture.hpp"
 #include "util.hpp"
 
 static int s_lower(int c) { return (c >= 'A' && c <= 'Z') ? c + 0x20 : c; }
@@ -641,6 +642,7 @@ void frontend_init(FrontEnd* fe)
         return;
     }
     memset(fe, 0, sizeof(*fe));
+    fe->pointer_x = fe->pointer_y = -1;
 }
 
 int frontend_build(FrontEnd* fe, BlockFile* cfg)
@@ -977,6 +979,8 @@ FeEvent frontend_tick(FrontEnd* fe, const FeInput* in,
      * When the pointer is in use but outside every item, a click is a
      * no-op (the menu stays up). */
     if (in->mouse_x >= 0 && in->mouse_y >= 0) {
+        fe->pointer_x = in->mouse_x;
+        fe->pointer_y = in->mouse_y;
         int idx = 0;
         int hit = fe_item_pick(fe, in->mouse_x, in->mouse_y, measure, &idx);
         if (hit) {
@@ -1564,7 +1568,7 @@ void frontend_render(FrontEnd* fe, const TextureSurface* hi_font,
         if (o == NULL || o->flic == NULL) {
             continue;
         }
-        const uint8_t* frm = flic_frame_rgba(o->flic);
+        const uint16_t* frm = flic_frame555(o->flic);
         if (frm == NULL) {
             continue;
         }
@@ -1574,19 +1578,28 @@ void frontend_render(FrontEnd* fe, const TextureSurface* hi_font,
             if (dy < 0 || dy >= h) {
                 continue;
             }
-            const uint8_t* s = frm + (size_t)yy * fw * 4;
+            int sx = o->x < 0 ? -o->x : 0;
+            int ex = fw;
+            if (o->x + ex > w) {
+                ex = w - o->x;
+            }
+            if (sx >= ex) {
+                continue;
+            }
             uint8_t* d = (uint8_t*)px + (size_t)dy * (size_t)pitch
-                         + (size_t)o->x * 4;
-            for (int xx = 0; xx < fw; ++xx) {
-                int dx = o->x + xx;
-                if (dx < 0 || dx >= w) {
-                    continue;
+                         + (size_t)(o->x + sx) * 4;
+            for (int xx = sx; xx < ex; ++xx) {
+                uint16_t c = frm[(size_t)yy * fw + xx];
+                /* FLIC-backed sprites use RGB555 zero as the transparent
+                 * key. Treating every pixel as opaque paints the decoder's
+                 * empty canvas over the menu backdrop. */
+                if (c != 0) {
+                    uint32_t rgba = flic_rgb555_to_rgba(c);
+                    d[0] = (uint8_t)rgba;
+                    d[1] = (uint8_t)(rgba >> 8);
+                    d[2] = (uint8_t)(rgba >> 16);
+                    d[3] = 0xff;
                 }
-                const int oi = xx * 4;
-                d[0] = s[oi + 0];
-                d[1] = s[oi + 1];
-                d[2] = s[oi + 2];
-                d[3] = s[oi + 3];
                 d += 4;
             }
         }
@@ -1618,17 +1631,6 @@ void frontend_render(FrontEnd* fe, const TextureSurface* hi_font,
         const TextureSurface* font = selected ? hi_font : lo_font;
         int lw = font != NULL ? fe_font_text_width(it->label, font)
                               : fe_text_width(it->label);
-        int chh = 0;
-        if (font != NULL) {
-            int cw = 0;
-            fe_font_cell(font, &cw, &chh);
-        }
-        int hh = font != NULL ? chh + 8 : 12;
-
-        if (selected) {
-            fe_fill_rect(px, pitch, w, h, x - 4, y - 2, lw + 8, hh,
-                         60, 80, 200);
-        }
         if (font != NULL) {
             fe_draw_font_text(px, pitch, w, h, x, y, it->label, font);
         } else {
@@ -1664,6 +1666,53 @@ void frontend_render(FrontEnd* fe, const TextureSurface* hi_font,
                              selected ? 255 : 200, selected ? 255 : 200,
                              selected ? 255 : 160);
             }
+        }
+    }
+
+    /* Pointer_Standard is the shipped Aclosed.bmp cursor from Lego.cfg's
+     * Pointers block. Its red tip is the top-left hotspot. */
+    if (fe->pointer_x >= 0 && fe->pointer_y >= 0
+        && fe->pointer_x < w && fe->pointer_y < h) {
+        char key[128];
+        snprintf(key, sizeof(key), "%s Pointers Pointer_Standard",
+                 util_root_name(fe->cfg));
+        const char* pointer = fe->cfg != NULL
+                                  ? block_get_strptr(fe->cfg, key) : NULL;
+        if (pointer == NULL || pointer[0] == '\0') {
+            pointer = "Interface\\Pointers\\Aclosed.bmp";
+        }
+        TextureSurface* cursor = texture_get_or_load(NULL, pointer);
+        if (cursor != NULL) {
+            int ox = fe->pointer_x, oy = fe->pointer_y;
+            for (int yy = 0; yy < cursor->height; ++yy) {
+                int dy = oy + yy;
+                if (dy < 0 || dy >= h) {
+                    continue;
+                }
+                uint8_t* d = (uint8_t*)px + (size_t)dy * pitch;
+                for (int xx = 0; xx < cursor->width; ++xx) {
+                    int dx = ox + xx;
+                    if (dx < 0 || dx >= w) {
+                        continue;
+                    }
+                    uint32_t c = cursor->pixels[(size_t)yy * cursor->width + xx];
+                    int transparent = 0;
+                    for (int k = 0; k < cursor->key_count; ++k) {
+                        if (c == cursor->keys[k]) {
+                            transparent = 1;
+                            break;
+                        }
+                    }
+                    if (!transparent) {
+                        uint8_t* p = d + (size_t)dx * 4;
+                        p[0] = (uint8_t)(c >> 16);
+                        p[1] = (uint8_t)(c >> 8);
+                        p[2] = (uint8_t)c;
+                        p[3] = 0xff;
+                    }
+                }
+            }
+            texture_release(cursor);
         }
     }
 }

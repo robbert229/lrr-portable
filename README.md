@@ -316,7 +316,11 @@ activates, Esc backs out (root Esc quits); a picker row returns
 straight into a level, like the classic demo. The menu now **looks like the
 game**: the frame loop blits each submenu's `MenuImage` art behind the
 items, and `frontend_render` draws the labels with the **shipped bitmap
-fonts** — `LoFont` for unselected, `HiFont` for the selected row
+fonts** — `LoFont` for unselected, `HiFont` for the selected row (without a
+blue backing rectangle), plus the shipped `Pointer_Standard` bitmap cursor.
+FLIC overlays honor the black transparency key and stay inside the framebuffer
+at negative x offsets. The delta decoder reads packet skip/control bytes in
+their on-disk order
 (FUN_0047a470's 10×19 ASCII grid: glyph g = ch-0x20 at (g%10, g/10), cell =
 width/10 × height/19, e.g. 380×817 → 38×43; each 8bpp face keys **both**
 palette entries 0 and 255 transparent (FUN_0047d9d0→FUN_0047e050 — the
