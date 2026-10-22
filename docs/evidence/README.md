@@ -645,3 +645,7 @@ Exported for finding 130. The 58-record bundle retains activity-capacity evidenc
 ## `legorr-stats-tools-capacity.bundle`
 
 Exported for finding 131. Seventy-five records cover the Stats loader reading `NumOfToolsCanCarry`, parsing per-level values into `+0xcc` in `0x150`-byte records, the state selector's per-level record pointer, and the activity-capacity getter.
+
+## `legorr-sound-duplicate-selection.bundle`
+
+Exported for finding 133. Five records cover the optional duplicate-buffer argument, bank-entry flag setup, and playback's single-buffer versus three-buffer rotation, together with the canonical buffer-creation record from finding 120.
