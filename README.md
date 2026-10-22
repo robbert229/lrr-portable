@@ -20,7 +20,7 @@ and curiosity; nothing in this repository is affiliated with or endorsed by the 
 
 ```
 README.md           This file
-docs/findings/      Reverse-engineering findings, 01–24 (see index below)
+docs/findings/      Reverse-engineering findings, 01–25 (see index below)
 tools/              WAD tooling (rrwad.py: unpack/pack/verify — see tools/README.md)
                     + model converter (tools/rrlwo.py: .lwo → glTF 2.0)
                     + compat harness (tools/compat/a2.py — see tools/compat/README.md)
@@ -72,7 +72,7 @@ legally obtained copy of the game.
 
 ## Current status (2026-10-21)
 
-Research is complete: all 24 findings shipped, every format shipped in the wads is
+Research is complete: all 25 findings shipped, every format shipped in the wads is
 documented address-level — including the two that exist but are never loaded
 (`.x` XOF-text leftovers, `.blx` editor-only) — and the `Lego*` block-text system that
 `.ae` belongs to (finding 12). The game runs and is playable through the Proton wrapper,
@@ -110,6 +110,17 @@ by the `-reduceanimation` feature bit / a literal `"Null"` disable. The port's
 front-end currently renders an instant menu swap; finding 24 documents the
 exact contract to reproduce it (LWS step or a `.flh` overlay stand-in). REA
 evidence: `docs/evidence/legorr-menu-wipe.bundle` (18 records).
+
+Finding 25 (2026-10-21) closed the runtime those LWS objects run on: the
+game-wide **DDiScene scene-graph object model** — the 9-slot kind string table
+(`NULL MESH FRAME ANIM ACT - - LWS LWO`) that the `FUN_00472cd0` factory
+dispatches on, the pooled `0x2c`-byte object record (free list `DAT_0076add0`,
+kind at `+0x10`, flags at `+0x14`), and the draw/step API every animated 3D
+thing uses — `FUN_00475140` (draw at time), `FUN_00477010`/`FUN_00477150`
+(begin/end scene), and the `FUN_004765c0` scene loader behind the
+`DAT_00505914` vtable system (source string `gods98/dx6`). REA evidence:
+`docs/evidence/legorr-ddscene.bundle` (64 records). Complements finding 24's
+`MenuWipe` (the LWS rock-slide is one instance of this runtime).
 
 The fresh verify pass (finding 20, 2026-10-20) re-derived the critical path — PE entry
 (`0x48f000`) → WinMain (`FUN_004777a0`) → init → frame loop → engine tick (`0x4232e0`) —
@@ -167,6 +178,7 @@ Open threads, in order of value:
 | 22 | [`findings/22-research-crumbs.md`](docs/findings/22-research-crumbs.md) | **Last open questions closed**: message registry = startup catalog (`FUN_00419230`, 40 `Info_*` names) + `InfoMessages` config population (`FUN_00434c10`); `DAT_004ffbc0` relabeled as the objective state word (not input devices); D3DRM is software-path-only (no HAL device referenced anywhere) |
 | 23 | [`findings/23-front-end-and-menu.md`](docs/findings/23-front-end-and-menu.md) | **Front-end & menus closed**: the boot→main-menu machine — `MenuBuild @ 0x4140c0`, the modal `MenuRunLoop`/`MenuTick`, the `FrontEndActive` gate, `MenuEnter`/`FrontEndStateChange`, the level-chain + start-level entries, and the options/movie callbacks, with the config grammar. Plus the two port blockers: the **`::` path separator** (`DAT_004aab18` = `"::"`) and the shipped level-name vocabulary (`Levels::<name>` via `StartLevel`/`NextLevel`, never `Level01`) — which together root-caused the `Lego.cfg` integration blocker |
 | 24 | [`findings/24-menu-wipe-and-front-end-transition.md`](docs/findings/24-menu-wipe-and-front-end-transition.md) | **Menu wipe closed**: the config-driven LWS front-end transition — `MenuWipe`/`!MenuWipe` keys (reduce-animation gate, `"Null"` disable) loaded by `LoadMenuBuild @ 0x4161f0` into the LWS scene factory (`FUN_00472cd0`, kind `"LWS"` → `FUN_004765c0`), stepping `RockWipe.lws` (35f @ 25 fps) as the menu-change wipe in `MenuRunLoop`/`MenuTick` with an input freeze — the wipe/fade gap left open in finding 23 |
+| 25 | [`findings/25-ddscene-object-runtime.md`](docs/findings/25-ddscene-object-runtime.md) | **DDiScene object runtime closed**: the game-wide scene-graph object model the MenuWipe (finding 24) and every animated 3D thing runs on — the 9-slot kind string table (`NULL MESH FRAME ANIM ACT - - LWS LWO`), the pooled `0x2c`-byte object record (`DAT_0076add0` free list, kind at `+0x10`, flags at `+0x14`), the draw/step API (`FUN_00475140` draw-at-time, `FUN_00477010`/`FUN_00477150` begin/end scene, `gods98/dx6` source path), and the `FUN_004765c0` scene loader behind `DAT_00505914` |
 
 Named-pseudocode corpus: [`docs/decompiles/engine-region.c`](docs/decompiles/engine-region.c)
 (114 named functions covering the engine/game-logic region — findings 01–10).
