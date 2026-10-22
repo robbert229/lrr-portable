@@ -550,3 +550,23 @@ WM_ACTIVATEAPP handling, the keyboard-sampling gate, the frame loop, cursor
 update, and the alternate-mode message filter. No runtime capture or media
 advancement claim is included. Import with `import_evidence_bundle` or
 inspect `records` directly.
+
+## legorr-terraincreate-fields.bundle
+
+Exported for finding 114. Eleven records cover TerrainCreate's 0x28-byte cell record, map-height byte assignment, mesh vertex use, diagonal selection/orientation fix-up, normal recalculation, and dirty-flag use.
+
+## legorr-ptl-consumer.bundle
+
+Exported for finding 115. Five records cover the LevelLoad PTLFile call chain, ordered block-child iteration, Message-name translation, and numeric-pair storage. It establishes table construction but does not identify a downstream consumer.
+
+## legorr-reward-widget.bundle
+
+Exported for finding 116. Nine records cover reward-button tuple initialization, the six-zero helper calls, RGB packing and surface-format conversion, and RewardInit ordering. The DirectDraw API mapping remains an inference.
+
+## legorr-loader-progress-read-tap.bundle
+
+Exported for finding 118. Twenty records cover loader-profile setup and selection, read-tap installation, both whole-file loader call sites, measured-size accumulation, and progress UI updates.
+
+## legorr-directsound3d-init.bundle
+
+Exported for finding 119. Five records cover DirectSound initialization, the queried GUID bytes and xref, the listener-interface acquisition branch, and subsequent initialization. One exploratory WAV-loader dossier is included but not cited by the finding.
