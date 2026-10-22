@@ -319,6 +319,7 @@ Open threads, in order of value:
 | 117 | [findings/117-fallin-multiplier-config-source.md](docs/findings/117-fallin-multiplier-config-source.md) | FallinMultiplier supplies the block-pointer modulus factor |
 | 118 | [findings/118-loader-progress-read-tap.md](docs/findings/118-loader-progress-read-tap.md) | Whole-file read hooks accumulate loader progress from measured file sizes |
 | 119 | [findings/119-directsound-3d-listener-interface.md](docs/findings/119-directsound-3d-listener-interface.md) | Sound initialization queries DirectSound's 3D listener interface |
+| 120 | [findings/120-sound-load-duplicates-directsound-buffer.md](docs/findings/120-sound-load-duplicates-directsound-buffer.md) | Sound loading can create two DirectSound duplicates for one sample buffer |
 
 Named-pseudocode corpus: [`docs/decompiles/engine-region.c`](docs/decompiles/engine-region.c)
 (114 named functions covering the engine/game-logic region — findings 01–10).

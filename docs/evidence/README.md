@@ -603,3 +603,11 @@ Exported for finding 118. Twenty records cover loader-profile setup and selectio
 ## legorr-directsound3d-init.bundle
 
 Exported for finding 119. Five records cover DirectSound initialization, the queried GUID bytes and xref, the listener-interface acquisition branch, and subsequent initialization. One exploratory WAV-loader dossier is included but not cited by the finding.
+
+## `legorr-sound-buffer-duplication.bundle`
+
+Exported for finding 120. Two function records cover sound-buffer creation, the optional duplicate-buffer branch, and the caller forwarding the branch argument.
+
+## `legorr-sound-buffer-fill.bundle`
+
+Exported for finding 120. One function record covers locking the primary buffer, copying the loaded sample into it, unlocking, and querying buffer state.
