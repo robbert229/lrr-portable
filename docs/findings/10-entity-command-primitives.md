@@ -266,23 +266,42 @@ on the grid handle at `level+4` (`FUN_0044f380`/`FUN_0044efb0`): the seed
 (`FUN_00430ee0`) validates the target cell (`record+0 == 0`), stamps it 1,
 and raises flag `0x40000` across the four neighbours as waves, while
 `FUN_00430530` marks cells `record+0 = 5` on the type-8/10 traceback and
-refuses blocked (`flags & 8`) cells. That system is **not ported**
-(TODO(corpus)) — its cell state byte, wave flag, and traceback live in the
-voxel records the port mirrors but whose path-search fields stay empty.
+refuses blocked (`flags & 8`) cells. **Ported 2026-10-21 (issue #70):** the
+port's `WaveFlood` core (`src/game/ai.cpp`) mirrors the corpus state model
+on the port-level grid handle — per-cell wave-state bytes
+(0 unwalked / 1 walked / 5 traceback, the `record+0` roles) and flag bits
+(wave flag `0x40000`, the `flags & 8` blocked gate) in a work state that
+the build installs and releases inside one `ai_path_build` call, so flood
+state never leaks between commands. The port's seeded target cell takes
+the corpus traceback-root role of the type-8/10 destination tiles (port
+routes to a cell, the corpus routes to destination tiles); the traceback
+follows the wave gradient out from the target back to the start cell,
+stamping 5 and refusing flag-8 cells, with backtracking so dead-end
+branches get stamped like the corpus's explored-neighbour pass. The only
+map-side authorities consulted are the ported queries `level_walkable`
+(`FUN_00432770`) and `level_tile_occupied` (`FUN_00432e00` read); a cell
+failing either takes the blocked bit. The handle-side wave pump internals
+(`FUN_0044f380`/`FUN_0044efb0` value queues) and the message side effects
+inside `FUN_00430530` (`FUN_00419b80`, `FUN_00431450`, the `+0x334`-gated
+branches) stay corpus-side/TODO with the rest of that family.
 
-Port stand-in (`ai_path_build`, called from `cmd_create_move` through the
-module context): install-reset the waypoint list per command, run a
-4-neighbour BFS over the grid through `level_walkable` cells only, and
-append the path cells front-to-back (start excluded) corpus-style. No
-grid, blocked start/target, unreachability, or an over-long path
-(> `AI_WAYPOINTS_MAX`; the corpus buffer is heap-unbounded) returns 0 and
-the caller seeds the one-hop fallback. The consumption side is unchanged,
-so multi-entry lists flow through the already-mirrored pop-on-arrival and
-completion semantics. `ai_test` covers a dispatch that reroutes around a
-blocked column without ever landing on it.
+The port lifecycle (`ai_path_build`, called from `cmd_create_move` through
+the module context): install-reset the waypoint list per command (the
+corpus dispatch block), seed/spread/traceback as above, then append the
+path cells front-to-back (start excluded, corpus-style appends with the
+port's `pending`-flag mirror of the `0.5f` marker) and release the wave
+state in the finish reset. No grid, blocked target, unreachability, equal
+cells, or an over-long path (> `AI_WAYPOINTS_MAX`; the corpus buffer is
+heap-unbounded) returns 0 and the caller seeds the one-hop fallback. The
+consumption side is unchanged, so multi-entry lists flow through the
+already-mirrored pop-on-arrival and completion semantics. `ai_test` covers
+a dispatch that reroutes around a blocked column without ever landing on
+it, the straight multi-cell flood on a clean grid with its spread marks
+(checked through `ai_wave_flood_count`, the last build's flag-`0x40000`
+cell count), the unreachable target across a full wall, the equal-cells
+case, and the no-grid fallback.
 
-Still TODO inside movement: the **wave-flood pathfinder** replacing the
-port BFS stand-in (the algorithm half of this section), and the `+0x334`
+Still TODO inside movement: the `+0x334`
 state objects behind the walkability gates above (now known: `+0x334` is an
 entity stats block — instance stats from the `DAT_00502bd8[type]` table at
 stride 336 (attacher writes it at `0x469c98`, called from the spawn

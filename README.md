@@ -589,11 +589,16 @@ finding 12, #14). Three new modules in `src/game/`:
   fallbacks keep the corpus-free unit tests unchanged. Move commands now
   install *built* paths: `cmd_create_move` resets the list per command
   (corpus dispatch install, `0x4418d0`) and `ai_path_build` appends one
-  entry per walked cell (`0x44693b`'s per-cell appends) over a
-  `level_walkable`-gated 4-neighbour BFS, falling back to the one-hop seed
-  when there is no grid or no path. The corpus's own *wave-flood* pathfinder
-  (`FUN_00430ee0`/`FUN_00430530` on the `level+4` grid handle) is the
-  documented TODO behind the algorithm. Two flag branches that were
+  entry per walked cell (`0x44693b`'s per-cell appends), falling back to
+  the one-hop seed when there is no grid or no path. The builder runs the
+  ported corpus *wave-flood* pathfinder (`FUN_00430ee0` seed + spread and
+  `FUN_00430530` traceback over the port's level-grid handle): a
+  target-validated seed raises the wave flag `0x40000` across walked
+  cells, blocked (`flags & 8`) cells are refused by the ported
+  walkability/occupancy queries, and the traceback walks the wave back to
+  the start cell, stamping it `5` along the way. The flood work state is
+  scoped per path build — created and released inside one `ai_path_build`
+  — so it never leaks between commands. Two flag branches that were
   approximated are now real: wake-timer expiry mirrors `FUN_0044c110`'s
   writes onto the attached `+0x364` target (`+0x340 = 100`, `+0x3e8` bit
   `0x800000`, gated by the target's `+0x3e0` bit `0x200000`), and the
