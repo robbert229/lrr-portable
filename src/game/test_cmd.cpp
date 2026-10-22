@@ -138,6 +138,25 @@ int main(void)
     CHECK(reused != NULL, "pool still has records after purge");
     cmd_free(reused, 0);
 
+    /* Records for different entities can be adjacent in the global list.
+     * Dropping a type from one entity must not follow the global link into
+     * another entity's chain and free its record. */
+    cmd_init();
+    GameContext separate;
+    game_context_init(&separate);
+    EntitySlot* first = make_ent(&separate, 1, "first");
+    EntitySlot* second = make_ent(&separate, 1, "second");
+    cmd_create_move(first, 1.0f, 0.0f, 0);
+    cmd_create_target(second, (void*)first);
+    void* second_head = second->cmd_head;
+    CHECK(cmd_chain_drop(first, 2) == 0,
+          "drop does not remove another entity's target record");
+    CHECK(first->cmd_head != NULL && cmd_rec_next(first->cmd_head) == NULL,
+          "first entity chain ends at its own record");
+    CHECK(second->cmd_head == second_head &&
+              cmd_rec_type(second->cmd_head) == 2,
+          "second entity retains its target record");
+
     if (s_failures != 0) {
         fprintf(stderr, "cmd_test: %d failure(s)\n", s_failures);
         return 1;

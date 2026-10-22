@@ -13,9 +13,9 @@
  *  The struct is a semantic model, not a byte clone: the corpus packs
  *  next(+0x60) and free-list link(+0x64) into consecutive 4-byte words and
  *  payload(+0x10)/buffer(+0x40) as 32-bit pointers; here the record is a
- *  stable pool object and the links share one `next` slot (a live record is
- *  never on the free list at the same time). Field names carry the corpus
- *  offsets.
+ *  stable pool object. A separate port-only global link keeps another
+ *  entity's commands from extending this entity's chain. Field names carry
+ *  the corpus offsets.
  * ------------------------------------------------------------------ */
 
 typedef struct CmdRec {
@@ -29,15 +29,23 @@ typedef struct CmdRec {
     int32_t  behaviour;  /* +0x1c behaviour id = behaviour[kind]                */
     int32_t  grant_act;  /* +0x38 activity the command grants: the tick's
                           * deferred install (callback 0x43da62) appends it
-                          * to the entity's permitted-activity list. The
-                          * corpus writers sit in the 0x438150 task-state
-                          * machinery — TODO(corpus); port-side writers
-                          * stage grants through cmd_rec_set_activity. */
+                          * to the entity's permitted-activity list and
+                          * drops type-0x13 grant records (cmd_chain_drop).
+                          * The corpus writer of the record's +0x38 — the
+                          * task-state granter — is config/runtime-driven
+                          * (finding 10 §"Spawn-dispatch task-state switch";
+                          * the shipped binary creates type-0x13 "ref"
+                          * records via CmdAlloc(0x13) — verified site
+                          * 0x403108 inside FUN_004030e0 — but pins no
+                          * +0x38 grant/flag pair);
+                          * port-side writers stage grants through
+                          * cmd_rec_set_activity. */
     int32_t  extra;      /* +0x3c (type-8 tasks set 8)                         */
     void*    buffer;     /* +0x40 owned buffer (freed on cmd_free)             */
     int32_t  kind;       /* +0x4c kind index                                   */
     uint32_t state;      /* +0x5c state flags (CMD_STATE_*)                    */
     void*    next;       /* +0x60 chain link / free-list link when free        */
+    void*    global_next; /* port-only global command-list link               */
 } CmdRec;
 
 #define CMD_STRIDE sizeof(CmdRec)
@@ -106,7 +114,7 @@ void* cmd_alloc(int type)
     CmdRec* rec = (CmdRec*)s_free;
     s_free = rec->next;
     memset(rec, 0, CMD_STRIDE);
-    rec->next = rec; /* free-list self link while live */
+    rec->next = NULL;
     rec->type = type;
     return rec;
 }
@@ -243,11 +251,9 @@ static void cmd_bind_kind(CmdRec* rec, int kind)
 static void cmd_link_head(CmdRec* rec, int kind)
 {
     if (s_global_head == NULL) {
-        s_global_tail = rec; /* first task: the tail bookkeeping has no record
-                               * yet (cmd_link_tail and finish unlink rely on
-                               * a consistent tail bound) */
+        s_global_tail = rec; /* first task establishes the global tail */
     }
-    rec->next = s_global_head;
+    rec->global_next = s_global_head;
     s_global_head = rec;
     rec->now = 1500.0f;
     rec->state = (rec->state & ~1u) | CMD_STATE_PENDING;
@@ -256,9 +262,9 @@ static void cmd_link_head(CmdRec* rec, int kind)
 
 static void cmd_link_tail(CmdRec* rec)
 {
-    rec->next = NULL;
+    rec->global_next = NULL;
     if (s_global_tail != NULL) {
-        s_global_tail->next = rec;
+        s_global_tail->global_next = rec;
     } else {
         s_global_head = rec;
     }
@@ -283,9 +289,47 @@ void* cmd_chain_walk(const EntitySlot* e)
 
 static void idle_register(EntitySlot* e);
 
+/* FUN_00403d10 (generic drop): unlink and free every chain record whose
+ * type (+0x00) equals `type`, mirroring the corpus loop over the entity's
+ * +0xbc record list. Like the corpus, records with per-type side effects
+ * (its types 7/0xc/0x17/3 branches) are not included here — the port only
+ * needs the plain drop FUN_00403d10(ent, 0x13, 0, 1) performs on the
+ * deferred-grant path. */
+int cmd_chain_drop(EntitySlot* e, int type)
+{
+    if (e == NULL || e->cmd_head == NULL) {
+        return 0;
+    }
+    int dropped = 0;
+    CmdRec* prev = NULL;
+    CmdRec* cur = as_rec(e->cmd_head);
+    while (cur != NULL) {
+        CmdRec* next = as_rec(cur->next);
+        if (cur->type == type) {
+            cmd_global_unlink(cur);
+            if (prev != NULL) {
+                prev->next = next;
+            } else {
+                e->cmd_head = next;
+            }
+            cmd_free(cur, 0);
+            ++dropped;
+        } else {
+            prev = cur;
+        }
+        cur = next;
+    }
+    return dropped;
+}
+
 void* cmd_global_head(void)
 {
     return s_global_head;
+}
+
+void* cmd_global_next(const void* rec)
+{
+    return rec != NULL ? cas_rec(rec)->global_next : NULL;
 }
 
 void cmd_global_unlink(const void* rec)
@@ -294,16 +338,18 @@ void cmd_global_unlink(const void* rec)
         return;
     }
     CmdRec* prev = NULL;
-    for (CmdRec* cur = s_global_head; cur != NULL; cur = as_rec(cur->next)) {
+    for (CmdRec* cur = s_global_head; cur != NULL;
+         cur = as_rec(cur->global_next)) {
         if ((const void*)cur == rec) {
             if (prev != NULL) {
-                prev->next = cur->next;
+                prev->global_next = cur->global_next;
             } else {
-                s_global_head = as_rec(cur->next);
+                s_global_head = as_rec(cur->global_next);
             }
             if (s_global_tail == cur) {
                 s_global_tail = prev;
             }
+            cur->global_next = NULL;
             return;
         }
         prev = cur;
@@ -454,6 +500,7 @@ void cmd_chain_purge(EntitySlot* e)
     e->cmd_head = NULL;
     while (cur != NULL) {
         CmdRec* next = as_rec(cur->next);
+        cmd_global_unlink(cur);
         cmd_free(cur, 1);
         cur = next;
     }
@@ -468,8 +515,9 @@ void cmd_tick_global(void)
      * +0x4c/+0x1c) is a stub boundary (finding 10 §"Still open"). Keep the
      * structural walk; the global list is drained each tick. */
     for (CmdRec* cur = s_global_head; cur != NULL; ) {
-        CmdRec* next = as_rec(cur->next);
+        CmdRec* next = as_rec(cur->global_next);
         (void)cur->state;
+        cur->global_next = NULL;
         cur = next;
     }
     s_global_head = NULL;
