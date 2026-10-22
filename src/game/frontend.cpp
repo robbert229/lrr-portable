@@ -1724,15 +1724,17 @@ void frontend_render(FrontEnd* fe, const TextureSurface* hi_font,
     }
 
     if (sub->display_title && sub->title[0] != '\0') {
-        int title_w = hi_font != NULL ? fe_font_text_width(sub->title, hi_font)
-                                      : fe_text_width(sub->title);
+        char title[FE_NAME_MAX];
+        fe_display_label(sub->title, title, sizeof(title));
+        int title_w = hi_font != NULL ? fe_font_text_width(title, hi_font)
+                                      : fe_text_width(title);
         int title_x = (w - title_w) / 2;
         int title_y = sub->base_y + sub->title_anchor_y;
         if (hi_font != NULL) {
-            fe_draw_font_text(px, pitch, w, h, title_x, title_y, sub->title,
+            fe_draw_font_text(px, pitch, w, h, title_x, title_y, title,
                               hi_font);
         } else {
-            fe_draw_text(px, pitch, w, h, title_x, title_y, sub->title,
+            fe_draw_text(px, pitch, w, h, title_x, title_y, title,
                          230, 210, 120);
         }
     }
