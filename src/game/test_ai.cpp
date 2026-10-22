@@ -196,15 +196,41 @@ int main(void)
     CHECK((linker->flags_3ec & 0x00080000u) != 0, "link flag set");
     CHECK(linker->link_target == (void*)twin, "link handle mirrors payload");
 
-    /* Cheat-word flag (0x43c90b): type-2 with link only. */
+    /* Cheat-word flag (0x43c90b): type-2 can-do probe = activity in
+     * {drill, teleport, reinforce} (FUN_0044c530 -> FUN_0043c440). */
     EntitySlot* rider = place(&ctx, 2, "rider", 0, 0);
-    rider->link_target = (void*)1; /* "on vehicle" proxy (probe is TODO) */
+    rider->activity = AI_ACT_DRILL;
     ctx.cheat = 1;
     run(&ctx, 1, 0.5f);
-    CHECK((rider->flags_3ec & 0x20u) != 0, "cheat + type-2 + link sets 0x20");
+    CHECK((rider->flags_3ec & 0x20u) != 0, "cheat + drill activity sets 0x20");
+    rider->activity = AI_ACT_WALK;
+    run(&ctx, 1, 0.5f);
+    CHECK((rider->flags_3ec & 0x20u) == 0, "non-can-do activity clears 0x20");
     ctx.cheat = 0;
+    rider->activity = AI_ACT_REINFORCE;
     run(&ctx, 1, 0.5f);
     CHECK((rider->flags_3ec & 0x20u) == 0, "flag cleared when cheat is off");
+    rider->activity = AI_ACTIVITY_NONE;
+
+    /* Attached wake mirror (FUN_0044c110): an expired wake timer wakes
+     * the +0x364 target — +0x340 = 100.0 and +0x3e8 bit 0x800000 — unless
+     * the target sits in the attached special state (+0x3e0 bit 0x200000). */
+    EntitySlot* waker = place(&ctx, 1, "waker", 0, 0);
+    EntitySlot* wakee = place(&ctx, 1, "wakee", 0, 0);
+    waker->flags_3e4 |= 0x08000000u;
+    waker->wake_timer = -0.1f; /* already expired */
+    waker->wake_target = wakee;
+    run(&ctx, 1, 0.5f);
+    CHECK(wakee->field_340 == 100.0f, "wake mirror writes +0x340 = 100");
+    CHECK((wakee->flags_3e8 & 0x00800000u) != 0, "wake raises +0x3e8 bit 0x800000");
+    wakee->field_340 = 0.0f;
+    wakee->flags_3e8 = 0;
+    wakee->flags_3e0 |= 0x00200000u; /* attached special state gates it out */
+    run(&ctx, 1, 0.5f);
+    CHECK(wakee->field_340 == 0.0f && (wakee->flags_3e8 & 0x00800000u) == 0,
+          "attached-state target is not re-woken");
+    wakee->flags_3e0 = 0;
+    waker->flags_3e4 = 0;
 
     /* Idle registration (0x43c94d + FUN_0043a960 table/cap). */
     EntitySlot* idler = place(&ctx, 1, "idler", 0, 0);

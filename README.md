@@ -593,12 +593,19 @@ finding 12, #14). Three new modules in `src/game/`:
   `level_walkable`-gated 4-neighbour BFS, falling back to the one-hop seed
   when there is no grid or no path. The corpus's own *wave-flood* pathfinder
   (`FUN_00430ee0`/`FUN_00430530` on the `level+4` grid handle) is the
-  documented TODO behind the algorithm. The demo key `g` issues a task for
-  the selection. `ai_test` (suite `ai`) covers activity set/complete
-  bookkeeping with the idle-record attach, wake-timer freezing, link
-  acquisition, the cheat flag, idle registration (with the `'\t'` probe and
-  its off-tile block), single- and multi-waypoint walking with the arrival
-  pop, blocked-tile freezes with the occupancy mark/clear, and the
+  documented TODO behind the algorithm. Two flag branches that were
+  approximated are now real: wake-timer expiry mirrors `FUN_0044c110`'s
+  writes onto the attached `+0x364` target (`+0x340 = 100`, `+0x3e8` bit
+  `0x800000`, gated by the target's `+0x3e0` bit `0x200000`), and the
+  cheat-word branch runs the `FUN_0044c530` can-do probe (type-2 with a
+  drill/teleport/reinforce activity — the corpus's permitted-activity list
+  is ported as the one-slot current activity, TODO). The demo key `g`
+  issues a task for the selection. `ai_test` (suite `ai`) covers activity
+  set/complete bookkeeping with the idle-record attach, wake-timer freezing
+  (plus the wake mirror and its attached-state gate), link acquisition, the
+  cheat flag, idle registration (with the `'\t'` probe and its off-tile
+  block), single- and multi-waypoint walking with the arrival pop,
+  blocked-tile freezes with the occupancy mark/clear, and the
   queue→executor→move path plus a dispatch rerouting around a blocked
   column.
 - **Advisor + message-bus runtime** (2026-10-21, finding 22): the announcer
