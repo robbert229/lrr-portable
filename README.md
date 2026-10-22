@@ -160,6 +160,15 @@ mode-0 path returns earlier, and static evidence does not establish callback
 reachability after that unlink. REA evidence:
 `docs/evidence/legorr-ddscene-lifecycle.bundle` (8 records).
 
+Findings 30–32 (2026-10-21) extend that lifecycle trace. Kind-3/4 teardown
+parks auxiliary clones for reuse; a later clone request can reattach one and
+draw-step it at time zero. On the general entity-creation path, that draw
+precedes assigning the new owner, while the positive-end scene callback cannot
+pass its `end <= 0` threshold during that forced step. Pool shutdown clears the
+per-frame sample-hook gate, while the scene-end callback uses a separate
+pointer/time check. Post-shutdown reachability remains unproven. REA evidence:
+`docs/evidence/legorr-ddscene-reuse.bundle` (5 focused records).
+
 The fresh verify pass (finding 20, 2026-10-20) re-derived the critical path — PE entry
 (`0x48f000`) → WinMain (`FUN_004777a0`) → init → frame loop → engine tick (`0x4232e0`) —
 in a clean Ghidra session: no contradicting evidence, and the named corpus reproduces
@@ -221,7 +230,9 @@ Open threads, in order of value:
 | 27 | [`findings/27-scene-done-flag-consumers.md`](docs/findings/27-scene-done-flag-consumers.md) | **Scene-done flag readers closed**: both consumers of `entity+0x3e4 bit 0x10000` (set by finding 26's scene-end hook) inside the finding-10 flag-evaluator blob — reader A (`0x43dd10`) plays **placement sounds by work-object type** (`7`→`SFX_PlaceOre`, `6`→`SFX_PlaceCrystal`, else `SFX_Place` via `FUN_00465050`), reader B (`0x43d903`) runs the `FUN_004475c0` impact/wake probe (message 5, roll speed, shake) and clears the bit — plus new `+0x3e4` bit facts (`0x80000`, `0x100000`, `0x40000000`) appended to finding 10 |
 | 28 | [`findings/28-ddscene-entity-ownership.md`](docs/findings/28-ddscene-entity-ownership.md) | **DDiScene owner link closed**: `FUN_00473da0/0x473db0` set/read object `+0x20`; the entity spawner assigns the owner on general scene objects and propagates it through type-specific model scene nodes, explaining how the scene-end callback returns to `entity+0x3e4` |
 | 29 | [`findings/29-ddscene-entity-teardown.md`](docs/findings/29-ddscene-entity-teardown.md) | **DDiScene teardown traced**: entity removal calls `FUN_00472a40(entity+0x1c)` before recycling the entity; ordinary pooled objects enter the DDiScene free list without an explicit `+0x20` clear (zeroed on reuse), while kind-3/4 has an early auxiliary-record return; post-unlink callback reachability remains unknown |
-| 26 | [`findings/26-ddscene-animation-hooks.md`](docs/findings/26-ddscene-animation-hooks.md) | **DDiScene animation hooks closed**: the two callbacks `FUN_00475140` fires every frame — the per-frame **SFX sample** hook (`DAT_0076cd78/7c`, registered by the `FUN_00464740` 45-slot SFX-name-hash bank init, `0x27` = `SFX_RockWipe` → `FUN_00465050`→`FUN_0047ad70` positional play) and the scene-**end entity flag** hook (`DAT_0076cd80/84`, boot-registered, ORs `0x10000` into `entity+0x3e4`) — plus the `FUN_00464f60` pending-SFX queue |
+| 30 | [`findings/30-ddscene-clone-reuse.md`](docs/findings/30-ddscene-clone-reuse.md) | **DDiScene clone slots traced**: kind-3/4 mode-0 teardown marks an auxiliary instance inactive; `FUN_00473690` can find it later, reattach it, and call `FUN_00475140(clone, 0)` |
+| 31 | [`findings/31-ddscene-reuse-callback-order.md`](docs/findings/31-ddscene-reuse-callback-order.md) | **Cached-clone callback ordering bounded**: entity creation assigns the owner after the clone factory's synchronous time-zero draw; positive scene-end frame values cannot pass the draw-step's `end <= 0` callback condition |
+| 32 | [`findings/32-ddscene-shutdown-hook-gates.md`](docs/findings/32-ddscene-shutdown-hook-gates.md) | **DDiScene shutdown gates distinguished**: shutdown clears the per-frame sample-hook bit, while the scene-end callback has a separate pointer/time predicate; post-shutdown reachability remains unknown |
 
 Named-pseudocode corpus: [`docs/decompiles/engine-region.c`](docs/decompiles/engine-region.c)
 (114 named functions covering the engine/game-logic region — findings 01–10).
