@@ -4,6 +4,20 @@ Several REA evidence bundles (JSON) exported from Ghidra analysis sessions of
 `LegoRR.exe` (SHA-256
 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`):
 
+## `legorr-menu-wipe.bundle`
+
+Exported 2026-10-21 from the finding-24 session (menu wipe / front-end
+transition). 18 recorded observations: the `LoadMenuBuild @ 0x4161f0`
+pseudocode with the `MenuWipe`/`!MenuWipe` config reads and the
+`-reduceanimation`/`"Null"` gates, the string constants (`"MenuWipe"`
+`0x4a26d0`, `"!MenuWipe"` `0x4a26c4`, `"Menu"` `0x4a2544`, `"Null"` `0x4a23f4`,
+`"LWS"` `0x4a13e0`), the `DAT_005574ec`/`DAT_005574f0` xref sweeps, the wipe
+start (`FUN_004103f0`), end (`FUN_00410440`), the `MenuRunLoop @ 0x413b80` /
+`MenuTick @ 0x412c00` drives, the input-freeze gate (`FUN_00411a00`), and the
+factory/dispatch (`FUN_00472cd0`, `FUN_00475930`, `FUN_00472710`,
+`FUN_004765c0`) plus `MenuEnter @ 0x416c80`. Import with `import_evidence_bundle`
+or inspect `records` directly.
+
 ## `legorr-ddscene.bundle`
 
 Exported 2026-10-21 from the finding-25 session (the DDiScene object runtime

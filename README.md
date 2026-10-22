@@ -99,6 +99,18 @@ vocabulary** (this is the root cause of the `Lego.cfg` integration blocker
 below, not a parse bug — the parser handles the file, the query form was
 wrong).
 
+Finding 24 (2026-10-21) closed the menu **wipe/fade transition** left as a
+named-but-not-decomposed gap in finding 23's `MenuRunLoop`: `MenuWipe` is a
+config-keyed LWS (LightWave scene) full-screen rock slide
+(`Interface\FrontEnd\Rock_Wipe\RockWipe`, 35 frames @ 25 fps), loaded by
+`LoadMenuBuild @ 0x4161f0` through the `FUN_00472cd0` object factory (kind
+`"LWS"`), triggered on every menu change by `MenuRunLoop`/`MenuTick`, with input
+frozen while it plays (`DAT_005574f0 & 2`), released at half-scene, and gated
+by the `-reduceanimation` feature bit / a literal `"Null"` disable. The port's
+front-end currently renders an instant menu swap; finding 24 documents the
+exact contract to reproduce it (LWS step or a `.flh` overlay stand-in). REA
+evidence: `docs/evidence/legorr-menu-wipe.bundle` (18 records).
+
 Finding 25 (2026-10-21) closed the runtime those LWS objects run on: the
 game-wide **DDiScene scene-graph object model** — the 9-slot kind string table
 (`NULL MESH FRAME ANIM ACT - - LWS LWO`) that the `FUN_00472cd0` factory
@@ -165,6 +177,7 @@ Open threads, in order of value:
 | 21 | [`findings/21-flh-container.md`](docs/findings/21-flh-container.md) | **`.flh` closed**: FLIC-family overlay container — 136 B header, `0xF1FA` chunk stream from `0x80`, RGB555 FLI16 keyframe (opcode 25) + word-diff deltas (opcode 27) + hold chunks, 555→565 on write; validated 18/18 files, 469/469 chunks, rendered frame check |
 | 22 | [`findings/22-research-crumbs.md`](docs/findings/22-research-crumbs.md) | **Last open questions closed**: message registry = startup catalog (`FUN_00419230`, 40 `Info_*` names) + `InfoMessages` config population (`FUN_00434c10`); `DAT_004ffbc0` relabeled as the objective state word (not input devices); D3DRM is software-path-only (no HAL device referenced anywhere) |
 | 23 | [`findings/23-front-end-and-menu.md`](docs/findings/23-front-end-and-menu.md) | **Front-end & menus closed**: the boot→main-menu machine — `MenuBuild @ 0x4140c0`, the modal `MenuRunLoop`/`MenuTick`, the `FrontEndActive` gate, `MenuEnter`/`FrontEndStateChange`, the level-chain + start-level entries, and the options/movie callbacks, with the config grammar. Plus the two port blockers: the **`::` path separator** (`DAT_004aab18` = `"::"`) and the shipped level-name vocabulary (`Levels::<name>` via `StartLevel`/`NextLevel`, never `Level01`) — which together root-caused the `Lego.cfg` integration blocker |
+| 24 | [`findings/24-menu-wipe-and-front-end-transition.md`](docs/findings/24-menu-wipe-and-front-end-transition.md) | **Menu wipe closed**: the config-driven LWS front-end transition — `MenuWipe`/`!MenuWipe` keys (reduce-animation gate, `"Null"` disable) loaded by `LoadMenuBuild @ 0x4161f0` into the LWS scene factory (`FUN_00472cd0`, kind `"LWS"` → `FUN_004765c0`), stepping `RockWipe.lws` (35f @ 25 fps) as the menu-change wipe in `MenuRunLoop`/`MenuTick` with an input freeze — the wipe/fade gap left open in finding 23 |
 | 25 | [`findings/25-ddscene-object-runtime.md`](docs/findings/25-ddscene-object-runtime.md) | **DDiScene object runtime closed**: the game-wide scene-graph object model the MenuWipe (finding 24) and every animated 3D thing runs on — the 9-slot kind string table (`NULL MESH FRAME ANIM ACT - - LWS LWO`), the pooled `0x2c`-byte object record (`DAT_0076add0` free list, kind at `+0x10`, flags at `+0x14`), the draw/step API (`FUN_00475140` draw-at-time, `FUN_00477010`/`FUN_00477150` begin/end scene, `gods98/dx6` source path), and the `FUN_004765c0` scene loader behind `DAT_00505914` |
 
 Named-pseudocode corpus: [`docs/decompiles/engine-region.c`](docs/decompiles/engine-region.c)

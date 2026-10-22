@@ -852,7 +852,9 @@ int frontend_build_slots(FrontEnd* fe, const FeSlot* slots, int n)
                 it->target[0] = '\0';
                 snprintf(it->label, FE_NAME_MAX, "%s", slots[k].label);
                 it->x = 48;
-                it->y = 96 + k * 40;
+                /* SaveMenuBuild constructs the slot list with a 0x3c-pixel
+                 * row interval; MenuTick advances each list row by it. */
+                it->y = 96 + k * 60;
                 sub->item_count = base + k + 1;
             }
             grafted = 1;
@@ -1582,7 +1584,10 @@ static void fe_item_pos(const FrontEnd* fe, const FeItem* it, int i,
     (void)i;
     (void)w;
     const FeSubmenu* sub = frontend_active_submenu(fe);
-    if (it->level_start) {
+    /* Runtime save rows use absolute coordinates just like level picker
+     * rows. Their SaveLoad panel is already positioned by the submenu, so
+     * adding its centered menu anchor would push the list off the panel. */
+    if (it->level_start || it->load_slot) {
         *x = it->x;
         *y = it->y;
     } else {
