@@ -2,7 +2,7 @@
 
 Findings 26 and 29 mapped the two animation callback slots and pool shutdown.
 Combining their dispatch checks with a fresh shutdown decompile shows that the
-global `DAT_0076cd94` reset gates only the per-frame sample hook. The scene-end
+global `DAT_0076cd94` reset gates only the sample hook. The scene-end
 hook has a separate pointer and time check, with no read of that gate in
 `FUN_00475140`.
 
@@ -24,11 +24,12 @@ does not clear the callback function/user slots at `DAT_0076cd78/7c` or
 `DAT_0076cd80/84`.
 
 `FUN_00475140` checks `DAT_0076cd78 != 0` and `DAT_0076cd94 & 0x40` before
-calling the per-frame hook. The scene-end path checks `DAT_0076cd80 != 0` and
+calling the sample hook, whose pending bit is set by action selection and
+consumed by a qualifying kind-4 step (finding 42). The scene-end path checks `DAT_0076cd80 != 0` and
 its frame/time conditions, but does not test `DAT_0076cd94`.
 
-Therefore clearing `DAT_0076cd94` during shutdown disables the per-frame
-sample callback path but is not itself a scene-end callback gate. Shutdown
+Therefore clearing `DAT_0076cd94` during shutdown disables the sample callback
+path but is not itself a scene-end callback gate. Shutdown
 also destroys the pooled objects and frees their blocks; this static trace
 does not establish whether any external reference can still invoke
 `FUN_00475140` after that storage is retired.
@@ -39,6 +40,6 @@ does not establish whether any external reference can still invoke
 | --- | --- |
 | Pool shutdown destroys live records, frees blocks, resets the free-list head, and clears `DAT_0076cd94` | observed (`FUN_00472800`) |
 | Shutdown body does not write the two callback function/user slots | observed complete body |
-| Per-frame hook requires callback pointer plus `DAT_0076cd94 & 0x40` | observed (`FUN_00475140`) |
+| Sample hook requires pending bit, callback pointer, and `DAT_0076cd94 & 0x40` on its qualifying path | observed (`FUN_00475140`; see finding 42) |
 | Scene-end hook requires callback pointer and its end-frame/time predicate but does not read `DAT_0076cd94` | observed (`FUN_00475140`) |
 | A scene-end callback can actually run after pool shutdown | unknown; no surviving-reference or runtime evidence is established here |
