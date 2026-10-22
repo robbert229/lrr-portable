@@ -418,8 +418,11 @@ Permitted-activity list (`+0x370` ids / `+0x384` count; closed 2026-10-21):
   (`cmd_rec_activity` / `cmd_rec_set_activity`). **Correction (pinned
   2026-10-21): the raisers of the `0x3e4` grant bit are *not* the `0x438150`
   switch** — the switch writes only `+0x334`, and a full disassembly census
-  of every `+0x3e4` reference shows no immediate-OR writer of bit `0x40` and
-  exactly one consumer (the deferred branch at `0x43da62`); the raiser is a
+  of every `+0x3e4` reference shows no immediate-OR writer of bit `0x40`;
+  the deferred branch at `0x43da62` is the documented consumer, though the
+  census bounds this claim (OR-immediates: 0 writers; byte-tests: 11 sites,
+  none mask `0x40`; dword-test encodings not enumerated, so the consumer
+  count is not pinned either way); the raiser is a
   computed-value store among the `mov [..+0x3e4], reg` sites
   (runtime/config-driven, TODO below). The ported list is where all these
   grants land.
@@ -451,8 +454,9 @@ selector:
   0x438187]`.
 - **Arms** — each points the entity's `+0x334` at a static stats template:
   key 0 (type 8) → `0x438163` → `DAT_004a98f0`; key 1 (type 9) →
-  `0x43816f` → `DAT_004a9a40`; keys 2 and 3 (types `0xc`/`0xd`/`0xe`/
-  `0x10`/`0x11`/`0x12`/`0x13` — 15 is NOT included, its selector byte is
+  `0x43816f` → `DAT_004a9a40`; selector values 2 and 3 (types
+  `0xc`/`0xd`/`0xe` via selector `2`, `0x10`/`0x11`/`0x12`/`0x13` via
+  selector `3` — 15 is NOT included, its selector byte is
   `0x04`) → `0x43817b` → `DAT_004a9b90`; key 4 (default, everything else,
   and any type outside the default arm's reach — incl. types 1..4/10 which
   never reach the switch) → `0x438187` → `FUN_00469c10` instance stats.
