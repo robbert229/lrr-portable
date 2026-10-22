@@ -114,9 +114,17 @@ commands by position. `CmdMarkMatching @ 0x402000` flags commands matching type+
 
 ## Still open
 
-- Semantics of record `+0x14` (1500.0f vs `timeGetTime`).
-- Whether opcode bytes are *also* key codes in the pre-switch pass (the byte at
-  `DAT_004ff0bc + i` keys the table — producer still unnamed).
+- Meaning of record `+0x14` remains unresolved: allocation initializes it from
+  `timeGetTime`, and both global-list link functions overwrite it with
+  `1500.0f`. The static observations identify the writes but not the field's
+  consumer or units (`legorr-command-hotkey-expansion.bundle`, IDs
+  `ev_05529de24b94ca5efa2dcc547df584566aee902d70a1381c87e9b2e9615ce90b`,
+  `ev_8d32153244d12608882d2a98080f0a21d2ae767df6d04b9974bd3901d6192d39`,
+  `ev_25583b39c26d7e113ff403d4886ed85be6e30753bf7d631092ad430c0a0ebdc0`).
+- The key byte at `DAT_004ff0bc + i` is distinct from the queued opcode, not
+  another opcode interpretation. `FUN_0041fb50` registers key/opcode pairs,
+  and `FUN_004520d0` polls the key state and queues the stored command while
+  the key remains down; see [finding 51](51-held-key-command-repeat.md).
 
 ## Entity-tick anatomy (closed 2026-10-21)
 

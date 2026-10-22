@@ -205,6 +205,20 @@ and shared draw-step (`FUN_00475140`). Ghidra did not assign the call at
 `0x42503f` to a procedure, so its caller and reachability remain unknown.
 Import with `import_evidence_bundle` or inspect `records` directly.
 
+## `legorr-advisor-animation.bundle`
+
+Exported 2026-10-21 for findings 37–43 — 65 retained observations from the
+Advisor animation-controller and DDiScene hook pass. Records cover controller
+setup and action labels (`FUN_00401000`), request admission/reset and resolved
+request callers (`FUN_004018c0`, `FUN_00401930`), the transition worker and
+per-slot transform (`FUN_00401990`, `FUN_00401b30`), action-window stepping
+(`FUN_00401a70`), sound submission/queue helpers and the sound-name table, and
+the shared scene step/action flag helpers (`FUN_00475140`, `FUN_00473370`,
+`FUN_00473b40`). Caller coverage at `0x423c2c` is unassigned, and the
+`FUN_00475120` decompiler return type conflicts with the caller's machine-level
+x87 result use; the findings retain both limitations. Import with
+`import_evidence_bundle` or inspect `records` directly.
+
 ## `legorr-pathfinder-build.bundle`
 
 Exported 2026-10-21 from the pathfinder slice — 68 retained observations,
@@ -247,3 +261,67 @@ the type-2 gate), and the list scanner (`FUN_0044b480`, `+0x370` slots with
 count `+0x384`). The spawn-dispatch switch tables (`0x438298`/`0x4382ac`)
 and stats-template bytes came from the shipped-image disassembly. Import
 with `import_evidence_bundle` or inspect `records` directly.
+
+## `legorr-campaign-expansion.bundle`
+
+Exported 2026-10-22 for findings 44–47 — 25 retained observations. The bundle
+covers reward-button save/advance dispatch, timer-objective evaluation order,
+objective-sidecar append gates and serialized fields, and entity-removal event
+messages. Static control flow does not establish every user-visible outcome or
+the runtime conditions that populate each optional message field. Import with
+`import_evidence_bundle` or inspect `records` directly.
+
+## `legorr-engine-expansion.bundle`
+
+Exported 2026-10-22 for findings 48–50 — 25 retained observations. Records
+cover DirectDraw setup branches and the D3DRM/device bridge, model-render pass
+dispatch, and tile-texture refresh order. The fullscreen/windowed labels in
+finding 48 remain inferences from the observed calls; the renderer findings
+describe static dispatch, not a captured rendered frame. Import with
+`import_evidence_bundle` or inspect `records` directly.
+
+## `legorr-command-hotkey-expansion.bundle`
+
+Exported 2026-10-22 for finding 51 and the finding-10 update — 38 retained
+observations. Records cover command-queue key polling and enqueue behavior,
+the key-registration producer and its call arguments, queue capacity, and
+command-record `+0x14` initialization/link writes. The meanings and units of
+that record field and the human-facing labels for key-state indices remain
+unknown. Import with `import_evidence_bundle` or inspect `records` directly.
+
+## `legorr-campaign-transition-agent.bundle`
+
+Exported 2026-10-22 for findings 52–53 — 40 retained observations. Records
+cover reward Advance's campaign-row marking gates and startup construction of
+normal/tutorial level chains from `NextLevel` references. The meaning of the
+completion status and low row bits, the configured chain order, and validation
+of cycles or missing references remain open. Import with
+`import_evidence_bundle` or inspect `records` directly.
+
+## `legorr-terrain-geometry-expansion.bundle`
+
+Exported 2026-10-22 for findings 54–55 — 27 retained observations. Records
+cover per-cell four-vertex construction and indexed buffer updates, plus
+material replacement and its bounded ten-record path. Vertex-field meanings,
+visual effects, and the timing semantics of the `0.05` field are not
+established. Import with `import_evidence_bundle` or inspect `records`
+directly.
+
+## `legorr-incident-message-rendering.bundle`
+
+Exported 2026-10-22 for findings 56–57 — 51 retained observations. Records
+cover config-time incident template compilation, token lookup and formatting,
+message-queue admission, and the scrolling text-widget consumer. Token meanings
+and exact runtime scheduling/display remain unresolved; one incoming reference
+to the consumer is omitted from the available caller inventory. Import with
+`import_evidence_bundle` or inspect `records` directly.
+
+## `legorr-win32-input-path.bundle`
+
+Exported 2026-10-22 for findings 58–59 — 87 retained observations. Records
+cover the Win32 message-pump filter and dispatch order, the DirectInput device
+setup and 256-byte keyboard-state polling/reacquire path, and the prior/current
+key-state conversion used by text entry. The mode bit meaning, exact window
+procedure target, symbolic DirectInput format, and correspondence between raw
+table indices and Win32 virtual keys remain unresolved. Import with
+`import_evidence_bundle` or inspect `records` directly.
