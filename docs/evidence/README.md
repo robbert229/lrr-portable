@@ -51,6 +51,16 @@ mode-0 early return and the `+0x28` free-list insertion; the
 shutdown. The bundle preserves the decompiler bodies and exact caller
 references. Import with `import_evidence_bundle` or inspect `records` directly.
 
+## `legorr-ddscene-reuse.bundle`
+
+Exported 2026-10-21 for findings 30–32. Five focused pseudocode observations:
+`FUN_00473690` (kind-3/4 inactive-clone scan, scene reattach, time-zero
+draw-step, and copy path), `FUN_00472a50` (mode-0 auxiliary-slot parking),
+`FUN_00437d00` (entity owner assignment after clone factory return),
+`FUN_00475140` (callback gates and scene-end threshold), and `FUN_00472800`
+(pool shutdown and global gate reset). Import with `import_evidence_bundle` or
+inspect `records` directly.
+
 ## `legorr-ddscene-hooks.bundle`
 
 Exported 2026-10-21 from the finding-26 session (the DDiScene animation hooks).
