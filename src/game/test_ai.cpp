@@ -11,7 +11,10 @@
 #include "game/game.hpp"
 #include "game/level.hpp"
 #include "game/select.hpp"
+#include "game/util.hpp"
+#include "gods98/block.hpp"
 #include "gods98/message.hpp"
+#include "gods98/resource.hpp"
 
 static int s_failures = 0;
 
@@ -39,8 +42,368 @@ static void run(GameContext* ctx, int n, float dt)
     }
 }
 
-int main(void)
+/* --------------------------------------------------------------------- */
+/* Real-data probe (opt-in `--real <wad-dir>`, meson adds it with          */
+/* test_wads_dir): wave-flood pathfinder on shipped .map grids.            */
+/*                                                                         */
+/* The reference BFS below mirrors the pre-port BFS stand-in exactly       */
+/* (b53bc29^, removed when the wave-flood port landed). It exists here     */
+/* only as an oracle — the shipping path never runs it. On entity-free     */
+/* grids both algorithms gate identically (level_walkable), so the probe   */
+/* asserts:                                                                */
+/*   - wave-flood paths stay on walkable, unoccupied cells, step           */
+/*     4-neighbour-adjacently, and end on the requested target cell;       */
+/*   - reachability agrees with the reference BFS;                         */
+/*   - when both produce a path they are the same length — both shortest   */
+/*     — so agreement survives reroutes around obstacles;                  */
+/*   - sampled walkers running the real command path arrive.               */
+/* --------------------------------------------------------------------- */
+
+#define REAL_PAIRS_PER_LEVEL 12   /* start/target pairs sampled per level  */
+#define REAL_ARRIVALS_PER_LEVEL 2 /* real-grid walkers ticked to arrival   */
+#define REAL_LEVELS_EXPECTED 42
+#define REAL_PAIRS_EXPECTED 496
+#define REAL_PATHS_EXPECTED 350
+#define REAL_ARRIVALS_EXPECTED 84
+
+static int s_real_levels;  /* levels loaded and probed        */
+static int s_real_pairs;   /* wave-flood / BFS pairs compared */
+static int s_real_paths;   /* pairs where wave-flood found one */
+static int s_real_arrivals; /* walkers run to arrival          */
+
+/* Same walk order as ai_path_build: start-excluded, target last. */
+static int bfs_reference(const LevelState* grid, int sx, int sy, int gx,
+                         int gy, int* out, int maxn)
 {
+    int w = level_width(grid);
+    int h = level_height(grid);
+    if ((sx == gx && sy == gy) || !level_walkable(grid, sx, sy) ||
+        !level_walkable(grid, gx, gy)) {
+        return 0;
+    }
+
+    int size = w * h;
+    int* prev = (int*)malloc((size_t)size * sizeof(int));
+    int* queue = (int*)malloc((size_t)size * sizeof(int));
+    if (prev == NULL || queue == NULL) {
+        free(prev);
+        free(queue);
+        return 0;
+    }
+    static const int dx[4] = { 1, -1, 0, 0 };
+    static const int dy[4] = { 0, 0, 1, -1 };
+    memset(prev, 0xff, (size_t)size * sizeof(int)); /* -1 = unvisited */
+    prev[sy * w + sx] = -2; /* start sentinel */
+    int head = 0, tail = 0, found = 0;
+    queue[tail++] = sy * w + sx;
+    while (head < tail && !found) {
+        int cell = queue[head++];
+        int cx = cell % w, cy = cell / w;
+        for (int d = 0; d < 4 && !found; ++d) {
+            int nx = cx + dx[d], ny = cy + dy[d];
+            if (nx < 0 || ny < 0 || nx >= w || ny >= h) {
+                continue;
+            }
+            int ncell = ny * w + nx;
+            if (prev[ncell] != -1 || !level_walkable(grid, nx, ny)) {
+                continue;
+            }
+            prev[ncell] = cell;
+            queue[tail++] = ncell;
+            if (nx == gx && ny == gy) {
+                found = 1;
+            }
+        }
+    }
+    free(queue);
+    if (!found) {
+        free(prev);
+        return 0;
+    }
+    int trace[256];
+    int len = 0;
+    for (int cell = gy * w + gx; cell != sy * w + sx; cell = prev[cell]) {
+        if (len >= (int)(sizeof(trace) / sizeof(trace[0]))) {
+            free(prev);
+            return 0;
+        }
+        trace[len++] = cell;
+    }
+    free(prev);
+    if (len > maxn) {
+        return 0; /* the port buffer caps at AI_WAYPOINTS_MAX too */
+    }
+    for (int i = 0; i < len; ++i) {
+        out[i] = trace[len - 1 - i];
+    }
+    return len;
+}
+
+/* Wave-flood the same pair through the shipping builder, reading the cell
+ * sequence back off the entity's waypoint list. A stack EntitySlot stands
+ * in for the mover: ai_path_build touches only x/y and the wp buffer. */
+static int wave_probe(GameContext* ctx, int sx, int sy, int gx, int gy,
+                      int* out, int maxn)
+{
+    EntitySlot probe_slot;
+    memset(&probe_slot, 0, sizeof(probe_slot));
+    probe_slot.x = (float)sx;
+    probe_slot.y = (float)sy;
+    int n = ai_path_build(ctx, &probe_slot, (float)gx, (float)gy);
+    if (n > maxn) {
+        return 0;
+    }
+    for (int i = 0; i < n; ++i) {
+        int wx = (int)probe_slot.wp[i].x;
+        int wy = (int)probe_slot.wp[i].y;
+        out[i] = wy * level_width(ctx->level) + wx;
+    }
+    return n;
+}
+
+static void real_check(int cond, const char* what, const char* level, int sx,
+                       int sy, int gx, int gy)
+{
+    if (cond) {
+        return;
+    }
+    fprintf(stderr, "FAIL --real: %s in \"%s\": (%d,%d) -> (%d,%d)\n", what,
+            level, sx, sy, gx, gy);
+    ++s_failures;
+}
+
+static void probe_level_real(GameContext* ctx, BlockFile* cfg,
+                             const char* name)
+{
+    LevelState* lv = level_load(cfg, name);
+    if (lv == NULL) {
+        fprintf(stderr, "FAIL --real: \"%s\": level_load failed\n",
+                name);
+        ++s_failures;
+        return;
+    }
+    int w = level_width(lv);
+    int h = level_height(lv);
+    if (w < 3 || h < 3) { /* grid_of() treats a sub-margin map as absent */
+        fprintf(stderr, "FAIL --real: \"%s\": grid too small (%d x %d)\n",
+                name, w, h);
+        ++s_failures;
+        level_destroy(lv);
+        return;
+    }
+    ++s_real_levels;
+    ctx->level = lv;
+
+    int* cells = (int*)malloc((size_t)w * h * sizeof(int));
+    if (cells == NULL) {
+        fprintf(stderr, "FAIL --real: \"%s\": cell allocation failed\n", name);
+        ++s_failures;
+        level_destroy(lv);
+        ctx->level = NULL;
+        return;
+    }
+    int nc = 0;
+    for (int y = 0; y < h; ++y) {
+        for (int x = 0; x < w; ++x) {
+            if (level_walkable(lv, x, y)) {
+                cells[nc++] = y * w + x;
+            }
+        }
+    }
+
+    if (nc < 2) {
+        fprintf(stderr, "FAIL --real: \"%s\": only %d walkable cell(s)\n",
+                name, nc);
+        ++s_failures;
+        free(cells);
+        ctx->level = NULL;
+        level_destroy(lv);
+        return;
+    }
+    int pairs = nc < REAL_PAIRS_PER_LEVEL ? nc : REAL_PAIRS_PER_LEVEL;
+    int arrivals_left = REAL_ARRIVALS_PER_LEVEL;
+
+    /* First pass: wave-flood / BFS agreement. No walkers run yet, so the
+     * only occupancy bits on the grid are whatever the .map carries. */
+    int good_s[REAL_ARRIVALS_PER_LEVEL + 1], good_t[REAL_ARRIVALS_PER_LEVEL + 1];
+    int good_len[REAL_ARRIVALS_PER_LEVEL + 1];
+    int ngood = 0;
+    for (int p = 0; p < pairs; ++p) {
+        /* p=0 spans the whole walkable set (longest sampled reroute), the
+         * rest stride the list with coprime steps: deterministic, and
+         * scattered far-apart pairs across every level. */
+        unsigned si = p == 0 ? 0u : (unsigned)(((size_t)p * 100003u + 11u) % (unsigned)nc);
+        unsigned ti = p == 0 ? (unsigned)(nc - 1) : (unsigned)(((size_t)p * 131071u + 17u) % (unsigned)nc);
+        if (si == ti) {
+            continue;
+        }
+        int sx = (int)(cells[si] % w), sy = cells[si] / w;
+        int tx = (int)(cells[ti] % w), ty = cells[ti] / w;
+        int wave_path[AI_WAYPOINTS_MAX];
+        int ref_path[AI_WAYPOINTS_MAX];
+        int wlen = wave_probe(ctx, sx, sy, tx, ty, wave_path, AI_WAYPOINTS_MAX);
+        int rlen = bfs_reference(lv, sx, sy, tx, ty, ref_path, AI_WAYPOINTS_MAX);
+        ++s_real_pairs;
+        if (wlen > 0) {
+            ++s_real_paths;
+        }
+        real_check((wlen > 0) == (rlen > 0), "wave-flood and reference BFS "
+                                            "disagree on reachability",
+                   name, sx, sy, tx, ty);
+        real_check(wlen <= 0 || wlen == rlen, "wave-flood path length differs "
+                                             "from the reference BFS",
+                   name, sx, sy, tx, ty);
+        int prev_cell = sy * w + sx;
+        for (int i = 0; i < wlen; ++i) {
+            int cx = wave_path[i] % w, cy = wave_path[i] / w;
+            real_check(level_walkable(lv, cx, cy),
+                       "wave-flood path lands on an unwalkable cell", name, sx,
+                       sy, tx, ty);
+            real_check(!level_tile_occupied(lv, cx, cy),
+                       "wave-flood path lands on an occupied cell", name, sx,
+                       sy, tx, ty);
+            real_check(abs(cx - prev_cell % w) + abs(cy - prev_cell / w) == 1,
+                       "wave-flood path steps off-grid or diagonally", name, sx,
+                       sy, tx, ty);
+            prev_cell = wave_path[i];
+        }
+        if (wlen > 0) {
+            real_check(prev_cell == ty * w + tx,
+                       "wave-flood path does not end on the target cell", name,
+                       sx, sy, tx, ty);
+        }
+        if (wlen > 0 && wlen <= 30 && ngood < REAL_ARRIVALS_PER_LEVEL) {
+            good_s[ngood] = cells[si]; /* cell ids: the walker pass decodes */
+            good_t[ngood] = cells[ti];
+            good_len[ngood] = wlen;
+            ++ngood;
+        }
+    }
+
+    /* Second pass: tick real walkers to arrival (cap per level; short paths
+     * only, so the whole probe stays inside the suite's tick budget). */
+    for (int p = 0; p < ngood && arrivals_left > 0; ++p, --arrivals_left) {
+        int sx = good_s[p] % w, sy = good_s[p] / w;
+        int tx = good_t[p] % w, ty = good_t[p] / w;
+        /* Departure occupancy persists until reused (corpus 0x43cd72 clears
+         * only the arrival cell), so the previous walker's trail would
+         * legitimately block this walker's flood: reset the reservation
+         * bits probe-side between walkers. */
+        for (int cy = 0; cy < h; ++cy) {
+            for (int cx = 0; cx < w; ++cx) {
+                if (level_tile_occupied(lv, cx, cy)) {
+                    level_tile_mark(lv, cx, cy, 0);
+                }
+            }
+        }
+        EntitySlot* wk = place(ctx, 1, "realwalker", (float)sx, (float)sy);
+        if (wk == NULL) {
+            fprintf(stderr, "FAIL --real: \"%s\": could not place walker\n",
+                    name);
+            ++s_failures;
+            break;
+        }
+        cmd_create_move(wk, (float)tx, (float)ty, 0);
+        int budget = 8 * (good_len[p] + 4); /* >=1 cell/tick at dt=0.5 */
+        int t = 0;
+        for (; t < budget && wk->cmd_head != NULL; ++t) {
+            ai_tick(ctx, 0.5f);
+        }
+        ++s_real_arrivals;
+        real_check(wk->cmd_head == NULL, "real-grid walker did not arrive in "
+                                        "the tick budget",
+                   name, sx, sy, tx, ty);
+        real_check(wk->wp_index == wk->wp_count, "arrival pops the real path",
+                   name, sx, sy, tx, ty);
+        real_check((wk->x - tx) * (wk->x - tx) + (wk->y - ty) * (wk->y - ty) <
+                       0.25f,
+                   "real-grid walker lands on the target cell", name, sx, sy,
+                   tx, ty);
+    }
+
+    if (arrivals_left != 0) {
+        fprintf(stderr, "FAIL --real: \"%s\": ran %d of %d walker arrivals\n",
+                name, REAL_ARRIVALS_PER_LEVEL - arrivals_left,
+                REAL_ARRIVALS_PER_LEVEL);
+        ++s_failures;
+    }
+
+    free(cells);
+    ctx->level = NULL;
+    level_destroy(lv);
+}
+
+static void probe_real(const char* wad_dir)
+{
+    if (resource_mount(wad_dir, "LegoRR") <= 0) {
+        fprintf(stderr, "FAIL --real: no wads under %s\n", wad_dir);
+        ++s_failures;
+        return;
+    }
+    BlockFile* cfg = block_open("Lego.cfg");
+    if (cfg == NULL) {
+        fprintf(stderr, "FAIL --real: no Lego.cfg in %s\n",
+                wad_dir);
+        ++s_failures;
+        return;
+    }
+
+    GameContext rctx; /* entity-free: no reservations, no stale commands */
+    game_context_init(&rctx);
+    cmd_context_set(&rctx);
+    rctx.stats_speed_sec[4] = 0.0f; /* neutral terrain: the synthetic probe */
+    rctx.stats_speed_sec[5] = 0.0f; /* rows above leave the table dirty      */
+
+    size_t nrec = block_record_count(cfg);
+    for (size_t i = 0; i < nrec; ++i) {
+        BlockRec* g = block_record_at(cfg, i);
+        if (g == NULL) {
+            continue;
+        }
+        const char* name = block_name(g);
+        char path[512];
+        snprintf(path, sizeof(path), "%s Levels %s SurfaceMap",
+                 util_root_name(cfg), name);
+        int found = block_get_strptr(cfg, path) != NULL;
+        if (!found) {
+            snprintf(path, sizeof(path), "%s %s SurfaceMap", util_root_name(cfg),
+                     name);
+            found = block_get_strptr(cfg, path) != NULL;
+        }
+        if (found) {
+            probe_level_real(&rctx, cfg, name);
+        }
+    }
+    fprintf(stderr,
+            "ai_test: --real probe: %d levels, %d wave/BFS pairs, %d paths, "
+            "%d walker arrivals\n",
+            s_real_levels, s_real_pairs, s_real_paths, s_real_arrivals);
+    if (s_real_levels != REAL_LEVELS_EXPECTED ||
+        s_real_pairs != REAL_PAIRS_EXPECTED ||
+        s_real_paths != REAL_PATHS_EXPECTED ||
+        s_real_arrivals != REAL_ARRIVALS_EXPECTED) {
+        fprintf(stderr,
+                "FAIL --real: expected %d levels, %d pairs, %d paths, "
+                "%d arrivals\n",
+                REAL_LEVELS_EXPECTED, REAL_PAIRS_EXPECTED,
+                REAL_PATHS_EXPECTED, REAL_ARRIVALS_EXPECTED);
+        ++s_failures;
+    }
+    block_close(cfg);
+}
+
+int main(int argc, char** argv)
+{
+    const char* real_dir = NULL;
+    for (int a = 1; a < argc; ++a) {
+        if (strcmp(argv[a], "--real") == 0 && a + 1 < argc) {
+            real_dir = argv[a + 1];
+        } else if (strcmp(argv[a], "--real") == 0) {
+            fprintf(stderr, "FAIL --real: expected a WAD directory\n");
+            ++s_failures;
+        }
+    }
+
     cmd_init();
     message_clear();
     message_init_defaults(); /* bus gate on (flags 0x4) + Info catalog */
@@ -737,13 +1100,15 @@ int main(void)
         ctx.stats_speed_sec[5] = 0.0f;
     }
 
-    /* Dropping the globally last record must update the global tail. The
-     * next link must remain reachable from the global head while each
-     * entity's chain stays separate. */
+    /* Move and target records stay on entity chains; dropping a target
+     * leaves the move intact and does not alter the task-only global list. */
+    void* global_before_drop = cmd_global_head();
     EntitySlot* dropper = place(&ctx, 1, "dropper", 11, 5);
     cmd_create_move(dropper, 10.0f, 5.0f, 0);
-    cmd_create_target(dropper, (void*)dropper); /* globally-last record */
+    cmd_create_target(dropper, (void*)dropper);
     CHECK(cmd_chain_drop(dropper, 2) == 1, "drop takes the target record");
+    CHECK(cmd_global_head() == global_before_drop,
+          "entity-chain drop leaves the task global list intact");
     for (int t = 0; t < 10 && dropper->cmd_head != NULL; ++t) {
         run(&ctx, 1, 0.5f); /* drain before any later link, so nothing else
                              * threads records onto this probe's chains */
@@ -751,19 +1116,17 @@ int main(void)
     CHECK(dropper->cmd_head == NULL, "dropper chain drains cleanly");
     EntitySlot* linked = place(&ctx, 1, "linked", 12, 5);
     cmd_create_move(linked, 11.0f, 5.0f, 0);
-    int walk = 0;
-    int reaches = 0;
-    for (const void* r = cmd_global_head(); r != NULL && walk < 64;
-         r = cmd_global_next(r), ++walk) {
-        if (r == linked->cmd_head) {
-            reaches = 1;
-        }
-    }
-    CHECK(walk < 64 && reaches, "next link threads soundly — no dangling tail");
+    CHECK(cmd_global_head() == global_before_drop &&
+              linked->cmd_head != NULL && cmd_rec_next(linked->cmd_head) == NULL,
+          "new move remains on its own chain outside the task list");
     for (int t = 0; t < 10 && linked->cmd_head != NULL; ++t) {
         run(&ctx, 1, 0.5f);
     }
     CHECK(linked->cmd_head == NULL, "linked move drains cleanly");
+
+    if (real_dir != NULL) {
+        probe_real(real_dir);
+    }
 
     if (s_failures != 0) {
         fprintf(stderr, "ai_test: %d failure(s)\n", s_failures);

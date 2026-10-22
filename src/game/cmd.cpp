@@ -250,11 +250,11 @@ static void cmd_bind_kind(CmdRec* rec, int kind)
 
 static void cmd_link_head(CmdRec* rec, int kind)
 {
+    if (s_global_head == NULL) {
+        s_global_tail = rec; /* first task establishes the global tail */
+    }
     rec->global_next = s_global_head;
     s_global_head = rec;
-    if (s_global_tail == NULL) {
-        s_global_tail = rec;
-    }
     rec->now = 1500.0f;
     rec->state = (rec->state & ~1u) | CMD_STATE_PENDING;
     cmd_bind_kind(rec, kind);
@@ -356,8 +356,18 @@ void cmd_global_unlink(const void* rec)
     }
 }
 
-/* Append a record to the entity's chain (entity +0x2f0 analog) and link it
- * onto the global list. */
+/* Append a record to the entity's chain (entity +0x2f0 analog).
+ * Corpus shape (finding 10): the move/target/gated creators chain the
+ * record *only* onto the entity chain — CmdCreateMove @ 0x4035c0 walks
+ * FUN_00404190 (CmdChainWalk) and writes `tail->next = rec` (or the +0x2f0
+ * head), plus the type-2 IdleQueueRegister; they never link onto the global
+ * list (DAT_004b3354/4b3358), which is the task-only list (CmdCreateTask
+ * links there through CmdLinkHead @ 0x404030). The +0x60 next field is one
+ * pointer, so a record must live on exactly one of the two overlays: using
+ * it for both at once chains two entities' live commands together through
+ * the first command's tail link, giving double ownership of one record.
+ * (Exposed by the executor move test: a move issued to a *selection* of two
+ * entities creates exactly that conflict.) */
 static void cmd_chain_append(EntitySlot* e, CmdRec* rec, int as_move)
 {
     CmdRec* tail = as_rec(cmd_chain_walk(e));
@@ -366,7 +376,9 @@ static void cmd_chain_append(EntitySlot* e, CmdRec* rec, int as_move)
     } else {
         e->cmd_head = rec;
     }
-    cmd_link_tail(rec);
+    rec->next = NULL; /* entity-chain tail: never re-link onto the global list */
+    rec->now = 1500.0f;
+    rec->state &= ~CMD_STATE_PENDING;
     if (as_move && e->etype == 2) {
         idle_register(e); /* IdleQueueRegister for fresh move commands */
     }

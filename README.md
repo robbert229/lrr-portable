@@ -20,7 +20,7 @@ and curiosity; nothing in this repository is affiliated with or endorsed by the 
 
 ```
 README.md           This file
-docs/findings/      Reverse-engineering findings, 01–29 (see index below)
+docs/findings/      Reverse-engineering findings, 01–113 (see index below)
 tools/              WAD tooling (rrwad.py: unpack/pack/verify — see tools/README.md)
                     + model converter (tools/rrlwo.py: .lwo → glTF 2.0)
                     + compat harness (tools/compat/a2.py — see tools/compat/README.md)
@@ -275,6 +275,50 @@ Open threads, in order of value:
 | 72 | [`findings/72-osf-reader-return-means-open-not-validated.md`](docs/findings/72-osf-reader-return-means-open-not-validated.md) | `.osf` reader's success result records file-open, even when validation rejects data |
 | 73 | [`findings/73-flh-caller-gated-playback.md`](docs/findings/73-flh-caller-gated-playback.md) | `.flh` advancement is caller-gated while the current surface continues drawing |
 | 74 | [`findings/74-reward-flh-context-lifetime.md`](docs/findings/74-reward-flh-context-lifetime.md) | Reward `.flh` contexts load lazily per task and close on transition or exit |
+| 75 | [`findings/75-olistfile-entry-placement.md`](docs/findings/75-olistfile-entry-placement.md) | Level `.ol` loading creates typed entities from required entry fields |
+| 76 | [`findings/76-entity-teardown-drains-command-chain-by-flags.md`](docs/findings/76-entity-teardown-drains-command-chain-by-flags.md) | Entity teardown drains command chains through flag-dependent disposition paths |
+| 77 | [`findings/77-selection-clear-marker.md`](docs/findings/77-selection-clear-marker.md) | A zero-mode selection action clears active selection and transfers a per-entity marker |
+| 78 | [`findings/78-energy-low-target-routing.md`](docs/findings/78-energy-low-target-routing.md) | Energy decay clamps a per-entity resource field using type stats |
+| 79 | [`findings/79-terrain-voxel-mutation-stages.md`](docs/findings/79-terrain-voxel-mutation-stages.md) | Terrain mutation advances selected voxel states through a four-step progression |
+| 80 | [`findings/80-kind-four-deposit-activity-gate.md`](docs/findings/80-kind-four-deposit-activity-gate.md) | Kind-4 entities enter `Activity_Deposit` through a gated state transition |
+| 81 | [`findings/81-emergemap-seeds-delayed-lava-erosion-stages.md`](docs/findings/81-emergemap-seeds-delayed-lava-erosion-stages.md) | `EmergeMap` seeds a bounded table of delayed erosion cells |
+| 82 | [`findings/82-healthbar-config-derives-clamped-border-shades.md`](docs/findings/82-healthbar-config-derives-clamped-border-shades.md) | Health-bar config derives lighter/darker border colors and clamps channels |
+| 83 | [`findings/83-olistfile-driving-references.md`](docs/findings/83-olistfile-driving-references.md) | `.ol` loading resolves optional `driving` names in a second pass |
+| 84 | [`findings/84-entity-teardown-dispatches-type-specific-payload-cleanup.md`](docs/findings/84-entity-teardown-dispatches-type-specific-payload-cleanup.md) | Entity teardown dispatches payload cleanup by raw type, with a type-3 gate |
+| 85 | [`findings/85-selection-candidate-eligibility.md`](docs/findings/85-selection-candidate-eligibility.md) | Selection candidates pass flag, kind, and nonnegative-float eligibility gates |
+| 86 | [`findings/86-low-resource-targets-queue-type-eleven-command.md`](docs/findings/86-low-resource-targets-queue-type-eleven-command.md) | Low-resource entities queue a type-0x11 target command after route checks |
+| 87 | [`findings/87-other-voxel-states-refresh-neighborhood-flags.md`](docs/findings/87-other-voxel-states-refresh-neighborhood-flags.md) | Other voxel states run a separate neighborhood-flag refresh path |
+| 88 | [`findings/88-neighbor-scan-consumes-terrain-work-flags.md`](docs/findings/88-neighbor-scan-consumes-terrain-work-flags.md) | A neighbor scan consumes terrain work flags through mutation mode 1 |
+| 89 | [`findings/89-kind-four-deposit-monitor-uses-count-and-state-gates.md`](docs/findings/89-kind-four-deposit-monitor-uses-count-and-state-gates.md) | A kind-4 monitor gates deposit handoff on count and state |
+| 90 | [`findings/90-lava-erosion-ticker-advances-pending-cells.md`](docs/findings/90-lava-erosion-ticker-advances-pending-cells.md) | Lava erosion ticker advances queued cells through timed stages |
+| 91 | [`findings/91-olistfile-health-defaults-and-seeds-entity-field.md`](docs/findings/91-olistfile-health-defaults-and-seeds-entity-field.md) | Optional `.ol` health defaults zero to 100 before entity initialization |
+| 93 | [`findings/93-objective-advisor-stream-token-tables.md`](docs/findings/93-objective-advisor-stream-token-tables.md) | Objective/advisor streams build separate resource and sound token tables |
+| 94 | [`findings/94-objective-advisor-renderer-consumes-inline-tokens.md`](docs/findings/94-objective-advisor-renderer-consumes-inline-tokens.md) | Objective/advisor rendering consumes inline resource and sound tokens |
+| 95 | [`findings/95-global-block-record-arena-is-released-at-shutdown.md`](docs/findings/95-global-block-record-arena-is-released-at-shutdown.md) | Block-text records accumulate in a process-wide arena until shutdown |
+| 96 | [`findings/96-whole-file-loader-scopes-stream-and-buffer-lifetimes.md`](docs/findings/96-whole-file-loader-scopes-stream-and-buffer-lifetimes.md) | Whole-file loads close the stream and return a separate heap buffer |
+| 97 | [`findings/97-explicit-entity-route-associates-target-pointer.md`](docs/findings/97-explicit-entity-route-associates-target-pointer.md) | Explicit entity routes bind a supplied pointer after route setup |
+| 98 | [`findings/98-helper-returned-entity-route-marker.md`](docs/findings/98-helper-returned-entity-route-marker.md) | A helper-returned pointer follows a separate route-marker path |
+| 99 | [`findings/99-upgrade-admission-tests-level-and-resource-choice.md`](docs/findings/99-upgrade-admission-tests-level-and-resource-choice.md) | Upgrade admission checks the next index and configured resource thresholds |
+| 100 | [`findings/100-upgrade-command-advances-building-index.md`](docs/findings/100-upgrade-command-advances-building-index.md) | Upgrade command commits the next building index |
+| 101 | [`findings/101-camera-key-hold-and-gates.md`](docs/findings/101-camera-key-hold-and-gates.md) | Camera key adjustments repeat while held behind gameplay and input gates |
+| 102 | [`findings/102-camera-config-pan-and-follow-bounds.md`](docs/findings/102-camera-config-pan-and-follow-bounds.md) | Camera settings feed pointer-pan acceleration and follow bounds |
+| 103 | [`findings/103-pointer-cursor-config-registry.md`](docs/findings/103-pointer-cursor-config-registry.md) | Pointer cursor config uses a fixed action-name registry |
+| 104 | [`findings/104-pointer-overrides-expire-in-the-reward-pump.md`](docs/findings/104-pointer-overrides-expire-in-the-reward-pump.md) | Timed cursor overrides hold through reward-screen input polling |
+| 105 | [`findings/105-sav-write-ignores-short-write-results.md`](docs/findings/105-sav-write-ignores-short-write-results.md) | Slot-save success ignores partial write results |
+| 106 | [`findings/106-sav-reader-resets-slot-on-record-count-mismatch.md`](docs/findings/106-sav-reader-resets-slot-on-record-count-mismatch.md) | A save record-count mismatch reinitializes the slot |
+| 107 | [`findings/107-samples-config-sound-alias-variants.md`](docs/findings/107-samples-config-sound-alias-variants.md) | Samples config builds loop/stream sound aliases and selects variants |
+| 108 | [`findings/108-streamed-wav-format-extension.md`](docs/findings/108-streamed-wav-format-extension.md) | Streamed WAV loading preserves non-PCM format extensions |
+| 109 | [`findings/109-emergemap-layerl-records.md`](docs/findings/109-emergemap-layerl-records.md) | EmergeMap values populate six-slot LayerL records |
+| 110 | [`findings/110-objective-entity-paired-field-predicate.md`](docs/findings/110-objective-entity-paired-field-predicate.md) | A delegated objective predicate searches entities for paired-field matches |
+| 111 | [`findings/111-directdraw-windowed-exclusive-surfaces.md`](docs/findings/111-directdraw-windowed-exclusive-surfaces.md) | Windowed and exclusive modes build different DirectDraw surfaces |
+| 112 | [`findings/112-registry-accessor-creates-path-keys.md`](docs/findings/112-registry-accessor-creates-path-keys.md) | The registry read accessor creates each subkey path component |
+| 113 | [`findings/113-window-activation-key-sampling.md`](docs/findings/113-window-activation-key-sampling.md) | Focus loss suppresses keyboard sampling while the frame callback continues |
+| 114 | [findings/114-terrain-cell-height-and-diagonal-selection.md](docs/findings/114-terrain-cell-height-and-diagonal-selection.md) | TerrainCreate separates map height from cell attributes and selects a diagonal |
+| 115 | [findings/115-ptl-message-remap-table.md](docs/findings/115-ptl-message-remap-table.md) | PTLFile builds an ordered table of numeric Message-name pairs |
+| 116 | [findings/116-reward-button-color-key-setup.md](docs/findings/116-reward-button-color-key-setup.md) | Reward button image handles receive a zero-to-zero color key |
+| 117 | [findings/117-fallin-multiplier-config-source.md](docs/findings/117-fallin-multiplier-config-source.md) | FallinMultiplier supplies the block-pointer modulus factor |
+| 118 | [findings/118-loader-progress-read-tap.md](docs/findings/118-loader-progress-read-tap.md) | Whole-file read hooks accumulate loader progress from measured file sizes |
+| 119 | [findings/119-directsound-3d-listener-interface.md](docs/findings/119-directsound-3d-listener-interface.md) | Sound initialization queries DirectSound's 3D listener interface |
 
 Named-pseudocode corpus: [`docs/decompiles/engine-region.c`](docs/decompiles/engine-region.c)
 (114 named functions covering the engine/game-logic region — findings 01–10).
@@ -778,7 +822,18 @@ finding 12, #14). Three new modules in `src/game/`:
   block), single- and multi-waypoint walking with the arrival pop,
   blocked-tile freezes with the occupancy mark/clear, and the
   queue→executor→move path plus a dispatch rerouting around a blocked
-  column.
+  column. With `test_wads_dir` set the suite gains a `--real` probe: the
+  builder runs against all 42 shipped `.map` levels — sampled pairs
+  checked for gate validity (paths never land on blocked, unwalkable, or
+  reserved cells), agreement with an embedded reference oracle mirroring
+  the pre-port BFS stand-in (reachability and shortest length, reroutes
+  included), and ticked-to-arrival command walkers. It passed green and
+  surfaced one loader gap: the predug edge-wall update is the load-time
+  source of the traversable bit (ported as `predug_wall_cell`, see
+  finding 07), without which shipped maps have no walkable cells. An
+  explicit `--real` run fails if the wads or a level cannot load, if a
+  level has too few walkable cells or walkers, or if the shipped corpus
+  totals differ from 42 levels / 496 pairs / 350 paths / 84 arrivals.
 - **Per-terrain movement speed** (2026-10-21, closing the finding 10
   per-terrain placeholder): the `FUN_00469cc0` speed probe — the corpus's
   per-terrain movement rates, read from the `+0x334` stats block's table

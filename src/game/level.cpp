@@ -282,6 +282,76 @@ static int dims_ok(const MapFile* m, const LevelState* s)
            && m->height == level_int(s, LEVEL_OFF_HEIGHT);
 }
 
+/* The predug edge-wall cell update — the flag side of the cell update
+ * (FUN_00430530) the corpus runs per `v == 1/3` predug cell *before* the
+ * 3x3 edge-wall OR (LoadPredugLayer 0x42bd20). Corpus shape, cell-update
+ * branch (the type byte is still 0 this early in the pipeline, so the
+ * `type == 8/10` branch cannot run):
+ *
+ *   - bounds gate: x/y == 0 or x >= w-2 / y >= h-2 (unsigned) no-ops;
+ *   - already-cave cells (`+0x08` bit 8 set) return untouched;
+ *   - the wave-seed marks the northwest 2x2 footprint {cell, x+1,
+ *     y+1, x+1/y+1} wave-state bytes (`record+0` = 1, the corpus's
+ *     flooded mark of a seeded handle);
+ *   - the eight neighbours without the cave flag take the traversable
+ *     mark `+0x08 |= 0x10` and lose the `0x400000` open flag
+ *     (`& ~0x400000`, the corpus's `& 0xfffbffff`);
+ *   - the cell itself raises cave `8`, keeps `+0x40` clear (the corpus
+ *     `& ~0x40`), and raises `0x400000` open plus `0x200000` — the
+ *     param-4 (load-time) wave flag of the `else` branch.
+ *
+ * Renderer, wave-handle (`FUN_00431450`, `FUN_0044efb0`), and message
+ * calls stay stubbed like the rest of the loading passes. This is the
+ * *only* place the shipped load pipeline marks cells traversable
+ * (`+0x08` bit `0x10`, the reader of `FUN_00432770` simple mode): the
+ * later full-map cell-init never raises it, so without this update a
+ * shipped level has no walkable cells at all — found by the T3
+ * real-data probe (wave-flood paths must cross real terrain). */
+static void predug_wall_cell(LevelState* s, int x, int y)
+{
+    int w = level_int(s, LEVEL_OFF_WIDTH);
+    int h = level_int(s, LEVEL_OFF_HEIGHT);
+    if (x == 0 || y == 0 || (unsigned)x >= (unsigned)w - 2u ||
+        (unsigned)y >= (unsigned)h - 2u) {
+        return;
+    }
+    uint8_t* rec = voxel_at(s, x, y);
+    uint32_t flags;
+    __builtin_memcpy(&flags, rec + 0x08, sizeof(flags));
+    if ((flags & 8u) != 0) {
+        return; /* the corpus's cave gate: already cave, untouched */
+    }
+
+    /* Wave seed over the northwest 2x2 footprint (record+0 = flooded). */
+    for (int dy = 0; dy <= 1; ++dy) {
+        for (int dx = 0; dx <= 1; ++dx) {
+            uint8_t* f = voxel_at(s, x + dx, y + dy);
+            if (f[0x00] == 0) {
+                f[0x00] = 1;
+            }
+        }
+    }
+
+    /* The eight neighbours: traversable mark over non-cave cells. */
+    for (int dy = -1; dy <= 1; ++dy) {
+        for (int dx = -1; dx <= 1; ++dx) {
+            uint8_t* n = voxel_at(s, x + dx, y + dy);
+            uint32_t nf;
+            __builtin_memcpy(&nf, n + 0x08, sizeof(nf));
+            if ((nf & 8u) == 0) {
+                nf |= TILE_FLAG_WALKABLE;
+                nf &= ~0x400000u;
+                __builtin_memcpy(n + 0x08, &nf, sizeof(nf));
+            }
+        }
+    }
+
+    /* The cell itself: cave + open + wave flag, blocking bit kept clear. */
+    flags |= 8u | 0x400000u | 0x200000u;
+    flags &= ~0x40u;
+    __builtin_memcpy(rec + 0x08, &flags, sizeof(flags));
+}
+
 /* LoadPredugLayer @ 0x42bd20 */
 static int load_predug(LevelState* s, const char* name, int bias)
 {
@@ -299,6 +369,9 @@ static int load_predug(LevelState* s, const char* name, int bias)
             uint8_t* rec = voxel_at(s, x, y);
             uint32_t f8 = 0, fC = 0;
             if (v == 1 || v == 3) {
+                /* Corpus cell update first (sets cave/traversable marks),
+                 * then the edge-wall OR. */
+                predug_wall_cell(s, x, y);
                 /* Edge-wall: the corpus ORs 0x4000000 into the 3×3
                  * neighbourhood's +0x08 words. */
                 for (int dy = -1; dy <= 1; ++dy) {

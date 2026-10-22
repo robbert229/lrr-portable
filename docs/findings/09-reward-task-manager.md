@@ -110,5 +110,7 @@ importance/quota floats inside the task table.
   slots, and the per-frame blob pass (`0x460360`) derives record `+0x30/+0x38` floats
   from them (quota `FILD` × scale, clamped `0..100`); no writer exists for record
   `+0x2c`-range ints.
-- `FUN_0047dbf0` widget-reset semantics (called with all-zero args on zone init).
+- FUN_0047dbf0 is called for reward button image handles with six zero arguments and installs a
+  zero-to-zero color-key range (finding 116). The wrapper bit meaning and inferred DirectDraw
+  mapping remain uncertain.
 - The exact flic playback (`FUN_00483c80`/`FUN_00484070`) — renderer lane.

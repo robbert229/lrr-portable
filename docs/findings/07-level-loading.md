@@ -91,15 +91,16 @@ Cell semantics per layer (value distributions from all 240 files):
 | +0x04 | LoadTerrainMap | surface material − bias |
 | +0x05 | LoadPathAiLayers | path/AI − bias |
 | +0x06 | LoadEmergeLayer | emerge value >> 1 |
-| +0x08 | LoadPredugLayer / LoadFallinLayer | flag bits (`0x4000000` predug edge wall, `0x20000`, `0x20000000` seen in `CellInitPass`) |
+| +0x08 | LoadPredugLayer / LoadFallinLayer | flag bits (`0x4000000` predug edge wall, `0x20000`, `0x20000000` seen in `CellInitPass`, and `0x10` traversable on the eight neighbours of `v == 1/3` edge-wall cells through the `FUN_00430530` cell update — the load-time source of walkability, found by the T3 real-data probe) |
 | +0x0C | LoadPredugLayer (`0x20`/`0x200` wall triggers `FUN_0044A4B0`) / LoadLayerL | extra flags |
 | +0x34 | LoadLayerM | byte layer |
 | +0x38/0x3C | LoadBlockPointers | count/pointer (>4 sets count−4 + flag) |
 | +0x40 | LoadBlockPointers | float `hash(x) % (ptrs * DAT_00556f14 * 25)` |
 
-`TerrainCreate` also builds a parallel physical **block table** (per cell stride 0x28,
-+0x18/+0x19 bytes, +0x1A default `0x60`, +0x1C.. +0x20 float normal pair, +0x24 flag) with
-`FUN_0044EDF0`/`FUN_004514F0` fix-ups where neighbour byte `+0x1A` deltas cross a threshold.
+TerrainCreate also builds a parallel physical block table (per cell stride 0x28):
++0x19 is an attribute byte initialized to 0x60; +0x1A is the map-derived height byte;
++0x1C..+0x20 hold the float normal pair, and +0x24 is a flag. Finding 114 documents the
+diagonal selector, height consumer, and orientation/normal fix-ups.
 
 ## The `.blx` question — resolved as *unused*
 
@@ -122,9 +123,17 @@ game.
   (finding 10 §tile queries): `+8` bit `0x10` = traversable layer, bit
   `0x40` = blocks walking, bit `0x8000000` = entity reservation
   (`FUN_00432e00`); `0x4000000` (Predug edge-wall) is written by the port
-  loader but its *reader* (pathfinder) is still unported. Remaining:
+  loader, and its intended reader — the wave-flood pathfinder — is now
+  ported (finding 10 §Pathfinder builder). Closed 2026-10-22 (issue #72):
+  the *writer* of `0x10` during loading is the predug loader running the
+  cell update `FUN_00430530` (flag side, `predug_wall_cell` in
+  `level.cpp`) on `v == 1/3` edge-wall cells; REA on the shipped
+  `LegoRR.exe` (`FUN_0042bd20` LoadPredugLayer → `FUN_00430530`, whose
+  else-branch marks the eight non-cave neighbours `| 0x10 & ~0x400000`)
+  and the full-map cell-init pass (`FUN_0042f6f0`, which only clears and
+  re-derives `0x8`/`0x400000`/`0x20000000`) back it up. Without that call
+  a shipped level has no walkable cells at all — the T3 real-data probe
+  found the gap. Remaining:
   `0x20`, `0x200`, `0x20000000`.
-- `LoadLayerL`'s appended 0x4C-stride record list (`state+8`, counter `state+0xC`).
-- `TerrainCreate`'s 0x28-stride block-table field semantics (normals, `0x60` sentinel).
-- `.ol`/`.nrn`/`.ptl` resources (`olistfile`, `NERPFile`, `PTLFile` keys) consumed where?
-- Who writes `DAT_00556f14` (block-pointer modulus).
+- DAT_00556f14 is loaded from FallinMultiplier and zero-normalized to 1 (finding 117); the gameplay rationale remains unknown.
+- .ol/.nrn resources (olistfile, NERPFile) and the NERP interpreter's direct load path remain open. The PTLFile consumer and pair-table construction are documented in finding 115.
