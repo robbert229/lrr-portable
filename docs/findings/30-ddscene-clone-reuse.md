@@ -14,10 +14,6 @@ The focused Evidence IDs are `ev_d2df670bd0aa34b21d5f9bf8a5abe97c70d690b4b8592e8
 (`FUN_00472a50`), `ev_5c73cde6dfc0d98ba688ebda86d3d53564b800308c7700457892fcaf2d08d7a3`
 (`FUN_00473690`), and `ev_93e9e098d4c87fbb35e563f8ac894b458fc82e1ba0b2a1696d6f7b07856b2484`
 (`FUN_00437d00`).
-The focused Evidence IDs are `ev_d2df670bd0aa34b21d5f9bf8a5abe97c70d690b4b8592e8e564eefff5d9da789`
-(`FUN_00472a50`), `ev_5c73cde6dfc0d98ba688ebda86d3d53564b800308c7700457892fcaf2d08d7a3`
-(`FUN_00473690`), and `ev_93e9e098d4c87fbb35e563f8ac894b458fc82e1ba0b2a1696d6f7b07856b2484`
-(`FUN_00437d00`).
 
 ## 1. Teardown parks the object
 
@@ -25,8 +21,6 @@ The focused Evidence IDs are `ev_d2df670bd0aa34b21d5f9bf8a5abe97c70d690b4b8592e8
 than 6. For kind 3 or 4 with a non-null auxiliary record at `object+0x24`, it
 writes zero to `aux+0x10` and returns. That return precedes channel/resource
 release and the ordinary pool insertion at `DAT_0076add0`.
-Evidence: `ev_d2df670bd0aa34b21d5f9bf8a5abe97c70d690b4b8592e8e564eefff5d9da789`;
-the paired scene-step call is detailed in finding 29.
 Evidence: `ev_d2df670bd0aa34b21d5f9bf8a5abe97c70d690b4b8592e8e564eefff5d9da789`;
 the paired scene-step call is detailed in finding 29.
 
@@ -49,13 +43,11 @@ If no inactive object is found, the routine allocates and appends another
 object to the auxiliary array. The inactive entry therefore acts as a reuse
 slot for a scene-specific clone.
 Evidence: `ev_5c73cde6dfc0d98ba688ebda86d3d53564b800308c7700457892fcaf2d08d7a3`.
-Evidence: `ev_5c73cde6dfc0d98ba688ebda86d3d53564b800308c7700457892fcaf2d08d7a3`.
 
 The general entity creator `FUN_00437d00` uses this factory path, stores its
 return value in entity `+0x1c`, then assigns that object the new entity as its
 owner. Other direct callers of `FUN_00473690` exist, so that owner assignment
 ordering is specific to this entity-creation path.
-Evidence: `ev_93e9e098d4c87fbb35e563f8ac894b458fc82e1ba0b2a1696d6f7b07856b2484`.
 Evidence: `ev_93e9e098d4c87fbb35e563f8ac894b458fc82e1ba0b2a1696d6f7b07856b2484`.
 
 ## What this establishes

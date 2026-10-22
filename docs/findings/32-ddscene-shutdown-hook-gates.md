@@ -14,9 +14,6 @@ hook has a separate pointer and time check, with no read of that gate in
 Fresh Evidence IDs: `ev_98458be3e26d38b582e13afe99ad848ee0d26081100f1a73b94d638dd81f78bc`
 (`FUN_00472800`) and `ev_7f7ad309108f21dd6c5ba9ede20a2eab387ea8cfaae9e753f25ba18a60b74625`
 (`FUN_00475140`).
-Fresh Evidence IDs: `ev_98458be3e26d38b582e13afe99ad848ee0d26081100f1a73b94d638dd81f78bc`
-(`FUN_00472800`) and `ev_7f7ad309108f21dd6c5ba9ede20a2eab387ea8cfaae9e753f25ba18a60b74625`
-(`FUN_00475140`).
 
 ## Observed shutdown and dispatch checks
 

@@ -16,12 +16,6 @@ Focused Evidence IDs: `ev_5c73cde6dfc0d98ba688ebda86d3d53564b800308c7700457892fc
 (`FUN_00475140`), and `ev_d2df670bd0aa34b21d5f9bf8a5abe97c70d690b4b8592e8e564eefff5d9da789`
 (`FUN_00472a50`). The owner setter is `ev_1421e13191d7ffe216de29c1b3830afa01cb0024a7fb8b9e3bf38b8e939e0b59`
 in the owner-link bundle.
-Focused Evidence IDs: `ev_5c73cde6dfc0d98ba688ebda86d3d53564b800308c7700457892fcaf2d08d7a3`
-(`FUN_00473690`), `ev_93e9e098d4c87fbb35e563f8ac894b458fc82e1ba0b2a1696d6f7b07856b2484`
-(`FUN_00437d00`), `ev_7f7ad309108f21dd6c5ba9ede20a2eab387ea8cfaae9e753f25ba18a60b74625`
-(`FUN_00475140`), and `ev_d2df670bd0aa34b21d5f9bf8a5abe97c70d690b4b8592e8e564eefff5d9da789`
-(`FUN_00472a50`). The owner setter is `ev_1421e13191d7ffe216de29c1b3830afa01cb0024a7fb8b9e3bf38b8e939e0b59`
-in the owner-link bundle.
 
 ## 1. Ordering on the entity-creation path
 
