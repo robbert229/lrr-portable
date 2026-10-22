@@ -244,6 +244,14 @@ Open threads, in order of value:
 | 41 | [`findings/41-advisor-animation-window.md`](docs/findings/41-advisor-animation-window.md) | **Advisor action windows**: one state bit selects completion or overflow-wrap behavior using slot boundaries and scene duration |
 | 42 | [`findings/42-ddscene-sample-hook-consumption.md`](docs/findings/42-ddscene-sample-hook-consumption.md) | **DDiScene sample-hook consumption**: action selection sets a pending bit that the next qualifying kind-4 draw-step consumes |
 | 43 | [`findings/43-ddscene-end-hook-repeatability.md`](docs/findings/43-ddscene-end-hook-repeatability.md) | **DDiScene end-hook repeatability**: callback conditions have no local one-shot latch; duplicate runtime dispatch remains unverified |
+| 44 | [`findings/44-reward-buttons-use-separate-save-routes.md`](docs/findings/44-reward-buttons-use-separate-save-routes.md) | Reward Save enters the slot UI; Advance commits through a separate checkpoint route |
+| 45 | [`findings/45-timer-objective-short-circuits-other-checks.md`](docs/findings/45-timer-objective-short-circuits-other-checks.md) | Timer expiry short-circuits later objective checks in the campaign evaluator |
+| 46 | [`findings/46-objective-sidecar-append-gates.md`](docs/findings/46-objective-sidecar-append-gates.md) | Objective sidecar records have additional append gates and a fixed serialized field set |
+| 47 | [`findings/47-entity-events-feed-incident-messages.md`](docs/findings/47-entity-events-feed-incident-messages.md) | Entity removal emits shared and type-specific event messages into the incident path |
+| 48 | [`findings/48-directdraw-renderer-setup.md`](docs/findings/48-directdraw-renderer-setup.md) | DirectDraw mode setup and bridge into the D3DRM device/viewport path |
+| 49 | [`findings/49-model-render-pass-dispatch.md`](docs/findings/49-model-render-pass-dispatch.md) | Model rendering walks ordered child passes through the shared renderer |
+| 50 | [`findings/50-tile-texture-refresh-order.md`](docs/findings/50-tile-texture-refresh-order.md) | Tile texture refresh updates indexed slots in a defined pass order |
+| 51 | [`findings/51-held-key-command-repeat.md`](docs/findings/51-held-key-command-repeat.md) | EnginePreFrame binds key bytes to command records; held keys enqueue again each tick |
 
 Named-pseudocode corpus: [`docs/decompiles/engine-region.c`](docs/decompiles/engine-region.c)
 (114 named functions covering the engine/game-logic region — findings 01–10).
