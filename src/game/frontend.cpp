@@ -1203,22 +1203,18 @@ static void fe_fill_rect(void* px, int pitch, int w, int h,
     }
 }
 
-void frontend_draw_text(void* px, int pitch, int w, int h, int x, int y,
-                        const char* s, int r, int g, int b)
-{
-    if (px == NULL || s == NULL) {
-        return;
-    }
-    fe_draw_text(px, pitch, w, h, x, y, s, r, g, b);
-}
-
 /* The in-game Help Window panel (issue #85). Corpus model: HelpWindow's
  * BIG-screen backdrop with info text; the Help_Window option is the
- * display gate. The port's face is a bottom-left panel: title line plus
- * `text` (the demo key lines when NULL). */
+ * display gate — it lives here, so the frame loop and every caller share
+ * one gate and the option can never draw without the store saying On.
+ * The port's face is a bottom-left panel: title line plus `text` (the demo
+ * key lines when NULL). */
 void frontend_help_overlay(void* px, int pitch, int w, int h,
-                           const char* text)
+                           const char* text, const GameOptions* opts)
 {
+    if (opts != NULL && opts->help_window == 0) {
+        return; /* Help_Window Off: the option gates the display. */
+    }
     if (px == NULL || w <= 0 || h <= 0) {
         return;
     }

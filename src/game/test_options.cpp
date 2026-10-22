@@ -26,10 +26,14 @@
 
 #include "game/frontend.hpp"
 #include "game/game.hpp"
+#include "game/level.hpp"
+#include "game/objective.hpp"
 #include "game/options.hpp"
 #include "game/render.hpp"
 #include "game/savegame.hpp"
+#include "gods98/audio.hpp"
 #include "gods98/block.hpp"
+#include "gods98/engine.hpp"
 #include "gods98/resource.hpp"
 
 static int s_failures = 0;
@@ -92,7 +96,7 @@ static void test_store(void)
     options_defaults(&o);
     CHECK(o.game_speed == 1 && o.sfx_volume == 8 && o.music_volume == 5
         && o.brightness == 8 && o.help_window == 0,
-        "store: documented defaults (OptionsLoadOrDefault)");
+        "store: corpus defaults (OptionsLoadOrDefault triple + port neutrals)");
 
     CHECK(options_id_for_label("Game_Speed") == OPT_GAME_SPEED
         && options_id_for_label("game speed") == OPT_GAME_SPEED
@@ -199,9 +203,12 @@ static void test_menu_to_runtime(void)
         render_apply_brightness(px, w * 4, w, h, 5);
         CHECK(px[0] == 100 || px[0] == 99, "effect: half value halves pixels");
 
-        /* Help Window's in-game display: On draws the panel, Off doesn't. */
+        /* Help Window's in-game display: the production gate lives in
+         * frontend_help_overlay itself (frameloop calls it unconditionally),
+         * so drive both store states through it. */
         memset(px, 0, (size_t)w * h * 4);
-        frontend_help_overlay(px, w * 4, w, h, "TEST");
+        store.help_window = 0;
+        frontend_help_overlay(px, w * 4, w, h, "TEST", &store);
         int touched = 0;
         for (int i = 0; i < w * h * 4; i++) {
             if (px[i] != 0) {
@@ -209,8 +216,19 @@ static void test_menu_to_runtime(void)
                 break;
             }
         }
-        CHECK(touched == (store.help_window != 0),
-            "effect: help overlay display matches the store");
+        CHECK(touched == 0, "effect: Help_Window Off draws nothing");
+        memset(px, 0, (size_t)w * h * 4);
+        store.help_window = 1;
+        frontend_help_overlay(px, w * 4, w, h, "TEST", &store);
+        touched = 0;
+        for (int i = 0; i < w * h * 4; i++) {
+            if (px[i] != 0) {
+                touched = 1;
+                break;
+            }
+        }
+        CHECK(touched == 1, "effect: Help_Window On draws the panel");
+        store.help_window = 1;
         free(px);
     }
 
@@ -240,15 +258,90 @@ static void test_menu_to_runtime(void)
     block_close(cfg);
 }
 
+/* --- production speed connection: store -> engine (PR #88 review) ----------
+ * Exercises the exact calls the frame loop makes per frame:
+ * options_scale_frame stamps the store's factor into an EngineContext and
+ * returns the scaled dt; EngineTick reads the stamp back through
+ * EngineTimeScale. Dropping either half changes what these see. */
+static void test_speed_connection(void)
+{
+    EngineContext ctx = { 0 };
+    GameOptions store;
+    options_defaults(&store);
+
+    float sdt = options_scale_frame(&store, &ctx, 1.0f);
+    CHECK(sdt == 1.0f && EngineTimeScale(&ctx) == 1.0f,
+        "speed: default store scales the frame 1:1");
+    options_set(&store, OPT_GAME_SPEED, 5);
+    sdt = options_scale_frame(&store, &ctx, 0.5f);
+    CHECK(sdt == 1.0f && EngineTimeScale(&ctx) == 2.0f,
+        "speed: slider 5 doubles ctx + ticker dt");
+    options_set(&store, OPT_GAME_SPEED, 0);
+    sdt = options_scale_frame(&store, &ctx, 0.5f);
+    CHECK(sdt == 0.25f && EngineTimeScale(&ctx) == 0.5f,
+        "speed: slider 0 halves ctx + ticker dt");
+
+    /* Observable pacing: the frame loop feeds objective_tick the scaled dt,
+     * and the corpus timer objective ticks down on exactly that. (An unmet
+     * crystal gate keeps the goal live so the timer keeps draining.) */
+    LevelState* s = (LevelState*)calloc(1, sizeof(LevelState));
+    CHECK(s != NULL, "speed: level state");
+    if (s != NULL) {
+        s->objective = LVL_OBJECTIVE_TIMER | LVL_OBJECTIVE_CRYSTALS;
+        level_set_int(s, OBJ_OFF_CRYSTAL_LIVE, 0);
+        level_set_int(s, OBJ_OFF_CRYSTAL_TARGET, 1);
+        level_set_float(s, OBJ_OFF_TIMER_TARGET, 10.0f);
+
+        options_set(&store, OPT_GAME_SPEED, 1);   /* 1.0x */
+        for (int i = 0; i < 10; i++) {
+            objective_tick(s, options_scale_frame(&store, &ctx, 0.1f));
+        }
+        float slow = level_float(s, OBJ_OFF_TIMER_TARGET);
+        options_set(&store, OPT_GAME_SPEED, 5);   /* 2.0x */
+        for (int i = 0; i < 10; i++) {
+            objective_tick(s, options_scale_frame(&store, &ctx, 0.1f));
+        }
+        float fast = level_float(s, OBJ_OFF_TIMER_TARGET);
+        /* 10 frames at 0.1 * 1.0 drained 1.0; the 2.0x stretch drained 2.0. */
+        CHECK(slow > 8.9f && slow < 9.1f,
+            "speed: normal pace drains the objective timer at 1.0x");
+        CHECK(fast > 6.9f && fast < 7.1f,
+            "speed: slider 5 drains the objective timer 2x");
+        free(s);
+    }
+}
+
+/* --- restored audio takes effect at once (PR #88 P2) ------------------------
+ * The frame loop opens audio with options_audio_gain instead of a fixed
+ * 0.6, so the .sav-restored store drives the live player directly. */
+static void test_audio_restoration(void)
+{
+    GameOptions store;
+    options_defaults(&store);
+    AudioPlayer ap = { 0 };
+    audio_set_volume(&ap, options_audio_gain(&store));
+    CHECK(ap.volume > 0.79f && ap.volume < 0.81f,
+        "audio: default SFX 8 opens the player at 0.8");
+
+    options_set(&store, OPT_SFX_VOLUME, 0);
+    audio_set_volume(&ap, options_audio_gain(&store));
+    CHECK(ap.volume == 0.0f, "audio: saved zero volume opens silent");
+
+    options_set(&store, OPT_SFX_VOLUME, 3);
+    audio_set_volume(&ap, options_audio_gain(&store));
+    CHECK(ap.volume > 0.29f && ap.volume < 0.31f,
+        "audio: saved SFX 3 opens at 0.3");
+}
+
 /* --- 4. save-context round trip --------------------------------------------- */
 
 static void test_save_roundtrip(void)
 {
-    char rmcmd[64]; snprintf(rmcmd, sizeof(rmcmd), "rm -rf %s", "opt_fixture");
-    system(rmcmd);
-    mkdir("opt_fixture", 0755);
-    if (chdir("opt_fixture") != 0) {
-        fprintf(stderr, "opt_fixture: chdir failed\n");
+    /* Run in a throwaway temp dir so nothing (no opt_fixture/, Saves/) is
+     * ever left behind in the working tree. */
+    char dir[] = "/tmp/opencode/lrr-opt-XXXXXX";
+    if (mkdtemp(dir) == NULL || chdir(dir) != 0) {
+        fprintf(stderr, "save fixture: mkdtemp/chdir failed\n");
         ++s_failures;
         return;
     }
@@ -305,6 +398,9 @@ static void test_save_roundtrip(void)
     if (chdir("..") != 0) {
         ++s_failures;
     }
+    char rmcmd[64 + sizeof("/tmp/opencode/lrr-opt-XXXXXXXXXX")];
+    snprintf(rmcmd, sizeof(rmcmd), "rm -rf %s", dir);
+    system(rmcmd);
 }
 
 /* --- real-config probe (--real <wad-dir>) ----------------------------------- */
@@ -356,6 +452,8 @@ int main(int argc, char** argv)
 {
     test_store();
     test_menu_to_runtime();
+    test_speed_connection();
+    test_audio_restoration();
     test_save_roundtrip();
     for (int a = 1; a < argc; a++) {
         if (strcmp(argv[a], "--real") == 0 && a + 1 < argc) {

@@ -5,6 +5,38 @@
 
 #include "options.hpp"
 
+#include "gods98/engine.hpp"
+
+/* One descriptor per control: banner name (normalized for matching), the
+ * shipped config range, the documented default, and the store field. The
+ * per-id accessors all read this table — no per-control switches. */
+static const struct {
+    const char* name;
+    int         lo;
+    int         hi;
+    int         dflt;
+    size_t      off;
+} s_opts[GAME_OPT_COUNT] = {
+    { "gamespeed",          0, 5,  OPT_DFLT_GAME_SPEED,
+      offsetof(GameOptions, game_speed) },
+    { "sfxvolume",          0, 10, OPT_DFLT_SFX_VOLUME,
+      offsetof(GameOptions, sfx_volume) },
+    { "musicvolume",        0, 10, OPT_DFLT_MUSIC_VOLUME,
+      offsetof(GameOptions, music_volume) },
+    { "brightness",         0, 10, OPT_DFLT_BRIGHTNESS,
+      offsetof(GameOptions, brightness) },
+    { "helpwindow",         0, 1,  OPT_DFLT_CYCLE,
+      offsetof(GameOptions, help_window) },
+    { "walldetail",         0, 1,  OPT_DFLT_CYCLE,
+      offsetof(GameOptions, wall_detail) },
+    { "music",              0, 1,  OPT_DFLT_CYCLE,
+      offsetof(GameOptions, music_onoff) },
+    { "soundeffects",       0, 1,  OPT_DFLT_CYCLE,
+      offsetof(GameOptions, sfx_onoff) },
+    { "automaticgamespeed", 0, 1,  OPT_DFLT_CYCLE,
+      offsetof(GameOptions, auto_game_speed) },
+};
+
 static int s_lower(int c) { return (c >= 'A' && c <= 'Z') ? c + 0x20 : c; }
 
 /* Case- and separator-insensitive exact match (the banner may arrive as
@@ -41,15 +73,11 @@ static int s_optname_eq(const char* a, const char* b)
 
 int options_id_for_label(const char* label)
 {
-    static const char* const names[GAME_OPT_COUNT] = {
-        "gamespeed", "sfxvolume", "musicvolume", "brightness", "helpwindow",
-        "walldetail", "music", "soundeffects", "automaticgamespeed",
-    };
     if (label == NULL) {
         return -1;
     }
     for (int i = 0; i < GAME_OPT_COUNT; i++) {
-        if (s_optname_eq(label, names[i])) {
+        if (s_optname_eq(label, s_opts[i].name)) {
             return i;
         }
     }
@@ -62,25 +90,21 @@ int options_range(int id, int* lo, int* hi)
         return 0;
     }
     /* Sliders carry the shipped Lego.cfg limits; cycles are two-option. */
-    switch (id) {
-    case OPT_GAME_SPEED:   *lo = 0; *hi = 5;  break;
-    case OPT_SFX_VOLUME:   *lo = 0; *hi = 10; break;
-    case OPT_MUSIC_VOLUME: *lo = 0; *hi = 10; break;
-    case OPT_BRIGHTNESS:   *lo = 0; *hi = 10; break;
-    default:               *lo = 0; *hi = 1;  break; /* cycles */
+    if (lo != NULL) {
+        *lo = s_opts[id].lo;
+    }
+    if (hi != NULL) {
+        *hi = s_opts[id].hi;
     }
     return 1;
 }
 
 int options_default(int id)
 {
-    switch (id) {
-    case OPT_GAME_SPEED:   return OPT_DFLT_GAME_SPEED;
-    case OPT_SFX_VOLUME:   return OPT_DFLT_SFX_VOLUME;
-    case OPT_MUSIC_VOLUME: return OPT_DFLT_MUSIC_VOLUME;
-    case OPT_BRIGHTNESS:   return OPT_DFLT_BRIGHTNESS;
-    default:               return OPT_DFLT_CYCLE;
+    if (id < 0 || id >= GAME_OPT_COUNT) {
+        return OPT_DFLT_CYCLE;
     }
+    return s_opts[id].dflt;
 }
 
 static int* option_field(GameOptions* o, int id)
@@ -88,18 +112,7 @@ static int* option_field(GameOptions* o, int id)
     if (o == NULL || id < 0 || id >= GAME_OPT_COUNT) {
         return NULL;
     }
-    switch (id) {
-    case OPT_GAME_SPEED:     return &o->game_speed;
-    case OPT_SFX_VOLUME:     return &o->sfx_volume;
-    case OPT_MUSIC_VOLUME:   return &o->music_volume;
-    case OPT_BRIGHTNESS:     return &o->brightness;
-    case OPT_HELP_WINDOW:    return &o->help_window;
-    case OPT_WALL_DETAIL:    return &o->wall_detail;
-    case OPT_MUSIC_ONOFF:    return &o->music_onoff;
-    case OPT_SFX_ONOFF:      return &o->sfx_onoff;
-    case OPT_AUTO_SPEED:     return &o->auto_game_speed;
-    default:                 return NULL;
-    }
+    return (int*)((char*)o + s_opts[id].off);
 }
 
 void options_defaults(GameOptions* o)
@@ -169,6 +182,28 @@ float options_time_scale(const GameOptions* o)
         v = 5;
     }
     return k_scales[v];
+}
+
+float options_scale_frame(const GameOptions* o, EngineContext* ctx, float dt)
+{
+    float scale = options_time_scale(o);
+    if (ctx != NULL) {
+        /* EngineTick's subsystem tickers read this back via EngineTimeScale. */
+        ctx->time_scale = scale;
+    }
+    return dt * scale;
+}
+
+float options_audio_gain(const GameOptions* o)
+{
+    int v = options_get(o, OPT_SFX_VOLUME); /* clamps to 0..10 */
+    if (v < 0) {
+        v = 0;
+    }
+    if (v > 10) {
+        v = 10;
+    }
+    return (float)v / 10.0f;
 }
 
 /* --- save-context serialisation ----------------------------------------- */

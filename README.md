@@ -348,12 +348,15 @@ standalone OptionsMenu) shows the effective value, never a reset default.
 (`options_time_scale` → `EngineTimeScale` and the ai/objective tickers' dt) —
 1 = normal. **Brightness** (`Brightness`, 0..10) multiplies the presented frame
 by BrightnessSet's `value × 0.1` scalar. **Help Window** (`Help_Window`
-Off/On) toggles the in-game help panel. The volume families
-(`SFX_Volume` 8, `Music_Volume` 5 default) keep driving the audio seam. The
-values load from the active save context when present (`.sav` header option
-block; a fresh game and un-stamped legacy saves use the documented
-OptionsLoadOrDefault defaults — speed 1, SFX 8, music 5, brightness 8) and
-survive save/reload. Suite: `options` (menu-to-runtime for each control,
+Off/On) toggles the in-game help panel (the option gates the panel in
+`frontend_help_overlay`, so it can never draw while Off). The volume families
+(`SFX_Volume`, `Music_Volume`) keep driving the audio seam — the frame loop
+opens audio with the store's SFX gain, so settings restored from a save take
+effect immediately. The values load from the active save context when present
+(`.sav` header option block; a fresh game and un-stamped legacy saves use the
+defaults — speed 1, SFX 8, music 5 per corpus `OptionsLoadOrDefault`,
+brightness 8 as the port's neutral default since the corpus assigns none)
+and survive save/reload. Suite: `options` (menu-to-runtime for each control,
 saved-value round trip, plus a `--real` probe asserting the shipped control
 names + ranges).
 **Pointer drag**

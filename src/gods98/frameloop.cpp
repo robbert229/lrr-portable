@@ -414,7 +414,10 @@ int LegorrrRun(void)
     int audio_status = audio_open(&ap);
     int sfx_frames = 0;
     if (audio_status == 0) {
-        audio_set_volume(&ap, 0.6f);
+        /* Master gain from the store, not a fixed 0.6: the active save
+         * context's restored SFX_Volume (or the default) applies immediately
+         * (issue #85) — saved settings take effect without a menu nudge. */
+        audio_set_volume(&ap, options_audio_gain(&game.options));
         int loop_rc = audio_loop_named(&ap, "Sounds\\Iambloop.wav", 0.0f);
         sfx_frames = audio_play_named(&ap, "Sounds\\Buildings\\elec5.wav");
         fprintf(log,
@@ -664,10 +667,9 @@ int LegorrrRun(void)
     }
 
     const float dt = 1.0f / 30.0f;
-    /* Game Speed (issue #85): the slider index drives the frame loop's time
-     * scale — EngineTick multiplies it into dt internally, and the game-layer
-     * tickers (ai/objective) run on the scaled dt. */
-    float time_scale = 1.0f;
+    /* Game Speed (issue #85): options_scale_frame stamps the store's factor
+     * into ctx.time_scale (EngineTick's subsystem tickers) and returns the
+     * scaled dt for the game-layer tickers (ai/objective). */
     /* Interactive proof: the arrow keys pan the blitted texture. */
     int rock_x = 24, rock_y = 24;
 
@@ -931,9 +933,7 @@ int LegorrrRun(void)
          * (findings 09/10/22). */
         if (game.level != NULL) {
             cmd_queue_tick();
-            time_scale = options_time_scale(&game.options);
-            ctx.time_scale = time_scale;
-            float sdt = dt * time_scale;
+            float sdt = options_scale_frame(&game.options, &ctx, dt);
             int ai_done = ai_tick(&game, sdt);
             if (ai_done != 0) {
                 fprintf(log, "frameloop: ai commands completed: %d\n", ai_done);
@@ -1023,10 +1023,12 @@ int LegorrrRun(void)
             }
             /* Help Window (issue #85): the option toggles the shipped help
              * panel over the level; the advisor stream text leads when the
-             * announcer has one. */
-            if (game.level != NULL && game.options.help_window != 0) {
+             * announcer has one. frontend_help_overlay holds the On/Off
+             * gate — this call is unconditional. */
+            if (game.level != NULL) {
                 frontend_help_overlay(pixels, pitch, WINDOW_W, WINDOW_H,
-                                      objective_stream(game.level));
+                                      objective_stream(game.level),
+                                      &game.options);
             }
             /* Brightness (issue #85): BrightnessSet's scalar on the frame. */
             render_apply_brightness(pixels, pitch, WINDOW_W, WINDOW_H,

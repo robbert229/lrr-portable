@@ -5,7 +5,7 @@
 # block-text-config primitives (findings 01/12), so its tests can run the
 # full load path from loose fixture files.
 
-gods98_incs = [include_directories('..', '../gods98')]  # repo-root + gods98
+gods98_incs = [include_directories('..', '../gods98'), miniwin_inc]  # repo-root + gods98
 
 game_lib = static_library('game',
   'game.cpp',
@@ -22,6 +22,7 @@ game_lib = static_library('game',
   'options.cpp',
   'util.cpp',
   include_directories : gods98_incs,
+  dependencies : [platsub_deps],
   install : false)
 
 game_dep = declare_dependency(link_with : game_lib,

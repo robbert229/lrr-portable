@@ -291,16 +291,12 @@ void frontend_render(FrontEnd* fe, const TextureSurface* hi_font,
                      const TextureSurface* lo_font,
                      int w, int h, void* px, int pitch);
 
-/* Public 3x5-face text blit (scale 2) for in-game overlays — the same
- * typeface frontend_render falls back to. */
-void frontend_draw_text(void* px, int pitch, int w, int h, int x, int y,
-                        const char* s, int r, int g, int b);
-
 /* The in-game Help Window (issue #85): the panel the Help_Window option
- * toggles — drawn while the option is On. `text` (NULL for the demo key
- * lines) fills the info lines. */
+ * toggles. The option is checked here — the display gate — so every caller
+ * shares it and the panel cannot draw while the store says Off. `text`
+ * (NULL for the demo key lines) fills the info lines. */
 void frontend_help_overlay(void* px, int pitch, int w, int h,
-                           const char* text);
+                           const char* text, const GameOptions* opts);
 
 #ifdef __cplusplus
 }

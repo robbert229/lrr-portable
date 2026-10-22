@@ -8,8 +8,11 @@
  * adjustment it takes — the menu-to-runtime seam both ways.
  *
  * Defaults and ranges follow the corpus:
- *   OptionsLoadOrDefault @ 0x416940 — speed 1, SFX 8, music 5, brightness 8
- *     (cycles default to option 0);
+ *   OptionsLoadOrDefault @ 0x416940 — sets exactly the triple at
+ *     DAT_00557030/34/3c: speed 1, SFX 8, music 5; it assigns no brightness
+ *     value (the same attribution previously stood for brightness too —
+ *     corrected here). Brightness 8 and Help_Window Off are port-chosen
+ *     neutral defaults (cycles default to option 0);
  *   ScrollToSliderIndexStore @ 0x414f90 — the speed *index* 0..5 the slider
  *     sets, derived from the continuous time scale (bands 0.667/1.0/1.333/
  *     1.667/2.0); options_time_scale() is that inverse: index -> dt factor.
@@ -43,19 +46,21 @@ extern "C" {
 #define OPT_SFX_ONOFF      7   /* Cycle Sound_Effects (On:Off) 0..1 */
 #define OPT_AUTO_SPEED     8   /* Cycle Automatic_Game_Speed  0..1  */
 
-/* OptionsLoadOrDefault @ 0x416940: speed 1, SFX 8, music 5, brightness 8;
- * every cycle defaults to option 0 (the shipped lists open On/High/Off). */
+/* Corpus triple OptionsLoadOrDefault @ 0x416940: speed 1, SFX 8, music 5.
+ * Brightness 8 / Help_Window Off: port-chosen neutrals (no corpus default
+ * exists — the decompile assigns only the DAT triple). Cycles open at
+ * option 0 (the shipped lists are High/On first). */
 #define OPT_DFLT_GAME_SPEED    1
 #define OPT_DFLT_SFX_VOLUME    8
 #define OPT_DFLT_MUSIC_VOLUME  5
-#define OPT_DFLT_BRIGHTNESS    8
+#define OPT_DFLT_BRIGHTNESS    8   /* port neutral, not OptionsLoadOrDefault */
 #define OPT_DFLT_CYCLE         0
 
 typedef struct GameOptions {
     int game_speed;      /* slider index 0..5 (1 = normal speed)   */
     int sfx_volume;      /* slider 0..10 (OptionsLoadOrDefault 8)  */
     int music_volume;    /* slider 0..10 (corpus default 5)        */
-    int brightness;      /* slider 0..10 (corpus default 8)        */
+    int brightness;      /* slider 0..10 (port default 8)        */
     int help_window;     /* 0 Off / 1 On                           */
     int wall_detail;     /* 0 High / 1 Low                         */
     int music_onoff;     /* 0 On / 1 Off (the shipped cycle order) */
@@ -92,6 +97,22 @@ int options_get_label(const GameOptions* o, const char* label, int* out);
  * continuous counterpart): {0.5, 1.0, 1.25, 1.5, 1.75, 2.0}; index 1 is the
  * default, 1.0 = normal pacing. */
 float options_time_scale(const GameOptions* o);
+
+struct EngineContext;
+
+/* The frame loop's per-frame speed connection: stamps the store's factor
+ * into the engine context's time scale (EngineTick's subsystem tickers
+ * read it back through EngineTimeScale) and returns the dt the frame loop
+ * hands to the game-layer tickers (ai_tick / objective_tick). `ctx` may be
+ * NULL when no engine context exists (menu-only frames). */
+float options_scale_frame(const GameOptions* o, struct EngineContext* ctx,
+                          float dt);
+
+/* Master audio gain 0..1 for the store — SFX_Volume / 10, the same mapping
+ * the live menu adjustment feeds to audio_set_volume. Applied at the audio
+ * start so settings restored from the active save context take effect
+ * immediately (issue #85), not only after another menu nudge. */
+float options_audio_gain(const GameOptions* o);
 
 /* --- save-context serialisation -----------------------------------------
  * 48-byte option block stamped into the `.sav` slot header: magic 'GOPS', u32
