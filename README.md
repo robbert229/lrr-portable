@@ -291,6 +291,19 @@ Open threads, in order of value:
 | 88 | [`findings/88-neighbor-scan-consumes-terrain-work-flags.md`](docs/findings/88-neighbor-scan-consumes-terrain-work-flags.md) | A neighbor scan consumes terrain work flags through mutation mode 1 |
 | 89 | [`findings/89-kind-four-deposit-monitor-uses-count-and-state-gates.md`](docs/findings/89-kind-four-deposit-monitor-uses-count-and-state-gates.md) | A kind-4 monitor gates deposit handoff on count and state |
 | 90 | [`findings/90-lava-erosion-ticker-advances-pending-cells.md`](docs/findings/90-lava-erosion-ticker-advances-pending-cells.md) | Lava erosion ticker advances queued cells through timed stages |
+| 91 | [`findings/91-olistfile-health-defaults-and-seeds-entity-field.md`](docs/findings/91-olistfile-health-defaults-and-seeds-entity-field.md) | Optional `.ol` health defaults zero to 100 before entity initialization |
+| 93 | [`findings/93-objective-advisor-stream-token-tables.md`](docs/findings/93-objective-advisor-stream-token-tables.md) | Objective/advisor streams build separate resource and sound token tables |
+| 94 | [`findings/94-objective-advisor-renderer-consumes-inline-tokens.md`](docs/findings/94-objective-advisor-renderer-consumes-inline-tokens.md) | Objective/advisor rendering consumes inline resource and sound tokens |
+| 95 | [`findings/95-global-block-record-arena-is-released-at-shutdown.md`](docs/findings/95-global-block-record-arena-is-released-at-shutdown.md) | Block-text records accumulate in a process-wide arena until shutdown |
+| 96 | [`findings/96-whole-file-loader-scopes-stream-and-buffer-lifetimes.md`](docs/findings/96-whole-file-loader-scopes-stream-and-buffer-lifetimes.md) | Whole-file loads close the stream and return a separate heap buffer |
+| 97 | [`findings/97-explicit-entity-route-associates-target-pointer.md`](docs/findings/97-explicit-entity-route-associates-target-pointer.md) | Explicit entity routes bind a supplied pointer after route setup |
+| 98 | [`findings/98-helper-returned-entity-route-marker.md`](docs/findings/98-helper-returned-entity-route-marker.md) | A helper-returned pointer follows a separate route-marker path |
+| 99 | [`findings/99-upgrade-admission-tests-level-and-resource-choice.md`](docs/findings/99-upgrade-admission-tests-level-and-resource-choice.md) | Upgrade admission checks the next index and configured resource thresholds |
+| 100 | [`findings/100-upgrade-command-advances-building-index.md`](docs/findings/100-upgrade-command-advances-building-index.md) | Upgrade command commits the next building index |
+| 101 | [`findings/101-camera-key-hold-and-gates.md`](docs/findings/101-camera-key-hold-and-gates.md) | Camera key adjustments repeat while held behind gameplay and input gates |
+| 102 | [`findings/102-camera-config-pan-and-follow-bounds.md`](docs/findings/102-camera-config-pan-and-follow-bounds.md) | Camera settings feed pointer-pan acceleration and follow bounds |
+| 105 | [`findings/105-sav-write-ignores-short-write-results.md`](docs/findings/105-sav-write-ignores-short-write-results.md) | Slot-save success ignores partial write results |
+| 106 | [`findings/106-sav-reader-resets-slot-on-record-count-mismatch.md`](docs/findings/106-sav-reader-resets-slot-on-record-count-mismatch.md) | A save record-count mismatch reinitializes the slot |
 
 Named-pseudocode corpus: [`docs/decompiles/engine-region.c`](docs/decompiles/engine-region.c)
 (114 named functions covering the engine/game-logic region — findings 01–10).
