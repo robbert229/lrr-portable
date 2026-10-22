@@ -101,6 +101,24 @@ int  osf_write(GameContext* ctx, const char* path); /* write + mark clean */
 /* Write one `.osf` table to `path` (loader-side helper). */
 int  osf_write_path(GameContext* ctx, int slot);
 
+/* Load-side `.osf` restore (OsfRead @ 0x459470, entered from LevelLoad @
+ * 0x429890): mirror of the corpus's FUN_00459470 — clear the live table
+ * first (OsfClear @ 0x4592a0), open `path` "rb", validate the `'RO'`
+ * magic (`0x534f5252`) and the exact `file_size == 8 + count*0x14` shape,
+ * then repopulate the live table and snapshot it into the shadow
+ * (OsfSnapshot @ 0x4592e0) with the dirty flag cleared. A missing or
+ * corrupt sidecar degrades to an empty table — the corpus's failure mode,
+ * no crash. The return mirrors FUN_00459470's `uVar3`: 1 whenever the
+ * file opened (valid or not), 0 when it was absent; the *installed state*
+ * (osf_count == 0 on a bad sidecar) is what distinguishes them. */
+int  osf_read(GameContext* ctx, const char* path);
+
+/* Restore `Saves\<slot>.osf` (the slot-level wrapper). The corpus calls it
+ * from `LevelLoad` only when the in-memory table is clean (dirty == 0) and
+ * an active slot is set — the caller (frameloop slot-load) reproduces that
+ * gate. */
+int  osf_read_path(GameContext* ctx, int slot);
+
 /* Builder for `Saves\<slot>.<ext>` path (native vs winapi separators). */
 void save_slot_path(GameContext* ctx, char* out, size_t out_sz, int slot,
                     const char* ext);

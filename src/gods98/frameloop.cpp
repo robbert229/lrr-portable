@@ -910,6 +910,19 @@ int LegorrrRun(void)
                 fprintf(log, "frameloop: restored checkpoint slot %d record "
                              "%d\n", pending_load_slot, pending_load_record);
             }
+            /* Load-side `.osf` sidecar restore (LevelLoad @ 0x429890 →
+             * OsfRead @ 0x459470): bring the slot's completed-objective
+             * table back the way the shipped game does. The corpus gates
+             * the read on a clean in-memory table (OsfDirtyGet()==0) and
+             * an active slot (SavGetSlot()!=-1); the port mirrors it here
+             * — after the checkpoint apply the slot is active and the
+             * table has nothing unsaved, so the sidecar replaces it. */
+            if (game.osf_dirty == 0 && pending_load_slot >= 0) {
+                (void)osf_read_path(&game, pending_load_slot);
+                fprintf(log, "frameloop: restored .osf sidecar slot %d "
+                             "(%d completed objective(s))\n",
+                        pending_load_slot, game.osf_count);
+            }
             pending_load_slot = -1;
         }
     }
