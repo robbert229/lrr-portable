@@ -4,6 +4,21 @@ Several REA evidence bundles (JSON) exported from Ghidra analysis sessions of
 `LegoRR.exe` (SHA-256
 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`):
 
+## `legorr-osf-restore.bundle`
+
+Exported 2026-10-21 from the `.osf` load-side restore session (issue #67 /
+LPT-16): the full `OsfRead @ 0x459470` body with its `OsfClear @ 0x4592a0`
+pre-step and the exact `8 + count*0x14` size / `0x534f5252` magic checks,
+`OsfDirtyGet @ 0x4593d0` (returns `DAT_004ffe64`), the read primitives
+(`FUN_0047f980`/`FUN_0047fca0` — the shared fread/fsize used by the `.sav`
+reader too), the shadow rollback `FUN_00459360` (copy `DAT_004ffe5c` →
+`DAT_004ffe50`, called from `FrontEndStartLevel @ 0x415220` and
+`ObjectiveTick @ 0x458be0`), the `OsfSnapshot @ 0x4592e0` caller set, and the
+caller proofs that `LevelLoad @ 0x429890` is the *only* entry point for both
+`FUN_004593d0` and `FUN_00459470` (the gate: clean table AND active slot).
+14 records. Import with `import_evidence_bundle` or inspect `records`
+directly.
+
 ## `legorr-menu-wipe.bundle`
 
 Exported 2026-10-21 from the finding-24 session (menu wipe / front-end
@@ -307,3 +322,266 @@ key-state conversion used by text entry. The mode bit meaning, exact window
 procedure target, symbolic DirectInput format, and correspondence between raw
 table indices and Win32 virtual keys remain unresolved. Import with
 `import_evidence_bundle` or inspect `records` directly.
+
+## `legorr-cursor-routing-expansion.bundle`
+
+Exported 2026-10-22 for findings 60–61 — 31 retained observations. Records
+cover Win32 cursor sampling, client-relative coordinate clamping and deltas,
+plus the gameplay screen-to-ray camera route. The bundle supports static
+control-flow claims; it does not establish runtime camera behavior. Import with
+`import_evidence_bundle` or inspect `records` directly.
+
+## `legorr-sound-instance-spatial-expansion.bundle`
+
+Exported 2026-10-22 for findings 62–63 — 70 retained observations. Records
+cover DirectSound distance and rolloff controls, sound-instance buffer
+rotation, stream-mode routing, deferred positional requests and stop cleanup.
+The audible result of these paths was not runtime-tested. Import with
+`import_evidence_bundle` or inspect `records` directly.
+
+## `legorr-wad-stream-contract.bundle`
+
+Exported 2026-10-22 for findings 64–65 — 26 retained observations. Records
+cover WAD open/read/seek/close behavior, per-open materialized buffers, clipped
+item reads and end-relative seek arithmetic. The boundary behavior is derived
+from static code and was not exercised at runtime. Import with
+`import_evidence_bundle` or inspect `records` directly.
+
+## `legorr-options-context-expansion.bundle`
+
+Exported 2026-10-22 for findings 66–67 — 44 retained observations. Records
+cover option globals across six save contexts and option data included in
+save-slot writes. The semantics of individual fields and the `.osf` file role
+remain uncertain. Import with `import_evidence_bundle` or inspect `records`
+directly.
+
+## `legorr-avi-playback-expansion.bundle`
+
+Exported 2026-10-22 for findings 68–69 — 47 retained observations. Records
+cover AVI frame-index timebase arithmetic, stream setup stages, failure state
+and teardown. Playback cadence and user-visible failure outcomes were not
+runtime-tested. Import with `import_evidence_bundle` or inspect `records`
+directly.
+
+## `legorr-activity-state-transitions.bundle`
+
+Exported 2026-10-22 for finding 70 — 14 retained observations. Records cover
+activity-name change dispatch, kind-specific command-chain runners, attached
+object follow-up, and timer/pointer/bit updates. The evaluator entry remains
+unassigned in Ghidra. Import with `import_evidence_bundle` or inspect
+`records` directly.
+
+## `legorr-checkpoint-reader-expansion.bundle`
+
+Exported 2026-10-22 for findings 71–72 — 68 retained observations. Records
+cover save-slot level-marker restoration and `.osf` reader validation and
+return behavior. The findings describe observed static paths, not a complete
+runtime load result. Import with `import_evidence_bundle` or inspect
+`records` directly.
+
+## `legorr-flh-playback-state-machine.bundle`
+
+Exported 2026-10-22 for findings 73–74 — 31 retained observations. Records
+cover caller-gated FLIC stepping and drawing, the reward animation's terminal
+frame behavior, and per-task reward contexts across transitions and exit.
+Runtime playback cadence remains unknown. Import with `import_evidence_bundle`
+or inspect `records` directly.
+
+## `legorr-olistfile-focused-expansion.bundle`
+
+Exported 2026-10-22 for findings 75 and 83 — 6 retained observations selected
+from the `.ol` loader pass. Records cover required entity-entry placement and
+the second-pass resolution of optional `driving` names. No `.ol` files were
+replayed at runtime. Import with `import_evidence_bundle` or inspect `records`
+directly.
+
+## `legorr-entity-destruction-chain-and-payload-expansion.bundle`
+
+Exported 2026-10-22 for findings 76 and 84 — 16 retained observations. Records
+cover teardown's flag-dependent command-chain disposition and type-dispatched
+cleanup of entity payload slots. Static evidence does not resolve allocator
+ownership beyond the observed call paths. Import with `import_evidence_bundle`
+or inspect `records` directly.
+
+## `legorr-selection-clear-expansion.bundle`
+
+Exported 2026-10-22 for finding 77 — 60 retained observations. The cited
+records follow a zero-mode selection action through queued opcode 3, active
+selection clearing, and transfer of a per-entity marker. Runtime input context
+remains unknown. Import with `import_evidence_bundle` or inspect `records`
+directly.
+
+## `legorr-energy-low-target-routing.bundle`
+
+Exported 2026-10-22 for findings 78 and 86 — 59 retained observations. Records cover
+energy-decay setup and the low-resource target-search path that can queue a
+type-`0x11` route command. Candidate identity and any recharge outcome remain
+unresolved. Import with `import_evidence_bundle` or inspect `records` directly.
+
+## `legorr-terrain-mutation-focused-expansion.bundle`
+
+Exported 2026-10-22 for findings 79, 87, and 88 — 3 retained observations
+selected from the terrain-mutation pass. Records cover voxel-state progression,
+a distinct neighborhood flag update, and a neighbor scan that consumes a work
+flag through mutation mode 1. Field meanings and runtime effects are not
+established. Import with `import_evidence_bundle` or inspect `records`
+directly.
+
+## `legorr-object-state-and-health-ui-expansion.bundle`
+
+Exported 2026-10-22 for findings 80, 82, and 89 — 6 retained observations. Records
+cover the gated kind-4 `Activity_Deposit` transition and health-bar config
+parsing, including derived/clamped border colors. Resource transfer and
+rendered appearance were not runtime-tested. Import with
+`import_evidence_bundle` or inspect `records` directly.
+
+## `legorr-lava-erosion-focused-expansion.bundle`
+
+Exported 2026-10-22 for findings 81 and 90 — 8 retained observations selected
+from the `EmergeMap` pass. Records cover pending-cell seeding and the separate
+timed ticker path through terrain stages and terminal event dispatch. Stage
+names and runtime cadence remain unknown. Import with `import_evidence_bundle`
+or inspect `records` directly.
+
+## `legorr-selection-eligibility-expansion.bundle`
+
+Exported 2026-10-22 for finding 85 — 62 retained observations. The cited
+records describe selection-candidate flag, kind, and float gates. They do not
+establish which candidates occur in a live scenario. Import with
+`import_evidence_bundle` or inspect `records` directly.
+
+## `legorr-objective-advisor-inline-markup.bundle`
+
+Exported 2026-10-22 for findings 93–94 — 5 retained observations. Records cover
+objective/advisor stream token table construction and the inline resource,
+sound, and text consumer. Specific level stream contents and audible/displayed
+results remain unverified. Import with `import_evidence_bundle` or inspect
+`records` directly.
+
+## `legorr-config-and-read-buffer-lifecycle.bundle`
+
+Exported 2026-10-22 for findings 95–96 — 10 retained observations. Records
+cover the shared block-text record arena and the whole-file stream-to-buffer
+adapter. Callback effects, short-read behavior, and document reachability at
+shutdown remain unresolved. Import with `import_evidence_bundle` or inspect
+`records` directly.
+
+## `legorr-entity-target-route-markers.bundle`
+
+Exported 2026-10-22 for findings 97–98 — 4 retained observations. Records
+cover two entity target-route setup paths, their route checks, stored pointers,
+and final path markers. Callsite conditions, target identities, and gameplay
+purpose remain unknown. Import with `import_evidence_bundle` or inspect
+`records` directly.
+
+## `upgrade-transition-focused.bundle`
+
+Exported 2026-10-22 for findings 99–100 — 9 retained observations. Records
+cover upgrade admission/payment alternatives and the shared commit path from a
+command case and worker tick. Resource-slot identity and any `Activity_Upgrade`
+animation selection remain unresolved. Import with `import_evidence_bundle` or
+inspect `records` directly.
+
+## `legorr-camera-control-focused.bundle`
+
+Exported 2026-10-22 for findings 101–102 — 13 retained observations selected
+from the camera-control analysis. Records cover gated held-key adjustments,
+config-backed pointer-pan speed/acceleration, and follow-mode bounds. The key
+byte mappings and runtime camera feel remain unverified. Import with
+`import_evidence_bundle` or inspect `records` directly.
+
+## `legorr-olistfile-health-field.bundle`
+
+Exported 2026-10-22 for finding 91 — 5 retained observations. Records cover
+the optional `.ol` health lookup, zero-to-100 default, and entity-field write.
+No range clamp for nonzero values or runtime entity health behavior is
+established. Import with `import_evidence_bundle` or inspect `records`
+directly.
+
+## `legorr-save-write-results-and-count-reset.bundle`
+
+Exported 2026-10-22 for findings 105–106 — 18 retained observations. Records
+cover the save writer's unchecked lower-level write results and the reader's
+record-count mismatch reset/retry path. No short-write fault was forced, and
+successful reinitialization is not established. Import with
+`import_evidence_bundle` or inspect `records` directly.
+
+## `legorr-pointer-cursor-config-and-override.bundle`
+
+Exported 2026-10-22 for findings 103–104 — 10 retained observations. Records
+cover the fixed cursor-name registry, config decoding for bitmap and animated
+slots, timed selection overrides, and the reward-pump caller. Exact cursor
+assets and elapsed-time duration in that loop remain unverified. Import with
+`import_evidence_bundle` or inspect `records` directly.
+
+## `legorr-samples-config.bundle`
+
+Exported 2026-10-22 for finding 107 — 33 retained observations. Records cover
+the `Samples` config group, alias registration, comma-separated variants,
+loop/stream markers, and variant selection. The `#...#` prefix branch has no
+shipped example, so its semantics remain unclaimed. Import with
+`import_evidence_bundle` or inspect `records` directly.
+
+## `legorr-streamed-wav-format.bundle`
+
+Exported 2026-10-22 for finding 108 — 5 focused observations. Records cover
+non-PCM WAVEFORMATEX extension preservation, DirectSound buffer creation, and
+the streamed playback caller. API acceptance and asset presence are
+unverified. Import with `import_evidence_bundle` or inspect `records` directly.
+
+## `legorr-emergemap-layerl.bundle`
+
+Exported 2026-10-22 for finding 109 — 10 retained observations. Records cover
+LevelLoad's EmergeMap argument, the map pipeline, and LayerL's six-slot record
+encoding. Consumers and gameplay meaning of the appended records remain
+unknown. Import with `import_evidence_bundle` or inspect `records` directly.
+
+## `legorr-objective-entity-paired-predicate.bundle`
+
+Exported 2026-10-22 for finding 110 — 30 retained observations. Records cover
+the delegated objective predicate, its registered-entity iterator, callback
+branches, field comparisons, and helper outputs. The compared fields' semantic
+meanings and live level reachability remain unknown. Import with
+`import_evidence_bundle` or inspect `records` directly.
+
+## `legorr-graphics-mode-surfaces.bundle`
+
+Exported 2026-10-22 for finding 111 — 5 retained observations. Records cover
+DirectDraw windowed/exclusive setup, presentation-surface descriptor writes,
+selected-mode probing, and the device setup path. Surface behavior is not
+runtime-tested. Import with `import_evidence_bundle` or inspect `records` directly.
+
+## `legorr-registry-accessor.bundle`
+
+Exported 2026-10-22 for finding 112 — 8 retained observations. Records cover
+the recursive subkey path splitter/accessor, RegCreateKeyA/RegQueryValueExA
+use, and startup callers. Runtime registry contents remain unobserved. Import
+with `import_evidence_bundle` or inspect `records` directly.
+
+## `legorr-window-activation-key-poll.bundle`
+
+Exported 2026-10-22 for finding 113 — 7 retained observations. Records cover
+WM_ACTIVATEAPP handling, the keyboard-sampling gate, the frame loop, cursor
+update, and the alternate-mode message filter. No runtime capture or media
+advancement claim is included. Import with `import_evidence_bundle` or
+inspect `records` directly.
+
+## legorr-terraincreate-fields.bundle
+
+Exported for finding 114. Eleven records cover TerrainCreate's 0x28-byte cell record, map-height byte assignment, mesh vertex use, diagonal selection/orientation fix-up, normal recalculation, and dirty-flag use.
+
+## legorr-ptl-consumer.bundle
+
+Exported for finding 115. Five records cover the LevelLoad PTLFile call chain, ordered block-child iteration, Message-name translation, and numeric-pair storage. It establishes table construction but does not identify a downstream consumer.
+
+## legorr-reward-widget.bundle
+
+Exported for finding 116. Nine records cover reward-button tuple initialization, the six-zero helper calls, RGB packing and surface-format conversion, and RewardInit ordering. The DirectDraw API mapping remains an inference.
+
+## legorr-loader-progress-read-tap.bundle
+
+Exported for finding 118. Twenty records cover loader-profile setup and selection, read-tap installation, both whole-file loader call sites, measured-size accumulation, and progress UI updates.
+
+## legorr-directsound3d-init.bundle
+
+Exported for finding 119. Five records cover DirectSound initialization, the queried GUID bytes and xref, the listener-interface acquisition branch, and subsequent initialization. One exploratory WAV-loader dossier is included but not cited by the finding.

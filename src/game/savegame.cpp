@@ -636,3 +636,70 @@ int osf_write_path(GameContext* ctx, int slot)
     save_slot_path(ctx, path, sizeof(path), slot, "osf");
     return osf_write(ctx, path);
 }
+
+/* Load-side `.osf` restore — OsfRead @ 0x459470, entered from LevelLoad @
+ * 0x429890 (finding 08 §".osf load-side restore"). Mirrors FUN_00459470:
+ * clear the live table first (OsfClear @ 0x4592a0), open `path` "rb",
+ * validate the `'RO'` magic (`0x534f5252`) and the exact
+ * `file_size == 8 + count*0x14` shape (the count is u32, read with the
+ * header), then repopulate the live table and snapshot it into the shadow
+ * (OsfSnapshot @ 0x4592e0) with the dirty flag cleared. A missing or
+ * corrupt sidecar degrades to an empty table — the corpus's failure mode,
+ * no crash. The return mirrors FUN_00459470's `uVar3`: 1 whenever the
+ * file opened (valid or not), 0 when it was absent; the *installed state*
+ * (osf_count == 0 on a bad sidecar) is what distinguishes them. `count`
+ * is additionally capped at the port's fixed-array GAME_OSF_MAX (the
+ * corpus reallocs its table; the port's array cannot grow past that). */
+int osf_read(GameContext* ctx, const char* path)
+{
+    if (ctx == NULL || path == NULL) {
+        return 0;
+    }
+    /* OsfClear — the live table is dropped before the open. The port's
+     * shadow is cleared too (the corpus frees/reallocs its shadow on the
+     * next snapshot; clearing here is the fixed-array equivalent, leaving
+     * nothing shadowed or stale from an earlier slot). */
+    ctx->osf_count = 0;
+    ctx->osf_capacity = 0;
+    ctx->osf_shadow_count = 0;
+    ctx->osf_shadow_dirty = 0;
+    FILE* fp = fopen(path, MODE_RB);
+    if (fp == NULL) {
+        return 0;
+    }
+    /* FUN_0047fca0 — file size (seek end, remember, seek back). */
+    fseek(fp, 0, SEEK_END);
+    long int fsz = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+    uint8_t hdr[8];
+    size_t got = fread(hdr, 1, 8, fp);
+    int ok = (got == 8);
+    uint32_t magic = 0, count_le = 0;
+    if (ok) {
+        __builtin_memcpy(&magic, hdr + 0, 4);    /* 'RO' magic (LE u32)  */
+        __builtin_memcpy(&count_le, hdr + 4, 4); /* entry count (u32)    */
+        ok = (magic == 0x534F5252u)
+          && ((int64_t)fsz - 8 == (int64_t)count_le * 0x14)
+          && count_le <= GAME_OSF_MAX;
+    }
+    if (ok) {
+        size_t n = (size_t)count_le * 0x14;      /* count * 20 bytes */
+        if (fread(ctx->osf, 1, n, fp) == n) {
+            ctx->osf_count = (int)count_le;
+            ctx->osf_capacity = (int)count_le;
+            osf_snapshot(ctx);                   /* live -> shadow     */
+            ctx->osf_dirty = 0;                  /* DAT_004ffe64 = 0   */
+            ctx->osf_shadow_dirty = 0;
+        }
+        /* else: corrupt (short read) -> table stays empty */
+    }
+    fclose(fp);
+    return 1;   /* uVar3 — the file opened */
+}
+
+int osf_read_path(GameContext* ctx, int slot)
+{
+    char path[280];
+    save_slot_path(ctx, path, sizeof(path), slot, "osf");
+    return osf_read(ctx, path);
+}

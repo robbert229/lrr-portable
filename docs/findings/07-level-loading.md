@@ -97,9 +97,10 @@ Cell semantics per layer (value distributions from all 240 files):
 | +0x38/0x3C | LoadBlockPointers | count/pointer (>4 sets count−4 + flag) |
 | +0x40 | LoadBlockPointers | float `hash(x) % (ptrs * DAT_00556f14 * 25)` |
 
-`TerrainCreate` also builds a parallel physical **block table** (per cell stride 0x28,
-+0x18/+0x19 bytes, +0x1A default `0x60`, +0x1C.. +0x20 float normal pair, +0x24 flag) with
-`FUN_0044EDF0`/`FUN_004514F0` fix-ups where neighbour byte `+0x1A` deltas cross a threshold.
+TerrainCreate also builds a parallel physical block table (per cell stride 0x28):
++0x19 is an attribute byte initialized to 0x60; +0x1A is the map-derived height byte;
++0x1C..+0x20 hold the float normal pair, and +0x24 is a flag. Finding 114 documents the
+diagonal selector, height consumer, and orientation/normal fix-ups.
 
 ## The `.blx` question — resolved as *unused*
 
@@ -134,7 +135,5 @@ game.
   a shipped level has no walkable cells at all — the T3 real-data probe
   found the gap. Remaining:
   `0x20`, `0x200`, `0x20000000`.
-- `LoadLayerL`'s appended 0x4C-stride record list (`state+8`, counter `state+0xC`).
-- `TerrainCreate`'s 0x28-stride block-table field semantics (normals, `0x60` sentinel).
-- `.ol`/`.nrn`/`.ptl` resources (`olistfile`, `NERPFile`, `PTLFile` keys) consumed where?
-- Who writes `DAT_00556f14` (block-pointer modulus).
+- DAT_00556f14 is loaded from FallinMultiplier and zero-normalized to 1 (finding 117); the gameplay rationale remains unknown.
+- .ol/.nrn resources (olistfile, NERPFile) and the NERP interpreter's direct load path remain open. The PTLFile consumer and pair-table construction are documented in finding 115.

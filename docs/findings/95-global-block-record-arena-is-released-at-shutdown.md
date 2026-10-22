@@ -1,0 +1,11 @@
+# 95 — Block-text records accumulate in a process-wide arena until shutdown
+
+*Target: shipped `LegoRR.exe`, SHA-256 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`. Provider: Ghidra 12.1.4 via REA. Evidence: `docs/evidence/legorr-config-and-read-buffer-lifecycle.bundle`.*
+
+The block-text parser's 32-byte records come from a shared chunk pool, not an allocation owned by each parsed document. `FUN_00478e60` creates the initial document record and links later records through `FUN_00479270` (`ev_74621f2e5b01fce10d546938c43a2d54063669b36ce29f0d1027afb7f71ba6ee`, `ev_3a85e679ac9ee94bbeb92f535a433a47dca48c4afea54f493ef4c6cf1ebcf29d`). When the free-record chain is empty, `FUN_00479490` allocates `1 << DAT_0050651c` records of 0x20 bytes, stores the chunk pointer in a 32-entry global array beginning at `DAT_00506498`, chains each record at `+0x1c`, and adds the old free-list head at the new chunk's tail (`ev_e3809d6d1d7bfc169c0fbabc20db13dbc31cffde9182d80fd535d55d258cd9b8`).
+
+`FUN_00478df0` clears the 32 chunk slots and initializes the global pool state (`DAT_00506518 = 0`, `DAT_0050651c = 0`, exponent `DAT_00506520 = 1`). `FUN_00478e20` walks those slots, frees every non-null chunk, then clears the free-list head and exponent (`ev_d5877dc5387337b1d1dfbc123bc6acbb3295bece3da29a81614a16ae92987e3f`, `ev_128c12e4d01dd0e070e16a82861025678d5664c12051119bd3d49e89e5221c54`). Ghidra reports `0x4777a0` as the only resolved direct caller of both reset and cleanup routines (`ev_67adb40dfa6a61b2c641dad5e949dce770f9a03ccf3aed9191db2285fa3dd051`, `ev_9ce6584c4ec8af635432f6d277524d8f6751d5192b0db9f75398861f29c9377c`). The coordinator evidence shows initialization before the application loop and cleanup after it (`ev_d33f142852d8d7442ed67a0c9c5d4c3193ccfc911051c0fe9e5921134b4cb618`), rather than a release at each `BlockOpen` return.
+
+## Boundary
+
+This is static evidence of the allocator and its resolved direct call sites. Unresolved indirect calls are outside the caller inventory; the evidence does not establish behavior under allocation failure or identify which parsed documents remain reachable at shutdown. Finding 12 describes the token/index format; this finding adds the record-pool lifetime.

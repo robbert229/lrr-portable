@@ -188,6 +188,133 @@ int main(void)
         }
     }
 
+    /* Load-side `.osf` restore (OsfRead @ 0x459470, entered from LevelLoad
+     * @ 0x429890) — strict write -> reload round trip: the completed
+     * objectives written to the sidecar come back byte-identical into the
+     * live table and its shadow, with nothing left dirty or stale. */
+    {
+        GameContext rctx;
+        game_context_init(&rctx);
+        /* Fresh context — a player booting into the loaded slot. */
+        osf_add(&rctx, 7, 8, "LegoManRescued");
+        osf_add(&rctx, 9, 10, "Crystal");
+        CHECK(save_write_slot(&rctx, 4) != 0, "rtrip: write slot 4 (+sidecar)");
+        /* Reload: wipe the in-memory table (the corpus clears it before the
+         * read), then restore strictly from the file. */
+        rctx.osf_count = 0;
+        rctx.osf_capacity = 0;
+        rctx.osf_shadow_count = 0;
+        rctx.osf_dirty = 0;
+        rctx.osf_shadow_dirty = 0;
+        int rr = osf_read_path(&rctx, 4);
+        CHECK(rr == 1, "rtrip: sidecar file opened");
+        CHECK(rctx.osf_count == 2 && rctx.osf_capacity == 2,
+            "rtrip: live count/capacity restored");
+        CHECK(rctx.osf[0].id == 7 && rctx.osf[0].ref == 8
+            && memcmp(rctx.osf[0].name, "LegoManResc\0", 12) == 0,
+            "rtrip: entry 0 identical (id/ref/name)");
+        CHECK(rctx.osf[1].id == 9 && rctx.osf[1].ref == 10
+            && memcmp(rctx.osf[1].name, "Crystal\0\0\0\0\0", 12) == 0,
+            "rtrip: entry 1 identical (id/ref/name)");
+        CHECK(rctx.osf_shadow_count == rctx.osf_count
+            && memcmp(rctx.osf_shadow, rctx.osf,
+                      (size_t)rctx.osf_count * sizeof(GameOsfEntry)) == 0,
+            "rtrip: shadow mirrors live (nothing shadowed/stale)");
+        CHECK(rctx.osf_dirty == 0 && rctx.osf_shadow_dirty == 0,
+            "rtrip: both dirty flags clear after restore");
+        free(rctx.records);
+        rctx.records = NULL;
+    }
+
+    /* Corrupt / missing sidecar handling (the corpus's degrade-to-empty
+     * failure mode): bad magic, a size that contradicts the count, a short
+     * file, and an absent file all leave the live table empty. */
+    {
+        GameContext cctx;
+        game_context_init(&cctx);
+        /* bad magic: 'XX' + count 1 */
+        uint8_t bad[8 + 20];
+        bad[0] = 'X'; bad[1] = 'X';
+        __builtin_memcpy(bad + 4, "\x01\x00\x00\x00", 4);
+        memset(bad + 8, 0, 20);
+        {
+            FILE* fp = fopen("Saves/6.osf", "wb");
+            fwrite(bad, 1, sizeof(bad), fp);
+            fclose(fp);
+        }
+        CHECK(osf_read_path(&cctx, 6) == 1, "corrupt: bad-magic file opens (uVar3)");
+        CHECK(cctx.osf_count == 0 && cctx.osf_shadow_count == 0,
+            "corrupt: bad magic -> table stays empty");
+        /* size mismatch: right count but wrong file size (count 1, 40 bytes) */
+        {
+            FILE* fp = fopen("Saves/6.osf", "wb");
+            uint8_t hdr[8];
+            uint8_t oversized_payload[40] = { 0 };
+            __builtin_memcpy(hdr, "\x52\x52\x4f\x53", 4);  /* 0x534f5252 LE */
+            __builtin_memcpy(hdr + 4, "\x01\x00\x00\x00", 4);
+            fwrite(hdr, 1, 8, fp);
+            fwrite(oversized_payload, 1, sizeof(oversized_payload), fp);
+            fclose(fp);
+        }
+        cctx.osf_count = 0;
+        CHECK(osf_read_path(&cctx, 6) == 1, "corrupt: size-mismatch file opens");
+        CHECK(cctx.osf_count == 0, "corrupt: size mismatch -> table stays empty");
+        /* short file (< 8-byte header) */
+        {
+            FILE* fp = fopen("Saves/6.osf", "wb");
+            fwrite("RO", 1, 2, fp);
+            fclose(fp);
+        }
+        CHECK(osf_read_path(&cctx, 6) == 1, "corrupt: short file opens");
+        CHECK(cctx.osf_count == 0, "corrupt: short file -> table stays empty");
+        /* absent sidecar -> fopen fails -> returns 0, table empty */
+        int ar = osf_read_path(&cctx, 0);
+        CHECK(ar == 0 && cctx.osf_count == 0,
+            "corrupt: absent sidecar -> 0, table empty");
+    }
+
+    /* Stale-shadow hole across a slot switch (the corpus's failure mode):
+     * OsfClear (0x4592a0) is live-only and the rollback 0x459360 copies
+     * the shadow back with no dirty gate, so the corpus can RESURRECT a
+     * previous level's shadow after a failed or absent read. The port is
+     * safe only because osf_read clears its own shadow before opening —
+     * load a valid sidecar, then a failed/absent one, and nothing of the
+     * first may survive. This locks that pre-clear: drop it and these
+     * checks fail. */
+    {
+        GameContext wctx;
+        game_context_init(&wctx);
+        osf_add(&wctx, 21, 22, "SlotOneObj");
+        CHECK(save_write_slot(&wctx, 1) != 0, "stale-shadow: write slot 1 sidecar");
+        /* corrupt one (bad magic) for the failed-read leg */
+        {
+            uint8_t bad[8 + 20];
+            bad[0] = 'X'; bad[1] = 'X';
+            __builtin_memcpy(bad + 4, "\x01\x00\x00\x00", 4);
+            memset(bad + 8, 0, 20);
+            FILE* fp = fopen("Saves/5.osf", "wb");
+            fwrite(bad, 1, sizeof(bad), fp);
+            fclose(fp);
+        }
+
+        GameContext lctx;
+        game_context_init(&lctx);
+        CHECK(osf_read_path(&lctx, 1) == 1 && lctx.osf_shadow_count == 1,
+            "stale-shadow: slot 1 installs live + shadow");
+        (void)osf_read_path(&lctx, 2); /* absent file -> 0 */
+        CHECK(lctx.osf_count == 0 && lctx.osf_shadow_count == 0,
+            "stale-shadow: absent read clears the old shadow");
+        CHECK(osf_read_path(&lctx, 1) == 1 && lctx.osf_shadow_count == 1,
+            "stale-shadow: slot 1 installs live + shadow (again)");
+        CHECK(osf_read_path(&lctx, 5) == 1
+            && lctx.osf_count == 0 && lctx.osf_shadow_count == 0,
+            "stale-shadow: corrupt read clears the old shadow (no resurrection)");
+        free(lctx.records);
+        lctx.records = NULL;
+        free(wctx.records);
+        wctx.records = NULL;
+    }
+
     /* Read the slot back and verify record 2 (dirty flag + blob). */
     ctx.active_slot = -1; /* force re-read */
     int rc = save_read_slot(&ctx, 3, 0);
