@@ -339,10 +339,24 @@ level's checkpoint now lands in **its own record** (port of
 `fe_record_for_level`/`fe_level_for_record` map levels↔records — tutorials
 first, then the campaign chain — and the record array grows on demand), so
 mid-campaign saves neither collide nor resume short.
-**Options sliders** (2026-10-21): the Options/Advanced `Slider`/`Cycle`
-items respond to `←`/`→` (and render a live bar+knob / current option) —
-the volume families (SFX/Music/Sound) drive the audio seam, the rest are
-state-only until the engine's option globals are wired. **Pointer drag**
+**Options** (2026-10-21): the Options/Advanced `Slider`/`Cycle` items respond
+to `←`/`→` (and render a live bar+knob / current option) and are **functional**:
+the values live in a store on `GameContext` that the menu seeds from and writes
+back into, so re-entering Options (any instance — the pause submenu or the
+standalone OptionsMenu) shows the effective value, never a reset default.
+**Game Speed** (`Game_Speed`, 0..5) scales the frame loop's simulation time
+(`options_time_scale` → `EngineTimeScale` and the ai/objective tickers' dt) —
+1 = normal. **Brightness** (`Brightness`, 0..10) multiplies the presented frame
+by BrightnessSet's `value × 0.1` scalar. **Help Window** (`Help_Window`
+Off/On) toggles the in-game help panel. The volume families
+(`SFX_Volume` 8, `Music_Volume` 5 default) keep driving the audio seam. The
+values load from the active save context when present (`.sav` header option
+block; a fresh game and un-stamped legacy saves use the documented
+OptionsLoadOrDefault defaults — speed 1, SFX 8, music 5, brightness 8) and
+survive save/reload. Suite: `options` (menu-to-runtime for each control,
+saved-value round trip, plus a `--real` probe asserting the shipped control
+names + ranges).
+**Pointer drag**
 (2026-10-21): holding the left button inside a slider's corpus-style 100×20
 bar rect (`FUN_00411870 @ 0x411870` semantics: value tracks pointer x as
 `round(clamp((mx − x) × 0.01, 0, 1) × (max − min))`, re-evaluated every

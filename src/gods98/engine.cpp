@@ -121,10 +121,14 @@ int EngineKeepRunning(EngineContext* ctx)
  */
 float EngineTimeScale(EngineContext* ctx)
 {
-    (void)ctx;
-    /* TODO(engine): the real factor (a configuration-derived speed) lives
-     * behind the corpus function; 1.0 == game speed. */
-    return 1.0f;
+    /* Corpus FUN_0041fb40: the config-derived speed factor. Issue #85 wires
+     * the Options Game_Speed slider through it — the frame loop writes
+     * options_time_scale(&game.options) into ctx->time_scale every frame
+     * (1.0 while no option has been raised). 0 keeps the scaffold default. */
+    if (ctx == NULL || ctx->time_scale == 0.0f) {
+        return 1.0f;
+    }
+    return ctx->time_scale;
 }
 
 /* Engine teardown — triplet slot DAT_00505934 (finding 20). The corpus

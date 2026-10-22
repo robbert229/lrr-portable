@@ -299,6 +299,9 @@ static void frameloop_menu_render(PlatformWindow* win, DisplaySurface* surf,
         }
     }
     frontend_render(fe, hi_font, lo_font, WINDOW_W, WINDOW_H, pixels, pitch);
+    /* Brightness (issue #85) is a post-pass over the finished frame. */
+    render_apply_brightness(pixels, pitch, WINDOW_W, WINDOW_H,
+                            game->options.brightness);
     platform_screenshot(win, pixels, pitch, WINDOW_W, WINDOW_H, frame);
     platform_present_pixels(win, pixels, pitch, WINDOW_W, WINDOW_H);
     surface_unlock(surf, pixels);
@@ -361,7 +364,7 @@ int LegorrrRun(void)
         NULL, /* level_block — bound to game.level below */
         NULL, /* level_voxels — resolved at bind (64-bit safe) */
         NULL, /* level_terrain */
-        0.0f, 0,
+        0.0f, 1.0f, 0,
     };
     /* Engine <-> level binding happens after the front end below — the level
      * loads only once the player picks one — so ctx.level_block/voxels/
@@ -484,8 +487,13 @@ int LegorrrRun(void)
     int boot_menu = 0;
     if (game.cfg != NULL) {
         fprintf(log, "frameloop: config Lego.cfg loaded\n");
-        boot_menu = frontend_build(&fe, game.cfg)
-                 && frontend_enabled(game.cfg)
+        int built = frontend_build(&fe, game.cfg);
+        /* Functional options (issue #85): attach the live store so the menu
+         * widgets show and set the effective values. frontend_build ran
+         * with no store (defaults); sync seeds the loaded slot's values. */
+        fe.opts = &game.options;
+        frontend_options_sync(&fe);
+        boot_menu = built && frontend_enabled(game.cfg)
                  && env_get("LEGORRR_LEVEL", "")[0] == '\0';
     } else {
         fprintf(log, "frameloop: Lego.cfg not found (wads need mounted game data)\n");
@@ -569,7 +577,7 @@ int LegorrrRun(void)
                     }
                     fprintf(log, "frameloop: option %s -> %d/%d (%s)\n",
                             oit->label, oit->value, oit->max,
-                            live ? "audio" : "state");
+                            live ? "audio" : "store — applied live");
                     fe.option_changed = 0;
                 }
             }
@@ -656,6 +664,10 @@ int LegorrrRun(void)
     }
 
     const float dt = 1.0f / 30.0f;
+    /* Game Speed (issue #85): the slider index drives the frame loop's time
+     * scale — EngineTick multiplies it into dt internally, and the game-layer
+     * tickers (ai/objective) run on the scaled dt. */
+    float time_scale = 1.0f;
     /* Interactive proof: the arrow keys pan the blitted texture. */
     int rock_x = 24, rock_y = 24;
 
@@ -743,7 +755,7 @@ int LegorrrRun(void)
                         }
                         fprintf(log, "frameloop: option %s -> %d/%d (%s)\n",
                                 oit->label, oit->value, oit->max,
-                                live ? "audio" : "state");
+                                live ? "audio" : "store — applied live");
                         fe.option_changed = 0;
                     }
                 }
@@ -919,7 +931,10 @@ int LegorrrRun(void)
          * (findings 09/10/22). */
         if (game.level != NULL) {
             cmd_queue_tick();
-            int ai_done = ai_tick(&game, dt);
+            time_scale = options_time_scale(&game.options);
+            ctx.time_scale = time_scale;
+            float sdt = dt * time_scale;
+            int ai_done = ai_tick(&game, sdt);
             if (ai_done != 0) {
                 fprintf(log, "frameloop: ai commands completed: %d\n", ai_done);
             }
@@ -928,7 +943,7 @@ int LegorrrRun(void)
                 fprintf(log, "frameloop: tasks completed this frame (mask 0x%x)\n",
                         done);
             }
-            int resolved = objective_tick(game.level, dt);
+            int resolved = objective_tick(game.level, sdt);
             if (resolved == 0) {
                 fprintf(log, "frameloop: objective resolved (word 0x%08x)\n",
                         game.level->objective);
@@ -1006,6 +1021,16 @@ int LegorrrRun(void)
                                          ui, rock_x + 64 + 8, rock_y);
                 }
             }
+            /* Help Window (issue #85): the option toggles the shipped help
+             * panel over the level; the advisor stream text leads when the
+             * announcer has one. */
+            if (game.level != NULL && game.options.help_window != 0) {
+                frontend_help_overlay(pixels, pitch, WINDOW_W, WINDOW_H,
+                                      objective_stream(game.level));
+            }
+            /* Brightness (issue #85): BrightnessSet's scalar on the frame. */
+            render_apply_brightness(pixels, pitch, WINDOW_W, WINDOW_H,
+                                    game.options.brightness);
             platform_screenshot(win, pixels, pitch, WINDOW_W, WINDOW_H,
                                 (int)frames);
             platform_present_pixels(win, pixels, pitch, WINDOW_W, WINDOW_H);

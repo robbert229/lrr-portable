@@ -15,7 +15,9 @@
  *   Enter on a Next to "Menu%i"  -> navigate submenus
  *   Esc on a submenu             -> back to the root submenu
  *   Esc on the root submenu      -> quit
- *   Slider/Cycle/TextInput       -> display-only (parsed, not editable)
+ *   Slider/Cycle                 -> adjust the option (writes into fe->opts
+ *                                  when attached; issue #85)
+ *   TextInput                    -> display-only (parsed, not editable)
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -285,8 +287,9 @@ static void fe_parse_item(const char* value, FeItem* it)
 }
 
 /* Slider initial values per banner — the corpus's option defaults
- * (OptionsLoadOrDefault: speed 1, SFX 8, music 5, brightness 8). These are
- * state until the engine's option globals (DAT_00557030/34/3c) are wired. */
+ * (OptionsLoadOrDefault: speed 1, SFX 8, music 5, brightness 8). With
+ * `fe.opts` attached (issue #85) the *effective* store value wins —
+ * fe_options_seed overrides these — and menu edits write back. */
 static int fe_option_default(const char* banner, int lo, int hi)
 {
     int d = lo;
@@ -297,6 +300,60 @@ static int fe_option_default(const char* banner, int lo, int hi)
     if (d < lo) { d = lo; }
     if (d > hi) { d = hi; }
     return d;
+}
+
+/* --- functional options (issue #85) --------------------------------------
+ * `fe->opts` (not owned) is the effective-value store: seeding puts the
+ * store's value into the widget, adjustments write it back. Labels that map
+ * to no option id (level names, plain triggers) are left display-only. */
+
+static int fe_options_widget(int kind)
+{
+    return kind == FE_ITEM_SLIDER || kind == FE_ITEM_REALSLIDER
+        || kind == FE_ITEM_CYCLE;
+}
+
+static void fe_options_seed_item(FrontEnd* fe, FeItem* it)
+{
+    int v = 0;
+    if (fe->opts == NULL || !fe_options_widget(it->kind)) {
+        return;
+    }
+    if (!options_get_label(fe->opts, it->label, &v)) {
+        return;
+    }
+    if (v < it->min) {
+        v = it->min;
+    }
+    if (v > it->max) {
+        v = it->max;
+    }
+    it->value = v;
+}
+
+void frontend_options_sync(FrontEnd* fe)
+{
+    if (fe == NULL || fe->opts == NULL) {
+        return;
+    }
+    for (int m = 0; m < FE_MENU_COUNT; m++) {
+        for (int s = 0; s < fe->menus[m].submenu_count; s++) {
+            FeSubmenu* sub = &fe->menus[m].submenus[s];
+            for (int i = 0; i < sub->item_count; i++) {
+                fe_options_seed_item(fe, &sub->items[i]);
+            }
+        }
+    }
+}
+
+/* Write the widget's new value back into the store (issue #85): every option
+ * adjustment lands here, so the frame loop's live consumers (dt scale,
+ * brightness, help overlay, audio) read the effective value. */
+static void fe_options_write(FrontEnd* fe, FeItem* it)
+{
+    if (fe->opts != NULL && fe_options_widget(it->kind)) {
+        options_set_label(fe->opts, it->label, it->value);
+    }
 }
 
 /* --- menu group building -------------------------------------------------- */
@@ -614,6 +671,8 @@ int frontend_build(FrontEnd* fe, BlockFile* cfg)
     fe_graft_picker(fe, &fe->menus[FE_MENU_MAIN], 1);
 
     fe->built = main_ok;
+    /* Options widgets seed from the store when one is already attached. */
+    frontend_options_sync(fe);
     return main_ok;
 }
 
@@ -713,6 +772,9 @@ int frontend_open(FrontEnd* fe, int menu)
     fe->open = 1;
     fe->quit = 0;
     fe->pending_level[0] = '\0';
+    /* Issue #85: re-entry shows the effective option values, never the
+     * build-time defaults — sync every widget from the store. */
+    frontend_options_sync(fe);
     fe_overlay_step(fe); /* open the active submenu's flic overlays */
     /* corpus DAT_005574e0 reset @ 0x413d29: the plane returns to the top
      * whenever the menu (re-)enters. */
@@ -854,10 +916,12 @@ FeEvent frontend_tick(FrontEnd* fe, const FeInput* in,
             || dit->kind == FE_ITEM_CYCLE) {
             if (in->right && dit->value < dit->max) {
                 dit->value++;
+                fe_options_write(fe, dit);
                 fe->option_changed = 1;
             }
             if (in->left && dit->value > dit->min) {
                 dit->value--;
+                fe_options_write(fe, dit);
                 fe->option_changed = 1;
             }
         }
@@ -952,6 +1016,7 @@ FeEvent frontend_tick(FrontEnd* fe, const FeInput* in,
                     }
                     if (v != dit->value) {
                         dit->value = v;
+                        fe_options_write(fe, dit);
                         fe->option_changed = 1;
                     }
                 }
@@ -1136,6 +1201,50 @@ static void fe_fill_rect(void* px, int pitch, int w, int h,
                       (uint8_t)r, (uint8_t)g, (uint8_t)b);
         }
     }
+}
+
+void frontend_draw_text(void* px, int pitch, int w, int h, int x, int y,
+                        const char* s, int r, int g, int b)
+{
+    if (px == NULL || s == NULL) {
+        return;
+    }
+    fe_draw_text(px, pitch, w, h, x, y, s, r, g, b);
+}
+
+/* The in-game Help Window panel (issue #85). Corpus model: HelpWindow's
+ * BIG-screen backdrop with info text; the Help_Window option is the
+ * display gate. The port's face is a bottom-left panel: title line plus
+ * `text` (the demo key lines when NULL). */
+void frontend_help_overlay(void* px, int pitch, int w, int h,
+                           const char* text)
+{
+    if (px == NULL || w <= 0 || h <= 0) {
+        return;
+    }
+    int x0 = 16, y0 = (h > 96) ? h - 92 : 4;
+    int pw = (w > 360) ? 360 : (w > 40 ? w - 32 : w);
+    int ph = 80;
+    if (y0 + ph > h) {
+        ph = h - y0 - 4;
+    }
+    if (ph <= 0) {
+        return;
+    }
+    fe_fill_rect(px, pitch, w, h, x0, y0, pw, ph, 10, 14, 34);
+    /* 1-px frame */
+    fe_fill_rect(px, pitch, w, h, x0, y0, pw, 1, 150, 160, 200);
+    fe_fill_rect(px, pitch, w, h, x0, y0 + ph - 1, pw, 1, 150, 160, 200);
+    fe_fill_rect(px, pitch, w, h, x0, y0, 1, ph, 150, 160, 200);
+    fe_fill_rect(px, pitch, w, h, x0 + pw - 1, y0, 1, ph, 150, 160, 200);
+    fe_draw_text(px, pitch, w, h, x0 + 8, y0 + 6, "HELP", 235, 225, 150);
+    fe_draw_text(px, pitch, w, h, x0 + 8, y0 + 26,
+                 (text != NULL && text[0] != '\0')
+                     ? text : "ESC PAUSE  ENTER SELECT  SPACE SFX",
+                 200, 205, 220);
+    fe_draw_text(px, pitch, w, h, x0 + 8, y0 + 46,
+                 "C ORE   CRYSTALS   B SAVE   Y REWARD",
+                 170, 175, 195);
 }
 
 /* --- shipped bitmap-font lane (FUN_0047a470) ------------------------------ */
