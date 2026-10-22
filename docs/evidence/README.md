@@ -88,3 +88,16 @@ speed probe (`FUN_00469cc0`, `+0x334+0x24`), and the idle registration
 setter (`FUN_00432e00`) and the round-to-nearest converter (`FUN_0048e060`)
 come from the earlier sessions' records and the shipped-image disassembly.
 Import with `import_evidence_bundle` or inspect `records` directly.
+
+## `legorr-pathfinder-build.bundle`
+
+Exported 2026-10-21 from the pathfinder slice — 68 retained observations,
+the same store as `legorr-tile-queries.bundle` (the session added the
+wave-flood decompiles recorded there). The records the slice leans on are
+the flood seed (`FUN_00430ee0`, target validation + flag `0x40000` spread),
+the traceback probe (`FUN_00430530`, `flags & 8` gate, type-8/10 cells),
+the grid-handle entry points (`FUN_0044f380`/`FUN_0044efb0`), and the tile
+accessors (`FUN_00431560`, `FUN_004319b0`). The creator lifecycle — install
+(`0x4418d0`), per-cell append with the `0.5f` marker (0x44693b), and the
+finish reset (`0x441a50`) — was read from the shipped-image disassembly.
+Import with `import_evidence_bundle` or inspect `records` directly.

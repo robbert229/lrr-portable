@@ -98,6 +98,16 @@ void ai_set_activity(EntitySlot* e, int id, int param);
  * the buffer per path command. */
 int ai_path_append(EntitySlot* e, float x, float y);
 
+/* Build a move command's path into the entity buffer: install-reset the
+ * list (corpus dispatch start, 0x4418d0) and append one entry per walked
+ * cell (builder appends, 0x44693b). The corpus algorithm is the wave-flood
+ * system on the level+4 grid handle (FUN_00430ee0/FUN_00430530) — TODO;
+ * the port stands in with a 4-neighbour BFS gated by level_walkable.
+ * Returns the entry count, or 0 when no path exists (no grid, blocked
+ * start/target, unreachable, longer than AI_WAYPOINTS_MAX) and the caller
+ * seeds a one-hop fallback. */
+int ai_path_build(GameContext* ctx, EntitySlot* e, float tx, float ty);
+
 /* Run the entity-manager tick for `dt` seconds: walk live entities and
  * apply the verified callback branches in corpus order, then step the
  * command chains. Returns the number of commands completed this tick. */

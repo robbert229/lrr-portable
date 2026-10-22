@@ -244,11 +244,48 @@ branch registers only on `'\t'` cells. Without a bound grid every map
 operation falls back to the port-side default (the corpus tick cannot walk
 an empty grid), which is what the mapless unit tests exercise.
 
-Still TODO inside movement: the **pathfinder that fills the buffer**
-(`FUN_00430ee0`/`FUN_00430530` seed/flood region — now that walkability
-exists, this is the next slice), the **`ent+0xbc` record list** as a
-distinct structure from the `+0x2f0` chain (behind `FUN_00403d10`'s arrival
-unlink), and the `+0x334` state objects behind the walkability gates above.
+### Pathfinder builder (port-shape closed 2026-10-21)
+
+How a move command fills the entity buffer is fully evidenced, and the
+port now mirrors the lifecycle:
+
+- Install (`0x4418d0`): the dispatch sets entity `+0x24` = buffer, `+0x28` =
+  count, `+0x2c` = index 0, clears `+0x28c`/`+0x290`, raises the mover
+  flag, and installs the buffer — the list is *installed per command*,
+  replacing the previous one.
+- Append (`0x44693b`): the builder grows the heap buffer with
+  `realloc(list, count*20)` (`lea (%eax,%eax,4),%edx; shl $2`) and writes
+  one entry per *walked cell*: `{x, y, 0.5f}` (third dword the constant
+  `0x3f000000`), stride 5 dwords — the same entry layout the walker pops.
+- Finish (`0x441a50`): frees the buffer (`0x48db80`), resets
+  `+0x24`/`+0x28`/`+0x2c`/`+0x28c`/`+0x290`, and clears the mover bits
+  (`and $0xff7ffffe`) — a command ending releases its list.
+
+The corpus *algorithm* between install and append is the wave-flood system
+on the grid handle at `level+4` (`FUN_0044f380`/`FUN_0044efb0`): the seed
+(`FUN_00430ee0`) validates the target cell (`record+0 == 0`), stamps it 1,
+and raises flag `0x40000` across the four neighbours as waves, while
+`FUN_00430530` marks cells `record+0 = 5` on the type-8/10 traceback and
+refuses blocked (`flags & 8`) cells. That system is **not ported**
+(TODO(corpus)) — its cell state byte, wave flag, and traceback live in the
+voxel records the port mirrors but whose path-search fields stay empty.
+
+Port stand-in (`ai_path_build`, called from `cmd_create_move` through the
+module context): install-reset the waypoint list per command, run a
+4-neighbour BFS over the grid through `level_walkable` cells only, and
+append the path cells front-to-back (start excluded) corpus-style. No
+grid, blocked start/target, unreachability, or an over-long path
+(> `AI_WAYPOINTS_MAX`; the corpus buffer is heap-unbounded) returns 0 and
+the caller seeds the one-hop fallback. The consumption side is unchanged,
+so multi-entry lists flow through the already-mirrored pop-on-arrival and
+completion semantics. `ai_test` covers a dispatch that reroutes around a
+blocked column without ever landing on it.
+
+Still TODO inside movement: the **wave-flood pathfinder** replacing the
+port BFS stand-in (the algorithm half of this section), the **`ent+0xbc`
+record list** as a distinct structure from the `+0x2f0` chain (behind
+`FUN_00403d10`'s arrival unlink), and the `+0x334` state objects behind the
+walkability gates above.
 
 Documented TODO branches (not guessed): projectile arcs (`+0x3e0`
 `0x400000`, `FUN_004755e0`/`FUN_00475120`); screen
