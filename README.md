@@ -260,6 +260,21 @@ Open threads, in order of value:
 | 57 | [`findings/57-incident-message-advisor-consumer.md`](docs/findings/57-incident-message-advisor-consumer.md) | Queued incident messages feed the scrolling text widget through a gated consumer |
 | 58 | [`findings/58-win32-message-pump-filter.md`](docs/findings/58-win32-message-pump-filter.md) | Win32 message pump filters selected messages before translation and dispatch |
 | 59 | [`findings/59-directinput-key-state-to-text.md`](docs/findings/59-directinput-key-state-to-text.md) | DirectInput snapshots feed key-edge handling and the text-entry path |
+| 60 | [`findings/60-win32-cursor-sampling.md`](docs/findings/60-win32-cursor-sampling.md) | Win32 cursor sampling stores clamped client-relative coordinates and deltas |
+| 61 | [`findings/61-cursor-screen-ray-camera-routing.md`](docs/findings/61-cursor-screen-ray-camera-routing.md) | Gameplay cursor coordinates feed a camera unprojection and ray path |
+| 62 | [`findings/62-three-dimensional-sound-distance-controls.md`](docs/findings/62-three-dimensional-sound-distance-controls.md) | Configured 3D sound distance and rolloff values update DirectSound interfaces |
+| 63 | [`findings/63-sound-instance-buffer-rotation-and-routing.md`](docs/findings/63-sound-instance-buffer-rotation-and-routing.md) | Sound submissions rotate looping buffers and separate streaming from in-memory playback |
+| 64 | [`findings/64-wad-stream-handle-contract.md`](docs/findings/64-wad-stream-handle-contract.md) | WAD opens materialize per-open buffers behind the generic stream handle |
+| 65 | [`findings/65-wad-end-relative-seek-boundary.md`](docs/findings/65-wad-end-relative-seek-boundary.md) | WAD end-relative seeks bypass the range clamp; out-of-range reads carry a derived risk |
+| 66 | [`findings/66-front-end-options-round-trip-through-six-save-contexts.md`](docs/findings/66-front-end-options-round-trip-through-six-save-contexts.md) | Three front-end option globals round-trip through six per-slot contexts |
+| 67 | [`findings/67-save-slot-write-includes-option-context.md`](docs/findings/67-save-slot-write-includes-option-context.md) | Save-slot headers serialize the selected option context along with level records |
+| 68 | [`findings/68-avi-frame-timebase.md`](docs/findings/68-avi-frame-timebase.md) | AVI frame indices derive from elapsed time and stream rate |
+| 69 | [`findings/69-avi-stream-open-and-teardown.md`](docs/findings/69-avi-stream-open-and-teardown.md) | AVI setup stages retain stream state across later failures before teardown |
+| 70 | [`findings/70-activity-change-dispatch-and-consumption.md`](docs/findings/70-activity-change-dispatch-and-consumption.md) | Activity pointer changes select typed runners, then commit timer and state |
+| 71 | [`findings/71-save-slot-read-restores-level-markers-not-the-live-task-block.md`](docs/findings/71-save-slot-read-restores-level-markers-not-the-live-task-block.md) | Slot reads feed campaign-list completion markers; live task restoration was not observed |
+| 72 | [`findings/72-osf-reader-return-means-open-not-validated.md`](docs/findings/72-osf-reader-return-means-open-not-validated.md) | `.osf` reader's success result records file-open, even when validation rejects data |
+| 73 | [`findings/73-flh-caller-gated-playback.md`](docs/findings/73-flh-caller-gated-playback.md) | `.flh` advancement is caller-gated while the current surface continues drawing |
+| 74 | [`findings/74-reward-flh-context-lifetime.md`](docs/findings/74-reward-flh-context-lifetime.md) | Reward `.flh` contexts load lazily per task and close on transition or exit |
 
 Named-pseudocode corpus: [`docs/decompiles/engine-region.c`](docs/decompiles/engine-region.c)
 (114 named functions covering the engine/game-logic region — findings 01–10).
