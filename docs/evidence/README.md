@@ -637,3 +637,11 @@ Exported for finding 126. Three function records cover the ten-entry effect-tabl
 Exported for finding 128. The 53-record bundle retains the canonical entity-activity evidence and adds fresh function records for `FUN_0044b370` (activity-list installation) and `FUN_0046a060` (capacity getter). It supports the getter's read from entity stats `+0xcc`, the installer's zero-store to `+0x3f4`, and the list mutation branches; the fields' broader semantics remain unresolved.
 
 Finding 129 reuses the `FUN_00483420` record in `legorr-screen-space-effect-lane.bundle` and the `FUN_00482d60` record in `legorr-engine-expansion.bundle`; no duplicate bundle was added.
+
+## `legorr-activity-3f4-reader-census.bundle`
+
+Exported for finding 130. The 58-record bundle retains activity-capacity evidence and adds a complete initialized-image search for displacement `0x3f4` plus instruction decodes of every non-writer match. The search finds no other direct entity-field reference; derived pointer arithmetic remains outside its scope.
+
+## `legorr-stats-tools-capacity.bundle`
+
+Exported for finding 131. Seventy-five records cover the Stats loader reading `NumOfToolsCanCarry`, parsing per-level values into `+0xcc` in `0x150`-byte records, the state selector's per-level record pointer, and the activity-capacity getter.

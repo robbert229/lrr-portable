@@ -530,5 +530,6 @@ and `DAT_004a48b0` consumer semantics unresolved; the riding-attach writer
 the `+0x3e4` bit-`0x40` grant-flag raiser (closed to a census: no immediate
 OR-writer exists — see the permitted-activity call-sites note; the computed
 store among the `mov [..+0x3e4], reg` sites is config/runtime-driven); the
-stats-block instance fill — `+0xcc` permitted-list capacity (the port's
-`activity_cap` defaults to the span) and the appender's `+0x3f4` write.
+appender's `+0x3f4` field meaning (finding 130 found no other direct
+entity-field reference); the stats `+0xcc` capacity source is documented in
+finding 131 as Stats `NumOfToolsCanCarry`.
