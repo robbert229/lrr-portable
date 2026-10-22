@@ -20,7 +20,7 @@ and curiosity; nothing in this repository is affiliated with or endorsed by the 
 
 ```
 README.md           This file
-docs/findings/      Reverse-engineering findings, 01–25 (see index below)
+docs/findings/      Reverse-engineering findings, 01–27 (see index below)
 tools/              WAD tooling (rrwad.py: unpack/pack/verify — see tools/README.md)
                     + model converter (tools/rrlwo.py: .lwo → glTF 2.0)
                     + compat harness (tools/compat/a2.py — see tools/compat/README.md)
@@ -72,7 +72,7 @@ legally obtained copy of the game.
 
 ## Current status (2026-10-21)
 
-Research is complete: all 25 findings shipped, every format shipped in the wads is
+Research is complete: all 27 findings shipped, every format shipped in the wads is
 documented address-level — including the two that exist but are never loaded
 (`.x` XOF-text leftovers, `.blx` editor-only) — and the `Lego*` block-text system that
 `.ae` belongs to (finding 12). The game runs and is playable through the Proton wrapper,
@@ -121,6 +121,27 @@ thing uses — `FUN_00475140` (draw at time), `FUN_00477010`/`FUN_00477150`
 `DAT_00505914` vtable system (source string `gods98/dx6`). REA evidence:
 `docs/evidence/legorr-ddscene.bundle` (64 records). Complements finding 24's
 `MenuWipe` (the LWS rock-slide is one instance of this runtime).
+
+Finding 26 (2026-10-21) decoded the two animation callbacks that draw step
+fires: the per-frame **SFX sample hook** (`DAT_0076cd78/7c`, registered by the
+45-slot SFX-name-hash bank init `FUN_00464740` — slot `0x27` =
+`SFX_RockWipe`, the wipe's own start-rumble, confirmed), playing each
+animation frame's `SAMPLE` name as a positional D3D sound, and the scene-end
+**entity-flag hook** (`DAT_0076cd80/84`, boot-registered) that ORs bit
+`0x10000` into the owning entity's `+0x3e4` flag word (a new bit on the
+finding-10 flag word). REA evidence:
+`docs/evidence/legorr-ddscene-hooks.bundle` (46 records).
+
+Finding 27 (2026-10-21) closed the loop on that scene-done bit: both readers
+live inside the finding-10 flag-evaluator blob. Reader A (`0x43dd10`) plays
+the **placement sounds by work-object type** — `7` (Ore) → `SFX_PlaceOre`,
+`6` (PowerCrystal) → `SFX_PlaceCrystal`, else `SFX_Place`, via
+`FUN_00465050` — gated on gated/placing mode (`+0x3e0 & 0x400`) and a target
+handle (`+0x308`). Reader B (`0x43d903`) runs the `FUN_004475c0`
+impact/wake probe (message 5, roll speed, shake; bits `0x100000` /
+`0x40000000`) and clears the bit. New `+0x3e4` bit facts (`0x10000`,
+`0x80000`, `0x100000`, `0x40000000`) appended to finding 10. REA evidence:
+`docs/evidence/legorr-scene-done.bundle` (42 records).
 
 The fresh verify pass (finding 20, 2026-10-20) re-derived the critical path — PE entry
 (`0x48f000`) → WinMain (`FUN_004777a0`) → init → frame loop → engine tick (`0x4232e0`) —
@@ -179,6 +200,9 @@ Open threads, in order of value:
 | 23 | [`findings/23-front-end-and-menu.md`](docs/findings/23-front-end-and-menu.md) | **Front-end & menus closed**: the boot→main-menu machine — `MenuBuild @ 0x4140c0`, the modal `MenuRunLoop`/`MenuTick`, the `FrontEndActive` gate, `MenuEnter`/`FrontEndStateChange`, the level-chain + start-level entries, and the options/movie callbacks, with the config grammar. Plus the two port blockers: the **`::` path separator** (`DAT_004aab18` = `"::"`) and the shipped level-name vocabulary (`Levels::<name>` via `StartLevel`/`NextLevel`, never `Level01`) — which together root-caused the `Lego.cfg` integration blocker |
 | 24 | [`findings/24-menu-wipe-and-front-end-transition.md`](docs/findings/24-menu-wipe-and-front-end-transition.md) | **Menu wipe closed**: the config-driven LWS front-end transition — `MenuWipe`/`!MenuWipe` keys (reduce-animation gate, `"Null"` disable) loaded by `LoadMenuBuild @ 0x4161f0` into the LWS scene factory (`FUN_00472cd0`, kind `"LWS"` → `FUN_004765c0`), stepping `RockWipe.lws` (35f @ 25 fps) as the menu-change wipe in `MenuRunLoop`/`MenuTick` with an input freeze — the wipe/fade gap left open in finding 23 |
 | 25 | [`findings/25-ddscene-object-runtime.md`](docs/findings/25-ddscene-object-runtime.md) | **DDiScene object runtime closed**: the game-wide scene-graph object model the MenuWipe (finding 24) and every animated 3D thing runs on — the 9-slot kind string table (`NULL MESH FRAME ANIM ACT - - LWS LWO`), the pooled `0x2c`-byte object record (`DAT_0076add0` free list, kind at `+0x10`, flags at `+0x14`), the draw/step API (`FUN_00475140` draw-at-time, `FUN_00477010`/`FUN_00477150` begin/end scene, `gods98/dx6` source path), and the `FUN_004765c0` scene loader behind `DAT_00505914` |
+| 26 | [`findings/26-ddscene-animation-hooks.md`](docs/findings/26-ddscene-animation-hooks.md) | **DDiScene animation hooks closed**: the two callbacks `FUN_00475140` fires every frame — the per-frame **SFX sample** hook (`DAT_0076cd78/7c`, registered by the `FUN_00464740` 45-slot SFX-name-hash bank init, `0x27` = `SFX_RockWipe` → `FUN_00465050`→`FUN_0047ad70` positional play) and the scene-**end entity flag** hook (`DAT_0076cd80/84`, boot-registered, ORs `0x10000` into `entity+0x3e4`) — plus the `FUN_00464f60` pending-SFX queue |
+| 27 | [`findings/27-scene-done-flag-consumers.md`](docs/findings/27-scene-done-flag-consumers.md) | **Scene-done flag readers closed**: both consumers of `entity+0x3e4 bit 0x10000` (set by finding 26's scene-end hook) inside the finding-10 flag-evaluator blob — reader A (`0x43dd10`) plays **placement sounds by work-object type** (`7`→`SFX_PlaceOre`, `6`→`SFX_PlaceCrystal`, else `SFX_Place` via `FUN_00465050`), reader B (`0x43d903`) runs the `FUN_004475c0` impact/wake probe (message 5, roll speed, shake) and clears the bit — plus new `+0x3e4` bit facts (`0x80000`, `0x100000`, `0x40000000`) appended to finding 10 |
+| 26 | [`findings/26-ddscene-animation-hooks.md`](docs/findings/26-ddscene-animation-hooks.md) | **DDiScene animation hooks closed**: the two callbacks `FUN_00475140` fires every frame — the per-frame **SFX sample** hook (`DAT_0076cd78/7c`, registered by the `FUN_00464740` 45-slot SFX-name-hash bank init, `0x27` = `SFX_RockWipe` → `FUN_00465050`→`FUN_0047ad70` positional play) and the scene-**end entity flag** hook (`DAT_0076cd80/84`, boot-registered, ORs `0x10000` into `entity+0x3e4`) — plus the `FUN_00464f60` pending-SFX queue |
 
 Named-pseudocode corpus: [`docs/decompiles/engine-region.c`](docs/decompiles/engine-region.c)
 (114 named functions covering the engine/game-logic region — findings 01–10).
