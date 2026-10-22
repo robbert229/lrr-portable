@@ -623,3 +623,11 @@ Exported for finding 122. Three function records cover `FUN_0047b580` allocation
 ## `legorr-avi-frame-row-copy.bundle`
 
 Exported for finding 123. Two function records cover `AVIStreamGetFrame` dispatch and the helper that copies DIB rows into the destination pixel buffer.
+
+## `legorr-screen-shake-raiser.bundle`
+
+Exported for finding 125. Two observations cover the negative-result branch in `FUN_004475c0`, which calls `FUN_0043f6a0` and raises entity `+0x3e4` bit `0x40000000`, plus the incoming-reference inventory for `DAT_004a48b0`. The global's consumer semantics remain unresolved.
+
+## `legorr-screen-space-effect-lane.bundle`
+
+Exported for finding 126. Three function records cover the ten-entry effect-table dispatcher, its 15-second timer/fade helper, and indexed per-item alpha/flag updates. Screen-space coordinates and the later draw consumer are not established.

@@ -31,6 +31,4 @@ Bundle: `docs/evidence/legorr-sound3d-per-source.bundle`.
 The binary directly shows descriptor flag value `0x200f2` and setter vtable
 slots. Identifying bit `0x10` as `DSBCAPS_CTRL3D`, and the slots as the
 DirectSound minimum- and maximum-distance setters, uses DirectSound interface
-and flag definitions. Static evidence does not show audible output, whether
-all records are in the linked list at every config update, or which individual
-sounds use 3D positioning.
+and flag definitions ([buffer capability flags](https://learn.microsoft.com/en-us/previous-versions/windows/desktop/ee416818%28v%3Dvs.85%29), [3D buffer methods](https://learn.microsoft.com/en-us/previous-versions/windows/desktop/ee417960%28v%3Dvs.85%29)). Static evidence does not show audible output, whether all records are in the linked list at every config update, or which individual sounds use 3D positioning.

@@ -323,6 +323,8 @@ Open threads, in order of value:
 | 121 | [findings/121-per-source-sound-buffers-request-3d-control.md](docs/findings/121-per-source-sound-buffers-request-3d-control.md) | Sound buffers request 3D control and tracked buffers receive distance updates |
 | 122 | [findings/122-wav-mmio-buffer-handoff.md](docs/findings/122-wav-mmio-buffer-handoff.md) | In-memory WAV loading copies the data chunk through the MMIO read window |
 | 123 | [findings/123-avi-frame-dib-row-copy.md](docs/findings/123-avi-frame-dib-row-copy.md) | AVI frame helper copies DIB rows into the surface pixel buffer |
+| 125 | [findings/125-screen-shake-flag-raiser.md](docs/findings/125-screen-shake-flag-raiser.md) | Negative entity health delta raises the screen-shake flag |
+| 126 | [findings/126-screen-space-effect-lane-dispatch-and-opacity-update.md](docs/findings/126-screen-space-effect-lane-dispatch-and-opacity-update.md) | Ten-entry effect table dispatches timed opacity updates |
 
 Named-pseudocode corpus: [`docs/decompiles/engine-region.c`](docs/decompiles/engine-region.c)
 (114 named functions covering the engine/game-logic region — findings 01–10).
