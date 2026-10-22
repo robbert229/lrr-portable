@@ -3,7 +3,8 @@
 *Anchors: `SavReadSlot @ 0x417a90`, `SavWriteSlot @ 0x417bd0`, `SavCommit @ 0x417fc0`,
 `SavMarkRecord @ 0x417eb0`, `SavWriteRecord @ 0x417f40`, `SavBuildCtx @ 0x417e70`,
 `CheckpointStep @ 0x462270`, `CheckpointBlobBuild @ 0x45fda0`,
-`OsfAdd @ 0x459190`, `OsfWrite @ 0x4593e0`, `SaveMenuBuild @ 0x415a10`.
+`OsfAdd @ 0x459190`, `OsfWrite @ 0x4593e0`, `OsfRead @ 0x459470`,
+`SaveMenuBuild @ 0x415a10`.
 Pseudocode: `docs/decompiles/engine-region.c`.*
 
 ## TL;DR
@@ -43,6 +44,72 @@ Record = `u32 flags` (`|1` dirty, `|2` also-set by `SavMarkRecord`) + `0x318c`-b
 A completed objective entity (`type==2`, flag `&8`) is appended by the entity-death handler
 (`0x43bd4b → OsfAdd`). `OsfSnapshot` clones the table to a shadow copy at `DAT_004ffe5c`;
 the `DAT_004ffe64` "dirty" flag is set on snapshot and cleared on write.
+
+### `.osf` load-side restore (closed — the sidecar comes back on level load)
+
+The write side is not the whole story: **`LevelLoad @ 0x429890` re-reads the
+active slot's `.osf` and reinstalls the completed-objective table**, gated on
+the in-memory table being clean and a slot being active. The reader is
+`FUN_00459470` (`OsfRead`), the *only* consumer of the `'RO'` file format
+aside from `OsfWrite` — it is built on the same `FUN_0047f6e0`/`FUN_0047f980`
+(fopen/fread) primitives the `.sav` reader uses, which is why the earlier
+write-only description missed it.
+
+The gate, from `LevelLoad @ 0x429890` (FUN_0048d9e0 `"%s\\%i.osf"` at
+`0x4a2788`):
+
+```
+FUN_004593d0();   // OsfReadGate: returns DAT_004ffe64 (the dirty flag)
+if (dirty == 0 && FUN_00417e90() != -1) {   // clean table AND active slot
+    OsfRead("Saves\<slot>.osf");
+}
+```
+
+`FUN_00459470(path)` — full reader, mirrors the port's `osf_read`:
+
+| Step | Corpus behavior | Evidence |
+| --- | --- | --- |
+| 0 | clear **live** table only: count/capacity = 0, free `DAT_004ffe50` (the shadow pair is left as-is) | `OsfClear @ 0x4592a0` |
+| 1 | `fopen(path, "rb")`; fail → return 0, table stays cleared | `FUN_0047f6e0` |
+| 2 | file size via seek-end (`FUN_0047fca0`) | `0x459470` body |
+| 3 | read 8-byte header: u32 magic + u32 count | `FUN_0047f980(&local_8,4,2,fp)` |
+| 4 | **magic must be `0x534F5252`** (`'RO'` LE) | `local_8 == 0x534f5252` |
+| 5 | **size must equal `8 + count*0x14` exactly** (any truncated/padded/count-mismatched file rejected) | `iVar2 + -8 == local_4 * 0x14` |
+| 6 | alloc `count*0x14`, read entries into live `DAT_004ffe50`, set count/capacity `DAT_004ffe54/58` | `OsfRead` body |
+| 7 | snapshot live → shadow (`DAT_004ffe5c`, count `DAT_004ffe60`), then `DAT_004ffe64 = 0` | `OsfSnapshot @ 0x4592e0` |
+| 8 | `fclose`; return 1 **whenever the file opened** (valid or not) — the *installed state* (`DAT_004ffe54 == 0` on a bad sidecar) is what signals success | `uVar3 = 1` |
+
+**Failure handling**: a missing `.osf` returns 0 and leaves the cleared table;
+a corrupt file (bad magic, size-count mismatch, short read) *also* returns 1
+(the file existed) but leaves the table empty — completed objectives degrade
+to none, no crash, no partial install. What a failed read does **not** do is
+touch the shadow: `DAT_004ffe5c/60` is written only by the success-path
+`OsfSnapshot @ 0x4592e0`, so a failed or zero-count read leaves the *previous*
+level's shadow populated, and `FUN_00459360` (called from
+`FrontEndStartLevel @ 0x415220` and `ObjectiveTick @ 0x458be0`) copies it back
+over the empty live table with no dirty gate — the corpus can resurrect a
+stale shadow. The port closes this hole: `osf_read` zeroes
+`osf_shadow_count`/`osf_shadow_dirty` **before** opening the file (the
+fixed-array equivalent of the corpus's realloc-on-next-snapshot, recorded as a
+deviation), so no sidecar path can leave anything stale.
+
+**What the restored table drives**: `FUN_00459360` (copy `DAT_004ffe5c →
+`DAT_004ffe50`, called from `FrontEndStartLevel @ 0x415220` and
+`ObjectiveTick @ 0x458be0`) rolls the live table back to that snapshot —
+the "repeatable mission" restart point — and `OsfWrite` serialises the live
+table on the next commit. So the restore reinstalls both the re-serialisable
+completed list **and** the level-restart snapshot in one read.
+
+**Port**: `osf_read`/`osf_read_path` in `savegame.cpp` reproduce steps 0–8
+(fixed-array `GAME_OSF_MAX` cap in place of the corpus's realloc, and the
+shadow pre-clear above in place of the corpus's late-snapshot behavior);
+the frameloop slot-load calls `osf_read_path` after `checkpoint_blob_apply`
+under the same clean-table/active-slot gate, and the pause-menu level restart
+re-runs the same read the way the corpus's in-game level driver re-enters
+`LevelLoad` (registered by `FUN_0041fa20`; `FUN_0041fb50` calls `0x429890`).
+under the same clean-table/active-slot gate. The savegame suite proves the
+strict round trip: write slot → reload → live and shadow contents identical,
+both dirty flags clear, and the corrupt/absent sidecar cases stay empty.
 
 ## In-memory checkpoint machinery
 
@@ -90,7 +157,8 @@ state+0x27c == 1, copies blob→record (`SavWriteRecord`), commits (`SavCommit` 
 with a zero-filled record array first.
 **Load** — `SavTreeLoad(root, records)` walks the config-built level tree
 (`DAT_00556ff8`; roots `DAT_00556fe4/fd0` = menu/game list pairs), consulting each record's
-dirty flag; restore then `FUN_00418110(0)`.
+dirty flag; restore then `FUN_00418110(0)`. The `.osf` sidecar is restored
+separately, inside `LevelLoad` (see §".osf load-side restore" above).
 
 **Record ↔ level** — the index is *per level*, not global: `CheckpointStep` takes it from
 `ListFindName(ActiveObjectList(levelState))` (the current level's position in the active
@@ -225,7 +293,6 @@ dword-verbatim identical):
 ## Still open
 
 - Record flag `|2` semantics (`SavMarkRecord` sets `1` (and `2` when name is empty) — likely "present/empty").
-- `FUN_0047fa50`-based `.osf` restore path (load side only shows the `'RO'` write).
 - `.dat` slot thumbnails: writer closed (see section above); the save-menu
   draw side (`DAT_004db890` blits, SaveImage `Width/Height/BigWidth/BigHeight/
   Pos1..5` rects + the scroll-plane scale) is not ported yet.

@@ -4,6 +4,21 @@ Several REA evidence bundles (JSON) exported from Ghidra analysis sessions of
 `LegoRR.exe` (SHA-256
 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`):
 
+## `legorr-osf-restore.bundle`
+
+Exported 2026-10-21 from the `.osf` load-side restore session (issue #67 /
+LPT-16): the full `OsfRead @ 0x459470` body with its `OsfClear @ 0x4592a0`
+pre-step and the exact `8 + count*0x14` size / `0x534f5252` magic checks,
+`OsfDirtyGet @ 0x4593d0` (returns `DAT_004ffe64`), the read primitives
+(`FUN_0047f980`/`FUN_0047fca0` — the shared fread/fsize used by the `.sav`
+reader too), the shadow rollback `FUN_00459360` (copy `DAT_004ffe5c` →
+`DAT_004ffe50`, called from `FrontEndStartLevel @ 0x415220` and
+`ObjectiveTick @ 0x458be0`), the `OsfSnapshot @ 0x4592e0` caller set, and the
+caller proofs that `LevelLoad @ 0x429890` is the *only* entry point for both
+`FUN_004593d0` and `FUN_00459470` (the gate: clean table AND active slot).
+14 records. Import with `import_evidence_bundle` or inspect `records`
+directly.
+
 ## `legorr-menu-wipe.bundle`
 
 Exported 2026-10-21 from the finding-24 session (menu wipe / front-end
