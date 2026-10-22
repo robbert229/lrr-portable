@@ -490,3 +490,11 @@ cover the save writer's unchecked lower-level write results and the reader's
 record-count mismatch reset/retry path. No short-write fault was forced, and
 successful reinitialization is not established. Import with
 `import_evidence_bundle` or inspect `records` directly.
+
+## `legorr-pointer-cursor-config-and-override.bundle`
+
+Exported 2026-10-22 for findings 103–104 — 10 retained observations. Records
+cover the fixed cursor-name registry, config decoding for bitmap and animated
+slots, timed selection overrides, and the reward-pump caller. Exact cursor
+assets and elapsed-time duration in that loop remain unverified. Import with
+`import_evidence_bundle` or inspect `records` directly.
