@@ -645,7 +645,15 @@ finding 12, #14). Three new modules in `src/game/`:
   block), single- and multi-waypoint walking with the arrival pop,
   blocked-tile freezes with the occupancy mark/clear, and the
   queue→executor→move path plus a dispatch rerouting around a blocked
-  column.
+  column. With `test_wads_dir` set the suite gains a `--real` probe: the
+  builder runs against all 42 shipped `.map` levels — sampled pairs
+  checked for gate validity (paths never land on blocked, unwalkable, or
+  reserved cells), agreement with an embedded reference oracle mirroring
+  the pre-port BFS stand-in (reachability and shortest length, reroutes
+  included), and ticked-to-arrival command walkers. It passed green and
+  surfaced one loader gap: the predug edge-wall update is the load-time
+  source of the traversable bit (ported as `predug_wall_cell`, see
+  finding 07), without which shipped maps have no walkable cells.
 - **Per-terrain movement speed** (2026-10-21, closing the finding 10
   per-terrain placeholder): the `FUN_00469cc0` speed probe — the corpus's
   per-terrain movement rates, read from the `+0x334` stats block's table
