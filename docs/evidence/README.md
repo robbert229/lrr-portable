@@ -4,6 +4,96 @@ Several REA evidence bundles (JSON) exported from Ghidra analysis sessions of
 `LegoRR.exe` (SHA-256
 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`):
 
+## `legorr-menu-wipe.bundle`
+
+Exported 2026-10-21 from the finding-24 session (menu wipe / front-end
+transition). 18 recorded observations: the `LoadMenuBuild @ 0x4161f0`
+pseudocode with the `MenuWipe`/`!MenuWipe` config reads and the
+`-reduceanimation`/`"Null"` gates, the string constants (`"MenuWipe"`
+`0x4a26d0`, `"!MenuWipe"` `0x4a26c4`, `"Menu"` `0x4a2544`, `"Null"` `0x4a23f4`,
+`"LWS"` `0x4a13e0`), the `DAT_005574ec`/`DAT_005574f0` xref sweeps, the wipe
+start (`FUN_004103f0`), end (`FUN_00410440`), the `MenuRunLoop @ 0x413b80` /
+`MenuTick @ 0x412c00` drives, the input-freeze gate (`FUN_00411a00`), and the
+factory/dispatch (`FUN_00472cd0`, `FUN_00475930`, `FUN_00472710`,
+`FUN_004765c0`) plus `MenuEnter @ 0x416c80`. Import with `import_evidence_bundle`
+or inspect `records` directly.
+
+## `legorr-scene-done.bundle`
+
+Exported 2026-10-21 from the finding-27 session (the scene-done flag
+consumers in the entity tick). 42 recorded observations: the two `+0x3e4 &
+0x10000` reader sites inside the finding-10 flag-evaluator blob (assembly
+windows `0x43d8f0–0x43ddc0`), reader A's SFX dispatch `FUN_00465050` with bank
+indices `0x23/0x24/0x25` by target type, reader B's `FUN_004475c0` probe, the
+`FUN_00444a200` work-object resolver / `FUN_00475300`/`FUN_004754c0`
+scene helpers, the SFX-bank slot-order verification for `SFX_Place*`, and the
+`+0x3e4` bit-map reads (`0x80000`, `0x100000`, `0x40000000`). Import with
+`import_evidence_bundle` or inspect `records` directly.
+
+## `legorr-ddscene-owner-link.bundle`
+
+Exported 2026-10-21 from the finding-28 owner-link trace. 20 recorded
+observations: `FUN_00473da0` setter and `FUN_00473db0` getter for object
+`+0x20`; the `FUN_00437d00` entity-spawn branch that stores a scene object at
+entity `+0x1c` and assigns the entity as owner; type-1 model propagation via
+`FUN_0046d140`; type-2/3/4 model wrapper `FUN_00408380`; and the scene-object
+constructor `FUN_00472950` clearing the pooled record. The bundle also retains
+the relevant caller/reference inventory. Import with `import_evidence_bundle`
+or inspect `records` directly.
+
+## `legorr-ddscene-lifecycle.bundle`
+
+Exported 2026-10-21 from the finding-29 teardown trace. Eight recorded
+observations: `FUN_00437540` entity teardown and its DDiScene-object handoff;
+`FUN_00472a40`/`FUN_00472a50` object disposal, including the kind-3/4
+mode-0 early return and the `+0x28` free-list insertion; the
+`FUN_00475710(object, 0)` scene-interface path; and `FUN_00472800` pool
+shutdown. The bundle preserves the decompiler bodies and exact caller
+references. Import with `import_evidence_bundle` or inspect `records` directly.
+
+## `legorr-ddscene-reuse.bundle`
+
+Exported 2026-10-21 for findings 30–32. Five focused pseudocode observations:
+`FUN_00473690` (kind-3/4 inactive-clone scan, scene reattach, time-zero
+draw-step, and copy path), `FUN_00472a50` (mode-0 auxiliary-slot parking),
+`FUN_00437d00` (entity owner assignment after clone factory return),
+`FUN_00475140` (callback gates and scene-end threshold), and `FUN_00472800`
+(pool shutdown and global gate reset). Import with `import_evidence_bundle` or
+inspect `records` directly.
+
+## `legorr-ddscene-hooks.bundle`
+
+Exported 2026-10-21 from the finding-26 session (the DDiScene animation hooks).
+46 recorded observations: the boot scene-end hook registration
+(`FUN_00472900`/`FUN_00472920`, `DAT_0076cd78/80`, `DAT_0076cd94 |= 0x40`),
+the two hook stubs (`LAB_0043f130` decode: `FUN_00473db0` → `entity+0x3e4 |=
+0x10000`; `LAB_00464c20` decode: `FUN_00464c70` SFX-name-hash lookup →
+`FUN_00465050` → `FUN_0047ad70`), the 45-slot SFX-name-hash bank init
+`FUN_00464740` (`DAT_00502a20`, `SFX_RockWipe` at slot `0x27`), the
+`FUN_00464f60` pending-SFX queue submit, the `FUN_00475140` draw-step call
+sites (`0x47519b` per-frame / `0x475294` scene-end gates), and the
+`FUN_00473680`/`FUN_00465090` positional-sound path. Import with
+`import_evidence_bundle` or inspect `records` directly.
+
+## `legorr-ddscene.bundle`
+
+Exported 2026-10-21 from the finding-25 session (the DDiScene object runtime
+behind MenuWipe and all LWS/3D animated objects). 64 recorded observations:
+the 9-slot kind-string table (`DAT_0076add8` slots → `NULL MESH FRAME ANIM
+ACT - - LWS LWO`), the object allocator `FUN_00472950` and pool grow
+`FUN_004759f0` (free list `DAT_0076add0`, `1<<DAT_0076cd90` doubling blocks,
+`0x2c`-byte records), the destroy path `FUN_00472a50`, the property/drawing
+accessor family (`FUN_00476160/180/1a0/1e0/200`, `FUN_00475f70`), the
+draw/step API (`FUN_00475140` draw-at-time, `FUN_00475710` step,
+`FUN_00475390/3f0` length/frame read, `FUN_00477010`/`FUN_00477150` begin/end
+scene with the `gods98/dx6` source string, `FUN_00477240`/`FUN_00473b40`
+flags), the animation hooks `DAT_0076cd78/80` and their `FUN_00472900`
+registration, the scene loader `FUN_004765c0` and file-open path `FUN_004800a0`,
+the `DDiScene` class string (`0x4aab98`) and its read site `FUN_00476770`, the
+`DAT_00505914` vtable system xrefs, and the per-kind loader branches
+(`FUN_004767e0` FRAME, `FUN_00476850` MESH, `FUN_004809e0` LWO). Import with
+`import_evidence_bundle` or inspect `records` directly.
+
 ## `legorr-tasktable.bundle`
 
 Exported 2026-10-21 from the task-table block session (issue #64 / LPT-19): the
@@ -22,7 +112,7 @@ function touches the unattributed ranges. 113 records.
 
 The canonical findings bundle. 403 recorded observations — function
 decompilations, address lookups, xref queries, and byte reads — each tied to
-the target digest, so findings 01–23 can be re-verified: import the bundle into
+the target digest, so findings 01–27 can be re-verified: import the bundle into
 a session (`import_evidence_bundle`) or inspect the `records` array directly.
 No game asset bytes are included; entries reference offsets and produce
 analysis text only.
@@ -101,6 +191,18 @@ speed probe (`FUN_00469cc0`, `+0x334+0x24`), and the idle registration
 (`FUN_0043a960`, the `'\t'` probe and `DAT_004eabcc` table). The occupancy
 setter (`FUN_00432e00`) and the round-to-nearest converter (`FUN_0048e060`)
 come from the earlier sessions' records and the shipped-image disassembly.
+Import with `import_evidence_bundle` or inspect `records` directly.
+
+## `legorr-ddscene-shutdown-reachability.bundle`
+
+Exported 2026-10-21 for findings 33–36 — 33 retained observations. The focused
+records include `FUN_0041fb50` initialization and its shutdown/failure exit,
+the direct caller inventory and exact incoming references for
+`FUN_00472800` (including the second unowned call instruction at `0x42503f`),
+and the animation-name dispatcher (`FUN_00447c40`), paired scene updater
+(`FUN_0046c3f0`), name-set/presence helpers (`FUN_00473370`/`FUN_00473340`),
+and shared draw-step (`FUN_00475140`). Ghidra did not assign the call at
+`0x42503f` to a procedure, so its caller and reachability remain unknown.
 Import with `import_evidence_bundle` or inspect `records` directly.
 
 ## `legorr-pathfinder-build.bundle`
