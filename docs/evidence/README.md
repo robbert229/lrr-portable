@@ -585,3 +585,15 @@ Exported for finding 118. Twenty records cover loader-profile setup and selectio
 ## legorr-directsound3d-init.bundle
 
 Exported for finding 119. Five records cover DirectSound initialization, the queried GUID bytes and xref, the listener-interface acquisition branch, and subsequent initialization. One exploratory WAV-loader dossier is included but not cited by the finding.
+
+## `legorr-record-flag.bundle`
+
+Exported 2026-10-22 for finding 08 §"Record flag semantics" (LPT-17, issue
+#66) — 36 retained observations. Records cover `SavMarkRecord @ 0x417eb0`
+(assembly + decompile: the `|1` OR, the `index < 8` gates at 0x417ec9/0x417ef3,
+and the `|2` OR), both callers (`CheckpointStep @ 0x462270`,
+`FUN_00462030`), the `IsInGame @ 0x416d60` gate and `DAT_00557020`/`00557024`
+xrefs, the complete record-flags reader set (`SavTreeWalk2` `& 1`,
+`SlotSummary` `& 1`, the 0x3190 constant scan, the score-float readers at
+record+0x2fb8), and the menu/preview flows. Import with
+`import_evidence_bundle` or inspect `records` directly.

@@ -1,7 +1,8 @@
 # Finding 08 — Save/Load and Checkpoints
 
 *Anchors: `SavReadSlot @ 0x417a90`, `SavWriteSlot @ 0x417bd0`, `SavCommit @ 0x417fc0`,
-`SavMarkRecord @ 0x417eb0`, `SavWriteRecord @ 0x417f40`, `SavBuildCtx @ 0x417e70`,
+`SavMarkRecord @ 0x417eb0`, `SavTreeWalk2 @ 0x4172f0`, `SavWriteRecord @ 0x417f40`,
+`SavBuildCtx @ 0x417e70`, `SlotSummary @ 0x4152c0`, `IsInGame @ 0x416d60`,
 `CheckpointStep @ 0x462270`, `CheckpointBlobBuild @ 0x45fda0`,
 `OsfAdd @ 0x459190`, `OsfWrite @ 0x4593e0`, `OsfRead @ 0x459470`,
 `SaveMenuBuild @ 0x415a10`.
@@ -30,8 +31,10 @@ current level's record.
 | 0x34 | 4 | (loaded as RAM pointer to record array) | |
 | 0xB0 | `0x3190` × N | records | read after header |
 
-Record = `u32 flags` (`|1` dirty, `|2` also-set by `SavMarkRecord`) + `0x318c`-byte payload
-(= the checkpoint blob, see below).
+Record = `u32 flags` + `0x318c`-byte payload
+(= the checkpoint blob, see below). The flags word's bits are closed:
+`|1` dirty/achieved, `|2` tutorial-range marker (see
+[§Record flag semantics](#record-flag-semantics-closes-issue-66)).
 
 ### `.osf` (`OsfWrite @ 0x4593e0`)
 
@@ -290,9 +293,95 @@ dword-verbatim identical):
 - `DAT_00552994` (blob) is distinct, per-frame scratch (see
   §CheckpointBlobBuild above).
 
+## Record flag semantics (closes issue #66 / LPT-17)
+
+The record flags word (the u32 at the base of each 0x3190 record) is **fully
+accounted for** — every writer and every reader is listed below. Evidence:
+`docs/evidence/legorr-record-flag.bundle` (REA session, 2026-10-22).
+
+| Bit | Meaning | Set by | Read by |
+| --- | --- | --- | --- |
+| `\|1` | achieved/dirty — the "completed" mark | `SavMarkRecord` (any in-range mark) | `SavTreeWalk2`, `SlotSummary` |
+| `\|2` | **tutorial-range marker** (record index < 8) | `SavMarkRecord` together with `\|1`, index 0–7 only | **none — write-only** |
+
+### Writer — `SavMarkRecord @ 0x417eb0`
+
+Assembly-confirmed control flow (the earlier "present/empty" guess is wrong):
+
+```
+ctx = SavBuildCtx(); if (!ctx) return;
+in_game = IsInGame();                 // DAT_00557024 != -1   (FrontEndActive's
+                                      //  in-game list context, getter 0x416d60)
+if (in_game == 0) {                   // front-end / reward screen
+    if (index >= 8) {                 // campaign record
+        if (record_count < index) return;      // unsigned JA 0x417ed1
+        flags |= 1; return;                    // |1 only (0x417eec)
+    }
+} else if (index >= 8) {              // in-game campaign record
+    return;                           //          (JNC 0x417ef6 -> no mark)
+}
+flags |= 1;                           //          tutorial record (index < 8)
+flags |= 2;                           //          both ORs at 0x417f0f / 0x417f19
+```
+
+- The `index < 8` gates are the unsigned `CMP ECX,8` / `JC 0x417ef8` at
+  `0x417ec9-0x417ecc` and `JNC 0x417f1c` at `0x417ef3-0x417ef6`. `8` is a
+  **hard constant**: the shipped config's 8-entry `TutorialStartLevel` chain
+  (README: "8 tutorials"), which takes records `0..7` in the level tree;
+  campaign levels follow at index ≥ 8.
+- Callers (only two, both resolved):
+  - `CheckpointStep @ 0x462270` — autosave on the objective-result word
+    (`state+0x27c == 1`); marks the current level's record before the
+    `SavWriteRecord` + commit.
+  - `FUN_00462030` — the reward-screen save-menu confirm path (from
+    `RewardZoneCheck @ 0x461dd0`); mark + write + `SavCommit`. Its own
+    `IsInGame()` probe at entry gates the whole save-menu flow on the
+    front-end context.
+- No clearing path exists: no corpus code ever clears `|2` (or `|1`) from a
+  record once set; `SavTreeWalk2`'s `& ~4` clears a bit of the *level-tree
+  node* word, not the record flags.
+
+### Readers — the complete set (0x3190 constant scan + body audit)
+
+| Reader | Site | Effect (observed) |
+| --- | --- | --- |
+| `SavTreeWalk2 @ 0x4172f0` | `flags & 1` (assembly `AND EBP,1`, 0x417360) | Load side: each record's `\|1` decides whether the level-tree node picks up the node "completed" flag word bit 2 (the `& 0xfffffffb` / `\| 4` at 0x417393/0x4173a9 — *node* word, not the record flags) — the dirty mark is what makes a saved level re-enter the menu as "done". |
+| `SlotSummary @ 0x4152c0` | `*(byte*)(records+i*0x3190) & 1` (0x415301) | Save menu row: counts `\|1` records and formats `"Game %i complete with %i points"` — the "complete" count is exactly the `\|1` count; points sum the per-record score float at `record+0x2fb8` (`FUN_00417430`). |
+| `FUN_00413a60` | score floats only | Slot preview scan: iterates **records 8..count-1** (`if (8 < local_a0)`, first sample at `records+0x1bc38` = record 8, stride 0xc64 dwords) — the tutorial records are skipped by *index*, not by flag. |
+| `FUN_00418120` | score floats only | Average-score gate: `uVar2 / (count - 8) > 99` → "all completed" probe; again skip 0–7 by index. |
+| `SavReadSlot`/`SavWriteSlot` | raw copies | Records are bulk-copied/zeroed; never inspect the flags word. |
+
+So **`|2` has no corpus consumer**: its only effect on the shipped game is
+the on-disk bit pattern SavMarkRecord produces for tutorial records. The
+observable behaviours it was confused with (empty-name display, preview
+scoring, slot "present" counts) are all driven by `\|1` and/or by skipping
+the index range directly.
+
+### Port
+
+`save_mark_record` (savegame.cpp) now mirrors the corpus byte-for-byte:
+`|1` always, plus `|2` when `index < SAVE_TUTORIAL_RECORDS` (8). Previously
+it OR'd `|2` unconditionally, writing a bit pattern the corpus never
+produces for campaign records.
+
+**Documented deviation — the `|1` on campaign records:** the corpus's
+`SavMarkRecord` skips the mark entirely for in-game campaign records
+(`IsInGame != 0 && index >= 8`) and only ever `|1`-marks them from the
+front-end save-menu path (`FUN_00462030` with `IsInGame == 0`). The port has
+no reward-screen/save-menu yet (this finding's still-open `.dat` menu item),
+so its save sites (`checkpoint_step`, the `S` hotkey) are front-end-equivalent
+saves: they run the corpus's *front-end* branch and set `|1` on campaign
+records, which is what keeps the slot menu's resume/completed counts
+(`save_slot_state`, the port's `SlotSummary` stand-in) working. When the
+save-to-slot menu lands, the port can key the in-game branch off its own
+"reward screen active" state.
+
+The savegame suite pins both ranges through a mark → write → reload cycle:
+a tutorial record keeps `|1\|2`, a campaign record keeps `|1` with `|2`
+clear.
+
 ## Still open
 
-- Record flag `|2` semantics (`SavMarkRecord` sets `1` (and `2` when name is empty) — likely "present/empty").
 - `.dat` slot thumbnails: writer closed (see section above); the save-menu
   draw side (`DAT_004db890` blits, SaveImage `Width/Height/BigWidth/BigHeight/
   Pos1..5` rects + the scroll-plane scale) is not ported yet.
