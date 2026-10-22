@@ -243,3 +243,30 @@ the type-2 gate), and the list scanner (`FUN_0044b480`, `+0x370` slots with
 count `+0x384`). The spawn-dispatch switch tables (`0x438298`/`0x4382ac`)
 and stats-template bytes came from the shipped-image disassembly. Import
 with `import_evidence_bundle` or inspect `records` directly.
+
+## `legorr-campaign-expansion.bundle`
+
+Exported 2026-10-22 for findings 44–47 — 25 retained observations. The bundle
+covers reward-button save/advance dispatch, timer-objective evaluation order,
+objective-sidecar append gates and serialized fields, and entity-removal event
+messages. Static control flow does not establish every user-visible outcome or
+the runtime conditions that populate each optional message field. Import with
+`import_evidence_bundle` or inspect `records` directly.
+
+## `legorr-engine-expansion.bundle`
+
+Exported 2026-10-22 for findings 48–50 — 25 retained observations. Records
+cover DirectDraw setup branches and the D3DRM/device bridge, model-render pass
+dispatch, and tile-texture refresh order. The fullscreen/windowed labels in
+finding 48 remain inferences from the observed calls; the renderer findings
+describe static dispatch, not a captured rendered frame. Import with
+`import_evidence_bundle` or inspect `records` directly.
+
+## `legorr-command-hotkey-expansion.bundle`
+
+Exported 2026-10-22 for finding 51 and the finding-10 update — 38 retained
+observations. Records cover command-queue key polling and enqueue behavior,
+the key-registration producer and its call arguments, queue capacity, and
+command-record `+0x14` initialization/link writes. The meanings and units of
+that record field and the human-facing labels for key-state indices remain
+unknown. Import with `import_evidence_bundle` or inspect `records` directly.
