@@ -220,8 +220,13 @@ corpus `0x48` record, finding 07):
   entity-conditional gates — the `+0x334` state object (`FUN_00469e60`
   reads `+0x334+0x144`; `FUN_00469cc0` reads a per-terrain-type speed table
   at `+0x334+0x24` and gates on `speed != 0`), the `+0x3e8` bit-1 walker
-  bit, and `+0x3e0` bit `0x400` in gated mode — all live on the unported
-  `+0x334` state objects (TODO, same family as the minion state machine).
+  bit, and `+0x3e0` bit `0x400` in gated mode — live on the unported
+  `+0x334` state objects (TODO, same family as the minion state machine),
+  *except* the speed probe itself (closed 2026-10-21): `ai_stats_speed`
+  ports `FUN_00469cc0`'s table read (`GameContext.stats_speed_sec`,
+  indexed by the cell's terrain type; corpus units = seconds per cell)
+  and `step_path` now steps the mover at that speed instead of the flat
+  port constant — see §"Per-terrain mover speed" below.
   The nonzero-`mode` branch inspects the four neighbors of a `record+0 == 0`
   cell (spawn-style) and is not exercised by movement.
 - `FUN_00432e00(cell, v)` sets/clears flag `0x8000000` — the entity
@@ -243,6 +248,41 @@ command stays live), clears the occupancy flag on arrival, and the idle
 branch registers only on `'\t'` cells. Without a bound grid every map
 operation falls back to the port-side default (the corpus tick cannot walk
 an empty grid), which is what the mapless unit tests exercise.
+
+### Per-terrain mover speed (closed 2026-10-21)
+
+`FUN_00469cc0(ent, type)` is a two-instruction read:
+
+```
+mov  ecx, [ent+0x334]            ; the entity stats block
+flds [ecx+0x24+type*4]           ; speed table entry by terrain type
+```
+
+On the move branch (`0x43cc35`–`0x43cc5c`) the walker's *current* cell is
+resolved by `FUN_0048e060`, its type byte by `FUN_004319b0`, and that
+entry drives the step: `FUN_00434570` accumulates `dt / entry` into cell
+progress and completes a cell once it passes `1.0` — so the entry is
+**seconds to cross one cell** of that terrain, and one tick can cross
+several cells when the terrain is fast (`+0x3e8` bit `0x2000000` multiplies
+the entry by the constant at `0x49e3b4` — the runner scale, value not
+recorded in the bundles, TODO).
+
+Port shape: the stats block itself stays TODO (finding 07's stats-block
+note), so the table is modelled as `GameContext.stats_speed_sec` — one
+game-wide float array indexed by the tile-type byte (`AI_STATS_TERRAIN_TYPES
+= 16` port bound; the corpus indexes blindly) — read through the terrain
+accessors exactly corpus-ordered (`underfoot_cps`: cell via
+`level_cell_of`, type via `level_tile_type`, entry via `ai_stats_speed`
+≡ `FUN_00469cc0`). `step_path` steps at that rate: the current waypoint
+completes after `entry / 1` seconds under foot and the `dt` overflow
+carries into the following entries, so slow terrain visibly slows the
+walk and fast terrain visibly quickens it; unset (zero) entries, an
+unbound grid, and out-of-range types fall back to `AI_MOVE_SPEED_CPS`,
+which keeps every mapless walker test byte-identical. The corpus's
+zero-entry *gate* (`speed != 0` inside `FUN_00432770`) belongs to the
+unported `+0x334` walker bit and stays a pass. `ai_test` pins the probe,
+the default fallbacks, and slow/fast terrain bands against a plain-row
+walker with the arrival pops and occupancy clear unchanged.
 
 ### Pathfinder builder (port-shape closed 2026-10-21)
 
@@ -289,8 +329,12 @@ stride 336 (attacher writes it at `0x469c98`, called from the spawn
 dispatch's default arm `0x43818a`), minion types taking static templates by
 the table at `0x4382ac` — type 8 → `0x4a98f0`, 9 → `0x4a9a40`, 12–14 and
 16–19 → `0x4a9b90`, everything else instance stats; templates all-zero in
-the file; filled at runtime, so the table values are config-driven, TODO) —
-the speed table `+0x24 + terrain*4` and the state word `+0x144` ride these).
+the file; filled at runtime, so the table values are config-driven, TODO).
+Of what rides these, the speed table `+0x24 + terrain*4` is now ported as
+the game-wide `stats_speed_sec` mirror (§"Per-terrain mover speed");
+the per-type instance stats fill, the state word `+0x144` behind
+`FUN_00469e60`, and the runner scale constant (`0x49e3b4`, unrecorded)
+stay TODO.
 The old "`ent+0xbc` record list" TODO resolves away: `param_1[0xbc]` is
 just the dword-indexed view of `ent + 0x2f0`, i.e. the *same* command
 chain the port mirrors (kinds: 8=move, 12=tile flags, 0xE=idle, `0x17`;

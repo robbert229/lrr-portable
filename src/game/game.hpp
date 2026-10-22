@@ -166,6 +166,10 @@ typedef struct RewardScreen {
  * byte flag sits at entry+8 (callback 0x43cd83 reads list+idx*20-12 relative
  * to +0x28); arrival clears that byte — the pop is flag-clear, not removal. */
 #define AI_WAYPOINTS_MAX 16 /* port bound; the corpus list is heap-allocated */
+/* Terrain count of the stats speed table (port bound — the corpus table
+ * sits inside the +0x334 stats block with an unpinned size, indexed by the
+ * signed tile-type byte; the port guards out-of-range reads). */
+#define AI_STATS_TERRAIN_TYPES 16
 typedef struct AiWaypoint {
     float   x, y;
     uint8_t pending; /* 1 = unarrived; arrival clears it (0x43cd90) */
@@ -226,6 +230,21 @@ typedef struct GameContext {
     BlockFile*  cfg;          /* DAT_005560c4 — Lego.cfg */
     LevelState* level;        /* DAT_005560d4 — current level block */
     uint32_t    cheat;        /* DAT_00556ed0 — level cheat/feature bits */
+
+    /* --- stats speed table (FUN_00469cc0, the `+0x334+0x24` terrain-speed
+     * table behind the entity stats block) --------------------------------
+     * Corpus: `*(state + 0x24 + terrain_type * 4)` — seconds to cross one
+     * cell of that terrain type; the walker accumulates progress as
+     * dt/entry and arrives past 1.0 (FUN_00434570 on the move branch,
+     * 0x43cc35 reads the cell's type through FUN_004319b0). The stats
+     * block itself (type table DAT_00502bd8, stride 336 — instance stats
+     * from config, templates zero) is not ported, so the port models the
+     * table as this one game-wide array indexed by the tile-type byte
+     * (TODO(corpus): per-type instance stats fill). A zero entry steps at
+     * AI_MOVE_SPEED_CPS: the corpus gates movement on entry != 0 behind
+     * the unported +0x3e8 walker bit, so unset entries need a port-side
+     * default either way. */
+    float stats_speed_sec[AI_STATS_TERRAIN_TYPES];
 
     /* --- save system (DAT_005574d0 + per-slot ctx) ---------------------- */
     int   save_slot;              /* DAT_005574d0 — -1 = none (defaults 5) */
