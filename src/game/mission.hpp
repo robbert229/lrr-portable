@@ -33,29 +33,42 @@ extern "C" {
 
 /* Task payload offsets (stride 0x210; corpus FUN_0045fxx offsets recorded
  * per finding 09 §"Task record" and the loader pseudocode). */
-#define TASK_OFF_NAME       0x04  /* char* name (inline here)              */
+#define TASK_OFF_NAME       0x04  /* char name[0x20] (TaskBlockInit)       */
 #define TASK_OFF_IMPORTANCE 0x24  /* float (TaskImportanceRefresh)         */
 #define TASK_OFF_QUOTA      0x28  /* int32 (TaskQuotaRefresh)              */
-#define TASK_OFF_VALUE      0x2C  /* live progress (reconstruction-side)   */
-#define TASK_OFF_FLICPATH   0x54  /* box/flic path token (FUN_0045f530)    */
-#define TASK_OFF_FLICXY     0x154 /* 2 ints (FUN_0045f530 -> +0x55/0x56)   */
-#define TASK_OFF_FLICPATH2  0x16C /* flic path token (FUN_0045f5f0 +0x5b)  */
+#define TASK_OFF_VALUE      0x2C  /* live progress (reconstruction-side;   */
+                                  /* corpus tracks it in the level block   */
+                                  /* objective slots, task +0x30 is a      */
+                                  /* derived float re-computed from quota) */
+#define TASK_OFF_TEXT       0x54  /* display text (FUN_0045f530 reads      */
+                                  /* `Reward Text.<name>` field 0, with    */
+                                  /* '_' mapped to ' ' over the first      */
+                                  /* 0x20 bytes)                           */
+#define TASK_OFF_TEXT_XY    0x154 /* 2 int text-draw x/y (FUN_0045f530     */
+                                  /* fields 1/2 -> record dwords 0x55/0x56)*/
+#define TASK_OFF_FLICPATH2  0x16C /* flic path (FUN_0045f5f0 -> +0x5b)     */
 #define TASK_OFF_IMG_XY     0x15C /* 2 ints (FUN_0045f3e0 -> +0x57/0x58)   */
 #define TASK_OFF_BOXIMG_XY  0x164 /* 2 ints (FUN_0045f290 -> +0x59/0x5a)   */
 #define TASK_OFF_FLIC_RECT  0x1EC /* 4 ints (FUN_0045f5f0 -> +0x7b..0x7e)  */
 #define TASK_OFF_FONT       0x204 /* font config token (FUN_0045f230)      */
 #define TASK_OFF_SOUND      0x208 /* sound config token (FUN_0045f1f0)     */
 
-/* Task flag bits the loaders OR in (corpus loader tails). */
-#define TASK_FLAG_COMPLETED  1u
-#define TASK_FLAG_IMG        2u   /* Images entry loaded (FUN_0045f3e0)   */
-#define TASK_FLAG_FLIC       4u   /* Flics entry loaded (FUN_0045f5f0)     */
-#define TASK_FLAG_ACTIVE     0x10u
+/* Task flag bits (dword +0x00). The display tick tests `flags & bit`
+ * paired with the blob-side display gates (finding 09 §Display). */
+#define TASK_FLAG_COMPLETED  1u    /* drawn as achieved + text overlay on   */
+#define TASK_FLAG_IMG        2u    /* Images entry loaded (FUN_0045f3e0)    */
+#define TASK_FLAG_FLIC       4u    /* Flics entry loaded (FUN_0045f5f0)     */
+#define TASK_FLAG_TEXT       0x10u /* text overlay drawn over the record    */
+#define TASK_FLAG_BOXTEXT    0x20u /* boxed-text variant of the overlay     */
 #define TASK_FLAG_BOXIMG     0x40u /* BoxImages entry loaded (FUN_0045f290) */
-#define TASK_FLAG_MASK       0x31  /* FUN_0045f530 ORs 0x31                */
+#define TASK_FLAG_MASK       0x31u /* FUN_0045f530 ORs 1|0x10|0x20 when a   */
+                                   /* `Reward Text.<name>` entry exists     */
 
 /* Seed the ten named task slots + run the six field loaders + refreshers
- * (TaskBlockInit, called once per level load). */
+ * (TaskBlockInit). Corpus lifetime is per game *session* (run-start callback
+ * FUN_0041fb50 @ 0x422651, freed by TaskBlockFinish in the run-finish
+ * callback — finding 08 §Ownership); the port re-seeds per level load as a
+ * layout-faithful stand-in for the session block. */
 void mission_task_init(GameContext* ctx, BlockFile* cfg, const char* level_name);
 
 /* Re-run Importance/Quota refreshers + crystal quota over every slot

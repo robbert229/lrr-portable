@@ -35,18 +35,29 @@ image/font handles, then **frees** the block.
 
 ## Task record (stride 0x210 = 528 bytes)
 
+The complete byte-range map with consuming functions is in **doc 08 §"Task table
+block"** — closed. Config-loaded fields:
+
 | Off | Loaded from config | Function |
 | --- | --- | --- |
-| +0x00 | flag byte: `&1` completed, `&2` active | `TaskBlockFinish` reads; loaders `|=` `0x31` |
+| +0x00 | u32 flags (`1` achieved/text-gate, `2` images, `4` flics, `0x10` text, `0x20` boxed text, `0x40` boximages) | loaders `|=` (`TaskText` ORs `0x31`) |
 | +0x04 | task name (default list or config value) | `TaskBlockInit` |
-| +0x24 | `Reward.Importance.<name>` float | `TaskImportanceRefresh` |
-| +0x28 | `Reward.Quota.<name>` int | `TaskQuotaRefresh` |
-| +0x54 | BoxImage filename + 2 coords (from `BoxImages.<name>` `file\|x\|y`) | `TaskBoxImages`/`TaskBoxRect` |
-| +0x57/58 | `Images.<name>` coords | `TaskImages` |
-| +0x5b | `Flics.<name>` path | `TaskFlicPath` |
-| +0x7b..7e | flic rect (4 uints) | `TaskFlicPath` |
-| +0x200 | font handle (default `DAT_00555b40`) | `TaskFontLoad` |
-| +0x204 | `Sounds.<name>` | `TaskSoundsLoad` |
+| +0x24 | `Reward Importance.<name>` float | `TaskImportanceRefresh` |
+| +0x28 | `Reward Quota.<name>` int | `TaskQuotaRefresh` |
+| +0x54 | display text (from `Text.<name>` field 0, `_`→' ') | `TaskText` (`FUN_0045f530`) |
+| +0x154/158 | `Text.<name>` text-draw coords | `TaskText` |
+| +0x15C/160 | `Images.<name>` coords | `TaskImages` |
+| +0x164/168 | `BoxImages.<name>` coords | `TaskBoxImages` |
+| +0x16C | `Flics.<name>` path | `TaskFlicPath` |
+| +0x1EC..1F8 | flic rect (4 uints, `Flics.<name>` fields 1..4) | `TaskFlicPath` |
+| +0x200 | image surface handle (loaded `FUN_0047d9d0`) | display lane |
+| +0x204 | font handle (default `DAT_00555b40`) | `TaskFontLoad` |
+| +0x208 | `Sounds.<name>` | `TaskSoundsLoad` |
+| +0x20C | boximage surface handle | display lane |
+
+`+0x30/+0x34/+0x38` are blob-side progress floats: `CheckpointBlobBuild`'s per-frame
+pass recomputes `+0x30` from the quota and clamps `+0x38` to `0.0..100.0` on all ten
+records (`0x460360`); no per-level config writes them.
 
 Config format for every image entry: `file.bmp|x|y` (pipe-delimited triples in `Lego.cfg`).
 `CrystalQuotaSetup` additionally reads `Quota.Crystals` capped to `≤26` (26 = crystal
@@ -94,7 +105,10 @@ importance/quota floats inside the task table.
 
 ## Still open
 
-- How live task *values* (progress) reach the records — the flags/coords/paths are config,
-  the running counts likely live in the `DAT_005557xx` score cluster.
+- How live task *values* (progress) reach the records: answered for the blob side —
+  the running counts live in the `DAT_005557xx` score cluster and the level objective
+  slots, and the per-frame blob pass (`0x460360`) derives record `+0x30/+0x38` floats
+  from them (quota `FILD` × scale, clamped `0..100`); no writer exists for record
+  `+0x2c`-range ints.
 - `FUN_0047dbf0` widget-reset semantics (called with all-zero args on zone init).
 - The exact flic playback (`FUN_00483c80`/`FUN_00484070`) — renderer lane.

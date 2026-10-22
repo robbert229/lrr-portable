@@ -20,7 +20,7 @@ and curiosity; nothing in this repository is affiliated with or endorsed by the 
 
 ```
 README.md           This file
-docs/findings/      Reverse-engineering findings, 01–22 (see index below)
+docs/findings/      Reverse-engineering findings, 01–29 (see index below)
 tools/              WAD tooling (rrwad.py: unpack/pack/verify — see tools/README.md)
                     + model converter (tools/rrlwo.py: .lwo → glTF 2.0)
                     + compat harness (tools/compat/a2.py — see tools/compat/README.md)
@@ -72,7 +72,7 @@ legally obtained copy of the game.
 
 ## Current status (2026-10-21)
 
-Research is complete: all 23 findings shipped, every format shipped in the wads is
+Research is complete: all 29 findings shipped, every format shipped in the wads is
 documented address-level — including the two that exist but are never loaded
 (`.x` XOF-text leftovers, `.blx` editor-only) — and the `Lego*` block-text system that
 `.ae` belongs to (finding 12). The game runs and is playable through the Proton wrapper,
@@ -98,6 +98,76 @@ not yet meet: the **`::` path separator** and the **`Levels::<name>` level
 vocabulary** (this is the root cause of the `Lego.cfg` integration blocker
 below, not a parse bug — the parser handles the file, the query form was
 wrong).
+
+Finding 24 (2026-10-21) closed the menu **wipe/fade transition** left as a
+named-but-not-decomposed gap in finding 23's `MenuRunLoop`: `MenuWipe` is a
+config-keyed LWS (LightWave scene) full-screen rock slide
+(`Interface\FrontEnd\Rock_Wipe\RockWipe`, 35 frames @ 25 fps), loaded by
+`LoadMenuBuild @ 0x4161f0` through the `FUN_00472cd0` object factory (kind
+`"LWS"`), triggered on every menu change by `MenuRunLoop`/`MenuTick`, with input
+frozen while it plays (`DAT_005574f0 & 2`), released at half-scene, and gated
+by the `-reduceanimation` feature bit / a literal `"Null"` disable. The port's
+front-end currently renders an instant menu swap; finding 24 documents the
+exact contract to reproduce it (LWS step or a `.flh` overlay stand-in). REA
+evidence: `docs/evidence/legorr-menu-wipe.bundle` (18 records).
+
+Finding 25 (2026-10-21) closed the runtime those LWS objects run on: the
+game-wide **DDiScene scene-graph object model** — the 9-slot kind string table
+(`NULL MESH FRAME ANIM ACT - - LWS LWO`) that the `FUN_00472cd0` factory
+dispatches on, the pooled `0x2c`-byte object record (free list `DAT_0076add0`,
+kind at `+0x10`, flags at `+0x14`), and the draw/step API every animated 3D
+thing uses — `FUN_00475140` (draw at time), `FUN_00477010`/`FUN_00477150`
+(begin/end scene), and the `FUN_004765c0` scene loader behind the
+`DAT_00505914` vtable system (source string `gods98/dx6`). REA evidence:
+`docs/evidence/legorr-ddscene.bundle` (64 records). Complements finding 24's
+`MenuWipe` (the LWS rock-slide is one instance of this runtime).
+
+Finding 26 (2026-10-21) decoded the two animation callbacks that draw step
+fires: the action-entry **SFX sample hook** (`DAT_0076cd78/7c`, registered by the
+45-slot SFX-name-hash bank init `FUN_00464740` — slot `0x27` =
+`SFX_RockWipe`, the wipe's own start-rumble, confirmed), playing the selected
+action's frame `SAMPLE` name as a positional D3D sound, and the scene-end
+**entity-flag hook** (`DAT_0076cd80/84`, boot-registered) that ORs bit
+`0x10000` into the owning entity's `+0x3e4` flag word (a new bit on the
+finding-10 flag word). REA evidence:
+`docs/evidence/legorr-ddscene-hooks.bundle` (46 records).
+
+Finding 27 (2026-10-21) closed the loop on that scene-done bit: both readers
+live inside the finding-10 flag-evaluator blob. Reader A (`0x43dd10`) plays
+the **placement sounds by work-object type** — `7` (Ore) → `SFX_PlaceOre`,
+`6` (PowerCrystal) → `SFX_PlaceCrystal`, else `SFX_Place`, via
+`FUN_00465050` — gated on gated/placing mode (`+0x3e0 & 0x400`) and a target
+handle (`+0x308`). Reader B (`0x43d903`) runs the `FUN_004475c0`
+impact/wake probe (message 5, roll speed, shake; bits `0x100000` /
+`0x40000000`) and clears the bit. New `+0x3e4` bit facts (`0x10000`,
+`0x80000`, `0x100000`, `0x40000000`) appended to finding 10. REA evidence:
+`docs/evidence/legorr-scene-done.bundle` (42 records).
+
+Finding 28 (2026-10-21) closed finding 26's remaining owner-link question:
+`FUN_00473da0` writes the DDiScene `+0x20` owner and `FUN_00473db0` reads it
+for the scene-end callback. The entity spawner wires the new scene object
+back to its entity; type-specific model paths propagate that pointer through
+their referenced scene objects. This ties the scene-end flag writer to entity
+construction while keeping unowned factory/menu objects in scope as possible.
+REA evidence: `docs/evidence/legorr-ddscene-owner-link.bundle` (20 records).
+
+Finding 29 (2026-10-21) traces DDiScene cleanup from the entity free path:
+`FUN_00437540` passes scene-backed entities' `+0x1c` object to
+`FUN_00472a40` before recycling the entity. The ordinary object path unlinks
+its scene interfaces and enters the DDiScene free list without explicitly
+clearing `+0x20`; the allocator zeroes the owner field on reuse. A kind-3/4
+mode-0 path returns earlier, and static evidence does not establish callback
+reachability after that unlink. REA evidence:
+`docs/evidence/legorr-ddscene-lifecycle.bundle` (8 records).
+
+Findings 30–32 (2026-10-21) extend that lifecycle trace. Kind-3/4 teardown
+parks auxiliary clones for reuse; a later clone request can reattach one and
+draw-step it at time zero. On the general entity-creation path, that draw
+precedes assigning the new owner, while the positive-end scene callback cannot
+pass its `end <= 0` threshold during that forced step. Pool shutdown clears the
+sample-hook gate, while the scene-end callback uses a separate
+pointer/time check. Post-shutdown reachability remains unproven. REA evidence:
+`docs/evidence/legorr-ddscene-reuse.bundle` (5 focused records).
 
 The fresh verify pass (finding 20, 2026-10-20) re-derived the critical path — PE entry
 (`0x48f000`) → WinMain (`FUN_004777a0`) → init → frame loop → engine tick (`0x4232e0`) —
@@ -154,6 +224,42 @@ Open threads, in order of value:
 | 21 | [`findings/21-flh-container.md`](docs/findings/21-flh-container.md) | **`.flh` closed**: FLIC-family overlay container — 136 B header, `0xF1FA` chunk stream from `0x80`, RGB555 FLI16 keyframe (opcode 25) + word-diff deltas (opcode 27) + hold chunks, 555→565 on write; validated 18/18 files, 469/469 chunks, rendered frame check |
 | 22 | [`findings/22-research-crumbs.md`](docs/findings/22-research-crumbs.md) | **Last open questions closed**: message registry = startup catalog (`FUN_00419230`, 40 `Info_*` names) + `InfoMessages` config population (`FUN_00434c10`); `DAT_004ffbc0` relabeled as the objective state word (not input devices); D3DRM is software-path-only (no HAL device referenced anywhere) |
 | 23 | [`findings/23-front-end-and-menu.md`](docs/findings/23-front-end-and-menu.md) | **Front-end & menus closed**: the boot→main-menu machine — `MenuBuild @ 0x4140c0`, the modal `MenuRunLoop`/`MenuTick`, the `FrontEndActive` gate, `MenuEnter`/`FrontEndStateChange`, the level-chain + start-level entries, and the options/movie callbacks, with the config grammar. Plus the two port blockers: the **`::` path separator** (`DAT_004aab18` = `"::"`) and the shipped level-name vocabulary (`Levels::<name>` via `StartLevel`/`NextLevel`, never `Level01`) — which together root-caused the `Lego.cfg` integration blocker |
+| 24 | [`findings/24-menu-wipe-and-front-end-transition.md`](docs/findings/24-menu-wipe-and-front-end-transition.md) | **Menu wipe closed**: the config-driven LWS front-end transition — `MenuWipe`/`!MenuWipe` keys (reduce-animation gate, `"Null"` disable) loaded by `LoadMenuBuild @ 0x4161f0` into the LWS scene factory (`FUN_00472cd0`, kind `"LWS"` → `FUN_004765c0`), stepping `RockWipe.lws` (35f @ 25 fps) as the menu-change wipe in `MenuRunLoop`/`MenuTick` with an input freeze — the wipe/fade gap left open in finding 23 |
+| 25 | [`findings/25-ddscene-object-runtime.md`](docs/findings/25-ddscene-object-runtime.md) | **DDiScene object runtime closed**: the game-wide scene-graph object model the MenuWipe (finding 24) and every animated 3D thing runs on — the 9-slot kind string table (`NULL MESH FRAME ANIM ACT - - LWS LWO`), the pooled `0x2c`-byte object record (`DAT_0076add0` free list, kind at `+0x10`, flags at `+0x14`), the draw/step API (`FUN_00475140` draw-at-time, `FUN_00477010`/`FUN_00477150` begin/end scene, `gods98/dx6` source path), and the `FUN_004765c0` scene loader behind `DAT_00505914` |
+| 26 | [`findings/26-ddscene-animation-hooks.md`](docs/findings/26-ddscene-animation-hooks.md) | **DDiScene animation hooks closed**: `FUN_00475140` can call the action-entry **SFX sample** hook (`DAT_0076cd78/7c`, registered by the `FUN_00464740` 45-slot SFX-name-hash bank init, `0x27` = `SFX_RockWipe` → `FUN_00465050`→`FUN_0047ad70` positional play) and the scene-**end entity flag** hook (`DAT_0076cd80/84`, boot-registered, ORs `0x10000` into `entity+0x3e4`) — plus the `FUN_00464f60` pending-SFX queue |
+| 27 | [`findings/27-scene-done-flag-consumers.md`](docs/findings/27-scene-done-flag-consumers.md) | **Scene-done flag readers closed**: both consumers of `entity+0x3e4 bit 0x10000` (set by finding 26's scene-end hook) inside the finding-10 flag-evaluator blob — reader A (`0x43dd10`) plays **placement sounds by work-object type** (`7`→`SFX_PlaceOre`, `6`→`SFX_PlaceCrystal`, else `SFX_Place` via `FUN_00465050`), reader B (`0x43d903`) runs the `FUN_004475c0` impact/wake probe (message 5, roll speed, shake) and clears the bit — plus new `+0x3e4` bit facts (`0x80000`, `0x100000`, `0x40000000`) appended to finding 10 |
+| 28 | [`findings/28-ddscene-entity-ownership.md`](docs/findings/28-ddscene-entity-ownership.md) | **DDiScene owner link closed**: `FUN_00473da0/0x473db0` set/read object `+0x20`; the entity spawner assigns the owner on general scene objects and propagates it through type-specific model scene nodes, explaining how the scene-end callback returns to `entity+0x3e4` |
+| 29 | [`findings/29-ddscene-entity-teardown.md`](docs/findings/29-ddscene-entity-teardown.md) | **DDiScene teardown traced**: entity removal calls `FUN_00472a40(entity+0x1c)` before recycling the entity; ordinary pooled objects enter the DDiScene free list without an explicit `+0x20` clear (zeroed on reuse), while kind-3/4 has an early auxiliary-record return; post-unlink callback reachability remains unknown |
+| 30 | [`findings/30-ddscene-clone-reuse.md`](docs/findings/30-ddscene-clone-reuse.md) | **DDiScene clone slots traced**: kind-3/4 mode-0 teardown marks an auxiliary instance inactive; `FUN_00473690` can find it later, reattach it, and call `FUN_00475140(clone, 0)` |
+| 31 | [`findings/31-ddscene-reuse-callback-order.md`](docs/findings/31-ddscene-reuse-callback-order.md) | **Cached-clone callback ordering bounded**: entity creation assigns the owner after the clone factory's synchronous time-zero draw; positive scene-end frame values cannot pass the draw-step's `end <= 0` callback condition |
+| 32 | [`findings/32-ddscene-shutdown-hook-gates.md`](docs/findings/32-ddscene-shutdown-hook-gates.md) | **DDiScene shutdown gates distinguished**: shutdown clears the sample-hook enable bit, while the scene-end callback has a separate pointer/time predicate; post-shutdown reachability remains unknown |
+| 33 | [`findings/33-ddscene-init-failure-cleanup.md`](docs/findings/33-ddscene-init-failure-cleanup.md) | **DDiScene pool cleanup is on the initializer's failure exit**: the parsed config/resource failures converge on shutdown; success returns without this cleanup; one other direct callsite is outside a procedure |
+| 34 | [`findings/34-ddscene-failed-init-retains-end-hook.md`](docs/findings/34-ddscene-failed-init-retains-end-hook.md) | **Failed initialization retains the scene-end hook pointer**: hook registration precedes later failure cleanup, which clears the sample gate but leaves the end-hook slots untouched; dispatch after failure is unproven |
+| 35 | [`findings/35-ddscene-paired-channel-update.md`](docs/findings/35-ddscene-paired-channel-update.md) | **Paired-scene update can skip its primary channel**: a missing primary action under a wrapper flag suppresses its draw step while a present companion is still advanced |
+| 36 | [`findings/36-ddscene-activity-name-cache.md`](docs/findings/36-ddscene-activity-name-cache.md) | **Activity-name pointer cache suppresses repeats after a miss**: the type-1 dispatcher caches the request pointer even when neither scene channel accepts it, so another call with that pointer short-circuits |
+| 37 | [`findings/37-advisor-animation-controller.md`](docs/findings/37-advisor-animation-controller.md) | **Advisor animation controller setup**: map-pointing/talking action labels and a companion DDiScene are initialized by a dedicated controller |
+| 38 | [`findings/38-advisor-request-admission.md`](docs/findings/38-advisor-request-admission.md) | **Advisor request admission**: slot availability, a shared gate, and active-state bit control admission; accepted requests encode two modes |
+| 39 | [`findings/39-advisor-request-reset-sounds.md`](docs/findings/39-advisor-request-reset-sounds.md) | **Advisor request reset**: accepted requests reset the scene and submit a slot sound plus queued `SFX_CaptainSlide` |
+| 40 | [`findings/40-advisor-transition-worker.md`](docs/findings/40-advisor-transition-worker.md) | **Advisor transition worker**: selected and companion scenes advance together with a per-slot transform and restart on completion |
+| 41 | [`findings/41-advisor-animation-window.md`](docs/findings/41-advisor-animation-window.md) | **Advisor action windows**: one state bit selects completion or overflow-wrap behavior using slot boundaries and scene duration |
+| 42 | [`findings/42-ddscene-sample-hook-consumption.md`](docs/findings/42-ddscene-sample-hook-consumption.md) | **DDiScene sample-hook consumption**: action selection sets a pending bit that the next qualifying kind-4 draw-step consumes |
+| 43 | [`findings/43-ddscene-end-hook-repeatability.md`](docs/findings/43-ddscene-end-hook-repeatability.md) | **DDiScene end-hook repeatability**: callback conditions have no local one-shot latch; duplicate runtime dispatch remains unverified |
+| 44 | [`findings/44-reward-buttons-use-separate-save-routes.md`](docs/findings/44-reward-buttons-use-separate-save-routes.md) | Reward Save enters the slot UI; Advance commits through a separate checkpoint route |
+| 45 | [`findings/45-timer-objective-short-circuits-other-checks.md`](docs/findings/45-timer-objective-short-circuits-other-checks.md) | Timer expiry short-circuits later objective checks in the campaign evaluator |
+| 46 | [`findings/46-objective-sidecar-append-gates.md`](docs/findings/46-objective-sidecar-append-gates.md) | Objective sidecar records have additional append gates and a fixed serialized field set |
+| 47 | [`findings/47-entity-events-feed-incident-messages.md`](docs/findings/47-entity-events-feed-incident-messages.md) | Entity removal emits shared and type-specific event messages into the incident path |
+| 48 | [`findings/48-directdraw-renderer-setup.md`](docs/findings/48-directdraw-renderer-setup.md) | DirectDraw mode setup and bridge into the D3DRM device/viewport path |
+| 49 | [`findings/49-model-render-pass-dispatch.md`](docs/findings/49-model-render-pass-dispatch.md) | Model rendering walks ordered child passes through the shared renderer |
+| 50 | [`findings/50-tile-texture-refresh-order.md`](docs/findings/50-tile-texture-refresh-order.md) | Tile texture refresh updates indexed slots in a defined pass order |
+| 51 | [`findings/51-held-key-command-repeat.md`](docs/findings/51-held-key-command-repeat.md) | EnginePreFrame binds key bytes to command records; held keys enqueue again each tick |
+| 52 | [`findings/52-advance-gates-campaign-completion-mark.md`](docs/findings/52-advance-gates-campaign-completion-mark.md) | Reward Advance gates campaign-row completion marks on the current level result |
+| 53 | [`findings/53-nextlevel-builds-campaign-chain-arrays.md`](docs/findings/53-nextlevel-builds-campaign-chain-arrays.md) | Startup builds normal and tutorial level chains by following `NextLevel` references |
+| 54 | [`findings/54-terrain-grid-emits-per-cell-quad-vertices.md`](docs/findings/54-terrain-grid-emits-per-cell-quad-vertices.md) | Terrain initialization builds and submits four vertex records for each grid cell |
+| 55 | [`findings/55-terrain-cell-material-changes-use-bounded-transition-records.md`](docs/findings/55-terrain-cell-material-changes-use-bounded-transition-records.md) | Cell material changes update the surface and vertices, with a gated ten-record path |
+| 56 | [`findings/56-incident-message-template-format.md`](docs/findings/56-incident-message-template-format.md) | Configured incident text compiles underscores, line breaks, and `$token$` spans |
+| 57 | [`findings/57-incident-message-advisor-consumer.md`](docs/findings/57-incident-message-advisor-consumer.md) | Queued incident messages feed the scrolling text widget through a gated consumer |
+| 58 | [`findings/58-win32-message-pump-filter.md`](docs/findings/58-win32-message-pump-filter.md) | Win32 message pump filters selected messages before translation and dispatch |
+| 59 | [`findings/59-directinput-key-state-to-text.md`](docs/findings/59-directinput-key-state-to-text.md) | DirectInput snapshots feed key-edge handling and the text-entry path |
 
 Named-pseudocode corpus: [`docs/decompiles/engine-region.c`](docs/decompiles/engine-region.c)
 (114 named functions covering the engine/game-logic region — findings 01–10).
