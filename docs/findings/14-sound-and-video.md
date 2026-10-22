@@ -123,7 +123,8 @@ playback region). The `.flh` container is documented in finding 21.
 
 1. DirectSound 3D listener acquisition is documented in finding 119: sound initialization queries
    the primary buffer for IID_IDirectSound3DListener. Later interface vtable calls and per-source 3D
-   buffer setup remain untraced.
+   buffer setup remain untraced. Finding 120 traces a separate sound-load path that can create two
+   duplicate sample buffers; caller values and playback selection remain open.
 2. The `mmioGetInfo` buffer (`FUN_00489113` region) implies WAVs are parsed
    **from a memory-mapped view** when loaded from WAD — the exact buffer
    handoff was not traced.

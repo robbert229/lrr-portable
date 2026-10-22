@@ -1,4 +1,4 @@
-# 120 — The entity effect branches: projectile arcs, screen shake, screen-space effect lane
+# 121 — The entity effect branches: projectile arcs, screen shake, screen-space effect lane
 
 Closes the three documented-but-unguessed TODO branches that finding 10
 listed (its "Documented TODO branches (not guessed)" paragraph): projectile

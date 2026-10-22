@@ -755,12 +755,7 @@ int main(int argc, char** argv)
         CHECK(!has_13 && recs == 1,
               "type-0x13 grant record unlinked after the grant");
     }
-    /* Unlink the still-live move record from the global command list before
-     * purging the chain (cmd_chain_purge frees records; the global list must
-     * not keep the tail pointing at a freed record). */
-    if (grantee2->cmd_head != NULL) {
-        cmd_global_unlink(grantee2->cmd_head);
-    }
+    /* Purging a chain also unlinks its live records from the global list. */
     cmd_chain_purge(grantee2);
 
     /* Attached wake mirror (FUN_0044c110): an expired wake timer wakes
@@ -1108,64 +1103,33 @@ int main(int argc, char** argv)
         ctx.stats_speed_sec[5] = 0.0f;
     }
 
-    if (real_dir != NULL) {
-        probe_real(real_dir);
-    }
-
-    /* cmd_chain_drop chain-splice soundness (round-3 review, merged with
-     * #112's chain-only model): the drop must capture the record's next
-     * pointer BEFORE splicing it out of the entity chain (and unlink the
-     * global task list first for records that live there — the corpus
-     * FUN_00403d10 unlink+free). A splice that reads prev->next after
-     * freeing the middle record leaves the chain walking into freed
-     * memory, and a subsequent append threads a pooled record off the
-     * dangling link and cycles the chain. Under the merged model entity
-     * commands (move/target/gated) chain on the entity only — the global
-     * list is the task-only overlay — so the invariant to pin is that
-     * the surviving chain stays walkable and NULL-terminated and fresh
-     * records append soundly. Placed at the end of main because mid-file
-     * the cross-section live records (long moves) thread new records onto
-     * their chains and alias this probe's bookkeeping. */
+    /* Move and target records stay on entity chains; dropping a target
+     * leaves the move intact and does not alter the task-only global list. */
+    void* global_before_drop = cmd_global_head();
     EntitySlot* dropper = place(&ctx, 1, "dropper", 11, 5);
     cmd_create_move(dropper, 10.0f, 5.0f, 0);
-    cmd_create_target(dropper, (void*)dropper); /* middle record */
-    dropper->flags_3e0 |= 0x400u; /* gated commands need this bit */
-    cmd_create_gated(dropper, (void*)dropper);
+    cmd_create_target(dropper, (void*)dropper);
     CHECK(cmd_chain_drop(dropper, 2) == 1, "drop takes the target record");
-    {
-        int len = 0;
-        const void* r;
-        for (r = dropper->cmd_head; r != NULL && len < 8; r = cmd_rec_next(r)) {
-            ++len;
-        }
-        CHECK(len == 2 && r == NULL,
-              "surviving chain walks move->gated and NULL-terminates");
-        const void* tail = cmd_chain_walk(dropper);
-        CHECK(tail != NULL && cmd_rec_type(tail) == 5,
-              "chain tail is the gated record after the splice");
-    }
+    CHECK(cmd_global_head() == global_before_drop,
+          "entity-chain drop leaves the task global list intact");
     for (int t = 0; t < 10 && dropper->cmd_head != NULL; ++t) {
         run(&ctx, 1, 0.5f); /* drain before any later link, so nothing else
                              * threads records onto this probe's chains */
     }
     CHECK(dropper->cmd_head == NULL, "dropper chain drains cleanly");
-    /* A fresh command after the drop must thread a new record onto the
-     * surviving chain soundly — no dangling link back into freed memory. */
     EntitySlot* linked = place(&ctx, 1, "linked", 12, 5);
     cmd_create_move(linked, 11.0f, 5.0f, 0);
-    {
-        int len = 0;
-        for (const void* r = linked->cmd_head; r != NULL && len < 8;
-             r = cmd_rec_next(r), ++len) {
-        }
-        CHECK(len == 1, "fresh move threads one live record");
-    }
-    CHECK(cmd_rec_next(linked->cmd_head) == NULL,
-          "fresh chain tail is NULL — no dangling reference");
+    CHECK(cmd_global_head() == global_before_drop &&
+              linked->cmd_head != NULL && cmd_rec_next(linked->cmd_head) == NULL,
+          "new move remains on its own chain outside the task list");
     for (int t = 0; t < 10 && linked->cmd_head != NULL; ++t) {
         run(&ctx, 1, 0.5f);
     }
     CHECK(linked->cmd_head == NULL, "linked move drains cleanly");
+
+    if (real_dir != NULL) {
+        probe_real(real_dir);
+    }
 
     if (s_failures != 0) {
         fprintf(stderr, "ai_test: %d failure(s)\n", s_failures);

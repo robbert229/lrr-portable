@@ -26,7 +26,7 @@ void game_context_init(GameContext* ctx)
      * FUN_0046a060 — instance fill TODO(corpus)); the port defaults it to
      * the corpus inline span so list installs behave (see game.hpp). */
     ctx->stats_activity_cap = AI_ACTIVITY_SLOTS;
-    /* Screen-space effect lane (finding 120): the lane starts empty and the
+    /* Screen-space effect lane (finding 121): the lane starts empty and the
      * shake amplitude mirror of DAT_004a48b0 starts at 1.0 — the corpus
      * stores the same 0x3f800000 init word, and the callback shake branch
      * (0x43ce88) resets it there when it decays past zero. */

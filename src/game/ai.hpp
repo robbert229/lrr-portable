@@ -163,7 +163,7 @@ int ai_activity_probe(const EntitySlot* e);
  * permits drill/teleport/reinforce, else 0. */
 int ai_can_do(const EntitySlot* e);
 
-/* --- entity effects (finding 120) ---------------------------------------- *
+/* --- entity effects (finding 121) ---------------------------------------- *
  * The screen-space effect lane (effect.hpp) hosts the projectile arc and
  * the screen-shake state. These ai-side raisers are what the demo/tests
  * drive; the lane API itself lives in effect.hpp. */

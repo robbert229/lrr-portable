@@ -7,7 +7,7 @@
 #include "effect.hpp"
 #include "level.hpp"
 
-/* Corpus constants pinned in the exported evidence (finding 120):
+/* Corpus constants pinned in the exported evidence (finding 121):
  *   FUN_00406760's control scaling — local_18 = {1.0, -1.3} normalized to
  *   length dist*0.2, local_20 = {0.3, 1.0} to length dist/3.
  *   FUN_004065f0 — the cubic point evaluation (decompiled).
@@ -328,7 +328,7 @@ int effect_lane_dispatches(const GameContext* ctx)
 /* Draw the lane's live records as small screen markers (the screen-space
  * effect lane draw path). Coordinates are world units like the entity
  * markers — converted through the bound level grid exactly as
- * level_render_map converts entity positions (finding 120). */
+ * level_render_map converts entity positions (finding 121). */
 static void draw_marker(const LevelState* lvl, void* pixels, int pitch,
                         int w, int h, float wx, float wy,
                         int cr, int cg, int cb)

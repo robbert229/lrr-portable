@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-// Screen-space effect lane (finding 120): projectile arcs, screen shake,
+// Screen-space effect lane (finding 121): projectile arcs, screen shake,
 // and the lane's dispatch + draw path. The arc table below is the corpus
 // geometry: trapezoid control scaling for a 12.0-shot / 3.0-height arc
-// transcribed from FUN_00406760/004065f0/00406820 (see finding 120).
+// transcribed from FUN_00406760/004065f0/00406820 (see finding 121).
 #include <math.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -38,7 +38,7 @@ static EntitySlot* place(GameContext* ctx, int type, const char* name,
     return (EntitySlot*)entity_at(ctx, type, idx);
 }
 
-/* ---- corpus arc table (finding 120; script-generated from the FUN_0040
+/* ---- corpus arc table (finding 121; script-generated from the FUN_0040
  * ---- 65f0 transcription for dist=12, dz=3) ------------------------------ */
 static void check_arc_geometry(void)
 {
@@ -74,7 +74,7 @@ static void check_arc_geometry(void)
     CHECK(mono, "arc segment lengths are cumulative and nondecreasing");
 
     /* Sampling at half-total sits inside the curve, between start and end.
-     * The corpus transcription (finding 120's arc_table.py) evaluates the
+     * The corpus transcription (finding 121's arc_table.py) evaluates the
      * half-arc-length point at (7.334105, -4.755673) for dist=12, dz=3. */
     float hx = 0, hz = 0;
     effect_arc_sample(pts, lens, n, total * 0.5f, &hx, &hz);

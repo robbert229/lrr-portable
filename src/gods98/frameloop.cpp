@@ -1195,7 +1195,7 @@ int LegorrrRun(void)
                                           !mission_reward_active(&game));
             }
             /* '4'/'f' — fire an arc projectile from the first selected
-             * entity toward the cursor cell (finding 120: effect lane
+             * entity toward the cursor cell (finding 121: effect lane
              * projectile arcs — demo hook). */
             if (input_key_edge(&input, 'f')) {
                 int n = 0;
@@ -1212,7 +1212,7 @@ int LegorrrRun(void)
                 fprintf(log, "frameloop: %d arc projectile(s) fired\n", n);
             }
             /* 'h' — trigger the impact screen shake on the first selected
-             * entity (finding 120: FUN_004475c0 raiser). */
+             * entity (finding 121: FUN_004475c0 raiser). */
             if (input_key_edge(&input, 'h')) {
                 if (game.selection_count > 0) {
                     ai_shake_raise(&game, game.selection[0]);
@@ -1238,7 +1238,7 @@ int LegorrrRun(void)
             /* Headless demo hook (LEGORRR_DEMO_FX): fire an arc from the
              * first placed entity toward the nearest other and raise a
              * screen shake on the first frame the level is in-game, so a
-             * canned run demonstrates the effect lane (finding 120). */
+             * canned run demonstrates the effect lane (finding 121). */
             static int s_demo_fx_done = 0;
             if (env_get("LEGORRR_DEMO_FX", NULL) != NULL && !s_demo_fx_done) {
                 /* Farthest placed pair — a clearly visible flight. */
@@ -1358,7 +1358,7 @@ int LegorrrRun(void)
                  * the voxel array + live entity markers + cursor cell. */
                 level_render_map(game.level, &game, input.mouse_x, input.mouse_y,
                                  WINDOW_W, WINDOW_H, pixels, pitch);
-                /* Screen-space effect lane draw (finding 120): projectiles
+                /* Screen-space effect lane draw (finding 121): projectiles
                  * and effects render on top of the map without touching the
                  * render path's own state. */
                 effect_lane_draw(&game, WINDOW_W, WINDOW_H, pixels, pitch);

@@ -186,7 +186,7 @@ typedef struct AiWaypoint {
  * holds pointers to it. */
 typedef struct EntitySlot EntitySlot;
 
-/* Screen-space effect lane record (finding 10/120; corpus effect bank
+/* Screen-space effect lane record (finding 10/121; corpus effect bank
  * DAT_0050391c, stride 0x2b0). One slot owns one live entity effect —
  * a projectile arc in flight (kind EFFECT_ARC) or a straight shot
  * (EFFECT_STRAIGHT). The corpus builds a 50-point cubic-bezier polyline
@@ -373,7 +373,7 @@ typedef struct GameContext {
      * tables. NULL disables the pre-pass. */
     int (*input_keyheld)(int key);
 
-    /* --- screen-space effect lane + viewport shake (finding 120) ---------- *
+    /* --- screen-space effect lane + viewport shake (finding 121) ---------- *
      * Corpus: DAT_0050391c effect bank (the projectile/effect records the
      * callback's arc and shake branches drive), and DAT_004a48b0 — the
      * global shake amplitude the callback shake branch (0x43ce88) reads and

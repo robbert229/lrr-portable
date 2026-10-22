@@ -604,9 +604,17 @@ Exported for finding 118. Twenty records cover loader-profile setup and selectio
 
 Exported for finding 119. Five records cover DirectSound initialization, the queried GUID bytes and xref, the listener-interface acquisition branch, and subsequent initialization. One exploratory WAV-loader dossier is included but not cited by the finding.
 
+## `legorr-sound-buffer-duplication.bundle`
+
+Exported for finding 120. Two function records cover sound-buffer creation, the optional duplicate-buffer branch, and the caller forwarding the branch argument.
+
+## `legorr-sound-buffer-fill.bundle`
+
+Exported for finding 120. One function record covers locking the primary buffer, copying the loaded sample into it, unlocking, and querying buffer state.
+
 ## legorr-entity-effect-branches.bundle
 
-Exported for finding 120. 74 records cover the three entity effect
+Exported for finding 121. 74 records cover the three entity effect
 branches: the effect bank `DAT_0050391c` and its allocator/firers
 (`FUN_0046ff70`, `FUN_0046faf0`, `FUN_0046fc70`, per-frame advance
 `FUN_0046f920` + ticker `FUN_0046f550`), the projectile arc geometry

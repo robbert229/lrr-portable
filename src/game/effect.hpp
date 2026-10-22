@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* Game layer — screen-space effect lane (finding 120).
+/* Game layer — screen-space effect lane (finding 121).
  *
  * Port of the corpus's entity effect bank (DAT_0050391c) and the callback
  * effect branches that drive it (finding 10's "Documented TODO branches":

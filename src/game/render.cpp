@@ -318,7 +318,7 @@ void level_render_map(const LevelState* lvl, const GameContext* ctx,
     if (gw <= 0 || gh <= 0) {
         return;
     }
-    /* Screen-space viewport shake (finding 120): the callback shake branch
+    /* Screen-space viewport shake (finding 121): the callback shake branch
      * (0x43ce88) leaves ctx->shake_dx/dy in world units (the corpus scales
      * the work-object offset by amp*0.1 minus the 10.0 position scale —
      * 0x49e3d4). Convert to pixels with that same fixed 10 px/unit draw

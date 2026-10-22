@@ -525,7 +525,7 @@ this branch (bounded TODO — see the permitted-activity call-sites note).
 ### Entity effect branches (projectile arcs, screen shake, screen-space effect lane — closed 2026-10-22)
 
 The three "documented-but-unguessed" branches of the original list are now
-ported from fresh REA evidence (finding 120,
+ported from fresh REA evidence (finding 121,
 `docs/evidence/legorr-entity-effect-branches.bundle`):
 
 - **Projectile arcs** (`+0x3e0` bit `0x400000`, `FUN_004755e0`/
