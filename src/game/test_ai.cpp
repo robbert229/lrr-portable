@@ -745,6 +745,40 @@ int main(void)
         ctx.stats_speed_sec[5] = 0.0f;
     }
 
+    /* cmd_chain_drop global-list hazard (round-3 review): the drop must
+     * unlink from the global command list BEFORE splicing the record out
+     * of the chain — chain and global thread the one next slot, so a
+     * splice-first drop hides the record from cmd_global_unlink's scan,
+     * leaves s_global_tail dangling at a freed record, and the very next
+     * cmd_link_tail threads a pooled record off that dangling tail and
+     * cycles the chain. Placed at the end of main because mid-file the
+     * cross-section live records (long moves) thread new records onto
+     * their chains and alias this probe's bookkeeping. */
+    EntitySlot* dropper = place(&ctx, 1, "dropper", 11, 5);
+    cmd_create_move(dropper, 10.0f, 5.0f, 0);
+    cmd_create_target(dropper, (void*)dropper); /* globally-last record */
+    CHECK(cmd_chain_drop(dropper, 2) == 1, "drop takes the target record");
+    for (int t = 0; t < 10 && dropper->cmd_head != NULL; ++t) {
+        run(&ctx, 1, 0.5f); /* drain before any later link, so nothing else
+                             * threads records onto this probe's chains */
+    }
+    CHECK(dropper->cmd_head == NULL, "dropper chain drains cleanly");
+    EntitySlot* linked = place(&ctx, 1, "linked", 12, 5);
+    cmd_create_move(linked, 11.0f, 5.0f, 0);
+    int walk = 0;
+    int reaches = 0;
+    for (const void* r = cmd_global_head(); r != NULL && walk < 64;
+         r = cmd_rec_next(r), ++walk) {
+        if (r == linked->cmd_head) {
+            reaches = 1;
+        }
+    }
+    CHECK(walk < 64 && reaches, "next link threads soundly — no dangling tail");
+    for (int t = 0; t < 10 && linked->cmd_head != NULL; ++t) {
+        run(&ctx, 1, 0.5f);
+    }
+    CHECK(linked->cmd_head == NULL, "linked move drains cleanly");
+
     if (s_failures != 0) {
         fprintf(stderr, "ai_test: %d failure(s)\n", s_failures);
         return 1;

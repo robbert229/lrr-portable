@@ -35,8 +35,9 @@ typedef struct CmdRec {
                           * task-state granter — is config/runtime-driven
                           * (finding 10 §"Spawn-dispatch task-state switch";
                           * the shipped binary creates type-0x13 "ref"
-                          * records via CmdAlloc(0x13) — e.g. 0x403108,
-                          * 0x424439 — but pins no +0x38 grant/flag pair);
+                          * records via CmdAlloc(0x13) — verified site
+                          * 0x403108 inside FUN_004030e0 — but pins no
+                          * +0x38 grant/flag pair);
                           * port-side writers stage grants through
                           * cmd_rec_set_activity. */
     int32_t  extra;      /* +0x3c (type-8 tasks set 8)                         */
@@ -301,12 +302,18 @@ int cmd_chain_drop(EntitySlot* e, int type)
     while (cur != NULL) {
         CmdRec* next = as_rec(cur->next);
         if (cur->type == type) {
-            if (prev != NULL) {
-                prev->next = cur->next;
-            } else {
-                e->cmd_head = cur->next;
-            }
+            /* Unlink from the global list FIRST: chain and global share the
+             * one next slot, so a chain splice before the scan hides cur
+             * from cmd_global_unlink — it would miss, never fix
+             * s_global_tail, and the next cmd_link_tail would thread a
+             * pooled record off the dangling tail. */
+            CmdRec* nxt = next; /* cur->next before unlink/free */
             cmd_global_unlink(cur);
+            if (prev != NULL) {
+                prev->next = nxt;
+            } else {
+                e->cmd_head = nxt;
+            }
             cmd_free(cur, 0);
             ++dropped;
         } else {
