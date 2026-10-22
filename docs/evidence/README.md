@@ -30,6 +30,17 @@ scene helpers, the SFX-bank slot-order verification for `SFX_Place*`, and the
 `+0x3e4` bit-map reads (`0x80000`, `0x100000`, `0x40000000`). Import with
 `import_evidence_bundle` or inspect `records` directly.
 
+## `legorr-ddscene-owner-link.bundle`
+
+Exported 2026-10-21 from the finding-28 owner-link trace. 20 recorded
+observations: `FUN_00473da0` setter and `FUN_00473db0` getter for object
+`+0x20`; the `FUN_00437d00` entity-spawn branch that stores a scene object at
+entity `+0x1c` and assigns the entity as owner; type-1 model propagation via
+`FUN_0046d140`; type-2/3/4 model wrapper `FUN_00408380`; and the scene-object
+constructor `FUN_00472950` clearing the pooled record. The bundle also retains
+the relevant caller/reference inventory. Import with `import_evidence_bundle`
+or inspect `records` directly.
+
 ## `legorr-ddscene-hooks.bundle`
 
 Exported 2026-10-21 from the finding-26 session (the DDiScene animation hooks).
