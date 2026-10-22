@@ -264,7 +264,9 @@ port now mirrors the lifecycle:
 The corpus *algorithm* between install and append is the wave-flood system
 on the grid handle at `level+4` (`FUN_0044f380`/`FUN_0044efb0`): the seed
 (`FUN_00430ee0`) validates the target cell (`record+0 == 0`), stamps it 1,
-and raises flag `0x40000` across the four neighbours as waves, while
+and raises flag `0x40000` over the seed footprint's offsets — `(-1,-1)`,
+`(0,-1)`, `(0,0)`, `(-1,0)`, a northwest 2x2 block including the seed cell
+itself (the `local_20` table in record 12) — while
 `FUN_00430530` marks cells `record+0 = 5` on the type-8/10 traceback and
 refuses blocked (`flags & 8`) cells. **Ported 2026-10-21 (issue #70):** the
 port's `WaveFlood` core (`src/game/ai.cpp`) mirrors the corpus state model
@@ -280,7 +282,9 @@ stamping 5 and refusing flag-8 cells, with backtracking so dead-end
 branches get stamped like the corpus's explored-neighbour pass. The only
 map-side authorities consulted are the ported queries `level_walkable`
 (`FUN_00432770`) and `level_tile_occupied` (`FUN_00432e00` read); a cell
-failing either takes the blocked bit. The handle-side wave pump internals
+failing either takes the blocked bit, exempting only the mover's own cell
+(the walker raises that reservation on its current cell every tick, so a
+mid-move rebuild would otherwise never root at the start). The handle-side wave pump internals
 (`FUN_0044f380`/`FUN_0044efb0` value queues) and the message side effects
 inside `FUN_00430530` (`FUN_00419b80`, `FUN_00431450`, the `+0x334`-gated
 branches) stay corpus-side/TODO with the rest of that family.

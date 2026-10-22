@@ -341,6 +341,45 @@ int main(void)
                   runner->cmd_head == NULL,
               "the walker walks every flooded cell and arrives");
 
+        /* Retargeting mid-move (PR #87 feedback): the walker's own cell
+         * carries its occupancy reservation every tick (0x43deed), so a
+         * rebuild while the command is live must exempt it — otherwise
+         * the wave can never root at the start and every mid-move
+         * retarget silently drops to the direct fallback. */
+        memset(voxels, 0, sizeof(voxels));
+        for (int cy = 0; cy <= 13; ++cy) {
+            for (int cx = 0; cx <= 13; ++cx) {
+                *(uint32_t*)(voxels + ((size_t)cy * 16 + cx) * 0x48 + 8) |= 0x10u;
+            }
+        }
+        EntitySlot* retarget = place(&ctx, 1, "retarget", 1, 5);
+        cmd_create_move(retarget, 8.0f, 5.0f, 0);
+        CHECK(retarget->wp_count == 7,
+              "the first build routes the seven-cell move");
+        run(&ctx, 1, 0.1f); /* mid-move: the walker marks cell (1,5) */
+        CHECK(retarget->cmd_head != NULL, "the retarget move is still live");
+        CHECK(ai_path_build(&ctx, retarget, 8.0f, 5.0f) == 7,
+              "the rebuild exempts the mover's own reservation at the start");
+        for (int t = 0; t < 15 && retarget->cmd_head != NULL; ++t) {
+            run(&ctx, 1, 0.5f);
+        }
+        CHECK(retarget->cmd_head == NULL && retarget->x == 8.0f &&
+                  retarget->y == 5.0f,
+              "the rebuilt route walks to the target");
+
+        /* Seed flag footprint (PR #87 feedback): record 12 raises the
+         * flag over the northwest 2x2 block including the seed cell,
+         * (-1,-1), (0,-1), (0,0), (-1,0) — not the cardinal neighbours.
+         * A target one step east of the start pins the count: footprint
+         * {(2,11),(3,11),(3,12),(2,12)} plus the wave's only spread entry
+         * (4,12) gives exactly five flagged cells; cardinal-neighbour
+         * marking gives four and misses the seed cell itself. */
+        EntitySlot* seedcell = place(&ctx, 1, "seedcell", 2, 12);
+        CHECK(ai_path_build(&ctx, seedcell, 3.0f, 12.0f) == 1,
+              "a one-step target roots a one-cell traceback");
+        CHECK(ai_wave_flood_count() == 5,
+              "the seed raises record 12's northwest 2x2 footprint flag");
+
         /* Unreachable target: the blocked column now spans the whole grid,
          * so the wave floods the target side, exhausts, and the traceback
          * never roots at the start. */

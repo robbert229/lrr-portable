@@ -593,10 +593,12 @@ finding 12, #14). Three new modules in `src/game/`:
   the one-hop seed when there is no grid or no path. The builder runs the
   ported corpus *wave-flood* pathfinder (`FUN_00430ee0` seed + spread and
   `FUN_00430530` traceback over the port's level-grid handle): a
-  target-validated seed raises the wave flag `0x40000` across walked
-  cells, blocked (`flags & 8`) cells are refused by the ported
-  walkability/occupancy queries, and the traceback walks the wave back to
-  the start cell, stamping it `5` along the way. The flood work state is
+  target-validated seed raises the wave flag `0x40000` over its northwest
+  2x2 footprint and every spread cell, blocked (`flags & 8`) cells are
+  refused by the ported walkability/occupancy queries (the mover's own
+  cell exempt — it reserves its current cell every tick), and the
+  traceback walks the wave back to the start cell, stamping it `5` along
+  the way. The flood work state is
   scoped per path build — created and released inside one `ai_path_build`
   — so it never leaks between commands. Two flag branches that were
   approximated are now real: wake-timer expiry mirrors `FUN_0044c110`'s

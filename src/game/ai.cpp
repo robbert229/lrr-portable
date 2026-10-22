@@ -154,7 +154,8 @@ static const LevelState* grid_of(const GameContext* ctx);
  *  Corpus state lives in the handle's voxel records (stride 0x48): the
  *  wave-state byte record+0 (0 = unwalked, 1 = flooded/walked, 5 =
  *  traceback-stamped) and the record+8 flag word, which carries the
- *  wave flag 0x40000 the seed raises across the neighbours (FUN_00430ee0)
+ *  wave flag 0x40000 the seed raises over its northwest 2x2 footprint
+ *  including the seed itself (FUN_00430ee0, record 12's offset table)
  *  and the 8 bit FUN_00430530 gates rejected cells on (`flags & 8`).
  *  The port-level equivalent of that handle is the per-build wave state
  *  below: the same state bytes and flag bits over the port grid, created
@@ -191,10 +192,17 @@ typedef struct WaveFlood {
     uint8_t*  scan;   /* per-cell traceback scan cursor    */
     int       marks;  /* cells carrying the wave flag (diagnostic)    */
     int       goal;   /* seeded target cell index          */
+    int       self;   /* the mover's own cell: its reservation is exempt
+                         from the occupancy gate (the walker marks its
+                         current cell every tick, 0x43deed) */
 } WaveFlood;
 
-/* The four spread directions the seed raises the wave flag across. */
+/* The four spread directions the flood advances through. */
 static const int s_wave_off[4][2] = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };
+
+/* The seed's flag footprint (record 12's local_20 table): a northwest
+ * 2x2 block including the seed cell — (-1,-1), (0,-1), (0,0), (-1,0). */
+static const int s_seed_off[4][2] = { { -1, -1 }, { 0, -1 }, { 0, 0 }, { -1, 0 } };
 
 static int s_wave_marks; /* wave-flag count from the last path build */
 
@@ -210,9 +218,15 @@ static void wave_mark(WaveFlood* wf, int cell)
 
 /* The blocked gate: an unwalkable or entity-reserved cell takes the
  * corpus's flags & 8 rejection bit; the ported queries are the only
- * state authority the wave consults. */
+ * state authority the wave consults. The mover's own cell is exempt
+ * from the occupancy check: the walker raises that reservation on its
+ * current cell every tick (callback 0x43deed), so rejecting it would
+ * strand every retarget mid-move (PR #87 feedback). */
 static int wave_gate_blocked(WaveFlood* wf, int x, int y, int cell)
 {
+    if (cell == wf->self) {
+        return !level_walkable(wf->grid, x, y);
+    }
     if (!level_walkable(wf->grid, x, y) || level_tile_occupied(wf->grid, x, y)) {
         wf->flags[cell] |= WAVE_FLAG_BLOCKED;
         return 1;
@@ -222,8 +236,9 @@ static int wave_gate_blocked(WaveFlood* wf, int x, int y, int cell)
 
 /* FUN_00430ee0 seed: validate the target — the corpus drops row/column 0
  * and everything at or past its w-2/h-2 margin (unsigned), and its
- * record+0 == 0 gate is per-build state, fresh here — then stamps it
- * walked (1) and raises the wave flag 0x40000 across the four neighbours.
+ * record+0 == 0 gate is per-build state, fresh here — then stamps the
+ * seed cell walked (1) and raises the wave flag 0x40000 over record 12's
+ * footprint offsets, a northwest 2x2 block including the seed itself.
  * Returns 0 (and installs no state) when the target is off-handle or
  * blocked by the ported queries. */
 static int wave_seed(WaveFlood* wf, int tx, int ty)
@@ -240,7 +255,7 @@ static int wave_seed(WaveFlood* wf, int tx, int ty)
     wf->cell[goal] = WAVE_STATE_WALKED;
     wf->goal = goal;
     for (int i = 0; i < 4; ++i) {
-        int nx = tx + s_wave_off[i][0], ny = ty + s_wave_off[i][1];
+        int nx = tx + s_seed_off[i][0], ny = ty + s_seed_off[i][1];
         if (nx >= 0 && ny >= 0 && nx < wf->w && ny < wf->h) {
             wave_mark(wf, ny * wf->w + nx);
         }
@@ -371,6 +386,8 @@ int ai_path_build(GameContext* ctx, EntitySlot* e, float tx, float ty)
     wf.grid = grid;
     wf.w = w;
     wf.h = h;
+    wf.self = sy * w + sx; /* the mover's own cell: exempt from its own
+                              reservation, the gate still sees the map */
     int size = w * h;
     wf.cell = (uint8_t*)calloc((size_t)size, 1);
     wf.flags = (uint32_t*)calloc((size_t)size, sizeof(uint32_t));
