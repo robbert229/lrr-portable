@@ -264,23 +264,230 @@ int ai_path_append(EntitySlot* e, float x, float y)
 
 static const LevelState* grid_of(const GameContext* ctx);
 
-/* Build a command's path into the entity buffer. Corpus shape: the command
- * dispatch installs the list per command (start block 0x4418d0: buffer set,
- * +0x28/+0x2c/+0x28c/+0x290 reset, mover flag raised), and the builder
- * appends one entry per walked cell (0x44693b). The corpus *algorithm* is
- * the wave-flood system behind the level+4 grid handle (`FUN_00430ee0`
- * seeds the wave and marks cells with flag 0x40000, `FUN_00430530` traces
- * back from type-8/10 cells) — not ported, TODO(corpus). The port stand-in
- * is a 4-neighbour BFS over the level grid, entered only through
- * level_walkable cells, appending path cells (start excluded, capped at
- * AI_WAYPOINTS_MAX) corpus-style. Returns the entry count; 0 means "no
- * grid, blocked target, unreachable, or equal cells" — the caller seeds a
- * one-hop fallback. */
+/* ------------------------------------------------------------------ *
+ *  Wave-flood pathfinder core — the port of the corpus system behind
+ *  the level+4 grid handle: the seed FUN_00430ee0 and the traceback /
+ *  spread probe FUN_00430530 (decompile evidence:
+ *  docs/evidence/legorr-pathfinder-build.bundle; finding 10).
+ *
+ *  Corpus state lives in the handle's voxel records (stride 0x48): the
+ *  wave-state byte record+0 (0 = unwalked, 1 = flooded/walked, 5 =
+ *  traceback-stamped) and the record+8 flag word, which carries the
+ *  wave flag 0x40000 the seed raises over its northwest 2x2 footprint
+ *  including the seed itself (FUN_00430ee0, record 12's offset table)
+ *  and the 8 bit FUN_00430530 gates rejected cells on (`flags & 8`).
+ *  The port-level equivalent of that handle is the per-build wave state
+ *  below: the same state bytes and flag bits over the port grid, created
+ *  by the build's install step and released by its finish reset, so the
+ *  flood work state is scoped per path build and never leaks between
+ *  commands. The only map-side authority it consults is the ported
+ *  queries level_walkable (FUN_00432770) and level_tile_occupied
+ *  (FUN_00432e00 read): an unwalkable or entity-reserved cell takes the
+ *  blocked bit 8 and the wave refuses it, exactly as the corpus gate.
+ *
+ *  The corpus traceback roots are the routing-destination tiles — cells
+ *  whose record+2 type is 8 or 10 (FUN_00430530's '\b'/'\n' branches).
+ *  The port routes to a cell, not a destination tile, so the seeded
+ *  target cell takes that role: traceback starts there and walks back
+ *  through the wave-marked cells to the start cell. The wave pump and
+ *  value-propagation queue behind the handle (FUN_0044efb0/FUN_0044f380)
+ *  is modelled by the spread FIFO below; the corpus's message/flag
+ *  side effects inside FUN_00430530 (FUN_00419b80, FUN_00431450, the
+ *  +0x334-gated branches) belong to the unported state objects and stay
+ *  TODO(corpus) like the rest of that family.
+ * ------------------------------------------------------------------ */
+#define WAVE_STATE_WALKED    1u        /* flooded: record+0 = 1          */
+#define WAVE_STATE_TRACEBACK 5u        /* record+0 = 5 (traceback pass)  */
+#define WAVE_FLAG_BLOCKED    0x00000008u /* FUN_00430530 flags & 8 gate  */
+#define WAVE_FLAG_WAVE       0x00040000u /* FUN_00430ee0 wave flag       */
+
+typedef struct WaveFlood {
+    const LevelState* grid;
+    int w, h;
+    uint8_t*  cell;   /* wave-state byte per cell          */
+    uint32_t* flags;  /* per-cell flag overlay (8 / 0x40000) */
+    int*      dist;   /* wave steps from target (traceback gradient) */
+    int*      queue;  /* spread FIFO; reused as the traceback stack   */
+    uint8_t*  scan;   /* per-cell traceback scan cursor    */
+    int       marks;  /* cells carrying the wave flag (diagnostic)    */
+    int       goal;   /* seeded target cell index          */
+    int       self;   /* the mover's own cell: its reservation is exempt
+                         from the occupancy gate (the walker marks its
+                         current cell every tick, 0x43deed) */
+} WaveFlood;
+
+/* The four spread directions the flood advances through. */
+static const int s_wave_off[4][2] = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };
+
+/* The seed's flag footprint (record 12's local_20 table): a northwest
+ * 2x2 block including the seed cell — (-1,-1), (0,-1), (0,0), (-1,0). */
+static const int s_seed_off[4][2] = { { -1, -1 }, { 0, -1 }, { 0, 0 }, { -1, 0 } };
+
+static int s_wave_marks; /* wave-flag count from the last path build */
+
+int ai_wave_flood_count(void) { return s_wave_marks; }
+
+static void wave_mark(WaveFlood* wf, int cell)
+{
+    if ((wf->flags[cell] & WAVE_FLAG_WAVE) == 0) {
+        wf->flags[cell] |= WAVE_FLAG_WAVE;
+        ++wf->marks;
+    }
+}
+
+/* The blocked gate: an unwalkable or entity-reserved cell takes the
+ * corpus's flags & 8 rejection bit; the ported queries are the only
+ * state authority the wave consults. The mover's own cell is exempt
+ * from the occupancy check: the walker raises that reservation on its
+ * current cell every tick (callback 0x43deed), so rejecting it would
+ * strand every retarget mid-move (PR #87 feedback). */
+static int wave_gate_blocked(WaveFlood* wf, int x, int y, int cell)
+{
+    if (cell == wf->self) {
+        return !level_walkable(wf->grid, x, y);
+    }
+    if (!level_walkable(wf->grid, x, y) || level_tile_occupied(wf->grid, x, y)) {
+        wf->flags[cell] |= WAVE_FLAG_BLOCKED;
+        return 1;
+    }
+    return 0;
+}
+
+/* FUN_00430ee0 seed: validate the target — the corpus drops row/column 0
+ * and everything at or past its w-2/h-2 margin (unsigned), and its
+ * record+0 == 0 gate is per-build state, fresh here — then stamps the
+ * seed cell walked (1) and raises the wave flag 0x40000 over record 12's
+ * footprint offsets, a northwest 2x2 block including the seed itself.
+ * Returns 0 (and installs no state) when the target is off-handle or
+ * blocked by the ported queries. */
+static int wave_seed(WaveFlood* wf, int tx, int ty)
+{
+    if (tx == 0 || ty == 0 ||
+        (unsigned)tx >= (unsigned)wf->w - 2u ||
+        (unsigned)ty >= (unsigned)wf->h - 2u) {
+        return 0;
+    }
+    int goal = ty * wf->w + tx;
+    if (wave_gate_blocked(wf, tx, ty, goal) != 0) {
+        return 0;
+    }
+    wf->cell[goal] = WAVE_STATE_WALKED;
+    wf->goal = goal;
+    for (int i = 0; i < 4; ++i) {
+        int nx = tx + s_seed_off[i][0], ny = ty + s_seed_off[i][1];
+        if (nx >= 0 && ny >= 0 && nx < wf->w && ny < wf->h) {
+            wave_mark(wf, ny * wf->w + nx);
+        }
+    }
+    return 1;
+}
+
+/* The wave spread: the corpus pumps the wave flag through the handle's
+ * queue (FUN_0044efb0); the port models the same four-direction spread
+ * with a FIFO from the seed cell. Entering a cell stamps it walked (1)
+ * and raises the wave flag 0x40000 — the mark of a walked cell — while
+ * blocked cells take flag 8 and the spread refuses them. The spread
+ * stops once the start cell floods; that is the corpus's traceback root
+ * condition (FUN_00430530 returning nonzero onto the mover). */
+static void wave_spread(WaveFlood* wf, int start)
+{
+    int w = wf->w, h = wf->h;
+    int head = 0, tail = 1;
+    wf->queue[0] = wf->goal;
+    while (head < tail && wf->cell[start] == 0) {
+        int cell = wf->queue[head++];
+        int cx = cell % w, cy = cell / w;
+        for (int i = 0; i < 4 && wf->cell[start] == 0; ++i) {
+            int nx = cx + s_wave_off[i][0], ny = cy + s_wave_off[i][1];
+            if (nx < 0 || ny < 0 || nx >= w || ny >= h) {
+                continue;
+            }
+            int ncell = ny * w + nx;
+            if (wf->cell[ncell] != 0) {
+                continue;
+            }
+            if (wave_gate_blocked(wf, nx, ny, ncell) != 0) {
+                continue;
+            }
+            wf->cell[ncell] = WAVE_STATE_WALKED;
+            wave_mark(wf, ncell);
+            wf->dist[ncell] = wf->dist[cell] + 1;
+            wf->queue[tail++] = ncell;
+        }
+    }
+}
+
+/* FUN_00430530 traceback: rooted at the flooded target cell, it walks
+ * back over the wave's cells to the start cell, stamping every walked
+ * cell with record+0 = 5 and refusing cells carrying the blocked flag 8.
+ * The port follows the wave-distance gradient with backtracking, so
+ * dead-end branches get stamped 5 too — the corpus stamps its explored
+ * neighbours 5 in exactly the same "tried and refused" pass. Writes the
+ * goal->start sequence into the reused stack (wf->queue) and returns the
+ * cell count before the start cell, or 0 when the start never flooded
+ * (unreachable or blocked target). */
+static int wave_traceback(WaveFlood* wf, int start)
+{
+    if (wf->cell[start] != WAVE_STATE_WALKED) {
+        return 0;
+    }
+    int depth = 0;
+    wf->queue[0] = wf->goal;
+    wf->cell[wf->goal] = WAVE_STATE_TRACEBACK;
+    while (depth >= 0) {
+        if (depth >= wf->w * wf->h) {
+            return 0; /* safety: a walk-back longer than the grid is broken */
+        }
+        int cell = wf->queue[depth];
+        if (cell == start) {
+            return depth;
+        }
+        int cx = cell % wf->w, cy = cell / wf->w;
+        int advanced = 0;
+        for (int i = wf->scan[cell]; i < 4; ++i) {
+            wf->scan[cell] = (uint8_t)(i + 1);
+            int nx = cx + s_wave_off[i][0], ny = cy + s_wave_off[i][1];
+            if (nx < 0 || ny < 0 || nx >= wf->w || ny >= wf->h) {
+                continue;
+            }
+            int ncell = ny * wf->w + nx;
+            if (wf->cell[ncell] != WAVE_STATE_WALKED) {
+                continue; /* flooded-only: never unwalked, never traceback */
+            }
+            if ((wf->flags[ncell] & WAVE_FLAG_BLOCKED) != 0) {
+                continue; /* the flags & 8 gate */
+            }
+            if (wf->dist[ncell] != wf->dist[cell] + 1) {
+                continue; /* follow the wave gradient out from the target */
+            }
+            wf->queue[++depth] = ncell;
+            wf->cell[ncell] = WAVE_STATE_TRACEBACK;
+            advanced = 1;
+            break;
+        }
+        if (advanced == 0) {
+            --depth; /* backtrack: this branch is a dead end */
+        }
+    }
+    return 0;
+}
+
+/* Build a command's path into the entity buffer through the wave-flood
+ * core. Corpus shape: the command dispatch installs the list per command
+ * (0x4418d0: buffer set, count/index and +0x28c/+0x290 reset, mover flag
+ * raised), the builder appends one entry per walked cell (0x44693b's
+ * per-cell {x, y, 0.5f} writes — the port's pending=1 mirror), and the
+ * command end releases the list (0x441a50). Port-side the finish reset
+ * also releases the wave state, so no flood work survives a build.
+ * Returns the entry count, or 0 when the build yields no path (no grid,
+ * off-handle or blocked target, unreachable, equal cells, longer than
+ * AI_WAYPOINTS_MAX) and the caller seeds the one-hop fallback. */
 int ai_path_build(GameContext* ctx, EntitySlot* e, float tx, float ty)
 {
+    s_wave_marks = 0; /* the build owns the whole flood state: start blank */
     const LevelState* grid = grid_of(ctx);
     if (e == NULL || grid == NULL) {
-        return 0;
+        return 0; /* no grid handle: the one-hop fallback owns this move */
     }
     int w = level_width(grid);
     int h = level_height(grid);
@@ -289,70 +496,56 @@ int ai_path_build(GameContext* ctx, EntitySlot* e, float tx, float ty)
     int gx = level_cell_of(tx);
     int gy = level_cell_of(ty);
     if (sx < 0 || sy < 0 || gx < 0 || gy < 0 || sx >= w || sy >= h ||
-        gx >= w || gy >= h || (sx == gx && sy == gy) ||
-        !level_walkable(grid, sx, sy) || !level_walkable(grid, gx, gy)) {
+        gx >= w || gy >= h) {
         return 0;
     }
 
+    WaveFlood wf;
+    memset(&wf, 0, sizeof(wf));
+    wf.grid = grid;
+    wf.w = w;
+    wf.h = h;
+    wf.self = sy * w + sx; /* the mover's own cell: exempt from its own
+                              reservation, the gate still sees the map */
     int size = w * h;
-    int* prev = (int*)malloc((size_t)size * sizeof(int));
-    int* queue = (int*)malloc((size_t)size * sizeof(int));
-    if (prev == NULL || queue == NULL) {
-        free(prev);
-        free(queue);
-        return 0;
-    }
-    static const int dx[4] = { 1, -1, 0, 0 };
-    static const int dy[4] = { 0, 0, 1, -1 };
-    memset(prev, 0xff, (size_t)size * sizeof(int)); /* -1 = unvisited */
-    prev[sy * w + sx] = -2; /* start sentinel */
-    int head = 0, tail = 0, found = 0;
-    queue[tail++] = sy * w + sx;
-    while (head < tail && !found) {
-        int cell = queue[head++];
-        int cx = cell % w, cy = cell / w;
-        for (int d = 0; d < 4 && !found; ++d) {
-            int nx = cx + dx[d], ny = cy + dy[d];
-            if (nx < 0 || ny < 0 || nx >= w || ny >= h) {
-                continue;
-            }
-            int ncell = ny * w + nx;
-            if (prev[ncell] != -1 || !level_walkable(grid, nx, ny)) {
-                continue;
-            }
-            prev[ncell] = cell;
-            queue[tail++] = ncell;
-            if (nx == gx && ny == gy) {
-                found = 1;
-            }
-        }
-    }
-    free(queue);
-    if (!found) {
-        free(prev);
-        return 0;
-    }
-    /* Trace the path back (read-only pass, then a stack buffer keeps prev
-     * pristine), and drop the start cell — the entity is already there.
-     * Port bound: paths longer than AI_WAYPOINTS_MAX fall back to the
-     * one-hop seed (the corpus buffer is heap-unbounded). */
-    int trace[AI_WAYPOINTS_MAX];
-    int len = 0;
-    for (int cell = gy * w + gx; cell != sy * w + sx; cell = prev[cell]) {
-        if (len >= AI_WAYPOINTS_MAX) {
-            free(prev);
-            return 0;
-        }
-        trace[len++] = cell;
-    }
-    free(prev);
+    wf.cell = (uint8_t*)calloc((size_t)size, 1);
+    wf.flags = (uint32_t*)calloc((size_t)size, sizeof(uint32_t));
+    wf.dist = (int*)calloc((size_t)size, sizeof(int));
+    wf.queue = (int*)calloc((size_t)size, sizeof(int));
+    wf.scan = (uint8_t*)calloc((size_t)size, 1);
 
-    e->wp_count = 0; /* corpus install: fresh list per command (0x4418d0) */
-    e->wp_index = 0;
-    for (int i = len - 1; i >= 0; --i) {
-        ai_path_append(e, (float)(trace[i] % w), (float)(trace[i] / w));
+    int len = 0;
+    if (wf.cell != NULL && wf.flags != NULL && wf.dist != NULL &&
+        wf.queue != NULL && wf.scan != NULL) {
+        if (wave_seed(&wf, gx, gy) != 0) {
+            int start = sy * w + sx;
+            if (wf.cell[start] == 0) {
+                wave_spread(&wf, start); /* equal cells need no wave */
+            }
+            len = wave_traceback(&wf, start);
+        }
+        /* The traceback stack is wf->queue; cells [0, len) run
+         * target -> start-adjacent (the start itself is excluded: the
+         * entity is already there). */
+        s_wave_marks = wf.marks;
     }
-    return len;
+
+    int rc = 0;
+    if (len > 0 && len <= AI_WAYPOINTS_MAX) {
+        e->wp_count = 0; /* corpus install: fresh list per command (0x4418d0) */
+        e->wp_index = 0;
+        for (int i = len - 1; i >= 0; --i) {
+            int cell = wf.queue[i];
+            ai_path_append(e, (float)(cell % w), (float)(cell / w));
+        }
+        rc = len;
+    }
+    free(wf.cell); /* finish reset (0x441a50): the flood state is released */
+    free(wf.flags);
+    free(wf.dist);
+    free(wf.queue);
+    free(wf.scan);
+    return rc;
 }
 
 /* The bound level's voxel grid, or NULL when no map is loaded (the corpus

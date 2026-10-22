@@ -57,6 +57,18 @@ static int s_icontains(const char* haystack, const char* needle)
     return 0;
 }
 
+/* Streamed soundtrack aliases live beside the menu SFX aliases in Samples.
+ * Their leading '@' marks a streamed WAVE in Lego.cfg, not part of its path. */
+static const char* menu_music_resource(BlockFile* cfg)
+{
+    const char* music = block_get_strptr(cfg,
+                                         "Lego* Samples SFX_MusicLoop");
+    if (music != NULL && music[0] == '@') {
+        ++music;
+    }
+    return music;
+}
+
 /* Held-key probe for the executor's cheat-keybind pre-pass (finding 06):
  * reads the current frame's input tables. */
 static const InputState* s_demo_input = NULL;
@@ -299,6 +311,9 @@ static void frameloop_menu_render(PlatformWindow* win, DisplaySurface* surf,
         }
     }
     frontend_render(fe, hi_font, lo_font, WINDOW_W, WINDOW_H, pixels, pitch);
+    /* Brightness (issue #85) is a post-pass over the finished frame. */
+    render_apply_brightness(pixels, pitch, WINDOW_W, WINDOW_H,
+                            game->options.brightness);
     platform_screenshot(win, pixels, pitch, WINDOW_W, WINDOW_H, frame);
     platform_present_pixels(win, pixels, pitch, WINDOW_W, WINDOW_H);
     surface_unlock(surf, pixels);
@@ -322,6 +337,7 @@ int LegorrrRun(void)
     }
 
     int mounted = resource_mount(wad_dir, "LegoRR");
+    resource_set_cd_root(wad_dir);
     fprintf(log, "frameloop: mounted %d wad(s) from %s\n", mounted, wad_dir);
     if (mounted == 0) {
         if (log != stderr) {
@@ -361,7 +377,7 @@ int LegorrrRun(void)
         NULL, /* level_block — bound to game.level below */
         NULL, /* level_voxels — resolved at bind (64-bit safe) */
         NULL, /* level_terrain */
-        0.0f, 0,
+        0.0f, 1.0f, 0,
     };
     /* Engine <-> level binding happens after the front end below — the level
      * loads only once the player picks one — so ctx.level_block/voxels/
@@ -411,7 +427,10 @@ int LegorrrRun(void)
     int audio_status = audio_open(&ap);
     int sfx_frames = 0;
     if (audio_status == 0) {
-        audio_set_volume(&ap, 0.6f);
+        /* Master gain from the store, not a fixed 0.6: the active save
+         * context's restored SFX_Volume (or the default) applies immediately
+         * (issue #85) — saved settings take effect without a menu nudge. */
+        audio_set_volume(&ap, options_audio_gain(&game.options));
         int loop_rc = audio_loop_named(&ap, "Sounds\\Iambloop.wav", 0.0f);
         sfx_frames = audio_play_named(&ap, "Sounds\\Buildings\\elec5.wav");
         fprintf(log,
@@ -484,14 +503,23 @@ int LegorrrRun(void)
      * the cfg) skips the menu straight into a level, like the classic demo. */
     char level_name[FE_LEVEL_NAME_MAX];
     FrontEnd fe;
-    int boot_menu = 0;
+    int boot_menu = 0, frontend_built = 0;
     if (game.cfg != NULL) {
         fprintf(log, "frameloop: config Lego.cfg loaded\n");
-        boot_menu = frontend_build(&fe, game.cfg)
-                 && frontend_enabled(game.cfg)
+        int built = frontend_build(&fe, game.cfg);
+        /* Functional options (issue #85): attach the live store so the menu
+         * widgets show and set the effective values. frontend_build ran
+         * with no store (defaults); sync seeds the loaded slot's values. */
+        fe.opts = &game.options;
+        frontend_options_sync(&fe);
+        frontend_built = built;
+        boot_menu = frontend_built && frontend_enabled(game.cfg)
                  && env_get("LEGORRR_LEVEL", "")[0] == '\0';
     } else {
         fprintf(log, "frameloop: Lego.cfg not found (wads need mounted game data)\n");
+    }
+    if (frontend_built && audio_status == 0) {
+        frontend_set_audio(&fe, &ap);
     }
     snprintf(level_name, sizeof(level_name), "%s",
              env_get("LEGORRR_LEVEL", "Level01"));
@@ -515,6 +543,19 @@ int LegorrrRun(void)
         frontend_build_slots(&fe, slots, sn);
     }
     if (boot_menu) {
+        if (audio_status == 0) {
+            const char* music = menu_music_resource(game.cfg);
+            int music_rc = (music != NULL && music[0] != '\0')
+                         ? audio_loop_named(&ap, music, 0.0f) : -1;
+            if (music_rc == 0) {
+                /* Unlike one-shot FLIC sounds, the continuous track only
+                 * reaches the platform queue from audio_update(). */
+                audio_update(&ap);
+            }
+            fprintf(log, "frameloop: main-menu music %s -> %s (%d)\n",
+                    music != NULL ? music : "(missing SFX_MusicLoop)",
+                    music_rc == 0 ? "queued" : "unavailable", music_rc);
+        }
         frontend_open(&fe, FE_MENU_MAIN);
         fprintf(log, "frameloop: front end up — main menu (arrows select, "
                      "Enter/Space act, Esc quits)\n");
@@ -572,7 +613,7 @@ int LegorrrRun(void)
                     }
                     fprintf(log, "frameloop: option %s -> %d/%d (%s)\n",
                             oit->label, oit->value, oit->max,
-                            live ? "audio" : "state");
+                            live ? "audio" : "store — applied live");
                     fe.option_changed = 0;
                 }
             }
@@ -632,10 +673,18 @@ int LegorrrRun(void)
 
             frameloop_menu_render(win, &surf, &fe, hi_font, lo_font, &game,
                                   (int)frames);
+            if (audio_status == 0) {
+                audio_update(&ap);
+            }
             Sleep((DWORD)FRAME_MS);
             ++frames;
             input_begin_frame(&input);
         }
+    }
+
+    /* Restore the game's ambient loop after leaving the main menu. */
+    if (boot_menu && audio_status == 0 && !quit) {
+        audio_loop_named(&ap, "Sounds\\Iambloop.wav", 0.0f);
     }
 
     /* --- Deferred level load (the front end chose a level) ------------------ */
@@ -659,6 +708,9 @@ int LegorrrRun(void)
     }
 
     const float dt = 1.0f / 30.0f;
+    /* Game Speed (issue #85): options_scale_frame stamps the store's factor
+     * into ctx.time_scale (EngineTick's subsystem tickers) and returns the
+     * scaled dt for the game-layer tickers (ai/objective). */
     /* Interactive proof: the arrow keys pan the blitted texture. */
     int rock_x = 24, rock_y = 24;
 
@@ -746,7 +798,7 @@ int LegorrrRun(void)
                         }
                         fprintf(log, "frameloop: option %s -> %d/%d (%s)\n",
                                 oit->label, oit->value, oit->max,
-                                live ? "audio" : "state");
+                                live ? "audio" : "store — applied live");
                         fe.option_changed = 0;
                     }
                 }
@@ -922,7 +974,8 @@ int LegorrrRun(void)
          * (findings 09/10/22). */
         if (game.level != NULL) {
             cmd_queue_tick();
-            int ai_done = ai_tick(&game, dt);
+            float sdt = options_scale_frame(&game.options, &ctx, dt);
+            int ai_done = ai_tick(&game, sdt);
             if (ai_done != 0) {
                 fprintf(log, "frameloop: ai commands completed: %d\n", ai_done);
             }
@@ -931,7 +984,7 @@ int LegorrrRun(void)
                 fprintf(log, "frameloop: tasks completed this frame (mask 0x%x)\n",
                         done);
             }
-            int resolved = objective_tick(game.level, dt);
+            int resolved = objective_tick(game.level, sdt);
             if (resolved == 0) {
                 fprintf(log, "frameloop: objective resolved (word 0x%08x)\n",
                         game.level->objective);
@@ -1009,6 +1062,18 @@ int LegorrrRun(void)
                                          ui, rock_x + 64 + 8, rock_y);
                 }
             }
+            /* Help Window (issue #85): the option toggles the shipped help
+             * panel over the level; the advisor stream text leads when the
+             * announcer has one. frontend_help_overlay holds the On/Off
+             * gate — this call is unconditional. */
+            if (game.level != NULL) {
+                frontend_help_overlay(pixels, pitch, WINDOW_W, WINDOW_H,
+                                      objective_stream(game.level),
+                                      &game.options);
+            }
+            /* Brightness (issue #85): BrightnessSet's scalar on the frame. */
+            render_apply_brightness(pixels, pitch, WINDOW_W, WINDOW_H,
+                                    game.options.brightness);
             platform_screenshot(win, pixels, pitch, WINDOW_W, WINDOW_H,
                                 (int)frames);
             platform_present_pixels(win, pixels, pitch, WINDOW_W, WINDOW_H);

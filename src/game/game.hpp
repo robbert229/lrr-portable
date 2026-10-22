@@ -25,6 +25,7 @@
 
 #include "gods98/block.hpp"
 #include "level.hpp"
+#include "options.hpp"
 
 #ifdef __cplusplus
 extern "C" {
@@ -275,6 +276,10 @@ typedef struct GameContext {
     /* --- save system (DAT_005574d0 + per-slot ctx) ---------------------- */
     int   save_slot;              /* DAT_005574d0 — -1 = none (defaults 5) */
     char  saves_dir[260];         /* "Saves" directory path */
+    GameOptions options;          /* DAT_00557030/34/3c — functional Options/
+                                   * Advanced values (speed/sfx/music/bright/
+                                   * help; issue #85), seeded by the active
+                                   * save slot, persisted on commit          */
     int   current_record;         /* checkpoint_step: level -> record index */
     int   active_slot;            /* slot of `records` (ctx +0x18 side) */
     int   record_count;           /* ctx +0x18 */

@@ -148,8 +148,12 @@ static void fli_delta(uint16_t* pix, int w, int h, const uint8_t* body,
             }
             uint16_t sc = le16(body + p);
             p += 2;
-            int skip = (sc >> 8) & 0xff;
-            int ctrl = sc & 0xff;
+            /* The packet word is stored little-endian as [skip, control],
+             * so skip is its low byte and the signed run control its high
+             * byte. Reversing these fields makes changed rows wander into
+             * adjacent pixels after the first delta frame. */
+            int skip = sc & 0xff;
+            int ctrl = (sc >> 8) & 0xff;
             x += skip;
             if (ctrl < 0x80) {
                 for (int k = 0; k < ctrl; ++k) {

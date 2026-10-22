@@ -249,6 +249,13 @@ int level_walkable(const LevelState* s, int cx, int cy);
  * clears. Bounds-guarded (the corpus writes OOB for bad coords). */
 void level_tile_mark(LevelState* s, int cx, int cy, int set);
 
+/* FUN_00432e00 read side: does the cell currently carry the OCCUPIED
+ * reservation flag? The wave-flood pathfinder consults it for its blocked
+ * gate (finding 10: the mark "feeds the pathfinder"). No map, or a cell
+ * the handle cannot address, reports occupied (cannot rule a reservation
+ * out); callers gate on that as blocked. */
+int level_tile_occupied(const LevelState* s, int cx, int cy);
+
 /* Cell (x,y) tile type byte (record+2), or -1 when there is no map. */
 int level_tile_type(const LevelState* s, int cx, int cy);
 

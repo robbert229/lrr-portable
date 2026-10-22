@@ -36,12 +36,14 @@
 
 #include "gods98/block.hpp"
 #include "gods98/texture.hpp"
+#include "options.hpp"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 struct Flic; /* gods98/flic.hpp — `.flh` overlay player (lazily opened) */
+struct AudioPlayer; /* gods98/audio.hpp — optional front-end SFX output */
 
 #define FE_ITEMS_MAX      32   /* ItemCount cap — ≥ the 24-level campaign picker */
 #define FE_SUBMENUS_MAX   8    /* MenuCount cap */
@@ -67,8 +69,8 @@ struct Flic; /* gods98/flic.hpp — `.flh` overlay player (lazily opened) */
 #define FE_FONT_KEY       0xffff0000u
 
 /* Item kinds — MenuItemType @ 0x413e60 (values 0..5; 5 = the "Next" catch-
- * all, 1 = Trigger). Slider/Cycle/TextInput parse their banner/label into
- * FeItem.label but are display-only in this milestone. */
+ * all, 1 = Trigger). Slider/Cycle adjust the option store behind `fe.opts`
+ * when one is attached (issue #85); TextInput parses its label only. */
 #define FE_ITEM_CYCLE      0
 #define FE_ITEM_TRIGGER    1
 #define FE_ITEM_TEXTINPUT  2
@@ -106,7 +108,7 @@ typedef struct FeOverlay {
     char  sfx[FE_NAME_MAX];
     int   x, y;
     Flic* flic;   /* opened player, or NULL (missing file / not started) */
-    int   tried;  /* 1 = open attempted (missing files are not retried) */
+    int   tried;  /* non-random overlays are only opened once per menu visit */
 } FeOverlay;
 
 typedef struct FeSubmenu {
@@ -119,7 +121,7 @@ typedef struct FeSubmenu {
     int   base_x, base_y;         /* Position key (x:y) */
     int   auto_center;            /* AutoCenter TRUE|FALSE */
     int   display_title;          /* DisplayTitle TRUE|FALSE */
-    int   play_random;            /* PlayRandom: one overlay plays per display */
+    int   play_random;            /* PlayRandom: random sequential FLIC playback */
     FeOverlay overlays[FE_OVERLAYS_MAX];
     int   overlay_count;
     int   can_scroll;             /* CanScroll TRUE — item plane pans (0x413970) */
@@ -172,12 +174,23 @@ typedef struct FrontEnd {
     char pending_level[FE_LEVEL_NAME_MAX]; /* level group to load (no "Levels::") */
     char resume_level[FE_LEVEL_NAME_MAX];  /* current level (pause Restart)   */
 
+    /* The functional option store (issue #85). When set, every option
+     * Slider/Cycle's displayed value seeds from it (build/open) and every
+     * adjustment writes back into it — the menu shows the *effective* value,
+     * never a reset default. NULL = classic display-only menu (values keep
+     * the per-banner fe_option_default). */
+    GameOptions* opts;
+
     /* Overlay players open for the currently active submenu (lazily). */
     const FeSubmenu* overlays_for;  /* which submenu's flics are open     */
+    int  overlay_active;            /* selected overlay index, or -1       */
+    uint32_t overlay_rng;           /* per-front-end LCG state              */
+    struct AudioPlayer* audio;      /* optional SFX player                  */
 
     /* CanScroll plane pan lives on each FeSubmenu (corpus DAT_005574e0
      * is reset when a menu re-enters — frontend_open clears every sub). */
     int  view_w, view_h;            /* render viewport (set each render)  */
+    int  pointer_x, pointer_y;      /* last menu pointer position         */
 } FrontEnd;
 
 /* One frame of modal-menu input: key *edges* this frame (the frame loop
@@ -213,6 +226,12 @@ void frontend_init(FrontEnd* fe);
  * level chain is populated from StartLevel/TutorialStartLevel + NextLevel. */
 int  frontend_build(FrontEnd* fe, BlockFile* cfg);
 
+/* Sync the option widgets with `fe->opts` (issue #85): seed every option
+ * Slider/Cycle value from the store, clamped to the item's cfg range. Called
+ * on build (when `opts` is already attached) and on every frontend_open, so
+ * re-entering Options always shows the effective value. */
+void frontend_options_sync(FrontEnd* fe);
+
 /* The FrontEndActive gate: `Lego* Main FrontEnd` cfg flag (finding 23).
  * (The corpus ANDs the loader-mode check DAT_00505f88 < 3; the port only
  * tracks the flag — the loader-mode notion is Win32-side.) */
@@ -229,6 +248,7 @@ int  fe_level_for_record(const FrontEnd* fe, int rec, char* out, size_t sz);
 /* Enter the modal menu at `menu`/submenu 0, selection 0. */
 int  frontend_open(FrontEnd* fe, int menu);
 void frontend_close(FrontEnd* fe);
+void frontend_set_audio(FrontEnd* fe, struct AudioPlayer* audio);
 
 /* Register the runtime save/load slot rows (from save_slot_state) and graft
  * them onto the SaveLoad submenus (MenuImage contains "SaveLoad" — the
@@ -261,7 +281,7 @@ const char* frontend_active_image(const FrontEnd* fe);
 
 /* Draw the active submenu into a locked RGBA32 framebuffer (R,G,B,A bytes):
  * item labels at their anchors (AutoCenter → centered on base_x), a
- * selection highlight behind the selected row, and the Title when
+ * selected font for the active row, the pointer graphic, and the Title when
  * display_title. The background / MenuImage blit is the caller's (it owns
  * the texture lane). `hi_font`/`lo_font` are the shipped bitmap fonts
  * (HiFont = selected, LoFont = unselected — the engine keys palette 255
@@ -276,6 +296,13 @@ const char* frontend_active_image(const FrontEnd* fe);
 void frontend_render(FrontEnd* fe, const TextureSurface* hi_font,
                      const TextureSurface* lo_font,
                      int w, int h, void* px, int pitch);
+
+/* The in-game Help Window (issue #85): the panel the Help_Window option
+ * toggles. The option is checked here — the display gate — so every caller
+ * shares it and the panel cannot draw while the store says Off. `text`
+ * (NULL for the demo key lines) fills the info lines. */
+void frontend_help_overlay(void* px, int pitch, int w, int h,
+                           const char* text, const GameOptions* opts);
 
 #ifdef __cplusplus
 }
