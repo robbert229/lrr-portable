@@ -165,8 +165,9 @@ linking between entity activities and `.lws` scene frames (finding 11 §4).
    `{NO,FALSE,OFF}→0`, anything else `2`, strings at `0x4aabe0–0x4a4124`.
 3. Value token limits: fixed 512-B buffers for formatted key paths (visible as
    `local_200/400/…` buffers); keys longer than that would silently truncate.
-4. `DAT_005343ac` read-tap callback suggests a file-change hook (mod/patch or
-   debug); origin not yet identified.
+4. DAT_005343ac is the optional loader-progress callback (finding 118): the whole-file loaders pass
+   the measured size before reading, and the callback accumulates it into the active LoaderProfile
+   category. The denominator unit and bytes successfully consumed remain unknown.
 
 ### Function map
 
