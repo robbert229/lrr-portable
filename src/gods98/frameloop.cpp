@@ -57,6 +57,18 @@ static int s_icontains(const char* haystack, const char* needle)
     return 0;
 }
 
+/* Streamed soundtrack aliases live beside the menu SFX aliases in Samples.
+ * Their leading '@' marks a streamed WAVE in Lego.cfg, not part of its path. */
+static const char* menu_music_resource(BlockFile* cfg)
+{
+    const char* music = block_get_strptr(cfg,
+                                         "Lego* Samples SFX_AmbientMusicLoop");
+    if (music != NULL && music[0] == '@') {
+        ++music;
+    }
+    return music;
+}
+
 /* Held-key probe for the executor's cheat-keybind pre-pass (finding 06):
  * reads the current frame's input tables. */
 static const InputState* s_demo_input = NULL;
@@ -198,6 +210,209 @@ static int movie_play_avi(const char* os_path, const char* label,
     return 1;
 }
 
+static int credits_load_lines(const char* name, char*** out_lines,
+                              int* out_count)
+{
+    *out_lines = NULL;
+    *out_count = 0;
+    Resource* r = resource_open(name, RESOURCE_AUTO);
+    if (r == NULL) {
+        return 0;
+    }
+    int32_t size = resource_read(r);
+    if (size <= 0) {
+        resource_free(r);
+        return 0;
+    }
+    char* text = (char*)malloc((size_t)size + 1);
+    if (text == NULL) {
+        resource_free(r);
+        return 0;
+    }
+    memcpy(text, r->data, (size_t)size);
+    text[size] = '\0';
+    resource_free(r);
+
+    int count = 1;
+    for (int32_t i = 0; i < size; ++i) {
+        if (text[i] == '\n') {
+            ++count;
+        }
+    }
+    char** lines = (char**)calloc((size_t)count, sizeof(*lines));
+    if (lines == NULL) {
+        free(text);
+        return 0;
+    }
+    int n = 0;
+    char* start = text;
+    for (char* p = text;; ++p) {
+        if (*p != '\n' && *p != '\0') {
+            continue;
+        }
+        char saved = *p;
+        *p = '\0';
+        size_t len = strlen(start);
+        if (len > 0 && start[len - 1] == '\r') {
+            start[--len] = '\0';
+        }
+        lines[n] = (char*)malloc(len + 1);
+        if (lines[n] == NULL) {
+            for (int i = 0; i < n; ++i) {
+                free(lines[i]);
+            }
+            free(lines);
+            free(text);
+            return 0;
+        }
+        memcpy(lines[n++], start, len + 1);
+        if (saved == '\0') {
+            break;
+        }
+        start = p + 1;
+    }
+    free(text);
+    *out_lines = lines;
+    *out_count = n;
+    return 1;
+}
+
+static void credits_free_lines(char** lines, int count)
+{
+    for (int i = 0; i < count; ++i) {
+        free(lines[i]);
+    }
+    free(lines);
+}
+
+/* CreditsTextFile + CreditsBackAVI @ 0x40a0c0: scroll centered text over
+ * the configured AVI until the player presses a key or clicks. */
+static void frameloop_credits(PlatformWindow* win, DisplaySurface* surf,
+                              BlockFile* cfg, const char* wad_dir,
+                              AudioPlayer* ap, int audio_status, int* quit,
+                              FILE* log, long* frame_number)
+{
+    const char* text_name = block_get_strptr(cfg,
+                                             "Lego* Main CreditsTextFile");
+    char** lines = NULL;
+    int line_count = 0;
+    if (text_name == NULL
+        || !credits_load_lines(text_name, &lines, &line_count)) {
+        fprintf(log, "credits: cannot load %s\n",
+                text_name != NULL ? text_name : "Lego* Main CreditsTextFile");
+        return;
+    }
+
+    TextureSurface* font = texture_get_or_load(
+        NULL, "Interface\\Fonts\\RSFont.bmp");
+    Movie* movie = NULL;
+    MovieInfo mi;
+    MovieOut out;
+    memset(&mi, 0, sizeof(mi));
+    memset(&out, 0, sizeof(out));
+    int video_frame_ms = FRAME_MS;
+    char movie_rel[256], movie_os[512];
+    if (movie_avis_enabled(cfg)
+        && movie_key_path(cfg, "CreditsBackAVI", movie_rel,
+                          sizeof(movie_rel))
+        && movie_path_resolve(wad_dir, movie_rel, movie_os,
+                              sizeof(movie_os))) {
+        movie = movie_open_path(movie_os);
+        if (movie == NULL || movie_info(movie, &mi) != 0
+            || mi.width <= 0 || mi.height <= 0) {
+            fprintf(log, "credits: cannot open backdrop %s\n", movie_os);
+            movie_close(movie);
+            movie = NULL;
+        } else if (mi.fps_num > 0 && mi.fps_den > 0) {
+            video_frame_ms = 1000 * mi.fps_den / mi.fps_num;
+            if (video_frame_ms < 1) {
+                video_frame_ms = 1;
+            }
+        }
+    }
+    InputState input;
+    input_reset(&input);
+    long scroll_px = 0;
+    int64_t next_video_ms = now_ms();
+    int have_video_frame = 0;
+    int leave = 0;
+    while (!*quit && !leave) {
+        PlatformEvent evbuf[32];
+        int nev = platform_pump_events(win, evbuf, 32);
+        input_capture_events(&input, evbuf, nev);
+        for (int i = 0; i < nev; ++i) {
+            if (evbuf[i].kind == PLATFORM_EVENT_QUIT) {
+                *quit = 1;
+                break;
+            }
+            if (evbuf[i].kind == PLATFORM_EVENT_KEYDOWN
+                || (evbuf[i].kind == PLATFORM_EVENT_MOUSE
+                    && evbuf[i].button == 1)) {
+                leave = 1;
+            }
+        }
+        if (*quit || leave) {
+            break;
+        }
+
+        if (movie != NULL && now_ms() >= next_video_ms) {
+            int mr = movie_next(movie, &out);
+            if (mr == 1) {
+                movie_close(movie);
+                movie = movie_open_path(movie_os);
+                if (movie != NULL && movie_info(movie, &mi) == 0) {
+                    mr = movie_next(movie, &out);
+                } else {
+                    movie_close(movie);
+                    movie = NULL;
+                    mr = -1;
+                }
+            }
+            if (mr == 0) {
+                have_video_frame = 1;
+            } else if (mr < 0) {
+                movie_close(movie);
+                movie = NULL;
+                have_video_frame = 0;
+            }
+            next_video_ms += video_frame_ms;
+            if (next_video_ms < now_ms() - video_frame_ms) {
+                next_video_ms = now_ms();
+            }
+        }
+
+        void* pixels = NULL;
+        int pitch = 0;
+        if (surface_lock(surf, &pixels, &pitch) == 0) {
+            if (have_video_frame) {
+                movie_scale_rgba(out.rgba, mi.width, mi.height, out.rgba_pitch,
+                                 (uint8_t*)pixels, WINDOW_W, WINDOW_H, pitch);
+            } else {
+                surface_fill(pixels, pitch, WINDOW_W, WINDOW_H, 0, 0, 0);
+            }
+            frontend_render_credits(font,
+                                    (const char* const*)lines, line_count,
+                                    (int)scroll_px, WINDOW_W, WINDOW_H,
+                                    pixels, pitch);
+            platform_screenshot(win, pixels, pitch, WINDOW_W, WINDOW_H,
+                                (int)*frame_number);
+            platform_present_pixels(win, pixels, pitch, WINDOW_W, WINDOW_H);
+            surface_unlock(surf, pixels);
+        }
+        if (audio_status == 0) {
+            audio_update(ap);
+        }
+        Sleep(FRAME_MS);
+        ++scroll_px;
+        ++*frame_number;
+        input_begin_frame(&input);
+    }
+
+    movie_close(movie);
+    texture_release(font);
+    credits_free_lines(lines, line_count);
+}
+
 /* Level load + mission seeding + level intro movie + engine binding. Both
  * the post-front-end boot path and the pause menu's Restart route here
  * (finding 07/09 + #47's level cinematics). */
@@ -299,6 +514,9 @@ static void frameloop_menu_render(PlatformWindow* win, DisplaySurface* surf,
         }
     }
     frontend_render(fe, hi_font, lo_font, WINDOW_W, WINDOW_H, pixels, pitch);
+    /* Brightness (issue #85) is a post-pass over the finished frame. */
+    render_apply_brightness(pixels, pitch, WINDOW_W, WINDOW_H,
+                            game->options.brightness);
     platform_screenshot(win, pixels, pitch, WINDOW_W, WINDOW_H, frame);
     platform_present_pixels(win, pixels, pitch, WINDOW_W, WINDOW_H);
     surface_unlock(surf, pixels);
@@ -322,6 +540,7 @@ int LegorrrRun(void)
     }
 
     int mounted = resource_mount(wad_dir, "LegoRR");
+    resource_set_cd_root(wad_dir);
     fprintf(log, "frameloop: mounted %d wad(s) from %s\n", mounted, wad_dir);
     if (mounted == 0) {
         if (log != stderr) {
@@ -361,7 +580,7 @@ int LegorrrRun(void)
         NULL, /* level_block — bound to game.level below */
         NULL, /* level_voxels — resolved at bind (64-bit safe) */
         NULL, /* level_terrain */
-        0.0f, 0,
+        0.0f, 1.0f, 0,
     };
     /* Engine <-> level binding happens after the front end below — the level
      * loads only once the player picks one — so ctx.level_block/voxels/
@@ -411,7 +630,10 @@ int LegorrrRun(void)
     int audio_status = audio_open(&ap);
     int sfx_frames = 0;
     if (audio_status == 0) {
-        audio_set_volume(&ap, 0.6f);
+        /* Master gain from the store, not a fixed 0.6: the active save
+         * context's restored SFX_Volume (or the default) applies immediately
+         * (issue #85) — saved settings take effect without a menu nudge. */
+        audio_set_volume(&ap, options_audio_gain(&game.options));
         int loop_rc = audio_loop_named(&ap, "Sounds\\Iambloop.wav", 0.0f);
         sfx_frames = audio_play_named(&ap, "Sounds\\Buildings\\elec5.wav");
         fprintf(log,
@@ -484,14 +706,23 @@ int LegorrrRun(void)
      * the cfg) skips the menu straight into a level, like the classic demo. */
     char level_name[FE_LEVEL_NAME_MAX];
     FrontEnd fe;
-    int boot_menu = 0;
+    int boot_menu = 0, frontend_built = 0;
     if (game.cfg != NULL) {
         fprintf(log, "frameloop: config Lego.cfg loaded\n");
-        boot_menu = frontend_build(&fe, game.cfg)
-                 && frontend_enabled(game.cfg)
+        int built = frontend_build(&fe, game.cfg);
+        /* Functional options (issue #85): attach the live store so the menu
+         * widgets show and set the effective values. frontend_build ran
+         * with no store (defaults); sync seeds the loaded slot's values. */
+        fe.opts = &game.options;
+        frontend_options_sync(&fe);
+        frontend_built = built;
+        boot_menu = frontend_built && frontend_enabled(game.cfg)
                  && env_get("LEGORRR_LEVEL", "")[0] == '\0';
     } else {
         fprintf(log, "frameloop: Lego.cfg not found (wads need mounted game data)\n");
+    }
+    if (frontend_built && audio_status == 0) {
+        frontend_set_audio(&fe, &ap);
     }
     snprintf(level_name, sizeof(level_name), "%s",
              env_get("LEGORRR_LEVEL", "Level01"));
@@ -515,6 +746,19 @@ int LegorrrRun(void)
         frontend_build_slots(&fe, slots, sn);
     }
     if (boot_menu) {
+        if (audio_status == 0) {
+            const char* music = menu_music_resource(game.cfg);
+            int music_rc = (music != NULL && music[0] != '\0')
+                         ? audio_loop_named(&ap, music, 0.0f) : -1;
+            if (music_rc == 0) {
+                /* Unlike one-shot FLIC sounds, the continuous track only
+                 * reaches the platform queue from audio_update(). */
+                audio_update(&ap);
+            }
+            fprintf(log, "frameloop: main-menu music %s -> %s (%d)\n",
+                    music != NULL ? music : "(missing SFX_AmbientMusicLoop)",
+                    music_rc == 0 ? "queued" : "unavailable", music_rc);
+        }
         frontend_open(&fe, FE_MENU_MAIN);
         fprintf(log, "frameloop: front end up — main menu (arrows select, "
                      "Enter/Space act, Esc quits)\n");
@@ -572,7 +816,7 @@ int LegorrrRun(void)
                     }
                     fprintf(log, "frameloop: option %s -> %d/%d (%s)\n",
                             oit->label, oit->value, oit->max,
-                            live ? "audio" : "state");
+                            live ? "audio" : "store — applied live");
                     fe.option_changed = 0;
                 }
             }
@@ -629,13 +873,25 @@ int LegorrrRun(void)
                 }
                 break;
             }
+            if (ev == FE_EVT_CREDITS) {
+                frameloop_credits(win, &surf, game.cfg, wad_dir, &ap,
+                                  audio_status, &quit, log, &frames);
+            }
 
             frameloop_menu_render(win, &surf, &fe, hi_font, lo_font, &game,
                                   (int)frames);
+            if (audio_status == 0) {
+                audio_update(&ap);
+            }
             Sleep((DWORD)FRAME_MS);
             ++frames;
             input_begin_frame(&input);
         }
+    }
+
+    /* Restore the game's ambient loop after leaving the main menu. */
+    if (boot_menu && audio_status == 0 && !quit) {
+        audio_loop_named(&ap, "Sounds\\Iambloop.wav", 0.0f);
     }
 
     /* --- Deferred level load (the front end chose a level) ------------------ */
@@ -659,6 +915,9 @@ int LegorrrRun(void)
     }
 
     const float dt = 1.0f / 30.0f;
+    /* Game Speed (issue #85): options_scale_frame stamps the store's factor
+     * into ctx.time_scale (EngineTick's subsystem tickers) and returns the
+     * scaled dt for the game-layer tickers (ai/objective). */
     /* Interactive proof: the arrow keys pan the blitted texture. */
     int rock_x = 24, rock_y = 24;
 
@@ -746,7 +1005,7 @@ int LegorrrRun(void)
                         }
                         fprintf(log, "frameloop: option %s -> %d/%d (%s)\n",
                                 oit->label, oit->value, oit->max,
-                                live ? "audio" : "state");
+                                live ? "audio" : "store — applied live");
                         fe.option_changed = 0;
                     }
                 }
@@ -922,7 +1181,8 @@ int LegorrrRun(void)
          * (findings 09/10/22). */
         if (game.level != NULL) {
             cmd_queue_tick();
-            int ai_done = ai_tick(&game, dt);
+            float sdt = options_scale_frame(&game.options, &ctx, dt);
+            int ai_done = ai_tick(&game, sdt);
             if (ai_done != 0) {
                 fprintf(log, "frameloop: ai commands completed: %d\n", ai_done);
             }
@@ -931,7 +1191,7 @@ int LegorrrRun(void)
                 fprintf(log, "frameloop: tasks completed this frame (mask 0x%x)\n",
                         done);
             }
-            int resolved = objective_tick(game.level, dt);
+            int resolved = objective_tick(game.level, sdt);
             if (resolved == 0) {
                 fprintf(log, "frameloop: objective resolved (word 0x%08x)\n",
                         game.level->objective);
@@ -1009,6 +1269,18 @@ int LegorrrRun(void)
                                          ui, rock_x + 64 + 8, rock_y);
                 }
             }
+            /* Help Window (issue #85): the option toggles the shipped help
+             * panel over the level; the advisor stream text leads when the
+             * announcer has one. frontend_help_overlay holds the On/Off
+             * gate — this call is unconditional. */
+            if (game.level != NULL) {
+                frontend_help_overlay(pixels, pitch, WINDOW_W, WINDOW_H,
+                                      objective_stream(game.level),
+                                      &game.options);
+            }
+            /* Brightness (issue #85): BrightnessSet's scalar on the frame. */
+            render_apply_brightness(pixels, pitch, WINDOW_W, WINDOW_H,
+                                    game.options.brightness);
             platform_screenshot(win, pixels, pitch, WINDOW_W, WINDOW_H,
                                 (int)frames);
             platform_present_pixels(win, pixels, pitch, WINDOW_W, WINDOW_H);

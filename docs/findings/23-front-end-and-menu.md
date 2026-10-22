@@ -195,6 +195,55 @@ StartLevelSelected     0x460220   ; commit pending level record → DAT_005529c4
 | `0x416150`/`0x4161a0` | `StreamPlayLevel`/`StreamPlayTutorial` | `Stream_LevelName_Level_%d` / `_TLevel_%d` stream triggers |
 | `0x4103d0` | `MainMenuTextItem` | the main menu's Credits/text item → `ScrollingTextDisplay @ 0x40a0c0` |
 
+## Main-menu background FLIC selection and sound
+
+**Observed in the shipped executable** (additional evidence bundle:
+`docs/evidence/legorr-menu-background-audio.bundle`):
+
+- The main-menu `Menu1` sets `PlayRandom TRUE` and provides five linked
+  `!OverlayN` records: `Rocky.flh`, `struck.flh`, `Sandwich.flh`, `claser.flh`,
+  and `Slug.flh`. Each record stores its own screen position and SFX token.
+- `MenuBuild @ 0x4140c0` reads the `PlayRandom` flag and constructs a linked list
+  of all configured overlays; `FUN_00412170 @ 0x412170` counts that list.
+- `FUN_004121b0` is the playback controller called from the menu tick. It keeps
+  at most one FLIC in the global active slot (`DAT_0055706c`). Once no FLIC is
+  active, the `PlayRandom` path passes a `rand()%400 == 0` gate, chooses a list
+  entry with `rand()%overlay_count`, and opens it with `FLICOpen @ 0x483c80`.
+  The gate is checked on menu ticks, so this is a randomized wait before each
+  overlay, rather than a choice derived from the selected text row. When the
+  FLIC finishes, the controller closes it, clears the active slot, and calls
+  the audio-related `FUN_0047ba20(0)` cleanup path before another random attempt.
+- On a successful FLIC open, `FUN_004121b0` queues the selected overlay's sound
+  token through `FUN_00464f60(sound_id, 0)`. During menu construction,
+  `FUN_00464c70` resolves each non-null SFX name to the sound-table ID stored in
+  the overlay record. The shipped aliases map `FrontSFX_RockMonster`,
+  `FrontSFX_Truck`, `FrontSFX_Sand`, and `FrontSFX_Slug` to
+  `Sounds\\Streamed\\FronRock`, `FronTruk`, `FronSand`, and `FronSlug`; the
+  `claser.flh` entry's SFX field is `SFX_NULL`.
+
+Key executable evidence: `FUN_004121b0` pseudocode
+(`ev_94eb25021f731f4b8405f20d84c578b71584d7731e272f112a26882c4b1c4292`),
+random gate (`ev_1b0959c9e4b0bac3854f3af6062cdbc2fb7218c001d76d95f38f2df5c6b30a73`),
+overlay count (`ev_df68fcf72f255e4364117f9d8b3b132f331649a568c1c5a8f161cb02001b6933`),
+and SFX token resolution (`ev_0827c47223be9e7b1c8ac5500ab135596534fe61297d3e0c8773e143da96809b`).
+The evidence bundle records these against the shipped executable's SHA-256.
+
+`fe_overlay_step` now mirrors the observed random pick and 1-in-400 per-tick
+gate, using the same LCG recurrence with a per-front-end seed. It plays one
+random overlay at a time and resolves its SFX alias through `Lego* Main` before
+queuing the WAVE. The port's audio API currently cannot stop one queued one-shot
+without also clearing the ambient loop, so it lets that sound finish naturally
+if the FLIC ends first. The executable's original seed lifecycle remains
+unknown.
+
+The main-menu soundtrack uses the shipped `Lego* Samples
+SFX_AmbientMusicLoop` alias, which points to `@Sounds\Streamed\Atmosdel`.
+The separate `SFX_MusicLoop` alias points to `@Sounds\Streamed\stats`. The
+port queues Atmosdel when opening the boot menu and calls `audio_update` during
+menu frames; without those updates the loop remained staged in `AudioPlayer`
+and never reached the platform audio queue. Leaving the boot menu restores the
+existing in-game `Iambloop.wav` loop.
+
 ## Slider mouse handling — `FUN_00411a00` case 3 / `FUN_00411870 @ 0x411870`
 
 The menu input tick `FUN_00411a00` switches on the item kind; a slider (kind 3) while

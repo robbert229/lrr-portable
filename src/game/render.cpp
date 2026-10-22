@@ -103,6 +103,28 @@ static void draw_model_wire(const Model* m, int px, int py,
     }
 }
 
+void render_apply_brightness(void* pixels, int pitch, int w, int h,
+                             int value)
+{
+    if (pixels == NULL || w <= 0 || h <= 0) {
+        return;
+    }
+    int v = value < 0 ? 0 : (value > 10 ? 10 : value);
+    int k = v * 0.1f * 256.0f + 0.5f; /* 0..256, 256 = 1.0 (value 10) */
+    if (k >= 256) {
+        return;
+    }
+    uint8_t* px = (uint8_t*)pixels;
+    for (int y = 0; y < h; ++y) {
+        uint8_t* row = px + (size_t)y * (size_t)pitch;
+        for (int x = 0; x < w; ++x) {
+            row[x * 4 + 0] = (uint8_t)((row[x * 4 + 0] * k) >> 8);
+            row[x * 4 + 1] = (uint8_t)((row[x * 4 + 1] * k) >> 8);
+            row[x * 4 + 2] = (uint8_t)((row[x * 4 + 2] * k) >> 8);
+        }
+    }
+}
+
 /* --- reward-overlay helpers (finding 09) --------------------------------
  * The post-mission card (RewardScreen) renders on top of the level: the
  * frame is dimmed first, the wallpaper texture (get-or-load by config name)

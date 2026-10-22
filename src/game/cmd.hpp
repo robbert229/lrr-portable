@@ -92,6 +92,13 @@ int         cmd_rec_type(const void* rec);
 const void* cmd_rec_payload(const void* rec);
 int         cmd_rec_kind(const void* rec);
 int         cmd_rec_behaviour(const void* rec);
+/* The +0x38 command-granted activity id: the callback's deferred install
+ * branch (0x43da62) appends it onto the entity's permitted-activity list
+ * when the +0x3e4 bit-0x40 grant flag is up. Corpus writers of +0x38 live
+ * in the 0x438150 task-state machinery (TODO); port-side grants stage
+ * through cmd_rec_set_activity. */
+int         cmd_rec_activity(const void* rec);
+void        cmd_rec_set_activity(void* rec, int act);
 uint32_t    cmd_rec_state(const void* rec);
 void*       cmd_rec_next(const void* rec);
 void        cmd_rec_set_next(void* rec, void* next);

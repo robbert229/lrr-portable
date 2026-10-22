@@ -31,6 +31,12 @@ void level_render_map(const LevelState* lvl, const GameContext* ctx,
                       int mouse_x, int mouse_y,
                       int w, int h, void* pixels, int pitch);
 
+/* Multiply the finished frame by the Brightness option (issue #85): the
+ * scalar is BrightnessSet's @ 0x414d30 (value * 0.1) — 10 is neutral, the
+ * corpus default 8 renders slightly dimmed, 0 goes black. Alpha untouched. */
+void render_apply_brightness(void* pixels, int pitch, int w, int h,
+                             int value);
+
 #ifdef __cplusplus
 }
 #endif

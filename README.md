@@ -316,7 +316,11 @@ activates, Esc backs out (root Esc quits); a picker row returns
 straight into a level, like the classic demo. The menu now **looks like the
 game**: the frame loop blits each submenu's `MenuImage` art behind the
 items, and `frontend_render` draws the labels with the **shipped bitmap
-fonts** — `LoFont` for unselected, `HiFont` for the selected row
+fonts** — `LoFont` for unselected, `HiFont` for the selected row (without a
+blue backing rectangle), plus the shipped `Pointer_Standard` bitmap cursor.
+FLIC overlays honor the black transparency key and stay inside the framebuffer
+at negative x offsets. The delta decoder reads packet skip/control bytes in
+their on-disk order
 (FUN_0047a470's 10×19 ASCII grid: glyph g = ch-0x20 at (g%10, g/10), cell =
 width/10 × height/19, e.g. 380×817 → 38×43; each 8bpp face keys **both**
 palette entries 0 and 255 transparent (FUN_0047d9d0→FUN_0047e050 — the
@@ -339,10 +343,27 @@ level's checkpoint now lands in **its own record** (port of
 `fe_record_for_level`/`fe_level_for_record` map levels↔records — tutorials
 first, then the campaign chain — and the record array grows on demand), so
 mid-campaign saves neither collide nor resume short.
-**Options sliders** (2026-10-21): the Options/Advanced `Slider`/`Cycle`
-items respond to `←`/`→` (and render a live bar+knob / current option) —
-the volume families (SFX/Music/Sound) drive the audio seam, the rest are
-state-only until the engine's option globals are wired. **Pointer drag**
+**Options** (2026-10-21): the Options/Advanced `Slider`/`Cycle` items respond
+to `←`/`→` (and render a live bar+knob / current option) and are **functional**:
+the values live in a store on `GameContext` that the menu seeds from and writes
+back into, so re-entering Options (any instance — the pause submenu or the
+standalone OptionsMenu) shows the effective value, never a reset default.
+**Game Speed** (`Game_Speed`, 0..5) scales the frame loop's simulation time
+(`options_time_scale` → `EngineTimeScale` and the ai/objective tickers' dt) —
+1 = normal. **Brightness** (`Brightness`, 0..10) multiplies the presented frame
+by BrightnessSet's `value × 0.1` scalar. **Help Window** (`Help_Window`
+Off/On) toggles the in-game help panel (the option gates the panel in
+`frontend_help_overlay`, so it can never draw while Off). The volume families
+(`SFX_Volume`, `Music_Volume`) keep driving the audio seam — the frame loop
+opens audio with the store's SFX gain, so settings restored from a save take
+effect immediately. The values load from the active save context when present
+(`.sav` header option block; a fresh game and un-stamped legacy saves use the
+defaults — speed 1, SFX 8, music 5 per corpus `OptionsLoadOrDefault`,
+brightness 8 as the port's neutral default since the corpus assigns none)
+and survive save/reload. Suite: `options` (menu-to-runtime for each control,
+saved-value round trip, plus a `--real` probe asserting the shipped control
+names + ranges).
+**Pointer drag**
 (2026-10-21): holding the left button inside a slider's corpus-style 100×20
 bar rect (`FUN_00411870 @ 0x411870` semantics: value tracks pointer x as
 `round(clamp((mx − x) × 0.01, 0, 1) × (max − min))`, re-evaluated every
@@ -589,21 +610,35 @@ finding 12, #14). Three new modules in `src/game/`:
   fallbacks keep the corpus-free unit tests unchanged. Move commands now
   install *built* paths: `cmd_create_move` resets the list per command
   (corpus dispatch install, `0x4418d0`) and `ai_path_build` appends one
-  entry per walked cell (`0x44693b`'s per-cell appends) over a
-  `level_walkable`-gated 4-neighbour BFS, falling back to the one-hop seed
-  when there is no grid or no path. The corpus's own *wave-flood* pathfinder
-  (`FUN_00430ee0`/`FUN_00430530` on the `level+4` grid handle) is the
-  documented TODO behind the algorithm. Two flag branches that were
+  entry per walked cell (`0x44693b`'s per-cell appends), falling back to
+  the one-hop seed when there is no grid or no path. The builder runs the
+  ported corpus *wave-flood* pathfinder (`FUN_00430ee0` seed + spread and
+  `FUN_00430530` traceback over the port's level-grid handle): a
+  target-validated seed raises the wave flag `0x40000` over its northwest
+  2x2 footprint and every spread cell, blocked (`flags & 8`) cells are
+  refused by the ported walkability/occupancy queries (the mover's own
+  cell exempt — it reserves its current cell every tick), and the
+  traceback walks the wave back to the start cell, stamping it `5` along
+  the way. The flood work state is
+  scoped per path build — created and released inside one `ai_path_build`
+  — so it never leaks between commands. Two flag branches that were
   approximated are now real: wake-timer expiry mirrors `FUN_0044c110`'s
   writes onto the attached `+0x364` target (`+0x340 = 100`, `+0x3e8` bit
   `0x800000`, gated by the target's `+0x3e0` bit `0x200000`), and the
   cheat-word branch runs the `FUN_0044c530` can-do probe (type-2 with a
-  drill/teleport/reinforce activity — the corpus's permitted-activity list
-  is ported as the one-slot current activity, TODO). The demo key `g`
+  drill/teleport/reinforce check `FUN_0043c440` over the corpus's real
+  *permitted-activity list* — `+0x370` id slots / `+0x384` count,
+  `FUN_0044b480`'s scan, the FIFO append at capacity (`0x44b44a`/`0x44b417`)
+  and the special-value in-place replace (`0x44b463`) via the install
+  appender `FUN_0044b370`; vehicle spawns seed `Activity_Stand` (`0x437eb6`)
+  and the deferred-install branch `0x43da62` installs the chain-head
+  record's `+0x38` grant). The demo key `g`
   issues a task for the selection. `ai_test` (suite `ai`) covers activity
   set/complete bookkeeping with the idle-record attach, wake-timer freezing
   (plus the wake mirror and its attached-state gate), link acquisition, the
-  cheat flag, idle registration (with the `'\t'` probe and its off-tile
+  cheat flag driven off the permitted-activity list (spawn seed, special
+  replace, list clear), the FIFO install at capacity, and the deferred
+  `0x43da62` command grant, idle registration (with the `'\t'` probe and its off-tile
   block), single- and multi-waypoint walking with the arrival pop,
   blocked-tile freezes with the occupancy mark/clear, and the
   queue→executor→move path plus a dispatch rerouting around a blocked

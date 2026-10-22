@@ -129,6 +129,10 @@ static int sav_write_slot_file(GameContext* ctx)
     uint8_t header[SAVE_HEADER_SIZE] = { 0 };
     int32_t count = (int32_t)ctx->record_count;
     __builtin_memcpy(header + 0x18, &count, 4);
+    /* Options/Advanced stamp (issue #85): the corpus persists the slot's
+     * speed/volume/brightness words alongside the records (SavReadSlot ->
+     * OptionsApplyFromSlot); the port stamps an option block at +0x20. */
+    options_save_header(&ctx->options, header + 0x20);
     size_t wrote = fwrite(header, 1, SAVE_HEADER_SIZE, fp);
     if (wrote == SAVE_HEADER_SIZE && count > 0) {
         wrote = fwrite(ctx->records, 1, (size_t)count * SAVE_RECORD_SIZE, fp);
@@ -168,6 +172,12 @@ int save_read_slot(GameContext* ctx, int slot, int create_if_missing)
     }
     int32_t count;
     __builtin_memcpy(&count, header + 0x18, 4);
+    /* Option block (issue #85): restore it when present, else fall back to
+     * the documented defaults (an old/absent stamp loads a fresh options
+     * context, OptionsLoadOrDefault-style). */
+    if (!options_load_header(&ctx->options, header + 0x20)) {
+        options_defaults(&ctx->options);
+    }
     if (count <= 0 || count > 0x1000) {
         fclose(fp);
         if (!create_if_missing) {

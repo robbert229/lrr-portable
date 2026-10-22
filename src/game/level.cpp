@@ -955,6 +955,17 @@ void level_tile_mark(LevelState* s, int cx, int cy, int set)
     }
 }
 
+int level_tile_occupied(const LevelState* s, int cx, int cy)
+{
+    const uint8_t* rec = level_voxel(s, cx, cy);
+    if (rec == NULL) {
+        return 1; /* no handle / no cell: cannot rule a reservation out */
+    }
+    uint32_t flags;
+    __builtin_memcpy(&flags, rec + 0x08, sizeof(flags));
+    return (flags & TILE_FLAG_OCCUPIED) != 0;
+}
+
 int level_tile_type(const LevelState* s, int cx, int cy)
 {
     const uint8_t* rec = level_voxel(s, cx, cy);

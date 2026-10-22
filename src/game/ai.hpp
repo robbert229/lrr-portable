@@ -33,8 +33,10 @@
  * finding 10 rather than guessed. Move commands now flow through the
  * ported path-list mirror (EntitySlot.wp, corpus +0x24/+0x28/+0x2c), the
  * +0x3e0 bit-0x8 mover flag, and the tile walkability/occupancy queries
- * (#60); ai_path_build installs BFS-built lists per command, with the
- * corpus wave-flood pathfinder as the documented algorithm TODO.
+ * (#60); ai_path_build now runs the ported corpus wave-flood pathfinder
+ * (FUN_00430ee0 seed + FUN_00430530 traceback on the port's level-grid
+ * handle) per command, with the one-hop fallback kept for the no-path
+ * and no-grid cases.
  * Wake-timer expiry mirrors FUN_0044c110's writes onto the +0x364 target,
  * and the cheat-word branch runs the real FUN_0044c530 can-do probe.
  */
@@ -105,15 +107,22 @@ void ai_set_activity(EntitySlot* e, int id, int param);
  * the buffer per path command. */
 int ai_path_append(EntitySlot* e, float x, float y);
 
-/* Build a move command's path into the entity buffer: install-reset the
- * list (corpus dispatch start, 0x4418d0) and append one entry per walked
- * cell (builder appends, 0x44693b). The corpus algorithm is the wave-flood
- * system on the level+4 grid handle (FUN_00430ee0/FUN_00430530) — TODO;
- * the port stands in with a 4-neighbour BFS gated by level_walkable.
- * Returns the entry count, or 0 when no path exists (no grid, blocked
- * start/target, unreachable, longer than AI_WAYPOINTS_MAX) and the caller
- * seeds a one-hop fallback. */
+/* Build a move command's path into the entity buffer through the ported
+ * wave-flood pathfinder core (the corpus's FUN_00430ee0 seed + spread +
+ * FUN_00430530 traceback on the port's level-grid handle — see ai.cpp).
+ * The list is install-reset per command (corpus dispatch start, 0x4418d0)
+ * and appended one entry per walked cell (builder appends, 0x44693b); the
+ * flood work state is created and released inside the build, never shared
+ * across commands. Returns the entry count, or 0 when no path exists (no
+ * grid, blocked target, unreachable, longer than AI_WAYPOINTS_MAX) and
+ * the caller seeds a one-hop fallback. */
 int ai_path_build(GameContext* ctx, EntitySlot* e, float tx, float ty);
+
+/* Wave-flood diagnostic: how many cells carried the wave flag 0x40000
+ * during the last ai_path_build's spread (finding 10's FUN_00430ee0 mark
+ * of a walked cell). Reset when a build starts, so it never reflects an
+ * earlier command; 0 before any build, or when that build had no grid. */
+int ai_wave_flood_count(void);
 
 /* Run the entity-manager tick for `dt` seconds: walk live entities and
  * apply the verified callback branches in corpus order, then step the
@@ -135,6 +144,34 @@ int ai_idle_count(void);
  * AI_MOVE_SPEED_CPS-equivalent default (the corpus indexes blindly and
  * gates movement on entry != 0 behind the unported +0x3e8 walker bit). */
 float ai_stats_speed(const GameContext* ctx, int tile_type);
+
+/* --- permitted-activity list (+0x370 ids / +0x384 count) ----------------- *
+ * The corpus's real can-do answer: FUN_0044b480 scans the entity's
+ * permitted-activity list, FUN_0043c440 asks it about activities 4 (drill),
+ * 5 (teleport) and 7 (reinforce), and FUN_0044c530 wraps that behind the
+ * type-2 gate. Installs land through FUN_0044b370 (ai_activity_grant). */
+
+/* FUN_0044b480: 1 when `activity` is on the entity's list (+0x370 scanned
+ * through count +0x384), else 0; a zero count always answers 0. */
+int ai_activity_scan(const EntitySlot* e, int activity);
+
+/* FUN_0043c440: which can-do activity the list carries — 1 = drill (4),
+ * 2 = teleport (5), 3 = reinforce (7), 0 = none. */
+int ai_activity_probe(const EntitySlot* e);
+
+/* FUN_0044c530: the "can do" probe — 1 for a type-2 entity whose list
+ * permits drill/teleport/reinforce, else 0. */
+int ai_can_do(const EntitySlot* e);
+
+/* FUN_0044b370: install one activity grant onto the entity's list — the
+ * command/dispatch install appender. Semantics (corpus-pinned): capacity
+ * check (FUN_0046a060, port model ctx->stats_activity_cap), +0x3ec bit
+ * 0x4 reflects "a special (4/5/7) activity is permitted", a special value
+ * REPLACES the first special entry already on the list (clearing the old
+ * grant in place, 0x44b463), and otherwise the value appends — slot[count],
+ * count++ while count != cap (0x44b44a), or the list shifts left by one and
+ * the value lands in the last slot when full (0x44b417). */
+void ai_activity_grant(GameContext* ctx, EntitySlot* e, int value);
 
 #ifdef __cplusplus
 }
