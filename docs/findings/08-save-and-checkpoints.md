@@ -69,7 +69,7 @@ if (dirty == 0 && FUN_00417e90() != -1) {   // clean table AND active slot
 
 | Step | Corpus behavior | Evidence |
 | --- | --- | --- |
-| 0 | clear live table: count/capacity = 0, free `DAT_004ffe50` | `OsfClear @ 0x4592a0` |
+| 0 | clear **live** table only: count/capacity = 0, free `DAT_004ffe50` (the shadow pair is left as-is) | `OsfClear @ 0x4592a0` |
 | 1 | `fopen(path, "rb")`; fail → return 0, table stays cleared | `FUN_0047f6e0` |
 | 2 | file size via seek-end (`FUN_0047fca0`) | `0x459470` body |
 | 3 | read 8-byte header: u32 magic + u32 count | `FUN_0047f980(&local_8,4,2,fp)` |
@@ -82,9 +82,16 @@ if (dirty == 0 && FUN_00417e90() != -1) {   // clean table AND active slot
 **Failure handling**: a missing `.osf` returns 0 and leaves the cleared table;
 a corrupt file (bad magic, size-count mismatch, short read) *also* returns 1
 (the file existed) but leaves the table empty — completed objectives degrade
-to none, no crash, no partial install. `DAT_004ffe5c` (the shadow) is only
-touched by the success-path snapshot, so a failed read cannot leave a stale
-shadow behind the empty live table.
+to none, no crash, no partial install. What a failed read does **not** do is
+touch the shadow: `DAT_004ffe5c/60` is written only by the success-path
+`OsfSnapshot @ 0x4592e0`, so a failed or zero-count read leaves the *previous*
+level's shadow populated, and `FUN_00459360` (called from
+`FrontEndStartLevel @ 0x415220` and `ObjectiveTick @ 0x458be0`) copies it back
+over the empty live table with no dirty gate — the corpus can resurrect a
+stale shadow. The port closes this hole: `osf_read` zeroes
+`osf_shadow_count`/`osf_shadow_dirty` **before** opening the file (the
+fixed-array equivalent of the corpus's realloc-on-next-snapshot, recorded as a
+deviation), so no sidecar path can leave anything stale.
 
 **What the restored table drives**: `FUN_00459360` (copy `DAT_004ffe5c →
 `DAT_004ffe50`, called from `FrontEndStartLevel @ 0x415220` and
@@ -94,7 +101,8 @@ table on the next commit. So the restore reinstalls both the re-serialisable
 completed list **and** the level-restart snapshot in one read.
 
 **Port**: `osf_read`/`osf_read_path` in `savegame.cpp` reproduce steps 0–8
-exactly (fixed-array `GAME_OSF_MAX` cap in place of the corpus's realloc);
+(fixed-array `GAME_OSF_MAX` cap in place of the corpus's realloc, and the
+shadow pre-clear above in place of the corpus's late-snapshot behavior);
 the frameloop slot-load calls `osf_read_path` after `checkpoint_blob_apply`
 under the same clean-table/active-slot gate. The savegame suite proves the
 strict round trip: write slot → reload → live and shadow contents identical,
