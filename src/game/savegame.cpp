@@ -32,6 +32,20 @@
 static const char* MODE_RB = "rb";
 static const char* MODE_WB = "wb";
 
+/* Corpus FUN_0048ff10's case-folded strcmp (used by the Level03
+ * checkpoint hard-code comparison). */
+static int strcasecmp_lite(const char* a, const char* b)
+{
+    for (;;) {
+        int ca = (unsigned char)*a++;
+        int cb = (unsigned char)*b++;
+        if (ca >= 'a' && ca <= 'z') ca -= 0x20;
+        if (cb >= 'a' && cb <= 'z') cb -= 0x20;
+        if (ca != cb) return ca - cb;
+        if (ca == 0) return 0;
+    }
+}
+
 void save_init(GameContext* ctx)
 {
     if (ctx == NULL) {
@@ -406,9 +420,25 @@ void checkpoint_blob_build(GameContext* ctx)
     /* Copy the ten task records (stride 0x210) verbatim. */
     __builtin_memcpy(blob + 0x1CEC, ctx->tasks, GAME_TASK_COUNT * GAME_TASK_STRIDE);
 
-    /* Tutorial hard-code: Level03 forces blob +0x868 = 1. */
-    if (level_name != NULL && strcmp(level_name, "Levels\\Level03") == 0) {
-        blob[0x868] = 1;
+    /* Tutorial hard-code (CheckpointBlobBuild tail, corpus 0x460066-0x46008c):
+     * when the level name matches "Levels::Level03", record_base + 0x868 —
+     * i.e. task slot 4 ("Caverns") quota, record_base + 4*0x210 + 0x28 — is
+     * forced to 1 as a dword write. */
+    const char* base = level_name != NULL ? strrchr(level_name, ':') : NULL;
+    if (base == NULL && level_name != NULL) {
+        base = strrchr(level_name, '\\');
+    }
+    if (base != NULL) {
+        ++base;
+    } else {
+        base = level_name;
+    }
+    /* FUN_0048ff10 is a case-folded strcmp, so match "Level03" the same way. */
+    static const char LVL03[] = "Level03";
+    int l03 = base != NULL && strcasecmp_lite(base, LVL03) == 0;
+    if (l03) {
+        int32_t one = 1;
+        __builtin_memcpy(blob + 0x1CEC + 0x868, &one, 4);
     }
 
     free(ctx->checkpoint_blob);

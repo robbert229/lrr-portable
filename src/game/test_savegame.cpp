@@ -93,10 +93,38 @@ int main(void)
         CHECK(0x1CEC + GAME_TASK_COUNT * GAME_TASK_STRIDE == SAVE_BLOB_SIZE,
               "task block fills blob");
     }
-    /* Tutorial fix: Level03 pushes blob+0x868 = 1. */
-    lvl->ptr_name = (void*)"Levels\\Level03";
+    /* Corpus-shape pin (finding 08 §"Task table"): the checkpoint-relevant
+     * record fields must land at the corpus offsets inside the copied blob
+     * records, and the records must round-trip verbatim. */
+    {
+        const uint8_t* r0 = ctx.checkpoint_blob + 0x1CEC; /* slot 0 "Crystals" */
+        uint32_t flags = 0;
+        int32_t quota = 0, value = 0;
+        float imp = 0.0f;
+        uint32_t self = 0;
+        __builtin_memcpy(&flags, r0 + 0x00, 4);
+        __builtin_memcpy(&imp,   r0 + 0x24, 4);
+        __builtin_memcpy(&quota, r0 + 0x28, 4);
+        __builtin_memcpy(&value, r0 + 0x2C, 4);
+        __builtin_memcpy(&self, ctx.checkpoint_blob + 0x1CE8, 4);
+        CHECK(flags == 1u, "blob record flags @+0x00");
+        CHECK(imp == 60.0f, "blob record importance @+0x24");
+        CHECK(quota == 5, "blob record quota @+0x28");
+        CHECK(value == 3, "blob record value pass-through @+0x2C");
+        CHECK(self == 0x1CEC, "blob self-ref -> record array at +0x1CEC");
+        CHECK(memcmp(ctx.checkpoint_blob + 0x1CEC, ctx.tasks,
+                     GAME_TASK_COUNT * GAME_TASK_STRIDE) == 0,
+              "blob records copied verbatim");
+    }
+    /* Tutorial fix: Level03 forces task slot 4 (Caverns) quota to 1, i.e.
+     * the dword at blob + 0x1CEC + 0x868 (record_base + 4*0x210 + 0x28). */
+    lvl->ptr_name = (void*)"Levels::Level03";
     checkpoint_blob_build(&ctx);
-    CHECK(ctx.checkpoint_blob[0x868] == 1, "Level03 tutorial fix");
+    {
+        int32_t caverns_quota = 0;
+        __builtin_memcpy(&caverns_quota, ctx.checkpoint_blob + 0x1CEC + 0x868, 4);
+        CHECK(caverns_quota == 1, "Level03 tutorial quota fix");
+    }
     lvl->ptr_name = (void*)"Level01";
 
     /* Save record 2 with the blob, mark dirty, write slot 3.
