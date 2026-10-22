@@ -51,6 +51,8 @@ PlatformWindow* platform_create_window(const char* title, int width, int height)
     pw->w = width;
     pw->h = height;
     pw->window_surface = SDL_GetWindowSurface(win);
+    /* The game draws its own bitmap pointer into the framebuffer. */
+    SDL_HideCursor();
     return pw;
 }
 
@@ -62,6 +64,7 @@ void platform_destroy_window(PlatformWindow* pw)
     if (pw->sdl != NULL) {
         SDL_DestroyWindow(pw->sdl);
     }
+    SDL_ShowCursor();
     pw->sdl = NULL;
     free(pw);
 }
