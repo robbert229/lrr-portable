@@ -917,7 +917,7 @@ int LegorrrRun(void)
              * an active slot (SavGetSlot()!=-1); the port mirrors it here
              * — after the checkpoint apply the slot is active and the
              * table has nothing unsaved, so the sidecar replaces it. */
-            if (game.osf_dirty == 0 && pending_load_slot >= 0) {
+            if (game.osf_dirty == 0) {
                 (void)osf_read_path(&game, pending_load_slot);
                 fprintf(log, "frameloop: restored .osf sidecar slot %d "
                              "(%d completed objective(s))\n",
@@ -1048,6 +1048,16 @@ int LegorrrRun(void)
                 frameloop_load_level(log, wad_dir, play_movies, win, &surf,
                                      &ap, audio_status, &quit, &game, &ctx,
                                      views, level_name);
+                /* The corpus re-enters LevelLoad for this reload through
+                 * the in-game callback registered by FUN_0041fa20
+                 * (FUN_0041fb50 calls FUN_00429890), so the `.osf` sidecar
+                 * read runs again under the same gate: clean table +
+                 * active slot -> re-read; dirty -> skipped and the
+                 * unsaved live table survives untouched. */
+                if (game.level != NULL && game.osf_dirty == 0
+                    && save_slot_get(&game) >= 0) {
+                    (void)osf_read_path(&game, save_slot_get(&game));
+                }
             }
             if (!quit && game.level == NULL) {
                 /* not restarting; Esc from the pause root resumes */

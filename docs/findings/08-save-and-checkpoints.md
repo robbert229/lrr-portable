@@ -104,6 +104,9 @@ completed list **and** the level-restart snapshot in one read.
 (fixed-array `GAME_OSF_MAX` cap in place of the corpus's realloc, and the
 shadow pre-clear above in place of the corpus's late-snapshot behavior);
 the frameloop slot-load calls `osf_read_path` after `checkpoint_blob_apply`
+under the same clean-table/active-slot gate, and the pause-menu level restart
+re-runs the same read the way the corpus's in-game level driver re-enters
+`LevelLoad` (registered by `FUN_0041fa20`; `FUN_0041fb50` calls `0x429890`).
 under the same clean-table/active-slot gate. The savegame suite proves the
 strict round trip: write slot → reload → live and shadow contents identical,
 both dirty flags clear, and the corrupt/absent sidecar cases stay empty.

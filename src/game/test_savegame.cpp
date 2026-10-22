@@ -272,6 +272,48 @@ int main(void)
             "corrupt: absent sidecar -> 0, table empty");
     }
 
+    /* Stale-shadow hole across a slot switch (the corpus's failure mode):
+     * OsfClear (0x4592a0) is live-only and the rollback 0x459360 copies
+     * the shadow back with no dirty gate, so the corpus can RESURRECT a
+     * previous level's shadow after a failed or absent read. The port is
+     * safe only because osf_read clears its own shadow before opening —
+     * load a valid sidecar, then a failed/absent one, and nothing of the
+     * first may survive. This locks that pre-clear: drop it and these
+     * checks fail. */
+    {
+        GameContext wctx;
+        game_context_init(&wctx);
+        osf_add(&wctx, 21, 22, "SlotOneObj");
+        CHECK(save_write_slot(&wctx, 1) != 0, "stale-shadow: write slot 1 sidecar");
+        /* corrupt one (bad magic) for the failed-read leg */
+        {
+            uint8_t bad[8 + 20];
+            bad[0] = 'X'; bad[1] = 'X';
+            __builtin_memcpy(bad + 4, "\x01\x00\x00\x00", 4);
+            memset(bad + 8, 0, 20);
+            FILE* fp = fopen("Saves/5.osf", "wb");
+            fwrite(bad, 1, sizeof(bad), fp);
+            fclose(fp);
+        }
+
+        GameContext lctx;
+        game_context_init(&lctx);
+        CHECK(osf_read_path(&lctx, 1) == 1 && lctx.osf_shadow_count == 1,
+            "stale-shadow: slot 1 installs live + shadow");
+        (void)osf_read_path(&lctx, 2); /* absent file -> 0 */
+        CHECK(lctx.osf_count == 0 && lctx.osf_shadow_count == 0,
+            "stale-shadow: absent read clears the old shadow");
+        CHECK(osf_read_path(&lctx, 1) == 1 && lctx.osf_shadow_count == 1,
+            "stale-shadow: slot 1 installs live + shadow (again)");
+        CHECK(osf_read_path(&lctx, 5) == 1
+            && lctx.osf_count == 0 && lctx.osf_shadow_count == 0,
+            "stale-shadow: corrupt read clears the old shadow (no resurrection)");
+        free(lctx.records);
+        lctx.records = NULL;
+        free(wctx.records);
+        wctx.records = NULL;
+    }
+
     /* Read the slot back and verify record 2 (dirty flag + blob). */
     ctx.active_slot = -1; /* force re-read */
     int rc = save_read_slot(&ctx, 3, 0);
