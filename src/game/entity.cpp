@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "ai.hpp"
 #include "entity.hpp"
 #include "gods98/model.hpp"
 #include "util.hpp"
@@ -74,6 +75,12 @@ int entity_create(GameContext* ctx, int type, const char* name,
     slot->y = y;
     slot->z = z;
     slot->rot = rot;
+    /* Corpus spawn dispatch (FUN_00437d50, type-2 arm at 0x437eb6): every
+     * vehicle spawn seeds its permitted-activity list with Activity_Stand
+     * through the FUN_0044b370 appender — the first grant is value 0. */
+    if (type == 2) {
+        ai_activity_grant(ctx, slot, AI_ACT_STAND);
+    }
     if (name != NULL) {
         int i = 0;
         for (; i < 31 && name[i] != '\0'; ++i) {

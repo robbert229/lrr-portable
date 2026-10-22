@@ -22,7 +22,13 @@
 #define ENT_FLAG3EC_LINKED         0x00080000u  /* link acquired (writes +0x354) */
 #define ENT_FLAG3EC_IDLE_REGISTER  0x00000040u  /* type-1 idle check (0x43c94d) */
 #define ENT_FLAG3EC_VULNERABLE     0x00000020u  /* cheat-gated flag (0x43c90b) */
+#define ENT_FLAG3EC_ACTIVITY_OK    0x00000004u  /* +0x3ec bit 0x4: the list
+                                                 * permits a 4/5/7 activity;
+                                                 * written by FUN_0044b370 */
 #define ENT_FLAG3E4_WAKE_TIMER     0x08000000u  /* +0x368 runs, tick early-return */
+#define ENT_FLAG3E4_ACTIVITY_GRANT 0x00000040u  /* +0x3e4 bit 0x40: deferred
+                                                 * command-grant install
+                                                 * (callback 0x43da62) */
 
 static const void* rec_payload(const void* rec) { return cmd_rec_payload(rec); }
 
@@ -111,6 +117,103 @@ float ai_stats_speed(const GameContext* ctx, int tile_type)
         return def;
     }
     return ctx->stats_speed_sec[tile_type];
+}
+
+/* --- permitted-activity list (+0x370 ids / +0x384 count) -------------------
+ * Corpus shape, pinned from the wake/riding decompile bundles:
+ *   FUN_0044b480 scan -> FUN_0043c440 (4/5/7) -> FUN_0044c530 (type-2 gate)
+ *   FUN_0044b370 setter — append/replace/recycle, callers 0x437eb6 (spawn
+ *   dispatch, type-2 arm) and 0x43da62 (deferred command install). */
+
+/* FUN_0044b480: scan the id slots at +0x370 through the +0x384 count;
+ * a zero count answers 0 without reading. */
+int ai_activity_scan(const EntitySlot* e, int activity)
+{
+    if (e == NULL || e->act_count <= 0) {
+        return 0;
+    }
+    for (int i = 0; i < e->act_count; ++i) {
+        if (e->act_list[i] == activity) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/* FUN_0043c440: the can-do activities, checked in corpus order —
+ * drill (1), teleport (2), reinforce (3), else 0. */
+int ai_activity_probe(const EntitySlot* e)
+{
+    if (ai_activity_scan(e, AI_ACT_DRILL)) {
+        return 1;
+    }
+    if (ai_activity_scan(e, AI_ACT_TELEPORT)) {
+        return 2;
+    }
+    return ai_activity_scan(e, AI_ACT_REINFORCE) ? 3 : 0;
+}
+
+/* FUN_0044c530: "can do" — only type-2 entities answer, and only from
+ * their permitted-activity list. */
+int ai_can_do(const EntitySlot* e)
+{
+    return (e != NULL && e->type == 2) ? (ai_activity_probe(e) != 0) : 0;
+}
+
+static int activity_is_special(int v) /* FUN_0044b350's {4,5,7} predicate */
+{
+    return v == AI_ACT_DRILL || v == AI_ACT_TELEPORT || v == AI_ACT_REINFORCE;
+}
+
+/* FUN_0044b370: install one activity grant. Corpus order (the whole body,
+ * see ai.hpp): cap gate, +0x3f4 = 0 (field not ported — no reader in the
+ * ported surface, TODO(corpus)), +0x3ec bit 0x4 refresh, special-entry
+ * replace, FIFO append/overwrite. The corpus compares count != cap with
+ * cap = FUN_0046a060(ent) = *(state+0xcc) (stats block instance fill
+ * TODO(corpus)); the port models it as ctx->stats_activity_cap clamped to
+ * the inline span. */
+void ai_activity_grant(GameContext* ctx, EntitySlot* e, int value)
+{
+    if (e == NULL) {
+        return;
+    }
+    int cap = (ctx == NULL) ? 0 : ctx->stats_activity_cap;
+    if (cap > AI_ACTIVITY_SLOTS) {
+        cap = AI_ACTIVITY_SLOTS; /* port bound (corpus stores inline) */
+    }
+    if (cap <= 0) {
+        return; /* cap-0 entity: the corpus's grant runs nothing (0x44b38d) */
+    }
+    if (e->act_count > cap) {
+        e->act_count = cap; /* guarded port mirror of corpus count/cap */
+    }
+    const int special = activity_is_special(value);
+    if (ai_activity_probe(e) != 0 || special) {
+        e->flags_3ec |= ENT_FLAG3EC_ACTIVITY_OK;   /* 0x44b3bf: or $0x4 */
+    } else {
+        e->flags_3ec &= ~ENT_FLAG3EC_ACTIVITY_OK;  /* 0x44b39c: and $0xfb */
+    }
+    if (special) {
+        /* A special grant replaces the first special entry on the list —
+         * the old grant is cleared in place (write at 0x44b463) and the
+         * setter returns without touching count. */
+        for (int i = 0; i < e->act_count; ++i) {
+            if (activity_is_special(e->act_list[i])) {
+                e->act_list[i] = value;
+                return;
+            }
+        }
+    }
+    if (e->act_count != cap) {
+        e->act_list[e->act_count++] = value;       /* 0x44b44a: append */
+        return;
+    }
+    /* Full list: drop the oldest (left shift, 0x44b417) and write the last
+     * slot (count is kept — the corpus stays at cap). */
+    for (int i = 0; i + 1 < e->act_count; ++i) {
+        e->act_list[i] = e->act_list[i + 1];
+    }
+    e->act_list[e->act_count - 1] = value;
 }
 
 static void idle100_register(EntitySlot* e)
@@ -658,19 +761,12 @@ static int callback_branches(GameContext* ctx, EntitySlot* e, float dt)
     /* 0x43c90b — cheat word DAT_00556ed0 bit 0 (testb $0x1): when set, the
      * type-2 "can do" probe FUN_0044c530 decides flag bit 0x20; otherwise
      * the bit is cleared. FUN_0044c530 = "type 2 and FUN_0043c440 is
-     * non-zero"; FUN_0043c440 scans the entity's permitted-activity list
-     * (+0x370 slots, count +0x384 — FUN_0044b480) for activities 4 (drill),
-     * 5 (teleport) or 7 (reinforce). The port models that list as one
-     * slot — the current activity (TODO(corpus): multi-slot list) — so the
-     * probe is "activity in {AI_ACT_DRILL, AI_ACT_TELEPORT,
-     * AI_ACT_REINFORCE}". */
-    if ((ctx->cheat & 1u) != 0 && e->type == 2) {
-        if (e->activity == AI_ACT_DRILL || e->activity == AI_ACT_TELEPORT ||
-            e->activity == AI_ACT_REINFORCE) {
-            e->flags_3ec |= ENT_FLAG3EC_VULNERABLE;
-        } else {
-            e->flags_3ec &= ~ENT_FLAG3EC_VULNERABLE;
-        }
+     * non-zero"; FUN_0043c440 asks FUN_0044b480's scan over the entity's
+     * real permitted-activity list (+0x370 slots, count +0x384) for
+     * activities 4 (drill), 5 (teleport) or 7 (reinforce) — list-driven,
+     * not the single current-activity field. */
+    if ((ctx->cheat & 1u) != 0 && ai_can_do(e)) {
+        e->flags_3ec |= ENT_FLAG3EC_VULNERABLE;
     } else {
         e->flags_3ec &= ~ENT_FLAG3EC_VULNERABLE;
     }
@@ -690,6 +786,23 @@ static int callback_branches(GameContext* ctx, EntitySlot* e, float dt)
                             level_cell_of(e->y)) == TILE_TYPE_IDLE) {
             idle100_register(e);
         }
+    }
+
+    /* 0x43da62 — deferred command grant: +0x3e4 bit 0x40 marks "the command
+     * at the chain head grants an activity". The branch consumes the flag,
+     * installs the record's +0x38 activity onto the entity's permitted-
+     * activity list through the FUN_0044b370 setter (append, or in-place
+     * replace when the grant is a special 4/5/7), drops the kind-0x13 grant
+     * records (FUN_00403d10(ent, 0x13, 0, 1) — port-side chain, TODO
+     * corpus record list), and RETURNS: both corpus paths end at 0x43ed80.
+     * The flag's raisers are the minion task-state machinery at 0x438150
+     * (documented TODO) — the ported list is where those grants land. */
+    if ((e->flags_3e4 & ENT_FLAG3E4_ACTIVITY_GRANT) != 0) {
+        e->flags_3e4 &= ~ENT_FLAG3E4_ACTIVITY_GRANT;
+        if (e->cmd_head != NULL) {
+            ai_activity_grant(ctx, e, cmd_rec_activity(e->cmd_head));
+        }
+        return 1;
     }
     return 0;
 }

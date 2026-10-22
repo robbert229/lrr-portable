@@ -145,6 +145,34 @@ int ai_idle_count(void);
  * gates movement on entry != 0 behind the unported +0x3e8 walker bit). */
 float ai_stats_speed(const GameContext* ctx, int tile_type);
 
+/* --- permitted-activity list (+0x370 ids / +0x384 count) ----------------- *
+ * The corpus's real can-do answer: FUN_0044b480 scans the entity's
+ * permitted-activity list, FUN_0043c440 asks it about activities 4 (drill),
+ * 5 (teleport) and 7 (reinforce), and FUN_0044c530 wraps that behind the
+ * type-2 gate. Installs land through FUN_0044b370 (ai_activity_grant). */
+
+/* FUN_0044b480: 1 when `activity` is on the entity's list (+0x370 scanned
+ * through count +0x384), else 0; a zero count always answers 0. */
+int ai_activity_scan(const EntitySlot* e, int activity);
+
+/* FUN_0043c440: which can-do activity the list carries — 1 = drill (4),
+ * 2 = teleport (5), 3 = reinforce (7), 0 = none. */
+int ai_activity_probe(const EntitySlot* e);
+
+/* FUN_0044c530: the "can do" probe — 1 for a type-2 entity whose list
+ * permits drill/teleport/reinforce, else 0. */
+int ai_can_do(const EntitySlot* e);
+
+/* FUN_0044b370: install one activity grant onto the entity's list — the
+ * command/dispatch install appender. Semantics (corpus-pinned): capacity
+ * check (FUN_0046a060, port model ctx->stats_activity_cap), +0x3ec bit
+ * 0x4 reflects "a special (4/5/7) activity is permitted", a special value
+ * REPLACES the first special entry already on the list (clearing the old
+ * grant in place, 0x44b463), and otherwise the value appends — slot[count],
+ * count++ while count != cap (0x44b44a), or the list shifts left by one and
+ * the value lands in the last slot when full (0x44b417). */
+void ai_activity_grant(GameContext* ctx, EntitySlot* e, int value);
+
 #ifdef __cplusplus
 }
 #endif

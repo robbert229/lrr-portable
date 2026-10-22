@@ -27,6 +27,12 @@ typedef struct CmdRec {
     float    now;        /* +0x14 timeGetTime on alloc, 1500.0 on link          */
     int32_t  param2;     /* +0x18 (task param from the queue)                  */
     int32_t  behaviour;  /* +0x1c behaviour id = behaviour[kind]                */
+    int32_t  grant_act;  /* +0x38 activity the command grants: the tick's
+                          * deferred install (callback 0x43da62) appends it
+                          * to the entity's permitted-activity list. The
+                          * corpus writers sit in the 0x438150 task-state
+                          * machinery — TODO(corpus); port-side writers
+                          * stage grants through cmd_rec_set_activity. */
     int32_t  extra;      /* +0x3c (type-8 tasks set 8)                         */
     void*    buffer;     /* +0x40 owned buffer (freed on cmd_free)             */
     int32_t  kind;       /* +0x4c kind index                                   */
@@ -43,6 +49,8 @@ int cmd_rec_type(const void* rec) { return cas_rec(rec)->type; }
 const void* cmd_rec_payload(const void* rec) { return cas_rec(rec)->payload; }
 int cmd_rec_kind(const void* rec) { return cas_rec(rec)->kind; }
 int cmd_rec_behaviour(const void* rec) { return cas_rec(rec)->behaviour; }
+int cmd_rec_activity(const void* rec) { return cas_rec(rec)->grant_act; }
+void cmd_rec_set_activity(void* rec, int act) { as_rec(rec)->grant_act = act; }
 uint32_t cmd_rec_state(const void* rec) { return cas_rec(rec)->state; }
 void* cmd_rec_next(const void* rec) { return cas_rec(rec)->next; }
 
