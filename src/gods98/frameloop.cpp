@@ -57,6 +57,18 @@ static int s_icontains(const char* haystack, const char* needle)
     return 0;
 }
 
+/* Streamed soundtrack aliases live beside the menu SFX aliases in Samples.
+ * Their leading '@' marks a streamed WAVE in Lego.cfg, not part of its path. */
+static const char* menu_music_resource(BlockFile* cfg)
+{
+    const char* music = block_get_strptr(cfg,
+                                         "Lego* Samples SFX_MusicLoop");
+    if (music != NULL && music[0] == '@') {
+        ++music;
+    }
+    return music;
+}
+
 /* Held-key probe for the executor's cheat-keybind pre-pass (finding 06):
  * reads the current frame's input tables. */
 static const InputState* s_demo_input = NULL;
@@ -325,6 +337,7 @@ int LegorrrRun(void)
     }
 
     int mounted = resource_mount(wad_dir, "LegoRR");
+    resource_set_cd_root(wad_dir);
     fprintf(log, "frameloop: mounted %d wad(s) from %s\n", mounted, wad_dir);
     if (mounted == 0) {
         if (log != stderr) {
@@ -490,7 +503,7 @@ int LegorrrRun(void)
      * the cfg) skips the menu straight into a level, like the classic demo. */
     char level_name[FE_LEVEL_NAME_MAX];
     FrontEnd fe;
-    int boot_menu = 0;
+    int boot_menu = 0, frontend_built = 0;
     if (game.cfg != NULL) {
         fprintf(log, "frameloop: config Lego.cfg loaded\n");
         int built = frontend_build(&fe, game.cfg);
@@ -499,10 +512,14 @@ int LegorrrRun(void)
          * with no store (defaults); sync seeds the loaded slot's values. */
         fe.opts = &game.options;
         frontend_options_sync(&fe);
-        boot_menu = built && frontend_enabled(game.cfg)
+        frontend_built = built;
+        boot_menu = frontend_built && frontend_enabled(game.cfg)
                  && env_get("LEGORRR_LEVEL", "")[0] == '\0';
     } else {
         fprintf(log, "frameloop: Lego.cfg not found (wads need mounted game data)\n");
+    }
+    if (frontend_built && audio_status == 0) {
+        frontend_set_audio(&fe, &ap);
     }
     snprintf(level_name, sizeof(level_name), "%s",
              env_get("LEGORRR_LEVEL", "Level01"));
@@ -526,6 +543,19 @@ int LegorrrRun(void)
         frontend_build_slots(&fe, slots, sn);
     }
     if (boot_menu) {
+        if (audio_status == 0) {
+            const char* music = menu_music_resource(game.cfg);
+            int music_rc = (music != NULL && music[0] != '\0')
+                         ? audio_loop_named(&ap, music, 0.0f) : -1;
+            if (music_rc == 0) {
+                /* Unlike one-shot FLIC sounds, the continuous track only
+                 * reaches the platform queue from audio_update(). */
+                audio_update(&ap);
+            }
+            fprintf(log, "frameloop: main-menu music %s -> %s (%d)\n",
+                    music != NULL ? music : "(missing SFX_MusicLoop)",
+                    music_rc == 0 ? "queued" : "unavailable", music_rc);
+        }
         frontend_open(&fe, FE_MENU_MAIN);
         fprintf(log, "frameloop: front end up — main menu (arrows select, "
                      "Enter/Space act, Esc quits)\n");
@@ -643,10 +673,18 @@ int LegorrrRun(void)
 
             frameloop_menu_render(win, &surf, &fe, hi_font, lo_font, &game,
                                   (int)frames);
+            if (audio_status == 0) {
+                audio_update(&ap);
+            }
             Sleep((DWORD)FRAME_MS);
             ++frames;
             input_begin_frame(&input);
         }
+    }
+
+    /* Restore the game's ambient loop after leaving the main menu. */
+    if (boot_menu && audio_status == 0 && !quit) {
+        audio_loop_named(&ap, "Sounds\\Iambloop.wav", 0.0f);
     }
 
     /* --- Deferred level load (the front end chose a level) ------------------ */

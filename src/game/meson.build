@@ -21,7 +21,7 @@ game_lib = static_library('game',
   'frontend.cpp',
   'options.cpp',
   'util.cpp',
-  include_directories : gods98_incs,
+  include_directories : gods98_incs + [miniwin_inc],
   dependencies : [platsub_deps],
   install : false)
 
