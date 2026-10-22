@@ -236,13 +236,13 @@ without also clearing the ambient loop, so it lets that sound finish naturally
 if the FLIC ends first. The executable's original seed lifecycle remains
 unknown.
 
-The main-menu soundtrack is a separate configured loop: the shipped
-`Lego* Samples SFX_MusicLoop` alias points to
-`@Sounds\Streamed\stats`. The port queues this loop when opening the boot
-menu and calls `audio_update` during menu frames; without those updates the
-loop remained staged in `AudioPlayer` and never reached the platform audio
-queue. Leaving the boot menu restores the existing in-game `Iambloop.wav`
-loop.
+The main-menu soundtrack uses the shipped `Lego* Samples
+SFX_AmbientMusicLoop` alias, which points to `@Sounds\Streamed\Atmosdel`.
+The separate `SFX_MusicLoop` alias points to `@Sounds\Streamed\stats`. The
+port queues Atmosdel when opening the boot menu and calls `audio_update` during
+menu frames; without those updates the loop remained staged in `AudioPlayer`
+and never reached the platform audio queue. Leaving the boot menu restores the
+existing in-game `Iambloop.wav` loop.
 
 ## Slider mouse handling — `FUN_00411a00` case 3 / `FUN_00411870 @ 0x411870`
 
