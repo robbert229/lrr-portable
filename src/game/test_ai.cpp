@@ -260,6 +260,32 @@ int main(void)
         CHECK(*f00 & 0x8000000u, "the departure cell stays marked (corpus "
                                  "clears only the arrival cell)");
 
+        /* Pathfinder builder: a dispatch on a clean grid reroutes around
+         * a blocked column, filling a multi-entry list the walker walks
+         * cell by cell without ever landing on the wall. */
+        memset(voxels, 0, sizeof(voxels));
+        for (int cy = 0; cy <= 13; ++cy) {
+            for (int cx = 0; cx <= 13; ++cx) {
+                *(uint32_t*)(voxels + ((size_t)cy * 16 + cx) * 0x48 + 8) |= 0x10u;
+            }
+        }
+        for (int cy = 1; cy <= 5; ++cy) {
+            *(uint32_t*)(voxels + ((size_t)cy * 16 + 5) * 0x48 + 8) |= 0x40u;
+        }
+        EntitySlot* detour = place(&ctx, 1, "detour", 1, 3);
+        cmd_create_move(detour, 9.0f, 3.0f, 0);
+        CHECK(detour->wp_count > 1, "pathfinder fills a multi-entry list");
+        int arrived = 0;
+        for (int t = 0; t < 40 && !arrived; ++t) {
+            run(&ctx, 1, 0.5f);
+            int px = (int)(detour->x + 0.5f), py = (int)(detour->y + 0.5f);
+            CHECK(!(px == 5 && py >= 1 && py <= 5),
+                  "the detour never lands on the blocked column");
+            arrived = detour->cmd_head == NULL;
+        }
+        CHECK(arrived && detour->x == 9.0f && detour->y == 3.0f,
+              "the walker reroutes around the blocked column");
+
         /* Idle probe (FUN_0043a960): the flag registers only on '\t' cells. */
         EntitySlot* idler2 = place(&ctx, 1, "idler2", 8, 0);
         int idle1 = ai_idle_count();

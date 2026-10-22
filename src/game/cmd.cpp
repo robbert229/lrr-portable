@@ -317,6 +317,8 @@ static void cmd_chain_append(EntitySlot* e, CmdRec* rec, int as_move)
  *  Creators (CmdCreateMove/Target/Gated/Task + MinionCompanionCmd).
  * ------------------------------------------------------------------ */
 
+static GameContext* s_ctx = NULL;
+
 void cmd_create_move(EntitySlot* e, float x, float y, int flag)
 {
     if (e == NULL) {
@@ -330,10 +332,15 @@ void cmd_create_move(EntitySlot* e, float x, float y, int flag)
     rec->y = y;
     rec->param = flag;
     /* Corpus move state +0x3e0 bit 0x8 is the creator side of the mover
-     * branch; seed the entity path list with this hop (the corpus path
-     * finder that fills multi-entry lists is port-side TODO — finding 10). */
+     * branch, and the dispatch installs the path list per command
+     * (0x4418d0): build a real path, falling back to the one-hop seed when
+     * there is no grid or no path. */
     e->flags_3e0 |= ENT_FLAG3E0_MOVING;
-    ai_path_append(e, x, y);
+    e->wp_count = 0;
+    e->wp_index = 0;
+    if (ai_path_build(s_ctx, e, x, y) == 0) {
+        ai_path_append(e, x, y);
+    }
     cmd_chain_append(e, rec, 1);
 }
 
@@ -488,8 +495,6 @@ typedef struct QueueRec {
 static QueueRec s_queue[2][CMD_QUEUE_CAP];
 static int      s_queue_count[2];
 static int      s_ping; /* active producer block (DAT_004fef28) */
-
-static GameContext* s_ctx = NULL;
 
 void cmd_context_set(GameContext* ctx)
 {

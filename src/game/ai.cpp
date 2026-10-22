@@ -3,6 +3,7 @@
  * (entry 0x43c810), decompile-verified 2026-10-21 (finding 10 closed). See
  * ai.hpp for the anatomy; branch comments carry corpus addresses. */
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "ai.hpp"
@@ -120,10 +121,10 @@ static int finish_head(GameContext* ctx, EntitySlot* e)
     return 1;
 }
 
-/* Append a waypoint to the entity path list (the corpus +0x24 buffer the
- * pathfinder fills; port-side pathfinding is TODO(corpus), so move commands
- * seed this list with their single hop). A finished-and-fully-popped list
- * restarts, mirroring the buffer being rebuilt per path command. */
+/* Append a waypoint to the entity path list (the corpus +0x24 buffer is
+ * heap-grown while the path is built — the appender at 0x44693b reallocs
+ * `count*20` bytes and writes {x, y, 0.5f} per walked cell). This mirrors
+ * one append; the builder is ai_path_build. */
 int ai_path_append(EntitySlot* e, float x, float y)
 {
     if (e == NULL) {
@@ -140,6 +141,99 @@ int ai_path_append(EntitySlot* e, float x, float y)
     e->wp[e->wp_count].y = y;
     e->wp[e->wp_count].pending = 1;
     return e->wp_count++;
+}
+
+static const LevelState* grid_of(const GameContext* ctx);
+
+/* Build a command's path into the entity buffer. Corpus shape: the command
+ * dispatch installs the list per command (start block 0x4418d0: buffer set,
+ * +0x28/+0x2c/+0x28c/+0x290 reset, mover flag raised), and the builder
+ * appends one entry per walked cell (0x44693b). The corpus *algorithm* is
+ * the wave-flood system behind the level+4 grid handle (`FUN_00430ee0`
+ * seeds the wave and marks cells with flag 0x40000, `FUN_00430530` traces
+ * back from type-8/10 cells) — not ported, TODO(corpus). The port stand-in
+ * is a 4-neighbour BFS over the level grid, entered only through
+ * level_walkable cells, appending path cells (start excluded, capped at
+ * AI_WAYPOINTS_MAX) corpus-style. Returns the entry count; 0 means "no
+ * grid, blocked target, unreachable, or equal cells" — the caller seeds a
+ * one-hop fallback. */
+int ai_path_build(GameContext* ctx, EntitySlot* e, float tx, float ty)
+{
+    const LevelState* grid = grid_of(ctx);
+    if (e == NULL || grid == NULL) {
+        return 0;
+    }
+    int w = level_width(grid);
+    int h = level_height(grid);
+    int sx = level_cell_of(e->x);
+    int sy = level_cell_of(e->y);
+    int gx = level_cell_of(tx);
+    int gy = level_cell_of(ty);
+    if (sx < 0 || sy < 0 || gx < 0 || gy < 0 || sx >= w || sy >= h ||
+        gx >= w || gy >= h || (sx == gx && sy == gy) ||
+        !level_walkable(grid, sx, sy) || !level_walkable(grid, gx, gy)) {
+        return 0;
+    }
+
+    int size = w * h;
+    int* prev = (int*)malloc((size_t)size * sizeof(int));
+    int* queue = (int*)malloc((size_t)size * sizeof(int));
+    if (prev == NULL || queue == NULL) {
+        free(prev);
+        free(queue);
+        return 0;
+    }
+    static const int dx[4] = { 1, -1, 0, 0 };
+    static const int dy[4] = { 0, 0, 1, -1 };
+    memset(prev, 0xff, (size_t)size * sizeof(int)); /* -1 = unvisited */
+    prev[sy * w + sx] = -2; /* start sentinel */
+    int head = 0, tail = 0, found = 0;
+    queue[tail++] = sy * w + sx;
+    while (head < tail && !found) {
+        int cell = queue[head++];
+        int cx = cell % w, cy = cell / w;
+        for (int d = 0; d < 4 && !found; ++d) {
+            int nx = cx + dx[d], ny = cy + dy[d];
+            if (nx < 0 || ny < 0 || nx >= w || ny >= h) {
+                continue;
+            }
+            int ncell = ny * w + nx;
+            if (prev[ncell] != -1 || !level_walkable(grid, nx, ny)) {
+                continue;
+            }
+            prev[ncell] = cell;
+            queue[tail++] = ncell;
+            if (nx == gx && ny == gy) {
+                found = 1;
+            }
+        }
+    }
+    free(queue);
+    if (!found) {
+        free(prev);
+        return 0;
+    }
+    /* Trace the path back (read-only pass, then a stack buffer keeps prev
+     * pristine), and drop the start cell — the entity is already there.
+     * Port bound: paths longer than AI_WAYPOINTS_MAX fall back to the
+     * one-hop seed (the corpus buffer is heap-unbounded). */
+    int trace[AI_WAYPOINTS_MAX];
+    int len = 0;
+    for (int cell = gy * w + gx; cell != sy * w + sx; cell = prev[cell]) {
+        if (len >= AI_WAYPOINTS_MAX) {
+            free(prev);
+            return 0;
+        }
+        trace[len++] = cell;
+    }
+    free(prev);
+
+    e->wp_count = 0; /* corpus install: fresh list per command (0x4418d0) */
+    e->wp_index = 0;
+    for (int i = len - 1; i >= 0; --i) {
+        ai_path_append(e, (float)(trace[i] % w), (float)(trace[i] / w));
+    }
+    return len;
 }
 
 /* The bound level's voxel grid, or NULL when no map is loaded (the corpus

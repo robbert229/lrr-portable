@@ -583,15 +583,21 @@ finding 12, #14). Three new modules in `src/game/`:
   the walker's current cell, `level_tile_mark` (`FUN_00432e00`) raises the
   `0x8000000` reservation while moving and drops it on arrival, and the
   idle registration probes the `'\t'` tile (`FUN_0043a960`) — mapless
-  fallbacks keep the corpus-free unit tests unchanged. The corpus
-  *pathfinder* that fills multi-entry lists (`FUN_00430ee0`/`FUN_00430530`)
-  remains TODO with the rest of the flag branches documented in finding 10
-  rather than guessed. The demo key `g` issues a task for the selection.
-  `ai_test` (suite `ai`) covers activity set/complete bookkeeping with the
-  idle-record attach, wake-timer freezing, link acquisition, the cheat
-  flag, idle registration (with the `'\t'` probe and its off-tile block),
-  single- and multi-waypoint walking with the arrival pop, blocked-tile
-  freezes with the occupancy mark/clear, and the queue→executor→move path.
+  fallbacks keep the corpus-free unit tests unchanged. Move commands now
+  install *built* paths: `cmd_create_move` resets the list per command
+  (corpus dispatch install, `0x4418d0`) and `ai_path_build` appends one
+  entry per walked cell (`0x44693b`'s per-cell appends) over a
+  `level_walkable`-gated 4-neighbour BFS, falling back to the one-hop seed
+  when there is no grid or no path. The corpus's own *wave-flood* pathfinder
+  (`FUN_00430ee0`/`FUN_00430530` on the `level+4` grid handle) is the
+  documented TODO behind the algorithm. The demo key `g` issues a task for
+  the selection. `ai_test` (suite `ai`) covers activity set/complete
+  bookkeeping with the idle-record attach, wake-timer freezing, link
+  acquisition, the cheat flag, idle registration (with the `'\t'` probe and
+  its off-tile block), single- and multi-waypoint walking with the arrival
+  pop, blocked-tile freezes with the occupancy mark/clear, and the
+  queue→executor→move path plus a dispatch rerouting around a blocked
+  column.
 - **Advisor + message-bus runtime** (2026-10-21, finding 22): the announcer
   now builds the `Stream Objective_…` advisor text (`DAT_004ffe38` analog)
   on every outcome, and `objective_advisor_shown` applies the 0x10/0x20/0x80
