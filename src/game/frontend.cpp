@@ -33,6 +33,24 @@
 static int s_lower(int c) { return (c >= 'A' && c <= 'Z') ? c + 0x20 : c; }
 static int s_toupper(int c) { return (c >= 'a' && c <= 'z') ? c - 0x20 : c; }
 
+/* Menu config identifiers use underscores where the original UI shows
+ * spaces (for example Start_Game → Start Game). Keep the raw value in
+ * FeItem for navigation and option lookup; normalize only at presentation.
+ */
+static void fe_display_label(const char* label, char* out, size_t out_size)
+{
+    if (out == NULL || out_size == 0) {
+        return;
+    }
+    size_t i = 0;
+    if (label != NULL) {
+        for (; label[i] != '\0' && i + 1 < out_size; ++i) {
+            out[i] = label[i] == '_' ? ' ' : label[i];
+        }
+    }
+    out[i] = '\0';
+}
+
 static int s_strcaseeq(const char* a, const char* b)
 {
     if (a == NULL || b == NULL) {
@@ -1571,8 +1589,10 @@ static void fe_item_pos(const FrontEnd* fe, const FeItem* it, int i,
         int bx = (sub != NULL) ? sub->base_x : 0;
         int by = (sub != NULL) ? sub->base_y : 0;
         if (sub != NULL && sub->auto_center) {
-            int tw = measure != NULL ? fe_font_text_width(it->label, measure)
-                                     : fe_text_width(it->label);
+            char label[FE_NAME_MAX];
+            fe_display_label(it->label, label, sizeof(label));
+            int tw = measure != NULL ? fe_font_text_width(label, measure)
+                                     : fe_text_width(label);
             *x = bx + it->x - tw / 2;
         } else {
             *x = bx + it->x;
@@ -1621,8 +1641,10 @@ static int fe_item_pick(const FrontEnd* fe, int mx, int my,
         const FeItem* it = &sub->items[i];
         int x, y;
         fe_item_pos(fe, it, i, 0, measure, &x, &y);
-        int tw = measure != NULL ? fe_font_text_width(it->label, measure)
-                                 : fe_text_width(it->label);
+        char label[FE_NAME_MAX];
+        fe_display_label(it->label, label, sizeof(label));
+        int tw = measure != NULL ? fe_font_text_width(label, measure)
+                                 : fe_text_width(label);
         if (mx >= x - 4 && mx <= x + tw + 4
             && my >= y - 2 && my <= y + rh) {
             if (out_idx != NULL) {
@@ -1731,12 +1753,14 @@ void frontend_render(FrontEnd* fe, const TextureSurface* hi_font,
 
         int selected = (i == fe->sel);
         const TextureSurface* font = selected ? hi_font : lo_font;
-        int lw = font != NULL ? fe_font_text_width(it->label, font)
-                              : fe_text_width(it->label);
+        char label[FE_NAME_MAX];
+        fe_display_label(it->label, label, sizeof(label));
+        int lw = font != NULL ? fe_font_text_width(label, font)
+                              : fe_text_width(label);
         if (font != NULL) {
-            fe_draw_font_text(px, pitch, w, h, x, y, it->label, font);
+            fe_draw_font_text(px, pitch, w, h, x, y, label, font);
         } else {
-            fe_draw_text(px, pitch, w, h, x, y, it->label,
+            fe_draw_text(px, pitch, w, h, x, y, label,
                          selected ? 255 : 200, selected ? 255 : 200,
                          selected ? 255 : 160);
         }
