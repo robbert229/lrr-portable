@@ -19,6 +19,39 @@ caller proofs that `LevelLoad @ 0x429890` is the *only* entry point for both
 14 records. Import with `import_evidence_bundle` or inspect `records`
 directly.
 
+## `legorr-menu-wipe.bundle`
+
+Exported 2026-10-21 from the finding-24 session (menu wipe / front-end
+transition). 18 recorded observations: the `LoadMenuBuild @ 0x4161f0`
+pseudocode with the `MenuWipe`/`!MenuWipe` config reads and the
+`-reduceanimation`/`"Null"` gates, the string constants (`"MenuWipe"`
+`0x4a26d0`, `"!MenuWipe"` `0x4a26c4`, `"Menu"` `0x4a2544`, `"Null"` `0x4a23f4`,
+`"LWS"` `0x4a13e0`), the `DAT_005574ec`/`DAT_005574f0` xref sweeps, the wipe
+start (`FUN_004103f0`), end (`FUN_00410440`), the `MenuRunLoop @ 0x413b80` /
+`MenuTick @ 0x412c00` drives, the input-freeze gate (`FUN_00411a00`), and the
+factory/dispatch (`FUN_00472cd0`, `FUN_00475930`, `FUN_00472710`,
+`FUN_004765c0`) plus `MenuEnter @ 0x416c80`. Import with `import_evidence_bundle`
+or inspect `records` directly.
+
+## `legorr-ddscene.bundle`
+
+Exported 2026-10-21 from the finding-25 session (the DDiScene object runtime
+behind MenuWipe and all LWS/3D animated objects). 64 recorded observations:
+the 9-slot kind-string table (`DAT_0076add8` slots → `NULL MESH FRAME ANIM
+ACT - - LWS LWO`), the object allocator `FUN_00472950` and pool grow
+`FUN_004759f0` (free list `DAT_0076add0`, `1<<DAT_0076cd90` doubling blocks,
+`0x2c`-byte records), the destroy path `FUN_00472a50`, the property/drawing
+accessor family (`FUN_00476160/180/1a0/1e0/200`, `FUN_00475f70`), the
+draw/step API (`FUN_00475140` draw-at-time, `FUN_00475710` step,
+`FUN_00475390/3f0` length/frame read, `FUN_00477010`/`FUN_00477150` begin/end
+scene with the `gods98/dx6` source string, `FUN_00477240`/`FUN_00473b40`
+flags), the animation hooks `DAT_0076cd78/80` and their `FUN_00472900`
+registration, the scene loader `FUN_004765c0` and file-open path `FUN_004800a0`,
+the `DDiScene` class string (`0x4aab98`) and its read site `FUN_00476770`, the
+`DAT_00505914` vtable system xrefs, and the per-kind loader branches
+(`FUN_004767e0` FRAME, `FUN_00476850` MESH, `FUN_004809e0` LWO). Import with
+`import_evidence_bundle` or inspect `records` directly.
+
 ## `legorr-tasktable.bundle`
 
 Exported 2026-10-21 from the task-table block session (issue #64 / LPT-19): the
@@ -37,7 +70,7 @@ function touches the unattributed ranges. 113 records.
 
 The canonical findings bundle. 403 recorded observations — function
 decompilations, address lookups, xref queries, and byte reads — each tied to
-the target digest, so findings 01–23 can be re-verified: import the bundle into
+the target digest, so findings 01–25 can be re-verified: import the bundle into
 a session (`import_evidence_bundle`) or inspect the `records` array directly.
 No game asset bytes are included; entries reference offsets and produce
 analysis text only.
