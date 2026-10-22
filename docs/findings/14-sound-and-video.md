@@ -121,17 +121,17 @@ playback region). The `.flh` container is documented in finding 21.
 
 ## Notes and open items
 
-1. Sound initialization's listener query is documented in finding 119. Finding 121 adds the
-   per-source buffer descriptor's 3D-control bit and the tracked-buffer distance-update calls;
-   which sounds use 3D positioning and later listener calls remain open. Finding 120 documents
-   optional duplicate sample buffers, while playback selection remains unknown.
+1. DirectSound 3D listener acquisition is documented in finding 119. Finding 121 traces the
+   per-source descriptor's 3D-control bit and configured distance setters; which individual sounds
+   use 3D positioning and later listener calls remain open. Finding 120 documents optional duplicate
+   sample buffers, and finding 133 traces playback's single-buffer versus three-buffer rotation.
 2. Finding 122 traces the in-memory WAV path from the `data` chunk through `mmioGetInfo`'s read
    window into a `GlobalAlloc` buffer before DirectSound setup. The shared file/WAD open layer is
    documented in finding 11; runtime WAD-backed loading and Windows' internal file access remain
    unverified.
 3. Finding 123 traces `AVIStreamGetFrame` output into a row-copy helper and the surface pixel
    buffer. The helper walks source rows backward while advancing the destination; bottom-up to
-   top-down conversion is an inference, and presentation beyond that buffer remains untraced.
+   top-down conversion is an inference. The later presentation path remains untraced.
 4. `.flh` container format — **closed** by finding 21 (2026-10-20): layout,
    both 16-bit coders, and the RGB555→565 write transform.
 5. MCI: only `play cdaudio from N` and status queries were observed; no
