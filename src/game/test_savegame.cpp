@@ -249,10 +249,11 @@ int main(void)
         {
             FILE* fp = fopen("Saves/6.osf", "wb");
             uint8_t hdr[8];
+            uint8_t oversized_payload[40] = { 0 };
             __builtin_memcpy(hdr, "\x52\x52\x4f\x53", 4);  /* 0x534f5252 LE */
             __builtin_memcpy(hdr + 4, "\x01\x00\x00\x00", 4);
             fwrite(hdr, 1, 8, fp);
-            fwrite(bad, 1, 40, fp);
+            fwrite(oversized_payload, 1, sizeof(oversized_payload), fp);
             fclose(fp);
         }
         cctx.osf_count = 0;
