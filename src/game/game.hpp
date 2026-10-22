@@ -203,6 +203,19 @@ typedef struct EntitySlot {
     /* --- entity-tick state (callback 0x43c810, finding 10) --------- */
     uint32_t flags_3e4; /* +0x3e4 (bit 0x8000000 = wake-timer running)  */
     uint32_t flags_3ec; /* +0x3ec (activity/behaviour flags)            */
+    /* --- minion task-state (spawn-dispatch switch 0x438150) --------- *
+     * The entity spawn dispatcher (FUN_00437d00) assigns the minion types
+     * a +0x334 stats block — its "task state" — through the selector at
+     * 0x438150 (ai_minion_state_for). activity_cap mirrors the state's
+     * +0xcc dword, which the permitted-activity appender reads
+     * (FUN_0046a060) to size each entity's list; the shipped static
+     * templates are zero and take their real values from config at runtime
+     * (TODO(corpus)), so the port defaults the per-entity cap to the span
+     * width when a minion task state is assigned (entity_create). */
+    int      task_state;    /* +0x334 role: minion task-state id, or
+                             * AI_TASK_STATE_NONE (= -1) for instance stats */
+    int      activity_cap;  /* state +0xcc: permitted-activity capacity;
+                             * 0 = unset -> ctx->stats_activity_cap          */
     int      activity;       /* +0x2e8: activity-table index, -1 = none */
     int      activity_last;  /* +0xbb: last completed activity, -1 none */
     int      activity_param; /* +0x2d8 (activity argument)              */

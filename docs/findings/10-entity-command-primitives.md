@@ -159,7 +159,8 @@ switch" — has a **negative answer: none does.** Decompiles of the shipped exe
    one of the exclusion set (table entries 0/1/4/6/8/12/17/23), progress the
    per-type runner, then `+0x2ec = +0x2e8`, `+0x2d4 = 0`. `+0x2ec` is written
    only at transition sites (`0x438199` pairs it with `+0x2e8` in the
-   minion task-state machine, `0x43c0fe`, `0x43e6cc` immediately before a
+   spawn dispatcher `FUN_00437d00` — see §"Spawn-dispatch task-state
+   switch", `0x43c0fe`, `0x43e6cc` immediately before a
    `FUN_00447c40` call, and inside `FUN_00447c40` itself).
 6. Idiom note: the x87 pattern `fcomps 0.0; fnstsw %ax; test $0x41, %ah`
    behaves as `je` skip ⇒ value > 0, fall-through ⇒ value <= 0 (verified
@@ -395,18 +396,19 @@ coverage total other than 42 levels / 496 pairs / 350 paths / 84 arrivals.
 The synthetic suite still runs alone when `test_wads_dir` is unset.
 
 Still TODO inside movement: the `+0x334`
-state objects behind the walkability gates above (now known: `+0x334` is an
-entity stats block — instance stats from the `DAT_00502bd8[type]` table at
-stride 336 (attacher writes it at `0x469c98`, called from the spawn
-dispatch's default arm `0x43818a`), minion types taking static templates by
-the table at `0x4382ac` — type 8 → `0x4a98f0`, 9 → `0x4a9a40`, 12–14 and
-16–19 → `0x4a9b90`, everything else instance stats; templates all-zero in
-the file; filled at runtime, so the table values are config-driven, TODO).
-Of what rides these, the speed table `+0x24 + terrain*4` is now ported as
-the game-wide `stats_speed_sec` mirror (§"Per-terrain mover speed");
-the per-type instance stats fill, the state word `+0x144` behind
-`FUN_00469e60`, and the runner scale constant (`0x49e3b4`, unrecorded)
-stay TODO.
+state objects behind the walkability gates above. The state-block *model*
+is now closed — see §"Spawn-dispatch task-state switch (`0x438150`)" for
+the `DAT_00502bd8[type]` base table (stride 336 / `0x150`), the minion
+static templates (`0x4a98f0`/`0x4a9a40`/`0x4a9b90`) the switch assigns,
+and the `+0x144`/`+0xcc`/`+0x24`/`+0x148` accessors —
+but the *instance fill* stays open: the shipped templates are all-zero
+apart from a leading `0x30` dword and take their real values from config
+at runtime. Of what rides these, the speed table `+0x24 + terrain*4` is now
+ported as the game-wide `stats_speed_sec` mirror (§"Per-terrain mover
+speed"), and the minion task state + the permitted-activity capacity
+(`+0xcc`) as `EntitySlot.task_state`/`activity_cap`; the per-type instance
+stats fill, the state word `+0x144` behind `FUN_00469e60`, and the runner
+scale constant (`0x49e3b4`, unrecorded) stay TODO.
 The old "`ent+0xbc` record list" TODO resolves away: `param_1[0xbc]` is
 just the dword-indexed view of `ent + 0x2f0`, i.e. the *same* command
 chain the port mirrors (kinds: 8=move, 12=tile flags, 0xE=idle, `0x17`;
@@ -448,20 +450,84 @@ Permitted-activity list (`+0x370` ids / `+0x384` count; closed 2026-10-21):
   — and once full the list shifts left dropping the oldest (`0x44b417`) and
   the value lands in the last slot.
 - Call sites: the spawn dispatch's type-2 arm (`0x437eb6`) grants
-  `Activity_Stand` (value 0) to every vehicle spawn; the callback's deferred
-  install branch (`0x43da62`, `+0x3e4` bit `0x40`) installs the chain-head
-  command record's `+0x38` grant through the setter and returns early, with
-  the kind-0x13 grant-record unlink (`FUN_00403d10(ent, 0x13, 0, 1)`)
-  deferred to the port's record chain. The record's `+0x38` is the port's
-  `grant_act` field (`cmd_rec_activity` / `cmd_rec_set_activity`). The
-  raisers of the `0x3e4` grant bit belong to the minion task-state machine
-  at `0x438150` (TODO below) — the ported list is where those grants land.
+  `Activity_Stand` (value 0) to every minifigure/vehicle spawn; the callback's
+  deferred install branch (`0x43da62`, `+0x3e4` bit `0x40`) installs the
+  chain-head command record's `+0x38` grant through the setter and returns
+  early, then unlinks every type-0x13 grant record
+  (`FUN_00403d10(ent, 0x13, 0, 1)` — no per-type side effects: the port's
+  `cmd_chain_drop`). The record's `+0x38` is the port's `grant_act` field
+  (`cmd_rec_activity` / `cmd_rec_set_activity`). **Correction (pinned
+  2026-10-21): the raisers of the `0x3e4` grant bit are *not* the `0x438150`
+  switch** — the switch writes only `+0x334`, and a full disassembly census
+  of every `+0x3e4` reference shows no immediate-OR writer of bit `0x40`;
+  the deferred branch at `0x43da62` is the documented consumer, though the
+  census bounds this claim (OR-immediates: 0 writers; byte-tests: 11 sites,
+  none mask `0x40`; dword-test encodings not enumerated, so the consumer
+  count is not pinned either way); the raiser is a
+  computed-value store among the `mov [..+0x3e4], reg` sites
+  (runtime/config-driven, TODO below). The ported list is where all these
+  grants land.
+
+### Spawn-dispatch task-state switch (`0x438150`, closed 2026-10-21)
+
+The "minion task-state granters" of issue #75's notes live in the entity
+spawn dispatcher `FUN_00437d00` (`0x437d00`–`0x438294`). After the
+per-type arms (types 1..4 and 10 get their own setup blocks), the default
+arm — types 5, 6, 7, 8, 9, `0xb`..`0x13` — builds the battle object
+(`FUN_00473690`/`FUN_00473da0`), sets the per-type flag additions
+(`0xb` → `0x60100`; 6/7 → `0x100100`; 8/`0xd` → `0x40000`; all →
+`0x20000`), runs `FUN_004383b0(entity, 1)` (type-6 rover work queues
+only), and then hits the **switch at `0x438150`** — the minion task-state
+selector:
+
+```
+0x43814c  add eax, -0x8                 ; key = type - 8
+0x43814f  cmp eax, 0xb
+0x438152  ja  0x438187                  ; key out of 0..0xb -> default arm
+0x438154  xor ecx, ecx
+0x438156  mov cl, byte [eax + 0x4382ac] ; selector byte table
+0x43815c  jmp dword [ecx*4 + 0x438298]  ; jump table
+```
+
+- **Selector table `0x4382ac`** (shipped bytes, for key 0..0xb i.e. types
+  `8..0x13`): `00 01 04 04 02 02 02 04 03 03 03 03`.
+- **Jump table `0x438298`**: `[0x438163, 0x43816f, 0x43817b, 0x43817b,
+  0x438187]`.
+- **Arms** — each points the entity's `+0x334` at a static stats template:
+  key 0 (type 8) → `0x438163` → `DAT_004a98f0`; key 1 (type 9) →
+  `0x43816f` → `DAT_004a9a40`; selector values 2 and 3 (types
+  `0xc`/`0xd`/`0xe` via selector `2`, `0x10`/`0x11`/`0x12`/`0x13` via
+  selector `3` — 15 is NOT included, its selector byte is
+  `0x04`) → `0x43817b` → `DAT_004a9b90`; key 4 (default, everything else,
+  and any type outside the default arm's reach — incl. types 1..4/10 which
+  never reach the switch) → `0x438187` → `FUN_00469c10` instance stats.
+- **What it consumes**: only `+0x334` — the entity's stats block (the
+  minion "task state"). `FUN_00469c10(ent, index)` is the general state
+  setter: `index < DAT_00502c28[type*0xf+sub]` gates it, it writes
+  `ent+0x330 = index` (`+0xcc` dword) and `ent+0x334 = DAT_00502bd8[type][sub]
+  + index*0x150` (per-type base table + 336-byte stride), and bumps the
+  state-change counters (`DAT_004dee44`/`DAT_004e3944`).
+- **What reads the state** (all `*(ent+0x334) + …`): `FUN_00469e60`
+  `+0x144` state word, `FUN_0046a060` `+0xcc` permitted-activity capacity,
+  `FUN_00469cc0` `+0x24` per-terrain speed table, `FUN_00469e80` `+0x148`.
+- **Templates**: the three static blocks are 336 bytes (stride `0x150`,
+  equal to the instance-state stride), shipped as a leading dword `0x30`
+  followed by zeroes; the real capacity/state values are filled at runtime
+  (config-driven — the shipped file carries none). The port models them as
+  `EntitySlot.task_state` (`ai_minion_state_for` mirrors the selector) plus
+  `EntitySlot.activity_cap` (the state's `+0xcc`, `ai_activity_cap`), and
+  `entity_create` assigns both to static-template spawns; the appender's
+  per-entity capacity gate (`FUN_0046a060`) is what consumes it.
+
+The deferred-grant flag (`+0x3e4` bit `0x40`) is *not* raised anywhere on
+this branch (bounded TODO — see the permitted-activity call-sites note).
 
 Documented TODO branches (not guessed): projectile arcs (`+0x3e0`
 `0x400000`, `FUN_004755e0`/`FUN_00475120`); screen
 shake (`+0x3e4` `0x40000000`, `DAT_004a48b0`); the riding-attach writer
 (`0x44c0a0` fragment — attach-pair `+0x364` install, `+0x3e0` bit `0x100`);
-the minion task-state machine at `0x438150` (spawn-dispatch switch — see
-the stats-block note above; the task switch itself still unpinned — it is
-also what raises `+0x3e4` bit `0x40` for deferred grants); the stats-block
-`+0xcc` permitted-list capacity fill and the setter's `+0x3f4` write.
+the `+0x3e4` bit-`0x40` grant-flag raiser (closed to a census: no immediate
+OR-writer exists — see the permitted-activity call-sites note; the computed
+store among the `mov [..+0x3e4], reg` sites is config/runtime-driven); the
+stats-block instance fill — `+0xcc` permitted-list capacity (the port's
+`activity_cap` defaults to the span) and the appender's `+0x3f4` write.

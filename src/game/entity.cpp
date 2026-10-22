@@ -75,11 +75,24 @@ int entity_create(GameContext* ctx, int type, const char* name,
     slot->y = y;
     slot->z = z;
     slot->rot = rot;
-    /* Corpus spawn dispatch (FUN_00437d50, type-2 arm at 0x437eb6): every
-     * vehicle spawn seeds its permitted-activity list with Activity_Stand
+    /* Corpus spawn dispatch (FUN_00437d00): the type-2 minifigure arm
+     * (at 0x437eb6) seeds its permitted-activity list with Activity_Stand
      * through the FUN_0044b370 appender — the first grant is value 0. */
     if (type == 2) {
         ai_activity_grant(ctx, slot, AI_ACT_STAND);
+    }
+    /* Corpus spawn dispatch default arm: the 0x438150 switch assigns the
+     * minion task-state (+0x334 stats block) to the static-template types —
+     * type 8 -> DAT_004a98f0, 9 -> DAT_004a9a40, 0xc..0xe and 0x10..0x13
+     * -> DAT_004a9b90; every other type falls through to the instance
+     * stats attacher (FUN_00469c10 at 0x43818a). The task state carries the
+     * permitted-activity capacity (state +0xcc, FUN_0046a060) that the
+     * appender reads per entity, so minion spawns set their own cap here
+     * (the shipped templates are zero — the real capacity is filled from
+     * config at runtime, TODO(corpus); the port defaults it to the span). */
+    slot->task_state = ai_minion_state_for(type);
+    if (slot->task_state != AI_TASK_STATE_NONE) {
+        slot->activity_cap = AI_ACTIVITY_SLOTS;
     }
     if (name != NULL) {
         int i = 0;

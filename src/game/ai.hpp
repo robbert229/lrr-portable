@@ -163,9 +163,34 @@ int ai_activity_probe(const EntitySlot* e);
  * permits drill/teleport/reinforce, else 0. */
 int ai_can_do(const EntitySlot* e);
 
+/* --- minion task-state (spawn-dispatch switch 0x438150) ------------------ *
+ * The corpus's entity spawn dispatcher (FUN_00437d00) routes minion types
+ * through a selector at 0x438150: type − 8 indexes the byte table at
+ * 0x4382ac and jumps through (0x438298) to a per-state arm that points the
+ * entity's +0x334 stats block at a static template — the minion "task state".
+ * The same stats block is what the permitted-activity appender reads for
+ * its per-entity capacity (FUN_0046a060 = state +0xcc; see ai_activity_cap
+ * and EntitySlot.activity_cap). Ids mirror the three template addresses. */
+#define AI_TASK_STATE_NONE      (-1) /* no minion task state (instance stats) */
+#define AI_TASK_STATE_MINION_1   0  /* type 8   -> DAT_004a98f0 template */
+#define AI_TASK_STATE_MINION_2   1  /* type 9   -> DAT_004a9a40 template */
+#define AI_TASK_STATE_MINION_3   2  /* types 0xc..0xe, 0x10..0x13 -> 0x4a9b90 */
+
+/* The 0x438150 selector: entity type -> minion task-state id, or
+ * AI_TASK_STATE_NONE for types the switch sends to the instance-stats arm
+ * (the corpus falls back to FUN_00469c10 for everything else). */
+int ai_minion_state_for(int type);
+
+/* FUN_0046a060: the permitted-activity capacity the appender sizes and
+ * recycles each entity's list from — corpus `*(ent+0x334 stats block) +
+ * 0xcc`. The port models the per-entity value as `EntitySlot.activity_cap`
+ * (0 = not set -> GameContext.stats_activity_cap, the game-wide default
+ * from game_context_init), clamped to the inline span. */
+int ai_activity_cap(const GameContext* ctx, const EntitySlot* e);
+
 /* FUN_0044b370: install one activity grant onto the entity's list — the
  * command/dispatch install appender. Semantics (corpus-pinned): capacity
- * check (FUN_0046a060, port model ctx->stats_activity_cap), +0x3ec bit
+ * check (FUN_0046a060 via ai_activity_cap), +0x3ec bit
  * 0x4 reflects "a special (4/5/7) activity is permitted", a special value
  * REPLACES the first special entry already on the list (clearing the old
  * grant in place, 0x44b463), and otherwise the value appends — slot[count],
