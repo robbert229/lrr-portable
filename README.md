@@ -598,12 +598,19 @@ finding 12, #14). Three new modules in `src/game/`:
   writes onto the attached `+0x364` target (`+0x340 = 100`, `+0x3e8` bit
   `0x800000`, gated by the target's `+0x3e0` bit `0x200000`), and the
   cheat-word branch runs the `FUN_0044c530` can-do probe (type-2 with a
-  drill/teleport/reinforce activity — the corpus's permitted-activity list
-  is ported as the one-slot current activity, TODO). The demo key `g`
+  drill/teleport/reinforce check `FUN_0043c440` over the corpus's real
+  *permitted-activity list* — `+0x370` id slots / `+0x384` count,
+  `FUN_0044b480`'s scan, the FIFO append at capacity (`0x44b44a`/`0x44b417`)
+  and the special-value in-place replace (`0x44b463`) via the install
+  appender `FUN_0044b370`; vehicle spawns seed `Activity_Stand` (`0x437eb6`)
+  and the deferred-install branch `0x43da62` installs the chain-head
+  record's `+0x38` grant). The demo key `g`
   issues a task for the selection. `ai_test` (suite `ai`) covers activity
   set/complete bookkeeping with the idle-record attach, wake-timer freezing
   (plus the wake mirror and its attached-state gate), link acquisition, the
-  cheat flag, idle registration (with the `'\t'` probe and its off-tile
+  cheat flag driven off the permitted-activity list (spawn seed, special
+  replace, list clear), the FIFO install at capacity, and the deferred
+  `0x43da62` command grant, idle registration (with the `'\t'` probe and its off-tile
   block), single- and multi-waypoint walking with the arrival pop,
   blocked-tile freezes with the occupancy mark/clear, and the
   queue→executor→move path plus a dispatch rerouting around a blocked

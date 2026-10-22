@@ -352,15 +352,44 @@ Wake and riding (closed 2026-10-21):
 - `FUN_0044c530` → `FUN_0043c440` (can-do / riding probe): type-2 entities
   answer via `FUN_0044b480`, which scans the entity's permitted-activity
   list (`+0x370` slots, count `+0x384`) for activities 4/5/7 (drill,
-  teleport, reinforce). The port models the list as its one
-  current-activity slot (`TODO(corpus)`: the multi-slot list and its
-  appenders, e.g. `0x44b44a`, are not ported).
+  teleport, reinforce). Ported as the real multi-slot list — see
+  "Permitted-activity list" below.
+
+Permitted-activity list (`+0x370` ids / `+0x384` count; closed 2026-10-21):
+
+- `FUN_0044b480` (scan): a zero count answers 0 without reading; otherwise
+  each of the `count` dwords in the inline `+0x370` span is compared with
+  the requested activity. The port models the span as five id slots
+  (`AI_ACTIVITY_SLOTS`, matching the inline span's dwords before `+0x384`).
+- `FUN_0043c440` (can-do): answers 1 for drill (4), 2 for teleport (5),
+  3 for reinforce (7), else 0; `FUN_0044c530` wraps that behind the type-2
+  gate and the cheat-word branch (0x43c90b) reads it from the list.
+- `FUN_0044b370` (the install appender, e.g. the append write at `0x44b44a`):
+  capacity is `FUN_0046a060(ent)` = `*(state + 0xcc)` — the stats-block
+  instance fill stays TODO (the port models `ctx->stats_activity_cap`,
+  defaulting to the span width); the setter's `+0x3f4 = 0` write has no
+  port-side reader (TODO(corpus)); it sets `+0x3ec` bit `0x4` iff the list
+  already carries a can-do value or the grant is special (`FUN_0044b350` =
+  the {4,5,7} predicate). A special grant *replaces* the first special entry
+  already on the list in place (`0x44b463`, count untouched); otherwise the
+  value appends — slot `[count]`, `count++` while `count != cap` (`0x44b44a`)
+  — and once full the list shifts left dropping the oldest (`0x44b417`) and
+  the value lands in the last slot.
+- Call sites: the spawn dispatch's type-2 arm (`0x437eb6`) grants
+  `Activity_Stand` (value 0) to every vehicle spawn; the callback's deferred
+  install branch (`0x43da62`, `+0x3e4` bit `0x40`) installs the chain-head
+  command record's `+0x38` grant through the setter and returns early, with
+  the kind-0x13 grant-record unlink (`FUN_00403d10(ent, 0x13, 0, 1)`)
+  deferred to the port's record chain. The record's `+0x38` is the port's
+  `grant_act` field (`cmd_rec_activity` / `cmd_rec_set_activity`). The
+  raisers of the `0x3e4` grant bit belong to the minion task-state machine
+  at `0x438150` (TODO below) — the ported list is where those grants land.
 
 Documented TODO branches (not guessed): projectile arcs (`+0x3e0`
 `0x400000`, `FUN_004755e0`/`FUN_00475120`); screen
 shake (`+0x3e4` `0x40000000`, `DAT_004a48b0`); the riding-attach writer
 (`0x44c0a0` fragment — attach-pair `+0x364` install, `+0x3e0` bit `0x100`);
 the minion task-state machine at `0x438150` (spawn-dispatch switch — see
-the stats-block note above; the task switch itself still unpinned);
-`FUN_0044b480`'s permitted-activity list (`+0x370`/`+0x384` — port models
-one slot).
+the stats-block note above; the task switch itself still unpinned — it is
+also what raises `+0x3e4` bit `0x40` for deferred grants); the stats-block
+`+0xcc` permitted-list capacity fill and the setter's `+0x3f4` write.

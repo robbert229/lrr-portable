@@ -196,21 +196,78 @@ int main(void)
     CHECK((linker->flags_3ec & 0x00080000u) != 0, "link flag set");
     CHECK(linker->link_target == (void*)twin, "link handle mirrors payload");
 
-    /* Cheat-word flag (0x43c90b): type-2 can-do probe = activity in
-     * {drill, teleport, reinforce} (FUN_0044c530 -> FUN_0043c440). */
+    /* Cheat-word flag (0x43c90b): the type-2 "can do" probe FUN_0044c530 =
+     * FUN_0043c440 over the entity's permitted-activity list (+0x370 slots,
+     * count +0x384, scanned by FUN_0044b480) for drill/teleport/reinforce —
+     * not the single current-activity field. Type-2 spawns seed the list
+     * with Activity_Stand (spawn-dispatch grant, 0x437eb6). */
     EntitySlot* rider = place(&ctx, 2, "rider", 0, 0);
-    rider->activity = AI_ACT_DRILL;
+    CHECK(ai_activity_scan(rider, AI_ACT_STAND) == 1 &&
+              ai_activity_probe(rider) == 0,
+          "type-2 spawn seeds Stand; Stand is not a can-do");
     ctx.cheat = 1;
     run(&ctx, 1, 0.5f);
-    CHECK((rider->flags_3ec & 0x20u) != 0, "cheat + drill activity sets 0x20");
-    rider->activity = AI_ACT_WALK;
+    CHECK((rider->flags_3ec & 0x20u) == 0, "cheat + Stand-only list clears 0x20");
+    ai_activity_grant(&ctx, rider, AI_ACT_DRILL);
     run(&ctx, 1, 0.5f);
-    CHECK((rider->flags_3ec & 0x20u) == 0, "non-can-do activity clears 0x20");
+    CHECK((rider->flags_3ec & 0x20u) != 0, "cheat + drill grant sets 0x20");
+    /* A special (4/5/7) grant replaces the first special entry in place
+     * (write at 0x44b463): no append, count unchanged, still can-do. */
+    ai_activity_grant(&ctx, rider, AI_ACT_TELEPORT);
+    CHECK(ai_activity_scan(rider, AI_ACT_DRILL) == 0 &&
+              ai_activity_scan(rider, AI_ACT_TELEPORT) == 1,
+          "special grant replaces the special entry in place");
+    run(&ctx, 1, 0.5f);
+    CHECK((rider->flags_3ec & 0x20u) != 0, "cheat + teleport grant sets 0x20");
+    /* Clearing the list ends the cheat: FUN_0044b480's scan answers 0 and
+     * the flag drops on the next tick. */
+    rider->act_count = 0;
+    run(&ctx, 1, 0.5f);
+    CHECK((rider->flags_3ec & 0x20u) == 0, "list clear drops the cheat flag");
+    /* A reinforce-only list still answers the probe (result 3). */
+    ai_activity_grant(&ctx, rider, AI_ACT_REINFORCE);
+    run(&ctx, 1, 0.5f);
+    CHECK((rider->flags_3ec & 0x20u) != 0, "reinforce grant sets 0x20");
+    /* Cheat off: the branch clears the bit even though the list permits. */
     ctx.cheat = 0;
-    rider->activity = AI_ACT_REINFORCE;
     run(&ctx, 1, 0.5f);
     CHECK((rider->flags_3ec & 0x20u) == 0, "flag cleared when cheat is off");
-    rider->activity = AI_ACTIVITY_NONE;
+    rider->act_count = 0;
+
+    /* FIFO install at capacity (FUN_0044b370's append/overwrite, corpus
+     * 0x44b44a / 0x44b417): a full list shifts left and the new grant lands
+     * in the last slot; non-special appends never replace in place. */
+    EntitySlot* fifo = place(&ctx, 1, "fifo", 0, 0);
+    const int plain[] = { AI_ACT_STAND, AI_ACT_ROUTE, AI_ACT_ROUTE_RUBBLE,
+                          AI_ACT_RUN_PANIC, AI_ACT_TURN_LEFT };
+    for (unsigned i = 0; i < sizeof plain / sizeof plain[0]; ++i) {
+        ai_activity_grant(&ctx, fifo, plain[i]);
+    }
+    CHECK(fifo->act_count == AI_ACTIVITY_SLOTS, "append fills to cap");
+    ai_activity_grant(&ctx, fifo, AI_ACT_EMERGE);
+    CHECK(fifo->act_count == AI_ACTIVITY_SLOTS &&
+              ai_activity_scan(fifo, AI_ACT_STAND) == 0 &&
+              ai_activity_scan(fifo, AI_ACT_ROUTE) == 1 &&
+              ai_activity_scan(fifo, AI_ACT_EMERGE) == 1,
+          "full-list grant drops the oldest and appends");
+
+    /* Deferred install branch (0x43da62): +0x3e4 bit 0x40 takes the grant
+     * from the chain-head record's +0x38 field, installs it through the
+     * setter, and returns early — the chain head does not run that tick. */
+    EntitySlot* grantee = place(&ctx, 1, "grantee", 0, 0);
+    cmd_create_move(grantee, 10.0f, 0.0f, 0);
+    CHECK(grantee->cmd_head != NULL, "move record at the chain head");
+    if (grantee->cmd_head != NULL) {
+        cmd_rec_set_activity(grantee->cmd_head, AI_ACT_TELEPORT);
+    }
+    grantee->flags_3e4 |= 0x00000040u;
+    float x_before_grant = grantee->x;
+    run(&ctx, 1, 0.5f);
+    CHECK((grantee->flags_3e4 & 0x00000040u) == 0, "grant flag consumed");
+    CHECK(ai_activity_scan(grantee, AI_ACT_TELEPORT) == 1,
+          "record grant lands on the entity's list");
+    CHECK(grantee->x == x_before_grant, "grant branch returns early that tick");
+    grantee->act_count = 0;
 
     /* Attached wake mirror (FUN_0044c110): an expired wake timer wakes
      * the +0x364 target — +0x340 = 100.0 and +0x3e8 bit 0x800000 — unless

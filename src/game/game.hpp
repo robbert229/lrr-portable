@@ -166,6 +166,12 @@ typedef struct RewardScreen {
  * byte flag sits at entry+8 (callback 0x43cd83 reads list+idx*20-12 relative
  * to +0x28); arrival clears that byte — the pop is flag-clear, not removal. */
 #define AI_WAYPOINTS_MAX 16 /* port bound; the corpus list is heap-allocated */
+/* Permitted-activity list bound (corpus entity +0x370 id slots / +0x384 count):
+ * the inline span +0x370..+0x384 is five dwords, so an entity holds at most
+ * five permitted activity ids before the setter (FUN_0044b370) recycles
+ * entries — the port models the stats-block capacity as
+ * GameContext.stats_activity_cap (see below). */
+#define AI_ACTIVITY_SLOTS 5
 /* Terrain count of the stats speed table (port bound — the corpus table
  * sits inside the +0x334 stats block with an unpinned size, indexed by the
  * signed tile-type byte; the port guards out-of-range reads). */
@@ -211,6 +217,14 @@ typedef struct EntitySlot {
     AiWaypoint wp[AI_WAYPOINTS_MAX];
     int      wp_count;       /* +0x28: valid entries                      */
     int      wp_index;       /* +0x2c: entry being walked                 */
+    /* --- permitted-activity list (corpus +0x370 ids / +0x384 count) ----- *
+     * Activities the entity is permitted to run, as table indices. The
+     * FUN_0044b480 scan and the FUN_0043c440 can-do probe read this list
+     * (activities 4/5/7 = drill/teleport/reinforce), and FUN_0044b370 is
+     * the appender/recycler that command and dispatch installs run. */
+    int32_t  act_list[AI_ACTIVITY_SLOTS]; /* +0x370: valid entries first   */
+    int      act_count;                   /* +0x384: valid entries, 0 = no
+                                           * permission (probe false)       */
 } EntitySlot;
 
 /* Completed-objective `.osf` table (finding 08): 20-byte entries — id, ref,
@@ -245,6 +259,18 @@ typedef struct GameContext {
      * the unported +0x3e8 walker bit, so unset entries need a port-side
      * default either way. */
     float stats_speed_sec[AI_STATS_TERRAIN_TYPES];
+
+    /* --- permitted-activity list capacity (FUN_0046a060) ----------------- *
+     * Corpus: the activity setter (FUN_0044b370) sizes and recycles each
+     * entity's permitted-activity list from `*(state + 0xcc)` — the dword
+     * the capacity probe FUN_0046a060 reads out of the entity's `+0x334`
+     * stats block. The instance-stats fill is the documented stats-block
+     * TODO (config-driven, values unrecorded), so the port models the
+     * capacity game-wide here; game_context_init defaults it to
+     * AI_ACTIVITY_SLOTS — the corpus's inline span — so list installs
+     * behave like cap == span entities. A zero capacity makes grants a
+     * no-op exactly as the corpus's cap-0 entities behave. */
+    int stats_activity_cap;
 
     /* --- save system (DAT_005574d0 + per-slot ctx) ---------------------- */
     int   save_slot;              /* DAT_005574d0 — -1 = none (defaults 5) */
