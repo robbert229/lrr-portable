@@ -498,3 +498,55 @@ cover the fixed cursor-name registry, config decoding for bitmap and animated
 slots, timed selection overrides, and the reward-pump caller. Exact cursor
 assets and elapsed-time duration in that loop remain unverified. Import with
 `import_evidence_bundle` or inspect `records` directly.
+
+## `legorr-samples-config.bundle`
+
+Exported 2026-10-22 for finding 107 — 33 retained observations. Records cover
+the `Samples` config group, alias registration, comma-separated variants,
+loop/stream markers, and variant selection. The `#...#` prefix branch has no
+shipped example, so its semantics remain unclaimed. Import with
+`import_evidence_bundle` or inspect `records` directly.
+
+## `legorr-streamed-wav-format.bundle`
+
+Exported 2026-10-22 for finding 108 — 5 focused observations. Records cover
+non-PCM WAVEFORMATEX extension preservation, DirectSound buffer creation, and
+the streamed playback caller. API acceptance and asset presence are
+unverified. Import with `import_evidence_bundle` or inspect `records` directly.
+
+## `legorr-emergemap-layerl.bundle`
+
+Exported 2026-10-22 for finding 109 — 10 retained observations. Records cover
+LevelLoad's EmergeMap argument, the map pipeline, and LayerL's six-slot record
+encoding. Consumers and gameplay meaning of the appended records remain
+unknown. Import with `import_evidence_bundle` or inspect `records` directly.
+
+## `legorr-objective-entity-paired-predicate.bundle`
+
+Exported 2026-10-22 for finding 110 — 30 retained observations. Records cover
+the delegated objective predicate, its registered-entity iterator, callback
+branches, field comparisons, and helper outputs. The compared fields' semantic
+meanings and live level reachability remain unknown. Import with
+`import_evidence_bundle` or inspect `records` directly.
+
+## `legorr-graphics-mode-surfaces.bundle`
+
+Exported 2026-10-22 for finding 111 — 5 retained observations. Records cover
+DirectDraw windowed/exclusive setup, presentation-surface descriptor writes,
+selected-mode probing, and the device setup path. Surface behavior is not
+runtime-tested. Import with `import_evidence_bundle` or inspect `records` directly.
+
+## `legorr-registry-accessor.bundle`
+
+Exported 2026-10-22 for finding 112 — 8 retained observations. Records cover
+the recursive subkey path splitter/accessor, RegCreateKeyA/RegQueryValueExA
+use, and startup callers. Runtime registry contents remain unobserved. Import
+with `import_evidence_bundle` or inspect `records` directly.
+
+## `legorr-window-activation-key-poll.bundle`
+
+Exported 2026-10-22 for finding 113 — 7 retained observations. Records cover
+WM_ACTIVATEAPP handling, the keyboard-sampling gate, the frame loop, cursor
+update, and the alternate-mode message filter. No runtime capture or media
+advancement claim is included. Import with `import_evidence_bundle` or
+inspect `records` directly.
