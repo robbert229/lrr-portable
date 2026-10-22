@@ -608,6 +608,23 @@ finding 12, #14). Three new modules in `src/game/`:
   blocked-tile freezes with the occupancy mark/clear, and the
   queue→executor→move path plus a dispatch rerouting around a blocked
   column.
+- **Per-terrain movement speed** (2026-10-21, closing the finding 10
+  per-terrain placeholder): the `FUN_00469cc0` speed probe — the corpus's
+  per-terrain movement rates, read from the `+0x334` stats block's table
+  at `+0x24 + terrain*4` (seconds to cross one cell; the move branch
+  accumulates `dt / entry` per cell, `FUN_00434570`) — is ported as
+  `ai_stats_speed`, the table modelled as `GameContext.stats_speed_sec`
+  indexed by the cell's terrain type through the level tile accessors.
+  `step_path` now steps the mover at the *terrain-under-foot* rate (cell
+  via `level_cell_of`, type via `level_tile_type`) instead of the flat
+  `AI_MOVE_SPEED_CPS` constant, with the tick's overflow carrying into
+  the following waypoints, so slow terrain visibly slows a walker and
+  fast terrain quickens it; unset entries, out-of-range types, and a
+  mapless context fall back to the port default. The corpus's zero-entry
+  walkability gate and the runner-bit scale stay behind the unported
+  `+0x334` state objects / unrecorded constants (TODO). `ai_test` pins
+  the probe reads and fallbacks and a slow/fast terrain band against a
+  plain-row walker, arrival pops and the occupancy clear unchanged.
 - **Advisor + message-bus runtime** (2026-10-21, finding 22): the announcer
   now builds the `Stream Objective_…` advisor text (`DAT_004ffe38` analog)
   on every outcome, and `objective_advisor_shown` applies the 0x10/0x20/0x80

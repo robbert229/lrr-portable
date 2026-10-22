@@ -239,8 +239,9 @@ int level_cell_of(float v);
  * NULL level (no map loaded) reports *not walkable* — callers that run
  * without map state (port unit tests, menus) skip the check instead. The
  * corpus's entity-conditional gates (the +0x334 state object, `+0x3e8`
- * bit 1, gated-mode `+0x3e0` bit 0x400, and the per-type speed probe
- * FUN_00469cc0) are TODO(corpus) and treated as pass here. */
+ * bit 1, gated-mode `+0x3e0` bit 0x400, and FUN_00469cc0's zero-speed
+ * gate behind them) are TODO(corpus) and treated as pass here; the speed
+ * probe itself is ported (`ai_stats_speed`) and drives the mover step. */
 int level_walkable(const LevelState* s, int cx, int cy);
 
 /* FUN_00432e00: set (nonzero) or clear the cell's OCCUPIED flag — the
