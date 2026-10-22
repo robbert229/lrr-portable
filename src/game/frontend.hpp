@@ -119,6 +119,7 @@ typedef struct FeSubmenu {
     char  lofont[FE_PATH_MAX];    /* LoFont key — unselected items (Menu_Font_Lo.bmp) */
     char  hifont[FE_PATH_MAX];    /* HiFont key — selected items  (Menu_Font_Hi.bmp) */
     int   base_x, base_y;         /* Position key (x:y) */
+    int   title_anchor_y;         /* Anchored x:y; title adds y to Position.y */
     int   auto_center;            /* AutoCenter TRUE|FALSE */
     int   display_title;          /* DisplayTitle TRUE|FALSE */
     int   play_random;            /* PlayRandom: random sequential FLIC playback */
@@ -213,6 +214,7 @@ typedef enum {
     FE_EVT_START_LEVEL,   /* frontend.pending_level holds the level group */
     FE_EVT_LOAD_GAME,     /* frontend.load_slot holds the save slot id    */
     FE_EVT_RESUME,        /* close a modal overlay (pause Continue / Esc)   */
+    FE_EVT_CREDITS,       /* show the main-menu scrolling credits view      */
     FE_EVT_QUIT,          /* user quit the app from the front end */
 } FeEvent;
 
@@ -296,6 +298,13 @@ const char* frontend_active_image(const FrontEnd* fe);
 void frontend_render(FrontEnd* fe, const TextureSurface* hi_font,
                      const TextureSurface* lo_font,
                      int w, int h, void* px, int pitch);
+
+/* Draw one frame of the scrolling credits lane over the caller's backdrop.
+ * scroll_px advances one pixel per frame; the text cycles from below the
+ * screen back to the bottom after the final line leaves the top. */
+void frontend_render_credits(const TextureSurface* font,
+                             const char* const* lines, int line_count,
+                             int scroll_px, int w, int h, void* px, int pitch);
 
 /* The in-game Help Window (issue #85): the panel the Help_Window option
  * toggles. The option is checked here — the display gate — so every caller

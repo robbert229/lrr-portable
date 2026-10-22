@@ -367,6 +367,7 @@ static void fe_parse_submenu(FrontEnd* fe, FeMenu* m, const char* name,
     FeSubmenu* sub = &m->submenus[idx];
     sub->item_count = 0;
     sub->base_x = sub->base_y = 0;
+    sub->title_anchor_y = 0;
     sub->auto_center = 0;
     sub->display_title = 0;
     sub->can_scroll = 0;
@@ -401,6 +402,17 @@ static void fe_parse_submenu(FrontEnd* fe, FeMenu* m, const char* name,
     sub->auto_center = block_get_bool(fe->cfg, buf) == 1;
     snprintf(buf, sizeof(buf), "%s DisplayTitle", pre);
     sub->display_title = block_get_bool(fe->cfg, buf) == 1;
+    /* The original menu renderer centers DisplayTitle on the screen and
+     * draws it at Position.y + Anchored.y. Anchored.x is not used for the
+     * title's horizontal placement. */
+    snprintf(buf, sizeof(buf), "%s Anchored", pre);
+    v = block_get_strptr(fe->cfg, buf);
+    if (v != NULL) {
+        const char* c = strchr(v, ':');
+        if (c != NULL) {
+            sub->title_anchor_y = (int)strtol(c + 1, NULL, 10);
+        }
+    }
     snprintf(buf, sizeof(buf), "%s CanScroll", pre);
     sub->can_scroll = block_get_bool(fe->cfg, buf) == 1;
     snprintf(buf, sizeof(buf), "%s MenuImage", pre);
@@ -929,6 +941,14 @@ static FeEvent fe_activate(FrontEnd* fe)
         fe->quit = 1;
         frontend_close(fe);
         return FE_EVT_QUIT;
+    }
+
+    /* MainMenuFull's Credits text row is a trigger with flag 0. In the
+     * original menu builder it has a callback that opens the scrolling
+     * credits display; the other plain triggers remain no-ops here. */
+    if (it->kind == FE_ITEM_TRIGGER && fe->menu == FE_MENU_MAIN
+        && s_stristr(it->label, "credits")) {
+        return FE_EVT_CREDITS;
     }
 
     /* Next -> navigate submenus ("Menu%i" target) */
@@ -1682,10 +1702,16 @@ void frontend_render(FrontEnd* fe, const TextureSurface* hi_font,
     }
 
     if (sub->display_title && sub->title[0] != '\0') {
+        int title_w = hi_font != NULL ? fe_font_text_width(sub->title, hi_font)
+                                      : fe_text_width(sub->title);
+        int title_x = (w - title_w) / 2;
+        int title_y = sub->base_y + sub->title_anchor_y;
         if (hi_font != NULL) {
-            fe_draw_font_text(px, pitch, w, h, 8, 8, sub->title, hi_font);
+            fe_draw_font_text(px, pitch, w, h, title_x, title_y, sub->title,
+                              hi_font);
         } else {
-            fe_draw_text(px, pitch, w, h, 8, 8, sub->title, 230, 210, 120);
+            fe_draw_text(px, pitch, w, h, title_x, title_y, sub->title,
+                         230, 210, 120);
         }
     }
 
@@ -1789,6 +1815,45 @@ void frontend_render(FrontEnd* fe, const TextureSurface* hi_font,
                 }
             }
             texture_release(cursor);
+        }
+    }
+}
+
+void frontend_render_credits(const TextureSurface* font,
+                             const char* const* lines, int line_count,
+                             int scroll_px, int w, int h, void* px, int pitch)
+{
+    if (px == NULL || lines == NULL || line_count <= 0 || w <= 0 || h <= 0) {
+        return;
+    }
+    int cw = 0, ch = 0;
+    if (font != NULL && fe_font_cell(font, &cw, &ch)) {
+        /* use the shipped RSFont bitmap grid */
+    } else {
+        font = NULL;
+        cw = 4;
+        ch = 8;
+    }
+    const int line_h = ch;
+    const int visible_rows = h / line_h + 1;
+    const int period = (line_count + visible_rows) * line_h;
+    int phase = scroll_px % period;
+    if (phase < 0) {
+        phase += period;
+    }
+    const int first_row = -visible_rows + phase / line_h;
+    const int partial = phase % line_h;
+    for (int row = first_row < 0 ? 0 : first_row;
+         row < line_count && row < first_row + visible_rows + 1; ++row) {
+        const char* text = lines[row] != NULL ? lines[row] : "";
+        int tw = font != NULL ? fe_font_text_width(text, font)
+                              : fe_text_width(text);
+        int x = (w - tw) / 2;
+        int y = (row - first_row) * line_h - partial;
+        if (font != NULL) {
+            fe_draw_font_text(px, pitch, w, h, x, y, text, font);
+        } else {
+            fe_draw_text(px, pitch, w, h, x, y, text, 230, 230, 220);
         }
     }
 }
