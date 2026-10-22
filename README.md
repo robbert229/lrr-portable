@@ -302,6 +302,8 @@ Open threads, in order of value:
 | 100 | [`findings/100-upgrade-command-advances-building-index.md`](docs/findings/100-upgrade-command-advances-building-index.md) | Upgrade command commits the next building index |
 | 101 | [`findings/101-camera-key-hold-and-gates.md`](docs/findings/101-camera-key-hold-and-gates.md) | Camera key adjustments repeat while held behind gameplay and input gates |
 | 102 | [`findings/102-camera-config-pan-and-follow-bounds.md`](docs/findings/102-camera-config-pan-and-follow-bounds.md) | Camera settings feed pointer-pan acceleration and follow bounds |
+| 103 | [`findings/103-pointer-cursor-config-registry.md`](docs/findings/103-pointer-cursor-config-registry.md) | Pointer cursor config uses a fixed action-name registry |
+| 104 | [`findings/104-pointer-overrides-expire-in-the-reward-pump.md`](docs/findings/104-pointer-overrides-expire-in-the-reward-pump.md) | Timed cursor overrides hold through reward-screen input polling |
 | 105 | [`findings/105-sav-write-ignores-short-write-results.md`](docs/findings/105-sav-write-ignores-short-write-results.md) | Slot-save success ignores partial write results |
 | 106 | [`findings/106-sav-reader-resets-slot-on-record-count-mismatch.md`](docs/findings/106-sav-reader-resets-slot-on-record-count-mismatch.md) | A save record-count mismatch reinitializes the slot |
 
