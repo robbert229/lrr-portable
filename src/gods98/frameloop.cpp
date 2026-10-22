@@ -62,7 +62,7 @@ static int s_icontains(const char* haystack, const char* needle)
 static const char* menu_music_resource(BlockFile* cfg)
 {
     const char* music = block_get_strptr(cfg,
-                                         "Lego* Samples SFX_MusicLoop");
+                                         "Lego* Samples SFX_AmbientMusicLoop");
     if (music != NULL && music[0] == '@') {
         ++music;
     }
@@ -208,6 +208,209 @@ static int movie_play_avi(const char* os_path, const char* label,
     fprintf(log, "movie: %s done — %lld frames%s\n", label,
             (long long)frames, skipped ? " (skipped)" : "");
     return 1;
+}
+
+static int credits_load_lines(const char* name, char*** out_lines,
+                              int* out_count)
+{
+    *out_lines = NULL;
+    *out_count = 0;
+    Resource* r = resource_open(name, RESOURCE_AUTO);
+    if (r == NULL) {
+        return 0;
+    }
+    int32_t size = resource_read(r);
+    if (size <= 0) {
+        resource_free(r);
+        return 0;
+    }
+    char* text = (char*)malloc((size_t)size + 1);
+    if (text == NULL) {
+        resource_free(r);
+        return 0;
+    }
+    memcpy(text, r->data, (size_t)size);
+    text[size] = '\0';
+    resource_free(r);
+
+    int count = 1;
+    for (int32_t i = 0; i < size; ++i) {
+        if (text[i] == '\n') {
+            ++count;
+        }
+    }
+    char** lines = (char**)calloc((size_t)count, sizeof(*lines));
+    if (lines == NULL) {
+        free(text);
+        return 0;
+    }
+    int n = 0;
+    char* start = text;
+    for (char* p = text;; ++p) {
+        if (*p != '\n' && *p != '\0') {
+            continue;
+        }
+        char saved = *p;
+        *p = '\0';
+        size_t len = strlen(start);
+        if (len > 0 && start[len - 1] == '\r') {
+            start[--len] = '\0';
+        }
+        lines[n] = (char*)malloc(len + 1);
+        if (lines[n] == NULL) {
+            for (int i = 0; i < n; ++i) {
+                free(lines[i]);
+            }
+            free(lines);
+            free(text);
+            return 0;
+        }
+        memcpy(lines[n++], start, len + 1);
+        if (saved == '\0') {
+            break;
+        }
+        start = p + 1;
+    }
+    free(text);
+    *out_lines = lines;
+    *out_count = n;
+    return 1;
+}
+
+static void credits_free_lines(char** lines, int count)
+{
+    for (int i = 0; i < count; ++i) {
+        free(lines[i]);
+    }
+    free(lines);
+}
+
+/* CreditsTextFile + CreditsBackAVI @ 0x40a0c0: scroll centered text over
+ * the configured AVI until the player presses a key or clicks. */
+static void frameloop_credits(PlatformWindow* win, DisplaySurface* surf,
+                              BlockFile* cfg, const char* wad_dir,
+                              AudioPlayer* ap, int audio_status, int* quit,
+                              FILE* log, long* frame_number)
+{
+    const char* text_name = block_get_strptr(cfg,
+                                             "Lego* Main CreditsTextFile");
+    char** lines = NULL;
+    int line_count = 0;
+    if (text_name == NULL
+        || !credits_load_lines(text_name, &lines, &line_count)) {
+        fprintf(log, "credits: cannot load %s\n",
+                text_name != NULL ? text_name : "Lego* Main CreditsTextFile");
+        return;
+    }
+
+    TextureSurface* font = texture_get_or_load(
+        NULL, "Interface\\Fonts\\RSFont.bmp");
+    Movie* movie = NULL;
+    MovieInfo mi;
+    MovieOut out;
+    memset(&mi, 0, sizeof(mi));
+    memset(&out, 0, sizeof(out));
+    int video_frame_ms = FRAME_MS;
+    char movie_rel[256], movie_os[512];
+    if (movie_avis_enabled(cfg)
+        && movie_key_path(cfg, "CreditsBackAVI", movie_rel,
+                          sizeof(movie_rel))
+        && movie_path_resolve(wad_dir, movie_rel, movie_os,
+                              sizeof(movie_os))) {
+        movie = movie_open_path(movie_os);
+        if (movie == NULL || movie_info(movie, &mi) != 0
+            || mi.width <= 0 || mi.height <= 0) {
+            fprintf(log, "credits: cannot open backdrop %s\n", movie_os);
+            movie_close(movie);
+            movie = NULL;
+        } else if (mi.fps_num > 0 && mi.fps_den > 0) {
+            video_frame_ms = 1000 * mi.fps_den / mi.fps_num;
+            if (video_frame_ms < 1) {
+                video_frame_ms = 1;
+            }
+        }
+    }
+    InputState input;
+    input_reset(&input);
+    long scroll_px = 0;
+    int64_t next_video_ms = now_ms();
+    int have_video_frame = 0;
+    int leave = 0;
+    while (!*quit && !leave) {
+        PlatformEvent evbuf[32];
+        int nev = platform_pump_events(win, evbuf, 32);
+        input_capture_events(&input, evbuf, nev);
+        for (int i = 0; i < nev; ++i) {
+            if (evbuf[i].kind == PLATFORM_EVENT_QUIT) {
+                *quit = 1;
+                break;
+            }
+            if (evbuf[i].kind == PLATFORM_EVENT_KEYDOWN
+                || (evbuf[i].kind == PLATFORM_EVENT_MOUSE
+                    && evbuf[i].button == 1)) {
+                leave = 1;
+            }
+        }
+        if (*quit || leave) {
+            break;
+        }
+
+        if (movie != NULL && now_ms() >= next_video_ms) {
+            int mr = movie_next(movie, &out);
+            if (mr == 1) {
+                movie_close(movie);
+                movie = movie_open_path(movie_os);
+                if (movie != NULL && movie_info(movie, &mi) == 0) {
+                    mr = movie_next(movie, &out);
+                } else {
+                    movie_close(movie);
+                    movie = NULL;
+                    mr = -1;
+                }
+            }
+            if (mr == 0) {
+                have_video_frame = 1;
+            } else if (mr < 0) {
+                movie_close(movie);
+                movie = NULL;
+                have_video_frame = 0;
+            }
+            next_video_ms += video_frame_ms;
+            if (next_video_ms < now_ms() - video_frame_ms) {
+                next_video_ms = now_ms();
+            }
+        }
+
+        void* pixels = NULL;
+        int pitch = 0;
+        if (surface_lock(surf, &pixels, &pitch) == 0) {
+            if (have_video_frame) {
+                movie_scale_rgba(out.rgba, mi.width, mi.height, out.rgba_pitch,
+                                 (uint8_t*)pixels, WINDOW_W, WINDOW_H, pitch);
+            } else {
+                surface_fill(pixels, pitch, WINDOW_W, WINDOW_H, 0, 0, 0);
+            }
+            frontend_render_credits(font,
+                                    (const char* const*)lines, line_count,
+                                    (int)scroll_px, WINDOW_W, WINDOW_H,
+                                    pixels, pitch);
+            platform_screenshot(win, pixels, pitch, WINDOW_W, WINDOW_H,
+                                (int)*frame_number);
+            platform_present_pixels(win, pixels, pitch, WINDOW_W, WINDOW_H);
+            surface_unlock(surf, pixels);
+        }
+        if (audio_status == 0) {
+            audio_update(ap);
+        }
+        Sleep(FRAME_MS);
+        ++scroll_px;
+        ++*frame_number;
+        input_begin_frame(&input);
+    }
+
+    movie_close(movie);
+    texture_release(font);
+    credits_free_lines(lines, line_count);
 }
 
 /* Level load + mission seeding + level intro movie + engine binding. Both
@@ -553,7 +756,7 @@ int LegorrrRun(void)
                 audio_update(&ap);
             }
             fprintf(log, "frameloop: main-menu music %s -> %s (%d)\n",
-                    music != NULL ? music : "(missing SFX_MusicLoop)",
+                    music != NULL ? music : "(missing SFX_AmbientMusicLoop)",
                     music_rc == 0 ? "queued" : "unavailable", music_rc);
         }
         frontend_open(&fe, FE_MENU_MAIN);
@@ -669,6 +872,10 @@ int LegorrrRun(void)
                                  "at %s\n", fe.load_slot, level_name);
                 }
                 break;
+            }
+            if (ev == FE_EVT_CREDITS) {
+                frameloop_credits(win, &surf, game.cfg, wad_dir, &ap,
+                                  audio_status, &quit, log, &frames);
             }
 
             frameloop_menu_render(win, &surf, &fe, hi_font, lo_font, &game,

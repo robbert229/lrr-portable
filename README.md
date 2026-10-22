@@ -582,8 +582,11 @@ finding 12, #14). Three new modules in `src/game/`:
   silent drop when full) and the **cheat-keybind pre-pass** (`cmd_bind_key`
   + the held-key probe). The demo maps the tracked mouse to a grid cell:
   `1`–`4` picks the nearest placed entity, `m` moves the selection to the
-  cursor cell, `n` clears. `select_test` (suite `select`) covers add/dedupe,
-  pick, pointer-move dispatch and the op-8 path.
+  cursor cell — the opcode-5 dispatch lands in `CmdCreateMove`, so the picked
+  entity walks the **wave-built path** (see the AI block below) around
+  blocked terrain instead of a straight hop — and `n` clears.
+  `select_test` (suite `select`) covers add/dedupe, pick, pointer-move
+  dispatch and the op-8 path.
 - **AI execution receivers** (2026-10-21, finding 10 closed): the
   entity-manager tick (`FUN_0043b270`) is now decompile-covered — its walker
   runs the per-entity callback at `0x43c810`, which is a **flag-word

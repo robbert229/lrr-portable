@@ -33,6 +33,24 @@
 static int s_lower(int c) { return (c >= 'A' && c <= 'Z') ? c + 0x20 : c; }
 static int s_toupper(int c) { return (c >= 'a' && c <= 'z') ? c - 0x20 : c; }
 
+/* Menu config identifiers use underscores where the original UI shows
+ * spaces (for example Start_Game → Start Game). Keep the raw value in
+ * FeItem for navigation and option lookup; normalize only at presentation.
+ */
+static void fe_display_label(const char* label, char* out, size_t out_size)
+{
+    if (out == NULL || out_size == 0) {
+        return;
+    }
+    size_t i = 0;
+    if (label != NULL) {
+        for (; label[i] != '\0' && i + 1 < out_size; ++i) {
+            out[i] = label[i] == '_' ? ' ' : label[i];
+        }
+    }
+    out[i] = '\0';
+}
+
 static int s_strcaseeq(const char* a, const char* b)
 {
     if (a == NULL || b == NULL) {
@@ -367,6 +385,7 @@ static void fe_parse_submenu(FrontEnd* fe, FeMenu* m, const char* name,
     FeSubmenu* sub = &m->submenus[idx];
     sub->item_count = 0;
     sub->base_x = sub->base_y = 0;
+    sub->title_anchor_y = 0;
     sub->auto_center = 0;
     sub->display_title = 0;
     sub->can_scroll = 0;
@@ -401,6 +420,17 @@ static void fe_parse_submenu(FrontEnd* fe, FeMenu* m, const char* name,
     sub->auto_center = block_get_bool(fe->cfg, buf) == 1;
     snprintf(buf, sizeof(buf), "%s DisplayTitle", pre);
     sub->display_title = block_get_bool(fe->cfg, buf) == 1;
+    /* The original menu renderer centers DisplayTitle on the screen and
+     * draws it at Position.y + Anchored.y. Anchored.x is not used for the
+     * title's horizontal placement. */
+    snprintf(buf, sizeof(buf), "%s Anchored", pre);
+    v = block_get_strptr(fe->cfg, buf);
+    if (v != NULL) {
+        const char* c = strchr(v, ':');
+        if (c != NULL) {
+            sub->title_anchor_y = (int)strtol(c + 1, NULL, 10);
+        }
+    }
     snprintf(buf, sizeof(buf), "%s CanScroll", pre);
     sub->can_scroll = block_get_bool(fe->cfg, buf) == 1;
     snprintf(buf, sizeof(buf), "%s MenuImage", pre);
@@ -929,6 +959,14 @@ static FeEvent fe_activate(FrontEnd* fe)
         fe->quit = 1;
         frontend_close(fe);
         return FE_EVT_QUIT;
+    }
+
+    /* MainMenuFull's Credits text row is a trigger with flag 0. In the
+     * original menu builder it has a callback that opens the scrolling
+     * credits display; the other plain triggers remain no-ops here. */
+    if (it->kind == FE_ITEM_TRIGGER && fe->menu == FE_MENU_MAIN
+        && s_stristr(it->label, "credits")) {
+        return FE_EVT_CREDITS;
     }
 
     /* Next -> navigate submenus ("Menu%i" target) */
@@ -1551,8 +1589,10 @@ static void fe_item_pos(const FrontEnd* fe, const FeItem* it, int i,
         int bx = (sub != NULL) ? sub->base_x : 0;
         int by = (sub != NULL) ? sub->base_y : 0;
         if (sub != NULL && sub->auto_center) {
-            int tw = measure != NULL ? fe_font_text_width(it->label, measure)
-                                     : fe_text_width(it->label);
+            char label[FE_NAME_MAX];
+            fe_display_label(it->label, label, sizeof(label));
+            int tw = measure != NULL ? fe_font_text_width(label, measure)
+                                     : fe_text_width(label);
             *x = bx + it->x - tw / 2;
         } else {
             *x = bx + it->x;
@@ -1601,8 +1641,10 @@ static int fe_item_pick(const FrontEnd* fe, int mx, int my,
         const FeItem* it = &sub->items[i];
         int x, y;
         fe_item_pos(fe, it, i, 0, measure, &x, &y);
-        int tw = measure != NULL ? fe_font_text_width(it->label, measure)
-                                 : fe_text_width(it->label);
+        char label[FE_NAME_MAX];
+        fe_display_label(it->label, label, sizeof(label));
+        int tw = measure != NULL ? fe_font_text_width(label, measure)
+                                 : fe_text_width(label);
         if (mx >= x - 4 && mx <= x + tw + 4
             && my >= y - 2 && my <= y + rh) {
             if (out_idx != NULL) {
@@ -1682,10 +1724,18 @@ void frontend_render(FrontEnd* fe, const TextureSurface* hi_font,
     }
 
     if (sub->display_title && sub->title[0] != '\0') {
+        char title[FE_NAME_MAX];
+        fe_display_label(sub->title, title, sizeof(title));
+        int title_w = hi_font != NULL ? fe_font_text_width(title, hi_font)
+                                      : fe_text_width(title);
+        int title_x = (w - title_w) / 2;
+        int title_y = sub->base_y + sub->title_anchor_y;
         if (hi_font != NULL) {
-            fe_draw_font_text(px, pitch, w, h, 8, 8, sub->title, hi_font);
+            fe_draw_font_text(px, pitch, w, h, title_x, title_y, title,
+                              hi_font);
         } else {
-            fe_draw_text(px, pitch, w, h, 8, 8, sub->title, 230, 210, 120);
+            fe_draw_text(px, pitch, w, h, title_x, title_y, title,
+                         230, 210, 120);
         }
     }
 
@@ -1705,12 +1755,14 @@ void frontend_render(FrontEnd* fe, const TextureSurface* hi_font,
 
         int selected = (i == fe->sel);
         const TextureSurface* font = selected ? hi_font : lo_font;
-        int lw = font != NULL ? fe_font_text_width(it->label, font)
-                              : fe_text_width(it->label);
+        char label[FE_NAME_MAX];
+        fe_display_label(it->label, label, sizeof(label));
+        int lw = font != NULL ? fe_font_text_width(label, font)
+                              : fe_text_width(label);
         if (font != NULL) {
-            fe_draw_font_text(px, pitch, w, h, x, y, it->label, font);
+            fe_draw_font_text(px, pitch, w, h, x, y, label, font);
         } else {
-            fe_draw_text(px, pitch, w, h, x, y, it->label,
+            fe_draw_text(px, pitch, w, h, x, y, label,
                          selected ? 255 : 200, selected ? 255 : 200,
                          selected ? 255 : 160);
         }
@@ -1789,6 +1841,45 @@ void frontend_render(FrontEnd* fe, const TextureSurface* hi_font,
                 }
             }
             texture_release(cursor);
+        }
+    }
+}
+
+void frontend_render_credits(const TextureSurface* font,
+                             const char* const* lines, int line_count,
+                             int scroll_px, int w, int h, void* px, int pitch)
+{
+    if (px == NULL || lines == NULL || line_count <= 0 || w <= 0 || h <= 0) {
+        return;
+    }
+    int cw = 0, ch = 0;
+    if (font != NULL && fe_font_cell(font, &cw, &ch)) {
+        /* use the shipped RSFont bitmap grid */
+    } else {
+        font = NULL;
+        cw = 4;
+        ch = 8;
+    }
+    const int line_h = ch;
+    const int visible_rows = h / line_h + 1;
+    const int period = (line_count + visible_rows) * line_h;
+    int phase = scroll_px % period;
+    if (phase < 0) {
+        phase += period;
+    }
+    const int first_row = -visible_rows + phase / line_h;
+    const int partial = phase % line_h;
+    for (int row = first_row < 0 ? 0 : first_row;
+         row < line_count && row < first_row + visible_rows + 1; ++row) {
+        const char* text = lines[row] != NULL ? lines[row] : "";
+        int tw = font != NULL ? fe_font_text_width(text, font)
+                              : fe_text_width(text);
+        int x = (w - tw) / 2;
+        int y = (row - first_row) * line_h - partial;
+        if (font != NULL) {
+            fe_draw_font_text(px, pitch, w, h, x, y, text, font);
+        } else {
+            fe_draw_text(px, pitch, w, h, x, y, text, 230, 230, 220);
         }
     }
 }
