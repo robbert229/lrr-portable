@@ -135,10 +135,7 @@ int main(void)
     CHECK(digger->cmd_head == NULL, "queue move unlinked after arrival");
     /* Test isolation: the selection list is process state, and later
      * sections' cmd_queue_tick calls dispatch for every entity still
-     * selected. Left selected here, digger picks up move records long
-     * after its section, and cmd_link_tail then threads later records
-     * through digger's still-live chain tail — one record reachable from
-     * two chains, popped twice, until ai_tick's chain loop never drains. */
+     * selected. */
     selection_clear(&ctx);
 
     /* --- verified callback branches (decompile 2026-10-21, finding 10) --- */
@@ -392,12 +389,7 @@ int main(void)
         CHECK(!has_13 && recs == 1,
               "type-0x13 grant record unlinked after the grant");
     }
-    /* Unlink the still-live move record from the global command list before
-     * purging the chain (cmd_chain_purge frees records; the global list must
-     * not keep the tail pointing at a freed record). */
-    if (grantee2->cmd_head != NULL) {
-        cmd_global_unlink(grantee2->cmd_head);
-    }
+    /* Purging a chain also unlinks its live records from the global list. */
     cmd_chain_purge(grantee2);
 
     /* Attached wake mirror (FUN_0044c110): an expired wake timer wakes
@@ -745,15 +737,9 @@ int main(void)
         ctx.stats_speed_sec[5] = 0.0f;
     }
 
-    /* cmd_chain_drop global-list hazard (round-3 review): the drop must
-     * unlink from the global command list BEFORE splicing the record out
-     * of the chain — chain and global thread the one next slot, so a
-     * splice-first drop hides the record from cmd_global_unlink's scan,
-     * leaves s_global_tail dangling at a freed record, and the very next
-     * cmd_link_tail threads a pooled record off that dangling tail and
-     * cycles the chain. Placed at the end of main because mid-file the
-     * cross-section live records (long moves) thread new records onto
-     * their chains and alias this probe's bookkeeping. */
+    /* Dropping the globally last record must update the global tail. The
+     * next link must remain reachable from the global head while each
+     * entity's chain stays separate. */
     EntitySlot* dropper = place(&ctx, 1, "dropper", 11, 5);
     cmd_create_move(dropper, 10.0f, 5.0f, 0);
     cmd_create_target(dropper, (void*)dropper); /* globally-last record */
@@ -768,7 +754,7 @@ int main(void)
     int walk = 0;
     int reaches = 0;
     for (const void* r = cmd_global_head(); r != NULL && walk < 64;
-         r = cmd_rec_next(r), ++walk) {
+         r = cmd_global_next(r), ++walk) {
         if (r == linked->cmd_head) {
             reaches = 1;
         }

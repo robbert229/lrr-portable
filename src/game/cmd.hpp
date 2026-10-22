@@ -86,6 +86,8 @@ void  cmd_chain_purge(EntitySlot* e);
 /* Current global command-list head (DAT_004b3354) — the most recent
  * link_head'd record (tasks land here via CmdLinkHead). */
 void* cmd_global_head(void);
+/* Advance along the global list; cmd_rec_next advances an entity chain. */
+void* cmd_global_next(const void* rec);
 
 /* Unlink `rec` from the global command list (a record is also chained on
  * its entity; completion unlinks here before cmd_free). */
