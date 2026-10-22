@@ -62,6 +62,14 @@ int save_write_slot(GameContext* ctx, int slot);
 /* SavCommit: write the current active slot to disk. */
 void save_commit(GameContext* ctx);
 
+/* Write the `.dat` slot thumbnail: the framebuffer as an uncompressed
+ * 24-bit BMP at `Saves\<slot>.dat`. The corpus dumps it on save confirm
+ * (FUN_00413b80 -> FUN_0047e440 -> FUN_0047c8f0) and re-reads it when the
+ * save menu opens (FUN_00413a60). `fb` is the 32-bit surface in surface
+ * byte order (B,G,R,A), `pitch` in bytes. */
+int save_write_thumbnail(GameContext* ctx, int slot, const void* fb,
+                         int pitch, int w, int h);
+
 /* Dirty-mark record `index` (|1, plus |2 for an empty-name record). */
 void save_mark_record(GameContext* ctx, int index);
 

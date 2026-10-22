@@ -435,6 +435,7 @@ int LegorrrRun(void)
                      "Sounds\\Vehicles\\Heliloop1.wav");
 
     long frames = 0;
+    int thumb_slot = -1;   /* pending `.dat` thumbnail dump (see below) */
     int quit = 0;
     const char* stop = "closed";
 
@@ -965,6 +966,12 @@ int LegorrrRun(void)
                             mission_reward_click(&game, 1);
                             fprintf(log, "frameloop: reward Save clicked -> "
                                          "checkpoint committed\n");
+                            /* Corpus save-confirm also dumps a `.dat`
+                             * thumbnail of the framebuffer (FUN_00413b80 ->
+                             * FUN_0047e440); the dump lands right after
+                             * this frame's render. */
+                            thumb_slot = game.save_slot < 0 ? SAVE_DEFAULT_SLOT
+                                                            : game.save_slot;
                         } else {
                             const char* nm = mission_reward_advance(&game);
                             fprintf(log, "frameloop: reward Advance clicked -> "
@@ -1002,6 +1009,15 @@ int LegorrrRun(void)
             platform_screenshot(win, pixels, pitch, WINDOW_W, WINDOW_H,
                                 (int)frames);
             platform_present_pixels(win, pixels, pitch, WINDOW_W, WINDOW_H);
+            if (thumb_slot >= 0) {
+                /* Save-confirm thumbnail (FUN_0047e440): dump the frame we
+                 * just presented to Saves\<slot>.dat as a 24bpp BMP. */
+                save_write_thumbnail(&game, thumb_slot, pixels, pitch,
+                                     WINDOW_W, WINDOW_H);
+                fprintf(log, "frameloop: .dat thumbnail written (slot %d)\n",
+                        thumb_slot);
+                thumb_slot = -1;
+            }
             surface_unlock(&surf, pixels);
         }
         Sleep((DWORD)FRAME_MS);
