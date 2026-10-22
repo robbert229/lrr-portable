@@ -61,6 +61,10 @@ static void run(GameContext* ctx, int n, float dt)
 
 #define REAL_PAIRS_PER_LEVEL 12   /* start/target pairs sampled per level  */
 #define REAL_ARRIVALS_PER_LEVEL 2 /* real-grid walkers ticked to arrival   */
+#define REAL_LEVELS_EXPECTED 42
+#define REAL_PAIRS_EXPECTED 496
+#define REAL_PATHS_EXPECTED 350
+#define REAL_ARRIVALS_EXPECTED 84
 
 static int s_real_levels;  /* levels loaded and probed        */
 static int s_real_pairs;   /* wave-flood / BFS pairs compared */
@@ -173,13 +177,17 @@ static void probe_level_real(GameContext* ctx, BlockFile* cfg,
 {
     LevelState* lv = level_load(cfg, name);
     if (lv == NULL) {
-        fprintf(stderr, "ai_test: --real: \"%s\": level_load failed (skipped)\n",
+        fprintf(stderr, "FAIL --real: \"%s\": level_load failed\n",
                 name);
+        ++s_failures;
         return;
     }
     int w = level_width(lv);
     int h = level_height(lv);
     if (w < 3 || h < 3) { /* grid_of() treats a sub-margin map as absent */
+        fprintf(stderr, "FAIL --real: \"%s\": grid too small (%d x %d)\n",
+                name, w, h);
+        ++s_failures;
         level_destroy(lv);
         return;
     }
@@ -188,6 +196,8 @@ static void probe_level_real(GameContext* ctx, BlockFile* cfg,
 
     int* cells = (int*)malloc((size_t)w * h * sizeof(int));
     if (cells == NULL) {
+        fprintf(stderr, "FAIL --real: \"%s\": cell allocation failed\n", name);
+        ++s_failures;
         level_destroy(lv);
         ctx->level = NULL;
         return;
@@ -201,12 +211,16 @@ static void probe_level_real(GameContext* ctx, BlockFile* cfg,
         }
     }
 
-    int pairs = REAL_PAIRS_PER_LEVEL;
     if (nc < 2) {
-        pairs = 0;
-    } else if (pairs > nc) {
-        pairs = nc;
+        fprintf(stderr, "FAIL --real: \"%s\": only %d walkable cell(s)\n",
+                name, nc);
+        ++s_failures;
+        free(cells);
+        ctx->level = NULL;
+        level_destroy(lv);
+        return;
     }
+    int pairs = nc < REAL_PAIRS_PER_LEVEL ? nc : REAL_PAIRS_PER_LEVEL;
     int arrivals_left = REAL_ARRIVALS_PER_LEVEL;
 
     /* First pass: wave-flood / BFS agreement. No walkers run yet, so the
@@ -284,6 +298,9 @@ static void probe_level_real(GameContext* ctx, BlockFile* cfg,
         }
         EntitySlot* wk = place(ctx, 1, "realwalker", (float)sx, (float)sy);
         if (wk == NULL) {
+            fprintf(stderr, "FAIL --real: \"%s\": could not place walker\n",
+                    name);
+            ++s_failures;
             break;
         }
         cmd_create_move(wk, (float)tx, (float)ty, 0);
@@ -304,6 +321,13 @@ static void probe_level_real(GameContext* ctx, BlockFile* cfg,
                    tx, ty);
     }
 
+    if (arrivals_left != 0) {
+        fprintf(stderr, "FAIL --real: \"%s\": ran %d of %d walker arrivals\n",
+                name, REAL_ARRIVALS_PER_LEVEL - arrivals_left,
+                REAL_ARRIVALS_PER_LEVEL);
+        ++s_failures;
+    }
+
     free(cells);
     ctx->level = NULL;
     level_destroy(lv);
@@ -312,14 +336,15 @@ static void probe_level_real(GameContext* ctx, BlockFile* cfg,
 static void probe_real(const char* wad_dir)
 {
     if (resource_mount(wad_dir, "LegoRR") <= 0) {
-        fprintf(stderr,
-                "ai_test: --real probe skipped (no wads under %s)\n", wad_dir);
+        fprintf(stderr, "FAIL --real: no wads under %s\n", wad_dir);
+        ++s_failures;
         return;
     }
     BlockFile* cfg = block_open("Lego.cfg");
     if (cfg == NULL) {
-        fprintf(stderr, "ai_test: --real probe skipped (no Lego.cfg in %s)\n",
+        fprintf(stderr, "FAIL --real: no Lego.cfg in %s\n",
                 wad_dir);
+        ++s_failures;
         return;
     }
 
@@ -353,6 +378,17 @@ static void probe_real(const char* wad_dir)
             "ai_test: --real probe: %d levels, %d wave/BFS pairs, %d paths, "
             "%d walker arrivals\n",
             s_real_levels, s_real_pairs, s_real_paths, s_real_arrivals);
+    if (s_real_levels != REAL_LEVELS_EXPECTED ||
+        s_real_pairs != REAL_PAIRS_EXPECTED ||
+        s_real_paths != REAL_PATHS_EXPECTED ||
+        s_real_arrivals != REAL_ARRIVALS_EXPECTED) {
+        fprintf(stderr,
+                "FAIL --real: expected %d levels, %d pairs, %d paths, "
+                "%d arrivals\n",
+                REAL_LEVELS_EXPECTED, REAL_PAIRS_EXPECTED,
+                REAL_PATHS_EXPECTED, REAL_ARRIVALS_EXPECTED);
+        ++s_failures;
+    }
     block_close(cfg);
 }
 
@@ -362,6 +398,9 @@ int main(int argc, char** argv)
     for (int a = 1; a < argc; ++a) {
         if (strcmp(argv[a], "--real") == 0 && a + 1 < argc) {
             real_dir = argv[a + 1];
+        } else if (strcmp(argv[a], "--real") == 0) {
+            fprintf(stderr, "FAIL --real: expected a WAD directory\n");
+            ++s_failures;
         }
     }
 

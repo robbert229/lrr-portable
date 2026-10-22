@@ -759,7 +759,10 @@ finding 12, #14). Three new modules in `src/game/`:
   included), and ticked-to-arrival command walkers. It passed green and
   surfaced one loader gap: the predug edge-wall update is the load-time
   source of the traversable bit (ported as `predug_wall_cell`, see
-  finding 07), without which shipped maps have no walkable cells.
+  finding 07), without which shipped maps have no walkable cells. An
+  explicit `--real` run fails if the wads or a level cannot load, if a
+  level has too few walkable cells or walkers, or if the shipped corpus
+  totals differ from 42 levels / 496 pairs / 350 paths / 84 arrivals.
 - **Per-terrain movement speed** (2026-10-21, closing the finding 10
   per-terrain placeholder): the `FUN_00469cc0` speed probe — the corpus's
   per-terrain movement rates, read from the `+0x334` stats block's table

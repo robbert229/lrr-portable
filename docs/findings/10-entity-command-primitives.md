@@ -389,6 +389,11 @@ cell at `0x43cd72`), so without the reset the second walker's flood is
 blocked by the first walker's trail — expected corpus-side behaviour,
 not a pathfinder finding.
 
+An explicit `--real` run requires the shipped wads and `Lego.cfg` and fails
+on an unloadable level, too few walkable cells or walker arrivals, or a
+coverage total other than 42 levels / 496 pairs / 350 paths / 84 arrivals.
+The synthetic suite still runs alone when `test_wads_dir` is unset.
+
 Still TODO inside movement: the `+0x334`
 state objects behind the walkability gates above (now known: `+0x334` is an
 entity stats block — instance stats from the `DAT_00502bd8[type]` table at
