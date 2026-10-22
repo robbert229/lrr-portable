@@ -631,3 +631,9 @@ Exported for finding 125. Two observations cover the negative-result branch in `
 ## `legorr-screen-space-effect-lane.bundle`
 
 Exported for finding 126. Three function records cover the ten-entry effect-table dispatcher, its 15-second timer/fade helper, and indexed per-item alpha/flag updates. Screen-space coordinates and the later draw consumer are not established.
+
+## `legorr-permitted-activity-capacity.bundle`
+
+Exported for finding 128. The 53-record bundle retains the canonical entity-activity evidence and adds fresh function records for `FUN_0044b370` (activity-list installation) and `FUN_0046a060` (capacity getter). It supports the getter's read from entity stats `+0xcc`, the installer's zero-store to `+0x3f4`, and the list mutation branches; the fields' broader semantics remain unresolved.
+
+Finding 129 reuses the `FUN_00483420` record in `legorr-screen-space-effect-lane.bundle` and the `FUN_00482d60` record in `legorr-engine-expansion.bundle`; no duplicate bundle was added.

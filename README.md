@@ -325,6 +325,8 @@ Open threads, in order of value:
 | 123 | [findings/123-avi-frame-dib-row-copy.md](docs/findings/123-avi-frame-dib-row-copy.md) | AVI frame helper copies DIB rows into the surface pixel buffer |
 | 125 | [findings/125-screen-shake-flag-raiser.md](docs/findings/125-screen-shake-flag-raiser.md) | Negative entity health delta raises the screen-shake flag |
 | 126 | [findings/126-screen-space-effect-lane-dispatch-and-opacity-update.md](docs/findings/126-screen-space-effect-lane-dispatch-and-opacity-update.md) | Ten-entry effect table dispatches timed opacity updates |
+| 128 | [findings/128-permitted-activity-appender-capacity.md](docs/findings/128-permitted-activity-appender-capacity.md) | Activity appender reads capacity from the entity stats block |
+| 129 | [findings/129-effect-item-flags-reach-model-render-dispatch.md](docs/findings/129-effect-item-flags-reach-model-render-dispatch.md) | Effect item flags can reach model render passes |
 
 Named-pseudocode corpus: [`docs/decompiles/engine-region.c`](docs/decompiles/engine-region.c)
 (114 named functions covering the engine/game-logic region — findings 01–10).
