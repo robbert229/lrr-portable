@@ -18,6 +18,18 @@ factory/dispatch (`FUN_00472cd0`, `FUN_00475930`, `FUN_00472710`,
 `FUN_004765c0`) plus `MenuEnter @ 0x416c80`. Import with `import_evidence_bundle`
 or inspect `records` directly.
 
+## `legorr-scene-done.bundle`
+
+Exported 2026-10-21 from the finding-27 session (the scene-done flag
+consumers in the entity tick). 42 recorded observations: the two `+0x3e4 &
+0x10000` reader sites inside the finding-10 flag-evaluator blob (assembly
+windows `0x43d8f0–0x43ddc0`), reader A's SFX dispatch `FUN_00465050` with bank
+indices `0x23/0x24/0x25` by target type, reader B's `FUN_004475c0` probe, the
+`FUN_00444a200` work-object resolver / `FUN_00475300`/`FUN_004754c0`
+scene helpers, the SFX-bank slot-order verification for `SFX_Place*`, and the
+`+0x3e4` bit-map reads (`0x80000`, `0x100000`, `0x40000000`). Import with
+`import_evidence_bundle` or inspect `records` directly.
+
 ## `legorr-ddscene-hooks.bundle`
 
 Exported 2026-10-21 from the finding-26 session (the DDiScene animation hooks).
@@ -69,7 +81,7 @@ function touches the unattributed ranges. 113 records.
 
 The canonical findings bundle. 403 recorded observations — function
 decompilations, address lookups, xref queries, and byte reads — each tied to
-the target digest, so findings 01–26 can be re-verified: import the bundle into
+the target digest, so findings 01–27 can be re-verified: import the bundle into
 a session (`import_evidence_bundle`) or inspect the `records` array directly.
 No game asset bytes are included; entries reference offsets and produce
 analysis text only.
