@@ -133,6 +133,13 @@ int main(void)
     run(&ctx, 20, 0.5f);
     CHECK(digger->x >= 4.9f && digger->y >= 4.9f, "queue move executes");
     CHECK(digger->cmd_head == NULL, "queue move unlinked after arrival");
+    /* Test isolation: the selection list is process state, and later
+     * sections' cmd_queue_tick calls dispatch for every entity still
+     * selected. Left selected here, digger picks up move records long
+     * after its section, and cmd_link_tail then threads later records
+     * through digger's still-live chain tail — one record reachable from
+     * two chains, popped twice, until ai_tick's chain loop never drains. */
+    selection_clear(&ctx);
 
     /* --- verified callback branches (decompile 2026-10-21, finding 10) --- */
 
