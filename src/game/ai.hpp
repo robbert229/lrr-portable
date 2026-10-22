@@ -29,11 +29,14 @@
  * entity mirror fields (flags_3e4/flags_3ec/activity/...), in corpus branch
  * order, with each branch naming its corpus address. Branches whose
  * subjects the port does not model yet (projectile arcs, screen-shake,
- * screen-space effects, riding) are listed as TODOs in finding 10 rather
- * than guessed. Move commands now flow through the ported path-list mirror
- * (EntitySlot.wp, corpus +0x24/+0x28/+0x2c) and the +0x3e0 bit-0x8 mover
- * flag; the corpus *pathfinder* that fills multi-entry lists and the tile
- * walkability/occupancy queries it drives remain TODO(corpus).
+ * screen-space effects, the riding-attach writer) are listed as TODOs in
+ * finding 10 rather than guessed. Move commands now flow through the
+ * ported path-list mirror (EntitySlot.wp, corpus +0x24/+0x28/+0x2c), the
+ * +0x3e0 bit-0x8 mover flag, and the tile walkability/occupancy queries
+ * (#60); ai_path_build installs BFS-built lists per command, with the
+ * corpus wave-flood pathfinder as the documented algorithm TODO.
+ * Wake-timer expiry mirrors FUN_0044c110's writes onto the +0x364 target,
+ * and the cheat-word branch runs the real FUN_0044c530 can-do probe.
  */
 #ifndef LEGORRR_GAME_AI_HPP
 #define LEGORRR_GAME_AI_HPP

@@ -282,15 +282,41 @@ completion semantics. `ai_test` covers a dispatch that reroutes around a
 blocked column without ever landing on it.
 
 Still TODO inside movement: the **wave-flood pathfinder** replacing the
-port BFS stand-in (the algorithm half of this section), the **`ent+0xbc`
-record list** as a distinct structure from the `+0x2f0` chain (behind
-`FUN_00403d10`'s arrival unlink), and the `+0x334` state objects behind the
-walkability gates above.
+port BFS stand-in (the algorithm half of this section), and the `+0x334`
+state objects behind the walkability gates above (now known: `+0x334` is an
+entity stats block — instance stats from the `DAT_00502bd8[type]` table at
+stride 336 (attacher writes it at `0x469c98`, called from the spawn
+dispatch's default arm `0x43818a`), minion types taking static templates by
+the table at `0x4382ac` — type 8 → `0x4a98f0`, 9 → `0x4a9a40`, 12–14 and
+16–19 → `0x4a9b90`, everything else instance stats; templates all-zero in
+the file; filled at runtime, so the table values are config-driven, TODO) —
+the speed table `+0x24 + terrain*4` and the state word `+0x144` ride these).
+The old "`ent+0xbc` record list" TODO resolves away: `param_1[0xbc]` is
+just the dword-indexed view of `ent + 0x2f0`, i.e. the *same* command
+chain the port mirrors (kinds: 8=move, 12=tile flags, 0xE=idle, `0x17`;
+`FUN_00403d10` unlinks by kind with per-kind side effects).
+
+Wake and riding (closed 2026-10-21):
+
+- `FUN_0044c110` (wake mirror): when an entity's expired `+0x368` wake
+  timer runs, its attached target (`+0x364`) is woken — `+0x340 = 100.0`
+  (`0x42c80000`) and `+0x3e8 |= 0x800000` — **unless** the target carries
+  `+0x3e0` bit `0x200000` (the attached special state). The `+0x364`
+  pointer is filled by the attach-pair writer (`0x44c0e2`/`0x44c0ea`:
+  mutual A↔B store, `+0x3e0` bit `0x100` — a riding-attach fragment,
+  TODO); the port mirrors the field and the writes.
+- `FUN_0044c530` → `FUN_0043c440` (can-do / riding probe): type-2 entities
+  answer via `FUN_0044b480`, which scans the entity's permitted-activity
+  list (`+0x370` slots, count `+0x384`) for activities 4/5/7 (drill,
+  teleport, reinforce). The port models the list as its one
+  current-activity slot (`TODO(corpus)`: the multi-slot list and its
+  appenders, e.g. `0x44b44a`, are not ported).
 
 Documented TODO branches (not guessed): projectile arcs (`+0x3e0`
 `0x400000`, `FUN_004755e0`/`FUN_00475120`); screen
-shake (`+0x3e4` `0x40000000`, `DAT_004a48b0`); riding probe `FUN_0043c440`
-(inside `FUN_0044c530`); attached wake target (`+0x364`, `FUN_0044c110`);
-the minion task-state machine at `0x438150` (indirect jump table `0x438298`,
-sets activities per state via `FUN_00447c40` — the closest thing to the
-missing "task switch").
+shake (`+0x3e4` `0x40000000`, `DAT_004a48b0`); the riding-attach writer
+(`0x44c0a0` fragment — attach-pair `+0x364` install, `+0x3e0` bit `0x100`);
+the minion task-state machine at `0x438150` (spawn-dispatch switch — see
+the stats-block note above; the task switch itself still unpinned);
+`FUN_0044b480`'s permitted-activity list (`+0x370`/`+0x384` — port models
+one slot).

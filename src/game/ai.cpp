@@ -363,12 +363,19 @@ static int callback_branches(GameContext* ctx, EntitySlot* e, float dt)
     }
 
     /* 0x43c870 — wake timer: if +0x3e4 bit 0x8000000 is set, tick +0x368
-     * down (FUN_0044c110 wakes the attached entity once expired) and
-     * RETURN — no further behaviour runs this frame.
-     * Attached-entity mirror (+0x364) is TODO(corpus). */
+     * down and RETURN — no further behaviour runs this frame. Once the
+     * timer has expired, FUN_0044c110 wakes the attached target: unless
+     * it is in the attached special state (+0x3e0 bit 0x200000), it takes
+     * +0x340 = 100.0 and sets +0x3e8 bit 0x800000. The corpus's +0x364
+     * pointer is filled by the attach-pair writer (0x44c0e2, not ported),
+     * so the port mirrors the field as-is. */
     if ((e->flags_3e4 & ENT_FLAG3E4_WAKE_TIMER) != 0) {
-        if (!(e->wake_timer > 0.0f)) {
-            /* FUN_0044c110: attached mirror wake. TODO(corpus). */
+        if (!(e->wake_timer > 0.0f) && e->wake_target != NULL) {
+            EntitySlot* t = (EntitySlot*)e->wake_target;
+            if ((t->flags_3e0 & 0x00200000u) == 0) {
+                t->field_340 = 100.0f;
+                t->flags_3e8 |= 0x00800000u;
+            }
         }
         e->wake_timer -= dt;
         return 1;
@@ -390,10 +397,16 @@ static int callback_branches(GameContext* ctx, EntitySlot* e, float dt)
 
     /* 0x43c90b — cheat word DAT_00556ed0 bit 0 (testb $0x1): when set, the
      * type-2 "can do" probe FUN_0044c530 decides flag bit 0x20; otherwise
-     * the bit is cleared. The riding probe FUN_0043c440 is TODO(corpus),
-     * so the mirror uses "has link" as the can-do approximation. */
+     * the bit is cleared. FUN_0044c530 = "type 2 and FUN_0043c440 is
+     * non-zero"; FUN_0043c440 scans the entity's permitted-activity list
+     * (+0x370 slots, count +0x384 — FUN_0044b480) for activities 4 (drill),
+     * 5 (teleport) or 7 (reinforce). The port models that list as one
+     * slot — the current activity (TODO(corpus): multi-slot list) — so the
+     * probe is "activity in {AI_ACT_DRILL, AI_ACT_TELEPORT,
+     * AI_ACT_REINFORCE}". */
     if ((ctx->cheat & 1u) != 0 && e->type == 2) {
-        if (e->link_target != NULL) {
+        if (e->activity == AI_ACT_DRILL || e->activity == AI_ACT_TELEPORT ||
+            e->activity == AI_ACT_REINFORCE) {
             e->flags_3ec |= ENT_FLAG3EC_VULNERABLE;
         } else {
             e->flags_3ec &= ~ENT_FLAG3EC_VULNERABLE;

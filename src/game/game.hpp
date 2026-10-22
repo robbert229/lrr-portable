@@ -198,6 +198,11 @@ typedef struct EntitySlot {
     float    activity_timer; /* +0x2d4 (run since activity set)         */
     float    wake_timer;     /* +0x368 (counts down; early-returns tick) */
     void*    link_target;    /* +0x354: acquired target-acquire link     */
+    void*    wake_target;    /* +0x364: attached wake target (FUN_0044c110;
+                               * the corpus fills it via the attach-pair
+                               * writer 0x44c0e2, which is not ported)      */
+    float    field_340;      /* +0x340 float; the wake mirror sets 100.0
+                              * (its general corpus readers are TODO)       */
     /* --- path list (corpus +0x24 buffer / +0x28 count / +0x2c index) --- */
     AiWaypoint wp[AI_WAYPOINTS_MAX];
     int      wp_count;       /* +0x28: valid entries                      */

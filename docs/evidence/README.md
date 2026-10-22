@@ -101,3 +101,15 @@ accessors (`FUN_00431560`, `FUN_004319b0`). The creator lifecycle — install
 (`0x4418d0`), per-cell append with the `0.5f` marker (0x44693b), and the
 finish reset (`0x441a50`) — was read from the shipped-image disassembly.
 Import with `import_evidence_bundle` or inspect `records` directly.
+
+## `legorr-wake-riding.bundle`
+
+Exported 2026-10-21 from the wake/riding slice — 72 retained observations,
+the pathfinder bundle's store plus the four probe/wake decompiles: the
+attached wake writer (`FUN_0044c110`: `+0x340 = 100.0`, `+0x3e8 |=
+0x800000`, gated by the target's `+0x3e0` bit `0x200000`), the can-do probe
+(`FUN_0043c440` over activities 4/5/7, `FUN_0044c530` wrapping it behind
+the type-2 gate), and the list scanner (`FUN_0044b480`, `+0x370` slots with
+count `+0x384`). The spawn-dispatch switch tables (`0x438298`/`0x4382ac`)
+and stats-template bytes came from the shipped-image disassembly. Import
+with `import_evidence_bundle` or inspect `records` directly.
