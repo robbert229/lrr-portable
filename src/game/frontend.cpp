@@ -1582,7 +1582,10 @@ static void fe_item_pos(const FrontEnd* fe, const FeItem* it, int i,
     (void)i;
     (void)w;
     const FeSubmenu* sub = frontend_active_submenu(fe);
-    if (it->level_start) {
+    /* Runtime save rows use absolute coordinates just like level picker
+     * rows. Their SaveLoad panel is already positioned by the submenu, so
+     * adding its centered menu anchor would push the list off the panel. */
+    if (it->level_start || it->load_slot) {
         *x = it->x;
         *y = it->y;
     } else {
