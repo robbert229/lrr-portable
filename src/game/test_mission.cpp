@@ -84,6 +84,7 @@ int main(void)
                 "      Importance { Crystals 60  Ore 10  Timer 20 }\n"
                 "      Quota { Crystals 5  Ore 3  Timer 900 }\n"
                 "      Images { Crystals img_c.bmp|1|2 }\n"
+                "      Text { Crystals rock_wipe_one|16|18 }\n"
                 "      BoxImages { Crystals box_c.bmp|3|4 }\n"
                 "      Flics { Crystals flic_c.flc|0|0|20|20 }\n"
                 "      Fonts { Crystals FNTX }\n"
@@ -157,6 +158,18 @@ int main(void)
     CHECK((task_flags(&ctx.tasks[0]) & TASK_FLAG_FLIC) != 0, "Crystals flic flag");
     CHECK(memcmp(ctx.tasks[0].data + TASK_OFF_FONT, "FNTX", 4) == 0, "font token");
     CHECK(memcmp(ctx.tasks[0].data + TASK_OFF_SOUND, "SNDX", 4) == 0, "sound token");
+
+    /* Text loader (FUN_0045f530): field 0 -> +0x54 with '_'->' ', fields
+     * 1/2 -> text-draw x/y at +0x154/+0x158, flag OR 0x31. */
+    CHECK(strcmp((const char*)ctx.tasks[0].data + TASK_OFF_TEXT,
+                 "rock wipe one") == 0, "display text +0x54");
+    {
+        int32_t tx = 0, ty = 0;
+        __builtin_memcpy(&tx, ctx.tasks[0].data + TASK_OFF_TEXT_XY, 4);
+        __builtin_memcpy(&ty, ctx.tasks[0].data + TASK_OFF_TEXT_XY + 4, 4);
+        CHECK(tx == 16 && ty == 18, "text draw xy +0x154/+0x158");
+    }
+    CHECK((task_flags(&ctx.tasks[0]) & 0x31u) == 0x31u, "text flag mask 0x31");
 
     /* Reward screen config. */
     mission_reward_init(&ctx, cfg, "Level01");

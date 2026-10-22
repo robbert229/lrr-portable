@@ -4,6 +4,20 @@ Several REA evidence bundles (JSON) exported from Ghidra analysis sessions of
 `LegoRR.exe` (SHA-256
 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`):
 
+## `legorr-tasktable.bundle`
+
+Exported 2026-10-21 from the task-table block session (issue #64 / LPT-19): the
+complete `+0x1CE8` consumer set (the `e81c0000` deref search), `TaskBlockInit` /
+`TaskBlockFinish` / `CheckpointBlobBuild` / `CheckpointBlobFree` assembly with the
+blob-vs-block allocation aliases (`DAT_00552990` live vs `DAT_00552994` per-frame
+blob), the six field loaders' assembly (the `Reward Text.<name>` key at
+`DAT_004a26b0`, the `_`→space map, the `0x31` flag OR), the `0x460360` blob pass
+(record `+0x28→+0x30` derive, the `0..100` `+0x38` clamp loop `0x460893-0x4608e5`,
+and the `record_base+0x868` Level03 dword force with the `"Levels::Level03"`
+case-folded compare), the display-tick record reads (`param_1[0x80]`/`[0x81]`/
+`[0x83]`, `+0xD4` staging string), and the negative imm-scan proving no task-domain
+function touches the unattributed ranges. 113 records.
+
 ## `legorr-rev.bundle`
 
 The canonical findings bundle. 403 recorded observations — function

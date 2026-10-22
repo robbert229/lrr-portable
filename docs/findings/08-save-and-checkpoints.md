@@ -50,25 +50,39 @@ the `DAT_004ffe64` "dirty" flag is set on snapshot and cleared on write.
 | --- | --- |
 | `DAT_005574d0` | active slot (−1 = none; `CheckpointStep` defaults to **slot 5**) |
 | ctx `+0x18` / `+0x34` | record count / record array pointer (per slot) |
-| `DAT_00552990+0x1CE8` | live per-task block base (source of the blob's task table) |
-| `DAT_00552994` | the blob itself (12,688 B, rebuilt each `KeepRunning` tick) |
+| `DAT_00552990` | live task-table block pointer (written only by `TaskBlockInit`; source of the blob's task table) |
+| `DAT_00552994` | checkpoint-blob pointer (12,688 B); rebuilt *and freed inside every `KeepRunning` tick pass `0x435940` while a game is loaded; read only within that pass (dangling between rebuilds — never dereferenced outside it). Getter `FUN_004601f0`. |
 
-### CheckpointBlobBuild (`0x45fda0`, called from `KeepRunning @ 0x435964`)
+### CheckpointBlobBuild (`0x45fda0`, called from `0x435940` @ `0x435964`)
 
-Zeroes a 0x318c-byte block, then fills:
+`0x435940` is the per-frame checkpoint tick (registered callback, entered from
+`0x4589c0`/`0x4250c0`). While a game is loaded (`FUN_00416d00` true) it, per frame:
+allocates a fresh 0x318c block via `FUN_0048dbd0`, zero-fills it (`0xc63` dwords),
+stores the pointer in `DAT_00552994`, then fills:
 
 | Blob off | Source | Notes |
 | --- | ---| --- |
 | +0x00 | config `Reward/Enable` | tri-state, `2→0` |
 | +0x1C0 | config `Reward/Modifier` | handle |
-| +0x1CEC | tasks ×10, each 0x210 B | copied from live task block (`DAT_00552990+0x1CE8`), then normalized by `FUN_004600a0`/`FUN_00460140` |
+| +0x1CE4 | constant `10` | task count |
+| +0x1CE8 | self-ref → blob+0x1CEC | record-array pointer |
+| +0x1CEC | tasks ×10, each 0x210 B | copied dword-verbatim from the live task block (`[DAT_00552990]+0x1CE8`), then `FUN_004600a0`/`FUN_00460140` (importance/quota refreshers) re-run over the blob records |
 | (globals) | `Reward/Timer` (default **76.9375**), `DisplayText/Images/Flics` | kept in `DAT_0055298c`, `DAT_00555bc4/c8/cc` |
 
-Level name `Levels\Level03` forces blob byte +0x868 = 1 (hard-coded tutorial fix).
+After the copy `0x435940` calls `CheckpointProgressClamp @ 0x460360` (clamps every blob
+record's float at +0x38 into `0.0..100.0` — see §Task table block below), then `0x461410`
+(the reward display handlers below), and finally `CheckpointBlobFree @ 0x4601e0`
+(`FUN_0048db80`), all inside the same tick — the blob is per-frame scratch, not
+persistent state.
+
+Level-name match against `"Levels::Level03"` (`FUN_0048ff10`, case-folded compare) forces
+the **dword** at blob record base `+0x868` = 1 (i.e. task slot 4 "Caverns" quota,
+`4*0x210 + 0x28`) — the tutorial-fix hard-code at `0x460066-0x46008c`.
 
 ### Flow
 
-**Capture** — every tick `KeepRunning` calls `CheckpointBlobBuild`;
+**Capture** — every frame the checkpoint tick (`0x435940`, entered from `0x4589c0` /
+`0x4250c0` while a game is loaded) rebuilds and frees the blob in place;
 **Save** — on reward-zone events (`RewardZoneCheck @ 0x461dd0`, `FUN_00462780 @ 0x4627f1`)
 `CheckpointStep` maps level state → list index (`ListFindName`), marks the record dirty when
 state+0x27c == 1, copies blob→record (`SavWriteRecord`), commits (`SavCommit` →
@@ -144,12 +158,74 @@ deviation is that it has no save-to-slot menu confirm, so the dump hangs off
 the commit instead. The read/draw side (rendering `Saves/<N>.dat` behind the
 save-menu rows with the SaveImage rects) is not implemented; see Still open.
 
+## Task table block — full field layout (closed)
+
+The live block is 0x318c bytes: a 0x1CEC header plus ten task records at
+block `+0x1CEC`, stride `0x210` (exactly `10 × 0x210 = 0x14A0`).
+Header fields: `+0x1CE4` = record count (`10`), `+0x1CE8` = self-ref pointing
+at the first record (`block + 0x1CEC`). Only ten functions ever deref the
+record base (`e81c0000` byte search — the complete consumer set):
+`0x45f030/0x45f750/0x45fda0/0x460360/0x461410/0x461790/0x461c90/0x462390/
+0x4624a0/0x462600`; every record byte range below was attributed against
+their disassembly (all remaining ranges are provably unreferenced).
+
+Record layout (offsets relative to record base; the blob copy is
+dword-verbatim identical):
+
+| Off | Field | Evidence |
+| --- | --- | --- |
+| +0x00 | u32 flags: `1` drawn-as-achieved/text gate, `2` Images entry, `4` Flics entry, `0x10` text overlay, `0x20` boxed text, `0x40` BoxImages entry | loaders OR bits (FUN_0045f3e0 `2`, FUN_0045f5f0 `4`, FUN_0045f530 `0x31`, FUN_0045f290 `0x40`); `RewardDisplayTick` tests `flag & bit` paired with the `DAT_00555bc4/c8/cc` config gates |
+| +0x04 | name string (≤0x20 bytes: the 10 names from the `TaskBlockInit` name table `0x4a8a08…0x4a931c`) | FUN_0048d9e0 `"%s"` per slot |
+| +0x24 | float importance (`Reward Importance.<name>`) | FUN_004600a0 |
+| +0x28 | int32 quota (`Reward Quota.<name>`); Level03 blob forces slot-4 quota = 1 | FUN_00460140; blob tail `+0x868` |
+| +0x2C | *(unreferenced — reconstruction-side value slot only)* | no consumer in the 10 functions |
+| +0x30 | float progress, recomputed from quota each frame on the blob side (`FILD` of `+0x28`, scaled) | `0x460360` blob pass |
+| +0x34 | dword scratch (written alongside `+0x30`) | `0x460360` |
+| +0x38 | float progress-clamp target, forced into `0.0..100.0` every frame on all 10 blob records | `0x46089b-0x4608e5` loop (`EDX 0..0x14A0` step 0x210) |
+| +0x3C..+0x50 | *(unreferenced)* | — |
+| +0x54 | display text, `Reward Text.<name>` field 0 with `_`→' ' replaced over the first 0x20 bytes (`FUN_00413f00`); key literal at `DAT_004a26b0` = `"Text"` | FUN_0045f530 (`0x45f58c: LEA EAX,[ESI+0x54]`) |
+| +0x5C..+0xD0 | *(unreferenced)* | — |
+| +0xD4 | display-string staging read by `RewardDisplayTick` (`param_1 + 0x35` as draw string) — **no writer in the shipped corpus**, so it stays zero (empty) at runtime; text drawing uses +0x54 | display tick, engine-region `6086/6106` |
+| +0xD8..+0x150 | *(unreferenced)* | — |
+| +0x154/+0x158 | text draw x/y ints (`Reward Text.<name>` fields 1/2) | FUN_0045f530; drawn at `FUN_0047a180` |
+| +0x15C/+0x160 | `Images.<name>` x/y | FUN_0045f3e0; blit `FUN_0047dcb0` |
+| +0x164/+0x168 | `BoxImages.<name>` x/y | FUN_0045f290 |
+| +0x16C | flic path (`Flics.<name>` field 0) | FUN_0045f5f0 |
+| +0x170..+0x1EB | *(unreferenced padding before the rect)* | — |
+| +0x1EC..+0x1F8 | flic rect, 4 ints (`Flics.<name>` fields 1..4) | drawn via `FUN_00484070` |
+| +0x1FC | flic handle — lazily opened `FUN_00483c80`, released `FUN_00483f00`, zeroed by `0x461410` | |
+| +0x200 | image surface (`FUN_0047d9d0` of `Images.<name>` path; freed `FUN_0047d470` by `TaskBlockFinish`) | read as `param_1[0x80]` |
+| +0x204 | font handle (`FUN_00479ee0` of `Fonts.<name>`, default `DAT_00555b40`; freed `FUN_0047a550`) | read as `param_1[0x81]` |
+| +0x208 | sound token (`Sounds.<name>`; consumed via `FUN_00464c70` in `0x4624a0`) | |
+| +0x20C | boximage surface (blitted at `FUN_0047dcb0`) | read as `param_1[0x83]` |
+| +0x20D..+0x210 | *(end padding)* | — |
+
+`!`-prefixed `Images`/`Flics` config keys are additionally gated by
+`DAT_00505f84` bits `0x1000000`/`0x2000000` (shipped-asset checks).
+
+### Ownership / lifetime (closes the `DAT_00552990` question)
+
+- **Created**: `TaskBlockInit @ 0x45f030` allocates the block via `FUN_0048dbd0`
+  (12,688-byte factory alloc), zero-fills 0xc63 dwords, stores the pointer in
+  `DAT_00552990` (the *only* writer), then runs the name pass + six loaders.
+  It is called once per **game session** from the run-start callback
+  `FUN_0041fb50` at `0x422651` (right after `RewardInit @ 0x422649`), registered
+  through `FUN_0041fa20` → `FUN_00477fd0` (start/tick/finish slots
+  `DAT_0050592c/30/34`, driven by `FUN_004777a0`).
+- **Destroyed**: `TaskBlockFinish @ 0x45f750` flushes each record's image /
+  font handles (`FUN_0047d470`, `FUN_0047a550`, `FUN_00483f00`) and frees the
+  block via `FUN_0048db80`; called from the run-finish callback `FUN_00424d00`
+  at `0x424d07`.
+- **Not** owned by `LevelLoad @ 0x429890` (its three call sites touch nothing
+  here) and not per level — the block survives level changes inside one
+  session; per-level variation is only the config-driven loader/refresh pass.
+- `DAT_00552994` (blob) is distinct, per-frame scratch (see
+  §CheckpointBlobBuild above).
+
 ## Still open
 
-- Task-table block (`DAT_00552990+0x1CE8`, 0x210/task) field layout.
 - Record flag `|2` semantics (`SavMarkRecord` sets `1` (and `2` when name is empty) — likely "present/empty").
 - `FUN_0047fa50`-based `.osf` restore path (load side only shows the `'RO'` write).
-- Who owns `DAT_00552990` lifetime (created in `LevelLoad`? via `FUN_0048dbd0` — verify xref).
 - `.dat` slot thumbnails: writer closed (see section above); the save-menu
   draw side (`DAT_004db890` blits, SaveImage `Width/Height/BigWidth/BigHeight/
   Pos1..5` rects + the scroll-plane scale) is not ported yet.

@@ -160,15 +160,14 @@ static void task_loader_images(BlockFile* cfg, const char* root,
     task_add_flag(t, TASK_FLAG_IMG);
 }
 
-/* FUN_0045f530 — `Reward BoxImages/Flics.<name>` (key at DAT_004a26b0):
- * path token at +0x54, coords +0x55/0x56, flag |0x31. */
-static void task_loader_flicpath(BlockFile* cfg, const char* root,
-                                 const char* level, GameTask* t)
+/* FUN_0045f530 — `Reward Text.<name>` (key string lives at corpus
+ * DAT_004a26b0 = "Text"): field 0 -> display text at +0x54 with '_'
+ * mapped to ' ' over the first 0x20 bytes (corpus FUN_00413f00),
+ * fields 1/2 -> text-draw x/y at +0x154/+0x158, flag |= 0x31. */
+static void task_loader_text(BlockFile* cfg, const char* root,
+                             const char* level, GameTask* t)
 {
-    /* The corpus key at DAT_004a26b0 is unconfirmed; `BoxImages` is the
-     * neighbouring loader's key and matches the +0x54 "/box image" slot
-     * (finding 09 §"Task record"). */
-    const char* v = rw_str(cfg, root, level, "BoxImages", task_name(t));
+    const char* v = rw_str(cfg, root, level, "Text", task_name(t));
     if (v == NULL) {
         return;
     }
@@ -176,9 +175,16 @@ static void task_loader_flicpath(BlockFile* cfg, const char* root,
     if (task_fields(v, f) == 0) {
         return;
     }
-    task_put_str(t, TASK_OFF_FLICPATH, f[0], 128);
-    task_put_int(t, TASK_OFF_FLICXY, (int32_t)util_atoi(f[1]));
-    task_put_int(t, TASK_OFF_FLICXY + 4, (int32_t)util_atoi(f[2]));
+    task_put_str(t, TASK_OFF_TEXT, f[0], 0x100);
+    /* corpus FUN_00413f00(buf, '_', ' ', 0x20) */
+    char* dst = (char*)t->data + TASK_OFF_TEXT;
+    for (int i = 0; i < 0x20 && dst[i] != '\0'; ++i) {
+        if (dst[i] == '_') {
+            dst[i] = ' ';
+        }
+    }
+    task_put_int(t, TASK_OFF_TEXT_XY, (int32_t)util_atoi(f[1]));
+    task_put_int(t, TASK_OFF_TEXT_XY + 4, (int32_t)util_atoi(f[2]));
     task_add_flag(t, TASK_FLAG_MASK);
 }
 
@@ -264,7 +270,7 @@ void mission_task_init(GameContext* ctx, BlockFile* cfg, const char* level_name)
     for (int i = 0; i < GAME_TASK_COUNT; ++i) {
         GameTask* t = &ctx->tasks[i];
         task_loader_images(cfg, root, level_name, t);
-        task_loader_flicpath(cfg, root, level_name, t);
+        task_loader_text(cfg, root, level_name, t);
         task_loader_flics(cfg, root, level_name, t);
         task_loader_font(cfg, root, level_name, t);
         task_loader_sound(cfg, root, level_name, t);
