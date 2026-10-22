@@ -122,10 +122,15 @@ TextureSurface* texture_decode(const uint8_t* data, uint32_t size)
         return NULL;
     }
 
-    /* Palette table, converted to 24-bit RGB. */
-    uint8_t r[256], g[256], b[256];
+    /* Palette table, converted to 24-bit RGB. Zero-filled: entries past the
+     * table read as black, mirroring the zero-padded 0x400 palette copy in
+     * the corpus loader (FUN_00489c30). */
+    uint8_t r[256] = { 0 }, g[256] = { 0 }, b[256] = { 0 };
     for (uint32_t i = 0; i < num_colors; ++i) {
         const uint8_t* e = data + pal_start + i * pal_stride;
+        if (e + pal_stride > data + size) {
+            break; /* palette table ends early; rest reads as black */
+        }
         b[i] = e[0];
         g[i] = e[1];
         r[i] = e[2];
@@ -138,6 +143,17 @@ TextureSurface* texture_decode(const uint8_t* data, uint32_t size)
     t->width  = w;
     t->height = h;
     t->bpp    = bpp;
+    if (bpp == 8) {
+        /* Corpus font keys: FUN_0047d9d0 hands FUN_0047e050 palette[0]
+         * (bytes 0..2 of the copied palette) and palette[255] (bytes
+         * 0x3fc..0x3fe) as the two colour keys of every 8bpp face. */
+        for (int i = 0; i < 2; ++i) {
+            uint32_t idx = (i == 0) ? 0u : 255u;
+            t->keys[i] = 0xff000000u | ((uint32_t)r[idx] << 16)
+                       | ((uint32_t)g[idx] << 8) | (uint32_t)b[idx];
+        }
+        t->key_count = 2;
+    }
     t->pixels = (uint32_t*)malloc((size_t)w * (size_t)h * 4);
     if (t->pixels == NULL) {
         free(t);

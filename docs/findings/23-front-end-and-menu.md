@@ -274,6 +274,66 @@ reachable/hittable — no per-item paging.
 | Exact sign/branch ordering of the velocity law | inferred (x87 flags not traced) |
 | Shipped `CanScroll` only on `MainMenuFull Menu1` | observed (data) |
 
+## Font colour keys — the two palette keys (`FUN_0047d9d0` @ 0x47d9d0)
+
+The port keyed one colour per font, sampled as the dominant colour of glyph
+0's cell. The corpus keys **two** — and not from the pixels at all, but from
+the font file's palette table:
+
+* `FUN_0047d9d0` loads `Data\<path>` through `FUN_00489c30`, which for 8bpp
+  images copies the palette into a zero-padded 0x400 buffer with the B and R
+  bytes swapped (`FUN_00489c30`'s `for (i < nc) swap(b,r)` loop + 0x400
+  zero-fill). When the flag is 0 (8bpp), it assembles **two key colours**
+  from that copy: `FUN_0047db90` of bytes `0x00..0x02` = **palette[0]** and
+  of bytes `0x3FC..0x3FE` = **palette[255]** (255*4 = 0x3FC). Non-8bpp faces
+  get keys (0, 0).
+* `FUN_0047e050` (the font-record constructor, called from `FUN_0047d9d0`'s
+  0x47db28) runs both colours through `FUN_0047e190` and stores them side by
+  side in font-record fields `[3]`/`[4]`. `FUN_0047e190` is a pure colour-map:
+  it splits the source colour into three bytes (`FUN_0047e2d0`) and
+  re-places each into the device's pixel format using the R/G/B masks from
+  the surface's vtable `+100` (GetPixelFormat) — a format roundtrip, no
+  luminance logic.
+* The keys then act as blit transparency: glyph blits (`FUN_0047dcb0`, e.g.
+  the `FUN_0047a470` text draw) call the `DAT_0076ac8c` surface Blit with the
+  keyed blit flags `0x1000000` / `0x1008000`, i.e. source pixels equal to
+  either key are not written.
+
+**Asset evidence** (palette entries read from the shipped BMPs; RGB):
+
+| Font | pal[0] | pal[255] |
+| --- | --- | --- |
+| `FrontEnd\Menu_Font_HI/LO` (the menu grid) | (0,0,0) | (255,0,0) |
+| `Fonts\MenuFontBig` / `MenuHiFont` / `MenuLoFont` | (227,0,0) | (255,35,255) |
+| `Fonts\MBriefFONT` | (0,0,0) | (255,0,0) |
+| `Fonts\MBriefFONT2/3/4`, `RSfont` | (0,0,0) | (255,255,255) |
+| `Fonts\Font5`, `Font5_Hi(2)`, `Font5_BIG`, `FONT4` | black/green | (255,0,0) |
+| `Fonts\FSfont` | (245,245,203) | (255,0,0) |
+| `Fonts\DesktopFont` | (59,59,59) | (255,0,0) |
+| `Fonts\TTFont` | (255,255,255) | (227,0,0) |
+
+All shipped fonts are 8bpp with `biClrUsed=256`, so the zero-pad path never
+fires on real data. For `Menu_Font_*` the pair is black + red: the sampled
+one-key port keyed the dominant red but **drew the black palette-0 cell
+background as solid boxes behind every label** — visible in the 2026-10-21
+before/after screenshots of the main menu. With both keys the labels blit
+clean, matching the corpus's two-colour source key.
+
+**Port**: `texture_decode` now records `keys[2]`/`key_count` on every
+surface (8bpp: `pal[0]`/`pal[255]`, zero-padded like the corpus copy), and
+`frontend.cpp`'s `fe_font_keys` uses them for the ink box + glyph blit
+(`fe_font_key_hit` — pixel equal to either key is transparent). Surfaces
+without palette info (the headless 3x5 fallback, synthetic test fixtures)
+keep the dominant-colour sampler as a documented stand-in for both slots.
+
+| Claim | State |
+| --- | --- |
+| Keys = palette[0] + palette[255] of 8bpp faces, (0,0) else | observed (FUN_0047d9d0 raw args + FUN_00489c30 + e050 stores) |
+| Key conversion is format roundtrip only | observed (FUN_0047e190 mask arithmetic) |
+| Both keys applied as source-key transparency on glyph blits | inferred (paired key stores + keyed blit flags; SetColorKey vtl calls not traced individually) |
+| Shipped font palettes (table above) | observed (wad asset dump) |
+| Non-8bpp key path | observed constant (0,0); no shipped non-8bpp font exists to exercise it |
+
 ## Confirmed / unknown ledger
 
 | Claim | State |
@@ -287,4 +347,5 @@ reachable/hittable — no per-item paging.
 | `StartLevel`/`NextLevel` = `Levels::X` address; `Level01` absent | observed (data) |
 | `ScrollToSliderIndex*` / `OptionMusicDefault` exact option binding | inferred (structure; names provisional) |
 | `SlotSummary` exact string format `Game %i …` | inferred (format arg — verified signature only) |
+| Font colour keys = palette[0]+palette[255], both keyed | observed (loader + asset dump; see the keys section) |
 | Boot init `FUN_0041fb50` internal order (movies vs menu) | inferred (callee set; not fully decompiled) |

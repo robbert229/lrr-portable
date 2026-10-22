@@ -1155,12 +1155,11 @@ static int fe_font_cell(const TextureSurface* f, int* cw, int* ch)
     return 1;
 }
 
-/* Colour key derivation — the loader samples the key from the image pixels
- * (FUN_0047d9d0), and each shipped face keys its own background: Menu_Font*
- * uses palette-255 pure red, MbriefFont* pure white. The dominant colour of
- * the space cell (glyph 0) is the background in every observed font.
- * FE_FONT_KEY stays as the generic default when a font decodes to a blank
- * cell 0. */
+/* Fallback key derivation (port-side stand-in, documented deviation): when
+ * a surface carries no palette key info — synthetic fonts, 24-bit sources
+ * — the key is sampled as the dominant colour of the grid (glyph 0's cell
+ * is background in every observed font). FE_FONT_KEY stays as the generic
+ * default for a fully blank sample. */
 static uint32_t fe_font_key(const TextureSurface* f, int cw, int ch)
 {
     uint32_t colors[8];
@@ -1201,21 +1200,42 @@ static uint32_t fe_font_key(const TextureSurface* f, int cw, int ch)
     return best;
 }
 
+/* Face keys — the corpus path (FUN_0047d9d0 + FUN_0047e050): every 8bpp
+ * font surface carries palette[0] and palette[255] as colour keys, both
+ * blitted transparent. Surfaces without a decoded palette (key_count 0)
+ * keep the sampled stand-in for both slots. */
+static void fe_font_keys(const TextureSurface* f, int cw, int ch,
+                         uint32_t keys[2])
+{
+    if (f->key_count == 2) {
+        keys[0] = f->keys[0];
+        keys[1] = f->keys[1];
+        return;
+    }
+    keys[0] = keys[1] = fe_font_key(f, cw, ch);
+}
+
+static int fe_font_key_hit(uint32_t p, const uint32_t keys[2])
+{
+    return p == keys[0] || p == keys[1];
+}
+
 /* Ink bounding box of glyph g — the non-key pixels only. The engine blits
  * exactly this box (FUN_00479ee0's right-edge scan / per-glyph rect), which
  * keeps each face's background AND frame strips out while retaining the
  * glyph's dark outline when it is inside the box. */
 static int fe_font_ink_box(const TextureSurface* f, int cw, int ch, int g,
-                           uint32_t key, int* minx, int* miny, int* maxx,
-                           int* maxy)
+                           const uint32_t keys[2], int* minx, int* miny,
+                           int* maxx, int* maxy)
 {
     int col = g % FE_FONT_GRID_COLS, row = g / FE_FONT_GRID_COLS;
     int x0 = col * cw, y0 = row * ch;
     *minx = cw; *miny = ch; *maxx = -1; *maxy = -1;
     for (int yy = 0; yy < ch; yy++) {
         for (int xx = 0; xx < cw; xx++) {
-            if (f->pixels[(size_t)(y0 + yy) * (size_t)f->width + (x0 + xx)]
-                == key) {
+            if (fe_font_key_hit(
+                    f->pixels[(size_t)(y0 + yy) * (size_t)f->width + (x0 + xx)],
+                    keys)) {
                 continue;
             }
             if (xx < *minx) { *minx = xx; }
@@ -1230,10 +1250,10 @@ static int fe_font_ink_box(const TextureSurface* f, int cw, int ch, int g,
 /* Advance width of glyph g = its ink width from the cell's left edge
  * (the engine's right-edge scan), 0 when blank. */
 static int fe_font_advance(const TextureSurface* f, int cw, int ch, int g,
-                           uint32_t key)
+                           const uint32_t keys[2])
 {
     int mx, my, ax, ay;
-    if (!fe_font_ink_box(f, cw, ch, g, key, &mx, &my, &ax, &ay)) {
+    if (!fe_font_ink_box(f, cw, ch, g, keys, &mx, &my, &ax, &ay)) {
         return 0;
     }
     return ax + 1;
@@ -1241,12 +1261,12 @@ static int fe_font_advance(const TextureSurface* f, int cw, int ch, int g,
 
 static void fe_blit_glyph(void* px, int pitch, int w, int h,
                           int dx, int dy, const TextureSurface* f,
-                          int cw, int ch, int g, uint32_t key)
+                          int cw, int ch, int g, const uint32_t keys[2])
 {
     int col = g % FE_FONT_GRID_COLS, row = g / FE_FONT_GRID_COLS;
     int x0 = col * cw, y0 = row * ch;
     int minx, miny, maxx, maxy;
-    if (!fe_font_ink_box(f, cw, ch, g, key, &minx, &miny, &maxx, &maxy)) {
+    if (!fe_font_ink_box(f, cw, ch, g, keys, &minx, &miny, &maxx, &maxy)) {
         return;
     }
     for (int yy = miny; yy <= maxy; yy++) {
@@ -1257,8 +1277,8 @@ static void fe_blit_glyph(void* px, int pitch, int w, int h,
         for (int xx = minx; xx <= maxx; xx++) {
             uint32_t p = f->pixels[(size_t)(y0 + yy) * (size_t)f->width
                                    + (x0 + xx)];
-            if (p == key) {
-                continue;                              /* key *inside* the box */
+            if (fe_font_key_hit(p, keys)) {
+                continue;               /* key *inside* the box */
             }
             int dx2 = dx + xx;
             if (dx2 < 0 || dx2 >= w) {
@@ -1284,7 +1304,8 @@ static int fe_draw_font_text(void* px, int pitch, int w, int h,
     if (!fe_font_cell(f, &cw, &chh)) {
         return 0;
     }
-    uint32_t key = fe_font_key(f, cw, chh);
+    uint32_t keys[2];
+    fe_font_keys(f, cw, chh, keys);
     int cx = x;
     for (int i = 0; s[i] != '\0' && cx < w; ++i) {
         int c = (unsigned char)s[i];
@@ -1293,11 +1314,11 @@ static int fe_draw_font_text(void* px, int pitch, int w, int h,
             cx += cw / 2;
             continue;
         }
-        int adv = fe_font_advance(f, cw, chh, g, key);
+        int adv = fe_font_advance(f, cw, chh, g, keys);
         if (adv <= 0) {
             adv = (c == ' ') ? cw / 2 : cw;        /* blank cell fallback */
         }
-        fe_blit_glyph(px, pitch, w, h, cx, y, f, cw, chh, g, key);
+        fe_blit_glyph(px, pitch, w, h, cx, y, f, cw, chh, g, keys);
         cx += adv;
     }
     return cx - x;
@@ -1309,7 +1330,8 @@ static int fe_font_text_width(const char* s, const TextureSurface* f)
     if (!fe_font_cell(f, &cw, &chh)) {
         return 0;
     }
-    uint32_t key = fe_font_key(f, cw, chh);
+    uint32_t keys[2];
+    fe_font_keys(f, cw, chh, keys);
     int cx = 0;
     for (int i = 0; s[i] != '\0'; ++i) {
         int c = (unsigned char)s[i];
@@ -1318,7 +1340,7 @@ static int fe_font_text_width(const char* s, const TextureSurface* f)
             cx += cw / 2;
             continue;
         }
-        int adv = fe_font_advance(f, cw, chh, g, key);
+        int adv = fe_font_advance(f, cw, chh, g, keys);
         cx += adv > 0 ? adv : (c == ' ' ? cw / 2 : cw);
     }
     return cx;
