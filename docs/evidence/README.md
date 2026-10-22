@@ -611,3 +611,41 @@ Exported for finding 120. Two function records cover sound-buffer creation, the 
 ## `legorr-sound-buffer-fill.bundle`
 
 Exported for finding 120. One function record covers locking the primary buffer, copying the loaded sample into it, unlocking, and querying buffer state.
+
+## `legorr-sound3d-per-source.bundle`
+
+Exported for finding 121. Four function records cover the DirectSound buffer descriptor, sound-record buffer creation, the tracked-buffer list, and configured distance setter calls.
+
+## `legorr-wav-handoff-memory-copy.bundle`
+
+Exported for finding 122. Three function records cover `FUN_0047b580` allocation and call order, WAV data-chunk seeking, and copying from the MMIO read window into the allocated memory buffer.
+
+## `legorr-avi-frame-row-copy.bundle`
+
+Exported for finding 123. Two function records cover `AVIStreamGetFrame` dispatch and the helper that copies DIB rows into the destination pixel buffer.
+
+## `legorr-screen-shake-raiser.bundle`
+
+Exported for finding 125. Two observations cover the negative-result branch in `FUN_004475c0`, which calls `FUN_0043f6a0` and raises entity `+0x3e4` bit `0x40000000`, plus the incoming-reference inventory for `DAT_004a48b0`. The global's consumer semantics remain unresolved.
+
+## `legorr-screen-space-effect-lane.bundle`
+
+Exported for finding 126. Three function records cover the ten-entry effect-table dispatcher, its 15-second timer/fade helper, and indexed per-item alpha/flag updates. Screen-space coordinates and the later draw consumer are not established.
+
+## `legorr-permitted-activity-capacity.bundle`
+
+Exported for finding 128. The 53-record bundle retains the canonical entity-activity evidence and adds fresh function records for `FUN_0044b370` (activity-list installation) and `FUN_0046a060` (capacity getter). It supports the getter's read from entity stats `+0xcc`, the installer's zero-store to `+0x3f4`, and the list mutation branches; the fields' broader semantics remain unresolved.
+
+Finding 129 reuses the `FUN_00483420` record in `legorr-screen-space-effect-lane.bundle` and the `FUN_00482d60` record in `legorr-engine-expansion.bundle`; no duplicate bundle was added.
+
+## `legorr-activity-3f4-reader-census.bundle`
+
+Exported for finding 130. The 58-record bundle retains activity-capacity evidence and adds a complete initialized-image search for displacement `0x3f4` plus instruction decodes of every non-writer match. The search finds no other direct entity-field reference; derived pointer arithmetic remains outside its scope.
+
+## `legorr-stats-tools-capacity.bundle`
+
+Exported for finding 131. Seventy-five records cover the Stats loader reading `NumOfToolsCanCarry`, parsing per-level values into `+0xcc` in `0x150`-byte records, the state selector's per-level record pointer, and the activity-capacity getter.
+
+## `legorr-sound-duplicate-selection.bundle`
+
+Exported for finding 133. Five records cover the optional duplicate-buffer argument, bank-entry flag setup, and playback's single-buffer versus three-buffer rotation, together with the canonical buffer-creation record from finding 120.

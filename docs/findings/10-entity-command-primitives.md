@@ -523,11 +523,13 @@ The deferred-grant flag (`+0x3e4` bit `0x40`) is *not* raised anywhere on
 this branch (bounded TODO — see the permitted-activity call-sites note).
 
 Documented TODO branches (not guessed): projectile arcs (`+0x3e0`
-`0x400000`, `FUN_004755e0`/`FUN_00475120`); screen
-shake (`+0x3e4` `0x40000000`, `DAT_004a48b0`); the riding-attach writer
+`0x400000`, `FUN_004755e0`/`FUN_00475120`); the screen-shake flag's
+negative-result raiser (`+0x3e4` `0x40000000`, finding 125), with its camera
+and `DAT_004a48b0` consumer semantics unresolved; the riding-attach writer
 (`0x44c0a0` fragment — attach-pair `+0x364` install, `+0x3e0` bit `0x100`);
 the `+0x3e4` bit-`0x40` grant-flag raiser (closed to a census: no immediate
 OR-writer exists — see the permitted-activity call-sites note; the computed
 store among the `mov [..+0x3e4], reg` sites is config/runtime-driven); the
-stats-block instance fill — `+0xcc` permitted-list capacity (the port's
-`activity_cap` defaults to the span) and the appender's `+0x3f4` write.
+appender's `+0x3f4` field meaning (finding 130 found no other direct
+entity-field reference); the stats `+0xcc` capacity source is documented in
+finding 131 as Stats `NumOfToolsCanCarry`.

@@ -1,0 +1,7 @@
+# Finding 131 — Tool-Carry Stat Feeds Activity-List Capacity
+
+The capacity read by the permitted-activity appender is populated by the Stats loader from the named `NumOfToolsCanCarry` entry. In `FUN_004667e0`, the loader iterates Stats entries and levels, retrieves `NumOfToolsCanCarry` for the current Stats key, parses its values with `FUN_00477440`, and copies each parsed dword into the per-level record at offset `+0xcc` with stride `0x150`. The state selector `FUN_00469c10` points an entity at one of those per-level records (`DAT_00502bd8[type][sub] + index*0x150`). `FUN_0046a060` returns the dword at the selected record's `+0xcc`, which the activity appender `FUN_0044b370` uses as its list capacity.
+
+This establishes the source relationship in the shipped binary: the field used as permitted-activity capacity is loaded from the Stats `NumOfToolsCanCarry` property for the selected entity type and level. It does not establish what values shipped game configuration supplies or whether the reuse was intended to mean the same thing in both systems. The evidence is static; it does not include a runtime configuration capture.
+
+Fresh Ghidra evidence for the Stats loader and state selector, with the pointer-table xrefs, is in [the canonical bundle](../evidence/legorr-stats-tools-capacity.bundle). The executable SHA-256 is `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`.

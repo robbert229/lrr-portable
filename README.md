@@ -320,6 +320,16 @@ Open threads, in order of value:
 | 118 | [findings/118-loader-progress-read-tap.md](docs/findings/118-loader-progress-read-tap.md) | Whole-file read hooks accumulate loader progress from measured file sizes |
 | 119 | [findings/119-directsound-3d-listener-interface.md](docs/findings/119-directsound-3d-listener-interface.md) | Sound initialization queries DirectSound's 3D listener interface |
 | 120 | [findings/120-sound-load-duplicates-directsound-buffer.md](docs/findings/120-sound-load-duplicates-directsound-buffer.md) | Sound loading can create two DirectSound duplicates for one sample buffer |
+| 121 | [findings/121-per-source-sound-buffers-request-3d-control.md](docs/findings/121-per-source-sound-buffers-request-3d-control.md) | Sound buffers request 3D control and tracked buffers receive distance updates |
+| 122 | [findings/122-wav-mmio-buffer-handoff.md](docs/findings/122-wav-mmio-buffer-handoff.md) | In-memory WAV loading copies the data chunk through the MMIO read window |
+| 123 | [findings/123-avi-frame-dib-row-copy.md](docs/findings/123-avi-frame-dib-row-copy.md) | AVI frame helper copies DIB rows into the surface pixel buffer |
+| 125 | [findings/125-screen-shake-flag-raiser.md](docs/findings/125-screen-shake-flag-raiser.md) | Negative entity health delta raises the screen-shake flag |
+| 126 | [findings/126-screen-space-effect-lane-dispatch-and-opacity-update.md](docs/findings/126-screen-space-effect-lane-dispatch-and-opacity-update.md) | Ten-entry effect table dispatches timed opacity updates |
+| 128 | [findings/128-permitted-activity-appender-capacity.md](docs/findings/128-permitted-activity-appender-capacity.md) | Activity appender reads capacity from the entity stats block |
+| 129 | [findings/129-effect-item-flags-reach-model-render-dispatch.md](docs/findings/129-effect-item-flags-reach-model-render-dispatch.md) | Effect item flags can reach model render passes |
+| 130 | [findings/130-activity-3f4-direct-reader-census.md](docs/findings/130-activity-3f4-direct-reader-census.md) | No other direct entity-field reference to the appender's `+0x3f4` store |
+| 131 | [findings/131-tool-carry-stat-is-activity-capacity.md](docs/findings/131-tool-carry-stat-is-activity-capacity.md) | Stats `NumOfToolsCanCarry` values feed activity-list capacity |
+| 133 | [findings/133-directsound-duplicate-buffer-selection.md](docs/findings/133-directsound-duplicate-buffer-selection.md) | Optional DirectSound duplicates rotate across three buffers at playback |
 
 Named-pseudocode corpus: [`docs/decompiles/engine-region.c`](docs/decompiles/engine-region.c)
 (114 named functions covering the engine/game-logic region — findings 01–10).
