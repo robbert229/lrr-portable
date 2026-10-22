@@ -319,6 +319,7 @@ Open threads, in order of value:
 | 117 | [findings/117-fallin-multiplier-config-source.md](docs/findings/117-fallin-multiplier-config-source.md) | FallinMultiplier supplies the block-pointer modulus factor |
 | 118 | [findings/118-loader-progress-read-tap.md](docs/findings/118-loader-progress-read-tap.md) | Whole-file read hooks accumulate loader progress from measured file sizes |
 | 119 | [findings/119-directsound-3d-listener-interface.md](docs/findings/119-directsound-3d-listener-interface.md) | Sound initialization queries DirectSound's 3D listener interface |
+| 120 | [findings/120-entity-effect-branches.md](docs/findings/120-entity-effect-branches.md) | Three closed entity-effect TODO branches: projectile arcs (callback `0x43ca82`, the `DAT_0050391c` ballistic-arc polyline), screen shake (`0x43ce88`, `DAT_004a48b0` amplitude/decay), and the screen-space effect lane — all ported to `src/game/effect.*` with corpus-table tests |
 
 Named-pseudocode corpus: [`docs/decompiles/engine-region.c`](docs/decompiles/engine-region.c)
 (114 named functions covering the engine/game-logic region — findings 01–10).
@@ -834,6 +835,27 @@ finding 12, #14). Three new modules in `src/game/`:
   explicit `--real` run fails if the wads or a level cannot load, if a
   level has too few walkable cells or walkers, or if the shipped corpus
   totals differ from 42 levels / 496 pairs / 350 paths / 84 arrivals.
+- **Entity effect branches** (2026-10-22, closing finding 10's last three
+  "documented-but-unguessed" TODOs — finding 120): `src/game/effect.*`
+  ports the corpus **screen-space effect lane** (`DAT_0050391c`
+  records; allocator `FUN_0046ff70`, firers `FUN_0046faf0`/`FUN_0046fc70`,
+  per-frame advance `FUN_0046f920` via the `FUN_0046f550` ticker) with
+  dispatch counting, straight + ballistic records, and a screen-space draw
+  path that renders after the map without touching the render path. The
+  **projectile arcs** branch (`callback 0x43ca82`, `+0x3e0` bit
+  `0x400000`) walks the corpus-shaped arc — the 50-point cubic-bezier
+  polyline (`FUN_00406820`/`FUN_004065f0`) with control vectors
+  `{1,-1.3}`·0.2·dist / `{0.3,1}`·dist/3 and arc-length sampling
+  (`FUN_004067b0`/`FUN_004068c0`) — and completes corpus-style (wake
+  target, `+0x340=-1.0`, flag clear) on arrival. **Screen shake** (callback
+  `0x43ce88`, `+0x3e4` bit `0x40000000`, `DAT_004a48b0`) decays the global
+  amplitude by `0.16/s` and resets to 1.0 + clears the bit at the end
+  (`ai_shake_raise` mirrors the `FUN_004475c0` raiser); the renderer shifts
+  the frame by the amplitude so the viewport visibly shakes. Demo keys:
+  `f` fires an arc from the selection toward the cursor, `h` raises a shake.
+  `effect_test` (suite `effect`) pins the arc geometry/sampling against the
+  corpus table, lane dispatch counting + full-lane rejection, arc travel
+  and arrival wake, and shake raise/decay/clear.
 - **Per-terrain movement speed** (2026-10-21, closing the finding 10
   per-terrain placeholder): the `FUN_00469cc0` speed probe — the corpus's
   per-terrain movement rates, read from the `+0x334` stats block's table

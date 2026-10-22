@@ -1235,6 +1235,59 @@ int LegorrrRun(void)
             if (ai_done != 0) {
                 fprintf(log, "frameloop: ai commands completed: %d\n", ai_done);
             }
+            /* Headless demo hook (LEGORRR_DEMO_FX): fire an arc from the
+             * first placed entity toward the nearest other and raise a
+             * screen shake on the first frame the level is in-game, so a
+             * canned run demonstrates the effect lane (finding 120). */
+            static int s_demo_fx_done = 0;
+            if (env_get("LEGORRR_DEMO_FX", NULL) != NULL && !s_demo_fx_done) {
+                /* Farthest placed pair — a clearly visible flight. */
+                EntitySlot* fx_from = NULL;
+                EntitySlot* fx_to = NULL;
+                float best = -1.0f;
+                EntitySlot* first = NULL;
+                for (int t = 0; t < ENTITY_TYPES; ++t) {
+                    for (int i = 0; i < game.entity_count[t]; ++i) {
+                        EntitySlot* e = &game.entity[t][i];
+                        if (first == NULL) {
+                            first = e;
+                        }
+                        for (int t2 = 0; t2 < ENTITY_TYPES; ++t2) {
+                            for (int j = 0; j < game.entity_count[t2]; ++j) {
+                                EntitySlot* o = &game.entity[t2][j];
+                                if (o == e) {
+                                    continue;
+                                }
+                                float dx = e->x - o->x, dy = e->y - o->y;
+                                float d = dx * dx + dy * dy;
+                                if (d > best) {
+                                    best = d;
+                                    fx_from = e;
+                                    fx_to = o;
+                                }
+                            }
+                        }
+                    }
+                }
+                if (fx_from != NULL) {
+                    int slot = ai_fire_arc(&game, fx_from, fx_to);
+                    /* Shake the *target* (not the shooter): FUN_004475c0
+                     * raises the shake bit on the linked entity — the arc
+                     * branch early-returns on the shooter, so a separate
+                     * entity must carry the shake. */
+                    ai_shake_raise(&game, fx_to != NULL ? fx_to : fx_from);
+                    s_demo_fx_done = 1;
+                    fprintf(log, "frameloop: demo FX fired (arc + shake) "
+                                 "slot=%d from=%.1f,%.1f to=%.1f,%.1f\n",
+                            slot, fx_from->x, fx_from->y,
+                            fx_to != NULL ? fx_to->x : 0.0f,
+                            fx_to != NULL ? fx_to->y : 0.0f);
+                } else if (first != NULL) {
+                    ai_shake_raise(&game, first);
+                    s_demo_fx_done = 1;
+                    fprintf(log, "frameloop: demo FX fired (shake only)\n");
+                }
+            }
             int done = mission_update(&game);
             if (done != 0) {
                 fprintf(log, "frameloop: tasks completed this frame (mask 0x%x)\n",

@@ -911,6 +911,7 @@ int ai_tick(GameContext* ctx, float dt)
      * contribute a viewport offset (cleared here so a quiet frame renders
      * with no residual offset). */
     ctx->shake_frame = 0;
+    ctx->shake_dx = ctx->shake_dy = 0.0f;
     /* 1. Entity chains: the callback's flag branches, then the port-side
      *    application of chain heads (move/target stepping). Corpus order:
      *    the walker visits type blocks in table order, entities ascending. */

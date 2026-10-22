@@ -522,12 +522,31 @@ selector:
 The deferred-grant flag (`+0x3e4` bit `0x40`) is *not* raised anywhere on
 this branch (bounded TODO — see the permitted-activity call-sites note).
 
-Documented TODO branches (not guessed): projectile arcs (`+0x3e0`
-`0x400000`, `FUN_004755e0`/`FUN_00475120`); screen
-shake (`+0x3e4` `0x40000000`, `DAT_004a48b0`); the riding-attach writer
-(`0x44c0a0` fragment — attach-pair `+0x364` install, `+0x3e0` bit `0x100`);
-the `+0x3e4` bit-`0x40` grant-flag raiser (closed to a census: no immediate
-OR-writer exists — see the permitted-activity call-sites note; the computed
-store among the `mov [..+0x3e4], reg` sites is config/runtime-driven); the
-stats-block instance fill — `+0xcc` permitted-list capacity (the port's
-`activity_cap` defaults to the span) and the appender's `+0x3f4` write.
+### Entity effect branches (projectile arcs, screen shake, screen-space effect lane — closed 2026-10-22)
+
+The three "documented-but-unguessed" branches of the original list are now
+ported from fresh REA evidence (finding 120,
+`docs/evidence/legorr-entity-effect-branches.bundle`):
+
+- **Projectile arcs** (`+0x3e0` bit `0x400000`, `FUN_004755e0`/
+  `FUN_00475120`): the callback arc branch `0x43ca82` consumes the flag,
+  steps the work-object scene, and completes corpus-style — target wake
+  `+0x3e8` bit `0x800000`, `+0x3e0 & ~0x400000`, `+0x340 = -1.0`, target
+  handle `+0x2e4`. The ballistic shape is the effect-bank arc polyline
+  (`DAT_0050391c` records; `FUN_00406820`/`FUN_004065f0` cubic polyline,
+  `FUN_004067b0`+`FUN_004068c0` arc-length sampling), control vectors
+  `{1,-1.3}`·0.2·dist and `{0.3,1}`·dist/3.
+- **Screen shake** (`+0x3e4` bit `0x40000000`, `DAT_004a48b0`): the shake
+  branch `0x43ce88` draws the work object at a random offset proportional to
+  the global amplitude `DAT_004a48b0` (shipped 1.0), decays it by
+  `0.16/s`, and resets to 1.0 + clears the bit at the end. The raiser is
+  the impact/wake probe `FUN_004475c0`.
+- **The screen-space effect lane**: the corpus's `DAT_0050391c` effect bank
+  (allocator `FUN_0046ff70`, firers `FUN_0046faf0`/`FUN_0046fc70`,
+  per-frame advance `FUN_0046f920` via the ticker `FUN_0046f550`) — ported
+  as `src/game/effect.*` (`effect_lane_dispatch`/`tick`/`draw`). The
+  dispatch counter and draw path are test-pinned; straight shots travel
+  `speed·dt`, arc shots travel the corpus polyline.
+
+The remaining TODO items below are the grant-flag raiser (bounded census)
+and the stats-block instance fill (config-driven, unrecorded values).

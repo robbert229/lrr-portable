@@ -17,7 +17,7 @@ build:
 	tools/build-miniwin.sh
 	@set -o pipefail; \
 	  ninja -C "$(BUILD_DIR)" -t commands src/LegoRR | \
-	  sed '/^rm -f subprojects\/miniwin\/libminiwin\.a && ar csr /d' | \
+	  sed '/^rm -f subprojects\/miniwin\/libminiwin\.a && .*ar csr.*/d' | \
 	  (cd "$(BUILD_DIR)" && sh -e)
 
 run: build

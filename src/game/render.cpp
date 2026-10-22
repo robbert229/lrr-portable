@@ -320,13 +320,13 @@ void level_render_map(const LevelState* lvl, const GameContext* ctx,
     }
     /* Screen-space viewport shake (finding 120): the callback shake branch
      * (0x43ce88) leaves ctx->shake_dx/dy in world units (the corpus scales
-     * the work-object offset by amp*0.1 minus the 10.0 position scale);
-     * convert them to the map's pixel space and offset every drawn element.
-     * A zero offset (no shaking entity) leaves the render byte-identical. */
-    int shx = (ctx->shake_frame != 0)
-                  ? (int)(ctx->shake_dx / (float)gw * (float)w) : 0;
-    int shy = (ctx->shake_frame != 0)
-                  ? (int)(ctx->shake_dy / (float)gh * (float)h) : 0;
+     * the work-object offset by amp*0.1 minus the 10.0 position scale —
+     * 0x49e3d4). Convert to pixels with that same fixed 10 px/unit draw
+     * scale so the amplitude/decay feels like the shipped game (amp 1.0 →
+     * 1.0 px, halving as the amplitude decays). A zero offset (no shaking
+     * entity) leaves the render byte-identical. */
+    int shx = (ctx->shake_frame != 0) ? (int)(ctx->shake_dx * 10.0f) : 0;
+    int shy = (ctx->shake_frame != 0) ? (int)(ctx->shake_dy * 10.0f) : 0;
     /* Whole-frame background (void) so regions outside the grid are not
      * stale garbage from the previous frame. */
     fill_rect(0, 0, w - 1, h - 1, w, h, pixels, pitch, 8, 16, 48);

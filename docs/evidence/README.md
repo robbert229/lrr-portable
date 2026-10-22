@@ -603,3 +603,18 @@ Exported for finding 118. Twenty records cover loader-profile setup and selectio
 ## legorr-directsound3d-init.bundle
 
 Exported for finding 119. Five records cover DirectSound initialization, the queried GUID bytes and xref, the listener-interface acquisition branch, and subsequent initialization. One exploratory WAV-loader dossier is included but not cited by the finding.
+
+## legorr-entity-effect-branches.bundle
+
+Exported for finding 120. 74 records cover the three entity effect
+branches: the effect bank `DAT_0050391c` and its allocator/firers
+(`FUN_0046ff70`, `FUN_0046faf0`, `FUN_0046fc70`, per-frame advance
+`FUN_0046f920` + ticker `FUN_0046f550`), the projectile arc geometry
+(`FUN_00406820` 50-point cubic polyline, `FUN_004065f0` point eval,
+`FUN_00406760` control scaling, `FUN_004067b0`/`FUN_004068c0`
+arc-length table + sampler, and `FUN_004420d0`'s firer dispatch), the
+callback arc branch consumer (`0x43ca82` region: `+0x3e0` bit `0x400000`,
+the `FUN_004755e0`/`FUN_00475120` scene step and the completion writes),
+the shake branch (`0x43ce88` region: `+0x3e4` bit `0x40000000`,
+`FUN_00475470` draw, `DAT_004a48b0` amplitude + `0x49e3fc` decay), and the
+shake raiser `FUN_004475c0`/`FUN_0043f6a0`.
