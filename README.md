@@ -705,7 +705,12 @@ finding 12, #14). Three new modules in `src/game/`:
   the libs are absent; `disabled` compiles the module out and drops the movie
   suite). Meson owns the soname lists and passes them to the module and the
   probe as defines, so the build and the runtime never drift apart, and
-  `libdl` is linked where old glibc needs it.
+  `libdl` is linked where old glibc needs it. On macOS, the probe also checks
+  Homebrew's FFmpeg formula prefix and its `.dylib` names. Install it with
+  `brew install ffmpeg`, then rerun `meson setup --reconfigure build` so Meson
+  detects the libraries. The Homebrew FFmpeg formula currently includes GPL
+  components; review FFmpeg's [license guidance](https://ffmpeg.org/legal.html)
+  before bundling those libraries in a distribution.
 - **`.flh` FLIC overlays** (2026-10-21, finding 21): `src/gods98/flic.*` is
   the port's runtime player for the FLIC-family overlay animations the
   shipped game shows on its menus — the 18 wad `.flh` files
