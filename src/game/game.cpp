@@ -21,5 +21,6 @@ void game_context_init(GameContext* ctx)
         return;
     }
     memset(ctx, 0, sizeof(*ctx));
+    options_defaults(&ctx->options);
     save_init(ctx);
 }

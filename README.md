@@ -339,10 +339,27 @@ level's checkpoint now lands in **its own record** (port of
 `fe_record_for_level`/`fe_level_for_record` map levels↔records — tutorials
 first, then the campaign chain — and the record array grows on demand), so
 mid-campaign saves neither collide nor resume short.
-**Options sliders** (2026-10-21): the Options/Advanced `Slider`/`Cycle`
-items respond to `←`/`→` (and render a live bar+knob / current option) —
-the volume families (SFX/Music/Sound) drive the audio seam, the rest are
-state-only until the engine's option globals are wired. **Pointer drag**
+**Options** (2026-10-21): the Options/Advanced `Slider`/`Cycle` items respond
+to `←`/`→` (and render a live bar+knob / current option) and are **functional**:
+the values live in a store on `GameContext` that the menu seeds from and writes
+back into, so re-entering Options (any instance — the pause submenu or the
+standalone OptionsMenu) shows the effective value, never a reset default.
+**Game Speed** (`Game_Speed`, 0..5) scales the frame loop's simulation time
+(`options_time_scale` → `EngineTimeScale` and the ai/objective tickers' dt) —
+1 = normal. **Brightness** (`Brightness`, 0..10) multiplies the presented frame
+by BrightnessSet's `value × 0.1` scalar. **Help Window** (`Help_Window`
+Off/On) toggles the in-game help panel (the option gates the panel in
+`frontend_help_overlay`, so it can never draw while Off). The volume families
+(`SFX_Volume`, `Music_Volume`) keep driving the audio seam — the frame loop
+opens audio with the store's SFX gain, so settings restored from a save take
+effect immediately. The values load from the active save context when present
+(`.sav` header option block; a fresh game and un-stamped legacy saves use the
+defaults — speed 1, SFX 8, music 5 per corpus `OptionsLoadOrDefault`,
+brightness 8 as the port's neutral default since the corpus assigns none)
+and survive save/reload. Suite: `options` (menu-to-runtime for each control,
+saved-value round trip, plus a `--real` probe asserting the shipped control
+names + ranges).
+**Pointer drag**
 (2026-10-21): holding the left button inside a slider's corpus-style 100×20
 bar rect (`FUN_00411870 @ 0x411870` semantics: value tracks pointer x as
 `round(clamp((mx − x) × 0.01, 0, 1) × (max − min))`, re-evaluated every
@@ -615,6 +632,23 @@ finding 12, #14). Three new modules in `src/game/`:
   blocked-tile freezes with the occupancy mark/clear, and the
   queue→executor→move path plus a dispatch rerouting around a blocked
   column.
+- **Per-terrain movement speed** (2026-10-21, closing the finding 10
+  per-terrain placeholder): the `FUN_00469cc0` speed probe — the corpus's
+  per-terrain movement rates, read from the `+0x334` stats block's table
+  at `+0x24 + terrain*4` (seconds to cross one cell; the move branch
+  accumulates `dt / entry` per cell, `FUN_00434570`) — is ported as
+  `ai_stats_speed`, the table modelled as `GameContext.stats_speed_sec`
+  indexed by the cell's terrain type through the level tile accessors.
+  `step_path` now steps the mover at the *terrain-under-foot* rate (cell
+  via `level_cell_of`, type via `level_tile_type`) instead of the flat
+  `AI_MOVE_SPEED_CPS` constant, with the tick's overflow carrying into
+  the following waypoints, so slow terrain visibly slows a walker and
+  fast terrain quickens it; unset entries, out-of-range types, and a
+  mapless context fall back to the port default. The corpus's zero-entry
+  walkability gate and the runner-bit scale stay behind the unported
+  `+0x334` state objects / unrecorded constants (TODO). `ai_test` pins
+  the probe reads and fallbacks and a slow/fast terrain band against a
+  plain-row walker, arrival pops and the occupancy clear unchanged.
 - **Advisor + message-bus runtime** (2026-10-21, finding 22): the announcer
   now builds the `Stream Objective_…` advisor text (`DAT_004ffe38` analog)
   on every outcome, and `objective_advisor_shown` applies the 0x10/0x20/0x80
@@ -712,7 +746,12 @@ finding 12, #14). Three new modules in `src/game/`:
   the libs are absent; `disabled` compiles the module out and drops the movie
   suite). Meson owns the soname lists and passes them to the module and the
   probe as defines, so the build and the runtime never drift apart, and
-  `libdl` is linked where old glibc needs it.
+  `libdl` is linked where old glibc needs it. On macOS, the probe also checks
+  Homebrew's FFmpeg formula prefix and its `.dylib` names. Install it with
+  `brew install ffmpeg`, then rerun `meson setup --reconfigure build` so Meson
+  detects the libraries. The Homebrew FFmpeg formula currently includes GPL
+  components; review FFmpeg's [license guidance](https://ffmpeg.org/legal.html)
+  before bundling those libraries in a distribution.
 - **`.flh` FLIC overlays** (2026-10-21, finding 21): `src/gods98/flic.*` is
   the port's runtime player for the FLIC-family overlay animations the
   shipped game shows on its menus — the 18 wad `.flh` files

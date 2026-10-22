@@ -97,6 +97,22 @@ static int s_idle100_n;
 
 int ai_idle_count(void) { return s_idle100_n; }
 
+/* FUN_00469cc0: `return *(float *)(*(ent + 0x334) + 0x24 + type * 4)` —
+ * the stats speed table behind the entity's stats block, indexed by the
+ * terrain type byte. The port models the stats block's table as the
+ * one game-wide `ctx->stats_speed_sec` (see game.hpp), so the probe
+ * becomes a guarded table read: zero entries and out-of-range types fall
+ * back to the AI_MOVE_SPEED_CPS-equivalent seconds/cell. */
+float ai_stats_speed(const GameContext* ctx, int tile_type)
+{
+    const float def = 1.0f / AI_MOVE_SPEED_CPS;
+    if (ctx == NULL || tile_type < 0 || tile_type >= AI_STATS_TERRAIN_TYPES ||
+        ctx->stats_speed_sec[tile_type] <= 0.0f) {
+        return def;
+    }
+    return ctx->stats_speed_sec[tile_type];
+}
+
 static void idle100_register(EntitySlot* e)
 {
     for (int i = 0; i < s_idle100_n; ++i) {
@@ -441,8 +457,28 @@ static const LevelState* grid_of(const GameContext* ctx)
     return ctx->level;
 }
 
-/* Move/target step: move `e` toward (tx,ty) by speed*dt; 1 when arrived. */
-static int step_toward(EntitySlot* e, float tx, float ty, float dt)
+/* Cells/second the entity moves at *now*: the speed of the terrain under
+ * foot, read the corpus way (move branch 0x43cc35–0x43cc5c: position →
+ * cell via FUN_0048e060, cell → type via FUN_004319b0, type → stats entry
+ * via FUN_00469cc0, where the corpus accumulates dt/entry per cell).
+ * Without a bound grid the corpus cannot read terrain and the port default
+ * applies. Corpus runner scaling (+0x3e8 bit 0x2000000 multiplies the
+ * entry by the constant at 0x49e3b4 — value not recorded in the bundles)
+ * is TODO(corpus). */
+static float underfoot_cps(const GameContext* ctx, const LevelState* grid,
+                           float x, float y)
+{
+    if (grid == NULL) {
+        return AI_MOVE_SPEED_CPS;
+    }
+    int type = level_tile_type(grid, level_cell_of(x), level_cell_of(y));
+    return 1.0f / ai_stats_speed(ctx, type);
+}
+
+/* Move/target step: move `e` toward (tx,ty) by speed*dt, where speed is
+ * the terrain-under-foot rate (see underfoot_cps); 1 when arrived. */
+static int step_toward(GameContext* ctx, EntitySlot* e, float tx, float ty,
+                       float dt)
 {
     float dx = tx - e->x;
     float dy = ty - e->y;
@@ -452,7 +488,7 @@ static int step_toward(EntitySlot* e, float tx, float ty, float dt)
         e->y = ty;
         return 1;
     }
-    float step = AI_MOVE_SPEED_CPS * dt;
+    float step = underfoot_cps(ctx, grid_of(ctx), e->x, e->y) * dt;
     if (step >= len) {
         e->x = tx;
         e->y = ty;
@@ -469,7 +505,9 @@ static int step_toward(EntitySlot* e, float tx, float ty, float dt)
  * the mover-state sync marks the entity's own cell occupied every tick
  * (callback 0x43deed) and the walker only steps while its *current* cell
  * is walkable (FUN_00432770, checked via 0x43cbe8; unwalkable = no step,
- * the command stays live). Arrival runs the corpus pop: the entry's pending
+ * the command stays live). The step rate is the terrain-under-foot speed
+ * (FUN_00469cc0, see underfoot_cps — 0x43cc35's probe on the same branch).
+ * Arrival runs the corpus pop: the entry's pending
  * byte is cleared (0x43cd90), no entry removal. When the list runs out the
  * corpus arrives — +0x3e0 bit 0x8 is cleared (0x43cd66), the arrival cell's
  * occupancy flag is dropped (FUN_00432e00(cell, 0) at 0x43cd72), and the
@@ -489,20 +527,49 @@ static int step_path(GameContext* ctx, EntitySlot* e, float fallback_x,
     }
     int done;
     if (e->wp_count == 0) {
-        done = step_toward(e, fallback_x, fallback_y, dt);
+        done = step_toward(ctx, e, fallback_x, fallback_y, dt);
     } else {
-        while (e->wp_index < e->wp_count && e->wp[e->wp_index].pending == 0) {
-            ++e->wp_index; /* skip popped entries */
-        }
-        if (e->wp_index >= e->wp_count) {
-            done = 1; /* path exhausted: arrived */
-        } else if (!step_toward(e, e->wp[e->wp_index].x, e->wp[e->wp_index].y,
-                                dt)) {
-            return 0; /* still walking the current entry */
-        } else {
-            e->wp[e->wp_index].pending = 0; /* pop = flag clear (0x43cd90) */
-            ++e->wp_index;
-            done = e->wp_index >= e->wp_count;
+        /* Path list: each entry is one cell crossed at the speed of the
+         * terrain under foot (corpus 0x43cc35's read + 0x434570's per-cell
+         * progress: a cell completes every speed seconds, so `dt` can
+         * complete several cells on fast terrain and the overflow carries
+         * into the next entries). Every completion pops in place. */
+        float rem = dt;
+        for (;;) {
+            while (e->wp_index < e->wp_count &&
+                   e->wp[e->wp_index].pending == 0) {
+                ++e->wp_index; /* skip popped entries */
+            }
+            if (e->wp_index >= e->wp_count) {
+                done = 1; /* path exhausted: arrived */
+                break;
+            }
+            float wx = e->wp[e->wp_index].x, wy = e->wp[e->wp_index].y;
+            float dx = wx - e->x, dy = wy - e->y;
+            float len = (float)__builtin_sqrtf(dx * dx + dy * dy);
+            if (len <= 0.001f) {
+                e->wp[e->wp_index].pending = 0; /* already there: pop */
+                ++e->wp_index;
+                continue;
+            }
+            float cps = underfoot_cps(ctx, grid, e->x, e->y);
+            float step = cps * rem;
+            if (step >= len) {
+                e->x = wx;
+                e->y = wy;
+                rem -= len / cps; /* time actually consumed */
+                e->wp[e->wp_index].pending = 0; /* pop = flag clear (0x43cd90) */
+                ++e->wp_index;
+                if (e->wp_index >= e->wp_count) {
+                    done = 1;
+                    break;
+                }
+            } else {
+                e->x += (dx / len) * step;
+                e->y += (dy / len) * step;
+                done = 0;
+                break; /* still walking the current entry */
+            }
         }
     }
     if (done && grid != NULL) {
@@ -664,7 +731,7 @@ int ai_tick(GameContext* ctx, float dt)
                 } else if (type == 2) {
                     /* Target: step toward the payload entity. */
                     const EntitySlot* tgt = (const EntitySlot*)rec_payload(head);
-                    if (tgt == NULL || step_toward(e, tgt->x, tgt->y, dt)) {
+                    if (tgt == NULL || step_toward(ctx, e, tgt->x, tgt->y, dt)) {
                         done += finish_head(ctx, e);
                     } else {
                         break;

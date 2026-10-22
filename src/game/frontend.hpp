@@ -36,6 +36,7 @@
 
 #include "gods98/block.hpp"
 #include "gods98/texture.hpp"
+#include "options.hpp"
 
 #ifdef __cplusplus
 extern "C" {
@@ -67,8 +68,8 @@ struct Flic; /* gods98/flic.hpp — `.flh` overlay player (lazily opened) */
 #define FE_FONT_KEY       0xffff0000u
 
 /* Item kinds — MenuItemType @ 0x413e60 (values 0..5; 5 = the "Next" catch-
- * all, 1 = Trigger). Slider/Cycle/TextInput parse their banner/label into
- * FeItem.label but are display-only in this milestone. */
+ * all, 1 = Trigger). Slider/Cycle adjust the option store behind `fe.opts`
+ * when one is attached (issue #85); TextInput parses its label only. */
 #define FE_ITEM_CYCLE      0
 #define FE_ITEM_TRIGGER    1
 #define FE_ITEM_TEXTINPUT  2
@@ -172,6 +173,13 @@ typedef struct FrontEnd {
     char pending_level[FE_LEVEL_NAME_MAX]; /* level group to load (no "Levels::") */
     char resume_level[FE_LEVEL_NAME_MAX];  /* current level (pause Restart)   */
 
+    /* The functional option store (issue #85). When set, every option
+     * Slider/Cycle's displayed value seeds from it (build/open) and every
+     * adjustment writes back into it — the menu shows the *effective* value,
+     * never a reset default. NULL = classic display-only menu (values keep
+     * the per-banner fe_option_default). */
+    GameOptions* opts;
+
     /* Overlay players open for the currently active submenu (lazily). */
     const FeSubmenu* overlays_for;  /* which submenu's flics are open     */
 
@@ -212,6 +220,12 @@ void frontend_init(FrontEnd* fe);
  * names the level-picker art. Returns 1 when MainMenuFull parsed. The
  * level chain is populated from StartLevel/TutorialStartLevel + NextLevel. */
 int  frontend_build(FrontEnd* fe, BlockFile* cfg);
+
+/* Sync the option widgets with `fe->opts` (issue #85): seed every option
+ * Slider/Cycle value from the store, clamped to the item's cfg range. Called
+ * on build (when `opts` is already attached) and on every frontend_open, so
+ * re-entering Options always shows the effective value. */
+void frontend_options_sync(FrontEnd* fe);
 
 /* The FrontEndActive gate: `Lego* Main FrontEnd` cfg flag (finding 23).
  * (The corpus ANDs the loader-mode check DAT_00505f88 < 3; the port only
@@ -276,6 +290,13 @@ const char* frontend_active_image(const FrontEnd* fe);
 void frontend_render(FrontEnd* fe, const TextureSurface* hi_font,
                      const TextureSurface* lo_font,
                      int w, int h, void* px, int pitch);
+
+/* The in-game Help Window (issue #85): the panel the Help_Window option
+ * toggles. The option is checked here — the display gate — so every caller
+ * shares it and the panel cannot draw while the store says Off. `text`
+ * (NULL for the demo key lines) fills the info lines. */
+void frontend_help_overlay(void* px, int pitch, int w, int h,
+                           const char* text, const GameOptions* opts);
 
 #ifdef __cplusplus
 }

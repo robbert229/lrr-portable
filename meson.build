@@ -36,20 +36,55 @@ endif
 cpp = meson.get_compiler('cpp')
 movies = get_option('movies')
 
-# Single source of truth for the FFmpeg runtime sonames: newest-first, then
-# the unstable `libX.so` name. The probe and the module both consume these as
-# ';'-joined compile defines (module falls back to these lists when built
-# outside meson).
-movie_libs = {
-  'LEGORRR_MOVIE_LIBAVFORMAT' : ['libavformat.so.63', 'libavformat.so.62',
-                                 'libavformat.so.61', 'libavformat.so'],
-  'LEGORRR_MOVIE_LIBAVCODE'   : ['libavcodec.so.63',  'libavcodec.so.62',
-                                 'libavcodec.so.61',  'libavcodec.so'],
-  'LEGORRR_MOVIE_LIBAVUTIL'   : ['libavutil.so.61',   'libavutil.so.60',
-                                 'libavutil.so.59',   'libavutil.so'],
-  'LEGORRR_MOVIE_LIBSWSCALE'  : ['libswscale.so.9',   'libswscale.so.8',
-                                 'libswscale.so.7',   'libswscale.so'],
-}
+# Single source of truth for the FFmpeg runtime libraries: newest-first,
+# followed by an unversioned name. The probe and the module both consume
+# these as ';'-joined compile defines (module falls back to Linux names when
+# built outside meson).
+if host_machine.system() == 'darwin'
+  # Homebrew keeps formula libraries in its opt prefix (which differs between
+  # Apple Silicon and Intel). Embed that prefix when available so both the
+  # configure probe and runtime dlopen can find dylibs without DYLD_LIBRARY_PATH.
+  ffmpeg_lib_prefix = ''
+  brew = find_program('brew', required : false)
+  if brew.found()
+    brew_ffmpeg_prefix = run_command(brew, '--prefix', 'ffmpeg', check : false)
+    if brew_ffmpeg_prefix.returncode() == 0
+      ffmpeg_lib_prefix = brew_ffmpeg_prefix.stdout().strip() / 'lib'
+    endif
+  endif
+  movie_lib_names = {
+    'LEGORRR_MOVIE_LIBAVFORMAT' : ['libavformat.63.dylib', 'libavformat.62.dylib',
+                                   'libavformat.61.dylib', 'libavformat.dylib'],
+    'LEGORRR_MOVIE_LIBAVCODE'   : ['libavcodec.63.dylib',  'libavcodec.62.dylib',
+                                   'libavcodec.61.dylib',  'libavcodec.dylib'],
+    'LEGORRR_MOVIE_LIBAVUTIL'   : ['libavutil.61.dylib',   'libavutil.60.dylib',
+                                   'libavutil.59.dylib',   'libavutil.dylib'],
+    'LEGORRR_MOVIE_LIBSWSCALE'  : ['libswscale.10.dylib',  'libswscale.9.dylib',
+                                   'libswscale.8.dylib',   'libswscale.dylib'],
+  }
+  movie_libs = {}
+  foreach name, candidates : movie_lib_names
+    paths = []
+    if ffmpeg_lib_prefix != ''
+      foreach candidate : candidates
+        paths += [ffmpeg_lib_prefix / candidate]
+      endforeach
+    endif
+    paths += candidates
+    movie_libs += {name : paths}
+  endforeach
+else
+  movie_libs = {
+    'LEGORRR_MOVIE_LIBAVFORMAT' : ['libavformat.so.63', 'libavformat.so.62',
+                                   'libavformat.so.61', 'libavformat.so'],
+    'LEGORRR_MOVIE_LIBAVCODE'   : ['libavcodec.so.63',  'libavcodec.so.62',
+                                   'libavcodec.so.61',  'libavcodec.so'],
+    'LEGORRR_MOVIE_LIBAVUTIL'   : ['libavutil.so.61',   'libavutil.so.60',
+                                   'libavutil.so.59',   'libavutil.so'],
+    'LEGORRR_MOVIE_LIBSWSCALE'  : ['libswscale.so.10',  'libswscale.so.9',
+                                   'libswscale.so.8',   'libswscale.so'],
+  }
+endif
 movie_defines = []
 foreach name, list : movie_libs
   movie_defines += '-D@0@="@1@"'.format(name, ';'.join(list))

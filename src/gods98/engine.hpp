@@ -99,6 +99,10 @@ typedef struct EngineContext {
     const void*    level_terrain;  /* TerrainState (reserved for heights) */
 
     float        exit_timer;   /* DAT_00556efc — decremented by scaled dt */
+    float        time_scale;   /* game-speed dt factor (issue #85). 0 = 1.0:
+                                * options_time_scale writes the live value
+                                * every frame; zero-initialized scaffolds and
+                                * tests keep the pre-#85 1.0 behaviour. */
     int          tickers_ran;  /* scaffolding: count of dispatched tickers */
 } EngineContext;
 

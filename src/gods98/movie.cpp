@@ -29,6 +29,24 @@
  * these — the same literals drive the configure-time probe and are passed as
  * defines (meson.build, `movie_libs`); the lists below are the fallback when
  * building outside meson (kept in sync by hand). */
+#if defined(__APPLE__)
+#ifndef LEGORRR_MOVIE_LIBAVFORMAT
+#define LEGORRR_MOVIE_LIBAVFORMAT                                              \
+    "libavformat.63.dylib;libavformat.62.dylib;libavformat.61.dylib;libavformat.dylib"
+#endif
+#ifndef LEGORRR_MOVIE_LIBAVCODE
+#define LEGORRR_MOVIE_LIBAVCODE                                                \
+    "libavcodec.63.dylib;libavcodec.62.dylib;libavcodec.61.dylib;libavcodec.dylib"
+#endif
+#ifndef LEGORRR_MOVIE_LIBAVUTIL
+#define LEGORRR_MOVIE_LIBAVUTIL                                                \
+    "libavutil.61.dylib;libavutil.60.dylib;libavutil.59.dylib;libavutil.dylib"
+#endif
+#ifndef LEGORRR_MOVIE_LIBSWSCALE
+#define LEGORRR_MOVIE_LIBSWSCALE                                               \
+    "libswscale.10.dylib;libswscale.9.dylib;libswscale.8.dylib;libswscale.dylib"
+#endif
+#else
 #ifndef LEGORRR_MOVIE_LIBAVFORMAT
 #define LEGORRR_MOVIE_LIBAVFORMAT                                              \
     "libavformat.so.63;libavformat.so.62;libavformat.so.61;libavformat.so"
@@ -44,6 +62,7 @@
 #ifndef LEGORRR_MOVIE_LIBSWSCALE
 #define LEGORRR_MOVIE_LIBSWSCALE                                               \
     "libswscale.so.9;libswscale.so.8;libswscale.so.7;libswscale.so"
+#endif
 #endif
 
 /* ------------------------------------------------------------------ *

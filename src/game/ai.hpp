@@ -50,7 +50,11 @@ extern "C" {
 #endif
 
 /* Movement speed (cells/second) and task timings (port-side application
- * constants — corpus movement is path-list driven, see header note). */
+ * constants). AI_MOVE_SPEED_CPS is the *default* rate: with a grid bound
+ * the mover steps at the speed of the terrain under foot instead, read
+ * from the stats speed table behind FUN_00469cc0 (see below); without a
+ * grid — or with unset table entries — this constant stands in. Corpus
+ * movement is path-list driven, see the header note. */
 #define AI_MOVE_SPEED_CPS  2.0f
 #define AI_TASK_DURATION   2.0f
 #define AI_TASK_YIELD      2    /* deposit per completed gather task */
@@ -130,6 +134,16 @@ int ai_commands_active(const GameContext* ctx);
 
 /* The DAT_004eabcc idle table FUN_0043a960 registers into (100 max). */
 int ai_idle_count(void);
+
+/* --- per-terrain movement speed (FUN_00469cc0) -------------------------- */
+/* Port of the `FUN_00469cc0(ent, tile_type)` speed probe: reads the stats
+ * speed table (`GameContext.stats_speed_sec` — the port model of the
+ * `+0x334` stats block's `+0x24 + terrain_type * 4` table) by terrain
+ * index. Returns the corpus value: seconds to cross one cell of that
+ * terrain. Zero entries and out-of-range types fall back to the
+ * AI_MOVE_SPEED_CPS-equivalent default (the corpus indexes blindly and
+ * gates movement on entry != 0 behind the unported +0x3e8 walker bit). */
+float ai_stats_speed(const GameContext* ctx, int tile_type);
 
 #ifdef __cplusplus
 }

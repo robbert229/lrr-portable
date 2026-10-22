@@ -437,6 +437,86 @@ int main(void)
         (void)f00;
     }
 
+    /* --- per-terrain movement speed (FUN_00469cc0 speed probe) ----------- */
+
+    {
+        static uint8_t voxels2[16 * 16 * 0x48];
+        LevelState map2;
+        memset(&map2, 0, sizeof(map2));
+        memset(voxels2, 0, sizeof(voxels2));
+        level_set_int(&map2, LEVEL_OFF_WIDTH, 16);
+        level_set_int(&map2, LEVEL_OFF_HEIGHT, 16);
+        level_store_ptr(&map2, LEVEL_OFF_VOXELS, voxels2);
+        for (int cy = 0; cy < 14; ++cy) {
+            for (int cx = 0; cx < 14; ++cx) {
+                *(uint32_t*)(voxels2 + ((size_t)cy * 16 + cx) * 0x48 + 8) |= 0x10u;
+            }
+        }
+        /* Row 5 crosses columns 4..7 of *slow* terrain (type 4), row 7 the
+         * same span of *fast* terrain (type 5), row 6 stays plain. */
+        for (int cx = 4; cx <= 7; ++cx) {
+            voxels2[(size_t)5 * 16 * 0x48 + (size_t)cx * 0x48 + 2] = 4;
+            voxels2[(size_t)7 * 16 * 0x48 + (size_t)cx * 0x48 + 2] = 5;
+        }
+        ctx.stats_speed_sec[4] = 2.0f;  /* corpus units: sec/cell -> 0.5 cps */
+        ctx.stats_speed_sec[5] = 0.25f; /* -> 4 cps */
+
+        /* The probe reads the table by terrain index; unset entries and
+         * out-of-range types fall back to the default (1/AI_MOVE_SPEED_CPS). */
+        CHECK(ai_stats_speed(&ctx, 4) == 2.0f, "speed table entry for type 4");
+        CHECK(ai_stats_speed(&ctx, 5) == 0.25f, "speed table entry for type 5");
+        CHECK(ai_stats_speed(&ctx, 0) * AI_MOVE_SPEED_CPS == 1.0f,
+              "unset entry defaults to the port speed");
+        CHECK(ai_stats_speed(&ctx, -1) * AI_MOVE_SPEED_CPS == 1.0f &&
+                  ai_stats_speed(&ctx, AI_STATS_TERRAIN_TYPES) *
+                      AI_MOVE_SPEED_CPS == 1.0f,
+              "out-of-range terrain types are guarded to the default");
+
+        ctx.level = &map2;
+        EntitySlot* slow = place(&ctx, 1, "slow", 3, 5);
+        EntitySlot* plain = place(&ctx, 1, "plain", 3, 6);
+        EntitySlot* fast = place(&ctx, 1, "fast", 3, 7);
+        cmd_create_move(slow, 11.0f, 5.0f, 0);
+        cmd_create_move(plain, 11.0f, 6.0f, 0);
+        cmd_create_move(fast, 11.0f, 7.0f, 0);
+        CHECK(slow->wp_count > 1, "the speed rows walk straight-through paths");
+
+        int t_slow = 0, t_plain = 0, t_fast = 0;
+        float lag = 0.0f;
+        for (int t = 1; t <= 64 && !(t_slow && t_plain && t_fast); ++t) {
+            ai_tick(&ctx, 0.5f);
+            if (t_plain == 0 && plain->cmd_head == NULL) {
+                t_plain = t;
+                lag = plain->x - slow->x;
+            }
+            if (t_slow == 0 && slow->cmd_head == NULL) {
+                t_slow = t;
+            }
+            if (t_fast == 0 && fast->cmd_head == NULL) {
+                t_fast = t;
+            }
+        }
+        CHECK(t_slow > 0 && t_plain > 0 && t_fast > 0, "all walkers arrive in "
+                                                      "the tick budget");
+        CHECK(t_slow > t_plain, "slow terrain visibly delays arrival");
+        CHECK(t_plain > t_fast, "fast terrain visibly quickens arrival");
+        CHECK(lag > 1.0f, "the slow walker is behind when the plain row lands");
+
+        /* Arrival still pops the path list as before the probe landed. */
+        CHECK(slow->wp_index == slow->wp_count && slow->cmd_head == NULL &&
+                  slow->wp[slow->wp_count - 1].pending == 0,
+              "slow walker arrival pops the path like today");
+        CHECK(fast->x == 11.0f && fast->y == 7.0f, "fast walker lands exactly");
+        const uint32_t* f_slow = (const uint32_t*)(voxels2 + ((size_t)5 * 16 +
+                                                              11) * 0x48 + 8);
+        CHECK((*f_slow & 0x8000000u) == 0,
+              "slow-row arrival clears the occupancy flag");
+
+        ctx.level = NULL;
+        ctx.stats_speed_sec[4] = 0.0f;
+        ctx.stats_speed_sec[5] = 0.0f;
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "ai_test: %d failure(s)\n", s_failures);
         return 1;
