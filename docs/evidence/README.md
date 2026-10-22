@@ -18,6 +18,20 @@ factory/dispatch (`FUN_00472cd0`, `FUN_00475930`, `FUN_00472710`,
 `FUN_004765c0`) plus `MenuEnter @ 0x416c80`. Import with `import_evidence_bundle`
 or inspect `records` directly.
 
+## `legorr-ddscene-hooks.bundle`
+
+Exported 2026-10-21 from the finding-26 session (the DDiScene animation hooks).
+46 recorded observations: the boot scene-end hook registration
+(`FUN_00472900`/`FUN_00472920`, `DAT_0076cd78/80`, `DAT_0076cd94 |= 0x40`),
+the two hook stubs (`LAB_0043f130` decode: `FUN_00473db0` → `entity+0x3e4 |=
+0x10000`; `LAB_00464c20` decode: `FUN_00464c70` SFX-name-hash lookup →
+`FUN_00465050` → `FUN_0047ad70`), the 45-slot SFX-name-hash bank init
+`FUN_00464740` (`DAT_00502a20`, `SFX_RockWipe` at slot `0x27`), the
+`FUN_00464f60` pending-SFX queue submit, the `FUN_00475140` draw-step call
+sites (`0x47519b` per-frame / `0x475294` scene-end gates), and the
+`FUN_00473680`/`FUN_00465090` positional-sound path. Import with
+`import_evidence_bundle` or inspect `records` directly.
+
 ## `legorr-ddscene.bundle`
 
 Exported 2026-10-21 from the finding-25 session (the DDiScene object runtime
@@ -55,7 +69,7 @@ function touches the unattributed ranges. 113 records.
 
 The canonical findings bundle. 403 recorded observations — function
 decompilations, address lookups, xref queries, and byte reads — each tied to
-the target digest, so findings 01–25 can be re-verified: import the bundle into
+the target digest, so findings 01–26 can be re-verified: import the bundle into
 a session (`import_evidence_bundle`) or inspect the `records` array directly.
 No game asset bytes are included; entries reference offsets and produce
 analysis text only.
