@@ -275,6 +275,22 @@ Open threads, in order of value:
 | 72 | [`findings/72-osf-reader-return-means-open-not-validated.md`](docs/findings/72-osf-reader-return-means-open-not-validated.md) | `.osf` reader's success result records file-open, even when validation rejects data |
 | 73 | [`findings/73-flh-caller-gated-playback.md`](docs/findings/73-flh-caller-gated-playback.md) | `.flh` advancement is caller-gated while the current surface continues drawing |
 | 74 | [`findings/74-reward-flh-context-lifetime.md`](docs/findings/74-reward-flh-context-lifetime.md) | Reward `.flh` contexts load lazily per task and close on transition or exit |
+| 75 | [`findings/75-olistfile-entry-placement.md`](docs/findings/75-olistfile-entry-placement.md) | Level `.ol` loading creates typed entities from required entry fields |
+| 76 | [`findings/76-entity-teardown-drains-command-chain-by-flags.md`](docs/findings/76-entity-teardown-drains-command-chain-by-flags.md) | Entity teardown drains command chains through flag-dependent disposition paths |
+| 77 | [`findings/77-selection-clear-marker.md`](docs/findings/77-selection-clear-marker.md) | A zero-mode selection action clears active selection and transfers a per-entity marker |
+| 78 | [`findings/78-energy-low-target-routing.md`](docs/findings/78-energy-low-target-routing.md) | Energy decay clamps a per-entity resource field using type stats |
+| 79 | [`findings/79-terrain-voxel-mutation-stages.md`](docs/findings/79-terrain-voxel-mutation-stages.md) | Terrain mutation advances selected voxel states through a four-step progression |
+| 80 | [`findings/80-kind-four-deposit-activity-gate.md`](docs/findings/80-kind-four-deposit-activity-gate.md) | Kind-4 entities enter `Activity_Deposit` through a gated state transition |
+| 81 | [`findings/81-emergemap-seeds-delayed-lava-erosion-stages.md`](docs/findings/81-emergemap-seeds-delayed-lava-erosion-stages.md) | `EmergeMap` seeds a bounded table of delayed erosion cells |
+| 82 | [`findings/82-healthbar-config-derives-clamped-border-shades.md`](docs/findings/82-healthbar-config-derives-clamped-border-shades.md) | Health-bar config derives lighter/darker border colors and clamps channels |
+| 83 | [`findings/83-olistfile-driving-references.md`](docs/findings/83-olistfile-driving-references.md) | `.ol` loading resolves optional `driving` names in a second pass |
+| 84 | [`findings/84-entity-teardown-dispatches-type-specific-payload-cleanup.md`](docs/findings/84-entity-teardown-dispatches-type-specific-payload-cleanup.md) | Entity teardown dispatches payload cleanup by raw type, with a type-3 gate |
+| 85 | [`findings/85-selection-candidate-eligibility.md`](docs/findings/85-selection-candidate-eligibility.md) | Selection candidates pass flag, kind, and nonnegative-float eligibility gates |
+| 86 | [`findings/86-low-resource-targets-queue-type-eleven-command.md`](docs/findings/86-low-resource-targets-queue-type-eleven-command.md) | Low-resource entities queue a type-0x11 target command after route checks |
+| 87 | [`findings/87-other-voxel-states-refresh-neighborhood-flags.md`](docs/findings/87-other-voxel-states-refresh-neighborhood-flags.md) | Other voxel states run a separate neighborhood-flag refresh path |
+| 88 | [`findings/88-neighbor-scan-consumes-terrain-work-flags.md`](docs/findings/88-neighbor-scan-consumes-terrain-work-flags.md) | A neighbor scan consumes terrain work flags through mutation mode 1 |
+| 89 | [`findings/89-kind-four-deposit-monitor-uses-count-and-state-gates.md`](docs/findings/89-kind-four-deposit-monitor-uses-count-and-state-gates.md) | A kind-4 monitor gates deposit handoff on count and state |
+| 90 | [`findings/90-lava-erosion-ticker-advances-pending-cells.md`](docs/findings/90-lava-erosion-ticker-advances-pending-cells.md) | Lava erosion ticker advances queued cells through timed stages |
 
 Named-pseudocode corpus: [`docs/decompiles/engine-region.c`](docs/decompiles/engine-region.c)
 (114 named functions covering the engine/game-logic region — findings 01–10).

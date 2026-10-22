@@ -371,3 +371,66 @@ cover caller-gated FLIC stepping and drawing, the reward animation's terminal
 frame behavior, and per-task reward contexts across transitions and exit.
 Runtime playback cadence remains unknown. Import with `import_evidence_bundle`
 or inspect `records` directly.
+
+## `legorr-olistfile-focused-expansion.bundle`
+
+Exported 2026-10-22 for findings 75 and 83 — 6 retained observations selected
+from the `.ol` loader pass. Records cover required entity-entry placement and
+the second-pass resolution of optional `driving` names. No `.ol` files were
+replayed at runtime. Import with `import_evidence_bundle` or inspect `records`
+directly.
+
+## `legorr-entity-destruction-chain-and-payload-expansion.bundle`
+
+Exported 2026-10-22 for findings 76 and 84 — 16 retained observations. Records
+cover teardown's flag-dependent command-chain disposition and type-dispatched
+cleanup of entity payload slots. Static evidence does not resolve allocator
+ownership beyond the observed call paths. Import with `import_evidence_bundle`
+or inspect `records` directly.
+
+## `legorr-selection-clear-expansion.bundle`
+
+Exported 2026-10-22 for finding 77 — 60 retained observations. The cited
+records follow a zero-mode selection action through queued opcode 3, active
+selection clearing, and transfer of a per-entity marker. Runtime input context
+remains unknown. Import with `import_evidence_bundle` or inspect `records`
+directly.
+
+## `legorr-energy-low-target-routing.bundle`
+
+Exported 2026-10-22 for findings 78 and 86 — 59 retained observations. Records cover
+energy-decay setup and the low-resource target-search path that can queue a
+type-`0x11` route command. Candidate identity and any recharge outcome remain
+unresolved. Import with `import_evidence_bundle` or inspect `records` directly.
+
+## `legorr-terrain-mutation-focused-expansion.bundle`
+
+Exported 2026-10-22 for findings 79, 87, and 88 — 3 retained observations
+selected from the terrain-mutation pass. Records cover voxel-state progression,
+a distinct neighborhood flag update, and a neighbor scan that consumes a work
+flag through mutation mode 1. Field meanings and runtime effects are not
+established. Import with `import_evidence_bundle` or inspect `records`
+directly.
+
+## `legorr-object-state-and-health-ui-expansion.bundle`
+
+Exported 2026-10-22 for findings 80, 82, and 89 — 6 retained observations. Records
+cover the gated kind-4 `Activity_Deposit` transition and health-bar config
+parsing, including derived/clamped border colors. Resource transfer and
+rendered appearance were not runtime-tested. Import with
+`import_evidence_bundle` or inspect `records` directly.
+
+## `legorr-lava-erosion-focused-expansion.bundle`
+
+Exported 2026-10-22 for findings 81 and 90 — 8 retained observations selected
+from the `EmergeMap` pass. Records cover pending-cell seeding and the separate
+timed ticker path through terrain stages and terminal event dispatch. Stage
+names and runtime cadence remain unknown. Import with `import_evidence_bundle`
+or inspect `records` directly.
+
+## `legorr-selection-eligibility-expansion.bundle`
+
+Exported 2026-10-22 for finding 85 — 62 retained observations. The cited
+records describe selection-candidate flag, kind, and float gates. They do not
+establish which candidates occur in a live scenario. Import with
+`import_evidence_bundle` or inspect `records` directly.
