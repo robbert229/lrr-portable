@@ -33,6 +33,63 @@ factory/dispatch (`FUN_00472cd0`, `FUN_00475930`, `FUN_00472710`,
 `FUN_004765c0`) plus `MenuEnter @ 0x416c80`. Import with `import_evidence_bundle`
 or inspect `records` directly.
 
+## `legorr-scene-done.bundle`
+
+Exported 2026-10-21 from the finding-27 session (the scene-done flag
+consumers in the entity tick). 42 recorded observations: the two `+0x3e4 &
+0x10000` reader sites inside the finding-10 flag-evaluator blob (assembly
+windows `0x43d8f0–0x43ddc0`), reader A's SFX dispatch `FUN_00465050` with bank
+indices `0x23/0x24/0x25` by target type, reader B's `FUN_004475c0` probe, the
+`FUN_00444a200` work-object resolver / `FUN_00475300`/`FUN_004754c0`
+scene helpers, the SFX-bank slot-order verification for `SFX_Place*`, and the
+`+0x3e4` bit-map reads (`0x80000`, `0x100000`, `0x40000000`). Import with
+`import_evidence_bundle` or inspect `records` directly.
+
+## `legorr-ddscene-owner-link.bundle`
+
+Exported 2026-10-21 from the finding-28 owner-link trace. 20 recorded
+observations: `FUN_00473da0` setter and `FUN_00473db0` getter for object
+`+0x20`; the `FUN_00437d00` entity-spawn branch that stores a scene object at
+entity `+0x1c` and assigns the entity as owner; type-1 model propagation via
+`FUN_0046d140`; type-2/3/4 model wrapper `FUN_00408380`; and the scene-object
+constructor `FUN_00472950` clearing the pooled record. The bundle also retains
+the relevant caller/reference inventory. Import with `import_evidence_bundle`
+or inspect `records` directly.
+
+## `legorr-ddscene-lifecycle.bundle`
+
+Exported 2026-10-21 from the finding-29 teardown trace. Eight recorded
+observations: `FUN_00437540` entity teardown and its DDiScene-object handoff;
+`FUN_00472a40`/`FUN_00472a50` object disposal, including the kind-3/4
+mode-0 early return and the `+0x28` free-list insertion; the
+`FUN_00475710(object, 0)` scene-interface path; and `FUN_00472800` pool
+shutdown. The bundle preserves the decompiler bodies and exact caller
+references. Import with `import_evidence_bundle` or inspect `records` directly.
+
+## `legorr-ddscene-reuse.bundle`
+
+Exported 2026-10-21 for findings 30–32. Five focused pseudocode observations:
+`FUN_00473690` (kind-3/4 inactive-clone scan, scene reattach, time-zero
+draw-step, and copy path), `FUN_00472a50` (mode-0 auxiliary-slot parking),
+`FUN_00437d00` (entity owner assignment after clone factory return),
+`FUN_00475140` (callback gates and scene-end threshold), and `FUN_00472800`
+(pool shutdown and global gate reset). Import with `import_evidence_bundle` or
+inspect `records` directly.
+
+## `legorr-ddscene-hooks.bundle`
+
+Exported 2026-10-21 from the finding-26 session (the DDiScene animation hooks).
+46 recorded observations: the boot scene-end hook registration
+(`FUN_00472900`/`FUN_00472920`, `DAT_0076cd78/80`, `DAT_0076cd94 |= 0x40`),
+the two hook stubs (`LAB_0043f130` decode: `FUN_00473db0` → `entity+0x3e4 |=
+0x10000`; `LAB_00464c20` decode: `FUN_00464c70` SFX-name-hash lookup →
+`FUN_00465050` → `FUN_0047ad70`), the 45-slot SFX-name-hash bank init
+`FUN_00464740` (`DAT_00502a20`, `SFX_RockWipe` at slot `0x27`), the
+`FUN_00464f60` pending-SFX queue submit, the `FUN_00475140` draw-step call
+sites (`0x47519b` per-frame / `0x475294` scene-end gates), and the
+`FUN_00473680`/`FUN_00465090` positional-sound path. Import with
+`import_evidence_bundle` or inspect `records` directly.
+
 ## `legorr-ddscene.bundle`
 
 Exported 2026-10-21 from the finding-25 session (the DDiScene object runtime
@@ -70,7 +127,7 @@ function touches the unattributed ranges. 113 records.
 
 The canonical findings bundle. 403 recorded observations — function
 decompilations, address lookups, xref queries, and byte reads — each tied to
-the target digest, so findings 01–25 can be re-verified: import the bundle into
+the target digest, so findings 01–27 can be re-verified: import the bundle into
 a session (`import_evidence_bundle`) or inspect the `records` array directly.
 No game asset bytes are included; entries reference offsets and produce
 analysis text only.
