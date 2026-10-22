@@ -43,13 +43,21 @@ static char  s_cd_root[RESOURCE_PATH_MAX] = ""; /* "" = "%c:\" default */
 
 static const char* ares_cd_path(const char* name, char* out, size_t out_sz)
 {
+    size_t off;
     if (s_cd_root[0] != '\0') {
-        snprintf(out, out_sz, "%s%c%s%c%s", s_cd_root, RES_PATH_SEP,
-                 s_cd_data_dir, RES_PATH_SEP, name);
+        off = (size_t)snprintf(out, out_sz, "%s%c%s%c", s_cd_root,
+                               RES_PATH_SEP, s_cd_data_dir, RES_PATH_SEP);
     } else {
-        snprintf(out, out_sz, "%c:%c%s%c%s", s_cd_drive, RES_PATH_SEP,
-                 s_cd_data_dir, RES_PATH_SEP, name);
+        off = (size_t)snprintf(out, out_sz, "%c:%c%s%c", s_cd_drive,
+                               RES_PATH_SEP, s_cd_data_dir, RES_PATH_SEP);
     }
+    if (off >= out_sz) {
+        return out;
+    }
+    for (size_t i = 0; name[i] != '\0' && off + 1 < out_sz; ++i) {
+        out[off++] = name[i] == '\\' ? RES_PATH_SEP : name[i];
+    }
+    out[off] = '\0';
     return out;
 }
 

@@ -22,8 +22,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "frontend.hpp"
+#include "gods98/audio.hpp"
 #include "gods98/flic.hpp"
 #include "gods98/texture.hpp"
 #include "util.hpp"
@@ -579,31 +581,78 @@ static void fe_overlay_close_all(FrontEnd* fe)
                     flic_close(sub->overlays[i].flic);
                     sub->overlays[i].flic = NULL;
                 }
+                sub->overlays[i].tried = 0;
             }
         }
     }
     fe->overlays_for = NULL;
+    fe->overlay_active = -1;
 }
 
-/* Open (and tick-start) the active submenu's overlay flics. PlayRandom
- * submenus play one chosen overlay; others play all listed. Missing files
- * (paths that don't resolve) leave the overlay's flic NULL — a no-op. */
+/* Keep the existing all-overlay handling for submenus without PlayRandom. */
 const FeSubmenu* frontend_active_submenu(const FrontEnd* fe);
 
-static void fe_overlay_open(FrontEnd* fe, const FeSubmenu* sub, int picked)
+static void fe_overlay_open_all(FrontEnd* fe, const FeSubmenu* sub)
 {
     if (fe == NULL || sub == NULL) {
         return;
     }
     for (int i = 0; i < sub->overlay_count; ++i) {
         FeOverlay* o = (FeOverlay*)&sub->overlays[i];
-        if ((sub->play_random && i != picked) || o->tried) {
+        if (o->tried) {
             continue;
         }
         o->tried = 1;
         o->flic = flic_open(o->path);
     }
     fe->overlays_for = sub;
+}
+
+/* FUN_0048e170: the game's 15-bit LCG. Seed this front-end instance from
+ * wall-clock seconds and its address so menu sequences vary between runs
+ * without consuming the gameplay random stream. */
+static uint32_t fe_overlay_random(FrontEnd* fe)
+{
+    fe->overlay_rng = fe->overlay_rng * 0x343fdu + 0x269ec3u;
+    return (fe->overlay_rng >> 16) & 0x7fffu;
+}
+
+static void fe_overlay_play_sfx(FrontEnd* fe, const FeOverlay* o)
+{
+    if (fe == NULL || o == NULL || fe->audio == NULL
+        || o->sfx[0] == '\0' || s_strcaseeq(o->sfx, "SFX_NULL")) {
+        return;
+    }
+
+    /* Overlay values name an SFX alias, while Lego.cfg maps that alias under
+     * Samples to a WAVE resource (often prefixed by '@' for streamed sounds). */
+    char key[FE_NAME_MAX + 32];
+    snprintf(key, sizeof(key), "%s Samples !%s", util_root_name(fe->cfg),
+             o->sfx);
+    const char* resource = block_get_strptr(fe->cfg, key);
+    if (resource == NULL || resource[0] == '\0') {
+        return;
+    }
+    if (resource[0] == '@') {
+        ++resource;
+    }
+    audio_play_named(fe->audio, resource);
+}
+
+static void fe_overlay_start_random(FrontEnd* fe, const FeSubmenu* sub)
+{
+    if (sub->overlay_count <= 0 || fe_overlay_random(fe) % 400u != 0) {
+        return;
+    }
+
+    int picked = (int)(fe_overlay_random(fe) % (uint32_t)sub->overlay_count);
+    FeOverlay* o = (FeOverlay*)&sub->overlays[picked];
+    o->flic = flic_open(o->path);
+    if (o->flic == NULL) {
+        return;
+    }
+    fe->overlay_active = picked;
+    fe_overlay_play_sfx(fe, o);
 }
 
 /* Ensure the current submenu's overlays are open (re-opening on menu
@@ -622,12 +671,26 @@ static void fe_overlay_step(FrontEnd* fe)
     }
     if (fe->overlays_for != sub) {
         fe_overlay_close_all(fe);
-        /* PlayRandom: pick one overlay per display; the frame counter is a
-         * decent shake. */
-        int picked = sub->play_random
-                         ? (int)(fe->sel * 7919u % (unsigned)sub->overlay_count)
-                         : -1;
-        fe_overlay_open(fe, sub, picked);
+        fe->overlays_for = sub;
+        if (!sub->play_random) {
+            fe_overlay_open_all(fe, sub);
+        }
+    }
+    if (sub->play_random) {
+        if (fe->overlay_active >= 0
+            && fe->overlay_active < sub->overlay_count) {
+            FeOverlay* o = (FeOverlay*)&sub->overlays[fe->overlay_active];
+            flic_tick_loop(o->flic, 0);
+            if (flic_eof(o->flic)) {
+                flic_close(o->flic);
+                o->flic = NULL;
+                o->tried = 0;
+                fe->overlay_active = -1;
+            }
+        } else {
+            fe_overlay_start_random(fe, sub);
+        }
+        return;
     }
     for (int i = 0; i < sub->overlay_count; ++i) {
         if (sub->overlays[i].flic != NULL) {
@@ -643,6 +706,11 @@ void frontend_init(FrontEnd* fe)
     }
     memset(fe, 0, sizeof(*fe));
     fe->pointer_x = fe->pointer_y = -1;
+    fe->overlay_active = -1;
+    fe->overlay_rng = (uint32_t)time(NULL) ^ (uint32_t)(uintptr_t)fe;
+    if (fe->overlay_rng == 0) {
+        fe->overlay_rng = 1;
+    }
 }
 
 int frontend_build(FrontEnd* fe, BlockFile* cfg)
@@ -768,6 +836,7 @@ int frontend_open(FrontEnd* fe, int menu)
     if (fe == NULL || !fe->built) {
         return 0;
     }
+    fe_overlay_close_all(fe);
     fe->menu = menu;
     fe->sub = 0;
     fe->sel = 0;
@@ -784,6 +853,13 @@ int frontend_open(FrontEnd* fe, int menu)
         fe->menus[menu].submenus[i].scroll = 0;
     }
     return 1;
+}
+
+void frontend_set_audio(FrontEnd* fe, struct AudioPlayer* audio)
+{
+    if (fe != NULL) {
+        fe->audio = audio;
+    }
 }
 
 void frontend_close(FrontEnd* fe)
@@ -813,14 +889,14 @@ static FeEvent fe_activate(FrontEnd* fe)
     /* save-slot row: load the slot (FE_EVT_LOAD_GAME, fe.load_slot set) */
     if (it->load_slot) {
         fe->load_slot = it->load_slot;
-        fe->open = 0;
+        frontend_close(fe);
         return FE_EVT_LOAD_GAME;
     }
 
     /* picker row: start the selected level */
     if (it->level_start) {
         snprintf(fe->pending_level, FE_LEVEL_NAME_MAX, "%s", it->target);
-        fe->open = 0;
+        frontend_close(fe);
         return FE_EVT_START_LEVEL;
     }
 
@@ -832,26 +908,26 @@ static FeEvent fe_activate(FrontEnd* fe)
             switch (fe->sub) {
             case 0:   /* pause Menu1: Continue_Game / Replay_Objective */
                 if (s_stristr(it->label, "continue")) {
-                    fe->open = 0;
+                    frontend_close(fe);
                     return FE_EVT_RESUME;
                 }
                 return FE_EVT_NONE;   /* Replay_Objective: stub */
             case 2:   /* pause Menu3 = quit confirm ("Yes") */
                 fe->quit = 1;
-                fe->open = 0;
+                frontend_close(fe);
                 return FE_EVT_QUIT;
             case 3:   /* pause Menu4 = restart confirm ("Yes") */
                 snprintf(fe->pending_level, FE_LEVEL_NAME_MAX, "%s",
                          fe->resume_level[0] != '\0' ? fe->resume_level
                                                      : it->target);
-                fe->open = 0;
+                frontend_close(fe);
                 return FE_EVT_START_LEVEL;
             default:  /* options submenus: Replay_Objective etc. — stub */
                 return FE_EVT_NONE;
             }
         }
         fe->quit = 1;
-        fe->open = 0;
+        frontend_close(fe);
         return FE_EVT_QUIT;
     }
 
@@ -895,8 +971,8 @@ FeEvent frontend_tick(FrontEnd* fe, const FeInput* in,
     if (fe->sel < 0) {
         fe->sel = 0;
     }
-    /* .flh overlay lane (finding 23): open + advance the active submenu's
-     * flics each frame (PlayRandom picks one at open). */
+    /* .flh overlay lane (finding 23): advance the active clip, or let
+     * PlayRandom's per-tick gate start one configured overlay. */
     fe_overlay_step(fe);
 
     if (in->up) {
@@ -1040,11 +1116,11 @@ FeEvent frontend_tick(FrontEnd* fe, const FeInput* in,
             fe->sub = 0;
             fe->sel = 0;
         } else if (fe->menu == FE_MENU_PAUSED) {
-            fe->open = 0;             /* pause Esc = resume */
+            frontend_close(fe);       /* pause Esc = resume */
             return FE_EVT_RESUME;
         } else {
             fe->quit = 1;
-            fe->open = 0;
+            frontend_close(fe);
             return FE_EVT_QUIT;
         }
         return FE_EVT_NONE;
