@@ -1112,35 +1112,56 @@ int main(int argc, char** argv)
         probe_real(real_dir);
     }
 
-    /* cmd_chain_drop global-list hazard (round-3 review): the drop must
-     * unlink from the global command list BEFORE splicing the record out
-     * of the chain — chain and global thread the one next slot, so a
-     * splice-first drop hides the record from cmd_global_unlink's scan,
-     * leaves s_global_tail dangling at a freed record, and the very next
-     * cmd_link_tail threads a pooled record off that dangling tail and
-     * cycles the chain. Placed at the end of main because mid-file the
-     * cross-section live records (long moves) thread new records onto
+    /* cmd_chain_drop chain-splice soundness (round-3 review, merged with
+     * #112's chain-only model): the drop must capture the record's next
+     * pointer BEFORE splicing it out of the entity chain (and unlink the
+     * global task list first for records that live there — the corpus
+     * FUN_00403d10 unlink+free). A splice that reads prev->next after
+     * freeing the middle record leaves the chain walking into freed
+     * memory, and a subsequent append threads a pooled record off the
+     * dangling link and cycles the chain. Under the merged model entity
+     * commands (move/target/gated) chain on the entity only — the global
+     * list is the task-only overlay — so the invariant to pin is that
+     * the surviving chain stays walkable and NULL-terminated and fresh
+     * records append soundly. Placed at the end of main because mid-file
+     * the cross-section live records (long moves) thread new records onto
      * their chains and alias this probe's bookkeeping. */
     EntitySlot* dropper = place(&ctx, 1, "dropper", 11, 5);
     cmd_create_move(dropper, 10.0f, 5.0f, 0);
-    cmd_create_target(dropper, (void*)dropper); /* globally-last record */
+    cmd_create_target(dropper, (void*)dropper); /* middle record */
+    dropper->flags_3e0 |= 0x400u; /* gated commands need this bit */
+    cmd_create_gated(dropper, (void*)dropper);
     CHECK(cmd_chain_drop(dropper, 2) == 1, "drop takes the target record");
+    {
+        int len = 0;
+        const void* r;
+        for (r = dropper->cmd_head; r != NULL && len < 8; r = cmd_rec_next(r)) {
+            ++len;
+        }
+        CHECK(len == 2 && r == NULL,
+              "surviving chain walks move->gated and NULL-terminates");
+        const void* tail = cmd_chain_walk(dropper);
+        CHECK(tail != NULL && cmd_rec_type(tail) == 5,
+              "chain tail is the gated record after the splice");
+    }
     for (int t = 0; t < 10 && dropper->cmd_head != NULL; ++t) {
         run(&ctx, 1, 0.5f); /* drain before any later link, so nothing else
                              * threads records onto this probe's chains */
     }
     CHECK(dropper->cmd_head == NULL, "dropper chain drains cleanly");
+    /* A fresh command after the drop must thread a new record onto the
+     * surviving chain soundly — no dangling link back into freed memory. */
     EntitySlot* linked = place(&ctx, 1, "linked", 12, 5);
     cmd_create_move(linked, 11.0f, 5.0f, 0);
-    int walk = 0;
-    int reaches = 0;
-    for (const void* r = cmd_global_head(); r != NULL && walk < 64;
-         r = cmd_rec_next(r), ++walk) {
-        if (r == linked->cmd_head) {
-            reaches = 1;
+    {
+        int len = 0;
+        for (const void* r = linked->cmd_head; r != NULL && len < 8;
+             r = cmd_rec_next(r), ++len) {
         }
+        CHECK(len == 1, "fresh move threads one live record");
     }
-    CHECK(walk < 64 && reaches, "next link threads soundly — no dangling tail");
+    CHECK(cmd_rec_next(linked->cmd_head) == NULL,
+          "fresh chain tail is NULL — no dangling reference");
     for (int t = 0; t < 10 && linked->cmd_head != NULL; ++t) {
         run(&ctx, 1, 0.5f);
     }
