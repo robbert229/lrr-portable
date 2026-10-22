@@ -102,6 +102,24 @@ accessors (`FUN_00431560`, `FUN_004319b0`). The creator lifecycle — install
 finish reset (`0x441a50`) — was read from the shipped-image disassembly.
 Import with `import_evidence_bundle` or inspect `records` directly.
 
+## `legorr-spawn-dispatch-granters.bundle`
+
+Exported 2026-10-21 from the minion task-state housekeeping session (issue
+#80 / board task lrr-portable/6). 50 recorded observations covering the
+entity spawn dispatcher `FUN_00437d00` — full decompile and assembly — the
+`0x438150` task-state switch (bytes at `0x438140`, the type−8 selector
+table at `0x4382ac` and the jump table at `0x438298`), the minion static
+stats templates (`0x4a97a0`/`0x4a98f0`/`0x4a9b90`, stride `0x150`), the
+stats accessors (`FUN_00469c10` state setter, `FUN_00469e60` +0x144,
+`FUN_0046a060` +0xcc capacity, `FUN_00469e80` +0x148), the record creators
+(`FUN_00402720`, `FUN_004036c0`, `FUN_00404030`, `FUN_00403610`,
+`FUN_00402850`) and the generic record unlink `FUN_00403d10`, the appender
+`FUN_0044b370` and its two callers (xrefs `0x437eb6`, `0x43da62` — the
+deferred branch bytes at `0x43da60`), the walker `FUN_004377d0` and its
+scene-pass caller `FUN_0043b270`, plus the `+0x3e4`-write census searches
+that disproved the "switch raises the grant flag" claim. Import with
+`import_evidence_bundle` or inspect `records` directly.
+
 ## `legorr-wake-riding.bundle`
 
 Exported 2026-10-21 from the wake/riding slice — 72 retained observations,

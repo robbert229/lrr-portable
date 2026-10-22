@@ -632,7 +632,19 @@ finding 12, #14). Three new modules in `src/game/`:
   and the special-value in-place replace (`0x44b463`) via the install
   appender `FUN_0044b370`; vehicle spawns seed `Activity_Stand` (`0x437eb6`)
   and the deferred-install branch `0x43da62` installs the chain-head
-  record's `+0x38` grant). The demo key `g`
+  record's `+0x38` grant (then drops the type-0x13 grant records,
+  `FUN_00403d10(ent, 0x13, 0, 1)` — `cmd_chain_drop`). The minion
+  task-state granters close out the same story (2026-10-21): the spawn
+  dispatch's `0x438150` switch (<code>type−8</code> → selector table
+  `0x4382ac` → jump table `0x438298`) points the minion types' `+0x334`
+  stats block at the static templates `DAT_004a98f0` (type 8),
+  `DAT_004a9a40` (type 9) and `DAT_004a9b90` (types `0xc..0xe`/`0x10..0x13`)
+  — `ai_minion_state_for` — and the state's `+0xcc` capacity
+  (`FUN_0046a060`, `EntitySlot.activity_cap` via `ai_activity_cap`) now
+  sizes the same appender per entity. `ai_test` pins the selector, the
+  minion spawn state/cap assignment, granted-task probes against a
+  cleared-list failure, the per-entity cap gate, and the type-0x13 grant
+  record cleanup. The demo key `g`
   issues a task for the selection. `ai_test` (suite `ai`) covers activity
   set/complete bookkeeping with the idle-record attach, wake-timer freezing
   (plus the wake mirror and its attached-state gate), link acquisition, the

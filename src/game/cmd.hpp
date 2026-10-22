@@ -74,6 +74,13 @@ void cmd_create_task(EntitySlot* e);   /* kind derived from the entity type */
 /* --- chain ops ---------------------------------------------------------- */
 /* CmdChainWalk: return the tail record of the entity's chain (or NULL). */
 void* cmd_chain_walk(const EntitySlot* e);
+
+/* FUN_00403d10 (generic drop): unlink and free every command record of the
+ * given type from the entity's chain (the corpus walks the +0xbc record
+ * list and matches record +0x00 == type; type-0x13 grant records have no
+ * per-type side effects, so the drop is a plain unlink+free). Returns the
+ * number of records dropped. */
+int cmd_chain_drop(EntitySlot* e, int type);
 void  cmd_chain_purge(EntitySlot* e);
 
 /* Current global command-list head (DAT_004b3354) — the most recent
@@ -94,9 +101,11 @@ int         cmd_rec_kind(const void* rec);
 int         cmd_rec_behaviour(const void* rec);
 /* The +0x38 command-granted activity id: the callback's deferred install
  * branch (0x43da62) appends it onto the entity's permitted-activity list
- * when the +0x3e4 bit-0x40 grant flag is up. Corpus writers of +0x38 live
- * in the 0x438150 task-state machinery (TODO); port-side grants stage
- * through cmd_rec_set_activity. */
+ * when the +0x3e4 bit-0x40 grant flag is up, then drops type-0x13 grant
+ * records (cmd_chain_drop). The corpus writer of +0x38 is the task-state
+ * granter — config/runtime-driven, not a shipped immediate (finding 10
+ * §"Spawn-dispatch task-state switch"); port-side grants stage through
+ * cmd_rec_set_activity. */
 int         cmd_rec_activity(const void* rec);
 void        cmd_rec_set_activity(void* rec, int act);
 uint32_t    cmd_rec_state(const void* rec);

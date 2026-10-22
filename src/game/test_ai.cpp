@@ -269,6 +269,130 @@ int main(void)
     CHECK(grantee->x == x_before_grant, "grant branch returns early that tick");
     grantee->act_count = 0;
 
+    /* --- minion task-state (spawn-dispatch switch 0x438150) ------------- *
+     * The entity spawn dispatcher (FUN_00437d00) assigns the minion types
+     * their +0x334 stats block through the selector at 0x438150: type-8
+     * bytes at 0x4382ac {00 01 04 04 02 02 02 04 03 03 03 03} jump (0x438298)
+     * to the static-template arms DAT_004a98f0 (type 8), DAT_004a9a40
+     * (type 9), DAT_004a9b90 (types 0xc/0xd/0xe/0x10/0x11/0x12/0x13); every
+     * other type falls back to the instance-stats arm (FUN_00469c10). */
+    CHECK(ai_minion_state_for(8) == AI_TASK_STATE_MINION_1 &&
+              ai_minion_state_for(9) == AI_TASK_STATE_MINION_2,
+          "switch arms pin types 8/9 to their static templates");
+    for (int t = 12; t <= 19; ++t) {
+        const int expect = (t == 15) ? AI_TASK_STATE_NONE
+                                     : AI_TASK_STATE_MINION_3;
+        CHECK(ai_minion_state_for(t) == expect,
+              "minion template arm covers the 0xc..0xe/0x10..0x13 set");
+    }
+    CHECK(ai_minion_state_for(1) == AI_TASK_STATE_NONE &&
+              ai_minion_state_for(2) == AI_TASK_STATE_NONE &&
+              ai_minion_state_for(5) == AI_TASK_STATE_NONE &&
+              ai_minion_state_for(6) == AI_TASK_STATE_NONE &&
+              ai_minion_state_for(7) == AI_TASK_STATE_NONE &&
+              ai_minion_state_for(10) == AI_TASK_STATE_NONE &&
+              ai_minion_state_for(11) == AI_TASK_STATE_NONE &&
+              ai_minion_state_for(20) == AI_TASK_STATE_NONE,
+          "non-template types take the instance-stats arm");
+
+    /* The spawn dispatch sets the minion task state and its per-entity
+     * activity capacity (state +0xcc, FUN_0046a060) on the static-template
+     * types; the type-2 spawn grant (Activity_Stand) is untouched. */
+    EntitySlot* minion8 = place(&ctx, 8, "minion", 0, 0);
+    CHECK(minion8->task_state == AI_TASK_STATE_MINION_1 &&
+              minion8->activity_cap == AI_ACTIVITY_SLOTS,
+          "minion spawn assigns task state and capacity");
+    CHECK(minion8->act_count == 0 && ai_activity_probe(minion8) == 0,
+          "ungranted minion activity still fails the probe");
+    EntitySlot* plain_special = place(&ctx, 15, "plain_special", 0, 0);
+    CHECK(plain_special->task_state == AI_TASK_STATE_NONE &&
+              plain_special->activity_cap == 0,
+          "instance-stats types get no minion task state");
+    EntitySlot* rider2 = place(&ctx, 2, "rider2", 0, 0);
+    CHECK(rider2->task_state == AI_TASK_STATE_NONE &&
+              ai_activity_scan(rider2, AI_ACT_STAND) == 1,
+          "type-2 spawn still seeds Stand; no task state");
+
+    /* A granted task answers the can-do probe from the list; the cleared
+     * list fails it — on a minion-task-state entity (FUN_0043c440's probe
+     * is not type-gated; the FUN_0044c530 type-2 gate wraps only the cheat
+     * branch). */
+    ai_activity_grant(&ctx, minion8, AI_ACT_DRILL);
+    CHECK(ai_activity_scan(minion8, AI_ACT_DRILL) == 1 &&
+              ai_activity_probe(minion8) == 1,
+          "granted drill task passes the probe");
+    ai_activity_grant(&ctx, minion8, AI_ACT_REINFORCE);
+    CHECK(ai_activity_probe(minion8) == 3, "reinforce grant answers probe 3");
+    minion8->act_count = 0;
+    CHECK(ai_activity_probe(minion8) == 0, "cleared list fails the probe");
+    ai_activity_grant(&ctx, minion8, AI_ACT_TELEPORT);
+    CHECK(ai_activity_probe(minion8) == 2, "teleport grant answers probe 2");
+    minion8->act_count = 0;
+
+    /* Per-entity capacity (state +0xcc) sizes the appender: a cap-1 state
+     * keeps a one-slot list (append, then FIFO overwrite) — matching
+     * FUN_0046a060's per-entity read; capacity 0 = unset (entity uses the
+     * game-wide default), and a zero context default makes grants a no-op
+     * exactly as the corpus's cap-0 states behave. */
+    minion8->activity_cap = 1;
+    ai_activity_grant(&ctx, minion8, AI_ACT_STAND);
+    CHECK(minion8->act_count == 1 &&
+              ai_activity_scan(minion8, AI_ACT_STAND) == 1,
+          "cap-1 state holds one grant");
+    ai_activity_grant(&ctx, minion8, AI_ACT_ROUTE);
+    CHECK(minion8->act_count == 1 &&
+              ai_activity_scan(minion8, AI_ACT_STAND) == 0 &&
+              ai_activity_scan(minion8, AI_ACT_ROUTE) == 1,
+          "full cap-1 list drops the oldest (FIFO)");
+    minion8->act_count = 0;
+    minion8->activity_cap = 0; /* unset -> ctx default again */
+    int default_cap = ctx.stats_activity_cap;
+    ctx.stats_activity_cap = 0; /* corpus cap-0 state: grant runs nothing */
+    ai_activity_grant(&ctx, minion8, AI_ACT_ROUTE_RUBBLE);
+    CHECK(minion8->act_count == 0 &&
+              ai_activity_scan(minion8, AI_ACT_ROUTE_RUBBLE) == 0,
+          "zero capacity makes grants a no-op");
+    ctx.stats_activity_cap = default_cap;
+
+    /* Deferred grant cleanup (0x43da8b): after installing the chain-head
+     * grant, the corpus unlinks and frees every type-0x13 record
+     * (FUN_00403d10(ent, 0x13, 0, 1)) — the port's cmd_chain_drop. */
+    EntitySlot* grantee2 = place(&ctx, 8, "grantee2", 0, 0);
+    cmd_create_move(grantee2, 10.0f, 0.0f, 0);
+    if (grantee2->cmd_head != NULL) {
+        cmd_rec_set_activity(grantee2->cmd_head, AI_ACT_DRILL);
+        void* grec = cmd_alloc(0x13); /* type-0x13 grant record */
+        cmd_rec_set_next(grantee2->cmd_head, grec);
+        cmd_rec_set_next(grec, NULL);
+    }
+    grantee2->flags_3e4 |= 0x00000040u;
+    float x_before_cleanup = grantee2->x;
+    run(&ctx, 1, 0.5f);
+    CHECK((grantee2->flags_3e4 & 0x00000040u) == 0, "cleanup consumes flag");
+    CHECK(ai_activity_scan(grantee2, AI_ACT_DRILL) == 1,
+          "head grant lands on the minion list");
+    CHECK(grantee2->x == x_before_cleanup, "cleanup branch returns early");
+    {
+        int has_13 = 0;
+        int recs = 0;
+        for (const void* r = grantee2->cmd_head; r != NULL;
+             r = cmd_rec_next(r)) {
+            ++recs;
+            if (cmd_rec_type(r) == 0x13) {
+                has_13 = 1;
+            }
+        }
+        CHECK(!has_13 && recs == 1,
+              "type-0x13 grant record unlinked after the grant");
+    }
+    /* Unlink the still-live move record from the global command list before
+     * purging the chain (cmd_chain_purge frees records; the global list must
+     * not keep the tail pointing at a freed record). */
+    if (grantee2->cmd_head != NULL) {
+        cmd_global_unlink(grantee2->cmd_head);
+    }
+    cmd_chain_purge(grantee2);
+
     /* Attached wake mirror (FUN_0044c110): an expired wake timer wakes
      * the +0x364 target — +0x340 = 100.0 and +0x3e8 bit 0x800000 — unless
      * the target sits in the attached special state (+0x3e0 bit 0x200000). */

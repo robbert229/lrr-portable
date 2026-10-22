@@ -29,10 +29,16 @@ typedef struct CmdRec {
     int32_t  behaviour;  /* +0x1c behaviour id = behaviour[kind]                */
     int32_t  grant_act;  /* +0x38 activity the command grants: the tick's
                           * deferred install (callback 0x43da62) appends it
-                          * to the entity's permitted-activity list. The
-                          * corpus writers sit in the 0x438150 task-state
-                          * machinery — TODO(corpus); port-side writers
-                          * stage grants through cmd_rec_set_activity. */
+                          * to the entity's permitted-activity list and
+                          * drops type-0x13 grant records (cmd_chain_drop).
+                          * The corpus writer of the record's +0x38 — the
+                          * task-state granter — is config/runtime-driven
+                          * (finding 10 §"Spawn-dispatch task-state switch";
+                          * the shipped binary creates type-0x13 "ref"
+                          * records via CmdAlloc(0x13) — e.g. 0x403108,
+                          * 0x424439 — but pins no +0x38 grant/flag pair);
+                          * port-side writers stage grants through
+                          * cmd_rec_set_activity. */
     int32_t  extra;      /* +0x3c (type-8 tasks set 8)                         */
     void*    buffer;     /* +0x40 owned buffer (freed on cmd_free)             */
     int32_t  kind;       /* +0x4c kind index                                   */
@@ -277,6 +283,39 @@ void* cmd_chain_walk(const EntitySlot* e)
 }
 
 static void idle_register(EntitySlot* e);
+
+/* FUN_00403d10 (generic drop): unlink and free every chain record whose
+ * type (+0x00) equals `type`, mirroring the corpus loop over the entity's
+ * +0xbc record list. Like the corpus, records with per-type side effects
+ * (its types 7/0xc/0x17/3 branches) are not included here — the port only
+ * needs the plain drop FUN_00403d10(ent, 0x13, 0, 1) performs on the
+ * deferred-grant path. */
+int cmd_chain_drop(EntitySlot* e, int type)
+{
+    if (e == NULL || e->cmd_head == NULL) {
+        return 0;
+    }
+    int dropped = 0;
+    CmdRec* prev = NULL;
+    CmdRec* cur = as_rec(e->cmd_head);
+    while (cur != NULL) {
+        CmdRec* next = as_rec(cur->next);
+        if (cur->type == type) {
+            if (prev != NULL) {
+                prev->next = cur->next;
+            } else {
+                e->cmd_head = cur->next;
+            }
+            cmd_global_unlink(cur);
+            cmd_free(cur, 0);
+            ++dropped;
+        } else {
+            prev = cur;
+        }
+        cur = next;
+    }
+    return dropped;
+}
 
 void* cmd_global_head(void)
 {
