@@ -4,6 +4,10 @@
 
 The shipped `Samples` section contains matching `@` aliases under `Stream_Objective_Levels::...`, `Stream_ObjectiveAcheived_Levels::...`, `Stream_ObjectiveFailed_Levels::...`, and `Stream_ObjectiveFailedCrystals`. The misspelling `Acheived` is present in both the code's outcome string and the config key. The level and tutorial keys appear under the appropriate outcome families, linking generated result-screen voice names to the streamed entries parsed by `FUN_00434a50`. The same screen setup also has states with no stream alias, and actual submission is conditional on the stored-name/result-screen gates.
 
+Finding 214 traces the separate result-screen countdown: when it expires, the
+code clears a UI state bit and invalidates its sentinel without explicitly
+stopping state zero; the cleanup stop is conditional on that sentinel.
+
 | Objective result | Alias family | Selector | Status |
 | --- | --- | ---: | --- |
 | No result prefix / tutorial intro | `Stream_Objective_Levels::...` | `0` | Observed generated-name and submit path |
