@@ -65,9 +65,12 @@ loop (`EngineSound` `0x4aa340`) is a persistent 3D instance from finding 03.
 (`FUN_00489260`). `FUN_00488c00` runs from the in-game tick (`FUN_004297b0`,
 finding 03): every `timeGetTime() − DAT_00544a10 > 4000` ms it re-checks
 track `DAT_00544a00` (`FUN_00489280` = MCI status) and re-issues playback if
-the track stopped, then fires callback `DAT_00544a08` — i.e. **level music is
-a CD-DA track number** with a 4-second auto-restart loop. No music files
-exist in the archives; the "music/CD" panel strings (finding 04) match.
+the track stopped or playback advanced beyond the selected track, then fires
+callback `DAT_00544a08`. The `play` command has no end-track argument, so MCI
+plays toward the end of the disc; finding 180 records the conditional brief
+spill into a following track before the watchdog notices. **Level music is a
+CD-DA track number** with a 4-second restart check. No music files exist in
+the archives; the "music/CD" panel strings (finding 04) match.
 
 ## 4. Video — `AVIFIL32` streaming module (`FUN_0047e800`, 376 B)
 
