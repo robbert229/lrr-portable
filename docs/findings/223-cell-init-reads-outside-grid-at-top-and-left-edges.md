@@ -103,14 +103,19 @@ and `yPos=3.39245`, so none of these startup objects converts to `x=0` or
 gameplay or otherwise changed after OList loading; it does not cover entities
 spawned later by scripts, emerge triggers, or other runtime systems.
 
-One remaining level-data spawn route is `EmergeMap`. `LoadLayerL`
-(`FUN_0042c120`) iterates its complete width and height, not just the interior,
-and records the coordinates for nonzero layer entries; a configured border
-entry could therefore nominate an emerge location. `Lego.cfg` configures ten
-such maps. Only `Level13` and `Level23` are present in `LegoRR0.wad`, and both
-have zero-valued top and left borders. The other eight configured files are
-absent, so the shipped archive does not let this scan rule out an emerge
-location on those levels.
+One remaining level-data spawn route is `EmergeMap`. `FUN_0042c120`
+(`LoadLayerL`) scans the complete layer and groups nonzero cells into 0x4c-byte
+records: slot 0 is the trigger coordinate, and slots 1–5 are candidate spawn
+coordinates. The entity callback calls `FUN_0042c330` at `0x43c9cf`; that
+routine waits for the current cell to match the record's trigger and its timer
+to expire, then tries each populated candidate through `FUN_0043af30`. That
+spawner requires the candidate to pass the walkability and occupancy gates;
+the walkability check `FUN_00432bd0` tests only upper bounds, so `x=0` or
+`y=0` can pass if its cell flags qualify. `Lego.cfg` configures ten
+`EmergeMap`s. Only `Level13` and `Level23` are present in `LegoRR0.wad`, and
+both have zero-valued top and left borders, so neither supplies a border
+trigger or candidate. The other eight configured files are absent; this
+leaves a conditional border-spawn route unresolved for those levels.
 
 At `0x456dcf`, the writer is called from callback-dispatch branch 4 after
 `FUN_00432c90` updates the cell. A static name/function pair associates the
