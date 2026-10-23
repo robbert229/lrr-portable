@@ -452,10 +452,11 @@ Open threads, in order of value:
 | 253 | [findings/253-terrain-scatter-erosion-propagation-cell-queries-menu-records-and-buffer-helpers.md](docs/findings/253-terrain-scatter-erosion-propagation-cell-queries-menu-records-and-buffer-helpers.md) | Terrain Scatter, Erosion Propagation, Cell Queries, Menu Records, and Buffer Helpers |
 | 254 | [findings/254-command-sweeps-cell-issuing-config-priorities-statistics-and-directdraw-create-helpers.md](docs/findings/254-command-sweeps-cell-issuing-config-priorities-statistics-and-directdraw-create-helpers.md) | Command Sweeps, Cell Issuing, Config Priorities, Statistics, and DirectDraw Create Helpers |
 | 255 | [findings/255-visual-channel-relays-resource-tree-callback-walks-scene-pose-and-registry-helpers.md](docs/findings/255-visual-channel-relays-resource-tree-callback-walks-scene-pose-and-registry-helpers.md) | Visual Channel Relays, Resource-Tree Callback Walks, Scene Pose, and Registry Helpers |
+| 256 | [findings/256-command-band-step-issuers-flag-behavior-timers-and-steering-helpers.md](docs/findings/256-command-band-step-issuers-flag-behavior-timers-and-steering-helpers.md) | Command-Band Step Issuers, Flag-Behavior Timers, and Steering Helpers |
 
 Named-pseudocode corpus: [`docs/decompiles/engine-region.c`](docs/decompiles/engine-region.c)
-(1212 generated sections selected from the reverse-engineering findings; the
-Ghidra script selects 1212 targets. This includes the manually bounded objective
+(1241 generated sections selected from the reverse-engineering findings; the
+Ghidra script selects 1241 targets. This includes the manually bounded objective
 callback at `0x459100`, which auto-analysis does not mark as a procedure).
 Machine-readable evidence: [`docs/evidence/legorr-rev.bundle`](docs/evidence/legorr-rev.bundle)
 (236 recorded REA observations against `LegoRR.exe`,
@@ -507,6 +508,8 @@ The command sweeps, cell issuing, config priorities, statistics, and DirectDraw 
 [legorr-engine-helpers-expansion-26.bundle](docs/evidence/legorr-engine-helpers-expansion-26.bundle).
 The visual channel relays, resource-tree callback walks, scene pose helpers, and string/config registry helpers are recorded in
 [legorr-engine-helpers-expansion-27.bundle](docs/evidence/legorr-engine-helpers-expansion-27.bundle).
+The command-band step issuers, flag-behavior timers, and steering/mesh helpers are recorded in
+[legorr-engine-helpers-expansion-28.bundle](docs/evidence/legorr-engine-helpers-expansion-28.bundle).
 The latest input, selection, and resource helper batch is in
 [legorr-engine-helpers-expansion-5.bundle](docs/evidence/legorr-engine-helpers-expansion-5.bundle);
 its address-range audits are in the [low](docs/evidence/legorr-engine-helper-audit-low-expansion-5.bundle),

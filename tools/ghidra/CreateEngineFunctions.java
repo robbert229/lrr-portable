@@ -1236,6 +1236,35 @@ public class CreateEngineFunctions extends GhidraScript {
         0x476330L,  // ResourceTreeCallbackWalk
         0x476410L,  // ResourceNameMatchCallback
         0x489910L,  // ResourceTreeCallbackCount
+        0x4089d0L,  // Segment2DPointDistance
+        0x40f0e0L,  // KindSixRandomMessageDispatchSweep
+        0x40f920L,  // KindTwoSteeringTorqueApply
+        0x40fb90L,  // SteeringPhysicsStep
+        0x410690L,  // MenuRecordResourcesRelease
+        0x41c800L,  // CatalogSlotFlagUpdate
+        0x424730L,  // SinePhaseMidpointBlendDispatch
+        0x439a20L,  // GatedStepCommandIssueWithTargetRecord
+        0x43a120L,  // CellStepCommandIssueWithJitter
+        0x43aab0L,  // ProximityActivityRaise
+        0x4420d0L,  // KindEffectSlotInitDispatch
+        0x443510L,  // SceneObjectPosePositionSync
+        0x4440f0L,  // ActivityTimeoutAccumulateAndRaise
+        0x444460L,  // FlaggedVectorStepCommandIssue
+        0x448880L,  // RecordGatedStepCommandIssue
+        0x448c90L,  // CardinalStepCommandIssueAndLink
+        0x448eb0L,  // ProximityStepCommandIssueWithJitter
+        0x4490a0L,  // ProximityStepCommandIssueWithLink
+        0x4492b0L,  // CellStepCommandIssueWithTargetMark
+        0x449ac0L,  // ProximityStepCommandIssueClearingGate
+        0x44b500L,  // ObjectPositionStepCommandIssueAndLink
+        0x453bb0L,  // FrameTimerArrayAdvanceAndAdvisorClear
+        0x463d20L,  // ViewBlitRectPositionsApply
+        0x466490L,  // CellSightRayCheckAndFlag
+        0x470540L,  // SegmentCenterProximityCheck
+        0x471d20L,  // VelocitySlotSteerDispatchAndSound
+        0x471f00L,  // PoseOffsetVelocitySlotBlend
+        0x482370L,  // MeshVerticesScaleApply
+        0x488a70L,  // LoadRecordInterfacesReleaseFree
         0x4350a0L,  // SurfaceTypeDescriptionsConfigLoad
         0x444fb0L,  // EntityTurnToVectorActivityIssue
         0x4451e0L,  // EntityPathStepVectorNormalize
@@ -2336,6 +2365,35 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x476330: return "ResourceTreeCallbackWalk";
             case 0x476410: return "ResourceNameMatchCallback";
             case 0x489910: return "ResourceTreeCallbackCount";
+            case 0x4089d0: return "Segment2DPointDistance";
+            case 0x40f0e0: return "KindSixRandomMessageDispatchSweep";
+            case 0x40f920: return "KindTwoSteeringTorqueApply";
+            case 0x40fb90: return "SteeringPhysicsStep";
+            case 0x410690: return "MenuRecordResourcesRelease";
+            case 0x41c800: return "CatalogSlotFlagUpdate";
+            case 0x424730: return "SinePhaseMidpointBlendDispatch";
+            case 0x439a20: return "GatedStepCommandIssueWithTargetRecord";
+            case 0x43a120: return "CellStepCommandIssueWithJitter";
+            case 0x43aab0: return "ProximityActivityRaise";
+            case 0x4420d0: return "KindEffectSlotInitDispatch";
+            case 0x443510: return "SceneObjectPosePositionSync";
+            case 0x4440f0: return "ActivityTimeoutAccumulateAndRaise";
+            case 0x444460: return "FlaggedVectorStepCommandIssue";
+            case 0x448880: return "RecordGatedStepCommandIssue";
+            case 0x448c90: return "CardinalStepCommandIssueAndLink";
+            case 0x448eb0: return "ProximityStepCommandIssueWithJitter";
+            case 0x4490a0: return "ProximityStepCommandIssueWithLink";
+            case 0x4492b0: return "CellStepCommandIssueWithTargetMark";
+            case 0x449ac0: return "ProximityStepCommandIssueClearingGate";
+            case 0x44b500: return "ObjectPositionStepCommandIssueAndLink";
+            case 0x453bb0: return "FrameTimerArrayAdvanceAndAdvisorClear";
+            case 0x463d20: return "ViewBlitRectPositionsApply";
+            case 0x466490: return "CellSightRayCheckAndFlag";
+            case 0x470540: return "SegmentCenterProximityCheck";
+            case 0x471d20: return "VelocitySlotSteerDispatchAndSound";
+            case 0x471f00: return "PoseOffsetVelocitySlotBlend";
+            case 0x482370: return "MeshVerticesScaleApply";
+            case 0x488a70: return "LoadRecordInterfacesReleaseFree";
             case 0x4350a0: return "SurfaceTypeDescriptionsConfigLoad";
             case 0x444fb0: return "EntityTurnToVectorActivityIssue";
             case 0x4451e0: return "EntityPathStepVectorNormalize";
