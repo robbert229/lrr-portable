@@ -161,8 +161,8 @@ playback region). The `.flh` container is documented in finding 21.
    window into a `GlobalAlloc` buffer before DirectSound setup; finding 215 records the open-MMIO
    handle leak on failures after format parsing. Findings 217–218 record the unchecked streamed
    metadata probe and its separate WinMM file-path open. The shared file/WAD open layer is
-   documented in finding 11; loose-file availability and runtime WAD-backed loading remain
-   unverified.
+   documented in finding 11; the reference tree contains 412 loose streamed WAVs, while runtime
+   path resolution remains unverified.
 3. Finding 123 traces `AVIStreamGetFrame` output into a row-copy helper and the surface pixel
    buffer. The helper walks source rows backward while advancing the destination; bottom-up to
    top-down conversion is an inference. Finding 172 traces each frame blit into the shared

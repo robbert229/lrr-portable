@@ -11,8 +11,11 @@ The size check and WAV-format probe therefore use different access paths. If a
 sample is available only through the game's WAD layer and has no corresponding
 standard file path, the MMIO probe cannot use the already-open WAD handle. Its
 zero result is still accepted by the streamed registration path (finding
-217). This narrows the WAD-backed uncertainty in finding 14, but does not
-establish whether the shipped files also exist loose or what a particular
+217). The checked-in reference tree contains 412 loose WAVs under
+`reference/Data/Sounds/Streamed`, including the `Atmosdel.wav`, `stats.wav`,
+and `Objectiv/Misobj01.wav` paths associated with shipped aliases in findings
+140 and 144. This shows those example files are present in the reference tree;
+it does not establish the working directory or which files a particular
 installation exposes to WinMM at runtime.
 
 **Evidence.** Static decompilation of shipped `reference/LegoRR.exe`, SHA-256
