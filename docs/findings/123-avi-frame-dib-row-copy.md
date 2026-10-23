@@ -36,7 +36,9 @@ Before the copy, a `FUN_0047e760` call is made only when the surface-state
 flag at `+8` is clear and that helper returns nonzero. The paired
 `FUN_0047e7b0` call occurs after the copy only when that condition was met.
 This conditional bracketing is observed; its exact API/lock semantics are not
-established by these records.
+established by these records. Finding 210 further records that this condition
+does not guard the row-copy loops: for a supported depth, they still execute
+after a failed or skipped lock attempt.
 
 ## Interpretation and limits
 
