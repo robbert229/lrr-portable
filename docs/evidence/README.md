@@ -191,6 +191,11 @@ sweep (command-creation layer only — the negative result that no tick reads
 record `+0x1c`), and the `test $0x41,%ah` zero-compare idiom. Import with
 `import_evidence_bundle` or inspect `records` directly.
 
+This bundle also contains the `FUN_0043f190` teleport-spawn worker
+decompilation. Finding 223 connects it to the Teleport Man request and its
+direct entity-callback call at `0x43ca38`; that callsite was checked against
+the shipped-image disassembly.
+
 ## `legorr-path-list-movement.bundle`
 
 Exported 2026-10-21 from the path-list movement session — 67 retained

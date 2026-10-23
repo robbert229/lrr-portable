@@ -116,6 +116,24 @@ The `Precreate` branch in level-load routine `FUN_00429890` separately creates
 ten type-2 entities and passes each to `FUN_00437540`; that pass contains no
 position assignment, so it is not evidence of a border spawn.
 
+The Teleport Man action provides a separate runtime type-2 creation path.
+`FUN_0041a300` maps menu slot 1 to `Interface_MenuItem_TeleportMan`, and
+`FUN_0041dca0` handles that slot by calling `FUN_00434e80(2,0)`. The helper
+queues that type/subtype through `FUN_0043f150` when the matching teleport
+ability is available. The entity callback at `0x43c810` directly calls
+`FUN_0043f190` at `0x43ca38` when its teleporter-stat gate passes. The worker
+consumes the queued type, creates the minifigure through `FUN_00438610`, reads
+the servicing entity's scene-frame position, and passes those coordinates to
+`FUN_004428a0` for the new entity. The traced worker does not call the
+pathfinder or check the resulting grid coordinate against map bounds, so the
+spawn bypasses the normal path-to-border restriction. It could place a
+minifigure at `x=0` or `y=0` if the servicing entity's scene origin is there.
+The shipped OList scan above establishes only that configured startup objects
+are interior; whether gameplay can place a servicing teleporter on a border
+remains open.
+This route also does not establish that a teleported minifigure receives the
+Place activity or reaches `FUN_00432600` before it moves away.
+
 One remaining level-data spawn route is `EmergeMap`. `FUN_0042c120`
 (`LoadLayerL`) scans the complete layer and groups nonzero cells into 0x4c-byte
 records: slot 0 is the trigger coordinate, and slots 1–5 are candidate spawn
