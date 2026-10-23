@@ -69,7 +69,8 @@ track `DAT_00544a00` (`FUN_00489280` = MCI status) and re-issues playback if
 the track stopped or playback advanced beyond the selected track, then fires
 callback `DAT_00544a08`. The `play` command has no end-track argument, so MCI
 plays toward the end of the disc; finding 180 records the conditional brief
-spill into a following track before the watchdog notices. **Level music is a
+spill into a following track before the watchdog notices, and finding 195 records
+how a failed current-track query can be accepted as a valid track number. **Level music is a
 CD-DA track number** with a 4-second restart check. No music files exist in
 the archives; the "music/CD" panel strings (finding 04) match.
 
@@ -144,7 +145,7 @@ playback region). The `.flh` container is documented in finding 21.
    top-down conversion is an inference. Finding 172 traces each frame blit into the shared
    DirectDraw render target; final device presentation remains dependent on the surrounding renderer.
    Findings 173–177 record the unchecked null-allocation path, missing explicit frame-retriever close, stale-surface blit after a null frame fetch, caller-level restart at stream length, and the video-only AVI stream selection.
-   Findings 181–194 resolve the command loop's keyboard/mouse-release exit gate, document the credits scroll clock over its background AVI, cross-check the shipped credits text against the CRLF splitter, record `.cconv` sidecar lookup precedence, show that successful AVI playback has no explicit loop sleep, trace the credits path around the `DontPlayAvis` gate, distinguish the DirectShow configured-video route from the credits AVIFIL32 route, record the COM route's missing explicit apartment teardown, show that configured videos add primary audio and video streams, document unchecked COM cleanup after partial initialization, trace the level-video press-to-skip condition, correlate the shipped boot/credits AVI stream contents with those routes, identify the null-release path when the DirectShow class cannot be created, and document separate-thread graph execution.
+   Findings 181–195 resolve the command loop's keyboard/mouse-release exit gate, document the credits scroll clock over its background AVI, cross-check the shipped credits text against the CRLF splitter, record `.cconv` sidecar lookup precedence, show that successful AVI playback has no explicit loop sleep, trace the credits path around the `DontPlayAvis` gate, distinguish the DirectShow configured-video route from the credits AVIFIL32 route, record the COM route's missing explicit apartment teardown, show that configured videos add primary audio and video streams, document unchecked COM cleanup after partial initialization, trace the level-video press-to-skip condition, correlate the shipped boot/credits AVI stream contents with those routes, identify the null-release path when the DirectShow class cannot be created, document separate-thread graph execution, and trace the CD-audio current-track error handling.
 4. `.flh` container format — **closed** by finding 21 (2026-10-20): layout,
    both 16-bit coders, and the RGB555→565 write transform.
 5. MCI: only `play cdaudio from N` and status queries were observed; no
