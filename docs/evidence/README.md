@@ -214,6 +214,13 @@ its `FUN_00403d10` → `FUN_00432c90` → `FUN_0042f6f0` path. The traced produc
 so this path does not establish an edge-sensitive read without an intervening
 flag writer. This caller and producer trace also comes from the full decompile
 and shipped-image disassembly, not a separate REA bundle.
+The setter census finds cell-grid stores of `0x20000000` in the PathMap loader
+`FUN_0042c760` and dynamic writer `FUN_00432600`; direct calls to the dynamic
+writer are at `0x43e77f` and `0x456dcf`. The load-time setter precedes queued
+updates, leaving those callback gates as the directly traced post-clear restore
+routes. This census comes from the full decompile and shipped-image
+disassembly, not a separate REA bundle; indirect calls and aliased stores were
+not ruled out.
 The tutorial callback trace additionally finds `SetRockMonsterAtTutorial 1`
 in Level17's shipped `.nrn` source and material 1 on all 69 distinct top/left
 border cells of its configured `Surf_17.map`. `FUN_00456b80` groups by terrain byte,

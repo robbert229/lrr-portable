@@ -224,6 +224,18 @@ would have to be restored before the event updates the cell. The callback's
 coordinate conversion and bounds helper accept zero, so an edge cell is not
 ruled out at the source, but no such interleaving is established here.
 
+The setter census narrows the possible flag-restoration path. In the full
+decompilation and shipped-image disassembly, the cell-grid stores that set
+`0x20000000` are the PathMap loader `FUN_0042c760` and dynamic writer
+`FUN_00432600`. The latter has two direct call sites: entity callback
+`0x43e77f` and tutorial callback `0x456dcf`. The PathMap loader runs during
+level construction, before the deferred update producer can clear the flag.
+Consequently, a post-clear restore through the directly traced paths would
+need one of those callback gates to run on the same cell before its queued
+update is consumed. This direct-xref and literal-store census does not rule
+out an indirect call or an aliased store, and it does not establish that the
+required ordering occurs.
+
 One remaining level-data spawn route is `EmergeMap`. `FUN_0042c120`
 (`LoadLayerL`) scans the complete layer and groups nonzero cells into 0x4c-byte
 records: slot 0 is the trigger coordinate, and slots 1–5 are candidate spawn

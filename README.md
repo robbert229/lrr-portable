@@ -419,7 +419,7 @@ Open threads, in order of value:
 | 220 | [findings/220-avi-unsupported-surface-depth-still-advances.md](docs/findings/220-avi-unsupported-surface-depth-still-advances.md) | AVI Timeline Advances When the Movie Surface Depth Is Unsupported |
 | 221 | [findings/221-lava-effect-latches-zero-sound-handle.md](docs/findings/221-lava-effect-latches-zero-sound-handle.md) | Lava Effect Latches a Zero Sound Handle |
 | 222 | [findings/222-wav-fmt-extension-read-is-not-chunk-bounded.md](docs/findings/222-wav-fmt-extension-read-is-not-chunk-bounded.md) | WAV Format Extension Read Is Not Bounded by the `fmt ` Chunk |
-| 223 | [findings/223-cell-init-reads-outside-grid-at-top-and-left-edges.md](docs/findings/223-cell-init-reads-outside-grid-at-top-and-left-edges.md) | Conditional top/left edge read before the cell grid; debug input and a Level17 tutorial spawn provide candidate edge routes, with required runtime cell flags still unestablished |
+| 223 | [findings/223-cell-init-reads-outside-grid-at-top-and-left-edges.md](docs/findings/223-cell-init-reads-outside-grid-at-top-and-left-edges.md) | Conditional top/left edge read before the cell grid; flag restoration narrows to two directly traced callback routes, with runtime ordering and edge flags unestablished |
 | 224 | [findings/224-predug-cells-feed-a-capped-spawn-coordinate-pool.md](docs/findings/224-predug-cells-feed-a-capped-spawn-coordinate-pool.md) | Predug Cell Values Feed a Capped Coordinate Pool |
 
 Named-pseudocode corpus: [`docs/decompiles/engine-region.c`](docs/decompiles/engine-region.c)
