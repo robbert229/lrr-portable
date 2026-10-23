@@ -550,7 +550,8 @@ comma-separated variants, loop/stream markers, variant selection, the
 deferred submission queue's selector/route-bit forwarding, and the signed
 volume marker path, including the `#...#` token-buffer termination/bounds
 limitation. It also records how `-reducesamples` gates `!`-prefixed aliases
-before resolution. The `#...#` prefix has no shipped example. Import with
+before resolution; the shipped config has 242 such aliases, 37 with streamed
+paths. The `#...#` prefix has no shipped example. Import with
 `import_evidence_bundle` or inspect `records` directly.
 
 ## `legorr-streamed-wav-format.bundle`
