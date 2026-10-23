@@ -20,7 +20,8 @@ The behavior is conditional on batching being enabled and does not establish
 that shipped gameplay reaches the full queue. Finding 171 documents one
 caller-side consequence of a zero return from the queued path: a shared-object
 event stores zero as its sound handle, which can later be passed to the
-stop-by-handle helper.
+stop-by-handle helper. Finding 212 shows that the frame sound tick temporarily
+clears the batching flag without draining or clearing this packed queue.
 
 **Evidence.** Static disassembly and decompilation of shipped
 `reference/LegoRR.exe`, SHA-256

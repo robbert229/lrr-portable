@@ -4,7 +4,7 @@ When sound submission batching is enabled (`DAT_00502a2c & 8`), `FUN_00465090` s
 
 `FUN_004652d0(0, 1)` drains pending records. For a non-positional record it calls `FUN_00464fa0(alias, selector)`; for a positional record it calls `FUN_00465090(object, alias, selector, route, position)`. The selector therefore survives the deferred path unchanged. Separately, `FUN_004651a0` resubmits the previous frame's secondary pending list through `FUN_00464fa0(alias, storedSelector)`, then shifts the newly accumulated lists into place.
 
-This clarifies how selector values reach the stream-state argument even when the audio system batches requests. It does not identify every runtime request's alias or establish audible playback.
+This clarifies how selector values reach the stream-state argument even when the audio system batches requests. The frame tick's separate alias-list rotation does not drain this packed queue; finding 212 traces that distinction. It does not identify every runtime request's alias or establish audible playback.
 
 | Packed bit | Stored from | Drain behavior |
 | --- | --- | --- |
