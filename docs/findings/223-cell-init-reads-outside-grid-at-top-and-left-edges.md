@@ -203,10 +203,15 @@ to expire, then tries each populated candidate through `FUN_0043af30`. That
 spawner requires the candidate to pass the walkability and occupancy gates;
 the walkability check `FUN_00432bd0` tests only upper bounds, so `x=0` or
 `y=0` can pass if its cell flags qualify. `Lego.cfg` configures ten
-`EmergeMap`s. Only `Level13` and `Level23` are present in `LegoRR0.wad`, and
-both have zero-valued top and left borders, so neither supplies a border
-trigger or candidate. The other eight configured files are absent; this
-leaves a conditional border-spawn route unresolved for those levels.
+`EmergeMap`s. `Level09`, `Level13`, `Level16`, `Level20`, `Level21`,
+`Level23`, `Level24`, and `Level25` are present in `LegoRR0.wad`; all eight
+have zero-valued top and left borders. The configured `Level11` and `Level14`
+maps are absent. Thus none of the available EmergeMap assets supplies a
+border trigger or candidate; the two missing maps remain unknown. The seven
+distinct configured ErodeMap files are all present and also have zero-valued
+top and left borders. This narrows the shipped-data case but does not rule
+out the callback-driven lava-neighbor path setting `0x200000` on an edge cell
+during play.
 
 That spawn route does not by itself reach the risky cell update. `FUN_0043af30`
 creates entity type 3 and the creation path identifies it as a RockMonster,

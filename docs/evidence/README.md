@@ -581,7 +581,9 @@ unverified. Import with `import_evidence_bundle` or inspect `records` directly.
 Exported 2026-10-22 for finding 109 — 10 retained observations. Records cover
 LevelLoad's EmergeMap argument, the map pipeline, and LayerL's six-slot record
 encoding. Consumers and gameplay meaning of the appended records remain
-unknown. Import with `import_evidence_bundle` or inspect `records` directly.
+unknown. Finding 223 separately scans all configured EmergeMap and ErodeMap
+assets for top/left border values; that asset scan is not retained in this
+bundle. Import with `import_evidence_bundle` or inspect `records` directly.
 
 ## `legorr-objective-entity-paired-predicate.bundle`
 
