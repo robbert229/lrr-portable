@@ -357,6 +357,7 @@ Open threads, in order of value:
 | 158 | [findings/158-sfx-volume-slider-sets-primary-directsound-volume.md](docs/findings/158-sfx-volume-slider-sets-primary-directsound-volume.md) | SFX-labeled slider sets the shared primary DirectSound output volume |
 | 159 | [findings/159-music-volume-targets-compact-disc-mixer-source.md](docs/findings/159-music-volume-targets-compact-disc-mixer-source.md) | Music volume callback targets the audio-CD mixer source |
 | 160 | [findings/160-music-volume-defaults-to-zero-without-cd-mixer-control.md](docs/findings/160-music-volume-defaults-to-zero-without-cd-mixer-control.md) | Music slider starts at zero when the CD mixer source is unavailable |
+| 161 | [findings/161-gameplay-uses-positional-and-object-attached-sfx.md](docs/findings/161-gameplay-uses-positional-and-object-attached-sfx.md) | Gameplay callers send several named aliases through spatial sound paths |
 
 Named-pseudocode corpus: [`docs/decompiles/engine-region.c`](docs/decompiles/engine-region.c)
 (114 named functions covering the engine/game-logic region — findings 01–10).
