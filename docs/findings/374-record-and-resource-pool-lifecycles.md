@@ -1,0 +1,28 @@
+# Finding 374 — Record and Resource Pool Lifecycles
+
+The six functions in issue #222 implement two distinct free-list allocators. The first is a variable-stride record pool (`0x0047a580`/`0x0047a5c0`, stride `0xbf4`); the second is a 0x20-byte scene-object registry pool (`0x0047e0c0`); the third is a 0x34-byte render-resource-instance pool (`0x004807a0`/`0x004807d0`/`0x004807f0`). “Pool” here describes allocation mechanics only; semantic record types remain partly unknown.
+
+| Address | Function | Observed behavior and state flow |
+| --- | --- | --- |
+| `0x0047a580` | `FixedSizeRecordPoolAcquire` | Reads the free-list head at `DAT_005065a8`; if empty, calls `0x0047a5c0`, then reloads the head. Pops through record dword `+0xbf0`, clears `0x2fd` dwords (`0xbf4` bytes), sets `+0xbf0` to self, stores the caller argument at offset 0, and returns the record. Existing caller evidence is `ev_c4bd0c5ddfd43126e0c837724a68a4f92e78bb3d26d6ad6387bd8beed30e6e76` in `legorr-engine-helpers-expansion-9.bundle` (finding 368). |
+| `0x0047a5c0` | `FixedSizeRecordPoolGrow` | Computes batch count as `1 << (DAT_005065ac & 31)`, allocates `count * 0xbf4` bytes via `0x0048dbd0`, records the block in the array at `DAT_00506528 + 4*index`, and increments `DAT_005065ac` only when allocation succeeds. Within the block, links records at stride `0xbf4` through `+0xbf0`; the last record links to the previous global head, then the new first record becomes the head at `DAT_005065a8`. It is directly called by `0x0047a580`. |
+| `0x0047e0c0` | `FixedSizeRecordPoolGrow` | A separate pool: computes `1 << (DAT_0053398c & 31)`, allocates `count * 0x20`, stores the block in `DAT_00533908[index]`, and increments `DAT_0053398c` on success. Links each record through `+0x1c`, joins the last record to `DAT_00533988`, and makes the block head the new free-list head. Caller `0x0047e3e0` (`InterfaceMethodResultRecordInitialize`) grows only when that head is null, then initializes record fields and self-links its `+0x1c` field. Caller evidence: `ev_6fb1e4dfab7979bd8bbace07057753e8e2b534684994729e0f81c0c2ea34ed99` in finding 371. |
+| `0x004807a0` | `FixedSizePoolRecordAcquire` | Calls `0x004807f0` if `DAT_005405d4` is null, pops the head through dword index 12 (`+0x30`), clears 13 dwords (`0x34` bytes), self-links `+0x30`, and returns the record. Direct evidence is `ev_52089e3fd8e434de24a204f8237644aafe21e6af89c3a88348f6c1f8f2559683` in `legorr-engine-helper-audit-text-io-expansion-9.bundle` (finding 373). |
+| `0x004807d0` | `FixedSizePoolRecordRelease` | Pushes the supplied record onto `DAT_005405d4`: writes the old head to `record+0x30`, then updates the head to the record. Direct evidence is the same bundle record as the acquire function (finding 373). |
+| `0x004807f0` | `RenderResourceInstancePoolGrow` | Computes `1 << (DAT_005405d8 & 31)`, allocates `count * 0x34`, stores the block in `DAT_00540584[index]`, and increments the block count after success. Links records at stride `0x34` using `+0x30`, joins the final record to the former head, then updates `DAT_005405d4`. Direct evidence is `ev_ee3bdb54cb55bc9fe08f1c80b6f78ab7caff644d5f61cd31574bea8a89bbff15`; caller evidence is `ev_52f4d8c649a2272633f37a52e5c182fb360387565bbf27a60d0c7aad2624189d` (finding 371). |
+
+## Interaction and limits
+
+- The `0x0047a580` allocator owns its own grow path and stores acquired blocks in a global block table. Its acquired records are cleared before the client argument is written, so stale fields do not survive reuse according to the pseudocode.
+- The `0x0047e0c0` grower backs a different record family: initialization at `0x0047e3e0` links an interface-method result record to itself at `+0x1c` after the pool head is made available. The relationship is direct caller evidence; the full pool teardown/return path is not established here.
+- The `0x004807a0`/`0x004807d0` pair is a conventional LIFO free list, and `0x004807f0` supplies batches to it. `0x00480870` (`TaskCallbackRecordAllocateAndInitialize`) calls the acquire routine. `0x004820d0` releases cached render-resource records through `0x004807d0` on two branches after releasing associated resources; this ties the free list to cached-resource lifecycle handling. These call sites establish lifecycle participation, but not the semantic meaning of every field.
+- Each grower checks allocation success before linking or advancing its batch counter. In contrast, the two acquire routines shown here reload/pop without checking whether growth left the head null. Whether allocator failure is impossible by contract, handled by a caller, or an actual null-dereference risk is unresolved.
+- Batch size doubles with the stored index through a 32-bit shift whose shift amount is masked to five bits. The pseudocode alone does not establish a practical maximum, overflow policy, or whether other code caps growth.
+
+## Follow-up slices
+
+- Trace release/teardown and block-table ownership for the `0xbf4` and `0x20` pools, including who returns their records to the free lists.
+- Inspect all `0x004807d0` callers and the 0x34-byte record consumers to identify field invariants and double-release defenses.
+- Establish allocator failure behavior for `0x0048dbd0` and whether callers have an external fatal-error path.
+
+Complete pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c); named excerpts and prior evidence summaries are in findings [368](368-record-pool-and-recursive-list-helpers.md), [371](371-record-pools-pair-tables-and-buffered-streams.md), and [373](373-cursor-simulation-renderer-and-file-helpers.md). Direct evidence is distinguished above from conclusions based on decompile/caller context.
