@@ -738,3 +738,10 @@ Finding 135 reuses `FUN_00464d00` in `legorr-samples-config.bundle` to document 
 Finding 136 uses `FUN_0047b970` and `FUN_0047ba20` from `legorr-sound-instance-spatial-expansion.bundle` to trace replacement and cleanup for a selected streamed-playback state. The argument path from `FUN_0047ad70` is cross-checked against the assembly retained in `legorr-sound-duplicate-selection.bundle`.
 
 Finding 137 combines the level-name handler records in `legorr-frontend.bundle` with the sound-instance updater and wrapper records in `legorr-engine-expansion.bundle` and `legorr-sound-instance-spatial-expansion.bundle`. It traces selector values 0 and 1 to `FUN_0047b970`, while leaving actual streamed use of the dynamic selector-1 alias unresolved.
+
+Finding 223's cell-boundary analysis is documented in
+[`docs/findings/223-cell-init-reads-outside-grid-at-top-and-left-edges.md`](../findings/223-cell-init-reads-outside-grid-at-top-and-left-edges.md).
+It is grounded in the checked-in `reference/LegoRR.exe`, its full decompile at
+`docs/decompiles/full/LEGORR.full.c`, targeted `objdump` call-site decodes, and
+the extracted shipped WAD maps and scripts. No separate REA JSON evidence
+bundle was exported for this analysis.

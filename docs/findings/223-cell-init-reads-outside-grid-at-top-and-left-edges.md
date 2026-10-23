@@ -345,6 +345,18 @@ Other direct runtime call sites include `0x428dca`, `0x43cd3d`, `0x43ebbc`,
 border-walkability source; their relevant live coordinates and cell states
 remain unproven.
 
+The movement callers at `0x43cd3d` and `0x43ebbc` add a concrete route into
+that propagation helper. Both first pass through `FUN_00432770` in its
+`param_4=0` walkability branch, which requires bit `0x10`, rejects bit `0x40`,
+and filters cell types 1, 7, and 11. Its coordinate checks only require
+`x < width-2` and `y < height-2`; they do not reject zero. The `0x43ebbc`
+caller then passes the same candidate coordinates to `FUN_00430530`, while
+`0x43cd3d` passes its selected grid coordinates there. Thus a runtime
+candidate at `x=1` or `y=1` can propagate `0x10` to the corresponding border
+neighbors if the remaining cell and movement gates pass. The executable and
+shipped assets establish the route and gates, but not that either caller used
+such coordinates during play.
+
 Neither call site proves that an out-of-range neighbor reaches
 `FUN_0042f6f0` or that its later `0x400` read executes. These configured-level
 script and map scans do not cover modified assets, all possible cell flags, or
