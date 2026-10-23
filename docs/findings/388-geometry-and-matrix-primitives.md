@@ -9,9 +9,9 @@ meaning where the callers do not establish it.
 | Address | Function | Observed behavior and important callers |
 | --- | --- | --- |
 | `0x00477290` | `CameraScreenCoordinateProject` | Forwards its input and output pointers to the camera/render interface method at vtable offset `+0x54`. `CameraPointerRayRoute` (`0x00429470`) and `ScreenRayTerrainCellPick` (`0x004502e0`) use it to construct screen-position-dependent rays. |
-| `0x004772d0` | `CameraProjectPointToScreen` | Calls the camera/render interface method at vtable offset `+0x50`, then divides the first two transformed components by the third for the output. Callers such as `TickEntityScreenEffects` (`0x004075a0`) and `SelectedEntityGroundMarkerRender` (`0x004248b0`) consume the result as screen coordinates. The exact interface transform convention is not established by this wrapper alone. |
-| `0x00479500` | `D3DRMVectorRandom` | Thin wrapper around the imported Direct3DRM `D3DRMVectorRandom`; callers use it for randomized vectors, including steering and particle setup. The distribution and output constraints are defined by the imported routine, not this wrapper. |
-| `0x00479510` | `D3DRMVectorRotate` | Thin wrapper around imported `D3DRMVectorRotate`, forwarding vector, quaternion, output, and scalar arguments. Movement/vector helpers use it for rotation. |
+| `0x004772d0` | `CameraProjectPointToScreen` | Calls the camera/render interface method at vtable offset `+0x50` into a temporary, then writes two output scalars. The decompiler's local types make the quotient operands ambiguous, so the exact divide is unresolved here. Callers such as `TickEntityScreenEffects` (`0x004075a0`) and `SelectedEntityGroundMarkerRender` (`0x004248b0`) consume the result as screen coordinates. |
+| `0x00479500` | `D3DRMVectorRandom` | Thin wrapper around the imported Direct3DRM `D3DRMVectorRandom`, forwarding its output pointer. `SteeringPhysicsStep` (`0x0040fb90`) and `ParticleSlotInitializeForEmitter` (`0x00465c50`) use it to obtain randomized vectors. The distribution and output constraints are defined by the imported routine, not this wrapper. |
+| `0x00479510` | `D3DRMVectorRotate` | Thin wrapper around imported `D3DRMVectorRotate`, forwarding vector, quaternion, output, and scalar arguments. `EntityVelocityVectorDispatch` (`0x00442300`) and `StepMovementVectorResolve` (`0x00444680`) call it for vector rotation. |
 | `0x00479530` | `SurfaceTriangleNormalCalculate` | Forms a cross product from the two triangle edges and normalizes it into the output vector. Terrain surface construction and `TerrainCellSurfaceNormalGet` (`0x00463590`) call it. There is no zero-length guard before the reciprocal square root, so degenerate input is not handled explicitly. |
 | `0x00479630` | `SurfaceTriangleAreaCalculate` | Computes three edge lengths, selects a longest edge, derives an angle using the math runtime, and returns half the product of the selected adjacent edge lengths and the sine of that angle. With the fourth argument zero, as in `ProjectedQuadScreenAreaCalculate` (`0x0040b470`), it takes the local edge/angle path. A nonzero flag calls the normal helper and affects the orientation branch, but the decompiler's local stack typing overlaps that output with a scalar; avoid claiming more about the orientation convention without instruction-level confirmation. |
 | `0x004798b0` | `RandomFloatRange` | Calls `RandomNext` and scales its 15-bit result by approximately `1/32768` into `min + r * (max - min)`. Numerous callers use it for jitter and placement ranges. The implementation has no explicit bound validation; with ordinary ordered bounds the maximum endpoint is excluded. |
@@ -60,8 +60,8 @@ helpers are cross-referenced in findings 301, 309, and 323.
 
 Unresolved points suitable for focused follow-up:
 
-- Identify the camera interface method contracts and matrix/coordinate
-  conventions behind vtable offsets `+0x50` and `+0x54`.
+- Identify the camera interface method contracts, quotient operands, and
+  matrix/coordinate conventions behind vtable offsets `+0x50` and `+0x54`.
 - Establish the orientation convention and degenerate-triangle behavior of
   `SurfaceTriangleAreaCalculate` from instruction-level evidence.
 - Confirm whether callers constrain ray parameters to the forward half-ray and
