@@ -101,7 +101,10 @@ wrapper cleanup (finding 201). The subsequent normal render step presents the
 shared secondary surface through the game's windowed blit or fullscreen flip
 path (finding 205). The sample blit uses the full source and destination
 surfaces, so mismatched dimensions are stretched to fill rather than letterboxed
-(finding 206).
+(finding 206). Microsoft's `IStreamSample::Update` contract documents
+`MS_S_ENDOFSTREAM` as a normal non-error status; because this callback accepts
+only `S_OK`, stream exhaustion enters the same interface cleanup and false
+return as other nonzero results (finding 219).
 After playback, the visible cleanup releases the COM interfaces without an
 explicit `SetState(STREAMSTATE_STOP)` call (finding 207).
 Stream setup also continues to `OpenFile` when adding primary audio fails,
@@ -180,7 +183,9 @@ playback region). The `.flh` container is documented in finding 21.
    DirectShow samples to the game's final windowed/fullscreen presentation;
    finding 206 records full-surface scaling, finding 207 records cleanup
    without an explicit stream-stop call, and finding 208 records best-effort
-   primary-audio setup.
+   primary-audio setup. Finding 219 documents that the callback routes the
+   documented `MS_S_ENDOFSTREAM` status through the same cleanup path as other
+   nonzero sample-update results.
 4. `.flh` container format — **closed** by finding 21 (2026-10-20): layout,
    both 16-bit coders, and the RGB555→565 write transform.
 5. MCI: only `play cdaudio from N` and status queries were observed; no
