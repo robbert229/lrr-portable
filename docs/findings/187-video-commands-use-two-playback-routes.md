@@ -1,0 +1,7 @@
+# Finding 187 — Video Commands Use Two Playback Routes
+
+The credits background path and the boot/level video paths do not share one playback implementation. `FUN_0040a0c0`, reached from the Credits callback, opens its movie with `AVIStreamOpenFromFileA`, queries `AVIStreamInfoA`, and fetches frames with `AVIStreamGetFrame`. In contrast, the configured boot and level paths go through `FUN_00472560` and `FUN_00472390`; that route calls `CoInitialize` and creates a COM object with `CoCreateInstance`, then invokes its methods through a vtable. The executable imports both the AVIFIL32 stream APIs and the COM creation APIs.
+
+The COM-created object is consistent with a graph-based media player, but the relevant class and interface GUIDs are unnamed in the decompilation, so this finding does not identify the library or claim the exact COM class. The separate call chains are directly visible in the binary.
+
+**Evidence.** Shipped `reference/LegoRR.exe`, SHA-256 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`. `FUN_00415910` and `FUN_00415990` load configured boot/level video files through `FUN_00472560`; `FUN_00472390` at `0x472390` calls `CoInitialize` and `FUN_004722b0` at `0x4722b0` calls `CoCreateInstance`. The Credits route reaches `FUN_0040a0c0` at `0x40a0c0` via `FUN_004103d0`, and its `FUN_0047e800`/`FUN_0047eb20` path calls the AVIFIL32 stream functions. `objdump -p reference/LegoRR.exe` lists `CoInitialize`, `CoCreateInstance`, and the AVI stream imports. The functions are in `docs/decompiles/full/LEGORR.full.c`.

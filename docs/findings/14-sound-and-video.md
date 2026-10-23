@@ -11,7 +11,8 @@ Win98-era OS facilities and plain files:
 | --- | --- | --- | --- |
 | SFX / voices | `.wav` (RIFF) | `WINMM!mmio*` + DirectSound | import xrefs `0x488cd2–0x489113`, `%s.wav` `0x4aae5c` |
 | Music | audio-CD tracks | `WINMM!mciSendStringA` | `"play cdaudio from %i"` `0x489210` |
-| Movies / logos | `.avi` (AVI1) | `AVIFIL32!AVIStream*` | module `FUN_0047e800` |
+| Credits background movie | `.avi` | `AVIFIL32!AVIStream*` | module `FUN_0047e800` |
+| Boot / level configured video | configured video path | COM-created media object (class unknown) | `FUN_00472560` → `FUN_00472390` → `CoCreateInstance` (finding 187) |
 
 `DSOUND.dll` is imported via ordinal 1 (`DirectSoundCreate`) at thunk
 `0x49c7ae`, called once from `FUN_0047a640` during sound-system init
@@ -72,7 +73,7 @@ spill into a following track before the watchdog notices. **Level music is a
 CD-DA track number** with a 4-second restart check. No music files exist in
 the archives; the "music/CD" panel strings (finding 04) match.
 
-## 4. Video — `AVIFIL32` streaming module (`FUN_0047e800`, 376 B)
+## 4. Credits background video — `AVIFIL32` streaming module (`FUN_0047e800`, 376 B)
 
 The single AVI module (its 5 OS calls sit in the `0x49b6d4–0x49b6ec` thunk
 row, all owned by `FUN_0047e800`'s body region): `AVIFileInit`,
@@ -81,6 +82,8 @@ frame pulls at `AVIStreamGetFrame` (`0x47eb52`) and `AVIStreamRelease`
 (`0x47e9ba`); `timeGetTime` drives the clock. Wrapper `FUN_0047ec90` =
 "open movie(path)" ← called from `FUN_0040a0c0` (message/dialog command
 router region — AVIs are triggered by config-referenced commands).
+
+This AVIFIL32 path belongs to the credits background callback. The configured boot and level video paths use the separate COM-created playback route in finding 187.
 
 Config surface (values from `Lego.cfg`):
 
@@ -141,7 +144,7 @@ playback region). The `.flh` container is documented in finding 21.
    top-down conversion is an inference. Finding 172 traces each frame blit into the shared
    DirectDraw render target; final device presentation remains dependent on the surrounding renderer.
    Findings 173–177 record the unchecked null-allocation path, missing explicit frame-retriever close, stale-surface blit after a null frame fetch, caller-level restart at stream length, and the video-only AVI stream selection.
-   Findings 181–186 resolve the command loop's keyboard/mouse-release exit gate, document the credits scroll clock over its background AVI, cross-check the shipped credits text against the CRLF splitter, record `.cconv` sidecar lookup precedence, show that successful AVI playback has no explicit loop sleep, and trace the credits path around the `DontPlayAvis` gate.
+   Findings 181–187 resolve the command loop's keyboard/mouse-release exit gate, document the credits scroll clock over its background AVI, cross-check the shipped credits text against the CRLF splitter, record `.cconv` sidecar lookup precedence, show that successful AVI playback has no explicit loop sleep, trace the credits path around the `DontPlayAvis` gate, and distinguish the COM-created configured-video route from the credits AVIFIL32 route.
 4. `.flh` container format — **closed** by finding 21 (2026-10-20): layout,
    both 16-bit coders, and the RGB555→565 write transform.
 5. MCI: only `play cdaudio from N` and status queries were observed; no
