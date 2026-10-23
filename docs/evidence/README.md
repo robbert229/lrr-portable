@@ -218,12 +218,16 @@ The tutorial callback trace additionally finds `SetRockMonsterAtTutorial 1`
 in Level17's shipped `.nrn` source and material 1 on all 69 distinct top/left
 border cells of its configured `Surf_17.map`. `FUN_00456b80` groups by terrain byte,
 and callback case 7 passes those coordinates to the type-3 spawner, whose
-walkability and adjacent-placement gates still need to pass. The available
+walkability and adjacent-placement gates still need to pass. The callback
+continues over the list after a failed spawn. The available
 Path and predug maps do not establish those border flags; the route also does
 not call the risky cell updater. This static asset/call trace uses
 `LEGORR.full.c`, `reference/LegoRR.exe`, and the unpacked shipped WAD data; it
-is not a separate REA bundle. Level17 config loads `17.npl`; the source-to-
-compiled call linkage and runtime execution are not established.
+is not a separate REA bundle. The configured `17.npl` contains six `0x2009f`
+function-call words at indices 183, 189, 195, 201, 207, and 213; table entry
+`0x9f` maps to `SetRockMonsterAtTutorial` and wrapper `0x4572a0`. This confirms
+the call is in the loaded script, while actual condition firing and spawn
+success remain unobserved.
 
 ## `legorr-path-list-movement.bundle`
 

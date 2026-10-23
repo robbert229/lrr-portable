@@ -281,17 +281,27 @@ cells). The callback at `0x456e6c` passes each selected coordinate to the
 type-3 spawner `FUN_0043af30`. That spawner first requires the selected cell to
 pass `FUN_00432bd0`: its `0x10` walkability flag must be set and its `0x8` wall
 flag clear. It then chooses one of the four adjacent cells for the actual
-creature placement. The walkability helper accepts zero coordinates but does
-not accept the final row or column; the available Level17 `Path_17.map` and
+creature placement. The callback returns 1 both when the spawn succeeds and
+when the spawner returns null, so `FUN_00456cb0` continues through the
+material-1 coordinate list. The walkability helper accepts zero coordinates
+but does not accept the final row or column; the available Level17 `Path_17.map` and
 `Dugg_17.map` have zero-valued top/left borders and no predug edge-wall
 markers adjacent to those borders. The script and terrain map therefore
 provide a possible border-seed route, but the shipped data examined here does
 not establish the required edge walkability state or a resulting border
 placement. This type-3 spawn callback also does not call `FUN_00432600` or
 `FUN_0042f6f0`, so it does not itself reach the edge-sensitive cell update.
-The Level17 config points the runtime loader at `17.npl`, not the `.nrn`
-source, and the compiled call linkage was not traced here. Thus the source
-condition and callback execution remain unverified at runtime.
+The configured `17.npl` confirms the call family: its 32-bit words at indices
+183, 189, 195, 201, 207, and 213 are all `0x2009f`, followed respectively by
+arguments `1, 2, 3, 4, 3, 4`. `FUN_00452df0` loads the configured NERP file,
+and `FUN_00453320` dispatches words with marker `0x20000` through the
+12-byte function table at `0x4a5948`. Table entry `0x9f` at `0x4a60bc` points
+to the `SetRockMonsterAtTutorial` name at `0x4a7454` and wrapper
+`0x4572a0`. This matches the six calls in the shipped `.nrn` source and
+confirms they are present in the configured compiled script. The source gives
+their conditions, but whether any condition fires in a play session remains
+unobserved. The `17.npl` payload SHA-256 is
+`c47afcf846eaf6ad42dff4a65042831b6eaa341e51b2a51eb88d25e07e1ee830`.
 
 Neither call site proves that an out-of-range neighbor reaches
 `FUN_0042f6f0` or that its later `0x400` read executes. The tutorial-map scan
