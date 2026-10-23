@@ -1,4 +1,4 @@
-# Finding 374 — Record and Resource Pool Lifecycles
+# Finding 387 — Record and Resource Pool Lifecycles
 
 The six functions in issue #222 implement three free-list allocators. The first is a 0xbf4-byte record pool (`0x0047a580`/`0x0047a5c0`); the second is a separate 0x20-byte record pool (`0x0047e0c0`); the third is a 0x34-byte render-resource-instance pool (`0x004807a0`/`0x004807d0`/`0x004807f0`). “Pool” here describes allocation mechanics only; semantic record types remain partly unknown.
 
