@@ -15,6 +15,8 @@ and runs nearby-cell update passes. If the target's `+0x0c` word has bit
 Focused record: `ev_d8d04a9318bc07017b92ffb0f8609b3733303b09962dcd3acdddaf0017eb132e`
 (`FUN_00430530`).
 
-The path establishes neighborhood flag and update calls but does not identify
-the flag meanings, their initiating gameplay action, or the visible result.
-This is static shipped-artifact evidence; no runtime transition was observed.
+Finding 224 establishes that the `+0x0c & 0x200` branch converts a deferred
+predug coordinate into the capped coordinate pool and reinitializes that
+cell. The initiating gameplay action for later updates and the exact visible
+result remain unknown. This is static shipped-artifact evidence; no runtime
+transition was observed.

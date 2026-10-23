@@ -92,7 +92,7 @@ Cell semantics per layer (value distributions from all 240 files):
 | +0x05 | LoadPathAiLayers | path/AI − bias |
 | +0x06 | LoadEmergeLayer | emerge value >> 1 |
 | +0x08 | LoadPredugLayer / LoadFallinLayer | flag bits (`0x4000000` predug edge wall, `0x20000`, `0x20000000` seen in `CellInitPass`, and `0x10` traversable on the eight neighbours of `v == 1/3` edge-wall cells through the `FUN_00430530` cell update — the load-time source of walkability, found by the T3 real-data probe) |
-| +0x0C | LoadPredugLayer (`0x20`/`0x200` wall triggers `FUN_0044A4B0`) / LoadLayerL | extra flags |
+| +0x0C | LoadPredugLayer (`0x20` immediate / `0x200` deferred coordinate-pool entry; finding 224) / LoadLayerL | extra flags |
 | +0x34 | LoadLayerM | byte layer |
 | +0x38/0x3C | LoadBlockPointers | count/pointer (>4 sets count−4 + flag) |
 | +0x40 | LoadBlockPointers | float `hash(x) % (ptrs * DAT_00556f14 * 25)` |
