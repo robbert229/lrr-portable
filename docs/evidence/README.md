@@ -203,6 +203,11 @@ gate (`FUN_004401b0`, `FUN_00439e10`, `FUN_00439d50`, `FUN_00404fc0`,
 path (`FUN_00432c90` and the lava-neighbor helpers). These observations come
 from `LEGORR.full.c` and disassembly of `reference/LegoRR.exe`; they are not
 part of this REA bundle.
+The same finding now traces the debug-key producer through `FUN_00426520`,
+`FUN_004288e0`, `FUN_0040f330`, and `FUN_00432c90`. Its edge reachability is
+conditional on `AllowDebugKeys` (disabled in shipped `Lego.cfg`) and a cursor
+coordinate on the edge; this evidence also comes from the full decompile and
+shipped-image disassembly, not this bundle.
 
 ## `legorr-path-list-movement.bundle`
 

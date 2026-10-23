@@ -194,6 +194,21 @@ static possibility: the traced maps and callbacks do not establish that the
 lava-neighbor path sets `0x200000` on one of the relevant border cells during
 a play session.
 
+There is also a direct debug-input route to the same cell mutator. The level
+input handler `FUN_00426520` converts the pointer position to map coordinates
+in `local_34/local_38` with `FUN_004502e0`, then calls `FUN_004288e0` when
+`DAT_00556ed0 & 0x10` is set. `FUN_004288e0` detects a newly pressed key at
+DirectInput keyboard-buffer index `0x1e` and passes those cursor coordinates
+to `FUN_0040f330`. That mutator repeatedly calls `FUN_00432c90`; once the
+target cell's low two state bits reach zero, `FUN_00432c90` sets
+`0x200000` and immediately calls `FUN_0042f6f0`. The path has no explicit
+lower-bound rejection, so it can reach the edge-sensitive helper if the
+cursor resolves to `x=0` or `y=0` and the cell reaches that state. The
+`0x10` gate is loaded from `AllowDebugKeys` (or enabled by the debug-build
+predicate); shipped `Lego.cfg` sets `AllowDebugKeys FALSE`. This therefore
+establishes a debug-enabled code route, not ordinary shipped-config runtime
+reachability or an observed crash.
+
 One remaining level-data spawn route is `EmergeMap`. `FUN_0042c120`
 (`LoadLayerL`) scans the complete layer and groups nonzero cells into 0x4c-byte
 records: slot 0 is the trigger coordinate, and slots 1–5 are candidate spawn
