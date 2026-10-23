@@ -352,6 +352,7 @@ Open threads, in order of value:
 | 153 | [findings/153-stream-start-ignores-directsound-position-and-play-errors.md](docs/findings/153-stream-start-ignores-directsound-position-and-play-errors.md) | Stream start ignores position and Play HRESULTs before marking active |
 | 154 | [findings/154-streamed-playback-stops-after-source-data-drains.md](docs/findings/154-streamed-playback-stops-after-source-data-drains.md) | Streamed playback pads the tail and stops after queued data drains |
 | 155 | [findings/155-shipped-music-streams-exceed-ring-buffer.md](docs/findings/155-shipped-music-streams-exceed-ring-buffer.md) | Shipped music tracks exceed the three-second streamed ring buffer |
+| 156 | [findings/156-options-sfx-volume-uses-nonlinear-directsound-table.md](docs/findings/156-options-sfx-volume-uses-nonlinear-directsound-table.md) | Options SFX slider maps to a nonlinear DirectSound attenuation table |
 
 Named-pseudocode corpus: [`docs/decompiles/engine-region.c`](docs/decompiles/engine-region.c)
 (114 named functions covering the engine/game-logic region — findings 01–10).

@@ -182,8 +182,8 @@ StartLevelSelected     0x460220   ; commit pending level record → DAT_005529c4
 | `0x415990` | `MoviePlayLevelVideo` | `<level> Video` key movie (LevelLoad path) |
 | `0x415700` | `MoviePlayWait` | FLIC frame loop with quit-probe cancellation |
 | `0x414d30` | `BrightnessSet` | param/10 → RGB scalar on `DAT_005560f0/f8` |
-| `0x414df0` | `VolumeSet` | param/9 → L/R volume (`FUN_00478980` → audio) |
-| `0x414de0` | `GameSpeedSelect` | param → `FUN_0047b530` discrete option table |
+| `0x414de0` | `SFXVolumeSet` | `SFX_Volume` slider index → `FUN_0047b530` DirectSound attenuation table |
+| `0x414df0` | `MusicVolumeSet` | `Music_Volume` slider → param/9 L/R mixer volume (`FUN_00478980`) |
 | `0x414e10` | `OptionMusicDefault` | default for `DAT_00557038` (getter via `FUN_004789a0`) |
 | `0x415030`/`0x414f90`/`0x415360` | `ScrollToSliderIndex`* | `_DAT_0055615c` float → 0..5 slider index into `DAT_00557030` (thresholds 2/3,1,4/3,5/3,2) |
 | `0x415150` | `OptionsApplyFromSlot` | on `LevelLoad`: apply slot volume/brightness/speed callbacks |
