@@ -1,0 +1,7 @@
+# Finding 166 — Spatial Playback Enters Through the Shared Wrapper
+
+The retained caller-reference results for `FUN_0047ad70` list four direct callers: `FUN_00456810`, `FUN_00456830`, `FUN_00464fa0`, and `FUN_00465090`. The first three call the dispatcher with mode `2`, which finding 148 identifies as global in-memory WAV playback. `FUN_00465090` is the shared positional/object wrapper: it selects dispatcher mode `1` for an explicit position and mode `0` for an object-attached source. Its other direct callers are the public wrapper `FUN_00465050` and the deferred positional queue drain `FUN_004652d0`.
+
+Within the executable's recorded direct-call graph, spatial playback therefore enters through `FUN_00465090` and its queued replay path. This supports the caller map in findings 161 and 164. It does not rule out calls through unrecorded indirect function pointers; the animation sample hook is one such callback path and is separately traced in finding 26.
+
+**Evidence.** REA/Ghidra `procedure_callers` evidence for shipped `LegoRR.exe` (SHA-256 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`): `ev_43cde0b404c09eeef1e5b33513436be7cd5aa6472c72868d1e76c36252bf4878` lists the direct callers of `FUN_0047ad70`; `ev_d63284bf413c08fe98f68439c9f19f4654f2cb41bd036256af4da6005d9e7e32` lists callers of `FUN_00465090`. Both records are in `docs/evidence/legorr-samples-config.bundle`. The mode-2 interpretation is documented in finding 148 and the wrapper behavior in finding 161.
