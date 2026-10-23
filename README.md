@@ -444,10 +444,11 @@ Open threads, in order of value:
 | 245 | [findings/245-region-route-light-config-and-surface-helpers.md](docs/findings/245-region-route-light-config-and-surface-helpers.md) | Region-Route, Light-Config, and Surface Helpers |
 | 246 | [findings/246-entity-move-route-command-and-object-clone-helpers.md](docs/findings/246-entity-move-route-command-and-object-clone-helpers.md) | Entity Move/Route Commands, Cell Queue, and Object Clones |
 | 247 | [findings/247-config-graphics-camera-tween-and-pool-spawn-helpers.md](docs/findings/247-config-graphics-camera-tween-and-pool-spawn-helpers.md) | Config/Graphics Quality, Camera Tween/Drag, Cell Search, and Pool/Spawn Helpers |
+| 248 | [findings/248-config-band-loaders-display-mode-directional-activity-and-flight-record-helpers.md](docs/findings/248-config-band-loaders-display-mode-directional-activity-and-flight-record-helpers.md) | Config-Band Loaders, Display-Mode Setup, Directional Activity, and Flight-Record Helpers |
 
 Named-pseudocode corpus: [`docs/decompiles/engine-region.c`](docs/decompiles/engine-region.c)
-(1081 generated sections selected from the reverse-engineering findings; the
-Ghidra script selects 1081 targets. This includes the manually bounded objective
+(1095 generated sections selected from the reverse-engineering findings; the
+Ghidra script selects 1095 targets. This includes the manually bounded objective
 callback at `0x459100`, which auto-analysis does not mark as a procedure).
 Machine-readable evidence: [`docs/evidence/legorr-rev.bundle`](docs/evidence/legorr-rev.bundle)
 (236 recorded REA observations against `LegoRR.exe`,
@@ -483,6 +484,8 @@ The entity move/route command, cell-queue, and object-clone helpers are recorded
 [legorr-engine-helpers-expansion-18.bundle](docs/evidence/legorr-engine-helpers-expansion-18.bundle).
 The config graphics-quality, camera tween/drag, cell-search, and pool/spawn helpers are recorded in
 [legorr-engine-helpers-expansion-19.bundle](docs/evidence/legorr-engine-helpers-expansion-19.bundle).
+The config-band loaders, display-mode setup, directional-activity, and flight-record helpers are recorded in
+[legorr-engine-helpers-expansion-20.bundle](docs/evidence/legorr-engine-helpers-expansion-20.bundle).
 The latest input, selection, and resource helper batch is in
 [legorr-engine-helpers-expansion-5.bundle](docs/evidence/legorr-engine-helpers-expansion-5.bundle);
 its address-range audits are in the [low](docs/evidence/legorr-engine-helper-audit-low-expansion-5.bundle),

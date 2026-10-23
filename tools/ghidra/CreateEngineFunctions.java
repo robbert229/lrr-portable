@@ -1112,6 +1112,21 @@ public class CreateEngineFunctions extends GhidraScript {
         0x471fc0L,  // EntityVelocitySlotDispatch
         0x481ac0L,  // StringTrailingDigitsSplit
         0x4915a0L,  // EnginePoolArenaCreate
+        // --- batch 9 (config bands, graphics mode, anim/route, flight-record helpers) ---
+        0x401530L,  // AdvisorPositionConfigLoad
+        0x4070b0L,  // BubbleActionStringsInit
+        0x409d50L,  // EntityCellPathEffectsApply
+        0x41aa00L,  // EntityTableMapsAllocate
+        0x4345f0L,  // PanelsConfigEntryApply
+        0x434af0L,  // TextMessagesConfigLoad
+        0x437150L,  // ToolTipIconsConfigLoad
+        0x444260L,  // EntityRandomCellStepRouteIssue
+        0x447950L,  // EntityDirectionalActivityStart
+        0x46a7f0L,  // UiMessageStringsInit
+        0x46fc70L,  // ObjectFlightCurveRecordInit
+        0x47e510L,  // DirectDrawDisplayModeSetup
+        0x482500L,  // InstanceQuadVertexDataFill
+        0x4882e0L,  // SceneNodeTransformMatrixApply
     };
     static final String[] NAMES = { "EngineTick", "EngineShutdown", "EngineShutdownAlt",
         "MainSimStep", "ManagerTick", "MessageDispatch", "ViewContextTick",
@@ -2081,6 +2096,20 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x471fc0: return "EntityVelocitySlotDispatch";
             case 0x481ac0: return "StringTrailingDigitsSplit";
             case 0x4915a0: return "EnginePoolArenaCreate";
+            case 0x401530: return "AdvisorPositionConfigLoad";
+            case 0x4070b0: return "BubbleActionStringsInit";
+            case 0x409d50: return "EntityCellPathEffectsApply";
+            case 0x41aa00: return "EntityTableMapsAllocate";
+            case 0x4345f0: return "PanelsConfigEntryApply";
+            case 0x434af0: return "TextMessagesConfigLoad";
+            case 0x437150: return "ToolTipIconsConfigLoad";
+            case 0x444260: return "EntityRandomCellStepRouteIssue";
+            case 0x447950: return "EntityDirectionalActivityStart";
+            case 0x46a7f0: return "UiMessageStringsInit";
+            case 0x46fc70: return "ObjectFlightCurveRecordInit";
+            case 0x47e510: return "DirectDrawDisplayModeSetup";
+            case 0x482500: return "InstanceQuadVertexDataFill";
+            case 0x4882e0: return "SceneNodeTransformMatrixApply";
             default: return null;
         }
     }
