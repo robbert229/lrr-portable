@@ -134,6 +134,8 @@ game.
   re-derives `0x8`/`0x400000`/`0x20000000`) back it up. Without that call
   a shipped level has no walkable cells at all — the T3 real-data probe
   found the gap. Remaining:
-  `0x20`, `0x200`, `0x20000000`.
+  `0x20`, `0x200`. The `0x20000000` neighbor-mask path, including its
+  conditional out-of-grid `0x400` read at top/left edges, is documented in
+  finding 223.
 - DAT_00556f14 is loaded from FallinMultiplier and zero-normalized to 1 (finding 117); the gameplay rationale remains unknown.
 - .ol/.nrn resources (olistfile, NERPFile) and the NERP interpreter's direct load path remain open. The PTLFile consumer and pair-table construction are documented in finding 115.
