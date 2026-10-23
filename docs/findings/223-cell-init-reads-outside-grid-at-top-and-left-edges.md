@@ -103,6 +103,15 @@ and `yPos=3.39245`, so none of these startup objects converts to `x=0` or
 gameplay or otherwise changed after OList loading; it does not cover entities
 spawned later by scripts, emerge triggers, or other runtime systems.
 
+One remaining level-data spawn route is `EmergeMap`. `LoadLayerL`
+(`FUN_0042c120`) iterates its complete width and height, not just the interior,
+and records the coordinates for nonzero layer entries; a configured border
+entry could therefore nominate an emerge location. `Lego.cfg` configures ten
+such maps. Only `Level13` and `Level23` are present in `LegoRR0.wad`, and both
+have zero-valued top and left borders. The other eight configured files are
+absent, so the shipped archive does not let this scan rule out an emerge
+location on those levels.
+
 At `0x456dcf`, the writer is called from callback-dispatch branch 4 after
 `FUN_00432c90` updates the cell. A static name/function pair associates the
 string `SetTutorialBlockIsPath` and wrapper `FUN_00457420` at file offsets
