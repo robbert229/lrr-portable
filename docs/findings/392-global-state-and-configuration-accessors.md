@@ -18,7 +18,7 @@ This finding maps the 44 assigned global/engine/level accessors and mutators. Th
 | `0x0040bdc0` | `SetTimeoutTo10000` | Calls the timeout setter with `10000.0`; caller `FUN_0042f0c0`, purpose unresolved (Finding 381). |
 | `0x0040e7e0` | `GlobalFlagBit0Clear` | Clears bit 0 of the observed global flag (Finding 356). |
 | `0x0040e910` | `GlobalValueClearIfEqual` | Clears the observed global value only when it equals the supplied value (Finding 356). |
-| `0x0040fec0` | Existing provisional label `SetGlobalScalarToOne` | Calls `RandomFloatRange(0, 1.0)` and discards its result; the body shows no persistent global write. |
+| `0x0040fec0` | Provisional alias `RandomFloatRangeResultDiscard` (existing label `SetGlobalScalarToOne`) | Calls `RandomFloatRange(0, 1.0)` and discards its result; the body shows no persistent global write. |
 | `0x0040ffe0` | `GlobalVectorSetAndNotifyListeners` | Stores four supplied global values and broadcasts the update through a callback; caller `FUN_0044bb30` (Finding 381). |
 | `0x00410b30` | `GlobalPointerGet_004c76ab24` | Returns the pointer stored in `DAT_0076ab24`. |
 | `0x00410b40` | `GlobalPointerGet_004c76ab28` | Returns the pointer stored in `DAT_0076ab28`. |
