@@ -16,7 +16,7 @@
 
 - [x] Inspect existing findings and decompile excerpts for all six functions.
 - [x] Add one consolidated lifecycle map with evidence identifiers and uncertainty notes.
-- [ ] Adversarially review the complete branch diff against `origin/main`.
+- [ ] Adversarially review the complete branch diff against `origin/main` (first review requested a named caller trace; added `FontResourceLoad` at `0x00479ee0`).
 - [x] Verify the documentation and evidence references (`git diff --check`; manual cross-check against decompile excerpts).
 - [x] Commit the branch work; findings are available in the branch and issue review comment.
 - [ ] Push the verified feature branch and create a PR targeting `main`.
