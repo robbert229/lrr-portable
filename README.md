@@ -360,6 +360,7 @@ Open threads, in order of value:
 | 161 | [findings/161-gameplay-uses-positional-and-object-attached-sfx.md](docs/findings/161-gameplay-uses-positional-and-object-attached-sfx.md) | Gameplay callers send several named aliases through spatial sound paths |
 | 162 | [findings/162-object-attached-sounds-refresh-spatial-state.md](docs/findings/162-object-attached-sounds-refresh-spatial-state.md) | Object-attached sounds refresh stored spatial values during sound updates |
 | 163 | [findings/163-view-provider-feeds-directsound-listener.md](docs/findings/163-view-provider-feeds-directsound-listener.md) | A stored view provider supplies DirectSound listener position and orientation |
+| 164 | [findings/164-explicit-sound-positions-are-deferred.md](docs/findings/164-explicit-sound-positions-are-deferred.md) | Explicit sound-position calls request deferred DirectSound application |
 
 Named-pseudocode corpus: [`docs/decompiles/engine-region.c`](docs/decompiles/engine-region.c)
 (114 named functions covering the engine/game-logic region — findings 01–10).

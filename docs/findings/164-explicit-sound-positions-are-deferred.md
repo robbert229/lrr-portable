@@ -1,0 +1,7 @@
+# Finding 164 — Explicit Sound Positions Request Deferred Application
+
+The explicit-position route traced in finding 161 reaches `FUN_0047ad70` in mode 1. That branch calls `FUN_0047ad10` with the selected 3D buffer and the caller's three-float position. `FUN_0047ad10` invokes the buffer vtable slot `+0x4c` with those coordinates and a final `0` apply flag. The slot corresponds to `IDirectSound3DBuffer::SetPosition`; `0` is `DS3D_DEFERRED`.
+
+DirectSound therefore receives the new source position as a deferred setting. The listener helper in finding 163 calls listener slot `+0x44` to commit deferred settings when its own cached listener vectors change. The decompile does not establish that every positional submission is followed by that helper, or the delay between submission and a commit, so this finding does not claim when the new source position takes effect.
+
+**Evidence.** Shipped `LegoRR.exe`, SHA-256 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`. `FUN_00465090`, `FUN_0047ad70`, and `FUN_0047ad10` are in `docs/decompiles/full/LEGORR.full.c` at `0x465090`, `0x47ad70`, and `0x47ad10`; the buffer vtable slot `+0x4c` is also identified as SetPosition from the DirectSound method layout. Microsoft documents the [SetPosition apply flag](https://learn.microsoft.com/en-us/previous-versions/windows/desktop/ee417996%28v%3Dvs.85%29): deferred settings wait for `CommitDeferredSettings`. Finding 163 traces the executable's listener commit call.
