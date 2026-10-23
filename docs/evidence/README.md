@@ -45,6 +45,15 @@ scene helpers, the SFX-bank slot-order verification for `SFX_Place*`, and the
 `+0x3e4` bit-map reads (`0x80000`, `0x100000`, `0x40000000`). Import with
 `import_evidence_bundle` or inspect `records` directly.
 
+## `legorr-menu-background-audio.bundle`
+
+Exported 2026-10-22 for findings 23, 141, and 144. The bundle records the random
+front-end FLIC selection, overlay SFX alias resolution, and the `FUN_00464f60`
+queue / `FUN_00464fa0` submit helpers. Findings 141 and 144 follow the menu
+tick's deferred-list rotation and music-loop queue values in the full
+decompile to show selector-zero overlay sounds and selector-one music streams.
+Import with `import_evidence_bundle` or inspect `records` directly.
+
 ## `legorr-ddscene-owner-link.bundle`
 
 Exported 2026-10-21 from the finding-28 owner-link trace. 20 recorded
@@ -182,6 +191,69 @@ sweep (command-creation layer only — the negative result that no tick reads
 record `+0x1c`), and the `test $0x41,%ah` zero-compare idiom. Import with
 `import_evidence_bundle` or inspect `records` directly.
 
+This bundle also contains the `FUN_0043f190` teleport-spawn worker
+decompilation. Finding 223 connects it to the Teleport Man request and its
+direct entity-callback call at `0x43ca38`; that callsite was checked against
+the shipped-image disassembly.
+
+Finding 223 also traces the vehicle `GetOut` unload path and Place-command
+gate (`FUN_004401b0`, `FUN_00439e10`, `FUN_00439d50`, `FUN_00404fc0`,
+`FUN_00432550`), edge descriptor creation (`FUN_0041d040`, `FUN_0041dca0`,
+`FUN_0041ea50`, `FUN_00409300`, `FUN_00433090`), and the cell-flag producer
+path (`FUN_00432c90` and the lava-neighbor helpers). These observations come
+from `LEGORR.full.c` and disassembly of `reference/LegoRR.exe`; they are not
+part of this REA bundle.
+The same finding now traces the debug-key producer through `FUN_00426520`,
+`FUN_004288e0`, `FUN_0040f330`, and `FUN_00432c90`. Its edge reachability is
+conditional on `AllowDebugKeys` (disabled in shipped `Lego.cfg`) and a cursor
+coordinate on the edge; this evidence also comes from the full decompile and
+shipped-image disassembly, not this bundle.
+The finding also checks the deferred type-`0xc` callback at `0x43e824` and
+its `FUN_00403d10` → `FUN_00432c90` → `FUN_0042f6f0` path. The traced producer
+`FUN_00430320` clears the `0x20000000` cell flag before queueing the update,
+so this path does not establish an edge-sensitive read without an intervening
+flag writer. This caller and producer trace also comes from the full decompile
+and shipped-image disassembly, not a separate REA bundle.
+The setter census finds cell-grid stores of `0x20000000` in the PathMap loader
+`FUN_0042c760` and dynamic writer `FUN_00432600`; direct calls to the dynamic
+writer are at `0x43e77f` and `0x456dcf`. The load-time setter precedes queued
+updates, leaving those callback gates as the directly traced post-clear restore
+routes. This census comes from the full decompile and shipped-image
+disassembly, not a separate REA bundle; indirect calls and aliased stores were
+not ruled out.
+The tutorial callback trace additionally finds `SetRockMonsterAtTutorial 1`
+in Level17's shipped `.nrn` source and material 1 on all 69 distinct top/left
+border cells of its configured `Surf_17.map`. `FUN_00456b80` groups by terrain byte,
+and callback case 7 passes those coordinates to the type-3 spawner, whose
+walkability and adjacent-placement gates still need to pass. The callback
+continues over the list after a failed spawn. The available
+Path and predug maps do not establish those border flags; the route also does
+not call the risky cell updater. This static asset/call trace uses
+`LEGORR.full.c`, `reference/LegoRR.exe`, and the unpacked shipped WAD data; it
+is not a separate REA bundle. The configured `17.npl` contains six `0x2009f`
+function-call words at indices 183, 189, 195, 201, 207, and 213; table entry
+`0x9f` maps to `SetRockMonsterAtTutorial` and wrapper `0x4572a0`. This confirms
+the call is in the loaded script, while actual condition firing and spawn
+success remain unobserved.
+The configured `M01.npl` also contains two `0x20089` calls to
+`SetTutorialBlockIsPath`, with arguments 4 and 11; the configured terrain map
+places material 4 only at interior cell `(18,12)` and has no material-11
+cells. The archive-wide `.nrn` and `.npl` scan found no other use of this
+command, and runtime condition firing remains unobserved.
+The same `.npl` scan finds `SetRockMonsterAtTutorial` in `14.npl`, `17.npl`,
+and `DE1.npl`. Level14's `surf_14.map` has 71 top/left material-1 cells, but
+its `Path_14.map` is absent and its predug map does not establish the required
+border walkability flag. DefenceTuto's calls use material IDs 4 and 8, neither
+of which appears in `Surf_DE1.map`. These NERP/map checks use the shipped
+archive payloads and full-image decompilation/disassembly; they are not
+retained in a separate REA bundle.
+The spawner's border-walkability bit can also be propagated by
+`FUN_00430530` from interior neighbors at `x=1`/`y=1`; its other direct
+call sites include `0x428dca`, `0x43cd3d`, `0x43ebbc`, `0x4485d0`,
+`0x456d6a`, and `0x47018e`. The available predug and erosion maps do not
+establish those runtime cell states. This caller census is from
+`reference/LegoRR.exe` and the full decompilation, not a separate REA bundle.
+
 ## `legorr-path-list-movement.bundle`
 
 Exported 2026-10-21 from the path-list movement session — 67 retained
@@ -279,11 +351,12 @@ with `import_evidence_bundle` or inspect `records` directly.
 
 ## `legorr-campaign-expansion.bundle`
 
-Exported 2026-10-22 for findings 44–47 — 25 retained observations. The bundle
-covers reward-button save/advance dispatch, timer-objective evaluation order,
-objective-sidecar append gates and serialized fields, and entity-removal event
-messages. Static control flow does not establish every user-visible outcome or
-the runtime conditions that populate each optional message field. Import with
+Exported 2026-10-22 for findings 44–47 and 140 — 25 retained observations. The
+bundle covers reward-button save/advance dispatch, timer-objective evaluation
+order, objective-sidecar append gates and serialized fields, entity-removal
+event messages, and objective-result voice-alias construction/submission.
+Static control flow does not establish every user-visible outcome or the
+runtime conditions that populate each optional message field. Import with
 `import_evidence_bundle` or inspect `records` directly.
 
 ## `legorr-engine-expansion.bundle`
@@ -534,10 +607,16 @@ assets and elapsed-time duration in that loop remain unverified. Import with
 
 ## `legorr-samples-config.bundle`
 
-Exported 2026-10-22 for finding 107 — 33 retained observations. Records cover
-the `Samples` config group, alias registration, comma-separated variants,
-loop/stream markers, and variant selection. The `#...#` prefix branch has no
-shipped example, so its semantics remain unclaimed. Import with
+Exported 2026-10-22 for findings 107, 139, and 147 — 33 retained observations.
+Records cover the `Samples` config group, alias registration,
+comma-separated variants, loop/stream markers, variant selection, the
+deferred submission queue's selector/route-bit forwarding, and the signed
+volume marker path, including the `#...#` token-buffer termination/bounds
+limitation, and the streamed branch's bypass of the `*` duplicate request. It
+also records how `-reducesamples` gates `!`-prefixed aliases before
+resolution; the shipped config has 242 such aliases, 37 with streamed paths.
+Finding 147 traces the shared generator and the LevelLoad seed source. The
+`#...#` prefix has no shipped example. Import with
 `import_evidence_bundle` or inspect `records` directly.
 
 ## `legorr-streamed-wav-format.bundle`
@@ -552,7 +631,9 @@ unverified. Import with `import_evidence_bundle` or inspect `records` directly.
 Exported 2026-10-22 for finding 109 — 10 retained observations. Records cover
 LevelLoad's EmergeMap argument, the map pipeline, and LayerL's six-slot record
 encoding. Consumers and gameplay meaning of the appended records remain
-unknown. Import with `import_evidence_bundle` or inspect `records` directly.
+unknown. Finding 223 separately scans all configured EmergeMap and ErodeMap
+assets for top/left border values; that asset scan is not retained in this
+bundle. Import with `import_evidence_bundle` or inspect `records` directly.
 
 ## `legorr-objective-entity-paired-predicate.bundle`
 
@@ -649,3 +730,18 @@ Exported for finding 131. Seventy-five records cover the Stats loader reading `N
 ## `legorr-sound-duplicate-selection.bundle`
 
 Exported for finding 133. Five records cover the optional duplicate-buffer argument, bank-entry flag setup, and playback's single-buffer versus three-buffer rotation, together with the canonical buffer-creation record from finding 120.
+
+Finding 134 reuses the `FUN_00464d00` parser record in `legorr-samples-config.bundle` and the loader/flag/playback records in `legorr-sound-duplicate-selection.bundle` to trace the `Samples` value's leading `*` through to three-buffer rotation. Its 13-entry inventory comes from `Lego.cfg` in `reference/LegoRR1.wad`; the finding records both source and extracted-config SHA-256 values.
+
+Finding 135 reuses `FUN_00464d00` in `legorr-samples-config.bundle` to document the stream-mode local's lifetime across the comma-item loop. The shipped config check found no comma-separated entry containing `@`; this constrains the observed use, not the parser's behavior for other inputs.
+
+Finding 136 uses `FUN_0047b970` and `FUN_0047ba20` from `legorr-sound-instance-spatial-expansion.bundle` to trace replacement and cleanup for a selected streamed-playback state. The argument path from `FUN_0047ad70` is cross-checked against the assembly retained in `legorr-sound-duplicate-selection.bundle`.
+
+Finding 137 combines the level-name handler records in `legorr-frontend.bundle` with the sound-instance updater and wrapper records in `legorr-engine-expansion.bundle` and `legorr-sound-instance-spatial-expansion.bundle`. It traces selector values 0 and 1 to `FUN_0047b970`, while leaving actual streamed use of the dynamic selector-1 alias unresolved.
+
+Finding 223's cell-boundary analysis is documented in
+[`docs/findings/223-cell-init-reads-outside-grid-at-top-and-left-edges.md`](../findings/223-cell-init-reads-outside-grid-at-top-and-left-edges.md).
+It is grounded in the checked-in `reference/LegoRR.exe`, its full decompile at
+`docs/decompiles/full/LEGORR.full.c`, targeted `objdump` call-site decodes, and
+the extracted shipped WAD maps and scripts. No separate REA JSON evidence
+bundle was exported for this analysis.

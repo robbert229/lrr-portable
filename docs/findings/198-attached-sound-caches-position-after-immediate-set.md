@@ -1,0 +1,7 @@
+# Finding 198 — Attached Sound Caches Position After Immediate Set
+
+The recurring attached-sound update calls the associated DirectSound buffer's `SetPosition` with apply flag `0` when the attached frame's scene-relative position changes. It then copies that requested position into the linked record's comparison cache without checking the method's HRESULT. On the next update, identical coordinates skip the setter.
+
+If `SetPosition` fails, the update routine therefore suppresses another attempt until the frame position changes. This is a conditional failure-path hazard; static analysis does not establish that the call fails in normal gameplay or that the buffer remains at a particular position.
+
+**Evidence.** Static disassembly of shipped `reference/LegoRR.exe`, SHA-256 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`: in `FUN_0047b410` at `0x47b410`, the method at buffer slot `+0x4c` is called at `0x47b46d` with final argument `0`; the three requested floats are copied to the linked record at `0x47b470–0x47b481` regardless of the returned value. The next call compares the queried position with this cache before setting it again. The DirectSound [SetPosition reference](https://learn.microsoft.com/en-us/previous-versions/windows/desktop/ee417996%28v%3Dvs.85%29) identifies the method's HRESULT result and apply modes; finding 162 records the attached-frame position query and immediate flag.

@@ -7,7 +7,7 @@ ordered level references and display names in parallel arrays. Finding 52
 shows the reward Advance path resolving the current level against one of these
 chains before marking progress.
 
-**Observations from** REA/Ghidra 12.1.4 over `source/LegoRR.exe` (SHA-256
+**Observations from** REA/Ghidra 12.1.4 over `reference/LegoRR.exe` (SHA-256
 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`),
 2026-10-22. Evidence: `docs/evidence/legorr-campaign-transition-agent.bundle`.
 Focused IDs: `ev_c93c5bc39c81827fb04b25defcbf8a86d93e0f87a9c426d8127c2730e2f05c8d`

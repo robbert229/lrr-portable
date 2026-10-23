@@ -1,6 +1,6 @@
 # 18 — Movies Fixed: the Indeo Block was a Missing Library, not a Missing Codec
 
-**Target:** `source/LegoRR.exe` (SHA-256 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`)
+**Target:** `reference/LegoRR.exe` (SHA-256 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`)
 **Supersedes** finding 17's "movies blocked" verdict. The game has always tried
 to play `Data/AVI/*.avi`; the decoder it was reaching for existed all along —
 its plugin just couldn't load.

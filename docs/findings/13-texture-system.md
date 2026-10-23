@@ -52,12 +52,12 @@ Called by exactly three sites (§3, §4, §5). Logic, from pseudocode:
 
 ## 3. LWO material binding (resolves finding 11 open item)
 
-The model-open orchestrator `FUN_004809e0` does parsing (`FUN_0048d7c0`) and
+The model-open orchestrator `FUN_004809e0` does parsing (`ModelObjectCreate @ 0x48d7c0`) and
 then the **material pass** `FUN_00480ac0` (3.4 KB). Its helper `FUN_00481820`
 (669 B) is the binder:
 
 * For each material/vertex entry it calls `FUN_00490090` (material lookup,
-  369 B — also called after LWO parse in `FUN_0048d7c0` and from
+  369 B — also called after LWO parse in `ModelObjectCreate` and from
   `FUN_00483c80`), then joins `"%s%s"` (`DAT_004a50d4`) into a path and calls
   **`FUN_00482e70`** — so LWO surface texture names become `.bmp` loads/caches
   at model-open time, per material.
@@ -126,9 +126,11 @@ budget automatically downgrades texture placement mode on small cards.
 ## 6. Shared preload — `SharedTextures` / `SharedObjects`
 
 `Main` keys `SharedTextures World\Shared` and `SharedObjects World\Shared`
-(`0x4a3a18` / `0x4a3a28`). At init: `SharedTextures` value is strdup'd
-(`FUN_004728c0`) and registered via `FUN_004805b0` (159 B; sets up via
-`FUN_00480650`, releases the previous entry through `FUN_00482d30`).
+(`0x4a3a18` / `0x4a3a28`). At init: `SharedTextures` value is copied by
+`SharedTextureDirectorySet @ 0x4728c0` and registered via
+`SharedTextureRootRegister @ 0x4805b0` (which initializes it through
+`SharedTextureRootInitialize @ 0x480650` and releases the previous entry through
+`FUN_00482d30`).
 `SharedObjects` drives `FUN_004876c0(dir, FUN_00464c70, FUN_00465090,
 FUN_00465370)` — three directory-scan callbacks; the texture-relevant one
 reaches `FUN_004653a0` (136 B), which loops index `i` loading
@@ -141,19 +143,26 @@ reaches `FUN_004653a0` (136 B), which loops index `i` loading
 | Address | Working name | Evidence |
 | --- | --- | --- |
 | `0x474050` | CreateBmpSurface | `DAT_0076ac84+0x18` create, 0x7c desc |
+| `0x474410` | ParseIndexedSurfaceName | parses the `a` + three-hex-digit indexed surface suffix |
 | `0x4744f0` | NamedSurfaceGet | config-DB vtable +0x5c/+0x60 |
 | `0x482e70` | TextureGetOrCreate | owns caches `0x53455c/0x53a55c` |
-| `0x483030` / `0x483080` | cache lookup / insert | `__strcmpi`, `strdup` |
+| `0x483030` / `0x483080` | TextureCacheLookup / TextureCacheInsert | `__strcmpi`, `strdup` |
 | `0x481820` | BindModelTextures | inside `FUN_00480ac0`; `%s%s`→`FUN_00482e70` |
 | `0x480ac0` | MaterialPass | `ModelOpen` helper (3.4 KB) |
 | `0x490090` | MaterialResolve | 3 callers, incl. post-LWO parse |
 | `0x42bb60` | TextureSetManager | keys `rooftexture`… |
 | `0x40b310` | LoadTileVariants | `%s%0.1x%0.1x.bmp` |
 | `0x42b330` | LoadTileMeshes | `%s%0.1x%0.1xa/b.bmp` → entity reg |
+| `0x40b5f0` | TileModelEntityRegister | registers a tile mesh entity and sets the `LWO:NOTEXTURE` override |
 | `0x462e60` | TexAnimUpdate | lock/update/unlock |
 | `0x47cd50` | QueryTextureMem | `DAT_00505918+0x9c` |
 | `0x477bd0` | SetLowTextureFlag | `DAT_00505f84 \|= 0x20` |
 | `0x4653a0` | PreloadSharedIndexed | `%s%i.bmp` → `DAT_00552100` |
+| `0x40a400` | PreloadNumberedBitmaps | loads numbered UI/indexed BMP names through the shared cache |
+| `0x48c820` | LwoSurfaceSettings | reads per-surface settings and texture-image tags |
+| `0x48d2c0` | LoadLWO | reads the LWO chunks and optional UV sidecar |
+| `0x481c50` | ParseUV | applies the model's UV sidecar stream |
+| `0x490090` | MaterialResolve | resolves a material name and associated material data |
 
 ## Notes and open items
 

@@ -2,7 +2,7 @@
 
 Level loading retrieves the active level's `OListFile` value and passes that path to a dedicated object-list parser. The parser walks the `.ol` block's sibling entries and reads `type`, `xpos`, `ypos`, and `heading` before it creates each entry. A missing required value or an unrecognized type terminates the parse with failure. Coordinates are decremented by one before integer/grid conversion, and heading is converted from degrees to radians before placement.
 
-**Observations from** REA/Ghidra 12.1.4 over `source/LegoRR.exe` (SHA-256
+**Observations from** REA/Ghidra 12.1.4 over `reference/LegoRR.exe` (SHA-256
 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`),
 2026-10-22. Evidence: `docs/evidence/legorr-olistfile-focused-expansion.bundle`.
 Focused IDs: `ev_a27cc2cb66787dcd36dd8af2f078036b9a5bdd28e80efc8f2fc5b33e1e667009`

@@ -1,6 +1,6 @@
 # 02 — Startup & Main Loop
 
-**Observations from** `FUN_004777a0` (WinMain body — itself called from the CRT `entry` @ `0x48f000`), `FUN_0047f130` (mount), `FUN_0041fa20` / `FUN_00477fd0` (engine registration), and the loop in `FUN_004777a0`. Ghidra 12.1.4, 2026-10-19; re-verified from scratch 2026-10-20 (finding 20). All addresses are virtual (image base `0x400000`).
+**Observations from** `FUN_004777a0` (WinMain body — itself called from the CRT `entry` @ `0x48f000`), `WadMountStartup @ 0x47f130`, `FUN_0041fa20` / `FUN_00477fd0` (engine registration), and the loop in `FUN_004777a0`. Ghidra 12.1.4, 2026-10-19; re-verified from scratch 2026-10-20 (finding 20). All addresses are virtual (image base `0x400000`).
 
 ## WinMain body: `FUN_004777a0`
 
@@ -8,8 +8,8 @@
 2. **Wad prefix from exe basename** — walks `GetCommandLineA()` to the last `\`, copies the **basename** (chars after the last backslash) into `DAT_00505814`, strips quotes in place, then uppercases the extension (`FUN_0049dcd0`) and NUL-terminates at `.EXE` (`FUN_0048da50` ≙ `strstr`). Result: `DAT_00505814 = "LegoRR"` — the prefix used by the mount's `"%s%i.wad"` loop (so `DAT_00505810 = &DAT_00505814`). The data *directory* is built separately in the mount: `getcwd() + "\" + "Data"` → `DAT_005342a8`. *(Corrects an earlier "install directory" reading — finding 20.)*
 3. **Registry** — `SOFTWARE\LEGO Media Games Rock R…`: `StandardParameters`, `NoHALMessage` (HAL-failure popup text default `No DirectX 3D accelerator could be found…`).
 4. **Arg parsing** — `FUN_00477bf0(cmdline, &local_c8c, &local_c90)` → config word pair consumed later.
-5. **Init order**: `FUN_0048b260`, `FUN_004893f0`, **WAD mount** `FUN_0047f130(exedir, local_c90, regkey)`, `FUN_00478df0`, `FUN_0047ed90`.
-6. **Window + device**: `FUN_004783f0(hInst)` (creates window `DAT_00505800`), `FUN_00488b50(local_c8c)`, then `FUN_0049d030(1, flags & 0x2000, flags & 0x40, flags & 0x100, buf)`.
+5. **Init order**: `FUN_0048b260`, `FUN_004893f0`, **WAD mount** `WadMountStartup(exedir, local_c90, regkey)`, `FUN_00478df0`, `FUN_0047ed90`.
+6. **Window + device**: `WindowCreate @ 0x4783f0(hInst)` (creates window `DAT_00505800`), `FUN_00488b50(local_c8c)`, then `FUN_0049d030(1, flags & 0x2000, flags & 0x40, flags & 0x100, buf)`.
 7. **Engine hook-up**: `FUN_0047ec80(DAT_0076ac84)` + `FUN_00485e80(0)` (render/graphics prep), then `FUN_0041fa20(&DAT_00505814)` → registers the callback triplet (below), then the frame loop runs.
 
 ## The callback triplet (the real game module boundary)
@@ -44,10 +44,10 @@ while (!quit) {
 
 `DAT_00505f84` is the master feature word (`&0x80` fixed-step, `&0x10` pause/skip-time, `&2` alt mode, bits `0x100/0x2000/0x40` gate init calls).
 
-## WAD mount detail (`FUN_0047f130`)
+## WAD mount detail (`WadMountStartup @ 0x47f130`)
 
-- Loops `%s%i.wad` for i=0..9 through `FUN_0047f640` (mounts into the next free context slot); success sets `bVar2`.
-- CD detection via `FUN_0047f4f0`, with `CDMissing` / retry MessageBox loop (`cd.key`, `delme.dat` markers; `SetupError`).
+- Loops `%s%i.wad` for i=0..9 through `MountWadFromPath` (`0x47f640`; mounts into the next free context slot); success sets `bVar2`.
+- CD detection via `FindCdKeyDrive` (`0x47f4f0`), with `CDMissing` / retry MessageBox loop (`cd.key`, `delme.dat` markers; `SetupError`). The helper scans drive letters C: through Z: for a CD-ROM containing `cd.key`, then saves the matching drive letter.
 - On missing data: `DataMissing` + `MessageBox` + exit `FUN_0048e4b0(0)`.
 
 ## Confirmed / unknown ledger

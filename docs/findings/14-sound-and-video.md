@@ -11,7 +11,8 @@ Win98-era OS facilities and plain files:
 | --- | --- | --- | --- |
 | SFX / voices | `.wav` (RIFF) | `WINMM!mmio*` + DirectSound | import xrefs `0x488cd2–0x489113`, `%s.wav` `0x4aae5c` |
 | Music | audio-CD tracks | `WINMM!mciSendStringA` | `"play cdaudio from %i"` `0x489210` |
-| Movies / logos | `.avi` (AVI1) | `AVIFIL32!AVIStream*` | module `FUN_0047e800` |
+| Credits background movie | `.avi` | `AVIFIL32!AVIStream*` | module `FUN_0047e800` |
+| Boot / level configured video | configured video path | DirectShow `AMMultiMediaStream` | `FUN_00472560` → `FUN_00472390` → `CoCreateInstance` (finding 187) |
 
 `DSOUND.dll` is imported via ordinal 1 (`DirectSoundCreate`) at thunk
 `0x49c7ae`, called once from `FUN_0047a640` during sound-system init
@@ -65,11 +66,15 @@ loop (`EngineSound` `0x4aa340`) is a persistent 3D instance from finding 03.
 (`FUN_00489260`). `FUN_00488c00` runs from the in-game tick (`FUN_004297b0`,
 finding 03): every `timeGetTime() − DAT_00544a10 > 4000` ms it re-checks
 track `DAT_00544a00` (`FUN_00489280` = MCI status) and re-issues playback if
-the track stopped, then fires callback `DAT_00544a08` — i.e. **level music is
-a CD-DA track number** with a 4-second auto-restart loop. No music files
-exist in the archives; the "music/CD" panel strings (finding 04) match.
+the track stopped or playback advanced beyond the selected track, then fires
+callback `DAT_00544a08`. The `play` command has no end-track argument, so MCI
+plays toward the end of the disc; finding 180 records the conditional brief
+spill into a following track before the watchdog notices, and finding 195 records
+how a failed current-track query can be accepted as a valid track number. **Level music is a
+CD-DA track number** with a 4-second restart check. No music files exist in
+the archives; the "music/CD" panel strings (finding 04) match.
 
-## 4. Video — `AVIFIL32` streaming module (`FUN_0047e800`, 376 B)
+## 4. Credits background video — `AVIFIL32` streaming module (`FUN_0047e800`, 376 B)
 
 The single AVI module (its 5 OS calls sit in the `0x49b6d4–0x49b6ec` thunk
 row, all owned by `FUN_0047e800`'s body region): `AVIFileInit`,
@@ -78,6 +83,32 @@ frame pulls at `AVIStreamGetFrame` (`0x47eb52`) and `AVIStreamRelease`
 (`0x47e9ba`); `timeGetTime` drives the clock. Wrapper `FUN_0047ec90` =
 "open movie(path)" ← called from `FUN_0040a0c0` (message/dialog command
 router region — AVIs are triggered by config-referenced commands).
+
+This AVIFIL32 path belongs to the credits background callback. The configured boot and level video paths use the separate DirectShow multimedia-stream route in finding 187.
+
+### Configured DirectShow sample pump
+
+The boot/level route creates a DirectDraw sample and starts the stream, then
+calls `IStreamSample::Update(0, NULL, NULL, NULL)` from its update callback.
+On `S_OK`, it blits the sample surface to the supplied game surface with
+`IDirectDrawSurface3::Blt` and `DDBLT_WAIT`; other sample results release
+several interfaces and return false. The update callback returns false if
+either the sample update or blit fails (finding 200). The boot/level loop's
+duration query is a loose render-count bound and does not schedule frames
+(finding 202); `Update` is the synchronous call that can wait for the next
+sample. A false callback result leaves the current invocation and leads to
+wrapper cleanup (finding 201). The subsequent normal render step presents the
+shared secondary surface through the game's windowed blit or fullscreen flip
+path (finding 205). The sample blit uses the full source and destination
+surfaces, so mismatched dimensions are stretched to fill rather than letterboxed
+(finding 206). Microsoft's `IStreamSample::Update` contract documents
+`MS_S_ENDOFSTREAM` as a normal non-error status; because this callback accepts
+only `S_OK`, stream exhaustion enters the same interface cleanup and false
+return as other nonzero results (finding 219).
+After playback, the visible cleanup releases the COM interfaces without an
+explicit `SetState(STREAMSTATE_STOP)` call (finding 207).
+Stream setup also continues to `OpenFile` when adding primary audio fails,
+while a primary-video add failure aborts setup (finding 208).
 
 Config surface (values from `Lego.cfg`):
 
@@ -89,7 +120,7 @@ Config surface (values from `Lego.cfg`):
 | `IntroAVI` | per-level movie at load | read in `LevelLoad` `FUN_00429890` `0x429fb1` |
 | `CreditsBackAVI` | `AVI\Loop.avi`, credits backdrop | `0x4a3c0c` |
 | `EndGameAVI1/2`, `ObjectiveAcheivedAVI` | endings / objective stingers | `0x4a4398/0x4a43a4/0x4a81ac` |
-| `DontPlayAvis` | master kill switch | `0x4a24ec` |
+| `DontPlayAvis` | gates boot sequence; level and credits video paths bypass it (finding 186) | `0x4a24ec` |
 | `DDILogo(Time)`, `LMILogo(Time)` | timed **BMP** splash, not AVI | `FUN_004157c0` uses `timeGetTime`+blit |
 
 Startup sequence (in the big init `FUN_0041fb50`): play `LegoAvi` if the
@@ -122,16 +153,61 @@ playback region). The `.flh` container is documented in finding 21.
 ## Notes and open items
 
 1. DirectSound 3D listener acquisition is documented in finding 119. Finding 121 traces the
-   per-source descriptor's 3D-control bit and configured distance setters; which individual sounds
-   use 3D positioning and later listener calls remain open. Finding 120 documents optional duplicate
+   per-source descriptor's 3D-control bit and configured distance setters; finding 161 maps named
+   gameplay aliases submitted through positional and object-attached wrapper routes, finding 162
+   traces spatial-state refresh for attached objects, finding 163 traces stored view vectors into
+   listener position/orientation setters and their frame-tick call, finding 164 shows explicit
+   source-position writes apply immediately, and finding 166 inventories
+   direct dispatcher callers. Findings 170–171 trace conditional shared-object
+   transition handle issues across immediate and queued submission; finding 178
+   records the dynamic alias-table capacity during sample loading. Finding 211
+   records that the advisor parser latches a sound token before checking
+   whether sound is enabled, finding 214 records that the objective-voice
+   countdown does not explicitly stop stream state zero when it expires, and
+   finding 221 traces the lava effect's zero-handle latch and conditional loss
+   of queued playback control. Findings 196–199 resolve the DirectSound
+   listener provider's frame-relative position/orientation queries, its
+   meter-per-vector-unit default, and conditional listener and attached-source
+   cache-on-failure paths. Findings 139, 149, and 209–213 document the two
+   deferred sound queues, selector handling, ten-request limits, overflow
+   behavior, and packed-queue lifetime across frame ticks and sound
+   disablement. Indirect 3D submission paths remain open. Finding 120 documents optional duplicate
    sample buffers, and finding 133 traces playback's single-buffer versus three-buffer rotation.
 2. Finding 122 traces the in-memory WAV path from the `data` chunk through `mmioGetInfo`'s read
-   window into a `GlobalAlloc` buffer before DirectSound setup. The shared file/WAD open layer is
-   documented in finding 11; runtime WAD-backed loading and Windows' internal file access remain
-   unverified.
+   window into a `GlobalAlloc` buffer before DirectSound setup; finding 215 records the open-MMIO
+   handle leak on failures after format parsing. Findings 217–218 record the unchecked streamed
+   metadata probe and its separate WinMM file-path open. Finding 222 records that non-PCM
+   `cbSize` extension reads are not bounded by the `fmt ` chunk size; the 412 loose WAV files
+   in the reference tree use 16-byte PCM format chunks. The shared file/WAD open layer is
+   documented in finding 11; the reference tree contains 412 loose streamed WAVs, while runtime
+   path resolution remains unverified.
 3. Finding 123 traces `AVIStreamGetFrame` output into a row-copy helper and the surface pixel
    buffer. The helper walks source rows backward while advancing the destination; bottom-up to
-   top-down conversion is an inference. The later presentation path remains untraced.
+   top-down conversion is an inference. Finding 172 traces each frame blit into the shared
+   DirectDraw render target. Finding 205 traces configured DirectShow frames
+   from that shared secondary surface through windowed blit or fullscreen flip;
+   the credits AVI's surrounding presentation path is recorded separately.
+   Findings 173–177 record the unchecked null-allocation path, missing explicit
+   frame-retriever close, stale-surface blit after a null frame fetch,
+   caller-level restart at stream length, and the video-only AVI stream
+   selection. Finding 210 records that supported AVI row copies proceed even
+   when the surface-lock helper fails or is skipped; finding 216 records that
+   the decoder is asked to choose its best display format; finding 220 records
+   that the frame index advances even when the movie surface depth has no copy
+   branch.
+   Findings 181–199 resolve the command loop's keyboard/mouse-release exit gate, document the credits scroll clock over its background AVI, cross-check the shipped credits text against the CRLF splitter, record `.cconv` sidecar lookup precedence, show that successful AVI playback has no explicit loop sleep, trace the credits path around the `DontPlayAvis` gate, distinguish the DirectShow configured-video route from the credits AVIFIL32 route, record the COM route's missing explicit apartment teardown, show that configured videos add primary audio and video streams, document unchecked COM cleanup after partial initialization, trace the level-video press-to-skip condition, correlate the shipped boot/credits AVI stream contents with those routes, identify the null-release path when the DirectShow class cannot be created, document separate-thread graph execution, trace the CD-audio current-track error handling, resolve the listener frame's scene-relative vectors, identify the listener cache's conditional suppression of failed deferred updates, trace the attached-source position cache after its immediate setter, and record DirectSound's default meter-per-vector-unit mapping.
+   Findings 200–202 trace configured-video sample blits, caller cleanup when
+   the update callback ends, and the duration-based iteration cap. Finding 203
+   records unchecked Direct3DRM frame-query results in listener and attached
+   source refreshes. Finding 204 records how stopping one attached sound can
+   clear all registry entries for its provider frame and suspend refreshes for
+   other sounds still attached to that frame. Finding 205 connects configured
+   DirectShow samples to the game's final windowed/fullscreen presentation;
+   finding 206 records full-surface scaling, finding 207 records cleanup
+   without an explicit stream-stop call, and finding 208 records best-effort
+   primary-audio setup. Finding 219 documents that the callback routes the
+   documented `MS_S_ENDOFSTREAM` status through the same cleanup path as other
+   nonzero sample-update results.
 4. `.flh` container format — **closed** by finding 21 (2026-10-20): layout,
    both 16-bit coders, and the RGB555→565 write transform.
 5. MCI: only `play cdaudio from N` and status queries were observed; no

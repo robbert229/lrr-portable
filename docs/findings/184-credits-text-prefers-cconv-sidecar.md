@@ -1,0 +1,5 @@
+# Finding 184 — Credits Text Lookup Prefers a `.cconv` Sidecar
+
+Before loading the configured credits text path, `FUN_0040a0c0` formats `<path>.cconv` and asks the shared file opener for that name. It tries the original configured path only when the sidecar open fails. With shipped configuration this is `Credits.txt.cconv` followed by `Credits.txt`. The two reference WADs contain `credits.txt` but no credits `.cconv` entry, so their archive contents provide the fallback text. An external or disk-backed sidecar could still win at runtime; the static code does not establish which source is present in a particular installation.
+
+**Evidence.** In `reference/LegoRR.exe` (SHA-256 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`), `FUN_0040a0c0` at `0x40a0c0` formats `"%s.cconv"`, calls `FUN_004800a0` with that name, and falls back to `param_1` only on a zero result. `reference/LegoRR1.wad` entry 0 is `credits.txt`; inventory of both `LegoRR0.wad` and `LegoRR1.wad` finds no credits `.cconv` entry. The shared file/WAD open layer is described in finding 11.

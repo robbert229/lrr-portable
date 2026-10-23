@@ -6,7 +6,7 @@ positive. The reward-screen polling loop decrements that counter by a fixed
 pointer at the sampled screen coordinates. Once the counter is nonpositive, the
 normal slot-zero request can take effect.
 
-**Observations from** REA/Ghidra 12.1.4 over `source/LegoRR.exe` (SHA-256
+**Observations from** REA/Ghidra 12.1.4 over `reference/LegoRR.exe` (SHA-256
 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`),
 2026-10-22. Evidence: `docs/evidence/legorr-pointer-cursor-config-and-override.bundle`.
 Focused IDs: `ev_74f3f24a26bbc9457ddfdd61356b21c7578a7234ede6126a7b4de381a802a9ae`

@@ -8,6 +8,10 @@
 
 `FUN_004890c0`, called earlier by the loader, seeks to the parent chunk's `dwDataOffset + 4`, sets the requested chunk ID to `data`, and calls `mmioDescend` on that parent. This ties the size/read preparation to the WAV data chunk.
 
+Finding 215 traces the open-handle cleanup boundary: failures after the format
+parser returns an MMIO handle reach cleanup without closing it, while a
+successful data read closes the handle before DirectSound buffer setup.
+
 ## Inference
 
 The MMIO read-window pointer is consumed internally, while the loader receives a copy in its allocated global-memory destination before DirectSound setup. The loader's upstream open path uses the shared disk/WAD access layer documented in finding 11, so this same handoff applies when that layer supplies a WAD-backed MMIO handle.

@@ -1,6 +1,6 @@
 # 01 — Resource Loading Map (`LegoRR.exe`)
 
-**Target:** `source/LegoRR.exe` · SHA-256 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`
+**Target:** `reference/LegoRR.exe` · SHA-256 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`
 **Analysis provider:** Ghidra 12.1.4 (REA) · 2,707 procedures · 2,381 strings
 
 ## Binary layout (observed)
@@ -24,41 +24,54 @@ The 2.9 MB `.data` segment dominates the binary and contains the runtime wad/fil
 
 ```
 FUN_0047f6e0(name, mode)
-  ├─ classify via FUN_0047fe30(name, mode)
+  ├─ classify via FileOpenRouteSelect @ 0x47fe30(name, mode)
   │    ├─ 0  → WAD branch      (log "WAD Load %s" / "WAD Fail %s")
   │    ├─ 1  → STD branch      (log "STD Load %s" / "STD Fail %s")
   │    └─ else → error: "Error in call to C:\Dev\SourceSafe\gods98\...\File Open"
   └─ allocate a 2-field handle via FUN_0047fed0(mode), store file handle at +4
 ```
 
-*Classification (observed):* `FUN_0047fe30` returns `1` if the name's first byte is `w`/`W`,
-otherwise it asks the filesystem whether the file exists (`FUN_0048bd50`, "not found" ⇒ `0`).
-So loose `Data\...` files are the STD branch; the wad branch handles archive members.
+*Classification (observed):* `FileOpenRouteSelect` returns `1` if the name's first byte is `w`/`W`,
+otherwise it searches the mounted WAD contexts for that entry (`WadEntryFindAcrossMountedArchives`).
+An absent archive entry returns `-1`, selecting the STD branch; the WAD branch handles archive members.
 
 ### WAD branch — mount + open
 
-* Mount (`FUN_0047f130`): tries `%s%i.wad` for `i = 0..9`, i.e. `LegoRR0.wad` … `LegoRR9.wad`.
+* Mount (`WadMountStartup @ 0x47f130`): tries `%s%i.wad` for `i = 0..9`, i.e. `LegoRR0.wad` … `LegoRR9.wad`.
   The shipped copy has 0 and 1. A failed CD-key check raises `CDMissing`; missing data raises
   `DataMissing` with an "install" message (`cd.key`, `delme.dat` marker files).
 * Context table `DAT_00575500`: 16 slots, 36 bytes each (`&DAT_00575500 + i*0x24`).
   Slot `+0x18` = name pointer array, `+0x20` = name count, `+0x1C` = TOC pointer.
-* Name lookup (`FUN_0048bda0`): linear `__strcmpi` over the slot's name array — case-insensitive.
-* Open (`FUN_0048bf70(path, idx)`): if `idx != -1`, opens inside that wad; with `idx == -1`
+* Name lookup (`WadEntryNameLookup @ 0x48bda0`): linear `__strcmpi` over the slot's name array — case-insensitive.
+* Open (`WadPathOpen @ 0x48bf70(path, idx)`): if `idx != -1`, opens inside that wad; with `idx == -1`
   (the `DAT_004aaf00` sentinel `0xFFFFFFFF`) it scans wads `9 → 0`, so later wads shadow earlier ones.
 * Entry read (`FUN_0048be40`):
-  1. `FUN_0048bd30` allocates a runtime slot from a 16-entry pool at `DAT_005756a0` (stride 16).
-  2. Entry flags: if `byte[0] & 2` the payload is expanded via `FUN_0049c7c0` (a small
+  1. `WadEntrySlotAllocate @ 0x48bd30` allocates a runtime slot from a 16-entry pool at `DAT_005756a0` (stride 16).
+  2. Entry flags: if `byte[0] & 2` the payload is expanded via `ExpandWadPayload` (`0x49c7c0`; a small
      header format: 4-byte magic + type byte at [3] + byte-swapped length, then raw bytes at
-     `payload+0x12`; types: 0 = memcpy, 1 = `FUN_0049c8e0`, 2 = `FUN_0049ca60`).
+     `payload+0x12`; types: 0 = memcpy, 1 = `DecodeWadPayloadType1`, 2 = `DecodeWadPayloadType2`).
   3. Slot fields: `+0x0` data pointer (or expanded buffer), `+0x4` state=1, `+0x8` wad index, `+0xC` entry index.
 * Writes into a wad are rejected: strings `Cannot write to a file stored in a Wad!` (`0x4ab060`)
   and `"fprintf" is unsupprted for wad files` (`0x4ab0c4`).
 
 ### STD branch
 
-`FUN_0047fed0(1)` then `FUN_0048eb90(path, h)` → `FUN_0048eb60(…, 0x40)` → `FUN_00495000`
-allocates a 32-byte handle block from a pool table (`DAT_0076cd98`, count `DAT_0076dda0`;
-free-reuse check masks state byte at `+0xC` with `0x83`) and `FUN_00494e30` performs the read.
+`FUN_0047fed0(1)` then `FUN_0048eb90(path, h)` → `StdFileOpenIntoHandle(…, 0x40)` →
+`StdFileHandleAcquire` allocates/reuses a 32-byte handle block from a pool table (`DAT_0076cd98`,
+count `DAT_0076dda0`; free-reuse check masks state byte at `+0xC` with `0x83`) and `StdFileOpen`
+parses the mode and initializes the OS file handle.
+
+`WadEntryFindAcrossMountedArchives` (`0x48bd50`) searches an explicitly selected archive when
+given an index, or scans mounted archive contexts from 9 down to 0 when passed `-1`. It returns
+the matching archive entry index (or `-1`), not an operating-system filesystem existence result.
+`ExpandWadPayload` allocates the declared output size and calls `WadPayloadDecodeDispatch`, which
+checks the payload header and dispatches raw copies or either codec. Type 1 uses
+`WadReadBitsLsbFirst` and three Huffman tables (`WadHuffmanTableRead`,
+`WadHuffmanSymbolDecode`, `WadHuffmanCanonicalCodesBuild`, `WadReverseLowBits`). Type 2 reads
+MSB-first bytes with `WadReadBitsMsbFirst` and uses `WadRunLengthDecode` and
+`WadBackreferenceOffsetDecode`. Both decoders share `WadBitstreamOutputInitialize`; the table
+reader uses `WadHuffmanTableClear` before loading code lengths. The shipped archives store all
+payloads uncompressed, so the compressed paths are present but dormant in that data set.
 
 A related path builder `FUN_0047f660` composes the string `"%c:\%s\%s"` (string `0x4aaf64`)
 using a one-byte drive letter stored at `DAT_005343b4` — this is how the game re-opens
@@ -101,7 +114,7 @@ alignment padding.** Case-insensitive name match over the flat path table is the
 | WAD file layout, offsets, uncompressed payloads | observed (validated by parsing both archives) |
 | Container round-trip | **proven** — `tools/rrwad.py verify` repacks both shipped archives byte-identical (5,631 + 214 entries) |
 | Runtime slot/context table semantics | observed (Ghidra pseudocode) |
-| Compression codecs `FUN_0049c8e0` / `FUN_0049ca60` | **dormant** — flag=1, stored=original everywhere; codecs never exercised |
+| Compression codecs `DecodeWadPayloadType1` / `DecodeWadPayloadType2` | **dormant** — flag=1, stored=original everywhere; codecs never exercised |
 | STD branch = plain `Data\` files | inferred from branch structure + `Data\%s` string |
 | `gods98` / `ROBW` = original dev tree | inferred from string fragments |
 
@@ -126,5 +139,5 @@ alignment padding.** Case-insensitive name match over the flat path table is the
 
   The engine's 3D pipeline is evidently built around imported LightWave assets plus a
   custom in-game scene representation — a strong lead for the renderer trace next.
-- Document the dormant codecs `FUN_0049c8e0` / `FUN_0049ca60` (never used by shipped archives).
+- The dormant payload codecs are now documented above; shipped archives store all payloads uncompressed.
 - `LegoRR.icd` is 0 bytes on this copy and produces no string hits — likely a dead install marker.

@@ -7,7 +7,10 @@ handles using the configured spacing values. A known `#name#` token selects a
 sound handle. The sound path only proceeds when the token index differs from
 the last one and the audio availability check succeeds; it then submits the
 sound through `FUN_0047ad70`. If `FUN_00456240(0)` is zero, the path also
-requests advisor animation slot `0x14` through `FUN_004018c0`.
+requests advisor animation slot `0x14` through `FUN_004018c0`. Finding 211
+refines the ordering: the parser stores the new token index before checking
+whether sound is enabled, so the same token is not retried if sound becomes
+enabled while that token remains active.
 
 The display worker `FUN_0046ad00` passes the active stream string through this
 parser into a scratch buffer, then sends the resulting text to the text widget

@@ -1,0 +1,9 @@
+# Finding 178 — Dynamic Sample Alias Registration Can Overrun Its Hash Table
+
+`FUN_00464740` allocates `0x7bc` bytes for `DAT_00502a20`, which holds 495 four-byte alias hashes. It fills indices `0..44` with the 45 built-in SFX names. During `Samples` group loading, `FUN_00434a50` enables dynamic name registration by setting bit 1 of `DAT_00502a2c`, then resolves each key through `FUN_00464c70`.
+
+When a key is not already present, `FUN_00464c70` writes its hash at index `45 + DAT_00502a24` and increments `DAT_00502a24`. This branch has no comparison against the allocation's 495-entry capacity. It can safely add 450 distinct dynamic aliases at indices `45..494`; the next distinct alias writes to index 495, one dword past the allocation.
+
+The shipped `reference/LegoRR1.wad` `Lego.cfg` has 446 distinct `Samples` keys. Thirty-one match built-in SFX aliases, leaving 415 dynamic aliases under the default sample-loading path. That occupies indices `45..459` and leaves 35 dynamic slots. A modified config with 36 additional unique names beyond the shipped set reaches the out-of-bounds write. This is a conditional config-driven memory overwrite; the shipped config itself stays within the allocation.
+
+**Evidence.** Shipped `reference/LegoRR.exe`, SHA-256 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`: allocation and static hash initialization are in `FUN_00464740` at `0x464740`; dynamic-mode enable and `Samples` iteration are in `FUN_00434a50` at `0x434a50`; the unchecked write/count increment are in `FUN_00464c70` at `0x464c70`. All functions are in `docs/decompiles/full/LEGORR.full.c`. The config corpus is `reference/LegoRR1.wad`, SHA-256 `5a967d3147533c61390120f923cea2bd275cc29bc7a8563de21c62bd9de6229d`; `Lego.cfg`'s `Samples` group and the 45 built-in names were counted from the archive and executable, respectively.

@@ -8,7 +8,7 @@ lock interval that prevents immediate reprocessing. The candidate gate in
 already queued or locked. `FUN_0040e9c0` derives the next-stage delay, and
 `FUN_0040cce0` selects and places an effect variant.
 
-**Observations from** REA/Ghidra 12.1.4 over the shipped `source/LegoRR.exe`
+**Observations from** REA/Ghidra 12.1.4 over the shipped `reference/LegoRR.exe`
 (SHA-256 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`),
 2026-10-22. Evidence bundle:
 [`legorr-lava-erosion-focused-expansion.bundle`](../evidence/legorr-lava-erosion-focused-expansion.bundle).

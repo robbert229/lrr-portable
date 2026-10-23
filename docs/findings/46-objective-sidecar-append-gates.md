@@ -6,7 +6,7 @@ entity entering that path is not sufficient by itself to produce a record.
 removal-state bit before calling `FUN_00459190`; `OsfAdd` then requires at least
 one of three fields to be nonzero before appending its 20-byte entry.
 
-**Observations from** REA/Ghidra 12.1.4 over `source/LegoRR.exe` (SHA-256
+**Observations from** REA/Ghidra 12.1.4 over `reference/LegoRR.exe` (SHA-256
 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`),
 2026-10-22. Evidence: `docs/evidence/legorr-campaign-expansion.bundle`.
 Focused IDs: `ev_cb67dd44b4a1a803dee82f4abe7eb06a9d4e5aad251bbfab9e77bcd31969d456`

@@ -58,16 +58,16 @@ Flag bits (observed behavior, partially inferred):
    `DAT_00556148/14c`, distance-test vs `_DAT_0049e2cc`).
 4. **Main simulation:** `FUN_004250c0(scale, dt, &3 outs)` → **0 = quit frame**;
    then ~25 subsystem tickers in fixed order, several passed `(DAT_005560d4, scale)`:
-   `FUN_00425d90`, `FUN_00402220`, `FUN_00424600`, `FUN_0040aa10`, `FUN_0043b270`,
+   `FUN_00425d90`, `FUN_00402220`, `TerrainCellFlagCleanup` (`0x424600`), `FUN_0040aa10`, `FUN_0043b270`,
    `FUN_0046f550`, `FUN_0040eab0`, `FUN_004313b0`, `FUN_004520d0`,
    `FUN_00435f5c`×3 (the three view contexts), `FUN_004091e0`, `FUN_0041ba10`,
    `FUN_004291a0(dt,0)`, `FUN_00449c00`, `FUN_0040d450`, `FUN_00426520`,
-   `FUN_0044eff0`, `FUN_0046e390`, `FUN_0047aba0`, `FUN_00465b00`, `FUN_004665c0`,
-   `FUN_0044cfa0`, `FUN_0041a2c0`.
+   `TerrainDirtyCellUpdate` (`0x44eff0`), `FUN_0046e390`, `FUN_0047aba0`, `FUN_00465b00`, `FUN_004665c0`,
+   `FUN_0044cfa0`, `FUN_0041a2c0`. `TerrainCellFlagCleanup` walks the selected terrain cells, clears per-cell processing bits, and queues command `0x14` for qualifying cells. `TerrainDirtyCellUpdate` processes cells marked dirty (`+0x19` flag `0x04`), clears the flag, then advances the terrain update helpers.
 5. **Indexed subsystem table:** under bit `0x800`, `FUN_0045a730(idx, dt)` is
    called with idx `0,1,2,(3 skipped),4,6,7,8,9,10,11` interleaved with named
-   tickers (`FUN_0045d6d0`, `FUN_0040e7f0`, `FUN_0041b490`, `FUN_0041b930`,
-   `FUN_0041a080`, `FUN_00419f30`). Looks like a numbered manager array
+   tickers (`PositionTrackerUpdateAll` at `0x45d6d0`, `FUN_0040e7f0`, `FUN_0041b490`, `TimedStatusAndEventTick` at `0x41b930`,
+   `FUN_0041a080`, `FUN_00419f30`). `PositionTrackerUpdateAll` applies each tracked offset to its entity's resolved scene handle; `TimedStatusAndEventTick` toggles a periodic status flag, advances a timer, and raises event bit `0x800` when its countdown expires. Looks like a numbered manager array
    (AI, particles, FX…) — worth naming once each index is identified.
 6. **Render:** `FUN_0046b7c0(camL, camH, dt)` and begin/end pairs
    (`FUN_00473b40(surface, 0/1)` = lock/unlock; `FUN_00475580(surface, 2, …,

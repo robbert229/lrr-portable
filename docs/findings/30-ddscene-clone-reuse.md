@@ -6,7 +6,7 @@ path when destroyed in mode 0. Teardown marks their auxiliary slot inactive;
 the clone factory later finds that slot, reattaches the object to a scene, and
 draw-steps it before returning it.
 
-**Observations from** REA/Ghidra 12.1.4 over `source/LegoRR.exe` (SHA-256
+**Observations from** REA/Ghidra 12.1.4 over `reference/LegoRR.exe` (SHA-256
 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`),
 2026-10-21. Evidence: `docs/evidence/legorr-ddscene-reuse.bundle` (5 records),
 plus the teardown wrapper in `docs/evidence/legorr-ddscene-lifecycle.bundle`.

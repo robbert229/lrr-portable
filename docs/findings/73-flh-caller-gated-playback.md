@@ -6,7 +6,7 @@ one frame, but the overlay still draws the current surface when advancement is
 denied. The frame player's cadence and hold behavior therefore come from its
 caller, not a per-frame clock stored in the `.flh` stream.
 
-**Observations from** REA/Ghidra 12.1.4 over `source/LegoRR.exe` (SHA-256
+**Observations from** REA/Ghidra 12.1.4 over `reference/LegoRR.exe` (SHA-256
 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`),
 2026-10-22. Evidence: `docs/evidence/legorr-flh-playback-state-machine.bundle`.
 Focused IDs: `ev_7fd7c31c36015c936e28d92b93cf85589d3374705fc96b39f9ff17eb87cd564e`

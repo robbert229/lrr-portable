@@ -1,0 +1,7 @@
+# Finding 181 — AVI Command Loop Exits on Keyboard Input or Mouse Release
+
+The AVI command loop in `FUN_0040a0c0` sets its exit flag when the 256-byte DirectInput keyboard state contains any nonzero byte. It also sets the flag when the mouse state `DAT_0076ab3c` is now released and was pressed on the previous loop iteration. The latter is a release-edge check, so a mouse press by itself does not exit the movie; the loop exits after the release is processed.
+
+The shared window-message handler `FUN_004784c0` updates that mouse state from button messages. In its ordinary branch, either left or right button down sets the state and either button up clears it. When `DAT_00505f84 & 0x4000` is set, only left-button down/up updates this state; right-button messages update a separate flag. Thus the exact mouse buttons accepted by the movie stop path depend on this mode bit. This describes the static input gate, not observed timing or user-visible behavior in a running game.
+
+**Evidence.** Shipped `reference/LegoRR.exe`, SHA-256 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`. `FUN_0040a0c0` at `0x40a0c0` tests the keyboard count from `FUN_0047efb0` and compares current `DAT_0076ab3c` with its saved prior-iteration value. `FUN_0047eef0` at `0x47eef0` refreshes the 256-byte DirectInput state buffer, and `FUN_0047efb0` counts nonzero bytes in it. `FUN_004784c0` at `0x4784c0` handles the mouse button messages and updates `DAT_0076ab3c`; all functions are in `docs/decompiles/full/LEGORR.full.c`.

@@ -22,10 +22,11 @@ finding 05 ruled out level data. Both halves now have positive evidence:
 - **Per-entry data (sound handles/flags):** also from `FUN_0041fb50` (xref `0x422553`),
   `FUN_00434c10` walks the config section keyed `InfoMessages`
   (`s_InfoMessages` `0x4a484c`): entry+4 is a message name mapped to the id by a catalog
-  lookup (`FUN_004193e0`), the sound path is loaded (`FUN_0047d9d0`) and stored at
-  config+`0x04` by `FUN_00419650` (addref via `FUN_0047dbc0`), the display text pointer
-  via `FUN_004194b0`, an optional second sound via `FUN_00419680`, and the
-  "play regardless of game state" flag via `FUN_00419470` — set when the flag string is
+  lookup (`FUN_004193e0`), `InfoMessageSoundLoad @ 0x419650` loads and stores the sound
+  pointer at config+`0x04` (then calls `ResourceRecordAddRef @ 0x47dbc0`), the display
+  text pointer is set via `FUN_004194b0`, `InfoMessageSecondarySoundSet @ 0x419680`
+  stores an optional second sound, and `InfoMessageAlwaysPlayFlagSet @ 0x419470` sets
+  the "play regardless of game state" flag when the flag string is
   empty/short (<4 chars) or compares equal to `AlwaysPlaySFX`
   (`s_ALWAYSPLAYSFX` `0x4a483c`). The `& 0x20000` cooldown rule (25.0 s reset) from
   finding 04 stays as documented; that flag comes from the same section.
@@ -49,7 +50,7 @@ directly onto what that word actually carries. That inference is wrong. All 57 x
 sit in four adjacent functions, `0x457d–0x4591`, all handling a **level objective
 state word**:
 
-- `FUN_00457d40` — per-level objective-config loader (writer, see table below)
+- `ObjectiveConfigLoad @ 0x457d40` — per-level objective-config loader (writer, see table below)
 - `FUN_00459050` — objective checker (gates on `0x10/0x20/0x100/0x200/0x800`)
 - `FUN_00458670` — objective-**result announcer** (sets 1/2/4/8, shows `"Acheived"` /
   `"Failed"` / `"FailedCrystals"` overlays, stores result index 0/1/2 into view slot
@@ -70,11 +71,11 @@ reads config keys:
 | `0x10` | `DontShowObjectiveAdvisor` key ≠ 1, or forced when the word is still 0 after load | suppress generic advisor hints (on by default) |
 | `0x20` | `DontShowObjectiveAcheiveAdvisor` key ≠ 1 | suppress "objective achieved" hint |
 | `0x80` | `DontShowObjectiveFailedAdvisor` key ≠ 1 | suppress "objective failed" hint |
-| `0x100` | `CrystalObjective` key present | crystal-count objective armed (`FUN_00458580`, target at +`0xf4`) |
-| `0x200` | `OreObjective` key present | ore-count objective armed (target at +`0xf8`) |
-| `0x400` | `BlockObjective` key present | block/build objective armed (`FUN_004585c0`, +`0xfc`/`0x100`) |
-| `0x800` | `TimerObjective` key present | timer objective armed (`FUN_004585f0`, seconds×25 at +`0x104`; also sets `0x20` when mode is `HitTimeFailObjective`) |
-| `0x1000` | `ConstructionObjective` key present | construct objective armed (`FUN_00458620`, +`0x108`/`0x10c`) |
+| `0x100` | `CrystalObjective` key present | crystal-count objective armed (`ObjectiveCrystalOrOreArm @ 0x458580`, target at +`0xf4`) |
+| `0x200` | `OreObjective` key present | ore-count objective armed (same helper, target at +`0xf8`) |
+| `0x400` | `BlockObjective` key present | block/build objective armed (`ObjectiveBlockArm @ 0x4585c0`, +`0xfc`/`0x100`) |
+| `0x800` | `TimerObjective` key present | timer objective armed (`ObjectiveTimerArm @ 0x4585f0`, seconds×25 at +`0x104`; also sets `0x20` when mode is `HitTimeFailObjective`) |
+| `0x1000` | `ConstructionObjective` key present | construct objective armed (`ObjectiveConstructionArm @ 0x458620`, +`0x108`/`0x10c`) |
 
 **Runtime-side bits** managed by the announcer/state machine: `0x1` objective still
 pending (set by the announcer's `param_1 = 0` path), `0x2` achieved, `0x4` failed,
@@ -114,8 +115,8 @@ The binary imports exactly three functions from `D3DRM.DLL`
   That is the classic *device-on-surface* / DRendering setup — D3DRM rendering into the
   game's own DirectDraw surface, whose implementation is the D3DRM built-in CPU
   color-RLE renderer + DRendering executes.
-- `D3DRMVectorRandom` / `D3DRMVectorRotate` are used as dumb free-function math
-  helpers (single-line wrappers `FUN_00479500` and the `0x479524` site) — random
+- `D3DRMVectorRandom @ 0x479500` / `D3DRMVectorRotate` are used as free-function math
+  helpers (the random helper is a thin wrapper; rotate is called at `0x479524`) — random
   scatter/rotation, not rendering.
 - The byte pattern for `GUID_IDirect3DHALDevice` (`{34532120-3453-11CF-…}`, little-endian
   `20 21 53 34`) appears **zero times** in any section of the binary: no code ever

@@ -8,7 +8,7 @@ referenced entity pointer in the new entity's `+0x2fc` field, sets bit `0x04`
 in its `+0x3e4` flags, derives a mode from the referenced entity's flags, and
 calls follow-up state/relationship helpers.
 
-**Observations from** REA/Ghidra 12.1.4 over `source/LegoRR.exe` (SHA-256
+**Observations from** REA/Ghidra 12.1.4 over `reference/LegoRR.exe` (SHA-256
 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`),
 2026-10-22. Evidence: `docs/evidence/legorr-olistfile-focused-expansion.bundle`.
 Focused IDs: `ev_55645c200e2f7eb8fc3d34b41a3eeccb0d4e41b65b3c496829a3556fd5c2ccdb`

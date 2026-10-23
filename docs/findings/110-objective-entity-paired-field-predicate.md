@@ -1,6 +1,6 @@
 # 110 — A delegated objective predicate searches entities for paired-field matches
 
-After its timer, crystal, and ore checks, `FUN_00459050` delegates another predicate through `LAB_00459100`, passing the level-state address plus 0xbc to the registered-entity iterator. The iterator invokes the callback for candidates and returns when one passes.
+After its timer, crystal, and ore checks, `FUN_00459050` delegates another predicate through code beginning at `0x459100` (Ghidra label `LAB_00459100`), passing the level-state address plus 0xbc to the registered-entity iterator. The iterator invokes the callback for candidates and returns when one passes. Ghidra does not mark this callback as a procedure, so the findings script creates a function entry with the observed body range through its shared return at `0x459186`.
 
 The callback has two flag-gated paths. With level flag 0x400 set, it considers entity kinds 1 and 2, calls `FUN_004424f0`, and compares the helper's two outputs with level-state fields +0xfc and +0x100. With flag 0x1000 set, it compares candidate fields +0x4c and +0x50 with level-state fields +0x108 and +0x10c. These are existence checks over the iterator's candidate table.
 

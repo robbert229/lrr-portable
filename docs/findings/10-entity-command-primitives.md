@@ -99,9 +99,27 @@ into the key-state table `DAT_0076ab80` is still down get executed early via `FU
 | 0x2d | `FUN_004528c0` | |
 | 0x40 | `FUN_00452cc0` | |
 
+The build/placement handlers are distinct helpers, not four aliases:
+`EntityBuildPlacementCommandBatchExpand @ 0x439280` parses four counts from the
+command payload and expands them into repeated calls to the two setup routines;
+`EntityBuildPlacementCommandPairCreate @ 0x439340` invokes both setup routines
+once with the same mode; and `EntityBuildPlacementAlternateCommandSetup @
+0x4394b0` computes or accepts placement coordinates, creates command kind 7,
+and enqueues it as opcode `0x1c`. The opcode `0x23` handler
+`EntityRandomValidCellCommandCreate @ 0x452430` samples up to 1000 map cells
+until `FUN_00432b50` accepts one, then queues the selected coordinates. Opcode
+`0x25` reaches `EntityAdjacentPlacementCellSearch @ 0x447210`, which tests a
+24-offset neighborhood with rotations/reflections before accepting a placement.
+
 Cancel helpers run from `CmdFree`: `CmdCancelRef @ 0x402cd0` marks matching type-`0x13`
 commands cancelled (`|0x20`); `CmdCancelByCoords @ 0x403700` does the same for type-7 zone
 commands by position. `CmdMarkMatching @ 0x402000` flags commands matching type+params.
+`CommandQueueCancelOpcode @ 0x451f60` removes every active command with a selected opcode
+from the ping-pong queue by swapping in the last item and shrinking the count. The selection
+helpers are `SelectionSnapshotCreate @ 0x452520` (copy the selected-entity pointer list) and
+`SelectionContainsEntity @ 0x452610` (pointer membership or selected-flag check);
+`CommandEntityReferenceRemap @ 0x45d870` updates queued references when an entity pointer
+is replaced.
 
 ## Cross-links
 

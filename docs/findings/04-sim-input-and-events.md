@@ -23,7 +23,7 @@ Behavior clusters observed:
   ends the game. Other returns 0 go through `FUN_00435940()` (the "keep running?"
   probe also seen in `EngineShutdown`).
 - **Focus loss:** when `DAT_00505808 == 0`, it builds a menu from string
-  `"LoseFocusAndPause"` (`FUN_00478f50` + `FUN_004790d0`) and on choice
+  `"LoseFocusAndPause"` (`FUN_00478f50` + `ConfigBooleanGetDefault2 @ 0x4790d0`) and on choice
   starts the fade transition (`FUN_00425c30(0,1)` + bit `0x2000000`).
   So `FUN_00425c30(mode, dir)` is the **screen-transition controller**.
 - **Camera keys (in-game):** `FUN_00436900 / 004369f4 / 00436aa5(DAT_005560e4, dt*k)`
@@ -88,8 +88,9 @@ Config-driven message queue (like `SND_*`/HUD events), max **40 message ids**
   `25.0` (`0x41c80000`) and mutes via `FUN_00464ef0(sound, 0)`; ids 10–12/0x26
   reset a cluster of four timers together (`DAT_004dc7cc…` = linked message family).
 - Queue: up to 40 active entries (`DAT_004dca20` ids stride 5, `+0x4` negative
-  age, `+0x8` float timestamp via `FUN_00419b50()`); `FUN_00419b20(id)` searches,
-  `DAT_004dcd38` is the write cursor.
+  age, `+0x8` float timestamp via `FUN_00419b50()`); `InfoMessageQueueFindId @ 0x419b20` searches,
+  `InfoMessageQueueTick @ 0x419f30` advances message effects, and `InfoMessageTimerDecay @ 0x41a2c0`
+  decrements timers; `DAT_004dcd38` is the write cursor.
 
 So: `MessageDispatch(0x10..0x13,…)` = "air low / air beat" notifications the
 tick fires (doc 03 §7); id table and linked families come from level data.

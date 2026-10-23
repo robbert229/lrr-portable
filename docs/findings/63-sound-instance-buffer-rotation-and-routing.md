@@ -1,13 +1,18 @@
 # 63 — Sound submissions select a buffer instance and keep streamed playback separate
 
 The direct sound path is gated by the sound subsystem, the loaded bank slot,
-and bank flags. A looping in-memory entry rotates through three buffer
-pointers; an entry without that flag uses one. The helper returns an integer
-formed from the bank slot and selected buffer index. Stream-mode entries take a
-separate file-backed path. These are submission and buffer-management facts;
-they do not establish that a request becomes audible.
+and bank flags. An in-memory entry whose duplicate-buffer flag is set rotates
+through three buffer pointers; an entry without that flag uses one. Finding 134
+traces this flag to the leading `*` on a `Samples` path. The helper returns an
+integer formed from the bank slot and selected buffer index. Stream-mode entries
+take a separate file-backed path. These are submission and buffer-management
+facts; they do not establish that a request becomes audible.
 
-**Observations from** REA/Ghidra 12.1.4 over `source/LegoRR.exe` (SHA-256
+The stream path replaces any active stream in its selected stream-state record
+before loading the next one; finding 136 traces the stop, release, and restart
+sequence. The selector's user-facing meaning remains unknown.
+
+**Observations from** REA/Ghidra 12.1.4 over `reference/LegoRR.exe` (SHA-256
 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`),
 2026-10-22. Evidence: `docs/evidence/legorr-sound-instance-spatial-expansion.bundle`.
 Focused IDs:
@@ -29,14 +34,17 @@ Focused IDs:
 
 ## Buffer selection and lifetime bookkeeping
 
+Finding 168 traces the in-memory branch's unchecked `SetCurrentPosition` and
+`Play` results; the returned integer does not report either call's success.
+
 `FUN_0047ad70` returns `-1` unless sound is enabled, the requested bank slot
 is not `-1`, and the slot's active bit is set. When the slot is in memory mode,
 flag `0x4` advances a per-slot index modulo three and selects one of three
 buffer pointers. Without that flag, it selects the single buffer pointer. The
 selected buffer is queried and configured before a DirectSound buffer call at
 vtable slot `+0x30`; the return is `slot * 3 + selected_index`. The slot setup
-in `FUN_0047a870` sets flag `0x4` when its in-memory entry is configured with
-the looping parameter.
+in `FUN_0047a870` sets flag `0x4` when the in-memory entry's duplicate-buffer
+argument is nonzero; finding 134 traces that argument from the config marker.
 
 The same dispatch function treats flag `0x8` as the streamed-entry path: it
 opens the file-backed entry and delegates to the streaming helper, returning
@@ -52,7 +60,7 @@ associated records.
 
 | Claim | State |
 | --- | --- |
-| In-memory looping entries rotate over three buffer pointers | observed (`FUN_0047a870`, `FUN_0047ad70`) |
+| In-memory entries with the duplicate-buffer flag rotate over three buffer pointers | observed (`FUN_0047a870`, `FUN_0047ad70`; config source traced in finding 134) |
 | The direct helper returns `slot * 3 + buffer_index`; invalid or disabled requests return `-1` | observed (`FUN_0047ad70`) |
 | Stream-mode entries use a separate file-backed dispatch | observed (`FUN_0047a870`, `FUN_0047ad70`) |
 | Positional submission can be immediate or queued up to ten entries | observed (`FUN_00465090`) |

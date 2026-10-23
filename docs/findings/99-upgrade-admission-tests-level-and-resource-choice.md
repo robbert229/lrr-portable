@@ -11,4 +11,4 @@ The shipped executable has a dedicated building-upgrade gate at `FUN_00438770`. 
 - `ev_6661c4ac8226af5cc4c49bf530108d7be57a7377f961510af502d3a15ad03561` — config keys and default thresholds.
 - `ev_a54a607c7f0803241f6ae1b7765a8f3f1cf65aeb5625c3bc63c73c0f115f4535` and `ev_9f1da3e1fb201183d886614881b2a30801769d3b298a9024efb7357638d870bd` — resource-balance reads and debit paths.
 
-Observations use REA/Ghidra 12.1.4 over shipped `source/LegoRR.exe` (SHA-256 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`), 2026-10-22. Bundle: `upgrade-transition-focused.bundle`.
+Observations use REA/Ghidra 12.1.4 over shipped `reference/LegoRR.exe` (SHA-256 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`), 2026-10-22. Bundle: `upgrade-transition-focused.bundle`.

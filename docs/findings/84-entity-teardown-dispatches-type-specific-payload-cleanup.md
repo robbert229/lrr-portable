@@ -7,7 +7,7 @@ operation when the entity stats word contains bit `0x200000`. These paths
 describe the destructor's dispatch and pointer flow; they do not identify the
 payload types or prove exclusive ownership.
 
-**Observations from** REA/Ghidra 12.1.4 over `source/LegoRR.exe` (SHA-256
+**Observations from** REA/Ghidra 12.1.4 over `reference/LegoRR.exe` (SHA-256
 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`),
 2026-10-22. Evidence: `docs/evidence/legorr-entity-destruction-chain-and-payload-expansion.bundle`.
 

@@ -21,8 +21,8 @@ file; the per-level `.blx` files in the WAD are constant-per-kind, editor-era le
 KeepRunning (0x435940)                       doc 06: sole quit/load decider
   └─ PendingLevelName (0x42f0c0)             resolves "which level next" from config
   └─ LevelLoad (0x429890, ~786 lines)        cleanup cluster → read config keys → file check → pipeline
-       ├─ FUN_00477440(name, buf, 0x4a1cd4)  "resource exists" check per map name
-       └─ MapLoadPipeline (0x42b510)         17 params = state + 16 map-name/filehandle args
+       ├─ FUN_00477440(value, parts, delimiter)  splits comma-delimited level config tuples
+       └─ MapLoadPipeline (0x42b510)            17 params = state + 16 map-name/filehandle args
             ├─ TerrainCreate (0x44e0c0)      builds terrain from the SurfaceMap grid
             ├─ LoadPredugLayer (0x42bd20)    predug flags → voxel +8/+C bits
             ├─ LoadErodeCryoreLayers (0x42c480) erosion/cryo byte → voxel +2
@@ -73,7 +73,9 @@ directly:
 | 0x10 | u16 cells, row-major `y*w+x` | `MapFileGetCell (0x4515c0)` reads `+0x10 + (y*w+x)*2` |
 
 A second, container-handle flavor is used by the layer loaders:
-`MapOpen2 (0x480170)` allocates via `FUN_00489410`/`FUN_004894a0`, same image layout;
+`MapOpen2 (0x480170)` allocates via `FUN_00489410`, reads with `FUN_004894a0`, and
+releases the allocated resource slot through `MapFileResourceSlotRelease @ 0x489460`;
+it uses the same image layout;
 `FUN_004334c0(h,&w,&h)` for dims and `FUN_004319e0(h,x,y)` → u16 cell (same `+0x10 + idx*2`).
 
 Cell semantics per layer (value distributions from all 240 files):
@@ -92,7 +94,7 @@ Cell semantics per layer (value distributions from all 240 files):
 | +0x05 | LoadPathAiLayers | path/AI − bias |
 | +0x06 | LoadEmergeLayer | emerge value >> 1 |
 | +0x08 | LoadPredugLayer / LoadFallinLayer | flag bits (`0x4000000` predug edge wall, `0x20000`, `0x20000000` seen in `CellInitPass`, and `0x10` traversable on the eight neighbours of `v == 1/3` edge-wall cells through the `FUN_00430530` cell update — the load-time source of walkability, found by the T3 real-data probe) |
-| +0x0C | LoadPredugLayer (`0x20`/`0x200` wall triggers `FUN_0044A4B0`) / LoadLayerL | extra flags |
+| +0x0C | LoadPredugLayer (`0x20` immediate / `0x200` deferred coordinate-pool entry; finding 224) / LoadLayerL | extra flags |
 | +0x34 | LoadLayerM | byte layer |
 | +0x38/0x3C | LoadBlockPointers | count/pointer (>4 sets count−4 + flag) |
 | +0x40 | LoadBlockPointers | float `hash(x) % (ptrs * DAT_00556f14 * 25)` |
@@ -134,6 +136,8 @@ game.
   re-derives `0x8`/`0x400000`/`0x20000000`) back it up. Without that call
   a shipped level has no walkable cells at all — the T3 real-data probe
   found the gap. Remaining:
-  `0x20`, `0x200`, `0x20000000`.
+  `0x20`, `0x200`. The `0x20000000` neighbor-mask path, including its
+  conditional out-of-grid `0x400` read at top/left edges, is documented in
+  finding 223.
 - DAT_00556f14 is loaded from FallinMultiplier and zero-normalized to 1 (finding 117); the gameplay rationale remains unknown.
 - .ol/.nrn resources (olistfile, NERPFile) and the NERP interpreter's direct load path remain open. The PTLFile consumer and pair-table construction are documented in finding 115.

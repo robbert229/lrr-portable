@@ -8,8 +8,8 @@
 The `.uv` files (60 shipped, all paired by basename with a `.lwo`) are a
 line-based **text sidecar** supplying two things the LWO itself lacks:
 per-surface **texture-path overrides** and per-corner **UV coordinates**.
-The parser is `FUN_00481c50` (`0x481c50`), called exactly once per model —
-from the mesh builder `FUN_00480ac0` — and *only* when a `.uv` stream exists.
+The parser is `ParseUV @ 0x481c50`, called exactly once per model —
+from the mesh builder `MaterialPass @ 0x480ac0` — and *only* when a `.uv` stream exists.
 Everything else in the file (track-name lines, trailing keyframe blocks) is
 **structurally ignored** by the engine. Grammar validated field-for-field
 against all 60 shipped files: **60/60 clean**.
@@ -33,9 +33,9 @@ conflicts at draw-assembly time.
 | --- | --- | --- |
 | Compose path | `0x48d34f` inside `FUN_0048d2c0` | the string `%s.uv` (`0x4afc90`) is referenced **only** here (only xref); the LWO loader builds `<name>.uv` only when the caller supplied a uv slot (`param_6 != 0`) |
 | Existence check + open | `FUN_0047fb60` (`0x47fb60`), `FUN_0047f6e0` | generic load-and-sanity helper; result is a **stream handle** stored into model slot `+0x1c` (`*param_6` written at two points, `0x48d2c0` body) — never read there |
-| Storage | `FUN_0048d7c0` | model struct (32 B): `+4` nVerts, `+8` nPolys, `+0xc` nSurfaces, `+0x10` PNTS array, `+0x14` POLS meta, `+0x18` SURF records (0x54 stride), `+0x1c` uv stream |
-| Single consumer | `FUN_00481c50(param_1=model, param_2=uvTable)` | called from `FUN_00480ac0` (mesh builder) inside `if (*(model + 0x1c) != 0)`; also `FUN_00480ac0` reserves a per-vertex uv table (`alloc(nVerts * 0x140)`) only on this branch |
-| Teardown | `FUN_0048d870` | model free calls `FUN_0047fac0(model[7])` — **closes the stream, reads nothing** |
+| Storage | `ModelObjectCreate @ 0x48d7c0` | model struct (32 B): `+4` nVerts, `+8` nPolys, `+0xc` nSurfaces, `+0x10` PNTS array, `+0x14` POLS meta, `+0x18` SURF records (0x54 stride), `+0x1c` uv stream |
+| Single consumer | `ParseUV @ 0x481c50(param_1=model, param_2=uvTable)` | called from `MaterialPass @ 0x480ac0` inside `if (*(model + 0x1c) != 0)`; also `MaterialPass` reserves a per-vertex uv table (`alloc(nVerts * 0x140)`) only on this branch |
+| Teardown | `ModelObjectFree @ 0x48d870` | model free calls `FUN_0047fac0(model[7])` — **closes the stream, reads nothing** |
 
 Exhaustive cross-checks that no other code reads the stream: all callers of
 the stream primitives `FUN_0047f980` (read), `FUN_0047f850` (seek),
@@ -46,11 +46,11 @@ one xref, so no other code opens the file).
 
 ## 2. Parser mechanics
 
-`FUN_00481c50` is a line-loop state machine:
+`ParseUV @ 0x481c50` is a line-loop state machine:
 
-- `FUN_00480050(buf, 0x400, stream)` — reads one CRLF line; returns 0 at EOF
+- `ReadCrlfLine @ 0x480050(buf, 0x400, stream)` — reads one CRLF line; returns 0 at EOF
   (clean exit).
-- `FUN_004774b0(line, &tokens)` — splits on the ctype-class whitespace table
+- `WhitespaceTokenize @ 0x4774b0(line, &tokens)` — splits on the ctype-class whitespace table
   (`PTR_DAT_004afd68` / `FUN_0048f1d0` mask 8) into a token-pointer array;
   returns the token count. **Blank lines return 0 and the entire state
   machine skips them** (`if (iVar9 != 0)` guard) — line counting never
@@ -76,7 +76,7 @@ decorative for the engine.
 | 1 | version, always `"2"` | skipped (never inspected) |
 | 2 | `s`, the surface count | skipped — value validated as equal to `s` in all 60 files |
 | 3 … 2+`s` | one *track name* per surface, e.g. `Arm L  Y` | skipped (first `s` phase-A lines) |
-| 3+`s` … 2+2`s` | one **BMP path per surface**, e.g. `Z:\Lego\data\creatures\lavamonster\LavaTextures.bmp` | **strdup'd over each SURF record's `+8` field** — the texture-name slot that `SURF/TIMG` populates (`puVar4[2] = FUN_0048c0c0(...)` in `FUN_0048c820`, `0x48c820` region). The `.uv` path therefore *overrides* the LWO's TIMG. |
+| 3+`s` … 2+2`s` | one **BMP path per surface**, e.g. `Z:\Lego\data\creatures\lavamonster\LavaTextures.bmp` | **strdup'd over each SURF record's `+8` field** — the texture-name slot that `SURF/TIMG` populates through `LwoStringDuplicate @ 0x48c0c0` in `LwoSurfaceSettings @ 0x48c820`. The `.uv` path therefore *overrides* the LWO's TIMG. |
 | 3+2`s` | `m`, the polygon count | skipped (enters phase B) |
 | then, `m` blocks | block header `"<polyIdx> <vertexCount>"` followed by exactly `vertexCount` lines `"<u> <v> <z>"` | see below |
 | tail | `s` keyframe blocks: `"<k>"` + `k` lines of 6 floats | **structurally never read** (see §5) |
@@ -98,7 +98,7 @@ v = -atof(tok[1]);                       /* v is NEGATED on write */
 vi = POLS[poly].vertices[corner];        /* u16 vertex index, from model */
 if (uvTable[vi] unset) { uvTable[vi] = (u, v); mark vi; }
 else if (uvTable[vi] != (u, v)) {         /* two faces want different uv for the SAME vertex */
-    grow point array (FUN_0048dc80, realloc to (nVerts+0xb)*0xc — 11 extra points per growth);
+    grow point array (`GrowHeapArray @ 0x48dc80`, realloc to (nVerts+0xb)*0xc — 11 extra points per growth);
     point[nVerts++] = point[vi];
     POLS[poly].vertices[corner] = nVerts - 1;   /* rewrite index in place (u16 store) */
     uvTable[new vi] = (u, v);

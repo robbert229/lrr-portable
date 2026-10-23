@@ -53,9 +53,10 @@ cleanup when its low flag bit is set (`ev_a6ae79f2593370da78def4885cadaa80165242
 Because stream release is behind the global-byte check, cleanup behavior
 when that byte is set is not established here.
 
-The observed destructor does not call an AVI frame-retriever close function;
-the evidence establishes only the calls present in this destructor, not the
-library's internal ownership or whether another path closes that retriever.
+The observed destructor does not close the AVI frame retriever, and the shipped
+executable imports no `AVIStreamGetFrameClose` function (finding 174). This
+establishes the absence of an explicit close path in the binary. Whether releasing
+the AVI stream also reclaims those decoder resources internally remains unknown.
 No file was executed, and this finding makes no claim about decoder or audio
 teardown.
 

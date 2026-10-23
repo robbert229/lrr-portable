@@ -13,4 +13,4 @@ The transition is an indexed upgrade-state change. The evidence does not establi
 - `ev_5eba9bab2413790e5cd28062dd7c922413ff37a0caf6e3d11a62d6622b2c7f78` — `FUN_004475c0` worker/progress branch that invokes the helper.
 - `ev_dfe96beaefc96b91ba82e059cbdf98a86f481912be0675741fd8ca28a592db20` — `FUN_004089a0` payload-side index setter.
 
-Observations use REA/Ghidra 12.1.4 over shipped `source/LegoRR.exe` (SHA-256 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`), 2026-10-22. Bundle: `upgrade-transition-focused.bundle`.
+Observations use REA/Ghidra 12.1.4 over shipped `reference/LegoRR.exe` (SHA-256 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`), 2026-10-22. Bundle: `upgrade-transition-focused.bundle`.

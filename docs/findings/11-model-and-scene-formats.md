@@ -43,15 +43,15 @@ rather than assumed 1-based.
 ## 1. Model load chain
 
 ```
-FUN_00472cd0 (entity creation)        FUN_004885c0
+FUN_00472cd0 (entity creation)        ModelResourceResolveOrLoad @ 0x4885c0
         └──────────────┬──────────────────────┘
                   FUN_004809e0            model entry
-                       └─ FUN_0048d7c0    create 0x20-byte model header
-                            ├─ FUN_0048c0c0   (header field +0)
-                            └─ FUN_0048d2c0   LWO file loader
+                       └─ ModelObjectCreate    create 0x20-byte model header
+                            ├─ LwoStringDuplicate @ 0x48c0c0 (chunk/surface name helper)
+                            └─ LoadLWO @ 0x48d2c0
 ```
 
-`FUN_0048d7c0` (`0x48d7c0`–`0x48d86b`) zero-allocates a 32-byte model struct and
+`ModelObjectCreate @ 0x48d7c0` (`0x48d7c0`–`0x48d86b`) zero-allocates a 32-byte model struct and
 hands out its fields to the loader: `+4` vertex count, `+8` polygon count,
 `+0xc` surface count, `+0x10` vertex array, `+0x14` polygon metadata, `+0x18`
 surface table, `+0x1c` the `.uv` sidecar stream (see §2 and finding 19). The
@@ -92,7 +92,7 @@ When the model header has a UV slot (`param_6 != 0`), the loader **also** opens
 `%s.uv` (`0x4afc90`) for the same base name — the existence check goes through
 the generic load helper `FUN_0047fb60`, and the resulting stream handle is
 stored in model slot `+0x1c` (`*param_6` is written only, never read here).
-Model teardown (`FUN_0048d870`) merely closes the stream. The only consumer is
+Model teardown (`ModelObjectFree @ 0x48d870`) merely closes the stream. The only consumer is
 the mesh builder: `FUN_00480ac0` calls `FUN_00481c50(model, uvTable)` iff the
 stream is present — that is the actual `.uv` text parser, not `FUN_0047fb60`
 or `FUN_0048eb90` (an earlier note here conflated those load helpers with the
@@ -218,6 +218,8 @@ bytes:
 | `0x4809e0` | LoadModel | entity model entry |
 | `0x48d7c0` | CreateModelObject | model struct (0x20 B) |
 | `0x48d2c0` | LoadLWO | `.lwo` container walk + `.uv` sidecar |
+| `0x48c0c0` | LwoStringDuplicate | allocates and copies a NUL-terminated chunk/surface string |
+| `0x48c1d0` | LwoReadBigEndianFloat | reads a four-byte value and reverses byte order |
 | `0x48c210` | LwoPoints | PNTS handler |
 | `0x48c3e0` | LwoPolygons | POLS handler |
 | `0x48c690` | LwoSurfaceNames | SRFS handler |
@@ -228,9 +230,12 @@ bytes:
 | `0x47f6e0` | FOpenWadOrDisk | file open: FS or WAD, `"rb"` |
 | `0x47f980` | FRead | chunk reader |
 | `0x47fb60` | FLoadCheck | existence check / load-into-memory helper (used for `.uv` open) |
-| `0x480ac0` | BuildEntityMesh | mesh/material pass — sole consumer of the `.uv` stream |
+| `0x480ac0` | MaterialPass | mesh/material pass — sole consumer of the `.uv` stream |
 | `0x481c50` | ParseUV | `.uv` line-stream parser (finding 19) |
-| `0x480050` | ReadLine | CRLF line reader (`buf, size, stream`) |
-| `0x4774b0` | TokenizeLine | whitespace tokenizer, returns token count |
-| `0x48d870` | FreeModel | model teardown (closes `.uv` stream unread) |
+| `0x4885c0` | ModelResourceResolveOrLoad | cache-aware scene/model resource resolver |
+| `0x480050` | ReadCrlfLine | CRLF line reader (`buf, size, stream`) |
+| `0x4774b0` | WhitespaceTokenize | whitespace tokenizer, returns token count |
+| `0x48d7c0` / `0x48d870` | ModelObjectCreate / ModelObjectFree | allocate/load and release the model plus optional `.uv` stream |
+| `0x48dc80` | GrowHeapArray | UV seam vertex-array growth |
+| `0x48eae0` / `0x48f460` | FileResourceHandleClose / FileResourceHandleSeek | buffered/mapped resource handle operations |
 | `0x48dbd0` / `0x48db80` | MemAlloc / MemFree | heap |

@@ -1,0 +1,5 @@
+# Finding 193 — Failed Media-Class Creation Reaches `Release` Through Null
+
+`FUN_004722b0` calls `CoCreateInstance` for the DirectShow multimedia-stream object. If that call returns a failing HRESULT, the function branches directly to cleanup and invokes `Release` through the output interface pointer without checking it. Microsoft documents that `CoCreateInstance` sets `*ppv` to null on failure. The cleanup therefore dereferences a null interface pointer instead of returning a clean setup failure. This is conditional on COM class creation failing; no failure was induced at runtime.
+
+**Evidence.** In `reference/LegoRR.exe` (SHA-256 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`), `FUN_004722b0` at `0x4722b0` passes a stack output slot to `CoCreateInstance` and branches to `0x472374` when the HRESULT is negative. At `0x472374–0x47237d`, it loads that output pointer and dispatches the interface vtable's `Release` slot with no null test. Microsoft's [`CoCreateInstance` documentation](https://learn.microsoft.com/en-us/windows/win32/api/combaseapi/nf-combaseapi-cocreateinstance) states that the output pointer is null on failure.

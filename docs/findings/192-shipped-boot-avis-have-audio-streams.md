@@ -1,0 +1,5 @@
+# Finding 192 — Shipped Boot AVIs Have Audio Streams; Credits Loop Does Not
+
+The shipped config maps `RRAvi` to `avi\intro.avi`, `LegoAvi` to `avi\lmi640.avi`, and `CreditsBackAVI` to `AVI\Loop.avi`. RIFF stream-header inspection finds both `vids` and `auds` streams in `intro.avi` and `lmi640.avi`, while `loop.avi` has only a `vids` stream. The first two are handled by the configured DirectShow route, which adds primary audio and video streams (finding 189); the credits loop uses the AVIFIL32 route, which opens only video (finding 177). This explains which shipped assets can supply embedded audio to each path, but does not establish that audio is audible on a particular run or machine.
+
+**Evidence.** `reference/LegoRR1.wad` entry `Lego.cfg` maps the three config keys to the paths above. RIFF inspection of `reference/Data/AVI/intro.avi` (67,727,206 bytes) and `lmi640.avi` (12,426,240 bytes) finds one `vids` and one `auds` stream header in each; `loop.avi` (1,275,190 bytes) has one `vids` stream header. Findings 177 and 189 document the corresponding AVIFIL32 and DirectShow code paths. The AVI stream types are the `fccType` values in their `strh` chunks.

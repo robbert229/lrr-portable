@@ -6,7 +6,7 @@ This finding closes the writer side: the field is a DDiScene object’s owner
 link, and the entity-spawn path installs it on scene objects and selected
 model-backed scene trees.
 
-**Observations from** REA/Ghidra 12.1.4 over `source/LegoRR.exe` (SHA-256
+**Observations from** REA/Ghidra 12.1.4 over `reference/LegoRR.exe` (SHA-256
 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`),
 2026-10-21. Evidence: `docs/evidence/legorr-ddscene-owner-link.bundle` (20
 records).

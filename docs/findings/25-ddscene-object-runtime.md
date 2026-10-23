@@ -7,7 +7,7 @@ object system** (16 core functions around `0x4727xx`–`0x477xxx`). The wipe's
 draw step has **25 callers** across entity, camera, movie, and menu code, so
 this finding explains how most "animated 3D thing" calls in the game work.
 
-**Observations from** REA/Ghidra 12.1.4 over `source/LegoRR.exe` (SHA-256
+**Observations from** REA/Ghidra 12.1.4 over `reference/LegoRR.exe` (SHA-256
 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`),
 2026-10-21. Evidence: `docs/evidence/legorr-ddscene.bundle` (64 records).
 
@@ -79,6 +79,8 @@ with `&PTR`-style field references to write the wipe's per-frame transform.
 | `FUN_00477150` | **end scene draw** — commit/copy back to the caller's surface (`FUN_00482d60`), error path logs via `s_C__Dev_SourceSafe_gods98_dx6_god_…` = **`gods98/dx6`** — confirms this is the gods98 DDiScene layer |
 | `FUN_00475390` | scene length (float): kind 4 → `FUN_004761a0(...)`, kind 3 → `FUN_004761a0(ch)` |
 | `FUN_004753f0` | frame/position: kind 4 → `FUN_00476180(...)`, kind 3 → `FUN_00476180(ch)` |
+| `DDiSceneObjectArgumentsNormalize @ 0x475900` | normalizes the object argument and supplies the default scene context when null |
+| `DDiSceneObjectPoseMethodDispatch @ 0x475470` | normalizes the object arguments through `FUN_00475900`, then dispatches the pose/transform arguments through the object's vtable slot `+0xec` |
 | `FUN_00476160/180/1a0/1e0/200` | channel accessors via vtable `+0x1c` (get record) → read `+0xc/0x10/0x18/0x1c/0x20` |
 | `FUN_00473b40` | toggle scene-wide flag (`flag&8`) around the render |
 
@@ -96,9 +98,13 @@ use the hook path.
 - `FUN_004765c0(path, …)`: `param_4==0` → **image path** (`FUN_004800a0`);
   otherwise **scene path** that builds object/bench nodes through
   `DAT_00505914` and loads `.lws`/`.lwo` via the resource layer.
-- `FUN_00476770` reads the string `s_DDiScene_004aab98` = `"DDiScene"` and
-  finds a type-index via `FUN_0048df40`/`FUN_0048f1d0` — the **class-name to
-  kind lookup** (`DDiScene` here is the scene-graph class).
+- `FUN_00476770` searches for `"DDiScene"`, advances through the following
+  bytes until `FUN_0048f1d0` reports the mask-`4` character test, then parses
+  the remaining text with `FUN_0048db70`. It returns the parsed value, or 1
+  when the result is zero. `FUN_0048df40` is not a function entry: it lies
+  inside `FUN_0048de20`, a generic array sort that takes a comparator callback.
+  The class name and caller context support a DDiScene kind lookup, but the
+  meaning of the character mask and parsed suffix is not established here.
 - `FUN_00473b40`/`FUN_00477240` manage scene flags and the "current object"
   pointer the wipe draw uses.
 
@@ -108,7 +114,7 @@ use the hook path.
 MenuTick (0x412c00) every frame while wipe active:
   FUN_00477010(screen, 1)                    ; begin scene
   FUN_00475710(DAT_005574ec, DAT_005560d8)   ; step object vs scene context
-  FUN_00475430/5470(…)                       ; per-frame transform (kind 3 chan)
+  FUN_00475430/DDiSceneObjectPoseMethodDispatch(…) ; per-frame transform (kind 3 chan)
   FUN_00475140(DAT_005574ec, DAT_005574f4)   ; draw at accumulator
   FUN_00477150(time, DAT_005560d8, 0)        ; end scene
   … advance DAT_005574f4 by dt …

@@ -1,0 +1,9 @@
+# Finding 169 — Shared-Object Sound Events Use Time Windows
+
+The `SharedObjects` loader stores three callbacks: sound-name resolution (`FUN_00464c70`), sound submission (`FUN_00465090`), and a sound-enabled predicate (`FUN_00465370`, which returns `DAT_00502a2c & 1`). During `FUN_00487ba0`, each object record is passed to `FUN_00487de0`, which checks its configured sample-event times against the current interval using `FUN_00487ed0`. The matcher tests an inclusive interval and has a wrap-around branch when the interval span reaches at least half the record's period.
+
+When an event time matches and the predicate accepts it, `FUN_00487de0` invokes the stored sound callback with `(object, aliasIndex, changed, 1, 0)`. The route flag `1` sends the event through the object-attached path. The callback's returned sound handle is saved with that event record. Finding 170 traces a transition-order issue: when the new and previous event times both match, the code reloads and stops the handle after overwriting it with the callback result.
+
+This gives a second data-driven source of object-attached SFX alongside the gameplay call sites in finding 161. The period and event values are numeric fields in the loader record; their user-facing units and audible behavior are not established here.
+
+**Evidence.** Shipped `reference/LegoRR.exe`, SHA-256 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`. `FUN_004876c0` stores the callbacks at `0x4876c0`; the `SharedObjects` initialization call and callback arguments are in `FUN_0041fb50` at `0x41fb50`; `FUN_00487ba0` dispatches updates at `0x487ba0`; `FUN_00487de0` and its interval matcher `FUN_00487ed0` are at `0x487de0` and `0x487ed0`; stop-by-handle is `FUN_0047b130` at `0x47b130`. The relevant pseudocode is in `docs/decompiles/full/LEGORR.full.c`; finding 13 documents the `SharedObjects` callback setup.

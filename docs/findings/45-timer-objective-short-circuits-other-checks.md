@@ -5,7 +5,7 @@ objective checks. When the timer reaches zero, that branch returns immediately;
 the `0x20` mode bit chooses which outcome marker the caller announces. Thus the
 timer branch can decide the evaluation result without reaching the other checks.
 
-**Observations from** REA/Ghidra 12.1.4 over `source/LegoRR.exe` (SHA-256
+**Observations from** REA/Ghidra 12.1.4 over `reference/LegoRR.exe` (SHA-256
 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`),
 2026-10-22. Evidence: `docs/evidence/legorr-campaign-expansion.bundle`.
 Focused IDs: `ev_1d5be4a8ee35d532f5533b2e28b4a59d9a30a156f8558af4ef63322faf41f169`

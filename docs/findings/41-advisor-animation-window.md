@@ -5,7 +5,7 @@ remaining-time result with the controller's second state bit. The bit chooses
 whether a positive remainder ends the transition or wraps the draw time back
 into the slot's configured action window.
 
-**Observations from** REA/Ghidra 12.1.4 over `source/LegoRR.exe` (SHA-256
+**Observations from** REA/Ghidra 12.1.4 over `reference/LegoRR.exe` (SHA-256
 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`),
 2026-10-21. Evidence: `docs/evidence/legorr-advisor-animation.bundle` (65
 records). Focused IDs: `ev_45182b736c7ab2c821293c026339cd41e60466598ad3d01ae1d6cc581d996327`

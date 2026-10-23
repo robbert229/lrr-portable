@@ -9,7 +9,7 @@ identified at entry `0x43c810` (left unattributed by Ghidra). Both consumers
 connect animation completion to gameplay sound/impact behaviour, which is the
 missing half of "the scene ended" signal's purpose.
 
-**Observations from** REA/Ghidra 12.1.4 over `source/LegoRR.exe` (SHA-256
+**Observations from** REA/Ghidra 12.1.4 over `reference/LegoRR.exe` (SHA-256
 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`),
 2026-10-21. Assembly windows read from the shipped image (`0x43d8f0–0x43ddc0`)
 and cross-checked against the finding-10/14/26 corpus names. Evidence:
@@ -21,7 +21,7 @@ and cross-checked against the finding-10/14/26 corpus names. Evidence:
 43dcf5:  test $0x80000, %edx          ; (context: gated/queue mode?)
 43dcfb:  je  out                       ; → 0x43ddc5, no placement handling
 43dd01:  push %esi; call 0x44a200      ; work-object resolver (finding 10)
-43dd0b:  call 0x475300                 ; DDiScene set-length/frame probe
+43dd0b:  call 0x475300                 ; DDiScene ActFrame timing update
 43dd10:  mov 0x3e4(%esi),%eax          ; ---- entity+0x3e4
 43dd19:  test $0x10000,%eax            ; scene-done bit
 43dd1e:  je  out                       ; not done → skip

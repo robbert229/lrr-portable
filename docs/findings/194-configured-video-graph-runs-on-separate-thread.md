@@ -1,0 +1,5 @@
+# Finding 194 — Configured Video Graph Runs on a Separate Thread
+
+`FUN_004722b0` initializes the DirectShow multimedia stream with flags `0` and a null graph pointer. Microsoft's `IAMMultiMediaStream::Initialize` documentation defines zero as creating a filter graph that runs on a separate thread; `AMMSF_NOGRAPHTHREAD` is the alternative that runs it on the caller's thread. The configured boot/level video path therefore delegates graph processing to a separate thread while the game thread continues its own update loop. This is a static API-contract conclusion, not a runtime thread capture.
+
+**Evidence.** Shipped `reference/LegoRR.exe`, SHA-256 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`. In `FUN_004722b0` at `0x4722b0`, the `IAMMultiMediaStream::Initialize` call through vtable slot `+0x30` passes stream type `0`, flags `0`, and a null filter-graph pointer. Microsoft's [`IAMMultiMediaStream::Initialize` documentation](https://learn.microsoft.com/en-us/previous-versions/ms784027%28v%3Dvs.85%29) specifies that zero selects a separate graph thread.

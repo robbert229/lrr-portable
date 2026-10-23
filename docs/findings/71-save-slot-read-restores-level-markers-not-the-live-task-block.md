@@ -7,7 +7,7 @@ into the live reward/task block. This narrows the “load” behavior documented
 finding 08: the observed path restores campaign/menu state, not an in-progress
 mission snapshot.
 
-**Observations from** REA/Ghidra 12.1.4 over `source/LegoRR.exe` (SHA-256
+**Observations from** REA/Ghidra 12.1.4 over `reference/LegoRR.exe` (SHA-256
 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`),
 2026-10-22. Evidence: `docs/evidence/legorr-checkpoint-reader-expansion.bundle`.
 

@@ -1,6 +1,6 @@
 # 60 — Win32 cursor sampling stores clamped client coordinates
 
-**Observations from** REA/Ghidra 12.1.4 over `source/LegoRR.exe` (SHA-256
+**Observations from** REA/Ghidra 12.1.4 over `reference/LegoRR.exe` (SHA-256
 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`),
 2026-10-22. Evidence bundle:
 [`legorr-cursor-routing-expansion.bundle`](../evidence/legorr-cursor-routing-expansion.bundle).
