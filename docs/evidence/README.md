@@ -198,9 +198,11 @@ the shipped-image disassembly.
 
 Finding 223 also traces the vehicle `GetOut` unload path and Place-command
 gate (`FUN_004401b0`, `FUN_00439e10`, `FUN_00439d50`, `FUN_00404fc0`,
-`FUN_00432550`), plus the cell-flag producer path (`FUN_00432c90` and the
-lava-neighbor helpers). These observations come from `LEGORR.full.c` and
-disassembly of `reference/LegoRR.exe`; they are not part of this REA bundle.
+`FUN_00432550`), edge descriptor creation (`FUN_0041d040`, `FUN_0041dca0`,
+`FUN_0041ea50`, `FUN_00409300`, `FUN_00433090`), and the cell-flag producer
+path (`FUN_00432c90` and the lava-neighbor helpers). These observations come
+from `LEGORR.full.c` and disassembly of `reference/LegoRR.exe`; they are not
+part of this REA bundle.
 
 ## `legorr-path-list-movement.bundle`
 

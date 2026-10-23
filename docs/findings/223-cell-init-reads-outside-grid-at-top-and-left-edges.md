@@ -169,6 +169,18 @@ callback still requires its timer and state-bit gates, a matching cell
 descriptor, and descriptor byte `+0xd0 & 2`; these checks are not established
 for an unloaded border minifigure.
 
+The matching descriptor can also be created for an in-bounds border cell.
+`FUN_0041ea50` stores the menu-selected map coordinate in `DAT_004ddcc4/8`;
+`FUN_0041d040`'s menu-action case 7 requires no existing descriptor and a
+cell type other than 6, without rejecting zero coordinates. The action
+dispatcher `FUN_0041dca0` handles case 7 by calling `FUN_00409300`, which
+uses `FUN_00433090` to require `0 <= x < width` and `0 <= y < height` and a
+clear `0x20000000` cell flag. Thus `x=0` and `y=0` pass the coordinate bounds;
+the creator adds the descriptor, sets its `+0xd0 & 2` callback bit, and sets
+cell flag `0x40000000`. This removes descriptor creation as an inherent
+interior-only gate, though it does not establish that the menu action is
+taken for an unloaded minifigure's edge cell during play.
+
 The writer's required cell flag `0x200000` also has a possible gameplay-time
 edge source. The predug loader sets this flag through `FUN_00430530(..., 1)`,
 but that routine rejects coordinates with `x=0` or `y=0`, so this loader path

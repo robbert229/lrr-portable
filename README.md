@@ -20,7 +20,7 @@ and curiosity; nothing in this repository is affiliated with or endorsed by the 
 
 ```
 README.md           This file
-docs/findings/      Reverse-engineering findings, 01–113 (see index below)
+docs/findings/      Reverse-engineering findings, 01–224 (see index below)
 tools/              WAD tooling (rrwad.py: unpack/pack/verify — see tools/README.md)
                     + model converter (tools/rrlwo.py: .lwo → glTF 2.0)
                     + compat harness (tools/compat/a2.py — see tools/compat/README.md)
@@ -367,6 +367,60 @@ Open threads, in order of value:
 | 168 | [findings/168-in-memory-sound-start-ignores-hresults.md](docs/findings/168-in-memory-sound-start-ignores-hresults.md) | In-memory sound start returns a slot identifier without checking DirectSound HRESULTs |
 | 169 | [findings/169-shared-object-sound-events-use-time-windows.md](docs/findings/169-shared-object-sound-events-use-time-windows.md) | Shared-object sound events submit object-attached aliases within time windows |
 | 170 | [findings/170-shared-object-transition-stops-new-sound-handle.md](docs/findings/170-shared-object-transition-stops-new-sound-handle.md) | Shared-object transition may stop the newly returned sound handle |
+
+| 171 | [findings/171-queued-shared-sound-records-zero-handle.md](docs/findings/171-queued-shared-sound-records-zero-handle.md) | Queued Shared-Object Sound Stores Handle Zero |
+| 172 | [findings/172-avi-frames-blit-to-render-target.md](docs/findings/172-avi-frames-blit-to-render-target.md) | AVI Frames Blit to the Shared DirectDraw Render Target |
+| 173 | [findings/173-avi-allocation-failure-reaches-frame-updater.md](docs/findings/173-avi-allocation-failure-reaches-frame-updater.md) | AVI Allocation Failure Reaches a Null Frame Updater |
+| 174 | [findings/174-avi-frame-retriever-is-not-explicitly-closed.md](docs/findings/174-avi-frame-retriever-is-not-explicitly-closed.md) | AVI Frame Retriever Has No Explicit Close Path |
+| 175 | [findings/175-null-avi-frame-reblits-previous-pixels.md](docs/findings/175-null-avi-frame-reblits-previous-pixels.md) | Null AVI Frame Fetch Leaves and Reblits Previous Pixels |
+| 176 | [findings/176-avi-command-loop-restarts-at-stream-length.md](docs/findings/176-avi-command-loop-restarts-at-stream-length.md) | AVI Command Loop Restarts at Stream Length |
+| 177 | [findings/177-avi-player-ignores-embedded-audio-streams.md](docs/findings/177-avi-player-ignores-embedded-audio-streams.md) | AVI Player Opens Video Streams but Not Embedded Audio |
+| 178 | [findings/178-dynamic-sample-alias-table-has-no-capacity-check.md](docs/findings/178-dynamic-sample-alias-table-has-no-capacity-check.md) | Dynamic Sample Alias Registration Can Overrun Its Hash Table |
+| 180 | [findings/180-cdda-watchdog-detects-track-overrun-at-four-second-intervals.md](docs/findings/180-cdda-watchdog-detects-track-overrun-at-four-second-intervals.md) | CD Audio Watchdog Detects Track Overrun at Four-Second Intervals |
+| 181 | [findings/181-avi-command-loop-input-exit.md](docs/findings/181-avi-command-loop-input-exit.md) | AVI Command Loop Exits on Keyboard Input or Mouse Release |
+| 182 | [findings/182-credits-scroll-uses-33ms-clock-steps.md](docs/findings/182-credits-scroll-uses-33ms-clock-steps.md) | Credits Scroll Uses 33 ms Clock Steps |
+| 183 | [findings/183-shipped-credits-text-matches-crlf-split-count.md](docs/findings/183-shipped-credits-text-matches-crlf-split-count.md) | Shipped Credits Text Matches the CRLF Split Count |
+| 184 | [findings/184-credits-text-prefers-cconv-sidecar.md](docs/findings/184-credits-text-prefers-cconv-sidecar.md) | Credits Text Lookup Prefers a `.cconv` Sidecar |
+| 185 | [findings/185-successful-avi-loop-has-no-explicit-sleep.md](docs/findings/185-successful-avi-loop-has-no-explicit-sleep.md) | Successful AVI Playback Has No Explicit Loop Sleep |
+| 186 | [findings/186-credits-background-bypasses-dontplayavis-gate.md](docs/findings/186-credits-background-bypasses-dontplayavis-gate.md) | `DontPlayAvis` Gates Boot Movies but Not Other Video Paths |
+| 187 | [findings/187-video-commands-use-two-playback-routes.md](docs/findings/187-video-commands-use-two-playback-routes.md) | Configured Videos Use DirectShow; Credits Use AVIFIL32 |
+| 188 | [findings/188-com-video-route-does-not-explicitly-uninitialize.md](docs/findings/188-com-video-route-does-not-explicitly-uninitialize.md) | COM Video Route Has No Explicit `CoUninitialize` Call |
+| 189 | [findings/189-configured-videos-add-primary-audio-stream.md](docs/findings/189-configured-videos-add-primary-audio-stream.md) | Configured Videos Add Primary Video and Audio Streams |
+| 190 | [findings/190-directshow-partial-init-cleanup-assumes-interfaces.md](docs/findings/190-directshow-partial-init-cleanup-assumes-interfaces.md) | DirectShow Partial-Setup Cleanup Assumes Every Interface Exists |
+| 191 | [findings/191-level-video-stops-on-button-down.md](docs/findings/191-level-video-stops-on-button-down.md) | Level Video Stops on Mouse Button Down |
+| 192 | [findings/192-shipped-boot-avis-have-audio-streams.md](docs/findings/192-shipped-boot-avis-have-audio-streams.md) | Shipped Boot AVIs Have Audio Streams; Credits Loop Does Not |
+| 193 | [findings/193-media-class-creation-failure-releases-null.md](docs/findings/193-media-class-creation-failure-releases-null.md) | Failed Media-Class Creation Reaches `Release` Through Null |
+| 194 | [findings/194-configured-video-graph-runs-on-separate-thread.md](docs/findings/194-configured-video-graph-runs-on-separate-thread.md) | Configured Video Graph Runs on a Separate Thread |
+| 195 | [findings/195-cdda-watchdog-parses-current-track-without-checking-mci-result.md](docs/findings/195-cdda-watchdog-parses-current-track-without-checking-mci-result.md) | CD-Audio Watchdog Parses Track Status Without Checking MCI Success |
+| 196 | [findings/196-listener-uses-scene-relative-camera-frame-vectors.md](docs/findings/196-listener-uses-scene-relative-camera-frame-vectors.md) | The Listener Uses Scene-Relative Frame Vectors |
+| 197 | [findings/197-listener-caches-deferred-values-without-checking-results.md](docs/findings/197-listener-caches-deferred-values-without-checking-results.md) | Listener Caches Deferred Values Without Checking Results |
+| 198 | [findings/198-attached-sound-caches-position-after-immediate-set.md](docs/findings/198-attached-sound-caches-position-after-immediate-set.md) | Attached Sound Caches Position After Immediate Set |
+| 199 | [findings/199-directsound-keeps-default-distance-factor.md](docs/findings/199-directsound-keeps-default-distance-factor.md) | DirectSound Keeps Its Default Distance Factor |
+| 200 | [findings/200-configured-video-polls-directshow-sample.md](docs/findings/200-configured-video-polls-directshow-sample.md) | Configured Video Pumps and Blits DirectShow Samples |
+| 201 | [findings/201-configured-video-stops-after-update-failure.md](docs/findings/201-configured-video-stops-after-update-failure.md) | Configured Video Stops When Its Update Callback Fails |
+| 202 | [findings/202-video-duration-only-bounds-render-count.md](docs/findings/202-video-duration-only-bounds-render-count.md) | Video Duration Bounds the Render Count, Not Frame Timing |
+| 203 | [findings/203-spatial-sound-ignores-frame-query-failures.md](docs/findings/203-spatial-sound-ignores-frame-query-failures.md) | Spatial Sound Ignores Frame-Query Failures |
+| 204 | [findings/204-stopping-one-attached-sound-clears-all-provider-entries.md](docs/findings/204-stopping-one-attached-sound-clears-all-provider-entries.md) | Stopping One Attached Sound Clears All Registry Entries for Its Frame |
+| 205 | [findings/205-directshow-video-uses-shared-render-presentation.md](docs/findings/205-directshow-video-uses-shared-render-presentation.md) | DirectShow Video Uses the Shared Render Presentation Path |
+| 206 | [findings/206-configured-video-blit-fills-render-surface.md](docs/findings/206-configured-video-blit-fills-render-surface.md) | Configured Video Blits Fill the Render Surface |
+| 207 | [findings/207-configured-video-releases-without-explicit-stop.md](docs/findings/207-configured-video-releases-without-explicit-stop.md) | Configured Video Releases Its Stream Without an Explicit Stop Call |
+| 208 | [findings/208-video-setup-ignores-audio-stream-add-failure.md](docs/findings/208-video-setup-ignores-audio-stream-add-failure.md) | Configured Video Continues if Adding Primary Audio Fails |
+| 209 | [findings/209-batched-spatial-sound-queue-drops-requests-after-ten.md](docs/findings/209-batched-spatial-sound-queue-drops-requests-after-ten.md) | Batched Spatial Sound Queue Drops Requests After Ten |
+| 210 | [findings/210-avi-frame-copy-proceeds-after-lock-failure.md](docs/findings/210-avi-frame-copy-proceeds-after-lock-failure.md) | AVI Frame Copy Proceeds After Surface Lock Failure |
+| 211 | [findings/211-advisor-sound-token-is-latched-before-audio-gate.md](docs/findings/211-advisor-sound-token-is-latched-before-audio-gate.md) | Advisor Sound Token Is Latched Before the Audio Gate |
+| 212 | [findings/212-frame-sound-tick-does-not-drain-packed-batch-queue.md](docs/findings/212-frame-sound-tick-does-not-drain-packed-batch-queue.md) | Frame Sound Tick Does Not Drain the Packed Batch Queue |
+| 213 | [findings/213-disabling-sound-does-not-clear-packed-requests.md](docs/findings/213-disabling-sound-does-not-clear-packed-requests.md) | Disabling Sound Does Not Clear Packed Requests |
+| 214 | [findings/214-objective-voice-timer-does-not-stop-stream.md](docs/findings/214-objective-voice-timer-does-not-stop-stream.md) | Objective Voice Timer Does Not Stop the Stream |
+| 215 | [findings/215-in-memory-wav-failures-leave-mmio-handle-open.md](docs/findings/215-in-memory-wav-failures-leave-mmio-handle-open.md) | In-Memory WAV Failures Leave the MMIO Handle Open |
+| 216 | [findings/216-avi-decoder-requests-best-display-format.md](docs/findings/216-avi-decoder-requests-best-display-format.md) | AVI Decoder Is Asked for the Best Display Format |
+| 217 | [findings/217-streamed-wav-registration-ignores-format-rate-failure.md](docs/findings/217-streamed-wav-registration-ignores-format-rate-failure.md) | Streamed WAV Registration Ignores a Failed Format-Rate Probe |
+| 218 | [findings/218-streamed-wav-metadata-probe-bypasses-game-file-layer.md](docs/findings/218-streamed-wav-metadata-probe-bypasses-game-file-layer.md) | Streamed WAV Metadata Probe Bypasses the Game File Layer |
+| 219 | [findings/219-directshow-end-of-stream-takes-sample-cleanup-path.md](docs/findings/219-directshow-end-of-stream-takes-sample-cleanup-path.md) | DirectShow End of Stream Takes the Sample Cleanup Path |
+| 220 | [findings/220-avi-unsupported-surface-depth-still-advances.md](docs/findings/220-avi-unsupported-surface-depth-still-advances.md) | AVI Timeline Advances When the Movie Surface Depth Is Unsupported |
+| 221 | [findings/221-lava-effect-latches-zero-sound-handle.md](docs/findings/221-lava-effect-latches-zero-sound-handle.md) | Lava Effect Latches a Zero Sound Handle |
+| 222 | [findings/222-wav-fmt-extension-read-is-not-chunk-bounded.md](docs/findings/222-wav-fmt-extension-read-is-not-chunk-bounded.md) | WAV Format Extension Read Is Not Bounded by the `fmt ` Chunk |
+| 223 | [findings/223-cell-init-reads-outside-grid-at-top-and-left-edges.md](docs/findings/223-cell-init-reads-outside-grid-at-top-and-left-edges.md) | Cell initialization reads before the grid at top/left edges; gameplay route traced through border spawn, vehicle unload, Place and cell-flag gates |
+| 224 | [findings/224-predug-cells-feed-a-capped-spawn-coordinate-pool.md](docs/findings/224-predug-cells-feed-a-capped-spawn-coordinate-pool.md) | Predug Cell Values Feed a Capped Coordinate Pool |
 
 Named-pseudocode corpus: [`docs/decompiles/engine-region.c`](docs/decompiles/engine-region.c)
 (114 named functions covering the engine/game-logic region — findings 01–10).
