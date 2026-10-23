@@ -10,7 +10,7 @@ This finding maps the 44 assigned global/engine/level accessors and mutators. Th
 | `0x00401c30` | `DisplayWidthGet` | Returns the configured display width used by centering and bounds callers (Finding 347). |
 | `0x00401c40` | `DisplayHeightGet` | Returns the configured display height used by centering and bounds callers (Finding 347). |
 | `0x00402170` | `LevelNoGatherObjectSetup` | Creates and links records for the NoGather level option during level loading (Finding 225). |
-| `0x004065d0` | `GlobalDwordGet` | Returns one global dword (Finding 365). |
+| `0x004065d0` | `GlobalDwordGet` | Returns `DAT_0076ac84` (Finding 365). |
 | `0x00407340` | `StateFlagToggleWhenZero` | Toggles `DAT_00557860` between 0 and 1: zero becomes 1; any nonzero value becomes 0. The flag's domain meaning is unresolved. |
 | `0x00407540` | `FlaggedObjectTimerRegistryInsert` | Inserts a qualifying object with flag `0x80` and a fixed timer into a 20-slot registry (Finding 312). |
 | `0x00408930` | `ConstantZeroFloatGet` | Returns `0.0` (Finding 380). |
@@ -18,11 +18,11 @@ This finding maps the 44 assigned global/engine/level accessors and mutators. Th
 | `0x0040bdc0` | `SetTimeoutTo10000` | Calls the timeout setter with `10000.0`; caller `FUN_0042f0c0`, purpose unresolved (Finding 381). |
 | `0x0040e7e0` | `GlobalFlagBit0Clear` | Clears bit 0 of the observed global flag (Finding 356). |
 | `0x0040e910` | `GlobalValueClearIfEqual` | Clears the observed global value only when it equals the supplied value (Finding 356). |
-| `0x0040fec0` | `SetGlobalScalarToOne` | Calls the scalar setter with index 0 and value `1.0`; no direct textual caller identified (Finding 381). |
+| `0x0040fec0` | Existing provisional label `SetGlobalScalarToOne` | Calls `RandomFloatRange(0, 1.0)` and discards its result; the body shows no persistent global write. |
 | `0x0040ffe0` | `GlobalVectorSetAndNotifyListeners` | Stores four supplied global values and broadcasts the update through a callback; caller `FUN_0044bb30` (Finding 381). |
-| `0x00410b30` | `GlobalPointerGet_004c76ab24` | Returns the pointer stored in global slot `0x004c76ab24`. |
-| `0x00410b40` | `GlobalPointerGet_004c76ab28` | Returns the pointer stored in global slot `0x004c76ab28`. |
-| `0x00410b50` | `GlobalPointerGet_004c76ab3c` | Returns the pointer stored in global slot `0x004c76ab3c`. |
+| `0x00410b30` | `GlobalPointerGet_004c76ab24` | Returns the pointer stored in `DAT_0076ab24`. |
+| `0x00410b40` | `GlobalPointerGet_004c76ab28` | Returns the pointer stored in `DAT_0076ab28`. |
+| `0x00410b50` | `GlobalPointerGet_004c76ab3c` | Returns the pointer stored in `DAT_0076ab3c`. |
 | `0x0041b9b0` | `GlobalStateGet_004ddd1c` | Returns the global state pointer/value at `0x004ddd1c`; semantic type unresolved. |
 | `0x0041f720` | `CurrentLevelStateFlagsContainMask` | Tests whether the current level-state record's `+0x3f0` word intersects the supplied mask (Finding 338). |
 | `0x0041f870` | `GlobalObjectField8CIncrement` | If the global object exists, increments its dword at `+0x8c` (Finding 350). |
