@@ -20,7 +20,7 @@ and curiosity; nothing in this repository is affiliated with or endorsed by the 
 
 ```
 README.md           This file
-docs/findings/      Reverse-engineering findings, 01–224 (see index below)
+docs/findings/      Reverse-engineering findings, 01–274 (see index below)
 tools/              WAD tooling (rrwad.py: unpack/pack/verify — see tools/README.md)
                     + model converter (tools/rrlwo.py: .lwo → glTF 2.0)
                     + compat harness (tools/compat/a2.py — see tools/compat/README.md)
@@ -456,10 +456,25 @@ Open threads, in order of value:
 | 257 | [findings/257-configured-tiny-monster-spawning-and-mutual-activity-pairing.md](docs/findings/257-configured-tiny-monster-spawning-and-mutual-activity-pairing.md) | Configured Tiny-Monster Spawning and Mutual Activity Pairing |
 | 258 | [findings/258-interface-method-wrappers-overlay-refresh-and-deferred-set-relays.md](docs/findings/258-interface-method-wrappers-overlay-refresh-and-deferred-set-relays.md) | Interface-Method Wrappers, Overlay Refresh, and Deferred-Set Relays |
 | 259 | [findings/259-selected-entity-detach-callback-and-pair-record-commit.md](docs/findings/259-selected-entity-detach-callback-and-pair-record-commit.md) | Selected-Entity Detach Callback and Pair-Record Commit |
+| 260 | [findings/260-crt-startup-locale-time-and-floating-point-helpers.md](docs/findings/260-crt-startup-locale-time-and-floating-point-helpers.md) | CRT Startup, Locale, Time-Zone, and Floating-Point Helpers |
+| 261 | [findings/261-crt-argument-environment-and-error-helpers.md](docs/findings/261-crt-argument-environment-and-error-helpers.md) | CRT Argument, Environment, Error, and Conversion Helpers |
+| 262 | [findings/262-scroll-panel-and-viewport-picking-helpers.md](docs/findings/262-scroll-panel-and-viewport-picking-helpers.md) | Scroll Panel and Viewport Picking Helpers |
+| 263 | [findings/263-entity-effect-fields-and-nested-record-teardown.md](docs/findings/263-entity-effect-fields-and-nested-record-teardown.md) | Entity Effect Fields and Nested Record Teardown |
+| 264 | [findings/264-crt-exception-and-extended-float-helpers.md](docs/findings/264-crt-exception-and-extended-float-helpers.md) | CRT Exception and Extended-Float Helpers |
+| 265 | [findings/265-token-directory-scan-and-mesh-coordinate-helpers.md](docs/findings/265-token-directory-scan-and-mesh-coordinate-helpers.md) | Token Directory Scan and Mesh Coordinate Helpers |
+| 266 | [findings/266-terrain-triangle-select-and-command-gate.md](docs/findings/266-terrain-triangle-select-and-command-gate.md) | Terrain Triangle Selection and Command Gate |
+| 267 | [findings/267-entity-route-commit-and-terrain-activity-gate.md](docs/findings/267-entity-route-commit-and-terrain-activity-gate.md) | Entity Route Commit and Terrain Activity Gate |
+| 268 | [findings/268-crt-conversion-scene-hierarchy-and-math-helpers.md](docs/findings/268-crt-conversion-scene-hierarchy-and-math-helpers.md) | CRT Conversion, Scene Hierarchy, and Math Helpers |
+| 269 | [findings/269-crt-environment-and-multibyte-string-helpers.md](docs/findings/269-crt-environment-and-multibyte-string-helpers.md) | CRT Environment and Multibyte String Helpers |
+| 270 | [findings/270-entity-route-markers-and-tickdown-spawn.md](docs/findings/270-entity-route-markers-and-tickdown-spawn.md) | Entity Route Markers and TickDown Spawn |
+| 271 | [findings/271-panel-layout-and-advisor-render-helpers.md](docs/findings/271-panel-layout-and-advisor-render-helpers.md) | Panel Layout and Advisor Render Helpers |
+| 272 | [findings/272-crt-file-resize-and-signal-helpers.md](docs/findings/272-crt-file-resize-and-signal-helpers.md) | CRT File Resize and Signal Helpers |
+| 273 | [findings/273-terrain-object-sound-grid-and-activity-transition.md](docs/findings/273-terrain-object-sound-grid-and-activity-transition.md) | Terrain Object Sound Grid and Activity Transition |
+| 274 | [findings/274-priority-image-selection-and-scene-registry-teardown.md](docs/findings/274-priority-image-selection-and-scene-registry-teardown.md) | Priority Image Selection and Scene Registry Teardown |
 
 Named-pseudocode corpus: [`docs/decompiles/engine-region.c`](docs/decompiles/engine-region.c)
-(1264 generated sections selected from the reverse-engineering findings; the
-Ghidra script selects 1264 targets. This includes the manually bounded objective
+(1335 generated sections selected from the reverse-engineering findings; the
+Ghidra script selects 1335 targets. This includes the manually bounded objective
 callback at `0x459100`, which auto-analysis does not mark as a procedure).
 Machine-readable evidence: [`docs/evidence/legorr-rev.bundle`](docs/evidence/legorr-rev.bundle)
 (236 recorded REA observations against `LegoRR.exe`,

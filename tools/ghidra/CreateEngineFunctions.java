@@ -1083,6 +1083,11 @@ public class CreateEngineFunctions extends GhidraScript {
         0x45d110L,  // RegionContainmentScanUpdate
         0x4702b0L,  // EntitySurfaceQuadSegmentIntersect
         0x476bf0L,  // SurfacePixelRowsFlipInPlace
+        0x498000L,  // CrtMemoryMove
+        0x4965d0L,  // CrtFileDescriptorTableInit
+        0x499880L,  // CrtTimeZoneStateInit
+        0x4962f0L,  // CrtLocaleCodePageTableUpdate
+        0x493280L,  // CrtFloatingPointExceptionRaise
         0x479630L,  // SurfaceTriangleAreaCalculate
         0x47d520L,  // Palette8To16BitSurfaceExpand
         0x4124f0L,  // MenuSaveImageConfigRectBlit
@@ -1310,6 +1315,59 @@ public class CreateEngineFunctions extends GhidraScript {
         0x4629d0L,  // PanelEventEntryAppend
         0x46f3b0L,  // RayHitScanAndEffectApply
         0x482220L,  // MeshRecordAllocateAndFill
+        0x495f80L,  // CrtCommandLineArgumentScan
+        0x4968f0L,  // CrtRuntimeErrorMessage
+        0x49b2b0L,  // CrtPutEnvUpdate
+        0x49afe0L,  // CrtCompareStringACompat
+        0x4935c0L,  // CrtDoubleToIntegerRound
+        0x45b740L,  // ScrollInfoPanelInitialize
+        0x45e660L,  // RectContainsPointHalfOpen
+        0x45e820L,  // ViewportPointCallbackDispatch
+        0x463770L,  // ScrollRectResourceRecordCreate
+        0x463810L,  // ScrollRectPayloadRecordCreate
+        0x44c150L,  // EntityPairScalarFieldsSet
+        0x44e670L,  // NestedPointerRecordDestroy
+        0x495160L,  // CxxExceptionHandlerSearch
+        0x495ee0L,  // CrtCommandLineArgumentsInit
+        0x49a1b0L,  // CrtExtendedFloatToDecimal
+        0x49a540L,  // Extended80Multiply
+        0x49a800L,  // ExtendedFloatPowerOfTenScale
+        0x4802d0L,  // FileTokenListLoadAndTreeScan
+        0x480390L,  // DirectoryTreeScan
+        0x480570L,  // DirectoryTokenListCompare
+        0x481fa0L,  // MeshVertexCoordinateRemap
+        0x44fab0L,  // TerrainCellSurfaceTriangleVerticesSelect
+        0x43c3e0L,  // EntityType26CommandCompletionGate
+        0x496190L,  // CrtEnvironmentBlockGet
+        0x49abe0L,  // CrtWideCharToMultiByteCompat
+        0x4957d0L,  // CxxCatchObjectBindOrCopy
+        0x499b30L,  // CrtDaylightSavingTimeCheck
+        0x4887c0L,  // SceneHierarchyInterfaceRegisterRecursive
+        0x48e0adL,  // CrtAcosCore
+        0x449430L,  // EntityTargetCellRouteAndAssociate
+        0x449610L,  // EntityCoordinateRouteAndMark
+        0x449980L,  // EntityActivityTerrainEligibilityTransition
+        0x49ae10L,  // CrtEnvironmentVariableLookup
+        0x49b4c0L,  // CrtEnvironmentEntryFind
+        0x49b540L,  // CrtEnvironmentArrayClone
+        0x49b5b0L,  // CrtMultibyteCharacterSearch
+        0x449520L,  // EntityTargetCellRouteMarker14
+        0x449240L,  // EntityWalkableTargetCellRouteIssue
+        0x449010L,  // EntityKind6RecordApproachRouteIssue
+        0x4489a0L,  // EntityKind6TickDownMarkerSpawn
+        0x45d060L,  // PrioritiesImagePositionsConfigLoad
+        0x45a650L,  // PanelCategoryBoundsSet
+        0x45a270L,  // PanelCategoryInteractionStateReset
+        0x45c3f0L,  // AdvisorProgressBarFillDraw
+        0x49a890L,  // Win32FileDescriptorResize
+        0x49aa10L,  // CrtSignalHandlerDispatch
+        0x49ab90L,  // CrtSignalHandlerRecordFind
+        0x44acc0L,  // TerrainObjectTypeSfxGridConfigLoad
+        0x44ad80L,  // TerrainObjectTypeSfxAtCellGet
+        0x449a70L,  // EntityActivity23StateTransition
+        0x45d300L,  // PriorityImageSelectionStateUpdate
+        0x45d3f0L,  // PriorityImageOrderMoveToFront
+        0x47e130L,  // SceneObjectRegistryReleaseAll
     };
     static final String[] NAMES = { "EngineTick", "EngineShutdown", "EngineShutdownAlt",
         "MainSimStep", "ManagerTick", "MessageDispatch", "ViewContextTick",
@@ -2466,6 +2524,64 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x477f80: return "DisplayDeviceCapsQueryDiscard";
             case 0x49db60: return "SignedDecimalToStringConvert";
             case 0x49dc10: return "StringToLowercase";
+            case 0x498000: return "CrtMemoryMove";
+            case 0x4965d0: return "CrtFileDescriptorTableInit";
+            case 0x499880: return "CrtTimeZoneStateInit";
+            case 0x4962f0: return "CrtLocaleCodePageTableUpdate";
+            case 0x493280: return "CrtFloatingPointExceptionRaise";
+            case 0x495f80: return "CrtCommandLineArgumentScan";
+            case 0x4968f0: return "CrtRuntimeErrorMessage";
+            case 0x49b2b0: return "CrtPutEnvUpdate";
+            case 0x49afe0: return "CrtCompareStringACompat";
+            case 0x4935c0: return "CrtDoubleToIntegerRound";
+            case 0x45b740: return "ScrollInfoPanelInitialize";
+            case 0x45e660: return "RectContainsPointHalfOpen";
+            case 0x45e820: return "ViewportPointCallbackDispatch";
+            case 0x463770: return "ScrollRectResourceRecordCreate";
+            case 0x463810: return "ScrollRectPayloadRecordCreate";
+            case 0x44c150: return "EntityPairScalarFieldsSet";
+            case 0x44e670: return "NestedPointerRecordDestroy";
+            case 0x495160: return "CxxExceptionHandlerSearch";
+            case 0x495ee0: return "CrtCommandLineArgumentsInit";
+            case 0x49a1b0: return "CrtExtendedFloatToDecimal";
+            case 0x49a540: return "Extended80Multiply";
+            case 0x49a800: return "ExtendedFloatPowerOfTenScale";
+            case 0x4802d0: return "FileTokenListLoadAndTreeScan";
+            case 0x480390: return "DirectoryTreeScan";
+            case 0x480570: return "DirectoryTokenListCompare";
+            case 0x481fa0: return "MeshVertexCoordinateRemap";
+            case 0x44fab0: return "TerrainCellSurfaceTriangleVerticesSelect";
+            case 0x43c3e0: return "EntityType26CommandCompletionGate";
+            case 0x496190: return "CrtEnvironmentBlockGet";
+            case 0x49abe0: return "CrtWideCharToMultiByteCompat";
+            case 0x4957d0: return "CxxCatchObjectBindOrCopy";
+            case 0x499b30: return "CrtDaylightSavingTimeCheck";
+            case 0x4887c0: return "SceneHierarchyInterfaceRegisterRecursive";
+            case 0x48e0ad: return "CrtAcosCore";
+            case 0x449430: return "EntityTargetCellRouteAndAssociate";
+            case 0x449610: return "EntityCoordinateRouteAndMark";
+            case 0x449980: return "EntityActivityTerrainEligibilityTransition";
+            case 0x49ae10: return "CrtEnvironmentVariableLookup";
+            case 0x49b4c0: return "CrtEnvironmentEntryFind";
+            case 0x49b540: return "CrtEnvironmentArrayClone";
+            case 0x49b5b0: return "CrtMultibyteCharacterSearch";
+            case 0x449520: return "EntityTargetCellRouteMarker14";
+            case 0x449240: return "EntityWalkableTargetCellRouteIssue";
+            case 0x449010: return "EntityKind6RecordApproachRouteIssue";
+            case 0x4489a0: return "EntityKind6TickDownMarkerSpawn";
+            case 0x45d060: return "PrioritiesImagePositionsConfigLoad";
+            case 0x45a650: return "PanelCategoryBoundsSet";
+            case 0x45a270: return "PanelCategoryInteractionStateReset";
+            case 0x45c3f0: return "AdvisorProgressBarFillDraw";
+            case 0x49a890: return "Win32FileDescriptorResize";
+            case 0x49aa10: return "CrtSignalHandlerDispatch";
+            case 0x49ab90: return "CrtSignalHandlerRecordFind";
+            case 0x44acc0: return "TerrainObjectTypeSfxGridConfigLoad";
+            case 0x44ad80: return "TerrainObjectTypeSfxAtCellGet";
+            case 0x449a70: return "EntityActivity23StateTransition";
+            case 0x45d300: return "PriorityImageSelectionStateUpdate";
+            case 0x45d3f0: return "PriorityImageOrderMoveToFront";
+            case 0x47e130: return "SceneObjectRegistryReleaseAll";
             case 0x4350a0: return "SurfaceTypeDescriptionsConfigLoad";
             case 0x444fb0: return "EntityTurnToVectorActivityIssue";
             case 0x4451e0: return "EntityPathStepVectorNormalize";

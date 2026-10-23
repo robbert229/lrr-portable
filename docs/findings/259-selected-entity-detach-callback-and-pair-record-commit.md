@@ -29,12 +29,13 @@ function-pointer literal in `UiActionDispatch` is quoted above. All
 investigations used shipped `reference/LegoRR.exe`, SHA-256
 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`.
 
-**Still unresolved.** `0x44fab0` remains deferred — its sole entry is relay
-`FUN_0044b7a0`, reachable only from an instruction address inside itself
-(`0x44b879`); no named procedure or function-pointer reference reaches it.
-`0x4802d0`/`0x480390`/`0x480570` stay explicitly unresolved. The CRT-region
-helpers (`0x48e280`/`0x48e680`/`0x48e0ad`/`0x48e8e0`/`0x48e4f0`/`0x48ed30`/
-`0x465c50`/`0x473560`/`0x489660`/`0x476e50`/`0x4887c0`, plus the
-0x493–0x49Bxxx cluster) are runtime/CRT support, not game logic. Every
-remaining 900–6900-byte anonymous procedure is accounted for in these
-deferred sets.
+**Follow-up.** `0x44fab0` now has the mechanical name
+`TerrainCellSurfaceTriangleVerticesSelect` (finding 266). Its callback reaches
+named entity/scene update paths, although the direct call remains inside a code
+region without a Ghidra procedure boundary and the threshold's exact meaning
+is not known. The sibling `0x44b7a0` remains deferred: its only direct call is
+at `0x44b879` inside the same unregistered callback zone. The token/directory
+helpers `0x4802d0`/`0x480390`/`0x480570` now have mechanical names in finding
+265; `0x480570`'s result remains unused by its caller. The CRT helpers listed
+above and the 0x493–0x49Bxxx cluster are runtime support rather than game
+logic, with new behavioral names recorded in findings 260, 261, and 264.

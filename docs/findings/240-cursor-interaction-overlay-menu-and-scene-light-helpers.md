@@ -41,7 +41,7 @@ Caller observations for each address are in the same bundle, including
 All investigations used shipped `reference/LegoRR.exe`, SHA-256
 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`.
 
-**Still unresolved.** The token-list/directory-scan trio `0x4802d0`, `0x480390`,
-and `0x480570` keeps its unresolved status, and triage showed no caller signal
-for the large anonymous candidates `0x418a00` and `0x45c0d0`; none of these
-received a name this turn.
+**Follow-up.** The token-list/directory-scan trio now has mechanical names in
+finding 265. The observed caller ignores `0x480570`'s compare result, so its
+intended effect remains unknown. The large anonymous candidates `0x418a00` and
+`0x45c0d0` remain deferred because the earlier triage found no caller signal.

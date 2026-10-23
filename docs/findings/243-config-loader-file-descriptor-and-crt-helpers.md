@@ -44,14 +44,20 @@ helpers kept out of the ledger names this round: `FUN_0045a370`/`FUN_0045a410`
 builder), and `FUN_0044a7d0` (poly-variant list builder). The entity scalar
 accessors `FUN_00469cb0`/`0x469ce0`/`0x469d20`/`0x46a0a0` return
 `**(entity+0x334)`-relative floats whose field meanings are not pinned, and
-`FUN_00432c50` is a cell-record type getter only. The CRT region around
-`0x493xxxx`–`0x49bxxxx` (the next-largest anonymous cluster: 0x498000,
-0x4968f0, 0x49a1b0, 0x495160, 0x4935c0, 0x493280, 0x499880, 0x495f80,
-0x49a540, 0x49b2b0, 0x49afe0, 0x4965d0, 0x4962f0) is self-referential
-stream/io support code whose entry chain runs through runtime-import stubs —
-writer-xref evidence for the descriptor and locale globals would unlock that
-cluster. The callback global `DAT_00544858` and the resolve semantics it
-hides need the `SharedObjectDirectoryScan` side traced further. The
-unresolved set carried from findings 240–242 (`0x4802d0`/`0x480390`/`0x480570`,
-`0x418a00`/`0x45c0d0`, `0x44d280`, `0x473460`/`0x473480`/`0x4734a0`) keeps its
-status.
+`FUN_00432c50` is a cell-record type getter only. Five CRT helpers in the
+`0x493xxxx`–`0x49bxxxx` region are now named from direct decompiles and caller
+evidence: `CrtMemoryMove` (0x498000), `CrtFileDescriptorTableInit`
+(0x4965d0), `CrtTimeZoneStateInit` (0x499880),
+`CrtLocaleCodePageTableUpdate` (0x4962f0), and
+`CrtFloatingPointExceptionRaise` (0x493280); see finding 260. Five more
+runtime helpers are now named in finding 261: `CrtCommandLineArgumentScan`
+(0x495f80), `CrtRuntimeErrorMessage` (0x4968f0), `CrtPutEnvUpdate`
+(0x49b2b0), `CrtCompareStringACompat` (0x49afe0), and
+`CrtDoubleToIntegerRound` (0x4935c0). Finding 264 adds the command-line argv
+initializer, MSVC exception-handler search, and extended-float decimal/multiply/
+power-of-ten helpers (0x495ee0, 0x495160, 0x49a1b0, 0x49a540, 0x49a800).
+Other helpers in that region remain anonymous. The callback global
+`DAT_00544858` and the resolve semantics it hides need the
+`SharedObjectDirectoryScan` side traced further. The unresolved set carried
+from findings 240–242 (`0x418a00`/`0x45c0d0`, `0x44d280`,
+`0x473460`/`0x473480`/`0x4734a0`) keeps its status.
