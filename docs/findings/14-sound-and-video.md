@@ -92,7 +92,7 @@ Config surface (values from `Lego.cfg`):
 | `IntroAVI` | per-level movie at load | read in `LevelLoad` `FUN_00429890` `0x429fb1` |
 | `CreditsBackAVI` | `AVI\Loop.avi`, credits backdrop | `0x4a3c0c` |
 | `EndGameAVI1/2`, `ObjectiveAcheivedAVI` | endings / objective stingers | `0x4a4398/0x4a43a4/0x4a81ac` |
-| `DontPlayAvis` | master kill switch | `0x4a24ec` |
+| `DontPlayAvis` | gates startup AVIs; credits background path bypasses it (finding 186) | `0x4a24ec` |
 | `DDILogo(Time)`, `LMILogo(Time)` | timed **BMP** splash, not AVI | `FUN_004157c0` uses `timeGetTime`+blit |
 
 Startup sequence (in the big init `FUN_0041fb50`): play `LegoAvi` if the
@@ -141,7 +141,7 @@ playback region). The `.flh` container is documented in finding 21.
    top-down conversion is an inference. Finding 172 traces each frame blit into the shared
    DirectDraw render target; final device presentation remains dependent on the surrounding renderer.
    Findings 173–177 record the unchecked null-allocation path, missing explicit frame-retriever close, stale-surface blit after a null frame fetch, caller-level restart at stream length, and the video-only AVI stream selection.
-   Findings 181–185 resolve the command loop's keyboard/mouse-release exit gate, document the credits scroll clock over its background AVI, cross-check the shipped credits text against the CRLF splitter, record `.cconv` sidecar lookup precedence, and show that successful AVI playback has no explicit loop sleep.
+   Findings 181–186 resolve the command loop's keyboard/mouse-release exit gate, document the credits scroll clock over its background AVI, cross-check the shipped credits text against the CRLF splitter, record `.cconv` sidecar lookup precedence, show that successful AVI playback has no explicit loop sleep, and trace the credits path around the `DontPlayAvis` gate.
 4. `.flh` container format — **closed** by finding 21 (2026-10-20): layout,
    both 16-bit coders, and the RGB555→565 write transform.
 5. MCI: only `play cdaudio from N` and status queries were observed; no
