@@ -71,16 +71,23 @@ The hook (`0x464c20`, a standalone 47-byte stub — not a Ghidra procedure
 entry) is:
 
 ```c
-// cdecl hook(frame_name, object); user dat (DAT_0076cd7c) ignored
-rc = FUN_00464c70(frame_name, &slot);        // hash frame_name, find slot in bank
-if (rc) FUN_00465050(object, frame_name, 0, 1, 0);
+// cdecl hook(sample_name, object); user data (DAT_0076cd7c) ignored
+alias = sample_name;
+rc = FUN_00464c70(sample_name, &alias);      // hash name; write matching slot
+if (rc) FUN_00465050(object, alias, 0, 1, 0);
 ```
 
 - `FUN_00464c70(name, &slot)` hashes `name` via `FUN_00477670(name,0,1)` and
   linear-searches `DAT_00502a20` (the 45-slot bank) for a matching hash,
   returning the **slot index**; if the name isn't present it returns 0 (unless
   `DAT_00502a2c & 2`, the dynamic-add path).
-- `FUN_00465050(object, name, 0, 1, 0)` → `FUN_00465090(*object, name, 0, 1, 0)`
+- The 47-byte stub implements the output in place: it passes the address of
+  its first stack argument (`[esp+4]`) as `FUN_00464c70`'s output pointer.
+  On success, the slot index overwrites the consumed name pointer in that
+  argument slot; the stub then reads that slot and passes the numeric index to
+  `FUN_00465050`. This is why the wrapper receives an alias index even though
+  the stub has no separate local slot allocation.
+- `FUN_00465050(object, aliasIndex, 0, 1, 0)` → `FUN_00465090(*object, aliasIndex, 0, 1, 0)`
   (the object's first word = its position/pointer) → `FUN_0047ad70`, the
   3D positional DSound submit (bank match/defer logic in `DAT_00502a2c`).
 
