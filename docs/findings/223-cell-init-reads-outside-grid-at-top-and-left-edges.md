@@ -50,6 +50,19 @@ documented in Finding 7. Archive SHA-256 hashes are
 
 The separate writer `FUN_00432600` (`0x432600`) can set the same cell bit
 when the target has flag `0x200000`, its type byte is not 6, and flag
-`0x80000000` is clear. It then calls `FUN_0042f6f0` for the target and four
-adjacent cells. The binary contains call sites at `0x43e77f` and `0x456dcf`;
-their initiating gameplay conditions remain to be traced.
+`0x80000000` is clear. It calls `FUN_0042f6f0` for the target and four adjacent
+cells; the writer itself does not check those coordinates against map
+dimensions. The helper's own checks still apply, including its acceptance of
+coordinate zero. At `0x43e77f`, an entity-state path derives a cell coordinate with
+`FUN_004424f0`, exact-searches the cell-descriptor list with `FUN_004090c0`,
+and calls the writer only if a descriptor exists and bit 2 is set in its byte
+at `+0xd0`. The exact list lookup has no map-range check. This establishes a
+conditional route for a boundary coordinate to reach the writer, but does not
+show that a shipped level or runtime entity uses such a coordinate.
+
+At `0x456dcf`, the writer is called from callback-dispatch branch 4 after
+`FUN_00432c90` updates the cell. The dispatch branch is reached through the
+generic callback walker; the static trace does not identify a runtime event
+that supplies this context. Neither call site proves that an out-of-range
+neighbor reaches `FUN_0042f6f0` or that its later `0x400` read executes. These
+remain conditional code paths, not observed runtime behavior.
