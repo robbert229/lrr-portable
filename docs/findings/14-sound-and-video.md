@@ -134,7 +134,7 @@ playback region). The `.flh` container is documented in finding 21.
    traces spatial-state refresh for attached objects, finding 163 traces stored view vectors into
    listener position/orientation setters and their frame-tick call, finding 164 shows explicit
    source-position writes are deferred then committed in the same dispatch, and finding 166 inventories
-   direct dispatcher callers. Findings 170–171 trace conditional shared-object transition handle issues across immediate and queued submission; finding 178 records the dynamic alias-table capacity during sample loading. Indirect 3D submission paths remain open. Finding 120 documents optional duplicate
+   direct dispatcher callers. Findings 170–171 trace conditional shared-object transition handle issues across immediate and queued submission; finding 178 records the dynamic alias-table capacity during sample loading. Finding 196 resolves the DirectSound listener provider's frame-relative position and orientation queries. Indirect 3D submission paths remain open. Finding 120 documents optional duplicate
    sample buffers, and finding 133 traces playback's single-buffer versus three-buffer rotation.
 2. Finding 122 traces the in-memory WAV path from the `data` chunk through `mmioGetInfo`'s read
    window into a `GlobalAlloc` buffer before DirectSound setup. The shared file/WAD open layer is
