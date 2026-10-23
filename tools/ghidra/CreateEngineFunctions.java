@@ -1098,6 +1098,20 @@ public class CreateEngineFunctions extends GhidraScript {
         0x47d740L,  // SurfacePixelRowsFlipWithScratch
         0x487a00L,  // SharedObjectClone
         0x4899f0L,  // ObjectHierarchyRecursiveClone
+        0x40b470L,  // ProjectedQuadScreenAreaCalculate
+        0x40c990L,  // MiscObjectsEffectSlotBind
+        0x41afd0L,  // InterfaceSurroundImagesConfigLoad
+        0x4334f0L,  // RenderQualityConfigApply
+        0x440a10L,  // AttachedEntityDirectionVectorUpdate
+        0x44a5d0L,  // NearestOpenCellCoordSearch
+        0x44dde0L,  // StringTableEntrySetCurrent
+        0x453da0L,  // CameraFocusTweenUpdate
+        0x45bcd0L,  // CameraDragFromCursorApply
+        0x45d8b0L,  // ScreenCoordNormalizeInit
+        0x46faf0L,  // EntitySpawnRecordSlotInit
+        0x471fc0L,  // EntityVelocitySlotDispatch
+        0x481ac0L,  // StringTrailingDigitsSplit
+        0x4915a0L,  // EnginePoolArenaCreate
     };
     static final String[] NAMES = { "EngineTick", "EngineShutdown", "EngineShutdownAlt",
         "MainSimStep", "ManagerTick", "MessageDispatch", "ViewContextTick",
@@ -2053,6 +2067,20 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x47d740: return "SurfacePixelRowsFlipWithScratch";
             case 0x487a00: return "SharedObjectClone";
             case 0x4899f0: return "ObjectHierarchyRecursiveClone";
+            case 0x40b470: return "ProjectedQuadScreenAreaCalculate";
+            case 0x40c990: return "MiscObjectsEffectSlotBind";
+            case 0x41afd0: return "InterfaceSurroundImagesConfigLoad";
+            case 0x4334f0: return "RenderQualityConfigApply";
+            case 0x440a10: return "AttachedEntityDirectionVectorUpdate";
+            case 0x44a5d0: return "NearestOpenCellCoordSearch";
+            case 0x44dde0: return "StringTableEntrySetCurrent";
+            case 0x453da0: return "CameraFocusTweenUpdate";
+            case 0x45bcd0: return "CameraDragFromCursorApply";
+            case 0x45d8b0: return "ScreenCoordNormalizeInit";
+            case 0x46faf0: return "EntitySpawnRecordSlotInit";
+            case 0x471fc0: return "EntityVelocitySlotDispatch";
+            case 0x481ac0: return "StringTrailingDigitsSplit";
+            case 0x4915a0: return "EnginePoolArenaCreate";
             default: return null;
         }
     }

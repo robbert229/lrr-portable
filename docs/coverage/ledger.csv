@@ -247,7 +247,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0040b2e0,FUN_0040b2e0,anonymous,,0,140
 0040b310,FUN_0040b310,named,LoadTileVariants,0,1155
 0040b410,FUN_0040b410,anonymous,,0,517
-0040b470,FUN_0040b470,anonymous,,0,1686
+0040b470,FUN_0040b470,named,ProjectedQuadScreenAreaCalculate,0,1686
 0040b5f0,FUN_0040b5f0,named,TileModelEntityRegister,0,2085
 0040b7d0,FUN_0040b7d0,anonymous,,0,344
 0040b810,FUN_0040b810,anonymous,,0,424
@@ -279,7 +279,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0040c830,FUN_0040c830,anonymous,,0,639
 0040c8a0,FUN_0040c8a0,anonymous,,0,476
 0040c920,FUN_0040c920,anonymous,,0,460
-0040c990,FUN_0040c990,anonymous,,0,1782
+0040c990,FUN_0040c990,named,MiscObjectsEffectSlotBind,0,1782
 0040cb70,FUN_0040cb70,anonymous,,0,1112
 0040cc40,FUN_0040cc40,anonymous,,0,445
 0040cce0,FUN_0040cce0,named,LavaEffectSelectAndPlace,0,1140
@@ -548,7 +548,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0041aa00,FUN_0041aa00,anonymous,,0,1600
 0041ab00,FUN_0041ab00,named,InterfaceBuildImagesConfigLoad,0,2581
 0041ada0,FUN_0041ada0,named,InterfaceImagesConfigLoad,0,2854
-0041afd0,FUN_0041afd0,anonymous,,0,1739
+0041afd0,FUN_0041afd0,named,InterfaceSurroundImagesConfigLoad,0,1739
 0041b1b0,FUN_0041b1b0,anonymous,,0,748
 0041b270,FUN_0041b270,anonymous,,0,312
 0041b2d0,FUN_0041b2d0,named,CommandContextPostToHud,0,158
@@ -796,7 +796,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00433330,FUN_00433330,anonymous,,0,371
 00433380,FUN_00433380,named,TerrainCellMutationProgress,0,1722
 004334c0,FUN_004334c0,named,MapFileDimensionsGet,0,228
-004334f0,FUN_004334f0,anonymous,,0,2191
+004334f0,FUN_004334f0,named,RenderQualityConfigApply,0,2191
 00433770,FUN_00433770,named,SceneLightsBuildFromConfig,0,3185
 00433be0,FUN_00433be0,anonymous,,0,195
 00433c10,FUN_00433c10,named,EntityNeighborBlockedCellStepProbe,0,1935
@@ -987,7 +987,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004407b0,FUN_004407b0,anonymous,,0,427
 004408c0,FUN_004408c0,anonymous,,0,426
 004409e0,FUN_004409e0,ported,EntityActivityRequestSet,4,228
-00440a10,FUN_00440a10,anonymous,,0,2160
+00440a10,FUN_00440a10,named,AttachedEntityDirectionVectorUpdate,0,2160
 00440bf0,FUN_00440bf0,anonymous,,0,324
 00440c30,FUN_00440c30,anonymous,,0,291
 00440c70,FUN_00440c70,named,TerrainGridPathSearch,0,6047
@@ -1080,7 +1080,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0044a3d0,FUN_0044a3d0,anonymous,,0,999
 0044a4b0,FUN_0044a4b0,ported,PredugCoordinatePoolAppend,1,228
 0044a4f0,FUN_0044a4f0,anonymous,,0,999
-0044a5d0,FUN_0044a5d0,anonymous,,0,2011
+0044a5d0,FUN_0044a5d0,named,NearestOpenCellCoordSearch,0,2011
 0044a7d0,FUN_0044a7d0,anonymous,,0,1553
 0044a910,FUN_0044a910,named,BuildingPlacementPreviewUpdate,0,3256
 0044acc0,FUN_0044acc0,anonymous,,0,793
@@ -1134,7 +1134,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0044da50,FUN_0044da50,anonymous,,0,864
 0044db50,FUN_0044db50,named,KeyValueEqualsFileLoad,0,2809
 0044dd40,FUN_0044dd40,anonymous,,0,681
-0044dde0,FUN_0044dde0,anonymous,,0,1900
+0044dde0,FUN_0044dde0,named,StringTableEntrySetCurrent,0,1900
 0044dec0,FUN_0044dec0,named,FileLoadingProgressUpdate,0,1666
 0044e0a0,FUN_0044e0a0,anonymous,,0,142
 0044e0c0,FUN_0044e0c0,ported,TerrainCreate,1,5576
@@ -1236,7 +1236,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00453910,FUN_00453910,anonymous,,0,104
 00453920,FUN_00453920,anonymous,,0,842
 00453bb0,FUN_00453bb0,anonymous,,0,1003
-00453da0,FUN_00453da0,anonymous,,0,1880
+00453da0,FUN_00453da0,named,CameraFocusTweenUpdate,0,1880
 00454600,FUN_00454600,ported,,1,1049
 00454880,FUN_00454880,anonymous,,0,164
 00454890,FUN_00454890,anonymous,,0,148
@@ -1322,7 +1322,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0045b900,FUN_0045b900,anonymous,,0,194
 0045b930,FUN_0045b930,anonymous,,0,179
 0045b9d0,FUN_0045b9d0,named,PanelRotationControlConfigLoad,0,2953
-0045bcd0,FUN_0045bcd0,anonymous,,0,1742
+0045bcd0,FUN_0045bcd0,named,CameraDragFromCursorApply,0,1742
 0045bf20,FUN_0045bf20,anonymous,,0,219
 0045bf70,FUN_0045bf70,anonymous,,0,350
 0045bfb0,FUN_0045bfb0,anonymous,,0,450
@@ -1363,7 +1363,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0045d7e0,FUN_0045d7e0,anonymous,,0,675
 0045d870,FUN_0045d870,named,CommandEntityReferenceRemap,0,330
 0045d8a0,FUN_0045d8a0,anonymous,,0,112
-0045d8b0,FUN_0045d8b0,anonymous,,0,1993
+0045d8b0,FUN_0045d8b0,named,ScreenCoordNormalizeInit,0,1993
 0045da90,FUN_0045da90,anonymous,,0,538
 0045daf0,FUN_0045daf0,anonymous,,0,80
 0045db00,FUN_0045db00,anonymous,,0,581
@@ -1648,7 +1648,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0046f550,FUN_0046f550,ported,,4,817
 0046f770,FUN_0046f770,anonymous,,0,1583
 0046f920,FUN_0046f920,ported,,1,1455
-0046faf0,FUN_0046faf0,anonymous,,0,2066
+0046faf0,FUN_0046faf0,named,EntitySpawnRecordSlotInit,0,2066
 0046fc70,FUN_0046fc70,anonymous,,0,2984
 0046fef0,FUN_0046fef0,anonymous,,0,348
 0046ff70,FUN_0046ff70,anonymous,,0,257
@@ -1677,7 +1677,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00471ce0,FUN_00471ce0,anonymous,,0,247
 00471d20,FUN_00471d20,anonymous,,0,2142
 00471f00,FUN_00471f00,anonymous,,0,766
-00471fc0,FUN_00471fc0,anonymous,,0,717
+00471fc0,FUN_00471fc0,named,EntityVelocitySlotDispatch,0,717
 00472080,FUN_00472080,anonymous,,0,634
 00472130,FUN_00472130,anonymous,,0,636
 004721e0,FUN_004721e0,named,DirectShowSampleSetup,0,1620
@@ -2062,7 +2062,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004809e0,FUN_004809e0,named,LwoModelEntryLoad,0,1337
 00480ac0,FUN_00480ac0,named,MaterialPass,0,16992
 00481820,FUN_00481820,named,BindModelTextures,0,3316
-00481ac0,FUN_00481ac0,anonymous,,0,1757
+00481ac0,FUN_00481ac0,named,StringTrailingDigitsSplit,0,1757
 00481b80,FUN_00481b80,named,CounterFormatStringBuild,0,2765
 00481c50,FUN_00481c50,ported,ParseUV,1,5994
 00481fa0,FUN_00481fa0,anonymous,,0,864
@@ -2357,7 +2357,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00491470,FUN_00491470,named,FormatArgumentReadWord,0,236
 004914a0,FUN_004914a0,anonymous,,0,1587
 00491560,FUN_00491560,anonymous,,0,256
-004915a0,FUN_004915a0,anonymous,,0,2112
+004915a0,FUN_004915a0,named,EnginePoolArenaCreate,0,2112
 00491710,FUN_00491710,anonymous,,0,396
 00491770,FUN_00491770,anonymous,,0,1432
 00491840,FUN_00491840,anonymous,,0,574
