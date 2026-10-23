@@ -65,12 +65,24 @@ at `+0xd0`. The conversion and exact list lookup have no map-range check.
 This is a conditional route for a boundary entity to reach the writer; it does
 not prove one does so at runtime.
 
+The descriptor gate is not restricted to interior cells in the traced
+creator. `FUN_00409300` creates a descriptor for `DAT_004ddcc4` and sets its
+`+0xd0` bit `0x2` when `FUN_00433090` returns zero; that helper bounds-checks
+the coordinates and, for an in-bounds cell, returns its `0x20000000` flag.
+Thus an in-bounds edge coordinate such as `x=0` or `y=0` with that flag clear
+passes this condition. The UI-action dispatcher `FUN_0041dca0` calls the
+creator for cases 5 and 7 after confirming no descriptor already exists at
+that coordinate. These static gates permit a boundary descriptor, but do not
+establish that the action is taken there or that a matching entity reaches
+the later callback.
+
 At `0x456dcf`, the writer is called from callback-dispatch branch 4 after
-`FUN_00432c90` updates the cell. Its wrapper is registered under the interface
-name `SetTutorialBlockIsPath` (string pointer and handler pointer at file
-offsets `0xa4db4`/`0xa4db8`); the wrapper supplies context 4. `FUN_00456b80`
-builds per-value coordinate lists from the level's voxel byte `+0x04`, and
-the callback walker applies the update to the selected list. The shipped
+`FUN_00432c90` updates the cell. A static name/function pair associates the
+string `SetTutorialBlockIsPath` and wrapper `FUN_00457420` at file offsets
+`0xa4db4`/`0xa4db8`; the wrapper supplies context 4. `FUN_00456b80` builds
+per-value coordinate lists from the level's voxel byte `+0x04`, and the
+callback walker applies the update to the selected list. The table consumer
+and runtime script invocation remain untraced. The shipped
 `MoveTuto_01\M01.nrn` script contains conditional calls
 `SetTutorialBlockIsPath 4 1` and `SetTutorialBlockIsPath 11 1`. Its configured
 `TerrainMap`, `Surf_M01.map`, is 30 by 26: value 4 occurs only at `(18,12)` and
