@@ -6,7 +6,7 @@ with automatic log capture and signature triage. One command per test run:
 
 ```sh
 python3 tools/compat/a2.py doctor      # is the box ready? (runner, Vulkan, digests)
-python3 tools/compat/a2.py setup       # stage the game (source/ is copied, never edited)
+python3 tools/compat/a2.py setup       # stage the game (reference/ is copied, never edited)
 python3 tools/compat/a2.py run         # launch, stream + save log, triage on exit
 python3 tools/compat/a2.py triage      # re-scan the newest (or a named) log
 python3 tools/compat/a2.py patch-avi   # flip DontPlayAvis TRUE in the staged wad
@@ -26,7 +26,7 @@ python3 tools/compat/a2.py shell …     # arbitrary exe/command under the prefi
   from the old bare-wine path is moved aside on first Proton use.
   `winecfg.exe` via `setup --winecfg` or `shell winecfg.exe` for manual tweaks.
 - **Prefix/game state** — under `${XDG_DATA_HOME:-~/.local/share}/rock-raider-a2/`:
-  `compatdata/` (Proton-managed), `game/` (staged copy of `source/`, plus
+  `compatdata/` (Proton-managed), `game/` (staged copy of `reference/`, plus
   `.mods/L1/` as the repack working tree), `logs/`, `backups/`.
 - **Display** — wrapped in `gamescope` at 640×480 @ 60 Hz when available
   (the game is hardcoded for that mode, finding 15 §4.3); `--no-gamescope`

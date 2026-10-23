@@ -3,7 +3,7 @@
 SHELL := /bin/bash
 
 BUILD_DIR ?= build
-WAD_DIR ?= $(CURDIR)/source
+WAD_DIR ?= $(CURDIR)/reference
 
 .PHONY: all build run clean
 
