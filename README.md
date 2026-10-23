@@ -348,6 +348,7 @@ Open threads, in order of value:
 | 149 | [findings/149-deferred-sound-queue-drops-requests-after-ten.md](docs/findings/149-deferred-sound-queue-drops-requests-after-ten.md) | Deferred sound queue silently drops requests after ten entries |
 | 150 | [findings/150-streamed-wav-playback-rejects-non-pcm.md](docs/findings/150-streamed-wav-playback-rejects-non-pcm.md) | Streamed playback rejects non-PCM WAV formats before buffer creation |
 | 151 | [findings/151-streamed-pcm-buffer-uses-four-aligned-segments.md](docs/findings/151-streamed-pcm-buffer-uses-four-aligned-segments.md) | Streamed PCM buffer uses four aligned segments totaling about three seconds |
+| 152 | [findings/152-streamed-playback-reuses-buffer-as-looping-ring.md](docs/findings/152-streamed-playback-reuses-buffer-as-looping-ring.md) | Streamed playback loops and refills its DirectSound ring buffer |
 
 Named-pseudocode corpus: [`docs/decompiles/engine-region.c`](docs/decompiles/engine-region.c)
 (114 named functions covering the engine/game-logic region — findings 01–10).
