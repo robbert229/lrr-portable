@@ -9,9 +9,9 @@ Covers all **2564** local functions in `docs/decompiles/full/manifest.csv`
 | --- | ---: | ---: |
 | ported | 293 | 11.4% |
 | anchored | 5 | 0.2% |
-| named | 852 | 33.2% |
+| named | 871 | 34.0% |
 | runtime-import | 46 | 1.8% |
-| anonymous | 1368 | 53.4% |
+| anonymous | 1349 | 52.6% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
   (293 functions)

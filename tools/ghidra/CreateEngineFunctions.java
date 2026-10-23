@@ -1137,6 +1137,25 @@ public class CreateEngineFunctions extends GhidraScript {
         0x41eca0L,  // AdvisorDialogStackLayout
         0x431b20L,  // PlacementBlockedAdjacentCellScan
         0x431c70L,  // FirstFreeNeighborCellPick
+        0x401270L,  // AdvisorConfigSlotLookup
+        0x40e1e0L,  // CellCornerOccupancyScan
+        0x418da0L,  // HelpWindowButtonHitTest
+        0x41eac0L,  // EventTimerCountdownAdvance
+        0x427e00L,  // ToolTipInfoStringsLoad
+        0x433180L,  // CellTypeSpeedMultiplierResolve
+        0x43a650L,  // ActionKindEntityCreateAndCommandIssue
+        0x442300L,  // EntityVelocityVectorDispatch
+        0x4477d0L,  // PathStepLookaheadEntryWrite
+        0x44b680L,  // EntitySceneObjectTreeAttach
+        0x4519b0L,  // VisualModelRecordCreate
+        0x45a9c0L,  // PanelTextureSlotsBlit
+        0x45cdc0L,  // PriorityImagesConfigLoad
+        0x46cff0L,  // SceneRecordTemplateInstantiate
+        0x46dd10L,  // StagedCellCandidateSelect
+        0x473c60L,  // XfTextureNameFormat
+        0x4748f0L,  // MeshRecordAllocateOrAppend
+        0x47d2d0L,  // SurfacePixelValueEncode
+        0x482b50L,  // RenderStateFlagsApply
         0x4350a0L,  // SurfaceTypeDescriptionsConfigLoad
         0x444fb0L,  // EntityTurnToVectorActivityIssue
         0x4451e0L,  // EntityPathStepVectorNormalize
@@ -2138,6 +2157,25 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x41eca0: return "AdvisorDialogStackLayout";
             case 0x431b20: return "PlacementBlockedAdjacentCellScan";
             case 0x431c70: return "FirstFreeNeighborCellPick";
+            case 0x401270: return "AdvisorConfigSlotLookup";
+            case 0x40e1e0: return "CellCornerOccupancyScan";
+            case 0x418da0: return "HelpWindowButtonHitTest";
+            case 0x41eac0: return "EventTimerCountdownAdvance";
+            case 0x427e00: return "ToolTipInfoStringsLoad";
+            case 0x433180: return "CellTypeSpeedMultiplierResolve";
+            case 0x43a650: return "ActionKindEntityCreateAndCommandIssue";
+            case 0x442300: return "EntityVelocityVectorDispatch";
+            case 0x4477d0: return "PathStepLookaheadEntryWrite";
+            case 0x44b680: return "EntitySceneObjectTreeAttach";
+            case 0x4519b0: return "VisualModelRecordCreate";
+            case 0x45a9c0: return "PanelTextureSlotsBlit";
+            case 0x45cdc0: return "PriorityImagesConfigLoad";
+            case 0x46cff0: return "SceneRecordTemplateInstantiate";
+            case 0x46dd10: return "StagedCellCandidateSelect";
+            case 0x473c60: return "XfTextureNameFormat";
+            case 0x4748f0: return "MeshRecordAllocateOrAppend";
+            case 0x47d2d0: return "SurfacePixelValueEncode";
+            case 0x482b50: return "RenderStateFlagsApply";
             case 0x4350a0: return "SurfaceTypeDescriptionsConfigLoad";
             case 0x444fb0: return "EntityTurnToVectorActivityIssue";
             case 0x4451e0: return "EntityPathStepVectorNormalize";

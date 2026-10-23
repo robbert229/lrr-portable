@@ -446,10 +446,11 @@ Open threads, in order of value:
 | 247 | [findings/247-config-graphics-camera-tween-and-pool-spawn-helpers.md](docs/findings/247-config-graphics-camera-tween-and-pool-spawn-helpers.md) | Config/Graphics Quality, Camera Tween/Drag, Cell Search, and Pool/Spawn Helpers |
 | 248 | [findings/248-config-band-loaders-display-mode-directional-activity-and-flight-record-helpers.md](docs/findings/248-config-band-loaders-display-mode-directional-activity-and-flight-record-helpers.md) | Config-Band Loaders, Display-Mode Setup, Directional Activity, and Flight-Record Helpers |
 | 249 | [findings/249-config-band-loaders-poly-variant-build-panel-and-cell-registration-layout-and-activity-helpers.md](docs/findings/249-config-band-loaders-poly-variant-build-panel-and-cell-registration-layout-and-activity-helpers.md) | Config-Band Loaders, Poly-Variant Build, Panel/Cell Registration, Layout, and Activity Helpers |
+| 250 | [findings/250-config-band-loaders-cell-corner-scan-action-command-record-instantiation-and-render-state-helpers.md](docs/findings/250-config-band-loaders-cell-corner-scan-action-command-record-instantiation-and-render-state-helpers.md) | Config-Band Loaders, Cell-Corner Scan, Action/Command Issues, Record Instantiation, and Render-State Helpers |
 
 Named-pseudocode corpus: [`docs/decompiles/engine-region.c`](docs/decompiles/engine-region.c)
-(1113 generated sections selected from the reverse-engineering findings; the
-Ghidra script selects 1113 targets. This includes the manually bounded objective
+(1132 generated sections selected from the reverse-engineering findings; the
+Ghidra script selects 1132 targets. This includes the manually bounded objective
 callback at `0x459100`, which auto-analysis does not mark as a procedure).
 Machine-readable evidence: [`docs/evidence/legorr-rev.bundle`](docs/evidence/legorr-rev.bundle)
 (236 recorded REA observations against `LegoRR.exe`,
@@ -489,6 +490,8 @@ The config-band loaders, display-mode setup, directional-activity, and flight-re
 [legorr-engine-helpers-expansion-20.bundle](docs/evidence/legorr-engine-helpers-expansion-20.bundle).
 The config-band loaders, poly-variant build, panel/cell registration, layout, and activity helpers are recorded in
 [legorr-engine-helpers-expansion-21.bundle](docs/evidence/legorr-engine-helpers-expansion-21.bundle).
+The config-band loaders, cell-corner scan, action/command issues, record instantiation, and render-state helpers are recorded in
+[legorr-engine-helpers-expansion-22.bundle](docs/evidence/legorr-engine-helpers-expansion-22.bundle).
 The latest input, selection, and resource helper batch is in
 [legorr-engine-helpers-expansion-5.bundle](docs/evidence/legorr-engine-helpers-expansion-5.bundle);
 its address-range audits are in the [low](docs/evidence/legorr-engine-helper-audit-low-expansion-5.bundle),

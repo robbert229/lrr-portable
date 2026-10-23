@@ -3,7 +3,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004011c0,FUN_004011c0,anonymous,,0,290
 00401210,FUN_00401210,anonymous,,0,130
 00401240,FUN_00401240,anonymous,,0,293
-00401270,FUN_00401270,anonymous,,0,1356
+00401270,FUN_00401270,named,AdvisorConfigSlotLookup,0,1356
 004013a0,FUN_004013a0,anonymous,,0,203
 004013e0,FUN_004013e0,anonymous,,0,368
 00401420,FUN_00401420,anonymous,,0,443
@@ -304,7 +304,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0040dd90,FUN_0040dd90,anonymous,,0,750
 0040de40,FUN_0040de40,named,EntityFenceSparkTerrainInteraction,0,2593
 0040e0c0,FUN_0040e0c0,anonymous,,0,1082
-0040e1e0,FUN_0040e1e0,anonymous,,0,1407
+0040e1e0,FUN_0040e1e0,named,CellCornerOccupancyScan,0,1407
 0040e350,FUN_0040e350,anonymous,,0,1042
 0040e460,FUN_0040e460,anonymous,,0,148
 0040e490,FUN_0040e490,named,EncyclopediaConfigFilesOpen,0,2964
@@ -493,7 +493,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00418920,FUN_00418920,anonymous,,0,855
 004189d0,FUN_004189d0,anonymous,,0,199
 00418a00,FUN_00418a00,anonymous,,0,3460
-00418da0,FUN_00418da0,anonymous,,0,1368
+00418da0,FUN_00418da0,named,HelpWindowButtonHitTest,0,1368
 00418f80,FUN_00418f80,anonymous,,0,153
 00418fc0,FUN_00418fc0,anonymous,,0,460
 00419030,FUN_00419030,anonymous,,0,673
@@ -593,7 +593,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0041e990,FUN_0041e990,anonymous,,0,195
 0041e9d0,FUN_0041e9d0,anonymous,,0,356
 0041ea50,FUN_0041ea50,named,StoreSelectedMapCoordinate,0,538
-0041eac0,FUN_0041eac0,anonymous,,0,1462
+0041eac0,FUN_0041eac0,named,EventTimerCountdownAdvance,0,1462
 0041ec30,FUN_0041ec30,anonymous,,0,526
 0041eca0,FUN_0041eca0,named,AdvisorDialogStackLayout,0,1868
 0041ee60,FUN_0041ee60,anonymous,,0,201
@@ -659,7 +659,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004263c0,FUN_004263c0,anonymous,,0,304
 00426420,FUN_00426420,named,CursorRayToCameraRoute,0,909
 00426520,FUN_00426520,ported,MainSimInteractionAndCellUpdate,4,33111
-00427e00,FUN_00427e00,anonymous,,0,1355
+00427e00,FUN_00427e00,named,ToolTipInfoStringsLoad,0,1355
 00427f80,FUN_00427f80,anonymous,,0,1071
 00428020,FUN_00428020,named,EntityCommandStatusFeedbackDispatch,0,6657
 00428330,FUN_00428330,named,TerrainCommandFeedbackDispatch,0,6919
@@ -790,7 +790,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00433090,FUN_00433090,named,TerrainCoordinateAndOccupancyCheck,0,406
 004330e0,FUN_004330e0,anonymous,,0,228
 00433120,FUN_00433120,anonymous,,0,521
-00433180,FUN_00433180,anonymous,,0,1310
+00433180,FUN_00433180,named,CellTypeSpeedMultiplierResolve,0,1310
 004332c0,FUN_004332c0,anonymous,,0,199
 004332f0,FUN_004332f0,anonymous,,0,396
 00433330,FUN_00433330,anonymous,,0,371
@@ -933,7 +933,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0043a120,FUN_0043a120,anonymous,,0,2199
 0043a300,FUN_0043a300,named,EntityDepositActivityGate,0,3240
 0043a5f0,FUN_0043a5f0,named,EntityVisualResourceGetOrCreate,0,425
-0043a650,FUN_0043a650,anonymous,,0,1350
+0043a650,FUN_0043a650,named,ActionKindEntityCreateAndCommandIssue,0,1350
 0043a7c0,FUN_0043a7c0,anonymous,,0,603
 0043a850,FUN_0043a850,anonymous,,0,722
 0043a8f0,FUN_0043a8f0,anonymous,,0,158
@@ -1001,7 +1001,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00442210,FUN_00442210,anonymous,,0,303
 00442260,FUN_00442260,named,EntityTransformPositionGet,0,273
 004422a0,FUN_004422a0,anonymous,,0,334
-00442300,FUN_00442300,anonymous,,0,1274
+00442300,FUN_00442300,named,EntityVelocityVectorDispatch,0,1274
 00442480,FUN_00442480,anonymous,,0,243
 004424f0,FUN_004424f0,ported,EntityPositionToTerrainCell,1,307
 00442540,FUN_00442540,anonymous,,0,134
@@ -1040,7 +1040,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004475c0,FUN_004475c0,named,EntityProgressAndNegativeDeltaHandler,0,1547
 00447730,FUN_00447730,anonymous,,0,336
 00447780,FUN_00447780,anonymous,,0,417
-004477d0,FUN_004477d0,anonymous,,0,1457
+004477d0,FUN_004477d0,named,PathStepLookaheadEntryWrite,0,1457
 00447900,FUN_00447900,anonymous,,0,117
 00447950,FUN_00447950,named,EntityDirectionalActivityStart,0,1592
 00447b00,FUN_00447b00,anonymous,,0,172
@@ -1097,7 +1097,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0044b480,FUN_0044b480,ported,EntityPermittedActivityCheck,8,360
 0044b4c0,FUN_0044b4c0,anonymous,,0,310
 0044b500,FUN_0044b500,anonymous,,0,1578
-0044b680,FUN_0044b680,anonymous,,0,1324
+0044b680,FUN_0044b680,named,EntitySceneObjectTreeAttach,0,1324
 0044b7a0,FUN_0044b7a0,anonymous,,0,720
 0044bae0,FUN_0044bae0,anonymous,,0,317
 0044bb30,FUN_0044bb30,anonymous,,0,1146
@@ -1193,7 +1193,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004515a0,FUN_004515a0,named,MapFileReadHeader,0,176
 004515c0,FUN_004515c0,named,MapFileGetCell,0,218
 004515e0,FUN_004515e0,named,TerrainCellRayHitTest,0,3317
-004519b0,FUN_004519b0,anonymous,,0,1486
+004519b0,FUN_004519b0,named,VisualModelRecordCreate,0,1486
 00451ab0,FUN_00451ab0,anonymous,,0,1182
 00451b30,FUN_00451b30,anonymous,,0,1014
 00451bc0,FUN_00451bc0,anonymous,,0,503
@@ -1302,7 +1302,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0045a6e0,FUN_0045a6e0,anonymous,,0,174
 0045a700,FUN_0045a700,anonymous,,0,178
 0045a730,FUN_0045a730,ported,ManagerTick,7,2908
-0045a9c0,FUN_0045a9c0,anonymous,,0,1476
+0045a9c0,FUN_0045a9c0,named,PanelTextureSlotsBlit,0,1476
 0045aac0,FUN_0045aac0,anonymous,,0,357
 0045ab00,FUN_0045ab00,anonymous,,0,312
 0045ab30,FUN_0045ab30,anonymous,,0,201
@@ -1346,7 +1346,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0045cc60,FUN_0045cc60,anonymous,,0,60
 0045cc70,FUN_0045cc70,named,PointerCursorDraw,0,1006
 0045cd90,FUN_0045cd90,named,PointerCursorOverrideTick,0,214
-0045cdc0,FUN_0045cdc0,anonymous,,0,1288
+0045cdc0,FUN_0045cdc0,named,PriorityImagesConfigLoad,0,1288
 0045cf00,FUN_0045cf00,anonymous,,0,377
 0045cf50,FUN_0045cf50,anonymous,,0,934
 0045d060,FUN_0045d060,anonymous,,0,740
@@ -1605,7 +1605,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0046cf80,FUN_0046cf80,anonymous,,0,85
 0046cf90,FUN_0046cf90,anonymous,,0,135
 0046cfc0,FUN_0046cfc0,anonymous,,0,294
-0046cff0,FUN_0046cff0,anonymous,,0,1425
+0046cff0,FUN_0046cff0,named,SceneRecordTemplateInstantiate,0,1425
 0046d140,FUN_0046d140,named,SceneAssignOwnerFromModel,0,523
 0046d1a0,FUN_0046d1a0,anonymous,,0,94
 0046d1c0,FUN_0046d1c0,anonymous,,0,625
@@ -1624,7 +1624,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0046db60,FUN_0046db60,anonymous,,0,87
 0046db70,FUN_0046db70,anonymous,,0,94
 0046db90,FUN_0046db90,named,CellQuadRunStage,0,2729
-0046dd10,FUN_0046dd10,anonymous,,0,1254
+0046dd10,FUN_0046dd10,named,StagedCellCandidateSelect,0,1254
 0046de80,FUN_0046de80,named,CellQuadRunEmit,0,3414
 0046e1c0,FUN_0046e1c0,anonymous,,0,560
 0046e220,FUN_0046e220,anonymous,,0,1129
@@ -1716,7 +1716,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00473b40,FUN_00473b40,ported,SceneRenderLockToggle,1,385
 00473ba0,FUN_00473ba0,anonymous,,0,92
 00473bc0,FUN_00473bc0,anonymous,,0,914
-00473c60,FUN_00473c60,anonymous,,0,1386
+00473c60,FUN_00473c60,named,XfTextureNameFormat,0,1386
 00473da0,FUN_00473da0,named,SceneObjectOwnerSet,0,112
 00473db0,FUN_00473db0,named,SceneObjectOwnerGet,0,86
 00473dc0,FUN_00473dc0,anonymous,,0,318
@@ -1729,7 +1729,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004744f0,FUN_004744f0,named,TextureSurfaceCreate,0,3357
 00474710,FUN_00474710,named,TextureRelease,0,567
 00474760,FUN_00474760,anonymous,,0,2527
-004748f0,FUN_004748f0,anonymous,,0,1471
+004748f0,FUN_004748f0,named,MeshRecordAllocateOrAppend,0,1471
 00474a20,FUN_00474a20,named,AnimatedTextureFrameCount,0,470
 00474a60,FUN_00474a60,anonymous,,0,598
 00474ae0,FUN_00474ae0,anonymous,,0,585
@@ -1955,7 +1955,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0047ce20,FUN_0047ce20,anonymous,,0,744
 0047cee0,FUN_0047cee0,named,DirectDrawClipperSetRegion,0,1310
 0047d000,FUN_0047d000,named,PalettizedBitmapSurfaceDecode,0,3856
-0047d2d0,FUN_0047d2d0,anonymous,,0,1315
+0047d2d0,FUN_0047d2d0,named,SurfacePixelValueEncode,0,1315
 0047d3f0,FUN_0047d3f0,anonymous,,0,168
 0047d410,FUN_0047d410,anonymous,,0,313
 0047d430,FUN_0047d430,anonymous,,0,357
@@ -2082,7 +2082,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004827a0,FUN_004827a0,anonymous,,0,301
 004827d0,FUN_004827d0,anonymous,,0,231
 00482ac0,FUN_00482ac0,named,ModelRenderRecordStateSetup,0,516
-00482b50,FUN_00482b50,anonymous,,0,1431
+00482b50,FUN_00482b50,named,RenderStateFlagsApply,0,1431
 00482cb0,FUN_00482cb0,anonymous,,0,158
 00482ce0,FUN_00482ce0,anonymous,,0,579
 00482d30,FUN_00482d30,named,ModelRenderListClear,0,221
