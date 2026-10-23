@@ -199,7 +199,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00408d70,FUN_00408d70,anonymous,,0,745
 00408e10,FUN_00408e10,anonymous,,0,447
 00408e50,FUN_00408e50,anonymous,,0,458
-00408ec0,FUN_00408ec0,anonymous,,0,2500
+00408ec0,FUN_00408ec0,named,KindNineNeighborEmitForFootprintCells,0,2500
 004090a0,FUN_004090a0,anonymous,,0,117
 004090c0,FUN_004090c0,named,TerrainDescriptorFindExact,0,460
 00409110,FUN_00409110,anonymous,,0,207
@@ -486,7 +486,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00418190,FUN_00418190,anonymous,,0,81
 004181a0,FUN_004181a0,anonymous,,0,85
 004181b0,FUN_004181b0,named,HelpWindowResourcesInit,0,2892
-00418450,FUN_00418450,anonymous,,0,2696
+00418450,FUN_00418450,named,HelpWindowInfoConfigStringsLoad,0,2696
 004185f0,FUN_004185f0,anonymous,,0,1716
 00418800,FUN_00418800,anonymous,,0,227
 00418830,FUN_00418830,named,BuildingUpgradeStateChangedEventDispatch,0,959
@@ -547,7 +547,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0041a9c0,FUN_0041a9c0,anonymous,,0,368
 0041aa00,FUN_0041aa00,anonymous,,0,1600
 0041ab00,FUN_0041ab00,anonymous,,0,2581
-0041ada0,FUN_0041ada0,anonymous,,0,2854
+0041ada0,FUN_0041ada0,named,InterfaceImagesConfigLoad,0,2854
 0041afd0,FUN_0041afd0,anonymous,,0,1739
 0041b1b0,FUN_0041b1b0,anonymous,,0,748
 0041b270,FUN_0041b270,anonymous,,0,312
@@ -1005,7 +1005,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00442480,FUN_00442480,anonymous,,0,243
 004424f0,FUN_004424f0,ported,EntityPositionToTerrainCell,1,307
 00442540,FUN_00442540,anonymous,,0,134
-004425f0,FUN_004425f0,anonymous,,0,2509
+004425f0,FUN_004425f0,named,SubobjectPoseDeltaNormalizeAndDispatch,0,2509
 004428a0,FUN_004428a0,named,EntityWorldPositionSet,0,2073
 00442b10,FUN_00442b10,named,EntityMovementAccumulatorApply,0,3963
 00442f80,FUN_00442f80,named,EntityPoseOrientationDispatch,0,4398
@@ -1132,7 +1132,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0044d9a0,FUN_0044d9a0,anonymous,,0,368
 0044da20,FUN_0044da20,anonymous,,0,184
 0044da50,FUN_0044da50,anonymous,,0,864
-0044db50,FUN_0044db50,anonymous,,0,2809
+0044db50,FUN_0044db50,named,KeyValueEqualsFileLoad,0,2809
 0044dd40,FUN_0044dd40,anonymous,,0,681
 0044dde0,FUN_0044dde0,anonymous,,0,1900
 0044dec0,FUN_0044dec0,named,FileLoadingProgressUpdate,0,1666
@@ -1446,7 +1446,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00463e40,FUN_00463e40,anonymous,,0,264
 00463ea0,FUN_00463ea0,anonymous,,0,222
 00463ed0,FUN_00463ed0,anonymous,,0,278
-00463f00,FUN_00463f00,anonymous,,0,2818
+00463f00,FUN_00463f00,named,SceneQuadGridEmit,0,2818
 00464110,FUN_00464110,anonymous,,0,1019
 004641c0,FUN_004641c0,named,BuildingPlacementFootprintRenderAndValidate,0,5897
 00464720,FUN_00464720,anonymous,,0,109
@@ -1630,7 +1630,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0046e220,FUN_0046e220,anonymous,,0,1129
 0046e330,FUN_0046e330,anonymous,,0,340
 0046e390,FUN_0046e390,ported,,3,2966
-0046e610,FUN_0046e610,anonymous,,0,2492
+0046e610,FUN_0046e610,named,TerrainEdgeFlagMidpointUpdate,0,2492
 0046e8a0,FUN_0046e8a0,anonymous,,0,759
 0046e9d0,FUN_0046e9d0,anonymous,,0,1248
 0046ead0,FUN_0046ead0,anonymous,,0,402
@@ -1770,7 +1770,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00475900,FUN_00475900,named,DDiSceneObjectArgumentsNormalize,0,246
 00475930,FUN_00475930,ported,EntityVisualKindDispatch,7,1401
 004759f0,FUN_004759f0,named,DDiSceneObjectArrayGrow,0,641
-00475a70,FUN_00475a70,anonymous,,0,2573
+00475a70,FUN_00475a70,named,SceneActionRecordActFrameScan,0,2573
 00475c00,FUN_00475c00,named,DDiSceneAnimationCallbacksSet,0,786
 00475c80,FUN_00475c80,anonymous,,0,840
 00475d10,FUN_00475d10,ported,DDiSceneActFrameRecordParse,2,958
@@ -1893,7 +1893,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0047a1b0,FUN_0047a1b0,anonymous,,0,210
 0047a1e0,FUN_0047a1e0,named,FormattedTextDrawAndMeasure,0,3292
 0047a470,FUN_0047a470,ported,BitmapFontGlyphDrawAndMeasure,5,507
-0047a520,FUN_0047a520,anonymous,,0,113
+0047a520,FUN_0047a520,named,BitmapFontGlyphMeasureWidth,0,113
 0047a540,FUN_0047a540,anonymous,,0,87
 0047a550,FUN_0047a550,named,FontRecordAndSurfaceRelease,0,141
 0047a580,FUN_0047a580,anonymous,,0,463
@@ -2063,7 +2063,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00480ac0,FUN_00480ac0,named,MaterialPass,0,16992
 00481820,FUN_00481820,named,BindModelTextures,0,3316
 00481ac0,FUN_00481ac0,anonymous,,0,1757
-00481b80,FUN_00481b80,anonymous,,0,2765
+00481b80,FUN_00481b80,named,CounterFormatStringBuild,0,2765
 00481c50,FUN_00481c50,ported,ParseUV,1,5994
 00481fa0,FUN_00481fa0,anonymous,,0,864
 00482040,FUN_00482040,anonymous,,0,682
@@ -2143,7 +2143,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00485250,FUN_00485250,named,TextBufferAppendVFormat,0,867
 00485300,FUN_00485300,named,ObjectiveAdvisorTextCopy,0,1028
 00485390,FUN_00485390,named,TextBufferDrawWrapped,0,4265
-00485710,FUN_00485710,anonymous,,0,3496
+00485710,FUN_00485710,named,TextWrapMeasureAndDrawLines,0,3496
 004859b0,FUN_004859b0,named,TextBufferReset,0,740
 00485a00,FUN_00485a00,anonymous,,0,182
 00485a20,FUN_00485a20,named,KeyboardKeyNamesInit,0,4292
@@ -2363,7 +2363,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00491840,FUN_00491840,anonymous,,0,574
 004918a0,FUN_004918a0,anonymous,,0,423
 00491900,FUN_00491900,named,EnginePoolAllocate,0,3557
-00491b40,FUN_00491b40,anonymous,,0,2561
+00491b40,FUN_00491b40,named,EnginePoolChunkTryAllocate,0,2561
 00491cc0,FUN_00491cc0,anonymous,,0,1332
 00491d90,FUN_00491d90,anonymous,,0,202
 00491db0,__trandisp1,runtime-import,__trandisp1,0,1160
@@ -2442,7 +2442,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004968f0,FUN_004968f0,anonymous,,0,5341
 00496ad0,FUN_00496ad0,anonymous,,0,1304
 00496c00,FUN_00496c00,named,Win32FileDescriptorSeek,0,1009
-00496cc0,FUN_00496cc0,anonymous,,0,2747
+00496cc0,FUN_00496cc0,named,Win32FileDescriptorWrite,0,2747
 00496ee0,FUN_00496ee0,named,Win32ErrorMapToErrno,0,704
 00496f50,FUN_00496f50,anonymous,,0,1040
 00497040,FUN_00497040,anonymous,,0,1289

@@ -1059,6 +1059,19 @@ public class CreateEngineFunctions extends GhidraScript {
         0x497130L,  // Win32FileDescriptorRead
         0x498350L,  // NumberStringScanParse
         0x499240L,  // Win32FileDescriptorOpen
+        0x408ec0L,  // KindNineNeighborEmitForFootprintCells
+        0x418450L,  // HelpWindowInfoConfigStringsLoad
+        0x41ada0L,  // InterfaceImagesConfigLoad
+        0x4425f0L,  // SubobjectPoseDeltaNormalizeAndDispatch
+        0x44db50L,  // KeyValueEqualsFileLoad
+        0x463f00L,  // SceneQuadGridEmit
+        0x46e610L,  // TerrainEdgeFlagMidpointUpdate
+        0x475a70L,  // SceneActionRecordActFrameScan
+        0x47a520L,  // BitmapFontGlyphMeasureWidth
+        0x481b80L,  // CounterFormatStringBuild
+        0x485710L,  // TextWrapMeasureAndDrawLines
+        0x491b40L,  // EnginePoolChunkTryAllocate
+        0x496cc0L,  // Win32FileDescriptorWrite
     };
     static final String[] NAMES = { "EngineTick", "EngineShutdown", "EngineShutdownAlt",
         "MainSimStep", "ManagerTick", "MessageDispatch", "ViewContextTick",
@@ -1975,6 +1988,19 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x497130: return "Win32FileDescriptorRead";
             case 0x498350: return "NumberStringScanParse";
             case 0x499240: return "Win32FileDescriptorOpen";
+            case 0x408ec0: return "KindNineNeighborEmitForFootprintCells";
+            case 0x418450: return "HelpWindowInfoConfigStringsLoad";
+            case 0x41ada0: return "InterfaceImagesConfigLoad";
+            case 0x4425f0: return "SubobjectPoseDeltaNormalizeAndDispatch";
+            case 0x44db50: return "KeyValueEqualsFileLoad";
+            case 0x463f00: return "SceneQuadGridEmit";
+            case 0x46e610: return "TerrainEdgeFlagMidpointUpdate";
+            case 0x475a70: return "SceneActionRecordActFrameScan";
+            case 0x47a520: return "BitmapFontGlyphMeasureWidth";
+            case 0x481b80: return "CounterFormatStringBuild";
+            case 0x485710: return "TextWrapMeasureAndDrawLines";
+            case 0x491b40: return "EnginePoolChunkTryAllocate";
+            case 0x496cc0: return "Win32FileDescriptorWrite";
             default: return null;
         }
     }
