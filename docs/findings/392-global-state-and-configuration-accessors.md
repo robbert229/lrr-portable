@@ -30,7 +30,7 @@ This finding maps the 44 assigned global/engine/level accessors and mutators. Th
 | `0x0041f8a0` | `GlobalObjectField98Add` | If the global object exists, adds the supplied value to `+0x98` (Finding 350). |
 | `0x0041f8c0` | `GlobalObjectField98Clear` | If the global object exists, clears its dword at `+0x98` (Finding 350). |
 | `0x0041f920` | `LevelStateField9CAdd` | Adds the supplied delta to `DAT_005560d4 + 0x9c`; the field's meaning is not established (Finding 338). |
-| `0x0041f940` | `FUN_0041f940` | Sets or clears `DAT_00556ecc` bit `0x20000` from the supplied boolean; name and domain meaning remain unresolved. |
+| `0x0041f940` | Provisional alias `GlobalFlagBit20000SetOrClear` (`FUN_0041f940`) | Sets or clears `DAT_00556ecc` bit `0x20000` from the supplied boolean; the flag's domain meaning remains unresolved. |
 | `0x0041f970` | `RuntimeFlag40000000Get` | Returns whether runtime flag bit `0x40000000` is set (Finding 376). |
 | `0x0041f980` | `GlobalObjectField94Increment` | If the global object exists, increments its dword at `+0x94` (Finding 350). |
 | `0x0041f990` | `GlobalObjectFieldA8Increment` | If the global object exists, increments its dword at `+0xa8` (Finding 350). |
