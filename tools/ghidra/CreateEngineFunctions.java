@@ -1047,6 +1047,18 @@ public class CreateEngineFunctions extends GhidraScript {
         0x44ead0L,  // TerrainCellListSurfaceHeightClampMutate
         0x463230L,  // TerrainDirtyCellQuadNormalEmitPass
         0x463590L,  // TerrainCellSurfaceNormalGet
+        0x406990L,  // TypeTableResourceRowLoad
+        0x40e490L,  // EncyclopediaConfigFilesOpen
+        0x434710L,  // PanelButtonLayoutConfigLoad
+        0x446610L,  // EntityMovementTickScaleAndDeltaGet
+        0x45a030L,  // UiPanelNameTablesInit
+        0x45b9d0L,  // PanelRotationControlConfigLoad
+        0x47d000L,  // PalettizedBitmapSurfaceDecode
+        0x485a20L,  // KeyboardKeyNamesInit
+        0x4877e0L,  // SceneEntrySlotTableExpand
+        0x497130L,  // Win32FileDescriptorRead
+        0x498350L,  // NumberStringScanParse
+        0x499240L,  // Win32FileDescriptorOpen
     };
     static final String[] NAMES = { "EngineTick", "EngineShutdown", "EngineShutdownAlt",
         "MainSimStep", "ManagerTick", "MessageDispatch", "ViewContextTick",
@@ -1951,6 +1963,18 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x44ead0: return "TerrainCellListSurfaceHeightClampMutate";
             case 0x463230: return "TerrainDirtyCellQuadNormalEmitPass";
             case 0x463590: return "TerrainCellSurfaceNormalGet";
+            case 0x406990: return "TypeTableResourceRowLoad";
+            case 0x40e490: return "EncyclopediaConfigFilesOpen";
+            case 0x434710: return "PanelButtonLayoutConfigLoad";
+            case 0x446610: return "EntityMovementTickScaleAndDeltaGet";
+            case 0x45a030: return "UiPanelNameTablesInit";
+            case 0x45b9d0: return "PanelRotationControlConfigLoad";
+            case 0x47d000: return "PalettizedBitmapSurfaceDecode";
+            case 0x485a20: return "KeyboardKeyNamesInit";
+            case 0x4877e0: return "SceneEntrySlotTableExpand";
+            case 0x497130: return "Win32FileDescriptorRead";
+            case 0x498350: return "NumberStringScanParse";
+            case 0x499240: return "Win32FileDescriptorOpen";
             default: return null;
         }
     }
