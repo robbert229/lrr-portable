@@ -1288,6 +1288,19 @@ public class CreateEngineFunctions extends GhidraScript {
         0x489b30L,  // ObjectInterfaceArrayResourceCreate
         0x41f6c0L,  // SelectedEntityDetachCallback
         0x43fc20L,  // RecordPairPoseCopyAndActivityRaise
+        0x407340L,  // StateFlagToggleWhenZero
+        0x418800L,  // ModeFlagPairApplyIfBit2
+        0x432f00L,  // TerrainCellStateEquals6
+        0x435d91L,  // EntityB8Bit3SetOrClear
+        0x435f32L,  // EntityFieldsA0A4StoreA8Clear
+        0x4538a0L,  // CameraFocusScrollScaleCommit
+        0x454b70L,  // ObjectiveVoiceAliasRaiseCommit
+        0x454b80L,  // ObjectiveVoiceAliasRaiseGateBit27
+        0x46a9e0L,  // AdvisorTextBoxRecordCommit
+        0x473560L,  // DDiSceneObjectKindModeSetup
+        0x477f80L,  // DisplayDeviceCapsQueryDiscard
+        0x49db60L,  // SignedDecimalToStringConvert
+        0x49dc10L,  // StringToLowercase
         0x4350a0L,  // SurfaceTypeDescriptionsConfigLoad
         0x444fb0L,  // EntityTurnToVectorActivityIssue
         0x4451e0L,  // EntityPathStepVectorNormalize
@@ -2440,6 +2453,19 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x489b30: return "ObjectInterfaceArrayResourceCreate";
             case 0x41f6c0: return "SelectedEntityDetachCallback";
             case 0x43fc20: return "RecordPairPoseCopyAndActivityRaise";
+            case 0x407340: return "StateFlagToggleWhenZero";
+            case 0x418800: return "ModeFlagPairApplyIfBit2";
+            case 0x432f00: return "TerrainCellStateEquals6";
+            case 0x435d91: return "EntityB8Bit3SetOrClear";
+            case 0x435f32: return "EntityFieldsA0A4StoreA8Clear";
+            case 0x4538a0: return "CameraFocusScrollScaleCommit";
+            case 0x454b70: return "ObjectiveVoiceAliasRaiseCommit";
+            case 0x454b80: return "ObjectiveVoiceAliasRaiseGateBit27";
+            case 0x46a9e0: return "AdvisorTextBoxRecordCommit";
+            case 0x473560: return "DDiSceneObjectKindModeSetup";
+            case 0x477f80: return "DisplayDeviceCapsQueryDiscard";
+            case 0x49db60: return "SignedDecimalToStringConvert";
+            case 0x49dc10: return "StringToLowercase";
             case 0x4350a0: return "SurfaceTypeDescriptionsConfigLoad";
             case 0x444fb0: return "EntityTurnToVectorActivityIssue";
             case 0x4451e0: return "EntityPathStepVectorNormalize";

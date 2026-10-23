@@ -80123,3 +80123,234 @@ undefined4 RecordPairPoseCopyAndActivityRaise(int param_1)
   }
   return 0;
 }
+// ==== StateFlagToggleWhenZero @ 407340 ====
+void StateFlagToggleWhenZero(void)
+
+{
+  DAT_00557860 = (uint)(DAT_00557860 == 0);
+  return;
+}
+// ==== ModeFlagPairApplyIfBit2 @ 418800 ====
+void ModeFlagPairApplyIfBit2(int param_1)
+
+{
+  if ((DAT_004dc650 & 4) != 0) {
+    if (param_1 != 0) {
+      DAT_004dc650 = DAT_004dc650 & 0xfffffffe | 2;
+      return;
+    }
+    DAT_004dc650 = DAT_004dc650 & 0xfffffffc;
+  }
+  return;
+}
+// ==== TerrainCellStateEquals6 @ 432F00 ====
+bool TerrainCellStateEquals6(int *param_1)
+
+{
+  return *(char *)(*(int *)(DAT_005560d4 + 0xb8) + 2 +
+                  (param_1[1] * *(int *)(DAT_005560d4 + 0x14) + *param_1) * 0x48) == '\x06';
+}
+// ==== EntityB8Bit3SetOrClear @ 435D91 ====
+void EntityB8Bit3SetOrClear(int param_1,int param_2)
+
+{
+  if (param_2 == 0) {
+    *(byte *)(param_1 + 0xb8) = *(byte *)(param_1 + 0xb8) & 0xf7;
+  }
+  else {
+    *(byte *)(param_1 + 0xb8) = *(byte *)(param_1 + 0xb8) | 8;
+  }
+  return;
+}
+// ==== EntityFieldsA0A4StoreA8Clear @ 435F32 ====
+void EntityFieldsA0A4StoreA8Clear(int param_1,undefined4 param_2,undefined4 param_3)
+
+{
+  *(undefined4 *)(param_1 + 0xa0) = param_2;
+  *(undefined4 *)(param_1 + 0xa4) = param_3;
+  *(undefined4 *)(param_1 + 0xa8) = 0;
+  return;
+}
+// ==== CameraFocusScrollScaleCommit @ 4538A0 ====
+undefined4 CameraFocusScrollScaleCommit(uint *param_1)
+
+{
+  int iVar1;
+  
+  if ((*param_1 == 0) && (iVar1 = FUN_00431560(), *(int *)(iVar1 + 0x27c) != 0)) {
+    return 0;
+  }
+  FUN_00425cd0(param_1[1]);
+  FUN_00425ce0((float)*param_1 * 0.01);
+  FUN_00425cd0(param_1[1]);
+  return 0;
+}
+// ==== ObjectiveVoiceAliasRaiseCommit @ 454B70 ====
+undefined4 ObjectiveVoiceAliasRaiseCommit(void)
+
+{
+  FUN_00458670(1);
+  return 1;
+}
+// ==== ObjectiveVoiceAliasRaiseGateBit27 @ 454B80 ====
+undefined4 ObjectiveVoiceAliasRaiseGateBit27(void)
+
+{
+  if ((DAT_00556ecc & 0x8000000) == 0) {
+    FUN_00458670(2);
+  }
+  return 1;
+}
+// ==== AdvisorTextBoxRecordCommit @ 46A9E0 ====
+void AdvisorTextBoxRecordCommit(void)
+
+{
+  undefined4 uVar1;
+  
+  DAT_00503648 = (float)DAT_00503628;
+  uVar1 = __ftol();
+  uVar1 = __ftol(uVar1);
+  FUN_004851b0(DAT_0050361c,uVar1);
+  uVar1 = __ftol();
+  uVar1 = __ftol(uVar1);
+  FUN_004851d0(DAT_0050361c,uVar1);
+  _DAT_0050364c = DAT_0050362c;
+  _DAT_00503658 = DAT_00503638;
+  _DAT_00503650 = DAT_00503630;
+  _DAT_00503654 = DAT_00503634;
+  _DAT_00503664 = _DAT_00503664 & 0xfffffffe;
+  return;
+}
+// ==== DDiSceneObjectKindModeSetup @ 473560 ====
+int DDiSceneObjectKindModeSetup(int param_1,int param_2)
+
+{
+  int iVar1;
+  int iVar2;
+  int iVar3;
+  undefined4 *puVar4;
+  undefined4 uVar5;
+  undefined4 unaff_ESI;
+  int *piVar6;
+  
+  iVar2 = FUN_00472950(param_1);
+  iVar1 = param_2;
+  if (iVar2 != 0) {
+    *(undefined4 *)(iVar2 + 0x10) = 1;
+    if (((param_2 == 3) || (param_2 == 2)) || (param_2 == 4)) {
+      uVar5 = 0x2000;
+      if (param_2 == 3) {
+        uVar5 = 0x3000;
+      }
+      else if (param_2 == 4) {
+        uVar5 = 0x2800;
+      }
+      uVar5 = FUN_00480870(*(undefined4 *)(iVar2 + 4),0,uVar5,0,0);
+      FUN_00475c00(iVar2,0,0,0,uVar5);
+    }
+    else {
+      piVar6 = &param_1;
+      iVar3 = (**(code **)(*DAT_00505914 + 0x14))(DAT_00505914);
+      if (iVar3 == 0) {
+        (**(code **)(**(int **)(iVar2 + 4) + 0x48))(*(int **)(iVar2 + 4),unaff_ESI);
+        FUN_00475c00(iVar2,0,0,piVar6,0);
+        if (iVar1 == 1) {
+          puVar4 = (undefined4 *)FUN_0048dbd0(0x14);
+          puVar4[2] = 0x14;
+          puVar4[1] = 0;
+          uVar5 = FUN_0048dbd0(0x50);
+          *puVar4 = uVar5;
+          puVar4[3] = 0;
+          puVar4[4] = 1;
+          (**(code **)(*piVar6 + 0x18))(piVar6,puVar4);
+          return iVar2;
+        }
+        (**(code **)(*piVar6 + 0x18))(piVar6,0);
+        return iVar2;
+      }
+    }
+  }
+  return iVar2;
+}
+// ==== DisplayDeviceCapsQueryDiscard @ 477F80 ====
+void DisplayDeviceCapsQueryDiscard(void)
+
+{
+  HDC hdc;
+  int index;
+  
+  index = 0xc;
+  hdc = GetDC(DAT_00505800);
+  GetDeviceCaps(hdc,index);
+  return;
+}
+// ==== SignedDecimalToStringConvert @ 49DB60 ====
+undefined4 SignedDecimalToStringConvert(int param_1,undefined4 param_2,int param_3)
+
+{
+  if ((param_3 == 10) && (param_1 < 0)) {
+    FUN_0049dba0(param_1,param_2,10,1);
+    return param_2;
+  }
+  FUN_0049dba0(param_1,param_2,param_3,0);
+  return param_2;
+}
+// ==== StringToLowercase @ 49DC10 ====
+char * StringToLowercase(char *param_1)
+
+{
+  char cVar1;
+  int iVar2;
+  uint uVar3;
+  uint uVar4;
+  char *pcVar5;
+  char *pcVar6;
+  char *pcVar7;
+  
+  pcVar5 = (char *)0x0;
+  if (DAT_00549180 == 0) {
+    pcVar5 = param_1;
+    if (*param_1 != '\0') {
+      do {
+        cVar1 = *param_1;
+        if (('@' < cVar1) && (cVar1 < '[')) {
+          *param_1 = cVar1 + ' ';
+        }
+        pcVar6 = param_1 + 1;
+        param_1 = param_1 + 1;
+      } while (*pcVar6 != '\0');
+      return pcVar5;
+    }
+  }
+  else {
+    iVar2 = FUN_00493ca0(DAT_00549180,0x100,param_1,0xffffffff,0,0,0);
+    if (((iVar2 != 0) && (pcVar5 = (char *)FUN_0048dbd0(iVar2), pcVar5 != (char *)0x0)) &&
+       (iVar2 = FUN_00493ca0(DAT_00549180,0x100,param_1,0xffffffff,pcVar5,iVar2,0), iVar2 != 0)) {
+      uVar3 = 0xffffffff;
+      pcVar6 = pcVar5;
+      do {
+        pcVar7 = pcVar6;
+        if (uVar3 == 0) break;
+        uVar3 = uVar3 - 1;
+        pcVar7 = pcVar6 + 1;
+        cVar1 = *pcVar6;
+        pcVar6 = pcVar7;
+      } while (cVar1 != '\0');
+      uVar3 = ~uVar3;
+      pcVar6 = pcVar7 + -uVar3;
+      pcVar7 = param_1;
+      for (uVar4 = uVar3 >> 2; uVar4 != 0; uVar4 = uVar4 - 1) {
+        *(undefined4 *)pcVar7 = *(undefined4 *)pcVar6;
+        pcVar6 = pcVar6 + 4;
+        pcVar7 = pcVar7 + 4;
+      }
+      for (uVar3 = uVar3 & 3; uVar3 != 0; uVar3 = uVar3 - 1) {
+        *pcVar7 = *pcVar6;
+        pcVar6 = pcVar6 + 1;
+        pcVar7 = pcVar7 + 1;
+      }
+    }
+    FUN_0048db80(pcVar5);
+  }
+  return param_1;
+}

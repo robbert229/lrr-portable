@@ -156,7 +156,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004070b0,FUN_004070b0,named,BubbleActionStringsInit,0,1982
 00407240,FUN_00407240,named,BubbleConfigTextureLoad,0,1078
 00407300,FUN_00407300,anonymous,,0,332
-00407340,FUN_00407340,anonymous,,0,85
+00407340,FUN_00407340,named,StateFlagToggleWhenZero,0,85
 00407360,FUN_00407360,anonymous,,0,60
 00407370,FUN_00407370,anonymous,,0,164
 004073a0,FUN_004073a0,anonymous,,0,662
@@ -488,7 +488,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004181b0,FUN_004181b0,named,HelpWindowResourcesInit,0,2892
 00418450,FUN_00418450,named,HelpWindowInfoConfigStringsLoad,0,2696
 004185f0,FUN_004185f0,named,HelpWindowButtonLayoutLoad,0,1716
-00418800,FUN_00418800,anonymous,,0,227
+00418800,FUN_00418800,named,ModeFlagPairApplyIfBit2,0,227
 00418830,FUN_00418830,named,BuildingUpgradeStateChangedEventDispatch,0,959
 00418920,FUN_00418920,anonymous,,0,855
 004189d0,FUN_004189d0,anonymous,,0,199
@@ -780,7 +780,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00432e60,FUN_00432e60,anonymous,,0,231
 00432e90,FUN_00432e90,anonymous,,0,189
 00432ec0,FUN_00432ec0,anonymous,,0,187
-00432f00,FUN_00432f00,anonymous,,0,187
+00432f00,FUN_00432f00,named,TerrainCellStateEquals6,0,187
 00432f40,FUN_00432f40,anonymous,,0,335
 00432f90,FUN_00432f90,anonymous,,0,321
 00432fd0,FUN_00432fd0,anonymous,,0,193
@@ -828,7 +828,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00435a50,FUN_00435a50,ported,MainSimFeatureFlagLatch,2,202
 00435aa0,FUN_00435aa0,anonymous,,0,419
 00435b20,FUN_00435b20,named,SceneObjectChainRecordCreate,0,1689
-00435d91,FUN_00435d91,anonymous,,0,228
+00435d91,FUN_00435d91,named,EntityB8Bit3SetOrClear,0,228
 00435dc8,FUN_00435dc8,named,CameraViewContextClose,0,192
 00435e0e,FUN_00435e0e,named,CameraViewContextSet,0,303
 00435e35,FUN_00435e35,anonymous,,0,575
@@ -837,7 +837,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00435f0b,FUN_00435f0b,anonymous,,0,86
 00435f16,FUN_00435f16,named,CursorScreenRayContextReset,0,87
 00435f28,FUN_00435f28,named,TerrainGridBorderInsetGet,0,60
-00435f32,FUN_00435f32,anonymous,,0,215
+00435f32,FUN_00435f32,named,EntityFieldsA0A4StoreA8Clear,0,215
 00435f5c,FUN_00435f5c,ported,ViewContextTick,2,6486
 00436831,FUN_00436831,anonymous,,0,237
 00436860,FUN_00436860,anonymous,,0,501
@@ -1231,7 +1231,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00453220,FUN_00453220,anonymous,,0,862
 004532e0,FUN_004532e0,anonymous,,0,299
 00453320,FUN_00453320,named,TutorialScriptCommandDispatch,0,8480
-004538a0,FUN_004538a0,anonymous,,0,271
+004538a0,FUN_004538a0,named,CameraFocusScrollScaleCommit,0,271
 00453900,FUN_00453900,anonymous,,0,81
 00453910,FUN_00453910,anonymous,,0,104
 00453920,FUN_00453920,anonymous,,0,842
@@ -1240,8 +1240,8 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00454600,FUN_00454600,ported,,1,1049
 00454880,FUN_00454880,anonymous,,0,164
 00454890,FUN_00454890,anonymous,,0,148
-00454b70,FUN_00454b70,anonymous,,0,68
-00454b80,FUN_00454b80,anonymous,,0,115
+00454b70,FUN_00454b70,named,ObjectiveVoiceAliasRaiseCommit,0,68
+00454b80,FUN_00454b80,named,ObjectiveVoiceAliasRaiseGateBit27,0,115
 00455300,FUN_00455300,anchored,,0,185
 00456210,FUN_00456210,named,FlhMagicUuNoop,0,49
 00456240,FUN_00456240,named,SystemStateFlags,0,60
@@ -1568,7 +1568,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0046a760,FUN_0046a760,anonymous,,0,667
 0046a7f0,FUN_0046a7f0,named,UiMessageStringsInit,0,1709
 0046a950,FUN_0046a950,anonymous,,0,590
-0046a9e0,FUN_0046a9e0,anonymous,,0,524
+0046a9e0,FUN_0046a9e0,named,AdvisorTextBoxRecordCommit,0,524
 0046aa90,FUN_0046aa90,anonymous,,0,289
 0046aad0,FUN_0046aad0,anonymous,,0,368
 0046ab10,FUN_0046ab10,named,TextSlotMessageAssign,0,1062
@@ -1709,7 +1709,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004734a0,FUN_004734a0,named,LightInterfaceCallSlot38,0,217
 004734c0,FUN_004734c0,named,AdvisorCompanionTransformApply,0,376
 004734f0,FUN_004734f0,named,DDiSceneLightCreate,0,635
-00473560,FUN_00473560,anonymous,,0,1297
+00473560,FUN_00473560,named,DDiSceneObjectKindModeSetup,0,1297
 00473680,FUN_00473680,anonymous,,0,71
 00473690,FUN_00473690,named,EntityVisualResourceLoad,0,7281
 00473b20,FUN_00473b20,anonymous,,0,234
@@ -1832,7 +1832,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00477bf0,FUN_00477bf0,ported,CommandLineOptionParse,1,3531
 00477f30,FUN_00477f30,named,MainLoopFramePump,0,231
 00477f70,FUN_00477f70,anonymous,,0,60
-00477f80,FUN_00477f80,anonymous,,0,140
+00477f80,FUN_00477f80,named,DisplayDeviceCapsQueryDiscard,0,140
 00477fa0,FUN_00477fa0,named,RendererBeginFrameOnce,0,170
 00477fd0,FUN_00477fd0,named,EngineCallbackTripletSet,0,233
 00478000,WINMM.DLL::timeGetTime,runtime-import,WINMM.DLL::timeGetTime,0,252
@@ -2559,7 +2559,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0049d950,FUN_0049d950,anonymous,,0,979
 0049d9d0,FUN_0049d9d0,anonymous,,0,685
 0049dab0,__strnicmp,runtime-import,__strnicmp,0,2043
-0049db60,FUN_0049db60,anonymous,,0,242
+0049db60,FUN_0049db60,named,SignedDecimalToStringConvert,0,242
 0049dba0,FUN_0049dba0,anonymous,,0,813
-0049dc10,FUN_0049dc10,anonymous,,0,1497
+0049dc10,FUN_0049dc10,named,StringToLowercase,0,1497
 0049dcd0,FUN_0049dcd0,named,StringToUpper,0,1499
