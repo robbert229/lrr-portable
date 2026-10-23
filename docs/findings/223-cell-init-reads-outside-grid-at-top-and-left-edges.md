@@ -92,6 +92,17 @@ walkability type filter. This is concrete evidence that a border cell can be
 marked walkable in shipped data, but it does not overcome the path-builder's
 lower-bound gates.
 
+**Startup object positions do not place a unit on the border.** `FUN_004424f0`
+reads an object's position and passes its two coordinates through
+`FUN_0044f6d0` to `FUN_0044f700`; the latter converts them to integer grid
+coordinates with `__ftol` before checking the map bounds. I scanned every
+`OListFile` path in `Lego.cfg`: all 34 are present in `LegoRR0.wad`, containing
+462 objects with both `xPos` and `yPos`. The smallest values are `xPos=5.203455`
+and `yPos=3.39245`, so none of these startup objects converts to `x=0` or
+`y=0`. This narrows the remaining entity route to positions created during
+gameplay or otherwise changed after OList loading; it does not cover entities
+spawned later by scripts, emerge triggers, or other runtime systems.
+
 At `0x456dcf`, the writer is called from callback-dispatch branch 4 after
 `FUN_00432c90` updates the cell. A static name/function pair associates the
 string `SetTutorialBlockIsPath` and wrapper `FUN_00457420` at file offsets
