@@ -339,6 +339,7 @@ Open threads, in order of value:
 | 140 | [findings/140-objective-outcome-streams-use-selector-zero.md](docs/findings/140-objective-outcome-streams-use-selector-zero.md) | Objective-outcome voice streams submit through selector zero |
 | 141 | [findings/141-menu-overlay-streams-submit-on-state-zero.md](docs/findings/141-menu-overlay-streams-submit-on-state-zero.md) | Menu-overlay streams submit one queue step later through state zero |
 | 142 | [findings/142-sample-hash-marker-sets-directsound-volume.md](docs/findings/142-sample-hash-marker-sets-directsound-volume.md) | `#...#` sets a per-sample DirectSound attenuation value |
+| 143 | [findings/143-reducesamples-skips-bang-prefixed-sound-aliases.md](docs/findings/143-reducesamples-skips-bang-prefixed-sound-aliases.md) | `-reducesamples` skips `!`-prefixed aliases before registration |
 
 Named-pseudocode corpus: [`docs/decompiles/engine-region.c`](docs/decompiles/engine-region.c)
 (114 named functions covering the engine/game-logic region — findings 01–10).

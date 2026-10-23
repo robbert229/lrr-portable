@@ -548,7 +548,8 @@ Exported 2026-10-22 for findings 107 and 139 — 33 retained observations.
 Records cover the `Samples` config group, alias registration,
 comma-separated variants, loop/stream markers, variant selection, the
 deferred submission queue's selector/route-bit forwarding, and the signed
-volume marker path. The `#...#` prefix has no shipped example. Import with
+volume marker path. It also records how `-reducesamples` gates `!`-prefixed
+aliases before resolution. The `#...#` prefix has no shipped example. Import with
 `import_evidence_bundle` or inspect `records` directly.
 
 ## `legorr-streamed-wav-format.bundle`
