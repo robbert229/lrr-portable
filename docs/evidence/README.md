@@ -208,6 +208,12 @@ The same finding now traces the debug-key producer through `FUN_00426520`,
 conditional on `AllowDebugKeys` (disabled in shipped `Lego.cfg`) and a cursor
 coordinate on the edge; this evidence also comes from the full decompile and
 shipped-image disassembly, not this bundle.
+The finding also checks the deferred type-`0xc` callback at `0x43e824` and
+its `FUN_00403d10` → `FUN_00432c90` → `FUN_0042f6f0` path. The traced producer
+`FUN_00430320` clears the `0x20000000` cell flag before queueing the update,
+so this path does not establish an edge-sensitive read without an intervening
+flag writer. This caller and producer trace also comes from the full decompile
+and shipped-image disassembly, not a separate REA bundle.
 
 ## `legorr-path-list-movement.bundle`
 

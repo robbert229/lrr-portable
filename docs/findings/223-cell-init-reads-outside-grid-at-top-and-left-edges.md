@@ -209,6 +209,21 @@ predicate); shipped `Lego.cfg` sets `AllowDebugKeys FALSE`. This therefore
 establishes a debug-enabled code route, not ordinary shipped-config runtime
 reachability or an observed crash.
 
+The entity callback also has a deferred type-`0xc` cell-update branch. The
+shipped-image disassembly at `0x43e824` calls `FUN_00403d10(entity, 0xc, 0,
+1)` after the entity's `+0x3e0 & 0x40000` state is set and its timer expires.
+`FUN_00403d10` passes the queued cell coordinate to `FUN_00432c90`, which in
+turn calls `FUN_0042f6f0`. One concrete producer is `FUN_0043abf0`: it requires
+the entity's current cell to carry `0x20000000`, then calls
+`FUN_00430320(cell, 0x3f)`. `FUN_00430320` clears `0x20000000` before queuing
+the type-`0xc` updates when its mutation gates pass. Since `FUN_0042f6f0`
+calls the edge-sensitive `FUN_0042f350` only when the current cell still has
+`0x20000000`, this
+deferred route does not by itself establish the out-of-bounds read; that flag
+would have to be restored before the event updates the cell. The callback's
+coordinate conversion and bounds helper accept zero, so an edge cell is not
+ruled out at the source, but no such interleaving is established here.
+
 One remaining level-data spawn route is `EmergeMap`. `FUN_0042c120`
 (`LoadLayerL`) scans the complete layer and groups nonzero cells into 0x4c-byte
 records: slot 0 is the trigger coordinate, and slots 1–5 are candidate spawn
