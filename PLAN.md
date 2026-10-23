@@ -19,7 +19,7 @@
 - [x] Adversarially review the complete branch diff against `origin/main` (standards: no findings; spec: added the named `FontResourceLoad` caller at `0x00479ee0`; no remaining material gaps).
 - [x] Verify the documentation and evidence references (`git diff --check`; manual cross-check against decompile excerpts).
 - [x] Commit the branch work; findings are available in the branch and issue review comment.
-- [ ] Push the feature branch and create a PR targeting `main`.
+- [x] Push the feature branch and create a PR targeting `main`: https://github.com/robbert229/lrr-portable/pull/224 (open; awaiting human review).
 
 ## Architectural decisions
 
