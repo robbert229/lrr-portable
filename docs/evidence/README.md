@@ -45,6 +45,15 @@ scene helpers, the SFX-bank slot-order verification for `SFX_Place*`, and the
 `+0x3e4` bit-map reads (`0x80000`, `0x100000`, `0x40000000`). Import with
 `import_evidence_bundle` or inspect `records` directly.
 
+## `legorr-menu-background-audio.bundle`
+
+Exported 2026-10-22 for findings 23 and 141. The bundle records the random
+front-end FLIC selection, overlay SFX alias resolution, and the `FUN_00464f60`
+queue / `FUN_00464fa0` submit helpers. Finding 141 follows the menu tick's
+deferred-list rotation in the full decompile to show the selector-zero stream
+submission path. Import with `import_evidence_bundle` or inspect `records`
+directly.
+
 ## `legorr-ddscene-owner-link.bundle`
 
 Exported 2026-10-21 from the finding-28 owner-link trace. 20 recorded
@@ -279,11 +288,12 @@ with `import_evidence_bundle` or inspect `records` directly.
 
 ## `legorr-campaign-expansion.bundle`
 
-Exported 2026-10-22 for findings 44–47 — 25 retained observations. The bundle
-covers reward-button save/advance dispatch, timer-objective evaluation order,
-objective-sidecar append gates and serialized fields, and entity-removal event
-messages. Static control flow does not establish every user-visible outcome or
-the runtime conditions that populate each optional message field. Import with
+Exported 2026-10-22 for findings 44–47 and 140 — 25 retained observations. The
+bundle covers reward-button save/advance dispatch, timer-objective evaluation
+order, objective-sidecar append gates and serialized fields, entity-removal
+event messages, and objective-result voice-alias construction/submission.
+Static control flow does not establish every user-visible outcome or the
+runtime conditions that populate each optional message field. Import with
 `import_evidence_bundle` or inspect `records` directly.
 
 ## `legorr-engine-expansion.bundle`
@@ -534,10 +544,11 @@ assets and elapsed-time duration in that loop remain unverified. Import with
 
 ## `legorr-samples-config.bundle`
 
-Exported 2026-10-22 for finding 107 — 33 retained observations. Records cover
-the `Samples` config group, alias registration, comma-separated variants,
-loop/stream markers, and variant selection. The `#...#` prefix branch has no
-shipped example, so its semantics remain unclaimed. Import with
+Exported 2026-10-22 for findings 107 and 139 — 33 retained observations.
+Records cover the `Samples` config group, alias registration,
+comma-separated variants, loop/stream markers, variant selection, the
+deferred submission queue's selector/route-bit forwarding, and the signed
+volume marker path. The `#...#` prefix has no shipped example. Import with
 `import_evidence_bundle` or inspect `records` directly.
 
 ## `legorr-streamed-wav-format.bundle`
@@ -649,3 +660,11 @@ Exported for finding 131. Seventy-five records cover the Stats loader reading `N
 ## `legorr-sound-duplicate-selection.bundle`
 
 Exported for finding 133. Five records cover the optional duplicate-buffer argument, bank-entry flag setup, and playback's single-buffer versus three-buffer rotation, together with the canonical buffer-creation record from finding 120.
+
+Finding 134 reuses the `FUN_00464d00` parser record in `legorr-samples-config.bundle` and the loader/flag/playback records in `legorr-sound-duplicate-selection.bundle` to trace the `Samples` value's leading `*` through to three-buffer rotation. Its 13-entry inventory comes from `Lego.cfg` in `reference/LegoRR1.wad`; the finding records both source and extracted-config SHA-256 values.
+
+Finding 135 reuses `FUN_00464d00` in `legorr-samples-config.bundle` to document the stream-mode local's lifetime across the comma-item loop. The shipped config check found no comma-separated entry containing `@`; this constrains the observed use, not the parser's behavior for other inputs.
+
+Finding 136 uses `FUN_0047b970` and `FUN_0047ba20` from `legorr-sound-instance-spatial-expansion.bundle` to trace replacement and cleanup for a selected streamed-playback state. The argument path from `FUN_0047ad70` is cross-checked against the assembly retained in `legorr-sound-duplicate-selection.bundle`.
+
+Finding 137 combines the level-name handler records in `legorr-frontend.bundle` with the sound-instance updater and wrapper records in `legorr-engine-expansion.bundle` and `legorr-sound-instance-spatial-expansion.bundle`. It traces selector values 0 and 1 to `FUN_0047b970`, while leaving actual streamed use of the dynamic selector-1 alias unresolved.

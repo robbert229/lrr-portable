@@ -263,7 +263,7 @@ Open threads, in order of value:
 | 60 | [`findings/60-win32-cursor-sampling.md`](docs/findings/60-win32-cursor-sampling.md) | Win32 cursor sampling stores clamped client-relative coordinates and deltas |
 | 61 | [`findings/61-cursor-screen-ray-camera-routing.md`](docs/findings/61-cursor-screen-ray-camera-routing.md) | Gameplay cursor coordinates feed a camera unprojection and ray path |
 | 62 | [`findings/62-three-dimensional-sound-distance-controls.md`](docs/findings/62-three-dimensional-sound-distance-controls.md) | Configured 3D sound distance and rolloff values update DirectSound interfaces |
-| 63 | [`findings/63-sound-instance-buffer-rotation-and-routing.md`](docs/findings/63-sound-instance-buffer-rotation-and-routing.md) | Sound submissions rotate looping buffers and separate streaming from in-memory playback |
+| 63 | [`findings/63-sound-instance-buffer-rotation-and-routing.md`](docs/findings/63-sound-instance-buffer-rotation-and-routing.md) | Sound submissions rotate duplicate-enabled buffers and separate streaming from in-memory playback |
 | 64 | [`findings/64-wad-stream-handle-contract.md`](docs/findings/64-wad-stream-handle-contract.md) | WAD opens materialize per-open buffers behind the generic stream handle |
 | 65 | [`findings/65-wad-end-relative-seek-boundary.md`](docs/findings/65-wad-end-relative-seek-boundary.md) | WAD end-relative seeks bypass the range clamp; out-of-range reads carry a derived risk |
 | 66 | [`findings/66-front-end-options-round-trip-through-six-save-contexts.md`](docs/findings/66-front-end-options-round-trip-through-six-save-contexts.md) | Three front-end option globals round-trip through six per-slot contexts |
@@ -306,7 +306,7 @@ Open threads, in order of value:
 | 104 | [`findings/104-pointer-overrides-expire-in-the-reward-pump.md`](docs/findings/104-pointer-overrides-expire-in-the-reward-pump.md) | Timed cursor overrides hold through reward-screen input polling |
 | 105 | [`findings/105-sav-write-ignores-short-write-results.md`](docs/findings/105-sav-write-ignores-short-write-results.md) | Slot-save success ignores partial write results |
 | 106 | [`findings/106-sav-reader-resets-slot-on-record-count-mismatch.md`](docs/findings/106-sav-reader-resets-slot-on-record-count-mismatch.md) | A save record-count mismatch reinitializes the slot |
-| 107 | [`findings/107-samples-config-sound-alias-variants.md`](docs/findings/107-samples-config-sound-alias-variants.md) | Samples config builds loop/stream sound aliases and selects variants |
+| 107 | [`findings/107-samples-config-sound-alias-variants.md`](docs/findings/107-samples-config-sound-alias-variants.md) | Samples config builds duplicate/stream sound aliases and selects variants |
 | 108 | [`findings/108-streamed-wav-format-extension.md`](docs/findings/108-streamed-wav-format-extension.md) | Streamed WAV loading preserves non-PCM format extensions |
 | 109 | [`findings/109-emergemap-layerl-records.md`](docs/findings/109-emergemap-layerl-records.md) | EmergeMap values populate six-slot LayerL records |
 | 110 | [`findings/110-objective-entity-paired-field-predicate.md`](docs/findings/110-objective-entity-paired-field-predicate.md) | A delegated objective predicate searches entities for paired-field matches |
@@ -330,6 +330,15 @@ Open threads, in order of value:
 | 130 | [findings/130-activity-3f4-direct-reader-census.md](docs/findings/130-activity-3f4-direct-reader-census.md) | No other direct entity-field reference to the appender's `+0x3f4` store |
 | 131 | [findings/131-tool-carry-stat-is-activity-capacity.md](docs/findings/131-tool-carry-stat-is-activity-capacity.md) | Stats `NumOfToolsCanCarry` values feed activity-list capacity |
 | 133 | [findings/133-directsound-duplicate-buffer-selection.md](docs/findings/133-directsound-duplicate-buffer-selection.md) | Optional DirectSound duplicates rotate across three buffers at playback |
+| 134 | [findings/134-samples-asterisk-enables-buffer-rotation.md](docs/findings/134-samples-asterisk-enables-buffer-rotation.md) | `Samples` asterisk marker requests duplicate buffers and three-buffer rotation |
+| 135 | [findings/135-stream-marker-persists-across-sample-variants.md](docs/findings/135-stream-marker-persists-across-sample-variants.md) | `@` stream mode persists across later comma-delimited sample variants |
+| 136 | [findings/136-streamed-playback-replaces-selected-stream-state.md](docs/findings/136-streamed-playback-replaces-selected-stream-state.md) | Starting a stream replaces the active stream in the selected state |
+| 137 | [findings/137-stream-selector-caller-trace.md](docs/findings/137-stream-selector-caller-trace.md) | Level-name streams use selector zero; sound-instance submissions pass one |
+| 138 | [findings/138-damage-hurt-sound-submits-with-selector-zero.md](docs/findings/138-damage-hurt-sound-submits-with-selector-zero.md) | Damage hurt-sound submission passes selector zero; the shipped alias is in-memory WAV |
+| 139 | [findings/139-sound-submission-queue-preserves-selector-bits.md](docs/findings/139-sound-submission-queue-preserves-selector-bits.md) | Deferred sound submissions preserve selector and route bits |
+| 140 | [findings/140-objective-outcome-streams-use-selector-zero.md](docs/findings/140-objective-outcome-streams-use-selector-zero.md) | Objective-outcome voice streams submit through selector zero |
+| 141 | [findings/141-menu-overlay-streams-submit-on-state-zero.md](docs/findings/141-menu-overlay-streams-submit-on-state-zero.md) | Menu-overlay streams submit one queue step later through state zero |
+| 142 | [findings/142-sample-hash-marker-sets-directsound-volume.md](docs/findings/142-sample-hash-marker-sets-directsound-volume.md) | `#...#` sets a per-sample DirectSound attenuation value |
 
 Named-pseudocode corpus: [`docs/decompiles/engine-region.c`](docs/decompiles/engine-region.c)
 (114 named functions covering the engine/game-logic region — findings 01–10).
