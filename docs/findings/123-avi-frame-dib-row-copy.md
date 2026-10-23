@@ -29,8 +29,10 @@ byte count, advances the destination by one pitch, and moves the source back
 by one pitch. The two accepted branches resolve to 15- or 16-bit mode and use
 the same byte-copy loop (`ev_57b420ba3a40680ff524c8048f07836b5733300cdff5473b18a0be5a2c47dc4d`).
 If the surface state resolves to another bit depth, neither row-copy branch is
-entered, so this helper leaves the movie surface unchanged. The static evidence
-does not establish which display bit depths the shipped game actually runs with.
+entered, so this helper leaves the movie surface unchanged. The frame retriever
+requests AVIFIL32's best display format rather than a specific header (finding
+216), but the static evidence does not establish which display bit depth the
+decoder actually chooses on a given machine.
 
 Before the copy, a `FUN_0047e760` call is made only when the surface-state
 flag at `+8` is clear and that helper returns nonzero. The paired
