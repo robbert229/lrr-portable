@@ -90,10 +90,10 @@ This AVIFIL32 path belongs to the credits background callback. The configured bo
 
 The boot/level route creates a DirectDraw sample and starts the stream, then
 calls `IStreamSample::Update(0, NULL, NULL, NULL)` from its update callback.
-Only `S_OK` proceeds to another virtual call; other results release several
-interfaces and return false. This matches the polling shape of Microsoft's
-video-streaming sample (finding 200). The identity and exact behavior of the
-following virtual call remain unresolved.
+On `S_OK`, it blits the sample surface to the supplied game surface with
+`IDirectDrawSurface3::Blt` and `DDBLT_WAIT`; other sample results release
+several interfaces and return false. The update callback returns false if
+either the sample update or blit fails (finding 200).
 
 Config surface (values from `Lego.cfg`):
 
@@ -155,7 +155,8 @@ playback region). The `.flh` container is documented in finding 21.
    DirectDraw render target; final device presentation remains dependent on the surrounding renderer.
    Findings 173–177 record the unchecked null-allocation path, missing explicit frame-retriever close, stale-surface blit after a null frame fetch, caller-level restart at stream length, and the video-only AVI stream selection.
    Findings 181–199 resolve the command loop's keyboard/mouse-release exit gate, document the credits scroll clock over its background AVI, cross-check the shipped credits text against the CRLF splitter, record `.cconv` sidecar lookup precedence, show that successful AVI playback has no explicit loop sleep, trace the credits path around the `DontPlayAvis` gate, distinguish the DirectShow configured-video route from the credits AVIFIL32 route, record the COM route's missing explicit apartment teardown, show that configured videos add primary audio and video streams, document unchecked COM cleanup after partial initialization, trace the level-video press-to-skip condition, correlate the shipped boot/credits AVI stream contents with those routes, identify the null-release path when the DirectShow class cannot be created, document separate-thread graph execution, trace the CD-audio current-track error handling, resolve the listener frame's scene-relative vectors, identify the listener cache's conditional suppression of failed deferred updates, trace the attached-source position cache after its immediate setter, and record DirectSound's default meter-per-vector-unit mapping.
-   Finding 200 traces the configured-video `IStreamSample::Update` polling path.
+   Findings 200–201 trace configured-video sample blits and caller cleanup when
+   the update callback ends.
 4. `.flh` container format — **closed** by finding 21 (2026-10-20): layout,
    both 16-bit coders, and the RGB555→565 write transform.
 5. MCI: only `play cdaudio from N` and status queries were observed; no
