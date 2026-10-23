@@ -6,7 +6,7 @@ ignored by the observed caller, so its intended effect remains uncertain.
 
 | Address | Name | Observed behavior |
 | --- | --- | --- |
-| 0x4802d0 | FileTokenListLoadAndTreeScan | Opens a path in read mode, scans whitespace-delimited `%s` tokens into 1024-byte local storage, copies tokens into 0x100-byte global slots, increments the token count, invokes the recursive directory walk, then closes the stream. It is called by 0x48b2f0 in the WinMain shutdown path. The file's meaning is unknown. |
+| 0x4802d0 | FileTokenListLoadAndTreeScan | Opens a path in read mode, scans whitespace-delimited `%s` tokens into 1024-byte local storage, copies tokens into global slots with a 0x400-byte stride, increments the token count, invokes the recursive directory walk, then closes the stream. It is called by 0x48b2f0 in the WinMain shutdown path. The file's meaning is unknown. |
 | 0x480390 | DirectoryTreeScan | Builds `root\\*.*`, walks entries with `FindFirstFileA`/`FindNextFileA`, skips `.` and `..`, recurses into directories, and passes ordinary entries to 0x480570. Called by 0x4802d0 and recursively by itself. |
 | 0x480570 | DirectoryTokenListCompare | Performs case-insensitive comparison against the loaded token slots and returns on a match. The observed caller ignores its result and the routine has no visible state mutation, so it does not establish a working filter or its purpose. |
 | 0x481fa0 | MeshVertexCoordinateRemap | Processes a count of vertex-like records into two floats per record, selecting axes, scale, and offset from flag bits. Called by geometry-array builder 0x480ac0. Its UV/texture role is not established. |

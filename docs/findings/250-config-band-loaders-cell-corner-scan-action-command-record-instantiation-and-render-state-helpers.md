@@ -78,8 +78,7 @@ record slot with a `0.17`-scaled random unit-velocity arc and a `rand%30+40`
 delay, called only from `SoundStreamSelectorUpdate`/`SoundInstanceUpdate`;
 the effect's subject cannot be stated mechanically), `0x473560` (scene-object
 display-mode reconfiguration with `FUN_00480870` mode handles and raw
-vtable dispatch), and `0x489660` (create-or-clone a frame-record block with
-`SharedObjectClone` and callback registration). These carry forward the
+vtable dispatch). These carry forward the
 unresolved set from findings 240–249 (`0x4802d0`/`0x480390`/`0x480570`,
 `0x418a00`/`0x45c0d0`, `0x44d280`, `0x473460`/`0x473480`/`0x4734a0`,
 `0x40b000`, `0x474760`, `0x483690`, `0x471630`, `0x46f770`, `0x435b20`,

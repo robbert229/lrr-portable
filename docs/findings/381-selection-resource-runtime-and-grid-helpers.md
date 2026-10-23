@@ -1,0 +1,53 @@
+# Finding 381 — Selection, Resource, Runtime, and Grid Helpers
+
+This pass names 45 routines from the three address ranges. Names follow the observed pseudocode and caller behavior; unresolved fields, callback roles, and state meanings are kept generic.
+
+| Address | Name | Observed behavior | Evidence and caller context |
+| --- | --- | --- | --- |
+| `0x00404ed0` | `CheckObjectCandidate` | Special-cases object type 6 with a high flag; otherwise delegates the type/ID/owner tuple to a record search. | Caller `FUN_00404fc0` uses it in world-object selection eligibility; bundle context covers the callback scan. |
+| `0x00404f10` | `FindMatchingObjectRecord` | Builds a three-value search key and scans records with a predicate that accepts selected object types. | Callers `FUN_00404ed0` and `FUN_00403910`; behavior and predicate are visible in checked-in pseudocode. |
+| `0x00407370` | `ResetObjectAuxiliaryState` | When a global guard is set, clears object offsets `+0x388` and `+0x38c` through a helper. | Pseudocode shows the writes; no direct textual caller was identified. |
+| `0x00407510` | `SetType2ObjectRecordValue` | For type-2 objects, walks paired global records and writes the supplied value to active entries. | Observed loop and writes in pseudocode; no direct textual caller was identified. |
+| `0x00409450` | `FindNearbyPlacementCandidate` | Wraps adjacent-coordinate lookup and invokes a placement helper with its result. | Caller `FUN_0043c570`; neighboring functions query adjacent cells and occupancy. |
+| `0x0040bdc0` | `SetTimeoutTo10000` | Calls the timeout setter with `10000.0`. | Caller `FUN_0042f0c0`; exact timeout purpose is not established. |
+| `0x0040bfc0` | `RockFallStyleTableSet` | Stores a table pointer used by the rock-fall style query and parser. | Caller `FUN_00429890` after parsing `RockFallStyles`; related parser/query are `FUN_0040bfd0` and `FUN_0040bf70`. |
+| `0x0040cf50` | `RegisterObjectAtGridPosition` | Gets an object position, then links the object into the corresponding grid bucket and clears occupancy state. | Callers `FUN_0042e020`, `FUN_00437940`, and `FUN_00447ea0`. |
+| `0x0040fde0` | `SetVectorAndNotifyListeners` | Forwards a value and callback argument to the vector-listener update helper with a zero target. | Called by `FUN_0040fe00`; callback/listener semantics remain partly unknown. |
+| `0x0040fec0` | `SetGlobalScalarToOne` | Calls a scalar setter with index zero and value `1.0`. | Direct pseudocode; no direct textual caller was identified. |
+| `0x0040ff70` | `ObjectVector3Set` | Writes three supplied values to object offsets `+0x3c`, `+0x40`, and `+0x44`. | Caller `FUN_0044bb30`. |
+| `0x0040ffe0` | `GlobalVectorSetAndNotifyListeners` | Stores four global values and broadcasts them through a callback. | Caller `FUN_0044bb30`; observer bundle covers the neighboring listener API. |
+| `0x00410b30` | `GlobalPointerGet_004c76ab24` | Returns the global pointer stored at `0x004c76ab24`. | Called by `FUN_00471d20`; semantic role of the global is unknown. |
+| `0x00410b40` | `GlobalPointerGet_004c76ab28` | Returns the global pointer stored at `0x004c76ab28`. | Called by `FUN_00471d20`; semantic role of the global is unknown. |
+| `0x00410b50` | `GlobalPointerGet_004c76ab3c` | Returns the global pointer stored at `0x004c76ab3c`. | Called by `FUN_00471d20`; semantic role of the global is unknown. |
+| `0x00417430` | `FloatToLong` | Calls the compiler runtime floating-point-to-long conversion helper. | Called by `FUN_004152c0`; CRT thunk behavior is explicit. |
+| `0x00418000` | `ShowLevelOverlayForCurrentSelection` | Gets the selected level, refreshes its state, and shows the associated UI descriptor. | Caller `FUN_00462030`; descriptor purpose is not further identified. |
+| `0x00419b50` | `RemainingTimerDurationGet` | Starts from `333.0` and subtracts the duration field at offset `+8` for each active timer record. | Caller `FUN_00419b80` uses the result while adding a timer; timer interpretation follows the caller. |
+| `0x0041b9b0` | `GlobalStateGet_004ddd1c` | Returns the global state value at `0x004ddd1c`. | Callers `FUN_0045a9c0`, `FUN_0045c4b0`, `FUN_0045dbc0`, and `FUN_0046ad00` branch on the value; exact state meaning is unknown. |
+| `0x0041ee60` | `InteractionTimerResetAndFlagClear` | Sets a timer global to `25.0` and clears bit `0x800` in a related global word. | Callers `FUN_0041b490` and `FUN_0041eca0`. |
+| `0x0041f840` | `RemoveObjectIfClass6` | Checks the object against class value 6 and invokes a removal helper when the check succeeds. | Passed as a callback to `FUN_0041f420`; class meaning is unknown. |
+| `0x0041f8e0` | `NoOpCallback` | Has an empty body and performs no visible work. | Pseudocode is an empty return; callers use it as a callback, but any return value is undefined. |
+| `0x00438670` | `EntityAtGridPositionLookup` | Packages a coordinate pair into a callback search and returns the matching entity or null. | Neighbor-cell route caller; caller context `ev_81e53f10ab1b07600981f692ee5dda8a71d15e2284e8824fe7e2eece0dfdc564` in `legorr-engine-helpers-expansion-27.bundle`. |
+| `0x00439790` | `LocalizedObjectTheNameGet` | Selects a localized “ObjectTheNames” value by object kind and index, returning null for unsupported kinds. | Table and lookup pseudocode; related kind-name lookup evidence `ev_f566111ade0b7a764f73c8d4fee8476cf2dd41c90333b5e9913307a009d3df7d` in `legorr-engine-helpers-expansion-23.bundle`. |
+| `0x00439860` | `LocalizedObjectNameGet` | Selects a localized “ObjectNames” value by object kind and index, returning null for unsupported kinds. | Table and lookup pseudocode; related kind-name lookup evidence `ev_f566111ade0b7a764f73c8d4fee8476cf2dd41c90333b5e9913307a009d3df7d` in `legorr-engine-helpers-expansion-23.bundle`. |
+| `0x00443840` | `EntityRouteCellCandidateAccept` | Rejects an occupied-cell case, requires the route check, rejects a secondary terrain condition, and checks cell coordinates. | Passed as the candidate predicate by route search in caller `FUN_00443710`; pseudocode only. |
+| `0x00477f70` | `RenderFeatureFlagsGet` | Returns a render feature flag word. | Caller masks bit `0x8000` to select a render path; context `ev_91ee53f9cd8b7bde9813b0768d8a1db722535c9ce6f97427e4c9dd500a454e7a` in `legorr-tasktable.bundle`. |
+| `0x0047ec60` | `AviPlaybackFrameIndexGet` | Returns the playback object field at offset `+0xb8`, unless playback is globally suppressed. | Procedure record `ev_d11885c761ae347ef66db2416b392e9f9821824da3215f1e61f5dc23eda6bc10` and wrapper context `ev_e1fe369aac6fa706d50ff5ebadc9fc7fcd3b9a97b7240a56e70b3cb408b4f163` in `legorr-avi-playback-expansion.bundle`. |
+| `0x004802b0` | `LoaderProgressCallbackSet` | Stores a callback and context in globals used by loader progress handling. | Procedure evidence `ev_cf8d3edc3529e2ccab5c6235b48a298af1cb392f67858dc87fcae9b83925a980` in `legorr-loader-progress-read-tap.bundle`. |
+| `0x00482210` | `PointerValueGet` | Returns the pointer-sized value at the supplied address. | Procedure evidence `ev_52089e3fd8e434de24a204f8237644aafe21e6af89c3a88348f6c1f8f2559683` in `legorr-engine-helper-audit-text-io-expansion-9.bundle`. |
+| `0x00487760` | `ResourceStringTablesFree` | Frees two counted arrays of string pointers. | Pseudocode only; both counted arrays are directly visible. |
+| `0x004877d0` | `ResourceEntryIdGet` | Reads a 16-bit field at object offset `+2`. | Caller loads a resource entry and passes its ID onward; no matching bundle record found. |
+| `0x004894c0` | `ComInterfaceQueryOrFallback` | Queries an interface on one object, falls back to another object, then requests an interface on a wrapper. | Caller context `ev_15e789ce5adc6c0da67c030ea033e152a559b78e1d07cf03af24b7bebc0acd2b` in `legorr-terraincreate-fields.bundle`. |
+| `0x0048bcf0` | `RegistryEntryValueGet` | Returns the `+8` field from an indexed 16-byte registry record. | Procedure evidence `ev_8688f97f74e41e6b24df6574e6d58ff1bbba7de05d148ffb35389f6e71190a8b` in `legorr-engine-helper-audit-text-io-expansion-9.bundle`. |
+| `0x0048bd10` | `RegistryEntryTypeGet` | Returns the `+4` field from an indexed 16-byte registry record. | Same direct procedure record as the adjacent registry accessor. |
+| `0x0048dfd0` | `QsortSmallPartitionSort` | Performs comparator-driven, stride-based sorting for the small-partition fallback of a recursive quicksort. | Surrounding quicksort caller and pseudocode; no direct bundle record found. |
+| `0x0048e250` | `StackProbeAllocate` | Touches stack pages at 4 KB intervals. | Procedure evidence `ev_497c4a9f4323ac99889e515be2e663134d51e6ffca523b957820d2e707d8f1d1` in `legorr-engine-helper-audit-text-io-expansion-9.bundle`. |
+| `0x0048e4f0` | `CrtTerminateProcessWithHandlers` | Runs registered callbacks and cleanup handlers, then calls `ExitProcess` on the termination path. | Pseudocode only. |
+| `0x0048e5a0` | `CrtRunCallbackArray` | Invokes each non-null callback in a pointer range. | Pseudocode only. |
+| `0x0048e680` | `CrtDoubleAbsoluteValue` | Returns the absolute value of a double with special-value handling. | Procedure evidence `ev_21ab87f2b4a07bca172c27cdd54a68dc9987deef7ebd79f9cac37e58dbf0d77e` in `legorr-engine-helpers-expansion-26.bundle`. |
+| `0x00490070` | `VsscanfParseInput` | Provides a varargs wrapper around the scanf-like parser at `0x00493ef0`. | Caller context `ev_bf310b0040b2f198b6c04a288010a0abf250e657024e7eb86b33bed0705183f4` in `legorr-engine-helper-audit-text-io-expansion-10.bundle`. |
+| `0x00494ca0` | `StreamPushbackChar` | Attempts to push a character back into the stream buffer. | Procedure evidence `ev_194e45122d351dbea38022bb4c31f346d96845b6e76a127b8a0248f126135b4f` in `legorr-engine-helper-audit-text-io-expansion-10.bundle`. |
+| `0x00494cc0` | `StreamSkipClassifiedChars` | Advances through input while characters match a character-class predicate. | Same direct procedure evidence as the stream pushback helper. |
+| `0x004977d0` | `CrtControlFlagsTranslate` | Maps bits from one floating-point control word into another representation. | Procedure evidence `ev_6300cd88a40a17a7844c7569471a8559c13da52fbb8e5548c7b64a7fed4da91b` in `legorr-scene-done.bundle`. |
+| `0x00499fe0` | `UInt96Add` | Adds two three-word unsigned integers with carry propagation. | Pseudocode only; word-level carry propagation is explicit. |
+
+Complete pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c), with named excerpts in [engine-region.c](../decompiles/engine-region.c). Where no direct evidence record was available, the name follows checked-in pseudocode and caller behavior.

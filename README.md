@@ -471,10 +471,122 @@ Open threads, in order of value:
 | 272 | [findings/272-crt-file-resize-and-signal-helpers.md](docs/findings/272-crt-file-resize-and-signal-helpers.md) | CRT File Resize and Signal Helpers |
 | 273 | [findings/273-terrain-object-sound-grid-and-activity-transition.md](docs/findings/273-terrain-object-sound-grid-and-activity-transition.md) | Terrain Object Sound Grid and Activity Transition |
 | 274 | [findings/274-priority-image-selection-and-scene-registry-teardown.md](docs/findings/274-priority-image-selection-and-scene-registry-teardown.md) | Priority Image Selection and Scene Registry Teardown |
+| 275 | [findings/275-scene-frame-record-clone-or-create.md](docs/findings/275-scene-frame-record-clone-or-create.md) | SceneAct Frame Record Clone or Create |
+| 276 | [findings/276-additional-engine-ui-and-scene-helper-names.md](docs/findings/276-additional-engine-ui-and-scene-helper-names.md) | Additional Engine, UI, and Scene Helper Names |
+| 277 | [findings/277-low-address-helper-names.md](docs/findings/277-low-address-helper-names.md) | Low-Address Helper Names |
+| 278 | [findings/278-simulation-and-terrain-helper-names.md](docs/findings/278-simulation-and-terrain-helper-names.md) | Simulation and Terrain Helper Names |
+| 279 | [findings/279-crt-and-display-helper-names.md](docs/findings/279-crt-and-display-helper-names.md) | CRT and Display Helper Names |
+| 280 | [findings/280-vector-math-helper-names.md](docs/findings/280-vector-math-helper-names.md) | Vector Math Helper Names |
+| 281 | [findings/281-advisor-terrain-task-helper-names.md](docs/findings/281-advisor-terrain-task-helper-names.md) | Advisor, Terrain, and Task Helper Names |
+| 282 | [findings/282-display-resolution-helper-names.md](docs/findings/282-display-resolution-helper-names.md) | Display Resolution Helper Names |
+| 283 | [findings/283-low-address-resource-and-geometry-helpers.md](docs/findings/283-low-address-resource-and-geometry-helpers.md) | Low-Address Resource and Geometry Helpers |
+| 284 | [findings/284-movement-lighting-and-action-gates.md](docs/findings/284-movement-lighting-and-action-gates.md) | Movement, Lighting, and Action Gates |
+| 285 | [findings/285-render-collision-fog-and-segment-helpers.md](docs/findings/285-render-collision-fog-and-segment-helpers.md) | Render, Collision, Fog, and Segment Helpers |
+| 286 | [findings/286-task-registry-and-category-mask-helpers.md](docs/findings/286-task-registry-and-category-mask-helpers.md) | Task Registry and Category-Mask Helpers |
+| 287 | [findings/287-terrain-cell-queued-work-transition.md](docs/findings/287-terrain-cell-queued-work-transition.md) | Terrain Cell Queued-Work Transition |
+| 288 | [findings/288-render-object-and-mesh-helpers.md](docs/findings/288-render-object-and-mesh-helpers.md) | Render Object and Mesh Helpers |
+| 289 | [findings/289-statistics-and-adjacent-cell-helpers.md](docs/findings/289-statistics-and-adjacent-cell-helpers.md) | Statistics and Adjacent-Cell Helpers |
+| 290 | [findings/290-entity-velocity-state-accessors.md](docs/findings/290-entity-velocity-state-accessors.md) | Entity Velocity State Accessors |
+| 291 | [findings/291-tracked-entity-pointer-array-removal.md](docs/findings/291-tracked-entity-pointer-array-removal.md) | Tracked Entity Pointer Array Removal |
+| 292 | [findings/292-selection-and-pointer-registry-helpers.md](docs/findings/292-selection-and-pointer-registry-helpers.md) | Selection and Pointer-Registry Helpers |
+| 293 | [findings/293-terrain-cell-predicates-and-spatial-lookup.md](docs/findings/293-terrain-cell-predicates-and-spatial-lookup.md) | Terrain Cell Predicates and Spatial Lookup |
+| 294 | [findings/294-render-segment-and-object-state-helpers.md](docs/findings/294-render-segment-and-object-state-helpers.md) | Render Segment and Object-State Helpers |
+| 295 | [findings/295-engine-mode-and-state-accessors.md](docs/findings/295-engine-mode-and-state-accessors.md) | Engine Mode and State Accessors |
+| 296 | [findings/296-entity-effect-counter-record-application.md](docs/findings/296-entity-effect-counter-record-application.md) | Entity Effect-Counter Record Application |
+| 297 | [findings/297-activity-record-and-message-table-helpers.md](docs/findings/297-activity-record-and-message-table-helpers.md) | Activity-Record and Message-Table Helpers |
+| 298 | [findings/298-render-object-transform-and-string-helpers.md](docs/findings/298-render-object-transform-and-string-helpers.md) | Render-Object Transform and String Helpers |
+| 299 | [findings/299-low-address-task-interface-helpers.md](docs/findings/299-low-address-task-interface-helpers.md) | Low-Address Task, Interface, and Grid Helpers |
+| 300 | [findings/300-terrain-queue-and-particle-slot-helpers.md](docs/findings/300-terrain-queue-and-particle-slot-helpers.md) | Terrain-Queue and Particle-Slot Helpers |
+| 301 | [findings/301-scene-geometry-and-resource-slot-helpers.md](docs/findings/301-scene-geometry-and-resource-slot-helpers.md) | Scene Geometry and Resource-Slot Helpers |
+| 302 | [findings/302-crt-character-and-arithmetic-helpers.md](docs/findings/302-crt-character-and-arithmetic-helpers.md) | CRT Character and Arithmetic Helpers |
+| 303 | [findings/303-bubble-action-and-string-cache-lookups.md](docs/findings/303-bubble-action-and-string-cache-lookups.md) | Bubble-Action and String-Cache Lookups |
+| 304 | [findings/304-terrain-visited-cell-tracking.md](docs/findings/304-terrain-visited-cell-tracking.md) | Terrain Visited-Cell Tracking |
+| 305 | [findings/305-entity-velocity-and-scene-position-accessors.md](docs/findings/305-entity-velocity-and-scene-position-accessors.md) | Entity Velocity and Scene-Position Accessors |
+| 306 | [findings/306-string-cache-and-interface-message-loaders.md](docs/findings/306-string-cache-and-interface-message-loaders.md) | String-Cache and Interface-Message Loaders |
+| 307 | [findings/307-terrain-cell-flag-operations-and-refresh.md](docs/findings/307-terrain-cell-flag-operations-and-refresh.md) | Terrain-Cell Flag Operations and Refresh |
+| 308 | [findings/308-effect-mode-and-slot-helpers.md](docs/findings/308-effect-mode-and-slot-helpers.md) | Effect-Mode and Slot Helpers |
+| 309 | [findings/309-geometry-and-directdraw-surface-helpers.md](docs/findings/309-geometry-and-directdraw-surface-helpers.md) | Geometry and DirectDraw Surface Helpers |
+| 310 | [findings/310-terrain-cell-flag-and-state-tests.md](docs/findings/310-terrain-cell-flag-and-state-tests.md) | Terrain-Cell Flag and State Tests |
+| 311 | [findings/311-renderer-fog-and-mesh-color-setters.md](docs/findings/311-renderer-fog-and-mesh-color-setters.md) | Renderer Fog and Mesh Color Setters |
+| 312 | [findings/312-object-task-and-registry-helpers.md](docs/findings/312-object-task-and-registry-helpers.md) | Object Task and Registry Helpers |
+| 313 | [findings/313-selection-resource-and-transform-helpers.md](docs/findings/313-selection-resource-and-transform-helpers.md) | Selection, Resource, and Transform Helpers |
+| 314 | [findings/314-terrain-grid-record-and-flag-helpers.md](docs/findings/314-terrain-grid-record-and-flag-helpers.md) | Terrain Grid, Record, and Flag Helpers |
+| 315 | [findings/315-pooled-record-and-display-mode-helpers.md](docs/findings/315-pooled-record-and-display-mode-helpers.md) | Pooled-Record and Display-Mode Helpers |
+| 316 | [findings/316-entity-flag-and-fixed-record-pool-helpers.md](docs/findings/316-entity-flag-and-fixed-record-pool-helpers.md) | Entity-Flag and Fixed-Record-Pool Helpers |
+| 317 | [findings/317-air-supply-amount-update.md](docs/findings/317-air-supply-amount-update.md) | Air-Supply Amount Update |
+| 318 | [findings/318-entity-eligibility-and-dock-helpers.md](docs/findings/318-entity-eligibility-and-dock-helpers.md) | Entity Eligibility and Dock Helpers |
+| 319 | [findings/319-entity-stats-and-mask-predicates.md](docs/findings/319-entity-stats-and-mask-predicates.md) | Entity-Stats and Mask Predicates |
+| 320 | [findings/320-crt-descriptor-and-extended-float-helpers.md](docs/findings/320-crt-descriptor-and-extended-float-helpers.md) | CRT Descriptor and Extended-Float Helpers |
+| 321 | [findings/321-transform-collection-and-surface-config-helpers.md](docs/findings/321-transform-collection-and-surface-config-helpers.md) | Transform-Collection and Surface-Config Helpers |
+| 322 | [findings/322-resource-binding-and-map-row-span-helpers.md](docs/findings/322-resource-binding-and-map-row-span-helpers.md) | Resource-Binding and Map-Row-Span Helpers |
+| 323 | [findings/323-camera-math-and-matrix-primitives.md](docs/findings/323-camera-math-and-matrix-primitives.md) | Camera Math and Matrix Primitives |
+| 324 | [findings/324-global-state-and-record-accessors.md](docs/findings/324-global-state-and-record-accessors.md) | Global-State and Record Accessors |
+| 325 | [findings/325-terrain-cell-refresh-and-grid-pick.md](docs/findings/325-terrain-cell-refresh-and-grid-pick.md) | Terrain-Cell Refresh and Grid Pick |
+| 326 | [findings/326-render-config-and-grid-record-tables.md](docs/findings/326-render-config-and-grid-record-tables.md) | Render-Config and Grid-Record Tables |
+| 327 | [findings/327-entity-threshold-and-flag-mask-predicates.md](docs/findings/327-entity-threshold-and-flag-mask-predicates.md) | Entity Threshold and Flag-Mask Predicates |
+| 328 | [findings/328-crt-environment-and-descriptor-helpers.md](docs/findings/328-crt-environment-and-descriptor-helpers.md) | CRT Environment and Descriptor Helpers |
+| 329 | [findings/329-viewport-and-global-refresh-helpers.md](docs/findings/329-viewport-and-global-refresh-helpers.md) | Viewport and Global-Refresh Helpers |
+| 330 | [findings/330-camera-bound-and-transform-setters.md](docs/findings/330-camera-bound-and-transform-setters.md) | Camera-Bound and Transform Setters |
+| 331 | [findings/331-weapon-type-record-accessors.md](docs/findings/331-weapon-type-record-accessors.md) | Weapon-Type Record Accessors |
+| 332 | [findings/332-interpolated-geometry-and-entity-record-helpers.md](docs/findings/332-interpolated-geometry-and-entity-record-helpers.md) | Interpolated Geometry and Entity-Record Helpers |
+| 333 | [findings/333-advisor-name-and-vector-math-helpers.md](docs/findings/333-advisor-name-and-vector-math-helpers.md) | Advisor-Name and Vector-Math Helpers |
+| 334 | [findings/334-camera-bounds-and-global-refresh.md](docs/findings/334-camera-bounds-and-global-refresh.md) | Camera Bounds and Global Refresh |
+| 335 | [findings/335-expansion-grid-and-timed-visual-helpers.md](docs/findings/335-expansion-grid-and-timed-visual-helpers.md) | Expansion-Grid and Timed-Visual Helpers |
+| 336 | [findings/336-hunger-meter-images-and-entity-override-pop.md](docs/findings/336-hunger-meter-images-and-entity-override-pop.md) | Hunger-Meter Images and Entity Override Pop |
+| 337 | [findings/337-scene-object-transform-and-pointer-wrappers.md](docs/findings/337-scene-object-transform-and-pointer-wrappers.md) | Scene-Object Transform and Pointer Wrappers |
+| 338 | [findings/338-current-level-state-and-resource-helpers.md](docs/findings/338-current-level-state-and-resource-helpers.md) | Current-Level State and Resource Helpers |
+| 339 | [findings/339-camera-distance-and-position-helpers.md](docs/findings/339-camera-distance-and-position-helpers.md) | Camera Distance and Position Helpers |
+| 340 | [findings/340-entity-display-and-tool-name-resources.md](docs/findings/340-entity-display-and-tool-name-resources.md) | Entity Display and Tool-Name Resources |
+| 341 | [findings/341-animation-and-input-state-helpers.md](docs/findings/341-animation-and-input-state-helpers.md) | Animation and Input-State Helpers |
+| 342 | [findings/342-crt-descriptor-and-bounded-string-helpers.md](docs/findings/342-crt-descriptor-and-bounded-string-helpers.md) | CRT Descriptor and Bounded-String Helpers |
+| 343 | [findings/343-advisor-action-and-animation-record-helpers.md](docs/findings/343-advisor-action-and-animation-record-helpers.md) | Advisor Action and Animation Record Helpers |
+| 344 | [findings/344-indexed-surface-and-pair-copy-helpers.md](docs/findings/344-indexed-surface-and-pair-copy-helpers.md) | Indexed-Surface and Pair-Copy Helpers |
+| 345 | [findings/345-sound-object-duration-query.md](docs/findings/345-sound-object-duration-query.md) | Sound-Object Duration Query |
+| 346 | [findings/346-screen-surface-allocation-and-clip-distance.md](docs/findings/346-screen-surface-allocation-and-clip-distance.md) | Screen-Surface Allocation and Clip Distance |
+| 347 | [findings/347-display-priority-and-allocator-wrappers.md](docs/findings/347-display-priority-and-allocator-wrappers.md) | Display, Priority, and Allocator Wrappers |
+| 348 | [findings/348-entity-and-indexed-record-accessors.md](docs/findings/348-entity-and-indexed-record-accessors.md) | Entity and Indexed-Record Accessors |
+| 349 | [findings/349-scene-property-and-render-resource-helpers.md](docs/findings/349-scene-property-and-render-resource-helpers.md) | Scene-Property and Render-Resource Helpers |
+| 350 | [findings/350-low-address-string-and-global-field-helpers.md](docs/findings/350-low-address-string-and-global-field-helpers.md) | Low-Address String and Global-Field Helpers |
+| 351 | [findings/351-text-output-task-table-and-indexed-record-helpers.md](docs/findings/351-text-output-task-table-and-indexed-record-helpers.md) | Text Output, Task Table, and Indexed Record Helpers |
+| 352 | [findings/352-scene-interface-pair-and-property-value-helpers.md](docs/findings/352-scene-interface-pair-and-property-value-helpers.md) | Scene Interface Pair and Property Value Helpers |
+| 353 | [findings/353-cell-commands-and-entity-activity-helpers.md](docs/findings/353-cell-commands-and-entity-activity-helpers.md) | Cell Commands and Entity Activity Helpers |
+| 354 | [findings/354-record-vector-and-resource-state-helpers.md](docs/findings/354-record-vector-and-resource-state-helpers.md) | Record, Vector, and Resource State Helpers |
+| 355 | [findings/355-bit-pointer-surface-and-window-wrappers.md](docs/findings/355-bit-pointer-surface-and-window-wrappers.md) | Bit, Pointer, Surface, and Window Wrappers |
+| 356 | [findings/356-animation-and-low-address-state-helpers.md](docs/findings/356-animation-and-low-address-state-helpers.md) | Animation and Low-Address State Helpers |
+| 357 | [findings/357-entity-fields-and-global-counter-helpers.md](docs/findings/357-entity-fields-and-global-counter-helpers.md) | Entity Fields and Global Counter Helpers |
+| 358 | [findings/358-matrix-window-surface-and-heap-helpers.md](docs/findings/358-matrix-window-surface-and-heap-helpers.md) | Matrix, Window, Surface, and Heap Helpers |
+| 359 | [findings/359-entity-command-records-and-neighbor-dispatch.md](docs/findings/359-entity-command-records-and-neighbor-dispatch.md) | Entity Command Records and Neighbor Dispatch |
+| 360 | [findings/360-grid-animation-and-resource-cleanup-helpers.md](docs/findings/360-grid-animation-and-resource-cleanup-helpers.md) | Grid Animation and Resource Cleanup Helpers |
+| 361 | [findings/361-sound-window-and-resource-interface-wrappers.md](docs/findings/361-sound-window-and-resource-interface-wrappers.md) | Sound, Window, and Resource Interface Wrappers |
+| 362 | [findings/362-callback-event-and-attached-record-helpers.md](docs/findings/362-callback-event-and-attached-record-helpers.md) | Callback, Event, and Attached-Record Helpers |
+| 363 | [findings/363-geometry-string-lookup-and-entity-state-helpers.md](docs/findings/363-geometry-string-lookup-and-entity-state-helpers.md) | Geometry, String Lookup, and Entity State Helpers |
+| 364 | [findings/364-bit-count-cursor-and-directory-helpers.md](docs/findings/364-bit-count-cursor-and-directory-helpers.md) | Bit Count, Cursor, and Directory Helpers |
+| 365 | [findings/365-renderer-record-and-cached-handle-helpers.md](docs/findings/365-renderer-record-and-cached-handle-helpers.md) | Renderer Record and Cached-Handle Helpers |
+| 366 | [findings/366-task-records-callback-dispatch-and-pointer-stacks.md](docs/findings/366-task-records-callback-dispatch-and-pointer-stacks.md) | Task Records, Callback Dispatch, and Pointer Stacks |
+| 367 | [findings/367-scene-resources-entity-predicates-and-offset-accessors.md](docs/findings/367-scene-resources-entity-predicates-and-offset-accessors.md) | Scene Resources, Entity Predicates, and Offset Accessors |
+| 368 | [findings/368-record-pool-and-recursive-list-helpers.md](docs/findings/368-record-pool-and-recursive-list-helpers.md) | Record Pool and Recursive List Helpers |
+| 369 | [findings/369-task-queue-and-entity-state-helpers.md](docs/findings/369-task-queue-and-entity-state-helpers.md) | Task Queue and Entity State Helpers |
+| 370 | [findings/370-screen-effects-surface-and-ui-helpers.md](docs/findings/370-screen-effects-surface-and-ui-helpers.md) | Screen Effects, Surface, and UI Helpers |
+| 371 | [findings/371-record-pools-pair-tables-and-buffered-streams.md](docs/findings/371-record-pools-pair-tables-and-buffered-streams.md) | Record Pools, Pair Tables, and Buffered Streams |
+| 372 | [findings/372-incident-messages-options-and-resource-helpers.md](docs/findings/372-incident-messages-options-and-resource-helpers.md) | Incident Messages, Options, and Resource Helpers |
+| 373 | [findings/373-cursor-simulation-renderer-and-file-helpers.md](docs/findings/373-cursor-simulation-renderer-and-file-helpers.md) | Cursor, Simulation, Renderer, and File Helpers |
+| 374 | [findings/374-terrain-interface-and-media-helpers.md](docs/findings/374-terrain-interface-and-media-helpers.md) | Terrain, Interface, and Media Helpers |
+| 375 | [findings/375-entity-ui-and-render-tree-helpers.md](docs/findings/375-entity-ui-and-render-tree-helpers.md) | Entity, UI, and Render Tree Helpers |
+| 376 | [findings/376-selection-cell-and-overlay-state-helpers.md](docs/findings/376-selection-cell-and-overlay-state-helpers.md) | Selection, Cell, and Overlay State Helpers |
+| 377 | [findings/377-callback-registry-and-runtime-helpers.md](docs/findings/377-callback-registry-and-runtime-helpers.md) | Callback, Registry, and Runtime Helpers |
+| 378 | [findings/378-input-selection-and-action-state-helpers.md](docs/findings/378-input-selection-and-action-state-helpers.md) | Input Selection and Action-State Helpers |
+| 379 | [findings/379-terrain-ui-and-crt-support-helpers.md](docs/findings/379-terrain-ui-and-crt-support-helpers.md) | Terrain, UI, and CRT Support Helpers |
+| 380 | [findings/380-scene-objects-terrain-and-matrix-helpers.md](docs/findings/380-scene-objects-terrain-and-matrix-helpers.md) | Scene Objects, Terrain, and Matrix Helpers |
+| 381 | [findings/381-selection-resource-runtime-and-grid-helpers.md](docs/findings/381-selection-resource-runtime-and-grid-helpers.md) | Selection, Resource, Runtime, and Grid Helpers |
+| 382 | [findings/382-crt-extended-precision-and-entity-routing.md](docs/findings/382-crt-extended-precision-and-entity-routing.md) | CRT, Extended Precision, and Entity Routing |
+| 383 | [findings/383-crt-global-accessors-and-light-effects.md](docs/findings/383-crt-global-accessors-and-light-effects.md) | CRT, Global Accessors, and Light Effects |
+| 384 | [findings/384-crt-formatting-com-cleanup-and-spawn-helpers.md](docs/findings/384-crt-formatting-com-cleanup-and-spawn-helpers.md) | CRT Formatting, COM Cleanup, and Spawn Helpers |
+| 385 | [findings/385-stream-surface-avi-and-route-state-helpers.md](docs/findings/385-stream-surface-avi-and-route-state-helpers.md) | Stream, Surface, AVI, and Route State Helpers |
+| 386 | [findings/386-spatial-ui-com-and-crt-runtime.md](docs/findings/386-spatial-ui-com-and-crt-runtime.md) | Spatial, UI, COM, and CRT Runtime |
 
 Named-pseudocode corpus: [`docs/decompiles/engine-region.c`](docs/decompiles/engine-region.c)
-(1335 generated sections selected from the reverse-engineering findings; the
-Ghidra script selects 1335 targets. This includes the manually bounded objective
+(2481 named sections selected from the reverse-engineering findings; the
+Ghidra script selects 2481 target addresses. This includes the manually bounded objective
 callback at `0x459100`, which auto-analysis does not mark as a procedure).
 Machine-readable evidence: [`docs/evidence/legorr-rev.bundle`](docs/evidence/legorr-rev.bundle)
 (236 recorded REA observations against `LegoRR.exe`,

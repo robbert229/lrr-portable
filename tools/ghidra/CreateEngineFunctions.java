@@ -1290,6 +1290,7 @@ public class CreateEngineFunctions extends GhidraScript {
         0x47e300L,  // InterfaceMethod18StructApply
         0x483690L,  // MatrixMethodPairApply
         0x485ea0L,  // InterfaceSlot58PairStoreClamp
+        0x489660L,  // SceneActFrameRecordCloneOrCreate
         0x489b30L,  // ObjectInterfaceArrayResourceCreate
         0x41f6c0L,  // SelectedEntityDetachCallback
         0x43fc20L,  // RecordPairPoseCopyAndActivityRaise
@@ -1368,7 +1369,1152 @@ public class CreateEngineFunctions extends GhidraScript {
         0x45d300L,  // PriorityImageSelectionStateUpdate
         0x45d3f0L,  // PriorityImageOrderMoveToFront
         0x47e130L,  // SceneObjectRegistryReleaseAll
-    };
+        0x004017b0L,  // AdvisorPositionRecordInitialize
+        0x004065f0L,  // CubicBezierPointEvaluate
+        0x00410320L,  // StringQueueRecordOrFlush
+        0x00410a10L,  // MenuItemChoiceStringsAllocate
+        0x00410bf0L,  // MenuItemNumericRangeRecordAllocate
+        0x004198f0L,  // TerrainCellLinkedEntriesRemove
+        0x0041a1a0L,  // UIEntryHitTestAndDispatch
+        0x0044da50L,  // ThreeChannelValueTweenStep
+        0x00453920L,  // AdvisorScrollStepAdvance
+        0x00459900L,  // HungerImagesPositionConfigLoad
+        0x00459a50L,  // BubbleImagesPositionConfigLoad
+        0x0045b620L,  // PriorityListButtonActionDispatch
+        0x00475c80L,  // DDiScenePayloadRelease
+        0x00477370L,  // DDiSceneRenderSurfacePoolGrow
+        0x0047d430L,  // SceneObjectRegistryTeardown
+        0x00403910L,  // CellRecordCountsPruneForEntity
+        0x00418920L,  // CategoryCellCandidateListBuild
+        0x004031e0L,  // ActiveEntityListContainsCode
+        0x00409ff0L,  // EntityDestroyTrackedPointerCleanup
+        0x00403810L,  // TerrainCellRecordCountUpdate
+        0x0040cdc0L,  // MapCellRecordGridInitialize
+        0x0040f890L,  // DirectionDrivenHeadingAngleStep
+        0x0040c2f0L,  // TransientEffectRenderSlotConfigure
+        0x00419830L,  // EntityLinkedListEntriesRemoveByKey
+        0x00408860L,  // AnimationLoopTimeAdjust
+        0x00439bd0L,  // EntityAcceptsTargetForTaskCheck
+        0x00451230L,  // TerrainCellSurfaceVectorWrite
+        0x00451450L,  // TerrainCellSurfaceVectorOffsetAdd
+        0x00451c50L,  // OwnedObjectReferenceChainRelease
+        0x00453220L,  // AdvisorDisplayStateResourcesRelease
+        0x0045a500L,  // PanelImageSlotEntryAllocate
+        0x0045d7e0L,  // LevelIdentifierRemapTableLoad
+        0x00495df0L,  // CrtEnvironmentPointerArrayBuild
+        0x00496ad0L,  // CrtGetStringTypeACompat
+        0x00496f50L,  // CrtCalendarFieldsToTimeScalar
+        0x00497b90L,  // CrtExtended80ToBinaryFloat
+        0x00497e20L,  // CrtDecimalMantissaRoundAndNormalize
+        0x00499da0L,  // CrtDaylightTransitionBoundaryCompute
+        0x0049b660L,  // CrtStringDuplicate
+        0x0049d630L,  // DisplayModeListPopulate
+        0x0049dba0L,  // CrtUnsignedIntegerFormatRadix
+        0x00401240L,  // Vector2Distance
+        0x004013a0L,  // Vector3Length
+        0x00401420L,  // Vector3Distance
+        0x00401470L,  // Vector3CrossProduct
+        0x00401500L,  // Vector3Add
+        0x004016c0L,  // Vector3Subtract
+        0x004016f0L,  // Vector3DotProduct
+        0x00401750L,  // Vector3Normalize
+        0x00434da0L,  // AdvisorTooltipAndTooltipSoundConfigLoad
+        0x00434a00L,  // AdvisorTutorialIconImageLoad
+        0x00435010L,  // TerrainCellWorkFlagCircleSet
+        0x004332f0L,  // TerrainCellWorkFlagSet
+        0x00439b80L,  // TaskTargetCellEligibilityCheck
+        0x0049d780L,  // DisplayResolutionComboPopulate
+        0x0049d870L,  // DisplayResolutionFilterTupleAppend
+        0x0049d8d0L,  // DisplayModeMatchesFilterTuple
+        0x0049d950L,  // DisplayModeNameIndexFind
+        0x0049d9d0L,  // DisplayRefreshRateControlsSync
+        0x004073a0L,  // EntityPointerRegistriesRemove
+        0x004067b0L,  // PolylineSegmentLengthsAndTotalCalculate
+        0x00406820L,  // BezierCurveSamplesBuild
+        0x00410c70L,  // ResourceVariantRecordRelease
+        0x00410f30L,  // ResourceRecordAndChildrenRelease
+        0x0044cc10L,  // LightEffectFadeParametersStore
+        0x00432950L,  // EntityMoveDestinationCellIsUsable
+        0x0043fdc0L,  // EntityActionTargetCellIsValid
+        0x004718d0L,  // ObjectPairRayHitCheck
+        0x00470690L,  // TimedEntitySegmentVisualCreate
+        0x00470260L,  // EntitySurfaceSegmentCollisionCheck
+        0x00473e10L,  // RendererFogColorSet
+        0x00403560L,  // TaskRegistryRemoveType10EntriesForEntity
+        0x00403430L,  // TaskRegistryRemoveType0EntryByPair
+        0x00402890L,  // TaskType23CreateForCategoryMask
+        0x00431140L,  // TerrainCellQueuedWorkTransition
+        0x00470630L,  // EntityDirectedLineSideCheck
+        0x00473b20L,  // EntityFlag80Set
+        0x00474a60L,  // SceneSurfaceTextureBindByMode
+        0x00475020L,  // SceneMeshColorAndAlphaSet
+        0x0042ef40L,  // StatsLevelRecordCountForStatType
+        0x004093b0L,  // PassableAdjacentCellSearchExpand
+        0x004712c0L,  // EntityVelocityStateRecordGet
+        0x004712f0L,  // EntityVelocitySlotValueGet
+        0x00471310L,  // EntityVelocitySlotValueSet
+        0x0043a930L,  // TrackedEntityPointerArrayRemove
+        0x0042dfc0L,  // ObjectPointerRegistryClearMatch
+        0x0042dff0L,  // ObjectPointerRegistryGetSlot
+        0x004293b0L,  // SelectionRectangleRender
+        0x00424830L,  // SelectedObjectOutlinesDraw
+        0x00432a20L,  // TerrainCellAllowsPlacement
+        0x00431ab0L,  // AnyObjectCanOccupyTerrainCell
+        0x00432b90L,  // TerrainCellTypeIs8Or10Or11
+        0x00433330L,  // TerrainCellTypeGetAtCoords
+        0x004329d0L,  // TerrainCellFlag8CheckIfInBounds
+        0x0046e8a0L,  // WorldSpatialRecordFindAtGridCoordinate
+        0x00471860L,  // SceneSegmentTraceNearestHit
+        0x00472080L,  // EntityCentersWithinConfiguredRadius
+        0x00472130L,  // EntityCentersWithinObjectRadius
+        0x004728e0L,  // RendererFlagBit6Set
+        0x00473ec0L,  // RenderObjectStateApplyToEntries
+        0x00474e90L,  // RenderObjectHierarchyFloat3Set
+        0x004750b0L,  // RenderObjectSetPackedRgbaFromFloatChannels
+        0x00423080L,  // ModeDependentField24Get
+        0x004230b0L,  // GlobalFloatField00556F00Get
+        0x00425d80L,  // CurrentEngineModeIsZero
+        0x00426230L,  // GlobalTripleCopyOut
+        0x00426360L,  // GlobalStateFlagsBits6And9Set
+        0x004263a0L,  // GlobalStateFlagsBit7Set
+        0x004263c0L,  // GlobalSubsystemStateReset
+        0x00429850L,  // ActiveEngineFieldB0Get
+        0x00429860L,  // EngineFloatField210GetByIndex
+        0x00429880L,  // EngineFloatField260Get
+        0x0042b2f0L,  // EntityEffectCountersApplyFromRecord
+        0x004314c0L,  // ActivityBuildRecordRelease
+        0x00431530L,  // ActivityBuildRecordsReleaseAll
+        0x0046a120L,  // GroupedCodeTableFindValueIndex
+        0x0046a370L,  // LinkedRecordChainFree
+        0x0046a390L,  // GlobalLinkedRecordChainClear
+        0x0046a760L,  // FirstSetFlagOrdinal
+        0x0046aad0L,  // MessageLabelIndexFind
+        0x00475580L,  // RenderObjectRotateAxis
+        0x00475610L,  // RenderObjectSetIdentityTransform
+        0x00476270L,  // SceneObjectSetFormattedString
+        0x004041b0L,  // EntityTaskChainContainsKind
+        0x0040cf80L,  // GridCellObjectLinkInsert
+        0x00412450L,  // RenderUiFrameCell
+        0x0041a660L,  // InteractionActionCodeMapInitialize
+        0x004302b0L,  // MapCellTrackingFlagsClearAndRefresh
+        0x00432100L,  // TerrainCellFlag100SetAndTrack
+        0x00432270L,  // TerrainCellVisitedFlagSetAndTrack
+        0x00465c50L,  // ParticleSlotInitializeForEmitter
+        0x00479b80L,  // PointInPolygon2D
+        0x00479d50L,  // Matrix4SetRotationZ
+        0x004760e0L,  // AttachedObjectDataReleaseAndClear
+        0x00476d50L,  // ResourceSlotTableInitialize
+        0x00476d80L,  // ResourceSlotTableReleaseAll
+        0x0047ab00L,  // VideoResourceSlotRelease
+        0x0047b050L,  // VideoResourceSlotEnabledSet
+        0x0047b2a0L,  // KeyedResourceEntryRemove
+        0x0048f950L,  // CrtFindHandleClose
+        0x00491360L,  // CrtBufferedCharacterWrite
+        0x00498b70L,  // CrtWideCharToMultibyte
+        0x00498e00L,  // CrtMultibyteToWideChar
+        0x004991f0L,  // CrtFileDescriptorHandleGet
+        0x004997c0L,  // CrtCallocAligned
+        0x00499fb0L,  // CrtUnsignedAddWithCarry
+        0x00407300L,  // BubbleActionNameToIndex
+        0x00410450L,  // StringKeyedCacheEntryFind
+        0x004322d0L,  // TerrainCellVisitedFlagTest
+        0x00432300L,  // TerrainCellVisitedFlagsClearAll
+        0x00471ca0L,  // EntityWorldCenterPositionRead
+        0x00471c70L,  // VelocitySlotVectorRead
+        0x00471a40L,  // VelocitySlotPrimaryObjectGet
+        0x00471a50L,  // VelocitySlotSecondaryObjectGet
+        0x00473ba0L,  // SceneObjectFlagBit3Get
+        0x00410520L,  // StringCacheLookupOrLoad
+        0x00419430L,  // InterfaceMessageTabInfoTextLoad
+        0x00432360L,  // TerrainCellPrimaryFlagsMaskClearAndRefresh
+        0x004323c0L,  // TerrainCellSecondaryFlagBit0Clear
+        0x004323f0L,  // TerrainCellFlagsSetAndRefresh
+        0x00432450L,  // TerrainCellFlagsSetMask100400
+        0x00432490L,  // TerrainCellFlagsSetMask20108000
+        0x004324d0L,  // TerrainCellSecondaryFlag8SetOrClear
+        0x00432520L,  // TerrainCellSecondaryFlag8Test
+        0x00432560L,  // TerrainCellFlag40000000ClearOrSet
+        0x004325d0L,  // TerrainCellSecondaryFlagBit0Set
+        0x00432710L,  // TerrainCellFlag80000ClearOrSet
+        0x00432d90L,  // TerrainCellFlag20TestInBounds
+        0x0046fef0L,  // EffectModeSurfaceQueryTypeResolve
+        0x0046ff70L,  // ActiveEffectRecordSlotFind
+        0x0046ff90L,  // ActiveSegmentVisualRecordSlotFind
+        0x00479ce0L,  // Matrix4Multiply
+        0x00479af0L,  // LineIntersection2DCompute
+        0x00478330L,  // Direct3DRenderPreferencesApply
+        0x0047dfa0L,  // DirectDrawSurfacePixelRead
+        0x0047de60L,  // DirectDrawSurfaceDescriptionGet
+        0x0047def0L,  // DirectDrawSurfacePixelFormatGet
+        0x00432b00L,  // TerrainCellFlag800TestInBounds
+        0x00432c20L,  // TerrainCellFlag40000Test
+        0x00432c50L,  // TerrainCellTypeSpeedClassGet
+        0x00432dd0L,  // TerrainCellFlag08000000Test
+        0x00432e60L,  // TerrainCellFlagsMaskC0Test
+        0x00432e90L,  // TerrainCellFlag04000000Test
+        0x00432ec0L,  // TerrainCellStateEquals1
+        0x00432f40L,  // TerrainCellFlagsMask18ClearInBounds
+        0x00432f90L,  // TerrainCellFlag4TestInBounds
+        0x00432fd0L,  // TerrainCellFlag2000Test
+        0x00433000L,  // TerrainCellFlag80Test
+        0x00433030L,  // TerrainCellFlag8000Test
+        0x00433060L,  // TerrainCellSecondaryFlagBit0Test
+        0x004330e0L,  // TerrainCellFlagsMask180000Test
+        0x00473dc0L,  // RendererFogEnableAndColorApply
+        0x00473e70L,  // RendererFogModeSet
+        0x00473ea0L,  // RendererFogParametersSet
+        0x00474ff0L,  // SceneMeshColorSet
+        0x00403320L,  // ObjectCommandTaskCreate
+        0x00404e00L,  // ObjectPathSubmitToGridTarget
+        0x00404f50L,  // ObjectFilterMatchesActionTarget
+        0x00407410L,  // Type4ObjectRegistryInsert
+        0x004074b0L,  // Type2TimedRegistryInsert
+        0x00407540L,  // FlaggedObjectTimerRegistryInsert
+        0x00408ce0L,  // OperationGroupAppendObject
+        0x00429160L,  // TerrainCellPaletteResourceAtGridPosition
+        0x004295c0L,  // EntityMatchesCurrentSelectionOrOwner
+        0x004247d0L,  // ApplyDefaultTransformToFlaggedRenderObject
+        0x00433120L,  // TerrainCellFlag10000000SetOrClear
+        0x004332c0L,  // TerrainCellRecordByte3Get
+        0x00434530L,  // TerrainGridEntryResourcesReleaseAll
+        0x004382c0L,  // PooledRecordAllocateAndReset
+        0x00438310L,  // PooledRecordChunkAllocateAndLink
+        0x00438580L,  // EntityFlag80000000SetOrClear
+        0x0047a5c0L,  // FixedSizeRecordPoolGrow
+        0x0049d5e0L,  // DisplayModeDialogSetModeAndRefreshChoices
+        0x00424560L,  // AirSupplyAmountUpdate
+        0x00438f60L,  // DockDefinitionMatchesCell
+        0x004399c0L,  // EntityFlag400AndHealthThresholdCheck
+        0x00439cf0L,  // EntityStatsWordFlag10Test
+        0x00439d10L,  // EntityStatsWordFlag20Test
+        0x00439d30L,  // EntityStatsWordFlag40Test
+        0x0043baf0L,  // EntityFlagsMask107C33DEOr1C00203AnyTest
+        0x004436f0L,  // EntityType3Flag04000000Test
+        0x00499150L,  // CrtFileDescriptorCloseSlot
+        0x0049a050L,  // ExtendedFloat96BitShiftLeftOne
+        0x0049a080L,  // ExtendedFloat96BitShiftRightOne
+        0x0049a0b0L,  // CrtDecimalDigitSequenceToExtended96
+        0x00424810L,  // ApplyDefaultTransformToFlaggedRenderObjects
+        0x00435190L,  // SurfaceTypeConfiguredValueAtIndex
+        0x0046c030L,  // RenderResourceBindingInitialize
+        0x0046ead0L,  // AppendMapRowSpanToBuffer
+        0x0046eb30L,  // StartMapRowSpanBufferRecord
+        0x00479110L,  // ReadAngleSettingRadians
+        0x00479240L,  // ReleaseLinkedObjectList
+        0x00479a30L,  // RayPlaneIntersectionParameter
+        0x00479ab0L,  // PointAlongRay
+        0x00479c10L,  // SphereRayIntersectionDiscriminantPositive
+        0x00479da0L,  // Matrix4SetRotationY
+        0x00479df0L,  // Matrix4SetRotationZ
+        0x00479e70L,  // Matrix4SetIdentity
+        0x00479ea0L,  // Matrix4SetZero
+        0x00479eb0L,  // Matrix4Copy
+        0x00425cd0L,  // Global004de548Set
+        0x00425d50L,  // GlobalRenderRecordSetFromInput
+        0x004295a0L,  // ContextSelectedGlobalPointerGet
+        0x0042b500L,  // GlobalStateField84Get
+        0x004310f0L,  // TerrainCellFlag20ClearAndRefresh
+        0x00433be0L,  // CurrentLevelTerrainGridPick
+        0x00435550L,  // GlobalStateZeroTransitionDetect
+        0x004370b0L,  // RenderConfigSixFieldCopyOut
+        0x004370d0L,  // RenderConfigSixFieldCopyInOrClear
+        0x00437100L,  // GridRecordCountDifferenceSum
+        0x00437440L,  // GridRecordCountTablesClear
+        0x00437460L,  // GridRecordCountDifferenceGet
+        0x004374a0L,  // GridRecordCountGet
+        0x00437cc0L,  // EntityFlag40000ThresholdCompare
+        0x00438ed0L,  // EntityFlagsContainRequestedSingleBit
+        0x0049af60L,  // CrtWideEnvironmentStringListConvert
+        0x0049af20L,  // CrtCountedStringCompare
+        0x0049aea0L,  // CrtFileDescriptorFlag80SetOrClear
+        0x00426250L,  // UpdateRenderViewportState
+        0x00436831L,  // CameraSetTiltBounds
+        0x00436860L,  // CameraSetTilt
+        0x00436a18L,  // CameraSetDistanceBounds
+        0x00436953L,  // CameraSetBoundedRotationValue
+        0x00435a20L,  // GlobalStateLowByteClearAndRefresh
+        0x00471330L,  // InterpolatedZWithinBounds
+        0x00471a20L,  // ReadIndexedPairSlotDword
+        0x00471ce0L,  // EntityFlag100AndSharedEligibilityCheck
+        0x0046f110L,  // WeaponTypeGetRechargeTime
+        0x0046f140L,  // WeaponTypeGetDischargeRate
+        0x0046f170L,  // WeaponTypeGetRange
+        0x0046f1a0L,  // WeaponTypeGetWallDestroyTime
+        0x004013e0L,  // AdvisorPositionNameToIndex
+        0x004014c0L,  // AdvisorAnimationNameToIndex
+        0x00406730L,  // Vector2DistanceVariant
+        0x00406760L,  // Vector2SetLength
+        0x00466380L,  // SetExpansionEntityAtGridCell
+        0x004663f0L,  // CanSpawnExpansionEntityAtGridCell
+        0x00465e00L,  // AdvanceTimedVisualSegmentAndFade
+        0x004599c0L,  // LoadObjectHungerMeterImages
+        0x00459240L,  // PopEntityStateOverride
+        0x00475070L,  // SceneObjectCoordinateTransformInPlace
+        0x00475090L,  // SceneObjectCoordinateTransformToOutput
+        0x004756b0L,  // SceneObjectTransformMatrixSet
+        0x00473680L,  // SceneObjectWrappedPointerGet
+        0x0041f720L,  // CurrentLevelStateFlagsContainMask
+        0x0041f920L,  // LevelStateField9CAdd
+        0x0041f9a0L,  // LevelResourceBalanceAddAndSound
+        0x00436a4aL,  // CameraSetDistance
+        0x00436921L,  // CameraSetScalarBounds
+        0x00436b33L,  // CameraGetPositionWithTerrainHeight
+        0x00436b79L,  // CameraRotationGet
+        0x004395e0L,  // EntityDisplayNameLookup
+        0x00439950L,  // ToolNameStringResourcesLoad
+        0x00482040L,  // AnimationTrackApplyWrappedFrameOffset
+        0x00483810L,  // InputActionStateToggle
+        0x00487cb0L,  // AnimationTrackFindKeyframeAndFraction
+        0x00498fe0L,  // CrtFileDescriptorAllocate
+        0x004990a0L,  // CrtFileDescriptorSetHandle
+        0x0049add0L,  // BoundedWideStringLengthIncludingNull
+        0x00401840L,  // AdvisorActionPositionAndModeSet
+        0x00401890L,  // AdvisorActionPositionGet
+        0x004011c0L,  // AdvisorAnimationEndCleanup
+        0x00450700L,  // GridSurfaceWriteAtXY
+        0x00439930L,  // CopyTwoDwordPairToOutputs
+        0x00465160L,  // SoundObjectDurationGet
+        0x00476e50L,  // ScreenBoundedSurfaceResourceAllocate
+        0x00476fb0L,  // RendererObjectSetClipDistance
+        0x00401c30L,  // DisplayWidthGet
+        0x00401c40L,  // DisplayHeightGet
+        0x00402090L,  // PriorityEntryOrderValueSet
+        0x004020a0L,  // PriorityEntryStateSet
+        0x004020b0L,  // PriorityEntryStateGet
+        0x004021e0L,  // EngineMemoryAllocate
+        0x00402210L,  // EngineMemoryFree
+        0x0043c280L,  // EntityNestedFloatAddUnlessBlocked
+        0x0043c4c0L,  // EntityFinishState1A
+        0x0043c530L,  // EntityMarkAndFinishState1A
+        0x0046a420L,  // SelectedGlobalPointTransformAndReturnX
+        0x0046a470L,  // LinkedListPushAtGlobalHead
+        0x00469a90L,  // IndexedValueAppend
+        0x00469ac0L,  // IndexedRecordWordAtOffsetB0Get
+        0x00469af0L,  // IndexedRecordWordAtOffsetB4Get
+        0x00469b20L,  // IndexedRecordWordAtOffsetB8Get
+        0x00469b50L,  // EntityIndexedRecordWordAtOffsetBCGet
+        0x00469b80L,  // EntityIndexedRecordWordAtOffsetE0Get
+        0x00469be0L,  // EntityIndexedRecordWordAtOffsetF0Get
+        0x00469d00L,  // NestedFloatAtOffset9CGet
+        0x00469d40L,  // NestedFloatAtOffset6CGet
+        0x00469d50L,  // NestedFloatAtOffset74Get
+        0x00469d60L,  // NestedFloatAtOffset78Get
+        0x00469d70L,  // NestedFloatAtOffsetE8Get
+        0x00469d90L,  // NestedFloatAtOffset70Get
+        0x00469da0L,  // NestedFieldAddressAtOffsetA0Get
+        0x00469db0L,  // NestedFloatAtOffset7CGet
+        0x00469dc0L,  // NestedFloatAtOffset80Get
+        0x00469e00L,  // IndexedRecordFloatAtOffsetDCGet
+        0x00469e20L,  // NestedFloatAtOffsetDCGet
+        0x00469e40L,  // NestedWordAtOffsetACGet
+        0x00469ec0L,  // IndexedRecordWordAtOffset144Get
+        0x00469ee0L,  // IndexedRecordWordAtOffset148Get
+        0x00469f00L,  // IndexedRecordWordAtOffset14CGet
+        0x00469f60L,  // IndexedRecordWordAtOffsetD0Get
+        0x00469f90L,  // NestedWordAtOffsetC0OrC4Get
+        0x00469fe0L,  // NestedFloatAtOffset8CGet
+        0x00472940L,  // SceneRootObjectGet
+        0x00476120L,  // ScenePropertyPrimaryValueGet
+        0x00476140L,  // ScenePropertySecondaryValueGet
+        0x004761c0L,  // ScenePropertyFloatAt14Get
+        0x004762f0L,  // ScenePropertyOwnedBufferRelease
+        0x00476d10L,  // RenderResourcePairReleaseAndClear
+        0x00476f10L,  // RenderSurfaceGetValuePair80And84
+        0x00477220L,  // RenderResourceTrackAndRetain
+        0x004773e0L,  // RenderResourceTrackedReferencesRelease,
+        0x0041a9c0L,  // CaseInsensitiveStringTableIndexFind
+        0x0041f870L,  // GlobalObjectField8CIncrement
+        0x0041f880L,  // GlobalObjectField8CSubtract
+        0x0041f8a0L,  // GlobalObjectField98Add
+        0x0041f8c0L,  // GlobalObjectField98Clear
+        0x0041f980L,  // GlobalObjectField94Increment
+        0x0041f990L,  // GlobalObjectFieldA8Increment
+        0x0045a5b0L,  // UITextOutputPositionAndDraw
+        0x0045a620L,  // UITextOutputObjectRelease
+        0x00462960L,  // TaskTableContentsRelease
+        0x00465010L,  // ConfiguredVariantPropertySet
+        0x00465030L,  // ConfiguredVariantPropertyRead
+        0x0046db20L,  // AttachedEntitySlotObjectGet
+        0x00463ea0L,  // IndexedTextMetricsPairGet
+        0x00463ed0L,  // IndexedTextMetricsPairSet
+        0x00466210L,  // EntityFieldGridBufferRelease
+        0x00476220L,  // RenderInterfacePairUpdate
+        0x00476310L,  // ScenePropertyValueAt08Get
+        0x004026c0L,  // EntityDeferredWorkSchedule
+        0x00402e40L,  // CellCommandType13Issue
+        0x00402fb0L,  // CellCommandType11Issue
+        0x00403030L,  // CellCommandType3Issue
+        0x00403b40L,  // EntityPendingTaskFlagClear
+        0x00403b60L,  // EntityActivityRecordsRefresh
+        0x00435ef4L,  // RecordFields4And14Set
+        0x00435f0bL,  // RecordField14Get
+        0x004422a0L,  // SurfaceVectorNormalize
+        0x0044d250L,  // FloatNegateAbsoluteValue
+        0x0044e6b0L,  // IndexedFlagValueSetOne
+        0x00451c30L,  // LinkedRecordField4Clear
+        0x004532e0L,  // IndirectHandleResolveInPlace
+        0x00453900L,  // DeferredCallbackSet
+        0x00453910L,  // DeferredCallbackInvokeIfSet
+        0x0045a6e0L,  // IndexedPairSet
+        0x0045a700L,  // IndexedPairGet
+        0x0045b900L,  // IntegerPairDivideToFloatPair
+        0x00462ab0L,  // RecordField18Set
+        0x00462ac0L,  // RecordFlags24Or
+        0x00463730L,  // IndexedFloatPairSet
+        0x00465ac0L,  // ResourceEnableSet
+        0x0046c0f0L,  // RecordResourceRelease
+        0x0046ced0L,  // PairedResourceStateSet
+        0x0046cfc0L,  // SixResourceSlotsSetState
+        0x0047d3f0L,  // BitCount32
+        0x00499690L,  // PointerRangeIsReadable
+        0x004996b0L,  // PointerRangeIsWritable
+        0x004996d0L,  // FunctionPointerIsExecutable
+        0x0047cdd0L,  // SurfaceDescriptionGet
+        0x0047c1c0L,  // DirectDrawEnumerateAndStoreCallbackResult
+        0x00479510L,  // D3DRMVectorRotate
+        0x00478310L,  // WindowRectAdjustForWindowedMode
+        0x00406c90L,  // AnimationObjectVisibilitySet
+        0x004086a0L,  // AnimationObjectVisibilityGet
+        0x00406d10L,  // AnimationObjectTimeUpdate
+        0x00406da0L,  // AnimationObjectTimeGet
+        0x00406dc0L,  // AnimationObjectTransformSet
+        0x00406e30L,  // AnimationObjectHandleGet
+        0x00407090L,  // AnimationObjectValueGet
+        0x00407360L,  // GlobalTaskRefreshFlagGet
+        0x004090a0L,  // TerrainCellPredicateCheck
+        0x0040e460L,  // GridCellRecordPresentCheck
+        0x0040f7b0L,  // OptionalResourceDestroy
+        0x00419e60L,  // PendingRecordReleaseIfPresent
+        0x00419f10L,  // PendingRecordReleaseAll
+        0x0041b470L,  // CategoryValueIsNeitherZeroNorFifteen
+        0x00409d40L,  // LevelStateStoredValueSet
+        0x0040ab10L,  // GlobalModeZeroInputSet
+        0x0040e7e0L,  // GlobalFlagBit0Clear
+        0x0040e910L,  // GlobalValueClearIfEqual
+        0x0046a270L,  // EntityCollisionRadiusGet
+        0x0046cf80L,  // EntityTypeMaskGet
+        0x0046d330L,  // EntityTypeFlagGetBit1
+        0x0046d9e0L,  // SceneObjectResourceGet
+        0x00462830L,  // GlobalFloatAt00554adcAddOne
+        0x00462850L,  // GlobalFloatAt00554efcAddOne
+        0x00462870L,  // GlobalCounterAt00555324Increment
+        0x00462880L,  // GlobalCounterAt00555328Increment
+        0x00462890L,  // GlobalCounterAt0055532cIncrement
+        0x00479e40L,  // MatrixIdentityAndTranslationSet
+        0x0047b330L,  // NestedRecordListRemoveMatchingKey
+        0x0047c170L,  // WindowStateInitialize
+        0x0047d490L,  // SurfacePixelFormatQuery
+        0x004792c0L,  // GlobalRecordListPushHead
+        0x0047b0d0L,  // IndexedRecordStride134WordGet
+        0x0047d410L,  // RendererRecordTableInitialize
+        0x0047ff30L,  // EngineHeapAllocate
+        0x0047ff40L,  // EngineHeapFree
+        0x00402800L,  // EntityCommand14BatchIssue
+        0x00402670L,  // EntityCommand15ValidatedRecordQueue
+        0x00409cd0L,  // CellCardinalNeighborApply
+        0x00402600L,  // EntityRecordArrayApplyZeroState
+        0x00433e30L,  // GridCellEntityEligibilityCheck
+        0x00437050L,  // EntityPoolResourcesRelease
+        0x00437300L,  // ProcessQueuedGridAnimations
+        0x004378e0L,  // GridObjectRecordsRelease
+        0x004383a0L,  // GlobalAnimationStateSet
+        0x0047b550L,  // SoundBufferVolumeSetMinus300
+        0x0047a800L,  // DirectSoundObjectsShutdown
+        0x0047a540L,  // ObjectFieldBE4DwordGet
+        0x004772b0L,  // RenderInterfaceTransformPoint
+        0x00475e10L,  // CallbackRecordSetFlag10AndRefresh
+        0x00476f50L,  // ResourceInterfaceCallSlot48
+        0x00476fd0L,  // ResourceInterfaceCallSlot8C
+        0x00476ff0L,  // ResourceInterfaceCallSlot90
+        0x00477250L,  // ResourceInterfaceCallSlot40AndClearField14
+        0x00477270L,  // ResourceInterfaceCallSlot88
+        0x00401c20L,  // GlobalFlagBit0IsSet
+        0x004020c0L,  // HandleArrayReleaseAndReset
+        0x00402a40L,  // CoordinatePairCallbackDispatch
+        0x00402aa0L,  // ArgumentCallbackDispatch
+        0x00402b30L,  // CoordinateCallbackDispatch
+        0x00402b60L,  // CoordinateCallbackDispatchByMode
+        0x00402ec0L,  // EntityConditionalTaskSchedule
+        0x004030b0L,  // CoordinatePairEventQueue
+        0x00403190L,  // ObjectEventType2Queue
+        0x004033c0L,  // ObjectAttachedRecordAllocate
+        0x0046b4d0L,  // CaseInsensitiveNameTableLookup
+        0x00463c00L,  // RectContainsPointByConvertedCoords
+        0x00463c90L,  // RectContainsPointFromObjectBounds
+        0x0046c0b0L,  // CopyFourFieldsAndConvertSecond
+        0x0043c200L,  // EntityStatePairPredicate
+        0x00442480L,  // VectorDirectionAngleRadiansGet
+        0x00443670L,  // TryRandomEntityActionFromCodeRange
+        0x00443710L,  // AdjacentPositionCandidateFind
+        0x004440a0L,  // LinkedEntityFlagAndCommandUpdate
+        0x004471b0L,  // TryCreateLinkedEntityAtPosition
+        0x004502c0L,  // CoordinatePairWithinBounds
+        0x0045a370L,  // CaseInsensitiveStringTableLookup
+        0x0045a410L,  // CaseInsensitiveIndexedStringLookup
+        0x0045b8a0L,  // PointDistanceWithinRadius
+        0x0045ab30L,  // RequestRecordSetFlag4ClearFlag8
+        0x0045ab60L,  // RequestRecordSetFlag2ClearFlag8
+        0x0045ab90L,  // RequestRecordFlag8IsSet
+        0x00451fd0L,  // CaseInsensitiveNameTableLookupAtOffset8
+        0x0047e7e0L,  // BitCount32ByPosition
+        0x0047f0d0L,  // CursorSetClientPosition
+        0x0047f6a0L,  // SaveDirectoryEnsureExists
+        0x00406360L,  // EntityRecordAttachAndRelink
+        0x004065d0L,  // GlobalDwordGet
+        0x00406c00L,  // RendererObjectUpdateFromRecordField64
+        0x00406c30L,  // RendererObjectUpdateFromRecordField68
+        0x00406c60L,  // RendererObjectUpdateFromRecordField6c
+        0x00406cb0L,  // RendererRecordClone
+        0x00406d30L,  // RendererObjectTimingValueAdjustByCount
+        0x00406f50L,  // RendererObjectSubobjectDispatch
+        0x00406fb0L,  // RendererCachedHandle40GetOrCreate
+        0x00406fe0L,  // RendererCachedHandle48GetOrCreate
+        0x00407010L,  // RendererCachedHandle50GetOrCreate
+        0x00407040L,  // RendererCachedHandle4cIsNotOne
+        0x00401bf0L,  // GlobalField505f88Get
+        0x00401210L,  // AdvisorSceneVisualStateInitialize
+        0x004033f0L,  // CoordinatePairTaskRecordQueue
+        0x004034a0L,  // ScalarTaskRecordQueue
+        0x00403520L,  // TaskRecordKind10Queue
+        0x004038c0L,  // TimedTaskRecordInitializeAndLink
+        0x004039a0L,  // TaskRecordCreateAndScanGrid
+        0x004039d0L,  // TaskRecordKind11TimedQueue
+        0x00403ef0L,  // PendingRecordCallbackDispatch
+        0x00403f60L,  // TaskRecordKind14RemoveIfHead
+        0x0040fe40L,  // PointerStackPush
+        0x0040fe60L,  // PointerStackPop
+        0x0040fe90L,  // PointerStackForEach
+        0x0040fcc0L,  // VectorScaleComponentsInPlace
+        0x00408360L,  // TaskField84GetAndField88Out
+        0x00408970L,  // TaskFlagBitQuery
+        0x0040f5e0L,  // GlobalConfigValueSet
+        0x0046a330L,  // EntityRecordFlag400ToggleAndRefresh
+        0x0046c3d0L,  // RecordFieldD8EqualsOne
+        0x0046c340L,  // IndexedRecordListRebuildForValue
+        0x0046cf40L,  // RecordFlagBitTest
+        0x0046cf90L,  // RecordIndexedEntriesRebuildAndRefresh
+        0x0046d260L,  // SceneResourceSlotsRebuild
+        0x0046d2c0L,  // SceneResourceVisibilitySet
+        0x0046d9f0L,  // SceneResourceNamedEntryResolveWithFallback
+        0x0046da90L,  // SceneResourceCachedSlotB4Get
+        0x0046dac0L,  // SceneResourceCachedSlotB8Get
+        0x0046daf0L,  // SceneResourceCachedSlotC0Get
+        0x0046d350L,  // SceneResourceDrawAtOrigin
+        0x0046e330L,  // GridSurfaceEntryReset
+        0x0043c650L,  // EntityCapacityOrStatePredicate
+        0x0043b6c0L,  // ClippedRectangleCallbackDispatch
+        0x0043a9f0L,  // EntityPairInteractionGate
+        0x0046e1c0L,  // GlobalEntityRenderParameterModeSet
+        0x0046a000L,  // Entity334FloatField90Get
+        0x0046a020L,  // Entity334FloatField98Get
+        0x0046a040L,  // Entity334FloatField94Get
+        0x0046a080L,  // Entity334FloatFieldF4Get
+        0x0046a170L,  // Entity334FloatField130Get
+        0x0046a190L,  // Entity334FloatField134Get
+        0x0046a1b0L,  // Entity334FloatField120Get
+        0x0046a1d0L,  // Entity334FloatField128Get
+        0x0046a1f0L,  // Entity334FloatField124Get
+        0x0046a210L,  // Entity334WordField13CGet
+        0x0046a230L,  // Entity334FloatField12CGet
+        0x0046a250L,  // Entity334FloatField138Get
+        0x0046a290L,  // Entity334FloatField114Get
+        0x0046a2b0L,  // Entity334FloatField118Get
+        0x0046a2d0L,  // Entity334FloatField11CGet
+        0x0046a2f0L,  // Entity334FloatField110Get
+        0x0046a310L,  // Entity334FloatField10CGet
+        0x0046a0c0L,  // MappedIndexedRecordWordAtFCGet
+        0x0046a0f0L,  // MappedIndexedRecordWordAt100Get
+        0x0047a580L,  // FixedSizeRecordPoolAcquire
+        0x0047b2e0L,  // NestedRecordListRemoveByKeyRecursive
+        0x0047e480L,  // TwoInterfaceFieldsReleaseAndReset
+        0x004034e0L,  // TaskPairRecordEnqueue
+        0x00403650L,  // EntityTaskBatchAppend
+        0x004040a0L,  // EntityTaskQueueFlush
+        0x00403af0L,  // EntityTaskStateUpdateAfterCleanup
+        0x00435ebbL,  // ScreenEffectRecordSet
+        0x0045bf70L,  // UIEntryBoundsGet
+        0x0045d470L,  // UIListEntriesSwap
+        0x0045e400L,  // EntityTypeAndStateFlagPredicate
+        0x00462da0L,  // IndexedSurfaceResourceAllocate
+        0x004634f0L,  // IndexedSurfaceEntryHideAndRecord
+        0x00463540L,  // IndexedSurfaceEntriesRestore
+        0x004636b0L,  // InfoPanelStringEntriesInitialize
+        0x00464720L,  // SurfaceVisibilitySet
+        0x00464e80L,  // DeferredSoundPlayExpire
+        0x00464ec0L,  // DeferredSoundTimerSetIfIdle
+        0x0046d1c0L,  // AnimationDurationForLoopCount
+        0x0046f1d0L,  // EntityIndexedFloatLookupWithMinusOneFallback
+        0x0047e0c0L,  // FixedSizeRecordPoolGrow
+        0x004807f0L,  // RenderResourceInstancePoolGrow
+        0x00488730L,  // CaseInsensitivePairTableFind
+        0x00488790L,  // CaseInsensitivePairTableAppend
+        0x0048b4a0L,  // BufferedCharStreamReadToString
+            0x00403a10L,  // TaskCallbackDispatch
+        0x0040c1b0L,  // IndexedResourceHandleSetCreate
+        0x0040c720L,  // GlobalResourceHandleLoadAndEnable
+        0x0040c920L,  // ResourceHandleLoadWithFallback
+        0x00412190L,  // MenuAudioTickIntervalReached
+        0x00413f30L,  // FilenameExtensionClassify
+        0x00417f20L,  // OptionsContextSixFieldSet
+        0x004180c0L,  // OptionsContextCopyAndReplaceResource
+        0x004196f0L,  // IncidentMessageQueueAppend
+        0x004197b0L,  // IncidentMessageQueueRemoveAt
+        0x00419a80L,  // IncidentMessageNodeCreate
+        0x00419ae0L,  // IncidentMessageFlagSet
+        0x00419da0L,  // IncidentMessagePanelRefreshIfActive
+        0x0041a250L,  // ScrollOffsetFromCursorUpdate
+        0x0041a290L,  // ScreenRightEdgeCacheRefresh
+        0x0041a2f0L,  // IncidentMessageStateGet
+        0x0041ba90L,  // SimulationGlobalWordSet
+        0x00436ac9L,  // RendererNodeRelativePositionSet
+        0x00435e35L,  // ModelTransformCopyToSceneNode
+        0x0045d4f0L,  // ConfigEntryEnabledToggleAtIndex
+        0x00462ed0L,  // GraphicsOverlayResourcesRelease
+        0x004634b0L,  // GraphicsOverlayVisibilitySet
+        0x00465970L,  // ObjectCallbackListDisposeAll
+        0x004661c0L,  // GridCellRecordBufferAllocate
+        0x0046c130L,  // SceneObjectSetAnimationWithFallback
+        0x0046d1a0L,  // SceneObjectAttachedResourceRelease
+        0x0046db60L,  // ObjectRecordField11CGet
+        0x00480870L,  // TaskCallbackRecordAllocateAndInitialize
+        0x00482470L,  // IndexedGeometryDataCopyToOutput
+        0x0047e4c0L,  // AviPlaybackStateInitialize
+        0x0047ed70L,  // InterfaceInvokeOneIfNonNull
+        0x00483140L,  // IndexedRecordInterfaceRelease
+        0x00483170L,  // IndexedRecordTransformInitialize
+        0x00483240L,  // IndexedRecordTransformCopyIn
+        0x00483400L,  // IndexedRecordDataAddressGet
+        0x00483540L,  // Matrix4x4IdentityInitialize
+        0x00483580L,  // RenderInterfaceCapabilityCheck
+        0x004078c0L,  // EntityCursorTargetStepResolveAndTimerAdvance
+        0x0040e8d0L,  // ScreenSpaceEffectDispatchIfEnabled
+        0x0040b850L,  // PackedGridCellValueGet
+        0x00406400L,  // PendingRecordCopyToEntityAndFlag
+        0x004063e0L,  // PendingRecordEntityReferenceClear
+        0x00408620L,  // SceneObjectRecordCloneRetainHandles
+        0x00408670L,  // SceneObjectPairApplyMode
+        0x004086c0L,  // SceneObjectPairSetRenderParameters
+        0x00408710L,  // SceneObjectPairSetCallbackScalar
+        0x00408770L,  // SceneObjectIndexedHandleGetOrCreate
+        0x004087b0L,  // SceneObjectPrimaryHandleGetOrCreate
+        0x004087e0L,  // SceneObjectSecondaryHandleGetOrCreate
+        0x00408810L,  // SceneObjectIndexedSecondaryHandleGetOrCreate
+        0x00408850L,  // SceneObjectFlagsGet
+        0x00408b60L,  // PointProjectOntoLine2D
+        0x00406980L,  // SceneObjectModeIsOne
+        0x004082e0L,  // SceneObjectScalarAdjustByDirection
+        0x00439cd0L,  // EntityAnimationStateSet
+        0x0043a8f0L,  // SimulationUpdateCounterAdd
+        0x0043a910L,  // SimulationModeCounterAdd
+        0x0043a9e0L,  // EntityQueueForRockfallProcessingIfEligible
+        0x0044f220L,  // SceneObjectResourceHandleSet
+        0x004525e0L,  // SelectionRecordArrayGet
+        0x004525f0L,  // SelectionRecordCountGet
+        0x00452600L,  // SelectionRecordCountReset
+        0x0046c110L,  // AnimationResourceAdvanceTime
+        0x0046cf20L,  // SceneEntityAnimationTracksSetEnabled
+        0x00466230L,  // GridCellRecordBufferReplace
+        0x00480780L,  // ZeroResultIsSuccess
+        0x004807a0L,  // FixedSizePoolRecordAcquire
+        0x004807d0L,  // FixedSizePoolRecordRelease
+        0x004821a0L,  // IndexedRecordEntryRead
+        0x00482350L,  // IndexedRecordField64Set
+        0x00482780L,  // IndexedRecordFlag6CBit0Get
+        0x004827a0L,  // IndexedRecordFlag6CBit0Set
+        0x004827d0L,  // RecordFlag2CBit0Set
+        0x00482cb0L,  // RendererCommandModeAndPairSend
+        0x00482ce0L,  // RendererCommandNodePrepend
+        0x004850c0L,  // IndexedWordTableLookup
+        0x004851b0L,  // FloatPairAtOffset4SetFromInts
+        0x004851d0L,  // FloatPairAtOffsetCSetFromUInts
+        0x004891d0L,  // MmioHandleAndGlobalBufferRelease
+        0x00489d70L,  // ObjectField38Release
+        0x0048f970L,  // FileTimeToLocalDateTimeStamp
+        0x0048fb50L,  // DriveLetterRootTypeAvailable
+        0x0048e030L,  // ByteRangeSwap
+        0x004976d0L,  // DbcsAwareBoundedStringCopy
+        0x0048be00L,  // FixedRecordSlotAllocate
+        0x0048bfc0L,  // FixedRecordSlotResourceRelease
+        0x0048bff0L,  // FixedRecordSlotResourceGet
+        0x00409350L,  // PathRecordAllocateAndLink
+        0x00408bf0L,  // Point2DProjectOntoDirection
+        0x0040a5c0L,  // QuadMeshRenderRecordPoolSlotAllocate
+        0x0040aae0L,  // EntityQuadMeshRenderRecordAllowed
+        0x00409f20L,  // EntityPlacementCommandsBuildOnce
+        0x0040b410L,  // TerrainCellResourceGridDispose
+        0x0040b810L,  // CellVisualChannelTableResourcesClear
+        0x0040b7d0L,  // CellVisualChannelTableDispose
+        0x0040be10L,  // SceneLightCreateAtPosition
+        0x0040c4d0L,  // SceneLightPoolExpireSweep
+        0x0040c520L,  // SceneLightSecondaryPoolExpireSweep
+        0x0040c6c0L,  // RockFallStyleSceneResourcesRelease
+        0x0040c690L,  // SceneResourceSingletonPoolRelease
+        0x0040d0a0L,  // TerrainEntityCellRecordRemove
+        0x0040d100L,  // TerrainCellEntityRecordUnlink
+        0x0040ee00L,  // CellCoordinateTimestampRemember
+        0x0040efb0L,  // CellCoordinateTimestampExists
+        0x0040fb00L,  // MatrixRotationComposeXYZ
+        0x00410560L,  // ResourceNameCacheGetOrLoad
+        0x00410aa0L,  // ResourceHandleListAppend
+        0x00410ae0L,  // ResourceHandleListDispose
+        0x00411320L,  // TextLayoutOffsetForCentering
+        0x00411840L,  // FrontendProgressValueChanged
+        0x00413b50L,  // InterfaceResourceHandlesRelease
+        0x00418fc0L,  // UiModeTransitionRequest
+        0x00419100L,  // UiModeResourcePositionsApply
+        0x00419200L,  // UiModeResourceBit40SetClear
+        0x004191f0L,  // UiModeResourceBit40Get
+        0x0041b1b0L,  // InterfaceBackButtonConfigLoad
+        0x0041b270L,  // InterfaceButtonImagesLoad
+        0x0044f810L,  // GridCoordinateClampAndStore
+        0x00450730L,  // TerrainCellChangeQueueAppend
+        0x00450780L,  // TerrainCellChangeQueueFlush
+        0x00452650L,  // ArrayFindValueIndex
+        0x00456c30L,  // ObjectPoolListHeadGet
+        0x00456c60L,  // ObjectPoolListsFreeAll
+        0x004589a0L,  // GlobalOptionLowBitsEnabled
+        0x0045b930L,  // FloatPairToIntegerPair
+        0x00465a90L,  // RegisteredObjectListApplyCallback
+        0x0046db70L,  // SceneObjectResourceRelease
+        0x0044e860L,  // GridCellSetPayloadIndex
+        0x004755b0L,  // SceneFrameScaleSet
+        0x0047e3e0L,  // InterfaceMethodResultRecordInitialize
+        0x004893a0L,  // CdAudioStopAndClose
+        0x00487fc0L,  // KeyframeTimeSegmentAndFractionGet
+        0x00485e30L,  // NamedOptionIndexFindCaseInsensitive
+        0x00488b90L,  // CdAudioPlaybackAvailable
+        0x0048c180L,  // OwnedResourceTreeRelease
+        0x00484ba0L,  // PackedTripletTableToWordBuild
+        0x00410020L,  // SceneNodePositionSet
+        0x00419030L,  // HelpWindowButtonFeedbackUpdate
+        0x00419780L,  // IndexedLinkedListEntryGet
+        0x00440130L,  // EntityUpdateAndUnregisterAtTile
+        0x00440bf0L,  // ObjectListFieldAssignAll
+        0x00447780L,  // EntityClearLinkedObjectState
+        0x00448800L,  // EntityMoveToCellCoordinates
+        0x00450060L,  // GridCellReadSurfaceVector
+        0x00450220L,  // GridCellReadSurfaceValues
+        0x004524b0L,  // SelectionObjectDetach
+        0x0045bf20L,  // CameraZoomStepAdjust
+        0x0045b850L,  // UiOverlayCreateConfiguredElement
+        0x0045c580L,  // UiOverlayAnimationAdvance
+        0x0045c5f0L,  // UiOverlayAnimationApply
+        0x0045da90L,  // UiRenderRecordCreate
+        0x0045daf0L,  // UiRenderRecordFree
+        0x00460290L,  // EntityType4IndexListBuild
+        0x00460310L,  // EntityType4IndexListAppend
+        0x0046f380L,  // EntityApplyImpulseAndDirection
+        0x0043c2b0L,  // PeriodicTimer25Advance
+        0x00439c80L,  // EntityIndexedFlagSetAndRefresh
+        0x004565f0L,  // EngineModeSet
+        0x00474ae0L,  // TerrainDetailEntryGetAtIndex
+        0x00474e30L,  // TerrainSurfacePropertySet
+        0x00475880L,  // SceneObjectOwnerLinkEnsure
+        0x00476dc0L,  // RenderTargetViewportScaleSet
+        0x00476f70L,  // SceneObjectQueryValueIfReady
+        0x0047ce20L,  // ProjectionOverlayDrawSubmit
+        0x00483b00L,  // WorldObjectRenderStateApply
+        0x00487990L,  // UIRenderTreeLayoutAndRelease
+        0x004880d0L,  // UIRenderElementChildrenEnumerate
+        0x00488900L,  // UIRenderTreeEntryProcess
+        0x004889a0L,  // UIRenderEntrySubrecordApply
+        0x00489750L,  // SceneObjectOwnerLinkRelease
+        0x00408e10L,  // CountMatchingCoordinatesInList
+        0x00408e50L,  // CreateRepeatedResourceInstances
+        0x00409110L,  // ReleaseSelectionGroupResources
+        0x00409150L,  // ClearSelectionGroup
+        0x00409940L,  // RefreshEightNeighborCells
+        0x004099d0L,  // ReleaseAllGroupRecords
+        0x0040aea0L,  // EnsureCellEntriesLoaded
+        0x0040af40L,  // CellResourceEntryMatches
+        0x0040b250L,  // CellFlag4IsSet
+        0x0040b2a0L,  // CellFlag100Set
+        0x0040b2e0L,  // CellFlag100IsSet
+        0x0040bd60L,  // BuildPerspectiveProjectionMatrix
+        0x0040c570L,  // ReadCellTablePair
+        0x0040c8a0L,  // GetResourceSlotAddressByIndex
+        0x0040d170L,  // CreateCellObjectIfAvailable
+        0x0040d1f0L,  // DeleteCellObject
+        0x0040dd90L,  // ComputeWorldPositionDelta
+        0x004114f0L,  // HasType6ItemAtIndex
+        0x004119d0L,  // HasActiveResource
+        0x00417fe0L,  // CurrentSelectionContextGet
+        0x00417ff0L,  // CurrentSelectionContextSet
+        0x00418120L,  // IsAverageValueAbove99
+        0x00418f80L,  // SelectionModeSetByIndex
+        0x00419450L,  // SelectionFlag10SetClear
+        0x004194f0L,  // IndexedSelectionFlag20000SetClear
+        0x0041c9f0L,  // InputEntryFlag8SetClear
+        0x0041ca20L,  // PlayerInputFlag8SetClear
+        0x0041ca60L,  // InputEntryFlag8Get
+        0x0041ca70L,  // PlayerInputFlag8Get
+        0x0041cfb0L,  // CancelActionForMatchingCoordinates
+        0x0041e990L,  // CellActionPermissionGet
+        0x0041f230L,  // QueueActionRequestType2
+        0x0041f270L,  // QueueActionRequestValue
+        0x0041f2b0L,  // QueueActionRequestFlag100000
+        0x0041f2f0L,  // QueueActionRequestPair
+        0x0041f340L,  // QueueActionRequestIndex
+        0x0041f3c0L,  // QueueCallbackRequest390
+        0x0041f400L,  // QueueCallbackRequest3E0
+        0x0041f970L,  // RuntimeFlag40000000Get
+        0x0045d370L,  // RegionBoundsSet
+        0x0044a390L,  // Type11CellCoordinateAppend
+        0x0044c710L,  // SceneObjectTransformStateInit
+        0x0044c790L,  // ConfiguredSceneTransformEnable
+        0x0046aa90L,  // MessageOverlayStateInit
+        0x0047e710L,  // DirectDrawSurfaceDescriptorInitialize
+        0x00485fb0L,  // ViewportRectangleGet
+        0x00488bb0L,  // CdAudioTrackStart
+        0x00408b00L,  // PointToPolylineMinimumSegmentDistance
+        0x00408d70L,  // TerrainDescriptorCoordinateCountLimitCheck
+        0x0040a3d0L,  // ScreenEffectFlagsClearAndRelease
+        0x0040ab30L,  // GridRecordFlagMaskClear
+        0x0040f7d0L,  // CallbackStateRecordCreate
+        0x0040f850L,  // CallbackStateListDispose
+        0x0040fdb0L,  // ThreeValueRecordCopyAndMarkReady
+        0x00410280L,  // CallbackOperationRunAndReturnStatus
+        0x00410b60L,  // ThreeWordRecordAllocateAndInitialize
+        0x00410b90L,  // BoundedFloatRecordCreate
+        0x00417280L,  // RegistryValueLookupWithLock
+        0x004172d0L,  // RegistryValueIndexLookupOrNotFound
+        0x004189d0L,  // RenderTransitionCleanupIfActive
+        0x00438720L,  // EntityAvailableResourceSpend
+        0x0043bbc0L,  // EntityDetachCarriedObjectAndResetState
+        0x004437f0L,  // EntityDispatchEvent31ForPendingFlag
+        0x00444620L,  // EntityEnterEvent21StateOnce
+        0x00447730L,  // EntityProgressAdvanceBy25
+        0x00447b00L,  // EntityDispatchEvent5AndSetFlag
+        0x004487c0L,  // EntityClearNestedState8Fields
+        0x0044d9a0L,  // VectorWithinAxisTolerance
+        0x00451bc0L,  // ResourceListUpdateMatchingKey
+        0x00459530L,  // RenderThreePassUpdate
+        0x0045abb0L,  // InputDeviceSetFlag20
+        0x00463e40L,  // FloatRoundToNearestInt
+        0x00466750L,  // GridCellInvalidateAndClearFlags
+        0x00496530L,  // CrtCodePageLocaleIdLookup
+        0x00496590L,  // CrtCtypeTablesReset
+        0x00497040L,  // CrtStreamReadByte
+        0x00497570L,  // CrtStreamBufferFlushAndRelease
+        0x00499710L,  // WideStringLength
+        0x00499730L,  // CrtRuntimeErrorMessageBoxDisplay
+        0x00498f50L,  // CrtStreamUngetByte
+        0x004965c0L,  // CrtAnsiCodePageTablesInit
+        0x004975d0L,  // CrtCharacterToLowerLocale
+        0x00498ae0L,  // CrtStreamBufferAllocate
+        0x0040ce30L,  // SelectionMarkerResourcesRelease
+        0x0041c7b0L,  // InputActionStateUpdate
+        0x0041c8f0L,  // InputActionPressedGet
+        0x0041c950L,  // InputBindingPressedGet
+        0x0041caf0L,  // InputBindingValueGet
+        0x0041cb90L,  // InputBindingDefaultValueGet
+        0x0041f100L,  // ObjectInteractionFlagsAllow
+        0x0041cea0L,  // SelectionObjectCommandUpdate
+        0x0041cf20L,  // SelectionTargetCommandUpdate
+        0x0041cf80L,  // SelectionMode7CancelAtPoint
+        0x0041cfe0L,  // SelectionMode5CancelAtPoint
+        0x0043a7c0L,  // EntityActionKindSupported
+        0x0043a850L,  // EntityActionRecordConsumeAndCleanup
+        0x004351a0L,  // ActionCodeToSoundAlias
+        0x00436ae9L,  // SelectionRecordPointGet
+        0x00436b0bL,  // SelectionRecordPointSet
+        0x004388b0L,  // EntityActionKindPrerequisiteCheck
+        0x00439e40L,  // EntityRecordFlag20Query
+        0x0043b320L,  // EntityIterationCallbackGuard
+        0x00491770L,  // CRTHeapReleaseUnusedPages
+        0x00491840L,  // CRTHeapLocateAllocationPage
+        0x004850e0L,  // ObjectField10Get
+        0x00485160L,  // TextOutputField82CBit2SetClear
+        0x0040d4f0L,  // TerrainCellActivationTry
+        0x0040cea0L,  // TerrainCellAndNeighborsUpdate
+        0x0040c750L,  // TerrainPointObjectCreate
+        0x0040c830L,  // TerrainPointObjectsRemoveMatching
+        0x0040cc40L,  // TerrainMarkerSetsClear
+        0x0040d030L,  // TerrainRecordPoolChunkAllocate
+        0x0040e700L,  // TerrainChoiceResourceSelect
+        0x0041a850L,  // ResourceHandleSetRelease
+        0x0041b9c0L,  // SelectionEntityCodeResolve
+        0x0041cab0L,  // IndexedEntityValueGet
+        0x0041cce0L,  // SelectionCoordinatesSet
+        0x0041e9d0L,  // SelectionRegionParametersSet
+        0x0041ec30L,  // EntityPairCountRefresh
+        0x0044cff0L,  // UiElementRgbColorSetClamped
+        0x0044dd40L,  // EngineLoaderProfileEntriesRelease
+        0x0044e0a0L,  // GlobalResourceHandleRelease
+        0x0045d550L,  // UiCursorMoveToChoiceEntry
+        0x0045d640L,  // UiCursorMoveToElementCenter
+        0x00494d10L,  // CrtFileDescriptorClose
+        0x00494df0L,  // CrtOwnedStreamBufferRelease
+        0x00498f00L,  // CrtCharacterClassFlag8Check
+        0x00497f40L,  // DoubleToExtended80
+        0x0048e870L,  // DoubleIsFinite
+        0x00475830L,  // SceneObjectFirstNonKind6ChildGet
+        0x00498b40L,  // CrtFileDescriptorFlag40Get
+        0x00495db0L,  // CrtCharacterClassFlagTest
+        0x00493150L,  // X87RoundToIntegral
+        0x00406df0L,  // RenderNodeSetPositionFromCallback
+        0x00408930L,  // ConstantZeroFloatGet
+        0x00409a90L,  // WorldObjectCreateWithTransform
+        0x0040af90L,  // TerrainCellRecordGet
+        0x0040bde0L,  // SceneMarkerCreateAtObjectPosition
+        0x0040beb0L,  // SceneMarkerCreateAtPositionOrObject
+        0x0040fe00L,  // SceneObjectListUpdateTransforms
+        0x0040ff50L,  // SceneObjectListApplyFloatCallback
+        0x00410070L,  // SceneObjectListApplyPositionCallback
+        0x004100b0L,  // SceneObjectListApplySecondPositionCallback
+        0x00418190L,  // SelectionModeStateSet
+        0x004181a0L,  // SelectionStateFlagClearBit0
+        0x00419150L,  // SelectionStateHandleGet
+        0x0041a990L,  // ObjectiveSelectionStateReset
+        0x0041b300L,  // MenuSelectionResourceUpdate
+        0x0041cc80L,  // CursorTileSelectionUpdateByType
+        0x0041d010L,  // SelectionCancelIfCursorHitsObject
+        0x004493e0L,  // SceneObjectHasTaskType4_5_7
+        0x00449cd0L,  // SceneObjectStateHandleApplyValue
+        0x0044b7a0L,  // MatrixApplyRotationAboutZWithOffset
+        0x00441ea0L,  // EntityType5FinalizeIfAllowed
+        0x00490400L,  // CrtScientificFloatFormatAppend
+        0x00490540L,  // CrtFixedFloatFractionFormat
+        0x00490640L,  // CrtFloatDecimalFormatPrepare
+        0x00495090L,  // CxxExceptionHandlerDispatch
+        0x004889d0L,  // ResourceTreeCallbackReferenceChainRelease
+        0x00489520L,  // ResourceTreeCallbackContextCreateForEnumerator
+        0x004895c0L,  // ResourceTreeCallbackContextCreateForResource
+        0x00404ed0L,  // CheckObjectCandidate
+        0x00404f10L,  // FindMatchingObjectRecord
+        0x00407370L,  // ResetObjectAuxiliaryState
+        0x00407510L,  // SetType2ObjectRecordValue
+        0x00409450L,  // FindNearbyPlacementCandidate
+        0x0040bdc0L,  // SetTimeoutTo10000
+        0x0040bfc0L,  // RockFallStyleTableSet
+        0x0040cf50L,  // RegisterObjectAtGridPosition
+        0x0040fde0L,  // SetVectorAndNotifyListeners
+        0x0040fec0L,  // SetGlobalScalarToOne
+        0x0040ff70L,  // ObjectVector3Set
+        0x0040ffe0L,  // GlobalVectorSetAndNotifyListeners
+        0x00410b30L,  // GlobalPointerGet_004c76ab24
+        0x00410b40L,  // GlobalPointerGet_004c76ab28
+        0x00410b50L,  // GlobalPointerGet_004c76ab3c
+        0x00417430L,  // FloatToLong
+        0x00418000L,  // ShowLevelOverlayForCurrentSelection
+        0x00419b50L,  // RemainingTimerDurationGet
+        0x0041b9b0L,  // GlobalStateGet_004ddd1c
+        0x0041ee60L,  // InteractionTimerResetAndFlagClear
+        0x0041f840L,  // RemoveObjectIfClass6
+        0x0041f8e0L,  // NoOpCallback
+        0x00438670L,  // EntityAtGridPositionLookup
+        0x00439790L,  // LocalizedObjectTheNameGet
+        0x00439860L,  // LocalizedObjectNameGet
+        0x00443840L,  // EntityRouteCellCandidateAccept
+        0x00477f70L,  // RenderFeatureFlagsGet
+        0x0047ec60L,  // AviPlaybackFrameIndexGet
+        0x004802b0L,  // LoaderProgressCallbackSet
+        0x00482210L,  // PointerValueGet
+        0x00487760L,  // ResourceStringTablesFree
+        0x004877d0L,  // ResourceEntryIdGet
+        0x004894c0L,  // ComInterfaceQueryOrFallback
+        0x0048bcf0L,  // RegistryEntryValueGet
+        0x0048bd10L,  // RegistryEntryTypeGet
+        0x0048dfd0L,  // QsortSmallPartitionSort
+        0x0048e250L,  // StackProbeAllocate
+        0x0048e4f0L,  // CrtTerminateProcessWithHandlers
+        0x0048e5a0L,  // CrtRunCallbackArray
+        0x0048e680L,  // CrtDoubleAbsoluteValue
+        0x00490070L,  // VsscanfParseInput
+        0x00494ca0L,  // StreamPushbackChar
+        0x00494cc0L,  // StreamSkipClassifiedChars
+        0x004977d0L,  // CrtControlFlagsTranslate
+        0x00499fe0L,  // UInt96Add
+        0x0047a1b0L,  // FormattedTextDraw
+        0x0048d940L,  // CrtMathDispatchTableInitialize
+        0x0048e090L,  // CrtAsin
+        0x0048e480L,  // CrtFloatingPointRuntimeInitialize
+        0x0048e4b0L,  // CrtExit
+        0x0048ec00L,  // SehFrameUnwind
+        0x0048eca0L,  // CallSettingFrame12
+        0x0048ee90L,  // SehScopeTableLookup
+        0x0048fa00L,  // CurrentDirectoryGet
+        0x0048fd20L,  // CrtFlushStreamBuffer
+        0x00493ec0L,  // BoundedStringLength
+        0x00493ae0L,  // DoubleFrexpDecompose
+        0x00493be0L,  // FpuStatusWordGetVariantA
+        0x00493bf0L,  // FpuStatusWordGetVariantB
+        0x00497aa0L,  // UInt96Zero
+        0x00497ab0L,  // UInt96IsZero
+        0x00497a80L,  // UInt96Copy
+        0x00497ad0L,  // UInt96ShiftRight
+        0x00497900L,  // UInt96HasNoBitsAtOrAbove
+        0x00497970L,  // UInt96IncrementAtBit
+        0x004979e0L,  // UInt96ClearFromBit
+        0x00438df0L,  // EntityLookupAtWorldPosition
+        0x00442210L,  // EntityActionRouteStateInitialize
+        0x0044c970L,  // LightEffectsBlinkParametersApply
+        0x00490280L,  // CrtFloatingPointFeatureProbe
+        0x004902b0L,  // CrtNormalizeDecimalPoint
+        0x004907c0L,  // StringPrefixReserve
+        0x004913b0L,  // CrtWriteRepeatedChar
+        0x004913f0L,  // CrtWriteStringBounded
+        0x004914a0L,  // StrChr
+        0x00491560L,  // CrtHeapInitialize
+        0x00491710L,  // CrtHeapBlockFree
+        0x00492dccL,  // CrtFmodExtendedPrecision
+        0x004939d0L,  // CrtMathExceptionHandlerGet
+        0x00493a00L,  // CrtMathExceptionCodeFromStatus
+        0x00493a40L,  // DoubleBuildWithExponent
+        0x00493a80L,  // DoubleClassify
+        0x00495d90L,  // IsDbcsLeadByte
+        0x004964e0L,  // CrtCodePageGet
+        0x004974d0L,  // CrtStandardStreamBufferInstall
+        0x00497ec0L,  // CrtLocaleDataGetOrInitialize
+        0x00498340L,  // CrtFatalMessageExit
+        0x00499860L,  // CrtTimeZoneInitializeOnce
+        0x0048e890L,  // MarkupIntegerTokenParse
+        0x0043f560L,  // EntityPoolFindWithLocalPredicate
+        0x00456640L,  // GlobalFlagGet_004ff978
+        0x00458650L,  // GlobalFlagGet_004ffe30
+        0x00458660L,  // GlobalValueSet_004ffe48
+        0x0045c4a0L,  // GlobalValueSet_0050080c
+        0x0045cc10L,  // IndexedGlobalValueGet_00500a9c
+        0x0045cc60L,  // GlobalValueGet_00500a98
+        0x004628c0L,  // GlobalFloatAccumulate_00555120
+        0x0047c160L,  // ConstantNegative10000Get
+        0x0048c030L,  // RegistryEntryAccessByIndex
+        0x0048e1aaL,  // CrtMathIntrinsicDispatch
+        0x00491ff5L,  // CrtNoOpStub
+        0x00495bdeL,  // CrtAbortAfterCallback
+        0x00497870L,  // CrtNoOpStubVariant
+        0x0044c7c0L,  // LightEffectsConfigurationLoad
+        0x0044cef0L,  // LightEffectsMoveParametersStore
+        0x0044d710L,  // WaypointVectorRandomScaleApply
+        0x0046abb0L,  // TextSlotMessageWithImageAssign
+        0x0048e280L,  // CrtRoundToIntegralWithMathErrorHandling
+        0x0048e8e0L,  // CrtRoundToIntegralWithMathErrorHandlingVariant
+        0x004906f0L,  // CrtScientificFloatFormatGuarded
+        0x00490720L,  // CrtFixedDecimalFormatGuarded
+        0x004908a0L,  // CrtFileStreamClose
+        0x00491d90L,  // CrtNewHandlerInvokeForAllocationRetry
+        0x00494c30L,  // CrtScanFormatCharNormalize
+        0x0047e460L,  // ComObjectDestroyAndOptionallyFree
+        0x00485210L,  // FormattedTextAppendToRingBuffer
+        0x0048fed0L,  // CrtInputWithStreamBufferSetup
+        0x0048b280L,  // WindowModeFlagSet
+        0x0047df50L,  // PixelChannelMaskGet
+        0x0044ade0L,  // EntityKindOneRandomSpawnTrigger
+        0x0044bfd0L,  // ConfiguredMonsterSpawnBehaviorTick
+        0x0045a240L,  // ScrollPanelControlsInitialize
+        0x0047ded0L,  // DirectDrawSurfaceUnlock
+        0x0048c010L,  // WadStreamLengthGet
+        0x0047ebe0L,  // AviStreamFrameCountGet
+        0x00495a60L,  // CrtUnwindAddressResolve
+        0x0044cf70L,  // ScenePositionResetAndEffectMotionCancel
+        0x0044da20L,  // RoutePositionBlockedStateSet
+        0x00435580L,  // GlobalHandlePositionApplyIfPresent
+        0x00435aa0L,  // PanelSelectionHighlightToggle
+        0x004374d0L,  // TaskCounterIncrementByBranch
+        0x004374f0L,  // EntityCallbackDispatchUnlessTypeFive
+        0x00438a60L,  // SpatialObjectQueryCenterMask01
+        0x00438ae0L,  // SpatialObjectQueryCenterMask02
+        0x00438b80L,  // SpatialObjectQueryCenterMaskFromArgument
+        0x00438bf0L,  // SpatialObjectQueryCenterMask80
+        0x00438cd0L,  // SpatialObjectQueryCenterMask20
+        0x00438d30L,  // SpatialObjectQueryCenterMask10
+        0x00438d90L,  // SpatialObjectQueryCenterMask200
+        0x00438e50L,  // SpatialObjectQueryCenterMask100
+        0x00439200L,  // TaskKindFilteredSearch
+        0x00439240L,  // TaskEntityFlagsAndCellTaskMatch
+        0x0043b360L,  // TaskCountAtGridCoordinateQuery
+        0x0043b820L,  // TypeTwoEntityEventDispatch
+        0x0043b850L,  // TypeTwoEntityPositionedCallbackDispatch
+        0x0043c490L,  // TaskTypeAndConditionCheck
+        0x004407b0L,  // SpatialEntityCallbackQuery
+        0x004408c0L,  // SpatialEntityCallbackQueryAtOptionalCoordinate
+        0x00440c30L,  // GridRouteSearchAdapter
+        0x00442540L,  // GridOperationArgumentAdapter
+        0x004456e0L,  // EntityBehaviorCallbackTick
+        0x00445d70L,  // EntityFlagGatedCallbackDispatch
+        0x0044702dL,  // RegisterRelativeStateUpdateFragment
+        0x004474f0L,  // LinkedEntityProximityResponse
+        0x00447900L,  // TypeFourEntityCallbackDispatch
+        0x0044adc0L,  // ScatterSpawnGateSet
+        0x0044af90L,  // EntityAttachedSpawnRecordProcess
+        0x0044b4c0L,  // TypeTwoEntityTargetResolveAndApply
+        0x0044bae0L,  // SceneObjectResourceAndCallbackStateDispose
+        0x0044c550L,  // GlobalScatterSpawnEnableAndDrain
+        0x0044f490L,  // GridCellOperationApplyAll
+        0x00450560L,  // RandomReachableGridPointSelect
+        0x00452580L,  // ActiveContextRecordGet
+        0x00454880L,  // GlobalCounter_004ff990Increment
+        0x00454890L,  // GlobalCounter_004ff990Reset
+        0x004567c0L,  // GlobalValue_004ff9bcStoreAndReturn
+        0x00459f50L,  // IndexedPanelResourcePositionApply
+        0x00459fd0L,  // PanelResourcePositionApplyIfEnabled
+        0x0045a3b0L,  // PanelSlotCoordinateHitTest
+        0x0045a630L,  // UIRecordCallbackForward
+        0x0045aac0L,  // PanelItemFlag10SetClear
+        0x0045ab00L,  // PanelStateFlagsToggle
+        0x0045abf0L,  // PanelItemFlag8SetIfEnabled
+        0x0045b610L,  // GlobalUIFlags_00500860ClearBits_1_2
+        0x0045bfb0L,  // ThreeSurfaceResourcesLoadAndInitialize
+        0x0045c340L,  // PanelResourceLayoutStore
+        0x0045c4b0L,  // PanelResourcePositionUpdateIfEnabled
+        0x0045c520L,  // PanelResourceHandleAndDimensionsStore
+        0x0045cf00L,  // PriorityLabelLayoutApply
+        0x0045d3c0L,  // PriorityPanelRowMoveDispatch
+        0x0045d8a0L,  // ObjectField14Set
+        0x0045db00L,  // TexturedSceneObjectDrawAtPosition
+        0x00460910L,  // ResolvedEntityOperationDispatch
+        0x004628a0L,  // GlobalFloatAccumulator_00555330Add
+        0x004628e0L,  // CallbackRecordAllocateInitialize
+        0x00464c50L,  // GlobalFlag_00502a2cBit2SetClear
+        0x00465380L,  // GlobalTriplet_00552128_30Reset
+        0x0046a950L,  // TextLayoutGeometryStoreAndApply
+        0x00472670L,  // DirectDrawSurfaceDescriptionGet
+        0x004756d0L,  // VideoObjectAspectRatioGet
+        0x004757f0L,  // TypedChildResourceScalarGet
+        0x00477310L,  // ComPropertyResultGet
+        0x00485a00L,  // ObjectStatePairGet
+        0x00487d50L,  // ComInterfaceQueryAndContextDispatch
+        0x00488bf0L,  // CdAudioStopAndCloseIfActive
+        0x00489bc0L,  // ComChildItemsVisit
+        0x0048ebb0L,  // CrtExceptionHandlerTransferAfterUnlink
+        0x0048ebf0L,  // CrtExceptionHandlerTransferWithAtomicPrefix
+        0x0048ec60L,  // CrtExceptionDispatchForwarder
+        0x0048ed00L,  // CrtExceptionFrameFilterInvoke
+        0x0048ed30L,  // CrtExceptionFrameInstallAndDispatch
+        0x0048ee00L,  // CrtExceptionScopeFilterAndUnwind
+        0x0048efe6L,  // CrtNlgFrameStateRecord
+        0x00490230L,  // ProcessorFeatureFallbackFalse
+        0x004918a0L,  // SmallHeapPageFreeSlotUpdate
+        0x00491cc0L,  // SmallHeapBlockResizeInPlace
+        0x00491f80L,  // CrtOneArgumentMathErrorHandlingStart
+        0x0049200cL,  // CrtFpuPrecisionModeCodeGet
+        0x00492068L,  // DoubleExponentBitsGetOrSpecialValue
+        0x0049221eL,  // CrtFloatingPointExceptionResultDispatch
+        0x00492225L,  // CrtFloatingPointExceptionResultDispatchVariant
+        0x00492bc6L,  // CrtDoubleRemainderReduction
+        0x00493170L,  // CrtMathExceptionHandleSingleResult
+        0x004931c0L,  // CrtMathExceptionHandleResultWithStatus
+        0x004938f0L,  // CrtMathExceptionDispatch
+        0x004939a0L,  // CrtMathErrorCodeSet
+        0x00493c40L,  // CrtNoOpStubVariant2
+        0x00495410L,  // CrtSehExceptionDispatcher
+        0x004954e0L,  // CrtSehLocalUnwindToScope
+        0x004955c0L,  // CrtSehUnwindAndInvokeHandler
+        0x00495650L,  // CrtSehHandlerCallWithFrame
+        0x0049573aL,  // CrtSehAbnormalTerminationCleanup
+        0x004959e0L,  // CrtSehDestructorInvoke
+        0x00495ae0L,  // CrtTerminateHandlerInvokeAndAbort
+        0x00495b70L,  // CrtUnexpectedHandlerInvokeAndTerminate
+        0x00496895L,  // CrtLocalUnwindFromFrame
+        0x004968b0L,  // CrtRuntimeErrorMessageEnterExit
+        0x00497770L,  // CrtFpuControlWordUpdate
+        0x004977b0L,  // CrtFpuControlWordUpdateMask
+        0x00497d60L,  // CrtExtendedFloatConvertFormatA
+        0x00497d80L,  // CrtExtendedFloatConvertFormatB
+        0x00497da0L,  // CrtDoubleToExtendedFloatConvertA
+        0x00497de0L,  // CrtDoubleToExtendedFloatConvertB
+        0x00498ce0L,  // CrtScanfNumericConversionAssign
+};
     static final String[] NAMES = { "EngineTick", "EngineShutdown", "EngineShutdownAlt",
         "MainSimStep", "ManagerTick", "MessageDispatch", "ViewContextTick",
         "EnginePreTick", "QuitPoll", "SelectedEntity", "TransitionControl",
@@ -1414,10 +2560,1060 @@ public class CreateEngineFunctions extends GhidraScript {
         "QuitMenuProbe", "LevelStartFlag", "MenuOptionsFlag", "StartLevelPilots",
         "StartLevelSelected" };
 
+        0x00403a10L,  // TaskCallbackDispatch
+        0x0040c1b0L,  // IndexedResourceHandleSetCreate
+        0x0040c720L,  // GlobalResourceHandleLoadAndEnable
+        0x0040c920L,  // ResourceHandleLoadWithFallback
+        0x00412190L,  // MenuAudioTickIntervalReached
+        0x00413f30L,  // FilenameExtensionClassify
+        0x00417f20L,  // OptionsContextSixFieldSet
+        0x004180c0L,  // OptionsContextCopyAndReplaceResource
+        0x004196f0L,  // IncidentMessageQueueAppend
+        0x004197b0L,  // IncidentMessageQueueRemoveAt
+        0x00419a80L,  // IncidentMessageNodeCreate
+        0x00419ae0L,  // IncidentMessageFlagSet
+        0x00419da0L,  // IncidentMessagePanelRefreshIfActive
+        0x0041a250L,  // ScrollOffsetFromCursorUpdate
+        0x0041a290L,  // ScreenRightEdgeCacheRefresh
+        0x0041a2f0L,  // IncidentMessageStateGet
+        0x0041ba90L,  // SimulationGlobalWordSet
+        0x00436ac9L,  // RendererNodeRelativePositionSet
+        0x00435e35L,  // ModelTransformCopyToSceneNode
+        0x0045d4f0L,  // ConfigEntryEnabledToggleAtIndex
+        0x00462ed0L,  // GraphicsOverlayResourcesRelease
+        0x004634b0L,  // GraphicsOverlayVisibilitySet
+        0x00465970L,  // ObjectCallbackListDisposeAll
+        0x004661c0L,  // GridCellRecordBufferAllocate
+        0x0046c130L,  // SceneObjectSetAnimationWithFallback
+        0x0046d1a0L,  // SceneObjectAttachedResourceRelease
+        0x0046db60L,  // ObjectRecordField11CGet
+        0x00480870L,  // TaskCallbackRecordAllocateAndInitialize
+        0x00482470L,  // IndexedGeometryDataCopyToOutput
+        0x0047e4c0L,  // AviPlaybackStateInitialize
+        0x0047ed70L,  // InterfaceInvokeOneIfNonNull
+        0x00483140L,  // IndexedRecordInterfaceRelease
+        0x00483170L,  // IndexedRecordTransformInitialize
+        0x00483240L,  // IndexedRecordTransformCopyIn
+        0x00483400L,  // IndexedRecordDataAddressGet
+        0x00483540L,  // Matrix4x4IdentityInitialize
+        0x00483580L,  // RenderInterfaceCapabilityCheck
+        0x004078c0L,  // EntityCursorTargetStepResolveAndTimerAdvance
+        0x0040e8d0L,  // ScreenSpaceEffectDispatchIfEnabled
+        0x0040b850L,  // PackedGridCellValueGet
+        0x00406400L,  // PendingRecordCopyToEntityAndFlag
+        0x004063e0L,  // PendingRecordEntityReferenceClear
+        0x00408620L,  // SceneObjectRecordCloneRetainHandles
+        0x00408670L,  // SceneObjectPairApplyMode
+        0x004086c0L,  // SceneObjectPairSetRenderParameters
+        0x00408710L,  // SceneObjectPairSetCallbackScalar
+        0x00408770L,  // SceneObjectIndexedHandleGetOrCreate
+        0x004087b0L,  // SceneObjectPrimaryHandleGetOrCreate
+        0x004087e0L,  // SceneObjectSecondaryHandleGetOrCreate
+        0x00408810L,  // SceneObjectIndexedSecondaryHandleGetOrCreate
+        0x00408850L,  // SceneObjectFlagsGet
+        0x00408b60L,  // PointProjectOntoLine2D
+        0x00406980L,  // SceneObjectModeIsOne
+        0x004082e0L,  // SceneObjectScalarAdjustByDirection
+        0x00439cd0L,  // EntityAnimationStateSet
+        0x0043a8f0L,  // SimulationUpdateCounterAdd
+        0x0043a910L,  // SimulationModeCounterAdd
+        0x0043a9e0L,  // EntityQueueForRockfallProcessingIfEligible
+        0x0044f220L,  // SceneObjectResourceHandleSet
+        0x004525e0L,  // SelectionRecordArrayGet
+        0x004525f0L,  // SelectionRecordCountGet
+        0x00452600L,  // SelectionRecordCountReset
+        0x0046c110L,  // AnimationResourceAdvanceTime
+        0x0046cf20L,  // SceneEntityAnimationTracksSetEnabled
+        0x00466230L,  // GridCellRecordBufferReplace
+        0x00480780L,  // ZeroResultIsSuccess
+        0x004807a0L,  // FixedSizePoolRecordAcquire
+        0x004807d0L,  // FixedSizePoolRecordRelease
+        0x004821a0L,  // IndexedRecordEntryRead
+        0x00482350L,  // IndexedRecordField64Set
+        0x00482780L,  // IndexedRecordFlag6CBit0Get
+        0x004827a0L,  // IndexedRecordFlag6CBit0Set
+        0x004827d0L,  // RecordFlag2CBit0Set
+        0x00482cb0L,  // RendererCommandModeAndPairSend
+        0x00482ce0L,  // RendererCommandNodePrepend
+        0x004850c0L,  // IndexedWordTableLookup
+        0x004851b0L,  // FloatPairAtOffset4SetFromInts
+        0x004851d0L,  // FloatPairAtOffsetCSetFromUInts
+        0x004891d0L,  // MmioHandleAndGlobalBufferRelease
+        0x00489d70L,  // ObjectField38Release
+        0x0048f970L,  // FileTimeToLocalDateTimeStamp
+        0x0048fb50L,  // DriveLetterRootTypeAvailable
+        0x0048e030L,  // ByteRangeSwap
+        0x004976d0L,  // DbcsAwareBoundedStringCopy
+        0x0048be00L,  // FixedRecordSlotAllocate
+        0x0048bfc0L,  // FixedRecordSlotResourceRelease
+        0x0048bff0L,  // FixedRecordSlotResourceGet
+        0x00409350L,  // PathRecordAllocateAndLink
+        0x00408bf0L,  // Point2DProjectOntoDirection
+        0x0040a5c0L,  // QuadMeshRenderRecordPoolSlotAllocate
+        0x0040aae0L,  // EntityQuadMeshRenderRecordAllowed
+        0x00409f20L,  // EntityPlacementCommandsBuildOnce
+        0x0040b410L,  // TerrainCellResourceGridDispose
+        0x0040b810L,  // CellVisualChannelTableResourcesClear
+        0x0040b7d0L,  // CellVisualChannelTableDispose
+        0x0040be10L,  // SceneLightCreateAtPosition
+        0x0040c4d0L,  // SceneLightPoolExpireSweep
+        0x0040c520L,  // SceneLightSecondaryPoolExpireSweep
+        0x0040c6c0L,  // RockFallStyleSceneResourcesRelease
+        0x0040c690L,  // SceneResourceSingletonPoolRelease
+        0x0040d0a0L,  // TerrainEntityCellRecordRemove
+        0x0040d100L,  // TerrainCellEntityRecordUnlink
+        0x0040ee00L,  // CellCoordinateTimestampRemember
+        0x0040efb0L,  // CellCoordinateTimestampExists
+        0x0040fb00L,  // MatrixRotationComposeXYZ
+        0x00410560L,  // ResourceNameCacheGetOrLoad
+        0x00410aa0L,  // ResourceHandleListAppend
+        0x00410ae0L,  // ResourceHandleListDispose
+        0x00411320L,  // TextLayoutOffsetForCentering
+        0x00411840L,  // FrontendProgressValueChanged
+        0x00413b50L,  // InterfaceResourceHandlesRelease
+        0x00418fc0L,  // UiModeTransitionRequest
+        0x00419100L,  // UiModeResourcePositionsApply
+        0x00419200L,  // UiModeResourceBit40SetClear
+        0x004191f0L,  // UiModeResourceBit40Get
+        0x0041b1b0L,  // InterfaceBackButtonConfigLoad
+        0x0041b270L,  // InterfaceButtonImagesLoad
+        0x0044f810L,  // GridCoordinateClampAndStore
+        0x00450730L,  // TerrainCellChangeQueueAppend
+        0x00450780L,  // TerrainCellChangeQueueFlush
+        0x00452650L,  // ArrayFindValueIndex
+        0x00456c30L,  // ObjectPoolListHeadGet
+        0x00456c60L,  // ObjectPoolListsFreeAll
+        0x004589a0L,  // GlobalOptionLowBitsEnabled
+        0x0045b930L,  // FloatPairToIntegerPair
+        0x00465a90L,  // RegisteredObjectListApplyCallback
+        0x0046db70L,  // SceneObjectResourceRelease
+        0x0044e860L,  // GridCellSetPayloadIndex
+        0x004755b0L,  // SceneFrameScaleSet
+        0x0047e3e0L,  // InterfaceMethodResultRecordInitialize
+        0x004893a0L,  // CdAudioStopAndClose
+        0x00487fc0L,  // KeyframeTimeSegmentAndFractionGet
+        0x00485e30L,  // NamedOptionIndexFindCaseInsensitive
+        0x00488b90L,  // CdAudioPlaybackAvailable
+        0x0048c180L,  // OwnedResourceTreeRelease
+        0x00484ba0L,  // PackedTripletTableToWordBuild
+        0x00410020L,  // SceneNodePositionSet
+        0x00419030L,  // HelpWindowButtonFeedbackUpdate
+        0x00419780L,  // IndexedLinkedListEntryGet
+        0x00440130L,  // EntityUpdateAndUnregisterAtTile
+        0x00440bf0L,  // ObjectListFieldAssignAll
+        0x00447780L,  // EntityClearLinkedObjectState
+        0x00448800L,  // EntityMoveToCellCoordinates
+        0x00450060L,  // GridCellReadSurfaceVector
+        0x00450220L,  // GridCellReadSurfaceValues
+        0x004524b0L,  // SelectionObjectDetach
+        0x0045bf20L,  // CameraZoomStepAdjust
+        0x0045b850L,  // UiOverlayCreateConfiguredElement
+        0x0045c580L,  // UiOverlayAnimationAdvance
+        0x0045c5f0L,  // UiOverlayAnimationApply
+        0x0045da90L,  // UiRenderRecordCreate
+        0x0045daf0L,  // UiRenderRecordFree
+        0x00460290L,  // EntityType4IndexListBuild
+        0x00460310L,  // EntityType4IndexListAppend
+        0x0046f380L,  // EntityApplyImpulseAndDirection
+        0x0043c2b0L,  // PeriodicTimer25Advance
+        0x00439c80L,  // EntityIndexedFlagSetAndRefresh
+        0x004565f0L,  // EngineModeSet
+        0x00474ae0L,  // TerrainDetailEntryGetAtIndex
+        0x00474e30L,  // TerrainSurfacePropertySet
+        0x00475880L,  // SceneObjectOwnerLinkEnsure
+        0x00476dc0L,  // RenderTargetViewportScaleSet
+        0x00476f70L,  // SceneObjectQueryValueIfReady
+        0x0047ce20L,  // ProjectionOverlayDrawSubmit
+        0x00483b00L,  // WorldObjectRenderStateApply
+        0x00487990L,  // UIRenderTreeLayoutAndRelease
+        0x004880d0L,  // UIRenderElementChildrenEnumerate
+        0x00488900L,  // UIRenderTreeEntryProcess
+        0x004889a0L,  // UIRenderEntrySubrecordApply
+        0x00489750L,  // SceneObjectOwnerLinkRelease
+        0x00408e10L,  // CountMatchingCoordinatesInList
+        0x00408e50L,  // CreateRepeatedResourceInstances
+        0x00409110L,  // ReleaseSelectionGroupResources
+        0x00409150L,  // ClearSelectionGroup
+        0x00409940L,  // RefreshEightNeighborCells
+        0x004099d0L,  // ReleaseAllGroupRecords
+        0x0040aea0L,  // EnsureCellEntriesLoaded
+        0x0040af40L,  // CellResourceEntryMatches
+        0x0040b250L,  // CellFlag4IsSet
+        0x0040b2a0L,  // CellFlag100Set
+        0x0040b2e0L,  // CellFlag100IsSet
+        0x0040bd60L,  // BuildPerspectiveProjectionMatrix
+        0x0040c570L,  // ReadCellTablePair
+        0x0040c8a0L,  // GetResourceSlotAddressByIndex
+        0x0040d170L,  // CreateCellObjectIfAvailable
+        0x0040d1f0L,  // DeleteCellObject
+        0x0040dd90L,  // ComputeWorldPositionDelta
+        0x004114f0L,  // HasType6ItemAtIndex
+        0x004119d0L,  // HasActiveResource
+        0x00417fe0L,  // CurrentSelectionContextGet
+        0x00417ff0L,  // CurrentSelectionContextSet
+        0x00418120L,  // IsAverageValueAbove99
+        0x00418f80L,  // SelectionModeSetByIndex
+        0x00419450L,  // SelectionFlag10SetClear
+        0x004194f0L,  // IndexedSelectionFlag20000SetClear
+        0x0041c9f0L,  // InputEntryFlag8SetClear
+        0x0041ca20L,  // PlayerInputFlag8SetClear
+        0x0041ca60L,  // InputEntryFlag8Get
+        0x0041ca70L,  // PlayerInputFlag8Get
+        0x0041cfb0L,  // CancelActionForMatchingCoordinates
+        0x0041e990L,  // CellActionPermissionGet
+        0x0041f230L,  // QueueActionRequestType2
+        0x0041f270L,  // QueueActionRequestValue
+        0x0041f2b0L,  // QueueActionRequestFlag100000
+        0x0041f2f0L,  // QueueActionRequestPair
+        0x0041f340L,  // QueueActionRequestIndex
+        0x0041f3c0L,  // QueueCallbackRequest390
+        0x0041f400L,  // QueueCallbackRequest3E0
+        0x0041f970L,  // RuntimeFlag40000000Get
+        0x0045d370L,  // RegionBoundsSet
+        0x0044a390L,  // Type11CellCoordinateAppend
+        0x0044c710L,  // SceneObjectTransformStateInit
+        0x0044c790L,  // ConfiguredSceneTransformEnable
+        0x0046aa90L,  // MessageOverlayStateInit
+        0x0047e710L,  // DirectDrawSurfaceDescriptorInitialize
+        0x00485fb0L,  // ViewportRectangleGet
+        0x00488bb0L,  // CdAudioTrackStart
+        0x00408b00L,  // PointToPolylineMinimumSegmentDistance
+        0x00408d70L,  // TerrainDescriptorCoordinateCountLimitCheck
+        0x0040a3d0L,  // ScreenEffectFlagsClearAndRelease
+        0x0040ab30L,  // GridRecordFlagMaskClear
+        0x0040f7d0L,  // CallbackStateRecordCreate
+        0x0040f850L,  // CallbackStateListDispose
+        0x0040fdb0L,  // ThreeValueRecordCopyAndMarkReady
+        0x00410280L,  // CallbackOperationRunAndReturnStatus
+        0x00410b60L,  // ThreeWordRecordAllocateAndInitialize
+        0x00410b90L,  // BoundedFloatRecordCreate
+        0x00417280L,  // RegistryValueLookupWithLock
+        0x004172d0L,  // RegistryValueIndexLookupOrNotFound
+        0x004189d0L,  // RenderTransitionCleanupIfActive
+        0x00438720L,  // EntityAvailableResourceSpend
+        0x0043bbc0L,  // EntityDetachCarriedObjectAndResetState
+        0x004437f0L,  // EntityDispatchEvent31ForPendingFlag
+        0x00444620L,  // EntityEnterEvent21StateOnce
+        0x00447730L,  // EntityProgressAdvanceBy25
+        0x00447b00L,  // EntityDispatchEvent5AndSetFlag
+        0x004487c0L,  // EntityClearNestedState8Fields
+        0x0044d9a0L,  // VectorWithinAxisTolerance
+        0x00451bc0L,  // ResourceListUpdateMatchingKey
+        0x00459530L,  // RenderThreePassUpdate
+        0x0045abb0L,  // InputDeviceSetFlag20
+        0x00463e40L,  // FloatRoundToNearestInt
+        0x00466750L,  // GridCellInvalidateAndClearFlags
+        0x00496530L,  // CrtCodePageLocaleIdLookup
+        0x00496590L,  // CrtCtypeTablesReset
+        0x00497040L,  // CrtStreamReadByte
+        0x00497570L,  // CrtStreamBufferFlushAndRelease
+        0x00499710L,  // WideStringLength
+        0x00499730L,  // CrtRuntimeErrorMessageBoxDisplay
+        0x00498f50L,  // CrtStreamUngetByte
+        0x004965c0L,  // CrtAnsiCodePageTablesInit
+        0x004975d0L,  // CrtCharacterToLowerLocale
+        0x00498ae0L,  // CrtStreamBufferAllocate
+        0x0040ce30L,  // SelectionMarkerResourcesRelease
+        0x0041c7b0L,  // InputActionStateUpdate
+        0x0041c8f0L,  // InputActionPressedGet
+        0x0041c950L,  // InputBindingPressedGet
+        0x0041caf0L,  // InputBindingValueGet
+        0x0041cb90L,  // InputBindingDefaultValueGet
+        0x0041f100L,  // ObjectInteractionFlagsAllow
+        0x0041cea0L,  // SelectionObjectCommandUpdate
+        0x0041cf20L,  // SelectionTargetCommandUpdate
+        0x0041cf80L,  // SelectionMode7CancelAtPoint
+        0x0041cfe0L,  // SelectionMode5CancelAtPoint
+        0x0043a7c0L,  // EntityActionKindSupported
+        0x0043a850L,  // EntityActionRecordConsumeAndCleanup
+        0x004351a0L,  // ActionCodeToSoundAlias
+        0x00436ae9L,  // SelectionRecordPointGet
+        0x00436b0bL,  // SelectionRecordPointSet
+        0x004388b0L,  // EntityActionKindPrerequisiteCheck
+        0x00439e40L,  // EntityRecordFlag20Query
+        0x0043b320L,  // EntityIterationCallbackGuard
+        0x00491770L,  // CRTHeapReleaseUnusedPages
+        0x00491840L,  // CRTHeapLocateAllocationPage
+        0x004850e0L,  // ObjectField10Get
+        0x00485160L,  // TextOutputField82CBit2SetClear
+        0x0040d4f0L,  // TerrainCellActivationTry
+        0x0040cea0L,  // TerrainCellAndNeighborsUpdate
+        0x0040c750L,  // TerrainPointObjectCreate
+        0x0040c830L,  // TerrainPointObjectsRemoveMatching
+        0x0040cc40L,  // TerrainMarkerSetsClear
+        0x0040d030L,  // TerrainRecordPoolChunkAllocate
+        0x0040e700L,  // TerrainChoiceResourceSelect
+        0x0041a850L,  // ResourceHandleSetRelease
+        0x0041b9c0L,  // SelectionEntityCodeResolve
+        0x0041cab0L,  // IndexedEntityValueGet
+        0x0041cce0L,  // SelectionCoordinatesSet
+        0x0041e9d0L,  // SelectionRegionParametersSet
+        0x0041ec30L,  // EntityPairCountRefresh
+        0x0044cff0L,  // UiElementRgbColorSetClamped
+        0x0044dd40L,  // EngineLoaderProfileEntriesRelease
+        0x0044e0a0L,  // GlobalResourceHandleRelease
+        0x0045d550L,  // UiCursorMoveToChoiceEntry
+        0x0045d640L,  // UiCursorMoveToElementCenter
+        0x00494d10L,  // CrtFileDescriptorClose
+        0x00494df0L,  // CrtOwnedStreamBufferRelease
+        0x00498f00L,  // CrtCharacterClassFlag8Check
+        0x00497f40L,  // DoubleToExtended80
+        0x0048e870L,  // DoubleIsFinite
+        0x00475830L,  // SceneObjectFirstNonKind6ChildGet
+        0x00498b40L,  // CrtFileDescriptorFlag40Get
+        0x00495db0L,  // CrtCharacterClassFlagTest
+        0x00493150L,  // X87RoundToIntegral
+        0x00406df0L,  // RenderNodeSetPositionFromCallback
+        0x00408930L,  // ConstantZeroFloatGet
+        0x00409a90L,  // WorldObjectCreateWithTransform
+        0x0040af90L,  // TerrainCellRecordGet
+        0x0040bde0L,  // SceneMarkerCreateAtObjectPosition
+        0x0040beb0L,  // SceneMarkerCreateAtPositionOrObject
+        0x0040fe00L,  // SceneObjectListUpdateTransforms
+        0x0040ff50L,  // SceneObjectListApplyFloatCallback
+        0x00410070L,  // SceneObjectListApplyPositionCallback
+        0x004100b0L,  // SceneObjectListApplySecondPositionCallback
+        0x00418190L,  // SelectionModeStateSet
+        0x004181a0L,  // SelectionStateFlagClearBit0
+        0x00419150L,  // SelectionStateHandleGet
+        0x0041a990L,  // ObjectiveSelectionStateReset
+        0x0041b300L,  // MenuSelectionResourceUpdate
+        0x0041cc80L,  // CursorTileSelectionUpdateByType
+        0x0041d010L,  // SelectionCancelIfCursorHitsObject
+        0x004493e0L,  // SceneObjectHasTaskType4_5_7
+        0x00449cd0L,  // SceneObjectStateHandleApplyValue
+        0x0044b7a0L,  // MatrixApplyRotationAboutZWithOffset
+        0x00441ea0L,  // EntityType5FinalizeIfAllowed
+        0x00490400L,  // CrtScientificFloatFormatAppend
+        0x00490540L,  // CrtFixedFloatFractionFormat
+        0x00490640L,  // CrtFloatDecimalFormatPrepare
+        0x00495090L,  // CxxExceptionHandlerDispatch
+        0x004889d0L,  // ResourceTreeCallbackReferenceChainRelease
+        0x00489520L,  // ResourceTreeCallbackContextCreateForEnumerator
+        0x004895c0L,  // ResourceTreeCallbackContextCreateForResource
     // Semantic names supported by the findings corpus. Targets without a
     // sufficiently specific documented role keep Ghidra's FUN_<address> name.
     static String documentedName(long address) {
+            case 0x00490400: return "CrtScientificFloatFormatAppend";
+            case 0x00490540: return "CrtFixedFloatFractionFormat";
+            case 0x00490640: return "CrtFloatDecimalFormatPrepare";
+            case 0x00495090: return "CxxExceptionHandlerDispatch";
+            case 0x004889d0: return "ResourceTreeCallbackReferenceChainRelease";
+            case 0x00489520: return "ResourceTreeCallbackContextCreateForEnumerator";
+            case 0x004895c0: return "ResourceTreeCallbackContextCreateForResource";
+            case 0x00406df0: return "RenderNodeSetPositionFromCallback";
+            case 0x00408930: return "ConstantZeroFloatGet";
+            case 0x00409a90: return "WorldObjectCreateWithTransform";
+            case 0x0040af90: return "TerrainCellRecordGet";
+            case 0x0040bde0: return "SceneMarkerCreateAtObjectPosition";
+            case 0x0040beb0: return "SceneMarkerCreateAtPositionOrObject";
+            case 0x0040fe00: return "SceneObjectListUpdateTransforms";
+            case 0x0040ff50: return "SceneObjectListApplyFloatCallback";
+            case 0x00410070: return "SceneObjectListApplyPositionCallback";
+            case 0x004100b0: return "SceneObjectListApplySecondPositionCallback";
+            case 0x00418190: return "SelectionModeStateSet";
+            case 0x004181a0: return "SelectionStateFlagClearBit0";
+            case 0x00419150: return "SelectionStateHandleGet";
+            case 0x0041a990: return "ObjectiveSelectionStateReset";
+            case 0x0041b300: return "MenuSelectionResourceUpdate";
+            case 0x0041cc80: return "CursorTileSelectionUpdateByType";
+            case 0x0041d010: return "SelectionCancelIfCursorHitsObject";
+            case 0x004493e0: return "SceneObjectHasTaskType4_5_7";
+            case 0x00449cd0: return "SceneObjectStateHandleApplyValue";
+            case 0x0044b7a0: return "MatrixApplyRotationAboutZWithOffset";
+            case 0x00441ea0: return "EntityType5FinalizeIfAllowed";
+            case 0x0040d4f0: return "TerrainCellActivationTry";
+            case 0x0040cea0: return "TerrainCellAndNeighborsUpdate";
+            case 0x0040c750: return "TerrainPointObjectCreate";
+            case 0x0040c830: return "TerrainPointObjectsRemoveMatching";
+            case 0x0040cc40: return "TerrainMarkerSetsClear";
+            case 0x0040d030: return "TerrainRecordPoolChunkAllocate";
+            case 0x0040e700: return "TerrainChoiceResourceSelect";
+            case 0x0041a850: return "ResourceHandleSetRelease";
+            case 0x0041b9c0: return "SelectionEntityCodeResolve";
+            case 0x0041cab0: return "IndexedEntityValueGet";
+            case 0x0041cce0: return "SelectionCoordinatesSet";
+            case 0x0041e9d0: return "SelectionRegionParametersSet";
+            case 0x0041ec30: return "EntityPairCountRefresh";
+            case 0x0044cff0: return "UiElementRgbColorSetClamped";
+            case 0x0044dd40: return "EngineLoaderProfileEntriesRelease";
+            case 0x0044e0a0: return "GlobalResourceHandleRelease";
+            case 0x0045d550: return "UiCursorMoveToChoiceEntry";
+            case 0x0045d640: return "UiCursorMoveToElementCenter";
+            case 0x00494d10: return "CrtFileDescriptorClose";
+            case 0x00494df0: return "CrtOwnedStreamBufferRelease";
+            case 0x00498f00: return "CrtCharacterClassFlag8Check";
+            case 0x00497f40: return "DoubleToExtended80";
+            case 0x0048e870: return "DoubleIsFinite";
+            case 0x00475830: return "SceneObjectFirstNonKind6ChildGet";
+            case 0x00498b40: return "CrtFileDescriptorFlag40Get";
+            case 0x00495db0: return "CrtCharacterClassFlagTest";
+            case 0x00493150: return "X87RoundToIntegral";
+            case 0x00491770: return "CRTHeapReleaseUnusedPages";
+            case 0x00491840: return "CRTHeapLocateAllocationPage";
+            case 0x004850e0: return "ObjectField10Get";
+            case 0x00485160: return "TextOutputField82CBit2SetClear";
+            case 0x0040ce30: return "SelectionMarkerResourcesRelease";
+            case 0x0041c7b0: return "InputActionStateUpdate";
+            case 0x0041c8f0: return "InputActionPressedGet";
+            case 0x0041c950: return "InputBindingPressedGet";
+            case 0x0041caf0: return "InputBindingValueGet";
+            case 0x0041cb90: return "InputBindingDefaultValueGet";
+            case 0x0041f100: return "ObjectInteractionFlagsAllow";
+            case 0x0041cea0: return "SelectionObjectCommandUpdate";
+            case 0x0041cf20: return "SelectionTargetCommandUpdate";
+            case 0x0041cf80: return "SelectionMode7CancelAtPoint";
+            case 0x0041cfe0: return "SelectionMode5CancelAtPoint";
+            case 0x0043a7c0: return "EntityActionKindSupported";
+            case 0x0043a850: return "EntityActionRecordConsumeAndCleanup";
+            case 0x004351a0: return "ActionCodeToSoundAlias";
+            case 0x00436ae9: return "SelectionRecordPointGet";
+            case 0x00436b0b: return "SelectionRecordPointSet";
+            case 0x004388b0: return "EntityActionKindPrerequisiteCheck";
+            case 0x00439e40: return "EntityRecordFlag20Query";
+            case 0x0043b320: return "EntityIterationCallbackGuard";
+            case 0x004965c0: return "CrtAnsiCodePageTablesInit";
+            case 0x004975d0: return "CrtCharacterToLowerLocale";
+            case 0x00498ae0: return "CrtStreamBufferAllocate";
+            case 0x00498f50: return "CrtStreamUngetByte";
+            case 0x00408b00: return "PointToPolylineMinimumSegmentDistance";
+            case 0x00408d70: return "TerrainDescriptorCoordinateCountLimitCheck";
+            case 0x0040a3d0: return "ScreenEffectFlagsClearAndRelease";
+            case 0x0040ab30: return "GridRecordFlagMaskClear";
+            case 0x0040f7d0: return "CallbackStateRecordCreate";
+            case 0x0040f850: return "CallbackStateListDispose";
+            case 0x0040fdb0: return "ThreeValueRecordCopyAndMarkReady";
+            case 0x00410280: return "CallbackOperationRunAndReturnStatus";
+            case 0x00410b60: return "ThreeWordRecordAllocateAndInitialize";
+            case 0x00410b90: return "BoundedFloatRecordCreate";
+            case 0x00417280: return "RegistryValueLookupWithLock";
+            case 0x004172d0: return "RegistryValueIndexLookupOrNotFound";
+            case 0x004189d0: return "RenderTransitionCleanupIfActive";
+            case 0x00438720: return "EntityAvailableResourceSpend";
+            case 0x0043bbc0: return "EntityDetachCarriedObjectAndResetState";
+            case 0x004437f0: return "EntityDispatchEvent31ForPendingFlag";
+            case 0x00444620: return "EntityEnterEvent21StateOnce";
+            case 0x00447730: return "EntityProgressAdvanceBy25";
+            case 0x00447b00: return "EntityDispatchEvent5AndSetFlag";
+            case 0x004487c0: return "EntityClearNestedState8Fields";
+            case 0x0044d9a0: return "VectorWithinAxisTolerance";
+            case 0x00451bc0: return "ResourceListUpdateMatchingKey";
+            case 0x00459530: return "RenderThreePassUpdate";
+            case 0x0045abb0: return "InputDeviceSetFlag20";
+            case 0x00463e40: return "FloatRoundToNearestInt";
+            case 0x00466750: return "GridCellInvalidateAndClearFlags";
+            case 0x00496530: return "CrtCodePageLocaleIdLookup";
+            case 0x00496590: return "CrtCtypeTablesReset";
+            case 0x00497040: return "CrtStreamReadByte";
+            case 0x00497570: return "CrtStreamBufferFlushAndRelease";
+            case 0x00499710: return "WideStringLength";
+            case 0x00499730: return "CrtRuntimeErrorMessageBoxDisplay";
+            case 0x00408e10: return "CountMatchingCoordinatesInList";
+            case 0x00408e50: return "CreateRepeatedResourceInstances";
+            case 0x00409110: return "ReleaseSelectionGroupResources";
+            case 0x00409150: return "ClearSelectionGroup";
+            case 0x00409940: return "RefreshEightNeighborCells";
+            case 0x004099d0: return "ReleaseAllGroupRecords";
+            case 0x0040aea0: return "EnsureCellEntriesLoaded";
+            case 0x0040af40: return "CellResourceEntryMatches";
+            case 0x0040b250: return "CellFlag4IsSet";
+            case 0x0040b2a0: return "CellFlag100Set";
+            case 0x0040b2e0: return "CellFlag100IsSet";
+            case 0x0040bd60: return "BuildPerspectiveProjectionMatrix";
+            case 0x0040c570: return "ReadCellTablePair";
+            case 0x0040c8a0: return "GetResourceSlotAddressByIndex";
+            case 0x0040d170: return "CreateCellObjectIfAvailable";
+            case 0x0040d1f0: return "DeleteCellObject";
+            case 0x0040dd90: return "ComputeWorldPositionDelta";
+            case 0x004114f0: return "HasType6ItemAtIndex";
+            case 0x004119d0: return "HasActiveResource";
+            case 0x00417fe0: return "CurrentSelectionContextGet";
+            case 0x00417ff0: return "CurrentSelectionContextSet";
+            case 0x00418120: return "IsAverageValueAbove99";
+            case 0x00418f80: return "SelectionModeSetByIndex";
+            case 0x00419450: return "SelectionFlag10SetClear";
+            case 0x004194f0: return "IndexedSelectionFlag20000SetClear";
+            case 0x0041c9f0: return "InputEntryFlag8SetClear";
+            case 0x0041ca20: return "PlayerInputFlag8SetClear";
+            case 0x0041ca60: return "InputEntryFlag8Get";
+            case 0x0041ca70: return "PlayerInputFlag8Get";
+            case 0x0041cfb0: return "CancelActionForMatchingCoordinates";
+            case 0x0041e990: return "CellActionPermissionGet";
+            case 0x0041f230: return "QueueActionRequestType2";
+            case 0x0041f270: return "QueueActionRequestValue";
+            case 0x0041f2b0: return "QueueActionRequestFlag100000";
+            case 0x0041f2f0: return "QueueActionRequestPair";
+            case 0x0041f340: return "QueueActionRequestIndex";
+            case 0x0041f3c0: return "QueueCallbackRequest390";
+            case 0x0041f400: return "QueueCallbackRequest3E0";
+            case 0x0041f970: return "RuntimeFlag40000000Get";
+            case 0x0045d370: return "RegionBoundsSet";
+            case 0x0044a390: return "Type11CellCoordinateAppend";
+            case 0x0044c710: return "SceneObjectTransformStateInit";
+            case 0x0044c790: return "ConfiguredSceneTransformEnable";
+            case 0x0046aa90: return "MessageOverlayStateInit";
+            case 0x0047e710: return "DirectDrawSurfaceDescriptorInitialize";
+            case 0x00485fb0: return "ViewportRectangleGet";
+            case 0x00488bb0: return "CdAudioTrackStart";
+            case 0x00410020: return "SceneNodePositionSet";
+            case 0x00419030: return "HelpWindowButtonFeedbackUpdate";
+            case 0x00419780: return "IndexedLinkedListEntryGet";
+            case 0x00440130: return "EntityUpdateAndUnregisterAtTile";
+            case 0x00440bf0: return "ObjectListFieldAssignAll";
+            case 0x00447780: return "EntityClearLinkedObjectState";
+            case 0x00448800: return "EntityMoveToCellCoordinates";
+            case 0x00450060: return "GridCellReadSurfaceVector";
+            case 0x00450220: return "GridCellReadSurfaceValues";
+            case 0x004524b0: return "SelectionObjectDetach";
+            case 0x0045bf20: return "CameraZoomStepAdjust";
+            case 0x0045b850: return "UiOverlayCreateConfiguredElement";
+            case 0x0045c580: return "UiOverlayAnimationAdvance";
+            case 0x0045c5f0: return "UiOverlayAnimationApply";
+            case 0x0045da90: return "UiRenderRecordCreate";
+            case 0x0045daf0: return "UiRenderRecordFree";
+            case 0x00460290: return "EntityType4IndexListBuild";
+            case 0x00460310: return "EntityType4IndexListAppend";
+            case 0x0046f380: return "EntityApplyImpulseAndDirection";
+            case 0x0043c2b0: return "PeriodicTimer25Advance";
+            case 0x00439c80: return "EntityIndexedFlagSetAndRefresh";
+            case 0x004565f0: return "EngineModeSet";
+            case 0x00474ae0: return "TerrainDetailEntryGetAtIndex";
+            case 0x00474e30: return "TerrainSurfacePropertySet";
+            case 0x00475880: return "SceneObjectOwnerLinkEnsure";
+            case 0x00476dc0: return "RenderTargetViewportScaleSet";
+            case 0x00476f70: return "SceneObjectQueryValueIfReady";
+            case 0x0047ce20: return "ProjectionOverlayDrawSubmit";
+            case 0x00483b00: return "WorldObjectRenderStateApply";
+            case 0x00487990: return "UIRenderTreeLayoutAndRelease";
+            case 0x004880d0: return "UIRenderElementChildrenEnumerate";
+            case 0x00488900: return "UIRenderTreeEntryProcess";
+            case 0x004889a0: return "UIRenderEntrySubrecordApply";
+            case 0x00489750: return "SceneObjectOwnerLinkRelease";
+            case 0x00409350: return "PathRecordAllocateAndLink";
+            case 0x00408bf0: return "Point2DProjectOntoDirection";
+            case 0x0040a5c0: return "QuadMeshRenderRecordPoolSlotAllocate";
+            case 0x0040aae0: return "EntityQuadMeshRenderRecordAllowed";
+            case 0x00409f20: return "EntityPlacementCommandsBuildOnce";
+            case 0x0040b410: return "TerrainCellResourceGridDispose";
+            case 0x0040b810: return "CellVisualChannelTableResourcesClear";
+            case 0x0040b7d0: return "CellVisualChannelTableDispose";
+            case 0x0040be10: return "SceneLightCreateAtPosition";
+            case 0x0040c4d0: return "SceneLightPoolExpireSweep";
+            case 0x0040c520: return "SceneLightSecondaryPoolExpireSweep";
+            case 0x0040c6c0: return "RockFallStyleSceneResourcesRelease";
+            case 0x0040c690: return "SceneResourceSingletonPoolRelease";
+            case 0x0040d0a0: return "TerrainEntityCellRecordRemove";
+            case 0x0040d100: return "TerrainCellEntityRecordUnlink";
+            case 0x0040ee00: return "CellCoordinateTimestampRemember";
+            case 0x0040efb0: return "CellCoordinateTimestampExists";
+            case 0x0040fb00: return "MatrixRotationComposeXYZ";
+            case 0x00410560: return "ResourceNameCacheGetOrLoad";
+            case 0x00410aa0: return "ResourceHandleListAppend";
+            case 0x00410ae0: return "ResourceHandleListDispose";
+            case 0x00411320: return "TextLayoutOffsetForCentering";
+            case 0x00411840: return "FrontendProgressValueChanged";
+            case 0x00413b50: return "InterfaceResourceHandlesRelease";
+            case 0x00418fc0: return "UiModeTransitionRequest";
+            case 0x00419100: return "UiModeResourcePositionsApply";
+            case 0x00419200: return "UiModeResourceBit40SetClear";
+            case 0x004191f0: return "UiModeResourceBit40Get";
+            case 0x0041b1b0: return "InterfaceBackButtonConfigLoad";
+            case 0x0041b270: return "InterfaceButtonImagesLoad";
+            case 0x0044f810: return "GridCoordinateClampAndStore";
+            case 0x00450730: return "TerrainCellChangeQueueAppend";
+            case 0x00450780: return "TerrainCellChangeQueueFlush";
+            case 0x00452650: return "ArrayFindValueIndex";
+            case 0x00456c30: return "ObjectPoolListHeadGet";
+            case 0x00456c60: return "ObjectPoolListsFreeAll";
+            case 0x004589a0: return "GlobalOptionLowBitsEnabled";
+            case 0x0045b930: return "FloatPairToIntegerPair";
+            case 0x00465a90: return "RegisteredObjectListApplyCallback";
+            case 0x0046db70: return "SceneObjectResourceRelease";
+            case 0x0044e860: return "GridCellSetPayloadIndex";
+            case 0x004755b0: return "SceneFrameScaleSet";
+            case 0x0047e3e0: return "InterfaceMethodResultRecordInitialize";
+            case 0x004893a0: return "CdAudioStopAndClose";
+            case 0x00487fc0: return "KeyframeTimeSegmentAndFractionGet";
+            case 0x00485e30: return "NamedOptionIndexFindCaseInsensitive";
+            case 0x00488b90: return "CdAudioPlaybackAvailable";
+            case 0x0048c180: return "OwnedResourceTreeRelease";
+            case 0x00484ba0: return "PackedTripletTableToWordBuild";
+            case 0x004078c0: return "EntityCursorTargetStepResolveAndTimerAdvance";
+            case 0x0040e8d0: return "ScreenSpaceEffectDispatchIfEnabled";
+            case 0x0040b850: return "PackedGridCellValueGet";
+            case 0x00406400: return "PendingRecordCopyToEntityAndFlag";
+            case 0x004063e0: return "PendingRecordEntityReferenceClear";
+            case 0x00408620: return "SceneObjectRecordCloneRetainHandles";
+            case 0x00408670: return "SceneObjectPairApplyMode";
+            case 0x004086c0: return "SceneObjectPairSetRenderParameters";
+            case 0x00408710: return "SceneObjectPairSetCallbackScalar";
+            case 0x00408770: return "SceneObjectIndexedHandleGetOrCreate";
+            case 0x004087b0: return "SceneObjectPrimaryHandleGetOrCreate";
+            case 0x004087e0: return "SceneObjectSecondaryHandleGetOrCreate";
+            case 0x00408810: return "SceneObjectIndexedSecondaryHandleGetOrCreate";
+            case 0x00408850: return "SceneObjectFlagsGet";
+            case 0x00408b60: return "PointProjectOntoLine2D";
+            case 0x00406980: return "SceneObjectModeIsOne";
+            case 0x004082e0: return "SceneObjectScalarAdjustByDirection";
+            case 0x00439cd0: return "EntityAnimationStateSet";
+            case 0x0043a8f0: return "SimulationUpdateCounterAdd";
+            case 0x0043a910: return "SimulationModeCounterAdd";
+            case 0x0043a9e0: return "EntityQueueForRockfallProcessingIfEligible";
+            case 0x0044f220: return "SceneObjectResourceHandleSet";
+            case 0x004525e0: return "SelectionRecordArrayGet";
+            case 0x004525f0: return "SelectionRecordCountGet";
+            case 0x00452600: return "SelectionRecordCountReset";
+            case 0x0046c110: return "AnimationResourceAdvanceTime";
+            case 0x0046cf20: return "SceneEntityAnimationTracksSetEnabled";
+            case 0x00466230: return "GridCellRecordBufferReplace";
+            case 0x00480780: return "ZeroResultIsSuccess";
+            case 0x004807a0: return "FixedSizePoolRecordAcquire";
+            case 0x004807d0: return "FixedSizePoolRecordRelease";
+            case 0x004821a0: return "IndexedRecordEntryRead";
+            case 0x00482350: return "IndexedRecordField64Set";
+            case 0x00482780: return "IndexedRecordFlag6CBit0Get";
+            case 0x004827a0: return "IndexedRecordFlag6CBit0Set";
+            case 0x004827d0: return "RecordFlag2CBit0Set";
+            case 0x00482cb0: return "RendererCommandModeAndPairSend";
+            case 0x00482ce0: return "RendererCommandNodePrepend";
+            case 0x004850c0: return "IndexedWordTableLookup";
+            case 0x004851b0: return "FloatPairAtOffset4SetFromInts";
+            case 0x004851d0: return "FloatPairAtOffsetCSetFromUInts";
+            case 0x004891d0: return "MmioHandleAndGlobalBufferRelease";
+            case 0x00489d70: return "ObjectField38Release";
+            case 0x0048f970: return "FileTimeToLocalDateTimeStamp";
+            case 0x0048fb50: return "DriveLetterRootTypeAvailable";
+            case 0x0048e030: return "ByteRangeSwap";
+            case 0x004976d0: return "DbcsAwareBoundedStringCopy";
+            case 0x0048be00: return "FixedRecordSlotAllocate";
+            case 0x0048bfc0: return "FixedRecordSlotResourceRelease";
+            case 0x0048bff0: return "FixedRecordSlotResourceGet";
+            case 0x00403a10: return "TaskCallbackDispatch";
+            case 0x0040c1b0: return "IndexedResourceHandleSetCreate";
+            case 0x0040c720: return "GlobalResourceHandleLoadAndEnable";
+            case 0x0040c920: return "ResourceHandleLoadWithFallback";
+            case 0x00412190: return "MenuAudioTickIntervalReached";
+            case 0x00413f30: return "FilenameExtensionClassify";
+            case 0x00417f20: return "OptionsContextSixFieldSet";
+            case 0x004180c0: return "OptionsContextCopyAndReplaceResource";
+            case 0x004196f0: return "IncidentMessageQueueAppend";
+            case 0x004197b0: return "IncidentMessageQueueRemoveAt";
+            case 0x00419a80: return "IncidentMessageNodeCreate";
+            case 0x00419ae0: return "IncidentMessageFlagSet";
+            case 0x00419da0: return "IncidentMessagePanelRefreshIfActive";
+            case 0x0041a250: return "ScrollOffsetFromCursorUpdate";
+            case 0x0041a290: return "ScreenRightEdgeCacheRefresh";
+            case 0x0041a2f0: return "IncidentMessageStateGet";
+            case 0x0041ba90: return "SimulationGlobalWordSet";
+            case 0x00436ac9: return "RendererNodeRelativePositionSet";
+            case 0x00435e35: return "ModelTransformCopyToSceneNode";
+            case 0x0045d4f0: return "ConfigEntryEnabledToggleAtIndex";
+            case 0x00462ed0: return "GraphicsOverlayResourcesRelease";
+            case 0x004634b0: return "GraphicsOverlayVisibilitySet";
+            case 0x00465970: return "ObjectCallbackListDisposeAll";
+            case 0x004661c0: return "GridCellRecordBufferAllocate";
+            case 0x0046c130: return "SceneObjectSetAnimationWithFallback";
+            case 0x0046d1a0: return "SceneObjectAttachedResourceRelease";
+            case 0x0046db60: return "ObjectRecordField11CGet";
+            case 0x00480870: return "TaskCallbackRecordAllocateAndInitialize";
+            case 0x00482470: return "IndexedGeometryDataCopyToOutput";
+            case 0x0047e4c0: return "AviPlaybackStateInitialize";
+            case 0x0047ed70: return "InterfaceInvokeOneIfNonNull";
+            case 0x00483140: return "IndexedRecordInterfaceRelease";
+            case 0x00483170: return "IndexedRecordTransformInitialize";
+            case 0x00483240: return "IndexedRecordTransformCopyIn";
+            case 0x00483400: return "IndexedRecordDataAddressGet";
+            case 0x00483540: return "Matrix4x4IdentityInitialize";
+            case 0x00483580: return "RenderInterfaceCapabilityCheck";
+            case 0x004017b0: return "AdvisorPositionRecordInitialize";
+            case 0x004065f0: return "CubicBezierPointEvaluate";
+            case 0x00410320: return "StringQueueRecordOrFlush";
+            case 0x00410a10: return "MenuItemChoiceStringsAllocate";
+            case 0x00410bf0: return "MenuItemNumericRangeRecordAllocate";
+            case 0x004198f0: return "TerrainCellLinkedEntriesRemove";
+            case 0x0041a1a0: return "UIEntryHitTestAndDispatch";
+            case 0x0044da50: return "ThreeChannelValueTweenStep";
+            case 0x00453920: return "AdvisorScrollStepAdvance";
+            case 0x00459900: return "HungerImagesPositionConfigLoad";
+            case 0x00459a50: return "BubbleImagesPositionConfigLoad";
+            case 0x0045b620: return "PriorityListButtonActionDispatch";
+            case 0x00475c80: return "DDiScenePayloadRelease";
+            case 0x00477370: return "DDiSceneRenderSurfacePoolGrow";
+            case 0x0047d430: return "SceneObjectRegistryTeardown";
+
         switch ((int) address) {
+            case 0x004034e0: return "TaskPairRecordEnqueue";
+            case 0x00403650: return "EntityTaskBatchAppend";
+            case 0x004040a0: return "EntityTaskQueueFlush";
+            case 0x00403af0: return "EntityTaskStateUpdateAfterCleanup";
+            case 0x00435ebb: return "ScreenEffectRecordSet";
+            case 0x0045bf70: return "UIEntryBoundsGet";
+            case 0x0045d470: return "UIListEntriesSwap";
+            case 0x0045e400: return "EntityTypeAndStateFlagPredicate";
+            case 0x00462da0: return "IndexedSurfaceResourceAllocate";
+            case 0x004634f0: return "IndexedSurfaceEntryHideAndRecord";
+            case 0x00463540: return "IndexedSurfaceEntriesRestore";
+            case 0x004636b0: return "InfoPanelStringEntriesInitialize";
+            case 0x00464720: return "SurfaceVisibilitySet";
+            case 0x00464e80: return "DeferredSoundPlayExpire";
+            case 0x00464ec0: return "DeferredSoundTimerSetIfIdle";
+            case 0x0046d1c0: return "AnimationDurationForLoopCount";
+            case 0x0046f1d0: return "EntityIndexedFloatLookupWithMinusOneFallback";
+            case 0x0047e0c0: return "FixedSizeRecordPoolGrow";
+            case 0x004807f0: return "RenderResourceInstancePoolGrow";
+            case 0x00488730: return "CaseInsensitivePairTableFind";
+            case 0x00488790: return "CaseInsensitivePairTableAppend";
+            case 0x0048b4a0: return "BufferedCharStreamReadToString";
+            case 0x00401bf0: return "GlobalField505f88Get";
+            case 0x00401210: return "AdvisorSceneVisualStateInitialize";
+            case 0x004033f0: return "CoordinatePairTaskRecordQueue";
+            case 0x004034a0: return "ScalarTaskRecordQueue";
+            case 0x00403520: return "TaskRecordKind10Queue";
+            case 0x004038c0: return "TimedTaskRecordInitializeAndLink";
+            case 0x004039a0: return "TaskRecordCreateAndScanGrid";
+            case 0x004039d0: return "TaskRecordKind11TimedQueue";
+            case 0x00403ef0: return "PendingRecordCallbackDispatch";
+            case 0x00403f60: return "TaskRecordKind14RemoveIfHead";
+            case 0x0040fe40: return "PointerStackPush";
+            case 0x0040fe60: return "PointerStackPop";
+            case 0x0040fe90: return "PointerStackForEach";
+            case 0x0040fcc0: return "VectorScaleComponentsInPlace";
+            case 0x00408360: return "TaskField84GetAndField88Out";
+            case 0x00408970: return "TaskFlagBitQuery";
+            case 0x0040f5e0: return "GlobalConfigValueSet";
+            case 0x0046a330: return "EntityRecordFlag400ToggleAndRefresh";
+            case 0x0046c3d0: return "RecordFieldD8EqualsOne";
+            case 0x0046c340: return "IndexedRecordListRebuildForValue";
+            case 0x0046cf40: return "RecordFlagBitTest";
+            case 0x0046cf90: return "RecordIndexedEntriesRebuildAndRefresh";
+            case 0x0046d260: return "SceneResourceSlotsRebuild";
+            case 0x0046d2c0: return "SceneResourceVisibilitySet";
+            case 0x0046d9f0: return "SceneResourceNamedEntryResolveWithFallback";
+            case 0x0046da90: return "SceneResourceCachedSlotB4Get";
+            case 0x0046dac0: return "SceneResourceCachedSlotB8Get";
+            case 0x0046daf0: return "SceneResourceCachedSlotC0Get";
+            case 0x0046d350: return "SceneResourceDrawAtOrigin";
+            case 0x0046e330: return "GridSurfaceEntryReset";
+            case 0x0043c650: return "EntityCapacityOrStatePredicate";
+            case 0x0043b6c0: return "ClippedRectangleCallbackDispatch";
+            case 0x0043a9f0: return "EntityPairInteractionGate";
+            case 0x0046e1c0: return "GlobalEntityRenderParameterModeSet";
+            case 0x0046a000: return "Entity334FloatField90Get";
+            case 0x0046a020: return "Entity334FloatField98Get";
+            case 0x0046a040: return "Entity334FloatField94Get";
+            case 0x0046a080: return "Entity334FloatFieldF4Get";
+            case 0x0046a170: return "Entity334FloatField130Get";
+            case 0x0046a190: return "Entity334FloatField134Get";
+            case 0x0046a1b0: return "Entity334FloatField120Get";
+            case 0x0046a1d0: return "Entity334FloatField128Get";
+            case 0x0046a1f0: return "Entity334FloatField124Get";
+            case 0x0046a210: return "Entity334WordField13CGet";
+            case 0x0046a230: return "Entity334FloatField12CGet";
+            case 0x0046a250: return "Entity334FloatField138Get";
+            case 0x0046a290: return "Entity334FloatField114Get";
+            case 0x0046a2b0: return "Entity334FloatField118Get";
+            case 0x0046a2d0: return "Entity334FloatField11CGet";
+            case 0x0046a2f0: return "Entity334FloatField110Get";
+            case 0x0046a310: return "Entity334FloatField10CGet";
+            case 0x0046a0c0: return "MappedIndexedRecordWordAtFCGet";
+            case 0x0046a0f0: return "MappedIndexedRecordWordAt100Get";
+            case 0x0047a580: return "FixedSizeRecordPoolAcquire";
+            case 0x0047b2e0: return "NestedRecordListRemoveByKeyRecursive";
+            case 0x0047e480: return "TwoInterfaceFieldsReleaseAndReset";
+            case 0x00406360: return "EntityRecordAttachAndRelink";
+            case 0x004065d0: return "GlobalDwordGet";
+            case 0x00406c00: return "RendererObjectUpdateFromRecordField64";
+            case 0x00406c30: return "RendererObjectUpdateFromRecordField68";
+            case 0x00406c60: return "RendererObjectUpdateFromRecordField6c";
+            case 0x00406cb0: return "RendererRecordClone";
+            case 0x00406d30: return "RendererObjectTimingValueAdjustByCount";
+            case 0x00406f50: return "RendererObjectSubobjectDispatch";
+            case 0x00406fb0: return "RendererCachedHandle40GetOrCreate";
+            case 0x00406fe0: return "RendererCachedHandle48GetOrCreate";
+            case 0x00407010: return "RendererCachedHandle50GetOrCreate";
+            case 0x00407040: return "RendererCachedHandle4cIsNotOne";
+            case 0x00401c20: return "GlobalFlagBit0IsSet";
+            case 0x004020c0: return "HandleArrayReleaseAndReset";
+            case 0x00402a40: return "CoordinatePairCallbackDispatch";
+            case 0x00402aa0: return "ArgumentCallbackDispatch";
+            case 0x00402b30: return "CoordinateCallbackDispatch";
+            case 0x00402b60: return "CoordinateCallbackDispatchByMode";
+            case 0x00402ec0: return "EntityConditionalTaskSchedule";
+            case 0x004030b0: return "CoordinatePairEventQueue";
+            case 0x00403190: return "ObjectEventType2Queue";
+            case 0x004033c0: return "ObjectAttachedRecordAllocate";
+            case 0x0046b4d0: return "CaseInsensitiveNameTableLookup";
+            case 0x00463c00: return "RectContainsPointByConvertedCoords";
+            case 0x00463c90: return "RectContainsPointFromObjectBounds";
+            case 0x0046c0b0: return "CopyFourFieldsAndConvertSecond";
+            case 0x0043c200: return "EntityStatePairPredicate";
+            case 0x00442480: return "VectorDirectionAngleRadiansGet";
+            case 0x00443670: return "TryRandomEntityActionFromCodeRange";
+            case 0x00443710: return "AdjacentPositionCandidateFind";
+            case 0x004440a0: return "LinkedEntityFlagAndCommandUpdate";
+            case 0x004471b0: return "TryCreateLinkedEntityAtPosition";
+            case 0x004502c0: return "CoordinatePairWithinBounds";
+            case 0x0045a370: return "CaseInsensitiveStringTableLookup";
+            case 0x0045a410: return "CaseInsensitiveIndexedStringLookup";
+            case 0x0045b8a0: return "PointDistanceWithinRadius";
+            case 0x0045ab30: return "RequestRecordSetFlag4ClearFlag8";
+            case 0x0045ab60: return "RequestRecordSetFlag2ClearFlag8";
+            case 0x0045ab90: return "RequestRecordFlag8IsSet";
+            case 0x00451fd0: return "CaseInsensitiveNameTableLookupAtOffset8";
+            case 0x0047e7e0: return "BitCount32ByPosition";
+            case 0x0047f0d0: return "CursorSetClientPosition";
+            case 0x0047f6a0: return "SaveDirectoryEnsureExists";
+            case 0x00402800: return "EntityCommand14BatchIssue";
+            case 0x00402670: return "EntityCommand15ValidatedRecordQueue";
+            case 0x00409cd0: return "CellCardinalNeighborApply";
+            case 0x00402600: return "EntityRecordArrayApplyZeroState";
+            case 0x00433e30: return "GridCellEntityEligibilityCheck";
+            case 0x00437050: return "EntityPoolResourcesRelease";
+            case 0x00437300: return "ProcessQueuedGridAnimations";
+            case 0x004378e0: return "GridObjectRecordsRelease";
+            case 0x004383a0: return "GlobalAnimationStateSet";
+            case 0x0047b550: return "SoundBufferVolumeSetMinus300";
+            case 0x0047a800: return "DirectSoundObjectsShutdown";
+            case 0x0047a540: return "ObjectFieldBE4DwordGet";
+            case 0x004772b0: return "RenderInterfaceTransformPoint";
+            case 0x00475e10: return "CallbackRecordSetFlag10AndRefresh";
+            case 0x00476f50: return "ResourceInterfaceCallSlot48";
+            case 0x00476fd0: return "ResourceInterfaceCallSlot8C";
+            case 0x00476ff0: return "ResourceInterfaceCallSlot90";
+            case 0x00477250: return "ResourceInterfaceCallSlot40AndClearField14";
+            case 0x00477270: return "ResourceInterfaceCallSlot88";
+            case 0x00406c90: return "AnimationObjectVisibilitySet";
+            case 0x004086a0: return "AnimationObjectVisibilityGet";
+            case 0x00406d10: return "AnimationObjectTimeUpdate";
+            case 0x00406da0: return "AnimationObjectTimeGet";
+            case 0x00406dc0: return "AnimationObjectTransformSet";
+            case 0x00406e30: return "AnimationObjectHandleGet";
+            case 0x00407090: return "AnimationObjectValueGet";
+            case 0x00407360: return "GlobalTaskRefreshFlagGet";
+            case 0x004090a0: return "TerrainCellPredicateCheck";
+            case 0x0040e460: return "GridCellRecordPresentCheck";
+            case 0x0040f7b0: return "OptionalResourceDestroy";
+            case 0x00419e60: return "PendingRecordReleaseIfPresent";
+            case 0x00419f10: return "PendingRecordReleaseAll";
+            case 0x0041b470: return "CategoryValueIsNeitherZeroNorFifteen";
+            case 0x00409d40: return "LevelStateStoredValueSet";
+            case 0x0040ab10: return "GlobalModeZeroInputSet";
+            case 0x0040e7e0: return "GlobalFlagBit0Clear";
+            case 0x0040e910: return "GlobalValueClearIfEqual";
+            case 0x0046a270: return "EntityCollisionRadiusGet";
+            case 0x0046cf80: return "EntityTypeMaskGet";
+            case 0x0046d330: return "EntityTypeFlagGetBit1";
+            case 0x0046d9e0: return "SceneObjectResourceGet";
+            case 0x00462830: return "GlobalFloatAt00554adcAddOne";
+            case 0x00462850: return "GlobalFloatAt00554efcAddOne";
+            case 0x00462870: return "GlobalCounterAt00555324Increment";
+            case 0x00462880: return "GlobalCounterAt00555328Increment";
+            case 0x00462890: return "GlobalCounterAt0055532cIncrement";
+            case 0x00479e40: return "MatrixIdentityAndTranslationSet";
+            case 0x0047b330: return "NestedRecordListRemoveMatchingKey";
+            case 0x0047c170: return "WindowStateInitialize";
+            case 0x0047d490: return "SurfacePixelFormatQuery";
+            case 0x004792c0: return "GlobalRecordListPushHead";
+            case 0x0047b0d0: return "IndexedRecordStride134WordGet";
+            case 0x0047d410: return "RendererRecordTableInitialize";
+            case 0x0047ff30: return "EngineHeapAllocate";
+            case 0x0047ff40: return "EngineHeapFree";
+            case 0x004026c0: return "EntityDeferredWorkSchedule";
+            case 0x00402e40: return "CellCommandType13Issue";
+            case 0x00402fb0: return "CellCommandType11Issue";
+            case 0x00403030: return "CellCommandType3Issue";
+            case 0x00403b40: return "EntityPendingTaskFlagClear";
+            case 0x00403b60: return "EntityActivityRecordsRefresh";
+            case 0x00435ef4: return "RecordFields4And14Set";
+            case 0x00435f0b: return "RecordField14Get";
+            case 0x004422a0: return "SurfaceVectorNormalize";
+            case 0x0044d250: return "FloatNegateAbsoluteValue";
+            case 0x0044e6b0: return "IndexedFlagValueSetOne";
+            case 0x00451c30: return "LinkedRecordField4Clear";
+            case 0x004532e0: return "IndirectHandleResolveInPlace";
+            case 0x00453900: return "DeferredCallbackSet";
+            case 0x00453910: return "DeferredCallbackInvokeIfSet";
+            case 0x0045a6e0: return "IndexedPairSet";
+            case 0x0045a700: return "IndexedPairGet";
+            case 0x0045b900: return "IntegerPairDivideToFloatPair";
+            case 0x00462ab0: return "RecordField18Set";
+            case 0x00462ac0: return "RecordFlags24Or";
+            case 0x00463730: return "IndexedFloatPairSet";
+            case 0x00465ac0: return "ResourceEnableSet";
+            case 0x0046c0f0: return "RecordResourceRelease";
+            case 0x0046ced0: return "PairedResourceStateSet";
+            case 0x0046cfc0: return "SixResourceSlotsSetState";
+            case 0x0047d3f0: return "BitCount32";
+            case 0x00499690: return "PointerRangeIsReadable";
+            case 0x004996b0: return "PointerRangeIsWritable";
+            case 0x004996d0: return "FunctionPointerIsExecutable";
+            case 0x0047cdd0: return "SurfaceDescriptionGet";
+            case 0x0047c1c0: return "DirectDrawEnumerateAndStoreCallbackResult";
+            case 0x00479510: return "D3DRMVectorRotate";
+            case 0x00478310: return "WindowRectAdjustForWindowedMode";
+            case 0x0041a9c0: return "CaseInsensitiveStringTableIndexFind";
+            case 0x0041f870: return "GlobalObjectField8CIncrement";
+            case 0x0041f880: return "GlobalObjectField8CSubtract";
+            case 0x0041f8a0: return "GlobalObjectField98Add";
+            case 0x0041f8c0: return "GlobalObjectField98Clear";
+            case 0x0041f980: return "GlobalObjectField94Increment";
+            case 0x0041f990: return "GlobalObjectFieldA8Increment";
+            case 0x0045a5b0: return "UITextOutputPositionAndDraw";
+            case 0x0045a620: return "UITextOutputObjectRelease";
+            case 0x00462960: return "TaskTableContentsRelease";
+            case 0x00465010: return "ConfiguredVariantPropertySet";
+            case 0x00465030: return "ConfiguredVariantPropertyRead";
+            case 0x0046db20: return "AttachedEntitySlotObjectGet";
+            case 0x00463ea0: return "IndexedTextMetricsPairGet";
+            case 0x00463ed0: return "IndexedTextMetricsPairSet";
+            case 0x00466210: return "EntityFieldGridBufferRelease";
+            case 0x00476220: return "RenderInterfacePairUpdate";
+            case 0x00476310: return "ScenePropertyValueAt08Get";
+            case 0x00401c30: return "DisplayWidthGet";
+            case 0x00401c40: return "DisplayHeightGet";
+            case 0x00402090: return "PriorityEntryOrderValueSet";
+            case 0x004020a0: return "PriorityEntryStateSet";
+            case 0x004020b0: return "PriorityEntryStateGet";
+            case 0x004021e0: return "EngineMemoryAllocate";
+            case 0x00402210: return "EngineMemoryFree";
+            case 0x0043c280: return "EntityNestedFloatAddUnlessBlocked";
+            case 0x0043c4c0: return "EntityFinishState1A";
+            case 0x0043c530: return "EntityMarkAndFinishState1A";
+            case 0x0046a420: return "SelectedGlobalPointTransformAndReturnX";
+            case 0x0046a470: return "LinkedListPushAtGlobalHead";
+            case 0x00469a90: return "IndexedValueAppend";
+            case 0x00469ac0: return "IndexedRecordWordAtOffsetB0Get";
+            case 0x00469af0: return "IndexedRecordWordAtOffsetB4Get";
+            case 0x00469b20: return "IndexedRecordWordAtOffsetB8Get";
+            case 0x00469b50: return "EntityIndexedRecordWordAtOffsetBCGet";
+            case 0x00469b80: return "EntityIndexedRecordWordAtOffsetE0Get";
+            case 0x00469be0: return "EntityIndexedRecordWordAtOffsetF0Get";
+            case 0x00469d00: return "NestedFloatAtOffset9CGet";
+            case 0x00469d40: return "NestedFloatAtOffset6CGet";
+            case 0x00469d50: return "NestedFloatAtOffset74Get";
+            case 0x00469d60: return "NestedFloatAtOffset78Get";
+            case 0x00469d70: return "NestedFloatAtOffsetE8Get";
+            case 0x00469d90: return "NestedFloatAtOffset70Get";
+            case 0x00469da0: return "NestedFieldAddressAtOffsetA0Get";
+            case 0x00469db0: return "NestedFloatAtOffset7CGet";
+            case 0x00469dc0: return "NestedFloatAtOffset80Get";
+            case 0x00469e00: return "IndexedRecordFloatAtOffsetDCGet";
+            case 0x00469e20: return "NestedFloatAtOffsetDCGet";
+            case 0x00469e40: return "NestedWordAtOffsetACGet";
+            case 0x00469ec0: return "IndexedRecordWordAtOffset144Get";
+            case 0x00469ee0: return "IndexedRecordWordAtOffset148Get";
+            case 0x00469f00: return "IndexedRecordWordAtOffset14CGet";
+            case 0x00469f60: return "IndexedRecordWordAtOffsetD0Get";
+            case 0x00469f90: return "NestedWordAtOffsetC0OrC4Get";
+            case 0x00469fe0: return "NestedFloatAtOffset8CGet";
+            case 0x00472940: return "SceneRootObjectGet";
+            case 0x00476120: return "ScenePropertyPrimaryValueGet";
+            case 0x00476140: return "ScenePropertySecondaryValueGet";
+            case 0x004761c0: return "ScenePropertyFloatAt14Get";
+            case 0x004762f0: return "ScenePropertyOwnedBufferRelease";
+            case 0x00476d10: return "RenderResourcePairReleaseAndClear";
+            case 0x00476f10: return "RenderSurfaceGetValuePair80And84";
+            case 0x00477220: return "RenderResourceTrackAndRetain";
+            case 0x004773e0: return "RenderResourceTrackedReferencesRelease";
+            case 0x00401840: return "AdvisorActionPositionAndModeSet";
+            case 0x00401890: return "AdvisorActionPositionGet";
+            case 0x004011c0: return "AdvisorAnimationEndCleanup";
+            case 0x00450700: return "GridSurfaceWriteAtXY";
+            case 0x00439930: return "CopyTwoDwordPairToOutputs";
+            case 0x00465160: return "SoundObjectDurationGet";
+            case 0x00476e50: return "ScreenBoundedSurfaceResourceAllocate";
+            case 0x00476fb0: return "RendererObjectSetClipDistance";
+            case 0x0041f720: return "CurrentLevelStateFlagsContainMask";
+            case 0x0041f920: return "LevelStateField9CAdd";
+            case 0x0041f9a0: return "LevelResourceBalanceAddAndSound";
+            case 0x00436a4a: return "CameraSetDistance";
+            case 0x00436921: return "CameraSetScalarBounds";
+            case 0x00436b33: return "CameraGetPositionWithTerrainHeight";
+            case 0x00436b79: return "CameraRotationGet";
+            case 0x004395e0: return "EntityDisplayNameLookup";
+            case 0x00439950: return "ToolNameStringResourcesLoad";
+            case 0x00482040: return "AnimationTrackApplyWrappedFrameOffset";
+            case 0x00483810: return "InputActionStateToggle";
+            case 0x00487cb0: return "AnimationTrackFindKeyframeAndFraction";
+            case 0x00498fe0: return "CrtFileDescriptorAllocate";
+            case 0x004990a0: return "CrtFileDescriptorSetHandle";
+            case 0x0049add0: return "BoundedWideStringLengthIncludingNull";
+            case 0x004013e0: return "AdvisorPositionNameToIndex";
+            case 0x004014c0: return "AdvisorAnimationNameToIndex";
+            case 0x00406730: return "Vector2DistanceVariant";
+            case 0x00406760: return "Vector2SetLength";
+            case 0x00436831: return "CameraSetTiltBounds";
+            case 0x00436860: return "CameraSetTilt";
+            case 0x00436a18: return "CameraSetDistanceBounds";
+            case 0x00436953: return "CameraSetBoundedRotationValue";
+            case 0x00435a20: return "GlobalStateLowByteClearAndRefresh";
+            case 0x00466380: return "SetExpansionEntityAtGridCell";
+            case 0x004663f0: return "CanSpawnExpansionEntityAtGridCell";
+            case 0x00465e00: return "AdvanceTimedVisualSegmentAndFade";
+            case 0x004599c0: return "LoadObjectHungerMeterImages";
+            case 0x00459240: return "PopEntityStateOverride";
+            case 0x00475070: return "SceneObjectCoordinateTransformInPlace";
+            case 0x00475090: return "SceneObjectCoordinateTransformToOutput";
+            case 0x004756b0: return "SceneObjectTransformMatrixSet";
+            case 0x00473680: return "SceneObjectWrappedPointerGet";
+            case 0x00426250: return "UpdateRenderViewportState";
+            case 0x00436831: return "CameraSetTiltBounds";
+            case 0x00436860: return "CameraSetTilt";
+            case 0x00436a18: return "CameraSetDistanceBounds";
+            case 0x00436953: return "CameraSetBoundedRotationValue";
+            case 0x00435a20: return "GlobalStateLowByteClearAndRefresh";
+            case 0x00471330: return "InterpolatedZWithinBounds";
+            case 0x00471a20: return "ReadIndexedPairSlotDword";
+            case 0x00471ce0: return "EntityFlag100AndSharedEligibilityCheck";
+            case 0x0046f110: return "WeaponTypeGetRechargeTime";
+            case 0x0046f140: return "WeaponTypeGetDischargeRate";
+            case 0x0046f170: return "WeaponTypeGetRange";
+            case 0x0046f1a0: return "WeaponTypeGetWallDestroyTime";
+            case 0x00425cd0: return "Global004de548Set";
+            case 0x00425d50: return "GlobalRenderRecordSetFromInput";
+            case 0x004295a0: return "ContextSelectedGlobalPointerGet";
+            case 0x0042b500: return "GlobalStateField84Get";
+            case 0x004310f0: return "TerrainCellFlag20ClearAndRefresh";
+            case 0x00433be0: return "CurrentLevelTerrainGridPick";
+            case 0x00435550: return "GlobalStateZeroTransitionDetect";
+            case 0x004370b0: return "RenderConfigSixFieldCopyOut";
+            case 0x004370d0: return "RenderConfigSixFieldCopyInOrClear";
+            case 0x00437100: return "GridRecordCountDifferenceSum";
+            case 0x00437440: return "GridRecordCountTablesClear";
+            case 0x00437460: return "GridRecordCountDifferenceGet";
+            case 0x004374a0: return "GridRecordCountGet";
+            case 0x00437cc0: return "EntityFlag40000ThresholdCompare";
+            case 0x00438ed0: return "EntityFlagsContainRequestedSingleBit";
+            case 0x0049af60: return "CrtWideEnvironmentStringListConvert";
+            case 0x0049af20: return "CrtCountedStringCompare";
+            case 0x0049aea0: return "CrtFileDescriptorFlag80SetOrClear";
+            case 0x00424810: return "ApplyDefaultTransformToFlaggedRenderObjects";
+            case 0x00435190: return "SurfaceTypeConfiguredValueAtIndex";
+            case 0x0046c030: return "RenderResourceBindingInitialize";
+            case 0x0046ead0: return "AppendMapRowSpanToBuffer";
+            case 0x0046eb30: return "StartMapRowSpanBufferRecord";
+            case 0x00479110: return "ReadAngleSettingRadians";
+            case 0x00479240: return "ReleaseLinkedObjectList";
+            case 0x00479a30: return "RayPlaneIntersectionParameter";
+            case 0x00479ab0: return "PointAlongRay";
+            case 0x00479c10: return "SphereRayIntersectionDiscriminantPositive";
+            case 0x00479da0: return "Matrix4SetRotationY";
+            case 0x00479df0: return "Matrix4SetRotationZ";
+            case 0x00479e70: return "Matrix4SetIdentity";
+            case 0x00479ea0: return "Matrix4SetZero";
+            case 0x00479eb0: return "Matrix4Copy";
+            case 0x00424560: return "AirSupplyAmountUpdate";
+            case 0x00438f60: return "DockDefinitionMatchesCell";
+            case 0x004399c0: return "EntityFlag400AndHealthThresholdCheck";
+            case 0x00439cf0: return "EntityStatsWordFlag10Test";
+            case 0x00439d10: return "EntityStatsWordFlag20Test";
+            case 0x00439d30: return "EntityStatsWordFlag40Test";
+            case 0x0043baf0: return "EntityFlagsMask107C33DEOr1C00203AnyTest";
+            case 0x004436f0: return "EntityType3Flag04000000Test";
+            case 0x00499150: return "CrtFileDescriptorCloseSlot";
+            case 0x0049a050: return "ExtendedFloat96BitShiftLeftOne";
+            case 0x0049a080: return "ExtendedFloat96BitShiftRightOne";
+            case 0x0049a0b0: return "CrtDecimalDigitSequenceToExtended96";
             case 0x401000: return "AdvisorSceneControllerInit";
             case 0x4018c0: return "AdvisorRequestAdmit";
             case 0x401930: return "AdvisorRequestResetAndSubmitSound";
@@ -2508,6 +4704,7 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x47e300: return "InterfaceMethod18StructApply";
             case 0x483690: return "MatrixMethodPairApply";
             case 0x485ea0: return "InterfaceSlot58PairStoreClamp";
+            case 0x489660: return "SceneActFrameRecordCloneOrCreate";
             case 0x489b30: return "ObjectInterfaceArrayResourceCreate";
             case 0x41f6c0: return "SelectedEntityDetachCallback";
             case 0x43fc20: return "RecordPairPoseCopyAndActivityRaise";
@@ -2591,6 +4788,412 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x4629d0: return "PanelEventEntryAppend";
             case 0x46f3b0: return "RayHitScanAndEffectApply";
             case 0x482220: return "MeshRecordAllocateAndFill";
+            case 0x00401240: return "Vector2Distance";
+            case 0x004013a0: return "Vector3Length";
+            case 0x00401420: return "Vector3Distance";
+            case 0x00401470: return "Vector3CrossProduct";
+            case 0x00401500: return "Vector3Add";
+            case 0x004016c0: return "Vector3Subtract";
+            case 0x004016f0: return "Vector3DotProduct";
+            case 0x00401750: return "Vector3Normalize";
+            case 0x00434da0: return "AdvisorTooltipAndTooltipSoundConfigLoad";
+            case 0x00434a00: return "AdvisorTutorialIconImageLoad";
+            case 0x00435010: return "TerrainCellWorkFlagCircleSet";
+            case 0x004332f0: return "TerrainCellWorkFlagSet";
+            case 0x00439b80: return "TaskTargetCellEligibilityCheck";
+            case 0x0049d780: return "DisplayResolutionComboPopulate";
+            case 0x0049d870: return "DisplayResolutionFilterTupleAppend";
+            case 0x0049d8d0: return "DisplayModeMatchesFilterTuple";
+            case 0x0049d950: return "DisplayModeNameIndexFind";
+            case 0x0049d9d0: return "DisplayRefreshRateControlsSync";
+            case 0x004073a0: return "EntityPointerRegistriesRemove";
+            case 0x004067b0: return "PolylineSegmentLengthsAndTotalCalculate";
+            case 0x00406820: return "BezierCurveSamplesBuild";
+            case 0x00410c70: return "ResourceVariantRecordRelease";
+            case 0x00410f30: return "ResourceRecordAndChildrenRelease";
+            case 0x0044cc10: return "LightEffectFadeParametersStore";
+            case 0x00432950: return "EntityMoveDestinationCellIsUsable";
+            case 0x0043fdc0: return "EntityActionTargetCellIsValid";
+            case 0x004718d0: return "ObjectPairRayHitCheck";
+            case 0x00470690: return "TimedEntitySegmentVisualCreate";
+            case 0x00470260: return "EntitySurfaceSegmentCollisionCheck";
+            case 0x00473e10: return "RendererFogColorSet";
+            case 0x00403560: return "TaskRegistryRemoveType10EntriesForEntity";
+            case 0x00403430: return "TaskRegistryRemoveType0EntryByPair";
+            case 0x00402890: return "TaskType23CreateForCategoryMask";
+            case 0x00431140: return "TerrainCellQueuedWorkTransition";
+            case 0x00470630: return "EntityDirectedLineSideCheck";
+            case 0x00473b20: return "EntityFlag80Set";
+            case 0x00474a60: return "SceneSurfaceTextureBindByMode";
+            case 0x00475020: return "SceneMeshColorAndAlphaSet";
+            case 0x0042ef40: return "StatsLevelRecordCountForStatType";
+            case 0x004093b0: return "PassableAdjacentCellSearchExpand";
+            case 0x004712c0: return "EntityVelocityStateRecordGet";
+            case 0x004712f0: return "EntityVelocitySlotValueGet";
+            case 0x00471310: return "EntityVelocitySlotValueSet";
+            case 0x0043a930: return "TrackedEntityPointerArrayRemove";
+            case 0x0042dfc0: return "ObjectPointerRegistryClearMatch";
+            case 0x0042dff0: return "ObjectPointerRegistryGetSlot";
+            case 0x004293b0: return "SelectionRectangleRender";
+            case 0x00424830: return "SelectedObjectOutlinesDraw";
+            case 0x00432a20: return "TerrainCellAllowsPlacement";
+            case 0x00431ab0: return "AnyObjectCanOccupyTerrainCell";
+            case 0x00432b90: return "TerrainCellTypeIs8Or10Or11";
+            case 0x00433330: return "TerrainCellTypeGetAtCoords";
+            case 0x004329d0: return "TerrainCellFlag8CheckIfInBounds";
+            case 0x0046e8a0: return "WorldSpatialRecordFindAtGridCoordinate";
+            case 0x00471860: return "SceneSegmentTraceNearestHit";
+            case 0x00472080: return "EntityCentersWithinConfiguredRadius";
+            case 0x00472130: return "EntityCentersWithinObjectRadius";
+            case 0x004728e0: return "RendererFlagBit6Set";
+            case 0x00473ec0: return "RenderObjectStateApplyToEntries";
+            case 0x00474e90: return "RenderObjectHierarchyFloat3Set";
+            case 0x004750b0: return "RenderObjectSetPackedRgbaFromFloatChannels";
+            case 0x00423080: return "ModeDependentField24Get";
+            case 0x004230b0: return "GlobalFloatField00556F00Get";
+            case 0x00425d80: return "CurrentEngineModeIsZero";
+            case 0x00426230: return "GlobalTripleCopyOut";
+            case 0x00426360: return "GlobalStateFlagsBits6And9Set";
+            case 0x004263a0: return "GlobalStateFlagsBit7Set";
+            case 0x004263c0: return "GlobalSubsystemStateReset";
+            case 0x00429850: return "ActiveEngineFieldB0Get";
+            case 0x00429860: return "EngineFloatField210GetByIndex";
+            case 0x00429880: return "EngineFloatField260Get";
+            case 0x0042b2f0: return "EntityEffectCountersApplyFromRecord";
+            case 0x004314c0: return "ActivityBuildRecordRelease";
+            case 0x00431530: return "ActivityBuildRecordsReleaseAll";
+            case 0x0046a120: return "GroupedCodeTableFindValueIndex";
+            case 0x0046a370: return "LinkedRecordChainFree";
+            case 0x0046a390: return "GlobalLinkedRecordChainClear";
+            case 0x0046a760: return "FirstSetFlagOrdinal";
+            case 0x0046aad0: return "MessageLabelIndexFind";
+            case 0x00475580: return "RenderObjectRotateAxis";
+            case 0x00475610: return "RenderObjectSetIdentityTransform";
+            case 0x00476270: return "SceneObjectSetFormattedString";
+            case 0x004041b0: return "EntityTaskChainContainsKind";
+            case 0x0040cf80: return "GridCellObjectLinkInsert";
+            case 0x00412450: return "RenderUiFrameCell";
+            case 0x0041a660: return "InteractionActionCodeMapInitialize";
+            case 0x004302b0: return "MapCellTrackingFlagsClearAndRefresh";
+            case 0x00432100: return "TerrainCellFlag100SetAndTrack";
+            case 0x00432270: return "TerrainCellVisitedFlagSetAndTrack";
+            case 0x00465c50: return "ParticleSlotInitializeForEmitter";
+            case 0x00479b80: return "PointInPolygon2D";
+            case 0x00479d50: return "Matrix4SetRotationZ";
+            case 0x004760e0: return "AttachedObjectDataReleaseAndClear";
+            case 0x00476d50: return "ResourceSlotTableInitialize";
+            case 0x00476d80: return "ResourceSlotTableReleaseAll";
+            case 0x0047ab00: return "VideoResourceSlotRelease";
+            case 0x0047b050: return "VideoResourceSlotEnabledSet";
+            case 0x0047b2a0: return "KeyedResourceEntryRemove";
+            case 0x0048f950: return "CrtFindHandleClose";
+            case 0x00491360: return "CrtBufferedCharacterWrite";
+            case 0x00498b70: return "CrtWideCharToMultibyte";
+            case 0x00498e00: return "CrtMultibyteToWideChar";
+            case 0x004991f0: return "CrtFileDescriptorHandleGet";
+            case 0x004997c0: return "CrtCallocAligned";
+            case 0x00499fb0: return "CrtUnsignedAddWithCarry";
+            case 0x00407300: return "BubbleActionNameToIndex";
+            case 0x00410450: return "StringKeyedCacheEntryFind";
+            case 0x004322d0: return "TerrainCellVisitedFlagTest";
+            case 0x00432300: return "TerrainCellVisitedFlagsClearAll";
+            case 0x00471ca0: return "EntityWorldCenterPositionRead";
+            case 0x00471c70: return "VelocitySlotVectorRead";
+            case 0x00471a40: return "VelocitySlotPrimaryObjectGet";
+            case 0x00471a50: return "VelocitySlotSecondaryObjectGet";
+            case 0x00473ba0: return "SceneObjectFlagBit3Get";
+            case 0x00410520: return "StringCacheLookupOrLoad";
+            case 0x00419430: return "InterfaceMessageTabInfoTextLoad";
+            case 0x00432360: return "TerrainCellPrimaryFlagsMaskClearAndRefresh";
+            case 0x004323c0: return "TerrainCellSecondaryFlagBit0Clear";
+            case 0x004323f0: return "TerrainCellFlagsSetAndRefresh";
+            case 0x00432450: return "TerrainCellFlagsSetMask100400";
+            case 0x00432490: return "TerrainCellFlagsSetMask20108000";
+            case 0x004324d0: return "TerrainCellSecondaryFlag8SetOrClear";
+            case 0x00432520: return "TerrainCellSecondaryFlag8Test";
+            case 0x00432560: return "TerrainCellFlag40000000ClearOrSet";
+            case 0x004325d0: return "TerrainCellSecondaryFlagBit0Set";
+            case 0x00432710: return "TerrainCellFlag80000ClearOrSet";
+            case 0x00432d90: return "TerrainCellFlag20TestInBounds";
+            case 0x0046fef0: return "EffectModeSurfaceQueryTypeResolve";
+            case 0x0046ff70: return "ActiveEffectRecordSlotFind";
+            case 0x0046ff90: return "ActiveSegmentVisualRecordSlotFind";
+            case 0x00479ce0: return "Matrix4Multiply";
+            case 0x00479af0: return "LineIntersection2DCompute";
+            case 0x00478330: return "Direct3DRenderPreferencesApply";
+            case 0x0047dfa0: return "DirectDrawSurfacePixelRead";
+            case 0x0047de60: return "DirectDrawSurfaceDescriptionGet";
+            case 0x0047def0: return "DirectDrawSurfacePixelFormatGet";
+            case 0x00432b00: return "TerrainCellFlag800TestInBounds";
+            case 0x00432c20: return "TerrainCellFlag40000Test";
+            case 0x00432c50: return "TerrainCellTypeSpeedClassGet";
+            case 0x00432dd0: return "TerrainCellFlag08000000Test";
+            case 0x00432e60: return "TerrainCellFlagsMaskC0Test";
+            case 0x00432e90: return "TerrainCellFlag04000000Test";
+            case 0x00432ec0: return "TerrainCellStateEquals1";
+            case 0x00432f40: return "TerrainCellFlagsMask18ClearInBounds";
+            case 0x00432f90: return "TerrainCellFlag4TestInBounds";
+            case 0x00432fd0: return "TerrainCellFlag2000Test";
+            case 0x00433000: return "TerrainCellFlag80Test";
+            case 0x00433030: return "TerrainCellFlag8000Test";
+            case 0x00433060: return "TerrainCellSecondaryFlagBit0Test";
+            case 0x004330e0: return "TerrainCellFlagsMask180000Test";
+            case 0x00473dc0: return "RendererFogEnableAndColorApply";
+            case 0x00473e70: return "RendererFogModeSet";
+            case 0x00473ea0: return "RendererFogParametersSet";
+            case 0x00474ff0: return "SceneMeshColorSet";
+            case 0x00403320: return "ObjectCommandTaskCreate";
+            case 0x00404e00: return "ObjectPathSubmitToGridTarget";
+            case 0x00404f50: return "ObjectFilterMatchesActionTarget";
+            case 0x00407410: return "Type4ObjectRegistryInsert";
+            case 0x004074b0: return "Type2TimedRegistryInsert";
+            case 0x00407540: return "FlaggedObjectTimerRegistryInsert";
+            case 0x00408ce0: return "OperationGroupAppendObject";
+            case 0x00429160: return "TerrainCellPaletteResourceAtGridPosition";
+            case 0x004295c0: return "EntityMatchesCurrentSelectionOrOwner";
+            case 0x004247d0: return "ApplyDefaultTransformToFlaggedRenderObject";
+            case 0x00433120: return "TerrainCellFlag10000000SetOrClear";
+            case 0x004332c0: return "TerrainCellRecordByte3Get";
+            case 0x00434530: return "TerrainGridEntryResourcesReleaseAll";
+            case 0x004382c0: return "PooledRecordAllocateAndReset";
+            case 0x00438310: return "PooledRecordChunkAllocateAndLink";
+            case 0x00438580: return "EntityFlag80000000SetOrClear";
+            case 0x0047a5c0: return "FixedSizeRecordPoolGrow";
+            case 0x0049d5e0: return "DisplayModeDialogSetModeAndRefreshChoices";
+            case 0x00404ed0: return "CheckObjectCandidate";
+            case 0x00404f10: return "FindMatchingObjectRecord";
+            case 0x00407370: return "ResetObjectAuxiliaryState";
+            case 0x00407510: return "SetType2ObjectRecordValue";
+            case 0x00409450: return "FindNearbyPlacementCandidate";
+            case 0x0040bdc0: return "SetTimeoutTo10000";
+            case 0x0040bfc0: return "RockFallStyleTableSet";
+            case 0x0040cf50: return "RegisterObjectAtGridPosition";
+            case 0x0040fde0: return "SetVectorAndNotifyListeners";
+            case 0x0040fec0: return "SetGlobalScalarToOne";
+            case 0x0040ff70: return "ObjectVector3Set";
+            case 0x0040ffe0: return "GlobalVectorSetAndNotifyListeners";
+            case 0x00410b30: return "GlobalPointerGet_004c76ab24";
+            case 0x00410b40: return "GlobalPointerGet_004c76ab28";
+            case 0x00410b50: return "GlobalPointerGet_004c76ab3c";
+            case 0x00417430: return "FloatToLong";
+            case 0x00418000: return "ShowLevelOverlayForCurrentSelection";
+            case 0x00419b50: return "RemainingTimerDurationGet";
+            case 0x0041b9b0: return "GlobalStateGet_004ddd1c";
+            case 0x0041ee60: return "InteractionTimerResetAndFlagClear";
+            case 0x0041f840: return "RemoveObjectIfClass6";
+            case 0x0041f8e0: return "NoOpCallback";
+            case 0x00438670: return "EntityAtGridPositionLookup";
+            case 0x00439790: return "LocalizedObjectTheNameGet";
+            case 0x00439860: return "LocalizedObjectNameGet";
+            case 0x00443840: return "EntityRouteCellCandidateAccept";
+            case 0x00477f70: return "RenderFeatureFlagsGet";
+            case 0x0047ec60: return "AviPlaybackFrameIndexGet";
+            case 0x004802b0: return "LoaderProgressCallbackSet";
+            case 0x00482210: return "PointerValueGet";
+            case 0x00487760: return "ResourceStringTablesFree";
+            case 0x004877d0: return "ResourceEntryIdGet";
+            case 0x004894c0: return "ComInterfaceQueryOrFallback";
+            case 0x0048bcf0: return "RegistryEntryValueGet";
+            case 0x0048bd10: return "RegistryEntryTypeGet";
+            case 0x0048dfd0: return "QsortSmallPartitionSort";
+            case 0x0048e250: return "StackProbeAllocate";
+            case 0x0048e4f0: return "CrtTerminateProcessWithHandlers";
+            case 0x0048e5a0: return "CrtRunCallbackArray";
+            case 0x0048e680: return "CrtDoubleAbsoluteValue";
+            case 0x00490070: return "VsscanfParseInput";
+            case 0x00494ca0: return "StreamPushbackChar";
+            case 0x00494cc0: return "StreamSkipClassifiedChars";
+            case 0x004977d0: return "CrtControlFlagsTranslate";
+            case 0x00499fe0: return "UInt96Add";
+            case 0x0047a1b0: return "FormattedTextDraw";
+            case 0x0048d940: return "CrtMathDispatchTableInitialize";
+            case 0x0048e090: return "CrtAsin";
+            case 0x0048e480: return "CrtFloatingPointRuntimeInitialize";
+            case 0x0048e4b0: return "CrtExit";
+            case 0x0048ec00: return "SehFrameUnwind";
+            case 0x0048eca0: return "CallSettingFrame12";
+            case 0x0048ee90: return "SehScopeTableLookup";
+            case 0x0048fa00: return "CurrentDirectoryGet";
+            case 0x0048fd20: return "CrtFlushStreamBuffer";
+            case 0x00493ec0: return "BoundedStringLength";
+            case 0x00493ae0: return "DoubleFrexpDecompose";
+            case 0x00493be0: return "FpuStatusWordGetVariantA";
+            case 0x00493bf0: return "FpuStatusWordGetVariantB";
+            case 0x00497aa0: return "UInt96Zero";
+            case 0x00497ab0: return "UInt96IsZero";
+            case 0x00497a80: return "UInt96Copy";
+            case 0x00497ad0: return "UInt96ShiftRight";
+            case 0x00497900: return "UInt96HasNoBitsAtOrAbove";
+            case 0x00497970: return "UInt96IncrementAtBit";
+            case 0x004979e0: return "UInt96ClearFromBit";
+            case 0x00438df0: return "EntityLookupAtWorldPosition";
+            case 0x00442210: return "EntityActionRouteStateInitialize";
+            case 0x0044c970: return "LightEffectsBlinkParametersApply";
+            case 0x00490280: return "CrtFloatingPointFeatureProbe";
+            case 0x004902b0: return "CrtNormalizeDecimalPoint";
+            case 0x004907c0: return "StringPrefixReserve";
+            case 0x004913b0: return "CrtWriteRepeatedChar";
+            case 0x004913f0: return "CrtWriteStringBounded";
+            case 0x004914a0: return "StrChr";
+            case 0x00491560: return "CrtHeapInitialize";
+            case 0x00491710: return "CrtHeapBlockFree";
+            case 0x00492dcc: return "CrtFmodExtendedPrecision";
+            case 0x004939d0: return "CrtMathExceptionHandlerGet";
+            case 0x00493a00: return "CrtMathExceptionCodeFromStatus";
+            case 0x00493a40: return "DoubleBuildWithExponent";
+            case 0x00493a80: return "DoubleClassify";
+            case 0x00495d90: return "IsDbcsLeadByte";
+            case 0x004964e0: return "CrtCodePageGet";
+            case 0x004974d0: return "CrtStandardStreamBufferInstall";
+            case 0x00497ec0: return "CrtLocaleDataGetOrInitialize";
+            case 0x00498340: return "CrtFatalMessageExit";
+            case 0x00499860: return "CrtTimeZoneInitializeOnce";
+            case 0x0048e890: return "MarkupIntegerTokenParse";
+            case 0x0043f560: return "EntityPoolFindWithLocalPredicate";
+            case 0x00456640: return "GlobalFlagGet_004ff978";
+            case 0x00458650: return "GlobalFlagGet_004ffe30";
+            case 0x00458660: return "GlobalValueSet_004ffe48";
+            case 0x0045c4a0: return "GlobalValueSet_0050080c";
+            case 0x0045cc10: return "IndexedGlobalValueGet_00500a9c";
+            case 0x0045cc60: return "GlobalValueGet_00500a98";
+            case 0x004628c0: return "GlobalFloatAccumulate_00555120";
+            case 0x0047c160: return "ConstantNegative10000Get";
+            case 0x0048c030: return "RegistryEntryAccessByIndex";
+            case 0x0048e1aa: return "CrtMathIntrinsicDispatch";
+            case 0x00491ff5: return "CrtNoOpStub";
+            case 0x00495bde: return "CrtAbortAfterCallback";
+            case 0x00497870: return "CrtNoOpStubVariant";
+            case 0x0044c7c0: return "LightEffectsConfigurationLoad";
+            case 0x0044cef0: return "LightEffectsMoveParametersStore";
+            case 0x0044d710: return "WaypointVectorRandomScaleApply";
+            case 0x0046abb0: return "TextSlotMessageWithImageAssign";
+            case 0x0048e280: return "CrtRoundToIntegralWithMathErrorHandling";
+            case 0x0048e8e0: return "CrtRoundToIntegralWithMathErrorHandlingVariant";
+            case 0x004906f0: return "CrtScientificFloatFormatGuarded";
+            case 0x00490720: return "CrtFixedDecimalFormatGuarded";
+            case 0x004908a0: return "CrtFileStreamClose";
+            case 0x00491d90: return "CrtNewHandlerInvokeForAllocationRetry";
+            case 0x00494c30: return "CrtScanFormatCharNormalize";
+            case 0x0047e460: return "ComObjectDestroyAndOptionallyFree";
+            case 0x00485210: return "FormattedTextAppendToRingBuffer";
+            case 0x0048fed0: return "CrtInputWithStreamBufferSetup";
+            case 0x0048b280: return "WindowModeFlagSet";
+            case 0x0047df50: return "PixelChannelMaskGet";
+            case 0x0044ade0: return "EntityKindOneRandomSpawnTrigger";
+            case 0x0044bfd0: return "ConfiguredMonsterSpawnBehaviorTick";
+            case 0x0045a240: return "ScrollPanelControlsInitialize";
+            case 0x0047ded0: return "DirectDrawSurfaceUnlock";
+            case 0x0048c010: return "WadStreamLengthGet";
+            case 0x0047ebe0: return "AviStreamFrameCountGet";
+            case 0x00495a60: return "CrtUnwindAddressResolve";
+            case 0x0044cf70: return "ScenePositionResetAndEffectMotionCancel";
+            case 0x0044da20: return "RoutePositionBlockedStateSet";
+            case 0x00435580: return "GlobalHandlePositionApplyIfPresent";
+            case 0x00435aa0: return "PanelSelectionHighlightToggle";
+            case 0x004374d0: return "TaskCounterIncrementByBranch";
+            case 0x004374f0: return "EntityCallbackDispatchUnlessTypeFive";
+            case 0x00438a60: return "SpatialObjectQueryCenterMask01";
+            case 0x00438ae0: return "SpatialObjectQueryCenterMask02";
+            case 0x00438b80: return "SpatialObjectQueryCenterMaskFromArgument";
+            case 0x00438bf0: return "SpatialObjectQueryCenterMask80";
+            case 0x00438cd0: return "SpatialObjectQueryCenterMask20";
+            case 0x00438d30: return "SpatialObjectQueryCenterMask10";
+            case 0x00438d90: return "SpatialObjectQueryCenterMask200";
+            case 0x00438e50: return "SpatialObjectQueryCenterMask100";
+            case 0x00439200: return "TaskKindFilteredSearch";
+            case 0x00439240: return "TaskEntityFlagsAndCellTaskMatch";
+            case 0x0043b360: return "TaskCountAtGridCoordinateQuery";
+            case 0x0043b820: return "TypeTwoEntityEventDispatch";
+            case 0x0043b850: return "TypeTwoEntityPositionedCallbackDispatch";
+            case 0x0043c490: return "TaskTypeAndConditionCheck";
+            case 0x004407b0: return "SpatialEntityCallbackQuery";
+            case 0x004408c0: return "SpatialEntityCallbackQueryAtOptionalCoordinate";
+            case 0x00440c30: return "GridRouteSearchAdapter";
+            case 0x00442540: return "GridOperationArgumentAdapter";
+            case 0x004456e0: return "EntityBehaviorCallbackTick";
+            case 0x00445d70: return "EntityFlagGatedCallbackDispatch";
+            case 0x0044702d: return "RegisterRelativeStateUpdateFragment";
+            case 0x004474f0: return "LinkedEntityProximityResponse";
+            case 0x00447900: return "TypeFourEntityCallbackDispatch";
+            case 0x0044adc0: return "ScatterSpawnGateSet";
+            case 0x0044af90: return "EntityAttachedSpawnRecordProcess";
+            case 0x0044b4c0: return "TypeTwoEntityTargetResolveAndApply";
+            case 0x0044bae0: return "SceneObjectResourceAndCallbackStateDispose";
+            case 0x0044c550: return "GlobalScatterSpawnEnableAndDrain";
+            case 0x0044f490: return "GridCellOperationApplyAll";
+            case 0x00450560: return "RandomReachableGridPointSelect";
+            case 0x00452580: return "ActiveContextRecordGet";
+            case 0x00454880: return "GlobalCounter_004ff990Increment";
+            case 0x00454890: return "GlobalCounter_004ff990Reset";
+            case 0x004567c0: return "GlobalValue_004ff9bcStoreAndReturn";
+            case 0x00459f50: return "IndexedPanelResourcePositionApply";
+            case 0x00459fd0: return "PanelResourcePositionApplyIfEnabled";
+            case 0x0045a3b0: return "PanelSlotCoordinateHitTest";
+            case 0x0045a630: return "UIRecordCallbackForward";
+            case 0x0045aac0: return "PanelItemFlag10SetClear";
+            case 0x0045ab00: return "PanelStateFlagsToggle";
+            case 0x0045abf0: return "PanelItemFlag8SetIfEnabled";
+            case 0x0045b610: return "GlobalUIFlags_00500860ClearBits_1_2";
+            case 0x0045bfb0: return "ThreeSurfaceResourcesLoadAndInitialize";
+            case 0x0045c340: return "PanelResourceLayoutStore";
+            case 0x0045c4b0: return "PanelResourcePositionUpdateIfEnabled";
+            case 0x0045c520: return "PanelResourceHandleAndDimensionsStore";
+            case 0x0045cf00: return "PriorityLabelLayoutApply";
+            case 0x0045d3c0: return "PriorityPanelRowMoveDispatch";
+            case 0x0045d8a0: return "ObjectField14Set";
+            case 0x0045db00: return "TexturedSceneObjectDrawAtPosition";
+            case 0x00460910: return "ResolvedEntityOperationDispatch";
+            case 0x004628a0: return "GlobalFloatAccumulator_00555330Add";
+            case 0x004628e0: return "CallbackRecordAllocateInitialize";
+            case 0x00464c50: return "GlobalFlag_00502a2cBit2SetClear";
+            case 0x00465380: return "GlobalTriplet_00552128_30Reset";
+            case 0x0046a950: return "TextLayoutGeometryStoreAndApply";
+            case 0x00472670: return "DirectDrawSurfaceDescriptionGet";
+            case 0x004756d0: return "VideoObjectAspectRatioGet";
+            case 0x004757f0: return "TypedChildResourceScalarGet";
+            case 0x00477310: return "ComPropertyResultGet";
+            case 0x00485a00: return "ObjectStatePairGet";
+            case 0x00487d50: return "ComInterfaceQueryAndContextDispatch";
+            case 0x00488bf0: return "CdAudioStopAndCloseIfActive";
+            case 0x00489bc0: return "ComChildItemsVisit";
+            case 0x0048ebb0: return "CrtExceptionHandlerTransferAfterUnlink";
+            case 0x0048ebf0: return "CrtExceptionHandlerTransferWithAtomicPrefix";
+            case 0x0048ec60: return "CrtExceptionDispatchForwarder";
+            case 0x0048ed00: return "CrtExceptionFrameFilterInvoke";
+            case 0x0048ed30: return "CrtExceptionFrameInstallAndDispatch";
+            case 0x0048ee00: return "CrtExceptionScopeFilterAndUnwind";
+            case 0x0048efe6: return "CrtNlgFrameStateRecord";
+            case 0x00490230: return "ProcessorFeatureFallbackFalse";
+            case 0x004918a0: return "SmallHeapPageFreeSlotUpdate";
+            case 0x00491cc0: return "SmallHeapBlockResizeInPlace";
+            case 0x00491f80: return "CrtOneArgumentMathErrorHandlingStart";
+            case 0x0049200c: return "CrtFpuPrecisionModeCodeGet";
+            case 0x00492068: return "DoubleExponentBitsGetOrSpecialValue";
+            case 0x0049221e: return "CrtFloatingPointExceptionResultDispatch";
+            case 0x00492225: return "CrtFloatingPointExceptionResultDispatchVariant";
+            case 0x00492bc6: return "CrtDoubleRemainderReduction";
+            case 0x00493170: return "CrtMathExceptionHandleSingleResult";
+            case 0x004931c0: return "CrtMathExceptionHandleResultWithStatus";
+            case 0x004938f0: return "CrtMathExceptionDispatch";
+            case 0x004939a0: return "CrtMathErrorCodeSet";
+            case 0x00493c40: return "CrtNoOpStubVariant2";
+            case 0x00495410: return "CrtSehExceptionDispatcher";
+            case 0x004954e0: return "CrtSehLocalUnwindToScope";
+            case 0x004955c0: return "CrtSehUnwindAndInvokeHandler";
+            case 0x00495650: return "CrtSehHandlerCallWithFrame";
+            case 0x0049573a: return "CrtSehAbnormalTerminationCleanup";
+            case 0x004959e0: return "CrtSehDestructorInvoke";
+            case 0x00495ae0: return "CrtTerminateHandlerInvokeAndAbort";
+            case 0x00495b70: return "CrtUnexpectedHandlerInvokeAndTerminate";
+            case 0x00496895: return "CrtLocalUnwindFromFrame";
+            case 0x004968b0: return "CrtRuntimeErrorMessageEnterExit";
+            case 0x00497770: return "CrtFpuControlWordUpdate";
+            case 0x004977b0: return "CrtFpuControlWordUpdateMask";
+            case 0x00497d60: return "CrtExtendedFloatConvertFormatA";
+            case 0x00497d80: return "CrtExtendedFloatConvertFormatB";
+            case 0x00497da0: return "CrtDoubleToExtendedFloatConvertA";
+            case 0x00497de0: return "CrtDoubleToExtendedFloatConvertB";
+            case 0x00498ce0: return "CrtScanfNumericConversionAssign";
             default: return null;
         }
     }
