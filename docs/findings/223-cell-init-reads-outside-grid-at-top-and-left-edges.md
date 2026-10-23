@@ -158,6 +158,30 @@ marked walkable, but this static trace does not establish a play-session
 vehicle position, successful unload, or that the unloaded minifigure remains
 there and executes the activity that reaches `FUN_00432600`.
 
+The Place-command gate does not add an edge-coordinate rejection. In
+`FUN_00404fc0`, command type `0x16` is accepted only for entity type 2, then
+calls `FUN_00432550` with the command coordinates; that function is an
+unconditional `return 1`. The dispatcher branch at `0x40468c` calls
+`FUN_00448c50`, which sets `Activity_Place` and entity flag `+0x3e4 & 0x200`.
+This makes a post-unload minifigure eligible through the traced type and
+coordinate checks, subject to the dispatcher's other entity-state gates. The
+callback still requires its timer and state-bit gates, a matching cell
+descriptor, and descriptor byte `+0xd0 & 2`; these checks are not established
+for an unloaded border minifigure.
+
+The writer's required cell flag `0x200000` also has a possible gameplay-time
+edge source. The predug loader sets this flag through `FUN_00430530(..., 1)`,
+but that routine rejects coordinates with `x=0` or `y=0`, so this loader path
+does not set it on the left or top border. Separately, `FUN_00432c90` sets
+`0x200000` when the cell's low two state bits are zero and the flag is not
+already set; it contains no map-coordinate check. The lava-neighbor path can
+call `FUN_0040f330` on a neighboring cell after `FUN_0040f2b0` accepts it via
+`FUN_00432b50`, whose bounds test also omits lower limits. Thus an edge cell
+can enter that mutator if the terrain and erosion gates pass. This remains a
+static possibility: the traced maps and callbacks do not establish that the
+lava-neighbor path sets `0x200000` on one of the relevant border cells during
+a play session.
+
 One remaining level-data spawn route is `EmergeMap`. `FUN_0042c120`
 (`LoadLayerL`) scans the complete layer and groups nonzero cells into 0x4c-byte
 records: slot 0 is the trigger coordinate, and slots 1–5 are candidate spawn

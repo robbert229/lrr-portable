@@ -196,9 +196,11 @@ decompilation. Finding 223 connects it to the Teleport Man request and its
 direct entity-callback call at `0x43ca38`; that callsite was checked against
 the shipped-image disassembly.
 
-Finding 223 also traces the vehicle `GetOut` unload path (`FUN_004401b0`,
-`FUN_00439e10`, and `FUN_00439d50`) from `LEGORR.full.c` and disassembly of
-`reference/LegoRR.exe`. Those observations are not part of this REA bundle.
+Finding 223 also traces the vehicle `GetOut` unload path and Place-command
+gate (`FUN_004401b0`, `FUN_00439e10`, `FUN_00439d50`, `FUN_00404fc0`,
+`FUN_00432550`), plus the cell-flag producer path (`FUN_00432c90` and the
+lava-neighbor helpers). These observations come from `LEGORR.full.c` and
+disassembly of `reference/LegoRR.exe`; they are not part of this REA bundle.
 
 ## `legorr-path-list-movement.bundle`
 
