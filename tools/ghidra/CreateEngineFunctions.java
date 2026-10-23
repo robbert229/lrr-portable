@@ -1127,6 +1127,25 @@ public class CreateEngineFunctions extends GhidraScript {
         0x47e510L,  // DirectDrawDisplayModeSetup
         0x482500L,  // InstanceQuadVertexDataFill
         0x4882e0L,  // SceneNodeTransformMatrixApply
+        // --- batch 10 (config loaders, menu/panel records, ray-scan, and layout helpers) ---
+        0x40bfd0L,  // RockFallStylesConfigLoad
+        0x40c3a0L,  // ResourceAvailabilitySweep
+        0x40dc20L,  // CellPairEdgeEffectApply
+        0x409790L,  // CellPathRecordRegisterApply
+        0x4185f0L,  // HelpWindowButtonLayoutLoad
+        0x411100L,  // MenuSectionRecordCreate
+        0x41eca0L,  // AdvisorDialogStackLayout
+        0x431b20L,  // PlacementBlockedAdjacentCellScan
+        0x431c70L,  // FirstFreeNeighborCellPick
+        0x4350a0L,  // SurfaceTypeDescriptionsConfigLoad
+        0x444fb0L,  // EntityTurnToVectorActivityIssue
+        0x4451e0L,  // EntityPathStepVectorNormalize
+        0x44a7d0L,  // PolyVariantSectionModelBuild
+        0x44d760L,  // JitterStepApply
+        0x45ac30L,  // PanelTextureSlotsAllocate
+        0x4629d0L,  // PanelEventEntryAppend
+        0x46f3b0L,  // RayHitScanAndEffectApply
+        0x482220L,  // MeshRecordAllocateAndFill
     };
     static final String[] NAMES = { "EngineTick", "EngineShutdown", "EngineShutdownAlt",
         "MainSimStep", "ManagerTick", "MessageDispatch", "ViewContextTick",
@@ -2110,6 +2129,24 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x47e510: return "DirectDrawDisplayModeSetup";
             case 0x482500: return "InstanceQuadVertexDataFill";
             case 0x4882e0: return "SceneNodeTransformMatrixApply";
+            case 0x40bfd0: return "RockFallStylesConfigLoad";
+            case 0x40c3a0: return "ResourceAvailabilitySweep";
+            case 0x40dc20: return "CellPairEdgeEffectApply";
+            case 0x409790: return "CellPathRecordRegisterApply";
+            case 0x4185f0: return "HelpWindowButtonLayoutLoad";
+            case 0x411100: return "MenuSectionRecordCreate";
+            case 0x41eca0: return "AdvisorDialogStackLayout";
+            case 0x431b20: return "PlacementBlockedAdjacentCellScan";
+            case 0x431c70: return "FirstFreeNeighborCellPick";
+            case 0x4350a0: return "SurfaceTypeDescriptionsConfigLoad";
+            case 0x444fb0: return "EntityTurnToVectorActivityIssue";
+            case 0x4451e0: return "EntityPathStepVectorNormalize";
+            case 0x44a7d0: return "PolyVariantSectionModelBuild";
+            case 0x44d760: return "JitterStepApply";
+            case 0x45ac30: return "PanelTextureSlotsAllocate";
+            case 0x4629d0: return "PanelEventEntryAppend";
+            case 0x46f3b0: return "RayHitScanAndEffectApply";
+            case 0x482220: return "MeshRecordAllocateAndFill";
             default: return null;
         }
     }
