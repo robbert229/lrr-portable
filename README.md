@@ -366,6 +366,7 @@ Open threads, in order of value:
 | 167 | [findings/167-global-alias-playback-disables-3d-mode.md](docs/findings/167-global-alias-playback-disables-3d-mode.md) | Global in-memory aliases disable DirectSound 3D processing |
 | 168 | [findings/168-in-memory-sound-start-ignores-hresults.md](docs/findings/168-in-memory-sound-start-ignores-hresults.md) | In-memory sound start returns a slot identifier without checking DirectSound HRESULTs |
 | 169 | [findings/169-shared-object-sound-events-use-time-windows.md](docs/findings/169-shared-object-sound-events-use-time-windows.md) | Shared-object sound events submit object-attached aliases within time windows |
+| 170 | [findings/170-shared-object-transition-stops-new-sound-handle.md](docs/findings/170-shared-object-transition-stops-new-sound-handle.md) | Shared-object transition may stop the newly returned sound handle |
 
 Named-pseudocode corpus: [`docs/decompiles/engine-region.c`](docs/decompiles/engine-region.c)
 (114 named functions covering the engine/game-logic region — findings 01–10).

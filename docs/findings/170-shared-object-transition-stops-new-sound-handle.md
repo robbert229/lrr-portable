@@ -1,0 +1,7 @@
+# Finding 170 — Shared-Object Transition Stops the Newly Returned Handle
+
+In `FUN_00487de0`, a changed sample event can pass both time-window checks in the same update. If the new event time matches and sound is enabled, the sound callback runs and its returned handle is written into the event record. Later in that same iteration, when `changed` is true and the previous event time also matches, the code reads the handle from that same record slot and passes it to `FUN_0047b130`.
+
+The store occurs before the stop call, so in this overlap case the value passed to the stop helper is the newly returned handle. The prior handle that occupied the slot has already been overwritten. `FUN_0047b130` resolves a valid handle to a DirectSound buffer and calls its stop method. This describes the order and target of the static calls; it does not establish audible output or whether a particular shipped asset reaches the overlap condition.
+
+**Evidence.** Disassembly of shipped `reference/LegoRR.exe`, SHA-256 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`: `FUN_00487de0` at `0x487de0` stores the callback result into `[esi + edi*4 + 0x68]` at `0x487e7d`, then on the changed-event path reloads that same slot at `0x487e9a` and passes it to `FUN_0047b130` at `0x487e9f`. `FUN_0047b130` at `0x47b130` resolves the handle and calls the buffer vtable's stop slot `+0x48`. The pseudocode for both functions is in `docs/decompiles/full/LEGORR.full.c`; finding 169 traces the event and time-window conditions.
