@@ -122,8 +122,9 @@ playback region). The `.flh` container is documented in finding 21.
 ## Notes and open items
 
 1. DirectSound 3D listener acquisition is documented in finding 119. Finding 121 traces the
-   per-source descriptor's 3D-control bit and configured distance setters; which individual sounds
-   use 3D positioning and later listener calls remain open. Finding 120 documents optional duplicate
+   per-source descriptor's 3D-control bit and configured distance setters; finding 161 maps named
+   gameplay aliases submitted through positional and object-attached wrapper routes. Other direct
+   3D submission paths and later listener calls remain open. Finding 120 documents optional duplicate
    sample buffers, and finding 133 traces playback's single-buffer versus three-buffer rotation.
 2. Finding 122 traces the in-memory WAV path from the `data` chunk through `mmioGetInfo`'s read
    window into a `GlobalAlloc` buffer before DirectSound setup. The shared file/WAD open layer is
