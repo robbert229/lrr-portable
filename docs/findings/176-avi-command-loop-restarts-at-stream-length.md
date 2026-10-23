@@ -1,0 +1,7 @@
+# Finding 176 — AVI Command Loop Restarts at Stream Length
+
+The frame method itself does not clamp the next requested index against the AVI stream length (finding 68). Its caller `FUN_0040a0c0` supplies that policy: on each playback-loop iteration it first calls `FUN_0047ecf0` to request the current index and calculate the next one, then reads the stream length through `FUN_0047ed60` and the current index through `FUN_0047ed50`. If `length <= index`, it calls `FUN_0047ed40(movie, 0)`, which sets the requested index back to zero and rebases the time clock before drawing the movie surface.
+
+The comparison happens after the frame request. At the boundary, the player can therefore request an index at or beyond `dwLength` before resetting to zero. If that request returns null, the stale-surface redraw behavior in finding 175 applies for that iteration; the next update requests frame zero. This is a loop policy in the command player, not a claim that AVIFIL32 accepts or displays an out-of-range frame.
+
+**Evidence.** Shipped `reference/LegoRR.exe`, SHA-256 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`. The call order and comparison are in `FUN_0040a0c0` at `0x40a0c0`; `FUN_0047ed60` returns the stream-info `dwLength` field, `FUN_0047ed50` returns the current frame index, and `FUN_0047ed40` calls the index/time rebase setter `FUN_0047ebf0`. All functions are in `docs/decompiles/full/LEGORR.full.c`. Findings 68 and 175 document the frame-index update and null-fetch behavior.

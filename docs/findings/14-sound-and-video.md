@@ -137,7 +137,7 @@ playback region). The `.flh` container is documented in finding 21.
    buffer. The helper walks source rows backward while advancing the destination; bottom-up to
    top-down conversion is an inference. Finding 172 traces each frame blit into the shared
    DirectDraw render target; final device presentation remains dependent on the surrounding renderer.
-   Findings 173–175 record the unchecked null-allocation path, missing explicit frame-retriever close, and stale-surface blit after a null frame fetch.
+   Findings 173–176 record the unchecked null-allocation path, missing explicit frame-retriever close, stale-surface blit after a null frame fetch, and caller-level restart at stream length.
 4. `.flh` container format — **closed** by finding 21 (2026-10-20): layout,
    both 16-bit coders, and the RGB555→565 write transform.
 5. MCI: only `play cdaudio from N` and status queries were observed; no

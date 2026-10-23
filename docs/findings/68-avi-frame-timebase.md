@@ -33,8 +33,10 @@ The API call's import thunk has this method as its observed callsite
 If `AVIStreamGetFrame` returns null, the method skips both the bitmap-copy
 call and the time/index update; it returns through the common success-shaped
 tail. No explicit stream-length clamp appears in this method before the frame
-request. The library's result for an out-of-range index, and the conversion
-helper's exact rounding behavior, remain outside this observation.
+request. The outer movie command loop checks the next index against stream
+`dwLength` after the request and resets to frame zero when `length <= index`
+(finding 176). The library's result for an out-of-range index, and the
+conversion helper's exact rounding behavior, remain outside this observation.
 
 `FUN_0047ebf0` is a seek-style setter: it stores a caller-supplied index,
 captures the current time, and rebases the saved clock by subtracting
