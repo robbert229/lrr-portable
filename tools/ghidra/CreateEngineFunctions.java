@@ -1221,6 +1221,21 @@ public class CreateEngineFunctions extends GhidraScript {
         0x473bc0L,  // ResourceNameRegisterOrQuery
         0x47c2e0L,  // DirectDrawDeviceCreate
         0x47c4b0L,  // DirectDrawEnumeratedDeviceCreate
+        0x409470L,  // NeighborCellEntitySearchRecurse
+        0x40b880L,  // CellVisualChannelRelay
+        0x40ba00L,  // SceneRotationFlagsApply
+        0x40bb90L,  // SceneFrameFromTripletApply
+        0x40c0d0L,  // SceneActSlotLoadAndRegister
+        0x40cb70L,  // SceneTimeoutEntrySweep
+        0x410490L,  // StringRegistryIntern
+        0x419e80L,  // RecordListEntryRemoveAndRelease
+        0x44a3d0L,  // PlaceCellNearestResolve
+        0x44ae50L,  // RandomKindSixScatterSpawn
+        0x44c7f0L,  // LightEffectsBlinkConfigApply
+        0x450a80L,  // CellListMinDistanceScaleApply
+        0x476330L,  // ResourceTreeCallbackWalk
+        0x476410L,  // ResourceNameMatchCallback
+        0x489910L,  // ResourceTreeCallbackCount
         0x4350a0L,  // SurfaceTypeDescriptionsConfigLoad
         0x444fb0L,  // EntityTurnToVectorActivityIssue
         0x4451e0L,  // EntityPathStepVectorNormalize
@@ -2306,6 +2321,21 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x473bc0: return "ResourceNameRegisterOrQuery";
             case 0x47c2e0: return "DirectDrawDeviceCreate";
             case 0x47c4b0: return "DirectDrawEnumeratedDeviceCreate";
+            case 0x409470: return "NeighborCellEntitySearchRecurse";
+            case 0x40b880: return "CellVisualChannelRelay";
+            case 0x40ba00: return "SceneRotationFlagsApply";
+            case 0x40bb90: return "SceneFrameFromTripletApply";
+            case 0x40c0d0: return "SceneActSlotLoadAndRegister";
+            case 0x40cb70: return "SceneTimeoutEntrySweep";
+            case 0x410490: return "StringRegistryIntern";
+            case 0x419e80: return "RecordListEntryRemoveAndRelease";
+            case 0x44a3d0: return "PlaceCellNearestResolve";
+            case 0x44ae50: return "RandomKindSixScatterSpawn";
+            case 0x44c7f0: return "LightEffectsBlinkConfigApply";
+            case 0x450a80: return "CellListMinDistanceScaleApply";
+            case 0x476330: return "ResourceTreeCallbackWalk";
+            case 0x476410: return "ResourceNameMatchCallback";
+            case 0x489910: return "ResourceTreeCallbackCount";
             case 0x4350a0: return "SurfaceTypeDescriptionsConfigLoad";
             case 0x444fb0: return "EntityTurnToVectorActivityIssue";
             case 0x4451e0: return "EntityPathStepVectorNormalize";

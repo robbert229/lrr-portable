@@ -210,7 +210,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00409350,FUN_00409350,anonymous,,0,496
 004093b0,FUN_004093b0,anonymous,,0,690
 00409450,FUN_00409450,anonymous,,0,168
-00409470,FUN_00409470,anonymous,,0,985
+00409470,FUN_00409470,named,NeighborCellEntitySearchRecurse,0,985
 00409550,FUN_00409550,ported,,1,606
 00409600,FUN_00409600,named,TerrainDescriptorTilesResetAndFree,0,2295
 00409790,FUN_00409790,named,CellPathRecordRegisterApply,0,2164
@@ -252,9 +252,9 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0040b7d0,FUN_0040b7d0,anonymous,,0,344
 0040b810,FUN_0040b810,anonymous,,0,424
 0040b850,FUN_0040b850,anonymous,,0,206
-0040b880,FUN_0040b880,anonymous,,0,1638
-0040ba00,FUN_0040ba00,anonymous,,0,1432
-0040bb90,FUN_0040bb90,anonymous,,0,1260
+0040b880,FUN_0040b880,named,CellVisualChannelRelay,0,1638
+0040ba00,FUN_0040ba00,named,SceneRotationFlagsApply,0,1432
+0040bb90,FUN_0040bb90,named,SceneFrameFromTripletApply,0,1260
 0040bd60,FUN_0040bd60,anonymous,,0,534
 0040bdc0,FUN_0040bdc0,anonymous,,0,114
 0040bde0,FUN_0040bde0,anonymous,,0,162
@@ -263,7 +263,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0040bf70,FUN_0040bf70,named,RockFallStyleNameLookup,0,413
 0040bfc0,FUN_0040bfc0,anonymous,,0,81
 0040bfd0,FUN_0040bfd0,named,RockFallStylesConfigLoad,0,1544
-0040c0d0,FUN_0040c0d0,anonymous,,0,1073
+0040c0d0,FUN_0040c0d0,named,SceneActSlotLoadAndRegister,0,1073
 0040c1b0,FUN_0040c1b0,anonymous,,0,629
 0040c230,FUN_0040c230,named,SceneSlotPoseScaleRegister,0,1049
 0040c2f0,FUN_0040c2f0,anonymous,,0,777
@@ -280,7 +280,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0040c8a0,FUN_0040c8a0,anonymous,,0,476
 0040c920,FUN_0040c920,anonymous,,0,460
 0040c990,FUN_0040c990,named,MiscObjectsEffectSlotBind,0,1782
-0040cb70,FUN_0040cb70,anonymous,,0,1112
+0040cb70,FUN_0040cb70,named,SceneTimeoutEntrySweep,0,1112
 0040cc40,FUN_0040cc40,anonymous,,0,445
 0040cce0,FUN_0040cce0,named,LavaEffectSelectAndPlace,0,1140
 0040cdc0,FUN_0040cdc0,anonymous,,0,811
@@ -357,7 +357,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004103f0,FUN_004103f0,named,MenuWipeStart,0,322
 00410440,FUN_00410440,named,MenuWipeEnd,0,85
 00410450,FUN_00410450,anonymous,,0,459
-00410490,FUN_00410490,anonymous,,0,1439
+00410490,FUN_00410490,named,StringRegistryIntern,0,1439
 00410520,FUN_00410520,anonymous,,0,353
 00410560,FUN_00410560,anonymous,,0,349
 004105a0,FUN_004105a0,named,CampaignLevelFallbackLabel,0,1048
@@ -529,7 +529,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00419da0,FUN_00419da0,anonymous,,0,239
 00419de0,FUN_00419de0,named,RecordListEntryMoveToFront,0,1037
 00419e60,FUN_00419e60,anonymous,,0,93
-00419e80,FUN_00419e80,anonymous,,0,946
+00419e80,FUN_00419e80,named,RecordListEntryRemoveAndRelease,0,946
 00419f10,FUN_00419f10,anonymous,,0,96
 00419f30,FUN_00419f30,ported,InfoMessageQueueTick,1,1105
 0041a080,FUN_0041a080,ported,IncidentMessageTextConsumer,1,1215
@@ -1077,7 +1077,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0044a2a0,FUN_0044a2a0,named,EntityWorkObjectPositionGet,0,548
 0044a310,FUN_0044a310,named,ObjectMovementInputAccumulate,0,511
 0044a390,FUN_0044a390,anonymous,,0,226
-0044a3d0,FUN_0044a3d0,anonymous,,0,999
+0044a3d0,FUN_0044a3d0,named,PlaceCellNearestResolve,0,999
 0044a4b0,FUN_0044a4b0,ported,PredugCoordinatePoolAppend,1,228
 0044a4f0,FUN_0044a4f0,named,NearestCellCoordinateWorldResolve,0,999
 0044a5d0,FUN_0044a5d0,named,NearestOpenCellCoordSearch,0,2011
@@ -1087,7 +1087,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0044ad80,FUN_0044ad80,anonymous,,0,156
 0044adc0,FUN_0044adc0,anonymous,,0,260
 0044ade0,FUN_0044ade0,anonymous,,0,527
-0044ae50,FUN_0044ae50,anonymous,,0,1140
+0044ae50,FUN_0044ae50,named,RandomKindSixScatterSpawn,0,1140
 0044af90,FUN_0044af90,anonymous,,0,180
 0044afb0,FUN_0044afb0,anonymous,,0,1503
 0044b140,FUN_0044b140,named,SmallSpiderCellSwarmSpawn,0,1006
@@ -1115,7 +1115,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0044c710,FUN_0044c710,anonymous,,0,417
 0044c790,FUN_0044c790,anonymous,,0,253
 0044c7c0,FUN_0044c7c0,anonymous,,0,173
-0044c7f0,FUN_0044c7f0,anonymous,,0,1617
+0044c7f0,FUN_0044c7f0,named,LightEffectsBlinkConfigApply,0,1617
 0044c970,FUN_0044c970,anonymous,,0,449
 0044c9c0,FUN_0044c9c0,named,LightEffectsFadeConfigLoad,0,2669
 0044cc10,FUN_0044cc10,anonymous,,0,745
@@ -1182,7 +1182,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00450890,FUN_00450890,ported,,1,87
 004508a0,FUN_004508a0,named,CellNeighborDirectionCode,0,922
 00450960,FUN_00450960,named,CellDirtyQueuePushAndClear,0,1760
-00450a80,FUN_00450a80,anonymous,,0,986
+00450a80,FUN_00450a80,named,CellListMinDistanceScaleApply,0,986
 00450b60,FUN_00450b60,ported,,1,3668
 00450f30,FUN_00450f30,ported,,1,2249
 00451180,FUN_00451180,named,CellVariantEntryMatchCheck,0,953
@@ -1790,8 +1790,8 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00476270,FUN_00476270,anonymous,,0,376
 004762f0,FUN_004762f0,anonymous,,0,153
 00476310,FUN_00476310,anonymous,,0,187
-00476330,FUN_00476330,anonymous,,0,1096
-00476410,FUN_00476410,anonymous,,0,3203
+00476330,FUN_00476330,named,ResourceTreeCallbackWalk,0,1096
+00476410,FUN_00476410,named,ResourceNameMatchCallback,0,3203
 004765c0,FUN_004765c0,ported,LwscSceneLoad,1,2522
 00476770,FUN_00476770,named,DDiSceneResourceNameResolve,0,534
 004767e0,FUN_004767e0,named,DDiSceneResourceExists,0,492
@@ -2212,7 +2212,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00489750,FUN_00489750,anonymous,,0,703
 004897d0,FUN_004897d0,ported,,1,85
 004897e0,FUN_004897e0,named,DDiSceneTimedHookDispatch,0,2130
-00489910,FUN_00489910,anonymous,,0,1163
+00489910,FUN_00489910,named,ResourceTreeCallbackCount,0,1163
 004899f0,FUN_004899f0,named,ObjectHierarchyRecursiveClone,0,2744
 00489b30,FUN_00489b30,anonymous,,0,944
 00489bc0,FUN_00489bc0,anonymous,,0,834
