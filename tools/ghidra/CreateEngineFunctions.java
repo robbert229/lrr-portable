@@ -1035,6 +1035,18 @@ public class CreateEngineFunctions extends GhidraScript {
         0x46c510L,  // SceneChannelSlotsRebuild
         0x46db90L,  // CellQuadRunStage
         0x46de80L,  // CellQuadRunEmit
+        0x405950L,  // PendingCommandTimerFireScan
+        0x407a10L,  // PendingTypeValueSlotSelect
+        0x40ab70L,  // DependencyGridConfigLoad
+        0x40d850L,  // TerrainCellNeighborFloodWalk
+        0x442b10L,  // EntityMovementAccumulatorApply
+        0x442f80L,  // EntityPoseOrientationDispatch
+        0x4438b0L,  // PathStepAdvanceAndArrivalCheck
+        0x444680L,  // StepMovementVectorResolve
+        0x4469c0L,  // EntityNearestConnectedTerrainCellRouteSelect
+        0x44ead0L,  // TerrainCellListSurfaceHeightClampMutate
+        0x463230L,  // TerrainDirtyCellQuadNormalEmitPass
+        0x463590L,  // TerrainCellSurfaceNormalGet
     };
     static final String[] NAMES = { "EngineTick", "EngineShutdown", "EngineShutdownAlt",
         "MainSimStep", "ManagerTick", "MessageDispatch", "ViewContextTick",
@@ -1927,6 +1939,18 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x46c510: return "SceneChannelSlotsRebuild";
             case 0x46db90: return "CellQuadRunStage";
             case 0x46de80: return "CellQuadRunEmit";
+            case 0x405950: return "PendingCommandTimerFireScan";
+            case 0x407a10: return "PendingTypeValueSlotSelect";
+            case 0x40ab70: return "DependencyGridConfigLoad";
+            case 0x40d850: return "TerrainCellNeighborFloodWalk";
+            case 0x442b10: return "EntityMovementAccumulatorApply";
+            case 0x442f80: return "EntityPoseOrientationDispatch";
+            case 0x4438b0: return "PathStepAdvanceAndArrivalCheck";
+            case 0x444680: return "StepMovementVectorResolve";
+            case 0x4469c0: return "EntityNearestConnectedTerrainCellRouteSelect";
+            case 0x44ead0: return "TerrainCellListSurfaceHeightClampMutate";
+            case 0x463230: return "TerrainDirtyCellQuadNormalEmitPass";
+            case 0x463590: return "TerrainCellSurfaceNormalGet";
             default: return null;
         }
     }
