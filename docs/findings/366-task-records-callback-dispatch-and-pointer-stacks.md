@@ -24,4 +24,4 @@ This pass names task-record queue/cleanup helpers, generic callback dispatch, a 
 
 Direct pseudocode and caller context are in the full corpus. Related evidence includes `legorr-ui-render-fourth-pass-2026-10-23.bundle` (`ev_de1f37015f1140f0ab5457c0da167edc5e5e2f6bd6f280471746e831dc32faa3`) for the advisor initialization caller; `legorr-engine-helpers-expansion-23.bundle` (`ev_f566111ade0b7a764f73c8d4fee8476cf2dd41c90333b5e9913307a009d3df7d`) for task-record callers; and `legorr-wake-riding.bundle` (`ev_4125e49b75c80c4243e6cdc29adb8eb72c27657124533b0ad6041a1a7c4bdcb7`) for direct pseudocode of `0x00403f60`.
 
-The complete pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c); named excerpts are in [engine-region.c](../decompiles/engine-region.c). Numeric task kinds and unresolved field semantics remain literal.
+The complete pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c); named excerpts are in [engine-region.c](../decompiles/legacy/engine-region.c). Numeric task kinds and unresolved field semantics remain literal.

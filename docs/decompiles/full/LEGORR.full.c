@@ -1,7 +1,7 @@
 /* LEGO Rock Raiders (LegoRR.exe) -- complete Ghidra pseudocode corpus.
  * Auto-generated from the REA evidence bundle; see README.md. */
 
-// ==== FUN_00401000 @ 00401000 ====
+// ==== AdvisorSceneControllerInit @ 00401000 [Ghidra: FUN_00401000] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -51,7 +51,7 @@ void FUN_00401000(undefined4 param_1,int param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_004011c0 @ 004011C0 ====
+// ==== AdvisorAnimationEndCleanup @ 004011C0 [Ghidra: FUN_004011c0] ====
 
 
 void FUN_004011c0(void)
@@ -66,7 +66,7 @@ void FUN_004011c0(void)
 }
 
 
-// ==== FUN_00401210 @ 00401210 ====
+// ==== AdvisorSceneVisualStateInitialize @ 00401210 [Ghidra: FUN_00401210] ====
 
 
 void FUN_00401210(void)
@@ -79,7 +79,7 @@ void FUN_00401210(void)
 }
 
 
-// ==== FUN_00401240 @ 00401240 ====
+// ==== Vector2Distance @ 00401240 [Ghidra: FUN_00401240] ====
 
 
 float10 FUN_00401240(float *param_1,float *param_2)
@@ -91,7 +91,7 @@ float10 FUN_00401240(float *param_1,float *param_2)
 }
 
 
-// ==== FUN_00401270 @ 00401270 ====
+// ==== AdvisorConfigSlotLookup @ 00401270 [Ghidra: FUN_00401270] ====
 
 
 void FUN_00401270(undefined4 param_1,undefined4 param_2)
@@ -143,7 +143,7 @@ LAB_004012f0:
 }
 
 
-// ==== FUN_004013a0 @ 004013A0 ====
+// ==== Vector3Length @ 004013A0 [Ghidra: FUN_004013a0] ====
 
 
 float10 FUN_004013a0(float *param_1)
@@ -155,7 +155,7 @@ float10 FUN_004013a0(float *param_1)
 }
 
 
-// ==== FUN_004013e0 @ 004013E0 ====
+// ==== AdvisorPositionNameToIndex @ 004013E0 [Ghidra: FUN_004013e0] ====
 
 
 undefined4 FUN_004013e0(char *param_1,int *param_2)
@@ -180,7 +180,7 @@ undefined4 FUN_004013e0(char *param_1,int *param_2)
 }
 
 
-// ==== FUN_00401420 @ 00401420 ====
+// ==== Vector3Distance @ 00401420 [Ghidra: FUN_00401420] ====
 
 
 float10 FUN_00401420(float *param_1,float *param_2)
@@ -195,7 +195,7 @@ float10 FUN_00401420(float *param_1,float *param_2)
 }
 
 
-// ==== FUN_00401470 @ 00401470 ====
+// ==== Vector3CrossProduct @ 00401470 [Ghidra: FUN_00401470] ====
 
 
 void FUN_00401470(float *param_1,float *param_2,float *param_3)
@@ -208,7 +208,7 @@ void FUN_00401470(float *param_1,float *param_2,float *param_3)
 }
 
 
-// ==== FUN_004014c0 @ 004014C0 ====
+// ==== AdvisorAnimationNameToIndex @ 004014C0 [Ghidra: FUN_004014c0] ====
 
 
 undefined4 FUN_004014c0(char *param_1,int *param_2)
@@ -233,7 +233,7 @@ undefined4 FUN_004014c0(char *param_1,int *param_2)
 }
 
 
-// ==== FUN_00401500 @ 00401500 ====
+// ==== Vector3Add @ 00401500 [Ghidra: FUN_00401500] ====
 
 
 void FUN_00401500(float *param_1,float *param_2,float *param_3)
@@ -246,7 +246,7 @@ void FUN_00401500(float *param_1,float *param_2,float *param_3)
 }
 
 
-// ==== FUN_00401530 @ 00401530 ====
+// ==== AdvisorPositionConfigLoad @ 00401530 [Ghidra: FUN_00401530] ====
 
 
 void FUN_00401530(undefined4 param_1,undefined4 param_2,undefined4 param_3,undefined4 param_4)
@@ -299,7 +299,7 @@ void FUN_00401530(undefined4 param_1,undefined4 param_2,undefined4 param_3,undef
 }
 
 
-// ==== FUN_004016c0 @ 004016C0 ====
+// ==== Vector3Subtract @ 004016C0 [Ghidra: FUN_004016c0] ====
 
 
 void FUN_004016c0(float *param_1,float *param_2,float *param_3)
@@ -312,7 +312,7 @@ void FUN_004016c0(float *param_1,float *param_2,float *param_3)
 }
 
 
-// ==== FUN_004016f0 @ 004016F0 ====
+// ==== Vector3DotProduct @ 004016F0 [Ghidra: FUN_004016f0] ====
 
 
 float10 FUN_004016f0(float *param_1,float *param_2)
@@ -336,7 +336,7 @@ void FUN_00401720(float *param_1,float *param_2,float param_3)
 }
 
 
-// ==== FUN_00401750 @ 00401750 ====
+// ==== Vector3Normalize @ 00401750 [Ghidra: FUN_00401750] ====
 
 
 void FUN_00401750(float *param_1)
@@ -352,7 +352,7 @@ void FUN_00401750(float *param_1)
 }
 
 
-// ==== FUN_004017b0 @ 004017B0 ====
+// ==== AdvisorPositionRecordInitialize @ 004017B0 [Ghidra: FUN_004017b0] ====
 
 
 void FUN_004017b0(int param_1,undefined4 param_2,int param_3,undefined4 param_4,int param_5,
@@ -379,7 +379,7 @@ void FUN_004017b0(int param_1,undefined4 param_2,int param_3,undefined4 param_4,
 }
 
 
-// ==== FUN_00401840 @ 00401840 ====
+// ==== AdvisorActionPositionAndModeSet @ 00401840 [Ghidra: FUN_00401840] ====
 
 
 void FUN_00401840(int param_1,int param_2,undefined4 param_3,undefined4 param_4)
@@ -398,7 +398,7 @@ void FUN_00401840(int param_1,int param_2,undefined4 param_3,undefined4 param_4)
 }
 
 
-// ==== FUN_00401890 @ 00401890 ====
+// ==== AdvisorActionPositionGet @ 00401890 [Ghidra: FUN_00401890] ====
 
 
 void FUN_00401890(int param_1,undefined4 *param_2,undefined4 *param_3)
@@ -410,7 +410,7 @@ void FUN_00401890(int param_1,undefined4 *param_2,undefined4 *param_3)
 }
 
 
-// ==== FUN_004018c0 @ 004018C0 ====
+// ==== AdvisorRequestAdmit @ 004018C0 [Ghidra: FUN_004018c0] ====
 
 
 undefined4 FUN_004018c0(int param_1,int param_2)
@@ -431,7 +431,7 @@ undefined4 FUN_004018c0(int param_1,int param_2)
 }
 
 
-// ==== FUN_00401930 @ 00401930 ====
+// ==== AdvisorRequestResetAndSubmitSound @ 00401930 [Ghidra: FUN_00401930] ====
 
 
 void FUN_00401930(int param_1)
@@ -450,7 +450,7 @@ void FUN_00401930(int param_1)
 }
 
 
-// ==== FUN_00401990 @ 00401990 ====
+// ==== AdvisorTransitionWorker @ 00401990 [Ghidra: FUN_00401990] ====
 
 
 void FUN_00401990(undefined4 param_1)
@@ -485,7 +485,7 @@ void FUN_00401990(undefined4 param_1)
 }
 
 
-// ==== FUN_00401a70 @ 00401A70 ====
+// ==== AdvisorSceneAdvanceAndCompletionCheck @ 00401A70 [Ghidra: FUN_00401a70] ====
 
 
 undefined4 FUN_00401a70(int param_1,undefined4 param_2)
@@ -517,7 +517,7 @@ undefined4 FUN_00401a70(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00401b20 @ 00401B20 ====
+// ==== AdvisorClearActiveState @ 00401B20 [Ghidra: FUN_00401b20] ====
 
 
 void FUN_00401b20(void)
@@ -528,7 +528,7 @@ void FUN_00401b20(void)
 }
 
 
-// ==== FUN_00401b30 @ 00401B30 ====
+// ==== AdvisorApplySlotTransform @ 00401B30 [Ghidra: FUN_00401b30] ====
 
 
 void FUN_00401b30(float param_1)
@@ -564,7 +564,7 @@ void FUN_00401b30(float param_1)
 }
 
 
-// ==== FUN_00401bf0 @ 00401BF0 ====
+// ==== GlobalField505f88Get @ 00401BF0 [Ghidra: FUN_00401bf0] ====
 
 
 undefined4 FUN_00401bf0(void)
@@ -574,7 +574,7 @@ undefined4 FUN_00401bf0(void)
 }
 
 
-// ==== FUN_00401c00 @ 00401C00 ====
+// ==== StartLevelOverrideIfEnabledGet @ 00401C00 [Ghidra: FUN_00401c00] ====
 
 
 uint FUN_00401c00(void)
@@ -584,7 +584,7 @@ uint FUN_00401c00(void)
 }
 
 
-// ==== FUN_00401c20 @ 00401C20 ====
+// ==== GlobalFlagBit0IsSet @ 00401C20 [Ghidra: FUN_00401c20] ====
 
 
 uint FUN_00401c20(void)
@@ -594,7 +594,7 @@ uint FUN_00401c20(void)
 }
 
 
-// ==== FUN_00401c30 @ 00401C30 ====
+// ==== DisplayWidthGet @ 00401C30 [Ghidra: FUN_00401c30] ====
 
 
 undefined4 FUN_00401c30(void)
@@ -604,7 +604,7 @@ undefined4 FUN_00401c30(void)
 }
 
 
-// ==== FUN_00401c40 @ 00401C40 ====
+// ==== DisplayHeightGet @ 00401C40 [Ghidra: FUN_00401c40] ====
 
 
 undefined4 FUN_00401c40(void)
@@ -614,7 +614,7 @@ undefined4 FUN_00401c40(void)
 }
 
 
-// ==== FUN_00401c50 @ 00401C50 ====
+// ==== FormattedTextPrintfWidth @ 00401C50 [Ghidra: FUN_00401c50] ====
 
 
 undefined4 FUN_00401c50(undefined4 param_1,undefined4 param_2)
@@ -625,7 +625,7 @@ undefined4 FUN_00401c50(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00401c80 @ 00401C80 ====
+// ==== FormattedTextPrintf @ 00401C80 [Ghidra: FUN_00401c80] ====
 
 
 void FUN_00401c80(undefined4 param_1,undefined4 param_2,undefined4 param_3,undefined4 param_4)
@@ -636,7 +636,7 @@ void FUN_00401c80(undefined4 param_1,undefined4 param_2,undefined4 param_3,undef
 }
 
 
-// ==== FUN_00401cb0 @ 00401CB0 ====
+// ==== CmdKindByName @ 00401CB0 [Ghidra: FUN_00401cb0] ====
 
 
 undefined4 FUN_00401cb0(char *param_1,int *param_2)
@@ -661,7 +661,7 @@ undefined4 FUN_00401cb0(char *param_1,int *param_2)
 }
 
 
-// ==== FUN_00401cf0 @ 00401CF0 ====
+// ==== CmdRegistryInit @ 00401CF0 [Ghidra: FUN_00401cf0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -764,7 +764,7 @@ void FUN_00401cf0(void)
 }
 
 
-// ==== FUN_00402000 @ 00402000 ====
+// ==== CmdMarkMatching @ 00402000 [Ghidra: FUN_00402000] ====
 
 
 void FUN_00402000(int param_1,int param_2,int *param_3)
@@ -786,7 +786,7 @@ void FUN_00402000(int param_1,int param_2,int *param_3)
 }
 
 
-// ==== FUN_00402060 @ 00402060 ====
+// ==== CmdSetKind @ 00402060 [Ghidra: FUN_00402060] ====
 
 
 void FUN_00402060(int param_1,int param_2)
@@ -806,7 +806,7 @@ void FUN_00402060(int param_1,int param_2)
 }
 
 
-// ==== FUN_00402090 @ 00402090 ====
+// ==== PriorityEntryOrderValueSet @ 00402090 [Ghidra: FUN_00402090] ====
 
 
 void FUN_00402090(int param_1,undefined4 param_2)
@@ -817,7 +817,7 @@ void FUN_00402090(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_004020a0 @ 004020A0 ====
+// ==== PriorityEntryStateSet @ 004020A0 [Ghidra: FUN_004020a0] ====
 
 
 void FUN_004020a0(int param_1,undefined4 param_2)
@@ -828,7 +828,7 @@ void FUN_004020a0(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_004020b0 @ 004020B0 ====
+// ==== PriorityEntryStateGet @ 004020B0 [Ghidra: FUN_004020b0] ====
 
 
 undefined4 FUN_004020b0(int param_1)
@@ -838,7 +838,7 @@ undefined4 FUN_004020b0(int param_1)
 }
 
 
-// ==== FUN_004020c0 @ 004020C0 ====
+// ==== HandleArrayReleaseAndReset @ 004020C0 [Ghidra: FUN_004020c0] ====
 
 
 void FUN_004020c0(void)
@@ -859,7 +859,7 @@ void FUN_004020c0(void)
 }
 
 
-// ==== FUN_00402100 @ 00402100 ====
+// ==== CmdFlushAll @ 00402100 [Ghidra: FUN_00402100] ====
 
 
 void FUN_00402100(int param_1)
@@ -890,7 +890,7 @@ void FUN_00402100(int param_1)
 }
 
 
-// ==== FUN_00402170 @ 00402170 ====
+// ==== LevelNoGatherObjectSetup @ 00402170 [Ghidra: FUN_00402170] ====
 
 
 void FUN_00402170(int param_1)
@@ -913,7 +913,7 @@ void FUN_00402170(int param_1)
 }
 
 
-// ==== FUN_004021e0 @ 004021E0 ====
+// ==== EngineMemoryAllocate @ 004021E0 [Ghidra: FUN_004021e0] ====
 
 
 void FUN_004021e0(undefined4 param_1)
@@ -924,7 +924,7 @@ void FUN_004021e0(undefined4 param_1)
 }
 
 
-// ==== FUN_00402210 @ 00402210 ====
+// ==== EngineMemoryFree @ 00402210 [Ghidra: FUN_00402210] ====
 
 
 void FUN_00402210(undefined4 param_1)
@@ -935,7 +935,7 @@ void FUN_00402210(undefined4 param_1)
 }
 
 
-// ==== FUN_00402220 @ 00402220 ====
+// ==== CmdTickGlobal @ 00402220 [Ghidra: FUN_00402220] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -975,7 +975,7 @@ void FUN_00402220(void)
 }
 
 
-// ==== FUN_00402310 @ 00402310 ====
+// ==== CmdChainPurge @ 00402310 [Ghidra: FUN_00402310] ====
 
 
 void FUN_00402310(int *param_1)
@@ -1101,7 +1101,7 @@ void FUN_00402310(int *param_1)
 }
 
 
-// ==== FUN_00402510 @ 00402510 ====
+// ==== TerrainCellCommandCreate @ 00402510 [Ghidra: FUN_00402510] ====
 
 
 void FUN_00402510(int *param_1,int param_2,int param_3)
@@ -1144,7 +1144,7 @@ void FUN_00402510(int *param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_00402600 @ 00402600 ====
+// ==== EntityRecordArrayApplyZeroState @ 00402600 [Ghidra: FUN_00402600] ====
 
 
 void FUN_00402600(int param_1,int param_2)
@@ -1176,7 +1176,7 @@ void FUN_00402600(int param_1,int param_2)
 }
 
 
-// ==== FUN_00402670 @ 00402670 ====
+// ==== EntityCommand15ValidatedRecordQueue @ 00402670 [Ghidra: FUN_00402670] ====
 
 
 void FUN_00402670(int param_1)
@@ -1198,7 +1198,7 @@ void FUN_00402670(int param_1)
 }
 
 
-// ==== FUN_004026c0 @ 004026C0 ====
+// ==== EntityDeferredWorkSchedule @ 004026C0 [Ghidra: FUN_004026c0] ====
 
 
 void FUN_004026c0(int param_1)
@@ -1216,7 +1216,7 @@ void FUN_004026c0(int param_1)
 }
 
 
-// ==== FUN_00402720 @ 00402720 ====
+// ==== CmdCreateTask @ 00402720 [Ghidra: FUN_00402720] ====
 
 
 void FUN_00402720(int *param_1,undefined4 param_2)
@@ -1275,7 +1275,7 @@ void FUN_004027a0(undefined4 *param_1)
 }
 
 
-// ==== FUN_00402800 @ 00402800 ====
+// ==== EntityCommand14BatchIssue @ 00402800 [Ghidra: FUN_00402800] ====
 
 
 void FUN_00402800(int param_1)
@@ -1301,7 +1301,7 @@ void FUN_00402800(int param_1)
 }
 
 
-// ==== FUN_00402850 @ 00402850 ====
+// ==== MinionCompanionCmd @ 00402850 [Ghidra: FUN_00402850] ====
 
 
 void FUN_00402850(int *param_1)
@@ -1320,7 +1320,7 @@ void FUN_00402850(int *param_1)
 }
 
 
-// ==== FUN_00402890 @ 00402890 ====
+// ==== TaskType23CreateForCategoryMask @ 00402890 [Ghidra: FUN_00402890] ====
 
 
 void FUN_00402890(undefined4 param_1,undefined4 param_2,int param_3)
@@ -1362,7 +1362,7 @@ void FUN_00402890(undefined4 param_1,undefined4 param_2,int param_3)
 }
 
 
-// ==== FUN_00402960 @ 00402960 ====
+// ==== EntityKindCommandIssue @ 00402960 [Ghidra: FUN_00402960] ====
 
 
 void FUN_00402960(int param_1)
@@ -1409,7 +1409,7 @@ void FUN_00402960(int param_1)
 }
 
 
-// ==== FUN_00402a40 @ 00402A40 ====
+// ==== CoordinatePairCallbackDispatch @ 00402A40 [Ghidra: FUN_00402a40] ====
 
 
 void FUN_00402a40(undefined4 param_1)
@@ -1425,7 +1425,7 @@ void FUN_00402a40(undefined4 param_1)
 }
 
 
-// ==== FUN_00402aa0 @ 00402AA0 ====
+// ==== ArgumentCallbackDispatch @ 00402AA0 [Ghidra: FUN_00402aa0] ====
 
 
 void FUN_00402aa0(undefined4 param_1)
@@ -1436,7 +1436,7 @@ void FUN_00402aa0(undefined4 param_1)
 }
 
 
-// ==== FUN_00402ae0 @ 00402AE0 ====
+// ==== TerrainCellRefreshDispatch @ 00402AE0 [Ghidra: FUN_00402ae0] ====
 
 
 void FUN_00402ae0(undefined4 *param_1,undefined4 param_2)
@@ -1455,7 +1455,7 @@ void FUN_00402ae0(undefined4 *param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00402b30 @ 00402B30 ====
+// ==== CoordinateCallbackDispatch @ 00402B30 [Ghidra: FUN_00402b30] ====
 
 
 void FUN_00402b30(undefined4 param_1)
@@ -1471,7 +1471,7 @@ void FUN_00402b30(undefined4 param_1)
 }
 
 
-// ==== FUN_00402b60 @ 00402B60 ====
+// ==== CoordinateCallbackDispatchByMode @ 00402B60 [Ghidra: FUN_00402b60] ====
 
 
 void FUN_00402b60(undefined4 param_1,int param_2)
@@ -1491,7 +1491,7 @@ void FUN_00402b60(undefined4 param_1,int param_2)
 }
 
 
-// ==== FUN_00402cd0 @ 00402CD0 ====
+// ==== CmdCancelRef @ 00402CD0 [Ghidra: FUN_00402cd0] ====
 
 
 void FUN_00402cd0(int *param_1)
@@ -1519,7 +1519,7 @@ void FUN_00402cd0(int *param_1)
 }
 
 
-// ==== FUN_00402d50 @ 00402D50 ====
+// ==== KindNineCellCommandIssue @ 00402D50 [Ghidra: FUN_00402d50] ====
 
 
 undefined4 FUN_00402d50(int *param_1,int param_2)
@@ -1557,7 +1557,7 @@ undefined4 FUN_00402d50(int *param_1,int param_2)
 }
 
 
-// ==== FUN_00402e40 @ 00402E40 ====
+// ==== CellCommandType13Issue @ 00402E40 [Ghidra: FUN_00402e40] ====
 
 
 void FUN_00402e40(undefined4 *param_1)
@@ -1582,7 +1582,7 @@ void FUN_00402e40(undefined4 *param_1)
 }
 
 
-// ==== FUN_00402ec0 @ 00402EC0 ====
+// ==== EntityConditionalTaskSchedule @ 00402EC0 [Ghidra: FUN_00402ec0] ====
 
 
 void FUN_00402ec0(int param_1)
@@ -1604,7 +1604,7 @@ void FUN_00402ec0(int param_1)
 }
 
 
-// ==== FUN_00402f30 @ 00402F30 ====
+// ==== EntityThresholdProgressEventQueue @ 00402F30 [Ghidra: FUN_00402f30] ====
 
 
 void FUN_00402f30(undefined4 param_1,int param_2)
@@ -1623,7 +1623,7 @@ void FUN_00402f30(undefined4 param_1,int param_2)
 }
 
 
-// ==== FUN_00402f70 @ 00402F70 ====
+// ==== EntityTargetCommandQueue @ 00402F70 [Ghidra: FUN_00402f70] ====
 
 
 void FUN_00402f70(int param_1,undefined4 param_2)
@@ -1644,7 +1644,7 @@ void FUN_00402f70(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00402fb0 @ 00402FB0 ====
+// ==== CellCommandType11Issue @ 00402FB0 [Ghidra: FUN_00402fb0] ====
 
 
 void FUN_00402fb0(undefined4 *param_1)
@@ -1667,7 +1667,7 @@ void FUN_00402fb0(undefined4 *param_1)
 }
 
 
-// ==== FUN_00403030 @ 00403030 ====
+// ==== CellCommandType3Issue @ 00403030 [Ghidra: FUN_00403030] ====
 
 
 void FUN_00403030(undefined4 *param_1)
@@ -1693,7 +1693,7 @@ void FUN_00403030(undefined4 *param_1)
 }
 
 
-// ==== FUN_004030b0 @ 004030B0 ====
+// ==== CoordinatePairEventQueue @ 004030B0 [Ghidra: FUN_004030b0] ====
 
 
 void FUN_004030b0(undefined4 *param_1,undefined4 param_2)
@@ -1755,7 +1755,7 @@ void FUN_004030e0(undefined4 *param_1)
 }
 
 
-// ==== FUN_00403190 @ 00403190 ====
+// ==== ObjectEventType2Queue @ 00403190 [Ghidra: FUN_00403190] ====
 
 
 undefined4 FUN_00403190(undefined4 param_1)
@@ -1773,7 +1773,7 @@ undefined4 FUN_00403190(undefined4 param_1)
 }
 
 
-// ==== FUN_004031e0 @ 004031E0 ====
+// ==== ActiveEntityListContainsCode @ 004031E0 [Ghidra: FUN_004031e0] ====
 
 
 undefined4 FUN_004031e0(undefined4 param_1)
@@ -1820,7 +1820,7 @@ undefined4 FUN_004031e0(undefined4 param_1)
 }
 
 
-// ==== FUN_00403270 @ 00403270 ====
+// ==== SelectionDragAreaCommandCreate @ 00403270 [Ghidra: FUN_00403270] ====
 
 
 void FUN_00403270(int *param_1,int param_2,undefined4 *param_3,int param_4)
@@ -1857,7 +1857,7 @@ void FUN_00403270(int *param_1,int param_2,undefined4 *param_3,int param_4)
 }
 
 
-// ==== FUN_00403320 @ 00403320 ====
+// ==== ObjectCommandTaskCreate @ 00403320 [Ghidra: FUN_00403320] ====
 
 
 void FUN_00403320(int *param_1,undefined4 param_2)
@@ -1892,7 +1892,7 @@ void FUN_00403320(int *param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_004033c0 @ 004033C0 ====
+// ==== ObjectAttachedRecordAllocate @ 004033C0 [Ghidra: FUN_004033c0] ====
 
 
 void FUN_004033c0(int param_1)
@@ -1912,7 +1912,7 @@ void FUN_004033c0(int param_1)
 }
 
 
-// ==== FUN_004033f0 @ 004033F0 ====
+// ==== CoordinatePairTaskRecordQueue @ 004033F0 [Ghidra: FUN_004033f0] ====
 
 
 void FUN_004033f0(undefined4 *param_1)
@@ -1930,7 +1930,7 @@ void FUN_004033f0(undefined4 *param_1)
 }
 
 
-// ==== FUN_00403430 @ 00403430 ====
+// ==== TaskRegistryRemoveType0EntryByPair @ 00403430 [Ghidra: FUN_00403430] ====
 
 
 void FUN_00403430(int *param_1)
@@ -1963,7 +1963,7 @@ void FUN_00403430(int *param_1)
 }
 
 
-// ==== FUN_004034a0 @ 004034A0 ====
+// ==== ScalarTaskRecordQueue @ 004034A0 [Ghidra: FUN_004034a0] ====
 
 
 void FUN_004034a0(undefined4 param_1)
@@ -1980,7 +1980,7 @@ void FUN_004034a0(undefined4 param_1)
 }
 
 
-// ==== FUN_004034e0 @ 004034E0 ====
+// ==== TaskPairRecordEnqueue @ 004034E0 [Ghidra: FUN_004034e0] ====
 
 
 void FUN_004034e0(undefined4 *param_1)
@@ -1997,7 +1997,7 @@ void FUN_004034e0(undefined4 *param_1)
 }
 
 
-// ==== FUN_00403520 @ 00403520 ====
+// ==== TaskRecordKind10Queue @ 00403520 [Ghidra: FUN_00403520] ====
 
 
 void FUN_00403520(undefined4 param_1)
@@ -2014,7 +2014,7 @@ void FUN_00403520(undefined4 param_1)
 }
 
 
-// ==== FUN_00403560 @ 00403560 ====
+// ==== TaskRegistryRemoveType10EntriesForEntity @ 00403560 [Ghidra: FUN_00403560] ====
 
 
 void FUN_00403560(int param_1)
@@ -2046,7 +2046,7 @@ void FUN_00403560(int param_1)
 }
 
 
-// ==== FUN_004035c0 @ 004035C0 ====
+// ==== CmdCreateMove @ 004035C0 [Ghidra: FUN_004035c0] ====
 
 
 void FUN_004035c0(int param_1,undefined4 *param_2,undefined4 param_3)
@@ -2070,7 +2070,7 @@ void FUN_004035c0(int param_1,undefined4 *param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_00403610 @ 00403610 ====
+// ==== CmdCreateGated @ 00403610 [Ghidra: FUN_00403610] ====
 
 
 void FUN_00403610(int param_1,undefined4 param_2)
@@ -2093,7 +2093,7 @@ void FUN_00403610(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00403650 @ 00403650 ====
+// ==== EntityTaskBatchAppend @ 00403650 [Ghidra: FUN_00403650] ====
 
 
 void FUN_00403650(int *param_1,int param_2,undefined4 param_3)
@@ -2122,7 +2122,7 @@ void FUN_00403650(int *param_1,int param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_004036c0 @ 004036C0 ====
+// ==== CmdCreateTarget @ 004036C0 [Ghidra: FUN_004036c0] ====
 
 
 void FUN_004036c0(int param_1,undefined4 param_2)
@@ -2144,7 +2144,7 @@ void FUN_004036c0(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00403700 @ 00403700 ====
+// ==== CmdCancelByCoords @ 00403700 [Ghidra: FUN_00403700] ====
 
 
 void FUN_00403700(int param_1,int param_2,int param_3,int param_4)
@@ -2162,7 +2162,7 @@ void FUN_00403700(int param_1,int param_2,int param_3,int param_4)
 }
 
 
-// ==== FUN_00403750 @ 00403750 ====
+// ==== CommandKindRecordIssueAndLink @ 00403750 [Ghidra: FUN_00403750] ====
 
 
 void FUN_00403750(undefined4 param_1,undefined4 param_2,undefined4 param_3,undefined4 *param_4,
@@ -2203,7 +2203,7 @@ void FUN_00403750(undefined4 param_1,undefined4 param_2,undefined4 param_3,undef
 }
 
 
-// ==== FUN_00403810 @ 00403810 ====
+// ==== TerrainCellRecordCountUpdate @ 00403810 [Ghidra: FUN_00403810] ====
 
 
 void FUN_00403810(undefined4 param_1,int param_2,int param_3,int param_4)
@@ -2241,7 +2241,7 @@ void FUN_00403810(undefined4 param_1,int param_2,int param_3,int param_4)
 }
 
 
-// ==== FUN_004038c0 @ 004038C0 ====
+// ==== TimedTaskRecordInitializeAndLink @ 004038C0 [Ghidra: FUN_004038c0] ====
 
 
 int FUN_004038c0(undefined4 param_1,undefined4 param_2,undefined4 param_3,undefined4 param_4)
@@ -2261,7 +2261,7 @@ int FUN_004038c0(undefined4 param_1,undefined4 param_2,undefined4 param_3,undefi
 }
 
 
-// ==== FUN_00403910 @ 00403910 ====
+// ==== CellRecordCountsPruneForEntity @ 00403910 [Ghidra: FUN_00403910] ====
 
 
 void FUN_00403910(undefined4 param_1)
@@ -2305,7 +2305,7 @@ void FUN_00403910(undefined4 param_1)
 }
 
 
-// ==== FUN_004039a0 @ 004039A0 ====
+// ==== TaskRecordCreateAndScanGrid @ 004039A0 [Ghidra: FUN_004039a0] ====
 
 
 void FUN_004039a0(undefined4 param_1)
@@ -2320,7 +2320,7 @@ void FUN_004039a0(undefined4 param_1)
 }
 
 
-// ==== FUN_004039d0 @ 004039D0 ====
+// ==== TaskRecordKind11TimedQueue @ 004039D0 [Ghidra: FUN_004039d0] ====
 
 
 void FUN_004039d0(undefined4 param_1)
@@ -2337,7 +2337,7 @@ void FUN_004039d0(undefined4 param_1)
 }
 
 
-// ==== FUN_00403a10 @ 00403A10 ====
+// ==== TaskCallbackDispatch @ 00403A10 [Ghidra: FUN_00403a10] ====
 
 
 void FUN_00403a10(undefined4 param_1)
@@ -2348,7 +2348,7 @@ void FUN_00403a10(undefined4 param_1)
 }
 
 
-// ==== FUN_00403a50 @ 00403A50 ====
+// ==== EntityDrainCommandChain @ 00403A50 [Ghidra: FUN_00403a50] ====
 
 
 void FUN_00403a50(int param_1)
@@ -2385,7 +2385,7 @@ void FUN_00403a50(int param_1)
 }
 
 
-// ==== FUN_00403af0 @ 00403AF0 ====
+// ==== EntityTaskStateUpdateAfterCleanup @ 00403AF0 [Ghidra: FUN_00403af0] ====
 
 
 void FUN_00403af0(int *param_1,int param_2)
@@ -2410,7 +2410,7 @@ void FUN_00403af0(int *param_1,int param_2)
 }
 
 
-// ==== FUN_00403b40 @ 00403B40 ====
+// ==== EntityPendingTaskFlagClear @ 00403B40 [Ghidra: FUN_00403b40] ====
 
 
 void FUN_00403b40(int param_1)
@@ -2426,7 +2426,7 @@ void FUN_00403b40(int param_1)
 }
 
 
-// ==== FUN_00403b60 @ 00403B60 ====
+// ==== EntityActivityRecordsRefresh @ 00403B60 [Ghidra: FUN_00403b60] ====
 
 
 void FUN_00403b60(int param_1)
@@ -2456,7 +2456,7 @@ void FUN_00403b60(int param_1)
 }
 
 
-// ==== FUN_00403c00 @ 00403C00 ====
+// ==== EntityActivityRecordRemoveByType @ 00403C00 [Ghidra: FUN_00403c00] ====
 
 
 void FUN_00403c00(int param_1,int param_2,undefined4 param_3)
@@ -2518,7 +2518,7 @@ LAB_00403cd1:
 }
 
 
-// ==== FUN_00403d10 @ 00403D10 ====
+// ==== EntityCommandUnlinkByKind @ 00403D10 [Ghidra: FUN_00403d10] ====
 
 
 void FUN_00403d10(int *param_1,int param_2,undefined4 *param_3,int param_4)
@@ -2607,7 +2607,7 @@ code_r0x00403d74:
 }
 
 
-// ==== FUN_00403ef0 @ 00403EF0 ====
+// ==== PendingRecordCallbackDispatch @ 00403EF0 [Ghidra: FUN_00403ef0] ====
 
 
 void FUN_00403ef0(undefined4 param_1)
@@ -2618,7 +2618,7 @@ void FUN_00403ef0(undefined4 param_1)
 }
 
 
-// ==== FUN_00403f30 @ 00403F30 ====
+// ==== EntityActivityListRegister @ 00403F30 [Ghidra: FUN_00403f30] ====
 
 
 void FUN_00403f30(int param_1)
@@ -2635,7 +2635,7 @@ void FUN_00403f30(int param_1)
 }
 
 
-// ==== FUN_00403f60 @ 00403F60 ====
+// ==== TaskRecordKind14RemoveIfHead @ 00403F60 [Ghidra: FUN_00403f60] ====
 
 
 void FUN_00403f60(int param_1)
@@ -2648,7 +2648,7 @@ void FUN_00403f60(int param_1)
 }
 
 
-// ==== FUN_00404030 @ 00404030 ====
+// ==== CmdLinkHead @ 00404030 [Ghidra: FUN_00404030] ====
 
 
 void FUN_00404030(int param_1,int param_2)
@@ -2664,7 +2664,7 @@ void FUN_00404030(int param_1,int param_2)
 }
 
 
-// ==== FUN_00404070 @ 00404070 ====
+// ==== CmdLinkTail @ 00404070 [Ghidra: FUN_00404070] ====
 
 
 void FUN_00404070(int param_1)
@@ -2678,7 +2678,7 @@ void FUN_00404070(int param_1)
 }
 
 
-// ==== FUN_004040a0 @ 004040A0 ====
+// ==== EntityTaskQueueFlush @ 004040A0 [Ghidra: FUN_004040a0] ====
 
 
 void FUN_004040a0(int param_1)
@@ -2696,7 +2696,7 @@ void FUN_004040a0(int param_1)
 }
 
 
-// ==== FUN_00404100 @ 00404100 ====
+// ==== CommandQueueSweepRelink @ 00404100 [Ghidra: FUN_00404100] ====
 
 
 void FUN_00404100(int param_1)
@@ -2743,7 +2743,7 @@ void FUN_00404100(int param_1)
 }
 
 
-// ==== FUN_00404190 @ 00404190 ====
+// ==== CmdChainWalk @ 00404190 [Ghidra: FUN_00404190] ====
 
 
 void FUN_00404190(int param_1)
@@ -2760,7 +2760,7 @@ void FUN_00404190(int param_1)
 }
 
 
-// ==== FUN_004041b0 @ 004041B0 ====
+// ==== EntityTaskChainContainsKind @ 004041B0 [Ghidra: FUN_004041b0] ====
 
 
 undefined4 FUN_004041b0(int param_1,int param_2)
@@ -2811,7 +2811,7 @@ undefined4 FUN_004041e0(int param_1)
 }
 
 
-// ==== FUN_00404e00 @ 00404E00 ====
+// ==== ObjectPathSubmitToGridTarget @ 00404E00 [Ghidra: FUN_00404e00] ====
 
 
 undefined4 FUN_00404e00(int *param_1,int *param_2,undefined4 param_3)
@@ -2846,7 +2846,7 @@ undefined4 FUN_00404e00(int *param_1,int *param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_00404ed0 @ 00404ED0 ====
+// ==== CheckObjectCandidate @ 00404ED0 [Ghidra: FUN_00404ed0] ====
 
 
 void FUN_00404ed0(int *param_1)
@@ -2861,7 +2861,7 @@ void FUN_00404ed0(int *param_1)
 }
 
 
-// ==== FUN_00404f10 @ 00404F10 ====
+// ==== FindMatchingObjectRecord @ 00404F10 [Ghidra: FUN_00404f10] ====
 
 
 void FUN_00404f10(undefined4 param_1,undefined4 param_2,undefined4 param_3)
@@ -2879,7 +2879,7 @@ void FUN_00404f10(undefined4 param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_00404f50 @ 00404F50 ====
+// ==== ObjectFilterMatchesActionTarget @ 00404F50 [Ghidra: FUN_00404f50] ====
 
 
 undefined4 FUN_00404f50(int *param_1,int *param_2)
@@ -2905,7 +2905,7 @@ undefined4 FUN_00404f50(int *param_1,int *param_2)
 }
 
 
-// ==== FUN_00404fc0 @ 00404FC0 ====
+// ==== PlaceCommandEligibilityCheck @ 00404FC0 [Ghidra: FUN_00404fc0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -3258,7 +3258,7 @@ FUN_00404fc0(int *param_1,int *param_2,int *param_3,int *param_4,undefined4 *par
 }
 
 
-// ==== FUN_00405950 @ 00405950 ====
+// ==== PendingCommandTimerFireScan @ 00405950 [Ghidra: FUN_00405950] ====
 
 
 void FUN_00405950(void)
@@ -3385,7 +3385,7 @@ joined_r0x00405b46:
 }
 
 
-// ==== FUN_00405c10 @ 00405C10 ====
+// ==== PendingCommandEntityAssignmentTick @ 00405C10 [Ghidra: FUN_00405c10] ====
 
 
 void FUN_00405c10(void)
@@ -3691,7 +3691,7 @@ LAB_00406112:
 }
 
 
-// ==== FUN_00406360 @ 00406360 ====
+// ==== EntityRecordAttachAndRelink @ 00406360 [Ghidra: FUN_00406360] ====
 
 
 void FUN_00406360(int param_1,int param_2,int param_3)
@@ -3722,7 +3722,7 @@ void FUN_00406360(int param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_004063e0 @ 004063E0 ====
+// ==== PendingRecordEntityReferenceClear @ 004063E0 [Ghidra: FUN_004063e0] ====
 
 
 void FUN_004063e0(int param_1)
@@ -3739,7 +3739,7 @@ void FUN_004063e0(int param_1)
 }
 
 
-// ==== FUN_00406400 @ 00406400 ====
+// ==== PendingRecordCopyToEntityAndFlag @ 00406400 [Ghidra: FUN_00406400] ====
 
 
 void FUN_00406400(undefined4 *param_1)
@@ -3765,7 +3765,7 @@ void FUN_00406400(undefined4 *param_1)
 }
 
 
-// ==== FUN_00406440 @ 00406440 ====
+// ==== CmdAlloc @ 00406440 [Ghidra: FUN_00406440] ====
 
 
 undefined4 * FUN_00406440(undefined4 param_1)
@@ -3794,7 +3794,7 @@ undefined4 * FUN_00406440(undefined4 param_1)
 }
 
 
-// ==== FUN_00406480 @ 00406480 ====
+// ==== CmdFree @ 00406480 [Ghidra: FUN_00406480] ====
 
 
 void FUN_00406480(int param_1,int param_2)
@@ -3812,7 +3812,7 @@ void FUN_00406480(int param_1,int param_2)
 }
 
 
-// ==== FUN_004064c0 @ 004064C0 ====
+// ==== CmdPoolGrow @ 004064C0 [Ghidra: FUN_004064c0] ====
 
 
 void FUN_004064c0(void)
@@ -3846,7 +3846,7 @@ void FUN_004064c0(void)
 }
 
 
-// ==== FUN_00406540 @ 00406540 ====
+// ==== EntityPoolCallbackSearch @ 00406540 [Ghidra: FUN_00406540] ====
 
 
 undefined4 FUN_00406540(code *param_1,undefined4 param_2)
@@ -3890,7 +3890,7 @@ undefined4 FUN_00406540(code *param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_004065d0 @ 004065D0 ====
+// ==== GlobalDwordGet @ 004065D0 [Ghidra: FUN_004065d0] ====
 
 
 undefined4 FUN_004065d0(void)
@@ -3900,7 +3900,7 @@ undefined4 FUN_004065d0(void)
 }
 
 
-// ==== FUN_004065e0 @ 004065E0 ====
+// ==== RenderSurfaceSecondaryGet @ 004065E0 [Ghidra: FUN_004065e0] ====
 
 
 undefined4 FUN_004065e0(void)
@@ -3910,7 +3910,7 @@ undefined4 FUN_004065e0(void)
 }
 
 
-// ==== FUN_004065f0 @ 004065F0 ====
+// ==== CubicBezierPointEvaluate @ 004065F0 [Ghidra: FUN_004065f0] ====
 
 
 void FUN_004065f0(float *param_1,float *param_2,float *param_3,float *param_4,float *param_5,
@@ -3942,7 +3942,7 @@ void FUN_004065f0(float *param_1,float *param_2,float *param_3,float *param_4,fl
 }
 
 
-// ==== FUN_00406730 @ 00406730 ====
+// ==== Vector2DistanceVariant @ 00406730 [Ghidra: FUN_00406730] ====
 
 
 float10 FUN_00406730(float *param_1,float *param_2)
@@ -3955,7 +3955,7 @@ float10 FUN_00406730(float *param_1,float *param_2)
 }
 
 
-// ==== FUN_00406760 @ 00406760 ====
+// ==== Vector2SetLength @ 00406760 [Ghidra: FUN_00406760] ====
 
 
 void FUN_00406760(float *param_1,float param_2)
@@ -3968,7 +3968,7 @@ void FUN_00406760(float *param_1,float param_2)
 }
 
 
-// ==== FUN_004067b0 @ 004067B0 ====
+// ==== PolylineSegmentLengthsAndTotalCalculate @ 004067B0 [Ghidra: FUN_004067b0] ====
 
 
 float10 FUN_004067b0(uint *param_1)
@@ -3999,7 +3999,7 @@ float10 FUN_004067b0(uint *param_1)
 }
 
 
-// ==== FUN_00406820 @ 00406820 ====
+// ==== BezierCurveSamplesBuild @ 00406820 [Ghidra: FUN_00406820] ====
 
 
 void FUN_00406820(uint *param_1,uint *param_2,undefined4 param_3,undefined4 param_4,
@@ -4028,7 +4028,7 @@ void FUN_00406820(uint *param_1,uint *param_2,undefined4 param_3,undefined4 para
 }
 
 
-// ==== FUN_004068c0 @ 004068C0 ====
+// ==== PathArcLengthInterpolate @ 004068C0 [Ghidra: FUN_004068c0] ====
 
 
 uint FUN_004068c0(uint *param_1,float param_2,float *param_3)
@@ -4070,7 +4070,7 @@ uint FUN_004068c0(uint *param_1,float param_2,float *param_3)
 }
 
 
-// ==== FUN_00406980 @ 00406980 ====
+// ==== SceneObjectModeIsOne @ 00406980 [Ghidra: FUN_00406980] ====
 
 
 bool FUN_00406980(int param_1)
@@ -4080,7 +4080,7 @@ bool FUN_00406980(int param_1)
 }
 
 
-// ==== FUN_00406990 @ 00406990 ====
+// ==== TypeTableResourceRowLoad @ 00406990 [Ghidra: FUN_00406990] ====
 
 
 undefined4
@@ -4199,7 +4199,7 @@ FUN_00406990(undefined4 *param_1,undefined4 param_2,undefined4 param_3,char *par
 }
 
 
-// ==== FUN_00406c00 @ 00406C00 ====
+// ==== RendererObjectUpdateFromRecordField64 @ 00406C00 [Ghidra: FUN_00406c00] ====
 
 
 void FUN_00406c00(int param_1,int param_2)
@@ -4210,7 +4210,7 @@ void FUN_00406c00(int param_1,int param_2)
 }
 
 
-// ==== FUN_00406c30 @ 00406C30 ====
+// ==== RendererObjectUpdateFromRecordField68 @ 00406C30 [Ghidra: FUN_00406c30] ====
 
 
 void FUN_00406c30(int param_1,int param_2)
@@ -4221,7 +4221,7 @@ void FUN_00406c30(int param_1,int param_2)
 }
 
 
-// ==== FUN_00406c60 @ 00406C60 ====
+// ==== RendererObjectUpdateFromRecordField6c @ 00406C60 [Ghidra: FUN_00406c60] ====
 
 
 void FUN_00406c60(int param_1,int param_2,undefined4 param_3)
@@ -4232,7 +4232,7 @@ void FUN_00406c60(int param_1,int param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_00406c90 @ 00406C90 ====
+// ==== AnimationObjectVisibilitySet @ 00406C90 [Ghidra: FUN_00406c90] ====
 
 
 void FUN_00406c90(int param_1,undefined4 param_2)
@@ -4243,7 +4243,7 @@ void FUN_00406c90(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00406cb0 @ 00406CB0 ====
+// ==== RendererRecordClone @ 00406CB0 [Ghidra: FUN_00406cb0] ====
 
 
 void FUN_00406cb0(undefined4 *param_1,undefined4 *param_2)
@@ -4274,7 +4274,7 @@ void FUN_00406cb0(undefined4 *param_1,undefined4 *param_2)
 }
 
 
-// ==== FUN_00406d10 @ 00406D10 ====
+// ==== AnimationObjectTimeUpdate @ 00406D10 [Ghidra: FUN_00406d10] ====
 
 
 void FUN_00406d10(int param_1,undefined4 param_2)
@@ -4285,7 +4285,7 @@ void FUN_00406d10(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00406d30 @ 00406D30 ====
+// ==== RendererObjectTimingValueAdjustByCount @ 00406D30 [Ghidra: FUN_00406d30] ====
 
 
 float10 FUN_00406d30(int param_1,undefined4 param_2,uint param_3)
@@ -4305,7 +4305,7 @@ float10 FUN_00406d30(int param_1,undefined4 param_2,uint param_3)
 }
 
 
-// ==== FUN_00406da0 @ 00406DA0 ====
+// ==== AnimationObjectTimeGet @ 00406DA0 [Ghidra: FUN_00406da0] ====
 
 
 void FUN_00406da0(int param_1)
@@ -4316,7 +4316,7 @@ void FUN_00406da0(int param_1)
 }
 
 
-// ==== FUN_00406dc0 @ 00406DC0 ====
+// ==== AnimationObjectTransformSet @ 00406DC0 [Ghidra: FUN_00406dc0] ====
 
 
 void FUN_00406dc0(int param_1,undefined4 param_2,undefined4 param_3)
@@ -4327,7 +4327,7 @@ void FUN_00406dc0(int param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_00406df0 @ 00406DF0 ====
+// ==== RenderNodeSetPositionFromCallback @ 00406DF0 [Ghidra: FUN_00406df0] ====
 
 
 void FUN_00406df0(int param_1,undefined4 param_2,undefined4 param_3,code *param_4,undefined4 param_5
@@ -4342,7 +4342,7 @@ void FUN_00406df0(int param_1,undefined4 param_2,undefined4 param_3,code *param_
 }
 
 
-// ==== FUN_00406e30 @ 00406E30 ====
+// ==== AnimationObjectHandleGet @ 00406E30 [Ghidra: FUN_00406e30] ====
 
 
 undefined4 FUN_00406e30(int param_1)
@@ -4352,7 +4352,7 @@ undefined4 FUN_00406e30(int param_1)
 }
 
 
-// ==== FUN_00406e40 @ 00406E40 ====
+// ==== ActivityRunnerUpdate @ 00406E40 [Ghidra: FUN_00406e40] ====
 
 
 undefined4 FUN_00406e40(int param_1,undefined4 param_2,undefined4 param_3)
@@ -4385,7 +4385,7 @@ undefined4 FUN_00406e40(int param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_00406ec0 @ 00406EC0 ====
+// ==== EntityPayloadReleaseSubslots @ 00406EC0 [Ghidra: FUN_00406ec0] ====
 
 
 void FUN_00406ec0(int param_1)
@@ -4416,7 +4416,7 @@ void FUN_00406ec0(int param_1)
 }
 
 
-// ==== FUN_00406f50 @ 00406F50 ====
+// ==== RendererObjectSubobjectDispatch @ 00406F50 [Ghidra: FUN_00406f50] ====
 
 
 void FUN_00406f50(int param_1,undefined4 param_2)
@@ -4430,7 +4430,7 @@ void FUN_00406f50(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00406f80 @ 00406F80 ====
+// ==== ActivityRunnerStateRead @ 00406F80 [Ghidra: FUN_00406f80] ====
 
 
 undefined4 FUN_00406f80(int param_1,int param_2)
@@ -4450,7 +4450,7 @@ undefined4 FUN_00406f80(int param_1,int param_2)
 }
 
 
-// ==== FUN_00406fb0 @ 00406FB0 ====
+// ==== RendererCachedHandle40GetOrCreate @ 00406FB0 [Ghidra: FUN_00406fb0] ====
 
 
 int FUN_00406fb0(int param_1)
@@ -4471,7 +4471,7 @@ int FUN_00406fb0(int param_1)
 }
 
 
-// ==== FUN_00406fe0 @ 00406FE0 ====
+// ==== RendererCachedHandle48GetOrCreate @ 00406FE0 [Ghidra: FUN_00406fe0] ====
 
 
 int FUN_00406fe0(int param_1)
@@ -4494,7 +4494,7 @@ int FUN_00406fe0(int param_1)
 }
 
 
-// ==== FUN_00407010 @ 00407010 ====
+// ==== RendererCachedHandle50GetOrCreate @ 00407010 [Ghidra: FUN_00407010] ====
 
 
 int FUN_00407010(int param_1)
@@ -4517,7 +4517,7 @@ int FUN_00407010(int param_1)
 }
 
 
-// ==== FUN_00407040 @ 00407040 ====
+// ==== RendererCachedHandle4cIsNotOne @ 00407040 [Ghidra: FUN_00407040] ====
 
 
 undefined4 FUN_00407040(int param_1)
@@ -4540,7 +4540,7 @@ undefined4 FUN_00407040(int param_1)
 }
 
 
-// ==== FUN_00407090 @ 00407090 ====
+// ==== AnimationObjectValueGet @ 00407090 [Ghidra: FUN_00407090] ====
 
 
 void FUN_00407090(int param_1)
@@ -4551,7 +4551,7 @@ void FUN_00407090(int param_1)
 }
 
 
-// ==== FUN_004070b0 @ 004070B0 ====
+// ==== BubbleActionStringsInit @ 004070B0 [Ghidra: FUN_004070b0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -4602,7 +4602,7 @@ void FUN_004070b0(void)
 }
 
 
-// ==== FUN_00407240 @ 00407240 ====
+// ==== BubbleConfigTextureLoad @ 00407240 [Ghidra: FUN_00407240] ====
 
 
 void FUN_00407240(undefined4 param_1)
@@ -4656,7 +4656,7 @@ void FUN_00407240(undefined4 param_1)
 }
 
 
-// ==== FUN_00407300 @ 00407300 ====
+// ==== BubbleActionNameToIndex @ 00407300 [Ghidra: FUN_00407300] ====
 
 
 int FUN_00407300(char *param_1)
@@ -4680,7 +4680,7 @@ int FUN_00407300(char *param_1)
 }
 
 
-// ==== FUN_00407340 @ 00407340 ====
+// ==== StateFlagToggleWhenZero @ 00407340 [Ghidra: FUN_00407340] ====
 
 
 void FUN_00407340(void)
@@ -4691,7 +4691,7 @@ void FUN_00407340(void)
 }
 
 
-// ==== FUN_00407360 @ 00407360 ====
+// ==== GlobalTaskRefreshFlagGet @ 00407360 [Ghidra: FUN_00407360] ====
 
 
 undefined4 FUN_00407360(void)
@@ -4701,7 +4701,7 @@ undefined4 FUN_00407360(void)
 }
 
 
-// ==== FUN_00407370 @ 00407370 ====
+// ==== ResetObjectAuxiliaryState @ 00407370 [Ghidra: FUN_00407370] ====
 
 
 void FUN_00407370(int param_1)
@@ -4715,7 +4715,7 @@ void FUN_00407370(int param_1)
 }
 
 
-// ==== FUN_004073a0 @ 004073A0 ====
+// ==== EntityPointerRegistriesRemove @ 004073A0 [Ghidra: FUN_004073a0] ====
 
 
 void FUN_004073a0(int param_1)
@@ -4755,7 +4755,7 @@ void FUN_004073a0(int param_1)
 }
 
 
-// ==== FUN_00407410 @ 00407410 ====
+// ==== Type4ObjectRegistryInsert @ 00407410 [Ghidra: FUN_00407410] ====
 
 
 void FUN_00407410(int *param_1)
@@ -4787,7 +4787,7 @@ void FUN_00407410(int *param_1)
 }
 
 
-// ==== FUN_00407450 @ 00407450 ====
+// ==== IdleQueueRegister @ 00407450 [Ghidra: FUN_00407450] ====
 
 
 void FUN_00407450(int *param_1)
@@ -4828,7 +4828,7 @@ void FUN_00407450(int *param_1)
 }
 
 
-// ==== FUN_004074b0 @ 004074B0 ====
+// ==== Type2TimedRegistryInsert @ 004074B0 [Ghidra: FUN_004074b0] ====
 
 
 void FUN_004074b0(int *param_1)
@@ -4869,7 +4869,7 @@ void FUN_004074b0(int *param_1)
 }
 
 
-// ==== FUN_00407510 @ 00407510 ====
+// ==== SetType2ObjectRecordValue @ 00407510 [Ghidra: FUN_00407510] ====
 
 
 void FUN_00407510(int *param_1,undefined4 param_2)
@@ -4890,7 +4890,7 @@ void FUN_00407510(int *param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00407540 @ 00407540 ====
+// ==== FlaggedObjectTimerRegistryInsert @ 00407540 [Ghidra: FUN_00407540] ====
 
 
 void FUN_00407540(int param_1)
@@ -4933,7 +4933,7 @@ void FUN_00407540(int param_1)
 }
 
 
-// ==== FUN_004075a0 @ 004075A0 ====
+// ==== TickEntityScreenEffects @ 004075A0 [Ghidra: FUN_004075a0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -5059,7 +5059,7 @@ void FUN_004075a0(float param_1)
 }
 
 
-// ==== FUN_004078c0 @ 004078C0 ====
+// ==== EntityCursorTargetStepResolveAndTimerAdvance @ 004078C0 [Ghidra: FUN_004078c0] ====
 
 
 void FUN_004078c0(int param_1,float param_2,int *param_3,undefined4 param_4)
@@ -5090,7 +5090,7 @@ void FUN_004078c0(int param_1,float param_2,int *param_3,undefined4 param_4)
 }
 
 
-// ==== FUN_00407a10 @ 00407A10 ====
+// ==== PendingTypeValueSlotSelect @ 00407A10 [Ghidra: FUN_00407a10] ====
 
 
 void FUN_00407a10(int param_1,undefined4 *param_2)
@@ -5261,7 +5261,7 @@ void FUN_00407a10(int param_1,undefined4 *param_2)
 }
 
 
-// ==== FUN_00407d60 @ 00407D60 ====
+// ==== BuildingTypeConfigRecordParse @ 00407D60 [Ghidra: FUN_00407d60] ====
 
 
 /* WARNING: Type propagation algorithm not settling */
@@ -5495,7 +5495,7 @@ FUN_00407d60(undefined4 *param_1,undefined4 param_2,undefined4 param_3,char *par
 }
 
 
-// ==== FUN_004082e0 @ 004082E0 ====
+// ==== SceneObjectScalarAdjustByDirection @ 004082E0 [Ghidra: FUN_004082e0] ====
 
 
 void FUN_004082e0(int param_1,int param_2)
@@ -5518,7 +5518,7 @@ void FUN_004082e0(int param_1,int param_2)
 }
 
 
-// ==== FUN_00408360 @ 00408360 ====
+// ==== TaskField84GetAndField88Out @ 00408360 [Ghidra: FUN_00408360] ====
 
 
 undefined4 FUN_00408360(int param_1,undefined4 *param_2)
@@ -5531,7 +5531,7 @@ undefined4 FUN_00408360(int param_1,undefined4 *param_2)
 }
 
 
-// ==== FUN_00408380 @ 00408380 ====
+// ==== SceneAssignEntityOwner @ 00408380 [Ghidra: FUN_00408380] ====
 
 
 void FUN_00408380(int param_1,undefined4 param_2)
@@ -5542,7 +5542,7 @@ void FUN_00408380(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_004083a0 @ 004083A0 ====
+// ==== SceneEntitySlotTableRebuild @ 004083A0 [Ghidra: FUN_004083a0] ====
 
 
 void FUN_004083a0(undefined4 *param_1,int param_2)
@@ -5631,7 +5631,7 @@ void FUN_004083a0(undefined4 *param_1,int param_2)
 }
 
 
-// ==== FUN_00408570 @ 00408570 ====
+// ==== SceneActivityChange @ 00408570 [Ghidra: FUN_00408570] ====
 
 
 undefined4 FUN_00408570(int param_1,undefined4 param_2,undefined4 param_3)
@@ -5668,7 +5668,7 @@ undefined4 FUN_00408570(int param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_004085f0 @ 004085F0 ====
+// ==== SceneActivityChangeSecondary @ 004085F0 [Ghidra: FUN_004085f0] ====
 
 
 undefined4 FUN_004085f0(int param_1,int param_2)
@@ -5688,7 +5688,7 @@ undefined4 FUN_004085f0(int param_1,int param_2)
 }
 
 
-// ==== FUN_00408620 @ 00408620 ====
+// ==== SceneObjectRecordCloneRetainHandles @ 00408620 [Ghidra: FUN_00408620] ====
 
 
 void FUN_00408620(undefined4 *param_1,undefined4 *param_2)
@@ -5717,7 +5717,7 @@ void FUN_00408620(undefined4 *param_1,undefined4 *param_2)
 }
 
 
-// ==== FUN_00408670 @ 00408670 ====
+// ==== SceneObjectPairApplyMode @ 00408670 [Ghidra: FUN_00408670] ====
 
 
 void FUN_00408670(int param_1,undefined4 param_2)
@@ -5731,7 +5731,7 @@ void FUN_00408670(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_004086a0 @ 004086A0 ====
+// ==== AnimationObjectVisibilityGet @ 004086A0 [Ghidra: FUN_004086a0] ====
 
 
 void FUN_004086a0(int param_1)
@@ -5742,7 +5742,7 @@ void FUN_004086a0(int param_1)
 }
 
 
-// ==== FUN_004086c0 @ 004086C0 ====
+// ==== SceneObjectPairSetRenderParameters @ 004086C0 [Ghidra: FUN_004086c0] ====
 
 
 void FUN_004086c0(int param_1,undefined4 param_2,undefined4 param_3)
@@ -5756,7 +5756,7 @@ void FUN_004086c0(int param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_00408710 @ 00408710 ====
+// ==== SceneObjectPairSetCallbackScalar @ 00408710 [Ghidra: FUN_00408710] ====
 
 
 void FUN_00408710(int param_1,undefined4 param_2,undefined4 param_3,code *param_4,undefined4 param_5
@@ -5774,7 +5774,7 @@ void FUN_00408710(int param_1,undefined4 param_2,undefined4 param_3,code *param_
 }
 
 
-// ==== FUN_00408770 @ 00408770 ====
+// ==== SceneObjectIndexedHandleGetOrCreate @ 00408770 [Ghidra: FUN_00408770] ====
 
 
 int FUN_00408770(int param_1,int param_2)
@@ -5795,7 +5795,7 @@ int FUN_00408770(int param_1,int param_2)
 }
 
 
-// ==== FUN_004087b0 @ 004087B0 ====
+// ==== SceneObjectPrimaryHandleGetOrCreate @ 004087B0 [Ghidra: FUN_004087b0] ====
 
 
 int FUN_004087b0(int param_1)
@@ -5818,7 +5818,7 @@ int FUN_004087b0(int param_1)
 }
 
 
-// ==== FUN_004087e0 @ 004087E0 ====
+// ==== SceneObjectSecondaryHandleGetOrCreate @ 004087E0 [Ghidra: FUN_004087e0] ====
 
 
 int FUN_004087e0(int param_1)
@@ -5841,7 +5841,7 @@ int FUN_004087e0(int param_1)
 }
 
 
-// ==== FUN_00408810 @ 00408810 ====
+// ==== SceneObjectIndexedSecondaryHandleGetOrCreate @ 00408810 [Ghidra: FUN_00408810] ====
 
 
 int FUN_00408810(int param_1,int param_2)
@@ -5862,7 +5862,7 @@ int FUN_00408810(int param_1,int param_2)
 }
 
 
-// ==== FUN_00408850 @ 00408850 ====
+// ==== SceneObjectFlagsGet @ 00408850 [Ghidra: FUN_00408850] ====
 
 
 undefined4 FUN_00408850(int param_1)
@@ -5872,7 +5872,7 @@ undefined4 FUN_00408850(int param_1)
 }
 
 
-// ==== FUN_00408860 @ 00408860 ====
+// ==== AnimationLoopTimeAdjust @ 00408860 [Ghidra: FUN_00408860] ====
 
 
 float10 FUN_00408860(float param_1,undefined4 param_2,uint param_3)
@@ -5903,7 +5903,7 @@ float10 FUN_00408860(float param_1,undefined4 param_2,uint param_3)
 }
 
 
-// ==== FUN_00408930 @ 00408930 ====
+// ==== ConstantZeroFloatGet @ 00408930 [Ghidra: FUN_00408930] ====
 
 
 float10 FUN_00408930(void)
@@ -5913,7 +5913,7 @@ float10 FUN_00408930(void)
 }
 
 
-// ==== FUN_00408940 @ 00408940 ====
+// ==== EntityPayloadTeardown @ 00408940 [Ghidra: FUN_00408940] ====
 
 
 void FUN_00408940(int param_1)
@@ -5928,7 +5928,7 @@ void FUN_00408940(int param_1)
 }
 
 
-// ==== FUN_00408970 @ 00408970 ====
+// ==== TaskFlagBitQuery @ 00408970 [Ghidra: FUN_00408970] ====
 
 
 uint FUN_00408970(int param_1,byte param_2,int param_3)
@@ -5944,7 +5944,7 @@ uint FUN_00408970(int param_1,byte param_2,int param_3)
 }
 
 
-// ==== FUN_004089a0 @ 004089A0 ====
+// ==== EntityPayloadStateSet @ 004089A0 [Ghidra: FUN_004089a0] ====
 
 
 void FUN_004089a0(int param_1,undefined4 param_2)
@@ -5956,7 +5956,7 @@ void FUN_004089a0(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_004089d0 @ 004089D0 ====
+// ==== Segment2DPointDistance @ 004089D0 [Ghidra: FUN_004089d0] ====
 
 
 float10 FUN_004089d0(float *param_1,float *param_2,float *param_3)
@@ -5995,7 +5995,7 @@ float10 FUN_004089d0(float *param_1,float *param_2,float *param_3)
 }
 
 
-// ==== FUN_00408b00 @ 00408B00 ====
+// ==== PointToPolylineMinimumSegmentDistance @ 00408B00 [Ghidra: FUN_00408b00] ====
 
 
 float10 FUN_00408b00(undefined4 param_1,int param_2,float param_3,uint param_4)
@@ -6027,7 +6027,7 @@ float10 FUN_00408b00(undefined4 param_1,int param_2,float param_3,uint param_4)
 }
 
 
-// ==== FUN_00408b60 @ 00408B60 ====
+// ==== PointProjectOntoLine2D @ 00408B60 [Ghidra: FUN_00408b60] ====
 
 
 void FUN_00408b60(float *param_1,float *param_2,float *param_3,float *param_4)
@@ -6049,7 +6049,7 @@ void FUN_00408b60(float *param_1,float *param_2,float *param_3,float *param_4)
 }
 
 
-// ==== FUN_00408bf0 @ 00408BF0 ====
+// ==== Point2DProjectOntoDirection @ 00408BF0 [Ghidra: FUN_00408bf0] ====
 
 
 void FUN_00408bf0(float *param_1,float *param_2,float *param_3,float *param_4)
@@ -6071,7 +6071,7 @@ void FUN_00408bf0(float *param_1,float *param_2,float *param_3,float *param_4)
 }
 
 
-// ==== FUN_00408c80 @ 00408C80 ====
+// ==== StringTableIndexLookup @ 00408C80 [Ghidra: FUN_00408c80] ====
 
 
 uint FUN_00408c80(byte *param_1)
@@ -6122,7 +6122,7 @@ LAB_00408cc3:
 }
 
 
-// ==== FUN_00408ce0 @ 00408CE0 ====
+// ==== OperationGroupAppendObject @ 00408CE0 [Ghidra: FUN_00408ce0] ====
 
 
 void FUN_00408ce0(undefined4 param_1,int *param_2)
@@ -6155,7 +6155,7 @@ void FUN_00408ce0(undefined4 param_1,int *param_2)
 }
 
 
-// ==== FUN_00408d70 @ 00408D70 ====
+// ==== TerrainDescriptorCoordinateCountLimitCheck @ 00408D70 [Ghidra: FUN_00408d70] ====
 
 
 undefined4 FUN_00408d70(undefined4 param_1,int param_2,int param_3)
@@ -6196,7 +6196,7 @@ undefined4 FUN_00408d70(undefined4 param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_00408e10 @ 00408E10 ====
+// ==== CountMatchingCoordinatesInList @ 00408E10 [Ghidra: FUN_00408e10] ====
 
 
 int FUN_00408e10(int param_1,int param_2,int param_3)
@@ -6222,7 +6222,7 @@ int FUN_00408e10(int param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_00408e50 @ 00408E50 ====
+// ==== CreateRepeatedResourceInstances @ 00408E50 [Ghidra: FUN_00408e50] ====
 
 
 void FUN_00408e50(undefined4 param_1,int param_2,int param_3,undefined4 param_4,int param_5)
@@ -6242,7 +6242,7 @@ void FUN_00408e50(undefined4 param_1,int param_2,int param_3,undefined4 param_4,
 }
 
 
-// ==== FUN_00408ec0 @ 00408EC0 ====
+// ==== KindNineNeighborEmitForFootprintCells @ 00408EC0 [Ghidra: FUN_00408ec0] ====
 
 
 void FUN_00408ec0(uint param_1,int *param_2,uint param_3)
@@ -6343,7 +6343,7 @@ void FUN_00408ec0(uint param_1,int *param_2,uint param_3)
 }
 
 
-// ==== FUN_004090a0 @ 004090A0 ====
+// ==== TerrainCellPredicateCheck @ 004090A0 [Ghidra: FUN_004090a0] ====
 
 
 bool FUN_004090a0(undefined4 param_1)
@@ -6356,7 +6356,7 @@ bool FUN_004090a0(undefined4 param_1)
 }
 
 
-// ==== FUN_004090c0 @ 004090C0 ====
+// ==== TerrainDescriptorFindExact @ 004090C0 [Ghidra: FUN_004090c0] ====
 
 
 int FUN_004090c0(int *param_1,int *param_2)
@@ -6382,7 +6382,7 @@ int FUN_004090c0(int *param_1,int *param_2)
 }
 
 
-// ==== FUN_00409110 @ 00409110 ====
+// ==== ReleaseSelectionGroupResources @ 00409110 [Ghidra: FUN_00409110] ====
 
 
 void FUN_00409110(undefined4 param_1)
@@ -6400,7 +6400,7 @@ void FUN_00409110(undefined4 param_1)
 }
 
 
-// ==== FUN_00409150 @ 00409150 ====
+// ==== ClearSelectionGroup @ 00409150 [Ghidra: FUN_00409150] ====
 
 
 void FUN_00409150(undefined4 param_1)
@@ -6485,7 +6485,7 @@ bool FUN_00409270(undefined4 param_1)
 }
 
 
-// ==== FUN_00409300 @ 00409300 ====
+// ==== TutorialPathDescriptorCreate @ 00409300 [Ghidra: FUN_00409300] ====
 
 
 undefined4 FUN_00409300(undefined4 param_1)
@@ -6505,7 +6505,7 @@ undefined4 FUN_00409300(undefined4 param_1)
 }
 
 
-// ==== FUN_00409350 @ 00409350 ====
+// ==== PathRecordAllocateAndLink @ 00409350 [Ghidra: FUN_00409350] ====
 
 
 undefined4 * FUN_00409350(undefined4 *param_1)
@@ -6533,7 +6533,7 @@ undefined4 * FUN_00409350(undefined4 *param_1)
 }
 
 
-// ==== FUN_004093b0 @ 004093B0 ====
+// ==== PassableAdjacentCellSearchExpand @ 004093B0 [Ghidra: FUN_004093b0] ====
 
 
 void FUN_004093b0(int *param_1)
@@ -6573,7 +6573,7 @@ LAB_00409420:
 }
 
 
-// ==== FUN_00409450 @ 00409450 ====
+// ==== FindNearbyPlacementCandidate @ 00409450 [Ghidra: FUN_00409450] ====
 
 
 undefined4 FUN_00409450(undefined4 param_1,undefined4 param_2)
@@ -6587,7 +6587,7 @@ undefined4 FUN_00409450(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00409470 @ 00409470 ====
+// ==== NeighborCellEntitySearchRecurse @ 00409470 [Ghidra: FUN_00409470] ====
 
 
 undefined4 FUN_00409470(int *param_1,undefined4 param_2)
@@ -6666,7 +6666,7 @@ void FUN_00409550(int param_1)
 }
 
 
-// ==== FUN_00409600 @ 00409600 ====
+// ==== TerrainDescriptorTilesResetAndFree @ 00409600 [Ghidra: FUN_00409600] ====
 
 
 void FUN_00409600(undefined4 param_1)
@@ -6737,7 +6737,7 @@ void FUN_00409600(undefined4 param_1)
 }
 
 
-// ==== FUN_00409790 @ 00409790 ====
+// ==== CellPathRecordRegisterApply @ 00409790 [Ghidra: FUN_00409790] ====
 
 
 undefined4
@@ -6814,7 +6814,7 @@ FUN_00409790(undefined4 param_1,uint param_2,undefined4 param_3,int *param_4,uin
 }
 
 
-// ==== FUN_00409940 @ 00409940 ====
+// ==== RefreshEightNeighborCells @ 00409940 [Ghidra: FUN_00409940] ====
 
 
 void FUN_00409940(int *param_1)
@@ -6835,7 +6835,7 @@ void FUN_00409940(int *param_1)
 }
 
 
-// ==== FUN_004099d0 @ 004099D0 ====
+// ==== ReleaseAllGroupRecords @ 004099D0 [Ghidra: FUN_004099d0] ====
 
 
 void FUN_004099d0(void)
@@ -6912,7 +6912,7 @@ void FUN_00409a40(int param_1)
 }
 
 
-// ==== FUN_00409a90 @ 00409A90 ====
+// ==== WorldObjectCreateWithTransform @ 00409A90 [Ghidra: FUN_00409a90] ====
 
 
 void FUN_00409a90(undefined4 param_1,undefined4 *param_2,undefined4 param_3,undefined4 param_4,
@@ -7013,7 +7013,7 @@ LAB_00409c1b:
 }
 
 
-// ==== FUN_00409cd0 @ 00409CD0 ====
+// ==== CellCardinalNeighborApply @ 00409CD0 [Ghidra: FUN_00409cd0] ====
 
 
 void FUN_00409cd0(int *param_1)
@@ -7044,7 +7044,7 @@ void FUN_00409cd0(int *param_1)
 }
 
 
-// ==== FUN_00409d40 @ 00409D40 ====
+// ==== LevelStateStoredValueSet @ 00409D40 [Ghidra: FUN_00409d40] ====
 
 
 void FUN_00409d40(undefined4 param_1)
@@ -7055,7 +7055,7 @@ void FUN_00409d40(undefined4 param_1)
 }
 
 
-// ==== FUN_00409d50 @ 00409D50 ====
+// ==== EntityCellPathEffectsApply @ 00409D50 [Ghidra: FUN_00409d50] ====
 
 
 void FUN_00409d50(int param_1)
@@ -7141,7 +7141,7 @@ void FUN_00409d50(int param_1)
 }
 
 
-// ==== FUN_00409f20 @ 00409F20 ====
+// ==== EntityPlacementCommandsBuildOnce @ 00409F20 [Ghidra: FUN_00409f20] ====
 
 
 void FUN_00409f20(int param_1)
@@ -7171,7 +7171,7 @@ void FUN_00409f20(int param_1)
 }
 
 
-// ==== FUN_00409ff0 @ 00409FF0 ====
+// ==== EntityDestroyTrackedPointerCleanup @ 00409FF0 [Ghidra: FUN_00409ff0] ====
 
 
 void FUN_00409ff0(int param_1)
@@ -7215,7 +7215,7 @@ void FUN_00409ff0(int param_1)
 }
 
 
-// ==== FUN_0040a0c0 @ 0040A0C0 ====
+// ==== ScrollingTextDisplay @ 0040A0C0 [Ghidra: FUN_0040a0c0] ====
 
 
 void FUN_0040a0c0(undefined4 param_1,undefined4 param_2,undefined4 param_3)
@@ -7363,7 +7363,7 @@ void FUN_0040a0c0(undefined4 param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_0040a3d0 @ 0040A3D0 ====
+// ==== ScreenEffectFlagsClearAndRelease @ 0040A3D0 [Ghidra: FUN_0040a3d0] ====
 
 
 void FUN_0040a3d0(void)
@@ -7383,7 +7383,7 @@ void FUN_0040a3d0(void)
 }
 
 
-// ==== FUN_0040a400 @ 0040A400 ====
+// ==== PreloadNumberedBitmaps @ 0040A400 [Ghidra: FUN_0040a400] ====
 
 
 void FUN_0040a400(undefined4 param_1,int param_2)
@@ -7416,7 +7416,7 @@ void FUN_0040a400(undefined4 param_1,int param_2)
 }
 
 
-// ==== FUN_0040a4b0 @ 0040A4B0 ====
+// ==== QuadMeshRenderRecordCreate @ 0040A4B0 [Ghidra: FUN_0040a4b0] ====
 
 
 void FUN_0040a4b0(undefined4 param_1,uint param_2)
@@ -7470,7 +7470,7 @@ void FUN_0040a4b0(undefined4 param_1,uint param_2)
 }
 
 
-// ==== FUN_0040a5c0 @ 0040A5C0 ====
+// ==== QuadMeshRenderRecordPoolSlotAllocate @ 0040A5C0 [Ghidra: FUN_0040a5c0] ====
 
 
 undefined4 * FUN_0040a5c0(void)
@@ -7490,7 +7490,7 @@ undefined4 * FUN_0040a5c0(void)
 }
 
 
-// ==== FUN_0040a5e0 @ 0040A5E0 ====
+// ==== RecordCountDigitsFill @ 0040A5E0 [Ghidra: FUN_0040a5e0] ====
 
 
 void FUN_0040a5e0(int param_1,uint param_2)
@@ -7554,7 +7554,7 @@ void FUN_0040a5e0(int param_1,uint param_2)
 }
 
 
-// ==== FUN_0040aa10 @ 0040AA10 ====
+// ==== ScreenEffectLaneDispatch @ 0040AA10 [Ghidra: FUN_0040aa10] ====
 
 
 void FUN_0040aa10(undefined4 param_1)
@@ -7573,7 +7573,7 @@ void FUN_0040aa10(undefined4 param_1)
 }
 
 
-// ==== FUN_0040aa40 @ 0040AA40 ====
+// ==== ScreenEffectOpacityUpdate @ 0040AA40 [Ghidra: FUN_0040aa40] ====
 
 
 void FUN_0040aa40(undefined4 *param_1,float param_2)
@@ -7603,7 +7603,7 @@ void FUN_0040aa40(undefined4 *param_1,float param_2)
 }
 
 
-// ==== FUN_0040aae0 @ 0040AAE0 ====
+// ==== EntityQuadMeshRenderRecordAllowed @ 0040AAE0 [Ghidra: FUN_0040aae0] ====
 
 
 undefined4 FUN_0040aae0(int *param_1)
@@ -7619,7 +7619,7 @@ undefined4 FUN_0040aae0(int *param_1)
 }
 
 
-// ==== FUN_0040ab10 @ 0040AB10 ====
+// ==== GlobalModeZeroInputSet @ 0040AB10 [Ghidra: FUN_0040ab10] ====
 
 
 void FUN_0040ab10(int param_1)
@@ -7630,7 +7630,7 @@ void FUN_0040ab10(int param_1)
 }
 
 
-// ==== FUN_0040ab30 @ 0040AB30 ====
+// ==== GridRecordFlagMaskClear @ 0040AB30 [Ghidra: FUN_0040ab30] ====
 
 
 void FUN_0040ab30(void)
@@ -7660,7 +7660,7 @@ void FUN_0040ab30(void)
 }
 
 
-// ==== FUN_0040ab70 @ 0040AB70 ====
+// ==== DependencyGridConfigLoad @ 0040AB70 [Ghidra: FUN_0040ab70] ====
 
 
 void FUN_0040ab70(undefined4 param_1,int param_2)
@@ -7760,7 +7760,7 @@ void FUN_0040ab70(undefined4 param_1,int param_2)
 }
 
 
-// ==== FUN_0040aea0 @ 0040AEA0 ====
+// ==== EnsureCellEntriesLoaded @ 0040AEA0 [Ghidra: FUN_0040aea0] ====
 
 
 undefined4 FUN_0040aea0(uint param_1,int param_2,int param_3)
@@ -7797,7 +7797,7 @@ undefined4 FUN_0040aea0(uint param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_0040af40 @ 0040AF40 ====
+// ==== CellResourceEntryMatches @ 0040AF40 [Ghidra: FUN_0040af40] ====
 
 
 undefined4 FUN_0040af40(int *param_1,int *param_2)
@@ -7821,7 +7821,7 @@ undefined4 FUN_0040af40(int *param_1,int *param_2)
 }
 
 
-// ==== FUN_0040af90 @ 0040AF90 ====
+// ==== TerrainCellRecordGet @ 0040AF90 [Ghidra: FUN_0040af90] ====
 
 
 void FUN_0040af90(int param_1,int param_2,int param_3,undefined4 *param_4,undefined4 *param_5)
@@ -7842,7 +7842,7 @@ void FUN_0040af90(int param_1,int param_2,int param_3,undefined4 *param_4,undefi
 }
 
 
-// ==== FUN_0040b000 @ 0040B000 ====
+// ==== TileMatchingCellsCollect @ 0040B000 [Ghidra: FUN_0040b000] ====
 
 
 void FUN_0040b000(int param_1,int param_2,int param_3,int param_4)
@@ -7918,7 +7918,7 @@ void FUN_0040b000(int param_1,int param_2,int param_3,int param_4)
 }
 
 
-// ==== FUN_0040b1b0 @ 0040B1B0 ====
+// ==== DependencyGridOccupancyPass @ 0040B1B0 [Ghidra: FUN_0040b1b0] ====
 
 
 void FUN_0040b1b0(void)
@@ -7971,7 +7971,7 @@ LAB_0040b21c:
 }
 
 
-// ==== FUN_0040b250 @ 0040B250 ====
+// ==== CellFlag4IsSet @ 0040B250 [Ghidra: FUN_0040b250] ====
 
 
 uint FUN_0040b250(int param_1,int param_2,int param_3)
@@ -7985,7 +7985,7 @@ uint FUN_0040b250(int param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_0040b2a0 @ 0040B2A0 ====
+// ==== CellFlag100Set @ 0040B2A0 [Ghidra: FUN_0040b2a0] ====
 
 
 void FUN_0040b2a0(int param_1,int param_2,int param_3)
@@ -7997,7 +7997,7 @@ void FUN_0040b2a0(int param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_0040b2e0 @ 0040B2E0 ====
+// ==== CellFlag100IsSet @ 0040B2E0 [Ghidra: FUN_0040b2e0] ====
 
 
 uint FUN_0040b2e0(int param_1,int param_2,int param_3)
@@ -8007,7 +8007,7 @@ uint FUN_0040b2e0(int param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_0040b310 @ 0040B310 ====
+// ==== LoadTileVariants @ 0040B310 [Ghidra: FUN_0040b310] ====
 
 
 uint * FUN_0040b310(undefined4 param_1,uint param_2,uint param_3)
@@ -8058,7 +8058,7 @@ uint * FUN_0040b310(undefined4 param_1,uint param_2,uint param_3)
 }
 
 
-// ==== FUN_0040b410 @ 0040B410 ====
+// ==== TerrainCellResourceGridDispose @ 0040B410 [Ghidra: FUN_0040b410] ====
 
 
 void FUN_0040b410(uint *param_1)
@@ -8089,7 +8089,7 @@ void FUN_0040b410(uint *param_1)
 }
 
 
-// ==== FUN_0040b470 @ 0040B470 ====
+// ==== ProjectedQuadScreenAreaCalculate @ 0040B470 [Ghidra: FUN_0040b470] ====
 
 
 float10 FUN_0040b470(int param_1,undefined4 param_2,float *param_3,int param_4)
@@ -8162,7 +8162,7 @@ float10 FUN_0040b470(int param_1,undefined4 param_2,float *param_3,int param_4)
 }
 
 
-// ==== FUN_0040b5f0 @ 0040B5F0 ====
+// ==== TileModelEntityRegister @ 0040B5F0 [Ghidra: FUN_0040b5f0] ====
 
 
 int * FUN_0040b5f0(undefined4 param_1,int param_2,int param_3,float param_4,int param_5)
@@ -8242,7 +8242,7 @@ int * FUN_0040b5f0(undefined4 param_1,int param_2,int param_3,float param_4,int 
 }
 
 
-// ==== FUN_0040b7d0 @ 0040B7D0 ====
+// ==== CellVisualChannelTableDispose @ 0040B7D0 [Ghidra: FUN_0040b7d0] ====
 
 
 void FUN_0040b7d0(undefined4 *param_1)
@@ -8266,7 +8266,7 @@ void FUN_0040b7d0(undefined4 *param_1)
 }
 
 
-// ==== FUN_0040b810 @ 0040B810 ====
+// ==== CellVisualChannelTableResourcesClear @ 0040B810 [Ghidra: FUN_0040b810] ====
 
 
 void FUN_0040b810(int param_1)
@@ -8295,7 +8295,7 @@ void FUN_0040b810(int param_1)
 }
 
 
-// ==== FUN_0040b850 @ 0040B850 ====
+// ==== PackedGridCellValueGet @ 0040B850 [Ghidra: FUN_0040b850] ====
 
 
 undefined4 FUN_0040b850(int *param_1,uint param_2)
@@ -8308,7 +8308,7 @@ undefined4 FUN_0040b850(int *param_1,uint param_2)
 }
 
 
-// ==== FUN_0040b880 @ 0040B880 ====
+// ==== CellVisualChannelRelay @ 0040B880 [Ghidra: FUN_0040b880] ====
 
 
 void FUN_0040b880(int param_1,int param_2,undefined4 param_3,uint param_4,undefined4 param_5,
@@ -8362,7 +8362,7 @@ void FUN_0040b880(int param_1,int param_2,undefined4 param_3,uint param_4,undefi
 }
 
 
-// ==== FUN_0040ba00 @ 0040BA00 ====
+// ==== SceneRotationFlagsApply @ 0040BA00 [Ghidra: FUN_0040ba00] ====
 
 
 void FUN_0040ba00(undefined4 param_1,undefined4 param_2,undefined4 param_3,undefined4 param_4,
@@ -8416,7 +8416,7 @@ void FUN_0040ba00(undefined4 param_1,undefined4 param_2,undefined4 param_3,undef
 }
 
 
-// ==== FUN_0040bb90 @ 0040BB90 ====
+// ==== SceneFrameFromTripletApply @ 0040BB90 [Ghidra: FUN_0040bb90] ====
 
 
 void FUN_0040bb90(undefined4 param_1,undefined4 param_2,float *param_3,float *param_4,float *param_5
@@ -8453,7 +8453,7 @@ void FUN_0040bb90(undefined4 param_1,undefined4 param_2,float *param_3,float *pa
 }
 
 
-// ==== FUN_0040bd60 @ 0040BD60 ====
+// ==== BuildPerspectiveProjectionMatrix @ 0040BD60 [Ghidra: FUN_0040bd60] ====
 
 
 void FUN_0040bd60(float *param_1,float param_2,float param_3,float param_4,float param_5,
@@ -8480,7 +8480,7 @@ void FUN_0040bd60(float *param_1,float param_2,float param_3,float param_4,float
 }
 
 
-// ==== FUN_0040bdc0 @ 0040BDC0 ====
+// ==== SetTimeoutTo10000 @ 0040BDC0 [Ghidra: FUN_0040bdc0] ====
 
 
 void FUN_0040bdc0(void)
@@ -8493,7 +8493,7 @@ void FUN_0040bdc0(void)
 }
 
 
-// ==== FUN_0040bde0 @ 0040BDE0 ====
+// ==== SceneMarkerCreateAtObjectPosition @ 0040BDE0 [Ghidra: FUN_0040bde0] ====
 
 
 void FUN_0040bde0(int param_1)
@@ -8507,7 +8507,7 @@ void FUN_0040bde0(int param_1)
 }
 
 
-// ==== FUN_0040be10 @ 0040BE10 ====
+// ==== SceneLightCreateAtPosition @ 0040BE10 [Ghidra: FUN_0040be10] ====
 
 
 void FUN_0040be10(undefined4 *param_1)
@@ -8541,7 +8541,7 @@ void FUN_0040be10(undefined4 *param_1)
 }
 
 
-// ==== FUN_0040beb0 @ 0040BEB0 ====
+// ==== SceneMarkerCreateAtPositionOrObject @ 0040BEB0 [Ghidra: FUN_0040beb0] ====
 
 
 void FUN_0040beb0(int param_1,undefined4 *param_2)
@@ -8578,7 +8578,7 @@ void FUN_0040beb0(int param_1,undefined4 *param_2)
 }
 
 
-// ==== FUN_0040bf70 @ 0040BF70 ====
+// ==== RockFallStyleNameLookup @ 0040BF70 [Ghidra: FUN_0040bf70] ====
 
 
 undefined4 FUN_0040bf70(char *param_1,uint *param_2)
@@ -8606,7 +8606,7 @@ undefined4 FUN_0040bf70(char *param_1,uint *param_2)
 }
 
 
-// ==== FUN_0040bfc0 @ 0040BFC0 ====
+// ==== RockFallStyleTableSet @ 0040BFC0 [Ghidra: FUN_0040bfc0] ====
 
 
 void FUN_0040bfc0(undefined4 param_1)
@@ -8617,7 +8617,7 @@ void FUN_0040bfc0(undefined4 param_1)
 }
 
 
-// ==== FUN_0040bfd0 @ 0040BFD0 ====
+// ==== RockFallStylesConfigLoad @ 0040BFD0 [Ghidra: FUN_0040bfd0] ====
 
 
 void FUN_0040bfd0(undefined4 param_1,undefined4 param_2,undefined4 param_3)
@@ -8681,7 +8681,7 @@ void FUN_0040bfd0(undefined4 param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_0040c0d0 @ 0040C0D0 ====
+// ==== SceneActSlotLoadAndRegister @ 0040C0D0 [Ghidra: FUN_0040c0d0] ====
 
 
 undefined4
@@ -8727,7 +8727,7 @@ FUN_0040c0d0(undefined4 param_1,undefined4 param_2,int param_3,int param_4,undef
 }
 
 
-// ==== FUN_0040c1b0 @ 0040C1B0 ====
+// ==== IndexedResourceHandleSetCreate @ 0040C1B0 [Ghidra: FUN_0040c1b0] ====
 
 
 undefined4 FUN_0040c1b0(undefined4 param_1,undefined4 param_2,int param_3)
@@ -8757,7 +8757,7 @@ undefined4 FUN_0040c1b0(undefined4 param_1,undefined4 param_2,int param_3)
 }
 
 
-// ==== FUN_0040c230 @ 0040C230 ====
+// ==== SceneSlotPoseScaleRegister @ 0040C230 [Ghidra: FUN_0040c230] ====
 
 
 undefined4
@@ -8792,7 +8792,7 @@ FUN_0040c230(int param_1,undefined4 param_2,undefined4 param_3,undefined4 param_
 }
 
 
-// ==== FUN_0040c2f0 @ 0040C2F0 ====
+// ==== TransientEffectRenderSlotConfigure @ 0040C2F0 [Ghidra: FUN_0040c2f0] ====
 
 
 undefined4
@@ -8822,7 +8822,7 @@ FUN_0040c2f0(int param_1,undefined4 param_2,undefined4 param_3,undefined4 param_
 }
 
 
-// ==== FUN_0040c3a0 @ 0040C3A0 ====
+// ==== ResourceAvailabilitySweep @ 0040C3A0 [Ghidra: FUN_0040c3a0] ====
 
 
 int FUN_0040c3a0(undefined4 param_1,undefined4 *param_2,undefined4 *param_3)
@@ -8888,7 +8888,7 @@ int FUN_0040c3a0(undefined4 param_1,undefined4 *param_2,undefined4 *param_3)
 }
 
 
-// ==== FUN_0040c4d0 @ 0040C4D0 ====
+// ==== SceneLightPoolExpireSweep @ 0040C4D0 [Ghidra: FUN_0040c4d0] ====
 
 
 void FUN_0040c4d0(undefined4 param_1)
@@ -8912,7 +8912,7 @@ void FUN_0040c4d0(undefined4 param_1)
 }
 
 
-// ==== FUN_0040c520 @ 0040C520 ====
+// ==== SceneLightSecondaryPoolExpireSweep @ 0040C520 [Ghidra: FUN_0040c520] ====
 
 
 void FUN_0040c520(undefined4 param_1)
@@ -8936,7 +8936,7 @@ void FUN_0040c520(undefined4 param_1)
 }
 
 
-// ==== FUN_0040c570 @ 0040C570 ====
+// ==== ReadCellTablePair @ 0040C570 [Ghidra: FUN_0040c570] ====
 
 
 void FUN_0040c570(int param_1,int param_2,undefined4 *param_3,undefined4 *param_4)
@@ -8951,7 +8951,7 @@ void FUN_0040c570(int param_1,int param_2,undefined4 *param_3,undefined4 *param_
 }
 
 
-// ==== FUN_0040c5b0 @ 0040C5B0 ====
+// ==== ResourceSlotRegisterName @ 0040C5B0 [Ghidra: FUN_0040c5b0] ====
 
 
 undefined4 FUN_0040c5b0(int param_1,uint param_2)
@@ -9002,7 +9002,7 @@ LAB_0040c634:
 }
 
 
-// ==== FUN_0040c690 @ 0040C690 ====
+// ==== SceneResourceSingletonPoolRelease @ 0040C690 [Ghidra: FUN_0040c690] ====
 
 
 void FUN_0040c690(void)
@@ -9022,7 +9022,7 @@ void FUN_0040c690(void)
 }
 
 
-// ==== FUN_0040c6c0 @ 0040C6C0 ====
+// ==== RockFallStyleSceneResourcesRelease @ 0040C6C0 [Ghidra: FUN_0040c6c0] ====
 
 
 void FUN_0040c6c0(void)
@@ -9054,7 +9054,7 @@ void FUN_0040c6c0(void)
 }
 
 
-// ==== FUN_0040c720 @ 0040C720 ====
+// ==== GlobalResourceHandleLoadAndEnable @ 0040C720 [Ghidra: FUN_0040c720] ====
 
 
 void FUN_0040c720(undefined4 param_1,undefined4 param_2)
@@ -9066,7 +9066,7 @@ void FUN_0040c720(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0040c750 @ 0040C750 ====
+// ==== TerrainPointObjectCreate @ 0040C750 [Ghidra: FUN_0040c750] ====
 
 
 void FUN_0040c750(int param_1,undefined4 *param_2)
@@ -9102,7 +9102,7 @@ void FUN_0040c750(int param_1,undefined4 *param_2)
 }
 
 
-// ==== FUN_0040c830 @ 0040C830 ====
+// ==== TerrainPointObjectsRemoveMatching @ 0040C830 [Ghidra: FUN_0040c830] ====
 
 
 void FUN_0040c830(undefined4 param_1)
@@ -9136,7 +9136,7 @@ void FUN_0040c830(undefined4 param_1)
 }
 
 
-// ==== FUN_0040c8a0 @ 0040C8A0 ====
+// ==== GetResourceSlotAddressByIndex @ 0040C8A0 [Ghidra: FUN_0040c8a0] ====
 
 
 undefined * FUN_0040c8a0(undefined4 param_1)
@@ -9169,7 +9169,7 @@ undefined * FUN_0040c8a0(undefined4 param_1)
 }
 
 
-// ==== FUN_0040c920 @ 0040C920 ====
+// ==== ResourceHandleLoadWithFallback @ 0040C920 [Ghidra: FUN_0040c920] ====
 
 
 undefined4 FUN_0040c920(int param_1,undefined4 param_2,int param_3)
@@ -9194,7 +9194,7 @@ undefined4 FUN_0040c920(int param_1,undefined4 param_2,int param_3)
 }
 
 
-// ==== FUN_0040c990 @ 0040C990 ====
+// ==== MiscObjectsEffectSlotBind @ 0040C990 [Ghidra: FUN_0040c990] ====
 
 
 void FUN_0040c990(undefined4 param_1,undefined4 param_2,undefined4 param_3)
@@ -9236,7 +9236,7 @@ void FUN_0040c990(undefined4 param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_0040cb70 @ 0040CB70 ====
+// ==== SceneTimeoutEntrySweep @ 0040CB70 [Ghidra: FUN_0040cb70] ====
 
 
 void FUN_0040cb70(undefined4 *param_1,float param_2)
@@ -9287,7 +9287,7 @@ void FUN_0040cb70(undefined4 *param_1,float param_2)
 }
 
 
-// ==== FUN_0040cc40 @ 0040CC40 ====
+// ==== TerrainMarkerSetsClear @ 0040CC40 [Ghidra: FUN_0040cc40] ====
 
 
 void FUN_0040cc40(undefined4 param_1)
@@ -9307,7 +9307,7 @@ void FUN_0040cc40(undefined4 param_1)
 }
 
 
-// ==== FUN_0040cce0 @ 0040CCE0 ====
+// ==== LavaEffectSelectAndPlace @ 0040CCE0 [Ghidra: FUN_0040cce0] ====
 
 
 undefined4 FUN_0040cce0(undefined4 param_1,undefined4 *param_2,undefined4 *param_3)
@@ -9347,7 +9347,7 @@ undefined4 FUN_0040cce0(undefined4 param_1,undefined4 *param_2,undefined4 *param
 }
 
 
-// ==== FUN_0040cdc0 @ 0040CDC0 ====
+// ==== MapCellRecordGridInitialize @ 0040CDC0 [Ghidra: FUN_0040cdc0] ====
 
 
 void FUN_0040cdc0(int param_1)
@@ -9383,7 +9383,7 @@ void FUN_0040cdc0(int param_1)
 }
 
 
-// ==== FUN_0040ce30 @ 0040CE30 ====
+// ==== SelectionMarkerResourcesRelease @ 0040CE30 [Ghidra: FUN_0040ce30] ====
 
 
 void FUN_0040ce30(void)
@@ -9407,7 +9407,7 @@ void FUN_0040ce30(void)
 }
 
 
-// ==== FUN_0040ce80 @ 0040CE80 ====
+// ==== MapCellStateBufferRebuild @ 0040CE80 [Ghidra: FUN_0040ce80] ====
 
 
 void FUN_0040ce80(undefined4 param_1)
@@ -9419,7 +9419,7 @@ void FUN_0040ce80(undefined4 param_1)
 }
 
 
-// ==== FUN_0040cea0 @ 0040CEA0 ====
+// ==== TerrainCellAndNeighborsUpdate @ 0040CEA0 [Ghidra: FUN_0040cea0] ====
 
 
 void FUN_0040cea0(int param_1,int param_2)
@@ -9457,7 +9457,7 @@ void FUN_0040cea0(int param_1,int param_2)
 }
 
 
-// ==== FUN_0040cf50 @ 0040CF50 ====
+// ==== RegisterObjectAtGridPosition @ 0040CF50 [Ghidra: FUN_0040cf50] ====
 
 
 void FUN_0040cf50(undefined4 param_1)
@@ -9473,7 +9473,7 @@ void FUN_0040cf50(undefined4 param_1)
 }
 
 
-// ==== FUN_0040cf80 @ 0040CF80 ====
+// ==== GridCellObjectLinkInsert @ 0040CF80 [Ghidra: FUN_0040cf80] ====
 
 
 int * FUN_0040cf80(int param_1,int param_2,int param_3)
@@ -9505,7 +9505,7 @@ int * FUN_0040cf80(int param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_0040d030 @ 0040D030 ====
+// ==== TerrainRecordPoolChunkAllocate @ 0040D030 [Ghidra: FUN_0040d030] ====
 
 
 void FUN_0040d030(void)
@@ -9539,7 +9539,7 @@ void FUN_0040d030(void)
 }
 
 
-// ==== FUN_0040d0a0 @ 0040D0A0 ====
+// ==== TerrainEntityCellRecordRemove @ 0040D0A0 [Ghidra: FUN_0040d0a0] ====
 
 
 void FUN_0040d0a0(int param_1)
@@ -9559,7 +9559,7 @@ void FUN_0040d0a0(int param_1)
 }
 
 
-// ==== FUN_0040d100 @ 0040D100 ====
+// ==== TerrainCellEntityRecordUnlink @ 0040D100 [Ghidra: FUN_0040d100] ====
 
 
 void FUN_0040d100(int param_1,int param_2,int param_3)
@@ -9574,7 +9574,7 @@ void FUN_0040d100(int param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_0040d170 @ 0040D170 ====
+// ==== CreateCellObjectIfAvailable @ 0040D170 [Ghidra: FUN_0040d170] ====
 
 
 undefined4 FUN_0040d170(undefined4 param_1,undefined4 param_2)
@@ -9596,7 +9596,7 @@ undefined4 FUN_0040d170(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0040d1f0 @ 0040D1F0 ====
+// ==== DeleteCellObject @ 0040D1F0 [Ghidra: FUN_0040d1f0] ====
 
 
 undefined4 FUN_0040d1f0(int param_1,int param_2)
@@ -9617,7 +9617,7 @@ undefined4 FUN_0040d1f0(int param_1,int param_2)
 }
 
 
-// ==== FUN_0040d240 @ 0040D240 ====
+// ==== TerrainCellHasOccupiedOrFlaggedNeighbor @ 0040D240 [Ghidra: FUN_0040d240] ====
 
 
 undefined4 FUN_0040d240(int param_1,int param_2)
@@ -9684,7 +9684,7 @@ undefined4 FUN_0040d240(int param_1,int param_2)
 }
 
 
-// ==== FUN_0040d3f0 @ 0040D3F0 ====
+// ==== TerrainCellSpecialStatePredicate @ 0040D3F0 [Ghidra: FUN_0040d3f0] ====
 
 
 undefined4 FUN_0040d3f0(undefined4 param_1,undefined4 param_2,undefined4 param_3,int param_4)
@@ -9758,7 +9758,7 @@ void FUN_0040d490(code *param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0040d4f0 @ 0040D4F0 ====
+// ==== TerrainCellActivationTry @ 0040D4F0 [Ghidra: FUN_0040d4f0] ====
 
 
 undefined4 FUN_0040d4f0(int param_1,int param_2,int param_3)
@@ -9790,7 +9790,7 @@ undefined4 FUN_0040d4f0(int param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_0040d850 @ 0040D850 ====
+// ==== TerrainCellNeighborFloodWalk @ 0040D850 [Ghidra: FUN_0040d850] ====
 
 
 void FUN_0040d850(int param_1,int param_2,int param_3,float param_4)
@@ -9914,7 +9914,7 @@ LAB_0040db89:
 }
 
 
-// ==== FUN_0040dc20 @ 0040DC20 ====
+// ==== CellPairEdgeEffectApply @ 0040DC20 [Ghidra: FUN_0040dc20] ====
 
 
 undefined4 FUN_0040dc20(int param_1,int param_2,int param_3,int param_4)
@@ -9982,7 +9982,7 @@ undefined4 FUN_0040dc20(int param_1,int param_2,int param_3,int param_4)
 }
 
 
-// ==== FUN_0040dd90 @ 0040DD90 ====
+// ==== ComputeWorldPositionDelta @ 0040DD90 [Ghidra: FUN_0040dd90] ====
 
 
 void FUN_0040dd90(undefined4 param_1,undefined4 param_2,undefined4 param_3,undefined4 param_4,
@@ -10008,7 +10008,7 @@ void FUN_0040dd90(undefined4 param_1,undefined4 param_2,undefined4 param_3,undef
 }
 
 
-// ==== FUN_0040de40 @ 0040DE40 ====
+// ==== EntityFenceSparkTerrainInteraction @ 0040DE40 [Ghidra: FUN_0040de40] ====
 
 
 undefined4 FUN_0040de40(undefined4 param_1)
@@ -10100,7 +10100,7 @@ undefined4 FUN_0040de40(undefined4 param_1)
 }
 
 
-// ==== FUN_0040e0c0 @ 0040E0C0 ====
+// ==== FenceSparkLaunchRegister @ 0040E0C0 [Ghidra: FUN_0040e0c0] ====
 
 
 void FUN_0040e0c0(undefined4 param_1,float *param_2,undefined4 param_3,undefined4 param_4)
@@ -10139,7 +10139,7 @@ void FUN_0040e0c0(undefined4 param_1,float *param_2,undefined4 param_3,undefined
 }
 
 
-// ==== FUN_0040e1e0 @ 0040E1E0 ====
+// ==== CellCornerOccupancyScan @ 0040E1E0 [Ghidra: FUN_0040e1e0] ====
 
 
 undefined4 FUN_0040e1e0(undefined4 param_1,int param_2,uint param_3)
@@ -10192,7 +10192,7 @@ undefined4 FUN_0040e1e0(undefined4 param_1,int param_2,uint param_3)
 }
 
 
-// ==== FUN_0040e350 @ 0040E350 ====
+// ==== CellEntityKindCreateOrRemove @ 0040E350 [Ghidra: FUN_0040e350] ====
 
 
 void FUN_0040e350(int param_1,int param_2,int param_3,int param_4)
@@ -10228,7 +10228,7 @@ void FUN_0040e350(int param_1,int param_2,int param_3,int param_4)
 }
 
 
-// ==== FUN_0040e460 @ 0040E460 ====
+// ==== GridCellRecordPresentCheck @ 0040E460 [Ghidra: FUN_0040e460] ====
 
 
 bool FUN_0040e460(int param_1,int param_2)
@@ -10238,7 +10238,7 @@ bool FUN_0040e460(int param_1,int param_2)
 }
 
 
-// ==== FUN_0040e490 @ 0040E490 ====
+// ==== EncyclopediaConfigFilesOpen @ 0040E490 [Ghidra: FUN_0040e490] ====
 
 
 void FUN_0040e490(undefined4 param_1,undefined4 param_2)
@@ -10339,7 +10339,7 @@ void FUN_0040e490(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0040e700 @ 0040E700 ====
+// ==== TerrainChoiceResourceSelect @ 0040E700 [Ghidra: FUN_0040e700] ====
 
 
 void FUN_0040e700(int param_1)
@@ -10380,7 +10380,7 @@ void FUN_0040e700(int param_1)
 }
 
 
-// ==== FUN_0040e7e0 @ 0040E7E0 ====
+// ==== GlobalFlagBit0Clear @ 0040E7E0 [Ghidra: FUN_0040e7e0] ====
 
 
 void FUN_0040e7e0(void)
@@ -10421,7 +10421,7 @@ void FUN_0040e7f0(undefined4 param_1)
 }
 
 
-// ==== FUN_0040e8d0 @ 0040E8D0 ====
+// ==== ScreenSpaceEffectDispatchIfEnabled @ 0040E8D0 [Ghidra: FUN_0040e8d0] ====
 
 
 void FUN_0040e8d0(undefined4 param_1)
@@ -10434,7 +10434,7 @@ void FUN_0040e8d0(undefined4 param_1)
 }
 
 
-// ==== FUN_0040e910 @ 0040E910 ====
+// ==== GlobalValueClearIfEqual @ 0040E910 [Ghidra: FUN_0040e910] ====
 
 
 void FUN_0040e910(int param_1)
@@ -10447,7 +10447,7 @@ void FUN_0040e910(int param_1)
 }
 
 
-// ==== FUN_0040e930 @ 0040E930 ====
+// ==== ErosionTimingStateInit @ 0040E930 [Ghidra: FUN_0040e930] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -10499,7 +10499,7 @@ undefined4 FUN_0040e990(int *param_1)
 }
 
 
-// ==== FUN_0040e9c0 @ 0040E9C0 ====
+// ==== LavaErosionDelayFromCell @ 0040E9C0 [Ghidra: FUN_0040e9c0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -10513,7 +10513,7 @@ float10 FUN_0040e9c0(int *param_1)
 }
 
 
-// ==== FUN_0040ea10 @ 0040EA10 ====
+// ==== LavaErosionStageRegister @ 0040EA10 [Ghidra: FUN_0040ea10] ====
 
 
 void FUN_0040ea10(int *param_1,int param_2)
@@ -10544,7 +10544,7 @@ void FUN_0040ea10(int *param_1,int param_2)
 }
 
 
-// ==== FUN_0040eab0 @ 0040EAB0 ====
+// ==== LavaErosionPendingCellTick @ 0040EAB0 [Ghidra: FUN_0040eab0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -10669,7 +10669,7 @@ LAB_0040ed93:
 }
 
 
-// ==== FUN_0040ee00 @ 0040EE00 ====
+// ==== CellCoordinateTimestampRemember @ 0040EE00 [Ghidra: FUN_0040ee00] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -10697,7 +10697,7 @@ void FUN_0040ee00(undefined4 *param_1)
 }
 
 
-// ==== FUN_0040ee50 @ 0040EE50 ====
+// ==== LavaErosionPendingCellAdd @ 0040EE50 [Ghidra: FUN_0040ee50] ====
 
 
 void FUN_0040ee50(int *param_1,int param_2)
@@ -10757,7 +10757,7 @@ void FUN_0040ee50(int *param_1,int param_2)
 }
 
 
-// ==== FUN_0040efb0 @ 0040EFB0 ====
+// ==== CellCoordinateTimestampExists @ 0040EFB0 [Ghidra: FUN_0040efb0] ====
 
 
 undefined4 FUN_0040efb0(int *param_1)
@@ -10779,7 +10779,7 @@ undefined4 FUN_0040efb0(int *param_1)
 }
 
 
-// ==== FUN_0040f000 @ 0040F000 ====
+// ==== LavaErosionNeighborCheck @ 0040F000 [Ghidra: FUN_0040f000] ====
 
 
 undefined4 FUN_0040f000(int *param_1,int *param_2)
@@ -10827,7 +10827,7 @@ undefined4 FUN_0040f000(int *param_1,int *param_2)
 }
 
 
-// ==== FUN_0040f0e0 @ 0040F0E0 ====
+// ==== KindSixRandomMessageDispatchSweep @ 0040F0E0 [Ghidra: FUN_0040f0e0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -10932,7 +10932,7 @@ LAB_0040f234:
 }
 
 
-// ==== FUN_0040f2b0 @ 0040F2B0 ====
+// ==== LavaErosionNeighborEligible @ 0040F2B0 [Ghidra: FUN_0040f2b0] ====
 
 
 undefined4 FUN_0040f2b0(int *param_1)
@@ -10957,7 +10957,7 @@ undefined4 FUN_0040f2b0(int *param_1)
 }
 
 
-// ==== FUN_0040f330 @ 0040F330 ====
+// ==== LavaErosionNeighborMutate @ 0040F330 [Ghidra: FUN_0040f330] ====
 
 
 void FUN_0040f330(int *param_1,undefined4 param_2,int param_3)
@@ -11064,7 +11064,7 @@ void FUN_0040f330(int *param_1,undefined4 param_2,int param_3)
 }
 
 
-// ==== FUN_0040f5e0 @ 0040F5E0 ====
+// ==== GlobalConfigValueSet @ 0040F5E0 [Ghidra: FUN_0040f5e0] ====
 
 
 void FUN_0040f5e0(undefined4 param_1)
@@ -11075,7 +11075,7 @@ void FUN_0040f5e0(undefined4 param_1)
 }
 
 
-// ==== FUN_0040f5f0 @ 0040F5F0 ====
+// ==== ErosionEightNeighborPropagate @ 0040F5F0 [Ghidra: FUN_0040f5f0] ====
 
 
 void FUN_0040f5f0(int *param_1,undefined4 param_2)
@@ -11126,7 +11126,7 @@ void FUN_0040f5f0(int *param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0040f6c0 @ 0040F6C0 ====
+// ==== SceneNodeRecordCreate @ 0040F6C0 [Ghidra: FUN_0040f6c0] ====
 
 
 undefined4 *
@@ -11181,7 +11181,7 @@ FUN_0040f6c0(undefined4 *param_1,undefined4 *param_2,undefined4 param_3,undefine
 }
 
 
-// ==== FUN_0040f7b0 @ 0040F7B0 ====
+// ==== OptionalResourceDestroy @ 0040F7B0 [Ghidra: FUN_0040f7b0] ====
 
 
 void FUN_0040f7b0(int param_1)
@@ -11194,7 +11194,7 @@ void FUN_0040f7b0(int param_1)
 }
 
 
-// ==== FUN_0040f7d0 @ 0040F7D0 ====
+// ==== CallbackStateRecordCreate @ 0040F7D0 [Ghidra: FUN_0040f7d0] ====
 
 
 undefined4 *
@@ -11230,7 +11230,7 @@ FUN_0040f7d0(int param_1,int param_2,undefined4 param_3,undefined4 param_4,undef
 }
 
 
-// ==== FUN_0040f850 @ 0040F850 ====
+// ==== CallbackStateListDispose @ 0040F850 [Ghidra: FUN_0040f850] ====
 
 
 void FUN_0040f850(undefined4 *param_1)
@@ -11249,7 +11249,7 @@ void FUN_0040f850(undefined4 *param_1)
 }
 
 
-// ==== FUN_0040f890 @ 0040F890 ====
+// ==== DirectionDrivenHeadingAngleStep @ 0040F890 [Ghidra: FUN_0040f890] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -11283,7 +11283,7 @@ void FUN_0040f890(int param_1,int param_2)
 }
 
 
-// ==== FUN_0040f920 @ 0040F920 ====
+// ==== KindTwoSteeringTorqueApply @ 0040F920 [Ghidra: FUN_0040f920] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -11343,7 +11343,7 @@ LAB_0040fad4:
 }
 
 
-// ==== FUN_0040fb00 @ 0040FB00 ====
+// ==== MatrixRotationComposeXYZ @ 0040FB00 [Ghidra: FUN_0040fb00] ====
 
 
 void FUN_0040fb00(int param_1)
@@ -11363,7 +11363,7 @@ void FUN_0040fb00(int param_1)
 }
 
 
-// ==== FUN_0040fb90 @ 0040FB90 ====
+// ==== SteeringPhysicsStep @ 0040FB90 [Ghidra: FUN_0040fb90] ====
 
 
 void FUN_0040fb90(undefined4 param_1,float *param_2,float *param_3)
@@ -11407,7 +11407,7 @@ void FUN_0040fb90(undefined4 param_1,float *param_2,float *param_3)
 }
 
 
-// ==== FUN_0040fcc0 @ 0040FCC0 ====
+// ==== VectorScaleComponentsInPlace @ 0040FCC0 [Ghidra: FUN_0040fcc0] ====
 
 
 void FUN_0040fcc0(float *param_1,float param_2,float param_3,float param_4)
@@ -11423,7 +11423,7 @@ void FUN_0040fcc0(float *param_1,float param_2,float param_3,float param_4)
 }
 
 
-// ==== FUN_0040fdb0 @ 0040FDB0 ====
+// ==== ThreeValueRecordCopyAndMarkReady @ 0040FDB0 [Ghidra: FUN_0040fdb0] ====
 
 
 void FUN_0040fdb0(int *param_1,undefined4 *param_2)
@@ -11440,7 +11440,7 @@ void FUN_0040fdb0(int *param_1,undefined4 *param_2)
 }
 
 
-// ==== FUN_0040fde0 @ 0040FDE0 ====
+// ==== SetVectorAndNotifyListeners @ 0040FDE0 [Ghidra: FUN_0040fde0] ====
 
 
 void FUN_0040fde0(undefined4 param_1)
@@ -11451,7 +11451,7 @@ void FUN_0040fde0(undefined4 param_1)
 }
 
 
-// ==== FUN_0040fe00 @ 0040FE00 ====
+// ==== SceneObjectListUpdateTransforms @ 0040FE00 [Ghidra: FUN_0040fe00] ====
 
 
 void FUN_0040fe00(undefined4 *param_1,undefined4 param_2)
@@ -11464,7 +11464,7 @@ void FUN_0040fe00(undefined4 *param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0040fe40 @ 0040FE40 ====
+// ==== PointerStackPush @ 0040FE40 [Ghidra: FUN_0040fe40] ====
 
 
 void FUN_0040fe40(int param_1,int param_2)
@@ -11479,7 +11479,7 @@ void FUN_0040fe40(int param_1,int param_2)
 }
 
 
-// ==== FUN_0040fe60 @ 0040FE60 ====
+// ==== PointerStackPop @ 0040FE60 [Ghidra: FUN_0040fe60] ====
 
 
 int FUN_0040fe60(int param_1)
@@ -11499,7 +11499,7 @@ int FUN_0040fe60(int param_1)
 }
 
 
-// ==== FUN_0040fe90 @ 0040FE90 ====
+// ==== PointerStackForEach @ 0040FE90 [Ghidra: FUN_0040fe90] ====
 
 
 void FUN_0040fe90(int param_1,code *param_2,undefined4 param_3)
@@ -11514,7 +11514,7 @@ void FUN_0040fe90(int param_1,code *param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_0040fec0 @ 0040FEC0 ====
+// ==== SetGlobalScalarToOne @ 0040FEC0 [Ghidra: FUN_0040fec0] ====
 
 
 void FUN_0040fec0(void)
@@ -11525,7 +11525,7 @@ void FUN_0040fec0(void)
 }
 
 
-// ==== FUN_0040ff50 @ 0040FF50 ====
+// ==== SceneObjectListApplyFloatCallback @ 0040FF50 [Ghidra: FUN_0040ff50] ====
 
 
 void FUN_0040ff50(undefined4 param_1)
@@ -11536,7 +11536,7 @@ void FUN_0040ff50(undefined4 param_1)
 }
 
 
-// ==== FUN_0040ff70 @ 0040FF70 ====
+// ==== ObjectVector3Set @ 0040FF70 [Ghidra: FUN_0040ff70] ====
 
 
 void FUN_0040ff70(int *param_1,undefined4 param_2,undefined4 param_3,undefined4 param_4)
@@ -11549,7 +11549,7 @@ void FUN_0040ff70(int *param_1,undefined4 param_2,undefined4 param_3,undefined4 
 }
 
 
-// ==== FUN_0040ffe0 @ 0040FFE0 ====
+// ==== GlobalVectorSetAndNotifyListeners @ 0040FFE0 [Ghidra: FUN_0040ffe0] ====
 
 
 void FUN_0040ffe0(undefined4 param_1,undefined4 param_2,undefined4 param_3,undefined4 param_4,
@@ -11565,7 +11565,7 @@ void FUN_0040ffe0(undefined4 param_1,undefined4 param_2,undefined4 param_3,undef
 }
 
 
-// ==== FUN_00410020 @ 00410020 ====
+// ==== SceneNodePositionSet @ 00410020 [Ghidra: FUN_00410020] ====
 
 
 void FUN_00410020(int *param_1,undefined4 *param_2)
@@ -11584,7 +11584,7 @@ void FUN_00410020(int *param_1,undefined4 *param_2)
 }
 
 
-// ==== FUN_00410070 @ 00410070 ====
+// ==== SceneObjectListApplyPositionCallback @ 00410070 [Ghidra: FUN_00410070] ====
 
 
 void FUN_00410070(undefined4 param_1,undefined4 param_2)
@@ -11595,7 +11595,7 @@ void FUN_00410070(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_004100b0 @ 004100B0 ====
+// ==== SceneObjectListApplySecondPositionCallback @ 004100B0 [Ghidra: FUN_004100b0] ====
 
 
 void FUN_004100b0(undefined4 param_1,undefined4 param_2)
@@ -11606,7 +11606,7 @@ void FUN_004100b0(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00410280 @ 00410280 ====
+// ==== CallbackOperationRunAndReturnStatus @ 00410280 [Ghidra: FUN_00410280] ====
 
 
 undefined4 FUN_00410280(undefined4 param_1)
@@ -11620,7 +11620,7 @@ undefined4 FUN_00410280(undefined4 param_1)
 }
 
 
-// ==== FUN_004102b0 @ 004102B0 ====
+// ==== UiTextUnderscoresToSpaces @ 004102B0 [Ghidra: FUN_004102b0] ====
 
 
 char * FUN_004102b0(char *param_1)
@@ -11676,7 +11676,7 @@ char * FUN_004102b0(char *param_1)
 }
 
 
-// ==== FUN_00410320 @ 00410320 ====
+// ==== StringQueueRecordOrFlush @ 00410320 [Ghidra: FUN_00410320] ====
 
 
 void FUN_00410320(undefined4 param_1,undefined4 param_2,undefined4 param_3,int param_4)
@@ -11712,7 +11712,7 @@ void FUN_00410320(undefined4 param_1,undefined4 param_2,undefined4 param_3,int p
 }
 
 
-// ==== FUN_004103d0 @ 004103D0 ====
+// ==== MainMenuTextItem @ 004103D0 [Ghidra: FUN_004103d0] ====
 
 
 void FUN_004103d0(void)
@@ -11723,7 +11723,7 @@ void FUN_004103d0(void)
 }
 
 
-// ==== FUN_004103f0 @ 004103F0 ====
+// ==== MenuWipeStart @ 004103F0 [Ghidra: FUN_004103f0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -11744,7 +11744,7 @@ void FUN_004103f0(void)
 }
 
 
-// ==== FUN_00410440 @ 00410440 ====
+// ==== MenuWipeEnd @ 00410440 [Ghidra: FUN_00410440] ====
 
 
 void FUN_00410440(void)
@@ -11755,7 +11755,7 @@ void FUN_00410440(void)
 }
 
 
-// ==== FUN_00410450 @ 00410450 ====
+// ==== StringKeyedCacheEntryFind @ 00410450 [Ghidra: FUN_00410450] ====
 
 
 undefined4 * FUN_00410450(char *param_1)
@@ -11781,7 +11781,7 @@ undefined4 * FUN_00410450(char *param_1)
 }
 
 
-// ==== FUN_00410490 @ 00410490 ====
+// ==== StringRegistryIntern @ 00410490 [Ghidra: FUN_00410490] ====
 
 
 undefined4 * FUN_00410490(char *param_1)
@@ -11843,7 +11843,7 @@ undefined4 * FUN_00410490(char *param_1)
 }
 
 
-// ==== FUN_00410520 @ 00410520 ====
+// ==== StringCacheLookupOrLoad @ 00410520 [Ghidra: FUN_00410520] ====
 
 
 undefined4 FUN_00410520(char *param_1)
@@ -11864,7 +11864,7 @@ undefined4 FUN_00410520(char *param_1)
 }
 
 
-// ==== FUN_00410560 @ 00410560 ====
+// ==== ResourceNameCacheGetOrLoad @ 00410560 [Ghidra: FUN_00410560] ====
 
 
 undefined4 FUN_00410560(char *param_1)
@@ -11885,7 +11885,7 @@ undefined4 FUN_00410560(char *param_1)
 }
 
 
-// ==== FUN_004105a0 @ 004105A0 ====
+// ==== CampaignLevelFallbackLabel @ 004105A0 [Ghidra: FUN_004105a0] ====
 
 
 char * FUN_004105a0(char *param_1)
@@ -11939,7 +11939,7 @@ char * FUN_004105a0(char *param_1)
 }
 
 
-// ==== FUN_004105f0 @ 004105F0 ====
+// ==== MenuParamRecordCreate @ 004105F0 [Ghidra: FUN_004105f0] ====
 
 
 undefined4 *
@@ -11981,7 +11981,7 @@ FUN_004105f0(undefined4 param_1,undefined4 param_2,undefined4 param_3,undefined4
 }
 
 
-// ==== FUN_00410690 @ 00410690 ====
+// ==== MenuRecordResourcesRelease @ 00410690 [Ghidra: FUN_00410690] ====
 
 
 void FUN_00410690(int *param_1)
@@ -12035,7 +12035,7 @@ void FUN_00410690(int *param_1)
 }
 
 
-// ==== FUN_00410740 @ 00410740 ====
+// ==== SaveMenuListEntryAppend @ 00410740 [Ghidra: FUN_00410740] ====
 
 
 void FUN_00410740(int *param_1,int param_2,int param_3,undefined4 param_4,undefined4 param_5,
@@ -12141,7 +12141,7 @@ void FUN_00410740(int *param_1,int param_2,int param_3,undefined4 param_4,undefi
 }
 
 
-// ==== FUN_00410a10 @ 00410A10 ====
+// ==== MenuItemChoiceStringsAllocate @ 00410A10 [Ghidra: FUN_00410a10] ====
 
 
 undefined4 *
@@ -12182,7 +12182,7 @@ FUN_00410a10(uint param_1,undefined4 param_2,undefined4 param_3,undefined4 param
 }
 
 
-// ==== FUN_00410aa0 @ 00410AA0 ====
+// ==== ResourceHandleListAppend @ 00410AA0 [Ghidra: FUN_00410aa0] ====
 
 
 void FUN_00410aa0(int *param_1,undefined4 param_2)
@@ -12201,7 +12201,7 @@ void FUN_00410aa0(int *param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00410ae0 @ 00410AE0 ====
+// ==== ResourceHandleListDispose @ 00410AE0 [Ghidra: FUN_00410ae0] ====
 
 
 void FUN_00410ae0(int *param_1)
@@ -12230,7 +12230,7 @@ void FUN_00410ae0(int *param_1)
 }
 
 
-// ==== FUN_00410b30 @ 00410B30 ====
+// ==== GlobalPointerGet_004c76ab24 @ 00410B30 [Ghidra: FUN_00410b30] ====
 
 
 undefined4 FUN_00410b30(void)
@@ -12240,7 +12240,7 @@ undefined4 FUN_00410b30(void)
 }
 
 
-// ==== FUN_00410b40 @ 00410B40 ====
+// ==== GlobalPointerGet_004c76ab28 @ 00410B40 [Ghidra: FUN_00410b40] ====
 
 
 undefined4 FUN_00410b40(void)
@@ -12250,7 +12250,7 @@ undefined4 FUN_00410b40(void)
 }
 
 
-// ==== FUN_00410b50 @ 00410B50 ====
+// ==== GlobalPointerGet_004c76ab3c @ 00410B50 [Ghidra: FUN_00410b50] ====
 
 
 undefined4 FUN_00410b50(void)
@@ -12260,7 +12260,7 @@ undefined4 FUN_00410b50(void)
 }
 
 
-// ==== FUN_00410b60 @ 00410B60 ====
+// ==== ThreeWordRecordAllocateAndInitialize @ 00410B60 [Ghidra: FUN_00410b60] ====
 
 
 void FUN_00410b60(undefined4 param_1,undefined4 param_2,undefined4 param_3)
@@ -12279,7 +12279,7 @@ void FUN_00410b60(undefined4 param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_00410b90 @ 00410B90 ====
+// ==== BoundedFloatRecordCreate @ 00410B90 [Ghidra: FUN_00410b90] ====
 
 
 undefined4 *
@@ -12307,7 +12307,7 @@ FUN_00410b90(undefined4 param_1,float param_2,float param_3,undefined4 param_4,u
 }
 
 
-// ==== FUN_00410bf0 @ 00410BF0 ====
+// ==== MenuItemNumericRangeRecordAllocate @ 00410BF0 [Ghidra: FUN_00410bf0] ====
 
 
 undefined4 *
@@ -12344,7 +12344,7 @@ FUN_00410bf0(undefined4 param_1,int param_2,int param_3,undefined4 param_4,undef
 }
 
 
-// ==== FUN_00410c70 @ 00410C70 ====
+// ==== ResourceVariantRecordRelease @ 00410C70 [Ghidra: FUN_00410c70] ====
 
 
 void FUN_00410c70(int *param_1)
@@ -12384,7 +12384,7 @@ void FUN_00410c70(int *param_1)
 }
 
 
-// ==== FUN_00410d50 @ 00410D50 ====
+// ==== MenuTextRecordMake @ 00410D50 [Ghidra: FUN_00410d50] ====
 
 
 undefined4 *
@@ -12443,7 +12443,7 @@ FUN_00410d50(char *param_1,int param_2,int param_3,undefined4 param_4,undefined4
 }
 
 
-// ==== FUN_00410e20 @ 00410E20 ====
+// ==== MenuButtonRecordMake @ 00410E20 [Ghidra: FUN_00410e20] ====
 
 
 undefined4 *
@@ -12512,7 +12512,7 @@ FUN_00410e20(char *param_1,undefined4 param_2,undefined4 param_3,undefined4 para
 }
 
 
-// ==== FUN_00410f30 @ 00410F30 ====
+// ==== ResourceRecordAndChildrenRelease @ 00410F30 [Ghidra: FUN_00410f30] ====
 
 
 void FUN_00410f30(int *param_1)
@@ -12550,7 +12550,7 @@ void FUN_00410f30(int *param_1)
 }
 
 
-// ==== FUN_00410fb0 @ 00410FB0 ====
+// ==== MenuItemImageSet @ 00410FB0 [Ghidra: FUN_00410fb0] ====
 
 
 bool FUN_00410fb0(int param_1,char *param_2,int param_3)
@@ -12629,7 +12629,7 @@ bool FUN_00410fb0(int param_1,char *param_2,int param_3)
 }
 
 
-// ==== FUN_00411100 @ 00411100 ====
+// ==== MenuSectionRecordCreate @ 00411100 [Ghidra: FUN_00411100] ====
 
 
 int * FUN_00411100(char *param_1,undefined4 param_2,int param_3,int param_4,int param_5,int param_6,
@@ -12700,7 +12700,7 @@ int * FUN_00411100(char *param_1,undefined4 param_2,int param_3,int param_4,int 
 }
 
 
-// ==== FUN_00411260 @ 00411260 ====
+// ==== ListAppend @ 00411260 [Ghidra: FUN_00411260] ====
 
 
 undefined4 FUN_00411260(int param_1,int param_2)
@@ -12731,7 +12731,7 @@ undefined4 FUN_00411260(int param_1,int param_2)
 }
 
 
-// ==== FUN_004112e0 @ 004112E0 ====
+// ==== MenuPointerRectangleHitTest @ 004112E0 [Ghidra: FUN_004112e0] ====
 
 
 undefined4 FUN_004112e0(int param_1,int param_2,int param_3,int param_4,int param_5,int param_6)
@@ -12746,7 +12746,7 @@ undefined4 FUN_004112e0(int param_1,int param_2,int param_3,int param_4,int para
 }
 
 
-// ==== FUN_00411320 @ 00411320 ====
+// ==== TextLayoutOffsetForCentering @ 00411320 [Ghidra: FUN_00411320] ====
 
 
 void FUN_00411320(undefined4 param_1,undefined4 param_2,int param_3,undefined4 param_4,int param_5,
@@ -12766,7 +12766,7 @@ void FUN_00411320(undefined4 param_1,undefined4 param_2,int param_3,undefined4 p
 }
 
 
-// ==== FUN_00411360 @ 00411360 ====
+// ==== MenuMouseCoordinateUpdate @ 00411360 [Ghidra: FUN_00411360] ====
 
 
 int FUN_00411360(int param_1,int param_2,int *param_3)
@@ -12832,7 +12832,7 @@ int FUN_00411360(int param_1,int param_2,int *param_3)
 }
 
 
-// ==== FUN_004114f0 @ 004114F0 ====
+// ==== HasType6ItemAtIndex @ 004114F0 [Ghidra: FUN_004114f0] ====
 
 
 bool FUN_004114f0(int param_1,int param_2)
@@ -12849,7 +12849,7 @@ bool FUN_004114f0(int param_1,int param_2)
 }
 
 
-// ==== FUN_00411530 @ 00411530 ====
+// ==== MenuWidgetItemScreenRect @ 00411530 [Ghidra: FUN_00411530] ====
 
 
 undefined4 FUN_00411530(int param_1,int param_2,int *param_3,int *param_4,int *param_5,int *param_6)
@@ -12971,7 +12971,7 @@ undefined4 FUN_00411530(int param_1,int param_2,int *param_3,int *param_4,int *p
 }
 
 
-// ==== FUN_00411790 @ 00411790 ====
+// ==== MenuPickWidgetUnderPointer @ 00411790 [Ghidra: FUN_00411790] ====
 
 
 undefined4 FUN_00411790(undefined4 param_1,int *param_2)
@@ -13011,7 +13011,7 @@ undefined4 FUN_00411790(undefined4 param_1,int *param_2)
 }
 
 
-// ==== FUN_00411840 @ 00411840 ====
+// ==== FrontendProgressValueChanged @ 00411840 [Ghidra: FUN_00411840] ====
 
 
 undefined4 FUN_00411840(void)
@@ -13027,7 +13027,7 @@ undefined4 FUN_00411840(void)
 }
 
 
-// ==== FUN_00411870 @ 00411870 ====
+// ==== MenuSliderPointerHandler @ 00411870 [Ghidra: FUN_00411870] ====
 
 
 undefined4 FUN_00411870(int param_1,int param_2,undefined4 *param_3)
@@ -13074,7 +13074,7 @@ undefined4 FUN_00411870(int param_1,int param_2,undefined4 *param_3)
 }
 
 
-// ==== FUN_004119d0 @ 004119D0 ====
+// ==== HasActiveResource @ 004119D0 [Ghidra: FUN_004119d0] ====
 
 
 undefined4 FUN_004119d0(int param_1)
@@ -13092,7 +13092,7 @@ undefined4 FUN_004119d0(int param_1)
 }
 
 
-// ==== FUN_00411a00 @ 00411A00 ====
+// ==== MenuInputTick @ 00411A00 [Ghidra: FUN_00411a00] ====
 
 
 int FUN_00411a00(undefined4 param_1,int param_2)
@@ -13335,7 +13335,7 @@ int FUN_00411a00(undefined4 param_1,int param_2)
 }
 
 
-// ==== FUN_00411f00 @ 00411F00 ====
+// ==== KeyContextCheck @ 00411F00 [Ghidra: FUN_00411f00] ====
 
 
 undefined4 FUN_00411f00(int param_1)
@@ -13345,7 +13345,7 @@ undefined4 FUN_00411f00(int param_1)
 }
 
 
-// ==== FUN_00411f10 @ 00411F10 ====
+// ==== PercentSplitSurfaceBlit @ 00411F10 [Ghidra: FUN_00411f10] ====
 
 
 void FUN_00411f10(int param_1,uint param_2,uint param_3,int param_4,uint param_5)
@@ -13424,7 +13424,7 @@ void FUN_00411f10(int param_1,uint param_2,uint param_3,int param_4,uint param_5
 }
 
 
-// ==== FUN_00412170 @ 00412170 ====
+// ==== MenuOverlayListCount @ 00412170 [Ghidra: FUN_00412170] ====
 
 
 int FUN_00412170(int param_1)
@@ -13441,7 +13441,7 @@ int FUN_00412170(int param_1)
 }
 
 
-// ==== FUN_00412190 @ 00412190 ====
+// ==== MenuAudioTickIntervalReached @ 00412190 [Ghidra: FUN_00412190] ====
 
 
 bool FUN_00412190(void)
@@ -13454,7 +13454,7 @@ bool FUN_00412190(void)
 }
 
 
-// ==== FUN_004121b0 @ 004121B0 ====
+// ==== MenuOverlayFlicPlaybackController @ 004121B0 [Ghidra: FUN_004121b0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -13560,7 +13560,7 @@ void FUN_004121b0(int param_1)
 }
 
 
-// ==== FUN_00412450 @ 00412450 ====
+// ==== RenderUiFrameCell @ 00412450 [Ghidra: FUN_00412450] ====
 
 
 void FUN_00412450(int param_1,int param_2,undefined4 param_3,int *param_4,int param_5,int param_6)
@@ -13587,7 +13587,7 @@ void FUN_00412450(int param_1,int param_2,undefined4 param_3,int *param_4,int pa
 }
 
 
-// ==== FUN_004124f0 @ 004124F0 ====
+// ==== MenuSaveImageConfigRectBlit @ 004124F0 [Ghidra: FUN_004124f0] ====
 
 
 void FUN_004124f0(int param_1,int param_2,undefined4 param_3,int param_4)
@@ -13655,7 +13655,7 @@ void FUN_004124f0(int param_1,int param_2,undefined4 param_3,int param_4)
 }
 
 
-// ==== FUN_00412750 @ 00412750 ====
+// ==== MenuHoverStatusTextDraw @ 00412750 [Ghidra: FUN_00412750] ====
 
 
 void FUN_00412750(int *param_1,int *param_2,int *param_3)
@@ -13744,7 +13744,7 @@ LAB_0041294c:
 }
 
 
-// ==== FUN_004129d0 @ 004129D0 ====
+// ==== MenuOverlaySurfaceAndTextSetup @ 004129D0 [Ghidra: FUN_004129d0] ====
 
 
 void FUN_004129d0(int *param_1)
@@ -13784,7 +13784,7 @@ void FUN_004129d0(int *param_1)
 }
 
 
-// ==== FUN_00412af0 @ 00412AF0 ====
+// ==== MenuSurfaceBlitScaled @ 00412AF0 [Ghidra: FUN_00412af0] ====
 
 
 void FUN_00412af0(int param_1,int param_2)
@@ -13835,7 +13835,7 @@ void FUN_00412af0(int param_1,int param_2)
 }
 
 
-// ==== FUN_00412c00 @ 00412C00 ====
+// ==== MenuTick @ 00412C00 [Ghidra: FUN_00412c00] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -14225,7 +14225,7 @@ switchD_00412f27_caseD_1:
 }
 
 
-// ==== FUN_00413970 @ 00413970 ====
+// ==== MenuScrollStateUpdate @ 00413970 [Ghidra: FUN_00413970] ====
 
 
 void FUN_00413970(int param_1)
@@ -14260,7 +14260,7 @@ void FUN_00413970(int param_1)
 }
 
 
-// ==== FUN_00413a60 @ 00413A60 ====
+// ==== SaveMenuThumbnailConfigLoad @ 00413A60 [Ghidra: FUN_00413a60] ====
 
 
 void FUN_00413a60(void)
@@ -14323,7 +14323,7 @@ void FUN_00413a60(void)
 }
 
 
-// ==== FUN_00413b50 @ 00413B50 ====
+// ==== InterfaceResourceHandlesRelease @ 00413B50 [Ghidra: FUN_00413b50] ====
 
 
 void FUN_00413b50(void)
@@ -14342,7 +14342,7 @@ void FUN_00413b50(void)
 }
 
 
-// ==== FUN_00413b80 @ 00413B80 ====
+// ==== MenuRunLoop @ 00413B80 [Ghidra: FUN_00413b80] ====
 
 
 void FUN_00413b80(int param_1)
@@ -14447,7 +14447,7 @@ void FUN_00413b80(int param_1)
 }
 
 
-// ==== FUN_00413e20 @ 00413E20 ====
+// ==== MenuShow @ 00413E20 [Ghidra: FUN_00413e20] ====
 
 
 void FUN_00413e20(int *param_1,int param_2)
@@ -14467,7 +14467,7 @@ void FUN_00413e20(int *param_1,int param_2)
 }
 
 
-// ==== FUN_00413e60 @ 00413E60 ====
+// ==== MenuItemType @ 00413E60 [Ghidra: FUN_00413e60] ====
 
 
 int FUN_00413e60(char *param_1)
@@ -14500,7 +14500,7 @@ int FUN_00413e60(char *param_1)
 }
 
 
-// ==== FUN_00413f00 @ 00413F00 ====
+// ==== StrReplace @ 00413F00 [Ghidra: FUN_00413f00] ====
 
 
 char * FUN_00413f00(char *param_1,char param_2,char param_3)
@@ -14524,7 +14524,7 @@ char * FUN_00413f00(char *param_1,char param_2,char param_3)
 }
 
 
-// ==== FUN_00413f30 @ 00413F30 ====
+// ==== FilenameExtensionClassify @ 00413F30 [Ghidra: FUN_00413f30] ====
 
 
 int FUN_00413f30(undefined4 *param_1)
@@ -14555,7 +14555,7 @@ int FUN_00413f30(undefined4 *param_1)
 }
 
 
-// ==== FUN_00413f90 @ 00413F90 ====
+// ==== MenuItemRecordAlloc @ 00413F90 [Ghidra: FUN_00413f90] ====
 
 
 undefined4 *
@@ -14594,7 +14594,7 @@ FUN_00413f90(char *param_1,undefined4 *param_2,undefined4 param_3,undefined4 par
 }
 
 
-// ==== FUN_00414010 @ 00414010 ====
+// ==== LoadItemStrings @ 00414010 [Ghidra: FUN_00414010] ====
 
 
 void FUN_00414010(int param_1,int param_2,int *param_3)
@@ -14627,7 +14627,7 @@ void FUN_00414010(int param_1,int param_2,int *param_3)
 }
 
 
-// ==== FUN_00414070 @ 00414070 ====
+// ==== ListAlloc @ 00414070 [Ghidra: FUN_00414070] ====
 
 
 undefined4 * FUN_00414070(uint param_1)
@@ -14657,7 +14657,7 @@ undefined4 * FUN_00414070(uint param_1)
 }
 
 
-// ==== FUN_004140c0 @ 004140C0 ====
+// ==== MenuBuild @ 004140C0 [Ghidra: FUN_004140c0] ====
 
 
 int * FUN_004140c0(undefined4 param_1,undefined4 param_2)
@@ -14973,7 +14973,7 @@ LAB_00414c2a:
 }
 
 
-// ==== FUN_00414c90 @ 00414C90 ====
+// ==== MenuListFindName @ 00414C90 [Ghidra: FUN_00414c90] ====
 
 
 int FUN_00414c90(int *param_1,char *param_2)
@@ -14998,7 +14998,7 @@ int FUN_00414c90(int *param_1,char *param_2)
 }
 
 
-// ==== FUN_00414ce0 @ 00414CE0 ====
+// ==== AvisEnabled @ 00414CE0 [Ghidra: FUN_00414ce0] ====
 
 
 undefined4 FUN_00414ce0(void)
@@ -15016,7 +15016,7 @@ undefined4 FUN_00414ce0(void)
 }
 
 
-// ==== FUN_00414d30 @ 00414D30 ====
+// ==== BrightnessSet @ 00414D30 [Ghidra: FUN_00414d30] ====
 
 
 void FUN_00414d30(int param_1)
@@ -15035,7 +15035,7 @@ void FUN_00414d30(int param_1)
 }
 
 
-// ==== FUN_00414de0 @ 00414DE0 ====
+// ==== GameSpeedSelect @ 00414DE0 [Ghidra: FUN_00414de0] ====
 
 
 void FUN_00414de0(undefined4 param_1)
@@ -15046,7 +15046,7 @@ void FUN_00414de0(undefined4 param_1)
 }
 
 
-// ==== FUN_00414df0 @ 00414DF0 ====
+// ==== VolumeSet @ 00414DF0 [Ghidra: FUN_00414df0] ====
 
 
 void FUN_00414df0(int param_1)
@@ -15057,7 +15057,7 @@ void FUN_00414df0(int param_1)
 }
 
 
-// ==== FUN_00414e10 @ 00414E10 ====
+// ==== OptionMusicDefault @ 00414E10 [Ghidra: FUN_00414e10] ====
 
 
 undefined4 FUN_00414e10(void)
@@ -15077,7 +15077,7 @@ undefined4 FUN_00414e10(void)
 }
 
 
-// ==== FUN_00414f90 @ 00414F90 ====
+// ==== ScrollToSliderIndexStore @ 00414F90 [Ghidra: FUN_00414f90] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -15109,7 +15109,7 @@ void FUN_00414f90(void)
 }
 
 
-// ==== FUN_00415030 @ 00415030 ====
+// ==== ScrollToSliderIndex @ 00415030 [Ghidra: FUN_00415030] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -15139,7 +15139,7 @@ undefined4 FUN_00415030(void)
 }
 
 
-// ==== FUN_004150b0 @ 004150B0 ====
+// ==== SaveMenuRefresh @ 004150B0 [Ghidra: FUN_004150b0] ====
 
 
 void FUN_004150b0(undefined4 param_1,undefined4 param_2)
@@ -15174,7 +15174,7 @@ void FUN_004150b0(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00415150 @ 00415150 ====
+// ==== OptionsApplyFromSlot @ 00415150 [Ghidra: FUN_00415150] ====
 
 
 void FUN_00415150(void)
@@ -15194,7 +15194,7 @@ void FUN_00415150(void)
 }
 
 
-// ==== FUN_00415220 @ 00415220 ====
+// ==== FrontEndStartLevel @ 00415220 [Ghidra: FUN_00415220] ====
 
 
 void FUN_00415220(void)
@@ -15230,7 +15230,7 @@ void FUN_00415220(void)
 }
 
 
-// ==== FUN_004152c0 @ 004152C0 ====
+// ==== SlotSummary @ 004152C0 [Ghidra: FUN_004152c0] ====
 
 
 void FUN_004152c0(int param_1,undefined4 param_2)
@@ -15273,7 +15273,7 @@ void FUN_004152c0(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00415360 @ 00415360 ====
+// ==== ScrollSliderRefresh @ 00415360 [Ghidra: FUN_00415360] ====
 
 
 void FUN_00415360(void)
@@ -15284,7 +15284,7 @@ void FUN_00415360(void)
 }
 
 
-// ==== FUN_00415370 @ 00415370 ====
+// ==== OverlayMenuGate @ 00415370 [Ghidra: FUN_00415370] ====
 
 
 bool FUN_00415370(undefined4 param_1,int param_2)
@@ -15346,7 +15346,7 @@ LAB_0041542f:
 }
 
 
-// ==== FUN_004154b0 @ 004154B0 ====
+// ==== LevelChainBuild @ 004154B0 [Ghidra: FUN_004154b0] ====
 
 
 undefined4 FUN_004154b0(undefined4 param_1,uint *param_2,undefined4 param_3)
@@ -15444,7 +15444,7 @@ undefined4 FUN_004154b0(undefined4 param_1,uint *param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_00415700 @ 00415700 ====
+// ==== MoviePlayWait @ 00415700 [Ghidra: FUN_00415700] ====
 
 
 void FUN_00415700(undefined4 param_1,int param_2)
@@ -15492,7 +15492,7 @@ void FUN_00415700(undefined4 param_1,int param_2)
 }
 
 
-// ==== FUN_004157c0 @ 004157C0 ====
+// ==== MoviePlayLoop @ 004157C0 [Ghidra: FUN_004157c0] ====
 
 
 void FUN_004157c0(int param_1,int param_2,undefined4 param_3)
@@ -15539,7 +15539,7 @@ void FUN_004157c0(int param_1,int param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_00415910 @ 00415910 ====
+// ==== MoviePlayNamed @ 00415910 [Ghidra: FUN_00415910] ====
 
 
 void FUN_00415910(int param_1,undefined4 param_2)
@@ -15566,7 +15566,7 @@ void FUN_00415910(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00415990 @ 00415990 ====
+// ==== MoviePlayLevelVideo @ 00415990 [Ghidra: FUN_00415990] ====
 
 
 void FUN_00415990(int param_1,undefined4 param_2)
@@ -15593,7 +15593,7 @@ void FUN_00415990(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00415a10 @ 00415A10 ====
+// ==== SaveMenuBuild @ 00415A10 [Ghidra: FUN_00415a10] ====
 
 
 void FUN_00415a10(void)
@@ -15653,7 +15653,7 @@ void FUN_00415a10(void)
 }
 
 
-// ==== FUN_00415cf0 @ 00415CF0 ====
+// ==== MovieShownReset @ 00415CF0 [Ghidra: FUN_00415cf0] ====
 
 
 void FUN_00415cf0(void)
@@ -15664,7 +15664,7 @@ void FUN_00415cf0(void)
 }
 
 
-// ==== FUN_00415d00 @ 00415D00 ====
+// ==== SaveMenuLayoutLoad @ 00415D00 [Ghidra: FUN_00415d00] ====
 
 
 void FUN_00415d00(undefined4 param_1,undefined4 param_2,undefined4 *param_3)
@@ -15925,7 +15925,7 @@ void FUN_00415d00(undefined4 param_1,undefined4 param_2,undefined4 *param_3)
 }
 
 
-// ==== FUN_00416150 @ 00416150 ====
+// ==== StreamPlayLevel @ 00416150 [Ghidra: FUN_00416150] ====
 
 
 void FUN_00416150(undefined4 param_1)
@@ -15944,7 +15944,7 @@ void FUN_00416150(undefined4 param_1)
 }
 
 
-// ==== FUN_004161a0 @ 004161A0 ====
+// ==== StreamPlayTutorial @ 004161A0 [Ghidra: FUN_004161a0] ====
 
 
 void FUN_004161a0(undefined4 param_1)
@@ -15963,7 +15963,7 @@ void FUN_004161a0(undefined4 param_1)
 }
 
 
-// ==== FUN_004161f0 @ 004161F0 ====
+// ==== LoadMenuBuild @ 004161F0 [Ghidra: FUN_004161f0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -16257,7 +16257,7 @@ LAB_004162aa:
 }
 
 
-// ==== FUN_00416910 @ 00416910 ====
+// ==== OptionsWriteToSlot @ 00416910 [Ghidra: FUN_00416910] ====
 
 
 void FUN_00416910(void)
@@ -16275,7 +16275,7 @@ void FUN_00416910(void)
 }
 
 
-// ==== FUN_00416940 @ 00416940 ====
+// ==== OptionsLoadOrDefault @ 00416940 [Ghidra: FUN_00416940] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -16310,7 +16310,7 @@ void FUN_00416940(int param_1,int param_2)
 }
 
 
-// ==== FUN_004169c0 @ 004169C0 ====
+// ==== FrontEndStateChange @ 004169C0 [Ghidra: FUN_004169c0] ====
 
 
 void FUN_004169c0(undefined4 param_1)
@@ -16417,7 +16417,7 @@ switchD_004169cd_default:
 }
 
 
-// ==== FUN_00416c80 @ 00416C80 ====
+// ==== MenuEnter @ 00416C80 [Ghidra: FUN_00416c80] ====
 
 
 undefined4 FUN_00416c80(undefined4 param_1)
@@ -16453,7 +16453,7 @@ switchD_00416ca6_caseD_3:
 }
 
 
-// ==== FUN_00416d00 @ 00416D00 ====
+// ==== FrontEndActive @ 00416D00 [Ghidra: FUN_00416d00] ====
 
 
 undefined4 FUN_00416d00(void)
@@ -16471,7 +16471,7 @@ undefined4 FUN_00416d00(void)
 }
 
 
-// ==== FUN_00416d50 @ 00416D50 ====
+// ==== SaveSlotOpen @ 00416D50 [Ghidra: FUN_00416d50] ====
 
 
 bool FUN_00416d50(void)
@@ -16481,7 +16481,7 @@ bool FUN_00416d50(void)
 }
 
 
-// ==== FUN_00416d60 @ 00416D60 ====
+// ==== IsInGame @ 00416D60 [Ghidra: FUN_00416d60] ====
 
 
 bool FUN_00416d60(void)
@@ -16491,7 +16491,7 @@ bool FUN_00416d60(void)
 }
 
 
-// ==== FUN_00416d70 @ 00416D70 ====
+// ==== FrontEndSelectedAction @ 00416D70 [Ghidra: FUN_00416d70] ====
 
 
 undefined4 FUN_00416d70(void)
@@ -16516,7 +16516,7 @@ undefined4 FUN_00416d70(void)
 }
 
 
-// ==== FUN_00416dd0 @ 00416DD0 ====
+// ==== QuitMenuProbe @ 00416DD0 [Ghidra: FUN_00416dd0] ====
 
 
 undefined4 FUN_00416dd0(void)
@@ -16526,7 +16526,7 @@ undefined4 FUN_00416dd0(void)
 }
 
 
-// ==== FUN_00416de0 @ 00416DE0 ====
+// ==== LevelStartFlag @ 00416DE0 [Ghidra: FUN_00416de0] ====
 
 
 bool FUN_00416de0(void)
@@ -16536,7 +16536,7 @@ bool FUN_00416de0(void)
 }
 
 
-// ==== FUN_00416df0 @ 00416DF0 ====
+// ==== MenuOptionsFlag @ 00416DF0 [Ghidra: FUN_00416df0] ====
 
 
 bool FUN_00416df0(void)
@@ -16546,7 +16546,7 @@ bool FUN_00416df0(void)
 }
 
 
-// ==== FUN_00416e00 @ 00416E00 ====
+// ==== ActiveObjectList @ 00416E00 [Ghidra: FUN_00416e00] ====
 
 
 undefined4 * FUN_00416e00(void)
@@ -16564,7 +16564,7 @@ undefined4 * FUN_00416e00(void)
 }
 
 
-// ==== FUN_00416e20 @ 00416E20 ====
+// ==== ListFindName @ 00416E20 [Ghidra: FUN_00416e20] ====
 
 
 int FUN_00416e20(int *param_1,char *param_2)
@@ -16588,7 +16588,7 @@ int FUN_00416e20(int *param_1,char *param_2)
 }
 
 
-// ==== FUN_00416e70 @ 00416E70 ====
+// ==== SavClearVisited @ 00416E70 [Ghidra: FUN_00416e70] ====
 
 
 void FUN_00416e70(void)
@@ -16623,7 +16623,7 @@ void FUN_00416e70(void)
 }
 
 
-// ==== FUN_00416ed0 @ 00416ED0 ====
+// ==== ListAddName @ 00416ED0 [Ghidra: FUN_00416ed0] ====
 
 
 void FUN_00416ed0(int *param_1,byte *param_2,undefined4 param_3)
@@ -16675,7 +16675,7 @@ LAB_00416f12:
 }
 
 
-// ==== FUN_00416f40 @ 00416F40 ====
+// ==== ListHasItem @ 00416F40 [Ghidra: FUN_00416f40] ====
 
 
 undefined4 FUN_00416f40(int *param_1,byte *param_2)
@@ -16726,7 +16726,7 @@ LAB_00416f82:
 }
 
 
-// ==== FUN_00416fb0 @ 00416FB0 ====
+// ==== ListSetNode @ 00416FB0 [Ghidra: FUN_00416fb0] ====
 
 
 void FUN_00416fb0(int *param_1,byte *param_2,undefined4 param_3)
@@ -16778,7 +16778,7 @@ LAB_00416ff2:
 }
 
 
-// ==== FUN_00417020 @ 00417020 ====
+// ==== ListGetNode @ 00417020 [Ghidra: FUN_00417020] ====
 
 
 undefined4 FUN_00417020(int *param_1,byte *param_2)
@@ -16829,7 +16829,7 @@ LAB_00417062:
 }
 
 
-// ==== FUN_00417090 @ 00417090 ====
+// ==== LevelNodeGet @ 00417090 [Ghidra: FUN_00417090] ====
 
 
 int * FUN_00417090(undefined4 param_1,int param_2)
@@ -16889,7 +16889,7 @@ LAB_0041718d:
 }
 
 
-// ==== FUN_004171c0 @ 004171C0 ====
+// ==== SavTreeWalk @ 004171C0 [Ghidra: FUN_004171c0] ====
 
 
 undefined4 FUN_004171c0(int param_1,code *param_2,undefined4 param_3)
@@ -16919,7 +16919,7 @@ undefined4 FUN_004171c0(int param_1,code *param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_00417280 @ 00417280 ====
+// ==== RegistryValueLookupWithLock @ 00417280 [Ghidra: FUN_00417280] ====
 
 
 undefined4 FUN_00417280(undefined4 param_1,undefined4 param_2)
@@ -16945,7 +16945,7 @@ undefined4 FUN_00417280(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_004172d0 @ 004172D0 ====
+// ==== RegistryValueIndexLookupOrNotFound @ 004172D0 [Ghidra: FUN_004172d0] ====
 
 
 undefined4 FUN_004172d0(undefined4 param_1,undefined4 param_2)
@@ -16961,7 +16961,7 @@ undefined4 FUN_004172d0(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_004172f0 @ 004172F0 ====
+// ==== SavTreeWalk2 @ 004172F0 [Ghidra: FUN_004172f0] ====
 
 
 void FUN_004172f0(int *param_1,int *param_2,int param_3)
@@ -17006,7 +17006,7 @@ void FUN_004172f0(int *param_1,int *param_2,int param_3)
 }
 
 
-// ==== FUN_004173e0 @ 004173E0 ====
+// ==== SavTreeLoad @ 004173E0 [Ghidra: FUN_004173e0] ====
 
 
 void FUN_004173e0(undefined4 param_1,undefined4 param_2,undefined4 param_3,undefined4 param_4,
@@ -17030,7 +17030,7 @@ void FUN_004173e0(undefined4 param_1,undefined4 param_2,undefined4 param_3,undef
 }
 
 
-// ==== FUN_00417430 @ 00417430 ====
+// ==== FloatToLong @ 00417430 [Ghidra: FUN_00417430] ====
 
 
 void FUN_00417430(void)
@@ -17041,7 +17041,7 @@ void FUN_00417430(void)
 }
 
 
-// ==== FUN_004179b0 @ 004179B0 ====
+// ==== SavMenuList @ 004179B0 [Ghidra: FUN_004179b0] ====
 
 
 void FUN_004179b0(int param_1,undefined4 param_2,undefined4 param_3,undefined4 param_4,
@@ -17075,7 +17075,7 @@ void FUN_004179b0(int param_1,undefined4 param_2,undefined4 param_3,undefined4 p
 }
 
 
-// ==== FUN_00417a90 @ 00417A90 ====
+// ==== SavReadSlot @ 00417A90 [Ghidra: FUN_00417a90] ====
 
 
 undefined4 FUN_00417a90(uint param_1,undefined4 *param_2,int param_3)
@@ -17123,7 +17123,7 @@ undefined4 FUN_00417a90(uint param_1,undefined4 *param_2,int param_3)
 }
 
 
-// ==== FUN_00417bd0 @ 00417BD0 ====
+// ==== SavWriteSlot @ 00417BD0 [Ghidra: FUN_00417bd0] ====
 
 
 undefined4
@@ -17202,7 +17202,7 @@ FUN_00417bd0(undefined4 param_1,undefined4 param_2,undefined4 param_3,undefined4
 }
 
 
-// ==== FUN_00417df0 @ 00417DF0 ====
+// ==== SavRefreshSlots @ 00417DF0 [Ghidra: FUN_00417df0] ====
 
 
 void FUN_00417df0(void)
@@ -17233,7 +17233,7 @@ LAB_00417e23:
 }
 
 
-// ==== FUN_00417e50 @ 00417E50 ====
+// ==== SavSlotCtx @ 00417E50 [Ghidra: FUN_00417e50] ====
 
 
 undefined * FUN_00417e50(int param_1)
@@ -17246,7 +17246,7 @@ undefined * FUN_00417e50(int param_1)
 }
 
 
-// ==== FUN_00417e70 @ 00417E70 ====
+// ==== SavBuildCtx @ 00417E70 [Ghidra: FUN_00417e70] ====
 
 
 undefined4 FUN_00417e70(void)
@@ -17262,7 +17262,7 @@ undefined4 FUN_00417e70(void)
 }
 
 
-// ==== FUN_00417e90 @ 00417E90 ====
+// ==== SavGetSlot @ 00417E90 [Ghidra: FUN_00417e90] ====
 
 
 undefined4 FUN_00417e90(void)
@@ -17272,7 +17272,7 @@ undefined4 FUN_00417e90(void)
 }
 
 
-// ==== FUN_00417ea0 @ 00417EA0 ====
+// ==== SavSetSlot @ 00417EA0 [Ghidra: FUN_00417ea0] ====
 
 
 void FUN_00417ea0(undefined4 param_1)
@@ -17283,7 +17283,7 @@ void FUN_00417ea0(undefined4 param_1)
 }
 
 
-// ==== FUN_00417eb0 @ 00417EB0 ====
+// ==== SavMarkRecord @ 00417EB0 [Ghidra: FUN_00417eb0] ====
 
 
 void FUN_00417eb0(uint param_1)
@@ -17318,7 +17318,7 @@ void FUN_00417eb0(uint param_1)
 }
 
 
-// ==== FUN_00417f20 @ 00417F20 ====
+// ==== OptionsContextSixFieldSet @ 00417F20 [Ghidra: FUN_00417f20] ====
 
 
 void FUN_00417f20(undefined4 *param_1)
@@ -17341,7 +17341,7 @@ void FUN_00417f20(undefined4 *param_1)
 }
 
 
-// ==== FUN_00417f40 @ 00417F40 ====
+// ==== SavWriteRecord @ 00417F40 [Ghidra: FUN_00417f40] ====
 
 
 undefined4 FUN_00417f40(int param_1,undefined4 *param_2)
@@ -17365,7 +17365,7 @@ undefined4 FUN_00417f40(int param_1,undefined4 *param_2)
 }
 
 
-// ==== FUN_00417f90 @ 00417F90 ====
+// ==== SavRecordPtr @ 00417F90 [Ghidra: FUN_00417f90] ====
 
 
 int FUN_00417f90(int param_1)
@@ -17381,7 +17381,7 @@ int FUN_00417f90(int param_1)
 }
 
 
-// ==== FUN_00417fc0 @ 00417FC0 ====
+// ==== SavCommit @ 00417FC0 [Ghidra: FUN_00417fc0] ====
 
 
 void FUN_00417fc0(void)
@@ -17395,7 +17395,7 @@ void FUN_00417fc0(void)
 }
 
 
-// ==== FUN_00417fe0 @ 00417FE0 ====
+// ==== CurrentSelectionContextGet @ 00417FE0 [Ghidra: FUN_00417fe0] ====
 
 
 undefined4 FUN_00417fe0(void)
@@ -17405,7 +17405,7 @@ undefined4 FUN_00417fe0(void)
 }
 
 
-// ==== FUN_00417ff0 @ 00417FF0 ====
+// ==== CurrentSelectionContextSet @ 00417FF0 [Ghidra: FUN_00417ff0] ====
 
 
 void FUN_00417ff0(undefined4 param_1)
@@ -17416,7 +17416,7 @@ void FUN_00417ff0(undefined4 param_1)
 }
 
 
-// ==== FUN_00418000 @ 00418000 ====
+// ==== ShowLevelOverlayForCurrentSelection @ 00418000 [Ghidra: FUN_00418000] ====
 
 
 void FUN_00418000(void)
@@ -17433,7 +17433,7 @@ void FUN_00418000(void)
 }
 
 
-// ==== FUN_00418040 @ 00418040 ====
+// ==== CampaignChainSnapshotCreate @ 00418040 [Ghidra: FUN_00418040] ====
 
 
 void FUN_00418040(undefined4 *param_1)
@@ -17477,7 +17477,7 @@ void FUN_00418040(undefined4 *param_1)
 }
 
 
-// ==== FUN_004180c0 @ 004180C0 ====
+// ==== OptionsContextCopyAndReplaceResource @ 004180C0 [Ghidra: FUN_004180c0] ====
 
 
 void FUN_004180c0(undefined4 *param_1)
@@ -17508,7 +17508,7 @@ void FUN_004180c0(undefined4 *param_1)
 }
 
 
-// ==== FUN_00418110 @ 00418110 ====
+// ==== SaveStateEventContextSet @ 00418110 [Ghidra: FUN_00418110] ====
 
 
 void FUN_00418110(undefined4 param_1)
@@ -17519,7 +17519,7 @@ void FUN_00418110(undefined4 param_1)
 }
 
 
-// ==== FUN_00418120 @ 00418120 ====
+// ==== IsAverageValueAbove99 @ 00418120 [Ghidra: FUN_00418120] ====
 
 
 undefined4 FUN_00418120(void)
@@ -17552,7 +17552,7 @@ undefined4 FUN_00418120(void)
 }
 
 
-// ==== FUN_00418190 @ 00418190 ====
+// ==== SelectionModeStateSet @ 00418190 [Ghidra: FUN_00418190] ====
 
 
 void FUN_00418190(undefined4 param_1)
@@ -17563,7 +17563,7 @@ void FUN_00418190(undefined4 param_1)
 }
 
 
-// ==== FUN_004181a0 @ 004181A0 ====
+// ==== SelectionStateFlagClearBit0 @ 004181A0 [Ghidra: FUN_004181a0] ====
 
 
 void FUN_004181a0(void)
@@ -17574,7 +17574,7 @@ void FUN_004181a0(void)
 }
 
 
-// ==== FUN_004181b0 @ 004181B0 ====
+// ==== HelpWindowResourcesInit @ 004181B0 [Ghidra: FUN_004181b0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -17679,7 +17679,7 @@ void FUN_004181b0(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00418450 @ 00418450 ====
+// ==== HelpWindowInfoConfigStringsLoad @ 00418450 [Ghidra: FUN_00418450] ====
 
 
 void FUN_00418450(undefined4 param_1,undefined4 param_2)
@@ -17782,7 +17782,7 @@ void FUN_00418450(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_004185f0 @ 004185F0 ====
+// ==== HelpWindowButtonLayoutLoad @ 004185F0 [Ghidra: FUN_004185f0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -17838,7 +17838,7 @@ void FUN_004185f0(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00418800 @ 00418800 ====
+// ==== ModeFlagPairApplyIfBit2 @ 00418800 [Ghidra: FUN_00418800] ====
 
 
 void FUN_00418800(int param_1)
@@ -17855,7 +17855,7 @@ void FUN_00418800(int param_1)
 }
 
 
-// ==== FUN_00418830 @ 00418830 ====
+// ==== BuildingUpgradeStateChangedEventDispatch @ 00418830 [Ghidra: FUN_00418830] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -17894,7 +17894,7 @@ void FUN_00418830(int param_1,int param_2,int param_3,int param_4)
 }
 
 
-// ==== FUN_00418920 @ 00418920 ====
+// ==== CategoryCellCandidateListBuild @ 00418920 [Ghidra: FUN_00418920] ====
 
 
 void FUN_00418920(undefined4 param_1,undefined4 param_2,undefined4 param_3)
@@ -17933,7 +17933,7 @@ void FUN_00418920(undefined4 param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_004189d0 @ 004189D0 ====
+// ==== RenderTransitionCleanupIfActive @ 004189D0 [Ghidra: FUN_004189d0] ====
 
 
 void FUN_004189d0(void)
@@ -17948,7 +17948,7 @@ void FUN_004189d0(void)
 }
 
 
-// ==== FUN_00418a00 @ 00418A00 ====
+// ==== OverlayTextBufferRefresh @ 00418A00 [Ghidra: FUN_00418a00] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -18098,7 +18098,7 @@ LAB_00418d88:
 }
 
 
-// ==== FUN_00418da0 @ 00418DA0 ====
+// ==== HelpWindowButtonHitTest @ 00418DA0 [Ghidra: FUN_00418da0] ====
 
 
 undefined4
@@ -18147,7 +18147,7 @@ FUN_00418da0(uint param_1,uint param_2,int param_3,undefined4 param_4,int param_
 }
 
 
-// ==== FUN_00418f80 @ 00418F80 ====
+// ==== SelectionModeSetByIndex @ 00418F80 [Ghidra: FUN_00418f80] ====
 
 
 void FUN_00418f80(undefined4 param_1)
@@ -18164,7 +18164,7 @@ void FUN_00418f80(undefined4 param_1)
 }
 
 
-// ==== FUN_00418fc0 @ 00418FC0 ====
+// ==== UiModeTransitionRequest @ 00418FC0 [Ghidra: FUN_00418fc0] ====
 
 
 bool FUN_00418fc0(int param_1,int param_2,int param_3)
@@ -18191,7 +18191,7 @@ bool FUN_00418fc0(int param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_00419030 @ 00419030 ====
+// ==== HelpWindowButtonFeedbackUpdate @ 00419030 [Ghidra: FUN_00419030] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -18225,7 +18225,7 @@ void FUN_00419030(undefined4 param_1,float param_2)
 }
 
 
-// ==== FUN_00419100 @ 00419100 ====
+// ==== UiModeResourcePositionsApply @ 00419100 [Ghidra: FUN_00419100] ====
 
 
 void FUN_00419100(void)
@@ -18253,7 +18253,7 @@ void FUN_00419100(void)
 }
 
 
-// ==== FUN_00419150 @ 00419150 ====
+// ==== SelectionStateHandleGet @ 00419150 [Ghidra: FUN_00419150] ====
 
 
 undefined4 FUN_00419150(int param_1)
@@ -18272,7 +18272,7 @@ undefined4 FUN_00419150(int param_1)
 }
 
 
-// ==== FUN_004191a0 @ 004191A0 ====
+// ==== MainSimStateAdmissionPredicate @ 004191A0 [Ghidra: FUN_004191a0] ====
 
 
 undefined4 FUN_004191a0(void)
@@ -18294,7 +18294,7 @@ undefined4 FUN_004191a0(void)
 }
 
 
-// ==== FUN_004191f0 @ 004191F0 ====
+// ==== UiModeResourceBit40Get @ 004191F0 [Ghidra: FUN_004191f0] ====
 
 
 uint FUN_004191f0(void)
@@ -18304,7 +18304,7 @@ uint FUN_004191f0(void)
 }
 
 
-// ==== FUN_00419200 @ 00419200 ====
+// ==== UiModeResourceBit40SetClear @ 00419200 [Ghidra: FUN_00419200] ====
 
 
 void FUN_00419200(int param_1,uint param_2)
@@ -18322,7 +18322,7 @@ void FUN_00419200(int param_1,uint param_2)
 }
 
 
-// ==== FUN_00419230 @ 00419230 ====
+// ==== IncidentMessageCatalogInit @ 00419230 [Ghidra: FUN_00419230] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -18376,7 +18376,7 @@ void FUN_00419230(undefined4 param_1)
 }
 
 
-// ==== FUN_004193e0 @ 004193E0 ====
+// ==== IncidentMessageConfigLookup @ 004193E0 [Ghidra: FUN_004193e0] ====
 
 
 undefined4 FUN_004193e0(char *param_1,int *param_2)
@@ -18401,7 +18401,7 @@ undefined4 FUN_004193e0(char *param_1,int *param_2)
 }
 
 
-// ==== FUN_00419420 @ 00419420 ====
+// ==== IncidentMessageTextCatalogGet @ 00419420 [Ghidra: FUN_00419420] ====
 
 
 undefined4 FUN_00419420(int param_1)
@@ -18411,7 +18411,7 @@ undefined4 FUN_00419420(int param_1)
 }
 
 
-// ==== FUN_00419430 @ 00419430 ====
+// ==== InterfaceMessageTabInfoTextLoad @ 00419430 [Ghidra: FUN_00419430] ====
 
 
 void FUN_00419430(undefined4 param_1)
@@ -18423,7 +18423,7 @@ void FUN_00419430(undefined4 param_1)
 }
 
 
-// ==== FUN_00419450 @ 00419450 ====
+// ==== SelectionFlag10SetClear @ 00419450 [Ghidra: FUN_00419450] ====
 
 
 void FUN_00419450(int param_1)
@@ -18438,7 +18438,7 @@ void FUN_00419450(int param_1)
 }
 
 
-// ==== FUN_00419470 @ 00419470 ====
+// ==== InfoMessageAlwaysPlayFlagSet @ 00419470 [Ghidra: FUN_00419470] ====
 
 
 void FUN_00419470(int param_1,int param_2)
@@ -18454,7 +18454,7 @@ void FUN_00419470(int param_1,int param_2)
 }
 
 
-// ==== FUN_004194b0 @ 004194B0 ====
+// ==== IncidentMessageTemplateReplace @ 004194B0 [Ghidra: FUN_004194b0] ====
 
 
 void FUN_004194b0(int param_1,undefined4 param_2)
@@ -18468,7 +18468,7 @@ void FUN_004194b0(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_004194f0 @ 004194F0 ====
+// ==== IndexedSelectionFlag20000SetClear @ 004194F0 [Ghidra: FUN_004194f0] ====
 
 
 void FUN_004194f0(int param_1,int param_2)
@@ -18484,7 +18484,7 @@ void FUN_004194f0(int param_1,int param_2)
 }
 
 
-// ==== FUN_00419530 @ 00419530 ====
+// ==== IncidentMessageTemplateCompile @ 00419530 [Ghidra: FUN_00419530] ====
 
 
 void FUN_00419530(char *param_1,undefined4 *param_2)
@@ -18584,7 +18584,7 @@ void FUN_00419530(char *param_1,undefined4 *param_2)
 }
 
 
-// ==== FUN_00419650 @ 00419650 ====
+// ==== InfoMessageSoundLoad @ 00419650 [Ghidra: FUN_00419650] ====
 
 
 void FUN_00419650(int param_1,undefined4 param_2)
@@ -18599,7 +18599,7 @@ void FUN_00419650(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00419680 @ 00419680 ====
+// ==== InfoMessageSecondarySoundSet @ 00419680 [Ghidra: FUN_00419680] ====
 
 
 void FUN_00419680(int param_1,undefined4 param_2)
@@ -18610,7 +18610,7 @@ void FUN_00419680(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_004196a0 @ 004196A0 ====
+// ==== MessageSubscriberDispatch @ 004196A0 [Ghidra: FUN_004196a0] ====
 
 
 undefined4 FUN_004196a0(int param_1,code *param_2,undefined4 param_3)
@@ -18634,7 +18634,7 @@ undefined4 FUN_004196a0(int param_1,code *param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_004196f0 @ 004196F0 ====
+// ==== IncidentMessageQueueAppend @ 004196F0 [Ghidra: FUN_004196f0] ====
 
 
 void FUN_004196f0(int param_1,int param_2)
@@ -18668,7 +18668,7 @@ void FUN_004196f0(int param_1,int param_2)
 }
 
 
-// ==== FUN_00419780 @ 00419780 ====
+// ==== IndexedLinkedListEntryGet @ 00419780 [Ghidra: FUN_00419780] ====
 
 
 int FUN_00419780(int param_1,int param_2)
@@ -18691,7 +18691,7 @@ int FUN_00419780(int param_1,int param_2)
 }
 
 
-// ==== FUN_004197b0 @ 004197B0 ====
+// ==== IncidentMessageQueueRemoveAt @ 004197B0 [Ghidra: FUN_004197b0] ====
 
 
 int FUN_004197b0(int param_1,int param_2)
@@ -18716,7 +18716,7 @@ int FUN_004197b0(int param_1,int param_2)
 }
 
 
-// ==== FUN_00419830 @ 00419830 ====
+// ==== EntityLinkedListEntriesRemoveByKey @ 00419830 [Ghidra: FUN_00419830] ====
 
 
 void FUN_00419830(undefined4 param_1)
@@ -18755,7 +18755,7 @@ void FUN_00419830(undefined4 param_1)
 }
 
 
-// ==== FUN_004198f0 @ 004198F0 ====
+// ==== TerrainCellLinkedEntriesRemove @ 004198F0 [Ghidra: FUN_004198f0] ====
 
 
 void FUN_004198f0(undefined4 param_1)
@@ -18800,7 +18800,7 @@ void FUN_004198f0(undefined4 param_1)
 }
 
 
-// ==== FUN_004199f0 @ 004199F0 ====
+// ==== MessagePreCheck @ 004199F0 [Ghidra: FUN_004199f0] ====
 
 
 undefined4 FUN_004199f0(int param_1,undefined4 param_2,undefined4 param_3)
@@ -18835,7 +18835,7 @@ undefined4 FUN_004199f0(int param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_00419a80 @ 00419A80 ====
+// ==== IncidentMessageNodeCreate @ 00419A80 [Ghidra: FUN_00419a80] ====
 
 
 undefined4 * FUN_00419a80(undefined4 *param_1,undefined4 param_2,int param_3)
@@ -18865,7 +18865,7 @@ undefined4 * FUN_00419a80(undefined4 *param_1,undefined4 param_2,int param_3)
 }
 
 
-// ==== FUN_00419ae0 @ 00419AE0 ====
+// ==== IncidentMessageFlagSet @ 00419AE0 [Ghidra: FUN_00419ae0] ====
 
 
 void FUN_00419ae0(int param_1)
@@ -18890,7 +18890,7 @@ bool FUN_00419b00(int param_1)
 }
 
 
-// ==== FUN_00419b20 @ 00419B20 ====
+// ==== InfoMessageQueueFindId @ 00419B20 [Ghidra: FUN_00419b20] ====
 
 
 int FUN_00419b20(int param_1)
@@ -18914,7 +18914,7 @@ int FUN_00419b20(int param_1)
 }
 
 
-// ==== FUN_00419b50 @ 00419B50 ====
+// ==== RemainingTimerDurationGet @ 00419B50 [Ghidra: FUN_00419b50] ====
 
 
 float10 FUN_00419b50(void)
@@ -18940,7 +18940,7 @@ float10 FUN_00419b50(void)
 }
 
 
-// ==== FUN_00419b80 @ 00419B80 ====
+// ==== MessageDispatch @ 00419B80 [Ghidra: FUN_00419b80] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -19020,7 +19020,7 @@ void FUN_00419b80(int param_1,undefined4 param_2,undefined4 param_3,undefined4 p
 }
 
 
-// ==== FUN_00419da0 @ 00419DA0 ====
+// ==== IncidentMessagePanelRefreshIfActive @ 00419DA0 [Ghidra: FUN_00419da0] ====
 
 
 void FUN_00419da0(void)
@@ -19035,7 +19035,7 @@ void FUN_00419da0(void)
 }
 
 
-// ==== FUN_00419de0 @ 00419DE0 ====
+// ==== RecordListEntryMoveToFront @ 00419DE0 [Ghidra: FUN_00419de0] ====
 
 
 void FUN_00419de0(uint param_1)
@@ -19081,7 +19081,7 @@ void FUN_00419de0(uint param_1)
 }
 
 
-// ==== FUN_00419e60 @ 00419E60 ====
+// ==== PendingRecordReleaseIfPresent @ 00419E60 [Ghidra: FUN_00419e60] ====
 
 
 void FUN_00419e60(void)
@@ -19094,7 +19094,7 @@ void FUN_00419e60(void)
 }
 
 
-// ==== FUN_00419e80 @ 00419E80 ====
+// ==== RecordListEntryRemoveAndRelease @ 00419E80 [Ghidra: FUN_00419e80] ====
 
 
 void FUN_00419e80(uint param_1)
@@ -19137,7 +19137,7 @@ void FUN_00419e80(uint param_1)
 }
 
 
-// ==== FUN_00419f10 @ 00419F10 ====
+// ==== PendingRecordReleaseAll @ 00419F10 [Ghidra: FUN_00419f10] ====
 
 
 void FUN_00419f10(void)
@@ -19150,7 +19150,7 @@ void FUN_00419f10(void)
 }
 
 
-// ==== FUN_00419f30 @ 00419F30 ====
+// ==== InfoMessageQueueTick @ 00419F30 [Ghidra: FUN_00419f30] ====
 
 
 void FUN_00419f30(float param_1)
@@ -19205,7 +19205,7 @@ void FUN_00419f30(float param_1)
 }
 
 
-// ==== FUN_0041a080 @ 0041A080 ====
+// ==== IncidentMessageTextConsumer @ 0041A080 [Ghidra: FUN_0041a080] ====
 
 
 void FUN_0041a080(undefined4 param_1)
@@ -19257,7 +19257,7 @@ void FUN_0041a080(undefined4 param_1)
 }
 
 
-// ==== FUN_0041a1a0 @ 0041A1A0 ====
+// ==== UIEntryHitTestAndDispatch @ 0041A1A0 [Ghidra: FUN_0041a1a0] ====
 
 
 undefined4 FUN_0041a1a0(int param_1,int param_2,int param_3)
@@ -19298,7 +19298,7 @@ undefined4 FUN_0041a1a0(int param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_0041a250 @ 0041A250 ====
+// ==== ScrollOffsetFromCursorUpdate @ 0041A250 [Ghidra: FUN_0041a250] ====
 
 
 void FUN_0041a250(void)
@@ -19318,7 +19318,7 @@ void FUN_0041a250(void)
 }
 
 
-// ==== FUN_0041a290 @ 0041A290 ====
+// ==== ScreenRightEdgeCacheRefresh @ 0041A290 [Ghidra: FUN_0041a290] ====
 
 
 void FUN_0041a290(void)
@@ -19333,7 +19333,7 @@ void FUN_0041a290(void)
 }
 
 
-// ==== FUN_0041a2c0 @ 0041A2C0 ====
+// ==== InfoMessageTimerDecay @ 0041A2C0 [Ghidra: FUN_0041a2c0] ====
 
 
 void FUN_0041a2c0(float param_1)
@@ -19352,7 +19352,7 @@ void FUN_0041a2c0(float param_1)
 }
 
 
-// ==== FUN_0041a2f0 @ 0041A2F0 ====
+// ==== IncidentMessageStateGet @ 0041A2F0 [Ghidra: FUN_0041a2f0] ====
 
 
 undefined4 FUN_0041a2f0(void)
@@ -19362,7 +19362,7 @@ undefined4 FUN_0041a2f0(void)
 }
 
 
-// ==== FUN_0041a300 @ 0041A300 ====
+// ==== InterfaceMenuActionLabelsInit @ 0041A300 [Ghidra: FUN_0041a300] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -19455,7 +19455,7 @@ void FUN_0041a300(uint param_1,uint param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_0041a660 @ 0041A660 ====
+// ==== InteractionActionCodeMapInitialize @ 0041A660 [Ghidra: FUN_0041a660] ====
 
 
 void FUN_0041a660(void)
@@ -19483,7 +19483,7 @@ void FUN_0041a660(void)
 }
 
 
-// ==== FUN_0041a7d0 @ 0041A7D0 ====
+// ==== InputKeyGroupRegister @ 0041A7D0 [Ghidra: FUN_0041a7d0] ====
 
 
 void FUN_0041a7d0(int param_1,int param_2)
@@ -19526,7 +19526,7 @@ void FUN_0041a7d0(int param_1,int param_2)
 }
 
 
-// ==== FUN_0041a850 @ 0041A850 ====
+// ==== ResourceHandleSetRelease @ 0041A850 [Ghidra: FUN_0041a850] ====
 
 
 void FUN_0041a850(void)
@@ -19557,7 +19557,7 @@ void FUN_0041a850(void)
 }
 
 
-// ==== FUN_0041a920 @ 0041A920 ====
+// ==== LevelStateCountersClear @ 0041A920 [Ghidra: FUN_0041a920] ====
 
 
 void FUN_0041a920(void)
@@ -19605,7 +19605,7 @@ void FUN_0041a920(void)
 }
 
 
-// ==== FUN_0041a990 @ 0041A990 ====
+// ==== ObjectiveSelectionStateReset @ 0041A990 [Ghidra: FUN_0041a990] ====
 
 
 void FUN_0041a990(void)
@@ -19618,7 +19618,7 @@ void FUN_0041a990(void)
 }
 
 
-// ==== FUN_0041a9c0 @ 0041A9C0 ====
+// ==== CaseInsensitiveStringTableIndexFind @ 0041A9C0 [Ghidra: FUN_0041a9c0] ====
 
 
 undefined4 FUN_0041a9c0(char *param_1,int *param_2)
@@ -19643,7 +19643,7 @@ undefined4 FUN_0041a9c0(char *param_1,int *param_2)
 }
 
 
-// ==== FUN_0041aa00 @ 0041AA00 ====
+// ==== EntityTableMapsAllocate @ 0041AA00 [Ghidra: FUN_0041aa00] ====
 
 
 void FUN_0041aa00(void)
@@ -19703,7 +19703,7 @@ void FUN_0041aa00(void)
 }
 
 
-// ==== FUN_0041ab00 @ 0041AB00 ====
+// ==== InterfaceBuildImagesConfigLoad @ 0041AB00 [Ghidra: FUN_0041ab00] ====
 
 
 void FUN_0041ab00(undefined4 param_1,undefined4 param_2)
@@ -19782,7 +19782,7 @@ void FUN_0041ab00(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0041ada0 @ 0041ADA0 ====
+// ==== InterfaceImagesConfigLoad @ 0041ADA0 [Ghidra: FUN_0041ada0] ====
 
 
 void FUN_0041ada0(undefined4 param_1,undefined4 param_2)
@@ -19881,7 +19881,7 @@ void FUN_0041ada0(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0041afd0 @ 0041AFD0 ====
+// ==== InterfaceSurroundImagesConfigLoad @ 0041AFD0 [Ghidra: FUN_0041afd0] ====
 
 
 void FUN_0041afd0(undefined4 param_1,undefined4 param_2)
@@ -19951,7 +19951,7 @@ void FUN_0041afd0(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0041b1b0 @ 0041B1B0 ====
+// ==== InterfaceBackButtonConfigLoad @ 0041B1B0 [Ghidra: FUN_0041b1b0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -19982,7 +19982,7 @@ void FUN_0041b1b0(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0041b270 @ 0041B270 ====
+// ==== InterfaceButtonImagesLoad @ 0041B270 [Ghidra: FUN_0041b270] ====
 
 
 void FUN_0041b270(undefined4 param_1,undefined4 param_2)
@@ -20000,7 +20000,7 @@ void FUN_0041b270(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0041b2d0 @ 0041B2D0 ====
+// ==== CommandContextPostToHud @ 0041B2D0 [Ghidra: FUN_0041b2d0] ====
 
 
 void FUN_0041b2d0(undefined4 param_1,undefined4 param_2)
@@ -20013,7 +20013,7 @@ void FUN_0041b2d0(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0041b300 @ 0041B300 ====
+// ==== MenuSelectionResourceUpdate @ 0041B300 [Ghidra: FUN_0041b300] ====
 
 
 void FUN_0041b300(int param_1,undefined4 *param_2)
@@ -20046,7 +20046,7 @@ void FUN_0041b300(int param_1,undefined4 *param_2)
 }
 
 
-// ==== FUN_0041b3c0 @ 0041B3C0 ====
+// ==== EntityQueryFlagCount @ 0041B3C0 [Ghidra: FUN_0041b3c0] ====
 
 
 int FUN_0041b3c0(int param_1)
@@ -20108,7 +20108,7 @@ LAB_0041b455:
 }
 
 
-// ==== FUN_0041b470 @ 0041B470 ====
+// ==== CategoryValueIsNeitherZeroNorFifteen @ 0041B470 [Ghidra: FUN_0041b470] ====
 
 
 undefined4 FUN_0041b470(int param_1)
@@ -20121,7 +20121,7 @@ undefined4 FUN_0041b470(int param_1)
 }
 
 
-// ==== FUN_0041b490 @ 0041B490 ====
+// ==== AdvisorOverlayUpdate @ 0041B490 [Ghidra: FUN_0041b490] ====
 
 
 void FUN_0041b490(void)
@@ -20196,7 +20196,7 @@ LAB_0041b5ff:
 }
 
 
-// ==== FUN_0041b680 @ 0041B680 ====
+// ==== CatalogCallbackByIdDispatch @ 0041B680 [Ghidra: FUN_0041b680] ====
 
 
 undefined4 FUN_0041b680(int param_1,code *param_2,undefined4 param_3)
@@ -20267,7 +20267,7 @@ undefined4 FUN_0041b680(int param_1,code *param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_0041b930 @ 0041B930 ====
+// ==== TimedStatusAndEventTick @ 0041B930 [Ghidra: FUN_0041b930] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -20290,7 +20290,7 @@ void FUN_0041b930(float param_1)
 }
 
 
-// ==== FUN_0041b9b0 @ 0041B9B0 ====
+// ==== GlobalStateGet_004ddd1c @ 0041B9B0 [Ghidra: FUN_0041b9b0] ====
 
 
 undefined4 FUN_0041b9b0(void)
@@ -20300,7 +20300,7 @@ undefined4 FUN_0041b9b0(void)
 }
 
 
-// ==== FUN_0041b9c0 @ 0041B9C0 ====
+// ==== SelectionEntityCodeResolve @ 0041B9C0 [Ghidra: FUN_0041b9c0] ====
 
 
 undefined4 FUN_0041b9c0(undefined4 *param_1)
@@ -20345,7 +20345,7 @@ void FUN_0041ba10(float param_1)
 }
 
 
-// ==== FUN_0041ba90 @ 0041BA90 ====
+// ==== SimulationGlobalWordSet @ 0041BA90 [Ghidra: FUN_0041ba90] ====
 
 
 void FUN_0041ba90(undefined4 param_1)
@@ -20356,7 +20356,7 @@ void FUN_0041ba90(undefined4 param_1)
 }
 
 
-// ==== FUN_0041baa0 @ 0041BAA0 ====
+// ==== SimulationPointerActionDispatch @ 0041BAA0 [Ghidra: FUN_0041baa0] ====
 
 
 uint FUN_0041baa0(int param_1,int param_2,int param_3,undefined4 param_4,int param_5)
@@ -20686,7 +20686,7 @@ LAB_0041c02c:
 }
 
 
-// ==== FUN_0041c1c0 @ 0041C1C0 ====
+// ==== AdvisorOverlayHitResolve @ 0041C1C0 [Ghidra: FUN_0041c1c0] ====
 
 
 undefined4
@@ -20729,7 +20729,7 @@ FUN_0041c1c0(uint param_1,uint param_2,undefined4 *param_3,undefined4 *param_4,u
 }
 
 
-// ==== FUN_0041c440 @ 0041C440 ====
+// ==== AdvisorCallbackScheduleGate @ 0041C440 [Ghidra: FUN_0041c440] ====
 
 
 void FUN_0041c440(void)
@@ -20743,7 +20743,7 @@ void FUN_0041c440(void)
 }
 
 
-// ==== FUN_0041c4f0 @ 0041C4F0 ====
+// ==== AdvisorAnimationPositionAndRequestUpdate @ 0041C4F0 [Ghidra: FUN_0041c4f0] ====
 
 
 void FUN_0041c4f0(int param_1,int param_2,int param_3,float *param_4)
@@ -20814,7 +20814,7 @@ void FUN_0041c4f0(int param_1,int param_2,int param_3,float *param_4)
 }
 
 
-// ==== FUN_0041c6e0 @ 0041C6E0 ====
+// ==== PointerActionStateDispatch @ 0041C6E0 [Ghidra: FUN_0041c6e0] ====
 
 
 undefined4 FUN_0041c6e0(int param_1,int param_2,int param_3,int param_4,int param_5)
@@ -20861,7 +20861,7 @@ LAB_0041c77a:
 }
 
 
-// ==== FUN_0041c7b0 @ 0041C7B0 ====
+// ==== InputActionStateUpdate @ 0041C7B0 [Ghidra: FUN_0041c7b0] ====
 
 
 void FUN_0041c7b0(int param_1)
@@ -20884,7 +20884,7 @@ void FUN_0041c7b0(int param_1)
 }
 
 
-// ==== FUN_0041c800 @ 0041C800 ====
+// ==== CatalogSlotFlagUpdate @ 0041C800 [Ghidra: FUN_0041c800] ====
 
 
 void FUN_0041c800(int param_1,int param_2)
@@ -20937,7 +20937,7 @@ void FUN_0041c800(int param_1,int param_2)
 }
 
 
-// ==== FUN_0041c8f0 @ 0041C8F0 ====
+// ==== InputActionPressedGet @ 0041C8F0 [Ghidra: FUN_0041c8f0] ====
 
 
 uint FUN_0041c8f0(int param_1,int param_2)
@@ -20961,7 +20961,7 @@ uint FUN_0041c8f0(int param_1,int param_2)
 }
 
 
-// ==== FUN_0041c950 @ 0041C950 ====
+// ==== InputBindingPressedGet @ 0041C950 [Ghidra: FUN_0041c950] ====
 
 
 uint FUN_0041c950(int param_1,int param_2,int param_3)
@@ -20993,7 +20993,7 @@ uint FUN_0041c950(int param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_0041c9f0 @ 0041C9F0 ====
+// ==== InputEntryFlag8SetClear @ 0041C9F0 [Ghidra: FUN_0041c9f0] ====
 
 
 void FUN_0041c9f0(int param_1,int param_2)
@@ -21008,7 +21008,7 @@ void FUN_0041c9f0(int param_1,int param_2)
 }
 
 
-// ==== FUN_0041ca20 @ 0041CA20 ====
+// ==== PlayerInputFlag8SetClear @ 0041CA20 [Ghidra: FUN_0041ca20] ====
 
 
 void FUN_0041ca20(int param_1,int param_2,int param_3)
@@ -21030,7 +21030,7 @@ void FUN_0041ca20(int param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_0041ca60 @ 0041CA60 ====
+// ==== InputEntryFlag8Get @ 0041CA60 [Ghidra: FUN_0041ca60] ====
 
 
 uint FUN_0041ca60(int param_1)
@@ -21040,7 +21040,7 @@ uint FUN_0041ca60(int param_1)
 }
 
 
-// ==== FUN_0041ca70 @ 0041CA70 ====
+// ==== PlayerInputFlag8Get @ 0041CA70 [Ghidra: FUN_0041ca70] ====
 
 
 uint FUN_0041ca70(int param_1,int param_2)
@@ -21056,7 +21056,7 @@ uint FUN_0041ca70(int param_1,int param_2)
 }
 
 
-// ==== FUN_0041cab0 @ 0041CAB0 ====
+// ==== IndexedEntityValueGet @ 0041CAB0 [Ghidra: FUN_0041cab0] ====
 
 
 undefined4 FUN_0041cab0(int param_1)
@@ -21076,7 +21076,7 @@ undefined4 FUN_0041cab0(int param_1)
 }
 
 
-// ==== FUN_0041caf0 @ 0041CAF0 ====
+// ==== InputBindingValueGet @ 0041CAF0 [Ghidra: FUN_0041caf0] ====
 
 
 undefined4 FUN_0041caf0(int param_1,int param_2)
@@ -21116,7 +21116,7 @@ undefined4 FUN_0041caf0(int param_1,int param_2)
 }
 
 
-// ==== FUN_0041cb90 @ 0041CB90 ====
+// ==== InputBindingDefaultValueGet @ 0041CB90 [Ghidra: FUN_0041cb90] ====
 
 
 undefined4 FUN_0041cb90(undefined4 param_1,int param_2,int param_3)
@@ -21154,7 +21154,7 @@ undefined4 FUN_0041cb90(undefined4 param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_0041cc80 @ 0041CC80 ====
+// ==== CursorTileSelectionUpdateByType @ 0041CC80 [Ghidra: FUN_0041cc80] ====
 
 
 void FUN_0041cc80(int param_1,undefined4 param_2,undefined4 param_3)
@@ -21178,7 +21178,7 @@ void FUN_0041cc80(int param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_0041cce0 @ 0041CCE0 ====
+// ==== SelectionCoordinatesSet @ 0041CCE0 [Ghidra: FUN_0041cce0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -21194,7 +21194,7 @@ void FUN_0041cce0(undefined4 *param_1,uint param_2,uint param_3)
 }
 
 
-// ==== FUN_0041cd30 @ 0041CD30 ====
+// ==== PositionTrackerBoxDraw @ 0041CD30 [Ghidra: FUN_0041cd30] ====
 
 
 void FUN_0041cd30(float *param_1)
@@ -21239,7 +21239,7 @@ void FUN_0041cd30(float *param_1)
 }
 
 
-// ==== FUN_0041cea0 @ 0041CEA0 ====
+// ==== SelectionObjectCommandUpdate @ 0041CEA0 [Ghidra: FUN_0041cea0] ====
 
 
 void FUN_0041cea0(int param_1)
@@ -21275,7 +21275,7 @@ void FUN_0041cea0(int param_1)
 }
 
 
-// ==== FUN_0041cf20 @ 0041CF20 ====
+// ==== SelectionTargetCommandUpdate @ 0041CF20 [Ghidra: FUN_0041cf20] ====
 
 
 void FUN_0041cf20(int param_1)
@@ -21304,7 +21304,7 @@ void FUN_0041cf20(int param_1)
 }
 
 
-// ==== FUN_0041cf80 @ 0041CF80 ====
+// ==== SelectionMode7CancelAtPoint @ 0041CF80 [Ghidra: FUN_0041cf80] ====
 
 
 void FUN_0041cf80(int *param_1)
@@ -21318,7 +21318,7 @@ void FUN_0041cf80(int *param_1)
 }
 
 
-// ==== FUN_0041cfb0 @ 0041CFB0 ====
+// ==== CancelActionForMatchingCoordinates @ 0041CFB0 [Ghidra: FUN_0041cfb0] ====
 
 
 void FUN_0041cfb0(int *param_1)
@@ -21333,7 +21333,7 @@ void FUN_0041cfb0(int *param_1)
 }
 
 
-// ==== FUN_0041cfe0 @ 0041CFE0 ====
+// ==== SelectionMode5CancelAtPoint @ 0041CFE0 [Ghidra: FUN_0041cfe0] ====
 
 
 void FUN_0041cfe0(int *param_1)
@@ -21347,7 +21347,7 @@ void FUN_0041cfe0(int *param_1)
 }
 
 
-// ==== FUN_0041d010 @ 0041D010 ====
+// ==== SelectionCancelIfCursorHitsObject @ 0041D010 [Ghidra: FUN_0041d010] ====
 
 
 void FUN_0041d010(undefined4 param_1)
@@ -21366,7 +21366,7 @@ void FUN_0041d010(undefined4 param_1)
 }
 
 
-// ==== FUN_0041d040 @ 0041D040 ====
+// ==== TutorialPathMenuAction @ 0041D040 [Ghidra: FUN_0041d040] ====
 
 
 undefined4 FUN_0041d040(int param_1)
@@ -21944,7 +21944,7 @@ LAB_0041dada:
 }
 
 
-// ==== FUN_0041dca0 @ 0041DCA0 ====
+// ==== UiActionDispatch @ 0041DCA0 [Ghidra: FUN_0041dca0] ====
 
 
 undefined4 FUN_0041dca0(undefined4 param_1)
@@ -22346,7 +22346,7 @@ LAB_0041e5c4:
 }
 
 
-// ==== FUN_0041e750 @ 0041E750 ====
+// ==== SelectionClearRequestAndHudReset @ 0041E750 [Ghidra: FUN_0041e750] ====
 
 
 void FUN_0041e750(void)
@@ -22358,7 +22358,7 @@ void FUN_0041e750(void)
 }
 
 
-// ==== FUN_0041e990 @ 0041E990 ====
+// ==== CellActionPermissionGet @ 0041E990 [Ghidra: FUN_0041e990] ====
 
 
 undefined4 FUN_0041e990(int param_1,int param_2)
@@ -22374,7 +22374,7 @@ undefined4 FUN_0041e990(int param_1,int param_2)
 }
 
 
-// ==== FUN_0041e9d0 @ 0041E9D0 ====
+// ==== SelectionRegionParametersSet @ 0041E9D0 [Ghidra: FUN_0041e9d0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -22391,7 +22391,7 @@ void FUN_0041e9d0(uint param_1,uint param_2,uint param_3,uint param_4,float para
 }
 
 
-// ==== FUN_0041ea50 @ 0041EA50 ====
+// ==== StoreSelectedMapCoordinate @ 0041EA50 [Ghidra: FUN_0041ea50] ====
 
 
 void FUN_0041ea50(int param_1,undefined4 *param_2)
@@ -22419,7 +22419,7 @@ void FUN_0041ea50(int param_1,undefined4 *param_2)
 }
 
 
-// ==== FUN_0041eac0 @ 0041EAC0 ====
+// ==== EventTimerCountdownAdvance @ 0041EAC0 [Ghidra: FUN_0041eac0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -22472,7 +22472,7 @@ void FUN_0041eac0(float param_1)
 }
 
 
-// ==== FUN_0041ec30 @ 0041EC30 ====
+// ==== EntityPairCountRefresh @ 0041EC30 [Ghidra: FUN_0041ec30] ====
 
 
 void FUN_0041ec30(int param_1,int param_2)
@@ -22503,7 +22503,7 @@ void FUN_0041ec30(int param_1,int param_2)
 }
 
 
-// ==== FUN_0041eca0 @ 0041ECA0 ====
+// ==== AdvisorDialogStackLayout @ 0041ECA0 [Ghidra: FUN_0041eca0] ====
 
 
 void FUN_0041eca0(float param_1,undefined4 param_2)
@@ -22569,7 +22569,7 @@ LAB_0041ed84:
 }
 
 
-// ==== FUN_0041ee60 @ 0041EE60 ====
+// ==== InteractionTimerResetAndFlagClear @ 0041EE60 [Ghidra: FUN_0041ee60] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -22583,7 +22583,7 @@ void FUN_0041ee60(void)
 }
 
 
-// ==== FUN_0041ee80 @ 0041EE80 ====
+// ==== CellGridPointHitTest @ 0041EE80 [Ghidra: FUN_0041ee80] ====
 
 
 undefined4
@@ -22684,7 +22684,7 @@ FUN_0041ee80(uint param_1,uint param_2,float param_3,float param_4,undefined4 *p
 }
 
 
-// ==== FUN_0041f100 @ 0041F100 ====
+// ==== ObjectInteractionFlagsAllow @ 0041F100 [Ghidra: FUN_0041f100] ====
 
 
 undefined4 FUN_0041f100(undefined4 param_1,undefined4 param_2)
@@ -22730,7 +22730,7 @@ undefined4 FUN_0041f100(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0041f230 @ 0041F230 ====
+// ==== QueueActionRequestType2 @ 0041F230 [Ghidra: FUN_0041f230] ====
 
 
 void FUN_0041f230(void)
@@ -22754,7 +22754,7 @@ void FUN_0041f230(void)
 }
 
 
-// ==== FUN_0041f270 @ 0041F270 ====
+// ==== QueueActionRequestValue @ 0041F270 [Ghidra: FUN_0041f270] ====
 
 
 void FUN_0041f270(undefined4 param_1)
@@ -22778,7 +22778,7 @@ void FUN_0041f270(undefined4 param_1)
 }
 
 
-// ==== FUN_0041f2b0 @ 0041F2B0 ====
+// ==== QueueActionRequestFlag100000 @ 0041F2B0 [Ghidra: FUN_0041f2b0] ====
 
 
 void FUN_0041f2b0(void)
@@ -22802,7 +22802,7 @@ void FUN_0041f2b0(void)
 }
 
 
-// ==== FUN_0041f2f0 @ 0041F2F0 ====
+// ==== QueueActionRequestPair @ 0041F2F0 [Ghidra: FUN_0041f2f0] ====
 
 
 void FUN_0041f2f0(undefined4 param_1,undefined4 param_2)
@@ -22826,7 +22826,7 @@ void FUN_0041f2f0(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0041f340 @ 0041F340 ====
+// ==== QueueActionRequestIndex @ 0041F340 [Ghidra: FUN_0041f340] ====
 
 
 void FUN_0041f340(undefined4 param_1)
@@ -22850,7 +22850,7 @@ void FUN_0041f340(undefined4 param_1)
 }
 
 
-// ==== FUN_0041f3c0 @ 0041F3C0 ====
+// ==== QueueCallbackRequest390 @ 0041F3C0 [Ghidra: FUN_0041f3c0] ====
 
 
 void FUN_0041f3c0(undefined4 param_1)
@@ -22861,7 +22861,7 @@ void FUN_0041f3c0(undefined4 param_1)
 }
 
 
-// ==== FUN_0041f400 @ 0041F400 ====
+// ==== QueueCallbackRequest3E0 @ 0041F400 [Ghidra: FUN_0041f400] ====
 
 
 void FUN_0041f400(undefined4 param_1)
@@ -22872,7 +22872,7 @@ void FUN_0041f400(undefined4 param_1)
 }
 
 
-// ==== FUN_0041f420 @ 0041F420 ====
+// ==== SelectedEntitiesAnyMatch @ 0041F420 [Ghidra: FUN_0041f420] ====
 
 
 undefined4 FUN_0041f420(code *param_1,undefined4 param_2)
@@ -22901,7 +22901,7 @@ undefined4 FUN_0041f420(code *param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0041f6c0 @ 0041F6C0 ====
+// ==== SelectedEntityDetachCallback @ 0041F6C0 [Ghidra: FUN_0041f6c0] ====
 
 
 undefined4 FUN_0041f6c0(int param_1)
@@ -22923,7 +22923,7 @@ undefined4 FUN_0041f6c0(int param_1)
 }
 
 
-// ==== FUN_0041f720 @ 0041F720 ====
+// ==== CurrentLevelStateFlagsContainMask @ 0041F720 [Ghidra: FUN_0041f720] ====
 
 
 bool FUN_0041f720(uint param_1)
@@ -22936,7 +22936,7 @@ bool FUN_0041f720(uint param_1)
 }
 
 
-// ==== FUN_0041f740 @ 0041F740 ====
+// ==== CellFourNeighborWalkCheck @ 0041F740 [Ghidra: FUN_0041f740] ====
 
 
 undefined4 FUN_0041f740(int *param_1)
@@ -22988,7 +22988,7 @@ undefined4 FUN_0041f740(int *param_1)
 }
 
 
-// ==== FUN_0041f840 @ 0041F840 ====
+// ==== RemoveObjectIfClass6 @ 0041F840 [Ghidra: FUN_0041f840] ====
 
 
 undefined4 FUN_0041f840(undefined4 param_1)
@@ -23004,7 +23004,7 @@ undefined4 FUN_0041f840(undefined4 param_1)
 }
 
 
-// ==== FUN_0041f870 @ 0041F870 ====
+// ==== GlobalObjectField8CIncrement @ 0041F870 [Ghidra: FUN_0041f870] ====
 
 
 void FUN_0041f870(void)
@@ -23017,7 +23017,7 @@ void FUN_0041f870(void)
 }
 
 
-// ==== FUN_0041f880 @ 0041F880 ====
+// ==== GlobalObjectField8CSubtract @ 0041F880 [Ghidra: FUN_0041f880] ====
 
 
 void FUN_0041f880(int param_1)
@@ -23030,7 +23030,7 @@ void FUN_0041f880(int param_1)
 }
 
 
-// ==== FUN_0041f8a0 @ 0041F8A0 ====
+// ==== GlobalObjectField98Add @ 0041F8A0 [Ghidra: FUN_0041f8a0] ====
 
 
 void FUN_0041f8a0(int param_1)
@@ -23043,7 +23043,7 @@ void FUN_0041f8a0(int param_1)
 }
 
 
-// ==== FUN_0041f8c0 @ 0041F8C0 ====
+// ==== GlobalObjectField98Clear @ 0041F8C0 [Ghidra: FUN_0041f8c0] ====
 
 
 void FUN_0041f8c0(void)
@@ -23056,7 +23056,7 @@ void FUN_0041f8c0(void)
 }
 
 
-// ==== FUN_0041f8e0 @ 0041F8E0 ====
+// ==== NoOpCallback @ 0041F8E0 [Ghidra: FUN_0041f8e0] ====
 
 
 void FUN_0041f8e0(void)
@@ -23066,7 +23066,7 @@ void FUN_0041f8e0(void)
 }
 
 
-// ==== FUN_0041f900 @ 0041F900 ====
+// ==== UpgradeResourceCheck @ 0041F900 [Ghidra: FUN_0041f900] ====
 
 
 undefined4 FUN_0041f900(int param_1)
@@ -23085,7 +23085,7 @@ undefined4 FUN_0041f900(int param_1)
 }
 
 
-// ==== FUN_0041f920 @ 0041F920 ====
+// ==== LevelStateField9CAdd @ 0041F920 [Ghidra: FUN_0041f920] ====
 
 
 void FUN_0041f920(int param_1)
@@ -23113,7 +23113,7 @@ void FUN_0041f940(int param_1)
 }
 
 
-// ==== FUN_0041f970 @ 0041F970 ====
+// ==== RuntimeFlag40000000Get @ 0041F970 [Ghidra: FUN_0041f970] ====
 
 
 uint FUN_0041f970(void)
@@ -23123,7 +23123,7 @@ uint FUN_0041f970(void)
 }
 
 
-// ==== FUN_0041f980 @ 0041F980 ====
+// ==== GlobalObjectField94Increment @ 0041F980 [Ghidra: FUN_0041f980] ====
 
 
 void FUN_0041f980(void)
@@ -23136,7 +23136,7 @@ void FUN_0041f980(void)
 }
 
 
-// ==== FUN_0041f990 @ 0041F990 ====
+// ==== GlobalObjectFieldA8Increment @ 0041F990 [Ghidra: FUN_0041f990] ====
 
 
 void FUN_0041f990(void)
@@ -23149,7 +23149,7 @@ void FUN_0041f990(void)
 }
 
 
-// ==== FUN_0041f9a0 @ 0041F9A0 ====
+// ==== LevelResourceBalanceAddAndSound @ 0041F9A0 [Ghidra: FUN_0041f9a0] ====
 
 
 void FUN_0041f9a0(int param_1)
@@ -23172,7 +23172,7 @@ void FUN_0041f9a0(int param_1)
 }
 
 
-// ==== FUN_0041f9e0 @ 0041F9E0 ====
+// ==== UpgradeResourceDebit @ 0041F9E0 [Ghidra: FUN_0041f9e0] ====
 
 
 void FUN_0041f9e0(int param_1,int param_2)
@@ -23195,7 +23195,7 @@ void FUN_0041f9e0(int param_1,int param_2)
 }
 
 
-// ==== FUN_0041fa20 @ 0041FA20 ====
+// ==== GameConfigCallbackRegistryInit @ 0041FA20 [Ghidra: FUN_0041fa20] ====
 
 
 void FUN_0041fa20(undefined4 param_1)
@@ -23225,7 +23225,7 @@ void FUN_0041fa20(undefined4 param_1)
 }
 
 
-// ==== FUN_0041fa80 @ 0041FA80 ====
+// ==== StartLevelPilots @ 0041FA80 [Ghidra: FUN_0041fa80] ====
 
 
 void FUN_0041fa80(void)
@@ -23252,7 +23252,7 @@ void FUN_0041fa80(void)
 }
 
 
-// ==== FUN_0041fb40 @ 0041FB40 ====
+// ==== TimeScaleGet @ 0041FB40 [Ghidra: FUN_0041fb40] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -23264,7 +23264,7 @@ float10 FUN_0041fb40(void)
 }
 
 
-// ==== FUN_0041fb50 @ 0041FB50 ====
+// ==== GameConfigInit @ 0041FB50 [Ghidra: FUN_0041fb50] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -24270,7 +24270,7 @@ LAB_00422818:
 }
 
 
-// ==== FUN_00422850 @ 00422850 ====
+// ==== MiscObjectResourcesLoad @ 00422850 [Ghidra: FUN_00422850] ====
 
 
 void FUN_00422850(undefined4 param_1)
@@ -24380,7 +24380,7 @@ void FUN_00422850(undefined4 param_1)
 }
 
 
-// ==== FUN_00423080 @ 00423080 ====
+// ==== ModeDependentField24Get @ 00423080 [Ghidra: FUN_00423080] ====
 
 
 int FUN_00423080(void)
@@ -24399,7 +24399,7 @@ int FUN_00423080(void)
 }
 
 
-// ==== FUN_004230b0 @ 004230B0 ====
+// ==== GlobalFloatField00556F00Get @ 004230B0 [Ghidra: FUN_004230b0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -24411,7 +24411,7 @@ float10 FUN_004230b0(void)
 }
 
 
-// ==== FUN_004230c0 @ 004230C0 ====
+// ==== DebugPanelTextDrawUpdate @ 004230C0 [Ghidra: FUN_004230c0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -24463,7 +24463,7 @@ void FUN_004230c0(float param_1)
 }
 
 
-// ==== FUN_004231f0 @ 004231F0 ====
+// ==== EnginePreTick @ 004231F0 [Ghidra: FUN_004231f0] ====
 
 
 void FUN_004231f0(void)
@@ -24528,7 +24528,7 @@ void FUN_004231f0(void)
 }
 
 
-// ==== FUN_00424560 @ 00424560 ====
+// ==== AirSupplyAmountUpdate @ 00424560 [Ghidra: FUN_00424560] ====
 
 
 void FUN_00424560(int *param_1,float param_2)
@@ -24556,7 +24556,7 @@ void FUN_00424560(int *param_1,float param_2)
 }
 
 
-// ==== FUN_00424600 @ 00424600 ====
+// ==== TerrainCellFlagCleanup @ 00424600 [Ghidra: FUN_00424600] ====
 
 
 void FUN_00424600(undefined4 param_1,int param_2)
@@ -24600,7 +24600,7 @@ void FUN_00424600(undefined4 param_1,int param_2)
 }
 
 
-// ==== FUN_00424730 @ 00424730 ====
+// ==== SinePhaseMidpointBlendDispatch @ 00424730 [Ghidra: FUN_00424730] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -24637,7 +24637,7 @@ void FUN_00424730(int param_1,float param_2)
 }
 
 
-// ==== FUN_004247d0 @ 004247D0 ====
+// ==== ApplyDefaultTransformToFlaggedRenderObject @ 004247D0 [Ghidra: FUN_004247d0] ====
 
 
 undefined4 FUN_004247d0(int param_1,undefined4 param_2)
@@ -24650,7 +24650,7 @@ undefined4 FUN_004247d0(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00424810 @ 00424810 ====
+// ==== ApplyDefaultTransformToFlaggedRenderObjects @ 00424810 [Ghidra: FUN_00424810] ====
 
 
 void FUN_00424810(undefined4 param_1)
@@ -24661,7 +24661,7 @@ void FUN_00424810(undefined4 param_1)
 }
 
 
-// ==== FUN_00424830 @ 00424830 ====
+// ==== SelectedObjectOutlinesDraw @ 00424830 [Ghidra: FUN_00424830] ====
 
 
 void FUN_00424830(undefined4 param_1)
@@ -24685,7 +24685,7 @@ void FUN_00424830(undefined4 param_1)
 }
 
 
-// ==== FUN_004248b0 @ 004248B0 ====
+// ==== SelectedEntityGroundMarkerRender @ 004248B0 [Ghidra: FUN_004248b0] ====
 
 
 void FUN_004248b0(int param_1,undefined4 param_2,float param_3,float param_4,float param_5)
@@ -24828,7 +24828,7 @@ void FUN_004248b0(int param_1,undefined4 param_2,float param_3,float param_4,flo
 }
 
 
-// ==== FUN_004250a0 @ 004250A0 ====
+// ==== ResetLevelAndExit @ 004250A0 [Ghidra: FUN_004250a0] ====
 
 
 void FUN_004250a0(void)
@@ -24840,7 +24840,7 @@ void FUN_004250a0(void)
 }
 
 
-// ==== FUN_004250c0 @ 004250C0 ====
+// ==== MainSimStep @ 004250C0 [Ghidra: FUN_004250c0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -25168,7 +25168,7 @@ LAB_00425aa8:
 }
 
 
-// ==== FUN_00425b40 @ 00425B40 ====
+// ==== PeriodicCallbackDispatch @ 00425B40 [Ghidra: FUN_00425b40] ====
 
 
 void FUN_00425b40(void)
@@ -25179,7 +25179,7 @@ void FUN_00425b40(void)
 }
 
 
-// ==== FUN_00425c30 @ 00425C30 ====
+// ==== TransitionControl @ 00425C30 [Ghidra: FUN_00425c30] ====
 
 
 void FUN_00425c30(int param_1,uint param_2)
@@ -25206,7 +25206,7 @@ void FUN_00425c30(int param_1,uint param_2)
 }
 
 
-// ==== FUN_00425cd0 @ 00425CD0 ====
+// ==== Global004de548Set @ 00425CD0 [Ghidra: FUN_00425cd0] ====
 
 
 void FUN_00425cd0(undefined4 param_1)
@@ -25217,7 +25217,7 @@ void FUN_00425cd0(undefined4 param_1)
 }
 
 
-// ==== FUN_00425ce0 @ 00425CE0 ====
+// ==== ScrollScaleSetAndClamp @ 00425CE0 [Ghidra: FUN_00425ce0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -25239,7 +25239,7 @@ void FUN_00425ce0(float param_1)
 }
 
 
-// ==== FUN_00425d50 @ 00425D50 ====
+// ==== GlobalRenderRecordSetFromInput @ 00425D50 [Ghidra: FUN_00425d50] ====
 
 
 void FUN_00425d50(undefined4 param_1)
@@ -25253,7 +25253,7 @@ void FUN_00425d50(undefined4 param_1)
 }
 
 
-// ==== FUN_00425d80 @ 00425D80 ====
+// ==== CurrentEngineModeIsZero @ 00425D80 [Ghidra: FUN_00425d80] ====
 
 
 bool FUN_00425d80(void)
@@ -25263,7 +25263,7 @@ bool FUN_00425d80(void)
 }
 
 
-// ==== FUN_00425d90 @ 00425D90 ====
+// ==== TerrainPointerCommandUpdate @ 00425D90 [Ghidra: FUN_00425d90] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -25398,7 +25398,7 @@ LAB_00426186:
 }
 
 
-// ==== FUN_004261c0 @ 004261C0 ====
+// ==== SpawnCoordinatePoolTick @ 004261C0 [Ghidra: FUN_004261c0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -25420,7 +25420,7 @@ void FUN_004261c0(float param_1)
 }
 
 
-// ==== FUN_00426230 @ 00426230 ====
+// ==== GlobalTripleCopyOut @ 00426230 [Ghidra: FUN_00426230] ====
 
 
 void FUN_00426230(undefined4 *param_1)
@@ -25433,7 +25433,7 @@ void FUN_00426230(undefined4 *param_1)
 }
 
 
-// ==== FUN_00426250 @ 00426250 ====
+// ==== UpdateRenderViewportState @ 00426250 [Ghidra: FUN_00426250] ====
 
 
 void FUN_00426250(void)
@@ -25458,7 +25458,7 @@ void FUN_00426250(void)
 }
 
 
-// ==== FUN_004262e0 @ 004262E0 ====
+// ==== ObjectiveScoreTextOriginSet @ 004262E0 [Ghidra: FUN_004262e0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -25477,7 +25477,7 @@ void FUN_004262e0(undefined4 *param_1)
 }
 
 
-// ==== FUN_00426320 @ 00426320 ====
+// ==== ObjectiveTaskTextOriginSet @ 00426320 [Ghidra: FUN_00426320] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -25496,7 +25496,7 @@ void FUN_00426320(undefined4 *param_1)
 }
 
 
-// ==== FUN_00426360 @ 00426360 ====
+// ==== GlobalStateFlagsBits6And9Set @ 00426360 [Ghidra: FUN_00426360] ====
 
 
 void FUN_00426360(int param_1,int param_2)
@@ -25519,7 +25519,7 @@ void FUN_00426360(int param_1,int param_2)
 }
 
 
-// ==== FUN_004263a0 @ 004263A0 ====
+// ==== GlobalStateFlagsBit7Set @ 004263A0 [Ghidra: FUN_004263a0] ====
 
 
 void FUN_004263a0(int param_1)
@@ -25534,7 +25534,7 @@ void FUN_004263a0(int param_1)
 }
 
 
-// ==== FUN_004263c0 @ 004263C0 ====
+// ==== GlobalSubsystemStateReset @ 004263C0 [Ghidra: FUN_004263c0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -25555,7 +25555,7 @@ void FUN_004263c0(void)
 }
 
 
-// ==== FUN_00426420 @ 00426420 ====
+// ==== CursorRayToCameraRoute @ 00426420 [Ghidra: FUN_00426420] ====
 
 
 void FUN_00426420(undefined4 param_1)
@@ -25593,7 +25593,7 @@ void FUN_00426420(undefined4 param_1)
 }
 
 
-// ==== FUN_00426520 @ 00426520 ====
+// ==== MainSimInteractionAndCellUpdate @ 00426520 [Ghidra: FUN_00426520] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -26451,7 +26451,7 @@ LAB_00427d6c:
 }
 
 
-// ==== FUN_00427e00 @ 00427E00 ====
+// ==== ToolTipInfoStringsLoad @ 00427E00 [Ghidra: FUN_00427e00] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -26483,7 +26483,7 @@ void FUN_00427e00(undefined4 param_1)
 }
 
 
-// ==== FUN_00427f80 @ 00427F80 ====
+// ==== LevelUpgradeNameStringsLoad @ 00427F80 [Ghidra: FUN_00427f80] ====
 
 
 void FUN_00427f80(undefined4 param_1)
@@ -26531,7 +26531,7 @@ void FUN_00427f80(undefined4 param_1)
 }
 
 
-// ==== FUN_00428020 @ 00428020 ====
+// ==== EntityCommandStatusFeedbackDispatch @ 00428020 [Ghidra: FUN_00428020] ====
 
 
 void FUN_00428020(int *param_1)
@@ -26761,7 +26761,7 @@ void FUN_00428020(int *param_1)
 }
 
 
-// ==== FUN_00428330 @ 00428330 ====
+// ==== TerrainCommandFeedbackDispatch @ 00428330 [Ghidra: FUN_00428330] ====
 
 
 void FUN_00428330(int *param_1,int param_2,int param_3,int param_4)
@@ -27007,7 +27007,7 @@ LAB_00428738:
 }
 
 
-// ==== FUN_00428780 @ 00428780 ====
+// ==== TerrainCellCommandPredicate @ 00428780 [Ghidra: FUN_00428780] ====
 
 
 undefined4 FUN_00428780(int *param_1)
@@ -27044,7 +27044,7 @@ undefined4 FUN_00428780(int *param_1)
 }
 
 
-// ==== FUN_00428800 @ 00428800 ====
+// ==== ActionFeedbackSoundDispatch @ 00428800 [Ghidra: FUN_00428800] ====
 
 
 void FUN_00428800(undefined4 param_1)
@@ -27090,7 +27090,7 @@ switchD_00428821_default:
 }
 
 
-// ==== FUN_004288e0 @ 004288E0 ====
+// ==== LevelDebugInputCellMutatorDispatch @ 004288E0 [Ghidra: FUN_004288e0] ====
 
 
 void FUN_004288e0(int param_1,undefined4 param_2,int param_3,undefined4 param_4)
@@ -27332,7 +27332,7 @@ void FUN_004288e0(int param_1,undefined4 param_2,int param_3,undefined4 param_4)
 }
 
 
-// ==== FUN_00429160 @ 00429160 ====
+// ==== TerrainCellPaletteResourceAtGridPosition @ 00429160 [Ghidra: FUN_00429160] ====
 
 
 void FUN_00429160(int *param_1)
@@ -27348,7 +27348,7 @@ void FUN_00429160(int *param_1)
 }
 
 
-// ==== FUN_004291a0 @ 004291A0 ====
+// ==== SceneMarkerUpdateAndDraw @ 004291A0 [Ghidra: FUN_004291a0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -27405,7 +27405,7 @@ void FUN_004291a0(float param_1,float param_2)
 }
 
 
-// ==== FUN_004293b0 @ 004293B0 ====
+// ==== SelectionRectangleRender @ 004293B0 [Ghidra: FUN_004293b0] ====
 
 
 void FUN_004293b0(void)
@@ -27446,7 +27446,7 @@ void FUN_004293b0(void)
 }
 
 
-// ==== FUN_00429470 @ 00429470 ====
+// ==== CameraPointerRayRoute @ 00429470 [Ghidra: FUN_00429470] ====
 
 
 void FUN_00429470(uint param_1,float param_2,undefined4 *param_3,undefined4 *param_4)
@@ -27502,7 +27502,7 @@ void FUN_00429470(uint param_1,float param_2,undefined4 *param_3,undefined4 *par
 }
 
 
-// ==== FUN_004295a0 @ 004295A0 ====
+// ==== ContextSelectedGlobalPointerGet @ 004295A0 [Ghidra: FUN_004295a0] ====
 
 
 undefined4 FUN_004295a0(void)
@@ -27518,7 +27518,7 @@ undefined4 FUN_004295a0(void)
 }
 
 
-// ==== FUN_004295c0 @ 004295C0 ====
+// ==== EntityMatchesCurrentSelectionOrOwner @ 004295C0 [Ghidra: FUN_004295c0] ====
 
 
 undefined4 FUN_004295c0(int param_1)
@@ -27532,7 +27532,7 @@ undefined4 FUN_004295c0(int param_1)
 }
 
 
-// ==== FUN_004295f0 @ 004295F0 ====
+// ==== SoundMinimumDistanceUpdateMode @ 004295F0 [Ghidra: FUN_004295f0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -27582,7 +27582,7 @@ void FUN_004295f0(int param_1,int *param_2,int param_3)
 }
 
 
-// ==== FUN_004297b0 @ 004297B0 ====
+// ==== CDAudioWatchdogModeUpdate @ 004297B0 [Ghidra: FUN_004297b0] ====
 
 
 void FUN_004297b0(int param_1)
@@ -27603,7 +27603,7 @@ void FUN_004297b0(int param_1)
 }
 
 
-// ==== FUN_00429810 @ 00429810 ====
+// ==== AudioPlaybackToggle @ 00429810 [Ghidra: FUN_00429810] ====
 
 
 void FUN_00429810(int param_1)
@@ -27620,7 +27620,7 @@ void FUN_00429810(int param_1)
 }
 
 
-// ==== FUN_00429850 @ 00429850 ====
+// ==== ActiveEngineFieldB0Get @ 00429850 [Ghidra: FUN_00429850] ====
 
 
 undefined4 FUN_00429850(void)
@@ -27630,7 +27630,7 @@ undefined4 FUN_00429850(void)
 }
 
 
-// ==== FUN_00429860 @ 00429860 ====
+// ==== EngineFloatField210GetByIndex @ 00429860 [Ghidra: FUN_00429860] ====
 
 
 float10 FUN_00429860(int param_1)
@@ -27640,7 +27640,7 @@ float10 FUN_00429860(int param_1)
 }
 
 
-// ==== FUN_00429880 @ 00429880 ====
+// ==== EngineFloatField260Get @ 00429880 [Ghidra: FUN_00429880] ====
 
 
 float10 FUN_00429880(void)
@@ -27650,7 +27650,7 @@ float10 FUN_00429880(void)
 }
 
 
-// ==== FUN_00429890 @ 00429890 ====
+// ==== LevelLoad @ 00429890 [Ghidra: FUN_00429890] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -28428,7 +28428,7 @@ LAB_0042b268:
 }
 
 
-// ==== FUN_0042b2f0 @ 0042B2F0 ====
+// ==== EntityEffectCountersApplyFromRecord @ 0042B2F0 [Ghidra: FUN_0042b2f0] ====
 
 
 undefined4 FUN_0042b2f0(undefined4 param_1,int param_2)
@@ -28445,7 +28445,7 @@ undefined4 FUN_0042b2f0(undefined4 param_1,int param_2)
 }
 
 
-// ==== FUN_0042b330 @ 0042B330 ====
+// ==== LoadTileMeshes @ 0042B330 [Ghidra: FUN_0042b330] ====
 
 
 undefined4 FUN_0042b330(int param_1,undefined4 param_2)
@@ -28507,7 +28507,7 @@ undefined4 FUN_0042b330(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0042b480 @ 0042B480 ====
+// ==== RectangularResourceTableDestroy @ 0042B480 [Ghidra: FUN_0042b480] ====
 
 
 void FUN_0042b480(int param_1)
@@ -28543,7 +28543,7 @@ void FUN_0042b480(int param_1)
 }
 
 
-// ==== FUN_0042b500 @ 0042B500 ====
+// ==== GlobalStateField84Get @ 0042B500 [Ghidra: FUN_0042b500] ====
 
 
 undefined4 FUN_0042b500(void)
@@ -28553,7 +28553,7 @@ undefined4 FUN_0042b500(void)
 }
 
 
-// ==== FUN_0042b510 @ 0042B510 ====
+// ==== MapLoadPipeline @ 0042B510 [Ghidra: FUN_0042b510] ====
 
 
 undefined4
@@ -28687,7 +28687,7 @@ FUN_0042b510(int param_1,undefined4 param_2,undefined4 param_3,undefined4 param_
 }
 
 
-// ==== FUN_0042b850 @ 0042B850 ====
+// ==== SurfaceTextCharacterMapInitialize @ 0042B850 [Ghidra: FUN_0042b850] ====
 
 
 void FUN_0042b850(undefined4 param_1)
@@ -28874,7 +28874,7 @@ void FUN_0042b850(undefined4 param_1)
 }
 
 
-// ==== FUN_0042bb60 @ 0042BB60 ====
+// ==== TextureSetConfigLoad @ 0042BB60 [Ghidra: FUN_0042bb60] ====
 
 
 undefined4 FUN_0042bb60(int param_1,undefined4 param_2)
@@ -28946,7 +28946,7 @@ undefined4 FUN_0042bb60(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0042bd20 @ 0042BD20 ====
+// ==== LoadPredugLayer @ 0042BD20 [Ghidra: FUN_0042bd20] ====
 
 
 undefined4 FUN_0042bd20(int param_1,int param_2,int param_3)
@@ -29049,7 +29049,7 @@ undefined4 FUN_0042bd20(int param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_0042bf40 @ 0042BF40 ====
+// ==== LoadEmergeLayer @ 0042BF40 [Ghidra: FUN_0042bf40] ====
 
 
 undefined4 FUN_0042bf40(int param_1,uint param_2)
@@ -29114,7 +29114,7 @@ undefined4 FUN_0042bf40(int param_1,uint param_2)
 }
 
 
-// ==== FUN_0042c060 @ 0042C060 ====
+// ==== LoadLayerM @ 0042C060 [Ghidra: FUN_0042c060] ====
 
 
 undefined4 FUN_0042c060(int param_1,uint param_2)
@@ -29160,7 +29160,7 @@ undefined4 FUN_0042c060(int param_1,uint param_2)
 }
 
 
-// ==== FUN_0042c120 @ 0042C120 ====
+// ==== LoadLayerL @ 0042C120 [Ghidra: FUN_0042c120] ====
 
 
 undefined4 FUN_0042c120(int param_1,uint param_2)
@@ -29252,7 +29252,7 @@ undefined4 FUN_0042c120(int param_1,uint param_2)
 }
 
 
-// ==== FUN_0042c330 @ 0042C330 ====
+// ==== EmergeMapTriggerSpawn @ 0042C330 [Ghidra: FUN_0042c330] ====
 
 
 undefined4 FUN_0042c330(int param_1,int *param_2,undefined4 *param_3)
@@ -29302,7 +29302,7 @@ undefined4 FUN_0042c330(int param_1,int *param_2,undefined4 *param_3)
 }
 
 
-// ==== FUN_0042c440 @ 0042C440 ====
+// ==== LevelRecordTimerCountdown @ 0042C440 [Ghidra: FUN_0042c440] ====
 
 
 void FUN_0042c440(int param_1,float param_2)
@@ -29328,7 +29328,7 @@ void FUN_0042c440(int param_1,float param_2)
 }
 
 
-// ==== FUN_0042c480 @ 0042C480 ====
+// ==== LoadErodeCryoreLayers @ 0042C480 [Ghidra: FUN_0042c480] ====
 
 
 undefined4 FUN_0042c480(int param_1,uint param_2,int param_3)
@@ -29392,7 +29392,7 @@ undefined4 FUN_0042c480(int param_1,uint param_2,int param_3)
 }
 
 
-// ==== FUN_0042c5b0 @ 0042C5B0 ====
+// ==== TerrainCellByteStateClassify @ 0042C5B0 [Ghidra: FUN_0042c5b0] ====
 
 
 undefined4
@@ -29438,7 +29438,7 @@ FUN_0042c5b0(int *param_1,undefined4 *param_2,undefined4 *param_3,undefined4 *pa
 }
 
 
-// ==== FUN_0042c6a0 @ 0042C6A0 ====
+// ==== LoadPathAiLayers @ 0042C6A0 [Ghidra: FUN_0042c6a0] ====
 
 
 undefined4 FUN_0042c6a0(int param_1,uint param_2,char param_3)
@@ -29485,7 +29485,7 @@ undefined4 FUN_0042c6a0(int param_1,uint param_2,char param_3)
 }
 
 
-// ==== FUN_0042c760 @ 0042C760 ====
+// ==== LoadFallinLayer @ 0042C760 [Ghidra: FUN_0042c760] ====
 
 
 undefined4 FUN_0042c760(int param_1,uint param_2,int param_3)
@@ -29572,7 +29572,7 @@ undefined4 FUN_0042c760(int param_1,uint param_2,int param_3)
 }
 
 
-// ==== FUN_0042c9d0 @ 0042C9D0 ====
+// ==== LoadBlockPointers @ 0042C9D0 [Ghidra: FUN_0042c9d0] ====
 
 
 undefined4 FUN_0042c9d0(int param_1,uint param_2)
@@ -29643,7 +29643,7 @@ undefined4 FUN_0042c9d0(int param_1,uint param_2)
 }
 
 
-// ==== FUN_0042cb70 @ 0042CB70 ====
+// ==== LavaErosionCellTimersAdvance @ 0042CB70 [Ghidra: FUN_0042cb70] ====
 
 
 void FUN_0042cb70(float param_1)
@@ -29698,7 +29698,7 @@ void FUN_0042cb70(float param_1)
 }
 
 
-// ==== FUN_0042cc90 @ 0042CC90 ====
+// ==== LoadTerrainMap @ 0042CC90 [Ghidra: FUN_0042cc90] ====
 
 
 undefined4 FUN_0042cc90(int param_1,uint param_2,undefined4 param_3)
@@ -29744,7 +29744,7 @@ undefined4 FUN_0042cc90(int param_1,uint param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_0042cd50 @ 0042CD50 ====
+// ==== UpgradeNameEntryFind @ 0042CD50 [Ghidra: FUN_0042cd50] ====
 
 
 int FUN_0042cd50(char *param_1)
@@ -29768,7 +29768,7 @@ int FUN_0042cd50(char *param_1)
 }
 
 
-// ==== FUN_0042cda0 @ 0042CDA0 ====
+// ==== VehicleTypeInit @ 0042CDA0 [Ghidra: FUN_0042cda0] ====
 
 
 undefined4 FUN_0042cda0(void)
@@ -29847,7 +29847,7 @@ undefined4 FUN_0042cda0(void)
 }
 
 
-// ==== FUN_0042cf50 @ 0042CF50 ====
+// ==== MiniFigureTypeTableLoad @ 0042CF50 [Ghidra: FUN_0042cf50] ====
 
 
 undefined4 FUN_0042cf50(void)
@@ -29926,7 +29926,7 @@ undefined4 FUN_0042cf50(void)
 }
 
 
-// ==== FUN_0042d100 @ 0042D100 ====
+// ==== RockMonsterTypesLoad @ 0042D100 [Ghidra: FUN_0042d100] ====
 
 
 undefined4 FUN_0042d100(void)
@@ -30005,7 +30005,7 @@ undefined4 FUN_0042d100(void)
 }
 
 
-// ==== FUN_0042d2b0 @ 0042D2B0 ====
+// ==== BuildingTypesLoad @ 0042D2B0 [Ghidra: FUN_0042d2b0] ====
 
 
 undefined4 FUN_0042d2b0(void)
@@ -30084,7 +30084,7 @@ undefined4 FUN_0042d2b0(void)
 }
 
 
-// ==== FUN_0042d460 @ 0042D460 ====
+// ==== UpgradeTypesLoad @ 0042D460 [Ghidra: FUN_0042d460] ====
 
 
 /* WARNING: Removing unreachable block (ram,0x0042d5d3) */
@@ -30161,7 +30161,7 @@ undefined4 FUN_0042d460(void)
 }
 
 
-// ==== FUN_0042d600 @ 0042D600 ====
+// ==== ObjectNamesLoad @ 0042D600 [Ghidra: FUN_0042d600] ====
 
 
 void FUN_0042d600(undefined4 param_1)
@@ -30283,7 +30283,7 @@ void FUN_0042d600(undefined4 param_1)
 }
 
 
-// ==== FUN_0042da20 @ 0042DA20 ====
+// ==== ObjectTheNamesLoad @ 0042DA20 [Ghidra: FUN_0042da20] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -30407,7 +30407,7 @@ void FUN_0042da20(undefined4 param_1)
 }
 
 
-// ==== FUN_0042de40 @ 0042DE40 ====
+// ==== ViewportTargetPositionClamp @ 0042DE40 [Ghidra: FUN_0042de40] ====
 
 
 void FUN_0042de40(int param_1,int *param_2,int param_3)
@@ -30494,7 +30494,7 @@ void FUN_0042de40(int param_1,int *param_2,int param_3)
 }
 
 
-// ==== FUN_0042dfc0 @ 0042DFC0 ====
+// ==== ObjectPointerRegistryClearMatch @ 0042DFC0 [Ghidra: FUN_0042dfc0] ====
 
 
 void FUN_0042dfc0(int param_1)
@@ -30518,7 +30518,7 @@ void FUN_0042dfc0(int param_1)
 }
 
 
-// ==== FUN_0042dff0 @ 0042DFF0 ====
+// ==== ObjectPointerRegistryGetSlot @ 0042DFF0 [Ghidra: FUN_0042dff0] ====
 
 
 undefined4 FUN_0042dff0(uint param_1,int *param_2)
@@ -30534,7 +30534,7 @@ undefined4 FUN_0042dff0(uint param_1,int *param_2)
 }
 
 
-// ==== FUN_0042e020 @ 0042E020 ====
+// ==== OListEntityRecordParse @ 0042E020 [Ghidra: FUN_0042e020] ====
 
 
 undefined4 FUN_0042e020(int param_1,undefined4 param_2)
@@ -30832,7 +30832,7 @@ undefined4 FUN_0042e020(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0042e8b0 @ 0042E8B0 ====
+// ==== ObjectListEntityTypeResolve @ 0042E8B0 [Ghidra: FUN_0042e8b0] ====
 
 
 undefined4 FUN_0042e8b0(char *param_1,undefined4 *param_2,uint *param_3,int *param_4)
@@ -31052,7 +31052,7 @@ undefined4 FUN_0042e8b0(char *param_1,undefined4 *param_2,uint *param_3,int *par
 }
 
 
-// ==== FUN_0042ed70 @ 0042ED70 ====
+// ==== EntityPointer @ 0042ED70 [Ghidra: FUN_0042ed70] ====
 
 
 undefined4 FUN_0042ed70(int param_1,int param_2,int *param_3)
@@ -31130,7 +31130,7 @@ undefined4 FUN_0042ed70(int param_1,int param_2,int *param_3)
 }
 
 
-// ==== FUN_0042ef40 @ 0042EF40 ====
+// ==== StatsLevelRecordCountForStatType @ 0042EF40 [Ghidra: FUN_0042ef40] ====
 
 
 int FUN_0042ef40(int param_1)
@@ -31172,7 +31172,7 @@ int FUN_0042ef40(int param_1)
 }
 
 
-// ==== FUN_0042efc0 @ 0042EFC0 ====
+// ==== DirectShowVideoPlaybackLoop @ 0042EFC0 [Ghidra: FUN_0042efc0] ====
 
 
 void FUN_0042efc0(int param_1,int param_2)
@@ -31207,7 +31207,7 @@ void FUN_0042efc0(int param_1,int param_2)
 }
 
 
-// ==== FUN_0042f0c0 @ 0042F0C0 ====
+// ==== PendingLevelName @ 0042F0C0 [Ghidra: FUN_0042f0c0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -31283,7 +31283,7 @@ undefined4 FUN_0042f0c0(void)
 }
 
 
-// ==== FUN_0042f2e0 @ 0042F2E0 ====
+// ==== TerrainCellEdgeFlagSetAndUpdate @ 0042F2E0 [Ghidra: FUN_0042f2e0] ====
 
 
 void FUN_0042f2e0(int param_1,int param_2,int param_3,int param_4)
@@ -31306,7 +31306,7 @@ void FUN_0042f2e0(int param_1,int param_2,int param_3,int param_4)
 }
 
 
-// ==== FUN_0042f350 @ 0042F350 ====
+// ==== TerrainNeighborCoordinateCheck @ 0042F350 [Ghidra: FUN_0042f350] ====
 
 
 uint FUN_0042f350(int param_1,int param_2,undefined1 *param_3,int param_4)
@@ -31457,7 +31457,7 @@ uint FUN_0042f350(int param_1,int param_2,undefined1 *param_3,int param_4)
 }
 
 
-// ==== FUN_0042f6f0 @ 0042F6F0 ====
+// ==== CellInitPass @ 0042F6F0 [Ghidra: FUN_0042f6f0] ====
 
 
 /* WARNING: Removing unreachable block (ram,0x0042fed8) */
@@ -31935,7 +31935,7 @@ switchD_0042fb0e_default:
 }
 
 
-// ==== FUN_004302b0 @ 004302B0 ====
+// ==== MapCellTrackingFlagsClearAndRefresh @ 004302B0 [Ghidra: FUN_004302b0] ====
 
 
 void FUN_004302b0(int *param_1)
@@ -31957,7 +31957,7 @@ void FUN_004302b0(int *param_1)
 }
 
 
-// ==== FUN_00430320 @ 00430320 ====
+// ==== TerrainCellWorkFlagClear @ 00430320 [Ghidra: FUN_00430320] ====
 
 
 void FUN_00430320(int *param_1,undefined4 param_2)
@@ -31998,7 +31998,7 @@ void FUN_00430320(int *param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00430470 @ 00430470 ====
+// ==== TerrainNeighborFlagSet @ 00430470 [Ghidra: FUN_00430470] ====
 
 
 void FUN_00430470(int param_1,undefined4 param_2,uint param_3,uint param_4)
@@ -32028,7 +32028,7 @@ void FUN_00430470(int param_1,undefined4 param_2,uint param_3,uint param_4)
 }
 
 
-// ==== FUN_00430530 @ 00430530 ====
+// ==== TerrainCellMutation @ 00430530 [Ghidra: FUN_00430530] ====
 
 
 undefined4 FUN_00430530(int param_1,uint param_2,uint param_3,int param_4)
@@ -32345,7 +32345,7 @@ LAB_00430cdd:
 }
 
 
-// ==== FUN_00430df0 @ 00430DF0 ====
+// ==== TerrainNeighborRefresh @ 00430DF0 [Ghidra: FUN_00430df0] ====
 
 
 void FUN_00430df0(int *param_1)
@@ -32398,7 +32398,7 @@ void FUN_00430df0(int *param_1)
 }
 
 
-// ==== FUN_00430ee0 @ 00430EE0 ====
+// ==== TerrainCellInitialize @ 00430EE0 [Ghidra: FUN_00430ee0] ====
 
 
 undefined4 FUN_00430ee0(int param_1,uint param_2,uint param_3)
@@ -32498,7 +32498,7 @@ undefined4 FUN_00430ee0(int param_1,uint param_2,uint param_3)
 }
 
 
-// ==== FUN_004310f0 @ 004310F0 ====
+// ==== TerrainCellFlag20ClearAndRefresh @ 004310F0 [Ghidra: FUN_004310f0] ====
 
 
 void FUN_004310f0(int *param_1)
@@ -32517,7 +32517,7 @@ void FUN_004310f0(int *param_1)
 }
 
 
-// ==== FUN_00431140 @ 00431140 ====
+// ==== TerrainCellQueuedWorkTransition @ 00431140 [Ghidra: FUN_00431140] ====
 
 
 void FUN_00431140(int param_1,int param_2)
@@ -32653,7 +32653,7 @@ void FUN_004313b0(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00431450 @ 00431450 ====
+// ==== TerrainNeighborFlagRefresh @ 00431450 [Ghidra: FUN_00431450] ====
 
 
 void FUN_00431450(int param_1,int *param_2,int param_3)
@@ -32677,7 +32677,7 @@ void FUN_00431450(int param_1,int *param_2,int param_3)
 }
 
 
-// ==== FUN_004314c0 @ 004314C0 ====
+// ==== ActivityBuildRecordRelease @ 004314C0 [Ghidra: FUN_004314c0] ====
 
 
 void FUN_004314c0(undefined4 *param_1)
@@ -32703,7 +32703,7 @@ void FUN_004314c0(undefined4 *param_1)
 }
 
 
-// ==== FUN_00431530 @ 00431530 ====
+// ==== ActivityBuildRecordsReleaseAll @ 00431530 [Ghidra: FUN_00431530] ====
 
 
 void FUN_00431530(int param_1)
@@ -32722,7 +32722,7 @@ void FUN_00431530(int param_1)
 }
 
 
-// ==== FUN_00431560 @ 00431560 ====
+// ==== CurrentLevelGet @ 00431560 [Ghidra: FUN_00431560] ====
 
 
 undefined4 FUN_00431560(void)
@@ -32732,7 +32732,7 @@ undefined4 FUN_00431560(void)
 }
 
 
-// ==== FUN_00431570 @ 00431570 ====
+// ==== CurrentLevelHeightGet @ 00431570 [Ghidra: FUN_00431570] ====
 
 
 undefined4 FUN_00431570(void)
@@ -32745,7 +32745,7 @@ undefined4 FUN_00431570(void)
 }
 
 
-// ==== FUN_00431580 @ 00431580 ====
+// ==== TerrainNeighborWorkFlagScan @ 00431580 [Ghidra: FUN_00431580] ====
 
 
 void FUN_00431580(uint *param_1,uint param_2)
@@ -32832,7 +32832,7 @@ void FUN_00431580(uint *param_1,uint param_2)
 }
 
 
-// ==== FUN_00431780 @ 00431780 ====
+// ==== TerrainStampImpactHandler @ 00431780 [Ghidra: FUN_00431780] ====
 
 
 void FUN_00431780(uint param_1,uint param_2,int param_3,int param_4)
@@ -32915,7 +32915,7 @@ void FUN_00431780(uint param_1,uint param_2,int param_3,int param_4)
 }
 
 
-// ==== FUN_004319b0 @ 004319B0 ====
+// ==== TerrainCellMaterialGet @ 004319B0 [Ghidra: FUN_004319b0] ====
 
 
 undefined1 FUN_004319b0(int param_1,int param_2)
@@ -32927,7 +32927,7 @@ undefined1 FUN_004319b0(int param_1,int param_2)
 }
 
 
-// ==== FUN_004319e0 @ 004319E0 ====
+// ==== MapFileCellGet @ 004319E0 [Ghidra: FUN_004319e0] ====
 
 
 undefined2 FUN_004319e0(int param_1,int param_2,int param_3)
@@ -32944,7 +32944,7 @@ undefined2 FUN_004319e0(int param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_00431a30 @ 00431A30 ====
+// ==== SelectedEntitiesAnyPredicateMatch @ 00431A30 [Ghidra: FUN_00431a30] ====
 
 
 undefined4 FUN_00431a30(undefined4 param_1,undefined4 param_2,undefined4 param_3)
@@ -32971,7 +32971,7 @@ undefined4 FUN_00431a30(undefined4 param_1,undefined4 param_2,undefined4 param_3
 }
 
 
-// ==== FUN_00431ab0 @ 00431AB0 ====
+// ==== AnyObjectCanOccupyTerrainCell @ 00431AB0 [Ghidra: FUN_00431ab0] ====
 
 
 undefined4 FUN_00431ab0(undefined4 param_1,undefined4 param_2)
@@ -32998,7 +32998,7 @@ undefined4 FUN_00431ab0(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00431b20 @ 00431B20 ====
+// ==== PlacementBlockedAdjacentCellScan @ 00431B20 [Ghidra: FUN_00431b20] ====
 
 
 undefined4 FUN_00431b20(int param_1,int param_2,int param_3,int param_4)
@@ -33054,7 +33054,7 @@ undefined4 FUN_00431b20(int param_1,int param_2,int param_3,int param_4)
 }
 
 
-// ==== FUN_00431c70 @ 00431C70 ====
+// ==== FirstFreeNeighborCellPick @ 00431C70 [Ghidra: FUN_00431c70] ====
 
 
 undefined4 FUN_00431c70(undefined4 param_1,int *param_2,int *param_3,int param_4)
@@ -33116,7 +33116,7 @@ LAB_00431d28:
 }
 
 
-// ==== FUN_00431da0 @ 00431DA0 ====
+// ==== TerrainCellRouteAndOccupancyCheck @ 00431DA0 [Ghidra: FUN_00431da0] ====
 
 
 undefined4 FUN_00431da0(int *param_1,int param_2,int param_3,int param_4,int param_5,int param_6)
@@ -33270,7 +33270,7 @@ undefined4 FUN_00431da0(int *param_1,int param_2,int param_3,int param_4,int par
 }
 
 
-// ==== FUN_00432100 @ 00432100 ====
+// ==== TerrainCellFlag100SetAndTrack @ 00432100 [Ghidra: FUN_00432100] ====
 
 
 void FUN_00432100(int *param_1)
@@ -33291,7 +33291,7 @@ void FUN_00432100(int *param_1)
 }
 
 
-// ==== FUN_00432170 @ 00432170 ====
+// ==== TerrainCellFlag100Test @ 00432170 [Ghidra: FUN_00432170] ====
 
 
 uint FUN_00432170(int *param_1)
@@ -33302,7 +33302,7 @@ uint FUN_00432170(int *param_1)
 }
 
 
-// ==== FUN_004321a0 @ 004321A0 ====
+// ==== TerrainCellUpdateQueueFlush @ 004321A0 [Ghidra: FUN_004321a0] ====
 
 
 void FUN_004321a0(void)
@@ -33330,7 +33330,7 @@ void FUN_004321a0(void)
 }
 
 
-// ==== FUN_00432200 @ 00432200 ====
+// ==== TerrainCellPreviousStateTrack @ 00432200 [Ghidra: FUN_00432200] ====
 
 
 void FUN_00432200(void)
@@ -33365,7 +33365,7 @@ void FUN_00432200(void)
 }
 
 
-// ==== FUN_00432270 @ 00432270 ====
+// ==== TerrainCellVisitedFlagSetAndTrack @ 00432270 [Ghidra: FUN_00432270] ====
 
 
 void FUN_00432270(int *param_1)
@@ -33383,7 +33383,7 @@ void FUN_00432270(int *param_1)
 }
 
 
-// ==== FUN_004322d0 @ 004322D0 ====
+// ==== TerrainCellVisitedFlagTest @ 004322D0 [Ghidra: FUN_004322d0] ====
 
 
 uint FUN_004322d0(int *param_1)
@@ -33394,7 +33394,7 @@ uint FUN_004322d0(int *param_1)
 }
 
 
-// ==== FUN_00432300 @ 00432300 ====
+// ==== TerrainCellVisitedFlagsClearAll @ 00432300 [Ghidra: FUN_00432300] ====
 
 
 void FUN_00432300(void)
@@ -33426,7 +33426,7 @@ void FUN_00432300(void)
 }
 
 
-// ==== FUN_00432360 @ 00432360 ====
+// ==== TerrainCellPrimaryFlagsMaskClearAndRefresh @ 00432360 [Ghidra: FUN_00432360] ====
 
 
 void FUN_00432360(int *param_1)
@@ -33447,7 +33447,7 @@ void FUN_00432360(int *param_1)
 }
 
 
-// ==== FUN_004323c0 @ 004323C0 ====
+// ==== TerrainCellSecondaryFlagBit0Clear @ 004323C0 [Ghidra: FUN_004323c0] ====
 
 
 void FUN_004323c0(int *param_1)
@@ -33462,7 +33462,7 @@ void FUN_004323c0(int *param_1)
 }
 
 
-// ==== FUN_004323f0 @ 004323F0 ====
+// ==== TerrainCellFlagsSetAndRefresh @ 004323F0 [Ghidra: FUN_004323f0] ====
 
 
 void FUN_004323f0(int *param_1)
@@ -33483,7 +33483,7 @@ void FUN_004323f0(int *param_1)
 }
 
 
-// ==== FUN_00432450 @ 00432450 ====
+// ==== TerrainCellFlagsSetMask100400 @ 00432450 [Ghidra: FUN_00432450] ====
 
 
 void FUN_00432450(int param_1,int param_2)
@@ -33501,7 +33501,7 @@ void FUN_00432450(int param_1,int param_2)
 }
 
 
-// ==== FUN_00432490 @ 00432490 ====
+// ==== TerrainCellFlagsSetMask20108000 @ 00432490 [Ghidra: FUN_00432490] ====
 
 
 void FUN_00432490(int param_1,int param_2)
@@ -33519,7 +33519,7 @@ void FUN_00432490(int param_1,int param_2)
 }
 
 
-// ==== FUN_004324d0 @ 004324D0 ====
+// ==== TerrainCellSecondaryFlag8SetOrClear @ 004324D0 [Ghidra: FUN_004324d0] ====
 
 
 void FUN_004324d0(int param_1,int param_2,int param_3)
@@ -33540,7 +33540,7 @@ void FUN_004324d0(int param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_00432520 @ 00432520 ====
+// ==== TerrainCellSecondaryFlag8Test @ 00432520 [Ghidra: FUN_00432520] ====
 
 
 uint FUN_00432520(int param_1,int param_2)
@@ -33551,7 +33551,7 @@ uint FUN_00432520(int param_1,int param_2)
 }
 
 
-// ==== FUN_00432550 @ 00432550 ====
+// ==== AlwaysAcceptPlaceCommandCell @ 00432550 [Ghidra: FUN_00432550] ====
 
 
 undefined4 FUN_00432550(void)
@@ -33561,7 +33561,7 @@ undefined4 FUN_00432550(void)
 }
 
 
-// ==== FUN_00432560 @ 00432560 ====
+// ==== TerrainCellFlag40000000ClearOrSet @ 00432560 [Ghidra: FUN_00432560] ====
 
 
 void FUN_00432560(int *param_1,int param_2)
@@ -33588,7 +33588,7 @@ void FUN_00432560(int *param_1,int param_2)
 }
 
 
-// ==== FUN_004325d0 @ 004325D0 ====
+// ==== TerrainCellSecondaryFlagBit0Set @ 004325D0 [Ghidra: FUN_004325d0] ====
 
 
 void FUN_004325d0(int *param_1)
@@ -33603,7 +33603,7 @@ void FUN_004325d0(int *param_1)
 }
 
 
-// ==== FUN_00432600 @ 00432600 ====
+// ==== TerrainCellVariantFlagPropagate @ 00432600 [Ghidra: FUN_00432600] ====
 
 
 undefined4 FUN_00432600(int *param_1)
@@ -33656,7 +33656,7 @@ undefined4 FUN_00432600(int *param_1)
 }
 
 
-// ==== FUN_00432710 @ 00432710 ====
+// ==== TerrainCellFlag80000ClearOrSet @ 00432710 [Ghidra: FUN_00432710] ====
 
 
 void FUN_00432710(int *param_1,int param_2)
@@ -33678,7 +33678,7 @@ void FUN_00432710(int *param_1,int param_2)
 }
 
 
-// ==== FUN_00432770 @ 00432770 ====
+// ==== TerrainCellWalkabilityQuery @ 00432770 [Ghidra: FUN_00432770] ====
 
 
 undefined4 FUN_00432770(int param_1,uint param_2,uint param_3,int param_4,int param_5)
@@ -33758,7 +33758,7 @@ undefined4 FUN_00432770(int param_1,uint param_2,uint param_3,int param_4,int pa
 }
 
 
-// ==== FUN_00432950 @ 00432950 ====
+// ==== EntityMoveDestinationCellIsUsable @ 00432950 [Ghidra: FUN_00432950] ====
 
 
 undefined4 FUN_00432950(int param_1,uint param_2,uint param_3)
@@ -33784,7 +33784,7 @@ undefined4 FUN_00432950(int param_1,uint param_2,uint param_3)
 }
 
 
-// ==== FUN_004329d0 @ 004329D0 ====
+// ==== TerrainCellFlag8CheckIfInBounds @ 004329D0 [Ghidra: FUN_004329d0] ====
 
 
 undefined4 FUN_004329d0(undefined4 param_1,int param_2,int param_3)
@@ -33804,7 +33804,7 @@ undefined4 FUN_004329d0(undefined4 param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_00432a20 @ 00432A20 ====
+// ==== TerrainCellAllowsPlacement @ 00432A20 [Ghidra: FUN_00432a20] ====
 
 
 undefined4 FUN_00432a20(int param_1,uint param_2,uint param_3)
@@ -33829,7 +33829,7 @@ undefined4 FUN_00432a20(int param_1,uint param_2,uint param_3)
 }
 
 
-// ==== FUN_00432aa0 @ 00432AA0 ====
+// ==== TerrainCellOccupancyOrFlagCheck @ 00432AA0 [Ghidra: FUN_00432aa0] ====
 
 
 uint FUN_00432aa0(int param_1,int param_2,int param_3)
@@ -33850,7 +33850,7 @@ uint FUN_00432aa0(int param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_00432b00 @ 00432B00 ====
+// ==== TerrainCellFlag800TestInBounds @ 00432B00 [Ghidra: FUN_00432b00] ====
 
 
 uint FUN_00432b00(uint param_1,uint param_2)
@@ -33865,7 +33865,7 @@ uint FUN_00432b00(uint param_1,uint param_2)
 }
 
 
-// ==== FUN_00432b50 @ 00432B50 ====
+// ==== TerrainWalkableNeighborSearch @ 00432B50 [Ghidra: FUN_00432b50] ====
 
 
 uint FUN_00432b50(uint param_1,uint param_2)
@@ -33880,7 +33880,7 @@ uint FUN_00432b50(uint param_1,uint param_2)
 }
 
 
-// ==== FUN_00432b90 @ 00432B90 ====
+// ==== TerrainCellTypeIs8Or10Or11 @ 00432B90 [Ghidra: FUN_00432b90] ====
 
 
 undefined4 FUN_00432b90(int param_1,int param_2)
@@ -33897,7 +33897,7 @@ undefined4 FUN_00432b90(int param_1,int param_2)
 }
 
 
-// ==== FUN_00432bd0 @ 00432BD0 ====
+// ==== TerrainCellWalkableFlagCheck @ 00432BD0 [Ghidra: FUN_00432bd0] ====
 
 
 undefined4 FUN_00432bd0(uint param_1,uint param_2)
@@ -33916,7 +33916,7 @@ undefined4 FUN_00432bd0(uint param_1,uint param_2)
 }
 
 
-// ==== FUN_00432c20 @ 00432C20 ====
+// ==== TerrainCellFlag40000Test @ 00432C20 [Ghidra: FUN_00432c20] ====
 
 
 uint FUN_00432c20(int param_1,int param_2)
@@ -33927,7 +33927,7 @@ uint FUN_00432c20(int param_1,int param_2)
 }
 
 
-// ==== FUN_00432c50 @ 00432C50 ====
+// ==== TerrainCellTypeSpeedClassGet @ 00432C50 [Ghidra: FUN_00432c50] ====
 
 
 int FUN_00432c50(int *param_1)
@@ -33944,7 +33944,7 @@ int FUN_00432c50(int *param_1)
 }
 
 
-// ==== FUN_00432c90 @ 00432C90 ====
+// ==== TerrainCellStateUpdate @ 00432C90 [Ghidra: FUN_00432c90] ====
 
 
 bool FUN_00432c90(int *param_1)
@@ -33992,7 +33992,7 @@ bool FUN_00432c90(int *param_1)
 }
 
 
-// ==== FUN_00432d90 @ 00432D90 ====
+// ==== TerrainCellFlag20TestInBounds @ 00432D90 [Ghidra: FUN_00432d90] ====
 
 
 uint FUN_00432d90(uint param_1,uint param_2)
@@ -34007,7 +34007,7 @@ uint FUN_00432d90(uint param_1,uint param_2)
 }
 
 
-// ==== FUN_00432dd0 @ 00432DD0 ====
+// ==== TerrainCellFlag08000000Test @ 00432DD0 [Ghidra: FUN_00432dd0] ====
 
 
 uint FUN_00432dd0(int *param_1)
@@ -34018,7 +34018,7 @@ uint FUN_00432dd0(int *param_1)
 }
 
 
-// ==== FUN_00432e00 @ 00432E00 ====
+// ==== TerrainCellPredugEdgeWallFlagSet @ 00432E00 [Ghidra: FUN_00432e00] ====
 
 
 void FUN_00432e00(int *param_1,int param_2)
@@ -34040,7 +34040,7 @@ void FUN_00432e00(int *param_1,int param_2)
 }
 
 
-// ==== FUN_00432e60 @ 00432E60 ====
+// ==== TerrainCellFlagsMaskC0Test @ 00432E60 [Ghidra: FUN_00432e60] ====
 
 
 undefined4 FUN_00432e60(int param_1,int param_2)
@@ -34054,7 +34054,7 @@ undefined4 FUN_00432e60(int param_1,int param_2)
 }
 
 
-// ==== FUN_00432e90 @ 00432E90 ====
+// ==== TerrainCellFlag04000000Test @ 00432E90 [Ghidra: FUN_00432e90] ====
 
 
 uint FUN_00432e90(int *param_1)
@@ -34065,7 +34065,7 @@ uint FUN_00432e90(int *param_1)
 }
 
 
-// ==== FUN_00432ec0 @ 00432EC0 ====
+// ==== TerrainCellStateEquals1 @ 00432EC0 [Ghidra: FUN_00432ec0] ====
 
 
 bool FUN_00432ec0(int *param_1)
@@ -34076,7 +34076,7 @@ bool FUN_00432ec0(int *param_1)
 }
 
 
-// ==== FUN_00432f00 @ 00432F00 ====
+// ==== TerrainCellStateEquals6 @ 00432F00 [Ghidra: FUN_00432f00] ====
 
 
 bool FUN_00432f00(int *param_1)
@@ -34087,7 +34087,7 @@ bool FUN_00432f00(int *param_1)
 }
 
 
-// ==== FUN_00432f40 @ 00432F40 ====
+// ==== TerrainCellFlagsMask18ClearInBounds @ 00432F40 [Ghidra: FUN_00432f40] ====
 
 
 bool FUN_00432f40(uint param_1,uint param_2)
@@ -34102,7 +34102,7 @@ bool FUN_00432f40(uint param_1,uint param_2)
 }
 
 
-// ==== FUN_00432f90 @ 00432F90 ====
+// ==== TerrainCellFlag4TestInBounds @ 00432F90 [Ghidra: FUN_00432f90] ====
 
 
 uint FUN_00432f90(uint param_1,uint param_2)
@@ -34117,7 +34117,7 @@ uint FUN_00432f90(uint param_1,uint param_2)
 }
 
 
-// ==== FUN_00432fd0 @ 00432FD0 ====
+// ==== TerrainCellFlag2000Test @ 00432FD0 [Ghidra: FUN_00432fd0] ====
 
 
 uint FUN_00432fd0(int param_1,int param_2)
@@ -34128,7 +34128,7 @@ uint FUN_00432fd0(int param_1,int param_2)
 }
 
 
-// ==== FUN_00433000 @ 00433000 ====
+// ==== TerrainCellFlag80Test @ 00433000 [Ghidra: FUN_00433000] ====
 
 
 uint FUN_00433000(int param_1,int param_2)
@@ -34139,7 +34139,7 @@ uint FUN_00433000(int param_1,int param_2)
 }
 
 
-// ==== FUN_00433030 @ 00433030 ====
+// ==== TerrainCellFlag8000Test @ 00433030 [Ghidra: FUN_00433030] ====
 
 
 uint FUN_00433030(int *param_1)
@@ -34150,7 +34150,7 @@ uint FUN_00433030(int *param_1)
 }
 
 
-// ==== FUN_00433060 @ 00433060 ====
+// ==== TerrainCellSecondaryFlagBit0Test @ 00433060 [Ghidra: FUN_00433060] ====
 
 
 uint FUN_00433060(int *param_1)
@@ -34161,7 +34161,7 @@ uint FUN_00433060(int *param_1)
 }
 
 
-// ==== FUN_00433090 @ 00433090 ====
+// ==== TerrainCoordinateAndOccupancyCheck @ 00433090 [Ghidra: FUN_00433090] ====
 
 
 uint FUN_00433090(int *param_1)
@@ -34180,7 +34180,7 @@ uint FUN_00433090(int *param_1)
 }
 
 
-// ==== FUN_004330e0 @ 004330E0 ====
+// ==== TerrainCellFlagsMask180000Test @ 004330E0 [Ghidra: FUN_004330e0] ====
 
 
 undefined4 FUN_004330e0(int *param_1)
@@ -34194,7 +34194,7 @@ undefined4 FUN_004330e0(int *param_1)
 }
 
 
-// ==== FUN_00433120 @ 00433120 ====
+// ==== TerrainCellFlag10000000SetOrClear @ 00433120 [Ghidra: FUN_00433120] ====
 
 
 void FUN_00433120(int *param_1,int param_2)
@@ -34216,7 +34216,7 @@ void FUN_00433120(int *param_1,int param_2)
 }
 
 
-// ==== FUN_00433180 @ 00433180 ====
+// ==== CellTypeSpeedMultiplierResolve @ 00433180 [Ghidra: FUN_00433180] ====
 
 
 undefined4 FUN_00433180(int *param_1,int param_2,int param_3,float param_4,float *param_5)
@@ -34259,7 +34259,7 @@ undefined4 FUN_00433180(int *param_1,int param_2,int param_3,float param_4,float
 }
 
 
-// ==== FUN_004332c0 @ 004332C0 ====
+// ==== TerrainCellRecordByte3Get @ 004332C0 [Ghidra: FUN_004332c0] ====
 
 
 undefined1 FUN_004332c0(int param_1,int param_2)
@@ -34271,7 +34271,7 @@ undefined1 FUN_004332c0(int param_1,int param_2)
 }
 
 
-// ==== FUN_004332f0 @ 004332F0 ====
+// ==== TerrainCellWorkFlagSet @ 004332F0 [Ghidra: FUN_004332f0] ====
 
 
 void FUN_004332f0(uint param_1,uint param_2)
@@ -34289,7 +34289,7 @@ void FUN_004332f0(uint param_1,uint param_2)
 }
 
 
-// ==== FUN_00433330 @ 00433330 ====
+// ==== TerrainCellTypeGetAtCoords @ 00433330 [Ghidra: FUN_00433330] ====
 
 
 undefined4 FUN_00433330(uint param_1,uint param_2,uint *param_3)
@@ -34305,7 +34305,7 @@ undefined4 FUN_00433330(uint param_1,uint param_2,uint *param_3)
 }
 
 
-// ==== FUN_00433380 @ 00433380 ====
+// ==== TerrainCellMutationProgress @ 00433380 [Ghidra: FUN_00433380] ====
 
 
 void FUN_00433380(int param_1,uint param_2,uint param_3)
@@ -34362,7 +34362,7 @@ void FUN_00433380(int param_1,uint param_2,uint param_3)
 }
 
 
-// ==== FUN_004334c0 @ 004334C0 ====
+// ==== MapFileDimensionsGet @ 004334C0 [Ghidra: FUN_004334c0] ====
 
 
 void FUN_004334c0(undefined4 param_1,undefined4 *param_2,undefined4 *param_3)
@@ -34377,7 +34377,7 @@ void FUN_004334c0(undefined4 param_1,undefined4 *param_2,undefined4 *param_3)
 }
 
 
-// ==== FUN_004334f0 @ 004334F0 ====
+// ==== RenderQualityConfigApply @ 004334F0 [Ghidra: FUN_004334f0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -34450,7 +34450,7 @@ undefined4 FUN_004334f0(void)
 }
 
 
-// ==== FUN_00433770 @ 00433770 ====
+// ==== SceneLightsBuildFromConfig @ 00433770 [Ghidra: FUN_00433770] ====
 
 
 undefined4 FUN_00433770(void)
@@ -34548,7 +34548,7 @@ undefined4 FUN_00433770(void)
 }
 
 
-// ==== FUN_00433be0 @ 00433BE0 ====
+// ==== CurrentLevelTerrainGridPick @ 00433BE0 [Ghidra: FUN_00433be0] ====
 
 
 void FUN_00433be0(undefined4 param_1,undefined4 param_2,undefined4 param_3,undefined4 param_4)
@@ -34559,7 +34559,7 @@ void FUN_00433be0(undefined4 param_1,undefined4 param_2,undefined4 param_3,undef
 }
 
 
-// ==== FUN_00433c10 @ 00433C10 ====
+// ==== EntityNeighborBlockedCellStepProbe @ 00433C10 [Ghidra: FUN_00433c10] ====
 
 
 undefined4 FUN_00433c10(int param_1,float param_2,int param_3)
@@ -34630,7 +34630,7 @@ undefined4 FUN_00433c10(int param_1,float param_2,int param_3)
 }
 
 
-// ==== FUN_00433e30 @ 00433E30 ====
+// ==== GridCellEntityEligibilityCheck @ 00433E30 [Ghidra: FUN_00433e30] ====
 
 
 undefined4 FUN_00433e30(int param_1,int param_2)
@@ -34651,7 +34651,7 @@ undefined4 FUN_00433e30(int param_1,int param_2)
 }
 
 
-// ==== FUN_00433e80 @ 00433E80 ====
+// ==== TerrainProjectedCellStateRefresh @ 00433E80 [Ghidra: FUN_00433e80] ====
 
 
 void FUN_00433e80(void)
@@ -34825,7 +34825,7 @@ void FUN_00433e80(void)
 }
 
 
-// ==== FUN_00434480 @ 00434480 ====
+// ==== CellSurfaceUpdateDispatch @ 00434480 [Ghidra: FUN_00434480] ====
 
 
 undefined4 FUN_00434480(int param_1,int param_2,int param_3,undefined4 param_4,undefined4 param_5)
@@ -34853,7 +34853,7 @@ undefined4 FUN_00434480(int param_1,int param_2,int param_3,undefined4 param_4,u
 }
 
 
-// ==== FUN_00434530 @ 00434530 ====
+// ==== TerrainGridEntryResourcesReleaseAll @ 00434530 [Ghidra: FUN_00434530] ====
 
 
 void FUN_00434530(void)
@@ -34878,7 +34878,7 @@ void FUN_00434530(void)
 }
 
 
-// ==== FUN_00434570 @ 00434570 ====
+// ==== TerrainCellProgressUpdate @ 00434570 [Ghidra: FUN_00434570] ====
 
 
 undefined4 FUN_00434570(int param_1,int param_2,float param_3,float param_4)
@@ -34900,7 +34900,7 @@ undefined4 FUN_00434570(int param_1,int param_2,float param_3,float param_4)
 }
 
 
-// ==== FUN_004345f0 @ 004345F0 ====
+// ==== PanelsConfigEntryApply @ 004345F0 [Ghidra: FUN_004345f0] ====
 
 
 void FUN_004345f0(undefined4 param_1,undefined4 param_2,undefined4 param_3)
@@ -34967,7 +34967,7 @@ void FUN_004345f0(undefined4 param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_00434710 @ 00434710 ====
+// ==== PanelButtonLayoutConfigLoad @ 00434710 [Ghidra: FUN_00434710] ====
 
 
 void FUN_00434710(undefined4 param_1,undefined4 param_2,undefined4 param_3,undefined4 param_4,
@@ -35067,7 +35067,7 @@ void FUN_00434710(undefined4 param_1,undefined4 param_2,undefined4 param_3,undef
 }
 
 
-// ==== FUN_00434a00 @ 00434A00 ====
+// ==== AdvisorTutorialIconImageLoad @ 00434A00 [Ghidra: FUN_00434a00] ====
 
 
 void FUN_00434a00(undefined4 param_1)
@@ -35088,7 +35088,7 @@ void FUN_00434a00(undefined4 param_1)
 }
 
 
-// ==== FUN_00434a50 @ 00434A50 ====
+// ==== SoundSamplesConfigLoad @ 00434A50 [Ghidra: FUN_00434a50] ====
 
 
 void FUN_00434a50(undefined4 param_1,int param_2)
@@ -35125,7 +35125,7 @@ void FUN_00434a50(undefined4 param_1,int param_2)
 }
 
 
-// ==== FUN_00434af0 @ 00434AF0 ====
+// ==== TextMessagesConfigLoad @ 00434AF0 [Ghidra: FUN_00434af0] ====
 
 
 void FUN_00434af0(undefined4 param_1)
@@ -35191,7 +35191,7 @@ void FUN_00434af0(undefined4 param_1)
 }
 
 
-// ==== FUN_00434c10 @ 00434C10 ====
+// ==== IncidentMessageConfigLoad @ 00434C10 [Ghidra: FUN_00434c10] ====
 
 
 void FUN_00434c10(undefined4 param_1)
@@ -35278,7 +35278,7 @@ void FUN_00434c10(undefined4 param_1)
 }
 
 
-// ==== FUN_00434da0 @ 00434DA0 ====
+// ==== AdvisorTooltipAndTooltipSoundConfigLoad @ 00434DA0 [Ghidra: FUN_00434da0] ====
 
 
 void FUN_00434da0(undefined4 param_1)
@@ -35308,7 +35308,7 @@ void FUN_00434da0(undefined4 param_1)
 }
 
 
-// ==== FUN_00434e80 @ 00434E80 ====
+// ==== InterfaceSpawnRequestEnqueue @ 00434E80 [Ghidra: FUN_00434e80] ====
 
 
 undefined4 FUN_00434e80(int param_1,undefined4 param_2)
@@ -35365,7 +35365,7 @@ undefined4 FUN_00434e80(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00435010 @ 00435010 ====
+// ==== TerrainCellWorkFlagCircleSet @ 00435010 [Ghidra: FUN_00435010] ====
 
 
 void FUN_00435010(int *param_1,int param_2)
@@ -35397,7 +35397,7 @@ void FUN_00435010(int *param_1,int param_2)
 }
 
 
-// ==== FUN_004350a0 @ 004350A0 ====
+// ==== SurfaceTypeDescriptionsConfigLoad @ 004350A0 [Ghidra: FUN_004350a0] ====
 
 
 void FUN_004350a0(undefined4 param_1,undefined4 param_2)
@@ -35461,7 +35461,7 @@ void FUN_004350a0(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00435170 @ 00435170 ====
+// ==== TerrainSurfaceTypeNameGet @ 00435170 [Ghidra: FUN_00435170] ====
 
 
 char * FUN_00435170(int param_1)
@@ -35477,7 +35477,7 @@ char * FUN_00435170(int param_1)
 }
 
 
-// ==== FUN_00435190 @ 00435190 ====
+// ==== SurfaceTypeConfiguredValueAtIndex @ 00435190 [Ghidra: FUN_00435190] ====
 
 
 undefined4 FUN_00435190(int param_1)
@@ -35487,7 +35487,7 @@ undefined4 FUN_00435190(int param_1)
 }
 
 
-// ==== FUN_004351a0 @ 004351A0 ====
+// ==== ActionCodeToSoundAlias @ 004351A0 [Ghidra: FUN_004351a0] ====
 
 
 void FUN_004351a0(int param_1)
@@ -35528,7 +35528,7 @@ void FUN_004351a0(int param_1)
 }
 
 
-// ==== FUN_00435230 @ 00435230 ====
+// ==== RandomVariantCellScatter @ 00435230 [Ghidra: FUN_00435230] ====
 
 
 void FUN_00435230(int *param_1,int param_2,int param_3)
@@ -35673,7 +35673,7 @@ LAB_0043551b:
 }
 
 
-// ==== FUN_00435550 @ 00435550 ====
+// ==== GlobalStateZeroTransitionDetect @ 00435550 [Ghidra: FUN_00435550] ====
 
 
 undefined4 FUN_00435550(void)
@@ -35688,7 +35688,7 @@ undefined4 FUN_00435550(void)
 }
 
 
-// ==== FUN_00435580 @ 00435580 ====
+// ==== GlobalHandlePositionApplyIfPresent @ 00435580 [Ghidra: FUN_00435580] ====
 
 
 undefined4 FUN_00435580(void)
@@ -35707,7 +35707,7 @@ undefined4 FUN_00435580(void)
 }
 
 
-// ==== FUN_004355c0 @ 004355C0 ====
+// ==== MenuOptionPanelTextureUpdate @ 004355C0 [Ghidra: FUN_004355c0] ====
 
 
 undefined4 FUN_004355c0(undefined4 param_1,undefined4 param_2,int param_3,int param_4)
@@ -35792,7 +35792,7 @@ undefined4 FUN_004355c0(undefined4 param_1,undefined4 param_2,int param_3,int pa
 }
 
 
-// ==== FUN_00435940 @ 00435940 ====
+// ==== KeepRunning @ 00435940 [Ghidra: FUN_00435940] ====
 
 
 undefined4 FUN_00435940(void)
@@ -35850,7 +35850,7 @@ LAB_004359e5:
 }
 
 
-// ==== FUN_00435a20 @ 00435A20 ====
+// ==== GlobalStateLowByteClearAndRefresh @ 00435A20 [Ghidra: FUN_00435a20] ====
 
 
 void FUN_00435a20(void)
@@ -35862,7 +35862,7 @@ void FUN_00435a20(void)
 }
 
 
-// ==== FUN_00435a50 @ 00435A50 ====
+// ==== MainSimFeatureFlagLatch @ 00435A50 [Ghidra: FUN_00435a50] ====
 
 
 void FUN_00435a50(void)
@@ -35880,7 +35880,7 @@ void FUN_00435a50(void)
 }
 
 
-// ==== FUN_00435aa0 @ 00435AA0 ====
+// ==== PanelSelectionHighlightToggle @ 00435AA0 [Ghidra: FUN_00435aa0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -35904,7 +35904,7 @@ void FUN_00435aa0(int param_1)
 }
 
 
-// ==== FUN_00435b20 @ 00435B20 ====
+// ==== SceneObjectChainRecordCreate @ 00435B20 [Ghidra: FUN_00435b20] ====
 
 
 int * FUN_00435b20(undefined4 param_1,int param_2)
@@ -35974,7 +35974,7 @@ int * FUN_00435b20(undefined4 param_1,int param_2)
 }
 
 
-// ==== FUN_00435d91 @ 00435D91 ====
+// ==== EntityB8Bit3SetOrClear @ 00435D91 [Ghidra: FUN_00435d91] ====
 
 
 void FUN_00435d91(int param_1,int param_2)
@@ -35990,7 +35990,7 @@ void FUN_00435d91(int param_1,int param_2)
 }
 
 
-// ==== FUN_00435dc8 @ 00435DC8 ====
+// ==== CameraViewContextClose @ 00435DC8 [Ghidra: FUN_00435dc8] ====
 
 
 void FUN_00435dc8(int *param_1)
@@ -36006,7 +36006,7 @@ void FUN_00435dc8(int *param_1)
 }
 
 
-// ==== FUN_00435e0e @ 00435E0E ====
+// ==== CameraViewContextSet @ 00435E0E [Ghidra: FUN_00435e0e] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -36022,7 +36022,7 @@ void FUN_00435e0e(undefined4 param_1,undefined4 param_2,undefined4 param_3,undef
 }
 
 
-// ==== FUN_00435e35 @ 00435E35 ====
+// ==== ModelTransformCopyToSceneNode @ 00435E35 [Ghidra: FUN_00435e35] ====
 
 
 void FUN_00435e35(int *param_1,int param_2)
@@ -36048,7 +36048,7 @@ void FUN_00435e35(int *param_1,int param_2)
 }
 
 
-// ==== FUN_00435ebb @ 00435EBB ====
+// ==== ScreenEffectRecordSet @ 00435EBB [Ghidra: FUN_00435ebb] ====
 
 
 void FUN_00435ebb(int param_1,undefined4 param_2,undefined4 param_3,undefined4 param_4,
@@ -36064,7 +36064,7 @@ void FUN_00435ebb(int param_1,undefined4 param_2,undefined4 param_3,undefined4 p
 }
 
 
-// ==== FUN_00435ef4 @ 00435EF4 ====
+// ==== RecordFields4And14Set @ 00435EF4 [Ghidra: FUN_00435ef4] ====
 
 
 void FUN_00435ef4(int param_1,undefined4 param_2,undefined4 param_3)
@@ -36076,7 +36076,7 @@ void FUN_00435ef4(int param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_00435f0b @ 00435F0B ====
+// ==== RecordField14Get @ 00435F0B [Ghidra: FUN_00435f0b] ====
 
 
 undefined4 FUN_00435f0b(int param_1)
@@ -36086,7 +36086,7 @@ undefined4 FUN_00435f0b(int param_1)
 }
 
 
-// ==== FUN_00435f16 @ 00435F16 ====
+// ==== CursorScreenRayContextReset @ 00435F16 [Ghidra: FUN_00435f16] ====
 
 
 void FUN_00435f16(int param_1)
@@ -36097,7 +36097,7 @@ void FUN_00435f16(int param_1)
 }
 
 
-// ==== FUN_00435f28 @ 00435F28 ====
+// ==== TerrainGridBorderInsetGet @ 00435F28 [Ghidra: FUN_00435f28] ====
 
 
 undefined4 FUN_00435f28(void)
@@ -36107,7 +36107,7 @@ undefined4 FUN_00435f28(void)
 }
 
 
-// ==== FUN_00435f32 @ 00435F32 ====
+// ==== EntityFieldsA0A4StoreA8Clear @ 00435F32 [Ghidra: FUN_00435f32] ====
 
 
 void FUN_00435f32(int param_1,undefined4 param_2,undefined4 param_3)
@@ -36120,7 +36120,7 @@ void FUN_00435f32(int param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_00435f5c @ 00435F5C ====
+// ==== ViewContextTick @ 00435F5C [Ghidra: FUN_00435f5c] ====
 
 
 void FUN_00435f5c(int *param_1,int param_2,float param_3,float param_4)
@@ -36310,7 +36310,7 @@ LAB_00436718:
 }
 
 
-// ==== FUN_00436831 @ 00436831 ====
+// ==== CameraSetTiltBounds @ 00436831 [Ghidra: FUN_00436831] ====
 
 
 void FUN_00436831(int param_1,undefined4 param_2,undefined4 param_3)
@@ -36323,7 +36323,7 @@ void FUN_00436831(int param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_00436860 @ 00436860 ====
+// ==== CameraSetTilt @ 00436860 [Ghidra: FUN_00436860] ====
 
 
 void FUN_00436860(int param_1,float param_2)
@@ -36340,7 +36340,7 @@ void FUN_00436860(int param_1,float param_2)
 }
 
 
-// ==== FUN_00436900 @ 00436900 ====
+// ==== CameraPanAxisUpdate @ 00436900 [Ghidra: FUN_00436900] ====
 
 
 void FUN_00436900(int param_1,float param_2)
@@ -36351,7 +36351,7 @@ void FUN_00436900(int param_1,float param_2)
 }
 
 
-// ==== FUN_00436921 @ 00436921 ====
+// ==== CameraSetScalarBounds @ 00436921 [Ghidra: FUN_00436921] ====
 
 
 void FUN_00436921(int param_1,undefined4 param_2,undefined4 param_3)
@@ -36364,7 +36364,7 @@ void FUN_00436921(int param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_00436953 @ 00436953 ====
+// ==== CameraSetBoundedRotationValue @ 00436953 [Ghidra: FUN_00436953] ====
 
 
 void FUN_00436953(int param_1,float param_2)
@@ -36380,7 +36380,7 @@ void FUN_00436953(int param_1,float param_2)
 }
 
 
-// ==== FUN_004369f4 @ 004369F4 ====
+// ==== CameraTiltAxisUpdate @ 004369F4 [Ghidra: FUN_004369f4] ====
 
 
 void FUN_004369f4(int param_1,float param_2)
@@ -36391,7 +36391,7 @@ void FUN_004369f4(int param_1,float param_2)
 }
 
 
-// ==== FUN_00436a18 @ 00436A18 ====
+// ==== CameraSetDistanceBounds @ 00436A18 [Ghidra: FUN_00436a18] ====
 
 
 void FUN_00436a18(int param_1,undefined4 param_2,undefined4 param_3)
@@ -36404,7 +36404,7 @@ void FUN_00436a18(int param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_00436a4a @ 00436A4A ====
+// ==== CameraSetDistance @ 00436A4A [Ghidra: FUN_00436a4a] ====
 
 
 void FUN_00436a4a(int param_1,float param_2)
@@ -36418,7 +36418,7 @@ void FUN_00436a4a(int param_1,float param_2)
 }
 
 
-// ==== FUN_00436aa5 @ 00436AA5 ====
+// ==== CameraZoomUpdate @ 00436AA5 [Ghidra: FUN_00436aa5] ====
 
 
 void FUN_00436aa5(int param_1,float param_2)
@@ -36429,7 +36429,7 @@ void FUN_00436aa5(int param_1,float param_2)
 }
 
 
-// ==== FUN_00436ac9 @ 00436AC9 ====
+// ==== RendererNodeRelativePositionSet @ 00436AC9 [Ghidra: FUN_00436ac9] ====
 
 
 void FUN_00436ac9(int param_1,undefined4 param_2,undefined4 param_3)
@@ -36440,7 +36440,7 @@ void FUN_00436ac9(int param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_00436ae9 @ 00436AE9 ====
+// ==== SelectionRecordPointGet @ 00436AE9 [Ghidra: FUN_00436ae9] ====
 
 
 void FUN_00436ae9(int *param_1,undefined4 param_2)
@@ -36453,7 +36453,7 @@ void FUN_00436ae9(int *param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00436b0b @ 00436B0B ====
+// ==== SelectionRecordPointSet @ 00436B0B [Ghidra: FUN_00436b0b] ====
 
 
 void FUN_00436b0b(int *param_1,undefined4 param_2,undefined4 param_3)
@@ -36466,7 +36466,7 @@ void FUN_00436b0b(int *param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_00436b33 @ 00436B33 ====
+// ==== CameraGetPositionWithTerrainHeight @ 00436B33 [Ghidra: FUN_00436b33] ====
 
 
 undefined4 FUN_00436b33(int *param_1,undefined4 param_2,undefined4 *param_3)
@@ -36483,7 +36483,7 @@ undefined4 FUN_00436b33(int *param_1,undefined4 param_2,undefined4 *param_3)
 }
 
 
-// ==== FUN_00436b79 @ 00436B79 ====
+// ==== CameraRotationGet @ 00436B79 [Ghidra: FUN_00436b79] ====
 
 
 float10 FUN_00436b79(int param_1)
@@ -36493,7 +36493,7 @@ float10 FUN_00436b79(int param_1)
 }
 
 
-// ==== FUN_00436b87 @ 00436B87 ====
+// ==== CameraPointerPanUpdate @ 00436B87 [Ghidra: FUN_00436b87] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -36512,7 +36512,7 @@ void FUN_00436b87(int param_1,undefined4 param_2,float param_3)
 }
 
 
-// ==== FUN_00436c20 @ 00436C20 ====
+// ==== ActivityNameTableInit @ 00436C20 [Ghidra: FUN_00436c20] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -36644,7 +36644,7 @@ void FUN_00436c20(void)
 }
 
 
-// ==== FUN_00437050 @ 00437050 ====
+// ==== EntityPoolResourcesRelease @ 00437050 [Ghidra: FUN_00437050] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -36672,7 +36672,7 @@ void FUN_00437050(void)
 }
 
 
-// ==== FUN_004370b0 @ 004370B0 ====
+// ==== RenderConfigSixFieldCopyOut @ 004370B0 [Ghidra: FUN_004370b0] ====
 
 
 void FUN_004370b0(undefined4 *param_1)
@@ -36691,7 +36691,7 @@ void FUN_004370b0(undefined4 *param_1)
 }
 
 
-// ==== FUN_004370d0 @ 004370D0 ====
+// ==== RenderConfigSixFieldCopyInOrClear @ 004370D0 [Ghidra: FUN_004370d0] ====
 
 
 void FUN_004370d0(undefined4 *param_1)
@@ -36719,7 +36719,7 @@ void FUN_004370d0(undefined4 *param_1)
 }
 
 
-// ==== FUN_00437100 @ 00437100 ====
+// ==== GridRecordCountDifferenceSum @ 00437100 [Ghidra: FUN_00437100] ====
 
 
 int FUN_00437100(undefined4 param_1,int param_2)
@@ -36755,7 +36755,7 @@ LAB_00437124:
 }
 
 
-// ==== FUN_00437150 @ 00437150 ====
+// ==== ToolTipIconsConfigLoad @ 00437150 [Ghidra: FUN_00437150] ====
 
 
 void FUN_00437150(undefined4 param_1)
@@ -36819,7 +36819,7 @@ void FUN_00437150(undefined4 param_1)
 }
 
 
-// ==== FUN_004372a0 @ 004372A0 ====
+// ==== SpawnCoordinatePoolClear @ 004372A0 [Ghidra: FUN_004372a0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -36857,7 +36857,7 @@ void FUN_004372a0(void)
 }
 
 
-// ==== FUN_00437300 @ 00437300 ====
+// ==== ProcessQueuedGridAnimations @ 00437300 [Ghidra: FUN_00437300] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -36889,7 +36889,7 @@ void FUN_00437300(undefined4 param_1,int param_2,float param_3)
 }
 
 
-// ==== FUN_004373d0 @ 004373D0 ====
+// ==== EntityActivityToggle @ 004373D0 [Ghidra: FUN_004373d0] ====
 
 
 void FUN_004373d0(int param_1,int param_2)
@@ -36910,7 +36910,7 @@ void FUN_004373d0(int param_1,int param_2)
 }
 
 
-// ==== FUN_00437440 @ 00437440 ====
+// ==== GridRecordCountTablesClear @ 00437440 [Ghidra: FUN_00437440] ====
 
 
 void FUN_00437440(void)
@@ -36933,7 +36933,7 @@ void FUN_00437440(void)
 }
 
 
-// ==== FUN_00437460 @ 00437460 ====
+// ==== GridRecordCountDifferenceGet @ 00437460 [Ghidra: FUN_00437460] ====
 
 
 int FUN_00437460(int param_1,int param_2,int param_3,int param_4)
@@ -36950,7 +36950,7 @@ int FUN_00437460(int param_1,int param_2,int param_3,int param_4)
 }
 
 
-// ==== FUN_004374a0 @ 004374A0 ====
+// ==== GridRecordCountGet @ 004374A0 [Ghidra: FUN_004374a0] ====
 
 
 undefined4 FUN_004374a0(int param_1,int param_2,int param_3)
@@ -36960,7 +36960,7 @@ undefined4 FUN_004374a0(int param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_004374d0 @ 004374D0 ====
+// ==== TaskCounterIncrementByBranch @ 004374D0 [Ghidra: FUN_004374d0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -36977,7 +36977,7 @@ void FUN_004374d0(int param_1)
 }
 
 
-// ==== FUN_004374f0 @ 004374F0 ====
+// ==== EntityCallbackDispatchUnlessTypeFive @ 004374F0 [Ghidra: FUN_004374f0] ====
 
 
 void FUN_004374f0(int *param_1)
@@ -36990,7 +36990,7 @@ void FUN_004374f0(int *param_1)
 }
 
 
-// ==== FUN_00437540 @ 00437540 ====
+// ==== EntityTeardown @ 00437540 [Ghidra: FUN_00437540] ====
 
 
 undefined4 FUN_00437540(int *param_1)
@@ -37089,7 +37089,7 @@ LAB_0043778d:
 }
 
 
-// ==== FUN_004377b0 @ 004377B0 ====
+// ==== EntityPoolFindByCallbackFiltered @ 004377B0 [Ghidra: FUN_004377b0] ====
 
 
 void FUN_004377b0(undefined4 param_1,undefined4 param_2)
@@ -37100,7 +37100,7 @@ void FUN_004377b0(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_004377d0 @ 004377D0 ====
+// ==== EntityPoolFindByCallback @ 004377D0 [Ghidra: FUN_004377d0] ====
 
 
 undefined4 FUN_004377d0(code *param_1,undefined4 param_2,int param_3)
@@ -37145,7 +37145,7 @@ undefined4 FUN_004377d0(code *param_1,undefined4 param_2,int param_3)
 }
 
 
-// ==== FUN_00437880 @ 00437880 ====
+// ==== EntityRename @ 00437880 [Ghidra: FUN_00437880] ====
 
 
 void FUN_00437880(int param_1,char *param_2)
@@ -37170,7 +37170,7 @@ void FUN_00437880(int param_1,char *param_2)
 }
 
 
-// ==== FUN_004378e0 @ 004378E0 ====
+// ==== GridObjectRecordsRelease @ 004378E0 [Ghidra: FUN_004378e0] ====
 
 
 void FUN_004378e0(void)
@@ -37206,7 +37206,7 @@ void FUN_004378e0(void)
 }
 
 
-// ==== FUN_00437940 @ 00437940 ====
+// ==== DeferredOListEntityCreateAndLink @ 00437940 [Ghidra: FUN_00437940] ====
 
 
 void FUN_00437940(int *param_1)
@@ -37347,7 +37347,7 @@ void FUN_00437940(int *param_1)
 }
 
 
-// ==== FUN_00437c20 @ 00437C20 ====
+// ==== DeferredOListEntityQueueAdd @ 00437C20 [Ghidra: FUN_00437c20] ====
 
 
 void FUN_00437c20(undefined4 param_1,undefined4 param_2,undefined4 param_3,undefined4 *param_4,
@@ -37385,7 +37385,7 @@ void FUN_00437c20(undefined4 param_1,undefined4 param_2,undefined4 param_3,undef
 }
 
 
-// ==== FUN_00437cc0 @ 00437CC0 ====
+// ==== EntityFlag40000ThresholdCompare @ 00437CC0 [Ghidra: FUN_00437cc0] ====
 
 
 undefined4 FUN_00437cc0(int param_1)
@@ -37405,7 +37405,7 @@ undefined4 FUN_00437cc0(int param_1)
 }
 
 
-// ==== FUN_00437d00 @ 00437D00 ====
+// ==== EntityCreateByType @ 00437D00 [Ghidra: FUN_00437d00] ====
 
 
 int * FUN_00437d00(int param_1,int param_2,int param_3)
@@ -37614,7 +37614,7 @@ LAB_00438192:
 }
 
 
-// ==== FUN_004382c0 @ 004382C0 ====
+// ==== PooledRecordAllocateAndReset @ 004382C0 [Ghidra: FUN_004382c0] ====
 
 
 undefined4 * FUN_004382c0(void)
@@ -37641,7 +37641,7 @@ undefined4 * FUN_004382c0(void)
 }
 
 
-// ==== FUN_00438310 @ 00438310 ====
+// ==== PooledRecordChunkAllocateAndLink @ 00438310 [Ghidra: FUN_00438310] ====
 
 
 void FUN_00438310(void)
@@ -37675,7 +37675,7 @@ void FUN_00438310(void)
 }
 
 
-// ==== FUN_004383a0 @ 004383A0 ====
+// ==== GlobalAnimationStateSet @ 004383A0 [Ghidra: FUN_004383a0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -37688,7 +37688,7 @@ void FUN_004383a0(undefined4 param_1)
 }
 
 
-// ==== FUN_004383b0 @ 004383B0 ====
+// ==== RoverWorkQueueUpdate @ 004383B0 [Ghidra: FUN_004383b0] ====
 
 
 void FUN_004383b0(int *param_1,int param_2)
@@ -37726,7 +37726,7 @@ void FUN_004383b0(int *param_1,int param_2)
 }
 
 
-// ==== FUN_00438460 @ 00438460 ====
+// ==== EntityKindRecordUpdateDispatch @ 00438460 [Ghidra: FUN_00438460] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -37781,7 +37781,7 @@ void FUN_00438460(int *param_1)
 }
 
 
-// ==== FUN_00438580 @ 00438580 ====
+// ==== EntityFlag80000000SetOrClear @ 00438580 [Ghidra: FUN_00438580] ====
 
 
 void FUN_00438580(int param_1,int param_2)
@@ -37801,7 +37801,7 @@ void FUN_00438580(int param_1,int param_2)
 }
 
 
-// ==== FUN_004385b0 @ 004385B0 ====
+// ==== EntitySharedEligibilityCheck @ 004385B0 [Ghidra: FUN_004385b0] ====
 
 
 undefined4 FUN_004385b0(int param_1,int param_2)
@@ -37819,7 +37819,7 @@ undefined4 FUN_004385b0(int param_1,int param_2)
 }
 
 
-// ==== FUN_00438610 @ 00438610 ====
+// ==== EntityCreateWithPosition @ 00438610 [Ghidra: FUN_00438610] ====
 
 
 int * FUN_00438610(undefined4 param_1,undefined4 param_2,undefined4 param_3,undefined4 param_4,
@@ -37840,7 +37840,7 @@ int * FUN_00438610(undefined4 param_1,undefined4 param_2,undefined4 param_3,unde
 }
 
 
-// ==== FUN_00438670 @ 00438670 ====
+// ==== EntityAtGridPositionLookup @ 00438670 [Ghidra: FUN_00438670] ====
 
 
 undefined4 FUN_00438670(undefined4 *param_1)
@@ -37858,7 +37858,7 @@ undefined4 FUN_00438670(undefined4 *param_1)
 }
 
 
-// ==== FUN_00438720 @ 00438720 ====
+// ==== EntityAvailableResourceSpend @ 00438720 [Ghidra: FUN_00438720] ====
 
 
 undefined4 FUN_00438720(undefined4 param_1,int param_2)
@@ -37879,7 +37879,7 @@ undefined4 FUN_00438720(undefined4 param_1,int param_2)
 }
 
 
-// ==== FUN_00438770 @ 00438770 ====
+// ==== BuildingUpgradeResourceAdmissionCheck @ 00438770 [Ghidra: FUN_00438770] ====
 
 
 undefined4 FUN_00438770(undefined4 *param_1,uint *param_2)
@@ -37909,7 +37909,7 @@ undefined4 FUN_00438770(undefined4 *param_1,uint *param_2)
 }
 
 
-// ==== FUN_004387f0 @ 004387F0 ====
+// ==== BuildingUpgradeCommit @ 004387F0 [Ghidra: FUN_004387f0] ====
 
 
 void FUN_004387f0(int *param_1)
@@ -37943,7 +37943,7 @@ void FUN_004387f0(int *param_1)
 }
 
 
-// ==== FUN_004388b0 @ 004388B0 ====
+// ==== EntityActionKindPrerequisiteCheck @ 004388B0 [Ghidra: FUN_004388b0] ====
 
 
 undefined4 FUN_004388b0(int *param_1,undefined4 param_2)
@@ -38005,7 +38005,7 @@ undefined4 FUN_00438960(int param_1,int param_2)
 }
 
 
-// ==== FUN_004389e0 @ 004389E0 ====
+// ==== EntityRouteMarkerCandidateFind @ 004389E0 [Ghidra: FUN_004389e0] ====
 
 
 undefined4 FUN_004389e0(undefined4 param_1,int param_2)
@@ -38039,7 +38039,7 @@ undefined4 FUN_004389e0(undefined4 param_1,int param_2)
 }
 
 
-// ==== FUN_00438a60 @ 00438A60 ====
+// ==== SpatialObjectQueryCenterMask01 @ 00438A60 [Ghidra: FUN_00438a60] ====
 
 
 undefined4
@@ -38073,7 +38073,7 @@ FUN_00438a60(undefined4 *param_1,undefined4 param_2,undefined4 param_3,undefined
 }
 
 
-// ==== FUN_00438ae0 @ 00438AE0 ====
+// ==== SpatialObjectQueryCenterMask02 @ 00438AE0 [Ghidra: FUN_00438ae0] ====
 
 
 undefined4 FUN_00438ae0(int param_1,undefined4 *param_2,undefined4 param_3,undefined4 param_4)
@@ -38111,7 +38111,7 @@ undefined4 FUN_00438ae0(int param_1,undefined4 *param_2,undefined4 param_3,undef
 }
 
 
-// ==== FUN_00438b80 @ 00438B80 ====
+// ==== SpatialObjectQueryCenterMaskFromArgument @ 00438B80 [Ghidra: FUN_00438b80] ====
 
 
 undefined4 FUN_00438b80(undefined4 param_1,undefined4 param_2)
@@ -38142,7 +38142,7 @@ undefined4 FUN_00438b80(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00438bf0 @ 00438BF0 ====
+// ==== SpatialObjectQueryCenterMask80 @ 00438BF0 [Ghidra: FUN_00438bf0] ====
 
 
 undefined4 FUN_00438bf0(undefined4 param_1)
@@ -38173,7 +38173,7 @@ undefined4 FUN_00438bf0(undefined4 param_1)
 }
 
 
-// ==== FUN_00438c60 @ 00438C60 ====
+// ==== EntityCandidateSearch @ 00438C60 [Ghidra: FUN_00438c60] ====
 
 
 undefined4 FUN_00438c60(undefined4 param_1)
@@ -38204,7 +38204,7 @@ undefined4 FUN_00438c60(undefined4 param_1)
 }
 
 
-// ==== FUN_00438cd0 @ 00438CD0 ====
+// ==== SpatialObjectQueryCenterMask20 @ 00438CD0 [Ghidra: FUN_00438cd0] ====
 
 
 undefined4 FUN_00438cd0(undefined4 *param_1)
@@ -38234,7 +38234,7 @@ undefined4 FUN_00438cd0(undefined4 *param_1)
 }
 
 
-// ==== FUN_00438d30 @ 00438D30 ====
+// ==== SpatialObjectQueryCenterMask10 @ 00438D30 [Ghidra: FUN_00438d30] ====
 
 
 undefined4 FUN_00438d30(undefined4 *param_1)
@@ -38264,7 +38264,7 @@ undefined4 FUN_00438d30(undefined4 *param_1)
 }
 
 
-// ==== FUN_00438d90 @ 00438D90 ====
+// ==== SpatialObjectQueryCenterMask200 @ 00438D90 [Ghidra: FUN_00438d90] ====
 
 
 undefined4 FUN_00438d90(undefined4 *param_1)
@@ -38294,7 +38294,7 @@ undefined4 FUN_00438d90(undefined4 *param_1)
 }
 
 
-// ==== FUN_00438df0 @ 00438DF0 ====
+// ==== EntityLookupAtWorldPosition @ 00438DF0 [Ghidra: FUN_00438df0] ====
 
 
 undefined4 FUN_00438df0(undefined4 *param_1)
@@ -38324,7 +38324,7 @@ undefined4 FUN_00438df0(undefined4 *param_1)
 }
 
 
-// ==== FUN_00438e50 @ 00438E50 ====
+// ==== SpatialObjectQueryCenterMask100 @ 00438E50 [Ghidra: FUN_00438e50] ====
 
 
 undefined4 FUN_00438e50(int param_1,undefined4 *param_2,undefined4 param_3)
@@ -38361,7 +38361,7 @@ undefined4 FUN_00438e50(int param_1,undefined4 *param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_00438ed0 @ 00438ED0 ====
+// ==== EntityFlagsContainRequestedSingleBit @ 00438ED0 [Ghidra: FUN_00438ed0] ====
 
 
 undefined4 FUN_00438ed0(undefined4 param_1,int param_2)
@@ -38392,7 +38392,7 @@ undefined4 FUN_00438ed0(undefined4 param_1,int param_2)
 }
 
 
-// ==== FUN_00438f60 @ 00438F60 ====
+// ==== DockDefinitionMatchesCell @ 00438F60 [Ghidra: FUN_00438f60] ====
 
 
 undefined4 FUN_00438f60(int *param_1)
@@ -38410,7 +38410,7 @@ undefined4 FUN_00438f60(int *param_1)
 }
 
 
-// ==== FUN_00439200 @ 00439200 ====
+// ==== TaskKindFilteredSearch @ 00439200 [Ghidra: FUN_00439200] ====
 
 
 undefined4 FUN_00439200(int param_1)
@@ -38428,7 +38428,7 @@ undefined4 FUN_00439200(int param_1)
 }
 
 
-// ==== FUN_00439240 @ 00439240 ====
+// ==== TaskEntityFlagsAndCellTaskMatch @ 00439240 [Ghidra: FUN_00439240] ====
 
 
 undefined4 FUN_00439240(undefined4 param_1,undefined4 *param_2)
@@ -38448,7 +38448,7 @@ undefined4 FUN_00439240(undefined4 param_1,undefined4 *param_2)
 }
 
 
-// ==== FUN_00439280 @ 00439280 ====
+// ==== EntityBuildPlacementCommandBatchExpand @ 00439280 [Ghidra: FUN_00439280] ====
 
 
 void FUN_00439280(uint param_1)
@@ -38497,7 +38497,7 @@ void FUN_00439280(uint param_1)
 }
 
 
-// ==== FUN_00439340 @ 00439340 ====
+// ==== EntityBuildPlacementCommandPairCreate @ 00439340 [Ghidra: FUN_00439340] ====
 
 
 void FUN_00439340(undefined4 param_1,undefined4 param_2)
@@ -38509,7 +38509,7 @@ void FUN_00439340(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00439370 @ 00439370 ====
+// ==== EntityBuildPlacementCommandSetup @ 00439370 [Ghidra: FUN_00439370] ====
 
 
 void FUN_00439370(int *param_1,undefined4 param_2,float *param_3,int param_4)
@@ -38559,7 +38559,7 @@ void FUN_00439370(int *param_1,undefined4 param_2,float *param_3,int param_4)
 }
 
 
-// ==== FUN_004394b0 @ 004394B0 ====
+// ==== EntityBuildPlacementAlternateCommandSetup @ 004394B0 [Ghidra: FUN_004394b0] ====
 
 
 void FUN_004394b0(int *param_1,undefined4 param_2,float *param_3,int param_4)
@@ -38608,7 +38608,7 @@ void FUN_004394b0(int *param_1,undefined4 param_2,float *param_3,int param_4)
 }
 
 
-// ==== FUN_004395e0 @ 004395E0 ====
+// ==== EntityDisplayNameLookup @ 004395E0 [Ghidra: FUN_004395e0] ====
 
 
 undefined4 FUN_004395e0(undefined4 *param_1)
@@ -38647,7 +38647,7 @@ undefined4 FUN_004395e0(undefined4 *param_1)
 }
 
 
-// ==== FUN_004396c0 @ 004396C0 ====
+// ==== ItemNameByKindLookup @ 004396C0 [Ghidra: FUN_004396c0] ====
 
 
 undefined ** FUN_004396c0(uint param_1,int param_2)
@@ -38698,7 +38698,7 @@ undefined ** FUN_004396c0(uint param_1,int param_2)
 }
 
 
-// ==== FUN_00439790 @ 00439790 ====
+// ==== LocalizedObjectTheNameGet @ 00439790 [Ghidra: FUN_00439790] ====
 
 
 undefined4 FUN_00439790(undefined4 param_1,int param_2)
@@ -38737,7 +38737,7 @@ undefined4 FUN_00439790(undefined4 param_1,int param_2)
 }
 
 
-// ==== FUN_00439860 @ 00439860 ====
+// ==== LocalizedObjectNameGet @ 00439860 [Ghidra: FUN_00439860] ====
 
 
 undefined4 FUN_00439860(undefined4 param_1,int param_2)
@@ -38776,7 +38776,7 @@ undefined4 FUN_00439860(undefined4 param_1,int param_2)
 }
 
 
-// ==== FUN_00439930 @ 00439930 ====
+// ==== CopyTwoDwordPairToOutputs @ 00439930 [Ghidra: FUN_00439930] ====
 
 
 void FUN_00439930(undefined4 *param_1,undefined4 *param_2,undefined4 *param_3)
@@ -38788,7 +38788,7 @@ void FUN_00439930(undefined4 *param_1,undefined4 *param_2,undefined4 *param_3)
 }
 
 
-// ==== FUN_00439950 @ 00439950 ====
+// ==== ToolNameStringResourcesLoad @ 00439950 [Ghidra: FUN_00439950] ====
 
 
 void FUN_00439950(undefined4 param_1,undefined4 param_2)
@@ -38808,7 +38808,7 @@ void FUN_00439950(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00439990 @ 00439990 ====
+// ==== EntityActivitySceneStateUpdate @ 00439990 [Ghidra: FUN_00439990] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -38826,7 +38826,7 @@ void FUN_00439990(void)
 }
 
 
-// ==== FUN_004399c0 @ 004399C0 ====
+// ==== EntityFlag400AndHealthThresholdCheck @ 004399C0 [Ghidra: FUN_004399c0] ====
 
 
 undefined4 FUN_004399c0(int *param_1)
@@ -38852,7 +38852,7 @@ undefined4 FUN_004399c0(int *param_1)
 }
 
 
-// ==== FUN_00439a20 @ 00439A20 ====
+// ==== GatedStepCommandIssueWithTargetRecord @ 00439A20 [Ghidra: FUN_00439a20] ====
 
 
 undefined4 FUN_00439a20(int param_1,int param_2)
@@ -38903,7 +38903,7 @@ undefined4 FUN_00439a20(int param_1,int param_2)
 }
 
 
-// ==== FUN_00439b80 @ 00439B80 ====
+// ==== TaskTargetCellEligibilityCheck @ 00439B80 [Ghidra: FUN_00439b80] ====
 
 
 bool FUN_00439b80(int *param_1,undefined4 *param_2)
@@ -38926,7 +38926,7 @@ bool FUN_00439b80(int *param_1,undefined4 *param_2)
 }
 
 
-// ==== FUN_00439bd0 @ 00439BD0 ====
+// ==== EntityAcceptsTargetForTaskCheck @ 00439BD0 [Ghidra: FUN_00439bd0] ====
 
 
 undefined4 FUN_00439bd0(int *param_1,int *param_2,int param_3)
@@ -38967,7 +38967,7 @@ undefined4 FUN_00439bd0(int *param_1,int *param_2,int param_3)
 }
 
 
-// ==== FUN_00439c80 @ 00439C80 ====
+// ==== EntityIndexedFlagSetAndRefresh @ 00439C80 [Ghidra: FUN_00439c80] ====
 
 
 void FUN_00439c80(int *param_1)
@@ -38986,7 +38986,7 @@ void FUN_00439c80(int *param_1)
 }
 
 
-// ==== FUN_00439cd0 @ 00439CD0 ====
+// ==== EntityAnimationStateSet @ 00439CD0 [Ghidra: FUN_00439cd0] ====
 
 
 void FUN_00439cd0(undefined4 param_1,undefined4 param_2)
@@ -38997,7 +38997,7 @@ void FUN_00439cd0(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00439cf0 @ 00439CF0 ====
+// ==== EntityStatsWordFlag10Test @ 00439CF0 [Ghidra: FUN_00439cf0] ====
 
 
 uint FUN_00439cf0(undefined4 param_1)
@@ -39010,7 +39010,7 @@ uint FUN_00439cf0(undefined4 param_1)
 }
 
 
-// ==== FUN_00439d10 @ 00439D10 ====
+// ==== EntityStatsWordFlag20Test @ 00439D10 [Ghidra: FUN_00439d10] ====
 
 
 uint FUN_00439d10(undefined4 param_1)
@@ -39023,7 +39023,7 @@ uint FUN_00439d10(undefined4 param_1)
 }
 
 
-// ==== FUN_00439d30 @ 00439D30 ====
+// ==== EntityStatsWordFlag40Test @ 00439D30 [Ghidra: FUN_00439d30] ====
 
 
 uint FUN_00439d30(undefined4 param_1)
@@ -39036,7 +39036,7 @@ uint FUN_00439d30(undefined4 param_1)
 }
 
 
-// ==== FUN_00439d50 @ 00439D50 ====
+// ==== VehicleUnloadAdjacentCellFind @ 00439D50 [Ghidra: FUN_00439d50] ====
 
 
 undefined4 FUN_00439d50(undefined4 param_1,int *param_2)
@@ -39084,7 +39084,7 @@ undefined4 FUN_00439d50(undefined4 param_1,int *param_2)
 }
 
 
-// ==== FUN_00439e10 @ 00439E10 ====
+// ==== VehicleUnloadCellFindIfEligible @ 00439E10 [Ghidra: FUN_00439e10] ====
 
 
 undefined4 FUN_00439e10(undefined4 param_1,undefined4 param_2)
@@ -39102,7 +39102,7 @@ undefined4 FUN_00439e10(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00439e40 @ 00439E40 ====
+// ==== EntityRecordFlag20Query @ 00439E40 [Ghidra: FUN_00439e40] ====
 
 
 undefined4 FUN_00439e40(undefined4 param_1,undefined4 param_2)
@@ -39120,7 +39120,7 @@ undefined4 FUN_00439e40(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00439e70 @ 00439E70 ====
+// ==== EntityAttachedObjectListDetach @ 00439E70 [Ghidra: FUN_00439e70] ====
 
 
 void FUN_00439e70(uint param_1,int param_2)
@@ -39234,7 +39234,7 @@ LAB_00439fbe:
 }
 
 
-// ==== FUN_0043a120 @ 0043A120 ====
+// ==== CellStepCommandIssueWithJitter @ 0043A120 [Ghidra: FUN_0043a120] ====
 
 
 int FUN_0043a120(int *param_1,int *param_2,float *param_3,int param_4,int param_5)
@@ -39321,7 +39321,7 @@ int FUN_0043a120(int *param_1,int *param_2,float *param_3,int param_4,int param_
 }
 
 
-// ==== FUN_0043a300 @ 0043A300 ====
+// ==== EntityDepositActivityGate @ 0043A300 [Ghidra: FUN_0043a300] ====
 
 
 undefined4 FUN_0043a300(int param_1,int *param_2)
@@ -39433,7 +39433,7 @@ undefined4 FUN_0043a300(int param_1,int *param_2)
 }
 
 
-// ==== FUN_0043a5f0 @ 0043A5F0 ====
+// ==== EntityVisualResourceGetOrCreate @ 0043A5F0 [Ghidra: FUN_0043a5f0] ====
 
 
 void FUN_0043a5f0(int *param_1)
@@ -39463,7 +39463,7 @@ void FUN_0043a5f0(int *param_1)
 }
 
 
-// ==== FUN_0043a650 @ 0043A650 ====
+// ==== ActionKindEntityCreateAndCommandIssue @ 0043A650 [Ghidra: FUN_0043a650] ====
 
 
 int FUN_0043a650(int param_1,int param_2,int param_3,undefined4 param_4)
@@ -39529,7 +39529,7 @@ int FUN_0043a650(int param_1,int param_2,int param_3,undefined4 param_4)
 }
 
 
-// ==== FUN_0043a7c0 @ 0043A7C0 ====
+// ==== EntityActionKindSupported @ 0043A7C0 [Ghidra: FUN_0043a7c0] ====
 
 
 undefined4 FUN_0043a7c0(undefined4 param_1,int param_2,undefined4 param_3)
@@ -39569,7 +39569,7 @@ undefined4 FUN_0043a7c0(undefined4 param_1,int param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_0043a850 @ 0043A850 ====
+// ==== EntityActionRecordConsumeAndCleanup @ 0043A850 [Ghidra: FUN_0043a850] ====
 
 
 void FUN_0043a850(int *param_1,int *param_2)
@@ -39608,7 +39608,7 @@ void FUN_0043a850(int *param_1,int *param_2)
 }
 
 
-// ==== FUN_0043a8f0 @ 0043A8F0 ====
+// ==== SimulationUpdateCounterAdd @ 0043A8F0 [Ghidra: FUN_0043a8f0] ====
 
 
 void FUN_0043a8f0(undefined4 param_1,int param_2)
@@ -39622,7 +39622,7 @@ void FUN_0043a8f0(undefined4 param_1,int param_2)
 }
 
 
-// ==== FUN_0043a910 @ 0043A910 ====
+// ==== SimulationModeCounterAdd @ 0043A910 [Ghidra: FUN_0043a910] ====
 
 
 void FUN_0043a910(undefined4 param_1,int param_2)
@@ -39635,7 +39635,7 @@ void FUN_0043a910(undefined4 param_1,int param_2)
 }
 
 
-// ==== FUN_0043a930 @ 0043A930 ====
+// ==== TrackedEntityPointerArrayRemove @ 0043A930 [Ghidra: FUN_0043a930] ====
 
 
 void FUN_0043a930(int param_1)
@@ -39659,7 +39659,7 @@ void FUN_0043a930(int param_1)
 }
 
 
-// ==== FUN_0043a960 @ 0043A960 ====
+// ==== EntityLavaCrustActivityRegister @ 0043A960 [Ghidra: FUN_0043a960] ====
 
 
 void FUN_0043a960(int *param_1)
@@ -39685,7 +39685,7 @@ void FUN_0043a960(int *param_1)
 }
 
 
-// ==== FUN_0043a9e0 @ 0043A9E0 ====
+// ==== EntityQueueForRockfallProcessingIfEligible @ 0043A9E0 [Ghidra: FUN_0043a9e0] ====
 
 
 void FUN_0043a9e0(undefined4 param_1)
@@ -39696,7 +39696,7 @@ void FUN_0043a9e0(undefined4 param_1)
 }
 
 
-// ==== FUN_0043a9f0 @ 0043A9F0 ====
+// ==== EntityPairInteractionGate @ 0043A9F0 [Ghidra: FUN_0043a9f0] ====
 
 
 void FUN_0043a9f0(int param_1,int param_2)
@@ -39723,7 +39723,7 @@ void FUN_0043a9f0(int param_1,int param_2)
 }
 
 
-// ==== FUN_0043aab0 @ 0043AAB0 ====
+// ==== ProximityActivityRaise @ 0043AAB0 [Ghidra: FUN_0043aab0] ====
 
 
 void FUN_0043aab0(int *param_1)
@@ -39772,7 +39772,7 @@ void FUN_0043aab0(int *param_1)
 }
 
 
-// ==== FUN_0043abf0 @ 0043ABF0 ====
+// ==== TerrainCellVariantUpdateQueue @ 0043ABF0 [Ghidra: FUN_0043abf0] ====
 
 
 void FUN_0043abf0(undefined4 param_1)
@@ -39799,7 +39799,7 @@ void FUN_0043abf0(undefined4 param_1)
 }
 
 
-// ==== FUN_0043ad50 @ 0043AD50 ====
+// ==== PredugSpawnCoordinateSelectAndCreate @ 0043AD50 [Ghidra: FUN_0043ad50] ====
 
 
 int FUN_0043ad50(int param_1,int param_2)
@@ -39850,7 +39850,7 @@ int FUN_0043ad50(int param_1,int param_2)
 }
 
 
-// ==== FUN_0043aea0 @ 0043AEA0 ====
+// ==== EmergenceRandomSpawnAttempt @ 0043AEA0 [Ghidra: FUN_0043aea0] ====
 
 
 int FUN_0043aea0(void)
@@ -39884,7 +39884,7 @@ int FUN_0043aea0(void)
 }
 
 
-// ==== FUN_0043af30 @ 0043AF30 ====
+// ==== CreatureSpawnFromEmergence @ 0043AF30 [Ghidra: FUN_0043af30] ====
 
 
 int * FUN_0043af30(undefined4 param_1,float param_2,undefined4 param_3,int param_4,int param_5)
@@ -40005,7 +40005,7 @@ LAB_0043b257:
 }
 
 
-// ==== FUN_0043b270 @ 0043B270 ====
+// ==== EntityFrameUpdateDispatch @ 0043B270 [Ghidra: FUN_0043b270] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -40044,7 +40044,7 @@ void FUN_0043b270(float param_1)
 }
 
 
-// ==== FUN_0043b320 @ 0043B320 ====
+// ==== EntityIterationCallbackGuard @ 0043B320 [Ghidra: FUN_0043b320] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -40059,7 +40059,7 @@ void FUN_0043b320(void)
 }
 
 
-// ==== FUN_0043b360 @ 0043B360 ====
+// ==== TaskCountAtGridCoordinateQuery @ 0043B360 [Ghidra: FUN_0043b360] ====
 
 
 void FUN_0043b360(uint param_1,uint param_2,undefined4 *param_3)
@@ -40078,7 +40078,7 @@ void FUN_0043b360(uint param_1,uint param_2,undefined4 *param_3)
 }
 
 
-// ==== FUN_0043b6c0 @ 0043B6C0 ====
+// ==== ClippedRectangleCallbackDispatch @ 0043B6C0 [Ghidra: FUN_0043b6c0] ====
 
 
 void FUN_0043b6c0(undefined4 param_1,float *param_2,float *param_3)
@@ -40125,7 +40125,7 @@ void FUN_0043b6c0(undefined4 param_1,float *param_2,float *param_3)
 }
 
 
-// ==== FUN_0043b820 @ 0043B820 ====
+// ==== TypeTwoEntityEventDispatch @ 0043B820 [Ghidra: FUN_0043b820] ====
 
 
 void FUN_0043b820(int *param_1,undefined4 param_2,undefined4 param_3)
@@ -40139,7 +40139,7 @@ void FUN_0043b820(int *param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_0043b850 @ 0043B850 ====
+// ==== TypeTwoEntityPositionedCallbackDispatch @ 0043B850 [Ghidra: FUN_0043b850] ====
 
 
 void FUN_0043b850(int *param_1,undefined4 param_2,undefined4 param_3,undefined4 param_4,int param_5)
@@ -40173,7 +40173,7 @@ void FUN_0043b850(int *param_1,undefined4 param_2,undefined4 param_3,undefined4 
 }
 
 
-// ==== FUN_0043baf0 @ 0043BAF0 ====
+// ==== EntityFlagsMask107C33DEOr1C00203AnyTest @ 0043BAF0 [Ghidra: FUN_0043baf0] ====
 
 
 bool FUN_0043baf0(int param_1)
@@ -40186,7 +40186,7 @@ bool FUN_0043baf0(int param_1)
 }
 
 
-// ==== FUN_0043bb20 @ 0043BB20 ====
+// ==== BuildingDepositStateMonitor @ 0043BB20 [Ghidra: FUN_0043bb20] ====
 
 
 void FUN_0043bb20(int *param_1)
@@ -40223,7 +40223,7 @@ void FUN_0043bb20(int *param_1)
 }
 
 
-// ==== FUN_0043bbc0 @ 0043BBC0 ====
+// ==== EntityDetachCarriedObjectAndResetState @ 0043BBC0 [Ghidra: FUN_0043bbc0] ====
 
 
 void FUN_0043bbc0(int *param_1)
@@ -40250,7 +40250,7 @@ void FUN_0043bbc0(int *param_1)
 }
 
 
-// ==== FUN_0043bc40 @ 0043BC40 ====
+// ==== ObjectiveSidecarAppendGate @ 0043BC40 [Ghidra: FUN_0043bc40] ====
 
 
 void FUN_0043bc40(int *param_1)
@@ -40453,7 +40453,7 @@ LAB_0043c1e7:
 }
 
 
-// ==== FUN_0043c200 @ 0043C200 ====
+// ==== EntityStatePairPredicate @ 0043C200 [Ghidra: FUN_0043c200] ====
 
 
 undefined4 FUN_0043c200(undefined4 param_1,float param_2,undefined4 param_3,undefined4 param_4)
@@ -40478,7 +40478,7 @@ undefined4 FUN_0043c200(undefined4 param_1,float param_2,undefined4 param_3,unde
 }
 
 
-// ==== FUN_0043c280 @ 0043C280 ====
+// ==== EntityNestedFloatAddUnlessBlocked @ 0043C280 [Ghidra: FUN_0043c280] ====
 
 
 undefined4 FUN_0043c280(int *param_1,float *param_2)
@@ -40496,7 +40496,7 @@ undefined4 FUN_0043c280(int *param_1,float *param_2)
 }
 
 
-// ==== FUN_0043c2b0 @ 0043C2B0 ====
+// ==== PeriodicTimer25Advance @ 0043C2B0 [Ghidra: FUN_0043c2b0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -40513,7 +40513,7 @@ void FUN_0043c2b0(float param_1)
 }
 
 
-// ==== FUN_0043c3e0 @ 0043C3E0 ====
+// ==== EntityType26CommandCompletionGate @ 0043C3E0 [Ghidra: FUN_0043c3e0] ====
 
 
 undefined4 FUN_0043c3e0(int *param_1)
@@ -40536,7 +40536,7 @@ undefined4 FUN_0043c3e0(int *param_1)
 }
 
 
-// ==== FUN_0043c440 @ 0043C440 ====
+// ==== EntityCanDoActivityClassify @ 0043C440 [Ghidra: FUN_0043c440] ====
 
 
 byte FUN_0043c440(undefined4 param_1)
@@ -40557,7 +40557,7 @@ byte FUN_0043c440(undefined4 param_1)
 }
 
 
-// ==== FUN_0043c490 @ 0043C490 ====
+// ==== TaskTypeAndConditionCheck @ 0043C490 [Ghidra: FUN_0043c490] ====
 
 
 undefined4 FUN_0043c490(undefined4 param_1,undefined4 param_2,int param_3)
@@ -40573,7 +40573,7 @@ undefined4 FUN_0043c490(undefined4 param_1,undefined4 param_2,int param_3)
 }
 
 
-// ==== FUN_0043c4c0 @ 0043C4C0 ====
+// ==== EntityFinishState1A @ 0043C4C0 [Ghidra: FUN_0043c4c0] ====
 
 
 void FUN_0043c4c0(int param_1)
@@ -40595,7 +40595,7 @@ void FUN_0043c4c0(int param_1)
 }
 
 
-// ==== FUN_0043c530 @ 0043C530 ====
+// ==== EntityMarkAndFinishState1A @ 0043C530 [Ghidra: FUN_0043c530] ====
 
 
 void FUN_0043c530(int *param_1)
@@ -40610,7 +40610,7 @@ void FUN_0043c530(int *param_1)
 }
 
 
-// ==== FUN_0043c570 @ 0043C570 ====
+// ==== KindFourPostCreateResolve @ 0043C570 [Ghidra: FUN_0043c570] ====
 
 
 void FUN_0043c570(int *param_1)
@@ -40653,7 +40653,7 @@ void FUN_0043c570(int *param_1)
 }
 
 
-// ==== FUN_0043c650 @ 0043C650 ====
+// ==== EntityCapacityOrStatePredicate @ 0043C650 [Ghidra: FUN_0043c650] ====
 
 
 undefined4 FUN_0043c650(int param_1)
@@ -40729,7 +40729,7 @@ void FUN_0043c6b0(int *param_1,float param_2)
 }
 
 
-// ==== FUN_0043eea0 @ 0043EEA0 ====
+// ==== SimulationEntityQueueFlush @ 0043EEA0 [Ghidra: FUN_0043eea0] ====
 
 
 void FUN_0043eea0(int *param_1)
@@ -40829,7 +40829,7 @@ LAB_0043f055:
 }
 
 
-// ==== FUN_0043f100 @ 0043F100 ====
+// ==== LinkedEntityRouteFlagClear @ 0043F100 [Ghidra: FUN_0043f100] ====
 
 
 void FUN_0043f100(undefined4 param_1,int param_2)
@@ -40846,7 +40846,7 @@ void FUN_0043f100(undefined4 param_1,int param_2)
 }
 
 
-// ==== FUN_0043f150 @ 0043F150 ====
+// ==== EntitySpawnRequestQueueAdd @ 0043F150 [Ghidra: FUN_0043f150] ====
 
 
 undefined4 FUN_0043f150(undefined4 param_1,undefined4 param_2,undefined4 param_3)
@@ -40862,7 +40862,7 @@ undefined4 FUN_0043f150(undefined4 param_1,undefined4 param_2,undefined4 param_3
 }
 
 
-// ==== FUN_0043f190 @ 0043F190 ====
+// ==== EntitySpawnRequestQueueProcess @ 0043F190 [Ghidra: FUN_0043f190] ====
 
 
 void FUN_0043f190(int param_1)
@@ -40980,7 +40980,7 @@ void FUN_0043f190(int param_1)
 }
 
 
-// ==== FUN_0043f560 @ 0043F560 ====
+// ==== EntityPoolFindWithLocalPredicate @ 0043F560 [Ghidra: FUN_0043f560] ====
 
 
 void FUN_0043f560(undefined4 param_1)
@@ -40991,7 +40991,7 @@ void FUN_0043f560(undefined4 param_1)
 }
 
 
-// ==== FUN_0043f5b0 @ 0043F5B0 ====
+// ==== EntityLinkedActivityEventDispatch @ 0043F5B0 [Ghidra: FUN_0043f5b0] ====
 
 
 void FUN_0043f5b0(int *param_1,uint param_2)
@@ -41034,7 +41034,7 @@ void FUN_0043f5b0(int *param_1,uint param_2)
 }
 
 
-// ==== FUN_0043f6a0 @ 0043F6A0 ====
+// ==== EntityDamageApply @ 0043F6A0 [Ghidra: FUN_0043f6a0] ====
 
 
 void FUN_0043f6a0(int *param_1,float param_2,int param_3)
@@ -41076,7 +41076,7 @@ void FUN_0043f6a0(int *param_1,float param_2,int param_3)
 }
 
 
-// ==== FUN_0043f7d0 @ 0043F7D0 ====
+// ==== EntityEnergyLowTargetRouteCommandTick @ 0043F7D0 [Ghidra: FUN_0043f7d0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -41187,7 +41187,7 @@ void FUN_0043f7d0(int *param_1,float param_2)
 }
 
 
-// ==== FUN_0043fb40 @ 0043FB40 ====
+// ==== DamageHurtSoundSubmit @ 0043FB40 [Ghidra: FUN_0043fb40] ====
 
 
 undefined4 FUN_0043fb40(int *param_1,float param_2,float param_3)
@@ -41225,7 +41225,7 @@ undefined4 FUN_0043fb40(int *param_1,float param_2,float param_3)
 }
 
 
-// ==== FUN_0043fc20 @ 0043FC20 ====
+// ==== RecordPairPoseCopyAndActivityRaise @ 0043FC20 [Ghidra: FUN_0043fc20] ====
 
 
 undefined4 FUN_0043fc20(int param_1)
@@ -41287,7 +41287,7 @@ undefined4 FUN_0043fc20(int param_1)
 }
 
 
-// ==== FUN_0043fdc0 @ 0043FDC0 ====
+// ==== EntityActionTargetCellIsValid @ 0043FDC0 [Ghidra: FUN_0043fdc0] ====
 
 
 undefined4 FUN_0043fdc0(int param_1)
@@ -41322,7 +41322,7 @@ undefined4 FUN_0043fdc0(int param_1)
 }
 
 
-// ==== FUN_0043fe70 @ 0043FE70 ====
+// ==== EntityRouteToExplicitTarget @ 0043FE70 [Ghidra: FUN_0043fe70] ====
 
 
 undefined4 FUN_0043fe70(int param_1,undefined4 param_2)
@@ -41381,7 +41381,7 @@ undefined4 FUN_0043fe70(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0043fff0 @ 0043FFF0 ====
+// ==== EntityRouteMarkerSetup @ 0043FFF0 [Ghidra: FUN_0043fff0] ====
 
 
 undefined4 FUN_0043fff0(int param_1)
@@ -41432,7 +41432,7 @@ undefined4 FUN_0043fff0(int param_1)
 }
 
 
-// ==== FUN_00440130 @ 00440130 ====
+// ==== EntityUpdateAndUnregisterAtTile @ 00440130 [Ghidra: FUN_00440130] ====
 
 
 void FUN_00440130(undefined4 param_1,int *param_2)
@@ -41463,7 +41463,7 @@ void FUN_00440130(undefined4 param_1,int *param_2)
 }
 
 
-// ==== FUN_004401b0 @ 004401B0 ====
+// ==== TerrainCellToWorldPosition @ 004401B0 [Ghidra: FUN_004401b0] ====
 
 
 undefined4 FUN_004401b0(int param_1,int param_2)
@@ -41545,7 +41545,7 @@ LAB_00440307:
 }
 
 
-// ==== FUN_004403d0 @ 004403D0 ====
+// ==== LevelDebugCellRetargetDispatch @ 004403D0 [Ghidra: FUN_004403d0] ====
 
 
 undefined4 FUN_004403d0(int *param_1,int param_2)
@@ -41676,7 +41676,7 @@ undefined4 FUN_004403d0(int *param_1,int param_2)
 }
 
 
-// ==== FUN_004407b0 @ 004407B0 ====
+// ==== SpatialEntityCallbackQuery @ 004407B0 [Ghidra: FUN_004407b0] ====
 
 
 void FUN_004407b0(undefined4 param_1,undefined4 param_2,undefined4 param_3,undefined4 param_4)
@@ -41699,7 +41699,7 @@ void FUN_004407b0(undefined4 param_1,undefined4 param_2,undefined4 param_3,undef
 }
 
 
-// ==== FUN_004408c0 @ 004408C0 ====
+// ==== SpatialEntityCallbackQueryAtOptionalCoordinate @ 004408C0 [Ghidra: FUN_004408c0] ====
 
 
 void FUN_004408c0(undefined4 param_1,undefined4 *param_2,undefined4 param_3)
@@ -41724,7 +41724,7 @@ void FUN_004408c0(undefined4 param_1,undefined4 *param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_004409e0 @ 004409E0 ====
+// ==== EntityActivityRequestSet @ 004409E0 [Ghidra: FUN_004409e0] ====
 
 
 void FUN_004409e0(int param_1,int param_2,undefined4 param_3)
@@ -41737,7 +41737,7 @@ void FUN_004409e0(int param_1,int param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_00440a10 @ 00440A10 ====
+// ==== AttachedEntityDirectionVectorUpdate @ 00440A10 [Ghidra: FUN_00440a10] ====
 
 
 void FUN_00440a10(int *param_1)
@@ -41813,7 +41813,7 @@ LAB_00440ad3:
 }
 
 
-// ==== FUN_00440bf0 @ 00440BF0 ====
+// ==== ObjectListFieldAssignAll @ 00440BF0 [Ghidra: FUN_00440bf0] ====
 
 
 void FUN_00440bf0(int *param_1,undefined4 param_2)
@@ -41836,7 +41836,7 @@ void FUN_00440bf0(int *param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00440c30 @ 00440C30 ====
+// ==== GridRouteSearchAdapter @ 00440C30 [Ghidra: FUN_00440c30] ====
 
 
 void FUN_00440c30(undefined4 param_1,undefined4 param_2,undefined4 param_3,undefined4 param_4,
@@ -41848,7 +41848,7 @@ void FUN_00440c30(undefined4 param_1,undefined4 param_2,undefined4 param_3,undef
 }
 
 
-// ==== FUN_00440c70 @ 00440C70 ====
+// ==== TerrainGridPathSearch @ 00440C70 [Ghidra: FUN_00440c70] ====
 
 
 undefined4
@@ -42066,7 +42066,7 @@ LAB_00440d61:
 }
 
 
-// ==== FUN_004410f0 @ 004410F0 ====
+// ==== TerrainNeighborPathCheck @ 004410F0 [Ghidra: FUN_004410f0] ====
 
 
 undefined4 FUN_004410f0(void)
@@ -42339,7 +42339,7 @@ LAB_004411fe:
 }
 
 
-// ==== FUN_00441700 @ 00441700 ====
+// ==== EntityRouteSetupAndMarkerAssociate @ 00441700 [Ghidra: FUN_00441700] ====
 
 
 undefined4 FUN_00441700(int param_1,uint param_2,float *param_3,float *param_4,int param_5)
@@ -42436,7 +42436,7 @@ undefined4 FUN_00441700(int param_1,uint param_2,float *param_3,float *param_4,i
 }
 
 
-// ==== FUN_00441940 @ 00441940 ====
+// ==== EntityActionSequenceReset @ 00441940 [Ghidra: FUN_00441940] ====
 
 
 void FUN_00441940(int *param_1,int param_2)
@@ -42519,7 +42519,7 @@ LAB_004419e7:
 }
 
 
-// ==== FUN_00441b30 @ 00441B30 ====
+// ==== EntityStateReset @ 00441B30 [Ghidra: FUN_00441b30] ====
 
 
 void FUN_00441b30(int param_1,int param_2,int param_3)
@@ -42634,7 +42634,7 @@ LAB_00441da5:
 }
 
 
-// ==== FUN_00441ea0 @ 00441EA0 ====
+// ==== EntityType5FinalizeIfAllowed @ 00441EA0 [Ghidra: FUN_00441ea0] ====
 
 
 void FUN_00441ea0(int *param_1)
@@ -42648,7 +42648,7 @@ void FUN_00441ea0(int *param_1)
 }
 
 
-// ==== FUN_00441ed0 @ 00441ED0 ====
+// ==== EntityFaceTargetActionStart @ 00441ED0 [Ghidra: FUN_00441ed0] ====
 
 
 undefined4 FUN_00441ed0(int param_1,int *param_2,int param_3)
@@ -42728,7 +42728,7 @@ LAB_0044207f:
 }
 
 
-// ==== FUN_004420d0 @ 004420D0 ====
+// ==== KindEffectSlotInitDispatch @ 004420D0 [Ghidra: FUN_004420d0] ====
 
 
 void FUN_004420d0(int param_1,undefined4 param_2)
@@ -42770,7 +42770,7 @@ void FUN_004420d0(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00442210 @ 00442210 ====
+// ==== EntityActionRouteStateInitialize @ 00442210 [Ghidra: FUN_00442210] ====
 
 
 void FUN_00442210(int param_1)
@@ -42789,7 +42789,7 @@ void FUN_00442210(int param_1)
 }
 
 
-// ==== FUN_00442260 @ 00442260 ====
+// ==== EntityTransformPositionGet @ 00442260 [Ghidra: FUN_00442260] ====
 
 
 void FUN_00442260(undefined4 param_1,undefined4 *param_2,undefined4 *param_3)
@@ -42807,7 +42807,7 @@ void FUN_00442260(undefined4 param_1,undefined4 *param_2,undefined4 *param_3)
 }
 
 
-// ==== FUN_004422a0 @ 004422A0 ====
+// ==== SurfaceVectorNormalize @ 004422A0 [Ghidra: FUN_004422a0] ====
 
 
 void FUN_004422a0(undefined4 param_1,float *param_2)
@@ -42827,7 +42827,7 @@ void FUN_004422a0(undefined4 param_1,float *param_2)
 }
 
 
-// ==== FUN_00442300 @ 00442300 ====
+// ==== EntityVelocityVectorDispatch @ 00442300 [Ghidra: FUN_00442300] ====
 
 
 void FUN_00442300(int *param_1,undefined4 param_2,float *param_3)
@@ -42882,7 +42882,7 @@ void FUN_00442300(int *param_1,undefined4 param_2,float *param_3)
 }
 
 
-// ==== FUN_00442480 @ 00442480 ====
+// ==== VectorDirectionAngleRadiansGet @ 00442480 [Ghidra: FUN_00442480] ====
 
 
 float10 FUN_00442480(undefined4 param_1)
@@ -42900,7 +42900,7 @@ float10 FUN_00442480(undefined4 param_1)
 }
 
 
-// ==== FUN_004424f0 @ 004424F0 ====
+// ==== EntityPositionToTerrainCell @ 004424F0 [Ghidra: FUN_004424f0] ====
 
 
 void FUN_004424f0(undefined4 param_1,undefined4 param_2,undefined4 param_3)
@@ -42918,7 +42918,7 @@ void FUN_004424f0(undefined4 param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_00442540 @ 00442540 ====
+// ==== GridOperationArgumentAdapter @ 00442540 [Ghidra: FUN_00442540] ====
 
 
 void FUN_00442540(undefined4 param_1,undefined4 param_2,undefined4 param_3)
@@ -42929,7 +42929,7 @@ void FUN_00442540(undefined4 param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_004425f0 @ 004425F0 ====
+// ==== SubobjectPoseDeltaNormalizeAndDispatch @ 004425F0 [Ghidra: FUN_004425f0] ====
 
 
 void FUN_004425f0(int *param_1,float param_2,float param_3)
@@ -43020,7 +43020,7 @@ void FUN_004425f0(int *param_1,float param_2,float param_3)
 }
 
 
-// ==== FUN_004428a0 @ 004428A0 ====
+// ==== EntityWorldPositionSet @ 004428A0 [Ghidra: FUN_004428a0] ====
 
 
 void FUN_004428a0(int *param_1,float param_2,float param_3,undefined4 param_4,int param_5)
@@ -43098,7 +43098,7 @@ void FUN_004428a0(int *param_1,float param_2,float param_3,undefined4 param_4,in
 }
 
 
-// ==== FUN_00442b10 @ 00442B10 ====
+// ==== EntityMovementAccumulatorApply @ 00442B10 [Ghidra: FUN_00442b10] ====
 
 
 int FUN_00442b10(int *param_1,float param_2,undefined4 *param_3)
@@ -43246,7 +43246,7 @@ LAB_00442f50:
 }
 
 
-// ==== FUN_00442f80 @ 00442F80 ====
+// ==== EntityPoseOrientationDispatch @ 00442F80 [Ghidra: FUN_00442f80] ====
 
 
 void FUN_00442f80(int *param_1,float param_2)
@@ -43399,7 +43399,7 @@ LAB_00443354:
 }
 
 
-// ==== FUN_00443510 @ 00443510 ====
+// ==== SceneObjectPosePositionSync @ 00443510 [Ghidra: FUN_00443510] ====
 
 
 void FUN_00443510(int *param_1)
@@ -43449,7 +43449,7 @@ LAB_0044354f:
 }
 
 
-// ==== FUN_00443670 @ 00443670 ====
+// ==== TryRandomEntityActionFromCodeRange @ 00443670 [Ghidra: FUN_00443670] ====
 
 
 undefined4 FUN_00443670(int param_1)
@@ -43480,7 +43480,7 @@ undefined4 FUN_00443670(int param_1)
 }
 
 
-// ==== FUN_004436f0 @ 004436F0 ====
+// ==== EntityType3Flag04000000Test @ 004436F0 [Ghidra: FUN_004436f0] ====
 
 
 undefined4 FUN_004436f0(int *param_1)
@@ -43493,7 +43493,7 @@ undefined4 FUN_004436f0(int *param_1)
 }
 
 
-// ==== FUN_00443710 @ 00443710 ====
+// ==== AdjacentPositionCandidateFind @ 00443710 [Ghidra: FUN_00443710] ====
 
 
 undefined4 FUN_00443710(int param_1,undefined4 *param_2,undefined4 *param_3)
@@ -43527,7 +43527,7 @@ undefined4 FUN_00443710(int param_1,undefined4 *param_2,undefined4 *param_3)
 }
 
 
-// ==== FUN_004437f0 @ 004437F0 ====
+// ==== EntityDispatchEvent31ForPendingFlag @ 004437F0 [Ghidra: FUN_004437f0] ====
 
 
 void FUN_004437f0(int *param_1)
@@ -43543,7 +43543,7 @@ void FUN_004437f0(int *param_1)
 }
 
 
-// ==== FUN_00443840 @ 00443840 ====
+// ==== EntityRouteCellCandidateAccept @ 00443840 [Ghidra: FUN_00443840] ====
 
 
 undefined4 FUN_00443840(undefined4 param_1,undefined4 *param_2,int *param_3)
@@ -43563,7 +43563,7 @@ undefined4 FUN_00443840(undefined4 param_1,undefined4 *param_2,int *param_3)
 }
 
 
-// ==== FUN_004438b0 @ 004438B0 ====
+// ==== PathStepAdvanceAndArrivalCheck @ 004438B0 [Ghidra: FUN_004438b0] ====
 
 
 float FUN_004438b0(float *param_1,float param_2)
@@ -43838,7 +43838,7 @@ float FUN_004438b0(float *param_1,float param_2)
 }
 
 
-// ==== FUN_004440a0 @ 004440A0 ====
+// ==== LinkedEntityFlagAndCommandUpdate @ 004440A0 [Ghidra: FUN_004440a0] ====
 
 
 void FUN_004440a0(int param_1)
@@ -43856,7 +43856,7 @@ void FUN_004440a0(int param_1)
 }
 
 
-// ==== FUN_004440f0 @ 004440F0 ====
+// ==== ActivityTimeoutAccumulateAndRaise @ 004440F0 [Ghidra: FUN_004440f0] ====
 
 
 void FUN_004440f0(int *param_1,float param_2)
@@ -43895,7 +43895,7 @@ void FUN_004440f0(int *param_1,float param_2)
 }
 
 
-// ==== FUN_00444260 @ 00444260 ====
+// ==== EntityRandomCellStepRouteIssue @ 00444260 [Ghidra: FUN_00444260] ====
 
 
 undefined4 FUN_00444260(undefined4 param_1)
@@ -43978,7 +43978,7 @@ undefined4 FUN_00444260(undefined4 param_1)
 }
 
 
-// ==== FUN_00444460 @ 00444460 ====
+// ==== FlaggedVectorStepCommandIssue @ 00444460 [Ghidra: FUN_00444460] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -44037,7 +44037,7 @@ void FUN_00444460(int *param_1,float *param_2)
 }
 
 
-// ==== FUN_00444620 @ 00444620 ====
+// ==== EntityEnterEvent21StateOnce @ 00444620 [Ghidra: FUN_00444620] ====
 
 
 void FUN_00444620(int param_1)
@@ -44054,7 +44054,7 @@ void FUN_00444620(int param_1)
 }
 
 
-// ==== FUN_00444680 @ 00444680 ====
+// ==== StepMovementVectorResolve @ 00444680 [Ghidra: FUN_00444680] ====
 
 
 undefined4 FUN_00444680(int *param_1,int param_2,int param_3,int param_4)
@@ -44340,7 +44340,7 @@ LAB_00444b4b:
 }
 
 
-// ==== FUN_00444fb0 @ 00444FB0 ====
+// ==== EntityTurnToVectorActivityIssue @ 00444FB0 [Ghidra: FUN_00444fb0] ====
 
 
 void FUN_00444fb0(int *param_1,float *param_2)
@@ -44408,7 +44408,7 @@ LAB_004451a1:
 }
 
 
-// ==== FUN_004451e0 @ 004451E0 ====
+// ==== EntityPathStepVectorNormalize @ 004451E0 [Ghidra: FUN_004451e0] ====
 
 
 void FUN_004451e0(int param_1)
@@ -44468,7 +44468,7 @@ void FUN_004451e0(int param_1)
 }
 
 
-// ==== FUN_004455a0 @ 004455A0 ====
+// ==== EntityMoveVectorSurfaceProbe @ 004455A0 [Ghidra: FUN_004455a0] ====
 
 
 undefined4 FUN_004455a0(int param_1)
@@ -44512,7 +44512,7 @@ undefined4 FUN_004455a0(int param_1)
 }
 
 
-// ==== FUN_004456e0 @ 004456E0 ====
+// ==== EntityBehaviorCallbackTick @ 004456E0 [Ghidra: FUN_004456e0] ====
 
 
 void FUN_004456e0(int *param_1)
@@ -44535,7 +44535,7 @@ void FUN_004456e0(int *param_1)
 }
 
 
-// ==== FUN_00445d70 @ 00445D70 ====
+// ==== EntityFlagGatedCallbackDispatch @ 00445D70 [Ghidra: FUN_00445d70] ====
 
 
 undefined4 FUN_00445d70(undefined4 param_1,undefined4 param_2,undefined4 param_3,undefined4 param_4)
@@ -44565,7 +44565,7 @@ undefined4 FUN_00445d70(undefined4 param_1,undefined4 param_2,undefined4 param_3
 }
 
 
-// ==== FUN_00446610 @ 00446610 ====
+// ==== EntityMovementTickScaleAndDeltaGet @ 00446610 [Ghidra: FUN_00446610] ====
 
 
 void FUN_00446610(int *param_1,float param_2,float *param_3,float *param_4)
@@ -44710,7 +44710,7 @@ undefined4 FUN_004468c0(int param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_004469c0 @ 004469C0 ====
+// ==== EntityNearestConnectedTerrainCellRouteSelect @ 004469C0 [Ghidra: FUN_004469c0] ====
 
 
 undefined4
@@ -44899,7 +44899,7 @@ LAB_00446d8f:
 }
 
 
-// ==== FUN_00446e40 @ 00446E40 ====
+// ==== EntityNearestCellRouteCommit @ 00446E40 [Ghidra: FUN_00446e40] ====
 
 
 undefined4 FUN_00446e40(int param_1,uint param_2,uint param_3,int param_4)
@@ -44975,7 +44975,7 @@ undefined4 FUN_00446e40(int param_1,uint param_2,uint param_3,int param_4)
 }
 
 
-// ==== FUN_0044702d @ 0044702D ====
+// ==== RegisterRelativeStateUpdateFragment @ 0044702D [Ghidra: FUN_0044702d] ====
 
 
 undefined4 FUN_0044702d(void)
@@ -44999,7 +44999,7 @@ undefined4 FUN_0044702d(void)
 }
 
 
-// ==== FUN_004470d0 @ 004470D0 ====
+// ==== EntityConditionalTypeFiveSpawn @ 004470D0 [Ghidra: FUN_004470d0] ====
 
 
 undefined4 FUN_004470d0(int param_1)
@@ -45035,7 +45035,7 @@ undefined4 FUN_004470d0(int param_1)
 }
 
 
-// ==== FUN_004471b0 @ 004471B0 ====
+// ==== TryCreateLinkedEntityAtPosition @ 004471B0 [Ghidra: FUN_004471b0] ====
 
 
 undefined4 FUN_004471b0(int param_1,undefined4 param_2,undefined4 param_3,int param_4)
@@ -45056,7 +45056,7 @@ undefined4 FUN_004471b0(int param_1,undefined4 param_2,undefined4 param_3,int pa
 }
 
 
-// ==== FUN_00447210 @ 00447210 ====
+// ==== EntityAdjacentPlacementCellSearch @ 00447210 [Ghidra: FUN_00447210] ====
 
 
 undefined4 FUN_00447210(int *param_1,int param_2)
@@ -45135,7 +45135,7 @@ undefined4 FUN_00447210(int *param_1,int param_2)
 }
 
 
-// ==== FUN_004473b0 @ 004473B0 ====
+// ==== RouteToCellCommandIssue @ 004473B0 [Ghidra: FUN_004473b0] ====
 
 
 int FUN_004473b0(int param_1,int param_2,int param_3,undefined4 param_4)
@@ -45182,7 +45182,7 @@ int FUN_004473b0(int param_1,int param_2,int param_3,undefined4 param_4)
 }
 
 
-// ==== FUN_004474f0 @ 004474F0 ====
+// ==== LinkedEntityProximityResponse @ 004474F0 [Ghidra: FUN_004474f0] ====
 
 
 void FUN_004474f0(int param_1)
@@ -45220,7 +45220,7 @@ void FUN_004474f0(int param_1)
 }
 
 
-// ==== FUN_004475c0 @ 004475C0 ====
+// ==== EntityProgressAndNegativeDeltaHandler @ 004475C0 [Ghidra: FUN_004475c0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -45285,7 +45285,7 @@ LAB_00447711:
 }
 
 
-// ==== FUN_00447730 @ 00447730 ====
+// ==== EntityProgressAdvanceBy25 @ 00447730 [Ghidra: FUN_00447730] ====
 
 
 undefined4 FUN_00447730(int param_1)
@@ -45304,7 +45304,7 @@ undefined4 FUN_00447730(int param_1)
 }
 
 
-// ==== FUN_00447780 @ 00447780 ====
+// ==== EntityClearLinkedObjectState @ 00447780 [Ghidra: FUN_00447780] ====
 
 
 void FUN_00447780(int param_1)
@@ -45324,7 +45324,7 @@ void FUN_00447780(int param_1)
 }
 
 
-// ==== FUN_004477d0 @ 004477D0 ====
+// ==== PathStepLookaheadEntryWrite @ 004477D0 [Ghidra: FUN_004477d0] ====
 
 
 void FUN_004477d0(int param_1)
@@ -45373,7 +45373,7 @@ void FUN_004477d0(int param_1)
 }
 
 
-// ==== FUN_00447900 @ 00447900 ====
+// ==== TypeFourEntityCallbackDispatch @ 00447900 [Ghidra: FUN_00447900] ====
 
 
 void FUN_00447900(int *param_1)
@@ -45386,7 +45386,7 @@ void FUN_00447900(int *param_1)
 }
 
 
-// ==== FUN_00447950 @ 00447950 ====
+// ==== EntityDirectionalActivityStart @ 00447950 [Ghidra: FUN_00447950] ====
 
 
 void FUN_00447950(int *param_1,float *param_2,int param_3)
@@ -45450,7 +45450,7 @@ void FUN_00447950(int *param_1,float *param_2,int param_3)
 }
 
 
-// ==== FUN_00447b00 @ 00447B00 ====
+// ==== EntityDispatchEvent5AndSetFlag @ 00447B00 [Ghidra: FUN_00447b00] ====
 
 
 void FUN_00447b00(int param_1)
@@ -45463,7 +45463,7 @@ void FUN_00447b00(int param_1)
 }
 
 
-// ==== FUN_00447b30 @ 00447B30 ====
+// ==== EntityActivityTick @ 00447B30 [Ghidra: FUN_00447b30] ====
 
 
 float10 FUN_00447b30(int *param_1,float param_2)
@@ -45508,7 +45508,7 @@ LAB_00447c11:
 }
 
 
-// ==== FUN_00447c40 @ 00447C40 ====
+// ==== SceneActivityUpdateDispatch @ 00447C40 [Ghidra: FUN_00447c40] ====
 
 
 undefined4 FUN_00447c40(undefined4 *param_1)
@@ -45576,7 +45576,7 @@ switchD_00447cbd_default:
 }
 
 
-// ==== FUN_00447ea0 @ 00447EA0 ====
+// ==== EntityTypeBehaviorUpdate @ 00447EA0 [Ghidra: FUN_00447ea0] ====
 
 
 void FUN_00447ea0(int *param_1,float param_2)
@@ -45859,7 +45859,7 @@ LAB_0044846d:
 }
 
 
-// ==== FUN_004487c0 @ 004487C0 ====
+// ==== EntityClearNestedState8Fields @ 004487C0 [Ghidra: FUN_004487c0] ====
 
 
 void FUN_004487c0(int param_1)
@@ -45874,7 +45874,7 @@ void FUN_004487c0(int param_1)
 }
 
 
-// ==== FUN_00448800 @ 00448800 ====
+// ==== EntityMoveToCellCoordinates @ 00448800 [Ghidra: FUN_00448800] ====
 
 
 undefined4 FUN_00448800(int param_1,int *param_2)
@@ -45899,7 +45899,7 @@ undefined4 FUN_00448800(int param_1,int *param_2)
 }
 
 
-// ==== FUN_00448880 @ 00448880 ====
+// ==== RecordGatedStepCommandIssue @ 00448880 [Ghidra: FUN_00448880] ====
 
 
 undefined4 FUN_00448880(int param_1,int *param_2)
@@ -45943,7 +45943,7 @@ undefined4 FUN_00448880(int param_1,int *param_2)
 }
 
 
-// ==== FUN_004489a0 @ 004489A0 ====
+// ==== EntityKind6TickDownMarkerSpawn @ 004489A0 [Ghidra: FUN_004489a0] ====
 
 
 undefined4 FUN_004489a0(undefined4 param_1)
@@ -45972,7 +45972,7 @@ undefined4 FUN_004489a0(undefined4 param_1)
 }
 
 
-// ==== FUN_00448a60 @ 00448A60 ====
+// ==== EntityNeighborCellMoveCommandHandle @ 00448A60 [Ghidra: FUN_00448a60] ====
 
 
 undefined4 FUN_00448a60(int *param_1,int *param_2)
@@ -46054,7 +46054,7 @@ undefined4 FUN_00448a60(int *param_1,int *param_2)
 }
 
 
-// ==== FUN_00448c50 @ 00448C50 ====
+// ==== EntitySetActivityPlace @ 00448C50 [Ghidra: FUN_00448c50] ====
 
 
 undefined4 FUN_00448c50(int param_1)
@@ -46067,7 +46067,7 @@ undefined4 FUN_00448c50(int param_1)
 }
 
 
-// ==== FUN_00448c90 @ 00448C90 ====
+// ==== CardinalStepCommandIssueAndLink @ 00448C90 [Ghidra: FUN_00448c90] ====
 
 
 int FUN_00448c90(int *param_1,int *param_2,int param_3)
@@ -46151,7 +46151,7 @@ int FUN_00448c90(int *param_1,int *param_2,int param_3)
 }
 
 
-// ==== FUN_00448eb0 @ 00448EB0 ====
+// ==== ProximityStepCommandIssueWithJitter @ 00448EB0 [Ghidra: FUN_00448eb0] ====
 
 
 undefined4 FUN_00448eb0(int *param_1,int *param_2,int param_3)
@@ -46215,7 +46215,7 @@ undefined4 FUN_00448eb0(int *param_1,int *param_2,int param_3)
 }
 
 
-// ==== FUN_00449010 @ 00449010 ====
+// ==== EntityKind6RecordApproachRouteIssue @ 00449010 [Ghidra: FUN_00449010] ====
 
 
 undefined4 FUN_00449010(int *param_1)
@@ -46242,7 +46242,7 @@ undefined4 FUN_00449010(int *param_1)
 }
 
 
-// ==== FUN_004490a0 @ 004490A0 ====
+// ==== ProximityStepCommandIssueWithLink @ 004490A0 [Ghidra: FUN_004490a0] ====
 
 
 undefined4 FUN_004490a0(int *param_1,int *param_2,int param_3,int param_4)
@@ -46324,7 +46324,7 @@ undefined4 FUN_004490a0(int *param_1,int *param_2,int param_3,int param_4)
 }
 
 
-// ==== FUN_00449240 @ 00449240 ====
+// ==== EntityWalkableTargetCellRouteIssue @ 00449240 [Ghidra: FUN_00449240] ====
 
 
 undefined4 FUN_00449240(int param_1,int *param_2)
@@ -46346,7 +46346,7 @@ undefined4 FUN_00449240(int param_1,int *param_2)
 }
 
 
-// ==== FUN_004492b0 @ 004492B0 ====
+// ==== CellStepCommandIssueWithTargetMark @ 004492B0 [Ghidra: FUN_004492b0] ====
 
 
 undefined4 FUN_004492b0(int *param_1,int *param_2)
@@ -46395,7 +46395,7 @@ undefined4 FUN_004492b0(int *param_1,int *param_2)
 }
 
 
-// ==== FUN_004493e0 @ 004493E0 ====
+// ==== SceneObjectHasTaskType4_5_7 @ 004493E0 [Ghidra: FUN_004493e0] ====
 
 
 undefined4 FUN_004493e0(int *param_1)
@@ -46415,7 +46415,7 @@ undefined4 FUN_004493e0(int *param_1)
 }
 
 
-// ==== FUN_00449430 @ 00449430 ====
+// ==== EntityTargetCellRouteAndAssociate @ 00449430 [Ghidra: FUN_00449430] ====
 
 
 int FUN_00449430(int param_1,undefined4 param_2)
@@ -46453,7 +46453,7 @@ int FUN_00449430(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00449520 @ 00449520 ====
+// ==== EntityTargetCellRouteMarker14 @ 00449520 [Ghidra: FUN_00449520] ====
 
 
 int FUN_00449520(int param_1,undefined4 param_2)
@@ -46490,7 +46490,7 @@ int FUN_00449520(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00449610 @ 00449610 ====
+// ==== EntityCoordinateRouteAndMark @ 00449610 [Ghidra: FUN_00449610] ====
 
 
 int FUN_00449610(int param_1,int *param_2)
@@ -46528,7 +46528,7 @@ int FUN_00449610(int param_1,int *param_2)
 }
 
 
-// ==== FUN_00449700 @ 00449700 ====
+// ==== RouteStepCommandIssue @ 00449700 [Ghidra: FUN_00449700] ====
 
 
 int FUN_00449700(int param_1)
@@ -46591,7 +46591,7 @@ int FUN_00449700(int param_1)
 }
 
 
-// ==== FUN_00449880 @ 00449880 ====
+// ==== BlockedCellApproachWeightWrite @ 00449880 [Ghidra: FUN_00449880] ====
 
 
 undefined4 FUN_00449880(int param_1,undefined4 param_2,undefined4 param_3,float param_4)
@@ -46633,7 +46633,7 @@ undefined4 FUN_00449880(int param_1,undefined4 param_2,undefined4 param_3,float 
 }
 
 
-// ==== FUN_00449980 @ 00449980 ====
+// ==== EntityActivityTerrainEligibilityTransition @ 00449980 [Ghidra: FUN_00449980] ====
 
 
 undefined4 FUN_00449980(int param_1,undefined4 param_2,undefined4 *param_3)
@@ -46672,7 +46672,7 @@ undefined4 FUN_00449980(int param_1,undefined4 param_2,undefined4 *param_3)
 }
 
 
-// ==== FUN_00449a70 @ 00449A70 ====
+// ==== EntityActivity23StateTransition @ 00449A70 [Ghidra: FUN_00449a70] ====
 
 
 void FUN_00449a70(int *param_1)
@@ -46691,7 +46691,7 @@ void FUN_00449a70(int *param_1)
 }
 
 
-// ==== FUN_00449ac0 @ 00449AC0 ====
+// ==== ProximityStepCommandIssueClearingGate @ 00449AC0 [Ghidra: FUN_00449ac0] ====
 
 
 undefined4 FUN_00449ac0(int *param_1,int *param_2)
@@ -46759,7 +46759,7 @@ void FUN_00449c00(void)
 }
 
 
-// ==== FUN_00449cd0 @ 00449CD0 ====
+// ==== SceneObjectStateHandleApplyValue @ 00449CD0 [Ghidra: FUN_00449cd0] ====
 
 
 void FUN_00449cd0(undefined4 param_1,undefined4 param_2)
@@ -46775,7 +46775,7 @@ void FUN_00449cd0(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00449f50 @ 00449F50 ====
+// ==== EntityTypeOperationDispatch @ 00449F50 [Ghidra: FUN_00449f50] ====
 
 
 void FUN_00449f50(int *param_1,undefined4 param_2)
@@ -46811,7 +46811,7 @@ void FUN_00449f50(int *param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00449ff0 @ 00449FF0 ====
+// ==== EntityTypeOperationRelease @ 00449FF0 [Ghidra: FUN_00449ff0] ====
 
 
 void FUN_00449ff0(int *param_1)
@@ -46915,7 +46915,7 @@ LAB_0044a0e2:
 }
 
 
-// ==== FUN_0044a200 @ 0044A200 ====
+// ==== EntityTypeComponentGet @ 0044A200 [Ghidra: FUN_0044a200] ====
 
 
 undefined4 * FUN_0044a200(undefined4 *param_1)
@@ -46947,7 +46947,7 @@ undefined4 * FUN_0044a200(undefined4 *param_1)
 }
 
 
-// ==== FUN_0044a2a0 @ 0044A2A0 ====
+// ==== EntityWorkObjectPositionGet @ 0044A2A0 [Ghidra: FUN_0044a2a0] ====
 
 
 undefined4 FUN_0044a2a0(int *param_1,undefined4 *param_2,undefined4 *param_3)
@@ -46983,7 +46983,7 @@ undefined4 FUN_0044a2a0(int *param_1,undefined4 *param_2,undefined4 *param_3)
 }
 
 
-// ==== FUN_0044a310 @ 0044A310 ====
+// ==== ObjectMovementInputAccumulate @ 0044A310 [Ghidra: FUN_0044a310] ====
 
 
 void FUN_0044a310(int *param_1,int param_2,int param_3,float param_4)
@@ -47008,7 +47008,7 @@ void FUN_0044a310(int *param_1,int param_2,int param_3,float param_4)
 }
 
 
-// ==== FUN_0044a390 @ 0044A390 ====
+// ==== Type11CellCoordinateAppend @ 0044A390 [Ghidra: FUN_0044a390] ====
 
 
 void FUN_0044a390(undefined4 *param_1)
@@ -47023,7 +47023,7 @@ void FUN_0044a390(undefined4 *param_1)
 }
 
 
-// ==== FUN_0044a3d0 @ 0044A3D0 ====
+// ==== PlaceCellNearestResolve @ 0044A3D0 [Ghidra: FUN_0044a3d0] ====
 
 
 undefined4 FUN_0044a3d0(undefined4 param_1,undefined4 *param_2)
@@ -47070,7 +47070,7 @@ undefined4 FUN_0044a3d0(undefined4 param_1,undefined4 *param_2)
 }
 
 
-// ==== FUN_0044a4b0 @ 0044A4B0 ====
+// ==== PredugCoordinatePoolAppend @ 0044A4B0 [Ghidra: FUN_0044a4b0] ====
 
 
 void FUN_0044a4b0(undefined4 *param_1)
@@ -47085,7 +47085,7 @@ void FUN_0044a4b0(undefined4 *param_1)
 }
 
 
-// ==== FUN_0044a4f0 @ 0044A4F0 ====
+// ==== NearestCellCoordinateWorldResolve @ 0044A4F0 [Ghidra: FUN_0044a4f0] ====
 
 
 undefined4 FUN_0044a4f0(undefined4 param_1,undefined4 *param_2)
@@ -47132,7 +47132,7 @@ undefined4 FUN_0044a4f0(undefined4 param_1,undefined4 *param_2)
 }
 
 
-// ==== FUN_0044a5d0 @ 0044A5D0 ====
+// ==== NearestOpenCellCoordSearch @ 0044A5D0 [Ghidra: FUN_0044a5d0] ====
 
 
 undefined4
@@ -47208,7 +47208,7 @@ FUN_0044a5d0(undefined4 param_1,undefined4 *param_2,undefined4 *param_3,int para
 }
 
 
-// ==== FUN_0044a7d0 @ 0044A7D0 ====
+// ==== PolyVariantSectionModelBuild @ 0044A7D0 [Ghidra: FUN_0044a7d0] ====
 
 
 int FUN_0044a7d0(undefined4 param_1,undefined4 param_2,undefined4 param_3,int param_4,uint param_5)
@@ -47275,7 +47275,7 @@ LAB_0044a893:
 }
 
 
-// ==== FUN_0044a910 @ 0044A910 ====
+// ==== BuildingPlacementPreviewUpdate @ 0044A910 [Ghidra: FUN_0044a910] ====
 
 
 undefined4
@@ -47387,7 +47387,7 @@ FUN_0044a910(int param_1,int param_2,int param_3,int param_4,float *param_5,unde
 }
 
 
-// ==== FUN_0044acc0 @ 0044ACC0 ====
+// ==== TerrainObjectTypeSfxGridConfigLoad @ 0044ACC0 [Ghidra: FUN_0044acc0] ====
 
 
 void FUN_0044acc0(undefined4 param_1,undefined4 param_2)
@@ -47422,7 +47422,7 @@ void FUN_0044acc0(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0044ad80 @ 0044AD80 ====
+// ==== TerrainObjectTypeSfxAtCellGet @ 0044AD80 [Ghidra: FUN_0044ad80] ====
 
 
 undefined4 FUN_0044ad80(int param_1)
@@ -47435,7 +47435,7 @@ undefined4 FUN_0044ad80(int param_1)
 }
 
 
-// ==== FUN_0044adc0 @ 0044ADC0 ====
+// ==== ScatterSpawnGateSet @ 0044ADC0 [Ghidra: FUN_0044adc0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -47452,7 +47452,7 @@ void FUN_0044adc0(int param_1)
 }
 
 
-// ==== FUN_0044ade0 @ 0044ADE0 ====
+// ==== EntityKindOneRandomSpawnTrigger @ 0044ADE0 [Ghidra: FUN_0044ade0] ====
 
 
 void FUN_0044ade0(int *param_1)
@@ -47479,7 +47479,7 @@ void FUN_0044ade0(int *param_1)
 }
 
 
-// ==== FUN_0044ae50 @ 0044AE50 ====
+// ==== RandomKindSixScatterSpawn @ 0044AE50 [Ghidra: FUN_0044ae50] ====
 
 
 void FUN_0044ae50(int *param_1,int param_2,int param_3)
@@ -47523,7 +47523,7 @@ void FUN_0044ae50(int *param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_0044af90 @ 0044AF90 ====
+// ==== EntityAttachedSpawnRecordProcess @ 0044AF90 [Ghidra: FUN_0044af90] ====
 
 
 void FUN_0044af90(int param_1)
@@ -47536,7 +47536,7 @@ void FUN_0044af90(int param_1)
 }
 
 
-// ==== FUN_0044afb0 @ 0044AFB0 ====
+// ==== ConfiguredTinyMonsterSpawnAndTeardown @ 0044AFB0 [Ghidra: FUN_0044afb0] ====
 
 
 void FUN_0044afb0(int *param_1)
@@ -47595,7 +47595,7 @@ void FUN_0044afb0(int *param_1)
 }
 
 
-// ==== FUN_0044b140 @ 0044B140 ====
+// ==== SmallSpiderCellSwarmSpawn @ 0044B140 [Ghidra: FUN_0044b140] ====
 
 
 void FUN_0044b140(undefined4 param_1,undefined4 param_2,uint param_3)
@@ -47634,7 +47634,7 @@ void FUN_0044b140(undefined4 param_1,undefined4 param_2,uint param_3)
 }
 
 
-// ==== FUN_0044b250 @ 0044B250 ====
+// ==== PairingActivityRaiseAndMutualLink @ 0044B250 [Ghidra: FUN_0044b250] ====
 
 
 void FUN_0044b250(int param_1,int param_2)
@@ -47670,7 +47670,7 @@ void FUN_0044b250(int param_1,int param_2)
 }
 
 
-// ==== FUN_0044b350 @ 0044B350 ====
+// ==== EntityActivityTypeSupportsCapacityRule @ 0044B350 [Ghidra: FUN_0044b350] ====
 
 
 undefined4 FUN_0044b350(int param_1)
@@ -47683,7 +47683,7 @@ undefined4 FUN_0044b350(int param_1)
 }
 
 
-// ==== FUN_0044b370 @ 0044B370 ====
+// ==== EntityActivityListAppend @ 0044B370 [Ghidra: FUN_0044b370] ====
 
 
 void FUN_0044b370(int param_1,undefined4 param_2)
@@ -47739,7 +47739,7 @@ void FUN_0044b370(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0044b480 @ 0044B480 ====
+// ==== EntityPermittedActivityCheck @ 0044B480 [Ghidra: FUN_0044b480] ====
 
 
 undefined4 FUN_0044b480(int param_1,int param_2)
@@ -47764,7 +47764,7 @@ undefined4 FUN_0044b480(int param_1,int param_2)
 }
 
 
-// ==== FUN_0044b4c0 @ 0044B4C0 ====
+// ==== TypeTwoEntityTargetResolveAndApply @ 0044B4C0 [Ghidra: FUN_0044b4c0] ====
 
 
 undefined4 FUN_0044b4c0(int *param_1,undefined4 param_2)
@@ -47786,7 +47786,7 @@ undefined4 FUN_0044b4c0(int *param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0044b500 @ 0044B500 ====
+// ==== ObjectPositionStepCommandIssueAndLink @ 0044B500 [Ghidra: FUN_0044b500] ====
 
 
 int FUN_0044b500(int *param_1,int param_2)
@@ -47848,7 +47848,7 @@ int FUN_0044b500(int *param_1,int param_2)
 }
 
 
-// ==== FUN_0044b680 @ 0044B680 ====
+// ==== EntitySceneObjectTreeAttach @ 0044B680 [Ghidra: FUN_0044b680] ====
 
 
 void FUN_0044b680(int param_1)
@@ -47903,7 +47903,7 @@ void FUN_0044b680(int param_1)
 }
 
 
-// ==== FUN_0044b7a0 @ 0044B7A0 ====
+// ==== MatrixApplyRotationAboutZWithOffset @ 0044B7A0 [Ghidra: FUN_0044b7a0] ====
 
 
 void FUN_0044b7a0(undefined4 param_1,int param_2,float param_3)
@@ -47932,7 +47932,7 @@ void FUN_0044b7a0(undefined4 param_1,int param_2,float param_3)
 }
 
 
-// ==== FUN_0044bae0 @ 0044BAE0 ====
+// ==== SceneObjectResourceAndCallbackStateDispose @ 0044BAE0 [Ghidra: FUN_0044bae0] ====
 
 
 void FUN_0044bae0(int *param_1)
@@ -47952,7 +47952,7 @@ void FUN_0044bae0(int *param_1)
 }
 
 
-// ==== FUN_0044bb30 @ 0044BB30 ====
+// ==== EntityNodeScaleUpdate @ 0044BB30 [Ghidra: FUN_0044bb30] ====
 
 
 void FUN_0044bb30(int param_1,int param_2)
@@ -47987,7 +47987,7 @@ void FUN_0044bb30(int param_1,int param_2)
 }
 
 
-// ==== FUN_0044bc30 @ 0044BC30 ====
+// ==== EntityMotionToSceneNodeSync @ 0044BC30 [Ghidra: FUN_0044bc30] ====
 
 
 void FUN_0044bc30(int param_1,float param_2)
@@ -48067,7 +48067,7 @@ void FUN_0044bc30(int param_1,float param_2)
 }
 
 
-// ==== FUN_0044be30 @ 0044BE30 ====
+// ==== EntityAuxiliaryPayloadRelease @ 0044BE30 [Ghidra: FUN_0044be30] ====
 
 
 void FUN_0044be30(int param_1)
@@ -48109,7 +48109,7 @@ void FUN_0044be30(int param_1)
 }
 
 
-// ==== FUN_0044bf00 @ 0044BF00 ====
+// ==== GlobalTimedCallbackDispatch @ 0044BF00 [Ghidra: FUN_0044bf00] ====
 
 
 void FUN_0044bf00(undefined4 *param_1)
@@ -48158,7 +48158,7 @@ void FUN_0044bf00(undefined4 *param_1)
 }
 
 
-// ==== FUN_0044bfd0 @ 0044BFD0 ====
+// ==== ConfiguredMonsterSpawnBehaviorTick @ 0044BFD0 [Ghidra: FUN_0044bfd0] ====
 
 
 undefined4 FUN_0044bfd0(int param_1)
@@ -48204,7 +48204,7 @@ undefined4 FUN_0044c030(int *param_1,float param_2)
 }
 
 
-// ==== FUN_0044c110 @ 0044C110 ====
+// ==== AttachedEntityWake @ 0044C110 [Ghidra: FUN_0044c110] ====
 
 
 void FUN_0044c110(int param_1)
@@ -48221,7 +48221,7 @@ void FUN_0044c110(int param_1)
 }
 
 
-// ==== FUN_0044c150 @ 0044C150 ====
+// ==== EntityPairScalarFieldsSet @ 0044C150 [Ghidra: FUN_0044c150] ====
 
 
 undefined4 FUN_0044c150(int *param_1,int *param_2,int param_3)
@@ -48242,7 +48242,7 @@ undefined4 FUN_0044c150(int *param_1,int *param_2,int param_3)
 }
 
 
-// ==== FUN_0044c1b0 @ 0044C1B0 ====
+// ==== EntityHeadingStepMove @ 0044C1B0 [Ghidra: FUN_0044c1b0] ====
 
 
 void FUN_0044c1b0(int param_1,float param_2)
@@ -48327,7 +48327,7 @@ LAB_0044c42b:
 }
 
 
-// ==== FUN_0044c4a0 @ 0044C4A0 ====
+// ==== SelectionClearMarkerAndResetHud @ 0044C4A0 [Ghidra: FUN_0044c4a0] ====
 
 
 void FUN_0044c4a0(int param_1)
@@ -48350,7 +48350,7 @@ void FUN_0044c4a0(int param_1)
 }
 
 
-// ==== FUN_0044c530 @ 0044C530 ====
+// ==== EntityCanDoOrRideCheck @ 0044C530 [Ghidra: FUN_0044c530] ====
 
 
 undefined4 FUN_0044c530(int *param_1)
@@ -48368,7 +48368,7 @@ undefined4 FUN_0044c530(int *param_1)
 }
 
 
-// ==== FUN_0044c550 @ 0044C550 ====
+// ==== GlobalScatterSpawnEnableAndDrain @ 0044C550 [Ghidra: FUN_0044c550] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -48402,7 +48402,7 @@ void FUN_0044c550(void)
 }
 
 
-// ==== FUN_0044c710 @ 0044C710 ====
+// ==== SceneObjectTransformStateInit @ 0044C710 [Ghidra: FUN_0044c710] ====
 
 
 void FUN_0044c710(undefined4 param_1,undefined4 param_2,undefined4 param_3,undefined4 param_4,
@@ -48422,7 +48422,7 @@ void FUN_0044c710(undefined4 param_1,undefined4 param_2,undefined4 param_3,undef
 }
 
 
-// ==== FUN_0044c790 @ 0044C790 ====
+// ==== ConfiguredSceneTransformEnable @ 0044C790 [Ghidra: FUN_0044c790] ====
 
 
 void FUN_0044c790(int param_1)
@@ -48438,7 +48438,7 @@ void FUN_0044c790(int param_1)
 }
 
 
-// ==== FUN_0044c7c0 @ 0044C7C0 ====
+// ==== LightEffectsConfigurationLoad @ 0044C7C0 [Ghidra: FUN_0044c7c0] ====
 
 
 void FUN_0044c7c0(undefined4 param_1,undefined4 param_2)
@@ -48451,7 +48451,7 @@ void FUN_0044c7c0(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0044c7f0 @ 0044C7F0 ====
+// ==== LightEffectsBlinkConfigApply @ 0044C7F0 [Ghidra: FUN_0044c7f0] ====
 
 
 undefined4 FUN_0044c7f0(undefined4 param_1,float param_2)
@@ -48509,7 +48509,7 @@ undefined4 FUN_0044c7f0(undefined4 param_1,float param_2)
 }
 
 
-// ==== FUN_0044c970 @ 0044C970 ====
+// ==== LightEffectsBlinkParametersApply @ 0044C970 [Ghidra: FUN_0044c970] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -48529,7 +48529,7 @@ void FUN_0044c970(undefined4 param_1,undefined4 param_2,undefined4 param_3,undef
 }
 
 
-// ==== FUN_0044c9c0 @ 0044C9C0 ====
+// ==== LightEffectsFadeConfigLoad @ 0044C9C0 [Ghidra: FUN_0044c9c0] ====
 
 
 undefined4 FUN_0044c9c0(undefined4 param_1,undefined4 param_2)
@@ -48608,7 +48608,7 @@ undefined4 FUN_0044c9c0(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0044cc10 @ 0044CC10 ====
+// ==== LightEffectFadeParametersStore @ 0044CC10 [Ghidra: FUN_0044cc10] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -48635,7 +48635,7 @@ void FUN_0044cc10(undefined4 param_1,undefined4 param_2,undefined4 param_3,undef
 }
 
 
-// ==== FUN_0044cca0 @ 0044CCA0 ====
+// ==== LightEffectsMoveConfigLoad @ 0044CCA0 [Ghidra: FUN_0044cca0] ====
 
 
 undefined4 FUN_0044cca0(undefined4 param_1,undefined4 param_2)
@@ -48710,7 +48710,7 @@ undefined4 FUN_0044cca0(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0044cef0 @ 0044CEF0 ====
+// ==== LightEffectsMoveParametersStore @ 0044CEF0 [Ghidra: FUN_0044cef0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -48735,7 +48735,7 @@ void FUN_0044cef0(undefined4 param_1,undefined4 param_2,undefined4 param_3,undef
 }
 
 
-// ==== FUN_0044cf70 @ 0044CF70 ====
+// ==== ScenePositionResetAndEffectMotionCancel @ 0044CF70 [Ghidra: FUN_0044cf70] ====
 
 
 void FUN_0044cf70(void)
@@ -48764,7 +48764,7 @@ void FUN_0044cfa0(undefined4 param_1)
 }
 
 
-// ==== FUN_0044cff0 @ 0044CFF0 ====
+// ==== UiElementRgbColorSetClamped @ 0044CFF0 [Ghidra: FUN_0044cff0] ====
 
 
 void FUN_0044cff0(void)
@@ -48800,7 +48800,7 @@ void FUN_0044cff0(void)
 }
 
 
-// ==== FUN_0044d0d0 @ 0044D0D0 ====
+// ==== DriftOffsetStepApply @ 0044D0D0 [Ghidra: FUN_0044d0d0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -48852,7 +48852,7 @@ LAB_0044d1f5:
 }
 
 
-// ==== FUN_0044d250 @ 0044D250 ====
+// ==== FloatNegateAbsoluteValue @ 0044D250 [Ghidra: FUN_0044d250] ====
 
 
 void FUN_0044d250(float *param_1)
@@ -48867,7 +48867,7 @@ void FUN_0044d250(float *param_1)
 }
 
 
-// ==== FUN_0044d280 @ 0044D280 ====
+// ==== RandomWaypointTimerStepApply @ 0044D280 [Ghidra: FUN_0044d280] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -48967,7 +48967,7 @@ void FUN_0044d280(float param_1)
 }
 
 
-// ==== FUN_0044d710 @ 0044D710 ====
+// ==== WaypointVectorRandomScaleApply @ 0044D710 [Ghidra: FUN_0044d710] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -48985,7 +48985,7 @@ void FUN_0044d710(void)
 }
 
 
-// ==== FUN_0044d760 @ 0044D760 ====
+// ==== JitterStepApply @ 0044D760 [Ghidra: FUN_0044d760] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -49056,7 +49056,7 @@ LAB_0044d825:
 }
 
 
-// ==== FUN_0044d9a0 @ 0044D9A0 ====
+// ==== VectorWithinAxisTolerance @ 0044D9A0 [Ghidra: FUN_0044d9a0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -49077,7 +49077,7 @@ undefined4 FUN_0044d9a0(float *param_1)
 }
 
 
-// ==== FUN_0044da20 @ 0044DA20 ====
+// ==== RoutePositionBlockedStateSet @ 0044DA20 [Ghidra: FUN_0044da20] ====
 
 
 void FUN_0044da20(int param_1)
@@ -49092,7 +49092,7 @@ void FUN_0044da20(int param_1)
 }
 
 
-// ==== FUN_0044da50 @ 0044DA50 ====
+// ==== ThreeChannelValueTweenStep @ 0044DA50 [Ghidra: FUN_0044da50] ====
 
 
 void FUN_0044da50(float param_1)
@@ -49131,7 +49131,7 @@ void FUN_0044da50(float param_1)
 }
 
 
-// ==== FUN_0044db50 @ 0044DB50 ====
+// ==== KeyValueEqualsFileLoad @ 0044DB50 [Ghidra: FUN_0044db50] ====
 
 
 void FUN_0044db50(undefined4 param_1,undefined4 param_2,undefined4 param_3,int param_4,
@@ -49243,7 +49243,7 @@ void FUN_0044db50(undefined4 param_1,undefined4 param_2,undefined4 param_3,int p
 }
 
 
-// ==== FUN_0044dd40 @ 0044DD40 ====
+// ==== EngineLoaderProfileEntriesRelease @ 0044DD40 [Ghidra: FUN_0044dd40] ====
 
 
 void FUN_0044dd40(int param_1)
@@ -49284,7 +49284,7 @@ void FUN_0044dd40(int param_1)
 }
 
 
-// ==== FUN_0044dde0 @ 0044DDE0 ====
+// ==== StringTableEntrySetCurrent @ 0044DDE0 [Ghidra: FUN_0044dde0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -49365,7 +49365,7 @@ void FUN_0044dde0(char *param_1)
 }
 
 
-// ==== FUN_0044dec0 @ 0044DEC0 ====
+// ==== FileLoadingProgressUpdate @ 0044DEC0 [Ghidra: FUN_0044dec0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -49431,7 +49431,7 @@ void FUN_0044dec0(undefined4 param_1,float param_2)
 }
 
 
-// ==== FUN_0044e0a0 @ 0044E0A0 ====
+// ==== GlobalResourceHandleRelease @ 0044E0A0 [Ghidra: FUN_0044e0a0] ====
 
 
 void FUN_0044e0a0(void)
@@ -49446,7 +49446,7 @@ void FUN_0044e0a0(void)
 }
 
 
-// ==== FUN_0044e0c0 @ 0044E0C0 ====
+// ==== TerrainCreate @ 0044E0C0 [Ghidra: FUN_0044e0c0] ====
 
 
 uint * FUN_0044e0c0(undefined4 param_1,uint param_2,float param_3,uint param_4)
@@ -49612,7 +49612,7 @@ uint * FUN_0044e0c0(undefined4 param_1,uint param_2,float param_3,uint param_4)
 }
 
 
-// ==== FUN_0044e4d0 @ 0044E4D0 ====
+// ==== TerrainGridVertexBuild @ 0044E4D0 [Ghidra: FUN_0044e4d0] ====
 
 
 void FUN_0044e4d0(uint *param_1)
@@ -49689,7 +49689,7 @@ void FUN_0044e4d0(uint *param_1)
 }
 
 
-// ==== FUN_0044e670 @ 0044E670 ====
+// ==== NestedPointerRecordDestroy @ 0044E670 [Ghidra: FUN_0044e670] ====
 
 
 void FUN_0044e670(int param_1)
@@ -49703,7 +49703,7 @@ void FUN_0044e670(int param_1)
 }
 
 
-// ==== FUN_0044e6b0 @ 0044E6B0 ====
+// ==== IndexedFlagValueSetOne @ 0044E6B0 [Ghidra: FUN_0044e6b0] ====
 
 
 void FUN_0044e6b0(int param_1,uint param_2)
@@ -49714,7 +49714,7 @@ void FUN_0044e6b0(int param_1,uint param_2)
 }
 
 
-// ==== FUN_0044e6d0 @ 0044E6D0 ====
+// ==== TerrainCellMaterialTransitionBegin @ 0044E6D0 [Ghidra: FUN_0044e6d0] ====
 
 
 void FUN_0044e6d0(int *param_1,int param_2,int param_3,undefined4 param_4,undefined4 param_5)
@@ -49789,7 +49789,7 @@ void FUN_0044e6d0(int *param_1,int param_2,int param_3,undefined4 param_4,undefi
 }
 
 
-// ==== FUN_0044e860 @ 0044E860 ====
+// ==== GridCellSetPayloadIndex @ 0044E860 [Ghidra: FUN_0044e860] ====
 
 
 void FUN_0044e860(int *param_1,int param_2,int param_3)
@@ -49800,7 +49800,7 @@ void FUN_0044e860(int *param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_0044e880 @ 0044E880 ====
+// ==== TerrainGridCellsInitialize @ 0044E880 [Ghidra: FUN_0044e880] ====
 
 
 void FUN_0044e880(int param_1)
@@ -49826,7 +49826,7 @@ void FUN_0044e880(int param_1)
 }
 
 
-// ==== FUN_0044e8c0 @ 0044E8C0 ====
+// ==== SurfaceVertexSpanValidate @ 0044E8C0 [Ghidra: FUN_0044e8c0] ====
 
 
 undefined4 FUN_0044e8c0(int param_1,int *param_2,uint param_3,float param_4,float param_5)
@@ -49921,7 +49921,7 @@ undefined4 FUN_0044e8c0(int param_1,int *param_2,uint param_3,float param_4,floa
 }
 
 
-// ==== FUN_0044ead0 @ 0044EAD0 ====
+// ==== TerrainCellListSurfaceHeightClampMutate @ 0044EAD0 [Ghidra: FUN_0044ead0] ====
 
 
 void FUN_0044ead0(int param_1,int *param_2,uint param_3,float param_4)
@@ -50055,7 +50055,7 @@ void FUN_0044ead0(int param_1,int *param_2,uint param_3,float param_4)
 }
 
 
-// ==== FUN_0044edf0 @ 0044EDF0 ====
+// ==== TerrainCellOrientationToggleAndRebuild @ 0044EDF0 [Ghidra: FUN_0044edf0] ====
 
 
 void FUN_0044edf0(int *param_1,int param_2,int param_3,int param_4)
@@ -50163,7 +50163,7 @@ void FUN_0044edf0(int *param_1,int param_2,int param_3,int param_4)
 }
 
 
-// ==== FUN_0044efb0 @ 0044EFB0 ====
+// ==== TerrainCellChangedFlagSet @ 0044EFB0 [Ghidra: FUN_0044efb0] ====
 
 
 void FUN_0044efb0(int param_1,int param_2,int param_3)
@@ -50179,7 +50179,7 @@ void FUN_0044efb0(int param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_0044eff0 @ 0044EFF0 ====
+// ==== TerrainDirtyCellUpdate @ 0044EFF0 [Ghidra: FUN_0044eff0] ====
 
 
 void FUN_0044eff0(int param_1,undefined4 param_2)
@@ -50267,7 +50267,7 @@ void FUN_0044f090(int *param_1,float param_2)
 }
 
 
-// ==== FUN_0044f1a0 @ 0044F1A0 ====
+// ==== InputKeyMappingAddBidirectional @ 0044F1A0 [Ghidra: FUN_0044f1a0] ====
 
 
 void FUN_0044f1a0(int param_1,byte param_2,byte param_3)
@@ -50299,7 +50299,7 @@ void FUN_0044f1a0(int param_1,byte param_2,byte param_3)
 }
 
 
-// ==== FUN_0044f220 @ 0044F220 ====
+// ==== SceneObjectResourceHandleSet @ 0044F220 [Ghidra: FUN_0044f220] ====
 
 
 void FUN_0044f220(int param_1,undefined4 param_2)
@@ -50310,7 +50310,7 @@ void FUN_0044f220(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0044f230 @ 0044F230 ====
+// ==== TerrainCellMaterialSet @ 0044F230 [Ghidra: FUN_0044f230] ====
 
 
 void FUN_0044f230(uint *param_1,uint param_2,uint param_3,undefined4 param_4,uint param_5)
@@ -50355,7 +50355,7 @@ void FUN_0044f230(uint *param_1,uint param_2,uint param_3,undefined4 param_4,uin
 }
 
 
-// ==== FUN_0044f380 @ 0044F380 ====
+// ==== TerrainVoxelNeighborsMutate @ 0044F380 [Ghidra: FUN_0044f380] ====
 
 
 void FUN_0044f380(undefined4 param_1,uint param_2,uint param_3,undefined4 param_4)
@@ -50406,7 +50406,7 @@ void FUN_0044f380(undefined4 param_1,uint param_2,uint param_3,undefined4 param_
 }
 
 
-// ==== FUN_0044f490 @ 0044F490 ====
+// ==== GridCellOperationApplyAll @ 0044F490 [Ghidra: FUN_0044f490] ====
 
 
 void FUN_0044f490(uint *param_1,undefined4 param_2)
@@ -50435,7 +50435,7 @@ void FUN_0044f490(uint *param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0044f4e0 @ 0044F4E0 ====
+// ==== TerrainCellSurfaceTypeSet @ 0044F4E0 [Ghidra: FUN_0044f4e0] ====
 
 
 undefined1 FUN_0044f4e0(int param_1,int param_2,int param_3,int param_4)
@@ -50454,7 +50454,7 @@ undefined1 FUN_0044f4e0(int param_1,int param_2,int param_3,int param_4)
 }
 
 
-// ==== FUN_0044f540 @ 0044F540 ====
+// ==== TerrainCellSurfaceTypeGet @ 0044F540 [Ghidra: FUN_0044f540] ====
 
 
 undefined1 FUN_0044f540(int param_1,int param_2,int param_3)
@@ -50465,7 +50465,7 @@ undefined1 FUN_0044f540(int param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_0044f570 @ 0044F570 ====
+// ==== TerrainCellSurfaceTypeReset @ 0044F570 [Ghidra: FUN_0044f570] ====
 
 
 void FUN_0044f570(int param_1,int param_2,int param_3)
@@ -50478,7 +50478,7 @@ void FUN_0044f570(int param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_0044f5c0 @ 0044F5C0 ====
+// ==== TerrainCellSurfaceAppearanceApply @ 0044F5C0 [Ghidra: FUN_0044f5c0] ====
 
 
 void FUN_0044f5c0(int *param_1,int param_2,int param_3,int param_4,undefined4 param_5,
@@ -50498,7 +50498,7 @@ void FUN_0044f5c0(int *param_1,int param_2,int param_3,int param_4,undefined4 pa
 }
 
 
-// ==== FUN_0044f640 @ 0044F640 ====
+// ==== MapCellToWorldCenter @ 0044F640 [Ghidra: FUN_0044f640] ====
 
 
 undefined4 FUN_0044f640(uint *param_1,uint param_2,uint param_3,float *param_4,float *param_5)
@@ -50513,7 +50513,7 @@ undefined4 FUN_0044f640(uint *param_1,uint param_2,uint param_3,float *param_4,f
 }
 
 
-// ==== FUN_0044f6d0 @ 0044F6D0 ====
+// ==== TerrainGridPick @ 0044F6D0 [Ghidra: FUN_0044f6d0] ====
 
 
 void FUN_0044f6d0(undefined4 param_1,undefined4 param_2,undefined4 param_3,undefined4 param_4,
@@ -50525,7 +50525,7 @@ void FUN_0044f6d0(undefined4 param_1,undefined4 param_2,undefined4 param_3,undef
 }
 
 
-// ==== FUN_0044f700 @ 0044F700 ====
+// ==== WorldToTerrainCellBoundsCheck @ 0044F700 [Ghidra: FUN_0044f700] ====
 
 
 undefined4
@@ -50567,7 +50567,7 @@ FUN_0044f700(int *param_1,float param_2,float param_3,int *param_4,int *param_5,
 }
 
 
-// ==== FUN_0044f810 @ 0044F810 ====
+// ==== GridCoordinateClampAndStore @ 0044F810 [Ghidra: FUN_0044f810] ====
 
 
 void FUN_0044f810(int *param_1,undefined4 param_2,undefined4 param_3,int *param_4,int *param_5)
@@ -50600,7 +50600,7 @@ void FUN_0044f810(int *param_1,undefined4 param_2,undefined4 param_3,int *param_
 }
 
 
-// ==== FUN_0044f870 @ 0044F870 ====
+// ==== TerrainWorldPointToCell @ 0044F870 [Ghidra: FUN_0044f870] ====
 
 
 undefined4 FUN_0044f870(uint param_1,float *param_2,float *param_3,float *param_4)
@@ -50638,7 +50638,7 @@ undefined4 FUN_0044f870(uint param_1,float *param_2,float *param_3,float *param_
 }
 
 
-// ==== FUN_0044f940 @ 0044F940 ====
+// ==== TerrainSurfaceHeightInterpolate @ 0044F940 [Ghidra: FUN_0044f940] ====
 
 
 float10 FUN_0044f940(int param_1,float param_2,float param_3)
@@ -50692,7 +50692,7 @@ float10 FUN_0044f940(int param_1,float param_2,float param_3)
 }
 
 
-// ==== FUN_0044fab0 @ 0044FAB0 ====
+// ==== TerrainCellSurfaceTriangleVerticesSelect @ 0044FAB0 [Ghidra: FUN_0044fab0] ====
 
 
 void FUN_0044fab0(int param_1,float param_2,float param_3,undefined4 *param_4)
@@ -50734,7 +50734,7 @@ LAB_0044fb68:
 }
 
 
-// ==== FUN_0044fb90 @ 0044FB90 ====
+// ==== TerrainSurfacePointProjectOffset @ 0044FB90 [Ghidra: FUN_0044fb90] ====
 
 
 undefined4
@@ -50926,7 +50926,7 @@ float10 FUN_0044fe70(uint param_1,float param_2,float param_3)
 }
 
 
-// ==== FUN_00450060 @ 00450060 ====
+// ==== GridCellReadSurfaceVector @ 00450060 [Ghidra: FUN_00450060] ====
 
 
 void FUN_00450060(int *param_1,int param_2,int param_3,undefined4 *param_4)
@@ -50946,7 +50946,7 @@ void FUN_00450060(int *param_1,int param_2,int param_3,undefined4 *param_4)
 }
 
 
-// ==== FUN_004500d0 @ 004500D0 ====
+// ==== TerrainCellSurfaceVerticesGet @ 004500D0 [Ghidra: FUN_004500d0] ====
 
 
 uint FUN_004500d0(uint *param_1,uint param_2,uint param_3,undefined4 *param_4)
@@ -51002,7 +51002,7 @@ uint FUN_004500d0(uint *param_1,uint param_2,uint param_3,undefined4 *param_4)
 }
 
 
-// ==== FUN_00450220 @ 00450220 ====
+// ==== GridCellReadSurfaceValues @ 00450220 [Ghidra: FUN_00450220] ====
 
 
 void FUN_00450220(int *param_1,int param_2,int param_3,undefined4 *param_4)
@@ -51038,7 +51038,7 @@ void FUN_00450220(int *param_1,int param_2,int param_3,undefined4 *param_4)
 }
 
 
-// ==== FUN_004502c0 @ 004502C0 ====
+// ==== CoordinatePairWithinBounds @ 004502C0 [Ghidra: FUN_004502c0] ====
 
 
 bool FUN_004502c0(uint *param_1,uint param_2,uint param_3)
@@ -51051,7 +51051,7 @@ bool FUN_004502c0(uint *param_1,uint param_2,uint param_3)
 }
 
 
-// ==== FUN_004502e0 @ 004502E0 ====
+// ==== ScreenRayTerrainCellPick @ 004502E0 [Ghidra: FUN_004502e0] ====
 
 
 undefined4
@@ -51156,7 +51156,7 @@ FUN_004502e0(uint *param_1,undefined4 param_2,uint param_3,uint param_4,int *par
 }
 
 
-// ==== FUN_00450560 @ 00450560 ====
+// ==== RandomReachableGridPointSelect @ 00450560 [Ghidra: FUN_00450560] ====
 
 
 void FUN_00450560(undefined4 param_1,undefined4 param_2,undefined4 param_3,undefined4 *param_4,
@@ -51230,7 +51230,7 @@ void FUN_00450600(int *param_1,int param_2,int param_3,int param_4,code *param_5
 }
 
 
-// ==== FUN_00450700 @ 00450700 ====
+// ==== GridSurfaceWriteAtXY @ 00450700 [Ghidra: FUN_00450700] ====
 
 
 void FUN_00450700(int *param_1,int param_2,int param_3,undefined4 param_4)
@@ -51241,7 +51241,7 @@ void FUN_00450700(int *param_1,int param_2,int param_3,undefined4 param_4)
 }
 
 
-// ==== FUN_00450730 @ 00450730 ====
+// ==== TerrainCellChangeQueueAppend @ 00450730 [Ghidra: FUN_00450730] ====
 
 
 void FUN_00450730(int param_1,undefined4 param_2,undefined4 param_3)
@@ -51255,7 +51255,7 @@ void FUN_00450730(int param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_00450780 @ 00450780 ====
+// ==== TerrainCellChangeQueueFlush @ 00450780 [Ghidra: FUN_00450780] ====
 
 
 void FUN_00450780(int param_1)
@@ -51278,7 +51278,7 @@ void FUN_00450780(int param_1)
 }
 
 
-// ==== FUN_004507d0 @ 004507D0 ====
+// ==== TerrainCellEdgeVectorQuery @ 004507D0 [Ghidra: FUN_004507d0] ====
 
 
 void FUN_004507d0(uint *param_1,uint param_2,uint param_3,undefined4 *param_4,undefined4 *param_5,
@@ -51341,7 +51341,7 @@ float10 FUN_00450890(int param_1)
 }
 
 
-// ==== FUN_004508a0 @ 004508A0 ====
+// ==== CellNeighborDirectionCode @ 004508A0 [Ghidra: FUN_004508a0] ====
 
 
 undefined4 FUN_004508a0(int param_1,int param_2,int param_3,int param_4)
@@ -51392,7 +51392,7 @@ undefined4 FUN_004508a0(int param_1,int param_2,int param_3,int param_4)
 }
 
 
-// ==== FUN_00450960 @ 00450960 ====
+// ==== CellDirtyQueuePushAndClear @ 00450960 [Ghidra: FUN_00450960] ====
 
 
 void FUN_00450960(int param_1,uint param_2,uint param_3,int param_4)
@@ -51442,7 +51442,7 @@ void FUN_00450960(int param_1,uint param_2,uint param_3,int param_4)
 }
 
 
-// ==== FUN_00450a80 @ 00450A80 ====
+// ==== CellListMinDistanceScaleApply @ 00450A80 [Ghidra: FUN_00450a80] ====
 
 
 void FUN_00450a80(int *param_1,int param_2)
@@ -51697,7 +51697,7 @@ void FUN_00450f30(undefined4 param_1,uint param_2,uint param_3)
 }
 
 
-// ==== FUN_00451180 @ 00451180 ====
+// ==== CellVariantEntryMatchCheck @ 00451180 [Ghidra: FUN_00451180] ====
 
 
 undefined4 FUN_00451180(uint *param_1,uint param_2,uint param_3,uint param_4,uint param_5)
@@ -51733,7 +51733,7 @@ undefined4 FUN_00451180(uint *param_1,uint param_2,uint param_3,uint param_4,uin
 }
 
 
-// ==== FUN_00451230 @ 00451230 ====
+// ==== TerrainCellSurfaceVectorWrite @ 00451230 [Ghidra: FUN_00451230] ====
 
 
 void FUN_00451230(uint *param_1,uint param_2,uint param_3,uint param_4,undefined4 *param_5)
@@ -51760,7 +51760,7 @@ void FUN_00451230(uint *param_1,uint param_2,uint param_3,uint param_4,undefined
 }
 
 
-// ==== FUN_004512d0 @ 004512D0 ====
+// ==== TerrainCellNormalSample @ 004512D0 [Ghidra: FUN_004512d0] ====
 
 
 undefined4 FUN_004512d0(uint *param_1,uint param_2,uint param_3,uint param_4,float *param_5)
@@ -51812,7 +51812,7 @@ undefined4 FUN_004512d0(uint *param_1,uint param_2,uint param_3,uint param_4,flo
 }
 
 
-// ==== FUN_00451450 @ 00451450 ====
+// ==== TerrainCellSurfaceVectorOffsetAdd @ 00451450 [Ghidra: FUN_00451450] ====
 
 
 void FUN_00451450(uint *param_1,uint param_2,uint param_3,uint param_4,float *param_5)
@@ -51838,7 +51838,7 @@ void FUN_00451450(uint *param_1,uint param_2,uint param_3,uint param_4,float *pa
 }
 
 
-// ==== FUN_004514f0 @ 004514F0 ====
+// ==== TerrainCellSurfaceVectorsRebuild @ 004514F0 [Ghidra: FUN_004514f0] ====
 
 
 void FUN_004514f0(uint *param_1,uint param_2,uint param_3)
@@ -51859,7 +51859,7 @@ void FUN_004514f0(uint *param_1,uint param_2,uint param_3)
 }
 
 
-// ==== FUN_004515a0 @ 004515A0 ====
+// ==== MapFileReadHeader @ 004515A0 [Ghidra: FUN_004515a0] ====
 
 
 void FUN_004515a0(int param_1,undefined4 *param_2,undefined4 *param_3)
@@ -51871,7 +51871,7 @@ void FUN_004515a0(int param_1,undefined4 *param_2,undefined4 *param_3)
 }
 
 
-// ==== FUN_004515c0 @ 004515C0 ====
+// ==== MapFileGetCell @ 004515C0 [Ghidra: FUN_004515c0] ====
 
 
 undefined4 FUN_004515c0(int param_1,int param_2,int param_3,int param_4)
@@ -51882,7 +51882,7 @@ undefined4 FUN_004515c0(int param_1,int param_2,int param_3,int param_4)
 }
 
 
-// ==== FUN_004515e0 @ 004515E0 ====
+// ==== TerrainCellRayHitTest @ 004515E0 [Ghidra: FUN_004515e0] ====
 
 
 undefined4
@@ -52010,7 +52010,7 @@ FUN_004515e0(int param_1,int param_2,int param_3,float *param_4,undefined4 param
 }
 
 
-// ==== FUN_004519b0 @ 004519B0 ====
+// ==== VisualModelRecordCreate @ 004519B0 [Ghidra: FUN_004519b0] ====
 
 
 int * FUN_004519b0(int param_1,char *param_2,undefined4 param_3,undefined4 param_4,int param_5)
@@ -52077,7 +52077,7 @@ int * FUN_004519b0(int param_1,char *param_2,undefined4 param_3,undefined4 param
 }
 
 
-// ==== FUN_00451ab0 @ 00451AB0 ====
+// ==== PrimitiveModelRecordCreate @ 00451AB0 [Ghidra: FUN_00451ab0] ====
 
 
 undefined4 * FUN_00451ab0(int param_1,char *param_2,undefined4 param_3)
@@ -52134,7 +52134,7 @@ undefined4 * FUN_00451ab0(int param_1,char *param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_00451b30 @ 00451B30 ====
+// ==== LinkedRecordListFlatten @ 00451B30 [Ghidra: FUN_00451b30] ====
 
 
 int FUN_00451b30(uint *param_1)
@@ -52180,7 +52180,7 @@ int FUN_00451b30(uint *param_1)
 }
 
 
-// ==== FUN_00451bc0 @ 00451BC0 ====
+// ==== ResourceListUpdateMatchingKey @ 00451BC0 [Ghidra: FUN_00451bc0] ====
 
 
 void FUN_00451bc0(undefined4 *param_1,undefined4 param_2,undefined4 param_3,int param_4)
@@ -52204,7 +52204,7 @@ void FUN_00451bc0(undefined4 *param_1,undefined4 param_2,undefined4 param_3,int 
 }
 
 
-// ==== FUN_00451c30 @ 00451C30 ====
+// ==== LinkedRecordField4Clear @ 00451C30 [Ghidra: FUN_00451c30] ====
 
 
 void FUN_00451c30(int param_1)
@@ -52217,7 +52217,7 @@ void FUN_00451c30(int param_1)
 }
 
 
-// ==== FUN_00451c50 @ 00451C50 ====
+// ==== OwnedObjectReferenceChainRelease @ 00451C50 [Ghidra: FUN_00451c50] ====
 
 
 void FUN_00451c50(int *param_1)
@@ -52254,7 +52254,7 @@ void FUN_00451c50(int *param_1)
 }
 
 
-// ==== FUN_00451cd0 @ 00451CD0 ====
+// ==== MessageStringTableInitialize @ 00451CD0 [Ghidra: FUN_00451cd0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -52331,7 +52331,7 @@ void FUN_00451cd0(void)
 }
 
 
-// ==== FUN_00451f60 @ 00451F60 ====
+// ==== CommandQueueCancelOpcode @ 00451F60 [Ghidra: FUN_00451f60] ====
 
 
 void FUN_00451f60(int param_1)
@@ -52367,7 +52367,7 @@ void FUN_00451f60(int param_1)
 }
 
 
-// ==== FUN_00451fd0 @ 00451FD0 ====
+// ==== CaseInsensitiveNameTableLookupAtOffset8 @ 00451FD0 [Ghidra: FUN_00451fd0] ====
 
 
 int FUN_00451fd0(char *param_1)
@@ -52391,7 +52391,7 @@ int FUN_00451fd0(char *param_1)
 }
 
 
-// ==== FUN_00452010 @ 00452010 ====
+// ==== ActionCommandQueueAppend @ 00452010 [Ghidra: FUN_00452010] ====
 
 
 void FUN_00452010(undefined1 param_1,undefined4 param_2,undefined4 param_3,undefined4 param_4,
@@ -52416,7 +52416,7 @@ void FUN_00452010(undefined1 param_1,undefined4 param_2,undefined4 param_3,undef
 }
 
 
-// ==== FUN_00452060 @ 00452060 ====
+// ==== KeyStateGatedCommandEnqueue @ 00452060 [Ghidra: FUN_00452060] ====
 
 
 void FUN_00452060(undefined4 param_1,undefined4 param_2,undefined4 param_3,undefined4 *param_4)
@@ -52447,7 +52447,7 @@ void FUN_00452060(undefined4 param_1,undefined4 param_2,undefined4 param_3,undef
 }
 
 
-// ==== FUN_004520d0 @ 004520D0 ====
+// ==== SelectionRoot @ 004520D0 [Ghidra: FUN_004520d0] ====
 
 
 void FUN_004520d0(void)
@@ -52568,7 +52568,7 @@ void FUN_004520d0(void)
 }
 
 
-// ==== FUN_00452430 @ 00452430 ====
+// ==== EntityRandomValidCellCommandCreate @ 00452430 [Ghidra: FUN_00452430] ====
 
 
 void FUN_00452430(undefined4 param_1)
@@ -52609,7 +52609,7 @@ void FUN_00452430(undefined4 param_1)
 }
 
 
-// ==== FUN_004524b0 @ 004524B0 ====
+// ==== SelectionObjectDetach @ 004524B0 [Ghidra: FUN_004524b0] ====
 
 
 void FUN_004524b0(int param_1)
@@ -52630,7 +52630,7 @@ void FUN_004524b0(int param_1)
 }
 
 
-// ==== FUN_00452520 @ 00452520 ====
+// ==== SelectionSnapshotCreate @ 00452520 [Ghidra: FUN_00452520] ====
 
 
 undefined4 FUN_00452520(undefined4 *param_1,uint *param_2)
@@ -52662,7 +52662,7 @@ undefined4 FUN_00452520(undefined4 *param_1,uint *param_2)
 }
 
 
-// ==== FUN_00452580 @ 00452580 ====
+// ==== ActiveContextRecordGet @ 00452580 [Ghidra: FUN_00452580] ====
 
 
 undefined4 * FUN_00452580(int *param_1)
@@ -52681,7 +52681,7 @@ undefined4 * FUN_00452580(int *param_1)
 }
 
 
-// ==== FUN_004525b0 @ 004525B0 ====
+// ==== SelectedEntitySetHasAny @ 004525B0 [Ghidra: FUN_004525b0] ====
 
 
 bool FUN_004525b0(void)
@@ -52691,7 +52691,7 @@ bool FUN_004525b0(void)
 }
 
 
-// ==== FUN_004525c0 @ 004525C0 ====
+// ==== SelectedEntity @ 004525C0 [Ghidra: FUN_004525c0] ====
 
 
 uint FUN_004525c0(void)
@@ -52701,7 +52701,7 @@ uint FUN_004525c0(void)
 }
 
 
-// ==== FUN_004525e0 @ 004525E0 ====
+// ==== SelectionRecordArrayGet @ 004525E0 [Ghidra: FUN_004525e0] ====
 
 
 undefined4 * FUN_004525e0(void)
@@ -52711,7 +52711,7 @@ undefined4 * FUN_004525e0(void)
 }
 
 
-// ==== FUN_004525f0 @ 004525F0 ====
+// ==== SelectionRecordCountGet @ 004525F0 [Ghidra: FUN_004525f0] ====
 
 
 undefined4 FUN_004525f0(void)
@@ -52721,7 +52721,7 @@ undefined4 FUN_004525f0(void)
 }
 
 
-// ==== FUN_00452600 @ 00452600 ====
+// ==== SelectionRecordCountReset @ 00452600 [Ghidra: FUN_00452600] ====
 
 
 void FUN_00452600(void)
@@ -52732,7 +52732,7 @@ void FUN_00452600(void)
 }
 
 
-// ==== FUN_00452610 @ 00452610 ====
+// ==== SelectionContainsEntity @ 00452610 [Ghidra: FUN_00452610] ====
 
 
 uint FUN_00452610(int param_1,int param_2)
@@ -52748,7 +52748,7 @@ uint FUN_00452610(int param_1,int param_2)
 }
 
 
-// ==== FUN_00452650 @ 00452650 ====
+// ==== ArrayFindValueIndex @ 00452650 [Ghidra: FUN_00452650] ====
 
 
 undefined4 FUN_00452650(int *param_1,uint param_2,int param_3,uint *param_4)
@@ -52774,7 +52774,7 @@ undefined4 FUN_00452650(int *param_1,uint param_2,int param_3,uint *param_4)
 }
 
 
-// ==== FUN_00452690 @ 00452690 ====
+// ==== SelectionCandidateAlreadySelectedOrMarked @ 00452690 [Ghidra: FUN_00452690] ====
 
 
 undefined4 FUN_00452690(int param_1)
@@ -52790,7 +52790,7 @@ undefined4 FUN_00452690(int param_1)
 }
 
 
-// ==== FUN_004526c0 @ 004526C0 ====
+// ==== SelectionCandidateFilterDefault @ 004526C0 [Ghidra: FUN_004526c0] ====
 
 
 void FUN_004526c0(undefined4 param_1,undefined4 param_2)
@@ -52801,7 +52801,7 @@ void FUN_004526c0(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_004526e0 @ 004526E0 ====
+// ==== SelectionCandidateFilter @ 004526E0 [Ghidra: FUN_004526e0] ====
 
 
 undefined4 FUN_004526e0(int *param_1,int param_2,int param_3)
@@ -52859,7 +52859,7 @@ undefined4 FUN_004526e0(int *param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_00452870 @ 00452870 ====
+// ==== SelectionCandidateEligibilityCheck @ 00452870 [Ghidra: FUN_00452870] ====
 
 
 undefined4 FUN_00452870(int *param_1)
@@ -52879,7 +52879,7 @@ undefined4 FUN_00452870(int *param_1)
 }
 
 
-// ==== FUN_004528c0 @ 004528C0 ====
+// ==== SelectionStateTick @ 004528C0 [Ghidra: FUN_004528c0] ====
 
 
 void FUN_004528c0(void)
@@ -53054,7 +53054,7 @@ LAB_00452b89:
 }
 
 
-// ==== FUN_00452be0 @ 00452BE0 ====
+// ==== SelectionClear @ 00452BE0 [Ghidra: FUN_00452be0] ====
 
 
 void FUN_00452be0(void)
@@ -53083,7 +53083,7 @@ void FUN_00452be0(void)
 }
 
 
-// ==== FUN_00452c50 @ 00452C50 ====
+// ==== SelectionEntityRemove @ 00452C50 [Ghidra: FUN_00452c50] ====
 
 
 undefined4 FUN_00452c50(int param_1)
@@ -53109,7 +53109,7 @@ undefined4 FUN_00452c50(int param_1)
 }
 
 
-// ==== FUN_00452cc0 @ 00452CC0 ====
+// ==== SelectedEntityStateMonitor @ 00452CC0 [Ghidra: FUN_00452cc0] ====
 
 
 int FUN_00452cc0(void)
@@ -53139,7 +53139,7 @@ int FUN_00452cc0(void)
 }
 
 
-// ==== FUN_00452d60 @ 00452D60 ====
+// ==== SelectionCommandDispatch @ 00452D60 [Ghidra: FUN_00452d60] ====
 
 
 undefined4 FUN_00452d60(undefined4 param_1)
@@ -53173,7 +53173,7 @@ LAB_00452dd6:
 }
 
 
-// ==== FUN_00452df0 @ 00452DF0 ====
+// ==== TutorialNerpScriptFileLoad @ 00452DF0 [Ghidra: FUN_00452df0] ====
 
 
 bool FUN_00452df0(undefined4 param_1)
@@ -53204,7 +53204,7 @@ bool FUN_00452df0(undefined4 param_1)
 }
 
 
-// ==== FUN_00452e70 @ 00452E70 ====
+// ==== ObjectiveAdvisorTokenLoad @ 00452E70 [Ghidra: FUN_00452e70] ====
 
 
 undefined4 FUN_00452e70(uint param_1,undefined4 *param_2)
@@ -53397,7 +53397,7 @@ undefined4 FUN_00452e70(uint param_1,undefined4 *param_2)
 }
 
 
-// ==== FUN_00453200 @ 00453200 ====
+// ==== ObjectiveAdvisorTokenLookup @ 00453200 [Ghidra: FUN_00453200] ====
 
 
 undefined4 FUN_00453200(uint param_1)
@@ -53410,7 +53410,7 @@ undefined4 FUN_00453200(uint param_1)
 }
 
 
-// ==== FUN_00453220 @ 00453220 ====
+// ==== AdvisorDisplayStateResourcesRelease @ 00453220 [Ghidra: FUN_00453220] ====
 
 
 undefined4 FUN_00453220(void)
@@ -53457,7 +53457,7 @@ undefined4 FUN_00453220(void)
 }
 
 
-// ==== FUN_004532e0 @ 004532E0 ====
+// ==== IndirectHandleResolveInPlace @ 004532E0 [Ghidra: FUN_004532e0] ====
 
 
 void FUN_004532e0(uint *param_1)
@@ -53476,7 +53476,7 @@ void FUN_004532e0(uint *param_1)
 }
 
 
-// ==== FUN_00453320 @ 00453320 ====
+// ==== TutorialScriptCommandDispatch @ 00453320 [Ghidra: FUN_00453320] ====
 
 
 void FUN_00453320(undefined4 param_1)
@@ -53741,7 +53741,7 @@ LAB_0045386d:
 }
 
 
-// ==== FUN_004538a0 @ 004538A0 ====
+// ==== CameraFocusScrollScaleCommit @ 004538A0 [Ghidra: FUN_004538a0] ====
 
 
 undefined4 FUN_004538a0(uint *param_1)
@@ -53759,7 +53759,7 @@ undefined4 FUN_004538a0(uint *param_1)
 }
 
 
-// ==== FUN_00453900 @ 00453900 ====
+// ==== DeferredCallbackSet @ 00453900 [Ghidra: FUN_00453900] ====
 
 
 void FUN_00453900(undefined4 param_1)
@@ -53770,7 +53770,7 @@ void FUN_00453900(undefined4 param_1)
 }
 
 
-// ==== FUN_00453910 @ 00453910 ====
+// ==== DeferredCallbackInvokeIfSet @ 00453910 [Ghidra: FUN_00453910] ====
 
 
 void FUN_00453910(void)
@@ -53784,7 +53784,7 @@ void FUN_00453910(void)
 }
 
 
-// ==== FUN_00453920 @ 00453920 ====
+// ==== AdvisorScrollStepAdvance @ 00453920 [Ghidra: FUN_00453920] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -53828,7 +53828,7 @@ void FUN_00453920(void)
 }
 
 
-// ==== FUN_00453bb0 @ 00453BB0 ====
+// ==== FrameTimerArrayAdvanceAndAdvisorClear @ 00453BB0 [Ghidra: FUN_00453bb0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -53874,7 +53874,7 @@ LAB_00453c7e:
 }
 
 
-// ==== FUN_00453da0 @ 00453DA0 ====
+// ==== CameraFocusTweenUpdate @ 00453DA0 [Ghidra: FUN_00453da0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -53980,7 +53980,7 @@ void FUN_00454600(int param_1,undefined4 param_2,undefined4 param_3,float param_
 }
 
 
-// ==== FUN_00454880 @ 00454880 ====
+// ==== GlobalCounter_004ff990Increment @ 00454880 [Ghidra: FUN_00454880] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -53993,7 +53993,7 @@ void FUN_00454880(void)
 }
 
 
-// ==== FUN_00454890 @ 00454890 ====
+// ==== GlobalCounter_004ff990Reset @ 00454890 [Ghidra: FUN_00454890] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -54006,7 +54006,7 @@ void FUN_00454890(void)
 }
 
 
-// ==== FUN_00454b70 @ 00454B70 ====
+// ==== ObjectiveVoiceAliasRaiseCommit @ 00454B70 [Ghidra: FUN_00454b70] ====
 
 
 undefined4 FUN_00454b70(void)
@@ -54017,7 +54017,7 @@ undefined4 FUN_00454b70(void)
 }
 
 
-// ==== FUN_00454b80 @ 00454B80 ====
+// ==== ObjectiveVoiceAliasRaiseGateBit27 @ 00454B80 [Ghidra: FUN_00454b80] ====
 
 
 undefined4 FUN_00454b80(void)
@@ -54044,7 +54044,7 @@ void FUN_00455300(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00456210 @ 00456210 ====
+// ==== FlhMagicUuNoop @ 00456210 [Ghidra: FUN_00456210] ====
 
 
 undefined4 FUN_00456210(void)
@@ -54054,7 +54054,7 @@ undefined4 FUN_00456210(void)
 }
 
 
-// ==== FUN_00456240 @ 00456240 ====
+// ==== SystemStateFlags @ 00456240 [Ghidra: FUN_00456240] ====
 
 
 undefined4 FUN_00456240(void)
@@ -54064,7 +54064,7 @@ undefined4 FUN_00456240(void)
 }
 
 
-// ==== FUN_00456550 @ 00456550 ====
+// ==== SetSystemStateFlags @ 00456550 [Ghidra: FUN_00456550] ====
 
 
 undefined4 FUN_00456550(undefined4 *param_1)
@@ -54075,7 +54075,7 @@ undefined4 FUN_00456550(undefined4 *param_1)
 }
 
 
-// ==== FUN_004565f0 @ 004565F0 ====
+// ==== EngineModeSet @ 004565F0 [Ghidra: FUN_004565f0] ====
 
 
 int FUN_004565f0(int *param_1)
@@ -54092,7 +54092,7 @@ int FUN_004565f0(int *param_1)
 }
 
 
-// ==== FUN_00456640 @ 00456640 ====
+// ==== GlobalFlagGet_004ff978 @ 00456640 [Ghidra: FUN_00456640] ====
 
 
 undefined4 FUN_00456640(void)
@@ -54102,7 +54102,7 @@ undefined4 FUN_00456640(void)
 }
 
 
-// ==== FUN_004567c0 @ 004567C0 ====
+// ==== GlobalValue_004ff9bcStoreAndReturn @ 004567C0 [Ghidra: FUN_004567c0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -54115,7 +54115,7 @@ undefined4 FUN_004567c0(undefined4 *param_1)
 }
 
 
-// ==== FUN_00456810 @ 00456810 ====
+// ==== SoundAliasPlayGlobal @ 00456810 [Ghidra: FUN_00456810] ====
 
 
 void FUN_00456810(void)
@@ -54128,7 +54128,7 @@ void FUN_00456810(void)
 }
 
 
-// ==== FUN_00456830 @ 00456830 ====
+// ==== AdvisorInlineTokenRender @ 00456830 [Ghidra: FUN_00456830] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -54310,7 +54310,7 @@ void FUN_00456830(char *param_1,char *param_2,int param_3)
 }
 
 
-// ==== FUN_00456b80 @ 00456B80 ====
+// ==== TutorialPathCoordinateIndex @ 00456B80 [Ghidra: FUN_00456b80] ====
 
 
 void FUN_00456b80(int param_1)
@@ -54356,7 +54356,7 @@ void FUN_00456b80(int param_1)
 }
 
 
-// ==== FUN_00456c30 @ 00456C30 ====
+// ==== ObjectPoolListHeadGet @ 00456C30 [Ghidra: FUN_00456c30] ====
 
 
 int FUN_00456c30(int param_1,int param_2)
@@ -54372,7 +54372,7 @@ int FUN_00456c30(int param_1,int param_2)
 }
 
 
-// ==== FUN_00456c60 @ 00456C60 ====
+// ==== ObjectPoolListsFreeAll @ 00456C60 [Ghidra: FUN_00456c60] ====
 
 
 void FUN_00456c60(void)
@@ -54402,7 +54402,7 @@ void FUN_00456c60(void)
 }
 
 
-// ==== FUN_00456cb0 @ 00456CB0 ====
+// ==== CoordinateListCallbackVisit @ 00456CB0 [Ghidra: FUN_00456cb0] ====
 
 
 void FUN_00456cb0(undefined4 param_1,code *param_2,undefined4 param_3)
@@ -54422,7 +54422,7 @@ void FUN_00456cb0(undefined4 param_1,code *param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_004574e0 @ 004574E0 ====
+// ==== ObjectiveTextOverlayLoad @ 004574E0 [Ghidra: FUN_004574e0] ====
 
 
 void FUN_004574e0(undefined4 param_1,undefined4 param_2,char *param_3,int param_4,undefined4 param_5
@@ -54827,7 +54827,7 @@ void FUN_004574e0(undefined4 param_1,undefined4 param_2,char *param_3,int param_
 }
 
 
-// ==== FUN_00457d40 @ 00457D40 ====
+// ==== ObjectiveConfigLoad @ 00457D40 [Ghidra: FUN_00457d40] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -55031,7 +55031,7 @@ void FUN_00457d40(undefined4 param_1,undefined4 param_2,undefined4 param_3,int p
 }
 
 
-// ==== FUN_00458580 @ 00458580 ====
+// ==== ObjectiveCrystalOrOreArm @ 00458580 [Ghidra: FUN_00458580] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -55051,7 +55051,7 @@ void FUN_00458580(int param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_004585c0 @ 004585C0 ====
+// ==== ObjectiveBlockArm @ 004585C0 [Ghidra: FUN_004585c0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -55066,7 +55066,7 @@ void FUN_004585c0(int param_1,undefined4 *param_2)
 }
 
 
-// ==== FUN_004585f0 @ 004585F0 ====
+// ==== ObjectiveTimerArm @ 004585F0 [Ghidra: FUN_004585f0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -55083,7 +55083,7 @@ void FUN_004585f0(int param_1,undefined4 param_2,int param_3)
 }
 
 
-// ==== FUN_00458620 @ 00458620 ====
+// ==== ObjectiveConstructionArm @ 00458620 [Ghidra: FUN_00458620] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -55098,7 +55098,7 @@ void FUN_00458620(int param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_00458650 @ 00458650 ====
+// ==== GlobalFlagGet_004ffe30 @ 00458650 [Ghidra: FUN_00458650] ====
 
 
 undefined4 FUN_00458650(void)
@@ -55108,7 +55108,7 @@ undefined4 FUN_00458650(void)
 }
 
 
-// ==== FUN_00458660 @ 00458660 ====
+// ==== GlobalValueSet_004ffe48 @ 00458660 [Ghidra: FUN_00458660] ====
 
 
 void FUN_00458660(undefined4 param_1)
@@ -55119,7 +55119,7 @@ void FUN_00458660(undefined4 param_1)
 }
 
 
-// ==== FUN_00458670 @ 00458670 ====
+// ==== ObjectiveVoiceAliasPrepare @ 00458670 [Ghidra: FUN_00458670] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -55235,7 +55235,7 @@ LAB_004587da:
 }
 
 
-// ==== FUN_004588e0 @ 004588E0 ====
+// ==== InputDeviceRelease @ 004588E0 [Ghidra: FUN_004588e0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -55279,7 +55279,7 @@ void FUN_004588e0(void)
 }
 
 
-// ==== FUN_004589a0 @ 004589A0 ====
+// ==== GlobalOptionLowBitsEnabled @ 004589A0 [Ghidra: FUN_004589a0] ====
 
 
 undefined4 FUN_004589a0(void)
@@ -55292,7 +55292,7 @@ undefined4 FUN_004589a0(void)
 }
 
 
-// ==== FUN_004589c0 @ 004589C0 ====
+// ==== QuitPoll @ 004589C0 [Ghidra: FUN_004589c0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -55376,7 +55376,7 @@ LAB_00458bcc:
 }
 
 
-// ==== FUN_00458be0 @ 00458BE0 ====
+// ==== ObjectiveTick @ 00458BE0 [Ghidra: FUN_00458be0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -55551,7 +55551,7 @@ void FUN_00458be0(undefined4 param_1,int param_2,undefined4 param_3,float param_
 }
 
 
-// ==== FUN_00459050 @ 00459050 ====
+// ==== ObjectiveTimerEvaluate @ 00459050 [Ghidra: FUN_00459050] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -55584,7 +55584,7 @@ bool FUN_00459050(int param_1,undefined4 *param_2,float param_3)
 }
 
 
-// ==== FUN_00459190 @ 00459190 ====
+// ==== OsfAdd @ 00459190 [Ghidra: FUN_00459190] ====
 
 
 void FUN_00459190(int *param_1)
@@ -55612,7 +55612,7 @@ void FUN_00459190(int *param_1)
 }
 
 
-// ==== FUN_00459240 @ 00459240 ====
+// ==== PopEntityStateOverride @ 00459240 [Ghidra: FUN_00459240] ====
 
 
 undefined4 FUN_00459240(int *param_1)
@@ -55632,7 +55632,7 @@ undefined4 FUN_00459240(int *param_1)
 }
 
 
-// ==== FUN_004592a0 @ 004592A0 ====
+// ==== OsfReadStateReset @ 004592A0 [Ghidra: FUN_004592a0] ====
 
 
 void FUN_004592a0(void)
@@ -55648,7 +55648,7 @@ void FUN_004592a0(void)
 }
 
 
-// ==== FUN_004592e0 @ 004592E0 ====
+// ==== OsfSnapshot @ 004592E0 [Ghidra: FUN_004592e0] ====
 
 
 void FUN_004592e0(void)
@@ -55683,7 +55683,7 @@ void FUN_004592e0(void)
 }
 
 
-// ==== FUN_00459360 @ 00459360 ====
+// ==== OsfSnapshotTableBuild @ 00459360 [Ghidra: FUN_00459360] ====
 
 
 undefined4 FUN_00459360(void)
@@ -55717,7 +55717,7 @@ undefined4 FUN_00459360(void)
 }
 
 
-// ==== FUN_004593d0 @ 004593D0 ====
+// ==== OsfReadDirtyFlagGet @ 004593D0 [Ghidra: FUN_004593d0] ====
 
 
 undefined4 FUN_004593d0(void)
@@ -55727,7 +55727,7 @@ undefined4 FUN_004593d0(void)
 }
 
 
-// ==== FUN_004593e0 @ 004593E0 ====
+// ==== OsfWrite @ 004593E0 [Ghidra: FUN_004593e0] ====
 
 
 undefined4 FUN_004593e0(undefined4 param_1)
@@ -55752,7 +55752,7 @@ undefined4 FUN_004593e0(undefined4 param_1)
 }
 
 
-// ==== FUN_00459470 @ 00459470 ====
+// ==== OsfRead @ 00459470 [Ghidra: FUN_00459470] ====
 
 
 undefined4 FUN_00459470(undefined4 param_1)
@@ -55787,7 +55787,7 @@ undefined4 FUN_00459470(undefined4 param_1)
 }
 
 
-// ==== FUN_00459530 @ 00459530 ====
+// ==== RenderThreePassUpdate @ 00459530 [Ghidra: FUN_00459530] ====
 
 
 void FUN_00459530(undefined4 param_1,undefined4 param_2)
@@ -55800,7 +55800,7 @@ void FUN_00459530(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00459560 @ 00459560 ====
+// ==== HealthBarConfigLoadAndShadeDerive @ 00459560 [Ghidra: FUN_00459560] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -55910,7 +55910,7 @@ undefined4 FUN_00459560(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00459900 @ 00459900 ====
+// ==== HungerImagesPositionConfigLoad @ 00459900 [Ghidra: FUN_00459900] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -55944,7 +55944,7 @@ undefined4 FUN_00459900(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_004599c0 @ 004599C0 ====
+// ==== LoadObjectHungerMeterImages @ 004599C0 [Ghidra: FUN_004599c0] ====
 
 
 void FUN_004599c0(undefined4 param_1,undefined4 param_2)
@@ -55974,7 +55974,7 @@ void FUN_004599c0(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00459a50 @ 00459A50 ====
+// ==== BubbleImagesPositionConfigLoad @ 00459A50 [Ghidra: FUN_00459a50] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -56007,7 +56007,7 @@ undefined4 FUN_00459a50(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00459b00 @ 00459B00 ====
+// ==== RenderEntityScreenRing @ 00459B00 [Ghidra: FUN_00459b00] ====
 
 
 void FUN_00459b00(int param_1,int param_2,int param_3)
@@ -56153,7 +56153,7 @@ void FUN_00459b00(int param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_00459f50 @ 00459F50 ====
+// ==== IndexedPanelResourcePositionApply @ 00459F50 [Ghidra: FUN_00459f50] ====
 
 
 void FUN_00459f50(undefined4 param_1,int param_2,int param_3)
@@ -56178,7 +56178,7 @@ void FUN_00459f50(undefined4 param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_00459fd0 @ 00459FD0 ====
+// ==== PanelResourcePositionApplyIfEnabled @ 00459FD0 [Ghidra: FUN_00459fd0] ====
 
 
 void FUN_00459fd0(undefined4 param_1,int param_2,int param_3)
@@ -56196,7 +56196,7 @@ void FUN_00459fd0(undefined4 param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_0045a030 @ 0045A030 ====
+// ==== UiPanelNameTablesInit @ 0045A030 [Ghidra: FUN_0045a030] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -56260,7 +56260,7 @@ void FUN_0045a030(void)
 }
 
 
-// ==== FUN_0045a240 @ 0045A240 ====
+// ==== ScrollPanelControlsInitialize @ 0045A240 [Ghidra: FUN_0045a240] ====
 
 
 void FUN_0045a240(void)
@@ -56274,7 +56274,7 @@ void FUN_0045a240(void)
 }
 
 
-// ==== FUN_0045a270 @ 0045A270 ====
+// ==== PanelCategoryInteractionStateReset @ 0045A270 [Ghidra: FUN_0045a270] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -56312,7 +56312,7 @@ void FUN_0045a270(void)
 }
 
 
-// ==== FUN_0045a2e0 @ 0045A2E0 ====
+// ==== OverlayImageRecordLoad @ 0045A2E0 [Ghidra: FUN_0045a2e0] ====
 
 
 void FUN_0045a2e0(undefined4 param_1,int param_2,undefined4 param_3)
@@ -56341,7 +56341,7 @@ void FUN_0045a2e0(undefined4 param_1,int param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_0045a370 @ 0045A370 ====
+// ==== CaseInsensitiveStringTableLookup @ 0045A370 [Ghidra: FUN_0045a370] ====
 
 
 undefined4 FUN_0045a370(char *param_1,int *param_2)
@@ -56366,7 +56366,7 @@ undefined4 FUN_0045a370(char *param_1,int *param_2)
 }
 
 
-// ==== FUN_0045a3b0 @ 0045A3B0 ====
+// ==== PanelSlotCoordinateHitTest @ 0045A3B0 [Ghidra: FUN_0045a3b0] ====
 
 
 bool FUN_0045a3b0(int param_1,int param_2,int param_3)
@@ -56388,7 +56388,7 @@ bool FUN_0045a3b0(int param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_0045a410 @ 0045A410 ====
+// ==== CaseInsensitiveIndexedStringLookup @ 0045A410 [Ghidra: FUN_0045a410] ====
 
 
 undefined4 FUN_0045a410(int param_1,char *param_2,uint *param_3)
@@ -56442,7 +56442,7 @@ void FUN_0045a460(uint param_1,undefined4 param_2,int param_3,int param_4,int pa
 }
 
 
-// ==== FUN_0045a500 @ 0045A500 ====
+// ==== PanelImageSlotEntryAllocate @ 0045A500 [Ghidra: FUN_0045a500] ====
 
 
 undefined4 * FUN_0045a500(int param_1,undefined4 param_2,int param_3,undefined4 param_4)
@@ -56477,7 +56477,7 @@ undefined4 * FUN_0045a500(int param_1,undefined4 param_2,int param_3,undefined4 
 }
 
 
-// ==== FUN_0045a590 @ 0045A590 ====
+// ==== ScrollingAdvisorTextAppend @ 0045A590 [Ghidra: FUN_0045a590] ====
 
 
 void FUN_0045a590(undefined4 *param_1,undefined4 param_2)
@@ -56488,7 +56488,7 @@ void FUN_0045a590(undefined4 *param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0045a5b0 @ 0045A5B0 ====
+// ==== UITextOutputPositionAndDraw @ 0045A5B0 [Ghidra: FUN_0045a5b0] ====
 
 
 void FUN_0045a5b0(undefined4 *param_1,undefined4 param_2,undefined4 param_3)
@@ -56506,7 +56506,7 @@ void FUN_0045a5b0(undefined4 *param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_0045a620 @ 0045A620 ====
+// ==== UITextOutputObjectRelease @ 0045A620 [Ghidra: FUN_0045a620] ====
 
 
 void FUN_0045a620(undefined4 *param_1)
@@ -56517,7 +56517,7 @@ void FUN_0045a620(undefined4 *param_1)
 }
 
 
-// ==== FUN_0045a630 @ 0045A630 ====
+// ==== UIRecordCallbackForward @ 0045A630 [Ghidra: FUN_0045a630] ====
 
 
 void FUN_0045a630(undefined4 *param_1,undefined4 param_2,undefined4 param_3)
@@ -56528,7 +56528,7 @@ void FUN_0045a630(undefined4 *param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_0045a650 @ 0045A650 ====
+// ==== PanelCategoryBoundsSet @ 0045A650 [Ghidra: FUN_0045a650] ====
 
 
 void FUN_0045a650(int param_1,int param_2,int param_3,int param_4,int param_5)
@@ -56555,7 +56555,7 @@ void FUN_0045a650(int param_1,int param_2,int param_3,int param_4,int param_5)
 }
 
 
-// ==== FUN_0045a6e0 @ 0045A6E0 ====
+// ==== IndexedPairSet @ 0045A6E0 [Ghidra: FUN_0045a6e0] ====
 
 
 void FUN_0045a6e0(int param_1,undefined4 param_2,undefined4 param_3)
@@ -56567,7 +56567,7 @@ void FUN_0045a6e0(int param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_0045a700 @ 0045A700 ====
+// ==== IndexedPairGet @ 0045A700 [Ghidra: FUN_0045a700] ====
 
 
 void FUN_0045a700(int param_1,undefined4 *param_2,undefined4 *param_3)
@@ -56579,7 +56579,7 @@ void FUN_0045a700(int param_1,undefined4 *param_2,undefined4 *param_3)
 }
 
 
-// ==== FUN_0045a730 @ 0045A730 ====
+// ==== ManagerTick @ 0045A730 [Ghidra: FUN_0045a730] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -56674,7 +56674,7 @@ void FUN_0045a730(int param_1,float param_2)
 }
 
 
-// ==== FUN_0045a9c0 @ 0045A9C0 ====
+// ==== PanelTextureSlotsBlit @ 0045A9C0 [Ghidra: FUN_0045a9c0] ====
 
 
 void FUN_0045a9c0(int param_1)
@@ -56735,7 +56735,7 @@ LAB_0045aa9a:
 }
 
 
-// ==== FUN_0045aac0 @ 0045AAC0 ====
+// ==== PanelItemFlag10SetClear @ 0045AAC0 [Ghidra: FUN_0045aac0] ====
 
 
 void FUN_0045aac0(int param_1,int param_2,int param_3)
@@ -56755,7 +56755,7 @@ void FUN_0045aac0(int param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_0045ab00 @ 0045AB00 ====
+// ==== PanelStateFlagsToggle @ 0045AB00 [Ghidra: FUN_0045ab00] ====
 
 
 void FUN_0045ab00(int param_1)
@@ -56774,7 +56774,7 @@ void FUN_0045ab00(int param_1)
 }
 
 
-// ==== FUN_0045ab30 @ 0045AB30 ====
+// ==== RequestRecordSetFlag4ClearFlag8 @ 0045AB30 [Ghidra: FUN_0045ab30] ====
 
 
 undefined4 FUN_0045ab30(int param_1)
@@ -56788,7 +56788,7 @@ undefined4 FUN_0045ab30(int param_1)
 }
 
 
-// ==== FUN_0045ab60 @ 0045AB60 ====
+// ==== RequestRecordSetFlag2ClearFlag8 @ 0045AB60 [Ghidra: FUN_0045ab60] ====
 
 
 undefined4 FUN_0045ab60(int param_1)
@@ -56802,7 +56802,7 @@ undefined4 FUN_0045ab60(int param_1)
 }
 
 
-// ==== FUN_0045ab90 @ 0045AB90 ====
+// ==== RequestRecordFlag8IsSet @ 0045AB90 [Ghidra: FUN_0045ab90] ====
 
 
 uint FUN_0045ab90(int param_1)
@@ -56812,7 +56812,7 @@ uint FUN_0045ab90(int param_1)
 }
 
 
-// ==== FUN_0045abb0 @ 0045ABB0 ====
+// ==== InputDeviceSetFlag20 @ 0045ABB0 [Ghidra: FUN_0045abb0] ====
 
 
 void FUN_0045abb0(int param_1,int param_2,int param_3)
@@ -56830,7 +56830,7 @@ void FUN_0045abb0(int param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_0045abf0 @ 0045ABF0 ====
+// ==== PanelItemFlag8SetIfEnabled @ 0045ABF0 [Ghidra: FUN_0045abf0] ====
 
 
 void FUN_0045abf0(int param_1,int param_2,int param_3)
@@ -56852,7 +56852,7 @@ void FUN_0045abf0(int param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_0045ac30 @ 0045AC30 ====
+// ==== PanelTextureSlotsAllocate @ 0045AC30 [Ghidra: FUN_0045ac30] ====
 
 
 void FUN_0045ac30(int param_1,int param_2,int param_3,int param_4,int *param_5,int param_6,
@@ -56923,7 +56923,7 @@ void FUN_0045ac30(int param_1,int param_2,int param_3,int param_4,int *param_5,i
 }
 
 
-// ==== FUN_0045adb0 @ 0045ADB0 ====
+// ==== SimCursorInteractionTick @ 0045ADB0 [Ghidra: FUN_0045adb0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -57126,7 +57126,7 @@ switchD_0045b08e_caseD_6:
 }
 
 
-// ==== FUN_0045b310 @ 0045B310 ====
+// ==== SimCategoryCellHitTest @ 0045B310 [Ghidra: FUN_0045b310] ====
 
 
 int FUN_0045b310(uint *param_1,uint *param_2,undefined4 param_3,undefined4 param_4,int param_5,
@@ -57249,7 +57249,7 @@ LAB_0045b52b:
 }
 
 
-// ==== FUN_0045b590 @ 0045B590 ====
+// ==== RectContainsOffsetPoint @ 0045B590 [Ghidra: FUN_0045b590] ====
 
 
 undefined4 FUN_0045b590(undefined4 param_1,float *param_2,int param_3,int param_4)
@@ -57268,7 +57268,7 @@ undefined4 FUN_0045b590(undefined4 param_1,float *param_2,int param_3,int param_
 }
 
 
-// ==== FUN_0045b610 @ 0045B610 ====
+// ==== GlobalUIFlags_00500860ClearBits_1_2 @ 0045B610 [Ghidra: FUN_0045b610] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -57281,7 +57281,7 @@ void FUN_0045b610(void)
 }
 
 
-// ==== FUN_0045b620 @ 0045B620 ====
+// ==== PriorityListButtonActionDispatch @ 0045B620 [Ghidra: FUN_0045b620] ====
 
 
 void FUN_0045b620(undefined4 param_1)
@@ -57343,7 +57343,7 @@ void FUN_0045b620(undefined4 param_1)
 }
 
 
-// ==== FUN_0045b740 @ 0045B740 ====
+// ==== ScrollInfoPanelInitialize @ 0045B740 [Ghidra: FUN_0045b740] ====
 
 
 void FUN_0045b740(void)
@@ -57380,7 +57380,7 @@ void FUN_0045b740(void)
 }
 
 
-// ==== FUN_0045b850 @ 0045B850 ====
+// ==== UiOverlayCreateConfiguredElement @ 0045B850 [Ghidra: FUN_0045b850] ====
 
 
 void FUN_0045b850(void)
@@ -57400,7 +57400,7 @@ void FUN_0045b850(void)
 }
 
 
-// ==== FUN_0045b8a0 @ 0045B8A0 ====
+// ==== PointDistanceWithinRadius @ 0045B8A0 [Ghidra: FUN_0045b8a0] ====
 
 
 undefined4 FUN_0045b8a0(int param_1,int param_2,int param_3,int param_4,int param_5)
@@ -57414,7 +57414,7 @@ undefined4 FUN_0045b8a0(int param_1,int param_2,int param_3,int param_4,int para
 }
 
 
-// ==== FUN_0045b900 @ 0045B900 ====
+// ==== IntegerPairDivideToFloatPair @ 0045B900 [Ghidra: FUN_0045b900] ====
 
 
 void FUN_0045b900(int param_1,int param_2,int param_3,float *param_4,float *param_5)
@@ -57426,7 +57426,7 @@ void FUN_0045b900(int param_1,int param_2,int param_3,float *param_4,float *para
 }
 
 
-// ==== FUN_0045b930 @ 0045B930 ====
+// ==== FloatPairToIntegerPair @ 0045B930 [Ghidra: FUN_0045b930] ====
 
 
 void FUN_0045b930(undefined4 *param_1,undefined4 *param_2)
@@ -57442,7 +57442,7 @@ void FUN_0045b930(undefined4 *param_1,undefined4 *param_2)
 }
 
 
-// ==== FUN_0045b9d0 @ 0045B9D0 ====
+// ==== PanelRotationControlConfigLoad @ 0045B9D0 [Ghidra: FUN_0045b9d0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -57544,7 +57544,7 @@ void FUN_0045b9d0(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0045bcd0 @ 0045BCD0 ====
+// ==== CameraDragFromCursorApply @ 0045BCD0 [Ghidra: FUN_0045bcd0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -57611,7 +57611,7 @@ undefined4 FUN_0045bcd0(int param_1,int param_2,float param_3)
 }
 
 
-// ==== FUN_0045bf20 @ 0045BF20 ====
+// ==== CameraZoomStepAdjust @ 0045BF20 [Ghidra: FUN_0045bf20] ====
 
 
 void FUN_0045bf20(int param_1,float param_2)
@@ -57628,7 +57628,7 @@ void FUN_0045bf20(int param_1,float param_2)
 }
 
 
-// ==== FUN_0045bf70 @ 0045BF70 ====
+// ==== UIEntryBoundsGet @ 0045BF70 [Ghidra: FUN_0045bf70] ====
 
 
 void FUN_0045bf70(int param_1,int param_2,undefined4 *param_3)
@@ -57645,7 +57645,7 @@ void FUN_0045bf70(int param_1,int param_2,undefined4 *param_3)
 }
 
 
-// ==== FUN_0045bfb0 @ 0045BFB0 ====
+// ==== ThreeSurfaceResourcesLoadAndInitialize @ 0045BFB0 [Ghidra: FUN_0045bfb0] ====
 
 
 void FUN_0045bfb0(undefined4 param_1,undefined4 param_2,undefined4 param_3)
@@ -57667,7 +57667,7 @@ void FUN_0045bfb0(undefined4 param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_0045c040 @ 0045C040 ====
+// ==== CrystalQuotaSetup @ 0045C040 [Ghidra: FUN_0045c040] ====
 
 
 void FUN_0045c040(undefined4 param_1,undefined4 param_2,undefined4 param_3)
@@ -57694,7 +57694,7 @@ void FUN_0045c040(undefined4 param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_0045c0d0 @ 0045C0D0 ====
+// ==== PairCountHistogramBuild @ 0045C0D0 [Ghidra: FUN_0045c0d0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -57835,7 +57835,7 @@ void FUN_0045c0d0(uint param_1,uint param_2)
 }
 
 
-// ==== FUN_0045c340 @ 0045C340 ====
+// ==== PanelResourceLayoutStore @ 0045C340 [Ghidra: FUN_0045c340] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -57858,7 +57858,7 @@ void FUN_0045c340(undefined4 param_1,uint param_2,uint param_3,undefined4 param_
 }
 
 
-// ==== FUN_0045c3f0 @ 0045C3F0 ====
+// ==== AdvisorProgressBarFillDraw @ 0045C3F0 [Ghidra: FUN_0045c3f0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -57885,7 +57885,7 @@ void FUN_0045c3f0(int param_1,float param_2)
 }
 
 
-// ==== FUN_0045c4a0 @ 0045C4A0 ====
+// ==== GlobalValueSet_0050080c @ 0045C4A0 [Ghidra: FUN_0045c4a0] ====
 
 
 void FUN_0045c4a0(undefined4 param_1)
@@ -57896,7 +57896,7 @@ void FUN_0045c4a0(undefined4 param_1)
 }
 
 
-// ==== FUN_0045c4b0 @ 0045C4B0 ====
+// ==== PanelResourcePositionUpdateIfEnabled @ 0045C4B0 [Ghidra: FUN_0045c4b0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -57924,7 +57924,7 @@ void FUN_0045c4b0(int param_1)
 }
 
 
-// ==== FUN_0045c520 @ 0045C520 ====
+// ==== PanelResourceHandleAndDimensionsStore @ 0045C520 [Ghidra: FUN_0045c520] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -57940,7 +57940,7 @@ void FUN_0045c520(undefined4 param_1,uint param_2,uint param_3,undefined4 param_
 }
 
 
-// ==== FUN_0045c580 @ 0045C580 ====
+// ==== UiOverlayAnimationAdvance @ 0045C580 [Ghidra: FUN_0045c580] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -57965,7 +57965,7 @@ void FUN_0045c580(int param_1,int param_2)
 }
 
 
-// ==== FUN_0045c5f0 @ 0045C5F0 ====
+// ==== UiOverlayAnimationApply @ 0045C5F0 [Ghidra: FUN_0045c5f0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -57989,7 +57989,7 @@ void FUN_0045c5f0(void)
 }
 
 
-// ==== FUN_0045c670 @ 0045C670 ====
+// ==== AdvisorAnimationSceneLookupAndRequest @ 0045C670 [Ghidra: FUN_0045c670] ====
 
 
 undefined4 FUN_0045c670(undefined4 param_1,undefined4 param_2,undefined4 param_3)
@@ -58006,7 +58006,7 @@ undefined4 FUN_0045c670(undefined4 param_1,undefined4 param_2,undefined4 param_3
 }
 
 
-// ==== FUN_0045c6b0 @ 0045C6B0 ====
+// ==== AdvisorAnimationSlotIdResolve @ 0045C6B0 [Ghidra: FUN_0045c6b0] ====
 
 
 bool FUN_0045c6b0(undefined4 param_1,int param_2,int *param_3)
@@ -58073,7 +58073,7 @@ bool FUN_0045c6b0(undefined4 param_1,int param_2,int *param_3)
 }
 
 
-// ==== FUN_0045c830 @ 0045C830 ====
+// ==== PointerCursorNameRegistryInit @ 0045C830 [Ghidra: FUN_0045c830] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -58141,7 +58141,7 @@ void FUN_0045c830(void)
 }
 
 
-// ==== FUN_0045ca70 @ 0045CA70 ====
+// ==== PointerCursorConfigLoad @ 0045CA70 [Ghidra: FUN_0045ca70] ====
 
 
 void FUN_0045ca70(int param_1)
@@ -58211,7 +58211,7 @@ void FUN_0045ca70(int param_1)
 }
 
 
-// ==== FUN_0045cbd0 @ 0045CBD0 ====
+// ==== PointerCursorConfigParse @ 0045CBD0 [Ghidra: FUN_0045cbd0] ====
 
 
 undefined4 FUN_0045cbd0(char *param_1,int *param_2)
@@ -58236,7 +58236,7 @@ undefined4 FUN_0045cbd0(char *param_1,int *param_2)
 }
 
 
-// ==== FUN_0045cc10 @ 0045CC10 ====
+// ==== IndexedGlobalValueGet_00500a9c @ 0045CC10 [Ghidra: FUN_0045cc10] ====
 
 
 undefined4 FUN_0045cc10(int param_1)
@@ -58246,7 +58246,7 @@ undefined4 FUN_0045cc10(int param_1)
 }
 
 
-// ==== FUN_0045cc20 @ 0045CC20 ====
+// ==== PointerCursorSelect @ 0045CC20 [Ghidra: FUN_0045cc20] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -58261,7 +58261,7 @@ void FUN_0045cc20(undefined4 param_1)
 }
 
 
-// ==== FUN_0045cc40 @ 0045CC40 ====
+// ==== PointerCursorOverrideSet @ 0045CC40 [Ghidra: FUN_0045cc40] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -58275,7 +58275,7 @@ void FUN_0045cc40(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0045cc60 @ 0045CC60 ====
+// ==== GlobalValueGet_00500a98 @ 0045CC60 [Ghidra: FUN_0045cc60] ====
 
 
 undefined4 FUN_0045cc60(void)
@@ -58285,7 +58285,7 @@ undefined4 FUN_0045cc60(void)
 }
 
 
-// ==== FUN_0045cc70 @ 0045CC70 ====
+// ==== PointerCursorDraw @ 0045CC70 [Ghidra: FUN_0045cc70] ====
 
 
 void FUN_0045cc70(uint param_1,uint param_2)
@@ -58325,7 +58325,7 @@ void FUN_0045cc70(uint param_1,uint param_2)
 }
 
 
-// ==== FUN_0045cd90 @ 0045CD90 ====
+// ==== PointerCursorOverrideTick @ 0045CD90 [Ghidra: FUN_0045cd90] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -58340,7 +58340,7 @@ void FUN_0045cd90(float param_1)
 }
 
 
-// ==== FUN_0045cdc0 @ 0045CDC0 ====
+// ==== PriorityImagesConfigLoad @ 0045CDC0 [Ghidra: FUN_0045cdc0] ====
 
 
 void FUN_0045cdc0(undefined4 param_1,undefined4 param_2)
@@ -58384,7 +58384,7 @@ void FUN_0045cdc0(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0045cf00 @ 0045CF00 ====
+// ==== PriorityLabelLayoutApply @ 0045CF00 [Ghidra: FUN_0045cf00] ====
 
 
 void FUN_0045cf00(void)
@@ -58408,7 +58408,7 @@ void FUN_0045cf00(void)
 }
 
 
-// ==== FUN_0045cf50 @ 0045CF50 ====
+// ==== PrioritiesConfigLoad @ 0045CF50 [Ghidra: FUN_0045cf50] ====
 
 
 undefined4 FUN_0045cf50(undefined4 param_1,undefined4 param_2,undefined4 param_3)
@@ -58443,7 +58443,7 @@ undefined4 FUN_0045cf50(undefined4 param_1,undefined4 param_2,undefined4 param_3
 }
 
 
-// ==== FUN_0045d060 @ 0045D060 ====
+// ==== PrioritiesImagePositionsConfigLoad @ 0045D060 [Ghidra: FUN_0045d060] ====
 
 
 void FUN_0045d060(undefined4 param_1,undefined4 param_2)
@@ -58478,7 +58478,7 @@ void FUN_0045d060(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0045d110 @ 0045D110 ====
+// ==== RegionContainmentScanUpdate @ 0045D110 [Ghidra: FUN_0045d110] ====
 
 
 undefined4 FUN_0045d110(uint param_1,uint param_2,int param_3,undefined4 param_4,int param_5)
@@ -58560,7 +58560,7 @@ undefined4 FUN_0045d110(uint param_1,uint param_2,int param_3,undefined4 param_4
 }
 
 
-// ==== FUN_0045d300 @ 0045D300 ====
+// ==== PriorityImageSelectionStateUpdate @ 0045D300 [Ghidra: FUN_0045d300] ====
 
 
 bool FUN_0045d300(int param_1,int param_2,int param_3)
@@ -58587,7 +58587,7 @@ bool FUN_0045d300(int param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_0045d370 @ 0045D370 ====
+// ==== RegionBoundsSet @ 0045D370 [Ghidra: FUN_0045d370] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -58603,7 +58603,7 @@ void FUN_0045d370(undefined4 *param_1,uint param_2,uint param_3)
 }
 
 
-// ==== FUN_0045d3c0 @ 0045D3C0 ====
+// ==== PriorityPanelRowMoveDispatch @ 0045D3C0 [Ghidra: FUN_0045d3c0] ====
 
 
 void FUN_0045d3c0(undefined4 param_1)
@@ -58620,7 +58620,7 @@ void FUN_0045d3c0(undefined4 param_1)
 }
 
 
-// ==== FUN_0045d3f0 @ 0045D3F0 ====
+// ==== PriorityImageOrderMoveToFront @ 0045D3F0 [Ghidra: FUN_0045d3f0] ====
 
 
 void FUN_0045d3f0(uint param_1)
@@ -58655,7 +58655,7 @@ void FUN_0045d3f0(uint param_1)
 }
 
 
-// ==== FUN_0045d470 @ 0045D470 ====
+// ==== UIListEntriesSwap @ 0045D470 [Ghidra: FUN_0045d470] ====
 
 
 void FUN_0045d470(uint param_1)
@@ -58676,7 +58676,7 @@ void FUN_0045d470(uint param_1)
 }
 
 
-// ==== FUN_0045d4f0 @ 0045D4F0 ====
+// ==== ConfigEntryEnabledToggleAtIndex @ 0045D4F0 [Ghidra: FUN_0045d4f0] ====
 
 
 void FUN_0045d4f0(uint param_1)
@@ -58695,7 +58695,7 @@ void FUN_0045d4f0(uint param_1)
 }
 
 
-// ==== FUN_0045d550 @ 0045D550 ====
+// ==== UiCursorMoveToChoiceEntry @ 0045D550 [Ghidra: FUN_0045d550] ====
 
 
 void FUN_0045d550(undefined4 param_1)
@@ -58747,7 +58747,7 @@ switchD_0045d561_default:
 }
 
 
-// ==== FUN_0045d640 @ 0045D640 ====
+// ==== UiCursorMoveToElementCenter @ 0045D640 [Ghidra: FUN_0045d640] ====
 
 
 void FUN_0045d640(int param_1)
@@ -58776,7 +58776,7 @@ void FUN_0045d640(int param_1)
 }
 
 
-// ==== FUN_0045d6d0 @ 0045D6D0 ====
+// ==== PositionTrackerUpdateAll @ 0045D6D0 [Ghidra: FUN_0045d6d0] ====
 
 
 void FUN_0045d6d0(void)
@@ -58833,7 +58833,7 @@ void FUN_0045d6d0(void)
 }
 
 
-// ==== FUN_0045d7e0 @ 0045D7E0 ====
+// ==== LevelIdentifierRemapTableLoad @ 0045D7E0 [Ghidra: FUN_0045d7e0] ====
 
 
 undefined4 FUN_0045d7e0(undefined4 param_1,undefined4 param_2)
@@ -58866,7 +58866,7 @@ undefined4 FUN_0045d7e0(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0045d870 @ 0045D870 ====
+// ==== CommandEntityReferenceRemap @ 0045D870 [Ghidra: FUN_0045d870] ====
 
 
 void FUN_0045d870(int *param_1)
@@ -58891,7 +58891,7 @@ void FUN_0045d870(int *param_1)
 }
 
 
-// ==== FUN_0045d8a0 @ 0045D8A0 ====
+// ==== ObjectField14Set @ 0045D8A0 [Ghidra: FUN_0045d8a0] ====
 
 
 void FUN_0045d8a0(int param_1,undefined4 param_2)
@@ -58902,7 +58902,7 @@ void FUN_0045d8a0(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0045d8b0 @ 0045D8B0 ====
+// ==== ScreenCoordNormalizeInit @ 0045D8B0 [Ghidra: FUN_0045d8b0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -58985,7 +58985,7 @@ void FUN_0045d8b0(void)
 }
 
 
-// ==== FUN_0045da90 @ 0045DA90 ====
+// ==== UiRenderRecordCreate @ 0045DA90 [Ghidra: FUN_0045da90] ====
 
 
 undefined4 * FUN_0045da90(undefined4 param_1,undefined4 *param_2,undefined4 param_3)
@@ -59012,7 +59012,7 @@ undefined4 * FUN_0045da90(undefined4 param_1,undefined4 *param_2,undefined4 para
 }
 
 
-// ==== FUN_0045daf0 @ 0045DAF0 ====
+// ==== UiRenderRecordFree @ 0045DAF0 [Ghidra: FUN_0045daf0] ====
 
 
 void FUN_0045daf0(undefined4 param_1)
@@ -59023,7 +59023,7 @@ void FUN_0045daf0(undefined4 param_1)
 }
 
 
-// ==== FUN_0045db00 @ 0045DB00 ====
+// ==== TexturedSceneObjectDrawAtPosition @ 0045DB00 [Ghidra: FUN_0045db00] ====
 
 
 void FUN_0045db00(int param_1,undefined4 *param_2,undefined4 param_3,float param_4)
@@ -59052,7 +59052,7 @@ void FUN_0045db00(int param_1,undefined4 *param_2,undefined4 param_3,float param
 }
 
 
-// ==== FUN_0045dbc0 @ 0045DBC0 ====
+// ==== TerrainViewTileGeometryBuild @ 0045DBC0 [Ghidra: FUN_0045dbc0] ====
 
 
 void FUN_0045dbc0(void)
@@ -59266,7 +59266,7 @@ void FUN_0045dbc0(void)
 }
 
 
-// ==== FUN_0045e400 @ 0045E400 ====
+// ==== EntityTypeAndStateFlagPredicate @ 0045E400 [Ghidra: FUN_0045e400] ====
 
 
 uint FUN_0045e400(int *param_1)
@@ -59286,7 +59286,7 @@ uint FUN_0045e400(int *param_1)
 }
 
 
-// ==== FUN_0045e660 @ 0045E660 ====
+// ==== RectContainsPointHalfOpen @ 0045E660 [Ghidra: FUN_0045e660] ====
 
 
 undefined4 FUN_0045e660(int param_1,uint param_2,uint param_3)
@@ -59302,7 +59302,7 @@ undefined4 FUN_0045e660(int param_1,uint param_2,uint param_3)
 }
 
 
-// ==== FUN_0045e6d0 @ 0045E6D0 ====
+// ==== TerrainPointPickResolve @ 0045E6D0 [Ghidra: FUN_0045e6d0] ====
 
 
 undefined4
@@ -59338,7 +59338,7 @@ FUN_0045e6d0(undefined4 *param_1,uint param_2,uint param_3,float *param_4,undefi
 }
 
 
-// ==== FUN_0045e820 @ 0045E820 ====
+// ==== ViewportPointCallbackDispatch @ 0045E820 [Ghidra: FUN_0045e820] ====
 
 
 undefined4
@@ -59379,7 +59379,7 @@ FUN_0045e820(int param_1,undefined4 param_2,undefined4 param_3,undefined4 *param
 }
 
 
-// ==== FUN_0045e940 @ 0045E940 ====
+// ==== ViewPointToScreenGeometryTransform @ 0045E940 [Ghidra: FUN_0045e940] ====
 
 
 void FUN_0045e940(int param_1,float *param_2)
@@ -59410,7 +59410,7 @@ void FUN_0045e940(int param_1,float *param_2)
 }
 
 
-// ==== FUN_0045e9e0 @ 0045E9E0 ====
+// ==== TerrainTileStyleResolve @ 0045E9E0 [Ghidra: FUN_0045e9e0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -59620,7 +59620,7 @@ switchD_0045ea38_default:
 }
 
 
-// ==== FUN_0045f030 @ 0045F030 ====
+// ==== TaskBlockInit @ 0045F030 [Ghidra: FUN_0045f030] ====
 
 
 undefined4 FUN_0045f030(void)
@@ -59700,7 +59700,7 @@ undefined4 FUN_0045f030(void)
 }
 
 
-// ==== FUN_0045f1f0 @ 0045F1F0 ====
+// ==== TaskSoundsLoad @ 0045F1F0 [Ghidra: FUN_0045f1f0] ====
 
 
 void FUN_0045f1f0(int param_1)
@@ -59715,7 +59715,7 @@ void FUN_0045f1f0(int param_1)
 }
 
 
-// ==== FUN_0045f230 @ 0045F230 ====
+// ==== TaskFontLoad @ 0045F230 [Ghidra: FUN_0045f230] ====
 
 
 void FUN_0045f230(int param_1)
@@ -59738,7 +59738,7 @@ void FUN_0045f230(int param_1)
 }
 
 
-// ==== FUN_0045f290 @ 0045F290 ====
+// ==== TaskBoxImages @ 0045F290 [Ghidra: FUN_0045f290] ====
 
 
 void FUN_0045f290(uint *param_1)
@@ -59782,7 +59782,7 @@ void FUN_0045f290(uint *param_1)
 }
 
 
-// ==== FUN_0045f3e0 @ 0045F3E0 ====
+// ==== TaskImages @ 0045F3E0 [Ghidra: FUN_0045f3e0] ====
 
 
 void FUN_0045f3e0(uint *param_1)
@@ -59826,7 +59826,7 @@ void FUN_0045f3e0(uint *param_1)
 }
 
 
-// ==== FUN_0045f530 @ 0045F530 ====
+// ==== TaskBoxRect @ 0045F530 [Ghidra: FUN_0045f530] ====
 
 
 void FUN_0045f530(uint *param_1)
@@ -59856,7 +59856,7 @@ void FUN_0045f530(uint *param_1)
 }
 
 
-// ==== FUN_0045f5f0 @ 0045F5F0 ====
+// ==== TaskFlicPath @ 0045F5F0 [Ghidra: FUN_0045f5f0] ====
 
 
 void FUN_0045f5f0(uint *param_1)
@@ -59902,7 +59902,7 @@ void FUN_0045f5f0(uint *param_1)
 }
 
 
-// ==== FUN_0045f750 @ 0045F750 ====
+// ==== TaskBlockFinish @ 0045F750 [Ghidra: FUN_0045f750] ====
 
 
 void FUN_0045f750(void)
@@ -59927,7 +59927,7 @@ void FUN_0045f750(void)
 }
 
 
-// ==== FUN_0045f7b0 @ 0045F7B0 ====
+// ==== TaskFlushImages @ 0045F7B0 [Ghidra: FUN_0045f7b0] ====
 
 
 void FUN_0045f7b0(int param_1)
@@ -59938,7 +59938,7 @@ void FUN_0045f7b0(int param_1)
 }
 
 
-// ==== FUN_0045f7d0 @ 0045F7D0 ====
+// ==== TaskFlushFont @ 0045F7D0 [Ghidra: FUN_0045f7d0] ====
 
 
 void FUN_0045f7d0(int param_1)
@@ -59949,7 +59949,7 @@ void FUN_0045f7d0(int param_1)
 }
 
 
-// ==== FUN_0045f7f0 @ 0045F7F0 ====
+// ==== RewardInit @ 0045F7F0 [Ghidra: FUN_0045f7f0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -60100,7 +60100,7 @@ undefined4 FUN_0045faf0(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0045fda0 @ 0045FDA0 ====
+// ==== CheckpointBlobBuild @ 0045FDA0 [Ghidra: FUN_0045fda0] ====
 
 
 undefined4 FUN_0045fda0(void)
@@ -60200,7 +60200,7 @@ undefined4 FUN_0045fda0(void)
 }
 
 
-// ==== FUN_004600a0 @ 004600A0 ====
+// ==== TaskImportanceRefresh @ 004600A0 [Ghidra: FUN_004600a0] ====
 
 
 void FUN_004600a0(int param_1)
@@ -60228,7 +60228,7 @@ void FUN_004600a0(int param_1)
 }
 
 
-// ==== FUN_00460140 @ 00460140 ====
+// ==== TaskQuotaRefresh @ 00460140 [Ghidra: FUN_00460140] ====
 
 
 void FUN_00460140(int param_1)
@@ -60254,7 +60254,7 @@ void FUN_00460140(int param_1)
 }
 
 
-// ==== FUN_004601e0 @ 004601E0 ====
+// ==== CheckpointBlobFree @ 004601E0 [Ghidra: FUN_004601e0] ====
 
 
 void FUN_004601e0(void)
@@ -60265,7 +60265,7 @@ void FUN_004601e0(void)
 }
 
 
-// ==== FUN_004601f0 @ 004601F0 ====
+// ==== CheckpointBlobGet @ 004601F0 [Ghidra: FUN_004601f0] ====
 
 
 undefined4 FUN_004601f0(void)
@@ -60275,7 +60275,7 @@ undefined4 FUN_004601f0(void)
 }
 
 
-// ==== FUN_00460200 @ 00460200 ====
+// ==== SelectedLevelStartObjectUpdate @ 00460200 [Ghidra: FUN_00460200] ====
 
 
 void FUN_00460200(void)
@@ -60292,7 +60292,7 @@ void FUN_00460200(void)
 }
 
 
-// ==== FUN_00460220 @ 00460220 ====
+// ==== StartLevelSelected @ 00460220 [Ghidra: FUN_00460220] ====
 
 
 void FUN_00460220(void)
@@ -60323,7 +60323,7 @@ void FUN_00460220(void)
 }
 
 
-// ==== FUN_00460290 @ 00460290 ====
+// ==== EntityType4IndexListBuild @ 00460290 [Ghidra: FUN_00460290] ====
 
 
 void FUN_00460290(undefined4 *param_1)
@@ -60360,7 +60360,7 @@ void FUN_00460290(undefined4 *param_1)
 }
 
 
-// ==== FUN_00460310 @ 00460310 ====
+// ==== EntityType4IndexListAppend @ 00460310 [Ghidra: FUN_00460310] ====
 
 
 undefined4 FUN_00460310(int param_1,int param_2)
@@ -60381,7 +60381,7 @@ undefined4 FUN_00460310(int param_1,int param_2)
 }
 
 
-// ==== FUN_00460360 @ 00460360 ====
+// ==== CheckpointBlobTaskProgressRefresh @ 00460360 [Ghidra: FUN_00460360] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -60602,7 +60602,7 @@ undefined4 FUN_00460360(void)
 }
 
 
-// ==== FUN_00460910 @ 00460910 ====
+// ==== ResolvedEntityOperationDispatch @ 00460910 [Ghidra: FUN_00460910] ====
 
 
 undefined4 FUN_00460910(undefined4 param_1,undefined4 param_2,undefined4 param_3)
@@ -60621,7 +60621,7 @@ undefined4 FUN_00460910(undefined4 param_1,undefined4 param_2,undefined4 param_3
 }
 
 
-// ==== FUN_00460950 @ 00460950 ====
+// ==== CheckpointBlobTaskProgressRecalculate @ 00460950 [Ghidra: FUN_00460950] ====
 
 
 undefined4 FUN_00460950(void)
@@ -60800,7 +60800,7 @@ undefined4 FUN_00460950(void)
 }
 
 
-// ==== FUN_00460f00 @ 00460F00 ====
+// ==== RewardStatsPanelDraw @ 00460F00 [Ghidra: FUN_00460f00] ====
 
 
 undefined4 FUN_00460f00(void)
@@ -60840,7 +60840,7 @@ undefined4 FUN_00460f00(void)
 }
 
 
-// ==== FUN_00461070 @ 00461070 ====
+// ==== RewardStatsTextFormat @ 00461070 [Ghidra: FUN_00461070] ====
 
 
 undefined4 FUN_00461070(void)
@@ -61054,7 +61054,7 @@ undefined4 FUN_00461070(void)
 }
 
 
-// ==== FUN_00461410 @ 00461410 ====
+// ==== RewardScreenTick @ 00461410 [Ghidra: FUN_00461410] ====
 
 
 undefined4 FUN_00461410(void)
@@ -61197,7 +61197,7 @@ undefined4 FUN_00461410(void)
 }
 
 
-// ==== FUN_00461790 @ 00461790 ====
+// ==== RewardDisplayTick @ 00461790 [Ghidra: FUN_00461790] ====
 
 
 void FUN_00461790(uint *param_1,uint param_2,uint param_3)
@@ -61311,7 +61311,7 @@ void FUN_00461790(uint *param_1,uint param_2,uint param_3)
 }
 
 
-// ==== FUN_00461c90 @ 00461C90 ====
+// ==== RewardScoreTaskTextDraw @ 00461C90 [Ghidra: FUN_00461c90] ====
 
 
 int FUN_00461c90(undefined4 param_1,undefined4 param_2)
@@ -61373,7 +61373,7 @@ int FUN_00461c90(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00461dd0 @ 00461DD0 ====
+// ==== RewardZoneCheck @ 00461DD0 [Ghidra: FUN_00461dd0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -61456,7 +61456,7 @@ LAB_00461f21:
 }
 
 
-// ==== FUN_00462030 @ 00462030 ====
+// ==== SaveMenuOpenFromReward @ 00462030 [Ghidra: FUN_00462030] ====
 
 
 void FUN_00462030(void)
@@ -61550,7 +61550,7 @@ void FUN_00462030(void)
 }
 
 
-// ==== FUN_00462270 @ 00462270 ====
+// ==== CheckpointStep @ 00462270 [Ghidra: FUN_00462270] ====
 
 
 void FUN_00462270(void)
@@ -61607,7 +61607,7 @@ void FUN_00462270(void)
 }
 
 
-// ==== FUN_00462390 @ 00462390 ====
+// ==== RewardScreenTransitionTick @ 00462390 [Ghidra: FUN_00462390] ====
 
 
 void FUN_00462390(undefined4 *param_1,undefined4 *param_2,undefined4 *param_3,undefined4 *param_4)
@@ -61647,7 +61647,7 @@ void FUN_00462390(undefined4 *param_1,undefined4 *param_2,undefined4 *param_3,un
 }
 
 
-// ==== FUN_00462460 @ 00462460 ====
+// ==== RewardFlhContextReload @ 00462460 [Ghidra: FUN_00462460] ====
 
 
 void FUN_00462460(byte *param_1)
@@ -61661,7 +61661,7 @@ void FUN_00462460(byte *param_1)
 }
 
 
-// ==== FUN_004624a0 @ 004624A0 ====
+// ==== RewardFlhContextTick @ 004624A0 [Ghidra: FUN_004624a0] ====
 
 
 void FUN_004624a0(int *param_1,int *param_2,float *param_3)
@@ -61734,7 +61734,7 @@ LAB_00462502:
 }
 
 
-// ==== FUN_00462600 @ 00462600 ====
+// ==== RewardTaskTextDrawAndScoreGate @ 00462600 [Ghidra: FUN_00462600] ====
 
 
 void FUN_00462600(int *param_1,undefined4 *param_2,undefined4 param_3)
@@ -61780,7 +61780,7 @@ void FUN_00462600(int *param_1,undefined4 *param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_00462700 @ 00462700 ====
+// ==== PointerOverrideExpiryTick @ 00462700 [Ghidra: FUN_00462700] ====
 
 
 void FUN_00462700(float param_1)
@@ -61798,7 +61798,7 @@ void FUN_00462700(float param_1)
 }
 
 
-// ==== FUN_00462780 @ 00462780 ====
+// ==== RewardSaveButtonZoneCheck @ 00462780 [Ghidra: FUN_00462780] ====
 
 
 undefined4 FUN_00462780(void)
@@ -61825,7 +61825,7 @@ undefined4 FUN_00462780(void)
 }
 
 
-// ==== FUN_00462800 @ 00462800 ====
+// ==== RewardScoreAdd @ 00462800 [Ghidra: FUN_00462800] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -61839,7 +61839,7 @@ void FUN_00462800(float param_1)
 }
 
 
-// ==== FUN_00462830 @ 00462830 ====
+// ==== GlobalFloatAt00554adcAddOne @ 00462830 [Ghidra: FUN_00462830] ====
 
 
 void FUN_00462830(void)
@@ -61850,7 +61850,7 @@ void FUN_00462830(void)
 }
 
 
-// ==== FUN_00462850 @ 00462850 ====
+// ==== GlobalFloatAt00554efcAddOne @ 00462850 [Ghidra: FUN_00462850] ====
 
 
 void FUN_00462850(void)
@@ -61861,7 +61861,7 @@ void FUN_00462850(void)
 }
 
 
-// ==== FUN_00462870 @ 00462870 ====
+// ==== GlobalCounterAt00555324Increment @ 00462870 [Ghidra: FUN_00462870] ====
 
 
 void FUN_00462870(void)
@@ -61872,7 +61872,7 @@ void FUN_00462870(void)
 }
 
 
-// ==== FUN_00462880 @ 00462880 ====
+// ==== GlobalCounterAt00555328Increment @ 00462880 [Ghidra: FUN_00462880] ====
 
 
 void FUN_00462880(void)
@@ -61883,7 +61883,7 @@ void FUN_00462880(void)
 }
 
 
-// ==== FUN_00462890 @ 00462890 ====
+// ==== GlobalCounterAt0055532cIncrement @ 00462890 [Ghidra: FUN_00462890] ====
 
 
 void FUN_00462890(void)
@@ -61894,7 +61894,7 @@ void FUN_00462890(void)
 }
 
 
-// ==== FUN_004628a0 @ 004628A0 ====
+// ==== GlobalFloatAccumulator_00555330Add @ 004628A0 [Ghidra: FUN_004628a0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -61907,7 +61907,7 @@ void FUN_004628a0(float param_1)
 }
 
 
-// ==== FUN_004628c0 @ 004628C0 ====
+// ==== GlobalFloatAccumulate_00555120 @ 004628C0 [Ghidra: FUN_004628c0] ====
 
 
 void FUN_004628c0(float param_1)
@@ -61918,7 +61918,7 @@ void FUN_004628c0(float param_1)
 }
 
 
-// ==== FUN_004628e0 @ 004628E0 ====
+// ==== CallbackRecordAllocateInitialize @ 004628E0 [Ghidra: FUN_004628e0] ====
 
 
 undefined4 *
@@ -61958,7 +61958,7 @@ FUN_004628e0(undefined4 *param_1,undefined4 param_2,undefined4 param_3,undefined
 }
 
 
-// ==== FUN_00462960 @ 00462960 ====
+// ==== TaskTableContentsRelease @ 00462960 [Ghidra: FUN_00462960] ====
 
 
 undefined4 FUN_00462960(int *param_1)
@@ -61988,7 +61988,7 @@ undefined4 FUN_00462960(int *param_1)
 }
 
 
-// ==== FUN_004629d0 @ 004629D0 ====
+// ==== PanelEventEntryAppend @ 004629D0 [Ghidra: FUN_004629d0] ====
 
 
 undefined4
@@ -62042,7 +62042,7 @@ FUN_004629d0(int param_1,char *param_2,int param_3,undefined4 param_4,undefined4
 }
 
 
-// ==== FUN_00462ab0 @ 00462AB0 ====
+// ==== RecordField18Set @ 00462AB0 [Ghidra: FUN_00462ab0] ====
 
 
 void FUN_00462ab0(int param_1,undefined4 param_2)
@@ -62053,7 +62053,7 @@ void FUN_00462ab0(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00462ac0 @ 00462AC0 ====
+// ==== RecordFlags24Or @ 00462AC0 [Ghidra: FUN_00462ac0] ====
 
 
 void FUN_00462ac0(int param_1,uint param_2)
@@ -62064,7 +62064,7 @@ void FUN_00462ac0(int param_1,uint param_2)
 }
 
 
-// ==== FUN_00462ad0 @ 00462AD0 ====
+// ==== RewardScrollTickerAdvanceAndDraw @ 00462AD0 [Ghidra: FUN_00462ad0] ====
 
 
 undefined4 FUN_00462ad0(float *param_1)
@@ -62175,7 +62175,7 @@ LAB_00462cd3:
 }
 
 
-// ==== FUN_00462da0 @ 00462DA0 ====
+// ==== IndexedSurfaceResourceAllocate @ 00462DA0 [Ghidra: FUN_00462da0] ====
 
 
 undefined4 FUN_00462da0(undefined4 param_1,int param_2,int param_3)
@@ -62211,7 +62211,7 @@ undefined4 FUN_00462da0(undefined4 param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_00462e60 @ 00462E60 ====
+// ==== AnimatedTextureReplace @ 00462E60 [Ghidra: FUN_00462e60] ====
 
 
 undefined4 FUN_00462e60(undefined4 param_1)
@@ -62239,7 +62239,7 @@ undefined4 FUN_00462e60(undefined4 param_1)
 }
 
 
-// ==== FUN_00462ed0 @ 00462ED0 ====
+// ==== GraphicsOverlayResourcesRelease @ 00462ED0 [Ghidra: FUN_00462ed0] ====
 
 
 void FUN_00462ed0(void)
@@ -62258,7 +62258,7 @@ void FUN_00462ed0(void)
 }
 
 
-// ==== FUN_00462f20 @ 00462F20 ====
+// ==== TerrainCellQuadGeometryEmit @ 00462F20 [Ghidra: FUN_00462f20] ====
 
 
 void FUN_00462f20(int param_1,int param_2,undefined4 *param_3,undefined4 *param_4,
@@ -62400,7 +62400,7 @@ LAB_00463090:
 }
 
 
-// ==== FUN_00463230 @ 00463230 ====
+// ==== TerrainDirtyCellQuadNormalEmitPass @ 00463230 [Ghidra: FUN_00463230] ====
 
 
 void FUN_00463230(void)
@@ -62510,7 +62510,7 @@ void FUN_00463230(void)
 }
 
 
-// ==== FUN_004634b0 @ 004634B0 ====
+// ==== GraphicsOverlayVisibilitySet @ 004634B0 [Ghidra: FUN_004634b0] ====
 
 
 void FUN_004634b0(int param_1)
@@ -62528,7 +62528,7 @@ void FUN_004634b0(int param_1)
 }
 
 
-// ==== FUN_004634f0 @ 004634F0 ====
+// ==== IndexedSurfaceEntryHideAndRecord @ 004634F0 [Ghidra: FUN_004634f0] ====
 
 
 void FUN_004634f0(int param_1,int param_2)
@@ -62545,7 +62545,7 @@ void FUN_004634f0(int param_1,int param_2)
 }
 
 
-// ==== FUN_00463540 @ 00463540 ====
+// ==== IndexedSurfaceEntriesRestore @ 00463540 [Ghidra: FUN_00463540] ====
 
 
 void FUN_00463540(void)
@@ -62568,7 +62568,7 @@ void FUN_00463540(void)
 }
 
 
-// ==== FUN_00463590 @ 00463590 ====
+// ==== TerrainCellSurfaceNormalGet @ 00463590 [Ghidra: FUN_00463590] ====
 
 
 undefined4 FUN_00463590(uint param_1,uint param_2,float *param_3)
@@ -62606,7 +62606,7 @@ undefined4 FUN_00463590(uint param_1,uint param_2,float *param_3)
 }
 
 
-// ==== FUN_004636b0 @ 004636B0 ====
+// ==== InfoPanelStringEntriesInitialize @ 004636B0 [Ghidra: FUN_004636b0] ====
 
 
 void FUN_004636b0(int param_1,int param_2,int param_3,int param_4)
@@ -62637,7 +62637,7 @@ void FUN_004636b0(int param_1,int param_2,int param_3,int param_4)
 }
 
 
-// ==== FUN_00463730 @ 00463730 ====
+// ==== IndexedFloatPairSet @ 00463730 [Ghidra: FUN_00463730] ====
 
 
 void FUN_00463730(int param_1,uint param_2,uint param_3)
@@ -62649,7 +62649,7 @@ void FUN_00463730(int param_1,uint param_2,uint param_3)
 }
 
 
-// ==== FUN_00463770 @ 00463770 ====
+// ==== ScrollRectResourceRecordCreate @ 00463770 [Ghidra: FUN_00463770] ====
 
 
 void FUN_00463770(int param_1,int param_2,float *param_3,int param_4,int param_5)
@@ -62688,7 +62688,7 @@ void FUN_00463770(int param_1,int param_2,float *param_3,int param_4,int param_5
 }
 
 
-// ==== FUN_00463810 @ 00463810 ====
+// ==== ScrollRectPayloadRecordCreate @ 00463810 [Ghidra: FUN_00463810] ====
 
 
 void FUN_00463810(int param_1,float *param_2,int param_3,undefined4 param_4,undefined4 param_5)
@@ -62712,7 +62712,7 @@ void FUN_00463810(int param_1,float *param_2,int param_3,undefined4 param_4,unde
 }
 
 
-// ==== FUN_004638a0 @ 004638A0 ====
+// ==== SimTrackCursorHitTest @ 004638A0 [Ghidra: FUN_004638a0] ====
 
 
 int FUN_004638a0(int *param_1,uint param_2,uint param_3,int param_4,int param_5)
@@ -62863,7 +62863,7 @@ LAB_00463ae4:
 }
 
 
-// ==== FUN_00463c00 @ 00463C00 ====
+// ==== RectContainsPointByConvertedCoords @ 00463C00 [Ghidra: FUN_00463c00] ====
 
 
 undefined4 FUN_00463c00(undefined4 param_1,float *param_2,int param_3,int param_4)
@@ -62882,7 +62882,7 @@ undefined4 FUN_00463c00(undefined4 param_1,float *param_2,int param_3,int param_
 }
 
 
-// ==== FUN_00463c90 @ 00463C90 ====
+// ==== RectContainsPointFromObjectBounds @ 00463C90 [Ghidra: FUN_00463c90] ====
 
 
 undefined4 FUN_00463c90(int param_1,int param_2,int param_3)
@@ -62903,7 +62903,7 @@ undefined4 FUN_00463c90(int param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_00463d20 @ 00463D20 ====
+// ==== ViewBlitRectPositionsApply @ 00463D20 [Ghidra: FUN_00463d20] ====
 
 
 void FUN_00463d20(int param_1)
@@ -62959,7 +62959,7 @@ LAB_00463de7:
 }
 
 
-// ==== FUN_00463e40 @ 00463E40 ====
+// ==== FloatRoundToNearestInt @ 00463E40 [Ghidra: FUN_00463e40] ====
 
 
 void FUN_00463e40(float param_1)
@@ -62979,7 +62979,7 @@ void FUN_00463e40(float param_1)
 }
 
 
-// ==== FUN_00463ea0 @ 00463EA0 ====
+// ==== IndexedTextMetricsPairGet @ 00463EA0 [Ghidra: FUN_00463ea0] ====
 
 
 void FUN_00463ea0(int param_1,undefined4 *param_2,undefined4 *param_3)
@@ -62991,7 +62991,7 @@ void FUN_00463ea0(int param_1,undefined4 *param_2,undefined4 *param_3)
 }
 
 
-// ==== FUN_00463ed0 @ 00463ED0 ====
+// ==== IndexedTextMetricsPairSet @ 00463ED0 [Ghidra: FUN_00463ed0] ====
 
 
 void FUN_00463ed0(int param_1,undefined4 param_2,undefined4 param_3)
@@ -63004,7 +63004,7 @@ void FUN_00463ed0(int param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_00463f00 @ 00463F00 ====
+// ==== SceneQuadGridEmit @ 00463F00 [Ghidra: FUN_00463f00] ====
 
 
 int * FUN_00463f00(undefined4 param_1,int param_2)
@@ -63115,7 +63115,7 @@ int * FUN_00463f00(undefined4 param_1,int param_2)
 }
 
 
-// ==== FUN_00464110 @ 00464110 ====
+// ==== RotatedPairsScratchFill @ 00464110 [Ghidra: FUN_00464110] ====
 
 
 undefined4 * FUN_00464110(int *param_1,int param_2,int param_3,int param_4)
@@ -63160,7 +63160,7 @@ switchD_0046415a_caseD_0:
 }
 
 
-// ==== FUN_004641c0 @ 004641C0 ====
+// ==== BuildingPlacementFootprintRenderAndValidate @ 004641C0 [Ghidra: FUN_004641c0] ====
 
 
 uint FUN_004641c0(undefined4 *param_1,undefined4 param_2,undefined4 param_3,uint param_4,
@@ -63382,7 +63382,7 @@ LAB_0046452e:
 }
 
 
-// ==== FUN_00464720 @ 00464720 ====
+// ==== SurfaceVisibilitySet @ 00464720 [Ghidra: FUN_00464720] ====
 
 
 void FUN_00464720(undefined4 *param_1,undefined4 param_2)
@@ -63393,7 +63393,7 @@ void FUN_00464720(undefined4 *param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00464740 @ 00464740 ====
+// ==== SoundAliasRegistryInit @ 00464740 [Ghidra: FUN_00464740] ====
 
 
 void FUN_00464740(void)
@@ -63497,7 +63497,7 @@ void FUN_00464740(void)
 }
 
 
-// ==== FUN_00464c50 @ 00464C50 ====
+// ==== GlobalFlag_00502a2cBit2SetClear @ 00464C50 [Ghidra: FUN_00464c50] ====
 
 
 void FUN_00464c50(int param_1)
@@ -63512,7 +63512,7 @@ void FUN_00464c50(int param_1)
 }
 
 
-// ==== FUN_00464c70 @ 00464C70 ====
+// ==== SoundAliasLookup @ 00464C70 [Ghidra: FUN_00464c70] ====
 
 
 undefined4 FUN_00464c70(int param_1,uint *param_2)
@@ -63550,7 +63550,7 @@ undefined4 FUN_00464c70(int param_1,uint *param_2)
 }
 
 
-// ==== FUN_00464d00 @ 00464D00 ====
+// ==== SoundSampleMarkerParse @ 00464D00 [Ghidra: FUN_00464d00] ====
 
 
 undefined4 FUN_00464d00(undefined4 param_1,int param_2)
@@ -63632,7 +63632,7 @@ undefined4 FUN_00464d00(undefined4 param_1,int param_2)
 }
 
 
-// ==== FUN_00464e20 @ 00464E20 ====
+// ==== SoundSampleVariantSelect @ 00464E20 [Ghidra: FUN_00464e20] ====
 
 
 undefined4 FUN_00464e20(int param_1)
@@ -63666,7 +63666,7 @@ undefined4 FUN_00464e20(int param_1)
 }
 
 
-// ==== FUN_00464e80 @ 00464E80 ====
+// ==== DeferredSoundPlayExpire @ 00464E80 [Ghidra: FUN_00464e80] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -63683,7 +63683,7 @@ void FUN_00464e80(void)
 }
 
 
-// ==== FUN_00464ec0 @ 00464EC0 ====
+// ==== DeferredSoundTimerSetIfIdle @ 00464EC0 [Ghidra: FUN_00464ec0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -63700,7 +63700,7 @@ undefined4 FUN_00464ec0(undefined4 param_1)
 }
 
 
-// ==== FUN_00464ef0 @ 00464EF0 ====
+// ==== SoundSubmitWithGlobalCooldown @ 00464EF0 [Ghidra: FUN_00464ef0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -63726,7 +63726,7 @@ undefined4 FUN_00464ef0(undefined4 param_1,int *param_2)
 }
 
 
-// ==== FUN_00464f60 @ 00464F60 ====
+// ==== SoundRequestQueueSubmit @ 00464F60 [Ghidra: FUN_00464f60] ====
 
 
 void FUN_00464f60(undefined4 param_1,undefined4 param_2)
@@ -63741,7 +63741,7 @@ void FUN_00464f60(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00464fa0 @ 00464FA0 ====
+// ==== SoundAliasPlay @ 00464FA0 [Ghidra: FUN_00464fa0] ====
 
 
 void FUN_00464fa0(int param_1,undefined4 param_2)
@@ -63770,7 +63770,7 @@ void FUN_00464fa0(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00465010 @ 00465010 ====
+// ==== ConfiguredVariantPropertySet @ 00465010 [Ghidra: FUN_00465010] ====
 
 
 void FUN_00465010(undefined4 param_1,undefined4 param_2)
@@ -63784,7 +63784,7 @@ void FUN_00465010(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00465030 @ 00465030 ====
+// ==== ConfiguredVariantPropertyRead @ 00465030 [Ghidra: FUN_00465030] ====
 
 
 void FUN_00465030(undefined4 param_1)
@@ -63798,7 +63798,7 @@ void FUN_00465030(undefined4 param_1)
 }
 
 
-// ==== FUN_00465050 @ 00465050 ====
+// ==== SoundSubmissionRouteWrapper @ 00465050 [Ghidra: FUN_00465050] ====
 
 
 void FUN_00465050(int param_1,undefined4 param_2,undefined4 param_3,undefined4 param_4,
@@ -63818,7 +63818,7 @@ void FUN_00465050(int param_1,undefined4 param_2,undefined4 param_3,undefined4 p
 }
 
 
-// ==== FUN_00465090 @ 00465090 ====
+// ==== PositionalSoundSubmit @ 00465090 [Ghidra: FUN_00465090] ====
 
 
 undefined4
@@ -63863,7 +63863,7 @@ FUN_00465090(undefined4 param_1,int param_2,uint param_3,uint param_4,undefined4
 }
 
 
-// ==== FUN_00465160 @ 00465160 ====
+// ==== SoundObjectDurationGet @ 00465160 [Ghidra: FUN_00465160] ====
 
 
 float10 FUN_00465160(undefined4 param_1)
@@ -63881,7 +63881,7 @@ float10 FUN_00465160(undefined4 param_1)
 }
 
 
-// ==== FUN_00465190 @ 00465190 ====
+// ==== SoundFrameTick @ 00465190 [Ghidra: FUN_00465190] ====
 
 
 void FUN_00465190(undefined4 param_1)
@@ -63892,7 +63892,7 @@ void FUN_00465190(undefined4 param_1)
 }
 
 
-// ==== FUN_004651a0 @ 004651A0 ====
+// ==== SoundFrameTick @ 004651A0 [Ghidra: FUN_004651a0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -63974,7 +63974,7 @@ void thunk_FUN_0047b390(void)
 }
 
 
-// ==== FUN_00465260 @ 00465260 ====
+// ==== SoundSubsystemEnableSet @ 00465260 [Ghidra: FUN_00465260] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -63995,7 +63995,7 @@ void FUN_00465260(int param_1,int param_2)
 }
 
 
-// ==== FUN_004652a0 @ 004652A0 ====
+// ==== SoundSubsystemEnableSetAndStop @ 004652A0 [Ghidra: FUN_004652a0] ====
 
 
 void FUN_004652a0(undefined4 param_1)
@@ -64006,7 +64006,7 @@ void FUN_004652a0(undefined4 param_1)
 }
 
 
-// ==== FUN_004652b0 @ 004652B0 ====
+// ==== SoundPackedBatchQueueUpdate @ 004652B0 [Ghidra: FUN_004652b0] ====
 
 
 uint FUN_004652b0(void)
@@ -64016,7 +64016,7 @@ uint FUN_004652b0(void)
 }
 
 
-// ==== FUN_004652c0 @ 004652C0 ====
+// ==== SoundDeferredQueueDrain @ 004652C0 [Ghidra: FUN_004652c0] ====
 
 
 void FUN_004652c0(undefined4 param_1)
@@ -64027,7 +64027,7 @@ void FUN_004652c0(undefined4 param_1)
 }
 
 
-// ==== FUN_004652d0 @ 004652D0 ====
+// ==== SoundBatchQueueDrain @ 004652D0 [Ghidra: FUN_004652d0] ====
 
 
 void FUN_004652d0(int param_1,int param_2)
@@ -64065,7 +64065,7 @@ void FUN_004652d0(int param_1,int param_2)
 }
 
 
-// ==== FUN_00465370 @ 00465370 ====
+// ==== SoundDynamicAliasRegistrationEnabledGet @ 00465370 [Ghidra: FUN_00465370] ====
 
 
 uint FUN_00465370(void)
@@ -64075,7 +64075,7 @@ uint FUN_00465370(void)
 }
 
 
-// ==== FUN_00465380 @ 00465380 ====
+// ==== GlobalTriplet_00552128_30Reset @ 00465380 [Ghidra: FUN_00465380] ====
 
 
 undefined4 FUN_00465380(void)
@@ -64088,7 +64088,7 @@ undefined4 FUN_00465380(void)
 }
 
 
-// ==== FUN_004653a0 @ 004653A0 ====
+// ==== PreloadSharedIndexed @ 004653A0 [Ghidra: FUN_004653a0] ====
 
 
 void FUN_004653a0(undefined4 param_1,undefined4 param_2,uint param_3)
@@ -64117,7 +64117,7 @@ void FUN_004653a0(undefined4 param_1,undefined4 param_2,uint param_3)
 }
 
 
-// ==== FUN_00465430 @ 00465430 ====
+// ==== SoundStreamSelectorUpdate @ 00465430 [Ghidra: FUN_00465430] ====
 
 
 int * FUN_00465430(int param_1,undefined4 param_2,undefined4 param_3,int *param_4,float param_5,
@@ -64285,7 +64285,7 @@ int * FUN_00465430(int param_1,undefined4 param_2,undefined4 param_3,int *param_
 }
 
 
-// ==== FUN_00465970 @ 00465970 ====
+// ==== ObjectCallbackListDisposeAll @ 00465970 [Ghidra: FUN_00465970] ====
 
 
 void FUN_00465970(void)
@@ -64305,7 +64305,7 @@ void FUN_00465970(void)
 }
 
 
-// ==== FUN_004659b0 @ 004659B0 ====
+// ==== LavaEffectSoundHandleGetOrSubmit @ 004659B0 [Ghidra: FUN_004659b0] ====
 
 
 void FUN_004659b0(int param_1,int param_2)
@@ -64343,7 +64343,7 @@ void FUN_004659b0(int param_1,int param_2)
 }
 
 
-// ==== FUN_00465a90 @ 00465A90 ====
+// ==== RegisteredObjectListApplyCallback @ 00465A90 [Ghidra: FUN_00465a90] ====
 
 
 void FUN_00465a90(undefined4 param_1)
@@ -64358,7 +64358,7 @@ void FUN_00465a90(undefined4 param_1)
 }
 
 
-// ==== FUN_00465ac0 @ 00465AC0 ====
+// ==== ResourceEnableSet @ 00465AC0 [Ghidra: FUN_00465ac0] ====
 
 
 void FUN_00465ac0(int param_1,int param_2)
@@ -64374,7 +64374,7 @@ void FUN_00465ac0(int param_1,int param_2)
 }
 
 
-// ==== FUN_00465b00 @ 00465B00 ====
+// ==== SoundInstanceUpdate @ 00465B00 [Ghidra: FUN_00465b00] ====
 
 
 void FUN_00465b00(float param_1)
@@ -64443,7 +64443,7 @@ void FUN_00465b00(float param_1)
 }
 
 
-// ==== FUN_00465c50 @ 00465C50 ====
+// ==== ParticleSlotInitializeForEmitter @ 00465C50 [Ghidra: FUN_00465c50] ====
 
 
 int FUN_00465c50(int param_1,int param_2)
@@ -64495,7 +64495,7 @@ int FUN_00465c50(int param_1,int param_2)
 }
 
 
-// ==== FUN_00465e00 @ 00465E00 ====
+// ==== AdvanceTimedVisualSegmentAndFade @ 00465E00 [Ghidra: FUN_00465e00] ====
 
 
 void FUN_00465e00(int param_1,int param_2,float param_3)
@@ -64523,7 +64523,7 @@ void FUN_00465e00(int param_1,int param_2,float param_3)
 }
 
 
-// ==== FUN_00465f40 @ 00465F40 ====
+// ==== InstanceQuadVerticesBuild @ 00465F40 [Ghidra: FUN_00465f40] ====
 
 
 void FUN_00465f40(int param_1,int param_2,undefined4 param_3,undefined4 param_4)
@@ -64610,7 +64610,7 @@ void FUN_00465f40(int param_1,int param_2,undefined4 param_3,undefined4 param_4)
 }
 
 
-// ==== FUN_004661c0 @ 004661C0 ====
+// ==== GridCellRecordBufferAllocate @ 004661C0 [Ghidra: FUN_004661c0] ====
 
 
 void FUN_004661c0(int param_1)
@@ -64639,7 +64639,7 @@ void FUN_004661c0(int param_1)
 }
 
 
-// ==== FUN_00466210 @ 00466210 ====
+// ==== EntityFieldGridBufferRelease @ 00466210 [Ghidra: FUN_00466210] ====
 
 
 void FUN_00466210(void)
@@ -64653,7 +64653,7 @@ void FUN_00466210(void)
 }
 
 
-// ==== FUN_00466230 @ 00466230 ====
+// ==== GridCellRecordBufferReplace @ 00466230 [Ghidra: FUN_00466230] ====
 
 
 void FUN_00466230(undefined4 param_1)
@@ -64665,7 +64665,7 @@ void FUN_00466230(undefined4 param_1)
 }
 
 
-// ==== FUN_00466250 @ 00466250 ====
+// ==== ExpandCellEntitySpawn @ 00466250 [Ghidra: FUN_00466250] ====
 
 
 undefined4 FUN_00466250(int param_1,int param_2)
@@ -64700,7 +64700,7 @@ undefined4 FUN_00466250(int param_1,int param_2)
 }
 
 
-// ==== FUN_00466380 @ 00466380 ====
+// ==== SetExpansionEntityAtGridCell @ 00466380 [Ghidra: FUN_00466380] ====
 
 
 void FUN_00466380(int param_1,int param_2,undefined4 param_3)
@@ -64718,7 +64718,7 @@ void FUN_00466380(int param_1,int param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_004663f0 @ 004663F0 ====
+// ==== CanSpawnExpansionEntityAtGridCell @ 004663F0 [Ghidra: FUN_004663f0] ====
 
 
 undefined4 FUN_004663f0(int param_1,int param_2,undefined4 *param_3)
@@ -64755,7 +64755,7 @@ undefined4 FUN_004663f0(int param_1,int param_2,undefined4 *param_3)
 }
 
 
-// ==== FUN_00466490 @ 00466490 ====
+// ==== CellSightRayCheckAndFlag @ 00466490 [Ghidra: FUN_00466490] ====
 
 
 undefined4 FUN_00466490(int param_1)
@@ -64810,7 +64810,7 @@ void FUN_004665c0(void)
 }
 
 
-// ==== FUN_00466750 @ 00466750 ====
+// ==== GridCellInvalidateAndClearFlags @ 00466750 [Ghidra: FUN_00466750] ====
 
 
 void FUN_00466750(int param_1,int param_2)
@@ -64829,7 +64829,7 @@ void FUN_00466750(int param_1,int param_2)
 }
 
 
-// ==== FUN_004667e0 @ 004667E0 ====
+// ==== EntityStatsConfigLoad @ 004667E0 [Ghidra: FUN_004667e0] ====
 
 
 undefined4 FUN_004667e0(undefined4 param_1,undefined4 param_2)
@@ -66488,7 +66488,7 @@ undefined4 FUN_004667e0(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00469a90 @ 00469A90 ====
+// ==== IndexedValueAppend @ 00469A90 [Ghidra: FUN_00469a90] ====
 
 
 void FUN_00469a90(int param_1,undefined4 param_2)
@@ -66500,7 +66500,7 @@ void FUN_00469a90(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00469ac0 @ 00469AC0 ====
+// ==== IndexedRecordWordAtOffsetB0Get @ 00469AC0 [Ghidra: FUN_00469ac0] ====
 
 
 undefined4 FUN_00469ac0(int param_1,int param_2,int param_3)
@@ -66511,7 +66511,7 @@ undefined4 FUN_00469ac0(int param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_00469af0 @ 00469AF0 ====
+// ==== IndexedRecordWordAtOffsetB4Get @ 00469AF0 [Ghidra: FUN_00469af0] ====
 
 
 undefined4 FUN_00469af0(int param_1,int param_2,int param_3)
@@ -66522,7 +66522,7 @@ undefined4 FUN_00469af0(int param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_00469b20 @ 00469B20 ====
+// ==== IndexedRecordWordAtOffsetB8Get @ 00469B20 [Ghidra: FUN_00469b20] ====
 
 
 undefined4 FUN_00469b20(int param_1,int param_2,int param_3)
@@ -66533,7 +66533,7 @@ undefined4 FUN_00469b20(int param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_00469b50 @ 00469B50 ====
+// ==== EntityIndexedRecordWordAtOffsetBCGet @ 00469B50 [Ghidra: FUN_00469b50] ====
 
 
 undefined4 FUN_00469b50(int *param_1)
@@ -66545,7 +66545,7 @@ undefined4 FUN_00469b50(int *param_1)
 }
 
 
-// ==== FUN_00469b80 @ 00469B80 ====
+// ==== EntityIndexedRecordWordAtOffsetE0Get @ 00469B80 [Ghidra: FUN_00469b80] ====
 
 
 undefined4 FUN_00469b80(int *param_1)
@@ -66557,7 +66557,7 @@ undefined4 FUN_00469b80(int *param_1)
 }
 
 
-// ==== FUN_00469bb0 @ 00469BB0 ====
+// ==== BuildingDepositCountGet @ 00469BB0 [Ghidra: FUN_00469bb0] ====
 
 
 undefined4 FUN_00469bb0(int *param_1)
@@ -66569,7 +66569,7 @@ undefined4 FUN_00469bb0(int *param_1)
 }
 
 
-// ==== FUN_00469be0 @ 00469BE0 ====
+// ==== EntityIndexedRecordWordAtOffsetF0Get @ 00469BE0 [Ghidra: FUN_00469be0] ====
 
 
 undefined4 FUN_00469be0(int *param_1)
@@ -66581,7 +66581,7 @@ undefined4 FUN_00469be0(int *param_1)
 }
 
 
-// ==== FUN_00469c10 @ 00469C10 ====
+// ==== EntityBuildingIndexSet @ 00469C10 [Ghidra: FUN_00469c10] ====
 
 
 undefined4 FUN_00469c10(int *param_1,uint param_2)
@@ -66606,7 +66606,7 @@ undefined4 FUN_00469c10(int *param_1,uint param_2)
 }
 
 
-// ==== FUN_00469cb0 @ 00469CB0 ====
+// ==== EntityComponentFloatAt20 @ 00469CB0 [Ghidra: FUN_00469cb0] ====
 
 
 float10 FUN_00469cb0(int param_1)
@@ -66616,7 +66616,7 @@ float10 FUN_00469cb0(int param_1)
 }
 
 
-// ==== FUN_00469cc0 @ 00469CC0 ====
+// ==== TerrainTypeMovementSpeedGet @ 00469CC0 [Ghidra: FUN_00469cc0] ====
 
 
 float10 FUN_00469cc0(int param_1,int param_2)
@@ -66626,7 +66626,7 @@ float10 FUN_00469cc0(int param_1,int param_2)
 }
 
 
-// ==== FUN_00469ce0 @ 00469CE0 ====
+// ==== EntityComponentFloatAtD4 @ 00469CE0 [Ghidra: FUN_00469ce0] ====
 
 
 float10 FUN_00469ce0(int param_1)
@@ -66636,7 +66636,7 @@ float10 FUN_00469ce0(int param_1)
 }
 
 
-// ==== FUN_00469d00 @ 00469D00 ====
+// ==== NestedFloatAtOffset9CGet @ 00469D00 [Ghidra: FUN_00469d00] ====
 
 
 float10 FUN_00469d00(int param_1)
@@ -66646,7 +66646,7 @@ float10 FUN_00469d00(int param_1)
 }
 
 
-// ==== FUN_00469d20 @ 00469D20 ====
+// ==== EntityComponentFloatAtD8 @ 00469D20 [Ghidra: FUN_00469d20] ====
 
 
 float10 FUN_00469d20(int param_1)
@@ -66656,7 +66656,7 @@ float10 FUN_00469d20(int param_1)
 }
 
 
-// ==== FUN_00469d40 @ 00469D40 ====
+// ==== NestedFloatAtOffset6CGet @ 00469D40 [Ghidra: FUN_00469d40] ====
 
 
 float10 FUN_00469d40(int param_1)
@@ -66666,7 +66666,7 @@ float10 FUN_00469d40(int param_1)
 }
 
 
-// ==== FUN_00469d50 @ 00469D50 ====
+// ==== NestedFloatAtOffset74Get @ 00469D50 [Ghidra: FUN_00469d50] ====
 
 
 float10 FUN_00469d50(int param_1)
@@ -66676,7 +66676,7 @@ float10 FUN_00469d50(int param_1)
 }
 
 
-// ==== FUN_00469d60 @ 00469D60 ====
+// ==== NestedFloatAtOffset78Get @ 00469D60 [Ghidra: FUN_00469d60] ====
 
 
 float10 FUN_00469d60(int param_1)
@@ -66686,7 +66686,7 @@ float10 FUN_00469d60(int param_1)
 }
 
 
-// ==== FUN_00469d70 @ 00469D70 ====
+// ==== NestedFloatAtOffsetE8Get @ 00469D70 [Ghidra: FUN_00469d70] ====
 
 
 float10 FUN_00469d70(int param_1)
@@ -66696,7 +66696,7 @@ float10 FUN_00469d70(int param_1)
 }
 
 
-// ==== FUN_00469d90 @ 00469D90 ====
+// ==== NestedFloatAtOffset70Get @ 00469D90 [Ghidra: FUN_00469d90] ====
 
 
 float10 FUN_00469d90(int param_1)
@@ -66706,7 +66706,7 @@ float10 FUN_00469d90(int param_1)
 }
 
 
-// ==== FUN_00469da0 @ 00469DA0 ====
+// ==== NestedFieldAddressAtOffsetA0Get @ 00469DA0 [Ghidra: FUN_00469da0] ====
 
 
 int FUN_00469da0(int param_1)
@@ -66716,7 +66716,7 @@ int FUN_00469da0(int param_1)
 }
 
 
-// ==== FUN_00469db0 @ 00469DB0 ====
+// ==== NestedFloatAtOffset7CGet @ 00469DB0 [Ghidra: FUN_00469db0] ====
 
 
 float10 FUN_00469db0(int param_1)
@@ -66726,7 +66726,7 @@ float10 FUN_00469db0(int param_1)
 }
 
 
-// ==== FUN_00469dc0 @ 00469DC0 ====
+// ==== NestedFloatAtOffset80Get @ 00469DC0 [Ghidra: FUN_00469dc0] ====
 
 
 float10 FUN_00469dc0(int param_1)
@@ -66736,7 +66736,7 @@ float10 FUN_00469dc0(int param_1)
 }
 
 
-// ==== FUN_00469de0 @ 00469DE0 ====
+// ==== EntityEnergyDecayRateGet @ 00469DE0 [Ghidra: FUN_00469de0] ====
 
 
 float10 FUN_00469de0(int param_1)
@@ -66746,7 +66746,7 @@ float10 FUN_00469de0(int param_1)
 }
 
 
-// ==== FUN_00469e00 @ 00469E00 ====
+// ==== IndexedRecordFloatAtOffsetDCGet @ 00469E00 [Ghidra: FUN_00469e00] ====
 
 
 float10 FUN_00469e00(int param_1,int param_2)
@@ -66756,7 +66756,7 @@ float10 FUN_00469e00(int param_1,int param_2)
 }
 
 
-// ==== FUN_00469e20 @ 00469E20 ====
+// ==== NestedFloatAtOffsetDCGet @ 00469E20 [Ghidra: FUN_00469e20] ====
 
 
 float10 FUN_00469e20(int param_1)
@@ -66766,7 +66766,7 @@ float10 FUN_00469e20(int param_1)
 }
 
 
-// ==== FUN_00469e40 @ 00469E40 ====
+// ==== NestedWordAtOffsetACGet @ 00469E40 [Ghidra: FUN_00469e40] ====
 
 
 undefined4 FUN_00469e40(int param_1)
@@ -66776,7 +66776,7 @@ undefined4 FUN_00469e40(int param_1)
 }
 
 
-// ==== FUN_00469e60 @ 00469E60 ====
+// ==== EntityStatsWordGet @ 00469E60 [Ghidra: FUN_00469e60] ====
 
 
 undefined4 FUN_00469e60(int param_1)
@@ -66786,7 +66786,7 @@ undefined4 FUN_00469e60(int param_1)
 }
 
 
-// ==== FUN_00469e80 @ 00469E80 ====
+// ==== EntityStateFlagsGet @ 00469E80 [Ghidra: FUN_00469e80] ====
 
 
 undefined4 FUN_00469e80(int param_1)
@@ -66796,7 +66796,7 @@ undefined4 FUN_00469e80(int param_1)
 }
 
 
-// ==== FUN_00469ea0 @ 00469EA0 ====
+// ==== EntityCapabilityFlagsGet @ 00469EA0 [Ghidra: FUN_00469ea0] ====
 
 
 undefined4 FUN_00469ea0(int param_1)
@@ -66806,7 +66806,7 @@ undefined4 FUN_00469ea0(int param_1)
 }
 
 
-// ==== FUN_00469ec0 @ 00469EC0 ====
+// ==== IndexedRecordWordAtOffset144Get @ 00469EC0 [Ghidra: FUN_00469ec0] ====
 
 
 undefined4 FUN_00469ec0(int param_1,int param_2)
@@ -66816,7 +66816,7 @@ undefined4 FUN_00469ec0(int param_1,int param_2)
 }
 
 
-// ==== FUN_00469ee0 @ 00469EE0 ====
+// ==== IndexedRecordWordAtOffset148Get @ 00469EE0 [Ghidra: FUN_00469ee0] ====
 
 
 undefined4 FUN_00469ee0(int param_1,int param_2)
@@ -66826,7 +66826,7 @@ undefined4 FUN_00469ee0(int param_1,int param_2)
 }
 
 
-// ==== FUN_00469f00 @ 00469F00 ====
+// ==== IndexedRecordWordAtOffset14CGet @ 00469F00 [Ghidra: FUN_00469f00] ====
 
 
 undefined4 FUN_00469f00(int param_1,int param_2)
@@ -66836,7 +66836,7 @@ undefined4 FUN_00469f00(int param_1,int param_2)
 }
 
 
-// ==== FUN_00469f20 @ 00469F20 ====
+// ==== ScreenShakeFlagRaise @ 00469F20 [Ghidra: FUN_00469f20] ====
 
 
 float10 FUN_00469f20(int param_1)
@@ -66846,7 +66846,7 @@ float10 FUN_00469f20(int param_1)
 }
 
 
-// ==== FUN_00469f40 @ 00469F40 ====
+// ==== BuildingUpgradeAdmissionCheck @ 00469F40 [Ghidra: FUN_00469f40] ====
 
 
 undefined4 FUN_00469f40(int param_1,int param_2)
@@ -66856,7 +66856,7 @@ undefined4 FUN_00469f40(int param_1,int param_2)
 }
 
 
-// ==== FUN_00469f60 @ 00469F60 ====
+// ==== IndexedRecordWordAtOffsetD0Get @ 00469F60 [Ghidra: FUN_00469f60] ====
 
 
 undefined4 FUN_00469f60(int param_1,int param_2,int param_3)
@@ -66867,7 +66867,7 @@ undefined4 FUN_00469f60(int param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_00469f90 @ 00469F90 ====
+// ==== NestedWordAtOffsetC0OrC4Get @ 00469F90 [Ghidra: FUN_00469f90] ====
 
 
 undefined4 FUN_00469f90(int param_1,int param_2)
@@ -66890,7 +66890,7 @@ undefined4 FUN_00469fc0(int param_1)
 }
 
 
-// ==== FUN_00469fe0 @ 00469FE0 ====
+// ==== NestedFloatAtOffset8CGet @ 00469FE0 [Ghidra: FUN_00469fe0] ====
 
 
 float10 FUN_00469fe0(int param_1)
@@ -66900,7 +66900,7 @@ float10 FUN_00469fe0(int param_1)
 }
 
 
-// ==== FUN_0046a000 @ 0046A000 ====
+// ==== Entity334FloatField90Get @ 0046A000 [Ghidra: FUN_0046a000] ====
 
 
 float10 FUN_0046a000(int param_1)
@@ -66910,7 +66910,7 @@ float10 FUN_0046a000(int param_1)
 }
 
 
-// ==== FUN_0046a020 @ 0046A020 ====
+// ==== Entity334FloatField98Get @ 0046A020 [Ghidra: FUN_0046a020] ====
 
 
 float10 FUN_0046a020(int param_1)
@@ -66920,7 +66920,7 @@ float10 FUN_0046a020(int param_1)
 }
 
 
-// ==== FUN_0046a040 @ 0046A040 ====
+// ==== Entity334FloatField94Get @ 0046A040 [Ghidra: FUN_0046a040] ====
 
 
 float10 FUN_0046a040(int param_1)
@@ -66930,7 +66930,7 @@ float10 FUN_0046a040(int param_1)
 }
 
 
-// ==== FUN_0046a060 @ 0046A060 ====
+// ==== PermittedActivityCapacityCheck @ 0046A060 [Ghidra: FUN_0046a060] ====
 
 
 undefined4 FUN_0046a060(int param_1)
@@ -66940,7 +66940,7 @@ undefined4 FUN_0046a060(int param_1)
 }
 
 
-// ==== FUN_0046a080 @ 0046A080 ====
+// ==== Entity334FloatFieldF4Get @ 0046A080 [Ghidra: FUN_0046a080] ====
 
 
 float10 FUN_0046a080(int param_1)
@@ -66950,7 +66950,7 @@ float10 FUN_0046a080(int param_1)
 }
 
 
-// ==== FUN_0046a0a0 @ 0046A0A0 ====
+// ==== EntitySpeedComponentGet @ 0046A0A0 [Ghidra: FUN_0046a0a0] ====
 
 
 float10 FUN_0046a0a0(int param_1)
@@ -66960,7 +66960,7 @@ float10 FUN_0046a0a0(int param_1)
 }
 
 
-// ==== FUN_0046a0c0 @ 0046A0C0 ====
+// ==== MappedIndexedRecordWordAtFCGet @ 0046A0C0 [Ghidra: FUN_0046a0c0] ====
 
 
 undefined4 FUN_0046a0c0(int param_1,int param_2,int param_3)
@@ -66971,7 +66971,7 @@ undefined4 FUN_0046a0c0(int param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_0046a0f0 @ 0046A0F0 ====
+// ==== MappedIndexedRecordWordAt100Get @ 0046A0F0 [Ghidra: FUN_0046a0f0] ====
 
 
 undefined4 FUN_0046a0f0(int param_1,int param_2,int param_3)
@@ -66982,7 +66982,7 @@ undefined4 FUN_0046a0f0(int param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_0046a120 @ 0046A120 ====
+// ==== GroupedCodeTableFindValueIndex @ 0046A120 [Ghidra: FUN_0046a120] ====
 
 
 undefined4 FUN_0046a120(int param_1,int *param_2)
@@ -67015,7 +67015,7 @@ undefined4 FUN_0046a120(int param_1,int *param_2)
 }
 
 
-// ==== FUN_0046a170 @ 0046A170 ====
+// ==== Entity334FloatField130Get @ 0046A170 [Ghidra: FUN_0046a170] ====
 
 
 float10 FUN_0046a170(int param_1)
@@ -67025,7 +67025,7 @@ float10 FUN_0046a170(int param_1)
 }
 
 
-// ==== FUN_0046a190 @ 0046A190 ====
+// ==== Entity334FloatField134Get @ 0046A190 [Ghidra: FUN_0046a190] ====
 
 
 float10 FUN_0046a190(int param_1)
@@ -67035,7 +67035,7 @@ float10 FUN_0046a190(int param_1)
 }
 
 
-// ==== FUN_0046a1b0 @ 0046A1B0 ====
+// ==== Entity334FloatField120Get @ 0046A1B0 [Ghidra: FUN_0046a1b0] ====
 
 
 float10 FUN_0046a1b0(int param_1)
@@ -67045,7 +67045,7 @@ float10 FUN_0046a1b0(int param_1)
 }
 
 
-// ==== FUN_0046a1d0 @ 0046A1D0 ====
+// ==== Entity334FloatField128Get @ 0046A1D0 [Ghidra: FUN_0046a1d0] ====
 
 
 float10 FUN_0046a1d0(int param_1)
@@ -67055,7 +67055,7 @@ float10 FUN_0046a1d0(int param_1)
 }
 
 
-// ==== FUN_0046a1f0 @ 0046A1F0 ====
+// ==== Entity334FloatField124Get @ 0046A1F0 [Ghidra: FUN_0046a1f0] ====
 
 
 float10 FUN_0046a1f0(int param_1)
@@ -67065,7 +67065,7 @@ float10 FUN_0046a1f0(int param_1)
 }
 
 
-// ==== FUN_0046a210 @ 0046A210 ====
+// ==== Entity334WordField13CGet @ 0046A210 [Ghidra: FUN_0046a210] ====
 
 
 undefined4 FUN_0046a210(int param_1)
@@ -67075,7 +67075,7 @@ undefined4 FUN_0046a210(int param_1)
 }
 
 
-// ==== FUN_0046a230 @ 0046A230 ====
+// ==== Entity334FloatField12CGet @ 0046A230 [Ghidra: FUN_0046a230] ====
 
 
 float10 FUN_0046a230(int param_1)
@@ -67085,7 +67085,7 @@ float10 FUN_0046a230(int param_1)
 }
 
 
-// ==== FUN_0046a250 @ 0046A250 ====
+// ==== Entity334FloatField138Get @ 0046A250 [Ghidra: FUN_0046a250] ====
 
 
 float10 FUN_0046a250(int param_1)
@@ -67095,7 +67095,7 @@ float10 FUN_0046a250(int param_1)
 }
 
 
-// ==== FUN_0046a270 @ 0046A270 ====
+// ==== EntityCollisionRadiusGet @ 0046A270 [Ghidra: FUN_0046a270] ====
 
 
 float10 FUN_0046a270(int param_1)
@@ -67105,7 +67105,7 @@ float10 FUN_0046a270(int param_1)
 }
 
 
-// ==== FUN_0046a290 @ 0046A290 ====
+// ==== Entity334FloatField114Get @ 0046A290 [Ghidra: FUN_0046a290] ====
 
 
 float10 FUN_0046a290(int param_1)
@@ -67115,7 +67115,7 @@ float10 FUN_0046a290(int param_1)
 }
 
 
-// ==== FUN_0046a2b0 @ 0046A2B0 ====
+// ==== Entity334FloatField118Get @ 0046A2B0 [Ghidra: FUN_0046a2b0] ====
 
 
 float10 FUN_0046a2b0(int param_1)
@@ -67125,7 +67125,7 @@ float10 FUN_0046a2b0(int param_1)
 }
 
 
-// ==== FUN_0046a2d0 @ 0046A2D0 ====
+// ==== Entity334FloatField11CGet @ 0046A2D0 [Ghidra: FUN_0046a2d0] ====
 
 
 float10 FUN_0046a2d0(int param_1)
@@ -67135,7 +67135,7 @@ float10 FUN_0046a2d0(int param_1)
 }
 
 
-// ==== FUN_0046a2f0 @ 0046A2F0 ====
+// ==== Entity334FloatField110Get @ 0046A2F0 [Ghidra: FUN_0046a2f0] ====
 
 
 float10 FUN_0046a2f0(int param_1)
@@ -67145,7 +67145,7 @@ float10 FUN_0046a2f0(int param_1)
 }
 
 
-// ==== FUN_0046a310 @ 0046A310 ====
+// ==== Entity334FloatField10CGet @ 0046A310 [Ghidra: FUN_0046a310] ====
 
 
 float10 FUN_0046a310(int param_1)
@@ -67155,7 +67155,7 @@ float10 FUN_0046a310(int param_1)
 }
 
 
-// ==== FUN_0046a330 @ 0046A330 ====
+// ==== EntityRecordFlag400ToggleAndRefresh @ 0046A330 [Ghidra: FUN_0046a330] ====
 
 
 void FUN_0046a330(int param_1)
@@ -67177,7 +67177,7 @@ void FUN_0046a330(int param_1)
 }
 
 
-// ==== FUN_0046a370 @ 0046A370 ====
+// ==== LinkedRecordChainFree @ 0046A370 [Ghidra: FUN_0046a370] ====
 
 
 void FUN_0046a370(int param_1)
@@ -67191,7 +67191,7 @@ void FUN_0046a370(int param_1)
 }
 
 
-// ==== FUN_0046a390 @ 0046A390 ====
+// ==== GlobalLinkedRecordChainClear @ 0046A390 [Ghidra: FUN_0046a390] ====
 
 
 void FUN_0046a390(void)
@@ -67204,7 +67204,7 @@ void FUN_0046a390(void)
 }
 
 
-// ==== FUN_0046a420 @ 0046A420 ====
+// ==== SelectedGlobalPointTransformAndReturnX @ 0046A420 [Ghidra: FUN_0046a420] ====
 
 
 undefined4 FUN_0046a420(void)
@@ -67224,7 +67224,7 @@ undefined4 FUN_0046a420(void)
 }
 
 
-// ==== FUN_0046a470 @ 0046A470 ====
+// ==== LinkedListPushAtGlobalHead @ 0046A470 [Ghidra: FUN_0046a470] ====
 
 
 void FUN_0046a470(int param_1)
@@ -67236,7 +67236,7 @@ void FUN_0046a470(int param_1)
 }
 
 
-// ==== FUN_0046a4c0 @ 0046A4C0 ====
+// ==== FlagMaskCallbacksAllPass @ 0046A4C0 [Ghidra: FUN_0046a4c0] ====
 
 
 undefined4 FUN_0046a4c0(uint param_1)
@@ -67261,7 +67261,7 @@ undefined4 FUN_0046a4c0(uint param_1)
 }
 
 
-// ==== FUN_0046a510 @ 0046A510 ====
+// ==== SceneObjectStateDispatch @ 0046A510 [Ghidra: FUN_0046a510] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -67313,7 +67313,7 @@ void FUN_0046a700(int param_1,float param_2)
 }
 
 
-// ==== FUN_0046a730 @ 0046A730 ====
+// ==== CameraMoveCommandRoute @ 0046A730 [Ghidra: FUN_0046a730] ====
 
 
 void FUN_0046a730(undefined4 param_1)
@@ -67327,7 +67327,7 @@ void FUN_0046a730(undefined4 param_1)
 }
 
 
-// ==== FUN_0046a760 @ 0046A760 ====
+// ==== FirstSetFlagOrdinal @ 0046A760 [Ghidra: FUN_0046a760] ====
 
 
 byte FUN_0046a760(uint param_1)
@@ -67373,7 +67373,7 @@ byte FUN_0046a760(uint param_1)
 }
 
 
-// ==== FUN_0046a7f0 @ 0046A7F0 ====
+// ==== UiMessageStringsInit @ 0046A7F0 [Ghidra: FUN_0046a7f0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -67423,7 +67423,7 @@ void FUN_0046a7f0(undefined4 param_1,undefined4 param_2,undefined4 param_3,undef
 }
 
 
-// ==== FUN_0046a950 @ 0046A950 ====
+// ==== TextLayoutGeometryStoreAndApply @ 0046A950 [Ghidra: FUN_0046a950] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -67445,7 +67445,7 @@ void FUN_0046a950(undefined4 param_1,uint param_2,undefined4 param_3,undefined4 
 }
 
 
-// ==== FUN_0046a9e0 @ 0046A9E0 ====
+// ==== AdvisorTextBoxRecordCommit @ 0046A9E0 [Ghidra: FUN_0046a9e0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -67471,7 +67471,7 @@ void FUN_0046a9e0(void)
 }
 
 
-// ==== FUN_0046aa90 @ 0046AA90 ====
+// ==== MessageOverlayStateInit @ 0046AA90 [Ghidra: FUN_0046aa90] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -67490,7 +67490,7 @@ void FUN_0046aa90(void)
 }
 
 
-// ==== FUN_0046aad0 @ 0046AAD0 ====
+// ==== MessageLabelIndexFind @ 0046AAD0 [Ghidra: FUN_0046aad0] ====
 
 
 undefined4 FUN_0046aad0(char *param_1,int *param_2)
@@ -67515,7 +67515,7 @@ undefined4 FUN_0046aad0(char *param_1,int *param_2)
 }
 
 
-// ==== FUN_0046ab10 @ 0046AB10 ====
+// ==== TextSlotMessageAssign @ 0046AB10 [Ghidra: FUN_0046ab10] ====
 
 
 void FUN_0046ab10(int param_1,char *param_2)
@@ -67566,7 +67566,7 @@ void FUN_0046ab10(int param_1,char *param_2)
 }
 
 
-// ==== FUN_0046abb0 @ 0046ABB0 ====
+// ==== TextSlotMessageWithImageAssign @ 0046ABB0 [Ghidra: FUN_0046abb0] ====
 
 
 void FUN_0046abb0(int param_1,undefined4 param_2,undefined4 param_3,undefined4 param_4)
@@ -67585,7 +67585,7 @@ void FUN_0046abb0(int param_1,undefined4 param_2,undefined4 param_3,undefined4 p
 }
 
 
-// ==== FUN_0046ac20 @ 0046AC20 ====
+// ==== AdvisorTextRequestSetup @ 0046AC20 [Ghidra: FUN_0046ac20] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -67604,7 +67604,7 @@ void FUN_0046ac20(undefined4 param_1,uint param_2)
 }
 
 
-// ==== FUN_0046ac60 @ 0046AC60 ====
+// ==== AdvisorTextAnimationUpdate @ 0046AC60 [Ghidra: FUN_0046ac60] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -67639,7 +67639,7 @@ void FUN_0046ac60(int param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_0046ad00 @ 0046AD00 ====
+// ==== AdvisorTextDisplayWorker @ 0046AD00 [Ghidra: FUN_0046ad00] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -67773,7 +67773,7 @@ void FUN_0046ad00(float param_1)
 }
 
 
-// ==== FUN_0046b1d0 @ 0046B1D0 ====
+// ==== TooltipOverlayStateInitialize @ 0046B1D0 [Ghidra: FUN_0046b1d0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -67873,7 +67873,7 @@ void FUN_0046b1d0(undefined4 param_1,undefined4 param_2,undefined4 param_3,float
 }
 
 
-// ==== FUN_0046b4d0 @ 0046B4D0 ====
+// ==== CaseInsensitiveNameTableLookup @ 0046B4D0 [Ghidra: FUN_0046b4d0] ====
 
 
 undefined4 FUN_0046b4d0(char *param_1,int *param_2)
@@ -67898,7 +67898,7 @@ undefined4 FUN_0046b4d0(char *param_1,int *param_2)
 }
 
 
-// ==== FUN_0046b520 @ 0046B520 ====
+// ==== UiTextEntryLoad @ 0046B520 [Ghidra: FUN_0046b520] ====
 
 
 void FUN_0046b520(int param_1,undefined4 param_2)
@@ -67964,7 +67964,7 @@ void FUN_0046b520(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0046b660 @ 0046B660 ====
+// ==== CommandSampleStatsAccumulate @ 0046B660 [Ghidra: FUN_0046b660] ====
 
 
 void FUN_0046b660(int param_1,int param_2)
@@ -67998,7 +67998,7 @@ void FUN_0046b660(int param_1,int param_2)
 }
 
 
-// ==== FUN_0046b700 @ 0046B700 ====
+// ==== TimedEffectCueRequestSet @ 0046B700 [Ghidra: FUN_0046b700] ====
 
 
 void FUN_0046b700(int param_1,undefined4 param_2)
@@ -68010,7 +68010,7 @@ void FUN_0046b700(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0046b730 @ 0046B730 ====
+// ==== TimedEffectPersistenceSet @ 0046B730 [Ghidra: FUN_0046b730] ====
 
 
 void FUN_0046b730(int param_1,int param_2)
@@ -68026,7 +68026,7 @@ void FUN_0046b730(int param_1,int param_2)
 }
 
 
-// ==== FUN_0046b770 @ 0046B770 ====
+// ==== TimedEffectUpdateRequestSet @ 0046B770 [Ghidra: FUN_0046b770] ====
 
 
 void FUN_0046b770(int param_1)
@@ -68037,7 +68037,7 @@ void FUN_0046b770(int param_1)
 }
 
 
-// ==== FUN_0046b7a0 @ 0046B7A0 ====
+// ==== TimedEffectTimestampReset @ 0046B7A0 [Ghidra: FUN_0046b7a0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -68050,7 +68050,7 @@ void FUN_0046b7a0(int param_1)
 }
 
 
-// ==== FUN_0046b7c0 @ 0046B7C0 ====
+// ==== TimedEffectAndCueUpdate @ 0046B7C0 [Ghidra: FUN_0046b7c0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -68105,7 +68105,7 @@ void FUN_0046b7c0(undefined4 param_1,undefined4 param_2,float param_3)
 }
 
 
-// ==== FUN_0046b8b0 @ 0046B8B0 ====
+// ==== RectangularGridOverlayGeometryDraw @ 0046B8B0 [Ghidra: FUN_0046b8b0] ====
 
 
 void FUN_0046b8b0(float param_1,float param_2,float param_3,float param_4,undefined4 param_5,
@@ -68198,7 +68198,7 @@ void FUN_0046b8b0(float param_1,float param_2,float param_3,float param_4,undefi
 }
 
 
-// ==== FUN_0046bc30 @ 0046BC30 ====
+// ==== TimedEffectSlotRender @ 0046BC30 [Ghidra: FUN_0046bc30] ====
 
 
 void FUN_0046bc30(int param_1,uint param_2,uint param_3)
@@ -68325,7 +68325,7 @@ void FUN_0046bc30(int param_1,uint param_2,uint param_3)
 }
 
 
-// ==== FUN_0046c030 @ 0046C030 ====
+// ==== RenderResourceBindingInitialize @ 0046C030 [Ghidra: FUN_0046c030] ====
 
 
 void FUN_0046c030(undefined4 *param_1,undefined4 param_2,undefined4 param_3,undefined4 param_4)
@@ -68354,7 +68354,7 @@ void FUN_0046c030(undefined4 *param_1,undefined4 param_2,undefined4 param_3,unde
 }
 
 
-// ==== FUN_0046c0b0 @ 0046C0B0 ====
+// ==== CopyFourFieldsAndConvertSecond @ 0046C0B0 [Ghidra: FUN_0046c0b0] ====
 
 
 void FUN_0046c0b0(undefined4 *param_1,undefined4 *param_2)
@@ -68372,7 +68372,7 @@ void FUN_0046c0b0(undefined4 *param_1,undefined4 *param_2)
 }
 
 
-// ==== FUN_0046c0f0 @ 0046C0F0 ====
+// ==== RecordResourceRelease @ 0046C0F0 [Ghidra: FUN_0046c0f0] ====
 
 
 void FUN_0046c0f0(int param_1)
@@ -68383,7 +68383,7 @@ void FUN_0046c0f0(int param_1)
 }
 
 
-// ==== FUN_0046c110 @ 0046C110 ====
+// ==== AnimationResourceAdvanceTime @ 0046C110 [Ghidra: FUN_0046c110] ====
 
 
 float10 FUN_0046c110(int param_1,undefined4 param_2)
@@ -68394,7 +68394,7 @@ float10 FUN_0046c110(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0046c130 @ 0046C130 ====
+// ==== SceneObjectSetAnimationWithFallback @ 0046C130 [Ghidra: FUN_0046c130] ====
 
 
 void FUN_0046c130(int param_1,undefined4 param_2)
@@ -68410,7 +68410,7 @@ void FUN_0046c130(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0046c160 @ 0046C160 ====
+// ==== UpgradeLevelTableParse @ 0046C160 [Ghidra: FUN_0046c160] ====
 
 
 void FUN_0046c160(int *param_1,undefined4 param_2,undefined4 param_3)
@@ -68530,7 +68530,7 @@ void FUN_0046c160(int *param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_0046c340 @ 0046C340 ====
+// ==== IndexedRecordListRebuildForValue @ 0046C340 [Ghidra: FUN_0046c340] ====
 
 
 void FUN_0046c340(int *param_1,int param_2)
@@ -68575,7 +68575,7 @@ void FUN_0046c340(int *param_1,int param_2)
 }
 
 
-// ==== FUN_0046c3d0 @ 0046C3D0 ====
+// ==== RecordFieldD8EqualsOne @ 0046C3D0 [Ghidra: FUN_0046c3d0] ====
 
 
 bool FUN_0046c3d0(int param_1)
@@ -68585,7 +68585,7 @@ bool FUN_0046c3d0(int param_1)
 }
 
 
-// ==== FUN_0046c3f0 @ 0046C3F0 ====
+// ==== SceneActivityPairedChannelUpdate @ 0046C3F0 [Ghidra: FUN_0046c3f0] ====
 
 
 uint FUN_0046c3f0(int param_1,undefined4 param_2,undefined4 param_3)
@@ -68643,7 +68643,7 @@ uint FUN_0046c3f0(int param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_0046c510 @ 0046C510 ====
+// ==== SceneChannelSlotsRebuild @ 0046C510 [Ghidra: FUN_0046c510] ====
 
 
 void FUN_0046c510(undefined4 *param_1,int param_2)
@@ -68732,7 +68732,7 @@ void FUN_0046c510(undefined4 *param_1,int param_2)
 }
 
 
-// ==== FUN_0046c6f0 @ 0046C6F0 ====
+// ==== VehicleTypeDefinitionParse @ 0046C6F0 [Ghidra: FUN_0046c6f0] ====
 
 
 undefined4 FUN_0046c6f0(char *param_1,char *param_2)
@@ -69040,7 +69040,7 @@ undefined4 FUN_0046c6f0(char *param_1,char *param_2)
 }
 
 
-// ==== FUN_0046ce10 @ 0046CE10 ====
+// ==== EntityPayloadType1Release @ 0046CE10 [Ghidra: FUN_0046ce10] ====
 
 
 void FUN_0046ce10(int param_1)
@@ -69084,7 +69084,7 @@ void FUN_0046ce10(int param_1)
 }
 
 
-// ==== FUN_0046ced0 @ 0046CED0 ====
+// ==== PairedResourceStateSet @ 0046CED0 [Ghidra: FUN_0046ced0] ====
 
 
 void FUN_0046ced0(int param_1,int param_2)
@@ -69098,7 +69098,7 @@ void FUN_0046ced0(int param_1,int param_2)
 }
 
 
-// ==== FUN_0046cf20 @ 0046CF20 ====
+// ==== SceneEntityAnimationTracksSetEnabled @ 0046CF20 [Ghidra: FUN_0046cf20] ====
 
 
 void FUN_0046cf20(undefined4 param_1,undefined4 param_2)
@@ -69109,7 +69109,7 @@ void FUN_0046cf20(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0046cf40 @ 0046CF40 ====
+// ==== RecordFlagBitTest @ 0046CF40 [Ghidra: FUN_0046cf40] ====
 
 
 uint FUN_0046cf40(int param_1,byte param_2,int param_3)
@@ -69129,7 +69129,7 @@ uint FUN_0046cf40(int param_1,byte param_2,int param_3)
 }
 
 
-// ==== FUN_0046cf80 @ 0046CF80 ====
+// ==== EntityTypeMaskGet @ 0046CF80 [Ghidra: FUN_0046cf80] ====
 
 
 undefined4 FUN_0046cf80(int param_1)
@@ -69139,7 +69139,7 @@ undefined4 FUN_0046cf80(int param_1)
 }
 
 
-// ==== FUN_0046cf90 @ 0046CF90 ====
+// ==== RecordIndexedEntriesRebuildAndRefresh @ 0046CF90 [Ghidra: FUN_0046cf90] ====
 
 
 void FUN_0046cf90(int param_1,undefined4 param_2)
@@ -69151,7 +69151,7 @@ void FUN_0046cf90(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0046cfc0 @ 0046CFC0 ====
+// ==== SixResourceSlotsSetState @ 0046CFC0 [Ghidra: FUN_0046cfc0] ====
 
 
 void FUN_0046cfc0(int param_1,undefined4 param_2)
@@ -69173,7 +69173,7 @@ void FUN_0046cfc0(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0046cff0 @ 0046CFF0 ====
+// ==== SceneRecordTemplateInstantiate @ 0046CFF0 [Ghidra: FUN_0046cff0] ====
 
 
 undefined4 FUN_0046cff0(undefined4 *param_1,undefined4 *param_2)
@@ -69232,7 +69232,7 @@ undefined4 FUN_0046cff0(undefined4 *param_1,undefined4 *param_2)
 }
 
 
-// ==== FUN_0046d140 @ 0046D140 ====
+// ==== SceneAssignOwnerFromModel @ 0046D140 [Ghidra: FUN_0046d140] ====
 
 
 void FUN_0046d140(int param_1,undefined4 param_2)
@@ -69260,7 +69260,7 @@ void FUN_0046d140(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0046d1a0 @ 0046D1A0 ====
+// ==== SceneObjectAttachedResourceRelease @ 0046D1A0 [Ghidra: FUN_0046d1a0] ====
 
 
 void FUN_0046d1a0(int param_1)
@@ -69271,7 +69271,7 @@ void FUN_0046d1a0(int param_1)
 }
 
 
-// ==== FUN_0046d1c0 @ 0046D1C0 ====
+// ==== AnimationDurationForLoopCount @ 0046D1C0 [Ghidra: FUN_0046d1c0] ====
 
 
 float10 FUN_0046d1c0(int param_1,undefined4 param_2,undefined4 param_3,uint param_4)
@@ -69299,7 +69299,7 @@ float10 FUN_0046d1c0(int param_1,undefined4 param_2,undefined4 param_3,uint para
 }
 
 
-// ==== FUN_0046d260 @ 0046D260 ====
+// ==== SceneResourceSlotsRebuild @ 0046D260 [Ghidra: FUN_0046d260] ====
 
 
 void FUN_0046d260(uint param_1)
@@ -69324,7 +69324,7 @@ void FUN_0046d260(uint param_1)
 }
 
 
-// ==== FUN_0046d2c0 @ 0046D2C0 ====
+// ==== SceneResourceVisibilitySet @ 0046D2C0 [Ghidra: FUN_0046d2c0] ====
 
 
 void FUN_0046d2c0(int param_1,int param_2)
@@ -69359,7 +69359,7 @@ void FUN_0046d2c0(int param_1,int param_2)
 }
 
 
-// ==== FUN_0046d330 @ 0046D330 ====
+// ==== EntityTypeFlagGetBit1 @ 0046D330 [Ghidra: FUN_0046d330] ====
 
 
 uint FUN_0046d330(int param_1)
@@ -69369,7 +69369,7 @@ uint FUN_0046d330(int param_1)
 }
 
 
-// ==== FUN_0046d350 @ 0046D350 ====
+// ==== SceneResourceDrawAtOrigin @ 0046D350 [Ghidra: FUN_0046d350] ====
 
 
 void FUN_0046d350(int param_1,undefined4 param_2,undefined4 param_3,undefined4 param_4)
@@ -69380,7 +69380,7 @@ void FUN_0046d350(int param_1,undefined4 param_2,undefined4 param_3,undefined4 p
 }
 
 
-// ==== FUN_0046d380 @ 0046D380 ====
+// ==== AttachedModelOrientationUpdate @ 0046D380 [Ghidra: FUN_0046d380] ====
 
 
 void FUN_0046d380(int param_1,undefined4 param_2,undefined4 param_3,code *param_4,undefined4 param_5
@@ -69564,7 +69564,7 @@ void FUN_0046d380(int param_1,undefined4 param_2,undefined4 param_3,code *param_
 }
 
 
-// ==== FUN_0046d9e0 @ 0046D9E0 ====
+// ==== SceneObjectResourceGet @ 0046D9E0 [Ghidra: FUN_0046d9e0] ====
 
 
 undefined4 FUN_0046d9e0(int param_1)
@@ -69574,7 +69574,7 @@ undefined4 FUN_0046d9e0(int param_1)
 }
 
 
-// ==== FUN_0046d9f0 @ 0046D9F0 ====
+// ==== SceneResourceNamedEntryResolveWithFallback @ 0046D9F0 [Ghidra: FUN_0046d9f0] ====
 
 
 void FUN_0046d9f0(int param_1,undefined4 param_2)
@@ -69596,7 +69596,7 @@ void FUN_0046d9f0(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0046da50 @ 0046DA50 ====
+// ==== EntityActivityChangeDispatch @ 0046DA50 [Ghidra: FUN_0046da50] ====
 
 
 int FUN_0046da50(int param_1,int param_2)
@@ -69617,7 +69617,7 @@ int FUN_0046da50(int param_1,int param_2)
 }
 
 
-// ==== FUN_0046da90 @ 0046DA90 ====
+// ==== SceneResourceCachedSlotB4Get @ 0046DA90 [Ghidra: FUN_0046da90] ====
 
 
 int FUN_0046da90(int param_1)
@@ -69640,7 +69640,7 @@ int FUN_0046da90(int param_1)
 }
 
 
-// ==== FUN_0046dac0 @ 0046DAC0 ====
+// ==== SceneResourceCachedSlotB8Get @ 0046DAC0 [Ghidra: FUN_0046dac0] ====
 
 
 int FUN_0046dac0(int param_1)
@@ -69663,7 +69663,7 @@ int FUN_0046dac0(int param_1)
 }
 
 
-// ==== FUN_0046daf0 @ 0046DAF0 ====
+// ==== SceneResourceCachedSlotC0Get @ 0046DAF0 [Ghidra: FUN_0046daf0] ====
 
 
 int FUN_0046daf0(int param_1)
@@ -69686,7 +69686,7 @@ int FUN_0046daf0(int param_1)
 }
 
 
-// ==== FUN_0046db20 @ 0046DB20 ====
+// ==== AttachedEntitySlotObjectGet @ 0046DB20 [Ghidra: FUN_0046db20] ====
 
 
 int FUN_0046db20(int param_1,int param_2)
@@ -69707,7 +69707,7 @@ int FUN_0046db20(int param_1,int param_2)
 }
 
 
-// ==== FUN_0046db60 @ 0046DB60 ====
+// ==== ObjectRecordField11CGet @ 0046DB60 [Ghidra: FUN_0046db60] ====
 
 
 undefined4 FUN_0046db60(int param_1)
@@ -69717,7 +69717,7 @@ undefined4 FUN_0046db60(int param_1)
 }
 
 
-// ==== FUN_0046db70 @ 0046DB70 ====
+// ==== SceneObjectResourceRelease @ 0046DB70 [Ghidra: FUN_0046db70] ====
 
 
 void FUN_0046db70(int param_1)
@@ -69728,7 +69728,7 @@ void FUN_0046db70(int param_1)
 }
 
 
-// ==== FUN_0046db90 @ 0046DB90 ====
+// ==== CellQuadRunStage @ 0046DB90 [Ghidra: FUN_0046db90] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -69834,7 +69834,7 @@ void FUN_0046db90(undefined4 param_1,int param_2)
 }
 
 
-// ==== FUN_0046dd10 @ 0046DD10 ====
+// ==== StagedCellCandidateSelect @ 0046DD10 [Ghidra: FUN_0046dd10] ====
 
 
 void FUN_0046dd10(undefined4 param_1,int param_2)
@@ -69883,7 +69883,7 @@ void FUN_0046dd10(undefined4 param_1,int param_2)
 }
 
 
-// ==== FUN_0046de80 @ 0046DE80 ====
+// ==== CellQuadRunEmit @ 0046DE80 [Ghidra: FUN_0046de80] ====
 
 
 void FUN_0046de80(undefined4 param_1,int param_2)
@@ -70005,7 +70005,7 @@ void FUN_0046de80(undefined4 param_1,int param_2)
 }
 
 
-// ==== FUN_0046e1c0 @ 0046E1C0 ====
+// ==== GlobalEntityRenderParameterModeSet @ 0046E1C0 [Ghidra: FUN_0046e1c0] ====
 
 
 void FUN_0046e1c0(int param_1)
@@ -70040,7 +70040,7 @@ void FUN_0046e1c0(int param_1)
 }
 
 
-// ==== FUN_0046e220 @ 0046E220 ====
+// ==== CellSurfaceQuadHeightFill @ 0046E220 [Ghidra: FUN_0046e220] ====
 
 
 void FUN_0046e220(int param_1,undefined4 param_2,int param_3)
@@ -70083,7 +70083,7 @@ void FUN_0046e220(int param_1,undefined4 param_2,int param_3)
 }
 
 
-// ==== FUN_0046e330 @ 0046E330 ====
+// ==== GridSurfaceEntryReset @ 0046E330 [Ghidra: FUN_0046e330] ====
 
 
 void FUN_0046e330(undefined4 param_1,int param_2)
@@ -70214,7 +70214,7 @@ LAB_0046e42b:
 }
 
 
-// ==== FUN_0046e610 @ 0046E610 ====
+// ==== TerrainEdgeFlagMidpointUpdate @ 0046E610 [Ghidra: FUN_0046e610] ====
 
 
 void FUN_0046e610(int param_1)
@@ -70297,7 +70297,7 @@ void FUN_0046e610(int param_1)
 }
 
 
-// ==== FUN_0046e8a0 @ 0046E8A0 ====
+// ==== WorldSpatialRecordFindAtGridCoordinate @ 0046E8A0 [Ghidra: FUN_0046e8a0] ====
 
 
 undefined4 * FUN_0046e8a0(int param_1,int param_2,uint *param_3)
@@ -70336,7 +70336,7 @@ undefined4 * FUN_0046e8a0(int param_1,int param_2,uint *param_3)
 }
 
 
-// ==== FUN_0046e9d0 @ 0046E9D0 ====
+// ==== StagedCellCandidateCollect @ 0046E9D0 [Ghidra: FUN_0046e9d0] ====
 
 
 float * FUN_0046e9d0(int param_1,uint param_2,uint param_3)
@@ -70384,7 +70384,7 @@ float * FUN_0046e9d0(int param_1,uint param_2,uint param_3)
 }
 
 
-// ==== FUN_0046ead0 @ 0046EAD0 ====
+// ==== AppendMapRowSpanToBuffer @ 0046EAD0 [Ghidra: FUN_0046ead0] ====
 
 
 void FUN_0046ead0(int param_1,uint param_2,uint param_3,uint param_4)
@@ -70402,7 +70402,7 @@ void FUN_0046ead0(int param_1,uint param_2,uint param_3,uint param_4)
 }
 
 
-// ==== FUN_0046eb30 @ 0046EB30 ====
+// ==== StartMapRowSpanBufferRecord @ 0046EB30 [Ghidra: FUN_0046eb30] ====
 
 
 void FUN_0046eb30(undefined4 param_1,undefined4 param_2,undefined4 param_3)
@@ -70418,7 +70418,7 @@ void FUN_0046eb30(undefined4 param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_0046eb80 @ 0046EB80 ====
+// ==== WeaponTypeConfigLoad @ 0046EB80 [Ghidra: FUN_0046eb80] ====
 
 
 undefined4 FUN_0046eb80(undefined4 param_1,undefined4 param_2)
@@ -70640,7 +70640,7 @@ LAB_0046f00b:
 }
 
 
-// ==== FUN_0046f0d0 @ 0046F0D0 ====
+// ==== ObjectTypeNameIndexFind @ 0046F0D0 [Ghidra: FUN_0046f0d0] ====
 
 
 uint FUN_0046f0d0(char *param_1)
@@ -70664,7 +70664,7 @@ uint FUN_0046f0d0(char *param_1)
 }
 
 
-// ==== FUN_0046f110 @ 0046F110 ====
+// ==== WeaponTypeGetRechargeTime @ 0046F110 [Ghidra: FUN_0046f110] ====
 
 
 float10 FUN_0046f110(int param_1)
@@ -70674,7 +70674,7 @@ float10 FUN_0046f110(int param_1)
 }
 
 
-// ==== FUN_0046f140 @ 0046F140 ====
+// ==== WeaponTypeGetDischargeRate @ 0046F140 [Ghidra: FUN_0046f140] ====
 
 
 float10 FUN_0046f140(int param_1)
@@ -70684,7 +70684,7 @@ float10 FUN_0046f140(int param_1)
 }
 
 
-// ==== FUN_0046f170 @ 0046F170 ====
+// ==== WeaponTypeGetRange @ 0046F170 [Ghidra: FUN_0046f170] ====
 
 
 float10 FUN_0046f170(int param_1)
@@ -70694,7 +70694,7 @@ float10 FUN_0046f170(int param_1)
 }
 
 
-// ==== FUN_0046f1a0 @ 0046F1A0 ====
+// ==== WeaponTypeGetWallDestroyTime @ 0046F1A0 [Ghidra: FUN_0046f1a0] ====
 
 
 float10 FUN_0046f1a0(int param_1,int param_2)
@@ -70704,7 +70704,7 @@ float10 FUN_0046f1a0(int param_1,int param_2)
 }
 
 
-// ==== FUN_0046f1d0 @ 0046F1D0 ====
+// ==== EntityIndexedFloatLookupWithMinusOneFallback @ 0046F1D0 [Ghidra: FUN_0046f1d0] ====
 
 
 float10 FUN_0046f1d0(int param_1,int *param_2)
@@ -70723,7 +70723,7 @@ float10 FUN_0046f1d0(int param_1,int *param_2)
 }
 
 
-// ==== FUN_0046f270 @ 0046F270 ====
+// ==== TypeMotionScaleApplyDispatch @ 0046F270 [Ghidra: FUN_0046f270] ====
 
 
 void FUN_0046f270(int *param_1,int param_2,int param_3,float param_4,undefined4 param_5)
@@ -70764,7 +70764,7 @@ void FUN_0046f270(int *param_1,int param_2,int param_3,float param_4,undefined4 
 }
 
 
-// ==== FUN_0046f380 @ 0046F380 ====
+// ==== EntityApplyImpulseAndDirection @ 0046F380 [Ghidra: FUN_0046f380] ====
 
 
 void FUN_0046f380(undefined4 param_1,undefined4 param_2,undefined4 param_3)
@@ -70776,7 +70776,7 @@ void FUN_0046f380(undefined4 param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_0046f3b0 @ 0046F3B0 ====
+// ==== RayHitScanAndEffectApply @ 0046F3B0 [Ghidra: FUN_0046f3b0] ====
 
 
 void FUN_0046f3b0(int param_1)
@@ -70878,7 +70878,7 @@ void FUN_0046f550(float param_1)
 }
 
 
-// ==== FUN_0046f770 @ 0046F770 ====
+// ==== EffectApplyByKindBranch @ 0046F770 [Ghidra: FUN_0046f770] ====
 
 
 void FUN_0046f770(undefined4 param_1,float *param_2,int param_3,undefined4 param_4,int param_5)
@@ -70991,7 +70991,7 @@ void FUN_0046f920(int *param_1,float param_2)
 }
 
 
-// ==== FUN_0046faf0 @ 0046FAF0 ====
+// ==== EntitySpawnRecordSlotInit @ 0046FAF0 [Ghidra: FUN_0046faf0] ====
 
 
 undefined4
@@ -71051,7 +71051,7 @@ FUN_0046faf0(undefined4 param_1,undefined4 *param_2,float *param_3,undefined4 pa
 }
 
 
-// ==== FUN_0046fc70 @ 0046FC70 ====
+// ==== ObjectFlightCurveRecordInit @ 0046FC70 [Ghidra: FUN_0046fc70] ====
 
 
 undefined4
@@ -71129,7 +71129,7 @@ FUN_0046fc70(undefined4 param_1,float *param_2,float *param_3,undefined4 param_4
 }
 
 
-// ==== FUN_0046fef0 @ 0046FEF0 ====
+// ==== EffectModeSurfaceQueryTypeResolve @ 0046FEF0 [Ghidra: FUN_0046fef0] ====
 
 
 void FUN_0046fef0(undefined4 param_1,undefined4 *param_2,undefined4 *param_3)
@@ -71156,7 +71156,7 @@ void FUN_0046fef0(undefined4 param_1,undefined4 *param_2,undefined4 *param_3)
 }
 
 
-// ==== FUN_0046ff70 @ 0046FF70 ====
+// ==== ActiveEffectRecordSlotFind @ 0046FF70 [Ghidra: FUN_0046ff70] ====
 
 
 int FUN_0046ff70(void)
@@ -71178,7 +71178,7 @@ int FUN_0046ff70(void)
 }
 
 
-// ==== FUN_0046ff90 @ 0046FF90 ====
+// ==== ActiveSegmentVisualRecordSlotFind @ 0046FF90 [Ghidra: FUN_0046ff90] ====
 
 
 int FUN_0046ff90(void)
@@ -71200,7 +71200,7 @@ int FUN_0046ff90(void)
 }
 
 
-// ==== FUN_0046ffb0 @ 0046FFB0 ====
+// ==== LaserSpatialSoundAndImpact @ 0046FFB0 [Ghidra: FUN_0046ffb0] ====
 
 
 int FUN_0046ffb0(float *param_1,float *param_2,int *param_3,undefined4 param_4,float param_5,
@@ -71295,7 +71295,7 @@ LAB_0047023a:
 }
 
 
-// ==== FUN_00470260 @ 00470260 ====
+// ==== EntitySurfaceSegmentCollisionCheck @ 00470260 [Ghidra: FUN_00470260] ====
 
 
 void FUN_00470260(undefined4 param_1,undefined4 param_2,undefined4 param_3,undefined4 param_4)
@@ -71313,7 +71313,7 @@ void FUN_00470260(undefined4 param_1,undefined4 param_2,undefined4 param_3,undef
 }
 
 
-// ==== FUN_004702b0 @ 004702B0 ====
+// ==== EntitySurfaceQuadSegmentIntersect @ 004702B0 [Ghidra: FUN_004702b0] ====
 
 
 undefined4
@@ -71420,7 +71420,7 @@ LAB_0047050a:
 }
 
 
-// ==== FUN_00470540 @ 00470540 ====
+// ==== SegmentCenterProximityCheck @ 00470540 [Ghidra: FUN_00470540] ====
 
 
 undefined4 FUN_00470540(undefined4 param_1,float *param_2,float *param_3,int param_4)
@@ -71459,7 +71459,7 @@ undefined4 FUN_00470540(undefined4 param_1,float *param_2,float *param_3,int par
 }
 
 
-// ==== FUN_00470630 @ 00470630 ====
+// ==== EntityDirectedLineSideCheck @ 00470630 [Ghidra: FUN_00470630] ====
 
 
 undefined4 FUN_00470630(undefined4 param_1,float *param_2,float *param_3)
@@ -71476,7 +71476,7 @@ undefined4 FUN_00470630(undefined4 param_1,float *param_2,float *param_3)
 }
 
 
-// ==== FUN_00470690 @ 00470690 ====
+// ==== TimedEntitySegmentVisualCreate @ 00470690 [Ghidra: FUN_00470690] ====
 
 
 void FUN_00470690(int param_1,undefined4 param_2,undefined4 param_3)
@@ -71502,7 +71502,7 @@ void FUN_00470690(int param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_00470760 @ 00470760 ====
+// ==== MeshBuildEightSidedSegment @ 00470760 [Ghidra: FUN_00470760] ====
 
 
 void FUN_00470760(undefined4 param_1,float param_2,float *param_3,float *param_4,undefined4 param_5,
@@ -72002,7 +72002,7 @@ void FUN_00470760(undefined4 param_1,float param_2,float *param_3,float *param_4
 }
 
 
-// ==== FUN_004712c0 @ 004712C0 ====
+// ==== EntityVelocityStateRecordGet @ 004712C0 [Ghidra: FUN_004712c0] ====
 
 
 int FUN_004712c0(int *param_1)
@@ -72018,7 +72018,7 @@ int FUN_004712c0(int *param_1)
 }
 
 
-// ==== FUN_004712f0 @ 004712F0 ====
+// ==== EntityVelocitySlotValueGet @ 004712F0 [Ghidra: FUN_004712f0] ====
 
 
 float10 FUN_004712f0(undefined4 param_1,int param_2)
@@ -72031,7 +72031,7 @@ float10 FUN_004712f0(undefined4 param_1,int param_2)
 }
 
 
-// ==== FUN_00471310 @ 00471310 ====
+// ==== EntityVelocitySlotValueSet @ 00471310 [Ghidra: FUN_00471310] ====
 
 
 void FUN_00471310(undefined4 param_1,undefined4 param_2,int param_3)
@@ -72045,7 +72045,7 @@ void FUN_00471310(undefined4 param_1,undefined4 param_2,int param_3)
 }
 
 
-// ==== FUN_00471330 @ 00471330 ====
+// ==== InterpolatedZWithinBounds @ 00471330 [Ghidra: FUN_00471330] ====
 
 
 undefined4 FUN_00471330(int param_1,int param_2,float param_3,float param_4,float param_5)
@@ -72061,7 +72061,7 @@ undefined4 FUN_00471330(int param_1,int param_2,float param_3,float param_4,floa
 }
 
 
-// ==== FUN_00471630 @ 00471630 ====
+// ==== RayHitCellDistanceMinimizeSweep @ 00471630 [Ghidra: FUN_00471630] ====
 
 
 void FUN_00471630(undefined4 *param_1)
@@ -72179,7 +72179,7 @@ void FUN_00471630(undefined4 *param_1)
 }
 
 
-// ==== FUN_00471860 @ 00471860 ====
+// ==== SceneSegmentTraceNearestHit @ 00471860 [Ghidra: FUN_00471860] ====
 
 
 undefined4
@@ -72208,7 +72208,7 @@ FUN_00471860(undefined4 param_1,undefined4 param_2,undefined4 *param_3,undefined
 }
 
 
-// ==== FUN_004718d0 @ 004718D0 ====
+// ==== ObjectPairRayHitCheck @ 004718D0 [Ghidra: FUN_004718d0] ====
 
 
 undefined4 FUN_004718d0(int param_1,int param_2)
@@ -72243,7 +72243,7 @@ undefined4 FUN_004718d0(int param_1,int param_2)
 }
 
 
-// ==== FUN_00471960 @ 00471960 ====
+// ==== SeeThroughWallsRayCheck @ 00471960 [Ghidra: FUN_00471960] ====
 
 
 undefined4 FUN_00471960(undefined4 param_1,undefined4 param_2)
@@ -72290,7 +72290,7 @@ undefined4 FUN_00471960(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00471a20 @ 00471A20 ====
+// ==== ReadIndexedPairSlotDword @ 00471A20 [Ghidra: FUN_00471a20] ====
 
 
 undefined4 FUN_00471a20(int param_1,int param_2,int param_3)
@@ -72300,7 +72300,7 @@ undefined4 FUN_00471a20(int param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_00471a40 @ 00471A40 ====
+// ==== VelocitySlotPrimaryObjectGet @ 00471A40 [Ghidra: FUN_00471a40] ====
 
 
 undefined4 FUN_00471a40(int param_1,int param_2)
@@ -72310,7 +72310,7 @@ undefined4 FUN_00471a40(int param_1,int param_2)
 }
 
 
-// ==== FUN_00471a50 @ 00471A50 ====
+// ==== VelocitySlotSecondaryObjectGet @ 00471A50 [Ghidra: FUN_00471a50] ====
 
 
 undefined4 FUN_00471a50(int param_1,int param_2)
@@ -72320,7 +72320,7 @@ undefined4 FUN_00471a50(int param_1,int param_2)
 }
 
 
-// ==== FUN_00471a60 @ 00471A60 ====
+// ==== EntityVelocitySteerBlendUpdate @ 00471A60 [Ghidra: FUN_00471a60] ====
 
 
 void FUN_00471a60(int param_1,undefined4 *param_2,float param_3,int param_4,int param_5)
@@ -72378,7 +72378,7 @@ void FUN_00471a60(int param_1,undefined4 *param_2,float param_3,int param_4,int 
 }
 
 
-// ==== FUN_00471c70 @ 00471C70 ====
+// ==== VelocitySlotVectorRead @ 00471C70 [Ghidra: FUN_00471c70] ====
 
 
 void FUN_00471c70(int param_1,undefined4 *param_2,int param_3)
@@ -72394,7 +72394,7 @@ void FUN_00471c70(int param_1,undefined4 *param_2,int param_3)
 }
 
 
-// ==== FUN_00471ca0 @ 00471CA0 ====
+// ==== EntityWorldCenterPositionRead @ 00471CA0 [Ghidra: FUN_00471ca0] ====
 
 
 undefined4 FUN_00471ca0(undefined4 param_1,int param_2)
@@ -72411,7 +72411,7 @@ undefined4 FUN_00471ca0(undefined4 param_1,int param_2)
 }
 
 
-// ==== FUN_00471ce0 @ 00471CE0 ====
+// ==== EntityFlag100AndSharedEligibilityCheck @ 00471CE0 [Ghidra: FUN_00471ce0] ====
 
 
 undefined4 FUN_00471ce0(int *param_1)
@@ -72431,7 +72431,7 @@ undefined4 FUN_00471ce0(int *param_1)
 }
 
 
-// ==== FUN_00471d20 @ 00471D20 ====
+// ==== VelocitySlotSteerDispatchAndSound @ 00471D20 [Ghidra: FUN_00471d20] ====
 
 
 undefined4 FUN_00471d20(uint param_1,undefined4 param_2,float param_3)
@@ -72507,7 +72507,7 @@ undefined4 FUN_00471d20(uint param_1,undefined4 param_2,float param_3)
 }
 
 
-// ==== FUN_00471f00 @ 00471F00 ====
+// ==== PoseOffsetVelocitySlotBlend @ 00471F00 [Ghidra: FUN_00471f00] ====
 
 
 undefined4 FUN_00471f00(undefined4 param_1,undefined4 param_2,undefined4 param_3)
@@ -72543,7 +72543,7 @@ undefined4 FUN_00471f00(undefined4 param_1,undefined4 param_2,undefined4 param_3
 }
 
 
-// ==== FUN_00471fc0 @ 00471FC0 ====
+// ==== EntityVelocitySlotDispatch @ 00471FC0 [Ghidra: FUN_00471fc0] ====
 
 
 undefined4 FUN_00471fc0(int param_1,undefined4 param_2)
@@ -72579,7 +72579,7 @@ undefined4 FUN_00471fc0(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00472080 @ 00472080 ====
+// ==== EntityCentersWithinConfiguredRadius @ 00472080 [Ghidra: FUN_00472080] ====
 
 
 undefined4 FUN_00472080(int param_1,int param_2)
@@ -72609,7 +72609,7 @@ undefined4 FUN_00472080(int param_1,int param_2)
 }
 
 
-// ==== FUN_00472130 @ 00472130 ====
+// ==== EntityCentersWithinObjectRadius @ 00472130 [Ghidra: FUN_00472130] ====
 
 
 undefined4 FUN_00472130(int param_1,int param_2)
@@ -72639,7 +72639,7 @@ undefined4 FUN_00472130(int param_1,int param_2)
 }
 
 
-// ==== FUN_004721e0 @ 004721E0 ====
+// ==== DirectShowSampleSetup @ 004721E0 [Ghidra: FUN_004721e0] ====
 
 
 bool FUN_004721e0(int *param_1)
@@ -72690,7 +72690,7 @@ bool FUN_004721e0(int *param_1)
 }
 
 
-// ==== FUN_004722b0 @ 004722B0 ====
+// ==== ConfiguredVideoGraphSetup @ 004722B0 [Ghidra: FUN_004722b0] ====
 
 
 bool FUN_004722b0(undefined4 param_1,undefined4 param_2,undefined4 param_3)
@@ -72729,7 +72729,7 @@ bool FUN_004722b0(undefined4 param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_00472390 @ 00472390 ====
+// ==== ConfiguredVideoComRouteInit @ 00472390 [Ghidra: FUN_00472390] ====
 
 
 void FUN_00472390(char *param_1,undefined4 param_2,undefined4 param_3)
@@ -72804,7 +72804,7 @@ void FUN_00472390(char *param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_00472430 @ 00472430 ====
+// ==== DirectShowInterfaceRelease @ 00472430 [Ghidra: FUN_00472430] ====
 
 
 void FUN_00472430(void)
@@ -72848,7 +72848,7 @@ void FUN_00472430(void)
 }
 
 
-// ==== FUN_004724a0 @ 004724A0 ====
+// ==== ConfiguredVideoSampleUpdate @ 004724A0 [Ghidra: FUN_004724a0] ====
 
 
 bool FUN_004724a0(void)
@@ -72887,7 +72887,7 @@ bool FUN_004724a0(void)
 }
 
 
-// ==== FUN_00472530 @ 00472530 ====
+// ==== VideoDurationFrameBoundUpdate @ 00472530 [Ghidra: FUN_00472530] ====
 
 
 void FUN_00472530(void)
@@ -72906,7 +72906,7 @@ void FUN_00472530(void)
 }
 
 
-// ==== FUN_00472560 @ 00472560 ====
+// ==== DirectShowRenderSurfaceCreate @ 00472560 [Ghidra: FUN_00472560] ====
 
 
 undefined4 FUN_00472560(undefined4 param_1)
@@ -72964,7 +72964,7 @@ LAB_0047264d:
 }
 
 
-// ==== FUN_00472670 @ 00472670 ====
+// ==== DirectDrawSurfaceDescriptionGet @ 00472670 [Ghidra: FUN_00472670] ====
 
 
 void FUN_00472670(undefined4 *param_1)
@@ -72988,7 +72988,7 @@ void FUN_00472670(undefined4 *param_1)
 }
 
 
-// ==== FUN_004726c0 @ 004726C0 ====
+// ==== VideoFrameBoundRefresh @ 004726C0 [Ghidra: FUN_004726c0] ====
 
 
 void FUN_004726c0(void)
@@ -72999,7 +72999,7 @@ void FUN_004726c0(void)
 }
 
 
-// ==== FUN_004726d0 @ 004726D0 ====
+// ==== DirectShowSampleUpdateAndBlit @ 004726D0 [Ghidra: FUN_004726d0] ====
 
 
 bool FUN_004726d0(undefined4 param_1,undefined4 param_2,undefined4 param_3)
@@ -73012,7 +73012,7 @@ bool FUN_004726d0(undefined4 param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_004726f0 @ 004726F0 ====
+// ==== DirectShowWrapperDestroy @ 004726F0 [Ghidra: FUN_004726f0] ====
 
 
 void FUN_004726f0(int param_1)
@@ -73026,7 +73026,7 @@ void FUN_004726f0(int param_1)
 }
 
 
-// ==== FUN_00472710 @ 00472710 ====
+// ==== EntityVisualTypeTablesInit @ 00472710 [Ghidra: FUN_00472710] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -73074,7 +73074,7 @@ undefined4 * FUN_00472710(undefined4 param_1)
 }
 
 
-// ==== FUN_00472800 @ 00472800 ====
+// ==== DDiSceneObjectPoolShutdown @ 00472800 [Ghidra: FUN_00472800] ====
 
 
 void FUN_00472800(void)
@@ -73128,7 +73128,7 @@ void FUN_00472800(void)
 }
 
 
-// ==== FUN_004728c0 @ 004728C0 ====
+// ==== SharedTextureDirectorySet @ 004728C0 [Ghidra: FUN_004728c0] ====
 
 
 void FUN_004728c0(undefined4 param_1)
@@ -73139,7 +73139,7 @@ void FUN_004728c0(undefined4 param_1)
 }
 
 
-// ==== FUN_004728e0 @ 004728E0 ====
+// ==== RendererFlagBit6Set @ 004728E0 [Ghidra: FUN_004728e0] ====
 
 
 void FUN_004728e0(int param_1)
@@ -73154,7 +73154,7 @@ void FUN_004728e0(int param_1)
 }
 
 
-// ==== FUN_00472900 @ 00472900 ====
+// ==== DDiSceneEndHookRegister @ 00472900 [Ghidra: FUN_00472900] ====
 
 
 void FUN_00472900(undefined4 param_1,undefined4 param_2)
@@ -73166,7 +73166,7 @@ void FUN_00472900(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00472920 @ 00472920 ====
+// ==== DDiSceneSampleHookRegister @ 00472920 [Ghidra: FUN_00472920] ====
 
 
 void FUN_00472920(undefined4 param_1,undefined4 param_2)
@@ -73179,7 +73179,7 @@ void FUN_00472920(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00472940 @ 00472940 ====
+// ==== SceneRootObjectGet @ 00472940 [Ghidra: FUN_00472940] ====
 
 
 undefined4 FUN_00472940(void)
@@ -73189,7 +73189,7 @@ undefined4 FUN_00472940(void)
 }
 
 
-// ==== FUN_00472950 @ 00472950 ====
+// ==== DDiSceneObjectAllocate @ 00472950 [Ghidra: FUN_00472950] ====
 
 
 undefined4 * FUN_00472950(undefined4 *param_1)
@@ -73236,7 +73236,7 @@ undefined4 * FUN_00472950(undefined4 *param_1)
 }
 
 
-// ==== FUN_00472a40 @ 00472A40 ====
+// ==== DDiSceneObjectDestroy @ 00472A40 [Ghidra: FUN_00472a40] ====
 
 
 void FUN_00472a40(undefined4 param_1)
@@ -73247,7 +73247,7 @@ void FUN_00472a40(undefined4 param_1)
 }
 
 
-// ==== FUN_00472a50 @ 00472A50 ====
+// ==== DDiSceneObjectDestroy @ 00472A50 [Ghidra: FUN_00472a50] ====
 
 
 void FUN_00472a50(undefined4 *param_1,int param_2)
@@ -73365,7 +73365,7 @@ void FUN_00472a50(undefined4 *param_1,int param_2)
 }
 
 
-// ==== FUN_00472cd0 @ 00472CD0 ====
+// ==== EntityVisualLoadACT @ 00472CD0 [Ghidra: FUN_00472cd0] ====
 
 
 int FUN_00472cd0(undefined4 param_1,char *param_2,undefined4 param_3,undefined4 param_4)
@@ -73578,7 +73578,7 @@ LAB_00472e2e:
 }
 
 
-// ==== FUN_00473340 @ 00473340 ====
+// ==== SceneActionNamePresent @ 00473340 [Ghidra: FUN_00473340] ====
 
 
 undefined4 FUN_00473340(int param_1,undefined4 param_2)
@@ -73596,7 +73596,7 @@ undefined4 FUN_00473340(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00473370 @ 00473370 ====
+// ==== SceneActionNameSet @ 00473370 [Ghidra: FUN_00473370] ====
 
 
 undefined4 FUN_00473370(int param_1,char *param_2)
@@ -73674,7 +73674,7 @@ undefined4 FUN_00473370(int param_1,char *param_2)
 }
 
 
-// ==== FUN_00473460 @ 00473460 ====
+// ==== LightInterfaceCallSlot40 @ 00473460 [Ghidra: FUN_00473460] ====
 
 
 bool FUN_00473460(int param_1,undefined4 param_2)
@@ -73689,7 +73689,7 @@ bool FUN_00473460(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00473480 @ 00473480 ====
+// ==== LightInterfaceCallSlot3C @ 00473480 [Ghidra: FUN_00473480] ====
 
 
 bool FUN_00473480(int param_1,undefined4 param_2)
@@ -73704,7 +73704,7 @@ bool FUN_00473480(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_004734a0 @ 004734A0 ====
+// ==== LightInterfaceCallSlot38 @ 004734A0 [Ghidra: FUN_004734a0] ====
 
 
 bool FUN_004734a0(int param_1,undefined4 param_2)
@@ -73719,7 +73719,7 @@ bool FUN_004734a0(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_004734c0 @ 004734C0 ====
+// ==== AdvisorCompanionTransformApply @ 004734C0 [Ghidra: FUN_004734c0] ====
 
 
 void FUN_004734c0(undefined4 param_1,undefined4 *param_2)
@@ -73737,7 +73737,7 @@ void FUN_004734c0(undefined4 param_1,undefined4 *param_2)
 }
 
 
-// ==== FUN_004734f0 @ 004734F0 ====
+// ==== DDiSceneLightCreate @ 004734F0 [Ghidra: FUN_004734f0] ====
 
 
 int FUN_004734f0(undefined4 param_1,undefined4 param_2,undefined4 param_3,undefined4 param_4,
@@ -73765,7 +73765,7 @@ int FUN_004734f0(undefined4 param_1,undefined4 param_2,undefined4 param_3,undefi
 }
 
 
-// ==== FUN_00473560 @ 00473560 ====
+// ==== DDiSceneObjectKindModeSetup @ 00473560 [Ghidra: FUN_00473560] ====
 
 
 int FUN_00473560(int param_1,int param_2)
@@ -73820,7 +73820,7 @@ int FUN_00473560(int param_1,int param_2)
 }
 
 
-// ==== FUN_00473680 @ 00473680 ====
+// ==== SceneObjectWrappedPointerGet @ 00473680 [Ghidra: FUN_00473680] ====
 
 
 undefined4 FUN_00473680(undefined4 *param_1)
@@ -73830,7 +73830,7 @@ undefined4 FUN_00473680(undefined4 *param_1)
 }
 
 
-// ==== FUN_00473690 @ 00473690 ====
+// ==== EntityVisualResourceLoad @ 00473690 [Ghidra: FUN_00473690] ====
 
 
 int FUN_00473690(int param_1)
@@ -74050,7 +74050,7 @@ int FUN_00473690(int param_1)
 }
 
 
-// ==== FUN_00473b20 @ 00473B20 ====
+// ==== EntityFlag80Set @ 00473B20 [Ghidra: FUN_00473b20] ====
 
 
 void FUN_00473b20(int param_1,int param_2)
@@ -74065,7 +74065,7 @@ void FUN_00473b20(int param_1,int param_2)
 }
 
 
-// ==== FUN_00473b40 @ 00473B40 ====
+// ==== SceneRenderLockToggle @ 00473B40 [Ghidra: FUN_00473b40] ====
 
 
 void FUN_00473b40(undefined4 *param_1,int param_2)
@@ -74089,7 +74089,7 @@ void FUN_00473b40(undefined4 *param_1,int param_2)
 }
 
 
-// ==== FUN_00473ba0 @ 00473BA0 ====
+// ==== SceneObjectFlagBit3Get @ 00473BA0 [Ghidra: FUN_00473ba0] ====
 
 
 uint FUN_00473ba0(int param_1)
@@ -74099,7 +74099,7 @@ uint FUN_00473ba0(int param_1)
 }
 
 
-// ==== FUN_00473bc0 @ 00473BC0 ====
+// ==== ResourceNameRegisterOrQuery @ 00473BC0 [Ghidra: FUN_00473bc0] ====
 
 
 undefined4 FUN_00473bc0(undefined4 *param_1,char *param_2,int param_3,undefined4 *param_4)
@@ -74150,7 +74150,7 @@ undefined4 FUN_00473bc0(undefined4 *param_1,char *param_2,int param_3,undefined4
 }
 
 
-// ==== FUN_00473c60 @ 00473C60 ====
+// ==== XfTextureNameFormat @ 00473C60 [Ghidra: FUN_00473c60] ====
 
 
 undefined * FUN_00473c60(int param_1,undefined4 param_2,int *param_3)
@@ -74206,7 +74206,7 @@ undefined * FUN_00473c60(int param_1,undefined4 param_2,int *param_3)
 }
 
 
-// ==== FUN_00473da0 @ 00473DA0 ====
+// ==== SceneObjectOwnerSet @ 00473DA0 [Ghidra: FUN_00473da0] ====
 
 
 void FUN_00473da0(int param_1,undefined4 param_2)
@@ -74217,7 +74217,7 @@ void FUN_00473da0(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00473db0 @ 00473DB0 ====
+// ==== SceneObjectOwnerGet @ 00473DB0 [Ghidra: FUN_00473db0] ====
 
 
 undefined4 FUN_00473db0(int param_1)
@@ -74227,7 +74227,7 @@ undefined4 FUN_00473db0(int param_1)
 }
 
 
-// ==== FUN_00473dc0 @ 00473DC0 ====
+// ==== RendererFogEnableAndColorApply @ 00473DC0 [Ghidra: FUN_00473dc0] ====
 
 
 void FUN_00473dc0(int param_1)
@@ -74243,7 +74243,7 @@ void FUN_00473dc0(int param_1)
 }
 
 
-// ==== FUN_00473e10 @ 00473E10 ====
+// ==== RendererFogColorSet @ 00473E10 [Ghidra: FUN_00473e10] ====
 
 
 void FUN_00473e10(void)
@@ -74262,7 +74262,7 @@ void FUN_00473e10(void)
 }
 
 
-// ==== FUN_00473e70 @ 00473E70 ====
+// ==== RendererFogModeSet @ 00473E70 [Ghidra: FUN_00473e70] ====
 
 
 void FUN_00473e70(undefined4 param_1)
@@ -74274,7 +74274,7 @@ void FUN_00473e70(undefined4 param_1)
 }
 
 
-// ==== FUN_00473ea0 @ 00473EA0 ====
+// ==== RendererFogParametersSet @ 00473EA0 [Ghidra: FUN_00473ea0] ====
 
 
 void FUN_00473ea0(undefined4 param_1,undefined4 param_2,undefined4 param_3)
@@ -74285,7 +74285,7 @@ void FUN_00473ea0(undefined4 param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_00473ec0 @ 00473EC0 ====
+// ==== RenderObjectStateApplyToEntries @ 00473EC0 [Ghidra: FUN_00473ec0] ====
 
 
 void FUN_00473ec0(int param_1,undefined4 param_2)
@@ -74323,7 +74323,7 @@ void FUN_00473ec0(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00474050 @ 00474050 ====
+// ==== CreateBmpSurface @ 00474050 [Ghidra: FUN_00474050] ====
 
 
 undefined4 FUN_00474050(undefined4 param_1,int param_2)
@@ -74517,7 +74517,7 @@ undefined4 FUN_00474050(undefined4 param_1,int param_2)
 }
 
 
-// ==== FUN_00474410 @ 00474410 ====
+// ==== ParseIndexedSurfaceName @ 00474410 [Ghidra: FUN_00474410] ====
 
 
 undefined4 FUN_00474410(char *param_1,undefined4 *param_2)
@@ -74574,7 +74574,7 @@ undefined4 FUN_00474410(char *param_1,undefined4 *param_2)
 }
 
 
-// ==== FUN_004744f0 @ 004744F0 ====
+// ==== TextureSurfaceCreate @ 004744F0 [Ghidra: FUN_004744f0] ====
 
 
 /* WARNING: Removing unreachable block (ram,0x004746c7) */
@@ -74683,7 +74683,7 @@ int * FUN_004744f0(undefined4 param_1,int *param_2,int *param_3,undefined4 param
 }
 
 
-// ==== FUN_00474710 @ 00474710 ====
+// ==== TextureRelease @ 00474710 [Ghidra: FUN_00474710] ====
 
 
 void FUN_00474710(int *param_1)
@@ -74712,7 +74712,7 @@ void FUN_00474710(int *param_1)
 }
 
 
-// ==== FUN_00474760 @ 00474760 ====
+// ==== InterfaceArrayForwardSync @ 00474760 [Ghidra: FUN_00474760] ====
 
 
 void FUN_00474760(undefined4 *param_1,undefined4 param_2,int param_3)
@@ -74805,7 +74805,7 @@ void FUN_00474760(undefined4 *param_1,undefined4 param_2,int param_3)
 }
 
 
-// ==== FUN_004748f0 @ 004748F0 ====
+// ==== MeshRecordAllocateOrAppend @ 004748F0 [Ghidra: FUN_004748f0] ====
 
 
 int FUN_004748f0(int param_1,int param_2,undefined4 param_3,undefined4 param_4,undefined4 param_5)
@@ -74861,7 +74861,7 @@ int FUN_004748f0(int param_1,int param_2,undefined4 param_3,undefined4 param_4,u
 }
 
 
-// ==== FUN_00474a20 @ 00474A20 ====
+// ==== AnimatedTextureFrameCount @ 00474A20 [Ghidra: FUN_00474a20] ====
 
 
 int FUN_00474a20(int param_1)
@@ -74886,7 +74886,7 @@ int FUN_00474a20(int param_1)
 }
 
 
-// ==== FUN_00474a60 @ 00474A60 ====
+// ==== SceneSurfaceTextureBindByMode @ 00474A60 [Ghidra: FUN_00474a60] ====
 
 
 void FUN_00474a60(int param_1,undefined4 param_2,int param_3)
@@ -74918,7 +74918,7 @@ void FUN_00474a60(int param_1,undefined4 param_2,int param_3)
 }
 
 
-// ==== FUN_00474ae0 @ 00474AE0 ====
+// ==== TerrainDetailEntryGetAtIndex @ 00474AE0 [Ghidra: FUN_00474ae0] ====
 
 
 uint FUN_00474ae0(uint param_1,undefined4 param_2)
@@ -74947,7 +74947,7 @@ uint FUN_00474ae0(uint param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00474b30 @ 00474B30 ====
+// ==== LwoLayerEnabledSet @ 00474B30 [Ghidra: FUN_00474b30] ====
 
 
 void FUN_00474b30(int param_1,int param_2,undefined4 param_3)
@@ -75005,7 +75005,7 @@ LAB_00474bc4:
 }
 
 
-// ==== FUN_00474c00 @ 00474C00 ====
+// ==== AnimatedTextureFrameResolve @ 00474C00 [Ghidra: FUN_00474c00] ====
 
 
 undefined4 FUN_00474c00(int *param_1)
@@ -75025,7 +75025,7 @@ undefined4 FUN_00474c00(int *param_1)
 }
 
 
-// ==== FUN_00474c40 @ 00474C40 ====
+// ==== LwoLayerPolygonVertexCount @ 00474C40 [Ghidra: FUN_00474c40] ====
 
 
 uint FUN_00474c40(int *param_1,undefined4 param_2,undefined4 param_3,undefined4 param_4,
@@ -75047,7 +75047,7 @@ uint FUN_00474c40(int *param_1,undefined4 param_2,undefined4 param_3,undefined4 
 }
 
 
-// ==== FUN_00474cc0 @ 00474CC0 ====
+// ==== LwoLayerPolygonVertexDataRead @ 00474CC0 [Ghidra: FUN_00474cc0] ====
 
 
 undefined4
@@ -75074,7 +75074,7 @@ FUN_00474cc0(int *param_1,undefined4 param_2,undefined4 param_3,undefined4 param
 }
 
 
-// ==== FUN_00474d30 @ 00474D30 ====
+// ==== TerrainCellQuadVertexEmit @ 00474D30 [Ghidra: FUN_00474d30] ====
 
 
 undefined4
@@ -75101,7 +75101,7 @@ FUN_00474d30(int *param_1,undefined4 param_2,undefined4 param_3,undefined4 param
 }
 
 
-// ==== FUN_00474da0 @ 00474DA0 ====
+// ==== AnimatedTextureFrameSet @ 00474DA0 [Ghidra: FUN_00474da0] ====
 
 
 void FUN_00474da0(int *param_1,undefined4 param_2,int param_3)
@@ -75138,7 +75138,7 @@ void FUN_00474da0(int *param_1,undefined4 param_2,int param_3)
 }
 
 
-// ==== FUN_00474e30 @ 00474E30 ====
+// ==== TerrainSurfacePropertySet @ 00474E30 [Ghidra: FUN_00474e30] ====
 
 
 void FUN_00474e30(int *param_1,undefined4 param_2,int param_3)
@@ -75157,7 +75157,7 @@ void FUN_00474e30(int *param_1,undefined4 param_2,int param_3)
 }
 
 
-// ==== FUN_00474e90 @ 00474E90 ====
+// ==== RenderObjectHierarchyFloat3Set @ 00474E90 [Ghidra: FUN_00474e90] ====
 
 
 undefined4 FUN_00474e90(int param_1,undefined4 param_2,undefined4 param_3,undefined4 param_4)
@@ -75188,7 +75188,7 @@ undefined4 FUN_00474e90(int param_1,undefined4 param_2,undefined4 param_3,undefi
 }
 
 
-// ==== FUN_00474f10 @ 00474F10 ====
+// ==== SceneObjectBoundsUnion @ 00474F10 [Ghidra: FUN_00474f10] ====
 
 
 undefined4 FUN_00474f10(int param_1,float *param_2)
@@ -75236,7 +75236,7 @@ undefined4 FUN_00474f10(int param_1,float *param_2)
 }
 
 
-// ==== FUN_00474ff0 @ 00474FF0 ====
+// ==== SceneMeshColorSet @ 00474FF0 [Ghidra: FUN_00474ff0] ====
 
 
 void FUN_00474ff0(int param_1,undefined4 param_2,undefined4 param_3,undefined4 param_4,
@@ -75253,7 +75253,7 @@ void FUN_00474ff0(int param_1,undefined4 param_2,undefined4 param_3,undefined4 p
 }
 
 
-// ==== FUN_00475020 @ 00475020 ====
+// ==== SceneMeshColorAndAlphaSet @ 00475020 [Ghidra: FUN_00475020] ====
 
 
 void FUN_00475020(int param_1,undefined4 param_2,undefined4 param_3,undefined4 param_4,
@@ -75271,7 +75271,7 @@ void FUN_00475020(int param_1,undefined4 param_2,undefined4 param_3,undefined4 p
 }
 
 
-// ==== FUN_00475070 @ 00475070 ====
+// ==== SceneObjectCoordinateTransformInPlace @ 00475070 [Ghidra: FUN_00475070] ====
 
 
 void FUN_00475070(undefined4 *param_1,undefined4 param_2,undefined4 param_3)
@@ -75282,7 +75282,7 @@ void FUN_00475070(undefined4 *param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_00475090 @ 00475090 ====
+// ==== SceneObjectCoordinateTransformToOutput @ 00475090 [Ghidra: FUN_00475090] ====
 
 
 void FUN_00475090(undefined4 *param_1,undefined4 param_2,undefined4 param_3)
@@ -75293,7 +75293,7 @@ void FUN_00475090(undefined4 *param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_004750b0 @ 004750B0 ====
+// ==== RenderObjectSetPackedRgbaFromFloatChannels @ 004750B0 [Ghidra: FUN_004750b0] ====
 
 
 void FUN_004750b0(int param_1)
@@ -75317,7 +75317,7 @@ void FUN_004750b0(int param_1)
 }
 
 
-// ==== FUN_00475120 @ 00475120 ====
+// ==== DDiSceneAdvanceByTime @ 00475120 [Ghidra: FUN_00475120] ====
 
 
 void FUN_00475120(undefined4 param_1,float param_2)
@@ -75331,7 +75331,7 @@ void FUN_00475120(undefined4 param_1,float param_2)
 }
 
 
-// ==== FUN_00475140 @ 00475140 ====
+// ==== DDiSceneFrameUpdateAndCallbacks @ 00475140 [Ghidra: FUN_00475140] ====
 
 
 float10 FUN_00475140(int param_1,float param_2)
@@ -75393,7 +75393,7 @@ float10 FUN_00475140(int param_1,float param_2)
 }
 
 
-// ==== FUN_00475300 @ 00475300 ====
+// ==== DDiSceneApplyActFrameTiming @ 00475300 [Ghidra: FUN_00475300] ====
 
 
 void FUN_00475300(float param_1)
@@ -75426,7 +75426,7 @@ void FUN_00475300(float param_1)
 }
 
 
-// ==== FUN_00475390 @ 00475390 ====
+// ==== DDiSceneObjectLengthGet @ 00475390 [Ghidra: FUN_00475390] ====
 
 
 float10 FUN_00475390(int param_1)
@@ -75452,7 +75452,7 @@ float10 FUN_00475390(int param_1)
 }
 
 
-// ==== FUN_004753f0 @ 004753F0 ====
+// ==== DDiSceneObjectFramePositionGet @ 004753F0 [Ghidra: FUN_004753f0] ====
 
 
 undefined4 FUN_004753f0(int param_1)
@@ -75476,7 +75476,7 @@ undefined4 FUN_004753f0(int param_1)
 }
 
 
-// ==== FUN_00475430 @ 00475430 ====
+// ==== DDiSceneObjectPositionSet @ 00475430 [Ghidra: FUN_00475430] ====
 
 
 void FUN_00475430(undefined4 param_1,int *param_2,undefined4 param_3,undefined4 param_4,
@@ -75489,7 +75489,7 @@ void FUN_00475430(undefined4 param_1,int *param_2,undefined4 param_3,undefined4 
 }
 
 
-// ==== FUN_00475470 @ 00475470 ====
+// ==== DDiSceneObjectPoseMethodDispatch @ 00475470 [Ghidra: FUN_00475470] ====
 
 
 void FUN_00475470(undefined4 param_1,int *param_2,undefined4 param_3,undefined4 param_4,
@@ -75502,7 +75502,7 @@ void FUN_00475470(undefined4 param_1,int *param_2,undefined4 param_3,undefined4 
 }
 
 
-// ==== FUN_004754c0 @ 004754C0 ====
+// ==== DDiSceneMoveOrPose @ 004754C0 [Ghidra: FUN_004754c0] ====
 
 
 void FUN_004754c0(undefined4 param_1,int *param_2,undefined4 param_3)
@@ -75546,7 +75546,7 @@ void FUN_00475500(undefined4 param_1,int *param_2)
 }
 
 
-// ==== FUN_00475580 @ 00475580 ====
+// ==== RenderObjectRotateAxis @ 00475580 [Ghidra: FUN_00475580] ====
 
 
 void FUN_00475580(undefined4 *param_1,undefined4 param_2,undefined4 param_3,undefined4 param_4,
@@ -75558,7 +75558,7 @@ void FUN_00475580(undefined4 *param_1,undefined4 param_2,undefined4 param_3,unde
 }
 
 
-// ==== FUN_004755b0 @ 004755B0 ====
+// ==== SceneFrameScaleSet @ 004755B0 [Ghidra: FUN_004755b0] ====
 
 
 void FUN_004755b0(undefined4 *param_1,undefined4 param_2,undefined4 param_3,undefined4 param_4,
@@ -75570,7 +75570,7 @@ void FUN_004755b0(undefined4 *param_1,undefined4 param_2,undefined4 param_3,unde
 }
 
 
-// ==== FUN_004755e0 @ 004755E0 ====
+// ==== CameraTeleportOrOffset @ 004755E0 [Ghidra: FUN_004755e0] ====
 
 
 void FUN_004755e0(undefined4 *param_1,undefined4 param_2,undefined4 param_3,undefined4 param_4,
@@ -75582,7 +75582,7 @@ void FUN_004755e0(undefined4 *param_1,undefined4 param_2,undefined4 param_3,unde
 }
 
 
-// ==== FUN_00475610 @ 00475610 ====
+// ==== RenderObjectSetIdentityTransform @ 00475610 [Ghidra: FUN_00475610] ====
 
 
 void FUN_00475610(undefined4 param_1)
@@ -75626,7 +75626,7 @@ void FUN_00475610(undefined4 param_1)
 }
 
 
-// ==== FUN_004756b0 @ 004756B0 ====
+// ==== SceneObjectTransformMatrixSet @ 004756B0 [Ghidra: FUN_004756b0] ====
 
 
 void FUN_004756b0(undefined4 *param_1,undefined4 param_2,undefined4 param_3)
@@ -75637,7 +75637,7 @@ void FUN_004756b0(undefined4 *param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_004756d0 @ 004756D0 ====
+// ==== VideoObjectAspectRatioGet @ 004756D0 [Ghidra: FUN_004756d0] ====
 
 
 float10 FUN_004756d0(undefined4 *param_1)
@@ -75658,7 +75658,7 @@ float10 FUN_004756d0(undefined4 *param_1)
 }
 
 
-// ==== FUN_00475710 @ 00475710 ====
+// ==== DDiSceneObjectAttachOrUnlink @ 00475710 [Ghidra: FUN_00475710] ====
 
 
 void FUN_00475710(undefined4 *param_1,undefined4 *param_2)
@@ -75698,7 +75698,7 @@ void FUN_00475710(undefined4 *param_1,undefined4 *param_2)
 }
 
 
-// ==== FUN_004757a0 @ 004757A0 ====
+// ==== DDiSceneContextGet @ 004757A0 [Ghidra: FUN_004757a0] ====
 
 
 undefined4 FUN_004757a0(undefined4 *param_1)
@@ -75720,7 +75720,7 @@ undefined4 FUN_004757a0(undefined4 *param_1)
 }
 
 
-// ==== FUN_004757f0 @ 004757F0 ====
+// ==== TypedChildResourceScalarGet @ 004757F0 [Ghidra: FUN_004757f0] ====
 
 
 float10 FUN_004757f0(int param_1)
@@ -75741,7 +75741,7 @@ float10 FUN_004757f0(int param_1)
 }
 
 
-// ==== FUN_00475830 @ 00475830 ====
+// ==== SceneObjectFirstNonKind6ChildGet @ 00475830 [Ghidra: FUN_00475830] ====
 
 
 int FUN_00475830(int *param_1)
@@ -75774,7 +75774,7 @@ int FUN_00475830(int *param_1)
 }
 
 
-// ==== FUN_00475880 @ 00475880 ====
+// ==== SceneObjectOwnerLinkEnsure @ 00475880 [Ghidra: FUN_00475880] ====
 
 
 undefined4 * FUN_00475880(int *param_1)
@@ -75799,7 +75799,7 @@ undefined4 * FUN_00475880(int *param_1)
 }
 
 
-// ==== FUN_00475900 @ 00475900 ====
+// ==== DDiSceneObjectArgumentsNormalize @ 00475900 [Ghidra: FUN_00475900] ====
 
 
 void FUN_00475900(undefined4 *param_1,undefined4 *param_2,undefined4 *param_3,undefined4 *param_4)
@@ -75815,7 +75815,7 @@ void FUN_00475900(undefined4 *param_1,undefined4 *param_2,undefined4 *param_3,un
 }
 
 
-// ==== FUN_00475930 @ 00475930 ====
+// ==== EntityVisualKindDispatch @ 00475930 [Ghidra: FUN_00475930] ====
 
 
 int FUN_00475930(char *param_1,undefined4 *param_2)
@@ -75884,7 +75884,7 @@ LAB_004759aa:
 }
 
 
-// ==== FUN_004759f0 @ 004759F0 ====
+// ==== DDiSceneObjectArrayGrow @ 004759F0 [Ghidra: FUN_004759f0] ====
 
 
 void FUN_004759f0(void)
@@ -75918,7 +75918,7 @@ void FUN_004759f0(void)
 }
 
 
-// ==== FUN_00475a70 @ 00475A70 ====
+// ==== SceneActionRecordActFrameScan @ 00475A70 [Ghidra: FUN_00475a70] ====
 
 
 /* WARNING: Removing unreachable block (ram,0x00475b81) */
@@ -76011,7 +76011,7 @@ undefined4 FUN_00475a70(int param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_00475c00 @ 00475C00 ====
+// ==== DDiSceneAnimationCallbacksSet @ 00475C00 [Ghidra: FUN_00475c00] ====
 
 
 void FUN_00475c00(int param_1,int param_2,int param_3,int param_4,int param_5)
@@ -76046,7 +76046,7 @@ void FUN_00475c00(int param_1,int param_2,int param_3,int param_4,int param_5)
 }
 
 
-// ==== FUN_00475c80 @ 00475C80 ====
+// ==== DDiScenePayloadRelease @ 00475C80 [Ghidra: FUN_00475c80] ====
 
 
 void FUN_00475c80(int param_1)
@@ -76082,7 +76082,7 @@ void FUN_00475c80(int param_1)
 }
 
 
-// ==== FUN_00475d10 @ 00475D10 ====
+// ==== DDiSceneActFrameRecordParse @ 00475D10 [Ghidra: FUN_00475d10] ====
 
 
 undefined4
@@ -76119,7 +76119,7 @@ FUN_00475d10(int param_1,undefined4 param_2,undefined4 param_3,int param_4,undef
 }
 
 
-// ==== FUN_00475e10 @ 00475E10 ====
+// ==== CallbackRecordSetFlag10AndRefresh @ 00475E10 [Ghidra: FUN_00475e10] ====
 
 
 void FUN_00475e10(undefined4 param_1)
@@ -76136,7 +76136,7 @@ void FUN_00475e10(undefined4 param_1)
 }
 
 
-// ==== FUN_00475e40 @ 00475E40 ====
+// ==== DDiSceneFrameRecordFind @ 00475E40 [Ghidra: FUN_00475e40] ====
 
 
 int * FUN_00475e40(int param_1,undefined4 param_2,int param_3)
@@ -76207,7 +76207,7 @@ int * FUN_00475e40(int param_1,undefined4 param_2,int param_3)
 }
 
 
-// ==== FUN_00475f70 @ 00475F70 ====
+// ==== DDiSceneAnimationHookCreate @ 00475F70 [Ghidra: FUN_00475f70] ====
 
 
 void FUN_00475f70(int *param_1,int param_2,char *param_3,undefined4 *param_4,int param_5,
@@ -76326,7 +76326,7 @@ void FUN_00475f70(int *param_1,int param_2,char *param_3,undefined4 *param_4,int
 }
 
 
-// ==== FUN_004760e0 @ 004760E0 ====
+// ==== AttachedObjectDataReleaseAndClear @ 004760E0 [Ghidra: FUN_004760e0] ====
 
 
 void FUN_004760e0(int *param_1)
@@ -76346,7 +76346,7 @@ void FUN_004760e0(int *param_1)
 }
 
 
-// ==== FUN_00476120 @ 00476120 ====
+// ==== ScenePropertyPrimaryValueGet @ 00476120 [Ghidra: FUN_00476120] ====
 
 
 undefined4 FUN_00476120(int *param_1)
@@ -76362,7 +76362,7 @@ undefined4 FUN_00476120(int *param_1)
 }
 
 
-// ==== FUN_00476140 @ 00476140 ====
+// ==== ScenePropertySecondaryValueGet @ 00476140 [Ghidra: FUN_00476140] ====
 
 
 undefined4 FUN_00476140(int *param_1)
@@ -76378,7 +76378,7 @@ undefined4 FUN_00476140(int *param_1)
 }
 
 
-// ==== FUN_00476160 @ 00476160 ====
+// ==== DDiSceneActionRecordField1CGet @ 00476160 [Ghidra: FUN_00476160] ====
 
 
 undefined4 FUN_00476160(int *param_1)
@@ -76394,7 +76394,7 @@ undefined4 FUN_00476160(int *param_1)
 }
 
 
-// ==== FUN_00476180 @ 00476180 ====
+// ==== DDiSceneActionRecordField0CGet @ 00476180 [Ghidra: FUN_00476180] ====
 
 
 undefined4 FUN_00476180(int *param_1)
@@ -76410,7 +76410,7 @@ undefined4 FUN_00476180(int *param_1)
 }
 
 
-// ==== FUN_004761a0 @ 004761A0 ====
+// ==== DDiSceneAnimationDurationGet @ 004761A0 [Ghidra: FUN_004761a0] ====
 
 
 float10 FUN_004761a0(int *param_1)
@@ -76426,7 +76426,7 @@ float10 FUN_004761a0(int *param_1)
 }
 
 
-// ==== FUN_004761c0 @ 004761C0 ====
+// ==== ScenePropertyFloatAt14Get @ 004761C0 [Ghidra: FUN_004761c0] ====
 
 
 float10 FUN_004761c0(int *param_1)
@@ -76442,7 +76442,7 @@ float10 FUN_004761c0(int *param_1)
 }
 
 
-// ==== FUN_004761e0 @ 004761E0 ====
+// ==== DDiSceneAnimationStateGet @ 004761E0 [Ghidra: FUN_004761e0] ====
 
 
 undefined4 FUN_004761e0(int *param_1)
@@ -76458,7 +76458,7 @@ undefined4 FUN_004761e0(int *param_1)
 }
 
 
-// ==== FUN_00476200 @ 00476200 ====
+// ==== DDiSceneAnimationLastFrameGet @ 00476200 [Ghidra: FUN_00476200] ====
 
 
 undefined4 FUN_00476200(int *param_1)
@@ -76474,7 +76474,7 @@ undefined4 FUN_00476200(int *param_1)
 }
 
 
-// ==== FUN_00476220 @ 00476220 ====
+// ==== RenderInterfacePairUpdate @ 00476220 [Ghidra: FUN_00476220] ====
 
 
 void FUN_00476220(undefined4 param_1,int *param_2)
@@ -76508,7 +76508,7 @@ void FUN_00476220(undefined4 param_1,int *param_2)
 }
 
 
-// ==== FUN_00476270 @ 00476270 ====
+// ==== SceneObjectSetFormattedString @ 00476270 [Ghidra: FUN_00476270] ====
 
 
 void FUN_00476270(int *param_1,undefined4 param_2)
@@ -76527,7 +76527,7 @@ void FUN_00476270(int *param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_004762f0 @ 004762F0 ====
+// ==== ScenePropertyOwnedBufferRelease @ 004762F0 [Ghidra: FUN_004762f0] ====
 
 
 void FUN_004762f0(undefined4 param_1)
@@ -76543,7 +76543,7 @@ void FUN_004762f0(undefined4 param_1)
 }
 
 
-// ==== FUN_00476310 @ 00476310 ====
+// ==== ScenePropertyValueAt08Get @ 00476310 [Ghidra: FUN_00476310] ====
 
 
 undefined4 FUN_00476310(int *param_1)
@@ -76559,7 +76559,7 @@ undefined4 FUN_00476310(int *param_1)
 }
 
 
-// ==== FUN_00476330 @ 00476330 ====
+// ==== ResourceTreeCallbackWalk @ 00476330 [Ghidra: FUN_00476330] ====
 
 
 int * FUN_00476330(int *param_1,undefined4 param_2,code *param_3,undefined4 param_4)
@@ -76606,7 +76606,7 @@ int * FUN_00476330(int *param_1,undefined4 param_2,code *param_3,undefined4 para
 }
 
 
-// ==== FUN_00476410 @ 00476410 ====
+// ==== ResourceNameMatchCallback @ 00476410 [Ghidra: FUN_00476410] ====
 
 
 /* WARNING: Removing unreachable block (ram,0x00476461) */
@@ -76736,7 +76736,7 @@ LAB_00476596:
 }
 
 
-// ==== FUN_004765c0 @ 004765C0 ====
+// ==== LwscSceneLoad @ 004765C0 [Ghidra: FUN_004765c0] ====
 
 
 undefined4
@@ -76833,7 +76833,7 @@ FUN_004765c0(char *param_1,undefined4 param_2,undefined4 *param_3,int param_4,un
 }
 
 
-// ==== FUN_00476770 @ 00476770 ====
+// ==== DDiSceneResourceNameResolve @ 00476770 [Ghidra: FUN_00476770] ====
 
 
 int FUN_00476770(undefined4 param_1)
@@ -76865,7 +76865,7 @@ int FUN_00476770(undefined4 param_1)
 }
 
 
-// ==== FUN_004767e0 @ 004767E0 ====
+// ==== DDiSceneResourceExists @ 004767E0 [Ghidra: FUN_004767e0] ====
 
 
 bool FUN_004767e0(undefined4 param_1,int *param_2)
@@ -76893,7 +76893,7 @@ bool FUN_004767e0(undefined4 param_1,int *param_2)
 }
 
 
-// ==== FUN_00476850 @ 00476850 ====
+// ==== DDiSceneResourceOpen @ 00476850 [Ghidra: FUN_00476850] ====
 
 
 /* WARNING: Restarted to delay deadcode elimination for space: stack */
@@ -76933,7 +76933,7 @@ int * FUN_00476850(int *param_1,int *param_2,int param_3)
 }
 
 
-// ==== FUN_00476bf0 @ 00476BF0 ====
+// ==== SurfacePixelRowsFlipInPlace @ 00476BF0 [Ghidra: FUN_00476bf0] ====
 
 
 void FUN_00476bf0(int *param_1)
@@ -77007,7 +77007,7 @@ void FUN_00476bf0(int *param_1)
 }
 
 
-// ==== FUN_00476d10 @ 00476D10 ====
+// ==== RenderResourcePairReleaseAndClear @ 00476D10 [Ghidra: FUN_00476d10] ====
 
 
 void FUN_00476d10(undefined4 param_1,undefined4 *param_2)
@@ -77024,7 +77024,7 @@ void FUN_00476d10(undefined4 param_1,undefined4 *param_2)
 }
 
 
-// ==== FUN_00476d50 @ 00476D50 ====
+// ==== ResourceSlotTableInitialize @ 00476D50 [Ghidra: FUN_00476d50] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -77047,7 +77047,7 @@ void FUN_00476d50(void)
 }
 
 
-// ==== FUN_00476d80 @ 00476D80 ====
+// ==== ResourceSlotTableReleaseAll @ 00476D80 [Ghidra: FUN_00476d80] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -77071,7 +77071,7 @@ void FUN_00476d80(void)
 }
 
 
-// ==== FUN_00476dc0 @ 00476DC0 ====
+// ==== RenderTargetViewportScaleSet @ 00476DC0 [Ghidra: FUN_00476dc0] ====
 
 
 void FUN_00476dc0(undefined4 param_1,undefined4 param_2,undefined4 param_3)
@@ -77093,7 +77093,7 @@ void FUN_00476dc0(undefined4 param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_00476e50 @ 00476E50 ====
+// ==== ScreenBoundedSurfaceResourceAllocate @ 00476E50 [Ghidra: FUN_00476e50] ====
 
 
 int FUN_00476e50(int param_1,int param_2,undefined4 *param_3)
@@ -77140,7 +77140,7 @@ int FUN_00476e50(int param_1,int param_2,undefined4 *param_3)
 }
 
 
-// ==== FUN_00476f10 @ 00476F10 ====
+// ==== RenderSurfaceGetValuePair80And84 @ 00476F10 [Ghidra: FUN_00476f10] ====
 
 
 void FUN_00476f10(int param_1,undefined4 *param_2,undefined4 *param_3)
@@ -77160,7 +77160,7 @@ void FUN_00476f10(int param_1,undefined4 *param_2,undefined4 *param_3)
 }
 
 
-// ==== FUN_00476f50 @ 00476F50 ====
+// ==== ResourceInterfaceCallSlot48 @ 00476F50 [Ghidra: FUN_00476f50] ====
 
 
 void FUN_00476f50(int param_1,undefined4 *param_2)
@@ -77171,7 +77171,7 @@ void FUN_00476f50(int param_1,undefined4 *param_2)
 }
 
 
-// ==== FUN_00476f70 @ 00476F70 ====
+// ==== SceneObjectQueryValueIfReady @ 00476F70 [Ghidra: FUN_00476f70] ====
 
 
 /* WARNING: Restarted to delay deadcode elimination for space: stack */
@@ -77197,7 +77197,7 @@ undefined4 FUN_00476f70(int param_1)
 }
 
 
-// ==== FUN_00476fb0 @ 00476FB0 ====
+// ==== RendererObjectSetClipDistance @ 00476FB0 [Ghidra: FUN_00476fb0] ====
 
 
 void FUN_00476fb0(int param_1,undefined4 param_2)
@@ -77208,7 +77208,7 @@ void FUN_00476fb0(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00476fd0 @ 00476FD0 ====
+// ==== ResourceInterfaceCallSlot8C @ 00476FD0 [Ghidra: FUN_00476fd0] ====
 
 
 void FUN_00476fd0(int param_1)
@@ -77219,7 +77219,7 @@ void FUN_00476fd0(int param_1)
 }
 
 
-// ==== FUN_00476ff0 @ 00476FF0 ====
+// ==== ResourceInterfaceCallSlot90 @ 00476FF0 [Ghidra: FUN_00476ff0] ====
 
 
 void FUN_00476ff0(int param_1)
@@ -77230,7 +77230,7 @@ void FUN_00476ff0(int param_1)
 }
 
 
-// ==== FUN_00477010 @ 00477010 ====
+// ==== DDiSceneDrawBegin @ 00477010 [Ghidra: FUN_00477010] ====
 
 
 void FUN_00477010(int param_1,int param_2)
@@ -77298,7 +77298,7 @@ void FUN_00477010(int param_1,int param_2)
 }
 
 
-// ==== FUN_00477150 @ 00477150 ====
+// ==== DDiSceneDrawEnd @ 00477150 [Ghidra: FUN_00477150] ====
 
 
 void FUN_00477150(float param_1,undefined4 *param_2)
@@ -77334,7 +77334,7 @@ void FUN_00477150(float param_1,undefined4 *param_2)
 }
 
 
-// ==== FUN_00477220 @ 00477220 ====
+// ==== RenderResourceTrackAndRetain @ 00477220 [Ghidra: FUN_00477220] ====
 
 
 void FUN_00477220(int param_1)
@@ -77347,7 +77347,7 @@ void FUN_00477220(int param_1)
 }
 
 
-// ==== FUN_00477240 @ 00477240 ====
+// ==== DDiSceneCurrentObjectSet @ 00477240 [Ghidra: FUN_00477240] ====
 
 
 void FUN_00477240(int param_1,undefined4 param_2)
@@ -77358,7 +77358,7 @@ void FUN_00477240(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00477250 @ 00477250 ====
+// ==== ResourceInterfaceCallSlot40AndClearField14 @ 00477250 [Ghidra: FUN_00477250] ====
 
 
 void FUN_00477250(int param_1,undefined4 param_2)
@@ -77370,7 +77370,7 @@ void FUN_00477250(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00477270 @ 00477270 ====
+// ==== ResourceInterfaceCallSlot88 @ 00477270 [Ghidra: FUN_00477270] ====
 
 
 void FUN_00477270(int param_1)
@@ -77381,7 +77381,7 @@ void FUN_00477270(int param_1)
 }
 
 
-// ==== FUN_00477290 @ 00477290 ====
+// ==== CameraScreenCoordinateProject @ 00477290 [Ghidra: FUN_00477290] ====
 
 
 void FUN_00477290(int param_1,undefined4 param_2,undefined4 param_3)
@@ -77392,7 +77392,7 @@ void FUN_00477290(int param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_004772b0 @ 004772B0 ====
+// ==== RenderInterfaceTransformPoint @ 004772B0 [Ghidra: FUN_004772b0] ====
 
 
 void FUN_004772b0(int param_1,undefined4 param_2,undefined4 param_3)
@@ -77403,7 +77403,7 @@ void FUN_004772b0(int param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_004772d0 @ 004772D0 ====
+// ==== CameraProjectPointToScreen @ 004772D0 [Ghidra: FUN_004772d0] ====
 
 
 void FUN_004772d0(int param_1,undefined4 param_2,undefined4 param_3)
@@ -77423,7 +77423,7 @@ void FUN_004772d0(int param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_00477310 @ 00477310 ====
+// ==== ComPropertyResultGet @ 00477310 [Ghidra: FUN_00477310] ====
 
 
 /* WARNING: Restarted to delay deadcode elimination for space: stack */
@@ -77452,7 +77452,7 @@ undefined1 * FUN_00477310(int param_1)
 }
 
 
-// ==== FUN_00477370 @ 00477370 ====
+// ==== DDiSceneRenderSurfacePoolGrow @ 00477370 [Ghidra: FUN_00477370] ====
 
 
 void FUN_00477370(void)
@@ -77486,7 +77486,7 @@ void FUN_00477370(void)
 }
 
 
-// ==== FUN_004773e0 @ 004773E0 ====
+// ==== RenderResourceTrackedReferencesRelease @ 004773E0 [Ghidra: FUN_004773e0] ====
 
 
 void FUN_004773e0(void)
@@ -77521,7 +77521,7 @@ void FUN_004773e0(void)
 }
 
 
-// ==== FUN_00477440 @ 00477440 ====
+// ==== BlockTextTokenSplit @ 00477440 [Ghidra: FUN_00477440] ====
 
 
 int FUN_00477440(char *param_1,undefined4 *param_2,char *param_3)
@@ -77565,7 +77565,7 @@ int FUN_00477440(char *param_1,undefined4 *param_2,char *param_3)
 }
 
 
-// ==== FUN_004774b0 @ 004774B0 ====
+// ==== WhitespaceTokenize @ 004774B0 [Ghidra: FUN_004774b0] ====
 
 
 int FUN_004774b0(byte *param_1,undefined4 *param_2)
@@ -77612,7 +77612,7 @@ int FUN_004774b0(byte *param_1,undefined4 *param_2)
 }
 
 
-// ==== FUN_00477550 @ 00477550 ====
+// ==== StringDuplicate @ 00477550 [Ghidra: FUN_00477550] ====
 
 
 char * FUN_00477550(char *param_1)
@@ -77660,7 +77660,7 @@ char * FUN_00477550(char *param_1)
 }
 
 
-// ==== FUN_00477590 @ 00477590 ====
+// ==== FormattedTextEscapeDecodeAndEmit @ 00477590 [Ghidra: FUN_00477590] ====
 
 
 void FUN_00477590(undefined4 param_1)
@@ -77699,7 +77699,7 @@ void FUN_00477590(undefined4 param_1)
 }
 
 
-// ==== FUN_00477610 @ 00477610 ====
+// ==== CaseInsensitiveSubstringFind @ 00477610 [Ghidra: FUN_00477610] ====
 
 
 char * FUN_00477610(char *param_1,char *param_2)
@@ -77744,7 +77744,7 @@ char * FUN_00477610(char *param_1,char *param_2)
 }
 
 
-// ==== FUN_00477670 @ 00477670 ====
+// ==== GameStringHashCompute @ 00477670 [Ghidra: FUN_00477670] ====
 
 
 int FUN_00477670(byte *param_1,int param_2,int param_3)
@@ -77789,7 +77789,7 @@ int FUN_00477670(byte *param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_00477710 @ 00477710 ====
+// ==== ConfigBooleanParse @ 00477710 [Ghidra: FUN_00477710] ====
 
 
 byte FUN_00477710(char *param_1)
@@ -77822,7 +77822,7 @@ byte FUN_00477710(char *param_1)
 }
 
 
-// ==== FUN_004777a0 @ 004777A0 ====
+// ==== WinMain @ 004777A0 [Ghidra: FUN_004777a0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -78029,7 +78029,7 @@ LAB_00477b6a:
 }
 
 
-// ==== FUN_00477bd0 @ 00477BD0 ====
+// ==== SetLowTextureFlag @ 00477BD0 [Ghidra: FUN_00477bd0] ====
 
 
 void FUN_00477bd0(void)
@@ -78042,7 +78042,7 @@ void FUN_00477bd0(void)
 }
 
 
-// ==== FUN_00477bf0 @ 00477BF0 ====
+// ==== CommandLineOptionParse @ 00477BF0 [Ghidra: FUN_00477bf0] ====
 
 
 void FUN_00477bf0(undefined4 param_1,undefined4 *param_2,undefined4 *param_3)
@@ -78174,7 +78174,7 @@ void FUN_00477bf0(undefined4 param_1,undefined4 *param_2,undefined4 *param_3)
 }
 
 
-// ==== FUN_00477f30 @ 00477F30 ====
+// ==== MainLoopFramePump @ 00477F30 [Ghidra: FUN_00477f30] ====
 
 
 void FUN_00477f30(int param_1)
@@ -78193,7 +78193,7 @@ void FUN_00477f30(int param_1)
 }
 
 
-// ==== FUN_00477f70 @ 00477F70 ====
+// ==== RenderFeatureFlagsGet @ 00477F70 [Ghidra: FUN_00477f70] ====
 
 
 undefined4 FUN_00477f70(void)
@@ -78203,7 +78203,7 @@ undefined4 FUN_00477f70(void)
 }
 
 
-// ==== FUN_00477f80 @ 00477F80 ====
+// ==== DisplayDeviceCapsQueryDiscard @ 00477F80 [Ghidra: FUN_00477f80] ====
 
 
 void FUN_00477f80(void)
@@ -78219,7 +78219,7 @@ void FUN_00477f80(void)
 }
 
 
-// ==== FUN_00477fa0 @ 00477FA0 ====
+// ==== RendererBeginFrameOnce @ 00477FA0 [Ghidra: FUN_00477fa0] ====
 
 
 void FUN_00477fa0(void)
@@ -78233,7 +78233,7 @@ void FUN_00477fa0(void)
 }
 
 
-// ==== FUN_00477fd0 @ 00477FD0 ====
+// ==== EngineCallbackTripletSet @ 00477FD0 [Ghidra: FUN_00477fd0] ====
 
 
 undefined4 FUN_00477fd0(undefined4 *param_1)
@@ -78265,7 +78265,7 @@ DWORD timeGetTime(void)
 }
 
 
-// ==== FUN_00478010 @ 00478010 ====
+// ==== WindowMessageDispatchFilter @ 00478010 [Ghidra: FUN_00478010] ====
 
 
 undefined4 FUN_00478010(int param_1)
@@ -78281,7 +78281,7 @@ undefined4 FUN_00478010(int param_1)
 }
 
 
-// ==== FUN_00478040 @ 00478040 ====
+// ==== Win32MessagePumpDispatch @ 00478040 [Ghidra: FUN_00478040] ====
 
 
 void FUN_00478040(void)
@@ -78303,7 +78303,7 @@ void FUN_00478040(void)
 }
 
 
-// ==== FUN_004780b0 @ 004780B0 ====
+// ==== RendererWindowModeApply @ 004780B0 [Ghidra: FUN_004780b0] ====
 
 
 void FUN_004780b0(int param_1,int param_2,int param_3,int param_4,int param_5)
@@ -78343,7 +78343,7 @@ void FUN_004780b0(int param_1,int param_2,int param_3,int param_4,int param_5)
 }
 
 
-// ==== FUN_004781d0 @ 004781D0 ====
+// ==== Direct3DRMDeviceInit @ 004781D0 [Ghidra: FUN_004781d0] ====
 
 
 undefined4 FUN_004781d0(int param_1,undefined4 *param_2)
@@ -78389,7 +78389,7 @@ undefined4 FUN_004781d0(int param_1,undefined4 *param_2)
 }
 
 
-// ==== FUN_00478310 @ 00478310 ====
+// ==== WindowRectAdjustForWindowedMode @ 00478310 [Ghidra: FUN_00478310] ====
 
 
 void FUN_00478310(LPRECT param_1)
@@ -78402,7 +78402,7 @@ void FUN_00478310(LPRECT param_1)
 }
 
 
-// ==== FUN_00478330 @ 00478330 ====
+// ==== Direct3DRenderPreferencesApply @ 00478330 [Ghidra: FUN_00478330] ====
 
 
 void FUN_00478330(int param_1,undefined4 param_2,int param_3,int param_4,int param_5)
@@ -78440,7 +78440,7 @@ void FUN_00478330(int param_1,undefined4 param_2,int param_3,int param_4,int par
 }
 
 
-// ==== FUN_004783d0 @ 004783D0 ====
+// ==== WindowTitleSet @ 004783D0 [Ghidra: FUN_004783d0] ====
 
 
 void FUN_004783d0(LPCSTR param_1)
@@ -78451,7 +78451,7 @@ void FUN_004783d0(LPCSTR param_1)
 }
 
 
-// ==== FUN_004783f0 @ 004783F0 ====
+// ==== WindowCreate @ 004783F0 [Ghidra: FUN_004783f0] ====
 
 
 undefined4 FUN_004783f0(HINSTANCE param_1)
@@ -78486,7 +78486,7 @@ undefined4 FUN_004783f0(HINSTANCE param_1)
 }
 
 
-// ==== FUN_004784c0 @ 004784C0 ====
+// ==== GameWindowProcedure @ 004784C0 [Ghidra: FUN_004784c0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -78603,7 +78603,7 @@ switchD_004784d4_caseD_1:
 }
 
 
-// ==== FUN_004786c0 @ 004786C0 ====
+// ==== MainWindowActivationAndCloseHandler @ 004786C0 [Ghidra: FUN_004786c0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -78706,7 +78706,7 @@ switchD_00478728_default:
 }
 
 
-// ==== FUN_004788d0 @ 004788D0 ====
+// ==== Direct3DRenderStateSetCached @ 004788D0 [Ghidra: FUN_004788d0] ====
 
 
 void FUN_004788d0(int param_1)
@@ -78732,7 +78732,7 @@ void FUN_004788d0(int param_1)
 }
 
 
-// ==== FUN_00478940 @ 00478940 ====
+// ==== D3DMaterialStateFlush @ 00478940 [Ghidra: FUN_00478940] ====
 
 
 void FUN_00478940(void)
@@ -78755,7 +78755,7 @@ void FUN_00478940(void)
 }
 
 
-// ==== FUN_00478980 @ 00478980 ====
+// ==== MusicMixerVolumeSet @ 00478980 [Ghidra: FUN_00478980] ====
 
 
 void FUN_00478980(void)
@@ -78766,7 +78766,7 @@ void FUN_00478980(void)
 }
 
 
-// ==== FUN_004789a0 @ 004789A0 ====
+// ==== MusicMixerVolumeGet @ 004789A0 [Ghidra: FUN_004789a0] ====
 
 
 void FUN_004789a0(undefined4 param_1,undefined4 param_2)
@@ -78777,7 +78777,7 @@ void FUN_004789a0(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_004789c0 @ 004789C0 ====
+// ==== WindowsMixerControlInit @ 004789C0 [Ghidra: FUN_004789c0] ====
 
 
 undefined4 FUN_004789c0(float *param_1,float *param_2,int param_3)
@@ -78986,7 +78986,7 @@ undefined4 FUN_004789c0(float *param_1,float *param_2,int param_3)
 }
 
 
-// ==== FUN_00478df0 @ 00478DF0 ====
+// ==== BlockTextTokenPoolInit @ 00478DF0 [Ghidra: FUN_00478df0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -79009,7 +79009,7 @@ void FUN_00478df0(void)
 }
 
 
-// ==== FUN_00478e20 @ 00478E20 ====
+// ==== BlockTextTokenPoolDestroy @ 00478E20 [Ghidra: FUN_00478e20] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -79032,7 +79032,7 @@ void FUN_00478e20(void)
 }
 
 
-// ==== FUN_00478e60 @ 00478E60 ====
+// ==== BlockTextOpenAndScan @ 00478E60 [Ghidra: FUN_00478e60] ====
 
 
 undefined4 * FUN_00478e60(uint param_1)
@@ -79110,7 +79110,7 @@ LAB_00478f21:
 }
 
 
-// ==== FUN_00478f50 @ 00478F50 ====
+// ==== ConfigEntryFind @ 00478F50 [Ghidra: FUN_00478f50] ====
 
 
 undefined4 * FUN_00478f50(char *param_1,char *param_2)
@@ -79223,7 +79223,7 @@ undefined4 * FUN_00478f50(char *param_1,char *param_2)
 }
 
 
-// ==== FUN_00478ff0 @ 00478FF0 ====
+// ==== ConfigNestedPathChildFind @ 00478FF0 [Ghidra: FUN_00478ff0] ====
 
 
 int FUN_00478ff0(undefined4 param_1,undefined4 param_2)
@@ -79239,7 +79239,7 @@ int FUN_00478ff0(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00479020 @ 00479020 ====
+// ==== SortedEntryNextEqualKey @ 00479020 [Ghidra: FUN_00479020] ====
 
 
 int FUN_00479020(int param_1)
@@ -79261,7 +79261,7 @@ int FUN_00479020(int param_1)
 }
 
 
-// ==== FUN_00479050 @ 00479050 ====
+// ==== ConfigStringCopy @ 00479050 [Ghidra: FUN_00479050] ====
 
 
 char * FUN_00479050(undefined4 param_1,undefined4 param_2)
@@ -79315,7 +79315,7 @@ char * FUN_00479050(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_004790b0 @ 004790B0 ====
+// ==== ConfigPathValueGet @ 004790B0 [Ghidra: FUN_004790b0] ====
 
 
 undefined4 FUN_004790b0(undefined4 param_1,undefined4 param_2)
@@ -79331,7 +79331,7 @@ undefined4 FUN_004790b0(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_004790d0 @ 004790D0 ====
+// ==== ConfigBooleanGetDefault2 @ 004790D0 [Ghidra: FUN_004790d0] ====
 
 
 undefined4 FUN_004790d0(undefined4 param_1,undefined4 param_2)
@@ -79350,7 +79350,7 @@ undefined4 FUN_004790d0(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00479110 @ 00479110 ====
+// ==== ReadAngleSettingRadians @ 00479110 [Ghidra: FUN_00479110] ====
 
 
 float10 FUN_00479110(undefined4 param_1,undefined4 param_2)
@@ -79375,7 +79375,7 @@ float10 FUN_00479110(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00479170 @ 00479170 ====
+// ==== ConfigRgbVectorRead @ 00479170 [Ghidra: FUN_00479170] ====
 
 
 bool FUN_00479170(undefined4 param_1,undefined4 param_2,float *param_3,float *param_4,float *param_5
@@ -79408,7 +79408,7 @@ bool FUN_00479170(undefined4 param_1,undefined4 param_2,float *param_3,float *pa
 }
 
 
-// ==== FUN_00479240 @ 00479240 ====
+// ==== ReleaseLinkedObjectList @ 00479240 [Ghidra: FUN_00479240] ====
 
 
 void FUN_00479240(undefined4 *param_1)
@@ -79426,7 +79426,7 @@ void FUN_00479240(undefined4 *param_1)
 }
 
 
-// ==== FUN_00479270 @ 00479270 ====
+// ==== BlockTextTokenAllocate @ 00479270 [Ghidra: FUN_00479270] ====
 
 
 void FUN_00479270(int param_1)
@@ -79459,7 +79459,7 @@ void FUN_00479270(int param_1)
 }
 
 
-// ==== FUN_004792c0 @ 004792C0 ====
+// ==== GlobalRecordListPushHead @ 004792C0 [Ghidra: FUN_004792c0] ====
 
 
 void FUN_004792c0(int param_1)
@@ -79471,7 +79471,7 @@ void FUN_004792c0(int param_1)
 }
 
 
-// ==== FUN_004792e0 @ 004792E0 ====
+// ==== ConfigBlockPathFind @ 004792E0 [Ghidra: FUN_004792e0] ====
 
 
 /* WARNING: Type propagation algorithm not settling */
@@ -79588,7 +79588,7 @@ int FUN_004792e0(int param_1,char *param_2)
 }
 
 
-// ==== FUN_00479490 @ 00479490 ====
+// ==== BlockTextTokenPoolGrow @ 00479490 [Ghidra: FUN_00479490] ====
 
 
 void FUN_00479490(void)
@@ -79622,7 +79622,7 @@ void FUN_00479490(void)
 }
 
 
-// ==== FUN_00479500 @ 00479500 ====
+// ==== D3DRMVectorRandom @ 00479500 [Ghidra: FUN_00479500] ====
 
 
 void FUN_00479500(undefined4 param_1)
@@ -79633,7 +79633,7 @@ void FUN_00479500(undefined4 param_1)
 }
 
 
-// ==== FUN_00479510 @ 00479510 ====
+// ==== D3DRMVectorRotate @ 00479510 [Ghidra: FUN_00479510] ====
 
 
 void FUN_00479510(undefined4 param_1,undefined4 param_2,undefined4 param_3,undefined4 param_4)
@@ -79644,7 +79644,7 @@ void FUN_00479510(undefined4 param_1,undefined4 param_2,undefined4 param_3,undef
 }
 
 
-// ==== FUN_00479530 @ 00479530 ====
+// ==== SurfaceTriangleNormalCalculate @ 00479530 [Ghidra: FUN_00479530] ====
 
 
 void FUN_00479530(float *param_1,float *param_2,float *param_3,float *param_4)
@@ -79669,7 +79669,7 @@ void FUN_00479530(float *param_1,float *param_2,float *param_3,float *param_4)
 }
 
 
-// ==== FUN_00479630 @ 00479630 ====
+// ==== SurfaceTriangleAreaCalculate @ 00479630 [Ghidra: FUN_00479630] ====
 
 
 float10 FUN_00479630(undefined4 *param_1,undefined4 *param_2,undefined4 *param_3,int param_4)
@@ -79787,7 +79787,7 @@ uint thunk_FUN_0048e170(void)
 }
 
 
-// ==== FUN_004798b0 @ 004798B0 ====
+// ==== RandomFloatRange @ 004798B0 [Ghidra: FUN_004798b0] ====
 
 
 float10 FUN_004798b0(float param_1,float param_2)
@@ -79801,7 +79801,7 @@ float10 FUN_004798b0(float param_1,float param_2)
 }
 
 
-// ==== FUN_004798e0 @ 004798E0 ====
+// ==== ViewRayIntersectionTest @ 004798E0 [Ghidra: FUN_004798e0] ====
 
 
 undefined4
@@ -79840,7 +79840,7 @@ FUN_004798e0(undefined4 param_1,undefined4 param_2,float *param_3,undefined4 par
 }
 
 
-// ==== FUN_00479a30 @ 00479A30 ====
+// ==== RayPlaneIntersectionParameter @ 00479A30 [Ghidra: FUN_00479a30] ====
 
 
 undefined4 FUN_00479a30(float *param_1,float *param_2,float *param_3,float *param_4,float *param_5)
@@ -79859,7 +79859,7 @@ undefined4 FUN_00479a30(float *param_1,float *param_2,float *param_3,float *para
 }
 
 
-// ==== FUN_00479ab0 @ 00479AB0 ====
+// ==== PointAlongRay @ 00479AB0 [Ghidra: FUN_00479ab0] ====
 
 
 void FUN_00479ab0(float *param_1,float *param_2,float *param_3,float param_4)
@@ -79877,7 +79877,7 @@ void FUN_00479ab0(float *param_1,float *param_2,float *param_3,float param_4)
 }
 
 
-// ==== FUN_00479af0 @ 00479AF0 ====
+// ==== LineIntersection2DCompute @ 00479AF0 [Ghidra: FUN_00479af0] ====
 
 
 float * FUN_00479af0(float *param_1,float *param_2,float *param_3,float *param_4,float *param_5)
@@ -79899,7 +79899,7 @@ float * FUN_00479af0(float *param_1,float *param_2,float *param_3,float *param_4
 }
 
 
-// ==== FUN_00479b80 @ 00479B80 ====
+// ==== PointInPolygon2D @ 00479B80 [Ghidra: FUN_00479b80] ====
 
 
 uint FUN_00479b80(float *param_1,int param_2,float *param_3,int param_4)
@@ -79929,7 +79929,7 @@ uint FUN_00479b80(float *param_1,int param_2,float *param_3,int param_4)
 }
 
 
-// ==== FUN_00479c10 @ 00479C10 ====
+// ==== SphereRayIntersectionDiscriminantPositive @ 00479C10 [Ghidra: FUN_00479c10] ====
 
 
 undefined4 FUN_00479c10(float *param_1,float param_2,float *param_3,float *param_4)
@@ -79953,7 +79953,7 @@ undefined4 FUN_00479c10(float *param_1,float param_2,float *param_3,float *param
 }
 
 
-// ==== FUN_00479ce0 @ 00479CE0 ====
+// ==== Matrix4Multiply @ 00479CE0 [Ghidra: FUN_00479ce0] ====
 
 
 void FUN_00479ce0(int param_1,float *param_2,float *param_3)
@@ -79999,7 +79999,7 @@ void FUN_00479ce0(int param_1,float *param_2,float *param_3)
 }
 
 
-// ==== FUN_00479d50 @ 00479D50 ====
+// ==== Matrix4SetRotationZ @ 00479D50 [Ghidra: FUN_00479d50] ====
 
 
 void FUN_00479d50(int param_1,float param_2)
@@ -80019,7 +80019,7 @@ void FUN_00479d50(int param_1,float param_2)
 }
 
 
-// ==== FUN_00479da0 @ 00479DA0 ====
+// ==== Matrix4SetRotationY @ 00479DA0 [Ghidra: FUN_00479da0] ====
 
 
 void FUN_00479da0(float *param_1,float param_2)
@@ -80039,7 +80039,7 @@ void FUN_00479da0(float *param_1,float param_2)
 }
 
 
-// ==== FUN_00479df0 @ 00479DF0 ====
+// ==== Matrix4SetRotationZ @ 00479DF0 [Ghidra: FUN_00479df0] ====
 
 
 void FUN_00479df0(float *param_1,float param_2)
@@ -80059,7 +80059,7 @@ void FUN_00479df0(float *param_1,float param_2)
 }
 
 
-// ==== FUN_00479e40 @ 00479E40 ====
+// ==== MatrixIdentityAndTranslationSet @ 00479E40 [Ghidra: FUN_00479e40] ====
 
 
 void FUN_00479e40(int param_1,undefined4 *param_2)
@@ -80073,7 +80073,7 @@ void FUN_00479e40(int param_1,undefined4 *param_2)
 }
 
 
-// ==== FUN_00479e70 @ 00479E70 ====
+// ==== Matrix4SetIdentity @ 00479E70 [Ghidra: FUN_00479e70] ====
 
 
 void FUN_00479e70(undefined4 *param_1)
@@ -80103,7 +80103,7 @@ void FUN_00479e70(undefined4 *param_1)
 }
 
 
-// ==== FUN_00479ea0 @ 00479EA0 ====
+// ==== Matrix4SetZero @ 00479EA0 [Ghidra: FUN_00479ea0] ====
 
 
 void FUN_00479ea0(undefined4 *param_1)
@@ -80119,7 +80119,7 @@ void FUN_00479ea0(undefined4 *param_1)
 }
 
 
-// ==== FUN_00479eb0 @ 00479EB0 ====
+// ==== Matrix4Copy @ 00479EB0 [Ghidra: FUN_00479eb0] ====
 
 
 void FUN_00479eb0(undefined4 *param_1,int param_2)
@@ -80144,7 +80144,7 @@ void FUN_00479eb0(undefined4 *param_1,int param_2)
 }
 
 
-// ==== FUN_00479ee0 @ 00479EE0 ====
+// ==== FontResourceLoad @ 00479EE0 [Ghidra: FUN_00479ee0] ====
 
 
 int FUN_00479ee0(uint param_1)
@@ -80261,7 +80261,7 @@ int FUN_00479ee0(uint param_1)
 }
 
 
-// ==== FUN_0047a150 @ 0047A150 ====
+// ==== FormattedTextFormatDraw @ 0047A150 [Ghidra: FUN_0047a150] ====
 
 
 void FUN_0047a150(undefined4 param_1,undefined4 *param_2,undefined4 param_3,undefined4 param_4,
@@ -80278,7 +80278,7 @@ void FUN_0047a150(undefined4 param_1,undefined4 *param_2,undefined4 param_3,unde
 }
 
 
-// ==== FUN_0047a180 @ 0047A180 ====
+// ==== RewardTextDraw @ 0047A180 [Ghidra: FUN_0047a180] ====
 
 
 void FUN_0047a180(undefined4 param_1,undefined4 param_2,undefined4 param_3,undefined4 param_4)
@@ -80289,7 +80289,7 @@ void FUN_0047a180(undefined4 param_1,undefined4 param_2,undefined4 param_3,undef
 }
 
 
-// ==== FUN_0047a1b0 @ 0047A1B0 ====
+// ==== FormattedTextDraw @ 0047A1B0 [Ghidra: FUN_0047a1b0] ====
 
 
 void FUN_0047a1b0(undefined4 param_1,undefined4 param_2,undefined4 param_3,undefined4 param_4,
@@ -80301,7 +80301,7 @@ void FUN_0047a1b0(undefined4 param_1,undefined4 param_2,undefined4 param_3,undef
 }
 
 
-// ==== FUN_0047a1e0 @ 0047A1E0 ====
+// ==== FormattedTextDrawAndMeasure @ 0047A1E0 [Ghidra: FUN_0047a1e0] ====
 
 
 uint FUN_0047a1e0(int param_1,int param_2,int param_3,undefined4 param_4,int *param_5,char *param_6,
@@ -80420,7 +80420,7 @@ LAB_0047a433:
 }
 
 
-// ==== FUN_0047a470 @ 0047A470 ====
+// ==== BitmapFontGlyphDrawAndMeasure @ 0047A470 [Ghidra: FUN_0047a470] ====
 
 
 undefined4 FUN_0047a470(undefined4 *param_1,int param_2,int param_3,char param_4,int param_5)
@@ -80446,7 +80446,7 @@ undefined4 FUN_0047a470(undefined4 *param_1,int param_2,int param_3,char param_4
 }
 
 
-// ==== FUN_0047a520 @ 0047A520 ====
+// ==== BitmapFontGlyphMeasureWidth @ 0047A520 [Ghidra: FUN_0047a520] ====
 
 
 void FUN_0047a520(undefined4 param_1,undefined4 param_2)
@@ -80457,7 +80457,7 @@ void FUN_0047a520(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0047a540 @ 0047A540 ====
+// ==== ObjectFieldBE4DwordGet @ 0047A540 [Ghidra: FUN_0047a540] ====
 
 
 undefined4 FUN_0047a540(int param_1)
@@ -80467,7 +80467,7 @@ undefined4 FUN_0047a540(int param_1)
 }
 
 
-// ==== FUN_0047a550 @ 0047A550 ====
+// ==== FontRecordAndSurfaceRelease @ 0047A550 [Ghidra: FUN_0047a550] ====
 
 
 void FUN_0047a550(undefined4 *param_1)
@@ -80480,7 +80480,7 @@ void FUN_0047a550(undefined4 *param_1)
 }
 
 
-// ==== FUN_0047a580 @ 0047A580 ====
+// ==== FixedSizeRecordPoolAcquire @ 0047A580 [Ghidra: FUN_0047a580] ====
 
 
 undefined4 * FUN_0047a580(undefined4 param_1)
@@ -80507,7 +80507,7 @@ undefined4 * FUN_0047a580(undefined4 param_1)
 }
 
 
-// ==== FUN_0047a5c0 @ 0047A5C0 ====
+// ==== FixedSizeRecordPoolGrow @ 0047A5C0 [Ghidra: FUN_0047a5c0] ====
 
 
 void FUN_0047a5c0(void)
@@ -80541,7 +80541,7 @@ void FUN_0047a5c0(void)
 }
 
 
-// ==== FUN_0047a640 @ 0047A640 ====
+// ==== DirectSoundSystemInit @ 0047A640 [Ghidra: FUN_0047a640] ====
 
 
 undefined4 FUN_0047a640(undefined4 param_1)
@@ -80625,7 +80625,7 @@ LAB_0047a755:
 }
 
 
-// ==== FUN_0047a800 @ 0047A800 ====
+// ==== DirectSoundObjectsShutdown @ 0047A800 [Ghidra: FUN_0047a800] ====
 
 
 void FUN_0047a800(void)
@@ -80643,7 +80643,7 @@ void FUN_0047a800(void)
 }
 
 
-// ==== FUN_0047a850 @ 0047A850 ====
+// ==== SoundVolumeValueValid @ 0047A850 [Ghidra: FUN_0047a850] ====
 
 
 undefined4 FUN_0047a850(int param_1)
@@ -80656,7 +80656,7 @@ undefined4 FUN_0047a850(int param_1)
 }
 
 
-// ==== FUN_0047a870 @ 0047A870 ====
+// ==== SoundBankEntryLoad @ 0047A870 [Ghidra: FUN_0047a870] ====
 
 
 int FUN_0047a870(undefined4 param_1,int param_2,int param_3,undefined4 param_4)
@@ -80760,7 +80760,7 @@ int FUN_0047a870(undefined4 param_1,int param_2,int param_3,undefined4 param_4)
 }
 
 
-// ==== FUN_0047aad0 @ 0047AAD0 ====
+// ==== SoundBankFreeSlotFind @ 0047AAD0 [Ghidra: FUN_0047aad0] ====
 
 
 undefined4 FUN_0047aad0(int *param_1)
@@ -80783,7 +80783,7 @@ undefined4 FUN_0047aad0(int *param_1)
 }
 
 
-// ==== FUN_0047ab00 @ 0047AB00 ====
+// ==== VideoResourceSlotRelease @ 0047AB00 [Ghidra: FUN_0047ab00] ====
 
 
 undefined4 FUN_0047ab00(int param_1)
@@ -80817,7 +80817,7 @@ undefined4 FUN_0047ab00(int param_1)
 }
 
 
-// ==== FUN_0047ab80 @ 0047AB80 ====
+// ==== DirectSoundListenerViewSet @ 0047AB80 [Ghidra: FUN_0047ab80] ====
 
 
 void FUN_0047ab80(undefined4 param_1)
@@ -80830,7 +80830,7 @@ void FUN_0047ab80(undefined4 param_1)
 }
 
 
-// ==== FUN_0047aba0 @ 0047ABA0 ====
+// ==== DirectSoundListenerUpdateTick @ 0047ABA0 [Ghidra: FUN_0047aba0] ====
 
 
 void FUN_0047aba0(void)
@@ -80843,7 +80843,7 @@ void FUN_0047aba0(void)
 }
 
 
-// ==== FUN_0047abc0 @ 0047ABC0 ====
+// ==== DirectSoundListenerSpatialUpdate @ 0047ABC0 [Ghidra: FUN_0047abc0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -80913,7 +80913,7 @@ LAB_0047ace5:
 }
 
 
-// ==== FUN_0047ad10 @ 0047AD10 ====
+// ==== SoundPositionSetFromVector @ 0047AD10 [Ghidra: FUN_0047ad10] ====
 
 
 void FUN_0047ad10(int *param_1,undefined4 *param_2)
@@ -80924,7 +80924,7 @@ void FUN_0047ad10(int *param_1,undefined4 *param_2)
 }
 
 
-// ==== FUN_0047ad30 @ 0047AD30 ====
+// ==== AttachedSoundStopByEntity @ 0047AD30 [Ghidra: FUN_0047ad30] ====
 
 
 undefined4 FUN_0047ad30(undefined4 param_1,int param_2)
@@ -80949,7 +80949,7 @@ undefined4 FUN_0047ad30(undefined4 param_1,int param_2)
 }
 
 
-// ==== FUN_0047ad70 @ 0047AD70 ====
+// ==== SoundBufferPlayWithPosition @ 0047AD70 [Ghidra: FUN_0047ad70] ====
 
 
 int FUN_0047ad70(undefined4 param_1,undefined4 param_2,int param_3,undefined4 param_4)
@@ -81089,7 +81089,7 @@ LAB_0047afad:
 }
 
 
-// ==== FUN_0047b020 @ 0047B020 ====
+// ==== SoundBufferAssociationAdd @ 0047B020 [Ghidra: FUN_0047b020] ====
 
 
 void FUN_0047b020(undefined4 param_1,undefined4 param_2,undefined4 param_3)
@@ -81107,7 +81107,7 @@ void FUN_0047b020(undefined4 param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_0047b050 @ 0047B050 ====
+// ==== VideoResourceSlotEnabledSet @ 0047B050 [Ghidra: FUN_0047b050] ====
 
 
 void FUN_0047b050(int param_1,uint param_2)
@@ -81142,7 +81142,7 @@ void FUN_0047b050(int param_1,uint param_2)
 }
 
 
-// ==== FUN_0047b0d0 @ 0047B0D0 ====
+// ==== IndexedRecordStride134WordGet @ 0047B0D0 [Ghidra: FUN_0047b0d0] ====
 
 
 undefined4 FUN_0047b0d0(int param_1)
@@ -81152,7 +81152,7 @@ undefined4 FUN_0047b0d0(int param_1)
 }
 
 
-// ==== FUN_0047b0f0 @ 0047B0F0 ====
+// ==== SoundHandleToBuffer @ 0047B0F0 [Ghidra: FUN_0047b0f0] ====
 
 
 undefined4 FUN_0047b0f0(int param_1)
@@ -81166,7 +81166,7 @@ undefined4 FUN_0047b0f0(int param_1)
 }
 
 
-// ==== FUN_0047b130 @ 0047B130 ====
+// ==== SoundBufferStopHandle @ 0047B130 [Ghidra: FUN_0047b130] ====
 
 
 void FUN_0047b130(int param_1)
@@ -81182,7 +81182,7 @@ void FUN_0047b130(int param_1)
 }
 
 
-// ==== FUN_0047b160 @ 0047B160 ====
+// ==== SoundSubsystemStopAll @ 0047B160 [Ghidra: FUN_0047b160] ====
 
 
 void FUN_0047b160(void)
@@ -81199,7 +81199,7 @@ void FUN_0047b160(void)
 }
 
 
-// ==== FUN_0047b1a0 @ 0047B1A0 ====
+// ==== SoundInstanceTrackRegister @ 0047B1A0 [Ghidra: FUN_0047b1a0] ====
 
 
 void FUN_0047b1a0(int *param_1)
@@ -81236,7 +81236,7 @@ void FUN_0047b1a0(int *param_1)
 }
 
 
-// ==== FUN_0047b220 @ 0047B220 ====
+// ==== SoundInstanceTrackStopAndRemove @ 0047B220 [Ghidra: FUN_0047b220] ====
 
 
 void FUN_0047b220(undefined4 param_1,int *param_2)
@@ -81271,7 +81271,7 @@ void FUN_0047b220(undefined4 param_1,int *param_2)
 }
 
 
-// ==== FUN_0047b2a0 @ 0047B2A0 ====
+// ==== KeyedResourceEntryRemove @ 0047B2A0 [Ghidra: FUN_0047b2a0] ====
 
 
 void FUN_0047b2a0(undefined4 param_1,undefined4 param_2)
@@ -81290,7 +81290,7 @@ void FUN_0047b2a0(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0047b2e0 @ 0047B2E0 ====
+// ==== NestedRecordListRemoveByKeyRecursive @ 0047B2E0 [Ghidra: FUN_0047b2e0] ====
 
 
 bool FUN_0047b2e0(undefined4 param_1,int param_2,int param_3)
@@ -81311,7 +81311,7 @@ bool FUN_0047b2e0(undefined4 param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_0047b330 @ 0047B330 ====
+// ==== NestedRecordListRemoveMatchingKey @ 0047B330 [Ghidra: FUN_0047b330] ====
 
 
 bool FUN_0047b330(undefined4 param_1,int param_2,int *param_3)
@@ -81333,7 +81333,7 @@ bool FUN_0047b330(undefined4 param_1,int param_2,int *param_3)
 }
 
 
-// ==== FUN_0047b390 @ 0047B390 ====
+// ==== SoundSourceSpatialRefreshAll @ 0047B390 [Ghidra: FUN_0047b390] ====
 
 
 void FUN_0047b390(void)
@@ -81367,7 +81367,7 @@ void FUN_0047b390(void)
 }
 
 
-// ==== FUN_0047b410 @ 0047B410 ====
+// ==== SoundSourceSpatialRefresh @ 0047B410 [Ghidra: FUN_0047b410] ====
 
 
 void FUN_0047b410(int *param_1)
@@ -81399,7 +81399,7 @@ void FUN_0047b410(int *param_1)
 }
 
 
-// ==== FUN_0047b4a0 @ 0047B4A0 ====
+// ==== SoundTrackedBuffersSetMinDistance @ 0047B4A0 [Ghidra: FUN_0047b4a0] ====
 
 
 void FUN_0047b4a0(undefined4 param_1)
@@ -81415,7 +81415,7 @@ void FUN_0047b4a0(undefined4 param_1)
 }
 
 
-// ==== FUN_0047b4d0 @ 0047B4D0 ====
+// ==== SoundTrackedBuffersSetMaxDistance @ 0047B4D0 [Ghidra: FUN_0047b4d0] ====
 
 
 void FUN_0047b4d0(undefined4 param_1)
@@ -81431,7 +81431,7 @@ void FUN_0047b4d0(undefined4 param_1)
 }
 
 
-// ==== FUN_0047b500 @ 0047B500 ====
+// ==== SoundBufferVolumeSet @ 0047B500 [Ghidra: FUN_0047b500] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -81452,7 +81452,7 @@ void FUN_0047b500(undefined4 param_1)
 }
 
 
-// ==== FUN_0047b530 @ 0047B530 ====
+// ==== SoundVolumeIndexSet @ 0047B530 [Ghidra: FUN_0047b530] ====
 
 
 void FUN_0047b530(int param_1)
@@ -81465,7 +81465,7 @@ void FUN_0047b530(int param_1)
 }
 
 
-// ==== FUN_0047b550 @ 0047B550 ====
+// ==== SoundBufferVolumeSetMinus300 @ 0047B550 [Ghidra: FUN_0047b550] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -81481,7 +81481,7 @@ void FUN_0047b550(void)
 }
 
 
-// ==== FUN_0047b580 @ 0047B580 ====
+// ==== InMemoryWaveSampleLoad @ 0047B580 [Ghidra: FUN_0047b580] ====
 
 
 undefined4 FUN_0047b580(HMMIO param_1,undefined4 param_2,undefined4 param_3)
@@ -81544,7 +81544,7 @@ undefined4 FUN_0047b580(HMMIO param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_0047b6c0 @ 0047B6C0 ====
+// ==== SoundRecordCreateBuffers @ 0047B6C0 [Ghidra: FUN_0047b6c0] ====
 
 
 undefined4 FUN_0047b6c0(int param_1)
@@ -81588,7 +81588,7 @@ undefined4 FUN_0047b6c0(int param_1)
 }
 
 
-// ==== FUN_0047b790 @ 0047B790 ====
+// ==== WaveSampleDuplicateBufferCreate @ 0047B790 [Ghidra: FUN_0047b790] ====
 
 
 bool FUN_0047b790(int param_1)
@@ -81670,7 +81670,7 @@ bool FUN_0047b790(int param_1)
 }
 
 
-// ==== FUN_0047b8e0 @ 0047B8E0 ====
+// ==== StreamedWaveBufferStepRate @ 0047B8E0 [Ghidra: FUN_0047b8e0] ====
 
 
 float10 FUN_0047b8e0(int param_1)
@@ -81690,7 +81690,7 @@ float10 FUN_0047b8e0(int param_1)
 }
 
 
-// ==== FUN_0047b970 @ 0047B970 ====
+// ==== StreamedWavePlaybackStart @ 0047B970 [Ghidra: FUN_0047b970] ====
 
 
 undefined4 FUN_0047b970(undefined4 param_1,int param_2,undefined4 param_3)
@@ -81727,7 +81727,7 @@ undefined4 FUN_0047b970(undefined4 param_1,int param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_0047ba20 @ 0047BA20 ====
+// ==== StreamPlaybackStopAndRelease @ 0047BA20 [Ghidra: FUN_0047ba20] ====
 
 
 undefined4 FUN_0047ba20(int param_1)
@@ -81759,7 +81759,7 @@ undefined4 FUN_0047ba20(int param_1)
 }
 
 
-// ==== FUN_0047baa0 @ 0047BAA0 ====
+// ==== StreamedWaveFormatAndBufferSetup @ 0047BAA0 [Ghidra: FUN_0047baa0] ====
 
 
 undefined4 FUN_0047baa0(undefined4 param_1,int param_2)
@@ -81832,7 +81832,7 @@ undefined4 FUN_0047baa0(undefined4 param_1,int param_2)
 }
 
 
-// ==== FUN_0047bc30 @ 0047BC30 ====
+// ==== StreamedWavePlaybackDrainCheck @ 0047BC30 [Ghidra: FUN_0047bc30] ====
 
 
 uint FUN_0047bc30(int param_1)
@@ -81919,7 +81919,7 @@ uint FUN_0047bc30(int param_1)
 }
 
 
-// ==== FUN_0047bdb0 @ 0047BDB0 ====
+// ==== StreamedWaveRingBufferTick @ 0047BDB0 [Ghidra: FUN_0047bdb0] ====
 
 
 void FUN_0047bdb0(int param_1)
@@ -82063,7 +82063,7 @@ void FUN_0047bdb0(int param_1)
 }
 
 
-// ==== FUN_0047c0c0 @ 0047C0C0 ====
+// ==== Vector3ExactEqual @ 0047C0C0 [Ghidra: FUN_0047c0c0] ====
 
 
 undefined4 FUN_0047c0c0(float *param_1,float *param_2)
@@ -82076,7 +82076,7 @@ undefined4 FUN_0047c0c0(float *param_1,float *param_2)
 }
 
 
-// ==== FUN_0047c100 @ 0047C100 ====
+// ==== DirectSoundListenerRolloffSet @ 0047C100 [Ghidra: FUN_0047c100] ====
 
 
 float10 FUN_0047c100(float param_1)
@@ -82095,7 +82095,7 @@ float10 FUN_0047c100(float param_1)
 }
 
 
-// ==== FUN_0047c160 @ 0047C160 ====
+// ==== ConstantNegative10000Get @ 0047C160 [Ghidra: FUN_0047c160] ====
 
 
 undefined4 FUN_0047c160(void)
@@ -82105,7 +82105,7 @@ undefined4 FUN_0047c160(void)
 }
 
 
-// ==== FUN_0047c170 @ 0047C170 ====
+// ==== WindowStateInitialize @ 0047C170 [Ghidra: FUN_0047c170] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -82129,7 +82129,7 @@ void FUN_0047c170(undefined4 param_1)
 }
 
 
-// ==== FUN_0047c1c0 @ 0047C1C0 ====
+// ==== DirectDrawEnumerateAndStoreCallbackResult @ 0047C1C0 [Ghidra: FUN_0047c1c0] ====
 
 
 undefined4 FUN_0047c1c0(undefined4 param_1)
@@ -82144,7 +82144,7 @@ undefined4 FUN_0047c1c0(undefined4 param_1)
 }
 
 
-// ==== FUN_0047c2e0 @ 0047C2E0 ====
+// ==== DirectDrawDeviceCreate @ 0047C2E0 [Ghidra: FUN_0047c2e0] ====
 
 
 /* WARNING: Restarted to delay deadcode elimination for space: stack */
@@ -82185,7 +82185,7 @@ bool FUN_0047c2e0(undefined4 param_1)
 }
 
 
-// ==== FUN_0047c4b0 @ 0047C4B0 ====
+// ==== DirectDrawEnumeratedDeviceCreate @ 0047C4B0 [Ghidra: FUN_0047c4b0] ====
 
 
 bool FUN_0047c4b0(uint param_1,undefined4 param_2,undefined4 param_3,undefined4 *param_4)
@@ -82222,7 +82222,7 @@ bool FUN_0047c4b0(uint param_1,undefined4 param_2,undefined4 param_3,undefined4 
 }
 
 
-// ==== FUN_0047c610 @ 0047C610 ====
+// ==== DirectDrawRendererInit @ 0047C610 [Ghidra: FUN_0047c610] ====
 
 
 undefined4
@@ -82340,7 +82340,7 @@ FUN_0047c610(int param_1,uint param_2,undefined4 param_3,int *param_4,undefined4
 }
 
 
-// ==== FUN_0047c8d0 @ 0047C8D0 ====
+// ==== RenderSurfacePresent @ 0047C8D0 [Ghidra: FUN_0047c8d0] ====
 
 
 void FUN_0047c8d0(void)
@@ -82355,7 +82355,7 @@ void FUN_0047c8d0(void)
 }
 
 
-// ==== FUN_0047c8f0 @ 0047C8F0 ====
+// ==== BitmapFileWrite @ 0047C8F0 [Ghidra: FUN_0047c8f0] ====
 
 
 int FUN_0047c8f0(int *param_1,undefined4 param_2)
@@ -82508,7 +82508,7 @@ int FUN_0047c8f0(int *param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0047cc20 @ 0047CC20 ====
+// ==== RenderSurfaceRestoreFromPrimary @ 0047CC20 [Ghidra: FUN_0047cc20] ====
 
 
 void FUN_0047cc20(void)
@@ -82521,7 +82521,7 @@ void FUN_0047cc20(void)
 }
 
 
-// ==== FUN_0047cc50 @ 0047CC50 ====
+// ==== WindowedRenderSurfaceBlit @ 0047CC50 [Ghidra: FUN_0047cc50] ====
 
 
 void FUN_0047cc50(void)
@@ -82551,7 +82551,7 @@ void FUN_0047cc50(void)
 }
 
 
-// ==== FUN_0047ccf0 @ 0047CCF0 ====
+// ==== DirectDrawObjectsRelease @ 0047CCF0 [Ghidra: FUN_0047ccf0] ====
 
 
 void FUN_0047ccf0(void)
@@ -82578,7 +82578,7 @@ void FUN_0047ccf0(void)
 }
 
 
-// ==== FUN_0047cd50 @ 0047CD50 ====
+// ==== QueryTextureMem @ 0047CD50 [Ghidra: FUN_0047cd50] ====
 
 
 void FUN_0047cd50(void)
@@ -82616,7 +82616,7 @@ void FUN_0047cd50(void)
 }
 
 
-// ==== FUN_0047cdd0 @ 0047CDD0 ====
+// ==== SurfaceDescriptionGet @ 0047CDD0 [Ghidra: FUN_0047cdd0] ====
 
 
 bool FUN_0047cdd0(undefined4 *param_1,undefined4 *param_2)
@@ -82639,7 +82639,7 @@ bool FUN_0047cdd0(undefined4 *param_1,undefined4 *param_2)
 }
 
 
-// ==== FUN_0047ce20 @ 0047CE20 ====
+// ==== ProjectionOverlayDrawSubmit @ 0047CE20 [Ghidra: FUN_0047ce20] ====
 
 
 void FUN_0047ce20(int param_1,undefined4 param_2)
@@ -82674,7 +82674,7 @@ void FUN_0047ce20(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0047cee0 @ 0047CEE0 ====
+// ==== DirectDrawClipperSetRegion @ 0047CEE0 [Ghidra: FUN_0047cee0] ====
 
 
 undefined4 FUN_0047cee0(void)
@@ -82723,7 +82723,7 @@ undefined4 FUN_0047cee0(void)
 }
 
 
-// ==== FUN_0047d000 @ 0047D000 ====
+// ==== PalettizedBitmapSurfaceDecode @ 0047D000 [Ghidra: FUN_0047d000] ====
 
 
 void FUN_0047d000(undefined4 param_1,int *param_2)
@@ -82859,7 +82859,7 @@ void FUN_0047d000(undefined4 param_1,int *param_2)
 }
 
 
-// ==== FUN_0047d2d0 @ 0047D2D0 ====
+// ==== SurfacePixelValueEncode @ 0047D2D0 [Ghidra: FUN_0047d2d0] ====
 
 
 uint FUN_0047d2d0(int *param_1,uint param_2)
@@ -82912,7 +82912,7 @@ uint FUN_0047d2d0(int *param_1,uint param_2)
 }
 
 
-// ==== FUN_0047d3f0 @ 0047D3F0 ====
+// ==== BitCount32 @ 0047D3F0 [Ghidra: FUN_0047d3f0] ====
 
 
 int FUN_0047d3f0(uint param_1)
@@ -82928,7 +82928,7 @@ int FUN_0047d3f0(uint param_1)
 }
 
 
-// ==== FUN_0047d410 @ 0047D410 ====
+// ==== RendererRecordTableInitialize @ 0047D410 [Ghidra: FUN_0047d410] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -82949,7 +82949,7 @@ void FUN_0047d410(void)
 }
 
 
-// ==== FUN_0047d430 @ 0047D430 ====
+// ==== SceneObjectRegistryTeardown @ 0047D430 [Ghidra: FUN_0047d430] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -82973,7 +82973,7 @@ void FUN_0047d430(void)
 }
 
 
-// ==== FUN_0047d470 @ 0047D470 ====
+// ==== ImageSurfaceRelease @ 0047D470 [Ghidra: FUN_0047d470] ====
 
 
 void FUN_0047d470(undefined4 *param_1)
@@ -82986,7 +82986,7 @@ void FUN_0047d470(undefined4 *param_1)
 }
 
 
-// ==== FUN_0047d490 @ 0047D490 ====
+// ==== SurfacePixelFormatQuery @ 0047D490 [Ghidra: FUN_0047d490] ====
 
 
 undefined4 FUN_0047d490(int *param_1)
@@ -83028,7 +83028,7 @@ undefined4 FUN_0047d490(int *param_1)
 }
 
 
-// ==== FUN_0047d520 @ 0047D520 ====
+// ==== Palette8To16BitSurfaceExpand @ 0047D520 [Ghidra: FUN_0047d520] ====
 
 
 undefined4 FUN_0047d520(int param_1,int *param_2)
@@ -83125,7 +83125,7 @@ undefined4 FUN_0047d520(int param_1,int *param_2)
 }
 
 
-// ==== FUN_0047d700 @ 0047D700 ====
+// ==== PopCount32 @ 0047D700 [Ghidra: FUN_0047d700] ====
 
 
 int FUN_0047d700(uint param_1)
@@ -83146,7 +83146,7 @@ int FUN_0047d700(uint param_1)
 }
 
 
-// ==== FUN_0047d720 @ 0047D720 ====
+// ==== FindFirstSetBit32 @ 0047D720 [Ghidra: FUN_0047d720] ====
 
 
 uint FUN_0047d720(uint param_1)
@@ -83165,7 +83165,7 @@ uint FUN_0047d720(uint param_1)
 }
 
 
-// ==== FUN_0047d740 @ 0047D740 ====
+// ==== SurfacePixelRowsFlipWithScratch @ 0047D740 [Ghidra: FUN_0047d740] ====
 
 
 void FUN_0047d740(int param_1)
@@ -83235,7 +83235,7 @@ void FUN_0047d740(int param_1)
 }
 
 
-// ==== FUN_0047d800 @ 0047D800 ====
+// ==== Bitmap24BitSurfaceConvert @ 0047D800 [Ghidra: FUN_0047d800] ====
 
 
 undefined4 FUN_0047d800(int param_1,int *param_2)
@@ -83332,7 +83332,7 @@ undefined4 FUN_0047d800(int param_1,int *param_2)
 }
 
 
-// ==== FUN_0047d9d0 @ 0047D9D0 ====
+// ==== BitmapSurfaceLoad @ 0047D9D0 [Ghidra: FUN_0047d9d0] ====
 
 
 int FUN_0047d9d0(undefined4 param_1)
@@ -83413,7 +83413,7 @@ int FUN_0047d9d0(undefined4 param_1)
 }
 
 
-// ==== FUN_0047db90 @ 0047DB90 ====
+// ==== RGBChannelsPack @ 0047DB90 [Ghidra: FUN_0047db90] ====
 
 
 uint FUN_0047db90(undefined1 param_1,undefined1 param_2,undefined1 param_3)
@@ -83424,7 +83424,7 @@ uint FUN_0047db90(undefined1 param_1,undefined1 param_2,undefined1 param_3)
 }
 
 
-// ==== FUN_0047dbc0 @ 0047DBC0 ====
+// ==== ResourceRecordAddRef @ 0047DBC0 [Ghidra: FUN_0047dbc0] ====
 
 
 void FUN_0047dbc0(undefined4 *param_1)
@@ -83441,7 +83441,7 @@ void FUN_0047dbc0(undefined4 *param_1)
 }
 
 
-// ==== FUN_0047dbf0 @ 0047DBF0 ====
+// ==== ImageSurfaceBlitTransformed @ 0047DBF0 [Ghidra: FUN_0047dbf0] ====
 
 
 void FUN_0047dbf0(undefined4 *param_1)
@@ -83468,7 +83468,7 @@ void FUN_0047dbf0(undefined4 *param_1)
 }
 
 
-// ==== FUN_0047dcb0 @ 0047DCB0 ====
+// ==== SurfaceBlitRect @ 0047DCB0 [Ghidra: FUN_0047dcb0] ====
 
 
 void FUN_0047dcb0(undefined4 *param_1,float *param_2,float *param_3,float *param_4)
@@ -83533,7 +83533,7 @@ void FUN_0047dcb0(undefined4 *param_1,float *param_2,float *param_3,float *param
 }
 
 
-// ==== FUN_0047de60 @ 0047DE60 ====
+// ==== DirectDrawSurfaceDescriptionGet @ 0047DE60 [Ghidra: FUN_0047de60] ====
 
 
 undefined4 FUN_0047de60(undefined4 *param_1)
@@ -83564,7 +83564,7 @@ undefined4 FUN_0047de60(undefined4 *param_1)
 }
 
 
-// ==== FUN_0047ded0 @ 0047DED0 ====
+// ==== DirectDrawSurfaceUnlock @ 0047DED0 [Ghidra: FUN_0047ded0] ====
 
 
 void FUN_0047ded0(undefined4 *param_1)
@@ -83575,7 +83575,7 @@ void FUN_0047ded0(undefined4 *param_1)
 }
 
 
-// ==== FUN_0047def0 @ 0047DEF0 ====
+// ==== DirectDrawSurfacePixelFormatGet @ 0047DEF0 [Ghidra: FUN_0047def0] ====
 
 
 int FUN_0047def0(undefined4 *param_1)
@@ -83602,7 +83602,7 @@ int FUN_0047def0(undefined4 *param_1)
 }
 
 
-// ==== FUN_0047df50 @ 0047DF50 ====
+// ==== PixelChannelMaskGet @ 0047DF50 [Ghidra: FUN_0047df50] ====
 
 
 int FUN_0047df50(undefined4 *param_1)
@@ -83627,7 +83627,7 @@ int FUN_0047df50(undefined4 *param_1)
 }
 
 
-// ==== FUN_0047dfa0 @ 0047DFA0 ====
+// ==== DirectDrawSurfacePixelRead @ 0047DFA0 [Ghidra: FUN_0047dfa0] ====
 
 
 undefined4 FUN_0047dfa0(undefined4 *param_1,uint param_2,uint param_3)
@@ -83660,7 +83660,7 @@ undefined4 FUN_0047dfa0(undefined4 *param_1,uint param_2,uint param_3)
 }
 
 
-// ==== FUN_0047e050 @ 0047E050 ====
+// ==== FontRecordCreate @ 0047E050 [Ghidra: FUN_0047e050] ====
 
 
 undefined4 *
@@ -83691,7 +83691,7 @@ FUN_0047e050(undefined4 param_1,undefined4 param_2,undefined4 param_3,undefined4
 }
 
 
-// ==== FUN_0047e0c0 @ 0047E0C0 ====
+// ==== FixedSizeRecordPoolGrow @ 0047E0C0 [Ghidra: FUN_0047e0c0] ====
 
 
 void FUN_0047e0c0(void)
@@ -83725,7 +83725,7 @@ void FUN_0047e0c0(void)
 }
 
 
-// ==== FUN_0047e130 @ 0047E130 ====
+// ==== SceneObjectRegistryReleaseAll @ 0047E130 [Ghidra: FUN_0047e130] ====
 
 
 void FUN_0047e130(void)
@@ -83760,7 +83760,7 @@ void FUN_0047e130(void)
 }
 
 
-// ==== FUN_0047e190 @ 0047E190 ====
+// ==== FontDeviceColorConvert @ 0047E190 [Ghidra: FUN_0047e190] ====
 
 
 uint FUN_0047e190(int *param_1,undefined4 param_2)
@@ -83816,7 +83816,7 @@ uint FUN_0047e190(int *param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0047e2d0 @ 0047E2D0 ====
+// ==== RGBChannelsUnpack @ 0047E2D0 [Ghidra: FUN_0047e2d0] ====
 
 
 void FUN_0047e2d0(undefined4 param_1,undefined1 *param_2,undefined1 *param_3,undefined1 *param_4)
@@ -83835,7 +83835,7 @@ void FUN_0047e2d0(undefined4 param_1,undefined1 *param_2,undefined1 *param_3,und
 }
 
 
-// ==== FUN_0047e300 @ 0047E300 ====
+// ==== InterfaceMethod18StructApply @ 0047E300 [Ghidra: FUN_0047e300] ====
 
 
 /* WARNING: Restarted to delay deadcode elimination for space: stack */
@@ -83877,7 +83877,7 @@ void FUN_0047e300(undefined4 param_1,undefined4 param_2,int param_3)
 }
 
 
-// ==== FUN_0047e3e0 @ 0047E3E0 ====
+// ==== InterfaceMethodResultRecordInitialize @ 0047E3E0 [Ghidra: FUN_0047e3e0] ====
 
 
 void FUN_0047e3e0(undefined4 *param_1,undefined4 param_2,undefined4 param_3,undefined4 param_4,
@@ -83903,7 +83903,7 @@ void FUN_0047e3e0(undefined4 *param_1,undefined4 param_2,undefined4 param_3,unde
 }
 
 
-// ==== FUN_0047e440 @ 0047E440 ====
+// ==== BitmapSurfaceSave @ 0047E440 [Ghidra: FUN_0047e440] ====
 
 
 void FUN_0047e440(undefined4 *param_1,undefined4 param_2)
@@ -83914,7 +83914,7 @@ void FUN_0047e440(undefined4 *param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0047e460 @ 0047E460 ====
+// ==== ComObjectDestroyAndOptionallyFree @ 0047E460 [Ghidra: FUN_0047e460] ====
 
 
 void FUN_0047e460(byte param_1)
@@ -83928,7 +83928,7 @@ void FUN_0047e460(byte param_1)
 }
 
 
-// ==== FUN_0047e480 @ 0047E480 ====
+// ==== TwoInterfaceFieldsReleaseAndReset @ 0047E480 [Ghidra: FUN_0047e480] ====
 
 
 void FUN_0047e480(void)
@@ -83952,7 +83952,7 @@ void FUN_0047e480(void)
 }
 
 
-// ==== FUN_0047e4c0 @ 0047E4C0 ====
+// ==== AviPlaybackStateInitialize @ 0047E4C0 [Ghidra: FUN_0047e4c0] ====
 
 
 void FUN_0047e4c0(undefined4 param_1,undefined4 param_2,undefined4 param_3,undefined4 param_4,
@@ -83977,7 +83977,7 @@ void FUN_0047e4c0(undefined4 param_1,undefined4 param_2,undefined4 param_3,undef
 }
 
 
-// ==== FUN_0047e510 @ 0047E510 ====
+// ==== DirectDrawDisplayModeSetup @ 0047E510 [Ghidra: FUN_0047e510] ====
 
 
 undefined4 FUN_0047e510(int param_1,int param_2,int param_3,char param_4)
@@ -84079,7 +84079,7 @@ LAB_0047e6b5:
 }
 
 
-// ==== FUN_0047e710 @ 0047E710 ====
+// ==== DirectDrawSurfaceDescriptorInitialize @ 0047E710 [Ghidra: FUN_0047e710] ====
 
 
 void FUN_0047e710(void)
@@ -84103,7 +84103,7 @@ void FUN_0047e710(void)
 }
 
 
-// ==== FUN_0047e760 @ 0047E760 ====
+// ==== AviSurfaceLock @ 0047E760 [Ghidra: FUN_0047e760] ====
 
 
 uint FUN_0047e760(void)
@@ -84136,7 +84136,7 @@ uint FUN_0047e760(void)
 }
 
 
-// ==== FUN_0047e7b0 @ 0047E7B0 ====
+// ==== AviFrameSurfaceUnlock @ 0047E7B0 [Ghidra: FUN_0047e7b0] ====
 
 
 uint FUN_0047e7b0(void)
@@ -84158,7 +84158,7 @@ uint FUN_0047e7b0(void)
 }
 
 
-// ==== FUN_0047e7e0 @ 0047E7E0 ====
+// ==== BitCount32ByPosition @ 0047E7E0 [Ghidra: FUN_0047e7e0] ====
 
 
 int FUN_0047e7e0(uint param_1)
@@ -84179,7 +84179,7 @@ int FUN_0047e7e0(uint param_1)
 }
 
 
-// ==== FUN_0047e800 @ 0047E800 ====
+// ==== AviFrameRetrieverOpen @ 0047E800 [Ghidra: FUN_0047e800] ====
 
 
 void FUN_0047e800(undefined4 param_1)
@@ -84251,7 +84251,7 @@ void FUN_0047e800(undefined4 param_1)
 }
 
 
-// ==== FUN_0047e980 @ 0047E980 ====
+// ==== AviPlayerDestroy @ 0047E980 [Ghidra: FUN_0047e980] ====
 
 
 void FUN_0047e980(byte param_1)
@@ -84265,7 +84265,7 @@ void FUN_0047e980(byte param_1)
 }
 
 
-// ==== FUN_0047e9a0 @ 0047E9A0 ====
+// ==== AviFrameRetrieverDestroy @ 0047E9A0 [Ghidra: FUN_0047e9a0] ====
 
 
 void FUN_0047e9a0(void)
@@ -84286,7 +84286,7 @@ void FUN_0047e9a0(void)
 }
 
 
-// ==== FUN_0047e9e0 @ 0047E9E0 ====
+// ==== AviFrameDecodeAndCopy @ 0047E9E0 [Ghidra: FUN_0047e9e0] ====
 
 
 void FUN_0047e9e0(int *param_1)
@@ -84377,7 +84377,7 @@ void FUN_0047e9e0(int *param_1)
 }
 
 
-// ==== FUN_0047eb20 @ 0047EB20 ====
+// ==== AviFrameUpdateAndBlit @ 0047EB20 [Ghidra: FUN_0047eb20] ====
 
 
 undefined4 FUN_0047eb20(void)
@@ -84408,7 +84408,7 @@ undefined4 FUN_0047eb20(void)
 }
 
 
-// ==== FUN_0047ebe0 @ 0047EBE0 ====
+// ==== AviStreamFrameCountGet @ 0047EBE0 [Ghidra: FUN_0047ebe0] ====
 
 
 undefined4 FUN_0047ebe0(void)
@@ -84423,7 +84423,7 @@ undefined4 FUN_0047ebe0(void)
 }
 
 
-// ==== FUN_0047ebf0 @ 0047EBF0 ====
+// ==== AviFrameSeekAndClockRebase @ 0047EBF0 [Ghidra: FUN_0047ebf0] ====
 
 
 void FUN_0047ebf0(undefined4 param_1)
@@ -84443,7 +84443,7 @@ void FUN_0047ebf0(undefined4 param_1)
 }
 
 
-// ==== FUN_0047ec60 @ 0047EC60 ====
+// ==== AviPlaybackFrameIndexGet @ 0047EC60 [Ghidra: FUN_0047ec60] ====
 
 
 uint FUN_0047ec60(void)
@@ -84455,7 +84455,7 @@ uint FUN_0047ec60(void)
 }
 
 
-// ==== FUN_0047ec80 @ 0047EC80 ====
+// ==== AviFileInitialize @ 0047EC80 [Ghidra: FUN_0047ec80] ====
 
 
 void FUN_0047ec80(undefined4 param_1)
@@ -84467,7 +84467,7 @@ void FUN_0047ec80(undefined4 param_1)
 }
 
 
-// ==== FUN_0047ec90 @ 0047EC90 ====
+// ==== AviPlayerCreate @ 0047EC90 [Ghidra: FUN_0047ec90] ====
 
 
 undefined4 FUN_0047ec90(undefined4 param_1)
@@ -84496,7 +84496,7 @@ undefined4 FUN_0047ec90(undefined4 param_1)
 }
 
 
-// ==== FUN_0047ecf0 @ 0047ECF0 ====
+// ==== AviFrameUpdate @ 0047ECF0 [Ghidra: FUN_0047ecf0] ====
 
 
 undefined1 FUN_0047ecf0(void)
@@ -84509,7 +84509,7 @@ undefined1 FUN_0047ecf0(void)
 }
 
 
-// ==== FUN_0047ed00 @ 0047ED00 ====
+// ==== AviPlaybackFrameLoop @ 0047ED00 [Ghidra: FUN_0047ed00] ====
 
 
 void FUN_0047ed00(int param_1,undefined4 param_2)
@@ -84527,7 +84527,7 @@ void FUN_0047ed00(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0047ed40 @ 0047ED40 ====
+// ==== AviFrameIndexAndClockReset @ 0047ED40 [Ghidra: FUN_0047ed40] ====
 
 
 void FUN_0047ed40(undefined4 param_1,undefined4 param_2)
@@ -84538,7 +84538,7 @@ void FUN_0047ed40(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0047ed50 @ 0047ED50 ====
+// ==== AviCurrentFrameIndexGet @ 0047ED50 [Ghidra: FUN_0047ed50] ====
 
 
 void FUN_0047ed50(void)
@@ -84549,7 +84549,7 @@ void FUN_0047ed50(void)
 }
 
 
-// ==== FUN_0047ed60 @ 0047ED60 ====
+// ==== AviStreamFrameCountGet @ 0047ED60 [Ghidra: FUN_0047ed60] ====
 
 
 void FUN_0047ed60(void)
@@ -84560,7 +84560,7 @@ void FUN_0047ed60(void)
 }
 
 
-// ==== FUN_0047ed70 @ 0047ED70 ====
+// ==== InterfaceInvokeOneIfNonNull @ 0047ED70 [Ghidra: FUN_0047ed70] ====
 
 
 void FUN_0047ed70(undefined4 *param_1)
@@ -84573,7 +84573,7 @@ void FUN_0047ed70(undefined4 *param_1)
 }
 
 
-// ==== FUN_0047ed80 @ 0047ED80 ====
+// ==== AviPlayerReadyGet @ 0047ED80 [Ghidra: FUN_0047ed80] ====
 
 
 undefined1 FUN_0047ed80(int param_1)
@@ -84583,7 +84583,7 @@ undefined1 FUN_0047ed80(int param_1)
 }
 
 
-// ==== FUN_0047ed90 @ 0047ED90 ====
+// ==== DirectInputInitialize @ 0047ED90 [Ghidra: FUN_0047ed90] ====
 
 
 undefined4 FUN_0047ed90(void)
@@ -84657,7 +84657,7 @@ undefined4 FUN_0047ed90(void)
 }
 
 
-// ==== FUN_0047eef0 @ 0047EEF0 ====
+// ==== InputStatePoll @ 0047EEF0 [Ghidra: FUN_0047eef0] ====
 
 
 void FUN_0047eef0(void)
@@ -84718,7 +84718,7 @@ void FUN_0047eef0(void)
 }
 
 
-// ==== FUN_0047efb0 @ 0047EFB0 ====
+// ==== KeyboardDownKeyCount @ 0047EFB0 [Ghidra: FUN_0047efb0] ====
 
 
 int FUN_0047efb0(void)
@@ -84742,7 +84742,7 @@ int FUN_0047efb0(void)
 }
 
 
-// ==== FUN_0047efd0 @ 0047EFD0 ====
+// ==== AviFileShutdown @ 0047EFD0 [Ghidra: FUN_0047efd0] ====
 
 
 void FUN_0047efd0(void)
@@ -84762,7 +84762,7 @@ void FUN_0047efd0(void)
 }
 
 
-// ==== FUN_0047f010 @ 0047F010 ====
+// ==== CursorPositionUpdate @ 0047F010 [Ghidra: FUN_0047f010] ====
 
 
 void FUN_0047f010(void)
@@ -84804,7 +84804,7 @@ void FUN_0047f010(void)
 }
 
 
-// ==== FUN_0047f0d0 @ 0047F0D0 ====
+// ==== CursorSetClientPosition @ 0047F0D0 [Ghidra: FUN_0047f0d0] ====
 
 
 void FUN_0047f0d0(int param_1,int param_2)
@@ -84824,7 +84824,7 @@ void FUN_0047f0d0(int param_1,int param_2)
 }
 
 
-// ==== FUN_0047f130 @ 0047F130 ====
+// ==== WadMountStartup @ 0047F130 [Ghidra: FUN_0047f130] ====
 
 
 void FUN_0047f130(undefined4 param_1,int param_2,undefined4 param_3)
@@ -84998,7 +84998,7 @@ LAB_0047f2db:
 }
 
 
-// ==== FUN_0047f4f0 @ 0047F4F0 ====
+// ==== FindCdKeyDrive @ 0047F4F0 [Ghidra: FUN_0047f4f0] ====
 
 
 undefined4 FUN_0047f4f0(void)
@@ -85030,7 +85030,7 @@ undefined4 FUN_0047f4f0(void)
 }
 
 
-// ==== FUN_0047f590 @ 0047F590 ====
+// ==== WadMountPathCacheStore @ 0047F590 [Ghidra: FUN_0047f590] ====
 
 
 void FUN_0047f590(char *param_1)
@@ -85090,7 +85090,7 @@ void FUN_0047f590(char *param_1)
 }
 
 
-// ==== FUN_0047f600 @ 0047F600 ====
+// ==== DebugOutputFormat @ 0047F600 [Ghidra: FUN_0047f600] ====
 
 
 void FUN_0047f600(undefined4 param_1)
@@ -85104,7 +85104,7 @@ void FUN_0047f600(undefined4 param_1)
 }
 
 
-// ==== FUN_0047f640 @ 0047F640 ====
+// ==== MountWadFromPath @ 0047F640 [Ghidra: FUN_0047f640] ====
 
 
 void FUN_0047f640(undefined4 param_1)
@@ -85116,7 +85116,7 @@ void FUN_0047f640(undefined4 param_1)
 }
 
 
-// ==== FUN_0047f660 @ 0047F660 ====
+// ==== SoundPathFallbackFormat @ 0047F660 [Ghidra: FUN_0047f660] ====
 
 
 undefined4 FUN_0047f660(undefined4 param_1,undefined4 param_2)
@@ -85130,7 +85130,7 @@ undefined4 FUN_0047f660(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0047f6a0 @ 0047F6A0 ====
+// ==== SaveDirectoryEnsureExists @ 0047F6A0 [Ghidra: FUN_0047f6a0] ====
 
 
 void FUN_0047f6a0(undefined4 param_1)
@@ -85144,7 +85144,7 @@ void FUN_0047f6a0(undefined4 param_1)
 }
 
 
-// ==== FUN_0047f6e0 @ 0047F6E0 ====
+// ==== GameFileOpenDispatch @ 0047F6E0 [Ghidra: FUN_0047f6e0] ====
 
 
 int FUN_0047f6e0(undefined4 param_1,undefined4 param_2)
@@ -85206,7 +85206,7 @@ int FUN_0047f6e0(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0047f850 @ 0047F850 ====
+// ==== WadFileSeek @ 0047F850 [Ghidra: FUN_0047f850] ====
 
 
 undefined4 FUN_0047f850(int param_1,int param_2,int param_3)
@@ -85264,7 +85264,7 @@ undefined4 FUN_0047f850(int param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_0047f980 @ 0047F980 ====
+// ==== WadFileRead @ 0047F980 [Ghidra: FUN_0047f980] ====
 
 
 int FUN_0047f980(undefined4 *param_1,int param_2,int param_3,int param_4)
@@ -85309,7 +85309,7 @@ int FUN_0047f980(undefined4 *param_1,int param_2,int param_3,int param_4)
 }
 
 
-// ==== FUN_0047fa50 @ 0047FA50 ====
+// ==== GameFileWrite @ 0047FA50 [Ghidra: FUN_0047fa50] ====
 
 
 undefined4 FUN_0047fa50(undefined4 param_1,undefined4 param_2,undefined4 param_3,int param_4)
@@ -85333,7 +85333,7 @@ undefined4 FUN_0047fa50(undefined4 param_1,undefined4 param_2,undefined4 param_3
 }
 
 
-// ==== FUN_0047fac0 @ 0047FAC0 ====
+// ==== GameFileClose @ 0047FAC0 [Ghidra: FUN_0047fac0] ====
 
 
 undefined4 FUN_0047fac0(undefined4 param_1)
@@ -85352,7 +85352,7 @@ undefined4 FUN_0047fac0(undefined4 param_1)
 }
 
 
-// ==== FUN_0047fb10 @ 0047FB10 ====
+// ==== WadFileCursorGet @ 0047FB10 [Ghidra: FUN_0047fb10] ====
 
 
 undefined4 FUN_0047fb10(int param_1)
@@ -85375,7 +85375,7 @@ undefined4 FUN_0047fb10(int param_1)
 }
 
 
-// ==== FUN_0047fb60 @ 0047FB60 ====
+// ==== SoundSampleFileOpenByName @ 0047FB60 [Ghidra: FUN_0047fb60] ====
 
 
 undefined4 FUN_0047fb60(undefined4 param_1)
@@ -85410,7 +85410,7 @@ undefined4 FUN_0047fb60(undefined4 param_1)
 }
 
 
-// ==== FUN_0047fc20 @ 0047FC20 ====
+// ==== GameFileReadByte @ 0047FC20 [Ghidra: FUN_0047fc20] ====
 
 
 undefined4 FUN_0047fc20(int param_1)
@@ -85444,7 +85444,7 @@ undefined4 FUN_0047fc20(int param_1)
 }
 
 
-// ==== FUN_0047fca0 @ 0047FCA0 ====
+// ==== GameFileLengthGet @ 0047FCA0 [Ghidra: FUN_0047fca0] ====
 
 
 undefined4 FUN_0047fca0(undefined4 param_1)
@@ -85461,7 +85461,7 @@ undefined4 FUN_0047fca0(undefined4 param_1)
 }
 
 
-// ==== FUN_0047fce0 @ 0047FCE0 ====
+// ==== GameFileReadLine @ 0047FCE0 [Ghidra: FUN_0047fce0] ====
 
 
 uint FUN_0047fce0(char *param_1,int param_2,undefined4 param_3)
@@ -85484,7 +85484,7 @@ uint FUN_0047fce0(char *param_1,int param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_0047fd40 @ 0047FD40 ====
+// ==== GameFileReadLineDispatch @ 0047FD40 [Ghidra: FUN_0047fd40] ====
 
 
 undefined4 FUN_0047fd40(undefined4 param_1,undefined4 param_2,int param_3)
@@ -85508,7 +85508,7 @@ undefined4 FUN_0047fd40(undefined4 param_1,undefined4 param_2,int param_3)
 }
 
 
-// ==== FUN_0047fdb0 @ 0047FDB0 ====
+// ==== GameFilePrintFormat @ 0047FDB0 [Ghidra: FUN_0047fdb0] ====
 
 
 undefined4 FUN_0047fdb0(int param_1,undefined4 param_2)
@@ -85531,7 +85531,7 @@ undefined4 FUN_0047fdb0(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0047fe20 @ 0047FE20 ====
+// ==== GameFileSystemTypeGet @ 0047FE20 [Ghidra: FUN_0047fe20] ====
 
 
 undefined4 FUN_0047fe20(undefined4 *param_1)
@@ -85541,7 +85541,7 @@ undefined4 FUN_0047fe20(undefined4 *param_1)
 }
 
 
-// ==== FUN_0047fe30 @ 0047FE30 ====
+// ==== FileOpenRouteSelect @ 0047FE30 [Ghidra: FUN_0047fe30] ====
 
 
 bool FUN_0047fe30(char *param_1,char *param_2)
@@ -85584,7 +85584,7 @@ bool FUN_0047fe30(char *param_1,char *param_2)
 }
 
 
-// ==== FUN_0047fea0 @ 0047FEA0 ====
+// ==== WadEntryReadIntoStreamSlot @ 0047FEA0 [Ghidra: FUN_0047fea0] ====
 
 
 bool FUN_0047fea0(int *param_1,undefined4 param_2)
@@ -85600,7 +85600,7 @@ bool FUN_0047fea0(int *param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0047fed0 @ 0047FED0 ====
+// ==== GameFileHandleAllocate @ 0047FED0 [Ghidra: FUN_0047fed0] ====
 
 
 undefined4 * FUN_0047fed0(int param_1)
@@ -85630,7 +85630,7 @@ undefined4 * FUN_0047fed0(int param_1)
 }
 
 
-// ==== FUN_0047ff30 @ 0047FF30 ====
+// ==== EngineHeapAllocate @ 0047FF30 [Ghidra: FUN_0047ff30] ====
 
 
 void FUN_0047ff30(undefined4 param_1)
@@ -85641,7 +85641,7 @@ void FUN_0047ff30(undefined4 param_1)
 }
 
 
-// ==== FUN_0047ff40 @ 0047FF40 ====
+// ==== EngineHeapFree @ 0047FF40 [Ghidra: FUN_0047ff40] ====
 
 
 void FUN_0047ff40(undefined4 param_1)
@@ -85652,7 +85652,7 @@ void FUN_0047ff40(undefined4 param_1)
 }
 
 
-// ==== FUN_0047ff50 @ 0047FF50 ====
+// ==== GameFileHandleRelease @ 0047FF50 [Ghidra: FUN_0047ff50] ====
 
 
 void FUN_0047ff50(int param_1)
@@ -85685,7 +85685,7 @@ void FUN_0047ff50(int param_1)
 }
 
 
-// ==== FUN_0047ffc0 @ 0047FFC0 ====
+// ==== MountedPathPrefixRewrite @ 0047FFC0 [Ghidra: FUN_0047ffc0] ====
 
 
 char * FUN_0047ffc0(char *param_1)
@@ -85734,7 +85734,7 @@ char * FUN_0047ffc0(char *param_1)
 }
 
 
-// ==== FUN_00480050 @ 00480050 ====
+// ==== ReadCrlfLine @ 00480050 [Ghidra: FUN_00480050] ====
 
 
 undefined4 FUN_00480050(char *param_1,undefined4 param_2,undefined4 param_3)
@@ -85767,7 +85767,7 @@ undefined4 FUN_00480050(char *param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_004800a0 @ 004800A0 ====
+// ==== ReadWholeFile @ 004800A0 [Ghidra: FUN_004800a0] ====
 
 
 void FUN_004800a0(undefined4 param_1,undefined4 param_2)
@@ -85778,7 +85778,7 @@ void FUN_004800a0(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_004800c0 @ 004800C0 ====
+// ==== ReadWholeFileWithProgress @ 004800C0 [Ghidra: FUN_004800c0] ====
 
 
 int FUN_004800c0(undefined4 param_1,undefined4 *param_2,int param_3)
@@ -85816,7 +85816,7 @@ int FUN_004800c0(undefined4 param_1,undefined4 *param_2,int param_3)
 }
 
 
-// ==== FUN_00480170 @ 00480170 ====
+// ==== MapOpen2 @ 00480170 [Ghidra: FUN_00480170] ====
 
 
 int FUN_00480170(undefined4 param_1,undefined4 *param_2)
@@ -85851,7 +85851,7 @@ int FUN_00480170(undefined4 param_1,undefined4 *param_2)
 }
 
 
-// ==== FUN_00480220 @ 00480220 ====
+// ==== ResourcePathResolveAgainstBase @ 00480220 [Ghidra: FUN_00480220] ====
 
 
 undefined * FUN_00480220(char *param_1)
@@ -85888,7 +85888,7 @@ undefined * FUN_00480220(char *param_1)
 }
 
 
-// ==== FUN_004802b0 @ 004802B0 ====
+// ==== LoaderProgressCallbackSet @ 004802B0 [Ghidra: FUN_004802b0] ====
 
 
 void FUN_004802b0(undefined4 param_1,undefined4 param_2)
@@ -85900,7 +85900,7 @@ void FUN_004802b0(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_004802d0 @ 004802D0 ====
+// ==== FileTokenListLoadAndTreeScan @ 004802D0 [Ghidra: FUN_004802d0] ====
 
 
 void FUN_004802d0(undefined4 param_1)
@@ -85954,7 +85954,7 @@ void FUN_004802d0(undefined4 param_1)
 }
 
 
-// ==== FUN_00480390 @ 00480390 ====
+// ==== DirectoryTreeScan @ 00480390 [Ghidra: FUN_00480390] ====
 
 
 void FUN_00480390(char *param_1)
@@ -86180,7 +86180,7 @@ LAB_00480488:
 }
 
 
-// ==== FUN_00480570 @ 00480570 ====
+// ==== DirectoryTokenListCompare @ 00480570 [Ghidra: FUN_00480570] ====
 
 
 void FUN_00480570(char *param_1)
@@ -86206,7 +86206,7 @@ void FUN_00480570(char *param_1)
 }
 
 
-// ==== FUN_004805b0 @ 004805B0 ====
+// ==== SharedTextureRootRegister @ 004805B0 [Ghidra: FUN_004805b0] ====
 
 
 undefined4 FUN_004805b0(char *param_1)
@@ -86275,7 +86275,7 @@ undefined4 FUN_004805b0(char *param_1)
 }
 
 
-// ==== FUN_00480650 @ 00480650 ====
+// ==== SharedTextureRootInitialize @ 00480650 [Ghidra: FUN_00480650] ====
 
 
 undefined4 FUN_00480650(void)
@@ -86367,7 +86367,7 @@ undefined4 FUN_00480650(void)
 }
 
 
-// ==== FUN_00480780 @ 00480780 ====
+// ==== ZeroResultIsSuccess @ 00480780 [Ghidra: FUN_00480780] ====
 
 
 bool FUN_00480780(undefined4 param_1)
@@ -86380,7 +86380,7 @@ bool FUN_00480780(undefined4 param_1)
 }
 
 
-// ==== FUN_004807a0 @ 004807A0 ====
+// ==== FixedSizePoolRecordAcquire @ 004807A0 [Ghidra: FUN_004807a0] ====
 
 
 undefined4 * FUN_004807a0(void)
@@ -86405,7 +86405,7 @@ undefined4 * FUN_004807a0(void)
 }
 
 
-// ==== FUN_004807d0 @ 004807D0 ====
+// ==== FixedSizePoolRecordRelease @ 004807D0 [Ghidra: FUN_004807d0] ====
 
 
 void FUN_004807d0(int param_1)
@@ -86417,7 +86417,7 @@ void FUN_004807d0(int param_1)
 }
 
 
-// ==== FUN_004807f0 @ 004807F0 ====
+// ==== RenderResourceInstancePoolGrow @ 004807F0 [Ghidra: FUN_004807f0] ====
 
 
 void FUN_004807f0(void)
@@ -86451,7 +86451,7 @@ void FUN_004807f0(void)
 }
 
 
-// ==== FUN_00480870 @ 00480870 ====
+// ==== TaskCallbackRecordAllocateAndInitialize @ 00480870 [Ghidra: FUN_00480870] ====
 
 
 int FUN_00480870(void)
@@ -86484,7 +86484,7 @@ int FUN_00480870(void)
 }
 
 
-// ==== FUN_00480900 @ 00480900 ====
+// ==== CachedRenderResourceInstanceCreate @ 00480900 [Ghidra: FUN_00480900] ====
 
 
 uint * FUN_00480900(uint *param_1)
@@ -86547,7 +86547,7 @@ uint * FUN_00480900(uint *param_1)
 }
 
 
-// ==== FUN_004809e0 @ 004809E0 ====
+// ==== LwoModelEntryLoad @ 004809E0 [Ghidra: FUN_004809e0] ====
 
 
 undefined4 FUN_004809e0(char *param_1,undefined4 param_2,undefined4 param_3)
@@ -86610,7 +86610,7 @@ undefined4 FUN_004809e0(char *param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_00480ac0 @ 00480AC0 ====
+// ==== MaterialPass @ 00480AC0 [Ghidra: FUN_00480ac0] ====
 
 
 undefined4 FUN_00480ac0(undefined4 param_1,int param_2,int param_3,undefined4 param_4)
@@ -87018,7 +87018,7 @@ LAB_00481605:
 }
 
 
-// ==== FUN_00481820 @ 00481820 ====
+// ==== BindModelTextures @ 00481820 [Ghidra: FUN_00481820] ====
 
 
 void FUN_00481820(undefined4 param_1,int param_2,int param_3,int param_4)
@@ -87108,7 +87108,7 @@ LAB_00481a49:
 }
 
 
-// ==== FUN_00481ac0 @ 00481AC0 ====
+// ==== StringTrailingDigitsSplit @ 00481AC0 [Ghidra: FUN_00481ac0] ====
 
 
 int * FUN_00481ac0(char *param_1,char *param_2,int *param_3,int *param_4)
@@ -87185,7 +87185,7 @@ int * FUN_00481ac0(char *param_1,char *param_2,int *param_3,int *param_4)
 }
 
 
-// ==== FUN_00481b80 @ 00481B80 ====
+// ==== CounterFormatStringBuild @ 00481B80 [Ghidra: FUN_00481b80] ====
 
 
 void FUN_00481b80(char *param_1,char *param_2,int *param_3,int param_4)
@@ -87305,7 +87305,7 @@ void FUN_00481b80(char *param_1,char *param_2,int *param_3,int param_4)
 }
 
 
-// ==== FUN_00481c50 @ 00481C50 ====
+// ==== ParseUV @ 00481C50 [Ghidra: FUN_00481c50] ====
 
 
 void FUN_00481c50(int param_1,int param_2)
@@ -87487,7 +87487,7 @@ void FUN_00481c50(int param_1,int param_2)
 }
 
 
-// ==== FUN_00481fa0 @ 00481FA0 ====
+// ==== MeshVertexCoordinateRemap @ 00481FA0 [Ghidra: FUN_00481fa0] ====
 
 
 void FUN_00481fa0(int param_1,int param_2,float *param_3,float param_4,float param_5,float param_6,
@@ -87527,7 +87527,7 @@ void FUN_00481fa0(int param_1,int param_2,float *param_3,float param_4,float par
 }
 
 
-// ==== FUN_00482040 @ 00482040 ====
+// ==== AnimationTrackApplyWrappedFrameOffset @ 00482040 [Ghidra: FUN_00482040] ====
 
 
 undefined4 FUN_00482040(uint *param_1)
@@ -87618,7 +87618,7 @@ void FUN_004820d0(uint *param_1,int *param_2)
 }
 
 
-// ==== FUN_004821a0 @ 004821A0 ====
+// ==== IndexedRecordEntryRead @ 004821A0 [Ghidra: FUN_004821a0] ====
 
 
 void FUN_004821a0(int param_1,int param_2,uint *param_3,undefined4 param_4,undefined4 *param_5,
@@ -87651,7 +87651,7 @@ void FUN_004821a0(int param_1,int param_2,uint *param_3,undefined4 param_4,undef
 }
 
 
-// ==== FUN_00482210 @ 00482210 ====
+// ==== PointerValueGet @ 00482210 [Ghidra: FUN_00482210] ====
 
 
 undefined4 FUN_00482210(undefined4 *param_1)
@@ -87661,7 +87661,7 @@ undefined4 FUN_00482210(undefined4 *param_1)
 }
 
 
-// ==== FUN_00482220 @ 00482220 ====
+// ==== MeshRecordAllocateAndFill @ 00482220 [Ghidra: FUN_00482220] ====
 
 
 int FUN_00482220(int *param_1,uint param_2,int param_3,int param_4,undefined2 *param_5)
@@ -87730,7 +87730,7 @@ int FUN_00482220(int *param_1,uint param_2,int param_3,int param_4,undefined2 *p
 }
 
 
-// ==== FUN_00482350 @ 00482350 ====
+// ==== IndexedRecordField64Set @ 00482350 [Ghidra: FUN_00482350] ====
 
 
 void FUN_00482350(int param_1,int param_2,undefined4 param_3)
@@ -87741,7 +87741,7 @@ void FUN_00482350(int param_1,int param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_00482370 @ 00482370 ====
+// ==== MeshVerticesScaleApply @ 00482370 [Ghidra: FUN_00482370] ====
 
 
 void FUN_00482370(uint *param_1,float param_2,float param_3,float param_4)
@@ -87783,7 +87783,7 @@ void FUN_00482370(uint *param_1,float param_2,float param_3,float param_4)
 }
 
 
-// ==== FUN_004823e0 @ 004823E0 ====
+// ==== TerrainCellQuadVerticesWrite @ 004823E0 [Ghidra: FUN_004823e0] ====
 
 
 void FUN_004823e0(int param_1,int param_2,int param_3,int param_4,int param_5)
@@ -87817,7 +87817,7 @@ void FUN_004823e0(int param_1,int param_2,int param_3,int param_4,int param_5)
 }
 
 
-// ==== FUN_00482470 @ 00482470 ====
+// ==== IndexedGeometryDataCopyToOutput @ 00482470 [Ghidra: FUN_00482470] ====
 
 
 void FUN_00482470(int param_1,int param_2,int param_3,int param_4,int param_5)
@@ -87851,7 +87851,7 @@ void FUN_00482470(int param_1,int param_2,int param_3,int param_4,int param_5)
 }
 
 
-// ==== FUN_00482500 @ 00482500 ====
+// ==== InstanceQuadVertexDataFill @ 00482500 [Ghidra: FUN_00482500] ====
 
 
 void FUN_00482500(int param_1,int param_2,int param_3,int param_4,int param_5,float *param_6,
@@ -87898,7 +87898,7 @@ void FUN_00482500(int param_1,int param_2,int param_3,int param_4,int param_5,fl
 }
 
 
-// ==== FUN_00482620 @ 00482620 ====
+// ==== MeshSegmentVertexFill @ 00482620 [Ghidra: FUN_00482620] ====
 
 
 void FUN_00482620(int param_1,int param_2,int param_3,int param_4,int param_5,undefined4 *param_6,
@@ -87934,7 +87934,7 @@ void FUN_00482620(int param_1,int param_2,int param_3,int param_4,int param_5,un
 }
 
 
-// ==== FUN_004826c0 @ 004826C0 ====
+// ==== MeshVertexRecordFill @ 004826C0 [Ghidra: FUN_004826c0] ====
 
 
 void FUN_004826c0(int param_1,int param_2,int param_3,int param_4,int param_5,int *param_6,
@@ -87970,7 +87970,7 @@ void FUN_004826c0(int param_1,int param_2,int param_3,int param_4,int param_5,in
 }
 
 
-// ==== FUN_00482780 @ 00482780 ====
+// ==== IndexedRecordFlag6CBit0Get @ 00482780 [Ghidra: FUN_00482780] ====
 
 
 uint FUN_00482780(int param_1,int param_2)
@@ -87980,7 +87980,7 @@ uint FUN_00482780(int param_1,int param_2)
 }
 
 
-// ==== FUN_004827a0 @ 004827A0 ====
+// ==== IndexedRecordFlag6CBit0Set @ 004827A0 [Ghidra: FUN_004827a0] ====
 
 
 void FUN_004827a0(int param_1,int param_2,int param_3)
@@ -87998,7 +87998,7 @@ void FUN_004827a0(int param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_004827d0 @ 004827D0 ====
+// ==== RecordFlag2CBit0Set @ 004827D0 [Ghidra: FUN_004827d0] ====
 
 
 void FUN_004827d0(int param_1,int param_2)
@@ -88013,7 +88013,7 @@ void FUN_004827d0(int param_1,int param_2)
 }
 
 
-// ==== FUN_00482ac0 @ 00482AC0 ====
+// ==== ModelRenderRecordStateSetup @ 00482AC0 [Ghidra: FUN_00482ac0] ====
 
 
 void FUN_00482ac0(int param_1,undefined4 param_2,undefined4 param_3,undefined4 param_4)
@@ -88036,7 +88036,7 @@ void FUN_00482ac0(int param_1,undefined4 param_2,undefined4 param_3,undefined4 p
 }
 
 
-// ==== FUN_00482b50 @ 00482B50 ====
+// ==== RenderStateFlagsApply @ 00482B50 [Ghidra: FUN_00482b50] ====
 
 
 void FUN_00482b50(uint param_1,undefined1 *param_2,int param_3)
@@ -88115,7 +88115,7 @@ LAB_00482c61:
 }
 
 
-// ==== FUN_00482cb0 @ 00482CB0 ====
+// ==== RendererCommandModeAndPairSend @ 00482CB0 [Ghidra: FUN_00482cb0] ====
 
 
 void FUN_00482cb0(undefined4 param_1,undefined4 param_2)
@@ -88128,7 +88128,7 @@ void FUN_00482cb0(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00482ce0 @ 00482CE0 ====
+// ==== RendererCommandNodePrepend @ 00482CE0 [Ghidra: FUN_00482ce0] ====
 
 
 void FUN_00482ce0(undefined4 param_1,undefined4 *param_2)
@@ -88158,7 +88158,7 @@ void FUN_00482ce0(undefined4 param_1,undefined4 *param_2)
 }
 
 
-// ==== FUN_00482d30 @ 00482D30 ====
+// ==== ModelRenderListClear @ 00482D30 [Ghidra: FUN_00482d30] ====
 
 
 void FUN_00482d30(void)
@@ -88178,7 +88178,7 @@ void FUN_00482d30(void)
 }
 
 
-// ==== FUN_00482d60 @ 00482D60 ====
+// ==== ModelRenderPassDispatch @ 00482D60 [Ghidra: FUN_00482d60] ====
 
 
 void FUN_00482d60(undefined4 param_1)
@@ -88246,7 +88246,7 @@ void FUN_00482d60(undefined4 param_1)
 }
 
 
-// ==== FUN_00482e70 @ 00482E70 ====
+// ==== TextureGetOrCreate @ 00482E70 [Ghidra: FUN_00482e70] ====
 
 
 undefined4 * FUN_00482e70(int param_1,char *param_2,undefined4 param_3,undefined4 param_4)
@@ -88338,7 +88338,7 @@ LAB_00482fe8:
 }
 
 
-// ==== FUN_00483030 @ 00483030 ====
+// ==== TextureCacheLookup @ 00483030 [Ghidra: FUN_00483030] ====
 
 
 int FUN_00483030(int param_1,uint param_2,char *param_3)
@@ -88365,7 +88365,7 @@ int FUN_00483030(int param_1,uint param_2,char *param_3)
 }
 
 
-// ==== FUN_00483080 @ 00483080 ====
+// ==== TextureCacheInsert @ 00483080 [Ghidra: FUN_00483080] ====
 
 
 void FUN_00483080(int param_1,int *param_2,undefined4 param_3,undefined4 param_4,undefined4 param_5)
@@ -88382,7 +88382,7 @@ void FUN_00483080(int param_1,int *param_2,undefined4 param_3,undefined4 param_4
 }
 
 
-// ==== FUN_004830c0 @ 004830C0 ====
+// ==== AnimatedTextureFrameSurfaceSet @ 004830C0 [Ghidra: FUN_004830c0] ====
 
 
 void FUN_004830c0(int param_1,int param_2,int *param_3)
@@ -88408,7 +88408,7 @@ void FUN_004830c0(int param_1,int param_2,int *param_3)
 }
 
 
-// ==== FUN_00483140 @ 00483140 ====
+// ==== IndexedRecordInterfaceRelease @ 00483140 [Ghidra: FUN_00483140] ====
 
 
 void FUN_00483140(int param_1,int param_2)
@@ -88427,7 +88427,7 @@ void FUN_00483140(int param_1,int param_2)
 }
 
 
-// ==== FUN_00483170 @ 00483170 ====
+// ==== IndexedRecordTransformInitialize @ 00483170 [Ghidra: FUN_00483170] ====
 
 
 undefined4 FUN_00483170(int param_1,int param_2)
@@ -88469,7 +88469,7 @@ undefined4 FUN_00483170(int param_1,int param_2)
 }
 
 
-// ==== FUN_00483240 @ 00483240 ====
+// ==== IndexedRecordTransformCopyIn @ 00483240 [Ghidra: FUN_00483240] ====
 
 
 undefined4 FUN_00483240(int param_1,int param_2,undefined4 *param_3)
@@ -88488,7 +88488,7 @@ undefined4 FUN_00483240(int param_1,int param_2,undefined4 *param_3)
 }
 
 
-// ==== FUN_00483270 @ 00483270 ====
+// ==== RenderObjectColorVectorSet @ 00483270 [Ghidra: FUN_00483270] ====
 
 
 undefined4
@@ -88551,7 +88551,7 @@ FUN_00483270(int param_1,int param_2,float param_3,float param_4,float param_5,i
 }
 
 
-// ==== FUN_00483400 @ 00483400 ====
+// ==== IndexedRecordDataAddressGet @ 00483400 [Ghidra: FUN_00483400] ====
 
 
 int FUN_00483400(int param_1,int param_2)
@@ -88561,7 +88561,7 @@ int FUN_00483400(int param_1,int param_2)
 }
 
 
-// ==== FUN_00483420 @ 00483420 ====
+// ==== ScreenEffectItemOpacitySet @ 00483420 [Ghidra: FUN_00483420] ====
 
 
 undefined4 FUN_00483420(int param_1,int param_2,float param_3,int param_4)
@@ -88620,7 +88620,7 @@ LAB_004834e4:
 }
 
 
-// ==== FUN_00483540 @ 00483540 ====
+// ==== Matrix4x4IdentityInitialize @ 00483540 [Ghidra: FUN_00483540] ====
 
 
 void FUN_00483540(undefined4 *param_1)
@@ -88646,7 +88646,7 @@ void FUN_00483540(undefined4 *param_1)
 }
 
 
-// ==== FUN_00483580 @ 00483580 ====
+// ==== RenderInterfaceCapabilityCheck @ 00483580 [Ghidra: FUN_00483580] ====
 
 
 undefined4 FUN_00483580(int *param_1)
@@ -88688,7 +88688,7 @@ undefined4 FUN_00483580(int *param_1)
 }
 
 
-// ==== FUN_00483600 @ 00483600 ====
+// ==== Direct3DViewportSetup @ 00483600 [Ghidra: FUN_00483600] ====
 
 
 undefined4 FUN_00483600(int param_1)
@@ -88730,7 +88730,7 @@ undefined4 FUN_00483600(int param_1)
 }
 
 
-// ==== FUN_00483690 @ 00483690 ====
+// ==== MatrixMethodPairApply @ 00483690 [Ghidra: FUN_00483690] ====
 
 
 undefined4 FUN_00483690(undefined4 param_1,float *param_2)
@@ -88793,7 +88793,7 @@ undefined4 FUN_00483690(undefined4 param_1,float *param_2)
 }
 
 
-// ==== FUN_00483810 @ 00483810 ====
+// ==== InputActionStateToggle @ 00483810 [Ghidra: FUN_00483810] ====
 
 
 undefined4 FUN_00483810(undefined4 *param_1)
@@ -88829,7 +88829,7 @@ undefined4 FUN_00483810(undefined4 *param_1)
 }
 
 
-// ==== FUN_004838b0 @ 004838B0 ====
+// ==== D3DRenderStateSync @ 004838B0 [Ghidra: FUN_004838b0] ====
 
 
 void FUN_004838b0(void)
@@ -88854,7 +88854,7 @@ void FUN_004838b0(void)
 }
 
 
-// ==== FUN_00483940 @ 00483940 ====
+// ==== Direct3DRenderStateRestore @ 00483940 [Ghidra: FUN_00483940] ====
 
 
 void FUN_00483940(void)
@@ -88879,7 +88879,7 @@ void FUN_00483940(void)
 }
 
 
-// ==== FUN_004839c0 @ 004839C0 ====
+// ==== ModelRenderChildPassDispatch @ 004839C0 [Ghidra: FUN_004839c0] ====
 
 
 undefined4 FUN_004839c0(uint *param_1,undefined4 param_2,undefined4 param_3)
@@ -88928,7 +88928,7 @@ undefined4 FUN_004839c0(uint *param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_00483a70 @ 00483A70 ====
+// ==== ModelChildRenderEligibilityCheck @ 00483A70 [Ghidra: FUN_00483a70] ====
 
 
 undefined4 FUN_00483a70(int param_1)
@@ -88941,7 +88941,7 @@ undefined4 FUN_00483a70(int param_1)
 }
 
 
-// ==== FUN_00483a90 @ 00483A90 ====
+// ==== ModelRenderChildMaterialPass @ 00483A90 [Ghidra: FUN_00483a90] ====
 
 
 bool FUN_00483a90(undefined4 param_1,undefined4 *param_2,undefined4 param_3,undefined4 param_4)
@@ -88957,7 +88957,7 @@ bool FUN_00483a90(undefined4 param_1,undefined4 *param_2,undefined4 param_3,unde
 }
 
 
-// ==== FUN_00483b00 @ 00483B00 ====
+// ==== WorldObjectRenderStateApply @ 00483B00 [Ghidra: FUN_00483b00] ====
 
 
 undefined4 FUN_00483b00(undefined4 param_1,int param_2,undefined4 param_3,undefined4 param_4)
@@ -88983,7 +88983,7 @@ undefined4 FUN_00483b00(undefined4 param_1,int param_2,undefined4 param_3,undefi
 }
 
 
-// ==== FUN_00483b70 @ 00483B70 ====
+// ==== Direct3DDeviceStateApply @ 00483B70 [Ghidra: FUN_00483b70] ====
 
 
 undefined4
@@ -89047,7 +89047,7 @@ FUN_00483b70(int *param_1,int *param_2,undefined4 param_3,undefined4 param_4,und
 }
 
 
-// ==== FUN_00483c80 @ 00483C80 ====
+// ==== FlicFileOpenAndStateCreate @ 00483C80 [Ghidra: FUN_00483c80] ====
 
 
 undefined4 FUN_00483c80(undefined4 param_1,int *param_2)
@@ -89161,7 +89161,7 @@ undefined4 FUN_00483c80(undefined4 param_1,int *param_2)
 }
 
 
-// ==== FUN_00483f00 @ 00483F00 ====
+// ==== FlicPlayerClose @ 00483F00 [Ghidra: FUN_00483f00] ====
 
 
 undefined4 FUN_00483f00(undefined4 *param_1)
@@ -89184,7 +89184,7 @@ undefined4 FUN_00483f00(undefined4 *param_1)
 }
 
 
-// ==== FUN_00483f60 @ 00483F60 ====
+// ==== FlicFileHeaderValidate @ 00483F60 [Ghidra: FUN_00483f60] ====
 
 
 undefined4 FUN_00483f60(undefined4 param_1,int *param_2)
@@ -89228,7 +89228,7 @@ LAB_00484012:
 }
 
 
-// ==== FUN_00484070 @ 00484070 ====
+// ==== FlicFrameAdvanceAndBlit @ 00484070 [Ghidra: FUN_00484070] ====
 
 
 bool FUN_00484070(undefined4 *param_1)
@@ -89301,7 +89301,7 @@ bool FUN_00484070(undefined4 *param_1)
 }
 
 
-// ==== FUN_004841d0 @ 004841D0 ====
+// ==== FlicRamFrameAdvance @ 004841D0 [Ghidra: FUN_004841d0] ====
 
 
 undefined4 FUN_004841d0(undefined4 *param_1)
@@ -89332,7 +89332,7 @@ undefined4 FUN_004841d0(undefined4 *param_1)
 }
 
 
-// ==== FUN_00484260 @ 00484260 ====
+// ==== FlicStreamFrameAdvance @ 00484260 [Ghidra: FUN_00484260] ====
 
 
 undefined4 FUN_00484260(undefined4 *param_1)
@@ -89365,7 +89365,7 @@ undefined4 FUN_00484260(undefined4 *param_1)
 }
 
 
-// ==== FUN_00484320 @ 00484320 ====
+// ==== FlicChunkWalk @ 00484320 [Ghidra: FUN_00484320] ====
 
 
 undefined4 FUN_00484320(uint *param_1)
@@ -89456,7 +89456,7 @@ LAB_00484459:
 }
 
 
-// ==== FUN_004844b0 @ 004844B0 ====
+// ==== FlicFrameRecordWalk @ 004844B0 [Ghidra: FUN_004844b0] ====
 
 
 undefined4 FUN_004844b0(undefined4 *param_1)
@@ -89515,7 +89515,7 @@ undefined4 FUN_004844b0(undefined4 *param_1)
 }
 
 
-// ==== FUN_00484610 @ 00484610 ====
+// ==== FlicSubrecordOpcodeDispatch @ 00484610 [Ghidra: FUN_00484610] ====
 
 
 undefined4 FUN_00484610(int param_1)
@@ -89576,7 +89576,7 @@ switchD_0048466b_caseD_1b:
 }
 
 
-// ==== FUN_00484720 @ 00484720 ====
+// ==== FlicChunkBufferAndContinueLK @ 00484720 [Ghidra: FUN_00484720] ====
 
 
 undefined4 FUN_00484720(undefined4 *param_1)
@@ -89608,7 +89608,7 @@ undefined4 FUN_00484720(undefined4 *param_1)
 }
 
 
-// ==== FUN_004847d0 @ 004847D0 ====
+// ==== FlicChunkBufferAndContinueType0B @ 004847D0 [Ghidra: FUN_004847d0] ====
 
 
 undefined4 FUN_004847d0(undefined4 *param_1)
@@ -89640,7 +89640,7 @@ undefined4 FUN_004847d0(undefined4 *param_1)
 }
 
 
-// ==== FUN_00484880 @ 00484880 ====
+// ==== FlicOpcode16ModeDispatch @ 00484880 [Ghidra: FUN_00484880] ====
 
 
 undefined4 FUN_00484880(int param_1)
@@ -89660,7 +89660,7 @@ undefined4 FUN_00484880(int param_1)
 }
 
 
-// ==== FUN_004848d0 @ 004848D0 ====
+// ==== FlicDecode8BitOpcode25Mode4 @ 004848D0 [Ghidra: FUN_004848d0] ====
 
 
 undefined4 FUN_004848d0(int param_1)
@@ -89731,7 +89731,7 @@ undefined4 FUN_004848d0(int param_1)
 }
 
 
-// ==== FUN_004849d0 @ 004849D0 ====
+// ==== FlicDecode16BitKeyframe @ 004849D0 [Ghidra: FUN_004849d0] ====
 
 
 undefined4 FUN_004849d0(uint param_1)
@@ -89808,7 +89808,7 @@ undefined4 FUN_004849d0(uint param_1)
 }
 
 
-// ==== FUN_00484b20 @ 00484B20 ====
+// ==== FlicOpcode25DecodeDispatch @ 00484B20 [Ghidra: FUN_00484b20] ====
 
 
 undefined4 FUN_00484b20(int param_1)
@@ -89834,7 +89834,7 @@ undefined4 FUN_00484b20(int param_1)
 }
 
 
-// ==== FUN_00484b90 @ 00484B90 ====
+// ==== FlicOpcode25SuccessStub @ 00484B90 [Ghidra: FUN_00484b90] ====
 
 
 undefined4 FUN_00484b90(void)
@@ -89844,7 +89844,7 @@ undefined4 FUN_00484b90(void)
 }
 
 
-// ==== FUN_00484ba0 @ 00484BA0 ====
+// ==== PackedTripletTableToWordBuild @ 00484BA0 [Ghidra: FUN_00484ba0] ====
 
 
 void FUN_00484ba0(int param_1)
@@ -89868,7 +89868,7 @@ void FUN_00484ba0(int param_1)
 }
 
 
-// ==== FUN_00484c00 @ 00484C00 ====
+// ==== FlicDecode16BitRowRecords @ 00484C00 [Ghidra: FUN_00484c00] ====
 
 
 undefined4 FUN_00484c00(int param_1)
@@ -89912,7 +89912,7 @@ undefined4 FUN_00484c00(int param_1)
 }
 
 
-// ==== FUN_00484c90 @ 00484C90 ====
+// ==== FlicOpcode27FallbackNoop @ 00484C90 [Ghidra: FUN_00484c90] ====
 
 
 void FUN_00484c90(void)
@@ -89922,7 +89922,7 @@ void FUN_00484c90(void)
 }
 
 
-// ==== FUN_00484ca0 @ 00484CA0 ====
+// ==== FlicDecode8BitAlternateDelta @ 00484CA0 [Ghidra: FUN_00484ca0] ====
 
 
 void FUN_00484ca0(uint param_1)
@@ -90026,7 +90026,7 @@ void FUN_00484ca0(uint param_1)
 }
 
 
-// ==== FUN_00484e50 @ 00484E50 ====
+// ==== FlicDecode16BitDelta @ 00484E50 [Ghidra: FUN_00484e50] ====
 
 
 void FUN_00484e50(int param_1)
@@ -90130,7 +90130,7 @@ void FUN_00484e50(int param_1)
 }
 
 
-// ==== FUN_00485030 @ 00485030 ====
+// ==== FlicOpcode27DecodeDispatch @ 00485030 [Ghidra: FUN_00485030] ====
 
 
 undefined4 FUN_00485030(int param_1)
@@ -90160,7 +90160,7 @@ undefined4 FUN_00485030(int param_1)
 }
 
 
-// ==== FUN_004850c0 @ 004850C0 ====
+// ==== IndexedWordTableLookup @ 004850C0 [Ghidra: FUN_004850c0] ====
 
 
 undefined2 FUN_004850c0(uint param_1,int param_2)
@@ -90170,7 +90170,7 @@ undefined2 FUN_004850c0(uint param_1,int param_2)
 }
 
 
-// ==== FUN_004850e0 @ 004850E0 ====
+// ==== ObjectField10Get @ 004850E0 [Ghidra: FUN_004850e0] ====
 
 
 undefined4 FUN_004850e0(int param_1)
@@ -90180,7 +90180,7 @@ undefined4 FUN_004850e0(int param_1)
 }
 
 
-// ==== FUN_004850f0 @ 004850F0 ====
+// ==== TextBufferCreate @ 004850F0 [Ghidra: FUN_004850f0] ====
 
 
 undefined4 * FUN_004850f0(undefined4 param_1,undefined4 *param_2,undefined4 param_3)
@@ -90212,7 +90212,7 @@ undefined4 * FUN_004850f0(undefined4 param_1,undefined4 *param_2,undefined4 para
 }
 
 
-// ==== FUN_00485160 @ 00485160 ====
+// ==== TextOutputField82CBit2SetClear @ 00485160 [Ghidra: FUN_00485160] ====
 
 
 void FUN_00485160(int param_1,int param_2)
@@ -90227,7 +90227,7 @@ void FUN_00485160(int param_1,int param_2)
 }
 
 
-// ==== FUN_00485190 @ 00485190 ====
+// ==== TextBufferDestroy @ 00485190 [Ghidra: FUN_00485190] ====
 
 
 void FUN_00485190(int param_1)
@@ -90239,7 +90239,7 @@ void FUN_00485190(int param_1)
 }
 
 
-// ==== FUN_004851b0 @ 004851B0 ====
+// ==== FloatPairAtOffset4SetFromInts @ 004851B0 [Ghidra: FUN_004851b0] ====
 
 
 void FUN_004851b0(int param_1,int param_2,int param_3)
@@ -90251,7 +90251,7 @@ void FUN_004851b0(int param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_004851d0 @ 004851D0 ====
+// ==== FloatPairAtOffsetCSetFromUInts @ 004851D0 [Ghidra: FUN_004851d0] ====
 
 
 void FUN_004851d0(int param_1,uint param_2,uint param_3)
@@ -90263,7 +90263,7 @@ void FUN_004851d0(int param_1,uint param_2,uint param_3)
 }
 
 
-// ==== FUN_00485210 @ 00485210 ====
+// ==== FormattedTextAppendToRingBuffer @ 00485210 [Ghidra: FUN_00485210] ====
 
 
 void FUN_00485210(undefined4 param_1,undefined4 param_2,undefined4 param_3)
@@ -90274,7 +90274,7 @@ void FUN_00485210(undefined4 param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_00485230 @ 00485230 ====
+// ==== TextBufferAppendFormat @ 00485230 [Ghidra: FUN_00485230] ====
 
 
 void FUN_00485230(undefined4 param_1,undefined4 param_2)
@@ -90285,7 +90285,7 @@ void FUN_00485230(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00485250 @ 00485250 ====
+// ==== TextBufferAppendVFormat @ 00485250 [Ghidra: FUN_00485250] ====
 
 
 void FUN_00485250(int param_1,int param_2,undefined4 param_3,undefined4 param_4)
@@ -90323,7 +90323,7 @@ void FUN_00485250(int param_1,int param_2,undefined4 param_3,undefined4 param_4)
 }
 
 
-// ==== FUN_00485300 @ 00485300 ====
+// ==== ObjectiveAdvisorTextCopy @ 00485300 [Ghidra: FUN_00485300] ====
 
 
 void FUN_00485300(int param_1,int param_2,undefined4 param_3)
@@ -90371,7 +90371,7 @@ void FUN_00485300(int param_1,int param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_00485390 @ 00485390 ====
+// ==== TextBufferDrawWrapped @ 00485390 [Ghidra: FUN_00485390] ====
 
 
 undefined4 FUN_00485390(int *param_1,uint param_2,undefined4 param_3,int *param_4)
@@ -90527,7 +90527,7 @@ LAB_00485629:
 }
 
 
-// ==== FUN_00485710 @ 00485710 ====
+// ==== TextWrapMeasureAndDrawLines @ 00485710 [Ghidra: FUN_00485710] ====
 
 
 undefined4 FUN_00485710(int *param_1,float param_2,int *param_3)
@@ -90659,7 +90659,7 @@ LAB_004858df:
 }
 
 
-// ==== FUN_004859b0 @ 004859B0 ====
+// ==== TextBufferReset @ 004859B0 [Ghidra: FUN_004859b0] ====
 
 
 void FUN_004859b0(int param_1)
@@ -90692,7 +90692,7 @@ void FUN_004859b0(int param_1)
 }
 
 
-// ==== FUN_00485a00 @ 00485A00 ====
+// ==== ObjectStatePairGet @ 00485A00 [Ghidra: FUN_00485a00] ====
 
 
 void FUN_00485a00(int param_1,undefined4 *param_2,undefined4 *param_3)
@@ -90704,7 +90704,7 @@ void FUN_00485a00(int param_1,undefined4 *param_2,undefined4 *param_3)
 }
 
 
-// ==== FUN_00485a20 @ 00485A20 ====
+// ==== KeyboardKeyNamesInit @ 00485A20 [Ghidra: FUN_00485a20] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -90825,7 +90825,7 @@ void FUN_00485a20(void)
 }
 
 
-// ==== FUN_00485e30 @ 00485E30 ====
+// ==== NamedOptionIndexFindCaseInsensitive @ 00485E30 [Ghidra: FUN_00485e30] ====
 
 
 undefined4 FUN_00485e30(char *param_1,char *param_2)
@@ -90852,7 +90852,7 @@ undefined4 FUN_00485e30(char *param_1,char *param_2)
 }
 
 
-// ==== FUN_00485e80 @ 00485E80 ====
+// ==== RenderSetup @ 00485E80 [Ghidra: FUN_00485e80] ====
 
 
 void FUN_00485e80(undefined4 param_1)
@@ -90864,7 +90864,7 @@ void FUN_00485e80(undefined4 param_1)
 }
 
 
-// ==== FUN_00485ea0 @ 00485EA0 ====
+// ==== InterfaceSlot58PairStoreClamp @ 00485EA0 [Ghidra: FUN_00485ea0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -90910,7 +90910,7 @@ void FUN_00485ea0(float *param_1)
 }
 
 
-// ==== FUN_00485fb0 @ 00485FB0 ====
+// ==== ViewportRectangleGet @ 00485FB0 [Ghidra: FUN_00485fb0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -90926,7 +90926,7 @@ void FUN_00485fb0(float *param_1)
 }
 
 
-// ==== FUN_00485ff0 @ 00485FF0 ====
+// ==== SurfaceDrawPolyline @ 00485FF0 [Ghidra: FUN_00485ff0] ====
 
 
 void FUN_00485ff0(undefined4 param_1,undefined4 param_2,int param_3,undefined4 param_4,
@@ -90955,7 +90955,7 @@ void FUN_00485ff0(undefined4 param_1,undefined4 param_2,int param_3,undefined4 p
 }
 
 
-// ==== FUN_00486090 @ 00486090 ====
+// ==== SurfaceFillPixelSpans @ 00486090 [Ghidra: FUN_00486090] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -91002,7 +91002,7 @@ void FUN_00486090(undefined4 param_1,int param_2,undefined4 param_3,undefined4 p
 }
 
 
-// ==== FUN_00486210 @ 00486210 ====
+// ==== SurfaceFillPixelSpanRecords @ 00486210 [Ghidra: FUN_00486210] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -91051,7 +91051,7 @@ void FUN_00486210(int param_1,int param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_00486390 @ 00486390 ====
+// ==== SurfaceDrawCirclePixels @ 00486390 [Ghidra: FUN_00486390] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -91092,7 +91092,7 @@ void FUN_00486390(undefined4 param_1,undefined4 param_2,uint param_3,undefined4 
 }
 
 
-// ==== FUN_004864d0 @ 004864D0 ====
+// ==== SurfaceColorPackToPixel @ 004864D0 [Ghidra: FUN_004864d0] ====
 
 
 uint FUN_004864d0(void)
@@ -91120,7 +91120,7 @@ uint FUN_004864d0(void)
 }
 
 
-// ==== FUN_00486550 @ 00486550 ====
+// ==== SurfaceLockConfigurePixelWriter @ 00486550 [Ghidra: FUN_00486550] ====
 
 
 undefined4 FUN_00486550(int *param_1)
@@ -91184,7 +91184,7 @@ undefined4 FUN_00486550(int *param_1)
 }
 
 
-// ==== FUN_00486650 @ 00486650 ====
+// ==== SurfaceUnlockResetPixelWriter @ 00486650 [Ghidra: FUN_00486650] ====
 
 
 void FUN_00486650(int *param_1)
@@ -91202,7 +91202,7 @@ void FUN_00486650(int *param_1)
 }
 
 
-// ==== FUN_00486690 @ 00486690 ====
+// ==== SurfacePixelWriterSelectByFormat @ 00486690 [Ghidra: FUN_00486690] ====
 
 
 undefined4 FUN_00486690(int param_1)
@@ -91237,7 +91237,7 @@ undefined4 FUN_00486690(int param_1)
 }
 
 
-// ==== FUN_00486720 @ 00486720 ====
+// ==== BresenhamLineWalkClipped @ 00486720 [Ghidra: FUN_00486720] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -91314,7 +91314,7 @@ void FUN_00486720(uint param_1,uint param_2,int param_3,int param_4,undefined4 p
 }
 
 
-// ==== FUN_004869f0 @ 004869F0 ====
+// ==== LoadLWSCScene @ 004869F0 [Ghidra: FUN_004869f0] ====
 
 
 /* WARNING: Type propagation algorithm not settling */
@@ -92099,7 +92099,7 @@ LAB_004874ea:
 }
 
 
-// ==== FUN_004876c0 @ 004876C0 ====
+// ==== SharedObjectDirectoryScan @ 004876C0 [Ghidra: FUN_004876c0] ====
 
 
 void FUN_004876c0(char *param_1,undefined4 param_2,undefined4 param_3,undefined4 param_4)
@@ -92159,7 +92159,7 @@ void FUN_004876c0(char *param_1,undefined4 param_2,undefined4 param_3,undefined4
 }
 
 
-// ==== FUN_00487760 @ 00487760 ====
+// ==== ResourceStringTablesFree @ 00487760 [Ghidra: FUN_00487760] ====
 
 
 void FUN_00487760(void)
@@ -92190,7 +92190,7 @@ void FUN_00487760(void)
 }
 
 
-// ==== FUN_004877d0 @ 004877D0 ====
+// ==== ResourceEntryIdGet @ 004877D0 [Ghidra: FUN_004877d0] ====
 
 
 undefined2 FUN_004877d0(int param_1)
@@ -92200,7 +92200,7 @@ undefined2 FUN_004877d0(int param_1)
 }
 
 
-// ==== FUN_004877e0 @ 004877E0 ====
+// ==== SceneEntrySlotTableExpand @ 004877E0 [Ghidra: FUN_004877e0] ====
 
 
 void FUN_004877e0(int param_1)
@@ -92301,7 +92301,7 @@ void FUN_004877e0(int param_1)
 }
 
 
-// ==== FUN_00487990 @ 00487990 ====
+// ==== UIRenderTreeLayoutAndRelease @ 00487990 [Ghidra: FUN_00487990] ====
 
 
 void FUN_00487990(int param_1,undefined4 param_2)
@@ -92324,7 +92324,7 @@ void FUN_00487990(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00487a00 @ 00487A00 ====
+// ==== SharedObjectClone @ 00487A00 [Ghidra: FUN_00487a00] ====
 
 
 undefined4 * FUN_00487a00(undefined4 *param_1,undefined4 param_2)
@@ -92411,7 +92411,7 @@ undefined4 * FUN_00487a00(undefined4 *param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00487ba0 @ 00487BA0 ====
+// ==== SharedObjectAnimationAndTimedEventUpdate @ 00487BA0 [Ghidra: FUN_00487ba0] ====
 
 
 void FUN_00487ba0(uint param_1,float param_2)
@@ -92464,7 +92464,7 @@ void FUN_00487ba0(uint param_1,float param_2)
 }
 
 
-// ==== FUN_00487cb0 @ 00487CB0 ====
+// ==== AnimationTrackFindKeyframeAndFraction @ 00487CB0 [Ghidra: FUN_00487cb0] ====
 
 
 float10 FUN_00487cb0(int param_1,float param_2,short *param_3)
@@ -92497,7 +92497,7 @@ float10 FUN_00487cb0(int param_1,float param_2,short *param_3)
 }
 
 
-// ==== FUN_00487d50 @ 00487D50 ====
+// ==== ComInterfaceQueryAndContextDispatch @ 00487D50 [Ghidra: FUN_00487d50] ====
 
 
 /* WARNING: Restarted to delay deadcode elimination for space: stack */
@@ -92527,7 +92527,7 @@ void FUN_00487d50(int param_1,int param_2)
 }
 
 
-// ==== FUN_00487de0 @ 00487DE0 ====
+// ==== SharedObjectTimedSoundEventUpdate @ 00487DE0 [Ghidra: FUN_00487de0] ====
 
 
 void FUN_00487de0(int param_1,int param_2)
@@ -92569,7 +92569,7 @@ void FUN_00487de0(int param_1,int param_2)
 }
 
 
-// ==== FUN_00487ed0 @ 00487ED0 ====
+// ==== SharedObjectSampleTimeWindowMatch @ 00487ED0 [Ghidra: FUN_00487ed0] ====
 
 
 undefined4 FUN_00487ed0(float param_1,uint param_2)
@@ -92605,7 +92605,7 @@ undefined4 FUN_00487ed0(float param_1,uint param_2)
 }
 
 
-// ==== FUN_00487fc0 @ 00487FC0 ====
+// ==== KeyframeTimeSegmentAndFractionGet @ 00487FC0 [Ghidra: FUN_00487fc0] ====
 
 
 float10 FUN_00487fc0(int param_1,float param_2,ushort *param_3)
@@ -92636,7 +92636,7 @@ float10 FUN_00487fc0(int param_1,float param_2,ushort *param_3)
 }
 
 
-// ==== FUN_00488070 @ 00488070 ====
+// ==== SharedObjectFloatTrackInterpolateApply @ 00488070 [Ghidra: FUN_00488070] ====
 
 
 void FUN_00488070(undefined4 param_1,int param_2,uint param_3,float param_4)
@@ -92656,7 +92656,7 @@ void FUN_00488070(undefined4 param_1,int param_2,uint param_3,float param_4)
 }
 
 
-// ==== FUN_004880d0 @ 004880D0 ====
+// ==== UIRenderElementChildrenEnumerate @ 004880D0 [Ghidra: FUN_004880d0] ====
 
 
 void FUN_004880d0(int param_1,int param_2)
@@ -92694,7 +92694,7 @@ void FUN_004880d0(int param_1,int param_2)
 }
 
 
-// ==== FUN_00488170 @ 00488170 ====
+// ==== AnimationTrackKeysInterpolate @ 00488170 [Ghidra: FUN_00488170] ====
 
 
 void FUN_00488170(undefined4 param_1,int param_2,uint param_3,float param_4)
@@ -92732,7 +92732,7 @@ void FUN_00488170(undefined4 param_1,int param_2,uint param_3,float param_4)
 }
 
 
-// ==== FUN_004882e0 @ 004882E0 ====
+// ==== SceneNodeTransformMatrixApply @ 004882E0 [Ghidra: FUN_004882e0] ====
 
 
 void FUN_004882e0(int param_1,float param_2,float *param_3,float *param_4,float *param_5)
@@ -92831,7 +92831,7 @@ void FUN_004882e0(int param_1,float param_2,float *param_3,float *param_4,float 
 }
 
 
-// ==== FUN_004885c0 @ 004885C0 ====
+// ==== ModelResourceResolveOrLoad @ 004885C0 [Ghidra: FUN_004885c0] ====
 
 
 int FUN_004885c0(int param_1,char *param_2,undefined4 param_3,undefined4 param_4)
@@ -92900,7 +92900,7 @@ int FUN_004885c0(int param_1,char *param_2,undefined4 param_3,undefined4 param_4
 }
 
 
-// ==== FUN_00488730 @ 00488730 ====
+// ==== CaseInsensitivePairTableFind @ 00488730 [Ghidra: FUN_00488730] ====
 
 
 undefined4 FUN_00488730(int param_1,uint param_2,char *param_3)
@@ -92927,7 +92927,7 @@ undefined4 FUN_00488730(int param_1,uint param_2,char *param_3)
 }
 
 
-// ==== FUN_00488790 @ 00488790 ====
+// ==== CaseInsensitivePairTableAppend @ 00488790 [Ghidra: FUN_00488790] ====
 
 
 void FUN_00488790(int param_1,int *param_2,undefined4 param_3,undefined4 param_4)
@@ -92943,7 +92943,7 @@ void FUN_00488790(int param_1,int *param_2,undefined4 param_3,undefined4 param_4
 }
 
 
-// ==== FUN_004887c0 @ 004887C0 ====
+// ==== SceneHierarchyInterfaceRegisterRecursive @ 004887C0 [Ghidra: FUN_004887c0] ====
 
 
 void FUN_004887c0(ushort *param_1,undefined4 param_2,undefined4 param_3)
@@ -93010,7 +93010,7 @@ void FUN_004887c0(ushort *param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_00488900 @ 00488900 ====
+// ==== UIRenderTreeEntryProcess @ 00488900 [Ghidra: FUN_00488900] ====
 
 
 void FUN_00488900(int param_1,undefined4 *param_2)
@@ -93040,7 +93040,7 @@ void FUN_00488900(int param_1,undefined4 *param_2)
 }
 
 
-// ==== FUN_004889a0 @ 004889A0 ====
+// ==== UIRenderEntrySubrecordApply @ 004889A0 [Ghidra: FUN_004889a0] ====
 
 
 void FUN_004889a0(undefined4 param_1,int param_2,uint param_3)
@@ -93054,7 +93054,7 @@ void FUN_004889a0(undefined4 param_1,int param_2,uint param_3)
 }
 
 
-// ==== FUN_004889d0 @ 004889D0 ====
+// ==== ResourceTreeCallbackReferenceChainRelease @ 004889D0 [Ghidra: FUN_004889d0] ====
 
 
 void FUN_004889d0(int param_1)
@@ -93092,7 +93092,7 @@ void FUN_004889d0(int param_1)
 }
 
 
-// ==== FUN_00488a70 @ 00488A70 ====
+// ==== LoadRecordInterfacesReleaseFree @ 00488A70 [Ghidra: FUN_00488a70] ====
 
 
 void FUN_00488a70(int param_1,undefined4 *param_2)
@@ -93136,7 +93136,7 @@ void FUN_00488a70(int param_1,undefined4 *param_2)
 }
 
 
-// ==== FUN_00488b50 @ 00488B50 ====
+// ==== CDAudioDeviceStateUpdate @ 00488B50 [Ghidra: FUN_00488b50] ====
 
 
 bool FUN_00488b50(int param_1)
@@ -93154,7 +93154,7 @@ bool FUN_00488b50(int param_1)
 }
 
 
-// ==== FUN_00488b90 @ 00488B90 ====
+// ==== CdAudioPlaybackAvailable @ 00488B90 [Ghidra: FUN_00488b90] ====
 
 
 undefined4 FUN_00488b90(void)
@@ -93167,7 +93167,7 @@ undefined4 FUN_00488b90(void)
 }
 
 
-// ==== FUN_00488bb0 @ 00488BB0 ====
+// ==== CdAudioTrackStart @ 00488BB0 [Ghidra: FUN_00488bb0] ====
 
 
 void FUN_00488bb0(undefined4 param_1,int param_2,undefined4 param_3)
@@ -93185,7 +93185,7 @@ void FUN_00488bb0(undefined4 param_1,int param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_00488bf0 @ 00488BF0 ====
+// ==== CdAudioStopAndCloseIfActive @ 00488BF0 [Ghidra: FUN_00488bf0] ====
 
 
 void FUN_00488bf0(void)
@@ -93199,7 +93199,7 @@ void FUN_00488bf0(void)
 }
 
 
-// ==== FUN_00488c00 @ 00488C00 ====
+// ==== CDAudioWatchdogTick @ 00488C00 [Ghidra: FUN_00488c00] ====
 
 
 void FUN_00488c00(int param_1)
@@ -93225,7 +93225,7 @@ void FUN_00488c00(int param_1)
 }
 
 
-// ==== FUN_00488c70 @ 00488C70 ====
+// ==== WaveFormatOpenAndRead @ 00488C70 [Ghidra: FUN_00488c70] ====
 
 
 MMRESULT FUN_00488c70(HPSTR param_1,LONG param_2,undefined4 *param_3,int *param_4,LPMMCKINFO param_5
@@ -93325,7 +93325,7 @@ LAB_00488e29:
 }
 
 
-// ==== FUN_00488e70 @ 00488E70 ====
+// ==== WaveFileAverageBytesPerSecondRead @ 00488E70 [Ghidra: FUN_00488e70] ====
 
 
 undefined4 FUN_00488e70(LPSTR param_1)
@@ -93362,7 +93362,7 @@ undefined4 FUN_00488e70(LPSTR param_1)
 }
 
 
-// ==== FUN_00488f10 @ 00488F10 ====
+// ==== WaveFileOpenReadChunks @ 00488F10 [Ghidra: FUN_00488f10] ====
 
 
 MMRESULT FUN_00488f10(LPSTR param_1,undefined4 *param_2,int *param_3,LPMMCKINFO param_4)
@@ -93450,7 +93450,7 @@ LAB_00489083:
 }
 
 
-// ==== FUN_004890c0 @ 004890C0 ====
+// ==== WaveDataChunkOpen @ 004890C0 [Ghidra: FUN_004890c0] ====
 
 
 void FUN_004890c0(undefined4 *param_1,LPMMCKINFO param_2,MMCKINFO *param_3)
@@ -93463,7 +93463,7 @@ void FUN_004890c0(undefined4 *param_1,LPMMCKINFO param_2,MMCKINFO *param_3)
 }
 
 
-// ==== FUN_00489100 @ 00489100 ====
+// ==== WaveDataRead @ 00489100 [Ghidra: FUN_00489100] ====
 
 
 uint FUN_00489100(HMMIO param_1,uint param_2,int param_3,int param_4,uint *param_5)
@@ -93515,7 +93515,7 @@ LAB_00489196:
 }
 
 
-// ==== FUN_004891d0 @ 004891D0 ====
+// ==== MmioHandleAndGlobalBufferRelease @ 004891D0 [Ghidra: FUN_004891d0] ====
 
 
 undefined4 FUN_004891d0(undefined4 *param_1,undefined4 *param_2)
@@ -93533,7 +93533,7 @@ undefined4 FUN_004891d0(undefined4 *param_1,undefined4 *param_2)
 }
 
 
-// ==== FUN_00489210 @ 00489210 ====
+// ==== CDAudioTrackPlayFrom @ 00489210 [Ghidra: FUN_00489210] ====
 
 
 undefined4 FUN_00489210(int param_1)
@@ -93551,7 +93551,7 @@ undefined4 FUN_00489210(int param_1)
 }
 
 
-// ==== FUN_00489260 @ 00489260 ====
+// ==== CDAudioErrorTextGet @ 00489260 [Ghidra: FUN_00489260] ====
 
 
 void FUN_00489260(void)
@@ -93562,7 +93562,7 @@ void FUN_00489260(void)
 }
 
 
-// ==== FUN_00489280 @ 00489280 ====
+// ==== CDAudioTrackCompletionPoll @ 00489280 [Ghidra: FUN_00489280] ====
 
 
 undefined4 FUN_00489280(int param_1)
@@ -93587,7 +93587,7 @@ undefined4 FUN_00489280(int param_1)
 }
 
 
-// ==== FUN_00489330 @ 00489330 ====
+// ==== CDAudioDeviceOpen @ 00489330 [Ghidra: FUN_00489330] ====
 
 
 undefined4 FUN_00489330(undefined4 param_1)
@@ -93609,7 +93609,7 @@ undefined4 FUN_00489330(undefined4 param_1)
 }
 
 
-// ==== FUN_004893a0 @ 004893A0 ====
+// ==== CdAudioStopAndClose @ 004893A0 [Ghidra: FUN_004893a0] ====
 
 
 undefined4 FUN_004893a0(void)
@@ -93627,7 +93627,7 @@ undefined4 FUN_004893a0(void)
 }
 
 
-// ==== FUN_004893f0 @ 004893F0 ====
+// ==== ResourceStateTableReset @ 004893F0 [Ghidra: FUN_004893f0] ====
 
 
 void FUN_004893f0(void)
@@ -93645,7 +93645,7 @@ void FUN_004893f0(void)
 }
 
 
-// ==== FUN_00489410 @ 00489410 ====
+// ==== MapFileResourceSlotAllocate @ 00489410 [Ghidra: FUN_00489410] ====
 
 
 int FUN_00489410(undefined4 param_1)
@@ -93671,7 +93671,7 @@ int FUN_00489410(undefined4 param_1)
 }
 
 
-// ==== FUN_00489460 @ 00489460 ====
+// ==== MapFileResourceSlotRelease @ 00489460 [Ghidra: FUN_00489460] ====
 
 
 void FUN_00489460(uint param_1)
@@ -93686,7 +93686,7 @@ void FUN_00489460(uint param_1)
 }
 
 
-// ==== FUN_004894a0 @ 004894A0 ====
+// ==== MapFileResourceSlotGet @ 004894A0 [Ghidra: FUN_004894a0] ====
 
 
 undefined4 FUN_004894a0(uint param_1)
@@ -93699,7 +93699,7 @@ undefined4 FUN_004894a0(uint param_1)
 }
 
 
-// ==== FUN_004894c0 @ 004894C0 ====
+// ==== ComInterfaceQueryOrFallback @ 004894C0 [Ghidra: FUN_004894c0] ====
 
 
 int * FUN_004894c0(void)
@@ -93726,7 +93726,7 @@ int * FUN_004894c0(void)
 }
 
 
-// ==== FUN_00489520 @ 00489520 ====
+// ==== ResourceTreeCallbackContextCreateForEnumerator @ 00489520 [Ghidra: FUN_00489520] ====
 
 
 undefined4 * FUN_00489520(undefined4 param_1,int *param_2)
@@ -93754,7 +93754,7 @@ undefined4 * FUN_00489520(undefined4 param_1,int *param_2)
 }
 
 
-// ==== FUN_004895c0 @ 004895C0 ====
+// ==== ResourceTreeCallbackContextCreateForResource @ 004895C0 [Ghidra: FUN_004895c0] ====
 
 
 undefined4 * FUN_004895c0(undefined4 param_1,int *param_2)
@@ -93782,7 +93782,7 @@ undefined4 * FUN_004895c0(undefined4 param_1,int *param_2)
 }
 
 
-// ==== FUN_00489660 @ 00489660 ====
+// ==== SceneActFrameRecordCloneOrCreate @ 00489660 [Ghidra: FUN_00489660] ====
 
 
 undefined4 * FUN_00489660(undefined4 *param_1,undefined4 param_2,undefined4 *param_3)
@@ -93842,7 +93842,7 @@ undefined4 * FUN_00489660(undefined4 *param_1,undefined4 param_2,undefined4 *par
 }
 
 
-// ==== FUN_00489750 @ 00489750 ====
+// ==== SceneObjectOwnerLinkRelease @ 00489750 [Ghidra: FUN_00489750] ====
 
 
 void FUN_00489750(int *param_1)
@@ -93888,7 +93888,7 @@ undefined4 FUN_004897d0(int param_1)
 }
 
 
-// ==== FUN_004897e0 @ 004897E0 ====
+// ==== DDiSceneTimedHookDispatch @ 004897E0 [Ghidra: FUN_004897e0] ====
 
 
 void FUN_004897e0(int *param_1,undefined4 param_2,undefined4 *param_3)
@@ -93965,7 +93965,7 @@ void FUN_004897e0(int *param_1,undefined4 param_2,undefined4 *param_3)
 }
 
 
-// ==== FUN_00489910 @ 00489910 ====
+// ==== ResourceTreeCallbackCount @ 00489910 [Ghidra: FUN_00489910] ====
 
 
 uint FUN_00489910(int *param_1,undefined4 param_2,code *param_3,undefined4 param_4)
@@ -94015,7 +94015,7 @@ uint FUN_00489910(int *param_1,undefined4 param_2,code *param_3,undefined4 param
 }
 
 
-// ==== FUN_004899f0 @ 004899F0 ====
+// ==== ObjectHierarchyRecursiveClone @ 004899F0 [Ghidra: FUN_004899f0] ====
 
 
 void FUN_004899f0(int *param_1,int *param_2,int param_3)
@@ -94125,7 +94125,7 @@ void FUN_004899f0(int *param_1,int *param_2,int param_3)
 }
 
 
-// ==== FUN_00489b30 @ 00489B30 ====
+// ==== ObjectInterfaceArrayResourceCreate @ 00489B30 [Ghidra: FUN_00489b30] ====
 
 
 void FUN_00489b30(int *param_1)
@@ -94169,7 +94169,7 @@ void FUN_00489b30(int *param_1)
 }
 
 
-// ==== FUN_00489bc0 @ 00489BC0 ====
+// ==== ComChildItemsVisit @ 00489BC0 [Ghidra: FUN_00489bc0] ====
 
 
 void FUN_00489bc0(int *param_1)
@@ -94213,7 +94213,7 @@ void FUN_00489bc0(int *param_1)
 }
 
 
-// ==== FUN_00489c30 @ 00489C30 ====
+// ==== IndexedBitmapPaletteDataPrepare @ 00489C30 [Ghidra: FUN_00489c30] ====
 
 
 void FUN_00489c30(int param_1,undefined4 param_2,int *param_3)
@@ -94299,7 +94299,7 @@ void FUN_00489c30(int param_1,undefined4 param_2,int *param_3)
 }
 
 
-// ==== FUN_00489d70 @ 00489D70 ====
+// ==== ObjectField38Release @ 00489D70 [Ghidra: FUN_00489d70] ====
 
 
 void FUN_00489d70(int param_1)
@@ -94312,7 +94312,7 @@ void FUN_00489d70(int param_1)
 }
 
 
-// ==== FUN_00489d90 @ 00489D90 ====
+// ==== DirectXErrorMessageFormat @ 00489D90 [Ghidra: FUN_00489d90] ====
 
 
 void FUN_00489d90(undefined4 param_1,undefined4 param_2)
@@ -94324,7 +94324,7 @@ void FUN_00489d90(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00489dd0 @ 00489DD0 ====
+// ==== DirectXResultDiagnosticDispatch @ 00489DD0 [Ghidra: FUN_00489dd0] ====
 
 
 int FUN_00489dd0(int param_1,int param_2,undefined4 param_3,undefined4 param_4)
@@ -95068,7 +95068,7 @@ int FUN_00489dd0(int param_1,int param_2,undefined4 param_3,undefined4 param_4)
 }
 
 
-// ==== FUN_0048b260 @ 0048B260 ====
+// ==== StartupStreamStateReset @ 0048B260 [Ghidra: FUN_0048b260] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -95085,7 +95085,7 @@ void FUN_0048b260(void)
 }
 
 
-// ==== FUN_0048b280 @ 0048B280 ====
+// ==== WindowModeFlagSet @ 0048B280 [Ghidra: FUN_0048b280] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -95098,7 +95098,7 @@ void FUN_0048b280(undefined4 param_1)
 }
 
 
-// ==== FUN_0048b290 @ 0048B290 ====
+// ==== StartupStreamsClose @ 0048B290 [Ghidra: FUN_0048b290] ====
 
 
 void FUN_0048b290(void)
@@ -95120,7 +95120,7 @@ void FUN_0048b290(void)
 }
 
 
-// ==== FUN_0048b2f0 @ 0048B2F0 ====
+// ==== StartupConfigStreamLoad @ 0048B2F0 [Ghidra: FUN_0048b2f0] ====
 
 
 void FUN_0048b2f0(void)
@@ -95136,7 +95136,7 @@ void FUN_0048b2f0(void)
 }
 
 
-// ==== FUN_0048b330 @ 0048B330 ====
+// ==== RegistryPathSplit @ 0048B330 [Ghidra: FUN_0048b330] ====
 
 
 char * FUN_0048b330(char *param_1,char *param_2)
@@ -95160,7 +95160,7 @@ char * FUN_0048b330(char *param_1,char *param_2)
 }
 
 
-// ==== FUN_0048b360 @ 0048B360 ====
+// ==== RegistryPathAccessor @ 0048B360 [Ghidra: FUN_0048b360] ====
 
 
 void FUN_0048b360(undefined4 param_1,undefined4 param_2,undefined4 param_3,undefined4 param_4,
@@ -95172,7 +95172,7 @@ void FUN_0048b360(undefined4 param_1,undefined4 param_2,undefined4 param_3,undef
 }
 
 
-// ==== FUN_0048b390 @ 0048B390 ====
+// ==== RegistryPathCreateKeys @ 0048B390 [Ghidra: FUN_0048b390] ====
 
 
 uint FUN_0048b390(HKEY param_1,DWORD param_2,LPCSTR param_3,int param_4,LPBYTE param_5,DWORD param_6
@@ -95208,7 +95208,7 @@ uint FUN_0048b390(HKEY param_1,DWORD param_2,LPCSTR param_3,int param_4,LPBYTE p
 }
 
 
-// ==== FUN_0048b4a0 @ 0048B4A0 ====
+// ==== BufferedCharStreamReadToString @ 0048B4A0 [Ghidra: FUN_0048b4a0] ====
 
 
 undefined4 FUN_0048b4a0(undefined4 param_1,char *param_2)
@@ -95227,7 +95227,7 @@ undefined4 FUN_0048b4a0(undefined4 param_1,char *param_2)
 }
 
 
-// ==== FUN_0048b4e0 @ 0048B4E0 ====
+// ==== WwadArchiveIndexLoad @ 0048B4E0 [Ghidra: FUN_0048b4e0] ====
 
 
 int FUN_0048b4e0(void)
@@ -95591,7 +95591,7 @@ LAB_0048bbad:
 }
 
 
-// ==== FUN_0048bce0 @ 0048BCE0 ====
+// ==== LwoParserRecordAtIndex @ 0048BCE0 [Ghidra: FUN_0048bce0] ====
 
 
 undefined * FUN_0048bce0(int param_1)
@@ -95601,7 +95601,7 @@ undefined * FUN_0048bce0(int param_1)
 }
 
 
-// ==== FUN_0048bcf0 @ 0048BCF0 ====
+// ==== RegistryEntryValueGet @ 0048BCF0 [Ghidra: FUN_0048bcf0] ====
 
 
 undefined4 FUN_0048bcf0(undefined4 param_1,int param_2)
@@ -95614,7 +95614,7 @@ undefined4 FUN_0048bcf0(undefined4 param_1,int param_2)
 }
 
 
-// ==== FUN_0048bd10 @ 0048BD10 ====
+// ==== RegistryEntryTypeGet @ 0048BD10 [Ghidra: FUN_0048bd10] ====
 
 
 undefined4 FUN_0048bd10(undefined4 param_1,int param_2)
@@ -95627,7 +95627,7 @@ undefined4 FUN_0048bd10(undefined4 param_1,int param_2)
 }
 
 
-// ==== FUN_0048bd30 @ 0048BD30 ====
+// ==== WadEntrySlotAllocate @ 0048BD30 [Ghidra: FUN_0048bd30] ====
 
 
 int FUN_0048bd30(void)
@@ -95649,7 +95649,7 @@ int FUN_0048bd30(void)
 }
 
 
-// ==== FUN_0048bd50 @ 0048BD50 ====
+// ==== WadEntryFindAcrossMountedArchives @ 0048BD50 [Ghidra: FUN_0048bd50] ====
 
 
 int FUN_0048bd50(undefined4 param_1,int param_2)
@@ -95674,7 +95674,7 @@ int FUN_0048bd50(undefined4 param_1,int param_2)
 }
 
 
-// ==== FUN_0048bda0 @ 0048BDA0 ====
+// ==== WadEntryNameLookup @ 0048BDA0 [Ghidra: FUN_0048bda0] ====
 
 
 int FUN_0048bda0(char *param_1,int param_2)
@@ -95699,7 +95699,7 @@ int FUN_0048bda0(char *param_1,int param_2)
 }
 
 
-// ==== FUN_0048be00 @ 0048BE00 ====
+// ==== FixedRecordSlotAllocate @ 0048BE00 [Ghidra: FUN_0048be00] ====
 
 
 int FUN_0048be00(void)
@@ -95728,7 +95728,7 @@ int FUN_0048be00(void)
 }
 
 
-// ==== FUN_0048be40 @ 0048BE40 ====
+// ==== WadEntryMemoryStreamOpen @ 0048BE40 [Ghidra: FUN_0048be40] ====
 
 
 int FUN_0048be40(undefined4 param_1,int param_2)
@@ -95781,7 +95781,7 @@ int FUN_0048be40(undefined4 param_1,int param_2)
 }
 
 
-// ==== FUN_0048bf70 @ 0048BF70 ====
+// ==== WadPathOpen @ 0048BF70 [Ghidra: FUN_0048bf70] ====
 
 
 int FUN_0048bf70(undefined4 param_1,int param_2)
@@ -95806,7 +95806,7 @@ int FUN_0048bf70(undefined4 param_1,int param_2)
 }
 
 
-// ==== FUN_0048bfc0 @ 0048BFC0 ====
+// ==== FixedRecordSlotResourceRelease @ 0048BFC0 [Ghidra: FUN_0048bfc0] ====
 
 
 void FUN_0048bfc0(int param_1)
@@ -95820,7 +95820,7 @@ void FUN_0048bfc0(int param_1)
 }
 
 
-// ==== FUN_0048bff0 @ 0048BFF0 ====
+// ==== FixedRecordSlotResourceGet @ 0048BFF0 [Ghidra: FUN_0048bff0] ====
 
 
 undefined4 FUN_0048bff0(int param_1)
@@ -95833,7 +95833,7 @@ undefined4 FUN_0048bff0(int param_1)
 }
 
 
-// ==== FUN_0048c010 @ 0048C010 ====
+// ==== WadStreamLengthGet @ 0048C010 [Ghidra: FUN_0048c010] ====
 
 
 void FUN_0048c010(int param_1)
@@ -95845,7 +95845,7 @@ void FUN_0048c010(int param_1)
 }
 
 
-// ==== FUN_0048c030 @ 0048C030 ====
+// ==== RegistryEntryAccessByIndex @ 0048C030 [Ghidra: FUN_0048c030] ====
 
 
 void FUN_0048c030(undefined4 param_1)
@@ -95856,7 +95856,7 @@ void FUN_0048c030(undefined4 param_1)
 }
 
 
-// ==== FUN_0048c040 @ 0048C040 ====
+// ==== StringCaseSubstringFind @ 0048C040 [Ghidra: FUN_0048c040] ====
 
 
 char * FUN_0048c040(char *param_1,char *param_2,uint *param_3,size_t *param_4)
@@ -95908,7 +95908,7 @@ char * FUN_0048c040(char *param_1,char *param_2,uint *param_3,size_t *param_4)
 }
 
 
-// ==== FUN_0048c0c0 @ 0048C0C0 ====
+// ==== LwoStringDuplicate @ 0048C0C0 [Ghidra: FUN_0048c0c0] ====
 
 
 char * FUN_0048c0c0(char *param_1)
@@ -95969,7 +95969,7 @@ char * FUN_0048c0c0(char *param_1)
 }
 
 
-// ==== FUN_0048c120 @ 0048C120 ====
+// ==== LwoTextureProjectionModeParse @ 0048C120 [Ghidra: FUN_0048c120] ====
 
 
 uint FUN_0048c120(char *param_1)
@@ -96009,7 +96009,7 @@ uint FUN_0048c120(char *param_1)
 }
 
 
-// ==== FUN_0048c180 @ 0048C180 ====
+// ==== OwnedResourceTreeRelease @ 0048C180 [Ghidra: FUN_0048c180] ====
 
 
 void FUN_0048c180(int *param_1,int param_2)
@@ -96031,7 +96031,7 @@ void FUN_0048c180(int *param_1,int param_2)
 }
 
 
-// ==== FUN_0048c1d0 @ 0048C1D0 ====
+// ==== LwoReadBigEndianFloat @ 0048C1D0 [Ghidra: FUN_0048c1d0] ====
 
 
 undefined4 FUN_0048c1d0(int *param_1,undefined1 *param_2)
@@ -96054,7 +96054,7 @@ undefined4 FUN_0048c1d0(int *param_1,undefined1 *param_2)
 }
 
 
-// ==== FUN_0048c210 @ 0048C210 ====
+// ==== LwoPoints @ 0048C210 [Ghidra: FUN_0048c210] ====
 
 
 undefined4 FUN_0048c210(undefined4 param_1,int *param_2,int param_3,int *param_4,int param_5)
@@ -96108,7 +96108,7 @@ undefined4 FUN_0048c210(undefined4 param_1,int *param_2,int param_3,int *param_4
 }
 
 
-// ==== FUN_0048c360 @ 0048C360 ====
+// ==== LwoCurves @ 0048C360 [Ghidra: FUN_0048c360] ====
 
 
 undefined4 FUN_0048c360(undefined4 param_1,int param_2)
@@ -96141,7 +96141,7 @@ undefined4 FUN_0048c360(undefined4 param_1,int param_2)
 }
 
 
-// ==== FUN_0048c3e0 @ 0048C3E0 ====
+// ==== LwoPolygons @ 0048C3E0 [Ghidra: FUN_0048c3e0] ====
 
 
 undefined4 FUN_0048c3e0(undefined4 param_1,int param_2,undefined4 *param_3,int param_4,int param_5)
@@ -96304,7 +96304,7 @@ undefined4 FUN_0048c3e0(undefined4 param_1,int param_2,undefined4 *param_3,int p
 }
 
 
-// ==== FUN_0048c690 @ 0048C690 ====
+// ==== LwoSurfaceNames @ 0048C690 [Ghidra: FUN_0048c690] ====
 
 
 undefined4
@@ -96403,7 +96403,7 @@ FUN_0048c690(undefined4 param_1,undefined4 param_2,undefined4 *param_3,int param
 }
 
 
-// ==== FUN_0048c820 @ 0048C820 ====
+// ==== LwoSurfaceSettings @ 0048C820 [Ghidra: FUN_0048c820] ====
 
 
 undefined4 FUN_0048c820(undefined4 param_1,int param_2,undefined4 *param_3,int param_4,int param_5)
@@ -97146,7 +97146,7 @@ LAB_0048d0a9:
 }
 
 
-// ==== FUN_0048d2c0 @ 0048D2C0 ====
+// ==== LoadLWO @ 0048D2C0 [Ghidra: FUN_0048d2c0] ====
 
 
 undefined4
@@ -97338,7 +97338,7 @@ code_r0x0048d69e:
 }
 
 
-// ==== FUN_0048d7c0 @ 0048D7C0 ====
+// ==== ModelObjectCreate @ 0048D7C0 [Ghidra: FUN_0048d7c0] ====
 
 
 undefined4 FUN_0048d7c0(undefined4 param_1,int *param_2,undefined4 param_3)
@@ -97370,7 +97370,7 @@ undefined4 FUN_0048d7c0(undefined4 param_1,int *param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_0048d870 @ 0048D870 ====
+// ==== ModelObjectFree @ 0048D870 [Ghidra: FUN_0048d870] ====
 
 
 undefined4 FUN_0048d870(undefined4 *param_1)
@@ -97430,7 +97430,7 @@ void __cdecl __fpmath(int param_1)
 }
 
 
-// ==== FUN_0048d940 @ 0048D940 ====
+// ==== CrtMathDispatchTableInitialize @ 0048D940 [Ghidra: FUN_0048d940] ====
 
 
 void FUN_0048d940(void)
@@ -97446,7 +97446,7 @@ void FUN_0048d940(void)
 }
 
 
-// ==== FUN_0048d980 @ 0048D980 ====
+// ==== ParseFloat @ 0048D980 [Ghidra: FUN_0048d980] ====
 
 
 float10 FUN_0048d980(byte *param_1)
@@ -97480,7 +97480,7 @@ float10 FUN_0048d980(byte *param_1)
 }
 
 
-// ==== FUN_0048d9e0 @ 0048D9E0 ====
+// ==== FormattedStringOutput @ 0048D9E0 [Ghidra: FUN_0048d9e0] ====
 
 
 undefined4 FUN_0048d9e0(undefined1 *param_1,undefined4 param_2)
@@ -97507,7 +97507,7 @@ undefined4 FUN_0048d9e0(undefined1 *param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0048da50 @ 0048DA50 ====
+// ==== StringFindSubstring @ 0048DA50 [Ghidra: FUN_0048da50] ====
 
 
 uint * FUN_0048da50(uint *param_1,char *param_2)
@@ -97616,7 +97616,7 @@ uint * FUN_0048da50(uint *param_1,char *param_2)
 }
 
 
-// ==== FUN_0048dad0 @ 0048DAD0 ====
+// ==== ParseSignedDecimal @ 0048DAD0 [Ghidra: FUN_0048dad0] ====
 
 
 int FUN_0048dad0(byte *param_1)
@@ -97666,7 +97666,7 @@ int FUN_0048dad0(byte *param_1)
 }
 
 
-// ==== FUN_0048db70 @ 0048DB70 ====
+// ==== ParseIntegerWrapper @ 0048DB70 [Ghidra: FUN_0048db70] ====
 
 
 void FUN_0048db70(undefined4 param_1)
@@ -97677,7 +97677,7 @@ void FUN_0048db70(undefined4 param_1)
 }
 
 
-// ==== FUN_0048db80 @ 0048DB80 ====
+// ==== EngineHeapFree @ 0048DB80 [Ghidra: FUN_0048db80] ====
 
 
 void FUN_0048db80(LPVOID param_1)
@@ -97700,7 +97700,7 @@ void FUN_0048db80(LPVOID param_1)
 }
 
 
-// ==== FUN_0048dbd0 @ 0048DBD0 ====
+// ==== EngineHeapAlloc @ 0048DBD0 [Ghidra: FUN_0048dbd0] ====
 
 
 void FUN_0048dbd0(undefined4 param_1)
@@ -97711,7 +97711,7 @@ void FUN_0048dbd0(undefined4 param_1)
 }
 
 
-// ==== FUN_0048dbf0 @ 0048DBF0 ====
+// ==== EngineHeapAllocateWithRetry @ 0048DBF0 [Ghidra: FUN_0048dbf0] ====
 
 
 int FUN_0048dbf0(uint param_1,int param_2)
@@ -97743,7 +97743,7 @@ int FUN_0048dbf0(uint param_1,int param_2)
 }
 
 
-// ==== FUN_0048dc40 @ 0048DC40 ====
+// ==== EngineHeapAllocateAligned @ 0048DC40 [Ghidra: FUN_0048dc40] ====
 
 
 void FUN_0048dc40(int param_1)
@@ -97761,7 +97761,7 @@ void FUN_0048dc40(int param_1)
 }
 
 
-// ==== FUN_0048dc80 @ 0048DC80 ====
+// ==== GrowHeapArray @ 0048DC80 [Ghidra: FUN_0048dc80] ====
 
 
 undefined4 * FUN_0048dc80(undefined4 *param_1,uint param_2)
@@ -97872,7 +97872,7 @@ LAB_0048ddea:
 }
 
 
-// ==== FUN_0048de20 @ 0048DE20 ====
+// ==== ArraySortWithComparator @ 0048DE20 [Ghidra: FUN_0048de20] ====
 
 
 void FUN_0048de20(uint param_1,uint param_2,uint param_3,code *param_4)
@@ -97959,7 +97959,7 @@ LAB_0048de95:
 }
 
 
-// ==== FUN_0048dfd0 @ 0048DFD0 ====
+// ==== QsortSmallPartitionSort @ 0048DFD0 [Ghidra: FUN_0048dfd0] ====
 
 
 void FUN_0048dfd0(uint param_1,uint param_2,int param_3,code *param_4)
@@ -97982,7 +97982,7 @@ void FUN_0048dfd0(uint param_1,uint param_2,int param_3,code *param_4)
 }
 
 
-// ==== FUN_0048e030 @ 0048E030 ====
+// ==== ByteRangeSwap @ 0048E030 [Ghidra: FUN_0048e030] ====
 
 
 void FUN_0048e030(undefined1 *param_1,undefined1 *param_2,int param_3)
@@ -98003,7 +98003,7 @@ void FUN_0048e030(undefined1 *param_1,undefined1 *param_2,int param_3)
 }
 
 
-// ==== __ftol @ 0048E060 ====
+// ==== X87FloatToLongLongRound @ 0048E060 [Ghidra: __ftol] ====
 
 
 /* Library Function - Single Match
@@ -98020,7 +98020,7 @@ longlong __ftol(void)
 }
 
 
-// ==== FUN_0048e090 @ 0048E090 ====
+// ==== CrtAsin @ 0048E090 [Ghidra: FUN_0048e090] ====
 
 
 void FUN_0048e090(void)
@@ -98034,7 +98034,7 @@ void FUN_0048e090(void)
 }
 
 
-// ==== FUN_0048e0ad @ 0048E0AD ====
+// ==== CrtAcosCore @ 0048E0AD [Ghidra: FUN_0048e0ad] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -98086,7 +98086,7 @@ LAB_0048e13c:
 }
 
 
-// ==== FUN_0048e160 @ 0048E160 ====
+// ==== RandomSeedSet @ 0048E160 [Ghidra: FUN_0048e160] ====
 
 
 void FUN_0048e160(undefined4 param_1)
@@ -98097,7 +98097,7 @@ void FUN_0048e160(undefined4 param_1)
 }
 
 
-// ==== FUN_0048e170 @ 0048E170 ====
+// ==== RandomNext @ 0048E170 [Ghidra: FUN_0048e170] ====
 
 
 uint FUN_0048e170(void)
@@ -98108,7 +98108,7 @@ uint FUN_0048e170(void)
 }
 
 
-// ==== FUN_0048e1aa @ 0048E1AA ====
+// ==== CrtMathIntrinsicDispatch @ 0048E1AA [Ghidra: FUN_0048e1aa] ====
 
 
 void FUN_0048e1aa(void)
@@ -98119,7 +98119,7 @@ void FUN_0048e1aa(void)
 }
 
 
-// ==== FUN_0048e1e0 @ 0048E1E0 ====
+// ==== FormattedTextBufferBuild @ 0048E1E0 [Ghidra: FUN_0048e1e0] ====
 
 
 undefined4 FUN_0048e1e0(undefined1 *param_1,undefined4 param_2,undefined4 param_3)
@@ -98146,7 +98146,7 @@ undefined4 FUN_0048e1e0(undefined1 *param_1,undefined4 param_2,undefined4 param_
 }
 
 
-// ==== FUN_0048e250 @ 0048E250 ====
+// ==== StackProbeAllocate @ 0048E250 [Ghidra: FUN_0048e250] ====
 
 
 /* WARNING: Unable to track spacebase fully for stack */
@@ -98167,7 +98167,7 @@ void FUN_0048e250(void)
 }
 
 
-// ==== FUN_0048e280 @ 0048E280 ====
+// ==== CrtRoundToIntegralWithMathErrorHandling @ 0048E280 [Ghidra: FUN_0048e280] ====
 
 
 float10 FUN_0048e280(undefined4 param_1,undefined4 param_2)
@@ -98208,7 +98208,7 @@ float10 FUN_0048e280(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0048e380 @ 0048E380 ====
+// ==== KeyToAscii @ 0048E380 [Ghidra: FUN_0048e380] ====
 
 
 uint FUN_0048e380(uint param_1)
@@ -98262,7 +98262,7 @@ uint FUN_0048e380(uint param_1)
 }
 
 
-// ==== FUN_0048e480 @ 0048E480 ====
+// ==== CrtFloatingPointRuntimeInitialize @ 0048E480 [Ghidra: FUN_0048e480] ====
 
 
 void FUN_0048e480(void)
@@ -98277,7 +98277,7 @@ void FUN_0048e480(void)
 }
 
 
-// ==== FUN_0048e4b0 @ 0048E4B0 ====
+// ==== CrtExit @ 0048E4B0 [Ghidra: FUN_0048e4b0] ====
 
 
 void FUN_0048e4b0(undefined4 param_1)
@@ -98304,7 +98304,7 @@ void __cdecl __exit(int _Code)
 }
 
 
-// ==== FUN_0048e4f0 @ 0048E4F0 ====
+// ==== CrtTerminateProcessWithHandlers @ 0048E4F0 [Ghidra: FUN_0048e4f0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -98348,7 +98348,7 @@ void FUN_0048e4f0(UINT param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_0048e5a0 @ 0048E5A0 ====
+// ==== CrtRunCallbackArray @ 0048E5A0 [Ghidra: FUN_0048e5a0] ====
 
 
 void FUN_0048e5a0(undefined4 *param_1,undefined4 *param_2)
@@ -98363,7 +98363,7 @@ void FUN_0048e5a0(undefined4 *param_1,undefined4 *param_2)
 }
 
 
-// ==== FUN_0048e680 @ 0048E680 ====
+// ==== CrtDoubleAbsoluteValue @ 0048E680 [Ghidra: FUN_0048e680] ====
 
 
 float10 FUN_0048e680(undefined4 param_1,undefined4 param_2)
@@ -98512,7 +98512,7 @@ LAB_0048e7eb:
 }
 
 
-// ==== FUN_0048e870 @ 0048E870 ====
+// ==== DoubleIsFinite @ 0048E870 [Ghidra: FUN_0048e870] ====
 
 
 bool FUN_0048e870(undefined4 param_1,undefined8 param_2)
@@ -98522,7 +98522,7 @@ bool FUN_0048e870(undefined4 param_1,undefined8 param_2)
 }
 
 
-// ==== FUN_0048e890 @ 0048E890 ====
+// ==== MarkupIntegerTokenParse @ 0048E890 [Ghidra: FUN_0048e890] ====
 
 
 void FUN_0048e890(char *param_1,undefined4 param_2)
@@ -98551,7 +98551,7 @@ void FUN_0048e890(char *param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0048e8e0 @ 0048E8E0 ====
+// ==== CrtRoundToIntegralWithMathErrorHandlingVariant @ 0048E8E0 [Ghidra: FUN_0048e8e0] ====
 
 
 float10 FUN_0048e8e0(undefined4 param_1,undefined4 param_2)
@@ -98685,7 +98685,7 @@ longlong __allmul(uint param_1,int param_2,uint param_3,int param_4)
 }
 
 
-// ==== FUN_0048ead0 @ 0048EAD0 ====
+// ==== EngineCalloc @ 0048EAD0 [Ghidra: FUN_0048ead0] ====
 
 
 void FUN_0048ead0(undefined4 param_1)
@@ -98696,7 +98696,7 @@ void FUN_0048ead0(undefined4 param_1)
 }
 
 
-// ==== FUN_0048eae0 @ 0048EAE0 ====
+// ==== FileResourceHandleClose @ 0048EAE0 [Ghidra: FUN_0048eae0] ====
 
 
 undefined4 FUN_0048eae0(int param_1)
@@ -98728,7 +98728,7 @@ undefined4 FUN_0048eae0(int param_1)
 }
 
 
-// ==== FUN_0048eb60 @ 0048EB60 ====
+// ==== StdFileOpenIntoHandle @ 0048EB60 [Ghidra: FUN_0048eb60] ====
 
 
 void FUN_0048eb60(undefined4 param_1,undefined4 param_2,undefined4 param_3)
@@ -98745,7 +98745,7 @@ void FUN_0048eb60(undefined4 param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_0048eb90 @ 0048EB90 ====
+// ==== FileOpenAndReadWholeStream @ 0048EB90 [Ghidra: FUN_0048eb90] ====
 
 
 void FUN_0048eb90(undefined4 param_1,undefined4 param_2)
@@ -98756,7 +98756,7 @@ void FUN_0048eb90(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0048ebb0 @ 0048EBB0 ====
+// ==== CrtExceptionHandlerTransferAfterUnlink @ 0048EBB0 [Ghidra: FUN_0048ebb0] ====
 
 
 void FUN_0048ebb0(code *UNRECOVERED_JUMPTABLE)
@@ -98772,7 +98772,7 @@ void FUN_0048ebb0(code *UNRECOVERED_JUMPTABLE)
 }
 
 
-// ==== FUN_0048ebf0 @ 0048EBF0 ====
+// ==== CrtExceptionHandlerTransferWithAtomicPrefix @ 0048EBF0 [Ghidra: FUN_0048ebf0] ====
 
 
 void FUN_0048ebf0(undefined4 param_1,code *UNRECOVERED_JUMPTABLE)
@@ -98787,7 +98787,7 @@ void FUN_0048ebf0(undefined4 param_1,code *UNRECOVERED_JUMPTABLE)
 }
 
 
-// ==== FUN_0048ec00 @ 0048EC00 ====
+// ==== SehFrameUnwind @ 0048EC00 [Ghidra: FUN_0048ec00] ====
 
 
 void FUN_0048ec00(PVOID param_1,PEXCEPTION_RECORD param_2)
@@ -98805,7 +98805,7 @@ void FUN_0048ec00(PVOID param_1,PEXCEPTION_RECORD param_2)
 }
 
 
-// ==== FUN_0048ec60 @ 0048EC60 ====
+// ==== CrtExceptionDispatchForwarder @ 0048EC60 [Ghidra: FUN_0048ec60] ====
 
 
 undefined4 FUN_0048ec60(undefined4 param_1,undefined4 param_2,undefined4 param_3,undefined4 param_4)
@@ -98818,7 +98818,7 @@ undefined4 FUN_0048ec60(undefined4 param_1,undefined4 param_2,undefined4 param_3
 }
 
 
-// ==== FUN_0048eca0 @ 0048ECA0 ====
+// ==== CallSettingFrame12 @ 0048ECA0 [Ghidra: FUN_0048eca0] ====
 
 
 undefined4
@@ -98846,7 +98846,7 @@ FUN_0048eca0(undefined4 param_1,undefined4 param_2,undefined4 param_3,int param_
 }
 
 
-// ==== FUN_0048ed00 @ 0048ED00 ====
+// ==== CrtExceptionFrameFilterInvoke @ 0048ED00 [Ghidra: FUN_0048ed00] ====
 
 
 void FUN_0048ed00(undefined4 param_1,int param_2,undefined4 param_3)
@@ -98858,7 +98858,7 @@ void FUN_0048ed00(undefined4 param_1,int param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_0048ed30 @ 0048ED30 ====
+// ==== CrtExceptionFrameInstallAndDispatch @ 0048ED30 [Ghidra: FUN_0048ed30] ====
 
 
 undefined4
@@ -98905,7 +98905,7 @@ FUN_0048ed30(undefined4 *param_1,undefined4 param_2,undefined4 param_3,undefined
 }
 
 
-// ==== FUN_0048ee00 @ 0048EE00 ====
+// ==== CrtExceptionScopeFilterAndUnwind @ 0048EE00 [Ghidra: FUN_0048ee00] ====
 
 
 undefined4 FUN_0048ee00(int param_1,int param_2,undefined4 param_3)
@@ -98929,7 +98929,7 @@ undefined4 FUN_0048ee00(int param_1,int param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_0048ee90 @ 0048EE90 ====
+// ==== SehScopeTableLookup @ 0048EE90 [Ghidra: FUN_0048ee90] ====
 
 
 int FUN_0048ee90(int param_1,int param_2,int param_3,uint *param_4,uint *param_5)
@@ -99072,7 +99072,7 @@ void __NLG_Notify1(void)
 }
 
 
-// ==== FUN_0048efe6 @ 0048EFE6 ====
+// ==== CrtNlgFrameStateRecord @ 0048EFE6 [Ghidra: FUN_0048efe6] ====
 
 
 void FUN_0048efe6(void)
@@ -99197,7 +99197,7 @@ void __cdecl __amsg_exit(int param_1)
 }
 
 
-// ==== FUN_0048f1d0 @ 0048F1D0 ====
+// ==== CharacterClassifyMask @ 0048F1D0 [Ghidra: FUN_0048f1d0] ====
 
 
 uint FUN_0048f1d0(int param_1,uint param_2)
@@ -99284,7 +99284,7 @@ int __cdecl _strncmp(char *_Str1,char *_Str2,size_t _MaxCount)
 }
 
 
-// ==== FUN_0048f2b0 @ 0048F2B0 ====
+// ==== StreamedAudioFileLengthGet @ 0048F2B0 [Ghidra: FUN_0048f2b0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -99376,7 +99376,7 @@ LAB_0048f425:
 }
 
 
-// ==== FUN_0048f460 @ 0048F460 ====
+// ==== FileResourceHandleSeek @ 0048F460 [Ghidra: FUN_0048f460] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -99413,7 +99413,7 @@ int FUN_0048f460(int param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_0048f500 @ 0048F500 ====
+// ==== GameFileWrite @ 0048F500 [Ghidra: FUN_0048f500] ====
 
 
 uint FUN_0048f500(char *param_1,uint param_2,uint param_3,int *param_4)
@@ -99500,7 +99500,7 @@ LAB_0048f619:
 }
 
 
-// ==== FUN_0048f650 @ 0048F650 ====
+// ==== GameFileDelete @ 0048F650 [Ghidra: FUN_0048f650] ====
 
 
 undefined4 FUN_0048f650(LPCSTR param_1)
@@ -99524,7 +99524,7 @@ undefined4 FUN_0048f650(LPCSTR param_1)
 }
 
 
-// ==== FUN_0048f680 @ 0048F680 ====
+// ==== FileSetReadOnlyAttribute @ 0048F680 [Ghidra: FUN_0048f680] ====
 
 
 undefined4 FUN_0048f680(LPCSTR param_1,byte param_2)
@@ -99552,7 +99552,7 @@ undefined4 FUN_0048f680(LPCSTR param_1,byte param_2)
 }
 
 
-// ==== FUN_0048f6d0 @ 0048F6D0 ====
+// ==== GameDirectoryCreate @ 0048F6D0 [Ghidra: FUN_0048f6d0] ====
 
 
 undefined4 FUN_0048f6d0(LPCSTR param_1)
@@ -99576,7 +99576,7 @@ undefined4 FUN_0048f6d0(LPCSTR param_1)
 }
 
 
-// ==== FUN_0048f700 @ 0048F700 ====
+// ==== GameFileMetadataFind @ 0048F700 [Ghidra: FUN_0048f700] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -99646,7 +99646,7 @@ HANDLE FUN_0048f700(LPCSTR param_1,uint *param_2)
 }
 
 
-// ==== FUN_0048f830 @ 0048F830 ====
+// ==== FileFindNextRecord @ 0048F830 [Ghidra: FUN_0048f830] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -99716,7 +99716,7 @@ undefined4 FUN_0048f830(HANDLE param_1,uint *param_2)
 }
 
 
-// ==== FUN_0048f950 @ 0048F950 ====
+// ==== CrtFindHandleClose @ 0048F950 [Ghidra: FUN_0048f950] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -99735,7 +99735,7 @@ undefined4 FUN_0048f950(HANDLE param_1)
 }
 
 
-// ==== FUN_0048f970 @ 0048F970 ====
+// ==== FileTimeToLocalDateTimeStamp @ 0048F970 [Ghidra: FUN_0048f970] ====
 
 
 undefined4 FUN_0048f970(FILETIME *param_1)
@@ -99761,7 +99761,7 @@ undefined4 FUN_0048f970(FILETIME *param_1)
 }
 
 
-// ==== FUN_0048fa00 @ 0048FA00 ====
+// ==== CurrentDirectoryGet @ 0048FA00 [Ghidra: FUN_0048fa00] ====
 
 
 void FUN_0048fa00(undefined4 param_1,undefined4 param_2)
@@ -99772,7 +99772,7 @@ void FUN_0048fa00(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0048fa20 @ 0048FA20 ====
+// ==== DriveCurrentDirectoryGet @ 0048FA20 [Ghidra: FUN_0048fa20] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -99851,7 +99851,7 @@ char * FUN_0048fa20(int param_1,char *param_2,uint param_3)
 }
 
 
-// ==== FUN_0048fb50 @ 0048FB50 ====
+// ==== DriveLetterRootTypeAvailable @ 0048FB50 [Ghidra: FUN_0048fb50] ====
 
 
 undefined4 FUN_0048fb50(uint param_1)
@@ -99873,7 +99873,7 @@ undefined4 FUN_0048fb50(uint param_1)
 }
 
 
-// ==== FUN_0048fb90 @ 0048FB90 ====
+// ==== GameFileReadBuffered @ 0048FB90 [Ghidra: FUN_0048fb90] ====
 
 
 uint FUN_0048fb90(undefined4 *param_1,uint param_2,uint param_3,int *param_4)
@@ -99964,7 +99964,7 @@ uint FUN_0048fb90(undefined4 *param_1,uint param_2,uint param_3,int *param_4)
 }
 
 
-// ==== FUN_0048fd20 @ 0048FD20 ====
+// ==== CrtFlushStreamBuffer @ 0048FD20 [Ghidra: FUN_0048fd20] ====
 
 
 undefined4 FUN_0048fd20(int *param_1)
@@ -100001,7 +100001,7 @@ undefined4 FUN_0048fd20(int *param_1)
 }
 
 
-// ==== FUN_0048fe20 @ 0048FE20 ====
+// ==== BufferedStreamGetByte @ 0048FE20 [Ghidra: FUN_0048fe20] ====
 
 
 uint FUN_0048fe20(undefined4 *param_1)
@@ -100023,7 +100023,7 @@ uint FUN_0048fe20(undefined4 *param_1)
 }
 
 
-// ==== FUN_0048fe50 @ 0048FE50 ====
+// ==== BufferedStreamReadLine @ 0048FE50 [Ghidra: FUN_0048fe50] ====
 
 
 char * FUN_0048fe50(char *param_1,int param_2,undefined4 *param_3)
@@ -100069,7 +100069,7 @@ LAB_0048feb6:
 }
 
 
-// ==== FUN_0048fed0 @ 0048FED0 ====
+// ==== CrtInputWithStreamBufferSetup @ 0048FED0 [Ghidra: FUN_0048fed0] ====
 
 
 undefined4 FUN_0048fed0(undefined4 param_1,undefined4 param_2,undefined4 param_3)
@@ -100146,7 +100146,7 @@ LAB_0048ff5e:
 }
 
 
-// ==== FUN_0048ffa0 @ 0048FFA0 ====
+// ==== PathResolveFull @ 0048FFA0 [Ghidra: FUN_0048ffa0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -100193,7 +100193,7 @@ LPSTR FUN_0048ffa0(LPSTR param_1,LPCSTR param_2,LPSTR param_3)
 }
 
 
-// ==== FUN_00490070 @ 00490070 ====
+// ==== VsscanfParseInput @ 00490070 [Ghidra: FUN_00490070] ====
 
 
 void FUN_00490070(undefined4 param_1,undefined4 param_2)
@@ -100204,7 +100204,7 @@ void FUN_00490070(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00490090 @ 00490090 ====
+// ==== MaterialResolve @ 00490090 [Ghidra: FUN_00490090] ====
 
 
 void FUN_00490090(byte *param_1,byte *param_2,undefined1 *param_3,int param_4,undefined1 *param_5)
@@ -100324,7 +100324,7 @@ void __setdefaultprecision(void)
 }
 
 
-// ==== FUN_00490230 @ 00490230 ====
+// ==== ProcessorFeatureFallbackFalse @ 00490230 [Ghidra: FUN_00490230] ====
 
 
 /* WARNING: Removing unreachable block (ram,0x00490271) */
@@ -100336,7 +100336,7 @@ undefined4 FUN_00490230(void)
 }
 
 
-// ==== FUN_00490280 @ 00490280 ====
+// ==== CrtFloatingPointFeatureProbe @ 00490280 [Ghidra: FUN_00490280] ====
 
 
 void FUN_00490280(void)
@@ -100358,7 +100358,7 @@ void FUN_00490280(void)
 }
 
 
-// ==== FUN_004902b0 @ 004902B0 ====
+// ==== CrtNormalizeDecimalPoint @ 004902B0 [Ghidra: FUN_004902b0] ====
 
 
 void FUN_004902b0(char *param_1)
@@ -100393,7 +100393,7 @@ void FUN_004902b0(char *param_1)
 }
 
 
-// ==== FUN_00490400 @ 00490400 ====
+// ==== CrtScientificFloatFormatAppend @ 00490400 [Ghidra: FUN_00490400] ====
 
 
 undefined1 * FUN_00490400(undefined4 *param_1,undefined1 *param_2,int param_3,int param_4)
@@ -100454,7 +100454,7 @@ undefined1 * FUN_00490400(undefined4 *param_1,undefined1 *param_2,int param_3,in
 }
 
 
-// ==== FUN_00490540 @ 00490540 ====
+// ==== CrtFixedFloatFractionFormat @ 00490540 [Ghidra: FUN_00490540] ====
 
 
 undefined1 * FUN_00490540(undefined4 *param_1,undefined1 *param_2,uint param_3)
@@ -100513,7 +100513,7 @@ undefined1 * FUN_00490540(undefined4 *param_1,undefined1 *param_2,uint param_3)
 }
 
 
-// ==== FUN_00490640 @ 00490640 ====
+// ==== CrtFloatDecimalFormatPrepare @ 00490640 [Ghidra: FUN_00490640] ====
 
 
 void FUN_00490640(undefined4 *param_1,int param_2,int param_3,undefined4 param_4)
@@ -100545,7 +100545,7 @@ void FUN_00490640(undefined4 *param_1,int param_2,int param_3,undefined4 param_4
 }
 
 
-// ==== FUN_004906f0 @ 004906F0 ====
+// ==== CrtScientificFloatFormatGuarded @ 004906F0 [Ghidra: FUN_004906f0] ====
 
 
 void FUN_004906f0(undefined4 param_1,undefined4 param_2,undefined4 param_3,undefined4 param_4)
@@ -100558,7 +100558,7 @@ void FUN_004906f0(undefined4 param_1,undefined4 param_2,undefined4 param_3,undef
 }
 
 
-// ==== FUN_00490720 @ 00490720 ====
+// ==== CrtFixedDecimalFormatGuarded @ 00490720 [Ghidra: FUN_00490720] ====
 
 
 void FUN_00490720(undefined4 param_1,undefined4 param_2,undefined4 param_3)
@@ -100571,7 +100571,7 @@ void FUN_00490720(undefined4 param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_004907c0 @ 004907C0 ====
+// ==== StringPrefixReserve @ 004907C0 [Ghidra: FUN_004907c0] ====
 
 
 void FUN_004907c0(char *param_1,int param_2)
@@ -100596,7 +100596,7 @@ void FUN_004907c0(char *param_1,int param_2)
 }
 
 
-// ==== FUN_004907f0 @ 004907F0 ====
+// ==== ParseEntityHealthValue @ 004907F0 [Ghidra: FUN_004907f0] ====
 
 
 undefined * FUN_004907f0(int param_1)
@@ -100634,7 +100634,7 @@ undefined * FUN_004907f0(int param_1)
 }
 
 
-// ==== FUN_004908a0 @ 004908A0 ====
+// ==== CrtFileStreamClose @ 004908A0 [Ghidra: FUN_004908a0] ====
 
 
 uint FUN_004908a0(uint param_1,int *param_2)
@@ -100708,7 +100708,7 @@ LAB_00490913:
 }
 
 
-// ==== FUN_004909d0 @ 004909D0 ====
+// ==== EngineFormatStringToStream @ 004909D0 [Ghidra: FUN_004909d0] ====
 
 
 int FUN_004909d0(undefined4 param_1,char *param_2,undefined4 *param_3)
@@ -101131,7 +101131,7 @@ LAB_0049112f:
 }
 
 
-// ==== FUN_00491360 @ 00491360 ====
+// ==== CrtBufferedCharacterWrite @ 00491360 [Ghidra: FUN_00491360] ====
 
 
 void FUN_00491360(uint param_1,int *param_2,int *param_3)
@@ -101158,7 +101158,7 @@ void FUN_00491360(uint param_1,int *param_2,int *param_3)
 }
 
 
-// ==== FUN_004913b0 @ 004913B0 ====
+// ==== CrtWriteRepeatedChar @ 004913B0 [Ghidra: FUN_004913b0] ====
 
 
 void FUN_004913b0(undefined4 param_1,int param_2,undefined4 param_3,int *param_4)
@@ -101175,7 +101175,7 @@ void FUN_004913b0(undefined4 param_1,int param_2,undefined4 param_3,int *param_4
 }
 
 
-// ==== FUN_004913f0 @ 004913F0 ====
+// ==== CrtWriteStringBounded @ 004913F0 [Ghidra: FUN_004913f0] ====
 
 
 void FUN_004913f0(char *param_1,int param_2,undefined4 param_3,int *param_4)
@@ -101196,7 +101196,7 @@ void FUN_004913f0(char *param_1,int param_2,undefined4 param_3,int *param_4)
 }
 
 
-// ==== FUN_00491430 @ 00491430 ====
+// ==== FormatArgumentReadDword @ 00491430 [Ghidra: FUN_00491430] ====
 
 
 undefined4 FUN_00491430(int *param_1)
@@ -101210,7 +101210,7 @@ undefined4 FUN_00491430(int *param_1)
 }
 
 
-// ==== FUN_00491450 @ 00491450 ====
+// ==== FormatArgumentReadDouble @ 00491450 [Ghidra: FUN_00491450] ====
 
 
 undefined8 FUN_00491450(int *param_1)
@@ -101224,7 +101224,7 @@ undefined8 FUN_00491450(int *param_1)
 }
 
 
-// ==== FUN_00491470 @ 00491470 ====
+// ==== FormatArgumentReadWord @ 00491470 [Ghidra: FUN_00491470] ====
 
 
 undefined4 FUN_00491470(undefined4 *param_1)
@@ -101240,7 +101240,7 @@ undefined4 FUN_00491470(undefined4 *param_1)
 }
 
 
-// ==== FUN_004914a0 @ 004914A0 ====
+// ==== StrChr @ 004914A0 [Ghidra: FUN_004914a0] ====
 
 
 uint * FUN_004914a0(uint *param_1,char param_2)
@@ -101311,7 +101311,7 @@ uint * FUN_004914a0(uint *param_1,char param_2)
 }
 
 
-// ==== FUN_00491560 @ 00491560 ====
+// ==== CrtHeapInitialize @ 00491560 [Ghidra: FUN_00491560] ====
 
 
 undefined4 FUN_00491560(void)
@@ -101332,7 +101332,7 @@ undefined4 FUN_00491560(void)
 }
 
 
-// ==== FUN_004915a0 @ 004915A0 ====
+// ==== EnginePoolArenaCreate @ 004915A0 [Ghidra: FUN_004915a0] ====
 
 
 undefined ** FUN_004915a0(void)
@@ -101410,7 +101410,7 @@ undefined ** FUN_004915a0(void)
 }
 
 
-// ==== FUN_00491710 @ 00491710 ====
+// ==== CrtHeapBlockFree @ 00491710 [Ghidra: FUN_00491710] ====
 
 
 void FUN_00491710(undefined **param_1)
@@ -101431,7 +101431,7 @@ void FUN_00491710(undefined **param_1)
 }
 
 
-// ==== FUN_00491770 @ 00491770 ====
+// ==== CRTHeapReleaseUnusedPages @ 00491770 [Ghidra: FUN_00491770] ====
 
 
 void FUN_00491770(int param_1)
@@ -101489,7 +101489,7 @@ void FUN_00491770(int param_1)
 }
 
 
-// ==== FUN_00491840 @ 00491840 ====
+// ==== CRTHeapLocateAllocationPage @ 00491840 [Ghidra: FUN_00491840] ====
 
 
 int FUN_00491840(undefined *param_1,undefined4 *param_2,uint *param_3)
@@ -101518,7 +101518,7 @@ int FUN_00491840(undefined *param_1,undefined4 *param_2,uint *param_3)
 }
 
 
-// ==== FUN_004918a0 @ 004918A0 ====
+// ==== SmallHeapPageFreeSlotUpdate @ 004918A0 [Ghidra: FUN_004918a0] ====
 
 
 void FUN_004918a0(int param_1,int param_2,byte *param_3)
@@ -101539,7 +101539,7 @@ void FUN_004918a0(int param_1,int param_2,byte *param_3)
 }
 
 
-// ==== FUN_00491900 @ 00491900 ====
+// ==== EnginePoolAllocate @ 00491900 [Ghidra: FUN_00491900] ====
 
 
 int * FUN_00491900(uint param_1)
@@ -101656,7 +101656,7 @@ int * FUN_00491900(uint param_1)
 }
 
 
-// ==== FUN_00491b40 @ 00491B40 ====
+// ==== EnginePoolChunkTryAllocate @ 00491B40 [Ghidra: FUN_00491b40] ====
 
 
 int FUN_00491b40(int *param_1,uint param_2,uint param_3)
@@ -101767,7 +101767,7 @@ LAB_00491c96:
 }
 
 
-// ==== FUN_00491cc0 @ 00491CC0 ====
+// ==== SmallHeapBlockResizeInPlace @ 00491CC0 [Ghidra: FUN_00491cc0] ====
 
 
 undefined4 FUN_00491cc0(int param_1,int *param_2,byte *param_3,uint param_4)
@@ -101821,7 +101821,7 @@ undefined4 FUN_00491cc0(int param_1,int *param_2,byte *param_3,uint param_4)
 }
 
 
-// ==== FUN_00491d90 @ 00491D90 ====
+// ==== CrtNewHandlerInvokeForAllocationRetry @ 00491D90 [Ghidra: FUN_00491d90] ====
 
 
 undefined4 FUN_00491d90(undefined4 param_1)
@@ -101931,7 +101931,7 @@ void __trandisp2(void)
 }
 
 
-// ==== FUN_00491f80 @ 00491F80 ====
+// ==== CrtOneArgumentMathErrorHandlingStart @ 00491F80 [Ghidra: FUN_00491f80] ====
 
 
 float10 FUN_00491f80(void)
@@ -101962,7 +101962,7 @@ float10 __startOneArgErrorHandling(void)
 }
 
 
-// ==== FUN_00491ff5 @ 00491FF5 ====
+// ==== CrtNoOpStub @ 00491FF5 [Ghidra: FUN_00491ff5] ====
 
 
 void FUN_00491ff5(void)
@@ -101972,7 +101972,7 @@ void FUN_00491ff5(void)
 }
 
 
-// ==== FUN_0049200c @ 0049200C ====
+// ==== CrtFpuPrecisionModeCodeGet @ 0049200C [Ghidra: FUN_0049200c] ====
 
 
 undefined4 FUN_0049200c(void)
@@ -101987,7 +101987,7 @@ undefined4 FUN_0049200c(void)
 }
 
 
-// ==== FUN_00492068 @ 00492068 ====
+// ==== DoubleExponentBitsGetOrSpecialValue @ 00492068 [Ghidra: FUN_00492068] ====
 
 
 uint FUN_00492068(undefined4 param_1,uint param_2)
@@ -102078,7 +102078,7 @@ void __ctrandisp2(undefined4 param_1,undefined4 param_2,undefined4 param_3,undef
 }
 
 
-// ==== FUN_0049221e @ 0049221E ====
+// ==== CrtFloatingPointExceptionResultDispatch @ 0049221E [Ghidra: FUN_0049221e] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -102150,7 +102150,7 @@ LAB_004922f3:
 }
 
 
-// ==== FUN_00492225 @ 00492225 ====
+// ==== CrtFloatingPointExceptionResultDispatchVariant @ 00492225 [Ghidra: FUN_00492225] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -102259,7 +102259,7 @@ float10 __fload(uint param_1,int param_2)
 }
 
 
-// ==== FUN_00492bc6 @ 00492BC6 ====
+// ==== CrtDoubleRemainderReduction @ 00492BC6 [Ghidra: FUN_00492bc6] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -102316,7 +102316,7 @@ undefined4 FUN_00492bc6(undefined4 param_1,uint param_2,ushort param_3)
 }
 
 
-// ==== FUN_00492dcc @ 00492DCC ====
+// ==== CrtFmodExtendedPrecision @ 00492DCC [Ghidra: FUN_00492dcc] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -102340,7 +102340,7 @@ float10 FUN_00492dcc(void)
 }
 
 
-// ==== FUN_00493150 @ 00493150 ====
+// ==== X87RoundToIntegral @ 00493150 [Ghidra: FUN_00493150] ====
 
 
 float10 FUN_00493150(double param_1)
@@ -102350,7 +102350,7 @@ float10 FUN_00493150(double param_1)
 }
 
 
-// ==== FUN_00493170 @ 00493170 ====
+// ==== CrtMathExceptionHandleSingleResult @ 00493170 [Ghidra: FUN_00493170] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -102370,7 +102370,7 @@ float10 FUN_00493170(undefined4 param_1,undefined4 param_2,undefined4 param_3,un
 }
 
 
-// ==== FUN_004931c0 @ 004931C0 ====
+// ==== CrtMathExceptionHandleResultWithStatus @ 004931C0 [Ghidra: FUN_004931c0] ====
 
 
 float10 FUN_004931c0(undefined4 param_1,undefined4 param_2,undefined4 param_3,undefined4 param_4,
@@ -102398,7 +102398,7 @@ float10 FUN_004931c0(undefined4 param_1,undefined4 param_2,undefined4 param_3,un
 }
 
 
-// ==== FUN_00493280 @ 00493280 ====
+// ==== CrtFloatingPointExceptionRaise @ 00493280 [Ghidra: FUN_00493280] ====
 
 
 void FUN_00493280(uint *param_1,uint *param_2,byte param_3,uint param_4,uint *param_5,uint *param_6)
@@ -102550,7 +102550,7 @@ switchD_0049351b_default:
 }
 
 
-// ==== FUN_004935c0 @ 004935C0 ====
+// ==== CrtDoubleToIntegerRound @ 004935C0 [Ghidra: FUN_004935c0] ====
 
 
 bool FUN_004935c0(uint param_1,double *param_2,uint param_3)
@@ -102694,7 +102694,7 @@ LAB_004938cb:
 }
 
 
-// ==== FUN_004938f0 @ 004938F0 ====
+// ==== CrtMathExceptionDispatch @ 004938F0 [Ghidra: FUN_004938f0] ====
 
 
 float10 FUN_004938f0(undefined4 param_1,undefined4 param_2,undefined4 param_3,undefined4 param_4,
@@ -102734,7 +102734,7 @@ float10 FUN_004938f0(undefined4 param_1,undefined4 param_2,undefined4 param_3,un
 }
 
 
-// ==== FUN_004939a0 @ 004939A0 ====
+// ==== CrtMathErrorCodeSet @ 004939A0 [Ghidra: FUN_004939a0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -102753,7 +102753,7 @@ void FUN_004939a0(int param_1)
 }
 
 
-// ==== FUN_004939d0 @ 004939D0 ====
+// ==== CrtMathExceptionHandlerGet @ 004939D0 [Ghidra: FUN_004939d0] ====
 
 
 undefined4 FUN_004939d0(int param_1)
@@ -102775,7 +102775,7 @@ undefined4 FUN_004939d0(int param_1)
 }
 
 
-// ==== FUN_00493a00 @ 00493A00 ====
+// ==== CrtMathExceptionCodeFromStatus @ 00493A00 [Ghidra: FUN_00493a00] ====
 
 
 int FUN_00493a00(uint param_1)
@@ -102797,7 +102797,7 @@ int FUN_00493a00(uint param_1)
 }
 
 
-// ==== FUN_00493a40 @ 00493A40 ====
+// ==== DoubleBuildWithExponent @ 00493A40 [Ghidra: FUN_00493a40] ====
 
 
 float10 FUN_00493a40(undefined4 param_1,undefined4 param_2,short param_3)
@@ -102808,7 +102808,7 @@ float10 FUN_00493a40(undefined4 param_1,undefined4 param_2,short param_3)
 }
 
 
-// ==== FUN_00493a80 @ 00493A80 ====
+// ==== DoubleClassify @ 00493A80 [Ghidra: FUN_00493a80] ====
 
 
 undefined4 FUN_00493a80(int param_1,uint param_2)
@@ -102830,7 +102830,7 @@ undefined4 FUN_00493a80(int param_1,uint param_2)
 }
 
 
-// ==== FUN_00493ae0 @ 00493AE0 ====
+// ==== DoubleFrexpDecompose @ 00493AE0 [Ghidra: FUN_00493ae0] ====
 
 
 float10 FUN_00493ae0(uint param_1,uint param_2,int *param_3)
@@ -102884,7 +102884,7 @@ float10 FUN_00493ae0(uint param_1,uint param_2,int *param_3)
 }
 
 
-// ==== FUN_00493be0 @ 00493BE0 ====
+// ==== FpuStatusWordGetVariantA @ 00493BE0 [Ghidra: FUN_00493be0] ====
 
 
 int FUN_00493be0(void)
@@ -102896,7 +102896,7 @@ int FUN_00493be0(void)
 }
 
 
-// ==== FUN_00493bf0 @ 00493BF0 ====
+// ==== FpuStatusWordGetVariantB @ 00493BF0 [Ghidra: FUN_00493bf0] ====
 
 
 int FUN_00493bf0(void)
@@ -102908,7 +102908,7 @@ int FUN_00493bf0(void)
 }
 
 
-// ==== FUN_00493c10 @ 00493C10 ====
+// ==== FpuControlWordUpdateMasked @ 00493C10 [Ghidra: FUN_00493c10] ====
 
 
 int FUN_00493c10(void)
@@ -102920,7 +102920,7 @@ int FUN_00493c10(void)
 }
 
 
-// ==== FUN_00493c40 @ 00493C40 ====
+// ==== CrtNoOpStubVariant2 @ 00493C40 [Ghidra: FUN_00493c40] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -102932,7 +102932,7 @@ void FUN_00493c40(void)
 }
 
 
-// ==== FUN_00493ca0 @ 00493CA0 ====
+// ==== LocaleCharacterMapString @ 00493CA0 [Ghidra: FUN_00493ca0] ====
 
 
 int FUN_00493ca0(LCID param_1,uint param_2,LPCSTR param_3,LPCWSTR param_4,LPWSTR param_5,int param_6
@@ -103017,7 +103017,7 @@ LAB_00493e9f:
 }
 
 
-// ==== FUN_00493ec0 @ 00493EC0 ====
+// ==== BoundedStringLength @ 00493EC0 [Ghidra: FUN_00493ec0] ====
 
 
 int FUN_00493ec0(char *param_1,int param_2)
@@ -103037,7 +103037,7 @@ int FUN_00493ec0(char *param_1,int param_2)
 }
 
 
-// ==== FUN_00493ef0 @ 00493EF0 ====
+// ==== CrtFormattedScanV @ 00493EF0 [Ghidra: FUN_00493ef0] ====
 
 
 int FUN_00493ef0(undefined4 param_1,byte *param_2,undefined4 *param_3)
@@ -103726,7 +103726,7 @@ LAB_00494af3:
 }
 
 
-// ==== FUN_00494c30 @ 00494C30 ====
+// ==== CrtScanFormatCharNormalize @ 00494C30 [Ghidra: FUN_00494c30] ====
 
 
 uint FUN_00494c30(uint param_1)
@@ -103747,7 +103747,7 @@ uint FUN_00494c30(uint param_1)
 }
 
 
-// ==== FUN_00494c70 @ 00494C70 ====
+// ==== ScanStreamGetChar @ 00494C70 [Ghidra: FUN_00494c70] ====
 
 
 uint FUN_00494c70(undefined4 *param_1)
@@ -103769,7 +103769,7 @@ uint FUN_00494c70(undefined4 *param_1)
 }
 
 
-// ==== FUN_00494ca0 @ 00494CA0 ====
+// ==== StreamPushbackChar @ 00494CA0 [Ghidra: FUN_00494ca0] ====
 
 
 void FUN_00494ca0(int param_1,undefined4 param_2)
@@ -103782,7 +103782,7 @@ void FUN_00494ca0(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00494cc0 @ 00494CC0 ====
+// ==== StreamSkipClassifiedChars @ 00494CC0 [Ghidra: FUN_00494cc0] ====
 
 
 undefined4 FUN_00494cc0(int *param_1,undefined4 param_2)
@@ -103803,7 +103803,7 @@ undefined4 FUN_00494cc0(int *param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00494d10 @ 00494D10 ====
+// ==== CrtFileDescriptorClose @ 00494D10 [Ghidra: FUN_00494d10] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -103856,7 +103856,7 @@ LAB_00494d99:
 }
 
 
-// ==== FUN_00494df0 @ 00494DF0 ====
+// ==== CrtOwnedStreamBufferRelease @ 00494DF0 [Ghidra: FUN_00494df0] ====
 
 
 void FUN_00494df0(undefined4 *param_1)
@@ -103873,7 +103873,7 @@ void FUN_00494df0(undefined4 *param_1)
 }
 
 
-// ==== FUN_00494e30 @ 00494E30 ====
+// ==== StdFileOpen @ 00494E30 [Ghidra: FUN_00494e30] ====
 
 
 undefined4 * FUN_00494e30(undefined4 param_1,char *param_2,undefined4 param_3,undefined4 *param_4)
@@ -103990,7 +103990,7 @@ LAB_00494f1e:
 }
 
 
-// ==== FUN_00495000 @ 00495000 ====
+// ==== StdFileHandleAcquire @ 00495000 [Ghidra: FUN_00495000] ====
 
 
 undefined4 * FUN_00495000(void)
@@ -104034,7 +104034,7 @@ undefined4 * FUN_00495000(void)
 }
 
 
-// ==== FUN_00495090 @ 00495090 ====
+// ==== CxxExceptionHandlerDispatch @ 00495090 [Ghidra: FUN_00495090] ====
 
 
 undefined4
@@ -104066,7 +104066,7 @@ FUN_00495090(int *param_1,undefined4 param_2,undefined4 param_3,undefined4 param
 }
 
 
-// ==== FUN_00495160 @ 00495160 ====
+// ==== CxxExceptionHandlerSearch @ 00495160 [Ghidra: FUN_00495160] ====
 
 
 void FUN_00495160(int *param_1,int param_2,undefined4 param_3,undefined4 param_4,int param_5,
@@ -104204,7 +104204,7 @@ LAB_004953cb:
 }
 
 
-// ==== FUN_00495410 @ 00495410 ====
+// ==== CrtSehExceptionDispatcher @ 00495410 [Ghidra: FUN_00495410] ====
 
 
 void FUN_00495410(undefined4 param_1,undefined4 param_2,undefined4 param_3,undefined4 param_4,
@@ -104241,7 +104241,7 @@ void FUN_00495410(undefined4 param_1,undefined4 param_2,undefined4 param_3,undef
 }
 
 
-// ==== FUN_004954e0 @ 004954E0 ====
+// ==== CrtSehLocalUnwindToScope @ 004954E0 [Ghidra: FUN_004954e0] ====
 
 
 void FUN_004954e0(int param_1,undefined4 param_2,int param_3,int param_4)
@@ -104276,7 +104276,7 @@ void FUN_004954e0(int param_1,undefined4 param_2,int param_3,int param_4)
 }
 
 
-// ==== FUN_004955c0 @ 004955C0 ====
+// ==== CrtSehUnwindAndInvokeHandler @ 004955C0 [Ghidra: FUN_004955c0] ====
 
 
 void FUN_004955c0(undefined4 param_1,int param_2,undefined4 param_3,undefined4 param_4,
@@ -104304,7 +104304,7 @@ void FUN_004955c0(undefined4 param_1,int param_2,undefined4 param_3,undefined4 p
 }
 
 
-// ==== FUN_00495650 @ 00495650 ====
+// ==== CrtSehHandlerCallWithFrame @ 00495650 [Ghidra: FUN_00495650] ====
 
 
 undefined4
@@ -104334,7 +104334,7 @@ FUN_00495650(undefined4 param_1,undefined4 param_2,undefined4 param_3,undefined4
 }
 
 
-// ==== FUN_0049573a @ 0049573A ====
+// ==== CrtSehAbnormalTerminationCleanup @ 0049573A [Ghidra: FUN_0049573a] ====
 
 
 void FUN_0049573a(void)
@@ -104357,7 +104357,7 @@ void FUN_0049573a(void)
 }
 
 
-// ==== FUN_004957d0 @ 004957D0 ====
+// ==== CxxCatchObjectBindOrCopy @ 004957D0 [Ghidra: FUN_004957d0] ====
 
 
 void FUN_004957d0(int param_1,int param_2,byte *param_3,byte *param_4)
@@ -104437,7 +104437,7 @@ LAB_004959c0:
 }
 
 
-// ==== FUN_004959e0 @ 004959E0 ====
+// ==== CrtSehDestructorInvoke @ 004959E0 [Ghidra: FUN_004959e0] ====
 
 
 void FUN_004959e0(int param_1)
@@ -104463,7 +104463,7 @@ void FUN_004959e0(int param_1)
 }
 
 
-// ==== FUN_00495a60 @ 00495A60 ====
+// ==== CrtUnwindAddressResolve @ 00495A60 [Ghidra: FUN_00495a60] ====
 
 
 int FUN_00495a60(int param_1,int *param_2)
@@ -104506,7 +104506,7 @@ void __CallSettingFrame_12(undefined4 param_1,undefined4 param_2,int param_3)
 }
 
 
-// ==== FUN_00495ae0 @ 00495AE0 ====
+// ==== CrtTerminateHandlerInvokeAndAbort @ 00495AE0 [Ghidra: FUN_00495ae0] ====
 
 
 void FUN_00495ae0(void)
@@ -104544,7 +104544,7 @@ void __cdecl _abort(void)
 }
 
 
-// ==== FUN_00495b70 @ 00495B70 ====
+// ==== CrtUnexpectedHandlerInvokeAndTerminate @ 00495B70 [Ghidra: FUN_00495b70] ====
 
 
 void FUN_00495b70(void)
@@ -104571,7 +104571,7 @@ void FUN_00495b70(void)
 }
 
 
-// ==== FUN_00495bde @ 00495BDE ====
+// ==== CrtAbortAfterCallback @ 00495BDE [Ghidra: FUN_00495bde] ====
 
 
 void FUN_00495bde(void)
@@ -104582,7 +104582,7 @@ void FUN_00495bde(void)
 }
 
 
-// ==== FUN_00495d90 @ 00495D90 ====
+// ==== IsDbcsLeadByte @ 00495D90 [Ghidra: FUN_00495d90] ====
 
 
 void FUN_00495d90(undefined4 param_1)
@@ -104593,7 +104593,7 @@ void FUN_00495d90(undefined4 param_1)
 }
 
 
-// ==== FUN_00495db0 @ 00495DB0 ====
+// ==== CrtCharacterClassFlagTest @ 00495DB0 [Ghidra: FUN_00495db0] ====
 
 
 undefined4 FUN_00495db0(uint param_1,uint param_2,byte param_3)
@@ -104614,7 +104614,7 @@ undefined4 FUN_00495db0(uint param_1,uint param_2,byte param_3)
 }
 
 
-// ==== FUN_00495df0 @ 00495DF0 ====
+// ==== CrtEnvironmentPointerArrayBuild @ 00495DF0 [Ghidra: FUN_00495df0] ====
 
 
 void FUN_00495df0(void)
@@ -104712,7 +104712,7 @@ void FUN_00495df0(void)
 }
 
 
-// ==== FUN_00495ee0 @ 00495EE0 ====
+// ==== CrtCommandLineArgumentsInit @ 00495EE0 [Ghidra: FUN_00495ee0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -104743,7 +104743,7 @@ void FUN_00495ee0(void)
 }
 
 
-// ==== FUN_00495f80 @ 00495F80 ====
+// ==== CrtCommandLineArgumentScan @ 00495F80 [Ghidra: FUN_00495f80] ====
 
 
 void FUN_00495f80(byte *param_1,undefined4 *param_2,byte *param_3,int *param_4,int *param_5)
@@ -104903,7 +104903,7 @@ LAB_00496155:
 }
 
 
-// ==== FUN_00496190 @ 00496190 ====
+// ==== CrtEnvironmentBlockGet @ 00496190 [Ghidra: FUN_00496190] ====
 
 
 LPSTR FUN_00496190(void)
@@ -105007,7 +105007,7 @@ LPSTR FUN_00496190(void)
 }
 
 
-// ==== FUN_004962f0 @ 004962F0 ====
+// ==== CrtLocaleCodePageTableUpdate @ 004962F0 [Ghidra: FUN_004962f0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -105127,7 +105127,7 @@ undefined4 FUN_004962f0(undefined4 param_1)
 }
 
 
-// ==== FUN_004964e0 @ 004964E0 ====
+// ==== CrtCodePageGet @ 004964E0 [Ghidra: FUN_004964e0] ====
 
 
 int FUN_004964e0(int param_1)
@@ -105159,7 +105159,7 @@ int FUN_004964e0(int param_1)
 }
 
 
-// ==== FUN_00496530 @ 00496530 ====
+// ==== CrtCodePageLocaleIdLookup @ 00496530 [Ghidra: FUN_00496530] ====
 
 
 undefined4 FUN_00496530(undefined4 param_1)
@@ -105180,7 +105180,7 @@ undefined4 FUN_00496530(undefined4 param_1)
 }
 
 
-// ==== FUN_00496590 @ 00496590 ====
+// ==== CrtCtypeTablesReset @ 00496590 [Ghidra: FUN_00496590] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -105206,7 +105206,7 @@ void FUN_00496590(void)
 }
 
 
-// ==== FUN_004965c0 @ 004965C0 ====
+// ==== CrtAnsiCodePageTablesInit @ 004965C0 [Ghidra: FUN_004965c0] ====
 
 
 void FUN_004965c0(void)
@@ -105217,7 +105217,7 @@ void FUN_004965c0(void)
 }
 
 
-// ==== FUN_004965d0 @ 004965D0 ====
+// ==== CrtFileDescriptorTableInit @ 004965D0 [Ghidra: FUN_004965d0] ====
 
 
 void FUN_004965d0(void)
@@ -105333,7 +105333,7 @@ LAB_004967ab:
 }
 
 
-// ==== FUN_00496895 @ 00496895 ====
+// ==== CrtLocalUnwindFromFrame @ 00496895 [Ghidra: FUN_00496895] ====
 
 
 void FUN_00496895(int param_1)
@@ -105344,7 +105344,7 @@ void FUN_00496895(int param_1)
 }
 
 
-// ==== FUN_004968b0 @ 004968B0 ====
+// ==== CrtRuntimeErrorMessageEnterExit @ 004968B0 [Ghidra: FUN_004968b0] ====
 
 
 void FUN_004968b0(void)
@@ -105361,7 +105361,7 @@ void FUN_004968b0(void)
 }
 
 
-// ==== FUN_004968f0 @ 004968F0 ====
+// ==== CrtRuntimeErrorMessage @ 004968F0 [Ghidra: FUN_004968f0] ====
 
 
 void FUN_004968f0(int param_1)
@@ -105556,7 +105556,7 @@ void FUN_004968f0(int param_1)
 }
 
 
-// ==== FUN_00496ad0 @ 00496AD0 ====
+// ==== CrtGetStringTypeACompat @ 00496AD0 [Ghidra: FUN_00496ad0] ====
 
 
 BOOL FUN_00496ad0(DWORD param_1,LPCSTR param_2,int param_3,LPWORD param_4,UINT param_5,LCID param_6)
@@ -105612,7 +105612,7 @@ BOOL FUN_00496ad0(DWORD param_1,LPCSTR param_2,int param_3,LPWORD param_4,UINT p
 }
 
 
-// ==== FUN_00496c00 @ 00496C00 ====
+// ==== Win32FileDescriptorSeek @ 00496C00 [Ghidra: FUN_00496c00] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -105655,7 +105655,7 @@ DWORD FUN_00496c00(uint param_1,LONG param_2,DWORD param_3)
 }
 
 
-// ==== FUN_00496cc0 @ 00496CC0 ====
+// ==== Win32FileDescriptorWrite @ 00496CC0 [Ghidra: FUN_00496cc0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -105758,7 +105758,7 @@ int FUN_00496cc0(uint param_1,char *param_2,uint param_3)
 }
 
 
-// ==== FUN_00496ee0 @ 00496EE0 ====
+// ==== Win32ErrorMapToErrno @ 00496EE0 [Ghidra: FUN_00496ee0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -105791,7 +105791,7 @@ void FUN_00496ee0(undefined *param_1)
 }
 
 
-// ==== FUN_00496f50 @ 00496F50 ====
+// ==== CrtCalendarFieldsToTimeScalar @ 00496F50 [Ghidra: FUN_00496f50] ====
 
 
 int FUN_00496f50(int param_1,int param_2,int param_3,int param_4,int param_5,int param_6,int param_7
@@ -105839,7 +105839,7 @@ int FUN_00496f50(int param_1,int param_2,int param_3,int param_4,int param_5,int
 }
 
 
-// ==== FUN_00497040 @ 00497040 ====
+// ==== CrtStreamReadByte @ 00497040 [Ghidra: FUN_00497040] ====
 
 
 uint FUN_00497040(undefined4 *param_1)
@@ -105893,7 +105893,7 @@ uint FUN_00497040(undefined4 *param_1)
 }
 
 
-// ==== FUN_00497130 @ 00497130 ====
+// ==== Win32FileDescriptorRead @ 00497130 [Ghidra: FUN_00497130] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -106034,7 +106034,7 @@ LAB_00497318:
 }
 
 
-// ==== FUN_004974d0 @ 004974D0 ====
+// ==== CrtStandardStreamBufferInstall @ 004974D0 [Ghidra: FUN_004974d0] ====
 
 
 undefined4 FUN_004974d0(undefined4 *param_1)
@@ -106077,7 +106077,7 @@ undefined4 FUN_004974d0(undefined4 *param_1)
 }
 
 
-// ==== FUN_00497570 @ 00497570 ====
+// ==== CrtStreamBufferFlushAndRelease @ 00497570 [Ghidra: FUN_00497570] ====
 
 
 void FUN_00497570(int param_1,undefined4 *param_2)
@@ -106100,7 +106100,7 @@ void FUN_00497570(int param_1,undefined4 *param_2)
 }
 
 
-// ==== FUN_004975d0 @ 004975D0 ====
+// ==== CrtCharacterToLowerLocale @ 004975D0 [Ghidra: FUN_004975d0] ====
 
 
 uint FUN_004975d0(uint param_1)
@@ -106154,7 +106154,7 @@ uint FUN_004975d0(uint param_1)
 }
 
 
-// ==== FUN_004976d0 @ 004976D0 ====
+// ==== DbcsAwareBoundedStringCopy @ 004976D0 [Ghidra: FUN_004976d0] ====
 
 
 byte * FUN_004976d0(byte *param_1,byte *param_2,uint param_3)
@@ -106224,7 +106224,7 @@ LAB_00497743:
 }
 
 
-// ==== FUN_00497770 @ 00497770 ====
+// ==== CrtFpuControlWordUpdate @ 00497770 [Ghidra: FUN_00497770] ====
 
 
 uint FUN_00497770(uint param_1,uint param_2)
@@ -106239,7 +106239,7 @@ uint FUN_00497770(uint param_1,uint param_2)
 }
 
 
-// ==== FUN_004977b0 @ 004977B0 ====
+// ==== CrtFpuControlWordUpdateMask @ 004977B0 [Ghidra: FUN_004977b0] ====
 
 
 void FUN_004977b0(undefined4 param_1,uint param_2)
@@ -106250,7 +106250,7 @@ void FUN_004977b0(undefined4 param_1,uint param_2)
 }
 
 
-// ==== FUN_004977d0 @ 004977D0 ====
+// ==== CrtControlFlagsTranslate @ 004977D0 [Ghidra: FUN_004977d0] ====
 
 
 uint FUN_004977d0(uint param_1)
@@ -106303,7 +106303,7 @@ uint FUN_004977d0(uint param_1)
 }
 
 
-// ==== FUN_00497870 @ 00497870 ====
+// ==== CrtNoOpStubVariant @ 00497870 [Ghidra: FUN_00497870] ====
 
 
 void FUN_00497870(void)
@@ -106313,7 +106313,7 @@ void FUN_00497870(void)
 }
 
 
-// ==== FUN_00497900 @ 00497900 ====
+// ==== UInt96HasNoBitsAtOrAbove @ 00497900 [Ghidra: FUN_00497900] ====
 
 
 undefined4 FUN_00497900(int param_1,int param_2)
@@ -106345,7 +106345,7 @@ undefined4 FUN_00497900(int param_1,int param_2)
 }
 
 
-// ==== FUN_00497970 @ 00497970 ====
+// ==== UInt96IncrementAtBit @ 00497970 [Ghidra: FUN_00497970] ====
 
 
 void FUN_00497970(int param_1,int param_2)
@@ -106377,7 +106377,7 @@ void FUN_00497970(int param_1,int param_2)
 }
 
 
-// ==== FUN_004979e0 @ 004979E0 ====
+// ==== UInt96ClearFromBit @ 004979E0 [Ghidra: FUN_004979e0] ====
 
 
 undefined4 FUN_004979e0(int param_1,int param_2)
@@ -106410,7 +106410,7 @@ undefined4 FUN_004979e0(int param_1,int param_2)
 }
 
 
-// ==== FUN_00497a80 @ 00497A80 ====
+// ==== UInt96Copy @ 00497A80 [Ghidra: FUN_00497a80] ====
 
 
 void FUN_00497a80(int param_1,undefined4 *param_2)
@@ -106429,7 +106429,7 @@ void FUN_00497a80(int param_1,undefined4 *param_2)
 }
 
 
-// ==== FUN_00497aa0 @ 00497AA0 ====
+// ==== UInt96Zero @ 00497AA0 [Ghidra: FUN_00497aa0] ====
 
 
 void FUN_00497aa0(undefined4 *param_1)
@@ -106442,7 +106442,7 @@ void FUN_00497aa0(undefined4 *param_1)
 }
 
 
-// ==== FUN_00497ab0 @ 00497AB0 ====
+// ==== UInt96IsZero @ 00497AB0 [Ghidra: FUN_00497ab0] ====
 
 
 undefined4 FUN_00497ab0(int *param_1)
@@ -106462,7 +106462,7 @@ undefined4 FUN_00497ab0(int *param_1)
 }
 
 
-// ==== FUN_00497ad0 @ 00497AD0 ====
+// ==== UInt96ShiftRight @ 00497AD0 [Ghidra: FUN_00497ad0] ====
 
 
 void FUN_00497ad0(uint *param_1,int param_2)
@@ -106505,7 +106505,7 @@ void FUN_00497ad0(uint *param_1,int param_2)
 }
 
 
-// ==== FUN_00497b90 @ 00497B90 ====
+// ==== CrtExtended80ToBinaryFloat @ 00497B90 [Ghidra: FUN_00497b90] ====
 
 
 undefined4 FUN_00497b90(ushort *param_1,uint *param_2,int *param_3)
@@ -106586,7 +106586,7 @@ LAB_00497d11:
 }
 
 
-// ==== FUN_00497d60 @ 00497D60 ====
+// ==== CrtExtendedFloatConvertFormatA @ 00497D60 [Ghidra: FUN_00497d60] ====
 
 
 void FUN_00497d60(undefined4 param_1,undefined4 param_2)
@@ -106597,7 +106597,7 @@ void FUN_00497d60(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00497d80 @ 00497D80 ====
+// ==== CrtExtendedFloatConvertFormatB @ 00497D80 [Ghidra: FUN_00497d80] ====
 
 
 void FUN_00497d80(undefined4 param_1,undefined4 param_2)
@@ -106608,7 +106608,7 @@ void FUN_00497d80(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00497da0 @ 00497DA0 ====
+// ==== CrtDoubleToExtendedFloatConvertA @ 00497DA0 [Ghidra: FUN_00497da0] ====
 
 
 void FUN_00497da0(undefined4 param_1,undefined4 param_2)
@@ -106622,7 +106622,7 @@ void FUN_00497da0(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00497de0 @ 00497DE0 ====
+// ==== CrtDoubleToExtendedFloatConvertB @ 00497DE0 [Ghidra: FUN_00497de0] ====
 
 
 void FUN_00497de0(undefined4 param_1,undefined4 param_2)
@@ -106636,7 +106636,7 @@ void FUN_00497de0(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_00497e20 @ 00497E20 ====
+// ==== CrtDecimalMantissaRoundAndNormalize @ 00497E20 [Ghidra: FUN_00497e20] ====
 
 
 void FUN_00497e20(char *param_1,int param_2,int param_3)
@@ -106709,7 +106709,7 @@ void FUN_00497e20(char *param_1,int param_2,int param_3)
 }
 
 
-// ==== FUN_00497ec0 @ 00497EC0 ====
+// ==== CrtLocaleDataGetOrInitialize @ 00497EC0 [Ghidra: FUN_00497ec0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -106730,7 +106730,7 @@ undefined * FUN_00497ec0(void)
 }
 
 
-// ==== FUN_00497f40 @ 00497F40 ====
+// ==== DoubleToExtended80 @ 00497F40 [Ghidra: FUN_00497f40] ====
 
 
 void FUN_00497f40(uint *param_1,uint *param_2)
@@ -106780,7 +106780,7 @@ void FUN_00497f40(uint *param_1,uint *param_2)
 }
 
 
-// ==== FUN_00498000 @ 00498000 ====
+// ==== CrtMemoryMove @ 00498000 [Ghidra: FUN_00498000] ====
 
 
 undefined4 * FUN_00498000(undefined4 *param_1,undefined4 *param_2,uint param_3)
@@ -107085,7 +107085,7 @@ switchD_00498035_caseD_0:
 }
 
 
-// ==== FUN_00498340 @ 00498340 ====
+// ==== CrtFatalMessageExit @ 00498340 [Ghidra: FUN_00498340] ====
 
 
 void FUN_00498340(void)
@@ -107096,7 +107096,7 @@ void FUN_00498340(void)
 }
 
 
-// ==== FUN_00498350 @ 00498350 ====
+// ==== NumberStringScanParse @ 00498350 [Ghidra: FUN_00498350] ====
 
 
 undefined4
@@ -107508,7 +107508,7 @@ LAB_004988f4:
 }
 
 
-// ==== FUN_00498ae0 @ 00498AE0 ====
+// ==== CrtStreamBufferAllocate @ 00498AE0 [Ghidra: FUN_00498ae0] ====
 
 
 void FUN_00498ae0(int *param_1)
@@ -107535,7 +107535,7 @@ void FUN_00498ae0(int *param_1)
 }
 
 
-// ==== FUN_00498b40 @ 00498B40 ====
+// ==== CrtFileDescriptorFlag40Get @ 00498B40 [Ghidra: FUN_00498b40] ====
 
 
 byte FUN_00498b40(uint param_1)
@@ -107548,7 +107548,7 @@ byte FUN_00498b40(uint param_1)
 }
 
 
-// ==== FUN_00498b70 @ 00498B70 ====
+// ==== CrtWideCharToMultibyte @ 00498B70 [Ghidra: FUN_00498b70] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -107696,7 +107696,7 @@ undefined8 __aullrem(uint param_1,uint param_2,uint param_3,uint param_4)
 }
 
 
-// ==== FUN_00498ce0 @ 00498CE0 ====
+// ==== CrtScanfNumericConversionAssign @ 00498CE0 [Ghidra: FUN_00498ce0] ====
 
 
 void FUN_00498ce0(int param_1,int *param_2,ushort *param_3)
@@ -107757,7 +107757,7 @@ switchD_00498cff_caseD_6:
 }
 
 
-// ==== FUN_00498e00 @ 00498E00 ====
+// ==== CrtMultibyteToWideChar @ 00498E00 [Ghidra: FUN_00498e00] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -107811,7 +107811,7 @@ uint FUN_00498e00(LPWSTR param_1,byte *param_2,uint param_3)
 }
 
 
-// ==== FUN_00498f00 @ 00498F00 ====
+// ==== CrtCharacterClassFlag8Check @ 00498F00 [Ghidra: FUN_00498f00] ====
 
 
 uint FUN_00498f00(int param_1)
@@ -107853,7 +107853,7 @@ longlong __allshl(void)
 }
 
 
-// ==== FUN_00498f50 @ 00498F50 ====
+// ==== CrtStreamUngetByte @ 00498F50 [Ghidra: FUN_00498f50] ====
 
 
 uint FUN_00498f50(uint param_1,int *param_2)
@@ -107896,7 +107896,7 @@ uint FUN_00498f50(uint param_1,int *param_2)
 }
 
 
-// ==== FUN_00498fe0 @ 00498FE0 ====
+// ==== CrtFileDescriptorAllocate @ 00498FE0 [Ghidra: FUN_00498fe0] ====
 
 
 int FUN_00498fe0(void)
@@ -107953,7 +107953,7 @@ int FUN_00498fe0(void)
 }
 
 
-// ==== FUN_004990a0 @ 004990A0 ====
+// ==== CrtFileDescriptorSetHandle @ 004990A0 [Ghidra: FUN_004990a0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -107993,7 +107993,7 @@ undefined4 FUN_004990a0(uint param_1,HANDLE param_2)
 }
 
 
-// ==== FUN_00499150 @ 00499150 ====
+// ==== CrtFileDescriptorCloseSlot @ 00499150 [Ghidra: FUN_00499150] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -108032,7 +108032,7 @@ LAB_004991ba:
 }
 
 
-// ==== FUN_004991f0 @ 004991F0 ====
+// ==== CrtFileDescriptorHandleGet @ 004991F0 [Ghidra: FUN_004991f0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -108050,7 +108050,7 @@ undefined4 FUN_004991f0(uint param_1)
 }
 
 
-// ==== FUN_00499240 @ 00499240 ====
+// ==== Win32FileDescriptorOpen @ 00499240 [Ghidra: FUN_00499240] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -108244,7 +108244,7 @@ LAB_0049936b:
 }
 
 
-// ==== FUN_00499690 @ 00499690 ====
+// ==== PointerRangeIsReadable @ 00499690 [Ghidra: FUN_00499690] ====
 
 
 bool FUN_00499690(void *param_1,UINT_PTR param_2)
@@ -108257,7 +108257,7 @@ bool FUN_00499690(void *param_1,UINT_PTR param_2)
 }
 
 
-// ==== FUN_004996b0 @ 004996B0 ====
+// ==== PointerRangeIsWritable @ 004996B0 [Ghidra: FUN_004996b0] ====
 
 
 bool FUN_004996b0(LPVOID param_1,UINT_PTR param_2)
@@ -108270,7 +108270,7 @@ bool FUN_004996b0(LPVOID param_1,UINT_PTR param_2)
 }
 
 
-// ==== FUN_004996d0 @ 004996D0 ====
+// ==== FunctionPointerIsExecutable @ 004996D0 [Ghidra: FUN_004996d0] ====
 
 
 bool FUN_004996d0(FARPROC param_1)
@@ -108301,7 +108301,7 @@ void __cdecl _abort(void)
 }
 
 
-// ==== FUN_00499710 @ 00499710 ====
+// ==== WideStringLength @ 00499710 [Ghidra: FUN_00499710] ====
 
 
 int FUN_00499710(short *param_1)
@@ -108319,7 +108319,7 @@ int FUN_00499710(short *param_1)
 }
 
 
-// ==== FUN_00499730 @ 00499730 ====
+// ==== CrtRuntimeErrorMessageBoxDisplay @ 00499730 [Ghidra: FUN_00499730] ====
 
 
 int FUN_00499730(undefined4 param_1,undefined4 param_2,undefined4 param_3)
@@ -108353,7 +108353,7 @@ LAB_00499780:
 }
 
 
-// ==== FUN_004997c0 @ 004997C0 ====
+// ==== CrtCallocAligned @ 004997C0 [Ghidra: FUN_004997c0] ====
 
 
 undefined4 * FUN_004997c0(int param_1,int param_2)
@@ -108411,7 +108411,7 @@ LAB_00499820:
 }
 
 
-// ==== FUN_00499860 @ 00499860 ====
+// ==== CrtTimeZoneInitializeOnce @ 00499860 [Ghidra: FUN_00499860] ====
 
 
 void FUN_00499860(void)
@@ -108425,7 +108425,7 @@ void FUN_00499860(void)
 }
 
 
-// ==== FUN_00499880 @ 00499880 ====
+// ==== CrtTimeZoneStateInit @ 00499880 [Ghidra: FUN_00499880] ====
 
 
 void FUN_00499880(void)
@@ -108578,7 +108578,7 @@ LAB_004999c8:
 }
 
 
-// ==== FUN_00499b30 @ 00499B30 ====
+// ==== CrtDaylightSavingTimeCheck @ 00499B30 [Ghidra: FUN_00499b30] ====
 
 
 bool FUN_00499b30(int *param_1)
@@ -108674,7 +108674,7 @@ LAB_00499d04:
 }
 
 
-// ==== FUN_00499da0 @ 00499DA0 ====
+// ==== CrtDaylightTransitionBoundaryCompute @ 00499DA0 [Ghidra: FUN_00499da0] ====
 
 
 void FUN_00499da0(int param_1,int param_2,uint param_3,int param_4,int param_5,int param_6,
@@ -108740,7 +108740,7 @@ void FUN_00499da0(int param_1,int param_2,uint param_3,int param_4,int param_5,i
 }
 
 
-// ==== FUN_00499fb0 @ 00499FB0 ====
+// ==== CrtUnsignedAddWithCarry @ 00499FB0 [Ghidra: FUN_00499fb0] ====
 
 
 undefined4 FUN_00499fb0(uint param_1,uint param_2,uint *param_3)
@@ -108759,7 +108759,7 @@ undefined4 FUN_00499fb0(uint param_1,uint param_2,uint *param_3)
 }
 
 
-// ==== FUN_00499fe0 @ 00499FE0 ====
+// ==== UInt96Add @ 00499FE0 [Ghidra: FUN_00499fe0] ====
 
 
 void FUN_00499fe0(undefined4 *param_1,undefined4 *param_2)
@@ -108783,7 +108783,7 @@ void FUN_00499fe0(undefined4 *param_1,undefined4 *param_2)
 }
 
 
-// ==== FUN_0049a050 @ 0049A050 ====
+// ==== ExtendedFloat96BitShiftLeftOne @ 0049A050 [Ghidra: FUN_0049a050] ====
 
 
 void FUN_0049a050(uint *param_1)
@@ -108801,7 +108801,7 @@ void FUN_0049a050(uint *param_1)
 }
 
 
-// ==== FUN_0049a080 @ 0049A080 ====
+// ==== ExtendedFloat96BitShiftRightOne @ 0049A080 [Ghidra: FUN_0049a080] ====
 
 
 void FUN_0049a080(uint *param_1)
@@ -108817,7 +108817,7 @@ void FUN_0049a080(uint *param_1)
 }
 
 
-// ==== FUN_0049a0b0 @ 0049A0B0 ====
+// ==== CrtDecimalDigitSequenceToExtended96 @ 0049A0B0 [Ghidra: FUN_0049a0b0] ====
 
 
 void FUN_0049a0b0(char *param_1,int param_2,uint *param_3)
@@ -108872,7 +108872,7 @@ void FUN_0049a0b0(char *param_1,int param_2,uint *param_3)
 }
 
 
-// ==== FUN_0049a1b0 @ 0049A1B0 ====
+// ==== CrtExtendedFloatToDecimal @ 0049A1B0 [Ghidra: FUN_0049a1b0] ====
 
 
 undefined4
@@ -109063,7 +109063,7 @@ LAB_0049a516:
 }
 
 
-// ==== FUN_0049a540 @ 0049A540 ====
+// ==== Extended80Multiply @ 0049A540 [Ghidra: FUN_0049a540] ====
 
 
 void FUN_0049a540(int *param_1,int *param_2)
@@ -109215,7 +109215,7 @@ void FUN_0049a540(int *param_1,int *param_2)
 }
 
 
-// ==== FUN_0049a800 @ 0049A800 ====
+// ==== ExtendedFloatPowerOfTenScale @ 0049A800 [Ghidra: FUN_0049a800] ====
 
 
 void FUN_0049a800(undefined2 *param_1,uint param_2,int param_3)
@@ -109261,7 +109261,7 @@ void FUN_0049a800(undefined2 *param_1,uint param_2,int param_3)
 }
 
 
-// ==== FUN_0049a890 @ 0049A890 ====
+// ==== Win32FileDescriptorResize @ 0049A890 [Ghidra: FUN_0049a890] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -109336,7 +109336,7 @@ LAB_0049a971:
 }
 
 
-// ==== FUN_0049aa10 @ 0049AA10 ====
+// ==== CrtSignalHandlerDispatch @ 0049AA10 [Ghidra: FUN_0049aa10] ====
 
 
 undefined4 FUN_0049aa10(int param_1)
@@ -109427,7 +109427,7 @@ LAB_0049ab06:
 }
 
 
-// ==== FUN_0049ab90 @ 0049AB90 ====
+// ==== CrtSignalHandlerRecordFind @ 0049AB90 [Ghidra: FUN_0049ab90] ====
 
 
 undefined * FUN_0049ab90(int param_1)
@@ -109454,7 +109454,7 @@ undefined * FUN_0049ab90(int param_1)
 }
 
 
-// ==== FUN_0049abe0 @ 0049ABE0 ====
+// ==== CrtWideCharToMultiByteCompat @ 0049ABE0 [Ghidra: FUN_0049abe0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -109565,7 +109565,7 @@ uint FUN_0049abe0(LPSTR param_1,LPCWSTR param_2,uint param_3)
 }
 
 
-// ==== FUN_0049add0 @ 0049ADD0 ====
+// ==== BoundedWideStringLengthIncludingNull @ 0049ADD0 [Ghidra: FUN_0049add0] ====
 
 
 int FUN_0049add0(short *param_1,int param_2)
@@ -109590,7 +109590,7 @@ int FUN_0049add0(short *param_1,int param_2)
 }
 
 
-// ==== FUN_0049ae10 @ 0049AE10 ====
+// ==== CrtEnvironmentVariableLookup @ 0049AE10 [Ghidra: FUN_0049ae10] ====
 
 
 int FUN_0049ae10(char *param_1)
@@ -109645,7 +109645,7 @@ int FUN_0049ae10(char *param_1)
 }
 
 
-// ==== FUN_0049aea0 @ 0049AEA0 ====
+// ==== CrtFileDescriptorFlag80SetOrClear @ 0049AEA0 [Ghidra: FUN_0049aea0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -109678,7 +109678,7 @@ int FUN_0049aea0(uint param_1,int param_2)
 }
 
 
-// ==== FUN_0049af20 @ 0049AF20 ====
+// ==== CrtCountedStringCompare @ 0049AF20 [Ghidra: FUN_0049af20] ====
 
 
 int FUN_0049af20(undefined4 param_1,undefined4 param_2,int param_3)
@@ -109697,7 +109697,7 @@ int FUN_0049af20(undefined4 param_1,undefined4 param_2,int param_3)
 }
 
 
-// ==== FUN_0049af60 @ 0049AF60 ====
+// ==== CrtWideEnvironmentStringListConvert @ 0049AF60 [Ghidra: FUN_0049af60] ====
 
 
 undefined4 FUN_0049af60(void)
@@ -109728,7 +109728,7 @@ undefined4 FUN_0049af60(void)
 }
 
 
-// ==== FUN_0049afe0 @ 0049AFE0 ====
+// ==== CrtCompareStringACompat @ 0049AFE0 [Ghidra: FUN_0049afe0] ====
 
 
 int FUN_0049afe0(LCID param_1,DWORD param_2,byte *param_3,LPWSTR param_4,byte *param_5,int param_6,
@@ -109842,7 +109842,7 @@ int FUN_0049afe0(LCID param_1,DWORD param_2,byte *param_3,LPWSTR param_4,byte *p
 }
 
 
-// ==== FUN_0049b2b0 @ 0049B2B0 ====
+// ==== CrtPutEnvUpdate @ 0049B2B0 [Ghidra: FUN_0049b2b0] ====
 
 
 undefined4 FUN_0049b2b0(char *param_1,int param_2)
@@ -109979,7 +109979,7 @@ undefined4 FUN_0049b2b0(char *param_1,int param_2)
 }
 
 
-// ==== FUN_0049b4c0 @ 0049B4C0 ====
+// ==== CrtEnvironmentEntryFind @ 0049B4C0 [Ghidra: FUN_0049b4c0] ====
 
 
 int FUN_0049b4c0(undefined4 param_1,int param_2)
@@ -110005,7 +110005,7 @@ int FUN_0049b4c0(undefined4 param_1,int param_2)
 }
 
 
-// ==== FUN_0049b540 @ 0049B540 ====
+// ==== CrtEnvironmentArrayClone @ 0049B540 [Ghidra: FUN_0049b540] ====
 
 
 undefined4 * FUN_0049b540(int *param_1)
@@ -110047,7 +110047,7 @@ undefined4 * FUN_0049b540(int *param_1)
 }
 
 
-// ==== FUN_0049b5b0 @ 0049B5B0 ====
+// ==== CrtMultibyteCharacterSearch @ 0049B5B0 [Ghidra: FUN_0049b5b0] ====
 
 
 byte * FUN_0049b5b0(byte *param_1,uint param_2)
@@ -110088,7 +110088,7 @@ LAB_0049b647:
 }
 
 
-// ==== FUN_0049b660 @ 0049B660 ====
+// ==== CrtStringDuplicate @ 0049B660 [Ghidra: FUN_0049b660] ====
 
 
 char * FUN_0049b660(char *param_1)
@@ -110323,7 +110323,7 @@ void RtlUnwind(PVOID TargetFrame,PVOID TargetIp,PEXCEPTION_RECORD ExceptionRecor
 }
 
 
-// ==== FUN_0049c7c0 @ 0049C7C0 ====
+// ==== ExpandWadPayload @ 0049C7C0 [Ghidra: FUN_0049c7c0] ====
 
 
 int FUN_0049c7c0(int param_1,int *param_2)
@@ -110354,7 +110354,7 @@ int FUN_0049c7c0(int param_1,int *param_2)
 }
 
 
-// ==== FUN_0049c840 @ 0049C840 ====
+// ==== WadPayloadDecodeDispatch @ 0049C840 [Ghidra: FUN_0049c840] ====
 
 
 undefined4 FUN_0049c840(char *param_1,char *param_2)
@@ -110401,7 +110401,7 @@ undefined4 FUN_0049c840(char *param_1,char *param_2)
 }
 
 
-// ==== FUN_0049c8e0 @ 0049C8E0 ====
+// ==== DecodeWadPayloadType1 @ 0049C8E0 [Ghidra: FUN_0049c8e0] ====
 
 
 uint FUN_0049c8e0(undefined4 param_1,undefined4 param_2)
@@ -110456,7 +110456,7 @@ uint FUN_0049c8e0(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0049ca60 @ 0049CA60 ====
+// ==== DecodeWadPayloadType2 @ 0049CA60 [Ghidra: FUN_0049ca60] ====
 
 
 uint FUN_0049ca60(undefined4 param_1,undefined4 param_2)
@@ -110546,7 +110546,7 @@ LAB_0049cb42:
 }
 
 
-// ==== FUN_0049cc70 @ 0049CC70 ====
+// ==== WadBitstreamOutputInitialize @ 0049CC70 [Ghidra: FUN_0049cc70] ====
 
 
 void FUN_0049cc70(int param_1,int param_2)
@@ -110565,7 +110565,7 @@ void FUN_0049cc70(int param_1,int param_2)
 }
 
 
-// ==== FUN_0049ccc0 @ 0049CCC0 ====
+// ==== WadReadBitsLsbFirst @ 0049CCC0 [Ghidra: FUN_0049ccc0] ====
 
 
 uint FUN_0049ccc0(char param_1)
@@ -110604,7 +110604,7 @@ uint FUN_0049ccc0(char param_1)
 }
 
 
-// ==== FUN_0049cd30 @ 0049CD30 ====
+// ==== WadReadBitsMsbFirst @ 0049CD30 [Ghidra: FUN_0049cd30] ====
 
 
 int FUN_0049cd30(char param_1)
@@ -110641,7 +110641,7 @@ int FUN_0049cd30(char param_1)
 }
 
 
-// ==== FUN_0049cd90 @ 0049CD90 ====
+// ==== WadHuffmanTableRead @ 0049CD90 [Ghidra: FUN_0049cd90] ====
 
 
 void FUN_0049cd90(int param_1,undefined4 param_2)
@@ -110674,7 +110674,7 @@ void FUN_0049cd90(int param_1,undefined4 param_2)
 }
 
 
-// ==== FUN_0049ce00 @ 0049CE00 ====
+// ==== WadHuffmanSymbolDecode @ 0049CE00 [Ghidra: FUN_0049ce00] ====
 
 
 uint FUN_0049ce00(int param_1)
@@ -110699,7 +110699,7 @@ uint FUN_0049ce00(int param_1)
 }
 
 
-// ==== FUN_0049ce70 @ 0049CE70 ====
+// ==== WadRunLengthDecode @ 0049CE70 [Ghidra: FUN_0049ce70] ====
 
 
 short FUN_0049ce70(void)
@@ -110718,7 +110718,7 @@ short FUN_0049ce70(void)
 }
 
 
-// ==== FUN_0049ceb0 @ 0049CEB0 ====
+// ==== WadBackreferenceOffsetDecode @ 0049CEB0 [Ghidra: FUN_0049ceb0] ====
 
 
 int FUN_0049ceb0(void)
@@ -110757,7 +110757,7 @@ int FUN_0049ceb0(void)
 }
 
 
-// ==== FUN_0049cf50 @ 0049CF50 ====
+// ==== WadHuffmanTableClear @ 0049CF50 [Ghidra: FUN_0049cf50] ====
 
 
 void FUN_0049cf50(undefined4 *param_1,char param_2)
@@ -110783,7 +110783,7 @@ void FUN_0049cf50(undefined4 *param_1,char param_2)
 }
 
 
-// ==== FUN_0049cf90 @ 0049CF90 ====
+// ==== WadHuffmanCanonicalCodesBuild @ 0049CF90 [Ghidra: FUN_0049cf90] ====
 
 
 void FUN_0049cf90(int param_1,byte param_2)
@@ -110820,7 +110820,7 @@ void FUN_0049cf90(int param_1,byte param_2)
 }
 
 
-// ==== FUN_0049d000 @ 0049D000 ====
+// ==== WadReverseLowBits @ 0049D000 [Ghidra: FUN_0049d000] ====
 
 
 uint FUN_0049d000(uint param_1,char param_2)
@@ -110848,7 +110848,7 @@ uint FUN_0049d000(uint param_1,char param_2)
 }
 
 
-// ==== FUN_0049d030 @ 0049D030 ====
+// ==== DirectDrawDeviceInitialize @ 0049D030 [Ghidra: FUN_0049d030] ====
 
 
 undefined4 FUN_0049d030(int param_1,int param_2,int param_3,int param_4,LPCSTR param_5)
@@ -110956,7 +110956,7 @@ LAB_0049d1cf:
 }
 
 
-// ==== FUN_0049d5e0 @ 0049D5E0 ====
+// ==== DisplayModeDialogSetModeAndRefreshChoices @ 0049D5E0 [Ghidra: FUN_0049d5e0] ====
 
 
 void FUN_0049d5e0(HWND param_1,int param_2)
@@ -110976,7 +110976,7 @@ void FUN_0049d5e0(HWND param_1,int param_2)
 }
 
 
-// ==== FUN_0049d630 @ 0049D630 ====
+// ==== DisplayModeListPopulate @ 0049D630 [Ghidra: FUN_0049d630] ====
 
 
 void FUN_0049d630(HWND param_1)
@@ -111033,7 +111033,7 @@ void FUN_0049d630(HWND param_1)
 }
 
 
-// ==== FUN_0049d780 @ 0049D780 ====
+// ==== DisplayResolutionComboPopulate @ 0049D780 [Ghidra: FUN_0049d780] ====
 
 
 void FUN_0049d780(HWND param_1)
@@ -111078,7 +111078,7 @@ void FUN_0049d780(HWND param_1)
 }
 
 
-// ==== FUN_0049d870 @ 0049D870 ====
+// ==== DisplayResolutionFilterTupleAppend @ 0049D870 [Ghidra: FUN_0049d870] ====
 
 
 void FUN_0049d870(undefined4 param_1,undefined4 param_2,undefined4 param_3)
@@ -111092,7 +111092,7 @@ void FUN_0049d870(undefined4 param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== FUN_0049d8d0 @ 0049D8D0 ====
+// ==== DisplayModeMatchesFilterTuple @ 0049D8D0 [Ghidra: FUN_0049d8d0] ====
 
 
 undefined4 FUN_0049d8d0(int param_1)
@@ -111125,7 +111125,7 @@ undefined4 FUN_0049d8d0(int param_1)
 }
 
 
-// ==== FUN_0049d950 @ 0049D950 ====
+// ==== DisplayModeNameIndexFind @ 0049D950 [Ghidra: FUN_0049d950] ====
 
 
 undefined4 FUN_0049d950(byte *param_1,uint *param_2)
@@ -111180,7 +111180,7 @@ LAB_0049d98f:
 }
 
 
-// ==== FUN_0049d9d0 @ 0049D9D0 ====
+// ==== DisplayRefreshRateControlsSync @ 0049D9D0 [Ghidra: FUN_0049d9d0] ====
 
 
 void FUN_0049d9d0(HWND param_1)
@@ -111299,7 +111299,7 @@ LAB_0049db4d:
 }
 
 
-// ==== FUN_0049db60 @ 0049DB60 ====
+// ==== SignedDecimalToStringConvert @ 0049DB60 [Ghidra: FUN_0049db60] ====
 
 
 undefined4 FUN_0049db60(int param_1,undefined4 param_2,int param_3)
@@ -111314,7 +111314,7 @@ undefined4 FUN_0049db60(int param_1,undefined4 param_2,int param_3)
 }
 
 
-// ==== FUN_0049dba0 @ 0049DBA0 ====
+// ==== CrtUnsignedIntegerFormatRadix @ 0049DBA0 [Ghidra: FUN_0049dba0] ====
 
 
 void FUN_0049dba0(uint param_1,char *param_2,uint param_3,int param_4)
@@ -111358,7 +111358,7 @@ void FUN_0049dba0(uint param_1,char *param_2,uint param_3,int param_4)
 }
 
 
-// ==== FUN_0049dc10 @ 0049DC10 ====
+// ==== StringToLowercase @ 0049DC10 [Ghidra: FUN_0049dc10] ====
 
 
 char * FUN_0049dc10(char *param_1)
@@ -111421,7 +111421,7 @@ char * FUN_0049dc10(char *param_1)
 }
 
 
-// ==== FUN_0049dcd0 @ 0049DCD0 ====
+// ==== StringToUpper @ 0049DCD0 [Ghidra: FUN_0049dcd0] ====
 
 
 char * FUN_0049dcd0(char *param_1)

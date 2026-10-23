@@ -12,4 +12,4 @@ This pass names two free-list pool growers, case-insensitive pair-table operatio
 
 Caller evidence for `0x0047e0c0` is `ev_6fb1e4dfab7979bd8bbace07057753e8e2b534684994729e0f81c0c2ea34ed99`. Direct and caller evidence for `0x004807f0` are `ev_ee3bdb54cb55bc9fe08f1c80b6f78ab7caff644d5f61cd31574bea8a89bbff15` and `ev_52f4d8c649a2272633f37a52e5c182fb360387565bbf27a60d0c7aad2624189d`. Pair-table caller records are `ev_453bd987c60d772e8237ab1afec3b7fbed130e71894c901206119cdad49643ef` and `ev_594c7c904d68d3043bfff069599356281c20b1c47401930e8e3ad5dc4a3a3c6b`; buffered-stream caller evidence is `ev_004a2c704d07e83ae6251cc9aa074b626de42c93ce5066cfff448099cd30e682`.
 
-Complete pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c); named excerpts are in [engine-region.c](../decompiles/engine-region.c). Numeric record kinds remain literal where semantics are unresolved.
+Complete pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c); named excerpts are in [engine-region.c](../decompiles/legacy/engine-region.c). Numeric record kinds remain literal where semantics are unresolved.

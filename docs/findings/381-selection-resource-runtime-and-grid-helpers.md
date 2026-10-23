@@ -50,4 +50,4 @@ This pass names 45 routines from the three address ranges. Names follow the obse
 | `0x004977d0` | `CrtControlFlagsTranslate` | Maps bits from one floating-point control word into another representation. | Procedure evidence `ev_6300cd88a40a17a7844c7569471a8559c13da52fbb8e5548c7b64a7fed4da91b` in `legorr-scene-done.bundle`. |
 | `0x00499fe0` | `UInt96Add` | Adds two three-word unsigned integers with carry propagation. | Pseudocode only; word-level carry propagation is explicit. |
 
-Complete pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c), with named excerpts in [engine-region.c](../decompiles/engine-region.c). Where no direct evidence record was available, the name follows checked-in pseudocode and caller behavior.
+Complete pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c), with named excerpts in [engine-region.c](../decompiles/legacy/engine-region.c). Where no direct evidence record was available, the name follows checked-in pseudocode and caller behavior.

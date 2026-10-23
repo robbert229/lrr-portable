@@ -25,4 +25,4 @@ This pass names rectangle and distance predicates, case-insensitive table lookup
 
 Direct pseudocode evidence for `0x0043c200` is in `legorr-energy-low-target-routing.bundle` (`ev_5a52a3fd5529b9b47b20edd10e55c3dd92e757e7af32bc2da7f06275d2beb1fe`); caller evidence is `ev_4dc7a5cfdc8ad698961ecdb04c1339fef9cf7580d89a8a6e42e02f04f8101a9a`. Other entries are supported by checked-in pseudocode and caller context; no matching direct evidence records were found.
 
-Complete pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c); named excerpts are in [engine-region.c](../decompiles/engine-region.c). Field, flag, and callback semantics remain at the operation level where callers do not establish more.
+Complete pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c); named excerpts are in [engine-region.c](../decompiles/legacy/engine-region.c). Field, flag, and callback semantics remain at the operation level where callers do not establish more.

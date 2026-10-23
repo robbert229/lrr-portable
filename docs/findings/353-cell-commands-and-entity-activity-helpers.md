@@ -13,4 +13,4 @@ This pass names deferred entity work, cell-command record operations, and entity
 
 Direct pseudocode evidence for `0x004026c0` is in `legorr-ui-render-audit-2026-10-23.bundle` (`ev_6a3aeb4f859f6d3a6ac8545c39bbc1795914422bbacd4eec89b86da756cb1237`). Caller context is in `legorr-engine-helper-audit-low-expansion-6.bundle` (`ev_7591fa8a4540d933717c05c043b2a1a0239fae2ffe1dae3045c0cf3433760b0a`). Other listed bodies and callers are supported by checked-in pseudocode; no matching direct records were located.
 
-The complete checked-in pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c); named excerpts are in [engine-region.c](../decompiles/engine-region.c). Names preserve unresolved command codes, fields, flags, and interface semantics.
+The complete checked-in pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c); named excerpts are in [engine-region.c](../decompiles/legacy/engine-region.c). Names preserve unresolved command codes, fields, flags, and interface semantics.

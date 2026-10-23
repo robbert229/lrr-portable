@@ -18,7 +18,7 @@ Covers all **2564** local functions in `docs/decompiles/full/manifest.csv`
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (5 functions)
-- **named** — human name in `engine-region.c` / corpus but no `src/`
+- **named** — human name in the full-corpus heading / manifest but no `src/`
   citation yet (2220 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
@@ -2273,12 +2273,9 @@ high-value port. The per-function pseudocode for every one of them is in
 
 - A `src/` citation of an entry address is a *strong* anchor (the file
   is anchored to that function) but is not proof the port is complete.
-- 8 functions named in `engine-region.c` (`EngineTick`, `EngineShutdown`,
-  `SelectionClusterA/B`, `SelectionGateHelper`, `SavObjCallbackB`,
-  `SavObjSerialize`, `EngineShutdownAlt`) are **absent from the full
-  corpus**: Ghidra auto-analysis never created them as function entries
-  (they live in the engine's indirect-call region — see
-  `tools/ghidra/CreateEngineFunctions.java`). They are tracked here only
-  as named entries in the engine-region corpus.
+- 11 named entries preserved in `LEGORR.supplement.c` are
+  absent from the full-corpus manifest at those exact entry addresses.
+  They are retained for lookup but excluded from the 2,564-function
+  coverage counts.
 
 Regenerate: `python3 tools/coverage_ledger.py`

@@ -2,7 +2,7 @@
 /* gods98 engine — frame tick + core state scaffold.
  *
  * Reconstruction scaffold for the engine-core functions named in the decompile
- * corpus (docs/decompiles/engine-region.c; findings 02/03/20):
+ * corpus (docs/decompiles/legacy/engine-region.c; findings 02/03/20):
  *
  *     EngineTick     @ 0x4232e0   per-frame tick          (triplet slot DAT_00505930)
  *     EnginePreTick  @ 0x4231f0   per-frame housekeeping

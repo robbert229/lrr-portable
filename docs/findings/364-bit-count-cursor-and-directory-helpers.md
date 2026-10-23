@@ -10,4 +10,4 @@ This pass names a second set-bit counter, a client-relative cursor setter, and a
 
 Direct pseudocode evidence: `legorr-engine-helper-audit-text-io-expansion-9.bundle` (`ev_d75b809b7beed400983aea831c39d7440674032f2c622d9ed5be41c89bb26690`) for the bit count and cursor setter; `legorr-engine-helpers-expansion-9.bundle` (`ev_ef8b3d3611bb75acfe4e212f4ab70f072531fb6c0e977b75d380861aeaccc8b5`) and the text-I/O bundle above for the directory helper.
 
-Complete pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c); named excerpts are in [engine-region.c](../decompiles/engine-region.c). Field, flag, and callback semantics remain at the operation level where callers do not establish more.
+Complete pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c); named excerpts are in [engine-region.c](../decompiles/legacy/engine-region.c). Field, flag, and callback semantics remain at the operation level where callers do not establish more.

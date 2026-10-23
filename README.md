@@ -24,7 +24,8 @@ docs/findings/      Reverse-engineering findings, 01–274 (see index below)
 tools/              WAD tooling (rrwad.py: unpack/pack/verify — see tools/README.md)
                     + model converter (tools/rrlwo.py: .lwo → glTF 2.0)
                     + compat harness (tools/compat/a2.py — see tools/compat/README.md)
-docs/decompiles/    Named Ghidra pseudocode corpus (engine-region.c)
+docs/decompiles/    Canonical and legacy Ghidra pseudocode; see
+                    docs/decompiles/README.md
 docs/evidence/      Exported REA evidence bundle (address-level citations)
 tools/              Analysis tooling: unwad.py, Ghidra function-naming script
 docs/adr/           Architecture decision records (build/port decisions)
@@ -91,7 +92,7 @@ Finding 23 (2026-10-21) closed the **front-end**: the boot→main-menu machine
 (`MenuBuild`, the modal `MenuRunLoop`, the `FrontEndActive` gate, menu-enter /
 state-change, the level-chain + start-level entries, and the options/movie
 callbacks) is decompiled, named (50 functions appended to
-`docs/decompiles/engine-region.c`; REA evidence in
+`docs/decompiles/legacy/engine-region.c`; REA evidence in
 `docs/evidence/legorr-frontend.bundle`), and the shipped `Lego.cfg` menu/level
 grammar documented. The port now supports the game's **`::` path separator**
 and builds campaign/tutorial chains from the shipped `Levels::<name>` values.
@@ -583,10 +584,11 @@ Open threads, in order of value:
 | 385 | [findings/385-stream-surface-avi-and-route-state-helpers.md](docs/findings/385-stream-surface-avi-and-route-state-helpers.md) | Stream, Surface, AVI, and Route State Helpers |
 | 386 | [findings/386-spatial-ui-com-and-crt-runtime.md](docs/findings/386-spatial-ui-com-and-crt-runtime.md) | Spatial, UI, COM, and CRT Runtime |
 
-Named-pseudocode corpus: [`docs/decompiles/engine-region.c`](docs/decompiles/engine-region.c)
-(2481 named sections selected from the reverse-engineering findings; the
-Ghidra script selects 2481 target addresses. This includes the manually bounded objective
-callback at `0x459100`, which auto-analysis does not mark as a procedure).
+Canonical full pseudocode corpus: [`docs/decompiles/full/LEGORR.full.c`](docs/decompiles/full/LEGORR.full.c)
+(2564 manifest functions; see its [README](docs/decompiles/full/README.md)). The
+legacy [`engine-region.c`](docs/decompiles/legacy/engine-region.c) retains named body
+variants that have not yet been reconciled; its 11 entries missing from the
+full manifest are preserved in `docs/decompiles/full/LEGORR.supplement.c`.
 Machine-readable evidence: [`docs/evidence/legorr-rev.bundle`](docs/evidence/legorr-rev.bundle)
 (236 recorded REA observations against `LegoRR.exe`,
 SHA-256 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`).

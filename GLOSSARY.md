@@ -42,7 +42,7 @@ docs otherwise call *backend* (the adapter) maps one-to-one on to it.
 _Avoid_: "the backend option" (misleading — the option is `platform`)
 
 **decompile corpus**:
-The named Ghidra pseudocode dump at `docs/decompiles/engine-region.c`
+The named Ghidra pseudocode dump at `docs/decompiles/legacy/engine-region.c`
 (114 functions) — the raw material the reconstruction is written from.
 _Avoid_: "the decomp", "engine-region"
 

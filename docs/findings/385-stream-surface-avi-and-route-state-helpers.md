@@ -11,4 +11,4 @@ This pass names 6 routines across the mid and high ranges. Names follow the obse
 | `0x0044cf70` | `ScenePositionResetAndEffectMotionCancel` | Reads the current owner pose into position state and clears state bit `0x80`. | Caller `FUN_004288e0` updates a scene transform before calling it; evidence `ev_7479e850be1cf44732679a120831ff8ccf2231130460878ab4f4503721bf00bb` in `legorr-engine-helper-audit-terrain-expansion-8.bundle`. |
 | `0x0044da20` | `RoutePositionBlockedStateSet` | Sets or clears state bit `0x200` based on whether a cursor/ray target lookup failed. | Caller `FUN_00426520` passes the failed-lookup condition; evidence `ev_3406ffd8a909bb28794a384d1e88cb9f3ef00f262d70d81867bc827746ed3f3b` in `legorr-engine-helpers-expansion-2.bundle`. |
 
-Complete pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c), with named excerpts in [engine-region.c](../decompiles/engine-region.c).
+Complete pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c), with named excerpts in [engine-region.c](../decompiles/legacy/engine-region.c).

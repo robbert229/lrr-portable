@@ -16,4 +16,4 @@ This batch names text-output operations, task-table cleanup, configured-list pro
 
 Direct pseudocode evidence: `legorr-incident-message-rendering.bundle` (`ev_7dd7b8b071572b759c5ebe375bac5c7ad01f840c0a954825c88a5bb613896002`, `ev_b9a60d4ce479b00dc81d3fc9654084e14fd00a5c9b2bfc2c6f90bdb19e94072b`); `legorr-tasktable.bundle` (`ev_79b9ad4ab167080014aa93367c3bd28c6b5e74a192706ef1539dfead9bef949a`); `legorr-samples-config.bundle` (`ev_bc2b8a8e49a94ac680730d213bd47dcc4764aaf562d870403b987176dea65a7e`, `ev_956a43d52d9e7247c51225244e64f9ee0bfea3f3df7c247f37be85e3c0d72a00`). Remaining indexed and buffer helpers are supported by the checked-in pseudocode and callers.
 
-The complete checked-in pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c); named excerpts are in [engine-region.c](../decompiles/engine-region.c). Field and interface meanings remain unspecified wherever callers do not establish them.
+The complete checked-in pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c); named excerpts are in [engine-region.c](../decompiles/legacy/engine-region.c). Field and interface meanings remain unspecified wherever callers do not establish them.

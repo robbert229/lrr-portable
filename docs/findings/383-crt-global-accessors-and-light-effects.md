@@ -43,4 +43,4 @@ This pass names 38 routines across the remaining high and mid ranges, plus small
 | `0x0044d710` | `WaypointVectorRandomScaleApply` | Scales target-vector components by a random factor. | Called by timer-driven `FUN_0044d280`; context `ev_34b2943ae4eec65ce70d2ab6788f10b428d3020b5a9215af77e94d265fafa8dd` in expansion-30. |
 | `0x0046abb0` | `TextSlotMessageWithImageAssign` | Assigns formatted text and creates/stores a surface for the text slot. | Called by `TextMessagesConfigLoad` for `TextMessagesWithImages`; context `ev_fb654e9ce69c90085cda97e49f50a18cc194e4faf49dda19c52176f3299c7377` in expansion-20. |
 
-Complete pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c), with named excerpts in [engine-region.c](../decompiles/engine-region.c).
+Complete pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c), with named excerpts in [engine-region.c](../decompiles/legacy/engine-region.c).

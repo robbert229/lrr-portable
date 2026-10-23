@@ -14,4 +14,4 @@ This pass names a scene-root global accessor, property-record accessors and clea
 | `0x00477220` | `RenderResourceTrackAndRetain` | Links the wrapper onto the global tracking list and invokes the wrapped object’s vtable slot +8. |
 | `0x004773e0` | `RenderResourceTrackedReferencesRelease` | Walks allocated 0x20-byte records and invokes slot +8 for each tracked wrapped object; the caller later frees the backing blocks. |
 
-The checked-in pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c) and the named excerpts are in [engine-region.c](../decompiles/engine-region.c). Names describe observed operations and offsets; unresolved record fields, enum meanings, and vtable slots remain intentionally unspecified.
+The checked-in pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c) and the named excerpts are in [engine-region.c](../decompiles/legacy/engine-region.c). Names describe observed operations and offsets; unresolved record fields, enum meanings, and vtable slots remain intentionally unspecified.

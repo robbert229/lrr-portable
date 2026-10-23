@@ -6,7 +6,7 @@
 **Method:** the critical path (`PE entry → WinMain → init → frame loop → engine tick`) was
 re-derived from scratch in a new REA/Ghidra session, and the shipped post-script
 (`tools/ghidra/CreateEngineFunctions.java`) was rerun on a scratch `analyzeHeadless`
-project and diffed byte-for-byte against `docs/decompiles/engine-region.c`.
+project and diffed byte-for-byte against `docs/decompiles/legacy/engine-region.c`.
 
 ## Verdict
 
@@ -102,7 +102,7 @@ Result: `Created 5 renamed 109` (the 5 creations are `EngineTick`, `EngineShutdo
 `EngineShutdownAlt` and two more reachable only indirectly); output
 `/tmp/engine-decompiles/engine-region.c` = **7,653 lines**.
 
-`diff docs/decompiles/engine-region.c` (fresh) → **exit 0, zero changed lines**.
+`diff docs/decompiles/legacy/engine-region.c` (fresh) → **exit 0, zero changed lines**.
 
 Preserved artifacts (scratch project self-deleted): `/tmp/opencode/engine-region.shipped.c`,
 `/tmp/opencode/engine-region.fresh.c`, `/tmp/opencode/engine-region.diff` (0 bytes).

@@ -35,4 +35,4 @@ This pass names entity state transitions, a camera-selected point transform, a l
 | `0x00469f90` | `NestedWordAtOffsetC0OrC4Get` | Returns nested offset 0xc0 when the selector is zero, otherwise nested offset 0xc4. |
 | `0x00469fe0` | `NestedFloatAtOffset8CGet` | Returns the nested float at offset 0x8c. |
 
-The checked-in pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c) and the named excerpts are in [engine-region.c](../decompiles/engine-region.c). Names describe observed operations and offsets; unresolved record fields, enum meanings, and vtable slots remain intentionally unspecified.
+The checked-in pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c) and the named excerpts are in [engine-region.c](../decompiles/legacy/engine-region.c). Names describe observed operations and offsets; unresolved record fields, enum meanings, and vtable slots remain intentionally unspecified.

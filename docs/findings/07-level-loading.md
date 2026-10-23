@@ -3,7 +3,7 @@
 *Anchors: `LevelLoad @ 0x429890`, `MapLoadPipeline @ 0x42b510`, `TerrainCreate @ 0x44e0c0`,
 `MapFileReadHeader @ 0x4515a0`, `MapFileGetCell @ 0x4515c0`,
 layer loaders `0x42bd20/0x42c480/0x42bf40/0x42c6a0/0x42c760/0x42c9d0/0x42cc90/0x42c120/0x42c060`,
-`CellInitPass @ 0x42f6f0`. Pseudocode: `docs/decompiles/engine-region.c`.*
+`CellInitPass @ 0x42f6f0`. Pseudocode: `docs/decompiles/legacy/engine-region.c`.*
 
 ## TL;DR
 
@@ -36,7 +36,7 @@ KeepRunning (0x435940)                       doc 06: sole quit/load decider
             └─ per-cell sweep CellInitPass (0x42f6f0)  for all (x,y)
 ```
 
-All of the above pseudocode is now in `docs/decompiles/engine-region.c`.
+All of the above pseudocode is now in `docs/decompiles/legacy/engine-region.c`.
 
 ## What a level is (config side)
 

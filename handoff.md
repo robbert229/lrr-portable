@@ -5,7 +5,7 @@
 Continue identifying anonymous `FUN_*` routines in `lrr-portable` using the
 `reverse-engineer-anything` skill and the retained Ghidra pseudocode/evidence.
 For each defensible name, keep `tools/ghidra/CreateEngineFunctions.java`,
-`docs/decompiles/engine-region.c`, `docs/coverage/ledger.csv`,
+`docs/decompiles/legacy/engine-region.c`, `docs/coverage/ledger.csv`,
 `docs/coverage/README.md`, `README.md`, and `docs/findings/*` aligned.
 
 The user explicitly requested three subagents for extra parallelism in a loop.

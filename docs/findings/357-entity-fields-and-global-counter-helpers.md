@@ -16,4 +16,4 @@ This pass names entity radius/mask accessors, a scene-object resource getter, an
 
 These operations are directly visible in the checked-in pseudocode. Named callers establish radius/mask usage for some accessors; no matching direct evidence-bundle records were found for these addresses.
 
-Complete pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c); named excerpts are in [engine-region.c](../decompiles/engine-region.c). Names retain operation-level or offset-based descriptions where semantic fields and interface details are unresolved.
+Complete pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c); named excerpts are in [engine-region.c](../decompiles/legacy/engine-region.c). Names retain operation-level or offset-based descriptions where semantic fields and interface details are unresolved.

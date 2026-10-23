@@ -8,7 +8,7 @@
 
 /* ------------------------------------------------------------------ *
  * Per-ticker stubs. Each `ticker_<hex>` corresponds to the corpus's
- * `FUN_<hex>`; fill the bodies in from engine-region.c one at a time.
+ * `FUN_<hex>`; fill the bodies in from docs/decompiles/legacy/engine-region.c one at a time.
  * The table order below is the observed EngineTick call order and must
  * stay stable (finding 03 §4; corpus lines 93-119).
  * ------------------------------------------------------------------ */

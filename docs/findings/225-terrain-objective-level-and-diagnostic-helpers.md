@@ -2,7 +2,7 @@
 
 The added names below come from Ghidra pseudocode and their callers in the shipped
 reference/LegoRR.exe. Full generated pseudocode is in
-../decompiles/engine-region.c. Names describe observed behavior; they do not
+../decompiles/legacy/engine-region.c. Names describe observed behavior; they do not
 establish broader engine semantics beyond the listed call sites.
 
 ## Terrain and map helpers

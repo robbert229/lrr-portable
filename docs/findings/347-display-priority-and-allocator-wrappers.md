@@ -12,4 +12,4 @@ This pass names direct display-dimension accessors, priority-entry table operati
 | `0x004021e0` | `EngineMemoryAllocate` | Forwards the requested allocation size to the engine allocator. |
 | `0x00402210` | `EngineMemoryFree` | Forwards the pointer to the engine free routine, which checks the custom allocator before falling back to HeapFree. |
 
-The checked-in pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c) and the named excerpts are in [engine-region.c](../decompiles/engine-region.c). Names describe observed operations and offsets; unresolved record fields, enum meanings, and vtable slots remain intentionally unspecified.
+The checked-in pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c) and the named excerpts are in [engine-region.c](../decompiles/legacy/engine-region.c). Names describe observed operations and offsets; unresolved record fields, enum meanings, and vtable slots remain intentionally unspecified.

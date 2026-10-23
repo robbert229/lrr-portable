@@ -1,7 +1,7 @@
 # 05 — Exit, Selection, Text Input & State Globals
 
 Tier-3 batch (8 more functions) plus xref/byte evidence from the live REA
-session. Pseudocode: [`../decompiles/engine-region.c`](../decompiles/engine-region.c)
+session. Pseudocode: [`../decompiles/legacy/engine-region.c`](../decompiles/legacy/engine-region.c)
 (lines 1399+, `QuitPoll` … `MessagePreCheck`).
 
 ## `QuitPoll` (`0x4589c0`) — quit detection via mouse-corner dwell

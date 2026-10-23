@@ -10,4 +10,4 @@ This pass names fixed-size record acquisition, recursive nested-list removal, an
 
 Caller evidence for `0x0047a580` is in `legorr-engine-helpers-expansion-9.bundle` (`ev_c4bd0c5ddfd43126e0c837724a68a4f92e78bb3d26d6ad6387bd8beed30e6e76`). Direct pseudocode evidence for `0x0047e480` is in `legorr-ui-render-fifth-pass-2026-10-23.bundle` (`ev_7c2411b4a9c6ae3069ebad3222d390a97cabb2cfcebe479529bf13d54ea0a553`); caller evidence is `legorr-engine-helper-audit-text-io-expansion-9.bundle` (`ev_01457480c8d70a5b557d05d849685bb3f792b45879a3af4519a3b6a512323755`). Recursive list behavior is visible in complete pseudocode and callers.
 
-The complete pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c); named excerpts are in [engine-region.c](../decompiles/engine-region.c). Numeric task kinds and unresolved field semantics remain literal.
+The complete pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c); named excerpts are in [engine-region.c](../decompiles/legacy/engine-region.c). Numeric task kinds and unresolved field semantics remain literal.

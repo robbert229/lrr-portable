@@ -29,4 +29,4 @@ This pass names 23 operation-level routines across input bindings, selection com
 | `0x004850e0` | `ObjectField10Get` | Returns the dword at object offset +0x10; callers pair it with +0x0c as dimensions for render rectangles. | Pseudocode and caller context; specific resource type unknown. |
 | `0x00485160` | `TextOutputField82CBit2SetClear` | Sets or clears bit 2 at object offset +0x82c. | Pseudocode and caller context; bit meaning unknown. |
 
-Complete pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c), with named excerpts in [engine-region.c](../decompiles/engine-region.c). Where no direct record was found, the table says so and the name follows checked-in pseudocode and caller behavior.
+Complete pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c), with named excerpts in [engine-region.c](../decompiles/legacy/engine-region.c). Where no direct record was found, the table says so and the name follows checked-in pseudocode and caller behavior.

@@ -17,4 +17,4 @@ This pass names renderer-record attachment/cloning, field-based object update wr
 | `0x00407010` | `RendererCachedHandle50GetOrCreate` | Returns the cached field at +0x50, or creates and stores a handle using the descriptor at +0x3c. |
 | `0x00407040` | `RendererCachedHandle4cIsNotOne` | Lazily creates and stores a handle at +0x4c using the descriptor at +0x38, then returns whether its helper-derived value differs from 1.0. |
 
-The checked-in pseudocode and caller context are in [LEGORR.full.c](../decompiles/full/LEGORR.full.c); named excerpts are in [engine-region.c](../decompiles/engine-region.c). No exact matching direct evidence records were found for these candidates.
+The checked-in pseudocode and caller context are in [LEGORR.full.c](../decompiles/full/LEGORR.full.c); named excerpts are in [engine-region.c](../decompiles/legacy/engine-region.c). No exact matching direct evidence records were found for these candidates.

@@ -20,4 +20,4 @@ This pass names 15 routines from the high and mid ranges. Names follow visible o
 | `0x0044bfd0` | `ConfiguredMonsterSpawnBehaviorTick` | Calls a configured spawn helper, updates entity flags, and calls `0x00462880`. | Finding 257; helper evidence `ev_d4647dc0f66e7d02dd910bbd1bd88a44d04613beefcebe719c6320e071c4b9b2` in expansion-29. |
 | `0x0045a240` | `ScrollPanelControlsInitialize` | Initializes scroll-panel components and sets the associated scroll flags. | Finding 262; caller context `ev_067463ec1683414c4610318da44c5a28d87abdd5ff2f8f0f5c6092f9293ead6d` in `legorr-ui-render-audit-2026-10-23.bundle`. |
 
-Complete pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c), with named excerpts in [engine-region.c](../decompiles/engine-region.c).
+Complete pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c), with named excerpts in [engine-region.c](../decompiles/legacy/engine-region.c).

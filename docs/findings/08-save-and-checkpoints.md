@@ -5,7 +5,7 @@
 `CheckpointStep @ 0x462270`, `CheckpointBlobBuild @ 0x45fda0`,
 `OsfAdd @ 0x459190`, `OsfWrite @ 0x4593e0`, `OsfRead @ 0x459470`,
 `SaveMenuBuild @ 0x415a10`.
-Pseudocode: `docs/decompiles/engine-region.c`.*
+Pseudocode: `docs/decompiles/legacy/engine-region.c`.*
 
 ## TL;DR
 
