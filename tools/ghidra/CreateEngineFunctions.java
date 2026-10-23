@@ -1187,6 +1187,21 @@ public class CreateEngineFunctions extends GhidraScript {
         0x46e220L,  // CellSurfaceQuadHeightFill
         0x474f10L,  // SceneObjectBoundsUnion
         0x488170L,  // AnimationTrackKeysInterpolate
+        0x4068c0L,  // PathArcLengthInterpolate
+        0x40c230L,  // SceneSlotPoseScaleRegister
+        0x40e350L,  // CellEntityKindCreateOrRemove
+        0x40f5f0L,  // ErosionEightNeighborPropagate
+        0x4105f0L,  // MenuParamRecordCreate
+        0x4129d0L,  // MenuOverlaySurfaceAndTextSetup
+        0x419de0L,  // RecordListEntryMoveToFront
+        0x435230L,  // RandomVariantCellScatter
+        0x4507d0L,  // TerrainCellEdgeVectorQuery
+        0x451b30L,  // LinkedRecordListFlatten
+        0x45e6d0L,  // TerrainPointPickResolve
+        0x464110L,  // RotatedPairsScratchFill
+        0x4780b0L,  // RendererWindowModeApply
+        0x482620L,  // MeshSegmentVertexFill
+        0x48c040L,  // StringCaseSubstringFind
         0x4350a0L,  // SurfaceTypeDescriptionsConfigLoad
         0x444fb0L,  // EntityTurnToVectorActivityIssue
         0x4451e0L,  // EntityPathStepVectorNormalize
@@ -2238,6 +2253,21 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x46e220: return "CellSurfaceQuadHeightFill";
             case 0x474f10: return "SceneObjectBoundsUnion";
             case 0x488170: return "AnimationTrackKeysInterpolate";
+            case 0x4068c0: return "PathArcLengthInterpolate";
+            case 0x40c230: return "SceneSlotPoseScaleRegister";
+            case 0x40e350: return "CellEntityKindCreateOrRemove";
+            case 0x40f5f0: return "ErosionEightNeighborPropagate";
+            case 0x4105f0: return "MenuParamRecordCreate";
+            case 0x4129d0: return "MenuOverlaySurfaceAndTextSetup";
+            case 0x419de0: return "RecordListEntryMoveToFront";
+            case 0x435230: return "RandomVariantCellScatter";
+            case 0x4507d0: return "TerrainCellEdgeVectorQuery";
+            case 0x451b30: return "LinkedRecordListFlatten";
+            case 0x45e6d0: return "TerrainPointPickResolve";
+            case 0x464110: return "RotatedPairsScratchFill";
+            case 0x4780b0: return "RendererWindowModeApply";
+            case 0x482620: return "MeshSegmentVertexFill";
+            case 0x48c040: return "StringCaseSubstringFind";
             case 0x4350a0: return "SurfaceTypeDescriptionsConfigLoad";
             case 0x444fb0: return "EntityTurnToVectorActivityIssue";
             case 0x4451e0: return "EntityPathStepVectorNormalize";

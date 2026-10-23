@@ -130,7 +130,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00406760,FUN_00406760,anonymous,,0,210
 004067b0,FUN_004067b0,anonymous,,0,554
 00406820,FUN_00406820,anonymous,,0,575
-004068c0,FUN_004068c0,anonymous,,0,1051
+004068c0,FUN_004068c0,named,PathArcLengthInterpolate,0,1051
 00406980,FUN_00406980,anonymous,,0,78
 00406990,FUN_00406990,named,TypeTableResourceRowLoad,0,3422
 00406c00,FUN_00406c00,anonymous,,0,152
@@ -265,7 +265,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0040bfd0,FUN_0040bfd0,named,RockFallStylesConfigLoad,0,1544
 0040c0d0,FUN_0040c0d0,anonymous,,0,1073
 0040c1b0,FUN_0040c1b0,anonymous,,0,629
-0040c230,FUN_0040c230,anonymous,,0,1049
+0040c230,FUN_0040c230,named,SceneSlotPoseScaleRegister,0,1049
 0040c2f0,FUN_0040c2f0,anonymous,,0,777
 0040c3a0,FUN_0040c3a0,named,ResourceAvailabilitySweep,0,1500
 0040c4d0,FUN_0040c4d0,anonymous,,0,362
@@ -305,7 +305,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0040de40,FUN_0040de40,named,EntityFenceSparkTerrainInteraction,0,2593
 0040e0c0,FUN_0040e0c0,named,FenceSparkLaunchRegister,0,1082
 0040e1e0,FUN_0040e1e0,named,CellCornerOccupancyScan,0,1407
-0040e350,FUN_0040e350,anonymous,,0,1042
+0040e350,FUN_0040e350,named,CellEntityKindCreateOrRemove,0,1042
 0040e460,FUN_0040e460,anonymous,,0,148
 0040e490,FUN_0040e490,named,EncyclopediaConfigFilesOpen,0,2964
 0040e700,FUN_0040e700,anonymous,,0,789
@@ -327,7 +327,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0040f2b0,FUN_0040f2b0,named,LavaErosionNeighborEligible,0,571
 0040f330,FUN_0040f330,named,LavaErosionNeighborMutate,0,2854
 0040f5e0,FUN_0040f5e0,anonymous,,0,81
-0040f5f0,FUN_0040f5f0,anonymous,,0,1029
+0040f5f0,FUN_0040f5f0,named,ErosionEightNeighborPropagate,0,1029
 0040f6c0,FUN_0040f6c0,named,SceneNodeRecordCreate,0,1108
 0040f7b0,FUN_0040f7b0,anonymous,,0,101
 0040f7d0,FUN_0040f7d0,anonymous,,0,649
@@ -361,7 +361,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00410520,FUN_00410520,anonymous,,0,353
 00410560,FUN_00410560,anonymous,,0,349
 004105a0,FUN_004105a0,named,CampaignLevelFallbackLabel,0,1048
-004105f0,FUN_004105f0,anonymous,,0,1044
+004105f0,FUN_004105f0,named,MenuParamRecordCreate,0,1044
 00410690,FUN_00410690,anonymous,,0,1127
 00410740,FUN_00410740,named,SaveMenuListEntryAppend,0,3767
 00410a10,FUN_00410a10,anonymous,,0,893
@@ -398,7 +398,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00412450,FUN_00412450,anonymous,,0,654
 004124f0,FUN_004124f0,named,MenuSaveImageConfigRectBlit,0,2192
 00412750,FUN_00412750,named,MenuHoverStatusTextDraw,0,2261
-004129d0,FUN_004129d0,anonymous,,0,1028
+004129d0,FUN_004129d0,named,MenuOverlaySurfaceAndTextSetup,0,1028
 00412af0,FUN_00412af0,named,MenuSurfaceBlitScaled,0,1074
 00412c00,FUN_00412c00,ported,MenuTick,3,14003
 00413970,FUN_00413970,ported,MenuScrollStateUpdate,3,701
@@ -527,7 +527,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00419b50,FUN_00419b50,anonymous,,0,418
 00419b80,FUN_00419b80,ported,MessageDispatch,6,2741
 00419da0,FUN_00419da0,anonymous,,0,239
-00419de0,FUN_00419de0,anonymous,,0,1037
+00419de0,FUN_00419de0,named,RecordListEntryMoveToFront,0,1037
 00419e60,FUN_00419e60,anonymous,,0,93
 00419e80,FUN_00419e80,anonymous,,0,946
 00419f10,FUN_00419f10,anonymous,,0,96
@@ -818,7 +818,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00435170,FUN_00435170,named,TerrainSurfaceTypeNameGet,0,211
 00435190,FUN_00435190,anonymous,,0,79
 004351a0,FUN_004351a0,anonymous,,0,535
-00435230,FUN_00435230,anonymous,,0,1059
+00435230,FUN_00435230,named,RandomVariantCellScatter,0,1059
 00435300,FUN_00435300,ported,,1,3362
 00435550,FUN_00435550,anonymous,,0,183
 00435580,FUN_00435580,anonymous,,0,214
@@ -1178,7 +1178,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00450700,FUN_00450700,anonymous,,0,157
 00450730,FUN_00450730,anonymous,,0,356
 00450780,FUN_00450780,anonymous,,0,394
-004507d0,FUN_004507d0,anonymous,,0,1046
+004507d0,FUN_004507d0,named,TerrainCellEdgeVectorQuery,0,1046
 00450890,FUN_00450890,ported,,1,87
 004508a0,FUN_004508a0,anonymous,,0,922
 00450960,FUN_00450960,named,CellDirtyQueuePushAndClear,0,1760
@@ -1195,7 +1195,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004515e0,FUN_004515e0,named,TerrainCellRayHitTest,0,3317
 004519b0,FUN_004519b0,named,VisualModelRecordCreate,0,1486
 00451ab0,FUN_00451ab0,named,PrimitiveModelRecordCreate,0,1182
-00451b30,FUN_00451b30,anonymous,,0,1014
+00451b30,FUN_00451b30,named,LinkedRecordListFlatten,0,1014
 00451bc0,FUN_00451bc0,anonymous,,0,503
 00451c30,FUN_00451c30,anonymous,,0,151
 00451c50,FUN_00451c50,anonymous,,0,713
@@ -1370,7 +1370,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0045dbc0,FUN_0045dbc0,named,TerrainViewTileGeometryBuild,0,6350
 0045e400,FUN_0045e400,anonymous,,0,400
 0045e660,FUN_0045e660,anonymous,,0,371
-0045e6d0,FUN_0045e6d0,anonymous,,0,1007
+0045e6d0,FUN_0045e6d0,named,TerrainPointPickResolve,0,1007
 0045e820,FUN_0045e820,anonymous,,0,838
 0045e940,FUN_0045e940,named,ViewPointToScreenGeometryTransform,0,883
 0045e9e0,FUN_0045e9e0,named,TerrainTileStyleResolve,0,7259
@@ -1447,7 +1447,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00463ea0,FUN_00463ea0,anonymous,,0,222
 00463ed0,FUN_00463ed0,anonymous,,0,278
 00463f00,FUN_00463f00,named,SceneQuadGridEmit,0,2818
-00464110,FUN_00464110,anonymous,,0,1019
+00464110,FUN_00464110,named,RotatedPairsScratchFill,0,1019
 004641c0,FUN_004641c0,named,BuildingPlacementFootprintRenderAndValidate,0,5897
 00464720,FUN_00464720,anonymous,,0,109
 00464740,FUN_00464740,named,SoundAliasRegistryInit,0,3903
@@ -1838,7 +1838,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00478000,WINMM.DLL::timeGetTime,runtime-import,WINMM.DLL::timeGetTime,0,252
 00478010,FUN_00478010,named,WindowMessageDispatchFilter,0,230
 00478040,FUN_00478040,named,Win32MessagePumpDispatch,0,342
-004780b0,FUN_004780b0,anonymous,,0,1042
+004780b0,FUN_004780b0,named,RendererWindowModeApply,0,1042
 004781d0,FUN_004781d0,named,Direct3DRMDeviceInit,0,1410
 00478310,FUN_00478310,anonymous,,0,140
 00478330,FUN_00478330,anonymous,,0,698
@@ -2076,7 +2076,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004823e0,FUN_004823e0,named,TerrainCellQuadVerticesWrite,0,885
 00482470,FUN_00482470,anonymous,,0,885
 00482500,FUN_00482500,named,InstanceQuadVertexDataFill,0,1573
-00482620,FUN_00482620,anonymous,,0,1052
+00482620,FUN_00482620,named,MeshSegmentVertexFill,0,1052
 004826c0,FUN_004826c0,named,MeshVertexRecordFill,0,1169
 00482780,FUN_00482780,anonymous,,0,121
 004827a0,FUN_004827a0,anonymous,,0,301
@@ -2242,7 +2242,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0048bff0,FUN_0048bff0,anonymous,,0,163
 0048c010,FUN_0048c010,anonymous,,0,177
 0048c030,FUN_0048c030,anonymous,,0,80
-0048c040,FUN_0048c040,anonymous,,0,1052
+0048c040,FUN_0048c040,named,StringCaseSubstringFind,0,1052
 0048c0c0,FUN_0048c0c0,named,LwoStringDuplicate,0,1265
 0048c120,FUN_0048c120,named,LwoTextureProjectionModeParse,0,701
 0048c180,FUN_0048c180,anonymous,,0,289
