@@ -349,6 +349,7 @@ Open threads, in order of value:
 | 150 | [findings/150-streamed-wav-playback-rejects-non-pcm.md](docs/findings/150-streamed-wav-playback-rejects-non-pcm.md) | Streamed playback rejects non-PCM WAV formats before buffer creation |
 | 151 | [findings/151-streamed-pcm-buffer-uses-four-aligned-segments.md](docs/findings/151-streamed-pcm-buffer-uses-four-aligned-segments.md) | Streamed PCM buffer uses four aligned segments totaling about three seconds |
 | 152 | [findings/152-streamed-playback-reuses-buffer-as-looping-ring.md](docs/findings/152-streamed-playback-reuses-buffer-as-looping-ring.md) | Streamed playback loops and refills its DirectSound ring buffer |
+| 153 | [findings/153-stream-start-ignores-directsound-position-and-play-errors.md](docs/findings/153-stream-start-ignores-directsound-position-and-play-errors.md) | Stream start ignores position and Play HRESULTs before marking active |
 
 Named-pseudocode corpus: [`docs/decompiles/engine-region.c`](docs/decompiles/engine-region.c)
 (114 named functions covering the engine/game-logic region — findings 01–10).
