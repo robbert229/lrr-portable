@@ -1156,6 +1156,20 @@ public class CreateEngineFunctions extends GhidraScript {
         0x4748f0L,  // MeshRecordAllocateOrAppend
         0x47d2d0L,  // SurfacePixelValueEncode
         0x482b50L,  // RenderStateFlagsApply
+        0x402960L,  // EntityKindCommandIssue
+        0x40a4b0L,  // QuadMeshRenderRecordCreate
+        0x40c5b0L,  // ResourceSlotRegisterName
+        0x41b3c0L,  // EntityQueryFlagCount
+        0x438460L,  // EntityKindRecordUpdateDispatch
+        0x4396c0L,  // ItemNameByKindLookup
+        0x449700L,  // RouteStepCommandIssue
+        0x44bb30L,  // EntityNodeScaleUpdate
+        0x44d0d0L,  // DriftOffsetStepApply
+        0x4512d0L,  // TerrainCellNormalSample
+        0x451ab0L,  // PrimitiveModelRecordCreate
+        0x466250L,  // ExpandCellEntitySpawn
+        0x46e9d0L,  // StagedCellCandidateCollect
+        0x4826c0L,  // MeshVertexRecordFill
         0x4350a0L,  // SurfaceTypeDescriptionsConfigLoad
         0x444fb0L,  // EntityTurnToVectorActivityIssue
         0x4451e0L,  // EntityPathStepVectorNormalize
@@ -2176,6 +2190,20 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x4748f0: return "MeshRecordAllocateOrAppend";
             case 0x47d2d0: return "SurfacePixelValueEncode";
             case 0x482b50: return "RenderStateFlagsApply";
+            case 0x402960: return "EntityKindCommandIssue";
+            case 0x40a4b0: return "QuadMeshRenderRecordCreate";
+            case 0x40c5b0: return "ResourceSlotRegisterName";
+            case 0x41b3c0: return "EntityQueryFlagCount";
+            case 0x438460: return "EntityKindRecordUpdateDispatch";
+            case 0x4396c0: return "ItemNameByKindLookup";
+            case 0x449700: return "RouteStepCommandIssue";
+            case 0x44bb30: return "EntityNodeScaleUpdate";
+            case 0x44d0d0: return "DriftOffsetStepApply";
+            case 0x4512d0: return "TerrainCellNormalSample";
+            case 0x451ab0: return "PrimitiveModelRecordCreate";
+            case 0x466250: return "ExpandCellEntitySpawn";
+            case 0x46e9d0: return "StagedCellCandidateCollect";
+            case 0x4826c0: return "MeshVertexRecordFill";
             case 0x4350a0: return "SurfaceTypeDescriptionsConfigLoad";
             case 0x444fb0: return "EntityTurnToVectorActivityIssue";
             case 0x4451e0: return "EntityPathStepVectorNormalize";
