@@ -10,9 +10,14 @@ so the `0x400` check reads before the allocated cell grid. The read contributes
 to the four-bit neighbor mask used to select the cell variant.
 
 This is conditional on a cell at the top or left edge carrying
-`0x20000000`. The static trace establishes the path and out-of-grid address;
-it does not establish that a shipped level has such a cell at an edge or that
-the read crashes. The result depends on bytes preceding the grid allocation.
+`0x20000000`. A packed-asset scan found that the configured PathMap files
+present in the shipped archives cannot set this flag on those borders during
+initial PathMap loading: all their top/left values are zero and their config
+entries have no bias suffix. Three other configured PathMap files are absent
+from the archives. The binary also has a separate dynamic writer, so the
+static data scan does not rule out a later boundary cell reaching the helper.
+The trace does not establish that the read crashes; its result depends on
+bytes preceding the grid allocation.
 
 **Evidence.** In shipped `reference/LegoRR.exe` (SHA-256
 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`),
@@ -30,3 +35,21 @@ row-major index points before that allocation. `FUN_0042c760` sets
 `0x20000000` for a qualifying path/AI layer cell when the layer value minus
 its bias equals 2 and the existing cell flag `0x8` is set. The disassembly
 and corresponding decompilation are in `docs/decompiles/full/LEGORR.full.c`.
+
+**Packaged-data check.** `Lego.cfg` in `reference/LegoRR1.wad` contains 20
+distinct `PathMap` paths; none has a `:<bias>` suffix, so the path-loader bias
+defaults to zero. Seventeen of those paths resolve in `reference/LegoRR0.wad`;
+all cells on each map's `x=0` or `y=0` border are zero. The other three
+configured paths (`Level13`, `Level14`, and `Level24`) are absent from that
+archive. The scan used the row-major u16 cells in each `MAP ` image, as
+documented in Finding 7. Archive SHA-256 hashes are
+`e02fa495f144d31142ef01a15221b1b7865d2a8264c43700523f2b52f91eaf68` for
+`LegoRR0.wad` and
+`5a967d3147533c61390120f923cea2bd275cc29bc7a8563de21c62bd9de6229d` for
+`LegoRR1.wad`.
+
+The separate writer `FUN_00432600` (`0x432600`) can set the same cell bit
+when the target has flag `0x200000`, its type byte is not 6, and flag
+`0x80000000` is clear. It then calls `FUN_0042f6f0` for the target and four
+adjacent cells. The binary contains call sites at `0x43e77f` and `0x456dcf`;
+their initiating gameplay conditions remain to be traced.
