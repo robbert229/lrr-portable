@@ -92,7 +92,7 @@ Config surface (values from `Lego.cfg`):
 | `IntroAVI` | per-level movie at load | read in `LevelLoad` `FUN_00429890` `0x429fb1` |
 | `CreditsBackAVI` | `AVI\Loop.avi`, credits backdrop | `0x4a3c0c` |
 | `EndGameAVI1/2`, `ObjectiveAcheivedAVI` | endings / objective stingers | `0x4a4398/0x4a43a4/0x4a81ac` |
-| `DontPlayAvis` | gates startup AVIs; credits background path bypasses it (finding 186) | `0x4a24ec` |
+| `DontPlayAvis` | gates boot sequence; level and credits video paths bypass it (finding 186) | `0x4a24ec` |
 | `DDILogo(Time)`, `LMILogo(Time)` | timed **BMP** splash, not AVI | `FUN_004157c0` uses `timeGetTime`+blit |
 
 Startup sequence (in the big init `FUN_0041fb50`): play `LegoAvi` if the
