@@ -360,7 +360,7 @@ Open threads, in order of value:
 | 161 | [findings/161-gameplay-uses-positional-and-object-attached-sfx.md](docs/findings/161-gameplay-uses-positional-and-object-attached-sfx.md) | Gameplay and shared-object events submit aliases through spatial sound paths |
 | 162 | [findings/162-object-attached-sounds-refresh-spatial-state.md](docs/findings/162-object-attached-sounds-refresh-spatial-state.md) | Object-attached sounds refresh stored spatial values during sound updates |
 | 163 | [findings/163-view-provider-feeds-directsound-listener.md](docs/findings/163-view-provider-feeds-directsound-listener.md) | The frame tick updates listener position and orientation from the stored view |
-| 164 | [findings/164-explicit-sound-positions-are-deferred.md](docs/findings/164-explicit-sound-positions-are-deferred.md) | Explicit positions are deferred then committed in the same dispatch |
+| 164 | [findings/164-explicit-sound-positions-apply-immediately.md](docs/findings/164-explicit-sound-positions-apply-immediately.md) | Explicit positions apply immediately; dispatcher also commits deferred settings |
 | 165 | [findings/165-object-spatial-update-registry-has-twenty-slots.md](docs/findings/165-object-spatial-update-registry-has-twenty-slots.md) | Object spatial-update registry has 20 slots and does not deduplicate |
 | 166 | [findings/166-spatial-playback-enters-through-shared-wrapper.md](docs/findings/166-spatial-playback-enters-through-shared-wrapper.md) | Direct spatial playback uses the shared positional/object wrapper |
 | 167 | [findings/167-global-alias-playback-disables-3d-mode.md](docs/findings/167-global-alias-playback-disables-3d-mode.md) | Global in-memory aliases disable DirectSound 3D processing |
