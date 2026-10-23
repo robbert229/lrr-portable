@@ -158,9 +158,9 @@ playback region). The `.flh` container is documented in finding 21.
    direct dispatcher callers. Findings 170–171 trace conditional shared-object transition handle issues across immediate and queued submission; finding 178 records the dynamic alias-table capacity during sample loading. Findings 211 records that the advisor parser latches a sound token before checking whether sound is enabled, and finding 214 records that the objective-voice countdown does not explicitly stop stream state zero when it expires. Findings 196–199 resolve the DirectSound listener provider's frame-relative position/orientation queries, its meter-per-vector-unit default, and conditional listener and attached-source cache-on-failure paths. Findings 139, 149, and 209–213 document the two deferred sound queues, selector handling, ten-request limits, overflow behavior, and packed-queue lifetime across frame ticks and sound disablement. Indirect 3D submission paths remain open. Finding 120 documents optional duplicate
    sample buffers, and finding 133 traces playback's single-buffer versus three-buffer rotation.
 2. Finding 122 traces the in-memory WAV path from the `data` chunk through `mmioGetInfo`'s read
-   window into a `GlobalAlloc` buffer before DirectSound setup. The shared file/WAD open layer is
-   documented in finding 11; runtime WAD-backed loading and Windows' internal file access remain
-   unverified.
+   window into a `GlobalAlloc` buffer before DirectSound setup; finding 215 records the open-MMIO
+   handle leak on failures after format parsing. The shared file/WAD open layer is documented in
+   finding 11; runtime WAD-backed loading and Windows' internal file access remain unverified.
 3. Finding 123 traces `AVIStreamGetFrame` output into a row-copy helper and the surface pixel
    buffer. The helper walks source rows backward while advancing the destination; bottom-up to
    top-down conversion is an inference. Finding 172 traces each frame blit into the shared
