@@ -117,6 +117,17 @@ both have zero-valued top and left borders, so neither supplies a border
 trigger or candidate. The other eight configured files are absent; this
 leaves a conditional border-spawn route unresolved for those levels.
 
+That spawn route does not by itself reach the risky cell update. `FUN_0043af30`
+creates entity type 3 and the creation path identifies it as a RockMonster,
+LavaMonster, or IceMonster. The `0x16` command that dispatches to
+`FUN_00448c50` (the setter for the entity's `Activity_Place` bit) is filtered
+by `FUN_00404fc0`, which rejects that command unless the candidate entity type
+is 2. Thus an emerged type-3 creature cannot receive the traced Place command
+that leads to `FUN_00432600`. The missing emergence maps could still spawn
+border creatures, but this route does not establish that those creatures call
+the dynamic writer; a separate type change or callback path would need to be
+found.
+
 At `0x456dcf`, the writer is called from callback-dispatch branch 4 after
 `FUN_00432c90` updates the cell. A static name/function pair associates the
 string `SetTutorialBlockIsPath` and wrapper `FUN_00457420` at file offsets
