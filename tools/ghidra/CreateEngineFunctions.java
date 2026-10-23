@@ -1265,6 +1265,8 @@ public class CreateEngineFunctions extends GhidraScript {
         0x471f00L,  // PoseOffsetVelocitySlotBlend
         0x482370L,  // MeshVerticesScaleApply
         0x488a70L,  // LoadRecordInterfacesReleaseFree
+        0x44afb0L,  // ConfiguredTinyMonsterSpawnAndTeardown
+        0x44b250L,  // PairingActivityRaiseAndMutualLink
         0x4350a0L,  // SurfaceTypeDescriptionsConfigLoad
         0x444fb0L,  // EntityTurnToVectorActivityIssue
         0x4451e0L,  // EntityPathStepVectorNormalize
@@ -2394,6 +2396,8 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x471f00: return "PoseOffsetVelocitySlotBlend";
             case 0x482370: return "MeshVerticesScaleApply";
             case 0x488a70: return "LoadRecordInterfacesReleaseFree";
+            case 0x44afb0: return "ConfiguredTinyMonsterSpawnAndTeardown";
+            case 0x44b250: return "PairingActivityRaiseAndMutualLink";
             case 0x4350a0: return "SurfaceTypeDescriptionsConfigLoad";
             case 0x444fb0: return "EntityTurnToVectorActivityIssue";
             case 0x4451e0: return "EntityPathStepVectorNormalize";

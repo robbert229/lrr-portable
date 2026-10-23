@@ -1089,9 +1089,9 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0044ade0,FUN_0044ade0,anonymous,,0,527
 0044ae50,FUN_0044ae50,named,RandomKindSixScatterSpawn,0,1140
 0044af90,FUN_0044af90,anonymous,,0,180
-0044afb0,FUN_0044afb0,anonymous,,0,1503
+0044afb0,FUN_0044afb0,named,ConfiguredTinyMonsterSpawnAndTeardown,0,1503
 0044b140,FUN_0044b140,named,SmallSpiderCellSwarmSpawn,0,1006
-0044b250,FUN_0044b250,anonymous,,0,1001
+0044b250,FUN_0044b250,named,PairingActivityRaiseAndMutualLink,0,1001
 0044b350,FUN_0044b350,ported,EntityActivityTypeSupportsCapacityRule,1,136
 0044b370,FUN_0044b370,ported,EntityActivityListAppend,11,1519
 0044b480,FUN_0044b480,ported,EntityPermittedActivityCheck,8,360
