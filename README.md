@@ -357,7 +357,7 @@ Open threads, in order of value:
 | 158 | [findings/158-sfx-volume-slider-sets-primary-directsound-volume.md](docs/findings/158-sfx-volume-slider-sets-primary-directsound-volume.md) | SFX-labeled slider sets the shared primary DirectSound output volume |
 | 159 | [findings/159-music-volume-targets-compact-disc-mixer-source.md](docs/findings/159-music-volume-targets-compact-disc-mixer-source.md) | Music volume callback targets the audio-CD mixer source |
 | 160 | [findings/160-music-volume-defaults-to-zero-without-cd-mixer-control.md](docs/findings/160-music-volume-defaults-to-zero-without-cd-mixer-control.md) | Music slider starts at zero when the CD mixer source is unavailable |
-| 161 | [findings/161-gameplay-uses-positional-and-object-attached-sfx.md](docs/findings/161-gameplay-uses-positional-and-object-attached-sfx.md) | Named and animation-driven gameplay aliases use spatial sound paths |
+| 161 | [findings/161-gameplay-uses-positional-and-object-attached-sfx.md](docs/findings/161-gameplay-uses-positional-and-object-attached-sfx.md) | Gameplay and shared-object events submit aliases through spatial sound paths |
 | 162 | [findings/162-object-attached-sounds-refresh-spatial-state.md](docs/findings/162-object-attached-sounds-refresh-spatial-state.md) | Object-attached sounds refresh stored spatial values during sound updates |
 | 163 | [findings/163-view-provider-feeds-directsound-listener.md](docs/findings/163-view-provider-feeds-directsound-listener.md) | The frame tick updates listener position and orientation from the stored view |
 | 164 | [findings/164-explicit-sound-positions-are-deferred.md](docs/findings/164-explicit-sound-positions-are-deferred.md) | Explicit positions are deferred then committed in the same dispatch |
