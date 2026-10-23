@@ -14,4 +14,4 @@ This batch names a case-insensitive string-table search and guarded updates to g
 
 No matching direct retained evidence records were found for these entries. The lookup and guarded field operations are explicit in the complete pseudocode; caller context includes string-table initialization/use and the global-field update sites.
 
-The complete checked-in pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c); named excerpts are in [engine-region.c](../decompiles/engine-region.c). Field and interface meanings remain unspecified wherever callers do not establish them.
+The complete checked-in pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c); named excerpts are in [engine-region.c](../decompiles/legacy/engine-region.c). Field and interface meanings remain unspecified wherever callers do not establish them.

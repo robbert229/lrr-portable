@@ -29,4 +29,4 @@ This pass names 24 routines. Names follow the visible operations and caller evid
 | `0x00442210` | `EntityActionRouteStateInitialize` | Resets action state, issues event `0x4d`, conditionally sets an entity flag, and resets a float field to `-1.0`. | Pseudocode plus caller context `ev_e959cb3ca6814716839bb8ec7d3d52040fb96fb1a4f11f7482fda4eb8cecfc` in `legorr-engine-helpers-expansion-24.bundle`; exact event meaning is unknown. |
 | `0x0044c970` | `LightEffectsBlinkParametersApply` | Applies parameters passed from configuration for color maximum, change scale, and a two-value blink interval. | Caller helper context `ev_81e53f10ab1b07600981f692ee5dda8a71d15e2284e8824fe7e2eece0dfdc564` in `legorr-engine-helpers-expansion-27.bundle`; target body was not in that bundle. |
 
-Complete pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c), with named excerpts in [engine-region.c](../decompiles/engine-region.c).
+Complete pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c), with named excerpts in [engine-region.c](../decompiles/legacy/engine-region.c).

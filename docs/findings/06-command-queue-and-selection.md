@@ -2,7 +2,7 @@
 
 Two structural discoveries this round, both from xref-mining the selection
 cluster (`0x452xxx`) plus targeted REA decompiles. Pseudocode additions:
-[`../decompiles/engine-region.c`](../decompiles/engine-region.c)
+[`../decompiles/legacy/engine-region.c`](../decompiles/legacy/engine-region.c)
 (`KeepRunning`, `SelectionRoot`, plus queue functions quoted below).
 
 ## The command queue (`FUN_004520d0` = `SelectionRoot` → renamed **CommandQueueTick**)

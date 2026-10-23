@@ -26,4 +26,4 @@ This pass names record-field accessors, numeric helpers, linked-record updates, 
 
 These entries are directly visible in the checked-in pseudocode and caller context. No matching direct retained evidence records were found for this candidate set.
 
-The complete checked-in pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c); named excerpts are in [engine-region.c](../decompiles/engine-region.c). Names preserve unresolved command codes, fields, flags, and interface semantics.
+The complete checked-in pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c); named excerpts are in [engine-region.c](../decompiles/legacy/engine-region.c). Names preserve unresolved command codes, fields, flags, and interface semantics.

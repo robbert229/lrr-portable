@@ -11,4 +11,4 @@ This pass names task-record queue and cleanup operations, a pointer stack, and t
 
 Direct pseudocode and caller context are in the full corpus. No matching direct evidence-bundle records were located for these exact procedure entries.
 
-Complete pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c); named excerpts are in [engine-region.c](../decompiles/engine-region.c). Numeric record kinds remain literal where semantics are unresolved.
+Complete pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c); named excerpts are in [engine-region.c](../decompiles/legacy/engine-region.c). Numeric record kinds remain literal where semantics are unresolved.

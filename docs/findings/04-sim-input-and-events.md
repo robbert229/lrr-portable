@@ -1,7 +1,7 @@
 # 04 — Sim Step, Input System, Trackers & Message Events
 
 Decompiled with the same headless pipeline (`tools/ghidra/CreateEngineFunctions.java`,
-pseudocode in [`../decompiles/engine-region.c`](../decompiles/engine-region.c)).
+pseudocode in [`../decompiles/legacy/engine-region.c`](../decompiles/legacy/engine-region.c)).
 All five functions resolve names inside the Ghidra project, so the pseudocode
 uses the names below.
 

@@ -12,4 +12,4 @@ This pass names grid-cell eligibility, resource cleanup, queued animation proces
 
 The listed bodies and caller context are explicit in the complete pseudocode. No matching direct retained evidence records were found for these exact procedure addresses.
 
-Complete pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c); named excerpts are in [engine-region.c](../decompiles/engine-region.c). Field and interface meanings remain unspecified where callers do not establish them.
+Complete pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c); named excerpts are in [engine-region.c](../decompiles/legacy/engine-region.c). Field and interface meanings remain unspecified where callers do not establish them.

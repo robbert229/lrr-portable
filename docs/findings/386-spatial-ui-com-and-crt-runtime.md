@@ -113,4 +113,4 @@ This pass names 106 functions across all remaining mid and high addresses. Names
 
 Supporting REA records for the audited regions include `legorr-engine-helper-audit-terrain-expansion-9.bundle`, `legorr-engine-helpers-expansion-17.bundle`, `legorr-ui-render-audit-2026-10-23.bundle`, `legorr-ddscene.bundle`, `legorr-engine-helper-audit-high.bundle`, `legorr-engine-helper-audit-text-io-expansion-9.bundle`, `legorr-engine-helpers-expansion-18.bundle`, `legorr-crt-third-pass-2026-10-23.bundle`, and `legorr-crt-runtime-audit`.
 
-Complete pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c), with named excerpts in [engine-region.c](../decompiles/engine-region.c).
+Complete pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c), with named excerpts in [engine-region.c](../decompiles/legacy/engine-region.c).

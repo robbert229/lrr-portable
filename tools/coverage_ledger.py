@@ -6,8 +6,8 @@ reconstruction status, using the repo's own address-anchoring conventions:
 
   - "ported"    : the function's entry address or FUN_* name is cited in
                   src/ (via `0x…`, `@ 0x…`, `entry 0x…`, or FUN_004xxxxx)
-  - "named"     : has a human name in docs/decompiles/engine-region.c (or a
-                  non-FUN symbol in the corpus) but no src/ citation yet
+  - "named"     : has a human name in the full corpus heading (or a non-FUN
+                  symbol in the manifest) but no src/ citation yet
   - "anonymous" : still FUN_* only, with no src/ citation
 
 Outputs:
@@ -21,7 +21,8 @@ import re
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 MANIFEST = ROOT / "docs/decompiles/full/manifest.csv"
-NAMED_CORPUS = ROOT / "docs/decompiles/engine-region.c"
+FULL_CORPUS = ROOT / "docs/decompiles/full/LEGORR.full.c"
+SUPPLEMENT = ROOT / "docs/decompiles/full/LEGORR.supplement.c"
 SRC_DIR = ROOT / "src"
 OUT_DIR = ROOT / "docs/coverage"
 
@@ -59,14 +60,37 @@ def read_manifest() -> list:
     return rows
 
 
-def read_named_corpus() -> dict:
-    """engine-region.c human names keyed by address."""
+def read_corpus_names(path: pathlib.Path) -> dict:
+    """Read human names from full-corpus section headings."""
     names = {}
-    for line in NAMED_CORPUS.read_text().splitlines():
-        m = re.match(r"// ==== (\S+) @ ([0-9A-Fa-f]{6,8}) ====", line)
+    for line in path.read_text().splitlines():
+        m = re.match(
+            r"// ==== (.+?) @ ([0-9A-Fa-f]{6,8})"
+            r"(?: \[Ghidra: .*?\])? ====$",
+            line,
+        )
         if m:
-            names[norm(m.group(2))] = m.group(1)
+            address = norm(m.group(2))
+            label = m.group(1)
+            ghidra = re.search(r" \[Ghidra: (.*?)\]$", line)
+            if ghidra:
+                # An explicit Ghidra suffix means the leading label is the
+                # human alias added by annotate_decompile_names.py.
+                name = label
+            elif re.fullmatch(r"FUN_[0-9A-Fa-f]{6,8}", label):
+                # Raw export headings are not human names.
+                continue
+            else:
+                name = label
+            if address in names and names[address] != name:
+                raise ValueError(f"conflicting full-corpus names at {address}")
+            names[address] = name
     return names
+
+
+def read_supplement_names(path: pathlib.Path) -> dict:
+    """Read named entries preserved outside the Ghidra function manifest."""
+    return read_corpus_names(path)
 
 
 # Symbols that are compiler/runtime support or import thunks, not game logic.
@@ -134,7 +158,8 @@ def region(addr: str) -> str:
 def main():
     rows = read_manifest()
     anchors = scan_src_anchors()
-    named = read_named_corpus()
+    named = read_corpus_names(FULL_CORPUS)
+    supplement = read_supplement_names(SUPPLEMENT)
     ledger = classify(rows, anchors, named)
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -184,7 +209,7 @@ def main():
         "- **anchored** — only an *interior* address (a call site / offset inside",
         "  the body) is cited in `src/`; the function is touched but its entry is",
         f"  not named ({len(anchored)} functions)",
-        "- **named** — human name in `engine-region.c` / corpus but no `src/`",
+        "- **named** — human name in the full-corpus heading / manifest but no `src/`",
         f"  citation yet ({len(named_e)} functions)",
         "- **runtime-import** — CRT/runtime support or import thunks; not game",
         f"  logic, never ported ({len(runtime)} functions)",
@@ -230,13 +255,10 @@ def main():
         "",
         "- A `src/` citation of an entry address is a *strong* anchor (the file",
         "  is anchored to that function) but is not proof the port is complete.",
-        "- 8 functions named in `engine-region.c` (`EngineTick`, `EngineShutdown`,",
-        "  `SelectionClusterA/B`, `SelectionGateHelper`, `SavObjCallbackB`,",
-        "  `SavObjSerialize`, `EngineShutdownAlt`) are **absent from the full",
-        "  corpus**: Ghidra auto-analysis never created them as function entries",
-        "  (they live in the engine's indirect-call region — see",
-        "  `tools/ghidra/CreateEngineFunctions.java`). They are tracked here only",
-        "  as named entries in the engine-region corpus.",
+        f"- {len(supplement)} named entries preserved in `LEGORR.supplement.c` are",
+        "  absent from the full-corpus manifest at those exact entry addresses.",
+        "  They are retained for lookup but excluded from the 2,564-function",
+        "  coverage counts.",
         "",
         "Regenerate: `python3 tools/coverage_ledger.py`",
         "",

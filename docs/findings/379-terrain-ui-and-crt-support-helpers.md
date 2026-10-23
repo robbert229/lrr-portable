@@ -32,4 +32,4 @@ This pass names 27 operation-level routines across terrain state, UI color/curso
 | `0x00495db0` | `CrtCharacterClassFlagTest` | Tests a caller-supplied mask against the CRT character table and locale fallback. | Wrapper `00495d90` supplies mask 4; pseudocode only. |
 | `0x00493150` | `X87RoundToIntegral` | Returns the x87 round-to-integral result for the supplied float. | Pseudocode only. |
 
-Complete pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c), with named excerpts in [engine-region.c](../decompiles/engine-region.c). Where no direct record was found, the table says so and the name follows checked-in pseudocode and caller behavior.
+Complete pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c), with named excerpts in [engine-region.c](../decompiles/legacy/engine-region.c). Where no direct record was found, the table says so and the name follows checked-in pseudocode and caller behavior.

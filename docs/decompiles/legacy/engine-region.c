@@ -1,3 +1,9 @@
+/* Legacy named decompilation corpus.
+ * The canonical complete export is ../full/LEGORR.full.c.
+ * This file is retained while its differing function bodies are reconciled;
+ * coverage names are now sourced from the full export. See full/README.md.
+ */
+
 // ==== EngineTick @ 004232e0 ====
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */

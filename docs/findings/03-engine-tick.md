@@ -4,7 +4,7 @@
 `call [DAT_00505930]`), so auto-analysis skipped it and REA could not
 decompile. We created the function offline with a Ghidra post-script
 (`tools/ghidra/CreateEngineFunctions.java`, run via `analyzeHeadless`)
-and decompiled there. Full pseudocode: `docs/decompiles/engine-region.c`.
+and decompiled there. Full pseudocode: `docs/decompiles/legacy/engine-region.c`.
 
 ## Signatures
 

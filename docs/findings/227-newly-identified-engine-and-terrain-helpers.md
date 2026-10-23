@@ -39,5 +39,5 @@ that remain uncertain are qualified below.
 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`), retained in
 [`legorr-engine-helpers-expansion-3.bundle`](../evidence/legorr-engine-helpers-expansion-3.bundle)
 (`ev_69fcfae5b26c15d810f32f8ed1bb85b09bc4e84c49f617200767116102d47d36`). The
-named pseudocode is in `docs/decompiles/engine-region.c` at the corresponding
+named pseudocode is in `docs/decompiles/legacy/engine-region.c` at the corresponding
 addresses.

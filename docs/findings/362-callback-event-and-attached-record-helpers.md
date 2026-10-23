@@ -17,4 +17,4 @@ This pass names observed global flag and handle cleanup, generic callback dispat
 
 Direct pseudocode and caller context are in the full corpus. Direct evidence records for the coordinate command helpers are documented in finding 359; no matching direct bundle records were located for the callback/event wrappers in this set.
 
-Complete pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c); named excerpts are in [engine-region.c](../decompiles/engine-region.c). Field, flag, and callback semantics remain at the operation level where callers do not establish more.
+Complete pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c); named excerpts are in [engine-region.c](../decompiles/legacy/engine-region.c). Field, flag, and callback semantics remain at the operation level where callers do not establish more.

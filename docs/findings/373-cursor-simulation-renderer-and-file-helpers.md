@@ -55,4 +55,4 @@ This pass adds 50 operation-level names across cursor routing, scene-object reco
 | `0x0048bfc0` | `FixedRecordSlotResourceRelease` | Releases the resource in a selected fixed record slot. | `ev_8688f97f74e41e6b24df6574e6d58ff1bbba7de05d148ffb35389f6e71190a8b` in `legorr-engine-helper-audit-text-io-expansion-9.bundle`; slot semantics unknown. |
 | `0x0048bff0` | `FixedRecordSlotResourceGet` | Returns the resource in a selected fixed record slot. | `ev_8688f97f74e41e6b24df6574e6d58ff1bbba7de05d148ffb35389f6e71190a8b` in `legorr-engine-helper-audit-text-io-expansion-9.bundle`; slot semantics unknown. |
 
-Complete pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c), with named excerpts in [engine-region.c](../decompiles/engine-region.c). Where no direct record was found, the table says so and the name follows checked-in pseudocode and caller behavior.
+Complete pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c), with named excerpts in [engine-region.c](../decompiles/legacy/engine-region.c). Where no direct record was found, the table says so and the name follows checked-in pseudocode and caller behavior.

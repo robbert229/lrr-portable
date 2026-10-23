@@ -43,4 +43,4 @@ This pass names scene-resource list rebuilds and lazy slots, structural entity p
 
 Direct pseudocode for `0x0043c200` is in `legorr-energy-low-target-routing.bundle` (`ev_5a52a3fd5529b9b47b20edd10e55c3dd92e757e7af32bc2da7f06275d2beb1fe`); other routines are supported by complete pseudocode and caller context. No direct evidence IDs were found for this candidate set.
 
-The complete pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c); named excerpts are in [engine-region.c](../decompiles/engine-region.c). Numeric task kinds and unresolved field semantics remain literal.
+The complete pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c); named excerpts are in [engine-region.c](../decompiles/legacy/engine-region.c). Numeric task kinds and unresolved field semantics remain literal.

@@ -9,4 +9,4 @@ This batch names an interface-pair update and a scene-property record value acce
 
 Direct pseudocode evidence: `legorr-advisor-animation.bundle` (`ev_0ec3059957c05673a84acc4ee06dafe179301f1e8d5023e3abf1cc599f9e7085`) and `legorr-ddscene.bundle` (`ev_b48bc1ac415a9c42443d39bd256e831a480875406242a6977c04b51b2667919f`) for the pair update; `legorr-ddscene.bundle` (`ev_9bf356e5959d1ae68070946cba715f45f79bf160b320dfde1b950cdcc7d5f8f7`) for the record accessor.
 
-The complete checked-in pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c); named excerpts are in [engine-region.c](../decompiles/engine-region.c). Field and interface meanings remain unspecified wherever callers do not establish them.
+The complete checked-in pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c); named excerpts are in [engine-region.c](../decompiles/legacy/engine-region.c). Field and interface meanings remain unspecified wherever callers do not establish them.

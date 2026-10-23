@@ -43,4 +43,4 @@ This pass names 36 operation-level routines across callback state, registry/reso
 | `0x004975d0` | `CrtCharacterToLowerLocale` | Lowercases ASCII when locale handling is disabled; otherwise uses ctype and the configured locale/code page. | Pseudocode only; no direct evidence bundle record was found. |
 | `0x00498ae0` | `CrtStreamBufferAllocate` | Allocates a 4 KB stream buffer and falls back to a two-byte inline buffer on allocation failure. | Pseudocode only; no direct evidence bundle record was found. |
 
-Complete pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c), with named excerpts in [engine-region.c](../decompiles/engine-region.c). Where no direct record was found, the table says so and the name follows checked-in pseudocode and caller behavior.
+Complete pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c), with named excerpts in [engine-region.c](../decompiles/legacy/engine-region.c). Where no direct record was found, the table says so and the name follows checked-in pseudocode and caller behavior.
