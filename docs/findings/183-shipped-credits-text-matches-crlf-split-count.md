@@ -1,0 +1,7 @@
+# Finding 183 — Shipped Credits Text Matches the CRLF Split Count
+
+The shipped `Lego.cfg` selects `Credits.txt`. That WAD payload is 1,916 bytes, contains 155 CRLF pairs, and ends with CRLF. Before splitting the input, `FUN_0040a0c0` counts CRLF pairs and allocates `count + 1` pointers. Its call to `FUN_00477440` uses the executable's CRLF delimiter at `0x4a1d64`; the splitter returns one token per separator-delimited row, including the empty token after a trailing delimiter. The shipped file therefore fits the routine's 156-entry count exactly. The caller ignores the splitter's returned token count and uses the earlier CRLF-derived count for scrolling.
+
+The final empty token is passed through the same text draw path as the other rows. That implies an empty spacing row at the end of the credits; whether the font renderer produces any visible artifact for that empty string is not established here.
+
+**Evidence.** `reference/LegoRR1.wad` contains `Lego.cfg` with `CreditsTextFile Credits.txt` and the 1,916-byte `credits.txt` entry (WAD indices 2 and 0). Byte inspection finds 155 `\r\n` pairs and a final `\r\n`. In the shipped `reference/LegoRR.exe` (SHA-256 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`), `FUN_0040a0c0` at `0x40a0c0` counts CRLF pairs, allocates `count + 1` dwords, and calls `FUN_00477440` with `DAT_004a1d64`; the bytes at `0x4a1d64` are `0d 0a 00`. The splitter implementation is at `0x477440`. Both functions are in `docs/decompiles/full/LEGORR.full.c`.
