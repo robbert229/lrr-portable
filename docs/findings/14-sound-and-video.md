@@ -99,7 +99,9 @@ duration query is a loose render-count bound and does not schedule frames
 sample. A false callback result leaves the current invocation and leads to
 wrapper cleanup (finding 201). The subsequent normal render step presents the
 shared secondary surface through the game's windowed blit or fullscreen flip
-path (finding 205).
+path (finding 205). The sample blit uses the full source and destination
+surfaces, so mismatched dimensions are stretched to fill rather than letterboxed
+(finding 206).
 
 Config surface (values from `Lego.cfg`):
 
@@ -169,7 +171,8 @@ playback region). The `.flh` container is documented in finding 21.
    source refreshes. Finding 204 records how stopping one attached sound can
    clear all registry entries for its provider frame and suspend refreshes for
    other sounds still attached to that frame. Finding 205 connects configured
-   DirectShow samples to the game's final windowed/fullscreen presentation.
+   DirectShow samples to the game's final windowed/fullscreen presentation;
+   finding 206 records the full-surface scaling behavior.
 4. `.flh` container format — **closed** by finding 21 (2026-10-20): layout,
    both 16-bit coders, and the RGB555→565 write transform.
 5. MCI: only `play cdaudio from N` and status queries were observed; no
