@@ -16,9 +16,9 @@
 
 - [x] Inspect existing findings and decompile excerpts for all six functions.
 - [x] Add one consolidated lifecycle map with evidence identifiers and uncertainty notes.
-- [ ] Adversarially review the complete branch diff against `develop`.
-- [ ] Verify the documentation and evidence references.
-- [ ] Commit and publish the branch / issue findings.
+- [x] Adversarially review the complete branch diff against `origin/develop` (standards: no findings; spec: two evidence corrections applied, no remaining material issue).
+- [x] Verify the documentation and evidence references (`git diff --check`; manual cross-check against decompile excerpts).
+- [x] Commit the branch work; findings are available in the branch and issue review comment.
 - [ ] Resolve integration and issue completion under repository policy.
 
 ## Architectural decisions
@@ -36,4 +36,5 @@
 ## Progress and blockers
 
 - Research and documentation are complete locally.
+- `make build` was attempted and failed during CMake configuration because `3rdparty/isle-portable/miniwin` is absent in this checkout.
 - Repository policy in `AGENTS.md` forbids merging and requires opening a PR. `hack/ralph.md` asks for direct merge and forbids PRs. The direct-merge completion path is therefore blocked by repository policy; leave the branch unmerged and report the conflict.
