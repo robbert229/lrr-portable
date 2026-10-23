@@ -8,22 +8,22 @@ Covers all **2564** local functions in `docs/decompiles/full/manifest.csv`
 | Status | Count | Share |
 | --- | ---: | ---: |
 | ported | 293 | 11.4% |
-| anchored | 7 | 0.3% |
-| named | 597 | 23.3% |
+| anchored | 5 | 0.2% |
+| named | 696 | 27.1% |
 | runtime-import | 46 | 1.8% |
-| anonymous | 1621 | 63.2% |
+| anonymous | 1524 | 59.4% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
   (293 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
-  not named (7 functions)
+  not named (5 functions)
 - **named** — human name in `engine-region.c` / corpus but no `src/`
-  citation yet (597 functions)
+  citation yet (696 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
-  (1621 functions)
+  (1524 functions)
 
 **Game logic remaining to port: 2225 (86.8%).**
 
@@ -31,16 +31,16 @@ Covers all **2564** local functions in `docs/decompiles/full/manifest.csv`
 
 | Region | Anonymous functions |
 | --- | ---: |
-| `0x00040xxxx` | 267 |
-| `0x00046xxxx` | 193 |
-| `0x00047xxxx` | 191 |
-| `0x00049xxxx` | 177 |
-| `0x00043xxxx` | 175 |
-| `0x00041xxxx` | 158 |
-| `0x00048xxxx` | 154 |
-| `0x00044xxxx` | 134 |
-| `0x00045xxxx` | 132 |
-| `0x00042xxxx` | 40 |
+| `0x00040xxxx` | 259 |
+| `0x00046xxxx` | 185 |
+| `0x00047xxxx` | 169 |
+| `0x00049xxxx` | 169 |
+| `0x00043xxxx` | 168 |
+| `0x00041xxxx` | 155 |
+| `0x00048xxxx` | 132 |
+| `0x00045xxxx` | 131 |
+| `0x00044xxxx` | 127 |
+| `0x00042xxxx` | 29 |
 
 ## Named-but-unported corpus functions
 
@@ -55,15 +55,20 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00401a70` | AdvisorSceneAdvanceAndCompletionCheck |
 | `0x00401b20` | AdvisorClearActiveState |
 | `0x00401b30` | AdvisorApplySlotTransform |
+| `0x00401c50` | FormattedTextPrintfWidth |
+| `0x00401c80` | FormattedTextPrintf |
 | `0x00402000` | CmdMarkMatching |
 | `0x00402060` | CmdSetKind |
 | `0x00402100` | CmdFlushAll |
 | `0x00402170` | LevelNoGatherObjectSetup |
+| `0x00402510` | TerrainCellCommandCreate |
+| `0x00402ae0` | TerrainCellRefreshDispatch |
 | `0x00402cd0` | CmdCancelRef |
 | `0x00402f30` | EntityThresholdProgressEventQueue |
 | `0x00402f70` | EntityTargetCommandQueue |
 | `0x00403700` | CmdCancelByCoords |
 | `0x00403a50` | EntityDrainCommandChain |
+| `0x00403c00` | EntityActivityRecordRemoveByType |
 | `0x00404fc0` | PlaceCommandEligibilityCheck |
 | `0x00406540` | EntityPoolCallbackSearch |
 | `0x004065e0` | RenderSurfaceSecondaryGet |
@@ -83,12 +88,16 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0040bf70` | RockFallStyleNameLookup |
 | `0x0040cce0` | LavaEffectSelectAndPlace |
 | `0x0040ce80` | MapCellStateBufferRebuild |
+| `0x0040d240` | TerrainCellHasOccupiedOrFlaggedNeighbor |
+| `0x0040d3f0` | TerrainCellSpecialStatePredicate |
+| `0x0040de40` | EntityFenceSparkTerrainInteraction |
 | `0x0040e930` | ErosionTimingStateInit |
 | `0x0040e9c0` | LavaErosionDelayFromCell |
 | `0x0040ee50` | LavaErosionPendingCellAdd |
 | `0x0040f000` | LavaErosionNeighborCheck |
 | `0x0040f2b0` | LavaErosionNeighborEligible |
 | `0x0040f330` | LavaErosionNeighborMutate |
+| `0x004102b0` | UiTextUnderscoresToSpaces |
 | `0x004103d0` | MainMenuTextItem |
 | `0x004103f0` | MenuWipeStart |
 | `0x00410440` | MenuWipeEnd |
@@ -161,6 +170,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004196a0` | MessageSubscriberDispatch |
 | `0x00419b20` | InfoMessageQueueFindId |
 | `0x0041a300` | InterfaceMenuActionLabelsInit |
+| `0x0041a7d0` | InputKeyGroupRegister |
 | `0x0041b2d0` | CommandContextPostToHud |
 | `0x0041c440` | AdvisorCallbackScheduleGate |
 | `0x0041c4f0` | AdvisorAnimationPositionAndRequestUpdate |
@@ -168,16 +178,22 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0041dca0` | UiActionDispatch |
 | `0x0041e750` | SelectionClearRequestAndHudReset |
 | `0x0041ea50` | StoreSelectedMapCoordinate |
+| `0x0041f420` | SelectedEntitiesAnyMatch |
 | `0x0041f900` | UpgradeResourceCheck |
 | `0x0041f9e0` | UpgradeResourceDebit |
 | `0x0041fa80` | StartLevelPilots |
 | `0x00422850` | MiscObjectResourcesLoad |
+| `0x004230c0` | DebugPanelTextDrawUpdate |
+| `0x004248b0` | SelectedEntityGroundMarkerRender |
 | `0x00425b40` | PeriodicCallbackDispatch |
 | `0x00425c30` | TransitionControl |
 | `0x00425ce0` | ScrollScaleSetAndClamp |
 | `0x004262e0` | ObjectiveScoreTextOriginSet |
 | `0x00426320` | ObjectiveTaskTextOriginSet |
 | `0x00426420` | CursorRayToCameraRoute |
+| `0x00428020` | EntityCommandStatusFeedbackDispatch |
+| `0x00428330` | TerrainCommandFeedbackDispatch |
+| `0x00428780` | TerrainCellCommandPredicate |
 | `0x00428800` | ActionFeedbackSoundDispatch |
 | `0x004288e0` | LevelDebugInputCellMutatorDispatch |
 | `0x00429470` | CameraPointerRayRoute |
@@ -185,13 +201,20 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004297b0` | CDAudioWatchdogModeUpdate |
 | `0x00429810` | AudioPlaybackToggle |
 | `0x0042b330` | LoadTileMeshes |
+| `0x0042b480` | RectangularResourceTableDestroy |
+| `0x0042b850` | SurfaceTextCharacterMapInitialize |
 | `0x0042bb60` | TextureSetConfigLoad |
 | `0x0042c330` | EmergeMapTriggerSpawn |
+| `0x0042c5b0` | TerrainCellByteStateClassify |
+| `0x0042cd50` | UpgradeNameEntryFind |
+| `0x0042cf50` | MiniFigureTypeTableLoad |
 | `0x0042d2b0` | BuildingTypesLoad |
 | `0x0042d460` | UpgradeTypesLoad |
 | `0x0042d600` | ObjectNamesLoad |
 | `0x0042da20` | ObjectTheNamesLoad |
+| `0x0042de40` | ViewportTargetPositionClamp |
 | `0x0042efc0` | DirectShowVideoPlaybackLoop |
+| `0x0042f2e0` | TerrainCellEdgeFlagSetAndUpdate |
 | `0x0042f350` | TerrainNeighborCoordinateCheck |
 | `0x00430320` | TerrainCellWorkFlagClear |
 | `0x00430470` | TerrainNeighborFlagSet |
@@ -199,9 +222,12 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00431580` | TerrainNeighborWorkFlagScan |
 | `0x00431780` | TerrainStampImpactHandler |
 | `0x004319e0` | MapFileCellGet |
+| `0x00431a30` | SelectedEntitiesAnyPredicateMatch |
 | `0x00431da0` | TerrainCellRouteAndOccupancyCheck |
+| `0x00432170` | TerrainCellFlag100Test |
 | `0x00432550` | AlwaysAcceptPlaceCommandCell |
 | `0x00432600` | TerrainCellVariantFlagPropagate |
+| `0x00432aa0` | TerrainCellOccupancyOrFlagCheck |
 | `0x00432b50` | TerrainWalkableNeighborSearch |
 | `0x00432bd0` | TerrainCellWalkableFlagCheck |
 | `0x00432c90` | TerrainCellStateUpdate |
@@ -210,8 +236,11 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004334c0` | MapFileDimensionsGet |
 | `0x00434a50` | SoundSamplesConfigLoad |
 | `0x00434e80` | InterfaceSpawnRequestEnqueue |
+| `0x00435170` | TerrainSurfaceTypeNameGet |
+| `0x00435dc8` | CameraViewContextClose |
 | `0x00435e0e` | CameraViewContextSet |
 | `0x00435f16` | CursorScreenRayContextReset |
+| `0x00435f28` | TerrainGridBorderInsetGet |
 | `0x00436aa5` | CameraZoomUpdate |
 | `0x00436b87` | CameraPointerPanUpdate |
 | `0x00436c20` | ActivityNameTableInit |
@@ -234,6 +263,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00439990` | EntityActivitySceneStateUpdate |
 | `0x00439d50` | VehicleUnloadAdjacentCellFind |
 | `0x00439e10` | VehicleUnloadCellFindIfEligible |
+| `0x00439e70` | EntityAttachedObjectListDetach |
 | `0x0043a300` | EntityDepositActivityGate |
 | `0x0043a5f0` | EntityVisualResourceGetOrCreate |
 | `0x0043abf0` | TerrainCellVariantUpdateQueue |
@@ -254,6 +284,9 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00440c70` | TerrainGridPathSearch |
 | `0x004410f0` | TerrainNeighborPathCheck |
 | `0x00441700` | EntityRouteSetupAndMarkerAssociate |
+| `0x00441940` | EntityActionSequenceReset |
+| `0x00441b30` | EntityStateReset |
+| `0x00442260` | EntityTransformPositionGet |
 | `0x004428a0` | EntityWorldPositionSet |
 | `0x004470d0` | EntityConditionalTypeFiveSpawn |
 | `0x00447210` | EntityAdjacentPlacementCellSearch |
@@ -261,13 +294,18 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00447b30` | EntityActivityTick |
 | `0x00447ea0` | EntityTypeBehaviorUpdate |
 | `0x00448c50` | EntitySetActivityPlace |
+| `0x00449f50` | EntityTypeOperationDispatch |
+| `0x00449ff0` | EntityTypeOperationRelease |
 | `0x0044a2a0` | EntityWorkObjectPositionGet |
+| `0x0044a310` | ObjectMovementInputAccumulate |
 | `0x0044a910` | BuildingPlacementPreviewUpdate |
 | `0x0044be30` | EntityAuxiliaryPayloadRelease |
 | `0x0044c4a0` | SelectionClearMarkerAndResetHud |
 | `0x0044dec0` | FileLoadingProgressUpdate |
 | `0x0044e4d0` | TerrainGridVertexBuild |
 | `0x0044e6d0` | TerrainCellMaterialTransitionBegin |
+| `0x0044e880` | TerrainGridCellsInitialize |
+| `0x0044f1a0` | InputKeyMappingAddBidirectional |
 | `0x0044f230` | TerrainCellMaterialSet |
 | `0x0044f4e0` | TerrainCellSurfaceTypeSet |
 | `0x0044f540` | TerrainCellSurfaceTypeGet |
@@ -284,6 +322,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00451f60` | CommandQueueCancelOpcode |
 | `0x00452430` | EntityRandomValidCellCommandCreate |
 | `0x00452520` | SelectionSnapshotCreate |
+| `0x004525b0` | SelectedEntitySetHasAny |
 | `0x00452690` | SelectionCandidateAlreadySelectedOrMarked |
 | `0x004526e0` | SelectionCandidateFilter |
 | `0x00452870` | SelectionCandidateEligibilityCheck |
@@ -364,16 +403,24 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00469ea0` | EntityCapabilityFlagsGet |
 | `0x00469f20` | ScreenShakeFlagRaise |
 | `0x00469f40` | BuildingUpgradeAdmissionCheck |
+| `0x0046a510` | SceneObjectStateDispatch |
 | `0x0046ac20` | AdvisorTextRequestSetup |
 | `0x0046ac60` | AdvisorTextAnimationUpdate |
 | `0x0046ad00` | AdvisorTextDisplayWorker |
+| `0x0046b520` | UiTextEntryLoad |
+| `0x0046b700` | TimedEffectCueRequestSet |
+| `0x0046b730` | TimedEffectPersistenceSet |
+| `0x0046b770` | TimedEffectUpdateRequestSet |
+| `0x0046b7a0` | TimedEffectTimestampReset |
 | `0x0046b7c0` | TimedEffectAndCueUpdate |
+| `0x0046b8b0` | RectangularGridOverlayGeometryDraw |
 | `0x0046c3f0` | SceneActivityPairedChannelUpdate |
 | `0x0046c6f0` | VehicleTypeDefinitionParse |
 | `0x0046ce10` | EntityPayloadType1Release |
 | `0x0046d140` | SceneAssignOwnerFromModel |
 | `0x0046da50` | EntityActivityChangeDispatch |
 | `0x0046eb80` | WeaponTypeConfigLoad |
+| `0x0046f0d0` | ObjectTypeNameIndexFind |
 | `0x0046ffb0` | LaserSpatialSoundAndImpact |
 | `0x004721e0` | DirectShowSampleSetup |
 | `0x004722b0` | ConfiguredVideoGraphSetup |
@@ -401,7 +448,10 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004744f0` | TextureSurfaceCreate |
 | `0x00474710` | TextureRelease |
 | `0x00474a20` | AnimatedTextureFrameCount |
+| `0x00474b30` | LwoLayerEnabledSet |
 | `0x00474c00` | AnimatedTextureFrameResolve |
+| `0x00474c40` | LwoLayerPolygonVertexCount |
+| `0x00474cc0` | LwoLayerPolygonVertexDataRead |
 | `0x00474d30` | TerrainCellQuadVertexEmit |
 | `0x00474da0` | AnimatedTextureFrameSet |
 | `0x00475120` | DDiSceneAdvanceByTime |
@@ -427,8 +477,10 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00477010` | DDiSceneDrawBegin |
 | `0x00477240` | DDiSceneCurrentObjectSet |
 | `0x00477290` | CameraScreenCoordinateProject |
+| `0x004772d0` | CameraProjectPointToScreen |
 | `0x004774b0` | WhitespaceTokenize |
 | `0x00477550` | StringDuplicate |
+| `0x00477590` | FormattedTextEscapeDecodeAndEmit |
 | `0x00477610` | CaseInsensitiveSubstringFind |
 | `0x00477670` | GameStringHashCompute |
 | `0x004777a0` | WinMain |
@@ -443,6 +495,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004783f0` | WindowCreate |
 | `0x004784c0` | GameWindowProcedure |
 | `0x004786c0` | MainWindowActivationAndCloseHandler |
+| `0x004788d0` | Direct3DRenderStateSetCached |
 | `0x00478940` | D3DMaterialStateFlush |
 | `0x00478980` | MusicMixerVolumeSet |
 | `0x004789a0` | MusicMixerVolumeGet |
@@ -450,11 +503,15 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00478df0` | BlockTextTokenPoolInit |
 | `0x00478e20` | BlockTextTokenPoolDestroy |
 | `0x00478f50` | ConfigEntryFind |
+| `0x00479020` | SortedEntryNextEqualKey |
 | `0x00479170` | ConfigRgbVectorRead |
 | `0x00479490` | BlockTextTokenPoolGrow |
 | `0x00479500` | D3DRMVectorRandom |
+| `0x00479530` | SurfaceTriangleNormalCalculate |
 | `0x004798e0` | ViewRayIntersectionTest |
+| `0x0047a150` | FormattedTextFormatDraw |
 | `0x0047a180` | RewardTextDraw |
+| `0x0047a1e0` | FormattedTextDrawAndMeasure |
 | `0x0047a550` | FontRecordAndSurfaceRelease |
 | `0x0047a640` | DirectSoundSystemInit |
 | `0x0047a850` | SoundVolumeValueValid |
@@ -495,6 +552,9 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0047cd50` | QueryTextureMem |
 | `0x0047cee0` | DirectDrawClipperSetRegion |
 | `0x0047d470` | ImageSurfaceRelease |
+| `0x0047d700` | PopCount32 |
+| `0x0047d720` | FindFirstSetBit32 |
+| `0x0047d800` | Bitmap24BitSurfaceConvert |
 | `0x0047db90` | RGBChannelsPack |
 | `0x0047dbc0` | ResourceRecordAddRef |
 | `0x0047e190` | FontDeviceColorConvert |
@@ -517,6 +577,8 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0047efb0` | KeyboardDownKeyCount |
 | `0x0047efd0` | AviFileShutdown |
 | `0x0047f4f0` | FindCdKeyDrive |
+| `0x0047f590` | WadMountPathCacheStore |
+| `0x0047f600` | DebugOutputFormat |
 | `0x0047f640` | MountWadFromPath |
 | `0x0047f850` | WadFileSeek |
 | `0x0047f980` | WadFileRead |
@@ -524,9 +586,16 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0047fac0` | GameFileClose |
 | `0x0047fb10` | WadFileCursorGet |
 | `0x0047fb60` | SoundSampleFileOpenByName |
+| `0x0047fc20` | GameFileReadByte |
+| `0x0047fce0` | GameFileReadLine |
+| `0x0047fd40` | GameFileReadLineDispatch |
+| `0x0047fdb0` | GameFilePrintFormat |
+| `0x0047fe20` | GameFileSystemTypeGet |
 | `0x0047fe30` | FileOpenRouteSelect |
 | `0x0047fea0` | WadEntryReadIntoStreamSlot |
 | `0x0047fed0` | GameFileHandleAllocate |
+| `0x0047ff50` | GameFileHandleRelease |
+| `0x0047ffc0` | MountedPathPrefixRewrite |
 | `0x00480050` | ReadCrlfLine |
 | `0x004800a0` | ReadWholeFile |
 | `0x004800c0` | ReadWholeFileWithProgress |
@@ -534,6 +603,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00480220` | ResourcePathResolveAgainstBase |
 | `0x004805b0` | SharedTextureRootRegister |
 | `0x00480650` | SharedTextureRootInitialize |
+| `0x00480900` | CachedRenderResourceInstanceCreate |
 | `0x004809e0` | LwoModelEntryLoad |
 | `0x00480ac0` | MaterialPass |
 | `0x00481820` | BindModelTextures |
@@ -552,6 +622,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004839c0` | ModelRenderChildPassDispatch |
 | `0x00483a70` | ModelChildRenderEligibilityCheck |
 | `0x00483a90` | ModelRenderChildMaterialPass |
+| `0x00483b70` | Direct3DDeviceStateApply |
 | `0x00483f00` | FlicPlayerClose |
 | `0x00483f60` | FlicFileHeaderValidate |
 | `0x00484320` | FlicChunkWalk |
@@ -571,10 +642,20 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00485030` | FlicOpcode27DecodeDispatch |
 | `0x004850f0` | TextBufferCreate |
 | `0x00485190` | TextBufferDestroy |
-| `0x00485250` | AdvisorTextAppendFromControlIndex |
+| `0x00485250` | TextBufferAppendVFormat |
 | `0x00485300` | ObjectiveAdvisorTextCopy |
 | `0x00485390` | TextBufferDrawWrapped |
+| `0x004859b0` | TextBufferReset |
 | `0x00485e80` | RenderSetup |
+| `0x00485ff0` | SurfaceDrawPolyline |
+| `0x00486090` | SurfaceFillPixelSpans |
+| `0x00486210` | SurfaceFillPixelSpanRecords |
+| `0x00486390` | SurfaceDrawCirclePixels |
+| `0x004864d0` | SurfaceColorPackToPixel |
+| `0x00486550` | SurfaceLockConfigurePixelWriter |
+| `0x00486650` | SurfaceUnlockResetPixelWriter |
+| `0x00486690` | SurfacePixelWriterSelectByFormat |
+| `0x00486720` | BresenhamLineWalkClipped |
 | `0x004869f0` | LoadLWSCScene |
 | `0x004876c0` | SharedObjectDirectoryScan |
 | `0x00487ba0` | SharedObjectAnimationAndTimedEventUpdate |
@@ -598,6 +679,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00489460` | MapFileResourceSlotRelease |
 | `0x004894a0` | MapFileResourceSlotGet |
 | `0x004897e0` | DDiSceneTimedHookDispatch |
+| `0x00489d90` | DirectXErrorMessageFormat |
 | `0x00489dd0` | DirectXResultDiagnosticDispatch |
 | `0x0048b260` | StartupStreamStateReset |
 | `0x0048b290` | StartupStreamsClose |
@@ -605,9 +687,12 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0048b330` | RegistryPathSplit |
 | `0x0048b360` | RegistryPathAccessor |
 | `0x0048b390` | RegistryPathCreateKeys |
+| `0x0048b4e0` | WwadArchiveIndexLoad |
+| `0x0048bce0` | LwoParserRecordAtIndex |
 | `0x0048bd30` | WadEntrySlotAllocate |
 | `0x0048bd50` | WadEntryFindAcrossMountedArchives |
 | `0x0048c0c0` | LwoStringDuplicate |
+| `0x0048c120` | LwoTextureProjectionModeParse |
 | `0x0048c1d0` | LwoReadBigEndianFloat |
 | `0x0048c360` | LwoCurves |
 | `0x0048d870` | ModelObjectFree |
@@ -616,6 +701,8 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0048dad0` | ParseSignedDecimal |
 | `0x0048db80` | EngineHeapFree |
 | `0x0048dbd0` | EngineHeapAlloc |
+| `0x0048dbf0` | EngineHeapAllocateWithRetry |
+| `0x0048dc40` | EngineHeapAllocateAligned |
 | `0x0048dc80` | GrowHeapArray |
 | `0x0048de20` | ArraySortWithComparator |
 | `0x0048e160` | RandomSeedSet |
@@ -628,11 +715,23 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0048f2b0` | StreamedAudioFileLengthGet |
 | `0x0048f460` | FileResourceHandleSeek |
 | `0x0048f500` | GameFileWrite |
+| `0x0048f650` | GameFileDelete |
+| `0x0048f6d0` | GameDirectoryCreate |
+| `0x0048f700` | GameFileMetadataFind |
+| `0x0048fb90` | GameFileReadBuffered |
 | `0x00490090` | MaterialResolve |
 | `0x004907f0` | ParseEntityHealthValue |
+| `0x004909d0` | EngineFormatStringToStream |
+| `0x00491430` | FormatArgumentReadDword |
+| `0x00491450` | FormatArgumentReadDouble |
+| `0x00491470` | FormatArgumentReadWord |
+| `0x00491900` | EnginePoolAllocate |
+| `0x00493c10` | FpuControlWordUpdateMasked |
 | `0x00493ca0` | LocaleCharacterMapString |
+| `0x00494c70` | ScanStreamGetChar |
 | `0x00494e30` | StdFileOpen |
 | `0x00495000` | StdFileHandleAcquire |
+| `0x00496c00` | Win32FileDescriptorSeek |
 | `0x0049c7c0` | ExpandWadPayload |
 | `0x0049c840` | WadPayloadDecodeDispatch |
 | `0x0049cc70` | WadBitstreamOutputInitialize |

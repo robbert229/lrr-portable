@@ -587,7 +587,6 @@ public class CreateEngineFunctions extends GhidraScript {
         0x483a90L,  // FUN_00483a90
         0x483f00L,  // FUN_00483f00
         0x484070L,  // FUN_00484070
-        0x485250L,  // FUN_00485250
         0x485300L,  // FUN_00485300
         0x4876c0L,  // FUN_004876c0
         0x487ba0L,  // shared-object track updates and timed-event dispatch
@@ -768,7 +767,7 @@ public class CreateEngineFunctions extends GhidraScript {
         0x432200L,  // terrain-cell previous-state tracking
         0x432e00L,  // predug edge-wall flag setter
         0x4334c0L,  // map-file dimensions read
-        0x4377d0L,  // entity timed-callback dispatch
+        0x4377d0L,  // EntityPoolFindByCallback
         0x4383b0L,  // rover work-queue update
         0x439370L,  // build/placement command setup
         0x439990L,  // entity activity scene-state update
@@ -797,7 +796,6 @@ public class CreateEngineFunctions extends GhidraScript {
         0x4792e0L,  // config block path lookup
         0x479ee0L,  // font resource load
         0x47a180L,  // reward text drawing
-        0x47a470L,  // advisor inline resource-token draw
         0x47aad0L,  // free sound-bank slot search
         0x47a550L,  // font record and surface release
         0x47c8f0L,  // bitmap file writer
@@ -880,6 +878,115 @@ public class CreateEngineFunctions extends GhidraScript {
         0x435a50L,  // MainSimFeatureFlagLatch
         0x42c440L,  // LevelRecordTimerCountdown
         0x42cb70L,  // LavaErosionCellTimersAdvance
+        0x42cf50L,  // MiniFigureTypeTableLoad
+        0x42de40L,  // ViewportTargetPositionClamp
+        0x42c5b0L,  // TerrainCellByteStateClassify
+        0x428020L,  // EntityCommandStatusFeedbackDispatch
+        0x428330L,  // TerrainCommandFeedbackDispatch
+        0x44e880L,  // TerrainGridCellsInitialize
+        0x44edf0L,  // TerrainCellOrientationToggleAndRebuild
+        0x4514f0L,  // TerrainCellSurfaceVectorsRebuild
+        0x46a4c0L,  // FlagMaskCallbacksAllPass
+        0x431a30L,  // SelectedEntitiesAnyPredicateMatch
+        0x48f650L,  // GameFileDelete
+        0x48f6d0L,  // GameDirectoryCreate
+        0x48f700L,  // GameFileMetadataFind
+        0x48c120L,  // LwoTextureProjectionModeParse
+        0x489d90L,  // DirectXErrorMessageFormat
+        0x48dbf0L,  // EngineHeapAllocateWithRetry
+        0x48dc40L,  // EngineHeapAllocateAligned
+        0x491900L,  // EnginePoolAllocate
+        0x4909d0L,  // EngineFormatStringToStream
+        0x4377b0L,  // EntityPoolFindByCallbackFiltered
+        0x442260L,  // EntityTransformPositionGet
+        0x4291a0L,  // SceneMarkerUpdateAndDraw
+        0x425d90L,  // TerrainPointerCommandUpdate
+        0x4230c0L,  // DebugPanelTextDrawUpdate
+        0x42b850L,  // SurfaceTextCharacterMapInitialize
+        0x42f2e0L,  // TerrainCellEdgeFlagSetAndUpdate
+        0x46b700L,  // TimedEffectCueRequestSet
+        0x46b730L,  // TimedEffectPersistenceSet
+        0x46b770L,  // TimedEffectUpdateRequestSet
+        0x46b7a0L,  // TimedEffectTimestampReset
+        0x46b8b0L,  // RectangularGridOverlayGeometryDraw
+        0x449f50L,  // EntityTypeOperationDispatch
+        0x449ff0L,  // EntityTypeOperationRelease
+        0x48b4e0L,  // WwadArchiveIndexLoad
+        0x483b70L,  // Direct3DDeviceStateApply
+        0x480900L,  // CachedRenderResourceInstanceCreate
+        0x477590L,  // FormattedTextEscapeDecodeAndEmit
+        0x47d800L,  // Bitmap24BitSurfaceConvert
+        0x435dc8L,  // CameraViewContextClose
+        0x4248b0L,  // SelectedEntityGroundMarkerRender
+        0x42cd50L,  // UpgradeNameEntryFind
+        0x41f420L,  // SelectedEntitiesAnyMatch
+        0x4102b0L,  // UiTextUnderscoresToSpaces
+        0x428780L,  // TerrainCellCommandPredicate
+        0x42b480L,  // RectangularResourceTableDestroy
+        0x4798b0L,  // RandomFloatRange
+        0x44f1a0L,  // InputKeyMappingAddBidirectional
+        0x441940L,  // EntityActionSequenceReset
+        0x44a310L,  // ObjectMovementInputAccumulate
+        0x46a510L,  // SceneObjectStateDispatch
+        0x48bce0L,  // LwoParserRecordAtIndex
+        0x47d700L,  // PopCount32
+        0x47d720L,  // FindFirstSetBit32
+        0x48fb90L,  // GameFileReadBuffered
+        0x479020L,  // SortedEntryNextEqualKey
+        0x402ae0L,  // TerrainCellRefreshDispatch
+        0x402510L,  // TerrainCellCommandCreate
+        0x439e70L,  // EntityAttachedObjectListDetach
+        0x441b30L,  // EntityStateReset
+        0x46b520L,  // UiTextEntryLoad
+        0x46f0d0L,  // ObjectTypeNameIndexFind
+        0x4859b0L,  // TextBufferReset
+        0x496c00L,  // Win32FileDescriptorSeek
+        0x491430L,  // FormatArgumentReadDword
+        0x491450L,  // FormatArgumentReadDouble
+        0x491470L,  // FormatArgumentReadWord
+        0x41a7d0L,  // InputKeyGroupRegister
+        0x403c00L,  // EntityActivityRecordRemoveByType
+        0x401c50L,  // FormattedTextPrintfWidth
+        0x401c80L,  // FormattedTextPrintf
+        0x47a150L,  // FormattedTextFormatDraw
+        0x47a1e0L,  // FormattedTextDrawAndMeasure
+        0x47a470L,  // BitmapFontGlyphDrawAndMeasure
+        0x40d240L,  // TerrainCellHasOccupiedOrFlaggedNeighbor
+        0x40d3f0L,  // TerrainCellSpecialStatePredicate
+        0x40de40L,  // EntityFenceSparkTerrainInteraction
+        0x432aa0L,  // TerrainCellOccupancyOrFlagCheck
+        0x432170L,  // TerrainCellFlag100Test
+        0x474cc0L,  // LwoLayerPolygonVertexDataRead
+        0x474c40L,  // LwoLayerPolygonVertexCount
+        0x4788d0L,  // Direct3DRenderStateSetCached
+        0x47f600L,  // DebugOutputFormat
+        0x485230L,  // TextBufferAppendFormat
+        0x485250L,  // TextBufferAppendVFormat
+        0x493c10L,  // FpuControlWordUpdateMasked
+        0x494c70L,  // ScanStreamGetChar
+        0x485ff0L,  // SurfaceDrawPolyline
+        0x486720L,  // BresenhamLineWalkClipped
+        0x47f590L,  // WadMountPathCacheStore
+        0x47fc20L,  // GameFileReadByte
+        0x47fce0L,  // GameFileReadLine
+        0x47fd40L,  // GameFileReadLineDispatch
+        0x47fdb0L,  // GameFilePrintFormat
+        0x47fe20L,  // GameFileSystemTypeGet
+        0x47ff50L,  // GameFileHandleRelease
+        0x47ffc0L,  // MountedPathPrefixRewrite
+        0x486090L,  // SurfaceFillPixelSpans
+        0x486210L,  // SurfaceFillPixelSpanRecords
+        0x486390L,  // SurfaceDrawCirclePixels
+        0x4864d0L,  // SurfaceColorPackToPixel
+        0x486550L,  // SurfaceLockConfigurePixelWriter
+        0x486650L,  // SurfaceUnlockResetPixelWriter
+        0x486690L,  // SurfacePixelWriterSelectByFormat
+        0x4772d0L,  // CameraProjectPointToScreen
+        0x479530L,  // SurfaceTriangleNormalCalculate
+        0x474b30L,  // LwoLayerEnabledSet
+        0x435170L,  // TerrainSurfaceTypeNameGet
+        0x435f28L,  // TerrainGridBorderInsetGet
+        0x4525b0L,  // SelectedEntitySetHasAny
     };
     static final String[] NAMES = { "EngineTick", "EngineShutdown", "EngineShutdownAlt",
         "MainSimStep", "ManagerTick", "MessageDispatch", "ViewContextTick",
@@ -989,6 +1096,76 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x434a50: return "SoundSamplesConfigLoad";
             case 0x434c10: return "IncidentMessageConfigLoad";
             case 0x435dc8: return "CameraViewContextClose";
+            case 0x4248b0: return "SelectedEntityGroundMarkerRender";
+            case 0x42cd50: return "UpgradeNameEntryFind";
+            case 0x41f420: return "SelectedEntitiesAnyMatch";
+            case 0x4102b0: return "UiTextUnderscoresToSpaces";
+            case 0x428780: return "TerrainCellCommandPredicate";
+            case 0x42b480: return "RectangularResourceTableDestroy";
+            case 0x4798b0: return "RandomFloatRange";
+            case 0x44f1a0: return "InputKeyMappingAddBidirectional";
+            case 0x441940: return "EntityActionSequenceReset";
+            case 0x44a310: return "ObjectMovementInputAccumulate";
+            case 0x46a510: return "SceneObjectStateDispatch";
+            case 0x48bce0: return "LwoParserRecordAtIndex";
+            case 0x47d700: return "PopCount32";
+            case 0x47d720: return "FindFirstSetBit32";
+            case 0x48fb90: return "GameFileReadBuffered";
+            case 0x479020: return "SortedEntryNextEqualKey";
+            case 0x402ae0: return "TerrainCellRefreshDispatch";
+            case 0x402510: return "TerrainCellCommandCreate";
+            case 0x439e70: return "EntityAttachedObjectListDetach";
+            case 0x441b30: return "EntityStateReset";
+            case 0x46b520: return "UiTextEntryLoad";
+            case 0x46f0d0: return "ObjectTypeNameIndexFind";
+            case 0x4859b0: return "TextBufferReset";
+            case 0x496c00: return "Win32FileDescriptorSeek";
+            case 0x491430: return "FormatArgumentReadDword";
+            case 0x491450: return "FormatArgumentReadDouble";
+            case 0x491470: return "FormatArgumentReadWord";
+            case 0x41a7d0: return "InputKeyGroupRegister";
+            case 0x403c00: return "EntityActivityRecordRemoveByType";
+            case 0x401c50: return "FormattedTextPrintfWidth";
+            case 0x401c80: return "FormattedTextPrintf";
+            case 0x47a150: return "FormattedTextFormatDraw";
+            case 0x47a1e0: return "FormattedTextDrawAndMeasure";
+            case 0x47a470: return "BitmapFontGlyphDrawAndMeasure";
+            case 0x40d240: return "TerrainCellHasOccupiedOrFlaggedNeighbor";
+            case 0x40d3f0: return "TerrainCellSpecialStatePredicate";
+            case 0x40de40: return "EntityFenceSparkTerrainInteraction";
+            case 0x432aa0: return "TerrainCellOccupancyOrFlagCheck";
+            case 0x432170: return "TerrainCellFlag100Test";
+            case 0x474cc0: return "LwoLayerPolygonVertexDataRead";
+            case 0x474c40: return "LwoLayerPolygonVertexCount";
+            case 0x4788d0: return "Direct3DRenderStateSetCached";
+            case 0x47f600: return "DebugOutputFormat";
+            case 0x485230: return "TextBufferAppendFormat";
+            case 0x485250: return "TextBufferAppendVFormat";
+            case 0x493c10: return "FpuControlWordUpdateMasked";
+            case 0x494c70: return "ScanStreamGetChar";
+            case 0x485ff0: return "SurfaceDrawPolyline";
+            case 0x486720: return "BresenhamLineWalkClipped";
+            case 0x47f590: return "WadMountPathCacheStore";
+            case 0x47fc20: return "GameFileReadByte";
+            case 0x47fce0: return "GameFileReadLine";
+            case 0x47fd40: return "GameFileReadLineDispatch";
+            case 0x47fdb0: return "GameFilePrintFormat";
+            case 0x47fe20: return "GameFileSystemTypeGet";
+            case 0x47ff50: return "GameFileHandleRelease";
+            case 0x47ffc0: return "MountedPathPrefixRewrite";
+            case 0x486090: return "SurfaceFillPixelSpans";
+            case 0x486210: return "SurfaceFillPixelSpanRecords";
+            case 0x486390: return "SurfaceDrawCirclePixels";
+            case 0x4864d0: return "SurfaceColorPackToPixel";
+            case 0x486550: return "SurfaceLockConfigurePixelWriter";
+            case 0x486650: return "SurfaceUnlockResetPixelWriter";
+            case 0x486690: return "SurfacePixelWriterSelectByFormat";
+            case 0x4772d0: return "CameraProjectPointToScreen";
+            case 0x479530: return "SurfaceTriangleNormalCalculate";
+            case 0x474b30: return "LwoLayerEnabledSet";
+            case 0x435170: return "TerrainSurfaceTypeNameGet";
+            case 0x435f28: return "TerrainGridBorderInsetGet";
+            case 0x4525b0: return "SelectedEntitySetHasAny";
             case 0x435e0e: return "CameraViewContextSet";
             case 0x436900: return "CameraPanAxisUpdate";
             case 0x4369f4: return "CameraTiltAxisUpdate";
@@ -1027,7 +1204,7 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x46ac20: return "AdvisorTextRequestSetup";
             case 0x46ac60: return "AdvisorTextAnimationUpdate";
             case 0x46ad00: return "AdvisorTextDisplayWorker";
-            case 0x46b770: return "CameraEdgeCursorPan";
+            case 0x46b770: return "TimedEffectUpdateRequestSet";
             case 0x46b7c0: return "TimedEffectAndCueUpdate";
             case 0x46c3f0: return "SceneActivityPairedChannelUpdate";
             case 0x46d140: return "SceneAssignOwnerFromModel";
@@ -1383,7 +1560,7 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x4321a0: return "TerrainCellUpdateQueueFlush";
             case 0x432200: return "TerrainCellPreviousStateTrack";
             case 0x4334c0: return "MapFileDimensionsGet";
-            case 0x4377d0: return "EntityTimedCallbackDispatch";
+            case 0x4377d0: return "EntityPoolFindByCallback";
             case 0x4383b0: return "RoverWorkQueueUpdate";
             case 0x439370: return "EntityBuildPlacementCommandSetup";
             case 0x439990: return "EntityActivitySceneStateUpdate";
@@ -1620,6 +1797,43 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x435a50: return "MainSimFeatureFlagLatch";
             case 0x42c440: return "LevelRecordTimerCountdown";
             case 0x42cb70: return "LavaErosionCellTimersAdvance";
+            case 0x42cf50: return "MiniFigureTypeTableLoad";
+            case 0x42de40: return "ViewportTargetPositionClamp";
+            case 0x42c5b0: return "TerrainCellByteStateClassify";
+            case 0x428020: return "EntityCommandStatusFeedbackDispatch";
+            case 0x428330: return "TerrainCommandFeedbackDispatch";
+            case 0x44e880: return "TerrainGridCellsInitialize";
+            case 0x44edf0: return "TerrainCellOrientationToggleAndRebuild";
+            case 0x4514f0: return "TerrainCellSurfaceVectorsRebuild";
+            case 0x46a4c0: return "FlagMaskCallbacksAllPass";
+            case 0x431a30: return "SelectedEntitiesAnyPredicateMatch";
+            case 0x48f650: return "GameFileDelete";
+            case 0x48f6d0: return "GameDirectoryCreate";
+            case 0x48f700: return "GameFileMetadataFind";
+            case 0x48c120: return "LwoTextureProjectionModeParse";
+            case 0x489d90: return "DirectXErrorMessageFormat";
+            case 0x48dbf0: return "EngineHeapAllocateWithRetry";
+            case 0x48dc40: return "EngineHeapAllocateAligned";
+            case 0x491900: return "EnginePoolAllocate";
+            case 0x4909d0: return "EngineFormatStringToStream";
+            case 0x4377b0: return "EntityPoolFindByCallbackFiltered";
+            case 0x442260: return "EntityTransformPositionGet";
+            case 0x4291a0: return "SceneMarkerUpdateAndDraw";
+            case 0x425d90: return "TerrainPointerCommandUpdate";
+            case 0x4230c0: return "DebugPanelTextDrawUpdate";
+            case 0x42b850: return "SurfaceTextCharacterMapInitialize";
+            case 0x42f2e0: return "TerrainCellEdgeFlagSetAndUpdate";
+            case 0x46b700: return "TimedEffectCueRequestSet";
+            case 0x46b730: return "TimedEffectPersistenceSet";
+            case 0x46b7a0: return "TimedEffectTimestampReset";
+            case 0x46b8b0: return "RectangularGridOverlayGeometryDraw";
+            case 0x449f50: return "EntityTypeOperationDispatch";
+            case 0x449ff0: return "EntityTypeOperationRelease";
+            case 0x48b4e0: return "WwadArchiveIndexLoad";
+            case 0x483b70: return "Direct3DDeviceStateApply";
+            case 0x480900: return "CachedRenderResourceInstanceCreate";
+            case 0x477590: return "FormattedTextEscapeDecodeAndEmit";
+            case 0x47d800: return "Bitmap24BitSurfaceConvert";
             default: return null;
         }
     }

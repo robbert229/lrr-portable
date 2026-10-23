@@ -423,10 +423,20 @@ Open threads, in order of value:
 | 224 | [findings/224-predug-cells-feed-a-capped-spawn-coordinate-pool.md](docs/findings/224-predug-cells-feed-a-capped-spawn-coordinate-pool.md) | Predug Cell Values Feed a Capped Coordinate Pool |
 | 225 | [findings/225-terrain-objective-level-and-diagnostic-helpers.md](docs/findings/225-terrain-objective-level-and-diagnostic-helpers.md) | Newly Identified Terrain, Objective, Level, and Diagnostic Helpers |
 | 226 | [findings/226-omitted-simulation-terrain-resource-text-procedures.md](docs/findings/226-omitted-simulation-terrain-resource-text-procedures.md) | Omitted Simulation, Terrain, Resource, and Text Procedures |
+| 227 | [findings/227-newly-identified-engine-and-terrain-helpers.md](docs/findings/227-newly-identified-engine-and-terrain-helpers.md) | Newly Identified Engine and Terrain Helpers |
+| 228 | [findings/228-entity-pool-terrain-and-timed-effect-helpers.md](docs/findings/228-entity-pool-terrain-and-timed-effect-helpers.md) | Entity-Pool, Terrain, and Timed-Effect Helpers |
+| 229 | [findings/229-wwad-archive-and-render-resource-helpers.md](docs/findings/229-wwad-archive-and-render-resource-helpers.md) | WWAD Archive and Render-Resource Helpers |
+| 230 | [findings/230-engine-input-selection-and-resource-helpers.md](docs/findings/230-engine-input-selection-and-resource-helpers.md) | Engine Input, Selection, and Resource Helpers |
+| 231 | [findings/231-terrain-entity-ui-and-stream-helpers.md](docs/findings/231-terrain-entity-ui-and-stream-helpers.md) | Terrain, Entity, UI, and Stream Helpers |
+| 232 | [findings/232-formatted-text-rendering-and-font-helpers.md](docs/findings/232-formatted-text-rendering-and-font-helpers.md) | Formatted Text Rendering and Font Helpers |
+| 233 | [findings/233-terrain-rendering-and-stream-primitives.md](docs/findings/233-terrain-rendering-and-stream-primitives.md) | Terrain, Rendering, and Stream Primitives |
+| 234 | [findings/234-game-file-streams-and-surface-pixels.md](docs/findings/234-game-file-streams-and-surface-pixels.md) | Game-File Streams and Surface Pixel Operations |
+| 235 | [findings/235-camera-projection-lwo-layer-state-and-surface-normals.md](docs/findings/235-camera-projection-lwo-layer-state-and-surface-normals.md) | Camera Projection, LWO Layer State, and Surface Normals |
+| 236 | [findings/236-terrain-labels-map-bounds-and-selection-predicate.md](docs/findings/236-terrain-labels-map-bounds-and-selection-predicate.md) | Terrain Labels, Map Bounds, and Selection Predicate |
 
 Named-pseudocode corpus: [`docs/decompiles/engine-region.c`](docs/decompiles/engine-region.c)
-(850 generated sections selected from the reverse-engineering findings; the
-Ghidra script selects 850 targets. This includes the manually bounded objective
+(957 generated sections selected from the reverse-engineering findings; the
+Ghidra script selects 957 targets. This includes the manually bounded objective
 callback at `0x459100`, which auto-analysis does not mark as a procedure).
 Machine-readable evidence: [`docs/evidence/legorr-rev.bundle`](docs/evidence/legorr-rev.bundle)
 (236 recorded REA observations against `LegoRR.exe`,
@@ -435,6 +445,39 @@ The latest helper expansion has its own supporting bundle at
 [legorr-engine-helpers-expansion.bundle](docs/evidence/legorr-engine-helpers-expansion.bundle)
 and the follow-up terrain/resource/text expansion is recorded in
 [legorr-engine-helpers-expansion-2.bundle](docs/evidence/legorr-engine-helpers-expansion-2.bundle).
+The latest engine and terrain helper decompiles are recorded in
+[legorr-engine-helpers-expansion-3.bundle](docs/evidence/legorr-engine-helpers-expansion-3.bundle).
+The current direct-decompile batch is in
+[legorr-engine-helpers-expansion-4.bundle](docs/evidence/legorr-engine-helpers-expansion-4.bundle).
+The latest input, selection, and resource helper batch is in
+[legorr-engine-helpers-expansion-5.bundle](docs/evidence/legorr-engine-helpers-expansion-5.bundle);
+its address-range audits are in the [low](docs/evidence/legorr-engine-helper-audit-low-expansion-5.bundle),
+[simulation/input](docs/evidence/legorr-engine-helper-audit-mid-expansion-5.bundle), and
+[resource/rendering](docs/evidence/legorr-engine-helper-audit-high-expansion-5.bundle)
+evidence bundles.
+The latest terrain, entity, UI, and stream expansion is in
+[legorr-engine-helpers-expansion-6.bundle](docs/evidence/legorr-engine-helpers-expansion-6.bundle),
+with its [low](docs/evidence/legorr-engine-helper-audit-low-expansion-6.bundle),
+[simulation](docs/evidence/legorr-engine-helper-audit-mid-expansion-6.bundle), and
+[resource](docs/evidence/legorr-engine-helper-audit-high-expansion-6.bundle)
+caller-audit bundles.
+The text renderer and font helper call chain is in
+[legorr-engine-helpers-expansion-7.bundle](docs/evidence/legorr-engine-helpers-expansion-7.bundle).
+The terrain, rendering, and stream helper batch is in
+[legorr-engine-helpers-expansion-8.bundle](docs/evidence/legorr-engine-helpers-expansion-8.bundle),
+with [terrain](docs/evidence/legorr-engine-helper-audit-terrain-expansion-8.bundle),
+[rendering](docs/evidence/legorr-engine-helper-audit-render-expansion-8.bundle), and
+[text/IO](docs/evidence/legorr-engine-helper-audit-text-io-expansion-8.bundle) caller audits.
+Game-file stream and DirectDraw pixel helpers were added in
+[legorr-engine-helpers-expansion-9.bundle](docs/evidence/legorr-engine-helpers-expansion-9.bundle).
+The camera, LWO layer, and normal helpers are in
+[legorr-engine-helper-audit-render-expansion-9.bundle](docs/evidence/legorr-engine-helper-audit-render-expansion-9.bundle).
+The terrain labels, grid-bound, and selection helpers are documented in
+[legorr-engine-helper-audit-terrain-expansion-9.bundle](docs/evidence/legorr-engine-helper-audit-terrain-expansion-9.bundle).
+The latest three-range helper audits are preserved in the
+[low](docs/evidence/legorr-engine-helper-audit-low.bundle),
+[simulation/terrain](docs/evidence/legorr-engine-helper-audit-mid.bundle), and
+[resource/rendering](docs/evidence/legorr-engine-helper-audit-high.bundle) evidence bundles.
 
 ## Reproducibility
 
