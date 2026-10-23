@@ -307,7 +307,7 @@ Open threads, in order of value:
 | 105 | [`findings/105-sav-write-ignores-short-write-results.md`](docs/findings/105-sav-write-ignores-short-write-results.md) | Slot-save success ignores partial write results |
 | 106 | [`findings/106-sav-reader-resets-slot-on-record-count-mismatch.md`](docs/findings/106-sav-reader-resets-slot-on-record-count-mismatch.md) | A save record-count mismatch reinitializes the slot |
 | 107 | [`findings/107-samples-config-sound-alias-variants.md`](docs/findings/107-samples-config-sound-alias-variants.md) | Samples config builds duplicate/stream sound aliases and selects variants |
-| 108 | [`findings/108-streamed-wav-format-extension.md`](docs/findings/108-streamed-wav-format-extension.md) | Streamed WAV loading preserves non-PCM format extensions |
+| 108 | [`findings/108-streamed-wav-format-extension.md`](docs/findings/108-streamed-wav-format-extension.md) | Streamed WAV parser preserves extensions before a PCM-only playback gate |
 | 109 | [`findings/109-emergemap-layerl-records.md`](docs/findings/109-emergemap-layerl-records.md) | EmergeMap values populate six-slot LayerL records |
 | 110 | [`findings/110-objective-entity-paired-field-predicate.md`](docs/findings/110-objective-entity-paired-field-predicate.md) | A delegated objective predicate searches entities for paired-field matches |
 | 111 | [`findings/111-directdraw-windowed-exclusive-surfaces.md`](docs/findings/111-directdraw-windowed-exclusive-surfaces.md) | Windowed and exclusive modes build different DirectDraw surfaces |
@@ -346,6 +346,7 @@ Open threads, in order of value:
 | 147 | [findings/147-sample-variant-choice-uses-shared-seeded-lcg.md](docs/findings/147-sample-variant-choice-uses-shared-seeded-lcg.md) | Sample variant selection consumes the shared LCG state |
 | 148 | [findings/148-global-wav-playback-applies-eight-db-attenuation.md](docs/findings/148-global-wav-playback-applies-eight-db-attenuation.md) | Global in-memory WAV playback subtracts 8 dB before SetVolume |
 | 149 | [findings/149-deferred-sound-queue-drops-requests-after-ten.md](docs/findings/149-deferred-sound-queue-drops-requests-after-ten.md) | Deferred sound queue silently drops requests after ten entries |
+| 150 | [findings/150-streamed-wav-playback-rejects-non-pcm.md](docs/findings/150-streamed-wav-playback-rejects-non-pcm.md) | Streamed playback rejects non-PCM WAV formats before buffer creation |
 
 Named-pseudocode corpus: [`docs/decompiles/engine-region.c`](docs/decompiles/engine-region.c)
 (114 named functions covering the engine/game-logic region — findings 01–10).
