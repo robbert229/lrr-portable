@@ -454,10 +454,11 @@ Open threads, in order of value:
 | 255 | [findings/255-visual-channel-relays-resource-tree-callback-walks-scene-pose-and-registry-helpers.md](docs/findings/255-visual-channel-relays-resource-tree-callback-walks-scene-pose-and-registry-helpers.md) | Visual Channel Relays, Resource-Tree Callback Walks, Scene Pose, and Registry Helpers |
 | 256 | [findings/256-command-band-step-issuers-flag-behavior-timers-and-steering-helpers.md](docs/findings/256-command-band-step-issuers-flag-behavior-timers-and-steering-helpers.md) | Command-Band Step Issuers, Flag-Behavior Timers, and Steering Helpers |
 | 257 | [findings/257-configured-tiny-monster-spawning-and-mutual-activity-pairing.md](docs/findings/257-configured-tiny-monster-spawning-and-mutual-activity-pairing.md) | Configured Tiny-Monster Spawning and Mutual Activity Pairing |
+| 258 | [findings/258-interface-method-wrappers-overlay-refresh-and-deferred-set-relays.md](docs/findings/258-interface-method-wrappers-overlay-refresh-and-deferred-set-relays.md) | Interface-Method Wrappers, Overlay Refresh, and Deferred-Set Relays |
 
 Named-pseudocode corpus: [`docs/decompiles/engine-region.c`](docs/decompiles/engine-region.c)
-(1243 generated sections selected from the reverse-engineering findings; the
-Ghidra script selects 1243 targets. This includes the manually bounded objective
+(1262 generated sections selected from the reverse-engineering findings; the
+Ghidra script selects 1262 targets. This includes the manually bounded objective
 callback at `0x459100`, which auto-analysis does not mark as a procedure).
 Machine-readable evidence: [`docs/evidence/legorr-rev.bundle`](docs/evidence/legorr-rev.bundle)
 (236 recorded REA observations against `LegoRR.exe`,
@@ -513,6 +514,8 @@ The command-band step issuers, flag-behavior timers, and steering/mesh helpers a
 [legorr-engine-helpers-expansion-28.bundle](docs/evidence/legorr-engine-helpers-expansion-28.bundle).
 The configured tiny-monster spawning and mutual activity pairing helpers are recorded in
 [legorr-engine-helpers-expansion-29.bundle](docs/evidence/legorr-engine-helpers-expansion-29.bundle).
+The interface-method wrappers, frame overlay refresh, and former deferred-set relays are
+recorded in [legorr-engine-helpers-expansion-30.bundle](docs/evidence/legorr-engine-helpers-expansion-30.bundle).
 The latest input, selection, and resource helper batch is in
 [legorr-engine-helpers-expansion-5.bundle](docs/evidence/legorr-engine-helpers-expansion-5.bundle);
 its address-range audits are in the [low](docs/evidence/legorr-engine-helper-audit-low-expansion-5.bundle),

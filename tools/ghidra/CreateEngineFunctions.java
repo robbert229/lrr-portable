@@ -1267,6 +1267,25 @@ public class CreateEngineFunctions extends GhidraScript {
         0x488a70L,  // LoadRecordInterfacesReleaseFree
         0x44afb0L,  // ConfiguredTinyMonsterSpawnAndTeardown
         0x44b250L,  // PairingActivityRaiseAndMutualLink
+        0x40b000L,  // TileMatchingCellsCollect
+        0x418a00L,  // OverlayTextBufferRefresh
+        0x435b20L,  // SceneObjectChainRecordCreate
+        0x44d280L,  // RandomWaypointTimerStepApply
+        0x45c0d0L,  // PairCountHistogramBuild
+        0x469cb0L,  // EntityComponentFloatAt20
+        0x469ce0L,  // EntityComponentFloatAtD4
+        0x469d20L,  // EntityComponentFloatAtD8
+        0x46a0a0L,  // EntitySpeedComponentGet
+        0x46f770L,  // EffectApplyByKindBranch
+        0x471630L,  // RayHitCellDistanceMinimizeSweep
+        0x473460L,  // LightInterfaceCallSlot40
+        0x473480L,  // LightInterfaceCallSlot3C
+        0x4734a0L,  // LightInterfaceCallSlot38
+        0x474760L,  // InterfaceArrayForwardSync
+        0x47e300L,  // InterfaceMethod18StructApply
+        0x483690L,  // MatrixMethodPairApply
+        0x485ea0L,  // InterfaceSlot58PairStoreClamp
+        0x489b30L,  // ObjectInterfaceArrayResourceCreate
         0x4350a0L,  // SurfaceTypeDescriptionsConfigLoad
         0x444fb0L,  // EntityTurnToVectorActivityIssue
         0x4451e0L,  // EntityPathStepVectorNormalize
@@ -2398,6 +2417,25 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x488a70: return "LoadRecordInterfacesReleaseFree";
             case 0x44afb0: return "ConfiguredTinyMonsterSpawnAndTeardown";
             case 0x44b250: return "PairingActivityRaiseAndMutualLink";
+            case 0x40b000: return "TileMatchingCellsCollect";
+            case 0x418a00: return "OverlayTextBufferRefresh";
+            case 0x435b20: return "SceneObjectChainRecordCreate";
+            case 0x44d280: return "RandomWaypointTimerStepApply";
+            case 0x45c0d0: return "PairCountHistogramBuild";
+            case 0x469cb0: return "EntityComponentFloatAt20";
+            case 0x469ce0: return "EntityComponentFloatAtD4";
+            case 0x469d20: return "EntityComponentFloatAtD8";
+            case 0x46a0a0: return "EntitySpeedComponentGet";
+            case 0x46f770: return "EffectApplyByKindBranch";
+            case 0x471630: return "RayHitCellDistanceMinimizeSweep";
+            case 0x473460: return "LightInterfaceCallSlot40";
+            case 0x473480: return "LightInterfaceCallSlot3C";
+            case 0x4734a0: return "LightInterfaceCallSlot38";
+            case 0x474760: return "InterfaceArrayForwardSync";
+            case 0x47e300: return "InterfaceMethod18StructApply";
+            case 0x483690: return "MatrixMethodPairApply";
+            case 0x485ea0: return "InterfaceSlot58PairStoreClamp";
+            case 0x489b30: return "ObjectInterfaceArrayResourceCreate";
             case 0x4350a0: return "SurfaceTypeDescriptionsConfigLoad";
             case 0x444fb0: return "EntityTurnToVectorActivityIssue";
             case 0x4451e0: return "EntityPathStepVectorNormalize";

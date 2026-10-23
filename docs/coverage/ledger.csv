@@ -240,7 +240,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0040aea0,FUN_0040aea0,anonymous,,0,771
 0040af40,FUN_0040af40,anonymous,,0,351
 0040af90,FUN_0040af90,anonymous,,0,505
-0040b000,FUN_0040b000,anonymous,,0,2355
+0040b000,FUN_0040b000,named,TileMatchingCellsCollect,0,2355
 0040b1b0,FUN_0040b1b0,named,DependencyGridOccupancyPass,0,1078
 0040b250,FUN_0040b250,anonymous,,0,253
 0040b2a0,FUN_0040b2a0,anonymous,,0,191
@@ -492,7 +492,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00418830,FUN_00418830,named,BuildingUpgradeStateChangedEventDispatch,0,959
 00418920,FUN_00418920,anonymous,,0,855
 004189d0,FUN_004189d0,anonymous,,0,199
-00418a00,FUN_00418a00,anonymous,,0,3460
+00418a00,FUN_00418a00,named,OverlayTextBufferRefresh,0,3460
 00418da0,FUN_00418da0,named,HelpWindowButtonHitTest,0,1368
 00418f80,FUN_00418f80,anonymous,,0,153
 00418fc0,FUN_00418fc0,anonymous,,0,460
@@ -827,7 +827,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00435a20,FUN_00435a20,anonymous,,0,117
 00435a50,FUN_00435a50,ported,MainSimFeatureFlagLatch,2,202
 00435aa0,FUN_00435aa0,anonymous,,0,419
-00435b20,FUN_00435b20,anonymous,,0,1689
+00435b20,FUN_00435b20,named,SceneObjectChainRecordCreate,0,1689
 00435d91,FUN_00435d91,anonymous,,0,228
 00435dc8,FUN_00435dc8,named,CameraViewContextClose,0,192
 00435e0e,FUN_00435e0e,named,CameraViewContextSet,0,303
@@ -1126,7 +1126,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0044cff0,FUN_0044cff0,anonymous,,0,544
 0044d0d0,FUN_0044d0d0,named,DriftOffsetStepApply,0,1249
 0044d250,FUN_0044d250,anonymous,,0,147
-0044d280,FUN_0044d280,anonymous,,0,3606
+0044d280,FUN_0044d280,named,RandomWaypointTimerStepApply,0,3606
 0044d710,FUN_0044d710,anonymous,,0,381
 0044d760,FUN_0044d760,named,JitterStepApply,0,1937
 0044d9a0,FUN_0044d9a0,anonymous,,0,368
@@ -1327,7 +1327,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0045bf70,FUN_0045bf70,anonymous,,0,350
 0045bfb0,FUN_0045bfb0,anonymous,,0,450
 0045c040,FUN_0045c040,ported,CrystalQuotaSetup,1,629
-0045c0d0,FUN_0045c0d0,anonymous,,0,3553
+0045c0d0,FUN_0045c0d0,named,PairCountHistogramBuild,0,3553
 0045c340,FUN_0045c340,anonymous,,0,574
 0045c3f0,FUN_0045c3f0,anonymous,,0,623
 0045c4a0,FUN_0045c4a0,anonymous,,0,81
@@ -1504,11 +1504,11 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00469bb0,FUN_00469bb0,named,BuildingDepositCountGet,0,190
 00469be0,FUN_00469be0,anonymous,,0,190
 00469c10,FUN_00469c10,ported,EntityBuildingIndexSet,4,608
-00469cb0,FUN_00469cb0,anonymous,,0,105
+00469cb0,FUN_00469cb0,named,EntityComponentFloatAt20,0,105
 00469cc0,FUN_00469cc0,ported,TerrainTypeMovementSpeedGet,9,131
-00469ce0,FUN_00469ce0,anonymous,,0,105
+00469ce0,FUN_00469ce0,named,EntityComponentFloatAtD4,0,105
 00469d00,FUN_00469d00,anonymous,,0,105
-00469d20,FUN_00469d20,anonymous,,0,105
+00469d20,FUN_00469d20,named,EntityComponentFloatAtD8,0,105
 00469d40,FUN_00469d40,anonymous,,0,105
 00469d50,FUN_00469d50,anonymous,,0,105
 00469d60,FUN_00469d60,anonymous,,0,105
@@ -1538,7 +1538,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0046a040,FUN_0046a040,anonymous,,0,105
 0046a060,FUN_0046a060,ported,PermittedActivityCapacityCheck,12,104
 0046a080,FUN_0046a080,anonymous,,0,105
-0046a0a0,FUN_0046a0a0,anonymous,,0,105
+0046a0a0,FUN_0046a0a0,named,EntitySpeedComponentGet,0,105
 0046a0c0,FUN_0046a0c0,anonymous,,0,193
 0046a0f0,FUN_0046a0f0,anonymous,,0,194
 0046a120,FUN_0046a120,anonymous,,0,527
@@ -1646,7 +1646,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0046f380,FUN_0046f380,anonymous,,0,174
 0046f3b0,FUN_0046f3b0,named,RayHitScanAndEffectApply,0,1984
 0046f550,FUN_0046f550,ported,,4,817
-0046f770,FUN_0046f770,anonymous,,0,1583
+0046f770,FUN_0046f770,named,EffectApplyByKindBranch,0,1583
 0046f920,FUN_0046f920,ported,,1,1455
 0046faf0,FUN_0046faf0,named,EntitySpawnRecordSlotInit,0,2066
 0046fc70,FUN_0046fc70,named,ObjectFlightCurveRecordInit,0,2984
@@ -1664,7 +1664,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004712f0,FUN_004712f0,anonymous,,0,167
 00471310,FUN_00471310,anonymous,,0,192
 00471330,FUN_00471330,anonymous,,0,277
-00471630,FUN_00471630,anonymous,,0,2915
+00471630,FUN_00471630,named,RayHitCellDistanceMinimizeSweep,0,2915
 00471860,FUN_00471860,anonymous,,0,530
 004718d0,FUN_004718d0,anonymous,,0,642
 00471960,FUN_00471960,named,SeeThroughWallsRayCheck,0,968
@@ -1704,9 +1704,9 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00472cd0,FUN_00472cd0,ported,EntityVisualLoadACT,5,7260
 00473340,FUN_00473340,named,SceneActionNamePresent,0,223
 00473370,FUN_00473370,ported,SceneActionNameSet,2,1980
-00473460,FUN_00473460,anonymous,,0,217
-00473480,FUN_00473480,anonymous,,0,217
-004734a0,FUN_004734a0,anonymous,,0,217
+00473460,FUN_00473460,named,LightInterfaceCallSlot40,0,217
+00473480,FUN_00473480,named,LightInterfaceCallSlot3C,0,217
+004734a0,FUN_004734a0,named,LightInterfaceCallSlot38,0,217
 004734c0,FUN_004734c0,named,AdvisorCompanionTransformApply,0,376
 004734f0,FUN_004734f0,named,DDiSceneLightCreate,0,635
 00473560,FUN_00473560,anonymous,,0,1297
@@ -1728,7 +1728,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00474410,FUN_00474410,named,ParseIndexedSurfaceName,0,1182
 004744f0,FUN_004744f0,named,TextureSurfaceCreate,0,3357
 00474710,FUN_00474710,named,TextureRelease,0,567
-00474760,FUN_00474760,anonymous,,0,2527
+00474760,FUN_00474760,named,InterfaceArrayForwardSync,0,2527
 004748f0,FUN_004748f0,named,MeshRecordAllocateOrAppend,0,1471
 00474a20,FUN_00474a20,named,AnimatedTextureFrameCount,0,470
 00474a60,FUN_00474a60,anonymous,,0,598
@@ -1981,7 +1981,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0047e130,FUN_0047e130,anonymous,,0,639
 0047e190,FUN_0047e190,named,FontDeviceColorConvert,0,1379
 0047e2d0,FUN_0047e2d0,named,RGBChannelsUnpack,0,344
-0047e300,FUN_0047e300,anonymous,,0,947
+0047e300,FUN_0047e300,named,InterfaceMethod18StructApply,0,947
 0047e3e0,FUN_0047e3e0,anonymous,,0,505
 0047e440,FUN_0047e440,ported,BitmapSurfaceSave,5,109
 0047e460,FUN_0047e460,anonymous,,0,119
@@ -2100,7 +2100,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00483540,FUN_00483540,anonymous,,0,389
 00483580,FUN_00483580,anonymous,,0,867
 00483600,FUN_00483600,named,Direct3DViewportSetup,0,886
-00483690,FUN_00483690,anonymous,,0,1588
+00483690,FUN_00483690,named,MatrixMethodPairApply,0,1588
 00483810,FUN_00483810,anonymous,,0,865
 004838b0,FUN_004838b0,named,D3DRenderStateSync,0,589
 00483940,FUN_00483940,named,Direct3DRenderStateRestore,0,521
@@ -2149,7 +2149,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00485a20,FUN_00485a20,named,KeyboardKeyNamesInit,0,4292
 00485e30,FUN_00485e30,anonymous,,0,436
 00485e80,FUN_00485e80,named,RenderSetup,0,115
-00485ea0,FUN_00485ea0,anonymous,,0,993
+00485ea0,FUN_00485ea0,named,InterfaceSlot58PairStoreClamp,0,993
 00485fb0,FUN_00485fb0,anonymous,,0,283
 00485ff0,FUN_00485ff0,named,SurfaceDrawPolyline,0,626
 00486090,FUN_00486090,named,SurfaceFillPixelSpans,0,1043
@@ -2214,7 +2214,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004897e0,FUN_004897e0,named,DDiSceneTimedHookDispatch,0,2130
 00489910,FUN_00489910,named,ResourceTreeCallbackCount,0,1163
 004899f0,FUN_004899f0,named,ObjectHierarchyRecursiveClone,0,2744
-00489b30,FUN_00489b30,anonymous,,0,944
+00489b30,FUN_00489b30,named,ObjectInterfaceArrayResourceCreate,0,944
 00489bc0,FUN_00489bc0,anonymous,,0,834
 00489c30,FUN_00489c30,ported,IndexedBitmapPaletteDataPrepare,1,1819
 00489d70,FUN_00489d70,anonymous,,0,135
