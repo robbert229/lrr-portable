@@ -11,7 +11,7 @@ This finding maps the 29 functions assigned to `math-geometry`. Most are literal
 | `0x00401500` | `Vector3Add` | Adds corresponding components of two 3D vectors into an output vector. |
 | `0x004016c0` | `Vector3Subtract` | Writes the second input minus the third input component by component. |
 | `0x004016f0` | `Vector3DotProduct` | Returns the sum of pairwise component products. |
-| `0x00401720` | `FUN_00401720` | Multiplies each component of a 3D vector by one scalar; used alongside add, subtract, dot, cross, and normalize in spatial calculations. |
+| `0x00401720` | Provisional alias `Vector3Scale` (`FUN_00401720`) | Multiplies each component of a 3D vector by one scalar; used alongside add, subtract, dot, cross, and normalize in spatial calculations. |
 | `0x00401750` | `Vector3Normalize` | Scales a vector by the reciprocal of its Euclidean length. The pseudocode has no zero-length guard. |
 | `0x004065f0` | `CubicBezierPointEvaluate` | Evaluates the two-coordinate cubic Bézier polynomial for four control-point vectors and parameter `t`. `BezierCurveSamplesBuild` calls it. |
 | `0x00406730` | `Vector2DistanceVariant` | Computes the same 2D Euclidean distance as `Vector2Distance`; used by the polyline length builder. |
