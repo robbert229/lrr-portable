@@ -214,6 +214,16 @@ its `FUN_00403d10` → `FUN_00432c90` → `FUN_0042f6f0` path. The traced produc
 so this path does not establish an edge-sensitive read without an intervening
 flag writer. This caller and producer trace also comes from the full decompile
 and shipped-image disassembly, not a separate REA bundle.
+The tutorial callback trace additionally finds `SetRockMonsterAtTutorial 1`
+in Level17's shipped `.nrn` source and material 1 on all 69 distinct top/left
+border cells of its configured `Surf_17.map`. `FUN_00456b80` groups by terrain byte,
+and callback case 7 passes those coordinates to the type-3 spawner, whose
+walkability and adjacent-placement gates still need to pass. The available
+Path and predug maps do not establish those border flags; the route also does
+not call the risky cell updater. This static asset/call trace uses
+`LEGORR.full.c`, `reference/LegoRR.exe`, and the unpacked shipped WAD data; it
+is not a separate REA bundle. Level17 config loads `17.npl`; the source-to-
+compiled call linkage and runtime execution are not established.
 
 ## `legorr-path-list-movement.bundle`
 
