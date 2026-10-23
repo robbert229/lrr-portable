@@ -37,7 +37,7 @@ The descriptor records are organized in blocks of 32, with a handle dword and fl
 - `CrtStreamBufferAllocate @ 0x00498ae0` allocates a 0x1000-byte buffer and configures stream pointers/flags; on allocation failure it installs the stream’s inline two-byte buffer and marks the small-buffer state. Read, pushback, and stream-write paths call it.
 - `CrtOwnedStreamBufferRelease @ 0x00494df0` frees the buffer at stream field 2 only when the stream flags indicate both a supported stream kind and owned allocation, then clears buffer flags and pointers. `FileResourceHandleClose` calls it.
 - `CrtInputWithStreamBufferSetup @ 0x0048fed0` performs standard-stream buffer setup, calls `EngineFormatStringToStream @ 0x004909d0` with its arguments, then flushes/releases through `CrtStreamBufferFlushAndRelease`. The assigned name suggests input, but the observed callee is the output formatter; the role/name mismatch should remain explicit until broader call context resolves it.
-- `CrtFileDescriptorSeek` clears a descriptor state bit after a successful seek; stream seek callers also flush buffered output before changing position. This links stream state to OS descriptor state.
+- `Win32FileDescriptorSeek @ 0x00496c00` clears a descriptor state bit after a successful seek; stream seek callers also flush buffered output before changing position. This links stream state to OS descriptor state.
 
 ## Formatted input and pushback
 
