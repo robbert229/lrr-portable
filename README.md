@@ -359,7 +359,7 @@ Open threads, in order of value:
 | 160 | [findings/160-music-volume-defaults-to-zero-without-cd-mixer-control.md](docs/findings/160-music-volume-defaults-to-zero-without-cd-mixer-control.md) | Music slider starts at zero when the CD mixer source is unavailable |
 | 161 | [findings/161-gameplay-uses-positional-and-object-attached-sfx.md](docs/findings/161-gameplay-uses-positional-and-object-attached-sfx.md) | Named and animation-driven gameplay aliases use spatial sound paths |
 | 162 | [findings/162-object-attached-sounds-refresh-spatial-state.md](docs/findings/162-object-attached-sounds-refresh-spatial-state.md) | Object-attached sounds refresh stored spatial values during sound updates |
-| 163 | [findings/163-view-provider-feeds-directsound-listener.md](docs/findings/163-view-provider-feeds-directsound-listener.md) | A stored view provider supplies DirectSound listener position and orientation |
+| 163 | [findings/163-view-provider-feeds-directsound-listener.md](docs/findings/163-view-provider-feeds-directsound-listener.md) | The frame tick updates listener position and orientation from the stored view |
 | 164 | [findings/164-explicit-sound-positions-are-deferred.md](docs/findings/164-explicit-sound-positions-are-deferred.md) | Explicit positions are deferred then committed in the same dispatch |
 | 165 | [findings/165-object-spatial-update-registry-has-twenty-slots.md](docs/findings/165-object-spatial-update-registry-has-twenty-slots.md) | Object spatial-update registry has 20 slots and does not deduplicate |
 | 166 | [findings/166-spatial-playback-enters-through-shared-wrapper.md](docs/findings/166-spatial-playback-enters-through-shared-wrapper.md) | Direct spatial playback uses the shared positional/object wrapper |
