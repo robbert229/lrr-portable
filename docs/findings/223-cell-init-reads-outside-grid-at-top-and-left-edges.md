@@ -103,6 +103,19 @@ and `yPos=3.39245`, so none of these startup objects converts to `x=0` or
 gameplay or otherwise changed after OList loading; it does not cover entities
 spawned later by scripts, emerge triggers, or other runtime systems.
 
+Blocked OList objects can be created later, but this does not introduce a new
+coordinate source. In `FUN_0042e020`, an object whose converted cell lacks the
+walkability flag is recorded by `FUN_00437c20`, including its original world
+position and grid coordinate. Terrain updates call `FUN_00437940`; when the
+updated coordinate matches a queued record, it creates the configured entity
+and calls `FUN_004428a0` with the saved position. That deferred path does not
+reconvert or range-check the saved coordinates before placing the entity.
+Because every shipped OList position already converts to an interior cell, the
+deferred route also does not place a shipped startup object on the border.
+The `Precreate` branch in level-load routine `FUN_00429890` separately creates
+ten type-2 entities and passes each to `FUN_00437540`; that pass contains no
+position assignment, so it is not evidence of a border spawn.
+
 One remaining level-data spawn route is `EmergeMap`. `FUN_0042c120`
 (`LoadLayerL`) scans the complete layer and groups nonzero cells into 0x4c-byte
 records: slot 0 is the trigger coordinate, and slots 1–5 are candidate spawn
