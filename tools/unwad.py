@@ -5,8 +5,8 @@ Format (see docs/findings/01-binary-and-loader-map.md):
     "WWAD" | u32 count | count*NUL names | count*NUL dev-paths | count*16B TOC | data
     TOC entry: flags u32 | orig_len u32 | stored_len u32 | file_offset u32
 
-Usage: python3 tools/unwad.py source/LegoRR0.wad [output_dir]
-       python3 tools/unwad.py source/*.wad --stats   # inventory only, no extraction
+Usage: python3 tools/unwad.py reference/LegoRR0.wad [output_dir]
+       python3 tools/unwad.py reference/*.wad --stats   # inventory only, no extraction
 """
 import argparse
 import os

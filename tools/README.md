@@ -96,14 +96,14 @@ for the data you changed, and payload offsets recomputed for new sizes.
 Round-trip proof (run 2026-10-20, both shipped archives):
 
 ```
-verify: OK — source/LegoRR0.wad round-trips byte-identical (5631 entries, 78,968,800 B)
-verify: OK — source/LegoRR1.wad round-trips byte-identical (214 entries, 3,754,454 B)
+verify: OK — reference/LegoRR0.wad round-trips byte-identical (5631 entries, 78,968,800 B)
+verify: OK — reference/LegoRR1.wad round-trips byte-identical (214 entries, 3,754,454 B)
 ```
 
 Mod workflow:
 
 ```sh
-python3 tools/rrwad.py unpack source/LegoRR1.wad mod/L1
+python3 tools/rrwad.py unpack reference/LegoRR1.wad mod/L1
 # edit mod/L1/Lego.cfg (or any entry)
 python3 tools/rrwad.py pack mod/L1/.rrwad.json -o mod/LegoRR1.wad
 ```

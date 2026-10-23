@@ -28,7 +28,7 @@ docs/decompiles/    Named Ghidra pseudocode corpus (engine-region.c)
 docs/evidence/      Exported REA evidence bundle (address-level citations)
 tools/              Analysis tooling: unwad.py, Ghidra function-naming script
 docs/adr/           Architecture decision records (build/port decisions)
-source/             (gitignored) the original, unmodified game files
+reference/          (gitignored) the original, unmodified game files
 unpacked/           (gitignored) 5,845 assets extracted from the .wad archives
 cross/              Meson cross files (i686.ini — MinGW-w64 Win32 toolchain)
 meson.build         Reconstruction build (top-level; platform=native|winapi)
@@ -38,11 +38,11 @@ subprojects/        miniwin CMake bridge (sparse isle-portable submodule)
 3rdparty/           Dependency submodules (isle-portable, sparse → miniwin/)
 ```
 
-Everything under `source/` is the original game as shipped. It is **not** committed to git
+Everything under `reference/` is the original game as shipped. It is **not** committed to git
 (copyright), and is expected to be provided by each person working in this repo from a
 legally obtained copy of the game.
 
-### What's in `source/`
+### What's in `reference/`
 
 | Path | Description |
 | --- | --- |
@@ -341,7 +341,7 @@ SHA-256 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`).
 
 ## Reproducibility
 
-- **Unpacking**: `python3 tools/unwad.py source/LegoRR1.wad unpacked/` extracts both archives.
+- **Unpacking**: `python3 tools/unwad.py reference/LegoRR1.wad unpacked/` extracts both archives.
 - **Function naming**: `tools/ghidra/CreateEngineFunctions.java` is a Ghidra headless
   post-script that creates/renames the analyzed functions and emits the decompile corpus;
   batch runs use `support/analyzeHeadless` with `-postScript`.
@@ -1039,8 +1039,8 @@ format) with byte-level field tables where possible.
 
 ## Working in this repo
 
-1. Place a legally owned copy of the game in `source/` (see layout above).
-2. Do not commit anything under `source/`.
+1. Place a legally owned copy of the game in `reference/` (see layout above).
+2. Do not commit anything under `reference/`.
 3. Analysis output — notes, decompiler dumps, parsers, experiments — lives in the tracked
    part of the repo.
 

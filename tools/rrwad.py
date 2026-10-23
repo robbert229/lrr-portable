@@ -11,10 +11,10 @@ keeps names/dev-paths/flags verbatim from a manifest, so an untouched archive
 round-trips byte-identical (`verify`).
 
 Usage:
-    python3 tools/rrwad.py list source/LegoRR0.wad
-    python3 tools/rrwad.py unpack source/LegoRR0.wad unpacked/LegoRR0
+    python3 tools/rrwad.py list reference/LegoRR0.wad
+    python3 tools/rrwad.py unpack reference/LegoRR0.wad unpacked/LegoRR0
     python3 tools/rrwad.py pack unpacked/LegoRR0/.rrwad.json -o rebuilt.wad
-    python3 tools/rrwad.py verify source/LegoRR0.wad
+    python3 tools/rrwad.py verify reference/LegoRR0.wad
 """
 import argparse
 import hashlib

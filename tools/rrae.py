@@ -11,8 +11,8 @@ TRANSCOEF/TRIGGER/LWSFILE/LOOPING/SAMPLE typed reads, root SCALE).
 Emits the same counts + FNV-1a digest test_entity.cpp folds, so the corpus
 constants (`REAL_*` in test_entity.cpp) are reproducible:
 
-    python3 tools/rrae.py truth source/LegoRR0.wad source/LegoRR1.wad
-    python3 tools/rrae.py truth source/LegoRR0.wad source/LegoRR1.wad --reduce-animation
+    python3 tools/rrae.py truth reference/LegoRR0.wad reference/LegoRR1.wad
+    python3 tools/rrae.py truth reference/LegoRR0.wad reference/LegoRR1.wad --reduce-animation
 """
 import argparse
 import sys

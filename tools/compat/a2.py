@@ -13,7 +13,7 @@ static compat audit (docs/findings/15-compat-audit.md) gets runtime evidence:
 
 State lives under ${XDG_DATA_HOME:-~/.local/share}/rock-raider-a2/ (prefix
 under compatdata/, staged game under game/, logs under logs/). The repo's
-source/ tree is never modified: staging copies, and wad patches keep an
+reference/ tree is never modified: staging copies, and wad patches keep an
 original backup. Runner discovery honours $RR_A2_PROTON / $UMU_RUN, then
 Steam / ProtonUp-Qt installs. See tools/compat/README.md.
 """
@@ -42,7 +42,7 @@ COMPATDATA = DATA / "compatdata"
 STAGE = DATA / "game"
 LOGS = DATA / "logs"
 BACKUPS = DATA / "backups"
-GAME_SRC = REPO / "source"
+GAME_SRC = REPO / "reference"
 MODS = STAGE / ".mods"
 
 WINEDEBUG_DEFAULT = "+ddraw,+winmm,-fixme-all"
