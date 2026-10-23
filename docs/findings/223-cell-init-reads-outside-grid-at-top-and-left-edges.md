@@ -53,16 +53,33 @@ when the target has flag `0x200000`, its type byte is not 6, and flag
 `0x80000000` is clear. It calls `FUN_0042f6f0` for the target and four adjacent
 cells; the writer itself does not check those coordinates against map
 dimensions. The helper's own checks still apply, including its acceptance of
-coordinate zero. At `0x43e77f`, an entity-state path derives a cell coordinate with
+coordinate zero. At `0x43e77f`, the entity callback at `0x43c810` processes
+`+0x3e4` bit `0x200` when the `+0x2d4` timer has expired and bits `0x100000`,
+`0x4`, and `0x8` in `+0x3e4`, bit `0x20000` in `+0x3e0`, and bit `0x10000`
+in `+0x3e0` are clear. The command-type `0x16` handler at `0x40468c` calls
+`FUN_00448c50`, which sets `Activity_Place` (activity index 30) and raises
+`+0x3e4` bit `0x200`. The callback derives the entity cell coordinate with
 `FUN_004424f0`, exact-searches the cell-descriptor list with `FUN_004090c0`,
 and calls the writer only if a descriptor exists and bit 2 is set in its byte
-at `+0xd0`. The exact list lookup has no map-range check. This establishes a
-conditional route for a boundary coordinate to reach the writer, but does not
-show that a shipped level or runtime entity uses such a coordinate.
+at `+0xd0`. The conversion and exact list lookup have no map-range check.
+This is a conditional route for a boundary entity to reach the writer; it does
+not prove one does so at runtime.
 
 At `0x456dcf`, the writer is called from callback-dispatch branch 4 after
-`FUN_00432c90` updates the cell. The dispatch branch is reached through the
-generic callback walker; the static trace does not identify a runtime event
-that supplies this context. Neither call site proves that an out-of-range
-neighbor reaches `FUN_0042f6f0` or that its later `0x400` read executes. These
-remain conditional code paths, not observed runtime behavior.
+`FUN_00432c90` updates the cell. Its wrapper is registered under the interface
+name `SetTutorialBlockIsPath` (string pointer and handler pointer at file
+offsets `0xa4db4`/`0xa4db8`); the wrapper supplies context 4. `FUN_00456b80`
+builds per-value coordinate lists from the level's voxel byte `+0x04`, and
+the callback walker applies the update to the selected list. The shipped
+`MoveTuto_01\M01.nrn` script contains conditional calls
+`SetTutorialBlockIsPath 4 1` and `SetTutorialBlockIsPath 11 1`. Its configured
+`TerrainMap`, `Surf_M01.map`, is 30 by 26: value 4 occurs only at `(18,12)` and
+value 11 does not occur. Those script calls therefore identify no top- or
+left-edge cell in this shipped tutorial map. The static script text does not
+establish that either conditional call executes in a play session.
+
+Neither call site proves that an out-of-range neighbor reaches
+`FUN_0042f6f0` or that its later `0x400` read executes. The tutorial-map scan
+also does not cover levels with different `TerrainMap` contents, modified
+assets, or all possible entity positions. These remain conditional code paths,
+not observed runtime behavior.
