@@ -318,8 +318,21 @@ their conditions, but whether any condition fires in a play session remains
 unobserved. The `17.npl` payload SHA-256 is
 `c47afcf846eaf6ad42dff4a65042831b6eaa341e51b2a51eb88d25e07e1ee830`.
 
+An archive-wide `.npl` scan finds this function entry in two other configured
+level scripts. Level14's `14.npl` contains calls with arguments 1 through 9;
+its configured 37-by-35 `surf_14.map` has material 1 on 71 distinct top/left
+border cells. The matching `Path_14.map` is absent from the shipped archives,
+and `dugg_14.map` has zero-valued top/left borders with no predug edge-wall
+markers adjacent to them. The spawner's required `0x10` walkability flag on
+those candidate cells is therefore unestablished. DefenceTuto's `DE1.npl`
+calls the function with arguments 4 and 8, but its configured `Surf_DE1.map`
+contains neither material, so those calls have no coordinate-list entries in
+the scanned terrain data. Level14 adds another shipped border-material
+candidate route whose cell flags and runtime execution remain unknown; the
+available data does not prove an edge spawn or the risky cell update.
+
 Neither call site proves that an out-of-range neighbor reaches
-`FUN_0042f6f0` or that its later `0x400` read executes. The tutorial-map scan
-also does not cover levels with different `TerrainMap` contents, modified
-assets, or all possible entity positions. These remain conditional code paths,
-not observed runtime behavior.
+`FUN_0042f6f0` or that its later `0x400` read executes. These configured-level
+script and map scans do not cover modified assets, all possible cell flags, or
+all entity positions. The routes remain conditional code paths, not observed
+runtime behavior.

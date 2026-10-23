@@ -240,6 +240,13 @@ The configured `M01.npl` also contains two `0x20089` calls to
 places material 4 only at interior cell `(18,12)` and has no material-11
 cells. The archive-wide `.nrn` and `.npl` scan found no other use of this
 command, and runtime condition firing remains unobserved.
+The same `.npl` scan finds `SetRockMonsterAtTutorial` in `14.npl`, `17.npl`,
+and `DE1.npl`. Level14's `surf_14.map` has 71 top/left material-1 cells, but
+its `Path_14.map` is absent and its predug map does not establish the required
+border walkability flag. DefenceTuto's calls use material IDs 4 and 8, neither
+of which appears in `Surf_DE1.map`. These NERP/map checks use the shipped
+archive payloads and full-image decompilation/disassembly; they are not
+retained in a separate REA bundle.
 
 ## `legorr-path-list-movement.bundle`
 
