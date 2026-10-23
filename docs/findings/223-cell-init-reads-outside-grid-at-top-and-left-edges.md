@@ -76,6 +76,22 @@ that coordinate. These static gates permit a boundary descriptor, but do not
 establish that the action is taken there or that a matching entity reaches
 the later callback.
 
+**Movement does not supply the missing border reachability.** The simple
+walkability branch of `FUN_00432770` checks only the upper bounds
+(`x < width-2`, `y < height-2`) and the cell flags/type; it has no lower-bound
+check, so it can report `x=0` or `y=0` as walkable. But both the target seed in
+`FUN_00430ee0` and the traceback/update gate in `FUN_00430530` explicitly
+reject `x=0` or `y=0`. The normal wave-flood path builder therefore cannot
+establish a route onto the top or left border. A border entity would need
+another source of placement or movement, or a callback would need to update
+that border cell directly. In configured `Level22`, `Dugg_22.map` has raw
+predug wall cells at `(1,18..24)` and `(1,37)`; the loader's eight-neighbor
+walkability writes consequently mark twelve left-border cells (`x=0`,
+`y=17..25` and `y=36..38`). Their decoded terrain types also pass the simple
+walkability type filter. This is concrete evidence that a border cell can be
+marked walkable in shipped data, but it does not overcome the path-builder's
+lower-bound gates.
+
 At `0x456dcf`, the writer is called from callback-dispatch branch 4 after
 `FUN_00432c90` updates the cell. A static name/function pair associates the
 string `SetTutorialBlockIsPath` and wrapper `FUN_00457420` at file offsets
