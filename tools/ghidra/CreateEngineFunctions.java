@@ -1202,6 +1202,25 @@ public class CreateEngineFunctions extends GhidraScript {
         0x4780b0L,  // RendererWindowModeApply
         0x482620L,  // MeshSegmentVertexFill
         0x48c040L,  // StringCaseSubstringFind
+        0x402d50L,  // KindNineCellCommandIssue
+        0x404100L,  // CommandQueueSweepRelink
+        0x408c80L,  // StringTableIndexLookup
+        0x41c6e0L,  // PointerActionStateDispatch
+        0x41cd30L,  // PositionTrackerBoxDraw
+        0x41f740L,  // CellFourNeighborWalkCheck
+        0x434480L,  // CellSurfaceUpdateDispatch
+        0x43c570L,  // KindFourPostCreateResolve
+        0x44a4f0L,  // NearestCellCoordinateWorldResolve
+        0x44b140L,  // SmallSpiderCellSwarmSpawn
+        0x4508a0L,  // CellNeighborDirectionCode
+        0x451180L,  // CellVariantEntryMatchCheck
+        0x45cf50L,  // PrioritiesConfigLoad
+        0x46b660L,  // CommandSampleStatsAccumulate
+        0x46f270L,  // TypeMotionScaleApplyDispatch
+        0x471960L,  // SeeThroughWallsRayCheck
+        0x473bc0L,  // ResourceNameRegisterOrQuery
+        0x47c2e0L,  // DirectDrawDeviceCreate
+        0x47c4b0L,  // DirectDrawEnumeratedDeviceCreate
         0x4350a0L,  // SurfaceTypeDescriptionsConfigLoad
         0x444fb0L,  // EntityTurnToVectorActivityIssue
         0x4451e0L,  // EntityPathStepVectorNormalize
@@ -2268,6 +2287,25 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x4780b0: return "RendererWindowModeApply";
             case 0x482620: return "MeshSegmentVertexFill";
             case 0x48c040: return "StringCaseSubstringFind";
+            case 0x402d50: return "KindNineCellCommandIssue";
+            case 0x404100: return "CommandQueueSweepRelink";
+            case 0x408c80: return "StringTableIndexLookup";
+            case 0x41c6e0: return "PointerActionStateDispatch";
+            case 0x41cd30: return "PositionTrackerBoxDraw";
+            case 0x41f740: return "CellFourNeighborWalkCheck";
+            case 0x434480: return "CellSurfaceUpdateDispatch";
+            case 0x43c570: return "KindFourPostCreateResolve";
+            case 0x44a4f0: return "NearestCellCoordinateWorldResolve";
+            case 0x44b140: return "SmallSpiderCellSwarmSpawn";
+            case 0x4508a0: return "CellNeighborDirectionCode";
+            case 0x451180: return "CellVariantEntryMatchCheck";
+            case 0x45cf50: return "PrioritiesConfigLoad";
+            case 0x46b660: return "CommandSampleStatsAccumulate";
+            case 0x46f270: return "TypeMotionScaleApplyDispatch";
+            case 0x471960: return "SeeThroughWallsRayCheck";
+            case 0x473bc0: return "ResourceNameRegisterOrQuery";
+            case 0x47c2e0: return "DirectDrawDeviceCreate";
+            case 0x47c4b0: return "DirectDrawEnumeratedDeviceCreate";
             case 0x4350a0: return "SurfaceTypeDescriptionsConfigLoad";
             case 0x444fb0: return "EntityTurnToVectorActivityIssue";
             case 0x4451e0: return "EntityPathStepVectorNormalize";

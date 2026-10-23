@@ -61,7 +61,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00402b30,FUN_00402b30,anonymous,,0,178
 00402b60,FUN_00402b60,anonymous,,0,270
 00402cd0,FUN_00402cd0,named,CmdCancelRef,0,467
-00402d50,FUN_00402d50,anonymous,,0,991
+00402d50,FUN_00402d50,named,KindNineCellCommandIssue,0,991
 00402e40,FUN_00402e40,anonymous,,0,543
 00402ec0,FUN_00402ec0,anonymous,,0,496
 00402f30,FUN_00402f30,named,EntityThresholdProgressEventQueue,0,338
@@ -105,7 +105,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00404030,FUN_00404030,ported,CmdLinkHead,2,354
 00404070,FUN_00404070,ported,CmdLinkTail,1,235
 004040a0,FUN_004040a0,anonymous,,0,333
-00404100,FUN_00404100,anonymous,,0,966
+00404100,FUN_00404100,named,CommandQueueSweepRelink,0,966
 00404190,FUN_00404190,ported,CmdChainWalk,2,229
 004041b0,FUN_004041b0,anonymous,,0,300
 004041e0,FUN_004041e0,anchored,,0,682
@@ -194,7 +194,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00408b00,FUN_00408b00,anonymous,,0,651
 00408b60,FUN_00408b60,anonymous,,0,472
 00408bf0,FUN_00408bf0,anonymous,,0,448
-00408c80,FUN_00408c80,anonymous,,0,919
+00408c80,FUN_00408c80,named,StringTableIndexLookup,0,919
 00408ce0,FUN_00408ce0,anonymous,,0,739
 00408d70,FUN_00408d70,anonymous,,0,745
 00408e10,FUN_00408e10,anonymous,,0,447
@@ -566,7 +566,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0041c1c0,FUN_0041c1c0,named,AdvisorOverlayHitResolve,0,1069
 0041c440,FUN_0041c440,named,AdvisorCallbackScheduleGate,0,205
 0041c4f0,FUN_0041c4f0,named,AdvisorAnimationPositionAndRequestUpdate,0,1805
-0041c6e0,FUN_0041c6e0,anonymous,,0,984
+0041c6e0,FUN_0041c6e0,named,PointerActionStateDispatch,0,984
 0041c7b0,FUN_0041c7b0,anonymous,,0,392
 0041c800,FUN_0041c800,anonymous,,0,1334
 0041c8f0,FUN_0041c8f0,anonymous,,0,353
@@ -580,7 +580,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0041cb90,FUN_0041cb90,anonymous,,0,704
 0041cc80,FUN_0041cc80,anonymous,,0,341
 0041cce0,FUN_0041cce0,anonymous,,0,292
-0041cd30,FUN_0041cd30,anonymous,,0,1005
+0041cd30,FUN_0041cd30,named,PositionTrackerBoxDraw,0,1005
 0041cea0,FUN_0041cea0,anonymous,,0,658
 0041cf20,FUN_0041cf20,anonymous,,0,510
 0041cf80,FUN_0041cf80,anonymous,,0,178
@@ -609,7 +609,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0041f420,FUN_0041f420,named,SelectedEntitiesAnyMatch,0,428
 0041f6c0,FUN_0041f6c0,anonymous,,0,423
 0041f720,FUN_0041f720,anonymous,,0,133
-0041f740,FUN_0041f740,anonymous,,0,921
+0041f740,FUN_0041f740,named,CellFourNeighborWalkCheck,0,921
 0041f840,FUN_0041f840,anonymous,,0,165
 0041f870,FUN_0041f870,anonymous,,0,143
 0041f880,FUN_0041f880,anonymous,,0,156
@@ -802,7 +802,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00433c10,FUN_00433c10,named,EntityNeighborBlockedCellStepProbe,0,1935
 00433e30,FUN_00433e30,anonymous,,0,374
 00433e80,FUN_00433e80,named,TerrainProjectedCellStateRefresh,0,5569
-00434480,FUN_00434480,anonymous,,0,922
+00434480,FUN_00434480,named,CellSurfaceUpdateDispatch,0,922
 00434530,FUN_00434530,anonymous,,0,435
 00434570,FUN_00434570,ported,TerrainCellProgressUpdate,2,556
 004345f0,FUN_004345f0,named,PanelsConfigEntryApply,0,1722
@@ -965,7 +965,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0043c490,FUN_0043c490,anonymous,,0,203
 0043c4c0,FUN_0043c4c0,anonymous,,0,439
 0043c530,FUN_0043c530,anonymous,,0,263
-0043c570,FUN_0043c570,anonymous,,0,930
+0043c570,FUN_0043c570,named,KindFourPostCreateResolve,0,930
 0043c650,FUN_0043c650,anonymous,,0,434
 0043c6b0,FUN_0043c6b0,anchored,,0,1334
 0043eea0,FUN_0043eea0,named,SimulationEntityQueueFlush,0,2614
@@ -1079,7 +1079,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0044a390,FUN_0044a390,anonymous,,0,226
 0044a3d0,FUN_0044a3d0,anonymous,,0,999
 0044a4b0,FUN_0044a4b0,ported,PredugCoordinatePoolAppend,1,228
-0044a4f0,FUN_0044a4f0,anonymous,,0,999
+0044a4f0,FUN_0044a4f0,named,NearestCellCoordinateWorldResolve,0,999
 0044a5d0,FUN_0044a5d0,named,NearestOpenCellCoordSearch,0,2011
 0044a7d0,FUN_0044a7d0,named,PolyVariantSectionModelBuild,0,1553
 0044a910,FUN_0044a910,named,BuildingPlacementPreviewUpdate,0,3256
@@ -1090,7 +1090,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0044ae50,FUN_0044ae50,anonymous,,0,1140
 0044af90,FUN_0044af90,anonymous,,0,180
 0044afb0,FUN_0044afb0,anonymous,,0,1503
-0044b140,FUN_0044b140,anonymous,,0,1006
+0044b140,FUN_0044b140,named,SmallSpiderCellSwarmSpawn,0,1006
 0044b250,FUN_0044b250,anonymous,,0,1001
 0044b350,FUN_0044b350,ported,EntityActivityTypeSupportsCapacityRule,1,136
 0044b370,FUN_0044b370,ported,EntityActivityListAppend,11,1519
@@ -1180,12 +1180,12 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00450780,FUN_00450780,anonymous,,0,394
 004507d0,FUN_004507d0,named,TerrainCellEdgeVectorQuery,0,1046
 00450890,FUN_00450890,ported,,1,87
-004508a0,FUN_004508a0,anonymous,,0,922
+004508a0,FUN_004508a0,named,CellNeighborDirectionCode,0,922
 00450960,FUN_00450960,named,CellDirtyQueuePushAndClear,0,1760
 00450a80,FUN_00450a80,anonymous,,0,986
 00450b60,FUN_00450b60,ported,,1,3668
 00450f30,FUN_00450f30,ported,,1,2249
-00451180,FUN_00451180,anonymous,,0,953
+00451180,FUN_00451180,named,CellVariantEntryMatchCheck,0,953
 00451230,FUN_00451230,anonymous,,0,644
 004512d0,FUN_004512d0,named,TerrainCellNormalSample,0,1512
 00451450,FUN_00451450,anonymous,,0,631
@@ -1348,7 +1348,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0045cd90,FUN_0045cd90,named,PointerCursorOverrideTick,0,214
 0045cdc0,FUN_0045cdc0,named,PriorityImagesConfigLoad,0,1288
 0045cf00,FUN_0045cf00,anonymous,,0,377
-0045cf50,FUN_0045cf50,anonymous,,0,934
+0045cf50,FUN_0045cf50,named,PrioritiesConfigLoad,0,934
 0045d060,FUN_0045d060,anonymous,,0,740
 0045d110,FUN_0045d110,named,RegionContainmentScanUpdate,0,2356
 0045d300,FUN_0045d300,anonymous,,0,463
@@ -1579,7 +1579,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0046b1d0,FUN_0046b1d0,named,TooltipOverlayStateInitialize,0,3487
 0046b4d0,FUN_0046b4d0,anonymous,,0,368
 0046b520,FUN_0046b520,named,UiTextEntryLoad,0,1737
-0046b660,FUN_0046b660,anonymous,,0,994
+0046b660,FUN_0046b660,named,CommandSampleStatsAccumulate,0,994
 0046b700,FUN_0046b700,named,TimedEffectCueRequestSet,0,224
 0046b730,FUN_0046b730,named,TimedEffectPersistenceSet,0,299
 0046b770,FUN_0046b770,named,TimedEffectUpdateRequestSet,0,143
@@ -1642,7 +1642,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0046f170,FUN_0046f170,anonymous,,0,113
 0046f1a0,FUN_0046f1a0,anonymous,,0,139
 0046f1d0,FUN_0046f1d0,anonymous,,0,478
-0046f270,FUN_0046f270,anonymous,,0,1007
+0046f270,FUN_0046f270,named,TypeMotionScaleApplyDispatch,0,1007
 0046f380,FUN_0046f380,anonymous,,0,174
 0046f3b0,FUN_0046f3b0,named,RayHitScanAndEffectApply,0,1984
 0046f550,FUN_0046f550,ported,,4,817
@@ -1667,7 +1667,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00471630,FUN_00471630,anonymous,,0,2915
 00471860,FUN_00471860,anonymous,,0,530
 004718d0,FUN_004718d0,anonymous,,0,642
-00471960,FUN_00471960,anonymous,,0,968
+00471960,FUN_00471960,named,SeeThroughWallsRayCheck,0,968
 00471a20,FUN_00471a20,anonymous,,0,131
 00471a40,FUN_00471a40,anonymous,,0,112
 00471a50,FUN_00471a50,anonymous,,0,112
@@ -1715,7 +1715,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00473b20,FUN_00473b20,anonymous,,0,234
 00473b40,FUN_00473b40,ported,SceneRenderLockToggle,1,385
 00473ba0,FUN_00473ba0,anonymous,,0,92
-00473bc0,FUN_00473bc0,anonymous,,0,914
+00473bc0,FUN_00473bc0,named,ResourceNameRegisterOrQuery,0,914
 00473c60,FUN_00473c60,named,XfTextureNameFormat,0,1386
 00473da0,FUN_00473da0,named,SceneObjectOwnerSet,0,112
 00473db0,FUN_00473db0,named,SceneObjectOwnerGet,0,86
@@ -1942,8 +1942,8 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0047c160,FUN_0047c160,anonymous,,0,58
 0047c170,FUN_0047c170,anonymous,,0,388
 0047c1c0,FUN_0047c1c0,anonymous,,0,195
-0047c2e0,FUN_0047c2e0,anonymous,,0,943
-0047c4b0,FUN_0047c4b0,anonymous,,0,935
+0047c2e0,FUN_0047c2e0,named,DirectDrawDeviceCreate,0,943
+0047c4b0,FUN_0047c4b0,named,DirectDrawEnumeratedDeviceCreate,0,935
 0047c610,FUN_0047c610,named,DirectDrawRendererInit,0,3441
 0047c8d0,FUN_0047c8d0,named,RenderSurfacePresent,0,161
 0047c8f0,FUN_0047c8f0,ported,BitmapFileWrite,4,4248

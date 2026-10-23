@@ -9,9 +9,9 @@ Covers all **2564** local functions in `docs/decompiles/full/manifest.csv`
 | --- | ---: | ---: |
 | ported | 293 | 11.4% |
 | anchored | 5 | 0.2% |
-| named | 917 | 35.8% |
+| named | 936 | 36.5% |
 | runtime-import | 46 | 1.8% |
-| anonymous | 1303 | 50.8% |
+| anonymous | 1284 | 50.1% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
   (293 functions)
@@ -19,11 +19,11 @@ Covers all **2564** local functions in `docs/decompiles/full/manifest.csv`
   the body) is cited in `src/`; the function is touched but its entry is
   not named (5 functions)
 - **named** — human name in `engine-region.c` / corpus but no `src/`
-  citation yet (917 functions)
+  citation yet (936 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
-  (1303 functions)
+  (1284 functions)
 
 **Game logic remaining to port: 2225 (86.8%).**
 
@@ -31,15 +31,15 @@ Covers all **2564** local functions in `docs/decompiles/full/manifest.csv`
 
 | Region | Anonymous functions |
 | --- | ---: |
-| `0x00040xxxx` | 223 |
+| `0x00040xxxx` | 220 |
 | `0x00049xxxx` | 161 |
-| `0x00046xxxx` | 155 |
-| `0x00047xxxx` | 151 |
-| `0x00043xxxx` | 150 |
-| `0x00041xxxx` | 128 |
+| `0x00046xxxx` | 153 |
+| `0x00043xxxx` | 148 |
+| `0x00047xxxx` | 147 |
+| `0x00041xxxx` | 125 |
 | `0x00048xxxx` | 111 |
-| `0x00045xxxx` | 106 |
-| `0x00044xxxx` | 91 |
+| `0x00045xxxx` | 103 |
+| `0x00044xxxx` | 89 |
 | `0x00042xxxx` | 27 |
 
 ## Named-but-unported corpus functions
