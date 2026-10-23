@@ -1,0 +1,9 @@
+# Finding 172 — AVI Frames Blit to the Shared DirectDraw Render Target
+
+For each non-null decoded AVI frame, `FUN_0047eb20` copies its pixels into the movie object's surface buffer through `FUN_0047e9e0`. The movie loop in `FUN_0040a0c0` then calls `FUN_0047ed00` with a destination rectangle initialized to `(0, 0, screenWidth, screenHeight)`.
+
+`FUN_0047ed00` obtains `DAT_0076ac8c` through `FUN_004065e0` and calls its vtable slot `+0x14` with the movie object's surface (`surfaceState + 0x18`) as source, null source-rectangle and effect pointers, and flag `0x01000000`. The five-argument call shape matches `IDirectDrawSurface::Blt`; the flag is `DDBLT_WAIT`. `DAT_0076ac8c` is the secondary/render surface: windowed presentation copies it to primary surface `DAT_0076ac88` in `FUN_0047cc50`, while fullscreen presentation flips the primary surface in `FUN_0047c8d0`. `FUN_0047cc20` copies in the opposite direction, from primary to the secondary surface.
+
+The AVI helper ignores the `Blt` result. This traces decoded frames into the application's shared render target; it does not establish that a particular device completes or displays the transfer successfully.
+
+**Evidence.** Shipped `reference/LegoRR.exe`, SHA-256 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`. `FUN_0040a0c0` initializes the full-screen rectangle from `DAT_00505924/28` and calls the frame updater and renderer at `0x40a0c0`; frame fetch/copy is in `FUN_0047eb20`/`FUN_0047e9e0`; the render-target blit is in `FUN_0047ed00`; surface creation and presentation helpers are in `FUN_0047c8d0`, `FUN_0047cc20`, and `FUN_0047cc50`. The decompilation is in `docs/decompiles/full/LEGORR.full.c`. The five-parameter method signature and `DDBLT_WAIT` behavior match Microsoft's [`IDirectDrawSurface::Blt` documentation](https://learn.microsoft.com/en-us/windows/win32/api/ddraw/nf-ddraw-idirectdrawsurface7-blt).

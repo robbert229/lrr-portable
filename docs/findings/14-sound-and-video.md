@@ -135,7 +135,8 @@ playback region). The `.flh` container is documented in finding 21.
    unverified.
 3. Finding 123 traces `AVIStreamGetFrame` output into a row-copy helper and the surface pixel
    buffer. The helper walks source rows backward while advancing the destination; bottom-up to
-   top-down conversion is an inference. The later presentation path remains untraced.
+   top-down conversion is an inference. Finding 172 traces each frame blit into the shared
+   DirectDraw render target; final device presentation remains dependent on the surrounding renderer.
 4. `.flh` container format — **closed** by finding 21 (2026-10-20): layout,
    both 16-bit coders, and the RGB555→565 write transform.
 5. MCI: only `play cdaudio from N` and status queries were observed; no
