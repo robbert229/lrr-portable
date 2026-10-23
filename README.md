@@ -364,6 +364,7 @@ Open threads, in order of value:
 | 165 | [findings/165-object-spatial-update-registry-has-twenty-slots.md](docs/findings/165-object-spatial-update-registry-has-twenty-slots.md) | Object spatial-update registry has 20 slots and does not deduplicate |
 | 166 | [findings/166-spatial-playback-enters-through-shared-wrapper.md](docs/findings/166-spatial-playback-enters-through-shared-wrapper.md) | Direct spatial playback uses the shared positional/object wrapper |
 | 167 | [findings/167-global-alias-playback-disables-3d-mode.md](docs/findings/167-global-alias-playback-disables-3d-mode.md) | Global in-memory aliases disable DirectSound 3D processing |
+| 168 | [findings/168-in-memory-sound-start-ignores-hresults.md](docs/findings/168-in-memory-sound-start-ignores-hresults.md) | In-memory sound start returns a slot identifier without checking DirectSound HRESULTs |
 
 Named-pseudocode corpus: [`docs/decompiles/engine-region.c`](docs/decompiles/engine-region.c)
 (114 named functions covering the engine/game-logic region — findings 01–10).

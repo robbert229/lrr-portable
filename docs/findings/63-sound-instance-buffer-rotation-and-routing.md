@@ -34,6 +34,9 @@ Focused IDs:
 
 ## Buffer selection and lifetime bookkeeping
 
+Finding 168 traces the in-memory branch's unchecked `SetCurrentPosition` and
+`Play` results; the returned integer does not report either call's success.
+
 `FUN_0047ad70` returns `-1` unless sound is enabled, the requested bank slot
 is not `-1`, and the slot's active bit is set. When the slot is in memory mode,
 flag `0x4` advances a per-slot index modulo three and selects one of three
