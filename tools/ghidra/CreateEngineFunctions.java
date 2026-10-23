@@ -1085,6 +1085,19 @@ public class CreateEngineFunctions extends GhidraScript {
         0x476bf0L,  // SurfacePixelRowsFlipInPlace
         0x479630L,  // SurfaceTriangleAreaCalculate
         0x47d520L,  // Palette8To16BitSurfaceExpand
+        0x4124f0L,  // MenuSaveImageConfigRectBlit
+        0x41b680L,  // CatalogCallbackByIdDispatch
+        0x433c10L,  // EntityNeighborBlockedCellStepProbe
+        0x441ed0L,  // EntityFaceTargetActionStart
+        0x446e40L,  // EntityNearestCellRouteCommit
+        0x448a60L,  // EntityNeighborCellMoveCommandHandle
+        0x44bc30L,  // EntityMotionToSceneNodeSync
+        0x450960L,  // CellDirtyQueuePushAndClear
+        0x465f40L,  // InstanceQuadVerticesBuild
+        0x471a60L,  // EntityVelocitySteerBlendUpdate
+        0x47d740L,  // SurfacePixelRowsFlipWithScratch
+        0x487a00L,  // SharedObjectClone
+        0x4899f0L,  // ObjectHierarchyRecursiveClone
     };
     static final String[] NAMES = { "EngineTick", "EngineShutdown", "EngineShutdownAlt",
         "MainSimStep", "ManagerTick", "MessageDispatch", "ViewContextTick",
@@ -2027,6 +2040,19 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x476bf0: return "SurfacePixelRowsFlipInPlace";
             case 0x479630: return "SurfaceTriangleAreaCalculate";
             case 0x47d520: return "Palette8To16BitSurfaceExpand";
+            case 0x4124f0: return "MenuSaveImageConfigRectBlit";
+            case 0x41b680: return "CatalogCallbackByIdDispatch";
+            case 0x433c10: return "EntityNeighborBlockedCellStepProbe";
+            case 0x441ed0: return "EntityFaceTargetActionStart";
+            case 0x446e40: return "EntityNearestCellRouteCommit";
+            case 0x448a60: return "EntityNeighborCellMoveCommandHandle";
+            case 0x44bc30: return "EntityMotionToSceneNodeSync";
+            case 0x450960: return "CellDirtyQueuePushAndClear";
+            case 0x465f40: return "InstanceQuadVerticesBuild";
+            case 0x471a60: return "EntityVelocitySteerBlendUpdate";
+            case 0x47d740: return "SurfacePixelRowsFlipWithScratch";
+            case 0x487a00: return "SharedObjectClone";
+            case 0x4899f0: return "ObjectHierarchyRecursiveClone";
             default: return null;
         }
     }

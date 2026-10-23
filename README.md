@@ -442,10 +442,11 @@ Open threads, in order of value:
 | 243 | [findings/243-config-loader-file-descriptor-and-crt-helpers.md](docs/findings/243-config-loader-file-descriptor-and-crt-helpers.md) | Config-Loader, File-Descriptor, and CRT Helpers |
 | 244 | [findings/244-config-file-text-layout-and-record-emit-helpers.md](docs/findings/244-config-file-text-layout-and-record-emit-helpers.md) | Config-File, Text-Layout, and Record-Emit Helpers |
 | 245 | [findings/245-region-route-light-config-and-surface-helpers.md](docs/findings/245-region-route-light-config-and-surface-helpers.md) | Region-Route, Light-Config, and Surface Helpers |
+| 246 | [findings/246-entity-move-route-command-and-object-clone-helpers.md](docs/findings/246-entity-move-route-command-and-object-clone-helpers.md) | Entity Move/Route Commands, Cell Queue, and Object Clones |
 
 Named-pseudocode corpus: [`docs/decompiles/engine-region.c`](docs/decompiles/engine-region.c)
-(1054 generated sections selected from the reverse-engineering findings; the
-Ghidra script selects 1054 targets. This includes the manually bounded objective
+(1067 generated sections selected from the reverse-engineering findings; the
+Ghidra script selects 1067 targets. This includes the manually bounded objective
 callback at `0x459100`, which auto-analysis does not mark as a procedure).
 Machine-readable evidence: [`docs/evidence/legorr-rev.bundle`](docs/evidence/legorr-rev.bundle)
 (236 recorded REA observations against `LegoRR.exe`,
@@ -477,6 +478,8 @@ The config-file, text-layout, and record-emit helpers are recorded in
 [legorr-engine-helpers-expansion-16.bundle](docs/evidence/legorr-engine-helpers-expansion-16.bundle).
 The region-route, light-config, and surface helpers are recorded in
 [legorr-engine-helpers-expansion-17.bundle](docs/evidence/legorr-engine-helpers-expansion-17.bundle).
+The entity move/route command, cell-queue, and object-clone helpers are recorded in
+[legorr-engine-helpers-expansion-18.bundle](docs/evidence/legorr-engine-helpers-expansion-18.bundle).
 The latest input, selection, and resource helper batch is in
 [legorr-engine-helpers-expansion-5.bundle](docs/evidence/legorr-engine-helpers-expansion-5.bundle);
 its address-range audits are in the [low](docs/evidence/legorr-engine-helper-audit-low-expansion-5.bundle),

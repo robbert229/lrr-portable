@@ -396,7 +396,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00412190,FUN_00412190,anonymous,,0,100
 004121b0,FUN_004121b0,named,MenuOverlayFlicPlaybackController,0,2748
 00412450,FUN_00412450,anonymous,,0,654
-004124f0,FUN_004124f0,anonymous,,0,2192
+004124f0,FUN_004124f0,named,MenuSaveImageConfigRectBlit,0,2192
 00412750,FUN_00412750,named,MenuHoverStatusTextDraw,0,2261
 004129d0,FUN_004129d0,anonymous,,0,1028
 00412af0,FUN_00412af0,anonymous,,0,1074
@@ -556,7 +556,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0041b3c0,FUN_0041b3c0,anonymous,,0,1201
 0041b470,FUN_0041b470,anonymous,,0,118
 0041b490,FUN_0041b490,ported,AdvisorOverlayUpdate,1,1805
-0041b680,FUN_0041b680,anonymous,,0,1788
+0041b680,FUN_0041b680,named,CatalogCallbackByIdDispatch,0,1788
 0041b930,FUN_0041b930,ported,TimedStatusAndEventTick,1,438
 0041b9b0,FUN_0041b9b0,anonymous,,0,60
 0041b9c0,FUN_0041b9c0,anonymous,,0,319
@@ -799,7 +799,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004334f0,FUN_004334f0,anonymous,,0,2191
 00433770,FUN_00433770,named,SceneLightsBuildFromConfig,0,3185
 00433be0,FUN_00433be0,anonymous,,0,195
-00433c10,FUN_00433c10,anonymous,,0,1935
+00433c10,FUN_00433c10,named,EntityNeighborBlockedCellStepProbe,0,1935
 00433e30,FUN_00433e30,anonymous,,0,374
 00433e80,FUN_00433e80,named,TerrainProjectedCellStateRefresh,0,5569
 00434480,FUN_00434480,anonymous,,0,922
@@ -996,7 +996,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00441940,FUN_00441940,named,EntityActionSequenceReset,0,2169
 00441b30,FUN_00441b30,named,EntityStateReset,0,4101
 00441ea0,FUN_00441ea0,anonymous,,0,161
-00441ed0,FUN_00441ed0,anonymous,,0,2241
+00441ed0,FUN_00441ed0,named,EntityFaceTargetActionStart,0,2241
 004420d0,FUN_004420d0,anonymous,,0,1063
 00442210,FUN_00442210,anonymous,,0,303
 00442260,FUN_00442260,named,EntityTransformPositionGet,0,273
@@ -1030,7 +1030,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00446610,FUN_00446610,named,EntityMovementTickScaleAndDeltaGet,0,2921
 004468c0,FUN_004468c0,anchored,,0,1366
 004469c0,FUN_004469c0,named,EntityNearestConnectedTerrainCellRouteSelect,0,4575
-00446e40,FUN_00446e40,anonymous,,0,2619
+00446e40,FUN_00446e40,named,EntityNearestCellRouteCommit,0,2619
 0044702d,FUN_0044702d,anonymous,,0,704
 004470d0,FUN_004470d0,named,EntityConditionalTypeFiveSpawn,0,837
 004471b0,FUN_004471b0,anonymous,,0,461
@@ -1051,7 +1051,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00448800,FUN_00448800,anonymous,,0,577
 00448880,FUN_00448880,anonymous,,0,1106
 004489a0,FUN_004489a0,anonymous,,0,691
-00448a60,FUN_00448a60,anonymous,,0,2202
+00448a60,FUN_00448a60,named,EntityNeighborCellMoveCommandHandle,0,2202
 00448c50,FUN_00448c50,named,EntitySetActivityPlace,0,180
 00448c90,FUN_00448c90,anonymous,,0,2131
 00448eb0,FUN_00448eb0,anonymous,,0,1725
@@ -1101,7 +1101,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0044b7a0,FUN_0044b7a0,anonymous,,0,720
 0044bae0,FUN_0044bae0,anonymous,,0,317
 0044bb30,FUN_0044bb30,anonymous,,0,1146
-0044bc30,FUN_0044bc30,anonymous,,0,2316
+0044bc30,FUN_0044bc30,named,EntityMotionToSceneNodeSync,0,2316
 0044be30,FUN_0044be30,named,EntityAuxiliaryPayloadRelease,0,964
 0044bf00,FUN_0044bf00,ported,GlobalTimedCallbackDispatch,1,1056
 0044bfd0,FUN_0044bfd0,anonymous,,0,335
@@ -1181,7 +1181,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004507d0,FUN_004507d0,anonymous,,0,1046
 00450890,FUN_00450890,ported,,1,87
 004508a0,FUN_004508a0,anonymous,,0,922
-00450960,FUN_00450960,anonymous,,0,1760
+00450960,FUN_00450960,named,CellDirtyQueuePushAndClear,0,1760
 00450a80,FUN_00450a80,anonymous,,0,986
 00450b60,FUN_00450b60,ported,,1,3668
 00450f30,FUN_00450f30,ported,,1,2249
@@ -1484,7 +1484,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00465b00,FUN_00465b00,ported,SoundInstanceUpdate,3,1618
 00465c50,FUN_00465c50,anonymous,,0,1467
 00465e00,FUN_00465e00,anonymous,,0,813
-00465f40,FUN_00465f40,anonymous,,0,2205
+00465f40,FUN_00465f40,named,InstanceQuadVerticesBuild,0,2205
 004661c0,FUN_004661c0,anonymous,,0,643
 00466210,FUN_00466210,anonymous,,0,126
 00466230,FUN_00466230,anonymous,,0,98
@@ -1671,7 +1671,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00471a20,FUN_00471a20,anonymous,,0,131
 00471a40,FUN_00471a40,anonymous,,0,112
 00471a50,FUN_00471a50,anonymous,,0,112
-00471a60,FUN_00471a60,anonymous,,0,2219
+00471a60,FUN_00471a60,named,EntityVelocitySteerBlendUpdate,0,2219
 00471c70,FUN_00471c70,anonymous,,0,238
 00471ca0,FUN_00471ca0,anonymous,,0,317
 00471ce0,FUN_00471ce0,anonymous,,0,247
@@ -1964,7 +1964,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0047d520,FUN_0047d520,named,Palette8To16BitSurfaceExpand,0,2547
 0047d700,FUN_0047d700,named,PopCount32,0,251
 0047d720,FUN_0047d720,named,FindFirstSetBit32,0,226
-0047d740,FUN_0047d740,anonymous,,0,2087
+0047d740,FUN_0047d740,named,SurfacePixelRowsFlipWithScratch,0,2087
 0047d800,FUN_0047d800,named,Bitmap24BitSurfaceConvert,0,2526
 0047d9d0,FUN_0047d9d0,ported,BitmapSurfaceLoad,6,2025
 0047db90,FUN_0047db90,named,RGBChannelsPack,0,166
@@ -2166,7 +2166,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004877d0,FUN_004877d0,anonymous,,0,83
 004877e0,FUN_004877e0,named,SceneEntrySlotTableExpand,0,3088
 00487990,FUN_00487990,anonymous,,0,452
-00487a00,FUN_00487a00,anonymous,,0,2573
+00487a00,FUN_00487a00,named,SharedObjectClone,0,2573
 00487ba0,FUN_00487ba0,named,SharedObjectAnimationAndTimedEventUpdate,0,1406
 00487cb0,FUN_00487cb0,anonymous,,0,693
 00487d50,FUN_00487d50,anonymous,,0,778
@@ -2213,7 +2213,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004897d0,FUN_004897d0,ported,,1,85
 004897e0,FUN_004897e0,named,DDiSceneTimedHookDispatch,0,2130
 00489910,FUN_00489910,anonymous,,0,1163
-004899f0,FUN_004899f0,anonymous,,0,2744
+004899f0,FUN_004899f0,named,ObjectHierarchyRecursiveClone,0,2744
 00489b30,FUN_00489b30,anonymous,,0,944
 00489bc0,FUN_00489bc0,anonymous,,0,834
 00489c30,FUN_00489c30,ported,IndexedBitmapPaletteDataPrepare,1,1819
