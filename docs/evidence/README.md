@@ -235,6 +235,11 @@ function-call words at indices 183, 189, 195, 201, 207, and 213; table entry
 `0x9f` maps to `SetRockMonsterAtTutorial` and wrapper `0x4572a0`. This confirms
 the call is in the loaded script, while actual condition firing and spawn
 success remain unobserved.
+The configured `M01.npl` also contains two `0x20089` calls to
+`SetTutorialBlockIsPath`, with arguments 4 and 11; the configured terrain map
+places material 4 only at interior cell `(18,12)` and has no material-11
+cells. The archive-wide `.nrn` and `.npl` scan found no other use of this
+command, and runtime condition firing remains unobserved.
 
 ## `legorr-path-list-movement.bundle`
 

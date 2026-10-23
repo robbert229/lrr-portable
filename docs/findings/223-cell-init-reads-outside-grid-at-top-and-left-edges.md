@@ -271,24 +271,27 @@ At `0x456dcf`, the writer is called from callback-dispatch branch 4 after
 string `SetTutorialBlockIsPath` and wrapper `FUN_00457420` at file offsets
 `0xa4db4`/`0xa4db8`; the wrapper supplies context 4. `FUN_00456b80` builds
 per-value coordinate lists from the level's voxel byte `+0x04`, and the
-callback walker applies the update to the selected list. The table consumer
-and runtime script invocation remain untraced. The shipped
+callback walker applies the update to the selected list. The NPL table
+consumer is `FUN_00453320`. The shipped
 `MoveTuto_01\M01.nrn` script contains conditional calls
 `SetTutorialBlockIsPath 4 1` and `SetTutorialBlockIsPath 11 1`. Its configured
 `TerrainMap`, `Surf_M01.map`, is 30 by 26: value 4 occurs only at `(18,12)` and
 value 11 does not occur. Those script calls therefore identify no top- or
-left-edge cell in this shipped tutorial map. An archive-wide scan of all 34
-shipped `.nrn` scripts found no other `SetTutorialBlockIsPath` call. The
-static script text does not establish that either conditional call executes
-in a play session.
+left-edge cell in this shipped tutorial map. The configured `M01.npl` contains
+the corresponding function-table call words `0x20089` at indices 289 and 296,
+followed by arguments 4 and 11. Table entry `0x89` at `0x4a5fb4` points to the
+`SetTutorialBlockIsPath` name and wrapper `0x457420`. An archive-wide scan of
+`.nrn` and `.npl` files found no other use of this command. The `.nrn` source's
+conditional calls therefore correspond to the configured compiled script,
+but whether either condition executes in a play session remains unobserved.
 
 The tutorial callback dispatcher also has a separate
 `SetRockMonsterAtTutorial` route. Its wrapper passes context 7 to
 `FUN_00456cb0`; `FUN_00456b80` builds that routine's per-value coordinate lists
 from the terrain byte at voxel `+4`, not from `BlockPointersMap`. The shipped
 Level17 `17.nrn` source conditionally calls `SetRockMonsterAtTutorial 1` when
-the stored crystal count reaches 10, and the configured 35-by-35 `Surf_17.map` has
-material 1 along the complete top and left borders (69 distinct border
+the stored crystal count reaches 10, and the configured 35-by-35 `Surf_17.map`
+has material 1 along the complete top and left borders (69 distinct border
 cells). The callback at `0x456e6c` passes each selected coordinate to the
 type-3 spawner `FUN_0043af30`. That spawner first requires the selected cell to
 pass `FUN_00432bd0`: its `0x10` walkability flag must be set and its `0x8` wall
