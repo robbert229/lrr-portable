@@ -10,7 +10,7 @@ callback effect is not established.
 | --- | --- | --- |
 | `0x0046a370` | `LinkedRecordChainFree` | Recursively follows the record link at `+0x1c` to the tail, then frees each record through `EngineHeapFree` (`0x0048db80`). No cycle or depth guard is visible. `GlobalLinkedRecordChainClear` (`0x0046a390`) uses it for teardown. |
 | `0x0046a390` | `GlobalLinkedRecordChainClear` | Clears `DAT_004aa450`, frees the chain rooted at `DAT_004aa458` through `LinkedRecordChainFree`, then clears the head. `LevelLoad` (`0x00429890`) calls it, establishing a level-transition cleanup path. |
-| `0x0046a420` | `SelectedGlobalPointTransformAndReturnX` | Chooses `DAT_005560e4` when `DAT_00556ec8 == 1`, otherwise `DAT_005560ec`; obtains a three-word local point through `0x00431570`, transforms it through `0x00436b33`, and returns the first transformed word. `SceneObjectStateDispatch` (`0x0046a510`) uses that value when its state flags request it. The point's semantic meaning is not established by this helper. |
+| `0x0046a420` | `SelectedGlobalPointTransformAndReturnX` | Selects `DAT_005560e4` when `DAT_00556ec8 == 1`, otherwise `DAT_005560ec`; its decompile then shows calls to `0x00431570` and `0x00436b33` before returning `local_c[0]`. Their inferred argument flow is unreliable: `0x00431570` is a zero-argument level-height accessor, while `0x00436b33` has a three-argument camera helper signature but is shown called with two arguments here. `SceneObjectStateDispatch` (`0x0046a510`) uses the returned word when its state flags request it, but the actual value/transform semantics remain unresolved. |
 | `0x0046a470` | `LinkedListPushAtGlobalHead` | Writes the current `DAT_004aa458` head into the supplied record's `+0x1c`, then makes the supplied record the new head. `SceneObjectStateDispatch` is its observed direct caller. |
 | `0x0046a4c0` | `FlagMaskCallbacksAllPass` | Iterates mask bits 0 through 30. For each set bit, resets `DAT_00503188` to 1, enumerates entities through `EntityPoolFindByCallbackFiltered` (`0x004377b0`) with that bit as callback data, and returns false if callback processing clears the shared flag. It returns true after all selected bits continue. `MainSimFeatureFlagLatch` (`0x00435a50`), `QuitPoll` (`0x004589c0`), and `ObjectiveTick` (`0x00458be0`) call it. The callback-specific meaning varies by caller and is not assigned here. |
 | `0x0046a510` | `SceneObjectStateDispatch` | Computes a one-based ordinal from the first set selector bit via `FirstSetFlagOrdinal` (`0x0046a760`). When `param_2` bit 1 is set, allocates a 0x20-byte record, prepends it to the global chain, initializes fields including `+0x10 = 0` and `+0x1c = param_3`, and conditionally copies selected-point/global values based on `param_3` bits 1 and 0. It then enumerates entities through `0x004377b0` with callback `LAB_0046a3c0` and the local selector/flag tuple. Callers include `StartLevelPilots` (`0x0041fa80`) and `ObjectiveVoiceAliasPrepare` (`0x00458670`); the callback's per-entity effect remains unresolved. |
@@ -37,8 +37,9 @@ Follow-up slices that would improve this map:
   `LAB_0046a5c0` to determine per-entity effects and mask meanings.
 - Establish the allocation/record field contract and verify whether the
   recursive chain release can encounter cycles or pathological depth.
-- Trace the point source and transform at `0x00431570`/`0x00436b33` to name the
-  selected point's domain meaning.
+- Recover the actual call/argument flow in `0x0046a420` at instruction level;
+  the decompiler's calls to `0x00431570`/`0x00436b33` conflict with those
+  callees' signatures, so the selected value and transform remain unresolved.
 
 ## Evidence
 
