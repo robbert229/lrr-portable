@@ -93,11 +93,10 @@ state-change, the level-chain + start-level entries, and the options/movie
 callbacks) is decompiled, named (50 functions appended to
 `docs/decompiles/engine-region.c`; REA evidence in
 `docs/evidence/legorr-frontend.bundle`), and the shipped `Lego.cfg` menu/level
-grammar documented — including the two config hard requirements the port does
-not yet meet: the **`::` path separator** and the **`Levels::<name>` level
-vocabulary** (this is the root cause of the `Lego.cfg` integration blocker
-below, not a parse bug — the parser handles the file, the query form was
-wrong).
+grammar documented. The port now supports the game's **`::` path separator**
+and builds campaign/tutorial chains from the shipped `Levels::<name>` values.
+The remaining question is shipped-data end-to-end validation; see the current
+status below.
 
 Finding 24 (2026-10-21) closed the menu **wipe/fade transition** left as a
 named-but-not-decomposed gap in finding 23's `MenuRunLoop`: `MenuWipe` is a
@@ -223,7 +222,7 @@ Open threads, in order of value:
 | 20 | [`findings/20-verify-pass.md`](docs/findings/20-verify-pass.md) | **Fresh verify pass** (2026-10-20): critical path re-derived in a clean session; corpus byte-identical; `DAT_00505814` = `.wad` prefix, not install dir; CRT entry `0x48f000` |
 | 21 | [`findings/21-flh-container.md`](docs/findings/21-flh-container.md) | **`.flh` closed**: FLIC-family overlay container — 136 B header, `0xF1FA` chunk stream from `0x80`, RGB555 FLI16 keyframe (opcode 25) + word-diff deltas (opcode 27) + hold chunks, 555→565 on write; validated 18/18 files, 469/469 chunks, rendered frame check |
 | 22 | [`findings/22-research-crumbs.md`](docs/findings/22-research-crumbs.md) | **Last open questions closed**: message registry = startup catalog (`FUN_00419230`, 40 `Info_*` names) + `InfoMessages` config population (`FUN_00434c10`); `DAT_004ffbc0` relabeled as the objective state word (not input devices); D3DRM is software-path-only (no HAL device referenced anywhere) |
-| 23 | [`findings/23-front-end-and-menu.md`](docs/findings/23-front-end-and-menu.md) | **Front-end & menus closed**: the boot→main-menu machine — `MenuBuild @ 0x4140c0`, the modal `MenuRunLoop`/`MenuTick`, the `FrontEndActive` gate, `MenuEnter`/`FrontEndStateChange`, the level-chain + start-level entries, and the options/movie callbacks, with the config grammar. Plus the two port blockers: the **`::` path separator** (`DAT_004aab18` = `"::"`) and the shipped level-name vocabulary (`Levels::<name>` via `StartLevel`/`NextLevel`, never `Level01`) — which together root-caused the `Lego.cfg` integration blocker |
+| 23 | [`findings/23-front-end-and-menu.md`](docs/findings/23-front-end-and-menu.md) | **Front-end & menus closed**: the boot→main-menu machine — `MenuBuild @ 0x4140c0`, the modal `MenuRunLoop`/`MenuTick`, the `FrontEndActive` gate, `MenuEnter`/`FrontEndStateChange`, the level-chain + start-level entries, and the options/movie callbacks, with the config grammar. The port has since implemented `::` path lookup and `Levels::<name>` campaign/tutorial chains; shipped-data end-to-end level-load validation remains |
 | 24 | [`findings/24-menu-wipe-and-front-end-transition.md`](docs/findings/24-menu-wipe-and-front-end-transition.md) | **Menu wipe closed**: the config-driven LWS front-end transition — `MenuWipe`/`!MenuWipe` keys (reduce-animation gate, `"Null"` disable) loaded by `LoadMenuBuild @ 0x4161f0` into the LWS scene factory (`FUN_00472cd0`, kind `"LWS"` → `FUN_004765c0`), stepping `RockWipe.lws` (35f @ 25 fps) as the menu-change wipe in `MenuRunLoop`/`MenuTick` with an input freeze — the wipe/fade gap left open in finding 23 |
 | 25 | [`findings/25-ddscene-object-runtime.md`](docs/findings/25-ddscene-object-runtime.md) | **DDiScene object runtime closed**: the game-wide scene-graph object model the MenuWipe (finding 24) and every animated 3D thing runs on — the 9-slot kind string table (`NULL MESH FRAME ANIM ACT - - LWS LWO`), the pooled `0x2c`-byte object record (`DAT_0076add0` free list, kind at `+0x10`, flags at `+0x14`), the draw/step API (`FUN_00475140` draw-at-time, `FUN_00477010`/`FUN_00477150` begin/end scene, `gods98/dx6` source path), and the `FUN_004765c0` scene loader behind `DAT_00505914` |
 | 26 | [`findings/26-ddscene-animation-hooks.md`](docs/findings/26-ddscene-animation-hooks.md) | **DDiScene animation hooks closed**: `FUN_00475140` can call the action-entry **SFX sample** hook (`DAT_0076cd78/7c`, registered by the `FUN_00464740` 45-slot SFX-name-hash bank init, `0x27` = `SFX_RockWipe` → `FUN_00465050`→`FUN_0047ad70` positional play) and the scene-**end entity flag** hook (`DAT_0076cd80/84`, boot-registered, ORs `0x10000` into `entity+0x3e4`) — plus the `FUN_00464f60` pending-SFX queue |
@@ -1009,17 +1008,16 @@ accessors read width/height/voxels at the corpus offsets
 byte (`+0x04`), and the camera grid-expiry prefers the bound level. The demo
 binds `game.level` after load. `engine_bind_test` (suite `enginebind`) covers
 the accessors + view terrain pick.
-⚠️ Integration blocker — **root-caused in finding 23**: the shipped
-`Lego.cfg` groups don't resolve through `block.*`'s space-split path lookup for
-two reasons, and neither is a parse bug — the parser handles the file, the
-*query form* was wrong. (a) the game's config path language is **`::`-separated**
-(`DAT_004aab18` = `"::"`, `BlockFindPath` 0x4792e0), so `Lego*`
-`Levels::Tutorial01 SurfaceMap` must tokenize to `Lego* Levels Tutorial01
-SurfaceMap`; and (b) shipped level names are `Levels::<name>` tokens sourced
-from `StartLevel`/`TutorialStartLevel`/`NextLevel` — `Level01` (the old probe /
-demo default) does not exist in shipped data. The menu layer needs a
-`::`-aware tokenizer (or a shim in the level loader) and StartLevel-driven name
-resolution before "New Game" can boot a real level.
+**Shipped `Lego.cfg` integration status:** the two issues root-caused in finding
+23 have since been addressed in the port. `block_find` accepts `::` as a path
+boundary, the front end builds campaign/tutorial chains from
+`StartLevel`/`TutorialStartLevel`/`NextLevel`, and the level loader resolves
+groups under the `Levels` container. Selecting a picker row reaches the frame
+loop's level-load path. The `LEGORRR_LEVEL` fallback of `Level01` remains a
+fixture/demo convenience and is not a level name in the shipped config; use a
+picker row or a shipped level name such as `Tutorial01`. A real-data check of
+the complete picker-to-map-load path remains useful; the optional WAD-backed
+probes described below cover front-end construction and level-group lookup.
 
 **Game layer — levels, objectives, savegames** (2026-10-21): the mission
 plumbing that sits on top of the engine (findings 07/08/22) is now
@@ -1328,7 +1326,8 @@ modules share (`DAT_005560c4` config, `DAT_005560d4` level block,
 `DAT_00556ed0` cheat word, `DAT_004ffbc0` objective word, the save/task/
 reward/entity tables) so tests run isolated. The build boots into the
 **main menu** first (finding 23); once a level starts — from the menu's
-picker rows or via `LEGORRR_LEVEL` (default `Level01`) — the frame loop
+picker rows or via `LEGORRR_LEVEL` (default `Level01`, a fixture/demo name not
+present in shipped `Lego.cfg`) — the frame loop
 seeds tasks/reward and places the `.ol`, runs the mission bridge + objective
 tick per frame, and exposes `S` (build blob + commit slot), `L`
 (`CheckpointStep`),

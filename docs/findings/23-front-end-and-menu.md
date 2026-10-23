@@ -17,10 +17,12 @@ feeder into `LevelLoad` (`FrontEndSelectedAction @ 0x416d70`), the level chain
 builder (`LevelChainBuild @ 0x4154b0`), the start-level entries
 (`FrontEndStartLevel @ 0x415220`, `StartLevelPilots @ 0x41fa80`,
 `StartLevelSelected @ 0x460220`), and the options/brightness/volume/game-speed
-item callbacks. It also pins the **two config hard requirements** the port does
-not yet meet: the block-path `::` separator and the shipped level-name
-vocabulary (`Levels::<name>`), which together explain the open `Lego.cfg`
-integration blocker (README ⚠️).
+item callbacks. It also pins two config requirements for the port: the
+block-path `::` separator and the shipped level-name vocabulary
+(`Levels::<name>`). The implementation has since added `::` path lookup,
+campaign/tutorial chain construction, and level lookup under the `Levels`
+container. The remaining integration check is to validate a shipped picker
+selection through to map loading; see the current status in the README.
 
 ## How the game boots to the main menu
 
@@ -107,7 +109,7 @@ the record constructors `MenuTextRecordMake @ 0x410d50` / `MenuButtonRecordMake
 | `RealSlider:…` | 4 | (commented header, finding-23 §config) |
 | `TextInput:…` | 2 | (commented header) |
 
-## The `::` config separator — why the blocker fires
+## The `::` config separator and port support
 
 The game's block-text path language is **`::`-separated**, confirmed by reading
 the delimiter used by the path tokenizer `FUN_00477440`:
@@ -119,9 +121,9 @@ the delimiter used by the path tokenizer `FUN_00477440`:
 So the exe queries `LegoRR Main Menu::MainMenuFull MenuCount` **and**
 `LegoRR Main Levels::Tutorial01 SurfaceMap` — where the first token `LegoRR`
 matches the config's `Lego*` wildcard root record, and `Main` is the *section*
-record (`DAT_004a24e4 = "Main"`, observed). The port's `block._` currently
-splits on **space only**, so `Lego* Levels::Tutorial01 SurfaceMap` fails even
-though the record exists as `Levels { Tutorial01 { … } }`.
+record (`DAT_004a24e4 = "Main"`, observed). The port's `block_find` now accepts
+both spaces and `::` as path boundaries (`src/gods98/block.cpp`), so the
+shipped address form resolves against `Levels { Tutorial01 { … } }`.
 
 Verified against the shipped `Lego.cfg` with the current parser:
 
@@ -135,6 +137,8 @@ Verified against the shipped `Lego.cfg` with the current parser:
 | `Lego* Menu MainMenuFull Menu1 MenuImage` | `Interface\FrontEnd\MenuBGpic.bmp` |
 | `Lego* Menu OptionsMenu Menu1 Item1` | `Slider:…:Game_Speed:0:5:…8 bitmaps` |
 | `Lego* Levels Tutorial01 SurfaceMap` | `Levels\TutorialLevels\MoveTuto_01\High_M01.map` (and `CryOreMap`/`PredugMap`/`OListFile`/`PTLFile`/…) |
+| `Lego* Menu::MainMenuFull MenuCount` | `5` (the exe's `::` path form is accepted too) |
+| `Lego* Levels::Tutorial01 SurfaceMap` | `Levels\TutorialLevels\MoveTuto_01\High_M01.map` |
 
 Shipped `Lego.cfg` shape that matters to the parser: root record `Lego*`,
 containing **siblings** `Main`, `Dialog`, `Reward`, `Menu`, `HelpWindow`, `Levels`,
@@ -146,17 +150,17 @@ layers, `NextLevel Levels::Tutorial02`, and front-end picker placement
 ## Levels: the address form
 
 - `StartLevel = Levels::Tutorial01`, `TutorialStartLevel = Levels::MoveTuto_01`
-  (observed). The level *name* the engine passes around is the `Levels::X` token —
-  the `::` address — **not** `Level01`.
+  (observed). These values and `NextLevel` links use the `Levels::X` address
+  form. The native front end extracts the group name (`Tutorial01`) when building
+  its chain, and the level loader resolves it under the `Levels` container.
 - `LevelChainBuild @ 0x4154b0` turns a start-level config key + `NextLevel`
   links into the ordered `{name, FullName}` list stored at `DAT_00556fe4`
   (campaign) / `DAT_00556fd0` (tutorials) with a count.
-- The port demo's `LEGORRR_LEVEL=Level01` default and its `level_test --real`
-  probe therefore resolve **0 real level groups**: the shipped vocabulary is
-  `Levels::Tutorial01…`, and even that spelling only resolves after `::`
-  tokenization. Fix = `::`-aware `block_find` (and/or a `::`→space shim in the
-  level loader) + resolving the level *name* via `StartLevel`/`NextLevel` instead
-  of an arbitrary "Level01".
+- The `LEGORRR_LEVEL=Level01` fallback is still a fixture/demo convenience;
+  `Level01` is not a shipped level group. The menu path uses the chain built
+  from `StartLevel`/`TutorialStartLevel` and `NextLevel` instead. A real-data
+  check through selection and map loading remains the end-to-end validation
+  target.
 
 ## Start-level path (menu → in-game)
 
@@ -266,21 +270,15 @@ with `FeInput.mdown`, fed from `InputState.mouse_down` — the native SDL poller
 the motion button-mask as `held` and releases it on BUTTON-UP — and the drag block in
 `frontend_tick` clamps to `[min,max]`.
 
-## Port impact (what a `front-end` pass needs)
+## Current port status
 
 
-1. **`block.*` must tokenize `::`** (or the level/menu loaders must translate it).
-   This unlocks *every* menu/level query on the shipped `Lego.cfg` and closes the
-   README ⚠️ blocker (verified: parsing is fine; the query form was not).
-2. Root records: keep the `Lego*` wildcard root; do not hardcode `Main` as parent
-   of `Menu`/`Levels`.
-3. Level names: drive from `StartLevel`/`TutorialStartLevel`/`NextLevel`
-   (`Levels::X`), not a synthetic `Level01`.
-4. The front-end is **modal** (`MenuRunLoop` blocks until the menu closes) —
-   the frame loop must not run the level sim while a menu is open.
-5. The four menus' data model + item grammar (table above) is what
-   `src/game/frontend.*` should materialise; the callbacks map onto the existing
-   audio/texture/level/savegame modules.
+The port keeps the `Lego*` wildcard root, treats `::` as a path boundary,
+resolves level-scoped config under `Levels`, and builds campaign/tutorial picker
+rows from the shipped start and next-level links. The frame loop handles the
+picker's start-level event and calls the level loader. Remaining work is to
+confirm this whole path against shipped data through successful map loading;
+the legacy `LEGORRR_LEVEL=Level01` fallback is not suitable for that check.
 
 ## Menu scrolling — the `CanScroll` flag (`FUN_00413970` @ 0x413970)
 
