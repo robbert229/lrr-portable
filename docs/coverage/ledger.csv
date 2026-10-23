@@ -165,7 +165,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004074b0,FUN_004074b0,anonymous,,0,717
 00407510,FUN_00407510,anonymous,,0,286
 00407540,FUN_00407540,anonymous,,0,757
-004075a0,FUN_004075a0,anonymous,,0,3525
+004075a0,FUN_004075a0,named,TickEntityScreenEffects,0,3525
 004078c0,FUN_004078c0,anonymous,,0,644
 00407a10,FUN_00407a10,anonymous,,0,3461
 00407d60,FUN_00407d60,named,BuildingTypeConfigRecordParse,0,6894
@@ -363,7 +363,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004105a0,FUN_004105a0,named,CampaignLevelFallbackLabel,0,1048
 004105f0,FUN_004105f0,anonymous,,0,1044
 00410690,FUN_00410690,anonymous,,0,1127
-00410740,FUN_00410740,anonymous,,0,3767
+00410740,FUN_00410740,named,SaveMenuListEntryAppend,0,3767
 00410a10,FUN_00410a10,anonymous,,0,893
 00410aa0,FUN_00410aa0,anonymous,,0,362
 00410ae0,FUN_00410ae0,anonymous,,0,457
@@ -384,8 +384,8 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00411320,FUN_00411320,anonymous,,0,337
 00411360,FUN_00411360,named,MenuMouseCoordinateUpdate,0,1934
 004114f0,FUN_004114f0,anonymous,,0,323
-00411530,FUN_00411530,anonymous,,0,3091
-00411790,FUN_00411790,anonymous,,0,735
+00411530,FUN_00411530,named,MenuWidgetItemScreenRect,0,3091
+00411790,FUN_00411790,named,MenuPickWidgetUnderPointer,0,735
 00411840,FUN_00411840,anonymous,,0,189
 00411870,FUN_00411870,ported,MenuSliderPointerHandler,2,1263
 004119d0,FUN_004119d0,anonymous,,0,208
@@ -797,7 +797,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00433380,FUN_00433380,named,TerrainCellMutationProgress,0,1722
 004334c0,FUN_004334c0,named,MapFileDimensionsGet,0,228
 004334f0,FUN_004334f0,anonymous,,0,2191
-00433770,FUN_00433770,anonymous,,0,3185
+00433770,FUN_00433770,named,SceneLightsBuildFromConfig,0,3185
 00433be0,FUN_00433be0,anonymous,,0,195
 00433c10,FUN_00433c10,anonymous,,0,1935
 00433e30,FUN_00433e30,anonymous,,0,374
@@ -1199,7 +1199,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00451bc0,FUN_00451bc0,anonymous,,0,503
 00451c30,FUN_00451c30,anonymous,,0,151
 00451c50,FUN_00451c50,anonymous,,0,713
-00451cd0,FUN_00451cd0,anonymous,,0,3579
+00451cd0,FUN_00451cd0,named,MessageStringTableInitialize,0,3579
 00451f60,FUN_00451f60,named,CommandQueueCancelOpcode,0,817
 00451fd0,FUN_00451fd0,anonymous,,0,331
 00452010,FUN_00452010,ported,ActionCommandQueueAppend,2,593
@@ -1282,7 +1282,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00459900,FUN_00459900,anonymous,,0,785
 004599c0,FUN_004599c0,anonymous,,0,610
 00459a50,FUN_00459a50,anonymous,,0,755
-00459b00,FUN_00459b00,anonymous,,0,3905
+00459b00,FUN_00459b00,named,RenderEntityScreenRing,0,3905
 00459f50,FUN_00459f50,anonymous,,0,429
 00459fd0,FUN_00459fd0,anonymous,,0,286
 0045a030,FUN_0045a030,anonymous,,0,3065
@@ -1311,8 +1311,8 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0045abb0,FUN_0045abb0,anonymous,,0,313
 0045abf0,FUN_0045abf0,anonymous,,0,366
 0045ac30,FUN_0045ac30,anonymous,,0,2011
-0045adb0,FUN_0045adb0,anonymous,,0,4831
-0045b310,FUN_0045b310,anonymous,,0,3787
+0045adb0,FUN_0045adb0,named,SimCursorInteractionTick,0,4831
+0045b310,FUN_0045b310,named,SimCategoryCellHitTest,0,3787
 0045b590,FUN_0045b590,anonymous,,0,377
 0045b610,FUN_0045b610,anonymous,,0,173
 0045b620,FUN_0045b620,anonymous,,0,812
@@ -1439,7 +1439,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00463730,FUN_00463730,anonymous,,0,172
 00463770,FUN_00463770,anonymous,,0,763
 00463810,FUN_00463810,anonymous,,0,819
-004638a0,FUN_004638a0,anonymous,,0,4579
+004638a0,FUN_004638a0,named,SimTrackCursorHitTest,0,4579
 00463c00,FUN_00463c00,anonymous,,0,377
 00463c90,FUN_00463c90,anonymous,,0,408
 00463d20,FUN_00463d20,anonymous,,0,1401
@@ -1576,7 +1576,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0046ac20,FUN_0046ac20,named,AdvisorTextRequestSetup,0,330
 0046ac60,FUN_0046ac60,named,AdvisorTextAnimationUpdate,0,674
 0046ad00,FUN_0046ad00,named,AdvisorTextDisplayWorker,0,3628
-0046b1d0,FUN_0046b1d0,anonymous,,0,3487
+0046b1d0,FUN_0046b1d0,named,TooltipOverlayStateInitialize,0,3487
 0046b4d0,FUN_0046b4d0,anonymous,,0,368
 0046b520,FUN_0046b520,named,UiTextEntryLoad,0,1737
 0046b660,FUN_0046b660,anonymous,,0,994
@@ -1586,7 +1586,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0046b7a0,FUN_0046b7a0,named,TimedEffectTimestampReset,0,185
 0046b7c0,FUN_0046b7c0,named,TimedEffectAndCueUpdate,0,1298
 0046b8b0,FUN_0046b8b0,named,RectangularGridOverlayGeometryDraw,0,2531
-0046bc30,FUN_0046bc30,anonymous,,0,3629
+0046bc30,FUN_0046bc30,named,TimedEffectSlotRender,0,3629
 0046c030,FUN_0046c030,anonymous,,0,565
 0046c0b0,FUN_0046c0b0,anonymous,,0,261
 0046c0f0,FUN_0046c0f0,anonymous,,0,94
@@ -1708,7 +1708,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00473480,FUN_00473480,anonymous,,0,217
 004734a0,FUN_004734a0,anonymous,,0,217
 004734c0,FUN_004734c0,named,AdvisorCompanionTransformApply,0,376
-004734f0,FUN_004734f0,anonymous,,0,635
+004734f0,FUN_004734f0,named,DDiSceneLightCreate,0,635
 00473560,FUN_00473560,anonymous,,0,1297
 00473680,FUN_00473680,anonymous,,0,71
 00473690,FUN_00473690,named,EntityVisualResourceLoad,0,7281

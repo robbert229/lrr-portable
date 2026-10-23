@@ -1008,6 +1008,19 @@ public class CreateEngineFunctions extends GhidraScript {
         0x433e80L,  // TerrainProjectedCellStateRefresh
         0x470760L,  // MeshBuildEightSidedSegment
         0x493ef0L,  // CrtFormattedScanV
+        0x4075a0L,  // TickEntityScreenEffects
+        0x410740L,  // SaveMenuListEntryAppend
+        0x411530L,  // MenuWidgetItemScreenRect
+        0x411790L,  // MenuPickWidgetUnderPointer
+        0x433770L,  // SceneLightsBuildFromConfig
+        0x451cd0L,  // MessageStringTableInitialize
+        0x459b00L,  // RenderEntityScreenRing
+        0x45adb0L,  // SimCursorInteractionTick
+        0x45b310L,  // SimCategoryCellHitTest
+        0x4638a0L,  // SimTrackCursorHitTest
+        0x46b1d0L,  // TooltipOverlayStateInitialize
+        0x46bc30L,  // TimedEffectSlotRender
+        0x4734f0L,  // DDiSceneLightCreate
     };
     static final String[] NAMES = { "EngineTick", "EngineShutdown", "EngineShutdownAlt",
         "MainSimStep", "ManagerTick", "MessageDispatch", "ViewContextTick",
@@ -1875,6 +1888,19 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x480900: return "CachedRenderResourceInstanceCreate";
             case 0x477590: return "FormattedTextEscapeDecodeAndEmit";
             case 0x47d800: return "Bitmap24BitSurfaceConvert";
+            case 0x4075a0: return "TickEntityScreenEffects";
+            case 0x410740: return "SaveMenuListEntryAppend";
+            case 0x411530: return "MenuWidgetItemScreenRect";
+            case 0x411790: return "MenuPickWidgetUnderPointer";
+            case 0x433770: return "SceneLightsBuildFromConfig";
+            case 0x451cd0: return "MessageStringTableInitialize";
+            case 0x459b00: return "RenderEntityScreenRing";
+            case 0x45adb0: return "SimCursorInteractionTick";
+            case 0x45b310: return "SimCategoryCellHitTest";
+            case 0x4638a0: return "SimTrackCursorHitTest";
+            case 0x46b1d0: return "TooltipOverlayStateInitialize";
+            case 0x46bc30: return "TimedEffectSlotRender";
+            case 0x4734f0: return "DDiSceneLightCreate";
             default: return null;
         }
     }
