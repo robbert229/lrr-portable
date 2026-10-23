@@ -103,8 +103,10 @@ and runtime script invocation remain untraced. The shipped
 `SetTutorialBlockIsPath 4 1` and `SetTutorialBlockIsPath 11 1`. Its configured
 `TerrainMap`, `Surf_M01.map`, is 30 by 26: value 4 occurs only at `(18,12)` and
 value 11 does not occur. Those script calls therefore identify no top- or
-left-edge cell in this shipped tutorial map. The static script text does not
-establish that either conditional call executes in a play session.
+left-edge cell in this shipped tutorial map. An archive-wide scan of all 34
+shipped `.nrn` scripts found no other `SetTutorialBlockIsPath` call. The
+static script text does not establish that either conditional call executes
+in a play session.
 
 Neither call site proves that an out-of-range neighbor reaches
 `FUN_0042f6f0` or that its later `0x400` read executes. The tutorial-map scan
