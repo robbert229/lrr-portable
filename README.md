@@ -344,6 +344,7 @@ Open threads, in order of value:
 | 145 | [findings/145-sample-hash-marker-parser-omits-termination-and-bounds.md](docs/findings/145-sample-hash-marker-parser-omits-termination-and-bounds.md) | `#...#` parser can read past its token or overwrite its stack buffer |
 | 146 | [findings/146-streamed-samples-ignore-asterisk-duplicate-flag.md](docs/findings/146-streamed-samples-ignore-asterisk-duplicate-flag.md) | `@` streaming bypasses the `*` duplicate-buffer path |
 | 147 | [findings/147-sample-variant-choice-uses-shared-seeded-lcg.md](docs/findings/147-sample-variant-choice-uses-shared-seeded-lcg.md) | Sample variant selection consumes the shared LCG state |
+| 148 | [findings/148-global-wav-playback-applies-eight-db-attenuation.md](docs/findings/148-global-wav-playback-applies-eight-db-attenuation.md) | Global in-memory WAV playback subtracts 8 dB before SetVolume |
 
 Named-pseudocode corpus: [`docs/decompiles/engine-region.c`](docs/decompiles/engine-region.c)
 (114 named functions covering the engine/game-logic region — findings 01–10).
