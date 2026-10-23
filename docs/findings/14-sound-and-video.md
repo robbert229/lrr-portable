@@ -104,6 +104,8 @@ surfaces, so mismatched dimensions are stretched to fill rather than letterboxed
 (finding 206).
 After playback, the visible cleanup releases the COM interfaces without an
 explicit `SetState(STREAMSTATE_STOP)` call (finding 207).
+Stream setup also continues to `OpenFile` when adding primary audio fails,
+while a primary-video add failure aborts setup (finding 208).
 
 Config surface (values from `Lego.cfg`):
 
@@ -174,8 +176,9 @@ playback region). The `.flh` container is documented in finding 21.
    clear all registry entries for its provider frame and suspend refreshes for
    other sounds still attached to that frame. Finding 205 connects configured
    DirectShow samples to the game's final windowed/fullscreen presentation;
-   finding 206 records full-surface scaling, and finding 207 records cleanup
-   without an explicit stream-stop call.
+   finding 206 records full-surface scaling, finding 207 records cleanup
+   without an explicit stream-stop call, and finding 208 records best-effort
+   primary-audio setup.
 4. `.flh` container format — **closed** by finding 21 (2026-10-20): layout,
    both 16-bit coders, and the RGB555→565 write transform.
 5. MCI: only `play cdaudio from N` and status queries were observed; no
