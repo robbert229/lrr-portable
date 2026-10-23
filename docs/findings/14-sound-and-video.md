@@ -176,7 +176,9 @@ playback region). The `.flh` container is documented in finding 21.
 2. Finding 122 traces the in-memory WAV path from the `data` chunk through `mmioGetInfo`'s read
    window into a `GlobalAlloc` buffer before DirectSound setup; finding 215 records the open-MMIO
    handle leak on failures after format parsing. Findings 217–218 record the unchecked streamed
-   metadata probe and its separate WinMM file-path open. The shared file/WAD open layer is
+   metadata probe and its separate WinMM file-path open. Finding 222 records that non-PCM
+   `cbSize` extension reads are not bounded by the `fmt ` chunk size; the 412 loose WAV files
+   in the reference tree use 16-byte PCM format chunks. The shared file/WAD open layer is
    documented in finding 11; the reference tree contains 412 loose streamed WAVs, while runtime
    path resolution remains unverified.
 3. Finding 123 traces `AVIStreamGetFrame` output into a row-copy helper and the surface pixel
