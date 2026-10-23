@@ -86,7 +86,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00403650,FUN_00403650,anonymous,,0,517
 004036c0,FUN_004036c0,ported,CmdCreateTarget,1,345
 00403700,FUN_00403700,named,CmdCancelByCoords,0,375
-00403750,FUN_00403750,anonymous,,0,1190
+00403750,FUN_00403750,named,CommandKindRecordIssueAndLink,0,1190
 00403810,FUN_00403810,anonymous,,0,813
 004038c0,FUN_004038c0,anonymous,,0,469
 00403910,FUN_00403910,anonymous,,0,861
@@ -154,7 +154,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00407040,FUN_00407040,anonymous,,0,442
 00407090,FUN_00407090,anonymous,,0,94
 004070b0,FUN_004070b0,named,BubbleActionStringsInit,0,1982
-00407240,FUN_00407240,anonymous,,0,1078
+00407240,FUN_00407240,named,BubbleConfigTextureLoad,0,1078
 00407300,FUN_00407300,anonymous,,0,332
 00407340,FUN_00407340,anonymous,,0,85
 00407360,FUN_00407360,anonymous,,0,60
@@ -230,7 +230,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0040a400,FUN_0040a400,named,PreloadNumberedBitmaps,0,645
 0040a4b0,FUN_0040a4b0,named,QuadMeshRenderRecordCreate,0,1187
 0040a5c0,FUN_0040a5c0,anonymous,,0,290
-0040a5e0,FUN_0040a5e0,anonymous,,0,1580
+0040a5e0,FUN_0040a5e0,named,RecordCountDigitsFill,0,1580
 0040aa10,FUN_0040aa10,ported,ScreenEffectLaneDispatch,5,260
 0040aa40,FUN_0040aa40,ported,ScreenEffectOpacityUpdate,2,629
 0040aae0,FUN_0040aae0,anonymous,,0,203
@@ -241,7 +241,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0040af40,FUN_0040af40,anonymous,,0,351
 0040af90,FUN_0040af90,anonymous,,0,505
 0040b000,FUN_0040b000,anonymous,,0,2355
-0040b1b0,FUN_0040b1b0,anonymous,,0,1078
+0040b1b0,FUN_0040b1b0,named,DependencyGridOccupancyPass,0,1078
 0040b250,FUN_0040b250,anonymous,,0,253
 0040b2a0,FUN_0040b2a0,anonymous,,0,191
 0040b2e0,FUN_0040b2e0,anonymous,,0,140
@@ -303,7 +303,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0040dc20,FUN_0040dc20,named,CellPairEdgeEffectApply,0,1636
 0040dd90,FUN_0040dd90,anonymous,,0,750
 0040de40,FUN_0040de40,named,EntityFenceSparkTerrainInteraction,0,2593
-0040e0c0,FUN_0040e0c0,anonymous,,0,1082
+0040e0c0,FUN_0040e0c0,named,FenceSparkLaunchRegister,0,1082
 0040e1e0,FUN_0040e1e0,named,CellCornerOccupancyScan,0,1407
 0040e350,FUN_0040e350,anonymous,,0,1042
 0040e460,FUN_0040e460,anonymous,,0,148
@@ -328,7 +328,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0040f330,FUN_0040f330,named,LavaErosionNeighborMutate,0,2854
 0040f5e0,FUN_0040f5e0,anonymous,,0,81
 0040f5f0,FUN_0040f5f0,anonymous,,0,1029
-0040f6c0,FUN_0040f6c0,anonymous,,0,1108
+0040f6c0,FUN_0040f6c0,named,SceneNodeRecordCreate,0,1108
 0040f7b0,FUN_0040f7b0,anonymous,,0,101
 0040f7d0,FUN_0040f7d0,anonymous,,0,649
 0040f850,FUN_0040f850,anonymous,,0,243
@@ -399,7 +399,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004124f0,FUN_004124f0,named,MenuSaveImageConfigRectBlit,0,2192
 00412750,FUN_00412750,named,MenuHoverStatusTextDraw,0,2261
 004129d0,FUN_004129d0,anonymous,,0,1028
-00412af0,FUN_00412af0,anonymous,,0,1074
+00412af0,FUN_00412af0,named,MenuSurfaceBlitScaled,0,1074
 00412c00,FUN_00412c00,ported,MenuTick,3,14003
 00413970,FUN_00413970,ported,MenuScrollStateUpdate,3,701
 00413a60,FUN_00413a60,ported,SaveMenuThumbnailConfigLoad,2,1331
@@ -542,7 +542,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0041a660,FUN_0041a660,anonymous,,0,754
 0041a7d0,FUN_0041a7d0,named,InputKeyGroupRegister,0,1005
 0041a850,FUN_0041a850,anonymous,,0,572
-0041a920,FUN_0041a920,anonymous,,0,1068
+0041a920,FUN_0041a920,named,LevelStateCountersClear,0,1068
 0041a990,FUN_0041a990,anonymous,,0,130
 0041a9c0,FUN_0041a9c0,anonymous,,0,368
 0041aa00,FUN_0041aa00,named,EntityTableMapsAllocate,0,1600
@@ -563,7 +563,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0041ba10,FUN_0041ba10,ported,,4,464
 0041ba90,FUN_0041ba90,anonymous,,0,81
 0041baa0,FUN_0041baa0,named,SimulationPointerActionDispatch,0,10110
-0041c1c0,FUN_0041c1c0,anonymous,,0,1069
+0041c1c0,FUN_0041c1c0,named,AdvisorOverlayHitResolve,0,1069
 0041c440,FUN_0041c440,named,AdvisorCallbackScheduleGate,0,205
 0041c4f0,FUN_0041c4f0,named,AdvisorAnimationPositionAndRequestUpdate,0,1805
 0041c6e0,FUN_0041c6e0,anonymous,,0,984
@@ -660,7 +660,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00426420,FUN_00426420,named,CursorRayToCameraRoute,0,909
 00426520,FUN_00426520,ported,MainSimInteractionAndCellUpdate,4,33111
 00427e00,FUN_00427e00,named,ToolTipInfoStringsLoad,0,1355
-00427f80,FUN_00427f80,anonymous,,0,1071
+00427f80,FUN_00427f80,named,LevelUpgradeNameStringsLoad,0,1071
 00428020,FUN_00428020,named,EntityCommandStatusFeedbackDispatch,0,6657
 00428330,FUN_00428330,named,TerrainCommandFeedbackDispatch,0,6919
 00428780,FUN_00428780,named,TerrainCellCommandPredicate,0,634
@@ -1024,7 +1024,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00444680,FUN_00444680,named,StepMovementVectorResolve,0,8504
 00444fb0,FUN_00444fb0,named,EntityTurnToVectorActivityIssue,0,1694
 004451e0,FUN_004451e0,named,EntityPathStepVectorNormalize,0,1682
-004455a0,FUN_004455a0,anonymous,,0,1093
+004455a0,FUN_004455a0,named,EntityMoveVectorSurfaceProbe,0,1093
 004456e0,FUN_004456e0,anonymous,,0,424
 00445d70,FUN_00445d70,anonymous,,0,575
 00446610,FUN_00446610,named,EntityMovementTickScaleAndDeltaGet,0,2921
@@ -1035,7 +1035,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004470d0,FUN_004470d0,named,EntityConditionalTypeFiveSpawn,0,837
 004471b0,FUN_004471b0,anonymous,,0,461
 00447210,FUN_00447210,named,EntityAdjacentPlacementCellSearch,0,1940
-004473b0,FUN_004473b0,anonymous,,0,1220
+004473b0,FUN_004473b0,named,RouteToCellCommandIssue,0,1220
 004474f0,FUN_004474f0,anonymous,,0,820
 004475c0,FUN_004475c0,named,EntityProgressAndNegativeDeltaHandler,0,1547
 00447730,FUN_00447730,anonymous,,0,336
@@ -1064,7 +1064,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00449520,FUN_00449520,anonymous,,0,814
 00449610,FUN_00449610,anonymous,,0,870
 00449700,FUN_00449700,named,RouteStepCommandIssue,0,1600
-00449880,FUN_00449880,anonymous,,0,1341
+00449880,FUN_00449880,named,BlockedCellApproachWeightWrite,0,1341
 00449980,FUN_00449980,anonymous,,0,880
 00449a70,FUN_00449a70,anonymous,,0,298
 00449ac0,FUN_00449ac0,anonymous,,0,1552
@@ -1571,7 +1571,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0046a9e0,FUN_0046a9e0,anonymous,,0,524
 0046aa90,FUN_0046aa90,anonymous,,0,289
 0046aad0,FUN_0046aad0,anonymous,,0,368
-0046ab10,FUN_0046ab10,anonymous,,0,1062
+0046ab10,FUN_0046ab10,named,TextSlotMessageAssign,0,1062
 0046abb0,FUN_0046abb0,anonymous,,0,371
 0046ac20,FUN_0046ac20,named,AdvisorTextRequestSetup,0,330
 0046ac60,FUN_0046ac60,named,AdvisorTextAnimationUpdate,0,674
@@ -1627,7 +1627,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0046dd10,FUN_0046dd10,named,StagedCellCandidateSelect,0,1254
 0046de80,FUN_0046de80,named,CellQuadRunEmit,0,3414
 0046e1c0,FUN_0046e1c0,anonymous,,0,560
-0046e220,FUN_0046e220,anonymous,,0,1129
+0046e220,FUN_0046e220,named,CellSurfaceQuadHeightFill,0,1129
 0046e330,FUN_0046e330,anonymous,,0,340
 0046e390,FUN_0046e390,ported,,3,2966
 0046e610,FUN_0046e610,named,TerrainEdgeFlagMidpointUpdate,0,2492
@@ -1741,7 +1741,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00474da0,FUN_00474da0,named,AnimatedTextureFrameSet,0,762
 00474e30,FUN_00474e30,anonymous,,0,395
 00474e90,FUN_00474e90,anonymous,,0,766
-00474f10,FUN_00474f10,anonymous,,0,1090
+00474f10,FUN_00474f10,named,SceneObjectBoundsUnion,0,1090
 00474ff0,FUN_00474ff0,anonymous,,0,292
 00475020,FUN_00475020,anonymous,,0,354
 00475070,FUN_00475070,anonymous,,0,170
@@ -2175,7 +2175,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00487fc0,FUN_00487fc0,anonymous,,0,669
 00488070,FUN_00488070,named,SharedObjectFloatTrackInterpolateApply,0,445
 004880d0,FUN_004880d0,anonymous,,0,854
-00488170,FUN_00488170,anonymous,,0,1128
+00488170,FUN_00488170,named,AnimationTrackKeysInterpolate,0,1128
 004882e0,FUN_004882e0,named,SceneNodeTransformMatrixApply,0,3013
 004885c0,FUN_004885c0,named,ModelResourceResolveOrLoad,0,1639
 00488730,FUN_00488730,anonymous,,0,438

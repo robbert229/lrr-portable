@@ -1170,6 +1170,23 @@ public class CreateEngineFunctions extends GhidraScript {
         0x466250L,  // ExpandCellEntitySpawn
         0x46e9d0L,  // StagedCellCandidateCollect
         0x4826c0L,  // MeshVertexRecordFill
+        0x403750L,  // CommandKindRecordIssueAndLink
+        0x407240L,  // BubbleConfigTextureLoad
+        0x40a5e0L,  // RecordCountDigitsFill
+        0x40b1b0L,  // DependencyGridOccupancyPass
+        0x40e0c0L,  // FenceSparkLaunchRegister
+        0x40f6c0L,  // SceneNodeRecordCreate
+        0x412af0L,  // MenuSurfaceBlitScaled
+        0x41a920L,  // LevelStateCountersClear
+        0x41c1c0L,  // AdvisorOverlayHitResolve
+        0x427f80L,  // LevelUpgradeNameStringsLoad
+        0x4455a0L,  // EntityMoveVectorSurfaceProbe
+        0x4473b0L,  // RouteToCellCommandIssue
+        0x449880L,  // BlockedCellApproachWeightWrite
+        0x46ab10L,  // TextSlotMessageAssign
+        0x46e220L,  // CellSurfaceQuadHeightFill
+        0x474f10L,  // SceneObjectBoundsUnion
+        0x488170L,  // AnimationTrackKeysInterpolate
         0x4350a0L,  // SurfaceTypeDescriptionsConfigLoad
         0x444fb0L,  // EntityTurnToVectorActivityIssue
         0x4451e0L,  // EntityPathStepVectorNormalize
@@ -2204,6 +2221,23 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x466250: return "ExpandCellEntitySpawn";
             case 0x46e9d0: return "StagedCellCandidateCollect";
             case 0x4826c0: return "MeshVertexRecordFill";
+            case 0x403750: return "CommandKindRecordIssueAndLink";
+            case 0x407240: return "BubbleConfigTextureLoad";
+            case 0x40a5e0: return "RecordCountDigitsFill";
+            case 0x40b1b0: return "DependencyGridOccupancyPass";
+            case 0x40e0c0: return "FenceSparkLaunchRegister";
+            case 0x40f6c0: return "SceneNodeRecordCreate";
+            case 0x412af0: return "MenuSurfaceBlitScaled";
+            case 0x41a920: return "LevelStateCountersClear";
+            case 0x41c1c0: return "AdvisorOverlayHitResolve";
+            case 0x427f80: return "LevelUpgradeNameStringsLoad";
+            case 0x4455a0: return "EntityMoveVectorSurfaceProbe";
+            case 0x4473b0: return "RouteToCellCommandIssue";
+            case 0x449880: return "BlockedCellApproachWeightWrite";
+            case 0x46ab10: return "TextSlotMessageAssign";
+            case 0x46e220: return "CellSurfaceQuadHeightFill";
+            case 0x474f10: return "SceneObjectBoundsUnion";
+            case 0x488170: return "AnimationTrackKeysInterpolate";
             case 0x4350a0: return "SurfaceTypeDescriptionsConfigLoad";
             case 0x444fb0: return "EntityTurnToVectorActivityIssue";
             case 0x4451e0: return "EntityPathStepVectorNormalize";

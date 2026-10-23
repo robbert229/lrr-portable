@@ -448,10 +448,11 @@ Open threads, in order of value:
 | 249 | [findings/249-config-band-loaders-poly-variant-build-panel-and-cell-registration-layout-and-activity-helpers.md](docs/findings/249-config-band-loaders-poly-variant-build-panel-and-cell-registration-layout-and-activity-helpers.md) | Config-Band Loaders, Poly-Variant Build, Panel/Cell Registration, Layout, and Activity Helpers |
 | 250 | [findings/250-config-band-loaders-cell-corner-scan-action-command-record-instantiation-and-render-state-helpers.md](docs/findings/250-config-band-loaders-cell-corner-scan-action-command-record-instantiation-and-render-state-helpers.md) | Config-Band Loaders, Cell-Corner Scan, Action/Command Issues, Record Instantiation, and Render-State Helpers |
 | 251 | [findings/251-command-band-kind-dispatch-item-name-lookup-route-and-record-helpers.md](docs/findings/251-command-band-kind-dispatch-item-name-lookup-route-and-record-helpers.md) | Command-Band Kind Dispatch, Item Name Lookup, Route Commands, and Record/Geometry Helpers |
+| 252 | [findings/252-config-band-texture-loaders-route-commands-and-surface-menu-helpers.md](docs/findings/252-config-band-texture-loaders-route-commands-and-surface-menu-helpers.md) | Config-Band Texture Loaders, Route Command Issues, and Surface/Menu Helpers |
 
 Named-pseudocode corpus: [`docs/decompiles/engine-region.c`](docs/decompiles/engine-region.c)
-(1146 generated sections selected from the reverse-engineering findings; the
-Ghidra script selects 1146 targets. This includes the manually bounded objective
+(1163 generated sections selected from the reverse-engineering findings; the
+Ghidra script selects 1163 targets. This includes the manually bounded objective
 callback at `0x459100`, which auto-analysis does not mark as a procedure).
 Machine-readable evidence: [`docs/evidence/legorr-rev.bundle`](docs/evidence/legorr-rev.bundle)
 (236 recorded REA observations against `LegoRR.exe`,
@@ -495,6 +496,8 @@ The config-band loaders, cell-corner scan, action/command issues, record instant
 [legorr-engine-helpers-expansion-22.bundle](docs/evidence/legorr-engine-helpers-expansion-22.bundle).
 The command-band kind dispatch, item name lookup, route command, drift/timer, terrain normal, and record/geometry helpers are recorded in
 [legorr-engine-helpers-expansion-23.bundle](docs/evidence/legorr-engine-helpers-expansion-23.bundle).
+The config-band texture loaders, route command issues, and surface/menu helpers are recorded in
+[legorr-engine-helpers-expansion-24.bundle](docs/evidence/legorr-engine-helpers-expansion-24.bundle).
 The latest input, selection, and resource helper batch is in
 [legorr-engine-helpers-expansion-5.bundle](docs/evidence/legorr-engine-helpers-expansion-5.bundle);
 its address-range audits are in the [low](docs/evidence/legorr-engine-helper-audit-low-expansion-5.bundle),
