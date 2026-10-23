@@ -1021,6 +1021,20 @@ public class CreateEngineFunctions extends GhidraScript {
         0x46b1d0L,  // TooltipOverlayStateInitialize
         0x46bc30L,  // TimedEffectSlotRender
         0x4734f0L,  // DDiSceneLightCreate
+        0x4083a0L,  // SceneEntitySlotTableRebuild
+        0x4181b0L,  // HelpWindowResourcesInit
+        0x41ee80L,  // CellGridPointHitTest
+        0x4355c0L,  // MenuOptionPanelTextureUpdate
+        0x43eea0L,  // SimulationEntityQueueFlush
+        0x4403d0L,  // LevelDebugCellRetargetDispatch
+        0x4515e0L,  // TerrainCellRayHitTest
+        0x45b590L,  // RectContainsOffsetPoint
+        0x462ad0L,  // RewardScrollTickerAdvanceAndDraw
+        0x462f20L,  // TerrainCellQuadGeometryEmit
+        0x46c160L,  // UpgradeLevelTableParse
+        0x46c510L,  // SceneChannelSlotsRebuild
+        0x46db90L,  // CellQuadRunStage
+        0x46de80L,  // CellQuadRunEmit
     };
     static final String[] NAMES = { "EngineTick", "EngineShutdown", "EngineShutdownAlt",
         "MainSimStep", "ManagerTick", "MessageDispatch", "ViewContextTick",
@@ -1218,7 +1232,7 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x43af30: return "CreatureSpawnFromEmergence";
             case 0x4401b0: return "TerrainCellToWorldPosition";
             case 0x4410f0: return "TerrainNeighborPathCheck";
-            case 0x44e0c0: return "TerrainGridCreate";
+            case 0x44e0c0: return "TerrainCreate";
             case 0x44e4d0: return "TerrainGridVertexBuild";
             case 0x451f60: return "CommandQueueCancelOpcode";
             case 0x452520: return "SelectionSnapshotCreate";
@@ -1278,7 +1292,7 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x48b390: return "RegistryPathCreateKeys";
             case 0x48e160: return "RandomSeedSet";
             case 0x48e170: return "RandomNext";
-            case 0x48e380: return "KeyboardLayoutKeyToText";
+            case 0x48e380: return "KeyToAscii";
             case 0x48f500: return "GameFileWrite";
             case 0x48de20: return "ArraySortWithComparator";
             case 0x431780: return "TerrainStampImpactHandler";
@@ -1557,7 +1571,6 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x482ac0: return "ModelRenderRecordStateSetup";
             case 0x483940: return "Direct3DRenderStateRestore";
             case 0x4839c0: return "ModelRenderChildPassDispatch";
-            case 0x485250: return "AdvisorTextAppendFromControlIndex";
             case 0x485300: return "ObjectiveAdvisorTextCopy";
             case 0x489330: return "CDAudioDeviceOpen";
             case 0x48be40: return "WadEntryMemoryStreamOpen";
@@ -1629,7 +1642,6 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x4792e0: return "ConfigBlockPathFind";
             case 0x479ee0: return "FontResourceLoad";
             case 0x47a180: return "RewardTextDraw";
-            case 0x47a470: return "AdvisorInlineResourceTokenDraw";
             case 0x47aad0: return "SoundBankFreeSlotFind";
             case 0x47a550: return "FontRecordAndSurfaceRelease";
             case 0x47c8f0: return "BitmapFileWrite";
@@ -1833,7 +1845,7 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x42d460: return "UpgradeTypesLoad";
             case 0x42d600: return "ObjectNamesLoad";
             case 0x42da20: return "ObjectTheNamesLoad";
-            case 0x431570: return "TerrainGridHeightGet";
+            case 0x431570: return "CurrentLevelHeightGet";
             case 0x44f4e0: return "TerrainCellSurfaceTypeSet";
             case 0x44f540: return "TerrainCellSurfaceTypeGet";
             case 0x44f570: return "TerrainCellSurfaceTypeReset";
@@ -1901,6 +1913,20 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x46b1d0: return "TooltipOverlayStateInitialize";
             case 0x46bc30: return "TimedEffectSlotRender";
             case 0x4734f0: return "DDiSceneLightCreate";
+            case 0x4083a0: return "SceneEntitySlotTableRebuild";
+            case 0x4181b0: return "HelpWindowResourcesInit";
+            case 0x41ee80: return "CellGridPointHitTest";
+            case 0x4355c0: return "MenuOptionPanelTextureUpdate";
+            case 0x43eea0: return "SimulationEntityQueueFlush";
+            case 0x4403d0: return "LevelDebugCellRetargetDispatch";
+            case 0x4515e0: return "TerrainCellRayHitTest";
+            case 0x45b590: return "RectContainsOffsetPoint";
+            case 0x462ad0: return "RewardScrollTickerAdvanceAndDraw";
+            case 0x462f20: return "TerrainCellQuadGeometryEmit";
+            case 0x46c160: return "UpgradeLevelTableParse";
+            case 0x46c510: return "SceneChannelSlotsRebuild";
+            case 0x46db90: return "CellQuadRunStage";
+            case 0x46de80: return "CellQuadRunEmit";
             default: return null;
         }
     }
