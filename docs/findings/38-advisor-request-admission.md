@@ -5,7 +5,7 @@ shared gate `DAT_00556ec8` is nonzero, and the controller's active bit is clear.
 Accepted requests set an active slot and encode one of two request modes in a
 separate controller state bit.
 
-**Observations from** REA/Ghidra 12.1.4 over `source/LegoRR.exe` (SHA-256
+**Observations from** REA/Ghidra 12.1.4 over `reference/LegoRR.exe` (SHA-256
 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`),
 2026-10-21. Evidence: `docs/evidence/legorr-advisor-animation.bundle` (65
 records). Focused IDs: `ev_00851f2d5dd5ae373e6ea3d1f8308354666d0f0d393fcdd80399ef08d5019853`

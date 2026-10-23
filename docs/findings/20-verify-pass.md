@@ -1,6 +1,6 @@
 # 20 — Verify Pass: Fresh Re-derivation of the Critical Path
 
-**Target:** `source/LegoRR.exe` · SHA-256 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`
+**Target:** `reference/LegoRR.exe` · SHA-256 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`
 **Analysis provider:** Ghidra 12.1.4 (REA) · fresh session, no carried annotations · 2026-10-20
 
 **Method:** the critical path (`PE entry → WinMain → init → frame loop → engine tick`) was
@@ -23,7 +23,7 @@ project and diffed byte-for-byte against `docs/decompiles/engine-region.c`.
 | Step | Address | Observation |
 | --- | --- | --- |
 | CRT `entry` | `0x48f000` (PE `AddressOfEntryPoint` RVA `0x8f000`) | Ghidra literal name `entry`: `GetVersion`, command-line fetch, `GetStartupInfoA`, then `uVar8 = FUN_004777a0(hModule, 0, cmdline, argc)`; exit via `FUN_0048e4b0`. |
-| WinMain body | `FUN_004777a0` | Compound mutex name (`"%s Mutex"` + `CreateMutexA`), `ERROR_ALREADY_EXISTS` (`0xB7`) ⇒ skips body & returns 0; last-`\` basename copy into `DAT_00505814`; quote strip; registry `StandardParameters` / `NoHALMessage` (`FUN_0048b360`); arg parse `FUN_00477bf0`; init `FUN_0048b260 → FUN_004893f0 → FUN_0047f130(mount) → FUN_00478df0 → FUN_0047ed90`; window `FUN_004783f0`; DDraw `FUN_00488b50` + `FUN_0049d030(1, &0x2000, &0x40, &0x100, …)`; `FUN_0047ec80` / `FUN_00485e80(0)`; hookup `FUN_0041fa20`; frame loop; teardown (incl. `FUN_00484c90(0)`, `FUN_0048b290`, `FUN_0048b2f0`). |
+| WinMain body | `FUN_004777a0` | Compound mutex name (`"%s Mutex"` + `CreateMutexA`), `ERROR_ALREADY_EXISTS` (`0xB7`) ⇒ skips body & returns 0; last-`\` basename copy into `DAT_00505814`; quote strip; registry `StandardParameters` / `NoHALMessage` (`FUN_0048b360`); arg parse `FUN_00477bf0`; init `StartupStreamStateReset → ResourceStateTableReset → WadMountStartup → FUN_00478df0 → FUN_0047ed90`; window `WindowCreate`; DDraw `FUN_00488b50` + `DirectDrawDeviceInitialize(1, &0x2000, &0x40, &0x100, …)`; `AviFileInitialize` / `RenderSetup`; hookup `FUN_0041fa20`; frame loop; teardown (incl. `FUN_00484c90(0)`, `StartupStreamsClose`, `StartupConfigStreamLoad`). |
 | Frame loop | inside `FUN_004777a0` | `DAT_0076ab4c..ab58` scratch cleared; `FUN_00478040`; `&2` → `DAT_00505808=1`; `FUN_0047eef0` / `FUN_0047f010`; indirect `(*DAT_00505930)(dt)` (0 ⇒ quit); `FUN_00477fa0` / `FUN_0047c8d0`; dt = `0.8333333` (`&0x80`), `DAT_0050593c` override, else `timeGetTime` Δ×`0.025` clamp `3.0`, `0.0` (`&0x10`). |
 
 Evidence: overview `ev_de67056a9fd3339b1e46a34d5af28fac998ae99cad72ad09760938b9abc2f9e1`;
@@ -33,7 +33,7 @@ mount `ev_27454cf22922676eb1fd259d63d0cc528593b15c25133b089b63092aef9feb11`.
 ## 2. Registration & the tick pointer (independent of auto-analysis)
 
 `FUN_0041fa20(&DAT_00505814)` zeroes the 958-dword engine state block at `DAT_005560c0`,
-stores the exe-dir pointer at `DAT_005560c4` and calls `FUN_004783d0`, then hands
+stores the exe-dir pointer at `DAT_005560c4` and calls `WindowTitleSet @ 0x4783d0`, then hands
 `{FUN_0041fb50, LAB_004232e0, LAB_00424cf0}` to `FUN_00477fd0`, which fixes:
 
 | Slot | Value | Note |
@@ -94,7 +94,7 @@ returns; then the subsystem ticker order is **identical** to the finding, includ
 
 ```sh
 analyzeHeadless /tmp/opencode/ghidra-proj FreshVerify \
-  -import source/LegoRR.exe -scriptPath tools/ghidra \
+  -import reference/LegoRR.exe -scriptPath tools/ghidra \
   -postScript CreateEngineFunctions.java -deleteProject
 ```
 

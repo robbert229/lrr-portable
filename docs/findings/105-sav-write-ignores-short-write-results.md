@@ -6,7 +6,7 @@ file layer returns a partial item count on a short or failed write, so the
 slot-level return value does not establish that the `.sav` contents or `.osf`
 sidecar were fully persisted.
 
-**Observations from** REA/Ghidra 12.1.4 over `source/LegoRR.exe` (SHA-256
+**Observations from** REA/Ghidra 12.1.4 over `reference/LegoRR.exe` (SHA-256
 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`),
 2026-10-22. Evidence: `docs/evidence/legorr-save-write-results-and-count-reset.bundle`.
 

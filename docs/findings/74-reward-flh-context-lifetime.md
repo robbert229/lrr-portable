@@ -6,7 +6,7 @@ record while the reward loop runs. Reward exit closes each loaded context and
 clears its slot; reward progression also has a close-and-reopen path. This
 completes the loader-lifetime seam left open by findings 09 and 21.
 
-**Observations from** REA/Ghidra 12.1.4 over `source/LegoRR.exe` (SHA-256
+**Observations from** REA/Ghidra 12.1.4 over `reference/LegoRR.exe` (SHA-256
 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`),
 2026-10-22. Evidence: `docs/evidence/legorr-flh-playback-state-machine.bundle`.
 Focused IDs: `ev_5c94fcf74470a3c30367dd9866366dd1a0eb1d70948f534e6e0ccfa2c889ff33`

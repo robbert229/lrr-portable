@@ -97,10 +97,18 @@ two:
 | --- | --- | --- |
 | `25` (`0x19`) | `0x484b20` → `0x4849d0` | keyframe, 16-bit §4 |
 | `27` (`0x1b`) | `0x485030` → `0x484e50` | delta frame, 16-bit §5 |
-| `11`/`12`/`13` | `0x484b90` | 8-bit linear rows (unused in corpus) |
+| `11`/`12`/`13` | `0x484b90` | success-return stub; no pixel writes (unused in corpus) |
 | `15`/`16`/`25` | depth/magic dispatch | 8-bit or magic-1234 variants (unused) |
-| `4`, `16`, `27`, `7` | `0x484c00`, `0x484880`, `0x485030` | other row coders (unused) |
-| `'DS'` `0x5344`, `'UU'` `0x5555` | —, `0x456210` | unused ('DS' is a silent no-op) |
+| `4`, `16`, `27`, `7` | `0x484c00`, `0x484880`, `0x485030` | 16-bit row records, mode dispatch, and opcode dispatch (unused paths) |
+| `'DS'` `0x5344`, `'UU'` `0x5555` | —, `FlhMagicUuNoop` (`0x456210`) | unused; both paths are silent no-ops |
+
+The 8-bit opcode-25 handler at `0x484b90` is only a six-byte function that
+returns success; it does not decode or write rows. The 8-bit magic-1234
+opcode-27 fallback at `0x484c90` is a one-byte no-op. The implemented 8-bit
+opcode-25 mode-4 path is `0x4848d0`; the alternate 8-bit delta decoder is
+`0x484ca0`. The 16-bit row-record helper at `0x484c00` is also a separate
+decoder. These paths are present in the image but are not used by the shipped
+18-file corpus described above.
 
 Chunk types `0x000B` and `'LK'` (`0x4B4C`) exist in the walker as buffer-and-
 continue cases (`0x4847d0`/`0x484720`) but ship in zero files.

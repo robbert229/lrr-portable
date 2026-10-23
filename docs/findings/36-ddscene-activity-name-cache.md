@@ -6,7 +6,7 @@ primary and optional companion action-name setters. Regardless of that result,
 the dispatcher caches the request before returning. A later call with the same
 name exits at the initial equality check without trying either scene again.
 
-**Observations from** REA/Ghidra 12.1.4 over `source/LegoRR.exe` (SHA-256
+**Observations from** REA/Ghidra 12.1.4 over `reference/LegoRR.exe` (SHA-256
 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`),
 2026-10-21. Evidence: `docs/evidence/legorr-ddscene-shutdown-reachability.bundle`
 (33 records). Focused IDs: `ev_7fec5899952b84c0f471166cd4a7b2ef493cedfd23521aec268f47ce11844eb7`

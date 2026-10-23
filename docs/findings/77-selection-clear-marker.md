@@ -7,7 +7,7 @@ then enqueues command opcode 3 and resets HUD context 0; the queue dispatches
 opcode 3 to a whole-selection clear routine. This connects an entity-level
 selection request to a global selection reset and marker transfer.
 
-**Observations from** REA/Ghidra 12.1.4 over `source/LegoRR.exe` (SHA-256
+**Observations from** REA/Ghidra 12.1.4 over `reference/LegoRR.exe` (SHA-256
 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`),
 2026-10-22. Evidence bundle:
 [`legorr-selection-clear-expansion.bundle`](../evidence/legorr-selection-clear-expansion.bundle).

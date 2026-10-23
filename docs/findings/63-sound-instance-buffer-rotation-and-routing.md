@@ -12,7 +12,7 @@ The stream path replaces any active stream in its selected stream-state record
 before loading the next one; finding 136 traces the stop, release, and restart
 sequence. The selector's user-facing meaning remains unknown.
 
-**Observations from** REA/Ghidra 12.1.4 over `source/LegoRR.exe` (SHA-256
+**Observations from** REA/Ghidra 12.1.4 over `reference/LegoRR.exe` (SHA-256
 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`),
 2026-10-22. Evidence: `docs/evidence/legorr-sound-instance-spatial-expansion.bundle`.
 Focused IDs:

@@ -1,6 +1,6 @@
 # 16 — A.2 Live Test: The Game Launches Under GE-Proton
 
-**Target:** `source/LegoRR.exe` (SHA-256 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`)
+**Target:** `reference/LegoRR.exe` (SHA-256 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`)
 **Host:** Bazzite 44 · RTX 3080 Ti (Vulkan 1.4) · gamescope 3.16 · GE-Proton10-25
 (wine 10.0 Staging) via the Lutris `ge-proton` runner
 **Run log (excerpt evidence):** `~/.local/share/rock-raider-a2/logs/run-20261020-144935.log`

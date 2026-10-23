@@ -7,7 +7,7 @@ each supplied config entry to a slot with a case-insensitive name comparison.
 The loader accepts either a bitmap pointer resource or an animated cursor
 resource with two stored hotspot coordinates.
 
-**Observations from** REA/Ghidra 12.1.4 over `source/LegoRR.exe` (SHA-256
+**Observations from** REA/Ghidra 12.1.4 over `reference/LegoRR.exe` (SHA-256
 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`),
 2026-10-22. Evidence: `docs/evidence/legorr-pointer-cursor-config-and-override.bundle`.
 Focused IDs: `ev_53a0e1d0b9c20e515ad95cd3a86a8faef76c17292a0ee08f5a5abfe7bec2d23a`

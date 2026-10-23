@@ -6,7 +6,7 @@ wipe/fade transitions" was named but not decomposed). `MenuWipe` is a
 between menus, the game plays a full-screen LightWave (LWS/LWSC) "rock wipe"
 scene that covers the old menu and is released mid-scene to reveal the new one.
 
-**Observations from** REA/Ghidra 12.1.4 over `source/LegoRR.exe` (SHA-256
+**Observations from** REA/Ghidra 12.1.4 over `reference/LegoRR.exe` (SHA-256
 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`),
 2026-10-21, on the wipe slice of the menu-core region `0x4103d0`–`0x413e11`
 plus the object factory at `0x472cd0`. Complementary data reads from the

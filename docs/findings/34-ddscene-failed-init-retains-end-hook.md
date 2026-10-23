@@ -6,7 +6,7 @@ body does not clear the scene-end callback pointer or user-data slot. This
 extends finding 32's distinction between the sample-hook gate and scene-end
 dispatch to a concrete partial-initialization path.
 
-**Observations from** REA/Ghidra 12.1.4 over `source/LegoRR.exe` (SHA-256
+**Observations from** REA/Ghidra 12.1.4 over `reference/LegoRR.exe` (SHA-256
 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`),
 2026-10-21. Evidence: `docs/evidence/legorr-ddscene-shutdown-reachability.bundle`
 (`FUN_0041fb50`, `FUN_00472800`) and

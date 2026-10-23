@@ -16,7 +16,7 @@ body exposes no additional optional entry-field lookup. This is static
 analysis: it does not establish how a particular level uses health or assign a
 broader semantic name to entity offset `+0x340`.
 
-**Observations from** REA/Ghidra 12.1.4 over `source/LegoRR.exe` (SHA-256
+**Observations from** REA/Ghidra 12.1.4 over `reference/LegoRR.exe` (SHA-256
 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`),
 2026-10-22. Evidence: `docs/evidence/legorr-olistfile-health-field.bundle`.
 

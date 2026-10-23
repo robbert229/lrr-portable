@@ -6,7 +6,7 @@ assigns the new entity to the returned object's `+0x20` owner field only after
 that return. The draw-step's scene-end threshold bounds what can happen during
 this brief ordering window.
 
-**Observations from** REA/Ghidra 12.1.4 over `source/LegoRR.exe` (SHA-256
+**Observations from** REA/Ghidra 12.1.4 over `reference/LegoRR.exe` (SHA-256
 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`),
 2026-10-21. Evidence: `docs/evidence/legorr-ddscene-reuse.bundle` (5 records);
 callback implementation details cross-reference findings 26 and 28.

@@ -8,7 +8,7 @@ and runs nearby-cell update passes. If the target's `+0x0c` word has bit
 `0x200`, the routine replaces it with `0x20`, submits the coordinates to
 `FUN_0044a4b0`, and calls `FUN_0042f6f0` for the target.
 
-**Observations from** REA/Ghidra 12.1.4 over the shipped `source/LegoRR.exe`
+**Observations from** REA/Ghidra 12.1.4 over the shipped `reference/LegoRR.exe`
 (SHA-256 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`),
 2026-10-22. Evidence bundle:
 [`legorr-terrain-mutation-focused-expansion.bundle`](../evidence/legorr-terrain-mutation-focused-expansion.bundle).

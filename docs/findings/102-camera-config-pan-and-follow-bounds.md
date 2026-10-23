@@ -1,6 +1,6 @@
 # 102 — Camera settings feed pointer-pan acceleration and follow bounds
 
-REA/Ghidra 12.1.4 analysis of the shipped `source/LegoRR.exe` (SHA-256
+REA/Ghidra 12.1.4 analysis of the shipped `reference/LegoRR.exe` (SHA-256
 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`). Evidence
 is in [`legorr-camera-control-focused.bundle`](../evidence/legorr-camera-control-focused.bundle).
 

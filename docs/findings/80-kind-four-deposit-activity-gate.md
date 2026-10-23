@@ -6,7 +6,7 @@ and stats-state bit `0x4` or `0x2`. When both gates pass, it sets
 change, and sets a one-second duration. This finding describes the helper's
 code-level handoff, not a user-visible resource transfer.
 
-**Observations from** REA/Ghidra 12.1.4 over the shipped `source/LegoRR.exe`
+**Observations from** REA/Ghidra 12.1.4 over the shipped `reference/LegoRR.exe`
 (SHA-256 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`),
 2026-10-22. Evidence bundle:
 [`legorr-object-state-and-health-ui-expansion.bundle`](../evidence/legorr-object-state-and-health-ui-expansion.bundle).

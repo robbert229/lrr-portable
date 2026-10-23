@@ -6,7 +6,7 @@ type `2` → `0x0a`, type `1` → `0x0b`, and type `4` → `0x0c`. Finding 22's
 catalog maps those latter three IDs to `Info_LegoManDeath`,
 `Info_VehicleDeath`, and `Info_BuildingDeath` respectively.
 
-**Observations from** REA/Ghidra 12.1.4 over `source/LegoRR.exe` (SHA-256
+**Observations from** REA/Ghidra 12.1.4 over `reference/LegoRR.exe` (SHA-256
 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`),
 2026-10-22. Evidence: `docs/evidence/legorr-campaign-expansion.bundle`.
 Focused IDs: `ev_cb67dd44b4a1a803dee82f4abe7eb06a9d4e5aad251bbfab9e77bcd31969d456`

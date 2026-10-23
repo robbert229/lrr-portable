@@ -9,7 +9,7 @@ resets the activity timer, commits the new pointer, and clears one stats-state
 bit. The concrete transition is below; activity-name meanings and the typed
 runner internals remain partly unknown.
 
-**Observations from** REA/Ghidra 12.1.4 over `source/LegoRR.exe` (SHA-256
+**Observations from** REA/Ghidra 12.1.4 over `reference/LegoRR.exe` (SHA-256
 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`),
 2026-10-22. Function body `FUN_00447c40` is a contiguous 578-byte Ghidra
 function at `0x447c40–0x447e81`; its decompilation and related helper bodies

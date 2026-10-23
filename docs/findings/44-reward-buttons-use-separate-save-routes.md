@@ -6,7 +6,7 @@ through `FUN_00462030`, while the Advance zone calls `FUN_00462270` directly.
 This corrects finding 09's summary that either reward-zone handler ends in the
 same checkpoint step.
 
-**Observations from** REA/Ghidra 12.1.4 over `source/LegoRR.exe` (SHA-256
+**Observations from** REA/Ghidra 12.1.4 over `reference/LegoRR.exe` (SHA-256
 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`),
 2026-10-22. Evidence: `docs/evidence/legorr-campaign-expansion.bundle`.
 Focused IDs: `ev_25ff9fad3264901ea7b394dbe3b6e6f4ebb725dc443fba45a8edd203aad76e88`

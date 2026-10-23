@@ -84,7 +84,7 @@ streamed from level files. The 40-id catalog is hard logic + defaults.
 `MessagePreCheck` (`0x4199f0`, decompiled) is now clear too: ids
 {10, 11, 12, 38} are the exception list that skips dedupe — for all others, if
 the id is already in the active queue, the queue entry's stored callback runs
-immediately (`FUN_004196a0(slot, LAB_004199a0, args)`).
+immediately (`MessageSubscriberDispatch`, `0x4196a0`, with `LAB_004199a0` and the message args).
 So `MessageDispatch` = **dedupe-with-live-callback** message bus.
 
 ## Ledger updates

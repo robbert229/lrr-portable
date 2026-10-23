@@ -8,7 +8,7 @@ This is an eligibility gate separate from the add, duplicate, and deselection
 branches described in findings [06](06-command-queue-and-selection.md) and
 [77](77-selection-clear-marker.md).
 
-**Observations from** REA/Ghidra 12.1.4 over `source/LegoRR.exe` (SHA-256
+**Observations from** REA/Ghidra 12.1.4 over `reference/LegoRR.exe` (SHA-256
 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`),
 2026-10-22. Evidence bundle:
 [`legorr-selection-eligibility-expansion.bundle`](../evidence/legorr-selection-eligibility-expansion.bundle).

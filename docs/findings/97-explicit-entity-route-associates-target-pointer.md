@@ -4,7 +4,7 @@ FUN_0043fe70(actor, supplied) accepts an explicit second pointer only when the a
 
 Only when that path setup succeeds does the function store supplied at actor+0x2fc, write byte 0x15 into the final path record, call FUN_004373d0(supplied, 1), and return one. The shipped image contains a direct call to this routine at 0x4046fe.
 
-**Evidence:** REA/Ghidra 12.1.4 on shipped source/LegoRR.exe (SHA-256 c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f), bundle legorr-entity-target-route-markers.bundle. Function dossier: ev_ce960ddc23b9a065a93ad2f26a6b2cf9c3c406c157326151cedbf62a14923307; direct callsite instruction: ev_5622113ec0f6b3d496993f82720cb3fd55451b4d1ec583d874de1c01c20e0221.
+**Evidence:** REA/Ghidra 12.1.4 on shipped reference/LegoRR.exe (SHA-256 c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f), bundle legorr-entity-target-route-markers.bundle. Function dossier: ev_ce960ddc23b9a065a93ad2f26a6b2cf9c3c406c157326151cedbf62a14923307; direct callsite instruction: ev_5622113ec0f6b3d496993f82720cb3fd55451b4d1ec583d874de1c01c20e0221.
 
 ## Boundary
 

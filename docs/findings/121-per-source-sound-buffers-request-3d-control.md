@@ -18,7 +18,7 @@ interface acquired in finding 119.
 
 ## Evidence
 
-REA/Ghidra 12.1.4 analysis of shipped `source/LegoRR.exe`, SHA-256
+REA/Ghidra 12.1.4 analysis of shipped `reference/LegoRR.exe`, SHA-256
 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`.
 Bundle: `docs/evidence/legorr-sound3d-per-source.bundle`.
 

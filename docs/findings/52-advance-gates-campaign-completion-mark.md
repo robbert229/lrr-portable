@@ -7,7 +7,7 @@ into a `0x3190`-stride row, with the exact bit combination depending on the
 chain mode and index. This ties campaign progress marking to a specific level
 result value while keeping the bit meanings unresolved.
 
-**Observations from** REA/Ghidra 12.1.4 over `source/LegoRR.exe` (SHA-256
+**Observations from** REA/Ghidra 12.1.4 over `reference/LegoRR.exe` (SHA-256
 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`),
 2026-10-22. Evidence: `docs/evidence/legorr-campaign-transition-agent.bundle`.
 Focused IDs: `ev_0959789f3c06aa946dd69cff2d45107564790585934448399dcdef76fdee05cc`

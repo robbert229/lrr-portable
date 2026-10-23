@@ -11,7 +11,7 @@ This finding decodes both callbacks, names their registrars, and closes the
 loop to the SFX bank (finding 14) and the entity flag-word evaluator (finding
 10).
 
-**Observations from** REA/Ghidra 12.1.4 over `source/LegoRR.exe` (SHA-256
+**Observations from** REA/Ghidra 12.1.4 over `reference/LegoRR.exe` (SHA-256
 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`),
 2026-10-21. Evidence: `docs/evidence/legorr-ddscene-hooks.bundle` (46 records).
 

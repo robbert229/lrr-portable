@@ -7,7 +7,7 @@ the first dword equals `0x534f5252` and the remaining file size is exactly
 file, even when the header or size gate rejected the contents; the return value
 therefore records the open path, not successful table restoration.
 
-**Observations from** REA/Ghidra 12.1.4 over `source/LegoRR.exe` (SHA-256
+**Observations from** REA/Ghidra 12.1.4 over `reference/LegoRR.exe` (SHA-256
 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`),
 2026-10-22. Evidence: `docs/evidence/legorr-checkpoint-reader-expansion.bundle`.
 

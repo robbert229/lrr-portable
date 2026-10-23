@@ -4,7 +4,7 @@ The Advisor animation controller builds a separate DDiScene companion and
 registers a compact set of named actions for map-pointing and talking. Its
 request path is a distinct scene client layered on the shared DDiScene system.
 
-**Observations from** REA/Ghidra 12.1.4 over `source/LegoRR.exe` (SHA-256
+**Observations from** REA/Ghidra 12.1.4 over `reference/LegoRR.exe` (SHA-256
 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`),
 2026-10-21. Evidence: `docs/evidence/legorr-advisor-animation.bundle` (65
 records). Focused IDs: `ev_79ee0e34716177ba6b878eb73432eed4ae1b8411b369cd3808039f2bc324e9a1`

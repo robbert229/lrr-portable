@@ -7,7 +7,7 @@ channel, clamping each derived channel to `[0, 1]`. A recognized vertical flag
 sets bit `0x8`; successful setup always sets bit `0x2`. The loader does not
 establish how or when the health bar is rendered.
 
-**Observations from** REA/Ghidra 12.1.4 over the shipped `source/LegoRR.exe`
+**Observations from** REA/Ghidra 12.1.4 over the shipped `reference/LegoRR.exe`
 (SHA-256 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`),
 2026-10-22. Evidence bundle:
 [`legorr-object-state-and-health-ui-expansion.bundle`](../evidence/legorr-object-state-and-health-ui-expansion.bundle).

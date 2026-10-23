@@ -6,7 +6,7 @@ global `DAT_0076cd94` reset gates only the sample hook. The scene-end
 hook has a separate pointer and time check, with no read of that gate in
 `FUN_00475140`.
 
-**Observations from** REA/Ghidra 12.1.4 over `source/LegoRR.exe` (SHA-256
+**Observations from** REA/Ghidra 12.1.4 over `reference/LegoRR.exe` (SHA-256
 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`),
 2026-10-21. Fresh evidence: `docs/evidence/legorr-ddscene-reuse.bundle`
 (`FUN_00472800`, `FUN_00475140`); registration and callback-slot evidence is in

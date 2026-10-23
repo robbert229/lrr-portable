@@ -8,7 +8,7 @@ then checks up to four neighboring cells with `FUN_004410f0`. On the first
 successful route check, it creates a type-`0x11` command carrying the candidate
 pointer through `FUN_00402f70`.
 
-**Observations from** REA/Ghidra 12.1.4 over the shipped `source/LegoRR.exe`
+**Observations from** REA/Ghidra 12.1.4 over the shipped `reference/LegoRR.exe`
 (SHA-256 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`),
 2026-10-22. Evidence bundle:
 [`legorr-energy-low-target-routing.bundle`](../evidence/legorr-energy-low-target-routing.bundle).

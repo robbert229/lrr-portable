@@ -5,7 +5,7 @@ two distinct audio events: one keyed by the slot's sound value and a queued
 `SFX_CaptainSlide` event. The latter is submitted through the bounded pending
 sound queue.
 
-**Observations from** REA/Ghidra 12.1.4 over `source/LegoRR.exe` (SHA-256
+**Observations from** REA/Ghidra 12.1.4 over `reference/LegoRR.exe` (SHA-256
 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`),
 2026-10-21. Evidence: `docs/evidence/legorr-advisor-animation.bundle` (65
 records). Focused IDs: `ev_051b90cc9739dbd16ee5d6820ad21fe7743cc2f68befb1e313c56ac10f7bdb98`

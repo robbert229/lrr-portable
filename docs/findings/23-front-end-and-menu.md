@@ -1,6 +1,6 @@
 # 23 — Front-End & Menus (boot → main menu)
 
-**Observations from** a fresh REA/Ghidra 12.1.4 session over `source/LegoRR.exe`
+**Observations from** a fresh REA/Ghidra 12.1.4 session over `reference/LegoRR.exe`
 (SHA-256 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`),
 2026-10-21, on the menu-core region `0x4103d0`–`0x418110` plus its callbacks.
 Complementary data reads from the shipped `Lego.cfg` (unpacked from `LegoRR0.wad`,

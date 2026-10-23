@@ -5,7 +5,7 @@ pointer, and a frame-time crossing condition. That path does not update a
 per-object “already fired” flag before returning, so repeated qualifying calls
 remain eligible in the static control flow.
 
-**Observations from** REA/Ghidra 12.1.4 over `source/LegoRR.exe` (SHA-256
+**Observations from** REA/Ghidra 12.1.4 over `reference/LegoRR.exe` (SHA-256
 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`),
 2026-10-21. Evidence: `docs/evidence/legorr-advisor-animation.bundle` (65
 records) and `docs/evidence/legorr-ddscene-hooks.bundle`. Focused IDs:

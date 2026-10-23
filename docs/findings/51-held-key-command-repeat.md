@@ -7,7 +7,7 @@ its registered opcode and arguments on each tick. The shipped image therefore
 supports held-key repetition; it does not identify the user-facing names of
 the five registered keys.
 
-**Observations from** REA/Ghidra 12.1.4 over `source/LegoRR.exe` (SHA-256
+**Observations from** REA/Ghidra 12.1.4 over `reference/LegoRR.exe` (SHA-256
 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`),
 2026-10-22. Evidence: `docs/evidence/legorr-command-hotkey-expansion.bundle`.
 Focused IDs: `ev_9edd71f55757f615737c8493ccc3623790a37b34b4bff033d04600717640a764`

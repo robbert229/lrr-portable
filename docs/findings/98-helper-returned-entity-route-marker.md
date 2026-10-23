@@ -4,7 +4,7 @@ FUN_0043fff0(actor) reads the actor's current cell, then calls FUN_004389e0(acto
 
 If FUN_00441700 accepts the path setup, the routine writes the helper-returned pointer at actor+0x2fc, writes 0x13 into the final path record, and returns one. It does not perform the explicit capability-bit and actor+0x304 checks visible in finding 97. The shipped image contains a direct call to this routine at 0x40470e.
 
-**Evidence:** REA/Ghidra 12.1.4 on shipped source/LegoRR.exe (SHA-256 c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f), bundle legorr-entity-target-route-markers.bundle. Function dossier: ev_4fcfa14fd68919f130a84b29f1f66814d3a0705f3f836a096dcaabcf2bcf1762; direct callsite instruction: ev_370578675728e795a02a3a61f9925e7a26ff51828c8be782f15ee730a73b3607.
+**Evidence:** REA/Ghidra 12.1.4 on shipped reference/LegoRR.exe (SHA-256 c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f), bundle legorr-entity-target-route-markers.bundle. Function dossier: ev_4fcfa14fd68919f130a84b29f1f66814d3a0705f3f836a096dcaabcf2bcf1762; direct callsite instruction: ev_370578675728e795a02a3a61f9925e7a26ff51828c8be782f15ee730a73b3607.
 
 ## Boundary
 

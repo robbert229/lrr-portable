@@ -6,7 +6,7 @@ pool, registers the scene-end hook, and then proceeds through config/resource
 setup. Failures that converge on `LAB_00422818` call `FUN_00472800` and return
 zero; the successful path returns one without that call.
 
-**Observations from** REA/Ghidra 12.1.4 over `source/LegoRR.exe` (SHA-256
+**Observations from** REA/Ghidra 12.1.4 over `reference/LegoRR.exe` (SHA-256
 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`),
 2026-10-21. Evidence: `docs/evidence/legorr-ddscene-shutdown-reachability.bundle`
 (33 records). Focused IDs: `ev_9cf0ef11e49abe4974600709d27cddc78521eee9c94f6ba65c1a2b8c2731b1f4`

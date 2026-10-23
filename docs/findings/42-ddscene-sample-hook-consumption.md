@@ -5,7 +5,7 @@ qualifying kind-4 draw-step with a resolvable frame, the step checks the hook's
 name, slot, and global gate, then clears the pending bit. This makes the hook
 an action-entry event rather than an unconditional per-frame callback.
 
-**Observations from** REA/Ghidra 12.1.4 over `source/LegoRR.exe` (SHA-256
+**Observations from** REA/Ghidra 12.1.4 over `reference/LegoRR.exe` (SHA-256
 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`),
 2026-10-21. Evidence: `docs/evidence/legorr-advisor-animation.bundle` (65
 records) and `docs/evidence/legorr-ddscene-hooks.bundle`. Focused IDs:

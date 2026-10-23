@@ -1,6 +1,6 @@
 # 17 — Interactive A.2 Session: Playable, Music Works, Movies Blocked on Indeo 5
 
-**Target:** `source/LegoRR.exe` (SHA-256 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`)
+**Target:** `reference/LegoRR.exe` (SHA-256 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`)
 **Session:** manual play through the first mission, `a2.py run` under GE-Proton10-25
 (wine 10.0 Staging), gamescope 640×480 @ 60, exclusive mode
 **Session log:** `~/.local/share/rock-raider-a2/logs/run-20261020-145826.log`

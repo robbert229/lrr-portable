@@ -421,14 +421,20 @@ Open threads, in order of value:
 | 222 | [findings/222-wav-fmt-extension-read-is-not-chunk-bounded.md](docs/findings/222-wav-fmt-extension-read-is-not-chunk-bounded.md) | WAV Format Extension Read Is Not Bounded by the `fmt ` Chunk |
 | 223 | [findings/223-cell-init-reads-outside-grid-at-top-and-left-edges.md](docs/findings/223-cell-init-reads-outside-grid-at-top-and-left-edges.md) | Conditional top/left edge read before the cell grid; Level14/17 tutorial spawns and two cell-flag writers are traced, while edge walkability and runtime ordering remain unknown |
 | 224 | [findings/224-predug-cells-feed-a-capped-spawn-coordinate-pool.md](docs/findings/224-predug-cells-feed-a-capped-spawn-coordinate-pool.md) | Predug Cell Values Feed a Capped Coordinate Pool |
+| 225 | [findings/225-terrain-objective-level-and-diagnostic-helpers.md](docs/findings/225-terrain-objective-level-and-diagnostic-helpers.md) | Newly Identified Terrain, Objective, Level, and Diagnostic Helpers |
+| 226 | [findings/226-omitted-simulation-terrain-resource-text-procedures.md](docs/findings/226-omitted-simulation-terrain-resource-text-procedures.md) | Omitted Simulation, Terrain, Resource, and Text Procedures |
 
 Named-pseudocode corpus: [`docs/decompiles/engine-region.c`](docs/decompiles/engine-region.c)
-(114 named functions covering the engine/game-logic region — findings 01–10).
-Functions named by findings 11–19 (loaders, parsers, the asset side) are cited
-with pseudocode in each finding's function map.
+(850 generated sections selected from the reverse-engineering findings; the
+Ghidra script selects 850 targets. This includes the manually bounded objective
+callback at `0x459100`, which auto-analysis does not mark as a procedure).
 Machine-readable evidence: [`docs/evidence/legorr-rev.bundle`](docs/evidence/legorr-rev.bundle)
 (236 recorded REA observations against `LegoRR.exe`,
 SHA-256 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`).
+The latest helper expansion has its own supporting bundle at
+[legorr-engine-helpers-expansion.bundle](docs/evidence/legorr-engine-helpers-expansion.bundle)
+and the follow-up terrain/resource/text expansion is recorded in
+[legorr-engine-helpers-expansion-2.bundle](docs/evidence/legorr-engine-helpers-expansion-2.bundle).
 
 ## Reproducibility
 
