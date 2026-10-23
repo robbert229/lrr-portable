@@ -357,8 +357,19 @@ neighbors if the remaining cell and movement gates pass. The executable and
 shipped assets establish the route and gates, but not that either caller used
 such coordinates during play.
 
-Neither call site proves that an out-of-range neighbor reaches
-`FUN_0042f6f0` or that its later `0x400` read executes. These configured-level
+The other caller contexts do not close that route. At `0x4485d0`, the code
+rounds the entity's `+0x2f4/+0x2f8` position and rejects zero coordinates, but
+does not reject 1 before calling `FUN_00430530`. At `0x456d6a`, the callback
+dispatcher passes a selected coordinate from a list built by `FUN_00456b80`
+from terrain bytes at cell `+4`; the propagation helper rejects an edge
+coordinate but accepts `x=1` and `y=1`. At `0x47018e`, the entity path first
+requires `FUN_00432bd0` and terrain type checks, then calls `FUN_00434570` on
+the selected cell before `FUN_00430530`; those gates also do not establish
+whether a near-border coordinate is used in play. The `0x428dca` caller is
+also not tied to a near-border runtime coordinate by the available evidence.
+
+None of these call paths proves that an out-of-range neighbor reaches
+`FUN_0042f6f0` or that its later `0x400` read executes. The configured-level
 script and map scans do not cover modified assets, all possible cell flags, or
 all entity positions. The routes remain conditional code paths, not observed
 runtime behavior.
