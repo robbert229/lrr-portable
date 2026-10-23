@@ -9,9 +9,9 @@ Covers all **2564** local functions in `docs/decompiles/full/manifest.csv`
 | --- | ---: | ---: |
 | ported | 293 | 11.4% |
 | anchored | 5 | 0.2% |
-| named | 696 | 27.1% |
+| named | 716 | 27.9% |
 | runtime-import | 46 | 1.8% |
-| anonymous | 1524 | 59.4% |
+| anonymous | 1504 | 58.7% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
   (293 functions)
@@ -19,11 +19,11 @@ Covers all **2564** local functions in `docs/decompiles/full/manifest.csv`
   the body) is cited in `src/`; the function is touched but its entry is
   not named (5 functions)
 - **named** — human name in `engine-region.c` / corpus but no `src/`
-  citation yet (696 functions)
+  citation yet (716 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
-  (1524 functions)
+  (1504 functions)
 
 **Game logic remaining to port: 2225 (86.8%).**
 
@@ -31,15 +31,15 @@ Covers all **2564** local functions in `docs/decompiles/full/manifest.csv`
 
 | Region | Anonymous functions |
 | --- | ---: |
-| `0x00040xxxx` | 259 |
-| `0x00046xxxx` | 185 |
+| `0x00040xxxx` | 257 |
+| `0x00046xxxx` | 180 |
 | `0x00047xxxx` | 169 |
-| `0x00049xxxx` | 169 |
-| `0x00043xxxx` | 168 |
-| `0x00041xxxx` | 155 |
-| `0x00048xxxx` | 132 |
-| `0x00045xxxx` | 131 |
+| `0x00043xxxx` | 167 |
+| `0x00049xxxx` | 167 |
+| `0x00041xxxx` | 154 |
+| `0x00045xxxx` | 128 |
 | `0x00044xxxx` | 127 |
+| `0x00048xxxx` | 126 |
 | `0x00042xxxx` | 29 |
 
 ## Named-but-unported corpus functions
@@ -716,9 +716,15 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0048f460` | FileResourceHandleSeek |
 | `0x0048f500` | GameFileWrite |
 | `0x0048f650` | GameFileDelete |
+| `0x0048f680` | FileSetReadOnlyAttribute |
 | `0x0048f6d0` | GameDirectoryCreate |
 | `0x0048f700` | GameFileMetadataFind |
+| `0x0048f830` | FileFindNextRecord |
+| `0x0048fa20` | DriveCurrentDirectoryGet |
 | `0x0048fb90` | GameFileReadBuffered |
+| `0x0048fe20` | BufferedStreamGetByte |
+| `0x0048fe50` | BufferedStreamReadLine |
+| `0x0048ffa0` | PathResolveFull |
 | `0x00490090` | MaterialResolve |
 | `0x004907f0` | ParseEntityHealthValue |
 | `0x004909d0` | EngineFormatStringToStream |
@@ -732,6 +738,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00494e30` | StdFileOpen |
 | `0x00495000` | StdFileHandleAcquire |
 | `0x00496c00` | Win32FileDescriptorSeek |
+| `0x00496ee0` | Win32ErrorMapToErrno |
 | `0x0049c7c0` | ExpandWadPayload |
 | `0x0049c840` | WadPayloadDecodeDispatch |
 | `0x0049cc70` | WadBitstreamOutputInitialize |

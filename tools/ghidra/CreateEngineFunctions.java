@@ -987,6 +987,27 @@ public class CreateEngineFunctions extends GhidraScript {
         0x435170L,  // TerrainSurfaceTypeNameGet
         0x435f28L,  // TerrainGridBorderInsetGet
         0x4525b0L,  // SelectedEntitySetHasAny
+        0x48fe50L,  // BufferedStreamReadLine
+        0x48fe20L,  // BufferedStreamGetByte
+        0x48f830L,  // FileFindNextRecord
+        0x48f680L,  // FileSetReadOnlyAttribute
+        0x48fa20L,  // DriveCurrentDirectoryGet
+        0x48ffa0L,  // PathResolveFull
+        0x496ee0L,  // Win32ErrorMapToErrno
+        // --- reward panel, terrain view, and simulation helpers (finding 238) ---
+        0x460950L,  // CheckpointBlobTaskProgressRecalculate
+        0x460f00L,  // RewardStatsPanelDraw
+        0x461070L,  // RewardStatsTextFormat
+        0x45dbc0L,  // TerrainViewTileGeometryBuild
+        0x45e9e0L,  // TerrainTileStyleResolve
+        0x45e940L,  // ViewPointToScreenGeometryTransform
+        0x46d380L,  // AttachedModelOrientationUpdate
+        0x405c10L,  // PendingCommandEntityAssignmentTick
+        0x41baa0L,  // SimulationPointerActionDispatch
+        0x407d60L,  // BuildingTypeConfigRecordParse
+        0x433e80L,  // TerrainProjectedCellStateRefresh
+        0x470760L,  // MeshBuildEightSidedSegment
+        0x493ef0L,  // CrtFormattedScanV
     };
     static final String[] NAMES = { "EngineTick", "EngineShutdown", "EngineShutdownAlt",
         "MainSimStep", "ManagerTick", "MessageDispatch", "ViewContextTick",
@@ -1166,6 +1187,13 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x435170: return "TerrainSurfaceTypeNameGet";
             case 0x435f28: return "TerrainGridBorderInsetGet";
             case 0x4525b0: return "SelectedEntitySetHasAny";
+            case 0x48fe50: return "BufferedStreamReadLine";
+            case 0x48fe20: return "BufferedStreamGetByte";
+            case 0x48f830: return "FileFindNextRecord";
+            case 0x48f680: return "FileSetReadOnlyAttribute";
+            case 0x48fa20: return "DriveCurrentDirectoryGet";
+            case 0x48ffa0: return "PathResolveFull";
+            case 0x496ee0: return "Win32ErrorMapToErrno";
             case 0x435e0e: return "CameraViewContextSet";
             case 0x436900: return "CameraPanAxisUpdate";
             case 0x4369f4: return "CameraTiltAxisUpdate";
@@ -1624,6 +1652,19 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x48dbd0: return "EngineHeapAlloc";
             case 0x48f2b0: return "StreamedAudioFileLengthGet";
             case 0x460360: return "CheckpointBlobTaskProgressRefresh";
+            case 0x460950: return "CheckpointBlobTaskProgressRecalculate";
+            case 0x460f00: return "RewardStatsPanelDraw";
+            case 0x461070: return "RewardStatsTextFormat";
+            case 0x45dbc0: return "TerrainViewTileGeometryBuild";
+            case 0x45e9e0: return "TerrainTileStyleResolve";
+            case 0x45e940: return "ViewPointToScreenGeometryTransform";
+            case 0x46d380: return "AttachedModelOrientationUpdate";
+            case 0x405c10: return "PendingCommandEntityAssignmentTick";
+            case 0x41baa0: return "SimulationPointerActionDispatch";
+            case 0x407d60: return "BuildingTypeConfigRecordParse";
+            case 0x433e80: return "TerrainProjectedCellStateRefresh";
+            case 0x470760: return "MeshBuildEightSidedSegment";
+            case 0x493ef0: return "CrtFormattedScanV";
             case 0x480170: return "MapOpen2";
             case 0x488070: return "SharedObjectFloatTrackInterpolateApply";
             case 0x401c00: return "StartLevelOverrideIfEnabledGet";

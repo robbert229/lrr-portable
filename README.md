@@ -433,10 +433,13 @@ Open threads, in order of value:
 | 234 | [findings/234-game-file-streams-and-surface-pixels.md](docs/findings/234-game-file-streams-and-surface-pixels.md) | Game-File Streams and Surface Pixel Operations |
 | 235 | [findings/235-camera-projection-lwo-layer-state-and-surface-normals.md](docs/findings/235-camera-projection-lwo-layer-state-and-surface-normals.md) | Camera Projection, LWO Layer State, and Surface Normals |
 | 236 | [findings/236-terrain-labels-map-bounds-and-selection-predicate.md](docs/findings/236-terrain-labels-map-bounds-and-selection-predicate.md) | Terrain Labels, Map Bounds, and Selection Predicate |
+| 237 | [findings/237-buffered-stream-and-win32-file-helpers.md](docs/findings/237-buffered-stream-and-win32-file-helpers.md) | Buffered Streams and Win32 File Helpers |
+| 238 | [findings/238-reward-terrain-and-simulation-helpers.md](docs/findings/238-reward-terrain-and-simulation-helpers.md) | Reward, Terrain, and Simulation Helpers |
+| 239 | [findings/239-mesh-segment-and-scan-runtime.md](docs/findings/239-mesh-segment-and-scan-runtime.md) | Mesh Segment Builder and Scan Runtime |
 
 Named-pseudocode corpus: [`docs/decompiles/engine-region.c`](docs/decompiles/engine-region.c)
-(957 generated sections selected from the reverse-engineering findings; the
-Ghidra script selects 957 targets. This includes the manually bounded objective
+(977 generated sections selected from the reverse-engineering findings; the
+Ghidra script selects 977 targets. This includes the manually bounded objective
 callback at `0x459100`, which auto-analysis does not mark as a procedure).
 Machine-readable evidence: [`docs/evidence/legorr-rev.bundle`](docs/evidence/legorr-rev.bundle)
 (236 recorded REA observations against `LegoRR.exe`,
@@ -449,6 +452,13 @@ The latest engine and terrain helper decompiles are recorded in
 [legorr-engine-helpers-expansion-3.bundle](docs/evidence/legorr-engine-helpers-expansion-3.bundle).
 The current direct-decompile batch is in
 [legorr-engine-helpers-expansion-4.bundle](docs/evidence/legorr-engine-helpers-expansion-4.bundle).
+The reward, terrain-view, and simulation helpers are recorded in
+[legorr-engine-helpers-expansion-10.bundle](docs/evidence/legorr-engine-helpers-expansion-10.bundle), with caller audits in the
+[render](docs/evidence/legorr-engine-helper-audit-render-expansion-10.bundle) and
+[simulation](docs/evidence/legorr-engine-helper-audit-simulation-expansion-10.bundle) bundles.
+The segment mesh and formatted-scan implementations are in
+[legorr-engine-helpers-expansion-11.bundle](docs/evidence/legorr-engine-helpers-expansion-11.bundle), with supporting
+[text/runtime audit](docs/evidence/legorr-engine-helper-audit-text-io-expansion-10.bundle).
 The latest input, selection, and resource helper batch is in
 [legorr-engine-helpers-expansion-5.bundle](docs/evidence/legorr-engine-helpers-expansion-5.bundle);
 its address-range audits are in the [low](docs/evidence/legorr-engine-helper-audit-low-expansion-5.bundle),
@@ -474,6 +484,8 @@ The camera, LWO layer, and normal helpers are in
 [legorr-engine-helper-audit-render-expansion-9.bundle](docs/evidence/legorr-engine-helper-audit-render-expansion-9.bundle).
 The terrain labels, grid-bound, and selection helpers are documented in
 [legorr-engine-helper-audit-terrain-expansion-9.bundle](docs/evidence/legorr-engine-helper-audit-terrain-expansion-9.bundle).
+The buffered-stream and Win32 file helpers are in
+[legorr-engine-helper-audit-text-io-expansion-9.bundle](docs/evidence/legorr-engine-helper-audit-text-io-expansion-9.bundle).
 The latest three-range helper audits are preserved in the
 [low](docs/evidence/legorr-engine-helper-audit-low.bundle),
 [simulation/terrain](docs/evidence/legorr-engine-helper-audit-mid.bundle), and
