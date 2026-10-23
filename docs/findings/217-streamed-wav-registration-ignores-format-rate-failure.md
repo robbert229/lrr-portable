@@ -21,5 +21,7 @@ In the streamed branch of `FUN_0047a870` at `0x47a870`, the result of
 sets flag bit `0x8` and sets its local success flag without checking the
 stored value. `FUN_00488e70` returns zero on each failed open/chunk/read path.
 `FUN_0047b8e0` at `0x47b8e0` divides the stored file size by that field for
-streamed entries. These functions are in `docs/decompiles/full/LEGORR.full.c`;
-finding 150 documents the separate PCM-only playback gate.
+streamed entries. Finding 218 traces how this probe opens the path separately
+from the game's file-layer handle. These functions are in
+`docs/decompiles/full/LEGORR.full.c`; finding 150 documents the separate
+PCM-only playback gate.
