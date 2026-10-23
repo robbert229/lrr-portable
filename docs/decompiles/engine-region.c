@@ -80046,3 +80046,80 @@ void ObjectInterfaceArrayResourceCreate(int *param_1)
   }
   return;
 }
+
+// ==== SelectedEntityDetachCallback @ 41F6C0 ====
+undefined4 SelectedEntityDetachCallback(int param_1)
+
+{
+  uint uVar1;
+  
+  uVar1 = FUN_00469ea0(param_1);
+  if ((uVar1 & 1) == 0) {
+    if (((*(uint *)(param_1 + 0x3e0) & 0x400) == 0) || (**(int **)(param_1 + 0x308) != 9)) {
+      FUN_00439e70(param_1,0);
+    }
+  }
+  else if (((*(uint *)(param_1 + 0x3e0) & 0x400) != 0) && (*(int *)(param_1 + 0x308) != 0)) {
+    FUN_0043fc20(*(int *)(param_1 + 0x308));
+    return 0;
+  }
+  return 0;
+}
+// ==== RecordPairPoseCopyAndActivityRaise @ 43FC20 ====
+undefined4 RecordPairPoseCopyAndActivityRaise(int param_1)
+
+{
+  int iVar1;
+  int iVar2;
+  undefined4 uVar3;
+  int iVar4;
+  undefined4 local_2c;
+  undefined4 local_28;
+  undefined4 local_24;
+  undefined4 local_20;
+  undefined4 local_1c;
+  undefined4 local_18;
+  undefined4 local_14;
+  undefined4 local_10;
+  undefined4 local_c;
+  undefined4 local_8;
+  undefined4 local_4;
+  
+  iVar1 = *(int *)(param_1 + 0x304);
+  if (iVar1 != 0) {
+    iVar2 = FUN_0043a5f0(iVar1);
+    if (iVar2 != 0) {
+      FUN_004754c0(iVar2,0,&local_24);
+      uVar3 = FUN_00431570(local_24,local_20,&local_2c,&local_28);
+      iVar2 = FUN_0044f6d0(uVar3);
+      if (iVar2 != 0) {
+        iVar2 = FUN_00431da0(param_1,local_2c,local_28,local_2c,local_28,0);
+        if (iVar2 != 0) {
+          iVar2 = FUN_0044a200(param_1);
+          if (iVar2 != 0) {
+            iVar4 = FUN_0044a200(iVar1);
+            if (iVar4 != 0) {
+              *(undefined4 *)(param_1 + 0x304) = 0;
+              *(undefined4 *)(iVar1 + 0x308) = 0;
+              *(uint *)(iVar1 + 0x3e0) = *(uint *)(iVar1 + 0x3e0) & 0xfffffbff;
+              *(undefined4 *)(iVar1 + 0x324) = 0;
+              FUN_004754c0(iVar4,0,&local_24);
+              FUN_00475500(iVar4,0,&local_c,&local_18);
+              FUN_00475430(iVar2,0,local_24,local_20,local_1c);
+              FUN_00475470(iVar2,0,local_c,local_8,local_4,local_18,local_14,local_10);
+              FUN_004373d0(iVar1,1);
+              FUN_00403f30(iVar1);
+              FUN_004409e0(param_1,0x34,0);
+              FUN_00447c40(param_1);
+              FUN_00403f30(param_1);
+              *(int *)(param_1 + 0x2fc) = iVar1;
+              *(uint *)(param_1 + 0x3ec) = *(uint *)(param_1 + 0x3ec) | 0x8000;
+              return 1;
+            }
+          }
+        }
+      }
+    }
+  }
+  return 0;
+}

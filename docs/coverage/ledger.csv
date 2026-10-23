@@ -607,7 +607,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0041f3c0,FUN_0041f3c0,anonymous,,0,94
 0041f400,FUN_0041f400,anonymous,,0,94
 0041f420,FUN_0041f420,named,SelectedEntitiesAnyMatch,0,428
-0041f6c0,FUN_0041f6c0,anonymous,,0,423
+0041f6c0,FUN_0041f6c0,named,SelectedEntityDetachCallback,0,423
 0041f720,FUN_0041f720,anonymous,,0,133
 0041f740,FUN_0041f740,named,CellFourNeighborWalkCheck,0,921
 0041f840,FUN_0041f840,anonymous,,0,165
@@ -977,7 +977,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0043f6a0,FUN_0043f6a0,named,EntityDamageApply,0,955
 0043f7d0,FUN_0043f7d0,named,EntityEnergyLowTargetRouteCommandTick,0,3378
 0043fb40,FUN_0043fb40,named,DamageHurtSoundSubmit,0,867
-0043fc20,FUN_0043fc20,anonymous,,0,1772
+0043fc20,FUN_0043fc20,named,RecordPairPoseCopyAndActivityRaise,0,1772
 0043fdc0,FUN_0043fdc0,anonymous,,0,802
 0043fe70,FUN_0043fe70,named,EntityRouteToExplicitTarget,0,1570
 0043fff0,FUN_0043fff0,named,EntityRouteMarkerSetup,0,1270

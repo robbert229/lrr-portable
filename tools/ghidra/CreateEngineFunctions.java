@@ -1286,6 +1286,8 @@ public class CreateEngineFunctions extends GhidraScript {
         0x483690L,  // MatrixMethodPairApply
         0x485ea0L,  // InterfaceSlot58PairStoreClamp
         0x489b30L,  // ObjectInterfaceArrayResourceCreate
+        0x41f6c0L,  // SelectedEntityDetachCallback
+        0x43fc20L,  // RecordPairPoseCopyAndActivityRaise
         0x4350a0L,  // SurfaceTypeDescriptionsConfigLoad
         0x444fb0L,  // EntityTurnToVectorActivityIssue
         0x4451e0L,  // EntityPathStepVectorNormalize
@@ -2436,6 +2438,8 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x483690: return "MatrixMethodPairApply";
             case 0x485ea0: return "InterfaceSlot58PairStoreClamp";
             case 0x489b30: return "ObjectInterfaceArrayResourceCreate";
+            case 0x41f6c0: return "SelectedEntityDetachCallback";
+            case 0x43fc20: return "RecordPairPoseCopyAndActivityRaise";
             case 0x4350a0: return "SurfaceTypeDescriptionsConfigLoad";
             case 0x444fb0: return "EntityTurnToVectorActivityIssue";
             case 0x4451e0: return "EntityPathStepVectorNormalize";
