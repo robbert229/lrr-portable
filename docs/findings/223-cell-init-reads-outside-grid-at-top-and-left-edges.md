@@ -134,6 +134,30 @@ remains open.
 This route also does not establish that a teleported minifigure receives the
 Place activity or reaches `FUN_00432600` before it moves away.
 
+Vehicle `GetOut` supplies another gameplay-time position source. Menu slot
+`0x19` dispatches to `FUN_004401b0(vehicle, 0)`. After confirming the vehicle
+has a carried minifigure and converting the vehicle's scene position to an
+in-bounds grid cell, that routine first tries the same cell for vehicles with
+the `0x2000000` stat flag. Otherwise, when the vehicle's `+0x3ec` flag `0x40`
+is clear, it may call `FUN_00439e10`; that helper requires vehicle stat flag
+`0x10` and delegates to `FUN_00439d50` to select an adjacent unload cell.
+Candidates are checked north, east, south, then west. `FUN_00432b50` checks
+only the upper map limits and walkability flag `0x8`. The following
+`FUN_00431da0(NULL, x, y, x, y, 0)` checks the candidate tile's flags and
+occupancy but has no lower-bound test. If the earlier three candidates are
+rejected and the west candidate at `(0,y)` passes those checks,
+`FUN_004401b0` converts that selected cell to world coordinates and directly
+assigns the carried minifigure's frame position; it does not pathfind the
+minifigure onto the cell. The bounds check in the conversion helper accepts
+zero coordinates. This establishes a conditional route for unloading onto
+the left edge (and the analogous north candidate can reach `y=0`): a vehicle
+must reach the adjacent interior cell, carry a minifigure, meet the unload
+gates, and have a qualifying border tile while preceding candidates fail.
+The `Level22` left-border cells described above provide shipped map cells
+marked walkable, but this static trace does not establish a play-session
+vehicle position, successful unload, or that the unloaded minifigure remains
+there and executes the activity that reaches `FUN_00432600`.
+
 One remaining level-data spawn route is `EmergeMap`. `FUN_0042c120`
 (`LoadLayerL`) scans the complete layer and groups nonzero cells into 0x4c-byte
 records: slot 0 is the trigger coordinate, and slots 1–5 are candidate spawn
