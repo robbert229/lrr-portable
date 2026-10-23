@@ -1,0 +1,9 @@
+# Finding 162 — Object-Attached Sounds Refresh Spatial State
+
+The object route used by `FUN_00465090` can attach a playing sound buffer to a game object that exposes spatial state. In `FUN_0047ad70`, the object-attached branch registers the buffer through `FUN_0047b1a0`. That helper retains the object in a fixed 20-entry registry and creates a record linked to the object's own list. The sound update path later visits each registered object and its linked sound records.
+
+`FUN_0047b390` walks the registry and calls `FUN_0047b410` for each non-null object. The latter queries three float values from the object, compares them with the last values stored for each linked sound record, and calls the associated buffer's vtable slot `+0x4c` when those values change. It then stores the refreshed values. The routine is reached by the recurring sound update path at the end of `FUN_004651a0`.
+
+This establishes that the object-attached route can refresh spatial state as its associated game object changes. The decompile does not establish the semantic names of the object's queried fields or the buffer vtable slot, nor the coordinate units. Finding 161 documents named gameplay callers on the object-attached route; finding 121 documents the 3D-control flag on loaded per-source buffers.
+
+**Evidence.** Static decompile of shipped `LegoRR.exe`, SHA-256 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`, in `docs/decompiles/full/LEGORR.full.c`: `FUN_00465090` at `0x465090` selects the object route; `FUN_0047ad70` at `0x47ad70` registers its associated buffer; `FUN_0047b1a0` at `0x47b1a0` creates the registration and linked record; `FUN_0047b390` at `0x47b390` and `FUN_0047b410` at `0x47b410` refresh changed values; `FUN_004651a0` at `0x4651a0` reaches the update path. These are static call and data-flow observations, not runtime measurements.
