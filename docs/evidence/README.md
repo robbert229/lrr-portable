@@ -544,15 +544,16 @@ assets and elapsed-time duration in that loop remain unverified. Import with
 
 ## `legorr-samples-config.bundle`
 
-Exported 2026-10-22 for findings 107 and 139 — 33 retained observations.
+Exported 2026-10-22 for findings 107, 139, and 147 — 33 retained observations.
 Records cover the `Samples` config group, alias registration,
 comma-separated variants, loop/stream markers, variant selection, the
 deferred submission queue's selector/route-bit forwarding, and the signed
 volume marker path, including the `#...#` token-buffer termination/bounds
 limitation, and the streamed branch's bypass of the `*` duplicate request. It
-also records how `-reducesamples` gates `!`-prefixed aliases
-before resolution; the shipped config has 242 such aliases, 37 with streamed
-paths. The `#...#` prefix has no shipped example. Import with
+also records how `-reducesamples` gates `!`-prefixed aliases before
+resolution; the shipped config has 242 such aliases, 37 with streamed paths.
+Finding 147 traces the shared generator and the LevelLoad seed source. The
+`#...#` prefix has no shipped example. Import with
 `import_evidence_bundle` or inspect `records` directly.
 
 ## `legorr-streamed-wav-format.bundle`
