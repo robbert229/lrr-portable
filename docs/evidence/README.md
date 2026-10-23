@@ -247,6 +247,12 @@ border walkability flag. DefenceTuto's calls use material IDs 4 and 8, neither
 of which appears in `Surf_DE1.map`. These NERP/map checks use the shipped
 archive payloads and full-image decompilation/disassembly; they are not
 retained in a separate REA bundle.
+The spawner's border-walkability bit can also be propagated by
+`FUN_00430530` from interior neighbors at `x=1`/`y=1`; its other direct
+call sites include `0x428dca`, `0x43cd3d`, `0x43ebbc`, `0x4485d0`,
+`0x456d6a`, and `0x47018e`. The available predug and erosion maps do not
+establish those runtime cell states. This caller census is from
+`reference/LegoRR.exe` and the full decompilation, not a separate REA bundle.
 
 ## `legorr-path-list-movement.bundle`
 

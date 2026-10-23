@@ -331,6 +331,20 @@ the scanned terrain data. Level14 adds another shipped border-material
 candidate route whose cell flags and runtime execution remain unknown; the
 available data does not prove an edge spawn or the risky cell update.
 
+The `0x10` walkability precondition has a runtime boundary-propagation path.
+`FUN_00430470` writes this bit only to coordinates with nonzero `x/y` below
+`width-2`/`height-2`, so it cannot set the border directly. `FUN_00430530`
+also rejects an edge as its input coordinate, but its 8-neighbor pass can set
+`0x10` on border neighbors when called for an interior cell at `x=1` or
+`y=1`; that pass requires the center cell's type byte `+2` to be 8 or 10 and
+its wall bit `0x8` to be clear. The predug loader calls it for `Dugg` values
+1 or 3, but the Level14 and Level17 predug maps have no such values at
+`x=1`/`y=1`, and Level14's corresponding `Erode` map has zero values there.
+Other direct runtime call sites include `0x428dca`, `0x43cd3d`, `0x43ebbc`,
+`0x4485d0`, `0x456d6a`, and `0x47018e`. Those callers leave a possible later
+border-walkability source; their relevant live coordinates and cell states
+remain unproven.
+
 Neither call site proves that an out-of-range neighbor reaches
 `FUN_0042f6f0` or that its later `0x400` read executes. These configured-level
 script and map scans do not cover modified assets, all possible cell flags, or
