@@ -47,12 +47,12 @@ scene helpers, the SFX-bank slot-order verification for `SFX_Place*`, and the
 
 ## `legorr-menu-background-audio.bundle`
 
-Exported 2026-10-22 for findings 23 and 141. The bundle records the random
+Exported 2026-10-22 for findings 23, 141, and 144. The bundle records the random
 front-end FLIC selection, overlay SFX alias resolution, and the `FUN_00464f60`
-queue / `FUN_00464fa0` submit helpers. Finding 141 follows the menu tick's
-deferred-list rotation in the full decompile to show the selector-zero stream
-submission path. Import with `import_evidence_bundle` or inspect `records`
-directly.
+queue / `FUN_00464fa0` submit helpers. Findings 141 and 144 follow the menu
+tick's deferred-list rotation and music-loop queue values in the full
+decompile to show selector-zero overlay sounds and selector-one music streams.
+Import with `import_evidence_bundle` or inspect `records` directly.
 
 ## `legorr-ddscene-owner-link.bundle`
 

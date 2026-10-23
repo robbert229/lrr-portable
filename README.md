@@ -340,6 +340,7 @@ Open threads, in order of value:
 | 141 | [findings/141-menu-overlay-streams-submit-on-state-zero.md](docs/findings/141-menu-overlay-streams-submit-on-state-zero.md) | Menu-overlay streams submit one queue step later through state zero |
 | 142 | [findings/142-sample-hash-marker-sets-directsound-volume.md](docs/findings/142-sample-hash-marker-sets-directsound-volume.md) | `#...#` sets a per-sample DirectSound attenuation value |
 | 143 | [findings/143-reducesamples-skips-bang-prefixed-sound-aliases.md](docs/findings/143-reducesamples-skips-bang-prefixed-sound-aliases.md) | `-reducesamples` skips `!`-prefixed aliases before registration |
+| 144 | [findings/144-music-stream-aliases-use-state-one.md](docs/findings/144-music-stream-aliases-use-state-one.md) | Shipped ambient and stats music streams select stream state one |
 
 Named-pseudocode corpus: [`docs/decompiles/engine-region.c`](docs/decompiles/engine-region.c)
 (114 named functions covering the engine/game-logic region — findings 01–10).

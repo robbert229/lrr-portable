@@ -2,13 +2,14 @@
 
 `FUN_00416150` and `FUN_004161a0` build the `Stream_LevelName_Level_%d` and `Stream_LevelName_TLevel_%d` alias names, resolve them through `FUN_00464c70`, and call `FUN_00464ef0(alias, 0)`. The `FUN_00464ef0` body in the named full decompile corpus calls `FUN_00464fa0(alias, 0)` when its cooldown permits submission. `FUN_00464fa0` forwards that zero as the fourth argument to `FUN_0047ad70`; the stream branch passes that argument to `FUN_0047b970` as its zero/nonzero state selector. Thus, when these configured `@` aliases are submitted, level-name and tutorial-name streams select state zero.
 
-The sound-instance updater `FUN_00465b00` also submits aliases through `FUN_00465050`, with arguments `(0, alias, 1, 0, position)`. `FUN_00465090` forwards that `1` as the fourth argument to `FUN_0047ad70` on its immediate path. Its known constructor call sets the alias field to index `0x26`, which the sound-name table maps to `SFX_Lava`; the shipped `Samples` entry is `!SFX_Lava *Sounds\New\lavbub`. This is duplicate-enabled in-memory playback, not a streamed entry. The separate direct calls `FUN_00464fa0(7, 1)` select alias index `7`, `SFX_AmbientLoop`; its shipped entry is `!SFX_Ambientloop Sounds\iambloop`, also in-memory. The selector-one calls traced here therefore do not enter `FUN_0047b970` for shipped config. Other indirect or unexamined selector-one call paths remain possible.
+The sound-instance updater `FUN_00465b00` also submits aliases through `FUN_00465050`, with arguments `(0, alias, 1, 0, position)`. `FUN_00465090` forwards that `1` as the fourth argument to `FUN_0047ad70` on its immediate path. Its known constructor call sets the alias field to index `0x26`, which the sound-name table maps to `SFX_Lava`; the shipped `Samples` entry is `!SFX_Lava *Sounds\New\lavbub`. This is duplicate-enabled in-memory playback, not a streamed entry. The separate direct calls `FUN_00464fa0(7, 1)` select alias index `7`, `SFX_AmbientLoop`; its shipped entry is `!SFX_Ambientloop Sounds\iambloop`, also in-memory. Finding 144 traces additional selector-one submissions for the `@`-marked `SFX_AmbientMusicLoop` and `SFX_MusicLoop` aliases; those do reach `FUN_0047b970` and select stream state one.
 
 | Caller path | Fourth argument passed to `FUN_0047ad70` | Status |
 | --- | ---: | --- |
 | Level name and tutorial name handlers (`FUN_00416150` / `FUN_004161a0`) | `0` | observed; their `@` aliases reach stream state zero, subject to the cooldown gate |
 | Sound-instance updater (`FUN_00465b00`) | `1` | observed; known alias is `SFX_Lava`, an in-memory entry |
 | Direct `FUN_00464fa0(7, 1)` calls | `1` | observed; index 7 is `SFX_AmbientLoop`, an in-memory entry |
+| Deferred music submissions (`FUN_00464f60(0x29/0x2c, 1)`) | `1` | observed; `SFX_MusicLoop` and `SFX_AmbientMusicLoop` are streamed entries (finding 144) |
 
 When a selected state already holds a stream, finding 136 shows that a successful replacement request stops and releases that stream before starting the next. These conclusions are static call-flow observations, not runtime audio results.
 
