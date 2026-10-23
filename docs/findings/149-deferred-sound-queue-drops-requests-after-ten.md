@@ -2,7 +2,7 @@
 
 `FUN_00464f60(alias, selector)` appends a deferred sound request only while `DAT_00502bd0 < 10`. At ten pending entries, it returns without storing the new alias or selector and without reporting a failure. `FUN_004651a0` drains the prior pending list, moves the current list into the next-frame list, and resets the current count to zero. Thus this queue can carry at most ten requests into a frame's pending list; further requests accumulated before the tick are silently discarded.
 
-This cap applies to callers that use `FUN_00464f60`, including the menu-overlay and music-stream submissions documented in findings 141 and 144. It does not establish the capacity or behavior of the separate packed request queue used when batching is enabled in `FUN_00465090`.
+This cap applies to callers that use `FUN_00464f60`, including the menu-overlay and music-stream submissions documented in findings 141 and 144. Finding 209 documents the separate packed request queue used when batching is enabled in `FUN_00465090`; it also holds ten requests and silently drops later submissions.
 
 | Queue stage | Behavior |
 | --- | --- |
