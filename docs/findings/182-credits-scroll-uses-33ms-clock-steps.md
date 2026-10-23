@@ -1,0 +1,7 @@
+# Finding 182 — Credits Scroll Uses 33 ms Clock Steps
+
+The credits command passes the configured `CreditsTextFile`, `RSFont`, and `CreditsBackAVI` values to `FUN_0040a0c0`. That routine loads the text file (trying a `.cconv` suffix first), opens the AVI, and draws centered text over the movie frame. Its vertical scroll offset advances by one pixel when more than `0x21` milliseconds have elapsed. After each tick it adds 33 ms to the prior timestamp, but if that timestamp is already behind the current time it rebases to the current time. A slow iteration therefore advances the scroll only once and drops the extra elapsed time instead of catching up multiple pixels.
+
+The line index advances after the pixel offset reaches the font object's `+0xbe4` spacing value, so each row moves upward by one pixel per tick and the next row enters at that spacing. This is a static timing policy; actual displayed cadence depends on the loop, DirectDraw presentation, and runtime scheduling.
+
+**Evidence.** Shipped `reference/LegoRR.exe`, SHA-256 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`. The credits globals are loaded from `CreditsTextFile` and `CreditsBackAVI` in `FUN_0041fb50` and passed with `RSFont` by `FUN_004103d0` to `FUN_0040a0c0`. The `timeGetTime` threshold, single offset increment, 33 ms timestamp step and late-time rebase, font-spacing comparison, and text draw positions are in `FUN_0040a0c0` at `0x40a0c0`, in `docs/decompiles/full/LEGORR.full.c`.
