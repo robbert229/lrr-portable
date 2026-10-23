@@ -3,6 +3,10 @@
 Covers all **2564** local functions in `docs/decompiles/full/manifest.csv`
 (the full Ghidra corpus, PR #126).
 
+Function-area assignments and responsibility boundaries are in
+[`function-areas.md`](function-areas.md) and [`function-areas.csv`](function-areas.csv).
+Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
+
 ## Status counts
 
 | Status | Count | Share |
