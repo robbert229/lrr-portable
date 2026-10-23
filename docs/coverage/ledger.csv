@@ -212,7 +212,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00409450,FUN_00409450,anonymous,,0,168
 00409470,FUN_00409470,anonymous,,0,985
 00409550,FUN_00409550,ported,,1,606
-00409600,FUN_00409600,anonymous,,0,2295
+00409600,FUN_00409600,named,TerrainDescriptorTilesResetAndFree,0,2295
 00409790,FUN_00409790,anonymous,,0,2164
 00409940,FUN_00409940,anonymous,,0,306
 004099d0,FUN_004099d0,anonymous,,0,201
@@ -391,13 +391,13 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004119d0,FUN_004119d0,anonymous,,0,208
 00411a00,FUN_00411a00,ported,MenuInputTick,2,7402
 00411f00,FUN_00411f00,ported,KeyContextCheck,1,99
-00411f10,FUN_00411f10,anonymous,,0,2216
+00411f10,FUN_00411f10,named,PercentSplitSurfaceBlit,0,2216
 00412170,FUN_00412170,named,MenuOverlayListCount,0,209
 00412190,FUN_00412190,anonymous,,0,100
 004121b0,FUN_004121b0,named,MenuOverlayFlicPlaybackController,0,2748
 00412450,FUN_00412450,anonymous,,0,654
 004124f0,FUN_004124f0,anonymous,,0,2192
-00412750,FUN_00412750,anonymous,,0,2261
+00412750,FUN_00412750,named,MenuHoverStatusTextDraw,0,2261
 004129d0,FUN_004129d0,anonymous,,0,1028
 00412af0,FUN_00412af0,anonymous,,0,1074
 00412c00,FUN_00412c00,ported,MenuTick,3,14003
@@ -546,7 +546,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0041a990,FUN_0041a990,anonymous,,0,130
 0041a9c0,FUN_0041a9c0,anonymous,,0,368
 0041aa00,FUN_0041aa00,anonymous,,0,1600
-0041ab00,FUN_0041ab00,anonymous,,0,2581
+0041ab00,FUN_0041ab00,named,InterfaceBuildImagesConfigLoad,0,2581
 0041ada0,FUN_0041ada0,named,InterfaceImagesConfigLoad,0,2854
 0041afd0,FUN_0041afd0,anonymous,,0,1739
 0041b1b0,FUN_0041b1b0,anonymous,,0,748
@@ -1108,7 +1108,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0044c030,FUN_0044c030,anchored,,0,742
 0044c110,FUN_0044c110,ported,AttachedEntityWake,4,303
 0044c150,FUN_0044c150,anonymous,,0,348
-0044c1b0,FUN_0044c1b0,anonymous,,0,2850
+0044c1b0,FUN_0044c1b0,named,EntityHeadingStepMove,0,2850
 0044c4a0,FUN_0044c4a0,named,SelectionClearMarkerAndResetHud,0,447
 0044c530,FUN_0044c530,ported,EntityCanDoOrRideCheck,9,179
 0044c550,FUN_0044c550,anonymous,,0,649
@@ -1117,9 +1117,9 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0044c7c0,FUN_0044c7c0,anonymous,,0,173
 0044c7f0,FUN_0044c7f0,anonymous,,0,1617
 0044c970,FUN_0044c970,anonymous,,0,449
-0044c9c0,FUN_0044c9c0,anonymous,,0,2669
+0044c9c0,FUN_0044c9c0,named,LightEffectsFadeConfigLoad,0,2669
 0044cc10,FUN_0044cc10,anonymous,,0,745
-0044cca0,FUN_0044cca0,anonymous,,0,2382
+0044cca0,FUN_0044cca0,named,LightEffectsMoveConfigLoad,0,2382
 0044cef0,FUN_0044cef0,anonymous,,0,661
 0044cf70,FUN_0044cf70,anonymous,,0,142
 0044cfa0,FUN_0044cfa0,ported,,4,249
@@ -1144,7 +1144,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0044e6d0,FUN_0044e6d0,named,TerrainCellMaterialTransitionBegin,0,1997
 0044e860,FUN_0044e860,anonymous,,0,130
 0044e880,FUN_0044e880,named,TerrainGridCellsInitialize,0,418
-0044e8c0,FUN_0044e8c0,anonymous,,0,2252
+0044e8c0,FUN_0044e8c0,named,SurfaceVertexSpanValidate,0,2252
 0044ead0,FUN_0044ead0,named,TerrainCellListSurfaceHeightClampMutate,0,3730
 0044edf0,FUN_0044edf0,ported,TerrainCellOrientationToggleAndRebuild,2,3009
 0044efb0,FUN_0044efb0,ported,TerrainCellChangedFlagSet,3,307
@@ -1350,7 +1350,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0045cf00,FUN_0045cf00,anonymous,,0,377
 0045cf50,FUN_0045cf50,anonymous,,0,934
 0045d060,FUN_0045d060,anonymous,,0,740
-0045d110,FUN_0045d110,anonymous,,0,2356
+0045d110,FUN_0045d110,named,RegionContainmentScanUpdate,0,2356
 0045d300,FUN_0045d300,anonymous,,0,463
 0045d370,FUN_0045d370,anonymous,,0,294
 0045d3c0,FUN_0045d3c0,anonymous,,0,195
@@ -1655,7 +1655,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0046ff90,FUN_0046ff90,anonymous,,0,254
 0046ffb0,FUN_0046ffb0,named,LaserSpatialSoundAndImpact,0,2554
 00470260,FUN_00470260,anonymous,,0,302
-004702b0,FUN_004702b0,anonymous,,0,2695
+004702b0,FUN_004702b0,named,EntitySurfaceQuadSegmentIntersect,0,2695
 00470540,FUN_00470540,anonymous,,0,900
 00470630,FUN_00470630,anonymous,,0,276
 00470690,FUN_00470690,anonymous,,0,748
@@ -1796,7 +1796,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00476770,FUN_00476770,named,DDiSceneResourceNameResolve,0,534
 004767e0,FUN_004767e0,named,DDiSceneResourceExists,0,492
 00476850,FUN_00476850,named,DDiSceneResourceOpen,0,944
-00476bf0,FUN_00476bf0,anonymous,,0,2334
+00476bf0,FUN_00476bf0,named,SurfacePixelRowsFlipInPlace,0,2334
 00476d10,FUN_00476d10,anonymous,,0,252
 00476d50,FUN_00476d50,anonymous,,0,353
 00476d80,FUN_00476d80,anonymous,,0,357
@@ -1870,7 +1870,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00479500,FUN_00479500,named,D3DRMVectorRandom,0,85
 00479510,FUN_00479510,anonymous,,0,166
 00479530,FUN_00479530,named,SurfaceTriangleNormalCalculate,0,693
-00479630,FUN_00479630,anonymous,,0,2681
+00479630,FUN_00479630,named,SurfaceTriangleAreaCalculate,0,2681
 004798a0,thunk_FUN_0048e170,runtime-import,thunk_FUN_0048e170,0,129
 004798b0,FUN_004798b0,ported,RandomFloatRange,2,229
 004798e0,FUN_004798e0,named,ViewRayIntersectionTest,0,958
@@ -1961,7 +1961,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0047d430,FUN_0047d430,anonymous,,0,357
 0047d470,FUN_0047d470,named,ImageSurfaceRelease,0,167
 0047d490,FUN_0047d490,anonymous,,0,824
-0047d520,FUN_0047d520,anonymous,,0,2547
+0047d520,FUN_0047d520,named,Palette8To16BitSurfaceExpand,0,2547
 0047d700,FUN_0047d700,named,PopCount32,0,251
 0047d720,FUN_0047d720,named,FindFirstSetBit32,0,226
 0047d740,FUN_0047d740,anonymous,,0,2087

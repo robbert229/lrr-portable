@@ -1072,6 +1072,19 @@ public class CreateEngineFunctions extends GhidraScript {
         0x485710L,  // TextWrapMeasureAndDrawLines
         0x491b40L,  // EnginePoolChunkTryAllocate
         0x496cc0L,  // Win32FileDescriptorWrite
+        0x409600L,  // TerrainDescriptorTilesResetAndFree
+        0x411f10L,  // PercentSplitSurfaceBlit
+        0x412750L,  // MenuHoverStatusTextDraw
+        0x41ab00L,  // InterfaceBuildImagesConfigLoad
+        0x44c1b0L,  // EntityHeadingStepMove
+        0x44c9c0L,  // LightEffectsFadeConfigLoad
+        0x44cca0L,  // LightEffectsMoveConfigLoad
+        0x44e8c0L,  // SurfaceVertexSpanValidate
+        0x45d110L,  // RegionContainmentScanUpdate
+        0x4702b0L,  // EntitySurfaceQuadSegmentIntersect
+        0x476bf0L,  // SurfacePixelRowsFlipInPlace
+        0x479630L,  // SurfaceTriangleAreaCalculate
+        0x47d520L,  // Palette8To16BitSurfaceExpand
     };
     static final String[] NAMES = { "EngineTick", "EngineShutdown", "EngineShutdownAlt",
         "MainSimStep", "ManagerTick", "MessageDispatch", "ViewContextTick",
@@ -2001,6 +2014,19 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x485710: return "TextWrapMeasureAndDrawLines";
             case 0x491b40: return "EnginePoolChunkTryAllocate";
             case 0x496cc0: return "Win32FileDescriptorWrite";
+            case 0x409600: return "TerrainDescriptorTilesResetAndFree";
+            case 0x411f10: return "PercentSplitSurfaceBlit";
+            case 0x412750: return "MenuHoverStatusTextDraw";
+            case 0x41ab00: return "InterfaceBuildImagesConfigLoad";
+            case 0x44c1b0: return "EntityHeadingStepMove";
+            case 0x44c9c0: return "LightEffectsFadeConfigLoad";
+            case 0x44cca0: return "LightEffectsMoveConfigLoad";
+            case 0x44e8c0: return "SurfaceVertexSpanValidate";
+            case 0x45d110: return "RegionContainmentScanUpdate";
+            case 0x4702b0: return "EntitySurfaceQuadSegmentIntersect";
+            case 0x476bf0: return "SurfacePixelRowsFlipInPlace";
+            case 0x479630: return "SurfaceTriangleAreaCalculate";
+            case 0x47d520: return "Palette8To16BitSurfaceExpand";
             default: return null;
         }
     }
