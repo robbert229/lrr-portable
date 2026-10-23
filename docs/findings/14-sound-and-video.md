@@ -97,7 +97,9 @@ either the sample update or blit fails (finding 200). The boot/level loop's
 duration query is a loose render-count bound and does not schedule frames
 (finding 202); `Update` is the synchronous call that can wait for the next
 sample. A false callback result leaves the current invocation and leads to
-wrapper cleanup (finding 201).
+wrapper cleanup (finding 201). The subsequent normal render step presents the
+shared secondary surface through the game's windowed blit or fullscreen flip
+path (finding 205).
 
 Config surface (values from `Lego.cfg`):
 
@@ -156,7 +158,9 @@ playback region). The `.flh` container is documented in finding 21.
 3. Finding 123 traces `AVIStreamGetFrame` output into a row-copy helper and the surface pixel
    buffer. The helper walks source rows backward while advancing the destination; bottom-up to
    top-down conversion is an inference. Finding 172 traces each frame blit into the shared
-   DirectDraw render target; final device presentation remains dependent on the surrounding renderer.
+   DirectDraw render target. Finding 205 traces configured DirectShow frames
+   from that shared secondary surface through windowed blit or fullscreen flip;
+   the credits AVI's surrounding presentation path is recorded separately.
    Findings 173–177 record the unchecked null-allocation path, missing explicit frame-retriever close, stale-surface blit after a null frame fetch, caller-level restart at stream length, and the video-only AVI stream selection.
    Findings 181–199 resolve the command loop's keyboard/mouse-release exit gate, document the credits scroll clock over its background AVI, cross-check the shipped credits text against the CRLF splitter, record `.cconv` sidecar lookup precedence, show that successful AVI playback has no explicit loop sleep, trace the credits path around the `DontPlayAvis` gate, distinguish the DirectShow configured-video route from the credits AVIFIL32 route, record the COM route's missing explicit apartment teardown, show that configured videos add primary audio and video streams, document unchecked COM cleanup after partial initialization, trace the level-video press-to-skip condition, correlate the shipped boot/credits AVI stream contents with those routes, identify the null-release path when the DirectShow class cannot be created, document separate-thread graph execution, trace the CD-audio current-track error handling, resolve the listener frame's scene-relative vectors, identify the listener cache's conditional suppression of failed deferred updates, trace the attached-source position cache after its immediate setter, and record DirectSound's default meter-per-vector-unit mapping.
    Findings 200–202 trace configured-video sample blits, caller cleanup when
@@ -164,7 +168,8 @@ playback region). The `.flh` container is documented in finding 21.
    records unchecked Direct3DRM frame-query results in listener and attached
    source refreshes. Finding 204 records how stopping one attached sound can
    clear all registry entries for its provider frame and suspend refreshes for
-   other sounds still attached to that frame.
+   other sounds still attached to that frame. Finding 205 connects configured
+   DirectShow samples to the game's final windowed/fullscreen presentation.
 4. `.flh` container format — **closed** by finding 21 (2026-10-20): layout,
    both 16-bit coders, and the RGB555→565 write transform.
 5. MCI: only `play cdaudio from N` and status queries were observed; no

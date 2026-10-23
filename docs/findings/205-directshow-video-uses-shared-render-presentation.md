@@ -1,0 +1,7 @@
+# Finding 205 — DirectShow Video Uses the Shared Render Presentation Path
+
+The DirectShow sample callback blits each decoded sample to the game's shared secondary render surface. The playback loop then runs the normal game render step, which presents that surface: windowed mode blits it to the primary surface, while fullscreen mode flips the primary surface. The configured-video route therefore feeds the game's existing DirectDraw presentation path rather than presenting through a separate DirectShow renderer.
+
+**Evidence.** Shipped `reference/LegoRR.exe`, SHA-256 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`. In `FUN_00472560` (`0x472560`), the game-surface interface is queried from the object returned by `FUN_004065e0`; that accessor returns `DAT_0076ac8c` (the secondary/render surface identified in finding 172). The returned interface is stored at wrapper offset `+0x1c`, where `FUN_004724a0` (`0x4724a0`) uses it as the destination of the sample-surface `Blt` (finding 200). The boot/level loop `FUN_00415700` (`0x415700`) calls `FUN_00477f30` (`0x477f30`) after each sample, and `FUN_00477f30` calls `FUN_0047c8d0` (`0x47c8d0`). That function flips the primary surface in fullscreen mode; in windowed mode it calls `FUN_0047cc50` (`0x47cc50`), which blits the secondary surface `DAT_0076ac8c` to the primary surface `DAT_0076ac88`. Finding 172 documents the shared render-surface roles and presentation branches.
+
+This is a static path trace. It does not establish whether the blit or flip succeeds on a particular device or display mode.
