@@ -162,7 +162,9 @@ playback region). The `.flh` container is documented in finding 21.
    Findings 200–202 trace configured-video sample blits, caller cleanup when
    the update callback ends, and the duration-based iteration cap. Finding 203
    records unchecked Direct3DRM frame-query results in listener and attached
-   source refreshes.
+   source refreshes. Finding 204 records how stopping one attached sound can
+   clear all registry entries for its provider frame and suspend refreshes for
+   other sounds still attached to that frame.
 4. `.flh` container format — **closed** by finding 21 (2026-10-20): layout,
    both 16-bit coders, and the RGB555→565 write transform.
 5. MCI: only `play cdaudio from N` and status queries were observed; no
