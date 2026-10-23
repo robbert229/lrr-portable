@@ -4,7 +4,7 @@ Inside each comma-delimited sample item, `FUN_00464d00` recognizes a leading `#.
 
 `FUN_0047a850` accepts values from `-10,000` through `0`, inclusive; `FUN_0047a870` stores an out-of-range value as `0`. During playback, `FUN_0047ad70` reads that field and calls the selected sound buffer's vtable slot `+0x3c` with it. The slot is `IDirectSoundBuffer::SetVolume`; DirectSound specifies this value in hundredths of decibels, with `0` as unattenuated volume and `-10,000` as silence. The playback path with first argument `2` subtracts `0x320` (800 hundredths of a decibel) before the SetVolume call.
 
-The `#...#` branch is processed per sample item and can precede the optional `@` marker. The shipped `Samples` section has no active `#...#` example, so this documents the implementation and accepted range rather than a demonstrated stock-config use.
+The `#...#` branch is processed per sample item and can precede the optional `@` marker. The shipped `Samples` section has no active `#...#` example, so this documents the implementation and accepted range rather than a demonstrated stock-config use. The parser's temporary token buffer is not terminated or length-checked; finding 145 records that limitation and its effect on exact values for malformed or modded markers.
 
 | Stage | Function | Behavior |
 | --- | --- | --- |

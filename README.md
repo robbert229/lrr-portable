@@ -341,6 +341,7 @@ Open threads, in order of value:
 | 142 | [findings/142-sample-hash-marker-sets-directsound-volume.md](docs/findings/142-sample-hash-marker-sets-directsound-volume.md) | `#...#` sets a per-sample DirectSound attenuation value |
 | 143 | [findings/143-reducesamples-skips-bang-prefixed-sound-aliases.md](docs/findings/143-reducesamples-skips-bang-prefixed-sound-aliases.md) | `-reducesamples` skips `!`-prefixed aliases before registration |
 | 144 | [findings/144-music-stream-aliases-use-state-one.md](docs/findings/144-music-stream-aliases-use-state-one.md) | Shipped ambient and stats music streams select stream state one |
+| 145 | [findings/145-sample-hash-marker-parser-omits-termination-and-bounds.md](docs/findings/145-sample-hash-marker-parser-omits-termination-and-bounds.md) | `#...#` parser can read past its token or overwrite its stack buffer |
 
 Named-pseudocode corpus: [`docs/decompiles/engine-region.c`](docs/decompiles/engine-region.c)
 (114 named functions covering the engine/game-logic region — findings 01–10).
