@@ -288,10 +288,7 @@ void terrain_destroy(void* handle)
 /* TerrainCellSurfaceTypeGet (FUN_0044f540, finding 226): the per-cell
  * surface-type byte in the physical block table — the port's terrain
  * handle is the TerrainState model, so the corpus's record fields
- * +0x8/+0x28 (stride, table) map to the modeled width/table pair. The
- * byte is read, never written by this leaf: the corpus's writer is the
- * renderer-side appearance apply (blocked, renderer seam), so a created
- * terrain answers the zero state until that lands (documented). Bounds
+ * +0x8/+0x28 (stride, table) map to the modeled width/table pair. Bounds
  * guard added — the corpus indexes blind (documented deviation). */
 int terrain_cell_surface_type_get(const void* terrain, int x, int y)
 {
@@ -2305,4 +2302,75 @@ int32_t grid_count_table_slot_peek(int row, int column, int slot, int table)
     }
     return (int)(table != 0 ? s_grid_count_second[(size_t)idx]
                             : s_grid_count_first[(size_t)idx]);
+}
+
+/* --- surface-type writer pair (2026-10-24, see level.hpp) -------------------
+ * The corpus's appearance table (DAT_004a52c0, 12-byte entries) ships the
+ * reference data's six color triplets: white, half-gray, brown, light
+ * green, blue, yellow. Larger type indexes read past the table into
+ * undefined data in the corpus; the port substitutes white. The triplets
+ * feed only the scene mesh color and alpha seam, so no other port state
+ * depends on them. */
+static const float s_surface_appearance[6][3] = {
+    { 1.0f, 1.0f, 1.0f },   /* 0 white */
+    { 0.5f, 0.5f, 0.5f },   /* 1 half-gray */
+    { 1.0f, 0.5f, 0.4f },   /* 2 brown */
+    { 0.5f, 1.0f, 0.5f },   /* 3 light green */
+    { 0.4f, 0.5f, 1.0f },   /* 4 blue */
+    { 0.6f, 0.6f, 0.0f },   /* 5 yellow */
+};
+
+void terrain_cell_surface_appearance_apply(void* terrain, int x, int y,
+                                           int mode, float r, float g,
+                                           float b)
+{
+    TerrainState* t = (TerrainState*)terrain;
+    if (t == NULL || t->blocks == NULL) {
+        return;
+    }
+    if (x < 0 || y < 0 || x >= t->width || y >= t->height) {
+        return; /* deviation: the corpus indexes blind */
+    }
+    uint8_t* blk = t->blocks
+        + ((size_t)y * (size_t)t->width + (size_t)x) * TERRAIN_BLOCK_STRIDE;
+    if (mode == 0) {
+        /* corpus: the mesh half gets (1,1,1) and (1,1,1) alpha, and the
+         * byte is cleared. */
+        blk[0x24] = 0u;
+        (void)r; (void)g; (void)b;
+    }
+    /* mode nonzero: the triplet (and a 1.0 alpha) is handed to the scene
+     * mesh color seam — the renderer boundary, no ported state (the
+     * corpus's mesh-record index uses the width-minus-one stride, like
+     * the other mesh-half deviations; no ported consumer). */
+    (void)r; (void)g; (void)b;
+}
+
+int terrain_cell_surface_type_set(void* terrain, int x, int y, int type)
+{
+    TerrainState* t = (TerrainState*)terrain;
+    if (t == NULL || t->blocks == NULL) {
+        return 0;
+    }
+    if (x < 0 || y < 0 || x >= t->width || y >= t->height) {
+        return 0; /* deviation: the corpus indexes blind */
+    }
+    uint8_t* blk = t->blocks
+        + ((size_t)y * (size_t)t->width + (size_t)x) * TERRAIN_BLOCK_STRIDE;
+    const int prior = (int)blk[0x24];
+    blk[0x24] = (uint8_t)type;
+    const float* c = ((unsigned)type < 6u)
+        ? s_surface_appearance[type] : s_surface_appearance[0];
+    /* The corpus looks up the triplet at table + type*0xc and hands it to
+     * the appearance leaf (mode 1) — the seam half above. */
+    terrain_cell_surface_appearance_apply(t, x, y, 1, c[0], c[1], c[2]);
+    return prior;
+}
+
+void terrain_cell_surface_type_reset(void* terrain, int x, int y)
+{
+    /* corpus: the white appearance (1,1,1) through the leaf in mode 0,
+     * then the byte cleared — the leaf's mode-0 half already clears. */
+    terrain_cell_surface_appearance_apply(terrain, x, y, 0, 1.0f, 1.0f,
+                                          1.0f);
 }

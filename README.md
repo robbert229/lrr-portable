@@ -1899,6 +1899,21 @@ reposition hook per found handle is the simtick-cited surface seam.
 `frontend_test` pins the arm/hand-over/same-index shapes, the bit-5 and
 flag windows, and the positions pass.
 
+**Surface-type writers** (2026-10-24; findings 226/450): the writer pair
+over the per-cell surface byte lands in `level.*`.
+`terrain_cell_surface_type_set` (0x44f4e0) returns the prior byte and
+applies the type's appearance triplet from the shipped table — the
+reference data's six real entries (white/half-gray/brown/green/blue/
+yellow); larger types read undefined neighbours in the corpus, white
+substituted (deviation). `terrain_cell_surface_type_reset` (0x44f570)
+applies white and clears the byte, and
+`terrain_cell_surface_appearance_apply` (0x44f5c0) is the leaf itself:
+mode nonzero hands the triplet to the scene mesh color seam (no port
+state), mode zero also clears the byte. All three guard the bounds the
+corpus indexes blind; the setter's own write lands before the appearance
+half, like the corpus. `level_test` pins the prior-value return, the
+round-trip, and the guarded corners.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

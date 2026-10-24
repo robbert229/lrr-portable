@@ -341,6 +341,23 @@ void terrain_destroy(void* terrain);
  * guard added, corpus indexes blind). */
 int terrain_cell_surface_type_get(const void* terrain, int x, int y);
 
+/* TerrainCellSurfaceTypeSet / Reset / AppearanceApply (FUN_0044f4e0 /
+ * FUN_0044f570 / FUN_0044f5c0, 2026-10-24; findings 226/450): the writer
+ * pair over the same +0x24 byte. The setter
+ * returns the prior value and applies the type's appearance triplet from
+ * the shipped table (six real entries in the reference data; larger types
+ * read undefined neighbours in the corpus — white substituted,
+ * documented deviation). Reset applies the white appearance and clears
+ * the byte. The appearance leaf's own effect is the scene mesh color and
+ * alpha set — the renderer seam — so mode nonzero changes no port state,
+ * while mode zero also clears the byte. All leaves guard the bounds (the
+ * corpus indexes blind) and answer 0/inert on NULL or misses. */
+int   terrain_cell_surface_type_set(void* terrain, int x, int y, int type);
+void  terrain_cell_surface_type_reset(void* terrain, int x, int y);
+void  terrain_cell_surface_appearance_apply(void* terrain, int x, int y,
+                                            int mode, float r, float g,
+                                            float b);
+
 /* FUN_00432e00: set (nonzero) or clear the cell's OCCUPIED flag — the
  * entity "reservation" bit the mover-state sync raises and the arrival
  * clears. Bounds-guarded (the corpus writes OOB for bad coords). */

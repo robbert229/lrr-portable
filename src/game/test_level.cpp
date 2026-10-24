@@ -818,9 +818,8 @@ int main(int argc, char** argv)
         __builtin_memcpy(rec + 0x08, &saved, 4);
 
         /* Surface-type byte leaf (FUN_0044f540) over a created terrain:
-         * the +0x24 bytes stay in the zero state until the blocked
-         * renderer-side appearance apply lands; the corners to test now
-         * are the bounds guard and the NULL handle. */
+         * bounds guard and NULL corners; the writer pair below lands the
+         * +0x24 bytes (2026-10-24). */
         void* terrain = terrain_create("L01_surface.map", 1.0f);
         CHECK(terrain != NULL, "terrain built from the surface map");
         CHECK(terrain_cell_surface_type_get(terrain, 3, 4) == 0,
@@ -833,6 +832,43 @@ int main(int argc, char** argv)
               "a negative index answers zero");
         CHECK(terrain_cell_surface_type_get(NULL, 0, 0) == 0,
               "NULL terrain answers zero");
+        /* The surface-type writers (2026-10-24): the setter returns the
+         * prior value, the byte lands, reset clears, and the appearance
+         * half is seam-only. */
+        CHECK(terrain_cell_surface_type_set(terrain, 3, 4, 2) == 0,
+              "the setter answers the zero prior");
+        CHECK(terrain_cell_surface_type_get(terrain, 3, 4) == 2,
+              "the setter lands the type byte");
+        CHECK(terrain_cell_surface_type_set(terrain, 3, 4, 5) == 2,
+              "the second call answers the prior");
+        terrain_cell_surface_type_reset(terrain, 3, 4);
+        CHECK(terrain_cell_surface_type_get(terrain, 3, 4) == 0,
+              "the reset clears the byte");
+        CHECK(terrain_cell_surface_type_set(terrain, GRID, 0, 1) == 0,
+              "the edge setter answers zero (bounds deviation)");
+        CHECK(terrain_cell_surface_type_get(terrain, GRID, 0) == 0,
+              "the edge byte stays unwritten");
+        CHECK(terrain_cell_surface_type_set(NULL, 0, 0, 1) == 0,
+              "NULL setter answers zero");
+        terrain_cell_surface_type_reset(NULL, 0, 0);
+        terrain_cell_surface_type_reset(terrain, -1, 0);
+        CHECK(terrain_cell_surface_type_get(terrain, 0, 0) == 0,
+              "the guarded reset stays inert");
+        terrain_cell_surface_appearance_apply(terrain, 1, 1, 1, 0.2f, 0.3f,
+                                              0.4f);
+        CHECK(terrain_cell_surface_type_get(terrain, 1, 1) == 0,
+              "mode 1 leaves the byte alone (seam half)");
+        terrain_cell_surface_type_set(terrain, 1, 1, 4);
+        terrain_cell_surface_appearance_apply(terrain, 1, 1, 0, 1.0f, 1.0f,
+                                              1.0f);
+        CHECK(terrain_cell_surface_type_get(terrain, 1, 1) == 0,
+              "mode 0 clears the byte");
+        terrain_cell_surface_appearance_apply(NULL, 0, 0, 1, 1.0f, 1.0f,
+                                              1.0f);
+        terrain_cell_surface_appearance_apply(terrain, 0, GRID, 0, 1.0f,
+                                              1.0f, 1.0f);
+        CHECK(terrain_cell_surface_type_get(terrain, 0, 0) == 0,
+              "the guarded apply stays inert");
         /* The corner normal sample (2026-10-24): no loader-fed corner
          * floats, so the axis corners read zero and the diagonal
          * selectors normalize the zero vector. */

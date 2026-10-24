@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 614 | 23.9% |
+| ported | 617 | 24.1% |
 | anchored | 5 | 0.2% |
-| named | 1898 | 74.0% |
+| named | 1895 | 73.9% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (614 functions)
+  (617 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1898 functions)
+  citation yet (1895 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1904 (74.3%).**
+**Game logic remaining to port: 1901 (74.1%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -700,9 +700,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0044f1a0` | InputKeyMappingAddBidirectional |
 | `0x0044f230` | TerrainCellMaterialSet |
 | `0x0044f490` | GridCellOperationApplyAll |
-| `0x0044f4e0` | TerrainCellSurfaceTypeSet |
-| `0x0044f570` | TerrainCellSurfaceTypeReset |
-| `0x0044f5c0` | TerrainCellSurfaceAppearanceApply |
 | `0x0044fab0` | TerrainCellSurfaceTriangleVerticesSelect |
 | `0x0044fb90` | TerrainSurfacePointProjectOffset |
 | `0x00450060` | GridCellReadSurfaceVector |
