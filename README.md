@@ -20,7 +20,7 @@ and curiosity; nothing in this repository is affiliated with or endorsed by the 
 
 ```
 README.md           This file
-docs/findings/      Reverse-engineering findings, 01–466 (see index below)
+docs/findings/      Reverse-engineering findings through 469 (see index below)
 tools/              WAD tooling (rrwad.py: unpack/pack/verify — see tools/README.md)
                     + model converter (tools/rrlwo.py: .lwo → glTF 2.0)
                     + compat harness (tools/compat/a2.py — see tools/compat/README.md)
@@ -663,6 +663,7 @@ Open threads, in order of value:
 | 463 | [findings/463-particles-and-grid-expansion.md](docs/findings/463-particles-and-grid-expansion.md) | Particles and Grid Expansion |
 | 466 | [findings/466-command-registry-global-queue-transitions.md](docs/findings/466-command-registry-global-queue-transitions.md) | Command Registry and Global Queue Transitions |
 | 465 | [findings/465-task-scheduler-record-lifecycle.md](docs/findings/465-task-scheduler-record-lifecycle.md) | Task Scheduler Record Lifecycle |
+| 469 | [findings/469-entity-task-and-command-setup.md](docs/findings/469-entity-task-and-command-setup.md) | Entity Task and Command Setup |
 
 Canonical full pseudocode corpus: [`docs/decompiles/full/LEGORR.full.c`](docs/decompiles/full/LEGORR.full.c)
 (2564 manifest functions; see its [README](docs/decompiles/full/README.md)). The
