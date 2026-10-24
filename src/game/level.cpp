@@ -1369,3 +1369,142 @@ int level_cell_flag8_check(const LevelState* s, int cx, int cy)
     }
     return 0;
 }
+
+/* --- map-file resource slots ---------------------------------------------
+ * The corpus table interleaves (ptr, flag) pairs across 2000 entries; the
+ * port keeps parallel arrays. See level.hpp for the deviation notes (the
+ * corpus's MapOpen2 opener rides the unported wad seam; the allocator's
+ * engine-heap wrapper is a TODO(corpus) seam mapped to calloc). */
+
+static uint8_t* s_map_slot_ptr[LEVEL_MAP_SLOT_COUNT];
+static uint32_t s_map_slot_used[LEVEL_MAP_SLOT_COUNT];
+
+/* FUN_004893f0: clear every pair (no frees — the corpus leak loop). */
+void level_map_slots_reset(void)
+{
+    for (int i = 0; i < LEVEL_MAP_SLOT_COUNT; ++i) {
+        s_map_slot_ptr[i] = NULL;
+        s_map_slot_used[i] = 0;
+    }
+}
+
+/* FUN_00489410: first free slot, zero-filled image, -1 when full. */
+int level_map_slot_allocate(size_t size)
+{
+    for (int i = 0; i < LEVEL_MAP_SLOT_COUNT; ++i) {
+        if (s_map_slot_used[i] == 0) {
+            void* img = calloc(1, size != 0 ? size : 1u);
+            if (img == NULL) {
+                return -1; /* corpus: heap seam would have asserted */
+            }
+            s_map_slot_ptr[i] = (uint8_t*)img;
+            s_map_slot_used[i] = 1;
+            return i;
+        }
+    }
+    return -1;
+}
+
+/* FUN_00489460: free + clear an in-use slot; bad/free ids are no-ops. */
+void level_map_slot_release(uint32_t slot)
+{
+    if (slot < LEVEL_MAP_SLOT_COUNT && s_map_slot_used[slot] != 0) {
+        free(s_map_slot_ptr[slot]);
+        s_map_slot_ptr[slot] = NULL;
+        s_map_slot_used[slot] = 0;
+    }
+}
+
+/* FUN_004894a0: the image pointer, or NULL when free/out of range. */
+uint8_t* level_map_slot_get(uint32_t slot)
+{
+    if (slot < LEVEL_MAP_SLOT_COUNT && s_map_slot_used[slot] != 0) {
+        return s_map_slot_ptr[slot];
+    }
+    return NULL;
+}
+
+/* FUN_004515a0: header dims at +0x08/+0x0C (port guards a NULL image). */
+void level_map_image_header(const uint8_t* image, uint32_t* width,
+                            uint32_t* height)
+{
+    *width = 0;
+    *height = 0;
+    if (image != NULL) {
+        __builtin_memcpy(width, image + 0x08, sizeof(*width));
+        __builtin_memcpy(height, image + 0x0C, sizeof(*height));
+    }
+}
+
+/* FUN_004515c0: zero-extended u16 cell at +0x10 + (y*width+x)*2. */
+uint16_t level_map_image_cell(const uint8_t* image, int x, int width, int y)
+{
+    if (image == NULL) {
+        return 0;
+    }
+    const size_t idx = (size_t)y * (size_t)width + (size_t)x;
+    uint16_t cell;
+    __builtin_memcpy(&cell, image + 0x10 + idx * 2, sizeof(cell));
+    return cell;
+}
+
+/* FUN_004334c0: header dims through the slot (NULL image -> 0/0, the
+ * documented stand-in for the corpus's read through the unresolved 0). */
+void level_map_dimensions_get(uint32_t slot, uint32_t* width,
+                              uint32_t* height)
+{
+    level_map_image_header(level_map_slot_get(slot), width, height);
+}
+
+/* FUN_004319e0: cell through the slot; the width comes from the header. */
+uint16_t level_map_cell_get(uint32_t slot, int x, int y)
+{
+    const uint8_t* img = level_map_slot_get(slot);
+    uint32_t w = 0, h = 0;
+    level_map_image_header(img, &w, &h);
+    return level_map_image_cell(img, x, (int)w, y);
+}
+
+/* FUN_00433330: gated state-byte read through an out param. */
+int level_cell_type_get_at(const LevelState* s, uint32_t cx, uint32_t cy,
+                           uint32_t* out_type)
+{
+    const int w = level_int(s, LEVEL_OFF_WIDTH);
+    const int h = level_int(s, LEVEL_OFF_HEIGHT);
+    if (cx < ((unsigned)w - 1u) && cy < ((unsigned)h - 1u)) {
+        const uint8_t* rec = level_voxel(s, (int)cx, (int)cy);
+        if (rec != NULL) {
+            *out_type = (uint32_t)rec[0x02];
+        }
+        return 1;
+    }
+    return 0;
+}
+
+/* FUN_0042c5b0: byte classification over the five-entry table. */
+int level_cell_byte_state_classify(const LevelState* s, int cx, int cy,
+                                   uint32_t* out_a, uint32_t* out_b,
+                                   uint32_t* out_c, uint32_t* out_d)
+{
+    static const uint32_t kTable[5] = { 1, 3, 5, 10, 25 };
+    *out_a = 0;
+    *out_b = 0;
+    *out_c = 0;
+    *out_d = 0;
+
+    const uint8_t* rec = level_voxel(s, cx, cy);
+    const uint32_t v = rec != NULL ? (uint32_t)rec[0x05] : 0u;
+    if (v == 0) {
+        return 0;
+    }
+    const uint32_t idx = v - 1u;
+    const uint32_t slot = idx >> 2;
+    const uint32_t value = slot < 5 ? kTable[slot] : 0u; /* stack-read guard */
+    switch (idx & 3u) {
+        case 0u:  *out_a = value; break;
+        case 1u:  *out_c = value; break;
+        case 2u:  *out_b = value; break;
+        default:  *out_d = value; break;
+    }
+    return 1;
+}

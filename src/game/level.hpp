@@ -218,6 +218,47 @@ const char* level_next_name(const LevelState* s);
 /* Voxel record pointer for cell (x,y) (or NULL on OOB). */
 uint8_t* level_voxel(const LevelState* s, int x, int y);
 
+/* --- map-file resource slots (finding 07: 0x489410's slot registry) ----- *
+ * The corpus keeps an interleaved (ptr, in-use-flag) pair table of 2000
+ * map-image buffers; MapOpen2 opens through it (unported wad seam, see
+ * docs/coverage/blocked.md). The port models the table as parallel
+ * arrays; the allocator calloc's the image (the corpus allocates through
+ * the engine-heap wrapper, TODO(corpus)). Reset clears without freeing,
+ * exactly as the corpus leak loop does. */
+
+#define LEVEL_MAP_SLOT_COUNT 2000 /* the corpus table length */
+
+/* FUN_004893f0: zero every slot pair. */
+void level_map_slots_reset(void);
+
+/* FUN_00489410: claim the first free slot with a zero-filled `size`-byte
+ * image; -1 when the table is full. */
+int level_map_slot_allocate(size_t size);
+
+/* FUN_00489460: free and clear an in-use slot; no-op for bad/free ids. */
+void level_map_slot_release(uint32_t slot);
+
+/* FUN_004894a0: the slot's image pointer, or NULL when free/out of range. */
+uint8_t* level_map_slot_get(uint32_t slot);
+
+/* FUN_004515a0: read the image header dims (+0x08/+0x0C). NULL reads as
+ * zero (the corpus dereferences blindly). */
+void level_map_image_header(const uint8_t* image, uint32_t* width,
+                            uint32_t* height);
+
+/* FUN_004515c0: the u16 cell at (y*width+x), zero-extended, reading
+ * +0x10. NULL image reads 0 (corpus dereferences blindly). */
+uint16_t level_map_image_cell(const uint8_t* image, int x, int width, int y);
+
+/* FUN_004334c0: header dims via the slot. An unresolved slot yields
+ * 0/0 (the corpus reads address 0x8/0xC — documented deviation). */
+void level_map_dimensions_get(uint32_t slot, uint32_t* width,
+                              uint32_t* height);
+
+/* FUN_004319e0: cell via the slot (row y, column x; the width comes
+ * from the image header). Unresolved slot reads 0. */
+uint16_t level_map_cell_get(uint32_t slot, int x, int y);
+
 /* --- tile semantics (entity-callback queries, finding 10) -------------- *
  * The voxel record fields these read are the ones the layer loaders write
  * (finding 07): the tile *type* byte is record+2 (the erosion/terrain byte;
@@ -385,6 +426,26 @@ int level_coord_pair_within_bounds(const LevelState* s, int cx, int cy);
  * (flag 8). The read is skipped off-grid, exactly as the corpus's
  * short-circuit leaves it. */
 int level_cell_flag8_check(const LevelState* s, int cx, int cy);
+
+/* FUN_00433330: the state byte (record+2, unsigned) through an out
+ * param, reported as 1 — but only inside the dim-1 gate; the out param
+ * keeps its old value outside (as in the corpus). No-map cells never
+ * satisfy the gate. */
+int level_cell_type_get_at(const LevelState* s, uint32_t cx, uint32_t cy,
+                           uint32_t* out_type);
+
+/* FUN_0042c5b0: classify the cell's +5 byte: zero reports 0 with all
+ * four outs zeroed; otherwise the byte indexes the {1, 3, 5, 10, 25}
+ * table and the low index bits pick which single out receives the
+ * value. The corpus routes by (v-1)%4 as 0 -> out_a, 1 -> out_c,
+ * 2 -> out_b, 3 -> out_d — outs b/c are SWAPPED relative to the value
+ * order while the table is indexed by (v-1)/4. Lookups beyond
+ * the five-entry table (bytes above 21) read stack garbage in the
+ * corpus; the port reports 0 (documented deviation). Off-map cells
+ * report 0 with all outs zeroed. */
+int level_cell_byte_state_classify(const LevelState* s, int cx, int cy,
+                                   uint32_t* out_a, uint32_t* out_b,
+                                   uint32_t* out_c, uint32_t* out_d);
 
 #ifdef __cplusplus
 }

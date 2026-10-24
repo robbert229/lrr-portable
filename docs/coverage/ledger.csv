@@ -693,7 +693,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0042c330,FUN_0042c330,named,EmergeMapTriggerSpawn,0,1486
 0042c440,FUN_0042c440,ported,LevelRecordTimerCountdown,3,464
 0042c480,FUN_0042c480,ported,LoadErodeCryoreLayers,1,1651
-0042c5b0,FUN_0042c5b0,named,TerrainCellByteStateClassify,0,891
+0042c5b0,FUN_0042c5b0,ported,TerrainCellByteStateClassify,2,891
 0042c6a0,FUN_0042c6a0,ported,LoadPathAiLayers,1,1057
 0042c760,FUN_0042c760,ported,LoadFallinLayer,1,3351
 0042c9d0,FUN_0042c9d0,ported,LoadBlockPointers,1,2212
@@ -737,7 +737,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00431580,FUN_00431580,named,TerrainNeighborWorkFlagScan,0,2473
 00431780,FUN_00431780,named,TerrainStampImpactHandler,0,2198
 004319b0,FUN_004319b0,ported,TerrainCellMaterialGet,2,199
-004319e0,FUN_004319e0,named,MapFileCellGet,0,291
+004319e0,FUN_004319e0,ported,MapFileCellGet,2,291
 00431a30,FUN_00431a30,named,SelectedEntitiesAnyPredicateMatch,0,519
 00431ab0,FUN_00431ab0,named,AnyObjectCanOccupyTerrainCell,0,480
 00431b20,FUN_00431b20,named,PlacementBlockedAdjacentCellScan,0,1666
@@ -793,9 +793,9 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00433180,FUN_00433180,named,CellTypeSpeedMultiplierResolve,0,1310
 004332c0,FUN_004332c0,ported,TerrainCellRecordByte3Get,2,199
 004332f0,FUN_004332f0,ported,TerrainCellWorkFlagSet,2,396
-00433330,FUN_00433330,named,TerrainCellTypeGetAtCoords,0,371
+00433330,FUN_00433330,ported,TerrainCellTypeGetAtCoords,2,371
 00433380,FUN_00433380,named,TerrainCellMutationProgress,0,1722
-004334c0,FUN_004334c0,named,MapFileDimensionsGet,0,228
+004334c0,FUN_004334c0,ported,MapFileDimensionsGet,2,228
 004334f0,FUN_004334f0,named,RenderQualityConfigApply,0,2191
 00433770,FUN_00433770,named,SceneLightsBuildFromConfig,0,3185
 00433be0,FUN_00433be0,named,CurrentLevelTerrainGridPick,0,195
@@ -1190,8 +1190,8 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004512d0,FUN_004512d0,named,TerrainCellNormalSample,0,1512
 00451450,FUN_00451450,named,TerrainCellSurfaceVectorOffsetAdd,0,631
 004514f0,FUN_004514f0,ported,TerrainCellSurfaceVectorsRebuild,2,547
-004515a0,FUN_004515a0,named,MapFileReadHeader,0,176
-004515c0,FUN_004515c0,named,MapFileGetCell,0,218
+004515a0,FUN_004515a0,ported,MapFileReadHeader,2,176
+004515c0,FUN_004515c0,ported,MapFileGetCell,2,218
 004515e0,FUN_004515e0,named,TerrainCellRayHitTest,0,3317
 004519b0,FUN_004519b0,named,VisualModelRecordCreate,0,1486
 00451ab0,FUN_00451ab0,named,PrimitiveModelRecordCreate,0,1182
@@ -2201,10 +2201,10 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00489280,FUN_00489280,named,CDAudioTrackCompletionPoll,0,556
 00489330,FUN_00489330,named,CDAudioDeviceOpen,0,458
 004893a0,FUN_004893a0,named,CdAudioStopAndClose,0,324
-004893f0,FUN_004893f0,named,MapFileResourceSlotsReset,0,211
-00489410,FUN_00489410,named,MapFileResourceSlotAllocate,0,461
-00489460,FUN_00489460,named,MapFileResourceSlotRelease,0,264
-004894a0,FUN_004894a0,named,MapFileResourceSlotGet,0,173
+004893f0,FUN_004893f0,ported,MapFileResourceSlotsReset,2,211
+00489410,FUN_00489410,ported,MapFileResourceSlotAllocate,3,461
+00489460,FUN_00489460,ported,MapFileResourceSlotRelease,2,264
+004894a0,FUN_004894a0,ported,MapFileResourceSlotGet,2,173
 004894c0,FUN_004894c0,named,ComInterfaceQueryOrFallback,0,580
 00489520,FUN_00489520,named,ResourceTreeCallbackContextCreateForEnumerator,0,549
 004895c0,FUN_004895c0,named,ResourceTreeCallbackContextCreateForResource,0,549
