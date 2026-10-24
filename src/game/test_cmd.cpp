@@ -698,6 +698,138 @@ int main(void)
         cmd_context_set(&ctx);
     }
 
+    /* The cancellation ref and conditional issuers (2026-10-24). */
+    {
+        GameContext cctx;
+        game_context_init(&cctx);
+        cmd_context_set(&cctx);
+
+        /* Cancel-ref: the marking walk raises bit 5 on the referenced
+         * type-0x13 record; the 0x13 side takes the callback seam. */
+        cmd_init();
+        EntitySlot host;
+        memset(&host, 0, sizeof(host));
+        host.type = 2;
+        cmd_create_task(&host);
+        void* ref_rec = cmd_global_head();
+        cmd_rec_type_set(ref_rec, 0x13);
+        void* owner = cmd_alloc(1);
+        CHECK(owner != NULL, "the owner record allocates");
+        cmd_rec_ref_set(owner, ref_rec);
+        CHECK(cmd_rec_ref_get(owner) == ref_rec, "the ref slot round-trips");
+        cmd_cancel_ref(owner);
+        CHECK((cmd_rec_state(ref_rec) & 0x20u) != 0u,
+              "the marking walk raises bit 5");
+        cmd_rec_state_set(ref_rec, 0u);
+        cmd_rec_ref_set(owner, NULL);
+        cmd_cancel_ref(owner);
+        CHECK((cmd_rec_state(ref_rec) & 0x20u) == 0u,
+              "no reference marks nothing");
+        cmd_rec_type_set(ref_rec, 0x13);
+        cmd_rec_ref_set(ref_rec, ref_rec);
+        cmd_cancel_ref(ref_rec);
+        CHECK((cmd_rec_state(ref_rec) & 0x20u) == 0u,
+              "the 0x13 side answers through the seam (no marking)");
+        cmd_rec_ref_set(ref_rec, NULL);
+        cmd_cancel_ref(NULL); /* guarded */
+
+        /* CmdFree's side effect: not suppressed marks, suppressed does not. */
+        cmd_init();
+        cmd_create_task(&host);
+        void* marked = cmd_global_head();
+        cmd_rec_type_set(marked, 0x13);
+        void* carrier = cmd_alloc(1);
+        cmd_rec_ref_set(carrier, marked);
+        cmd_free(carrier, 0);
+        CHECK((cmd_rec_state(marked) & 0x20u) != 0u,
+              "the unsuppressed free runs the cancel ref");
+        cmd_rec_state_set(marked, 0u);
+        carrier = cmd_alloc(1);
+        cmd_rec_ref_set(carrier, marked);
+        cmd_free(carrier, 1);
+        CHECK((cmd_rec_state(marked) & 0x20u) == 0u,
+              "the suppressed free skips the cancel ref");
+
+        /* Conditional schedule: the capability bit plus the two gates. */
+        cmd_init();
+        EntitySlot cond;
+        memset(&cond, 0, sizeof(cond));
+        static uint8_t cimg[0x200];
+        memset(cimg, 0, sizeof(cimg));
+        uint32_t cap = 1u;
+        memcpy(cimg + 0x14c, &cap, 4);
+        cond.stats_record = cimg;
+        entity_conditional_task_schedule(&cond);
+        CHECK(cmd_global_head() != NULL
+                  && cmd_rec_type(cmd_global_head()) == 0x1e
+                  && cmd_rec_payload(cmd_global_head()) == &cond
+                  && cmd_rec_kind(cmd_global_head()) == 0x11
+                  && (cond.flags_3ec & 0x10000u) != 0u
+                  && (cmd_rec_state(cmd_global_head()) & 0x100010u) == 0x100010u
+                  && (cmd_rec_state(cmd_global_head()) & 0x40u) == 0u,
+              "the conditional task lands (latch, kind, bits)");
+        cmd_tick_global();
+        entity_conditional_task_schedule(&cond);
+        CHECK(cmd_global_head() == NULL, "the latch blocks the second pass");
+        cond.flags_3ec = 0u;
+        cond.flags_3e0 = 0x400u;
+        entity_conditional_task_schedule(&cond);
+        CHECK(cmd_global_head() == NULL, "the gate blocks");
+        cond.flags_3e0 = 0u;
+        cap = 0u;
+        memcpy(cimg + 0x14c, &cap, 4);
+        entity_conditional_task_schedule(&cond);
+        CHECK(cmd_global_head() == NULL, "no capability bit, no task");
+        entity_conditional_task_schedule(NULL);
+
+        /* Threshold event queue: kind 7 or 0x13 with bit 21. */
+        cmd_init();
+        entity_threshold_progress_event_queue(&host, 0);
+        CHECK(cmd_global_head() != NULL
+                  && cmd_rec_type(cmd_global_head()) == 10
+                  && cmd_rec_payload(cmd_global_head()) == &host
+                  && cmd_rec_kind(cmd_global_head()) == 7
+                  && (cmd_rec_state(cmd_global_head()) & 0x200000u) == 0u,
+              "the clear flag links kind 7");
+        cmd_tick_global();
+        entity_threshold_progress_event_queue(&host, 1);
+        CHECK(cmd_global_head() != NULL
+                  && cmd_rec_kind(cmd_global_head()) == 0x13
+                  && (cmd_rec_state(cmd_global_head()) & 0x200000u) != 0u,
+              "the set flag links kind 0x13 and raises bit 21");
+        cmd_tick_global();
+        entity_threshold_progress_event_queue(NULL, 0);
+        cmd_tick_global();
+
+        /* Target queue: the record chains onto the entity, never the list. */
+        cmd_init();
+        EntitySlot tgt_host;
+        memset(&tgt_host, 0, sizeof(tgt_host));
+        tgt_host.type = 2;
+        entity_target_command_queue(&tgt_host, &host);
+        CHECK(cmd_global_head() == NULL, "the target record skips the list");
+        CHECK(tgt_host.cmd_head != NULL
+                  && cmd_rec_type(tgt_host.cmd_head) == 0x11
+                  && cmd_rec_payload(tgt_host.cmd_head) == &host,
+              "the empty chain takes the record at the head");
+        cmd_create_move(&tgt_host, 1.0f, 2.0f, 0);
+        void* first = tgt_host.cmd_head;
+        entity_target_command_queue(&tgt_host, &cond);
+        CHECK(tgt_host.cmd_head == first, "the head stays put");
+        int depth = 0;
+        void* last = first;
+        while (cmd_rec_next(last) != NULL) {
+            last = cmd_rec_next(last);
+            ++depth;
+        }
+        CHECK(depth == 2
+                  && cmd_rec_type(last) == 0x11
+                  && cmd_rec_payload(last) == &cond,
+              "the chain tail takes the record");
+        cmd_init();
+        cmd_context_set(&ctx);
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "cmd_test: %d failure(s)\n", s_failures);
         return 1;

@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 634 | 24.7% |
+| ported | 638 | 24.9% |
 | anchored | 5 | 0.2% |
-| named | 1878 | 73.2% |
+| named | 1874 | 73.1% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (634 functions)
+  (638 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1878 functions)
+  citation yet (1874 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1884 (73.5%).**
+**Game logic remaining to port: 1880 (73.3%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -64,12 +64,8 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00402960` | EntityKindCommandIssue |
 | `0x00402a40` | CoordinatePairCallbackDispatch |
 | `0x00402aa0` | ArgumentCallbackDispatch |
-| `0x00402cd0` | CmdCancelRef |
 | `0x00402d50` | KindNineCellCommandIssue |
 | `0x00402e40` | CellCommandType13Issue |
-| `0x00402ec0` | EntityConditionalTaskSchedule |
-| `0x00402f30` | EntityThresholdProgressEventQueue |
-| `0x00402f70` | EntityTargetCommandQueue |
 | `0x00402fb0` | CellCommandType11Issue |
 | `0x00403030` | CellCommandType3Issue |
 | `0x004030b0` | CoordinatePairEventQueue |

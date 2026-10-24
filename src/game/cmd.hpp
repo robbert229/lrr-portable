@@ -327,6 +327,36 @@ void handle_array_release_and_reset(void);
 void entity_command14_batch_issue(int count);
 void level_no_gather_object_setup(int mode);
 
+/* --- cancellation-ref and conditional issuers (2026-10-24) --------------------
+ * CmdCancelRef (FUN_00402cd0, findings 10/466): run by CmdFree unless the
+ * second argument suppresses it. A type-0x13 record with a referenced record
+ * dispatches the cancel callback through the entity-pool registry — the
+ * unported seam, so the port's observable half is that it stops there. Any
+ * other type with a referenced record walks the task list and raises bit 5
+ * (the completion/cancel flag) on each type-0x13 record that *is* that
+ * referenced record. NULL is guarded (deviation: the corpus reads blindly).
+ * EntityConditionalTaskSchedule (FUN_00402ec0, finding 466): with the
+ * capability word's bit 0 raised and the +0x3e0 bit-0x400 gate and the
+ * +0x3ec bit-0x10000 latch clear, allocates the type-0x1e record, latches
+ * bit 16, head-links it at kind 0x11, and raises bits 4/20 and clears bit 6.
+ * EntityThresholdProgressEventQueue (FUN_00402f30, finding 466): allocates
+ * the type-10 record, stores the payload plus the +0x3c word 0x10, and
+ * links it at kind 0x13 (raising bit 21) when the flag is set, else kind 7.
+ * EntityTargetCommandQueue (FUN_00402f70, finding 466): allocates the
+ * type-0x11 record for the target and chains it onto the entity command
+ * chain through the CmdChainWalk tail (or the +0x2f0 head) — no link-head,
+ * no timestamp write (the corpus writes only the chain pointer). */
+void cmd_cancel_ref(void* rec);
+void entity_conditional_task_schedule(EntitySlot* e);
+void entity_threshold_progress_event_queue(void* payload, int flag);
+void entity_target_command_queue(EntitySlot* e, void* target);
+
+/* Diagnostics: overwrite a record's +0x58 reference slot and its +0x00 type
+ * word (tests stage corpus-shaped records no ported producer creates). */
+void cmd_rec_ref_set(void* rec, void* ref);
+void* cmd_rec_ref_get(const void* rec);
+void cmd_rec_type_set(void* rec, int type);
+
 #ifdef __cplusplus
 }
 #endif
