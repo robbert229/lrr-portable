@@ -20,7 +20,7 @@ and curiosity; nothing in this repository is affiliated with or endorsed by the 
 
 ```
 README.md           This file
-docs/findings/      Reverse-engineering findings, 01–459 (see index below)
+docs/findings/      Reverse-engineering findings, 01–460 (see index below)
 tools/              WAD tooling (rrwad.py: unpack/pack/verify — see tools/README.md)
                     + model converter (tools/rrlwo.py: .lwo → glTF 2.0)
                     + compat harness (tools/compat/a2.py — see tools/compat/README.md)
@@ -655,6 +655,7 @@ Open threads, in order of value:
 | 455 | [findings/455-terrain-command-feedback-and-cell-interaction.md](docs/findings/455-terrain-command-feedback-and-cell-interaction.md) | Terrain Command Feedback and Cell Interaction |
 | 458 | [findings/458-combat-effects-projectiles.md](docs/findings/458-combat-effects-projectiles.md) | Combat Effects and Projectiles |
 | 457 | [findings/457-entity-stats-configuration-and-record-accessors.md](docs/findings/457-entity-stats-configuration-and-record-accessors.md) | Entity Stats Configuration and Record Accessors |
+| 460 | [findings/460-velocity-and-collision-queries.md](docs/findings/460-velocity-and-collision-queries.md) | Velocity and Collision Queries |
 | 459 | [findings/459-timed-effects-and-cues.md](docs/findings/459-timed-effects-and-cues.md) | Timed Effects and Cues |
 
 Canonical full pseudocode corpus: [`docs/decompiles/full/LEGORR.full.c`](docs/decompiles/full/LEGORR.full.c)
