@@ -20,7 +20,8 @@ and curiosity; nothing in this repository is affiliated with or endorsed by the 
 
 ```
 README.md           This file
-docs/findings/      Reverse-engineering findings, 01–274 (see index below)
+docs/findings/      Reverse-engineering findings, 01–417 (see index below)
+docs/findings/      Reverse-engineering findings, 01–416 (see index below)
 tools/              WAD tooling (rrwad.py: unpack/pack/verify — see tools/README.md)
                     + model converter (tools/rrlwo.py: .lwo → glTF 2.0)
                     + compat harness (tools/compat/a2.py — see tools/compat/README.md)
@@ -588,6 +589,34 @@ Open threads, in order of value:
 | 389 | [findings/389-linked-records-and-state-helpers.md](docs/findings/389-linked-records-and-state-helpers.md) | Linked Records and State Helpers |
 | 390 | [findings/390-motion-config-and-resource-utilities.md](docs/findings/390-motion-config-and-resource-utilities.md) | Motion, Configuration, and Resource Utilities |
 | 391 | [findings/391-vector-geometry-and-pointer-state-primitives.md](docs/findings/391-vector-geometry-and-pointer-state-primitives.md) | Vector, Geometry, and Pointer-State Primitives |
+| 392 | [findings/392-global-state-and-configuration-accessors.md](docs/findings/392-global-state-and-configuration-accessors.md) | Global State and Configuration Accessors |
+| 393 | [findings/393-string-list-and-small-record-utilities.md](docs/findings/393-string-list-and-small-record-utilities.md) | String, List, and Small Record Utilities |
+| 394 | [findings/394-runtime-engine-memory-management.md](docs/findings/394-runtime-engine-memory-management.md) | Runtime and Engine Memory Management |
+| 395 | [findings/395-crt-and-os-file-stream-io.md](docs/findings/395-crt-and-os-file-stream-io.md) | CRT and OS File/Stream I/O |
+| 396 | [findings/396-crt-process-startup-termination-and-exceptions.md](docs/findings/396-crt-process-startup-termination-and-exceptions.md) | CRT Process Startup, Termination, and Exceptions |
+| 397 | [findings/397-crt-strings-locale-and-formatting.md](docs/findings/397-crt-strings-locale-and-formatting.md) | CRT Strings, Locale, and Formatting |
+| 398 | [findings/398-application-startup-window-loop.md](docs/findings/398-application-startup-window-loop.md) | Application Startup, Window Loop, and Preferences |
+| 399 | [findings/399-crt-numeric-and-floating-point-runtime.md](docs/findings/399-crt-numeric-and-floating-point-runtime.md) | CRT Numeric and Floating-Point Runtime |
+| 400 | [findings/400-compiler-runtime-no-op-stubs.md](docs/findings/400-compiler-runtime-no-op-stubs.md) | Compiler/Runtime No-op Stubs |
+| 401 | [findings/401-task-callback-record-allocator.md](docs/findings/401-task-callback-record-allocator.md) | Task Callback Record Allocator |
+| 402 | [findings/402-registry-and-startup-streams.md](docs/findings/402-registry-and-startup-streams.md) | Registry and Startup Streams |
+| 403 | [findings/403-config-and-text-parsing-helpers.md](docs/findings/403-config-and-text-parsing-helpers.md) | Configuration and Text Parsing Helpers |
+| 404 | [findings/404-game-file-archive-and-pools.md](docs/findings/404-game-file-archive-and-pools.md) | Game Files, Archives, and Record Pools |
+| 405 | [findings/405-level-map-loading-pipeline.md](docs/findings/405-level-map-loading-pipeline.md) | Level and Map Loading Pipeline |
+| 406 | [findings/406-audio-playback-mixing-and-spatial-sound.md](docs/findings/406-audio-playback-mixing-and-spatial-sound.md) | Audio Playback, Mixing, and Spatial Sound |
+| 407 | [findings/407-system-input-and-osf-state.md](docs/findings/407-system-input-and-osf-state.md) | System Input and OSF State |
+| 408 | [findings/408-save-slot-context-and-level-record-lifecycle.md](docs/findings/408-save-slot-context-and-level-record-lifecycle.md) | Save Slot Context and Level Record Lifecycle |
+| 409 | [findings/409-game-configuration-entity-type-and-object-name-tables.md](docs/findings/409-game-configuration-entity-type-and-object-name-tables.md) | Game Configuration Entity Type and Object-Name Tables |
+| 410 | [findings/410-map-and-visual-resource-records.md](docs/findings/410-map-and-visual-resource-records.md) | Map and Visual Resource Records |
+| 411 | [findings/411-interface-records-and-directx-diagnostics.md](docs/findings/411-interface-records-and-directx-diagnostics.md) | Interface Records and DirectX Diagnostics |
+| 412 | [findings/412-platform-import-thunks.md](docs/findings/412-platform-import-thunks.md) | Platform Import Thunks |
+| 413 | [findings/413-configured-directshow-video-path.md](docs/findings/413-configured-directshow-video-path.md) | Configured DirectShow Video Path |
+| 414 | [findings/414-avi-and-flic-playback-routes.md](docs/findings/414-avi-and-flic-playback-routes.md) | AVI and FLIC Playback Routes |
+| 415 | [findings/415-model-lightwave-and-animation-asset-pipeline.md](docs/findings/415-model-lightwave-and-animation-asset-pipeline.md) | Model, LightWave, and Animation Asset Pipeline |
+| 416 | [findings/416-scene-and-render-resource-lifecycle.md](docs/findings/416-scene-and-render-resource-lifecycle.md) | Scene and Render Resource Lifecycle |
+| 417 | [findings/417-sound-subsystem-aliases-queues-and-effects.md](docs/findings/417-sound-subsystem-aliases-queues-and-effects.md) | Sound aliases, submission queues, and transient effects |
+| 418 | [findings/418-movie-stream-and-audio-playback.md](docs/findings/418-movie-stream-and-audio-playback.md) | Movie, Stream, and Audio Playback Boundaries |
+| 419 | [findings/419-interface-and-presentation-config-loading.md](docs/findings/419-interface-and-presentation-config-loading.md) | Interface and Presentation Config Loading |
 | 420 | [findings/420-renderer-and-scene-lifecycle.md](docs/findings/420-renderer-and-scene-lifecycle.md) | Renderer and Scene Lifecycle |
 
 Canonical full pseudocode corpus: [`docs/decompiles/full/LEGORR.full.c`](docs/decompiles/full/LEGORR.full.c)
@@ -1282,9 +1311,11 @@ finding 12, #14). Three new modules in `src/game/`:
   corner; `entity_test` checks the `Model` key lands in `model_path`.
 - **AVI movies** (2026-10-21, findings 14 §4 + 23): `src/gods98/movie.*`
   reconstructs the corpus's movie path — `AvisEnabled @ 0x414ce0` (the
-  `DontPlayAvis` gate), `MoviePlayNamed @ 0x415910` (config-key → path), the
-  modal play-until-done/ESC `MoviePlayLoop @ 0x4157c0`, and
-  `MoviePlayLevelVideo @ 0x415990` (the level's `Video` config key). The
+  `DontPlayAvis` gate), `MoviePlayNamed @ 0x415910` and
+  `MoviePlayLevelVideo @ 0x415990` (config-key and level `Video` paths through
+  the DirectShow frame-wait helper). `MoviePlayLoop @ 0x4157c0` is a separate
+  timed bitmap-surface display helper. See [Finding 418](docs/findings/418-movie-stream-and-audio-playback.md)
+  for the native call paths. The
   shipped `Data/AVI/*.avi` files (Indeo5/msvideo1 video, adpcm_ms/pcm audio)
   are decoded in-process by **FFmpeg's runtime libraries dlopen'd at
   first use** — no header, no link dependency, so the build stays
