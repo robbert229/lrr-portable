@@ -62,7 +62,7 @@ always rooted with the exe-name token (§5.1).
 | `0x4792e0` | BlockFindPath | token-path walk → record or 0 |
 | `0x4790b0` | BlockGetValue | `record+8` = value token string |
 | `0x478ff0` | BlockSubgroup | validates `record+0xc < *(+0x14+0xc)`, returns child record |
-| `0x478f50` | BlockQueryDefault | copies `param_1` into static `DAT_00506098`, returns it when no lookup hits |
+| `0x478f50` | ConfigEntryFind / path builder | joins the root and supplied path components with `::` into static `DAT_00506098`; actual record lookup is performed by `0x4792e0` |
 | `0x479050` | (typed variant) | used alongside the two above in level-load code (finding 07) |
 | `0x48d980` | StrToFloat | value → float |
 | `0x477440` | StrMatch | comparison helper over config strings |
@@ -177,7 +177,7 @@ linking between entity activities and `.lws` scene frames (finding 11 §4).
 | `0x478e60` | BlockOpen (comment-strip + index + depth) |
 | `0x479270` / `0x479490` | record alloc / pool grow |
 | `0x4792e0` | BlockFindPath |
-| `0x4790b0` / `0x478ff0` / `0x478f50` | value / subgroup / default-get |
+| `0x4790b0` / `0x478ff0` / `0x478f50` | value / subgroup / `::`-delimited path builder |
 | `0x472cd0` | AssembleEntityConfig (`.ae` consumer; ACT branch ported as `src/gods98/entity.cpp`) |
 | `0x472710` | kind-table init (sets `DAT_0076add8–adf8`, `DAT_0076ae00/04/08/0c/20`) |
 | `0x475930` | kind dispatch (`FUN_00475930`: `:`-split, NOTEXTURE flag, 9-slot table) |

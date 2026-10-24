@@ -31,9 +31,10 @@ FUN_0047f6e0(name, mode)
   └─ allocate a 2-field handle via FUN_0047fed0(mode), store file handle at +4
 ```
 
-*Classification (observed):* `FileOpenRouteSelect` returns `1` if the name's first byte is `w`/`W`,
-otherwise it searches the mounted WAD contexts for that entry (`WadEntryFindAcrossMountedArchives`).
-An absent archive entry returns `-1`, selecting the STD branch; the WAD branch handles archive members.
+*Classification (observed):* `FileOpenRouteSelect` tests the **mode string's** first byte: `w`/`W`
+selects the STD branch so writes bypass archive lookup. For other modes it searches the mounted WAD
+contexts for the entry (`WadEntryFindAcrossMountedArchives`): a hit selects WAD, and a miss selects
+STD. Invalid inputs produce an unsupported selector.
 
 ### WAD branch — mount + open
 
