@@ -860,6 +860,18 @@ active playback copies (SoundSubsystemFrameTick) and the deferred/batch
 drains land with their own milestones. `sound_test` covers ordered appends,
 the drop-on-full path, bounded reads, and the count-only clear.
 
+**Deferred-play cooldown** (2026-10-24; port issues #326/#327):
+`sound_deferred_timer_set_if_idle` (`DeferredSoundTimerSetIfIdle @
+0x464ec0`) arms the corpus's global cooldown timer (`_DAT_00502b24`) only
+while idle, forgetting the recorded handle word (`DAT_00502b28`), and
+`sound_deferred_play_expire` (`DeferredSoundPlayExpire @ 0x464e80`) stops +
+resets when a recorded handle meets a running timer. Deviations: the expiry
+stop seam is a no-op until the instance layer lands, and the handle word is
+written through a port seam mirroring the submission route (whose body is
+blocked behind the alias-play chain); blocked sound chains are catalogued in
+`docs/coverage/blocked.md`. `sound_test` covers the idle gate, handle
+forgetting, both expire skip-paths, and re-arming.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

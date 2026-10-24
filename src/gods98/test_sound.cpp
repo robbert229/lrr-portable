@@ -502,12 +502,58 @@ static void test_request_queue(void)
           "cleared queue reads nothing");
 }
 
+/* ------------------------------------------------------------------ *
+ *  Deferred-play cooldown (DeferredSoundTimerSetIfIdle @ 0x464ec0,
+ *  DeferredSoundPlayExpire @ 0x464e80 — issues #326 / #327).
+ * ------------------------------------------------------------------ */
+
+static void test_deferred_cooldown(void)
+{
+    /* Words zero-initialise like the corpus; expire is inert until an
+     * arming submit records a handle. */
+    CHECK(sound_deferred_cooldown() == 0.0f, "cooldown starts idle");
+    sound_deferred_play_expire();
+    CHECK(sound_deferred_cooldown() == 0.0f, "expire on idle is a no-op");
+
+    /* Idle set arms and clears the recorded handle (corpus writes -1). */
+    CHECK(sound_deferred_timer_set_if_idle(10.0f) == 1, "idle set arms");
+    CHECK(sound_deferred_cooldown() == 10.0f, "timer takes the value");
+    CHECK(sound_deferred_handle() == -1, "arming forgets the handle");
+    CHECK(sound_deferred_timer_set_if_idle(5.0f) == 0,
+          "running cooldown refuses a re-arm");
+    CHECK(sound_deferred_cooldown() == 10.0f, "refused set keeps old timer");
+
+    /* Expire skips while no handle is recorded, even mid-timer. */
+    sound_deferred_play_expire();
+    CHECK(sound_deferred_cooldown() == 10.0f && sound_deferred_handle() == -1,
+          "expire skips with the handle at -1");
+
+    /* A recorded handle with the timer running expires: stop seam,
+     * handle back to -1, timer zeroed. */
+    sound_deferred_handle_record(7);
+    sound_deferred_play_expire();
+    CHECK(sound_deferred_handle() == -1, "expire forgets the handle");
+    CHECK(sound_deferred_cooldown() == 0.0f, "expire zeroes the timer");
+
+    /* Recorded but drained (timer not > 0): no expiry. */
+    sound_deferred_handle_record(9);
+    sound_deferred_play_expire();
+    CHECK(sound_deferred_handle() == 9, "expire skips on a zero timer");
+
+    /* Idle again, so the next set arms. */
+    sound_deferred_handle_record(-1);
+    CHECK(sound_deferred_timer_set_if_idle(2.0f) == 1, "re-arms after drain");
+    CHECK(sound_deferred_timer_set_if_idle(0.0f) == 0,
+          "zero timer counts as running once armed");
+}
+
 int main(int argc, char** argv)
 {
     test_synthetic();
     test_alias_registry();
     test_sound_enable();
     test_request_queue();
+    test_deferred_cooldown();
     for (int i = 1; i < argc; ++i) {
         if (strcmp(argv[i], "--real") == 0 && i + 1 < argc) {
             test_real(argv[i + 1]);

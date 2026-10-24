@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 301 | 11.7% |
+| ported | 303 | 11.8% |
 | anchored | 5 | 0.2% |
-| named | 2212 | 86.3% |
+| named | 2210 | 86.2% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 0 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (301 functions)
+  (303 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (5 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (2212 functions)
+  citation yet (2210 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (0 functions)
 
-**Game logic remaining to port: 2217 (86.5%).**
+**Game logic remaining to port: 2215 (86.4%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -1283,8 +1283,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00464720` | SurfaceVisibilitySet |
 | `0x00464d00` | SoundSampleMarkerParse |
 | `0x00464e20` | SoundSampleVariantSelect |
-| `0x00464e80` | DeferredSoundPlayExpire |
-| `0x00464ec0` | DeferredSoundTimerSetIfIdle |
 | `0x00464fa0` | SoundAliasPlay |
 | `0x00465010` | ConfiguredVariantPropertySet |
 | `0x00465030` | ConfiguredVariantPropertyRead |
