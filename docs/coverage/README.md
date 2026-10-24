@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 472 | 18.4% |
+| ported | 475 | 18.5% |
 | anchored | 5 | 0.2% |
-| named | 2041 | 79.6% |
+| named | 2038 | 79.5% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 0 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (472 functions)
+  (475 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (5 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (2041 functions)
+  citation yet (2038 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (0 functions)
 
-**Game logic remaining to port: 2046 (79.8%).**
+**Game logic remaining to port: 2043 (79.7%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -334,9 +334,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0040fdb0` | ThreeValueRecordCopyAndMarkReady |
 | `0x0040fde0` | SetVectorAndNotifyListeners |
 | `0x0040fe00` | SceneObjectListUpdateTransforms |
-| `0x0040fe40` | PointerStackPush |
-| `0x0040fe60` | PointerStackPop |
-| `0x0040fe90` | PointerStackForEach |
 | `0x0040fec0` | SetGlobalScalarToOne |
 | `0x0040ff50` | SceneObjectListApplyFloatCallback |
 | `0x0040ff70` | ObjectVector3Set |

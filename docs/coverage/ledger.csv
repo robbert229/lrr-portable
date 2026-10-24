@@ -340,9 +340,9 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0040fdb0,FUN_0040fdb0,named,ThreeValueRecordCopyAndMarkReady,0,221
 0040fde0,FUN_0040fde0,named,SetVectorAndNotifyListeners,0,99
 0040fe00,FUN_0040fe00,named,SceneObjectListUpdateTransforms,0,204
-0040fe40,FUN_0040fe40,named,PointerStackPush,0,266
-0040fe60,FUN_0040fe60,named,PointerStackPop,0,339
-0040fe90,FUN_0040fe90,named,PointerStackForEach,0,224
+0040fe40,FUN_0040fe40,ported,PointerStackPush,3,266
+0040fe60,FUN_0040fe60,ported,PointerStackPop,3,339
+0040fe90,FUN_0040fe90,ported,PointerStackForEach,3,224
 0040fec0,FUN_0040fec0,named,SetGlobalScalarToOne,0,71
 0040ff50,FUN_0040ff50,named,SceneObjectListApplyFloatCallback,0,111
 0040ff70,FUN_0040ff70,named,ObjectVector3Set,0,244

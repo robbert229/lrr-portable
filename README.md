@@ -1354,6 +1354,21 @@ word when the exponent is all ones, per finding 399's CrtAsin
 pre-dispatch probe). `crt_test` pins the cursor arithmetic, the
 zero-extended word read and the exponent selector's corners.
 
+**Intrusive pointer stacks** (2026-10-24; findings 366/393): the corpus's
+callback-state-list stack machine lands in a new `src/gods98/ptrstack.*`
+module — `ptrstack_push` (`PointerStackPush @ 0x40fe40`),
+`ptrstack_pop` (`PointerStackPop @ 0x40fe60`) and `ptrstack_for_each`
+(`PointerStackForEach @ 0x40fe90`). Items chain through a link slot at
+item `+0x9c` and the stack keeps head/count as a pair, exactly the
+corpus's layout; the link is read with byte-safe access (the corpus's
+dword slot is not pointer-aligned on 64-bit hosts), and the callback
+walk reproduces the corpus's step order — the next pointer is read
+*after* the callback returns, so a callback that re-links its own item
+steers the walk. NULL-stack/NULL-item guards follow the corpus's push
+skip; pop/foreach answer the empty case instead of dereferencing
+(documented deviation). `ptrstack_test` drives LIFO order, the drain to
+empty, the guards and the link-steering walk.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the
