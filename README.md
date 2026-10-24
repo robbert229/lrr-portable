@@ -1061,6 +1061,34 @@ words and derived timer, running-timer gating, the disabled-subsystem
 and batch-mode declines with their deferral quirks, expiry, and the
 stream-name triggers across the registration on/off paths.
 
+**Terrain-cell flag primitives** (2026-10-24; terrain wave): sixteen
+leaf accessors in `src/game/level.*` form the corpus's voxel-record
+flag family that the walk, wave and occupancy paths read through —
+`level_cell_walkable_flag` (`0x432bd0`: unsigned dim-1 gate, traversable
+bit 0x10 with the blocked gate bit 3 clear), `level_cell_flag_wave`
+(the wave flag, `0x432c20`), `level_cell_speed_class` (`0x432c50`: 0
+under the terrain block bit, else the low terrain bits + 1),
+`level_cell_mask_c0` (`0x432e60`, a byte read of the flag word),
+`level_cell_flag_edge_wall` (the predug edge-wall bit, `0x432e90`), the
+state-byte equality tests `level_cell_state_is_1/6` (`0x432ec0` /
+`0x432f00`), `level_cell_mask18_clear` (`0x432f40`, outside the gate
+counts as clear), `level_cell_flag_4` (`0x432f90`), the single-bit tests
+`level_cell_flag_2000/80/8000` (`0x432fd0` / `0x433000` / `0x433030`),
+`level_cell_secondary_bit0` (`0x433060`, the record+12 word),
+`level_cell_occupied_at` (`0x433090`, signed in-bounds check on the
+occupied-class bit), `level_cell_mask_180000` (`0x4330e0`), and the
+write-side `level_cell_flag_10000000_set` (`0x433120`) raising or
+clearing the flag. Every accessor reads through `level_voxel`, so an
+unaddressable cell reports zero flags / no state — a deviation from the
+corpus, which computes the record address with no bounds check at all
+and reads or writes the voxel heap past the grid for bad coords
+(documented in `level.hpp`). The corpus's own bounds gates are
+reproduced exactly, including the unsigned wrap that lets every
+coordinate through when a grid dimension is zero. `level_test` drives
+the flag word of a hand-picked record on the loaded fixture and covers
+every mask, speed class, state equality, secondary word, raise/clear
+word pair, gate and off-map behavior.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the
