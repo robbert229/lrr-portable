@@ -559,3 +559,55 @@ int view_grid_edge_get(void)
 {
     return g_view_grid_edge;
 }
+
+/* --- camera-selection cluster (see view.hpp) -------------------------------
+ * DAT_005560a0 / DAT_005560a8: zero-initialized until camera_view_context_set
+ * configures them (the corpus loads them from the camera config records at
+ * startup — that loader seam is unported, so the pan stays inert out of the
+ * box, like g_view_grid_edge). */
+float g_view_pan_cap   = 0.0f;  /* DAT_005560a0 (CameraAcceleration) */
+float g_view_pan_scale = 0.0f;  /* DAT_005560a8 (CameraSpeed) */
+
+void camera_view_context_set(float cap, float follow_scale,
+                             float pan_scale, int edge)
+{
+    g_view_pan_cap = cap;
+    g_view_follow_scale = follow_scale;
+    g_view_pan_scale = pan_scale;
+    g_view_grid_edge = edge;
+}
+
+void selection_record_point_set(ViewContext* v, float x, float y)
+{
+    if (v != NULL && v->mode == 1) {
+        /* corpus: the view record's dword [10] camera (cam_follow), z=0 */
+        cam_set_pos(&v->cam_follow, x, y, 0.0f);
+    }
+}
+
+int camera_get_position_with_terrain_height(ViewContext* v,
+                                            EngineContext* ctx,
+                                            float out[3])
+{
+    if (v != NULL && ctx != NULL && out != NULL && v->mode == 1) {
+        cam_get_pos(&v->cam_follow, out);
+        /* corpus: the terrain leaf takes the world handle; the port routes
+         * it through the engine context's bound level block (deviation). */
+        out[2] = terrain_height(ctx, out[0], out[1]);
+    }
+    return 1; /* corpus: constant success, untouched output for mode != 1 */
+}
+
+void camera_pointer_pan_update(ViewContext* v, float vec[3], float amount)
+{
+    if (v == NULL || vec == NULL) {
+        return; /* deviation: the corpus dereferences blindly */
+    }
+    vec_normalize(vec);
+    v->pan_accum = amount * g_view_pan_scale + v->pan_accum;
+    if (g_view_pan_cap < v->pan_accum) {
+        v->pan_accum = g_view_pan_cap;
+    }
+    vec_scale(vec, vec, v->pan_accum * amount);
+    vec_add(v->offset, v->offset, vec);
+}

@@ -1822,6 +1822,23 @@ state-bit-0x100 gate, the ported shared-eligibility predicate, the
 extra +0x3e0 bit-0x40000 rejection. `select_test` pins the scan, the
 mark path, and every eligibility band.
 
+**Camera-selection leaves** (2026-10-24; findings 102/339/378/424/426):
+four follow-view camera leaves land in `view.*`.
+`camera_view_context_set` (0x435e0e) stores the four view-config globals
+(the pan cap, follow scale, pan scale, edge clamp); the pan globals start
+zero — the startup config seam is unported, so the pan is inert until
+configured. `selection_record_point_set` (0x436b0b) writes the follow
+camera's x/y (z zero) for follow-mode views, and
+`camera_get_position_with_terrain_height` (0x436b33) copies that camera
+and replaces its z with the terrain height — the corpus's world-handle
+argument routes through the engine context's bound level block
+(deviation), constant success. `camera_pointer_pan_update` (0x436b87)
+normalizes the move, compounds the per-view accumulator (a modeled
++0x9c field) with the pan scale, caps it, and accumulates the scaled
+move into the follow offsets — the zero-length case goes NaN through
+the corpus's unguarded normalize, as shipped. `view_test` pins the
+gates, the cap clamp, and the NaN shape.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

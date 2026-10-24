@@ -182,4 +182,26 @@ void cam_set_facing(CameraHandle* c, const float* r);       /* FUN_00475470 */
  * the faithful getter. */
 int view_grid_edge_get(void);
 
+/* --- camera-selection cluster (2026-10-24) ---------------------------------
+ * CameraViewContextSet / SelectionRecordPointSet /
+ * CameraGetPositionWithTerrainHeight / CameraPointerPanUpdate
+ * (FUN_00435e0e / FUN_00436b0b / FUN_00436b33 / FUN_00436b87, findings
+ * 102/339/378/424/426): the follow-view camera leaves. The setter stores
+ * the four view-config globals (cap, follow scale, pan scale, edge). The
+ * point set writes the follow camera's x/y for follow-mode views; the
+ * position read copies the follow camera and replaces its z with the
+ * terrain height (the corpus's world-handle argument maps to the engine
+ * context's bound level block — documented deviation). The pan update
+ * normalizes the move vector, advances the per-view accumulator by
+ * amount * pan scale, caps it, scales the vector by accumulator * amount,
+ * and accumulates it into the follow offsets (the corpus's +0x18 field).
+ * Zero-length vectors normalize as-is (the corpus's unguarded leaf). */
+void camera_view_context_set(float cap, float follow_scale,
+                             float pan_scale, int edge);
+void selection_record_point_set(ViewContext* v, float x, float y);
+int  camera_get_position_with_terrain_height(ViewContext* v,
+                                             EngineContext* ctx,
+                                             float out[3]);
+void camera_pointer_pan_update(ViewContext* v, float vec[3], float amount);
+
 #endif /* LEGORRR_VIEW_HPP */
