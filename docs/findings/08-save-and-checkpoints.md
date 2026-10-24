@@ -202,6 +202,8 @@ on exit, if the selection is in the save list (`DAT_00556fcc`), the slot
 `DAT_004a1f5c >= 0`, and a live game is loaded (`FUN_00460200`'s object with
 `+4 != 0`), it calls `FUN_0047e440(path, game+0x10-surface)` to dump the
 framebuffer once.
+`DAT_00556fcc` is the initialized `SaveMenu` tree pointer, also used as the
+secondary menu root by `MenuRunLoop` and `MenuTick`.
 
 `FUN_0047e440 -> FUN_0047c8f0` is a plain BMP writer — the `.dat` is just an
 uncompressed 24bpp BMP with a made-up extension, field for field: `BM`, file
