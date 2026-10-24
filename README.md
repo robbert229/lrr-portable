@@ -20,7 +20,7 @@ and curiosity; nothing in this repository is affiliated with or endorsed by the 
 
 ```
 README.md           This file
-docs/findings/      Reverse-engineering findings, 01–437 (see index below)
+docs/findings/      Reverse-engineering findings, 01–452 (see index below)
 tools/              WAD tooling (rrwad.py: unpack/pack/verify — see tools/README.md)
                     + model converter (tools/rrlwo.py: .lwo → glTF 2.0)
                     + compat harness (tools/compat/a2.py — see tools/compat/README.md)
@@ -634,7 +634,21 @@ Open threads, in order of value:
 | 435 | [findings/435-scene-objects-animation-and-render-records.md](docs/findings/435-scene-objects-animation-and-render-records.md) | Scene Objects, Animation, and Render Records |
 | 436 | [findings/436-simulation-ui-and-player-controls.md](docs/findings/436-simulation-ui-and-player-controls.md) | Simulation UI and Player Controls |
 | 437 | [findings/437-menu-widgets-and-menu-rendering.md](docs/findings/437-menu-widgets-and-menu-rendering.md) | Menu Widgets and Menu Rendering |
+| 438 | [findings/438-front-end-flow-save-slot-and-option-state.md](docs/findings/438-front-end-flow-save-slot-and-option-state.md) | Front-End Flow, Save Slots, and Option State |
+| 439 | [findings/439-hud-panel-render-and-interaction-state.md](docs/findings/439-hud-panel-render-and-interaction-state.md) | HUD Panel Rendering and Interaction State |
+| 440 | [findings/440-tutorial-and-advisor-control.md](docs/findings/440-tutorial-and-advisor-control.md) | Tutorial and Advisor Control |
+| 442 | [findings/442-advisor-scene-and-action-state.md](docs/findings/442-advisor-scene-and-action-state.md) | Advisor Scene and Action State |
+| 441 | [findings/441-incident-and-information-message-queue.md](docs/findings/441-incident-and-information-message-queue.md) | Incident and Information Message Queue |
+| 444 | [findings/444-input-selection-pointer-actions.md](docs/findings/444-input-selection-pointer-actions.md) | Input, Selection, and Pointer Actions |
+| 443 | [findings/443-help-tutorial-and-interface-resources.md](docs/findings/443-help-tutorial-and-interface-resources.md) | Help, Tutorial, and Interface Resources |
+| 446 | [findings/446-terrain-and-overlay-rendering.md](docs/findings/446-terrain-and-overlay-rendering.md) | Terrain and Overlay Rendering |
+| 445 | [findings/445-terrain-scene-geometry.md](docs/findings/445-terrain-scene-geometry.md) | Terrain Scene Geometry |
+| 448 | [findings/448-routing-and-activity-transitions.md](docs/findings/448-routing-and-activity-transitions.md) | Routing and Activity Transitions |
+| 447 | [findings/447-terrain-grid-path-search.md](docs/findings/447-terrain-grid-path-search.md) | Terrain Grid Path Search |
+| 450 | [findings/450-terrain-data-and-grid-operations.md](docs/findings/450-terrain-data-and-grid-operations.md) | Terrain Data and Grid Operations |
+| 449 | [findings/449-spatial-queries-and-candidate-search.md](docs/findings/449-spatial-queries-and-candidate-search.md) | Spatial Queries and Candidate Search |
 | 452 | [findings/452-lava-erosion-timing-and-neighbor-propagation.md](docs/findings/452-lava-erosion-timing-and-neighbor-propagation.md) | Lava Erosion Timing and Neighbor Propagation |
+| 451 | [findings/451-terrain-cell-state-neighbors-occupancy-and-traversal.md](docs/findings/451-terrain-cell-state-neighbors-occupancy-and-traversal.md) | Terrain Cell State, Neighbors, Occupancy, and Traversal |
 
 Canonical full pseudocode corpus: [`docs/decompiles/full/LEGORR.full.c`](docs/decompiles/full/LEGORR.full.c)
 (2564 manifest functions; see its [README](docs/decompiles/full/README.md)). The
