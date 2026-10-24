@@ -1288,6 +1288,21 @@ int main(int argc, char** argv)
               "the guarded null level answers zero everywhere");
     }
 
+    /* GlobalOptionLowBitsEnabled (2026-10-24). */
+    {
+        LevelState g;
+        memset(&g, 0, sizeof(g));
+        CHECK(global_option_low_bits_enabled(&g) == 0
+                  && global_option_low_bits_enabled(NULL) == 0,
+              "the option gate answers for a clear word and the null level");
+        g.objective = 8; /* low bits stay clear */
+        CHECK(global_option_low_bits_enabled(&g) == 0,
+              "the gate ignores the high word");
+        g.objective = 0x11;
+        CHECK(global_option_low_bits_enabled(&g) != 0,
+              "any low bit opens the gate");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "level_test: %d failure(s)\n", s_failures);
         return 1;

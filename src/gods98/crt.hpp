@@ -212,4 +212,11 @@ void display_resolution_filter_tuple_append(int width, int height, int bpp);
 int  display_resolution_filter_tuple_count(void);
 void display_resolution_filter_tuple_get(int index, int* w, int* h, int* bpp);
 
+/* --- the remaining unowned DAT one-liners (2026-10-24; finding 383) --------
+ * GlobalFlagGet_004ff978 (FUN_00456640): the unresolved flag the corpus
+ * gates a caller on; zero-init static, no ported feeder.
+ * GlobalValueSet_004ffe48 (FUN_00458660): the unresolved store's word. */
+uint32_t global_flag_004ff978_get(void);
+void     global_value_004ffe48_set(uint32_t value);
+
 #endif /* LEGORRR_GODS98_CRT_HPP */

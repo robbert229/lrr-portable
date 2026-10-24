@@ -2159,6 +2159,18 @@ selection-state word's 0x40 bit through the band that models it, and
 store onto the mute word. `message_test`, `frontend_test`, and
 `simtick_test` pin the windows, the mask, and the store.
 
+**The save-side accessor band** (2026-10-24; findings 08/214/250/383):
+five leaves land across three modules. `osf_read_dirty_flag_get`
+(0x4593d0, `savegame.*`) reads the OSF dirty word the save module already
+models, and `checkpoint_blob_get` (0x4601f0) threads the checkpoint blob
+pointer; `global_option_low_bits_enabled` (0x4589a0, `level.*`) gates on
+the objective word's low three bits (the corpus's DAT_004ffbc0 →
+LevelState.objective); and the two unresolved globals land as crt.*
+zero-init storage — `global_flag_004ff978_get` (0x456640) and
+`global_value_004ffe48_set` (0x458660), meanings unresolved per finding
+383. `savegame_test`, `level_test`, and `crt_test` pin the reads and the
+guards.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

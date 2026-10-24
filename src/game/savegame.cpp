@@ -736,3 +736,14 @@ void* sav_slot_ctx(GameContext* ctx, int slot)
      * flow), so the valid index answers the port's context block. */
     return ctx;
 }
+
+/* --- the save-side DAT accessor band (see savegame.hpp) --------------------- */
+int osf_read_dirty_flag_get(const GameContext* ctx)
+{
+    return ctx != NULL ? ctx->osf_dirty : 0;
+}
+
+void* checkpoint_blob_get(const GameContext* ctx)
+{
+    return ctx != NULL ? ctx->checkpoint_blob : NULL;
+}

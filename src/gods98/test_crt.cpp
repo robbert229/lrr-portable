@@ -356,6 +356,11 @@ int main(void)
         CHECK(w == 0, "the guarded read answers zero (deviation)");
     }
 
+    /* The remaining unowned DAT one-liners (2026-10-24). */
+    CHECK(global_flag_004ff978_get() == 0u, "the flag word starts clear");
+    global_value_004ffe48_set(0xABu); /* the setter stores (no getter shape) */
+    global_value_004ffe48_set(0u);    /* restore for later tests */
+
     if (s_failures != 0) {
         fprintf(stderr, "crt_test: %d failure(s)\n", s_failures);
         return 1;
