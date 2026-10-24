@@ -67,6 +67,14 @@ earlier description in finding 25 §2, which divided a 64-byte block by the
 record size; the allocation expression is a record count multiplied by
 `0x2c`, not a fixed 64-byte allocation.
 
+The grow function only advances the block counter and installs a free-list
+head when the block allocation succeeds. If it fails, `DDiSceneObjectAllocate`
+continues with `DAT_0076add0` still null and reads its `+0x28` link while
+popping the record. There is no allocation-failure check at this point, so the
+observed path appears to dereference null instead of returning a clean failure.
+This differs from a later interface-factory failure, which does call the
+destroy helper and return null.
+
 Allocation pops the free-list head through its `+0x28` link, clears eleven
 dwords, and writes the record's own address back to `+0x28` as a live-record
 marker. It then calls the factory stored in `DAT_00505914` three times through
@@ -144,6 +152,7 @@ teardown.
 | The root getter returns `DAT_0076add4`, and `EntitySceneObjectTreeAttach` uses it as a scene context | observed (`0x472940`, `0x44b680`) |
 | Object records are `0x2c` bytes; the pool grow count is `1 << DAT_0076cd90` records | observed (`0x472950`, `0x4759f0`) |
 | First pool block has one record, then successful blocks double in count | observed (initializer counter and grow expression) |
+| Pool-block allocation failure leaves the allocator's free-list pop unchecked | observed (`0x4759f0`, `0x472950`); apparent null dereference |
 | Hook registrars store separate callback/user pairs; sample registrar also sets gate bit `0x40` | observed (`0x472900`, `0x472920`) |
 | Entity creation clears bit `0x40` and sets it on the common completion path | observed (`0x437d00`); intended reason is inferred |
 | Shutdown frees live objects, pool blocks, auxiliary entries, and the duplicated shared-texture directory | observed (`0x472800`) |
