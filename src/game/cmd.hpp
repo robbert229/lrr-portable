@@ -386,6 +386,45 @@ void argument_callback_dispatch(void* arg);
 unsigned cmd_rec_count_get(const void* rec);
 int cmd_rec_extra_get(const void* rec);
 
+/* --- terrain cell-command issuers (2026-10-24) ------------------------------
+ * The cell-command family allocates a record for a grid cell: the pair lands
+ * at the +0x08/+0x0c slots as integers (the corpus writes them as ints where
+ * the move records store floats — the port reads the same slots through an
+ * int view, deviation noted), followed by the action word, the -1 target
+ * marker and the zero entry count. Each links at a cell-command kind and
+ * runs the record-array half. The counter update that follows the link
+ * belongs to the unported spatial-query/action-issue family and the
+ * cell-record counter block, so the port documents it as a seam (see
+ * docs/coverage/blocked.md) and changes no entity state there.
+ * TerrainCellCommandCreate (FUN_00402510): all three state guards must come
+ * out clear — the state-equals-1 and state-equals-6 tests and the in-bounds
+ * flag-bit-4 test. Then the type-8 record, the flag word's bit 3 with the
+ * caller's flag, the record-array half, the kind-3 link, bit 7 (with bit 13
+ * additionally when the second flag is set), and — with the caller's flag
+ * clear — the surface-type apply and the cell's flag-bit-0x800000 mark.
+ * KindNineCellCommandIssue (FUN_00402d50): the state byte must not be 1, the
+ * walkable flag must answer and the reservation bit must be clear. Then the
+ * type-9 record with action 8, the bit-10 raise, the record-array half with
+ * the mode argument clear, the kind-3 link, the cell's occupied mark, and
+ * the surface-type apply; answers 1 when issued (the corpus's tail loses the
+ * surface setter's register arguments — the type follows the 0x402510 shape).
+ * CellCommandType13Issue (FUN_00402e40): with the bounded flag-bit-8 read
+ * answering, the type-0x14 record with action 0xd, the bit-10 raise, the
+ * record-array half and the kind-3 link.
+ * CellCommandType11Issue (FUN_00402fb0): no guard — the type-0xf record with
+ * action 0xb, the bit-10 raise, the record-array half, the kind-4 link, and
+ * the cell's secondary bit 3. */
+void terrain_cell_command_create(int x, int y, int flag, int raise20);
+int  kind_nine_cell_command_issue(int x, int y, int mode);
+void cell_command_type13_issue(int x, int y);
+void cell_command_type11_issue(int x, int y);
+
+/* Diagnostics: the cell-command record's int views of the coordinate slots
+ * and its action/target words. */
+int cmd_rec_cell_xy_get(const void* rec, int* x, int* y);
+int cmd_rec_action_get(const void* rec);
+int cmd_rec_target_get(const void* rec);
+
 #ifdef __cplusplus
 }
 #endif

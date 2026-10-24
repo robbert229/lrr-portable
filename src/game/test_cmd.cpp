@@ -967,6 +967,147 @@ int main(void)
         cmd_context_set(&ctx);
     }
 
+    /* The terrain cell-command issuers (2026-10-24). */
+    {
+        static uint8_t grid[8 * 8 * 0x48];
+        GameContext lctx;
+        game_context_init(&lctx);
+        cmd_context_set(&lctx);
+        static LevelState lvl;
+        memset(&lvl, 0, sizeof(lvl));
+        memset(grid, 0, sizeof(grid));
+        lvl.word[0x14 / 4] = 8; /* LEVEL_OFF_WIDTH  */
+        lvl.word[0x18 / 4] = 8; /* LEVEL_OFF_HEIGHT */
+        lvl.ptr_voxels = grid;
+        /* The terrain handle stays absent: a real level's loader creates
+         * it (the fixture-dependent half), so the surface-type wiring is
+         * covered by level_test's writer pair while the cell marks — the
+         * observable terrain half here — are pinned below. */
+        lvl.ptr_terrain = NULL;
+        lctx.level = &lvl;
+
+#define CELL(x, y) (grid + ((size_t)(y) * 8u + (size_t)(x)) * 0x48)
+#define PUT32(x, y, off, v)                                                    \
+    do {                                                                       \
+        const uint32_t v_ = (uint32_t)(v);                                     \
+        memcpy(CELL(x, y) + (off), &v_, 4);                                     \
+    } while (0)
+#define GET32(x, y, off) (*(const uint32_t*)(CELL(x, y) + (off)))
+
+        /* Stage: (1,1) takes flag 4 plus the traversable bit; (2,2) state
+         * 1; (3,3) state 6; (4,4) plain; (5,5) walkable; (6,6) flag 8. */
+        PUT32(1, 1, 0x08, 0x14u);
+        CELL(2, 2)[2] = 1;
+        CELL(3, 3)[2] = 6;
+        PUT32(5, 5, 0x08, 0x10u);
+        PUT32(6, 6, 0x08, 8u);
+
+        /* Type-8 create: every guard skips. */
+        cmd_init();
+        terrain_cell_command_create(2, 2, 1, 0);
+        terrain_cell_command_create(3, 3, 1, 0);
+        terrain_cell_command_create(4, 4, 1, 0);
+        CHECK(cmd_global_head() == NULL, "the state-1/6 and plain cells skip");
+        lctx.level = NULL;
+        terrain_cell_command_create(1, 1, 1, 0);
+        CHECK(cmd_global_head() == NULL, "the absent level skips (deviation)");
+        lctx.level = &lvl;
+
+        /* The set-flag arm: the terrain half stays out. */
+        cmd_init();
+        terrain_cell_command_create(1, 1, 1, 1);
+        CHECK(cmd_global_head() != NULL
+                  && cmd_rec_type(cmd_global_head()) == 8,
+              "the flagged cell issues the type-8 record");
+        {
+            int cx = -1, cy = -1;
+            cmd_rec_cell_xy_get(cmd_global_head(), &cx, &cy);
+            CHECK(cx == 1 && cy == 1, "the coordinates land as words");
+            CHECK(cmd_rec_action_get(cmd_global_head()) == 0
+                      && cmd_rec_target_get(cmd_global_head()) == -1,
+                  "the create record leaves the action unset, target -1");
+            CHECK(cmd_rec_kind(cmd_global_head()) == 3, "kind 3 links it");
+            CHECK((cmd_rec_state(cmd_global_head()) & 0x20008u) == 0x20008u
+                      && (cmd_rec_state(cmd_global_head()) & 0x80u) != 0u,
+                  "the set flag raises bits 3 and 13 (and bit 7)");
+        }
+        CHECK((GET32(1, 1, 0x08) & 0x800000u) == 0u,
+              "the set flag skips the terrain half");
+
+        /* The clear-flag arm: bit 3 drops and the terrain half runs. */
+        cmd_tick_global();
+        cmd_init();
+        terrain_cell_command_create(1, 1, 0, 0);
+        CHECK((cmd_rec_state(cmd_global_head()) & 0x8u) == 0u
+                  && (cmd_rec_state(cmd_global_head()) & 0x80u) != 0u
+                  && (cmd_rec_state(cmd_global_head()) & 0x20000u) == 0u,
+              "the clear flag raises bit 7 only");
+        CHECK(cmd_rec_type(cmd_global_head()) == 8
+                  && (GET32(1, 1, 0x08) & 0x800000u) != 0u,
+              "the clear flag raises the cell's bit 0x800000");
+
+        /* Kind-nine issue: the guards, then the full shape. */
+        cmd_tick_global();
+        cmd_init();
+        CHECK(kind_nine_cell_command_issue(2, 2, 1) == 0,
+              "the state-1 cell is refused");
+        CHECK(kind_nine_cell_command_issue(6, 6, 1) == 0,
+              "the unwalkable cell is refused");
+        CHECK(kind_nine_cell_command_issue(5, 5, 1) == 1, "the cell issues");
+        CHECK(cmd_global_head() != NULL
+                  && cmd_rec_type(cmd_global_head()) == 9
+                  && cmd_rec_action_get(cmd_global_head()) == 8
+                  && cmd_rec_target_get(cmd_global_head()) == -1
+                  && (cmd_rec_state(cmd_global_head()) & 0x400u) != 0u
+                  && cmd_rec_kind(cmd_global_head()) == 3,
+              "the type-9 record carries action 8 and bit 10");
+        CHECK(level_cell_flag_reserved(&lvl, 5, 5) != 0u,
+              "the issue marks the cell occupied");
+        CHECK(kind_nine_cell_command_issue(5, 5, 0) == 0,
+              "the occupied mark refuses the second issue");
+
+        /* Type-0x14 issue: the bounded flag-8 read gates it. */
+        cmd_tick_global();
+        cmd_init();
+        cell_command_type13_issue(4, 4);
+        CHECK(cmd_global_head() == NULL, "the plain cell issues nothing");
+        cell_command_type13_issue(6, 6);
+        CHECK(cmd_global_head() != NULL
+                  && cmd_rec_type(cmd_global_head()) == 0x14
+                  && cmd_rec_action_get(cmd_global_head()) == 0xd
+                  && (cmd_rec_state(cmd_global_head()) & 0x400u) != 0u
+                  && cmd_rec_kind(cmd_global_head()) == 3,
+              "the flagged cell issues the type-0x14 record");
+
+        /* Type-0xf issue: no guard, the secondary bit 3 mark. */
+        cmd_tick_global();
+        cmd_init();
+        cell_command_type11_issue(3, 3);
+        CHECK(cmd_global_head() != NULL
+                  && cmd_rec_type(cmd_global_head()) == 0xf
+                  && cmd_rec_action_get(cmd_global_head()) == 0xb
+                  && cmd_rec_kind(cmd_global_head()) == 4
+                  && level_cell_secondary_flag_8(&lvl, 3, 3) != 0u,
+              "the type-0xf record links at kind 4 and marks the cell");
+        cmd_tick_global();
+        cmd_init();
+        CHECK(cmd_rec_cell_xy_get(NULL, NULL, NULL) == 0,
+              "the guarded reads answer zero");
+
+        /* The missing terrain handle guards the surface half. */
+        terrain_cell_command_create(1, 1, 0, 0);
+        CHECK(cmd_global_head() != NULL
+                  && cmd_rec_type(cmd_global_head()) == 8,
+              "the record lands even with the terrain handle absent");
+        cmd_tick_global();
+#undef CELL
+#undef PUT32
+#undef GET32
+        lctx.level = NULL;
+        cmd_init();
+        cmd_context_set(&ctx);
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "cmd_test: %d failure(s)\n", s_failures);
         return 1;

@@ -2009,6 +2009,26 @@ argument-wrapping dispatchers whose observable body is the pool-callback
 machinery — recorded seams. `cmd_test` pins the guard, the snapshot
 ownership, the five +0x3c arms, and both bit-20 shapes.
 
+**Terrain cell-command issuers** (2026-10-24; findings 451/466): the
+cell-command family lands in `cmd.*` over the ported terrain predicates,
+with the pair stored in the record's +0x08/+0x0c slots as integers (the
+corpus's union with the move records' floats — read through an int view)
+and the action word / -1 target / zero count beside them.
+`terrain_cell_command_create` (0x402510) chains the state-1 and state-6
+and in-bounds flag-bit-4 guards, then the type-8 record, the caller's
+bit 3, the record-array half, the kind-3 link, bit 7 (with bit 13
+additionally), and — with the caller's flag clear — the surface-type
+apply and the cell's bit-0x800000 mark. `kind_nine_cell_command_issue`
+(0x402d50) requires the state byte to differ from 1, the walkable flag
+and a clear reservation bit, issues the type-9 record with action 8 and
+bit 10, and marks the cell occupied before the surface apply.
+`cell_command_type13_issue` (0x402e40) gates on the bounded flag-bit-8
+read; `cell_command_type11_issue` (0x402fb0) needs no guard and raises
+the cell's secondary bit 3. The counter update after the link belongs to
+the unported spatial-query family and the cell-record counter block, so
+it is recorded as a seam in `docs/coverage/blocked.md`. `cmd_test` pins
+the guard chains, the record shapes and kinds, and both terrain marks.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

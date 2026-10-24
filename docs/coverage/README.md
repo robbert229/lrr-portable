@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 642 | 25.0% |
+| ported | 646 | 25.2% |
 | anchored | 5 | 0.2% |
-| named | 1870 | 72.9% |
+| named | 1866 | 72.8% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (642 functions)
+  (646 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1870 functions)
+  citation yet (1866 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1876 (73.2%).**
+**Game logic remaining to port: 1872 (73.0%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -58,11 +58,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00401b30` | AdvisorApplySlotTransform |
 | `0x00401c50` | FormattedTextPrintfWidth |
 | `0x00401c80` | FormattedTextPrintf |
-| `0x00402510` | TerrainCellCommandCreate |
 | `0x00402890` | TaskType23CreateForCategoryMask |
-| `0x00402d50` | KindNineCellCommandIssue |
-| `0x00402e40` | CellCommandType13Issue |
-| `0x00402fb0` | CellCommandType11Issue |
 | `0x00403030` | CellCommandType3Issue |
 | `0x004030b0` | CoordinatePairEventQueue |
 | `0x00403190` | ObjectEventType2Queue |
