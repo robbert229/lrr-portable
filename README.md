@@ -1293,6 +1293,36 @@ finding 12, #14). Three new modules in `src/game/`:
   `+0x334` state objects / unrecorded constants (TODO). `ai_test` pins
   the probe reads and fallbacks and a slow/fast terrain band against a
   plain-row walker, arrival pops and the occupancy clear unchanged.
+- **Terrain grid route search** (2026-10-24, finding 447):
+  `src/game/path.*` ports the corpus's *route-search* cluster — the
+  breadth-first `TerrainGridPathSearch @ 0x440c70` (`path_grid_search`),
+  the cost-relaxation `TerrainNeighborPathCheck @ 0x4410f0`
+  (`path_neighbor_search`, 1.0 per step halved to 0.5 when the
+  beyond-cell probe flag is set, with the decrease-cost reconstruction and
+  the fallback through the BFS), and the no-callback convenience wrapper
+  `GridRouteSearchAdapter @ 0x440c30` (`path_route_adapter`) — together
+  with the eligibility predicate they expand through,
+  `TerrainCellRouteAndOccupancyCheck @ 0x431da0` (`path_route_check`,
+  entity type/stats gates plus the cell type/flag rules, corner-cut
+  result 2, traversable result 3), the `0x20000000` probe
+  `TerrainCoordinateAndOccupancyCheck @ 0x433090` (`path_coord_probe`),
+  and the route installer `EntityRouteSetupAndMarkerAssociate @ 0x441700`
+  (`path_route_install`, grids the search output into `EntitySlot.wp`).
+  The entity stats-block words the predicate reads are mirrored on
+  `EntitySlot` (`stats_word`/`stats_state`/`stats_capability` for the
+  `+0x334` words `+0x144/+0x148/+0x14c`, `route_link` for `+0x36c`); zero
+  mirrors behave like the corpus's zero templates — a statless entity
+  routes through no normal cells. Unresolved masks stay literal (finding
+  317 discipline), the corpus's capacity-less 100-record work queues are
+  bound to the grid size here (overflow aborts the search), and the module
+  is a leaf: the port's move commands still run the wave-flood builder,
+  this cluster feeds the unported route-command seam
+  (`ObjectPathSubmitToGridTarget @ 0x404e00`). `path_test` (suite `path`)
+  covers the probe, the predicate's full gate matrix (entity/NULL, type,
+  flags, diagonal corner-cut, lava/wall edge probes), BFS
+  length/rerouting/unreachable/callback contracts, the neighbor search's
+  half-cost steering and fallback-adjacency invariant, the adapter, and
+  the install's flag writes and bound.
 - **Advisor + message-bus runtime** (2026-10-21, finding 22): the announcer
   now builds the `Stream Objective_…` advisor text (`DAT_004ffe38` analog)
   on every outcome, and `objective_advisor_shown` applies the 0x10/0x20/0x80

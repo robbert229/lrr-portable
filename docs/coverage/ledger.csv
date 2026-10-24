@@ -742,7 +742,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00431ab0,FUN_00431ab0,named,AnyObjectCanOccupyTerrainCell,0,480
 00431b20,FUN_00431b20,named,PlacementBlockedAdjacentCellScan,0,1666
 00431c70,FUN_00431c70,named,FirstFreeNeighborCellPick,0,1654
-00431da0,FUN_00431da0,named,TerrainCellRouteAndOccupancyCheck,0,3798
+00431da0,FUN_00431da0,ported,TerrainCellRouteAndOccupancyCheck,3,3798
 00432100,FUN_00432100,named,TerrainCellFlag100SetAndTrack,0,454
 00432170,FUN_00432170,named,TerrainCellFlag100Test,0,187
 004321a0,FUN_004321a0,ported,TerrainCellUpdateQueueFlush,1,496
@@ -787,7 +787,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00433000,FUN_00433000,named,TerrainCellFlag80Test,0,191
 00433030,FUN_00433030,named,TerrainCellFlag8000Test,0,186
 00433060,FUN_00433060,named,TerrainCellSecondaryFlagBit0Test,0,183
-00433090,FUN_00433090,named,TerrainCoordinateAndOccupancyCheck,0,406
+00433090,FUN_00433090,ported,TerrainCoordinateAndOccupancyCheck,3,406
 004330e0,FUN_004330e0,named,TerrainCellFlagsMask180000Test,0,228
 00433120,FUN_00433120,named,TerrainCellFlag10000000SetOrClear,0,521
 00433180,FUN_00433180,named,CellTypeSpeedMultiplierResolve,0,1310
@@ -953,7 +953,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0043b6c0,FUN_0043b6c0,named,ClippedRectangleCallbackDispatch,0,794
 0043b820,FUN_0043b820,named,TypeTwoEntityEventDispatch,0,247
 0043b850,FUN_0043b850,named,TypeTwoEntityPositionedCallbackDispatch,0,650
-0043baf0,FUN_0043baf0,named,EntityFlagsMask107C33DEOr1C00203AnyTest,0,171
+0043baf0,FUN_0043baf0,ported,EntityFlagsMask107C33DEOr1C00203AnyTest,4,171
 0043bb20,FUN_0043bb20,named,BuildingDepositStateMonitor,0,740
 0043bbc0,FUN_0043bbc0,named,EntityDetachCarriedObjectAndResetState,0,540
 0043bc40,FUN_0043bc40,named,ObjectiveSidecarAppendGate,0,5325
@@ -989,10 +989,10 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004409e0,FUN_004409e0,ported,EntityActivityRequestSet,4,228
 00440a10,FUN_00440a10,named,AttachedEntityDirectionVectorUpdate,0,2160
 00440bf0,FUN_00440bf0,named,ObjectListFieldAssignAll,0,324
-00440c30,FUN_00440c30,named,GridRouteSearchAdapter,0,291
-00440c70,FUN_00440c70,named,TerrainGridPathSearch,0,6047
-004410f0,FUN_004410f0,named,TerrainNeighborPathCheck,0,9039
-00441700,FUN_00441700,named,EntityRouteSetupAndMarkerAssociate,0,2889
+00440c30,FUN_00440c30,ported,GridRouteSearchAdapter,3,291
+00440c70,FUN_00440c70,ported,TerrainGridPathSearch,3,6047
+004410f0,FUN_004410f0,ported,TerrainNeighborPathCheck,3,9039
+00441700,FUN_00441700,ported,EntityRouteSetupAndMarkerAssociate,3,2889
 00441940,FUN_00441940,named,EntityActionSequenceReset,0,2169
 00441b30,FUN_00441b30,named,EntityStateReset,0,4101
 00441ea0,FUN_00441ea0,named,EntityType5FinalizeIfAllowed,0,161
@@ -1003,7 +1003,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004422a0,FUN_004422a0,named,SurfaceVectorNormalize,0,334
 00442300,FUN_00442300,named,EntityVelocityVectorDispatch,0,1274
 00442480,FUN_00442480,named,VectorDirectionAngleRadiansGet,0,243
-004424f0,FUN_004424f0,ported,EntityPositionToTerrainCell,1,307
+004424f0,FUN_004424f0,ported,EntityPositionToTerrainCell,2,307
 00442540,FUN_00442540,named,GridOperationArgumentAdapter,0,134
 004425f0,FUN_004425f0,named,SubobjectPoseDeltaNormalizeAndDispatch,0,2509
 004428a0,FUN_004428a0,named,EntityWorldPositionSet,0,2073
@@ -1521,9 +1521,9 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00469e00,FUN_00469e00,named,IndexedRecordFloatAtOffsetDCGet,0,153
 00469e20,FUN_00469e20,named,NestedFloatAtOffsetDCGet,0,105
 00469e40,FUN_00469e40,named,NestedWordAtOffsetACGet,0,104
-00469e60,FUN_00469e60,named,EntityStatsWordGet,0,105
-00469e80,FUN_00469e80,named,EntityStateFlagsGet,0,105
-00469ea0,FUN_00469ea0,named,EntityCapabilityFlagsGet,0,105
+00469e60,FUN_00469e60,ported,EntityStatsWordGet,2,105
+00469e80,FUN_00469e80,ported,EntityStateFlagsGet,2,105
+00469ea0,FUN_00469ea0,ported,EntityCapabilityFlagsGet,2,105
 00469ec0,FUN_00469ec0,named,IndexedRecordWordAtOffset144Get,0,153
 00469ee0,FUN_00469ee0,named,IndexedRecordWordAtOffset148Get,0,153
 00469f00,FUN_00469f00,named,IndexedRecordWordAtOffset14CGet,0,153

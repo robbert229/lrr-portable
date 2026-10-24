@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 293 | 11.4% |
+| ported | 303 | 11.8% |
 | anchored | 5 | 0.2% |
-| named | 2220 | 86.6% |
+| named | 2210 | 86.2% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 0 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (293 functions)
+  (303 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (5 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (2220 functions)
+  citation yet (2210 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (0 functions)
 
-**Game logic remaining to port: 2225 (86.8%).**
+**Game logic remaining to port: 2215 (86.4%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -668,7 +668,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00431ab0` | AnyObjectCanOccupyTerrainCell |
 | `0x00431b20` | PlacementBlockedAdjacentCellScan |
 | `0x00431c70` | FirstFreeNeighborCellPick |
-| `0x00431da0` | TerrainCellRouteAndOccupancyCheck |
 | `0x00432100` | TerrainCellFlag100SetAndTrack |
 | `0x00432170` | TerrainCellFlag100Test |
 | `0x00432270` | TerrainCellVisitedFlagSetAndTrack |
@@ -709,7 +708,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00433000` | TerrainCellFlag80Test |
 | `0x00433030` | TerrainCellFlag8000Test |
 | `0x00433060` | TerrainCellSecondaryFlagBit0Test |
-| `0x00433090` | TerrainCoordinateAndOccupancyCheck |
 | `0x004330e0` | TerrainCellFlagsMask180000Test |
 | `0x00433120` | TerrainCellFlag10000000SetOrClear |
 | `0x00433180` | CellTypeSpeedMultiplierResolve |
@@ -859,7 +857,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0043b6c0` | ClippedRectangleCallbackDispatch |
 | `0x0043b820` | TypeTwoEntityEventDispatch |
 | `0x0043b850` | TypeTwoEntityPositionedCallbackDispatch |
-| `0x0043baf0` | EntityFlagsMask107C33DEOr1C00203AnyTest |
 | `0x0043bb20` | BuildingDepositStateMonitor |
 | `0x0043bbc0` | EntityDetachCarriedObjectAndResetState |
 | `0x0043bc40` | ObjectiveSidecarAppendGate |
@@ -892,10 +889,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004408c0` | SpatialEntityCallbackQueryAtOptionalCoordinate |
 | `0x00440a10` | AttachedEntityDirectionVectorUpdate |
 | `0x00440bf0` | ObjectListFieldAssignAll |
-| `0x00440c30` | GridRouteSearchAdapter |
-| `0x00440c70` | TerrainGridPathSearch |
-| `0x004410f0` | TerrainNeighborPathCheck |
-| `0x00441700` | EntityRouteSetupAndMarkerAssociate |
 | `0x00441940` | EntityActionSequenceReset |
 | `0x00441b30` | EntityStateReset |
 | `0x00441ea0` | EntityType5FinalizeIfAllowed |
@@ -1345,9 +1338,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00469e00` | IndexedRecordFloatAtOffsetDCGet |
 | `0x00469e20` | NestedFloatAtOffsetDCGet |
 | `0x00469e40` | NestedWordAtOffsetACGet |
-| `0x00469e60` | EntityStatsWordGet |
-| `0x00469e80` | EntityStateFlagsGet |
-| `0x00469ea0` | EntityCapabilityFlagsGet |
 | `0x00469ec0` | IndexedRecordWordAtOffset144Get |
 | `0x00469ee0` | IndexedRecordWordAtOffset148Get |
 | `0x00469f00` | IndexedRecordWordAtOffset14CGet |

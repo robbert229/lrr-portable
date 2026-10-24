@@ -227,6 +227,19 @@ typedef struct EntitySlot {
                                * writer 0x44c0e2, which is not ported)      */
     float    field_340;      /* +0x340 float; the wake mirror sets 100.0
                               * (its general corpus readers are TODO)       */
+    /* --- route-search stats words (finding 447) ------------------------- *
+     * Mirrors of the +0x334 stats-block words the route predicates read —
+     * EntityStatsWordGet @ 0x469e60 (stats +0x144), EntityStateFlagsGet @
+     * 0x469e80 (stats +0x148), EntityCapabilityFlagsGet @ 0x469ea0 (stats
+     * +0x14c) — and the +0x36c linked-target word
+     * (TerrainCellRouteAndOccupancyCheck). The stats block is populated
+     * from config at runtime (TODO(corpus) like the current stats table);
+     * zero mirrors behave exactly like the corpus's zero templates: a
+     * statless entity routes through no normal cells. */
+    uint32_t stats_word;       /* corpus *(ent+0x334)+0x144                */
+    uint32_t stats_state;      /* corpus *(ent+0x334)+0x148                */
+    uint32_t stats_capability; /* corpus *(ent+0x334)+0x14c                */
+    void*    route_link;       /* corpus entity +0x36c linked target        */
     /* --- path list (corpus +0x24 buffer / +0x28 count / +0x2c index) --- */
     AiWaypoint wp[AI_WAYPOINTS_MAX];
     int      wp_count;       /* +0x28: valid entries                      */
