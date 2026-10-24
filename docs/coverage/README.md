@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 828 | 32.3% |
+| ported | 832 | 32.4% |
 | anchored | 4 | 0.2% |
-| named | 1685 | 65.7% |
+| named | 1681 | 65.6% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (828 functions)
+  (832 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1685 functions)
+  citation yet (1681 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1690 (65.9%).**
+**Game logic remaining to port: 1686 (65.8%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -878,7 +878,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0046a0c0` | MappedIndexedRecordWordAtFCGet |
 | `0x0046a120` | GroupedCodeTableFindValueIndex |
 | `0x0046a330` | EntityRecordFlag400ToggleAndRefresh |
-| `0x0046a420` | SelectedGlobalPointTransformAndReturnX |
 | `0x0046a510` | SceneObjectStateDispatch |
 | `0x0046a760` | FirstSetFlagOrdinal |
 | `0x0046a7f0` | UiMessageStringsInit |
@@ -1280,6 +1279,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00482ac0` | ModelRenderRecordStateSetup |
 | `0x00482b50` | RenderStateFlagsApply |
 | `0x00482cb0` | RendererCommandModeAndPairSend |
+| `0x00482ce0` | RendererCommandNodePrepend |
 | `0x00482d60` | ModelRenderPassDispatch |
 | `0x004830c0` | AnimatedTextureFrameSurfaceSet |
 | `0x00483140` | IndexedRecordInterfaceRelease |

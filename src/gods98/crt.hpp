@@ -415,4 +415,18 @@ void  linked_list_global_aux_set(void* word); /* port hook */
  * blindly; the port guards the record pointer. */
 void linked_object_list_release(void* list);          /* FUN_00479240 */
 
+/* ModelRenderListClear (FUN_00482d30): walks the corpus's model-render
+ * list head (unowned global, zero-init storage with hooks) freeing each
+ * node through the engine heap, following the successor at node +0x44,
+ * then clears the head. CrtOwnedStreamBufferRelease (FUN_00494df0): frees
+ * a stream record's owned buffer when the flag word raises any of bits
+ * 0/1/7 together with bit 3, then clears bits 3 and 11 and zeroes the
+ * pointer words (deviation: the port lays the corpus dword field window
+ * out as host words — field n at record + n*sizeof(void*), flags last;
+ * NULL record guarded — corpus strides blindly). */
+void model_render_list_clear(void);                 /* FUN_00482d30 */
+void model_render_list_head_set(void* node);        /* port hook */
+void* model_render_list_head_peek(void);            /* port hook */
+void crt_owned_stream_buffer_release(char* record); /* FUN_00494df0 */
+
 #endif /* LEGORRR_GODS98_CRT_HPP */

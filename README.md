@@ -2363,6 +2363,20 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Chain-release + view-transform leaves** (findings 376/478/431/13/395/379/
+348/426): `simtick.*` ports `simtick_release_all_group_records` (0x4099d0 —
+the bobbin chain walk dropping each record through the corpus drop leaf,
+read-only through the hook boundary), `crt.*` ports `model_render_list_clear`
+(0x482d30 — the unowned list head with hooks, nodes freed through the engine
+heap along the +0x44 successor, head cleared) and
+`crt_owned_stream_buffer_release` (0x494df0 — the flag-gated owned-buffer
+free, bits 3 and 11 cleared and the pointer words zeroed in the host-word
+field window), and `view.*` ports
+`selected_global_point_transform_and_return_x` (0x46a420 — the mode-selected
+view window read through the ported camera pair, answering the frame's x).
+`simtick_test`, `crt_test`, and `view_test` pin the walks, the gates, and
+the guards.
+
 **Eligibility + release leaf band** (findings 332/460/251/435/471/393/377/
 323/416/428): `entity.*` ports `entity_flag100_and_shared_eligibility_check`
 (0x471ce0 — stats bit 0x100 rides the shared gate, strict only for type 4),

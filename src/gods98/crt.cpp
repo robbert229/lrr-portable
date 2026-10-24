@@ -1166,3 +1166,45 @@ void linked_object_list_release(void* list)
         node = next;
     }
 }
+
+/* ModelRenderListClear (FUN_00482d30) — see crt.hpp. */
+static void* s_model_render_list_head; /* DAT_005343c4 role: unowned */
+
+void model_render_list_clear(void)
+{
+    void* node = s_model_render_list_head;
+    while (node != NULL) {
+        void* next = NULL;
+        __builtin_memcpy(&next, (char*)node + 0x44, sizeof next);
+        engine_heap_free(node);
+        node = next;
+    }
+    s_model_render_list_head = NULL;
+}
+
+void model_render_list_head_set(void* node) { s_model_render_list_head = node; }
+void* model_render_list_head_peek(void) { return s_model_render_list_head; }
+
+/* CrtOwnedStreamBufferRelease (FUN_00494df0) — see crt.hpp. */
+void crt_owned_stream_buffer_release(char* record)
+{
+    if (record == NULL) {
+        return; /* deviation: the corpus strides the record blindly */
+    }
+    /* Deviation: the port lays the corpus's dword field window out as host
+     * words — field n at record + n*sizeof(void*), flags last. */
+    const long field = (long)sizeof(void*);
+    uint32_t flags = 0u;
+    __builtin_memcpy(&flags, record + 3 * field, sizeof flags);
+    if ((flags & 0x83u) != 0u && (flags & 0x8u) != 0u) {
+        void* buffer = NULL;
+        __builtin_memcpy(&buffer, record + 2 * field, sizeof buffer);
+        engine_heap_free(buffer);
+        flags &= 0xfffffbf7u; /* corpus mask: bits 3 and 11 */
+        __builtin_memcpy(record + 3 * field, &flags, sizeof flags);
+        void* zero = NULL;
+        __builtin_memcpy(record + 0 * field, &zero, sizeof zero);
+        __builtin_memcpy(record + 1 * field, &zero, sizeof zero);
+        __builtin_memcpy(record + 2 * field, &zero, sizeof zero);
+    }
+}

@@ -1559,7 +1559,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0046a330,FUN_0046a330,named,EntityRecordFlag400ToggleAndRefresh,0,344
 0046a370,FUN_0046a370,ported,LinkedRecordChainFree,2,152
 0046a390,FUN_0046a390,ported,GlobalLinkedRecordChainClear,2,111
-0046a420,FUN_0046a420,named,SelectedGlobalPointTransformAndReturnX,0,270
+0046a420,FUN_0046a420,ported,SelectedGlobalPointTransformAndReturnX,3,270
 0046a470,FUN_0046a470,ported,LinkedListPushAtGlobalHead,3,117
 0046a4c0,FUN_0046a4c0,ported,FlagMaskCallbacksAllPass,4,356
 0046a510,FUN_0046a510,named,SceneObjectStateDispatch,0,854
@@ -2084,7 +2084,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00482ac0,FUN_00482ac0,named,ModelRenderRecordStateSetup,0,516
 00482b50,FUN_00482b50,named,RenderStateFlagsApply,0,1431
 00482cb0,FUN_00482cb0,named,RendererCommandModeAndPairSend,0,158
-00482ce0,FUN_00482ce0,ported,RendererCommandNodePrepend,2,579
+00482ce0,FUN_00482ce0,named,RendererCommandNodePrepend,0,579
 00482d30,FUN_00482d30,ported,ModelRenderListClear,3,221
 00482d60,FUN_00482d60,named,ModelRenderPassDispatch,0,1773
 00482e70,FUN_00482e70,ported,TextureGetOrCreate,1,2370

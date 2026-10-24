@@ -847,3 +847,14 @@ const float* simtick_scene_transform_config_peek(void)
 {
     return s_xform_config;
 }
+
+/* ReleaseAllGroupRecords (FUN_004099d0) — see simtick.hpp. */
+void simtick_release_all_group_records(void)
+{
+    SimtickBobbin* node = s_bobbin_head;
+    while (node != NULL) {
+        SimtickBobbin* next = node->next;
+        bobbin_drop(node);
+        node = next;
+    }
+}
