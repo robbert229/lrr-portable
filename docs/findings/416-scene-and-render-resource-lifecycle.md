@@ -52,6 +52,10 @@ Render-resource tracking uses a global list plus a fixed slot table.
 `RenderResourceTrackAndRetain` links a wrapper and calls its wrapped object's
 reference method; `RenderResourceTrackedReferencesRelease` unwinds those
 references before `ResourceSlotTableReleaseAll` releases the remaining slots.
+The `DAT_0076ad60` head links 0x20-byte pooled render-resource records through
+their `+0x1c` fields: pool growth chains new records into it,
+`ScreenBoundedSurfaceResourceAllocate` removes the head and clears its link,
+and `RenderResourceTrackAndRetain` links a wrapper at the head.
 Several interface helpers forward through fixed vtable offsets; their names
 intentionally preserve the slot number because the semantic contract is not
 known. Cached render-resource instances use a separate 0x34-byte pool (finding
