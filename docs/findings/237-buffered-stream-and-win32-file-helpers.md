@@ -11,7 +11,14 @@ surface for directory enumeration, drive paths, attributes, and error codes.
 | 0x48f680 | FileSetReadOnlyAttribute | Reads file attributes, then sets or clears the Win32 read-only bit according to the mode byte; maps failures through the engine error mapper. |
 | 0x48fa20 | DriveCurrentDirectoryGet | Gets the process current directory for drive zero, or validates a requested drive and resolves its `X:.` path; copies into a caller buffer or allocates one. |
 | 0x48ffa0 | PathResolveFull | Wraps `GetFullPathNameA`, allocating a standard-size buffer when none is supplied and using the current-directory helper for an empty path. |
-| 0x496ee0 | Win32ErrorMapToErrno | Stores the raw Win32 error, maps known values through a table to the engine's CRT-style error state, and applies fallback mappings for other values. |
+| 0x496ee0 | Win32ErrorMapToErrno | Stores the raw Win32 error in `DAT_005490d4`, maps known values through a table to the CRT `errno` global `DAT_005490d0`, and applies fallback mappings for other values. |
+
+`DAT_005490d0` is the CRT `errno` storage: CRT math handlers write `0x21`
+(`EDOM`) and `0x22` (`ERANGE`), while file-descriptor failures write `9`
+(`EBADF`). `DAT_005490d4` holds the corresponding raw Win32 error code; the
+error mapper sets it from its argument, and callers also clear it on paths that
+reset the error state. These are process-global data addresses in the PE image;
+the decompile does not establish thread-local behavior.
 
 **Evidence.** Direct decompiles and caller records are in
 [legorr-engine-helper-audit-text-io-expansion-9.bundle](../evidence/legorr-engine-helper-audit-text-io-expansion-9.bundle).

@@ -56,12 +56,12 @@ This investigation maps the 83 functions assigned to `runtime-numeric-and-floati
 | `0x00492bc6` | `CrtDoubleRemainderReduction` | Performs exponent-aligned subtraction/reduction steps for finite operands in the extended-precision remainder path. | Called by `CrtFmodExtendedPrecision` for special exponent/significand cases. The full edge-case contract is not inferred beyond the visible branch conditions. |
 | `0x00492dcc` | `CrtFmodExtendedPrecision` | Computes an x87 remainder directly for ordinary operands and routes subnormal/special cases to the reduction helper. | Calls `CrtDoubleRemainderReduction`. |
 | `0x00493150` | `X87RoundToIntegral` | Returns the x87 `ROUND` result for a double input. | Shared by both public rounding wrappers. |
-| `0x00493170` | `CrtMathExceptionHandleSingleResult` | When `DAT_004b28e0` is zero, sends the result through `CrtMathExceptionDispatch`; otherwise stores error code `0x21`, invokes the control-word helper, and returns the input result. | Called by the rounding and absolute-value wrappers for special cases. The global's semantic name is unresolved. |
+| `0x00493170` | `CrtMathExceptionHandleSingleResult` | When `DAT_004b28e0` is zero, sends the result through `CrtMathExceptionDispatch`; otherwise stores `EDOM` (`0x21`) in CRT `errno` at `DAT_005490d0`, invokes the control-word helper, and returns the input result. | Called by the rounding and absolute-value wrappers for special cases. Finding 237 maps the shared error global and adjacent Win32 error storage. |
 | `0x004931c0` | `CrtMathExceptionHandleResultWithStatus` | Converts the status/result into an integer form, raises a structured floating-point exception when requested, then dispatches through the registered math handler or updates CRT error/FPU state. | Called by rounding/absolute-value wrappers and the formatted scanner. Uses `CrtDoubleToIntegerRound`, `CrtFloatingPointExceptionRaise`, and `CrtMathExceptionDispatch`. |
 | `0x00493280` | `CrtFloatingPointExceptionRaise` | Maps x87 exception bits to Windows floating-point exception codes, builds an exception record/context from the FPU state, calls `RaiseException`, then copies handler-adjusted control/status/result data back. | Called by `CrtMathExceptionHandleResultWithStatus` and numeric scan conversion. Finding 260 gives the prior focused evidence; exact Windows structure semantics follow the observed field writes. |
 | `0x004935c0` | `CrtDoubleToIntegerRound` | Converts the supplied double according to operation flags and x87 rounding control, handles underflow/overflow/special cases, updates output bits, and reports whether conversion completed without an unhandled condition. | Called by `CrtMathExceptionHandleResultWithStatus` and formatted numeric scanning; uses `DoubleFrexpDecompose` and FPU status helpers. |
 | `0x004938f0` | `CrtMathExceptionDispatch` | Looks up the registered handler by operation code, builds a callback argument record, clears FPU status as required, invokes the handler, and falls back to CRT error-code state when no handler handles it. | Called by the two math-result handlers; calls `CrtMathExceptionHandlerGet` and `CrtMathErrorCodeSet`. |
-| `0x004939a0` | `CrtMathErrorCodeSet` | Stores CRT math error code `0x21` for operation 1 and `0x22` for operation codes 2–3. | Used by math exception and numeric conversion paths. The global's external CRT name is not established here. |
+| `0x004939a0` | `CrtMathErrorCodeSet` | Stores `EDOM` (`0x21`) for operation 1 and `ERANGE` (`0x22`) for operation codes 2–3 in CRT `errno` at `DAT_005490d0`. | Used by math exception and numeric conversion paths; see Finding 237 for corroborating file-error assignments. |
 | `0x004939d0` | `CrtMathExceptionHandlerGet` | Searches a fixed table of operation codes and returns the associated registered callback, or null if absent. | Called by `CrtMathExceptionDispatch`. |
 | `0x00493a00` | `CrtMathExceptionCodeFromStatus` | Maps selected x87 status bits to CRT math exception codes, checking overflow/underflow/inexact/invalid-related masks in priority order. | Called by the status-bearing math-result handler. |
 
@@ -111,6 +111,18 @@ This investigation maps the 83 functions assigned to `runtime-numeric-and-floati
 - **Math operation → exception/error policy:** scalar wrappers and intrinsic/transcendental dispatchers collect x87 status and route exceptional values through result dispatch, integer conversion, Windows `RaiseException`, or a registered CRT math handler. When a handler is absent or declines, the path updates CRT math-error state and invokes observed FPU status/control helpers; their broader state-restoration contract is unresolved. The static pseudocode does not establish all external CRT structure meanings.
 - **Decimal parsing/formatting → extended precision:** scanner input builds a 96-bit decimal accumulator; the extended conversion helpers translate between decimal digits, extended80, and target binary formats. Formatter output converts an extended value to decimal digits, rounds/pads them, and emits fixed/scientific text with the active locale separator.
 - **Shared random state:** the address `0x004798a0` advances the same LCG state used by game code and documented in Finding 147. It is included in this assigned runtime area by the coverage ledger, but its visible role is pseudo-random generation rather than floating-point math.
+
+### CRT character-class table
+
+`DAT_005492b8` is the base of a 257-byte character-class table, with byte
+values indexed at `base + character + 1`. `CrtLocaleCodePageTableUpdate @
+0x004962f0` clears the table before populating it from a built-in code-page
+range table or `GetCPInfo`. On the API path, it marks each reported multibyte
+lead-byte range with bit `0x04`; the same bit is checked by path parsing and
+command-line scanning before consuming a second byte. `CrtCharacterClassFlagTest
+@ 0x00495db0` tests a requested flag in this table and, when absent, consults a
+separate 16-bit character table at `0x004afd72`. The other class-bit meanings
+and the complete built-in table layout remain unresolved.
 
 ## Open questions and focused follow-up
 
