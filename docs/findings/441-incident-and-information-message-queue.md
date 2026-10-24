@@ -46,6 +46,7 @@ During the in-game branch, `EngineTick` calls `IncidentMessageTextConsumer @ 0x0
 `CatalogCallbackByIdDispatch @ 0x0041b680` is a separate catalog traversal helper used by advisor/input callers (see Finding 246). IDs `0x13`, `0x14`, and `0x15` enumerate fixed entity sets with distinct flag gates; other IDs walk the configured ID list at `DAT_004ddc04` and dispatch each value, resolving `0x22`/`0x23` through `SelectionEntityCodeResolve`. `CatalogSlotFlagUpdate @ 0x0041c800` handles catalog categories `1` and `4`, consulting per-slot flag arrays, global flag `0x80`, and eligibility helpers before clearing or setting slot bit `1`; its category meaning is unresolved. These helpers share callback/catalog infrastructure but are not the same queue as `DAT_004dca18`.
 
 `TimedStatusAndEventTick @ 0x0041b930` decrements a timer, toggles `DAT_004ddd1c` and resets that timer to 15 seconds when it expires, calls `EventTimerCountdownAdvance @ 0x0041eac0`, and raises bit `0x800` in `DAT_004de1f8` once `_DAT_004de1ec` is no longer positive. It runs in `EngineTick`'s periodic in-game block. This is adjacent simulation status state; no direct call from it to the incident-message dispatcher is present in the checked-in body.
+Bit `0x800` also gates `AdvisorDialogStackLayout` and `CellGridPointHitTest`, which lay out and hit-test advisor dialog rows; `InteractionTimerResetAndFlagClear` clears it. The evidence supports treating it as the active advisor-dialog interaction state. The surrounding `DAT_004de1f8` word remains only partially mapped.
 
 ## Assigned-function map
 
