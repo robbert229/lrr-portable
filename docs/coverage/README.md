@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 623 | 24.3% |
+| ported | 628 | 24.5% |
 | anchored | 5 | 0.2% |
-| named | 1889 | 73.7% |
+| named | 1884 | 73.5% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (623 functions)
+  (628 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (5 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1889 functions)
+  citation yet (1884 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1895 (73.9%).**
+**Game logic remaining to port: 1890 (73.7%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -65,11 +65,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00401c40` | DisplayHeightGet |
 | `0x00401c50` | FormattedTextPrintfWidth |
 | `0x00401c80` | FormattedTextPrintf |
-| `0x00402000` | CmdMarkMatching |
-| `0x00402060` | CmdSetKind |
-| `0x00402090` | PriorityEntryOrderValueSet |
-| `0x004020a0` | PriorityEntryStateSet |
-| `0x004020b0` | PriorityEntryStateGet |
 | `0x004020c0` | HandleArrayReleaseAndReset |
 | `0x00402100` | CmdFlushAll |
 | `0x00402170` | LevelNoGatherObjectSetup |

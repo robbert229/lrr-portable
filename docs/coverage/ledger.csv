@@ -33,11 +33,11 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00401c80,FUN_00401c80,named,FormattedTextPrintf,0,178
 00401cb0,FUN_00401cb0,ported,CmdKindByName,1,368
 00401cf0,FUN_00401cf0,ported,CmdRegistryInit,1,3832
-00402000,FUN_00402000,named,CmdMarkMatching,0,474
-00402060,FUN_00402060,named,CmdSetKind,0,352
-00402090,FUN_00402090,named,PriorityEntryOrderValueSet,0,105
-004020a0,FUN_004020a0,named,PriorityEntryStateSet,0,105
-004020b0,FUN_004020b0,named,PriorityEntryStateGet,0,79
+00402000,FUN_00402000,ported,CmdMarkMatching,1,474
+00402060,FUN_00402060,ported,CmdSetKind,1,352
+00402090,FUN_00402090,ported,PriorityEntryOrderValueSet,1,105
+004020a0,FUN_004020a0,ported,PriorityEntryStateSet,1,105
+004020b0,FUN_004020b0,ported,PriorityEntryStateGet,1,79
 004020c0,FUN_004020c0,named,HandleArrayReleaseAndReset,0,252
 00402100,FUN_00402100,named,CmdFlushAll,0,534
 00402170,FUN_00402170,named,LevelNoGatherObjectSetup,0,423

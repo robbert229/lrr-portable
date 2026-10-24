@@ -232,6 +232,31 @@ int selected_entity_state_monitor(void);
 void entity_command15_validated_record_queue(EntitySlot* e);
 void entity_deferred_work_schedule(EntitySlot* e);
 
+/* --- registry accessors / match marker (2026-10-24) --------------------------
+ * CmdMarkMatching (FUN_00402000, finding 466): walks the task list, raising
+ * the record's +0x5c bit 0x10000 when its type matches and either the
+ * payload equals the second argument or the record's x/y dwords equal the
+ * supplied coordinate pair (the corpus compares int views; the port reads
+ * the float bits through memcpy — same equality).
+ * CmdSetKind (FUN_00402060, findings 10/466): records the kind at +0x4c and
+ * the behaviour at +0x1c — or 99 when the record's state carries the
+ * 0x30000 marker bits.
+ * PriorityEntryOrderValueSet (FUN_00402090): writes the order table (the
+ * port's s_behaviour, DAT_004b32e8) at the kind slot — guarded (deviation)
+ * since the corpus writes blind; this feeds cmd_kind_behaviour.
+ * PriorityEntryStateSet / PriorityEntryStateGet (FUN_004020a0 / FUN_004020b0,
+ * finding 466): the 27-entry per-priority state table (DAT_004b7ff4, zeroed
+ * by the registry initializer — a zero-init static here, the initializer
+ * seam); guarded access (deviation). */
+void cmd_mark_matching(int type, int payload, const int coords[2]);
+void cmd_set_kind(void* rec, int kind);
+void priority_entry_order_value_set(int kind, int value);
+void priority_entry_state_set(int kind, int value);
+int  priority_entry_state_get(int kind);
+
+/* Diagnostic: overwrite a record's +0x5c state word. */
+void cmd_rec_state_set(void* rec, uint32_t state);
+
 #ifdef __cplusplus
 }
 #endif
