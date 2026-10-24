@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 465 | 18.1% |
+| ported | 468 | 18.3% |
 | anchored | 5 | 0.2% |
-| named | 2048 | 79.9% |
+| named | 2045 | 79.8% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 0 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (465 functions)
+  (468 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (5 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (2048 functions)
+  citation yet (2045 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (0 functions)
 
-**Game logic remaining to port: 2053 (80.1%).**
+**Game logic remaining to port: 2050 (80.0%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -736,7 +736,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004383b0` | RoverWorkQueueUpdate |
 | `0x00438460` | EntityKindRecordUpdateDispatch |
 | `0x00438580` | EntityFlag80000000SetOrClear |
-| `0x004385b0` | EntitySharedEligibilityCheck |
 | `0x00438610` | EntityCreateWithPosition |
 | `0x00438670` | EntityAtGridPositionLookup |
 | `0x00438720` | EntityAvailableResourceSpend |
@@ -802,7 +801,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0043b6c0` | ClippedRectangleCallbackDispatch |
 | `0x0043b820` | TypeTwoEntityEventDispatch |
 | `0x0043b850` | TypeTwoEntityPositionedCallbackDispatch |
-| `0x0043baf0` | EntityFlagsMask107C33DEOr1C00203AnyTest |
 | `0x0043bb20` | BuildingDepositStateMonitor |
 | `0x0043bbc0` | EntityDetachCarriedObjectAndResetState |
 | `0x0043bc40` | ObjectiveSidecarAppendGate |
@@ -856,7 +854,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00442f80` | EntityPoseOrientationDispatch |
 | `0x00443510` | SceneObjectPosePositionSync |
 | `0x00443670` | TryRandomEntityActionFromCodeRange |
-| `0x004436f0` | EntityType3Flag04000000Test |
 | `0x00443710` | AdjacentPositionCandidateFind |
 | `0x004437f0` | EntityDispatchEvent31ForPendingFlag |
 | `0x00443840` | EntityRouteCellCandidateAccept |

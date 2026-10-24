@@ -497,3 +497,51 @@ int object_list_load_file(GameContext* ctx, const char* olist)
     ctx->entity_placed = placed;
     return placed;
 }
+
+/* EntityFlagsMask107C33DEOr1C00203AnyTest (FUN_0043baf0, finding 319):
+ * either flag word intersects its literal mask. */
+bool entity_flags_mask107c33de_or_1c00203_any_test(const EntitySlot* e)
+{
+    if ((e->flags_3e0 & 0x107c33deu) != 0u) {
+        return true;
+    }
+    return (e->flags_3e4 & 0x01c00203u) != 0u;
+}
+
+/* EntitySharedEligibilityCheck (FUN_004385b0, finding 471/472 context):
+ * the command and activity layers' shared gate. Corpus order: +0x3e0 bits
+ * 0x700100 clear, +0x3e4 bit 0x100000 clear, +0x340 float not negative,
+ * +0x3e0 bit 0x20000 clear; a nonzero `relaxed` skips the +0x3e8 clause,
+ * otherwise bit 0x20000000 must be set and bit 0x80000000 clear.
+ * (+1000 decimal is +0x3e8 — the flags_3e8 mirror.) */
+int entity_shared_eligibility_check(const EntitySlot* e, int relaxed)
+{
+    if ((e->flags_3e0 & 0x00700100u) != 0u) {
+        return 0;
+    }
+    if ((e->flags_3e4 & 0x00100000u) != 0u) {
+        return 0;
+    }
+    if (!(0.0f <= e->field_340)) {
+        return 0;
+    }
+    if ((e->flags_3e0 & 0x00020000u) != 0u) {
+        return 0;
+    }
+    if (relaxed != 0) {
+        return 1;
+    }
+    if ((e->flags_3e8 & 0x20000000u) != 0u
+        && (e->flags_3e8 & 0x80000000u) == 0u) {
+        return 1;
+    }
+    return 0;
+}
+
+/* EntityType3Flag04000000Test (FUN_004436f0, finding 318): kind 3 with
+ * +0x3e8 bit 0x04000000. The corpus reads the flag word as
+ * entity[0xfa] (dword-indexed +0x3e8). */
+int entity_type3_flag04000000_test(const EntitySlot* e)
+{
+    return (e->type == 3 && (e->flags_3e8 & 0x04000000u) != 0u) ? 1 : 0;
+}

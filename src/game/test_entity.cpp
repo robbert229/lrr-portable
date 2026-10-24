@@ -674,6 +674,71 @@ static int stats_record_test(void)
     return 0;
 }
 
+/* Eligibility predicates over the flag mirrors (FUN_004385b0 /
+ * FUN_0043baf0 / FUN_004436f0) — stack EntitySlot probes. */
+static void eligibility_test(void)
+{
+    EntitySlot e;
+    memset(&e, 0, sizeof(e));
+    e.type = 3;
+
+    /* Mask-any test: the +3e0 and +3e4 masks are disjoint from zero. */
+    CHECK(entity_flags_mask107c33de_or_1c00203_any_test(&e) == false,
+          "clean flags mask nothing");
+    e.flags_3e0 = 0x00000100u; /* inside 0x107c33de */
+    CHECK(entity_flags_mask107c33de_or_1c00203_any_test(&e) == true,
+          "the +3e0 mask bites");
+    e.flags_3e0 = 0u;
+    e.flags_3e4 = 0x01c00203u; /* the exact +3e4 mask */
+    CHECK(entity_flags_mask107c33de_or_1c00203_any_test(&e) == true,
+          "the +3e4 mask bites");
+    e.flags_3e4 = 0u;
+
+    /* Shared eligibility: the clean entity is eligible only through the
+     * relaxed form — the strict form needs the +3e8 pair. */
+    e.field_340 = 100.0f;
+    CHECK(entity_shared_eligibility_check(&e, 1) == 1,
+          "relaxed form passes a clean entity");
+    CHECK(entity_shared_eligibility_check(&e, 0) == 0,
+          "strict form needs the +3e8 bit pair");
+    e.flags_3e8 = 0x20000000u;
+    CHECK(entity_shared_eligibility_check(&e, 0) == 1,
+          "the +3e8 pair opens the strict form");
+    e.flags_3e8 |= 0x80000000u;
+    CHECK(entity_shared_eligibility_check(&e, 0) == 0,
+          "the high bit closes the strict form again");
+    e.flags_3e8 = 0u;
+
+    /* Each gate independently. */
+    e.flags_3e0 = 0x00000100u; /* bit in 0x700100 */
+    CHECK(entity_shared_eligibility_check(&e, 1) == 0,
+          "the +3e0 mask 0x700100 gates");
+    e.flags_3e0 = 0x00020000u;
+    CHECK(entity_shared_eligibility_check(&e, 1) == 0,
+          "+3e0 bit 0x20000 gates");
+    e.flags_3e0 = 0u;
+    e.flags_3e4 = 0x00100000u;
+    CHECK(entity_shared_eligibility_check(&e, 1) == 0,
+          "+3e4 bit 0x100000 gates");
+    e.flags_3e4 = 0u;
+    e.field_340 = -0.001f;
+    CHECK(entity_shared_eligibility_check(&e, 1) == 0,
+          "a negative +340 float gates");
+    e.field_340 = 0.0f;
+    CHECK(entity_shared_eligibility_check(&e, 1) == 1,
+          "zero is not negative");
+
+    /* Kind-3 test. */
+    CHECK(entity_type3_flag04000000_test(&e) == 0,
+          "kind 3 without the bit is false");
+    e.flags_3e8 = 0x04000000u;
+    CHECK(entity_type3_flag04000000_test(&e) == 1,
+          "kind 3 with the bit is true");
+    e.type = 6;
+    CHECK(entity_type3_flag04000000_test(&e) == 0,
+          "the wrong kind is false with the bit set");
+}
+
 int main(int argc, char** argv)
 {
     char rmcmd[64];
