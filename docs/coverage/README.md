@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 1129 | 44.0% |
-| anchored | 4 | 0.2% |
-| named | 1389 | 54.2% |
-| runtime-import | 41 | 1.6% |
-| anonymous | 1 | 0.0% |
+| ported | 296 | 11.5% |
+| anchored | 5 | 0.2% |
+| named | 2217 | 86.5% |
+| runtime-import | 46 | 1.8% |
+| anonymous | 0 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (1129 functions)
+  (296 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1389 functions)
+  citation yet (2217 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1394 (54.4%).**
+**Game logic remaining to port: 2222 (86.7%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -741,6 +741,17 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00463e40` | FloatRoundToNearestInt |
 | `0x00463f00` | SceneQuadGridEmit |
 | `0x004641c0` | BuildingPlacementFootprintRenderAndValidate |
+| `0x00464720` | SurfaceVisibilitySet |
+| `0x00464d00` | SoundSampleMarkerParse |
+| `0x00464e20` | SoundSampleVariantSelect |
+| `0x00464e80` | DeferredSoundPlayExpire |
+| `0x00464ec0` | DeferredSoundTimerSetIfIdle |
+| `0x00464f60` | SoundRequestQueueSubmit |
+| `0x00464fa0` | SoundAliasPlay |
+| `0x00465010` | ConfiguredVariantPropertySet |
+| `0x00465030` | ConfiguredVariantPropertyRead |
+| `0x00465090` | PositionalSoundSubmit |
+| `0x00465160` | SoundObjectDurationGet |
 | `0x00465190` | SoundHandleStopForward |
 | `0x004653a0` | TransientEffectTexturesPreload |
 | `0x00465430` | TransientEffectEmitterCreate |
