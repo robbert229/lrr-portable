@@ -144,6 +144,14 @@ establish whether these globals are read before the next initialization
 overwrites them, nor whether any external object reference survives pool
 teardown.
 
+## Focused follow-up slice
+
+Trace failed `GameConfigInit` cleanup and a subsequent initialization or draw
+attempt to determine whether stale callback pairs or references to freed scene
+objects can be used. Findings 32 and 34 establish the static callback/gate
+state; runtime or complete caller-lifetime evidence is needed to resolve the
+remaining reachability question.
+
 ## Confirmed / unknown ledger
 
 | Claim | State |
