@@ -26,7 +26,7 @@ This pass names 37 previously anonymous routines across callback/resource setup,
 | `0x0045d4f0` | `ConfigEntryEnabledToggleAtIndex` | Bounds-checks an index and toggles its entry state; disabling entries 0 or 1 triggers a notification. Entry meanings are unresolved. | Caller `FUN_0045b620`; no direct bundle record reported. |
 | `0x00462ed0` | `GraphicsOverlayResourcesRelease` | Releases overlay globals, clears them, and invokes a helper. | Shutdown caller `FUN_0042f0c0`. |
 | `0x004634b0` | `GraphicsOverlayVisibilitySet` | Stores visibility only when it changes, then updates renderer visibility. | Caller `FUN_0042b510`. |
-| `0x00465970` | `ObjectCallbackListDisposeAll` | Walks the global callback list at offset 0x298, invokes a destructor helper, and clears the head. | Shutdown caller context; no direct evidence record reported. |
+| `0x00465970` | `TransientEffectRegistryReleaseAll` | Walks the global callback list at offset 0x298, invokes a destructor helper, and clears the head. | Shutdown caller context; no direct evidence record reported. |
 | `0x004661c0` | `GridCellRecordBufferAllocate` | Allocates and zeroes a width-by-height buffer of 0x0c-byte records, then stores its descriptor. | Paired routine `FUN_00466230`; initialization callers. |
 | `0x0046c130` | `SceneObjectSetAnimationWithFallback` | Sets an animation on the object at parameter offset 4, retrying with the global default if the first result is zero. | Callers `FUN_004083a0`, `FUN_0046c510`. |
 | `0x0046d1a0` | `SceneObjectAttachedResourceRelease` | Releases the object at parameter offset 8. | Caller `FUN_00446610`. |
