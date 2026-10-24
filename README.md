@@ -20,22 +20,7 @@ and curiosity; nothing in this repository is affiliated with or endorsed by the 
 
 ```
 README.md           This file
-docs/findings/      Reverse-engineering findings, 01–436 (see index below)
-docs/findings/      Reverse-engineering findings, 01–435 (see index below)
-docs/findings/      Reverse-engineering findings, 01–434 (see index below)
-docs/findings/      Reverse-engineering findings, 01–433 (see index below)
-docs/findings/      Reverse-engineering findings, 01–432 (see index below)
-docs/findings/      Reverse-engineering findings, 01–431 (see index below)
-docs/findings/      Reverse-engineering findings, 01–430 (see index below)
-docs/findings/      Reverse-engineering findings, 01–429 (see index below)
-docs/findings/      Reverse-engineering findings, 01–428 (see index below)
-docs/findings/      Reverse-engineering findings, 01–427 (see index below)
-docs/findings/      Reverse-engineering findings, 01–426 (see index below)
-docs/findings/      Reverse-engineering findings, 01–425 (see index below)
-docs/findings/      Reverse-engineering findings, 01–424 (see index below)
-docs/findings/      Reverse-engineering findings, 01–423 (see index below)
-docs/findings/      Reverse-engineering findings, 01–417 (see index below)
-docs/findings/      Reverse-engineering findings, 01–416 (see index below)
+docs/findings/      Reverse-engineering findings, 01–436 and 440 (see index below)
 tools/              WAD tooling (rrwad.py: unpack/pack/verify — see tools/README.md)
                     + model converter (tools/rrlwo.py: .lwo → glTF 2.0)
                     + compat harness (tools/compat/a2.py — see tools/compat/README.md)
@@ -648,6 +633,7 @@ Open threads, in order of value:
 | 434 | [findings/434-scene-resources-lights-markers-and-transient-effects.md](docs/findings/434-scene-resources-lights-markers-and-transient-effects.md) | Scene Resources, Lights, Markers, and Transient Effects |
 | 435 | [findings/435-scene-objects-animation-and-render-records.md](docs/findings/435-scene-objects-animation-and-render-records.md) | Scene Objects, Animation, and Render Records |
 | 436 | [findings/436-simulation-ui-and-player-controls.md](docs/findings/436-simulation-ui-and-player-controls.md) | Simulation UI and Player Controls |
+| 440 | [findings/440-tutorial-and-advisor-control.md](docs/findings/440-tutorial-and-advisor-control.md) | Tutorial and Advisor Control |
 
 Canonical full pseudocode corpus: [`docs/decompiles/full/LEGORR.full.c`](docs/decompiles/full/LEGORR.full.c)
 (2564 manifest functions; see its [README](docs/decompiles/full/README.md)). The
