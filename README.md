@@ -661,10 +661,11 @@ Open threads, in order of value:
 | 461 | [findings/461-weapon-definitions-and-indexed-lookups.md](docs/findings/461-weapon-definitions-and-indexed-lookups.md) | Weapon Definitions and Indexed Lookups |
 | 464 | [findings/464-entity-lifecycle-and-pools.md](docs/findings/464-entity-lifecycle-and-pools.md) | Entity Lifecycle and Pools |
 | 463 | [findings/463-particles-and-grid-expansion.md](docs/findings/463-particles-and-grid-expansion.md) | Particles and Grid Expansion |
-| 466 | [findings/466-command-registry-global-queue-transitions.md](docs/findings/466-command-registry-global-queue-transitions.md) | Command Registry and Global Queue Transitions |
 | 465 | [findings/465-task-scheduler-record-lifecycle.md](docs/findings/465-task-scheduler-record-lifecycle.md) | Task Scheduler Record Lifecycle |
+| 466 | [findings/466-command-registry-global-queue-transitions.md](docs/findings/466-command-registry-global-queue-transitions.md) | Command Registry and Global Queue Transitions |
 | 467 | [findings/467-command-creation-and-issue-routing.md](docs/findings/467-command-creation-and-issue-routing.md) | Command Creation and Issue Routing |
 | 468 | [findings/468-command-queue-and-selection-state.md](docs/findings/468-command-queue-and-selection-state.md) | Command Queue and Selection State |
+| 469 | [findings/469-entity-task-and-command-setup.md](docs/findings/469-entity-task-and-command-setup.md) | Entity Task and Command Setup |
 | 470 | [findings/470-entity-placement-and-spawning.md](docs/findings/470-entity-placement-and-spawning.md) | Entity Placement and Spawning |
 
 Canonical full pseudocode corpus: [`docs/decompiles/full/LEGORR.full.c`](docs/decompiles/full/LEGORR.full.c)
