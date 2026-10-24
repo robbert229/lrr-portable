@@ -607,7 +607,7 @@ address,decompile_reference_count,function_count,functions,finding_mentions,imag
 0x004db8cc,4,2,StringKeyedCacheEntryFind@0x00410450; StringRegistryIntern@0x00410490,docs/findings/255-visual-channel-relays-resource-tree-callback-walks-scene-pose-and-registry-helpers.md; docs/findings/393-string-list-and-small-record-utilities.md,.data,zero-filled virtual tail,,,mentioned,,,
 0x004db8d0,10,1,StringQueueRecordOrFlush@0x00410320,,.data,zero-filled virtual tail,,,interpreted,Number of pending string records in the fixed-capacity string queue,high,"Finding 393; StringQueueRecordOrFlush appends while this count is below fifteen, uses it to index each parallel array, and resets it to zero after flushing"
 0x004db8d4,2,1,FrontendProgressValueChanged@0x00411840,,.data,zero-filled virtual tail,,,unreviewed,,,
-0x004db8dc,8,1,MenuTick@0x00412c00,,.data,zero-filled virtual tail,,,unreviewed,,,
+0x004db8dc,8,1,MenuTick@0x00412c00,,.data,zero-filled virtual tail,,,interpreted,Menu text-caret blink counter,high,"MenuTick increments this counter while drawing a text-entry item and alternates an underscore caret on odd blink intervals, restoring the underlying character after drawing"
 0x004db8e0,4,1,OverlayMenuGate@0x00415370,,.data,zero-filled virtual tail,,,unreviewed,,,
 0x004db8e4,2,1,OverlayMenuGate@0x00415370,,.data,zero-filled virtual tail,,,unreviewed,,,
 0x004db8e8,4,3,SelectionModeStateSet@0x00418190; HelpWindowResourcesInit@0x004181b0; OverlayTextBufferRefresh@0x00418a00,,.data,zero-filled virtual tail,,,unreviewed,,,
@@ -1458,7 +1458,7 @@ address,decompile_reference_count,function_count,functions,finding_mentions,imag
 0x00502a40,1,1,PositionalSoundSubmit@0x00465090,,.data,zero-filled virtual tail,,,unreviewed,,,
 0x00502a44,5,3,SoundAliasPlay@0x00464fa0; PositionalSoundSubmit@0x00465090; SoundBatchQueueDrain@0x004652d0,,.data,zero-filled virtual tail,,,unreviewed,,,
 0x00502b20,14,3,SoundAliasPlay@0x00464fa0; PositionalSoundSubmit@0x00465090; SoundBatchQueueDrain@0x004652d0,docs/findings/209-batched-spatial-sound-queue-drops-requests-after-ten.md; docs/findings/212-frame-sound-tick-does-not-drain-packed-batch-queue.md; docs/findings/213-disabling-sound-does-not-clear-packed-requests.md; docs/findings/26-ddscene-animation-hooks.md,.data,zero-filled virtual tail,,,mentioned,,,
-0x00502b24,8,4,DeferredSoundPlayExpire@0x00464e80; DeferredSoundTimerSetIfIdle@0x00464ec0; SoundSubmitWithGlobalCooldown@0x00464ef0; SoundSubsystemFrameTick@0x004651a0,,.data,zero-filled virtual tail,,,unreviewed,,,
+0x00502b24,8,4,DeferredSoundPlayExpire@0x00464e80; DeferredSoundTimerSetIfIdle@0x00464ec0; SoundSubmitWithGlobalCooldown@0x00464ef0; SoundSubsystemFrameTick@0x004651a0,,.data,zero-filled virtual tail,,,interpreted,Remaining global sound cooldown timer,high,"DeferredSoundTimerSetIfIdle initializes this float when no cooldown is active, SoundSubmitWithGlobalCooldown sets it to the sound duration times 25, SoundSubsystemFrameTick subtracts elapsed frame time, and DeferredSoundPlayExpire fires the deferred sound when it expires"
 0x00502b28,7,3,DeferredSoundPlayExpire@0x00464e80; DeferredSoundTimerSetIfIdle@0x00464ec0; SoundSubmitWithGlobalCooldown@0x00464ef0,,.data,zero-filled virtual tail,,,unreviewed,,,
 0x00502b2c,2,2,SoundSubmitWithGlobalCooldown@0x00464ef0; SoundSubsystemEnableSet@0x00465260,,.data,zero-filled virtual tail,,,unreviewed,,,
 0x00502b30,2,2,SoundRequestQueueSubmit@0x00464f60; SoundSubsystemFrameTick@0x004651a0,docs/findings/26-ddscene-animation-hooks.md,.data,zero-filled virtual tail,,,mentioned,,,
@@ -1733,7 +1733,7 @@ address,decompile_reference_count,function_count,functions,finding_mentions,imag
 0x005491a8,3,1,CrtCommandLineArgumentsInit@0x00495ee0,,.data,zero-filled virtual tail,,,unreviewed,,,
 0x005492b0,5,1,CrtEnvironmentBlockGet@0x00496190,docs/findings/397-crt-strings-locale-and-formatting.md,.data,zero-filled virtual tail,,,mentioned,,,
 0x005492b8,16,7,AssetPathComponentsParse@0x00490090; CrtCharacterClassFlagTest@0x00495db0; CrtCommandLineArgumentScan@0x00495f80; CrtLocaleCodePageTableUpdate@0x004962f0; CrtCtypeTablesReset@0x00496590; DbcsAwareBoundedStringCopy@0x004976d0; CrtMultibyteCharacterSearch@0x0049b5b0,docs/findings/399-crt-numeric-and-floating-point-runtime.md,.data,zero-filled virtual tail,,,interpreted,Base of the CRT character-class flag table with a one-byte index bias,high,"Finding 399; CrtLocaleCodePageTableUpdate clears and fills 256 byte entries, CrtCharacterClassFlagTest reads base + unsigned character + 1, and path/command-line parsers test lead-byte flag 0x04"
-0x005493bc,8,5,CrtLocaleCodePageTableUpdate@0x004962f0; CrtCtypeTablesReset@0x00496590; DbcsAwareBoundedStringCopy@0x004976d0; CrtCountedStringCompare@0x0049af20; CrtMultibyteCharacterSearch@0x0049b5b0,,.data,zero-filled virtual tail,,,unreviewed,,,
+0x005493bc,8,5,CrtLocaleCodePageTableUpdate@0x004962f0; CrtCtypeTablesReset@0x00496590; DbcsAwareBoundedStringCopy@0x004976d0; CrtCountedStringCompare@0x0049af20; CrtMultibyteCharacterSearch@0x0049b5b0,,.data,zero-filled virtual tail,,,interpreted,Active multibyte locale code page,high,"CrtLocaleCodePageTableUpdate stores the selected code page here; the multibyte copy, comparison, search, and conversion helpers use it to select code-page-aware behavior"
 0x005493c0,5,3,CrtLocaleCodePageTableUpdate@0x004962f0; CrtCtypeTablesReset@0x00496590; CrtCountedStringCompare@0x0049af20,,.data,zero-filled virtual tail,,,unreviewed,,,
 0x005493c8,3,2,CrtLocaleCodePageTableUpdate@0x004962f0; CrtCtypeTablesReset@0x00496590,,.data,zero-filled virtual tail,,,unreviewed,,,
 0x005493cc,3,2,CrtLocaleCodePageTableUpdate@0x004962f0; CrtCtypeTablesReset@0x00496590,,.data,zero-filled virtual tail,,,unreviewed,,,
@@ -2267,7 +2267,7 @@ address,decompile_reference_count,function_count,functions,finding_mentions,imag
 0x00557064,3,1,MenuOverlayFlicPlaybackController@0x004121b0,,.data,zero-filled virtual tail,,,unreviewed,,,
 0x00557068,3,1,MenuOverlayFlicPlaybackController@0x004121b0,,.data,zero-filled virtual tail,,,unreviewed,,,
 0x0055706c,21,3,MenuOverlayFlicPlaybackController@0x004121b0; MenuTick@0x00412c00; MenuRunLoop@0x00413b80,docs/findings/23-front-end-and-menu.md; docs/findings/24-menu-wipe-and-front-end-transition.md,.data,zero-filled virtual tail,,,mentioned,,,
-0x00557070,8,3,MenuOverlayFlicPlaybackController@0x004121b0; MenuTick@0x00412c00; MenuRunLoop@0x00413b80,,.data,zero-filled virtual tail,,,unreviewed,,,
+0x00557070,8,3,MenuOverlayFlicPlaybackController@0x004121b0; MenuTick@0x00412c00; MenuRunLoop@0x00413b80,,.data,zero-filled virtual tail,,,partial,Start timestamp for the currently playing menu FLIC animation,medium,"MenuOverlayFlicPlaybackController stores timeGetTime here when it starts an animation, maintains a separate latest-frame timestamp at 0x00557074, and clears both timestamps when playback ends"
 0x00557074,7,3,MenuOverlayFlicPlaybackController@0x004121b0; MenuTick@0x00412c00; MenuRunLoop@0x00413b80,,.data,zero-filled virtual tail,,,unreviewed,,,
 0x00557078,3,2,MenuTick@0x00412c00; LoadMenuBuild@0x004161f0,,.data,zero-filled virtual tail,,,unreviewed,,,
 0x0055707c,3,2,MenuTick@0x00412c00; LoadMenuBuild@0x004161f0,,.data,zero-filled virtual tail,,,unreviewed,,,
@@ -2399,7 +2399,7 @@ address,decompile_reference_count,function_count,functions,finding_mentions,imag
 0x00558090,7,3,DecodeWadPayloadType1@0x0049c8e0; DecodeWadPayloadType2@0x0049ca60; WadBitstreamOutputInitialize@0x0049cc70,docs/findings/404-game-file-archive-and-pools.md,.data,zero-filled virtual tail,,,interpreted,End pointer for the decompressed WAD payload output,high,Finding 404; initializer derives this pointer from the source header and destination; both decoders stop output when the cursor reaches it
 0x005580a0,3,1,DirectDrawDeviceInitialize@0x0049d030,,.data,zero-filled virtual tail,,,unreviewed,,,
 0x005580a4,5,2,DirectDrawDeviceInitialize@0x0049d030; DisplayResolutionComboPopulate@0x0049d780,,.data,zero-filled virtual tail,,,unreviewed,,,
-0x005580a8,8,3,DirectDrawDeviceInitialize@0x0049d030; DisplayModeListPopulate@0x0049d630; DisplayModeNameIndexFind@0x0049d950,,.data,zero-filled virtual tail,,,unreviewed,,,
+0x005580a8,8,3,DirectDrawDeviceInitialize@0x0049d030; DisplayModeListPopulate@0x0049d630; DisplayModeNameIndexFind@0x0049d950,,.data,zero-filled virtual tail,,,interpreted,Number of DirectDraw display-mode records enumerated,high,"DirectDrawDeviceInitialize and the display-options dialog receive this count from the mode enumeration helper, then traverse that many fixed-size display-mode records"
 0x005580ac,3,1,DirectDrawDeviceInitialize@0x0049d030,,.data,zero-filled virtual tail,,,unreviewed,,,
 0x0055963c,4,2,DirectDrawDeviceInitialize@0x0049d030; DisplayResolutionComboPopulate@0x0049d780,,.data,zero-filled virtual tail,,,unreviewed,,,
 0x0055964c,1,1,DisplayResolutionComboPopulate@0x0049d780,,.data,zero-filled virtual tail,,,unreviewed,,,
