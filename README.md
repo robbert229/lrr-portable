@@ -584,6 +584,7 @@ Open threads, in order of value:
 | 385 | [findings/385-stream-surface-avi-and-route-state-helpers.md](docs/findings/385-stream-surface-avi-and-route-state-helpers.md) | Stream, Surface, AVI, and Route State Helpers |
 | 386 | [findings/386-spatial-ui-com-and-crt-runtime.md](docs/findings/386-spatial-ui-com-and-crt-runtime.md) | Spatial, UI, COM, and CRT Runtime |
 | 387 | [findings/387-record-and-resource-pool-lifecycles.md](docs/findings/387-record-and-resource-pool-lifecycles.md) | Record and Resource Pool Lifecycles |
+| 406 | [findings/406-audio-playback-mixing-and-spatial-sound.md](docs/findings/406-audio-playback-mixing-and-spatial-sound.md) | Audio Playback, Mixing, and Spatial Sound |
 
 Canonical full pseudocode corpus: [`docs/decompiles/full/LEGORR.full.c`](docs/decompiles/full/LEGORR.full.c)
 (2564 manifest functions; see its [README](docs/decompiles/full/README.md)). The
