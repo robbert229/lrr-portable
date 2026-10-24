@@ -16,13 +16,26 @@ Each per-ID config record has a `0x14`-byte stride beginning at `DAT_004dc6f8`. 
 
 If the configured display template exists and the precheck admits the event, the dispatcher finds or creates an active per-ID record, subject to the 40-record limit at `DAT_004dcd38`. A record has five dwords: linked-list head, node count, message ID, a float used as a display offset, and a float used by the update path. `IncidentMessageNodeCreate @ 0x00419a80` allocates a 20-byte node, copies two dwords from the first payload pointer or initializes them to `-1`, stores the second payload, compiles the optional third payload as a text override, and leaves the link field for the append helper. The consumers show the first two fields are used as event-specific coordinates/data, but not all producers use them the same way. The text consumer prefers the node's compiled override when present and otherwise uses the configured template.
 
-`IncidentMessageQueueAppend @ 0x004196f0` appends the node to the selected record's linked list and increments its count. When traversal reaches its ninth-node condition it removes the head before appending, keeping the observed list bounded at about nine nodes. `IncidentMessageQueueRemoveAt @ 0x004197b0` bounds-checks an index, unlinks that node, updates the head when removing index zero, decrements the count, and returns the detached pointer; the helper does not free it. `MessageSubscriberDispatch @ 0x004196a0` is the shared list walker: it invokes a caller-supplied callback for each node and stops on the first nonzero result. `InfoMessageQueueFindId @ 0x00419b20` returns an active record index for a matching ID or `-1`; `FUN_00419b00` checks whether the ID's compiled template pointer is nonzero.
+`IncidentMessageQueueAppend @ 0x004196f0` appends the node to the selected record's linked list and increments its count. When traversal reaches its ninth-node condition it calls `IncidentMessageQueueRemoveAt(id, 0)` and discards the returned pointer before appending, keeping the observed list bounded at about nine nodes. `IncidentMessageQueueRemoveAt @ 0x004197b0` bounds-checks an index, unlinks that node, updates the head when removing index zero, decrements the count, and returns the detached pointer; the helper does not free it. The cap-eviction path has no visible node free, and ownership or later reuse is unresolved; this is not enough evidence to claim a leak. `MessageSubscriberDispatch @ 0x004196a0` is the shared list walker: it invokes a caller-supplied callback for each node and stops on the first nonzero result. `InfoMessageQueueFindId @ 0x00419b20` returns an active record index for a matching ID or `-1`; `FUN_00419b00` checks whether the ID's compiled template pointer is nonzero.
 
 `IncidentMessageFlagSet @ 0x00419ae0` sets or clears the global `DAT_004dcd48` bit `0x4` tested by the dispatcher. `IncidentMessagePanelRefreshIfActive @ 0x00419da0` examines the first active record and calls a panel update helper when its node list and leading record fields meet the observed conditions. These operations establish the global gate and a first-record refresh path; they do not establish that every dispatched event is displayed or played.
 
 ## Frame update and information-panel text
 
 The `EngineTick @ 0x004232e0` snapshot calls `InfoMessageTimerDecay @ 0x0041a2c0` before the in-game render/update branch. That helper walks all 40 per-ID timer fields at `DAT_004dc704` in `0x14`-byte steps and subtracts the frame delta from positive values. `KindSixRandomMessageDispatchSweep @ 0x0040f0e0` runs when its global gate is active: after its countdown expires it samples up to 100 random grid coordinates, accepts one through `FUN_0040f190`, dispatches message ID `6` with that coordinate pointer, and rearms the countdown to a value in the observed `750`–`799` range. Finding 256 captures this producer.
+
+Other direct producers show how the dispatch payloads are used. In `MessageDispatch(id, p2, p3, p4)`, `IncidentMessageNodeCreate(p4, p3, p2)` copies the first two dwords from `p4` when non-null, stores `p3` as a compiled text override when non-null, and stores `p2` as the node payload.
+
+| Caller | Submitted IDs and payload shape visible at the call site |
+| --- | --- |
+| `LavaErosionPendingCellTick @ 0x0040eab0` | ID `0x1e` with a pointer to the affected grid-coordinate pair in `p4`. |
+| `TerrainCellMutation @ 0x00430530` | IDs `0x24`/`0x25` with a local two-dword cell record in `p4`; the ID depends on the observed cell-type branch. |
+| `CreatureSpawnFromEmergence @ 0x0043af30` | IDs `2`, `3`, or `4` after type-name checks, then `0x27`; each call passes the created entity in `p3`. |
+| `ObjectiveSidecarAppendGate @ 0x0043bc40` | Shared ID `0x26`, then one of IDs `10`–`12` according to entity type; calls pass the same coordinate pointer in `p4` (Finding 47). |
+| `EntityLinkedActivityEventDispatch @ 0x0043f5b0` | IDs `0x14`–`0x19` selected by event bits in `p2`; the entity pointer is passed in `p3`. |
+| `EntityTypeBehaviorUpdate @ 0x00447ea0` | ID `0x0d` with the entity pointer in `p3`. |
+
+These examples establish producer-to-node data flow, not the configured text or sound outcome for a particular runtime state.
 
 During the in-game branch, `EngineTick` calls `IncidentMessageTextConsumer @ 0x0041a080` and then `InfoMessageQueueTick @ 0x00419f30`. The text consumer checks global queue/display state; when the active display-update bit is set, it resets the text widget, chooses the head node's override string or the configured template for the leading message ID, appends the formatted text, updates the scroll position, and clears that update bit. If the queue is inactive it requests the corresponding panel transition. Finding 57 traces this consumer into the widget's ring buffer and records the limitations of the caller inventory.
 
@@ -71,7 +84,7 @@ During the in-game branch, `EngineTick` calls `IncidentMessageTextConsumer @ 0x0
 
 - Recover the callback predicate at `LAB_004199a0` and establish exactly which message payloads it treats as duplicates, including the special-ID exceptions.
 - Validate the `$...$` template syntax and the trailing `%b` data against shipped `InfoMessages` entries; resolve why `IncidentMessageTextCatalogGet` reads the sound-handle field.
-- Trace the resource and display effects driven by the queue's float fields and `FUN_0047dcb0`, including the ownership/freeing of nodes returned by `IncidentMessageQueueRemoveAt`.
+- Trace the resource and display effects driven by the queue's float fields and `FUN_0047dcb0`, including the ownership or reuse of nodes detached by ordinary removal and the cap-eviction path.
 - Identify the meanings of `DAT_004dcd48` bits beyond the direct setter/test relationships documented here, and determine when the leading queue record is reordered or removed.
 - Confirm which `CatalogCallbackByIdDispatch` categories and `CatalogSlotFlagUpdate` arrays belong to this investigation's message path; current callers point to adjacent advisor/input catalog logic instead.
 
