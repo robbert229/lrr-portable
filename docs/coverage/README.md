@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 346 | 13.5% |
+| ported | 363 | 14.2% |
 | anchored | 5 | 0.2% |
-| named | 2167 | 84.5% |
+| named | 2150 | 83.9% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 0 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (346 functions)
+  (363 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (2167 functions)
+  citation yet (2150 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 2172 (84.7%).**
+**Game logic remaining to port: 2155 (84.0%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -386,19 +386,23 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00431530` | ActivityBuildRecordsReleaseAll |
 | `0x00431780` | TerrainStampImpactHandler |
 | `0x00431b20` | PlacementBlockedAdjacentCellScan |
+| `0x00431c70` | FirstFreeNeighborCellPick |
+| `0x00431da0` | TerrainCellRouteAndOccupancyCheck |
+| `0x00432100` | TerrainCellFlag100SetAndTrack |
+| `0x00432270` | TerrainCellVisitedFlagSetAndTrack |
+| `0x00432300` | TerrainCellVisitedFlagsClearAll |
+| `0x00432360` | TerrainCellPrimaryFlagsMaskClearAndRefresh |
+| `0x004323f0` | TerrainCellFlagsSetAndRefresh |
+| `0x00432450` | TerrainCellFlagsSetMask100400 |
+| `0x00432490` | TerrainCellFlagsSetMask20108000 |
+| `0x00432550` | AlwaysAcceptPlaceCommandCell |
+| `0x00432560` | TerrainCellFlag40000000ClearOrSet |
 | `0x00432600` | TerrainCellVariantFlagPropagate |
-| `0x00432710` | TerrainCellFlag80000ClearOrSet |
 | `0x00432950` | EntityMoveDestinationCellIsUsable |
-| `0x004329d0` | TerrainCellFlag8CheckIfInBounds |
 | `0x00432a20` | TerrainCellAllowsPlacement |
-| `0x00432aa0` | TerrainCellOccupancyOrFlagCheck |
-| `0x00432b00` | TerrainCellFlag800TestInBounds |
-| `0x00432b50` | TerrainWalkableNeighborSearch |
-| `0x00432b90` | TerrainCellTypeIs8Or10Or11 |
 | `0x00432c90` | TerrainCellStateUpdate |
-| `0x00432d90` | TerrainCellFlag20TestInBounds |
-| `0x00432dd0` | TerrainCellFlag08000000Test |
 | `0x00433180` | CellTypeSpeedMultiplierResolve |
+| `0x00433330` | TerrainCellTypeGetAtCoords |
 | `0x00433380` | TerrainCellMutationProgress |
 | `0x004334f0` | RenderQualityConfigApply |
 | `0x00433770` | SceneLightsBuildFromConfig |

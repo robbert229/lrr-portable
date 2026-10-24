@@ -436,6 +436,70 @@ int level_cell_mask_180000(const LevelState* s, int cx, int cy);
  * Bounds-guarded (the corpus writes OOB for bad coords). */
 void level_cell_flag_10000000_set(LevelState* s, int cx, int cy, int set);
 
+/* --- second terrain-cell leaf cluster ----------------------------------- *
+ * Same record layout and same documented bounds deviation as the block
+ * above: corpus variants with no bounds check read/write via
+ * level_voxel and report zero / no-op off-map; the "bounded" variants
+ * reproduce the corpus's unsigned dim-1 gate. */
+
+/* FUN_00432170: secondary flag word (record+12) bit 0x100. */
+uint32_t level_cell_secondary_flag_100(const LevelState* s, int cx, int cy);
+
+/* FUN_004322d0: the pathfinder "visited" mark — secondary bit 1. */
+uint32_t level_cell_visited_flag(const LevelState* s, int cx, int cy);
+
+/* FUN_004323c0 / FUN_004325d0: clear / raise secondary bit 0 (the
+ * pair the "SetAndTrack" corpus variants wrap; the tracking queue is
+ * a separate unported seam). Bounds-guarded (corpus writes OOB). */
+void level_cell_secondary_bit0_clear(LevelState* s, int cx, int cy);
+void level_cell_secondary_bit0_set(LevelState* s, int cx, int cy);
+
+/* FUN_004324d0 / FUN_00432520: secondary bit 3 (the flag-8 pair). */
+void level_cell_secondary_bit8_set(LevelState* s, int cx, int cy, int set);
+uint32_t level_cell_secondary_flag_8(const LevelState* s, int cx, int cy);
+
+/* FUN_00432aa0: mode 0 reads the flag word's 0x400 mask; mode nonzero
+ * answers whether EITHER the 0x400 flag or the secondary byte's bit 4
+ * marks the cell. */
+uint32_t level_cell_occupied_or_flag(const LevelState* s, int cx, int cy,
+                                     int mode);
+
+/* FUN_00432b00 / FUN_00432b50 / FUN_00432d90: bounded single-bit reads
+ * (flags 0x800, 0x8, 0x20) — 0 outside the dim-1 gate. */
+uint32_t level_cell_flag_800_bounded(const LevelState* s, int cx, int cy);
+uint32_t level_cell_flag_8_bounded(const LevelState* s, int cx, int cy);
+uint32_t level_cell_flag_20_bounded(const LevelState* s, int cx, int cy);
+
+/* FUN_00432b90: the state byte (record+2, signed char) is 8, 10 or 11. */
+int level_cell_type_is_8_or_10_or_11(const LevelState* s, int cx, int cy);
+
+/* FUN_00432dd0: the entity-reservation bit (flag 0x8000000) — the read
+ * side of the level_tile_mark flag. Returns the masked word. */
+uint32_t level_cell_flag_reserved(const LevelState* s, int cx, int cy);
+
+/* FUN_00432710: raise (set nonzero) or clear flag bit 0x80000. The
+ * corpus twin that raises 0x40000000 additionally refreshes the cell
+ * queues; this one is a pure leaf. Bounds-guarded. */
+void level_cell_flag_80000_set(LevelState* s, int cx, int cy, int set);
+
+/* FUN_004332c0: record byte +3 as an unsigned value. */
+int level_cell_record_byte3(const LevelState* s, int cx, int cy);
+
+/* FUN_004332f0: raise the in-gate work bit (flag 0x4) — the bit the
+ * update-queue flush tests; OOB cells stay untouched. */
+void level_cell_work_flag_set(LevelState* s, int cx, int cy);
+
+/* FUN_004502c0: unsigned membership of a coordinate pair against the
+ * grid dimensions (the corpus reads the pair from a struct pointer;
+ * LevelState's width/height fields stand in — negative coords wrap as
+ * the corpus's unsigned comparisons do). */
+int level_coord_pair_within_bounds(const LevelState* s, int cx, int cy);
+
+/* FUN_004329d0: a valid coordinate whose cell carries the blocked bit
+ * (flag 8). The read is skipped off-grid, exactly as the corpus's
+ * short-circuit leaves it. */
+int level_cell_flag8_check(const LevelState* s, int cx, int cy);
+
 #ifdef __cplusplus
 }
 #endif
