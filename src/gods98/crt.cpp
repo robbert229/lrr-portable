@@ -156,3 +156,47 @@ int bounded_wide_string_length_including_null(const uint16_t* text,
     }
     return bound;
 }
+
+/* DoubleExponentBitsGetOrSpecialValue (FUN_00492068, findings 386/399):
+ * exponent field for ordinary values; the untouched high word when the
+ * exponent is all ones (Inf/NaN) so the caller sees the full pattern.
+ * The corpus takes the double's high word as its only live argument
+ * (the first parameter is the unused low word). */
+uint32_t double_exponent_bits_or_special(uint32_t high_word)
+{
+    if ((high_word & 0x7ff00000u) != 0x7ff00000u) {
+        return high_word & 0x7ff00000u;
+    }
+    return high_word;
+}
+
+/* FormatArgumentReadDword (FUN_00491430, finding 395): read the dword
+ * at the cursor, then advance it by four. */
+uint32_t format_argument_read_dword(uint8_t** cursor)
+{
+    uint32_t v;
+    memcpy(&v, *cursor, sizeof(v));
+    *cursor = *cursor + 4;
+    return v;
+}
+
+/* FormatArgumentReadWord (FUN_00491470, finding 395): read the word,
+ * advance by two, return zero-extended (the corpus's CONCAT of the
+ * advanced pointer's high half — zero for 32-bit cursors). */
+uint32_t format_argument_read_word(uint8_t** cursor)
+{
+    uint16_t v;
+    memcpy(&v, *cursor, sizeof(v));
+    *cursor = *cursor + 2;
+    return v;
+}
+
+/* FormatArgumentReadDouble (FUN_00491450, finding 395): read eight
+ * bytes, advance by eight. */
+double format_argument_read_double(uint8_t** cursor)
+{
+    double v;
+    memcpy(&v, *cursor, sizeof(v));
+    *cursor = *cursor + 8;
+    return v;
+}

@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 468 | 18.3% |
+| ported | 472 | 18.4% |
 | anchored | 5 | 0.2% |
-| named | 2045 | 79.8% |
+| named | 2041 | 79.6% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 0 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (468 functions)
+  (472 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (5 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (2045 functions)
+  citation yet (2041 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (0 functions)
 
-**Game logic remaining to port: 2050 (80.0%).**
+**Game logic remaining to port: 2046 (79.8%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -1917,9 +1917,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00491360` | CrtBufferedCharacterWrite |
 | `0x004913b0` | CrtWriteRepeatedChar |
 | `0x004913f0` | CrtWriteStringBounded |
-| `0x00491430` | FormatArgumentReadDword |
-| `0x00491450` | FormatArgumentReadDouble |
-| `0x00491470` | FormatArgumentReadWord |
 | `0x004914a0` | StrChr |
 | `0x00491560` | CrtHeapInitialize |
 | `0x004915a0` | EnginePoolArenaCreate |
@@ -1934,7 +1931,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00491f80` | CrtOneArgumentMathErrorHandlingStart |
 | `0x00491ff5` | CrtNoOpStub |
 | `0x0049200c` | CrtFpuPrecisionModeCodeGet |
-| `0x00492068` | DoubleExponentBitsGetOrSpecialValue |
 | `0x0049221e` | CrtFloatingPointExceptionResultDispatch |
 | `0x00492225` | CrtFloatingPointExceptionResultDispatchVariant |
 | `0x00492bc6` | CrtDoubleRemainderReduction |

@@ -86,6 +86,22 @@ int wide_string_length(const uint16_t* text);
 int bounded_wide_string_length_including_null(const uint16_t* text,
                                               int bound);
 
+/* FUN_00492068: double high-word exponent selector — the exponent field
+ * for ordinary values, the untouched high word when the exponent is all
+ * ones (Inf/NaN) (findings 386/399; CrtAsin's pre-dispatch probe). */
+uint32_t double_exponent_bits_or_special(uint32_t high_word);
+
+/* Format-argument cursor reads (FUN_00491430 / FUN_00491470 /
+ * FUN_00491450; findings 231/395 — EngineFormatStringToStream's
+ * width/precision/value walk): each reads the value at the cursor and
+ * advances it. The word read returns the zero-extended 16-bit value
+ * (the corpus's CONCAT upper half is the pointer's own high word — zero
+ * in 32-bit space). Reads go through memcpy — the cursor may sit at an
+ * unaligned continuation of a previous wider read. */
+uint32_t format_argument_read_dword(uint8_t** cursor);
+uint32_t format_argument_read_word(uint8_t** cursor);
+double format_argument_read_double(uint8_t** cursor);
+
 #ifdef __cplusplus
 }
 #endif

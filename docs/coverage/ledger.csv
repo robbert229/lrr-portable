@@ -2352,9 +2352,9 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00491360,FUN_00491360,named,CrtBufferedCharacterWrite,0,417
 004913b0,FUN_004913b0,named,CrtWriteRepeatedChar,0,248
 004913f0,FUN_004913f0,named,CrtWriteStringBounded,0,312
-00491430,FUN_00491430,named,FormatArgumentReadDword,0,155
-00491450,FUN_00491450,named,FormatArgumentReadDouble,0,155
-00491470,FUN_00491470,named,FormatArgumentReadWord,0,236
+00491430,FUN_00491430,ported,FormatArgumentReadDword,2,155
+00491450,FUN_00491450,ported,FormatArgumentReadDouble,2,155
+00491470,FUN_00491470,ported,FormatArgumentReadWord,2,236
 004914a0,FUN_004914a0,named,StrChr,0,1587
 00491560,FUN_00491560,named,CrtHeapInitialize,0,256
 004915a0,FUN_004915a0,named,EnginePoolArenaCreate,0,2112
@@ -2372,7 +2372,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00491f97,__startOneArgErrorHandling,runtime-import,__startOneArgErrorHandling,0,221
 00491ff5,FUN_00491ff5,named,CrtNoOpStub,0,41
 0049200c,FUN_0049200c,named,CrtFpuPrecisionModeCodeGet,0,118
-00492068,FUN_00492068,named,DoubleExponentBitsGetOrSpecialValue,0,159
+00492068,FUN_00492068,ported,DoubleExponentBitsGetOrSpecialValue,2,159
 0049208b,__math_exit,runtime-import,__math_exit,0,339
 00492170,__cintrindisp2,runtime-import,__cintrindisp2,0,233
 004921ae,__cintrindisp1,runtime-import,__cintrindisp1,0,233

@@ -171,6 +171,32 @@ static void test_crt_leaves(void)
           "leading NUL answers one");
     CHECK(bounded_wide_string_length_including_null(s_long, 4) == 4,
           "terminator exactly at the bound answers the bound");
+
+    /* Double exponent selector over the high word (finding 399). */
+    CHECK(double_exponent_bits_or_special(0x40080000u) == 0x40000000u,
+          "ordinary value answers its exponent field");
+    CHECK(double_exponent_bits_or_special(0x3ff00000u) == 0x3ff00000u,
+          "one's exponent is untouched");
+    CHECK(double_exponent_bits_or_special(0x7ff00000u) == 0x7ff00000u,
+          "infinity answers the full high word");
+    CHECK(double_exponent_bits_or_special(0x7ff80000u) == 0x7ff80000u,
+          "NaN answers the full high word");
+
+    /* Format-argument cursor: reads consume and advance. */
+    uint8_t buf[16];
+    const uint32_t d1 = 0x11223344u;
+    const uint16_t w1 = 0x5566u;
+    const double f1 = 3.5;
+    memcpy(buf, &d1, 4);
+    memcpy(buf + 4, &w1, 2);
+    memcpy(buf + 6, &f1, 8);
+    uint8_t* cur = buf;
+    CHECK(format_argument_read_dword(&cur) == d1 && cur == buf + 4,
+          "dword read advances four");
+    CHECK(format_argument_read_word(&cur) == w1 && cur == buf + 6,
+          "word read advances two and zero-extends");
+    CHECK(format_argument_read_double(&cur) == f1 && cur == buf + 14,
+          "double read advances eight");
 }
 
 int main(void)
