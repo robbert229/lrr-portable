@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 326 | 12.7% |
+| ported | 330 | 12.9% |
 | anchored | 5 | 0.2% |
-| named | 2187 | 85.3% |
+| named | 2183 | 85.1% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 0 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (326 functions)
+  (330 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (2187 functions)
+  citation yet (2183 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 2192 (85.5%).**
+**Game logic remaining to port: 2188 (85.3%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -256,6 +256,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00415220` | FrontEndStartLevel |
 | `0x00415370` | OverlayMenuGate |
 | `0x00415d00` | SaveMenuLayoutLoad |
+| `0x00416910` | OptionsWriteToSlot |
 | `0x004169c0` | FrontEndStateChange |
 | `0x00416c80` | MenuEnter |
 | `0x00417090` | LevelNodeGet |
@@ -755,7 +756,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00463f00` | SceneQuadGridEmit |
 | `0x004641c0` | BuildingPlacementFootprintRenderAndValidate |
 | `0x00464720` | SurfaceVisibilitySet |
-| `0x00465160` | SoundObjectDurationGet |
 | `0x00465190` | SoundHandleStopForward |
 | `0x00465380` | SceneEffectRegistryReset |
 | `0x004653a0` | TransientEffectTexturesPreload |

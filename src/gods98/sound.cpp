@@ -1098,3 +1098,102 @@ int sound_active_request_get(int index, int* alias, int* loop)
     }
     return 1;
 }
+
+/* ------------------------------------------------------------------ *
+ *  Streamed-voice duration + configured stream triggers (issues
+ *  #297 / #299; findings 406 / 217).
+ *
+ *  A stream's duration is its stored file size divided by the format's
+ *  average bytes per second. The corpus keeps that in a side record
+ *  table and picks between a cached copy and a dereferenced format
+ *  word by the record's stream flag — both resolve to the same value
+ *  in the port, whose bank records carry the loaded WAV. The
+ *  division has no zero guard as shipped: unloaded or zero-rate
+ *  records yield infinity/NaN, and a NaN cooldown would then never
+ *  expire (finding 217), kept as-is.
+ * ------------------------------------------------------------------ */
+
+double sound_streamed_wave_buffer_step_rate(int slot)
+{
+    /* StreamedWaveBufferStepRate @ 0x47b8e0. slot -1 is the variant
+     * select's "no sound" result: zero, before any table read. */
+    if (slot == -1) {
+        return 0.0;
+    }
+    if (slot < 0 || slot >= SOUND_BANK_SLOTS) {
+        return 0.0; /* deviation: the corpus reads past its record table */
+    }
+    const BankSlot* rec = &s_bank[slot];
+    const Sound* snd = rec->sound;
+    uint32_t bytes = (snd != NULL) ? snd->file_len : 0u;
+    double rate = (snd != NULL) ? (double)snd->format.byte_rate : 0.0;
+    return (double)bytes / rate;
+}
+
+double sound_object_duration_get(int alias)
+{
+    /* SoundObjectDurationGet @ 0x465160: duration of whatever the alias's
+     * chain selects — one PRNG draw per call (a global-cooldown submit
+     * therefore draws twice: play's select and this one, as corpus). */
+    int slot = sound_variant_select(alias);
+    return sound_streamed_wave_buffer_step_rate(slot);
+}
+
+int sound_submit_with_global_cooldown(int alias, int* out_handle)
+{
+    /* SoundSubmitWithGlobalCooldown @ 0x464ef0. */
+    if (s_cooldown_timer <= 0.0f) {
+        const int batched = (s_sound_flags & SOUND_FLAG_BATCH) != 0;
+        const int enabled = (s_sound_flags & SOUND_FLAG_ENABLED) != 0;
+        sound_alias_play(alias, 0);       /* the submit's play (0x464fa0) */
+
+        /* Corpus DAT_00502b28 = the play's instance-layer handle.
+         * Deviation: the instance layer is TODO(corpus), so the port
+         * records the routed bank slot — and -1 when nothing routed:
+         * alias 0, a disabled subsystem, a chain head that reads 0 (the
+         * "no sound" quirk), or a batch-mode deferral (no instance
+         * handle until the replay). */
+        int handle = -1;
+        if (!batched && alias != 0 && enabled && alias > 0
+            && alias < SOUND_ALIAS_MAX && s_variant_slot[alias] != 0) {
+            handle = s_variant_slot[alias];
+        }
+
+        if (handle != -1) {
+            s_cooldown_alias = (double)alias;   /* _DAT_00502b2c */
+            s_cooldown_timer =
+                (float)(sound_object_duration_get(alias) * 25.0);
+            s_cooldown_handle = handle;         /* DAT_00502b28 */
+            if (out_handle != NULL) {
+                *out_handle = handle;
+            }
+            return 1;
+        }
+    }
+    return 0;
+}
+
+int sound_stream_play_level(int level)
+{
+    /* StreamPlayLevel @ 0x416150: the Stream_LevelName_Level_%d alias,
+     * submitted through the global cooldown when it resolves. */
+    char name[128];
+    snprintf(name, sizeof(name), "Stream_LevelName_Level_%d", level);
+    int alias = 0;
+    if (sound_alias_lookup(name, &alias) != 0) {
+        return sound_submit_with_global_cooldown(alias, NULL);
+    }
+    return 0;
+}
+
+int sound_stream_play_tutorial(int level)
+{
+    /* StreamPlayTutorial @ 0x4161a0. */
+    char name[128];
+    snprintf(name, sizeof(name), "Stream_LevelName_TLevel_%d", level);
+    int alias = 0;
+    if (sound_alias_lookup(name, &alias) != 0) {
+        return sound_submit_with_global_cooldown(alias, NULL);
+    }
+    return 0;
+}

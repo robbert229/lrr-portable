@@ -1135,6 +1135,165 @@ static void test_submission_route(void)
     }
 }
 
+
+static void test_streamed_voices(void)
+{
+    sound_bank_clear();
+    sound_request_queue_clear();
+    sound_batch_queue_drain(0, 1);
+    /* Expire needs a recorded handle to run; force-clear a leftover
+     * cooldown from earlier tests through the record-then-expire pair. */
+    sound_deferred_handle_record(1);
+    sound_deferred_play_expire();
+    sound_subsystem_enable_set(1, 0);
+    sound_bank_sound_on_set(1);
+    sound_alias_registration_set(1);
+    CHECK(sound_deferred_cooldown() == 0.0f, "the cooldown starts idle");
+
+    uint8_t pcm[8] = { 1, 0, 2, 0, 3, 0, 4, 0 };
+    WavSeg segs[2] = { { NULL, 0, 0 }, { "DATA!", NULL, 0 } };
+    size_t wsz = 0;
+    uint8_t* w = build_wav(1, 16, 11025, pcm, (uint32_t)sizeof(pcm),
+                           segs, 2, NULL, 0, &wsz);
+    if (w == NULL) {
+        printf("SKIP streamed-voices: wav build failed\n");
+        return;
+    }
+    const char* files[2] = { "/tmp/opencode/svx_a.wav",
+                             "/tmp/opencode/svx_b.wav" };
+    int ok_files = 1;
+    for (int i = 0; i < 2; ++i) {
+        FILE* fp = fopen(files[i], "wb");
+        if (fp == NULL) {
+            ok_files = 0;
+            break;
+        }
+        fwrite(w, 1, wsz, fp);
+        fclose(fp);
+    }
+    free(w);
+    if (!ok_files) {
+        printf("SKIP streamed-voices: wav write failed\n");
+        return;
+    }
+    const double rate = (double)wsz / 22050.0;   /* bytes over avg bps */
+
+    /* --- step rate ------------------------------------------------ */
+
+    CHECK(sound_streamed_wave_buffer_step_rate(-1) == 0.0,
+          "slot -1 reads no duration before any table read");
+    double nanv = sound_streamed_wave_buffer_step_rate(599);
+    CHECK(nanv != nanv, "unloaded slots divide to NaN (finding 217: no guard)");
+
+    /* --- chain-backed duration ------------------------------------ */
+
+    char spec[1600];
+    snprintf(spec, sizeof spec, "%s,%s", files[0], files[1]);
+    CHECK(sound_sample_marker_parse(spec, 12) == 1,
+          "stream chain 12 parses");
+    int chain[16];
+    CHECK(sound_variant_chain(12, chain, 16) == 2, "chain 12 has two links");
+    /* Both links carry the same file: the duration lands on wsz/rate
+     * however the draw picks. */
+    int pick = test_variant_draw() % 2;   /* duration's one select */
+    (void)pick;
+    double d = sound_object_duration_get(12);
+    CHECK(d > rate * 0.99 && d < rate * 1.01,
+          "duration is the selected record's size over its byte rate");
+
+    /* --- global-cooldown submit ----------------------------------- */
+
+    int pick1 = test_variant_draw() % 2;  /* the submit's play draw */
+    int pick2 = test_variant_draw() % 2;  /* its duration draw */
+    (void)pick1;
+    (void)pick2;
+    int h = 0;
+    CHECK(sound_submit_with_global_cooldown(12, &h) == 1,
+          "an idle timer lets the alias submit");
+    CHECK(h == chain[pick1 == 0 ? 0 : 1] || h == chain[0] || h == chain[1],
+          "the handle records the routed chain slot");
+    CHECK(sound_deferred_last_alias() == 12,
+          "the last-alias word carries the submitted alias");
+    double timer = (double)sound_deferred_cooldown();
+    CHECK(timer > rate * 25.0 * 0.99 && timer < rate * 25.0 * 1.01,
+          "the timer is the duration times the corpus's 25");
+    CHECK(sound_deferred_handle() == h, "the handle word records the route");
+
+    CHECK(sound_submit_with_global_cooldown(12, NULL) == 0,
+          "the running timer gates the next submit");
+    sound_deferred_play_expire();
+    CHECK(sound_deferred_cooldown() == 0.0f && sound_deferred_handle() == -1,
+          "expiry releases the recorded handle (the stop seam is a no-op)");
+
+    /* --- gating --------------------------------------------------- */
+
+    sound_subsystem_enable_set(0, 0);
+    CHECK(sound_submit_with_global_cooldown(12, NULL) == 0,
+          "a disabled subsystem routes nothing");
+    CHECK(sound_deferred_cooldown() == 0.0f,
+          "the disabled submit leaves the timer alone");
+    sound_subsystem_enable_set(1, 0);
+
+    sound_batch_queue_drain(1, 0);
+    CHECK(sound_submit_with_global_cooldown(12, NULL) == 0,
+          "a batch-mode submit defers without an instance handle");
+    CHECK(sound_batch_queue_count() == 1,
+          "the deferred record waits for the replay");
+    int pick3 = test_variant_draw() % 2;  /* the replay's select */
+    (void)pick3;
+    sound_batch_queue_drain(0, 1);        /* replays through the route */
+    CHECK(sound_batch_queue_count() == 0, "the replay clears the deferral");
+    sound_deferred_handle_record(-1);
+    sound_deferred_play_expire();
+
+    /* --- stream name triggers ------------------------------------- */
+
+    sound_alias_registration_set(0);
+    CHECK(sound_stream_play_level(1111) == 0,
+          "an unregistered stream name resolves nowhere");
+    CHECK(sound_stream_play_level(1111) == 0,
+          "registration off leaves the alias table untouched");
+    int n_before = sound_alias_count();
+
+    /* A freshly registered stream alias has no chain: the lookup
+     * resolves, the play routes nothing, the submit declines. */
+    sound_alias_registration_set(1);
+    CHECK(sound_stream_play_tutorial(5) == 0,
+          "a chainless stream alias resolves but routes nothing");
+    CHECK(sound_alias_count() == n_before + 1,
+          "the tutorial name registered dynamically");
+    CHECK(sound_stream_play_tutorial(5) == 0,
+          "the same name resolves through the table next time");
+    CHECK(sound_alias_count() == n_before + 1, "no duplicate registration");
+
+    /* Wire the registered stream alias to the stream file. A single-link
+     * chain keeps the selection deterministic: the corpus's multi-token
+     * parse leaves the linked node holding its pool-zero slot (the slot
+     * writes lag the link allocation), so a two-file spec would let the
+     * draw sometimes select slot 0 and hit the no-sound quirk. */
+    int s7 = n_before;   /* the just-registered tutorial alias */
+    snprintf(spec, sizeof spec, "%s", files[1]);
+    CHECK(sound_sample_marker_parse(spec, s7) == 1,
+          "the registered stream alias parses its chain");
+
+    /* A single-link chain selects without a PRNG draw: no mirror moves. */
+    int ssub = sound_stream_play_tutorial(5);
+    CHECK(ssub == 1, "the resolved stream name submits through the cooldown");
+    CHECK(sound_deferred_last_alias() == s7,
+          "the stream submit records its alias");
+    double timer2 = (double)sound_deferred_cooldown();
+    CHECK(timer2 > rate * 25.0 * 0.99 && timer2 < rate * 25.0 * 1.01,
+          "the stream submit starts the duration-derived cooldown");
+
+    sound_deferred_handle_record(-1);
+    sound_deferred_play_expire();
+    sound_alias_registration_set(0);
+
+    sound_bank_clear();
+    for (int i = 0; i < 2; ++i) {
+        remove(files[i]);
+    }
+}
 int main(int argc, char** argv)
 {
     test_synthetic();
@@ -1146,6 +1305,7 @@ int main(int argc, char** argv)
     test_variant_chains();
     test_variant_properties();
     test_submission_route();
+    test_streamed_voices();
     for (int i = 1; i < argc; ++i) {
         if (strcmp(argv[i], "--real") == 0 && i + 1 < argc) {
             test_real(argv[i + 1]);

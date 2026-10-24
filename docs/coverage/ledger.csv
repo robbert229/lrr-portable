@@ -1457,14 +1457,14 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00464e20,FUN_00464e20,ported,SoundSampleVariantSelect,3,763
 00464e80,FUN_00464e80,ported,DeferredSoundPlayExpire,3,266
 00464ec0,FUN_00464ec0,ported,DeferredSoundTimerSetIfIdle,3,264
-00464ef0,FUN_00464ef0,ported,SoundSubmitWithGlobalCooldown,6,519
+00464ef0,FUN_00464ef0,ported,SoundSubmitWithGlobalCooldown,8,519
 00464f60,FUN_00464f60,ported,SoundRequestQueueSubmit,3,232
-00464fa0,FUN_00464fa0,ported,SoundAliasPlay,3,570
+00464fa0,FUN_00464fa0,ported,SoundAliasPlay,4,570
 00465010,FUN_00465010,ported,ConfiguredVariantPropertySet,3,161
 00465030,FUN_00465030,ported,ConfiguredVariantPropertyRead,3,134
 00465050,FUN_00465050,ported,SoundSubmissionRouteWrapper,1,309
 00465090,FUN_00465090,ported,PositionalSoundSubmit,3,1169
-00465160,FUN_00465160,named,SoundObjectDurationGet,0,221
+00465160,FUN_00465160,ported,SoundObjectDurationGet,2,221
 00465190,FUN_00465190,named,SoundHandleStopForward,0,80
 004651a0,FUN_004651a0,ported,SoundSubsystemFrameTick,3,1011
 00465250,thunk_FUN_0047b390,runtime-import,thunk_FUN_0047b390,0,630

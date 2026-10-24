@@ -1036,6 +1036,31 @@ frame counts, restore-before-first-frame ordering (rect branch only),
 rect plumbing, quit leaving the branch mid-stream, failed-present
 resumption, and the pixel-exact rect blit with clipping.
 
+**Streamed-voice duration + stream triggers** (2026-10-24; port issues
+#299 / #340): `sound_streamed_wave_buffer_step_rate`
+(`StreamedWaveBufferStepRate @ 0x47b8e0`) divides a bank record's
+stored WAV size by its format's average bytes per second — no zero
+guard as shipped (finding 217: unloaded records divide to NaN, and a
+NaN cooldown would never expire), slot −1 (the variant select's
+no-sound result) reads 0. `sound_object_duration_get`
+(`SoundObjectDurationGet @ 0x465160`) asks the variant chain what the
+alias selects, so each duration consumes one PRNG draw.
+`sound_submit_with_global_cooldown` (`SoundSubmitWithGlobalCooldown @
+0x464ef0`) plays the alias through the submission route while the
+cooldown timer is down, then records the last-alias word, the handle
+word (the routed bank slot — deviation: the corpus's handle is
+instance-layer, TODO(corpus)), and a timer of duration × 25. The
+stream triggers `sound_stream_play_level` /
+`sound_stream_play_tutorial` (`StreamPlayLevel @ 0x416150` /
+`StreamPlayTutorial @ 0x4161a0`) format the `Stream_LevelName_Level_%d`
+/ `Stream_LevelName_TLevel_%d` stream name, resolve it through the
+alias registry, and submit through the same gate. `sound_test` covers
+the slot −1 / unloaded-NaN / loaded-record step-rate cases, the
+chain-backed duration draw, idle-timer submission with the recorded
+words and derived timer, running-timer gating, the disabled-subsystem
+and batch-mode declines with their deferral quirks, expiry, and the
+stream-name triggers across the registration on/off paths.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

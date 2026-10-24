@@ -430,4 +430,41 @@ void sound_subsystem_frame_tick(float dt);
 int sound_active_request_count(void);
 int sound_active_request_get(int index, int* alias, int* loop);
 
+
+/* ------------------------------------------------------------------ *
+ *  Streamed-voice duration + stream triggers (issues #297 / #299;
+ *  findings 406 / 217).
+ * ------------------------------------------------------------------ */
+
+/* StreamedWaveBufferStepRate @ 0x47b8e0: the bank record slot's file
+ * size over the format's average bytes per second. No zero guard as
+ * shipped (finding 217): unloaded slots read as 0/0 -> NaN, zero-rate
+ * formats -> infinity. Slot -1 (the select's no-sound result) reads 0.
+ * Deviation: the corpus keeps stream records in a side table with a
+ * cached-vs-dereferenced rate word selected by the stream flag; the
+ * port reads its bank record (the same value for both branches). */
+double sound_streamed_wave_buffer_step_rate(int slot);
+
+/* SoundObjectDurationGet @ 0x465160: duration of whatever `alias`'s
+ * chain selects — consumes one variant draw per call. Alias 0
+ * (nothing selects) reads 0. */
+double sound_object_duration_get(int alias);
+
+/* SoundSubmitWithGlobalCooldown @ 0x464ef0: with the cooldown timer
+ * down to <= 0, plays `alias` through the submission route and records
+ * the last-alias word, the handle word, and a timer of
+ * duration * 25 (corpus units). Returns 1 (and writes *out_handle when
+ * given) on submission, 0 when the timer is still running or nothing
+ * routed. Deviation: the corpus handle is an instance-layer handle;
+ * the port records the routed bank slot (see the .cpp note). */
+int sound_submit_with_global_cooldown(int alias, int* out_handle);
+
+/* StreamPlayLevel @ 0x416150 / StreamPlayTutorial @ 0x4161a0: format
+ * the `Stream_LevelName_Level_%d` / `Stream_LevelName_TLevel_%d`
+ * stream name, resolve it through the alias lookup, and submit it
+ * through the global cooldown when it resolves. Returns the submit
+ * result (0 when the name resolves nowhere). */
+int sound_stream_play_level(int level);
+int sound_stream_play_tutorial(int level);
+
 #endif /* LEGORRR_SOUND_HPP */
