@@ -452,6 +452,19 @@ int main(void)
         advisor_state_word_set(0u);
     }
 
+    /* ByteRangeSwap (2026-10-24). */
+    {
+        char x[4] = { 1, 2, 3, 4 };
+        char y[4] = { 9, 8, 7, 6 };
+        byte_range_swap(x, y, 4);
+        CHECK(x[0] == 9 && x[1] == 8 && x[2] == 7 && x[3] == 6
+                  && y[0] == 1 && y[1] == 2 && y[2] == 3 && y[3] == 4,
+              "the ranges exchange bytes");
+        byte_range_swap(x, x, 4); /* same-pointer shortcut */
+        CHECK(x[0] == 9, "the shortcut keeps the first range");
+        byte_range_swap(NULL, y, 2); /* guarded */
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "crt_test: %d failure(s)\n", s_failures);
         return 1;

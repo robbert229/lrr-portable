@@ -290,4 +290,23 @@ void copy_two_dword_pair_to_outputs(const void* record, uint32_t* out_a,
  * fixed-offset style, entry-guarded (documented deviation). */
 void scene_object_owner_set(void* scene_object, uint32_t owner);
 
+/* --- the record primitive band (2026-10-24; findings 393/386) ---------------
+ * IndexedRecordField64Set (FUN_00482350): dword store through the
+ *   record's +8 base pointer at base + 100 + index * 0x70.
+ * ObjectVector3Set (FUN_0040ff70): three float stores at base + 0x3c…44
+ *   where the object block's slot 0 holds the base pointer.
+ * FloatPairAtOffset4SetFromInts (FUN_004851b0) / …OffsetCSetFromUInts
+ *   (FUN_004851d0): integer-to-float pair stores at +4/+8 (signed) and
+ *   +0xc/+0x10 (unsigned) — the corpus's casts faithful.
+ * ObjectStatePairGet (FUN_00485a00): read the +0x820/+0x824 state pair.
+ * Entry NULL guards stand in for the corpus's blind dereferences
+ * (documented deviations). */
+void indexed_record_field64_set(void* record, int index, uint32_t value);
+void object_vector3_set(void* object_block, float x, float y, float z);
+void float_pair_at_offset4_set_from_ints(void* record, int x, int y);
+void float_pair_at_offsetc_set_from_uints(void* record, uint32_t x,
+                                          uint32_t y);
+void object_state_pair_get(const void* record, uint32_t* out_a,
+                           uint32_t* out_b);
+
 #endif /* LEGORRR_GODS98_RECORD_HPP */

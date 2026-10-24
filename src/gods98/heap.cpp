@@ -61,3 +61,8 @@ void ui_render_record_free(void* record)
 {
     engine_heap_free(record);
 }
+
+void engine_heap_allocate(long size)
+{
+    (void)engine_heap_alloc(size);
+}

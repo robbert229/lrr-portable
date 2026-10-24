@@ -283,4 +283,8 @@ void crt_no_op_stub(void);              /* FUN_00491ff5 */
 void crt_no_op_stub_variant(void);      /* FUN_00497870 */
 void advisor_clear_active_state(void);  /* FUN_00401b20 */
 
+/* ByteRangeSwap (FUN_0048e030): byte-for-byte swap of two ranges; the
+ * corpus's same-pointer shortcut keeps (documented NULL guard). */
+void byte_range_swap(void* a, void* b, size_t n);
+
 #endif /* LEGORRR_GODS98_CRT_HPP */

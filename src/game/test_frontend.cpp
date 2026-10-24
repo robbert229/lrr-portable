@@ -1200,6 +1200,21 @@ int main(int argc, char** argv)
         sim_status_banner_word_set(0u);
     }
 
+    /* The bit-0x40 set-clear rule (2026-10-24). */
+    {
+        selection_state_flags_set(0u);
+        ui_mode_resource_bit40_set_clear(0, 1u); /* value nonzero -> clear */
+        CHECK(selection_state_flags_peek() == 0u, "a nonzero value clears 40");
+        ui_mode_resource_bit40_set_clear(0, 0u); /* value zero -> set */
+        CHECK(selection_state_flags_peek() == 0x40u, "a zero value sets 40");
+        ui_mode_resource_bit40_set_clear(1, 9u); /* probe flips the word */
+        CHECK(selection_state_flags_peek() == 0u, "the probe flips it off");
+        ui_mode_resource_bit40_set_clear(1, 0u); /* flip again */
+        CHECK(selection_state_flags_peek() == 0x40u, "the probe flips it on");
+        ui_mode_resource_bit40_set_clear(0, 0u);
+        selection_state_flags_set(0u); /* restore boot state */
+    }
+
     if (s_failures == 0) {
         printf("frontend: all tests passed\n");
         return 0;

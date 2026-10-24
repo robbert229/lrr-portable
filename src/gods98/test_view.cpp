@@ -446,6 +446,41 @@ int main(void)
         CHECK(1, "the wrappers keep their corpus shapes");
     }
 
+    /* The view math band (2026-10-24). */
+    {
+        float f = 3.5f;
+        float_negate_absolute_value(&f);
+        CHECK(f == -3.5f, "the negate flips a positive");
+        f = -2.0f;
+        float_negate_absolute_value(&f);
+        CHECK(f == 2.0f, "the negate flips a negative");
+        float_negate_absolute_value(NULL); /* guarded */
+
+        float v2[2] = { 3.0f, 0.0f };
+        vector2_set_length(v2, 2.0f);
+        CHECK(v2[0] == 2.0f && v2[1] == 0.0f, "the length lands on x");
+        float v3[2] = { 0.0f, 4.0f };
+        vector2_set_length(v3, 1.0f);
+        CHECK(v3[0] == 0.0f && v3[1] == 1.0f, "the unit y stays put");
+        vector2_set_length(v3, 0.0f); /* guarded divide */
+        CHECK(v3[1] == 1.0f, "a zero length keeps the vector");
+
+        char cam[0xc0];
+        memset(cam, 0, sizeof(cam));
+        camera_distance_bounds_set(cam, 0.0f, 100.0f);
+        camera_distance_set(cam, 10.0f);
+        float d = 0.0f;
+        camera_zoom_step_adjust(cam, 1, 1.0f);
+        __builtin_memcpy(&d, cam + 0x90, 4);
+        CHECK(d == 13.0f, "the +3x step zooms out");
+        camera_zoom_step_adjust(cam, 0, 1.0f);
+        __builtin_memcpy(&d, cam + 0x90, 4);
+        CHECK(d == 10.0f, "the -3x step zooms back");
+        camera_zoom_step_adjust(cam, 7, 1.0f); /* inert direction */
+        __builtin_memcpy(&d, cam + 0x90, 4);
+        CHECK(d == 10.0f, "other directions stay put");
+    }
+
     if (s_failures == 0) {
         printf("view_test: PASS\n");
         return 0;

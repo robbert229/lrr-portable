@@ -781,6 +781,55 @@ int main(void)
         scene_object_owner_set(NULL, 1u); /* guarded */
     }
 
+    /* The record primitive band (2026-10-24). */
+    {
+        /* +0x64 store through the +8 base pointer, stride 0x70. */
+        char base[0x128];
+        memset(base, 0, sizeof(base));
+        char rec[0x10];
+        memset(rec, 0, sizeof(rec));
+        unsigned long bp = (unsigned long)(size_t)base;
+        __builtin_memcpy(rec + 8, &bp, sizeof(bp));
+        indexed_record_field64_set(rec, 1, 0x22u);
+        uint32_t v = 0u;
+        __builtin_memcpy(&v, base + 100 + 0x70, 4);
+        CHECK(v == 0x22u, "the stride-0x70 store lands");
+        indexed_record_field64_set(NULL, 0, 1u); /* guarded */
+        indexed_record_field64_set(rec, 0, 1u);  /* base stays: fine */
+
+        /* ObjectVector3Set: slot 0 of the block is the base pointer. */
+        char block[8];
+        memset(block, 0, sizeof(block));
+        __builtin_memcpy(block, &bp, sizeof(bp));
+        object_vector3_set(block, 1.5f, 2.5f, 3.5f);
+        float x = 0, y = 0, z = 0;
+        __builtin_memcpy(&x, base + 0x3c, 4);
+        __builtin_memcpy(&y, base + 0x40, 4);
+        __builtin_memcpy(&z, base + 0x44, 4);
+        CHECK(x == 1.5f && y == 2.5f && z == 3.5f, "the vector lands at +3c");
+        object_vector3_set(NULL, 0.0f, 0.0f, 0.0f); /* guarded */
+
+        char r2[0x20];
+        memset(r2, 0, sizeof(r2));
+        float_pair_at_offset4_set_from_ints(r2, -2, 7);
+        float_pair_at_offsetc_set_from_uints(r2, 4u, 8u);
+        CHECK(*(float*)(r2 + 0x04) == -2.0f && *(float*)(r2 + 0x08) == 7.0f
+                  && *(float*)(r2 + 0x0c) == 4.0f
+                  && *(float*)(r2 + 0x10) == 8.0f,
+              "the int/uint-to-float pairs land with the casts");
+        float_pair_at_offset4_set_from_ints(NULL, 1, 1); /* guarded */
+
+        char big[0x828];
+        memset(big, 0, sizeof(big));
+        uint32_t p1 = 0x55u, p2 = 0x66u;
+        __builtin_memcpy(big + 0x820, &p1, 4);
+        __builtin_memcpy(big + 0x824, &p2, 4);
+        uint32_t a = 0, b = 0;
+        object_state_pair_get(big, &a, &b);
+        CHECK(a == 0x55u && b == 0x66u, "the +0x820 pair reads");
+        object_state_pair_get(NULL, &a, &b); /* guarded */
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "record_test: %d failure(s)\n", s_failures);
         return 1;

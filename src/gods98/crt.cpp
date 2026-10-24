@@ -570,3 +570,20 @@ void advisor_clear_active_state(void)
 {
     s_advisor_state_word &= ~2u;
 }
+
+void byte_range_swap(void* a, void* b, size_t n)
+{
+    if (a == NULL || b == NULL) {
+        return; /* deviation: the corpus reads blindly */
+    }
+    if (a == b) {
+        return; /* the corpus's same-range shortcut */
+    }
+    unsigned char* pa = (unsigned char*)a;
+    unsigned char* pb = (unsigned char*)b;
+    for (size_t i = 0; i < n; ++i) {
+        const unsigned char t = pa[i];
+        pa[i] = pb[i];
+        pb[i] = t;
+    }
+}

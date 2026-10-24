@@ -696,3 +696,37 @@ void set_global_scalar_to_one(void)
 {
     /* the corpus's ramp draw is discarded; faithful no-op */
 }
+
+/* FloatNegateAbsoluteValue (FUN_0044d250) — see view.hpp. */
+void float_negate_absolute_value(float* value)
+{
+    if (value == NULL) {
+        return; /* deviation: the corpus dereferences blindly */
+    }
+    *value = -*value; /* both corpus branches negate */
+}
+
+/* Vector2SetLength (FUN_00406760) — see view.hpp. */
+void vector2_set_length(float v[2], float length)
+{
+    if (v == NULL) {
+        return; /* deviation: the corpus dereferences blindly */
+    }
+    if (length == 0.0f) {
+        return; /* deviation: the corpus divides blindly */
+    }
+    const float s = sqrtf(v[0] * v[0] + v[1] * v[1]) / length;
+    v[0] = v[0] / s;
+    v[1] = v[1] / s;
+}
+
+/* CameraZoomStepAdjust (FUN_0045bf20) — see view.hpp. */
+void camera_zoom_step_adjust(void* camera, int direction, float step)
+{
+    if (direction == 0) {
+        camera_zoom_update(camera, step * -3.0f);
+    } else if (direction == 1) {
+        camera_zoom_update(camera, step * 3.0f);
+    }
+    /* other directions: the corpus's early exit — inert */
+}

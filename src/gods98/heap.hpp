@@ -51,4 +51,8 @@ void engine_heap_free_wrapper(void* ptr);
  * a bare tail call into the engine heap free — faithful wrapper. */
 void ui_render_record_free(void* record);
 
+/* EngineHeapAllocate (FUN_0047ff30): the corpus's plain alloc wrapper is
+ * a bare call into the heap's alloc entry — faithful. */
+void engine_heap_allocate(long size);
+
 #endif /* LEGORRR_GODS98_HEAP_HPP */

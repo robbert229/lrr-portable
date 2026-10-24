@@ -2307,3 +2307,16 @@ void sim_status_banner_word_set(uint32_t value)
 {
     s_status_banner_word = value;
 }
+
+void ui_mode_resource_bit40_set_clear(int probe, uint32_t value)
+{
+    uint32_t v = value;
+    if (probe != 0) {
+        v = s_sel_state & 0x40u;
+    }
+    if (v == 0u) {
+        s_sel_state |= 0x40u;
+    } else {
+        s_sel_state &= ~0x40u;
+    }
+}
