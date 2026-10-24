@@ -1390,6 +1390,24 @@ pointer-aligned on 64-bit hosts) and NULL records answer 0 (documented
 deviation). `record_test` drives the offsets, the index arithmetic, the
 equality corner and the window's edges.
 
+**Active-engine state accessors** (2026-10-24; findings 295/324/392/475):
+five level-block state readers land in `src/game/level.*` — the corpus
+names its level block "active engine state", and `LevelState` already
+models that block, so these read `level_int`/`level_float` words at new
+`LEVEL_OFF_*` constants: `active_engine_field_b0_get`
+(`ActiveEngineFieldB0Get @ 0x429850`, dword +0xb0),
+`engine_float_field210_get_by_index` (`EngineFloatField210GetByIndex @
+0x429860`, float +0x210 + 4·index), `engine_float_field260_get`
+(`EngineFloatField260Get @ 0x429880`, float +0x260),
+`global_state_field84_get` (`GlobalStateField84Get @ 0x42b500`, dword
++0x84 — the field meaning stays unresolved per finding 324), and
+`upgrade_resource_check` (`UpgradeResourceCheck @ 0x41f900`, the
+counter pair: +0xa0 for selector 0, +0xac for any nonzero selector).
+The corpus dereferences its level global directly; a NULL level answers
+0 (the corpus's own zero-when-no-level rule — documented deviation).
+`level_test` drives each field through a store-and-read round trip, the
+indexed float, the selector pair and the NULL guards.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the
