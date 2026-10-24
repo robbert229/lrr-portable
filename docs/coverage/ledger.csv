@@ -663,7 +663,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00427f80,FUN_00427f80,named,LevelUpgradeNameStringsLoad,0,1071
 00428020,FUN_00428020,named,EntityCommandStatusFeedbackDispatch,0,6657
 00428330,FUN_00428330,named,TerrainCommandFeedbackDispatch,0,6919
-00428780,FUN_00428780,ported,TerrainCellCommandPredicate,3,634
+00428780,FUN_00428780,named,TerrainCellCommandPredicate,0,634
 00428800,FUN_00428800,ported,ActionFeedbackSoundDispatch,2,735
 004288e0,FUN_004288e0,named,LevelDebugInputCellMutatorDispatch,0,8041
 00429160,FUN_00429160,named,TerrainCellPaletteResourceAtGridPosition,0,332
@@ -674,7 +674,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004295c0,FUN_004295c0,named,EntityMatchesCurrentSelectionOrOwner,0,224
 004295f0,FUN_004295f0,ported,SoundMinimumDistanceUpdateMode,4,1364
 004297b0,FUN_004297b0,ported,CDAudioWatchdogModeUpdate,4,344
-00429810,FUN_00429810,named,AudioPlaybackToggle,0,216
+00429810,FUN_00429810,ported,AudioPlaybackToggle,2,216
 00429850,FUN_00429850,named,ActiveEngineFieldB0Get,0,84
 00429860,FUN_00429860,named,EngineFloatField210GetByIndex,0,107
 00429880,FUN_00429880,named,EngineFloatField260Get,0,86
@@ -815,10 +815,10 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00434e80,FUN_00434e80,named,InterfaceSpawnRequestEnqueue,0,1236
 00435010,FUN_00435010,ported,TerrainCellWorkFlagCircleSet,1,725
 004350a0,FUN_004350a0,named,SurfaceTypeDescriptionsConfigLoad,0,1548
-00435170,FUN_00435170,ported,TerrainSurfaceTypeNameGet,1,211
-00435190,FUN_00435190,ported,SurfaceTypeConfiguredValueAtIndex,1,79
+00435170,FUN_00435170,named,TerrainSurfaceTypeNameGet,0,211
+00435190,FUN_00435190,named,SurfaceTypeConfiguredValueAtIndex,0,79
 004351a0,FUN_004351a0,ported,ActionCodeToSoundAlias,2,535
-00435230,FUN_00435230,ported,RandomVariantCellScatter,2,1059
+00435230,FUN_00435230,named,RandomVariantCellScatter,0,1059
 00435300,FUN_00435300,ported,,1,3362
 00435550,FUN_00435550,named,GlobalStateZeroTransitionDetect,0,183
 00435580,FUN_00435580,ported,GlobalHandlePositionApplyIfPresent,2,214
@@ -1340,10 +1340,10 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0045c830,FUN_0045c830,named,PointerCursorNameRegistryInit,0,2931
 0045ca70,FUN_0045ca70,named,PointerCursorConfigLoad,0,1783
 0045cbd0,FUN_0045cbd0,named,PointerCursorConfigParse,0,368
-0045cc10,FUN_0045cc10,ported,IndexedGlobalValueGet_00500a9c,2,79
+0045cc10,FUN_0045cc10,named,IndexedGlobalValueGet_00500a9c,0,79
 0045cc20,FUN_0045cc20,ported,PointerCursorSelect,2,203
 0045cc40,FUN_0045cc40,ported,PointerCursorOverrideSet,2,213
-0045cc60,FUN_0045cc60,ported,GlobalValueGet_00500a98,2,60
+0045cc60,FUN_0045cc60,named,GlobalValueGet_00500a98,0,60
 0045cc70,FUN_0045cc70,named,PointerCursorDraw,0,1006
 0045cd90,FUN_0045cd90,named,PointerCursorOverrideTick,0,214
 0045cdc0,FUN_0045cdc0,named,PriorityImagesConfigLoad,0,1288

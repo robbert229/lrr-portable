@@ -14,6 +14,7 @@
 #include <math.h>
 
 #include "media.hpp"
+#include "sound.hpp"
 
 static int s_failures = 0;
 
@@ -237,9 +238,102 @@ static void test_min_distance(void)
           "mode 1 restores the live config values");
 }
 
+/* ------------------------------------------------------------------ *
+ *  AudioPlaybackToggle (issue #298)
+ * ------------------------------------------------------------------ */
+
+static void test_playback_toggle(void)
+{
+    media_audio_playback_toggle(1);
+    CHECK((media_cd_flags_get() & MEDIA_FLAG_SOUND_ON) != 0,
+          "enable raises the sound-on bit");
+    CHECK(sound_subsystem_enabled() == 1, "enable re-enables the subsystem");
+
+    media_audio_playback_toggle(1);
+    CHECK((media_cd_flags_get() & MEDIA_FLAG_SOUND_ON) != 0 &&
+              sound_subsystem_enabled() == 1,
+          "repeated enable is idempotent");
+
+    media_audio_playback_toggle(0);
+    CHECK((media_cd_flags_get() & MEDIA_FLAG_SOUND_ON) == 0,
+          "clearing drops the sound-on bit");
+    CHECK(sound_subsystem_enabled() == 0, "clearing mutes the subsystem");
+    media_audio_playback_toggle(0);
+    CHECK((media_cd_flags_get() & MEDIA_FLAG_SOUND_ON) == 0 &&
+              sound_subsystem_enabled() == 0,
+          "repeated disable is idempotent");
+
+    media_audio_playback_toggle(1);   /* leave enabled for later tests */
+    CHECK(sound_subsystem_enabled() == 1, "enable leaves the subsystem on");
+}
+
+/* ------------------------------------------------------------------ *
+ *  Cue dispatch + cursor override (issue #300)
+ * ------------------------------------------------------------------ */
+
+static void test_cue_dispatch(void)
+{
+    sound_batch_queue_drain(0, 0);                 /* start unbatched */
+    media_pointer_cursor_override_set(0, 0.0f);    /* clear override */
+
+    /* Known event, batch off: override lands on the mapped slot, mode
+     * stays off, and the unset cue alias plays through with no draw. */
+    media_action_feedback_sound_dispatch(2);
+    CHECK(media_pointer_cursor_slot() == 0x15, "event 2 maps slot 0x15");
+    CHECK(float_eq(media_pointer_cursor_override(), 12.5f),
+          "the dispatch sets the 12.5 override value");
+    CHECK(sound_batch_mode_get() == 0, "the dispatch restores batch off");
+
+    /* The active override blocks plain selects until cleared. */
+    media_pointer_cursor_select(1);
+    CHECK(media_pointer_cursor_slot() == 0x15,
+          "an active override blocks the cursor select");
+    media_pointer_cursor_override_set(0x21, 0.0f);
+    media_pointer_cursor_select(7);
+    CHECK(media_pointer_cursor_slot() == 7, "a zero override reopens selects");
+
+    /* Batch armed with one deferred record: the dispatch forces the mode
+     * off WITHOUT replaying the deferred table, then restores it. */
+    sound_batch_queue_drain(1, 0);                 /* raise mode */
+    sound_alias_play(13, 0);                       /* unset alias defers */
+    CHECK(sound_batch_queue_count() == 1, "the unset alias deferred");
+    media_action_feedback_sound_dispatch(6);       /* unknown event */
+    CHECK(sound_batch_queue_count() == 1,
+          "the unknown event neither replays nor clears deferred records");
+    CHECK(sound_batch_mode_get() != 0,
+          "the unknown event still restores the saved mode");
+    media_action_feedback_sound_dispatch(0);       /* known event */
+    CHECK(sound_batch_queue_count() == 1 &&
+              sound_batch_mode_get() != 0 &&
+              media_pointer_cursor_slot() == 0x14,
+          "the known event plays without touching the deferred table");
+
+    /* Drain the deferred table through the replay so nothing leaks. */
+    sound_batch_queue_drain(0, 1);
+    CHECK(sound_batch_queue_count() == 0 && sound_batch_mode_get() == 0,
+          "cleanup replay clears the batch table");
+
+    /* Action codes route through the select, not the override. */
+    media_pointer_cursor_override_set(0, 0.0f);
+    media_action_code_to_sound_alias(3);
+    CHECK(media_pointer_cursor_slot() == 0x2d, "code 3 selects cue 0x2d");
+    media_action_code_to_sound_alias(11);
+    CHECK(media_pointer_cursor_slot() == 0x35, "code 11 selects cue 0x35");
+    media_action_code_to_sound_alias(7);
+    CHECK(media_pointer_cursor_slot() == 0x35, "unmapped codes do nothing");
+
+    media_pointer_cursor_override_set(99, 12.5f);
+    media_action_code_to_sound_alias(1);
+    CHECK(media_pointer_cursor_slot() == 99,
+          "mapped codes cannot overrule an active override");
+    media_pointer_cursor_override_set(0, 0.0f);
+}
+
 int main(void)
 {
     test_timer();
+    test_playback_toggle();
+    test_cue_dispatch();
     test_cd_watchdog();
     test_min_distance();
 
