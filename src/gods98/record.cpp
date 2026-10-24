@@ -635,3 +635,98 @@ void object_state_pair_get(const void* record, uint32_t* out_a,
     __builtin_memcpy(out_a, (const char*)record + 0x820, sizeof(*out_a));
     __builtin_memcpy(out_b, (const char*)record + 0x824, sizeof(*out_b));
 }
+
+/* --- the scene-visibility wrapper band (see record.hpp) ---------------------
+ * FUN_00473b40 (the corpus surface lock/unlock leaf) is the port's hook
+ * boundary: the wrappers reproduce their own gates and stores and route the
+ * leaf through the recorded no-op below. */
+static int s_scene_vis_calls;
+static void* s_scene_vis_last_obj;
+static int s_scene_vis_last_flag;
+
+static void scene_visibility_hook_call(void* object, int flag)
+{
+    ++s_scene_vis_calls;
+    s_scene_vis_last_obj = object;
+    s_scene_vis_last_flag = flag;
+}
+
+void scene_visibility_hook_reset(void)
+{
+    s_scene_vis_calls = 0;
+    s_scene_vis_last_obj = NULL;
+    s_scene_vis_last_flag = 0;
+}
+
+int scene_visibility_calls(void) { return s_scene_vis_calls; }
+
+void scene_visibility_last_call(void** out_object, int* out_flag)
+{
+    if (out_object != NULL) {
+        *out_object = s_scene_vis_last_obj;
+    }
+    if (out_flag != NULL) {
+        *out_flag = s_scene_vis_last_flag;
+    }
+}
+
+/* GraphicsOverlayVisibilitySet (FUN_004634b0) — the overlay words
+ * DAT_00552180/DAT_0055218c (handle, cache) have no ported owner; they land
+ * here as zero-init statics (deviation: corpus strides them blindly). */
+static uint32_t s_overlay_word;  /* DAT_00552180 role */
+static uint32_t s_overlay_cache; /* DAT_0055218c role */
+
+void graphics_overlay_visibility_set(uint32_t flag)
+{
+    if (s_overlay_cache != flag) {
+        s_overlay_cache = flag;
+        /* corpus: the handle rides the call, flag folded to 1/0. */
+        scene_visibility_hook_call((void*)(uintptr_t)s_overlay_word,
+                                   flag != 0u ? 1 : 0);
+    }
+}
+
+void graphics_overlay_word_set(uint32_t handle_word)
+{
+    s_overlay_word = handle_word;
+}
+
+uint32_t graphics_overlay_word_peek(void) { return s_overlay_word; }
+
+/* SurfaceVisibilitySet (FUN_00464720) — record +0 handle through the leaf. */
+void surface_visibility_set(const void* record, uint32_t flag)
+{
+    scene_visibility_hook_call(rec_ptr(record, 0x00), (int)flag);
+}
+
+/* AnimationObjectVisibilitySet (FUN_00406c90) — animation record +4. */
+void animation_object_visibility_set(const void* anim, uint32_t flag)
+{
+    scene_visibility_hook_call(rec_ptr(anim, 0x04), (int)flag);
+}
+
+/* SceneObjectPairApplyMode (FUN_00408670) — the +4 object, then the +0x7c
+ * partner when nonzero. Deviation: the partner test strides a dword in the
+ * corpus; the port's widened slot answers through the pointer. */
+void scene_object_pair_apply_mode(const void* record, uint32_t flag)
+{
+    scene_visibility_hook_call(rec_ptr(record, 0x04), (int)flag);
+    void* partner = rec_ptr(record, 0x7c);
+    if (partner != NULL) {
+        scene_visibility_hook_call(partner, (int)flag);
+    }
+}
+
+/* AnimationObjectVisibilityGet (FUN_004086a0) — the +4 object's flag bit 3
+ * through the ported getter. */
+uint32_t animation_object_visibility_get(const void* anim)
+{
+    return scene_object_flag_bit3_get(rec_ptr(anim, 0x04));
+}
+
+/* SceneAssignEntityOwner (FUN_00408380) — owner store on the +4 object
+ * through the ported owner set. */
+void scene_assign_entity_owner(const void* scene, uint32_t owner)
+{
+    scene_object_owner_set(rec_ptr(scene, 0x04), owner);
+}

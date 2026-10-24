@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 832 | 32.4% |
+| ported | 838 | 32.7% |
 | anchored | 4 | 0.2% |
-| named | 1681 | 65.6% |
+| named | 1675 | 65.3% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (832 functions)
+  (838 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1681 functions)
+  citation yet (1675 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1686 (65.8%).**
+**Game logic remaining to port: 1680 (65.5%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -95,7 +95,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00406c00` | RendererObjectUpdateFromRecordField64 |
 | `0x00406c30` | RendererObjectUpdateFromRecordField68 |
 | `0x00406c60` | RendererObjectUpdateFromRecordField6c |
-| `0x00406c90` | AnimationObjectVisibilitySet |
 | `0x00406cb0` | RendererRecordClone |
 | `0x00406d10` | AnimationObjectTimeUpdate |
 | `0x00406d30` | RendererObjectTimingValueAdjustByCount |
@@ -125,13 +124,10 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00407a10` | PendingTypeValueSlotSelect |
 | `0x00407d60` | BuildingTypeConfigRecordParse |
 | `0x004082e0` | SceneObjectScalarAdjustByDirection |
-| `0x00408380` | SceneAssignEntityOwner |
 | `0x004083a0` | SceneEntitySlotTableRebuild |
 | `0x00408570` | SceneActivityChange |
 | `0x004085f0` | SceneActivityChangeSecondary |
 | `0x00408620` | SceneObjectRecordCloneRetainHandles |
-| `0x00408670` | SceneObjectPairApplyMode |
-| `0x004086a0` | AnimationObjectVisibilityGet |
 | `0x004086c0` | SceneObjectPairSetRenderParameters |
 | `0x00408710` | SceneObjectPairSetCallbackScalar |
 | `0x00408770` | SceneObjectIndexedHandleGetOrCreate |
@@ -902,7 +898,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00462ed0` | GraphicsOverlayResourcesRelease |
 | `0x00462f20` | TerrainCellQuadGeometryEmit |
 | `0x00463230` | TerrainDirtyCellQuadNormalEmitPass |
-| `0x004634b0` | GraphicsOverlayVisibilitySet |
 | `0x004634f0` | IndexedSurfaceEntryHideAndRecord |
 | `0x00463540` | IndexedSurfaceEntriesRestore |
 | `0x00463590` | TerrainCellSurfaceNormalGet |
@@ -914,7 +909,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00463f00` | SceneQuadGridEmit |
 | `0x00464110` | RotatedPairsScratchFill |
 | `0x004641c0` | BuildingPlacementFootprintRenderAndValidate |
-| `0x00464720` | SurfaceVisibilitySet |
 | `0x00465190` | SoundHandleStopForward |
 | `0x004653a0` | TransientEffectTexturesPreload |
 | `0x00465430` | TransientEffectEmitterCreate |
