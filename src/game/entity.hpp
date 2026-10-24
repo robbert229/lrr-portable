@@ -204,6 +204,12 @@ void context_selected_pointer_pair_set(uint32_t first, uint32_t second);
  * rejects on +0x3e0 bit 0x40000 (finding 468). NULL rejects (deviation). */
 int selection_candidate_eligibility_check(const EntitySlot* e);
 
+/* EntityFlag40000ThresholdCompare (FUN_00437cc0, findings 362/476): the
+ * record-queue validator — the state flags (stats record +0x148) must carry
+ * bit 0x40000 and the nested float at +0xe8 must fall below the entity's
+ * own +0x340 bound; missing state records read zero, so the test fails. */
+int entity_flag40000_threshold_compare(const EntitySlot* e);
+
 #ifdef __cplusplus
 }
 #endif

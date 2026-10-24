@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 620 | 24.2% |
+| ported | 623 | 24.3% |
 | anchored | 5 | 0.2% |
-| named | 1892 | 73.8% |
+| named | 1889 | 73.7% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (620 functions)
+  (623 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (5 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1892 functions)
+  citation yet (1889 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1898 (74.0%).**
+**Game logic remaining to port: 1895 (73.9%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -77,8 +77,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00402210` | EngineMemoryFree |
 | `0x00402510` | TerrainCellCommandCreate |
 | `0x00402600` | EntityRecordArrayApplyZeroState |
-| `0x00402670` | EntityCommand15ValidatedRecordQueue |
-| `0x004026c0` | EntityDeferredWorkSchedule |
 | `0x00402800` | EntityCommand14BatchIssue |
 | `0x00402890` | TaskType23CreateForCategoryMask |
 | `0x00402960` | EntityKindCommandIssue |
@@ -653,7 +651,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004378e0` | GridObjectRecordsRelease |
 | `0x00437940` | DeferredOListEntityCreateAndLink |
 | `0x00437c20` | DeferredOListEntityQueueAdd |
-| `0x00437cc0` | EntityFlag40000ThresholdCompare |
 | `0x004382c0` | PooledRecordAllocateAndReset |
 | `0x00438310` | PooledRecordChunkAllocateAndLink |
 | `0x004383a0` | GlobalAnimationStateSet |

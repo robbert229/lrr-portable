@@ -217,6 +217,21 @@ int selection_entity_remove(void* entity);
 int selection_candidate_filter(void* entity, int mode, int param_3);
 int selected_entity_state_monitor(void);
 
+/* --- entity record schedulers (2026-10-24) ----------------------------------
+ * EntityCommand15ValidatedRecordQueue (FUN_00402670, findings 362/465): with
+ * the validator above, allocates a type-0x1a record, links it (kind 0xf),
+ * stores the entity at +0x10 and raises the +0x5c bits 6/14/18 after
+ * clearing bit 4. The corpus's first statement calls CurrentLevelGet for
+ * its touch only; the port's link lands the record on the task list.
+ * EntityDeferredWorkSchedule (FUN_004026c0, finding 465): with the +0x304
+ * attach mirror clear and the +0x3ec bit-0x100 flag clear, searches the
+ * object-record pool through EntityPoolCallbackSearch — the registry and
+ * callback are the unported entity seam, so the search always misses and
+ * the fallback task is created (the corpus's observable half). NULL entity
+ * answers inert (deviation). */
+void entity_command15_validated_record_queue(EntitySlot* e);
+void entity_deferred_work_schedule(EntitySlot* e);
+
 #ifdef __cplusplus
 }
 #endif

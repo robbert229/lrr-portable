@@ -459,6 +459,70 @@ int main(void)
         cmd_context_set(&ctx);
     }
 
+    /* The entity record schedulers (2026-10-24). */
+    {
+        GameContext qctx;
+        game_context_init(&qctx);
+        cmd_context_set(&qctx);
+
+        /* Deferred schedule: attach mirror clear + flag clear creates the
+         * task through the ported fallback. */
+        EntitySlot work;
+        memset(&work, 0, sizeof(work));
+        work.type = 2;
+        entity_deferred_work_schedule(&work);
+        CHECK(cmd_global_head() != NULL
+                  && cmd_rec_type(cmd_global_head()) == 3
+                  && cmd_rec_payload(cmd_global_head()) == &work,
+              "the fallback task is created (pool seam misses)");
+        cmd_tick_global();
+
+        /* The gates: attach set, or the flag bit — nothing scheduled. */
+        work.attach_304 = (const void*)1;
+        entity_deferred_work_schedule(&work);
+        CHECK(cmd_global_head() == NULL, "the attach mirror blocks");
+        work.attach_304 = NULL;
+        work.flags_3ec = 0x100u;
+        entity_deferred_work_schedule(&work);
+        CHECK(cmd_global_head() == NULL, "the flag bit blocks");
+        work.flags_3ec = 0u;
+
+        /* The validated record queue: NULL inert, unvalidated skips,
+         * validated links the type-0x1a record. */
+        entity_command15_validated_record_queue(NULL);
+        EntitySlot plain;
+        memset(&plain, 0, sizeof(plain));
+        plain.field_340 = 1.0f;
+        entity_command15_validated_record_queue(&plain);
+        CHECK(cmd_global_head() == NULL, "the unvalidated entity skips");
+        EntitySlot good;
+        memset(&good, 0, sizeof(good));
+        good.field_340 = 1.0f;
+        static uint8_t vimg[0x200];
+        memset(vimg, 0, sizeof(vimg));
+        const uint32_t vf = 0x40000u;
+        const float vfl = 0.5f;
+        memcpy(vimg + 0x148, &vf, 4);
+        memcpy(vimg + 0xe8, &vfl, 4);
+        good.stats_record = vimg;
+        entity_command15_validated_record_queue(&good);
+        CHECK(cmd_global_head() != NULL
+                  && cmd_rec_type(cmd_global_head()) == 0x1a
+                  && cmd_rec_payload(cmd_global_head()) == &good
+                  && cmd_rec_kind(cmd_global_head()) == 0xf,
+              "the validated entity queues a type-0x1a record");
+        const uint32_t st = cmd_rec_state(cmd_global_head());
+        CHECK((st & 0x40040u) == 0x40040u && (st & 0x10u) == 0u,
+              "the state bits raise 6/14/18 and clear bit 4");
+        cmd_tick_global();
+        const uint32_t off = 0u;
+        memcpy(vimg + 0x148, &off, 4); /* the state-flag gate closes */
+        entity_command15_validated_record_queue(&good);
+        CHECK(cmd_global_head() == NULL,
+              "the flag-off entity skips (validator gate)");
+        cmd_context_set(&ctx);
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "cmd_test: %d failure(s)\n", s_failures);
         return 1;

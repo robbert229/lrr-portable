@@ -47,8 +47,8 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00402310,FUN_00402310,ported,CmdChainPurge,1,2949
 00402510,FUN_00402510,named,TerrainCellCommandCreate,0,1128
 00402600,FUN_00402600,named,EntityRecordArrayApplyZeroState,0,628
-00402670,FUN_00402670,named,EntityCommand15ValidatedRecordQueue,0,356
-004026c0,FUN_004026c0,named,EntityDeferredWorkSchedule,0,265
+00402670,FUN_00402670,ported,EntityCommand15ValidatedRecordQueue,1,356
+004026c0,FUN_004026c0,ported,EntityDeferredWorkSchedule,1,265
 00402720,FUN_00402720,ported,CmdCreateTask,2,561
 004027a0,FUN_004027a0,ported,,1,428
 00402800,FUN_00402800,named,EntityCommand14BatchIssue,0,370
@@ -875,7 +875,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004378e0,FUN_004378e0,named,GridObjectRecordsRelease,0,577
 00437940,FUN_00437940,named,DeferredOListEntityCreateAndLink,0,3898
 00437c20,FUN_00437c20,named,DeferredOListEntityQueueAdd,0,1007
-00437cc0,FUN_00437cc0,named,EntityFlag40000ThresholdCompare,0,281
+00437cc0,FUN_00437cc0,ported,EntityFlag40000ThresholdCompare,1,281
 00437d00,FUN_00437d00,ported,EntityCreateByType,5,5113
 004382c0,FUN_004382c0,named,PooledRecordAllocateAndReset,0,471
 00438310,FUN_00438310,named,PooledRecordChunkAllocateAndLink,0,646
