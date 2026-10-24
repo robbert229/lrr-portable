@@ -81,3 +81,14 @@ depends on it:
 | `CRTHeapLocateAllocationPage` (`0x491840`), `SmallHeapPageFreeSlotUpdate` (`0x4918a0`) | Page-directory walk + free-slot bookkeeping over the corpus heap's arena pages (`PTR_LOOP_004affb8`); the port frees straight through the host allocator. | Fold in only with a dedicated allocator port. |
 | `CrtNewHandlerInvokeForAllocationRetry` (`0x491d90`) | The registry global (`DAT_00549158`); the port passes the retry handler per call instead, and nothing registers one (the corpus's unregistered case). | Blocked-by-design (documented deviation). |
 
+## CRT x87 stub thunks (2026-10-24)
+
+`CrtNoOpStub` (`0x491ff5`) and `CrtNoOpStubVariant` (`0x497870`) decompile
+to empty bodies, but their call sites consume FP state — `CrtAcosCore`
+(`0x48e0ad`) reads EAX/ST0 back after `0x491ff5`, and
+`CrtFpuControlWordUpdate` (`0x497770`) passes the control word to
+`0x497870` (an `fldcw`-shaped wrapper). The "no-op" reading is a Ghidra
+body artifact; porting them as empty functions would port unproven
+semantics. **Blocked** pending an x87 control/status stub corpus (they
+are host-CRT internals; nothing in the port drives them).
+

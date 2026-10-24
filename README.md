@@ -1199,6 +1199,22 @@ and their selected flags in place for the snapshot paths, so the
 flag-clean variant stays `selection_clear`. `select_test` drives the
 gate, array identity/order, the count and the count-only reset.
 
+**CRT / compiler-runtime leaves** (2026-10-24; findings 260/381/393/394):
+three runtime thunks land in a new `src/gods98/crt.*` module with a
+`crt` suite — `crt_memory_move` (`CrtMemoryMove @ 0x498000`; the
+corpus's word-loop/byte-tail copy with backward traversal for the
+overlapping case is byte-equivalent memmove), `float_to_long`
+(`FloatToLong @ 0x417430`; the compiler's `__ftol` helper under the
+truncate-toward-zero control word, mapped to the C++ cast with the
+corpus's 32-bit result width), and `noop_callback` (`NoOpCallback @
+0x41f8e0`; the callable no-op several engine paths install — its return
+value is undefined per finding 381). The two x87 control-word stub
+thunks (`CrtNoOpStub @ 0x491ff5`, `CrtNoOpStubVariant @ 0x497870`) are
+blocked — their call sites consume FP state the empty Ghidra bodies
+cannot prove (`docs/coverage/blocked.md`). `crt_test` covers overlap
+both directions, word/zero-count sizes, truncation corners and the
+no-op's call identity.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the
