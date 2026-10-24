@@ -5,7 +5,7 @@
  * paths, modelled with their observable state:
  *
  *  - CDAudioWatchdogModeUpdate @ 0x4297b0: the CD-audio watchdog state.
- *    Enable raises bit 8 of the audio/engine state word, draws the
+ *    Enable raises bit value 8 of the audio/engine state word, draws the
  *    time-derived CD-track slot (random % window + start, per the
  *    CDTracks / CDStartTrack config), and schedules the watchdog re-arm
  *    callback on the port's one-shot timer; the callback re-arms with a
@@ -67,10 +67,12 @@ float media_timer_remaining(void);
  *  CDAudioWatchdogModeUpdate @ 0x4297b0. See header block.
  * ------------------------------------------------------------------ */
 
-/* DAT_00556ecc bit 8 — the corpus keeps this in the engine state word;
- * the port models it module-locally (deviation: no engine context is
- * threaded through the call). */
-#define MEDIA_CD_WATCHDOG_BIT 0x100u
+/* DAT_00556ecc bit value 8 — the corpus keeps this in the engine state
+ * word; the port models it module-locally (deviation: no engine context
+ * is threaded through the call). Bit value 0x10 is AudioPlaybackToggle's
+ * sound-on flag, modelled in the same word (#298, below). */
+#define MEDIA_CD_WATCHDOG_BIT 0x8u
+#define MEDIA_FLAG_SOUND_ON   0x10u
 
 /* Corpus config fields: CDStartTrack (DAT_00556f0c, default 2 when
  * unset) and CDTracks (DAT_00556f10, default 1 — disables when zero). */
@@ -80,7 +82,7 @@ void     media_cd_config_set(int start_track_base, int track_count);
  * schedules the re-arm callback for that many seconds out; disable
  * clears the bit, cancels, and runs one watchdog tick with 0. */
 void     media_cd_watchdog_update(int enable);
-uint32_t media_cd_flags_get(void);   /* state word with bit 8 */
+uint32_t media_cd_flags_get(void);   /* state word with the 0x8/0x10 bits */
 int      media_cd_slot(void);        /* last derived slot (scheduled delay) */
 void     media_cd_loop_set(int loop);/* DAT_00544a04 analog (never cleared
                                       * as shipped: stale across calls) */
@@ -95,6 +97,43 @@ void     media_cd_track_set_dead(int dead);
  * re-arm callback runs and the slot refreshes with a fresh draw.
  * `arg` 0 — the disable call's — does nothing, as shipped. */
 void     media_cd_watchdog_tick(int arg);
+
+/* ------------------------------------------------------------------ *
+ *  AudioPlaybackToggle @ 0x429810 (issue #298). See header block.
+ * ------------------------------------------------------------------ */
+
+/* Set (enable != 0) raises the sound-on bit and re-enables the sound
+ * subsystem; clearing it mutes through the same gate. Repeats are
+ * idempotent, like the corpus's flag write. */
+void media_audio_playback_toggle(int enable);
+
+/* ------------------------------------------------------------------ *
+ *  Cue dispatch tables (issue #300; ActionFeedbackSoundDispatch @
+ *  0x428800, ActionCodeToSoundAlias @ 0x4351a0) over the ported
+ *  submission queue, plus the pointer-cursor override state they write
+ *  (PointerCursorSelect @ 0x45cc20, PointerCursorOverrideSet @
+ *  0x45cc40 — DAT_00500a98/DAT_00500efc; consumers land with the cursor
+ *  draw, so the port holds the state as the observable half).
+ * ------------------------------------------------------------------ */
+
+/* PointerCursorSelect @ 0x45cc20: writes the cursor slot only while no
+ * override value is active. */
+void media_pointer_cursor_select(int slot);
+/* PointerCursorOverrideSet @ 0x45cc40. */
+void media_pointer_cursor_override_set(int slot, float value);
+int   media_pointer_cursor_slot(void);
+float media_pointer_cursor_override(void);
+
+/* ActionFeedbackSoundDispatch @ 0x428800: saves and forces batch mode
+ * off, maps events 0-5 to the cursor override + cue pair, plays it, and
+ * restores the saved mode (unknown events submit nothing but still
+ * restore). */
+void media_action_feedback_sound_dispatch(int event);
+
+/* ActionCodeToSoundAlias @ 0x4351a0: action-record codes 1-5, 8, 10, 11
+ * map to cues 0x2b-0x2f, 0x32, 0x34, 0x35 through the cursor select;
+ * other codes do nothing. */
+void media_action_code_to_sound_alias(int code);
 
 /* ------------------------------------------------------------------ *
  *  SoundMinimumDistanceUpdateMode @ 0x4295f0. See header block.

@@ -961,7 +961,7 @@ restore, and the disabled-subsystem gate that runs before the draw.
 the media area plus the one-shot scheduler #301 introduces (the port
 analog of the corpus's scheduled-callback table, driven by the engine
 clock). `media_cd_watchdog_update` (`CDAudioWatchdogModeUpdate @
-0x4297b0`): enable raises bit 8 of the audio state word, draws the
+0x4297b0`): enable raises the bit-value-8 flag in the audio state word, draws the
 time-derived CD-track slot (random % window + start, per the CDTracks /
 CDStartTrack config) and schedules the watchdog re-arm for that many
 seconds; the callback re-arms with a fresh draw, as shipped. Disable
@@ -989,6 +989,31 @@ both scalars, repeated entry, unknown modes, and restore of the
 min-distance state. The corpus's simulation call paths (the music
 toggle in MainSimStep, level reset, objective tick, level setup and
 selection changes) land with their corresponding sim ports.
+
+**Media playback toggle + cue dispatch** (2026-10-24; port issues
+#298 / #300): `media_audio_playback_toggle` (`AudioPlaybackToggle @
+0x429810`) raises or clears the sound-on bit (value `0x10` in the same
+state word as the watchdog flag) and forwards enable/mute through the
+ported `SoundSubsystemEnableSetAndStop @ 0x4652a0` gate — submissions
+are gated while muted, repeats are idempotent. The cue dispatch pair
+runs over the ported submission route: `media_action_feedback_sound_dispatch`
+(`ActionFeedbackSoundDispatch @ 0x428800`) saves the batch mode, forces
+it off with no replay, maps events 0–5 to a cursor-override slot
+(`0x14`/`0x15`, value 12.5) plus cue (`0x13`, `0x14`, `0x1f`, `0x1e`,
+`0x20`, `0x21`) through `SoundAliasPlay`, and restores the saved mode —
+unknown events submit nothing but still restore, and deferred batch
+records survive the dispatch untouched (the dispatch's drain never
+replays). `media_action_code_to_sound_alias` (`ActionCodeToSoundAlias @
+0x4351a0`) maps action-record codes 1–5/8/10/11 to cues `0x2b`–`0x2f`,
+`0x32`, `0x34`, `0x35` through the cursor select. The select/override
+pair itself (`PointerCursorSelect @ 0x45cc20`,
+`PointerCursorOverrideSet @ 0x45cc40`) is held module-locally as the
+observable half until the cursor draw lands: the select writes the slot
+only while the override value is non-positive, the override setter
+writes both. `media_test` covers both toggle directions with the
+subsystem gate, batch save/force/restore including the no-replay quirk
+and the unknown-event path, slot/cue mapping, select blocking, and the
+unmapped-code no-ops.
 
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),

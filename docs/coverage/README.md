@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 320 | 12.5% |
+| ported | 325 | 12.7% |
 | anchored | 5 | 0.2% |
-| named | 2193 | 85.5% |
+| named | 2188 | 85.3% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 0 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (320 functions)
+  (325 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (5 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (2193 functions)
+  citation yet (2188 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (0 functions)
 
-**Game logic remaining to port: 2198 (85.7%).**
+**Game logic remaining to port: 2193 (85.5%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -619,14 +619,12 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00428020` | EntityCommandStatusFeedbackDispatch |
 | `0x00428330` | TerrainCommandFeedbackDispatch |
 | `0x00428780` | TerrainCellCommandPredicate |
-| `0x00428800` | ActionFeedbackSoundDispatch |
 | `0x004288e0` | LevelDebugInputCellMutatorDispatch |
 | `0x00429160` | TerrainCellPaletteResourceAtGridPosition |
 | `0x004293b0` | SelectionRectangleRender |
 | `0x00429470` | CameraPointerRayRoute |
 | `0x004295a0` | ContextSelectedGlobalPointerGet |
 | `0x004295c0` | EntityMatchesCurrentSelectionOrOwner |
-| `0x00429810` | AudioPlaybackToggle |
 | `0x00429850` | ActiveEngineFieldB0Get |
 | `0x00429860` | EngineFloatField210GetByIndex |
 | `0x00429880` | EngineFloatField260Get |
@@ -735,7 +733,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004350a0` | SurfaceTypeDescriptionsConfigLoad |
 | `0x00435170` | TerrainSurfaceTypeNameGet |
 | `0x00435190` | SurfaceTypeConfiguredValueAtIndex |
-| `0x004351a0` | ActionCodeToSoundAlias |
 | `0x00435230` | RandomVariantCellScatter |
 | `0x00435550` | GlobalStateZeroTransitionDetect |
 | `0x00435580` | GlobalHandlePositionApplyIfPresent |
@@ -1186,8 +1183,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0045ca70` | PointerCursorConfigLoad |
 | `0x0045cbd0` | PointerCursorConfigParse |
 | `0x0045cc10` | IndexedGlobalValueGet_00500a9c |
-| `0x0045cc20` | PointerCursorSelect |
-| `0x0045cc40` | PointerCursorOverrideSet |
 | `0x0045cc60` | GlobalValueGet_00500a98 |
 | `0x0045cc70` | PointerCursorDraw |
 | `0x0045cd90` | PointerCursorOverrideTick |
