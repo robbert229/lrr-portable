@@ -448,6 +448,75 @@ int main(int argc, char** argv)
         CHECK(cell_neighbor_direction_code(2, 2, 1, 0) == -1,
               "a knight move is no neighbor");
 
+        /* The neighbor-refresh / circle / edge-flag cluster. */
+        {
+            uint32_t f = zero, g = 0u;
+
+            /* Edge flag set and update: 0x200 raises and drops. */
+            f = zero;
+            __builtin_memcpy(rec + 0x08, &f, 4);
+            terrain_cell_edge_flag_set_and_update(s, 3, 4, 1);
+            __builtin_memcpy(&f, rec + 0x08, 4);
+            CHECK(f == 0x200u, "the edge setter raises 0x200");
+            terrain_cell_edge_flag_set_and_update(s, 3, 4, 0);
+            __builtin_memcpy(&f, rec + 0x08, 4);
+            CHECK(f == 0u, "the same leaf's clear branch drops it");
+
+            /* Flag 0x20 clear and refresh: only bit 5 drops. */
+            f = 0xffffffffu;
+            __builtin_memcpy(rec + 0x08, &f, 4);
+            terrain_cell_flag20_clear_and_refresh(s, 3, 4);
+            __builtin_memcpy(&f, rec + 0x08, 4);
+            CHECK(f == 0xffffffdfu, "only the 0x20 bit clears");
+
+            /* The neighbor refresh leaf: the build-record word is
+             * unowned in the port, so the leaf changes nothing. */
+            terrain_neighbor_flag_refresh(s, 3, 4, 0);
+            __builtin_memcpy(&f, rec + 0x08, 4);
+            __builtin_memcpy(&g, rec + 0x18, 4);
+            CHECK(f == 0xffffffdfu && g == 0u,
+                  "the refresh leaf is inert with no build records");
+
+            /* Work-flag circle: radius 1 lights the cross, not the
+             * diagonals; radius 0 only the center. */
+            for (int dy = -2; dy <= 2; ++dy) {
+                for (int dx = -2; dx <= 2; ++dx) {
+                    f = zero;
+                    __builtin_memcpy(level_voxel(s, 3 + dx, 3 + dy) + 0x08,
+                                     &f, 4);
+                }
+            }
+            terrain_cell_work_flag_circle_set(s, 3, 3, 1);
+            int lit = 0;
+            for (int dy = -2; dy <= 2; ++dy) {
+                for (int dx = -2; dx <= 2; ++dx) {
+                    __builtin_memcpy(&f,
+                                     level_voxel(s, 3 + dx, 3 + dy) + 0x08, 4);
+                    if ((f & 4u) != 0) {
+                        ++lit;
+                    }
+                    /* The setter's own gate makes cell 7 (and above)
+                     * dead even inside the circle (faithful). */
+                    const int on = (dx * dx + dy * dy <= 1) &&
+                                   (3 + dx < 7) && (3 + dy < 7);
+                    CHECK(((f & 4u) != 0) == (on != 0),
+                          "the circle lights exactly its cells");
+                }
+            }
+            CHECK(lit == 5, "radius 1 lights the five-cell cross");
+
+            /* Radius 0: the center alone. */
+            f = zero;
+            __builtin_memcpy(level_voxel(s, 3, 3) + 0x08, &f, 4);
+            terrain_cell_work_flag_circle_set(s, 3, 3, 0);
+            __builtin_memcpy(&f, level_voxel(s, 3, 3) + 0x08, 4);
+            CHECK(f == 4u, "radius 0 lights the center only");
+
+            /* Out-of-cell candidates skip (bounds deviation). */
+            terrain_cell_work_flag_circle_set(s, 9999, 9999, 1);
+            CHECK(1, "an off-map circle changes nothing");
+        }
+
         /* The OR-test pair: mode 0 masks the flag word, mode 1 answers
          * whether either the flag 0x400 or the secondary byte's bit 4
          * marks the cell. */

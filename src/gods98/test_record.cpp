@@ -588,6 +588,46 @@ static void test_descriptor_coordinates(void)
     CHECK(cx == -1, "a zero width clamps the index below zero (faithful)");
 }
 
+/* Indexed flag slot and resource-handle writers (findings 354/373/450). */
+static void test_flag_and_handle_writers(void)
+{
+    static uint8_t big[0x40b4 + 256 * 4];
+    memset(big, 0xAA, sizeof(big));
+
+    indexed_flag_value_set_one(big, 5u);
+    uint32_t v = 0;
+    __builtin_memcpy(&v, big + 0x40b4 + 5 * 4, 4);
+    CHECK(v == 1u, "the slot answers one");
+    v = 0xAAAAAAAAu;
+    __builtin_memcpy(&v, big + 0x40b4 + 6 * 4, 4);
+    CHECK(v == 0xAAAAAAAAu, "the neighbour slot is untouched");
+
+    /* Low byte selects the slot: 0x105 aliases 5, 0x1ff the last. */
+    indexed_flag_value_set_one(big, 0x105u);
+    v = 0;
+    __builtin_memcpy(&v, big + 0x40b4 + 5 * 4, 4);
+    CHECK(v == 1u, "the masked index hits the same slot");
+    indexed_flag_value_set_one(big, 0x1ffu);
+    v = 0;
+    __builtin_memcpy(&v, big + 0x40b4 + 255 * 4, 4);
+    CHECK(v == 1u, "index 0x1ff hits the last slot");
+
+    indexed_flag_value_set_one(NULL, 5u); /* NULL safe (deviation) */
+    CHECK(1, "NULL record is safe");
+
+    /* The resource-handle writer: +0x2c stores, neighbours hold. */
+    uint8_t obj[0x30];
+    memset(obj, 0x5A, sizeof(obj));
+    scene_object_resource_handle_set(obj, 0xcafebabeu);
+    v = 0;
+    __builtin_memcpy(&v, obj + 0x2c, 4);
+    CHECK(v == 0xcafebabeu, "the handle lands at +0x2c");
+    CHECK(obj[0x28] == 0x5A && obj[0x2b] == 0x5A && 0x30 - 0x30 == 0,
+          "the neighbours are untouched");
+    scene_object_resource_handle_set(NULL, 1u);
+    CHECK(1, "NULL object is safe");
+}
+
 static void test_interpolated_z(void)
 {
     /* a = 10 at +8, b = 4 at +8: v = 4 * 2.5 + 10 = 20. */
@@ -628,6 +668,7 @@ int main(void)
     test_indexed_sweep();
     test_transform_copy_in();
     test_descriptor_coordinates();
+    test_flag_and_handle_writers();
     test_straggler_reads();
     test_interpolated_z();
     if (s_failures != 0) {

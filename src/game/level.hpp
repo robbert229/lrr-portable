@@ -575,6 +575,38 @@ void terrain_cell_flag40000000_clear_or_set(LevelState* s, int cx, int cy,
  * state. */
 int cell_neighbor_direction_code(int x1, int y1, int x2, int y2);
 
+/* --- neighbor-refresh / circle / edge-flag cluster (2026-10-24) ----------
+ * The refresh-side companions of the cell-flag families. Deviations (as
+ * elsewhere): the corpus indexes its cell table blindly; the port uses
+ * level_voxel and skips off-map cells; the per-cell CellInitPass
+ * refresh companion stays a TODO(corpus) seam on the load-path form. */
+
+/* TerrainNeighborFlagRefresh (FUN_00431450): refresh the cell's
+ * activity-build record — the cell word +0x18 holds that record's
+ * pointer in the corpus's 32-bit space. The record's owning release
+ * family is unported, so every port case reads a zero word and the
+ * activity-side branches stay TODO(corpus) seams (see level.cpp);
+ * mode selects the destroy-check versus the mark path. */
+void terrain_neighbor_flag_refresh(LevelState* s, int cx, int cy, int mode);
+
+/* TerrainCellFlag20ClearAndRefresh (FUN_004310f0): neighbor refresh
+ * with mode 0, then clear primary bit 0x20, then the refresh seam. */
+void terrain_cell_flag20_clear_and_refresh(LevelState* s, int cx, int cy);
+
+/* TerrainCellEdgeFlagSetAndUpdate (FUN_0042f2e0): raise or clear the
+ * primary 0x200 edge flag on the corpus's set selector (the manager
+ * travels as the corpus's first argument), then the refresh seam. */
+void terrain_cell_edge_flag_set_and_update(LevelState* s, int cx, int cy,
+                                           int set);
+
+/* TerrainCellWorkFlagCircleSet (FUN_00435010): raise the work bit (via
+ * the ported in-gate setter) on every cell of the filled circle of the
+ * given radius about (center_x, center_y); each candidate answers the
+ * corpus's signed -1 < c < dim bounds before the setter's own gate.
+ * Radius arithmetic is the corpus's wrapping int math (faithful). */
+void terrain_cell_work_flag_circle_set(LevelState* s, int center_x,
+                                       int center_y, int radius);
+
 #ifdef __cplusplus
 }
 #endif

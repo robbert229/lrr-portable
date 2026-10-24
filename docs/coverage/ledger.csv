@@ -716,7 +716,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0042ef40,FUN_0042ef40,named,StatsLevelRecordCountForStatType,0,495
 0042efc0,FUN_0042efc0,ported,DirectShowVideoPlaybackLoop,5,726
 0042f0c0,FUN_0042f0c0,ported,PendingLevelName,1,1852
-0042f2e0,FUN_0042f2e0,named,TerrainCellEdgeFlagSetAndUpdate,0,550
+0042f2e0,FUN_0042f2e0,ported,TerrainCellEdgeFlagSetAndUpdate,1,550
 0042f350,FUN_0042f350,named,TerrainNeighborCoordinateCheck,0,2871
 0042f6f0,FUN_0042f6f0,ported,CellInitPass,5,14655
 004302b0,FUN_004302b0,named,MapCellTrackingFlagsClearAndRefresh,0,533
@@ -725,11 +725,11 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00430530,FUN_00430530,ported,TerrainCellMutation,11,11674
 00430df0,FUN_00430df0,named,TerrainNeighborRefresh,0,1210
 00430ee0,FUN_00430ee0,ported,TerrainCellInitialize,8,2768
-004310f0,FUN_004310f0,named,TerrainCellFlag20ClearAndRefresh,0,376
+004310f0,FUN_004310f0,ported,TerrainCellFlag20ClearAndRefresh,1,376
 00431140,FUN_00431140,named,TerrainCellQueuedWorkTransition,0,593
 004311d0,FUN_004311d0,ported,,1,2047
 004313b0,FUN_004313b0,ported,,5,783
-00431450,FUN_00431450,ported,TerrainNeighborFlagRefresh,2,552
+00431450,FUN_00431450,ported,TerrainNeighborFlagRefresh,3,552
 004314c0,FUN_004314c0,named,ActivityBuildRecordRelease,0,490
 00431530,FUN_00431530,named,ActivityBuildRecordsReleaseAll,0,220
 00431560,FUN_00431560,ported,CurrentLevelGet,4,60
@@ -813,7 +813,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00434c10,FUN_00434c10,ported,IncidentMessageConfigLoad,2,2155
 00434da0,FUN_00434da0,named,AdvisorTooltipAndTooltipSoundConfigLoad,0,806
 00434e80,FUN_00434e80,named,InterfaceSpawnRequestEnqueue,0,1236
-00435010,FUN_00435010,named,TerrainCellWorkFlagCircleSet,0,725
+00435010,FUN_00435010,ported,TerrainCellWorkFlagCircleSet,1,725
 004350a0,FUN_004350a0,named,SurfaceTypeDescriptionsConfigLoad,0,1548
 00435170,FUN_00435170,named,TerrainSurfaceTypeNameGet,0,211
 00435190,FUN_00435190,named,SurfaceTypeConfiguredValueAtIndex,0,79
@@ -1140,7 +1140,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0044e0c0,FUN_0044e0c0,ported,TerrainCreate,2,5576
 0044e4d0,FUN_0044e4d0,named,TerrainGridVertexBuild,0,1962
 0044e670,FUN_0044e670,named,NestedPointerRecordDestroy,0,222
-0044e6b0,FUN_0044e6b0,named,IndexedFlagValueSetOne,0,125
+0044e6b0,FUN_0044e6b0,ported,IndexedFlagValueSetOne,1,125
 0044e6d0,FUN_0044e6d0,named,TerrainCellMaterialTransitionBegin,0,1997
 0044e860,FUN_0044e860,named,GridCellSetPayloadIndex,0,130
 0044e880,FUN_0044e880,named,TerrainGridCellsInitialize,0,418
@@ -1151,7 +1151,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0044eff0,FUN_0044eff0,ported,TerrainDirtyCellUpdate,5,1093
 0044f090,FUN_0044f090,ported,,1,1104
 0044f1a0,FUN_0044f1a0,named,InputKeyMappingAddBidirectional,0,758
-0044f220,FUN_0044f220,named,SceneObjectResourceHandleSet,0,112
+0044f220,FUN_0044f220,ported,SceneObjectResourceHandleSet,1,112
 0044f230,FUN_0044f230,named,TerrainCellMaterialSet,0,1258
 0044f380,FUN_0044f380,ported,TerrainVoxelNeighborsMutate,1,1054
 0044f490,FUN_0044f490,named,GridCellOperationApplyAll,0,466

@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 545 | 21.3% |
+| ported | 550 | 21.5% |
 | anchored | 5 | 0.2% |
-| named | 1968 | 76.8% |
+| named | 1963 | 76.6% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 0 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (545 functions)
+  (550 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (5 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1968 functions)
+  citation yet (1963 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (0 functions)
 
-**Game logic remaining to port: 1973 (77.0%).**
+**Game logic remaining to port: 1968 (76.8%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -612,13 +612,11 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0042dfc0` | ObjectPointerRegistryClearMatch |
 | `0x0042dff0` | ObjectPointerRegistryGetSlot |
 | `0x0042ef40` | StatsLevelRecordCountForStatType |
-| `0x0042f2e0` | TerrainCellEdgeFlagSetAndUpdate |
 | `0x0042f350` | TerrainNeighborCoordinateCheck |
 | `0x004302b0` | MapCellTrackingFlagsClearAndRefresh |
 | `0x00430320` | TerrainCellWorkFlagClear |
 | `0x00430470` | TerrainNeighborFlagSet |
 | `0x00430df0` | TerrainNeighborRefresh |
-| `0x004310f0` | TerrainCellFlag20ClearAndRefresh |
 | `0x00431140` | TerrainCellQueuedWorkTransition |
 | `0x004314c0` | ActivityBuildRecordRelease |
 | `0x00431530` | ActivityBuildRecordsReleaseAll |
@@ -648,7 +646,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00434af0` | TextMessagesConfigLoad |
 | `0x00434da0` | AdvisorTooltipAndTooltipSoundConfigLoad |
 | `0x00434e80` | InterfaceSpawnRequestEnqueue |
-| `0x00435010` | TerrainCellWorkFlagCircleSet |
 | `0x004350a0` | SurfaceTypeDescriptionsConfigLoad |
 | `0x00435170` | TerrainSurfaceTypeNameGet |
 | `0x00435190` | SurfaceTypeConfiguredValueAtIndex |
@@ -934,14 +931,12 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0044e0a0` | GlobalResourceHandleRelease |
 | `0x0044e4d0` | TerrainGridVertexBuild |
 | `0x0044e670` | NestedPointerRecordDestroy |
-| `0x0044e6b0` | IndexedFlagValueSetOne |
 | `0x0044e6d0` | TerrainCellMaterialTransitionBegin |
 | `0x0044e860` | GridCellSetPayloadIndex |
 | `0x0044e880` | TerrainGridCellsInitialize |
 | `0x0044e8c0` | SurfaceVertexSpanValidate |
 | `0x0044ead0` | TerrainCellListSurfaceHeightClampMutate |
 | `0x0044f1a0` | InputKeyMappingAddBidirectional |
-| `0x0044f220` | SceneObjectResourceHandleSet |
 | `0x0044f230` | TerrainCellMaterialSet |
 | `0x0044f490` | GridCellOperationApplyAll |
 | `0x0044f4e0` | TerrainCellSurfaceTypeSet |
