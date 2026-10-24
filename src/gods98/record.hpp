@@ -309,4 +309,41 @@ void float_pair_at_offsetc_set_from_uints(void* record, uint32_t x,
 void object_state_pair_get(const void* record, uint32_t* out_a,
                            uint32_t* out_b);
 
+/* --- scene-visibility wrapper band (2026-10-24; findings 446/370/435/356/
+ * 373/476/28) --------------------------------------------------------------
+ * The corpus's visibility leaf (FUN_00473b40, the surface lock/unlock) is
+ * the port's hook boundary — quoted in tickers.cpp, no body here — so the
+ * wrappers below reproduce their own gates and field work and route the
+ * leaf through the documented no-op hook (the simtick drop-leaf precedent).
+ * Handle slots that the corpus fills with record addresses are read as
+ * native pointer slots (the module's established widening).
+ * GraphicsOverlayVisibilitySet (FUN_004634b0): the overlay word changes
+ *   only when the flag differs from the cached value; the handle rides
+ *   the call through unchanged. Both corpus words are port statics.
+ * SurfaceVisibilitySet (FUN_00464720): record +0 handle, flag through.
+ * AnimationObjectVisibilitySet (FUN_00406c90): animation record +4.
+ * SceneObjectPairApplyMode (FUN_00408670): the +4 object, then the +0x7c
+ *   partner when it is nonzero.
+ * AnimationObjectVisibilityGet (FUN_004086a0): the +4 object's flag bit 3
+ *   through the ported getter.
+ * SceneAssignEntityOwner (FUN_00408380): owner store on the +4 object
+ *   through the ported owner set. */
+void scene_visibility_hook_reset(void);             /* port hook */
+int  scene_visibility_calls(void);                  /* port hook */
+void scene_visibility_last_call(void** out_object, int* out_flag); /* hook */
+void graphics_overlay_visibility_set(uint32_t flag);
+                                                /* FUN_004634b0 */
+void graphics_overlay_word_set(uint32_t handle);    /* port hook */
+uint32_t graphics_overlay_word_peek(void);          /* port hook */
+void surface_visibility_set(const void* record, uint32_t flag);
+                                                /* FUN_00464720 */
+void animation_object_visibility_set(const void* anim, uint32_t flag);
+                                                /* FUN_00406c90 */
+void scene_object_pair_apply_mode(const void* record, uint32_t flag);
+                                                /* FUN_00408670 */
+uint32_t animation_object_visibility_get(const void* anim);
+                                                /* FUN_004086a0 */
+void scene_assign_entity_owner(const void* scene, uint32_t owner);
+                                                /* FUN_00408380 */
+
 #endif /* LEGORRR_GODS98_RECORD_HPP */

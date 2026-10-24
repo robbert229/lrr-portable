@@ -171,15 +171,15 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00407d60,FUN_00407d60,named,BuildingTypeConfigRecordParse,0,6894
 004082e0,FUN_004082e0,named,SceneObjectScalarAdjustByDirection,0,457
 00408360,FUN_00408360,ported,TaskField84GetAndField88Out,3,196
-00408380,FUN_00408380,named,SceneAssignEntityOwner,0,121
+00408380,FUN_00408380,ported,SceneAssignEntityOwner,3,121
 004083a0,FUN_004083a0,named,SceneEntitySlotTableRebuild,0,2561
 00408570,FUN_00408570,named,SceneActivityChange,0,844
 004085f0,FUN_004085f0,named,SceneActivityChangeSecondary,0,400
 00408620,FUN_00408620,named,SceneObjectRecordCloneRetainHandles,0,532
 00408670,FUN_00408670,ported,SceneObjectPairApplyMode,3,216
 004086a0,FUN_004086a0,ported,AnimationObjectVisibilityGet,3,94
-004086c0,FUN_004086c0,ported,SceneObjectPairSetRenderParameters,3,289
-00408710,FUN_00408710,ported,SceneObjectPairSetCallbackScalar,3,408
+004086c0,FUN_004086c0,named,SceneObjectPairSetRenderParameters,0,289
+00408710,FUN_00408710,named,SceneObjectPairSetCallbackScalar,0,408
 00408770,FUN_00408770,named,SceneObjectIndexedHandleGetOrCreate,0,340
 004087b0,FUN_004087b0,named,SceneObjectPrimaryHandleGetOrCreate,0,330
 004087e0,FUN_004087e0,named,SceneObjectSecondaryHandleGetOrCreate,0,330
@@ -1449,7 +1449,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00463f00,FUN_00463f00,named,SceneQuadGridEmit,0,2818
 00464110,FUN_00464110,ported,RotatedPairsScratchFill,2,1019
 004641c0,FUN_004641c0,named,BuildingPlacementFootprintRenderAndValidate,0,5897
-00464720,FUN_00464720,named,SurfaceVisibilitySet,0,109
+00464720,FUN_00464720,ported,SurfaceVisibilitySet,3,109
 00464740,FUN_00464740,ported,SoundAliasRegistryInit,4,3903
 00464c50,FUN_00464c50,ported,SoundDynamicAliasRegistrationSet,5,167
 00464c70,FUN_00464c70,ported,SoundAliasLookup,4,687
@@ -1713,7 +1713,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00473680,FUN_00473680,ported,SceneObjectWrappedPointerGet,1,71
 00473690,FUN_00473690,named,EntityVisualResourceLoad,0,7281
 00473b20,FUN_00473b20,named,EntityFlag80Set,0,234
-00473b40,FUN_00473b40,ported,SceneRenderLockToggle,1,385
+00473b40,FUN_00473b40,ported,SceneRenderLockToggle,3,385
 00473ba0,FUN_00473ba0,ported,SceneObjectFlagBit3Get,1,92
 00473bc0,FUN_00473bc0,named,ResourceNameRegisterOrQuery,0,914
 00473c60,FUN_00473c60,named,XfTextureNameFormat,0,1386

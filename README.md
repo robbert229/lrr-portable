@@ -2363,6 +2363,19 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Scene-visibility wrapper band** (findings 446/370/435/356/373/476/28):
+`record.*` ports six wrappers over the surface lock/unlock hook boundary —
+`graphics_overlay_visibility_set` (0x4634b0 — the overlay word moves the
+cache only on a change, the handle rides the folded 1/0 flag, both corpus
+words as port statics), `surface_visibility_set` (0x464720 — the record +0
+handle), `animation_object_visibility_set` (0x406c90 — the animation record's
++4 handle), `scene_object_pair_apply_mode` (0x408670 — the +4 object and the
+nonzero +0x7c partner), `animation_object_visibility_get` (0x4086a0 — the +4
+object's flag bit 3 through the ported getter), and `scene_assign_entity_owner`
+(0x408380 — the owner store on the +4 object through the ported setter), each
+routing FUN_00473b40 through a recorded hook so `record_test` pins the calls,
+gates, and stores.
+
 **Chain-release + view-transform leaves** (findings 376/478/431/13/395/379/
 348/426): `simtick.*` ports `simtick_release_all_group_records` (0x4099d0 —
 the bobbin chain walk dropping each record through the corpus drop leaf,

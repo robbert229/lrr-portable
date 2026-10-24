@@ -830,6 +830,76 @@ int main(void)
         object_state_pair_get(NULL, &a, &b); /* guarded */
     }
 
+    /* The scene-visibility wrapper band (2026-10-24). */
+    {
+        scene_visibility_hook_reset();
+
+        /* SurfaceVisibilitySet: record +0 handle through the leaf. */
+        char obj[0x20];
+        memset(obj, 0, sizeof obj);
+        char rec[0x10];
+        memset(rec, 0, sizeof rec);
+        void* p = obj;
+        __builtin_memcpy(rec + 0x00, &p, sizeof p);
+        surface_visibility_set(rec, 1u);
+        void* last = NULL;
+        int flag = -1;
+        scene_visibility_last_call(&last, &flag);
+        CHECK(scene_visibility_calls() == 1 && last == (void*)obj && flag == 1,
+              "the surface wrapper lands on the record's object");
+
+        /* AnimationObjectVisibilitySet: animation record +4. */
+        char anim[0x20];
+        memset(anim, 0, sizeof anim);
+        __builtin_memcpy(anim + 0x04, &p, sizeof p);
+        animation_object_visibility_set(anim, 0u);
+        scene_visibility_last_call(&last, &flag);
+        CHECK(scene_visibility_calls() == 2 && last == (void*)obj && flag == 0,
+              "the animation wrapper reads its +4 handle");
+
+        /* AnimationObjectVisibilityGet: +4 object's flag bit 3. */
+        obj[0x14] = (char)0x10; /* bit 3 clear */
+        CHECK(animation_object_visibility_get(anim) == 0u, "bit 3 reads clear");
+        obj[0x14] = (char)0x08; /* bit 3 set */
+        CHECK(animation_object_visibility_get(anim) == 1u, "bit 3 reads set");
+
+        /* SceneAssignEntityOwner: owner store on the +4 object. */
+        scene_assign_entity_owner(anim, 0x1234u);
+        uint32_t owner = 0;
+        __builtin_memcpy(&owner, obj + 0x20, sizeof owner);
+        CHECK(owner == 0x1234u, "the owner lands through the ported setter");
+
+        /* SceneObjectPairApplyMode: partner only when set. */
+        scene_visibility_hook_reset();
+        char pair[0x90];
+        memset(pair, 0, sizeof pair);
+        __builtin_memcpy(pair + 0x04, &p, sizeof p);
+        scene_object_pair_apply_mode(pair, 1u);
+        CHECK(scene_visibility_calls() == 1, "the partnerless pair calls once");
+        char mate[0x10];
+        memset(mate, 0, sizeof mate);
+        void* mp = mate;
+        __builtin_memcpy(pair + 0x7c, &mp, sizeof mp);
+        scene_object_pair_apply_mode(pair, 1u);
+        CHECK(scene_visibility_calls() == 3, "the second object rides the mode");
+        scene_visibility_last_call(&last, &flag);
+        CHECK(last == (void*)mate, "the partner call lands last");
+
+        /* GraphicsOverlayVisibilitySet: cache gate, folded flag. */
+        scene_visibility_hook_reset();
+        graphics_overlay_word_set(7u);
+        graphics_overlay_visibility_set(1u); /* cache moves 0 -> 1 */
+        CHECK(scene_visibility_calls() == 1, "the first flag change calls");
+        graphics_overlay_visibility_set(1u); /* equal cache: no call */
+        CHECK(scene_visibility_calls() == 1, "the equal flag stays silent");
+        graphics_overlay_visibility_set(0u);
+        scene_visibility_last_call(&last, &flag);
+        CHECK(scene_visibility_calls() == 2 && last == (void*)(uintptr_t)7u
+                  && flag == 0,
+              "the flag-off call folds zero and rides the handle word");
+        CHECK(graphics_overlay_word_peek() == 7u, "the overlay word sticks");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "record_test: %d failure(s)\n", s_failures);
         return 1;
