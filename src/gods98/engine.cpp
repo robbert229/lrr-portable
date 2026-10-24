@@ -173,3 +173,48 @@ int mode_dependent_field24_get(const EngineContext* ctx)
     const ViewContext* v = ctx->views[which];
     return v != NULL ? (int)v->follow_span : 0;
 }
+
+/* --- the 0x425-0x426 engine-state band (see engine.hpp) ---------------------
+ * The two threaded one-liners are the corpus's own reads of the context-mode
+ * and cheat-word globals; the two DAT-global shapes land as zero-initialized
+ * module storage per the unowned-global convention (the triple's only corpus
+ * writer is the unported renderer-side sim-interaction update). */
+static int s_scroll_guard;        /* DAT_004de548 */
+static uint32_t s_triple[3];      /* DAT_0055651c / DAT_00556520 / DAT_00556524 */
+
+bool current_engine_mode_is_zero(const EngineContext* ctx)
+{
+    return ctx != NULL && ctx->context_mode == 0;
+}
+
+void global_state_flags_bit7_set(EngineContext* ctx, int value)
+{
+    if (ctx == NULL) {
+        return; /* deviation: the corpus writes its global blindly */
+    }
+    if (value != 0) {
+        ctx->debug |= 0x80u;
+    } else {
+        ctx->debug &= ~0x80u;
+    }
+}
+
+void global_scroll_guard_set(int value)
+{
+    s_scroll_guard = value;
+}
+
+int global_scroll_guard_peek(void)
+{
+    return s_scroll_guard;
+}
+
+void global_triple_copy_out(uint32_t* out)
+{
+    if (out == NULL) {
+        return; /* deviation: the corpus writes through blindly */
+    }
+    out[0] = s_triple[0];
+    out[1] = s_triple[1];
+    out[2] = s_triple[2];
+}

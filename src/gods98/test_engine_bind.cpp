@@ -105,6 +105,36 @@ int main(void)
               "engine_bind: null view slots and context guard answer zero");
     }
 
+    /* The 0x425-0x426 engine-state band (2026-10-24). */
+    {
+        EngineContext ec = {};
+        CHECK(current_engine_mode_is_zero(NULL) == false
+                  && current_engine_mode_is_zero(&ec) == true,
+              "engine_bind: mode zero answers for the zero word and null");
+        ec.context_mode = 1;
+        CHECK(current_engine_mode_is_zero(&ec) == false,
+              "engine_bind: a nonzero mode is not zero");
+        ec.context_mode = 0;
+
+        global_state_flags_bit7_set(&ec, 1);
+        CHECK((ec.debug & 0x80u) != 0u, "engine_bind: bit 7 raises");
+        global_state_flags_bit7_set(&ec, 0);
+        CHECK((ec.debug & 0x80u) == 0u
+                  && ec.debug == 0u,
+              "engine_bind: bit 7 clears and the word stays otherwise untouched");
+        global_state_flags_bit7_set(NULL, 1);
+
+        global_scroll_guard_set(7);
+        CHECK(global_scroll_guard_peek() == 7, "engine_bind: the guard stores");
+        global_scroll_guard_set(0);
+
+        uint32_t out[3] = { 1, 2, 3 };
+        global_triple_copy_out(NULL);
+        global_triple_copy_out(out);
+        CHECK(out[0] == 0u && out[1] == 0u && out[2] == 0u,
+              "engine_bind: the inert triple copies zero");
+    }
+
     if (s_failures == 0) {
         printf("engine_bind_test: PASS\n");
         return 0;
