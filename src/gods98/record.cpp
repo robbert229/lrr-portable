@@ -214,3 +214,120 @@ uint32_t entity_type_flag_bit1_get(const void* record)
 {
     return (rec_dword(record, 0x1e8) & 0xffu) >> 1 & 1u;
 }
+
+/* ------------------------------------------------------------------ *
+ *  Field-reader sweep (see record.hpp). */
+
+uint32_t object_record_field11c_get(const void* record)
+{
+    return rec_dword(record, 0x11c);
+}
+
+uint32_t object_field_be4_dword_get(const void* record)
+{
+    return rec_dword(record, 0xbe4);
+}
+
+uint32_t entity_type_mask_get(const void* record)
+{
+    return rec_dword(record, 300);
+}
+
+uint32_t pointer_value_get(const void* pointed)
+{
+    return rec_dword(pointed, 0);
+}
+
+uint32_t scene_object_flags_get(const void* scene_object)
+{
+    return rec_dword(scene_object, 0x70);
+}
+
+uint32_t scene_object_owner_get(const void* scene_object)
+{
+    return rec_dword(scene_object, 0x20);
+}
+
+uint32_t scene_object_resource_get(const void* scene_object)
+{
+    return rec_dword(scene_object, 0x08);
+}
+
+uint32_t scene_object_wrapped_pointer_get(const void* wrapped)
+{
+    return rec_dword(wrapped, 0);
+}
+
+uint32_t scene_object_flag_bit3_get(const void* scene_object)
+{
+    return (rec_dword(scene_object, 0x14) & 0xffu) >> 3 & 1u;
+}
+
+int scene_object_mode_is_one(const void* scene_object)
+{
+    return rec_dword(scene_object, 0x28) == 1u ? 1 : 0;
+}
+
+uint32_t animation_object_handle_get(const void* animation_object)
+{
+    return rec_dword(animation_object, 0x04);
+}
+
+uint32_t resource_entry_id_get(const void* entry)
+{
+    if (entry != NULL) {
+        uint16_t v = 0;
+        __builtin_memcpy(&v, (const char*)entry + 2, sizeof(v));
+        return v;
+    }
+    return 0u;
+}
+
+uint32_t indexed_word_table_lookup(uint32_t index, const void* table)
+{
+    const size_t off = 0x41c + (size_t)(index & 0xffu) * 2u;
+    if (table != NULL) {
+        uint16_t v = 0;
+        __builtin_memcpy(&v, (const char*)table + off, sizeof(v));
+        return v;
+    }
+    return 0u;
+}
+
+uint32_t indexed_record_flag6c_bit0_get(const void* record, int index)
+{
+    const char* base = (const char*)rec_ptr(record, 0x08);
+    if (base == NULL) {
+        return 0u;
+    }
+    const size_t off = (size_t)index * 0x70u + 0x6cu;
+    return rec_dword(base + off, 0) & 1u;
+}
+
+void* indexed_record_data_address_get(const void* record, int index)
+{
+    char* base = (char*)rec_ptr(record, 0x08);
+    if (base == NULL) {
+        return NULL;
+    }
+    return (void*)(base + (size_t)((size_t)index * 0x70u + 0x10u));
+}
+
+int count_matching_coordinates_in_list(const void* manager,
+                                       int32_t coord_x, int32_t coord_y)
+{
+    const int32_t count = (int32_t)rec_dword(manager, 0x20);
+    if (count == 0) {
+        return 0;
+    }
+    int found = 0;
+    for (int32_t i = 0; i < count; ++i) {
+        void* entry = rec_ptr(manager, 0x2cu + (size_t)i * sizeof(void*));
+        if (entry != NULL
+            && (int32_t)rec_dword(entry, 0) == coord_x
+            && (int32_t)rec_dword(entry, 4) == coord_y) {
+            ++found;
+        }
+    }
+    return found;
+}

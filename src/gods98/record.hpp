@@ -104,4 +104,77 @@ int model_child_render_eligibility_check(const void* object);
  * finding 357. NULL answers 0. */
 uint32_t entity_type_flag_bit1_get(const void* record);
 
+/* ------------------------------------------------------------------ *
+ *  Field-reader sweep (2026-10-24; findings 305/337/356/361/372/373/
+ *  376/381/393/411/430/432/435). Opaque-record faithful reads — the
+ *  field MEANINGS stay with the callers per each function's finding.
+ *  NULL records answer 0 (documented deviation); indexed reads follow
+ *  the corpus's pointer slot and stride arithmetic, reading corpus
+ *  pointer fields native-size as elsewhere in this module.
+ * ------------------------------------------------------------------ */
+
+/* ObjectRecordField11CGet (FUN_0046db60, findings 372/432): +0x11c. */
+uint32_t object_record_field11c_get(const void* record);
+
+/* ObjectFieldBE4DwordGet (FUN_0047a540, findings 361/411): +0xbe4. */
+uint32_t object_field_be4_dword_get(const void* record);
+
+/* EntityTypeMaskGet (FUN_0046cf80, findings 357/432): dword at +300. */
+uint32_t entity_type_mask_get(const void* record);
+
+/* PointerValueGet (FUN_00482210, findings 381/411): the dword it points
+ * at (offset +0 of the passed pointer). */
+uint32_t pointer_value_get(const void* pointed);
+
+/* SceneObjectFlagsGet (FUN_00408850, findings 373/435): +0x70. */
+uint32_t scene_object_flags_get(const void* scene_object);
+
+/* SceneObjectOwnerGet (FUN_00473db0, finding 430): +0x20. */
+uint32_t scene_object_owner_get(const void* scene_object);
+
+/* SceneObjectResourceGet (FUN_0046d9e0, findings 357/432): +0x08. */
+uint32_t scene_object_resource_get(const void* scene_object);
+
+/* SceneObjectWrappedPointerGet (FUN_00473680, findings 337/430): the
+ * wrapped pointer's contents (the target's dword at +0). */
+uint32_t scene_object_wrapped_pointer_get(const void* wrapped);
+
+/* SceneObjectFlagBit3Get (FUN_00473ba0, findings 305/430): bit 3 of the
+ * flag byte at +0x14. */
+uint32_t scene_object_flag_bit3_get(const void* scene_object);
+
+/* SceneObjectModeIsOne (FUN_00406980, findings 373/435): the +0x28 mode
+ * word equals 1. */
+int scene_object_mode_is_one(const void* scene_object);
+
+/* AnimationObjectHandleGet (FUN_00406e30, findings 356/435): +0x04. */
+uint32_t animation_object_handle_get(const void* animation_object);
+
+/* ResourceEntryIdGet (FUN_004877d0, findings 381/416): the 16-bit entry
+ * id word at +2 (zero-extended, as the corpus returns it). */
+uint32_t resource_entry_id_get(const void* entry);
+
+/* IndexedWordTableLookup (FUN_004850c0, findings 373/431): word table
+ * CORPUS ORDER — (index, table): (index & 0xff) steps 2 bytes from the
+ * table's +0x41c start. */
+uint32_t indexed_word_table_lookup(uint32_t index, const void* table);
+
+/* IndexedRecordFlag6CBit0Get (FUN_00482780, findings 373/431): bit 0 of
+ * the indexed record's +0x6c word — base table from the record's +0x8
+ * pointer slot, stride 0x70. */
+uint32_t indexed_record_flag6c_bit0_get(const void* record, int index);
+
+/* IndexedRecordDataAddressGet (FUN_00483400, findings 372/431): the
+ * INDEXED RECORD's data address, base + 0x10 + index*0x70 — the address
+ * itself, not its contents (as the corpus answers). NULL table answers
+ * NULL (documented deviation). */
+void* indexed_record_data_address_get(const void* record, int index);
+
+/* CountMatchingCoordinatesInList (FUN_00408e10, findings 376/393): the
+ * coordinate-pair count — `count` (word +0x20) entry pointers stored
+ * inline from +0x2c, each entry's first two dwords tested. Deviation:
+ * the inline entry slots hold native pointers. */
+int count_matching_coordinates_in_list(const void* manager,
+                                       int32_t coord_x, int32_t coord_y);
+
 #endif /* LEGORRR_GODS98_RECORD_HPP */

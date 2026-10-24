@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 504 | 19.7% |
+| ported | 520 | 20.3% |
 | anchored | 5 | 0.2% |
-| named | 2009 | 78.4% |
+| named | 1993 | 77.7% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 0 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (504 functions)
+  (520 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (2009 functions)
+  citation yet (1993 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 2014 (78.5%).**
+**Game logic remaining to port: 1998 (77.9%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -82,7 +82,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004067b0` | PolylineSegmentLengthsAndTotalCalculate |
 | `0x00406820` | BezierCurveSamplesBuild |
 | `0x004068c0` | PathArcLengthInterpolate |
-| `0x00406980` | SceneObjectModeIsOne |
 | `0x00406990` | TypeTableResourceRowLoad |
 | `0x00406c00` | RendererObjectUpdateFromRecordField64 |
 | `0x00406c30` | RendererObjectUpdateFromRecordField68 |
@@ -899,6 +898,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0046ce10` | EntityPayloadType1Release |
 | `0x0046ced0` | PairedResourceStateSet |
 | `0x0046cf20` | SceneEntityAnimationTracksSetEnabled |
+| `0x0046cf40` | RecordFlagBitTest |
 | `0x0046cf90` | RecordIndexedEntriesRebuildAndRefresh |
 | `0x0046cff0` | SceneRecordTemplateInstantiate |
 | `0x0046d140` | SceneAssignOwnerFromModel |
@@ -986,8 +986,10 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004734f0` | DDiSceneLightCreate |
 | `0x00473560` | DDiSceneObjectKindModeSetup |
 | `0x00473690` | EntityVisualResourceLoad |
+| `0x00473b20` | EntityFlag80Set |
 | `0x00473bc0` | ResourceNameRegisterOrQuery |
 | `0x00473c60` | XfTextureNameFormat |
+| `0x00473da0` | SceneObjectOwnerSet |
 | `0x00473dc0` | RendererFogEnableAndColorApply |
 | `0x00473e10` | RendererFogColorSet |
 | `0x00473e70` | RendererFogModeSet |
@@ -1120,6 +1122,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0047a180` | RewardTextDraw |
 | `0x0047a1b0` | FormattedTextDraw |
 | `0x0047a1e0` | FormattedTextDrawAndMeasure |
+| `0x0047a520` | BitmapFontGlyphMeasureWidth |
 | `0x0047a550` | FontRecordAndSurfaceRelease |
 | `0x0047a580` | FixedSizeRecordPoolAcquire |
 | `0x0047a5c0` | FixedSizeRecordPoolGrow |
@@ -1255,7 +1258,15 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00481b80` | CounterFormatStringBuild |
 | `0x00481fa0` | MeshVertexCoordinateRemap |
 | `0x00482040` | AnimationTrackApplyWrappedFrameOffset |
+| `0x004821a0` | IndexedRecordEntryRead |
 | `0x00482220` | MeshRecordAllocateAndFill |
+| `0x00482350` | IndexedRecordField64Set |
+| `0x00482370` | MeshVerticesScaleApply |
+| `0x004823e0` | TerrainCellQuadVerticesWrite |
+| `0x00482470` | IndexedGeometryDataCopyToOutput |
+| `0x00482500` | InstanceQuadVertexDataFill |
+| `0x00482620` | MeshSegmentVertexFill |
+| `0x004826c0` | MeshVertexRecordFill |
 | `0x004827a0` | IndexedRecordFlag6CBit0Set |
 | `0x004827d0` | RecordFlag2CBit0Set |
 | `0x00482ac0` | ModelRenderRecordStateSetup |
@@ -1264,6 +1275,11 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00482d60` | ModelRenderPassDispatch |
 | `0x004830c0` | AnimatedTextureFrameSurfaceSet |
 | `0x00483140` | IndexedRecordInterfaceRelease |
+| `0x00483170` | IndexedRecordTransformInitialize |
+| `0x00483240` | IndexedRecordTransformCopyIn |
+| `0x00483270` | RenderObjectColorVectorSet |
+| `0x00483420` | ScreenEffectItemOpacitySet |
+| `0x00483540` | Matrix4x4IdentityInitialize |
 | `0x00483580` | RenderInterfaceCapabilityCheck |
 | `0x00483600` | Direct3DViewportSetup |
 | `0x00483690` | MatrixMethodPairApply |
@@ -1292,7 +1308,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00484ca0` | FlicDecode8BitAlternateDelta |
 | `0x00484e50` | FlicDecode16BitDelta |
 | `0x00485030` | FlicOpcode27DecodeDispatch |
-| `0x004850c0` | IndexedWordTableLookup |
 | `0x004850f0` | TextBufferCreate |
 | `0x00485160` | TextOutputField82CBit2SetClear |
 | `0x00485190` | TextBufferDestroy |
