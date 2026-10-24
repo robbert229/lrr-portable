@@ -54,3 +54,17 @@ they hand work to:
 | `MapOpen2` (`0x480170`) | The slot-table opener: resolves the file through the resource-open pair (`FUN_0047f6e0`/`FUN_0047fac0`), reads the payload with `WadFileRead @ 0x47f980`, and installs it into an allocated slot. The resource-open/wad read seam (the port opens `.map` files through `level_map_open`) and the `DAT_005343ac` reader hook are unported. | After the wad resource-read seam. |
 | `TerrainCellFlagsSetAndRefresh` (`0x4323f0`), `TerrainCellPrimaryFlagsMaskClearAndRefresh` (`0x432360`), `TerrainCellFlagsSetMask100400` (`0x432450`), `TerrainCellFlagsSetMask20108000` (`0x432490`), `TerrainCellFlag40000000ClearOrSet` (`0x432560`) | Each raises its flag set and refreshes through the per-cell `CellInitPass @ 0x42f6f0` entry (the flag-only twins of this family — `SecondaryFlagBit0*`, `SecondaryFlag8*`, `Flag80000ClearOrSet`, `Flag10000000SetOrClear`, `WorkFlagSet` — are already ported as leaves). A faithful per-cell refresh needs the corpus routine's full body; the load-time scoped port derives the same flag side only in bulk. | Faithful per-cell CellInitPass port. |
 
+## Entity stats records (2026-10-24)
+
+The entity record readers (the `+0x334` field getters) are **ported** as
+offset-preserving leaves (`src/game/entity.*`, finding 457) with the
+record modeled on `EntitySlot.stats_record`; what remains here is the
+Stats configuration layer they hand off to:
+
+| Function (`address`) | Blocker | Next action |
+| --- | --- | --- |
+| `EntityStatsConfigLoad` (`0x4667e0`) | Reads the `Stats` config section and materializes the indexed record table (`DAT_00502bd8`), the per-type counts (`DAT_00502c28`), and the grouped code tables — the port models records as a zero template because no config loader fills them (TODO(corpus)). | Port the config loader against `BlockFile` with a per-level name resolve. |
+| Indexed-record readers (`0x469ac0/af0/b20/e00/ec0/ee0/f00/f60`, `0x46a0c0/0f0`) and `BuildingUpgradeAdmissionCheck` (`0x469f40`) | They address the config tables above by type/level (and `type*0x3c + level*4`); with no loader ported there is nothing to index. | After the config loader. |
+| `IndexedValueAppend` (`0x469a90`), `GroupedCodeTableFindValueIndex` (`0x46a120`) | Append/lookup over the same unowned grouped tables. | Fold into the config-loader port. |
+| `EntityRecordFlag400ToggleAndRefresh` (`0x46a330`) | Toggles record `+148` bit 0x400, then calls `KindFourPostCreateResolve @ 0x43c570`, which is unported. | After that resolver. |
+

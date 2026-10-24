@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 373 | 14.5% |
+| ported | 413 | 16.1% |
 | anchored | 5 | 0.2% |
-| named | 2140 | 83.5% |
+| named | 2100 | 81.9% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 0 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (373 functions)
+  (413 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (2140 functions)
+  citation yet (2100 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 2145 (83.7%).**
+**Game logic remaining to port: 2105 (82.1%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -788,7 +788,18 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004667e0` | EntityStatsConfigLoad |
 | `0x00469a90` | IndexedValueAppend |
 | `0x00469ac0` | IndexedRecordWordAtOffsetB0Get |
+| `0x00469af0` | IndexedRecordWordAtOffsetB4Get |
+| `0x00469b20` | IndexedRecordWordAtOffsetB8Get |
+| `0x00469b50` | EntityIndexedRecordWordAtOffsetBCGet |
+| `0x00469b80` | EntityIndexedRecordWordAtOffsetE0Get |
+| `0x00469bb0` | BuildingDepositCountGet |
+| `0x00469be0` | EntityIndexedRecordWordAtOffsetF0Get |
+| `0x00469e00` | IndexedRecordFloatAtOffsetDCGet |
+| `0x00469ec0` | IndexedRecordWordAtOffset144Get |
+| `0x00469ee0` | IndexedRecordWordAtOffset148Get |
+| `0x00469f00` | IndexedRecordWordAtOffset14CGet |
 | `0x00469f40` | BuildingUpgradeAdmissionCheck |
+| `0x00469f60` | IndexedRecordWordAtOffsetD0Get |
 | `0x0046a0c0` | MappedIndexedRecordWordAtFCGet |
 | `0x0046a120` | GroupedCodeTableFindValueIndex |
 | `0x0046a330` | EntityRecordFlag400ToggleAndRefresh |

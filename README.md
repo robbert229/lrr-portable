@@ -1137,6 +1137,24 @@ past the table read stack garbage in the corpus and report 0 here).
 header/cell images, zero reads through the failed-resolve deviation),
 the gated type read and every classify routing corner.
 
+**Entity record accessors** (2026-10-24; finding 457): the corpus's
+`+0x334` stats-record family — thirty-nine field readers spanning
+float words (`+0x20` … `+0x138`, including the terrain-speed array at
+`+24 + index*4`, the energy-decay rate, speed component and collision
+radius), the stats/state/capability flag words (`+144` / `+148` / `+14c`
+plus `+ac` and `+13c`), the `+0xc0`/`+0xc4` selector word and the
+`+0xa0` field **address** getter (`entity_stats_field_at_a0`, which
+returns the address itself) — land as offset-preserving leaves in
+`src/game/entity.*`. The record is modeled on `EntitySlot.stats_record`
+(NULL → a zero template): the Stats config loader that fills real
+records is unported, so reads default to zero exactly as the shipped
+static templates do (`docs/coverage/blocked.md` records the config
+layer, the indexed-table readers and the 0x400-toggle that needs the
+type-4 post-create resolver). `entity_test` drives the whole family
+over a synthetic record image, checks each read lands on its corpus
+offset, and covers the zero-template fallback, the selector pair and
+the address identity.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the
