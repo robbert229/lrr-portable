@@ -34,6 +34,7 @@ The tick is dominated by globals in the `0x5560d4`–`0x556f24` window:
 | `DAT_005560e4 / e8 / ec` | three view/camera contexts | each ticked identically by `FUN_00435f5c(o, state, dt, scale)`; `0ec+0x24` = its render-list ref |
 | `DAT_00556124 / 128 / 12c` | debug text-panel surfaces | target of `FUN_0047a180(surface, x, y, fmt, …)` = `printf`-style HUD text |
 | `DAT_005561d4…28c` | entity/object arrays (strides `0x1ec`, `0x74`, `0x14c`, `0x10`) + counts | iterated in EngineShutdown |
+| `DAT_00556fb8 / 0x00556fbc` | current interaction tile `(x, y)` | `MainSimInteractionAndCellUpdate @ 0x426520` stores the two coordinates returned by `FUN_004502e0`; later uses the pair to index the terrain grid and passes its address to tile-action helpers |
 
 Flag bits (observed behavior, partially inferred):
 
