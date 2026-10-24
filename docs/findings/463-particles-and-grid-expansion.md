@@ -31,6 +31,6 @@ The assigned functions split into a transient-effect particle path and a terrain
 
 ## Follow-up boundaries
 
-- Trace writers and readers of grid-record bits `0x8`, `0x10`, and `0x100` before assigning domain names.
+- Trace terrain-cell bits `0x8` and `0x10`, plus the separate entity-cell bit `0x100`, before assigning domain names.
 - Identify any indirect/renderer caller of `InstanceQuadVerticesBuild` and recover its parameter contract.
 - Inspect the callback target and adjacent engine-tick dispatch if the sight-ray scan needs a fuller entity iteration description.
