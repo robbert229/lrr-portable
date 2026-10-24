@@ -1956,6 +1956,24 @@ per-priority state table (zero-init static; the registry initializer
 seam) as guarded access. `cmd_test` pins the round-trips, the binding
 branches, and both marking routes.
 
+**Registry flush, heap wrappers, and batch issue** (2026-10-24; findings
+10/393/466): six leaves land in `cmd.*`. `cmd_flush_all` (0x402100) takes
+the disable mode on bit 1 of the registry word and the full flush at
+zero — the entity callback sweep is the unported registry seam (inert),
+and both list heads and the 27-entry priority-state table drop (the
+corpus's cell-record counter block is unmodeled registry data,
+documented). `engine_memory_allocate`/`engine_memory_free` (0x4021e0 /
+0x402210) are the engine-heap wrapper pair, keeping the corpus's
+discarded-return shape. `handle_array_release_and_reset` (0x4020c0)
+walks the 12-dword handle array — no ported feeder, so a zero-init
+static and an inert release — then zeroes the companion counter and the
+registry word. `entity_command14_batch_issue` (0x402800) issues `count`
+(or one for zero) kind-0x14 records, raising bit 6 in the zero case.
+`level_no_gather_object_setup` (0x402170) chains the batch, the
+kind-0x17 gather record with bit 6, and the kind-0 head record with bits
+6/7/10 and bit 4 cleared. `cmd_test` pins the flush halves, the batch
+flags, and the setup chain.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

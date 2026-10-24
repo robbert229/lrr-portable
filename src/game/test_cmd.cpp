@@ -583,6 +583,85 @@ int main(void)
         cmd_context_set(&ctx);
     }
 
+    /* The registry flush / wrappers / batch issue (2026-10-24). */
+    {
+        GameContext rctx;
+        game_context_init(&rctx);
+        cmd_context_set(&rctx);
+        cmd_init();
+        CHECK(cmd_global_enabled_peek() == 1, "the word starts at bit 0");
+        cmd_flush_all(1);
+        CHECK((cmd_global_enabled_peek() & 2) == 0,
+              "the disable mode clears bit 1");
+
+        EntitySlot e;
+        memset(&e, 0, sizeof(e));
+        e.type = 2;
+        cmd_create_task(&e);
+        priority_entry_state_set(10, 5);
+        CHECK(cmd_global_head() != NULL, "a task for the flush");
+        cmd_flush_all(0);
+        CHECK(cmd_global_head() == NULL
+                  && (cmd_global_enabled_peek() & 2) != 0
+                  && priority_entry_state_get(10) == 0,
+              "the zero flush drops heads, raises bit 1, zeroes states");
+        cmd_flush_all(1);
+        CHECK(cmd_global_enabled_peek() == 1, "bit 1 cleared back to bit 0");
+
+        engine_memory_allocate(64); /* corpus discards the allocation */
+        engine_memory_free(NULL);
+
+        cmd_init();
+        entity_command14_batch_issue(1);
+        CHECK(cmd_global_head() != NULL
+                  && cmd_rec_type(cmd_global_head()) == 4
+                  && cmd_rec_kind(cmd_global_head()) == 0x14
+                  && (cmd_rec_state(cmd_global_head()) & 0x40u) == 0u,
+              "a nonzero count issues an unflagged record");
+        cmd_init();
+        entity_command14_batch_issue(0);
+        CHECK(cmd_global_head() != NULL
+                  && (cmd_rec_state(cmd_global_head()) & 0x40u) != 0u,
+              "the zero count raises bit 6");
+
+        cmd_init();
+        level_no_gather_object_setup(1);
+        CHECK(cmd_global_head() != NULL
+                  && cmd_rec_type(cmd_global_head()) == 0x1b
+                  && cmd_rec_kind(cmd_global_head()) == 0
+                  && (cmd_rec_state(cmd_global_head()) & 0x440u) == 0x440u
+                  && (cmd_rec_state(cmd_global_head()) & 0x10u) == 0u,
+              "the setup record head-lands with bits 6/7/10");
+        cmd_init();
+        level_no_gather_object_setup(0);
+        CHECK(cmd_rec_type(cmd_global_head()) == 0x1b
+                  && cmd_global_head() != NULL,
+              "the batched setup still lands the head record");
+        {
+            int seen_head = cmd_rec_type(cmd_global_head());
+            void* cur = cmd_global_next(cmd_global_head());
+            int seen = 1;
+            int batch_seen = 0, gather_seen = 0;
+            while (cur != NULL) {
+                if (cmd_rec_type(cur) == 4) {
+                    batch_seen = 1;
+                }
+                if (cmd_rec_type(cur) == 0x18) {
+                    gather_seen = 1;
+                }
+                cur = cmd_global_next(cur);
+                ++seen;
+            }
+            CHECK(seen_head == 0x1b && batch_seen && gather_seen,
+                  "the batch and gather records chain behind the head");
+        }
+        cmd_init();
+        handle_array_release_and_reset();
+        CHECK(cmd_global_enabled_peek() == 0, "the reset zeroes the word");
+        cmd_init();
+        cmd_context_set(&ctx);
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "cmd_test: %d failure(s)\n", s_failures);
         return 1;

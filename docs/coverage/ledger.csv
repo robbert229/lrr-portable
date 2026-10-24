@@ -38,11 +38,11 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00402090,FUN_00402090,ported,PriorityEntryOrderValueSet,1,105
 004020a0,FUN_004020a0,ported,PriorityEntryStateSet,1,105
 004020b0,FUN_004020b0,ported,PriorityEntryStateGet,1,79
-004020c0,FUN_004020c0,named,HandleArrayReleaseAndReset,0,252
-00402100,FUN_00402100,named,CmdFlushAll,0,534
-00402170,FUN_00402170,named,LevelNoGatherObjectSetup,0,423
-004021e0,FUN_004021e0,named,EngineMemoryAllocate,0,80
-00402210,FUN_00402210,named,EngineMemoryFree,0,80
+004020c0,FUN_004020c0,ported,HandleArrayReleaseAndReset,1,252
+00402100,FUN_00402100,ported,CmdFlushAll,1,534
+00402170,FUN_00402170,ported,LevelNoGatherObjectSetup,1,423
+004021e0,FUN_004021e0,ported,EngineMemoryAllocate,1,80
+00402210,FUN_00402210,ported,EngineMemoryFree,1,80
 00402220,FUN_00402220,ported,CmdTickGlobal,4,1057
 00402310,FUN_00402310,ported,CmdChainPurge,1,2949
 00402510,FUN_00402510,named,TerrainCellCommandCreate,0,1128
@@ -51,7 +51,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004026c0,FUN_004026c0,ported,EntityDeferredWorkSchedule,1,265
 00402720,FUN_00402720,ported,CmdCreateTask,2,561
 004027a0,FUN_004027a0,ported,,1,428
-00402800,FUN_00402800,named,EntityCommand14BatchIssue,0,370
+00402800,FUN_00402800,ported,EntityCommand14BatchIssue,1,370
 00402850,FUN_00402850,ported,MinionCompanionCmd,1,279
 00402890,FUN_00402890,named,TaskType23CreateForCategoryMask,0,727
 00402960,FUN_00402960,named,EntityKindCommandIssue,0,1191
