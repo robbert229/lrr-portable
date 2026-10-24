@@ -7,7 +7,7 @@ the registry's object class remain open.
 
 | Address | Name | Observed behavior |
 | --- | --- | --- |
-| 0x45d300 | PriorityImageSelectionStateUpdate | After rectangle hit testing, updates the selected category/sentinel in `DAT_005013b8` and sets bit 1 in `DAT_005013bc` when the selection matches. Two input parameters' precise meanings remain uncertain. |
+| 0x45d300 | PriorityImageSelectionStateUpdate | After rectangle hit testing, updates the selected category/sentinel in `DAT_005013b8` and sets bit 1 in `DAT_005013bc` when the selection matches. `PositionTrackerUpdateAll` consumes bit 1 to choose the selected image table and clears it after the pass. Two input parameters' precise meanings remain uncertain. |
 | 0x45d3f0 | PriorityImageOrderMoveToFront | Shifts preceding entries in `DAT_0050111c` when the selection path allows reordering, then refreshes positions through 0x402090 and 0x428800. The rendering effects of those callees are not established. |
 | 0x47e130 | SceneObjectRegistryReleaseAll | Walks registry bucket slots, checks each candidate's `+0x1c` self marker, and passes valid entries to 0x47d470 for vtable `+8` release and free-list chaining. Called by 0x47d430 before bucket arrays and registry globals are cleared. The exact object class remains unknown. |
 | 0x47d430 | SceneObjectRegistryTeardown | Calls `SceneObjectRegistryReleaseAll`, frees the registry bucket arrays, and resets the registry end marker and global state. No callers were resolved in the available reference record. |
