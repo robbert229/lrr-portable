@@ -1066,6 +1066,11 @@ void linked_list_push_at_global_head(void* record)
 
 void* linked_list_global_head_peek(void) { return s_linked_list_head; }
 
+void linked_list_global_head_set(void* record)
+{
+    s_linked_list_head = record;
+}
+
 void global_record_list_push_head(void* record)
 {
     record_list_push(&s_record_list_head, record);
@@ -1120,3 +1125,27 @@ void crt_no_op_stub_variant2(void)
 {
     return;
 }
+
+/* LinkedRecordChainFree / GlobalLinkedRecordChainClear — see crt.hpp. */
+static void* s_linked_list_aux; /* DAT_004aa450 role: unowned, zero-init */
+
+void linked_record_chain_free(void* record)
+{
+    if (record == NULL) {
+        return; /* the corpus's gate */
+    }
+    void* next = NULL;
+    __builtin_memcpy(&next, (char*)record + 0x1c, sizeof(next));
+    linked_record_chain_free(next);
+    engine_heap_free(record);
+}
+
+void global_linked_record_chain_clear(void)
+{
+    s_linked_list_aux = NULL;
+    linked_record_chain_free(s_linked_list_head);
+    s_linked_list_head = NULL;
+}
+
+void* linked_list_global_aux_peek(void) { return s_linked_list_aux; }
+void  linked_list_global_aux_set(void* word) { s_linked_list_aux = word; }

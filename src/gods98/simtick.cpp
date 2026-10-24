@@ -805,3 +805,23 @@ void simtick_directsound_listener_view_set(int view)
         s_sound_active = view;
     }
 }
+
+/* RoutePositionBlockedStateSet (FUN_0044da20) — see simtick.hpp. */
+void simtick_route_position_blocked_state_set(int blocked)
+{
+    if (blocked != 0) {
+        s_edit_word = (s_edit_word & ~0x400u) | 0x200u;
+        return;
+    }
+    s_edit_word &= ~0x1200u; /* bits 9 and 12; bit 10 survives */
+}
+
+uint32_t simtick_route_position_state_peek(void) { return s_edit_word; }
+
+/* GlobalUIFlagsClearBits12 (FUN_0045b610) — see simtick.hpp. */
+void simtick_global_ui_flags_clear_bits12(void)
+{
+    s_timer_word &= 0xfffffff9u;
+}
+
+uint32_t simtick_global_ui_flags_word(void) { return s_timer_word; }

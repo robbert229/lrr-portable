@@ -171,4 +171,18 @@ void simulation_global_word_set(uint32_t value);
  * the slot; the provider call feeds it exactly where the corpus does. */
 void simtick_directsound_listener_view_set(int view); /* FUN_0047ab80 */
 
+/* RoutePositionBlockedStateSet (FUN_0044da20): a blocked route sets the
+ * scene-transform word's blocking bit 9 and drops bit 10; an unblocked
+ * route clears bits 9 and 12 and keeps bit 10 (the corpus's 0xffffedff
+ * mask, faithful).
+ * GlobalUIFlagsClearBits12 (FUN_0045b610): clears bits 1 and 2 of the
+ * index-9 timer word (the corpus's DAT_00500860 — the same word the
+ * shared-timer dispatch reads). The peek hooks stand in for the corpus's
+ * readers of both words. */
+void simtick_route_position_blocked_state_set(int blocked);
+                                        /* FUN_0044da20 */
+void simtick_global_ui_flags_clear_bits12(void); /* FUN_0045b610 */
+uint32_t simtick_route_position_state_peek(void);
+uint32_t simtick_global_ui_flags_word(void);
+
 #endif /* LEGORRR_SIMTICK_HPP */
