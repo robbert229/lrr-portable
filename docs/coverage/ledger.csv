@@ -2290,8 +2290,8 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0048e870,FUN_0048e870,ported,DoubleIsFinite,2,109
 0048e890,FUN_0048e890,named,MarkupIntegerTokenParse,0,470
 0048e8e0,FUN_0048e8e0,named,CrtRoundToIntegralWithMathErrorHandlingVariant,0,1080
-0048e9e0,__alldiv,ported,__alldiv,3,1679
-0048ea90,__allmul,ported,__allmul,2,451
+0048e9e0,__alldiv,runtime-import,__alldiv,0,1679
+0048ea90,__allmul,runtime-import,__allmul,0,451
 0048ead0,FUN_0048ead0,ported,EngineCalloc,2,82
 0048eae0,FUN_0048eae0,named,FileResourceHandleClose,0,674
 0048eb60,FUN_0048eb60,named,StdFileOpenIntoHandle,0,218

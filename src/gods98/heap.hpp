@@ -55,4 +55,17 @@ void ui_render_record_free(void* record);
  * a bare call into the heap's alloc entry — faithful. */
 void engine_heap_allocate(long size);
 
+/* --- the retry-handler pair (2026-10-24; finding 394) ------------------------
+ * CrtNewHandlerInvokeForAllocationRetry (FUN_00491d90): dispatches the
+ * attempted size to the registered allocation-failure handler and answers
+ * whether it asked for another attempt. The corpus registry (the
+ * set_new_handler word) is unported — the port models it with its own
+ * setter hook; unregistered answers 0 (no retry), the corpus's unset
+ * case.
+ * EngineCalloc (FUN_0048ead0): the corpus's retry-enabled allocation —
+ * EngineHeapAllocateWithRetry(size, 1) — returning the block. */
+int   crt_new_handler_invoke(long size);
+void  crt_new_handler_set(int (*handler)(long)); /* port hook */
+void* engine_calloc(long size);                  /* FUN_0048ead0 */
+
 #endif /* LEGORRR_GODS98_HEAP_HPP */

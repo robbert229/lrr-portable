@@ -66,3 +66,31 @@ void engine_heap_allocate(long size)
 {
     (void)engine_heap_alloc(size);
 }
+
+/* --- the retry-handler pair (see heap.hpp) ----------------------------------
+ * The corpus handler word (DAT_00549158, registered through the CRT's
+ * set_new_handler machinery — unported) lands as zero-init storage with
+ * the port-side setter; nothing registers while that seam is absent, so
+ * the invoke answers 0 and EngineCalloc behaves like the plain entry —
+ * the corpus's own unset-handler reading. */
+static int (*s_new_handler)(long);
+
+int crt_new_handler_invoke(long size)
+{
+    if (s_new_handler != NULL) {
+        if (s_new_handler(size) != 0) {
+            return 1; /* the handler asked for another attempt */
+        }
+    }
+    return 0;
+}
+
+void crt_new_handler_set(int (*handler)(long))
+{
+    s_new_handler = handler;
+}
+
+void* engine_calloc(long size)
+{
+    return engine_heap_alloc_retry(size, crt_new_handler_invoke);
+}

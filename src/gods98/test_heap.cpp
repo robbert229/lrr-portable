@@ -97,6 +97,28 @@ int main(void)
         CHECK(1, "the alloc wrapper stays inert on the heap seam");
     }
 
+    /* The retry-handler pair (2026-10-24). */
+    {
+        CHECK(crt_new_handler_invoke(16) == 0, "unregistered answers no-retry");
+        void* p = engine_calloc(64);
+        CHECK(p != NULL, "the calloc allocates");
+        engine_heap_free(p);
+        CHECK(engine_calloc((long)0xffffffe1) == NULL
+                  && engine_calloc(-1) == NULL,
+              "the overflow gate answers NULL");
+        CHECK(engine_calloc(0) != NULL, "size zero allocates one byte");
+        static int s_hits;
+        s_hits = 0;
+        crt_new_handler_set([](long size) -> int {
+            (void)size;
+            ++s_hits;
+            return s_hits < 2; /* retry once, then give up */
+        });
+        CHECK(crt_new_handler_invoke(1) == 1, "the installed handler retries");
+        CHECK(crt_new_handler_invoke(1) == 0, "the same handler gives up next");
+        crt_new_handler_set(NULL); /* restore the corpus's unset case */
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "heap_test: %d failure(s)\n", s_failures);
         return 1;
