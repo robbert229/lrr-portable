@@ -20,12 +20,7 @@ and curiosity; nothing in this repository is affiliated with or endorsed by the 
 
 ```
 README.md           This file
-docs/findings/      Reverse-engineering findings, 01–426 (see index below)
-docs/findings/      Reverse-engineering findings, 01–425 (see index below)
-docs/findings/      Reverse-engineering findings, 01–424 (see index below)
-docs/findings/      Reverse-engineering findings, 01–423 (see index below)
-docs/findings/      Reverse-engineering findings, 01–417 (see index below)
-docs/findings/      Reverse-engineering findings, 01–416 (see index below)
+docs/findings/      Reverse-engineering findings, 01–439 (see index below)
 tools/              WAD tooling (rrwad.py: unpack/pack/verify — see tools/README.md)
                     + model converter (tools/rrlwo.py: .lwo → glTF 2.0)
                     + compat harness (tools/compat/a2.py — see tools/compat/README.md)
@@ -628,6 +623,7 @@ Open threads, in order of value:
 | 424 | [findings/424-camera-viewport-and-view-context.md](docs/findings/424-camera-viewport-and-view-context.md) | Camera, Viewport, and View-Context State |
 | 425 | [findings/425-display-mode-selection-state-and-controls.md](docs/findings/425-display-mode-selection-state-and-controls.md) | Display-Mode Selection State and Controls |
 | 426 | [findings/426-camera-selection-point-and-pointer-pan.md](docs/findings/426-camera-selection-point-and-pointer-pan.md) | Camera Selection Point and Pointer Pan |
+| 439 | [findings/439-hud-panel-render-and-interaction-state.md](docs/findings/439-hud-panel-render-and-interaction-state.md) | HUD Panel Rendering and Interaction State |
 
 Canonical full pseudocode corpus: [`docs/decompiles/full/LEGORR.full.c`](docs/decompiles/full/LEGORR.full.c)
 (2564 manifest functions; see its [README](docs/decompiles/full/README.md)). The
