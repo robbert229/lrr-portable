@@ -833,11 +833,11 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00435e0e,FUN_00435e0e,ported,CameraViewContextSet,1,303
 00435e35,FUN_00435e35,named,ModelTransformCopyToSceneNode,0,575
 00435ebb,FUN_00435ebb,named,ScreenEffectRecordSet,0,367
-00435ef4,FUN_00435ef4,named,RecordFields4And14Set,0,173
+00435ef4,FUN_00435ef4,ported,RecordFields4And14Set,1,173
 00435f0b,FUN_00435f0b,ported,RecordField14Get,2,86
 00435f16,FUN_00435f16,named,CursorScreenRayContextReset,0,87
 00435f28,FUN_00435f28,ported,TerrainGridBorderInsetGet,3,60
-00435f32,FUN_00435f32,named,EntityFieldsA0A4StoreA8Clear,0,215
+00435f32,FUN_00435f32,ported,EntityFieldsA0A4StoreA8Clear,1,215
 00435f5c,FUN_00435f5c,ported,ViewContextTick,2,6486
 00436831,FUN_00436831,ported,CameraSetTiltBounds,1,237
 00436860,FUN_00436860,named,CameraSetTilt,0,501

@@ -247,4 +247,21 @@ void indexed_flag_value_set_one(void* record, uint32_t index);
  * resource handle at object + 0x2c. */
 void scene_object_resource_handle_set(void* object, uint32_t handle);
 
+/* --- entity record-field leaves (2026-10-24) -------------------------------
+ * RecordFields4And14Set (FUN_00435ef4, findings 354/476): store the two
+ * supplied dwords at record +4 and +0x14 (the latter pairs with the
+ * ported RecordField14Get read leaf).
+ * EntityFieldsA0A4StoreA8Clear (FUN_00435f32, finding 476): store the two
+ * supplied dwords at +0xa0/+0xa4 and clear +0xa8.
+ * EntityB8Bit3SetOrClear (FUN_00435d91, finding 476): raise or clear bit
+ * 3 of the +0xb8 byte. Field meanings stay unresolved (findings 354);
+ * NULL records skip the stores (documented deviation; corpus callers
+ * dereference blindly). The corpus writes blindly into whatever record
+ * its callers hand in; the port keeps the write shape. */
+void record_fields_4_and_14_set(void* record, uint32_t value_a,
+                                uint32_t value_b);
+void entity_fields_a0_a4_store_a8_clear(void* record, uint32_t value_a,
+                                        uint32_t value_b);
+void entity_b8_bit3_set_or_clear(void* record, int set);
+
 #endif /* LEGORRR_GODS98_RECORD_HPP */

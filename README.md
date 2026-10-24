@@ -1761,6 +1761,18 @@ table by kind and ignores the rest). Writes outside the window skip,
 reads answer zero (bounds deviation). `input_test` pins the one-bit
 round-trips, table independence, and the guards.
 
+**Entity record-field leaves** (2026-10-24; findings 354/476): three
+plain record writers land in `record.*` with the corpus's offsets over
+opaque records — `record_fields_4_and_14_set` (0x435ef4) stores the two
+supplied dwords at +4/+0x14 (its read twin is the ported
+`record_field14_get`), `entity_fields_a0_a4_store_a8_clear` (0x435f32)
+stores +0xa0/+0xa4 and clears +0xa8 (the corpus's own clear), and
+`entity_b8_bit3_set_or_clear` (0x435d91) raises or clears bit 3 of the
++0xb8 byte. The findings leave the field meanings unresolved; the port
+keeps the write shape with NULL records skipping (deviation).
+`record_test` proves the round-trips through the caller-owned buffer,
+the bit isolation, and the NULL skips.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the
