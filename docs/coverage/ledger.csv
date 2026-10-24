@@ -1856,7 +1856,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00478e60,FUN_00478e60,ported,BlockTextOpenAndScan,3,1795
 00478f50,FUN_00478f50,ported,ConfigEntryFind,2,2731
 00478ff0,FUN_00478ff0,ported,ConfigNestedPathChildFind,1,263
-00479020,FUN_00479020,named,SortedEntryNextEqualKey,0,316
+00479020,FUN_00479020,ported,SortedEntryNextEqualKey,3,316
 00479050,FUN_00479050,ported,ConfigStringCopy,1,1143
 004790b0,FUN_004790b0,ported,ConfigPathValueGet,1,202
 004790d0,FUN_004790d0,ported,ConfigBooleanGetDefault2,6,258

@@ -335,6 +335,14 @@ const char* block_value(const BlockRec* r) { return r ? r->value : NULL; }
 
 BlockRec* block_first_child(const BlockRec* r) { return r ? r->child : NULL; }
 BlockRec* block_next_sibling(const BlockRec* r) { return r ? r->sibling : NULL; }
+
+/* SortedEntryNextEqualKey (FUN_00479020): next record at the same depth
+ * is next-sibling in the tree model (see header; corpus next-pointer
+ * read guarded). */
+BlockRec* block_next_equal_key(const BlockRec* r)
+{
+    return block_next_sibling(r);
+}
 int block_has_children(const BlockRec* r) { return r && r->child != NULL; }
 
 size_t block_record_count(const BlockFile* bf) { return bf ? bf->nrec : 0; }

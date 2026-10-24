@@ -197,6 +197,38 @@ static void test_multiroot(void)
     block_close(bf);
 }
 
+/* SortedEntryNextEqualKey (FUN_00479020): the config loaders' sibling
+ * iteration idiom — first match then repeatedly "next at the same
+ * depth" (findings 230/403). */
+static void test_equal_key(void)
+{
+    BlockFile* bf = parse(
+        "S {\n"
+        "  c1 { g 1 }\n"
+        "  c2 2\n"
+        "  c3 { g 3 }\n"
+        "}\n");
+    BlockRec* c1 = block_find(bf, "S c1");
+    BlockRec* c2 = block_find(bf, "S c2");
+    BlockRec* c3 = block_find(bf, "S c3");
+    BlockRec* g1 = block_find(bf, "S c1 g");
+    CHECK(c1 != NULL && c2 != NULL && c3 != NULL && g1 != NULL,
+          "equal-key: fixture records");
+    CHECK(block_next_equal_key(c1) == c2, "skips c1's subtree in document order");
+    CHECK(block_next_equal_key(c2) == c3, "simple child continues the walk");
+    CHECK(block_next_equal_key(c3) == NULL, "last sibling ends the walk");
+    CHECK(block_next_equal_key(g1) == NULL, "subtree record has no sibling");
+    CHECK(block_next_equal_key(NULL) == NULL, "NULL start answers NULL");
+    /* The loaders' loop idiom. */
+    int seen = 0;
+    for (BlockRec* e = block_find(bf, "S c1"); e != NULL;
+         e = block_next_equal_key(e)) {
+        ++seen;
+    }
+    CHECK(seen == 3, "iteration walks all three siblings");
+    block_close(bf);
+}
+
 static void test_getters(void)
 {
     BlockFile* bf = parse(
@@ -380,6 +412,7 @@ int main(int argc, char** argv)
     test_colon_sep();
     test_comments_braces();
     test_multiroot();
+    test_equal_key();
     test_getters();
 
     if (argc >= 3 && strcmp(argv[1], "--real") == 0) {

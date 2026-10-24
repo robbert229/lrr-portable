@@ -66,6 +66,15 @@ const char* block_name(const BlockRec* r);
 const char* block_value(const BlockRec* r);     /* NULL when no value token */
 BlockRec*   block_first_child(const BlockRec* r);
 BlockRec*   block_next_sibling(const BlockRec* r);
+
+/* SortedEntryNextEqualKey (FUN_00479020, findings 230/403): follow the
+ * sorted record chain and answer the next record whose depth (+0xc)
+ * equals the starting record's depth — "equal key" is the depth word,
+ * and the walk stops the moment the chain gets shallower. The corpus
+ * reads the followed entry's depth before checking it (NULL next
+ * crashes — guarded here); in the port's tree model the walk is exactly
+ * the next record under the same parent, so this is next-sibling. */
+BlockRec* block_next_equal_key(const BlockRec* r);
 int         block_has_children(const BlockRec* r);
 size_t      block_record_count(const BlockFile* bf);
 /* Records in document (creation) order — iteration for validators/tools. */
