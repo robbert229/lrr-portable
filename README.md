@@ -1792,6 +1792,23 @@ by the ported sound-minimum-distance leaf. `frontend_test` pins the
 gates and table switches; `entity_test` the mode selection and the
 predicate's rejection paths.
 
+**Command-queue adjacent leaves** (2026-10-24; findings 06/10/374/386/468):
+three queue-side leaves land in `cmd.*`, reading the module's own
+modeled state. `cmd_queue_cancel_match` (0x451f60) runs the corpus's
+cancel sweep over the active bank — swap-with-last removals whose
+forward cursor never rechecks a swapped-in match (kept faithfully; the
+findings' "matching second field" is compared through the port's
+pointer-sized store). `active_context_record_get` (0x452580) hands out
+the active selection array and count through the cmd context, answering
+zero/NULL while nothing is selected, and `cmd_array_find_value_index`
+(0x452650) is the pure linear value search — matched index written,
+NULL arrays skipped (deviation). `cmd_test` pins the sweep's swap-skip
+count shape, the empty-context answer, and the search edges.
+`caseinsensitive_name_table_lookup_at_offset8` (0x451fd0) stays open
+with its table feeder `MessageStringTableInitialize` — both scan the
+corpus's built-in `Message_*` name table (blocked: reference-binary
+name tables).
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

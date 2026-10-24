@@ -147,6 +147,26 @@ void cmd_queue_tick(void);
 /* Entity chain head on the slot (chain links live in the cmd pool). */
 void cmd_entity_head(EntitySlot* e);
 
+/* --- queue-adjacent leaves (2026-10-24) -----------------------------------
+ * CommandQueueCancelOpcode (FUN_00451f60, findings 06/10/468): removes
+ * every pending entry of the active bank whose second field matches the
+ * argument, swap-with-last removals. The corpus's forward index skips a
+ * swapped-in match (rechecked only at the next slot) — the port keeps
+ * that shape faithfully.
+ * ActiveContextRecordGet (FUN_00452580, finding 386): hands out the
+ * active selection array and its count through the cmd context; clears
+ * the output and answers NULL when nothing is selected.
+ * ArrayFindValueIndex (FUN_00452650, finding 374): the linear value
+ * search over an int array; the matched index lands when a non-NULL
+ * output was given. NULL arrays skip (documented deviation). */
+void cmd_queue_cancel_match(int value);
+const void* active_context_record_get(int* count_out);
+int cmd_array_find_value_index(const int* array, unsigned count, int value,
+                               unsigned* index_out);
+/* Tests/diagnostics view over the active-bank record count (the
+ * message_active_count precedent). */
+int cmd_queue_active_count_peek(void);
+
 #ifdef __cplusplus
 }
 #endif

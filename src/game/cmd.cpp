@@ -695,3 +695,62 @@ void cmd_queue_tick(void)
         }
     }
 }
+
+/* --- queue-adjacent leaves (see cmd.hpp) -----------------------------------
+ * CommandQueueCancelOpcode: corpus shape — the active bank only,
+ * swap-with-last removals, forward index never rechecking the slot a
+ * swap landed on (so a swapped-in match stays if it lands behind the
+ * cursor; the loop bound is the running count).
+ * Comparison deviation: the corpus matches the 32-bit second field, the
+ * port matches the stored pointer through the uintptr cast. */
+void cmd_queue_cancel_match(int value)
+{
+    const int block = s_ping;
+    int count = s_queue_count[block];
+    unsigned i = 0;
+    while ((int)i < count) {
+        if ((uintptr_t)s_queue[block][i].a1 == (uintptr_t)value) {
+            count = count - 1;
+            s_queue[block][i] = s_queue[block][count];
+            s_queue_count[block] = count;
+        }
+        i = i + 1;
+    }
+}
+
+const void* active_context_record_get(int* count_out)
+{
+    const int count = selection_count(s_ctx);
+    if (count == 0) {
+        if (count_out != NULL) {
+            *count_out = 0;
+        }
+        return NULL; /* deviation: corpus hands the array address anyway */
+    }
+    if (count_out != NULL) {
+        *count_out = count;
+    }
+    return (const void*)selection_record_array(s_ctx);
+}
+
+int cmd_array_find_value_index(const int* array, unsigned count, int value,
+                               unsigned* index_out)
+{
+    if (array == NULL) {
+        return 0; /* deviation: the corpus dereferences blindly */
+    }
+    for (unsigned i = 0; i < count; ++i) {
+        if (array[i] == value) {
+            if (index_out != NULL) {
+                *index_out = i;
+            }
+            return 1;
+        }
+    }
+    return 0;
+}
+
+int cmd_queue_active_count_peek(void)
+{
+    return s_queue_count[s_ping];
+}

@@ -157,6 +157,59 @@ int main(void)
               cmd_rec_type(second->cmd_head) == 2,
           "second entity retains its target record");
 
+    /* The queue-adjacent leaves (2026-10-24): the corpus-shaped cancel,
+     * the active-context hand-out, and the pure value search. */
+    {
+        cmd_produce(11, (const void*)(uintptr_t)1, 0, 0, 0);
+        cmd_produce(11, (const void*)(uintptr_t)2, 0, 0, 0);
+        cmd_produce(11, (const void*)(uintptr_t)1, 0, 0, 0);
+        CHECK(cmd_queue_active_count_peek() == 3, "the bank holds three");
+        cmd_queue_cancel_match(1);
+        /* Corpus shape: the [1,2,1] sweep removes the slot-0 match (the
+         * last 1 swaps into the slot the cursor already passed) and keeps
+         * walking, leaving the swapped-in match behind — count 2. */
+        CHECK(cmd_queue_active_count_peek() == 2,
+              "the sweep leaves the swapped-in match (faithful)");
+        cmd_queue_cancel_match(99);
+        CHECK(cmd_queue_active_count_peek() == 2, "the miss changes nothing");
+        cmd_queue_cancel_match(2);
+        CHECK(cmd_queue_active_count_peek() == 1, "the second match drains");
+        cmd_queue_cancel_match(1);
+        CHECK(cmd_queue_active_count_peek() == 0, "the bank empties");
+
+        /* Corpus swap-skip on [1,2]: cancel(1) leaves count 1 with the
+         * successor swapped into the cursor's slot. */
+        cmd_produce(11, (const void*)(uintptr_t)1, 0, 0, 0);
+        cmd_produce(11, (const void*)(uintptr_t)2, 0, 0, 0);
+        cmd_queue_cancel_match(1);
+        CHECK(cmd_queue_active_count_peek() == 1,
+              "the swapped-in successor is not rechecked (faithful)");
+        cmd_queue_cancel_match(2);
+    }
+
+    {
+        int count_out = -1;
+        CHECK(active_context_record_get(&count_out) == NULL
+                  && count_out == 0,
+              "nothing selected: zero count, NULL handle");
+    }
+
+    {
+        const int table[] = { 7, 9, 3, 9 };
+        unsigned idx = 99;
+        CHECK(cmd_array_find_value_index(table, 4, 3, &idx) == 1
+                  && idx == 2,
+              "the value search finds the second 3-shaped hit");
+        idx = 55;
+        CHECK(cmd_array_find_value_index(table, 4, 8, &idx) == 0
+                  && idx == 55,
+              "the miss leaves the output alone");
+        CHECK(cmd_array_find_value_index(NULL, 4, 3, &idx) == 0,
+              "the NULL array skips (deviation)");
+        CHECK(cmd_array_find_value_index(table, 4, 7, NULL) == 1,
+              "the NULL output is safe");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "cmd_test: %d failure(s)\n", s_failures);
         return 1;

@@ -1200,7 +1200,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00451c30,FUN_00451c30,named,LinkedRecordField4Clear,0,151
 00451c50,FUN_00451c50,named,OwnedObjectReferenceChainRelease,0,713
 00451cd0,FUN_00451cd0,named,MessageStringTableInitialize,0,3579
-00451f60,FUN_00451f60,named,CommandQueueCancelOpcode,0,817
+00451f60,FUN_00451f60,ported,CommandQueueCancelOpcode,1,817
 00451fd0,FUN_00451fd0,named,CaseInsensitiveNameTableLookupAtOffset8,0,331
 00452010,FUN_00452010,ported,ActionCommandQueueAppend,2,593
 00452060,FUN_00452060,ported,KeyStateGatedCommandEnqueue,3,920
@@ -1208,14 +1208,14 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00452430,FUN_00452430,named,EntityRandomValidCellCommandCreate,0,683
 004524b0,FUN_004524b0,named,SelectionObjectDetach,0,373
 00452520,FUN_00452520,named,SelectionSnapshotCreate,0,703
-00452580,FUN_00452580,named,ActiveContextRecordGet,0,255
+00452580,FUN_00452580,ported,ActiveContextRecordGet,1,255
 004525b0,FUN_004525b0,ported,SelectedEntitySetHasAny,3,59
 004525c0,FUN_004525c0,ported,SelectedEntity,3,83
 004525e0,FUN_004525e0,ported,SelectionRecordArrayGet,2,63
 004525f0,FUN_004525f0,ported,SelectionRecordCountGet,2,60
 00452600,FUN_00452600,ported,SelectionRecordCountReset,2,61
 00452610,FUN_00452610,ported,SelectionContainsEntity,1,228
-00452650,FUN_00452650,named,ArrayFindValueIndex,0,375
+00452650,FUN_00452650,ported,ArrayFindValueIndex,1,375
 00452690,FUN_00452690,named,SelectionCandidateAlreadySelectedOrMarked,0,190
 004526c0,FUN_004526c0,ported,SelectionCandidateFilterDefault,1,109
 004526e0,FUN_004526e0,named,SelectionCandidateFilter,0,1492
