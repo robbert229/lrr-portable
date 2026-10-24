@@ -548,6 +548,102 @@ static void test_deferred_cooldown(void)
           "zero timer counts as running once armed");
 }
 
+/* ------------------------------------------------------------------ *
+ *  Bank record lifecycle (SoundBankEntryLoad @ 0x47a870,
+ *  SoundBankFreeSlotFind @ 0x47aad0, SoundBankEntryRelease @ 0x47ab00,
+ *  SoundVolumeValueValid @ 0x47a850; finding 14 §1).
+ * ------------------------------------------------------------------ */
+
+static void test_bank_entries(void)
+{
+    sound_bank_clear();
+    sound_bank_sound_on_set(1);
+
+    /* Millibel validator boundaries (valid while -10001 < v < 1). */
+    CHECK(sound_volume_value_valid(0) == 1, "volume 0 valid");
+    CHECK(sound_volume_value_valid(-1) == 1, "volume -1 valid");
+    CHECK(sound_volume_value_valid(-10000) == 1, "volume -10000 valid");
+    CHECK(sound_volume_value_valid(-10001) == 0, "volume -10001 invalid");
+    CHECK(sound_volume_value_valid(1) == 0, "volume 1 invalid");
+
+    int slot = -1;
+    CHECK(sound_bank_free_slot_find(&slot) == 1 && slot == 0,
+          "free-slot scan starts at 0");
+    CHECK(sound_bank_free_slot_find(NULL) == 0, "null out fails the scan");
+    CHECK(sound_bank_entry_flags(-1) == 0 && sound_bank_entry_volume(-1) == 0,
+          "record accessors are bounded");
+
+    /* Entry load needs a file the resource layer can open: write a
+     * minimal WAV where the loader path reaches it. */
+    static const char* base = "/tmp/opencode/sndbe_entry";
+    uint8_t pcm[8] = {1, 0, 2, 0, 3, 0, 4, 0};
+    WavSeg segs[2];
+    segs[0].id = NULL; segs[0].bytes = NULL; segs[0].len = 0;
+    segs[1].id = "DATA!"; segs[1].bytes = NULL; segs[1].len = 0;
+    size_t wsz = 0;
+    uint8_t* w = build_wav(1, 16, 11025, pcm, sizeof(pcm), segs, 2, NULL, 0,
+                           &wsz);
+    CHECK(w != NULL, "entry test wav built");
+    char path[512];
+    snprintf(path, sizeof(path), "%s.wav", base);
+    FILE* fp = fopen(path, "wb");
+    if (w == NULL || fp == NULL) {
+        printf("SKIP bank-entry: wav write failed\n");
+        free(w);
+        return;
+    }
+    fwrite(w, 1, wsz, fp);
+    fclose(fp);
+    free(w);
+
+    int s0 = sound_bank_entry_load(base, 0 /* memory */, 1 /* loop */, -500);
+    CHECK(s0 == 0, "entry load claims the free slot");
+    CHECK(sound_bank_entry_flags(s0)
+              == (SOUND_SLOT_BUSY | SOUND_SLOT_LOADED | SOUND_LOOPING),
+          "memory+loop flags: busy, loaded, loop bit");
+    CHECK(sound_bank_entry_volume(s0) == -500, "valid volume stored");
+    CHECK(sound_bank_count() == 1, "busy slot counted");
+    Sound* f = sound_bank_find(base);
+    CHECK(f != NULL && (f->flags & SOUND_LOOPING) != 0,
+          "find sees the loaded looping record");
+
+    /* No dedupe in the corpus loader: a second load claims slot 1. */
+    int s1 = sound_bank_entry_load(base, 1 /* streamed */, 0, 5);
+    CHECK(s1 == 1, "second load claims the next slot");
+    CHECK(sound_bank_entry_flags(s1)
+              == (SOUND_SLOT_BUSY | SOUND_SLOT_LOADED | SOUND_STREAMED),
+          "streamed flags carry the stream bit");
+    CHECK(sound_bank_entry_volume(s1) == 0, "invalid volume stored as 0");
+    CHECK(sound_bank_count() == 2, "two records counted");
+
+    /* Release frees the slot for reuse and drops the payload. */
+    sound_bank_entry_release(s0);
+    CHECK(sound_bank_count() == 1 && sound_bank_free_slot_find(&slot) == 1
+              && slot == s0,
+          "release clears busy and the slot comes back");
+    sound_bank_entry_release(-1); /* no-op by the corpus's param guard */
+
+    /* Failure path: missing file claims and releases nothing. */
+    CHECK(sound_bank_entry_load("/tmp/opencode/sndbe_missing", 0, 0, 0) == -1,
+          "missing file fails the entry load");
+    CHECK(sound_bank_count() == 1, "failed load registers no record");
+
+    /* Sound-off gate: loads refuse while the subsystem switch is off. */
+    sound_bank_sound_on_set(0);
+    CHECK(sound_bank_entry_load(base, 0, 0, 0) == -1, "sound-off blocks load");
+    sound_bank_sound_on_set(1);
+
+    /* Port convenience keeps bank_load deduped. */
+    CHECK(sound_bank_load(base, 0, 0) == 0 && sound_bank_count() == 1,
+          "bank_load dedupes before claiming (port layer)");
+    CHECK(sound_bank_load("/tmp/opencode/sndbe_missing", 0, 0) == -1,
+          "bank_load fails on a missing file");
+
+    sound_bank_clear();
+    remove(path);
+    CHECK(sound_bank_count() == 0, "clear empties the bank");
+}
+
 int main(int argc, char** argv)
 {
     test_synthetic();
@@ -555,6 +651,7 @@ int main(int argc, char** argv)
     test_sound_enable();
     test_request_queue();
     test_deferred_cooldown();
+    test_bank_entries();
     for (int i = 1; i < argc; ++i) {
         if (strcmp(argv[i], "--real") == 0 && i + 1 < argc) {
             test_real(argv[i + 1]);

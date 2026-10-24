@@ -7,10 +7,14 @@ must land first.
 
 ## Sound-subsystem wave
 
+> Update (2026-10-24): `SoundBankEntryLoad @ 0x47a870` and the slot helpers
+> (`0x47aad0`, `0x47ab00`, `0x47a850`) are **ported** — the bank-record root
+> landed as one cluster. The rows below stay blocked on what remains of the
+> chain.
+
 | Function (`address`) | Issue(s) | Blocker | Next action |
 | --- | --- | --- | --- |
-| `SoundBankEntryLoad` (`0x47a870`) | — | Own cluster: the 600-slot bank table (`DAT_00506698`/stride `0x134`) plus the wav/stream loaders `InMemoryWaveSampleLoad @ 0x47b580` (1670 B) and its flag/handle bookkeeping. Not a blocker-in-itself, but it is the root of every remaining sound chain, so it is scheduled as its own cluster. | Port the bank-entry cluster (loader seam reusing `sound_bank_load`), then the chains below unlock. |
-| `SoundSampleMarkerParse` (`0x464d00`) | #318 | Samples the bank record `SoundBankEntryLoad @ 0x47a870` filled (chain at `DAT_00501468`); without it the marker lists have no producer. | After `SoundBankEntryLoad`. |
+| `SoundSampleMarkerParse` (`0x464d00`) | #318 | Now unblocked in substance: its per-path loads run through the ported bank entry load; still needs the comma-split + chain model (findings 107/134/135/142). | Port as the configured-variants cluster. |
 | `SoundSampleVariantSelect` (`0x464e20`) | #324 | Reads/writes the marker chains #318 builds (plus the ported `RandomNext @ 0x48e170` PRNG draw); dependency chain #318 → bank layer. | After #318. |
 | `ConfiguredVariantPropertySet` (`0x465010`) / `Read` (`0x465030`) | #319 / #320 | Thin wrappers over `SoundSampleVariantSelect @ 0x464e20`, `SoundBankEntryVolumeSet @ 0x47b050` (unported), `IndexedRecordStride134WordGet @ 0x47b0d0` (unported). | After #324 and the bank-entry pair. |
 | `SoundAliasPlay` (`0x464fa0`) | #325 | The submit route needs `SoundSampleVariantSelect` (#324); the batch path additionally drains through it. | After #324. |

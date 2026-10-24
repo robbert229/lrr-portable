@@ -872,6 +872,22 @@ blocked behind the alias-play chain); blocked sound chains are catalogued in
 `docs/coverage/blocked.md`. `sound_test` covers the idle gate, handle
 forgetting, both expire skip-paths, and re-arming.
 
+**Bank record lifecycle** (2026-10-24; finding 14 §1): the bank's 600 slots
+are now corpus-shaped records — busy/loaded bits plus the loop (`*`
+duplicate-buffer, finding 134) and stream bits — driven by
+`sound_bank_entry_load` (`SoundBankEntryLoad @ 0x47a870`, claims a free slot
+from `sound_bank_free_slot_find @ 0x47aad0`, loads `<name>.wav`, validates the
+`#N#` millibel volume with `SoundVolumeValueValid @ 0x47a850`, drops the slot
+whole on load failure) and `sound_bank_entry_release` (`@ 0x47ab00`). Deviations:
+the loader seam reuses the port's resource-layer WAV loader for the corpus's
+platform mmio path, the release seam's DirectSound interface drops land with
+the instance layer, and the sound-system switch (DAT_00533878) is a port seam
+defaulting on. `sound_bank_load` keeps its port-side dedupe. `sound_test`
+covers slot claiming/reuse, flag bits, volume validation, the failure and
+sound-off paths, and record accessors. This is the root of the chain recorded
+in `docs/coverage/blocked.md`; the marker-parse/configured-variant entries
+follow it.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

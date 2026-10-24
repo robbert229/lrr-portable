@@ -1904,7 +1904,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0047a870,FUN_0047a870,ported,SoundBankEntryLoad,3,3087
 0047aad0,FUN_0047aad0,ported,SoundBankFreeSlotFind,3,299
 0047ab00,FUN_0047ab00,ported,SoundBankEntryRelease,3,773
-0047ab80,FUN_0047ab80,ported,DirectSoundListenerViewSet,3,114
+0047ab80,FUN_0047ab80,named,DirectSoundListenerViewSet,0,114
 0047aba0,FUN_0047aba0,ported,DirectSoundListenerUpdateTick,4,133
 0047abc0,FUN_0047abc0,ported,DirectSoundListenerSpatialUpdate,1,1845
 0047ad10,FUN_0047ad10,named,SoundPositionSetFromVector,0,145

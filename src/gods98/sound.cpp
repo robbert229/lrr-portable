@@ -342,7 +342,6 @@ uint32_t sound_bank_entry_flags(int slot)
 
 int sound_bank_entry_volume(int slot)
 {
-    /* IndexedRecordStride134WordGet @ 0x47b0d0 (record +0x110 word). */
     if (slot < 0 || slot >= SOUND_BANK_SLOTS) {
         return 0;
     }

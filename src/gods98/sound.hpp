@@ -114,42 +114,9 @@ void sound_bank_entry_release(int slot);
 int sound_volume_value_valid(int millibels);
 
 /* Record inspection: flag word / stored volume for a slot, or
- * 0/0-invalid when the index is out of range. The volume read is the
- * corpus's IndexedRecordStride134WordGet. */
+ * 0/0-invalid when the index is out of range. */
 uint32_t sound_bank_entry_flags(int slot);
 int sound_bank_entry_volume(int slot);
-
-/* SoundBankEntryVolumeSet @ 0x47b050: validate `millibels` (storing 0
- * when invalid) into the record's volume word. Deviations: the corpus
- * pushes the value through the record's buffer interfaces — all three
- * when the loop bit is set — which land with the instance layer
- * (TODO(corpus), the seam is a no-op), and it writes past any slot
- * bound, which the port guards. */
-void sound_bank_entry_volume_set(int slot, int millibels);
-
-/* ------------------------------------------------------------------ *
- *  Configured variant properties (issues #319 / #320).
- *
- *  The corpus pair selects a variant and then applies/reads the volume
- *  word of the picked record:
- *
- *    ConfiguredVariantPropertySet @ 0x465010: variant-select, then
- *    volume-set. Deviation: the decompiled wrapper only passes the
- *    slot on to the volume setter — the corpus's second argument is
- *    register-passed and invisible — so the port takes the millibel
- *    value explicitly, as issue #319's "stores the supplied variant
- *    properties" describes.
- *
- *    ConfiguredVariantPropertyRead @ 0x465030: variant-select only.
- *    The corpus reads the volume word but discards it, so the only
- *    observable effect is the draw-and-swap.
- * ------------------------------------------------------------------ */
-
-/* Set the head variant's record volume (see above). */
-void sound_variant_property_set(int alias_index, int millibels);
-
-/* Rotate the variant chain, discarding the read (as shipped). */
-void sound_variant_property_read(int alias_index);
 
 /* FNV-1a over the PCM payload (tests compare against wave-module-derived
  * reference hashes from the shipped corpus). */
