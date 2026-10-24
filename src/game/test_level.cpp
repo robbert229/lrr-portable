@@ -708,6 +708,54 @@ int main(int argc, char** argv)
     const char* next = (const char*)level_load_ptr(s, LEVEL_OFF_NEXTLEVEL);
     CHECK(next != NULL && strcmp(next, "Level02") == 0, "nextlevel stored");
 
+    /* Active-engine state accessors (findings 295/324/392/475) drive the
+     * same block words; fields saved and restored. */
+    {
+        uint32_t saved_b0 = 0, saved_84 = 0, saved_a0 = 0, saved_ac = 0;
+        __builtin_memcpy(&saved_b0, s->word + 0xb0 / 4, 4);
+        __builtin_memcpy(&saved_84, s->word + 0x84 / 4, 4);
+        __builtin_memcpy(&saved_a0, s->word + 0xa0 / 4, 4);
+        __builtin_memcpy(&saved_ac, s->word + 0xac / 4, 4);
+
+        level_set_int(s, LEVEL_OFF_ENGINE_B0, 0x1234);
+        CHECK(active_engine_field_b0_get(s) == 0x1234u, "b0 dword read");
+        level_set_int(s, LEVEL_OFF_STATE84, 0x55aa55aau);
+        CHECK(global_state_field84_get(s) == 0x55aa55aau,
+              "state-84 dword read");
+        level_set_float(s, LEVEL_OFF_ENGINE_F260, 1.75f);
+        CHECK(engine_float_field260_get(s) == 1.75f, "260 float read");
+
+        /* Indexed float array: write slot 1 and read it back. */
+        {
+            float saved_211 = level_float(s, LEVEL_OFF_ENGINE_FLOATS + 4);
+            level_set_float(s, LEVEL_OFF_ENGINE_FLOATS + 4, 2.5f);
+            CHECK(engine_float_field210_get_by_index(s, 1) == 2.5f,
+                  "210-indexed float (index 1)");
+            level_set_float(s, LEVEL_OFF_ENGINE_FLOATS + 4, saved_211);
+        }
+
+        /* Upgrade resource check: the selector picks the counter. */
+        level_set_int(s, LEVEL_OFF_RES_A, 40);
+        level_set_int(s, LEVEL_OFF_RES_B, 70);
+        CHECK(upgrade_resource_check(s, 0) == 40, "selector 0 -> +0xa0");
+        CHECK(upgrade_resource_check(s, 1) == 70, "selector 1 -> +0xac");
+        CHECK(upgrade_resource_check(s, -3) == 70,
+              "any nonzero selector -> +0xac");
+
+        /* NULL level answers 0 across the family (documented deviation). */
+        CHECK(active_engine_field_b0_get(NULL) == 0, "NULL b0 read");
+        CHECK(engine_float_field210_get_by_index(NULL, 0) == 0.0f,
+              "NULL indexed float");
+        CHECK(engine_float_field260_get(NULL) == 0.0f, "NULL 260 float");
+        CHECK(global_state_field84_get(NULL) == 0, "NULL state-84 read");
+        CHECK(upgrade_resource_check(NULL, 0) == 0, "NULL resource check");
+
+        __builtin_memcpy(s->word + 0xb0 / 4, &saved_b0, 4);
+        __builtin_memcpy(s->word + 0x84 / 4, &saved_84, 4);
+        __builtin_memcpy(s->word + 0xa0 / 4, &saved_a0, 4);
+        __builtin_memcpy(s->word + 0xac / 4, &saved_ac, 4);
+    }
+
     level_destroy(s);
     block_close(cfg);
 

@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 483 | 18.8% |
+| ported | 488 | 19.0% |
 | anchored | 5 | 0.2% |
-| named | 2030 | 79.2% |
+| named | 2025 | 79.0% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 0 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (483 functions)
+  (488 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (5 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (2030 functions)
+  citation yet (2025 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (0 functions)
 
-**Game logic remaining to port: 2035 (79.4%).**
+**Game logic remaining to port: 2030 (79.2%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -565,7 +565,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0041f880` | GlobalObjectField8CSubtract |
 | `0x0041f8a0` | GlobalObjectField98Add |
 | `0x0041f8c0` | GlobalObjectField98Clear |
-| `0x0041f900` | UpgradeResourceCheck |
 | `0x0041f920` | LevelStateField9CAdd |
 | `0x0041f970` | RuntimeFlag40000000Get |
 | `0x0041f980` | GlobalObjectField94Increment |
@@ -608,13 +607,9 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00429470` | CameraPointerRayRoute |
 | `0x004295a0` | ContextSelectedGlobalPointerGet |
 | `0x004295c0` | EntityMatchesCurrentSelectionOrOwner |
-| `0x00429850` | ActiveEngineFieldB0Get |
-| `0x00429860` | EngineFloatField210GetByIndex |
-| `0x00429880` | EngineFloatField260Get |
 | `0x0042b2f0` | EntityEffectCountersApplyFromRecord |
 | `0x0042b330` | LoadTileMeshes |
 | `0x0042b480` | RectangularResourceTableDestroy |
-| `0x0042b500` | GlobalStateField84Get |
 | `0x0042b850` | SurfaceTextCharacterMapInitialize |
 | `0x0042bb60` | TextureSetConfigLoad |
 | `0x0042c330` | EmergeMapTriggerSpawn |

@@ -75,6 +75,12 @@ extern "C" {
 #define LEVEL_OFF_MAXVARIATION     0x20C /* +0x83 float BuildingMaxVariation     */
 #define LEVEL_OFF_CRYSTALS         0x230 /* +0x8c live crystal count (reader)      */
 #define LEVEL_OFF_ORE              0x280 /* +0xa0 live ore count (reader)         */
+#define LEVEL_OFF_STATE84          0x84  /* active-engine dword read (FUN_0042b500) */
+#define LEVEL_OFF_RES_A            0xA0  /* upgrade resource check (selector 0)    */
+#define LEVEL_OFF_ENGINE_B0        0xB0  /* active-engine dword read (FUN_00429850) */
+#define LEVEL_OFF_RES_B            0xAC  /* upgrade resource check (selector !=0)  */
+#define LEVEL_OFF_ENGINE_FLOATS    0x210 /* indexed float array (FUN_00429860)     */
+#define LEVEL_OFF_ENGINE_F260      0x260 /* active-engine float read (FUN_00429880) */
 
 /* Voxel record stride (bytes). */
 #define LEVEL_VOXEL_STRIDE 0x48
@@ -466,6 +472,29 @@ int level_cell_type_get_at(const LevelState* s, uint32_t cx, uint32_t cy,
 int level_cell_byte_state_classify(const LevelState* s, int cx, int cy,
                                    uint32_t* out_a, uint32_t* out_b,
                                    uint32_t* out_c, uint32_t* out_d);
+
+/* --- active-engine state accessors on the level block (findings
+ * 295/324/392/475): the corpus reads these fields off DAT_005560d4 —
+ * the level block the LevelState models. NULL level answers 0 (the
+ * corpus dereferences its global directly; UpgradeResourceCheck's own
+ * zero-when-no-level rule generalized, documented deviation). */
+
+/* FUN_00429850: the dword at +0xb0. */
+uint32_t active_engine_field_b0_get(const LevelState* s);
+
+/* FUN_00429860: the float at +0x210 + 4*index. */
+float engine_float_field210_get_by_index(const LevelState* s, int index);
+
+/* FUN_00429880: the float at +0x260. */
+float engine_float_field260_get(const LevelState* s);
+
+/* FUN_0042b500: the dword at +0x84 (field meaning unresolved per
+ * finding 324 — this is the faithful read). */
+uint32_t global_state_field84_get(const LevelState* s);
+
+/* FUN_0041f900: level field +0xa0 when selector is 0, +0xac otherwise,
+ * 0 when no level object is active (finding 475's resource check). */
+uint32_t upgrade_resource_check(const LevelState* s, int selector);
 
 #ifdef __cplusplus
 }

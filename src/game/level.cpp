@@ -1566,3 +1566,48 @@ int level_cell_byte_state_classify(const LevelState* s, int cx, int cy,
     }
     return 1;
 }
+
+/* ActiveEngineFieldB0Get (FUN_00429850, findings 295/392): the active
+ * engine-state dword at level-block +0xb0. */
+uint32_t active_engine_field_b0_get(const LevelState* s)
+{
+    return s != NULL ? (uint32_t)level_int(s, LEVEL_OFF_ENGINE_B0) : 0u;
+}
+
+/* EngineFloatField210GetByIndex (FUN_00429860, findings 295/392): the
+ * indexed float at +0x210 + 4*index. */
+float engine_float_field210_get_by_index(const LevelState* s, int index)
+{
+    if (s == NULL) {
+        return 0.0f;
+    }
+    return level_float(s, LEVEL_OFF_ENGINE_FLOATS + index * 4);
+}
+
+/* EngineFloatField260Get (FUN_00429880, findings 295/392): the float at
+ * active engine-state +0x260. */
+float engine_float_field260_get(const LevelState* s)
+{
+    return s != NULL ? level_float(s, LEVEL_OFF_ENGINE_F260) : 0.0f;
+}
+
+/* GlobalStateField84Get (FUN_0042b500, findings 324/392): the dword at
+ * +0x84; the field's meaning stays unresolved (finding 324 says so),
+ * this is the faithful read. */
+uint32_t global_state_field84_get(const LevelState* s)
+{
+    return s != NULL ? (uint32_t)level_int(s, LEVEL_OFF_STATE84) : 0u;
+}
+
+/* UpgradeResourceCheck (FUN_0041f900, finding 475): the level's resource
+ * counters — +0xa0 for selector 0, +0xac for any nonzero selector; and
+ * zero when no level object is active (the corpus's own DAT-null rule,
+ * which doubles as the port's NULL guard). */
+uint32_t upgrade_resource_check(const LevelState* s, int selector)
+{
+    if (s == NULL) {
+        return 0u;
+    }
+    return (uint32_t)level_int(s, selector != 0 ? LEVEL_OFF_RES_B
+                                               : LEVEL_OFF_RES_A);
+}

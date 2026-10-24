@@ -616,7 +616,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0041f8a0,FUN_0041f8a0,named,GlobalObjectField98Add,0,156
 0041f8c0,FUN_0041f8c0,named,GlobalObjectField98Clear,0,118
 0041f8e0,FUN_0041f8e0,ported,NoOpCallback,2,41
-0041f900,FUN_0041f900,named,UpgradeResourceCheck,0,258
+0041f900,FUN_0041f900,ported,UpgradeResourceCheck,2,258
 0041f920,FUN_0041f920,named,LevelStateField9CAdd,0,156
 0041f940,FUN_0041f940,ported,,1,173
 0041f970,FUN_0041f970,named,RuntimeFlag40000000Get,0,67
@@ -675,14 +675,14 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004295f0,FUN_004295f0,ported,SoundMinimumDistanceUpdateMode,4,1364
 004297b0,FUN_004297b0,ported,CDAudioWatchdogModeUpdate,4,344
 00429810,FUN_00429810,ported,AudioPlaybackToggle,2,216
-00429850,FUN_00429850,named,ActiveEngineFieldB0Get,0,84
-00429860,FUN_00429860,named,EngineFloatField210GetByIndex,0,107
-00429880,FUN_00429880,named,EngineFloatField260Get,0,86
+00429850,FUN_00429850,ported,ActiveEngineFieldB0Get,3,84
+00429860,FUN_00429860,ported,EngineFloatField210GetByIndex,3,107
+00429880,FUN_00429880,ported,EngineFloatField260Get,3,86
 00429890,FUN_00429890,ported,LevelLoad,8,25496
 0042b2f0,FUN_0042b2f0,named,EntityEffectCountersApplyFromRecord,0,267
 0042b330,FUN_0042b330,named,LoadTileMeshes,0,1613
 0042b480,FUN_0042b480,named,RectangularResourceTableDestroy,0,686
-0042b500,FUN_0042b500,named,GlobalStateField84Get,0,84
+0042b500,FUN_0042b500,ported,GlobalStateField84Get,3,84
 0042b510,FUN_0042b510,ported,MapLoadPipeline,2,5229
 0042b850,FUN_0042b850,named,SurfaceTextCharacterMapInitialize,0,4304
 0042bb60,FUN_0042bb60,named,TextureSetConfigLoad,0,2146
