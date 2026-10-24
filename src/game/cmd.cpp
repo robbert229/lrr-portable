@@ -52,12 +52,7 @@ typedef struct CmdRec {
                           * cmd_rec_set_activity. */
     int32_t  extra;      /* +0x3c (type-8 tasks set 8)                         */
     void*    buffer;     /* +0x40 owned buffer (freed on cmd_free)             */
-    void*    arg38;      /* +0x38 second payload slot (the 0x13 queue's word)   */
     uint32_t count;      /* +0x44 the buffer's entry count                     */
-
-    void*    entity_ref; /* +0x48 pending entity reference (the corpus
-                          * writers are the spawn-dispatch band, unported —
-                          * zero until one installs a value)                   */
 
     int32_t  kind;       /* +0x4c kind index                                   */
     void*    ref;        /* +0x58 referenced record (the 0x13 "ref" pair)      */
@@ -1343,4 +1338,100 @@ void cmd_rec_type_set(void* rec, int type)
     if (rec != NULL) {
         as_rec(rec)->type = type;
     }
+}
+/* --- selection-record array / entity-kind issuer (see cmd.hpp) ---------------
+ * The record array's per-entry callees (the entity action-sequence reset and
+ * the attached-object list detach) belong to the unported teardown family, so
+ * the loop below is the seam half — the guard, the raised bits, and the
+ * snapshot's ownership by the record are the ported observable half. */
+void entity_record_array_apply_zero_state(void* rec, int mode)
+{
+    if (rec == NULL) {
+        return; /* deviation: the corpus writes the record blindly */
+    }
+    if (!selection_has_any(s_ctx)) {
+        return; /* corpus: SelectedEntitySetHasAny gates the whole body */
+    }
+    CmdRec* r = as_rec(rec);
+    r->state |= 0x140u; /* bits 6 and 8 */
+    void* array = NULL;
+    unsigned count = 0;
+    if (selection_snapshot_create(&array, &count) == 0) {
+        return;
+    }
+    r->buffer = array; /* owned: cmd_free releases it (no 0x200 flag) */
+    r->count = count;
+    for (unsigned i = 0; i < count; ++i) {
+        void* entry = (array != NULL) ? ((void**)array)[i] : NULL;
+        (void)entry;
+        /* Corpus: EntityActionSequenceReset(entry, 0) and, with the mode
+         * argument set, EntityAttachedObjectListDetach(entry, 0) — the
+         * teardown seam; the port changes no entity state here. */
+        if (mode != 0) {
+            (void)entry;
+        }
+    }
+    (void)mode;
+}
+
+void entity_kind_command_issue(EntitySlot* e)
+{
+    if (e == NULL) {
+        return; /* deviation: the corpus reads the entity blindly */
+    }
+    if ((e->flags_3e4 & 0x10u) != 0u) {
+        return; /* the latch already ran the command */
+    }
+    CmdRec* rec = (CmdRec*)cmd_alloc(0x12);
+    if (rec == NULL) {
+        return;
+    }
+    rec->payload = e;
+    e->flags_3e4 |= 0x10u;
+    const uint32_t cap = entity_capability_flags_get(e);
+    if ((cap & 0x100u) == 0u) {
+        const uint32_t stats = entity_stats_word_get(e);
+        if ((stats & 0x2000000u) == 0u) {
+            if ((stats & 0x1000000u) != 0u) {
+                rec->extra = 2;
+            }
+        } else {
+            rec->extra = ((stats & 0x1000000u) == 0u) ? 4 : 1;
+        }
+    } else {
+        rec->extra = 1;
+    }
+    if ((cap & 0x40u) != 0u && (e->flags_3e0 & 0x400u) == 0u) {
+        rec->state |= 0x100000u;
+    }
+    /* Corpus argument: the inverted bit-20 answer (~state >> 0x14) & 1. */
+    entity_record_array_apply_zero_state(rec, (int)((~rec->state) >> 0x14) & 1u);
+    rec->state &= ~0x40u;
+    cmd_link_head(rec, 0xc);
+}
+
+void coordinate_pair_callback_dispatch(const void* coord_pair)
+{
+    /* Seam: pairs the coordinate word with zero and traverses the entity
+     * pool with the fixed callback — the pool-registry machinery above. */
+    (void)coord_pair;
+}
+
+void argument_callback_dispatch(void* arg)
+{
+    /* Seam: dispatches the argument through the fixed pool callback. */
+    (void)arg;
+}
+
+unsigned cmd_rec_count_get(const void* rec)
+{
+    return rec != NULL ? cas_rec(rec)->count : 0u;
+}
+
+int cmd_rec_extra_get(const void* rec)
+{
+    if (rec == NULL) {
+        return -1;
+    }
+    return (int)cas_rec(rec)->extra;
 }

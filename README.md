@@ -1991,6 +1991,24 @@ walk tail, touching no list head and no timestamp. `cmd_test` pins the
 marking walk, both free paths, the three gates, both kinds, and the
 chain placement.
 
+**Selection-record array and the entity-kind issuer** (2026-10-24;
+findings 06/10/362/466): four leaves land in `cmd.*`.
+`entity_record_array_apply_zero_state` (0x402600) is gated by the
+selected-entity presence test: it raises the record's bits 6/8, takes the
+selection snapshot into the record's owned +0x40 buffer with the entry
+count at +0x44 (so cmd_free releases it), and walks the entries — whose
+per-entry action-sequence reset and attached-object detach belong to the
+unported entity-teardown family (the seam half).
+`entity_kind_command_issue` (0x402960) is the once-per-entity command:
+the +0x3e4 bit-0x10 latch, the type-0x12 record, the +0x3c word chosen
+from the capability bit 0x100 and the stats bits 0x1000000/0x2000000,
+bit 20 under the capability bit 0x40 with the +0x3e0 bit-0x400 gate
+clear, and the head-link at kind 0xc. `coordinate_pair_callback_dispatch`
+(0x402a40) and `argument_callback_dispatch` (0x402aa0) are the pair- and
+argument-wrapping dispatchers whose observable body is the pool-callback
+machinery — recorded seams. `cmd_test` pins the guard, the snapshot
+ownership, the five +0x3c arms, and both bit-20 shapes.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the
