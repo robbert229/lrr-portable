@@ -297,6 +297,16 @@ int main(void)
         CHECK(menu_overlay_list_count(NULL) == 0, "NULL menu counts zero");
     }
 
+    /* TerrainGridBorderInsetGet (FUN_00435f28): DAT_005560ac getter. */
+    {
+        const int saved = g_view_grid_edge;
+        g_view_grid_edge = 3;
+        CHECK(view_grid_edge_get() == 3, "the edge getter reads the global");
+        g_view_grid_edge = 0;
+        CHECK(view_grid_edge_get() == 0, "zero reads back zero");
+        g_view_grid_edge = saved;
+    }
+
     if (s_failures == 0) {
         printf("view_test: PASS\n");
         return 0;

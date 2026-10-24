@@ -198,4 +198,39 @@ uint32_t game_file_system_type_get(const void* handle);
 uint32_t indexed_record_transform_copy_in(void* record, int index,
                                           const void* source);
 
+/* --- grid-descriptor coordinate leaves (2026-10-24) ---------------------
+ * The map descriptor map_cell_to_world_center reads — width +0x00, height
+ * +0x04, scale +0x10, origins +0x18 / +0x1C (int fields converted at the
+ * use site) — gains its inverse pair. Truncations are toward zero (the
+ * corpus's __ftol under the ported control word, the crt precedent);
+ * NULL descriptors skip the answer (documented deviation; corpus callers
+ * pass live pointers). */
+
+/* WorldToTerrainCellBoundsCheck (FUN_0044f700): truncate the world point
+ * to cell coordinates — ALWAYS stored, NULL-safe — then check -1 < c < d.
+ * In range, answers 1 and (when given) writes the subcell coordinate: the
+ * center-relative position in half-cell units, folded past 1 by
+ * 2-x-with-lowest. Out of range answers 0. */
+int world_to_terrain_cell_bounds_check(const void* map, float world_x,
+                                       float world_y, int* cell_x,
+                                       int* cell_y, float* subcell);
+
+/* GridCoordinateClampAndStore (FUN_0044f810): truncate a world point to
+ * cells and clamp each into 0..dim-1 before storing (NULL-safe stores). */
+void grid_coordinate_clamp_and_store(const void* map, float world_x,
+                                     float world_y, int* cell_x, int* cell_y);
+
+/* TerrainWorldPointToCell (FUN_0044f870): the grid-pick forwarder's twin
+ * call shape: check the point through the bounds check (the forwarder
+ * drops the scale answer), and while in range write the cell coordinates
+ * as floats, and — when an offset is asked for — the point's fractional
+ * place in the cell (point minus the center, halved-cell-scaled plus a
+ * half-step, the corpus's - -0.5). The scale divisor reads +0x10 as a
+ * FLOAT here (that leaf's own pseudocode), while the center formula
+ * converts the same field as an int — both reproduced faithfully; a
+ * zero scale divides like the corpus does (infinity answers). Always
+ * answers 0. */
+uint32_t terrain_world_point_to_cell(const void* map, const float* point,
+                                     float* cell_out, float* offset_out);
+
 #endif /* LEGORRR_GODS98_RECORD_HPP */

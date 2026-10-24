@@ -434,6 +434,22 @@ int main(int argc, char** argv)
                   "out-of-cell setters skip (bounds deviation)");
         }
 
+        /* CellNeighborDirectionCode (FUN_004508a0): eight neighbors. */
+        CHECK(cell_neighbor_direction_code(2, 2, 2, 1) == 0, "up");
+        CHECK(cell_neighbor_direction_code(2, 2, 3, 2) == 1, "right");
+        CHECK(cell_neighbor_direction_code(2, 2, 2, 3) == 2, "down");
+        CHECK(cell_neighbor_direction_code(2, 2, 1, 2) == 3, "left");
+        CHECK(cell_neighbor_direction_code(2, 2, 3, 1) == 4, "right-up");
+        CHECK(cell_neighbor_direction_code(2, 2, 3, 3) == 5, "right-down");
+        CHECK(cell_neighbor_direction_code(2, 2, 1, 3) == 6, "left-down");
+        CHECK(cell_neighbor_direction_code(2, 2, 1, 1) == 7, "left-up");
+        CHECK(cell_neighbor_direction_code(2, 2, 2, 2) == -1,
+              "the same cell is no neighbor");
+        CHECK(cell_neighbor_direction_code(2, 2, 0, 2) == -1,
+              "two cells away is no neighbor");
+        CHECK(cell_neighbor_direction_code(2, 2, 1, 0) == -1,
+              "a knight move is no neighbor");
+
         /* The OR-test pair: mode 0 masks the flag word, mode 1 answers
          * whether either the flag 0x400 or the secondary byte's bit 4
          * marks the cell. */

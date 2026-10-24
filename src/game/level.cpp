@@ -1804,3 +1804,38 @@ void terrain_cell_flag40000000_clear_or_set(LevelState* s, int cx, int cy,
     }
     cell_flag40000000_refresh_seam(s, cx, cy);
 }
+
+/* CellNeighborDirectionCode (FUN_004508a0): eight neighbors, -1 else. */
+int cell_neighbor_direction_code(int x1, int y1, int x2, int y2)
+{
+    if (x1 == x2) {
+        if (y2 == y1 - 1) {
+            return 0;
+        }
+        if (y2 == y1 + 1) {
+            return 2;
+        }
+    } else if (y1 == y2) {
+        if (x2 == x1 + 1) {
+            return 1;
+        }
+        if (x2 == x1 - 1) {
+            return 3;
+        }
+    } else if (x2 == x1 + 1) {
+        if (y2 == y1 - 1) {
+            return 4;
+        }
+        if (y2 == y1 + 1) {
+            return 5;
+        }
+    } else if (x2 == x1 - 1) {
+        if (y2 == y1 + 1) {
+            return 6;
+        }
+        if (y2 == y1 - 1) {
+            return 7;
+        }
+    }
+    return -1;
+}

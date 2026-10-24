@@ -1580,6 +1580,23 @@ visited queue really queues (the drainer clears both listed cells),
 the masks OR and clear exactly their bits, and out-of-cell setters
 skip (bounds deviation).
 
+**Descriptor coordinates and the neighbor compass** (2026-10-24): the
+grid-pick forwarder's real body lands with it —
+`world_to_terrain_cell_bounds_check` (`WorldToTerrainCellBoundsCheck @
+0x44f700`, `record.*`) truncates a world point to cells, checks
+`-1 < c < dim` and answers the subcell coordinate folded past one by
+the lowest-pair rule; `grid_coordinate_clamp_and_store` (0x44f810) is
+the clamped-store twin; `terrain_world_point_to_cell` (0x44f870) drives
+both, with the corpus's own field-reading mismatch reproduced (scale
+read as float by the offset path, converted as int by the center
+formula). `view_grid_edge_get` (0x435f28, `view.*`) is the faithful
+getter of the tile-edge clamp DAT global its ported writer already
+owns. `cell_neighbor_direction_code` (`CellNeighborDirectionCode @
+0x4508a0`, `level.*`) is the pure eight-neighbor compass (-1 for
+non-adjacent). `record_test` hand-computes the subcell fold, the
+clamps and the zero-width below-zero clamp (faithful arithmetic);
+`level_test` walks all eight directions.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

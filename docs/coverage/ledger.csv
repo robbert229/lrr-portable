@@ -836,7 +836,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00435ef4,FUN_00435ef4,named,RecordFields4And14Set,0,173
 00435f0b,FUN_00435f0b,ported,RecordField14Get,2,86
 00435f16,FUN_00435f16,named,CursorScreenRayContextReset,0,87
-00435f28,FUN_00435f28,named,TerrainGridBorderInsetGet,0,60
+00435f28,FUN_00435f28,ported,TerrainGridBorderInsetGet,3,60
 00435f32,FUN_00435f32,named,EntityFieldsA0A4StoreA8Clear,0,215
 00435f5c,FUN_00435f5c,ported,ViewContextTick,2,6486
 00436831,FUN_00436831,ported,CameraSetTiltBounds,1,237
@@ -1161,9 +1161,9 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0044f5c0,FUN_0044f5c0,named,TerrainCellSurfaceAppearanceApply,0,488
 0044f640,FUN_0044f640,ported,MapCellToWorldCenter,3,384
 0044f6d0,FUN_0044f6d0,ported,TerrainGridPick,2,215
-0044f700,FUN_0044f700,named,WorldToTerrainCellBoundsCheck,0,943
-0044f810,FUN_0044f810,named,GridCoordinateClampAndStore,0,492
-0044f870,FUN_0044f870,named,TerrainWorldPointToCell,0,842
+0044f700,FUN_0044f700,ported,WorldToTerrainCellBoundsCheck,1,943
+0044f810,FUN_0044f810,ported,GridCoordinateClampAndStore,1,492
+0044f870,FUN_0044f870,ported,TerrainWorldPointToCell,1,842
 0044f940,FUN_0044f940,ported,TerrainSurfaceHeightInterpolate,2,1593
 0044fab0,FUN_0044fab0,named,TerrainCellSurfaceTriangleVerticesSelect,0,1022
 0044fb90,FUN_0044fb90,named,TerrainSurfacePointProjectOffset,0,2647
@@ -1181,8 +1181,8 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004507d0,FUN_004507d0,named,TerrainCellEdgeVectorQuery,0,1046
 00450890,FUN_00450890,ported,,1,87
 004508a0,FUN_004508a0,ported,CellNeighborDirectionCode,3,922
-00450960,FUN_00450960,ported,CellDirtyQueuePushAndClear,1,1760
-00450a80,FUN_00450a80,ported,CellListMinDistanceScaleApply,2,986
+00450960,FUN_00450960,named,CellDirtyQueuePushAndClear,0,1760
+00450a80,FUN_00450a80,named,CellListMinDistanceScaleApply,0,986
 00450b60,FUN_00450b60,ported,,1,3668
 00450f30,FUN_00450f30,anonymous,,0,2249
 00451180,FUN_00451180,ported,CellVariantEntryMatchCheck,3,953
