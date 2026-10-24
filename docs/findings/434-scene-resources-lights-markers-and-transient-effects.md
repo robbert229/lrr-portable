@@ -28,7 +28,9 @@ The latter loads a scene resource (trying the ordinary scene descriptor and a
 fallback descriptor), enables it, creates four associated handles, and
 registers the requested name on the selected style/slot. `RockFallStyleNameLookup`
 (`0x0040bf70`) is a case-insensitive lookup over the stored names, while
-`RockFallStyleTableSet` (`0x0040bfc0`) sets the global style-table selector.
+`RockFallStyleTableSet` (`0x0040bfc0`) stores the active `RockFallStyles`
+index resolved from the level's `RockFallStyle` setting at `DAT_004c79a4`.
+That index chooses a group of three scene-slot records in the fixed resource tables.
 `RockFallStyleSceneResourcesRelease` (`0x0040c6c0`) releases and clears the
 four child handles in each of three active style groups. This connects the
 config loader to the fixed slot tables; it does not establish what each
