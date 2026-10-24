@@ -1202,3 +1202,170 @@ void level_cell_flag_10000000_set(LevelState* s, int cx, int cy, int set)
         *flags &= ~0x10000000u;
     }
 }
+
+/* --- second terrain-cell leaf cluster ------------------------------------
+ * Same voxel-record model and bounds deviation; the corpus's tracking /
+ * refresh companions (the SetAndTrack queue variants and the 0x40000000
+ * pair's FUN_0042f6f0 refresh) are separate unported seams. */
+
+/* FUN_00432170: secondary word bit 0x100. */
+uint32_t level_cell_secondary_flag_100(const LevelState* s, int cx, int cy)
+{
+    return cell_secondary_word(s, cx, cy) & 0x100u;
+}
+
+/* FUN_004322d0: visited mark, secondary bit 1. */
+uint32_t level_cell_visited_flag(const LevelState* s, int cx, int cy)
+{
+    return cell_secondary_word(s, cx, cy) & 2u;
+}
+
+/* FUN_004323c0 / FUN_004325d0: clear/raise secondary bit 0. */
+void level_cell_secondary_bit0_clear(LevelState* s, int cx, int cy)
+{
+    uint8_t* rec = level_voxel(s, cx, cy);
+    if (rec == NULL) {
+        return;
+    }
+    uint32_t* word = (uint32_t*)(rec + 0x0C);
+    *word &= ~1u;
+}
+
+void level_cell_secondary_bit0_set(LevelState* s, int cx, int cy)
+{
+    uint8_t* rec = level_voxel(s, cx, cy);
+    if (rec == NULL) {
+        return;
+    }
+    uint32_t* word = (uint32_t*)(rec + 0x0C);
+    *word |= 1u;
+}
+
+/* FUN_004324d0 / FUN_00432520: secondary bit 3 pair. */
+void level_cell_secondary_bit8_set(LevelState* s, int cx, int cy, int set)
+{
+    uint8_t* rec = level_voxel(s, cx, cy);
+    if (rec == NULL) {
+        return;
+    }
+    uint32_t* word = (uint32_t*)(rec + 0x0C);
+    if (set != 0) {
+        *word |= 8u;
+    } else {
+        *word &= ~8u;
+    }
+}
+
+uint32_t level_cell_secondary_flag_8(const LevelState* s, int cx, int cy)
+{
+    return cell_secondary_word(s, cx, cy) & 8u;
+}
+
+/* FUN_00432aa0: mode 0 = masked 0x400 read; mode nonzero = OR test of
+ * the 0x400 flag and the secondary BYTE's bit 4 (the byte read is the
+ * low byte of the secondary word, so the word mask is equivalent). */
+uint32_t level_cell_occupied_or_flag(const LevelState* s, int cx, int cy,
+                                     int mode)
+{
+    const uint32_t flags = cell_flag_word(s, cx, cy);
+    if (mode == 0) {
+        return flags & 0x400u;
+    }
+    if ((flags & 0x400u) == 0 && (cell_secondary_word(s, cx, cy) & 4u) == 0) {
+        return 0;
+    }
+    return 1;
+}
+
+/* FUN_00432b00 / FUN_00432b50 / FUN_00432d90: dim-1-gated bit reads. */
+static uint32_t cell_flag_word_in_gate(const LevelState* s, int cx, int cy)
+{
+    const int w = level_int(s, LEVEL_OFF_WIDTH);
+    const int h = level_int(s, LEVEL_OFF_HEIGHT);
+    if ((unsigned)cx < ((unsigned)w - 1u) &&
+        (unsigned)cy < ((unsigned)h - 1u)) {
+        return cell_flag_word(s, cx, cy);
+    }
+    return 0u;
+}
+
+uint32_t level_cell_flag_800_bounded(const LevelState* s, int cx, int cy)
+{
+    return cell_flag_word_in_gate(s, cx, cy) & 0x800u;
+}
+
+uint32_t level_cell_flag_8_bounded(const LevelState* s, int cx, int cy)
+{
+    return cell_flag_word_in_gate(s, cx, cy) & 8u;
+}
+
+uint32_t level_cell_flag_20_bounded(const LevelState* s, int cx, int cy)
+{
+    return cell_flag_word_in_gate(s, cx, cy) & 0x20u;
+}
+
+/* FUN_00432b90: signed state byte in {8, 10, 11}. No cell reads absent. */
+int level_cell_type_is_8_or_10_or_11(const LevelState* s, int cx, int cy)
+{
+    const int type = level_tile_type(s, cx, cy);
+    return type == 8 || type == 10 || type == 11;
+}
+
+/* FUN_00432dd0: entity-reservation bit (the level_tile_mark flag). */
+uint32_t level_cell_flag_reserved(const LevelState* s, int cx, int cy)
+{
+    return cell_flag_word(s, cx, cy) & TILE_FLAG_OCCUPIED;
+}
+
+/* FUN_00432710: raise/clear flag 0x80000 (bounds-guarded). */
+void level_cell_flag_80000_set(LevelState* s, int cx, int cy, int set)
+{
+    uint8_t* rec = level_voxel(s, cx, cy);
+    if (rec == NULL) {
+        return;
+    }
+    uint32_t* flags = (uint32_t*)(rec + 0x08);
+    if (set != 0) {
+        *flags |= 0x80000u;
+    } else {
+        *flags &= ~0x80000u;
+    }
+}
+
+/* FUN_004332c0: record byte +3, unsigned. */
+int level_cell_record_byte3(const LevelState* s, int cx, int cy)
+{
+    const uint8_t* rec = level_voxel(s, cx, cy);
+    return rec != NULL ? (int)rec[3] : 0;
+}
+
+/* FUN_004332f0: the in-gate work-bit raise. */
+void level_cell_work_flag_set(LevelState* s, int cx, int cy)
+{
+    const int w = level_int(s, LEVEL_OFF_WIDTH);
+    const int h = level_int(s, LEVEL_OFF_HEIGHT);
+    if ((unsigned)cx < ((unsigned)w - 1u) &&
+        (unsigned)cy < ((unsigned)h - 1u)) {
+        uint8_t* rec = level_voxel(s, cx, cy);
+        if (rec != NULL) {
+            uint32_t* flags = (uint32_t*)(rec + 0x08);
+            *flags |= 4u;
+        }
+    }
+}
+
+/* FUN_004502c0: unsigned pair membership (negative coords wrap). */
+int level_coord_pair_within_bounds(const LevelState* s, int cx, int cy)
+{
+    return (unsigned)cx < (unsigned)level_int(s, LEVEL_OFF_WIDTH) &&
+           (unsigned)cy < (unsigned)level_int(s, LEVEL_OFF_HEIGHT);
+}
+
+/* FUN_004329d0: valid coordinate with the blocked bit (flag 8) set. */
+int level_cell_flag8_check(const LevelState* s, int cx, int cy)
+{
+    if (level_coord_pair_within_bounds(s, cx, cy)) {
+        return (cell_flag_word(s, cx, cy) & 8u) != 0;
+    }
+    return 0;
+}

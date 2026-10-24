@@ -1089,6 +1089,31 @@ the flag word of a hand-picked record on the loaded fixture and covers
 every mask, speed class, state equality, secondary word, raise/clear
 word pair, gate and off-map behavior.
 
+**Terrain-cell secondary flags + gated bits** (2026-10-24; terrain
+wave): the second leaf cluster of the same voxel family — the
+secondary flag word (record+12) gains `level_cell_secondary_flag_100`,
+`level_cell_visited_flag`, the bit-0 set/clear pair, the bit-3
+set/test pair, and `level_cell_secondary_bit0_set/clear`
+(`0x432170` / `0x4322d0` / `0x4324d0` / `0x432520` / `0x4323c0` /
+`0x4325d0`); `level_cell_occupied_or_flag` (`0x432aa0`) answers the
+flag-0x400-or-secondary-byte-bit-4 OR-test its two modes define; the
+gated single-bit reads `level_cell_flag_800/8/20_bounded` (`0x432b00` /
+`0x432b50` / `0x432d90`) reproduce the dim-1 gate; `level_cell_flag8_check`
+(`0x4329d0` built on `level_coord_pair_within_bounds`, `0x4502c0`) uses
+the corpus's *plain* unsigned bounds; `level_cell_type_is_8_or_10_or_11`
+(`0x432b90`) tests the blocky state-byte set; the reservation bit reads
+back through `level_cell_flag_reserved` (`0x432dd0`) as the read twin of
+`level_tile_mark`; `level_cell_flag_80000_set` (`0x432710`) raises or
+clears the flag without the refresh companion (the 0x40000000 twin that
+does is blocked); `level_cell_record_byte3` (`0x4332c0`) reads the +3
+byte; and `level_cell_work_flag_set` (`0x4332f0`) raises the gated work
+bit. Same bounds deviation as the first cluster. The corpus's
+Set-and-Track / Set-and-Refresh variants stay blocked (cell track queues
+and the per-cell CellInitPass, `docs/coverage/blocked.md`).
+`level_test` extends the synthetic-record section with the secondary
+word, mode test, gated reads, state set, word pairs and coordinate
+bounds.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

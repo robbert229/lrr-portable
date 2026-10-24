@@ -327,6 +327,155 @@ int main(int argc, char** argv)
         __builtin_memcpy(rec + 0x08, &saved, 4); /* leave the map as loaded */
     }
 
+    /* Second terrain leaf cluster: secondary-word bits, the OR-test,
+     * gated bit reads, the state-set test, the reservation bit read,
+     * the word-pair writes, and the +3 record byte. Same (3,4) record,
+     * saved and restored around each field. */
+    {
+        const int w = (int)level_width(s), h = (int)level_height(s);
+        uint8_t* rec = level_voxel(s, 3, 4);
+        uint32_t saved, f, zero = 0;
+        __builtin_memcpy(&saved, rec + 0x08, 4);
+        uint32_t saved2;
+        __builtin_memcpy(&saved2, rec + 0x0C, 4);
+        const uint8_t saved_b2 = rec[2], saved_b3 = rec[3];
+        (void)h;
+
+        __builtin_memcpy(rec + 0x08, &zero, 4);
+        __builtin_memcpy(rec + 0x0C, &zero, 4);
+
+        /* Secondary word. */
+        f = 0x100u;
+        __builtin_memcpy(rec + 0x0C, &f, 4);
+        CHECK(level_cell_secondary_flag_100(s, 3, 4) == 0x100u,
+              "secondary 0x100 reads masked");
+        f = 2u;
+        __builtin_memcpy(rec + 0x0C, &f, 4);
+        CHECK(level_cell_visited_flag(s, 3, 4) == 2u, "visited mark reads");
+        __builtin_memcpy(rec + 0x0C, &zero, 4);
+        CHECK(level_cell_visited_flag(s, 3, 4) == 0u, "cleared visited");
+        level_cell_secondary_bit0_set(s, 3, 4);
+        __builtin_memcpy(&f, rec + 0x0C, 4);
+        CHECK(f == 1u, "secondary bit 0 raised");
+        level_cell_secondary_bit0_clear(s, 3, 4);
+        __builtin_memcpy(&f, rec + 0x0C, 4);
+        CHECK(f == 0u, "secondary bit 0 cleared");
+        level_cell_secondary_bit8_set(s, 3, 4, 1);
+        CHECK(level_cell_secondary_flag_8(s, 3, 4) == 8u, "secondary bit 3 reads");
+        level_cell_secondary_bit8_set(s, 3, 4, 0);
+        CHECK(level_cell_secondary_flag_8(s, 3, 4) == 0u, "secondary bit 3 clears");
+
+        /* The OR-test pair: mode 0 masks the flag word, mode 1 answers
+         * whether either the flag 0x400 or the secondary byte's bit 4
+         * marks the cell. */
+        f = 0x400u;
+        __builtin_memcpy(rec + 0x08, &f, 4);
+        CHECK(level_cell_occupied_or_flag(s, 3, 4, 0) == 0x400u,
+              "mode 0 masks the flag word");
+        __builtin_memcpy(rec + 0x08, &zero, 4);
+        CHECK(level_cell_occupied_or_flag(s, 3, 4, 1) == 0u,
+              "neither marker -> 0");
+        rec[12] = 4; /* secondary low byte, bit 4 */
+        CHECK(level_cell_occupied_or_flag(s, 3, 4, 1) == 1u,
+              "secondary byte bit 4 marks");
+        f = 0x400u;
+        __builtin_memcpy(rec + 0x0C, &zero, 4);
+        __builtin_memcpy(rec + 0x08, &f, 4);
+        CHECK(level_cell_occupied_or_flag(s, 3, 4, 1) == 1u,
+              "flag 0x400 marks");
+
+        /* Gated bit reads: inside, then the last column outside dim-1. */
+        f = 0x800u | 0x20u;
+        __builtin_memcpy(rec + 0x08, &f, 4);
+        CHECK(level_cell_flag_800_bounded(s, 3, 4) == 0x800u, "0x800 reads inside");
+        CHECK(level_cell_flag_20_bounded(s, 3, 4) == 0x20u, "0x20 reads inside");
+        CHECK(level_cell_flag_8_bounded(s, 3, 4) == 0u, "bit 8 clear here");
+        f = 8u;
+        __builtin_memcpy(rec + 0x08, &f, 4);
+        CHECK(level_cell_flag_8_bounded(s, 3, 4) == 8u, "bit 8 reads");
+        CHECK(level_cell_flag_800_bounded(s, w - 1, 0) == 0u,
+              "0x800 reads 0 outside the gate");
+        CHECK(level_cell_flag_8_bounded(s, w - 1, 0) == 0u,
+              "bit 8 reads 0 outside the gate");
+
+        /* Reservation bit: the level_tile_mark write side, read back. */
+        level_tile_mark(s, 3, 4, 1);
+        CHECK(level_cell_flag_reserved(s, 3, 4) == 0x8000000u,
+              "the reservation bit reads masked");
+        level_tile_mark(s, 3, 4, 0);
+        __builtin_memcpy(rec + 0x08, &zero, 4);
+
+        /* Word-pair write: raise/clear 0x80000. */
+        level_cell_flag_80000_set(s, 3, 4, 1);
+        __builtin_memcpy(&f, rec + 0x08, 4);
+        CHECK(f == 0x80000u, "flag 0x80000 raised");
+        level_cell_flag_80000_set(s, 3, 4, 0);
+        __builtin_memcpy(&f, rec + 0x08, 4);
+        CHECK(f == 0u, "flag 0x80000 cleared");
+        level_cell_flag_80000_set(s, w, 0, 1); /* OOB no-op */
+
+        /* Work bit: gated raise, OOB and outside-gate no-ops. */
+        level_cell_work_flag_set(s, 3, 4);
+        __builtin_memcpy(&f, rec + 0x08, 4);
+        CHECK(f == 4u, "the work bit is raised inside the gate");
+        level_cell_work_flag_set(s, w - 1, 0);
+        __builtin_memcpy(&f, rec + 0x08, 4);
+        CHECK(f == 4u, "the outside-gate call left the record alone");
+        CHECK(level_cell_flag_4(s, 3, 4) == 4u, "the work bit is the 0x4 test");
+        __builtin_memcpy(rec + 0x08, &zero, 4);
+
+        /* Record byte +3 and the state-set test. */
+        rec[3] = 0x5a;
+        CHECK(level_cell_record_byte3(s, 3, 4) == 0x5a, "record byte +3 reads");
+        CHECK(level_cell_record_byte3(s, w, 0) == 0, "off-map byte +3 reads 0");
+        rec[2] = 10;
+        CHECK(level_cell_type_is_8_or_10_or_11(s, 3, 4) == 1, "state 10 is blocky");
+        rec[2] = 11;
+        CHECK(level_cell_type_is_8_or_10_or_11(s, 3, 4) == 1, "state 11 is blocky");
+        rec[2] = 8;
+        CHECK(level_cell_type_is_8_or_10_or_11(s, 3, 4) == 1, "state 8 is blocky");
+        rec[2] = 6;
+        CHECK(level_cell_type_is_8_or_10_or_11(s, 3, 4) == 0, "state 6 is not");
+        CHECK(level_cell_type_is_8_or_10_or_11(s, w, 0) == 0, "off-map is not");
+
+        /* Restore every field the block touched. */
+        __builtin_memcpy(rec + 0x08, &saved, 4);
+        __builtin_memcpy(rec + 0x0C, &saved2, 4);
+        rec[2] = saved_b2;
+        rec[3] = saved_b3;
+    }
+
+    /* Coordinate-pair membership + the flag-8 check it gates. */
+    {
+        const int w = (int)level_width(s), h = (int)level_height(s);
+        CHECK(level_coord_pair_within_bounds(s, 3, 4) == 1, "inside pair bounds");
+        CHECK(level_coord_pair_within_bounds(s, w, 0) == 0, "x at w is outside");
+        CHECK(level_coord_pair_within_bounds(s, 0, h) == 0, "y at h is outside");
+        CHECK(level_coord_pair_within_bounds(s, -1, 0) == 0,
+              "negative wraps outside as unsigned");
+        CHECK(level_coord_pair_within_bounds(s, 0, h - 1) == 1, "last row is inside");
+
+        uint8_t* rec = level_voxel(s, 3, 4);
+        uint32_t saved, f;
+        __builtin_memcpy(&saved, rec + 0x08, 4);
+        f = 8u;
+        __builtin_memcpy(rec + 0x08, &f, 4);
+        CHECK(level_cell_flag8_check(s, 3, 4) == 1, "blocked bit checks in");
+        {
+            uint8_t* r70 = level_voxel(s, w - 1, 0);
+            uint32_t s70;
+            __builtin_memcpy(&s70, r70 + 0x08, 4);
+            f = 8u;
+            __builtin_memcpy(r70 + 0x08, &f, 4);
+            CHECK(level_cell_flag8_check(s, w - 1, 0) == 1,
+                  "plain bounds include the last column (not dim-1)");
+            __builtin_memcpy(r70 + 0x08, &s70, 4);
+        }
+        __builtin_memcpy(rec + 0x08, &saved, 4);
+        CHECK(level_cell_flag8_check(s, -1, -1) == 0, "off-grid never blocked");
+        CHECK(level_cell_flag8_check(s, w, 5) == 0, "past the grid never blocked");
+    }
+
     /* Terrain handle + block table. */
     void* terr = level_load_ptr(s, LEVEL_OFF_TERRAIN);
     CHECK(terr != NULL, "terrain created");
