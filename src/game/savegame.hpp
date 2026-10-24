@@ -197,4 +197,9 @@ uint32_t save_state_event_context_peek(void);
  * models both halves, so this composes them. */
 void* sav_build_ctx(GameContext* ctx);
 
+/* SavRecordPtr (FUN_00417f90): the record address for `index` —
+ * base + index * 0x3190 + 4 once the slot context is open and the index
+ * is under the count. NULL when the corpus's guard answers 0. */
+void* sav_record_ptr(GameContext* ctx, int index);
+
 #endif /* LEGORRR_GAME_SAVEGAME_HPP */

@@ -1648,6 +1648,26 @@ int main(void)
         cmd_context_set(&ctx);
     }
 
+    /* CmdCancelByCoords (2026-10-24). */
+    {
+        void* rec = cmd_alloc(7);
+        CHECK(rec != NULL, "the kind-7 record allocates");
+        cmd_link_global_head(rec, 5);
+        cmd_rec_zone_set(rec, 3);
+        cmd_rec_action_set(rec, 5);
+        cmd_rec_target_set(rec, 6);
+        CHECK(cmd_rec_zone_get(rec) == 3, "the zone word lands");
+        cmd_cancel_by_coords(4, 0, 0, 0); /* other zone: stays */
+        CHECK((cmd_rec_state(rec) & 0x20u) == 0u, "the wrong zone keeps");
+        cmd_cancel_by_coords(3, 1, 9, 9); /* coords miss */
+        CHECK((cmd_rec_state(rec) & 0x20u) == 0u, "mismatched coords keep");
+        cmd_cancel_by_coords(3, 1, 5, 6);
+        CHECK((cmd_rec_state(rec) & 0x20u) != 0u, "the matched record completes");
+        cmd_cancel_by_coords(3, 0, 0, 0);
+        cmd_global_unlink(rec);
+        cmd_free(rec, 0);
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "cmd_test: %d failure(s)\n", s_failures);
         return 1;

@@ -1238,6 +1238,22 @@ int main(int argc, char** argv)
         selection_state_flags_set(0u); /* restore boot state */
     }
 
+    /* MenuWipeStart (2026-10-24). */
+    {
+        menu_wipe_arm_set(0u);
+        menu_wipe_flags_set(0u);
+        menu_wipe_start(); /* unarmed: inert */
+        CHECK(menu_wipe_flags_peek() == 0u, "unarmed keeps the flags");
+        menu_wipe_arm_set(1u);
+        menu_wipe_flags_set(0u);
+        menu_clock_millis_set(12345u);
+        menu_wipe_start();
+        CHECK((menu_wipe_flags_peek() & 3u) == 3u, "both start bits rise");
+        CHECK(menu_wipe_clock_peek() == 12345.0f, "the clock stamps");
+        menu_wipe_flags_set(0u);
+        menu_wipe_arm_set(0u);
+    }
+
     if (s_failures == 0) {
         printf("frontend: all tests passed\n");
         return 0;

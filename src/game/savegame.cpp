@@ -770,3 +770,13 @@ void* sav_build_ctx(GameContext* ctx)
     }
     return sav_slot_ctx(ctx, save_slot_get(ctx));
 }
+
+/* SavRecordPtr (FUN_00417f90) — see savegame.hpp. */
+void* sav_record_ptr(GameContext* ctx, int index)
+{
+    if (sav_build_ctx(ctx) == NULL || index < 0
+        || index >= ctx->record_count) {
+        return NULL; /* the corpus's zero answer */
+    }
+    return (char*)ctx->records + (size_t)index * SAVE_RECORD_SIZE + 4;
+}

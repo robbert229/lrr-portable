@@ -33,7 +33,6 @@
 #include "gods98/record.hpp"
 #include "gods98/texture.hpp"
 #include "gods98/sound.hpp"
-#include "gods98/crt.hpp"
 #include "util.hpp"
 #include "select.hpp"
 #include "gods98/view.hpp"
@@ -2329,4 +2328,30 @@ void ui_mode_resource_bit40_set_clear(int probe, uint32_t value)
     } else {
         s_sel_state &= ~0x40u;
     }
+}
+
+/* MenuWipeStart (FUN_004103f0) — see frontend.hpp. */
+static uint32_t s_menu_wipe_arm;  /* DAT_005574ec */
+static uint32_t s_menu_wipe_stop; /* DAT_005574f4 */
+static float    s_menu_wipe_clock;/* DAT_005574f8 */
+static uint32_t s_menu_clock_millis; /* timeGetTime model */
+
+void menu_wipe_start(void)
+{
+    if (s_menu_wipe_arm == 0u) {
+        return;
+    }
+    s_menu_wipe_stop = 0u;
+    s_menu_wipe |= 3u;
+    s_menu_wipe_clock = (float)s_menu_clock_millis;
+    sound_request_queue_submit(0x27, 0);
+}
+
+void menu_wipe_arm_set(uint32_t value) { s_menu_wipe_arm = value; }
+uint32_t menu_wipe_arm_peek(void) { return s_menu_wipe_arm; }
+float menu_wipe_clock_peek(void) { return s_menu_wipe_clock; }
+
+void menu_clock_millis_set(uint32_t millis)
+{
+    s_menu_clock_millis = millis;
 }

@@ -516,6 +516,14 @@ void request_record_flags_set(int index, uint32_t flags)
     }
 }
 
+uint32_t request_record_flags_peek(int index)
+{
+    if (index < 0 || index >= REQUEST_RECORD_COUNT) {
+        return 0u;
+    }
+    return s_request_flags[index];
+}
+
 /* --- the remaining DAT one-liner stores/reads (see crt.hpp) ----------------- */
 static uint32_t s_value_0050080c = 0u;
 static uint32_t s_font_words[16];   /* DAT_00500a9c window */
@@ -586,4 +594,199 @@ void byte_range_swap(void* a, void* b, size_t n)
         pa[i] = pb[i];
         pb[i] = t;
     }
+}
+
+/* --- the DAT window band (see crt.hpp) ---------------------------------------
+ * All tables are 18-entry zero-initialized statics (the corpus's .data
+ * tables have no ported owner; the corpus strides/blind-derefs — guarded
+ * here, the unowned-global deviation). */
+#define DAT_WINDOW_COUNT 18
+
+static uint32_t s_pair_a[DAT_WINDOW_COUNT]; /* DAT_00500128 entries */
+static uint32_t s_pair_b[DAT_WINDOW_COUNT]; /* DAT_0050012c entries */
+static float    s_fpair_a[DAT_WINDOW_COUNT]; /* DAT_00552144 entries */
+static float    s_fpair_b[DAT_WINDOW_COUNT]; /* DAT_00552148 entries */
+static void*    s_metric_records[DAT_WINDOW_COUNT]; /* DAT_00552154 */
+static uint32_t s_region_xy[2];  /* DAT_005013a8/3ac */
+static float    s_region_wh[2];  /* DAT_005013b0/b4 */
+static void*    s_panel_records[DAT_WINDOW_COUNT]; /* DAT_00500134 */
+
+
+void indexed_pair_set(int index, uint32_t x, uint32_t y)
+{
+    if (index < 0 || index >= DAT_WINDOW_COUNT) {
+        return; /* deviation: the corpus strides blindly */
+    }
+    s_pair_a[index] = x;
+    s_pair_b[index] = y;
+}
+
+void indexed_pair_get(int index, uint32_t* out_x, uint32_t* out_y)
+{
+    if (index < 0 || index >= DAT_WINDOW_COUNT
+        || out_x == NULL || out_y == NULL) {
+        return; /* deviation: the corpus dereferences blindly */
+    }
+    *out_x = s_pair_a[index];
+    *out_y = s_pair_b[index];
+}
+
+void indexed_float_pair_set(int index, uint32_t x, uint32_t y)
+{
+    if (index < 0 || index >= DAT_WINDOW_COUNT) {
+        return; /* deviation: the corpus strides blindly */
+    }
+    s_fpair_a[index] = (float)x; /* the corpus's uint->float cast */
+    s_fpair_b[index] = (float)y;
+}
+
+void indexed_float_pair_peek(int index, float* out_x, float* out_y)
+{
+    if (index < 0 || index >= DAT_WINDOW_COUNT || out_x == NULL
+        || out_y == NULL) {
+        return;
+    }
+    *out_x = s_fpair_a[index];
+    *out_y = s_fpair_b[index];
+}
+
+void indexed_text_metrics_pair_set(int index, uint32_t x, uint32_t y)
+{
+    if (index < 0 || index >= DAT_WINDOW_COUNT) {
+        return;
+    }
+    char* rec = (char*)s_metric_records[index];
+    if (rec == NULL) {
+        return; /* deviation: the corpus dereferences its slot blindly */
+    }
+    __builtin_memcpy(rec + 0x1c, &x, sizeof(x));
+    __builtin_memcpy(rec + 0x20, &y, sizeof(y));
+    const uint32_t one = 1u; /* the corpus's dirty flag */
+    __builtin_memcpy(rec + 0x24, &one, sizeof(one));
+}
+
+void indexed_text_metrics_pair_get(int index, uint32_t* out_x,
+                                   uint32_t* out_y)
+{
+    if (index < 0 || index >= DAT_WINDOW_COUNT
+        || out_x == NULL || out_y == NULL) {
+        return;
+    }
+    const char* rec = (const char*)s_metric_records[index];
+    if (rec == NULL) {
+        return;
+    }
+    __builtin_memcpy(out_x, rec + 0x1c, sizeof(*out_x));
+    __builtin_memcpy(out_y, rec + 0x20, sizeof(*out_y));
+}
+
+void indexed_record_pointer_set(int index, void* record)
+{
+    if (index >= 0 && index < DAT_WINDOW_COUNT) {
+        s_metric_records[index] = record;
+    }
+}
+
+void* indexed_record_pointer_peek(int index)
+{
+    if (index < 0 || index >= DAT_WINDOW_COUNT) {
+        return NULL;
+    }
+    return s_metric_records[index];
+}
+
+void region_bounds_set(const uint32_t* xy_pair, uint32_t w, uint32_t h)
+{
+    if (xy_pair == NULL) {
+        return; /* deviation: the corpus dereferences blindly */
+    }
+    s_region_xy[0] = xy_pair[0];
+    s_region_xy[1] = xy_pair[1];
+    s_region_wh[0] = (float)w; /* the corpus's uint->float casts */
+    s_region_wh[1] = (float)h;
+}
+
+void region_bounds_peek(uint32_t* out_xy, float* out_wh)
+{
+    if (out_xy != NULL) {
+        out_xy[0] = s_region_xy[0];
+        out_xy[1] = s_region_xy[1];
+    }
+    if (out_wh != NULL) {
+        out_wh[0] = s_region_wh[0];
+        out_wh[1] = s_region_wh[1];
+    }
+}
+
+void panel_draw_records_set(int index, void* records)
+{
+    if (index >= 0 && index < DAT_WINDOW_COUNT) {
+        s_panel_records[index] = records;
+    }
+}
+
+void* panel_draw_records_peek(int index)
+{
+    if (index < 0 || index >= DAT_WINDOW_COUNT) {
+        return NULL;
+    }
+    return s_panel_records[index];
+}
+
+static uint32_t* panel_item_word(int panel, int item)
+{
+    if (panel < 0 || panel >= DAT_WINDOW_COUNT) {
+        return NULL;
+    }
+    char* block = (char*)s_panel_records[panel];
+    if (block == NULL || item < 0) {
+        return NULL; /* deviation: the corpus strides blindly */
+    }
+    return (uint32_t*)(block + 0x28 + (size_t)item * 0x2c);
+}
+
+void panel_item_flag16_set(int panel, int item, int value)
+{
+    uint32_t* w = panel_item_word(panel, item);
+    if (w == NULL) {
+        return;
+    }
+    *w = value != 0 ? *w | 0x10u : *w & ~0x10u;
+}
+
+void panel_item_flag32_set(int panel, int item, int value)
+{
+    uint32_t* w = panel_item_word(panel, item);
+    if (w == NULL) {
+        return;
+    }
+    *w = value != 0 ? *w | 0x20u : *w & ~0x20u;
+}
+
+void panel_state_flags_toggle(int index)
+{
+    if (index < 0 || index >= DAT_WINDOW_COUNT) {
+        return;
+    }
+    const uint32_t f = s_request_flags[index];
+    if ((f & 2u) != 0u) {
+        s_request_flags[index] = f & ~2u | 0xcu;
+    } else {
+        s_request_flags[index] = f & ~4u | 0xau;
+    }
+}
+
+static float    s_reward_score;  /* DAT_00555738 */
+static float    s_reward_count;  /* DAT_0055573c */
+
+void reward_score_add(float value)
+{
+    s_reward_count = s_reward_count - -1.0f; /* corpus shape */
+    s_reward_score = s_reward_score + value;
+}
+
+float reward_score_total_peek(void) { return s_reward_score; }
+uint32_t reward_score_count_peek(void)
+{
+    return (uint32_t)s_reward_count;
 }

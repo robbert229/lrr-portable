@@ -2339,6 +2339,30 @@ driven through that dispatch — and resolves the skip the earlier sweep
 queued for it. `heap_test` pins the dispatch, the zero-size quirk, and
 the overflow gate.
 
+**The DAT window band** (2026-10-24; findings 250/252/357/394): fifteen
+rows land. Six data-section windows get the unowned-global treatment —
+zero-init module statics with guarded entries and port hooks where the
+corpus writers are unported. `crt.*` takes them: `indexed_pair_set/get`
+(0x45a6e0/0x45a700) and `indexed_float_pair_set` (0x463730, the corpus's
+uint→float cast kept), the text-metrics pair read/write through its
+pointer window (0x463ea0/0x463ed0, set raising the corpus's dirty flag),
+`region_bounds_set` (0x45d370)'s dwords-plus-floats quad, the
+panel-flag pair `panel_item_flag16_set`/`panel_item_flag32_set`
+(0x45aac0/0x45abb0) over the draw-record block's stride-0x2c items,
+`panel_state_flags_toggle` (0x45ab00) walking the request-record flags,
+and `reward_score_add` (0x462800) — count +1.0, score += value, faithful
+to the corpus's `x - -1.0`. `menu_wipe_start` (0x4103f0, `frontend.*`)
+arms through the modeled wipe-flag word and stamps the tick hook into
+the clock float before submitting the corpus's alias-0x27 request. The
+save band takes its commit wrapper: `sav_record_ptr` (0x417f90) answers
+record + index*0x3190 + 4 under the open-slot and count guards, and the
+already-modeled commit path (0x417fc0) gets its corpus citation.
+`cmd.*` takes `cmd_cancel_by_coords` (0x403700): global-list walk,
+type-7 records on the modeled zone word (+0x2c, the corpus's kind-7
+issuer unported — accessors stand in), completing on the flag-0x20
+state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
+pin the windows, guards, and folds.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the
