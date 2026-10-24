@@ -1562,6 +1562,24 @@ OS-bound/register-word residuals (MMIO and find-handle closes, the three
 PE-unwind address resolver). `record_test` pins the block placement,
 the header edge and the deviation corners.
 
+**Tracked cell-flag set family** (2026-10-24; terrain wave): the eight
+voxel-record setters the earlier cell-flag cluster left behind —
+`terrain_cell_flag100_set_and_track` (0x432100), the visited mark's
+setter and drainer (`terrain_cell_visited_flag_set_and_track` 0x432270,
+`terrain_cell_visited_flags_clear_all` 0x432300), the mask-clear/
+set-refresh leaves (0x432360/0x4323f0/0x432450/0x432490) and the
+0x40000000 clear-or-set (0x432560) — land in `level.*` as faithful
+word ops on the same `level_voxel` record the flag getters read. The
+corpus's two tracking queues (the refresh-track and visited pair lists
+with their counters) land as module statics bounded silently — the
+corpus writes past the end of its DAT regions, and the queues'
+consumers (the corpus's queued-work transition and refresh dispatch)
+stay unported; the per-cell CellInitPass refresh call is a
+TODO(corpus) seam, as `level.cpp` documents. `level_test` proves the
+visited queue really queues (the drainer clears both listed cells),
+the masks OR and clear exactly their bits, and out-of-cell setters
+skip (bounds deviation).
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the
