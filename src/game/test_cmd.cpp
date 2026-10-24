@@ -1108,6 +1108,90 @@ int main(void)
         cmd_context_set(&ctx);
     }
 
+    /* The task-type-23 category-mask issuer (2026-10-24). */
+    {
+        GameContext kctx;
+        game_context_init(&kctx);
+        cmd_context_set(&kctx);
+        cmd_init();
+
+        EntitySlot worker;
+        memset(&worker, 0, sizeof(worker));
+        static uint8_t wimg[0x200];
+        memset(wimg, 0, sizeof(wimg));
+        uint32_t wflags = 0x84u; /* bits 4 and 8 (selectors 1 and 0x10) */
+        memcpy(wimg + 0x148, &wflags, 4);
+        worker.stats_record = wimg;
+
+        /* The gate: an unset bit refuses, an out-of-map selector refuses. */
+        task_type23_create_for_category_mask(&worker, 4, 0);
+        CHECK(cmd_global_head() == NULL, "an unset state bit refuses");
+        task_type23_create_for_category_mask(&worker, 3, 1);
+        CHECK(cmd_global_head() == NULL, "selector 3 is out of the map");
+        task_type23_create_for_category_mask(NULL, 1, 1);
+        CHECK(cmd_global_head() == NULL, "the guarded entity answers nothing");
+
+        /* Selector 1: type 0x17, category kind 0xc, bit 6 clear. */
+        task_type23_create_for_category_mask(&worker, 1, 0);
+        CHECK(cmd_global_head() != NULL
+                  && cmd_rec_type(cmd_global_head()) == 0x17
+                  && cmd_rec_payload(cmd_global_head()) == &worker
+                  && cmd_rec_kind(cmd_global_head()) == 0xc
+                  && (cmd_rec_state(cmd_global_head()) & 0x40u) == 0u,
+              "selector 1 links the task at kind 0xc");
+        cmd_tick_global();
+        cmd_init();
+
+        /* The selector-to-kind map, staged bit by bit. */
+        struct { int sel; int kind; uint32_t flag; } map[] = {
+            { 1, 0xc, 4u }, { 2, 0xc, 8u }, { 4, 0xc, 0x10u },
+            { 8, 3, 0x20u }, { 0x10, 7, 0x40u }, { 0x20, 4, 0x80u },
+        };
+        for (unsigned m = 0; m < sizeof(map) / sizeof(map[0]); ++m) {
+            cmd_init();
+            memcpy(wimg + 0x148, &map[m].flag, 4);
+            task_type23_create_for_category_mask(&worker, map[m].sel, 0);
+            CHECK(cmd_global_head() != NULL
+                      && cmd_rec_type(cmd_global_head()) == 0x17
+                      && cmd_rec_extra_get(cmd_global_head()) == map[m].sel
+                      && cmd_rec_kind(cmd_global_head()) == map[m].kind,
+                  "the selector lands its kind and the +0x3c selector");
+            task_type23_create_for_category_mask(&worker, 0, 0);
+            task_type23_create_for_category_mask(&worker, 0x21, 0);
+            cmd_tick_global();
+        }
+        /* Out-of-map selectors never pass the gate. */
+        cmd_init();
+        const uint32_t all = 0xFCu;
+        memcpy(wimg + 0x148, &all, 4);
+        task_type23_create_for_category_mask(&worker, 0, 1);
+        task_type23_create_for_category_mask(&worker, 3, 1);
+        task_type23_create_for_category_mask(&worker, 0x100, 1);
+        CHECK(cmd_global_head() == NULL,
+              "out-of-map selectors issue nothing");
+        cmd_tick_global();
+
+        /* The record-array half rides the caller argument: bit 8 raised,
+         * bit 6 still clear after the link. */
+        cmd_init();
+        static EntitySlot picked;
+        memset(&picked, 0, sizeof(picked));
+        kctx.selection[0] = &picked;
+        kctx.selection_count = 1;
+        const uint32_t h4 = 4u;
+        memcpy(wimg + 0x148, &h4, 4);
+        task_type23_create_for_category_mask(&worker, 1, 1);
+        CHECK((cmd_rec_state(cmd_global_head()) & 0x140u) == 0x100u
+                  && cmd_rec_extra_get(cmd_global_head()) == 1
+                  && cmd_rec_count_get(cmd_global_head()) == 1u,
+              "the set argument runs the record-array half (bit 8 survives)");
+        cmd_tick_global();
+        kctx.selection_count = 0;
+        kctx.selection[0] = NULL;
+        cmd_init();
+        cmd_context_set(&ctx);
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "cmd_test: %d failure(s)\n", s_failures);
         return 1;

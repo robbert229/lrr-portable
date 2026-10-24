@@ -1579,3 +1579,36 @@ int cmd_rec_target_get(const void* rec)
 {
     return rec != NULL ? (int)cas_rec(rec)->cell_target : -2;
 }
+
+/* --- task-type-23 category-mask issuer (see cmd.hpp) -------------------------
+ * The corpus's entity argument rides every read blindly; the port guards the
+ * entity slot because the selector gate reads its stats record. */
+void task_type23_create_for_category_mask(EntitySlot* e, int selector,
+                                          int issue_records)
+{
+    if (e == NULL) {
+        return; /* deviation: the corpus reads the entity blindly */
+    }
+    if (entity_flags_contain_requested_single_bit(e, selector) == 0) {
+        return;
+    }
+    CmdRec* rec = (CmdRec*)cmd_alloc(0x17);
+    if (rec == NULL) {
+        return;
+    }
+    rec->payload = e;
+    rec->extra = (int32_t)selector;
+    int kind;
+    switch (selector) {
+    case 1: case 2: case 4: kind = 0xc; break;
+    case 8:                 kind = 3;   break;
+    case 0x10:              kind = 7;   break;
+    case 0x20:              kind = 4;   break;
+    default:                kind = 0xd; break;
+    }
+    if (issue_records != 0) {
+        entity_record_array_apply_zero_state(rec, 1);
+    }
+    cmd_link_head(rec, kind);
+    rec->state &= ~0x40u; /* the corpus clears bit 6 after the link */
+}

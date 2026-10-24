@@ -425,6 +425,16 @@ int cmd_rec_cell_xy_get(const void* rec, int* x, int* y);
 int cmd_rec_action_get(const void* rec);
 int cmd_rec_target_get(const void* rec);
 
+/* TaskType23CreateForCategoryMask (FUN_00402890, findings 327/449/465):
+ * when the entity's state word contains the selector's single bit the
+ * type-0x17 task record is allocated for the entity with the selector
+ * kept in the +0x3c word, the record-array half runs with the caller's
+ * argument, and the task links with the category kind the selector maps
+ * to — 1/2/4 to 0xc, 8 to 3, 0x10 to 7, 0x20 to 4, every other value to
+ * 0xd — clearing bit 6 afterwards. NULL entity guarded (deviation). */
+void task_type23_create_for_category_mask(EntitySlot* e, int selector,
+                                          int issue_records);
+
 #ifdef __cplusplus
 }
 #endif

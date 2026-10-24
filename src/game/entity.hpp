@@ -232,6 +232,14 @@ int selection_candidate_eligibility_check(const EntitySlot* e);
  * own +0x340 bound; missing state records read zero, so the test fails. */
 int entity_flag40000_threshold_compare(const EntitySlot* e);
 
+/* EntityFlagsContainRequestedSingleBit (FUN_00438ed0, findings 327/449):
+ * the selector is accepted when it is 1/2/4/8/0x10/0x20 and the state-flag
+ * word's corresponding bit 4/8/0x10/0x20/0x40/0x80 is set — the corpus's
+ * chain of word re-reads, collapsed to the equivalent switch. Feeds
+ * TaskType23CreateForCategoryMask (cmd.*). */
+int entity_flags_contain_requested_single_bit(const EntitySlot* e,
+                                              int selector);
+
 #ifdef __cplusplus
 }
 #endif

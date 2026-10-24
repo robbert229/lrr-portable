@@ -53,7 +53,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004027a0,FUN_004027a0,ported,,1,428
 00402800,FUN_00402800,ported,EntityCommand14BatchIssue,1,370
 00402850,FUN_00402850,ported,MinionCompanionCmd,1,279
-00402890,FUN_00402890,named,TaskType23CreateForCategoryMask,0,727
+00402890,FUN_00402890,ported,TaskType23CreateForCategoryMask,1,727
 00402960,FUN_00402960,ported,EntityKindCommandIssue,1,1191
 00402a40,FUN_00402a40,ported,CoordinatePairCallbackDispatch,1,178
 00402aa0,FUN_00402aa0,ported,ArgumentCallbackDispatch,1,94
