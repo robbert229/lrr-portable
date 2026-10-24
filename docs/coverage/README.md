@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 558 | 21.8% |
+| ported | 561 | 21.9% |
 | anchored | 5 | 0.2% |
-| named | 1954 | 76.2% |
+| named | 1951 | 76.1% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (558 functions)
+  (561 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (5 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1954 functions)
+  citation yet (1951 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1960 (76.4%).**
+**Game logic remaining to port: 1957 (76.3%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -640,8 +640,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00434da0` | AdvisorTooltipAndTooltipSoundConfigLoad |
 | `0x00434e80` | InterfaceSpawnRequestEnqueue |
 | `0x004350a0` | SurfaceTypeDescriptionsConfigLoad |
-| `0x00435170` | TerrainSurfaceTypeNameGet |
-| `0x00435190` | SurfaceTypeConfiguredValueAtIndex |
 | `0x00435230` | RandomVariantCellScatter |
 | `0x00435550` | GlobalStateZeroTransitionDetect |
 | `0x00435580` | GlobalHandlePositionApplyIfPresent |
@@ -949,7 +947,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00450a80` | CellListMinDistanceScaleApply |
 | `0x00451180` | CellVariantEntryMatchCheck |
 | `0x00451230` | TerrainCellSurfaceVectorWrite |
-| `0x004512d0` | TerrainCellNormalSample |
 | `0x00451450` | TerrainCellSurfaceVectorOffsetAdd |
 | `0x004515e0` | TerrainCellRayHitTest |
 | `0x004519b0` | VisualModelRecordCreate |

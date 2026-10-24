@@ -751,6 +751,34 @@ int main(int argc, char** argv)
               "a negative index answers zero");
         CHECK(terrain_cell_surface_type_get(NULL, 0, 0) == 0,
               "NULL terrain answers zero");
+        /* The corner normal sample (2026-10-24): no loader-fed corner
+         * floats, so the axis corners read zero and the diagonal
+         * selectors normalize the zero vector. */
+        {
+            float v[3] = { 7.f, 7.f, 7.f };
+            CHECK(terrain_cell_normal_sample(terrain, 2, 3, 0, v) == 1
+                      && v[0] == 0.0f && v[1] == 0.0f && v[2] == 0.0f,
+                  "corner 0 reads the zero triple");
+            CHECK(terrain_cell_normal_sample(terrain, 2, 3, 2, v) == 1
+                      && v[0] == 0.0f && v[1] == 0.0f && v[2] == 0.0f,
+                  "corner 2 reads the zero triple");
+            CHECK(terrain_cell_normal_sample(terrain, 2, 3, 1, v) == 1
+                      && v[0] != v[0] && v[1] != v[1] && v[2] != v[2],
+                  "corner 1 normalizes the zero vector (faithful)");
+            CHECK(terrain_cell_normal_sample(terrain, 2, 3, 3, v) == 1
+                      && v[1] != v[1],
+                  "corner 3 answers the same");
+            v[0] = 7.f;
+            CHECK(terrain_cell_normal_sample(terrain, (uint32_t)GRID, 0,
+                                             0, v) == 0
+                      && v[0] == 0.0f,
+                  "the width edge writes zero");
+            v[0] = 7.f;
+            CHECK(terrain_cell_normal_sample(NULL, 0, 0, 0, v) == 0
+                      && v[0] == 0.0f,
+                  "NULL terrain answers zero");
+        }
+
         /* The terrain dirty queue (2026-10-24): push, swap-remove,
          * raise/clear corners. */
         terrain_cell_dirty_queue_push_and_clear(NULL, 3, 4, 1);
@@ -973,6 +1001,25 @@ int main(int argc, char** argv)
         CHECK(cell_coordinate_timestamp_exists(998 * 7 + 1, 998 * 11 + 1)
                   == 1u,
               "the filled table answers for its entries");
+    }
+
+    /* The surface-type config leaves (2026-10-24): the config loader is
+     * unported, so every name falls back and every value reads zero. */
+    {
+        const char* n = terrain_surface_type_name_get(0);
+        CHECK(strcmp(n, "Need config for surface type") == 0,
+              "the missing-config fallback answers");
+        CHECK(strcmp(terrain_surface_type_name_get(3), n) == 0,
+              "the typed indexes all fall back");
+        CHECK(strcmp(terrain_surface_type_name_get(-1), n) == 0
+                  && strcmp(terrain_surface_type_name_get(1 << 20), n) == 0,
+              "the guarded indexes fall back too");
+        CHECK(surface_type_configured_value_at_index(0) == 0u
+                  && surface_type_configured_value_at_index(5) == 0u,
+              "the configured values read zero");
+        CHECK(surface_type_configured_value_at_index(-1) == 0u
+                  && surface_type_configured_value_at_index(1 << 20) == 0u,
+              "the guarded indexes read zero");
     }
 
     /* The tile-variant grid-record table (2026-10-24). */
