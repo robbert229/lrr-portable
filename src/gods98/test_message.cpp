@@ -188,6 +188,19 @@ int main(void)
         deferred_callback_set(0u);
     }
 
+    /* IncidentMessageFlagSet (2026-10-24): s_flags bit 4. */
+    {
+        const uint32_t saved = message_flags_peek();
+        message_set_flags(0u);
+        incident_message_flag_set(1);
+        CHECK((message_flags_peek() & 4u) != 0u, "the flag rises");
+        incident_message_flag_set(0);
+        CHECK((message_flags_peek() & 4u) == 0u, "the flag drops");
+        incident_message_flag_set(1);
+        message_set_flags(saved); /* restore the boot state */
+        CHECK(message_flags_peek() == saved, "the test restores the word");
+    }
+
     if (s_failures == 0) {
         printf("message_test: PASS\n");
         return 0;

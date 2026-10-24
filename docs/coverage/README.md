@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 736 | 28.7% |
+| ported | 744 | 29.0% |
 | anchored | 4 | 0.2% |
-| named | 1777 | 69.3% |
+| named | 1769 | 69.0% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (736 functions)
+  (744 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1777 functions)
+  citation yet (1769 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1782 (69.5%).**
+**Game logic remaining to port: 1774 (69.2%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -379,7 +379,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00419830` | EntityLinkedListEntriesRemoveByKey |
 | `0x004198f0` | TerrainCellLinkedEntriesRemove |
 | `0x00419a80` | IncidentMessageNodeCreate |
-| `0x00419ae0` | IncidentMessageFlagSet |
 | `0x00419b20` | InfoMessageQueueFindId |
 | `0x00419b50` | RemainingTimerDurationGet |
 | `0x00419da0` | IncidentMessagePanelRefreshIfActive |
@@ -431,7 +430,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0041d040` | TutorialPathMenuAction |
 | `0x0041dca0` | UiActionDispatch |
 | `0x0041e750` | SelectionClearRequestAndHudReset |
-| `0x0041e990` | CellActionPermissionGet |
 | `0x0041ea50` | StoreSelectedMapCoordinate |
 | `0x0041eac0` | EventTimerCountdownAdvance |
 | `0x0041ec30` | EntityPairCountRefresh |
@@ -537,14 +535,8 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00435dc8` | CameraViewContextClose |
 | `0x00435e35` | ModelTransformCopyToSceneNode |
 | `0x00435ebb` | ScreenEffectRecordSet |
-| `0x00435f16` | CursorScreenRayContextReset |
-| `0x00436831` | CameraSetTiltBounds |
 | `0x00436860` | CameraSetTilt |
-| `0x00436921` | CameraSetScalarBounds |
 | `0x00436953` | CameraSetBoundedRotationValue |
-| `0x00436a18` | CameraSetDistanceBounds |
-| `0x00436a4a` | CameraSetDistance |
-| `0x00436aa5` | CameraZoomUpdate |
 | `0x00436ac9` | RendererNodeRelativePositionSet |
 | `0x00436ae9` | SelectionRecordPointGet |
 | `0x00436c20` | ActivityNameTableInit |

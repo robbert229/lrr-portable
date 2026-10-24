@@ -382,3 +382,13 @@ uint32_t deferred_callback_peek(void)
 {
     return s_deferred_callback_presence;
 }
+
+/* IncidentMessageFlagSet (FUN_00419ae0) — s_flags bit 4. */
+void incident_message_flag_set(int value)
+{
+    if (value != 0) {
+        s_flags |= 4u;
+    } else {
+        s_flags &= ~4u;
+    }
+}

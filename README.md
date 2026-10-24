@@ -2249,6 +2249,26 @@ accessor and ctx probe the way the corpus's slot-open test does, and
 two-dword field with entry guards. `frontend_test`, `savegame_test`, and
 `record_test` pin the quads, the walks, and the rules.
 
+**The camera-controller bounds band** (2026-10-24; findings 04/280/440):
+eight rows land. Five camera-key leaves go into `view.*` as fixed-offset
+record operations — the controller record's owners stay on the unported
+scene seam, so only the field shape these leaves need is written:
+`camera_tilt_bounds_set` (0x436831), `camera_scalar_bounds_set`
+(0x436921), and `camera_distance_bounds_set` (0x436a18) raise the gate
+bits in the `+0xb8` flag byte and store their bound pairs,
+`camera_distance_set` (0x436a4a) is gated on bit 4 unless bit 8
+overrides, and `camera_zoom_update` (0x436aa5) accumulates through the
+gate. `cursor_screen_ray_context_reset` (0x435f16) drops the modeled
+ViewContext pan slot when the cursor ray handler's dead-zone branch
+fires. `incident_message_flag_set` (0x419ae0, `message.*`) walks bit 4
+of the module's own flag word, and `cell_action_permission_get`
+(0x41e990, `frontend.*`) permits every cell while the system-state word
+keeps bit 4 clear and otherwise reads the 300-entry, stride-15 level
+table — zero-init storage with port-side accessors (the corpus cell
+writer and the level-start clear are unported). `view_test`,
+`message_test`, and `frontend_test` pin the gates, the clamps, and the
+window.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

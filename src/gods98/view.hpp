@@ -204,4 +204,28 @@ int  camera_get_position_with_terrain_height(ViewContext* v,
                                              float out[3]);
 void camera_pointer_pan_update(ViewContext* v, float vec[3], float amount);
 
+/* --- the camera-controller bounds band (2026-10-24; finding 280) ------------
+ * The corpus's camera-key controller record (offsets into the record its
+ * per-view callers pass): bounds stores write the lo/hi floats and raise
+ * a gate bit in the flag byte at +0xb8; the distance setter is gated on
+ * the bit-4 gate unless bit 8 overrides; zoom adds to the stored value.
+ * The record itself is not modeled in the port (its owners are the
+ * per-view camera objects) — these take a raw record pointer and write
+ * fixed offsets, the port's record-module style, entry-guarded where the
+ * corpus dereferences blindly (documented deviations). */
+void camera_tilt_bounds_set(void* camera, float lo, float hi);
+                                        /* FUN_00436831 */
+void camera_scalar_bounds_set(void* camera, float lo, float hi);
+                                        /* FUN_00436921 */
+void camera_distance_bounds_set(void* camera, float lo, float hi);
+                                        /* FUN_00436a18 */
+void camera_distance_set(void* camera, float value); /* FUN_00436a4a */
+void camera_zoom_update(void* camera, float delta);  /* FUN_00436aa5 */
+
+/* CursorScreenRayContextReset (FUN_00435f16): the corpus's cursor ray
+ * handler drops the pan accumulator when the cursor sits inside the
+ * screen-edge dead zone — the reset half, ported against the modeled
+ * ViewContext slot. NULL skips (deviation: blind store). */
+void cursor_screen_ray_context_reset(ViewContext* v);
+
 #endif /* LEGORRR_VIEW_HPP */

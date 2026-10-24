@@ -376,6 +376,57 @@ int main(void)
         camera_view_context_set(0.0f, save_follow, 0.0f, save_edge);
     }
 
+    /* The camera-controller bounds band + cursor pan reset (2026-10-24). */
+    {
+        char cam[0xc0];
+        memset(cam, 0, sizeof(cam));
+        camera_tilt_bounds_set(cam, 1.0f, 2.0f);
+        CHECK(*(const uint8_t*)(cam + 0xb8) == 1u, "the tilt gate bit rises");
+        float lo = 0.0f, hi = 0.0f;
+        __builtin_memcpy(&lo, cam + 0x7c, 4);
+        __builtin_memcpy(&hi, cam + 0x80, 4);
+        CHECK(lo == 1.0f && hi == 2.0f, "the tilt bounds land");
+        camera_scalar_bounds_set(cam, 3.0f, 4.0f);
+        camera_distance_bounds_set(cam, 5.0f, 6.0f);
+        CHECK(*(const uint8_t*)(cam + 0xb8) == 7u, "the three gate bits stack");
+        __builtin_memcpy(&lo, cam + 0x88, 4);
+        __builtin_memcpy(&hi, cam + 0x8c, 4);
+        CHECK(lo == 3.0f && hi == 4.0f, "the scalar bounds land");
+
+        camera_distance_set(cam, 5.5f); /* inside the distance bounds */
+        float d = 0.0f;
+        __builtin_memcpy(&d, cam + 0x90, 4);
+        CHECK(d == 5.5f, "an in-range distance lands");
+        camera_distance_set(cam, 9.0f); /* out of range: gate holds */
+        __builtin_memcpy(&d, cam + 0x90, 4);
+        CHECK(d == 5.5f, "the gate withholds an out-of-range value");
+
+        camera_zoom_update(cam, 0.5f); /* 5.5 + 0.5 = 6.0, at the edge */
+        __builtin_memcpy(&d, cam + 0x90, 4);
+        CHECK(d == 6.0f, "zoom accumulates through the gate");
+        camera_zoom_update(cam, 3.0f); /* 6.0 + 3.0 out of range */
+        __builtin_memcpy(&d, cam + 0x90, 4);
+        CHECK(d == 6.0f, "the zoom keeps the last accepted value");
+
+        /* bit 8 overrides the gate entirely */
+        cam[0xb8] |= 8;
+        camera_distance_set(cam, 99.0f);
+        __builtin_memcpy(&d, cam + 0x90, 4);
+        CHECK(d == 99.0f, "the override bit lets anything through");
+        cam[0xb8] &= 7;
+
+        camera_tilt_bounds_set(NULL, 1.0f, 2.0f); /* guarded */
+        camera_distance_set(NULL, 1.0f); /* guarded */
+        camera_zoom_update(NULL, 1.0f); /* guarded */
+
+        ViewContext v;
+        memset(&v, 0, sizeof(v));
+        v.pan_accum = 5.0f;
+        cursor_screen_ray_context_reset(&v);
+        CHECK(v.pan_accum == 0.0f, "the cursor ray reset drops the pan");
+        cursor_screen_ray_context_reset(NULL); /* guarded */
+    }
+
     if (s_failures == 0) {
         printf("view_test: PASS\n");
         return 0;

@@ -1170,6 +1170,23 @@ int main(int argc, char** argv)
         selection_state_flags_set(0u);
     }
 
+    /* The cell-action permission window (2026-10-24). */
+    {
+        message_set_system_state(0u);
+        CHECK(cell_action_permission_get(0, 0) == 1
+                  && cell_action_permission_get(1000, 1000) == 1,
+              "a clear system word permits every cell");
+        message_set_system_state(4u);
+        CHECK(cell_action_permission_get(0, 0) == 0, "an empty table forbids");
+        CHECK(cell_action_permission_get(-1, 0) == 0
+                  && cell_action_permission_get(0, 300) == 0,
+              "the guarded window answers outside 300 entries");
+        cell_action_permission_table_set(15, 1u); /* column 1, row 0 */
+        CHECK(cell_action_permission_get(1, 0) == 1, "the stride-15 index lands");
+        cell_action_permission_table_set(15, 0u);
+        message_set_system_state(0u);
+    }
+
     if (s_failures == 0) {
         printf("frontend: all tests passed\n");
         return 0;

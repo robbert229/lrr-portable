@@ -130,4 +130,8 @@ uint32_t incident_message_state_get(void);
 void     deferred_callback_set(uint32_t value);
 uint32_t deferred_callback_peek(void);
 
+/* IncidentMessageFlagSet (FUN_00419ae0, findings 06/440): raises or drops
+ * bit 4 of the message flag word through the module's own s_flags. */
+void incident_message_flag_set(int value);
+
 #endif /* LEGORRR_MESSAGE_HPP */

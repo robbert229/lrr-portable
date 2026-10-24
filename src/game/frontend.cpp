@@ -2255,3 +2255,34 @@ uint32_t interaction_flags_peek(void)
 {
     return s_inter_flags;
 }
+
+/* --- the cell-action permission window (see frontend.hpp) ------------------- */
+#define CELL_PERMISSION_ENTRIES 300 /* corpus's 300-dword clear loop */
+static uint32_t s_cell_perm[CELL_PERMISSION_ENTRIES];
+
+int cell_action_permission_get(int column, int row)
+{
+    if ((system_state_flags_get() & 4u) == 0u) {
+        return 1;
+    }
+    const int index = row + column * 15; /* the corpus's 0xf stride */
+    if (index < 0 || index >= CELL_PERMISSION_ENTRIES) {
+        return 0; /* deviation: the corpus strides blindly */
+    }
+    return s_cell_perm[index] != 0u;
+}
+
+void cell_action_permission_table_set(int index, uint32_t value)
+{
+    if (index >= 0 && index < CELL_PERMISSION_ENTRIES) {
+        s_cell_perm[index] = value;
+    }
+}
+
+uint32_t cell_action_permission_table_peek(int index)
+{
+    if (index < 0 || index >= CELL_PERMISSION_ENTRIES) {
+        return 0u;
+    }
+    return s_cell_perm[index];
+}
