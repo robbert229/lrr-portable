@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 552 | 21.5% |
+| ported | 558 | 21.8% |
 | anchored | 5 | 0.2% |
-| named | 1960 | 76.4% |
+| named | 1954 | 76.2% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (552 functions)
+  (558 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (5 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1960 functions)
+  citation yet (1954 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1966 (76.7%).**
+**Game logic remaining to port: 1960 (76.4%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -230,16 +230,11 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0040a5e0` | RecordCountDigitsFill |
 | `0x0040aae0` | EntityQuadMeshRenderRecordAllowed |
 | `0x0040ab10` | GlobalModeZeroInputSet |
-| `0x0040ab30` | GridRecordFlagMaskClear |
 | `0x0040ab70` | DependencyGridConfigLoad |
 | `0x0040aea0` | EnsureCellEntriesLoaded |
 | `0x0040af40` | CellResourceEntryMatches |
-| `0x0040af90` | TerrainCellRecordGet |
 | `0x0040b000` | TileMatchingCellsCollect |
 | `0x0040b1b0` | DependencyGridOccupancyPass |
-| `0x0040b250` | CellFlag4IsSet |
-| `0x0040b2a0` | CellFlag100Set |
-| `0x0040b2e0` | CellFlag100IsSet |
 | `0x0040b310` | LoadTileVariants |
 | `0x0040b410` | TerrainCellResourceGridDispose |
 | `0x0040b470` | ProjectedQuadScreenAreaCalculate |
@@ -298,7 +293,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0040e0c0` | FenceSparkLaunchRegister |
 | `0x0040e1e0` | CellCornerOccupancyScan |
 | `0x0040e350` | CellEntityKindCreateOrRemove |
-| `0x0040e460` | GridCellRecordPresentCheck |
 | `0x0040e490` | EncyclopediaConfigFilesOpen |
 | `0x0040e700` | TerrainChoiceResourceSelect |
 | `0x0040e7e0` | GlobalFlagBit0Clear |

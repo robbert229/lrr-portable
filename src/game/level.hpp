@@ -642,6 +642,45 @@ uint32_t cell_coordinate_timestamp_exists(int x, int y);
 void terrain_cell_dirty_queue_push_and_clear(void* terrain, int x, int y,
                                              int push);
 
+/* --- tile-variant grid-record table (2026-10-24) --------------------------
+ * The corpus keeps a fixed 300-block record region (DAT block stride
+ * 0x31 dwords; block word 0 is a variant-record pointer and words 1..15
+ * are per-field flag words, with two variant-value tables aliasing the
+ * region 16 and 32 dwords behind each block). Nothing ported feeds the
+ * table contents, so the region lands as a zero-initialized module
+ * static (the timestamp-table precedent); the variant-pointer branches
+ * therefore answer the default records (zero) in port cases. The corpus
+ * indexes these tables blindly; every port leaf bounds-checks first and
+ * reports the unaddressable cell as zero / no-op (deviation). */
+
+/* GridRecordFlagMaskClear (FUN_0040ab30): sweep the whole region and
+ * clear mask 0x10c from each of the first sixteen block words. */
+void grid_record_flag_mask_clear(void);
+
+/* TerrainCellRecordGet (FUN_0040af90, findings 377/380/451): resolve a
+ * coordinate to its block and read the variant-pair fields for the
+ * requested field word; without a variant record (the port case) the
+ * default records answer. NULL outputs skip the stores (deviation). */
+void terrain_cell_record_get(int x, int y, int field,
+                             uint32_t* value_a, uint32_t* value_b);
+
+/* CellFlag4IsSet (FUN_0040b250): the block's field-0 word carries the
+ * flag bit 0x4 when the block has no variant record (the port case);
+ * with one, the requested field word answers. */
+uint32_t cell_flag4_is_set(int x, int y, int field);
+
+/* CellFlag100Set / CellFlag100IsSet (FUN_0040b2a0 / FUN_0040b2e0):
+ * raise / test the block field's flag bit 0x100. */
+void cell_flag100_set(int x, int y, int field);
+uint32_t cell_flag100_is_set(int x, int y, int field);
+
+/* GridCellRecordPresentCheck (FUN_0040e460, finding 356): test the first
+ * field of the grid cell record in the heap-allocated present table.
+ * The table's owner (the grid-initialize leaf) is unported, so it stays
+ * NULL in port cases and the check answers 0 (documented deviation;
+ * the corpus dereferences its pointer blindly). */
+int grid_cell_record_present_check(int x, int y);
+
 #ifdef __cplusplus
 }
 #endif

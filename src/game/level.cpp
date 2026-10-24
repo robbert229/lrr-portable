@@ -2000,3 +2000,131 @@ int terrain_cell_dirty_flag(const void* terrain, int x, int y)
             + ((size_t)y * (size_t)t->width + (size_t)x)
               * TERRAIN_BLOCK_STRIDE + 0x19)[0] & 0x10;
 }
+
+/* --- tile-variant grid-record table (see level.hpp) -----------------------
+ * Corpus region: DAT 0x4b8bc8..0x4c71fc as one dword array; the block
+ * base (record pointer word) sits at dword 32, the field words follow
+ * at +1, and the two variant-value tables alias the region at dwords
+ * 0 and 16 behind the block base. Zero-initialized static: the loaders
+ * that feed the corpus tables are unported, so variant pointers and
+ * values stay zero in every port case. */
+#define GRID_REC_REGION_DWORDS 14712 /* (0x4c71fc - 0x4b8bc8) / 4 */
+#define GRID_REC_COLS          15    /* x scale (index = y + x * 15) */
+#define GRID_REC_STRIDE        0x31  /* dwords per record block */
+#define GRID_REC_FIELD_WORDS   16    /* cleared by the mask sweep */
+
+static uint32_t s_grid_rec[GRID_REC_REGION_DWORDS];
+
+/* Flat dword index of a block's record-pointer word, or -1 when the
+ * coordinate cannot address the region (bounds deviation). */
+static long long grid_rec_block_index(int x, int y)
+{
+    const long long idx = (long long)y + (long long)x * GRID_REC_COLS;
+    const long long off = 32 + idx * GRID_REC_STRIDE;
+    if (idx < 0 || off < 0 || off >= GRID_REC_REGION_DWORDS) {
+        return -1;
+    }
+    return off;
+}
+
+/* Flat dword index of a block field word, or -1. */
+static long long grid_rec_field_index(int x, int y, int field)
+{
+    const long long off = grid_rec_block_index(x, y);
+    if (off < 0 || field < 0) {
+        return -1;
+    }
+    const long long word = off + 1 + field;
+    if (word >= GRID_REC_REGION_DWORDS) {
+        return -1;
+    }
+    return word;
+}
+
+void grid_record_flag_mask_clear(void)
+{
+    size_t k = 33; /* the corpus's field-word origin */
+    do {
+        for (int row = 0; row < 15; ++row) {
+            for (int d = 0; d < GRID_REC_FIELD_WORDS; ++d) {
+                s_grid_rec[k + (size_t)d] &= 0xfffffef3u; /* ~ 0x10c */
+            }
+            k += GRID_REC_STRIDE;
+        }
+    } while (k + 33 < GRID_REC_REGION_DWORDS);
+}
+
+void terrain_cell_record_get(int x, int y, int field,
+                             uint32_t* value_a, uint32_t* value_b)
+{
+    const long long block = grid_rec_block_index(x, y);
+    if (block < 0) {
+        return;
+    }
+    const uint32_t variant = s_grid_rec[(size_t)block];
+    const long long off = block + (variant != 0u ? field : 0);
+    /* The corpus indexes both tables by (field + idx * 0x31) dwords,
+     * with the fallback form adding the 0xc4-byte per-cell stride; the
+     * region guard covers both shapes. */
+    if (off < 0 || off + 16 >= GRID_REC_REGION_DWORDS) {
+        return;
+    }
+    const uint32_t a = s_grid_rec[(size_t)off];         /* DAT table A */
+    const uint32_t b = s_grid_rec[(size_t)off + 16];    /* DAT table B */
+    if (value_a != NULL) {
+        *value_a = a;
+    }
+    if (value_b != NULL) {
+        *value_b = b;
+    }
+}
+
+uint32_t cell_flag4_is_set(int x, int y, int field)
+{
+    const long long block = grid_rec_block_index(x, y);
+    if (block < 0) {
+        return 0;
+    }
+    const long long word = (s_grid_rec[(size_t)block] != 0u)
+        ? grid_rec_field_index(x, y, field)
+        : grid_rec_field_index(x, y, 0);
+    if (word < 0) {
+        return 0;
+    }
+    return s_grid_rec[(size_t)word] & 4u;
+}
+
+void cell_flag100_set(int x, int y, int field)
+{
+    const long long word = grid_rec_field_index(x, y, field);
+    if (word >= 0) {
+        s_grid_rec[(size_t)word] |= 0x100u;
+    }
+}
+
+uint32_t cell_flag100_is_set(int x, int y, int field)
+{
+    const long long word = grid_rec_field_index(x, y, field);
+    if (word < 0) {
+        return 0;
+    }
+    return s_grid_rec[(size_t)word] & 0x100u;
+}
+
+/* The present table lands NULL: its heap owner (the grid-initialize
+ * leaf, address deliberately unquoted) is unported. */
+static uint32_t* s_grid_present_table;
+static const uint32_t* s_grid_record_manager;
+
+int grid_cell_record_present_check(int x, int y)
+{
+    if (s_grid_present_table == NULL || s_grid_record_manager == NULL) {
+        return 0; /* deviation: the corpus dereferences blindly */
+    }
+    const int w = (int)s_grid_record_manager[5]; /* +0x14 */
+    const long long idx = (long long)w * y + x;
+    if (idx < 0) {
+        return 0;
+    }
+    return s_grid_present_table[(size_t)idx * 3] != 0u; /* stride 0xc */
+}
