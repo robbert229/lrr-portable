@@ -9641,9 +9641,9 @@ void MoviePlayLevelVideo(int param_1,undefined4 param_2)
 }
 
 
-// ==== MovieShownReset @ 00415cf0 ====
+// ==== SaveSlotSelectionClear @ 00415cf0 ====
 
-void MovieShownReset(void)
+void SaveSlotSelectionClear(void)
 
 {
   DAT_005574d0 = 0xffffffff;
@@ -14634,7 +14634,7 @@ undefined4 GameConfigInit(void)
     FUN_0045a240();
     FUN_0045aac0(0,2,1);
     FUN_0045aac0(0,3,1);
-    MovieShownReset();
+    SaveSlotSelectionClear();
     iVar4 = FrontEndActive();
     if (iVar4 != 0) {
       LoadMenuBuild(DAT_005560c0);

@@ -433,7 +433,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00415910,FUN_00415910,ported,MoviePlayNamed,1,479
 00415990,FUN_00415990,ported,MoviePlayLevelVideo,2,480
 00415a10,FUN_00415a10,ported,SaveMenuBuild,4,2406
-00415cf0,FUN_00415cf0,named,MovieShownReset,0,70
+00415cf0,FUN_00415cf0,named,SaveSlotSelectionClear,0,70
 00415d00,FUN_00415d00,named,SaveMenuLayoutLoad,0,7404
 00416150,FUN_00416150,named,StreamPlayLevel,0,291
 004161a0,FUN_004161a0,named,StreamPlayTutorial,0,292

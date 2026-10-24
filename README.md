@@ -614,6 +614,9 @@ Open threads, in order of value:
 | 415 | [findings/415-model-lightwave-and-animation-asset-pipeline.md](docs/findings/415-model-lightwave-and-animation-asset-pipeline.md) | Model, LightWave, and Animation Asset Pipeline |
 | 416 | [findings/416-scene-and-render-resource-lifecycle.md](docs/findings/416-scene-and-render-resource-lifecycle.md) | Scene and Render Resource Lifecycle |
 | 417 | [findings/417-sound-subsystem-aliases-queues-and-effects.md](docs/findings/417-sound-subsystem-aliases-queues-and-effects.md) | Sound aliases, submission queues, and transient effects |
+| 418 | [findings/418-movie-stream-and-audio-playback.md](docs/findings/418-movie-stream-and-audio-playback.md) | Movie, Stream, and Audio Playback Boundaries |
+| 419 | [findings/419-interface-and-presentation-config-loading.md](docs/findings/419-interface-and-presentation-config-loading.md) | Interface and Presentation Config Loading |
+| 420 | [findings/420-renderer-and-scene-lifecycle.md](docs/findings/420-renderer-and-scene-lifecycle.md) | Renderer and Scene Lifecycle |
 | 437 | [findings/437-menu-widgets-and-menu-rendering.md](docs/findings/437-menu-widgets-and-menu-rendering.md) | Menu Widgets and Menu Rendering |
 
 Canonical full pseudocode corpus: [`docs/decompiles/full/LEGORR.full.c`](docs/decompiles/full/LEGORR.full.c)
@@ -1308,9 +1311,11 @@ finding 12, #14). Three new modules in `src/game/`:
   corner; `entity_test` checks the `Model` key lands in `model_path`.
 - **AVI movies** (2026-10-21, findings 14 §4 + 23): `src/gods98/movie.*`
   reconstructs the corpus's movie path — `AvisEnabled @ 0x414ce0` (the
-  `DontPlayAvis` gate), `MoviePlayNamed @ 0x415910` (config-key → path), the
-  modal play-until-done/ESC `MoviePlayLoop @ 0x4157c0`, and
-  `MoviePlayLevelVideo @ 0x415990` (the level's `Video` config key). The
+  `DontPlayAvis` gate), `MoviePlayNamed @ 0x415910` and
+  `MoviePlayLevelVideo @ 0x415990` (config-key and level `Video` paths through
+  the DirectShow frame-wait helper). `MoviePlayLoop @ 0x4157c0` is a separate
+  timed bitmap-surface display helper. See [Finding 418](docs/findings/418-movie-stream-and-audio-playback.md)
+  for the native call paths. The
   shipped `Data/AVI/*.avi` files (Indeo5/msvideo1 video, adpcm_ms/pcm audio)
   are decoded in-process by **FFmpeg's runtime libraries dlopen'd at
   first use** — no header, no link dependency, so the build stays
