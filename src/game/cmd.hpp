@@ -318,6 +318,35 @@ void cmd_rec_ref_set(void* rec, void* ref);
 void* cmd_rec_ref_get(const void* rec);
 void cmd_rec_type_set(void* rec, int type);
 
+/* --- the selection-record array and the entity-kind issuer (2026-10-24) -----
+ * EntityRecordArrayApplyZeroState (FUN_00402600, findings 06/10): when the
+ * selected-entity set is non-empty, raises the record's bits 6/8, takes the
+ * selection snapshot into the record's +0x40 owned buffer with the entry
+ * count at +0x44, and walks it. Per entry the corpus runs
+ * EntityActionSequenceReset and — with the mode argument set —
+ * EntityAttachedObjectListDetach; both live in the unported entity-teardown
+ * family, so the traversal is the seam half (documented) while the guard,
+ * the bits, and the snapshot ownership are observable. NULL record guarded.
+ * EntityKindCommandIssue (FUN_00402960, finding 466): once per entity — the
+ * +0x3e4 bit-0x10 latch blocks the second pass. Allocates the type-0x12
+ * record, and picks the +0x3c word from the capability word's bit 0x100 and
+ * the stats word's bits 0x1000000/0x2000000 (1, or 2/4/1 — nothing when the
+ * pair reads clear). With the capability bit 0x40 and the +0x3e0 bit-0x400
+ * gate clear it raises bit 20, runs the record-array half with the inverted
+ * bit-20 answer, clears bit 6, and head-links at kind 0xc.
+ * CoordinatePairCallbackDispatch / ArgumentCallbackDispatch (FUN_00402a40 /
+ * FUN_00402aa0, findings 362/465): the callback dispatchers — the pair
+ * wrapper and the direct-argument dispatch. Their whole observable body is
+ * the unported pool-callback machinery, so the port records the seams. */
+void entity_record_array_apply_zero_state(void* rec, int mode);
+void entity_kind_command_issue(EntitySlot* e);
+void coordinate_pair_callback_dispatch(const void* coord_pair);
+void argument_callback_dispatch(void* arg);
+
+/* Diagnostics: the record's +0x44 buffer entry count and +0x3c word. */
+unsigned cmd_rec_count_get(const void* rec);
+int cmd_rec_extra_get(const void* rec);
+
 #ifdef __cplusplus
 }
 #endif

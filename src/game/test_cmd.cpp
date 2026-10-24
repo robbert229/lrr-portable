@@ -794,6 +794,143 @@ int main(void)
         cmd_context_set(&ctx);
     }
 
+    /* The record-array half and the entity-kind issuer (2026-10-24). */
+    {
+        GameContext sctx;
+        game_context_init(&sctx);
+        cmd_context_set(&sctx);
+        cmd_init();
+
+        /* Record array: the empty selection guards everything out. */
+        void* rec = cmd_alloc(0x12);
+        CHECK(rec != NULL, "the record allocates");
+        entity_record_array_apply_zero_state(rec, 1);
+        CHECK((cmd_rec_state(rec) & 0x140u) == 0u
+                  && cmd_rec_count_get(rec) == 0u,
+              "the empty selection raises nothing");
+        cmd_free(rec, 1);
+        entity_record_array_apply_zero_state(NULL, 1);
+
+        /* Two entries: bits 6/8, the snapshot, and the count. */
+        static EntitySlot picked[2];
+        memset(picked, 0, sizeof(picked));
+        sctx.selection[0] = &picked[0];
+        sctx.selection[1] = &picked[1];
+        sctx.selection_count = 2;
+        rec = cmd_alloc(0x12);
+        entity_record_array_apply_zero_state(rec, 0);
+        CHECK((cmd_rec_state(rec) & 0x140u) == 0x140u
+                  && cmd_rec_count_get(rec) == 2u
+                  && cmd_rec_state(rec) != 0u,
+              "the guard raises bits 6/8 and takes the snapshot");
+        cmd_free(rec, 1); /* the snapshot rides the owned buffer */
+
+        /* Empty-count variant: the snapshot path answers zero. */
+        sctx.selection_count = 0;
+        rec = cmd_alloc(0x12);
+        cmd_rec_state_set(rec, 0u);
+        entity_record_array_apply_zero_state(rec, 1);
+        CHECK((cmd_rec_state(rec) & 0x140u) == 0u, "the reset guard inert");
+        cmd_free(rec, 1);
+        sctx.selection[0] = NULL;
+        sctx.selection[1] = NULL;
+
+        /* Entity-kind issue: the latch, the +0x3c shapes, bit 20. */
+        cmd_init();
+        EntitySlot kinded;
+        memset(&kinded, 0, sizeof(kinded));
+        static uint8_t kimg[0x200];
+        memset(kimg, 0, sizeof(kimg));
+        uint32_t cap = 0x100u; /* the simple arm: +0x3c = 1 */
+        uint32_t st = 0u;
+        memcpy(kimg + 0x14c, &cap, 4);
+        memcpy(kimg + 0x144, &st, 4);
+        kinded.stats_record = kimg;
+        entity_kind_command_issue(&kinded);
+        CHECK(cmd_global_head() != NULL
+                  && cmd_rec_type(cmd_global_head()) == 0x12
+                  && cmd_rec_payload(cmd_global_head()) == &kinded
+                  && cmd_rec_kind(cmd_global_head()) == 0xc,
+              "the kind command links at kind 0xc");
+        CHECK((cmd_rec_state(cmd_global_head()) & 0x40u) == 0u,
+              "bit 6 stays clear");
+        CHECK(kinded.flags_3e4 == 0x10u, "the latch raises bit 4");
+        cmd_tick_global();
+        cmd_init();
+        entity_kind_command_issue(&kinded);
+        CHECK(cmd_global_head() == NULL, "the latch blocks the second pass");
+        cmd_tick_global();
+        entity_kind_command_issue(NULL); /* guarded */
+
+        /* The +0x3c arms: stats pair shapes. */
+        struct { const char* what; uint32_t cap; uint32_t stats; int want; }
+            arms[] = {
+                { "cap-only", 0x100u, 0u, 1 },
+                { "2000000-only", 0u, 0x2000000u, 4 },
+                { "both", 0u, 0x3000000u, 1 },
+                { "1000000-only", 0u, 0x1000000u, 2 },
+                { "neither", 0u, 0u, 0 },
+            };
+        for (unsigned a = 0; a < sizeof(arms) / sizeof(arms[0]); ++a) {
+            cmd_init();
+            EntitySlot probe;
+            memset(&probe, 0, sizeof(probe));
+            static uint8_t pimg[0x200];
+            memset(pimg, 0, sizeof(pimg));
+            const uint32_t pc = arms[a].cap;
+            const uint32_t ps = arms[a].stats;
+            memcpy(pimg + 0x14c, &pc, 4);
+            memcpy(pimg + 0x144, &ps, 4);
+            probe.stats_record = pimg;
+            entity_kind_command_issue(&probe);
+            void* head = cmd_global_head();
+            char msg[96];
+            snprintf(msg, sizeof(msg), "the %s arm lands the +0x3c word",
+                     arms[a].what);
+            int got = head != NULL ? cmd_rec_extra_get(head) : -1;
+            CHECK(got == arms[a].want, msg);
+            cmd_tick_global();
+        }
+
+        /* Bit 20: the capability bit plus the gate. */
+        cmd_init();
+        sctx.selection_count = 1;
+        static EntitySlot one;
+        memset(&one, 0, sizeof(one));
+        sctx.selection[0] = &one;
+        EntitySlot armed;
+        memset(&armed, 0, sizeof(armed));
+        static uint8_t aim[0x200];
+        memset(aim, 0, sizeof(aim));
+        const uint32_t acap = 0x100u | 0x40u;
+        const uint32_t as0 = 0u;
+        memcpy(aim + 0x14c, &acap, 4);
+        memcpy(aim + 0x144, &as0, 4);
+        armed.stats_record = aim;
+        entity_kind_command_issue(&armed);
+        CHECK((cmd_rec_state(cmd_global_head()) & 0x100000u) != 0u
+                  && (cmd_rec_state(cmd_global_head()) & 0x140u) == 0x100u,
+              "the armed record raises bit 20 and keeps bit 8");
+        cmd_tick_global();
+        cmd_init();
+        armed.flags_3e4 = 0u;   /* unlatch for the gated run */
+        armed.flags_3e0 = 0x400u; /* the gate blocks bit 20 */
+        entity_kind_command_issue(&armed);
+        CHECK((cmd_rec_state(cmd_global_head()) & 0x100000u) == 0u
+                  && (cmd_rec_state(cmd_global_head()) & 0x140u) == 0x100u,
+              "the gated record skips bit 20 (mode 1 half)");
+        cmd_tick_global();
+        sctx.selection_count = 0;
+        sctx.selection[0] = NULL;
+
+        /* The dispatch seams change no state. */
+        cmd_init();
+        coordinate_pair_callback_dispatch(&kinded);
+        argument_callback_dispatch(&kinded);
+        CHECK(cmd_global_head() == NULL, "the dispatch seams do nothing");
+        cmd_context_set(&ctx);
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "cmd_test: %d failure(s)\n", s_failures);
         return 1;

@@ -46,7 +46,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00402220,FUN_00402220,ported,CmdTickGlobal,4,1057
 00402310,FUN_00402310,ported,CmdChainPurge,1,2949
 00402510,FUN_00402510,named,TerrainCellCommandCreate,0,1128
-00402600,FUN_00402600,named,EntityRecordArrayApplyZeroState,0,628
+00402600,FUN_00402600,ported,EntityRecordArrayApplyZeroState,1,628
 00402670,FUN_00402670,ported,EntityCommand15ValidatedRecordQueue,1,356
 004026c0,FUN_004026c0,ported,EntityDeferredWorkSchedule,1,265
 00402720,FUN_00402720,ported,CmdCreateTask,2,561
@@ -54,9 +54,9 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00402800,FUN_00402800,ported,EntityCommand14BatchIssue,1,370
 00402850,FUN_00402850,ported,MinionCompanionCmd,1,279
 00402890,FUN_00402890,named,TaskType23CreateForCategoryMask,0,727
-00402960,FUN_00402960,named,EntityKindCommandIssue,0,1191
-00402a40,FUN_00402a40,named,CoordinatePairCallbackDispatch,0,178
-00402aa0,FUN_00402aa0,named,ArgumentCallbackDispatch,0,94
+00402960,FUN_00402960,ported,EntityKindCommandIssue,1,1191
+00402a40,FUN_00402a40,ported,CoordinatePairCallbackDispatch,1,178
+00402aa0,FUN_00402aa0,ported,ArgumentCallbackDispatch,1,94
 00402ae0,FUN_00402ae0,ported,TerrainCellRefreshDispatch,1,308
 00402b30,FUN_00402b30,ported,CoordinateCallbackDispatch,1,178
 00402b60,FUN_00402b60,ported,CoordinateCallbackDispatchByMode,1,270
