@@ -1450,9 +1450,9 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00464110,FUN_00464110,named,RotatedPairsScratchFill,0,1019
 004641c0,FUN_004641c0,named,BuildingPlacementFootprintRenderAndValidate,0,5897
 00464720,FUN_00464720,named,SurfaceVisibilitySet,0,109
-00464740,FUN_00464740,named,SoundAliasRegistryInit,0,3903
-00464c50,FUN_00464c50,named,SoundDynamicAliasRegistrationSet,0,167
-00464c70,FUN_00464c70,named,SoundAliasLookup,0,687
+00464740,FUN_00464740,ported,SoundAliasRegistryInit,4,3903
+00464c50,FUN_00464c50,ported,SoundDynamicAliasRegistrationSet,5,167
+00464c70,FUN_00464c70,ported,SoundAliasLookup,4,687
 00464d00,FUN_00464d00,named,SoundSampleMarkerParse,0,1910
 00464e20,FUN_00464e20,named,SoundSampleVariantSelect,0,763
 00464e80,FUN_00464e80,named,DeferredSoundPlayExpire,0,266

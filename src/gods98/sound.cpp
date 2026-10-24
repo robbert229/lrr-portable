@@ -240,3 +240,154 @@ uint32_t sound_pcm_hash(Sound* s)
     }
     return h;
 }
+
+/* ------------------------------------------------------------------ *
+ *  Sound alias registry (finding 137; issues #313 / #321 / #314).
+ *  See sound.hpp for the corpus model and documented deviations.
+ * ------------------------------------------------------------------ */
+
+/* SoundAliasRegistryInit @ 0x00464740: the 45 hard-coded SFX_* names in
+ * slot order (literal strings s_SFX_NULL..s_SFX_AmbientMusicLoop at
+ * 0x4a9794..0x4a94d0; indices 7, 0x26, 0x29 and 0x2c are pinned by
+ * findings 137/144). */
+static const char* const s_alias_builtins[SOUND_ALIAS_BUILTINS] = {
+    "SFX_NULL",                  /* 0  */
+    "SFX_Stamp",                 /* 1  */
+    "SFX_Drill",                 /* 2  */
+    "SFX_DrillFade",             /* 3  */
+    "SFX_RockBreak",             /* 4  */
+    "SFX_Drip",                  /* 5  */
+    "SFX_Ambient",               /* 6  */
+    "SFX_AmbientLoop",           /* 7  */
+    "SFX_Step",                  /* 8  */
+    "SFX_RockMonster",           /* 9  */
+    "SFX_RockMonster2",          /* 10 */
+    "SFX_RockMonsterStep",       /* 11 */
+    "SFX_MFDeposit",             /* 12 */
+    "SFX_ButtonPressed",         /* 13 */
+    "SFX_MFLift",                /* 14 */
+    "SFX_MFThrow",               /* 15 */
+    "SFX_Walker",                /* 16 */
+    "SFX_YesSir",                /* 17 */
+    "SFX_Build",                 /* 18 */
+    "SFX_Okay",                  /* 19 */
+    "SFX_NotOkay",               /* 20 */
+    "SFX_InterfaceSlideOnScreen",  /* 21 */
+    "SFX_InterfaceSlideOffScreen", /* 22 */
+    "SFX_PanelSlideOnScreen",    /* 23 */
+    "SFX_PanelSlideOffScreen",   /* 24 */
+    "SFX_Siren",                 /* 25 */
+    "SFX_CrystalRecharge",       /* 26 */
+    "SFX_Laser",                 /* 27 */
+    "SFX_LaserHit",              /* 28 */
+    "SFX_LazerRecharge",         /* 29 */
+    "SFX_TopPriority",           /* 30 */
+    "SFX_ImmovableRock",         /* 31 */
+    "SFX_Wall",                  /* 32 */
+    "SFX_Floor",                 /* 33 */
+    "SFX_BoulderHit",            /* 34 */
+    "SFX_Place",                 /* 35 */
+    "SFX_PlaceOre",              /* 36 */
+    "SFX_PlaceCrystal",          /* 37 */
+    "SFX_Lava",                  /* 38 (0x26) */
+    "SFX_RockWipe",              /* 39 */
+    "SFX_FallIn",                /* 40 */
+    "SFX_MusicLoop",             /* 41 (0x29) */
+    "SFX_CaptainSlide",          /* 42 */
+    "SFX_Dynamite",              /* 43 */
+    "SFX_AmbientMusicLoop",      /* 44 (0x2c) */
+};
+
+/* Dynamic (config-registered) aliases appended by the lookup, mirroring
+ * the corpus DAT_00502a24 slots behind the 45 built-ins. */
+static char* s_alias_dynamic[SOUND_ALIAS_MAX - SOUND_ALIAS_BUILTINS];
+static int   s_alias_dynamic_count;
+static int   s_alias_register_unknown; /* DAT_00502a2c bit 2 */
+
+static char* s_dupstr(const char* s)
+{
+    size_t n = strlen(s) + 1;
+    char* copy = (char*)calloc(n, 1);
+    if (copy != NULL) {
+        memcpy(copy, s, n);
+    }
+    return copy;
+}
+
+void sound_alias_registry_init(void)
+{
+    /* Corpus: the built-in hashes are written into a fresh allocation;
+     * the port's built-ins are static. Deviation (documented): the
+     * corpus's repeated call leaks the table yet keeps the stale dynamic
+     * count; the port frees and zeroes the dynamic side and leaves the
+     * registration flag as-is, exactly the DAT_00502a2c behaviour. */
+    for (int i = 0; i < s_alias_dynamic_count; ++i) {
+        free(s_alias_dynamic[i]);
+        s_alias_dynamic[i] = NULL;
+    }
+    s_alias_dynamic_count = 0;
+}
+
+void sound_alias_registration_set(int enable)
+{
+    /* SoundDynamicAliasRegistrationSet @ 0x00464c50: sets/clears
+     * DAT_00502a2c bit 2; the port has no other bit 2 consumer. */
+    s_alias_register_unknown = (enable != 0);
+}
+
+int sound_alias_lookup(const char* name, int* out_index)
+{
+    /* SoundAliasLookup @ 0x00464c70. The corpus compares hash keys under
+     * the KeyToAscii uppercase fold; s_strcasecmp applies the same fold
+     * to the names. */
+    if (name == NULL || out_index == NULL) {
+        return 0; /* corpus's param_1 != 0 guard */
+    }
+    for (int i = 0; i < SOUND_ALIAS_BUILTINS; ++i) {
+        if (s_strcasecmp(name, s_alias_builtins[i]) == 0) {
+            *out_index = i;
+            return 1;
+        }
+    }
+    for (int i = 0; i < s_alias_dynamic_count; ++i) {
+        if (s_strcasecmp(name, s_alias_dynamic[i]) == 0) {
+            *out_index = SOUND_ALIAS_BUILTINS + i;
+            return 1;
+        }
+    }
+    if (s_alias_register_unknown != 0) {
+        if (s_alias_dynamic_count >= SOUND_ALIAS_MAX - SOUND_ALIAS_BUILTINS) {
+            return 0; /* port bound: the corpus writes past its 0x7bc
+                       * table instead of failing */
+        }
+        int index = SOUND_ALIAS_BUILTINS + s_alias_dynamic_count;
+        char* copy = s_dupstr(name);
+        if (copy == NULL) {
+            return 0;
+        }
+        s_alias_dynamic[s_alias_dynamic_count] = copy;
+        ++s_alias_dynamic_count;
+        *out_index = index;
+        return 1;
+    }
+    return 0;
+}
+
+int sound_alias_count(void)
+{
+    return SOUND_ALIAS_BUILTINS + s_alias_dynamic_count;
+}
+
+const char* sound_alias_name(int index)
+{
+    if (index < 0) {
+        return NULL;
+    }
+    if (index < SOUND_ALIAS_BUILTINS) {
+        return s_alias_builtins[index];
+    }
+    if (index < SOUND_ALIAS_BUILTINS + s_alias_dynamic_count) {
+        return s_alias_dynamic[index - SOUND_ALIAS_BUILTINS];
+    }
+    return NULL;
+}

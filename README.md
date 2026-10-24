@@ -824,6 +824,18 @@ junk rejection) and, with `test_wads_dir` set, parses **all 387 shipped
 .wav files** and byte-matches five reference entries against `wave`-module-
 derived PCM hashes.
 
+**Sound alias registry** (2026-10-24, finding 137; port issues #313/#321/#314):
+`sound_alias_registry_init` (`SoundAliasRegistryInit @ 0x464740`) builds the
+corpus's index-to-alias mapping — 45 hard-coded `SFX_*` built-ins in slot
+order — `sound_alias_lookup` (`SoundAliasLookup @ 0x464c70`) resolves names to
+indices through built-ins and config-registered entries with the corpus's
+case fold, and `sound_alias_registration_set` (`SoundDynamicAliasRegistration
+Set @ 0x464c50`) arms/disarms appending unknown names (the port stores alias
+*names* where the corpus stores uppercase string hashes, and bounds the 495-
+slot table it overflowed). `sound_test` pins the whole 45-entry table, the
+indices pinned by findings 137/144, the case-folded/NULL/no-append paths, the
+flag surviving re-init, and the port's bound.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

@@ -299,9 +299,119 @@ static void test_real(const char* dir)
     resource_unmount_all();
 }
 
+/* ------------------------------------------------------------------ *
+ *  Alias registry (SoundAliasRegistryInit @ 0x00464740, SoundAliasLookup
+ *  @ 0x00464c70, SoundDynamicAliasRegistrationSet @ 0x00464c50 — issues
+ *  #313 / #321 / #314, finding 137).
+ * ------------------------------------------------------------------ */
+
+static void test_alias_registry(void)
+{
+    static const char* const expected[45] = {
+        "SFX_NULL", "SFX_Stamp", "SFX_Drill", "SFX_DrillFade",
+        "SFX_RockBreak", "SFX_Drip", "SFX_Ambient", "SFX_AmbientLoop",
+        "SFX_Step", "SFX_RockMonster", "SFX_RockMonster2",
+        "SFX_RockMonsterStep", "SFX_MFDeposit", "SFX_ButtonPressed",
+        "SFX_MFLift", "SFX_MFThrow", "SFX_Walker", "SFX_YesSir",
+        "SFX_Build", "SFX_Okay", "SFX_NotOkay",
+        "SFX_InterfaceSlideOnScreen", "SFX_InterfaceSlideOffScreen",
+        "SFX_PanelSlideOnScreen", "SFX_PanelSlideOffScreen", "SFX_Siren",
+        "SFX_CrystalRecharge", "SFX_Laser", "SFX_LaserHit",
+        "SFX_LazerRecharge", "SFX_TopPriority", "SFX_ImmovableRock",
+        "SFX_Wall", "SFX_Floor", "SFX_BoulderHit", "SFX_Place",
+        "SFX_PlaceOre", "SFX_PlaceCrystal", "SFX_Lava", "SFX_RockWipe",
+        "SFX_FallIn", "SFX_MusicLoop", "SFX_CaptainSlide", "SFX_Dynamite",
+        "SFX_AmbientMusicLoop",
+    };
+
+    sound_alias_registry_init();
+    CHECK(sound_alias_count() == 45, "registry init builds 45 built-ins");
+    for (int i = 0; i < 45; ++i) {
+        const char* n = sound_alias_name(i);
+        CHECK(n != NULL && strcmp(n, expected[i]) == 0, "built-in name/order");
+    }
+    /* Indices pinned by the findings, not just the literal table. */
+    CHECK(sound_alias_name(7) != NULL
+              && strcmp(sound_alias_name(7), "SFX_AmbientLoop") == 0,
+          "index 7 is SFX_AmbientLoop (finding 137)");
+    CHECK(sound_alias_name(0x26) != NULL
+              && strcmp(sound_alias_name(0x26), "SFX_Lava") == 0,
+          "index 0x26 is SFX_Lava (finding 137)");
+    CHECK(sound_alias_name(0x29) != NULL
+              && strcmp(sound_alias_name(0x29), "SFX_MusicLoop") == 0,
+          "index 0x29 is SFX_MusicLoop (finding 144)");
+    CHECK(sound_alias_name(0x2c) != NULL
+              && strcmp(sound_alias_name(0x2c), "SFX_AmbientMusicLoop") == 0,
+          "index 0x2c is SFX_AmbientMusicLoop (finding 144)");
+    CHECK(sound_alias_name(-1) == NULL && sound_alias_name(45) == NULL,
+          "name access is bounded to the built-ins");
+
+    /* Lookup: exact and folded (the corpus folds both sides through
+     * KeyToAscii; the fold is ASCII-only). */
+    int idx = -1;
+    CHECK(sound_alias_lookup("SFX_Lava", &idx) == 1 && idx == 0x26,
+          "lookup finds a built-in");
+    CHECK(sound_alias_lookup("sfx_lava", &idx) == 1 && idx == 0x26,
+          "lookup is case-insensitive");
+    CHECK(sound_alias_lookup("SFX_MUSICLOOP", &idx) == 1 && idx == 0x29,
+          "lookup finds a built-in upper-cased");
+
+    /* Not-found path: no registration by default, nothing appended. */
+    idx = 7;
+    CHECK(sound_alias_lookup("SFX_Nope", &idx) == 0,
+          "unknown alias finds nothing (registration off)");
+    CHECK(idx == 7, "failed lookup leaves the index untouched");
+    CHECK(sound_alias_lookup(NULL, &idx) == 0, "NULL name finds nothing");
+    CHECK(sound_alias_count() == 45, "unknown lookup appends nothing");
+
+    /* Registration set @ 0x00464c50: unknown names append at the tail. */
+    sound_alias_registration_set(1);
+    CHECK(sound_alias_lookup("SFX_Nope", &idx) == 1 && idx == 45,
+          "registration appends the first unknown alias");
+    CHECK(sound_alias_lookup("sfx_nope", &idx) == 1 && idx == 45,
+          "appended alias re-finds case-insensitively");
+    CHECK(sound_alias_count() == 46 && sound_alias_name(45) != NULL
+              && strcmp(sound_alias_name(45), "SFX_Nope") == 0,
+          "appended alias is the first dynamic slot");
+
+    sound_alias_registration_set(0);
+    CHECK(sound_alias_lookup("SFX_Other", &idx) == 0,
+          "registration off blocks appending");
+    CHECK(sound_alias_count() == 46 && sound_alias_name(46) == NULL,
+          "blocked lookup leaves no gap");
+    CHECK(sound_alias_lookup("SFX_Nope", &idx) == 1 && idx == 45,
+          "already-registered alias survives registration being off");
+
+    /* Re-init drops the dynamic side (documented deviation: the corpus
+     * keeps the stale count and reads uninitialised slots) but leaves the
+     * registration flag exactly as it is (the corpus never touches
+     * DAT_00502a2c here — the disabled flag below would keep lookup from
+     * appending until re-enabled). */
+    sound_alias_registration_set(1);
+    sound_alias_registry_init();
+    CHECK(sound_alias_count() == 45 && sound_alias_name(45) == NULL,
+          "re-init clears the dynamic aliases");
+    CHECK(sound_alias_lookup("SFX_Nope", &idx) == 1 && idx == 45,
+          "registration flag survives re-init (corpus behaviour)");
+
+    /* Port bound (deviation: the corpus writes OOB past its 0x7bc-byte
+     * table): filling the table makes further appends fail cleanly. */
+    char fill[64];
+    for (int i = 1; i < 450; ++i) {
+        sprintf(fill, "SFX_Fill%d", i);
+        CHECK(sound_alias_lookup(fill, &idx) == 1 && idx == 45 + i,
+              "dynamic fill reaches the table bound");
+    }
+    CHECK(sound_alias_count() == SOUND_ALIAS_MAX, "count hits the bound");
+    CHECK(sound_alias_lookup("SFX_Fill999", &idx) == 0,
+          "appending at the bound returns 0 (port guard)");
+    sound_alias_registry_init();
+}
+
 int main(int argc, char** argv)
 {
     test_synthetic();
+    test_alias_registry();
     for (int i = 1; i < argc; ++i) {
         if (strcmp(argv[i], "--real") == 0 && i + 1 < argc) {
             test_real(argv[i + 1]);
