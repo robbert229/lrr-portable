@@ -805,11 +805,11 @@ address,decompile_reference_count,function_count,functions,finding_mentions,imag
 0x004dcffc,1,1,InputBindingDefaultValueGet@0x0041cb90,,.data,zero-filled virtual tail,,,unreviewed,,,
 0x004dd00c,1,1,InputBindingDefaultValueGet@0x0041cb90,,.data,zero-filled virtual tail,,,unreviewed,,,
 0x004dd030,1,1,InputBindingDefaultValueGet@0x0041cb90,,.data,zero-filled virtual tail,,,unreviewed,,,
-0x004dd120,2,2,InterfaceImagesConfigLoad@0x0041ada0; IndexedEntityValueGet@0x0041cab0,,.data,zero-filled virtual tail,,,unreviewed,,,
+0x004dd120,2,2,InterfaceImagesConfigLoad@0x0041ada0; IndexedEntityValueGet@0x0041cab0,,.data,zero-filled virtual tail,,,partial,Per-index interface-image resource handle table for the second parsed image field,medium,InterfaceImagesConfigLoad loads the image name parsed into its second image field and stores each handle at this indexed table; IndexedEntityValueGet selects the corresponding handle when the input-category predicate succeeds. The image field’s UI role is not yet resolved.
 0x004dd124,1,1,InputBindingDefaultValueGet@0x0041cb90,,.data,zero-filled virtual tail,,,unreviewed,,,
 0x004dd134,1,1,InputBindingDefaultValueGet@0x0041cb90,,.data,zero-filled virtual tail,,,unreviewed,,,
 0x004dd158,1,1,InputBindingDefaultValueGet@0x0041cb90,,.data,zero-filled virtual tail,,,unreviewed,,,
-0x004dd248,2,2,InterfaceImagesConfigLoad@0x0041ada0; IndexedEntityValueGet@0x0041cab0,,.data,zero-filled virtual tail,,,unreviewed,,,
+0x004dd248,2,2,InterfaceImagesConfigLoad@0x0041ada0; IndexedEntityValueGet@0x0041cab0,,.data,zero-filled virtual tail,,,partial,Per-index interface-image resource handle table for the third parsed image field,medium,InterfaceImagesConfigLoad loads the image name parsed into its third image field and stores each handle at this indexed table; IndexedEntityValueGet selects the corresponding handle when the per-index flag at 0x004dd60c is set. The image field’s UI role is not yet resolved.
 0x004dd370,2,2,InterfaceImagesConfigLoad@0x0041ada0; SimulationPointerActionDispatch@0x0041baa0,,.data,zero-filled virtual tail,,,unreviewed,,,
 0x004dd498,2,2,InterfaceImagesConfigLoad@0x0041ada0; SimulationPointerActionDispatch@0x0041baa0,,.data,zero-filled virtual tail,,,unreviewed,,,
 0x004dd5c0,1,1,InterfaceImagesConfigLoad@0x0041ada0,,.data,zero-filled virtual tail,,,unreviewed,,,
