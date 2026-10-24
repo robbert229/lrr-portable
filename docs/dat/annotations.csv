@@ -1842,3 +1842,10 @@ address,review_status,interpretation,confidence,evidence
 0x00557060,partial,Save-menu selection state slot,medium,LoadMenuBuild passes this address to MenuBuild as the SaveMenu state pointer alongside the save-menu callback; the value’s exact encoding is not recovered.
 0x00557554,interpreted,Configured Save_Game label buffer,high,LoadMenuBuild copies the localized Save_Game configuration string into this global character buffer for the front-end save menu.
 0x00557824,partial,"Current level-preview screen index, initialized to zero",medium,"LoadMenuBuild resets this value to zero and loads the adjacent MaxLevelScreens limit into 0x00557828; the index is used with the level-preview screen list, but its later reads are not recovered in this function."
+0x0076addc,interpreted,Scene object mesh record type token: MESH,high,EntityVisualTypeTablesInit stores a pointer to the static MESH token in this renderer type table slot.
+0x0076ade0,interpreted,Scene object frame record type token: FRAME,high,EntityVisualTypeTablesInit stores a pointer to the static FRAME token in this renderer type table slot.
+0x0076ade4,interpreted,Scene object animation record type token: ANIM,high,EntityVisualTypeTablesInit stores a pointer to the static ANIM token in this renderer type table slot.
+0x0076ade8,interpreted,Scene object action record type token: ACT,high,EntityVisualTypeTablesInit stores a pointer to the static ACT token in this renderer type table slot.
+0x0076adf4,interpreted,LightWave scene file type token: LWS,high,EntityVisualTypeTablesInit stores a pointer to the static LWS token in this renderer type table slot.
+0x0076adf8,interpreted,LightWave object file type token: LWO,high,EntityVisualTypeTablesInit stores a pointer to the static LWO token in this renderer type table slot.
+0x0076adec,partial,Null entry in the renderer scene-type table,medium,"EntityVisualTypeTablesInit explicitly initializes this table slot to null; the table contains neighboring MESH, FRAME, ANIM, and ACT tokens, but no consumer assigns a meaning to this empty slot."
