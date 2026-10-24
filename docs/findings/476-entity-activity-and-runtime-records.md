@@ -8,6 +8,8 @@ This finding follows the activity and runtime-record procedures assigned in [iss
 
 `EntityActivityListRegister @ 0x00403f30` allocates kind `0xe` when the current head is absent or not kind `0xe`, linking the new record ahead of the previous head. `PendingTypeValueSlotSelect @ 0x00407a10` chooses a value from entity flags first, then walks past leading kind-`0xe` records and switches on the next record kind; several cases inspect nested record fields before selecting a `DAT_005578xx` value. This establishes a priority order in the code, while the user-facing meaning of those values remains unknown. `BubbleActionNameToIndex @ 0x00407300` scans a fixed name table case-insensitively; on a miss it returns the last comparison result rather than an explicit `-1` sentinel. `ResetObjectAuxiliaryState @ 0x00407370` clears `+0x388` and selects `+0x38c` only when its global enable is set.
 
+The separate global word `DAT_004dee14` coordinates entity-system lifecycle and updates. `ActivityNameTableInit` sets bit `0x01`, which `EntityPoolResourcesRelease` clears; `EntityIterationCallbackGuard` sets bit `0x02` around the entity callback walk, and `EntityType5FinalizeIfAllowed` checks that guard before finalizing kind 5. `EntityFrameUpdateDispatch` uses bits `0x04`, `0x08`, and `0x10` to run or defer activity updates. Bit `0x20` suppresses random kind-1 spawning, while bit `0x40` changes the hover effect for a kind-`0x1a` overlay entry during the scatter-spawn drain. The full word is not mapped.
+
 ## Activity runner and scene handles
 
 | Procedure | Observed behavior |
