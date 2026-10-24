@@ -122,4 +122,20 @@ int input_quit_dwell(InputState* s, int slot, int mx, int my,
                      int rect_x, int rect_y, int rect_w, int rect_h,
                      int quit_w, int quit_h, int keep_running);
 
+/* --- input-entry / player-input flag-8 leaves (2026-10-24) ----------------
+ * InputEntryFlag8SetClear / InputEntryFlag8Get (FUN_0041c9f0 / FUN_0041ca60,
+ * findings 376/444): raise/clear/read bit 0x8 of the corpus's indexed
+ * input-entry flag word. PlayerInputFlag8SetClear / PlayerInputFlag8Get
+ * (FUN_0041ca20 / FUN_0041ca70): the same bit over the two player-input
+ * tables selected by kind 1 / kind 4. None of the corpus's table owners
+ * (the pointer-table allocator and the action-state leaves, still
+ * unported) lands, so all three tables land zero-initialized with a
+ * documented 256-entry window (the corpus's own sizes come from heap
+ * allocations; the port bounds-checks, answering zero outside the window
+ * and skipping writes — deviation). */
+void input_entry_flag8_set_clear(int entry, int set);
+uint32_t input_entry_flag8_get(int entry);
+void player_input_flag8_set_clear(int kind, int action, int set);
+uint32_t player_input_flag8_get(int kind, int action);
+
 #endif /* LEGORRR_INPUT_HPP */

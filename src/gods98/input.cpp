@@ -207,3 +207,64 @@ int input_quit_dwell(InputState* s, int slot, int mx, int my,
     }
     return 0;
 }
+/* --- input-entry / player-input flag-8 leaves (see input.hpp) --------------
+ * Zero-initialized module statics with the documented window; the corpus
+ * indexes through (possibly heap) pointers blindly. */
+#define INPUT_FLAG_TABLE_SLOTS 256
+
+static uint32_t s_input_entry_flags[INPUT_FLAG_TABLE_SLOTS];
+static uint32_t s_player_kind1_flags[INPUT_FLAG_TABLE_SLOTS];
+static uint32_t s_player_kind4_flags[INPUT_FLAG_TABLE_SLOTS];
+
+void input_entry_flag8_set_clear(int entry, int set)
+{
+    if (entry < 0 || entry >= INPUT_FLAG_TABLE_SLOTS) {
+        return; /* deviation: the corpus indexes blindly */
+    }
+    if (set != 0) {
+        s_input_entry_flags[entry] = s_input_entry_flags[entry] | 8u;
+    } else {
+        s_input_entry_flags[entry] = s_input_entry_flags[entry] & ~8u;
+    }
+}
+
+uint32_t input_entry_flag8_get(int entry)
+{
+    if (entry < 0 || entry >= INPUT_FLAG_TABLE_SLOTS) {
+        return 0u;
+    }
+    return s_input_entry_flags[entry] & 8u;
+}
+
+static uint32_t* player_flags_table(int kind)
+{
+    if (kind == 1) {
+        return s_player_kind1_flags;   /* DAT pointer global: table A */
+    }
+    if (kind == 4) {
+        return s_player_kind4_flags;   /* DAT pointer global: table B */
+    }
+    return NULL;
+}
+
+void player_input_flag8_set_clear(int kind, int action, int set)
+{
+    uint32_t* table = player_flags_table(kind);
+    if (table == NULL || action < 0 || action >= INPUT_FLAG_TABLE_SLOTS) {
+        return; /* deviation: the corpus reads any kind through the table */
+    }
+    if (set != 0) {
+        table[action] = table[action] | 8u;
+    } else {
+        table[action] = table[action] & ~8u;
+    }
+}
+
+uint32_t player_input_flag8_get(int kind, int action)
+{
+    const uint32_t* table = player_flags_table(kind);
+    if (table == NULL || action < 0 || action >= INPUT_FLAG_TABLE_SLOTS) {
+        return 0u;
+    }
+    return table[action] & 8u;
+}

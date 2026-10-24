@@ -148,6 +148,41 @@ int main(void)
     input_capture_events(&f, &f4, 1);
     CHECK(input_key_edge(&f, PLATFORM_KEY_UP), "flow: press-after-release edges");
 
+    /* The flag-8 leaves (2026-10-24): one bit over the three DAT tables,
+     * settable and readable through the corpus's own leaves. */
+    {
+        CHECK(input_entry_flag8_get(3) == 0u, "the entry flags start zero");
+        input_entry_flag8_set_clear(3, 1);
+        CHECK(input_entry_flag8_get(3) == 8u, "the raise lands");
+        CHECK(input_entry_flag8_get(4) == 0u, "the neighbour entry holds");
+        input_entry_flag8_set_clear(3, 0);
+        CHECK(input_entry_flag8_get(3) == 0u, "the clear lands");
+
+        CHECK(player_input_flag8_get(1, 7) == 0u
+                  && player_input_flag8_get(4, 7) == 0u,
+              "both player tables start zero");
+        player_input_flag8_set_clear(1, 7, 1);
+        CHECK(player_input_flag8_get(1, 7) == 8u
+                  && player_input_flag8_get(4, 7) == 0u,
+              "kind 1 raises its table only");
+        player_input_flag8_set_clear(4, 7, 1);
+        CHECK(player_input_flag8_get(1, 7) == 8u
+                  && player_input_flag8_get(4, 7) == 8u,
+              "the kinds stay independent");
+        player_input_flag8_set_clear(1, 7, 0);
+        CHECK(player_input_flag8_get(1, 7) == 0u
+                  && player_input_flag8_get(4, 7) == 8u,
+              "the clear spares the other kind");
+
+        /* Unknown kinds and far indices answer zero / skip (deviation). */
+        player_input_flag8_set_clear(2, 5, 1);
+        CHECK(player_input_flag8_get(2, 5) == 0u, "kind 2 never fires");
+        CHECK(input_entry_flag8_get(1 << 20) == 0u, "the far index reads zero");
+        player_input_flag8_set_clear(1, 1 << 20, 1);
+        CHECK(player_input_flag8_get(1, 1 << 20) == 0u,
+              "the far player index is guarded");
+    }
+
     if (s_failures == 0) {
         printf("input_test: PASS\n");
         return 0;

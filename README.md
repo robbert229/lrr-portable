@@ -1748,6 +1748,19 @@ bounds-checks, and flags peeks keep both storages observable.
 `message_test` pins the bit isolation, idempotent raises, and guarded
 ids.
 
+**Input flag-8 leaves** (2026-10-24; findings 376/444): four set/clear/get
+leaves land in `input.*` over three zero-initialized DAT tables with a
+documented 256-entry window — the corpus sizes them through heap
+allocations its allocator owner (unported) never hands over. The
+input-entry leaf pair `input_entry_flag8_set_clear`/`_get`
+(0x41c9f0/0x41ca60) raises, drops, and reads bit 0x8 of the indexed
+entry flag word; the player pair `player_input_flag8_set_clear`/`_get`
+(0x41ca20/0x41ca70) does the same through the kind-1 or kind-4 player
+table, answering zero for other kinds (faithful — the corpus picks its
+table by kind and ignores the rest). Writes outside the window skip,
+reads answer zero (bounds deviation). `input_test` pins the one-bit
+round-trips, table independence, and the guards.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

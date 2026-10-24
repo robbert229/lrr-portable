@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 583 | 22.7% |
+| ported | 587 | 22.9% |
 | anchored | 5 | 0.2% |
-| named | 1929 | 75.2% |
+| named | 1925 | 75.1% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (583 functions)
+  (587 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (5 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1929 functions)
+  citation yet (1925 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1935 (75.5%).**
+**Game logic remaining to port: 1931 (75.3%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -499,10 +499,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0041c800` | CatalogSlotFlagUpdate |
 | `0x0041c8f0` | InputActionPressedGet |
 | `0x0041c950` | InputBindingPressedGet |
-| `0x0041c9f0` | InputEntryFlag8SetClear |
-| `0x0041ca20` | PlayerInputFlag8SetClear |
-| `0x0041ca60` | InputEntryFlag8Get |
-| `0x0041ca70` | PlayerInputFlag8Get |
 | `0x0041cab0` | IndexedEntityValueGet |
 | `0x0041caf0` | InputBindingValueGet |
 | `0x0041cb90` | InputBindingDefaultValueGet |
