@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 429 | 16.7% |
+| ported | 439 | 17.1% |
 | anchored | 5 | 0.2% |
-| named | 2084 | 81.3% |
+| named | 2074 | 80.9% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 0 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (429 functions)
+  (439 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (5 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (2084 functions)
+  citation yet (2074 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (0 functions)
 
-**Game logic remaining to port: 2089 (81.5%).**
+**Game logic remaining to port: 2079 (81.1%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -45,18 +45,10 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00401000` | AdvisorSceneControllerInit |
 | `0x004011c0` | AdvisorAnimationEndCleanup |
 | `0x00401210` | AdvisorSceneVisualStateInitialize |
-| `0x00401240` | Vector2Distance |
 | `0x00401270` | AdvisorConfigSlotLookup |
-| `0x004013a0` | Vector3Length |
 | `0x004013e0` | AdvisorPositionNameToIndex |
-| `0x00401420` | Vector3Distance |
-| `0x00401470` | Vector3CrossProduct |
 | `0x004014c0` | AdvisorAnimationNameToIndex |
-| `0x00401500` | Vector3Add |
 | `0x00401530` | AdvisorPositionConfigLoad |
-| `0x004016c0` | Vector3Subtract |
-| `0x004016f0` | Vector3DotProduct |
-| `0x00401750` | Vector3Normalize |
 | `0x004017b0` | AdvisorPositionRecordInitialize |
 | `0x00401840` | AdvisorActionPositionAndModeSet |
 | `0x00401890` | AdvisorActionPositionGet |
@@ -146,7 +138,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004065d0` | GlobalDwordGet |
 | `0x004065e0` | RenderSurfaceSecondaryGet |
 | `0x004065f0` | CubicBezierPointEvaluate |
-| `0x00406730` | Vector2DistanceVariant |
 | `0x00406760` | Vector2SetLength |
 | `0x004067b0` | PolylineSegmentLengthsAndTotalCalculate |
 | `0x00406820` | BezierCurveSamplesBuild |
@@ -1598,7 +1589,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0047baa0` | StreamedWaveFormatAndBufferSetup |
 | `0x0047bc30` | StreamedWavePlaybackDrainCheck |
 | `0x0047bdb0` | StreamedWaveRingBufferTick |
-| `0x0047c0c0` | Vector3ExactEqual |
 | `0x0047c100` | DirectSoundListenerRolloffSet |
 | `0x0047c160` | ConstantNegative10000Get |
 | `0x0047c170` | WindowStateInitialize |

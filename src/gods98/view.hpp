@@ -61,13 +61,21 @@ extern int   g_view_grid_edge;
 /* Test hook: when nonzero, the mode-3 velocity-EMA target is injected. */
 extern int g_view_test_blend;
 
-/* --- pure vector helpers (corpus FUN_00401720 / 00401500 / 00401420 /
- *      004016f0 / 004013a0) ------------------------------------------------- */
+/* --- pure vector helpers (corpus FUN_00401720 / FUN_00401500 /
+ * FUN_004016c0 / FUN_00401470 / FUN_00401750 / FUN_00401420 / FUN_004016f0 /
+ * FUN_004013a0 / FUN_00401240 / FUN_00406730 / FUN_0047c0c0; finding 280) --
+ * 3D unless noted; x87 float10 corpus math is byte-equivalent float here. */
 void vec_scale(float* dst, const float* src, float s);
 void vec_add(float* dst, const float* a, const float* b);
+void vec_sub(float* dst, const float* a, const float* b);
+void vec_cross(float* dst, const float* b, const float* c);
+void vec_normalize(float* v); /* zero length unguarded, as corpus */
 float vec_dist(const float* a, const float* b);
 float vec_dot(const float* a, const float* b);
 float vec_len(const float* a);
+float vec2_dist(const float* a, const float* b);   /* 2D */
+float vec2_dist_alt(const float* a, const float* b); /* 2D corpus variant */
+int   vec_exact_equal(const float* a, const float* b);
 
 /* --- camera-handle primitives (record-backed) ----------------------------- */
 void cam_offset(CameraHandle* c, float x, float y, float z); /* FUN_004755e0 */

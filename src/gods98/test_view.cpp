@@ -31,6 +31,25 @@ int main(void)
     CHECK(vec_dist(a, b) > 5.19f && vec_dist(a, b) < 5.20f, "vec_dist");
     CHECK(vec_dot(a, b) == 32.0f, "vec_dot");
     CHECK(vec_len(a) > 3.741f && vec_len(a) < 3.742f, "vec_len");
+    vec_sub(d, b, a);
+    CHECK(d[0] == 3.0f && d[1] == 3.0f && d[2] == 3.0f, "vec_sub");
+    {   /* x * y = z (corpus right-hand-order cross convention). */
+        float x[3] = { 1, 0, 0 }, y[3] = { 0, 1, 0 };
+        vec_cross(d, x, y);
+        CHECK(d[0] == 0.0f && d[1] == 0.0f && d[2] == 1.0f, "vec_cross");
+    }
+    {
+        float n[3] = { 3, 0, 4 };
+        vec_normalize(n);
+        CHECK(vec_len(n) > 0.9999f && vec_len(n) < 1.0001f, "vec_normalize");
+    }
+    {
+        float p[2] = { 1, 2 }, q[2] = { 4, 6 };
+        CHECK(vec2_dist(p, q) > 4.99f && vec2_dist(p, q) < 5.01f, "vec2_dist");
+        CHECK(vec2_dist_alt(p, q) == vec2_dist(p, q), "vec2_dist_alt agrees");
+    }
+    CHECK(vec_exact_equal(a, b) == 0, "different vectors unequal");
+    CHECK(vec_exact_equal(a, a) == 1, "identical vectors equal");
 
     /* camera-handle primitives */
     CameraHandle c = {};

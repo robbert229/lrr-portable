@@ -9,36 +9,86 @@ float g_view_follow_scale = 1.0f;   /* DAT_005560a4 (grid pick follow scale) */
 int   g_view_grid_edge   = 0;       /* DAT_005560ac (tile-count edge clamp) */
 int   g_view_test_blend  = 0;       /* test hook for the mode-3 EMA target */
 
-/* ---- pure vector helpers (corpus FUN_00401720/1500/1420/16f0/13a0) ------ */
+/* ---- pure vector helpers ------------------------------------------------
+ * Corpus mapping (finding 280; the corpus bodies use x87 float10, the port
+ * computes the byte-equivalent single-precision results):
+ *   FUN_00401720 vec_scale, FUN_00401500 vec_add,  FUN_004016c0 vec_sub,
+ *   FUN_00401470 vec_cross, FUN_00401750 vec_normalize,
+ *   FUN_00401420 vec_dist,  FUN_004016f0 vec_dot,  FUN_004013a0 vec_len,
+ *   FUN_00401240 vec2_dist, FUN_00406730 vec2_dist_alt,
+ *   FUN_0047c0c0 vec_exact_equal. */
 
-void vec_scale(float* dst, const float* src, float s)
+void vec_scale(float* dst, const float* src, float s) /* FUN_00401720 */
 {
     dst[0] = s * src[0];
     dst[1] = s * src[1];
     dst[2] = s * src[2];
 }
 
-void vec_add(float* dst, const float* a, const float* b)
+void vec_add(float* dst, const float* a, const float* b) /* FUN_00401500 */
 {
     dst[0] = a[0] + b[0];
     dst[1] = a[1] + b[1];
     dst[2] = a[2] + b[2];
 }
 
-float vec_dist(const float* a, const float* b)
+void vec_sub(float* dst, const float* a, const float* b) /* FUN_004016c0 */
+{
+    dst[0] = a[0] - b[0];
+    dst[1] = a[1] - b[1];
+    dst[2] = a[2] - b[2];
+}
+
+void vec_cross(float* dst, const float* b, const float* c) /* FUN_00401470 */
+{
+    dst[0] = b[1] * c[2] - b[2] * c[1];
+    dst[1] = b[2] * c[0] - b[0] * c[2];
+    dst[2] = b[0] * c[1] - b[1] * c[0];
+}
+
+void vec_normalize(float* v) /* FUN_00401750 (zero length unguarded, as corpus) */
+{
+    float s = 1.0f / sqrtf(v[0] * v[0] + v[2] * v[2] + v[1] * v[1]);
+    v[0] = s * v[0];
+    v[1] = s * v[1];
+    v[2] = s * v[2];
+}
+
+float vec_dist(const float* a, const float* b) /* FUN_00401420 */
 {
     float dx = a[0] - b[0], dy = a[1] - b[1], dz = a[2] - b[2];
     return sqrtf(dx * dx + dy * dy + dz * dz);
 }
 
-float vec_dot(const float* a, const float* b)
+float vec_dot(const float* a, const float* b) /* FUN_004016f0 */
 {
     return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 }
 
-float vec_len(const float* a)
+float vec_len(const float* a) /* FUN_004013a0 */
 {
     return sqrtf(a[0] * a[0] + a[1] * a[1] + a[2] * a[2]);
+}
+
+float vec2_dist(const float* a, const float* b) /* FUN_00401240 */
+{
+    float dx = a[0] - b[0];
+    float dy = a[1] - b[1];
+    return sqrtf(dx * dx + dy * dy);
+}
+
+float vec2_dist_alt(const float* a, const float* b) /* FUN_00406730 */
+{
+    /* Corpus variant: dy term first, x term through an extra round-trip —
+     * identical single-precision result. */
+    float dy = a[1] - b[1];
+    float dx = a[0] - b[0];
+    return sqrtf(dy * dy + dx * dx);
+}
+
+int vec_exact_equal(const float* a, const float* b) /* FUN_0047c0c0 */
+{
+    return a[0] == b[0] && a[1] == b[1] && a[2] == b[2];
 }
 
 /* ---- camera-handle primitives (record-backed) --------------------------- */
