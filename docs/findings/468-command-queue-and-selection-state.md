@@ -6,7 +6,7 @@ Related context: [Finding 246](246-entity-move-route-command-and-object-clone-he
 
 ## Action buffering and dispatch
 
-`ActionCommandQueueAppend @ 0x00452010` appends an action entry to the opcode-byte array rooted at `DAT_004ff0bc` and the parallel five-dword argument array rooted at `DAT_004ff0c8`, using `DAT_004ff29c` as the shared count. It stores three scalar values and an optional coordinate pair. This is the interface-action buffer consumed at the beginning of `SelectionRoot`, not the larger selection-operation ring.
+`ActionCommandQueueAppend @ 0x00452010` appends an action entry to the opcode-byte array rooted at `DAT_004ff0bc` and the parallel five-dword argument array rooted at `DAT_004ff0c8`, using `DAT_004ff29c` as the shared count. It stores three scalar values and an optional coordinate pair. This is the interface-action buffer consumed at the beginning of `SelectionRoot`, not the larger selection-operation ring. `SelectionRoot` does not visibly reset this count after draining it; the reset path and whether another helper owns it are unresolved.
 
 `KeyStateGatedCommandEnqueue @ 0x00452060` appends a five-dword operation record to one of two banks at `DAT_004eaf20`, each with capacity `0x800`; `DAT_004fef28` selects the active bank and the associated count is at `DAT_004fef20 + bank*4`. It drops an operation when the active bank is full. It zero-initializes the record before storing opcode/arguments and an optional coordinate pair. The function name's “key state” aspect is not implemented as a visible key test here; `SelectionRoot` checks the per-opcode enable byte at `DAT_0076ab80` when draining the separate action buffer.
 
@@ -30,7 +30,7 @@ The active selection is a compact array rooted at `DAT_004fef2c`, with count `DA
 | `ArrayFindValueIndex @ 0x00452650` | Searches a pointer-sized integer array, optionally returns the matching index, and reports success as a boolean-like value. |
 | `SelectionCandidateAlreadySelectedOrMarked @ 0x00452690` | Returns true if the entity is already selected or its word at `+0x3ec` has bit `2`. |
 
-`SelectionCandidateEligibilityCheck @ 0x00452870` requires entity flag word `+0xfa` bit `0x100`, a successful `FUN_004385b0(entity,1)`, and clear bits in words `+0xf9` and `+0xf8`; type `1` has an additional `+0xf8` bit `0x40000` rejection. `SelectionCandidateFilter @ 0x004526e0` first follows `+0xc1` when nonzero, then applies that eligibility test. Depending on its second argument, it may reject already-selected/marked candidates after calling `FUN_0044c4a0`; otherwise it inserts a not-yet-selected candidate while the count is below 100, sets selected bit `0x200000` in word `+0xfa`, and refreshes entity activity state. For a qualifying type-2 entity it can also reset its action state and issue a turn action. A final flag-gated branch updates a visual resource and returns success. `SelectionCandidateFilterDefault @ 0x004526c0` calls this filter with mode `1`.
+`SelectionCandidateEligibilityCheck @ 0x00452870` requires entity flag word `+0x3e8` bit `0x100`, a successful `FUN_004385b0(entity,1)`, and clear bits in words `+0x3e4` and `+0x3e0`; type `1` has an additional `+0x3e0` bit `0x40000` rejection. `SelectionCandidateFilter @ 0x004526e0` first follows the pointer at `+0x304` when nonzero, then applies that eligibility test. Depending on its second argument, it may reject already-selected/marked candidates after calling `FUN_0044c4a0`; otherwise it inserts a not-yet-selected candidate while the count is below 100, sets selected bit `0x200000` in word `+0x3e8`, and refreshes entity activity state. For a qualifying type-2 entity it can also reset its action state and issue a turn action. A final bit-`0x80` gate on word `+0x3e8` updates a visual resource and returns success. `SelectionCandidateFilterDefault @ 0x004526c0` calls this filter with mode `1`.
 
 `EntityRandomValidCellCommandCreate @ 0x00452430` obtains grid dimensions from two helper lookups, tries up to 1000 random coordinate pairs, and, if `FUN_00432b50` accepts one, queues operation `0x24` with the supplied entity and chosen coordinates. This is a producer for the operation dispatcher; it does not add an entity to the selection array itself.
 
@@ -46,7 +46,7 @@ The active selection is a compact array rooted at `DAT_004fef2c`, with count `DA
 
 `SelectedEntityStateMonitor @ 0x00452cc0` performs entity cleanup for the selected state: type-2 entities with a nested entity have bits cleared on the nested entity; type `4` calls `FUN_00409ff0`; other entities call `FUN_00437540`, with an extra `FUN_0040d0a0` for type `0x0b`. Its loop variable counts down from the selection count, while the checked-in pseudocode repeatedly references the base symbol `DAT_004fef2c` rather than visibly advancing an array pointer. This unusual shape is recorded as an unresolved decompile/correctness question, not generalized into a claim that every selected entity is processed.
 
-`SelectionCommandDispatch @ 0x00452d60` checks a primary object at `DAT_00556160` first, then selected entries. A candidate must have flag byte `+0xfa` bit `0x10` and satisfy a type/nested-entity condition. For a type-2 entity with a nested entity it dispatches using that nested pointer; otherwise it passes the entity itself to `FUN_004295f0` with the supplied operation and returns `1`. It returns `0` when no eligible candidate exists. The helper's downstream meaning is outside this function.
+`SelectionCommandDispatch @ 0x00452d60` checks a primary object at `DAT_00556160` first, then selected entries. A candidate must have bit `0x10` set in the byte at `+0x3e8` and satisfy a type/nested-entity condition. For a type-2 entity with a nested entity it dispatches using that nested pointer; otherwise it passes the entity itself to `FUN_004295f0` with the supplied operation and returns `1`. It returns `0` when no eligible candidate exists. The helper's downstream meaning is outside this function.
 
 ## Main flow and limits
 
@@ -56,7 +56,7 @@ Several helper names and integer opcode values are anchored by the checked-in na
 
 ## Focused follow-up slices
 
-- Trace all producers of the action buffer at `DAT_004ff0bc` and document opcode names, queue capacity, and overflow behavior.
+- Trace all producers and reset paths of the action buffer at `DAT_004ff0bc`; document opcode names, queue capacity, and overflow behavior. `SelectionRoot` drains but does not visibly reset `DAT_004ff29c`.
 - Identify the owner/free path for arrays returned by `SelectionSnapshotCreate`.
 - Reconcile `SelectedEntityStateMonitor`'s repeated base-symbol access with the executable call/data evidence.
 - Determine the intended miss return for `CaseInsensitiveNameTableLookupAtOffset8` and how callers validate it.
