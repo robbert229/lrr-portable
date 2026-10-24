@@ -1974,3 +1974,5 @@ address,review_status,interpretation,confidence,evidence
 0x004aabec,interpreted,Boolean true token YES,high,"ConfigBooleanParse compares this token case-insensitively and returns true when the input matches."
 0x004ab0f8,interpreted,Current and parent directory entry token dot-dot,high,"DirectoryTreeScan compares each enumerated filename with this null-terminated '..' token and skips the parent-directory entry."
 0x004ab0fc,interpreted,Current directory entry token dot,high,"DirectoryTreeScan compares each enumerated filename with this null-terminated '.' token and skips the current-directory entry."
+0x004b202c,partial,CRT floating-point exponent-class eligibility lookup,medium,"CrtDoubleRemainderReduction indexes this byte table with four exponent bits from the first operand and proceeds only when the selected byte is nonzero; the table's higher-level numeric rationale is unresolved."
+0x004b205c,interpreted,Double-precision scale factor 0.5 for remainder reduction,high,"CrtDoubleRemainderReduction repeatedly multiplies the divisor magnitude by this double constant while reducing the exponent gap; the stored IEEE-754 value is 0.5."
