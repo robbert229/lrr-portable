@@ -2363,6 +2363,18 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Grid-cell record buffer + small record leaves** (findings 463/373/378/386):
+`engine.*` takes the entity-cell field-grid trio — `grid_cell_record_buffer_allocate`
+(0x4661c0, the `width * height * 0x0c` buffer with the corpus's masked zero-word
+loop, the descriptor landing even on an alloc failure), `entity_field_grid_buffer_release`
+(0x466210), and `grid_cell_record_buffer_replace` (0x466230) — over the two
+DAT words as module statics. `view.*` ports `selection_record_point_get`
+(0x436ae9, the follow-mode camera readback), `heap.*` ports
+`object_field_38_release` (0x489d70, the +0x38 slot free), and `crt.*` ports
+the `crt_no_op_stub_variant2` empty stub (0x493c40). `enginebind_test`,
+`view_test`, `heap_test`, and `crt_test` pin the zero pass, the gate, and the
+slot free.
+
 **Stats flag tests + availability seams + free wrappers** (findings 319/14/480/428):
 `entity.*` takes the three stats-word bit tests (`entity_stats_flag10/20/40_test`,
 0x439cf0/0x439d10/0x439d30) masking the already-ported stats reader's word,

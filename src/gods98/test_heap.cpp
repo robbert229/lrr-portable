@@ -119,6 +119,19 @@ int main(void)
         crt_new_handler_set(NULL); /* restore the corpus's unset case */
     }
 
+    /* ObjectField38Release (2026-10-24): the slot free, guarded. */
+    {
+        object_field_38_release(NULL); /* guarded */
+        char* rec = (char*)engine_heap_alloc(0x40);
+        memset(rec, 0, 0x40);
+        object_field_38_release(rec); /* empty slot: no free */
+        void* field = engine_heap_alloc(16);
+        memcpy(rec + 0x38, &field, sizeof(field));
+        object_field_38_release(rec); /* frees field; rec keeps the word */
+        memset(rec + 0x38, 0, sizeof(field)); /* before rec goes away */
+        engine_heap_free(rec);
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "heap_test: %d failure(s)\n", s_failures);
         return 1;

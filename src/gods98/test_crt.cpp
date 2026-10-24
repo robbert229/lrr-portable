@@ -685,6 +685,14 @@ int main(void)
         CHECK(crt_surface_calls_count() == 0, "the guards keep the seam quiet");
     }
 
+    /* CrtNoOpStubVariant2 (2026-10-24): the empty body answers nothing. */
+    {
+        const int before = crt_surface_calls_count();
+        crt_no_op_stub_variant2();
+        CHECK(crt_surface_calls_count() == before,
+              "the stub stays inert");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "crt_test: %d failure(s)\n", s_failures);
         return 1;

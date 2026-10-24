@@ -1114,3 +1114,9 @@ void crt_fatal_exit_observer_set(void (*observer)(void))
 {
     s_fatal_exit_observer = observer;
 }
+
+/* CrtNoOpStubVariant2 (FUN_00493c40) — see crt.hpp. */
+void crt_no_op_stub_variant2(void)
+{
+    return;
+}

@@ -849,7 +849,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00436a4a,FUN_00436a4a,ported,CameraSetDistance,1,293
 00436aa5,FUN_00436aa5,ported,CameraZoomUpdate,1,124
 00436ac9,FUN_00436ac9,named,RendererNodeRelativePositionSet,0,155
-00436ae9,FUN_00436ae9,named,SelectionRecordPointGet,0,136
+00436ae9,FUN_00436ae9,ported,SelectionRecordPointGet,3,136
 00436b0b,FUN_00436b0b,ported,SelectionRecordPointSet,1,165
 00436b33,FUN_00436b33,ported,CameraGetPositionWithTerrainHeight,1,279
 00436b79,FUN_00436b79,ported,CameraRotationGet,3,87
@@ -1485,9 +1485,9 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00465c50,FUN_00465c50,named,ParticleSlotInitializeForEmitter,0,1467
 00465e00,FUN_00465e00,named,AdvanceTimedVisualSegmentAndFade,0,813
 00465f40,FUN_00465f40,named,InstanceQuadVerticesBuild,0,2205
-004661c0,FUN_004661c0,named,GridCellRecordBufferAllocate,0,643
-00466210,FUN_00466210,named,EntityFieldGridBufferRelease,0,126
-00466230,FUN_00466230,named,GridCellRecordBufferReplace,0,98
+004661c0,FUN_004661c0,ported,GridCellRecordBufferAllocate,2,643
+00466210,FUN_00466210,ported,EntityFieldGridBufferRelease,2,126
+00466230,FUN_00466230,ported,GridCellRecordBufferReplace,2,98
 00466250,FUN_00466250,named,ExpandCellEntitySpawn,0,1137
 00466380,FUN_00466380,named,SetExpansionEntityAtGridCell,0,453
 004663f0,FUN_004663f0,named,CanSpawnExpansionEntityAtGridCell,0,842
@@ -2217,7 +2217,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00489b30,FUN_00489b30,named,ObjectInterfaceArrayResourceCreate,0,944
 00489bc0,FUN_00489bc0,named,ComChildItemsVisit,0,834
 00489c30,FUN_00489c30,ported,IndexedBitmapPaletteDataPrepare,1,1819
-00489d70,FUN_00489d70,named,ObjectField38Release,0,135
+00489d70,FUN_00489d70,ported,ObjectField38Release,2,135
 00489d90,FUN_00489d90,named,DirectXErrorMessageFormat,0,267
 00489dd0,FUN_00489dd0,named,DirectXResultDiagnosticDispatch,0,29044
 0048b260,FUN_0048b260,named,StartupStreamStateReset,0,228
@@ -2398,7 +2398,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00493be0,FUN_00493be0,named,FpuStatusWordGetVariantA,0,91
 00493bf0,FUN_00493bf0,named,FpuStatusWordGetVariantB,0,91
 00493c10,FUN_00493c10,named,FpuControlWordUpdateMasked,0,93
-00493c40,FUN_00493c40,named,CrtNoOpStubVariant2,0,127
+00493c40,FUN_00493c40,ported,CrtNoOpStubVariant2,3,127
 00493ca0,FUN_00493ca0,named,LocaleCharacterMapString,0,2287
 00493ec0,FUN_00493ec0,ported,BoundedStringLength,2,297
 00493ef0,FUN_00493ef0,named,CrtFormattedScanV,0,20038

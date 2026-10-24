@@ -730,3 +730,12 @@ void camera_zoom_step_adjust(void* camera, int direction, float step)
     }
     /* other directions: the corpus's early exit — inert */
 }
+
+/* SelectionRecordPointGet (FUN_00436ae9) — see view.hpp. */
+void selection_record_point_get(ViewContext* v, float out[3])
+{
+    if (v != NULL && out != NULL && v->mode == 1) {
+        /* corpus: the view record's dword [10] camera (cam_follow) */
+        cam_get_pos(&v->cam_follow, out);
+    }
+}

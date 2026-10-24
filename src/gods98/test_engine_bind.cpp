@@ -143,6 +143,36 @@ int main(void)
     am.app_mode = 0;
 
 
+    /* The grid-cell record buffer (2026-10-24): allocate, release, replace. */
+    {
+        EngineState st = {};
+        st.grid_w = 2;
+        st.grid_h = 1;
+        grid_cell_record_buffer_allocate(&st);
+        CHECK(entity_field_grid_buffer_peek() != NULL,
+              "allocate lands the field-grid buffer");
+        CHECK(entity_field_grid_descriptor_peek() == &st,
+              "the descriptor lands");
+        const char* buf = (const char*)entity_field_grid_buffer_peek();
+        int nonzero = 0;
+        for (int i = 0; i < 2 * 1 * 0xc; ++i) {
+            if (buf[i] != 0) {
+                nonzero = 1;
+            }
+        }
+        CHECK(nonzero == 0, "the buffer reads zeroed");
+        *(char*)entity_field_grid_buffer_peek() = 0x5a; /* dirty the buffer */
+        grid_cell_record_buffer_replace(&st);
+        CHECK(entity_field_grid_buffer_peek() != NULL
+                  && *(const char*)entity_field_grid_buffer_peek() == 0,
+              "replace re-runs the allocating zero pass");
+        entity_field_grid_buffer_release();
+        CHECK(entity_field_grid_buffer_peek() == NULL,
+              "release clears the word");
+        entity_field_grid_buffer_release(); /* idempotent */
+        grid_cell_record_buffer_allocate(NULL); /* guarded */
+    }
+
     if (s_failures == 0) {
         printf("engine_bind_test: PASS\n");
         return 0;

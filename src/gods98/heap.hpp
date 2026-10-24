@@ -79,4 +79,9 @@ void optional_resource_destroy(void* record);
  * dereferences blindly. */
 void text_buffer_destroy(void* record);
 
+/* ObjectField38Release (FUN_00489d70): frees the allocation held in the
+ * record's +0x38 slot while one is there. The corpus's slot is a 32-bit
+ * dword; the port carries a host-width pointer (documented deviation). */
+void object_field_38_release(void* record);
+
 #endif /* LEGORRR_GODS98_HEAP_HPP */

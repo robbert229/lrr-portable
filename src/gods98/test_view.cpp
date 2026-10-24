@@ -481,6 +481,22 @@ int main(void)
         CHECK(d == 10.0f, "other directions stay put");
     }
 
+    /* SelectionRecordPointGet (2026-10-24): the follow-mode readback. */
+    {
+        ViewContext v = {};
+        cam_set_pos(&v.cam_follow, 12.5f, -3.0f, 4.0f);
+        v.mode = 1;
+        float out[3] = { 0.0f, 0.0f, 0.0f };
+        selection_record_point_get(&v, out);
+        CHECK(out[0] == 12.5f && out[1] == -3.0f && out[2] == 4.0f,
+              "the follow record reads the camera back");
+        v.mode = 0;
+        out[0] = 9.0f;
+        selection_record_point_get(&v, out);
+        CHECK(out[0] == 9.0f, "the non-follow gate answers nothing");
+        selection_record_point_get(NULL, out); /* guarded */
+    }
+
     if (s_failures == 0) {
         printf("view_test: PASS\n");
         return 0;

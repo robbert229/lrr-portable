@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 803 | 31.3% |
+| ported | 809 | 31.6% |
 | anchored | 4 | 0.2% |
-| named | 1710 | 66.7% |
+| named | 1704 | 66.5% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (803 functions)
+  (809 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1710 functions)
+  citation yet (1704 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1715 (66.9%).**
+**Game logic remaining to port: 1709 (66.7%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -524,7 +524,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00436860` | CameraSetTilt |
 | `0x00436953` | CameraSetBoundedRotationValue |
 | `0x00436ac9` | RendererNodeRelativePositionSet |
-| `0x00436ae9` | SelectionRecordPointGet |
 | `0x00436c20` | ActivityNameTableInit |
 | `0x00437050` | EntityPoolResourcesRelease |
 | `0x004370b0` | RenderConfigSixFieldCopyOut |
@@ -939,9 +938,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00465c50` | ParticleSlotInitializeForEmitter |
 | `0x00465e00` | AdvanceTimedVisualSegmentAndFade |
 | `0x00465f40` | InstanceQuadVerticesBuild |
-| `0x004661c0` | GridCellRecordBufferAllocate |
-| `0x00466210` | EntityFieldGridBufferRelease |
-| `0x00466230` | GridCellRecordBufferReplace |
 | `0x00466250` | ExpandCellEntitySpawn |
 | `0x00466380` | SetExpansionEntityAtGridCell |
 | `0x004663f0` | CanSpawnExpansionEntityAtGridCell |
@@ -1500,7 +1496,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004899f0` | ObjectHierarchyRecursiveClone |
 | `0x00489b30` | ObjectInterfaceArrayResourceCreate |
 | `0x00489bc0` | ComChildItemsVisit |
-| `0x00489d70` | ObjectField38Release |
 | `0x00489d90` | DirectXErrorMessageFormat |
 | `0x00489dd0` | DirectXResultDiagnosticDispatch |
 | `0x0048b260` | StartupStreamStateReset |
@@ -1623,7 +1618,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00493be0` | FpuStatusWordGetVariantA |
 | `0x00493bf0` | FpuStatusWordGetVariantB |
 | `0x00493c10` | FpuControlWordUpdateMasked |
-| `0x00493c40` | CrtNoOpStubVariant2 |
 | `0x00493ca0` | LocaleCharacterMapString |
 | `0x00493ef0` | CrtFormattedScanV |
 | `0x00494c30` | CrtScanFormatCharNormalize |
