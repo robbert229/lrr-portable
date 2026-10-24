@@ -2039,7 +2039,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0047fea0,FUN_0047fea0,named,WadEntryReadIntoStreamSlot,0,198
 0047fed0,FUN_0047fed0,named,GameFileHandleAllocate,0,493
 0047ff30,FUN_0047ff30,named,EngineHeapAllocate,0,80
-0047ff40,FUN_0047ff40,named,EngineHeapFree,0,80
+0047ff40,FUN_0047ff40,ported,EngineHeapFree,2,80
 0047ff50,FUN_0047ff50,named,GameFileHandleRelease,0,600
 0047ffc0,FUN_0047ffc0,named,MountedPathPrefixRewrite,0,909
 00480050,FUN_00480050,named,ReadCrlfLine,0,592
@@ -2262,10 +2262,10 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0048da50,FUN_0048da50,ported,StringFindSubstring,2,2603
 0048dad0,FUN_0048dad0,named,ParseSignedDecimal,0,900
 0048db70,FUN_0048db70,ported,ParseIntegerWrapper,2,80
-0048db80,FUN_0048db80,named,EngineHeapFree,0,334
-0048dbd0,FUN_0048dbd0,named,EngineHeapAlloc,0,93
-0048dbf0,FUN_0048dbf0,named,EngineHeapAllocateWithRetry,0,460
-0048dc40,FUN_0048dc40,named,EngineHeapAllocateAligned,0,268
+0048db80,FUN_0048db80,ported,EngineHeapFree,2,334
+0048dbd0,FUN_0048dbd0,ported,EngineHeapAlloc,2,93
+0048dbf0,FUN_0048dbf0,ported,EngineHeapAllocateWithRetry,2,460
+0048dc40,FUN_0048dc40,ported,EngineHeapAllocateAligned,2,268
 0048dc80,FUN_0048dc80,named,GrowHeapArray,0,2965
 0048de20,FUN_0048de20,named,ArraySortWithComparator,0,2004
 0048dfd0,FUN_0048dfd0,named,QsortSmallPartitionSort,0,425

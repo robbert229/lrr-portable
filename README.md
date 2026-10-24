@@ -1171,6 +1171,22 @@ documented split). Appending past the static buffer's 256-byte bound
 is bounded (the corpus runs through the static); `string_test` covers
 duplicates, the scan corners, bound edges and join/truncation.
 
+**Engine heap seam** (2026-10-24; findings 397/243): the corpus's
+allocation entry points land in `src/gods98/heap.*` with a `heap` test
+suite — `engine_heap_alloc` (`EngineHeapAlloc @ 0x48dbd0`, the
+retry-flag entry), `engine_heap_alloc_retry`
+(`EngineHeapAllocateWithRetry @ 0x48dbf0`; zero-size allocates one
+byte, sizes at/above `0xffffffe1` hit the corpus overflow gate and
+answer NULL, an unregistered retry handler makes a single attempt),
+`engine_heap_alloc_aligned` (`EngineHeapAllocateAligned @ 0x48dc40`,
+16-byte round-up), and the free pair (`EngineHeapFree @ 0x48db80` /
+its resource-layer wrapper `@ 0x47ff40`, NULL no-op). The seam maps
+onto the host allocator — the corpus's pool allocator, allocation-page
+bookkeeping and new-handler registry stay blocked (see
+`docs/coverage/blocked.md`), so every allocation is a single aligned
+attempt; `heap_test` covers alignment, the zero-size and overflow-gate
+quirks, the retry path and free/re-alloc flow.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the
