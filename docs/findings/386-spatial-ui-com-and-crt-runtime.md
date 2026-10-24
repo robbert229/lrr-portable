@@ -44,7 +44,7 @@ This pass names 106 functions across all remaining mid and high addresses. Names
 | `0x004567c0` | `GlobalValue_004ff9bcStoreAndReturn` | Stores and returns the value at global 0x004ff9bc. | `LEGORR.full.c` pseudocode and caller references. |
 | `0x00459f50` | `IndexedPanelResourcePositionApply` | Looks up and applies indexed panel resource at tile-derived position. | `LEGORR.full.c` pseudocode and caller references. |
 | `0x00459fd0` | `PanelResourcePositionApplyIfEnabled` | Applies configured panel resource at tile position when enabled. | `LEGORR.full.c` pseudocode and caller references. |
-| `0x0045a3b0` | `PanelSlotCoordinateHitTest` | Checks panel table bounds and an adjusted coordinate. | `LEGORR.full.c` pseudocode and caller references. |
+| `0x0045a3b0` | `PanelSlotCoordinateHitTest` | For kind-0 records, tests adjusted coordinates and returns whether the category index is zero on a hit; its caller uses false to set an output flag. | `LEGORR.full.c` pseudocode and caller references. |
 | `0x0045a630` | `UIRecordCallbackForward` | Forwards a dereferenced handle and two arguments to a UI record helper. | `LEGORR.full.c` pseudocode and caller references. |
 | `0x0045aac0` | `PanelItemFlag10SetClear` | Sets or clears panel item flag 0x10. | `LEGORR.full.c` pseudocode and caller references. |
 | `0x0045ab00` | `PanelStateFlagsToggle` | Toggles panel state flags used by item controls. | `LEGORR.full.c` pseudocode and caller references. |
