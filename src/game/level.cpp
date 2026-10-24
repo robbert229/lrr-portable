@@ -2249,3 +2249,60 @@ uint32_t terrain_neighbor_coordinate_check(const LevelState* s, int x, int y,
     }
     return (mode != 0) ? alt_code_tbl[mask] : code_tbl[mask];
 }
+
+/* --- grid-record count tables (see level.hpp) ------------------------------
+ * The corpus's two adjacent tables (DAT pairs 0x4dee44/0x4e3944) as two
+ * zero-initialized module statics: no ported code feeds them. Table 0 is
+ * the first table (the read leaf's source / the difference's subtrahend),
+ * table 1 the second (the difference's minimend). */
+#define GRID_COUNT_TABLE_DWORDS 0x12c0 /* 300 cells * 16 slots */
+
+static uint32_t s_grid_count_first[GRID_COUNT_TABLE_DWORDS];
+static uint32_t s_grid_count_second[GRID_COUNT_TABLE_DWORDS];
+
+static long long grid_count_index(int row, int column, int slot)
+{
+    const long long cell = (long long)row * 15 + column;
+    const long long idx = cell * 16 + slot;
+    if (cell < 0 || slot < 0 || idx >= GRID_COUNT_TABLE_DWORDS) {
+        return -1; /* bounds deviation (corpus indexes blindly) */
+    }
+    return idx;
+}
+
+void grid_record_count_tables_clear(void)
+{
+    for (size_t k = 0; k < GRID_COUNT_TABLE_DWORDS; ++k) {
+        s_grid_count_first[k] = 0u;
+        s_grid_count_second[k] = 0u;
+    }
+}
+
+int grid_record_count_difference_get(int row, int column, int slot,
+                                     int subtract_first_table)
+{
+    const long long idx = grid_count_index(row, column, slot);
+    if (idx < 0) {
+        return 0;
+    }
+    const int v = (int)s_grid_count_second[(size_t)idx];
+    return (subtract_first_table != 0)
+        ? v - (int)s_grid_count_first[(size_t)idx]
+        : v;
+}
+
+uint32_t grid_record_count_get(int row, int column, int slot)
+{
+    const long long idx = grid_count_index(row, column, slot);
+    return (idx < 0) ? 0u : s_grid_count_first[(size_t)idx];
+}
+
+int32_t grid_count_table_slot_peek(int row, int column, int slot, int table)
+{
+    const long long idx = grid_count_index(row, column, slot);
+    if (idx < 0) {
+        return -1;
+    }
+    return (int)(table != 0 ? s_grid_count_second[(size_t)idx]
+                            : s_grid_count_first[(size_t)idx]);
+}

@@ -1104,6 +1104,34 @@ int main(int argc, char** argv)
               "the guarded indexes read zero");
     }
 
+    /* The grid-record count tables (2026-10-24): both statics start and
+     * stay zero — the corpus's entity-side writers do not feed them. */
+    {
+        CHECK(grid_record_count_get(3, 7, 2) == 0u, "the count reads zero");
+        CHECK(grid_record_count_difference_get(3, 7, 2, 1) == 0,
+              "the difference reads zero with the subtraction");
+        CHECK(grid_record_count_difference_get(3, 7, 2, 0) == 0,
+              "the second table reads zero too");
+
+        /* The slot band: every slot of a cell answers zero; the tables'
+         * edges and the blind-index band past them stay guarded. */
+        CHECK(grid_count_table_slot_peek(19, 14, 15, 0) == 0,
+              "the last cell's last slot is in range");
+        CHECK(grid_count_table_slot_peek(20, 0, 0, 1) == -1,
+              "the row past the table reports out of range");
+        CHECK(grid_count_table_slot_peek(-1, 0, 0, 0) == -1,
+              "the negative row reports out of range");
+        CHECK(grid_record_count_get(1 << 20, 0, 0) == 0u
+                  && grid_record_count_difference_get(0, 0, -1, 1) == 0,
+              "the guarded indices answer zero");
+
+        /* The clear leaf sweeps both tables (all zero already). */
+        grid_record_count_tables_clear();
+        CHECK(grid_count_table_slot_peek(0, 0, 0, 0) == 0
+                  && grid_count_table_slot_peek(10, 5, 9, 1) == 0,
+              "the clear leaves the tables zero");
+    }
+
     /* The tile-variant grid-record table (2026-10-24). */
     {
         uint32_t a = 0, b = 0;

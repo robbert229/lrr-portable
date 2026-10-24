@@ -862,7 +862,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00437150,FUN_00437150,named,ToolTipIconsConfigLoad,0,1664
 004372a0,FUN_004372a0,named,SpawnCoordinatePoolClear,0,699
 00437300,FUN_00437300,named,ProcessQueuedGridAnimations,0,794
-004373d0,FUN_004373d0,ported,EntityActivityToggle,2,497
+004373d0,FUN_004373d0,named,EntityActivityToggle,0,497
 00437440,FUN_00437440,ported,GridRecordCountTablesClear,1,337
 00437460,FUN_00437460,ported,GridRecordCountDifferenceGet,1,269
 004374a0,FUN_004374a0,ported,GridRecordCountGet,1,138
