@@ -276,7 +276,7 @@ address,decompile_reference_count,function_count,functions,finding_mentions,imag
 0x004aaf00,3,3,SoundSampleFileOpenByName@0x0047fb60; FileOpenRouteSelect@0x0047fe30; WadEntryReadIntoStreamSlot@0x0047fea0,docs/findings/01-binary-and-loader-map.md,.data,file-backed,0xa9d00,ffffffff446174614d697373696e6700,mentioned,,,
 0x004aaf24,1,1,WadMountStartup@0x0047f130,,.data,file-backed,0xa9d24,2a2e2a0053657475704572726f720000,unreviewed,,,
 0x004aaf48,1,1,WadMountStartup@0x0047f130,,.data,file-backed,0xa9d48,5c44617461000000257325692e776164,unreviewed,,,
-0x004aaf5c,8,4,WadMountStartup@0x0047f130; FindCdKeyDrive@0x0047f4f0; SoundPathFallbackFormat@0x0047f660; SaveDirectoryEnsureExists@0x0047f6a0,,.data,file-backed,0xa9d5c,446174610000000025633a5c25735c25,unreviewed,,,
+0x004aaf5c,8,4,WadMountStartup@0x0047f130; FindCdKeyDrive@0x0047f4f0; SoundPathFallbackFormat@0x0047f660; SaveDirectoryEnsureExists@0x0047f6a0,,.data,file-backed,0xa9d5c,446174610000000025633a5c25735c25,interpreted,"Shared ""Data"" directory name used when constructing game resource paths",high,"The executable stores the null-terminated bytes Data at this address; WadMountStartup, FindCdKeyDrive, SoundPathFallbackFormat, and SaveDirectoryEnsureExists combine this directory name with drive or working-directory paths"
 0x004aaf70,1,1,FindCdKeyDrive@0x0047f4f0,,.data,file-backed,0xa9d70,413a5c00574144204661696c2025730a,unreviewed,,,
 0x004ab0f8,1,1,DirectoryTreeScan@0x00480390,,.data,file-backed,0xa9ef8,2e2e00002e0000005c2a2e2a00000000,unreviewed,,,
 0x004ab0fc,1,1,DirectoryTreeScan@0x00480390,,.data,file-backed,0xa9efc,2e0000005c2a2e2a0000000030000000,unreviewed,,,
