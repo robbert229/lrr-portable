@@ -113,7 +113,7 @@ Net: quit paths (menu "Quit", focus-loss choice, corner gesture) all reduce to
 | --- | --- |
 | Double-buffered 2048×5-dword command queue, per-frame dispatch | observed |
 | Buffer swap semantics (enqueue-during-dispatch ⇒ next frame) | observed |
-| Entity-ID remap table before dispatch | observed (table purpose inferred) |
+| Entity-ID remap table before dispatch | observed: `LevelIdentifierRemapTableLoad` fills paired identifiers at `DAT_00555be0`/`DAT_00555be4`, counts them in `DAT_00555d20`, and `CommandEntityReferenceRemap` scans the loaded pair count |
 | Opcode→handler map table above | observed; handler semantics mostly inferred |
 | Selection = pointer array + count, HUD ctx 9–0xE | observed |
 | HUD ctx mapping per dominant type | inferred |
