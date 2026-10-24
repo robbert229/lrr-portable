@@ -1517,6 +1517,20 @@ counter `count_matching_coordinates_in_list` (0x408e10), whose inline
 entry slots hold native pointers (documented deviation).
 `record_test` drives offsets, masks, bounds and the pair-list walk.
 
+**Registry split and two straggler reads** (2026-10-24; findings
+234/402/404/414): `registry_path_split` (`RegistryPathSplit @
+0x48b330`, `block.*`) is the backslash component copier the registry
+key builders loop over — copy up to (not including) the separator, skip
+one, hand back the rest; the config paths' twin split lands where the
+nested-path finder lives (the registry's 100-byte caller bound stays
+with its callers, per finding 402). `avi_player_ready_get`
+(`AviPlayerReadyGet @ 0x47ed80`, `record.*`) is the movie object's
+byte-safe readiness byte at `+0x99` (the sleep-free AVI loop's gate,
+finding 185), and `game_file_system_type_get` (`GameFileSystemTypeGet
+@ 0x47fe20`, `record.*`) the system-kind word at the game-file handle's
+start that picks WAD versus standard operations. `block_test` drives
+the split corners; `record_test` pins byte isolation.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

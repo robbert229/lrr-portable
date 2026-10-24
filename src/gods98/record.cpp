@@ -331,3 +331,22 @@ int count_matching_coordinates_in_list(const void* manager,
     }
     return found;
 }
+
+/* AviPlayerReadyGet (FUN_0047ed80, findings 185/414): the readiness
+ * byte at +0x99 (byte-safe — the corpus reads it as a raw byte). */
+uint32_t avi_player_ready_get(const void* movie)
+{
+    if (movie != NULL) {
+        uint8_t v = 0;
+        __builtin_memcpy(&v, (const char*)movie + 0x99, sizeof(v));
+        return v;
+    }
+    return 0u;
+}
+
+/* GameFileSystemTypeGet (FUN_0047fe20, findings 234/404): the handle's
+ * leading type dword. */
+uint32_t game_file_system_type_get(const void* handle)
+{
+    return rec_dword(handle, 0);
+}
