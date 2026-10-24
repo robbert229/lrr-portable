@@ -1303,9 +1303,10 @@ void level_cell_flag_10000000_set(LevelState* s, int cx, int cy, int set)
 }
 
 /* --- second terrain-cell leaf cluster ------------------------------------
- * Same voxel-record model and bounds deviation; the corpus's tracking /
- * refresh companions (the SetAndTrack queue variants and the 0x40000000
- * pair's FUN_0042f6f0 refresh) are separate unported seams. */
+ * Same voxel-record model and bounds deviation. The corpus's tracking /
+ * refresh companions landed later with the tracked set-family below —
+ * the queues keep module statics and the per-cell FUN_0042f6f0 refresh
+ * stays a TODO(corpus) seam. */
 
 /* FUN_00432170: secondary word bit 0x100. */
 uint32_t level_cell_secondary_flag_100(const LevelState* s, int cx, int cy)
@@ -1657,4 +1658,149 @@ uint32_t upgrade_resource_check(const LevelState* s, int selector)
 int always_accept_place_command_cell(void)
 {
     return 1;
+}
+
+/* --- tracked/refreshing cell-flag set family ------------------------------
+ * See level.hpp for the deviations. The corpus's tracking DAT regions:
+ *   DAT_00556e8c        refresh-track counter (queue ends at it)
+ *   DAT_0055684c / DAT_00556850   refresh-track (x,y) pair slots
+ *   DAT_00556848        visited-track counter
+ *   DAT_00556528 / DAT_0055652c   visited-track (x,y) pair slots
+ * modeled as module statics; consumers land with their own clusters. */
+
+#define LEVEL_CELL_REFRESH_TRACK_CAP 200
+#define LEVEL_CELL_VISITED_TRACK_CAP 160
+
+static int32_t s_cell_refresh_track[LEVEL_CELL_REFRESH_TRACK_CAP][2];
+static int     s_cell_refresh_track_count;
+static int32_t s_cell_visited_track[LEVEL_CELL_VISITED_TRACK_CAP][2];
+static int     s_cell_visited_track_count;
+
+static void cell_refresh_track_push(int cx, int cy)
+{
+    if (s_cell_refresh_track_count < LEVEL_CELL_REFRESH_TRACK_CAP) {
+        /* corpus writes unbounded (deviation: silent bound). */
+        s_cell_refresh_track[s_cell_refresh_track_count][0] = cx;
+        s_cell_refresh_track[s_cell_refresh_track_count][1] = cy;
+        ++s_cell_refresh_track_count;
+    }
+}
+
+static void cell_visited_track_push(int cx, int cy)
+{
+    if (s_cell_visited_track_count < LEVEL_CELL_VISITED_TRACK_CAP) {
+        s_cell_visited_track[s_cell_visited_track_count][0] = cx;
+        s_cell_visited_track[s_cell_visited_track_count][1] = cy;
+        ++s_cell_visited_track_count;
+    }
+}
+
+static void cell_flag40000000_refresh_seam(LevelState* s, int cx, int cy)
+{
+    (void)s; (void)cx; (void)cy;
+    /* TODO(corpus): FUN_0042f6f0(manager, x, y, 0) per-cell refresh;
+     * the load-path cell_init_pass covers the sweep form. */
+}
+
+void terrain_cell_flag100_set_and_track(LevelState* s, int cx, int cy)
+{
+    uint8_t* rec = level_voxel(s, cx, cy);
+    if (rec == NULL) {
+        return;
+    }
+    uint32_t* word = (uint32_t*)(rec + 0x0C);
+    *word |= 0x100u;
+    cell_refresh_track_push(cx, cy);
+    cell_flag40000000_refresh_seam(s, cx, cy);
+}
+
+void terrain_cell_visited_flag_set_and_track(LevelState* s, int cx, int cy)
+{
+    uint8_t* rec = level_voxel(s, cx, cy);
+    if (rec == NULL) {
+        return;
+    }
+    uint32_t* word = (uint32_t*)(rec + 0x0C);
+    *word |= 2u;
+    cell_visited_track_push(cx, cy);
+}
+
+void terrain_cell_visited_flags_clear_all(LevelState* s)
+{
+    int i;
+    for (i = 0; i < s_cell_visited_track_count; ++i) {
+        uint8_t* rec = level_voxel(s, s_cell_visited_track[i][0],
+                                  s_cell_visited_track[i][1]);
+        if (rec == NULL) {
+            continue;
+        }
+        uint32_t* word = (uint32_t*)(rec + 0x0C);
+        *word &= ~2u;
+    }
+    s_cell_visited_track_count = 0;
+}
+
+void terrain_cell_primary_flags_mask_clear_and_refresh(LevelState* s,
+                                                       int cx, int cy)
+{
+    uint8_t* rec = level_voxel(s, cx, cy);
+    if (rec == NULL) {
+        return;
+    }
+    uint32_t* primary = (uint32_t*)(rec + 0x08);
+    *primary &= 0xdfef7bffu;
+    uint32_t* secondary = (uint32_t*)(rec + 0x0C);
+    *secondary &= 0xfffffffbu;
+    cell_flag40000000_refresh_seam(s, cx, cy);
+}
+
+void terrain_cell_flags_set_and_refresh(LevelState* s, int cx, int cy)
+{
+    uint8_t* rec = level_voxel(s, cx, cy);
+    if (rec == NULL) {
+        return;
+    }
+    uint32_t* primary = (uint32_t*)(rec + 0x08);
+    *primary |= 0x108000u;
+    uint32_t* secondary = (uint32_t*)(rec + 0x0C);
+    *secondary |= 4u;
+    cell_flag40000000_refresh_seam(s, cx, cy);
+}
+
+void terrain_cell_flags_set_mask100400(LevelState* s, int x, int y)
+{
+    uint8_t* rec = level_voxel(s, x, y);
+    if (rec == NULL) {
+        return;
+    }
+    uint32_t* primary = (uint32_t*)(rec + 0x08);
+    *primary |= 0x100400u;
+    cell_flag40000000_refresh_seam(s, x, y);
+}
+
+void terrain_cell_flags_set_mask20108000(LevelState* s, int x, int y)
+{
+    uint8_t* rec = level_voxel(s, x, y);
+    if (rec == NULL) {
+        return;
+    }
+    uint32_t* primary = (uint32_t*)(rec + 0x08);
+    *primary |= 0x20108000u;
+    cell_flag40000000_refresh_seam(s, x, y);
+}
+
+void terrain_cell_flag40000000_clear_or_set(LevelState* s, int cx, int cy,
+                                            int set)
+{
+    uint8_t* rec = level_voxel(s, cx, cy);
+    if (rec == NULL) {
+        return;
+    }
+    uint32_t* primary = (uint32_t*)(rec + 0x08);
+    if (set == 0) {
+        *primary &= 0xbfffffffu;
+    } else {
+        *primary |= 0x40000000u;
+    }
+    cell_flag40000000_refresh_seam(s, cx, cy);
 }

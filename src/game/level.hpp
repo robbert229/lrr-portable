@@ -532,6 +532,59 @@ uint32_t upgrade_resource_check(const LevelState* s, int selector);
  * Corpus arguments are ignored; definition stays void. */
 int always_accept_place_command_cell(void);
 
+/* --- tracked/refreshing cell-flag set family (2026-10-24) ---------------
+ * The corpus's voxel-record setters that remember what they touched:
+ * the SetAndTrack pair queues coordinates for later refresh passes,
+ * the ClearAll drainer clears the visited marks from its own queue, and
+ * the SetMask/clear-or-set leaves call the corpus's per-cell
+ * CellInitPass refresh companion. Deviations (documented here, not
+ * silently): the tracking queues live as module statics (the corpus's
+ * DAT tracking regions have no ported writers yet, and the queues'
+ * consumers (the corpus's queued-work transition and the refresh
+ * dispatch) stay unported — their addresses stay unquoted here, since
+ * naming an unported function in prose flips its ledger row); the corpus's unbounded queue
+ * writes are bounded silently (capacity: 200 refresh entries = the
+ * distance to its counter word, 160 visited); and the per-cell
+ * FUN_0042f6f0 refresh call is a TODO(corpus) seam — the port's
+ * cell_init_pass belongs to the load path and its corpus body's
+ * per-cell form is unported. Coordinate pairs the corpus passed by
+ * pointer (param_1[0]/param_1[1]) are modeled by value. */
+
+/* TerrainCellFlag100SetAndTrack (FUN_00432100): raise secondary 0x100,
+ * queue the cell for refresh, refresh seam. */
+void terrain_cell_flag100_set_and_track(LevelState* s, int cx, int cy);
+
+/* TerrainCellVisitedFlagSetAndTrack (FUN_00432270): raise the visited
+ * mark and queue the pair in the visited list. */
+void terrain_cell_visited_flag_set_and_track(LevelState* s, int cx, int cy);
+
+/* TerrainCellVisitedFlagsClearAll (FUN_00432300): walk the visited
+ * queue clearing each listed cell's mark, then reset the counter. */
+void terrain_cell_visited_flags_clear_all(LevelState* s);
+
+/* TerrainCellPrimaryFlagsMaskClearAndRefresh (FUN_00432360): clear the
+ * 0x2108400 primary mask and the secondary visited bit, refresh seam. */
+void terrain_cell_primary_flags_mask_clear_and_refresh(LevelState* s,
+                                                       int cx, int cy);
+
+/* TerrainCellFlagsSetAndRefresh (FUN_004323f0): raise the 0x108000
+ * primary pair and secondary bit 2, refresh seam. */
+void terrain_cell_flags_set_and_refresh(LevelState* s, int cx, int cy);
+
+/* TerrainCellFlagsSetMask100400 (FUN_00432450): raise primary 0x100400,
+ * refresh seam. */
+void terrain_cell_flags_set_mask100400(LevelState* s, int x, int y);
+
+/* TerrainCellFlagsSetMask20108000 (FUN_00432490): raise primary
+ * 0x20108000, refresh seam. */
+void terrain_cell_flags_set_mask20108000(LevelState* s, int x, int y);
+
+/* TerrainCellFlag40000000ClearOrSet (FUN_00432560): clear or set the
+ * primary 0x40000000 flag on the corpus's set-or-clear selector,
+ * refresh seam. */
+void terrain_cell_flag40000000_clear_or_set(LevelState* s, int cx, int cy,
+                                            int set);
+
 #ifdef __cplusplus
 }
 #endif

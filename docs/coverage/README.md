@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 532 | 20.7% |
+| ported | 540 | 21.1% |
 | anchored | 5 | 0.2% |
-| named | 1981 | 77.3% |
+| named | 1973 | 77.0% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 0 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (532 functions)
+  (540 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1981 functions)
+  citation yet (1973 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1986 (77.5%).**
+**Game logic remaining to port: 1978 (77.1%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -421,14 +421,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00431b20` | PlacementBlockedAdjacentCellScan |
 | `0x00431c70` | FirstFreeNeighborCellPick |
 | `0x00431da0` | TerrainCellRouteAndOccupancyCheck |
-| `0x00432100` | TerrainCellFlag100SetAndTrack |
-| `0x00432270` | TerrainCellVisitedFlagSetAndTrack |
-| `0x00432300` | TerrainCellVisitedFlagsClearAll |
-| `0x00432360` | TerrainCellPrimaryFlagsMaskClearAndRefresh |
-| `0x004323f0` | TerrainCellFlagsSetAndRefresh |
-| `0x00432450` | TerrainCellFlagsSetMask100400 |
-| `0x00432490` | TerrainCellFlagsSetMask20108000 |
-| `0x00432560` | TerrainCellFlag40000000ClearOrSet |
 | `0x00432600` | TerrainCellVariantFlagPropagate |
 | `0x00432c90` | TerrainCellStateUpdate |
 | `0x00433180` | CellTypeSpeedMultiplierResolve |
