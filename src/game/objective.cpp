@@ -346,3 +346,9 @@ int objective_tick(LevelState* s, float dt)
     }
     return 1;
 }
+
+int objective_voice_alias_raise_commit(LevelState* s)
+{
+    objective_announce(s, 1);
+    return 1;
+}

@@ -22,7 +22,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00401930,FUN_00401930,named,AdvisorRequestResetAndSubmitSound,0,310
 00401990,FUN_00401990,named,AdvisorTransitionWorker,0,806
 00401a70,FUN_00401a70,named,AdvisorSceneAdvanceAndCompletionCheck,0,755
-00401b20,FUN_00401b20,named,AdvisorClearActiveState,0,85
+00401b20,FUN_00401b20,ported,AdvisorClearActiveState,2,85
 00401b30,FUN_00401b30,named,AdvisorApplySlotTransform,0,807
 00401bf0,FUN_00401bf0,ported,GlobalField505f88Get,2,60
 00401c00,FUN_00401c00,ported,StartLevelOverrideIfEnabledGet,1,89
@@ -343,7 +343,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0040fe40,FUN_0040fe40,ported,PointerStackPush,3,266
 0040fe60,FUN_0040fe60,ported,PointerStackPop,3,339
 0040fe90,FUN_0040fe90,ported,PointerStackForEach,3,224
-0040fec0,FUN_0040fec0,named,SetGlobalScalarToOne,0,71
+0040fec0,FUN_0040fec0,ported,SetGlobalScalarToOne,2,71
 0040ff50,FUN_0040ff50,named,SceneObjectListApplyFloatCallback,0,111
 0040ff70,FUN_0040ff70,named,ObjectVector3Set,0,244
 0040ffe0,FUN_0040ffe0,named,GlobalVectorSetAndNotifyListeners,0,294
@@ -1004,7 +1004,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00442300,FUN_00442300,named,EntityVelocityVectorDispatch,0,1274
 00442480,FUN_00442480,named,VectorDirectionAngleRadiansGet,0,243
 004424f0,FUN_004424f0,ported,EntityPositionToTerrainCell,1,307
-00442540,FUN_00442540,named,GridOperationArgumentAdapter,0,134
+00442540,FUN_00442540,ported,GridOperationArgumentAdapter,2,134
 004425f0,FUN_004425f0,named,SubobjectPoseDeltaNormalizeAndDispatch,0,2509
 004428a0,FUN_004428a0,named,EntityWorldPositionSet,0,2073
 00442b10,FUN_00442b10,named,EntityMovementAccumulatorApply,0,3963
@@ -1240,7 +1240,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00454600,FUN_00454600,ported,,1,1049
 00454880,FUN_00454880,ported,GlobalCounter_004ff990Increment,1,164
 00454890,FUN_00454890,ported,GlobalCounter_004ff990Reset,1,148
-00454b70,FUN_00454b70,named,ObjectiveVoiceAliasRaiseCommit,0,68
+00454b70,FUN_00454b70,ported,ObjectiveVoiceAliasRaiseCommit,1,68
 00454b80,FUN_00454b80,named,ObjectiveVoiceAliasRaiseGateBit27,0,115
 00455300,FUN_00455300,anchored,,0,185
 00456210,FUN_00456210,ported,FlhMagicUuNoop,1,49
@@ -1365,7 +1365,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0045d8a0,FUN_0045d8a0,ported,ObjectField14Set,1,112
 0045d8b0,FUN_0045d8b0,named,ScreenCoordNormalizeInit,0,1993
 0045da90,FUN_0045da90,named,UiRenderRecordCreate,0,538
-0045daf0,FUN_0045daf0,named,UiRenderRecordFree,0,80
+0045daf0,FUN_0045daf0,ported,UiRenderRecordFree,1,80
 0045db00,FUN_0045db00,named,TexturedSceneObjectDrawAtPosition,0,581
 0045dbc0,FUN_0045dbc0,named,TerrainViewTileGeometryBuild,0,6350
 0045e400,FUN_0045e400,named,EntityTypeAndStateFlagPredicate,0,400
@@ -1717,7 +1717,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00473ba0,FUN_00473ba0,ported,SceneObjectFlagBit3Get,1,92
 00473bc0,FUN_00473bc0,named,ResourceNameRegisterOrQuery,0,914
 00473c60,FUN_00473c60,named,XfTextureNameFormat,0,1386
-00473da0,FUN_00473da0,named,SceneObjectOwnerSet,0,112
+00473da0,FUN_00473da0,ported,SceneObjectOwnerSet,1,112
 00473db0,FUN_00473db0,ported,SceneObjectOwnerGet,1,86
 00473dc0,FUN_00473dc0,named,RendererFogEnableAndColorApply,0,318
 00473e10,FUN_00473e10,named,RendererFogColorSet,0,295
@@ -2127,7 +2127,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00484b90,FUN_00484b90,ported,FlicOpcode25SuccessStub,3,49
 00484ba0,FUN_00484ba0,named,PackedTripletTableToWordBuild,0,433
 00484c00,FUN_00484c00,named,FlicDecode16BitRowRecords,0,886
-00484c90,FUN_00484c90,named,FlicOpcode27FallbackNoop,0,41
+00484c90,FUN_00484c90,ported,FlicOpcode27FallbackNoop,2,41
 00484ca0,FUN_00484ca0,named,FlicDecode8BitAlternateDelta,0,2597
 00484e50,FUN_00484e50,named,FlicDecode16BitDelta,0,2550
 00485030,FUN_00485030,named,FlicOpcode27DecodeDispatch,0,547
@@ -2370,7 +2370,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00491e17,__trandisp2,runtime-import,__trandisp2,0,1555
 00491f80,FUN_00491f80,named,CrtOneArgumentMathErrorHandlingStart,0,107
 00491f97,__startOneArgErrorHandling,runtime-import,__startOneArgErrorHandling,0,221
-00491ff5,FUN_00491ff5,named,CrtNoOpStub,0,41
+00491ff5,FUN_00491ff5,ported,CrtNoOpStub,2,41
 0049200c,FUN_0049200c,named,CrtFpuPrecisionModeCodeGet,0,118
 00492068,FUN_00492068,ported,DoubleExponentBitsGetOrSpecialValue,2,159
 0049208b,__math_exit,runtime-import,__math_exit,0,339
@@ -2454,7 +2454,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00497770,FUN_00497770,named,CrtFpuControlWordUpdate,0,182
 004977b0,FUN_004977b0,named,CrtFpuControlWordUpdateMask,0,114
 004977d0,FUN_004977d0,named,CrtControlFlagsTranslate,0,876
-00497870,FUN_00497870,named,CrtNoOpStubVariant,0,41
+00497870,FUN_00497870,ported,CrtNoOpStubVariant,2,41
 00497900,FUN_00497900,named,UInt96HasNoBitsAtOrAbove,0,603
 00497970,FUN_00497970,named,UInt96IncrementAtBit,0,712
 004979e0,FUN_004979e0,named,UInt96ClearFromBit,0,834

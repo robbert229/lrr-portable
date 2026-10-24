@@ -681,3 +681,18 @@ void current_level_terrain_grid_pick(EngineContext* ctx, float x, float y,
     int* py = gy != NULL ? gy : &ty;
     (void)grid_pick(ctx, pos, px, py);
 }
+
+/* GridOperationArgumentAdapter (FUN_00442540) — see view.hpp. */
+void grid_operation_argument_adapter(float x, float y, EngineContext* ctx)
+{
+    if (ctx == NULL) {
+        return; /* deviation: the corpus reads its own world blindly */
+    }
+    (void)terrain_height(ctx, x, y);
+}
+
+/* SetGlobalScalarToOne (FUN_0040fec0) — see view.hpp. */
+void set_global_scalar_to_one(void)
+{
+    /* the corpus's ramp draw is discarded; faithful no-op */
+}

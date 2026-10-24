@@ -82,4 +82,8 @@ uint32_t flic_opcode25_success_stub(void);
 }
 #endif
 
+/* FlicOpcode27FallbackNoop (FUN_00484c90, finding 155): the corpus's
+ * fallback for unknown opcode 27 records is a pure return — faithful. */
+void flic_opcode27_fallback_noop(void);
+
 #endif /* LEGORRR_FLIC_HPP */

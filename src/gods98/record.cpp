@@ -564,3 +564,11 @@ void copy_two_dword_pair_to_outputs(const void* record, uint32_t* out_a,
     __builtin_memcpy(out_a, (const char*)record, 4);
     __builtin_memcpy(out_b, (const char*)record + 4, 4);
 }
+
+void scene_object_owner_set(void* scene_object, uint32_t owner)
+{
+    if (scene_object == NULL) {
+        return; /* deviation: the corpus writes blindly */
+    }
+    __builtin_memcpy((char*)scene_object + 0x20, &owner, sizeof(owner));
+}

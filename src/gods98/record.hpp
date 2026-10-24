@@ -286,4 +286,8 @@ void linked_record_field4_clear(void* record);
 void copy_two_dword_pair_to_outputs(const void* record, uint32_t* out_a,
                                     uint32_t* out_b);
 
+/* SceneObjectOwnerSet (FUN_00473da0): dword store at +0x20 — the port's
+ * fixed-offset style, entry-guarded (documented deviation). */
+void scene_object_owner_set(void* scene_object, uint32_t owner);
+
 #endif /* LEGORRR_GODS98_RECORD_HPP */

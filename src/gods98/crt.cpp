@@ -554,3 +554,19 @@ void font_cursor_word_set(int index, uint32_t v)
         s_font_words[index] = v;
     }
 }
+
+/* --- pure-return stubs + advisor word clear (see crt.hpp) -------------------- */
+void crt_no_op_stub(void)
+{
+    /* FUN_00491ff5: pure return — faithful. */
+}
+
+void crt_no_op_stub_variant(void)
+{
+    /* FUN_00497870: pure return — faithful. */
+}
+
+void advisor_clear_active_state(void)
+{
+    s_advisor_state_word &= ~2u;
+}

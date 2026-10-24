@@ -135,6 +135,17 @@ int main(void)
     level_destroy(s2);
     block_close(cfg);
 
+    /* The raise-commit wrapper (2026-10-24). */
+    {
+        LevelState fresh;
+        memset(&fresh, 0, sizeof(fresh));
+        int r = objective_voice_alias_raise_commit(&fresh);
+        CHECK(r == 1, "the commit answers 1");
+        CHECK((fresh.objective & 2u) != 0
+                  && level_int(&fresh, OBJ_OFF_RESULT_INDEX) == 1,
+              "the announcer ran through the wrapper");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "objective_test: %d failure(s)\n", s_failures);
         return 1;

@@ -274,4 +274,13 @@ uint32_t indexed_global_value_at_get(int index);      /* FUN_0045cc10 */
 uint32_t global_cursor_word_get(void);                /* FUN_0045cc60 */
 void     font_cursor_word_set(int index, uint32_t v); /* port hook */
 
+/* --- pure-return stubs + advisor word clear (2026-10-24; findings 37/38/393) -
+ * The corpus keeps several address-range stubs that only return: the FLIC
+ * opcode-27 fallback and the two CRT variants land as faithful no-op
+ * functions. AdvisorClearActiveState (FUN_00401b20) clears bit 1 of the
+ * advisor state word this module's band models. */
+void crt_no_op_stub(void);              /* FUN_00491ff5 */
+void crt_no_op_stub_variant(void);      /* FUN_00497870 */
+void advisor_clear_active_state(void);  /* FUN_00401b20 */
+
 #endif /* LEGORRR_GODS98_CRT_HPP */

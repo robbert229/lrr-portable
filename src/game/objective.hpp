@@ -89,4 +89,10 @@ int objective_tick(LevelState* s, float dt);
 }
 #endif
 
+/* ObjectiveVoiceAliasRaiseCommit (FUN_00454b70): the corpus's commit-half
+ * raise calls the announcer with 1 and answers 1 — deviation: the
+ * port's announcer needs the threaded level block the corpus reads
+ * blindly. */
+int objective_voice_alias_raise_commit(LevelState* s);
+
 #endif /* LEGORRR_GAME_OBJECTIVE_HPP */

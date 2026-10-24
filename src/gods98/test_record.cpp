@@ -770,6 +770,17 @@ int main(void)
         copy_two_dword_pair_to_outputs(rec, NULL, &b); /* guarded */
     }
 
+    /* SceneObjectOwnerSet (2026-10-24). */
+    {
+        char so[0x28];
+        memset(so, 0, sizeof(so));
+        scene_object_owner_set(so, 0x99u);
+        uint32_t owner = 0u;
+        __builtin_memcpy(&owner, so + 0x20, 4);
+        CHECK(owner == 0x99u, "the owner word lands at +0x20");
+        scene_object_owner_set(NULL, 1u); /* guarded */
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "record_test: %d failure(s)\n", s_failures);
         return 1;

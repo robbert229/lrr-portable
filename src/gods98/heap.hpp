@@ -47,4 +47,8 @@ void engine_heap_free_wrapper(void* ptr);
 }
 #endif
 
+/* UiRenderRecordFree (FUN_0045daf0): the corpus's UI-side record free is
+ * a bare tail call into the engine heap free — faithful wrapper. */
+void ui_render_record_free(void* record);
+
 #endif /* LEGORRR_GODS98_HEAP_HPP */

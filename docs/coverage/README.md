@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 748 | 29.2% |
+| ported | 757 | 29.5% |
 | anchored | 4 | 0.2% |
-| named | 1765 | 68.8% |
+| named | 1756 | 68.5% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (748 functions)
+  (757 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1765 functions)
+  citation yet (1756 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1770 (69.0%).**
+**Game logic remaining to port: 1761 (68.7%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -57,7 +57,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00401930` | AdvisorRequestResetAndSubmitSound |
 | `0x00401990` | AdvisorTransitionWorker |
 | `0x00401a70` | AdvisorSceneAdvanceAndCompletionCheck |
-| `0x00401b20` | AdvisorClearActiveState |
 | `0x00401b30` | AdvisorApplySlotTransform |
 | `0x00401c50` | FormattedTextPrintfWidth |
 | `0x00401c80` | FormattedTextPrintf |
@@ -263,7 +262,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0040fdb0` | ThreeValueRecordCopyAndMarkReady |
 | `0x0040fde0` | SetVectorAndNotifyListeners |
 | `0x0040fe00` | SceneObjectListUpdateTransforms |
-| `0x0040fec0` | SetGlobalScalarToOne |
 | `0x0040ff50` | SceneObjectListApplyFloatCallback |
 | `0x0040ff70` | ObjectVector3Set |
 | `0x0040ffe0` | GlobalVectorSetAndNotifyListeners |
@@ -662,7 +660,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004422a0` | SurfaceVectorNormalize |
 | `0x00442300` | EntityVelocityVectorDispatch |
 | `0x00442480` | VectorDirectionAngleRadiansGet |
-| `0x00442540` | GridOperationArgumentAdapter |
 | `0x004425f0` | SubobjectPoseDeltaNormalizeAndDispatch |
 | `0x004428a0` | EntityWorldPositionSet |
 | `0x00442b10` | EntityMovementAccumulatorApply |
@@ -825,7 +822,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00453920` | AdvisorScrollStepAdvance |
 | `0x00453bb0` | FrameTimerArrayAdvanceAndAdvisorClear |
 | `0x00453da0` | CameraFocusTweenUpdate |
-| `0x00454b70` | ObjectiveVoiceAliasRaiseCommit |
 | `0x00454b80` | ObjectiveVoiceAliasRaiseGateBit27 |
 | `0x004565f0` | EngineModeSet |
 | `0x00456810` | SoundAliasPlayGlobal |
@@ -907,7 +903,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0045d870` | CommandEntityReferenceRemap |
 | `0x0045d8b0` | ScreenCoordNormalizeInit |
 | `0x0045da90` | UiRenderRecordCreate |
-| `0x0045daf0` | UiRenderRecordFree |
 | `0x0045db00` | TexturedSceneObjectDrawAtPosition |
 | `0x0045dbc0` | TerrainViewTileGeometryBuild |
 | `0x0045e400` | EntityTypeAndStateFlagPredicate |
@@ -1139,7 +1134,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00473b20` | EntityFlag80Set |
 | `0x00473bc0` | ResourceNameRegisterOrQuery |
 | `0x00473c60` | XfTextureNameFormat |
-| `0x00473da0` | SceneObjectOwnerSet |
 | `0x00473dc0` | RendererFogEnableAndColorApply |
 | `0x00473e10` | RendererFogColorSet |
 | `0x00473e70` | RendererFogModeSet |
@@ -1467,7 +1461,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00484b20` | FlicOpcode25DecodeDispatch |
 | `0x00484ba0` | PackedTripletTableToWordBuild |
 | `0x00484c00` | FlicDecode16BitRowRecords |
-| `0x00484c90` | FlicOpcode27FallbackNoop |
 | `0x00484ca0` | FlicDecode8BitAlternateDelta |
 | `0x00484e50` | FlicDecode16BitDelta |
 | `0x00485030` | FlicOpcode27DecodeDispatch |
@@ -1657,7 +1650,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00491cc0` | SmallHeapBlockResizeInPlace |
 | `0x00491d90` | CrtNewHandlerInvokeForAllocationRetry |
 | `0x00491f80` | CrtOneArgumentMathErrorHandlingStart |
-| `0x00491ff5` | CrtNoOpStub |
 | `0x0049200c` | CrtFpuPrecisionModeCodeGet |
 | `0x0049221e` | CrtFloatingPointExceptionResultDispatch |
 | `0x00492225` | CrtFloatingPointExceptionResultDispatchVariant |
@@ -1728,7 +1720,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00497770` | CrtFpuControlWordUpdate |
 | `0x004977b0` | CrtFpuControlWordUpdateMask |
 | `0x004977d0` | CrtControlFlagsTranslate |
-| `0x00497870` | CrtNoOpStubVariant |
 | `0x00497900` | UInt96HasNoBitsAtOrAbove |
 | `0x00497970` | UInt96IncrementAtBit |
 | `0x004979e0` | UInt96ClearFromBit |

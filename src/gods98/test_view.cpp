@@ -437,6 +437,15 @@ int main(void)
         CHECK(gx == 3 && gy == 4, "null outputs keep the last write");
     }
 
+    /* The adapter + scalar-to-one wrappers (2026-10-24). */
+    {
+        EngineContext ec = {};
+        grid_operation_argument_adapter(1.5f, 2.5f, &ec); /* height discarded */
+        grid_operation_argument_adapter(1.0f, 1.0f, NULL); /* guarded */
+        set_global_scalar_to_one(); /* the modeled ramp is inert */
+        CHECK(1, "the wrappers keep their corpus shapes");
+    }
+
     if (s_failures == 0) {
         printf("view_test: PASS\n");
         return 0;

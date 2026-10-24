@@ -56,3 +56,8 @@ void engine_heap_free_wrapper(void* ptr)
 {
     engine_heap_free(ptr);
 }
+
+void ui_render_record_free(void* record)
+{
+    engine_heap_free(record);
+}
