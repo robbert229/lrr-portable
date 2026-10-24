@@ -108,6 +108,11 @@ settings or required light creation causes an early failure; the final
 rotation-light setting is optional. The prior behavioral summary is in finding
 240.
 
+The root scene object's default white type-2 light is stored at
+`DAT_00556104`. `ContextSelectedGlobalPointerGet` returns this pointer when
+`DAT_00556ec8` is nonzero, and `MainSimInteractionAndCellUpdate` adjusts its
+light values under that mode.
+
 `PreloadNumberedBitmaps` (`0x0040a400`) formats and loads eleven numbered
 bitmap resources into a global cache: ten occupy consecutive slots and the
 eleventh has a separate slot. `LoadTileMeshes` (`0x0042b330`) allocates a
