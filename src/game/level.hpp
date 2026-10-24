@@ -758,4 +758,26 @@ int32_t grid_count_table_slot_peek(int row, int column, int slot, int table);
 }
 #endif
 
+/* --- coordinate-callback dispatchers (2026-10-24) ----------------------------
+ * TerrainCellRefreshDispatch (FUN_00402ae0, findings 451/362): resolve the
+ * current level's terrain record (the corpus's CurrentLevelGet root,
+ * DAT_005560d4 -> GameContext.level, terrain handle at level +0x04),
+ * dispatch the fixed coordinate callback through EntityPoolCallbackSearch
+ * — the object-record pool registry and its code-literal callback are the
+ * unported entity-seam, so the dispatch does nothing in the port — then
+ * clear the cell's surface type. The corpus threads the pair as a stack
+ * pointer the callback may see; the port reads coordinates by value
+ * (documented deviation), guards the missing level/terrain (the corpus
+ * dereferences blind), and ignores the second argument (callback-only).
+ * CoordinateCallbackDispatch / CoordinateCallbackDispatchByMode
+ * (FUN_00402b30 / FUN_00402b60, finding 362/465): the pair-wrapping
+ * dispatchers — their whole observable body is the unported callback
+ * machinery above, so the port records the seam and changes no state. */
+struct GameContext;
+void terrain_cell_refresh_dispatch(const struct GameContext* ctx, int x,
+                                   int y);
+void coordinate_callback_dispatch(const void* coord_pair, int value);
+void coordinate_callback_dispatch_by_mode(const void* coord_pair,
+                                          int mode);
+
 #endif /* LEGORRR_GAME_LEVEL_HPP */

@@ -1914,6 +1914,19 @@ corpus indexes blind; the setter's own write lands before the appearance
 half, like the corpus. `level_test` pins the prior-value return, the
 round-trip, and the guarded corners.
 
+**Coordinate-callback dispatchers** (2026-10-24; findings 451/362/465):
+three dispatch leaves land in `level.*`.
+`terrain_cell_refresh_dispatch` (0x402ae0) resolves the current level's
+terrain handle through the modeled level block and clears the cell's
+surface type — the corpus's stack-thrown coordinate pair is read by
+value, and the missing level/terrain skips (deviations); the coordinate
+callback rides the entity-pool registry, an unported seam.
+`coordinate_callback_dispatch` (0x402b30) and
+`coordinate_callback_dispatch_by_mode` (0x402b60) are the pair-wrapping
+dispatchers whose whole observable body is that callback machinery —
+the port records the seams and changes no state. `level_test` pins the
+refresh half's clear and guards and the seam no-ops.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

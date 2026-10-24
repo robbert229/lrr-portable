@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 617 | 24.1% |
+| ported | 620 | 24.2% |
 | anchored | 5 | 0.2% |
-| named | 1895 | 73.9% |
+| named | 1892 | 73.8% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (617 functions)
+  (620 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (5 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1895 functions)
+  citation yet (1892 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1901 (74.1%).**
+**Game logic remaining to port: 1898 (74.0%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -84,9 +84,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00402960` | EntityKindCommandIssue |
 | `0x00402a40` | CoordinatePairCallbackDispatch |
 | `0x00402aa0` | ArgumentCallbackDispatch |
-| `0x00402ae0` | TerrainCellRefreshDispatch |
-| `0x00402b30` | CoordinateCallbackDispatch |
-| `0x00402b60` | CoordinateCallbackDispatchByMode |
 | `0x00402cd0` | CmdCancelRef |
 | `0x00402d50` | KindNineCellCommandIssue |
 | `0x00402e40` | CellCommandType13Issue |

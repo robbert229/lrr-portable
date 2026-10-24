@@ -57,9 +57,9 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00402960,FUN_00402960,named,EntityKindCommandIssue,0,1191
 00402a40,FUN_00402a40,named,CoordinatePairCallbackDispatch,0,178
 00402aa0,FUN_00402aa0,named,ArgumentCallbackDispatch,0,94
-00402ae0,FUN_00402ae0,named,TerrainCellRefreshDispatch,0,308
-00402b30,FUN_00402b30,named,CoordinateCallbackDispatch,0,178
-00402b60,FUN_00402b60,named,CoordinateCallbackDispatchByMode,0,270
+00402ae0,FUN_00402ae0,ported,TerrainCellRefreshDispatch,1,308
+00402b30,FUN_00402b30,ported,CoordinateCallbackDispatch,1,178
+00402b60,FUN_00402b60,ported,CoordinateCallbackDispatchByMode,1,270
 00402cd0,FUN_00402cd0,named,CmdCancelRef,0,467
 00402d50,FUN_00402d50,named,KindNineCellCommandIssue,0,991
 00402e40,FUN_00402e40,named,CellCommandType13Issue,0,543

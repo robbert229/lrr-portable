@@ -2355,3 +2355,38 @@ void terrain_cell_surface_type_reset(void* terrain, int x, int y)
     terrain_cell_surface_appearance_apply(terrain, x, y, 0, 1.0f, 1.0f,
                                           1.0f);
 }
+
+/* --- coordinate-callback dispatchers (see level.hpp) -------------------------
+ * The entity-pool callback registry (DAT_004b31c8 band) and the fixed
+ * code-literal callbacks are unported seams, like the media mode-leaf's
+ * hooks — the observable port state here is the refresh dispatch's
+ * terrain half (the surface-type clear). */
+void terrain_cell_refresh_dispatch(const struct GameContext* ctx, int x,
+                                   int y)
+{
+    const LevelState* lvl = (ctx != NULL) ? ctx->level : NULL;
+    /* Corpus: CurrentLevelGet (port: GameContext.level -> +0x04 terrain
+     * handle); a missing level or terrain skips (deviation). */
+    if (lvl == NULL || lvl->ptr_terrain == NULL) {
+        return;
+    }
+    /* Coordinate callback dispatch through EntityPoolCallbackSearch:
+     * the object-record pool scan is the seam half. */
+    terrain_cell_surface_type_reset(lvl->ptr_terrain, x, y);
+}
+
+void coordinate_callback_dispatch(const void* coord_pair, int value)
+{
+    (void)coord_pair;
+    (void)value;
+    /* Seam: pair the coordinate word with zero and traverse the entity
+     * pool with the fixed callback — the callback machinery is the
+     * unported entity seam above. */
+}
+
+void coordinate_callback_dispatch_by_mode(const void* coord_pair, int mode)
+{
+    (void)coord_pair;
+    (void)mode;
+    /* Seam: same pair context, callback chosen by the mode word. */
+}
