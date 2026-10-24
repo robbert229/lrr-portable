@@ -15653,7 +15653,7 @@ void FUN_00415a10(void)
 }
 
 
-// ==== MovieShownReset @ 00415CF0 [Ghidra: FUN_00415cf0] ====
+// ==== SaveSlotSelectionClear @ 00415CF0 [Ghidra: FUN_00415cf0] ====
 
 
 void FUN_00415cf0(void)
@@ -111482,5 +111482,4 @@ char * FUN_0049dcd0(char *param_1)
   }
   return param_1;
 }
-
 
