@@ -1964,3 +1964,5 @@ address,review_status,interpretation,confidence,evidence
 0x004affa0,interpreted,Pointer to the wide-string fallback text (null),high,"EngineFormatStringToStream uses this pointer when a wide-string format conversion receives a null argument, then counts and emits the pointed-to UTF-16 string."
 0x0049f168,interpreted,IAMMultiMediaStream interface identifier,high,"ConfiguredVideoGraphSetup passes this IID to CoCreateInstance; its bytes decode to {BEBE595C-9A6F-11D0-8FDE-00C04FD9189D}, the IAMMultiMediaStream interface GUID."
 0x0049f1e8,interpreted,AMMultiMediaStream class identifier,high,"ConfiguredVideoGraphSetup passes this CLSID to CoCreateInstance; its bytes decode to {49C47CE5-9BA4-11D0-8212-00C04FC32C45}, the AMMultiMediaStream coclass GUID."
+0x0049f228,interpreted,IID_IDirectDrawMediaStream,high,"DirectShowSampleSetup uses this GUID in QueryInterface on the selected media stream to obtain the DirectDraw-specific stream interface."
+0x0049f288,interpreted,MSPID_PrimaryVideo stream-purpose identifier,high,"DirectShowSampleSetup passes this GUID to the multimedia stream's GetMediaStream method to retrieve its primary video stream."
