@@ -1943,6 +1943,19 @@ misses), and creates the fallback task. `cmd_test` pins the fallback
 creation, both gates, the queue record's shape, and the validator
 closure.
 
+**Command-registry accessors** (2026-10-24; findings 10/466): five
+registry leaves land in `cmd.*`. `cmd_mark_matching` (0x402000) walks
+the task list raising bit 16 when the type matches plus either the
+payload's low word (the corpus's 32-bit view) or the record's x/y dwords
+equal the pair. `cmd_set_kind` (0x402060) records the kind at +0x4c and
+binds the behaviour — pinning 99 when the record carries the 0x30000
+marker bits. `priority_entry_order_value_set` (0x402090) writes the
+behaviour/order table at the kind slot (guarded, deviation),
+`priority_entry_state_set`/`_get` (0x4020a0/0x4020b0) land the 27-entry
+per-priority state table (zero-init static; the registry initializer
+seam) as guarded access. `cmd_test` pins the round-trips, the binding
+branches, and both marking routes.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

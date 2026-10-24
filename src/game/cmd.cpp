@@ -1082,3 +1082,75 @@ void entity_deferred_work_schedule(EntitySlot* e)
         cmd_create_task(e);
     }
 }
+
+/* --- registry accessors / match marker (see cmd.hpp) -------------------------
+ * DAT_004b7ff4: the per-priority state table, zeroed by the (unported)
+ * registry initializer loop — zero-init static, 27 entries. */
+#define PRIORITY_ENTRY_COUNT 27
+static int s_priority_state[PRIORITY_ENTRY_COUNT];
+
+void cmd_mark_matching(int type, int payload, const int coords[2])
+{
+    for (CmdRec* cur = s_global_head; cur != NULL;
+         cur = as_rec(cur->global_next)) {
+        if (cur->type == type) {
+            /* corpus compares the record's +0x10 word (32-bit) against the
+             * argument: the port matches the low-word view. */
+            if (payload != 0 && (int32_t)(uintptr_t)cur->payload == payload) {
+                cur->state |= 0x10000u;
+            }
+            if (coords != NULL) {
+                int rx, ry;
+                __builtin_memcpy(&rx, &cur->x, sizeof(rx));
+                __builtin_memcpy(&ry, &cur->y, sizeof(ry));
+                if (coords[0] == rx && coords[1] == ry) {
+                    cur->state |= 0x10000u;
+                }
+            }
+        }
+    }
+}
+
+void cmd_set_kind(void* rec, int kind)
+{
+    if (rec == NULL) {
+        return; /* deviation: the corpus dereferences blindly */
+    }
+    CmdRec* r = as_rec(rec);
+    if ((r->state & 0x30000u) == 0u) {
+        r->behaviour = cmd_kind_behaviour(kind);
+    } else {
+        r->behaviour = 99;
+    }
+    r->kind = kind;
+}
+
+void priority_entry_order_value_set(int kind, int value)
+{
+    if (kind >= 0 && kind < 27) {
+        s_behaviour[kind] = (int8_t)value;
+    }
+    /* deviation: the corpus writes blindly into the order table. */
+}
+
+void priority_entry_state_set(int kind, int value)
+{
+    if (kind >= 0 && kind < PRIORITY_ENTRY_COUNT) {
+        s_priority_state[kind] = value;
+    }
+}
+
+int priority_entry_state_get(int kind)
+{
+    if (kind < 0 || kind >= PRIORITY_ENTRY_COUNT) {
+        return 0; /* deviation: the corpus reads blindly */
+    }
+    return s_priority_state[kind];
+}
+
+void cmd_rec_state_set(void* rec, uint32_t state)
+{
+    if (rec != NULL) {
+        as_rec(rec)->state = state;
+    }
+}

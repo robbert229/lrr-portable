@@ -559,6 +559,66 @@ int main(void)
         cmd_context_set(&ctx);
     }
 
+    /* The registry accessors / match marker (2026-10-24). */
+    {
+        GameContext xctx;
+        game_context_init(&xctx);
+        cmd_context_set(&xctx);
+
+        /* Priority tables: zero-start round-trip and the guarded edges. */
+        CHECK(priority_entry_state_get(10) == 0, "the state table starts zero");
+        priority_entry_state_set(10, 7);
+        CHECK(priority_entry_state_get(10) == 7, "the state write lands");
+        priority_entry_state_set(60, 1);
+        CHECK(priority_entry_state_get(60) == 0
+                  && priority_entry_state_get(26) == 0,
+              "the guarded edges stay untouched");
+        priority_entry_state_set(10, 0);
+
+        const int save_behaviour = cmd_kind_behaviour(3);
+        priority_entry_order_value_set(3, 9);
+        CHECK(cmd_kind_behaviour(3) == 9, "the order write feeds behaviour");
+        priority_entry_order_value_set(999, 5);
+        CHECK(cmd_kind_behaviour(999) == 0x31, "the guarded write skips");
+        priority_entry_order_value_set(3, save_behaviour);
+
+        /* Set kind: unmarked records bind, marked ones pin 99. */
+        EntitySlot e1 = {};
+        memset(&e1, 0, sizeof(e1));
+        e1.type = 2;
+        cmd_create_task(&e1);
+        void* head = cmd_global_head();
+        CHECK(head != NULL, "a task for the walk");
+        cmd_set_kind(head, 2);
+        CHECK(cmd_rec_kind(head) == 2
+                  && cmd_rec_behaviour(head) == cmd_kind_behaviour(2),
+              "the unmarked record binds the kind");
+        cmd_rec_state_set(head, 0x30000u);
+        cmd_set_kind(head, 1);
+        CHECK(cmd_rec_kind(head) == 1 && cmd_rec_behaviour(head) == 99,
+              "the marker bits pin behaviour 99");
+        cmd_set_kind(NULL, 1); /* guarded */
+
+        /* Mark matching: type + payload, or type + coordinate pair. */
+        cmd_rec_state_set(head, 0u);
+        cmd_mark_matching(3, 0x1234, NULL);
+        CHECK((cmd_rec_state(head) & 0x10000u) == 0u,
+              "the non-matching payload marks nothing");
+        cmd_mark_matching(99, (int)(uintptr_t)&e1, NULL);
+        CHECK((cmd_rec_state(head) & 0x10000u) == 0u,
+              "the non-matching type marks nothing");
+        cmd_mark_matching(3, (int)(uintptr_t)&e1, NULL);
+        CHECK((cmd_rec_state(head) & 0x10000u) != 0u,
+              "the payload match raises bit 16");
+        cmd_rec_state_set(head, 0u);
+        const int zero_pair[2] = { 0, 0 };
+        cmd_mark_matching(3, 0, zero_pair);
+        CHECK((cmd_rec_state(head) & 0x10000u) != 0u,
+              "the coordinate pair match raises bit 16");
+        cmd_tick_global();
+        cmd_context_set(&ctx);
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "cmd_test: %d failure(s)\n", s_failures);
         return 1;
