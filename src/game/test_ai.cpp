@@ -1146,6 +1146,29 @@ int main(int argc, char** argv)
         CHECK(ai_idle_count() == before + 1, "a type-5 entity never lands");
     }
 
+    /* Activity-request wrappers (2026-10-24): corpus indices 5 and 30. */
+    {
+        GameContext ctx;
+        game_context_init(&ctx);
+        int idx = entity_create(&ctx, 1, "ActReq", 0.0f, 0.0f, 0.0f, 0.0f);
+        CHECK(idx >= 0, "activity-request probe slot created");
+        if (idx >= 0) {
+            EntitySlot* e = &ctx.entity[0][idx];
+            e->flags_3e0 = 0u;
+            e->flags_3e4 = 0u;
+            entity_dispatch_event5_and_set_flag(e);
+            CHECK(e->activity == 5
+                      && (e->flags_3e0 & 0x200000u) != 0u,
+                  "the index-5 request sets activity 5 and bit 0x200000");
+            CHECK(entity_set_activity_place(e) == 1
+                      && e->activity == 30
+                      && (e->flags_3e4 & 0x200u) != 0u,
+                  "the index-30 request sets activity 30 and bit 0x200");
+            entity_dispatch_event5_and_set_flag(NULL); /* guarded */
+            CHECK(entity_set_activity_place(NULL) == 1, "the null store answers 1");
+        }
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "ai_test: %d failure(s)\n", s_failures);
         return 1;

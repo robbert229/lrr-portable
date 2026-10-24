@@ -218,4 +218,15 @@ void ai_activity_grant(GameContext* ctx, EntitySlot* e, int value);
  * the rockfall-tile probe stay unmodeled deviations — findings 41/457). */
 void entity_queue_for_rockfall_processing_if_eligible(EntitySlot* e);
 
+/* --- activity-request wrappers (2026-10-24; findings 448/223/377) -----------
+ * EntityDispatchEvent5AndSetFlag (FUN_00447b00): requests corpus activity
+ * index 5 through the activity setter — whose corpus sibling folds carry the
+ * scene-activity dispatch bookkeeping — and raises bit 0x200000 of the
+ * entity's +0x3e0 word. EntitySetActivityPlace (FUN_00448c50): the same for
+ * corpus activity index 30 against bit 0x200 of +0x3e4, answering true.
+ * (The corpus names suggest place-semantics for the second, but the name
+ * table's index 30 entry is "Activity_Clear" — no semantic claim.) */
+void entity_dispatch_event5_and_set_flag(EntitySlot* e); /* FUN_00447b00 */
+int  entity_set_activity_place(EntitySlot* e);           /* FUN_00448c50 */
+
 #endif /* LEGORRR_GAME_AI_HPP */
