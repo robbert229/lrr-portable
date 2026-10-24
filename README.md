@@ -2363,6 +2363,26 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Panel/view blit + small global primitives** (findings 250/252/256/245/388/417):
+the panel/view blit band ports `panel_item_flag8_set_if_enabled` (0x45abf0,
+the item word's bit 8 under the bit-0x20 enable gate), `view_blit_rect_positions_apply`
+(0x463d20, the view origin from the float pair plus the region-indexed pair,
+the two rect records' conditional size-pair blits, and the metrics finish),
+and `panel_texture_slots_allocate` (0x45ac30, building the stride-0x2c draw-record
+block with the three texture streams through the modeled surface seam —
+monotonic load handles and a recording buffer in `crt.*`) into `crt.*`, and
+`panel_texture_slots_blit` (0x45a9c0, the flag-bit picker with the status-banner
+word as the corpus's alternate-look gate) into `frontend.*`. The small global
+primitives band takes `uint96_zero` (0x497aa0), `global_value_clear_if_equal`
+(0x40e910), the two global-list pushes (0x46a470/0x4792c0, link at +0x1c),
+`scene_effect_registry_reset` (0x465380), and `crt_fatal_message_exit`
+(0x498340, abort default with a testable observer hook) into `crt.*`,
+`objective_voice_alias_raise_gate_bit27` (0x454b80, the failed-result raise
+under the modeled CD-state gate) into `objective.*`, and `level_random_seed_set`
+(the shared draw word reseed, modeled module-locally per precedent) into `level.*`.
+`crt_test`, `frontend_test`, `objective_test`, and `level_test` pin the
+picker, the guards, and the windows.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

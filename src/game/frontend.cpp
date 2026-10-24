@@ -33,6 +33,7 @@
 #include "gods98/record.hpp"
 #include "gods98/texture.hpp"
 #include "gods98/sound.hpp"
+#include "gods98/crt.hpp"
 #include "util.hpp"
 #include "select.hpp"
 #include "gods98/view.hpp"
@@ -2354,4 +2355,71 @@ float menu_wipe_clock_peek(void) { return s_menu_wipe_clock; }
 void menu_clock_millis_set(uint32_t millis)
 {
     s_menu_clock_millis = millis;
+}
+
+/* --- the panel texture-slot blit (see frontend.hpp) --------------------------
+ * The record's flag word is the float view's +0x28 dword; the texture
+ * handles are the +0x10/+0x14/+0x18 float views carried bit-for-bit. A
+ * missing draw-record block answers nothing (deviation: the corpus walks
+ * the window unconditionally once its count word reads non-null). */
+void panel_texture_slots_blit(int panel)
+{
+    const int count = panel_draw_count_peek(panel);
+    if (count <= 0) {
+        return; /* the corpus's count gate */
+    }
+    const char* block = (const char*)panel_draw_records_peek(panel);
+    if (block == NULL) {
+        return; /* deviation: the corpus strides a null block */
+    }
+    uint32_t oa = 0u, ob = 0u;
+    indexed_pair_get(panel, &oa, &ob);
+    const float ox = (float)(int)oa;
+    const float oy = (float)(int)ob;
+
+    for (int i = 0; i < count; ++i) {
+        const float* rec = (const float*)(block + (size_t)i * 0x2c);
+        uint32_t flags = 0u;
+        __builtin_memcpy(&flags, rec + 10, sizeof(flags));
+        if ((flags & 0x10u) != 0u) {
+            continue; /* the corpus hides bit-0x10 items */
+        }
+        const int has40 = (flags & 0x40u) != 0u;
+        int banner = 0;
+        float pick = 0.0f;
+        if ((flags & 8u) == 0u && (flags & 2u) != 0u) {
+            if (!has40) {
+                pick = rec[4];
+            } else {
+                banner = (int)sim_status_banner_word_get();
+                if (banner == 0) {
+                    continue; /* the corpus skips the blit */
+                }
+                pick = rec[4];
+            }
+        } else if ((flags & 4u) == 0u && (flags & 8u) == 0u) {
+            if (!has40) {
+                pick = rec[6];
+            } else {
+                banner = (int)sim_status_banner_word_get();
+                pick = banner == 0 ? rec[6] : rec[4];
+            }
+        } else {
+            if (has40) {
+                banner = (int)sim_status_banner_word_get();
+                if (banner != 0) {
+                    pick = rec[4];
+                } else {
+                    pick = rec[5];
+                }
+            } else {
+                pick = rec[5];
+            }
+        }
+        uint32_t handle = 0u;
+        __builtin_memcpy(&handle, &pick, sizeof(handle));
+        if (handle != 0u) {
+            crt_surface_blit_record(handle, rec[0] + ox, rec[1] + oy);
+        }
+    }
 }

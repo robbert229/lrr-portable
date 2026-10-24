@@ -353,3 +353,12 @@ int objective_voice_alias_raise_commit(LevelState* s)
     objective_announce(s, 1);
     return 1;
 }
+
+/* ObjectiveVoiceAliasRaiseGateBit27 (FUN_00454b80) — see objective.hpp. */
+int objective_voice_alias_raise_gate_bit27(LevelState* s)
+{
+    if ((media_cd_flags_get() & 0x8000000u) == 0u) {
+        objective_announce(s, 2);
+    }
+    return 1;
+}

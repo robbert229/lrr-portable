@@ -95,4 +95,12 @@ int objective_tick(LevelState* s, float dt);
  * blindly. */
 int objective_voice_alias_raise_commit(LevelState* s);
 
+/* ObjectiveVoiceAliasRaiseGateBit27 (FUN_00454b80): when the engine-state
+ * word's bit 27 is clear the corpus raises the failed-result announcer and
+ * answers 1. Bit 27's corpus writer is the CDAudio/voice state feeder —
+ * unported — so the gate reads through the port's modeled state word and
+ * stays clear (the announcer therefore always fires, the corpus's unset
+ * case, deviation documented). */
+int objective_voice_alias_raise_gate_bit27(LevelState* s);
+
 #endif /* LEGORRR_GAME_OBJECTIVE_HPP */

@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 784 | 30.6% |
+| ported | 796 | 31.0% |
 | anchored | 4 | 0.2% |
-| named | 1729 | 67.4% |
+| named | 1717 | 67.0% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (784 functions)
+  (796 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1729 functions)
+  citation yet (1717 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1734 (67.6%).**
+**Game logic remaining to port: 1722 (67.2%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -217,7 +217,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0040e490` | EncyclopediaConfigFilesOpen |
 | `0x0040e700` | TerrainChoiceResourceSelect |
 | `0x0040e8d0` | ScreenSpaceEffectDispatchIfEnabled |
-| `0x0040e910` | GlobalValueClearIfEqual |
 | `0x0040e930` | ErosionTimingStateInit |
 | `0x0040e9c0` | LavaErosionDelayFromCell |
 | `0x0040ee50` | LavaErosionPendingCellAdd |
@@ -738,7 +737,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00453920` | AdvisorScrollStepAdvance |
 | `0x00453bb0` | FrameTimerArrayAdvanceAndAdvisorClear |
 | `0x00453da0` | CameraFocusTweenUpdate |
-| `0x00454b80` | ObjectiveVoiceAliasRaiseGateBit27 |
 | `0x004565f0` | EngineModeSet |
 | `0x00456810` | SoundAliasPlayGlobal |
 | `0x00456830` | AdvisorInlineTokenRender |
@@ -767,9 +765,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0045a620` | UITextOutputObjectRelease |
 | `0x0045a630` | UIRecordCallbackForward |
 | `0x0045a650` | PanelCategoryBoundsSet |
-| `0x0045a9c0` | PanelTextureSlotsBlit |
-| `0x0045abf0` | PanelItemFlag8SetIfEnabled |
-| `0x0045ac30` | PanelTextureSlotsAllocate |
 | `0x0045adb0` | SimCursorInteractionTick |
 | `0x0045b310` | SimCategoryCellHitTest |
 | `0x0045b610` | GlobalUIFlags_00500860ClearBits_1_2 |
@@ -851,13 +846,11 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00463770` | ScrollRectResourceRecordCreate |
 | `0x00463810` | ScrollRectPayloadRecordCreate |
 | `0x004638a0` | SimTrackCursorHitTest |
-| `0x00463d20` | ViewBlitRectPositionsApply |
 | `0x00463e40` | FloatRoundToNearestInt |
 | `0x00463f00` | SceneQuadGridEmit |
 | `0x004641c0` | BuildingPlacementFootprintRenderAndValidate |
 | `0x00464720` | SurfaceVisibilitySet |
 | `0x00465190` | SoundHandleStopForward |
-| `0x00465380` | SceneEffectRegistryReset |
 | `0x004653a0` | TransientEffectTexturesPreload |
 | `0x00465430` | TransientEffectEmitterCreate |
 | `0x00465970` | TransientEffectRegistryReleaseAll |
@@ -887,6 +880,9 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0046a0c0` | MappedIndexedRecordWordAtFCGet |
 | `0x0046a120` | GroupedCodeTableFindValueIndex |
 | `0x0046a330` | EntityRecordFlag400ToggleAndRefresh |
+| `0x0046a370` | LinkedRecordChainFree |
+| `0x0046a390` | GlobalLinkedRecordChainClear |
+| `0x0046a420` | SelectedGlobalPointTransformAndReturnX |
 | `0x0046a510` | SceneObjectStateDispatch |
 | `0x0046a760` | FirstSetFlagOrdinal |
 | `0x0046a7f0` | UiMessageStringsInit |
@@ -1128,7 +1124,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00479110` | ReadAngleSettingRadians |
 | `0x00479170` | ConfigRgbVectorRead |
 | `0x00479240` | ReleaseLinkedObjectList |
-| `0x004792c0` | GlobalRecordListPushHead |
 | `0x00479490` | BlockTextTokenPoolGrow |
 | `0x00479500` | D3DRMVectorRandom |
 | `0x00479510` | D3DRMVectorRotate |
@@ -1570,7 +1565,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00497970` | UInt96IncrementAtBit |
 | `0x004979e0` | UInt96ClearFromBit |
 | `0x00497a80` | UInt96Copy |
-| `0x00497aa0` | UInt96Zero |
 | `0x00497ad0` | UInt96ShiftRight |
 | `0x00497b90` | CrtExtended80ToBinaryFloat |
 | `0x00497d60` | CrtExtendedFloatConvertFormatA |
@@ -1580,7 +1574,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00497e20` | CrtDecimalMantissaRoundAndNormalize |
 | `0x00497ec0` | CrtLocaleDataGetOrInitialize |
 | `0x00497f40` | DoubleToExtended80 |
-| `0x00498340` | CrtFatalMessageExit |
 | `0x00498350` | NumberStringScanParse |
 | `0x00498ce0` | CrtScanfNumericConversionAssign |
 | `0x00498e00` | CrtMultibyteToWideChar |

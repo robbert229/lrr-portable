@@ -497,4 +497,14 @@ uint32_t menu_wipe_arm_peek(void);
 float menu_wipe_clock_peek(void);
 void menu_clock_millis_set(uint32_t millis); /* port tick hook */
 
+/* --- the panel texture-slot blit (2026-10-24; findings 250/252) --------------
+ * PanelTextureSlotsBlit (FUN_0045a9c0): walks the panel's draw-record block
+ * (stride 0x2c, count `panel_draw_count_peek`) with the panel's view-offset
+ * pair added to each record's position, picks the texture slot the flag
+ * word's bits 2/4/8/0x10/0x40 select — with the status-banner word as the
+ * corpus's alternate-look gate — and blits through the modeled surface
+ * seam. Bit 0x10 hides the item; the picker otherwise consults the banner
+ * word (`sim_status_banner_word_get`) exactly where the corpus does. */
+void panel_texture_slots_blit(int panel); /* FUN_0045a9c0 */
+
 #endif /* LEGORRR_GAME_FRONTEND_HPP */

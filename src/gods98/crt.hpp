@@ -322,4 +322,73 @@ void reward_score_add(float value);      /* FUN_00462800 */
 float reward_score_total_peek(void);
 uint32_t reward_score_count_peek(void);
 
+/* --- the panel/view blit band (2026-10-24; findings 250/252/256) ------------
+ * The view blit block (the DAT_00552140/14c/150/158 windows, stride 0x20 per
+ * view) has no ported owner — zero-init windows with hooks. The blit leaves
+ * reach the corpus's surface seam (already cited as ported); the port models
+ * that seam with the recorder hooks here: loads hand back monotonic handles
+ * and every surface call is recorded.
+ * ViewBlitRectPositionsApply (FUN_00463d20): compose the view origin from
+ * the float-pair window plus the region-indexed pair window, blit the view
+ * handle, walk the two rect records for their conditional size-pair blits,
+ * and finish through the metrics record's blit.
+ * PanelItemFlag8SetIfEnabled (FUN_0045abf0): the item word's bit 8 only
+ * follows the flag while bit 32 is set (the corpus's enable gate).
+ * PanelTextureSlotsAllocate (FUN_0045ac30): build the panel draw-record
+ * block — count entries of 0x2c through the engine heap, gathered per the
+ * slot-index array, with the three texture streams loaded through the
+ * modeled seam. The corpus overwrites the panel's previous block without
+ * freeing it (faithful). */
+void view_blit_rect_positions_apply(int view); /* FUN_00463d20 */
+void panel_item_flag8_set_if_enabled(int panel, int item, int value);
+                                        /* FUN_0045abf0 */
+void panel_texture_slots_allocate(int panel, int count, const int* slot_index,
+                                  const float* stream, const int* tex1,
+                                  const int* tex2, const int* tex3,
+                                  const int* ids); /* FUN_0045ac30 */
+void view_blit_window_set(int view, uint32_t handle, void* rect_a,
+                          void* rect_b, int region_index); /* port hook */
+void view_blit_window_peek(int view, uint32_t* handle, void** rect_a,
+                           void** rect_b, int* region_index);
+void panel_draw_count_set(int panel, int count);  /* port hook */
+int  panel_draw_count_peek(int panel);            /* port hook */
+/* The modeled surface seam: monotonic load handles + a recording buffer.
+ * Blits record (handle, x, y); transforms record (handle, 0, 0). Handles
+ * live as uint32 bits; the float-valued window fields carry them
+ * bit-for-bit the way the corpus's float "handles" do. */
+uint32_t crt_surface_handle_next(void);
+void     crt_surface_blit_record(uint32_t handle, float x, float y);
+int      crt_surface_calls_count(void);
+int      crt_surface_call_get(int index, uint32_t* handle, float* x,
+                              float* y);
+void     crt_surface_calls_clear(void);
+float    crt_float_bits(uint32_t bits);
+
+/* --- the small global primitives band (2026-10-24; findings 245/388/417) ----
+ * One-liner engine helpers whose corpus globals have no ported owner —
+ * zero-initialized module statics with hooks per convention.
+ * UInt96Zero (FUN_00497aa0): zero the three limbs (the sibling is already
+ * ported). GlobalValueClearIfEqual (FUN_0040e910): the screen-effect
+ * handle word clears only when the incoming value equals it (the corpus's
+ * stale-handle release rule). LinkedListPushAtGlobalHead /
+ * GlobalRecordListPushHead (FUN_0046a470/FUN_004792c0): push a record at
+ * the head of the corpus's two global lists — the link lands at +0x1c and
+ * the heads land here. SceneEffectRegistryReset (FUN_00465380): clear the
+ * transient-effect registry head/tail/texture words and answer 1.
+ * CrtFatalMessageExit (FUN_00498340): the corpus's exhausted-memory fatal
+ * path (`__amsg_exit` 2). The port aborts like the CRT unless an observer
+ * hook stands in (documented deviation). */
+void uint96_zero(uint32_t limbs[3]);   /* FUN_00497aa0 */
+void global_value_clear_if_equal(int value); /* FUN_0040e910 */
+void global_value_word_set(int value);       /* port hook */
+int  global_value_word_peek(void);
+void linked_list_push_at_global_head(void* record); /* FUN_0046a470 */
+void* linked_list_global_head_peek(void);           /* port hook */
+void global_record_list_push_head(void* record);    /* FUN_004792c0 */
+void* global_record_list_head_peek(void);           /* port hook */
+int  scene_effect_registry_reset(void);             /* FUN_00465380 */
+void scene_effect_registry_words_peek(uint32_t out_words[3]);
+void crt_fatal_message_exit(void);                  /* FUN_00498340 */
+void crt_fatal_exit_observer_set(void (*observer)(void));
+
 #endif /* LEGORRR_GODS98_CRT_HPP */

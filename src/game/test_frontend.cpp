@@ -26,6 +26,7 @@
 #include "game/game.hpp"
 #include "game/select.hpp"
 #include "gods98/block.hpp"
+#include "gods98/crt.hpp"
 #include "gods98/message.hpp"
 #include "gods98/resource.hpp"
 #include "gods98/texture.hpp"
@@ -1252,6 +1253,71 @@ int main(int argc, char** argv)
         CHECK(menu_wipe_clock_peek() == 12345.0f, "the clock stamps");
         menu_wipe_flags_set(0u);
         menu_wipe_arm_set(0u);
+    }
+
+    /* The panel texture-slot blit (2026-10-24): the picker picks slots,
+     * the flag bits hide items, and the banner word gates the alternates. */
+    {
+        static char pblock[0x2c * 2];
+        memset(pblock, 0, sizeof(pblock));
+        float* rec = (float*)pblock;
+        rec[0] = 1.0f;
+        rec[1] = 2.0f;
+        rec[4] = 5.0f;  /* texture A */
+        rec[5] = 7.0f;  /* texture C */
+        rec[6] = 6.0f;  /* texture B */
+        uint32_t fl = 0u;
+        __builtin_memcpy(rec + 10, &fl, 4);
+        float* rec2 = (float*)(pblock + 0x2c);
+        rec2[0] = 10.0f;
+        rec2[1] = 10.0f;
+        rec2[6] = 6.0f;
+        uint32_t fl2 = 0x10u; /* hidden */
+        __builtin_memcpy(rec2 + 10, &fl2, 4);
+        panel_draw_records_set(11, pblock);
+        panel_draw_count_set(11, 2);
+        indexed_pair_set(11, 10u, 5u);
+        sim_status_banner_word_set(0u);
+        crt_surface_calls_clear();
+        panel_texture_slots_blit(11);
+        CHECK(crt_surface_calls_count() == 1, "the hidden item never blits");
+        uint32_t h = 0u;
+        float x = 0, y = 0;
+        crt_surface_call_get(0, &h, &x, &y);
+        CHECK(h == 0x40C00000u && x == 11.0f && y == 7.0f,
+              "flags clear picks the B slot at the offset position");
+        fl = 2u; /* A with the bit-2 raise */
+        __builtin_memcpy(rec + 10, &fl, 4);
+        crt_surface_calls_clear();
+        panel_texture_slots_blit(11);
+        crt_surface_call_get(0, &h, &x, &y);
+        CHECK(crt_surface_calls_count() == 1 && h == 0x40A00000u,
+              "the bit-2 raise picks the A slot");
+        fl = 8u; /* the C-slot branch */
+        __builtin_memcpy(rec + 10, &fl, 4);
+        crt_surface_calls_clear();
+        panel_texture_slots_blit(11);
+        crt_surface_call_get(0, &h, &x, &y);
+        CHECK(h == 0x40E00000u && x == 11.0f && y == 7.0f,
+              "the plain else picks the C slot");
+        fl = 0x40u | 4u; /* the banner-gated alternate */
+        __builtin_memcpy(rec + 10, &fl, 4);
+        crt_surface_calls_clear();
+        panel_texture_slots_blit(11);
+        crt_surface_call_get(0, &h, &x, &y);
+        CHECK(h == 0x40E00000u, "the else path takes the C slot while "
+                                "the banner word stays clear");
+        sim_status_banner_word_set(1u);
+        crt_surface_calls_clear();
+        panel_texture_slots_blit(11);
+        crt_surface_call_get(0, &h, &x, &y);
+        CHECK(h == 0x40A00000u, "the banner word raises the A alternate");
+        sim_status_banner_word_set(0u);
+        panel_draw_count_set(11, 0);
+        panel_draw_records_set(11, NULL);
+        crt_surface_calls_clear();
+        panel_texture_slots_blit(11);
+        CHECK(crt_surface_calls_count() == 0, "a closed panel answers nothing");
     }
 
     if (s_failures == 0) {
