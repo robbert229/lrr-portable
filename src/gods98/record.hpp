@@ -73,4 +73,19 @@ int map_cell_to_world_center(const void* map, uint32_t cell_x,
  * to" form), otherwise the mask value. */
 uint32_t task_flag_bit_query(const void* task, uint32_t bit, int suppress);
 
+/* TaskField84GetAndField88Out (FUN_00408360, finding 366): return the
+ * dword at +0x84 and, when given an output pointer, copy the dword at
+ * +0x88 there. Field meanings stay with the task layer. NULL task
+ * answers 0 and writes nothing (documented deviation). */
+uint32_t task_field84_get_and_field88_out(const void* task, uint32_t* out88);
+
+/* PackedGridCellValueGet (FUN_0040b850, findings 373/451): decode a
+ * packed cell byte — the low nibble steps by the descriptor's width
+ * (word +0), the high nibble is the short step — and read the grid
+ * dword at (descriptor +8) + index*4. NULL answers 0, matching the
+ * corpus's own guard. Deviation: the corpus's 32-bit cell-array slot is
+ * read as a native pointer (the port's model of a corpus pointer
+ * field). */
+uint32_t packed_grid_cell_value_get(const void* grid, uint32_t packed_cell);
+
 #endif /* LEGORRR_GODS98_RECORD_HPP */

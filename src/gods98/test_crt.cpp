@@ -132,6 +132,14 @@ static void test_pair_conversions(void)
     CHECK(ix == 0 && iy == 5, "corners truncate toward zero");
 }
 
+/* Bit view for the floating-leaf checks. */
+static uint64_t crt_bits(double d)
+{
+    uint64_t b = 0;
+    __builtin_memcpy(&b, &d, sizeof(b));
+    return b;
+}
+
 static void test_crt_leaves(void)
 {
     /* Unsigned add with carry: the sum never lies about the carry. */
@@ -205,6 +213,27 @@ static void test_crt_leaves(void)
     CHECK(x87_round_to_integral(3.2) == 3.0, "3.2 to 3");
     CHECK(x87_round_to_integral(-3.2) == -3.0, "-3.2 to -3");
     CHECK(x87_round_to_integral(7.0) == 7.0, "integers untouched");
+
+    /* DoubleBuildWithExponent (FUN_00493a40): the bit recipe, checked as
+     * bit patterns (the value's meaning stays with the frexp caller). */
+    {
+        /* Recipe: top = ((high >> 16) & 0x800f) | ((exp + 0x3fe) << 4). */
+        CHECK(crt_bits(double_build_with_exponent(0x12345678u, 0x43218abcu, 0))
+                  == 0x3FE18ABC12345678ull, "exp 0 bias word");
+        CHECK(crt_bits(double_build_with_exponent(0x12345678u, 0x43218abcu, 1))
+                  == 0x3FF18ABC12345678ull, "exponent 1 steps the bias word");
+        CHECK(crt_bits(double_build_with_exponent(0x12345678u, 0x43218abcu, -1))
+                  == 0x3FD18ABC12345678ull, "exponent -1 steps it down");
+        /* The mask keeps the sign bit and the fraction nibble. */
+        CHECK(crt_bits(double_build_with_exponent(0u, 0x80000000u, 1))
+                  == 0xBFF0000000000000ull, "sign bit survives the mask");
+        CHECK(crt_bits(double_build_with_exponent(0x12345678u, 0x000f0abcu, 0))
+                  == 0x3FEF0ABC12345678ull, "the fraction nibble survives");
+        /* 16-bit truncation of the bias shift (exp = -0x3ff -> 0xFFF0). */
+        CHECK(crt_bits(double_build_with_exponent(1u, 0u, -0x3ff))
+                  == 0xFFF0000000000001ull, "the bias word truncates to 16 bits");
+    }
+
     {
         const double neg_zero = x87_round_to_integral(-0.4);
         CHECK(neg_zero == 0.0 && 1.0 / neg_zero < 0.0,
