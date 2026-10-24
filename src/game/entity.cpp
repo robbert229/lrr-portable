@@ -751,3 +751,14 @@ int selection_candidate_eligibility_check(const EntitySlot* e)
     }
     return 1;
 }
+
+/* EntityFlag40000ThresholdCompare (see entity.hpp). */
+int entity_flag40000_threshold_compare(const EntitySlot* e)
+{
+    if ((entity_state_flags_get(e) & 0x40000u) != 0u) {
+        if (entity_stats_float_ate8(e) < e->field_340) {
+            return 1;
+        }
+    }
+    return 0;
+}

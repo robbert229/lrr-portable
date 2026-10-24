@@ -1056,3 +1056,29 @@ int selected_entity_state_monitor(void)
     }
     return count;
 }
+
+/* --- entity record schedulers (see cmd.hpp) ----------------------------------
+ * Corpus note: the queue leaf's CurrentLevelGet call discards its result
+ * (the corpus's level-state touch) — no ported state depends on it. */
+void entity_command15_validated_record_queue(EntitySlot* e)
+{
+    if (e != NULL && entity_flag40000_threshold_compare(e) != 0) {
+        CmdRec* rec = (CmdRec*)cmd_alloc(0x1a);
+        cmd_link_head(rec, 0xf);
+        rec->payload = e;
+        rec->state = (rec->state & ~0x10u) | 0x40040u;
+    }
+}
+
+void entity_deferred_work_schedule(EntitySlot* e)
+{
+    if (e == NULL) {
+        return; /* deviation: the corpus dereferences blindly */
+    }
+    if (e->attach_304 == NULL && (e->flags_3ec & 0x100u) == 0u) {
+        /* EntityPoolCallbackSearch with the fixed callback: the pool
+         * registry seam always misses here, so the fallback task is
+         * created (corpus shape). */
+        cmd_create_task(e);
+    }
+}

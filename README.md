@@ -1927,6 +1927,22 @@ dispatchers whose whole observable body is that callback machinery —
 the port records the seams and changes no state. `level_test` pins the
 refresh half's clear and guards and the seam no-ops.
 
+**Record-queue validator + entity schedulers** (2026-10-24; findings
+362/465/476): three entity-domain leaves land in `entity.*` / `cmd.*`.
+`entity_flag40000_threshold_compare` (0x437cc0) is the validator — the
+state flags (stats +0x148) carry bit 0x40000 and the nested float at
++0xe8 falls below the entity's own +0x340 bound.
+`entity_command15_validated_record_queue` (0x402670) allocates a
+type-0x1a record for the validated entity, links it at kind 0xf, stores
+the entity at +0x10, and raises the +0x5c bits 6/14/18 after clearing
+bit 4 — the corpus's opening CurrentLevelGet touch changes nothing (the
+port's link lands it on the task list). `entity_deferred_work_schedule`
+(0x4026c0) gates on the +0x304 attach mirror and the +0x3ec bit-0x100
+flag, searches the pool through the unported callback seam (always
+misses), and creates the fallback task. `cmd_test` pins the fallback
+creation, both gates, the queue record's shape, and the validator
+closure.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the
