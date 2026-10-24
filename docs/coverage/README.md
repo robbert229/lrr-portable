@@ -1788,7 +1788,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0047ed80` | AviPlayerReadyGet |
 | `0x0047ed90` | DirectInputInitialize |
 | `0x0047efb0` | KeyboardDownKeyCount |
-| `0x0047efd0` | AviFileShutdown |
+| `0x0047efd0` | DirectInputShutdown |
 | `0x0047f0d0` | CursorSetClientPosition |
 | `0x0047f4f0` | FindCdKeyDrive |
 | `0x0047f590` | WadMountPathCacheStore |

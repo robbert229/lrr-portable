@@ -46237,10 +46237,10 @@ void AviFileInitialize(undefined4 param_1)
 }
 
 
-// ==== AviFileShutdown @ 0047efd0 ====
+// ==== DirectInputShutdown @ 0047efd0 ====
 
 
-void AviFileShutdown(void)
+void DirectInputShutdown(void)
 
 {
   if (DAT_0076ab0c != 0) {
