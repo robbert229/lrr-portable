@@ -26,8 +26,9 @@ display-only reward overlay.
    screen-level keys: `Wallpaper`, `Display`, `CentreText`,
    `ScrollSpeed`, `VertSpacing`, `TitleFont`/`BackFont`/base font (`FUN_00479ee0` resolves
    font handles), `CompleteText`/`FailedText`/`QuitText`, `TextPos`, and button widgets
-   `SaveButton`/`AdvanceButton` (widget tuples at `DAT_00555b68…b88` — these are the
-   **zones** `RewardZoneCheck` hit-tests, see below).
+   `SaveButton`/`AdvanceButton` (image handles and positions at `DAT_00555b60…b8c`; the
+   base image handles at `DAT_00555b68` and `DAT_00555b80` supply dimensions for the
+   corresponding hit zones).
 2. `TaskBlockInit()` — allocates the 0x318c task block (`DAT_00552990`), zero-fills, sets
    10 task slots (stride `0x210`, base stored as self-ref at block+`0x1CE8`), names them
    `Crystals, Ore, Diggable, Constructions, Caverns, Figures, RockMonsters, Oxygen, Timer,
