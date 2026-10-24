@@ -1900,10 +1900,10 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0047a5c0,FUN_0047a5c0,named,FixedSizeRecordPoolGrow,0,679
 0047a640,FUN_0047a640,named,DirectSoundSystemInit,0,2299
 0047a800,FUN_0047a800,named,DirectSoundObjectsShutdown,0,316
-0047a850,FUN_0047a850,named,SoundVolumeValueValid,0,120
-0047a870,FUN_0047a870,named,SoundBankEntryLoad,0,3087
-0047aad0,FUN_0047aad0,named,SoundBankFreeSlotFind,0,299
-0047ab00,FUN_0047ab00,named,SoundBankEntryRelease,0,773
+0047a850,FUN_0047a850,ported,SoundVolumeValueValid,3,120
+0047a870,FUN_0047a870,ported,SoundBankEntryLoad,3,3087
+0047aad0,FUN_0047aad0,ported,SoundBankFreeSlotFind,3,299
+0047ab00,FUN_0047ab00,ported,SoundBankEntryRelease,3,773
 0047ab80,FUN_0047ab80,named,DirectSoundListenerViewSet,0,114
 0047aba0,FUN_0047aba0,ported,DirectSoundListenerUpdateTick,4,133
 0047abc0,FUN_0047abc0,ported,DirectSoundListenerSpatialUpdate,1,1845

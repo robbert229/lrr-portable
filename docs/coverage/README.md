@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 303 | 11.8% |
+| ported | 307 | 12.0% |
 | anchored | 5 | 0.2% |
-| named | 2210 | 86.2% |
+| named | 2206 | 86.0% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 0 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (303 functions)
+  (307 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (5 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (2210 functions)
+  citation yet (2206 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (0 functions)
 
-**Game logic remaining to port: 2215 (86.4%).**
+**Game logic remaining to port: 2211 (86.2%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -1677,10 +1677,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0047a5c0` | FixedSizeRecordPoolGrow |
 | `0x0047a640` | DirectSoundSystemInit |
 | `0x0047a800` | DirectSoundObjectsShutdown |
-| `0x0047a850` | SoundVolumeValueValid |
-| `0x0047a870` | SoundBankEntryLoad |
-| `0x0047aad0` | SoundBankFreeSlotFind |
-| `0x0047ab00` | SoundBankEntryRelease |
 | `0x0047ab80` | DirectSoundListenerViewSet |
 | `0x0047ad10` | SoundPositionSetFromVector |
 | `0x0047ad30` | AttachedSoundStopByEntity |

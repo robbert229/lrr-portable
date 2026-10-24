@@ -6,9 +6,19 @@
 #include "resource.hpp"
 #include "sound.hpp"
 
-static const char* s_bank_names[SOUND_BANK_SLOTS];
-static Sound*      s_bank_sounds[SOUND_BANK_SLOTS];
-static int         s_bank_count = 0;
+/* Bank record (corpus record of stride 0x134; port keeps the fields the
+ * shipped record carries where observable: name at record +0, volume at
+ * +0x110, the flag word at +0x130). `sound` is the port-side payload
+ * handle standing in for the record's data/buffer fields. */
+typedef struct BankSlot {
+    char     name[260];      /* stored "<base>.wav" resource name */
+    Sound*   sound;          /* loaded payload, NULL until loaded */
+    uint32_t flags;          /* SOUND_SLOT_* + SOUND_LOOPING/STREAMED */
+    int      volume;         /* +0x110: validated millibels */
+} BankSlot;
+
+static BankSlot s_bank[SOUND_BANK_SLOTS];
+static int      s_bank_sound_on = 1; /* DAT_00533878 seam, see sound.hpp */
 
 /* ------------------------------------------------------------------ *
  *  RIFF/WAVE parse (finding 14 §2).
@@ -160,37 +170,12 @@ static int s_has_wav_suffix(const char* name)
 
 int sound_bank_load(const char* name, int streamed, int looping)
 {
-    char full[1024];
-    if (!s_has_wav_suffix(name)) {
-        if (strlen(name) + 5 >= sizeof(full)) {
-            return -1;
-        }
-        snprintf(full, sizeof(full), "%s.wav", name);
-    } else {
-        if (strlen(name) + 1 >= sizeof(full)) {
-            return -1;
-        }
-        snprintf(full, sizeof(full), "%s", name);
+    /* Port convenience over the corpus entry load: skip when already
+     * present, like the shipped loader's own dedupe callers. */
+    if (sound_bank_find(name) != NULL) {
+        return 0;
     }
-
-    if (sound_bank_find(full) != NULL) {
-        return 0; /* already loaded */
-    }
-    if (s_bank_count >= SOUND_BANK_SLOTS) {
-        return -1;
-    }
-
-    Sound* s = sound_load(full);
-    if (s == NULL) {
-        return -1;
-    }
-    s->flags = (streamed ? SOUND_STREAMED : 0)
-             | (looping ? SOUND_LOOPING : 0);
-
-    s_bank_names[s_bank_count] = s->name;
-    s_bank_sounds[s_bank_count] = s;
-    ++s_bank_count;
-    return 0;
+    return sound_bank_entry_load(name, streamed, looping, 0) >= 0 ? 0 : -1;
 }
 
 Sound* sound_bank_find(const char* fullname)
@@ -207,9 +192,10 @@ Sound* sound_bank_find(const char* fullname)
         snprintf(full, sizeof(full), "%s.wav", fullname);
         fullname = full;
     }
-    for (int i = 0; i < s_bank_count; ++i) {
-        if (s_strcasecmp(s_bank_names[i], fullname) == 0) {
-            return s_bank_sounds[i];
+    for (int i = 0; i < SOUND_BANK_SLOTS; ++i) {
+        if ((s_bank[i].flags & SOUND_SLOT_BUSY) != 0
+            && s_strcasecmp(s_bank[i].name, fullname) == 0) {
+            return s_bank[i].sound;
         }
     }
     return NULL;
@@ -217,15 +203,147 @@ Sound* sound_bank_find(const char* fullname)
 
 int sound_bank_count(void)
 {
-    return s_bank_count;
+    int count = 0;
+    for (int i = 0; i < SOUND_BANK_SLOTS; ++i) {
+        if ((s_bank[i].flags & SOUND_SLOT_BUSY) != 0) {
+            ++count;
+        }
+    }
+    return count;
 }
 
 void sound_bank_clear(void)
 {
-    for (int i = 0; i < s_bank_count; ++i) {
-        sound_free(s_bank_sounds[i]);
+    for (int i = 0; i < SOUND_BANK_SLOTS; ++i) {
+        if (s_bank[i].sound != NULL) {
+            sound_free(s_bank[i].sound);
+        }
+        s_bank[i].sound = NULL;
+        s_bank[i].flags = 0;
+        s_bank[i].volume = 0;
+        s_bank[i].name[0] = '\0';
     }
-    s_bank_count = 0;
+}
+
+void sound_bank_sound_on_set(int on)
+{
+    s_bank_sound_on = (on != 0);
+}
+
+int sound_bank_sound_on(void)
+{
+    return s_bank_sound_on;
+}
+
+int sound_bank_free_slot_find(int* out_slot)
+{
+    /* SoundBankFreeSlotFind @ 0x47aad0. */
+    if (out_slot == NULL) {
+        return 0;
+    }
+    for (int i = 0; i < SOUND_BANK_SLOTS; ++i) {
+        if ((s_bank[i].flags & SOUND_SLOT_BUSY) == 0) {
+            *out_slot = i;
+            return 1;
+        }
+    }
+    return 0;
+}
+
+int sound_volume_value_valid(int millibels)
+{
+    /* SoundVolumeValueValid @ 0x47a850: (-10001 < v < 1). */
+    return (millibels < 1 && -10001 < millibels) ? 1 : 0;
+}
+
+int sound_bank_entry_load(const char* name, int streamed, int looping,
+                          int volume)
+{
+    /* SoundBankEntryLoad @ 0x47a870. */
+    if (!s_bank_sound_on) {
+        return -1; /* corpus's DAT_00533878 gate */
+    }
+    int slot;
+    if (name == NULL || !sound_bank_free_slot_find(&slot)) {
+        return -1;
+    }
+
+    BankSlot* rec = &s_bank[slot];
+    rec->flags = 0;      /* claimed record starts with cleared flags */
+    rec->sound = NULL;
+    rec->volume = 0;
+    rec->name[0] = '\0';
+
+    char full[1024];
+    if (!s_has_wav_suffix(name)) {
+        if (strlen(name) + 5 >= sizeof(full)) {
+            return -1;
+        }
+        snprintf(full, sizeof(full), "%s.wav", name);
+    } else {
+        if (strlen(name) + 1 >= sizeof(full)) {
+            return -1;
+        }
+        snprintf(full, sizeof(full), "%s", name);
+    }
+
+    /* Loader seam: the port's resource-layer loader stands in for the
+     * corpus's platform mmio path (InMemoryWaveSampleLoad's role),
+     * producing the same observable loaded record. */
+    Sound* s = sound_load(full);
+    if (s == NULL) {
+        return -1; /* flags stay zeroed: the slot was never claimed */
+    }
+    if (streamed != 0) {
+        rec->flags |= SOUND_STREAMED;
+    } else {
+        if (looping != 0) {
+            rec->flags |= SOUND_LOOPING;
+        }
+    }
+
+    size_t n = strlen(full);
+    if (n >= sizeof(rec->name)) {
+        n = sizeof(rec->name) - 1; /* truncate like the record copy loop */
+    }
+    memcpy(rec->name, full, n);
+    rec->name[n] = '\0';
+    s->flags = rec->flags & (SOUND_LOOPING | SOUND_STREAMED);
+    rec->sound = s;
+    rec->volume = sound_volume_value_valid(volume) ? volume : 0;
+    rec->flags |= SOUND_SLOT_BUSY | SOUND_SLOT_LOADED;
+    return slot;
+}
+
+void sound_bank_entry_release(int slot)
+{
+    /* SoundBankEntryRelease @ 0x47ab00. */
+    if (!s_bank_sound_on || slot < 0 || slot >= SOUND_BANK_SLOTS) {
+        return;
+    }
+    s_bank[slot].flags &= ~(uint32_t)SOUND_SLOT_BUSY;
+    if (s_bank[slot].sound != NULL) {
+        sound_free(s_bank[slot].sound);
+        s_bank[slot].sound = NULL;
+    }
+    /* Corpus: releases the three buffer interfaces through their
+     * vtables — TODO(corpus), no instance layer to hand them back to. */
+}
+
+uint32_t sound_bank_entry_flags(int slot)
+{
+    if (slot < 0 || slot >= SOUND_BANK_SLOTS) {
+        return 0;
+    }
+    return s_bank[slot].flags;
+}
+
+int sound_bank_entry_volume(int slot)
+{
+    if (slot < 0 || slot >= SOUND_BANK_SLOTS) {
+        return 0;
+    }
+    return s_bank[slot].volume;
 }
 
 uint32_t sound_pcm_hash(Sound* s)

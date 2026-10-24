@@ -53,7 +53,9 @@ Sound* sound_load(const char* name);
 
 /* Sound bank (finding 14 §1). `name` is the base name — "<name>.wav" is
  * built internally (corpus "%s.wav" 0x4aae5c). `streamed`/`looping` set the
- * two flag bits. Returns 0 on success (or already loaded), -1 on failure. */
+ * two flag bits. Returns 0 on success (or already loaded), -1 on failure.
+ * The dedupe check is a port-layer convenience: the corpus has none, its
+ * level-init caller loads each file exactly once. */
 int sound_bank_load(const char* name, int streamed, int looping);
 
 /* Case-insensitive lookup by the stored "<name>.wav" resource name. */
@@ -61,6 +63,58 @@ Sound* sound_bank_find(const char* fullname);
 
 int  sound_bank_count(void);
 void sound_bank_clear(void);
+
+/* ------------------------------------------------------------------ *
+ *  Bank record lifecycle (the chain blocked.md roots at the bank —
+ *  finding 14 §1; records of stride 0x134, busy-flag base
+ *  DAT_005067c8, 600 slots).
+ *
+ *  Slot flag word (record +0x130): bit 0 = busy, bit 1 = loaded
+ *  (set on success alongside bit 0, no port-side consumer yet),
+ *  bit 2 = looping, bit 3 = streamed/memory mode. The corpus loads
+ *  the WAV through the platform mmio path (InMemoryWaveSampleLoad's
+ *  role); the port reuses its own resource-layer loader for the same
+ *  observable result (documented seam).
+ * ------------------------------------------------------------------ */
+
+#define SOUND_SLOT_BUSY   1u
+#define SOUND_SLOT_LOADED 2u
+/* + SOUND_LOOPING / SOUND_STREAMED for bits 2/3. */
+
+/* Port seam for the corpus's sound-system switch (DAT_00533878, raised
+ * when DirectSound init succeeds and dropped by the
+ * LoaderProfileNoSound profile). The port defaults it to on; the
+ * engine's config read drives it when that milestone lands. */
+void sound_bank_sound_on_set(int on);
+int  sound_bank_sound_on(void);
+
+/* SoundBankFreeSlotFind @ 0x47aad0: first slot whose busy bit is clear.
+ * 1 with *out_slot set, or 0 when all 600 slots are claimed. */
+int sound_bank_free_slot_find(int* out_slot);
+
+/* SoundBankEntryLoad @ 0x47a870: claim a free slot, load
+ * "<name>.wav", set the loop/stream bits per mode, validate `volume`
+ * (millibels, see the validity helper) storing 0 when invalid, and
+ * raise busy+loaded. Returns the slot index, or -1 when sound is off,
+ * no slot is free, or the file fails to load (the claimed slot's flags
+ * stay zeroed, exactly as shipped). No dedupe — the corpus has none. */
+int sound_bank_entry_load(const char* name, int streamed, int looping,
+                          int volume);
+
+/* SoundBankEntryRelease @ 0x47ab00: clear the busy bit and free the
+ * record's sample memory. Deviation: the corpus additionally releases
+ * three DirectSound buffer interfaces through their vtables — the
+ * instance layer is TODO(corpus), so that part of the seam is a no-op. */
+void sound_bank_entry_release(int slot);
+
+/* SoundVolumeValueValid @ 0x47a850: the millibel sanity gate — valid
+ * while (-10001 < v < 1). */
+int sound_volume_value_valid(int millibels);
+
+/* Record inspection: flag word / stored volume for a slot, or
+ * 0/0-invalid when the index is out of range. */
+uint32_t sound_bank_entry_flags(int slot);
+int sound_bank_entry_volume(int slot);
 
 /* FNV-1a over the PCM payload (tests compare against wave-module-derived
  * reference hashes from the shipped corpus). */
