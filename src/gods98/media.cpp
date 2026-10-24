@@ -345,3 +345,16 @@ float media_min_distance_ref_distance(void)
 {
     return s_mind_ref;
 }
+
+/* --- the CD-audio availability seam (see media.hpp) -------------------------- */
+static int s_cd_audio_open; /* DAT_0054486c role: unowned, zero-init */
+
+int media_cd_audio_playback_available(void)
+{
+    return (s_cd_audio_open != 0 && sound_bank_sound_on() != 0) ? 1 : 0;
+}
+
+void media_cd_audio_open_set(int open)
+{
+    s_cd_audio_open = open;
+}

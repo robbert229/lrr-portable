@@ -781,3 +781,18 @@ int entity_flags_contain_requested_single_bit(const EntitySlot* e,
     default: return 0;
     }
 }
+
+uint32_t entity_stats_flag10_test(const EntitySlot* e)
+{
+    return entity_stats_word_get(e) & 0x10u;
+}
+
+uint32_t entity_stats_flag20_test(const EntitySlot* e)
+{
+    return entity_stats_word_get(e) & 0x20u;
+}
+
+uint32_t entity_stats_flag40_test(const EntitySlot* e)
+{
+    return entity_stats_word_get(e) & 0x40u;
+}

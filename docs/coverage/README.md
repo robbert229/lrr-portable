@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 796 | 31.0% |
+| ported | 803 | 31.3% |
 | anchored | 4 | 0.2% |
-| named | 1717 | 67.0% |
+| named | 1710 | 66.7% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (796 functions)
+  (803 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1717 functions)
+  citation yet (1710 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1722 (67.2%).**
+**Game logic remaining to port: 1715 (66.9%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -225,6 +225,9 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0040f2b0` | LavaErosionNeighborEligible |
 | `0x0040f330` | LavaErosionNeighborMutate |
 | `0x0040f5f0` | ErosionEightNeighborPropagate |
+| `0x0040f6c0` | SceneNodeRecordCreate |
+| `0x0040f7d0` | CallbackStateRecordCreate |
+| `0x0040f850` | CallbackStateListDispose |
 | `0x0040f890` | DirectionDrivenHeadingAngleStep |
 | `0x0040f920` | KindTwoSteeringTorqueApply |
 | `0x0040fb00` | MatrixRotationComposeXYZ |
@@ -1146,7 +1149,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0047a5c0` | FixedSizeRecordPoolGrow |
 | `0x0047a640` | DirectSoundSystemInit |
 | `0x0047a800` | DirectSoundObjectsShutdown |
-| `0x0047ab80` | DirectSoundListenerViewSet |
 | `0x0047ad10` | SoundPositionSetFromVector |
 | `0x0047ad30` | AttachedSoundStopByEntity |
 | `0x0047ad70` | SoundBufferPlayWithPosition |
@@ -1323,7 +1325,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00485030` | FlicOpcode27DecodeDispatch |
 | `0x004850f0` | TextBufferCreate |
 | `0x00485160` | TextOutputField82CBit2SetClear |
-| `0x00485190` | TextBufferDestroy |
 | `0x00485210` | FormattedTextAppendToRingBuffer |
 | `0x00485250` | TextBufferAppendVFormat |
 | `0x00485300` | ObjectiveAdvisorTextCopy |

@@ -94,3 +94,23 @@ void* engine_calloc(long size)
 {
     return engine_heap_alloc_retry(size, crt_new_handler_invoke);
 }
+
+/* OptionalResourceDestroy (FUN_0040f7b0) — see heap.hpp. */
+void optional_resource_destroy(void* record)
+{
+    if (record != NULL) {
+        engine_heap_free(record);
+    }
+}
+
+/* TextBufferDestroy (FUN_00485190) — see heap.hpp. */
+void text_buffer_destroy(void* record)
+{
+    if (record == NULL) {
+        return; /* deviation: the corpus strides the record blindly */
+    }
+    void* buffer = NULL;
+    __builtin_memcpy(&buffer, (char*)record + 0x14, sizeof(buffer));
+    engine_heap_free(buffer);
+    engine_heap_free(record);
+}

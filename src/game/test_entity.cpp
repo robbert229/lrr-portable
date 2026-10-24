@@ -771,6 +771,43 @@ static void progress_advance_test(void)
     CHECK(e.progress_344 == 0.0f, "zero bound pins the progress");
 }
 
+static int stats_flag_test(void)
+{
+    /* EntityStatsWordFlag10/20/40Test (2026-10-24): the bit tests mask the
+     * stats reader's word exactly. */
+    uint8_t rec[ENTITY_STATS_RECORD_SIZE];
+    memset(rec, 0, sizeof rec);
+    GameContext ctx;
+    game_context_init(&ctx);
+    int a = entity_create(&ctx, 1, "FlagA", 0.0f, 0.0f, 0.0f, 0.0f);
+    int b = entity_create(&ctx, 1, "FlagB", 0.0f, 0.0f, 0.0f, 0.0f);
+    if (a < 0 || b < 0) {
+        CHECK(0, "probe slots created");
+        return 1;
+    }
+    EntitySlot* e = &ctx.entity[0][a];
+    e->stats_record = rec;
+    CHECK(entity_stats_flag10_test(e) == 0u
+              && entity_stats_flag20_test(e) == 0u
+              && entity_stats_flag40_test(e) == 0u,
+          "a clear record answers no bits");
+    const uint32_t w1 = 0x133u;
+    memcpy(rec + 0x144, &w1, 4);
+    CHECK(entity_stats_flag10_test(e) == 0x10u, "bit 0x10 comes masked");
+    CHECK(entity_stats_flag20_test(e) == 0x20u, "bit 0x20 comes masked");
+    CHECK(entity_stats_flag40_test(e) == 0u, "a clear bit 0x40 answers 0");
+    const uint32_t w2 = 0x40u;
+    memcpy(rec + 0x144, &w2, 4);
+    CHECK(entity_stats_flag40_test(e) == 0x40u, "bit 0x40 comes masked");
+    CHECK(entity_stats_flag10_test(e) == 0u, "the other bits stay clear");
+    EntitySlot* n = &ctx.entity[0][b];
+    CHECK(entity_stats_flag10_test(n) == 0u
+              && entity_stats_flag20_test(n) == 0u
+              && entity_stats_flag40_test(n) == 0u,
+          "an unset record answers no bits");
+    return 0;
+}
+
 int main(int argc, char** argv)
 {
     char rmcmd[64];
@@ -825,6 +862,7 @@ int main(int argc, char** argv)
     }
     fixture_roundtrip(); /* s_failures drives the exit code below */
     stats_record_test();
+    stats_flag_test();
     eligibility_test();
     progress_advance_test();
 

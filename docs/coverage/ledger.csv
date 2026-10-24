@@ -328,10 +328,10 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0040f330,FUN_0040f330,named,LavaErosionNeighborMutate,0,2854
 0040f5e0,FUN_0040f5e0,ported,GlobalConfigValueSet,1,81
 0040f5f0,FUN_0040f5f0,named,ErosionEightNeighborPropagate,0,1029
-0040f6c0,FUN_0040f6c0,ported,SceneNodeRecordCreate,3,1108
+0040f6c0,FUN_0040f6c0,named,SceneNodeRecordCreate,0,1108
 0040f7b0,FUN_0040f7b0,ported,OptionalResourceDestroy,2,101
-0040f7d0,FUN_0040f7d0,ported,CallbackStateRecordCreate,3,649
-0040f850,FUN_0040f850,ported,CallbackStateListDispose,3,243
+0040f7d0,FUN_0040f7d0,named,CallbackStateRecordCreate,0,649
+0040f850,FUN_0040f850,named,CallbackStateListDispose,0,243
 0040f890,FUN_0040f890,named,DirectionDrivenHeadingAngleStep,0,805
 0040f920,FUN_0040f920,named,KindTwoSteeringTorqueApply,0,1995
 0040fb00,FUN_0040fb00,named,MatrixRotationComposeXYZ,0,434
@@ -1904,7 +1904,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0047a870,FUN_0047a870,ported,SoundBankEntryLoad,3,3087
 0047aad0,FUN_0047aad0,ported,SoundBankFreeSlotFind,3,299
 0047ab00,FUN_0047ab00,ported,SoundBankEntryRelease,3,773
-0047ab80,FUN_0047ab80,named,DirectSoundListenerViewSet,0,114
+0047ab80,FUN_0047ab80,ported,DirectSoundListenerViewSet,3,114
 0047aba0,FUN_0047aba0,ported,DirectSoundListenerUpdateTick,4,133
 0047abc0,FUN_0047abc0,ported,DirectSoundListenerSpatialUpdate,1,1845
 0047ad10,FUN_0047ad10,named,SoundPositionSetFromVector,0,145
@@ -2135,7 +2135,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004850e0,FUN_004850e0,ported,ObjectField10Get,2,86
 004850f0,FUN_004850f0,named,TextBufferCreate,0,655
 00485160,FUN_00485160,named,TextOutputField82CBit2SetClear,0,235
-00485190,FUN_00485190,named,TextBufferDestroy,0,122
+00485190,FUN_00485190,ported,TextBufferDestroy,2,122
 004851b0,FUN_004851b0,ported,FloatPairAtOffset4SetFromInts,1,160
 004851d0,FUN_004851d0,ported,FloatPairAtOffsetCSetFromUInts,1,167
 00485210,FUN_00485210,named,FormattedTextAppendToRingBuffer,0,151

@@ -68,4 +68,15 @@ int   crt_new_handler_invoke(long size);
 void  crt_new_handler_set(int (*handler)(long)); /* port hook */
 void* engine_calloc(long size);                  /* FUN_0048ead0 */
 
+/* OptionalResourceDestroy (FUN_0040f7b0): frees the optional resource
+ * record only when one is there — the corpus's gate over the engine free. */
+void optional_resource_destroy(void* record);
+
+/* TextBufferDestroy (FUN_00485190): frees the buffer held in the text
+ * buffer record's +0x14 slot, then the record itself. The corpus's slot
+ * is a 32-bit dword; the port carries a host-width pointer there
+ * (documented deviation). A null record lands guarded — the corpus's
+ * dereferences blindly. */
+void text_buffer_destroy(void* record);
+
 #endif /* LEGORRR_GODS98_HEAP_HPP */

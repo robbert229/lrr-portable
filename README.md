@@ -2363,6 +2363,19 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Stats flag tests + availability seams + free wrappers** (findings 319/14/480/428):
+`entity.*` takes the three stats-word bit tests (`entity_stats_flag10/20/40_test`,
+0x439cf0/0x439d10/0x439d30) masking the already-ported stats reader's word,
+faithful to the corpus's bare masked answers. `media.*` ports
+`media_cd_audio_playback_available` (0x488b90, both corpus words in: the
+device word — a zero-init hook while the MCI opener stays unported — and the
+sound-on seam), `simtick.*` ports `simtick_directsound_listener_view_set`
+(0x47ab80, the listener slot store gated on the sound word), and `heap.*`
+ports the two free wrappers `optional_resource_destroy` (0x40f7b0, the null
+gate) and `text_buffer_destroy` (0x485190, buffer slot then record).
+`entity_test`, `media_test`, `heap_test`, and `simtick_test` pin the masks,
+gates, and guards.
+
 **Panel/view blit + small global primitives** (findings 250/252/256/245/388/417):
 the panel/view blit band ports `panel_item_flag8_set_if_enabled` (0x45abf0,
 the item word's bit 8 under the bit-0x20 enable gate), `view_blit_rect_positions_apply`

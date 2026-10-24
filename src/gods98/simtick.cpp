@@ -797,3 +797,11 @@ void simulation_global_word_set(uint32_t value)
 {
     s_mute_word = value;
 }
+
+/* DirectSoundListenerViewSet (FUN_0047ab80) — see simtick.hpp. */
+void simtick_directsound_listener_view_set(int view)
+{
+    if (s_sound_on != 0) {
+        s_sound_active = view;
+    }
+}
