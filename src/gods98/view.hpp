@@ -118,6 +118,13 @@ int rect_contains_point_by_converted_coords(const float rect_bounds[4],
 int rect_contains_point_from_object_bounds(const float* const* bounds_at_14,
                                            float off_x, float off_y,
                                            int x, int y);
+
+/* MenuPointerRectangleHitTest (FUN_004112e0, finding 23/240): the
+ * integer widget-rectangle test — inside when left <= x <= left+width
+ * and top <= y <= top+height, all four edges closed. The corpus's menu
+ * machinery (unported) feeds it the stored pointer position. */
+int menu_pointer_rectangle_hit_test(int x, int y, int rect_x, int rect_y,
+                                    int rect_w, int rect_h);
 /* t = dot(q-p, n) / dot(n, d) into t_out for ray (p,d) × plane (q,n);
  * answers 1 when not parallel, 0 otherwise (FUN_00479a30). */
 int ray_plane_intersection_parameter(float* t_out, const float* p,

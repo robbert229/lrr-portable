@@ -257,14 +257,7 @@ typedef struct EntitySlot {
      * clamps it to the entity's own +0x340 bound, clearing the +0x2fc
      * link field in passing. */
     float    progress_344;   /* +0x344: routing progress float            */
-    uintptr_t link_2fc;    /* +0x2fc: link field the advance clears (corpus
-                                 * dword link, widened for the port) */
-    /* --- eligibility coordinate pair (corpus +0x2f4/+0x2f8) ---------------
-     * The activity/terrain eligibility transition parks its last probed
-     * cell pair here and blanks it to -1.0/-1.0 when it hands the cell off
-     * to queued work. */
-    float    pos_pair_2f4; /* +0x2f4: pair x (port-side mirror)             */
-    float    pos_pair_2f8; /* +0x2f8: pair y                                */
+    uint32_t link_2fc;       /* +0x2fc: link field the advance clears     */
     /* --- path list (corpus +0x24 buffer / +0x28 count / +0x2c index) --- */
     AiWaypoint wp[AI_WAYPOINTS_MAX];
     int      wp_count;       /* +0x28: valid entries                      */

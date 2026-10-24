@@ -1436,6 +1436,27 @@ establishes no axis/units for the field, so — like the stats accessors
 — this is the faithful read and the meaning stays with callers.
 `crt_test`/`record_test` pin the rounding corners and the field read.
 
+**Documented last leaves: map center, widget test, progress, task bits**
+(2026-10-24; findings 225/240/377/366/448/465): four more pure corpus
+functions land where their semantics live. `map_cell_to_world_center`
+(`MapCellToWorldCenter @ 0x44f640`, `record.*`) bounds-checks a cell
+against the map descriptor and answers the cell's world X/Z center —
+the corpus's five descriptor dwords (width +0, height +4, scale +16,
+origin +24/+28) are ints converted to float at the use site and the
+bounds test is the corpus's *unsigned* compare, both reproduced.
+`menu_pointer_rectangle_hit_test` (`MenuPointerRectangleHitTest @
+0x4112e0`, `view.*`) is the widget-rectangle test with all four edges
+closed. `entity_progress_advance_by_25` (`EntityProgressAdvanceBy25 @
+0x447730`, `entity.*`) adds 25 to the routing-progress float (new
+`+0x344` mirror), clears the `+0x2fc` link field and clamps to the
+entity's own `+0x340` bound, reporting when the bound is reached
+(finding 448 keeps the field meanings with the routing layer).
+`task_flag_bit_query` (`TaskFlagBitQuery @ 0x408970`, `record.*`) tests
+`1 << (bit & 31)` against the task record's `+0x98` word, the corpus's
+suppress-if-set form reproduced. `record_test`, `view_test` and
+`entity_test` drive the arithmetic corners (also wiring up the
+eligibility test that had been defined but never invoked).
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 492 | 19.2% |
+| ported | 496 | 19.3% |
 | anchored | 5 | 0.2% |
-| named | 2021 | 78.8% |
+| named | 2017 | 78.7% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 0 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (492 functions)
+  (496 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (2021 functions)
+  citation yet (2017 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 2026 (79.0%).**
+**Game logic remaining to port: 2022 (78.9%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -243,6 +243,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00410fb0` | MenuItemImageSet |
 | `0x00411100` | MenuSectionRecordCreate |
 | `0x00411260` | ListAppend |
+| `0x00411320` | TextLayoutOffsetForCentering |
 | `0x00411360` | MenuMouseCoordinateUpdate |
 | `0x004114f0` | HasType6ItemAtIndex |
 | `0x00411530` | MenuWidgetItemScreenRect |
@@ -606,6 +607,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004473b0` | RouteToCellCommandIssue |
 | `0x004474f0` | LinkedEntityProximityResponse |
 | `0x004475c0` | EntityProgressAndNegativeDeltaHandler |
+| `0x00447780` | EntityClearLinkedObjectState |
 | `0x004477d0` | PathStepLookaheadEntryWrite |
 | `0x00447900` | TypeFourEntityCallbackDispatch |
 | `0x00447950` | EntityDirectionalActivityStart |
@@ -688,6 +690,13 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0044f1a0` | InputKeyMappingAddBidirectional |
 | `0x0044f230` | TerrainCellMaterialSet |
 | `0x0044f490` | GridCellOperationApplyAll |
+| `0x0044f4e0` | TerrainCellSurfaceTypeSet |
+| `0x0044f540` | TerrainCellSurfaceTypeGet |
+| `0x0044f570` | TerrainCellSurfaceTypeReset |
+| `0x0044f5c0` | TerrainCellSurfaceAppearanceApply |
+| `0x0044f700` | WorldToTerrainCellBoundsCheck |
+| `0x0044f810` | GridCoordinateClampAndStore |
+| `0x0044f870` | TerrainWorldPointToCell |
 | `0x0044fab0` | TerrainCellSurfaceTriangleVerticesSelect |
 | `0x0044fb90` | TerrainSurfacePointProjectOffset |
 | `0x00450060` | GridCellReadSurfaceVector |

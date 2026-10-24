@@ -58,4 +58,19 @@ int interpolated_z_within_bounds(const void* record_a, const void* record_b,
  * read, as in the stats accessors. NULL answers 0. */
 float camera_rotation_get(const void* camera);
 
+/* MapCellToWorldCenter (FUN_0044f640, finding 225): bounds-check a cell
+ * against the map descriptor and answer the cell's world X/Z center.
+ * The descriptor's five fields are int dwords the corpus converts to
+ * float on the fly: width +0, height +4, scale +16, origin X +24,
+ * origin Y +28. The bounds test is the corpus's UNSIGNED compare
+ * (negative indices fail as huge ones); NULL answers 0. */
+int map_cell_to_world_center(const void* map, uint32_t cell_x,
+                             uint32_t cell_y, float* world_x, float* world_y);
+
+/* TaskFlagBitQuery (FUN_00408970, findings 366/465): test bit `bit & 31`
+ * of the task record's flag word at +0x98. A nonzero suppress answers
+ * 0 when the bit is SET (the corpus's "skip if flagged and asked not
+ * to" form), otherwise the mask value. */
+uint32_t task_flag_bit_query(const void* task, uint32_t bit, int suppress);
+
 #endif /* LEGORRR_GODS98_RECORD_HPP */
