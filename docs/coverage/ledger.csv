@@ -569,13 +569,13 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0041c6e0,FUN_0041c6e0,named,PointerActionStateDispatch,0,984
 0041c7b0,FUN_0041c7b0,named,InputActionStateUpdate,0,392
 0041c800,FUN_0041c800,named,CatalogSlotFlagUpdate,0,1334
-0041c8f0,FUN_0041c8f0,ported,InputActionPressedGet,5,353
-0041c950,FUN_0041c950,ported,InputBindingPressedGet,3,596
+0041c8f0,FUN_0041c8f0,named,InputActionPressedGet,0,353
+0041c950,FUN_0041c950,named,InputBindingPressedGet,0,596
 0041c9f0,FUN_0041c9f0,ported,InputEntryFlag8SetClear,1,227
 0041ca20,FUN_0041ca20,ported,PlayerInputFlag8SetClear,1,389
-0041ca60,FUN_0041ca60,ported,InputEntryFlag8Get,2,77
+0041ca60,FUN_0041ca60,ported,InputEntryFlag8Get,1,77
 0041ca70,FUN_0041ca70,ported,PlayerInputFlag8Get,1,222
-0041cab0,FUN_0041cab0,ported,IndexedEntityValueGet,3,345
+0041cab0,FUN_0041cab0,named,IndexedEntityValueGet,0,345
 0041caf0,FUN_0041caf0,named,InputBindingValueGet,0,804
 0041cb90,FUN_0041cb90,named,InputBindingDefaultValueGet,0,704
 0041cc80,FUN_0041cc80,ported,CursorTileSelectionUpdateByType,2,341
