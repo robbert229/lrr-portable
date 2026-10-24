@@ -23,6 +23,8 @@ This finding maps the 24 procedures assigned by Issue #168 across several relate
 
 The direct HelpWindow path is `HelpWindowResourcesInit` → info-string and button-layout loaders → `HelpWindowButtonHitTest` during interaction. `HelpWindowButtonHitTest` and `HelpWindowButtonFeedbackUpdate` implement different parts of the interaction: hit selection and state transitions versus visual/scroll feedback. The raw state bits have only local, body-supported meanings here.
 
+`DAT_004dc650` is the shared HelpWindow state word. The observed bits are: `0x01` marks the overlay transition/render state and is cleared by transition cleanup; `0x02` and `0x04` are enabled during resource initialization; `0x01` and `0x02` gate state admission, text refresh, and button hit testing, while `0x04` selects the alternate button mode; `0x08` marks a deferred header-text redraw; `0x10` marks a button hit/hover slot; `0x20` marks a mode-transition event; and `0x40` gates HelpWindow processing and its resource mode. These are local meanings established by the listed readers and writers; the full lifecycle and any unobserved bits remain unresolved.
+
 ## Interface images and runtime advisor overlay
 
 | Address | Function | Observed behavior |
