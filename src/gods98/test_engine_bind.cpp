@@ -68,6 +68,17 @@ int main(void)
     CHECK(v.cam_facing.pos[2] == 7.0f,
           "view: camera height follows the voxel surface byte");
 
+    /* The engine-state flag one-liner (2026-10-24). */
+    {
+        EngineContext ec = {};
+        CHECK(runtime_flag40000000_get(&ec) == 0u
+                  && runtime_flag40000000_get(NULL) == 0u,
+              "engine_bind: the clear word and the null guard answer zero");
+        ec.state = 0x40000001u;
+        CHECK(runtime_flag40000000_get(&ec) == 0x40000000u,
+              "engine_bind: bit 30 reads back masked");
+    }
+
     if (s_failures == 0) {
         printf("engine_bind_test: PASS\n");
         return 0;

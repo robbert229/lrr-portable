@@ -144,3 +144,9 @@ void EngineShutdown(EngineContext* ctx)
     }
     /* corpus LAB_00424cf0 — stub forwarding to FUN_004250a0. TODO(engine). */
 }
+/* RuntimeFlag40000000Get (FUN_0041f970): the faithful masked read of the
+ * port's engine-state word. */
+uint32_t runtime_flag40000000_get(const EngineContext* ctx)
+{
+    return ctx != NULL ? (ctx->state & 0x40000000u) : 0u;
+}

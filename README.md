@@ -2090,6 +2090,20 @@ intermediate keepers orphan. The one-liners `entity_task_state_update_after_clea
 `cmd_test` pins the raw-move purity, the gate, the sweep's orphaning
 relink, and the containment walk.
 
+**The global-object field band** (2026-10-24; findings 295/324/392):
+eight leaves land. The corpus's `DAT_005560d4` word-field arithmetic —
+increment, subtract, add-with-argument, clear — comes over as seven
+guarded mutators on the port's `LevelState` (`global_object_field8c_increment`
+0x41f870, `global_object_field8c_subtract` 0x41f880,
+`global_object_field98_add`/`clear` 0x41f8a0/0x41f8c0,
+`level_state_field9c_add` 0x41f920, `global_object_field94_increment`
+0x41f980, `global_object_fielda8_increment` 0x41f990 in `level.*`), the
+`DAT_005560d4 != 0` guard becoming the NULL-level guard; and
+`runtime_flag40000000_get` (0x41f970, `engine.*`) reads the
+`DAT_00556ecc` state word's bit 30 through the threaded `EngineContext`.
+`level_test` and `enginebind_test` pin the walks, the masked read, and
+the guards.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

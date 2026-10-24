@@ -209,4 +209,9 @@ float EngineTimeScale(EngineContext* ctx);
  * teardown used in loader mode (finding 20). */
 void EngineShutdown(EngineContext* ctx);
 
+/* RuntimeFlag40000000Get (FUN_0041f970, finding 03): the DAT_00556ecc
+ * engine-state word's bit 30 — the corpus's no-argument global read,
+ * threaded through the port's EngineContext (NULL answers zero). */
+uint32_t runtime_flag40000000_get(const EngineContext* ctx);
+
 #endif /* LEGORRR_ENGINE_HPP */

@@ -759,6 +759,31 @@ int grid_record_count_difference_get(int row, int column, int slot,
 uint32_t grid_record_count_get(int row, int column, int slot);
 int32_t grid_count_table_slot_peek(int row, int column, int slot, int table);
 
+/* --- the global-object field band (2026-10-24; findings 295/324/392) --------
+ * The corpus's DAT_005560d4 word fields, threaded through the port's
+ * LevelState (the corpus reads the DAT global itself; a NULL level answers
+ * as the corpus's NULL global does — no effect). The field meanings stay
+ * unresolved; these are the faithful arithmetic the corpus runs.
+ * GlobalObjectField8CIncrement @ FUN_0041f870
+ * GlobalObjectField8CSubtract @ FUN_0041f880
+ * GlobalObjectField98Add @ FUN_0041f8a0
+ * GlobalObjectField98Clear @ FUN_0041f8c0
+ * LevelStateField9CAdd @ FUN_0041f920
+ * GlobalObjectField94Increment @ FUN_0041f980
+ * GlobalObjectFieldA8Increment @ FUN_0041f990 */
+void global_object_field8c_increment(LevelState* s);
+void global_object_field8c_subtract(LevelState* s, int amount);
+void global_object_field98_add(LevelState* s, int amount);
+void global_object_field98_clear(LevelState* s);
+void level_state_field9c_add(LevelState* s, int amount);
+void global_object_field94_increment(LevelState* s);
+void global_object_fielda8_increment(LevelState* s);
+uint32_t level_field8c_get(const LevelState* s);
+uint32_t level_field98_get(const LevelState* s);
+uint32_t level_field9c_get(const LevelState* s);
+uint32_t level_field94_get(const LevelState* s);
+uint32_t level_fielda8_get(const LevelState* s);
+
 #ifdef __cplusplus
 }
 #endif
