@@ -1,6 +1,6 @@
 # Finding 435 — Scene Objects, Animation, and Render Records
 
-This investigation ties together the assigned scene-object, animation, renderer-record, and presentation helpers. The functions form several cooperating layers: object records hold renderer handles and state; animation wrappers forward time, visibility, and transform operations; list callbacks synchronize scene nodes; and higher-level routines allocate or submit transient, UI, selection, and viewport rendering work. Field meanings remain operation-level where pseudocode does not establish them.
+This investigation ties together the assigned scene-object, animation, renderer-record, and presentation helpers. Function behavior below follows checked-in pseudocode; linked findings provide caller/evidence context where available. I mark interpretations as inferences and leave field meanings unresolved where pseudocode does not establish them. The functions form several cooperating layers: object records hold renderer handles and state; animation wrappers forward time, visibility, and transform operations; list callbacks synchronize scene nodes; and higher-level routines allocate or submit transient, UI, selection, and viewport rendering work.
 
 ## Object records and renderer handles
 
