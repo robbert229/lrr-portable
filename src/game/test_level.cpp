@@ -751,6 +751,28 @@ int main(int argc, char** argv)
               "a negative index answers zero");
         CHECK(terrain_cell_surface_type_get(NULL, 0, 0) == 0,
               "NULL terrain answers zero");
+        /* The terrain dirty queue (2026-10-24): push, swap-remove,
+         * raise/clear corners. */
+        terrain_cell_dirty_queue_push_and_clear(NULL, 3, 4, 1);
+        terrain_cell_dirty_queue_push_and_clear(terrain, 9999, 0, 1);
+        CHECK(terrain_cell_dirty_flag(terrain, 9999, 0) == 0,
+              "the off-grid push skips (bounds deviation)");
+        terrain_cell_dirty_queue_push_and_clear(terrain, 3, 4, 1);
+        CHECK(terrain_cell_dirty_flag(terrain, 3, 4) != 0,
+              "the push raises the dirty flag");
+        CHECK(terrain_cell_dirty_flag(terrain, 5, 5) == 0,
+              "the neighbour stays clean");
+        terrain_cell_dirty_queue_push_and_clear(terrain, 5, 5, 1);
+        terrain_cell_dirty_queue_push_and_clear(terrain, 3, 4, 1);
+        terrain_cell_dirty_queue_push_and_clear(terrain, 3, 4, 0);
+        CHECK(terrain_cell_dirty_flag(terrain, 3, 4) == 0,
+              "the clear drops the found entry's flag");
+        CHECK(terrain_cell_dirty_flag(terrain, 5, 5) != 0,
+              "the other queue entry keeps its flag");
+        terrain_cell_dirty_queue_push_and_clear(terrain, 5, 5, 0);
+        CHECK(terrain_cell_dirty_flag(terrain, 5, 5) == 0,
+              "the tail-swap entry clears next");
+
         terrain_destroy(terrain);
         rec[2] = saved_b2;
     }
@@ -931,6 +953,27 @@ int main(int argc, char** argv)
     /* AlwaysAcceptPlaceCommandCell (FUN_00432550, finding 455). */
     CHECK(always_accept_place_command_cell() == 1,
           "the kind-0x16 callback accepts unconditionally");
+
+    /* The cell timestamp dedup pair (2026-10-24). */
+    {
+        int k;
+        CHECK(cell_coordinate_timestamp_exists(1234, 5678) == 0u,
+              "the table starts empty");
+        cell_coordinate_timestamp_remember(1234, 5678);
+        CHECK(cell_coordinate_timestamp_exists(1234, 5678) == 1u,
+              "remember registers the pair");
+        CHECK(cell_coordinate_timestamp_exists(1234, 5679) == 0u,
+              "the near miss answers no");
+        for (k = 0; k < 999; ++k) {
+            cell_coordinate_timestamp_remember(k * 7 + 1, k * 11 + 1);
+        }
+        cell_coordinate_timestamp_remember(987654, 321);
+        CHECK(cell_coordinate_timestamp_exists(987654, 321) == 0u,
+              "the full table stores nothing (faithful)");
+        CHECK(cell_coordinate_timestamp_exists(998 * 7 + 1, 998 * 11 + 1)
+                  == 1u,
+              "the filled table answers for its entries");
+    }
 
     if (s_failures != 0) {
         fprintf(stderr, "level_test: %d failure(s)\n", s_failures);

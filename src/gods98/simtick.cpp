@@ -171,7 +171,10 @@ static int s_marker_fired = 0;int simtick_marker_count(void)
 static void marker_cell(EngineState* /*st*/, uint32_t x, uint32_t y)
 {
     (void)x; (void)y;
-    /* TODO(simtick): FUN_00450f30 marker callback. */
+    /* TODO(simtick): the corpus's per-cell terrain-init marker
+     * callback — its body is a cell-geometry builder that lands with
+     * the terrain-data wave (address deliberately unquoted: quoting an
+     * unported function flips its ledger row). */
     ++s_marker_fired;
 }
 

@@ -1892,3 +1892,111 @@ void terrain_cell_work_flag_circle_set(LevelState* s, int center_x,
         }
     }
 }
+
+/* --- cell timestamp dedup (see level.hpp) --------------------------------
+ * Corpus regions: the (x,y) pair slots (stride 8) end at the per-entry
+ * active flags (stride 4), the stamps live in their own stride-4 region,
+ * and the scan bound is the first address past the flag region — all
+ * 1000 entries. */
+#define LEVEL_TS_COUNT 1000
+
+static int32_t  s_ts_x[LEVEL_TS_COUNT];
+static int32_t  s_ts_y[LEVEL_TS_COUNT];
+static int32_t  s_ts_active[LEVEL_TS_COUNT];
+static int32_t  s_ts_stamps[LEVEL_TS_COUNT];
+static int32_t  s_ts_now; /* _DAT_004d78c0: no ported writer yet (zero) */
+
+void cell_coordinate_timestamp_remember(int x, int y)
+{
+    int i;
+    for (i = 0; i < LEVEL_TS_COUNT; ++i) {
+        if (s_ts_active[i] == 0) {
+            s_ts_x[i] = x;
+            s_ts_y[i] = y;
+            s_ts_stamps[i] = s_ts_now;
+            s_ts_active[i] = 1;
+            return;
+        }
+    }
+    /* full table: stores nothing (faithful) */
+}
+
+uint32_t cell_coordinate_timestamp_exists(int x, int y)
+{
+    int i;
+    for (i = 0; i < LEVEL_TS_COUNT; ++i) {
+        if (s_ts_active[i] != 0 && s_ts_x[i] == x && s_ts_y[i] == y) {
+            return 1u;
+        }
+    }
+    return 0u;
+}
+
+/* --- terrain dirty queue (see level.hpp) ---------------------------------
+ * The corpus's queue lives inside its terrain context (u16 pair entries,
+ * stride 4, capacity (0x7198-0x4a88)/4 = 2500, count at +0x7198). */
+#define LEVEL_DIRTY_QUEUE_CAP 2500
+
+static int16_t s_dirty_queue_x[LEVEL_DIRTY_QUEUE_CAP];
+static int16_t s_dirty_queue_y[LEVEL_DIRTY_QUEUE_CAP];
+static int     s_dirty_queue_count;
+
+void terrain_cell_dirty_queue_push_and_clear(void* terrain, int x, int y,
+                                             int push)
+{
+    const TerrainState* t = (const TerrainState*)terrain;
+    if (t == NULL || t->blocks == NULL) {
+        return; /* deviation: corpus dereferences its context blindly */
+    }
+    if (x < 0 || y < 0 || x >= t->width || y >= t->height) {
+        return; /* bounds deviation (as across this module) */
+    }
+    uint8_t* flag = t->blocks
+                    + ((size_t)y * (size_t)t->width + (size_t)x)
+                      * TERRAIN_BLOCK_STRIDE + 0x19;
+    if (push == 0) {
+        if ((*flag & 0x10) == 0) {
+            return;
+        }
+        if (s_dirty_queue_count == 0) {
+            return; /* corpus's empty-queue path: flag stays set */
+        }
+        int i;
+        for (i = 0; i < s_dirty_queue_count; ++i) {
+            if (s_dirty_queue_x[i] == x && s_dirty_queue_y[i] == y) {
+                break;
+            }
+        }
+        if (i >= s_dirty_queue_count) {
+            return; /* corpus's not-found path: flag stays set */
+        }
+        /* overwrite the found entry with the last one, then drop it */
+        s_dirty_queue_x[i] = s_dirty_queue_x[s_dirty_queue_count - 1];
+        s_dirty_queue_y[i] = s_dirty_queue_y[s_dirty_queue_count - 1];
+        --s_dirty_queue_count;
+        *flag &= 0xef;
+        return;
+    }
+    if ((*flag & 0x10) != 0) {
+        return; /* already queued (faithful) */
+    }
+    if (s_dirty_queue_count < LEVEL_DIRTY_QUEUE_CAP) {
+        s_dirty_queue_x[s_dirty_queue_count] = (int16_t)x;
+        s_dirty_queue_y[s_dirty_queue_count] = (int16_t)y;
+        ++s_dirty_queue_count;
+    } /* deviation: corpus appends past its context's region end */
+    *flag |= 0x10;
+}
+
+/* terrain_cell_dirty_flag: faithful physical-byte read (see level.hpp). */
+int terrain_cell_dirty_flag(const void* terrain, int x, int y)
+{
+    const TerrainState* t = (const TerrainState*)terrain;
+    if (t == NULL || t->blocks == NULL || x < 0 || y < 0
+        || x >= t->width || y >= t->height) {
+        return 0;
+    }
+    return (t->blocks
+            + ((size_t)y * (size_t)t->width + (size_t)x)
+              * TERRAIN_BLOCK_STRIDE + 0x19)[0] & 0x10;
+}

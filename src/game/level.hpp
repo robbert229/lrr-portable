@@ -607,6 +607,41 @@ void terrain_cell_edge_flag_set_and_update(LevelState* s, int cx, int cy,
 void terrain_cell_work_flag_circle_set(LevelState* s, int center_x,
                                        int center_y, int radius);
 
+/* terrain_cell_dirty_flag: the corpus's byte +0x19 bit 0x10 read shape
+ * on the physical block (the same byte terrain_cell_dirty_queue_
+ * push_and_clear raises). Exposed as the read side of the dirty-queue
+ * contract; the corpus's scanning consumers stay unported. */
+int terrain_cell_dirty_flag(const void* terrain, int x, int y);
+
+/* --- cell timestamp dedup and the terrain dirty queue (2026-10-24) ------
+ * Both are corpus DAT/context stores without ported owners, modeled as
+ * module statics with documented values/bounds (the s_system_state and
+ * tracking-queue precedents). */
+
+/* CellCoordinateTimestampRemember (FUN_0040ee00): store the coordinate
+ * pair and the CURRENT TIMESTAMP GLOBAL into the first free record of
+ * the 1000-entry dedup table; a full table stores nothing. The corpus's
+ * timestamp word (_DAT_004d78c0) is the tick counter its message loop
+ * advances; the port models no writer yet, so the stored stamps stay
+ * zero (deviation). */
+void cell_coordinate_timestamp_remember(int x, int y);
+
+/* CellCoordinateTimestampExists (FUN_0040efb0): answer 1 when an active
+ * record holds the exact pair, 0 when the scan runs off the table. */
+uint32_t cell_coordinate_timestamp_exists(int x, int y);
+
+/* CellDirtyQueuePushAndClear (FUN_00450960): the terrain-owned dirty
+ * cell queue over the physical block table. push != 0: when the cell's
+ * byte +0x19 lacks the 0x10 flag, append (x,y) and raise the flag.
+ * push == 0: when the flag is set, scan the queue for (x,y), replace
+ * the found entry with the last one, drop the last, and clear the flag
+ * (the corpus's not-found and empty-queue paths answer early, leaving
+ * the flag set — faithful). The queue lands as a module static (the
+ * corpus's context offsets have no ported owner); the port bounds-checks
+ * the block access. */
+void terrain_cell_dirty_queue_push_and_clear(void* terrain, int x, int y,
+                                             int push);
+
 #ifdef __cplusplus
 }
 #endif

@@ -1619,6 +1619,28 @@ store at +0x2c) land in `record.*` beside their reader twins.
 inert without build records; `record_test` pins the slot masking and
 the handle placement.
 
+**Timestamp dedup and the terrain dirty queue** (2026-10-24; findings
+246/374/451): two DAT/context stores with unported owners land as
+module statics in `level.*`. `cell_coordinate_timestamp_remember`
+(0x40ee00) drops the coordinate pair and the current timestamp global
+into the first free record of the corpus's 1000-entry dedup table —
+the timestamp word has no ported writer yet, so stamps store zero —
+and `cell_coordinate_timestamp_exists` (0x40efb0) answers exact-pair
+matches; a full table stores nothing (faithful).
+`terrain_cell_dirty_queue_push_and_clear` (0x450960) is the terrain's
+dirty-cell queue over the physical block table: pushing raises byte
++0x19's 0x10 flag and appends the pair, clearing scans the queue and
+swap-removes the found entry (the corpus's not-found and empty-queue
+paths answer early with the flag left set — faithful). The queue
+landed as a module static (the corpus's context offsets have no
+ported owner) and `terrain_cell_dirty_flag` exposes the byte read the
+contract needs. In the same audit pass the simtick marker callback
+stopped quoting `FUN_00450f30`'s address — that geometry-builder leaf
+was claimed ported by a TODO quote alone, so the quote is gone and the
+row is honest (it lands with the terrain-data wave). `level_test`
+drives the queue's push/swap-remove/flag corners and the dedup table's
+fill and overflow.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

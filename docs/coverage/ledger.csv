@@ -318,9 +318,9 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0040e9c0,FUN_0040e9c0,named,LavaErosionDelayFromCell,0,401
 0040ea10,FUN_0040ea10,ported,LavaErosionStageRegister,1,676
 0040eab0,FUN_0040eab0,ported,LavaErosionPendingCellTick,4,3839
-0040ee00,FUN_0040ee00,named,CellCoordinateTimestampRemember,0,519
+0040ee00,FUN_0040ee00,ported,CellCoordinateTimestampRemember,1,519
 0040ee50,FUN_0040ee50,named,LavaErosionPendingCellAdd,0,1750
-0040efb0,FUN_0040efb0,named,CellCoordinateTimestampExists,0,337
+0040efb0,FUN_0040efb0,ported,CellCoordinateTimestampExists,1,337
 0040f000,FUN_0040f000,named,LavaErosionNeighborCheck,0,1093
 0040f0e0,FUN_0040f0e0,named,KindSixRandomMessageDispatchSweep,0,1023
 0040f190,FUN_0040f190,ported,,4,1320
@@ -1181,10 +1181,10 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004507d0,FUN_004507d0,named,TerrainCellEdgeVectorQuery,0,1046
 00450890,FUN_00450890,ported,,1,87
 004508a0,FUN_004508a0,ported,CellNeighborDirectionCode,3,922
-00450960,FUN_00450960,named,CellDirtyQueuePushAndClear,0,1760
+00450960,FUN_00450960,ported,CellDirtyQueuePushAndClear,1,1760
 00450a80,FUN_00450a80,named,CellListMinDistanceScaleApply,0,986
 00450b60,FUN_00450b60,ported,,1,3668
-00450f30,FUN_00450f30,ported,,1,2249
+00450f30,FUN_00450f30,anonymous,,0,2249
 00451180,FUN_00451180,named,CellVariantEntryMatchCheck,0,953
 00451230,FUN_00451230,named,TerrainCellSurfaceVectorWrite,0,644
 004512d0,FUN_004512d0,named,TerrainCellNormalSample,0,1512
