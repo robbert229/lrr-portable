@@ -435,6 +435,21 @@ int cmd_rec_target_get(const void* rec);
 void task_type23_create_for_category_mask(EntitySlot* e, int selector,
                                           int issue_records);
 
+/* --- the task-kind filtered search (2026-10-24; findings 378/381/449) --------
+ * EntityActionKindSupported (FUN_0043a7c0): with the stats word's bit 3 set,
+ * the action kinds 9, 8, 0xb and 0xd answer unconditionally, kind 6 asks the
+ * callable no-op (its return is corpus-undefined, so the port treats the arm
+ * as always missing), and kind 7 asks the upgrade-resource counters (kind-7
+ * argument; no active level answers zero). Kinds outside the set miss.
+ * TaskEntityFlagsAndCellTaskMatch (FUN_00439240): the pool-search callback —
+ * the same stats gate with the task kind and argument forwarded.
+ * TaskKindFilteredSearch (FUN_00439200): selectors 1, 2 and 4 never search;
+ * anything else walks the entity pool (table order, ascending index, live
+ * slots) through the callback. */
+int entity_action_kind_supported(EntitySlot* e, int kind, int arg);
+int task_entity_flags_and_cell_task_match(const EntitySlot* e, int kind);
+int task_kind_filtered_search(int selector);
+
 #ifdef __cplusplus
 }
 #endif

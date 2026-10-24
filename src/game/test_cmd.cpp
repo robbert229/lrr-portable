@@ -1192,6 +1192,113 @@ int main(void)
         cmd_context_set(&ctx);
     }
 
+    /* The task-kind filtered search (2026-10-24). */
+    {
+        GameContext pctx;
+        game_context_init(&pctx);
+        cmd_context_set(&pctx);
+        cmd_init();
+
+        /* Kind support: the stats gate, the unconditional arms, the misses. */
+        EntitySlot hands;
+        memset(&hands, 0, sizeof(hands));
+        static uint8_t himg[0x200];
+        memset(himg, 0, sizeof(himg));
+        uint32_t w3 = 0u; /* bit 3 clear: everything misses */
+        memcpy(himg + 0x144, &w3, 4);
+        hands.stats_record = himg;
+        CHECK(entity_action_kind_supported(&hands, 9, 0) == 0
+                  && entity_action_kind_supported(&hands, 8, 0) == 0
+                  && entity_action_kind_supported(&hands, 7, 1) == 0,
+              "the clear stats word misses every arm");
+        CHECK(entity_action_kind_supported(NULL, 9, 0) == 0,
+              "the guarded entity answers nothing");
+        w3 = 8u;
+        memcpy(himg + 0x144, &w3, 4);
+        CHECK(entity_action_kind_supported(&hands, 9, 0) != 0
+                  && entity_action_kind_supported(&hands, 8, 0) != 0
+                  && entity_action_kind_supported(&hands, 0xb, 0) != 0
+                  && entity_action_kind_supported(&hands, 0xd, 0) != 0,
+              "the gated arms answer unconditionally");
+        CHECK(entity_action_kind_supported(&hands, 3, 0) == 0
+                  && entity_action_kind_supported(&hands, 6, 0) == 0,
+              "kind 3 and the no-op arm miss");
+        /* Kind 7: the upgrade counters — no level, selector pick, misses. */
+        CHECK(entity_action_kind_supported(&hands, 7, 0) == 0,
+              "no level answers zero for kind 7");
+        static LevelState uplvl;
+        memset(&uplvl, 0, sizeof(uplvl));
+        pctx.level = &uplvl;
+        uplvl.word[0xA0 / 4] = 7;
+        CHECK(entity_action_kind_supported(&hands, 7, 0) != 0
+                  && entity_action_kind_supported(&hands, 7, 1) == 0,
+              "selector zero reads counter A");
+        uplvl.word[0xAC / 4] = 9;
+        CHECK(entity_action_kind_supported(&hands, 7, 1) != 0
+                  && entity_action_kind_supported(&hands, 7, 5) != 0,
+              "the other selectors read counter B");
+        uplvl.word[0xA0 / 4] = 0;
+        uplvl.word[0xAC / 4] = 0;
+        CHECK(entity_action_kind_supported(&hands, 7, 3) == 0,
+              "the zeroed counters miss");
+        pctx.level = NULL;
+
+        /* The callback half follows the same gate and forwards the kind. */
+        CHECK(task_entity_flags_and_cell_task_match(&hands, 9) != 0,
+              "the callback takes the gated kind");
+        const uint32_t cleared = 0u;
+        memcpy(himg + 0x144, &cleared, 4);
+        CHECK(task_entity_flags_and_cell_task_match(&hands, 9) == 0,
+              "the callback's gate blocks");
+        w3 = 8u;
+        memcpy(himg + 0x144, &w3, 4);
+
+        /* The search: 1/2/4 never search. */
+        CHECK(task_kind_filtered_search(1) == 0
+                  && task_kind_filtered_search(2) == 0
+                  && task_kind_filtered_search(4) == 0,
+              "the excluded selectors never search");
+
+        /* The empty pool misses. */
+        CHECK(task_kind_filtered_search(9) == 0, "the empty pool misses");
+
+        /* One live entity with the gated word answers selector 9. */
+        pctx.entity_count[0] = 1;
+        pctx.entity[0][0] = hands;
+        pctx.entity[0][0].type = 2;
+        CHECK(task_kind_filtered_search(9) != 0, "the live slot answers 9");
+        CHECK(task_kind_filtered_search(3) == 0, "kind 3 misses");
+        CHECK(task_kind_filtered_search(6) == 0, "the no-op arm misses");
+        const uint32_t off = 0u;
+        memcpy(himg + 0x144, &off, 4);
+        CHECK(task_kind_filtered_search(9) == 0, "the ungated slot misses");
+
+        /* Dead slots skip; the second table reaches too. */
+        w3 = 8u;
+        memcpy(himg + 0x144, &w3, 4);
+        pctx.entity[0][0].type = 0; /* dead, count still covers it */
+        pctx.entity_count[1] = 2;
+        pctx.entity[1][1] = hands;
+        pctx.entity[1][1].type = 2;
+        CHECK(task_kind_filtered_search(8) != 0, "the second table answers");
+
+        /* Kind 7 through the search: the level counters forward. */
+        pctx.entity[1][1] = hands;
+        pctx.entity[1][1].type = 2; /* the copy dropped the live marker */
+        memcpy(himg + 0x144, &w3, 4);
+        pctx.level = &uplvl; /* counters still zero */
+        CHECK(task_kind_filtered_search(7) == 0, "kind 7 misses on counters");
+        uplvl.word[0xA0 / 4] = 1;
+        CHECK(task_kind_filtered_search(7) != 0,
+              "kind 7 answers through the counter");
+        uplvl.word[0xA0 / 4] = 0;
+        pctx.level = NULL;
+        pctx.entity_count[0] = 0;
+        pctx.entity_count[1] = 0;
+        cmd_init();
+        cmd_context_set(&ctx);
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "cmd_test: %d failure(s)\n", s_failures);
         return 1;

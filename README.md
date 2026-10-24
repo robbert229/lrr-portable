@@ -2042,6 +2042,21 @@ links at the category kind the selector maps to — 1/2/4 to 0xc, 8 to 3,
 the gate arms, the full selector-to-kind map, the out-of-map refusals,
 and the record-array bit 8.
 
+**The task-kind filtered search** (2026-10-24; findings 378/381/449):
+three leaves land in `cmd.*`. `entity_action_kind_supported` (0x43a7c0)
+gates on the stats word's bit 3, then answers the action kinds 9, 8,
+0xb and 0xd unconditionally, kind 7 through the upgrade-resource
+counters (selector zero reads counter A, anything else counter B), kind
+6 through the callable no-op — whose return is corpus-undefined, so the
+port treats that arm as always missing — and misses everywhere else.
+`task_entity_flags_and_cell_task_match` (0x439240) is the same gate as
+the pool-search callback, forwarding the kind. `task_kind_filtered_search`
+(0x439200) skips selectors 1, 2 and 4, then walks the entity pool — table
+order, ascending index, live slots — through the callback. `cmd_test`
+pins the gates, the four unconditional arms, both counter selectors,
+the no-op miss, the excluded selectors, and the pool walk's dead-slot
+skip.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the
