@@ -1675,6 +1675,19 @@ so names answer the missing-config literal and values read zero.
 `level_test` pins the selector shapes, the zero-vector normalization, and
 the guarded fallbacks.
 
+**Neighbor-coordinate classification** (2026-10-24; findings 445/451
+wave): `terrain_neighbor_coordinate_check` (0x42f350) — the corpus's
+cardinal-neighbor probe — lands in `level.*`. It walks north, east,
+south, west in corpus order, marking bit *i* when the neighbor's flag
+word carries the occupied class `0x20000000` or the work flag `0x400`,
+then reads a kind nibble and a return code from two sixteen-entry
+tables (mode 0 answers `0x6x`/`99`/`100` codes, mode non-zero the
+`0x7x` pair). The corpus's second probe dereferences out-of-bounds
+cells, so off-map neighbors answer zero (the module's bounds
+deviation). `level_test` pins the probe order, the flag-or-occupied
+equivalence, the mask-15 and mode codes, and the corner's two-probe
+mask.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the
