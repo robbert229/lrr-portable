@@ -92,4 +92,12 @@ void model_free(Model* m);
  * against the python ground truth over the shipped corpus. */
 uint32_t model_digest(const Model* m);
 
+/* LwoReadBigEndianFloat (corpus FUN_0048c1d0): consume four bytes at the
+ * cursor in stream (big-endian) order, hand back the bytes byte-reversed,
+ * advance the cursor, answer 1. Interpreting the output as little-endian
+ * recovers the big-endian float the corpus's PNTS/SURF readers wanted. The
+ * port's model path parses through the rrlwo converter (finding 11), so the
+ * reader ships as a standalone primitive. */
+int lwo_read_big_endian_float(const uint8_t** cursor, uint8_t out[4]);
+
 #endif /* LEGORRR_MODEL_HPP */

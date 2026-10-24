@@ -33,6 +33,21 @@ static float bef32(const uint8_t* p)
     return f;
 }
 
+/* LwoReadBigEndianFloat (corpus FUN_0048c1d0): consume four stream bytes
+ * at the cursor, byte-reverse them into `out`, advance the cursor, answer
+ * 1. The corpus's LwoPoints/LwoSurfaceSettings readers call it for every
+ * big-endian float field; byte-reversal is exactly be32 + host store. */
+int lwo_read_big_endian_float(const uint8_t** cursor, uint8_t out[4])
+{
+    const uint8_t* p = *cursor;
+    out[0] = p[3];
+    out[1] = p[2];
+    out[2] = p[1];
+    out[3] = p[0];
+    *cursor = p + 4;
+    return 1;
+}
+
 /* --- growable byte buffer --------------------------------------------------- */
 
 typedef struct Buf {

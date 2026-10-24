@@ -101,6 +101,27 @@ int sphere_ray_intersection_discriminant_positive(const float* center,
                                                   const float* origin,
                                                   const float* dir);
 
+/* --- 4x4 matrix primitives + polygon parity test (corpus FUN_00479ea0 /
+ * FUN_00479ce0 / FUN_00479b80; findings 309/388) ---------------------------
+ * Row-major float storage; corpus x87 math is byte-equivalent float here. */
+
+/* Zero the matrix (FUN_00479ea0: 16 stores). */
+void matrix4_set_zero(float* out);
+
+/* Multiply: corpus takes (out, right, left) and accumulates each output
+ * cell as a four-term dot product, i.e. out = left × right, row-major
+ * (FUN_00479ce0). */
+void matrix4_multiply(float* out, const float* right, const float* left);
+
+/* Even-odd horizontal-ray crossing parity (FUN_00479b80). Edge k runs
+ * verts[k] → next[k]; the corpus reads the edge end through a pointer pair
+ * that strides both arrays in lockstep, so any caller whose `next` is the
+ * vertex array shifted one vertex (the typical ring form) behaves 1:1.
+ * No zero-span/boundary handling beyond the corpus's, including the
+ * potentially zero-span divide. */
+int point_in_polygon_2d(const float point[2], const float* verts,
+                        const float* next, int count);
+
 /* --- camera-handle primitives (record-backed) ----------------------------- */
 void cam_offset(CameraHandle* c, float x, float y, float z); /* FUN_004755e0 */
 void cam_get_pos(CameraHandle* c, float out[3]);            /* FUN_004754c0 */

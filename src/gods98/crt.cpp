@@ -76,3 +76,20 @@ int double_is_finite(double value)
     __builtin_memcpy(&bits, &value, sizeof bits);
     return ((bits >> 52u) & 0x7ffu) != 0x7ffu;
 }
+
+/* FUN_0045b900: the corpus casts the int pair and the divisor to float
+ * before both divides (the results land in a caller float pair). */
+void integer_pair_divide_to_float_pair(int x, int y, int divisor,
+                                       float* out_x, float* out_y)
+{
+    *out_x = (float)x / (float)divisor;
+    *out_y = (float)y / (float)divisor;
+}
+
+/* FUN_0045b930: the compiler's two-shot __ftol — each float truncates
+ * toward zero into its int output (same deviation as float_to_long). */
+void float_pair_to_integer_pair(float x, float y, int* out_x, int* out_y)
+{
+    *out_x = (int)x;
+    *out_y = (int)y;
+}

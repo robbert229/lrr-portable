@@ -115,12 +115,30 @@ static void test_bit_numeric(void)
     CHECK(double_is_finite((0.0 - 1.0) * 0.0 / 0.0) == 0, "NaN is not finite");
 }
 
+static void test_pair_conversions(void)
+{
+    float fx, fy;
+    integer_pair_divide_to_float_pair(6, 9, 3, &fx, &fy);
+    CHECK(fx == 2.0f && fy == 3.0f, "pair divides evenly");
+    integer_pair_divide_to_float_pair(-1, 1, 2, &fx, &fy);
+    CHECK(fx == -0.5f && fy == 0.5f, "negative numerator keeps the sign");
+    integer_pair_divide_to_float_pair(1, 1, -2, &fx, &fy);
+    CHECK(fx == -0.5f && fy == -0.5f, "negative divisor flips both");
+
+    int ix, iy;
+    float_pair_to_integer_pair(2.7f, -2.7f, &ix, &iy);
+    CHECK(ix == 2 && iy == -2, "pair truncates toward zero");
+    float_pair_to_integer_pair(-0.9f, 5.5f, &ix, &iy);
+    CHECK(ix == 0 && iy == 5, "corners truncate toward zero");
+}
+
 int main(void)
 {
     test_memory_move();
     test_float_to_long();
     test_noop_callback();
     test_bit_numeric();
+    test_pair_conversions();
     if (s_failures != 0) {
         fprintf(stderr, "crt_test: %d failure(s)\n", s_failures);
         return 1;

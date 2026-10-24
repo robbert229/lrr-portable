@@ -51,6 +51,47 @@ int main(void)
     CHECK(vec_exact_equal(a, b) == 0, "different vectors unequal");
     CHECK(vec_exact_equal(a, a) == 1, "identical vectors equal");
 
+    /* 4x4 matrices: zero-fill, and left×right order (row-major). */
+    {
+        float m[16];
+        matrix4_set_zero(m);
+        int z = 1;
+        for (int i = 0; i < 16; ++i) {
+            z &= m[i] == 0.0f;
+        }
+        CHECK(z, "matrix4_set_zero clears every cell");
+    }
+    {
+        const float A[16] = { 1, 2, 0, 0,  0, 3, 0, 0,  0, 0, 1, 0,
+                              0, 0, 0, 1 };
+        const float B[16] = { 0, 1, 0, 0,  1, 0, 0, 0,  0, 0, 1, 0,
+                              0, 0, 0, 1 };
+        float out[16];
+        matrix4_multiply(out, B, A); /* corpus (out, right, left) = A×B */
+        CHECK(out[0] == 2.0f && out[1] == 1.0f && out[2] == 0.0f &&
+                  out[3] == 0.0f, "A×B row 0");
+        CHECK(out[4] == 3.0f && out[5] == 0.0f, "A×B row 1");
+        CHECK(out[8] == 0.0f && out[9] == 0.0f && out[10] == 1.0f &&
+                  out[11] == 0.0f && out[15] == 1.0f, "A×B rows 2/3");
+        matrix4_multiply(out, A, B);
+        CHECK(out[0] == 0.0f && out[1] == 3.0f && out[2] == 0.0f,
+              "B×A differs: multiplication order is corpus's");
+    }
+
+    /* PointInPolygon2D: square ring as edge-start/edge-end pairs. */
+    {
+        const float start[8] = { 1, -1,  1, 1,  -1, 1,  -1, -1 };
+        const float end[8]   = { 1, 1,  -1, 1,  -1, -1,  1, -1 };
+        const float inside[2] = { 0, 0 };
+        const float outside[2] = { 2, 0 };
+        CHECK(point_in_polygon_2d(inside, start, end, 4) == 1,
+              "center point answers inside");
+        CHECK(point_in_polygon_2d(outside, start, end, 4) == 0,
+              "far point answers outside");
+        CHECK(point_in_polygon_2d(inside, start, end, 0) == 0,
+              "zero edges answer even parity");
+    }
+
     /* geometry helpers */
     CHECK(point_distance_within_radius(0, 0, 3, 4, 5.1f) == 1,
           "distance under radius");

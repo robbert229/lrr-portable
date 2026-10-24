@@ -396,6 +396,36 @@ static void test_uv(void)
     model_free(m);
 }
 
+/* LwoReadBigEndianFloat (corpus FUN_0048c1d0): the four stream bytes land
+ * byte-reversed so a little-endian read recovers the big-endian float, the
+ * cursor advances four, and the return is always 1. */
+static void test_be_float_cursor(void)
+{
+    /* 3.14159... as big-endian bytes. */
+    static const uint8_t stream[] = { 0x40, 0x49, 0x0F, 0xD0 };
+    const uint8_t* cursor = stream;
+    uint8_t out[4];
+
+    CHECK(lwo_read_big_endian_float(&cursor, out) == 1, "be reader answers 1");
+    CHECK(cursor == stream + 4, "the cursor advanced four");
+
+    float f;
+    memcpy(&f, out, sizeof f);
+    CHECK(f > 3.1415f && f < 3.1416f, "byte reversal recovers the float");
+
+    /* Successive reads keep advancing the cursor. */
+    static const uint8_t stream2[] = { 0x3F, 0x80, 0x00, 0x00, 0x41, 0x20,
+                                       0x00, 0x00 };
+    const uint8_t* c2 = stream2;
+    float a, b;
+    lwo_read_big_endian_float(&c2, out);
+    memcpy(&a, out, 4);
+    lwo_read_big_endian_float(&c2, out);
+    memcpy(&b, out, 4);
+    CHECK(a == 1.0f && b == 10.0f, "two reads give the two big-endian floats");
+    CHECK(c2 == stream2 + 8, "the cursor advanced twice");
+}
+
 static void test_digest_stability(void)
 {
     unsigned char* end;
@@ -619,6 +649,7 @@ int main(int argc, char** argv)
     test_pols();
     test_srfs_surf();
     test_uv();
+    test_be_float_cursor();
     test_digest_stability();
 
     if (argc >= 3 && strcmp(argv[1], "--real") == 0) {

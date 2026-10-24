@@ -173,6 +173,56 @@ int sphere_ray_intersection_discriminant_positive(const float* center,
     return 0;
 }
 
+/* ---- 4x4 matrices + polygon parity (finding 309/388) --------------------- */
+
+/* Matrix4SetZero (FUN_00479ea0): the corpus's 16 zero stores. */
+void matrix4_set_zero(float* out)
+{
+    for (int i = 0; i < 16; ++i) {
+        out[i] = 0.0f;
+    }
+}
+
+/* Matrix4Multiply (FUN_00479ce0): the corpus takes (out, right, left),
+ * zeroes the output, then accumulates each cell as the four-term dot
+ * product out[row][col] = Σ_k left[row][k] · right[k][col] — i.e.
+ * out = left × right, row-major. */
+void matrix4_multiply(float* out, const float* right, const float* left)
+{
+    matrix4_set_zero(out);
+    for (int row = 0; row < 4; ++row) {
+        for (int col = 0; col < 4; ++col) {
+            float* dst = out + 4 * row + col;
+            for (int k = 0; k < 4; ++k) {
+                *dst = left[4 * row + k] * right[4 * k + col] + *dst;
+            }
+        }
+    }
+}
+
+/* PointInPolygon2D (FUN_00479b80): even-odd crossing parity. Edge k runs
+ * verts[k] → next[k]; the corpus strides its two read pointers in lockstep,
+ * so the in-lockstep indexing below reads the same bytes for any caller
+ * passing the shifted-ring pair. The boundary semantics, zero-span divide
+ * and all, are the corpus's. */
+int point_in_polygon_2d(const float point[2], const float* verts,
+                        const float* next, int count)
+{
+    int crossings = 0;
+    for (int k = 0; k < count; ++k) {
+        const float x0 = verts[2 * k];
+        const float y0 = verts[2 * k + 1];
+        const float x1 = next[2 * k];
+        const float y1 = next[2 * k + 1];
+        if (((y0 <= point[1] && point[1] <= y1)
+             || (point[1] <= y0 && y1 <= point[1]))
+            && point[0] < (x1 - x0) * ((point[1] - y0) / (y1 - y0)) + x0) {
+            ++crossings;
+        }
+    }
+    return crossings & 1;
+}
+
 /* ---- camera-handle primitives (record-backed) --------------------------- */
 
 void cam_offset(CameraHandle* c, float x, float y, float z)

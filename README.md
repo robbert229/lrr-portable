@@ -1254,6 +1254,26 @@ test). Corpus x87 math is byte-equivalent single precision here.
 parallel answers, hit/miss spheres); `crt_test` the bit counts'
 agreement, the scan corners and Inf/NaN.
 
+**Matrices, polygon parity, and the LWO cursor** (2026-10-24; findings
+309/388/415): the remaining pure-math leaves land in their corpus
+module's homes — `matrix4_set_zero` (`Matrix4SetZero @ 0x479ea0`, 16
+zero stores) and `matrix4_multiply` (`Matrix4Multiply @ 0x479ce0`,
+which takes `(out, right, left)` and accumulates each cell as a
+four-term dot product, i.e. `out = left × right`, row-major) next to
+`point_in_polygon_2d` (`PointInPolygon2D @ 0x479b80`, the even-odd
+horizontal-ray crossing parity over parallel edge-start/edge-end
+arrays — the corpus reads the edge end through a lockstep pointer pair,
+and the boundary/zero-span quirks carry over) in `src/gods98/view.*`;
+`integer_pair_divide_to_float_pair` (`IntegerPairDivideToFloatPair @
+0x45b900`) and `float_pair_to_integer_pair` (`FloatPairToIntegerPair @
+0x45b930`, the two-shot `__ftol` pair truncation) in `src/gods98/crt.*`;
+and `lwo_read_big_endian_float` (`LwoReadBigEndianFloat @ 0x48c1d0`) in
+`src/gods98/model.*` — the stream-cursor reader that byte-reverses four
+bytes and advances (the port's own model path parses via the `rrlwo`
+converter, so the reader ships standalone). `view_test` pins the
+matrix order and polygon parity, `crt_test` the pair conversions,
+`model_test` the cursor walk.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the
