@@ -380,3 +380,32 @@ void indexed_selection_flag_20000_set_clear(int id, int set)
         c->flags = c->flags & ~0x20000u;
     }
 }
+
+/* --- the incident/message DAT-global band (see message.hpp) -----------------
+ * Zero-init storage per the unowned-global convention (finding 05's all-zero
+ * byte-read is the faithful initial state); the corpus's index math and the
+ * stride-0x14 record window are reproduced. */
+#define MSG_DAT_WINDOW 0x28 /* the corpus's 40-entry block per finding 05 */
+static uint32_t s_msg_catalog[MSG_DAT_WINDOW]; /* DAT_004dc6fc stride-0x14 block */
+static uint32_t s_msg_secondary[MSG_DAT_WINDOW]; /* DAT_004dc700 stride-0x14 block */
+static uint32_t s_incident_state;              /* DAT_004dcd58 */
+
+uint32_t incident_message_text_catalog_get(int id)
+{
+    if (id < 0 || id >= MSG_DAT_WINDOW) {
+        return 0u; /* deviation: the corpus strides blindly past the block */
+    }
+    return s_msg_catalog[id];
+}
+
+void info_message_secondary_sound_set(int id, uint32_t value)
+{
+    if (id >= 0 && id < MSG_DAT_WINDOW) {
+        s_msg_secondary[id] = value;
+    }
+}
+
+uint32_t incident_message_state_get(void)
+{
+    return s_incident_state;
+}

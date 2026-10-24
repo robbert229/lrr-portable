@@ -1102,6 +1102,17 @@ int main(int argc, char** argv)
         frontend_flow_word_set(4, 0);
     }
 
+    /* UiModeResourceBit40Get (2026-10-24): the masked read of the word. */
+    {
+        selection_state_flags_set(0u);
+        CHECK(ui_mode_resource_bit40_get() == 0u, "the 40 bit starts clear");
+        selection_state_flags_set(0x40u);
+        CHECK(ui_mode_resource_bit40_get() == 0x40u, "the 40 bit reads masked");
+        selection_state_flags_set(0x41u);
+        CHECK(ui_mode_resource_bit40_get() == 0x40u, "the mask keeps its shape");
+        selection_state_flags_set(0u);
+    }
+
     if (s_failures == 0) {
         printf("frontend: all tests passed\n");
         return 0;

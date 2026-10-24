@@ -500,10 +500,10 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00419100,FUN_00419100,ported,UiModeResourcePositionsApply,1,416
 00419150,FUN_00419150,ported,SelectionStateHandleGet,1,393
 004191a0,FUN_004191a0,named,MainSimStateAdmissionPredicate,0,307
-004191f0,FUN_004191f0,named,UiModeResourceBit40Get,0,61
+004191f0,FUN_004191f0,ported,UiModeResourceBit40Get,1,61
 00419200,FUN_00419200,named,UiModeResourceBit40SetClear,0,244
 00419230,FUN_00419230,named,IncidentMessageCatalogInit,0,2117
-004193e0,FUN_004193e0,ported,IncidentMessageConfigLookup,2,368
+004193e0,FUN_004193e0,named,IncidentMessageConfigLookup,0,368
 00419420,FUN_00419420,ported,IncidentMessageTextCatalogGet,1,102
 00419430,FUN_00419430,named,InterfaceMessageTabInfoTextLoad,0,129
 00419450,FUN_00419450,ported,SelectionFlag10SetClear,1,170

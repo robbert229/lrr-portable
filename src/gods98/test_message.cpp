@@ -167,6 +167,19 @@ int main(void)
         CHECK(message_config_flags(6) == 0x20000u, "the clear spares the id");
     }
 
+    /* The incident/message DAT-global band (2026-10-24). */
+    {
+        CHECK(incident_message_text_catalog_get(0) == 0u
+                  && incident_message_text_catalog_get(MESSAGE_MAX_ID) == 0u,
+              "message: the catalog window answers zero, guarded");
+        info_message_secondary_sound_set(7, 0x1234u);
+        info_message_secondary_sound_set(-1, 9u);   /* guarded */
+        info_message_secondary_sound_set(MESSAGE_MAX_ID, 9u); /* guarded */
+        CHECK(incident_message_state_get() == 0u,
+              "message: the incident state word starts clear");
+        info_message_secondary_sound_set(7, 0u); /* restore for later tests */
+    }
+
     if (s_failures == 0) {
         printf("message_test: PASS\n");
         return 0;
