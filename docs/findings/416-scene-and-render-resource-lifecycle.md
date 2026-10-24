@@ -179,8 +179,10 @@ the actual callers and the table each helper operates on.
 
 Directly observed vtable offsets do not identify their implementing interface
 method. The GUID/interface at `DAT_0049fb48`, the semantic meaning of the
-render-resource slots, and some scene-entry fields remain unknown. Useful
-follow-up slices are to identify that interface through its query/release
-callers and to trace the renderer slots through implementations before assigning
-higher-level meanings. Map-file slot ownership and its 2,000-entry bound are
-covered separately in finding 07; no new map-format behavior is inferred here.
+render-resource slots, and some scene-entry fields remain unknown. Focused
+follow-ups are [issue 253](https://github.com/robbert229/lrr-portable/issues/253)
+to identify that interface through its query/release callers and
+[issue 254](https://github.com/robbert229/lrr-portable/issues/254) to trace the renderer
+slots through implementations before assigning higher-level meanings. Map-file
+slot ownership and its 2,000-entry bound are covered separately in finding 07;
+no new map-format behavior is inferred here.
