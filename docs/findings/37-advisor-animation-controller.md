@@ -23,6 +23,14 @@ the controller state word `DAT_004b31bc` to zero. The identified initializer
 The strings establish labels and setup inputs, not which gameplay situations
 select each action or what the animation looks like at runtime.
 
+The eleven names at `DAT_004b30f8` map through `AdvisorAnimationNameToIndex`
+to eleven three-dword records beginning at `DAT_004b3124`. The first dword
+holds the loaded scene action handle; `AdvisorConfigSlotLookup` stores two
+parsed timing values in the next two dwords. The transition helpers index the
+record by name-derived index, use its action handle for scene operations, and
+consult the timing values during the completion/update path. The exact meaning
+of each timing value remains unresolved.
+
 ## Confirmed / unknown ledger
 
 | Claim | State |
