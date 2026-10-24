@@ -86,7 +86,7 @@ camera over 35 frames, filling the screen.
 | --- | --- | --- |
 | `0x413b80` | `MenuRunLoop` | triggers the wipe on each menu change; blocks the swap until it completes |
 | `0x4103f0` | `FUN_004103f0` (wipe start) | if `DAT_005574ec≠0`: `DAT_005574f4=0`, `DAT_005574f0\|=3`, `_DAT_005574f8=timeGetTime()`, plays SFX `FUN_00464f60(0x27,0)` (the rock-rumble) |
-| `0x412c00` | `MenuTick` | per-frame advance + draw while `DAT_005574ec≠0 && (DAT_005574f0&1)`; releases the menu at half-time |
+| `0x412c00` | `MenuTick` | per-frame advance + draw while `DAT_005574ec≠0 && (DAT_005574f0&1)`; adds a time-scaled delta capped at 3 to `DAT_005574f4` (scene-frame progress), releases the menu at half-time, and ends the wipe when the scene duration is reached |
 | `0x410440` | `FUN_00410440` | wipe end: `DAT_005574f0 &= ~3` |
 | `0x411a00` | `FUN_00411a00` (menu input tick) | **early-returns while `DAT_005574f0 & 2`** — input frozen during the wipe |
 
