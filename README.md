@@ -20,7 +20,7 @@ and curiosity; nothing in this repository is affiliated with or endorsed by the 
 
 ```
 README.md           This file
-docs/findings/      Reverse-engineering findings through 468 (see index below)
+docs/findings/      Reverse-engineering findings, 01–468 (see index below)
 tools/              WAD tooling (rrwad.py: unpack/pack/verify — see tools/README.md)
                     + model converter (tools/rrlwo.py: .lwo → glTF 2.0)
                     + compat harness (tools/compat/a2.py — see tools/compat/README.md)
@@ -651,8 +651,19 @@ Open threads, in order of value:
 | 451 | [findings/451-terrain-cell-state-neighbors-occupancy-and-traversal.md](docs/findings/451-terrain-cell-state-neighbors-occupancy-and-traversal.md) | Terrain Cell State, Neighbors, Occupancy, and Traversal |
 | 454 | [findings/454-terrain-grid-and-cell-resource-tables.md](docs/findings/454-terrain-grid-and-cell-resource-tables.md) | Terrain Grid and Cell Resource Tables |
 | 453 | [findings/453-object-search-and-placement-eligibility.md](docs/findings/453-object-search-and-placement-eligibility.md) | Object Search and Placement Eligibility |
+| 456 | [findings/456-world-entity-creation-and-pointer-registries.md](docs/findings/456-world-entity-creation-and-pointer-registries.md) | World Entity Creation and Pointer Registries |
 | 455 | [findings/455-terrain-command-feedback-and-cell-interaction.md](docs/findings/455-terrain-command-feedback-and-cell-interaction.md) | Terrain Command Feedback and Cell Interaction |
-
+| 458 | [findings/458-combat-effects-projectiles.md](docs/findings/458-combat-effects-projectiles.md) | Combat Effects and Projectiles |
+| 457 | [findings/457-entity-stats-configuration-and-record-accessors.md](docs/findings/457-entity-stats-configuration-and-record-accessors.md) | Entity Stats Configuration and Record Accessors |
+| 460 | [findings/460-velocity-and-collision-queries.md](docs/findings/460-velocity-and-collision-queries.md) | Velocity and Collision Queries |
+| 459 | [findings/459-timed-effects-and-cues.md](docs/findings/459-timed-effects-and-cues.md) | Timed Effects and Cues |
+| 462 | [findings/462-objective-configuration-and-runtime-results.md](docs/findings/462-objective-configuration-and-runtime-results.md) | Objective Configuration and Runtime Results |
+| 461 | [findings/461-weapon-definitions-and-indexed-lookups.md](docs/findings/461-weapon-definitions-and-indexed-lookups.md) | Weapon Definitions and Indexed Lookups |
+| 464 | [findings/464-entity-lifecycle-and-pools.md](docs/findings/464-entity-lifecycle-and-pools.md) | Entity Lifecycle and Pools |
+| 463 | [findings/463-particles-and-grid-expansion.md](docs/findings/463-particles-and-grid-expansion.md) | Particles and Grid Expansion |
+| 466 | [findings/466-command-registry-global-queue-transitions.md](docs/findings/466-command-registry-global-queue-transitions.md) | Command Registry and Global Queue Transitions |
+| 465 | [findings/465-task-scheduler-record-lifecycle.md](docs/findings/465-task-scheduler-record-lifecycle.md) | Task Scheduler Record Lifecycle |
+| 467 | [findings/467-command-creation-and-issue-routing.md](docs/findings/467-command-creation-and-issue-routing.md) | Command Creation and Issue Routing |
 | 468 | [findings/468-command-queue-and-selection-state.md](docs/findings/468-command-queue-and-selection-state.md) | Command Queue and Selection State |
 
 Canonical full pseudocode corpus: [`docs/decompiles/full/LEGORR.full.c`](docs/decompiles/full/LEGORR.full.c)

@@ -44,9 +44,11 @@ cross-references, see below).
   (`CmdChainWalk @ 0x404190` just walks to the end for primitives that skip appending when a
   current command `+0x60` exists). Purged by `CmdChainPurge`, which unlinks records with
   `+0x5c & 0x20` and frees them.
-- **Global list**: `DAT_004b3354/4b3358` = head/tail. `CmdLinkHead` pushes LIFO (`+0x60` =
-  old head, sets flag `0x10`), `CmdLinkTail` appends FIFO. `CmdTickGlobal @ 0x402220`
-  iterates the list each frame.
+- **Global lists**: `DAT_004b3354` and `DAT_004b3358` are separate list heads used by the
+  command scheduler. `CmdLinkHead` pushes onto `DAT_004b3354` (`+0x60` = old head, sets
+  flag `0x10`); `CmdLinkTail` pushes onto the separately designated `DAT_004b3358` list
+  by the same head-insertion pattern, rather than appending FIFO. `CmdTickGlobal @ 0x402220`
+  processes and purges both lists each frame.
 - `IdleQueueRegister @ 0x407450`: type-2 (minion) entities with a freshly attached command
   register into the 20-entry idle table `DAT_00557a84` (stride 8, entry = entity + timestamp
   `12.5f`), used for poll the idle minions when the list is full.
