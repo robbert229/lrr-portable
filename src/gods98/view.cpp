@@ -611,3 +611,85 @@ void camera_pointer_pan_update(ViewContext* v, float vec[3], float amount)
     vec_scale(vec, vec, v->pan_accum * amount);
     vec_add(v->offset, v->offset, vec);
 }
+
+/* --- the camera-controller bounds band (see view.hpp) -----------------------
+ * Fixed-offset record operations; the corpus's controller record is not
+ * modeled as a struct (its owners are the per-view camera objects, and
+ * the pose-dispatch half of the keys' logic stays at the unported scene
+ * seam). Only the record-field shape these five leaves need is written. */
+#define CAM_FLAGS_OFF 0xb8  /* gate-bit byte */
+
+static uint8_t cam_flags(const void* rec, size_t off)
+{
+    return *(const uint8_t*)((const char*)rec + off);
+}
+
+static void cam_or_flags(void* rec, uint8_t mask)
+{
+    uint8_t f = *(uint8_t*)((char*)rec + CAM_FLAGS_OFF);
+    f |= mask;
+    *(uint8_t*)((char*)rec + CAM_FLAGS_OFF) = f;
+}
+
+void camera_tilt_bounds_set(void* camera, float lo, float hi)
+{
+    if (camera == NULL) {
+        return; /* deviation: the corpus writes blindly */
+    }
+    cam_or_flags(camera, 1u);
+    __builtin_memcpy((char*)camera + 0x7c, &lo, sizeof(lo));
+    __builtin_memcpy((char*)camera + 0x80, &hi, sizeof(hi));
+}
+
+void camera_scalar_bounds_set(void* camera, float lo, float hi)
+{
+    if (camera == NULL) {
+        return; /* deviation: the corpus writes blindly */
+    }
+    cam_or_flags(camera, 2u);
+    __builtin_memcpy((char*)camera + 0x88, &lo, sizeof(lo));
+    __builtin_memcpy((char*)camera + 0x8c, &hi, sizeof(hi));
+}
+
+void camera_distance_bounds_set(void* camera, float lo, float hi)
+{
+    if (camera == NULL) {
+        return; /* deviation: the corpus writes blindly */
+    }
+    cam_or_flags(camera, 4u);
+    __builtin_memcpy((char*)camera + 0x94, &lo, sizeof(lo));
+    __builtin_memcpy((char*)camera + 0x98, &hi, sizeof(hi));
+}
+
+void camera_distance_set(void* camera, float value)
+{
+    if (camera == NULL) {
+        return; /* deviation: the corpus writes blindly */
+    }
+    const uint8_t f = cam_flags(camera, CAM_FLAGS_OFF);
+    float lo = 0.0f, hi = 0.0f;
+    __builtin_memcpy(&lo, (const char*)camera + 0x94, sizeof(lo));
+    __builtin_memcpy(&hi, (const char*)camera + 0x98, sizeof(hi));
+    if ((f & 4u) == 0u || (f & 8u) != 0u || (lo <= value && value <= hi)) {
+        __builtin_memcpy((char*)camera + 0x90, &value, sizeof(value));
+    }
+}
+
+void camera_zoom_update(void* camera, float delta)
+{
+    if (camera == NULL) {
+        return; /* deviation: the corpus reads blindly */
+    }
+    float cur = 0.0f;
+    __builtin_memcpy(&cur, (const char*)camera + 0x90, sizeof(cur));
+    camera_distance_set(camera, delta + cur);
+}
+
+/* CursorScreenRayContextReset (FUN_00435f16) — see view.hpp. */
+void cursor_screen_ray_context_reset(ViewContext* v)
+{
+    if (v == NULL) {
+        return; /* deviation: the corpus stores blindly */
+    }
+    v->pan_accum = 0.0f; /* the corpus's view-record +0x9c slot */
+}

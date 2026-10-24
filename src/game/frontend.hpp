@@ -453,4 +453,16 @@ uint32_t objective_selection_word_peek(void);   /* port hook */
 float    interaction_timer_peek(void);          /* port hook */
 uint32_t interaction_flags_peek(void);          /* port hook */
 
+/* --- the cell-action permission window (2026-10-24; findings 250/419) --------
+ * CellActionPermissionGet (FUN_0041e990): while the message module's
+ * system-state word has bit 4 clear, every cell action is permitted (1);
+ * with bit 4 set the corpus reads its 300-entry level-permission table
+ * (dword row + column*15, zeroed at level start by the unported
+ * counters-clear path). The table lands as zero-init storage with
+ * port-side accessors standing in for the unported cell writer. */
+int cell_action_permission_get(int column, int row);
+void cell_action_permission_table_set(int index, uint32_t value);
+                                       /* port hook */
+uint32_t cell_action_permission_table_peek(int index);
+
 #endif /* LEGORRR_GAME_FRONTEND_HPP */
