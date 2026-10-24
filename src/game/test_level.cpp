@@ -366,6 +366,72 @@ int main(int argc, char** argv)
         level_cell_secondary_bit8_set(s, 3, 4, 0);
         CHECK(level_cell_secondary_flag_8(s, 3, 4) == 0u, "secondary bit 3 clears");
 
+        /* The tracked set-family (2026-10-24): queue pair and masks. */
+        {
+            uint32_t g = 0u;
+            f = zero;
+            __builtin_memcpy(rec + 0x08, &f, 4);
+            __builtin_memcpy(rec + 0x0C, &f, 4);
+            uint8_t* rec11 = level_voxel(s, 1, 1);
+            __builtin_memcpy(rec11 + 0x0C, &f, 4);
+
+            terrain_cell_visited_flag_set_and_track(s, 3, 4);
+            terrain_cell_visited_flag_set_and_track(s, 1, 1);
+            __builtin_memcpy(&f, rec + 0x0C, 4);
+            CHECK(f == 2u, "the visited setter raises the mark in line");
+            terrain_cell_visited_flags_clear_all(s);
+            __builtin_memcpy(&f, rec + 0x0C, 4);
+            __builtin_memcpy(&g, rec11 + 0x0C, 4);
+            CHECK(f == 0u && g == 0u,
+                  "ClearAll drains its queue through both listed cells");
+
+            f = zero;
+            __builtin_memcpy(rec + 0x0C, &f, 4);
+            terrain_cell_flag100_set_and_track(s, 3, 4);
+            __builtin_memcpy(&f, rec + 0x0C, 4);
+            CHECK(f == 0x100u, "track setter raises secondary 0x100");
+
+            f = zero;
+            __builtin_memcpy(rec + 0x08, &f, 4);
+            terrain_cell_flags_set_mask100400(s, 3, 4);
+            __builtin_memcpy(&f, rec + 0x08, 4);
+            CHECK(f == 0x100400u, "the 0x100400 mask raises exactly its bits");
+            terrain_cell_flags_set_mask20108000(s, 3, 4);
+            __builtin_memcpy(&f, rec + 0x08, 4);
+            CHECK(f == 0x20108400u, "the 0x20108000 mask ORs alongside");
+
+            terrain_cell_flags_set_and_refresh(s, 3, 4);
+            __builtin_memcpy(&f, rec + 0x08, 4);
+            __builtin_memcpy(&g, rec + 0x0C, 4);
+            CHECK(f == 0x20108400u && g == 0x104u, /* masks already in place */
+                  "set-and-refresh raises both words' masks");
+
+            f = 0xffffffffu;
+            __builtin_memcpy(rec + 0x08, &f, 4);
+            __builtin_memcpy(rec + 0x0C, &f, 4);
+            terrain_cell_primary_flags_mask_clear_and_refresh(s, 3, 4);
+            __builtin_memcpy(&f, rec + 0x08, 4);
+            __builtin_memcpy(&g, rec + 0x0C, 4);
+            CHECK(f == 0xdfef7bffu, "the primary mask clears its bits");
+            CHECK(g == 0xfffffffbu, "the secondary bit 4 value clears");
+
+            f = 0u;
+            __builtin_memcpy(rec + 0x08, &f, 4);
+            terrain_cell_flag40000000_clear_or_set(s, 3, 4, 1);
+            __builtin_memcpy(&f, rec + 0x08, 4);
+            CHECK(f == 0x40000000u, "clear-or-set raises 0x40000000");
+            terrain_cell_flag40000000_clear_or_set(s, 3, 4, 0);
+            __builtin_memcpy(&f, rec + 0x08, 4);
+            CHECK(f == 0u, "the same leaf's clear branch drops it");
+
+            /* Out-of-cell: the bounds deviation skips the record and
+             * the queue (the corpus indexes blindly). */
+            terrain_cell_flag100_set_and_track(s, 9999, 9999);
+            terrain_cell_visited_flag_set_and_track(s, 9999, 9999);
+            CHECK(level_cell_visited_flag(s, 9999, 9999) == 0u,
+                  "out-of-cell setters skip (bounds deviation)");
+        }
+
         /* The OR-test pair: mode 0 masks the flag word, mode 1 answers
          * whether either the flag 0x400 or the secondary byte's bit 4
          * marks the cell. */
