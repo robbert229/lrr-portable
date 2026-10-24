@@ -20,7 +20,7 @@ and curiosity; nothing in this repository is affiliated with or endorsed by the 
 
 ```
 README.md           This file
-docs/findings/      Reverse-engineering findings, 01-469 (see index below)
+docs/findings/      Reverse-engineering findings through 475 (see index below)
 tools/              WAD tooling (rrwad.py: unpack/pack/verify — see tools/README.md)
                     + model converter (tools/rrlwo.py: .lwo → glTF 2.0)
                     + compat harness (tools/compat/a2.py — see tools/compat/README.md)
@@ -666,6 +666,13 @@ Open threads, in order of value:
 | 467 | [findings/467-command-creation-and-issue-routing.md](docs/findings/467-command-creation-and-issue-routing.md) | Command Creation and Issue Routing |
 | 468 | [findings/468-command-queue-and-selection-state.md](docs/findings/468-command-queue-and-selection-state.md) | Command Queue and Selection State |
 | 469 | [findings/469-entity-task-and-command-setup.md](docs/findings/469-entity-task-and-command-setup.md) | Entity Task and Command Setup |
+| 470 | [findings/470-entity-placement-and-spawning.md](docs/findings/470-entity-placement-and-spawning.md) | Entity Placement and Spawning |
+| 471 | [findings/471-entity-activities-and-action-completion.md](docs/findings/471-entity-activities-and-action-completion.md) | Entity Activities and Action Completion |
+| 472 | [findings/472-entity-motion-and-action-execution.md](docs/findings/472-entity-motion-and-action-execution.md) | Entity Motion and Action Execution |
+| 473 | [findings/473-simulation-dispatch-and-damage.md](docs/findings/473-simulation-dispatch-and-damage.md) | Simulation Dispatch and Damage |
+| 474 | [findings/474-simulation-tick-and-engine-state-lifecycle.md](docs/findings/474-simulation-tick-and-engine-state-lifecycle.md) | Simulation Tick and Engine State Lifecycle |
+| 475 | [findings/475-objectives-upgrades-and-resource-counters.md](docs/findings/475-objectives-upgrades-and-resource-counters.md) | Objectives, Upgrades, and Resource Counters |
+| 476 | [findings/476-entity-activity-and-runtime-records.md](docs/findings/476-entity-activity-and-runtime-records.md) | Entity Activity and Runtime Records |
 | 477 | [findings/477-tasks-rewards-and-checkpoints.md](docs/findings/477-tasks-rewards-and-checkpoints.md) | Tasks, Rewards, and Checkpoints |
 
 Canonical full pseudocode corpus: [`docs/decompiles/full/LEGORR.full.c`](docs/decompiles/full/LEGORR.full.c)

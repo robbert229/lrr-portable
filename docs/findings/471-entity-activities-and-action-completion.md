@@ -1,0 +1,67 @@
+# Finding 471 — Entity Activities and Action Completion
+
+This finding maps the 42 procedures assigned to entity-activity-actions. They cover carried-object detachment, task and target gates, route/activity creation, entity iteration and spawn callbacks, deposit and proximity behavior, activity completion, and counters. The behavior described below is directly visible in the canonical pseudocode unless identified as an inference. Descriptive function names do not establish the meaning of opaque flag fields.
+
+## Task and activity predicates; route/action issue
+
+VehicleUnloadAdjacentCellFind @ 0x439d50 examines the four neighboring cells around an entity's terrain coordinate. It returns the first cell passing terrain lookup and FUN_00431da0, optionally writing that coordinate, or returns 0 if none qualifies. VehicleUnloadCellFindIfEligible @ 0x439e10 calls it only when FUN_00469ea0 has bit 0x10; EntityRecordFlag20Query @ 0x439e40 does the same under bit 0x20.
+
+EntityAttachedObjectListDetach @ 0x439e70 enters when entity field +0x3e0 has bit 0x400 set and either bit 0x2000 is clear or the second argument is nonzero. It walks the attached-record list at +0x308 for the count at +0x324, clears each slot and the attached record fields at +0x300/+0x304, and conditionally updates scene position and activity records. Depending on flags and the second argument, it either removes a set of activity kinds or detaches each record; one branch calls EntityActionRecordConsumeAndCleanup and EntityActivitySceneStateUpdate. It then zeros the list count, clears bit 0x400, and clears step entries whose state byte is 5 or 7.
+
+CellStepCommandIssueWithJitter @ 0x43a120 requires entity field +0x3e0 bit 0x400, then routes directly when the target cell matches the entity cell or obtains an intermediate route through FUN_004410f0 and issues it through FUN_00441700. On success it writes step kind 8 or 9, stores supplied coordinate offsets when present, and may set a step-record flag. For kind 1 it instead samples an interior point in the target cell and sets the extra flag.
+
+EntityDepositActivityGate @ 0x43a300 requires the entity's +0x3e0 bit 0x400. State bits 4/2 on the entity take a separate branch that raises activity 0x1d and updates the entity. Otherwise it continues when EntityAcceptsTargetForTaskCheck(targetEntity, entity[+0x308], 0) succeeds or the target entity's state word includes bit 0x8; with neither condition, this route path is skipped. It then resolves the target work-object pose when available, converts source and target positions to cells, and routes to the target. A successful route stores the target at +0x2fc and writes step kind 7 or 9; kind 7 also encodes a direction in the step flags. [BuildingDepositStateMonitor @ 0x43bb20](../decompiles/full/LEGORR.full.c#L40189) is the kind-4 caller. It selects a threshold from +0x324 or, when state bit 2 is set, the lesser of +0x328 and FUN_00469bb0. If the current +0x324 value is below that threshold, or entity flags indicate +0x3e0 bit 0x2000 or +0x3e8 bit 0x1000000, it clears the latter bit. Otherwise, state bit 2 or 4 enables the call to EntityDepositActivityGate(entity, 0).
+
+EntityActionKindSupported @ 0x43a7c0 requires entity state bit 8. It accepts kind 6 when FUN_0041f8e0(1) succeeds, kind 7 when FUN_0041f900(param_3) succeeds, and kinds 8, 9, 0xb, and 0xd directly. ActionKindEntityCreateAndCommandIssue @ 0x43a650 first checks that predicate, resolves a nearby scene point, applies the kind-6 or kind-7 resource/counter updates, creates the entity/task record, and enqueues opcode 0x16 (most kinds) or 0x1c (kind 7) through FUN_00452060. Kinds 8 and 9 receive Short or Normal labels. This is a direct producer-to-queue link; its gameplay interpretation follows the action kind and neighboring command dispatch in [Finding 467](467-command-creation-and-issue-routing.md) and [Finding 468](468-command-queue-and-selection-state.md).
+
+EntityVisualResourceGetOrCreate @ 0x43a5f0 tries the kind-specific visual accessor for kinds 1–4; when it finds no handle it calls EntityTypeComponentGet. EntityActionRecordConsumeAndCleanup @ 0x43a850 optionally creates a six-counter sidecar for kind-3 owners, updates the relevant kind-6 or kind-7 counter/resource, clears the consumed record's +0x304 link, releases it, and notifies the owner when the owner is not kind 3.
+
+## Entity sets, world activities, and spawn processing
+
+SimulationUpdateCounterAdd @ 0x43a8f0 adds the requested number through FUN_0041f870 and requests EntityActivitySceneStateUpdate. SimulationModeCounterAdd @ 0x43a910 calls FUN_0041f9a0(0) param_2 times. Their names are labels; the actual counters are in those callees. TrackedEntityPointerArrayRemove @ 0x43a930 nulls every matching entry in the global array. EntityLavaCrustActivityRegister @ 0x43a960 adds eligible kind-1 entities standing on terrain type 9 to that array, up to 100 entries; EntityQueueForRockfallProcessingIfEligible @ 0x43a9e0 is a direct wrapper.
+
+EntityPairInteractionGate @ 0x43a9f0 checks flags on two entities and requires the second entity's referenced target kind to be 6; when the current level marker differs from the first entity's stored marker, it requests activity 0x24, updates the entity, and sets +0x3e4 bit 0x200000. The cell conversions are computed but not otherwise consumed in this procedure, so no adjacency claim is made from them.
+
+ProximityActivityRaise @ 0x43aab0 handles kind 3 with state bit 0x4000. It requires the activity timer to be below +0x340, the level marker to differ from +0x2e8, and the entity's +0x3e0 bit 0x400 to be clear. Its cell must pass terrain checks; the entity-to-cell-center distance must be less than one third of the level-derived scale. It then requests activity 0x24, updates the entity, and sets bit 0x200000 at +0x3e4.
+
+TerrainCellVariantUpdateQueue @ 0x43abf0 obtains the entity cell, has a one-in-five random path that calls FUN_00435230, then when the cell passes FUN_00433090 it updates the entity/cell through FUN_0040beb0, FUN_00430320, and FUN_0042f6f0. It also visits entities through LAB_0043ac90.
+
+PredugSpawnCoordinateSelectAndCreate @ 0x43ad50 returns zero when the predug coordinate pool is empty. Otherwise it selects a random pool coordinate or nearest coordinate via NearestCellCoordinateWorldResolve, chooses a random angle, offsets the world position by 12.75 units, and creates a kind-3 entity using the requested level index. On success it sets entity flags, requests activity 0xc, registers it, and emits operation 0x1f.
+
+EmergenceRandomSpawnAttempt @ 0x43aea0 obtains the current level and dimensions, then makes up to 1,000 random cell attempts using CreatureSpawnFromEmergence; it returns the first created entity or zero. CreatureSpawnFromEmergence @ 0x43af30 rejects coordinates failing terrain, occupancy, or other cell checks; tests up to four neighboring cells for an acceptable spawn point; interpolates a point between the requested cell and the selected neighbor; creates a kind-3 entity, sets state, requests activity 0xc, registers it, and applies the kind-specific effect. It records the source cell and dispatches follow-up operations when the cell matches configured RockMonster, Lavamonster, or Icemonster entries. The exact meanings of all cell predicates remain unresolved.
+
+## Frame dispatch and callback helpers
+
+EntityFrameUpdateDispatch @ 0x43b270 coordinates the global entity update pass: it performs pre/post work when global bit 4 is set, sets the in-update bit 0x10, walks entities through LAB_0043c810, clears/consumes global bits 4/8/0x10, runs FUN_0044bf00, and advances a 125-unit timer that calls FUN_00425b40 on expiry. EntityIterationCallbackGuard @ 0x43b320 sets global bit 2 around a walk through LAB_0043b350, then clears it.
+
+TaskCountAtGridCoordinateQuery @ 0x43b360 initializes an output count to zero and walks entities through LAB_0043b3b0 at the requested grid coordinate. ClippedRectangleCallbackDispatch @ 0x43b6c0 skips when renderer state bit 8 is set; otherwise it computes the intersection bounds for the two supplied rectangles, walks matching entities through LAB_0043b770, then enqueues command opcode 0x2d.
+
+TypeTwoEntityEventDispatch @ 0x43b820 dispatches through the kind-2 component for a kind-2 entity or a linked kind-2 record at +0x36c. TypeTwoEntityPositionedCallbackDispatch @ 0x43b850 selects that same linked kind-2 record when appropriate, optionally reads a supplied scene position, and walks entities through LAB_0043b8d0. EntityFlagsMask107C33DEOr1C00203AnyTest @ 0x43baf0 returns whether any mask bit is set across entity fields +0x3e0 and +0x3e4 using masks 0x107c33de and 0x01c00203.
+
+## Detach, deposit completion, and action state transitions
+
+EntityDetachCarriedObjectAndResetState @ 0x43bbc0 handles kind 3. If its +0x308 target is kind 6, it clears the target link and related count/state fields, then clears the target's timer. It also resets one counter from its sidecar when present, sets its own timer to -4.0, and raises +0x3e8 bit 0x800000.
+
+ObjectiveSidecarAppendGate @ 0x43bc40 is a broad state-transition routine. It has early gates on flags, timer +0x340, and entity kind. For the +0x3e8 bit 0x800000 path it detaches linked records, invokes EntityKindOneRandomSpawnTrigger, and finalizes or releases the entity according to kind. Other branches handle kind-specific state changes, including setting kind-3 route/activity state, resetting or releasing kind-4 objects, and—when +0x3e8 bit 0x40000 is set—processing links and creating a scene effect. Its many branches are direct in the decompile; labeling it as one particular gameplay event would exceed the current evidence.
+
+EntityStatePairPredicate @ 0x43c200 tests a state-derived value for the first entity; if nonzero it adds values from both entities and a callback accumulation, returning false when the sum is nonpositive. EntityNestedFloatAddUnlessBlocked @ 0x43c280 adds the entity's value from FUN_00469e20 to an accumulator unless a kind-4 entity fails FUN_004385b0. PeriodicTimer25Advance @ 0x43c2b0 accumulates delta into _DAT_004dee0c, resets it after 25, and walks entities through LAB_0043c2f0.
+
+EntityType26CommandCompletionGate @ 0x43c3e0 requires a kind-2 entity whose current command is type 0x1a; it returns true when FUN_00472080 succeeds and FUN_004718d0 reports no further work. EntityCanDoActivityClassify @ 0x43c440 checks permitted activity kinds 4, 5, and 7 and returns classifications 1, 2, or 3 in that priority order. TaskTypeAndConditionCheck @ 0x43c490 returns true only when FUN_004385b0(target, 1) and the supplied condition are both nonzero.
+
+EntityFinishState1A @ 0x43c4c0 checks the target pointer at +0x2fc; when a classified activity and TaskTypeAndConditionCheck both pass, it starts EntityFaceTargetActionStart. It then clears +0x3e4 bit 0x04000000 and removes activity 0x1a. EntityMarkAndFinishState1A @ 0x43c530 applies this only to kind 2 with command type 0x1a, first setting +0x3e8 bit 0x04000000.
+
+KindFourPostCreateResolve @ 0x43c570 handles kind 4 unless +0x3e8 bit 0x80000000 is set. It obtains the entity kind/position, checks terrain flags and FUN_00409450, then clears or sets +0x3e8 bit 0x20000000 and may call FUN_004093b0 after further state and task checks.
+
+EntityCapacityOrStatePredicate @ 0x43c650 requires entity state bit 0x80000. If the counter from FUN_00469b80 is nonzero and does not exceed the first value referenced by +0x348, it returns false; otherwise it returns true only if the word at +0x3e8 lacks bit 0x80000000.
+
+FUN_0043c6b0 increments three counters at +0x3d8, +0x3d4, and +0x3dc. For kind 2 it dispatches operations 0x22/0x23 when level thresholds are crossed; for kinds 6, 7, 9, and 0xb it resets the first counter at 750 and calls FUN_004026c0 (with an additional flag gate for kind 0xb). The meanings of those counters and operation codes are unresolved.
+
+## Unresolved questions and follow-up slices
+
+- Name the state and counter meanings behind opaque masks, including _DAT_004dee14, +0x3e8 completion bits, and counters at +0x3d4/+0x3d8/+0x3dc.
+- Resolve the exact terrain and occupancy meanings of the unload, emergence, and deposit predicates.
+- Trace the global tracked-entity array's consumers and establish whether its 100-entry cap can drop eligible entities.
+- Split ObjectiveSidecarAppendGate into focused state-transition investigations, especially its linked-record cleanup and effect creation paths.
+- Identify the state and callback contracts behind LAB_0043c810, LAB_0043b350, LAB_0043b3b0, LAB_0043b770, and LAB_0043b8d0.
+
+**Evidence.** Canonical pseudocode in docs/decompiles/full/LEGORR.full.c, procedures 0x439d50–0x43c6b0. Related prior findings: [Finding 128](128-permitted-activity-appender-capacity.md) and [Finding 131](131-tool-carry-stat-is-activity-capacity.md) (activity capacity), [Finding 251](251-command-band-kind-dispatch-item-name-lookup-route-and-record-helpers.md) and [Finding 256](256-command-band-step-issuers-flag-behavior-timers-and-steering-helpers.md) (command routing), [Finding 255](255-visual-channel-relays-resource-tree-callback-walks-scene-pose-and-registry-helpers.md) (random spawn/task registration), and [Finding 467](467-command-creation-and-issue-routing.md) / [Finding 468](468-command-queue-and-selection-state.md) (command creation and selection queue). Function-area catalog assigns all 42 procedures to entity-activity-actions.
