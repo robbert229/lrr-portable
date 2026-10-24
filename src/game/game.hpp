@@ -203,6 +203,11 @@ typedef struct EntitySlot {
     /* --- entity-tick state (callback 0x43c810, finding 10) --------- */
     uint32_t flags_3e4; /* +0x3e4 (bit 0x8000000 = wake-timer running)  */
     uint32_t flags_3ec; /* +0x3ec (activity/behaviour flags)            */
+    /* +0x3f0: level-state mask word. The corpus's two readers are this
+     * module's selection gate (CurrentLevelStateFlagsContainMask) and the
+     * unported sim-interaction update; no ported writer feeds it — a
+     * zero-init mirror per the flags_3e0 precedent. */
+    uint32_t flags_3f0;           /* +0x3f0 (level-state mask word)         */
     /* --- minion task-state (spawn-dispatch switch 0x438150) --------- *
      * The entity spawn dispatcher (FUN_00437d00) assigns the minion types
      * a +0x334 stats block — its "task state" — through the selector at

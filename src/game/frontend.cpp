@@ -26,6 +26,7 @@
 
 #include "frontend.hpp"
 #include "gods98/audio.hpp"
+#include "gods98/message.hpp"
 #include "gods98/flic.hpp"
 #include "gods98/texture.hpp"
 #include "util.hpp"
@@ -2112,4 +2113,16 @@ void frontend_flow_word_set(int which, int value)
     if (which >= 0 && which < 5) {
         s_fe_flow[which] = value;
     }
+}
+
+/* MainSimStateAdmissionPredicate (FUN_004191a0) — see frontend.hpp. The
+ * corpus reads bits 1/2 of the selection word directly and the 0x40 bit
+ * through its own leaf; all three reduce to the same modeled word. */
+int main_sim_state_admission_predicate(void)
+{
+    const uint32_t sel = s_sel_state;
+    return ui_mode_resource_bit40_get() != 0u
+        && (sel & 2u) != 0u
+        && (sel & 1u) != 0u
+        && system_state_flags_get() == 0u;
 }

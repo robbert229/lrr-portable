@@ -398,4 +398,11 @@ int level_start_flag(void);     /* FUN_00416de0: DAT_00557048 != 0 */
 int menu_options_flag(void);    /* FUN_00416df0: DAT_0055704c != 0 */
 void frontend_flow_word_set(int which, int value); /* port-side setter */
 
+/* MainSimStateAdmissionPredicate (FUN_004191a0): the corpus's sim-admission
+ * gate — selection-state bits 1 and 2 set, bit 0x40 raised through the
+ * leaf above, and the message module's system-state word clear. All three
+ * models are the port's own (the same s_sel_state the selection band
+ * reads and the message_system_state model), so no new storage lands. */
+int main_sim_state_admission_predicate(void);
+
 #endif /* LEGORRR_GAME_FRONTEND_HPP */

@@ -159,3 +159,14 @@ int selection_candidate_already_selected_or_marked(const GameContext* ctx,
     }
     return (e->flags_3ec & 2u) != 0u ? 1 : 0;
 }
+
+/* CurrentLevelStateFlagsContainMask (FUN_0041f720) — see select.hpp. */
+int current_level_state_flags_contain_mask(const GameContext* ctx,
+                                           uint32_t mask)
+{
+    const EntitySlot* e = selection_first(ctx);
+    if (e == NULL) {
+        return 0; /* deviation: the corpus reads *(NULL + 0x3f0) blindly */
+    }
+    return (e->flags_3f0 & mask) != 0u;
+}

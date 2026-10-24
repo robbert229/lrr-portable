@@ -2171,6 +2171,19 @@ zero-init storage — `global_flag_004ff978_get` (0x456640) and
 383. `savegame_test`, `level_test`, and `crt_test` pin the reads and the
 guards.
 
+**The admission-predicate pair** (2026-10-24; findings 06/380/478): two
+rows land. `main_sim_state_admission_predicate` (0x4191a0, `frontend.*`)
+is the corpus's sim-admission gate — selection-word bits 1 and 2, the
+0x40 bit through its leaf, and the message module's system-state word
+clear — all three models already owned by the port, so no new storage
+lands. `current_level_state_flags_contain_mask` (0x41f720, `select.*`)
+ANDs the selected entity's `+0x3f0` level-state mask word through the
+selection accessor; the word lands as a zero-init `EntitySlot` mirror
+(both corpus readers documented — the ported gate and the unported
+sim-interaction update) and an empty selection answers false where the
+corpus dereferences NULL. `frontend_test` pins the gate's four walks and
+`select_test` the mask, the empty-selection deviation, and the mirror.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the
