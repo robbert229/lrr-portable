@@ -595,6 +595,7 @@ Open threads, in order of value:
 | 396 | [findings/396-crt-process-startup-termination-and-exceptions.md](docs/findings/396-crt-process-startup-termination-and-exceptions.md) | CRT Process Startup, Termination, and Exceptions |
 | 397 | [findings/397-crt-strings-locale-and-formatting.md](docs/findings/397-crt-strings-locale-and-formatting.md) | CRT Strings, Locale, and Formatting |
 | 398 | [findings/398-application-startup-window-loop.md](docs/findings/398-application-startup-window-loop.md) | Application Startup, Window Loop, and Preferences |
+| 399 | [findings/399-crt-numeric-and-floating-point-runtime.md](docs/findings/399-crt-numeric-and-floating-point-runtime.md) | CRT Numeric and Floating-Point Runtime |
 
 Canonical full pseudocode corpus: [`docs/decompiles/full/LEGORR.full.c`](docs/decompiles/full/LEGORR.full.c)
 (2564 manifest functions; see its [README](docs/decompiles/full/README.md)). The
