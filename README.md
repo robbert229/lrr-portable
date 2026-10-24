@@ -1809,6 +1809,19 @@ with its table feeder `MessageStringTableInitialize` — both scan the
 corpus's built-in `Message_*` name table (blocked: reference-binary
 name tables).
 
+**Selection-candidate leaves** (2026-10-24; findings 77/85/468): three
+candidate leaves land on the port's own selection storage.
+`selection_contains_entity` (0x452610, materializing the dedupe the
+add-path used) scans the selection array below the count — NULL context
+answers absent. `selection_candidate_already_selected_or_marked`
+(0x452690) answers through that scan or the +0x3ec mark bit (the corpus
+reads the word as a byte). `selection_candidate_eligibility_check`
+(0x452870) runs the corpus's gate order in `entity.*`: the +0x3e8
+state-bit-0x100 gate, the ported shared-eligibility predicate, the
++0x3e4 low-byte `& 10` band, the +0x3e0 0x24000000 band, and type 1's
+extra +0x3e0 bit-0x40000 rejection. `select_test` pins the scan, the
+mark path, and every eligibility band.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

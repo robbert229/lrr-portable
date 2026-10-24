@@ -217,6 +217,15 @@ uint32_t context_selected_pointer_pair_peek(int second);
 void context_selected_pointer_pair_set(uint32_t first, uint32_t second);
 
 
+/* SelectionCandidateEligibilityCheck (FUN_00452870, findings 77/85/468):
+ * the selection filter's eligibility predicate — requires the +0x3e8
+ * state bit 0x100, the shared-eligibility predicate, no +0x3e4 low-byte
+ * bits 1/3 (the corpus's `(byte)word & 10`), no +0x3e0 bits 0x24000000, and
+ * — the corpus's documented quirk branch `*param_1 != 1 || (word &
+ * 0x40000)`'s right term never fires for non-type-1 entities; type 1
+ * rejects on +0x3e0 bit 0x40000 (finding 468). NULL rejects (deviation). */
+int selection_candidate_eligibility_check(const EntitySlot* e);
+
 #ifdef __cplusplus
 }
 #endif
