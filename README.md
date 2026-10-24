@@ -20,7 +20,7 @@ and curiosity; nothing in this repository is affiliated with or endorsed by the 
 
 ```
 README.md           This file
-docs/findings/      Reverse-engineering findings, 01–448 (see index below)
+docs/findings/      Reverse-engineering findings, 01–449 (see index below)
 tools/              WAD tooling (rrwad.py: unpack/pack/verify — see tools/README.md)
                     + model converter (tools/rrlwo.py: .lwo → glTF 2.0)
                     + compat harness (tools/compat/a2.py — see tools/compat/README.md)
@@ -645,6 +645,7 @@ Open threads, in order of value:
 | 445 | [findings/445-terrain-scene-geometry.md](docs/findings/445-terrain-scene-geometry.md) | Terrain Scene Geometry |
 | 448 | [findings/448-routing-and-activity-transitions.md](docs/findings/448-routing-and-activity-transitions.md) | Routing and Activity Transitions |
 | 447 | [findings/447-terrain-grid-path-search.md](docs/findings/447-terrain-grid-path-search.md) | Terrain Grid Path Search |
+| 449 | [findings/449-spatial-queries-and-candidate-search.md](docs/findings/449-spatial-queries-and-candidate-search.md) | Spatial Queries and Candidate Search |
 
 Canonical full pseudocode corpus: [`docs/decompiles/full/LEGORR.full.c`](docs/decompiles/full/LEGORR.full.c)
 (2564 manifest functions; see its [README](docs/decompiles/full/README.md)). The
