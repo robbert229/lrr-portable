@@ -1,9 +1,10 @@
 # Finding 414 — AVI and FLIC Playback Routes
 
-This map closes the 41-function `video-playback-decoders` issue by connecting
-its AVI and FLIC routines to their callers, state, and neighboring presentation
-paths. The two families are separate: the credits/AVI player uses AVIFIL32,
-while `.flh` overlays use the engine's own FLIC-family reader and decoder.
+This map addresses all 41 function entries assigned by Issue #196. Forty are
+AVI/FLIC playback routines; one entry was misclassified by the issue and is
+reclassified below as DirectInput teardown. The two video families are separate:
+the credits/AVI player uses AVIFIL32, while `.flh` overlays use the engine's own
+FLIC-family reader and decoder.
 
 **Target and evidence.** Static analysis of shipped `reference/LegoRR.exe`,
 SHA-256 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`.
@@ -11,6 +12,17 @@ Function bodies are in [`LEGORR.full.c`](../decompiles/full/LEGORR.full.c).
 The AVI playback expansion evidence is in
 [`legorr-avi-playback-expansion.bundle`](../evidence/legorr-avi-playback-expansion.bundle).
 The FLIC byte-level and corpus analysis is in [finding 21](21-flh-container.md).
+
+## Issue scope correction
+
+Issue #196 lists `0x0047efd0` as `AviFileShutdown` in the video-playback
+decoder area. The routine uses the DirectInput globals populated by
+`DirectInputInitialize` at `0x0047ed90`: when the acquired flag is set it calls
+the device method at slot `+0x20`, clears that flag, and releases the device and
+parent interfaces through slot `+8`. It is therefore named `DirectInputShutdown`
+and reclassified in the coverage map as `player-interface/input-device-and-cursor`.
+It is documented here to account for the issue's full 41-entry list, but is not
+one of the 40 AVI/FLIC functions in the area.
 
 ## AVI route
 
@@ -45,7 +57,6 @@ boundary ordering and resulting null-frame behavior are detailed in findings
 | `0x0047ed50` | `AviCurrentFrameIndexGet` | Thin wrapper forwarding to the guarded playback-index getter. |
 | `0x0047ed60` | `AviStreamFrameCountGet` | Thin wrapper forwarding to the stream-length getter. |
 | `0x0047ed80` | `AviPlayerReadyGet` | Returns the movie object's ready byte at offset `+0x99`. |
-| `0x0047efd0` | `DirectInputShutdown` (listed by Issue #196 as `AviFileShutdown`) | If the acquired flag is set, invokes the device method at slot `+0x20` and clears the flag; then releases the DirectInput device and parent interfaces through slot `+8`. These are the globals initialized by `DirectInputInitialize` at `0x0047ed90`, so this routine is input teardown, not part of AVI/FLIC playback. The ticket’s area assignment for this address is incorrect. |
 
 The movie frame index is derived from elapsed time and the stored rate rather
 than incremented by one: after a successful frame fetch, `0x0047eb20` computes

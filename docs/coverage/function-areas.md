@@ -85,7 +85,7 @@ Assignment confidence: 700 high, 1832 medium, 32 low. Basis counts: address-clus
 | `font-and-ui-text` — Font and UI text rendering | 25 | Loads/releases font resources, measures or draws formatted text, wraps UI text, or builds/draws text buffers. Excludes low-level string parsing and unrelated gameplay state. |
 | `frontend-menu-flow` — Front-end menu flow and options | 31 | Menu run/tick/build/show flow, front-end state transitions, option values, save/load menu composition, and menu actions. |
 | `hud-panels-and-overlays` — HUD Panels and Overlay Resources | 24 | Health/hunger/bubble visuals, panel and overlay resource loading/layout, slot hit tests, text drawing, and panel state helpers. |
-| `input-device-and-cursor` — Input devices and cursor state | 9 | Initializes/polls device input or updates keyboard/cursor state. Higher-level command/gameplay interpretation is outside this range. |
+| `input-device-and-cursor` — Input devices and cursor state | 9 | Initializes/polls device input, updates keyboard/cursor state, or sets up/releases input interfaces. Higher-level command/gameplay interpretation is outside this range. |
 | `input-selection-actions` — Input, pointer actions, and selection commands | 49 | Key/binding state, input action dispatch, cursor/tile selection, selection-mode cancel/update, pointer hit tests, and action-request queues. |
 | `simulation-ui-controls` — Simulation UI and Player Controls | 63 | Manager/cursor interaction, category and priority controls, camera drag/zoom, cursor configuration, and command/region remapping. |
 | `tutorial-advisor-control` — Tutorial and Advisor Control | 30 | Tutorial script load/dispatch, advisor tokens and scrolling, camera focus/tweens, deferred callbacks, and advisor voice cues. |
