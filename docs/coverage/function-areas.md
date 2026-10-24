@@ -20,9 +20,9 @@ Assignment confidence: 700 high, 1832 medium, 32 low. Basis counts: address-clus
 | --- | --- | ---: | ---: |
 | `gameplay-simulation` | Entity behavior, commands, objectives, tasks, combat, simulation state, and progression. | 597 | 23 |
 | `world-and-terrain` | Terrain cells and grids, spatial queries, placement searches, and route transitions. | 332 | 12 |
-| `player-interface` | Front end, input interpretation, menus, HUD, advisor/help, and display-facing controls. | 363 | 14 |
+| `player-interface` | Front end, input interpretation, menus, HUD, advisor/help, and display-facing controls. | 364 | 14 |
 | `scene-and-rendering` | Scene objects and resources, models, viewports, render surfaces, and visual effects. | 491 | 13 |
-| `audio-and-video` | Sound, spatial playback, streams, and video playback or decoding. | 154 | 5 |
+| `audio-and-video` | Sound, spatial playback, streams, and video playback or decoding. | 153 | 5 |
 | `game-data-and-assets` | Configuration, map and level loading, archives, registries, and presentation/resource records. | 151 | 7 |
 | `platform-and-runtime` | Win32/DirectX interfaces, startup/window services, CRT, and operating-system/runtime support. | 316 | 11 |
 | `shared-primitives` | Cross-cutting state accessors, lists/strings, pools, math, and small reusable helpers. | 160 | 7 |
@@ -83,7 +83,7 @@ Assignment confidence: 700 high, 1832 medium, 32 low. Basis counts: address-clus
 | `camera-selection-state` — Camera and Selection State | 4 | Camera controls, pointer panning, terrain-height positioning, and the small selection-record point accessors. |
 | `display-mode-selection` — Display mode selection UI | 3 | Initializes DirectDraw for the setup path and populates/filters display-mode choices and refresh-rate controls. Device rendering/presentation is separately classified. |
 | `font-and-ui-text` — Font and UI text rendering | 25 | Loads/releases font resources, measures or draws formatted text, wraps UI text, or builds/draws text buffers. Excludes low-level string parsing and unrelated gameplay state. |
-| `frontend-menu-flow` — Front-end menu flow and options | 31 | Menu run/tick/build/show flow, front-end state transitions, option values, save/load menu composition, and menu actions. |
+| `frontend-menu-flow` — Front-end menu flow and options | 32 | Menu run/tick/build/show flow, front-end state transitions, option values, save/load menu composition, and menu actions. |
 | `hud-panels-and-overlays` — HUD Panels and Overlay Resources | 24 | Health/hunger/bubble visuals, panel and overlay resource loading/layout, slot hit tests, text drawing, and panel state helpers. |
 | `input-device-and-cursor` — Input devices and cursor state | 8 | Initializes/polls device input or updates keyboard/cursor state. Higher-level command/gameplay interpretation is outside this range. |
 | `input-selection-actions` — Input, pointer actions, and selection commands | 49 | Key/binding state, input action dispatch, cursor/tile selection, selection-mode cancel/update, pointer hit tests, and action-request queues. |
@@ -116,7 +116,7 @@ Assignment confidence: 700 high, 1832 medium, 32 low. Basis counts: address-clus
 | Area ID | Functions | Responsibility boundary |
 | --- | ---: | --- |
 | `audio-playback-mixing` — Audio playback, mixing, and spatial sound | 57 | Initializes audio devices and banks, configures listener/source state, plays/stops tracked or streamed samples, or manages CD/wave playback. File access below the audio layer is separate. |
-| `media-playback` — Movie, stream, and audio playback | 13 | Movie/stream playback, menu audio timing, CD audio watchdog, audio toggles, and playback wait loops. |
+| `media-playback` — Movie, stream, and audio playback | 12 | Movie/stream playback, menu audio timing, CD audio watchdog, audio toggles, and playback wait loops. |
 | `sound-subsystem` — Sound Subsystem | 32 | Sound aliases and samples, submission queues, deferred playback, positional sound, stream selection, and sound-instance ticking. |
 | `video-playback` — Video Playback | 11 | DirectShow graph/sample setup, duration/frame-bound handling, render surface creation, frame update/blit, and teardown. |
 | `video-playback-decoders` — AVI and FLIC playback | 41 | Opens, advances, decodes, seeks, blits, or releases AVI/FLIC playback state and frame data. Excludes general renderer surface operations. |

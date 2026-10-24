@@ -587,6 +587,7 @@ Open threads, in order of value:
 | 388 | [findings/388-geometry-and-matrix-primitives.md](docs/findings/388-geometry-and-matrix-primitives.md) | Geometry, Projection, and Random Primitives |
 | 389 | [findings/389-linked-records-and-state-helpers.md](docs/findings/389-linked-records-and-state-helpers.md) | Linked Records and State Helpers |
 | 390 | [findings/390-motion-config-and-resource-utilities.md](docs/findings/390-motion-config-and-resource-utilities.md) | Motion, Configuration, and Resource Utilities |
+| 418 | [findings/418-movie-stream-and-audio-playback.md](docs/findings/418-movie-stream-and-audio-playback.md) | Movie, Stream, and Audio Playback Boundaries |
 
 Canonical full pseudocode corpus: [`docs/decompiles/full/LEGORR.full.c`](docs/decompiles/full/LEGORR.full.c)
 (2564 manifest functions; see its [README](docs/decompiles/full/README.md)). The
@@ -1280,9 +1281,11 @@ finding 12, #14). Three new modules in `src/game/`:
   corner; `entity_test` checks the `Model` key lands in `model_path`.
 - **AVI movies** (2026-10-21, findings 14 §4 + 23): `src/gods98/movie.*`
   reconstructs the corpus's movie path — `AvisEnabled @ 0x414ce0` (the
-  `DontPlayAvis` gate), `MoviePlayNamed @ 0x415910` (config-key → path), the
-  modal play-until-done/ESC `MoviePlayLoop @ 0x4157c0`, and
-  `MoviePlayLevelVideo @ 0x415990` (the level's `Video` config key). The
+  `DontPlayAvis` gate), `MoviePlayNamed @ 0x415910` and
+  `MoviePlayLevelVideo @ 0x415990` (config-key and level `Video` paths through
+  the DirectShow frame-wait helper). `MoviePlayLoop @ 0x4157c0` is a separate
+  timed bitmap-surface display helper. See [Finding 418](docs/findings/418-movie-stream-and-audio-playback.md)
+  for the native call paths. The
   shipped `Data/AVI/*.avi` files (Indeo5/msvideo1 video, adpcm_ms/pcm audio)
   are decoded in-process by **FFmpeg's runtime libraries dlopen'd at
   first use** — no header, no link dependency, so the build stays

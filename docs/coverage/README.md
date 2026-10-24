@@ -415,7 +415,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00415220` | FrontEndStartLevel |
 | `0x00415360` | ScrollSliderRefresh |
 | `0x00415370` | OverlayMenuGate |
-| `0x00415cf0` | MovieShownReset |
+| `0x00415cf0` | SaveSlotSelectionClear |
 | `0x00415d00` | SaveMenuLayoutLoad |
 | `0x00416150` | StreamPlayLevel |
 | `0x004161a0` | StreamPlayTutorial |
