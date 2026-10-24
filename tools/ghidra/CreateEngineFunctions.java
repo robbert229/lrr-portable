@@ -711,7 +711,7 @@ public class CreateEngineFunctions extends GhidraScript {
         0x48f460L,  // FileResourceHandleSeek
         0x49d030L,  // DirectDrawDeviceInitialize
         0x47ec80L,  // AviFileInitialize
-        0x47efd0L,  // AviFileShutdown
+        0x47efd0L,  // DirectInputShutdown
         0x47ccf0L,  // DirectDrawObjectsRelease
         0x485e80L,  // RenderSetup
         0x4893f0L,  // ResourceStateTableReset
@@ -4313,7 +4313,7 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x48f460: return "FileResourceHandleSeek";
             case 0x49d030: return "DirectDrawDeviceInitialize";
             case 0x47ec80: return "AviFileInitialize";
-            case 0x47efd0: return "AviFileShutdown";
+            case 0x47efd0: return "DirectInputShutdown";
             case 0x47ccf0: return "DirectDrawObjectsRelease";
             case 0x485e80: return "RenderSetup";
             case 0x4893f0: return "ResourceStateTableReset";
