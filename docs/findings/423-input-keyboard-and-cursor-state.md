@@ -17,6 +17,8 @@ The eight functions assigned by Issue #177 are covered across this finding and e
 
 The main loop dispatches queued Win32 messages before polling DirectInput and sampling the cursor (Finding 58). The poll maintains `DAT_0076ab80` and `DAT_0076aa00`; separately, `EnginePreTick` scans the current table and compares it with its text-entry mirror `DAT_004de430` before applying `KeyContextCheck` and `KeyToAscii` to input (Findings 04, 05, and 59). This establishes a keyboard-to-text path without treating the Win32 message `wParam` as its source. `KeyboardDownKeyCount` is a separate convenience check for “any key held,” used by scrolling text and movie playback.
 
+Specific DirectInput scan-code entries are directly observable: `DAT_0076ab81` is Escape (offset `0x01`), and `DAT_0076abb9` is Space (offset `0x39`). `MainSimStep` compares the Space byte with its previous-frame counterpart at `DAT_0076aa39` to detect a press edge; the same current byte is checked by the reward-screen and simulation handlers.
+
 Cursor sampling and cursor placement share the client-relative globals, but have different directions: `CursorPositionUpdate` reads OS position into the game state, while `CursorSetClientPosition` writes game coordinates back through `SetCursorPos`. The DirectInput evidence concerns keyboard-state bytes; the cursor code uses Win32 position APIs and does not show DirectInput mouse polling.
 
 `InputActionStateToggle` and `KeyboardKeyNamesInit` are adjacent input-layer helpers, but the available call evidence does not show that either is fed by `InputStatePoll`. The 256-byte DirectInput indices are observed as raw table positions; their exact correspondence to Windows virtual keys or the name-table indices is unresolved.
