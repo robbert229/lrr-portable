@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 429 | 16.7% |
+| ported | 439 | 17.1% |
 | anchored | 5 | 0.2% |
-| named | 2084 | 81.3% |
+| named | 2074 | 80.9% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 0 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (429 functions)
+  (439 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (2084 functions)
+  citation yet (2074 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 2089 (81.5%).**
+**Game logic remaining to port: 2079 (81.1%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -75,6 +75,14 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00405950` | PendingCommandTimerFireScan |
 | `0x00405c10` | PendingCommandEntityAssignmentTick |
 | `0x00406540` | EntityPoolCallbackSearch |
+| `0x004065d0` | GlobalDwordGet |
+| `0x004065e0` | RenderSurfaceSecondaryGet |
+| `0x004065f0` | CubicBezierPointEvaluate |
+| `0x00406760` | Vector2SetLength |
+| `0x004067b0` | PolylineSegmentLengthsAndTotalCalculate |
+| `0x00406820` | BezierCurveSamplesBuild |
+| `0x004068c0` | PathArcLengthInterpolate |
+| `0x00406980` | SceneObjectModeIsOne |
 | `0x00406990` | TypeTableResourceRowLoad |
 | `0x00406c00` | RendererObjectUpdateFromRecordField64 |
 | `0x00406c30` | RendererObjectUpdateFromRecordField68 |

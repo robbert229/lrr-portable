@@ -1215,6 +1215,20 @@ cannot prove (`docs/coverage/blocked.md`). `crt_test` covers overlap
 both directions, word/zero-count sizes, truncation corners and the
 no-op's call identity.
 
+**Pure vector helpers** (2026-10-24; finding 280): the eleven corpus
+vector leaves land in `src/gods98/view.*` — scale/add/sub/cross/
+normalize, 3D distance/dot/length, the two 2D distance variants and
+the exact-equality test (`FUN_00401720/00401500/004016c0/00401470/
+00401750/00401420/004016f0/004013a0/00401240/00406730/0047c0c0`). The
+five earlier bodies already shipped; their abbreviated citation
+(`FUN_00401720/1500/1420/...`) never flipped those ledger rows, so the
+mapping comment now cites each address in full (the recurring
+abbreviated-citation hazard, now closed). The corpus computes in x87
+long double; the port's single-precision results are byte-equivalent,
+and `vec_normalize` keeps the corpus's unguarded zero length.
+`view_test` covers every helper including the cross convention and
+the 2D variants' agreement.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the
