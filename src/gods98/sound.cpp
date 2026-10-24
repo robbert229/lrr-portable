@@ -569,3 +569,48 @@ double sound_deferred_last_alias(void)
 {
     return s_cooldown_alias;
 }
+
+/* ------------------------------------------------------------------ *
+ *  Deferred sound request queue (issue #317). See sound.hpp.
+ * ------------------------------------------------------------------ */
+
+static int s_queue_alias[SOUND_REQUEST_QUEUE_CAPACITY];  /* DAT_00502b30 */
+static int s_queue_loop[SOUND_REQUEST_QUEUE_CAPACITY];   /* DAT_00502b58 */
+static int s_queue_count;                                /* DAT_00502bd0 */
+
+void sound_request_queue_submit(int alias, int loop)
+{
+    /* SoundRequestQueueSubmit @ 0x464f60. */
+    if (s_queue_count >= SOUND_REQUEST_QUEUE_CAPACITY) {
+        return; /* corpus drop-on-full: no counter bump, no error */
+    }
+    s_queue_alias[s_queue_count] = alias;
+    s_queue_loop[s_queue_count] = loop;
+    ++s_queue_count;
+}
+
+int sound_request_queue_count(void)
+{
+    return s_queue_count;
+}
+
+int sound_request_queue_get(int index, int* alias, int* loop)
+{
+    if (index < 0 || index >= s_queue_count) {
+        return 0;
+    }
+    if (alias != NULL) {
+        *alias = s_queue_alias[index];
+    }
+    if (loop != NULL) {
+        *loop = s_queue_loop[index];
+    }
+    return 1;
+}
+
+void sound_request_queue_clear(void)
+{
+    /* Port-side helper: the corpus zeroes DAT_00502bd0 only in its
+     * frame tick (that consumer is unported here). */
+    s_queue_count = 0;
+}
