@@ -61,9 +61,9 @@ and [213](213-disabling-sound-does-not-clear-packed-requests.md).
 | `0x004652c0` | `SoundDeferredQueueDrain` | Forwards its argument to `SoundBatchQueueDrain` as the replay/clear option. |
 | `0x004652d0` | `SoundBatchQueueDrain` | Enables batch mode when requested; otherwise clears it and, when requested, replays and clears all packed requests. |
 | `0x00465370` | `SoundSubsystemEnabledGet` | Returns the sound-enabled bit; this address was mislabeled as dynamic-alias state. |
-| `0x00465380` | `SceneEffectRegistryReset` | Clears the transient-effect registry head, tail, and shared texture count. Reclassified to scene resources/effects. |
+| `0x00465380` | `SceneEffectRegistryReset` | Clears the transient-effect registry head at `DAT_00552128`, tail at `DAT_0055212c`, and shared texture count. Reclassified to scene resources/effects. |
 | `0x004653a0` | `TransientEffectTexturesPreload` | Loads numbered BMP textures into the shared transient-effect texture table. Reclassified to scene resources/effects. |
-| `0x00465430` | `TransientEffectEmitterCreate` | Allocates an emitter record and scene context, creates textured particle slots, seeds an initial burst for applicable modes, and links the record into the effect registry. Reclassified to scene resources/effects. |
+| `0x00465430` | `TransientEffectEmitterCreate` | Allocates an emitter record and scene context, creates textured particle slots, seeds an initial burst for applicable modes, and links the record into the effect registry using head/tail globals at `DAT_00552128/0x0055212c`. Reclassified to scene resources/effects. |
 | `0x00465970` | `TransientEffectRegistryReleaseAll` | Walks the emitter registry, releases each record, then clears its head. Reclassified to scene resources/effects. |
 | `0x004659b0` | `TransientEffectInstanceRelease` | Releases the emitter render resource and scene object, unlinks it, stops an associated sound handle when present, and frees the record. Reclassified to scene resources/effects. |
 | `0x00465a90` | `TransientEffectRegistryEnableSet` | Walks all registered emitters and applies an enabled state. Reclassified to scene resources/effects. |
