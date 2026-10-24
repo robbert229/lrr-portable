@@ -484,9 +484,9 @@ address,decompile_reference_count,function_count,functions,finding_mentions,imag
 0x004b32e0,1,1,CmdRegistryInit@0x00401cf0,,.data,zero-filled virtual tail,,,unreviewed,,,
 0x004b32e4,1,1,CmdRegistryInit@0x00401cf0,,.data,zero-filled virtual tail,,,unreviewed,,,
 0x004b32e8,11,7,CmdKindByName@0x00401cb0; CmdRegistryInit@0x00401cf0; CmdSetKind@0x00402060; PriorityEntryOrderValueSet@0x00402090; CmdTickGlobal@0x00402220; CmdChainPurge@0x00402310; CmdLinkHead@0x00404030,docs/findings/10-entity-command-primitives.md; docs/findings/465-task-scheduler-record-lifecycle.md; docs/findings/466-command-registry-global-queue-transitions.md; docs/findings/76-entity-teardown-drains-command-chain-by-flags.md,.data,zero-filled virtual tail,,,mentioned,,,
-0x004b32ec,4,1,CmdTickGlobal@0x00402220,,.data,zero-filled virtual tail,,,unreviewed,,,
+0x004b32ec,4,1,CmdTickGlobal@0x00402220,,.data,zero-filled virtual tail,,,interpreted,Default scheduler value for AI_Priority_Ore,high,"CmdRegistryInit initializes the AI priority value table at 0x004b32e8 to 49 and leaves this second entry at that default; CmdKindByName maps AI_Priority_Ore to index 1, and CmdSetKind reads this table entry when assigning the corresponding priority value to a command."
 0x004b32f4,1,1,CmdRegistryInit@0x00401cf0,,.data,zero-filled virtual tail,,,unreviewed,,,
-0x004b32f8,3,2,CmdRegistryInit@0x00401cf0; CmdTickGlobal@0x00402220,,.data,zero-filled virtual tail,,,unreviewed,,,
+0x004b32f8,3,2,CmdRegistryInit@0x00401cf0; CmdTickGlobal@0x00402220,,.data,zero-filled virtual tail,,,interpreted,Default scheduler value for AI_Priority_Construction,high,"CmdRegistryInit initializes the AI priority value table at 0x004b32e8 to 49, then sets this fifth entry to 60; CmdKindByName maps AI_Priority_Construction to index 4, and CmdSetKind reads the table when assigning a command's priority value."
 0x004b32fc,1,1,CmdRegistryInit@0x00401cf0,,.data,zero-filled virtual tail,,,unreviewed,,,
 0x004b3300,1,1,CmdRegistryInit@0x00401cf0,,.data,zero-filled virtual tail,,,unreviewed,,,
 0x004b3308,1,1,CmdRegistryInit@0x00401cf0,,.data,zero-filled virtual tail,,,unreviewed,,,
@@ -1792,7 +1792,7 @@ address,decompile_reference_count,function_count,functions,finding_mentions,imag
 0x0054bf24,3,2,TooltipOverlayStateInitialize@0x0046b1d0; TimedEffectSlotRender@0x0046bc30,,.data,zero-filled virtual tail,,,unreviewed,,,
 0x0054bf28,9,3,TooltipOverlayStateInitialize@0x0046b1d0; RectangularGridOverlayGeometryDraw@0x0046b8b0; TimedEffectSlotRender@0x0046bc30,docs/findings/459-timed-effects-and-cues.md,.data,zero-filled virtual tail,,,mentioned,,,
 0x0054bf2c,9,2,TooltipOverlayStateInitialize@0x0046b1d0; TimedEffectSlotRender@0x0046bc30,,.data,zero-filled virtual tail,,,partial,Secondary tooltip layout inset used when positioning its text and object rows,low,"TooltipOverlayStateInitialize stores this argument as a layout value; TimedEffectSlotRender adds it to the primary inset when positioning the tooltip box, text rows, and object icon"
-0x0054bf30,5,2,TooltipOverlayStateInitialize@0x0046b1d0; TimedEffectSlotRender@0x0046bc30,,.data,zero-filled virtual tail,,,unreviewed,,,
+0x0054bf30,5,2,TooltipOverlayStateInitialize@0x0046b1d0; TimedEffectSlotRender@0x0046bc30,,.data,zero-filled virtual tail,,,interpreted,Tooltip rendering viewport width,high,TooltipOverlayStateInitialize stores the display width returned by DisplayWidthGet here; TimedEffectSlotRender uses it to keep tooltip text within the right edge of the viewport.
 0x0054bf34,2,2,TooltipOverlayStateInitialize@0x0046b1d0; TimedEffectSlotRender@0x0046bc30,,.data,zero-filled virtual tail,,,unreviewed,,,
 0x0054bf38,2,2,TooltipOverlayStateInitialize@0x0046b1d0; TimedEffectSlotRender@0x0046bc30,,.data,zero-filled virtual tail,,,unreviewed,,,
 0x0054bf3c,3,3,TooltipOverlayStateInitialize@0x0046b1d0; TimedEffectTimestampReset@0x0046b7a0; TimedEffectAndCueUpdate@0x0046b7c0,docs/findings/459-timed-effects-and-cues.md,.data,zero-filled virtual tail,,,mentioned,,,
