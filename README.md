@@ -1307,6 +1307,22 @@ dereferences the +0x14 slot unguarded; the port answers 0 for a NULL
 slot or rect (documented deviation). `view_test` drives the corners, the
 truncated-offset shifts and the slot indirection.
 
+**CRT math and wide-string leaves** (2026-10-24; findings 302/342/377/
+397/399): four more runtime leaves join `src/gods98/crt.*` —
+`crt_unsigned_add_with_carry` (`CrtUnsignedAddWithCarry @ 0x499fb0`, the
+carry primitive the corpus's 96-bit helpers build on), `double_classify`
+(`DoubleClassify @ 0x493a80`, the exponent+quiet-bit pattern classifier:
+1/+Inf, 2/−Inf, 3/quiet-NaN-shaped, 4/signaling-NaN-shaped, 0/finite —
+the corpus masks the high word's top 16 bits with `0x7ff8`, exponent
+plus quiet bit, verbatim), and the two wide-string primitives
+`wide_string_length` (`WideStringLength @ 0x499710`, the UTF-16 strlen)
+and `bounded_wide_string_length_including_null` (`BoundedWideStringLength-
+IncludingNull @ 0x49add0`, counting including the NUL when the terminator
+falls inside the bound, the bound otherwise — and for a terminator at
+exactly the bound position, since the corpus's remaining-count gate
+answers 0 there). `crt_test` pins the carry corners, the classifier's
+bit patterns and the bounded scan's boundary cases.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

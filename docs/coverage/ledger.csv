@@ -2393,7 +2393,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004939d0,FUN_004939d0,named,CrtMathExceptionHandlerGet,0,305
 00493a00,FUN_00493a00,named,CrtMathExceptionCodeFromStatus,0,254
 00493a40,FUN_00493a40,named,DoubleBuildWithExponent,0,242
-00493a80,FUN_00493a80,named,DoubleClassify,0,383
+00493a80,FUN_00493a80,ported,DoubleClassify,2,383
 00493ae0,FUN_00493ae0,named,DoubleFrexpDecompose,0,1595
 00493be0,FUN_00493be0,named,FpuStatusWordGetVariantA,0,91
 00493bf0,FUN_00493bf0,named,FpuStatusWordGetVariantB,0,91
@@ -2492,14 +2492,14 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004996b0,FUN_004996b0,named,PointerRangeIsWritable,0,138
 004996d0,FUN_004996d0,named,FunctionPointerIsExecutable,0,113
 004996f0,_abort,runtime-import,_abort,0,191
-00499710,FUN_00499710,named,WideStringLength,0,233
+00499710,FUN_00499710,ported,WideStringLength,2,233
 00499730,FUN_00499730,named,CrtRuntimeErrorMessageBoxDisplay,0,794
 004997c0,FUN_004997c0,named,CrtCallocAligned,0,1297
 00499860,FUN_00499860,named,CrtTimeZoneInitializeOnce,0,129
 00499880,FUN_00499880,named,CrtTimeZoneStateInit,0,4067
 00499b30,FUN_00499b30,named,CrtDaylightSavingTimeCheck,0,2214
 00499da0,FUN_00499da0,named,CrtDaylightTransitionBoundaryCompute,0,1648
-00499fb0,FUN_00499fb0,named,CrtUnsignedAddWithCarry,0,254
+00499fb0,FUN_00499fb0,ported,CrtUnsignedAddWithCarry,2,254
 00499fe0,FUN_00499fe0,named,UInt96Add,0,449
 0049a050,FUN_0049a050,named,ExtendedFloat96BitShiftLeftOne,0,237
 0049a080,FUN_0049a080,named,ExtendedFloat96BitShiftRightOne,0,213
@@ -2511,7 +2511,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0049aa10,FUN_0049aa10,named,CrtSignalHandlerDispatch,0,1709
 0049ab90,FUN_0049ab90,named,CrtSignalHandlerRecordFind,0,531
 0049abe0,FUN_0049abe0,named,CrtWideCharToMultiByteCompat,0,2829
-0049add0,FUN_0049add0,named,BoundedWideStringLengthIncludingNull,0,387
+0049add0,FUN_0049add0,ported,BoundedWideStringLengthIncludingNull,2,387
 0049ae10,FUN_0049ae10,named,CrtEnvironmentVariableLookup,0,1233
 0049aea0,FUN_0049aea0,named,CrtFileDescriptorFlag80SetOrClear,0,728
 0049af20,FUN_0049af20,named,CrtCountedStringCompare,0,284

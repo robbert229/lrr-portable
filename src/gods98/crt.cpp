@@ -93,3 +93,66 @@ void float_pair_to_integer_pair(float x, float y, int* out_x, int* out_y)
     *out_x = (int)x;
     *out_y = (int)y;
 }
+
+/* FUN_00499fb0: the corpus's carry test — the sum below either operand
+ * means the addition carried out of the 32-bit result. */
+int crt_unsigned_add_with_carry(uint32_t a, uint32_t b, uint32_t* sum)
+{
+    const uint32_t s = a + b;
+    *sum = s;
+    return (s < a || s < b) ? 1 : 0;
+}
+
+/* FUN_00493a80: the exponent/quiet-bit pattern classifier over the two
+ * bit words, corpus masks verbatim (finding 399). The corpus masks the
+ * high word's top 16 bits with 0x7ff8 — exponent plus quiet bit. */
+int double_classify(uint32_t lo, uint32_t hi)
+{
+    const uint32_t exp_quiet = (hi >> 16) & 0x7ff8u;
+    if (hi == 0x7ff00000u && lo == 0u) {
+        return 1;                                   /* +infinity */
+    }
+    if (hi == 0xfff00000u && lo == 0u) {
+        return 2;                                   /* -infinity */
+    }
+    if (exp_quiet == 0x7ff8u) {
+        return 3;                                   /* quiet-NaN-shaped */
+    }
+    if (exp_quiet == 0x7ff0u && ((hi & 0x7ffffu) != 0u || lo != 0u)) {
+        return 4;                                   /* signaling-NaN-shaped */
+    }
+    return 0;                                       /* finite */
+}
+
+/* FUN_00499710: the 16-bit strlen — code units counted up to the NUL. */
+int wide_string_length(const uint16_t* text)
+{
+    const uint16_t* p = text;
+    while (*p != 0) {
+        ++p;
+    }
+    return (int)(p - text);
+}
+
+/* FUN_0049add0: bounded scan — the terminator index plus one when found
+ * within `bound` (count including the NUL), the bound otherwise; a zero
+ * bound returns the bound without reading. */
+int bounded_wide_string_length_including_null(const uint16_t* text,
+                                              int bound)
+{
+    if (bound != 0) {
+        const uint16_t* p = text;
+        int left = bound;
+        while (*p != 0) {
+            ++p;
+            --left;
+            if (left == 0) {
+                break;
+            }
+        }
+        if (left != 0 && *p == 0) {
+            return (int)(p - text) + 1;
+        }
+    }
+    return bound;
+}
