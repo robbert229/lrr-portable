@@ -2112,6 +2112,17 @@ itself otherwise; the read threads through the port's view table with
 NULL slots answering zero. `enginebind_test` pins the selection, the
 mode passthrough, and the guards.
 
+**The engine-state band 0x425cd0-0x4263a0** (2026-10-24; findings
+295/324/392): four leaves land in `engine.*`.
+`current_engine_mode_is_zero` (0x425d80) reads the context-mode word
+through the threaded `EngineContext`; `global_state_flags_bit7_set`
+(0x4263a0) raises or clears cheat-word bit 7. The two DAT-global shapes
+follow the unowned-global convention: `global_scroll_guard_set` (0x425cd0)
+stores the scroll-scale guard global (the corpus's only reader is still
+unported — a port-side peek stands in), and `global_triple_copy_out`
+(0x426230) hands out the inert zero-init triple. `enginebind_test` pins
+the mode reads, the bit-7 walk, the guard store, and the zero triple.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

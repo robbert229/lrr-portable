@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 677 | 26.4% |
+| ported | 681 | 26.6% |
 | anchored | 4 | 0.2% |
-| named | 1836 | 71.6% |
+| named | 1832 | 71.5% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (677 functions)
+  (681 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1836 functions)
+  citation yet (1832 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1841 (71.8%).**
+**Game logic remaining to port: 1837 (71.6%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -400,8 +400,12 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004248b0` | SelectedEntityGroundMarkerRender |
 | `0x00425b40` | PeriodicCallbackDispatch |
 | `0x00425c30` | TransitionControl |
+| `0x00425ce0` | ScrollScaleSetAndClamp |
 | `0x00425d50` | GlobalRenderRecordSetFromInput |
 | `0x00426250` | UpdateRenderViewportState |
+| `0x004262e0` | ObjectiveScoreTextOriginSet |
+| `0x00426320` | ObjectiveTaskTextOriginSet |
+| `0x00426360` | GlobalStateFlagsBits6And9Set |
 | `0x004263c0` | GlobalSubsystemStateReset |
 | `0x00426420` | CursorRayToCameraRoute |
 | `0x00427e00` | ToolTipInfoStringsLoad |

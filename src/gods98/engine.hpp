@@ -222,4 +222,21 @@ uint32_t runtime_flag40000000_get(const EngineContext* ctx);
  * views answer zero). */
 int mode_dependent_field24_get(const EngineContext* ctx);
 
+/* --- the 0x425-0x426 engine-state band (2026-10-24; findings 295/324/392) ---
+ * CurrentEngineModeIsZero (FUN_00425d80): the context-mode word reads zero.
+ * GlobalStateFlagsBit7Set (FUN_004263a0): cheat-word bit 7 on/off. Both
+ * thread through EngineContext (the corpus's DAT_00556ec8 / DAT_00556ed0).
+ * GlobalScrollGuardSet (FUN_00425cd0) stores the scroll-scale guard global
+ * (corpus DAT_004de548) — zero-init module storage, the corpus's writer
+ * side being this setter itself. GlobalTripleCopyOut (FUN_00426230) hands
+ * out the inert triple (corpus DAT_0055651c/520/524) — zero-init statics,
+ * documented: the corpus's only writer is the unported sim-interaction
+ * renderer update. */
+bool   current_engine_mode_is_zero(const EngineContext* ctx);
+void   global_state_flags_bit7_set(EngineContext* ctx, int value);
+void   global_scroll_guard_set(int value);
+int    global_scroll_guard_peek(void); /* port-side hook: the corpus reader
+                                        * ScrollScaleSetAndClamp is unported */
+void   global_triple_copy_out(uint32_t* out);
+
 #endif /* LEGORRR_ENGINE_HPP */
