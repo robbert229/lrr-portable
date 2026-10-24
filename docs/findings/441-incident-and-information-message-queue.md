@@ -24,12 +24,12 @@ If the configured display template exists and the precheck admits the event, the
 
 The `EngineTick @ 0x004232e0` snapshot calls `InfoMessageTimerDecay @ 0x0041a2c0` before the in-game render/update branch. That helper walks all 40 per-ID timer fields at `DAT_004dc704` in `0x14`-byte steps and subtracts the frame delta from positive values. `KindSixRandomMessageDispatchSweep @ 0x0040f0e0` runs when its global gate is active: after its countdown expires it samples up to 100 random grid coordinates, accepts one through `FUN_0040f190`, dispatches message ID `6` with that coordinate pointer, and rearms the countdown to a value in the observed `750`–`799` range. Finding 256 captures this producer.
 
-Other direct producers show how the dispatch payloads are used. In `MessageDispatch(id, p2, p3, p4)`, `IncidentMessageNodeCreate(p4, p3, p2)` copies the first two dwords from `p4` when non-null, stores `p3` as a compiled text override when non-null, and stores `p2` as the node payload.
+Other direct producers show how the dispatch payloads are used. In `MessageDispatch(id, p2, p3, p4)`, `IncidentMessageNodeCreate(p4, p3, p2)` copies the first two dwords from `p4` when non-null, stores `p3` as the node payload, and compiles `p2` as an optional text override when non-null.
 
 | Caller | Submitted IDs and payload shape visible at the call site |
 | --- | --- |
 | `LavaErosionPendingCellTick @ 0x0040eab0` | ID `0x1e` with a pointer to the affected grid-coordinate pair in `p4`. |
-| `TerrainCellMutation @ 0x00430530` | IDs `0x24`/`0x25` with a local two-dword cell record in `p4`; the ID depends on the observed cell-type branch. |
+| `TerrainCellMutation @ 0x00430530` | Cell types 8 and 10 both dispatch ID `0x25`; type 8 also dispatches ID `1`, while type 10 also dispatches `0x24`. All calls pass the local two-dword cell record in `p4`. |
 | `CreatureSpawnFromEmergence @ 0x0043af30` | IDs `2`, `3`, or `4` after type-name checks, then `0x27`; each call passes the created entity in `p3`. |
 | `ObjectiveSidecarAppendGate @ 0x0043bc40` | Shared ID `0x26`, then one of IDs `10`–`12` according to entity type; calls pass the same coordinate pointer in `p4` (Finding 47). |
 | `EntityLinkedActivityEventDispatch @ 0x0043f5b0` | IDs `0x14`–`0x19` selected by event bits in `p2`; the entity pointer is passed in `p3`. |
