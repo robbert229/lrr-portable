@@ -170,11 +170,11 @@ public class CreateEngineFunctions extends GhidraScript {
         0x4152c0L,  // SlotSummary — "%i point" completed-game summary for a slot
         0x415370L,  // OverlayMenuGate — paused/options overlay open gate
         0x4154b0L,  // LevelChainBuild — StartLevel + NextLevel -> ordered level list
-        0x415700L,  // MoviePlayWait — FLIC frame loop with quit-probe cancellation
-        0x4157c0L,  // MoviePlayLoop — play movie by config key to completion
+        0x415700L,  // MoviePlayWait — DirectShow sample-update loop with quit-probe cancellation
+        0x4157c0L,  // MoviePlayLoop — timed bitmap-surface display by config key
         0x415910L,  // MoviePlayNamed — play a named movie (config-key -> path)
         0x415990L,  // MoviePlayLevelVideo — play <level> Video movie (LevelLoad path)
-        0x415cf0L,  // MovieShownReset — DAT_005574d0 = 0xffffffff
+        0x415cf0L,  // SaveSlotSelectionClear — DAT_005574d0 = 0xffffffff
         0x415d00L,  // SaveMenuLayoutLoad — SaveText/LevelText layout keys + rects
         0x416150L,  // StreamPlayLevel — trigger Stream_LevelName_Level_%d
         0x4161a0L,  // StreamPlayTutorial — trigger Stream_LevelName_TLevel_%d
@@ -2553,7 +2553,7 @@ public class CreateEngineFunctions extends GhidraScript {
         "ScrollToSliderIndex", "ScrollSliderRefresh", "SaveMenuRefresh",
         "OptionsApplyFromSlot", "FrontEndStartLevel", "SlotSummary",
         "OverlayMenuGate", "LevelChainBuild", "MoviePlayWait", "MoviePlayLoop",
-        "MoviePlayNamed", "MoviePlayLevelVideo", "MovieShownReset",
+        "MoviePlayNamed", "MoviePlayLevelVideo", "SaveSlotSelectionClear",
         "SaveMenuLayoutLoad", "StreamPlayLevel", "StreamPlayTutorial",
         "OptionsWriteToSlot", "OptionsLoadOrDefault", "FrontEndStateChange",
         "MenuEnter", "FrontEndActive", "SaveSlotOpen", "FrontEndSelectedAction",
