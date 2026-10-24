@@ -1,6 +1,6 @@
 # Finding 357 — Entity Fields and Global Counter Helpers
 
-This pass names entity radius/mask accessors, a scene-object resource getter, and five global accumulator increments. The global counters retain their exact addresses because their meanings are unresolved.
+This pass names entity radius/mask accessors, a scene-object resource getter, and five global accumulator increments. The counter at `0x00555324` is now identified as a successful creature-emergence spawn count; the other globals retain address-based names because their meanings remain unresolved.
 
 | Address | Name | Observed behavior |
 | --- | --- | --- |
@@ -10,7 +10,7 @@ This pass names entity radius/mask accessors, a scene-object resource getter, an
 | `0x0046d9e0` | `SceneObjectResourceGet` | Returns the pointer stored at offset +8. |
 | `0x00462830` | `GlobalFloatAt00554adcAddOne` | Adds 1.0 to global float DAT_00554adc. |
 | `0x00462850` | `GlobalFloatAt00554efcAddOne` | Adds 1.0 to global float DAT_00554efc. |
-| `0x00462870` | `GlobalCounterAt00555324Increment` | Increments global integer DAT_00555324. |
+| `0x00462870` | `GlobalCounterAt00555324Increment` | Increments the successful creature-emergence spawn count at DAT_00555324 after `CreatureSpawnFromEmergence` creates and initializes a creature. |
 | `0x00462880` | `GlobalCounterAt00555328Increment` | Increments global integer DAT_00555328. |
 | `0x00462890` | `GlobalCounterAt0055532cIncrement` | Increments global integer DAT_0055532c. |
 

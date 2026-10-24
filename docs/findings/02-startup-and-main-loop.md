@@ -28,7 +28,8 @@ The whole game logic lives between `0x41fb50`–`0x424d00`, which explains why G
 
 ```c
 while (!quit) {
-  message_scratch = 0;             // DAT_0076ab4c..ab58
+  DAT_0076ab4c = 0;                // per-frame primary mouse-button down-event latch
+  DAT_0076ab50 = DAT_0076ab54 = DAT_0076ab58 = 0; // adjacent input-event state
   pump_messages();                 // FUN_00478040
   FUN_0047eef0();                  // pre-tick (input state?)
   FUN_0047f010();                  // pre-tick 2

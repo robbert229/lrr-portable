@@ -105,8 +105,9 @@ available decompile.
 
 ## Scene transform and configured light effects
 
-`SceneObjectTransformStateInit` (`0x0044c710`) stores two object handles and
-a position triple in globals, initializes current and configured channel
+`SceneObjectTransformStateInit` (`0x0044c710`) stores the target scene object
+at `DAT_004eadd8`, a companion context at `DAT_004eaddc`, and a position triple
+in globals, initializes current and configured channel
 values from that triple, and applies the transform. `ConfiguredSceneTransformEnable`
 (`0x0044c790`) sets global flag `DAT_004eaec8` bit `0x100` and reapplies the
 configured transform when enabled; disabling it only clears that bit. Input
@@ -144,6 +145,8 @@ object with the fourth component set to `1.0`. The frame ordering and
 unresolved channel meanings are described in finding 390; this static path
 does not establish that each configured blink/fade value is consumed by this
 particular tick routine.
+
+The same state word `DAT_004eaec8` also carries the effect phases. The stores above set feature bits `0x1` (blink), `0x4` (fade), and `0x40` (move/jitter configuration); the jitter stepper uses `0x80` while applying its sampled offset. Bit `0x100` disables the frame-driven effect group when the configured transform is enabled. `RoutePositionBlockedStateSet` uses `0x200` to select the downward RGB-tween branch, and `ThreeChannelValueTweenStep` latches `0x400` and `0x1000` at its upper and lower endpoints. The fade state also toggles bits `0x8`, `0x10`, and `0x20`; their full phase names remain uncertain.
 
 ## Open questions
 

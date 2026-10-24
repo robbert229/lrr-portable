@@ -30,10 +30,12 @@ The tick is dominated by globals in the `0x5560d4`–`0x556f24` window:
 | `DAT_00556ed0` | **debug/cheat flag word** | gates all debug overlay strings |
 | `DAT_00556ec8` | **context mode**: 1 = in-game, 0 = editor/preview | the tick splits into two render+update branches on it |
 | `DAT_00505f88` | app mode (10 = loader/benchmark) | see LoaderProfile below |
-| `DAT_005560d8 / 0dc` | render target pair (`FUN_00477150(target, …, dt)` draws) | paired begin/end calls around draw sections |
+| `DAT_005560d8` | root DDiScene object | created by `FUN_00472710`; used as parent/context for scene-object resources and the scene draw call `DDiSceneDrawEnd` |
+| `DAT_005560dc` | DDiScene viewport wrapper for active camera and screen projection | `GameConfigInit` stores the result of `RenderTargetViewportScaleSet` using the first view context and a viewport size derived from the D3D device; the helper creates the wrapped interface through the D3DRM3 factory, and projection/screen-to-world helpers dispatch through it. The exact native viewport interface name remains unconfirmed |
 | `DAT_005560e4 / e8 / ec` | three view/camera contexts | each ticked identically by `FUN_00435f5c(o, state, dt, scale)`; `0ec+0x24` = its render-list ref |
 | `DAT_00556124 / 128 / 12c` | debug text-panel surfaces | target of `FUN_0047a180(surface, x, y, fmt, …)` = `printf`-style HUD text |
 | `DAT_005561d4…28c` | entity/object arrays (strides `0x1ec`, `0x74`, `0x14c`, `0x10`) + counts | iterated in EngineShutdown |
+| `DAT_00556fb8 / 0x00556fbc` | current interaction tile `(x, y)` | `MainSimInteractionAndCellUpdate @ 0x426520` stores the two coordinates returned by `FUN_004502e0`; later uses the pair to index the terrain grid and passes its address to tile-action helpers |
 
 Flag bits (observed behavior, partially inferred):
 

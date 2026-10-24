@@ -31,7 +31,8 @@ control and data flow, not runtime behavior after a failed initialization.
 at `DAT_0076ad80`, then separately clears the first 20 pool-bank pointers. It
 writes the string pointers and defaults used by the DDiScene kind table around
 `DAT_0076add8`–`DAT_0076ae10` (the table's dispatch use is detailed in finding
-25). It saves its argument at `DAT_0076ae20`, clears the free-list head
+25). It saves the visual-resource path root at `DAT_0076ae20` (the executable
+basename `LegoRR`), clears the free-list head
 `DAT_0076add0`, sets the pool-block counter `DAT_0076cd90` to zero, initializes
 `DAT_0076cd94` to `1`, clears the auxiliary count `DAT_0076cd74`, and nulls
 `DAT_0076cd88`.
@@ -41,7 +42,9 @@ record in `DAT_0076add4`, and invokes the vtable method at offset `+0xf8` on
 the first pointer in that record, passing `1`. It does not check the allocator
 result before dereferencing it, so this path has no local recovery if root
 allocation returns null. `SceneRootObjectGet @ 0x472940`
-is a direct getter for `DAT_0076add4`. For example,
+is a direct getter for `DAT_0076add4`. Renderer fog enable, color, mode, and
+range setters also dispatch through the wrapped interface in this root record,
+confirming its use as the active scene context. For example,
 `EntitySceneObjectTreeAttach @ 0x44b680` allocates an object from an entity's
 component, gets the root, and passes both to `FUN_00475710` before attaching
 the object's handle to the entity record. These call sites establish the

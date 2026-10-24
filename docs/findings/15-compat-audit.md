@@ -33,8 +33,9 @@ talked to directly. Dev-string cluster confirms the vintage:
 ## 2. Launch-gate scan
 
 * `GetVersion` (`0x48f026`): result is **decomposed into globals**
-  (`DAT_005490dc` = major, `DAT_005490e8/4` = minor/build) with **no
-  conditional gate in this function** — no NT refusal, no version branch.
+  (`DAT_005490dc` = upper 16 bits, `DAT_005490e4` = major byte,
+  `DAT_005490e8` = minor byte, and `DAT_005490e0` = major × 256 + minor)
+  with **no conditional gate in this function** — no NT refusal, no version branch.
 * No `GetVersionEx`, no `VerifyVersionInfo`, no `IsProcessorFeature…`
   imports.
 * CD-key checks are **file-based** (`cd.key`, `delme.dat`, mount of

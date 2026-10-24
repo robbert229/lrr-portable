@@ -8,9 +8,10 @@ session. Pseudocode: [`../decompiles/legacy/engine-region.c`](../decompiles/lega
 
 Signature `QuitPoll(edgeA, edgeB, &quitFlag)`. Mechanics:
 
-- Mouse position: `DAT_0076ab24/ab28` = x, y. `DAT_00556eec` / `DAT_00556ef0` =
-  screen-corner rectangles (rect + `0x1d6` × `0x13b` = width/height margins —
-  the "corner zone").
+- Mouse position: `DAT_0076ab24/ab28` = x, y. `DAT_00556eec` and
+  `DAT_00556ef0` are the loaded next- and back-button image surfaces. `QuitPoll`
+  uses their surface dimensions to form the corresponding screen-corner zones
+  (offsets `0x1d6` × `0x13b`); button hit tests also use these dimensions.
 - Cursor state machine on `_DAT_004ffbc0` **objective state word**
   (bits 1/2/4 = result states, bit 8 = advisor-hint-pending; all xrefs sit in the
   objective layer `0x457d–0x4591` — finding 22 corrected the earlier "input-device

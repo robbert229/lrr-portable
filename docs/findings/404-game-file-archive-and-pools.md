@@ -100,6 +100,31 @@ This finding maps the 73 functions assigned to `game-file-archive-and-pools`. Th
 | `0x0049cf90` | `WadHuffmanCanonicalCodesBuild` | Builds canonical Huffman code ranges/lookup state from code lengths. |
 | `0x0049d000` | `WadReverseLowBits` | Reverses the requested low-order bits, supporting the LSB-first code path. |
 
+### WAD decoder DAT globals
+
+The codec helpers share one process-global working state, initialized by
+`WadBitstreamOutputInitialize @ 0x0049cc70`. The pseudocode assigns the
+following roles directly from their reads and writes:
+
+| Address | Recovered role | Evidence in the decompile |
+| --- | --- | --- |
+| `0x00558080` | Current compressed-input pointer. Initialization sets it to `source + 0x12`; the bit readers advance it as input is consumed, and both decoders also advance it when copying literal bytes. |
+| `0x00558084` | Current decompressed-output pointer. Initialization sets it to the destination; both decoders write bytes here and increment it. |
+| `0x00558090` | Decompressed-output end pointer. Initialization derives it from the input header and destination; both decoder loops stop when the output pointer reaches it. |
+| `0x00557d68` | Remaining-bit count for the active bit buffer. The LSB-first reader refills it to 16; the MSB-first reader refills it to 8. |
+| `0x00558088` | MSB-first bit buffer. `WadReadBitsMsbFirst` loads one input byte, tests its high bit, shifts it left, and decrements the shared bit count. |
+| `0x0055808c` | LSB-first bit buffer. `WadReadBitsLsbFirst` loads a 16-bit unit, returns low bits first, shifts right, and decrements the shared bit count. |
+| `0x00557d80`, `0x00557e80`, `0x00557f80` | Three Huffman decode tables passed respectively to the type-1 symbol, offset, and run decoders. `DecodeWadPayloadType1` reads each table before using it. |
+
+This is a shared, non-reentrant decoder context: either decoder's initializer
+overwrites the same input/output cursors and bit count, and the readers use the
+same bit-buffer globals. That follows from the global assignments and call
+graph; no runtime test of overlapping decoder calls was performed. The exact
+encoded meaning of every field in the 18-byte
+payload header is outside this mapping. The shipped WAD corpus does not exercise
+the compressed branches, so these roles are static-analysis findings rather
+than confirmation against a compressed game entry.
+
 ## End-to-end flow and limits
 
 - Startup attempts to mount numbered WAD archives. The `GameFileOpenDispatch` path searches mounted indexes first and falls back to standard files; WAD writes and formatted output are rejected. Finding 20 gives the mount order and archive layout.

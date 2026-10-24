@@ -62,7 +62,7 @@ by kind. Names live in two string tables resolved by `CmdKindByName`:
   Request, Repair, Dig, Dynamite, Reinforce, Wait, AnimationWait, ElecFence, Eat, GotoEat,
   FindDriver, GetTool, BirdScarer, Upgrade, BuildPath, Train, Depart, AttackPath,
   AttackRockMonster, Recharge, Dock, AttackObject, FindLoad`
-- **25 AI priorities**: `Crystal, Ore, DefaultCollect, Destruction, Construction, Request,
+- **27 AI priorities**: `Crystal, Ore, DefaultCollect, Destruction, Construction, Request,
   Reinforce, Repair, Clearing, Storage, Refining, HealthLow, GetIn, Upgrade, BuildPath,
   AttackRockMonster, Barrier, FindLoad, Recharge, UpgradeBuilding, Gather, Steal, Punch,
   Depart, AttackPath, AttackObject, Congregate`

@@ -28,7 +28,9 @@ The latter loads a scene resource (trying the ordinary scene descriptor and a
 fallback descriptor), enables it, creates four associated handles, and
 registers the requested name on the selected style/slot. `RockFallStyleNameLookup`
 (`0x0040bf70`) is a case-insensitive lookup over the stored names, while
-`RockFallStyleTableSet` (`0x0040bfc0`) sets the global style-table selector.
+`RockFallStyleTableSet` (`0x0040bfc0`) stores the active `RockFallStyles`
+index resolved from the level's `RockFallStyle` setting at `DAT_004c79a4`.
+That index chooses a group of three scene-slot records in the fixed resource tables.
 `RockFallStyleSceneResourcesRelease` (`0x0040c6c0`) releases and clears the
 four child handles in each of three active style groups. This connects the
 config loader to the fixed slot tables; it does not establish what each
@@ -107,6 +109,11 @@ the top spot, track spot, and root light. Missing required RGB
 settings or required light creation causes an early failure; the final
 rotation-light setting is optional. The prior behavioral summary is in finding
 240.
+
+The root scene object's default white type-2 light is stored at
+`DAT_00556104`. `ContextSelectedGlobalPointerGet` returns this pointer when
+`DAT_00556ec8` is nonzero, and `MainSimInteractionAndCellUpdate` adjusts its
+light values under that mode.
 
 `PreloadNumberedBitmaps` (`0x0040a400`) formats and loads eleven numbered
 bitmap resources into a global cache: ten occupy consecutive slots and the

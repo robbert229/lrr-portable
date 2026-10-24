@@ -14,6 +14,8 @@ This finding follows level setup into the NERP script interpreter, advisor text/
 
 `TutorialScriptCommandDispatch @ 0x00453320` runs from `EngineTick @ 0x004232e0` when the tutorial-disable bit `0x01000000` is clear (the caller is preserved in `LEGORR.supplement.c` and the legacy region). It walks the loaded script as 32-bit words. The interpreter uses high bits to distinguish callback, comparison, and control-flow records, takes callback identifiers from the low 16 bits, consults the callback metadata/table at `0x004a5948`–`0x004a5950`, and invokes callbacks with zero to three resolved arguments. `IndirectHandleResolveInPlace @ 0x004532e0` resolves values in the `0x0002xxxx` tagged form through the same callback table when its resolver slot is unset. Comparison results are carried between records and can alter the next script position; optional debug output formats callback names. The bytecode's complete opcode names and user-facing semantics are not recovered here. After processing the script, the interpreter calls `CameraFocusTweenUpdate @ 0x00453da0` with the frame delta.
 
+The script buffer is stored at `DAT_00555d6c` and its byte length at `DAT_00555d70`; the dispatcher walks `length / 4` words, and `AdvisorDisplayStateResourcesRelease` frees the loaded buffer.
+
 `CameraFocusTweenUpdate` follows either a tracked object index or an explicit object handle while its focus gate is active, updates the stored cell/position pair, and clamps the viewport target. Separate zoom and tilt gates advance their values toward stored targets and clear when they enter their completion windows; the helper dispatches the resulting camera zoom/tilt updates. When the current scene record has its `+0x27c` field set, it also submits `{100, 0}` through `CameraFocusScrollScaleCommit @ 0x004538a0`. Finding 247 traces the camera tween's object resolution and state fields.
 
 `CameraFocusScrollScaleCommit` skips its updates when its first value is zero and the scene record's `+0x27c` is nonzero. Otherwise it stores the second value in `DAT_004de548`, passes the first value as a percentage to `ScrollScaleSetAndClamp @ 0x00425ce0`, then writes the second value again. The latter helper accepts increases or updates while the stored guard is zero, applies the scale, and clamps it to `[0,3]`.
@@ -22,7 +24,7 @@ This finding follows level setup into the NERP script interpreter, advisor text/
 
 The separate callback relay is small but stateful. `DeferredCallbackSet @ 0x00453900` stores its argument in `DAT_004a673c`; `GameConfigInit` supplies whether the corresponding message resource was found. `DeferredCallbackInvokeIfSet @ 0x00453910` checks only whether that stored value is nonzero, then calls `SoundAliasPlayGlobal @ 0x00456810`. That helper plays the alias currently stored in `DAT_004a6768` when it is not `-1`. The UI interaction caller is in `MainSimInteractionAndCellUpdate @ 0x00426520`; it reaches the relay for the configured message region. Finding 354 records the setter/invoker pair.
 
-`FUN_00454600 @ 0x00454600` is called by the same `EngineTick` snapshot under the active-render-mode and feature-bit guards, after `FUN_00435300`. It advances a sine phase, resolves the last indexed object in `DAT_00555dec`, sets that object's `+0x3f8` field, derives screen coordinates, and blits `DAT_0055645c`. Its intended display role and the meaning of its final arguments remain uncertain.
+`AdvisorTutorialIconImageLoad @ 0x00434a00` loads the configured `TutorialIcon` bitmap and retains its resource handle in `DAT_0055645c`. `RandomVariantCellScatter @ 0x00435300` blits that image above marked cells with a sinusoidal vertical offset. `FUN_00454600 @ 0x00454600` uses the same image for an indexed-object overlay after resolving the last object in `DAT_00555dec`, setting its `+0x3f8` field, and deriving screen coordinates; the exact trigger and final arguments remain uncertain.
 
 ## Advisor text and global state
 
@@ -75,7 +77,7 @@ The remaining accessors affect nearby engine state but do not establish a tutori
 
 - What is the complete opcode and callback-name mapping for the NERP table at `0x004a5948`–`0x004a5950`, including its branch/skip records?
 - What do the colon- and dollar-prefixed token declarations mean in shipped NERP text, and who owns/releases the `:` image table?
-- What in-game effect does `FUN_00454600` render, and what are the meanings of its position and final arguments?
+- What triggers `FUN_00454600`, and what are the meanings of its position and final arguments when it draws the TutorialIcon resource?
 - What semantics distinguish objective-voice selectors `1`, `2`, and `3` in the `MainSimStep` callers?
 - What do the two global fields `DAT_004ff978` and `DAT_004ff980` represent beyond their observed setter/getter and gate uses?
 - What are the 55 tutorial coordinate-list category meanings, and which callback consumers use `CoordinateListCallbackVisit`?

@@ -22,3 +22,10 @@ Focused records: `ev_4c40e0572b48cadc98f523ab1ceca969eb70e3a11fff648eaa3fd8ec035
 The stage names, event's visible outcome, and timing under an active level remain
 unknown. This is static shipped-artifact evidence; no runtime erosion was
 observed.
+
+The pending queue is a count at `DAT_004cbd30` with X/Y pairs in the parallel
+array rooted at `DAT_004c7eb0`; additions are capped at 2000 and removal
+compacts the array. A second 2000-slot table stores each erosion record's X/Y
+coordinates at `DAT_004cbd34`, active flags at `DAT_004cfbb4`, and countdown
+timers at `DAT_004d1af4`. `ErosionTimingStateInit` clears the count and active
+flags, while stage registration claims a free slot and initializes its timer.

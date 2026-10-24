@@ -1,6 +1,6 @@
 # 113 — Focus loss suppresses keyboard sampling while the frame callback continues
 
-The window callback path reaches `FUN_004786c0`. Its `WM_ACTIVATEAPP` handler (message 0x1c) stores `wParam` in `DAT_00505808`; `WM_CLOSE` and `WM_QUIT` set the separate quit flag `DAT_0050580c`. The `WM_ACTIVATE` message (0x06) returns 0.
+The window callback path reaches `FUN_004786c0`. Its `WM_ACTIVATEAPP` handler (message 0x1c) stores `wParam` in `DAT_00505808`, the application activation state; `WM_CLOSE` and `WM_QUIT` set the separate quit flag `DAT_0050580c`. The `WM_ACTIVATE` message (0x06) returns 0.
 
 In `FUN_0047eef0` (`EnginePreTick`), a zero activation flag—unless feature bit `DAT_00505f84 & 2` forces the active path—clears the current and previous 256-byte key snapshots, calls an input-interface method at vtable offset +0x20, and returns before the normal keyboard-state read. The active path copies the current snapshot to the previous one, clears current state, and requests a 256-byte read through offset +0x24.
 

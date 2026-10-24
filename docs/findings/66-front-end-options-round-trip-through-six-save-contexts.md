@@ -49,6 +49,10 @@ this trace leaves its producer and relation to the option globals open
 - The `+0x08`, `+0x0c`, and `+0x10` slot fields are observed as raw data-flow
   locations. Callback names and neighboring menu code suggest option state,
   but this pass does not map each field to a player-facing setting or unit.
+- The runtime value stored at `+0x0c` (`DAT_00557030`) is separately traced
+  in Finding 23 as a six-bucket index derived from the scroll-to slider float.
+  Its player-facing setting name remains unresolved; this identification does
+  not name the slot field beyond that observed runtime value.
 - The data path is static analysis of the shipped executable. It does not
   observe a user changing a setting, a specific slot being selected, or a
   save succeeding.

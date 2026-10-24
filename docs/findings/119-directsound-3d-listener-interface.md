@@ -1,8 +1,9 @@
 # 119 — Sound initialization queries DirectSound's 3D listener interface
 
-The sound initializer creates a DirectSound device, sets its cooperative level, and creates a
-primary buffer. It then calls QueryInterface on that buffer using the 16-byte GUID at 0x4a04f8 and
-stores the returned interface pointer in DAT_005065c0. The bytes decode to
+The sound initializer stores the created DirectSound device in `DAT_005065b8`, sets its
+cooperative level, and stores the primary buffer in `DAT_005065bc`. It then calls QueryInterface
+on that buffer using the 16-byte GUID at 0x4a04f8 and stores the returned interface pointer in
+`DAT_005065c0`. The bytes decode to
 IID_IDirectSound3DListener. If the query fails, the initializer releases the primary buffer and
 device and clears the device pointer; on success it continues initialization and eventually marks
 the sound subsystem active.

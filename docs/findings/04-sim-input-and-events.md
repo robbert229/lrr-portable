@@ -38,15 +38,17 @@ Behavior clusters observed:
 - **Object rename mode:** with debug bit `0x20000`, grabbing a type-2 entity
   (`FUN_004525c0()` = selection ptr; `*sel == 2`) inside screen bounds calls
   `FUN_00437880(sel, "Object")` (rename) and publishes `sel+0x8` name pointer
-  into `DAT_00556fa0` — the same global `EnginePreTick` appends typed
-  characters to. (See below.)
+  into `DAT_00556fa0` — the same global `EnginePreTick` edits typed
+  characters into. `DebugPanelTextDrawUpdate` also displays the pointed-to
+  string at the projected coordinates stored beside it. (See below.)
 - Outputs `param_3/4/5` = edge flags forwarded to `EngineTick`
   (`FUN_00426520(fVar2, dt, o1, o2, o3)`).
 
 ## `EnginePreTick` (`0x4231f0`) — keyboard-to-text pump
 
-Runs first in `EngineTick`. When `DAT_00556fa0` is a **string** (text-entry
-mode: object rename / debug console), it walks the 256-byte key table, and for
+Runs first in `EngineTick`. When `DAT_00556fa0` is non-null, it treats it as a
+mutable **string pointer** (observed in object rename mode), walks the
+256-byte key table, and for
 each newly pressed key calls `FUN_00411f00(key)` (scan-code→context check) and
 `FUN_0048e380(key)` (key→ASCII), appending the char to the string and NULing.
 Afterwards it snapshots `DAT_0076ab80…` into `DAT_004de430…` and clears the

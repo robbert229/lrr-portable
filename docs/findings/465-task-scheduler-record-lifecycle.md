@@ -35,7 +35,7 @@ This area contains two linked work paths: global command/task records and per-en
 | `0x004041b0` | `EntityTaskChainContainsKind` | Searches an entity's `+0x2f0` chain through `+0x60` links and reports whether any record has the requested kind. |
 | `0x004063e0` | `PendingRecordEntityReferenceClear` | Walks the global head list `DAT_004b3354` through `+0x60` links and clears field `+0x48` wherever it references the given entity. |
 | `0x00406400` | `PendingRecordCopyToEntityAndFlag` | Allocates a record of the input record's kind, copies 26 dwords while preserving the allocator's pool link, sets flag `0x200`, clears the new record's `+0x60` link, and returns it. Used by `EntityRecordAttachAndRelink`. |
-| `0x00407360` | `GlobalTaskRefreshFlagGet` | Returns global `DAT_00557860`, which is toggled by the adjacent `StateFlagToggleWhenZero` helper and gates `ResetObjectAuxiliaryState`. |
+| `0x00407360` | `GlobalTaskRefreshFlagGet` | Returns global `DAT_00557860`, which is toggled by the adjacent `StateFlagToggleWhenZero` helper and gates `ResetObjectAuxiliaryState`; the same flag alters type-2 entity handling in `TickEntityScreenEffects`. |
 | `0x00407450` | `IdleQueueRegister` | For kind-2 entities, inserts the entity into a 20-entry pointer/timer table if absent and initializes its paired timer to `0x41480000` (12.5f). If the table is full it returns without insertion. |
 | `0x00408360` | `TaskField84GetAndField88Out` | Returns the dword at object `+0x84`; if output is non-null, writes object `+0x88` there. |
 | `0x00408970` | `TaskFlagBitQuery` | Computes `1 << (bit & 31)` against object `+0x98`; returns the bit mask when set, except a nonzero third argument forces zero for a set bit. |
