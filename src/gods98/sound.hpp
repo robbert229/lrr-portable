@@ -287,4 +287,47 @@ void sound_deferred_handle_record(int handle);
 /* The recorded handle word (DAT_00502b28). */
 int sound_deferred_handle(void);
 
+/* ------------------------------------------------------------------ *
+ *  Configured sound-variant chains (issues #318 / #324; findings
+ *  107/134/135/142).
+ *
+ *  A `Samples` config value — e.g. "*Sounds\drtdrillc,#-400#B,@stream" —
+ *  is split on commas and loaded path-by-path into bank records by
+ *  SoundSampleMarkerParse @ 0x464d00, linking every success into the
+ *  alias's variant chain: the head record holds the current pick and
+ *  the node list holds the alternates. Markers per finding 134/135/142:
+ *  a leading '*' raises the record's duplicate-buffer flag (stored in
+ *  the loop bit), '#N#' (signed decimal) sets the per-sample volume,
+ *  and '@' switches every later path in the value to streamed mode.
+ *
+ *  SoundSampleVariantSelect @ 0x464e20 then re-draws the chain: it
+ *  picks a chain member with random_value % variant_count and swaps it
+ *  to the head, returning the new head slot.
+ *
+ *  Port deviations: the corpus writes the chain pool (DAT_005023e0,
+ *  counter DAT_00502a28) with no bound — the port caps it and drops
+ *  further links when full (the corpus would scribble over adjacent
+ *  data); '#...#' buffers stay unterminated in the corpus (finding
+ *  145) — the port terminates; and the corpus's faithful quirk that
+ *  the second load overwrites the head slot (the first value lands in
+ *  the head only until overwritten) is reproduced deliberately.
+ * ------------------------------------------------------------------ */
+
+#define SOUND_VARIANT_TOKENS 100   /* corpus token buffer, local_190[100] */
+#define SOUND_VARIANT_POOL_NODES 16384 /* port bound, see above */
+
+/* SoundSampleMarkerParse @ 0x464d00: parse one Samples value into the
+ * alias's variant chain. 1 if every path loaded, 0 if any failed (the
+ * chain still keeps the successes, like the corpus). */
+int sound_sample_marker_parse(const char* spec, int alias_index);
+
+/* SoundSampleVariantSelect @ 0x464e20: rotate the chain with the
+ * corpus's 15-bit draw and return the head's bank slot (-1 for the
+ * null alias 0, or a head that holds none). */
+int sound_variant_select(int alias_index);
+
+/* Chain inspection for callers/tests: write the chain's bank slots in
+ * head order into `out_slots` (up to max) and return the count. */
+int sound_variant_chain(int alias_index, int* out_slots, int max);
+
 #endif /* LEGORRR_SOUND_HPP */

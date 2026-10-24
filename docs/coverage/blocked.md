@@ -9,15 +9,15 @@ must land first.
 
 > Update (2026-10-24): `SoundBankEntryLoad @ 0x47a870` and the slot helpers
 > (`0x47aad0`, `0x47ab00`, `0x47a850`) are **ported** — the bank-record root
-> landed as one cluster. The rows below stay blocked on what remains of the
-> chain.
+> landed as one cluster, and the marker-parse/variant-select pair
+> (`0x464d00` / `0x464e20`, issues #318 / #324) landed with it as the
+> configured-variants chain model. The rows below stay blocked on what
+> remains of the chain.
 
 | Function (`address`) | Issue(s) | Blocker | Next action |
 | --- | --- | --- | --- |
-| `SoundSampleMarkerParse` (`0x464d00`) | #318 | Now unblocked in substance: its per-path loads run through the ported bank entry load; still needs the comma-split + chain model (findings 107/134/135/142). | Port as the configured-variants cluster. |
-| `SoundSampleVariantSelect` (`0x464e20`) | #324 | Reads/writes the marker chains #318 builds (plus the ported `RandomNext @ 0x48e170` PRNG draw); dependency chain #318 → bank layer. | After #318. |
-| `ConfiguredVariantPropertySet` (`0x465010`) / `Read` (`0x465030`) | #319 / #320 | Thin wrappers over `SoundSampleVariantSelect @ 0x464e20`, `SoundBankEntryVolumeSet @ 0x47b050` (unported), `IndexedRecordStride134WordGet @ 0x47b0d0` (unported). | After #324 and the bank-entry pair. |
-| `SoundAliasPlay` (`0x464fa0`) | #325 | The submit route needs `SoundSampleVariantSelect` (#324); the batch path additionally drains through it. | After #324. |
+| `ConfiguredVariantPropertySet` (`0x465010`) / `Read` (`0x465030`) | #319 / #320 | Thin wrappers over the now-ported `SoundSampleVariantSelect @ 0x464e20` plus `SoundBankEntryVolumeSet @ 0x47b050` / `IndexedRecordStride134WordGet @ 0x47b0d0` — both small bank-record accessors, port as this cluster's next iteration. | Port the two accessors with the wrapper pair. |
+| `SoundAliasPlay` (`0x464fa0`) | #325 | The select half is ported, but the play route itself runs through the instance layer (`DAT_00506684` handle chain, `FUN_0047b1a0` role) which is unported. | Port the sound-instance layer (tracks the `FUN_0047b1a0` chain). |
 | `SoundObjectDurationGet` (`0x465160`) | #340 | Asks `SoundSampleVariantSelect` (#324) for the entry and `StreamedWaveBufferStepRate @ 0x47b8e0` (unported) for the duration. | After #324 / bank loaders. |
 | `SoundHandleStopForward` (`0x465190`) | #331 | Forwarder into the instance layer: `SoundBufferStopHandle @ 0x47b130` and the instance-chain bookkeeping are unported (the stop seam is modelled as a documented no-op in `sound_subsystem_enable_set`). | Port the sound-instance layer (tracks `FUN_0047b1a0` chain). |
 | `PositionalSoundSubmit` (`0x465090`) | #328 | Queues through `SoundRequestQueueSubmit` (ported) but submits positions via `SoundAliasPlay`/the route through #324. | After #325. |
