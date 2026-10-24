@@ -191,4 +191,10 @@ void* checkpoint_blob_get(const GameContext* ctx);
 void     save_state_event_context_set(uint32_t value);
 uint32_t save_state_event_context_peek(void);
 
+/* SavBuildCtx (FUN_00417e70, finding 408): the corpus's active-slot
+ * context probe — the slot accessor's block when a slot is open, NULL
+ * when the selection is closed. The port's save_slot_get/sav_slot_ctx
+ * models both halves, so this composes them. */
+void* sav_build_ctx(GameContext* ctx);
+
 #endif /* LEGORRR_GAME_SAVEGAME_HPP */

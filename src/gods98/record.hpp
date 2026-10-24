@@ -280,4 +280,10 @@ void record_flags_24_or(void* record, uint32_t flags);
 void object_field14_set(void* record, uint32_t value);
 void linked_record_field4_clear(void* record);
 
+/* CopyTwoDwordPairToOutputs (FUN_00439930): split a two-dword record
+ * field across two output words — the corpus's blind dereferences get
+ * entry NULL guards (documented). */
+void copy_two_dword_pair_to_outputs(const void* record, uint32_t* out_a,
+                                    uint32_t* out_b);
+
 #endif /* LEGORRR_GODS98_RECORD_HPP */

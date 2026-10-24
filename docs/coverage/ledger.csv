@@ -468,7 +468,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00417bd0,FUN_00417bd0,ported,SavWriteSlot,1,2260
 00417df0,FUN_00417df0,named,SavRefreshSlots,0,483
 00417e50,FUN_00417e50,ported,SavSlotCtx,1,160
-00417e70,FUN_00417e70,named,SavBuildCtx,0,162
+00417e70,FUN_00417e70,ported,SavBuildCtx,2,162
 00417e90,FUN_00417e90,ported,SavGetSlot,1,60
 00417ea0,FUN_00417ea0,ported,SavSetSlot,1,81
 00417eb0,FUN_00417eb0,ported,SavMarkRecord,1,694
@@ -578,7 +578,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0041cab0,FUN_0041cab0,named,IndexedEntityValueGet,0,345
 0041caf0,FUN_0041caf0,named,InputBindingValueGet,0,804
 0041cb90,FUN_0041cb90,named,InputBindingDefaultValueGet,0,704
-0041cc80,FUN_0041cc80,ported,CursorTileSelectionUpdateByType,2,341
+0041cc80,FUN_0041cc80,named,CursorTileSelectionUpdateByType,0,341
 0041cce0,FUN_0041cce0,ported,SelectionCoordinatesSet,1,292
 0041cd30,FUN_0041cd30,named,PositionTrackerBoxDraw,0,1005
 0041cea0,FUN_0041cea0,named,SelectionObjectCommandUpdate,0,658
@@ -589,10 +589,10 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0041d010,FUN_0041d010,named,SelectionCancelIfCursorHitsObject,0,203
 0041d040,FUN_0041d040,named,TutorialPathMenuAction,0,12473
 0041dca0,FUN_0041dca0,named,UiActionDispatch,0,8193
-0041e750,FUN_0041e750,ported,SelectionClearRequestAndHudReset,3,87
-0041e990,FUN_0041e990,ported,CellActionPermissionGet,1,195
+0041e750,FUN_0041e750,named,SelectionClearRequestAndHudReset,0,87
+0041e990,FUN_0041e990,named,CellActionPermissionGet,0,195
 0041e9d0,FUN_0041e9d0,ported,SelectionRegionParametersSet,1,356
-0041ea50,FUN_0041ea50,ported,StoreSelectedMapCoordinate,3,538
+0041ea50,FUN_0041ea50,named,StoreSelectedMapCoordinate,0,538
 0041eac0,FUN_0041eac0,named,EventTimerCountdownAdvance,0,1462
 0041ec30,FUN_0041ec30,named,EntityPairCountRefresh,0,526
 0041eca0,FUN_0041eca0,named,AdvisorDialogStackLayout,0,1868

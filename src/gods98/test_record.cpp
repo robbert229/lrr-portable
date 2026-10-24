@@ -759,6 +759,17 @@ int main(void)
         linked_record_field4_clear(NULL); /* guarded */
     }
 
+    /* CopyTwoDwordPairToOutputs (2026-10-24). */
+    {
+        char rec[8];
+        __builtin_memcpy(rec, "\x11\x11\x11\x11\x22\x22\x22\x22", 8);
+        uint32_t a = 0, b = 0;
+        copy_two_dword_pair_to_outputs(rec, &a, &b);
+        CHECK(a == 0x11111111u && b == 0x22222222u, "the pair splits");
+        copy_two_dword_pair_to_outputs(NULL, &a, &b);
+        copy_two_dword_pair_to_outputs(rec, NULL, &b); /* guarded */
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "record_test: %d failure(s)\n", s_failures);
         return 1;

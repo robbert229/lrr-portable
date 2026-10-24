@@ -761,3 +761,12 @@ uint32_t save_state_event_context_peek(void)
 {
     return s_save_state_event_context;
 }
+
+/* SavBuildCtx (FUN_00417e70): slot-open probe through the port's models. */
+void* sav_build_ctx(GameContext* ctx)
+{
+    if (save_slot_get(ctx) == -1) {
+        return NULL;
+    }
+    return sav_slot_ctx(ctx, save_slot_get(ctx));
+}

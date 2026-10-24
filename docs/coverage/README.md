@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 729 | 28.4% |
+| ported | 736 | 28.7% |
 | anchored | 4 | 0.2% |
-| named | 1784 | 69.6% |
+| named | 1777 | 69.3% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (729 functions)
+  (736 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1784 functions)
+  citation yet (1777 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1789 (69.8%).**
+**Game logic remaining to port: 1782 (69.5%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -304,7 +304,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004173e0` | SavTreeLoad |
 | `0x004179b0` | SavMenuList |
 | `0x00417df0` | SavRefreshSlots |
-| `0x00417e70` | SavBuildCtx |
 | `0x00417f20` | OptionsContextSixFieldSet |
 | `0x00417f40` | SavWriteRecord |
 | `0x00417f90` | SavRecordPtr |
@@ -371,6 +370,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0041cab0` | IndexedEntityValueGet |
 | `0x0041caf0` | InputBindingValueGet |
 | `0x0041cb90` | InputBindingDefaultValueGet |
+| `0x0041cc80` | CursorTileSelectionUpdateByType |
 | `0x0041cd30` | PositionTrackerBoxDraw |
 | `0x0041cea0` | SelectionObjectCommandUpdate |
 | `0x0041cf20` | SelectionTargetCommandUpdate |
@@ -380,6 +380,9 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0041d010` | SelectionCancelIfCursorHitsObject |
 | `0x0041d040` | TutorialPathMenuAction |
 | `0x0041dca0` | UiActionDispatch |
+| `0x0041e750` | SelectionClearRequestAndHudReset |
+| `0x0041e990` | CellActionPermissionGet |
+| `0x0041ea50` | StoreSelectedMapCoordinate |
 | `0x0041eac0` | EventTimerCountdownAdvance |
 | `0x0041ec30` | EntityPairCountRefresh |
 | `0x0041eca0` | AdvisorDialogStackLayout |
