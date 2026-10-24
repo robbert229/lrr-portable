@@ -200,7 +200,7 @@ undefined4 EngineTick(float param_1)
     TerrainCellChangeQueueFlush();
   }
   FUN_00477fa0();
-  RegisteredObjectListApplyCallback();
+  TransientEffectRegistryEnableSet();
   FUN_004651a0();
   if ((DAT_00556ec8 == 1) && ((DAT_00556ecc & 0x100000) == 0)) {
     FUN_00435300(DAT_005560d4,DAT_005560dc,fVar10,param_1);
@@ -3018,7 +3018,7 @@ undefined4 PendingLevelName(void)
     DAT_00556e90 = 0;
     FUN_00435f32(DAT_005560e4,0,0);
     CameraSetDistance(DAT_005560e4,0x43480000);
-    ObjectCallbackListDisposeAll();
+    TransientEffectRegistryReleaseAll();
     GlobalStateLowByteClearAndRefresh();
     uVar2 = *(undefined4 *)(iVar1 + 0xb4);
     MessageOverlayStateInit();
@@ -4307,7 +4307,7 @@ LAB_0042f7a5:
             }
           }
           else {
-            ResourceEnableSet(*(undefined4 *)(iVar4 + 0x1c),0);
+            TransientEffectEnableSet(*(undefined4 *)(iVar4 + 0x1c),0);
           }
         }
         else {
@@ -4331,7 +4331,7 @@ LAB_0042f7a5:
         FUN_00450960(*(undefined4 *)(param_1 + 4),param_2,param_3,0);
         *(undefined1 *)(iVar4 + 1) = 0x47;
         if ((*(uint *)(iVar4 + 8) & 0x4000) != 0) {
-          ResourceEnableSet(*(undefined4 *)(iVar4 + 0x1c),1);
+          TransientEffectEnableSet(*(undefined4 *)(iVar4 + 0x1c),1);
         }
       }
     }
@@ -24553,9 +24553,9 @@ PositionalSoundSubmit(undefined4 param_1,int param_2,uint param_3,uint param_4,u
 }
 
 
-// ==== SoundFrameTick @ 00465190 ====
+// ==== SoundHandleStopForward @ 00465190 ====
 
-void SoundFrameTick(undefined4 param_1)
+void SoundHandleStopForward(undefined4 param_1)
 
 {
   FUN_0047b130(param_1);
@@ -24563,11 +24563,11 @@ void SoundFrameTick(undefined4 param_1)
 }
 
 
-// ==== SoundFrameTick @ 004651a0 ====
+// ==== SoundSubsystemFrameTick @ 004651a0 ====
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
 
-void SoundFrameTick(float param_1)
+void SoundSubsystemFrameTick(float param_1)
 
 {
   int iVar1;
@@ -24640,9 +24640,9 @@ void SoundSubsystemEnableSetAndStop(undefined4 param_1)
 }
 
 
-// ==== SoundPackedBatchQueueUpdate @ 004652b0 ====
+// ==== SoundBatchModeGet @ 004652b0 ====
 
-uint SoundPackedBatchQueueUpdate(void)
+uint SoundBatchModeGet(void)
 
 {
   return DAT_00502a2c & 8;
@@ -24697,20 +24697,20 @@ void SoundBatchQueueDrain(int param_1,int param_2)
 }
 
 
-// ==== SoundDynamicAliasRegistrationEnabledGet @ 00465370 ====
+// ==== SoundSubsystemEnabledGet @ 00465370 ====
 
-uint SoundDynamicAliasRegistrationEnabledGet(void)
+uint SoundSubsystemEnabledGet(void)
 
 {
   return DAT_00502a2c & 1;
 }
 
 
-// ==== SoundStreamSelectorUpdate @ 00465430 ====
+// ==== TransientEffectEmitterCreate @ 00465430 ====
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
 
-int * SoundStreamSelectorUpdate
+int * TransientEffectEmitterCreate
                 (int param_1,undefined4 param_2,undefined4 param_3,int *param_4,float param_5,
                 float param_6,float param_7,float param_8,int param_9,int param_10,uint param_11,
                 int param_12)
@@ -24882,9 +24882,9 @@ int * SoundStreamSelectorUpdate
 }
 
 
-// ==== LavaEffectSoundHandleGetOrSubmit @ 004659b0 ====
+// ==== TransientEffectInstanceRelease @ 004659b0 ====
 
-void LavaEffectSoundHandleGetOrSubmit(int param_1,int param_2)
+void TransientEffectInstanceRelease(int param_1,int param_2)
 
 {
   if ((*(byte *)(param_1 + 0x294) & 2) == 0) {
@@ -24912,18 +24912,18 @@ void LavaEffectSoundHandleGetOrSubmit(int param_1,int param_2)
     *(undefined4 *)(*(int *)(param_1 + 0x29c) + 0x298) = *(undefined4 *)(param_1 + 0x298);
   }
   if (*(int *)(param_1 + 0x2a4) != 0) {
-    SoundFrameTick(*(int *)(param_1 + 0x2a4));
+    SoundSubsystemFrameTick(*(int *)(param_1 + 0x2a4));
   }
   FUN_0048db80(param_1);
   return;
 }
 
 
-// ==== SoundInstanceUpdate @ 00465b00 ====
+// ==== TransientEffectInstanceUpdate @ 00465b00 ====
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
 
-void SoundInstanceUpdate(float param_1)
+void TransientEffectInstanceUpdate(float param_1)
 
 {
   int *piVar1;
@@ -24983,7 +24983,7 @@ void SoundInstanceUpdate(float param_1)
       } while (uVar5 < (uint)piVar3[0xa0]);
     }
     if ((((piVar3[0xa5] & 8U) != 0) && ((piVar3[0xa5] & 0x10U) != 0)) && (bVar2)) {
-      LavaEffectSoundHandleGetOrSubmit(piVar3,piVar3[0xa3]);
+      TransientEffectInstanceRelease(piVar3,piVar3[0xa3]);
     }
   } while( true );
 }
@@ -38481,7 +38481,7 @@ LAB_0043cdea:
     uVar13 = EntityTypeComponentGet(piVar8);
     iVar10 = piVar8[0xd4];
 LAB_0043ce1d:
-    SoundFrameTick(iVar10);
+    SoundSubsystemFrameTick(iVar10);
     piVar8[0xfb] = piVar8[0xfb] & 0xffefffff;
     uVar14 = NestedWordAtOffsetC0OrC4Get(piVar8,1,0,1,0);
     SoundSubmissionRouteWrapper(uVar13,uVar14);
@@ -39443,7 +39443,7 @@ LAB_0043dcb3:
 LAB_0043ed80:
   if ((bVar7) && ((piVar8[0xfb] & 0x20000U) != 0)) {
     EntityTypeComponentGet(piVar8);
-    SoundFrameTick(piVar8[0xd4]);
+    SoundSubsystemFrameTick(piVar8[0xd4]);
     piVar8[0xfb] = piVar8[0xfb] & 0xffefffff;
     uVar13 = NestedWordAtOffsetC0OrC4Get(piVar8,1,0);
     SoundAliasPlay(uVar13);
@@ -41701,10 +41701,10 @@ undefined4 LoadTileMeshes(int param_1,undefined4 param_2)
 }
 
 
-// ==== PreloadSharedIndexed @ 004653a0 ====
+// ==== TransientEffectTexturesPreload @ 004653a0 ====
 
 
-void PreloadSharedIndexed(undefined4 param_1,undefined4 param_2,uint param_3)
+void TransientEffectTexturesPreload(undefined4 param_1,undefined4 param_2,uint param_3)
 
 {
   undefined4 uVar1;
@@ -58904,7 +58904,7 @@ void TerrainProjectedCellStateRefresh(void)
         IndexedSurfaceEntryHideAndRecord();
         if ((*(uint *)(*(int *)(iVar6 + 0xb8) + (iVar8 * *(int *)(iVar6 + 0x14) + iVar7) * 0x48 + 8)
             & 0x4000) != 0) {
-          ResourceEnableSet();
+          TransientEffectEnableSet();
         }
       }
       else if ((((byte)DAT_00556ecc & 0x20) == 0) || (iVar9 = FUN_00434480(), iVar9 == 0)) {
@@ -58912,7 +58912,7 @@ void TerrainProjectedCellStateRefresh(void)
         IndexedSurfaceEntryHideAndRecord();
         if ((*(uint *)(*(int *)(iVar6 + 0xb8) + (iVar8 * *(int *)(iVar6 + 0x14) + iVar7) * 0x48 + 8)
             & 0x4000) != 0) {
-          ResourceEnableSet();
+          TransientEffectEnableSet();
         }
         iVar7 = iVar8 * *(int *)(iVar6 + 0x14) + iVar7;
         *(uint *)(*(int *)(iVar6 + 0xb8) + 8 + iVar7 * 0x48) =
@@ -93173,10 +93173,10 @@ void IndexedFloatPairSet(int param_1,uint param_2,uint param_3)
   return;
 }
 
-// ==== ResourceEnableSet @ 00465AC0 ====
+// ==== TransientEffectEnableSet @ 00465AC0 ====
 
 
-void ResourceEnableSet(int param_1,int param_2)
+void TransientEffectEnableSet(int param_1,int param_2)
 
 {
   RecordFlag2CBit0Set(*(undefined4 *)(param_1 + 0x290),param_2);
@@ -96686,10 +96686,10 @@ void GraphicsOverlayVisibilitySet(int param_1)
   return;
 }
 
-// ==== ObjectCallbackListDisposeAll @ 00465970 ====
+// ==== TransientEffectRegistryReleaseAll @ 00465970 ====
 
 
-void ObjectCallbackListDisposeAll(void)
+void TransientEffectRegistryReleaseAll(void)
 
 {
   int iVar1;
@@ -98691,10 +98691,10 @@ void FloatPairToIntegerPair(undefined4 *param_1,undefined4 *param_2)
   return;
 }
 
-// ==== RegisteredObjectListApplyCallback @ 00465A90 ====
+// ==== TransientEffectRegistryEnableSet @ 00465A90 ====
 
 
-void RegisteredObjectListApplyCallback(undefined4 param_1)
+void TransientEffectRegistryEnableSet(undefined4 param_1)
 
 {
   int iVar1;
@@ -106993,10 +106993,10 @@ CallbackRecordAllocateInitialize(undefined4 *param_1,undefined4 param_2,undefine
   return puVar1;
 }
 
-// ==== GlobalFlag_00502a2cBit2SetClear @ 00464C50 ====
+// ==== SoundDynamicAliasRegistrationSet @ 00464C50 ====
 
 
-void GlobalFlag_00502a2cBit2SetClear(int param_1)
+void SoundDynamicAliasRegistrationSet(int param_1)
 
 {
   if (param_1 != 0) {
@@ -107007,10 +107007,10 @@ void GlobalFlag_00502a2cBit2SetClear(int param_1)
   return;
 }
 
-// ==== GlobalTriplet_00552128_30Reset @ 00465380 ====
+// ==== SceneEffectRegistryReset @ 00465380 ====
 
 
-undefined4 GlobalTriplet_00552128_30Reset(void)
+undefined4 SceneEffectRegistryReset(void)
 
 {
   DAT_00552128 = 0;
