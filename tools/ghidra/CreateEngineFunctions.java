@@ -686,7 +686,7 @@ public class CreateEngineFunctions extends GhidraScript {
         0x48c690L,  // LwoSurfaceNames
         0x48c820L,  // LwoSurfaceSettings
         0x48d2c0L,  // LoadLWO
-        0x490090L,  // MaterialResolve
+        0x490090L,  // AssetPathComponentsParse
         0x419470L,  // InfoMessageAlwaysPlayFlagSet
         0x419650L,  // InfoMessageSoundLoad
         0x419680L,  // InfoMessageSecondarySoundSet
@@ -928,7 +928,7 @@ public class CreateEngineFunctions extends GhidraScript {
         0x441940L,  // EntityActionSequenceReset
         0x44a310L,  // ObjectMovementInputAccumulate
         0x46a510L,  // SceneObjectStateDispatch
-        0x48bce0L,  // LwoParserRecordAtIndex
+        0x48bce0L,  // WadArchiveRecordAtIndex
         0x47d700L,  // PopCount32
         0x47d720L,  // FindFirstSetBit32
         0x48fb90L,  // GameFileReadBuffered
@@ -3684,7 +3684,7 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x441940: return "EntityActionSequenceReset";
             case 0x44a310: return "ObjectMovementInputAccumulate";
             case 0x46a510: return "SceneObjectStateDispatch";
-            case 0x48bce0: return "LwoParserRecordAtIndex";
+            case 0x48bce0: return "WadArchiveRecordAtIndex";
             case 0x47d700: return "PopCount32";
             case 0x47d720: return "FindFirstSetBit32";
             case 0x48fb90: return "GameFileReadBuffered";
@@ -4288,7 +4288,7 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x48c690: return "LwoSurfaceNames";
             case 0x48c820: return "LwoSurfaceSettings";
             case 0x48d2c0: return "LoadLWO";
-            case 0x490090: return "MaterialResolve";
+            case 0x490090: return "AssetPathComponentsParse";
             case 0x419470: return "InfoMessageAlwaysPlayFlagSet";
             case 0x419650: return "InfoMessageSoundLoad";
             case 0x419680: return "InfoMessageSecondarySoundSet";

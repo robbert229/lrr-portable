@@ -45070,10 +45070,10 @@ code_r0x0048d69e:
 }
 
 
-// ==== MaterialResolve @ 00490090 ====
+// ==== AssetPathComponentsParse @ 00490090 ====
 
 
-void MaterialResolve(byte *param_1,byte *param_2,undefined1 *param_3,int param_4,undefined1 *param_5)
+void AssetPathComponentsParse(byte *param_1,byte *param_2,undefined1 *param_3,int param_4,undefined1 *param_5)
 
 {
   byte *pbVar1;
@@ -54472,9 +54472,9 @@ void SceneObjectStateDispatch(undefined4 param_1,uint param_2,uint param_3)
   return;
 }
 
-// ==== LwoParserRecordAtIndex @ 48bce0 ====
+// ==== WadArchiveRecordAtIndex @ 48bce0 ====
 
-undefined * LwoParserRecordAtIndex(int param_1)
+undefined * WadArchiveRecordAtIndex(int param_1)
 
 {
   return &DAT_00575500 + param_1 * 0x24;

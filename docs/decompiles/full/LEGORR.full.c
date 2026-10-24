@@ -95591,7 +95591,7 @@ LAB_0048bbad:
 }
 
 
-// ==== LwoParserRecordAtIndex @ 0048BCE0 [Ghidra: FUN_0048bce0] ====
+// ==== WadArchiveRecordAtIndex @ 0048BCE0 [Ghidra: FUN_0048bce0] ====
 
 
 undefined * FUN_0048bce0(int param_1)
@@ -100204,7 +100204,7 @@ void FUN_00490070(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== MaterialResolve @ 00490090 [Ghidra: FUN_00490090] ====
+// ==== AssetPathComponentsParse @ 00490090 [Ghidra: FUN_00490090] ====
 
 
 void FUN_00490090(byte *param_1,byte *param_2,undefined1 *param_3,int param_4,undefined1 *param_5)

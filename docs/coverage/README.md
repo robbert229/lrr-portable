@@ -1990,7 +1990,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0048b390` | RegistryPathCreateKeys |
 | `0x0048b4a0` | BufferedCharStreamReadToString |
 | `0x0048b4e0` | WwadArchiveIndexLoad |
-| `0x0048bce0` | LwoParserRecordAtIndex |
+| `0x0048bce0` | WadArchiveRecordAtIndex |
 | `0x0048bcf0` | RegistryEntryValueGet |
 | `0x0048bd10` | RegistryEntryTypeGet |
 | `0x0048bd30` | WadEntrySlotAllocate |
@@ -2069,7 +2069,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0048fed0` | CrtInputWithStreamBufferSetup |
 | `0x0048ffa0` | PathResolveFull |
 | `0x00490070` | VsscanfParseInput |
-| `0x00490090` | MaterialResolve |
+| `0x00490090` | AssetPathComponentsParse |
 | `0x00490230` | ProcessorFeatureFallbackFalse |
 | `0x00490280` | CrtFloatingPointFeatureProbe |
 | `0x004902b0` | CrtNormalizeDecimalPoint |
