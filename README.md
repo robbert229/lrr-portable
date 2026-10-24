@@ -1495,6 +1495,28 @@ zero state, and the port adds the bounds guard the corpus lacks
 (documented deviations). `level_test` drives the handle through the
 fixture surface map.
 
+**Reader sweep: sixteen faithful field reads** (2026-10-24; findings
+305/337/356/361/372/373/376/381/393/411/430/432/435/451): the
+pure-leaf scan's remaining field readers land in `src/gods98/record.*`
+as the opaque-record pattern the stats accessors established — exact
+offset, NULL answers zero, meaning stays with the callers. The object
+and scene twins (`object_record_field11c_get` 0x46db60,
+`object_field_be4_dword_get` 0x47a540, `entity_type_mask_get` 0x46cf80,
+`scene_object_flags_get` 0x408850, `scene_object_owner_get` 0x473db0,
+`scene_object_resource_get` 0x46d9e0,
+`scene_object_wrapped_pointer_get` 0x473680,
+`animation_object_handle_get` 0x406e30, `pointer_value_get` 0x482210)
+plus the bit tests (`scene_object_flag_bit3_get` 0x473ba0,
+`scene_object_mode_is_one` 0x406980), the 16-bit
+`resource_entry_id_get` (0x4877d0) and the indexed readers —
+`indexed_word_table_lookup` (0x4850c0, corpus (index, table) argument
+order kept), `indexed_record_flag6c_bit0_get` (0x482780) and
+`indexed_record_data_address_get` (0x483400), both walking the
+record's +0x8 table slot at stride 0x70 — and the coordinate-pair
+counter `count_matching_coordinates_in_list` (0x408e10), whose inline
+entry slots hold native pointers (documented deviation).
+`record_test` drives offsets, masks, bounds and the pair-list walk.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

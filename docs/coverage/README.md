@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 504 | 19.7% |
+| ported | 520 | 20.3% |
 | anchored | 5 | 0.2% |
-| named | 2009 | 78.4% |
+| named | 1993 | 77.7% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 0 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (504 functions)
+  (520 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (5 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (2009 functions)
+  citation yet (1993 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (0 functions)
 
-**Game logic remaining to port: 2014 (78.5%).**
+**Game logic remaining to port: 1998 (77.9%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -142,7 +142,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004067b0` | PolylineSegmentLengthsAndTotalCalculate |
 | `0x00406820` | BezierCurveSamplesBuild |
 | `0x004068c0` | PathArcLengthInterpolate |
-| `0x00406980` | SceneObjectModeIsOne |
 | `0x00406990` | TypeTableResourceRowLoad |
 | `0x00406c00` | RendererObjectUpdateFromRecordField64 |
 | `0x00406c30` | RendererObjectUpdateFromRecordField68 |
@@ -154,7 +153,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00406da0` | AnimationObjectTimeGet |
 | `0x00406dc0` | AnimationObjectTransformSet |
 | `0x00406df0` | RenderNodeSetPositionFromCallback |
-| `0x00406e30` | AnimationObjectHandleGet |
 | `0x00406e40` | ActivityRunnerUpdate |
 | `0x00406ec0` | EntityPayloadReleaseSubslots |
 | `0x00406f50` | RendererObjectSubobjectDispatch |
@@ -193,7 +191,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004087b0` | SceneObjectPrimaryHandleGetOrCreate |
 | `0x004087e0` | SceneObjectSecondaryHandleGetOrCreate |
 | `0x00408810` | SceneObjectIndexedSecondaryHandleGetOrCreate |
-| `0x00408850` | SceneObjectFlagsGet |
 | `0x00408860` | AnimationLoopTimeAdjust |
 | `0x00408930` | ConstantZeroFloatGet |
 | `0x00408940` | EntityPayloadTeardown |
@@ -205,7 +202,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00408c80` | StringTableIndexLookup |
 | `0x00408ce0` | OperationGroupAppendObject |
 | `0x00408d70` | TerrainDescriptorCoordinateCountLimitCheck |
-| `0x00408e10` | CountMatchingCoordinatesInList |
 | `0x00408e50` | CreateRepeatedResourceInstances |
 | `0x00408ec0` | KindNineNeighborEmitForFootprintCells |
 | `0x004090a0` | TerrainCellPredicateCheck |
@@ -1264,7 +1260,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0046ced0` | PairedResourceStateSet |
 | `0x0046cf20` | SceneEntityAnimationTracksSetEnabled |
 | `0x0046cf40` | RecordFlagBitTest |
-| `0x0046cf80` | EntityTypeMaskGet |
 | `0x0046cf90` | RecordIndexedEntriesRebuildAndRefresh |
 | `0x0046cfc0` | SixResourceSlotsSetState |
 | `0x0046cff0` | SceneRecordTemplateInstantiate |
@@ -1275,14 +1270,12 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0046d2c0` | SceneResourceVisibilitySet |
 | `0x0046d350` | SceneResourceDrawAtOrigin |
 | `0x0046d380` | AttachedModelOrientationUpdate |
-| `0x0046d9e0` | SceneObjectResourceGet |
 | `0x0046d9f0` | SceneResourceNamedEntryResolveWithFallback |
 | `0x0046da50` | EntityActivityChangeDispatch |
 | `0x0046da90` | SceneResourceCachedSlotB4Get |
 | `0x0046dac0` | SceneResourceCachedSlotB8Get |
 | `0x0046daf0` | SceneResourceCachedSlotC0Get |
 | `0x0046db20` | AttachedEntitySlotObjectGet |
-| `0x0046db60` | ObjectRecordField11CGet |
 | `0x0046db70` | SceneObjectResourceRelease |
 | `0x0046db90` | CellQuadRunStage |
 | `0x0046dd10` | StagedCellCandidateSelect |
@@ -1361,14 +1354,11 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004734c0` | AdvisorCompanionTransformApply |
 | `0x004734f0` | DDiSceneLightCreate |
 | `0x00473560` | DDiSceneObjectKindModeSetup |
-| `0x00473680` | SceneObjectWrappedPointerGet |
 | `0x00473690` | EntityVisualResourceLoad |
 | `0x00473b20` | EntityFlag80Set |
-| `0x00473ba0` | SceneObjectFlagBit3Get |
 | `0x00473bc0` | ResourceNameRegisterOrQuery |
 | `0x00473c60` | XfTextureNameFormat |
 | `0x00473da0` | SceneObjectOwnerSet |
-| `0x00473db0` | SceneObjectOwnerGet |
 | `0x00473dc0` | RendererFogEnableAndColorApply |
 | `0x00473e10` | RendererFogColorSet |
 | `0x00473e70` | RendererFogModeSet |
@@ -1510,7 +1500,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0047a1b0` | FormattedTextDraw |
 | `0x0047a1e0` | FormattedTextDrawAndMeasure |
 | `0x0047a520` | BitmapFontGlyphMeasureWidth |
-| `0x0047a540` | ObjectFieldBE4DwordGet |
 | `0x0047a550` | FontRecordAndSurfaceRelease |
 | `0x0047a580` | FixedSizeRecordPoolAcquire |
 | `0x0047a5c0` | FixedSizeRecordPoolGrow |
@@ -1653,7 +1642,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00481fa0` | MeshVertexCoordinateRemap |
 | `0x00482040` | AnimationTrackApplyWrappedFrameOffset |
 | `0x004821a0` | IndexedRecordEntryRead |
-| `0x00482210` | PointerValueGet |
 | `0x00482220` | MeshRecordAllocateAndFill |
 | `0x00482350` | IndexedRecordField64Set |
 | `0x00482370` | MeshVerticesScaleApply |
@@ -1662,7 +1650,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00482500` | InstanceQuadVertexDataFill |
 | `0x00482620` | MeshSegmentVertexFill |
 | `0x004826c0` | MeshVertexRecordFill |
-| `0x00482780` | IndexedRecordFlag6CBit0Get |
 | `0x004827a0` | IndexedRecordFlag6CBit0Set |
 | `0x004827d0` | RecordFlag2CBit0Set |
 | `0x00482ac0` | ModelRenderRecordStateSetup |
@@ -1678,7 +1665,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00483170` | IndexedRecordTransformInitialize |
 | `0x00483240` | IndexedRecordTransformCopyIn |
 | `0x00483270` | RenderObjectColorVectorSet |
-| `0x00483400` | IndexedRecordDataAddressGet |
 | `0x00483420` | ScreenEffectItemOpacitySet |
 | `0x00483540` | Matrix4x4IdentityInitialize |
 | `0x00483580` | RenderInterfaceCapabilityCheck |
@@ -1709,7 +1695,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00484ca0` | FlicDecode8BitAlternateDelta |
 | `0x00484e50` | FlicDecode16BitDelta |
 | `0x00485030` | FlicOpcode27DecodeDispatch |
-| `0x004850c0` | IndexedWordTableLookup |
 | `0x004850f0` | TextBufferCreate |
 | `0x00485160` | TextOutputField82CBit2SetClear |
 | `0x00485190` | TextBufferDestroy |
@@ -1739,7 +1724,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004869f0` | LoadLWSCScene |
 | `0x004876c0` | SharedObjectDirectoryScan |
 | `0x00487760` | ResourceStringTablesFree |
-| `0x004877d0` | ResourceEntryIdGet |
 | `0x004877e0` | SceneEntrySlotTableExpand |
 | `0x00487990` | UIRenderTreeLayoutAndRelease |
 | `0x00487a00` | SharedObjectClone |

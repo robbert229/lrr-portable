@@ -18,8 +18,20 @@ static int s_failures = 0;
 
 /* A record large enough for the widest slot the primitives read. */
 typedef struct ProbeRecord {
-    char storage[0x200];
+    char storage[0xc00]; /* fits the +0xbe4 sweep field */
 } ProbeRecord;
+
+/* Table-slot holder for the indexed readers (corpus record +0x8 slot). */
+typedef struct PokeTableRecord {
+    char     prefix[0x08];
+    void*    table;
+    char     rest[0x200];
+} PokeTableRecord;
+
+static void poke_ptr(void* base, size_t off, void* v)
+{
+    __builtin_memcpy((char*)base + off, &v, sizeof(v));
+}
 
 static void poke_dword(void* base, size_t off, uint32_t v)
 {
@@ -293,6 +305,129 @@ static void test_entity_flag_bit1(void)
     CHECK(entity_type_flag_bit1_get(NULL) == 0u, "NULL answers zero");
 }
 
+/* Field-reader sweep (findings 305/337/356/361/372/373/376/381/393/
+ * 411/430/432/435) — the plain offset readers. */
+static void test_reader_sweep(void)
+{
+    ProbeRecord r;
+    memset(&r, 0, sizeof(r));
+
+    poke_dword(&r, 0x11c, 0xa1a1a1a1u);
+    CHECK(object_record_field11c_get(&r) == 0xa1a1a1a1u, "+0x11c");
+    poke_dword(&r, 300, 0x12345678u);
+    CHECK(entity_type_mask_get(&r) == 0x12345678u, "+300 (mask)");
+    poke_dword(&r, 0x70, 0x00ffffffu);
+    CHECK(scene_object_flags_get(&r) == 0x00ffffffu, "scene flags +0x70");
+    poke_dword(&r, 0x20, 0x55555555u);
+    CHECK(scene_object_owner_get(&r) == 0x55555555u, "scene owner +0x20");
+    poke_dword(&r, 0x08, 0x77777777u);
+    CHECK(scene_object_resource_get(&r) == 0x77777777u, "scene resource +8");
+
+    /* Word at +2 zero-extends; +0xbe4 needs a wide record. */
+    char wide[0xc00];
+    memset(wide, 0, sizeof(wide));
+    poke_dword(wide, 0xbe4, 0xdeadbeefu);
+    CHECK(object_field_be4_dword_get(wide) == 0xdeadbeefu, "wide field +0xbe4");
+
+    char two[8];
+    memset(two, 0, sizeof(two));
+    two[2] = (char)0xab;
+    CHECK(resource_entry_id_get(two) == 0xabu, "entry id word zero-extends");
+
+    /* Bit/flag corners. */
+    poke_dword(&r, 0x14, 0x100u); /* bit 3 lives only in the low byte */
+    CHECK(scene_object_flag_bit3_get(&r) == 0u, "bit 3 of the LOW byte");
+    poke_dword(&r, 0x14, 0x08u);
+    CHECK(scene_object_flag_bit3_get(&r) == 1u, "bit 3 set");
+    poke_dword(&r, 0x14, 0x80u);
+    CHECK(scene_object_flag_bit3_get(&r) == 0u, "bit 7 is not bit 3");
+    poke_dword(&r, 0x28, 1u);
+    CHECK(scene_object_mode_is_one(&r) == 1, "mode 1 is one");
+    poke_dword(&r, 0x28, 2u);
+    CHECK(scene_object_mode_is_one(&r) == 0, "mode 2 is not one");
+
+    /* Pointer-deref twins: read through the given address. */
+    poke_dword(&r, 0x04, 0x40000000u);
+    CHECK(animation_object_handle_get(&r) == 0x40000000u, "anim handle +4");
+    uint32_t target = 0xcafef00du;
+    CHECK(pointer_value_get(&target) == 0xcafef00du, "pointer_value reads +0");
+    CHECK(scene_object_wrapped_pointer_get(&target) == 0xcafef00du,
+          "wrapped pointer reads its target's +0");
+
+    /* NULL corners (deviations: zero answers). */
+    CHECK(object_record_field11c_get(NULL) == 0u, "NULL record reads zero");
+    CHECK(object_field_be4_dword_get(NULL) == 0u, "NULL wide field reads zero");
+    CHECK(entity_type_mask_get(NULL) == 0u, "NULL mask reads zero");
+    CHECK(resource_entry_id_get(NULL) == 0u, "NULL entry id reads zero");
+    CHECK(pointer_value_get(NULL) == 0u, "NULL pointer reads zero");
+}
+
+/* Indexed readers: the +0x8 table slot, the stride-0x70 records, the
+ * word table at +0x41c, and the coordinate list. */
+static void test_indexed_sweep(void)
+{
+    /* Table of three stride-0x70 records: bit-0 flags 1, 0, 1. */
+    uint8_t table[3 * 0x70];
+    memset(table, 0, sizeof(table));
+    poke_dword(table + 0 * 0x70, 0x6cu, 1u);
+    poke_dword(table + 1 * 0x70, 0x6cu, 0u);
+    poke_dword(table + 2 * 0x70, 0x6cu, 3u); /* bit 1 alongside bit 0 */
+    PokeTableRecord holder;
+    memset(&holder, 0, sizeof(holder));
+    holder.table = table;
+    CHECK(indexed_record_flag6c_bit0_get(&holder, 0) == 1u, "record 0 bit0");
+    CHECK(indexed_record_flag6c_bit0_get(&holder, 1) == 0u, "record 1 clear");
+    CHECK(indexed_record_flag6c_bit0_get(&holder, 2) == 1u,
+          "record 2 answers bit 0 through the mask");
+    CHECK(indexed_record_data_address_get(&holder, 1)
+              == (void*)(table + 1 * 0x70 + 0x10),
+          "data address is base + 0x10 + index*stride");
+    holder.table = NULL;
+    CHECK(indexed_record_flag6c_bit0_get(&holder, 0) == 0u,
+          "empty table answers zero");
+    CHECK(indexed_record_data_address_get(&holder, 0) == NULL,
+          "empty table answers NULL");
+    CHECK(indexed_record_data_address_get(NULL, 0) == NULL,
+          "NULL record answers NULL");
+
+    /* Word table: corpus order is (index, table); +0x41c start. */
+    static uint8_t words[0x41c + 256 * 2];
+    memset(words, 0, sizeof(words));
+    uint16_t w1 = 0x1122, w255 = 0xffee;
+    __builtin_memcpy(words + 0x41c + 1 * 2, &w1, sizeof(w1));
+    __builtin_memcpy(words + 0x41c + 255 * 2, &w255, sizeof(w255));
+    CHECK(indexed_word_table_lookup(1u, words) == 0x1122u, "index 1 word");
+    CHECK(indexed_word_table_lookup(255u, words) == 0xffeeu,
+          "the index masks low byte: 255");
+    CHECK(indexed_word_table_lookup(256u, words) == 0u,
+          "index 256 masks to 0 (untouched cell)");
+
+    /* Coordinate pair list: an explicit byte layout — count at +0x20,
+     * native pointer slots from +0x2c (the deviation's shape). */
+    uint32_t entry_a[4] = { 10, 20, 0, 0 };
+    uint32_t entry_b[4] = { 30, 40, 0, 0 };
+    uint8_t mgr[0x2c + 16 * 8];
+    memset(mgr, 0, sizeof(mgr));
+    poke_dword(mgr, 0x20, 2u);
+    poke_ptr(mgr, 0x2c + 0 * 8, entry_a);
+    poke_ptr(mgr, 0x2c + 1 * 8, entry_b);
+    CHECK(count_matching_coordinates_in_list(mgr, 10, 20) == 1,
+          "the matching pair counts once");
+    CHECK(count_matching_coordinates_in_list(mgr, 10, 21) == 0,
+          "both coordinates must match");
+    CHECK(count_matching_coordinates_in_list(mgr, 30, 40) == 1,
+          "the second entry matches too");
+    poke_dword(mgr, 0x20, 3u);
+    poke_ptr(mgr, 0x2c + 2 * 8, entry_a);
+    CHECK(count_matching_coordinates_in_list(mgr, 10, 20) == 2,
+          "duplicate entries both count");
+    poke_dword(mgr, 0x20, 0u);
+    CHECK(count_matching_coordinates_in_list(mgr, 10, 20) == 0,
+          "zero count walks nothing");
+    CHECK(count_matching_coordinates_in_list(NULL, 0, 0) == 0,
+          "NULL manager answers zero");
+}
+
 static void test_interpolated_z(void)
 {
     /* a = 10 at +8, b = 4 at +8: v = 4 * 2.5 + 10 = 20. */
@@ -329,6 +464,8 @@ int main(void)
     test_object_pool_head();
     test_model_child_eligibility();
     test_entity_flag_bit1();
+    test_reader_sweep();
+    test_indexed_sweep();
     test_interpolated_z();
     if (s_failures != 0) {
         fprintf(stderr, "record_test: %d failure(s)\n", s_failures);

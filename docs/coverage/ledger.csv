@@ -131,7 +131,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004067b0,FUN_004067b0,named,PolylineSegmentLengthsAndTotalCalculate,0,554
 00406820,FUN_00406820,named,BezierCurveSamplesBuild,0,575
 004068c0,FUN_004068c0,named,PathArcLengthInterpolate,0,1051
-00406980,FUN_00406980,named,SceneObjectModeIsOne,0,78
+00406980,FUN_00406980,ported,SceneObjectModeIsOne,1,78
 00406990,FUN_00406990,named,TypeTableResourceRowLoad,0,3422
 00406c00,FUN_00406c00,named,RendererObjectUpdateFromRecordField64,0,152
 00406c30,FUN_00406c30,named,RendererObjectUpdateFromRecordField68,0,153
@@ -143,7 +143,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00406da0,FUN_00406da0,named,AnimationObjectTimeGet,0,94
 00406dc0,FUN_00406dc0,named,AnimationObjectTransformSet,0,167
 00406df0,FUN_00406df0,named,RenderNodeSetPositionFromCallback,0,290
-00406e30,FUN_00406e30,named,AnimationObjectHandleGet,0,83
+00406e30,FUN_00406e30,ported,AnimationObjectHandleGet,1,83
 00406e40,FUN_00406e40,named,ActivityRunnerUpdate,0,844
 00406ec0,FUN_00406ec0,named,EntityPayloadReleaseSubslots,0,755
 00406f50,FUN_00406f50,named,RendererObjectSubobjectDispatch,0,225
@@ -184,7 +184,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004087b0,FUN_004087b0,named,SceneObjectPrimaryHandleGetOrCreate,0,330
 004087e0,FUN_004087e0,named,SceneObjectSecondaryHandleGetOrCreate,0,330
 00408810,FUN_00408810,named,SceneObjectIndexedSecondaryHandleGetOrCreate,0,346
-00408850,FUN_00408850,named,SceneObjectFlagsGet,0,86
+00408850,FUN_00408850,ported,SceneObjectFlagsGet,1,86
 00408860,FUN_00408860,named,AnimationLoopTimeAdjust,0,785
 00408930,FUN_00408930,named,ConstantZeroFloatGet,0,57
 00408940,FUN_00408940,named,EntityPayloadTeardown,0,217
@@ -197,7 +197,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00408c80,FUN_00408c80,named,StringTableIndexLookup,0,919
 00408ce0,FUN_00408ce0,named,OperationGroupAppendObject,0,739
 00408d70,FUN_00408d70,named,TerrainDescriptorCoordinateCountLimitCheck,0,745
-00408e10,FUN_00408e10,named,CountMatchingCoordinatesInList,0,447
+00408e10,FUN_00408e10,ported,CountMatchingCoordinatesInList,1,447
 00408e50,FUN_00408e50,named,CreateRepeatedResourceInstances,0,458
 00408ec0,FUN_00408ec0,named,KindNineNeighborEmitForFootprintCells,0,2500
 004090a0,FUN_004090a0,named,TerrainCellPredicateCheck,0,117
@@ -1602,7 +1602,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0046ced0,FUN_0046ced0,named,PairedResourceStateSet,0,318
 0046cf20,FUN_0046cf20,named,SceneEntityAnimationTracksSetEnabled,0,107
 0046cf40,FUN_0046cf40,named,RecordFlagBitTest,0,287
-0046cf80,FUN_0046cf80,named,EntityTypeMaskGet,0,85
+0046cf80,FUN_0046cf80,ported,EntityTypeMaskGet,1,85
 0046cf90,FUN_0046cf90,named,RecordIndexedEntriesRebuildAndRefresh,0,135
 0046cfc0,FUN_0046cfc0,named,SixResourceSlotsSetState,0,294
 0046cff0,FUN_0046cff0,named,SceneRecordTemplateInstantiate,0,1425
@@ -1614,14 +1614,14 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0046d330,FUN_0046d330,ported,EntityTypeFlagGetBit1,3,93
 0046d350,FUN_0046d350,named,SceneResourceDrawAtOrigin,0,192
 0046d380,FUN_0046d380,named,AttachedModelOrientationUpdate,0,6267
-0046d9e0,FUN_0046d9e0,named,SceneObjectResourceGet,0,83
+0046d9e0,FUN_0046d9e0,ported,SceneObjectResourceGet,1,83
 0046d9f0,FUN_0046d9f0,named,SceneResourceNamedEntryResolveWithFallback,0,465
 0046da50,FUN_0046da50,named,EntityActivityChangeDispatch,0,348
 0046da90,FUN_0046da90,named,SceneResourceCachedSlotB4Get,0,330
 0046dac0,FUN_0046dac0,named,SceneResourceCachedSlotB8Get,0,330
 0046daf0,FUN_0046daf0,named,SceneResourceCachedSlotC0Get,0,330
 0046db20,FUN_0046db20,named,AttachedEntitySlotObjectGet,0,346
-0046db60,FUN_0046db60,named,ObjectRecordField11CGet,0,87
+0046db60,FUN_0046db60,ported,ObjectRecordField11CGet,1,87
 0046db70,FUN_0046db70,named,SceneObjectResourceRelease,0,94
 0046db90,FUN_0046db90,named,CellQuadRunStage,0,2729
 0046dd10,FUN_0046dd10,named,StagedCellCandidateSelect,0,1254
@@ -1710,15 +1710,15 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004734c0,FUN_004734c0,named,AdvisorCompanionTransformApply,0,376
 004734f0,FUN_004734f0,named,DDiSceneLightCreate,0,635
 00473560,FUN_00473560,named,DDiSceneObjectKindModeSetup,0,1297
-00473680,FUN_00473680,named,SceneObjectWrappedPointerGet,0,71
+00473680,FUN_00473680,ported,SceneObjectWrappedPointerGet,1,71
 00473690,FUN_00473690,named,EntityVisualResourceLoad,0,7281
 00473b20,FUN_00473b20,named,EntityFlag80Set,0,234
 00473b40,FUN_00473b40,ported,SceneRenderLockToggle,1,385
-00473ba0,FUN_00473ba0,named,SceneObjectFlagBit3Get,0,92
+00473ba0,FUN_00473ba0,ported,SceneObjectFlagBit3Get,1,92
 00473bc0,FUN_00473bc0,named,ResourceNameRegisterOrQuery,0,914
 00473c60,FUN_00473c60,named,XfTextureNameFormat,0,1386
 00473da0,FUN_00473da0,named,SceneObjectOwnerSet,0,112
-00473db0,FUN_00473db0,named,SceneObjectOwnerGet,0,86
+00473db0,FUN_00473db0,ported,SceneObjectOwnerGet,1,86
 00473dc0,FUN_00473dc0,named,RendererFogEnableAndColorApply,0,318
 00473e10,FUN_00473e10,named,RendererFogColorSet,0,295
 00473e70,FUN_00473e70,named,RendererFogModeSet,0,215
@@ -1894,7 +1894,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0047a1e0,FUN_0047a1e0,named,FormattedTextDrawAndMeasure,0,3292
 0047a470,FUN_0047a470,ported,BitmapFontGlyphDrawAndMeasure,5,507
 0047a520,FUN_0047a520,named,BitmapFontGlyphMeasureWidth,0,113
-0047a540,FUN_0047a540,named,ObjectFieldBE4DwordGet,0,87
+0047a540,FUN_0047a540,ported,ObjectFieldBE4DwordGet,1,87
 0047a550,FUN_0047a550,named,FontRecordAndSurfaceRelease,0,141
 0047a580,FUN_0047a580,named,FixedSizeRecordPoolAcquire,0,463
 0047a5c0,FUN_0047a5c0,named,FixedSizeRecordPoolGrow,0,679
@@ -2069,7 +2069,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00482040,FUN_00482040,named,AnimationTrackApplyWrappedFrameOffset,0,682
 004820d0,FUN_004820d0,ported,,1,1149
 004821a0,FUN_004821a0,named,IndexedRecordEntryRead,0,689
-00482210,FUN_00482210,named,PointerValueGet,0,71
+00482210,FUN_00482210,ported,PointerValueGet,1,71
 00482220,FUN_00482220,named,MeshRecordAllocateAndFill,0,1574
 00482350,FUN_00482350,named,IndexedRecordField64Set,0,154
 00482370,FUN_00482370,named,MeshVerticesScaleApply,0,1004
@@ -2078,7 +2078,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00482500,FUN_00482500,named,InstanceQuadVertexDataFill,0,1573
 00482620,FUN_00482620,named,MeshSegmentVertexFill,0,1052
 004826c0,FUN_004826c0,named,MeshVertexRecordFill,0,1169
-00482780,FUN_00482780,named,IndexedRecordFlag6CBit0Get,0,121
+00482780,FUN_00482780,ported,IndexedRecordFlag6CBit0Get,1,121
 004827a0,FUN_004827a0,named,IndexedRecordFlag6CBit0Set,0,301
 004827d0,FUN_004827d0,named,RecordFlag2CBit0Set,0,231
 00482ac0,FUN_00482ac0,named,ModelRenderRecordStateSetup,0,516
@@ -2095,7 +2095,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00483170,FUN_00483170,named,IndexedRecordTransformInitialize,0,825
 00483240,FUN_00483240,named,IndexedRecordTransformCopyIn,0,335
 00483270,FUN_00483270,named,RenderObjectColorVectorSet,0,1379
-00483400,FUN_00483400,named,IndexedRecordDataAddressGet,0,105
+00483400,FUN_00483400,ported,IndexedRecordDataAddressGet,1,105
 00483420,FUN_00483420,named,ScreenEffectItemOpacitySet,0,1367
 00483540,FUN_00483540,named,Matrix4x4IdentityInitialize,0,389
 00483580,FUN_00483580,named,RenderInterfaceCapabilityCheck,0,867
@@ -2131,7 +2131,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00484ca0,FUN_00484ca0,named,FlicDecode8BitAlternateDelta,0,2597
 00484e50,FUN_00484e50,named,FlicDecode16BitDelta,0,2550
 00485030,FUN_00485030,named,FlicOpcode27DecodeDispatch,0,547
-004850c0,FUN_004850c0,named,IndexedWordTableLookup,0,123
+004850c0,FUN_004850c0,ported,IndexedWordTableLookup,1,123
 004850e0,FUN_004850e0,ported,ObjectField10Get,2,86
 004850f0,FUN_004850f0,named,TextBufferCreate,0,655
 00485160,FUN_00485160,named,TextOutputField82CBit2SetClear,0,235
@@ -2163,7 +2163,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004869f0,FUN_004869f0,named,LoadLWSCScene,0,30966
 004876c0,FUN_004876c0,named,SharedObjectDirectoryScan,0,1363
 00487760,FUN_00487760,named,ResourceStringTablesFree,0,486
-004877d0,FUN_004877d0,named,ResourceEntryIdGet,0,83
+004877d0,FUN_004877d0,ported,ResourceEntryIdGet,1,83
 004877e0,FUN_004877e0,named,SceneEntrySlotTableExpand,0,3088
 00487990,FUN_00487990,named,UIRenderTreeLayoutAndRelease,0,452
 00487a00,FUN_00487a00,named,SharedObjectClone,0,2573
