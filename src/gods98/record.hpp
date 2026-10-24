@@ -264,4 +264,20 @@ void entity_fields_a0_a4_store_a8_clear(void* record, uint32_t value_a,
                                         uint32_t value_b);
 void entity_b8_bit3_set_or_clear(void* record, int set);
 
+/* --- the record-field write band (2026-10-24; findings 324/386) ------------
+ * Pure field writers over record handles, in the port's fixed-offset write
+ * style. NULL records skip the stores (documented deviations; corpus
+ * callers dereference blindly).
+ * RecordField18Set (FUN_00462ab0): dword store at +0x18.
+ * RecordFlags24Or (FUN_00462ac0): OR the flag word at +0x24.
+ * ObjectField14Set (FUN_0045d8a0): dword store at +0x14 (the corpus's
+ *   generic object/record field write).
+ * LinkedRecordField4Clear (FUN_00451c30): walk the record chain through
+ *   each node's +0x14 next link, clearing every node's +4 word - faithful
+ *   chain walk with an entry NULL guard (documented). */
+void record_field18_set(void* record, uint32_t value);
+void record_flags_24_or(void* record, uint32_t flags);
+void object_field14_set(void* record, uint32_t value);
+void linked_record_field4_clear(void* record);
+
 #endif /* LEGORRR_GODS98_RECORD_HPP */

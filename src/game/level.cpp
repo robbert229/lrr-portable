@@ -2515,3 +2515,9 @@ int global_option_low_bits_enabled(const LevelState* s)
 {
     return s != NULL && (s->objective & 7u) != 0u;
 }
+
+/* GlobalFlagGet_004ffe30 (FUN_00458650): threaded objective-result read. */
+int level_objective_result_get(const LevelState* s)
+{
+    return s != NULL ? s->objective_result : 0;
+}

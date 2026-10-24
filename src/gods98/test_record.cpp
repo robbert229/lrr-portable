@@ -719,6 +719,46 @@ int main(void)
         CHECK(1, "NULL record skips");
     }
 
+    /* The record-field write band (2026-10-24). */
+    {
+        char rec[0x30];
+        memset(rec, 0, sizeof(rec));
+        record_field18_set(rec, 0x11223344u);
+        uint32_t v18 = 0u;
+        __builtin_memcpy(&v18, rec + 0x18, sizeof(v18));
+        CHECK(v18 == 0x11223344u, "the +0x18 store lands");
+        record_flags_24_or(rec, 2u);
+        record_flags_24_or(rec, 8u);
+        uint32_t f24 = 0u;
+        __builtin_memcpy(&f24, rec + 0x24, sizeof(f24));
+        CHECK(f24 == 0xAu, "the flag OR accumulates");
+        object_field14_set(rec, 9u);
+        uint32_t v14 = 0u;
+        __builtin_memcpy(&v14, rec + 0x14, sizeof(v14));
+        CHECK(v14 == 9u, "the +0x14 store lands");
+        record_field18_set(NULL, 1u); /* guarded */
+        object_field14_set(NULL, 1u); /* guarded */
+        record_flags_24_or(NULL, 1u); /* guarded */
+
+        /* The chain walk: three linked nodes all clear their +4. */
+        char c[3][0x30];
+        memset(c, 0, sizeof(c));
+        unsigned long n1 = (unsigned long)(size_t)c[1];
+        unsigned long n2 = (unsigned long)(size_t)c[2];
+        __builtin_memcpy(c[0] + 0x14, &n1, sizeof(n1));
+        __builtin_memcpy(c[1] + 0x14, &n2, sizeof(n2));
+        __builtin_memcpy(c[0] + 4, "\x11\x11\x11\x11", 4);
+        __builtin_memcpy(c[1] + 4, "\x22\x22\x22\x22", 4);
+        __builtin_memcpy(c[2] + 4, "\x33\x33\x33\x33", 4);
+        linked_record_field4_clear(c[0]);
+        unsigned long p0 = 0, p1 = 0, p2 = 0;
+        __builtin_memcpy(&p0, c[0] + 4, 4);
+        __builtin_memcpy(&p1, c[1] + 4, 4);
+        __builtin_memcpy(&p2, c[2] + 4, 4);
+        CHECK(p0 == 0 && p1 == 0 && p2 == 0, "the chain clears every node");
+        linked_record_field4_clear(NULL); /* guarded */
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "record_test: %d failure(s)\n", s_failures);
         return 1;

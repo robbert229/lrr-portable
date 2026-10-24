@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 720 | 28.1% |
+| ported | 729 | 28.4% |
 | anchored | 4 | 0.2% |
-| named | 1793 | 69.9% |
+| named | 1784 | 69.6% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (720 functions)
+  (729 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1793 functions)
+  citation yet (1784 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1798 (70.1%).**
+**Game logic remaining to port: 1789 (69.8%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -754,7 +754,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00456b80` | TutorialPathCoordinateIndex |
 | `0x00456c60` | ObjectPoolListsFreeAll |
 | `0x00456cb0` | CoordinateListCallbackVisit |
-| `0x00458650` | GlobalFlagGet_004ffe30 |
 | `0x004588e0` | InputDeviceRelease |
 | `0x00459240` | PopEntityStateOverride |
 | `0x004593e0` | OsfWrite |
@@ -794,14 +793,17 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0045b9d0` | PanelRotationControlConfigLoad |
 | `0x0045bcd0` | CameraDragFromCursorApply |
 | `0x0045c0d0` | PairCountHistogramBuild |
+| `0x0045c340` | PanelResourceLayoutStore |
+| `0x0045c3f0` | AdvisorProgressBarFillDraw |
+| `0x0045c4b0` | PanelResourcePositionUpdateIfEnabled |
+| `0x0045c520` | PanelResourceHandleAndDimensionsStore |
+| `0x0045c580` | UiOverlayAnimationAdvance |
 | `0x0045c5f0` | UiOverlayAnimationApply |
 | `0x0045c670` | AdvisorAnimationSceneLookupAndRequest |
 | `0x0045c6b0` | AdvisorAnimationSlotIdResolve |
 | `0x0045c830` | PointerCursorNameRegistryInit |
 | `0x0045ca70` | PointerCursorConfigLoad |
 | `0x0045cbd0` | PointerCursorConfigParse |
-| `0x0045cc10` | IndexedGlobalValueGet_00500a9c |
-| `0x0045cc60` | GlobalValueGet_00500a98 |
 | `0x0045cc70` | PointerCursorDraw |
 | `0x0045cd90` | PointerCursorOverrideTick |
 | `0x0045cdc0` | PriorityImagesConfigLoad |
@@ -817,6 +819,9 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0045d640` | UiCursorMoveToElementCenter |
 | `0x0045d7e0` | LevelIdentifierRemapTableLoad |
 | `0x0045d870` | CommandEntityReferenceRemap |
+| `0x0045d8b0` | ScreenCoordNormalizeInit |
+| `0x0045da90` | UiRenderRecordCreate |
+| `0x0045daf0` | UiRenderRecordFree |
 | `0x0045db00` | TexturedSceneObjectDrawAtPosition |
 | `0x0045dbc0` | TerrainViewTileGeometryBuild |
 | `0x0045e400` | EntityTypeAndStateFlagPredicate |
@@ -826,7 +831,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0045f750` | TaskBlockFinish |
 | `0x0045f7b0` | TaskFlushImages |
 | `0x0045f7d0` | TaskFlushFont |
-| `0x004601e0` | CheckpointBlobFree |
 | `0x00460200` | SelectedLevelStartObjectUpdate |
 | `0x00460220` | StartLevelSelected |
 | `0x00460290` | EntityType4IndexListBuild |

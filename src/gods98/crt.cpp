@@ -515,3 +515,42 @@ void request_record_flags_set(int index, uint32_t flags)
         s_request_flags[index] = flags;
     }
 }
+
+/* --- the remaining DAT one-liner stores/reads (see crt.hpp) ----------------- */
+static uint32_t s_value_0050080c = 0u;
+static uint32_t s_font_words[16];   /* DAT_00500a9c window */
+static uint32_t s_cursor_word = 0u; /* DAT_00500a98 */
+
+void global_value_0050080c_set(uint32_t value)
+{
+    s_value_0050080c = value;
+}
+
+uint32_t global_value_0050080c_peek(void)
+{
+    return s_value_0050080c;
+}
+
+uint32_t indexed_global_value_at_get(int index)
+{
+    if (index < 0 || index >= 16) {
+        return 0u; /* deviation: the corpus strides blindly */
+    }
+    return s_font_words[index];
+}
+
+uint32_t global_cursor_word_get(void)
+{
+    return s_cursor_word;
+}
+
+void font_cursor_word_set(int index, uint32_t v)
+{
+    if (index == -1) {
+        s_cursor_word = v; /* the DAT_00500a98 word itself */
+        return;
+    }
+    if (index >= 0 && index < 16) {
+        s_font_words[index] = v;
+    }
+}

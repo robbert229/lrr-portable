@@ -833,4 +833,9 @@ void coordinate_callback_dispatch_by_mode(const void* coord_pair,
  * the corpus tests its global blindly). */
 int global_option_low_bits_enabled(const LevelState* s);
 
+/* GlobalFlagGet_004ffe30 (FUN_00458650, findings 21/22): the objective-
+ * result word the corpus reads blindly - LevelState's own field through
+ * the port's guarded read (NULL answers 0). */
+int level_objective_result_get(const struct LevelState* s);
+
 #endif /* LEGORRR_GAME_LEVEL_HPP */

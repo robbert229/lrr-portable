@@ -510,3 +510,46 @@ void entity_b8_bit3_set_or_clear(void* record, int set)
         *byte = (unsigned char)(*byte & ~8u);
     }
 }
+
+/* --- the record-field write band (see record.hpp) --------------------------- */
+void record_field18_set(void* record, uint32_t value)
+{
+    if (record == NULL) {
+        return; /* deviation: the corpus writes blindly */
+    }
+    __builtin_memcpy((char*)record + 0x18, &value, sizeof(value));
+}
+
+void record_flags_24_or(void* record, uint32_t flags)
+{
+    if (record == NULL) {
+        return; /* deviation: the corpus reads blindly */
+    }
+    uint32_t f = 0u;
+    __builtin_memcpy(&f, (char*)record + 0x24, sizeof(f));
+    f |= flags;
+    __builtin_memcpy((char*)record + 0x24, &f, sizeof(f));
+}
+
+void object_field14_set(void* record, uint32_t value)
+{
+    if (record == NULL) {
+        return; /* deviation: the corpus writes blindly */
+    }
+    __builtin_memcpy((char*)record + 0x14, &value, sizeof(value));
+}
+
+void linked_record_field4_clear(void* record)
+{
+    if (record == NULL) {
+        return; /* deviation: the corpus dereferences blindly */
+    }
+    char* node = (char*)record;
+    while (node != NULL) {
+        const uint32_t zero = 0u;
+        __builtin_memcpy(node + 4, &zero, sizeof(zero));
+        void* next = NULL;
+        __builtin_memcpy(&next, node + 0x14, sizeof(next));
+        node = (char*)next;
+    }
+}
