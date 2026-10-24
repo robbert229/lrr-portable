@@ -20,7 +20,7 @@ and curiosity; nothing in this repository is affiliated with or endorsed by the 
 
 ```
 README.md           This file
-docs/findings/      Reverse-engineering findings, 01–417 (see index below)
+docs/findings/      Reverse-engineering findings, 01–437 (see index below)
 docs/findings/      Reverse-engineering findings, 01–416 (see index below)
 tools/              WAD tooling (rrwad.py: unpack/pack/verify — see tools/README.md)
                     + model converter (tools/rrlwo.py: .lwo → glTF 2.0)
@@ -615,6 +615,7 @@ Open threads, in order of value:
 | 415 | [findings/415-model-lightwave-and-animation-asset-pipeline.md](docs/findings/415-model-lightwave-and-animation-asset-pipeline.md) | Model, LightWave, and Animation Asset Pipeline |
 | 416 | [findings/416-scene-and-render-resource-lifecycle.md](docs/findings/416-scene-and-render-resource-lifecycle.md) | Scene and Render Resource Lifecycle |
 | 417 | [findings/417-sound-subsystem-aliases-queues-and-effects.md](docs/findings/417-sound-subsystem-aliases-queues-and-effects.md) | Sound aliases, submission queues, and transient effects |
+| 437 | [findings/437-menu-widgets-and-menu-rendering.md](docs/findings/437-menu-widgets-and-menu-rendering.md) | Menu Widgets and Menu Rendering |
 
 Canonical full pseudocode corpus: [`docs/decompiles/full/LEGORR.full.c`](docs/decompiles/full/LEGORR.full.c)
 (2564 manifest functions; see its [README](docs/decompiles/full/README.md)). The
