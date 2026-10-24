@@ -279,3 +279,69 @@ uint32_t global_value_004ff9bc_store_and_return(const void* value)
     s_global_dword_004ff9bc = v;
     return v;
 }
+
+/* --- unowned DAT-global counter/accumulator band (see crt.hpp) -----------
+ * None of these globals has a ported owner or feeder, so each lands as a
+ * zero-initialized module static (the s_system_state precedent). */
+static uint32_t s_counter_004ff990 = 0u;
+static float    s_float_00554adc   = 0.0f;
+static float    s_float_00554efc   = 0.0f;
+static uint32_t s_counter_00555324 = 0u;
+static uint32_t s_counter_00555328 = 0u;
+static uint32_t s_counter_0055532c = 0u;
+static float    s_float_00555330   = 0.0f;
+static float    s_float_00555120   = 0.0f;
+
+void global_counter_004ff990_increment(void)
+{
+    s_counter_004ff990 = s_counter_004ff990 + 1u;
+}
+
+void global_counter_004ff990_reset(void)
+{
+    s_counter_004ff990 = 0u;
+}
+
+void global_float_at_00554adc_add_one(void)
+{
+    s_float_00554adc = s_float_00554adc + 1.0f; /* corpus: x - -1.0 */
+}
+
+void global_float_at_00554efc_add_one(void)
+{
+    s_float_00554efc = s_float_00554efc + 1.0f;
+}
+
+void global_counter_at_00555324_increment(void)
+{
+    s_counter_00555324 = s_counter_00555324 + 1u;
+}
+
+void global_counter_at_00555328_increment(void)
+{
+    s_counter_00555328 = s_counter_00555328 + 1u;
+}
+
+void global_counter_at_0055532c_increment(void)
+{
+    s_counter_0055532c = s_counter_0055532c + 1u;
+}
+
+void global_float_accumulator_00555330_add(float value)
+{
+    s_float_00555330 = s_float_00555330 + value;
+}
+
+void global_float_accumulate_00555120(float value)
+{
+    s_float_00555120 = s_float_00555120 + value;
+}
+
+uint32_t crt_counter_004ff990_peek(void) { return s_counter_004ff990; }
+float    crt_float_00554adc_peek(void)   { return s_float_00554adc; }
+float    crt_float_00554efc_peek(void)   { return s_float_00554efc; }
+uint32_t crt_counter_00555324_peek(void) { return s_counter_00555324; }
+uint32_t crt_counter_00555328_peek(void) { return s_counter_00555328; }
+uint32_t crt_counter_0055532c_peek(void) { return s_counter_0055532c; }
+float    crt_float_00555330_peek(void)   { return s_float_00555330; }
+float    crt_float_00555120_peek(void)   { return s_float_00555120; }

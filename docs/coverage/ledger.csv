@@ -1240,12 +1240,12 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00454600,FUN_00454600,ported,,1,1049
 00454880,FUN_00454880,ported,GlobalCounter_004ff990Increment,1,164
 00454890,FUN_00454890,ported,GlobalCounter_004ff990Reset,1,148
-00454b70,FUN_00454b70,ported,ObjectiveVoiceAliasRaiseCommit,1,68
-00454b80,FUN_00454b80,ported,ObjectiveVoiceAliasRaiseGateBit27,2,115
+00454b70,FUN_00454b70,named,ObjectiveVoiceAliasRaiseCommit,0,68
+00454b80,FUN_00454b80,named,ObjectiveVoiceAliasRaiseGateBit27,0,115
 00455300,FUN_00455300,anchored,,0,185
 00456210,FUN_00456210,ported,FlhMagicUuNoop,1,49
-00456240,FUN_00456240,named,SystemStateFlags,0,60
-00456550,FUN_00456550,named,SetSystemStateFlags,0,98
+00456240,FUN_00456240,ported,SystemStateFlags,1,60
+00456550,FUN_00456550,ported,SetSystemStateFlags,1,98
 004565f0,FUN_004565f0,named,EngineModeSet,0,195
 00456640,FUN_00456640,named,GlobalFlagGet_004ff978,0,60
 004567c0,FUN_004567c0,ported,GlobalValue_004ff9bcStoreAndReturn,1,185
@@ -1412,7 +1412,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00462600,FUN_00462600,named,RewardTaskTextDrawAndScoreGate,0,1006
 00462700,FUN_00462700,named,PointerOverrideExpiryTick,0,289
 00462780,FUN_00462780,ported,RewardSaveButtonZoneCheck,2,542
-00462800,FUN_00462800,ported,RewardScoreAdd,1,217
+00462800,FUN_00462800,named,RewardScoreAdd,0,217
 00462830,FUN_00462830,ported,GlobalFloatAt00554adcAddOne,1,79
 00462850,FUN_00462850,ported,GlobalFloatAt00554efcAddOne,1,79
 00462870,FUN_00462870,ported,GlobalCounterAt00555324Increment,1,76
@@ -1420,8 +1420,8 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00462890,FUN_00462890,ported,GlobalCounterAt0055532cIncrement,1,76
 004628a0,FUN_004628a0,ported,GlobalFloatAccumulator_00555330Add,1,179
 004628c0,FUN_004628c0,ported,GlobalFloatAccumulate_00555120,1,91
-004628e0,FUN_004628e0,ported,CallbackRecordAllocateInitialize,3,887
-00462960,FUN_00462960,ported,TaskTableContentsRelease,3,595
+004628e0,FUN_004628e0,named,CallbackRecordAllocateInitialize,0,887
+00462960,FUN_00462960,named,TaskTableContentsRelease,0,595
 004629d0,FUN_004629d0,named,PanelEventEntryAppend,0,1632
 00462ab0,FUN_00462ab0,ported,RecordField18Set,1,112
 00462ac0,FUN_00462ac0,ported,RecordFlags24Or,1,128

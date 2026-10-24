@@ -93,11 +93,6 @@ int  message_active_has(int id);
 /* per-id cooldown value (tests/diagnostics). */
 float message_cooldown(int id);
 
-/* flags census (tests/diagnostics): the global flags word and the
- * per-id config flags (the message_active_count precedent). */
-uint32_t message_flags_peek(void);
-uint32_t message_config_flags(int id);
-
 /* SystemStateFlags / SetSystemStateFlags (FUN_00456240 / FUN_00456550,
  * findings 04/05/440): the corpus's get / set accessors over the
  * game-state bitmask at DAT_004ff980 — the module's own s_system_state,
@@ -106,55 +101,5 @@ uint32_t message_config_flags(int id);
  * (documented deviation; corpus callers pass live pointers). */
 uint32_t system_state_flags_get(void);
 uint32_t system_state_flags_set(const uint32_t* value);
-
-/* --- corpus flag leaves (2026-10-24) --------------------------------------
- * SelectionFlag10SetClear (FUN_00419450, findings 376/441): raise or clear
- * bit 0x10 in the selection-flags global — our s_flags (DAT_004dcd48).
- * InfoMessageAlwaysPlayFlagSet / IndexedSelectionFlag20000SetClear
- * (FUN_00419470 / FUN_004194f0, finding 441): raise or clear the per-id
- * config record's 0x10000 / 0x20000 flag bits — our per-id config flag
- * word (the corpus table's flag dword). The corpus indexes its config
- * records blindly; the port bounds-checks (documented deviation). */
-void selection_flag10_set_clear(int set);
-void info_message_always_play_flag_set(int id, int set);
-void indexed_selection_flag_20000_set_clear(int id, int set);
-
-/* --- the incident/message DAT-global band (2026-10-24; findings 05/250/441) -
- * The corpus's message config block (DAT_004dc6fc…, stride 0x14 — all-zero
- * byte-read per finding 05) and the incident-state word FUN_0041a2f0 (DAT_004dcd58) have
- * no ported feeder — the shapes land as guarded zero-init storage per the
- * unowned-global convention. The catalog read (FUN_00419420) is the same
- * stride-0x14 dword the corpus's InfoMessageSoundLoad populates into the
- * record's +4 (finding 441 — despite its name it does not read a template
- * field); the secondary-sound store (FUN_00419680) writes the adjacent
- * dword of the same record block. */
-uint32_t incident_message_text_catalog_get(int id);
-void     info_message_secondary_sound_set(int id, uint32_t value);
-uint32_t incident_message_state_get(void);
-
-/* DeferredCallbackSet (FUN_00453900, findings 256/440): the corpus stores
- * the callback-presence word (DAT_004a673c) that GameConfigInit seeds with
- * whether the corresponding message resource was found; the corpus reader
- * (DeferredCallbackInvokeIfSet) is unported, so the word lands as
- * zero-init storage with a peek. */
-void     deferred_callback_set(uint32_t value);
-uint32_t deferred_callback_peek(void);
-
-/* IncidentMessageFlagSet (FUN_00419ae0, findings 06/440): raises or drops
- * bit 4 of the message flag word through the module's own s_flags. */
-void incident_message_flag_set(int value);
-
-/* HasActiveResource (FUN_004119d0, finding 440): a record with a nonzero
- * +0x38 word answers through the system-state bitmask. NULL record guarded
- * (corpus strides blindly). */
-int has_active_resource(const void* record);       /* FUN_004119d0 */
-
-/* IndexedLinkedListEntryGet (FUN_00419780): walk the corpus's indexed
- * list table (five-dword entries: head +0, count +4, chained through
- * the node's +0x10 link) to the entry at index param_2; out-of-range
- * answers 0. The corpus's table writers stay unported, so the table
- * model starts empty (documented deviation) with install hooks. */
-void indexed_list_install(int list, void* head, int count); /* test hook */
-void* indexed_linked_list_entry_get(int list, int index);   /* FUN_00419780 */
 
 #endif /* LEGORRR_MESSAGE_HPP */

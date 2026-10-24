@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 562 | 21.9% |
+| ported | 573 | 22.3% |
 | anchored | 5 | 0.2% |
-| named | 1950 | 76.1% |
+| named | 1939 | 75.6% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (562 functions)
+  (573 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1950 functions)
+  citation yet (1939 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1956 (76.3%).**
+**Game logic remaining to port: 1945 (75.9%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -735,12 +735,8 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00453920` | AdvisorScrollStepAdvance |
 | `0x00453bb0` | FrameTimerArrayAdvanceAndAdvisorClear |
 | `0x00453da0` | CameraFocusTweenUpdate |
-| `0x00454880` | GlobalCounter_004ff990Increment |
-| `0x00454890` | GlobalCounter_004ff990Reset |
 | `0x00454b70` | ObjectiveVoiceAliasRaiseCommit |
 | `0x00454b80` | ObjectiveVoiceAliasRaiseGateBit27 |
-| `0x00456240` | SystemStateFlags |
-| `0x00456550` | SetSystemStateFlags |
 | `0x004565f0` | EngineModeSet |
 | `0x00456640` | GlobalFlagGet_004ff978 |
 | `0x00456810` | SoundAliasPlayGlobal |
@@ -823,6 +819,9 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004624a0` | RewardFlhContextTick |
 | `0x00462600` | RewardTaskTextDrawAndScoreGate |
 | `0x00462700` | PointerOverrideExpiryTick |
+| `0x00462800` | RewardScoreAdd |
+| `0x004628e0` | CallbackRecordAllocateInitialize |
+| `0x00462960` | TaskTableContentsRelease |
 | `0x004629d0` | PanelEventEntryAppend |
 | `0x00462ad0` | RewardScrollTickerAdvanceAndDraw |
 | `0x00462da0` | IndexedSurfaceResourceAllocate |
