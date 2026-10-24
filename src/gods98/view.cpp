@@ -118,6 +118,51 @@ int rect_contains_point_half_open(const float rect_xywh[4], int x, int y)
     return 0;
 }
 
+/* ---- offset-point rect family (findings 241/363/446) --------------------- */
+
+/* Shared body of the three corpus leaves: the __ftol-truncated float
+ * offsets subtract from the point, then the quad bounds test the shifted
+ * point half-open — x_min <= fx < x_max, y_min <= fy < y_max. */
+static int rect_contains_converted(const float rect[4], float off_x,
+                                   float off_y, int x, int y)
+{
+    const float fx = (float)(x - (int)off_x);
+    const float fy = (float)(y - (int)off_y);
+    return (rect[0] <= fx && fy < rect[3]
+            && rect[1] <= fy && fx < rect[2])
+               ? 1 : 0;
+}
+
+/* RectContainsOffsetPoint (FUN_0045b590): the category-cell hit walk's
+ * containment test — bounds quad plus the float offset pair. */
+int rect_contains_offset_point(const float rect_bounds[4], float off_x,
+                               float off_y, int x, int y)
+{
+    return rect_contains_converted(rect_bounds, off_x, off_y, x, y);
+}
+
+/* RectContainsPointByConvertedCoords (FUN_00463c00): the region-route
+ * walk's copy — the pseudocode is identical to the category walk's. */
+int rect_contains_point_by_converted_coords(const float rect_bounds[4],
+                                            float off_x, float off_y,
+                                            int x, int y)
+{
+    return rect_contains_converted(rect_bounds, off_x, off_y, x, y);
+}
+
+/* RectContainsPointFromObjectBounds (FUN_00463c90): same test, bounds via
+ * the pointer stored at the record's +0x14. The corpus dereferences the
+ * slot unguarded; the port answers 0 for a NULL slot or rect. */
+int rect_contains_point_from_object_bounds(const float* const* bounds_at_14,
+                                           float off_x, float off_y,
+                                           int x, int y)
+{
+    if (bounds_at_14 == NULL || *bounds_at_14 == NULL) {
+        return 0;
+    }
+    return rect_contains_converted(*bounds_at_14, off_x, off_y, x, y);
+}
+
 /* RayPlaneIntersectionParameter (FUN_00479a30): writes t = dot(q-p, n) /
  * dot(d, n) into `t_out` for ray (p,d) against plane (q,n); answers 1 when
  * not parallel, 0 otherwise. */

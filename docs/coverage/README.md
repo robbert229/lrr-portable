@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 458 | 17.9% |
+| ported | 461 | 18.0% |
 | anchored | 5 | 0.2% |
-| named | 2055 | 80.1% |
+| named | 2052 | 80.0% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 0 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (458 functions)
+  (461 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (2055 functions)
+  citation yet (2052 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 2060 (80.3%).**
+**Game logic remaining to port: 2057 (80.2%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -732,6 +732,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0045a5b0` | UITextOutputPositionAndDraw |
 | `0x0045adb0` | SimCursorInteractionTick |
 | `0x0045b310` | SimCategoryCellHitTest |
+| `0x0045b610` | GlobalUIFlags_00500860ClearBits_1_2 |
 | `0x0045b620` | PriorityListButtonActionDispatch |
 | `0x0045b740` | ScrollInfoPanelInitialize |
 | `0x0045b850` | UiOverlayCreateConfiguredElement |
@@ -798,6 +799,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004636b0` | InfoPanelStringEntriesInitialize |
 | `0x00463810` | ScrollRectPayloadRecordCreate |
 | `0x004638a0` | SimTrackCursorHitTest |
+| `0x00463d20` | ViewBlitRectPositionsApply |
 | `0x00463e40` | FloatRoundToNearestInt |
 | `0x00463f00` | SceneQuadGridEmit |
 | `0x004641c0` | BuildingPlacementFootprintRenderAndValidate |

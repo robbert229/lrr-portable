@@ -94,6 +94,30 @@ int point_distance_within_radius(float x1, float y1, float x2, float y2,
                                  float radius);
 /* Half-open rect test on the record's {x,y,w,h} float quad (FUN_0045e660). */
 int rect_contains_point_half_open(const float rect_xywh[4], int x, int y);
+
+/* --- offset-point rect family (corpus FUN_0045b590 / FUN_00463c00 /
+ * FUN_00463c90; findings 241/363/446) --------------------------------------
+ * All three are the same half-open containment test over a bounds-quad
+ * rect {x_min, y_min, x_max, y_max}: the two float offsets truncate to int
+ * (the corpus's two __ftol calls) and subtract from the integer point
+ * before the compare — `x_min <= float(x - ox) < x_max` and the same for
+ * y. The port's cast matches the documented __ftol ≡ C++ truncation. */
+
+/* Direct bounds quad (FUN_0045b590 / FUN_00463c00; the corpus's two call
+ * shapes carry identical arithmetic). */
+int rect_contains_offset_point(const float rect_bounds[4], float off_x,
+                               float off_y, int x, int y);
+int rect_contains_point_by_converted_coords(const float rect_bounds[4],
+                                            float off_x, float off_y,
+                                            int x, int y);
+
+/* Bounds read through the pointer stored in the corpus record's +0x14 slot
+ * (FUN_00463c90): the port passes that slot resolved as a pointer to the
+ * rect pointer. NULL slot or NULL rect answers 0 — the corpus dereferences
+ * unguarded (documented deviation). */
+int rect_contains_point_from_object_bounds(const float* const* bounds_at_14,
+                                           float off_x, float off_y,
+                                           int x, int y);
 /* t = dot(q-p, n) / dot(n, d) into t_out for ray (p,d) × plane (q,n);
  * answers 1 when not parallel, 0 otherwise (FUN_00479a30). */
 int ray_plane_intersection_parameter(float* t_out, const float* p,

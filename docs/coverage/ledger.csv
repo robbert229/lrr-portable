@@ -1314,7 +1314,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0045adb0,FUN_0045adb0,named,SimCursorInteractionTick,0,4831
 0045b310,FUN_0045b310,named,SimCategoryCellHitTest,0,3787
 0045b590,FUN_0045b590,ported,RectContainsOffsetPoint,3,377
-0045b610,FUN_0045b610,ported,GlobalUIFlags_00500860ClearBits_1_2,3,173
+0045b610,FUN_0045b610,named,GlobalUIFlags_00500860ClearBits_1_2,0,173
 0045b620,FUN_0045b620,named,PriorityListButtonActionDispatch,0,812
 0045b740,FUN_0045b740,named,ScrollInfoPanelInitialize,0,763
 0045b850,FUN_0045b850,named,UiOverlayCreateConfiguredElement,0,295
@@ -1442,7 +1442,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004638a0,FUN_004638a0,named,SimTrackCursorHitTest,0,4579
 00463c00,FUN_00463c00,ported,RectContainsPointByConvertedCoords,3,377
 00463c90,FUN_00463c90,ported,RectContainsPointFromObjectBounds,3,408
-00463d20,FUN_00463d20,ported,ViewBlitRectPositionsApply,3,1401
+00463d20,FUN_00463d20,named,ViewBlitRectPositionsApply,0,1401
 00463e40,FUN_00463e40,named,FloatRoundToNearestInt,0,264
 00463ea0,FUN_00463ea0,ported,IndexedTextMetricsPairGet,1,222
 00463ed0,FUN_00463ed0,ported,IndexedTextMetricsPairSet,1,278

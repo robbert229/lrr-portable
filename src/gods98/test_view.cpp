@@ -110,6 +110,45 @@ int main(void)
         CHECK(rect_contains_point_half_open(rect, 10, 60) == 0,
               "top edge exclusive");
     }
+    /* Offset-point rect family: same half-open test on a bounds quad with
+     * the float offsets truncated (the corpus's __ftol pair). */
+    {
+        const float rect[4] = { 5, 8, 55, 33 }; /* x_min, y_min, x_max, y_max */
+        CHECK(rect_contains_offset_point(rect, 0.0f, 0.0f, 5, 8) == 1,
+              "lower corner is inside");
+        CHECK(rect_contains_offset_point(rect, 0.0f, 0.0f, 55, 33) == 0,
+              "upper edges are exclusive");
+        CHECK(rect_contains_offset_point(rect, 0.9f, 0.9f, 6, 9) == 1,
+              "offset 0.9 truncates to 0: same answer as zero");
+        CHECK(rect_contains_offset_point(rect, 2.7f, 2.7f, 8, 11) == 1,
+              "truncated offset 2 shifts the corner back in");
+        CHECK(rect_contains_offset_point(rect, 3.7f, 0.0f, 8, 11) == 1,
+              "just inside after truncation");
+        CHECK(rect_contains_offset_point(rect, 3.8f, 0.0f, 58, 11) == 0,
+              "truncating past the exclusive edge answers outside");
+        CHECK(rect_contains_offset_point(rect, -1.0f, 0.0f, 4, 8) == 1,
+              "negative offset shifts the test point up");
+        CHECK(rect_contains_point_by_converted_coords(rect, 2.0f, 3.0f, 7,
+                                                      11) == 1,
+              "the region-route copy agrees");
+    }
+    {
+        float rect_mem[4] = { 5, 8, 55, 33 };
+        const float* slot = rect_mem; /* stands in for the record +0x14 */
+        CHECK(rect_contains_point_from_object_bounds(&slot, 1.5f, 1.5f, 6,
+                                                     9) == 1,
+              "bounds read through the slot");
+        CHECK(rect_contains_point_from_object_bounds(&slot, 1.5f, 1.5f, 56,
+                                                     33) == 0,
+              "the slot copy stays half-open");
+        CHECK(rect_contains_point_from_object_bounds(NULL, 0.0f, 0.0f, 6,
+                                                     9) == 0,
+              "NULL slot answers outside");
+        const float* null_slot = NULL;
+        CHECK(rect_contains_point_from_object_bounds(&null_slot, 0.0f, 0.0f,
+                                                     6, 9) == 0,
+              "NULL rect answers outside");
+    }
     {
         float p[3] = { 0, 0, 0 }, d[3] = { 0, 1, 0 }, q[3] = { 0, 5, 0 },
               n[3] = { 0, 1, 0 };
