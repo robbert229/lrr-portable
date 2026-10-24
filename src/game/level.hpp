@@ -698,6 +698,33 @@ uint32_t cell_flag100_is_set(int x, int y, int field);
  * the corpus dereferences its pointer blindly). */
 int grid_cell_record_present_check(int x, int y);
 
+/* --- corner normal sampling + surface-type config leaves (2026-10-24) -----
+ * TerrainCellNormalSample (FUN_004512d0): read the cell's corner float
+ * triple. The corpus's corner selectors answer block floats +0x00 (corner
+ * 0), +0x0c (corner 2), or the normalized sum of both (corners 1/3); the
+ * block byte +0x19 bit 0x1 parity raises the selector first. The port's
+ * physical blocks carry no loader-fed corner floats (the corpus's vertex
+ * builders are unported), so the triples read zero: corners 1/3 then
+ * normalize the zero vector — inf/NaN answers, faithful to the corpus
+ * under the same loader-less conditions. NULL or out-of-range cells write
+ * the zero triple and answer 0 (bounds deviation; corner parity stays
+ * unset in every port case). */
+int terrain_cell_normal_sample(const void* terrain, uint32_t x, uint32_t y,
+                               uint32_t corner, float out[3]);
+
+/* TerrainSurfaceTypeNameGet (FUN_00435170): the configured name for a
+ * surface type, falling back to the missing-config literal when the
+ * entry is null. The name table's owner (the surface-type config loader)
+ * is unported, so every entry is null and the fallback answers; the
+ * literal's exact punctuation from the binary's string table is not in
+ * the corpus, so the findings' wording stands (deviation). */
+const char* terrain_surface_type_name_get(int index);
+
+/* SurfaceTypeConfiguredValueAtIndex (FUN_00435190): the indexed value of
+ * the same config loader's table — zero in every port case (unported
+ * owner), with the corpus's blind indexing guarded (deviation). */
+uint32_t surface_type_configured_value_at_index(int index);
+
 #ifdef __cplusplus
 }
 #endif

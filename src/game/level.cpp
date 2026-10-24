@@ -2147,3 +2147,71 @@ int grid_cell_record_present_check(int x, int y)
     }
     return s_grid_present_table[(size_t)idx * 3] != 0u; /* stride 0xc */
 }
+
+/* --- corner normal sampling (see level.hpp) ------------------------------- */
+int terrain_cell_normal_sample(const void* terrain, uint32_t x, uint32_t y,
+                               uint32_t corner, float out[3])
+{
+    const TerrainState* t = (const TerrainState*)terrain;
+    if (t == NULL || t->blocks == NULL || out == NULL
+        || x >= (uint32_t)t->width || y >= (uint32_t)t->height) {
+        for (int i = 0; i < 3; ++i) {
+            out[i] = 0.0f; /* deviation: corpus writes blindly */
+        }
+        return 0;
+    }
+    const uint8_t* p = t->blocks
+                       + ((size_t)y * (size_t)t->width + (size_t)x)
+                         * TERRAIN_BLOCK_STRIDE;
+    uint32_t sel = corner;
+    if ((p[0x19] & 1u) != 0u) {
+        sel = (sel + 1u) & 3u;
+    }
+    float v[3];
+    const float* fa = (const float*)(p + 0x00);
+    const float* fb = (const float*)(p + 0x0c);
+    if (sel == 0u) {
+        v[0] = fa[0]; v[1] = fa[1]; v[2] = fa[2];
+    } else if (sel == 2u) {
+        v[0] = fb[0]; v[1] = fb[1]; v[2] = fb[2];
+    } else {
+        v[0] = fb[0] + fa[0];
+        v[1] = fb[1] + fa[1];
+        v[2] = fb[2] + fa[2];
+        const float inv = 1.0f / (float)
+            __builtin_sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+        v[0] *= inv;
+        v[1] *= inv;
+        v[2] *= inv;
+    }
+    out[0] = v[0];
+    out[1] = v[1];
+    out[2] = v[2];
+    return 1;
+}
+
+/* --- surface-type config leaves (see level.hpp) ----------------------------
+ * Both DAT tables belong to the unported surface-type descriptions loader,
+ * so they land zero-initialized / NULL as module statics. */
+#define SURFACE_TYPE_SLOTS 64
+
+static const char* s_surface_type_names[SURFACE_TYPE_SLOTS];
+static uint32_t s_surface_type_values[SURFACE_TYPE_SLOTS];
+
+const char* terrain_surface_type_name_get(int index)
+{
+    static const char missing[] = "Need config for surface type";
+    if (index < 0 || index >= SURFACE_TYPE_SLOTS
+        || s_surface_type_names[index] == NULL) {
+        return missing;
+    }
+    return s_surface_type_names[index];
+}
+
+uint32_t surface_type_configured_value_at_index(int index)
+{
+    if (index < 0 || index >= SURFACE_TYPE_SLOTS) {
+        return 0; /* bounds deviation (corpus indexes blindly) */
+    }
+    return s_surface_type_values[index];
+}

@@ -815,8 +815,8 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00434e80,FUN_00434e80,named,InterfaceSpawnRequestEnqueue,0,1236
 00435010,FUN_00435010,ported,TerrainCellWorkFlagCircleSet,1,725
 004350a0,FUN_004350a0,named,SurfaceTypeDescriptionsConfigLoad,0,1548
-00435170,FUN_00435170,named,TerrainSurfaceTypeNameGet,0,211
-00435190,FUN_00435190,named,SurfaceTypeConfiguredValueAtIndex,0,79
+00435170,FUN_00435170,ported,TerrainSurfaceTypeNameGet,1,211
+00435190,FUN_00435190,ported,SurfaceTypeConfiguredValueAtIndex,1,79
 004351a0,FUN_004351a0,ported,ActionCodeToSoundAlias,2,535
 00435230,FUN_00435230,named,RandomVariantCellScatter,0,1059
 00435300,FUN_00435300,ported,,1,3362
