@@ -145,6 +145,8 @@ unresolved channel meanings are described in finding 390; this static path
 does not establish that each configured blink/fade value is consumed by this
 particular tick routine.
 
+The same state word `DAT_004eaec8` also carries the effect phases. The stores above set feature bits `0x1` (blink), `0x4` (fade), and `0x40` (move/jitter configuration); the jitter stepper uses `0x80` while applying its sampled offset. Bit `0x100` disables the frame-driven effect group when the configured transform is enabled. `RoutePositionBlockedStateSet` uses `0x200` to select the downward RGB-tween branch, and `ThreeChannelValueTweenStep` latches `0x400` and `0x1000` at its upper and lower endpoints. The fade state also toggles bits `0x8`, `0x10`, and `0x20`; their full phase names remain uncertain.
+
 ## Open questions
 
 - What do the remaining scene-node callback opcodes and callback completion
