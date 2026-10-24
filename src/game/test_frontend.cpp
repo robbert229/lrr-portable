@@ -1307,6 +1307,21 @@ int main(int argc, char** argv)
         timed_effect_tick_word_set(0u);
     }
 
+    /* The screen-right-edge cache refresh (2026-10-24): metrics fold. */
+    {
+        char metric[0x30];
+        memset(metric, 0, sizeof metric);
+        indexed_record_pointer_set(0, metric);
+        indexed_text_metrics_pair_set(0, 0u, 0u);
+        screen_right_edge_cache_refresh();
+        CHECK(screen_right_edge_cache_peek() == 0u, "a clear pair caches clear");
+        indexed_text_metrics_pair_set(0, 11u, 4u);
+        screen_right_edge_cache_refresh();
+        CHECK(screen_right_edge_cache_peek() == 7u, "the fold caches x - y");
+        indexed_text_metrics_pair_set(0, 0u, 0u);
+        indexed_record_pointer_set(0, NULL);
+    }
+
     if (s_failures == 0) {
         printf("frontend: all tests passed\n");
         return 0;

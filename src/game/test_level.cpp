@@ -1327,6 +1327,19 @@ int main(int argc, char** argv)
         CHECK((expect & ~0x7fff) == 0, "the draw stays 15-bit");
     }
 
+    /* The terrain-object SFX grid getter (2026-10-24): pair indexing. */
+    {
+        uint32_t pos[2] = { 1u, 2u };
+        terrain_sfx_grid_cell_set(17, 555);
+        CHECK(terrain_object_type_sfx_at_cell_get(pos) == 555,
+              "the cell pair indexes the sfx grid");
+        const uint32_t big[2] = { 0xffffu, 0u };
+        CHECK(terrain_object_type_sfx_at_cell_get(big) == 0,
+              "the out-of-range cell answers clear");
+        CHECK(terrain_object_type_sfx_at_cell_get(NULL) == 0,
+              "a null record answers clear");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "level_test: %d failure(s)\n", s_failures);
         return 1;

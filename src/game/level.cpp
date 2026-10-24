@@ -2513,3 +2513,37 @@ int level_objective_result_get(const LevelState* s)
 {
     return s != NULL ? s->objective_result : 0;
 }
+
+/* TerrainObjectTypeSfxAtCellGet (FUN_0044ad80) — see level.hpp. */
+#define TERRAIN_SFX_GRID_CELLS 300
+static int s_terrain_sfx_grid[TERRAIN_SFX_GRID_CELLS]; /* DAT_004de814 role */
+
+int terrain_object_type_sfx_at_cell_get(const void* position_record)
+{
+    uint32_t x = 0, y = 0;
+    if (position_record == NULL) {
+        return 0; /* deviation: the corpus strides blindly */
+    }
+    __builtin_memcpy(&x, (const char*)position_record, 4);
+    __builtin_memcpy(&y, (const char*)position_record + 4, 4);
+    const int cell = (int)(y + x * 15u); /* corpus's second-word-first index */
+    if (cell < 0 || cell >= TERRAIN_SFX_GRID_CELLS) {
+        return 0;
+    }
+    return s_terrain_sfx_grid[cell];
+}
+
+void terrain_sfx_grid_cell_set(int cell, int handle)
+{
+    if (cell >= 0 && cell < TERRAIN_SFX_GRID_CELLS) {
+        s_terrain_sfx_grid[cell] = handle;
+    }
+}
+
+int terrain_sfx_grid_cell_peek(int cell)
+{
+    if (cell < 0 || cell >= TERRAIN_SFX_GRID_CELLS) {
+        return 0;
+    }
+    return s_terrain_sfx_grid[cell];
+}

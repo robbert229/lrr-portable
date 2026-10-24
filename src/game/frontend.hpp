@@ -517,4 +517,10 @@ void    timed_effect_timestamp_reset(int index);  /* FUN_0046b7a0 */
 void    timed_effect_tick_word_set(uint32_t tick); /* port hook */
 uint32_t timed_effect_tick_word_peek(void);
 uint32_t timed_effect_time_peek(int index);        /* diagnostics */
+/* ScreenRightEdgeCacheRefresh (FUN_0041a290): re-reads the index-0 text
+ * metrics pair through the ported getter and caches x - y into the right-edge
+ * word. The corpus's reader is the unported layout band, so the cache lands
+ * as a module static with a peek hook. */
+void     screen_right_edge_cache_refresh(void); /* FUN_0041a290 */
+uint32_t screen_right_edge_cache_peek(void);    /* port hook */
 #endif /* LEGORRR_GAME_FRONTEND_HPP */

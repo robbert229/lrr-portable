@@ -358,3 +358,16 @@ void media_cd_audio_open_set(int open)
 {
     s_cd_audio_open = open;
 }
+
+/* LoaderProgressCallbackSet (FUN_004802b0) — see media.hpp. */
+static void* s_loader_progress_callback; /* DAT_005343ac role: unowned */
+static void* s_loader_progress_context;  /* DAT_005343b0 role: unowned */
+
+void loader_progress_callback_set(void* callback, void* context)
+{
+    s_loader_progress_callback = callback;
+    s_loader_progress_context = context;
+}
+
+void* loader_progress_callback_peek(void) { return s_loader_progress_callback; }
+void* loader_progress_context_peek(void) { return s_loader_progress_context; }

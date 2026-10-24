@@ -2363,6 +2363,19 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Config-fed cache + grid leaves** (findings 273/118/487/244/444/372):
+`level.*` ports `terrain_object_type_sfx_at_cell_get` (0x44ad80 — the
+position record's pair indexes the terrain-object SFX grid under the corpus's
+second-word-first fold; the 300-cell grid lands as zero-init storage with
+hooks behind the unported config-parsing loader), `frontend.*` ports
+`screen_right_edge_cache_refresh` (0x41a290, the index-0 metrics pair folded
+into the cached right-edge word), and `media.*` ports
+`loader_progress_callback_set` (0x4802b0, the loader-progress callback pair
+with set/peek hooks until the corpus read tap lands). Three register/thunk/
+vtable leaves join blocked.md (`CallbackOperationRunAndReturnStatus`,
+`CrtNlgFrameStateRecord`, `SoundPositionSetFromVector`). `level_test`,
+`frontend_test`, and `media_test` pin the indexing, the fold, and the stores.
+
 **Scene-motion + state-word leaves** (findings 433/385/464/08/477/459):
 `simtick.*` ports `simtick_scene_position_reset_and_effect_motion_cancel`
 (0x44cf70 — the owner-transform copy onto the configured triple, which lands

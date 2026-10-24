@@ -337,6 +337,19 @@ int main(void)
     test_cd_watchdog();
     test_min_distance();
 
+    /* The loader-progress setter pair (2026-10-24): stores, peeks, clears. */
+    {
+        loader_progress_callback_set(NULL, NULL);
+        CHECK(loader_progress_callback_peek() == NULL
+                  && loader_progress_context_peek() == NULL,
+              "a clear store answers clear");
+        loader_progress_callback_set((void*)1, (void*)2);
+        CHECK(loader_progress_callback_peek() == (void*)1
+                  && loader_progress_context_peek() == (void*)2,
+              "both words store and read back");
+        loader_progress_callback_set(NULL, NULL);
+    }
+
     if (s_failures != 0) {
         printf("media_test: %d failure(s)\n", s_failures);
         return 1;
