@@ -678,7 +678,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00429850,FUN_00429850,named,ActiveEngineFieldB0Get,0,84
 00429860,FUN_00429860,named,EngineFloatField210GetByIndex,0,107
 00429880,FUN_00429880,named,EngineFloatField260Get,0,86
-00429890,FUN_00429890,ported,LevelLoad,7,25496
+00429890,FUN_00429890,ported,LevelLoad,8,25496
 0042b2f0,FUN_0042b2f0,named,EntityEffectCountersApplyFromRecord,0,267
 0042b330,FUN_0042b330,named,LoadTileMeshes,0,1613
 0042b480,FUN_0042b480,named,RectangularResourceTableDestroy,0,686
