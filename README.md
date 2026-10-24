@@ -1408,6 +1408,20 @@ The corpus dereferences its level global directly; a NULL level answers
 `level_test` drives each field through a store-and-read round trip, the
 indexed float, the selector pair and the NULL guards.
 
+**Config sibling iteration** (2026-10-24; findings 230/403): the one
+missing piece of the config-lookup idiom lands in `src/gods98/block.*` —
+`block_next_equal_key` (`SortedEntryNextEqualKey @ 0x479020`). In the
+corpus a record's "key" is its *depth* word (+0xc) and the walk answers
+the next entry that stays at that depth, which in the port's tree model
+is exactly the next record under the same parent — next-sibling. The
+loaders' `first; for (e = first; e; e = next_equal_key(e))` loop (the
+three-call chain `ConfigEntryFind` + `ConfigNestedPathChildFind` + this
+one, per findings 243/244) now composes fully. The corpus reads the
+followed entry's depth before the bounds check, so a NULL next crashes
+there; the port guards it (documented deviation). `block_test` drives
+sibling order, subtree skipping, the end-of-chain corner and the
+iteration loop.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the
