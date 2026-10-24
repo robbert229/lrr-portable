@@ -144,7 +144,7 @@ reaches `FUN_004653a0` (136 B), which loops index `i` loading
 | --- | --- | --- |
 | `0x474050` | CreateBmpSurface | `DAT_0076ac84+0x18` create, 0x7c desc |
 | `0x474410` | ParseIndexedSurfaceName | parses the `a` + three-hex-digit indexed surface suffix |
-| `0x4744f0` | NamedSurfaceGet | config-DB vtable +0x5c/+0x60 |
+| `0x4744f0` | TextureSurfaceCreate | config-DB vtable +0x5c/+0x60 |
 | `0x482e70` | TextureGetOrCreate | owns caches `0x53455c/0x53a55c` |
 | `0x483030` / `0x483080` | TextureCacheLookup / TextureCacheInsert | `__strcmpi`, `strdup` |
 | `0x481820` | BindModelTextures | inside `FUN_00480ac0`; `%s%s`→`FUN_00482e70` |

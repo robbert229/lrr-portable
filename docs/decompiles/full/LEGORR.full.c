@@ -80783,7 +80783,7 @@ undefined4 FUN_0047aad0(int *param_1)
 }
 
 
-// ==== VideoResourceSlotRelease @ 0047AB00 [Ghidra: FUN_0047ab00] ====
+// ==== SoundBankEntryRelease @ 0047AB00 [Ghidra: FUN_0047ab00] ====
 
 
 undefined4 FUN_0047ab00(int param_1)
@@ -81107,7 +81107,7 @@ void FUN_0047b020(undefined4 param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== VideoResourceSlotEnabledSet @ 0047B050 [Ghidra: FUN_0047b050] ====
+// ==== SoundBankEntryVolumeSet @ 0047B050 [Ghidra: FUN_0047b050] ====
 
 
 void FUN_0047b050(int param_1,uint param_2)
@@ -93627,7 +93627,7 @@ undefined4 FUN_004893a0(void)
 }
 
 
-// ==== ResourceStateTableReset @ 004893F0 [Ghidra: FUN_004893f0] ====
+// ==== MapFileResourceSlotsReset @ 004893F0 [Ghidra: FUN_004893f0] ====
 
 
 void FUN_004893f0(void)

@@ -1690,13 +1690,13 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0047a850` | SoundVolumeValueValid |
 | `0x0047a870` | SoundBankEntryLoad |
 | `0x0047aad0` | SoundBankFreeSlotFind |
-| `0x0047ab00` | VideoResourceSlotRelease |
+| `0x0047ab00` | SoundBankEntryRelease |
 | `0x0047ab80` | DirectSoundListenerViewSet |
 | `0x0047ad10` | SoundPositionSetFromVector |
 | `0x0047ad30` | AttachedSoundStopByEntity |
 | `0x0047ad70` | SoundBufferPlayWithPosition |
 | `0x0047b020` | SoundBufferAssociationAdd |
-| `0x0047b050` | VideoResourceSlotEnabledSet |
+| `0x0047b050` | SoundBankEntryVolumeSet |
 | `0x0047b0d0` | IndexedRecordStride134WordGet |
 | `0x0047b0f0` | SoundHandleToBuffer |
 | `0x0047b130` | SoundBufferStopHandle |
@@ -1964,7 +1964,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00489280` | CDAudioTrackCompletionPoll |
 | `0x00489330` | CDAudioDeviceOpen |
 | `0x004893a0` | CdAudioStopAndClose |
-| `0x004893f0` | ResourceStateTableReset |
+| `0x004893f0` | MapFileResourceSlotsReset |
 | `0x00489410` | MapFileResourceSlotAllocate |
 | `0x00489460` | MapFileResourceSlotRelease |
 | `0x004894a0` | MapFileResourceSlotGet |

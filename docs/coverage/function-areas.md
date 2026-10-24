@@ -11,7 +11,7 @@ It classifies where each function belongs; it does not claim every function is f
 - **Confidence** describes confidence in area placement, not completeness of behavioral understanding: `high` = the area is clear; `medium` = plausible placement with some ambiguity; `low` = provisional placement that needs follow-up.
 - Port/reconstruction status remains in [`ledger.csv`](ledger.csv). Address partitions used during review are not semantic boundaries.
 
-Assignment confidence: 700 high, 1832 medium, 32 low. Basis counts: address-cluster 1, body 49, import-symbol 15, name 1036, name+body 1440, unresolved 23.
+Assignment confidence: 700 high, 1833 medium, 31 low. Basis counts: address-cluster 1, body 49, import-symbol 15, name 1036, name+body 1440, unresolved 23.
 23 functions with opaque pseudocode are provisionally grouped by surrounding subsystem. Three CRT no-op stubs have their own `runtime-support-unresolved` area.
 
 ## Broader domains
@@ -21,9 +21,9 @@ Assignment confidence: 700 high, 1832 medium, 32 low. Basis counts: address-clus
 | `gameplay-simulation` | Entity behavior, commands, objectives, tasks, combat, simulation state, and progression. | 597 | 23 |
 | `world-and-terrain` | Terrain cells and grids, spatial queries, placement searches, and route transitions. | 332 | 12 |
 | `player-interface` | Front end, input interpretation, menus, HUD, advisor/help, and display-facing controls. | 363 | 14 |
-| `scene-and-rendering` | Scene objects and resources, models, viewports, render surfaces, and visual effects. | 491 | 13 |
-| `audio-and-video` | Sound, spatial playback, streams, and video playback or decoding. | 154 | 5 |
-| `game-data-and-assets` | Configuration, map and level loading, archives, registries, and presentation/resource records. | 151 | 7 |
+| `scene-and-rendering` | Scene objects and resources, models, viewports, render surfaces, and visual effects. | 484 | 13 |
+| `audio-and-video` | Sound, spatial playback, streams, and video playback or decoding. | 156 | 5 |
+| `game-data-and-assets` | Configuration, map and level loading, archives, registries, and presentation/resource records. | 156 | 7 |
 | `platform-and-runtime` | Win32/DirectX interfaces, startup/window services, CRT, and operating-system/runtime support. | 316 | 11 |
 | `shared-primitives` | Cross-cutting state accessors, lists/strings, pools, math, and small reusable helpers. | 160 | 7 |
 
@@ -105,7 +105,7 @@ Assignment confidence: 700 high, 1832 medium, 32 low. Basis counts: address-clus
 | `scene-object-animation` — Scene objects, actions, and animation | 81 | Owns scene-object lifecycle and links, action/property records, frame advancement and callbacks, transforms, and entity visual setup. It stops at resource loading and lower-level renderer/device services. |
 | `scene-object-effects` — Scene Objects and Visual Effects | 26 | Entity-to-scene attachment, scene transforms, lighting/blink/fade/move configuration, and effect-motion cancellation. |
 | `scene-resource-animation` — Scene Resources and Animation | 31 | Resource binding/release, animation advancement, scene activity channels, vehicle definition parsing, attached resources, and scene object resource slots. |
-| `scene-resource-lifecycle` — Scene and render resource lifecycle | 68 | Resolves, loads, tracks, caches, retains, releases, or clones scene/model/texture resources and animation data. Excludes rendering the resource and file/archive primitives beneath the loaders. |
+| `scene-resource-lifecycle` — Scene and render resource lifecycle | 61 | Resolves, loads, tracks, caches, retains, releases, or clones scene/model/texture resources and animation data. Excludes rendering the resource and file/archive primitives beneath the loaders. |
 | `scene-resources-effects` — Scene resources, lights, markers, and transient effects | 33 | Scene resource handles, lighting/markers, effect slots, scene act/pose registration, and cleanup. |
 | `ui-render-tree` — UI render-tree traversal | 4 | Lays out, enumerates, processes, or releases hierarchical UI render entries; excludes font/text drawing and general model rendering. |
 | `utility-render-effects` — Screen effects and UI text primitives | 16 | Screen-effect state/opacity/render lane dispatch, scrolling text, text conversion, and low-level screen blits. |
@@ -115,7 +115,7 @@ Assignment confidence: 700 high, 1832 medium, 32 low. Basis counts: address-clus
 
 | Area ID | Functions | Responsibility boundary |
 | --- | ---: | --- |
-| `audio-playback-mixing` — Audio playback, mixing, and spatial sound | 57 | Initializes audio devices and banks, configures listener/source state, plays/stops tracked or streamed samples, or manages CD/wave playback. File access below the audio layer is separate. |
+| `audio-playback-mixing` — Audio playback, mixing, and spatial sound | 59 | Initializes audio devices and banks, configures listener/source state, plays/stops tracked or streamed samples, or manages CD/wave playback. File access below the audio layer is separate. |
 | `media-playback` — Movie, stream, and audio playback | 13 | Movie/stream playback, menu audio timing, CD audio watchdog, audio toggles, and playback wait loops. |
 | `sound-subsystem` — Sound Subsystem | 32 | Sound aliases and samples, submission queues, deferred playback, positional sound, stream selection, and sound-instance ticking. |
 | `video-playback` — Video Playback | 11 | DirectShow graph/sample setup, duration/frame-bound handling, render surface creation, frame update/blit, and teardown. |
@@ -125,10 +125,10 @@ Assignment confidence: 700 high, 1832 medium, 32 low. Basis counts: address-clus
 
 | Area ID | Functions | Responsibility boundary |
 | --- | ---: | --- |
-| `config-text-parsing` — Configuration and text parsing | 26 | Tokenizes or parses game configuration/text records, performs config lookup and value conversion, or supplies string helpers used by those readers. Excludes general CRT routines and UI text rendering. |
+| `config-text-parsing` — Configuration and text parsing | 27 | Tokenizes or parses game configuration/text records, performs config lookup and value conversion, or supplies string helpers used by those readers. Excludes general CRT routines and UI text rendering. |
 | `game-config-types` — Game configuration and entity type tables | 7 | Configuration callbacks, type/name tables, building/vehicle/upgrade/monster type initialization, and config-file resource parsing. |
 | `game-file-archive-and-pools` — Game files, archives, and record pools | 73 | Routes game file operations, mounts and reads WAD/archive payloads, resolves asset paths, scans directory trees, or allocates fixed-size game records. Codec internals are grouped with archive decoding; CRT file primitives remain separate. |
-| `level-map-loading` — Level and map loading pipeline | 15 | Level/map load orchestration, terrain layers, map dimensions/cell data, object list parsing/resolution, and pending level name. |
+| `level-map-loading` — Level and map loading pipeline | 19 | Level/map load orchestration, terrain layers, map dimensions/cell data, object list parsing/resolution, and pending level name. |
 | `map-and-visual-resources` — Map and Visual Resource Records | 9 | Map-file access and visual/model/list resource record creation, lookup, and release. |
 | `registry-and-startup-streams` — Registry and startup streams | 10 | Creates or reads registry paths/values and startup configuration streams. Excludes game archive/file routing and generic CRT stream implementation. |
 | `resource-config-loading` — Interface and presentation config loading | 11 | Loads presentation-facing panels, sounds, text messages, surface descriptions, and interface config resources. |
