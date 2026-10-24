@@ -1043,7 +1043,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004477d0,FUN_004477d0,named,PathStepLookaheadEntryWrite,0,1457
 00447900,FUN_00447900,named,TypeFourEntityCallbackDispatch,0,117
 00447950,FUN_00447950,named,EntityDirectionalActivityStart,0,1592
-00447b00,FUN_00447b00,named,EntityDispatchEvent5AndSetFlag,0,172
+00447b00,FUN_00447b00,ported,EntityDispatchEvent5AndSetFlag,3,172
 00447b30,FUN_00447b30,named,EntityActivityTick,0,1038
 00447c40,FUN_00447c40,ported,SceneActivityUpdateDispatch,3,2101
 00447ea0,FUN_00447ea0,named,EntityTypeBehaviorUpdate,0,8839
@@ -1052,7 +1052,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00448880,FUN_00448880,named,RecordGatedStepCommandIssue,0,1106
 004489a0,FUN_004489a0,named,EntityKind6TickDownMarkerSpawn,0,691
 00448a60,FUN_00448a60,named,EntityNeighborCellMoveCommandHandle,0,2202
-00448c50,FUN_00448c50,named,EntitySetActivityPlace,0,180
+00448c50,FUN_00448c50,ported,EntitySetActivityPlace,3,180
 00448c90,FUN_00448c90,named,CardinalStepCommandIssueAndLink,0,2131
 00448eb0,FUN_00448eb0,named,ProximityStepCommandIssueWithJitter,0,1725
 00449010,FUN_00449010,named,EntityKind6RecordApproachRouteIssue,0,609

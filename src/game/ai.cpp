@@ -961,3 +961,24 @@ int ai_commands_active(const GameContext* ctx)
     }
     return n;
 }
+
+/* EntityDispatchEvent5AndSetFlag (FUN_00447b00) — see ai.hpp. */
+void entity_dispatch_event5_and_set_flag(EntitySlot* e)
+{
+    if (e == NULL) {
+        return; /* deviation: the corpus strides blindly */
+    }
+    ai_set_activity(e, 5, 0); /* corpus activity index 5 */
+    e->flags_3e0 |= 0x200000u;
+}
+
+/* EntitySetActivityPlace (FUN_00448c50) — see ai.hpp. */
+int entity_set_activity_place(EntitySlot* e)
+{
+    if (e == NULL) {
+        return 1; /* deviation: the corpus strides blindly, answers 1 */
+    }
+    ai_set_activity(e, 30, 0); /* corpus activity index 30 */
+    e->flags_3e4 |= 0x200u;
+    return 1;
+}

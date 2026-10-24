@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 820 | 32.0% |
+| ported | 822 | 32.1% |
 | anchored | 4 | 0.2% |
-| named | 1693 | 66.0% |
+| named | 1691 | 66.0% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (820 functions)
+  (822 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1693 functions)
+  citation yet (1691 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1698 (66.2%).**
+**Game logic remaining to port: 1696 (66.1%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -680,7 +680,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004477d0` | PathStepLookaheadEntryWrite |
 | `0x00447900` | TypeFourEntityCallbackDispatch |
 | `0x00447950` | EntityDirectionalActivityStart |
-| `0x00447b00` | EntityDispatchEvent5AndSetFlag |
 | `0x00447b30` | EntityActivityTick |
 | `0x00447ea0` | EntityTypeBehaviorUpdate |
 | `0x004487c0` | EntityClearNestedState8Fields |
@@ -688,7 +687,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00448880` | RecordGatedStepCommandIssue |
 | `0x004489a0` | EntityKind6TickDownMarkerSpawn |
 | `0x00448a60` | EntityNeighborCellMoveCommandHandle |
-| `0x00448c50` | EntitySetActivityPlace |
 | `0x00448c90` | CardinalStepCommandIssueAndLink |
 | `0x00448eb0` | ProximityStepCommandIssueWithJitter |
 | `0x00449010` | EntityKind6RecordApproachRouteIssue |

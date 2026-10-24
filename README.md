@@ -2363,6 +2363,15 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Activity-request wrappers** (findings 448/223/377): `ai.*` ports the two
+entity wrappers `entity_dispatch_event5_and_set_flag` (0x447b00 — activity
+request through corpus index 5, folding the corpus setter's
+dispatch-bookkeeping sibling and raising bit 0x200000 of the +0x3e0 word)
+and `entity_set_activity_place` (0x448c50 — corpus activity index 30 against
+bit 0x200 of +0x3e4, answering true; the corpus's "place" name is unproven
+against the name table, so no semantic claim). `ai_test` pins the activity
+indices, the flag bits, and the null guards.
+
 **Config-fed cache + grid leaves** (findings 273/118/487/244/444/372):
 `level.*` ports `terrain_object_type_sfx_at_cell_get` (0x44ad80 — the
 position record's pair indexes the terrain-object SFX grid under the corpus's
