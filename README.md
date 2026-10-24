@@ -623,6 +623,10 @@ Open threads, in order of value:
 | 424 | [findings/424-camera-viewport-and-view-context.md](docs/findings/424-camera-viewport-and-view-context.md) | Camera, Viewport, and View-Context State |
 | 425 | [findings/425-display-mode-selection-state-and-controls.md](docs/findings/425-display-mode-selection-state-and-controls.md) | Display-Mode Selection State and Controls |
 | 426 | [findings/426-camera-selection-point-and-pointer-pan.md](docs/findings/426-camera-selection-point-and-pointer-pan.md) | Camera Selection Point and Pointer Pan |
+| 427 | [findings/427-screen-effects-and-ui-text-paths.md](docs/findings/427-screen-effects-and-ui-text-paths.md) | Screen Effects and UI Text Paths |
+| 428 | [findings/428-font-and-text-buffer-rendering.md](docs/findings/428-font-and-text-buffer-rendering.md) | Font and Text-Buffer Rendering |
+| 429 | [findings/429-advisor-and-message-ui-state.md](docs/findings/429-advisor-and-message-ui-state.md) | Advisor and Message UI State |
+| 430 | [findings/430-scene-object-action-and-animation-lifecycle.md](docs/findings/430-scene-object-action-and-animation-lifecycle.md) | Scene Object, Action, and Animation Lifecycle |
 | 439 | [findings/439-hud-panel-render-and-interaction-state.md](docs/findings/439-hud-panel-render-and-interaction-state.md) | HUD Panel Rendering and Interaction State |
 
 Canonical full pseudocode corpus: [`docs/decompiles/full/LEGORR.full.c`](docs/decompiles/full/LEGORR.full.c)
