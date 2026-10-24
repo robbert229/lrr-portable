@@ -59,7 +59,8 @@ if get_option('platform') == 'native'
                  ['crt', 'test_crt.cpp'],
                  ['heap', 'test_heap.cpp'],
                  ['ptrstack', 'test_ptrstack.cpp'],
-                 ['record', 'test_record.cpp']]
+                 ['record', 'test_record.cpp'],
+                 ['surface', 'test_surface.cpp']]
     test_name = exe[0]
     t = executable(test_name + '_test', exe[1],
       include_directories : gods98_incs,

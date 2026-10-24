@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 489 | 19.1% |
+| ported | 492 | 19.2% |
 | anchored | 5 | 0.2% |
-| named | 2024 | 78.9% |
+| named | 2021 | 78.8% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 0 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (489 functions)
+  (492 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (2024 functions)
+  citation yet (2021 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 2029 (79.1%).**
+**Game logic remaining to port: 2026 (79.0%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -461,6 +461,14 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00436831` | CameraSetTiltBounds |
 | `0x00436860` | CameraSetTilt |
 | `0x00436953` | CameraSetBoundedRotationValue |
+| `0x00436a18` | CameraSetDistanceBounds |
+| `0x00436a4a` | CameraSetDistance |
+| `0x00436aa5` | CameraZoomUpdate |
+| `0x00436ac9` | RendererNodeRelativePositionSet |
+| `0x00436ae9` | SelectionRecordPointGet |
+| `0x00436b0b` | SelectionRecordPointSet |
+| `0x00436b33` | CameraGetPositionWithTerrainHeight |
+| `0x00436b87` | CameraPointerPanUpdate |
 | `0x00436c20` | ActivityNameTableInit |
 | `0x00437050` | EntityPoolResourcesRelease |
 | `0x004370b0` | RenderConfigSixFieldCopyOut |
@@ -1152,7 +1160,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0047d520` | Palette8To16BitSurfaceExpand |
 | `0x0047d740` | SurfacePixelRowsFlipWithScratch |
 | `0x0047d800` | Bitmap24BitSurfaceConvert |
-| `0x0047db90` | RGBChannelsPack |
 | `0x0047dbc0` | ResourceRecordAddRef |
 | `0x0047de60` | DirectDrawSurfaceDescriptionGet |
 | `0x0047ded0` | DirectDrawSurfaceUnlock |

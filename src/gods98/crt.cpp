@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-only
+#include <math.h>
 #include <string.h>
 
 #include "crt.hpp"
@@ -199,4 +200,12 @@ double format_argument_read_double(uint8_t** cursor)
     memcpy(&v, *cursor, sizeof(v));
     *cursor = *cursor + 8;
     return v;
+}
+
+/* X87RoundToIntegral (FUN_00493150, finding 379): FRNDINT under the
+ * default control word — nearest-even integral, still floating.
+ * rint() matches it exactly (and keeps -0, per the x87 answer). */
+double x87_round_to_integral(double value)
+{
+    return rint(value);
 }

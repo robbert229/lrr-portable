@@ -84,3 +84,10 @@ int interpolated_z_within_bounds(const void* record_a, const void* record_b,
     }
     return 0;
 }
+
+/* CameraRotationGet (FUN_00436b79): the float at +0x84 (opaque-record
+ * reader; see header). */
+float camera_rotation_get(const void* camera)
+{
+    return rec_float(camera, 0x84);
+}

@@ -100,6 +100,18 @@ static void test_indexed_slots(void)
           "the two slot windows stay separate");
 }
 
+/* CameraRotationGet (FUN_00436b79): the opaque +0x84 float. */
+static void test_camera_rotation(void)
+{
+    ProbeRecord cam;
+    memset(&cam, 0, sizeof(cam));
+    poke_float(&cam, 0x84, 1.25f);
+    CHECK(camera_rotation_get(&cam) == 1.25f, "rotation reads +0x84");
+    poke_float(&cam, 0x84, -3.5f);
+    CHECK(camera_rotation_get(&cam) == -3.5f, "rotation sees the update");
+    CHECK(camera_rotation_get(NULL) == 0.0f, "NULL camera answers zero");
+}
+
 static void test_interpolated_z(void)
 {
     /* a = 10 at +8, b = 4 at +8: v = 4 * 2.5 + 10 = 20. */
@@ -128,6 +140,7 @@ int main(void)
 {
     test_field_reads();
     test_indexed_slots();
+    test_camera_rotation();
     test_interpolated_z();
     if (s_failures != 0) {
         fprintf(stderr, "record_test: %d failure(s)\n", s_failures);
