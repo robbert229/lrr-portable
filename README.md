@@ -2327,6 +2327,18 @@ corpus. `EngineCalloc` (0x48ead0) stays blocked with the CRT memory-
 pressure handler seam. `record_test`, `view_test`, `crt_test`,
 `heap_test`, and `frontend_test` pin the strides, casts, and gates.
 
+**The heap retry-handler pair** (2026-10-24; finding 394): two rows
+land. `crt_new_handler_invoke` (0x491d90, `heap.*`) dispatches the
+attempted size to the corpus's registered allocation-failure handler
+and answers whether it asked for another attempt — the corpus registry
+word lands as zero-init storage with a port-side setter (the
+set_new_handler seam that registers it is unported), and unregistered
+answers 0 like the corpus's unset case. `engine_calloc` (0x48ead0) is
+the corpus's retry-enabled allocation — the port's alloc-retry loop
+driven through that dispatch — and resolves the skip the earlier sweep
+queued for it. `heap_test` pins the dispatch, the zero-size quirk, and
+the overflow gate.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

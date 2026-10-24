@@ -2292,7 +2292,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0048e8e0,FUN_0048e8e0,named,CrtRoundToIntegralWithMathErrorHandlingVariant,0,1080
 0048e9e0,__alldiv,runtime-import,__alldiv,0,1679
 0048ea90,__allmul,runtime-import,__allmul,0,451
-0048ead0,FUN_0048ead0,named,EngineCalloc,0,82
+0048ead0,FUN_0048ead0,ported,EngineCalloc,2,82
 0048eae0,FUN_0048eae0,named,FileResourceHandleClose,0,674
 0048eb60,FUN_0048eb60,named,StdFileOpenIntoHandle,0,218
 0048eb90,FUN_0048eb90,named,FileOpenAndReadWholeStream,0,112
@@ -2365,7 +2365,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00491900,FUN_00491900,named,EnginePoolAllocate,0,3557
 00491b40,FUN_00491b40,named,EnginePoolChunkTryAllocate,0,2561
 00491cc0,FUN_00491cc0,named,SmallHeapBlockResizeInPlace,0,1332
-00491d90,FUN_00491d90,named,CrtNewHandlerInvokeForAllocationRetry,0,202
+00491d90,FUN_00491d90,ported,CrtNewHandlerInvokeForAllocationRetry,1,202
 00491db0,__trandisp1,runtime-import,__trandisp1,0,1160
 00491e17,__trandisp2,runtime-import,__trandisp2,0,1555
 00491f80,FUN_00491f80,named,CrtOneArgumentMathErrorHandlingStart,0,107
