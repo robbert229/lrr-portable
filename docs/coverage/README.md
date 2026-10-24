@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 296 | 11.5% |
+| ported | 300 | 11.7% |
 | anchored | 5 | 0.2% |
-| named | 2217 | 86.5% |
+| named | 2213 | 86.3% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 0 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (296 functions)
+  (300 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (5 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (2217 functions)
+  citation yet (2213 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (0 functions)
 
-**Game logic remaining to port: 2222 (86.7%).**
+**Game logic remaining to port: 2218 (86.5%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -1293,12 +1293,8 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00465160` | SoundObjectDurationGet |
 | `0x00465190` | SoundHandleStopForward |
 | `0x004651a0` | SoundSubsystemFrameTick |
-| `0x00465260` | SoundSubsystemEnableSet |
-| `0x004652a0` | SoundSubsystemEnableSetAndStop |
-| `0x004652b0` | SoundBatchModeGet |
 | `0x004652c0` | SoundDeferredQueueDrain |
 | `0x004652d0` | SoundBatchQueueDrain |
-| `0x00465370` | SoundSubsystemEnabledGet |
 | `0x00465380` | SceneEffectRegistryReset |
 | `0x004653a0` | TransientEffectTexturesPreload |
 | `0x00465430` | TransientEffectEmitterCreate |

@@ -122,4 +122,44 @@ int sound_alias_count(void);
  * only keeps hash keys; this exposes the port-side name mapping. */
 const char* sound_alias_name(int index);
 
+/* ------------------------------------------------------------------ *
+ *  Sound subsystem enable state (finding 137; issues #315 / #322 / #323
+ *  / #316) — the corpus flag word DAT_00502a2c: bit 0 subsystem-enabled,
+ *  bit 1 dynamic-alias registration (see above), bit 3 batch mode. The
+ *  enable/disable setter suppresses future submissions through this word
+ *  once the submission queue lands (#296/#317); the port exposes the
+ *  state and consumers gate on it there.
+ * ------------------------------------------------------------------ */
+
+#define SOUND_FLAG_ENABLED       1u /* DAT_00502a2c bit 0 @ 0x00465260   */
+#define SOUND_FLAG_REG_UNKNOWN   2u /* bit 1 — registration_set          */
+#define SOUND_FLAG_BATCH         8u /* bit 3 — batch-mode-get            */
+
+/* SoundSubsystemEnableSet @ 0x465260: raise bit
+ * 0 on enable (and return — nothing else runs); on disable clear bit 0
+ * and, when stop_active is nonzero, run the stop seam. The corpus's stop
+ * seam is SoundSubsystemStopAll (unported here) — it walks the live
+ * chain (DAT_00506684) and stops both stream states; that instance layer
+ * is TODO(corpus), so the port's seam is a no-op today (documented
+ * deviation: only the state transition is observable until instances
+ * land). Disabling also zeroes the cooldown word _DAT_00502b2c (the last
+ * alias submitted under the global cooldown — written by the submission
+ * queue port #296). */
+void sound_subsystem_enable_set(int enable, int stop_active);
+
+/* SoundSubsystemEnableSetAndStop @ 0x4652a0: enable_set with the stop
+ * seam armed. */
+void sound_subsystem_enable_set_and_stop(int enable);
+
+/* SoundSubsystemEnabledGet @ 0x465370: bit 0. */
+int sound_subsystem_enabled(void);
+
+/* SoundBatchModeGet @ 0x4652b0: bit 3. */
+int sound_batch_mode_get(void);
+
+/* The corpus's cooldown word _DAT_00502b2c: holds the alias submitted
+ * under the global cooldown (its writer lands with submission queue
+ * #296); disable zeroes the word. */
+double sound_deferred_last_alias(void);
+
 #endif /* LEGORRR_SOUND_HPP */
