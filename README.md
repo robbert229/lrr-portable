@@ -1974,6 +1974,23 @@ kind-0x17 gather record with bit 6, and the kind-0 head record with bits
 6/7/10 and bit 4 cleared. `cmd_test` pins the flush halves, the batch
 flags, and the setup chain.
 
+**Cancellation ref and conditional issuers** (2026-10-24; findings
+10/466): four command leaves land in `cmd.*`. `cmd_cancel_ref` (0x402cd0)
+is CmdFree's side effect — a type-0x13 record's cancel rides the
+pool-callback seam, any other kind walks the task list raising bit 5 on
+the type-0x13 record it references (the new +0x58 reference slot; the
+shipped binary's spawn-dispatch switch populates it, the port stages it
+in tests). `entity_conditional_task_schedule` (0x402ec0) gates on the
+capability word's bit 0, the +0x3e0 bit-0x400 block and the +0x3ec
+bit-0x10000 latch, then links the type-0x1e task at kind 0x11 raising
+bits 4/20. `entity_threshold_progress_event_queue` (0x402f30) links the
+type-10 record with the +0x3c word 0x10 at kind 7 — or kind 0x13 with
+bit 21 when the flag is set. `entity_target_command_queue` (0x402f70)
+chains the type-0x11 target record onto the entity chain through the
+walk tail, touching no list head and no timestamp. `cmd_test` pins the
+marking walk, both free paths, the three gates, both kinds, and the
+chain placement.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

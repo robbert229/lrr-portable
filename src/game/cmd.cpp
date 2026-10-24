@@ -46,6 +46,7 @@ typedef struct CmdRec {
     int32_t  extra;      /* +0x3c (type-8 tasks set 8)                         */
     void*    buffer;     /* +0x40 owned buffer (freed on cmd_free)             */
     int32_t  kind;       /* +0x4c kind index                                   */
+    void*    ref;        /* +0x58 referenced record (the 0x13 "ref" pair)      */
     uint32_t state;      /* +0x5c state flags (CMD_STATE_*)                    */
     void*    next;       /* +0x60 chain link / free-list link when free        */
     void*    global_next; /* port-only global command-list link               */
@@ -124,9 +125,11 @@ void* cmd_alloc(int type)
 
 void cmd_free(void* rec, int cancel)
 {
-    (void)cancel; /* cancellation side-effects are a stub (CmdCancelRef) */
     if (rec == NULL) {
         return;
+    }
+    if (cancel == 0) {
+        cmd_cancel_ref(rec); /* corpus: unless the argument suppresses it */
     }
     CmdRec* r = as_rec(rec);
     if (r->buffer != NULL && (r->state & CMD_STATE_BUFOUT) == 0) {
@@ -1149,5 +1152,109 @@ void level_no_gather_object_setup(int mode)
     if (other != NULL) {
         cmd_link_head(other, 0);
         other->state = (other->state & ~0x10u) | 0x440u;
+    }
+}
+
+/* --- cancellation-ref and conditional issuers (see cmd.hpp) ------------------
+ * The referenced-record slot (+0x58) is the type-0x13 "ref" pair the
+ * shipped binary's spawn-dispatch switch allocates through CmdAlloc(0x13);
+ * port-side producers leave it NULL, so both halves answer inert unless a
+ * test stages the reference. */
+void cmd_cancel_ref(void* rec)
+{
+    if (rec == NULL) {
+        return; /* deviation: the corpus reads the type word blindly */
+    }
+    CmdRec* r = as_rec(rec);
+    if (r->type == 0x13) {
+        if (r->ref != NULL) {
+            /* Corpus: dispatch the cancel callback over the entity pool
+             * (LAB_00402d30) through EntityPoolCallbackSearch — the
+             * pool-registry seam, which always misses in the port. */
+        }
+        return; /* a ref record's cancel is the seam; no marking walk */
+    }
+    if (r->ref == NULL) {
+        return;
+    }
+    for (CmdRec* cur = s_global_head; cur != NULL;
+         cur = as_rec(cur->global_next)) {
+        if (cur->type == 0x13 && cur == (CmdRec*)r->ref) {
+            cur->state |= 0x20u; /* the completion/cancel flag */
+        }
+    }
+}
+
+void entity_conditional_task_schedule(EntitySlot* e)
+{
+    if (e == NULL) {
+        return; /* deviation: the corpus reads the entity blindly */
+    }
+    if ((entity_capability_flags_get(e) & 1u) != 0u
+        && (e->flags_3e0 & 0x400u) == 0u
+        && (e->flags_3ec & 0x10000u) == 0u) {
+        CmdRec* rec = (CmdRec*)cmd_alloc(0x1e);
+        if (rec == NULL) {
+            return;
+        }
+        rec->payload = e;
+        e->flags_3ec |= 0x10000u;
+        cmd_link_head(rec, 0x11);
+        rec->state = (rec->state & ~0x40u) | 0x100010u;
+    }
+}
+
+void entity_threshold_progress_event_queue(void* payload, int flag)
+{
+    const int set_flag = (flag != 0);
+    CmdRec* rec = (CmdRec*)cmd_alloc(10);
+    if (rec == NULL) {
+        return;
+    }
+    rec->payload = payload;
+    rec->extra = 0x10;
+    if (set_flag) {
+        rec->state |= 0x200000u;
+    }
+    /* corpus kind: (-1 & 0xc) + 7 = 0x13 when the flag is set, else 7. */
+    cmd_link_head(rec, set_flag ? 0x13 : 7);
+}
+
+void entity_target_command_queue(EntitySlot* e, void* target)
+{
+    CmdRec* rec = (CmdRec*)cmd_alloc(0x11);
+    if (rec == NULL) {
+        return;
+    }
+    rec->payload = target;
+    if (e == NULL) {
+        return; /* deviation: the corpus writes +0x2f0 blindly */
+    }
+    CmdRec* tail = as_rec(cmd_chain_walk(e));
+    if (tail != NULL) {
+        tail->next = rec;
+    } else {
+        e->cmd_head = rec;
+    }
+    /* The corpus writes only the chain pointer: no timestamp, no pending
+     * clear, no idle registration (the append helper's extras). */
+}
+
+void cmd_rec_ref_set(void* rec, void* ref)
+{
+    if (rec != NULL) {
+        as_rec(rec)->ref = ref;
+    }
+}
+
+void* cmd_rec_ref_get(const void* rec)
+{
+    return rec != NULL ? cas_rec(rec)->ref : NULL;
+}
+
+void cmd_rec_type_set(void* rec, int type)
+{
+    if (rec != NULL) {
+        as_rec(rec)->type = type;
     }
 }
