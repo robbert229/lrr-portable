@@ -602,6 +602,7 @@ Open threads, in order of value:
 | 403 | [findings/403-config-and-text-parsing-helpers.md](docs/findings/403-config-and-text-parsing-helpers.md) | Configuration and Text Parsing Helpers |
 | 404 | [findings/404-game-file-archive-and-pools.md](docs/findings/404-game-file-archive-and-pools.md) | Game Files, Archives, and Record Pools |
 | 405 | [findings/405-level-map-loading-pipeline.md](docs/findings/405-level-map-loading-pipeline.md) | Level and Map Loading Pipeline |
+| 406 | [findings/406-audio-playback-mixing-and-spatial-sound.md](docs/findings/406-audio-playback-mixing-and-spatial-sound.md) | Audio Playback, Mixing, and Spatial Sound |
 
 Canonical full pseudocode corpus: [`docs/decompiles/full/LEGORR.full.c`](docs/decompiles/full/LEGORR.full.c)
 (2564 manifest functions; see its [README](docs/decompiles/full/README.md)). The
