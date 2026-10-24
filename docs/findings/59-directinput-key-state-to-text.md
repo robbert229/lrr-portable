@@ -20,12 +20,14 @@ it: `FUN_0047eef0` asks it for exactly `0x100` bytes into
 [Evidence: `ev_0458f5888b2c75e12d9fb03ecf49b49abeaaa95644fe5a3dfa1b0df540bbd006`,
 `ev_1b8441c3c389660b8ace9e868d8e3c3833f6397aee044b8885bc7e615cfe7901`]
 
-Each active poll copies the previous 256 bytes from `DAT_0076ab80` to
-`DAT_004de430`, clears the current table, then invokes the device's
-`GetDeviceState` vtable slot with size `0x100`. If the read fails, it clears
-the ready flag and tries the device's `Acquire` slot; if the application is
-inactive, it clears both current and previous tables and calls the device's
-`Unacquire` slot. [Evidence:
+Each active poll copies the current 256 bytes from `DAT_0076ab80` to the
+poller previous-state table `DAT_0076aa00`, clears the current table, then
+invokes the device's `GetDeviceState` vtable slot with size `0x100`. If the
+read fails, it clears the ready flag and tries the device's `Acquire` slot; if
+the application is inactive, it clears both poller tables and calls the
+device's `Unacquire` slot. The separate text-entry mirror `DAT_004de430` is
+updated on the text-entry path by `EnginePreTick`, as described below and in
+Finding 04. [Evidence:
 `ev_1b8441c3c389660b8ace9e868d8e3c3833f6397aee044b8885bc7e615cfe7901`]
 
 The table's observed addressing range is raw byte index `0x00`–`0xff`; this
