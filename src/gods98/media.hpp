@@ -165,4 +165,14 @@ void media_min_distance_config_set(float cell_scale, float clip_base,
 }
 #endif
 
+/* --- the CD-audio availability seam (2026-10-24; finding 14) ---------------
+ * CDAudioPlaybackAvailable (FUN_00488b90): the corpus answers yes only
+ * while the CD-audio device word (DAT_0054486c, raised by the MCI device
+ * opener — unported) and the sound-system word (DAT_00533878, the port's
+ * sound-on seam) are both set. The device word has no ported owner, so it
+ * lands zero-initialized with a set hook standing in (documented
+ * deviation). */
+int  media_cd_audio_playback_available(void); /* FUN_00488b90 */
+void media_cd_audio_open_set(int open);       /* port hook */
+
 #endif /* LEGORRR_MEDIA_HPP */

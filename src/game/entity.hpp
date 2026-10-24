@@ -222,4 +222,11 @@ int entity_flags_contain_requested_single_bit(const EntitySlot* e,
 }
 #endif
 
+/* EntityStatsWordFlag10Test/20Test/40Test (FUN_00439cf0/00439d10/00439d30):
+ * the stats-word bit tests — the corpus masks the stats reader's word and
+ * hands back the masked result (a bare bit, not a bool). */
+uint32_t entity_stats_flag10_test(const EntitySlot* e); /* FUN_00439cf0 */
+uint32_t entity_stats_flag20_test(const EntitySlot* e); /* FUN_00439d10 */
+uint32_t entity_stats_flag40_test(const EntitySlot* e); /* FUN_00439d30 */
+
 #endif /* LEGORRR_GAME_ENTITY_HPP */

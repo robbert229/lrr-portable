@@ -165,4 +165,10 @@ int  simtick_bobbin_advanced(void); /* helper-invocation counter */
  * models. NULL-free by shape: this is a blind global store. */
 void simulation_global_word_set(uint32_t value);
 
+/* DirectSoundListenerViewSet (FUN_0047ab80): the view provider stores the
+ * current listener object in the DAT_00506688 slot (this module's sound
+ * guard) only while the sound system is up. The keep-alive ticker reads
+ * the slot; the provider call feeds it exactly where the corpus does. */
+void simtick_directsound_listener_view_set(int view); /* FUN_0047ab80 */
+
 #endif /* LEGORRR_SIMTICK_HPP */

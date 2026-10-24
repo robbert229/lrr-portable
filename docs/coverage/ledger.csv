@@ -329,7 +329,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0040f5e0,FUN_0040f5e0,ported,GlobalConfigValueSet,1,81
 0040f5f0,FUN_0040f5f0,named,ErosionEightNeighborPropagate,0,1029
 0040f6c0,FUN_0040f6c0,named,SceneNodeRecordCreate,0,1108
-0040f7b0,FUN_0040f7b0,named,OptionalResourceDestroy,0,101
+0040f7b0,FUN_0040f7b0,ported,OptionalResourceDestroy,2,101
 0040f7d0,FUN_0040f7d0,named,CallbackStateRecordCreate,0,649
 0040f850,FUN_0040f850,named,CallbackStateListDispose,0,243
 0040f890,FUN_0040f890,named,DirectionDrivenHeadingAngleStep,0,805
@@ -923,9 +923,9 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00439bd0,FUN_00439bd0,named,EntityAcceptsTargetForTaskCheck,0,730
 00439c80,FUN_00439c80,named,EntityIndexedFlagSetAndRefresh,0,284
 00439cd0,FUN_00439cd0,named,EntityAnimationStateSet,0,107
-00439cf0,FUN_00439cf0,named,EntityStatsWordFlag10Test,0,118
-00439d10,FUN_00439d10,named,EntityStatsWordFlag20Test,0,118
-00439d30,FUN_00439d30,named,EntityStatsWordFlag40Test,0,118
+00439cf0,FUN_00439cf0,ported,EntityStatsWordFlag10Test,2,118
+00439d10,FUN_00439d10,ported,EntityStatsWordFlag20Test,1,118
+00439d30,FUN_00439d30,ported,EntityStatsWordFlag40Test,1,118
 00439d50,FUN_00439d50,named,VehicleUnloadAdjacentCellFind,0,977
 00439e10,FUN_00439e10,named,VehicleUnloadCellFindIfEligible,0,246
 00439e40,FUN_00439e40,named,EntityRecordFlag20Query,0,246
@@ -1904,7 +1904,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0047a870,FUN_0047a870,ported,SoundBankEntryLoad,3,3087
 0047aad0,FUN_0047aad0,ported,SoundBankFreeSlotFind,3,299
 0047ab00,FUN_0047ab00,ported,SoundBankEntryRelease,3,773
-0047ab80,FUN_0047ab80,named,DirectSoundListenerViewSet,0,114
+0047ab80,FUN_0047ab80,ported,DirectSoundListenerViewSet,3,114
 0047aba0,FUN_0047aba0,ported,DirectSoundListenerUpdateTick,4,133
 0047abc0,FUN_0047abc0,ported,DirectSoundListenerSpatialUpdate,1,1845
 0047ad10,FUN_0047ad10,named,SoundPositionSetFromVector,0,145
@@ -2135,7 +2135,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004850e0,FUN_004850e0,ported,ObjectField10Get,2,86
 004850f0,FUN_004850f0,named,TextBufferCreate,0,655
 00485160,FUN_00485160,named,TextOutputField82CBit2SetClear,0,235
-00485190,FUN_00485190,named,TextBufferDestroy,0,122
+00485190,FUN_00485190,ported,TextBufferDestroy,2,122
 004851b0,FUN_004851b0,ported,FloatPairAtOffset4SetFromInts,1,160
 004851d0,FUN_004851d0,ported,FloatPairAtOffsetCSetFromUInts,1,167
 00485210,FUN_00485210,named,FormattedTextAppendToRingBuffer,0,151
@@ -2186,7 +2186,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004889d0,FUN_004889d0,named,ResourceTreeCallbackReferenceChainRelease,0,892
 00488a70,FUN_00488a70,named,LoadRecordInterfacesReleaseFree,0,1192
 00488b50,FUN_00488b50,named,CDAudioDeviceStateUpdate,0,224
-00488b90,FUN_00488b90,named,CdAudioPlaybackAvailable,0,119
+00488b90,FUN_00488b90,ported,CdAudioPlaybackAvailable,2,119
 00488bb0,FUN_00488bb0,named,CdAudioTrackStart,0,254
 00488bf0,FUN_00488bf0,named,CdAudioStopAndCloseIfActive,0,104
 00488c00,FUN_00488c00,named,CDAudioWatchdogTick,0,494
