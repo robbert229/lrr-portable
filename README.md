@@ -635,6 +635,7 @@ Open threads, in order of value:
 | 436 | [findings/436-simulation-ui-and-player-controls.md](docs/findings/436-simulation-ui-and-player-controls.md) | Simulation UI and Player Controls |
 | 437 | [findings/437-menu-widgets-and-menu-rendering.md](docs/findings/437-menu-widgets-and-menu-rendering.md) | Menu Widgets and Menu Rendering |
 | 438 | [findings/438-front-end-flow-save-slot-and-option-state.md](docs/findings/438-front-end-flow-save-slot-and-option-state.md) | Front-End Flow, Save Slots, and Option State |
+| 466 | [findings/466-command-registry-global-queue-transitions.md](docs/findings/466-command-registry-global-queue-transitions.md) | Command Registry and Global Queue Transitions |
 
 Canonical full pseudocode corpus: [`docs/decompiles/full/LEGORR.full.c`](docs/decompiles/full/LEGORR.full.c)
 (2564 manifest functions; see its [README](docs/decompiles/full/README.md)). The
