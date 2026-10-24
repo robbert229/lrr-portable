@@ -1633,3 +1633,9 @@ uint32_t upgrade_resource_check(const LevelState* s, int selector)
     return (uint32_t)level_int(s, selector != 0 ? LEVEL_OFF_RES_B
                                                : LEVEL_OFF_RES_A);
 }
+
+/* AlwaysAcceptPlaceCommandCell (FUN_00432550, finding 455): always yes. */
+int always_accept_place_command_cell(void)
+{
+    return 1;
+}

@@ -241,6 +241,39 @@ static void test_crt_leaves(void)
     }
 }
 
+/* Constant and DAT-global band (findings 380/383/386/392/399/406/440). */
+static void test_constant_band(void)
+{
+    CHECK(constant_zero_float_get() == 0.0, "zero float answers zero");
+    double z = constant_zero_float_get();
+    CHECK(z == 0.0 && memcmp(&z, "\0\0\0\0\0\0\0\0", 8) == 0,
+          "the zero float is bit-exact +0.0");
+    CHECK(constant_negative_10000_get() == -10000,
+          "the constant reads as negative ten thousand");
+    uint32_t raw = (uint32_t)constant_negative_10000_get();
+    CHECK(raw == 0xffffd8f0u, "the dword view is the corpus's 0xffffd8f0");
+    CHECK(processor_feature_fallback_false() == 0u, "fallback answers zero");
+    CHECK(flh_magic_uu_noop() == 0u, "the UU noop answers zero");
+}
+
+static void test_static_globals(void)
+{
+    /* Store-and-return: the return value is the stored dword. */
+    uint32_t v = 0x1234abcdu;
+    CHECK(global_value_004ff9bc_store_and_return(&v) == v,
+          "stores and returns the pointed dword");
+    v = 0x77777777u;
+    CHECK(global_value_004ff9bc_store_and_return(&v) == v,
+          "a second store returns the new value");
+    CHECK(global_value_004ff9bc_store_and_return(NULL) == 0u,
+          "NULL answers zero (deviation)");
+
+    /* The unresolved-meaning global: faithful read of static-backed
+     * storage (x87 float10 deviation — double). */
+    CHECK(global_float_field_00556f00_get() == 0.0,
+          "the global reads zero until a writer lands");
+}
+
 int main(void)
 {
     test_memory_move();
@@ -249,6 +282,8 @@ int main(void)
     test_bit_numeric();
     test_pair_conversions();
     test_crt_leaves();
+    test_constant_band();
+    test_static_globals();
     if (s_failures != 0) {
         fprintf(stderr, "crt_test: %d failure(s)\n", s_failures);
         return 1;

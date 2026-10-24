@@ -777,6 +777,10 @@ int main(int argc, char** argv)
     level_destroy(s);
     block_close(cfg);
 
+    /* AlwaysAcceptPlaceCommandCell (FUN_00432550, finding 455). */
+    CHECK(always_accept_place_command_cell() == 1,
+          "the kind-0x16 callback accepts unconditionally");
+
     if (s_failures != 0) {
         fprintf(stderr, "level_test: %d failure(s)\n", s_failures);
         return 1;

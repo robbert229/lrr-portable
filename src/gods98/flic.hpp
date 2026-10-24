@@ -72,6 +72,12 @@ const uint8_t* flic_frame_rgba(Flic* f);
 /* RGB555 -> RGBA32 expansion of one pixel (the renderer's conversion). */
 uint32_t flic_rgb555_to_rgba(uint16_t c);
 
+/* FlicOpcode25SuccessStub (FUN_00484b90, finding 21): the 8-bit
+ * opcode-25 handler — a six-byte success-returning stub, no pixel
+ * writes (unused in the corpus; the 16-bit coder above owns all shipped
+ * files). Corpus arguments are ignored; definition stays void. */
+uint32_t flic_opcode25_success_stub(void);
+
 #ifdef __cplusplus
 }
 #endif

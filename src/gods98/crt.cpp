@@ -235,3 +235,47 @@ double double_build_with_exponent(uint32_t significand_low,
     __builtin_memcpy(&value, &bits, sizeof(value));
     return value;
 }
+
+/* ------------------------------------------------------------------ *
+ *  Constant and DAT-global band (see crt.hpp). */
+
+double constant_zero_float_get(void)
+{
+    return 0.0;
+}
+
+int32_t constant_negative_10000_get(void)
+{
+    return -10000;
+}
+
+uint32_t processor_feature_fallback_false(void)
+{
+    return 0u;
+}
+
+uint32_t flh_magic_uu_noop(void)
+{
+    return 0u;
+}
+
+/* The two DAT globals, static-backed until the corpus's writers (all
+ * still unported) land — message.cpp's s_system_state precedent. */
+static double   s_global_float_00556f00 = 0.0;
+static uint32_t s_global_dword_004ff9bc = 0u;
+
+double global_float_field_00556f00_get(void)
+{
+    return s_global_float_00556f00;
+}
+
+uint32_t global_value_004ff9bc_store_and_return(const void* value)
+{
+    if (value == NULL) {
+        return 0u; /* deviation: corpus dereferences blindly */
+    }
+    uint32_t v = 0u;
+    memcpy(&v, value, sizeof(v));
+    s_global_dword_004ff9bc = v;
+    return v;
+}

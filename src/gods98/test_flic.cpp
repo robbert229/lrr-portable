@@ -361,6 +361,11 @@ int main(int argc, char** argv)
             ++a;
         }
     }
+    /* FlicOpcode25SuccessStub (FUN_00484b90, finding 21): the 8-bit
+     * opcode-25 handler is a success stub with no pixel writes. */
+    CHECK(flic_opcode25_success_stub() == 1u,
+          "the 8-bit opcode-25 handler answers success");
+
     if (s_failures != 0) {
         fprintf(stderr, "flic: %d failure(s)\n", s_failures);
         return 1;

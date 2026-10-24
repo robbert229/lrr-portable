@@ -372,3 +372,9 @@ const uint8_t* flic_frame_rgba(Flic* f)
     }
     return f->rgba;
 }
+
+/* FlicOpcode25SuccessStub (FUN_00484b90, finding 21): success, no work. */
+uint32_t flic_opcode25_success_stub(void)
+{
+    return 1u;
+}

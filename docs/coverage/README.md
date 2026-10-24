@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 523 | 20.4% |
+| ported | 531 | 20.7% |
 | anchored | 5 | 0.2% |
-| named | 1990 | 77.6% |
+| named | 1982 | 77.3% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 0 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (523 functions)
+  (531 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (5 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1990 functions)
+  citation yet (1982 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (0 functions)
 
-**Game logic remaining to port: 1995 (77.8%).**
+**Game logic remaining to port: 1987 (77.5%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -192,7 +192,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004087e0` | SceneObjectSecondaryHandleGetOrCreate |
 | `0x00408810` | SceneObjectIndexedSecondaryHandleGetOrCreate |
 | `0x00408860` | AnimationLoopTimeAdjust |
-| `0x00408930` | ConstantZeroFloatGet |
 | `0x00408940` | EntityPayloadTeardown |
 | `0x004089a0` | EntityPayloadStateSet |
 | `0x004089d0` | Segment2DPointDistance |
@@ -565,7 +564,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0041fa80` | StartLevelPilots |
 | `0x00422850` | MiscObjectResourcesLoad |
 | `0x00423080` | ModeDependentField24Get |
-| `0x004230b0` | GlobalFloatField00556F00Get |
 | `0x004230c0` | DebugPanelTextDrawUpdate |
 | `0x00424560` | AirSupplyAmountUpdate |
 | `0x00424730` | SinePhaseMidpointBlendDispatch |
@@ -638,7 +636,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004323f0` | TerrainCellFlagsSetAndRefresh |
 | `0x00432450` | TerrainCellFlagsSetMask100400 |
 | `0x00432490` | TerrainCellFlagsSetMask20108000 |
-| `0x00432550` | AlwaysAcceptPlaceCommandCell |
 | `0x00432560` | TerrainCellFlag40000000ClearOrSet |
 | `0x00432600` | TerrainCellVariantFlagPropagate |
 | `0x00432c90` | TerrainCellStateUpdate |
@@ -1018,12 +1015,10 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00454890` | GlobalCounter_004ff990Reset |
 | `0x00454b70` | ObjectiveVoiceAliasRaiseCommit |
 | `0x00454b80` | ObjectiveVoiceAliasRaiseGateBit27 |
-| `0x00456210` | FlhMagicUuNoop |
 | `0x00456240` | SystemStateFlags |
 | `0x00456550` | SetSystemStateFlags |
 | `0x004565f0` | EngineModeSet |
 | `0x00456640` | GlobalFlagGet_004ff978 |
-| `0x004567c0` | GlobalValue_004ff9bcStoreAndReturn |
 | `0x00456810` | SoundAliasPlayGlobal |
 | `0x00456830` | AdvisorInlineTokenRender |
 | `0x00456b80` | TutorialPathCoordinateIndex |
@@ -1534,7 +1529,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0047bc30` | StreamedWavePlaybackDrainCheck |
 | `0x0047bdb0` | StreamedWaveRingBufferTick |
 | `0x0047c100` | DirectSoundListenerRolloffSet |
-| `0x0047c160` | ConstantNegative10000Get |
 | `0x0047c170` | WindowStateInitialize |
 | `0x0047c1c0` | DirectDrawEnumerateAndStoreCallbackResult |
 | `0x0047c2e0` | DirectDrawDeviceCreate |
@@ -1686,7 +1680,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004848d0` | FlicDecode8BitOpcode25Mode4 |
 | `0x004849d0` | FlicDecode16BitKeyframe |
 | `0x00484b20` | FlicOpcode25DecodeDispatch |
-| `0x00484b90` | FlicOpcode25SuccessStub |
 | `0x00484ba0` | PackedTripletTableToWordBuild |
 | `0x00484c00` | FlicDecode16BitRowRecords |
 | `0x00484c90` | FlicOpcode27FallbackNoop |
@@ -1853,7 +1846,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0048ffa0` | PathResolveFull |
 | `0x00490070` | VsscanfParseInput |
 | `0x00490090` | AssetPathComponentsParse |
-| `0x00490230` | ProcessorFeatureFallbackFalse |
 | `0x00490280` | CrtFloatingPointFeatureProbe |
 | `0x004902b0` | CrtNormalizeDecimalPoint |
 | `0x00490400` | CrtScientificFloatFormatAppend |
