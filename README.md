@@ -1597,6 +1597,28 @@ non-adjacent). `record_test` hand-computes the subcell fold, the
 clamps and the zero-width below-zero clamp (faithful arithmetic);
 `level_test` walks all eight directions.
 
+**The refresh-side terrain leaves and the record twins** (2026-10-24;
+findings 354/373/450 wave): the companions that round out the cell-flag
+families land in `level.*`. `terrain_neighbor_flag_refresh` (0x431450)
+refreshes a cell's activity-build record — its +0x18 word, but the
+record's owning release family is unported, so every port case reads
+zero and the activity branches stay TODO(corpus) seams; this leaf had
+only been quoted in earlier notes, so the ledger row is now truthful by
+code. `terrain_cell_flag20_clear_and_refresh` (0x4310f0) runs that
+refresh, drops primary bit 0x20 and hits the shared refresh seam;
+`terrain_cell_edge_flag_set_and_update` (0x42f2e0) raises or clears the
+0x200 edge flag with the same seam; `terrain_cell_work_flag_circle_set`
+(0x435010) walks the filled circle of a radius about a center through
+the ported in-gate work-flag setter, faithful to the corpus's signed
+candidate bounds and wrapping radius math. The two pure record twins
+`indexed_flag_value_set_one` (0x44e6b0 — dword 1 at +0x40b4 + (idx &
+0xff)*4) and `scene_object_resource_handle_set` (0x44f220 — the handle
+store at +0x2c) land in `record.*` beside their reader twins.
+`level_test` proves the circle lights exactly its cross, the edge and
+0x20 flags raise and drop exactly their bits, and the refresh leaf is
+inert without build records; `record_test` pins the slot masking and
+the handle placement.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

@@ -716,7 +716,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0042ef40,FUN_0042ef40,named,StatsLevelRecordCountForStatType,0,495
 0042efc0,FUN_0042efc0,ported,DirectShowVideoPlaybackLoop,5,726
 0042f0c0,FUN_0042f0c0,ported,PendingLevelName,1,1852
-0042f2e0,FUN_0042f2e0,named,TerrainCellEdgeFlagSetAndUpdate,0,550
+0042f2e0,FUN_0042f2e0,ported,TerrainCellEdgeFlagSetAndUpdate,1,550
 0042f350,FUN_0042f350,named,TerrainNeighborCoordinateCheck,0,2871
 0042f6f0,FUN_0042f6f0,ported,CellInitPass,5,14655
 004302b0,FUN_004302b0,named,MapCellTrackingFlagsClearAndRefresh,0,533
@@ -726,8 +726,8 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00430df0,FUN_00430df0,named,TerrainNeighborRefresh,0,1210
 00430ee0,FUN_00430ee0,ported,TerrainCellInitialize,8,2768
 004310f0,FUN_004310f0,ported,TerrainCellFlag20ClearAndRefresh,1,376
-00431140,FUN_00431140,ported,TerrainCellQueuedWorkTransition,4,593
-004311d0,FUN_004311d0,ported,,2,2047
+00431140,FUN_00431140,named,TerrainCellQueuedWorkTransition,0,593
+004311d0,FUN_004311d0,ported,,1,2047
 004313b0,FUN_004313b0,ported,,5,783
 00431450,FUN_00431450,ported,TerrainNeighborFlagRefresh,3,552
 004314c0,FUN_004314c0,named,ActivityBuildRecordRelease,0,490

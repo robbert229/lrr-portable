@@ -233,4 +233,18 @@ void grid_coordinate_clamp_and_store(const void* map, float world_x,
 uint32_t terrain_world_point_to_cell(const void* map, const float* point,
                                      float* cell_out, float* offset_out);
 
+/* --- indexed flag slot and resource-handle writers (2026-10-24) ---------
+ * Pure offset writers on the opaque records, modeled on the module's
+ * reader twins (rec_dword reads, memcpy stores). NULL records skip the
+ * store (documented deviation; corpus callers dereference blindly). */
+
+/* IndexedFlagValueSetOne (FUN_0044e6b0, findings 354/450): write dword 1
+ * at record + 0x40b4 + (index & 0xff)*4 — the low byte selects the flag
+ * slot in the record's indexed flag array. */
+void indexed_flag_value_set_one(void* record, uint32_t index);
+
+/* SceneObjectResourceHandleSet (FUN_0044f220, finding 373): store the
+ * resource handle at object + 0x2c. */
+void scene_object_resource_handle_set(void* object, uint32_t handle);
+
 #endif /* LEGORRR_GODS98_RECORD_HPP */

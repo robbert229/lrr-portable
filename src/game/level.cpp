@@ -1695,7 +1695,7 @@ static void cell_visited_track_push(int cx, int cy)
     }
 }
 
-static void cell_flag40000000_refresh_seam(LevelState* s, int cx, int cy)
+static void cell_refresh_seam(LevelState* s, int cx, int cy)
 {
     (void)s; (void)cx; (void)cy;
     /* TODO(corpus): FUN_0042f6f0(manager, x, y, 0) per-cell refresh;
@@ -1711,7 +1711,7 @@ void terrain_cell_flag100_set_and_track(LevelState* s, int cx, int cy)
     uint32_t* word = (uint32_t*)(rec + 0x0C);
     *word |= 0x100u;
     cell_refresh_track_push(cx, cy);
-    cell_flag40000000_refresh_seam(s, cx, cy);
+    cell_refresh_seam(s, cx, cy);
 }
 
 void terrain_cell_visited_flag_set_and_track(LevelState* s, int cx, int cy)
@@ -1751,7 +1751,7 @@ void terrain_cell_primary_flags_mask_clear_and_refresh(LevelState* s,
     *primary &= 0xdfef7bffu;
     uint32_t* secondary = (uint32_t*)(rec + 0x0C);
     *secondary &= 0xfffffffbu;
-    cell_flag40000000_refresh_seam(s, cx, cy);
+    cell_refresh_seam(s, cx, cy);
 }
 
 void terrain_cell_flags_set_and_refresh(LevelState* s, int cx, int cy)
@@ -1764,7 +1764,7 @@ void terrain_cell_flags_set_and_refresh(LevelState* s, int cx, int cy)
     *primary |= 0x108000u;
     uint32_t* secondary = (uint32_t*)(rec + 0x0C);
     *secondary |= 4u;
-    cell_flag40000000_refresh_seam(s, cx, cy);
+    cell_refresh_seam(s, cx, cy);
 }
 
 void terrain_cell_flags_set_mask100400(LevelState* s, int x, int y)
@@ -1775,7 +1775,7 @@ void terrain_cell_flags_set_mask100400(LevelState* s, int x, int y)
     }
     uint32_t* primary = (uint32_t*)(rec + 0x08);
     *primary |= 0x100400u;
-    cell_flag40000000_refresh_seam(s, x, y);
+    cell_refresh_seam(s, x, y);
 }
 
 void terrain_cell_flags_set_mask20108000(LevelState* s, int x, int y)
@@ -1786,7 +1786,7 @@ void terrain_cell_flags_set_mask20108000(LevelState* s, int x, int y)
     }
     uint32_t* primary = (uint32_t*)(rec + 0x08);
     *primary |= 0x20108000u;
-    cell_flag40000000_refresh_seam(s, x, y);
+    cell_refresh_seam(s, x, y);
 }
 
 void terrain_cell_flag40000000_clear_or_set(LevelState* s, int cx, int cy,
@@ -1802,7 +1802,7 @@ void terrain_cell_flag40000000_clear_or_set(LevelState* s, int cx, int cy,
     } else {
         *primary |= 0x40000000u;
     }
-    cell_flag40000000_refresh_seam(s, cx, cy);
+    cell_refresh_seam(s, cx, cy);
 }
 
 /* CellNeighborDirectionCode (FUN_004508a0): eight neighbors, -1 else. */
@@ -1838,4 +1838,76 @@ int cell_neighbor_direction_code(int x1, int y1, int x2, int y2)
         }
     }
     return -1;
+}
+
+/* --- neighbor-refresh / circle / edge-flag cluster (see level.hpp) ------- */
+
+void terrain_neighbor_flag_refresh(LevelState* s, int cx, int cy, int mode)
+{
+    uint8_t* rec = level_voxel(s, cx, cy);
+    if (rec == NULL) {
+        return; /* bounds deviation (as across this module) */
+    }
+    uint32_t build = 0u;
+    __builtin_memcpy(&build, rec + 0x18, sizeof(build));
+    /* The corpus reads a cell-record word +0x18 as the activity-build
+     * record pointer; in the corpus's 32-bit space the word is the
+     * pointer. The port's voxel layout keeps the corpus's byte layout,
+     * and the word's owner — the activity-build release family — is
+     * unported, so every port case reads zero and both corpus branches
+     * (destroy registration through the ported SceneActionNameSet leaf
+     * with the scene-frame seam, or the byte +0xC marks) collapse to
+     * the no-op below. TODO(corpus): the activity-build layer seam. */
+    if (build == 0u) {
+        return;
+    }
+    (void)mode;
+}
+
+void terrain_cell_flag20_clear_and_refresh(LevelState* s, int cx, int cy)
+{
+    terrain_neighbor_flag_refresh(s, cx, cy, 0);
+    uint8_t* rec = level_voxel(s, cx, cy);
+    if (rec != NULL) {
+        uint32_t* word = (uint32_t*)(rec + 0x08);
+        *word &= 0xffffffdfu;
+    }
+    cell_refresh_seam(s, cx, cy);
+}
+
+void terrain_cell_edge_flag_set_and_update(LevelState* s, int cx, int cy,
+                                           int set)
+{
+    uint8_t* rec = level_voxel(s, cx, cy);
+    if (rec != NULL) {
+        uint32_t* word = (uint32_t*)(rec + 0x08);
+        if (set != 0) {
+            *word |= 0x200u;
+        } else {
+            *word &= 0xfffffdffu;
+        }
+    }
+    cell_refresh_seam(s, cx, cy);
+}
+
+void terrain_cell_work_flag_circle_set(LevelState* s, int center_x,
+                                       int center_y, int radius)
+{
+    const int w = level_int(s, LEVEL_OFF_WIDTH);
+    const int h = level_int(s, LEVEL_OFF_HEIGHT);
+    const int r2 = radius * radius; /* corpus wrapping int math */
+    for (int dy = -radius; dy <= radius; ++dy) {
+        for (int dx = -radius; dx <= radius; ++dx) {
+            if (dx * dx + dy * dy > r2) {
+                continue;
+            }
+            const int cx = center_x + dx;
+            const int cy = center_y + dy;
+            /* The corpus's signed candidate bounds, then the setter's
+             * own in-gate test — both faithful. */
+            if (-1 < cx && cx < w && -1 < cy && cy < h) {
+                level_cell_work_flag_set(s, cx, cy);
+            }
+        }
+    }
 }

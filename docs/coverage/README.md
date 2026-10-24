@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 545 | 21.3% |
+| ported | 550 | 21.5% |
 | anchored | 5 | 0.2% |
-| named | 1968 | 76.8% |
+| named | 1963 | 76.6% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 0 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (545 functions)
+  (550 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1968 functions)
+  citation yet (1963 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1973 (77.0%).**
+**Game logic remaining to port: 1968 (76.8%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -407,12 +407,12 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0042da20` | ObjectTheNamesLoad |
 | `0x0042de40` | ViewportTargetPositionClamp |
 | `0x0042ef40` | StatsLevelRecordCountForStatType |
-| `0x0042f2e0` | TerrainCellEdgeFlagSetAndUpdate |
 | `0x0042f350` | TerrainNeighborCoordinateCheck |
 | `0x004302b0` | MapCellTrackingFlagsClearAndRefresh |
 | `0x00430320` | TerrainCellWorkFlagClear |
 | `0x00430470` | TerrainNeighborFlagSet |
 | `0x00430df0` | TerrainNeighborRefresh |
+| `0x00431140` | TerrainCellQueuedWorkTransition |
 | `0x004314c0` | ActivityBuildRecordRelease |
 | `0x00431530` | ActivityBuildRecordsReleaseAll |
 | `0x00431780` | TerrainStampImpactHandler |

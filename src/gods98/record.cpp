@@ -454,3 +454,23 @@ uint32_t terrain_world_point_to_cell(const void* map, const float* point,
     }
     return 0u;
 }
+
+/* --- indexed flag slot and resource-handle writers (see record.hpp) ------ */
+
+void indexed_flag_value_set_one(void* record, uint32_t index)
+{
+    if (record == NULL) {
+        return;
+    }
+    const uint32_t one = 1u;
+    const size_t off = 0x40b4u + (size_t)(index & 0xffu) * 4u;
+    __builtin_memcpy((char*)record + off, &one, sizeof(one));
+}
+
+void scene_object_resource_handle_set(void* object, uint32_t handle)
+{
+    if (object == NULL) {
+        return;
+    }
+    __builtin_memcpy((char*)object + 0x2cu, &handle, sizeof(handle));
+}
