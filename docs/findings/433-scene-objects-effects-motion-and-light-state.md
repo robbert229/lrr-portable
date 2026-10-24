@@ -105,8 +105,9 @@ available decompile.
 
 ## Scene transform and configured light effects
 
-`SceneObjectTransformStateInit` (`0x0044c710`) stores two object handles and
-a position triple in globals, initializes current and configured channel
+`SceneObjectTransformStateInit` (`0x0044c710`) stores the target scene object
+at `DAT_004eadd8`, a companion context at `DAT_004eaddc`, and a position triple
+in globals, initializes current and configured channel
 values from that triple, and applies the transform. `ConfiguredSceneTransformEnable`
 (`0x0044c790`) sets global flag `DAT_004eaec8` bit `0x100` and reapplies the
 configured transform when enabled; disabling it only clears that bit. Input
