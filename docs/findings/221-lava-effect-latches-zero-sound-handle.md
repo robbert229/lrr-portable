@@ -1,6 +1,6 @@
 # Finding 221 — Lava Effect Latches a Zero Sound Handle
 
-The sound-instance updater makes one alias-submission attempt when its sound
+The transient-effect instance updater makes one alias-submission attempt when its sound
 handle field is zero and its attempt flag is clear. It stores the return value
 in the handle field; if that value is zero, it sets the attempt flag and does
 not try again on later updates. Under packed batching, an accepted positional

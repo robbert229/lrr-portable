@@ -42,7 +42,7 @@ This pass names 49 operation-level routines across terrain grids, interface reso
 | `0x00456c60` | `ObjectPoolListsFreeAll` | Frees all linked nodes across 55 list heads and zeros each head. | Checked-in pseudocode; no direct bundle record reported. |
 | `0x004589a0` | `GlobalOptionLowBitsEnabled` | Returns whether any of the low three bits in a global option word are set. | Pseudocode only; individual bit meanings unknown. |
 | `0x0045b930` | `FloatPairToIntegerPair` | Converts two float inputs to integers and writes the pair to output. | Checked-in pseudocode; no direct bundle record reported. |
-| `0x00465a90` | `RegisteredObjectListApplyCallback` | Walks a global object list and invokes a callback helper for each node. | Checked-in pseudocode; no direct bundle record reported. |
+| `0x00465a90` | `TransientEffectRegistryEnableSet` | Walks a global object list and invokes a callback helper for each node. | Checked-in pseudocode; no direct bundle record reported. |
 | `0x0046db70` | `SceneObjectResourceRelease` | Passes the object resource field at +8 to the release helper. | Pseudocode only; pointed-to resource semantics inferred from cleanup helper. |
 | `0x0044e860` | `GridCellSetPayloadIndex` | Computes cell index as width*row+column and calls the collection setter with the cell payload index. | Checked-in pseudocode; no direct bundle record reported. |
 | `0x004755b0` | `SceneFrameScaleSet` | Calls the interface method at vtable +0x40 with five arguments; caller applies scale-like constants. | Caller evidence `ev_81e53f10ab1b07600981f692ee5dda8a71d15e2284e8824fe7e2eece0dfdc564` in `legorr-engine-helpers-expansion-27.bundle`; vtable semantics inferred. |

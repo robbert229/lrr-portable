@@ -9,7 +9,7 @@ procedures. This batch resolves the deferred command trio (`0x43a120`/`0x448c90`
 anchored command-sweep procedure `0x4041e0`, `CoordinateListCallbackVisit`,
 `EntityFlagWordBehaviorEvaluate`, `EngineTick`, `AdvisorOverlayUpdate`,
 `CatalogCallbackByIdDispatch`, `EntityVelocitySlotDispatch`,
-`EntityWorldPositionSet`, `EntityPermittedActivityCheck`, `SoundInstanceUpdate`,
+`EntityWorldPositionSet`, `EntityPermittedActivityCheck`, `TransientEffectInstanceUpdate`,
 `SceneTimeoutEntrySweep`, `EntityMotionToSceneNodeSync`, `LwscSceneLoad`,
 `TileModelEntityRegister`, `LoadTileMeshes`, `MenuSectionRecordCreate`,
 `DDiSceneObjectDestroy`, `EntityMovementAccumulatorApply`, and named/ported callees
