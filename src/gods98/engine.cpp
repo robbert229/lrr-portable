@@ -155,3 +155,26 @@ uint32_t runtime_flag40000000_get(const EngineContext* ctx)
 {
     return ctx != NULL ? (ctx->state & 0x40000000u) : 0u;
 }
+
+/* ModeDependentField24Get (FUN_00423080): mode-selected follow-span read.
+ * The corpus indexes views[ctx->context_mode == 1 ? 0 : 2]; other modes
+ * return the mode word verbatim, and the port reads the ViewContext's
+ * follow_span slot (the corpus's word 0x24) through the threaded view
+ * table (deviation: NULL slots answer zero, corpus dereferences blindly).
+ */
+int mode_dependent_field24_get(const EngineContext* ctx)
+{
+    if (ctx == NULL) {
+        return 0; /* deviation: the corpus dereferences its global blindly */
+    }
+    int which;
+    if (ctx->context_mode == 1) {
+        which = 0;
+    } else if (ctx->context_mode == 0) {
+        which = 2;
+    } else {
+        return ctx->context_mode;
+    }
+    const ViewContext* v = ctx->views[which];
+    return v != NULL ? (int)v->follow_span : 0;
+}

@@ -82,6 +82,32 @@ int main(void)
               "engine_bind: bit 30 reads back masked");
     }
 
+    /* The mode-dependent field-24 read (2026-10-24). */
+    {
+        EngineContext ec = {};
+        ViewContext vga = {};
+        ViewContext vfree = {};
+        vga.follow_span = 5.0f;   /* DAT_005560e4's word 0x24 */
+        vfree.follow_span = 9.0f; /* DAT_005560ec's word 0x24 */
+        ec.views[0] = &vga;
+        ec.views[2] = &vfree;
+        ec.context_mode = 1;
+        CHECK(mode_dependent_field24_get(&ec) == 5,
+              "engine_bind: in-game mode reads the first view");
+        ec.context_mode = 0;
+        CHECK(mode_dependent_field24_get(&ec) == 9,
+              "engine_bind: editor mode reads the third view");
+        ec.context_mode = 7;
+        CHECK(mode_dependent_field24_get(&ec) == 7,
+              "engine_bind: other modes answer the mode word");
+        ec.views[0] = NULL;
+        ec.views[2] = NULL;
+        ec.context_mode = 1;
+        CHECK(mode_dependent_field24_get(&ec) == 0
+                  && mode_dependent_field24_get(NULL) == 0,
+              "engine_bind: null view slots and context guard answer zero");
+    }
+
     if (s_failures == 0) {
         printf("engine_bind_test: PASS\n");
         return 0;
