@@ -1079,9 +1079,9 @@ address,decompile_reference_count,function_count,functions,finding_mentions,imag
 0x004eae5c,4,1,RandomWaypointTimerStepApply@0x0044d280,,.data,zero-filled virtual tail,,,unreviewed,,,
 0x004eae60,2,2,LightEffectFadeParametersStore@0x0044cc10; RandomWaypointTimerStepApply@0x0044d280,,.data,zero-filled virtual tail,,,unreviewed,,,
 0x004eae64,2,2,LightEffectFadeParametersStore@0x0044cc10; RandomWaypointTimerStepApply@0x0044d280,,.data,zero-filled virtual tail,,,unreviewed,,,
-0x004eae68,15,1,RandomWaypointTimerStepApply@0x0044d280,,.data,zero-filled virtual tail,,,unreviewed,,,
-0x004eae6c,10,1,RandomWaypointTimerStepApply@0x0044d280,,.data,zero-filled virtual tail,,,unreviewed,,,
-0x004eae70,10,1,RandomWaypointTimerStepApply@0x0044d280,,.data,zero-filled virtual tail,,,unreviewed,,,
+0x004eae68,15,1,RandomWaypointTimerStepApply@0x0044d280,,.data,zero-filled virtual tail,,,interpreted,X-axis accumulated progress value for the active randomized waypoint movement phase,high,"Findings 258 and 390; RandomWaypointTimerStepApply initializes this phase value from the selected target or zero, advances it with the X velocity, and uses its crossing of the phase endpoint to stop or clamp movement"
+0x004eae6c,10,1,RandomWaypointTimerStepApply@0x0044d280,,.data,zero-filled virtual tail,,,interpreted,Y-axis accumulated progress value for the active randomized waypoint movement phase,high,Findings 258 and 390; RandomWaypointTimerStepApply advances this phase value with the Y velocity alongside the X/Z phase values and clamps the associated position when the endpoint is crossed
+0x004eae70,10,1,RandomWaypointTimerStepApply@0x0044d280,,.data,zero-filled virtual tail,,,interpreted,Z-axis accumulated progress value for the active randomized waypoint movement phase,high,Findings 258 and 390; RandomWaypointTimerStepApply advances this phase value with the Z velocity alongside the X/Y phase values and clamps the associated position when the endpoint is crossed
 0x004eae74,3,3,LightEffectsMoveParametersStore@0x0044cef0; ScenePositionResetAndEffectMotionCancel@0x0044cf70; VectorWithinAxisTolerance@0x0044d9a0,,.data,zero-filled virtual tail,,,unreviewed,,,
 0x004eae78,1,1,VectorWithinAxisTolerance@0x0044d9a0,,.data,zero-filled virtual tail,,,unreviewed,,,
 0x004eae7c,1,1,VectorWithinAxisTolerance@0x0044d9a0,,.data,zero-filled virtual tail,,,unreviewed,,,
@@ -2004,7 +2004,7 @@ address,decompile_reference_count,function_count,functions,finding_mentions,imag
 0x00556128,10,4,GameConfigInit@0x0041fb50; DebugPanelTextDrawUpdate@0x004230c0; SelectedEntityGroundMarkerRender@0x004248b0; PairCountHistogramBuild@0x0045c0d0,,.data,zero-filled virtual tail,,,unreviewed,,,
 0x0055612c,1,1,GameConfigInit@0x0041fb50,,.data,zero-filled virtual tail,,,unreviewed,,,
 0x00556130,3,1,GameConfigInit@0x0041fb50,,.data,zero-filled virtual tail,,,unreviewed,,,
-0x00556134,11,3,GameConfigInit@0x0041fb50; MenuOptionPanelTextureUpdate@0x004355c0; ObjectiveTextOverlayLoad@0x004574e0,,.data,zero-filled virtual tail,,,unreviewed,,,
+0x00556134,11,3,GameConfigInit@0x0041fb50; MenuOptionPanelTextureUpdate@0x004355c0; ObjectiveTextOverlayLoad@0x004574e0,,.data,zero-filled virtual tail,,,interpreted,Loaded MBriefFONT interface font handle,high,"Finding 406; InterfaceFontResourcesInit loads Interface\\Fonts\\MBriefFONT.bmp here, and settings dialog text buffers and drawing paths use this handle"
 0x00556138,13,4,LoadMenuBuild@0x004161f0; GameConfigInit@0x0041fb50; MenuOptionPanelTextureUpdate@0x004355c0; ObjectiveTextOverlayLoad@0x004574e0,,.data,zero-filled virtual tail,,,interpreted,Loaded MBriefFONT2 interface font handle,high,"Finding 406; InterfaceFontResourcesInit loads Interface\\Fonts\\MBriefFONT2.bmp here, and help, dialog, mission briefing, and mission result text paths use this handle for measurement or drawing"
 0x0055613c,2,2,MainMenuTextItem@0x004103d0; GameConfigInit@0x0041fb50,,.data,zero-filled virtual tail,,,unreviewed,,,
 0x00556140,11,5,GameConfigInit@0x0041fb50; MainSimStep@0x004250c0; GlobalSubsystemStateReset@0x004263c0; LevelLoad@0x00429890; KeepRunning@0x00435940,,.data,zero-filled virtual tail,,,unreviewed,,,
