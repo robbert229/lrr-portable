@@ -351,6 +351,114 @@ int main(void)
         cmd_context_set(&ctx);
     }
 
+    /* The selection filter / state monitor (2026-10-24). */
+    {
+        GameContext fctx;
+        game_context_init(&fctx);
+        cmd_context_set(&fctx);
+
+        EntitySlot bad;
+        memset(&bad, 0, sizeof(bad));
+        bad.type = 4;
+        CHECK(selection_candidate_filter(&bad, 1, 0) == 0
+                  && selection_count(&fctx) == 0,
+              "the unstate-gated candidate is ineligible");
+
+        EntitySlot cand;
+        memset(&cand, 0, sizeof(cand));
+        cand.type = 4;
+        cand.flags_3e8 = 0x100u;
+        CHECK(selection_candidate_filter(&cand, 1, 0) == 0
+                  && selection_count(&fctx) == 1
+                  && cand.flags_3e8 == (0x200000u | 0x100u),
+              "the eligible candidate appends and gets the selected bit");
+        CHECK(selection_candidate_filter(&cand, 1, 0) == 0
+                  && selection_count(&fctx) == 1,
+              "the already-selected candidate is rejected");
+        CHECK(selection_candidate_filter(&cand, 0, 0) == 0
+                  && selection_count(&fctx) == 1,
+              "mode 0 takes the already-selected path (marker seam)");
+
+        /* Marked (unselected) candidates reject under mode 0. */
+        EntitySlot marked;
+        memset(&marked, 0, sizeof(marked));
+        marked.type = 4;
+        marked.flags_3e8 = 0x100u;
+        marked.flags_3ec = 2u;
+        CHECK(selection_candidate_filter(&marked, 0, 0) == 0
+                  && selection_count(&fctx) == 1,
+              "the marked candidate rejects under mode 0");
+
+        /* Visual half: flag bit 0x80 with zero stats returns 1. */
+        EntitySlot vis;
+        memset(&vis, 0, sizeof(vis));
+        vis.type = 4;
+        vis.flags_3e8 = 0x100u | 0x80u;
+        CHECK(selection_candidate_filter(&vis, 1, 0) == 1
+                  && selection_count(&fctx) == 2,
+              "the visual half reports success (seams cited)");
+
+        /* Attach indirection: the filter swaps to the +0x304 object. */
+        EntitySlot child;
+        memset(&child, 0, sizeof(child));
+        child.attach_304 = &cand;
+        CHECK(selection_candidate_filter(&child, 1, 0) == 0
+                  && selection_count(&fctx) == 2,
+              "the attached candidate (already selected) is rejected");
+
+        /* The hundred-entry cap: nothing appends past it. */
+        fctx.selection_count = 100;
+        EntitySlot more;
+        memset(&more, 0, sizeof(more));
+        more.type = 4;
+        more.flags_3e8 = 0x100u;
+        CHECK(selection_candidate_filter(&more, 1, 0) == 0
+                  && fctx.selection_count == 100,
+              "the cap rejects (corpus bound)");
+        (void)more;
+
+        /* The state monitor: count passes over the head entry. */
+        static uint8_t stats_img[0x200];
+        memset(stats_img, 0, sizeof(stats_img));
+        const uint32_t sw = 0x20000u;
+        memcpy(stats_img + 0x144, &sw, 4);
+
+        EntitySlot head;
+        memset(&head, 0, sizeof(head));
+        EntitySlot owner;
+        memset(&owner, 0, sizeof(owner));
+        EntitySlot grand;
+        memset(&grand, 0, sizeof(grand));
+        owner.flags_3e4 = 8u | 0x100u;
+        owner.owner_36c = &grand;
+        head.owner_36c = &owner;
+
+        GameContext mctx;
+        game_context_init(&mctx);
+        cmd_context_set(&mctx);
+        selection_add(&mctx, &head);
+        CHECK(selected_entity_state_monitor() == 1, "the monitor answers count");
+        CHECK((owner.flags_3e4 & 8u) != 0u && owner.owner_36c == &grand,
+              "no stats bit — the owner keeps its word and bit 3");
+
+        head.stats_record = stats_img;
+        owner.owner_36c = &grand;
+        owner.flags_3e4 |= 8u;
+        CHECK(selected_entity_state_monitor() == 1
+                  && (owner.flags_3e4 & 8u) == 0u
+                  && owner.owner_36c == NULL,
+              "the stats bit clears the owner's word and bit 3");
+
+        selection_add(&mctx, &owner); /* second entry: two corpus-shaped passes */
+        owner.owner_36c = &grand;
+        owner.flags_3e4 |= 8u;
+        CHECK(selected_entity_state_monitor() == 2
+                  && (owner.flags_3e4 & 8u) == 0u
+                  && owner.owner_36c == NULL,
+              "the two-pass run clears the owner again");
+        cmd_context_set(&ctx);
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "cmd_test: %d failure(s)\n", s_failures);
         return 1;

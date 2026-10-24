@@ -199,6 +199,24 @@ int selection_command_dispatch(int param);
 void entity_random_valid_cell_command_create(void* entity);
 int selection_entity_remove(void* entity);
 
+/* --- selection filter / state monitor (2026-10-24) ---------------------------
+ * SelectionCandidateFilter (FUN_004526e0, findings 06/10/77/85/468): the
+ * insert half of the selection filter — follow the +0x304 attach pointer,
+ * run the ported eligibility and already-selected leaves, and (below the
+ * corpus's hundred-entry cap) append the candidate with the +0x3e8
+ * selected bit set. The marker/HUD reset, the activity refresh / action
+ * reset / turn-issue leaves, and the visual-resource route are unported
+ * entity/render seams; the type-2 turn branch additionally needs the
+ * engine view the cmd context does not carry.
+ * SelectedEntityStateMonitor (FUN_00452cc0, findings 06/10): `count`
+ * passes over the FIRST selection entry (the corpus counter never
+ * advances — faithful), clearing the attached owner's +0x3e4 bit 3 and
+ * owner word when its stats word bit 0x20000 is set. The per-type
+ * teardown calls are the unported entity-layer teardown family, like the
+ * media mode-leaf's hooks. NULL entries skip (deviation). */
+int selection_candidate_filter(void* entity, int mode, int param_3);
+int selected_entity_state_monitor(void);
+
 #ifdef __cplusplus
 }
 #endif

@@ -232,6 +232,8 @@ typedef struct EntitySlot {
     void*    wake_target;    /* +0x364: attached wake target (FUN_0044c110;
                                * the corpus fills it via the attach-pair
                                * writer 0x44c0e2, which is not ported)      */
+    const void* attach_304;  /* +0x304: attached object the selection
+                              * filter follows in place of the candidate   */
     const void* owner_36c;   /* +0x36c: owner pointer read by the
                               * context-selected predicate and the
                               * selection-command dispatch (pointer-sized

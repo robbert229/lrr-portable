@@ -7,6 +7,7 @@
 #include "ai.hpp"
 #include "select.hpp"
 #include "util.hpp"
+#include "entity.hpp"
 #include "gods98/heap.hpp"
 #include "gods98/media.hpp"
 
@@ -884,4 +885,84 @@ int selection_entity_remove(void* entity)
     ((EntitySlot*)entity)->flags &= ~ENTITY_SELECTED;
     ((EntitySlot*)entity)->flags_3e8 &= ~ENTITY_SELECTED;
     return 1;
+}
+
+/* --- selection filter / state monitor (see cmd.hpp) --------------------------
+ * The corpus's selection-array append + flag-word set land on the port's
+ * modeled selection storage; everything it would hand to the entity /
+ * activity / visual layers is documented there as an unported seam. */
+int selection_candidate_filter(void* entity, int mode, int param_3)
+{
+    if (s_ctx == NULL || entity == NULL) {
+        return 0; /* deviation: the corpus dereferences blindly */
+    }
+    EntitySlot* e = (EntitySlot*)entity;
+    if (e->attach_304 != NULL) {
+        e = (EntitySlot*)e->attach_304;
+    }
+    if (selection_candidate_eligibility_check(e) == 0) {
+        return 0;
+    }
+    if (mode == 0
+        && selection_candidate_already_selected_or_marked(s_ctx, e) != 0) {
+        /* Corpus: SelectionClearMarkerAndResetHud — unported marker/HUD
+         * seam (finding 77's enqueue+reset) — then reject. */
+        return 0;
+    }
+    if (selection_contains_entity(s_ctx, e) != 0) {
+        return 0;
+    }
+    if (s_ctx->selection_count >= 100) {
+        return 0;
+    }
+    /* Corpus pool refresh: EntityPoolFindByCallbackFiltered is ported but
+     * its callback is a corpus code literal (an unported seam). */
+    ((EntitySlot**)selection_record_array(s_ctx))[s_ctx->selection_count] = e;
+    s_ctx->selection_count = s_ctx->selection_count + 1;
+    e->flags_3e8 |= 0x200000u;
+    if (e->type != 4
+        && (e->flags_3e0 & 0x24002000u) == 0u
+        && (e->flags_3e4 & 0x100u) == 0u) {
+        /* Activity refresh + action reset: EntityActivityRecordsRefresh
+         * / EntityActionSequenceReset — unported entity-layer seams. */
+        if (e->type == 2 && param_3 != 0) {
+            /* Type-2 turn issue: the follow camera's facing (portable via
+             * the engine's view) plus EntityStateReset / turn-activity
+             * issue — unported, and the cmd context carries no view. */
+        }
+    }
+    if ((e->flags_3e8 & 0x80u) != 0u) {
+        if ((entity_stats_word_get(e) & 0x20000u) == 0u
+            || e->owner_36c != NULL) {
+            /* Visual half: object lookup + the sound-route resource
+             * update — hook-boundary seams (cited in ai.cpp), no state. */
+            return 1;
+        }
+    }
+    return 0;
+}
+
+int selected_entity_state_monitor(void)
+{
+    const int count = (s_ctx != NULL) ? s_ctx->selection_count : 0;
+    /* Faithful corpus shape: the counter is not used inside the loop —
+     * every pass inspects the first selection entry. */
+    for (int i = 0; i < count; ++i) {
+        EntitySlot* head = (count > 0)
+            ? (EntitySlot*)selection_record_array(s_ctx)[0]
+            : NULL;
+        if (head == NULL) {
+            continue;
+        }
+        if ((entity_stats_word_get(head) & 0x20000u) != 0u) {
+            EntitySlot* owner = (EntitySlot*)head->owner_36c;
+            if (owner != NULL) {
+                owner->flags_3e4 &= 0xfffffff7u;
+                owner->owner_36c = NULL;
+            }
+        }
+        /* Per-type teardown (type 4 / type 0xb / the generic EntityTeardown)
+         * is the unported entity-layer teardown family — documented seam. */
+    }
+    return count;
 }
