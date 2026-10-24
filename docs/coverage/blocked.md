@@ -28,12 +28,13 @@ must land first.
 ## Media-playback wave
 
 > Update (2026-10-24): the state machines (`0x4297b0` / `0x4295f0`,
-> issues #301 / #302), the playback toggle (`0x429810`, issue #298), and
-> the cue-dispatch pair with the cursor-override state (`0x428800` /
-> `0x4351a0` / `0x45cc20` / `0x45cc40`, issue #300) are **ported** — the
-> first three clusters of this wave.
+> issues #301 / #302), the playback toggle (`0x429810`, issue #298), the
+> cue-dispatch pair with the cursor-override state (`0x428800` /
+> `0x4351a0` / `0x45cc20` / `0x45cc40`, issue #300), and the rect-aware
+> video pump (`0x42efc0`, issue #303) are **ported** — the remaining
+> rows stay blocked.
 
 | Function (`address`) | Issue(s) | Blocker | Next action |
 | --- | --- | --- | --- |
 | `StreamPlayLevel` (`0x416150`) / `StreamPlayTutorial` (`0x4161a0`) | #299 | Both resolve a `Stream_LevelName_*` alias and submit through `SoundSubmitWithGlobalCooldown @ 0x464ef0` (ported): the duration half asks `SoundObjectDurationGet @ 0x465160` → `StreamedWaveBufferStepRate @ 0x47b8e0` (unported, #340) and the stream state lands at the unported streamed-voice seam (`FUN_0047b970` selector). | After the streamed-voice layer (with #340). |
-| `DirectShowVideoPlaybackLoop` (`0x42efc0`) | #303 | Not yet triaged against the movie module; the rect-aware playback seam needs the render-surface restore semantics read against `movie.*` first. | Triage next: shape-compatible rect pump into the existing movie driver. |
+

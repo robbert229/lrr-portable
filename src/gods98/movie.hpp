@@ -105,6 +105,68 @@ int movie_next(Movie* m, MovieOut* out);
 void movie_scale_rgba(const uint8_t* src, int sw, int sh, int spitch,
                       uint8_t* dst, int dw, int dh, int dpitch);
 
+/* --- rect-aware video pump (port issue #303) ------------------------------ */
+
+/* DirectShowVideoPlaybackLoop @ 0x42efc0 replacement. The corpus takes a
+ * destination rectangle (level load supplies its float dimensions; the
+ * objective path the achieved-AVI record's) or NULL for the full window,
+ * restores the render surface from the primary when a rect is given
+ * (the corpus's RenderSurfaceRestoreFromPrimary role runs once before the
+ * pump), blits frames through the sample-update role until it reports
+ * false, polling the message pump each iteration, and closes the wrapper. Finding 206: the corpus's own
+ * DirectDraw Blit passes null rectangles, so the computed rect never lands
+ * on the blit — this port replacement *does* apply it (the shape-compatible
+ * contract this issue asks for), and that is the deviation. */
+typedef struct MovieRect {
+    int x, y, w, h;   /* destination rectangle, window pixels */
+} MovieRect;
+
+/* Frame-source role (`DirectShowSampleUpdateAndBlit`): fill `out`, return 0
+ * for one delivered frame, anything else to end the pump (EOF or error). */
+typedef int (*MovieNextFn)(MovieOut* out, void* user);
+
+/* Present role: the destination-side blit of one frame. The rect semantics
+ * live here (NULL = full window); non-zero ends the pump. */
+typedef int (*MoviePresentFn)(const MovieOut* out, const MovieInfo* info,
+                              const MovieRect* rect, void* user);
+
+/* Quit-poll role (`MainLoopFramePump`): non-zero leaves the branch. */
+typedef int (*MovieQuitFn)(void* user);
+
+/* Setup-time surface-restore seam (the rect branch's restore-first call).
+ * Runs once before the first frame, and only when a rect is given; the
+ * port's lock-present-blit path has no lasting surface state, so the
+ * driver passes NULL and the hook exists for tests to observe the
+ * setup-before-frames ordering. */
+typedef void (*MovieSurfaceRestoreFn)(void* user);
+
+/* Pump bundle (NULL `quit`/`restore` allowed). */
+typedef struct MoviePump {
+    MovieNextFn            next;
+    void*                  next_user;
+    const MovieInfo*       info;
+    const MovieRect*       rect;        /* NULL = full-window branch */
+    MoviePresentFn         present;
+    void*                  present_user;
+    MovieQuitFn            quit;
+    void*                  quit_user;
+    MovieSurfaceRestoreFn  restore;
+    void*                  restore_user;
+} MoviePump;
+
+/* One entry point for both corpus branches: poll `quit` between frames,
+ * blit through `present` while `next` keeps delivering. Returns the number
+ * of frames pumped. */
+int movie_video_playback_loop(const MoviePump* pump);
+
+/* Nearest-neighbour scale-fill of an RGBA32 frame into a destination
+ * sub-rectangle (pure pixel math, same mapping as movie_scale_rgba but
+ * sampled over the rect; clipped to the destination with the rect-relative
+ * mapping kept). */
+void movie_scale_rgba_rect(const uint8_t* src, int sw, int sh, int spitch,
+                           uint8_t* dst, int dw, int dh, int dpitch,
+                           const MovieRect* rect);
+
 /* --- config surface (finding 23 callbacks) ------------------------------ */
 
 /* AvisEnabled @ 0x414ce0: play movies when `Lego* Main DontPlayAvis` is not

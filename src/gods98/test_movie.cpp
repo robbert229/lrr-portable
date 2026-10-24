@@ -368,12 +368,172 @@ static void test_real(const char* dir)
 
 /* ------------------------------------------------------------------ */
 
+/* ------------------------------------------------------------------ *
+ *  Rect-aware pump (DirectShowVideoPlaybackLoop @ 0x42efc0, issue
+ *  #303). Driven by a fake decoder (frames 0..n-1, then EOF) and a fake
+ *  present sink, so both branches are checked without any real media.
+ * ------------------------------------------------------------------ */
+
+typedef struct FakePump {
+    int       next_count;
+    int       frame_count;
+    int       quit_polls;
+    int       quit_after;    /* return quit truthy after this many polls */
+    int       present_count;
+    int       restore_count;
+    int       restore_seen_before_first_present;
+    int       stop_at_frame; /* present reports failure at this frame */
+    const MovieRect* last_rect;
+    int       rect_was_null;
+} FakePump;
+
+static FakePump s_fake;
+
+static int fake_next(MovieOut* out, void* user)
+{
+    (void)user;
+    if (++s_fake.next_count > 3) {
+        return 1;
+    }
+    static const uint8_t rgba[16] = { 1, 0, 0, 0, 0, 1, 0, 0,
+                                      0, 0, 1, 0, 0, 0, 0, 1 };
+    memset(out, 0, sizeof(*out));
+    out->rgba = rgba;
+    out->rgba_pitch = 16;
+    return 0;
+}
+
+static void fake_restore(void* user)
+{
+    (void)user;
+    if (s_fake.present_count == 0) {
+        s_fake.restore_seen_before_first_present = 1;
+    }
+    ++s_fake.restore_count;
+}
+
+static int fake_present(const MovieOut* out, const MovieInfo* info,
+                        const MovieRect* rect, void* user)
+{
+    (void)out;
+    (void)info;
+    (void)user;
+    if (rect == NULL) {
+        s_fake.rect_was_null = 1;
+    } else {
+        s_fake.last_rect = rect;
+    }
+    ++s_fake.present_count;
+    if (s_fake.stop_at_frame > 0 && s_fake.present_count == s_fake.stop_at_frame) {
+        return 1;
+    }
+    return 0;
+}
+
+static int fake_quit(void* user)
+{
+    (void)user;
+    ++s_fake.quit_polls;
+    if (s_fake.quit_after > 0 && s_fake.quit_polls >= s_fake.quit_after) {
+        return 1;
+    }
+    return 0;
+}
+
+static void fake_pump_reset(void)
+{
+    memset(&s_fake, 0, sizeof(s_fake));
+    s_fake.rect_was_null = 0;
+}
+
+static void test_rect_pump(void)
+{
+    MovieInfo info;
+    memset(&info, 0, sizeof(info));
+    info.width = 2;
+    info.height = 2;
+
+    MoviePump pump;
+    memset(&pump, 0, sizeof(pump));
+    pump.next = fake_next;
+    pump.info = &info;
+    pump.present = fake_present;
+    pump.quit = fake_quit;
+    pump.restore = fake_restore;
+
+    /* --- full-window branch --------------------------------------- */
+    fake_pump_reset();
+    pump.rect = NULL;
+    int frames = movie_video_playback_loop(&pump);
+    CHECK(frames == 3, "null-rect pump plays the decoder's frames (3)");
+    CHECK(s_fake.present_count == 3 && s_fake.rect_was_null == 1,
+          "null-rect present always sees a null rectangle");
+    CHECK(s_fake.restore_count == 0,
+          "null-rect branch never runs the surface-restore seam");
+
+    /* --- rect branch ---------------------------------------------- */
+    fake_pump_reset();
+    MovieRect r = { 8, 4, 6, 12 };
+    pump.rect = &r;
+    frames = movie_video_playback_loop(&pump);
+    CHECK(frames == 3, "rect pump plays the same frames");
+    CHECK(s_fake.restore_count == 1 &&
+              s_fake.restore_seen_before_first_present == 1,
+          "the rect branch restores the surface once, before the first frame");
+    CHECK(s_fake.last_rect != NULL &&
+              s_fake.last_rect->x == 8 && s_fake.last_rect->y == 4 &&
+              s_fake.last_rect->w == 6 && s_fake.last_rect->h == 12,
+          "the rect reaches the present hook unchanged");
+    CHECK(s_fake.rect_was_null == 0, "the rect branch never reports null");
+    CHECK(s_fake.quit_polls == 3, "the pump polls quit once per played frame");
+
+    /* --- quit ends the branch mid-stream -------------------------- */
+    fake_pump_reset();
+    pump.rect = NULL;
+    s_fake.quit_after = 2;
+    frames = movie_video_playback_loop(&pump);
+    CHECK(frames == 2 && s_fake.present_count == 2,
+          "a quit between frames leaves the branch");
+    CHECK(s_fake.next_count == 2, "the pump stops pulling frames on quit");
+    s_fake.quit_after = 0;
+
+    /* --- present failure leaves too (blit-report role) ------------- */
+    fake_pump_reset();
+    s_fake.stop_at_frame = 2;
+    frames = movie_video_playback_loop(&pump);
+    CHECK(frames == 1 && s_fake.next_count == 2,
+          "a failed present ends the pump after the failing frame was pulled");
+
+    CHECK(movie_video_playback_loop(NULL) == 0, "null pump reports zero frames");
+
+    /* --- the rect scaler itself ------------------------------------ */
+    uint8_t src[16] = { 1, 1, 1, 0,  2, 2, 2, 0,  3, 3, 3, 0,  4, 4, 4, 0 };
+    uint8_t dst[64];   /* 4x4 destination */
+    memset(dst, 0, sizeof(dst));
+    MovieRect fill = { 1, 1, 2, 2 };
+    movie_scale_rgba_rect(src, 2, 2, 8, dst, 4, 4, 16, &fill);
+    CHECK(dst[(1 * 16) + 1 * 4] == 1 && dst[(1 * 16) + 2 * 4] == 2 &&
+              dst[(2 * 16) + 1 * 4] == 3 && dst[(2 * 16) + 2 * 4] == 4,
+          "the rect blit maps the four source pixels into the destination rect");
+    CHECK(dst[0] == 0 && dst[3 * 16 + 3 * 4] == 0,
+          "pixels outside the rect are untouched");
+
+    /* clipped rect: only the intersection lands */
+    memset(dst, 0, sizeof(dst));
+    MovieRect over = { 3, 3, 4, 4 };
+    movie_scale_rgba_rect(src, 2, 2, 8, dst, 4, 4, 16, &over);
+    CHECK(dst[3 * 16 + 3 * 4] != 0, "clipped rect paints the in-bounds corner");
+    CHECK(dst[0] == 0 && dst[1] == 0, "the clip spares the out-of-rect pixels");
+}
+
+
 int main(int argc, char** argv)
 {
     printf("== movie ==\n");
 
     test_config();
     test_scaler();
+    test_rect_pump();
 
     if (movie_available()) {
         printf("movie: FFmpeg runtime present (libavcodec major id in use)\n");

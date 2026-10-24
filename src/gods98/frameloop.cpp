@@ -109,104 +109,167 @@ static int64_t now_ms(void)
     return (int64_t)ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
 }
 
-/* Play one AVI through the software decoder (src/gods98/movie.*) to the full
- * window: decode -> scale-fill -> present, feed the movie's audio track to
- * the seam, paced at the movie's fps. Modal like the corpus's
- * MoviePlayLoop @ 0x4157c0 — steps until done or a skip key (ESC/Space/
- * Enter/click), and propagates a window quit. Returns 1 when a movie was
- * played (or skipped after opening), 0 when it could not be opened. */
+/* Play one AVI through the software decoder (src/gods98/movie.*) through
+ * the rect-aware pump entry (movie_video_playback_loop, the port
+ * replacement for DirectShowVideoPlaybackLoop @ 0x42efc0 — the level-load
+ * and objective-tick video paths shape through this same seam): decode ->
+ * scale-fill (full window for rect == NULL, into rect otherwise) ->
+ * present, feed the movie's audio track to the seam, paced at the movie's
+ * fps. Modal like the corpus's MoviePlayLoop @ 0x4157c0 — steps until done
+ * or a skip key (ESC/Space/Enter/click), and propagates a window quit.
+ * Returns 1 when a movie was played (or skipped after opening), 0 when it
+ * could not be opened. */
+typedef struct MoviePumpState {
+    Movie*             mv;
+    MovieInfo          mi;
+    const MovieRect*   rect;      /* NULL = full-window branch */
+    PlatformWindow*    win;
+    DisplaySurface*    surf;
+    AudioPlayer*       ap;
+    int*               quit;
+    int                skipped;
+    int64_t            next_t;
+    int                frame_ms;
+    long long          frames;
+} MoviePumpState;
+
+static int s_movie_frame_next(MovieOut* out, void* user)
+{
+    MoviePumpState* st = (MoviePumpState*)user;
+    int r = movie_next(st->mv, out);
+    return r == 0 ? 0 : 1;   /* EOF or error ends the branch */
+}
+
+static int s_movie_frame_present(const MovieOut* out, const MovieInfo* mi,
+                                const MovieRect* rect, void* user)
+{
+    MoviePumpState* st = (MoviePumpState*)user;
+    if (st->ap->dev != NULL && out->audio_frames > 0 && out->audio_rate > 0) {
+        platform_audio_play_stereo(st->ap->dev, out->audio, out->audio_frames,
+                                   out->audio_rate);
+    }
+    void* pixels = NULL;
+    int   pitch = 0;
+    if (surface_lock(st->surf, &pixels, &pitch) == 0) {
+        if (rect != NULL) {
+            movie_scale_rgba_rect(out->rgba, mi->width, mi->height,
+                                  out->rgba_pitch, (uint8_t*)pixels,
+                                  WINDOW_W, WINDOW_H, pitch, rect);
+        } else {
+            movie_scale_rgba(out->rgba, mi->width, mi->height, out->rgba_pitch,
+                             (uint8_t*)pixels, WINDOW_W, WINDOW_H, pitch);
+        }
+        platform_screenshot(st->win, pixels, pitch, WINDOW_W, WINDOW_H,
+                            (int)st->frames);
+        platform_present_pixels(st->win, pixels, pitch, WINDOW_W, WINDOW_H);
+        surface_unlock(st->surf, pixels);
+    }
+    st->next_t += st->frame_ms;
+    int64_t now = now_ms();
+    if (st->next_t > now) {
+        Sleep((DWORD)(st->next_t - now));
+    } else if (now - st->next_t > 2 * st->frame_ms) {
+        st->next_t = now;    /* fell behind — resync instead of bursting */
+    }
+    ++st->frames;
+    return 0;
+}
+
+static int s_movie_frame_quit(void* user)
+{
+    MoviePumpState* st = (MoviePumpState*)user;
+    PlatformEvent evb[16];
+    int nev = platform_pump_events(st->win, evb, 16);
+    for (int i = 0; i < nev; ++i) {
+        if (evb[i].kind == PLATFORM_EVENT_QUIT) {
+            *st->quit = 1;
+            return 1;
+        }
+        if (evb[i].kind == PLATFORM_EVENT_KEYDOWN
+            && (evb[i].code == PLATFORM_KEY_ESC
+                || evb[i].code == ' ' || evb[i].code == PLATFORM_KEY_ENTER)) {
+            st->skipped = 1;
+            return 1;
+        }
+        if (evb[i].kind == PLATFORM_EVENT_MOUSE && evb[i].button == 1) {
+            st->skipped = 1;
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static int movie_play_avi_rect(const char* os_path, const char* label,
+                               PlatformWindow* win, DisplaySurface* surf,
+                               AudioPlayer* ap, int* quit,
+                               const MovieRect* rect, FILE* log);
+
 static int movie_play_avi(const char* os_path, const char* label,
                           PlatformWindow* win, DisplaySurface* surf,
                           AudioPlayer* ap, int* quit, FILE* log)
+{
+    return movie_play_avi_rect(os_path, label, win, surf, ap, quit, NULL, log);
+}
+
+static int movie_play_avi_rect(const char* os_path, const char* label,
+                               PlatformWindow* win, DisplaySurface* surf,
+                               AudioPlayer* ap, int* quit,
+                               const MovieRect* rect, FILE* log)
 {
     Movie* mv = movie_open_path(os_path);
     if (mv == NULL) {
         fprintf(log, "movie: %s: cannot open/decode %s\n", label, os_path);
         return 0;
     }
-    MovieInfo mi;
-    if (movie_info(mv, &mi) != 0 || mi.width <= 0 || mi.height <= 0) {
+    MoviePumpState st;
+    memset(&st, 0, sizeof(st));
+    st.mv = mv;
+    if (movie_info(mv, &st.mi) != 0 || st.mi.width <= 0 || st.mi.height <= 0) {
         fprintf(log, "movie: %s: no video stream in %s\n", label, os_path);
         movie_close(mv);
         return 0;
     }
-    fprintf(log, "movie: %s %s — %dx%d @ %d fps, %d Hz audio\n", label,
-            os_path, mi.width, mi.height,
-            mi.fps_den > 0 && mi.fps_num > 0 ? mi.fps_num / mi.fps_den
-                                             : mi.fps_num,
-            mi.audio_rate);
+    fprintf(log, "movie: %s %s — %dx%d @ %d fps, %d Hz audio%s\n", label,
+            os_path, st.mi.width, st.mi.height,
+            st.mi.fps_den > 0 && st.mi.fps_num > 0 ? st.mi.fps_num / st.mi.fps_den
+                                             : st.mi.fps_num,
+            st.mi.audio_rate, rect != NULL ? " (rect)" : "");
 
     /* The movie carries its own soundtrack — silence the demo's ambient
      * loop while it plays (the caller re-seeds it afterwards). */
     audio_stop(ap);
 
-    int frame_ms = mi.fps_den > 0 && mi.fps_num > 0
-                       ? 1000 * mi.fps_den / mi.fps_num
-                       : 40;
-    if (frame_ms < 1) {
-        frame_ms = 1;
+    st.rect = rect;
+    st.win = win;
+    st.surf = surf;
+    st.ap = ap;
+    st.quit = quit;
+    st.frame_ms = st.mi.fps_den > 0 && st.mi.fps_num > 0
+                      ? 1000 * st.mi.fps_den / st.mi.fps_num
+                      : 40;
+    if (st.frame_ms < 1) {
+        st.frame_ms = 1;
     }
-    int64_t next_t = now_ms();
-    int64_t frames = 0;
-    int skipped = 0;
-    while (!*quit && !skipped) {
-        PlatformEvent evb[16];
-        int nev = platform_pump_events(win, evb, 16);
-        for (int i = 0; i < nev; ++i) {
-            if (evb[i].kind == PLATFORM_EVENT_QUIT) {
-                *quit = 1;
-                break;
-            }
-            if (evb[i].kind == PLATFORM_EVENT_KEYDOWN
-                && (evb[i].code == PLATFORM_KEY_ESC
-                    || evb[i].code == ' ' || evb[i].code == PLATFORM_KEY_ENTER)) {
-                skipped = 1;
-                break;
-            }
-            if (evb[i].kind == PLATFORM_EVENT_MOUSE && evb[i].button == 1) {
-                skipped = 1;
-                break;
-            }
-        }
-        if (*quit || skipped) {
-            break;
-        }
+    st.next_t = now_ms();
 
-        MovieOut out;
-        int r = movie_next(mv, &out);
-        if (r == 1) {
-            break; /* end of movie */
-        }
-        if (r < 0) {
-            fprintf(log, "movie: %s: decode error\n", label);
-            break;
-        }
-        if (ap->dev != NULL && out.audio_frames > 0 && out.audio_rate > 0) {
-            platform_audio_play_stereo(ap->dev, out.audio, out.audio_frames,
-                                       out.audio_rate);
-        }
-        void* pixels = NULL;
-        int   pitch = 0;
-        if (surface_lock(surf, &pixels, &pitch) == 0) {
-            movie_scale_rgba(out.rgba, mi.width, mi.height, out.rgba_pitch,
-                             (uint8_t*)pixels, WINDOW_W, WINDOW_H, pitch);
-            platform_screenshot(win, pixels, pitch, WINDOW_W, WINDOW_H,
-                                (int)frames);
-            platform_present_pixels(win, pixels, pitch, WINDOW_W, WINDOW_H);
-            surface_unlock(surf, pixels);
-        }
-        next_t += frame_ms;
-        int64_t now = now_ms();
-        if (next_t > now) {
-            Sleep((DWORD)(next_t - now));
-        } else if (now - next_t > 2 * frame_ms) {
-            next_t = now; /* fell behind — resync instead of bursting */
-        }
-        ++frames;
-    }
+    MoviePump pump;
+    memset(&pump, 0, sizeof(pump));
+    pump.next = s_movie_frame_next;
+    pump.next_user = &st;
+    pump.info = &st.mi;
+    pump.rect = rect;                 /* NULL = full-window branch */
+    pump.present = s_movie_frame_present;
+    pump.present_user = &st;
+    pump.quit = s_movie_frame_quit;
+    pump.quit_user = &st;
+    /* No restore hook: the port's lock-present-blit path leaves no lasting
+     * surface state, so the corpus's setup-time restore seam is inert
+     * here. */
+    movie_video_playback_loop(&pump);
+
     movie_close(mv);
     fprintf(log, "movie: %s done — %lld frames%s\n", label,
-            (long long)frames, skipped ? " (skipped)" : "");
+            (long long)st.frames, st.skipped ? " (skipped)" : "");
     return 1;
 }
 
@@ -431,7 +494,10 @@ static void frameloop_load_level(FILE* log, const char* wad_dir,
                 game->level->objective);
         /* Level intro cinematic — MoviePlayLevelVideo @ 0x415990 reads the
          * level's `Video` config key and plays it after load (the corpus
-         * plays it inside LevelLoad), same gates as boot. */
+         * plays it inside LevelLoad @ 0x429890 through
+         * DirectShowVideoPlaybackLoop @ 0x42efc0 — whose full-window branch
+         * this seam reproduces: the corpus's rect blit never applied its
+         * computed rectangle, finding 206), same gates as boot. */
         if (play_movies) {
             char mp[256], os[512];
             if (movie_level_video_path(game->cfg, level_name, mp, sizeof(mp))

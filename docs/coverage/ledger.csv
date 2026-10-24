@@ -678,7 +678,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00429850,FUN_00429850,named,ActiveEngineFieldB0Get,0,84
 00429860,FUN_00429860,named,EngineFloatField210GetByIndex,0,107
 00429880,FUN_00429880,named,EngineFloatField260Get,0,86
-00429890,FUN_00429890,ported,LevelLoad,7,25496
+00429890,FUN_00429890,ported,LevelLoad,8,25496
 0042b2f0,FUN_0042b2f0,named,EntityEffectCountersApplyFromRecord,0,267
 0042b330,FUN_0042b330,named,LoadTileMeshes,0,1613
 0042b480,FUN_0042b480,named,RectangularResourceTableDestroy,0,686
@@ -714,7 +714,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0042e8b0,FUN_0042e8b0,ported,ObjectListEntityTypeResolve,7,7597
 0042ed70,FUN_0042ed70,ported,EntityPointer,1,1332
 0042ef40,FUN_0042ef40,named,StatsLevelRecordCountForStatType,0,495
-0042efc0,FUN_0042efc0,named,DirectShowVideoPlaybackLoop,0,726
+0042efc0,FUN_0042efc0,ported,DirectShowVideoPlaybackLoop,5,726
 0042f0c0,FUN_0042f0c0,ported,PendingLevelName,1,1852
 0042f2e0,FUN_0042f2e0,named,TerrainCellEdgeFlagSetAndUpdate,0,550
 0042f350,FUN_0042f350,named,TerrainNeighborCoordinateCheck,0,2871

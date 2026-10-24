@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 325 | 12.7% |
+| ported | 326 | 12.7% |
 | anchored | 5 | 0.2% |
-| named | 2188 | 85.3% |
+| named | 2187 | 85.3% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 0 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (325 functions)
+  (326 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (5 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (2188 functions)
+  citation yet (2187 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (0 functions)
 
-**Game logic remaining to port: 2193 (85.5%).**
+**Game logic remaining to port: 2192 (85.5%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -646,7 +646,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0042dfc0` | ObjectPointerRegistryClearMatch |
 | `0x0042dff0` | ObjectPointerRegistryGetSlot |
 | `0x0042ef40` | StatsLevelRecordCountForStatType |
-| `0x0042efc0` | DirectShowVideoPlaybackLoop |
 | `0x0042f2e0` | TerrainCellEdgeFlagSetAndUpdate |
 | `0x0042f350` | TerrainNeighborCoordinateCheck |
 | `0x004302b0` | MapCellTrackingFlagsClearAndRefresh |

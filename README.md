@@ -1015,6 +1015,27 @@ subsystem gate, batch save/force/restore including the no-replay quirk
 and the unknown-event path, slot/cue mapping, select blocking, and the
 unmapped-code no-ops.
 
+**Rect-aware video pump** (2026-10-24; port issue #303):
+`movie_video_playback_loop` (in `src/gods98/movie.*`) is one
+shape-compatible entry point for `DirectShowVideoPlaybackLoop @
+0x42efc0`'s two branches — a null destination rectangle pumps decoded
+frames to the full window, and a supplied `MovieRect` scale-fills each
+frame into it (`movie_scale_rgba_rect`, the rect twin of the existing
+scaler) after the setup-time render-surface restore seam runs once
+first, like the corpus. Frames stream while the decoder keeps
+delivering, with the quit poll between frames. The frameloop movie
+driver's frame loop now routes through this pump, so the level-intro
+path — the port's replacement for the corpus's in-`LevelLoad @
+0x429890` video call — runs through the same seam. Deviation (documented
+in the header): the corpus's own DirectDraw blit passes null rectangles
+and never applies the computed rect (findings 200/206), so the shipped
+rect branch still fills the window; this port's replacement honors the
+rect per the issue's contract, and that is the intentional difference.
+`movie_test` drives both branches with a fake decoder and a fake sink:
+frame counts, restore-before-first-frame ordering (rect branch only),
+rect plumbing, quit leaving the branch mid-stream, failed-present
+resumption, and the pixel-exact rect blit with clipping.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the
