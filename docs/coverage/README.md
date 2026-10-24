@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 550 | 21.5% |
+| ported | 552 | 21.5% |
 | anchored | 5 | 0.2% |
-| named | 1963 | 76.6% |
+| named | 1960 | 76.4% |
 | runtime-import | 46 | 1.8% |
-| anonymous | 0 | 0.0% |
+| anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (550 functions)
+  (552 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1963 functions)
+  citation yet (1960 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1968 (76.8%).**
+**Game logic remaining to port: 1966 (76.7%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -210,7 +210,12 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0040e1e0` | CellCornerOccupancyScan |
 | `0x0040e350` | CellEntityKindCreateOrRemove |
 | `0x0040e8d0` | ScreenSpaceEffectDispatchIfEnabled |
+| `0x0040e910` | GlobalValueClearIfEqual |
+| `0x0040e930` | ErosionTimingStateInit |
+| `0x0040e9c0` | LavaErosionDelayFromCell |
 | `0x0040ee50` | LavaErosionPendingCellAdd |
+| `0x0040f000` | LavaErosionNeighborCheck |
+| `0x0040f0e0` | KindSixRandomMessageDispatchSweep |
 | `0x0040f2b0` | LavaErosionNeighborEligible |
 | `0x0040f330` | LavaErosionNeighborMutate |
 | `0x0040f5f0` | ErosionEightNeighborPropagate |
@@ -696,7 +701,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00450730` | TerrainCellChangeQueueAppend |
 | `0x00450780` | TerrainCellChangeQueueFlush |
 | `0x004507d0` | TerrainCellEdgeVectorQuery |
-| `0x00450960` | CellDirtyQueuePushAndClear |
 | `0x00450a80` | CellListMinDistanceScaleApply |
 | `0x00451180` | CellVariantEntryMatchCheck |
 | `0x00451230` | TerrainCellSurfaceVectorWrite |
