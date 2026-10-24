@@ -5,6 +5,7 @@ gods98_incs = [include_directories('.'), include_directories('..'),
 gods98_lib = static_library('gods98',
   'gods98.cpp',
   'string.cpp',
+  'heap.cpp',
   'engine.cpp',
   'tickers.cpp',
   'resource.cpp',
@@ -51,7 +52,8 @@ if get_option('platform') == 'native'
                  ['block', 'test_block.cpp'], ['model', 'test_model.cpp'],
                  ['entity_ae', 'test_entity.cpp'], ['movie', 'test_movie.cpp'],
                  ['flic', 'test_flic.cpp'], ['media', 'test_media.cpp'],
-                 ['string', 'test_string.cpp']]
+                 ['string', 'test_string.cpp'],
+                 ['heap', 'test_heap.cpp']]
     test_name = exe[0]
     t = executable(test_name + '_test', exe[1],
       include_directories : gods98_incs,

@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 417 | 16.3% |
+| ported | 422 | 16.5% |
 | anchored | 5 | 0.2% |
-| named | 2096 | 81.7% |
+| named | 2091 | 81.6% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 0 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (417 functions)
+  (422 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (2096 functions)
+  citation yet (2091 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 2101 (81.9%).**
+**Game logic remaining to port: 2096 (81.7%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -1148,6 +1148,9 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0047fd40` | GameFileReadLineDispatch |
 | `0x0047fdb0` | GameFilePrintFormat |
 | `0x0047fe30` | FileOpenRouteSelect |
+| `0x0047fea0` | WadEntryReadIntoStreamSlot |
+| `0x0047fed0` | GameFileHandleAllocate |
+| `0x0047ff30` | EngineHeapAllocate |
 | `0x0047ff50` | GameFileHandleRelease |
 | `0x0047ffc0` | MountedPathPrefixRewrite |
 | `0x00480050` | ReadCrlfLine |
