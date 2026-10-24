@@ -20,7 +20,7 @@ and curiosity; nothing in this repository is affiliated with or endorsed by the 
 
 ```
 README.md           This file
-docs/findings/      Reverse-engineering findings, 01–436 (see index below)
+docs/findings/      Reverse-engineering findings, 01–436 and 443 (see index below)
 docs/findings/      Reverse-engineering findings, 01–435 (see index below)
 docs/findings/      Reverse-engineering findings, 01–434 (see index below)
 docs/findings/      Reverse-engineering findings, 01–433 (see index below)
@@ -648,6 +648,7 @@ Open threads, in order of value:
 | 434 | [findings/434-scene-resources-lights-markers-and-transient-effects.md](docs/findings/434-scene-resources-lights-markers-and-transient-effects.md) | Scene Resources, Lights, Markers, and Transient Effects |
 | 435 | [findings/435-scene-objects-animation-and-render-records.md](docs/findings/435-scene-objects-animation-and-render-records.md) | Scene Objects, Animation, and Render Records |
 | 436 | [findings/436-simulation-ui-and-player-controls.md](docs/findings/436-simulation-ui-and-player-controls.md) | Simulation UI and Player Controls |
+| 443 | [findings/443-help-tutorial-and-interface-resources.md](docs/findings/443-help-tutorial-and-interface-resources.md) | Help, Tutorial, and Interface Resources |
 
 Canonical full pseudocode corpus: [`docs/decompiles/full/LEGORR.full.c`](docs/decompiles/full/LEGORR.full.c)
 (2564 manifest functions; see its [README](docs/decompiles/full/README.md)). The
