@@ -31,7 +31,8 @@ control and data flow, not runtime behavior after a failed initialization.
 at `DAT_0076ad80`, then separately clears the first 20 pool-bank pointers. It
 writes the string pointers and defaults used by the DDiScene kind table around
 `DAT_0076add8`–`DAT_0076ae10` (the table's dispatch use is detailed in finding
-25). It saves its argument at `DAT_0076ae20`, clears the free-list head
+25). It saves the visual-resource path root at `DAT_0076ae20` (the executable
+basename `LegoRR`), clears the free-list head
 `DAT_0076add0`, sets the pool-block counter `DAT_0076cd90` to zero, initializes
 `DAT_0076cd94` to `1`, clears the auxiliary count `DAT_0076cd74`, and nulls
 `DAT_0076cd88`.
