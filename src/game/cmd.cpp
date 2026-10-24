@@ -817,3 +817,71 @@ int selection_command_dispatch(int param)
     }
     return 0;
 }
+
+/* --- random-cell producer / entity remove (see cmd.hpp) ----------------------
+ * PRNG: the corpus's shared random word draw (thunk_FUN_0048e170),
+ * modelled module-locally the way level.cpp and frontend.cpp do. */
+static uint32_t s_cmd_rand_state = 1;
+
+static int cmd_rand15(void)
+{
+    s_cmd_rand_state = s_cmd_rand_state * 214013u + 2531011u;
+    return (int)((s_cmd_rand_state >> 16) & 0x7fffu);
+}
+
+void entity_random_valid_cell_command_create(void* entity)
+{
+    const LevelState* lvl = (s_ctx != NULL) ? s_ctx->level : NULL;
+    const int w = (lvl != NULL) ? level_width(lvl) : 0;
+    const int h = (lvl != NULL) ? level_height(lvl) : 0;
+    if (w <= 0 || h <= 0) {
+        return; /* deviation: the corpus modulos zero on an absent level */
+    }
+    int x = 0, y = 0;
+    int found = 0;
+    for (unsigned tries = 0; tries < 1000u; ++tries) {
+        x = cmd_rand15() % w;
+        y = cmd_rand15() % h;
+        if (level_cell_flag_8_bounded(lvl, x, y) != 0u) {
+            found = 1;
+            break;
+        }
+    }
+    if (found != 0) {
+        /* deviation: the corpus queues a pointer to its stack pair; the
+         * port stores the coordinates by value in the record. */
+        cmd_produce(0x24, entity, 0, x, y);
+    }
+}
+
+int selection_entity_remove(void* entity)
+{
+    if (s_ctx == NULL || entity == NULL) {
+        return 0;
+    }
+    const int count = selection_count(s_ctx);
+    if (count == 0) {
+        return 0;
+    }
+    EntitySlot** arr = (EntitySlot**)selection_record_array(s_ctx);
+    int index = -1;
+    for (int i = 0; i < count; ++i) {
+        if (arr[i] == (EntitySlot*)entity) {
+            index = i;
+            break;
+        }
+    }
+    if (index < 0) {
+        return 0;
+    }
+    if (index == 0) {
+        /* Corpus posts the HUD context (CommandContextPostToHud) — the
+         * HUD-chain seam (GlobalStateLowByteClearAndRefresh + the menu /
+         * map-coordinate leaves) is unported, so no ported state moves. */
+    }
+    s_ctx->selection_count = count - 1;
+    arr[index] = arr[count - 1];
+    ((EntitySlot*)entity)->flags &= ~ENTITY_SELECTED;
+    ((EntitySlot*)entity)->flags_3e8 &= ~ENTITY_SELECTED;
+    return 1;
+}

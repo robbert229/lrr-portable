@@ -8,6 +8,7 @@
 #include "game/cmd.hpp"
 #include "game/entity.hpp"
 #include "game/game.hpp"
+#include "game/level.hpp"
 #include "game/select.hpp"
 #include "gods98/heap.hpp"
 #include "gods98/media.hpp"
@@ -288,6 +289,65 @@ int main(void)
         CHECK(selection_command_dispatch(0) == 0,
               "the unflagged context with nothing selected rejects");
         media_min_distance_update_mode(1, NULL, 0);
+        cmd_context_set(&ctx);
+    }
+
+    /* The random-cell producer + entity remove (2026-10-24). */
+    {
+        static uint8_t grid[8 * 8 * 0x48]; /* LEVEL_VOXEL_STRIDE cells */
+        GameContext lctx;
+        game_context_init(&lctx);
+        cmd_context_set(&lctx);
+
+        /* (Re)build the hand-built level block: 8x8, no voxels yet. */
+        static LevelState lvl;
+        memset(&lvl, 0, sizeof(lvl));
+        memset(grid, 0, sizeof(grid));
+        lvl.word[0x14 / 4] = 8; /* LEVEL_OFF_WIDTH  */
+        lvl.word[0x18 / 4] = 8; /* LEVEL_OFF_HEIGHT */
+        lvl.ptr_voxels = grid;
+        lctx.level = &lvl;
+
+        /* All cells unflagged: no draw is ever accepted. */
+        entity_random_valid_cell_command_create(NULL);
+        CHECK(cmd_queue_active_count_peek() == 0,
+              "no walkable cell — nothing queues");
+
+        /* Flag every cell walkable: the first draw queues 0x24. */
+        for (int i = 0; i < 8 * 8; ++i) {
+            const uint32_t f = 8u;
+            memcpy(grid + (size_t)i * 0x48 + 0x08, &f, 4);
+        }
+        entity_random_valid_cell_command_create(NULL);
+        CHECK(cmd_queue_active_count_peek() == 1,
+              "the accepted draw queues operation 0x24");
+        cmd_queue_tick();
+
+        /* No level at all: the guard skips (no modulo-zero). */
+        lctx.level = NULL;
+        entity_random_valid_cell_command_create(NULL);
+        CHECK(cmd_queue_active_count_peek() == 0,
+              "the absent level skips (deviation)");
+    }
+
+    {
+        /* selection_entity_remove: found removes, missing answers zero. */
+        GameContext rctx;
+        game_context_init(&rctx);
+        cmd_context_set(&rctx);
+        EntitySlot* x1 = make_ent(&rctx, 1, "rem1");
+        EntitySlot* x2 = make_ent(&rctx, 1, "rem2");
+        selection_add(&rctx, x1);
+        selection_add(&rctx, x2);
+        x1->flags_3e8 |= 0x200000u;
+        CHECK(selection_entity_remove(x1) == 1, "the found entity leaves");
+        CHECK(selection_count(&rctx) == 1
+                  && selection_contains_entity(&rctx, x2) == 1
+                  && selection_contains_entity(&rctx, x1) == 0,
+              "the last entry swaps into the vacated slot");
+        CHECK((x1->flags_3e8 & 0x200000u) == 0u, "the +0x3e8 bit clears");
+        CHECK(selection_entity_remove(x1) == 0, "the second miss answers 0");
+        CHECK(selection_entity_remove(NULL) == 0, "NULL answers zero");
         cmd_context_set(&ctx);
     }
 

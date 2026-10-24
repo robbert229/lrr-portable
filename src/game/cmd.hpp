@@ -183,6 +183,22 @@ int cmd_queue_active_count_peek(void);
 int selection_snapshot_create(void** array_out, unsigned* count_out);
 int selection_command_dispatch(int param);
 
+/* --- random-cell producer / entity remove (2026-10-24) ----------------------
+ * EntityRandomValidCellCommandCreate (FUN_00452430, findings 06/10/468):
+ * samples up to 1000 random map cells through the port's module-local
+ * 15-bit LCG, and when the walkable-cell helper (its +0x3e8 cell-bit
+ * bounded read) accepts one, queues operation 0x24 with the entity. The
+ * corpus threads the coordinate pair as a stack pointer the dispatch may
+ * not survive; the port stores the pair by value (documented deviation),
+ * and zero/absent grid dimensions skip (the corpus would modulo by zero).
+ * SelectionEntityRemove (FUN_00452c50, findings 06/10/468): the removal
+ * half — scan for the entity's index, the index-zero HUD post is the
+ * unported HUD-chain seam (no state effect here), swap-with-last removal,
+ * and the selected-bit clear on both the reconstruction flag word and the
+ * corpus's +0x3e8 mirror. Answers 1 only when it removed. */
+void entity_random_valid_cell_command_create(void* entity);
+int selection_entity_remove(void* entity);
+
 #ifdef __cplusplus
 }
 #endif

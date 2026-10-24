@@ -1855,6 +1855,19 @@ initialize and the match read stay blocked on the COM/display seams.
 `cmd_test` pins the snapshot copy, the dispatch gates and indirection;
 `crt_test` the seeded shape and overflow.
 
+**Random-cell producer + entity remove** (2026-10-24; findings 06/10/468):
+two queue producers land in `cmd.*`. `entity_random_valid_cell_command_create`
+(0x452430) samples up to 1000 random cells through the port's module-local
+15-bit LCG and queues operation 0x24 with the first walkable cell the
+bounded bit-8 helper accepts — coordinates by value (the corpus threads
+a stack pointer, deviation) and an absent level skips (the corpus would
+modulo zero). `selection_entity_remove` (0x452c50) scans the selection
+array, swaps the last entry into the vacated slot, and clears the
+selected bit on both flag mirrors; the index-zero HUD post is the
+unported HUD-chain seam, and it answers 1 only when it removed.
+`cmd_test` pins the no-cell rejection, the queueing draw (hand-built
+voxel block), the guard skip, and the swap-removal shape.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the
