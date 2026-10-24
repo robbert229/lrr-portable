@@ -648,6 +648,7 @@ Open threads, in order of value:
 | 434 | [findings/434-scene-resources-lights-markers-and-transient-effects.md](docs/findings/434-scene-resources-lights-markers-and-transient-effects.md) | Scene Resources, Lights, Markers, and Transient Effects |
 | 435 | [findings/435-scene-objects-animation-and-render-records.md](docs/findings/435-scene-objects-animation-and-render-records.md) | Scene Objects, Animation, and Render Records |
 | 436 | [findings/436-simulation-ui-and-player-controls.md](docs/findings/436-simulation-ui-and-player-controls.md) | Simulation UI and Player Controls |
+| 448 | [findings/448-routing-and-activity-transitions.md](docs/findings/448-routing-and-activity-transitions.md) | Routing and Activity Transitions |
 
 Canonical full pseudocode corpus: [`docs/decompiles/full/LEGORR.full.c`](docs/decompiles/full/LEGORR.full.c)
 (2564 manifest functions; see its [README](docs/decompiles/full/README.md)). The
