@@ -77,6 +77,9 @@ A second, container-handle flavor is used by the layer loaders:
 releases the allocated resource slot through `MapFileResourceSlotRelease @ 0x489460`;
 it uses the same image layout;
 `FUN_004334c0(h,&w,&h)` for dims and `FUN_004319e0(h,x,y)` → u16 cell (same `+0x10 + idx*2`).
+The shared 2,000-entry map-file slot table is cleared at startup by
+`MapFileResourceSlotsReset @ 0x4893f0`; its reset, allocate, get, and release
+helpers operate on the same pointer/active-bit records.
 
 Cell semantics per layer (value distributions from all 240 files):
 `Surf` 1–11 materials · `High` 0–13 heights · `Dugg` predug flags 0–4 ·

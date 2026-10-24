@@ -665,7 +665,7 @@ public class CreateEngineFunctions extends GhidraScript {
         0x40a400L,  // PreloadNumberedBitmaps
         0x40b310L,  // LoadTileVariants
         0x42b330L,  // LoadTileMeshes
-        0x4653a0L,  // PreloadSharedIndexed
+        0x4653a0L,  // TransientEffectTexturesPreload
         0x474050L,  // CreateBmpSurface
         0x474410L,  // ParseIndexedSurfaceName
         0x477bd0L,  // SetLowTextureFlag
@@ -686,7 +686,7 @@ public class CreateEngineFunctions extends GhidraScript {
         0x48c690L,  // LwoSurfaceNames
         0x48c820L,  // LwoSurfaceSettings
         0x48d2c0L,  // LoadLWO
-        0x490090L,  // MaterialResolve
+        0x490090L,  // AssetPathComponentsParse
         0x419470L,  // InfoMessageAlwaysPlayFlagSet
         0x419650L,  // InfoMessageSoundLoad
         0x419680L,  // InfoMessageSecondarySoundSet
@@ -711,10 +711,10 @@ public class CreateEngineFunctions extends GhidraScript {
         0x48f460L,  // FileResourceHandleSeek
         0x49d030L,  // DirectDrawDeviceInitialize
         0x47ec80L,  // AviFileInitialize
-        0x47efd0L,  // AviFileShutdown
+        0x47efd0L,  // DirectInputShutdown
         0x47ccf0L,  // DirectDrawObjectsRelease
         0x485e80L,  // RenderSetup
-        0x4893f0L,  // ResourceStateTableReset
+        0x4893f0L,  // MapFileResourceSlotsReset
         0x48b260L,  // StartupStreamStateReset
         0x48b290L,  // StartupStreamsClose
         0x48b2f0L,  // StartupConfigStreamLoad
@@ -928,7 +928,7 @@ public class CreateEngineFunctions extends GhidraScript {
         0x441940L,  // EntityActionSequenceReset
         0x44a310L,  // ObjectMovementInputAccumulate
         0x46a510L,  // SceneObjectStateDispatch
-        0x48bce0L,  // LwoParserRecordAtIndex
+        0x48bce0L,  // WadArchiveRecordAtIndex
         0x47d700L,  // PopCount32
         0x47d720L,  // FindFirstSetBit32
         0x48fb90L,  // GameFileReadBuffered
@@ -1505,8 +1505,8 @@ public class CreateEngineFunctions extends GhidraScript {
         0x004760e0L,  // AttachedObjectDataReleaseAndClear
         0x00476d50L,  // ResourceSlotTableInitialize
         0x00476d80L,  // ResourceSlotTableReleaseAll
-        0x0047ab00L,  // VideoResourceSlotRelease
-        0x0047b050L,  // VideoResourceSlotEnabledSet
+        0x0047ab00L,  // SoundBankEntryRelease
+        0x0047b050L,  // SoundBankEntryVolumeSet
         0x0047b2a0L,  // KeyedResourceEntryRemove
         0x0048f950L,  // CrtFindHandleClose
         0x00491360L,  // CrtBufferedCharacterWrite
@@ -1761,7 +1761,7 @@ public class CreateEngineFunctions extends GhidraScript {
         0x00462ab0L,  // RecordField18Set
         0x00462ac0L,  // RecordFlags24Or
         0x00463730L,  // IndexedFloatPairSet
-        0x00465ac0L,  // ResourceEnableSet
+        0x00465ac0L,  // TransientEffectEnableSet
         0x0046c0f0L,  // RecordResourceRelease
         0x0046ced0L,  // PairedResourceStateSet
         0x0046cfc0L,  // SixResourceSlotsSetState
@@ -1971,7 +1971,7 @@ public class CreateEngineFunctions extends GhidraScript {
         0x0045d4f0L,  // ConfigEntryEnabledToggleAtIndex
         0x00462ed0L,  // GraphicsOverlayResourcesRelease
         0x004634b0L,  // GraphicsOverlayVisibilitySet
-        0x00465970L,  // ObjectCallbackListDisposeAll
+        0x00465970L,  // TransientEffectRegistryReleaseAll
         0x004661c0L,  // GridCellRecordBufferAllocate
         0x0046c130L,  // SceneObjectSetAnimationWithFallback
         0x0046d1a0L,  // SceneObjectAttachedResourceRelease
@@ -2074,7 +2074,7 @@ public class CreateEngineFunctions extends GhidraScript {
         0x00456c60L,  // ObjectPoolListsFreeAll
         0x004589a0L,  // GlobalOptionLowBitsEnabled
         0x0045b930L,  // FloatPairToIntegerPair
-        0x00465a90L,  // RegisteredObjectListApplyCallback
+        0x00465a90L,  // TransientEffectRegistryEnableSet
         0x0046db70L,  // SceneObjectResourceRelease
         0x0044e860L,  // GridCellSetPayloadIndex
         0x004755b0L,  // SceneFrameScaleSet
@@ -2313,8 +2313,8 @@ public class CreateEngineFunctions extends GhidraScript {
         0x00487760L,  // ResourceStringTablesFree
         0x004877d0L,  // ResourceEntryIdGet
         0x004894c0L,  // ComInterfaceQueryOrFallback
-        0x0048bcf0L,  // RegistryEntryValueGet
-        0x0048bd10L,  // RegistryEntryTypeGet
+        0x0048bcf0L,  // WadEntryLengthGet
+        0x0048bd10L,  // WadEntryField4Get
         0x0048dfd0L,  // QsortSmallPartitionSort
         0x0048e250L,  // StackProbeAllocate
         0x0048e4f0L,  // CrtTerminateProcessWithHandlers
@@ -2378,7 +2378,7 @@ public class CreateEngineFunctions extends GhidraScript {
         0x0045cc60L,  // GlobalValueGet_00500a98
         0x004628c0L,  // GlobalFloatAccumulate_00555120
         0x0047c160L,  // ConstantNegative10000Get
-        0x0048c030L,  // RegistryEntryAccessByIndex
+        0x0048c030L,  // WadMemoryStreamBufferGet
         0x0048e1aaL,  // CrtMathIntrinsicDispatch
         0x00491ff5L,  // CrtNoOpStub
         0x00495bdeL,  // CrtAbortAfterCallback
@@ -2465,8 +2465,8 @@ public class CreateEngineFunctions extends GhidraScript {
         0x00460910L,  // ResolvedEntityOperationDispatch
         0x004628a0L,  // GlobalFloatAccumulator_00555330Add
         0x004628e0L,  // CallbackRecordAllocateInitialize
-        0x00464c50L,  // GlobalFlag_00502a2cBit2SetClear
-        0x00465380L,  // GlobalTriplet_00552128_30Reset
+        0x00464c50L,  // SoundDynamicAliasRegistrationSet
+        0x00465380L,  // SceneEffectRegistryReset
         0x0046a950L,  // TextLayoutGeometryStoreAndApply
         0x00472670L,  // DirectDrawSurfaceDescriptionGet
         0x004756d0L,  // VideoObjectAspectRatioGet
@@ -2582,7 +2582,7 @@ public class CreateEngineFunctions extends GhidraScript {
         0x0045d4f0L,  // ConfigEntryEnabledToggleAtIndex
         0x00462ed0L,  // GraphicsOverlayResourcesRelease
         0x004634b0L,  // GraphicsOverlayVisibilitySet
-        0x00465970L,  // ObjectCallbackListDisposeAll
+        0x00465970L,  // TransientEffectRegistryReleaseAll
         0x004661c0L,  // GridCellRecordBufferAllocate
         0x0046c130L,  // SceneObjectSetAnimationWithFallback
         0x0046d1a0L,  // SceneObjectAttachedResourceRelease
@@ -2685,7 +2685,7 @@ public class CreateEngineFunctions extends GhidraScript {
         0x00456c60L,  // ObjectPoolListsFreeAll
         0x004589a0L,  // GlobalOptionLowBitsEnabled
         0x0045b930L,  // FloatPairToIntegerPair
-        0x00465a90L,  // RegisteredObjectListApplyCallback
+        0x00465a90L,  // TransientEffectRegistryEnableSet
         0x0046db70L,  // SceneObjectResourceRelease
         0x0044e860L,  // GridCellSetPayloadIndex
         0x004755b0L,  // SceneFrameScaleSet
@@ -3127,7 +3127,7 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x00456c60: return "ObjectPoolListsFreeAll";
             case 0x004589a0: return "GlobalOptionLowBitsEnabled";
             case 0x0045b930: return "FloatPairToIntegerPair";
-            case 0x00465a90: return "RegisteredObjectListApplyCallback";
+            case 0x00465a90: return "TransientEffectRegistryEnableSet";
             case 0x0046db70: return "SceneObjectResourceRelease";
             case 0x0044e860: return "GridCellSetPayloadIndex";
             case 0x004755b0: return "SceneFrameScaleSet";
@@ -3210,7 +3210,7 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x0045d4f0: return "ConfigEntryEnabledToggleAtIndex";
             case 0x00462ed0: return "GraphicsOverlayResourcesRelease";
             case 0x004634b0: return "GraphicsOverlayVisibilitySet";
-            case 0x00465970: return "ObjectCallbackListDisposeAll";
+            case 0x00465970: return "TransientEffectRegistryReleaseAll";
             case 0x004661c0: return "GridCellRecordBufferAllocate";
             case 0x0046c130: return "SceneObjectSetAnimationWithFallback";
             case 0x0046d1a0: return "SceneObjectAttachedResourceRelease";
@@ -3439,7 +3439,7 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x00462ab0: return "RecordField18Set";
             case 0x00462ac0: return "RecordFlags24Or";
             case 0x00463730: return "IndexedFloatPairSet";
-            case 0x00465ac0: return "ResourceEnableSet";
+            case 0x00465ac0: return "TransientEffectEnableSet";
             case 0x0046c0f0: return "RecordResourceRelease";
             case 0x0046ced0: return "PairedResourceStateSet";
             case 0x0046cfc0: return "SixResourceSlotsSetState";
@@ -3684,7 +3684,7 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x441940: return "EntityActionSequenceReset";
             case 0x44a310: return "ObjectMovementInputAccumulate";
             case 0x46a510: return "SceneObjectStateDispatch";
-            case 0x48bce0: return "LwoParserRecordAtIndex";
+            case 0x48bce0: return "WadArchiveRecordAtIndex";
             case 0x47d700: return "PopCount32";
             case 0x47d720: return "FindFirstSetBit32";
             case 0x48fb90: return "GameFileReadBuffered";
@@ -3799,7 +3799,7 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x464f60: return "SoundRequestQueueSubmit";
             case 0x464fa0: return "SoundAliasPlay";
             case 0x465090: return "PositionalSoundSubmit";
-            case 0x4651a0: return "SoundFrameTick";
+            case 0x4651a0: return "SoundSubsystemFrameTick";
             case 0x4652d0: return "SoundBatchQueueDrain";
             case 0x47ad70: return "SoundBufferPlayWithPosition";
             case 0x47b970: return "StreamedWavePlaybackStart";
@@ -3859,7 +3859,7 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x475140: return "DDiSceneFrameUpdateAndCallbacks";
             case 0x464740: return "SoundAliasRegistryInit";
             case 0x465050: return "SoundSubmissionRouteWrapper";
-            case 0x465b00: return "SoundInstanceUpdate";
+            case 0x465b00: return "TransientEffectInstanceUpdate";
             case 0x469e60: return "EntityStatsWordGet";
             case 0x472900: return "DDiSceneEndHookRegister";
             case 0x472a50: return "DDiSceneObjectDestroy";
@@ -3920,7 +3920,7 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x48db80: return "EngineHeapFree";
             case 0x459050: return "ObjectiveTimerEvaluate";
             case 0x461410: return "RewardScreenTick";
-            case 0x465370: return "SoundDynamicAliasRegistrationEnabledGet";
+            case 0x465370: return "SoundSubsystemEnabledGet";
             case 0x4721e0: return "DirectShowSampleSetup";
             case 0x4726f0: return "DirectShowWrapperDestroy";
             case 0x472920: return "DDiSceneSampleHookRegister";
@@ -4064,10 +4064,10 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x44f230: return "TerrainCellMaterialSet";
             case 0x456810: return "SoundAliasPlayGlobal";
             case 0x462700: return "PointerOverrideExpiryTick";
-            case 0x465190: return "SoundFrameTick";
-            case 0x4652b0: return "SoundPackedBatchQueueUpdate";
-            case 0x465430: return "SoundStreamSelectorUpdate";
-            case 0x4659b0: return "LavaEffectSoundHandleGetOrSubmit";
+            case 0x465190: return "SoundHandleStopForward";
+            case 0x4652b0: return "SoundBatchModeGet";
+            case 0x465430: return "TransientEffectEmitterCreate";
+            case 0x4659b0: return "TransientEffectInstanceRelease";
             case 0x469bb0: return "BuildingDepositCountGet";
             case 0x469f20: return "ScreenShakeFlagRaise";
             case 0x46da50: return "EntityActivityChangeDispatch";
@@ -4267,7 +4267,7 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x40a400: return "PreloadNumberedBitmaps";
             case 0x40b310: return "LoadTileVariants";
             case 0x42b330: return "LoadTileMeshes";
-            case 0x4653a0: return "PreloadSharedIndexed";
+            case 0x4653a0: return "TransientEffectTexturesPreload";
             case 0x474050: return "CreateBmpSurface";
             case 0x474410: return "ParseIndexedSurfaceName";
             case 0x477bd0: return "SetLowTextureFlag";
@@ -4288,7 +4288,7 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x48c690: return "LwoSurfaceNames";
             case 0x48c820: return "LwoSurfaceSettings";
             case 0x48d2c0: return "LoadLWO";
-            case 0x490090: return "MaterialResolve";
+            case 0x490090: return "AssetPathComponentsParse";
             case 0x419470: return "InfoMessageAlwaysPlayFlagSet";
             case 0x419650: return "InfoMessageSoundLoad";
             case 0x419680: return "InfoMessageSecondarySoundSet";
@@ -4313,10 +4313,10 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x48f460: return "FileResourceHandleSeek";
             case 0x49d030: return "DirectDrawDeviceInitialize";
             case 0x47ec80: return "AviFileInitialize";
-            case 0x47efd0: return "AviFileShutdown";
+            case 0x47efd0: return "DirectInputShutdown";
             case 0x47ccf0: return "DirectDrawObjectsRelease";
             case 0x485e80: return "RenderSetup";
-            case 0x4893f0: return "ResourceStateTableReset";
+            case 0x4893f0: return "MapFileResourceSlotsReset";
             case 0x48b260: return "StartupStreamStateReset";
             case 0x48b290: return "StartupStreamsClose";
             case 0x48b2f0: return "StartupConfigStreamLoad";
@@ -4883,8 +4883,8 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x004760e0: return "AttachedObjectDataReleaseAndClear";
             case 0x00476d50: return "ResourceSlotTableInitialize";
             case 0x00476d80: return "ResourceSlotTableReleaseAll";
-            case 0x0047ab00: return "VideoResourceSlotRelease";
-            case 0x0047b050: return "VideoResourceSlotEnabledSet";
+            case 0x0047ab00: return "SoundBankEntryRelease";
+            case 0x0047b050: return "SoundBankEntryVolumeSet";
             case 0x0047b2a0: return "KeyedResourceEntryRemove";
             case 0x0048f950: return "CrtFindHandleClose";
             case 0x00491360: return "CrtBufferedCharacterWrite";
@@ -4993,8 +4993,8 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x00487760: return "ResourceStringTablesFree";
             case 0x004877d0: return "ResourceEntryIdGet";
             case 0x004894c0: return "ComInterfaceQueryOrFallback";
-            case 0x0048bcf0: return "RegistryEntryValueGet";
-            case 0x0048bd10: return "RegistryEntryTypeGet";
+            case 0x0048bcf0: return "WadEntryLengthGet";
+            case 0x0048bd10: return "WadEntryField4Get";
             case 0x0048dfd0: return "QsortSmallPartitionSort";
             case 0x0048e250: return "StackProbeAllocate";
             case 0x0048e4f0: return "CrtTerminateProcessWithHandlers";
@@ -5058,7 +5058,7 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x0045cc60: return "GlobalValueGet_00500a98";
             case 0x004628c0: return "GlobalFloatAccumulate_00555120";
             case 0x0047c160: return "ConstantNegative10000Get";
-            case 0x0048c030: return "RegistryEntryAccessByIndex";
+            case 0x0048c030: return "WadMemoryStreamBufferGet";
             case 0x0048e1aa: return "CrtMathIntrinsicDispatch";
             case 0x00491ff5: return "CrtNoOpStub";
             case 0x00495bde: return "CrtAbortAfterCallback";
@@ -5145,8 +5145,8 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x00460910: return "ResolvedEntityOperationDispatch";
             case 0x004628a0: return "GlobalFloatAccumulator_00555330Add";
             case 0x004628e0: return "CallbackRecordAllocateInitialize";
-            case 0x00464c50: return "GlobalFlag_00502a2cBit2SetClear";
-            case 0x00465380: return "GlobalTriplet_00552128_30Reset";
+            case 0x00464c50: return "SoundDynamicAliasRegistrationSet";
+            case 0x00465380: return "SceneEffectRegistryReset";
             case 0x0046a950: return "TextLayoutGeometryStoreAndApply";
             case 0x00472670: return "DirectDrawSurfaceDescriptionGet";
             case 0x004756d0: return "VideoObjectAspectRatioGet";

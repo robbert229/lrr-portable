@@ -49,6 +49,19 @@ and `FUN_00452e70` (gameplay trigger). Per-sound records carry a sound handle
 `MinDistFor3DSoundsOnTopView` (`0x4a393c–0x4a3964`). The air-lock warning
 loop (`EngineSound` `0x4aa340`) is a persistent 3D instance from finding 03.
 
+The shared sound-bank slot release/volume helpers are `SoundBankEntryRelease
+@ 0x47ab00` and `SoundBankEntryVolumeSet @ 0x47b050` (previously mislabeled as
+video/resource helpers). Both are guarded by the DirectSound initialization
+flag `DAT_00533878`; release clears the slot-active bit, frees its streamed
+sample memory, and releases the three buffer interfaces, while volume-set
+validates the DirectSound millibel value (invalid input is stored as zero) and
+forwards it to the active buffer or the three looping buffers.
+`AdvisorDisplayStateResourcesRelease @
+0x453220` calls the release helper for its stored slot indices, and
+`ConfiguredVariantPropertySet @ 0x465010` reaches the volume helper through
+`SoundVolumeValueValid @ 0x47a850`. The slot fields' precise role beyond these
+observed operations remains open.
+
 ## 2. RIFF/WAVE parsing (`mmio` region `0x488c00–0x489330`)
 
 * `mmioDescend` ×4 sites (`0x488cd2 / 0x488e8b / 0x488f47 / 0x4890ed`) and
