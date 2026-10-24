@@ -586,8 +586,29 @@ Open threads, in order of value:
 | 387 | [findings/387-record-and-resource-pool-lifecycles.md](docs/findings/387-record-and-resource-pool-lifecycles.md) | Record and Resource Pool Lifecycles |
 | 388 | [findings/388-geometry-and-matrix-primitives.md](docs/findings/388-geometry-and-matrix-primitives.md) | Geometry, Projection, and Random Primitives |
 | 389 | [findings/389-linked-records-and-state-helpers.md](docs/findings/389-linked-records-and-state-helpers.md) | Linked Records and State Helpers |
+| 390 | [findings/390-motion-config-and-resource-utilities.md](docs/findings/390-motion-config-and-resource-utilities.md) | Motion, Configuration, and Resource Utilities |
+| 391 | [findings/391-vector-geometry-and-pointer-state-primitives.md](docs/findings/391-vector-geometry-and-pointer-state-primitives.md) | Vector, Geometry, and Pointer-State Primitives |
+| 392 | [findings/392-global-state-and-configuration-accessors.md](docs/findings/392-global-state-and-configuration-accessors.md) | Global State and Configuration Accessors |
+| 393 | [findings/393-string-list-and-small-record-utilities.md](docs/findings/393-string-list-and-small-record-utilities.md) | String, List, and Small Record Utilities |
+| 394 | [findings/394-runtime-engine-memory-management.md](docs/findings/394-runtime-engine-memory-management.md) | Runtime and Engine Memory Management |
+| 395 | [findings/395-crt-and-os-file-stream-io.md](docs/findings/395-crt-and-os-file-stream-io.md) | CRT and OS File/Stream I/O |
+| 396 | [findings/396-crt-process-startup-termination-and-exceptions.md](docs/findings/396-crt-process-startup-termination-and-exceptions.md) | CRT Process Startup, Termination, and Exceptions |
+| 397 | [findings/397-crt-strings-locale-and-formatting.md](docs/findings/397-crt-strings-locale-and-formatting.md) | CRT Strings, Locale, and Formatting |
+| 398 | [findings/398-application-startup-window-loop.md](docs/findings/398-application-startup-window-loop.md) | Application Startup, Window Loop, and Preferences |
+| 399 | [findings/399-crt-numeric-and-floating-point-runtime.md](docs/findings/399-crt-numeric-and-floating-point-runtime.md) | CRT Numeric and Floating-Point Runtime |
+| 400 | [findings/400-compiler-runtime-no-op-stubs.md](docs/findings/400-compiler-runtime-no-op-stubs.md) | Compiler/Runtime No-op Stubs |
+| 401 | [findings/401-task-callback-record-allocator.md](docs/findings/401-task-callback-record-allocator.md) | Task Callback Record Allocator |
+| 402 | [findings/402-registry-and-startup-streams.md](docs/findings/402-registry-and-startup-streams.md) | Registry and Startup Streams |
+| 403 | [findings/403-config-and-text-parsing-helpers.md](docs/findings/403-config-and-text-parsing-helpers.md) | Configuration and Text Parsing Helpers |
+| 404 | [findings/404-game-file-archive-and-pools.md](docs/findings/404-game-file-archive-and-pools.md) | Game Files, Archives, and Record Pools |
+| 405 | [findings/405-level-map-loading-pipeline.md](docs/findings/405-level-map-loading-pipeline.md) | Level and Map Loading Pipeline |
+| 406 | [findings/406-audio-playback-mixing-and-spatial-sound.md](docs/findings/406-audio-playback-mixing-and-spatial-sound.md) | Audio Playback, Mixing, and Spatial Sound |
+| 407 | [findings/407-system-input-and-osf-state.md](docs/findings/407-system-input-and-osf-state.md) | System Input and OSF State |
+| 408 | [findings/408-save-slot-context-and-level-record-lifecycle.md](docs/findings/408-save-slot-context-and-level-record-lifecycle.md) | Save Slot Context and Level Record Lifecycle |
+| 409 | [findings/409-game-configuration-entity-type-and-object-name-tables.md](docs/findings/409-game-configuration-entity-type-and-object-name-tables.md) | Game Configuration Entity Type and Object-Name Tables |
+| 410 | [findings/410-map-and-visual-resource-records.md](docs/findings/410-map-and-visual-resource-records.md) | Map and Visual Resource Records |
+| 411 | [findings/411-interface-records-and-directx-diagnostics.md](docs/findings/411-interface-records-and-directx-diagnostics.md) | Interface Records and DirectX Diagnostics |
 | 412 | [findings/412-platform-import-thunks.md](docs/findings/412-platform-import-thunks.md) | Platform Import Thunks |
-
 
 Canonical full pseudocode corpus: [`docs/decompiles/full/LEGORR.full.c`](docs/decompiles/full/LEGORR.full.c)
 (2564 manifest functions; see its [README](docs/decompiles/full/README.md)). The
