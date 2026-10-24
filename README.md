@@ -1155,6 +1155,22 @@ over a synthetic record image, checks each read lands on its corpus
 offset, and covers the zero-template fallback, the selector pair and
 the address identity.
 
+**Corpus text primitives** (2026-10-24; findings 397/12): four string
+helpers land in `src/gods98/string.*` with a `string` test suite —
+`string_duplicate` (`StringDuplicate @ 0x477550`, NUL copy through the
+heap seam; malloc stands in for the engine-heap wrapper, TODO(corpus)),
+`string_find_substring` (`StringFindSubstring @ 0x48da50`; the corpus's
+aligned-word/SWAR scan is byte-equivalent strstr behavior, and the
+empty-needle-yields-the-haystack early-outs are kept),
+`string_length_bounded` (`BoundedStringLength @ 0x493ec0`; length up to
+the bound, bound when no NUL turns up in time), and `string_path_join`
+(`ConfigEntryFind @ 0x478f50`) building `root::comp1::comp2…` into the
+static builder buffer that the already-ported `block_find` half reads
+(the corpus's other half performs the record lookup; join-only is the
+documented split). Appending past the static buffer's 256-byte bound
+is bounded (the corpus runs through the static); `string_test` covers
+duplicates, the scan corners, bound edges and join/truncation.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

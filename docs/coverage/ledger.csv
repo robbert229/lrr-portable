@@ -1822,7 +1822,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004773e0,FUN_004773e0,named,RenderResourceTrackedReferencesRelease,0,688
 00477440,FUN_00477440,ported,BlockTextTokenSplit,4,795
 004774b0,FUN_004774b0,named,WhitespaceTokenize,0,957
-00477550,FUN_00477550,ported,StringDuplicate,8,929
+00477550,FUN_00477550,ported,StringDuplicate,2,929
 00477590,FUN_00477590,named,FormattedTextEscapeDecodeAndEmit,0,670
 00477610,FUN_00477610,ported,CaseInsensitiveSubstringFind,3,834
 00477670,FUN_00477670,named,GameStringHashCompute,0,853
@@ -1854,7 +1854,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00478df0,FUN_00478df0,ported,BlockTextTokenPoolInit,3,353
 00478e20,FUN_00478e20,ported,BlockTextTokenPoolDestroy,3,339
 00478e60,FUN_00478e60,ported,BlockTextOpenAndScan,3,1795
-00478f50,FUN_00478f50,ported,ConfigEntryFind,3,2731
+00478f50,FUN_00478f50,ported,ConfigEntryFind,2,2731
 00478ff0,FUN_00478ff0,ported,ConfigNestedPathChildFind,1,263
 00479020,FUN_00479020,ported,SortedEntryNextEqualKey,3,316
 00479050,FUN_00479050,ported,ConfigStringCopy,1,1143
