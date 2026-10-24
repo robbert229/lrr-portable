@@ -244,4 +244,23 @@ void   global_triple_copy_out(uint32_t* out);
  * the corpus reads its global blindly). */
 int engine_app_mode_get(const EngineContext* ctx);
 
+/* --- the grid-cell record buffer (2026-10-24; finding 463) ------------------
+ * The entity-cell field grid: its own buffer of `width * height * 0x0c`
+ * bytes (dimensions at the state block's +0x14/+0x18), stride-0x0c records.
+ * The corpus keeps the buffer in DAT_005520e8 and the descriptor in
+ * DAT_005520ec; neither word has a ported owner, so both land here as
+ * module statics.
+ * GridCellRecordBufferAllocate (FUN_004661c0): allocate from the state
+ * block's dimensions and zero the word loop (the corpus's int multiply and
+ * masked count, faithful). The descriptor lands even on an alloc failure —
+ * the corpus stores it outside the buffer guard.
+ * EntityFieldGridBufferRelease (FUN_00466210): free the current buffer and
+ * clear the word (the descriptor word survives the corpus's release).
+ * GridCellRecordBufferReplace (FUN_00466230): release, then allocate. */
+void        grid_cell_record_buffer_allocate(EngineState* block); /* FUN_004661c0 */
+void        entity_field_grid_buffer_release(void);               /* FUN_00466210 */
+void        grid_cell_record_buffer_replace(EngineState* block);  /* FUN_00466230 */
+void*       entity_field_grid_buffer_peek(void);
+EngineState* entity_field_grid_descriptor_peek(void);
+
 #endif /* LEGORRR_ENGINE_HPP */

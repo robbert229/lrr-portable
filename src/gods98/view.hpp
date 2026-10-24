@@ -259,4 +259,9 @@ void float_negate_absolute_value(float* value);
 void vector2_set_length(float v[2], float length);
 void camera_zoom_step_adjust(void* camera, int direction, float step);
 
+/* SelectionRecordPointGet (FUN_00436ae9): the follow-mode readback — the
+ * selection record's camera position through the corpus's move-or-pose read
+ * (cam_get_pos). Non-follow records answer nothing (the corpus's gate). */
+void selection_record_point_get(ViewContext* v, float out[3]); /* FUN_00436ae9 */
+
 #endif /* LEGORRR_VIEW_HPP */

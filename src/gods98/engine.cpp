@@ -5,9 +5,6 @@
 #include "message.hpp"
 #include "tickers.hpp"
 #include "view.hpp"
-#include "record.hpp"
-#include "crt.hpp"
-#include "sound.hpp"
 #include "heap.hpp"
 
 /* Frame tick — corpus EngineTick @ 0x4232e0. The numbered structure below
@@ -229,3 +226,43 @@ int engine_app_mode_get(const EngineContext* ctx)
 {
     return ctx != NULL ? ctx->app_mode : 0;
 }
+
+/* --- the grid-cell record buffer (see engine.hpp) ---------------------------- */
+static void*        s_field_grid_buf;   /* DAT_005520e8 role */
+static EngineState* s_field_grid_desc;  /* DAT_005520ec role */
+
+void grid_cell_record_buffer_allocate(EngineState* block)
+{
+    if (block == NULL) {
+        return; /* deviation: the corpus strides the block blindly */
+    }
+    const int w = (int)block->grid_w;
+    const int h = (int)block->grid_h;
+    void* buf = engine_heap_alloc((long)(w * h * 0xc));
+    if (buf != NULL) {
+        uint32_t* p = (uint32_t*)buf;
+        for (uint32_t n = (uint32_t)(w * h * 3) & 0x3fffffffu; n != 0u; --n) {
+            *p++ = 0u;
+        }
+    }
+    s_field_grid_buf = buf;
+    s_field_grid_desc = block;
+}
+
+void entity_field_grid_buffer_release(void)
+{
+    if (s_field_grid_buf != NULL) {
+        engine_heap_free(s_field_grid_buf);
+        s_field_grid_buf = NULL;
+    }
+}
+
+void grid_cell_record_buffer_replace(EngineState* block)
+{
+    entity_field_grid_buffer_release();
+    grid_cell_record_buffer_allocate(block);
+}
+
+void* entity_field_grid_buffer_peek(void) { return s_field_grid_buf; }
+
+EngineState* entity_field_grid_descriptor_peek(void) { return s_field_grid_desc; }

@@ -114,3 +114,16 @@ void text_buffer_destroy(void* record)
     engine_heap_free(buffer);
     engine_heap_free(record);
 }
+
+/* ObjectField38Release (FUN_00489d70) — see heap.hpp. */
+void object_field_38_release(void* record)
+{
+    if (record == NULL) {
+        return; /* deviation: the corpus dereferences blindly */
+    }
+    void* field = NULL;
+    __builtin_memcpy(&field, (char*)record + 0x38, sizeof(field));
+    if (field != NULL) {
+        engine_heap_free(field);
+    }
+}

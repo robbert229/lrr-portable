@@ -391,4 +391,8 @@ void scene_effect_registry_words_peek(uint32_t out_words[3]);
 void crt_fatal_message_exit(void);                  /* FUN_00498340 */
 void crt_fatal_exit_observer_set(void (*observer)(void));
 
+/* CrtNoOpStubVariant2 (FUN_00493c40): the corpus's second no-op CRT stub
+ * variant — an empty body, ported faithfully as a call-through. */
+void crt_no_op_stub_variant2(void); /* FUN_00493c40 */
+
 #endif /* LEGORRR_GODS98_CRT_HPP */

@@ -849,7 +849,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00436a4a,FUN_00436a4a,ported,CameraSetDistance,1,293
 00436aa5,FUN_00436aa5,ported,CameraZoomUpdate,1,124
 00436ac9,FUN_00436ac9,named,RendererNodeRelativePositionSet,0,155
-00436ae9,FUN_00436ae9,named,SelectionRecordPointGet,0,136
+00436ae9,FUN_00436ae9,ported,SelectionRecordPointGet,3,136
 00436b0b,FUN_00436b0b,ported,SelectionRecordPointSet,1,165
 00436b33,FUN_00436b33,ported,CameraGetPositionWithTerrainHeight,1,279
 00436b79,FUN_00436b79,ported,CameraRotationGet,3,87
