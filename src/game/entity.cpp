@@ -180,6 +180,88 @@ const void* entity_model(const EntitySlot* e)
     return e != NULL ? e->model : NULL;
 }
 
+/* --- entity record accessors (finding 457) --------------------------------
+ * Every corpus reader resolves the entity's selected stats record and reads
+ * a fixed field. The port mirrors the record on the slot (NULL = the zero
+ * template, the Stats config loader being unported — see entity.hpp).
+ * Names are offset-preserving: the decompile proves the offsets, not the
+ * field semantics. */
+
+static const uint8_t s_stats_zero_record[ENTITY_STATS_RECORD_SIZE] = { 0 };
+
+static const uint8_t* stats_rec(const EntitySlot* e)
+{
+    const uint8_t* rec = (const uint8_t*)e->stats_record;
+    return rec != NULL ? rec : s_stats_zero_record;
+}
+
+static float stats_rec_float(const EntitySlot* e, int off)
+{
+    float f = 0.0f;
+    __builtin_memcpy(&f, stats_rec(e) + off, sizeof(f));
+    return f;
+}
+
+static uint32_t stats_rec_word(const EntitySlot* e, int off)
+{
+    uint32_t w = 0;
+    __builtin_memcpy(&w, stats_rec(e) + off, sizeof(w));
+    return w;
+}
+
+float entity_stats_float_at20(const EntitySlot* e) { return stats_rec_float(e, 0x20); }
+float entity_stats_float_at24_indexed(const EntitySlot* e, int index)
+{
+    return stats_rec_float(e, 0x24 + index * 4);
+}
+float entity_stats_float_atd4(const EntitySlot* e) { return stats_rec_float(e, 0xd4); }
+float entity_stats_float_at9c(const EntitySlot* e) { return stats_rec_float(e, 0x9c); }
+float entity_stats_float_atd8(const EntitySlot* e) { return stats_rec_float(e, 0xd8); }
+float entity_stats_float_at6c(const EntitySlot* e) { return stats_rec_float(e, 0x6c); }
+float entity_stats_float_at74(const EntitySlot* e) { return stats_rec_float(e, 0x74); }
+float entity_stats_float_at78(const EntitySlot* e) { return stats_rec_float(e, 0x78); }
+float entity_stats_float_ate8(const EntitySlot* e) { return stats_rec_float(e, 0xe8); }
+float entity_stats_float_at70(const EntitySlot* e) { return stats_rec_float(e, 0x70); }
+void* entity_stats_field_at_a0(const EntitySlot* e)
+{
+    /* the corpus returns the ADDRESS record+0xa0, not its contents */
+    return (void*)(stats_rec(e) + 0xa0);
+}
+float entity_stats_float_at7c(const EntitySlot* e) { return stats_rec_float(e, 0x7c); }
+float entity_stats_float_at80(const EntitySlot* e) { return stats_rec_float(e, 0x80); }
+float entity_energy_decay_rate_get(const EntitySlot* e) { return stats_rec_float(e, 0x84); }
+float entity_stats_float_atdc(const EntitySlot* e) { return stats_rec_float(e, 0xdc); }
+uint32_t entity_stats_word_atac(const EntitySlot* e) { return stats_rec_word(e, 0xac); }
+uint32_t entity_stats_word_get(const EntitySlot* e) { return stats_rec_word(e, 0x144); }
+uint32_t entity_state_flags_get(const EntitySlot* e) { return stats_rec_word(e, 0x148); }
+uint32_t entity_capability_flags_get(const EntitySlot* e) { return stats_rec_word(e, 0x14c); }
+float entity_stats_float_at88(const EntitySlot* e) { return stats_rec_float(e, 0x88); }
+uint32_t entity_stats_word_at_c0_or_c4(const EntitySlot* e, int selector)
+{
+    return stats_rec_word(e, selector != 0 ? 0xc4 : 0xc0);
+}
+float entity_stats_float_at8c(const EntitySlot* e) { return stats_rec_float(e, 0x8c); }
+float entity_stats_float_at90(const EntitySlot* e) { return stats_rec_float(e, 0x90); }
+float entity_stats_float_at98(const EntitySlot* e) { return stats_rec_float(e, 0x98); }
+float entity_stats_float_at94(const EntitySlot* e) { return stats_rec_float(e, 0x94); }
+float entity_stats_float_atf4(const EntitySlot* e) { return stats_rec_float(e, 0xf4); }
+float entity_speed_component_get(const EntitySlot* e) { return stats_rec_float(e, 0xf8); }
+float entity_stats_float_at130(const EntitySlot* e) { return stats_rec_float(e, 0x130); }
+float entity_stats_float_at134(const EntitySlot* e) { return stats_rec_float(e, 0x134); }
+float entity_stats_float_at120(const EntitySlot* e) { return stats_rec_float(e, 0x120); }
+float entity_stats_float_at128(const EntitySlot* e) { return stats_rec_float(e, 0x128); }
+float entity_stats_float_at124(const EntitySlot* e) { return stats_rec_float(e, 0x124); }
+uint32_t entity_stats_word_at13c(const EntitySlot* e) { return stats_rec_word(e, 0x13c); }
+float entity_stats_float_at12c(const EntitySlot* e) { return stats_rec_float(e, 0x12c); }
+float entity_stats_float_at138(const EntitySlot* e) { return stats_rec_float(e, 0x138); }
+float entity_collision_radius_get(const EntitySlot* e) { return stats_rec_float(e, 0xe4); }
+float entity_stats_float_at114(const EntitySlot* e) { return stats_rec_float(e, 0x114); }
+float entity_stats_float_at118(const EntitySlot* e) { return stats_rec_float(e, 0x118); }
+float entity_stats_float_at11c(const EntitySlot* e) { return stats_rec_float(e, 0x11c); }
+float entity_stats_float_at110(const EntitySlot* e) { return stats_rec_float(e, 0x110); }
+float entity_stats_float_at10c(const EntitySlot* e) { return stats_rec_float(e, 0x10c); }
+
+
 /* `.ol` `type` name -> entity table code — DECOMPILE-VERIFIED (finding 07/10).
  *
  * The corpus resolver `FUN_0042e8b0` (ObjectTypeByName) matches the name

@@ -81,6 +81,66 @@ void entity_set_model(EntitySlot* e, const char* path);
 /* The parsed LWO Model* for a slot (NULL when none/load failed). */
 const void* entity_model(const EntitySlot* e);
 
+/* --- entity record accessors (finding 457: the corpus +0x334 record) -----
+ * Corpus families FUN_00469cb0 … FUN_0046a310 read fixed fields from the
+ * entity's selected stats record (*(entity + 0x334)). The port mirrors that
+ * record as EntitySlot.stats_record; NULL resolves to a zero template,
+ * matching the shipped static templates (the Stats configuration loader
+ * that fills real records is unported — reads
+ * therefore default to 0/0.0f, a documented TODO(corpus) deviation). The
+ * corpus's float fields return long double (x87 float10); the port hands
+ * back the plain float stored in the record. Offsets are record-relative;
+ * names are offset-preserving where semantics are unproved. */
+
+#define ENTITY_STATS_RECORD_SIZE 0x150 /* the corpus record stride */
+
+float entity_stats_float_at20(const EntitySlot* e);   /* FUN_00469cb0 */
+float entity_stats_float_at24_indexed(const EntitySlot* e, int index);
+                                      /* FUN_00469cc0 (terrain-speed array) */
+float entity_stats_float_atd4(const EntitySlot* e);   /* FUN_00469ce0 */
+float entity_stats_float_at9c(const EntitySlot* e);   /* FUN_00469d00 */
+float entity_stats_float_atd8(const EntitySlot* e);   /* FUN_00469d20 */
+float entity_stats_float_at6c(const EntitySlot* e);   /* FUN_00469d40 */
+float entity_stats_float_at74(const EntitySlot* e);   /* FUN_00469d50 */
+float entity_stats_float_at78(const EntitySlot* e);   /* FUN_00469d60 */
+float entity_stats_float_ate8(const EntitySlot* e);   /* FUN_00469d70 */
+float entity_stats_float_at70(const EntitySlot* e);   /* FUN_00469d90 */
+void* entity_stats_field_at_a0(const EntitySlot* e);  /* FUN_00469da0: the
+                                         * record+0xa0 address itself */
+float entity_stats_float_at7c(const EntitySlot* e);   /* FUN_00469db0 */
+float entity_stats_float_at80(const EntitySlot* e);   /* FUN_00469dc0 */
+float entity_energy_decay_rate_get(const EntitySlot* e); /* FUN_00469de0 (+84) */
+float entity_stats_float_atdc(const EntitySlot* e);   /* FUN_00469e20 */
+uint32_t entity_stats_word_atac(const EntitySlot* e); /* FUN_00469e40 */
+uint32_t entity_stats_word_get(const EntitySlot* e);  /* FUN_00469e60 (+144) */
+uint32_t entity_state_flags_get(const EntitySlot* e); /* FUN_00469e80 (+148) */
+uint32_t entity_capability_flags_get(const EntitySlot* e); /* FUN_00469ea0 (+14c) */
+float entity_stats_float_at88(const EntitySlot* e);   /* FUN_00469f20
+                                         * (the "screen shake" reader) */
+uint32_t entity_stats_word_at_c0_or_c4(const EntitySlot* e, int selector);
+                                      /* FUN_00469f90: +c4 if selector
+                                       * nonzero, else +c0 */
+float entity_stats_float_at8c(const EntitySlot* e);   /* FUN_00469fe0 */
+float entity_stats_float_at90(const EntitySlot* e);   /* FUN_0046a000 */
+float entity_stats_float_at98(const EntitySlot* e);   /* FUN_0046a020 */
+float entity_stats_float_at94(const EntitySlot* e);   /* FUN_0046a040 */
+float entity_stats_float_atf4(const EntitySlot* e);   /* FUN_0046a080 */
+float entity_speed_component_get(const EntitySlot* e); /* FUN_0046a0a0 (+f8) */
+float entity_stats_float_at130(const EntitySlot* e);  /* FUN_0046a170 */
+float entity_stats_float_at134(const EntitySlot* e);  /* FUN_0046a190 */
+float entity_stats_float_at120(const EntitySlot* e);  /* FUN_0046a1b0 */
+float entity_stats_float_at128(const EntitySlot* e);  /* FUN_0046a1d0 */
+float entity_stats_float_at124(const EntitySlot* e);  /* FUN_0046a1f0 */
+uint32_t entity_stats_word_at13c(const EntitySlot* e); /* FUN_0046a210 */
+float entity_stats_float_at12c(const EntitySlot* e);  /* FUN_0046a230 */
+float entity_stats_float_at138(const EntitySlot* e);  /* FUN_0046a250 */
+float entity_collision_radius_get(const EntitySlot* e); /* FUN_0046a270 (+e4) */
+float entity_stats_float_at114(const EntitySlot* e);  /* FUN_0046a290 */
+float entity_stats_float_at118(const EntitySlot* e);  /* FUN_0046a2b0 */
+float entity_stats_float_at11c(const EntitySlot* e);  /* FUN_0046a2d0 */
+float entity_stats_float_at110(const EntitySlot* e);  /* FUN_0046a2f0 */
+float entity_stats_float_at10c(const EntitySlot* e);  /* FUN_0046a310 */
+
 #ifdef __cplusplus
 }
 #endif

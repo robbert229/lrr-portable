@@ -216,6 +216,13 @@ typedef struct EntitySlot {
                              * AI_TASK_STATE_NONE (= -1) for instance stats */
     int      activity_cap;  /* state +0xcc: permitted-activity capacity;
                              * 0 = unset -> ctx->stats_activity_cap          */
+    const void* stats_record; /* +0x334 record side (finding 457): the
+                               * selected stats record image read by the
+                               * entity record accessors in entity.hpp. NULL
+                               * = the zero template — the Stats config
+                               * loader that fills real records is unported
+                               * (TODO(corpus)), so reads default to zero as
+                               * the shipped static templates do. */
     int      activity;       /* +0x2e8: activity-table index, -1 = none */
     int      activity_last;  /* +0xbb: last completed activity, -1 none */
     int      activity_param; /* +0x2d8 (activity argument)              */

@@ -555,6 +555,125 @@ static int ol_probe(const char* wad_dir)
     return files;
 }
 
+/* --- entity record accessors (the +0x334 stats record family) ----------- *
+ * Drive every offset getter over a synthetic 0x150-byte record image and
+ * check the read lands where the corpus reads it. */
+static int stats_record_test(void)
+{
+    uint8_t rec[ENTITY_STATS_RECORD_SIZE];
+    __builtin_memset(rec, 0, sizeof rec);
+    for (int i = 0; i < ENTITY_STATS_RECORD_SIZE; ++i) {
+        /* Small bytes: keeps the float high byte away from the 0x7F/0xFF
+         * exponent patterns so `==` never hits a NaN bit pattern. */
+        rec[i] = (uint8_t)(1 + i % 100);
+    }
+
+    GameContext ctx;
+    game_context_init(&ctx);
+    int idx = entity_create(&ctx, 1, "StatsProbe", 0.0f, 0.0f, 0.0f, 0.0f);
+    CHECK(idx >= 0, "probe slot created");
+    if (idx < 0) {
+        return 1;
+    }
+
+    /* Zero-template fallback: an unselected record reads zero everywhere. */
+    CHECK(entity_stats_float_at20(&ctx.entity[0][idx]) == 0.0f,
+          "unset record reads zero float");
+    CHECK(entity_stats_word_get(&ctx.entity[0][idx]) == 0u,
+          "unset record reads zero word");
+    CHECK(entity_state_flags_get(&ctx.entity[0][idx]) == 0u,
+          "unset record reads zero state flags");
+
+    EntitySlot* e = &ctx.entity[0][idx];
+    e->stats_record = rec;
+
+    /* Float fields: rec[off] is i%256 at offset off, so the expected float
+     * is the raw pattern little-endian at that offset. */
+#define FLOAT_AT(fn, off)                                                      \
+    do {                                                                       \
+        float want, got;                                                       \
+        __builtin_memcpy(&want, rec + (off), 4);                               \
+        got = (fn)(e);                                                         \
+        CHECK(got == want, #fn " reads record offset");                        \
+    } while (0)
+
+    FLOAT_AT(entity_stats_float_at20, 0x20);
+    FLOAT_AT(entity_stats_float_atd4, 0xd4);
+    FLOAT_AT(entity_stats_float_at9c, 0x9c);
+    FLOAT_AT(entity_stats_float_atd8, 0xd8);
+    FLOAT_AT(entity_stats_float_at6c, 0x6c);
+    FLOAT_AT(entity_stats_float_at74, 0x74);
+    FLOAT_AT(entity_stats_float_at78, 0x78);
+    FLOAT_AT(entity_stats_float_ate8, 0xe8);
+    FLOAT_AT(entity_stats_float_at70, 0x70);
+    FLOAT_AT(entity_stats_float_at7c, 0x7c);
+    FLOAT_AT(entity_stats_float_at80, 0x80);
+    FLOAT_AT(entity_energy_decay_rate_get, 0x84);
+    FLOAT_AT(entity_stats_float_atdc, 0xdc);
+    FLOAT_AT(entity_stats_float_at88, 0x88);
+    FLOAT_AT(entity_stats_float_at8c, 0x8c);
+    FLOAT_AT(entity_stats_float_at90, 0x90);
+    FLOAT_AT(entity_stats_float_at98, 0x98);
+    FLOAT_AT(entity_stats_float_at94, 0x94);
+    FLOAT_AT(entity_stats_float_atf4, 0xf4);
+    FLOAT_AT(entity_speed_component_get, 0xf8);
+    FLOAT_AT(entity_stats_float_at130, 0x130);
+    FLOAT_AT(entity_stats_float_at134, 0x134);
+    FLOAT_AT(entity_stats_float_at120, 0x120);
+    FLOAT_AT(entity_stats_float_at128, 0x128);
+    FLOAT_AT(entity_stats_float_at124, 0x124);
+    FLOAT_AT(entity_stats_float_at12c, 0x12c);
+    FLOAT_AT(entity_stats_float_at138, 0x138);
+    FLOAT_AT(entity_collision_radius_get, 0xe4);
+    FLOAT_AT(entity_stats_float_at114, 0x114);
+    FLOAT_AT(entity_stats_float_at118, 0x118);
+    FLOAT_AT(entity_stats_float_at11c, 0x11c);
+    FLOAT_AT(entity_stats_float_at110, 0x110);
+    FLOAT_AT(entity_stats_float_at10c, 0x10c);
+
+    /* Indexed terrain-speed floats: +24 + index*4. */
+    {
+        float want2, want5, want;
+        __builtin_memcpy(&want2, rec + 0x24 + 2 * 4, 4);
+        __builtin_memcpy(&want5, rec + 0x24 + 5 * 4, 4);
+        want = entity_stats_float_at24_indexed(e, 2);
+        CHECK(want == want2, "indexed speed reads +24+index*4 (2)");
+        want = entity_stats_float_at24_indexed(e, 5);
+        CHECK(want == want5, "indexed speed reads +24+index*4 (5)");
+    }
+
+    /* Word fields. */
+    uint32_t w;
+#define WORD_AT(fn, off, ...)                                                  \
+    do {                                                                       \
+        __builtin_memcpy(&w, rec + (off), 4);                                  \
+        CHECK((fn)(__VA_ARGS__) == w, #fn " reads record offset");             \
+    } while (0)
+    WORD_AT(entity_stats_word_atac, 0xac, e);
+    WORD_AT(entity_stats_word_get, 0x144, e);
+    WORD_AT(entity_state_flags_get, 0x148, e);
+    WORD_AT(entity_capability_flags_get, 0x14c, e);
+    WORD_AT(entity_stats_word_at13c, 0x13c, e);
+
+    /* Selector pair: 0 -> +c0, nonzero -> +c4. */
+    __builtin_memcpy(&w, rec + 0xc0, 4);
+    CHECK(entity_stats_word_at_c0_or_c4(e, 0) == w, "selector 0 reads +c0");
+    __builtin_memcpy(&w, rec + 0xc4, 4);
+    CHECK(entity_stats_word_at_c0_or_c4(e, 1) == w, "selector 1 reads +c4");
+
+    /* The address getter hands back record+0xa0 itself. */
+    CHECK(entity_stats_field_at_a0(e) == (void*)(rec + 0xa0),
+          "the field getter returns the record address");
+
+    /* Clear back to the zero template and check both flag words. */
+    e->stats_record = NULL;
+    CHECK(entity_stats_word_get(e) == 0u && entity_stats_field_at_a0(e) != NULL,
+          "unset record falls back to the zero template");
+
+    ctx.cfg = NULL; /* no resources owned by this probe */
+    return 0;
+}
+
 int main(int argc, char** argv)
 {
     char rmcmd[64];
@@ -608,6 +727,7 @@ int main(int argc, char** argv)
         return 1;
     }
     fixture_roundtrip(); /* s_failures drives the exit code below */
+    stats_record_test();
 
     /* Back out of the fixture dir so the probe sees the shipped Lego.cfg
      * (and its wad mount) rather than the loose fixture. */

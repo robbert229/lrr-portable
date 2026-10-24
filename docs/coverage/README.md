@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 373 | 14.5% |
+| ported | 413 | 16.1% |
 | anchored | 5 | 0.2% |
-| named | 2140 | 83.5% |
+| named | 2100 | 81.9% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 0 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (373 functions)
+  (413 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (5 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (2140 functions)
+  citation yet (2100 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (0 functions)
 
-**Game logic remaining to port: 2145 (83.7%).**
+**Game logic remaining to port: 2105 (82.1%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -1260,55 +1260,15 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00469b80` | EntityIndexedRecordWordAtOffsetE0Get |
 | `0x00469bb0` | BuildingDepositCountGet |
 | `0x00469be0` | EntityIndexedRecordWordAtOffsetF0Get |
-| `0x00469cb0` | EntityComponentFloatAt20 |
-| `0x00469ce0` | EntityComponentFloatAtD4 |
-| `0x00469d00` | NestedFloatAtOffset9CGet |
-| `0x00469d20` | EntityComponentFloatAtD8 |
-| `0x00469d40` | NestedFloatAtOffset6CGet |
-| `0x00469d50` | NestedFloatAtOffset74Get |
-| `0x00469d60` | NestedFloatAtOffset78Get |
-| `0x00469d70` | NestedFloatAtOffsetE8Get |
-| `0x00469d90` | NestedFloatAtOffset70Get |
-| `0x00469da0` | NestedFieldAddressAtOffsetA0Get |
-| `0x00469db0` | NestedFloatAtOffset7CGet |
-| `0x00469dc0` | NestedFloatAtOffset80Get |
-| `0x00469de0` | EntityEnergyDecayRateGet |
 | `0x00469e00` | IndexedRecordFloatAtOffsetDCGet |
-| `0x00469e20` | NestedFloatAtOffsetDCGet |
-| `0x00469e40` | NestedWordAtOffsetACGet |
-| `0x00469e60` | EntityStatsWordGet |
-| `0x00469e80` | EntityStateFlagsGet |
-| `0x00469ea0` | EntityCapabilityFlagsGet |
 | `0x00469ec0` | IndexedRecordWordAtOffset144Get |
 | `0x00469ee0` | IndexedRecordWordAtOffset148Get |
 | `0x00469f00` | IndexedRecordWordAtOffset14CGet |
-| `0x00469f20` | ScreenShakeFlagRaise |
 | `0x00469f40` | BuildingUpgradeAdmissionCheck |
 | `0x00469f60` | IndexedRecordWordAtOffsetD0Get |
-| `0x00469f90` | NestedWordAtOffsetC0OrC4Get |
-| `0x00469fe0` | NestedFloatAtOffset8CGet |
-| `0x0046a000` | Entity334FloatField90Get |
-| `0x0046a020` | Entity334FloatField98Get |
-| `0x0046a040` | Entity334FloatField94Get |
-| `0x0046a080` | Entity334FloatFieldF4Get |
-| `0x0046a0a0` | EntitySpeedComponentGet |
 | `0x0046a0c0` | MappedIndexedRecordWordAtFCGet |
 | `0x0046a0f0` | MappedIndexedRecordWordAt100Get |
 | `0x0046a120` | GroupedCodeTableFindValueIndex |
-| `0x0046a170` | Entity334FloatField130Get |
-| `0x0046a190` | Entity334FloatField134Get |
-| `0x0046a1b0` | Entity334FloatField120Get |
-| `0x0046a1d0` | Entity334FloatField128Get |
-| `0x0046a1f0` | Entity334FloatField124Get |
-| `0x0046a210` | Entity334WordField13CGet |
-| `0x0046a230` | Entity334FloatField12CGet |
-| `0x0046a250` | Entity334FloatField138Get |
-| `0x0046a270` | EntityCollisionRadiusGet |
-| `0x0046a290` | Entity334FloatField114Get |
-| `0x0046a2b0` | Entity334FloatField118Get |
-| `0x0046a2d0` | Entity334FloatField11CGet |
-| `0x0046a2f0` | Entity334FloatField110Get |
-| `0x0046a310` | Entity334FloatField10CGet |
 | `0x0046a330` | EntityRecordFlag400ToggleAndRefresh |
 | `0x0046a370` | LinkedRecordChainFree |
 | `0x0046a390` | GlobalLinkedRecordChainClear |
