@@ -1290,6 +1290,23 @@ cell address unguarded past its gate; unreachable cells report unusable
 margins, the flag and type exclusion sets and the differing
 blockers/blocked-types of the pair.
 
+**Offset-point rect family** (2026-10-24; findings 241/363/446): the
+three hit-walk containment leaves land in `src/gods98/view.*` beside
+`rect_contains_point_half_open` — `rect_contains_offset_point`
+(`RectContainsOffsetPoint @ 0x45b590`, the category-cell walk's test),
+`rect_contains_point_by_converted_coords`
+(`RectContainsPointByConvertedCoords @ 0x463c00`, the region-route
+walk's byte-identical copy) and `rect_contains_point_from_object_bounds`
+(`RectContainsPointFromObjectBounds @ 0x463c90`, bounds read through the
+record's +0x14 slot pointer). All three carry the same arithmetic: the
+float offset pair truncates to int (the corpus's two `__ftol` calls —
+the documented cast ≡ truncation), subtracts from the integer point, and
+tests `x_min <= fx < x_max` / `y_min <= fy < y_max` over the bounds quad
+`{x_min, y_min, x_max, y_max}` — half-open in both axes. The corpus
+dereferences the +0x14 slot unguarded; the port answers 0 for a NULL
+slot or rect (documented deviation). `view_test` drives the corners, the
+truncated-offset shifts and the slot indirection.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the
