@@ -455,6 +455,9 @@ void checkpoint_blob_build(GameContext* ctx)
     ctx->checkpoint_blob = blob;
 }
 
+/* CheckpointBlobFree (FUN_004601e0, finding 08): frees the blob. The
+ * corpus frees its global and LEAVES the dangling pointer; the port
+ * nulls it (documented deviation — port-owned storage). */
 void checkpoint_blob_free(GameContext* ctx)
 {
     if (ctx != NULL) {

@@ -530,5 +530,12 @@ int main(void)
     CHECK(save_state_event_context_peek() == 9u, "the store lands");
     save_state_event_context_set(0u);
 
+    /* CheckpointBlobFree (2026-10-24): frees and clears the port model. */
+    checkpoint_blob_build(&ctx);
+    CHECK(ctx.checkpoint_blob != NULL, "the blob builds");
+    checkpoint_blob_free(&ctx);
+    CHECK(ctx.checkpoint_blob == NULL, "the free clears the port pointer");
+    checkpoint_blob_free(&ctx); /* the double free is a no-op */
+
     return 0;
 }

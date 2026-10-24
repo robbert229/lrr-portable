@@ -261,4 +261,17 @@ int  request_record_ready_flag2(int index);   /* FUN_0045ab60 */
 int  request_record_flag8_is_set(int index);  /* FUN_0045ab90 */
 void request_record_flags_set(int index, uint32_t flags); /* port hook */
 
+/* --- the remaining DAT one-liner stores/reads (2026-10-24; finding 392) -----
+ * GlobalValueSet_0050080c (FUN_0045c4a0): the unresolved store's word.
+ * IndexedGlobalValueGet_00500a9c / GlobalValueGet_00500a98
+ * (FUN_0045cc10 / FUN_0045cc60): the font-cursor words - the corpus's
+ * table reads whose feeder (the font slot loader) is unported, so both
+ * land as zero-init storage with the corpus's stride-1 index math
+ * guarded to a documented 16-entry window (deviation). */
+void     global_value_0050080c_set(uint32_t value);
+uint32_t global_value_0050080c_peek(void);            /* port hook */
+uint32_t indexed_global_value_at_get(int index);      /* FUN_0045cc10 */
+uint32_t global_cursor_word_get(void);                /* FUN_0045cc60 */
+void     font_cursor_word_set(int index, uint32_t v); /* port hook */
+
 #endif /* LEGORRR_GODS98_CRT_HPP */

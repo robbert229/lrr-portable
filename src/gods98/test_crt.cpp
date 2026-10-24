@@ -425,6 +425,23 @@ int main(void)
         request_record_flags_set(4, 0u);
     }
 
+    /* The remaining DAT one-liner band (2026-10-24). */
+    {
+        global_value_0050080c_set(6u);
+        CHECK(global_value_0050080c_peek() == 6u, "the store lands");
+        global_value_0050080c_set(0u);
+        CHECK(indexed_global_value_at_get(0) == 0u
+                  && indexed_global_value_at_get(16) == 0u
+                  && indexed_global_value_at_get(-1) == 0u,
+              "the font window starts clear and guards clean");
+        font_cursor_word_set(3, 7u);
+        CHECK(indexed_global_value_at_get(3) == 7u, "the indexed read lands");
+        font_cursor_word_set(-1, 4u);
+        CHECK(global_cursor_word_get() == 4u, "the cursor word reads back");
+        font_cursor_word_set(3, 0u);
+        font_cursor_word_set(-1, 0u);
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "crt_test: %d failure(s)\n", s_failures);
         return 1;

@@ -1301,6 +1301,17 @@ int main(int argc, char** argv)
               "any low bit opens the gate");
     }
 
+    /* The objective-result read (2026-10-24). */
+    {
+        LevelState g;
+        memset(&g, 0, sizeof(g));
+        CHECK(level_objective_result_get(&g) == 0
+                  && level_objective_result_get(NULL) == 0,
+              "the result word starts clear");
+        g.objective_result = 1;
+        CHECK(level_objective_result_get(&g) == 1, "the achieved word reads");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "level_test: %d failure(s)\n", s_failures);
         return 1;

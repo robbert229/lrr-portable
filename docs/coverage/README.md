@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 720 | 28.1% |
+| ported | 729 | 28.4% |
 | anchored | 4 | 0.2% |
-| named | 1793 | 69.9% |
+| named | 1784 | 69.6% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (720 functions)
+  (729 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1793 functions)
+  citation yet (1784 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1798 (70.1%).**
+**Game logic remaining to port: 1789 (69.8%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -828,7 +828,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00451ab0` | PrimitiveModelRecordCreate |
 | `0x00451b30` | LinkedRecordListFlatten |
 | `0x00451bc0` | ResourceListUpdateMatchingKey |
-| `0x00451c30` | LinkedRecordField4Clear |
 | `0x00451c50` | OwnedObjectReferenceChainRelease |
 | `0x00451cd0` | MessageStringTableInitialize |
 | `0x00451fd0` | CaseInsensitiveNameTableLookupAtOffset8 |
@@ -853,7 +852,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00456b80` | TutorialPathCoordinateIndex |
 | `0x00456c60` | ObjectPoolListsFreeAll |
 | `0x00456cb0` | CoordinateListCallbackVisit |
-| `0x00458650` | GlobalFlagGet_004ffe30 |
 | `0x004588e0` | InputDeviceRelease |
 | `0x00459240` | PopEntityStateOverride |
 | `0x004593e0` | OsfWrite |
@@ -900,7 +898,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0045c0d0` | PairCountHistogramBuild |
 | `0x0045c340` | PanelResourceLayoutStore |
 | `0x0045c3f0` | AdvisorProgressBarFillDraw |
-| `0x0045c4a0` | GlobalValueSet_0050080c |
 | `0x0045c4b0` | PanelResourcePositionUpdateIfEnabled |
 | `0x0045c520` | PanelResourceHandleAndDimensionsStore |
 | `0x0045c580` | UiOverlayAnimationAdvance |
@@ -910,8 +907,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0045c830` | PointerCursorNameRegistryInit |
 | `0x0045ca70` | PointerCursorConfigLoad |
 | `0x0045cbd0` | PointerCursorConfigParse |
-| `0x0045cc10` | IndexedGlobalValueGet_00500a9c |
-| `0x0045cc60` | GlobalValueGet_00500a98 |
 | `0x0045cc70` | PointerCursorDraw |
 | `0x0045cd90` | PointerCursorOverrideTick |
 | `0x0045cdc0` | PriorityImagesConfigLoad |
@@ -929,7 +924,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0045d640` | UiCursorMoveToElementCenter |
 | `0x0045d7e0` | LevelIdentifierRemapTableLoad |
 | `0x0045d870` | CommandEntityReferenceRemap |
-| `0x0045d8a0` | ObjectField14Set |
 | `0x0045d8b0` | ScreenCoordNormalizeInit |
 | `0x0045da90` | UiRenderRecordCreate |
 | `0x0045daf0` | UiRenderRecordFree |
@@ -943,7 +937,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0045f750` | TaskBlockFinish |
 | `0x0045f7b0` | TaskFlushImages |
 | `0x0045f7d0` | TaskFlushFont |
-| `0x004601e0` | CheckpointBlobFree |
 | `0x00460200` | SelectedLevelStartObjectUpdate |
 | `0x00460220` | StartLevelSelected |
 | `0x00460290` | EntityType4IndexListBuild |
@@ -966,8 +959,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004628e0` | CallbackRecordAllocateInitialize |
 | `0x00462960` | TaskTableContentsRelease |
 | `0x004629d0` | PanelEventEntryAppend |
-| `0x00462ab0` | RecordField18Set |
-| `0x00462ac0` | RecordFlags24Or |
 | `0x00462ad0` | RewardScrollTickerAdvanceAndDraw |
 | `0x00462da0` | IndexedSurfaceResourceAllocate |
 | `0x00462e60` | AnimatedTextureReplace |

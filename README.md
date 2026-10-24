@@ -2216,6 +2216,23 @@ port-side setter standing in for the unported panel-layer writers.
 `enginebind_test`, `crt_test`, and `frontend_test` pin the reads, the
 window guards, and the wipe clear.
 
+**The record-field write band** (2026-10-24; findings 08/324/386): nine
+rows land. Four record primitives in `record.*`:
+`record_field18_set` (0x462ab0), `record_flags_24_or` (0x462ac0),
+`object_field14_set` (0x45d8a0), and `linked_record_field4_clear`
+(0x451c30) — the chain walker following each node's `+0x14` next link and
+clearing every `+4`, the corpus's blind walk down to a guarded entry.
+`checkpoint_blob_free` (0x4601e0, `savegame.*`) was already the port's
+model of the corpus free — cited; the corpus quirk of freeing the global
+and leaving the pointer dangling is replaced by the port's clear-on-free
+(documented deviation). `level_objective_result_get` (0x458650, `level.*`)
+threads the objective-result word LevelState already models. Three DAT
+one-liners land as zero-init storage in `crt.*`: the unresolved store
+(0x45c4a0) and the font-cursor table pair (0x45cc10/c60) whose feeder
+(font slot loading) is unported — corpus index math reproduced, guarded
+to a documented window. `record_test`, `crt_test`, `savegame_test`, and
+`level_test` pin the writes, the walk, and the peeks.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

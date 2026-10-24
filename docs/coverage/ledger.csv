@@ -1197,7 +1197,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00451ab0,FUN_00451ab0,named,PrimitiveModelRecordCreate,0,1182
 00451b30,FUN_00451b30,named,LinkedRecordListFlatten,0,1014
 00451bc0,FUN_00451bc0,named,ResourceListUpdateMatchingKey,0,503
-00451c30,FUN_00451c30,named,LinkedRecordField4Clear,0,151
+00451c30,FUN_00451c30,ported,LinkedRecordField4Clear,1,151
 00451c50,FUN_00451c50,named,OwnedObjectReferenceChainRelease,0,713
 00451cd0,FUN_00451cd0,named,MessageStringTableInitialize,0,3579
 00451f60,FUN_00451f60,ported,CommandQueueCancelOpcode,1,817
@@ -1261,7 +1261,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004585c0,FUN_004585c0,ported,ObjectiveBlockArm,1,290
 004585f0,FUN_004585f0,ported,ObjectiveTimerArm,1,320
 00458620,FUN_00458620,ported,ObjectiveConstructionArm,1,306
-00458650,FUN_00458650,named,GlobalFlagGet_004ffe30,0,60
+00458650,FUN_00458650,ported,GlobalFlagGet_004ffe30,2,60
 00458660,FUN_00458660,ported,GlobalValueSet_004ffe48,1,81
 00458670,FUN_00458670,ported,ObjectiveVoiceAliasPrepare,2,2644
 004588e0,FUN_004588e0,named,InputDeviceRelease,0,852
@@ -1330,7 +1330,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0045c0d0,FUN_0045c0d0,named,PairCountHistogramBuild,0,3553
 0045c340,FUN_0045c340,named,PanelResourceLayoutStore,0,574
 0045c3f0,FUN_0045c3f0,named,AdvisorProgressBarFillDraw,0,623
-0045c4a0,FUN_0045c4a0,named,GlobalValueSet_0050080c,0,81
+0045c4a0,FUN_0045c4a0,ported,GlobalValueSet_0050080c,1,81
 0045c4b0,FUN_0045c4b0,named,PanelResourcePositionUpdateIfEnabled,0,529
 0045c520,FUN_0045c520,named,PanelResourceHandleAndDimensionsStore,0,323
 0045c580,FUN_0045c580,named,UiOverlayAnimationAdvance,0,492
@@ -1340,10 +1340,10 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0045c830,FUN_0045c830,named,PointerCursorNameRegistryInit,0,2931
 0045ca70,FUN_0045ca70,named,PointerCursorConfigLoad,0,1783
 0045cbd0,FUN_0045cbd0,named,PointerCursorConfigParse,0,368
-0045cc10,FUN_0045cc10,named,IndexedGlobalValueGet_00500a9c,0,79
+0045cc10,FUN_0045cc10,ported,IndexedGlobalValueGet_00500a9c,2,79
 0045cc20,FUN_0045cc20,ported,PointerCursorSelect,2,203
 0045cc40,FUN_0045cc40,ported,PointerCursorOverrideSet,2,213
-0045cc60,FUN_0045cc60,named,GlobalValueGet_00500a98,0,60
+0045cc60,FUN_0045cc60,ported,GlobalValueGet_00500a98,2,60
 0045cc70,FUN_0045cc70,named,PointerCursorDraw,0,1006
 0045cd90,FUN_0045cd90,named,PointerCursorOverrideTick,0,214
 0045cdc0,FUN_0045cdc0,named,PriorityImagesConfigLoad,0,1288
@@ -1362,7 +1362,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0045d6d0,FUN_0045d6d0,ported,PositionTrackerUpdateAll,1,1260
 0045d7e0,FUN_0045d7e0,named,LevelIdentifierRemapTableLoad,0,675
 0045d870,FUN_0045d870,named,CommandEntityReferenceRemap,0,330
-0045d8a0,FUN_0045d8a0,named,ObjectField14Set,0,112
+0045d8a0,FUN_0045d8a0,ported,ObjectField14Set,1,112
 0045d8b0,FUN_0045d8b0,named,ScreenCoordNormalizeInit,0,1993
 0045da90,FUN_0045da90,named,UiRenderRecordCreate,0,538
 0045daf0,FUN_0045daf0,named,UiRenderRecordFree,0,80
@@ -1389,7 +1389,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0045fda0,FUN_0045fda0,ported,CheckpointBlobBuild,2,2872
 004600a0,FUN_004600a0,ported,TaskImportanceRefresh,1,679
 00460140,FUN_00460140,ported,TaskQuotaRefresh,1,625
-004601e0,FUN_004601e0,named,CheckpointBlobFree,0,71
+004601e0,FUN_004601e0,ported,CheckpointBlobFree,1,71
 004601f0,FUN_004601f0,ported,CheckpointBlobGet,1,60
 00460200,FUN_00460200,named,SelectedLevelStartObjectUpdate,0,166
 00460220,FUN_00460220,named,StartLevelSelected,0,543
@@ -1423,8 +1423,8 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004628e0,FUN_004628e0,named,CallbackRecordAllocateInitialize,0,887
 00462960,FUN_00462960,named,TaskTableContentsRelease,0,595
 004629d0,FUN_004629d0,named,PanelEventEntryAppend,0,1632
-00462ab0,FUN_00462ab0,named,RecordField18Set,0,112
-00462ac0,FUN_00462ac0,named,RecordFlags24Or,0,128
+00462ab0,FUN_00462ab0,ported,RecordField18Set,1,112
+00462ac0,FUN_00462ac0,ported,RecordFlags24Or,1,128
 00462ad0,FUN_00462ad0,named,RewardScrollTickerAdvanceAndDraw,0,3173
 00462da0,FUN_00462da0,named,IndexedSurfaceResourceAllocate,0,743
 00462e60,FUN_00462e60,named,AnimatedTextureReplace,0,455
