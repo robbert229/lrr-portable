@@ -315,7 +315,7 @@ undefined4 EngineTick(float param_1)
     TerrainCellChangeQueueFlush();
   }
   FUN_00477fa0();
-  RegisteredObjectListApplyCallback();
+  TransientEffectRegistryEnableSet();
   FUN_004651a0();
   if ((DAT_00556ec8 == 1) && ((DAT_00556ecc & 0x100000) == 0)) {
     FUN_00435300(DAT_005560d4,DAT_005560dc,fVar10,param_1);
@@ -900,7 +900,7 @@ LAB_0043cdea:
     uVar13 = EntityTypeComponentGet(piVar8);
     iVar10 = piVar8[0xd4];
 LAB_0043ce1d:
-    SoundFrameTick(iVar10);
+    SoundHandleStopForward(iVar10);
     piVar8[0xfb] = piVar8[0xfb] & 0xffefffff;
     uVar14 = NestedWordAtOffsetC0OrC4Get(piVar8,1,0,1,0);
     SoundSubmissionRouteWrapper(uVar13,uVar14);
@@ -1862,7 +1862,7 @@ LAB_0043dcb3:
 LAB_0043ed80:
   if ((bVar7) && ((piVar8[0xfb] & 0x20000U) != 0)) {
     EntityTypeComponentGet(piVar8);
-    SoundFrameTick(piVar8[0xd4]);
+    SoundHandleStopForward(piVar8[0xd4]);
     piVar8[0xfb] = piVar8[0xfb] & 0xffefffff;
     uVar13 = NestedWordAtOffsetC0OrC4Get(piVar8,1,0);
     SoundAliasPlay(uVar13);
