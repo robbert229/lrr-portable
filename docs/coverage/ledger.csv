@@ -343,7 +343,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0040fe40,FUN_0040fe40,ported,PointerStackPush,3,266
 0040fe60,FUN_0040fe60,ported,PointerStackPop,3,339
 0040fe90,FUN_0040fe90,ported,PointerStackForEach,3,224
-0040fec0,FUN_0040fec0,ported,SetGlobalScalarToOne,2,71
+0040fec0,FUN_0040fec0,named,SetGlobalScalarToOne,0,71
 0040ff50,FUN_0040ff50,named,SceneObjectListApplyFloatCallback,0,111
 0040ff70,FUN_0040ff70,ported,ObjectVector3Set,1,244
 0040ffe0,FUN_0040ffe0,named,GlobalVectorSetAndNotifyListeners,0,294

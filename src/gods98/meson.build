@@ -7,6 +7,7 @@ gods98_lib = static_library('gods98',
   'string.cpp',
   'crt.cpp',
   'heap.cpp',
+  'ptrstack.cpp',
   'engine.cpp',
   'tickers.cpp',
   'resource.cpp',
@@ -55,7 +56,8 @@ if get_option('platform') == 'native'
                  ['flic', 'test_flic.cpp'], ['media', 'test_media.cpp'],
                  ['string', 'test_string.cpp'],
                  ['crt', 'test_crt.cpp'],
-                 ['heap', 'test_heap.cpp']]
+                 ['heap', 'test_heap.cpp'],
+                 ['ptrstack', 'test_ptrstack.cpp']]
     test_name = exe[0]
     t = executable(test_name + '_test', exe[1],
       include_directories : gods98_incs,
