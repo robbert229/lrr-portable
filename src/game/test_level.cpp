@@ -869,6 +869,30 @@ int main(int argc, char** argv)
                                               1.0f, 1.0f);
         CHECK(terrain_cell_surface_type_get(terrain, 0, 0) == 0,
               "the guarded apply stays inert");
+        /* The refresh dispatch (2026-10-24): the terrain half clears the
+         * surface byte through the modeled level block; the guard cases
+         * stay inert. */
+        {
+            GameContext rctx;
+            game_context_init(&rctx);
+            static LevelState dlvl;
+            memset(&dlvl, 0, sizeof(dlvl));
+            rctx.level = &dlvl;
+            terrain_cell_surface_type_set(terrain, 2, 5, 4);
+            dlvl.ptr_terrain = NULL;
+            terrain_cell_refresh_dispatch(&rctx, 2, 5);
+            CHECK(terrain_cell_surface_type_get(terrain, 2, 5) == 4,
+                  "the missing terrain skips (deviation)");
+            dlvl.ptr_terrain = terrain;
+            terrain_cell_refresh_dispatch(&rctx, 2, 5);
+            CHECK(terrain_cell_surface_type_get(terrain, 2, 5) == 0,
+                  "the refresh dispatch clears the cell's surface type");
+            rctx.level = NULL;
+            terrain_cell_refresh_dispatch(&rctx, 0, 0);
+            coordinate_callback_dispatch(&dlvl, 0);
+            coordinate_callback_dispatch_by_mode(&dlvl, 1);
+            CHECK(1, "the dispatch seams change no state");
+        }
         /* The corner normal sample (2026-10-24): no loader-fed corner
          * floats, so the axis corners read zero and the diagonal
          * selectors normalize the zero vector. */

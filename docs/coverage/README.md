@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 617 | 24.1% |
+| ported | 620 | 24.2% |
 | anchored | 5 | 0.2% |
-| named | 1895 | 73.9% |
+| named | 1892 | 73.8% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (617 functions)
+  (620 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1895 functions)
+  citation yet (1892 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1901 (74.1%).**
+**Game logic remaining to port: 1898 (74.0%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -58,6 +58,36 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00401b30` | AdvisorApplySlotTransform |
 | `0x00401c50` | FormattedTextPrintfWidth |
 | `0x00401c80` | FormattedTextPrintf |
+| `0x00402000` | CmdMarkMatching |
+| `0x00402060` | CmdSetKind |
+| `0x00402090` | PriorityEntryOrderValueSet |
+| `0x004020a0` | PriorityEntryStateSet |
+| `0x004020b0` | PriorityEntryStateGet |
+| `0x004020c0` | HandleArrayReleaseAndReset |
+| `0x00402100` | CmdFlushAll |
+| `0x00402170` | LevelNoGatherObjectSetup |
+| `0x004021e0` | EngineMemoryAllocate |
+| `0x00402210` | EngineMemoryFree |
+| `0x00402510` | TerrainCellCommandCreate |
+| `0x00402600` | EntityRecordArrayApplyZeroState |
+| `0x00402670` | EntityCommand15ValidatedRecordQueue |
+| `0x004026c0` | EntityDeferredWorkSchedule |
+| `0x00402800` | EntityCommand14BatchIssue |
+| `0x00402890` | TaskType23CreateForCategoryMask |
+| `0x00402960` | EntityKindCommandIssue |
+| `0x00402a40` | CoordinatePairCallbackDispatch |
+| `0x00402aa0` | ArgumentCallbackDispatch |
+| `0x00402cd0` | CmdCancelRef |
+| `0x00402d50` | KindNineCellCommandIssue |
+| `0x00402e40` | CellCommandType13Issue |
+| `0x00402ec0` | EntityConditionalTaskSchedule |
+| `0x00402f30` | EntityThresholdProgressEventQueue |
+| `0x00402f70` | EntityTargetCommandQueue |
+| `0x00402fb0` | CellCommandType11Issue |
+| `0x00403030` | CellCommandType3Issue |
+| `0x004030b0` | CoordinatePairEventQueue |
+| `0x00403190` | ObjectEventType2Queue |
+| `0x004031e0` | ActiveEntityListContainsCode |
 | `0x00403320` | ObjectCommandTaskCreate |
 | `0x00403750` | CommandKindRecordIssueAndLink |
 | `0x00403810` | TerrainCellRecordCountUpdate |
