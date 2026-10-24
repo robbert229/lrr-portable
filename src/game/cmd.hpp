@@ -457,6 +457,40 @@ void task_record_kind11_timed_queue(void* payload);
 void* cmd_rec_event_payload_get(const void* rec);
 int cmd_rec_cell_count_get(const void* rec); /* +0x28 word (timed arg 3) */
 
+/* --- the entity command-chain housekeeping (2026-10-24; findings 369/465) ----
+ * EntityCommandChainHeadRemove (FUN_004041e0): pops the entity chain head.
+ * Pending-but-undone heads move to the global head list; the corpus's second
+ * arm (test $0x20,%ch — state bit 16, Ghidra's 0x2000 mislabel) undone heads
+ * to the tail list — both raw inserts (no timestamp, no flag edits) —
+ * and everything else is freed. Returns the entity's new chain head.
+ * EntityDrainCommandChain (FUN_00403a50): gated on DAT_004b8060 bit 1 clear:
+ * pending-undone records head-link at their own kind, bit-16 undone ones
+ * tail-link, and everything else frees; the entity chain drops to NULL.
+ * The corpus's pool-search tail half (the callback raising bit 5 on records
+ * whose +0x10 payload is the entity) is the DAT_004b31c8 registry seam.
+ * EntityTaskStateUpdateAfterCleanup (FUN_00403af0): with the argument clear
+ * the chain head's bit 0 drops; with it set and the head type 0, the head
+ * comes off and a kind-3 entity additionally queues operation 7. The corpus
+ * reads the +0xbc record list — the port models it as the chain head
+ * (deviation, same convention as cmd_chain_drop).
+ * EntityPendingTaskFlagClear (FUN_00403b40): bit 0 off the chain head.
+ * TaskRecordKind14RemoveIfHead (FUN_00403f60): a kind-0xe head comes off.
+ * CommandQueueSweepRelink (FUN_00404100): the chain sweep — flag-bit-2
+ * records free, pending-undone ones go raw onto the head list, bit-16
+ * undone ones raw onto the tail list, everything else stays. The corpus
+ * relinks every keeper through the HEAD keeper's link slot only, so an
+ * intermediate keeper is orphaned (the corpus quirk, pinned). The corpus's
+ * two global lists overlay the same link word, so both raw inserts land
+ * on the port's single global chain (documented).
+ * EntityTaskChainContainsKind (FUN_004041b0): any chain record of the type. */
+void* entity_command_chain_head_remove(EntitySlot* e);
+void entity_drain_command_chain(EntitySlot* e);
+void entity_task_state_update_after_cleanup(EntitySlot* e, int flag);
+void entity_pending_task_flag_clear(EntitySlot* e);
+void task_record_kind14_remove_if_head(EntitySlot* e);
+void command_queue_sweep_relink(EntitySlot* e);
+int  entity_task_chain_contains_kind(const EntitySlot* e, int type);
+
 #ifdef __cplusplus
 }
 #endif

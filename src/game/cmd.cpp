@@ -1775,3 +1775,147 @@ int cmd_rec_cell_count_get(const void* rec)
 {
     return rec != NULL ? (int)cas_rec(rec)->cell_count : -1;
 }
+
+/* --- entity command-chain housekeeping (see cmd.hpp) --------------------------
+ * The corpus's DAT_004b3354/DAT_004b3358 lists overlay one link word, so the
+ * two raw moves below land on the port's single global chain; the records'
+ * entity-chain link clears as the corpus's +0x60 overwrite does. */
+static void cmd_raw_head_insert(CmdRec* rec)
+{
+    rec->global_next = s_global_head;
+    rec->next = NULL;
+    if (s_global_head == NULL) {
+        s_global_tail = rec;
+    }
+    s_global_head = rec;
+}
+
+void* entity_command_chain_head_remove(EntitySlot* e)
+{
+    if (e == NULL) {
+        return NULL; /* deviation: the corpus reads the entity blindly */
+    }
+    CmdRec* head = as_rec(e->cmd_head);
+    if (head == NULL) {
+        return NULL;
+    }
+    e->cmd_head = head->next;
+    head->next = NULL;
+    if ((head->state & 0x10u) != 0u && (head->state & 0x20u) == 0u) {
+        cmd_raw_head_insert(head); /* the pending-and-undone head moves on */
+    } else if ((head->state & 0x10000u) != 0u /* corpus test $0x20,%ch */
+               && (head->state & 0x20u) == 0u) {
+        cmd_raw_head_insert(head); /* the tail list is the port's one chain */
+    } else {
+        cmd_free(head, 0);
+    }
+    return e->cmd_head;
+}
+
+void entity_drain_command_chain(EntitySlot* e)
+{
+    if (e == NULL) {
+        return; /* deviation: the corpus reads the entity blindly */
+    }
+    if ((s_global_enabled & 2) != 0) {
+        return; /* the corpus gate: DAT_004b8060 bit 1 blocks the drain */
+    }
+    CmdRec* cur = as_rec(e->cmd_head);
+    while (cur != NULL) {
+        CmdRec* next = as_rec(cur->next);
+        if ((cur->state & 0x10u) != 0u && (cur->state & 0x20u) == 0u) {
+            cur->next = NULL;
+            cmd_link_head(cur, cur->kind); /* the pending head link (full) */
+        } else if ((cur->state & 0x10000u) != 0u /* corpus test $0x20,%ch */
+                   && (cur->state & 0x20u) == 0u) {
+            cur->next = NULL;
+            cmd_link_tail(cur); /* the bit-16 tail link (full) */
+        } else {
+            cmd_free(cur, 0);
+        }
+        cur = next;
+    }
+    e->cmd_head = NULL;
+    /* The corpus's tail half — EntityPoolCallbackSearch with the
+     * LAB_00403ad0 callback (bit 5 onto the records whose +0x10 payload
+     * is this entity) — is the DAT_004b31c8 registry seam. */
+}
+
+void entity_task_state_update_after_cleanup(EntitySlot* e, int flag)
+{
+    if (e == NULL || e->cmd_head == NULL) {
+        return;
+    }
+    if (flag == 0) {
+        as_rec(e->cmd_head)->state &= ~1u;
+        return;
+    }
+    if (as_rec(e->cmd_head)->type == 0) {
+        entity_command_chain_head_remove(e);
+        if (e->type == 3) {
+            cmd_enqueue(7, e, 0, 0, 0); /* operation 7 for kind-3 entities */
+        }
+    }
+}
+
+void entity_pending_task_flag_clear(EntitySlot* e)
+{
+    if (e != NULL && e->cmd_head != NULL) {
+        as_rec(e->cmd_head)->state &= ~1u;
+    }
+}
+
+void task_record_kind14_remove_if_head(EntitySlot* e)
+{
+    if (e != NULL && e->cmd_head != NULL
+        && as_rec(e->cmd_head)->type == 0xe) {
+        entity_command_chain_head_remove(e);
+    }
+}
+
+void command_queue_sweep_relink(EntitySlot* e)
+{
+    if (e == NULL) {
+        return; /* deviation: the corpus reads the entity blindly */
+    }
+    CmdRec* keep = NULL;
+    CmdRec* cur = as_rec(e->cmd_head);
+    while (cur != NULL) {
+        CmdRec* next = as_rec(cur->next);
+        if ((cur->state & 4u) != 0u) {
+            cmd_free(cur, 0); /* the flag bit-2 record goes */
+        } else if ((cur->state & 0x10u) != 0u && (cur->state & 0x20u) == 0u) {
+            cmd_raw_head_insert(cur); /* raw onto the head list */
+        } else if ((cur->state & 0x10000u) != 0u /* corpus test $0x20,%ch */
+                   && (cur->state & 0x20u) == 0u
+                   && (cur->state & 0x10u) == 0u) {
+            cmd_raw_head_insert(cur); /* raw onto the tail list */
+        } else {
+            /* The corpus relinks every keeper through the HEAD keeper's
+             * link slot only (iVar3 is assigned once), so an intermediate
+             * keeper is orphaned — the corpus quirk, kept. */
+            cur->next = NULL;
+            if (keep == NULL) {
+                keep = cur;
+            } else {
+                keep->next = cur;
+            }
+        }
+        cur = next;
+    }
+    e->cmd_head = keep;
+}
+
+int entity_task_chain_contains_kind(const EntitySlot* e, int type)
+{
+    if (e == NULL) {
+        return 0;
+    }
+    for (const CmdRec* cur = cas_rec(e->cmd_head); cur != NULL;
+         cur = cas_rec(cur->next)) {
+        if (cur->type == type) {
+            return 1;
+        }
+    }
+    return 0;
+}

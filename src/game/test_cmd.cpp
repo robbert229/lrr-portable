@@ -1432,6 +1432,186 @@ int main(void)
         cmd_context_set(&ctx);
     }
 
+    /* The entity command-chain housekeeping band (2026-10-24). */
+    {
+        GameContext lctx;
+        game_context_init(&lctx);
+        cmd_context_set(&lctx);
+        cmd_init();
+        EntitySlot host;
+        memset(&host, 0, sizeof(host));
+        host.type = 2;
+
+        /* Head remove: guarded, and the free arm hands the block back. */
+        CHECK(entity_command_chain_head_remove(NULL) == NULL
+                  && entity_command_chain_head_remove(&host) == NULL,
+              "head remove guards the empty shapes");
+        void* only = cmd_alloc(7);
+        cmd_rec_state_set(only, 0x20u); /* done: the free arm */
+        host.cmd_head = only;
+        CHECK(entity_command_chain_head_remove(&host) == NULL
+                  && host.cmd_head == NULL,
+              "the done head removes into the free arm");
+        CHECK(cmd_alloc(7) == only, "the freed block comes back");
+        cmd_init();
+
+        /* The pending-undone arm moves the head onto the global chain,
+         * raw: no timestamp and no flag writes. */
+        void* mv = cmd_alloc(9);
+        cmd_rec_state_set(mv, 0x10u);
+        void* tail = cmd_alloc(1);
+        cmd_rec_set_next(mv, tail);
+        host.cmd_head = mv;
+        const float before_now = cmd_rec_now(mv);
+        const uint32_t before_state = cmd_rec_state(mv);
+        CHECK(entity_command_chain_head_remove(&host) == tail
+                  && host.cmd_head == tail
+                  && cmd_global_head() == mv
+                  && cmd_global_next(mv) == NULL,
+              "the pending head lands on the global head");
+        CHECK(cmd_rec_now(mv) == before_now
+                  && cmd_rec_state(mv) == before_state,
+              "the raw move writes no timestamp and no flags");
+        cmd_init();
+
+        /* The bit-16 arm lands on the same port chain. */
+        mv = cmd_alloc(9);
+        cmd_rec_state_set(mv, 0x10000u);
+        host.cmd_head = mv;
+        tail = cmd_alloc(2);
+        host.cmd_head = mv;
+        cmd_rec_set_next(mv, tail);
+        CHECK(entity_command_chain_head_remove(&host) == tail
+                  && cmd_global_head() == mv,
+              "the bit-16 head lands on the global chain too");
+        cmd_init();
+
+        /* Drain: gated while the enable word's bit 1 stands. */
+        cmd_flush_all(0);
+        void* pend = cmd_alloc(4);
+        cmd_rec_state_set(pend, 0x10u);
+        cmd_set_kind(pend, 5);
+        void* bit16 = cmd_alloc(6);
+        cmd_rec_state_set(bit16, 0x10000u);
+        void* gone = cmd_alloc(7);
+        cmd_rec_state_set(gone, 0x20u);
+        cmd_rec_set_next(pend, bit16);
+        cmd_rec_set_next(bit16, gone);
+        host.cmd_head = pend;
+        entity_drain_command_chain(&host);
+        CHECK(host.cmd_head == pend, "the gated drain leaves the chain");
+        cmd_flush_all(1);
+        entity_drain_command_chain(&host);
+        CHECK(host.cmd_head == NULL
+                  && cmd_global_head() == pend
+                  && cmd_global_next(pend) == bit16,
+              "the drained chain lands pend then bit-16 tail");
+        CHECK(cmd_rec_state(pend) & CMD_STATE_PENDING ? 1 : 0,
+              "the drained pending record stays pending");
+        CHECK(cmd_rec_now(pend) == 1500.0f && cmd_rec_now(bit16) == 1500.0f,
+              "the drained links stamp the 1500 timestamp");
+        CHECK(cmd_rec_kind(pend) == 5, "the drained head links its kind");
+        cmd_init();
+
+        /* The after-cleanup update: bit 0 off, or the type-0 head off with
+         * the kind-3 op-7 queue riding. */
+        void* bit0 = cmd_alloc(1);
+        cmd_rec_state_set(bit0, 0x11u);
+        host.cmd_head = bit0;
+        entity_task_state_update_after_cleanup(&host, 0);
+        CHECK(cmd_rec_state(bit0) == 0x10u, "the clear flag drops bit 0");
+        host.type = 3;
+        entity_task_state_update_after_cleanup(&host, 1);
+        const int qbefore = cmd_queue_active_count_peek();
+        void* zero = cmd_alloc(0);
+        cmd_rec_state_set(zero, 0x20u);
+        host.cmd_head = zero;
+        entity_task_state_update_after_cleanup(&host, 1);
+        CHECK(host.cmd_head == NULL
+                  && cmd_queue_active_count_peek() == qbefore + 1,
+              "the kind-3 cleanup queues operation 7");
+        host.cmd_head = cmd_alloc(1);
+        cmd_rec_state_set(host.cmd_head, 0u);
+        entity_task_state_update_after_cleanup(&host, 1);
+        CHECK(host.cmd_head != NULL, "a nonzero head type stays put");
+        host.type = 2;
+        cmd_init();
+
+        /* The pending flag clear and the kind-14 head. */
+        void* flagged = cmd_alloc(1);
+        cmd_rec_state_set(flagged, 0x11u);
+        host.cmd_head = flagged;
+        entity_pending_task_flag_clear(&host);
+        CHECK(cmd_rec_state(flagged) == 0x10u, "the clear takes bit 0 off");
+        entity_pending_task_flag_clear(NULL);
+        host.cmd_head = NULL;
+        entity_pending_task_flag_clear(&host);
+        void* kind14 = cmd_alloc(0xe);
+        cmd_rec_state_set(kind14, 0x20u); /* done: the free arm */
+        host.cmd_head = kind14;
+        task_record_kind14_remove_if_head(&host);
+        CHECK(host.cmd_head == NULL, "the kind-14 head comes off");
+        void* notk14 = cmd_alloc(3);
+        host.cmd_head = notk14;
+        task_record_kind14_remove_if_head(&host);
+        CHECK(host.cmd_head == notk14, "the other head types stay");
+        cmd_init();
+
+        /* The sweep: free / raw-head / raw-tail / keeper arms with the
+         * corpus's head-keeper-only relink. */
+        void* k1 = cmd_alloc(1);
+        void* ph = cmd_alloc(2);
+        void* k2 = cmd_alloc(3);
+        void* t16 = cmd_alloc(4);
+        void* drop = cmd_alloc(5);
+        void* k3 = cmd_alloc(6);
+        cmd_rec_state_set(k1, 0u);
+        cmd_rec_state_set(ph, 0x10u);
+        cmd_rec_state_set(k2, 0x30u);
+        cmd_rec_state_set(t16, 0x10000u);
+        cmd_rec_state_set(drop, 4u);
+        cmd_rec_state_set(k3, 0x20u);
+        cmd_rec_set_next(k1, ph);
+        cmd_rec_set_next(ph, k2);
+        cmd_rec_set_next(k2, t16);
+        cmd_rec_set_next(t16, drop);
+        cmd_rec_set_next(drop, k3);
+        host.cmd_head = k1;
+        const float ph_now = cmd_rec_now(ph);
+        command_queue_sweep_relink(&host);
+        CHECK(host.cmd_head == k1
+                  && cmd_rec_next(k1) == k3
+                  && cmd_rec_next(k3) == NULL,
+              "the sweep keeps k1->k3 with k2 orphaned (corpus quirk)");
+        CHECK(cmd_global_head() == t16
+                  && cmd_global_next(t16) == ph
+                  && cmd_global_next(ph) == NULL,
+              "the raw moves land t16 then ph on the global chain");
+        CHECK(cmd_rec_now(ph) == ph_now
+                  && cmd_rec_state(ph) == 0x10u
+                  && cmd_rec_state(t16) == 0x10000u,
+              "the raw sweep moves stamp nothing");
+        cmd_init();
+
+        /* Chain containment. */
+        void* ca = cmd_alloc(1);
+        void* cb = cmd_alloc(2);
+        void* cc = cmd_alloc(3);
+        cmd_rec_set_next(ca, cb);
+        cmd_rec_set_next(cb, cc);
+        host.cmd_head = ca;
+        CHECK(entity_task_chain_contains_kind(&host, 1) != 0
+                  && entity_task_chain_contains_kind(&host, 3) != 0
+                  && entity_task_chain_contains_kind(&host, 2) != 0,
+              "the walk finds head, middle and tail");
+        CHECK(entity_task_chain_contains_kind(&host, 9) == 0
+                  && entity_task_chain_contains_kind(NULL, 1) == 0,
+              "the walk misses clean");
+        host.cmd_head = NULL;
+        cmd_init();
+        cmd_context_set(&ctx);
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "cmd_test: %d failure(s)\n", s_failures);
         return 1;

@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 661 | 25.8% |
-| anchored | 5 | 0.2% |
-| named | 1851 | 72.2% |
+| ported | 668 | 26.1% |
+| anchored | 4 | 0.2% |
+| named | 1845 | 72.0% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (661 functions)
+  (668 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
-  not named (5 functions)
+  not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1851 functions)
+  citation yet (1845 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1857 (72.4%).**
+**Game logic remaining to port: 1850 (72.2%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -76,16 +76,10 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00403910` | CellRecordCountsPruneForEntity |
 | `0x004039a0` | TaskRecordCreateAndScanGrid |
 | `0x00403a10` | TaskCallbackDispatch |
-| `0x00403a50` | EntityDrainCommandChain |
-| `0x00403af0` | EntityTaskStateUpdateAfterCleanup |
-| `0x00403b40` | EntityPendingTaskFlagClear |
 | `0x00403b60` | EntityActivityRecordsRefresh |
 | `0x00403c00` | EntityActivityRecordRemoveByType |
 | `0x00403ef0` | PendingRecordCallbackDispatch |
-| `0x00403f60` | TaskRecordKind14RemoveIfHead |
 | `0x004040a0` | EntityTaskQueueFlush |
-| `0x00404100` | CommandQueueSweepRelink |
-| `0x004041b0` | EntityTaskChainContainsKind |
 | `0x00404e00` | ObjectPathSubmitToGridTarget |
 | `0x00404ed0` | CheckObjectCandidate |
 | `0x00404f10` | FindMatchingObjectRecord |
