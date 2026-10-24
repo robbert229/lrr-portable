@@ -776,3 +776,12 @@ void* sav_record_ptr(GameContext* ctx, int index)
     }
     return (char*)ctx->records + (size_t)index * SAVE_RECORD_SIZE + 4;
 }
+
+/* SelectedLevelStartObjectUpdate (FUN_00460200) — see savegame.hpp. */
+void selected_level_start_object_update(GameContext* ctx)
+{
+    if (ctx == NULL || ctx->level == NULL) {
+        return; /* corpus: no level bound, nothing reads */
+    }
+    (void)checkpoint_blob_get(ctx); /* the corpus keeps no result */
+}

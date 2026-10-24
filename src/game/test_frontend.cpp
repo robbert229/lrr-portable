@@ -1297,6 +1297,16 @@ int main(int argc, char** argv)
         CHECK(crt_surface_calls_count() == 0, "a closed panel answers nothing");
     }
 
+    /* The timed-effect timestamp reset (2026-10-24): stamp + guard. */
+    {
+        timed_effect_tick_word_set(123u);
+        timed_effect_timestamp_reset(3);
+        CHECK(timed_effect_time_peek(3) == 123u, "the stamp lands");
+        timed_effect_timestamp_reset(-1); /* guarded */
+        CHECK(timed_effect_time_peek(-1) == 0u, "the guard answers clear");
+        timed_effect_tick_word_set(0u);
+    }
+
     if (s_failures == 0) {
         printf("frontend: all tests passed\n");
         return 0;

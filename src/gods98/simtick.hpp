@@ -185,4 +185,15 @@ void simtick_global_ui_flags_clear_bits12(void); /* FUN_0045b610 */
 uint32_t simtick_route_position_state_peek(void);
 uint32_t simtick_global_ui_flags_word(void);
 
+/* ScenePositionResetAndEffectMotionCancel (FUN_0044cf70): copies the current
+ * owner transform onto the configured position triple and clears the scene-
+ * transform word's bit 7 (the motion-cancel gate the drift/jitter tickers
+ * read). The corpus feeds both triples from the unported transform-state
+ * initializer, so they land as module statics with hooks — deviation: the
+ * corpus reads the owner pose through the scene-object vtable seam, modeled
+ * here as the current triple. */
+void simtick_scene_position_reset_and_effect_motion_cancel(void);
+                                     /* FUN_0044cf70 */
+void         simtick_scene_transform_current_set(const float xyz[3]);
+const float* simtick_scene_transform_config_peek(void);
 #endif /* LEGORRR_SIMTICK_HPP */

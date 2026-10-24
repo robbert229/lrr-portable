@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 813 | 31.7% |
+| ported | 817 | 31.9% |
 | anchored | 4 | 0.2% |
-| named | 1700 | 66.3% |
+| named | 1696 | 66.1% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (813 functions)
+  (817 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1700 functions)
+  citation yet (1696 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1705 (66.5%).**
+**Game logic remaining to port: 1701 (66.3%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -541,7 +541,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00437c20` | DeferredOListEntityQueueAdd |
 | `0x004382c0` | PooledRecordAllocateAndReset |
 | `0x00438310` | PooledRecordChunkAllocateAndLink |
-| `0x004383a0` | GlobalAnimationStateSet |
 | `0x004383b0` | RoverWorkQueueUpdate |
 | `0x00438460` | EntityKindRecordUpdateDispatch |
 | `0x00438580` | EntityFlag80000000SetOrClear |
@@ -748,7 +747,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0044cc10` | LightEffectFadeParametersStore |
 | `0x0044cca0` | LightEffectsMoveConfigLoad |
 | `0x0044cef0` | LightEffectsMoveParametersStore |
-| `0x0044cf70` | ScenePositionResetAndEffectMotionCancel |
 | `0x0044cff0` | UiElementRgbColorSetClamped |
 | `0x0044d0d0` | DriftOffsetStepApply |
 | `0x0044d280` | RandomWaypointTimerStepApply |
@@ -886,7 +884,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0045f750` | TaskBlockFinish |
 | `0x0045f7b0` | TaskFlushImages |
 | `0x0045f7d0` | TaskFlushFont |
-| `0x00460200` | SelectedLevelStartObjectUpdate |
 | `0x00460220` | StartLevelSelected |
 | `0x00460290` | EntityType4IndexListBuild |
 | `0x00460310` | EntityType4IndexListAppend |
@@ -979,7 +976,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0046b660` | CommandSampleStatsAccumulate |
 | `0x0046b700` | TimedEffectCueRequestSet |
 | `0x0046b730` | TimedEffectPersistenceSet |
-| `0x0046b7a0` | TimedEffectTimestampReset |
 | `0x0046b7c0` | TimedEffectAndCueUpdate |
 | `0x0046b8b0` | RectangularGridOverlayGeometryDraw |
 | `0x0046bc30` | TimedEffectSlotRender |

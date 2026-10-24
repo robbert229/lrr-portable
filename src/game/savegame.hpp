@@ -190,4 +190,9 @@ void* sav_build_ctx(GameContext* ctx);
  * is under the count. NULL when the corpus's guard answers 0. */
 void* sav_record_ptr(GameContext* ctx, int index);
 
+/* SelectedLevelStartObjectUpdate (FUN_00460200): when the level block is
+ * bound, reads the checkpoint blob through the ported getter (the corpus
+ * discards the value; the apparent argument is calling-convention residue —
+ * the getter answers the blob word itself). */
+void selected_level_start_object_update(GameContext* ctx); /* FUN_00460200 */
 #endif /* LEGORRR_GAME_SAVEGAME_HPP */
