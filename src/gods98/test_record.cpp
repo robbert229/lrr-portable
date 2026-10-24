@@ -428,6 +428,32 @@ static void test_indexed_sweep(void)
           "NULL manager answers zero");
 }
 
+/* Straggler readers: the movie readiness byte and the game-file
+ * system-kind word. */
+static void test_straggler_reads(void)
+{
+    ProbeRecord movie;
+    memset(&movie, 0, sizeof(movie));
+    movie.storage[0x99] = 1;
+    CHECK(avi_player_ready_get(&movie) == 1u, "ready byte at +0x99");
+    movie.storage[0x99] = 0;
+    CHECK(avi_player_ready_get(&movie) == 0u, "cleared byte answers zero");
+    /* The byte reads alone: neighbours must not leak in. */
+    poke_dword(&movie, 0x94, 0xffffffffu); /* ends below +0x99 */
+    poke_dword(&movie, 0x9c, 0xffffffffu);
+    CHECK(avi_player_ready_get(&movie) == 0u, "neighbour dwords stay out");
+    movie.storage[0x99] = 0xff;
+    CHECK(avi_player_ready_get(&movie) == 0xffu, "the byte answers full");
+    CHECK(avi_player_ready_get(NULL) == 0u, "NULL movie answers zero");
+
+    uint32_t kind = 2u; /* 0 = wad-backed in the corpus's callers */
+    uint8_t handle[16];
+    memset(handle, 0, sizeof(handle));
+    __builtin_memcpy(handle, &kind, 4);
+    CHECK(game_file_system_type_get(handle) == 2u, "the type dword reads +0");
+    CHECK(game_file_system_type_get(NULL) == 0u, "NULL handle answers zero");
+}
+
 static void test_interpolated_z(void)
 {
     /* a = 10 at +8, b = 4 at +8: v = 4 * 2.5 + 10 = 20. */
@@ -466,6 +492,7 @@ int main(void)
     test_entity_flag_bit1();
     test_reader_sweep();
     test_indexed_sweep();
+    test_straggler_reads();
     test_interpolated_z();
     if (s_failures != 0) {
         fprintf(stderr, "record_test: %d failure(s)\n", s_failures);

@@ -420,6 +420,38 @@ int main(int argc, char** argv)
         test_real_spots(argv[2]);
     }
 
+    /* RegistryPathSplit (FUN_0048b330, finding 402): component copy. */
+    {
+        char out[100];
+        const char* rest = registry_path_split("Key\\Sub\\Leaf", out);
+        CHECK(strcmp(out, "Key") == 0, "first component copied");
+        CHECK(rest != NULL && strcmp(rest, "Sub\\Leaf") == 0,
+              "rest resumes after one separator");
+        rest = registry_path_split(rest, out);
+        CHECK(strcmp(out, "Sub") == 0, "second component copied");
+        rest = registry_path_split(rest, out);
+        CHECK(strcmp(out, "Leaf") == 0, "the tail component copies whole");
+        CHECK(rest != NULL && *rest == '\0', "the tail returns the empty rest");
+        /* Leading/trailing separator corners. */
+        rest = registry_path_split("\\Lead", out);
+        CHECK(out[0] == '\0', "leading separator yields an empty component");
+        CHECK(rest != NULL && strcmp(rest, "Lead") == 0,
+              "the rest skips the leading separator");
+        rest = registry_path_split("Trail\\", out);
+        CHECK(strcmp(out, "Trail") == 0, "trailing separator component");
+        CHECK(rest != NULL && strcmp(rest, "") == 0,
+              "the rest of a trailing separator is empty");
+        /* Empty path: both ends terminated, rest is the same pointer. */
+        rest = registry_path_split("", out);
+        CHECK(out[0] == '\0' && rest != NULL && *rest == '\0',
+              "empty path splits empty");
+        /* NULL deviations. */
+        CHECK(registry_path_split(NULL, out) == NULL, "NULL path answers NULL");
+        rest = registry_path_split("A", NULL);
+        CHECK(rest != NULL && strcmp(rest, "A") == 0,
+              "NULL out copies nothing and returns the path");
+    }
+
     if (s_failures == 0) {
         printf("block: all tests passed\n");
         return 0;

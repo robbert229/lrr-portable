@@ -413,3 +413,28 @@ int block_get_bool(BlockFile* bf, const char* path)
     }
     return 2;
 }
+
+/* RegistryPathSplit (FUN_0048b330, finding 402): the corpus copies the
+ * leading backslash component, terminates both ends, and skips one
+ * separator. The registry's 100-byte caller buffer bound is the
+ * caller's business (finding 402 notes the helper itself is unbounded —
+ * reproduced, caller checks live where the registry lands). */
+const char* registry_path_split(const char* path, char* out)
+{
+    if (path == NULL || out == NULL) {
+        return path;
+    }
+    *out = '\0';
+    char c = *path;
+    while (c != '\0' && c != '\\') {
+        *out = c;
+        ++out;
+        ++path;
+        c = *path;
+    }
+    if (*path == '\\') {
+        ++path;
+    }
+    *out = '\0';
+    return path;
+}

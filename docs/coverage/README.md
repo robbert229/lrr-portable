@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 520 | 20.3% |
+| ported | 523 | 20.4% |
 | anchored | 5 | 0.2% |
-| named | 1993 | 77.7% |
+| named | 1990 | 77.6% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 0 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (520 functions)
+  (523 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (5 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1993 functions)
+  citation yet (1990 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (0 functions)
 
-**Game logic remaining to port: 1998 (77.9%).**
+**Game logic remaining to port: 1995 (77.8%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -1590,7 +1590,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0047ed50` | AviCurrentFrameIndexGet |
 | `0x0047ed60` | AviStreamFrameCountGet |
 | `0x0047ed70` | InterfaceInvokeOneIfNonNull |
-| `0x0047ed80` | AviPlayerReadyGet |
 | `0x0047ed90` | DirectInputInitialize |
 | `0x0047efb0` | KeyboardDownKeyCount |
 | `0x0047efd0` | DirectInputShutdown |
@@ -1610,7 +1609,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0047fce0` | GameFileReadLine |
 | `0x0047fd40` | GameFileReadLineDispatch |
 | `0x0047fdb0` | GameFilePrintFormat |
-| `0x0047fe20` | GameFileSystemTypeGet |
 | `0x0047fe30` | FileOpenRouteSelect |
 | `0x0047fea0` | WadEntryReadIntoStreamSlot |
 | `0x0047fed0` | GameFileHandleAllocate |
@@ -1778,7 +1776,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0048b280` | WindowModeFlagSet |
 | `0x0048b290` | StartupStreamsClose |
 | `0x0048b2f0` | StartupConfigStreamLoad |
-| `0x0048b330` | RegistryPathSplit |
 | `0x0048b360` | RegistryPathAccessor |
 | `0x0048b390` | RegistryPathCreateKeys |
 | `0x0048b4a0` | BufferedCharStreamReadToString |

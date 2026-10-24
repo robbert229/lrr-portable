@@ -91,4 +91,12 @@ float block_get_float(BlockFile* bf, const char* path, float dflt);
  * missing or unparseable → 2. */
 int   block_get_bool(BlockFile* bf, const char* path);
 
+/* RegistryPathSplit (FUN_0048b330, finding 402): the backslash-path
+ * component copier the registry key builders loop over — copies bytes
+ * up to (not including) the next backslash or NUL into `out`, skips one
+ * separator, and returns the rest of the path. Same split idiom as the
+ * config nested paths above. NULL path answers NULL, out NULL copies
+ * nothing (documented deviation). */
+const char* registry_path_split(const char* path, char* out);
+
 #endif /* LEGORRR_BLOCK_HPP */

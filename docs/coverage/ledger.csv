@@ -2008,7 +2008,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0047ed50,FUN_0047ed50,named,AviCurrentFrameIndexGet,0,59
 0047ed60,FUN_0047ed60,named,AviStreamFrameCountGet,0,59
 0047ed70,FUN_0047ed70,named,InterfaceInvokeOneIfNonNull,0,128
-0047ed80,FUN_0047ed80,named,AviPlayerReadyGet,0,86
+0047ed80,FUN_0047ed80,ported,AviPlayerReadyGet,2,86
 0047ed90,FUN_0047ed90,named,DirectInputInitialize,0,2033
 0047eef0,FUN_0047eef0,ported,InputStatePoll,1,1356
 0047efb0,FUN_0047efb0,named,KeyboardDownKeyCount,0,285
@@ -2034,7 +2034,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0047fce0,FUN_0047fce0,named,GameFileReadLine,0,449
 0047fd40,FUN_0047fd40,named,GameFileReadLineDispatch,0,521
 0047fdb0,FUN_0047fdb0,named,GameFilePrintFormat,0,490
-0047fe20,FUN_0047fe20,named,GameFileSystemTypeGet,0,71
+0047fe20,FUN_0047fe20,ported,GameFileSystemTypeGet,2,71
 0047fe30,FUN_0047fe30,named,FileOpenRouteSelect,0,852
 0047fea0,FUN_0047fea0,named,WadEntryReadIntoStreamSlot,0,198
 0047fed0,FUN_0047fed0,named,GameFileHandleAllocate,0,493
@@ -2224,7 +2224,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0048b280,FUN_0048b280,named,WindowModeFlagSet,0,168
 0048b290,FUN_0048b290,named,StartupStreamsClose,0,290
 0048b2f0,FUN_0048b2f0,named,StartupConfigStreamLoad,0,215
-0048b330,FUN_0048b330,named,RegistryPathSplit,0,355
+0048b330,FUN_0048b330,ported,RegistryPathSplit,3,355
 0048b360,FUN_0048b360,named,RegistryPathAccessor,0,217
 0048b390,FUN_0048b390,named,RegistryPathCreateKeys,0,834
 0048b4a0,FUN_0048b4a0,named,BufferedCharStreamReadToString,0,260

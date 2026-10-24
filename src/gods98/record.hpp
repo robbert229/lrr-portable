@@ -177,4 +177,15 @@ void* indexed_record_data_address_get(const void* record, int index);
 int count_matching_coordinates_in_list(const void* manager,
                                        int32_t coord_x, int32_t coord_y);
 
+/* AviPlayerReadyGet (FUN_0047ed80, findings 185/414): the movie
+ * object's ready BYTE at +0x99 — one when the AVI open chain succeeded,
+ * zero otherwise. Byte-safe read (the offset straddles dwords); NULL
+ * answers 0. */
+uint32_t avi_player_ready_get(const void* movie);
+
+/* GameFileSystemTypeGet (FUN_0047fe20, findings 234/404): the system-kind
+ * dword at the very start of the game-file handle — callers choose WAD
+ * versus standard operations with it. Faithful read; NULL answers 0. */
+uint32_t game_file_system_type_get(const void* handle);
+
 #endif /* LEGORRR_GODS98_RECORD_HPP */
