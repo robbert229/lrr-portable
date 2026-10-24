@@ -53,6 +53,12 @@ cleanup when its low flag bit is set (`ev_a6ae79f2593370da78def4885cadaa80165242
 Because stream release is behind the global-byte check, cleanup behavior
 when that byte is set is not established here.
 
+The same global byte gates the other AVI frame-retriever methods: a nonzero
+value prevents frame updates and seek rebasing, makes the frame-count getter
+return zero, and makes the frame-index getter return zero. No direct write to
+this byte appears in the checked-in pseudocode, so the source of a nonzero
+value remains unresolved.
+
 The observed destructor does not close the AVI frame retriever, and the shipped
 executable imports no `AVIStreamGetFrameClose` function (finding 174). This
 establishes the absence of an explicit close path in the binary. Whether releasing
