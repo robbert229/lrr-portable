@@ -627,6 +627,11 @@ Open threads, in order of value:
 | 428 | [findings/428-font-and-text-buffer-rendering.md](docs/findings/428-font-and-text-buffer-rendering.md) | Font and Text-Buffer Rendering |
 | 429 | [findings/429-advisor-and-message-ui-state.md](docs/findings/429-advisor-and-message-ui-state.md) | Advisor and Message UI State |
 | 430 | [findings/430-scene-object-action-and-animation-lifecycle.md](docs/findings/430-scene-object-action-and-animation-lifecycle.md) | Scene Object, Action, and Animation Lifecycle |
+| 431 | [findings/431-graphics-rendering-and-surface-paths.md](docs/findings/431-graphics-rendering-and-surface-paths.md) | Graphics, Rendering, and Pixel Surface Paths |
+| 432 | [findings/432-scene-resource-animation-state-flow.md](docs/findings/432-scene-resource-animation-state-flow.md) | Scene Resource and Animation State Flow |
+| 433 | [findings/433-scene-objects-effects-motion-and-light-state.md](docs/findings/433-scene-objects-effects-motion-and-light-state.md) | Scene Objects, Effects, Motion, and Light State |
+| 434 | [findings/434-scene-resources-lights-markers-and-transient-effects.md](docs/findings/434-scene-resources-lights-markers-and-transient-effects.md) | Scene Resources, Lights, Markers, and Transient Effects |
+| 435 | [findings/435-scene-objects-animation-and-render-records.md](docs/findings/435-scene-objects-animation-and-render-records.md) | Scene Objects, Animation, and Render Records |
 | 439 | [findings/439-hud-panel-render-and-interaction-state.md](docs/findings/439-hud-panel-render-and-interaction-state.md) | HUD Panel Rendering and Interaction State |
 
 Canonical full pseudocode corpus: [`docs/decompiles/full/LEGORR.full.c`](docs/decompiles/full/LEGORR.full.c)
