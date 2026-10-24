@@ -1868,6 +1868,20 @@ unported HUD-chain seam, and it answers 1 only when it removed.
 `cmd_test` pins the no-cell rejection, the queueing draw (hand-built
 voxel block), the guard skip, and the swap-removal shape.
 
+**Selection filter + state monitor** (2026-10-24; findings 06/10/468): two
+selection-state leaves land in `cmd.*`. `selection_candidate_filter`
+(0x4526e0) follows the +0x304 attach mirror (a new EntitySlot field),
+runs the ported eligibility and already-selected leaves, and appends the
+candidate below the corpus's hundred-entry cap with the +0x3e8 selected
+bit — the marker/HUD reset, activity/action resets, type-2 turn issue, and
+visual-resource route are documented unported seams (the insert is the
+observable half). `selected_entity_state_monitor` (0x452cc0) runs the
+corpus's counter-free loop — `count` passes over the FIRST selection entry
+(kept faithfully) — clearing the attached owner's +0x3e4 bit 3 and owner
+word when the stats word's bit 0x20000 says so; the per-type teardown is
+the entity-layer seam. `cmd_test` pins eligibility, the append and cap,
+the visual success half, and both monitor shapes.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

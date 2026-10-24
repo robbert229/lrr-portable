@@ -1218,12 +1218,12 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00452650,FUN_00452650,ported,ArrayFindValueIndex,1,375
 00452690,FUN_00452690,ported,SelectionCandidateAlreadySelectedOrMarked,1,190
 004526c0,FUN_004526c0,ported,SelectionCandidateFilterDefault,1,109
-004526e0,FUN_004526e0,named,SelectionCandidateFilter,0,1492
+004526e0,FUN_004526e0,ported,SelectionCandidateFilter,1,1492
 00452870,FUN_00452870,ported,SelectionCandidateEligibilityCheck,3,359
 004528c0,FUN_004528c0,named,SelectionStateTick,0,3991
 00452be0,FUN_00452be0,ported,SelectionClear,1,568
 00452c50,FUN_00452c50,ported,SelectionEntityRemove,1,458
-00452cc0,FUN_00452cc0,named,SelectedEntityStateMonitor,0,615
+00452cc0,FUN_00452cc0,ported,SelectedEntityStateMonitor,1,615
 00452d60,FUN_00452d60,ported,SelectionCommandDispatch,1,791
 00452df0,FUN_00452df0,named,TutorialNerpScriptFileLoad,0,559
 00452e70,FUN_00452e70,named,ObjectiveAdvisorTokenLoad,0,6179

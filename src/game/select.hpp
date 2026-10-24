@@ -97,6 +97,6 @@ int selection_contains_entity(const GameContext* ctx, const EntitySlot* e);
  * the type-1 +0x3e0 bit-0x40000 rejection. NULL entities reject both. */
 int selection_candidate_already_selected_or_marked(const GameContext* ctx,
                                                    const EntitySlot* e);
-int selection_candidate_eligibility_check(const EntitySlot* e);
+/* The eligibility leaf is declared in entity.hpp (implemented there). */
 
 #endif /* LEGORRR_GAME_SELECT_HPP */
