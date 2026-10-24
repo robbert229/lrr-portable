@@ -2135,6 +2135,15 @@ stands in for the unported callback bindings. `save_slot_get`
 slot word — cited here. `frontend_test` pins the boot state and the
 setter walk, `savegame_test` the slot round-trip.
 
+**The save-slot band** (2026-10-24; findings 21/408): three rows land in
+`savegame.*`. `save_slot_selection_clear` (0x415cf0) drops the active slot
+to the corpus's closed `-1` sentinel; `sav_slot_ctx` (0x417e50)
+reproduces the corpus's 0..5 bounds test over the slot context block —
+the port's one active-slot context stands in for the corpus's six
+deviation, documented); and `save_slot_set` (SavSetSlot, 0x417ea0) was
+already the port's model of the slot word — cited.
+`savegame_test` pins the clear, the bounds, and the block answer.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

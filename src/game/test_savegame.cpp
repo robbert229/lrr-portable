@@ -691,5 +691,16 @@ int main(void)
     save_slot_set(&ctx, 3);
     CHECK(save_slot_get(&ctx) == 3, "the slot setter round-trips");
 
+    /* The save-slot band (2026-10-24): selection clear + ctx accessor. */
+    save_slot_set(&ctx, 4);
+    save_slot_selection_clear(&ctx);
+    CHECK(save_slot_get(&ctx) == -1, "the clear drops to the closed sentinel");
+    save_slot_set(&ctx, 5);
+    CHECK(sav_slot_ctx(NULL, 0) == NULL
+              && sav_slot_ctx(&ctx, -1) == NULL
+              && sav_slot_ctx(&ctx, SAVE_SLOTS) == NULL,
+          "the ctx accessor bounds clean");
+    CHECK(sav_slot_ctx(&ctx, 2) == &ctx, "the ctx block answers valid slots");
+
     return 0;
 }
