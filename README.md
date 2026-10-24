@@ -634,6 +634,7 @@ Open threads, in order of value:
 | 435 | [findings/435-scene-objects-animation-and-render-records.md](docs/findings/435-scene-objects-animation-and-render-records.md) | Scene Objects, Animation, and Render Records |
 | 436 | [findings/436-simulation-ui-and-player-controls.md](docs/findings/436-simulation-ui-and-player-controls.md) | Simulation UI and Player Controls |
 | 437 | [findings/437-menu-widgets-and-menu-rendering.md](docs/findings/437-menu-widgets-and-menu-rendering.md) | Menu Widgets and Menu Rendering |
+| 456 | [findings/456-world-entity-creation-and-pointer-registries.md](docs/findings/456-world-entity-creation-and-pointer-registries.md) | World Entity Creation and Pointer Registries |
 
 Canonical full pseudocode corpus: [`docs/decompiles/full/LEGORR.full.c`](docs/decompiles/full/LEGORR.full.c)
 (2564 manifest functions; see its [README](docs/decompiles/full/README.md)). The
