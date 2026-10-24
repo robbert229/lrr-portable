@@ -947,6 +947,77 @@ int main(int argc, char** argv)
               "the store reads back");
     }
 
+    /* The eligibility + admission leaves (2026-10-24). */
+    {
+        GameContext ctx;
+        game_context_init(&ctx);
+        int idx = entity_create(&ctx, 1, "EligLeaf", 0.0f, 0.0f, 0.0f, 0.0f);
+        CHECK(idx >= 0, "eligibility leaf slot created");
+        if (idx >= 0) {
+            EntitySlot* e = &ctx.entity[0][idx];
+            e->flags_3e0 = 0u;
+            e->flags_3e4 = 0u;
+            e->flags_3e8 = 0u;
+            e->field_340 = 0.0f;
+            char rec[ENTITY_STATS_RECORD_SIZE];
+            memset(rec, 0, sizeof rec);
+            e->stats_record = rec;
+            /* quad-mesh admission: clear stats, type 1 answers allowed. */
+            CHECK(entity_quad_mesh_render_record_allowed(e) == 1,
+                  "a clear stats word allows the record");
+            const uint32_t hi = 0x08000000u;
+            memcpy(rec + 0x148, &hi, 4);
+            CHECK(entity_quad_mesh_render_record_allowed(e) == 0,
+                  "the stats bit admits nothing");
+            const uint32_t zero = 0u;
+            memcpy(rec + 0x148, &zero, 4);
+            e->type = 8;
+            CHECK(entity_quad_mesh_render_record_allowed(e) == 0,
+                  "type 8 is excluded");
+            e->type = 13;
+            CHECK(entity_quad_mesh_render_record_allowed(e) == 0,
+                  "type 13 is excluded");
+            e->type = 1;
+            /* flag-100 + shared eligibility: gate follows stats bit 0x100. */
+            CHECK(entity_flag100_and_shared_eligibility_check(e) == 0,
+                  "a clear stats word answers no");
+            const uint32_t f100 = 0x100u;
+            memcpy(rec + 0x148, &f100, 4);
+            CHECK(entity_flag100_and_shared_eligibility_check(e) == 1,
+                  "bit 100 rides through the relaxed gate");
+            e->type = 4; /* the gate takes the strict clause */
+            e->flags_3e8 = 0x20000000u;
+            CHECK(entity_flag100_and_shared_eligibility_check(e) == 1,
+                  "the strict clause answers through its word");
+            e->flags_3e8 = 0u;
+            CHECK(entity_flag100_and_shared_eligibility_check(e) == 0,
+                  "the strict clause fails its word");
+            /* task type + condition: the gate and the caller's condition. */
+            CHECK(task_type_and_condition_check(e, 1) == 1,
+                  "the relaxed gate carries the condition");
+            CHECK(task_type_and_condition_check(e, 0) == 0,
+                  "a clear condition answers no");
+            e->flags_3e0 = 0x100u; /* blocks the gate */
+            CHECK(task_type_and_condition_check(e, 1) == 0,
+                  "the blocked gate answers no");
+        }
+    }
+
+    /* The shared eligibility gate's own negative field (2026-10-24). */
+    {
+        GameContext ctx;
+        game_context_init(&ctx);
+        int idx = entity_create(&ctx, 1, "EligNeg", 0.0f, 0.0f, 0.0f, 0.0f);
+        if (idx >= 0) {
+            EntitySlot* e = &ctx.entity[0][idx];
+            e->flags_3e0 = 0u;
+            e->flags_3e4 = 0u;
+            e->field_340 = -1.0f;
+            CHECK(entity_flag100_and_shared_eligibility_check(e) == 0,
+                  "the negative bound fails the gate");
+        }
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "entity_test: %d failure(s)\n", s_failures);
         return 1;

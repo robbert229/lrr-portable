@@ -720,6 +720,26 @@ int main(void)
               "the aux word clears with it");
     }
 
+    /* ReleaseLinkedObjectList (2026-10-24): owner free + chain recycle. */
+    {
+        void* prev = global_record_list_head_peek();
+        char header[0x20];
+        char node[0x20];
+        memset(header, 0, sizeof header);
+        memset(node, 0, sizeof node);
+        void* next = node;
+        __builtin_memcpy(header + 0x14, &next, sizeof next);
+        linked_object_list_release(header);
+        CHECK(global_record_list_head_peek() == (void*)node,
+              "the chain recycles the last node to the head");
+        void* link = NULL;
+        __builtin_memcpy(&link, node + 0x1c, sizeof link);
+        CHECK(link == (void*)header, "the recycled nodes chain through +0x1c");
+        __builtin_memcpy(&link, header + 0x1c, sizeof link);
+        CHECK(link == prev, "the chain tail reaches the prior head");
+        linked_object_list_release(NULL); /* guarded */
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "crt_test: %d failure(s)\n", s_failures);
         return 1;

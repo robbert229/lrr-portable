@@ -1149,3 +1149,20 @@ void global_linked_record_chain_clear(void)
 
 void* linked_list_global_aux_peek(void) { return s_linked_list_aux; }
 void  linked_list_global_aux_set(void* word) { s_linked_list_aux = word; }
+
+/* ReleaseLinkedObjectList (FUN_00479240) — see crt.hpp. */
+void linked_object_list_release(void* list)
+{
+    if (list == NULL) {
+        return; /* deviation: the corpus strides the head blindly */
+    }
+    void* owner = NULL;
+    __builtin_memcpy(&owner, (char*)list, sizeof owner);
+    engine_heap_free(owner);
+    for (void* node = list; node != NULL;) {
+        void* next = NULL;
+        __builtin_memcpy(&next, (char*)node + 0x14, sizeof next);
+        global_record_list_push_head(node);
+        node = next;
+    }
+}

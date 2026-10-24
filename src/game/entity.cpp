@@ -724,3 +724,31 @@ uint32_t entity_global_animation_state_peek(void)
 {
     return s_global_animation_state;
 }
+
+/* EntityFlag100AndSharedEligibilityCheck (FUN_00471ce0) — see entity.hpp. */
+int entity_flag100_and_shared_eligibility_check(const EntitySlot* e)
+{
+    if ((entity_state_flags_get(e) & 0x100u) == 0u) {
+        return 0;
+    }
+    return entity_shared_eligibility_check(e, e->type != 4) != 0 ? 1 : 0;
+}
+
+/* EntityQuadMeshRenderRecordAllowed (FUN_0040aae0) — see entity.hpp. */
+int entity_quad_mesh_render_record_allowed(const EntitySlot* e)
+{
+    if ((entity_state_flags_get(e) & 0x08000000u) == 0u && e->type != 8
+        && e->type != 13) {
+        return 1;
+    }
+    return 0;
+}
+
+/* TaskTypeAndConditionCheck (FUN_0043c490) — see entity.hpp. */
+int task_type_and_condition_check(const EntitySlot* target, int condition)
+{
+    if (entity_shared_eligibility_check(target, 1) == 0 || condition == 0) {
+        return 0;
+    }
+    return 1;
+}

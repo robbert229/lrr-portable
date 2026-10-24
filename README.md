@@ -2363,6 +2363,22 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Eligibility + release leaf band** (findings 332/460/251/435/471/393/377/
+323/416/428): `entity.*` ports `entity_flag100_and_shared_eligibility_check`
+(0x471ce0 — stats bit 0x100 rides the shared gate, strict only for type 4),
+`entity_quad_mesh_render_record_allowed` (0x40aae0 — clear stats bit
+0x08000000 and type neither 8 nor 13), and `task_type_and_condition_check`
+(0x43c490 — the relaxed gate and the caller's condition; the corpus's first
+argument is calling-convention residue), while `crt.*` ports
+`linked_object_list_release` (0x479240 — the field-0 owner free, then the
+field-5 chain recycled onto the global record list), `ptrstack.*` ports
+`callback_state_list_dispose` (0x40f850 — the drain, the entry frees, and
+the stack-record release, with the corpus record laid out host-widened),
+and `frontend.*` ports `bitmap_font_glyph_measure_width` (0x47a520 — the
+measure lane with the draw flag clear, the faithful void-effect wrapper).
+`entity_test`, `crt_test`, `ptrstack_test`, and `frontend_test` pin the
+gates, the chain, the drain, and the guards.
+
 **Activity-request wrappers** (findings 448/223/377): `ai.*` ports the two
 entity wrappers `entity_dispatch_event5_and_set_flag` (0x447b00 — activity
 request through corpus index 5, folding the corpus setter's

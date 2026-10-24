@@ -523,4 +523,12 @@ uint32_t timed_effect_time_peek(int index);        /* diagnostics */
  * as a module static with a peek hook. */
 void     screen_right_edge_cache_refresh(void); /* FUN_0041a290 */
 uint32_t screen_right_edge_cache_peek(void);    /* port hook */
+/* BitmapFontGlyphMeasureWidth (FUN_0047a520): runs the glyph layout lane
+ * with the draw flag clear and zero coordinates — the corpus lane recomputes
+ * the measure float and returns void, changing nothing observable. Deviation:
+ * the port re-derives glyph advances inside the render lane, so the wrapper
+ * lands as the bounds-guarded call-through. */
+void bitmap_font_glyph_measure_width(void* font, unsigned char glyph);
+                                                /* FUN_0047a520 */
+
 #endif /* LEGORRR_GAME_FRONTEND_HPP */

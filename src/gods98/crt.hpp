@@ -407,4 +407,12 @@ void global_linked_record_chain_clear(void);  /* FUN_0046a390 */
 void* linked_list_global_aux_peek(void);      /* port hook */
 void  linked_list_global_aux_set(void* word); /* port hook */
 
+/* ReleaseLinkedObjectList (FUN_00479240): frees the list record's field-0
+ * owner word through the engine heap, then recycles the chain — linked
+ * through record field 5, a corpus slot the port keeps as a documented
+ * widened link slot — by pushing every node onto the global record list
+ * through the ported push. Deviation: the corpus strides the chain
+ * blindly; the port guards the record pointer. */
+void linked_object_list_release(void* list);          /* FUN_00479240 */
+
 #endif /* LEGORRR_GODS98_CRT_HPP */

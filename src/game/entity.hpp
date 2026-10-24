@@ -235,4 +235,20 @@ uint32_t entity_stats_flag40_test(const EntitySlot* e); /* FUN_00439d30 */
  * dispatch row stays blocked. */
 void     entity_global_animation_state_set(uint32_t value); /* FUN_004383a0 */
 uint32_t entity_global_animation_state_peek(void);          /* port hook */
+/* --- eligibility + admission leaves (2026-10-24; findings 332/460/251/435/471)
+ * EntityFlag100AndSharedEligibilityCheck (FUN_00471ce0): with the stats
+ * word's bit 0x100 set, consults the shared eligibility gate — the relaxed
+ * clause is skipped only for type-4 entities (the corpus's second argument
+ * is its own type test). EntityQuadMeshRenderRecordAllowed (FUN_0040aae0):
+ * allowed with stats bit 0x08000000 clear and the type neither 8 nor 13.
+ * TaskTypeAndConditionCheck (FUN_0043c490): the gate in relaxed mode over
+ * the target and the caller's condition; the corpus's first argument is
+ * discarded in the body (calling-convention residue, 0x460200 precedent). */
+int entity_flag100_and_shared_eligibility_check(const EntitySlot* e);
+                                                /* FUN_00471ce0 */
+int entity_quad_mesh_render_record_allowed(const EntitySlot* e);
+                                                /* FUN_0040aae0 */
+int task_type_and_condition_check(const EntitySlot* target, int condition);
+                                                /* FUN_0043c490 */
+
 #endif /* LEGORRR_GAME_ENTITY_HPP */
