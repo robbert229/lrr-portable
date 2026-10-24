@@ -1970,3 +1970,5 @@ address,review_status,interpretation,confidence,evidence
 0x0076ab48,partial,Additional input-activity state checked during objective voice transition,medium,"ObjectiveVoiceAliasPrepare waits until this field and the adjacent mouse-state fields at 0x0076ab3c, 0x0076ab40, and 0x0076ab4c are clear before changing objective voice state; the write path for this field is unresolved."
 0x004aa454,partial,Integer constant 40 copied into scene-state records,medium,"SceneObjectStateDispatch copies this value into a newly allocated record at offset 0x14 when parameter flag bit 0 is set; its higher-level meaning is unresolved."
 0x004aa45c,partial,Float constant 3.0 copied into scene-state records,medium,"SceneObjectStateDispatch copies this value into a newly allocated record at offset 0x0c when parameter flag bit 1 is set; its higher-level meaning is unresolved."
+0x004aabe0,interpreted,Boolean false token NO,high,"ConfigBooleanParse compares this token case-insensitively and returns false when the input matches."
+0x004aabec,interpreted,Boolean true token YES,high,"ConfigBooleanParse compares this token case-insensitively and returns true when the input matches."
