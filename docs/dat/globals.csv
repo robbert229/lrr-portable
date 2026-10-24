@@ -1600,7 +1600,7 @@ address,decompile_reference_count,function_count,functions,finding_mentions,imag
 0x00506698,4,2,SoundBankEntryLoad@0x0047a870; SoundBufferPlayWithPosition@0x0047ad70,docs/findings/14-sound-and-video.md,.data,zero-filled virtual tail,,,mentioned,,,
 0x0050679c,3,2,SoundBankEntryLoad@0x0047a870; StreamedWaveBufferStepRate@0x0047b8e0,,.data,zero-filled virtual tail,,,unreviewed,,,
 0x005067a0,2,2,SoundBankEntryLoad@0x0047a870; StreamedWaveBufferStepRate@0x0047b8e0,,.data,zero-filled virtual tail,,,unreviewed,,,
-0x005067a8,7,4,SoundBankEntryLoad@0x0047a870; SoundBufferPlayWithPosition@0x0047ad70; SoundBankEntryVolumeSet@0x0047b050; IndexedRecordStride134WordGet@0x0047b0d0,,.data,zero-filled virtual tail,,,unreviewed,,,
+0x005067a8,7,4,SoundBankEntryLoad@0x0047a870; SoundBufferPlayWithPosition@0x0047ad70; SoundBankEntryVolumeSet@0x0047b050; IndexedRecordStride134WordGet@0x0047b0d0,,.data,zero-filled virtual tail,,,interpreted,Per-entry DirectSound volume value for the sound bank,high,"SoundBankEntryLoad stores the entry's configured volume here and SoundBankEntryVolumeSet updates it; the setter applies the value through IDirectSoundBuffer::SetVolume, and IndexedRecordStride134WordGet returns it"
 0x005067b4,4,2,SoundBankEntryRelease@0x0047ab00; StreamedWaveBufferStepRate@0x0047b8e0,,.data,zero-filled virtual tail,,,unreviewed,,,
 0x005067b8,6,4,SoundBankEntryRelease@0x0047ab00; SoundBufferPlayWithPosition@0x0047ad70; SoundBankEntryVolumeSet@0x0047b050; SoundHandleToBuffer@0x0047b0f0,,.data,zero-filled virtual tail,,,unreviewed,,,
 0x005067c4,6,1,SoundBufferPlayWithPosition@0x0047ad70,,.data,zero-filled virtual tail,,,unreviewed,,,
