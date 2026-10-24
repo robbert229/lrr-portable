@@ -1,6 +1,6 @@
 # Finding 418 — Movie, Stream, and Audio Playback Boundaries
 
-This finding maps the 13 `media-playback` functions assigned by Issue #194. The behavior below is based on the checked-in decompilation and named call sites; function names are descriptive labels, not proof of undocumented DirectShow or audio-library semantics.
+This finding maps the 13 functions originally assigned to `media-playback` by Issue #194. The evidence shows that `0x415cf0` belongs with front-end save-slot state, leaving 12 functions in that area. The behavior below is based on the checked-in decompilation and named call sites; function names are descriptive labels, not proof of undocumented DirectShow or audio-library semantics.
 
 ## Playback paths
 
