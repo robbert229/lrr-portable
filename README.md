@@ -20,7 +20,7 @@ and curiosity; nothing in this repository is affiliated with or endorsed by the 
 
 ```
 README.md           This file
-
+docs/findings/      Reverse-engineering findings through 470 (see index below)
 tools/              WAD tooling (rrwad.py: unpack/pack/verify — see tools/README.md)
                     + model converter (tools/rrlwo.py: .lwo → glTF 2.0)
                     + compat harness (tools/compat/a2.py — see tools/compat/README.md)
@@ -665,7 +665,9 @@ Open threads, in order of value:
 | 466 | [findings/466-command-registry-global-queue-transitions.md](docs/findings/466-command-registry-global-queue-transitions.md) | Command Registry and Global Queue Transitions |
 | 467 | [findings/467-command-creation-and-issue-routing.md](docs/findings/467-command-creation-and-issue-routing.md) | Command Creation and Issue Routing |
 | 468 | [findings/468-command-queue-and-selection-state.md](docs/findings/468-command-queue-and-selection-state.md) | Command Queue and Selection State |
-
+| 469 | [findings/469-entity-task-and-command-setup.md](docs/findings/469-entity-task-and-command-setup.md) | Entity Task and Command Setup |
+| 470 | [findings/470-entity-placement-and-spawning.md](docs/findings/470-entity-placement-and-spawning.md) | Entity Placement and Spawning |
+| 471 | [findings/471-entity-activities-and-action-completion.md](docs/findings/471-entity-activities-and-action-completion.md) | Entity Activities and Action Completion |
 
 Canonical full pseudocode corpus: [`docs/decompiles/full/LEGORR.full.c`](docs/decompiles/full/LEGORR.full.c)
 (2564 manifest functions; see its [README](docs/decompiles/full/README.md)). The
