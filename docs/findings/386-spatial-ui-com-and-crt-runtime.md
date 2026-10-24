@@ -61,8 +61,8 @@ This pass names 106 functions across all remaining mid and high addresses. Names
 | `0x00460910` | `ResolvedEntityOperationDispatch` | Resolves an entity and delegates the operation. | `LEGORR.full.c` pseudocode and caller references. |
 | `0x004628a0` | `GlobalFloatAccumulator_00555330Add` | Adds a float to global accumulator at 0x00555330. | `LEGORR.full.c` pseudocode and caller references. |
 | `0x004628e0` | `CallbackRecordAllocateInitialize` | Allocates callback record and an eight-entry zeroed array. | `LEGORR.full.c` pseudocode and caller references. |
-| `0x00464c50` | `GlobalFlag_00502a2cBit2SetClear` | Sets or clears bit 2 in global 0x00502a2c. | `LEGORR.full.c` pseudocode and caller references. |
-| `0x00465380` | `GlobalTriplet_00552128_30Reset` | Clears three adjacent globals beginning at 0x00552128. | `LEGORR.full.c` pseudocode and caller references. |
+| `0x00464c50` | `SoundDynamicAliasRegistrationSet` | Sets or clears bit 2 in global 0x00502a2c. | `LEGORR.full.c` pseudocode and caller references. |
+| `0x00465380` | `SceneEffectRegistryReset` | Clears three adjacent globals beginning at 0x00552128. | `LEGORR.full.c` pseudocode and caller references. |
 | `0x0046a950` | `TextLayoutGeometryStoreAndApply` | Stores text/rectangle/scale fields and applies text layout. | `LEGORR.full.c` pseudocode and caller references. |
 | `0x00472670` | `DirectDrawSurfaceDescriptionGet` | Queries a DirectDraw surface description and returns selected fields. | `LEGORR.full.c` pseudocode and caller references. |
 | `0x004756d0` | `VideoObjectAspectRatioGet` | Combines two interface values into an aspect ratio. | `LEGORR.full.c` pseudocode and caller references. |

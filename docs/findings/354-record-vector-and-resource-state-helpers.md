@@ -19,7 +19,7 @@ This pass names record-field accessors, numeric helpers, linked-record updates, 
 | `0x00462ab0` | `RecordField18Set` | Writes a supplied value at record offset +0x18; record type and field meaning are unresolved. |
 | `0x00462ac0` | `RecordFlags24Or` | ORs supplied bits into the dword at record offset +0x24; flag meanings are unresolved. |
 | `0x00463730` | `IndexedFloatPairSet` | Converts two integer inputs to floats and stores them in an indexed pair of global slots. |
-| `0x00465ac0` | `ResourceEnableSet` | Calls a helper on the resource at offset +0x290 and sets or clears bit 0 at +0x294 from the supplied boolean. |
+| `0x00465ac0` | `TransientEffectEnableSet` | Calls a helper on the resource at offset +0x290 and sets or clears bit 0 at +0x294 from the supplied boolean. |
 | `0x0046c0f0` | `RecordResourceRelease` | Releases the resource pointer stored at record offset +4; record type and ownership semantics are unresolved. |
 | `0x0046ced0` | `PairedResourceStateSet` | Calls the same state helper for one resource/object pair and, when present, a second pair. |
 | `0x0046cfc0` | `SixResourceSlotsSetState` | Iterates six resource slots beginning at offset +0x10 and forwards the supplied state to each nonzero slot. |
