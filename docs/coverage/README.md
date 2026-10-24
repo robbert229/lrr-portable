@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 700 | 27.3% |
+| ported | 702 | 27.4% |
 | anchored | 4 | 0.2% |
-| named | 1813 | 70.7% |
+| named | 1811 | 70.6% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (700 functions)
+  (702 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1813 functions)
+  citation yet (1811 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1818 (70.9%).**
+**Game logic remaining to port: 1816 (70.8%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -318,7 +318,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00418a00` | OverlayTextBufferRefresh |
 | `0x00418da0` | HelpWindowButtonHitTest |
 | `0x00419030` | HelpWindowButtonFeedbackUpdate |
-| `0x004191a0` | MainSimStateAdmissionPredicate |
 | `0x00419200` | UiModeResourceBit40SetClear |
 | `0x00419230` | IncidentMessageCatalogInit |
 | `0x004193e0` | IncidentMessageConfigLookup |

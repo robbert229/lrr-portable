@@ -499,7 +499,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00419030,FUN_00419030,named,HelpWindowButtonFeedbackUpdate,0,673
 00419100,FUN_00419100,ported,UiModeResourcePositionsApply,1,416
 00419150,FUN_00419150,ported,SelectionStateHandleGet,1,393
-004191a0,FUN_004191a0,named,MainSimStateAdmissionPredicate,0,307
+004191a0,FUN_004191a0,ported,MainSimStateAdmissionPredicate,2,307
 004191f0,FUN_004191f0,ported,UiModeResourceBit40Get,1,61
 00419200,FUN_00419200,named,UiModeResourceBit40SetClear,0,244
 00419230,FUN_00419230,named,IncidentMessageCatalogInit,0,2117

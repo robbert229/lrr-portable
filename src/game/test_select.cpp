@@ -157,6 +157,22 @@ int main(void)
               "NULL rejects (deviation)");
     }
 
+    /* CurrentLevelStateFlagsContainMask (2026-10-24). */
+    {
+        selection_clear(&ctx);
+        CHECK(current_level_state_flags_contain_mask(&ctx, 1u) == 0,
+              "no selection answers the mask false");
+        CHECK(current_level_state_flags_contain_mask(NULL, 1u) == 0,
+              "the null context answers false");
+        selection_add(&ctx, a); /* re-open the cleared selection */
+        a->flags_3f0 = 0x11u;
+        CHECK(current_level_state_flags_contain_mask(&ctx, 1u) != 0
+                  && current_level_state_flags_contain_mask(&ctx, 2u) == 0,
+              "the mask ANDs the first entry's word");
+        a->flags_3f0 = 0u; /* zero-init mirror: back to the shipped state */
+        selection_clear(&ctx);
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "select_test: %d failure(s)\n", s_failures);
         return 1;

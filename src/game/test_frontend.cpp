@@ -26,8 +26,6 @@
 #include "game/game.hpp"
 #include "game/select.hpp"
 #include "gods98/block.hpp"
-#include "gods98/crt.hpp"
-#include "gods98/heap.hpp"
 #include "gods98/message.hpp"
 #include "gods98/resource.hpp"
 #include "gods98/texture.hpp"
@@ -1111,6 +1109,25 @@ int main(int argc, char** argv)
         selection_state_flags_set(0x41u);
         CHECK(ui_mode_resource_bit40_get() == 0x40u, "the mask keeps its shape");
         selection_state_flags_set(0u);
+    }
+
+    /* MainSimStateAdmissionPredicate (2026-10-24). */
+    {
+        selection_state_flags_set(0u);
+        message_set_system_state(0u);
+        CHECK(main_sim_state_admission_predicate() == 0,
+              "the admission gate keeps for a clear word");
+        selection_state_flags_set(3u); /* bits 1+2, no 0x40 */
+        CHECK(main_sim_state_admission_predicate() == 0,
+              "bits 1+2 alone keep the gate shut");
+        selection_state_flags_set(0x43u);
+        CHECK(main_sim_state_admission_predicate() != 0,
+              "the three bits open the gate");
+        message_set_system_state(1u);
+        CHECK(main_sim_state_admission_predicate() == 0,
+              "a set system-state word shuts the gate");
+        message_set_system_state(0u);
+        selection_state_flags_set(0u); /* restore boot state */
     }
 
     if (s_failures == 0) {

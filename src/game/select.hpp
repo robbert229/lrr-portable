@@ -99,4 +99,12 @@ int selection_candidate_already_selected_or_marked(const GameContext* ctx,
                                                    const EntitySlot* e);
 /* The eligibility leaf is declared in entity.hpp (implemented there). */
 
+/* CurrentLevelStateFlagsContainMask (FUN_0041f720): ANDs the selected
+ * entity's +0x3f0 level-state mask word. Deviation: with an empty
+ * selection the corpus dereferences its NULL accessor blindly; the port
+ * answers false (no flags contained). The +0x3f0 word itself is a
+ * zero-init mirror — see game.hpp EntitySlot. */
+int current_level_state_flags_contain_mask(const GameContext* ctx,
+                                           uint32_t mask);
+
 #endif /* LEGORRR_GAME_SELECT_HPP */
