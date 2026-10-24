@@ -553,3 +553,14 @@ void linked_record_field4_clear(void* record)
         node = (char*)next;
     }
 }
+
+/* CopyTwoDwordPairToOutputs (FUN_00439930) — see record.hpp. */
+void copy_two_dword_pair_to_outputs(const void* record, uint32_t* out_a,
+                                    uint32_t* out_b)
+{
+    if (record == NULL || out_a == NULL || out_b == NULL) {
+        return; /* deviation: the corpus dereferences blindly */
+    }
+    __builtin_memcpy(out_a, (const char*)record, 4);
+    __builtin_memcpy(out_b, (const char*)record + 4, 4);
+}

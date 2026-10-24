@@ -537,5 +537,12 @@ int main(void)
     CHECK(ctx.checkpoint_blob == NULL, "the free clears the port pointer");
     checkpoint_blob_free(&ctx); /* the double free is a no-op */
 
+    /* SavBuildCtx (2026-10-24): the slot-open probe. */
+    save_slot_selection_clear(&ctx);
+    CHECK(sav_build_ctx(&ctx) == NULL, "a closed slot builds nothing");
+    save_slot_set(&ctx, 5);
+    CHECK(sav_build_ctx(&ctx) == &ctx, "an open slot builds the block");
+    save_slot_selection_clear(&ctx);
+
     return 0;
 }

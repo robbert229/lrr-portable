@@ -468,7 +468,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00417bd0,FUN_00417bd0,ported,SavWriteSlot,1,2260
 00417df0,FUN_00417df0,named,SavRefreshSlots,0,483
 00417e50,FUN_00417e50,ported,SavSlotCtx,1,160
-00417e70,FUN_00417e70,named,SavBuildCtx,0,162
+00417e70,FUN_00417e70,ported,SavBuildCtx,2,162
 00417e90,FUN_00417e90,ported,SavGetSlot,1,60
 00417ea0,FUN_00417ea0,ported,SavSetSlot,1,81
 00417eb0,FUN_00417eb0,ported,SavMarkRecord,1,694
@@ -488,7 +488,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004181b0,FUN_004181b0,named,HelpWindowResourcesInit,0,2892
 00418450,FUN_00418450,named,HelpWindowInfoConfigStringsLoad,0,2696
 004185f0,FUN_004185f0,named,HelpWindowButtonLayoutLoad,0,1716
-00418800,FUN_00418800,named,ModeFlagPairApplyIfBit2,0,227
+00418800,FUN_00418800,ported,ModeFlagPairApplyIfBit2,2,227
 00418830,FUN_00418830,named,BuildingUpgradeStateChangedEventDispatch,0,959
 00418920,FUN_00418920,named,CategoryCellCandidateListBuild,0,855
 004189d0,FUN_004189d0,named,RenderTransitionCleanupIfActive,0,199
@@ -543,7 +543,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0041a7d0,FUN_0041a7d0,named,InputKeyGroupRegister,0,1005
 0041a850,FUN_0041a850,named,ResourceHandleSetRelease,0,572
 0041a920,FUN_0041a920,named,LevelStateCountersClear,0,1068
-0041a990,FUN_0041a990,named,ObjectiveSelectionStateReset,0,130
+0041a990,FUN_0041a990,ported,ObjectiveSelectionStateReset,1,130
 0041a9c0,FUN_0041a9c0,named,CaseInsensitiveStringTableIndexFind,0,368
 0041aa00,FUN_0041aa00,named,EntityTableMapsAllocate,0,1600
 0041ab00,FUN_0041ab00,named,InterfaceBuildImagesConfigLoad,0,2581
@@ -579,7 +579,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0041caf0,FUN_0041caf0,named,InputBindingValueGet,0,804
 0041cb90,FUN_0041cb90,named,InputBindingDefaultValueGet,0,704
 0041cc80,FUN_0041cc80,named,CursorTileSelectionUpdateByType,0,341
-0041cce0,FUN_0041cce0,named,SelectionCoordinatesSet,0,292
+0041cce0,FUN_0041cce0,ported,SelectionCoordinatesSet,1,292
 0041cd30,FUN_0041cd30,named,PositionTrackerBoxDraw,0,1005
 0041cea0,FUN_0041cea0,named,SelectionObjectCommandUpdate,0,658
 0041cf20,FUN_0041cf20,named,SelectionTargetCommandUpdate,0,510
@@ -591,12 +591,12 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0041dca0,FUN_0041dca0,named,UiActionDispatch,0,8193
 0041e750,FUN_0041e750,named,SelectionClearRequestAndHudReset,0,87
 0041e990,FUN_0041e990,named,CellActionPermissionGet,0,195
-0041e9d0,FUN_0041e9d0,named,SelectionRegionParametersSet,0,356
+0041e9d0,FUN_0041e9d0,ported,SelectionRegionParametersSet,1,356
 0041ea50,FUN_0041ea50,named,StoreSelectedMapCoordinate,0,538
 0041eac0,FUN_0041eac0,named,EventTimerCountdownAdvance,0,1462
 0041ec30,FUN_0041ec30,named,EntityPairCountRefresh,0,526
 0041eca0,FUN_0041eca0,named,AdvisorDialogStackLayout,0,1868
-0041ee60,FUN_0041ee60,named,InteractionTimerResetAndFlagClear,0,201
+0041ee60,FUN_0041ee60,ported,InteractionTimerResetAndFlagClear,1,201
 0041ee80,FUN_0041ee80,named,CellGridPointHitTest,0,2754
 0041f100,FUN_0041f100,named,ObjectInteractionFlagsAllow,0,777
 0041f230,FUN_0041f230,named,QueueActionRequestType2,0,313
@@ -914,7 +914,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004396c0,FUN_004396c0,named,ItemNameByKindLookup,0,1153
 00439790,FUN_00439790,named,LocalizedObjectTheNameGet,0,763
 00439860,FUN_00439860,named,LocalizedObjectNameGet,0,743
-00439930,FUN_00439930,named,CopyTwoDwordPairToOutputs,0,144
+00439930,FUN_00439930,ported,CopyTwoDwordPairToOutputs,2,144
 00439950,FUN_00439950,named,ToolNameStringResourcesLoad,0,346
 00439990,FUN_00439990,named,EntityActivitySceneStateUpdate,0,274
 004399c0,FUN_004399c0,named,EntityFlag400AndHealthThresholdCheck,0,399

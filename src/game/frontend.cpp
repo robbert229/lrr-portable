@@ -2159,3 +2159,99 @@ void menu_wipe_flags_set(uint32_t flags)
 {
     s_menu_wipe = flags;
 }
+
+/* --- the selection-region band (see frontend.hpp) ---------------------------
+ * Zero-initialized statics per the unowned-global convention: the corpus's
+ * words have no ported owner (its UI/hit-test writers are unported), so
+ * the zero load image is the faithful state (deviation). */
+static uint32_t s_sel_c0c;        /* DAT_004ddd0c */
+static uint32_t s_sel_c10;        /* DAT_004ddd10 */
+static float    s_sel_c14;        /* DAT_004ddd14 */
+static float    s_sel_c18;        /* DAT_004ddd18 */
+static float    s_reg[5];         /* DAT_004ddce0/e4/e8/ec + f0 */
+static uint32_t s_obj_sel_word;   /* DAT_004ddccc */
+static uint32_t s_obj_track_word; /* DAT_004ddcd0 */
+static float    s_inter_timer = 0.0f; /* DAT_004de1ec */
+static uint32_t s_inter_flags;    /* DAT_004de1f8 */
+
+void selection_coordinates_set(const uint32_t* pair, uint32_t x, uint32_t y)
+{
+    if (pair == NULL) {
+        return; /* deviation: the corpus dereferences blindly */
+    }
+    s_sel_c0c = pair[0];
+    s_sel_c10 = pair[1];
+    s_sel_c14 = (float)x; /* the corpus's int->float cast */
+    s_sel_c18 = (float)y;
+}
+
+void selection_region_parameters_set(float a, float b, float c, float d,
+                                     float e)
+{
+    s_reg[0] = a;
+    s_reg[1] = b;
+    s_reg[2] = c;
+    s_reg[3] = d;
+    s_reg[4] = (float)(e * 0.04); /* the corpus's double-prec scale */
+}
+
+void objective_selection_state_reset(void)
+{
+    s_obj_sel_word = 0u;
+    __builtin_memcpy(&s_obj_track_word, &s_reg[2], sizeof(s_obj_track_word));
+    s_inter_flags |= 0x84u;
+}
+
+void interaction_timer_reset_and_flag_clear(void)
+{
+    s_inter_timer = 25.0f; /* corpus 0x41c80000 */
+    s_inter_flags &= ~0x800u;
+}
+
+void mode_flag_pair_apply_if_bit2(int value)
+{
+    if ((s_sel_state & 4u) == 0u) {
+        return;
+    }
+    if (value != 0) {
+        s_sel_state = (s_sel_state & ~1u) | 2u;
+    } else {
+        s_sel_state &= ~3u;
+    }
+}
+
+float selection_coordinates_peek(int which)
+{
+    switch (which) {
+    case 0: return (float)s_sel_c0c;
+    case 1: return (float)s_sel_c10;
+    case 2: return s_sel_c14;
+    case 3: return s_sel_c18;
+    }
+    return 0.0f;
+}
+
+void selection_region_parameters_peek(float out[5])
+{
+    if (out == NULL) {
+        return;
+    }
+    for (int i = 0; i < 5; ++i) {
+        out[i] = s_reg[i];
+    }
+}
+
+uint32_t objective_selection_word_peek(void)
+{
+    return s_obj_sel_word;
+}
+
+float interaction_timer_peek(void)
+{
+    return s_inter_timer;
+}
+
+uint32_t interaction_flags_peek(void)
+{
+    return s_inter_flags;
+}

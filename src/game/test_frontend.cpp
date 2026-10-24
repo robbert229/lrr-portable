@@ -1127,6 +1127,49 @@ int main(int argc, char** argv)
         menu_wipe_flags_set(0u);
     }
 
+    /* The selection-region band (2026-10-24). */
+    {
+        const uint32_t pair[2] = { 7u, 9u };
+        selection_coordinates_set(NULL, 1u, 1u); /* guarded */
+        selection_coordinates_set(pair, 3u, 5u);
+        CHECK(selection_coordinates_peek(0) == 7.0f
+                  && selection_coordinates_peek(1) == 9.0f
+                  && selection_coordinates_peek(2) == 3.0f
+                  && selection_coordinates_peek(3) == 5.0f,
+              "the coordinate quad lands with the int-to-float casts");
+
+        selection_region_parameters_set(1.0f, 2.0f, 3.0f, 4.0f, 10.0f);
+        float reg[5];
+        selection_region_parameters_peek(reg);
+        CHECK(reg[0] == 1.0f && reg[1] == 2.0f && reg[2] == 3.0f
+                  && reg[3] == 4.0f && reg[4] == 0.4f,
+              "the region parameters land scaled by 0.04");
+
+        objective_selection_state_reset();
+        CHECK(objective_selection_word_peek() == 0u
+                  && (interaction_flags_peek() & 0x84u) == 0x84u,
+              "the reset clears, mirrors, and raises the pair");
+        interaction_timer_reset_and_flag_clear();
+        CHECK(interaction_timer_peek() == 25.0f
+                  && (interaction_flags_peek() & 0x800u) == 0u,
+              "the timer restocks to 25.0 and bit 800 drops");
+        selection_region_parameters_peek(reg);
+        CHECK(reg[2] != 0.0f, "the mirrored float stays put");
+
+        selection_state_flags_set(0u);
+        mode_flag_pair_apply_if_bit2(1);
+        CHECK(selection_state_flags_peek() == 0u, "bit 2 clear keeps quiet");
+        selection_state_flags_set(7u);
+        mode_flag_pair_apply_if_bit2(1);
+        CHECK((selection_state_flags_peek() & 3u) == 2u,
+              "bit 2 set and nonzero arms bit 1");
+        selection_state_flags_set(7u);
+        mode_flag_pair_apply_if_bit2(0);
+        CHECK((selection_state_flags_peek() & 3u) == 0u,
+              "zero drops both low bits");
+        selection_state_flags_set(0u);
+    }
+
     if (s_failures == 0) {
         printf("frontend: all tests passed\n");
         return 0;

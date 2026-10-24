@@ -2233,6 +2233,22 @@ one-liners land as zero-init storage in `crt.*`: the unresolved store
 to a documented window. `record_test`, `crt_test`, `savegame_test`, and
 `level_test` pin the writes, the walk, and the peeks.
 
+**The selection-region band** (2026-10-24; findings 06/250/478): seven
+rows land. Five selection/UI-state leaves go into `frontend.*` beside
+the band that models the selection-state word: the coordinate quad
+(0x41cce0 — the integer-to-float casts faithful), the five-slot region
+store (0x41e9d0 — its 0.04 scale keeps the corpus's double-precision
+multiply), the objective-selection reset (0x41a990 — clear, mirror the
+region's +08 float, raise the 0x84 pair), the interaction-timer restock
+(0x41ee60 — 25.0 and the bit-800 drop), and the mode-flag pair rule
+(0x418800) applying to the selection word through the band's own setter.
+The words land zero-initialized (deviation, no ported feeder).
+`sav_build_ctx` (0x417e70, `savegame.*`) composes the port's slot
+accessor and ctx probe the way the corpus's slot-open test does, and
+`copy_two_dword_pair_to_outputs` (0x439930, `record.*`) splits a
+two-dword field with entry guards. `frontend_test`, `savegame_test`, and
+`record_test` pin the quads, the walks, and the rules.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

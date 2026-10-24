@@ -419,4 +419,38 @@ void     menu_wipe_end(void);
 uint32_t menu_wipe_flags_peek(void);
 void     menu_wipe_flags_set(uint32_t flags); /* port hook */
 
+/* --- the selection-region band (2026-10-24; findings 06/250/478) ------------
+ * The corpus's selection/UI-state words beside the selection-state word
+ * the band above models: the coordinate quad (DAT_004ddd0c/10/14/18), the
+ * region parameters (DAT_004ddce0…cf0), the objective-selection pair
+ * (DAT_004ddccc/d0 — reset mirrors DAT_004ddce8) and the interaction
+ * timer + flag word (DAT_004de1ec/1f8). No ported feeder owns them, so
+ * everything lands zero-initialized (deviation) with port-side peeks.
+ * ModeFlagPairApplyIfBit2 (0x418800) applies the corpus's mode rule to
+ * the selection-state word this band already models. */
+void selection_coordinates_set(const uint32_t* pair, uint32_t x, uint32_t y);
+/* selection_coordinates_set (FUN_0041cce0): the pointer's two dwords go
+ * to the +0c/+10 slots; x/y arrive as integers and convert to floats for
+ * the +14/+18 slots — the corpus's int->float casts, faithful. */
+void selection_region_parameters_set(float a, float b, float c, float d,
+                                     float e);
+/* selection_region_parameters_set (FUN_0041e9d0): five region slots, the
+ * last scaled by 0.04 (the corpus's float multiply). */
+void objective_selection_state_reset(void);
+/* objective_selection_state_reset (FUN_0041a990): clears the selection
+ * word, mirrors the region's +08 float into the tracking word, and raises
+ * interaction-flag bits 0x84. */
+void interaction_timer_reset_and_flag_clear(void);
+/* interaction_timer_reset_and_flag_clear (FUN_0041ee60): restocks the
+ * interaction timer (25.0) and clears bit 0x800. */
+void mode_flag_pair_apply_if_bit2(int value);
+/* mode_flag_pair_apply_if_bit2 (FUN_00418800): with bit 2 of the
+ * selection word set, nonzero arms bits (1 set, 0 clear) and zero drops
+ * both. */
+float    selection_coordinates_peek(int which); /* 0..3 */
+void     selection_region_parameters_peek(float out[5]);
+uint32_t objective_selection_word_peek(void);   /* port hook */
+float    interaction_timer_peek(void);          /* port hook */
+uint32_t interaction_flags_peek(void);          /* port hook */
+
 #endif /* LEGORRR_GAME_FRONTEND_HPP */
