@@ -21,8 +21,8 @@ Assignment confidence: 702 high, 1831 medium, 31 low. Basis counts: address-clus
 | `gameplay-simulation` | Entity behavior, commands, objectives, tasks, combat, simulation state, and progression. | 597 | 23 |
 | `world-and-terrain` | Terrain cells and grids, spatial queries, placement searches, and route transitions. | 332 | 12 |
 | `player-interface` | Front end, input interpretation, menus, HUD, advisor/help, and display-facing controls. | 364 | 14 |
-| `scene-and-rendering` | Scene objects and resources, models, viewports, render surfaces, and visual effects. | 481 | 13 |
-| `audio-and-video` | Sound, spatial playback, streams, and video playback or decoding. | 156 | 5 |
+| `scene-and-rendering` | Scene objects and resources, models, viewports, render surfaces, and visual effects. | 489 | 13 |
+| `audio-and-video` | Sound, spatial playback, streams, and video playback or decoding. | 148 | 5 |
 | `game-data-and-assets` | Configuration, map and level loading, archives, registries, and presentation/resource records. | 158 | 7 |
 | `platform-and-runtime` | Win32/DirectX interfaces, startup/window services, CRT, and operating-system/runtime support. | 316 | 11 |
 | `shared-primitives` | Cross-cutting state accessors, lists/strings, pools, math, and small reusable helpers. | 160 | 7 |
@@ -106,7 +106,7 @@ Assignment confidence: 702 high, 1831 medium, 31 low. Basis counts: address-clus
 | `scene-object-effects` — Scene Objects and Visual Effects | 26 | Entity-to-scene attachment, scene transforms, lighting/blink/fade/move configuration, and effect-motion cancellation. |
 | `scene-resource-animation` — Scene Resources and Animation | 31 | Resource binding/release, animation advancement, scene activity channels, vehicle definition parsing, attached resources, and scene object resource slots. |
 | `scene-resource-lifecycle` — Scene and render resource lifecycle | 63 | Resolves, loads, tracks, caches, retains, releases, or clones scene/model/texture resources and animation data. Excludes rendering the resource and file/archive primitives beneath the loaders. |
-| `scene-resources-effects` — Scene resources, lights, markers, and transient effects | 33 | Scene resource handles, lighting/markers, effect slots, scene act/pose registration, and cleanup. |
+| `scene-resources-effects` — Scene resources, lights, markers, and transient effects | 41 | Scene resource handles, lighting/markers, effect slots, scene act/pose registration, and cleanup. |
 | `ui-render-tree` — UI render-tree traversal | 4 | Lays out, enumerates, processes, or releases hierarchical UI render entries; excludes font/text drawing and general model rendering. |
 | `utility-render-effects` — Screen effects and UI text primitives | 16 | Screen-effect state/opacity/render lane dispatch, scrolling text, text conversion, and low-level screen blits. |
 | `viewport-and-rendering` — Viewport and Scene Rendering | 10 | UI render records, terrain view tiles, viewport transforms/picking, and terrain tile style resolution. |
@@ -117,7 +117,7 @@ Assignment confidence: 702 high, 1831 medium, 31 low. Basis counts: address-clus
 | --- | ---: | --- |
 | `audio-playback-mixing` — Audio playback, mixing, and spatial sound | 59 | Initializes audio devices and banks, configures listener/source state, plays/stops tracked or streamed samples, or manages CD/wave playback. File access below the audio layer is separate. |
 | `media-playback` — Movie, stream, and audio playback | 13 | Movie/stream playback, menu audio timing, CD audio watchdog, audio toggles, and playback wait loops. |
-| `sound-subsystem` — Sound Subsystem | 33 | Sound aliases and samples, submission queues, deferred playback, positional sound, stream selection, and sound-instance ticking. |
+| `sound-subsystem` — Sound Subsystem | 25 | Sound aliases and samples, submission queues, deferred playback, positional sound, stream selection, and sound-instance ticking. |
 | `video-playback` — Video Playback | 11 | DirectShow graph/sample setup, duration/frame-bound handling, render surface creation, frame update/blit, and teardown. |
 | `video-playback-decoders` — AVI and FLIC playback | 40 | Opens, advances, decodes, seeks, blits, or releases AVI/FLIC playback state and frame data. Excludes general renderer surface operations. |
 

@@ -157,7 +157,7 @@ reaches `FUN_004653a0` (136 B), which loops index `i` loading
 | `0x462e60` | TexAnimUpdate | lock/update/unlock |
 | `0x47cd50` | QueryTextureMem | `DAT_00505918+0x9c` |
 | `0x477bd0` | SetLowTextureFlag | `DAT_00505f84 \|= 0x20` |
-| `0x4653a0` | PreloadSharedIndexed | `%s%i.bmp` → `DAT_00552100` |
+| `0x4653a0` | TransientEffectTexturesPreload | `%s%i.bmp` → `DAT_00552100` |
 | `0x40a400` | PreloadNumberedBitmaps | loads numbered UI/indexed BMP names through the shared cache |
 | `0x48c820` | LwoSurfaceSettings | reads per-surface settings and texture-image tags |
 | `0x48d2c0` | LoadLWO | reads the LWO chunks and optional UV sidecar |
