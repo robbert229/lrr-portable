@@ -1822,7 +1822,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004773e0,FUN_004773e0,named,RenderResourceTrackedReferencesRelease,0,688
 00477440,FUN_00477440,ported,BlockTextTokenSplit,4,795
 004774b0,FUN_004774b0,named,WhitespaceTokenize,0,957
-00477550,FUN_00477550,named,StringDuplicate,0,929
+00477550,FUN_00477550,ported,StringDuplicate,2,929
 00477590,FUN_00477590,named,FormattedTextEscapeDecodeAndEmit,0,670
 00477610,FUN_00477610,named,CaseInsensitiveSubstringFind,0,834
 00477670,FUN_00477670,named,GameStringHashCompute,0,853
@@ -1854,7 +1854,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00478df0,FUN_00478df0,named,BlockTextTokenPoolInit,0,353
 00478e20,FUN_00478e20,named,BlockTextTokenPoolDestroy,0,339
 00478e60,FUN_00478e60,ported,BlockTextOpenAndScan,3,1795
-00478f50,FUN_00478f50,named,ConfigEntryFind,0,2731
+00478f50,FUN_00478f50,ported,ConfigEntryFind,2,2731
 00478ff0,FUN_00478ff0,ported,ConfigNestedPathChildFind,1,263
 00479020,FUN_00479020,named,SortedEntryNextEqualKey,0,316
 00479050,FUN_00479050,ported,ConfigStringCopy,1,1143
@@ -2259,7 +2259,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0048d940,FUN_0048d940,named,CrtMathDispatchTableInitialize,0,256
 0048d980,FUN_0048d980,ported,ParseFloat,2,594
 0048d9e0,FUN_0048d9e0,named,FormattedStringOutput,0,466
-0048da50,FUN_0048da50,named,StringFindSubstring,0,2603
+0048da50,FUN_0048da50,ported,StringFindSubstring,2,2603
 0048dad0,FUN_0048dad0,named,ParseSignedDecimal,0,900
 0048db70,FUN_0048db70,ported,ParseIntegerWrapper,2,80
 0048db80,FUN_0048db80,named,EngineHeapFree,0,334
@@ -2400,7 +2400,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00493c10,FUN_00493c10,named,FpuControlWordUpdateMasked,0,93
 00493c40,FUN_00493c40,named,CrtNoOpStubVariant2,0,127
 00493ca0,FUN_00493ca0,named,LocaleCharacterMapString,0,2287
-00493ec0,FUN_00493ec0,named,BoundedStringLength,0,297
+00493ec0,FUN_00493ec0,ported,BoundedStringLength,2,297
 00493ef0,FUN_00493ef0,named,CrtFormattedScanV,0,20038
 00494c30,FUN_00494c30,named,CrtScanFormatCharNormalize,0,273
 00494c70,FUN_00494c70,named,ScanStreamGetChar,0,309

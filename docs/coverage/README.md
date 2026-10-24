@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 413 | 16.1% |
+| ported | 417 | 16.3% |
 | anchored | 5 | 0.2% |
-| named | 2100 | 81.9% |
+| named | 2096 | 81.7% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 0 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (413 functions)
+  (417 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (5 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (2100 functions)
+  citation yet (2096 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (0 functions)
 
-**Game logic remaining to port: 2105 (82.1%).**
+**Game logic remaining to port: 2101 (81.9%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -1514,7 +1514,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00477370` | DDiSceneRenderSurfacePoolGrow |
 | `0x004773e0` | RenderResourceTrackedReferencesRelease |
 | `0x004774b0` | WhitespaceTokenize |
-| `0x00477550` | StringDuplicate |
 | `0x00477590` | FormattedTextEscapeDecodeAndEmit |
 | `0x00477610` | CaseInsensitiveSubstringFind |
 | `0x00477670` | GameStringHashCompute |
@@ -1542,7 +1541,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004789c0` | WindowsMixerControlInit |
 | `0x00478df0` | BlockTextTokenPoolInit |
 | `0x00478e20` | BlockTextTokenPoolDestroy |
-| `0x00478f50` | ConfigEntryFind |
 | `0x00479020` | SortedEntryNextEqualKey |
 | `0x00479110` | ReadAngleSettingRadians |
 | `0x00479170` | ConfigRgbVectorRead |
@@ -1889,7 +1887,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0048d870` | ModelObjectFree |
 | `0x0048d940` | CrtMathDispatchTableInitialize |
 | `0x0048d9e0` | FormattedStringOutput |
-| `0x0048da50` | StringFindSubstring |
 | `0x0048dad0` | ParseSignedDecimal |
 | `0x0048db80` | EngineHeapFree |
 | `0x0048dbd0` | EngineHeapAlloc |
@@ -2004,7 +2001,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00493c10` | FpuControlWordUpdateMasked |
 | `0x00493c40` | CrtNoOpStubVariant2 |
 | `0x00493ca0` | LocaleCharacterMapString |
-| `0x00493ec0` | BoundedStringLength |
 | `0x00493ef0` | CrtFormattedScanV |
 | `0x00494c30` | CrtScanFormatCharNormalize |
 | `0x00494c70` | ScanStreamGetChar |
