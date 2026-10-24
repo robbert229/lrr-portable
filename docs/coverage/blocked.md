@@ -147,3 +147,17 @@ update and the query-driven side effects are missing there.
 layer (the `DAT_00502bd8` indexed record family), which also gates the
 query helpers above. **Next action:** the spatial object-query model,
 then the counter block, which together let `0x403810` land as a leaf.
+
+
+## Wrapper/thunk seams and model-shaped gaps (2026-10-24)
+
+Several small named rows are wrappers whose callee or callback body the
+port does not model. They stay out until their dependency lands:
+
+| Function (`address`) | Blocker | Next action |
+| --- | --- | --- |
+| `SceneObjectListApplyFloatCallback` (`0x40ff50`), `SceneObjectListApplyPositionCallback` (`0x410070`), `SceneObjectListApplySecondPositionCallback` (`0x4100b0`) | Tail calls into the ported `PointerStackForEach` (`0x40fe90`) with bare code-thunk callbacks (`LAB_*` labels with no pseudocode) — the callback bodies cannot be recovered from the check-in. | Recover or re-derive the thunk bodies from the scene-object layer, then wrap. |
+| `EntityAnimationStateSet` (`0x439cd0`) | Tail call into `EntityBuildingIndexSet` (`0x469c10`) — gated by the blocked stats-config layer (`DAT_00502c28` admission word). | Stats-config layer (shared blocker). |
+| `MainMenuTextItem` (`0x4103d0`) | Calls `ScrollingTextDisplay` (`0x40a0c0`), which the port models only as the credits scroller with its own config/text sources; the menu's text/position globals (`DAT_00556f50/6f54/613c`) have no model. | Generalize the scroller into a shared draw API, or land the menu text layer. |
+| `WadArchiveRecordAtIndex` (`0x48bce0`) | Indexes the 16-slot, 36-byte archive-context table at `DAT_00575500` (`&base + i * 0x24`, finding 01); the port models no per-archive context block. | Model the WAD mount's context table, then the stride accessor lands as a leaf. |
+| `SceneObjectCoordinateTransformInPlace` (`0x475070`) | COM-style vtable dispatch (`(**(code **)(*param_1 + 0x108))`) on the renderer object — the scene/COM seam stays unported. | Renderer COM seam (shared blocker). |
