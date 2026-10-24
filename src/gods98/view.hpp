@@ -236,4 +236,15 @@ void cursor_screen_ray_context_reset(ViewContext* v);
 void current_level_terrain_grid_pick(EngineContext* ctx, float x, float y,
                                      int* gx, int* gy);
 
+/* GridOperationArgumentAdapter (FUN_00442540): the corpus's grid-op
+ * argument rotator — the terrain-height call takes (level, x, y) while
+ * grid code hands (x, y, level); the float result is discarded (void).
+ * NULL contexts skip (deviation). */
+void grid_operation_argument_adapter(float x, float y, EngineContext* ctx);
+
+/* SetGlobalScalarToOne (FUN_0040fec0): the corpus draws the 0…1 ramp and
+ * drops it; the port models that ramp as 1.0, so the call's observable
+ * effect is nothing — faithful. */
+void set_global_scalar_to_one(void);
+
 #endif /* LEGORRR_VIEW_HPP */

@@ -2286,6 +2286,26 @@ tile probes documented deviations. The scene-list callback wrappers
 thunks with no pseudocode. `view_test`, `ai_test`, and `frontend_test`
 pin the pick, the table rule, and the draws.
 
+**The stubs, wrappers, and word-clear band** (2026-10-24; findings 37/38/
+155/393): nine rows land. Three pure-return stubs are ported faithful to
+their emptiness — `flic_opcode27_fallback_noop` (0x484c90) for the
+FLIC-internal fallback, `crt_no_op_stub` (0x491ff5) and
+`crt_no_op_stub_variant` (0x497870) for the address-range variants.
+`advisor_clear_active_state` (0x401b20, `crt.*`) drops the advisor word's
+active bit through the band that owns the word. `ui_render_record_free`
+(0x45daf0, `heap.*`) is the corpus's bare tail call into the engine heap
+free; `scene_object_owner_set` (0x473da0, `record.*`) writes the owner
+word at `+0x20`, entry-guarded. `grid_operation_argument_adapter`
+(0x442540, `view.*`) rotates the grid-op arguments into the terrain-
+height call and discards the float the way the corpus's void return
+does, and `set_global_scalar_to_one` (0x40fec0, `view.*`) keeps the
+corpus's discarded-ramp shape against the port's inert ramp model.
+`objective_voice_alias_raise_commit` (0x454b70, `objective.*`) runs the
+announcer with 1 and answers 1 — threaded through the port's block
+(deviation). The WAD context-table reader (0x48bce0) stays blocked with
+the mount layer. `crt_test`, `flic_test`, `heap_test`, `record_test`,
+`view_test`, and `objective_test` pin the shapes.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

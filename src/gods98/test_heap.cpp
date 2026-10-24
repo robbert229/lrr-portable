@@ -82,6 +82,14 @@ int main(void)
 {
     test_alloc_pair();
     test_aligned_and_retry();
+    /* The UI render-record free wrapper (2026-10-24). */
+    {
+        void* p = engine_heap_alloc(32);
+        CHECK(p != NULL, "the alloc lands");
+        ui_render_record_free(p); /* frees; the port never reads after */
+        ui_render_record_free(NULL); /* the corpus's no-op-on-null shape */
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "heap_test: %d failure(s)\n", s_failures);
         return 1;

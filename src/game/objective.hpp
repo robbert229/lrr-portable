@@ -95,44 +95,4 @@ int objective_tick(LevelState* s, float dt);
  * blindly. */
 int objective_voice_alias_raise_commit(LevelState* s);
 
-/* ObjectiveVoiceAliasRaiseGateBit27 (FUN_00454b80): when the engine-state
- * word's bit 27 is clear the corpus raises the failed-result announcer and
- * answers 1. Bit 27's corpus writer is the CDAudio/voice state feeder —
- * unported — so the gate reads through the port's modeled state word and
- * stays clear (the announcer therefore always fires, the corpus's unset
- * case, deviation documented). */
-int objective_voice_alias_raise_gate_bit27(LevelState* s);
-
-/* --- the advisor action window band (2026-10-25) ---------------------------
- * The corpus keeps the advisor's per-action records in an unowned word
- * region (base word + row * 0x24): {mode +0x00, pair dwords +0x04/+0x08,
- * read-out pair +0x0c/+0x10, flag word +0x14}. The port models the
- * region as a bounded module table (the widened-window convention); the
- * corpus's writers outside these two rows leave it zero.
- * AdvisorActionPositionAndModeSet (FUN_00401840): stores the mode and
- * the pair dwords, raising flag word bit 0x10000 when mode is 0xc and
- * clearing it otherwise. Bounds-guarded (deviation: blind stride). */
-void advisor_action_position_and_mode_set(int row, int mode,
-                                          uint32_t dword_a,
-                                          uint32_t dword_b); /* FUN_00401840 */
-
-/* AdvisorActionPositionGet (FUN_00401890): reads the record's +0x0c and
- * +0x10 dwords (the corpus's separate read-out window — this band's set
- * never writes them, a faithful quirk). NULL outputs skipped. */
-void advisor_action_position_get(int row, uint32_t* dword_c,
-                                 uint32_t* dword_d);          /* FUN_00401890 */
-
-/* Observer hook for the flag word (test pin; not corpus API). */
-uint32_t advisor_action_flags_peek(int row);
-
-/* ObjectiveAdvisorTokenLookup (FUN_00453200): reads the advisor token
- * table (the corpus's unowned count word and table pointer); a
- * token index below the count answers the table entry, else 0. The
- * corpus's table writer stays unported, so the modeled table reads
- * empty (documented deviation). */
-int objective_advisor_token_lookup(uint32_t index);
-
-/* Test hook installing the token table (corpus writer unported). */
-void objective_advisor_tokens_install(const uint32_t* table, uint32_t count);
-
 #endif /* LEGORRR_GAME_OBJECTIVE_HPP */

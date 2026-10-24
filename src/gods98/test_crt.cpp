@@ -442,6 +442,16 @@ int main(void)
         font_cursor_word_set(-1, 0u);
     }
 
+    /* The stub pair + advisor word clear (2026-10-24). */
+    {
+        crt_no_op_stub();
+        crt_no_op_stub_variant(); /* the corpus is pure return */
+        advisor_state_word_set(3u);
+        advisor_clear_active_state();
+        CHECK(advisor_state_word_peek() == 1u, "the active bit drops alone");
+        advisor_state_word_set(0u);
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "crt_test: %d failure(s)\n", s_failures);
         return 1;

@@ -379,3 +379,8 @@ uint32_t flic_opcode25_success_stub(void)
 {
     return 1u;
 }
+
+void flic_opcode27_fallback_noop(void)
+{
+    /* FUN_00484c90: pure return — faithful. */
+}

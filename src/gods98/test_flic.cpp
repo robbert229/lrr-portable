@@ -366,6 +366,10 @@ int main(int argc, char** argv)
     CHECK(flic_opcode25_success_stub() == 1u,
           "the 8-bit opcode-25 handler answers success");
 
+    /* Opcode-27 fallback (2026-10-24): pure return, callable. */
+    flic_opcode27_fallback_noop();
+    CHECK(1, "the opcode-27 fallback returns");
+
     if (s_failures != 0) {
         fprintf(stderr, "flic: %d failure(s)\n", s_failures);
         return 1;

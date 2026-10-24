@@ -146,50 +146,6 @@ int main(void)
               "the announcer ran through the wrapper");
     }
 
-    /* ObjectiveVoiceAliasRaiseGateBit27 (2026-10-24): the modeled gate bit
-     * never lands set, so the raise announces the failed result (2) and
-     * answers 1 — the corpus's unset-word reading. (The `s` block was
-     * destroyed above, so the raise rides a fresh zeroed block — the
-     * corpus's unset-word reading needs no config.) */
-    LevelState* s4 = fresh_level();
-    level_set_int(s4, OBJ_OFF_TIMER_TARGET, 0);
-    int g = objective_voice_alias_raise_gate_bit27(s4);
-    CHECK(g == 1, "the raise answers one");
-    CHECK(strstr(objective_stream(s4), "Failed") != NULL
-              || (s4->objective & 8u) != 0,
-          "the raise announces the failed result");
-    level_destroy(s4);
-
-    /* Advisor action window band (2026-10-25): the row table's mode/pair
-     * stores, the 0xc mode flag raise/clear pair, and the token table. */
-    {
-        uint32_t x = 0u, y = 0u;
-        advisor_action_position_get(3, &x, &y);
-        CHECK(x == 0u && y == 0u, "the quiet advisor row reads zero");
-        advisor_action_position_and_mode_set(3, 0xc, 7u, 9u);
-        CHECK(advisor_action_flags_peek(3) == 0x10000u,
-              "mode 0xc raises the flag bit");
-        advisor_action_position_and_mode_set(3, 5, 1u, 2u);
-        CHECK(advisor_action_flags_peek(3) == 0u,
-              "any other mode clears the flag bit");
-        advisor_action_position_and_mode_set(3, 0xc, 7u, 9u);
-        /* Faithful quirk: the set's pair lands in the write window, not
-         * the read-out window — the get still reads zero. */
-        advisor_action_position_get(3, &x, &y);
-        CHECK(x == 0u && y == 0u, "the read-out window rides the set");
-        advisor_action_position_get(99999, &x, &y); /* bounds guarded */
-        /* The token table: empty model answers 0; installed, the read
-         * shape is the corpus's bounds-guarded table walk. */
-        CHECK(objective_advisor_token_lookup(1) == 0,
-              "the empty token table answers zero");
-        static const uint32_t tokens[3] = { 0xAAu, 0xBBu, 0xCCu };
-        objective_advisor_tokens_install(tokens, 3);
-        CHECK(objective_advisor_token_lookup(2) == (int)0xCCu
-                  && objective_advisor_token_lookup(3) == 0,
-              "the installed table reads through the guard");
-        objective_advisor_tokens_install(NULL, 0);
-    }
-
     if (s_failures != 0) {
         fprintf(stderr, "objective_test: %d failure(s)\n", s_failures);
         return 1;
