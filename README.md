@@ -2072,6 +2072,24 @@ remove the first kind-0 pair match and every kind-10 entity match,
 unlinking and freeing through the cancel-ref path. `cmd_test` pins the
 ten shapes, both removal walks, and the empty-chain guards.
 
+**The entity command-chain housekeeping band** (2026-10-24; findings
+369/465): seven leaves land in `cmd.*`. `entity_command_chain_head_remove`
+(0x4041e0) pops the chain head — pending-undone heads ride raw onto the
+global head list, bit-16 undone ones (the corpus's `test $0x20,%ch`, read
+as 0x2000 by Ghidra) onto the tail list, everything else frees; the raw
+moves stamp no timestamps and no flags. `entity_drain_command_chain`
+(0x403a50) drains behind the enable word's bit-1 gate, head-linking the
+pending, tail-linking the bit-16, freeing the rest; its pool-search tail
+half is the registry seam. `command_queue_sweep_relink` (0x404100) sweeps
+the chain, freeing bit-2 records, moving raw, and — the corpus quirk —
+relinking every keeper through the head keeper's link slot, so
+intermediate keepers orphan. The one-liners `entity_task_state_update_after_cleanup`
+(0x403af0, with the kind-3 op-7 queue), `entity_pending_task_flag_clear`
+(0x403b40), `task_record_kind14_remove_if_head` (0x403f60) and
+`entity_task_chain_contains_kind` (0x4041b0) complete the band.
+`cmd_test` pins the raw-move purity, the gate, the sweep's orphaning
+relink, and the containment walk.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

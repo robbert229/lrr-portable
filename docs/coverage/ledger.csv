@@ -100,13 +100,13 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00403c00,FUN_00403c00,named,EntityActivityRecordRemoveByType,0,1303
 00403d10,FUN_00403d10,ported,EntityCommandUnlinkByKind,7,2271
 00403ef0,FUN_00403ef0,named,PendingRecordCallbackDispatch,0,94
-00403f30,FUN_00403f30,ported,EntityActivityListRegister,5,300
+00403f30,FUN_00403f30,ported,EntityActivityListRegister,3,300
 00403f60,FUN_00403f60,ported,TaskRecordKind14RemoveIfHead,1,171
-00404030,FUN_00404030,ported,CmdLinkHead,4,354
+00404030,FUN_00404030,ported,CmdLinkHead,2,354
 00404070,FUN_00404070,ported,CmdLinkTail,1,235
 004040a0,FUN_004040a0,named,EntityTaskQueueFlush,0,333
-00404100,FUN_00404100,ported,CommandQueueSweepRelink,2,966
-00404190,FUN_00404190,ported,CmdChainWalk,3,229
+00404100,FUN_00404100,ported,CommandQueueSweepRelink,1,966
+00404190,FUN_00404190,ported,CmdChainWalk,2,229
 004041b0,FUN_004041b0,ported,EntityTaskChainContainsKind,1,300
 004041e0,FUN_004041e0,ported,,1,682
 00404e00,FUN_00404e00,named,ObjectPathSubmitToGridTarget,0,680
