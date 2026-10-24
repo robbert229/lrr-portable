@@ -2012,7 +2012,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0047ed90,FUN_0047ed90,named,DirectInputInitialize,0,2033
 0047eef0,FUN_0047eef0,ported,InputStatePoll,1,1356
 0047efb0,FUN_0047efb0,named,KeyboardDownKeyCount,0,285
-0047efd0,FUN_0047efd0,named,AviFileShutdown,0,333
+0047efd0,FUN_0047efd0,named,DirectInputShutdown,0,333
 0047f010,FUN_0047f010,ported,CursorPositionUpdate,1,772
 0047f0d0,FUN_0047f0d0,named,CursorSetClientPosition,0,307
 0047f130,FUN_0047f130,ported,WadMountStartup,1,4491
@@ -2229,9 +2229,9 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0048b390,FUN_0048b390,named,RegistryPathCreateKeys,0,834
 0048b4a0,FUN_0048b4a0,named,BufferedCharStreamReadToString,0,260
 0048b4e0,FUN_0048b4e0,named,WwadArchiveIndexLoad,0,13223
-0048bce0,FUN_0048bce0,named,LwoParserRecordAtIndex,0,86
-0048bcf0,FUN_0048bcf0,named,RegistryEntryValueGet,0,183
-0048bd10,FUN_0048bd10,named,RegistryEntryTypeGet,0,183
+0048bce0,FUN_0048bce0,named,WadArchiveRecordAtIndex,0,86
+0048bcf0,FUN_0048bcf0,named,WadEntryLengthGet,0,183
+0048bd10,FUN_0048bd10,named,WadEntryField4Get,0,183
 0048bd30,FUN_0048bd30,named,WadEntrySlotAllocate,0,254
 0048bd50,FUN_0048bd50,named,WadEntryFindAcrossMountedArchives,0,405
 0048bda0,FUN_0048bda0,ported,WadEntryNameLookup,1,423
@@ -2241,7 +2241,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0048bfc0,FUN_0048bfc0,named,FixedRecordSlotResourceRelease,0,200
 0048bff0,FUN_0048bff0,named,FixedRecordSlotResourceGet,0,163
 0048c010,FUN_0048c010,named,WadStreamLengthGet,0,177
-0048c030,FUN_0048c030,named,RegistryEntryAccessByIndex,0,80
+0048c030,FUN_0048c030,named,WadMemoryStreamBufferGet,0,80
 0048c040,FUN_0048c040,named,StringCaseSubstringFind,0,1052
 0048c0c0,FUN_0048c0c0,named,LwoStringDuplicate,0,1265
 0048c120,FUN_0048c120,named,LwoTextureProjectionModeParse,0,701
@@ -2335,7 +2335,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0048ff10,__strcmpi,ported,__strcmpi,2,1341
 0048ffa0,FUN_0048ffa0,named,PathResolveFull,0,1032
 00490070,FUN_00490070,named,VsscanfParseInput,0,124
-00490090,FUN_00490090,named,MaterialResolve,0,2236
+00490090,FUN_00490090,named,AssetPathComponentsParse,0,2236
 00490210,__setdefaultprecision,runtime-import,__setdefaultprecision,0,191
 00490230,FUN_00490230,named,ProcessorFeatureFallbackFalse,0,109
 00490280,FUN_00490280,named,CrtFloatingPointFeatureProbe,0,318

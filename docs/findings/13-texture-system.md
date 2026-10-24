@@ -149,7 +149,7 @@ reaches `FUN_004653a0` (136 B), which loops index `i` loading
 | `0x483030` / `0x483080` | TextureCacheLookup / TextureCacheInsert | `__strcmpi`, `strdup` |
 | `0x481820` | BindModelTextures | inside `FUN_00480ac0`; `%s%s`→`FUN_00482e70` |
 | `0x480ac0` | MaterialPass | `ModelOpen` helper (3.4 KB) |
-| `0x490090` | MaterialResolve | 3 callers, incl. post-LWO parse |
+| `0x490090` | AssetPathComponentsParse | Splits path prefix, directory, basename, and extension; called by model creation, model texture binding, and FLIC open. |
 | `0x42bb60` | TextureSetManager | keys `rooftexture`… |
 | `0x40b310` | LoadTileVariants | `%s%0.1x%0.1x.bmp` |
 | `0x42b330` | LoadTileMeshes | `%s%0.1x%0.1xa/b.bmp` → entity reg |
@@ -162,7 +162,7 @@ reaches `FUN_004653a0` (136 B), which loops index `i` loading
 | `0x48c820` | LwoSurfaceSettings | reads per-surface settings and texture-image tags |
 | `0x48d2c0` | LoadLWO | reads the LWO chunks and optional UV sidecar |
 | `0x481c50` | ParseUV | applies the model's UV sidecar stream |
-| `0x490090` | MaterialResolve | resolves a material name and associated material data |
+| `0x490090` | AssetPathComponentsParse | splits path components for model/material asset names; it does not resolve a material |
 
 ## Notes and open items
 
