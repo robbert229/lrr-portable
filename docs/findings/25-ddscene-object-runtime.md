@@ -40,9 +40,10 @@ covered for `.ae` files; this finding adds the complete loader map.
 `FUN_00472950` is the object allocator. It:
 
 1. lazily grows the **object pool** via `FUN_004759f0` — a free list at
-   `DAT_0076add0` of `0x2c`-byte nodes, grown in doubling blocks sized
-   `1<<DAT_0076cd90` (block counter, first call `DAT_0076cd90=0` → 64 bytes ÷
-   0x2c). Pool grows through `DAT_0076ad80` bank slots.
+   `DAT_0076add0` of `0x2c`-byte nodes, grown in doubling blocks containing
+   `1<<DAT_0076cd90` records. The count is multiplied by `0x2c` for the
+   allocation size: with `DAT_0076cd90=0`, the first block contains one
+   44-byte record. Pool grows through `DAT_0076ad80` bank slots.
 2. pops one node from `DAT_0076add0`, clears its 11 dwords (`0x2c` bytes).
 3. creates its three **channels** via `FUN_00475f70(*rec,…)`,
    `FUN_00475f70(rec[1],…)`, `FUN_00475f70(rec[2],…)` — each channel carries a
