@@ -312,7 +312,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0040e7e0,FUN_0040e7e0,ported,GlobalFlagBit0Clear,1,85
 0040e7f0,FUN_0040e7f0,ported,,1,717
 0040e8d0,FUN_0040e8d0,named,ScreenSpaceEffectDispatchIfEnabled,0,209
-0040e910,FUN_0040e910,named,GlobalValueClearIfEqual,0,107
+0040e910,FUN_0040e910,ported,GlobalValueClearIfEqual,3,107
 0040e930,FUN_0040e930,named,ErosionTimingStateInit,0,584
 0040e990,FUN_0040e990,ported,,1,288
 0040e9c0,FUN_0040e9c0,named,LavaErosionDelayFromCell,0,401
@@ -1241,7 +1241,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00454880,FUN_00454880,ported,GlobalCounter_004ff990Increment,1,164
 00454890,FUN_00454890,ported,GlobalCounter_004ff990Reset,1,148
 00454b70,FUN_00454b70,ported,ObjectiveVoiceAliasRaiseCommit,1,68
-00454b80,FUN_00454b80,named,ObjectiveVoiceAliasRaiseGateBit27,0,115
+00454b80,FUN_00454b80,ported,ObjectiveVoiceAliasRaiseGateBit27,2,115
 00455300,FUN_00455300,anchored,,0,185
 00456210,FUN_00456210,ported,FlhMagicUuNoop,1,49
 00456240,FUN_00456240,ported,SystemStateFlags,1,60
@@ -1302,15 +1302,15 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0045a6e0,FUN_0045a6e0,ported,IndexedPairSet,1,174
 0045a700,FUN_0045a700,ported,IndexedPairGet,1,178
 0045a730,FUN_0045a730,ported,ManagerTick,7,2908
-0045a9c0,FUN_0045a9c0,named,PanelTextureSlotsBlit,0,1476
+0045a9c0,FUN_0045a9c0,ported,PanelTextureSlotsBlit,2,1476
 0045aac0,FUN_0045aac0,ported,PanelItemFlag10SetClear,1,357
 0045ab00,FUN_0045ab00,ported,PanelStateFlagsToggle,1,312
 0045ab30,FUN_0045ab30,ported,RequestRecordSetFlag4ClearFlag8,2,201
 0045ab60,FUN_0045ab60,ported,RequestRecordSetFlag2ClearFlag8,1,201
 0045ab90,FUN_0045ab90,ported,RequestRecordFlag8IsSet,1,94
 0045abb0,FUN_0045abb0,ported,InputDeviceSetFlag20,1,313
-0045abf0,FUN_0045abf0,named,PanelItemFlag8SetIfEnabled,0,366
-0045ac30,FUN_0045ac30,named,PanelTextureSlotsAllocate,0,2011
+0045abf0,FUN_0045abf0,ported,PanelItemFlag8SetIfEnabled,3,366
+0045ac30,FUN_0045ac30,ported,PanelTextureSlotsAllocate,3,2011
 0045adb0,FUN_0045adb0,named,SimCursorInteractionTick,0,4831
 0045b310,FUN_0045b310,named,SimCategoryCellHitTest,0,3787
 0045b590,FUN_0045b590,ported,RectContainsOffsetPoint,3,377
@@ -1442,7 +1442,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004638a0,FUN_004638a0,named,SimTrackCursorHitTest,0,4579
 00463c00,FUN_00463c00,ported,RectContainsPointByConvertedCoords,3,377
 00463c90,FUN_00463c90,ported,RectContainsPointFromObjectBounds,3,408
-00463d20,FUN_00463d20,named,ViewBlitRectPositionsApply,0,1401
+00463d20,FUN_00463d20,ported,ViewBlitRectPositionsApply,3,1401
 00463e40,FUN_00463e40,named,FloatRoundToNearestInt,0,264
 00463ea0,FUN_00463ea0,ported,IndexedTextMetricsPairGet,1,222
 00463ed0,FUN_00463ed0,ported,IndexedTextMetricsPairSet,1,278
@@ -1474,7 +1474,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004652c0,FUN_004652c0,ported,SoundDeferredQueueDrain,3,82
 004652d0,FUN_004652d0,ported,SoundBatchQueueDrain,3,757
 00465370,FUN_00465370,ported,SoundSubsystemEnabledGet,2,58
-00465380,FUN_00465380,named,SceneEffectRegistryReset,0,109
+00465380,FUN_00465380,ported,SceneEffectRegistryReset,3,109
 004653a0,FUN_004653a0,named,TransientEffectTexturesPreload,0,589
 00465430,FUN_00465430,named,TransientEffectEmitterCreate,0,4887
 00465970,FUN_00465970,named,TransientEffectRegistryReleaseAll,0,253
@@ -1560,7 +1560,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0046a370,FUN_0046a370,named,LinkedRecordChainFree,0,152
 0046a390,FUN_0046a390,named,GlobalLinkedRecordChainClear,0,111
 0046a420,FUN_0046a420,named,SelectedGlobalPointTransformAndReturnX,0,270
-0046a470,FUN_0046a470,named,LinkedListPushAtGlobalHead,0,117
+0046a470,FUN_0046a470,ported,LinkedListPushAtGlobalHead,3,117
 0046a4c0,FUN_0046a4c0,ported,FlagMaskCallbacksAllPass,4,356
 0046a510,FUN_0046a510,named,SceneObjectStateDispatch,0,854
 0046a700,FUN_0046a700,ported,,3,306
@@ -1864,7 +1864,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00479170,FUN_00479170,named,ConfigRgbVectorRead,0,722
 00479240,FUN_00479240,named,ReleaseLinkedObjectList,0,240
 00479270,FUN_00479270,ported,BlockTextTokenAllocate,1,563
-004792c0,FUN_004792c0,named,GlobalRecordListPushHead,0,117
+004792c0,FUN_004792c0,ported,GlobalRecordListPushHead,3,117
 004792e0,FUN_004792e0,ported,ConfigBlockPathFind,5,3192
 00479490,FUN_00479490,named,BlockTextTokenPoolGrow,0,641
 00479500,FUN_00479500,named,D3DRMVectorRandom,0,85
@@ -2273,7 +2273,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0048e060,__ftol,ported,X87FloatToLongLongRound,3,164
 0048e090,FUN_0048e090,named,CrtAsin,0,112
 0048e0ad,FUN_0048e0ad,named,CrtAcosCore,0,1162
-0048e160,FUN_0048e160,named,RandomSeedSet,0,81
+0048e160,FUN_0048e160,ported,RandomSeedSet,1,81
 0048e170,FUN_0048e170,ported,RandomNext,7,123
 0048e1aa,FUN_0048e1aa,named,CrtMathIntrinsicDispatch,0,61
 0048e1e0,FUN_0048e1e0,named,FormattedTextBufferBuild,0,476
@@ -2459,7 +2459,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00497970,FUN_00497970,named,UInt96IncrementAtBit,0,712
 004979e0,FUN_004979e0,named,UInt96ClearFromBit,0,834
 00497a80,FUN_00497a80,named,UInt96Copy,0,271
-00497aa0,FUN_00497aa0,named,UInt96Zero,0,108
+00497aa0,FUN_00497aa0,ported,UInt96Zero,2,108
 00497ab0,FUN_00497ab0,ported,UInt96IsZero,2,213
 00497ad0,FUN_00497ad0,named,UInt96ShiftRight,0,900
 00497b90,FUN_00497b90,named,CrtExtended80ToBinaryFloat,0,1842
@@ -2471,7 +2471,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00497ec0,FUN_00497ec0,named,CrtLocaleDataGetOrInitialize,0,445
 00497f40,FUN_00497f40,named,DoubleToExtended80,0,998
 00498000,FUN_00498000,ported,CrtMemoryMove,2,9135
-00498340,FUN_00498340,named,CrtFatalMessageExit,0,59
+00498340,FUN_00498340,ported,CrtFatalMessageExit,3,59
 00498350,FUN_00498350,named,NumberStringScanParse,0,9648
 00498ae0,FUN_00498ae0,named,CrtStreamBufferAllocate,0,430
 00498b40,FUN_00498b40,named,CrtFileDescriptorFlag40Get,0,180

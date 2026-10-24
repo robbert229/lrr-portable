@@ -146,6 +146,16 @@ int main(void)
               "the announcer ran through the wrapper");
     }
 
+    /* ObjectiveVoiceAliasRaiseGateBit27 (2026-10-24): the modeled gate bit
+     * never lands set, so the raise announces the failed result (2) and
+     * answers 1 — the corpus's unset-word reading. */
+    level_set_int(s, OBJ_OFF_TIMER_TARGET, 0);
+    int g = objective_voice_alias_raise_gate_bit27(s);
+    CHECK(g == 1, "the raise answers one");
+    CHECK(strstr(objective_stream(s), "Failed") != NULL
+              || (s->objective & 8u) != 0,
+          "the raise announces the failed result");
+
     if (s_failures != 0) {
         fprintf(stderr, "objective_test: %d failure(s)\n", s_failures);
         return 1;

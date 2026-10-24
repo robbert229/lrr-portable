@@ -66,10 +66,21 @@ static const char* K_INITORE        = "InitialOre";
 
 static uint32_t s_rand_state = 1;
 
+void level_random_seed_set(uint32_t seed)
+{
+    s_rand_state = seed;
+}
+
+
 static uint16_t level_rand_u16(void)
 {
     s_rand_state = s_rand_state * 214013u + 2531011u;
     return (uint16_t)((s_rand_state >> 16) & 0x7fffu);
+}
+
+int level_random_draw15(void)
+{
+    return (int)level_rand_u16();
 }
 
 static int level_strcasecmp(const char* a, const char* b)

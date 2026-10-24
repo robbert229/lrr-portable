@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "crt.hpp"
+#include "heap.hpp"
 
 /* FUN_00498000: the corpus's memmove with word loops and byte tails —
  * byte-equivalent to the host memmove (findings 260/394). */
@@ -789,4 +790,327 @@ float reward_score_total_peek(void) { return s_reward_score; }
 uint32_t reward_score_count_peek(void)
 {
     return (uint32_t)s_reward_count;
+}
+
+/* --- the panel/view blit band (see crt.hpp) --------------------------------- */
+static uint32_t s_view_handle[DAT_WINDOW_COUNT]; /* DAT_00552140 */
+static void*    s_view_rect_a[DAT_WINDOW_COUNT]; /* DAT_0055214c */
+static void*    s_view_rect_b[DAT_WINDOW_COUNT]; /* DAT_00552150 */
+static int      s_view_region[DAT_WINDOW_COUNT]; /* DAT_00552158 */
+static int      s_panel_count[DAT_WINDOW_COUNT]; /* DAT_00500138 */
+
+#define CRT_SURFACE_CALLS 256
+static uint32_t s_call_handle[CRT_SURFACE_CALLS];
+static float    s_call_x[CRT_SURFACE_CALLS];
+static float    s_call_y[CRT_SURFACE_CALLS];
+static int      s_call_n;
+
+uint32_t crt_surface_handle_next(void)
+{
+    static uint32_t s_handle_counter = 0u;
+    ++s_handle_counter;
+    return s_handle_counter;
+}
+
+void crt_surface_blit_record(uint32_t handle, float x, float y)
+{
+    if (s_call_n < CRT_SURFACE_CALLS) {
+        s_call_handle[s_call_n] = handle;
+        s_call_x[s_call_n] = x;
+        s_call_y[s_call_n] = y;
+        ++s_call_n;
+    }
+}
+
+int crt_surface_calls_count(void) { return s_call_n; }
+
+int crt_surface_call_get(int index, uint32_t* handle, float* x, float* y)
+{
+    if (index < 0 || index >= s_call_n) {
+        return 0;
+    }
+    if (handle != NULL) {
+        *handle = s_call_handle[index];
+    }
+    if (x != NULL) {
+        *x = s_call_x[index];
+    }
+    if (y != NULL) {
+        *y = s_call_y[index];
+    }
+    return 1;
+}
+
+void crt_surface_calls_clear(void) { s_call_n = 0; }
+
+float crt_float_bits(uint32_t bits)
+{
+    float f = 0.0f;
+    __builtin_memcpy(&f, &bits, sizeof(f));
+    return f;
+}
+
+static uint32_t float_bits(float f)
+{
+    uint32_t b = 0u;
+    __builtin_memcpy(&b, &f, sizeof(b));
+    return b;
+}
+
+void view_blit_window_set(int view, uint32_t handle, void* rect_a,
+                          void* rect_b, int region_index)
+{
+    if (view < 0 || view >= DAT_WINDOW_COUNT) {
+        return;
+    }
+    s_view_handle[view] = handle;
+    s_view_rect_a[view] = rect_a;
+    s_view_rect_b[view] = rect_b;
+    s_view_region[view] = region_index;
+}
+
+void view_blit_window_peek(int view, uint32_t* handle, void** rect_a,
+                           void** rect_b, int* region_index)
+{
+    if (view < 0 || view >= DAT_WINDOW_COUNT) {
+        return;
+    }
+    if (handle != NULL) {
+        *handle = s_view_handle[view];
+    }
+    if (rect_a != NULL) {
+        *rect_a = s_view_rect_a[view];
+    }
+    if (rect_b != NULL) {
+        *rect_b = s_view_rect_b[view];
+    }
+    if (region_index != NULL) {
+        *region_index = s_view_region[view];
+    }
+}
+
+void panel_draw_count_set(int panel, int count)
+{
+    if (panel >= 0 && panel < DAT_WINDOW_COUNT) {
+        s_panel_count[panel] = count;
+    }
+}
+
+int panel_draw_count_peek(int panel)
+{
+    if (panel < 0 || panel >= DAT_WINDOW_COUNT) {
+        return 0;
+    }
+    return s_panel_count[panel];
+}
+
+/* PanelItemFlag8SetIfEnabled (FUN_0045abf0) — see crt.hpp. Bit 8 of the
+ * stride-0x2c item's word at +0x28 only follows the flag while bit 32
+ * (the enable gate) is set; otherwise the write is skipped. */
+void panel_item_flag8_set_if_enabled(int panel, int item, int value)
+{
+    uint32_t* w = panel_item_word(panel, item);
+    if (w == NULL) {
+        return;
+    }
+    if ((*w & 0x20u) == 0u) {
+        return;
+    }
+    *w = value != 0 ? *w | 8u : *w & ~8u;
+}
+
+/* ViewBlitRectPositionsApply (FUN_00463d20) — see crt.hpp. Rect records:
+ * +0x00/+0x04 position, +0x10/+0x14 the size pair (bit-for-bit blit
+ * handles), +0x18 the flag word. The corpus strides its own block and
+ * dereferences every window blindly — the guards here are the documented
+ * deviation. */
+void view_blit_rect_positions_apply(int view)
+{
+    if (view < 0 || view >= DAT_WINDOW_COUNT) {
+        return;
+    }
+    const int k = s_view_region[view];
+    if (k < 0 || k >= DAT_WINDOW_COUNT) {
+        return; /* deviation: the corpus strides its own block blindly */
+    }
+    const float ox = s_fpair_a[view] + (float)(int)s_pair_a[k];
+    const float oy = s_fpair_b[view] + (float)(int)s_pair_b[k];
+    crt_surface_blit_record(s_view_handle[view], ox, oy);
+
+    for (int which = 0; which <= 1; ++which) {
+        const float* pf = (const float*)(which == 0 ? s_view_rect_a[view]
+                                                   : s_view_rect_b[view]);
+        if (pf == NULL) {
+            continue; /* deviation: the corpus reads blindly */
+        }
+        uint32_t flags = 0u;
+        __builtin_memcpy(&flags, pf + 6, sizeof(flags));
+        uint32_t handle = 0u;
+        if (((flags & 2u) == 0u) || (pf[4] == 0.0f)) {
+            if ((flags & 4u) != 0u && pf[5] != 0.0f) {
+                handle = float_bits(pf[5]);
+            } else {
+                continue;
+            }
+        } else {
+            handle = float_bits(pf[4]);
+        }
+        crt_surface_blit_record(handle, pf[0] + ox, pf[1] + oy);
+    }
+
+    const float* pf = (const float*)s_metric_records[view];
+    if (pf == NULL) {
+        return; /* deviation: the corpus dereferences its slot blindly */
+    }
+    crt_surface_blit_record(float_bits(pf[6]),
+                            pf[0] + pf[4] + ox, pf[1] + pf[5] + oy);
+}
+
+/* PanelTextureSlotsAllocate (FUN_0045ac30) — see crt.hpp. Draw-record
+ * fields: +0x00/+0x04 position, +0x08/+0x0c the size sums, +0x10/+0x14/
+ * +0x18 the texture-slot handles, +0x20 the id word, +0x28 the flag word.
+ * The corpus stores the new block over the panel's previous one without
+ * freeing it (faithful); a null allocator answer skips the fill loop
+ * (deviation: the corpus strides on through the failure). */
+void panel_texture_slots_allocate(int panel, int count, const int* slot_index,
+                                  const float* stream, const int* tex1,
+                                  const int* tex2, const int* tex3,
+                                  const int* ids)
+{
+    if (panel < 0 || panel >= DAT_WINDOW_COUNT || count <= 0) {
+        return;
+    }
+    float* block = (float*)engine_heap_alloc((long)count * 0x2c);
+    panel_draw_records_set(panel, block);
+    panel_draw_count_set(panel, count);
+    if (block == NULL) {
+        return;
+    }
+    for (int i = 0; i < count; ++i) {
+        const int slot = (slot_index != NULL) ? slot_index[i] : i;
+        if (slot < 0 || slot >= count) {
+            continue; /* deviation: the corpus strides blindly */
+        }
+        float* rec = block + (size_t)slot * 11;
+        const float* s = stream + (size_t)i * 4;
+        rec[0] = s[0];
+        rec[1] = s[1];
+        rec[2] = s[2] + s[0];
+        rec[3] = s[3] + s[1];
+        rec[4] = 0.0f;
+        rec[5] = 0.0f;
+        rec[6] = 0.0f;
+        rec[10] = 0.0f;
+        if (ids != NULL) {
+            rec[8] = crt_float_bits((uint32_t)ids[i]);
+        }
+        const int* tex[3] = { tex1, tex2, tex3 };
+        const int field[3] = { 6, 4, 5 }; /* corpus slot order: +0x18,
+                                            +0x10, +0x14 */
+        for (int t = 0; t < 3; ++t) {
+            if (tex[t] != NULL && tex[t][i] != 0) {
+                const uint32_t h = crt_surface_handle_next();
+                rec[field[t]] = crt_float_bits(h); /* load seam: a handle */
+                crt_surface_blit_record(h, 0.0f, 0.0f); /* transform call */
+            }
+        }
+    }
+}
+
+/* --- the small global primitives band (see crt.hpp) -------------------------- */
+
+void uint96_zero(uint32_t limbs[3])
+{
+    if (limbs == NULL) {
+        return; /* deviation: the corpus dereferences blindly */
+    }
+    limbs[0] = 0u;
+    limbs[1] = 0u;
+    limbs[2] = 0u;
+}
+
+/* GlobalValueClearIfEqual (FUN_0040e910) — the screen-effect handle word
+ * (the corpus's DAT_004c7ea4, unowned) clears only on a matching release. */
+static int s_global_value_word;
+
+void global_value_clear_if_equal(int value)
+{
+    if (s_global_value_word == value) {
+        s_global_value_word = 0;
+    }
+}
+
+void global_value_word_set(int value) { s_global_value_word = value; }
+int  global_value_word_peek(void) { return s_global_value_word; }
+
+/* The two global-list pushes (FUN_0046a470/FUN_004792c0) — the corpus's
+ * head words have no ported owner, so the heads land here; the link field
+ * at record +0x28 is a port-side pointer-sized slot (the corpus's 32-bit
+ * dword, widened with the host — deviation documented). */
+static void* s_linked_list_head;  /* DAT_004aa458 role */
+static void* s_record_list_head;  /* DAT_00506518 role */
+
+static void record_list_push(void** head, void* record)
+{
+    if (record == NULL) {
+        return; /* deviation: the corpus strides the record blindly */
+    }
+    *(void**)((char*)record + 0x1c) = *head;
+    *head = record;
+}
+
+void linked_list_push_at_global_head(void* record)
+{
+    record_list_push(&s_linked_list_head, record);
+}
+
+void* linked_list_global_head_peek(void) { return s_linked_list_head; }
+
+void global_record_list_push_head(void* record)
+{
+    record_list_push(&s_record_list_head, record);
+}
+
+void* global_record_list_head_peek(void) { return s_record_list_head; }
+
+/* SceneEffectRegistryReset (FUN_00465380) — the transient-effect registry
+ * words (head/tail/shared-texture, unowned) clear and the reset answers 1
+ * exactly as the corpus does. */
+static uint32_t s_scene_effect_words[3];
+
+int scene_effect_registry_reset(void)
+{
+    s_scene_effect_words[0] = 0u;
+    s_scene_effect_words[1] = 0u;
+    s_scene_effect_words[2] = 0u;
+    return 1;
+}
+
+void scene_effect_registry_words_peek(uint32_t out_words[3])
+{
+    if (out_words == NULL) {
+        return;
+    }
+    for (int i = 0; i < 3; ++i) {
+        out_words[i] = s_scene_effect_words[i];
+    }
+}
+
+/* CrtFatalMessageExit (FUN_00498340) — the corpus's exhausted-memory
+ * abort. The port aborts with the host runtime, or routes through the
+ * observer hook when installed so the path is testable (deviation). */
+static void (*s_fatal_exit_observer)(void);
+
+void crt_fatal_message_exit(void)
+{
+    if (s_fatal_exit_observer != NULL) {
+        s_fatal_exit_observer();
+        return;
+    }
+    abort();
+}
+
+void crt_fatal_exit_observer_set(void (*observer)(void))
+{
+    s_fatal_exit_observer = observer;
 }

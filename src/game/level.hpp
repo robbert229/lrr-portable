@@ -821,4 +821,11 @@ int global_option_low_bits_enabled(const LevelState* s);
  * the port's guarded read (NULL answers 0). */
 int level_objective_result_get(const struct LevelState* s);
 
+/* RandomSeedSet (FUN_0048e160): the corpus stores the seed into the shared
+ * draw word; the port models that word module-locally the way the overlay,
+ * cmd, media and sound models do (same LCG), so this reseeds this module's
+ * instance only — other instances keep their own state (deviation). */
+void level_random_seed_set(uint32_t seed);
+int  level_random_draw15(void); /* the seeded instance's RandomNext draw */
+
 #endif /* LEGORRR_GAME_LEVEL_HPP */

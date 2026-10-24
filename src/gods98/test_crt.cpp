@@ -537,6 +537,154 @@ int main(void)
         CHECK(reward_score_count_peek() == n + 1u, "the count rises once");
     }
 
+    /* The small global primitives band (2026-10-24). */
+    {
+        uint32_t limbs[3] = { 1u, 2u, 3u };
+        uint96_zero(limbs);
+        CHECK(limbs[0] == 0u && limbs[1] == 0u && limbs[2] == 0u,
+              "the limbs clear");
+        CHECK(uint96_is_zero(limbs) == 1, "the sibling agrees");
+        uint96_zero(NULL); /* guarded */
+
+        global_value_word_set(5);
+        global_value_clear_if_equal(7);
+        CHECK(global_value_word_peek() == 5, "a mismatched release keeps");
+        global_value_clear_if_equal(5);
+        CHECK(global_value_word_peek() == 0, "the matching release clears");
+
+        char node[0x20];
+        memset(node, 0, sizeof(node));
+        linked_list_push_at_global_head(node);
+        CHECK(linked_list_global_head_peek() == (void*)node, "the push lands");
+        void* up = NULL;
+        __builtin_memcpy(&up, node + 0x1c, sizeof(up));
+        CHECK(up == NULL, "the tail link is null after the first push");
+        char node2[0x20];
+        memset(node2, 0, sizeof(node2));
+        linked_list_push_at_global_head(node2);
+        __builtin_memcpy(&up, node2 + 0x1c, sizeof(up));
+        CHECK(up == (void*)node && linked_list_global_head_peek() == (void*)node2,
+              "the second push relinks");
+        linked_list_push_at_global_head(NULL); /* guarded */
+
+        global_record_list_push_head(node2);
+        CHECK(global_record_list_head_peek() == (void*)node2, "the record push lands");
+
+        const uint32_t expect_zero[3] = { 0u, 0u, 0u };
+        CHECK(scene_effect_registry_reset() == 1, "the reset answers one");
+        uint32_t words[3] = { 9u, 9u, 9u };
+        scene_effect_registry_words_peek(words);
+        CHECK(words[0] == 0u && words[1] == 0u && words[2] == 0u,
+              "the registry words clear");
+        scene_effect_registry_words_peek(NULL); /* guarded */
+
+        static int s_fatal_hits;
+        s_fatal_hits = 0;
+        crt_fatal_exit_observer_set([](void) -> void { ++s_fatal_hits; });
+        crt_fatal_message_exit();
+        CHECK(s_fatal_hits == 1, "the observer stands in for the abort");
+        crt_fatal_exit_observer_set(NULL); /* restore the aborting default */
+    }
+
+    /* The panel/view blit band (2026-10-24). */
+    {
+        /* The flag-8 enable gate. */
+        static char fblock[0x2c * 2];
+        memset(fblock, 0, sizeof(fblock));
+        uint32_t* w = (uint32_t*)(fblock + 0x28);
+        panel_draw_records_set(7, fblock);
+        panel_item_flag8_set_if_enabled(7, 0, 1);
+        CHECK(*w == 0u, "the disabled gate keeps bit 8 clear");
+        *w = 0x20u;
+        panel_item_flag8_set_if_enabled(7, 0, 1);
+        CHECK(*w == 0x28u, "the enabled gate takes bit 8");
+        panel_item_flag8_set_if_enabled(7, 0, 0);
+        CHECK(*w == 0x20u, "clearing drops bit 8");
+        *w = 0x10u;
+        panel_item_flag8_set_if_enabled(7, 0, 1);
+        CHECK(*w == 0x10u, "bit 16 alone is not the enable gate");
+        panel_draw_records_set(7, NULL);
+
+        /* Allocate: the stream, the size sums, the gather, the ids, the
+         * three texture streams through the modeled seam. */
+        crt_surface_calls_clear();
+        const float stream[2][4] = { { 1.0f, 2.0f, 3.0f, 4.0f },
+                                     { 5.0f, 6.0f, 7.0f, 8.0f } };
+        const int slot[2] = { 1, 0 };
+        const int ids[2] = { 0x111, 0x222 };
+        const int t1[2] = { 7, 0 };
+        const int t2[2] = { 0, 8 };
+        const int t3[2] = { 9, 10 };
+        panel_texture_slots_allocate(3, 2, slot, &stream[0][0], t1, t2, t3,
+                                     ids);
+        CHECK(panel_draw_count_peek(3) == 2, "the count lands");
+        const char* blk = (const char*)panel_draw_records_peek(3);
+        CHECK(blk != NULL, "the block lands");
+        const float* r1 = (const float*)(blk + 0x2c);
+        CHECK(r1[0] == 1.0f && r1[1] == 2.0f && r1[2] == 4.0f
+                  && r1[3] == 6.0f,
+              "the stream lands with the size sums");
+        uint32_t bits = 0u;
+        __builtin_memcpy(&bits, r1 + 8, 4);
+        CHECK(bits == 0x111u, "the id carries bit for bit");
+        __builtin_memcpy(&bits, r1 + 6, 4);
+        CHECK(bits != 0u, "the first texture stream lands at +18");
+        __builtin_memcpy(&bits, r1 + 4, 4);
+        CHECK(bits == 0u, "the second stream leaves +16 clear");
+        const float* r0 = (const float*)blk;
+        __builtin_memcpy(&bits, r0 + 6, 4);
+        CHECK(bits == 0u, "the absent second item first stream stays clear");
+        __builtin_memcpy(&bits, r0 + 5, 4);
+        CHECK(bits != 0u, "the third stream lands at +14");
+        CHECK(crt_surface_calls_count() == 4, "the seam records the loads");
+        int transforms = 0;
+        for (int ci = 0; ci < crt_surface_calls_count(); ++ci) {
+            uint32_t h; float cx, cy;
+            crt_surface_call_get(ci, &h, &cx, &cy);
+            (void)h;
+            if (cx == 0.0f && cy == 0.0f) {
+                ++transforms;
+            }
+        }
+        CHECK(transforms == 4, "the loads land as transforms");
+        panel_draw_records_set(3, NULL);
+        panel_draw_count_set(3, 0);
+        panel_texture_slots_allocate(3, 0, NULL, NULL, NULL, NULL, NULL,
+                                     NULL); /* count zero: inert */
+        CHECK(panel_draw_count_peek(3) == 0, "the zero count stays inert");
+
+        /* The view blit: origin, the two rect records, the metrics finish. */
+        static float rect_a[8] = { 1.0f, 2.0f, 0, 0, 5.0f, 6.0f, 0, 0 };
+        static float rect_b[8] = { 3.0f, 3.0f, 0, 0, 0, 9.0f, 0, 0 };
+        static float metrics[8] = { 1.0f, 1.0f, 0, 0, 1.0f, 1.0f, 3.0f, 0 };
+        const uint32_t fl_a = 2u, fl_b = 4u;
+        __builtin_memcpy(rect_a + 6, &fl_a, 4); /* bit 2, rec+16 set */
+        __builtin_memcpy(rect_b + 6, &fl_b, 4); /* size-b pair path */
+        indexed_pair_set(4, 100u, 50u);        /* the region offsets */
+        indexed_float_pair_set(2, 10u, 20u);   /* the view's own pair */
+        view_blit_window_set(2, 777u, rect_a, rect_b, 4);
+        indexed_record_pointer_set(2, metrics);
+        crt_surface_calls_clear();
+        view_blit_rect_positions_apply(2);
+        CHECK(crt_surface_calls_count() == 4, "the view walks handle, rects, metrics");
+        uint32_t h = 0u;
+        float x = 0, y = 0;
+        crt_surface_call_get(0, &h, &x, &y);
+        CHECK(h == 777u && x == 110.0f && y == 70.0f, "the view handle lands");
+        crt_surface_call_get(1, &h, &x, &y);
+        CHECK(h == 0x40A00000u && x == 111.0f && y == 72.0f,
+              "the rect handle carries its size bits");
+        crt_surface_call_get(3, &h, &x, &y);
+        CHECK(h == 0x40400000u && x == 112.0f && y == 72.0f,
+              "the metrics finish adds both offsets");
+        view_blit_window_set(1, 1u, NULL, NULL, 100);
+        crt_surface_calls_clear();
+        view_blit_rect_positions_apply(1); /* region guard */
+        view_blit_rect_positions_apply(-1);
+        view_blit_rect_positions_apply(99);
+        CHECK(crt_surface_calls_count() == 0, "the guards keep the seam quiet");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "crt_test: %d failure(s)\n", s_failures);
         return 1;

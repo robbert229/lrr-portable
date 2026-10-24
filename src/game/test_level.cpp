@@ -1312,6 +1312,21 @@ int main(int argc, char** argv)
         CHECK(level_objective_result_get(&g) == 1, "the achieved word reads");
     }
 
+    /* RandomSeedSet (2026-10-24): the draw follows from the seed exactly as
+     * the corpus's LCG does. */
+    {
+        level_random_seed_set(1u);
+        const int first = level_random_draw15();
+        level_random_seed_set(1u);
+        CHECK(level_random_draw15() == first, "the same seed draws the same");
+        level_random_seed_set(0x1234u);
+        const int seeded = level_random_draw15();
+        const int expect = (int)(((uint32_t)0x1234u * 214013u + 2531011u)
+                                 >> 16) & 0x7fff;
+        CHECK(seeded == expect, "the seed lands into the LCG state");
+        CHECK((expect & ~0x7fff) == 0, "the draw stays 15-bit");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "level_test: %d failure(s)\n", s_failures);
         return 1;
