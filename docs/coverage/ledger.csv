@@ -1470,11 +1470,11 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00465250,thunk_FUN_0047b390,runtime-import,thunk_FUN_0047b390,0,630
 00465260,FUN_00465260,ported,SoundSubsystemEnableSet,5,332
 004652a0,FUN_004652a0,ported,SoundSubsystemEnableSetAndStop,3,82
-004652b0,FUN_004652b0,ported,SoundBatchModeGet,5,58
-004652c0,FUN_004652c0,ported,SoundDeferredQueueDrain,3,82
-004652d0,FUN_004652d0,ported,SoundBatchQueueDrain,3,757
+004652b0,FUN_004652b0,ported,SoundBatchModeGet,4,58
+004652c0,FUN_004652c0,named,SoundDeferredQueueDrain,0,82
+004652d0,FUN_004652d0,named,SoundBatchQueueDrain,0,757
 00465370,FUN_00465370,ported,SoundSubsystemEnabledGet,2,58
-00465380,FUN_00465380,ported,SceneEffectRegistryReset,3,109
+00465380,FUN_00465380,named,SceneEffectRegistryReset,0,109
 004653a0,FUN_004653a0,named,TransientEffectTexturesPreload,0,589
 00465430,FUN_00465430,named,TransientEffectEmitterCreate,0,4887
 00465970,FUN_00465970,named,TransientEffectRegistryReleaseAll,0,253

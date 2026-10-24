@@ -423,7 +423,16 @@ static const char* const s_alias_builtins[SOUND_ALIAS_BUILTINS] = {
  * the corpus DAT_00502a24 slots behind the 45 built-ins. */
 static char* s_alias_dynamic[SOUND_ALIAS_MAX - SOUND_ALIAS_BUILTINS];
 static int   s_alias_dynamic_count;
-static int   s_alias_register_unknown; /* DAT_00502a2c bit 2 */
+
+/* The corpus's DAT_00502a2c sound flag word: bit 0 subsystem-enabled
+ * (enable-set @ 0x465260), bit 1 dynamic-alias registration, bit 3 batch
+ * mode (batch-mode-get @ 0x4652b0). */
+static uint32_t s_sound_flags;
+
+/* _DAT_00502b2c — the global-cooldown word (the corpus types it as a
+ * double; it holds the alias submitted under the cooldown, whose writer
+ * lands with #296). */
+static double s_cooldown_alias;
 
 static char* s_dupstr(const char* s)
 {
@@ -451,9 +460,13 @@ void sound_alias_registry_init(void)
 
 void sound_alias_registration_set(int enable)
 {
-    /* SoundDynamicAliasRegistrationSet @ 0x00464c50: sets/clears
-     * DAT_00502a2c bit 2; the port has no other bit 2 consumer. */
-    s_alias_register_unknown = (enable != 0);
+    /* SoundDynamicAliasRegistrationSet @ 0x00464c50: raises/clears the
+     * value-2 bit of DAT_00502a2c (`|= 2` / `&= 0xfffffffd`). */
+    if (enable != 0) {
+        s_sound_flags |= SOUND_FLAG_REG_UNKNOWN;
+    } else {
+        s_sound_flags &= ~SOUND_FLAG_REG_UNKNOWN;
+    }
 }
 
 int sound_alias_lookup(const char* name, int* out_index)
@@ -476,7 +489,7 @@ int sound_alias_lookup(const char* name, int* out_index)
             return 1;
         }
     }
-    if (s_alias_register_unknown != 0) {
+    if ((s_sound_flags & SOUND_FLAG_REG_UNKNOWN) != 0) {
         if (s_alias_dynamic_count >= SOUND_ALIAS_MAX - SOUND_ALIAS_BUILTINS) {
             return 0; /* port bound: the corpus writes past its 0x7bc
                        * table instead of failing */
@@ -511,4 +524,48 @@ const char* sound_alias_name(int index)
         return s_alias_dynamic[index - SOUND_ALIAS_BUILTINS];
     }
     return NULL;
+}
+
+/* ------------------------------------------------------------------ *
+ *  Sound subsystem enable state (issues #315 / #322 / #323 / #316;
+ *  finding 137 flag word DAT_00502a2c).
+ * ------------------------------------------------------------------ */
+
+void sound_subsystem_enable_set(int enable, int stop_active)
+{
+    /* SoundSubsystemEnableSet @ 0x00465260. */
+    if (enable != 0) {
+        s_sound_flags |= SOUND_FLAG_ENABLED;
+        return;
+    }
+    s_sound_flags &= ~SOUND_FLAG_ENABLED;
+    if (stop_active != 0) {
+        /* Corpus stop seam (instance-chain walk, TODO(corpus) — see
+         * sound.hpp). Deviation: the port's disable leaves live playback
+         * running until the instance layer lands. */
+    }
+    s_cooldown_alias = 0.0;
+}
+
+void sound_subsystem_enable_set_and_stop(int enable)
+{
+    /* SoundSubsystemEnableSetAndStop @ 0x004652a0. */
+    sound_subsystem_enable_set(enable, 1);
+}
+
+int sound_subsystem_enabled(void)
+{
+    return (s_sound_flags & SOUND_FLAG_ENABLED) != 0;
+}
+
+int sound_batch_mode_get(void)
+{
+    /* SoundBatchModeGet @ 0x004652b0: `return DAT_00502a2c & 8` — the
+     * corpus returns the masked word, so 8 (not 1) when set. */
+    return (int)(s_sound_flags & SOUND_FLAG_BATCH);
+}
+
+double sound_deferred_last_alias(void)
+{
+    return s_cooldown_alias;
 }

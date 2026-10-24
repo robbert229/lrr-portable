@@ -836,6 +836,20 @@ slot table it overflowed). `sound_test` pins the whole 45-entry table, the
 indices pinned by findings 137/144, the case-folded/NULL/no-append paths, the
 flag surviving re-init, and the port's bound.
 
+**Sound subsystem enable state** (2026-10-24; port issues #315/#322/#323/#316):
+`sound_subsystem_enable_set` (`SoundSubsystemEnableSet @ 0x465260`) raises
+`DAT_00502a2c`'s value-1 bit and, on disable, clears it, runs the stop seam,
+and zeroes the global-cooldown word `_DAT_00502b2c`;
+`sound_subsystem_enable_set_and_stop` (`@ 0x4652a0`) is the stop-armed form;
+`sound_subsystem_enabled` (`SoundSubsystemEnabledGet @ 0x465370`) and
+`sound_batch_mode_get` (`SoundBatchModeGet @ 0x4652b0`, returning the masked
+word) read it back. Deviations: the corpus's stop seam (SoundSubsystemStopAll,
+unported) and the queue-side submission suppression land with their own
+milestones, and the port shares the corpus flag word with the alias
+registration bit. `sound_test` covers the enable/disable/and-stop
+transitions, the cooldown-word zero, batch-mode readback, and flag-bit
+independence.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

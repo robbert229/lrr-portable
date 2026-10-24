@@ -409,10 +409,55 @@ static void test_alias_registry(void)
     sound_alias_registry_init();
 }
 
+/* ------------------------------------------------------------------ *
+ *  Subsystem enable state (SoundSubsystemEnableSet @ 0x465260,
+ *  EnableSetAndStop @ 0x4652a0, EnabledGet @ 0x465370, BatchModeGet @
+ *  0x4652b0 — issues #315/#322/#323/#316).
+ * ------------------------------------------------------------------ */
+
+static void test_sound_enable(void)
+{
+    CHECK(sound_subsystem_enabled() == 0, "subsystem starts disabled (zero word)");
+    CHECK(sound_batch_mode_get() == 0, "batch mode starts off");
+
+    sound_subsystem_enable_set(1, 1);
+    CHECK(sound_subsystem_enabled() != 0, "enable raises the enabled bit");
+
+    sound_subsystem_enable_set(0, 1);
+    CHECK(sound_subsystem_enabled() == 0, "disable clears the enabled bit");
+
+    /* The stop-and-stop variant is enable-set with stop active. */
+    sound_subsystem_enable_set_and_stop(1);
+    CHECK(sound_subsystem_enabled() != 0, "enable_and_stop enables");
+    sound_subsystem_enable_set_and_stop(0);
+    CHECK(sound_subsystem_enabled() == 0, "enable_and_stop disables");
+
+    /* Disable zeroes the global-cooldown word (the corpus double at
+     * _DAT_00502b2c; its writer lands with the submission queue #296). */
+    CHECK(sound_deferred_last_alias() == 0.0, "cooldown word zeroed on disable");
+
+    /* Batch-mode get returns the masked word. */
+    CHECK(sound_batch_mode_get() == 0, "batch mode stays off with no queue");
+
+    /* The registration bit and the enable bit are independent. */
+    sound_subsystem_enable_set(1, 0);
+    sound_alias_registration_set(1);
+    CHECK(sound_subsystem_enabled() != 0, "registration flag does not disable");
+    sound_subsystem_enable_set(0, 0);
+    /* Re-enable and confirm registration survived (shared word, distinct
+     * bits) — a live alias lookup still appends while disabled. */
+    int idx = -1;
+    sound_subsystem_enable_set(1, 0);
+    CHECK(sound_alias_lookup("SFX_Lava", &idx) == 1 && idx == 0x26,
+          "lookup unaffected by enable state");
+    sound_subsystem_enable_set(0, 0);
+}
+
 int main(int argc, char** argv)
 {
     test_synthetic();
     test_alias_registry();
+    test_sound_enable();
     for (int i = 1; i < argc; ++i) {
         if (strcmp(argv[i], "--real") == 0 && i + 1 < argc) {
             test_real(argv[i + 1]);
