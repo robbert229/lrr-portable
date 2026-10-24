@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 439 | 17.1% |
+| ported | 450 | 17.6% |
 | anchored | 5 | 0.2% |
-| named | 2074 | 80.9% |
+| named | 2063 | 80.5% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 0 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (439 functions)
+  (450 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (5 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (2074 functions)
+  citation yet (2063 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (0 functions)
 
-**Game logic remaining to port: 2079 (81.1%).**
+**Game logic remaining to port: 2068 (80.7%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -1104,7 +1104,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0045b620` | PriorityListButtonActionDispatch |
 | `0x0045b740` | ScrollInfoPanelInitialize |
 | `0x0045b850` | UiOverlayCreateConfiguredElement |
-| `0x0045b8a0` | PointDistanceWithinRadius |
 | `0x0045b900` | IntegerPairDivideToFloatPair |
 | `0x0045b930` | FloatPairToIntegerPair |
 | `0x0045b9d0` | PanelRotationControlConfigLoad |
@@ -1151,7 +1150,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0045db00` | TexturedSceneObjectDrawAtPosition |
 | `0x0045dbc0` | TerrainViewTileGeometryBuild |
 | `0x0045e400` | EntityTypeAndStateFlagPredicate |
-| `0x0045e660` | RectContainsPointHalfOpen |
 | `0x0045e6d0` | TerrainPointPickResolve |
 | `0x0045e820` | ViewportPointCallbackDispatch |
 | `0x0045e940` | ViewPointToScreenGeometryTransform |
@@ -1537,11 +1535,8 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00479530` | SurfaceTriangleNormalCalculate |
 | `0x00479630` | SurfaceTriangleAreaCalculate |
 | `0x004798e0` | ViewRayIntersectionTest |
-| `0x00479a30` | RayPlaneIntersectionParameter |
 | `0x00479ab0` | PointAlongRay |
-| `0x00479af0` | LineIntersection2DCompute |
 | `0x00479b80` | PointInPolygon2D |
-| `0x00479c10` | SphereRayIntersectionDiscriminantPositive |
 | `0x00479ce0` | Matrix4Multiply |
 | `0x00479d50` | Matrix4SetRotationZ |
 | `0x00479da0` | Matrix4SetRotationY |
@@ -1606,14 +1601,11 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0047cee0` | DirectDrawClipperSetRegion |
 | `0x0047d000` | PalettizedBitmapSurfaceDecode |
 | `0x0047d2d0` | SurfacePixelValueEncode |
-| `0x0047d3f0` | BitCount32 |
 | `0x0047d410` | RendererRecordTableInitialize |
 | `0x0047d430` | SceneObjectRegistryTeardown |
 | `0x0047d470` | ImageSurfaceRelease |
 | `0x0047d490` | SurfacePixelFormatQuery |
 | `0x0047d520` | Palette8To16BitSurfaceExpand |
-| `0x0047d700` | PopCount32 |
-| `0x0047d720` | FindFirstSetBit32 |
 | `0x0047d740` | SurfacePixelRowsFlipWithScratch |
 | `0x0047d800` | Bitmap24BitSurfaceConvert |
 | `0x0047db90` | RGBChannelsPack |
@@ -1636,7 +1628,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0047e710` | DirectDrawSurfaceDescriptorInitialize |
 | `0x0047e760` | AviSurfaceLock |
 | `0x0047e7b0` | AviFrameSurfaceUnlock |
-| `0x0047e7e0` | BitCount32ByPosition |
 | `0x0047e980` | AviPlayerDestroy |
 | `0x0047e9a0` | AviFrameRetrieverDestroy |
 | `0x0047e9e0` | AviFrameDecodeAndCopy |
@@ -1887,7 +1878,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0048e4f0` | CrtTerminateProcessWithHandlers |
 | `0x0048e5a0` | CrtRunCallbackArray |
 | `0x0048e680` | CrtDoubleAbsoluteValue |
-| `0x0048e870` | DoubleIsFinite |
 | `0x0048e890` | MarkupIntegerTokenParse |
 | `0x0048e8e0` | CrtRoundToIntegralWithMathErrorHandlingVariant |
 | `0x0048ead0` | EngineCalloc |
@@ -2037,7 +2027,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004979e0` | UInt96ClearFromBit |
 | `0x00497a80` | UInt96Copy |
 | `0x00497aa0` | UInt96Zero |
-| `0x00497ab0` | UInt96IsZero |
 | `0x00497ad0` | UInt96ShiftRight |
 | `0x00497b90` | CrtExtended80ToBinaryFloat |
 | `0x00497d60` | CrtExtendedFloatConvertFormatA |

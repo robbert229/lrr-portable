@@ -14,6 +14,7 @@
 #define LEGORRR_GODS98_CRT_HPP
 
 #include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -30,6 +31,28 @@ int float_to_long(float value);
 
 /* FUN_0041f8e0: the callable no-op installed by several engine paths. */
 void noop_callback(void);
+
+/* FUN_0047d3f0: bit count (corpus: clear-lowest-set-bit loop). */
+int bit_count32(uint32_t value);
+
+/* FUN_0047d700: bit count by position loop — same answer, corpus keeps the
+ * separate body. */
+int pop_count32(uint32_t value);
+
+/* FUN_0047d720: lowest set bit's index, or 0xffffffff when value is zero. */
+uint32_t find_first_set_bit32(uint32_t value);
+
+/* FUN_0047e7e0: the position-loop bit count again (the corpus's second
+ * identical body; kept distinct to mirror the address map). */
+int bit_count32_by_position(uint32_t value);
+
+/* FUN_00497ab0: zero test over 3 dwords (the "96-bit" pair of 32-bit limbs
+ * plus its high word — the corpus checks exactly 3). */
+int uint96_is_zero(const uint32_t limbs[3]);
+
+/* FUN_0048e870: the double finite test — exponent field not all ones,
+ * so true for finite values and false for Inf/NaN. */
+int double_is_finite(double value);
 
 #ifdef __cplusplus
 }

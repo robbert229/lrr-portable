@@ -22,3 +22,57 @@ int float_to_long(float value)
 void noop_callback(void)
 {
 }
+
+/* FUN_0047d3f0: popcount via the clear-lowest-set-bit loop. */
+int bit_count32(uint32_t value)
+{
+    int n = 0;
+    while (value != 0u) {
+        value &= value - 1u;
+        ++n;
+    }
+    return n;
+}
+
+/* FUN_0047d700: popcount via the per-position test loop. */
+int pop_count32(uint32_t value)
+{
+    int n = 0;
+    for (unsigned i = 0; i < 32u; ++i) {
+        if ((value & (1u << (i & 31u))) != 0u) {
+            ++n;
+        }
+    }
+    return n;
+}
+
+/* FUN_0047d720: index of the lowest set bit, 0xffffffff for zero. */
+uint32_t find_first_set_bit32(uint32_t value)
+{
+    for (uint32_t i = 0; i < 32u; ++i) {
+        if ((value & (1u << (i & 31u))) != 0u) {
+            return i;
+        }
+    }
+    return 0xffffffffu;
+}
+
+/* FUN_0047e7e0: the corpus's second identical position-loop body. */
+int bit_count32_by_position(uint32_t value)
+{
+    return pop_count32(value);
+}
+
+/* FUN_00497ab0: zero over exactly 3 dwords. */
+int uint96_is_zero(const uint32_t limbs[3])
+{
+    return limbs[0] == 0u && limbs[1] == 0u && limbs[2] == 0u;
+}
+
+/* FUN_0048e870: the double's exponent field not all-ones. */
+int double_is_finite(double value)
+{
+    uint64_t bits;
+    __builtin_memcpy(&bits, &value, sizeof bits);
+    return ((bits >> 52u) & 0x7ffu) != 0x7ffu;
+}

@@ -1229,6 +1229,31 @@ and `vec_normalize` keeps the corpus's unguarded zero length.
 `view_test` covers every helper including the cross convention and
 the 2D variants' agreement.
 
+**Pure geometry and numeric leaves** (2026-10-24; findings 262/323/363
+and 355/364):
+five geometry helpers join `src/gods98/view.*` —
+`point_distance_within_radius` (`PointDistanceWithinRadius @
+0x45b8a0`, strictly-under test), `rect_contains_point_half_open`
+(`RectContainsPointHalfOpen @ 0x45e660`, the record's float {x,y,w,h}
+quad, half-open both axes), `ray_plane_intersection_parameter`
+(`RayPlaneIntersectionParameter @ 0x479a30`, `t = dot(q−p, n) /
+dot(d, n)` with the parallel answer 0), `line_intersection_2d_compute`
+(`LineIntersection2DCompute @ 0x479af0`, writes the hit point or
+returns NULL when parallel), and
+`sphere_ray_intersection_discriminant_positive` (`SphereRay… @
+0x479c10`, the corpus's discriminant expression verbatim). Six numeric
+runtime leaves join `src/gods98/crt.*` — `bit_count32` (`BitCount32 @
+0x47d3f0`, clear-lowest loop), `pop_count32` (`PopCount32 @ 0x47d700`)
+and `bit_count32_by_position` (`BitCount32ByPosition @ 0x47e7e0`, the
+corpus's two identical position-loop bodies), `find_first_set_bit32`
+(`FindFirstSetBit32 @ 0x47d720`, 0xffffffff for zero), `uint96_is_zero`
+(`UInt96IsZero @ 0x497ab0`, exactly three dwords) and
+`double_is_finite` (`DoubleIsFinite @ 0x48e870`, the exponent-not-all-ones
+test). Corpus x87 math is byte-equivalent single precision here.
+`view_test` drives all five geometry corners (edge exclusivity,
+parallel answers, hit/miss spheres); `crt_test` the bit counts'
+agreement, the scan corners and Inf/NaN.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

@@ -86,11 +86,41 @@ static void test_noop_callback(void)
     CHECK(counter == 1, "the direct call still does nothing");
 }
 
+static void test_bit_numeric(void)
+{
+    CHECK(bit_count32(0) == 0, "zero has no bits");
+    CHECK(bit_count32(0xFFFFFFFFu) == 32, "all bits count 32");
+    CHECK(bit_count32(0x12345678u) == 13, "corner value counts 13");
+    CHECK(pop_count32(0x12345678u) == 13, "position loop agrees");
+    CHECK(bit_count32_by_position(0x12345678u) == 13, "second body agrees");
+    CHECK(pop_count32(0) == 0, "zero counts zero");
+
+    CHECK(find_first_set_bit32(0) == 0xffffffffu, "zero answers none");
+    CHECK(find_first_set_bit32(1) == 0, "bit 0");
+    CHECK(find_first_set_bit32(0x80000000u) == 31, "bit 31");
+    CHECK(find_first_set_bit32(0x8u) == 3, "bit 3");
+
+    const uint32_t z[3] = { 0, 0, 0 };
+    const uint32_t nz[3] = { 0, 1, 0 };
+    const uint32_t hi[3] = { 0, 0, 0x80000000u };
+    CHECK(uint96_is_zero(z) == 1, "3 dwords of zero is zero");
+    CHECK(uint96_is_zero(nz) == 0, "any nonzero dword answers false");
+    CHECK(uint96_is_zero(hi) == 0, "the high dword counts");
+
+    CHECK(double_is_finite(1.0) == 1, "one is finite");
+    CHECK(double_is_finite(1e308) == 1, "large finite is finite");
+    CHECK(double_is_finite(0.0) == 1, "zero is finite");
+    CHECK(double_is_finite(-1.0) == 1, "negative finite is finite");
+    CHECK(double_is_finite(1.0 / 0.0) == 0, "infinity is not finite");
+    CHECK(double_is_finite((0.0 - 1.0) * 0.0 / 0.0) == 0, "NaN is not finite");
+}
+
 int main(void)
 {
     test_memory_move();
     test_float_to_long();
     test_noop_callback();
+    test_bit_numeric();
     if (s_failures != 0) {
         fprintf(stderr, "crt_test: %d failure(s)\n", s_failures);
         return 1;

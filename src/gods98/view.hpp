@@ -77,6 +77,30 @@ float vec2_dist(const float* a, const float* b);   /* 2D */
 float vec2_dist_alt(const float* a, const float* b); /* 2D corpus variant */
 int   vec_exact_equal(const float* a, const float* b);
 
+/* --- geometry helpers (corpus FUN_0045b8a0 / FUN_0045e660 / FUN_00479a30 /
+ * FUN_00479af0 / FUN_00479c10; findings 363/323) --------------------------- */
+/* True when distance (x1,y1)-(x2,y2) < radius (FUN_0045b8a0). */
+int point_distance_within_radius(float x1, float y1, float x2, float y2,
+                                 float radius);
+/* Half-open rect test on the record's {x,y,w,h} float quad (FUN_0045e660). */
+int rect_contains_point_half_open(const float rect_xywh[4], int x, int y);
+/* t = dot(q-p, n) / dot(n, d) into t_out for ray (p,d) × plane (q,n);
+ * answers 1 when not parallel, 0 otherwise (FUN_00479a30). */
+int ray_plane_intersection_parameter(float* t_out, const float* p,
+                                     const float* d, const float* q,
+                                     const float* n);
+/* Line1 (p1,d1) × line2 (p2,d2): writes the hit into out, returns it;
+ * NULL when parallel (FUN_00479af0). */
+float* line_intersection_2d_compute(float* out, const float* p1,
+                                    const float* d1, const float* p2,
+                                    const float* d2);
+/* Positive-discriminant ray-sphere test, corpus expression verbatim;
+ * `radius2` is the corpus's squared-radius parameter (FUN_00479c10). */
+int sphere_ray_intersection_discriminant_positive(const float* center,
+                                                  float radius2,
+                                                  const float* origin,
+                                                  const float* dir);
+
 /* --- camera-handle primitives (record-backed) ----------------------------- */
 void cam_offset(CameraHandle* c, float x, float y, float z); /* FUN_004755e0 */
 void cam_get_pos(CameraHandle* c, float out[3]);            /* FUN_004754c0 */
