@@ -342,6 +342,7 @@ uint32_t sound_bank_entry_flags(int slot)
 
 int sound_bank_entry_volume(int slot)
 {
+    /* IndexedRecordStride134WordGet @ 0x47b0d0 (record +0x110 word). */
     if (slot < 0 || slot >= SOUND_BANK_SLOTS) {
         return 0;
     }
@@ -862,4 +863,42 @@ int sound_variant_chain(int alias_index, int* out_slots, int max)
         ++n;
     }
     return n;
+}
+
+/* ------------------------------------------------------------------ *
+ *  Bank-record volume write + configured variant properties (issues
+ *  #319 / #320). See sound.hpp.
+ * ------------------------------------------------------------------ */
+
+void sound_bank_entry_volume_set(int slot, int millibels)
+{
+    /* SoundBankEntryVolumeSet @ 0x47b050. */
+    if (slot < 0 || slot >= SOUND_BANK_SLOTS) {
+        return; /* corpus writes without bounds */
+    }
+    /* Validate-and-store: invalid millibel values land as 0. */
+    s_bank[slot].volume = sound_volume_value_valid(millibels) ? millibels : 0;
+
+    /* Corpus: when the loop bit is set the value goes to all three of
+     * the record's buffer interfaces through their vtables (SetVolume
+     * role), otherwise to buffer 0 only. Instance layer TODO(corpus):
+     * the seam is a no-op. */
+}
+
+void sound_variant_property_set(int alias_index, int millibels)
+{
+    /* ConfiguredVariantPropertySet @ 0x465010. Deviation: the corpus's
+     * millibel argument is register-passed and invisible to the
+     * decompile, so the port takes it explicitly (issue #319). */
+    int slot = sound_variant_select(alias_index);
+    sound_bank_entry_volume_set(slot, millibels);
+}
+
+void sound_variant_property_read(int alias_index)
+{
+    /* ConfiguredVariantPropertyRead @ 0x465030: only the variant draw
+     * is observable — the corpus reads IndexedRecordStride134WordGet's
+     * word (@ 0x47b0d0, via sound_bank_entry_volume) but discards it. */
+    int slot = sound_variant_select(alias_index);
+    (void)sound_bank_entry_volume(slot);
 }

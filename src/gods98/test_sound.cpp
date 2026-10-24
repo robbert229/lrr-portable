@@ -833,6 +833,116 @@ static void test_variant_chains(void)
     }
 }
 
+/* ------------------------------------------------------------------ *
+ *  Configured variant property pair (ConfiguredVariantPropertySet @
+ *  0x465010 / ConfiguredVariantPropertyRead @ 0x465030 — issues
+ *  #319 / #320) plus the bank volume setter (0x47b050).
+ * ------------------------------------------------------------------ */
+
+static void test_variant_properties(void)
+{
+    sound_bank_clear();
+
+    uint8_t pcm[8] = { 1, 0, 2, 0, 3, 0, 4, 0 };
+    WavSeg segs[2];
+    segs[0].id = NULL;    segs[0].bytes = NULL; segs[0].len = 0;
+    segs[1].id = "DATA!"; segs[1].bytes = NULL; segs[1].len = 0;
+    size_t wsz = 0;
+    uint8_t* w = build_wav(1, 16, 11025, pcm, (uint32_t)sizeof(pcm),
+                           segs, 2, NULL, 0, &wsz);
+    if (w == NULL) {
+        printf("SKIP variant-properties: wav build failed\n");
+        return;
+    }
+    const char* files[3] = { "/tmp/opencode/svp_a.wav",
+                             "/tmp/opencode/svp_b.wav" };
+    int ok_files = 1;
+    for (int i = 0; i < 2; ++i) {
+        FILE* fp = fopen(files[i], "wb");
+        if (fp == NULL) {
+            ok_files = 0;
+            break;
+        }
+        fwrite(w, 1, wsz, fp);
+        fclose(fp);
+    }
+    free(w);
+    if (!ok_files) {
+        printf("SKIP variant-properties: wav write failed\n");
+        return;
+    }
+
+    const int alias = 7;
+    char spec[1600];
+    snprintf(spec, sizeof spec, "%s,%s", "/tmp/opencode/svp_a",
+             "/tmp/opencode/svp_b");
+    CHECK(sound_sample_marker_parse(spec, alias) == 1,
+          "property pair chain parses");
+    int out[16];
+    CHECK(sound_variant_chain(alias, out, 16) == 2 && out[0] == 1,
+          "head starts at the second load");
+
+    /* Property read: draws and swaps like the selector, changes nothing
+     * else (the corpus discards the volume word). */
+    int h = out[0], nd = out[1];
+    int pick = test_variant_draw() % 2;
+    if (pick != 0) {
+        int t = nd; nd = h; h = t;
+    }
+    sound_variant_property_read(alias);
+    CHECK(sound_variant_chain(alias, out, 16) == 2 && out[0] == h
+              && out[1] == nd,
+          "property read rotates the chain only");
+
+    /* Property set: volume lands on the record after the draw. */
+    h = out[0];
+    nd = out[1];
+    pick = test_variant_draw() % 2;
+    if (pick != 0) {
+        int t = nd; nd = h; h = t;
+    }
+    sound_variant_property_set(alias, -777);
+    CHECK(sound_bank_entry_volume(h) == -777,
+          "property set stores the millibels in the head record");
+    CHECK(sound_bank_entry_volume(nd) == 0,
+          "the alternate record keeps its volume");
+
+    /* Invalid value stores 0 through the same route. */
+    h = out[0];
+    nd = out[1];
+    pick = test_variant_draw() % 2;
+    if (pick != 0) {
+        int t = nd; nd = h; h = t;
+    }
+    sound_variant_property_set(alias, 99999);
+    CHECK(sound_bank_entry_volume(h) == 0,
+          "invalid property volume stores 0 on the drawn head");
+
+    /* Direct setter: validator boundaries and slot bounds. */
+    sound_bank_entry_volume_set(0, -10001);
+    CHECK(sound_bank_entry_volume(0) == 0, "volume set -10001 stores 0");
+    sound_bank_entry_volume_set(0, -10000);
+    CHECK(sound_bank_entry_volume(0) == -10000, "volume set -10000 valid");
+    sound_bank_entry_volume_set(1, 1);
+    CHECK(sound_bank_entry_volume(1) == 0, "volume set 1 stores 0");
+    sound_bank_entry_volume_set(1, -7);
+    sound_bank_entry_volume_set(-1, 123);          /* guarded */
+    sound_bank_entry_volume_set(SOUND_BANK_SLOTS, 123);
+    CHECK(sound_bank_entry_volume(1) == -7, "out-of-range writes are guarded");
+
+    /* Silent alias: select answers -1 and no record is touched. */
+    sound_bank_entry_volume_set(0, -42);
+    sound_variant_property_set(0, -5);
+    sound_variant_property_read(0);
+    CHECK(sound_bank_entry_volume(0) == -42,
+          "silent alias property calls change nothing");
+
+    sound_bank_clear();
+    for (int i = 0; i < 2; ++i) {
+        remove(files[i]);
+    }
+}
+
 int main(int argc, char** argv)
 {
     test_synthetic();
@@ -842,6 +952,7 @@ int main(int argc, char** argv)
     test_deferred_cooldown();
     test_bank_entries();
     test_variant_chains();
+    test_variant_properties();
     for (int i = 1; i < argc; ++i) {
         if (strcmp(argv[i], "--real") == 0 && i + 1 < argc) {
             test_real(argv[i + 1]);

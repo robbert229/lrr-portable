@@ -1460,8 +1460,8 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00464ef0,FUN_00464ef0,ported,SoundSubmitWithGlobalCooldown,6,519
 00464f60,FUN_00464f60,ported,SoundRequestQueueSubmit,3,232
 00464fa0,FUN_00464fa0,named,SoundAliasPlay,0,570
-00465010,FUN_00465010,named,ConfiguredVariantPropertySet,0,161
-00465030,FUN_00465030,named,ConfiguredVariantPropertyRead,0,134
+00465010,FUN_00465010,ported,ConfiguredVariantPropertySet,3,161
+00465030,FUN_00465030,ported,ConfiguredVariantPropertyRead,3,134
 00465050,FUN_00465050,ported,SoundSubmissionRouteWrapper,1,309
 00465090,FUN_00465090,ported,PositionalSoundSubmit,3,1169
 00465160,FUN_00465160,ported,SoundObjectDurationGet,2,221
@@ -1910,7 +1910,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0047ad10,FUN_0047ad10,named,SoundPositionSetFromVector,0,145
 0047ad30,FUN_0047ad30,named,AttachedSoundStopByEntity,0,418
 0047ad70,FUN_0047ad70,named,SoundBufferPlayWithPosition,0,4345
-0047b020,FUN_0047b020,ported,SoundBufferAssociationAdd,3,283
+0047b020,FUN_0047b020,named,SoundBufferAssociationAdd,0,283
 0047b050,FUN_0047b050,ported,SoundBankEntryVolumeSet,3,764
 0047b0d0,FUN_0047b0d0,ported,IndexedRecordStride134WordGet,2,103
 0047b0f0,FUN_0047b0f0,named,SoundHandleToBuffer,0,203

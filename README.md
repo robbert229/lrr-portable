@@ -909,6 +909,22 @@ head-overwrite quirk, marker semantics, the stream persistence rule, the
 deterministic first draw and swaps, failure links staying linked as `-1`,
 and the split quirks.
 
+**Configured variant properties** (2026-10-24; port issues #319 / #320):
+`sound_variant_property_set` (`ConfiguredVariantPropertySet @ 0x465010`)
+draws the alias's variant chain and stores a millibel volume into the
+picked record through `sound_bank_entry_volume_set`
+(`SoundBankEntryVolumeSet @ 0x47b050`, record +0x110 word, validated —
+the corpus's buffer-interface push waits on the instance layer), while
+`sound_variant_property_read` (`ConfiguredVariantPropertyRead @ 0x465030`)
+performs the draw only: the corpus reads the word back through the
+stride-134 getter (`IndexedRecordStride134WordGet @ 0x47b0d0`, modelled by
+the record accessor) but discards it, so the rotation is the whole visible
+effect. Deviations: the corpus's invisible second argument to the setter is
+taken explicitly (issue #319), and slot writes are bounds-guarded (the
+corpus writes past the table). `sound_test` covers the draw-only read,
+head-record volume writes, invalid-value zeroing, validator and slot
+bounds, and the silent-alias no-op.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the
