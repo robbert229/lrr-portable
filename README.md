@@ -609,6 +609,7 @@ Open threads, in order of value:
 | 410 | [findings/410-map-and-visual-resource-records.md](docs/findings/410-map-and-visual-resource-records.md) | Map and Visual Resource Records |
 | 411 | [findings/411-interface-records-and-directx-diagnostics.md](docs/findings/411-interface-records-and-directx-diagnostics.md) | Interface Records and DirectX Diagnostics |
 | 412 | [findings/412-platform-import-thunks.md](docs/findings/412-platform-import-thunks.md) | Platform Import Thunks |
+| 413 | [findings/413-configured-directshow-video-path.md](docs/findings/413-configured-directshow-video-path.md) | Configured DirectShow Video Path |
 
 Canonical full pseudocode corpus: [`docs/decompiles/full/LEGORR.full.c`](docs/decompiles/full/LEGORR.full.c)
 (2564 manifest functions; see its [README](docs/decompiles/full/README.md)). The
