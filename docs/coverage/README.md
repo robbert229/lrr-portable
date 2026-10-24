@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 580 | 22.6% |
+| ported | 583 | 22.7% |
 | anchored | 5 | 0.2% |
-| named | 1932 | 75.4% |
+| named | 1929 | 75.2% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (580 functions)
+  (583 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (5 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1932 functions)
+  citation yet (1929 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1938 (75.6%).**
+**Game logic remaining to port: 1935 (75.5%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -447,10 +447,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004193e0` | IncidentMessageConfigLookup |
 | `0x00419420` | IncidentMessageTextCatalogGet |
 | `0x00419430` | InterfaceMessageTabInfoTextLoad |
-| `0x00419450` | SelectionFlag10SetClear |
-| `0x00419470` | InfoMessageAlwaysPlayFlagSet |
 | `0x004194b0` | IncidentMessageTemplateReplace |
-| `0x004194f0` | IndexedSelectionFlag20000SetClear |
 | `0x00419530` | IncidentMessageTemplateCompile |
 | `0x00419650` | InfoMessageSoundLoad |
 | `0x00419680` | InfoMessageSecondarySoundSet |

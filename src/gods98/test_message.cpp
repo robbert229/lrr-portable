@@ -127,6 +127,46 @@ int main(void)
               "NULL answers zero and stores nothing (deviation)");
     }
 
+    /* The corpus flag leaves (2026-10-24): global bit 0x10 and the two
+     * per-id config bits over the module's own storage. */
+    {
+        message_set_flags(0);
+        selection_flag10_set_clear(1);
+        CHECK(message_flags_peek() == 0x10u, "the raise sets bit 0x10");
+        selection_flag10_set_clear(1);
+        CHECK(message_flags_peek() == 0x10u, "raising twice is idempotent");
+        selection_flag10_set_clear(0);
+        CHECK(message_flags_peek() == 0u, "the clear drops it");
+        message_set_flags(0x130u);
+        selection_flag10_set_clear(0);
+        CHECK(message_flags_peek() == (0x130u & ~0x10u),
+              "the clear spares the neighbours");
+    }
+    {
+        message_config_set(5, NULL, 0.0f, 0u);
+        indexed_selection_flag_20000_set_clear(5, 1);
+        CHECK(message_config_flags(5) == 0x20000u, "the 0x20000 leaf raises");
+        info_message_always_play_flag_set(5, 1);
+        CHECK(message_config_flags(5) == 0x30000u,
+              "the 0x10000 leaf raises next to it");
+        info_message_always_play_flag_set(5, 0);
+        indexed_selection_flag_20000_set_clear(5, 0);
+        CHECK(message_config_flags(5) == 0u, "both clears land");
+
+        indexed_selection_flag_20000_set_clear(-1, 1);
+        info_message_always_play_flag_set(MESSAGE_MAX_ID, 1);
+        CHECK(1, "the guarded ids are no-ops");
+
+        /* neighbours stay untouched (per-id isolation) */
+        message_config_set(6, NULL, 0.0f, 0x20000u);
+        indexed_selection_flag_20000_set_clear(7, 1);
+        CHECK(message_config_flags(6) == 0x20000u
+                  && message_config_flags(7) == 0x20000u,
+              "the raise stays on its id");
+        indexed_selection_flag_20000_set_clear(7, 0);
+        CHECK(message_config_flags(6) == 0x20000u, "the clear spares the id");
+    }
+
     if (s_failures == 0) {
         printf("message_test: PASS\n");
         return 0;

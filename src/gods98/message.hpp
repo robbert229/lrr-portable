@@ -83,6 +83,11 @@ int  message_active_has(int id);
 /* per-id cooldown value (tests/diagnostics). */
 float message_cooldown(int id);
 
+/* flags census (tests/diagnostics): the global flags word and the
+ * per-id config flags (the message_active_count precedent). */
+uint32_t message_flags_peek(void);
+uint32_t message_config_flags(int id);
+
 /* SystemStateFlags / SetSystemStateFlags (FUN_00456240 / FUN_00456550,
  * findings 04/05/440): the corpus's get / set accessors over the
  * game-state bitmask at DAT_004ff980 — the module's own s_system_state,
@@ -91,5 +96,17 @@ float message_cooldown(int id);
  * (documented deviation; corpus callers pass live pointers). */
 uint32_t system_state_flags_get(void);
 uint32_t system_state_flags_set(const uint32_t* value);
+
+/* --- corpus flag leaves (2026-10-24) --------------------------------------
+ * SelectionFlag10SetClear (FUN_00419450, findings 376/441): raise or clear
+ * bit 0x10 in the selection-flags global — our s_flags (DAT_004dcd48).
+ * InfoMessageAlwaysPlayFlagSet / IndexedSelectionFlag20000SetClear
+ * (FUN_00419470 / FUN_004194f0, finding 441): raise or clear the per-id
+ * config record's 0x10000 / 0x20000 flag bits — our per-id config flag
+ * word (the corpus table's flag dword). The corpus indexes its config
+ * records blindly; the port bounds-checks (documented deviation). */
+void selection_flag10_set_clear(int set);
+void info_message_always_play_flag_set(int id, int set);
+void indexed_selection_flag_20000_set_clear(int id, int set);
 
 #endif /* LEGORRR_MESSAGE_HPP */

@@ -506,10 +506,10 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004193e0,FUN_004193e0,named,IncidentMessageConfigLookup,0,368
 00419420,FUN_00419420,named,IncidentMessageTextCatalogGet,0,102
 00419430,FUN_00419430,named,InterfaceMessageTabInfoTextLoad,0,129
-00419450,FUN_00419450,named,SelectionFlag10SetClear,0,170
-00419470,FUN_00419470,named,InfoMessageAlwaysPlayFlagSet,0,304
+00419450,FUN_00419450,ported,SelectionFlag10SetClear,1,170
+00419470,FUN_00419470,ported,InfoMessageAlwaysPlayFlagSet,1,304
 004194b0,FUN_004194b0,named,IncidentMessageTemplateReplace,0,242
-004194f0,FUN_004194f0,named,IndexedSelectionFlag20000SetClear,0,304
+004194f0,FUN_004194f0,ported,IndexedSelectionFlag20000SetClear,1,304
 00419530,FUN_00419530,named,IncidentMessageTemplateCompile,0,2020
 00419650,FUN_00419650,named,InfoMessageSoundLoad,0,209
 00419680,FUN_00419680,named,InfoMessageSecondarySoundSet,0,128

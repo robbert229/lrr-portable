@@ -88,6 +88,11 @@ void message_config_set(int id, const char* sound, float cooldown,
 }
 
 void message_set_flags(uint32_t flags)        { s_flags = flags; }
+uint32_t message_flags_peek(void)             { return s_flags; }
+uint32_t message_config_flags(int id)
+{
+    return (id >= 0 && id < MESSAGE_MAX_ID) ? s_cfg[id].flags : 0u;
+}
 void message_set_system_state(uint32_t v)     { s_system_state = v; }
 
 uint32_t system_state_flags_get(void)
@@ -298,4 +303,39 @@ float message_cooldown(int id)
         return 0.0f;
     }
     return s_cfg[id].cooldown;
+}
+/* --- corpus flag leaves (see message.hpp) -------------------------------- */
+void selection_flag10_set_clear(int set)
+{
+    if (set != 0) {
+        s_flags = s_flags | 0x10u;
+    } else {
+        s_flags = s_flags & ~0x10u;
+    }
+}
+
+void info_message_always_play_flag_set(int id, int set)
+{
+    if (id < 0 || id >= MESSAGE_MAX_ID) {
+        return; /* deviation: the corpus indexes blindly */
+    }
+    MessageConfig* c = &s_cfg[id];
+    if (set != 0) {
+        c->flags = c->flags | 0x10000u;
+    } else {
+        c->flags = c->flags & ~0x10000u;
+    }
+}
+
+void indexed_selection_flag_20000_set_clear(int id, int set)
+{
+    if (id < 0 || id >= MESSAGE_MAX_ID) {
+        return; /* deviation: the corpus indexes blindly */
+    }
+    MessageConfig* c = &s_cfg[id];
+    if (set != 0) {
+        c->flags = c->flags | 0x20000u;
+    } else {
+        c->flags = c->flags & ~0x20000u;
+    }
 }
