@@ -377,4 +377,20 @@ void     ui_mode_resource_positions_apply(void);
 void     layout_position_set(int entry, int x, int y); /* diagnostics */
 int      layout_position_get(int entry, int* x, int* y);
 
+/* --- the front-end flow words (2026-10-24; findings 23/438) -----------------
+ * The corpus's five DAT_0055701c/20/24/48/4c menu-flow words, modeled as
+ * zero-initialized module statics per the unowned-global convention (the
+ * corpus's writers — OptionsLoadOrDefault's reset and the menu-callback
+ * bindings — are unported). At the corpus's load image all five read zero,
+ * and SaveSlotOpen/IsInGame test `!= -1`, so both report true exactly as
+ * the corpus does before the save/tutorial selections initialize (the
+ * assigned IsInGame label is a selection sentinel per finding 438).
+ * The port-side setter stands in for the unported callback bindings. */
+int save_slot_open(void);       /* FUN_00416d50: DAT_00557020 != -1 */
+int is_in_game(void);           /* FUN_00416d60: DAT_00557024 != -1 */
+int quit_menu_probe(void);      /* FUN_00416dd0: DAT_0055701c verbatim */
+int level_start_flag(void);     /* FUN_00416de0: DAT_00557048 != 0 */
+int menu_options_flag(void);    /* FUN_00416df0: DAT_0055704c != 0 */
+void frontend_flow_word_set(int which, int value); /* port-side setter */
+
 #endif /* LEGORRR_GAME_FRONTEND_HPP */

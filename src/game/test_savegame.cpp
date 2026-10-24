@@ -499,5 +499,10 @@ int main(void)
         return 1;
     }
     printf("savegame_test: OK\n");
+    /* SavGetSlot (2026-10-24): the accessor reads the port's slot global. */
+    CHECK(save_slot_get(&ctx) == ctx.save_slot, "the slot getter reads the word");
+    save_slot_set(&ctx, 3);
+    CHECK(save_slot_get(&ctx) == 3, "the slot setter round-trips");
+
     return 0;
 }

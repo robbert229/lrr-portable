@@ -48,7 +48,7 @@ extern "C" {
 /* --- slot context --------------------------------------------------- */
 void save_init(GameContext* ctx);
 
-int  save_slot_get(const GameContext* ctx);        /* SavGetSlot */
+int  save_slot_get(const GameContext* ctx);  /* SavGetSlot FUN_00417e90 */
 void save_slot_set(GameContext* ctx, int slot);    /* SavSetSlot */
 
 /* Open `Saves\<slot>.sav` into the active-slot context. `create_if_missing`
