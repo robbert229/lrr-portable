@@ -647,7 +647,11 @@ Open threads, in order of value:
 | 447 | [findings/447-terrain-grid-path-search.md](docs/findings/447-terrain-grid-path-search.md) | Terrain Grid Path Search |
 | 450 | [findings/450-terrain-data-and-grid-operations.md](docs/findings/450-terrain-data-and-grid-operations.md) | Terrain Data and Grid Operations |
 | 449 | [findings/449-spatial-queries-and-candidate-search.md](docs/findings/449-spatial-queries-and-candidate-search.md) | Spatial Queries and Candidate Search |
+| 452 | [findings/452-lava-erosion-timing-and-neighbor-propagation.md](docs/findings/452-lava-erosion-timing-and-neighbor-propagation.md) | Lava Erosion Timing and Neighbor Propagation |
 | 451 | [findings/451-terrain-cell-state-neighbors-occupancy-and-traversal.md](docs/findings/451-terrain-cell-state-neighbors-occupancy-and-traversal.md) | Terrain Cell State, Neighbors, Occupancy, and Traversal |
+| 454 | [findings/454-terrain-grid-and-cell-resource-tables.md](docs/findings/454-terrain-grid-and-cell-resource-tables.md) | Terrain Grid and Cell Resource Tables |
+| 453 | [findings/453-object-search-and-placement-eligibility.md](docs/findings/453-object-search-and-placement-eligibility.md) | Object Search and Placement Eligibility |
+
 | 468 | [findings/468-command-queue-and-selection-state.md](docs/findings/468-command-queue-and-selection-state.md) | Command Queue and Selection State |
 
 Canonical full pseudocode corpus: [`docs/decompiles/full/LEGORR.full.c`](docs/decompiles/full/LEGORR.full.c)
