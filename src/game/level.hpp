@@ -845,4 +845,16 @@ int level_objective_result_get(const struct LevelState* s);
 void level_random_seed_set(uint32_t seed);
 int  level_random_draw15(void); /* the seeded instance's RandomNext draw */
 
+/* TerrainObjectTypeSfxAtCellGet (FUN_0044ad80): turns a position record's
+ * coordinate pair into the grid cell through the ported two-dword copy, and
+ * answers that cell's entry in the terrain-object SFX grid. Deviation: the
+ * corpus's aliasing store through the first output (its own record pointer)
+ * is calling-convention residue — the port reads the pair. The grid is fed
+ * by the unported config-parsing loader, so it lands as zero-init module
+ * storage with set/peek hooks; out-of-range cells answer 0 (guarded
+ * deviation: the corpus strides blindly). */
+int terrain_object_type_sfx_at_cell_get(const void* position_record);
+                                 /* FUN_0044ad80 */
+void terrain_sfx_grid_cell_set(int cell, int handle);  /* port hook */
+int  terrain_sfx_grid_cell_peek(int cell);             /* port hook */
 #endif /* LEGORRR_GAME_LEVEL_HPP */

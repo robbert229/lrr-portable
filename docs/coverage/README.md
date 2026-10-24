@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 817 | 31.9% |
+| ported | 820 | 32.0% |
 | anchored | 4 | 0.2% |
-| named | 1696 | 66.1% |
+| named | 1693 | 66.0% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (817 functions)
+  (820 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1696 functions)
+  citation yet (1693 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1701 (66.3%).**
+**Game logic remaining to port: 1698 (66.2%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -337,7 +337,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00419f10` | PendingRecordReleaseAll |
 | `0x0041a1a0` | UIEntryHitTestAndDispatch |
 | `0x0041a250` | ScrollOffsetFromCursorUpdate |
-| `0x0041a290` | ScreenRightEdgeCacheRefresh |
 | `0x0041a300` | InterfaceMenuActionLabelsInit |
 | `0x0041a920` | LevelStateCountersClear |
 | `0x0041a9c0` | CaseInsensitiveStringTableIndexFind |
@@ -655,6 +654,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0044a5d0` | NearestOpenCellCoordSearch |
 | `0x0044a7d0` | PolyVariantSectionModelBuild |
 | `0x0044a910` | BuildingPlacementPreviewUpdate |
+| `0x0044acc0` | TerrainObjectTypeSfxGridConfigLoad |
 | `0x0044adc0` | ScatterSpawnGateSet |
 | `0x0044ade0` | EntityKindOneRandomSpawnTrigger |
 | `0x0044ae50` | RandomKindSixScatterSpawn |

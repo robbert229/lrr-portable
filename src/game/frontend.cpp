@@ -29,8 +29,6 @@
 #include "gods98/message.hpp"
 #include "gods98/flic.hpp"
 #include "gods98/crt.hpp"
-#include "gods98/heap.hpp"
-#include "gods98/record.hpp"
 #include "gods98/texture.hpp"
 #include "gods98/sound.hpp"
 #include "gods98/crt.hpp"
@@ -2445,3 +2443,15 @@ uint32_t timed_effect_time_peek(int index)
     }
     return s_timed_effect_time[index];
 }
+
+/* ScreenRightEdgeCacheRefresh (FUN_0041a290) — see frontend.hpp. */
+static uint32_t s_screen_right_edge; /* DAT_004dcd44 role: unowned */
+
+void screen_right_edge_cache_refresh(void)
+{
+    uint32_t x = 0, y = 0;
+    indexed_text_metrics_pair_get(0, &x, &y);
+    s_screen_right_edge = x - y;
+}
+
+uint32_t screen_right_edge_cache_peek(void) { return s_screen_right_edge; }

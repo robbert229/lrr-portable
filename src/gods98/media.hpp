@@ -175,4 +175,12 @@ void media_min_distance_config_set(float cell_scale, float clip_base,
 int  media_cd_audio_playback_available(void); /* FUN_00488b90 */
 void media_cd_audio_open_set(int open);       /* port hook */
 
+/* LoaderProgressCallbackSet (FUN_004802b0): stores the optional loader
+ * progress callback pair (DAT_005343ac/DAT_005343b0, finding 118). The
+ * corpus's read tap lives with the unported whole-file read loop, so the
+ * pair lands as zero-init module storage with setter/peek hooks. */
+void  loader_progress_callback_set(void* callback, void* context);
+                                 /* FUN_004802b0 */
+void* loader_progress_callback_peek(void);
+void* loader_progress_context_peek(void);
 #endif /* LEGORRR_MEDIA_HPP */
