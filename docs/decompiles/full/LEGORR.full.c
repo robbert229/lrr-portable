@@ -15653,7 +15653,7 @@ void FUN_00415a10(void)
 }
 
 
-// ==== MovieShownReset @ 00415CF0 [Ghidra: FUN_00415cf0] ====
+// ==== SaveSlotSelectionClear @ 00415CF0 [Ghidra: FUN_00415cf0] ====
 
 
 void FUN_00415cf0(void)
@@ -63497,7 +63497,7 @@ void FUN_00464740(void)
 }
 
 
-// ==== GlobalFlag_00502a2cBit2SetClear @ 00464C50 [Ghidra: FUN_00464c50] ====
+// ==== SoundDynamicAliasRegistrationSet @ 00464C50 [Ghidra: FUN_00464c50] ====
 
 
 void FUN_00464c50(int param_1)
@@ -63881,7 +63881,7 @@ float10 FUN_00465160(undefined4 param_1)
 }
 
 
-// ==== SoundFrameTick @ 00465190 [Ghidra: FUN_00465190] ====
+// ==== SoundHandleStopForward @ 00465190 [Ghidra: FUN_00465190] ====
 
 
 void FUN_00465190(undefined4 param_1)
@@ -63892,7 +63892,7 @@ void FUN_00465190(undefined4 param_1)
 }
 
 
-// ==== SoundFrameTick @ 004651A0 [Ghidra: FUN_004651a0] ====
+// ==== SoundSubsystemFrameTick @ 004651A0 [Ghidra: FUN_004651a0] ====
 
 
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
@@ -64006,7 +64006,7 @@ void FUN_004652a0(undefined4 param_1)
 }
 
 
-// ==== SoundPackedBatchQueueUpdate @ 004652B0 [Ghidra: FUN_004652b0] ====
+// ==== SoundBatchModeGet @ 004652B0 [Ghidra: FUN_004652b0] ====
 
 
 uint FUN_004652b0(void)
@@ -64065,7 +64065,7 @@ void FUN_004652d0(int param_1,int param_2)
 }
 
 
-// ==== SoundDynamicAliasRegistrationEnabledGet @ 00465370 [Ghidra: FUN_00465370] ====
+// ==== SoundSubsystemEnabledGet @ 00465370 [Ghidra: FUN_00465370] ====
 
 
 uint FUN_00465370(void)
@@ -64075,7 +64075,7 @@ uint FUN_00465370(void)
 }
 
 
-// ==== GlobalTriplet_00552128_30Reset @ 00465380 [Ghidra: FUN_00465380] ====
+// ==== SceneEffectRegistryReset @ 00465380 [Ghidra: FUN_00465380] ====
 
 
 undefined4 FUN_00465380(void)
@@ -64088,7 +64088,7 @@ undefined4 FUN_00465380(void)
 }
 
 
-// ==== PreloadSharedIndexed @ 004653A0 [Ghidra: FUN_004653a0] ====
+// ==== TransientEffectTexturesPreload @ 004653A0 [Ghidra: FUN_004653a0] ====
 
 
 void FUN_004653a0(undefined4 param_1,undefined4 param_2,uint param_3)
@@ -64117,7 +64117,7 @@ void FUN_004653a0(undefined4 param_1,undefined4 param_2,uint param_3)
 }
 
 
-// ==== SoundStreamSelectorUpdate @ 00465430 [Ghidra: FUN_00465430] ====
+// ==== TransientEffectEmitterCreate @ 00465430 [Ghidra: FUN_00465430] ====
 
 
 int * FUN_00465430(int param_1,undefined4 param_2,undefined4 param_3,int *param_4,float param_5,
@@ -64285,7 +64285,7 @@ int * FUN_00465430(int param_1,undefined4 param_2,undefined4 param_3,int *param_
 }
 
 
-// ==== ObjectCallbackListDisposeAll @ 00465970 [Ghidra: FUN_00465970] ====
+// ==== TransientEffectRegistryReleaseAll @ 00465970 [Ghidra: FUN_00465970] ====
 
 
 void FUN_00465970(void)
@@ -64305,7 +64305,7 @@ void FUN_00465970(void)
 }
 
 
-// ==== LavaEffectSoundHandleGetOrSubmit @ 004659B0 [Ghidra: FUN_004659b0] ====
+// ==== TransientEffectInstanceRelease @ 004659B0 [Ghidra: FUN_004659b0] ====
 
 
 void FUN_004659b0(int param_1,int param_2)
@@ -64343,7 +64343,7 @@ void FUN_004659b0(int param_1,int param_2)
 }
 
 
-// ==== RegisteredObjectListApplyCallback @ 00465A90 [Ghidra: FUN_00465a90] ====
+// ==== TransientEffectRegistryEnableSet @ 00465A90 [Ghidra: FUN_00465a90] ====
 
 
 void FUN_00465a90(undefined4 param_1)
@@ -64358,7 +64358,7 @@ void FUN_00465a90(undefined4 param_1)
 }
 
 
-// ==== ResourceEnableSet @ 00465AC0 [Ghidra: FUN_00465ac0] ====
+// ==== TransientEffectEnableSet @ 00465AC0 [Ghidra: FUN_00465ac0] ====
 
 
 void FUN_00465ac0(int param_1,int param_2)
@@ -64374,7 +64374,7 @@ void FUN_00465ac0(int param_1,int param_2)
 }
 
 
-// ==== SoundInstanceUpdate @ 00465B00 [Ghidra: FUN_00465b00] ====
+// ==== TransientEffectInstanceUpdate @ 00465B00 [Ghidra: FUN_00465b00] ====
 
 
 void FUN_00465b00(float param_1)
@@ -80783,7 +80783,7 @@ undefined4 FUN_0047aad0(int *param_1)
 }
 
 
-// ==== VideoResourceSlotRelease @ 0047AB00 [Ghidra: FUN_0047ab00] ====
+// ==== SoundBankEntryRelease @ 0047AB00 [Ghidra: FUN_0047ab00] ====
 
 
 undefined4 FUN_0047ab00(int param_1)
@@ -81107,7 +81107,7 @@ void FUN_0047b020(undefined4 param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== VideoResourceSlotEnabledSet @ 0047B050 [Ghidra: FUN_0047b050] ====
+// ==== SoundBankEntryVolumeSet @ 0047B050 [Ghidra: FUN_0047b050] ====
 
 
 void FUN_0047b050(int param_1,uint param_2)
@@ -93627,7 +93627,7 @@ undefined4 FUN_004893a0(void)
 }
 
 
-// ==== ResourceStateTableReset @ 004893F0 [Ghidra: FUN_004893f0] ====
+// ==== MapFileResourceSlotsReset @ 004893F0 [Ghidra: FUN_004893f0] ====
 
 
 void FUN_004893f0(void)
@@ -111482,5 +111482,4 @@ char * FUN_0049dcd0(char *param_1)
   }
   return param_1;
 }
-
 
