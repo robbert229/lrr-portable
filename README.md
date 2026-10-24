@@ -672,6 +672,7 @@ Open threads, in order of value:
 | 473 | [findings/473-simulation-dispatch-and-damage.md](docs/findings/473-simulation-dispatch-and-damage.md) | Simulation Dispatch and Damage |
 | 474 | [findings/474-simulation-tick-and-engine-state-lifecycle.md](docs/findings/474-simulation-tick-and-engine-state-lifecycle.md) | Simulation Tick and Engine State Lifecycle |
 | 475 | [findings/475-objectives-upgrades-and-resource-counters.md](docs/findings/475-objectives-upgrades-and-resource-counters.md) | Objectives, Upgrades, and Resource Counters |
+| 476 | [findings/476-entity-activity-and-runtime-records.md](docs/findings/476-entity-activity-and-runtime-records.md) | Entity Activity and Runtime Records |
 
 Canonical full pseudocode corpus: [`docs/decompiles/full/LEGORR.full.c`](docs/decompiles/full/LEGORR.full.c)
 (2564 manifest functions; see its [README](docs/decompiles/full/README.md)). The
