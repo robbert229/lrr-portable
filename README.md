@@ -2029,6 +2029,19 @@ the unported spatial-query family and the cell-record counter block, so
 it is recorded as a seam in `docs/coverage/blocked.md`. `cmd_test` pins
 the guard chains, the record shapes and kinds, and both terrain marks.
 
+**Category-mask task gate and issuer** (2026-10-24; findings 327/449/465):
+two leaves land. `entity_flags_contain_requested_single_bit` (0x438ed0,
+`entity.*`) accepts the selector 1/2/4/8/0x10/0x20 exactly when the state
+flag word's corresponding bit 4/8/0x10/0x20/0x40/0x80 is set — the
+corpus's chain of word re-reads, collapsed to the equivalent switch.
+`task_type23_create_for_category_mask` (0x402890, `cmd.*`) issues the
+type-0x17 task record through that gate with the selector kept in the
++0x3c word, runs the record-array half on the caller's argument, and
+links at the category kind the selector maps to — 1/2/4 to 0xc, 8 to 3,
+0x10 to 7, 0x20 to 4 — clearing bit 6 after the link. `cmd_test` pins
+the gate arms, the full selector-to-kind map, the out-of-map refusals,
+and the record-array bit 8.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

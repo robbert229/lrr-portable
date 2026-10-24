@@ -53,7 +53,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004027a0,FUN_004027a0,ported,,1,428
 00402800,FUN_00402800,ported,EntityCommand14BatchIssue,1,370
 00402850,FUN_00402850,ported,MinionCompanionCmd,1,279
-00402890,FUN_00402890,named,TaskType23CreateForCategoryMask,0,727
+00402890,FUN_00402890,ported,TaskType23CreateForCategoryMask,1,727
 00402960,FUN_00402960,ported,EntityKindCommandIssue,1,1191
 00402a40,FUN_00402a40,ported,CoordinatePairCallbackDispatch,1,178
 00402aa0,FUN_00402aa0,ported,ArgumentCallbackDispatch,1,94
@@ -902,7 +902,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00438d90,FUN_00438d90,named,SpatialObjectQueryCenterMask200,0,489
 00438df0,FUN_00438df0,named,EntityLookupAtWorldPosition,0,485
 00438e50,FUN_00438e50,named,SpatialObjectQueryCenterMask100,0,677
-00438ed0,FUN_00438ed0,named,EntityFlagsContainRequestedSingleBit,0,722
+00438ed0,FUN_00438ed0,ported,EntityFlagsContainRequestedSingleBit,2,722
 00438f60,FUN_00438f60,named,DockDefinitionMatchesCell,0,259
 00439200,FUN_00439200,named,TaskKindFilteredSearch,0,231
 00439240,FUN_00439240,named,TaskEntityFlagsAndCellTaskMatch,0,268

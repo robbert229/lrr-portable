@@ -677,3 +677,22 @@ int entity_flag40000_threshold_compare(const EntitySlot* e)
     }
     return 0;
 }
+
+/* EntityFlagsContainRequestedSingleBit (FUN_00438ed0, findings 327/449).
+ * The corpus re-reads the word at each chain rung; the selector arms and
+ * the flag bits pair one-to-one, so one read through the switch is the
+ * identical answer. */
+int entity_flags_contain_requested_single_bit(const EntitySlot* e,
+                                              int selector)
+{
+    const uint32_t flags = entity_state_flags_get(e);
+    switch (selector) {
+    case 1:  return (flags & 0x04u) != 0u;
+    case 2:  return (flags & 0x08u) != 0u;
+    case 4:  return (flags & 0x10u) != 0u;
+    case 8:  return (flags & 0x20u) != 0u;
+    case 0x10: return (flags & 0x40u) != 0u;
+    case 0x20: return (flags & 0x80u) != 0u;
+    default: return 0;
+    }
+}
