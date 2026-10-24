@@ -20,6 +20,7 @@ and curiosity; nothing in this repository is affiliated with or endorsed by the 
 
 ```
 README.md           This file
+docs/findings/      Reverse-engineering findings, 01–429 (see index below)
 docs/findings/      Reverse-engineering findings, 01–428 (see index below)
 docs/findings/      Reverse-engineering findings, 01–427 (see index below)
 docs/findings/      Reverse-engineering findings, 01–426 (see index below)
@@ -632,6 +633,7 @@ Open threads, in order of value:
 | 426 | [findings/426-camera-selection-point-and-pointer-pan.md](docs/findings/426-camera-selection-point-and-pointer-pan.md) | Camera Selection Point and Pointer Pan |
 | 427 | [findings/427-screen-effects-and-ui-text-paths.md](docs/findings/427-screen-effects-and-ui-text-paths.md) | Screen Effects and UI Text Paths |
 | 428 | [findings/428-font-and-text-buffer-rendering.md](docs/findings/428-font-and-text-buffer-rendering.md) | Font and Text-Buffer Rendering |
+| 429 | [findings/429-advisor-and-message-ui-state.md](docs/findings/429-advisor-and-message-ui-state.md) | Advisor and Message UI State |
 
 Canonical full pseudocode corpus: [`docs/decompiles/full/LEGORR.full.c`](docs/decompiles/full/LEGORR.full.c)
 (2564 manifest functions; see its [README](docs/decompiles/full/README.md)). The
