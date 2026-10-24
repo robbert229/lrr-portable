@@ -127,7 +127,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004065e0,FUN_004065e0,named,RenderSurfaceSecondaryGet,0,60
 004065f0,FUN_004065f0,named,CubicBezierPointEvaluate,0,870
 00406730,FUN_00406730,ported,Vector2DistanceVariant,3,307
-00406760,FUN_00406760,named,Vector2SetLength,0,210
+00406760,FUN_00406760,ported,Vector2SetLength,2,210
 004067b0,FUN_004067b0,named,PolylineSegmentLengthsAndTotalCalculate,0,554
 00406820,FUN_00406820,named,BezierCurveSamplesBuild,0,575
 004068c0,FUN_004068c0,named,PathArcLengthInterpolate,0,1051
@@ -501,7 +501,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00419150,FUN_00419150,ported,SelectionStateHandleGet,1,393
 004191a0,FUN_004191a0,ported,MainSimStateAdmissionPredicate,2,307
 004191f0,FUN_004191f0,ported,UiModeResourceBit40Get,1,61
-00419200,FUN_00419200,named,UiModeResourceBit40SetClear,0,244
+00419200,FUN_00419200,ported,UiModeResourceBit40SetClear,1,244
 00419230,FUN_00419230,named,IncidentMessageCatalogInit,0,2117
 004193e0,FUN_004193e0,named,IncidentMessageConfigLookup,0,368
 00419420,FUN_00419420,ported,IncidentMessageTextCatalogGet,1,102
@@ -1324,8 +1324,8 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0045b9d0,FUN_0045b9d0,named,PanelRotationControlConfigLoad,0,2953
 0045bcd0,FUN_0045bcd0,named,CameraDragFromCursorApply,0,1742
 0045bf20,FUN_0045bf20,ported,CameraZoomStepAdjust,2,219
-0045bf70,FUN_0045bf70,ported,UIEntryBoundsGet,3,350
-0045bfb0,FUN_0045bfb0,ported,ThreeSurfaceResourcesLoadAndInitialize,3,450
+0045bf70,FUN_0045bf70,named,UIEntryBoundsGet,0,350
+0045bfb0,FUN_0045bfb0,named,ThreeSurfaceResourcesLoadAndInitialize,0,450
 0045c040,FUN_0045c040,ported,CrystalQuotaSetup,1,629
 0045c0d0,FUN_0045c0d0,named,PairCountHistogramBuild,0,3553
 0045c340,FUN_0045c340,named,PanelResourceLayoutStore,0,574
@@ -2038,7 +2038,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0047fe30,FUN_0047fe30,named,FileOpenRouteSelect,0,852
 0047fea0,FUN_0047fea0,named,WadEntryReadIntoStreamSlot,0,198
 0047fed0,FUN_0047fed0,named,GameFileHandleAllocate,0,493
-0047ff30,FUN_0047ff30,named,EngineHeapAllocate,0,80
+0047ff30,FUN_0047ff30,ported,EngineHeapAllocate,1,80
 0047ff40,FUN_0047ff40,ported,EngineHeapFree,2,80
 0047ff50,FUN_0047ff50,named,GameFileHandleRelease,0,600
 0047ffc0,FUN_0047ffc0,named,MountedPathPrefixRewrite,0,909
@@ -2071,7 +2071,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004821a0,FUN_004821a0,named,IndexedRecordEntryRead,0,689
 00482210,FUN_00482210,ported,PointerValueGet,1,71
 00482220,FUN_00482220,named,MeshRecordAllocateAndFill,0,1574
-00482350,FUN_00482350,named,IndexedRecordField64Set,0,154
+00482350,FUN_00482350,ported,IndexedRecordField64Set,1,154
 00482370,FUN_00482370,named,MeshVerticesScaleApply,0,1004
 004823e0,FUN_004823e0,named,TerrainCellQuadVerticesWrite,0,885
 00482470,FUN_00482470,named,IndexedGeometryDataCopyToOutput,0,885
@@ -2136,15 +2136,15 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004850f0,FUN_004850f0,named,TextBufferCreate,0,655
 00485160,FUN_00485160,named,TextOutputField82CBit2SetClear,0,235
 00485190,FUN_00485190,named,TextBufferDestroy,0,122
-004851b0,FUN_004851b0,named,FloatPairAtOffset4SetFromInts,0,160
-004851d0,FUN_004851d0,named,FloatPairAtOffsetCSetFromUInts,0,167
+004851b0,FUN_004851b0,ported,FloatPairAtOffset4SetFromInts,1,160
+004851d0,FUN_004851d0,ported,FloatPairAtOffsetCSetFromUInts,1,167
 00485210,FUN_00485210,named,FormattedTextAppendToRingBuffer,0,151
 00485230,FUN_00485230,ported,TextBufferAppendFormat,1,126
 00485250,FUN_00485250,named,TextBufferAppendVFormat,0,867
 00485300,FUN_00485300,named,ObjectiveAdvisorTextCopy,0,1028
 00485390,FUN_00485390,named,TextBufferDrawWrapped,0,4265
 00485710,FUN_00485710,named,TextWrapMeasureAndDrawLines,0,3496
-004859b0,FUN_004859b0,ported,TextBufferReset,3,740
+004859b0,FUN_004859b0,named,TextBufferReset,0,740
 00485a00,FUN_00485a00,ported,ObjectStatePairGet,1,182
 00485a20,FUN_00485a20,named,KeyboardKeyNamesInit,0,4292
 00485e30,FUN_00485e30,named,NamedOptionIndexFindCaseInsensitive,0,436
@@ -2270,7 +2270,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0048de20,FUN_0048de20,named,ArraySortWithComparator,0,2004
 0048dfd0,FUN_0048dfd0,named,QsortSmallPartitionSort,0,425
 0048e030,FUN_0048e030,ported,ByteRangeSwap,1,333
-0048e060,__ftol,ported,X87FloatToLongLongRound,4,164
+0048e060,__ftol,ported,X87FloatToLongLongRound,3,164
 0048e090,FUN_0048e090,named,CrtAsin,0,112
 0048e0ad,FUN_0048e0ad,named,CrtAcosCore,0,1162
 0048e160,FUN_0048e160,named,RandomSeedSet,0,81

@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 757 | 29.5% |
+| ported | 768 | 30.0% |
 | anchored | 4 | 0.2% |
-| named | 1756 | 68.5% |
+| named | 1745 | 68.1% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (757 functions)
+  (768 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1756 functions)
+  citation yet (1745 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1761 (68.7%).**
+**Game logic remaining to port: 1750 (68.3%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -83,7 +83,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004065d0` | GlobalDwordGet |
 | `0x004065e0` | RenderSurfaceSecondaryGet |
 | `0x004065f0` | CubicBezierPointEvaluate |
-| `0x00406760` | Vector2SetLength |
 | `0x004067b0` | PolylineSegmentLengthsAndTotalCalculate |
 | `0x00406820` | BezierCurveSamplesBuild |
 | `0x004068c0` | PathArcLengthInterpolate |
@@ -319,7 +318,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00418a00` | OverlayTextBufferRefresh |
 | `0x00418da0` | HelpWindowButtonHitTest |
 | `0x00419030` | HelpWindowButtonFeedbackUpdate |
-| `0x00419200` | UiModeResourceBit40SetClear |
 | `0x00419230` | IncidentMessageCatalogInit |
 | `0x004193e0` | IncidentMessageConfigLookup |
 | `0x00419430` | InterfaceMessageTabInfoTextLoad |
@@ -789,6 +787,8 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0045b850` | UiOverlayCreateConfiguredElement |
 | `0x0045b9d0` | PanelRotationControlConfigLoad |
 | `0x0045bcd0` | CameraDragFromCursorApply |
+| `0x0045bf70` | UIEntryBoundsGet |
+| `0x0045bfb0` | ThreeSurfaceResourcesLoadAndInitialize |
 | `0x0045c0d0` | PairCountHistogramBuild |
 | `0x0045c340` | PanelResourceLayoutStore |
 | `0x0045c3f0` | AdvisorProgressBarFillDraw |
@@ -1263,7 +1263,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0047fe30` | FileOpenRouteSelect |
 | `0x0047fea0` | WadEntryReadIntoStreamSlot |
 | `0x0047fed0` | GameFileHandleAllocate |
-| `0x0047ff30` | EngineHeapAllocate |
 | `0x0047ff50` | GameFileHandleRelease |
 | `0x0047ffc0` | MountedPathPrefixRewrite |
 | `0x00480050` | ReadCrlfLine |
@@ -1291,7 +1290,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00482040` | AnimationTrackApplyWrappedFrameOffset |
 | `0x004821a0` | IndexedRecordEntryRead |
 | `0x00482220` | MeshRecordAllocateAndFill |
-| `0x00482350` | IndexedRecordField64Set |
 | `0x00482370` | MeshVerticesScaleApply |
 | `0x004823e0` | TerrainCellQuadVerticesWrite |
 | `0x00482470` | IndexedGeometryDataCopyToOutput |
@@ -1339,13 +1337,12 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004850f0` | TextBufferCreate |
 | `0x00485160` | TextOutputField82CBit2SetClear |
 | `0x00485190` | TextBufferDestroy |
-| `0x004851b0` | FloatPairAtOffset4SetFromInts |
-| `0x004851d0` | FloatPairAtOffsetCSetFromUInts |
 | `0x00485210` | FormattedTextAppendToRingBuffer |
 | `0x00485250` | TextBufferAppendVFormat |
 | `0x00485300` | ObjectiveAdvisorTextCopy |
 | `0x00485390` | TextBufferDrawWrapped |
 | `0x00485710` | TextWrapMeasureAndDrawLines |
+| `0x004859b0` | TextBufferReset |
 | `0x00485a20` | KeyboardKeyNamesInit |
 | `0x00485e30` | NamedOptionIndexFindCaseInsensitive |
 | `0x00485e80` | RenderSetup |

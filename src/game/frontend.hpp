@@ -478,4 +478,11 @@ int menu_audio_tick_interval_reached(void); /* FUN_00412190 */
 uint32_t sim_status_banner_word_get(void);  /* FUN_0041b9b0 */
 void     sim_status_banner_word_set(uint32_t value); /* port hook */
 
+/* UiModeResourceBit40SetClear (FUN_00419200): with the first argument
+ * set the corpus takes the current bit 0x40 as its second argument,
+ * then installs the word with the bit set when that answer is clear and
+ * cleared when it is not — the bit-0x40 rule over the modeled selection
+ * word, faithful. */
+void ui_mode_resource_bit40_set_clear(int probe, uint32_t value);
+
 #endif /* LEGORRR_GAME_FRONTEND_HPP */

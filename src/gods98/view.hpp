@@ -247,4 +247,16 @@ void grid_operation_argument_adapter(float x, float y, EngineContext* ctx);
  * effect is nothing — faithful. */
 void set_global_scalar_to_one(void);
 
+/* --- the view math band (2026-10-24; findings 280/256) -----------------------
+ * FloatNegateAbsoluteValue (FUN_0044d250): both corpus branches flip the
+ * sign — the port keeps the single in-place negate.
+ * Vector2SetLength (FUN_00406760): scale the vector to `length`, the
+ * corpus's sqrt-over-length division; a zero length skips (deviation).
+ * CameraZoomStepAdjust (FUN_0045bf20): direction 0 zooms by -3x the
+ * step, 1 by +3x, anything else is inert; the corpus's view-record
+ * global is threaded (deviation). */
+void float_negate_absolute_value(float* value);
+void vector2_set_length(float v[2], float length);
+void camera_zoom_step_adjust(void* camera, int direction, float step);
+
 #endif /* LEGORRR_VIEW_HPP */

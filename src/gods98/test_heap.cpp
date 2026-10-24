@@ -90,6 +90,13 @@ int main(void)
         ui_render_record_free(NULL); /* the corpus's no-op-on-null shape */
     }
 
+    /* The alloc wrapper (2026-10-24): the corpus drops the pointer. */
+    {
+        engine_heap_allocate(16); /* must not crash; size-0 quirk too */
+        engine_heap_allocate(0);
+        CHECK(1, "the alloc wrapper stays inert on the heap seam");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "heap_test: %d failure(s)\n", s_failures);
         return 1;

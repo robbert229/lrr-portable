@@ -2306,6 +2306,27 @@ announcer with 1 and answers 1 — threaded through the port's block
 the mount layer. `crt_test`, `flic_test`, `heap_test`, `record_test`,
 `view_test`, and `objective_test` pin the shapes.
 
+**The pure math and record primitives band** (2026-10-24; findings
+256/280/386/393): eleven rows land. The record module takes the fixed-
+offset primitive pair — `indexed_record_field64_set` (0x482350) stores
+through the record's `+8` base pointer at base + 100 + index * 0x70,
+`object_vector3_set` (0x40ff70) writes the vector block's slot-0 base
+into `+3c…44`, the two int/uint-to-float pair stores (0x4851b0 /
+0x4851d0) keep the corpus's casts at `+4/+8` and `+0xc/+0x10`, and
+`object_state_pair_get` (0x485a00) reads the `+0x820` pair; all four are
+entry-guarded deviations against the corpus's blind dereferences. The
+view module takes `float_negate_absolute_value` (0x44d250, both corpus
+branches negate), `vector2_set_length` (0x406760, zero-length guarded),
+and `camera_zoom_step_adjust` (0x45bf20, ±3x steps through the iter-85
+zoom gate). `byte_range_swap` (0x48e030, `crt.*`) keeps the corpus's
+same-pointer shortcut, `engine_heap_allocate` (0x47ff30, `heap.*`) is
+the corpus's drop-the-pointer alloc wrapper, and
+`ui_mode_resource_bit40_set_clear` (0x419200, `frontend.*`) runs the
+bit-0x40 flip rule over the modeled selection word faithful to the
+corpus. `EngineCalloc` (0x48ead0) stays blocked with the CRT memory-
+pressure handler seam. `record_test`, `view_test`, `crt_test`,
+`heap_test`, and `frontend_test` pin the strides, casts, and gates.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

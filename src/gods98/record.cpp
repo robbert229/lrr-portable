@@ -572,3 +572,66 @@ void scene_object_owner_set(void* scene_object, uint32_t owner)
     }
     __builtin_memcpy((char*)scene_object + 0x20, &owner, sizeof(owner));
 }
+
+/* --- the record primitive band (see record.hpp) ----------------------------- */
+void indexed_record_field64_set(void* record, int index, uint32_t value)
+{
+    void* base = NULL;
+    if (record == NULL) {
+        return; /* deviation: the corpus reads blindly */
+    }
+    __builtin_memcpy(&base, (char*)record + 8, sizeof(base));
+    if (base == NULL) {
+        return; /* deviation: the corpus dereferences blindly */
+    }
+    __builtin_memcpy((char*)base + 100 + (size_t)index * 0x70,
+                     &value, sizeof(value));
+}
+
+void object_vector3_set(void* object_block, float x, float y, float z)
+{
+    void* base = NULL;
+    if (object_block == NULL) {
+        return; /* deviation: the corpus reads blindly */
+    }
+    __builtin_memcpy(&base, (char*)object_block, sizeof(base));
+    if (base == NULL) {
+        return; /* deviation: the corpus dereferences blindly */
+    }
+    __builtin_memcpy((char*)base + 0x3c, &x, sizeof(x));
+    __builtin_memcpy((char*)base + 0x40, &y, sizeof(y));
+    __builtin_memcpy((char*)base + 0x44, &z, sizeof(z));
+}
+
+void float_pair_at_offset4_set_from_ints(void* record, int x, int y)
+{
+    if (record == NULL) {
+        return; /* deviation: the corpus writes blindly */
+    }
+    const float fx = (float)x; /* the corpus's int->float casts */
+    const float fy = (float)y;
+    __builtin_memcpy((char*)record + 0x04, &fx, sizeof(fx));
+    __builtin_memcpy((char*)record + 0x08, &fy, sizeof(fy));
+}
+
+void float_pair_at_offsetc_set_from_uints(void* record, uint32_t x,
+                                          uint32_t y)
+{
+    if (record == NULL) {
+        return; /* deviation: the corpus writes blindly */
+    }
+    const float fx = (float)x; /* the corpus's uint->float casts */
+    const float fy = (float)y;
+    __builtin_memcpy((char*)record + 0x0c, &fx, sizeof(fx));
+    __builtin_memcpy((char*)record + 0x10, &fy, sizeof(fy));
+}
+
+void object_state_pair_get(const void* record, uint32_t* out_a,
+                           uint32_t* out_b)
+{
+    if (record == NULL || out_a == NULL || out_b == NULL) {
+        return; /* deviation: the corpus dereferences blindly */
+    }
+    __builtin_memcpy(out_a, (const char*)record + 0x820, sizeof(*out_a));
+    __builtin_memcpy(out_b, (const char*)record + 0x824, sizeof(*out_b));
+}
