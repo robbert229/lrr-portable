@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 594 | 23.2% |
+| ported | 597 | 23.3% |
 | anchored | 5 | 0.2% |
-| named | 1918 | 74.8% |
+| named | 1915 | 74.7% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (594 functions)
+  (597 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1918 functions)
+  citation yet (1915 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1924 (75.0%).**
+**Game logic remaining to port: 1921 (74.9%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -731,8 +731,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00451fd0` | CaseInsensitiveNameTableLookupAtOffset8 |
 | `0x004524b0` | SelectionObjectDetach |
 | `0x00452520` | SelectionSnapshotCreate |
-| `0x00452580` | ActiveContextRecordGet |
-| `0x00452650` | ArrayFindValueIndex |
 | `0x00452690` | SelectionCandidateAlreadySelectedOrMarked |
 | `0x004526e0` | SelectionCandidateFilter |
 | `0x00452870` | SelectionCandidateEligibilityCheck |
