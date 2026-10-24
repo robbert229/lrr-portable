@@ -494,10 +494,10 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004189d0,FUN_004189d0,named,RenderTransitionCleanupIfActive,0,199
 00418a00,FUN_00418a00,named,OverlayTextBufferRefresh,0,3460
 00418da0,FUN_00418da0,named,HelpWindowButtonHitTest,0,1368
-00418f80,FUN_00418f80,named,SelectionModeSetByIndex,0,153
-00418fc0,FUN_00418fc0,named,UiModeTransitionRequest,0,460
+00418f80,FUN_00418f80,ported,SelectionModeSetByIndex,1,153
+00418fc0,FUN_00418fc0,ported,UiModeTransitionRequest,1,460
 00419030,FUN_00419030,named,HelpWindowButtonFeedbackUpdate,0,673
-00419100,FUN_00419100,named,UiModeResourcePositionsApply,0,416
+00419100,FUN_00419100,ported,UiModeResourcePositionsApply,1,416
 00419150,FUN_00419150,ported,SelectionStateHandleGet,1,393
 004191a0,FUN_004191a0,named,MainSimStateAdmissionPredicate,0,307
 004191f0,FUN_004191f0,named,UiModeResourceBit40Get,0,61
@@ -1582,7 +1582,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0046b660,FUN_0046b660,named,CommandSampleStatsAccumulate,0,994
 0046b700,FUN_0046b700,named,TimedEffectCueRequestSet,0,224
 0046b730,FUN_0046b730,named,TimedEffectPersistenceSet,0,299
-0046b770,FUN_0046b770,named,TimedEffectUpdateRequestSet,0,143
+0046b770,FUN_0046b770,ported,TimedEffectUpdateRequestSet,1,143
 0046b7a0,FUN_0046b7a0,named,TimedEffectTimestampReset,0,185
 0046b7c0,FUN_0046b7c0,named,TimedEffectAndCueUpdate,0,1298
 0046b8b0,FUN_0046b8b0,named,RectangularGridOverlayGeometryDraw,0,2531

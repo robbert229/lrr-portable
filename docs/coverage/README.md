@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 610 | 23.8% |
+| ported | 614 | 23.9% |
 | anchored | 5 | 0.2% |
-| named | 1902 | 74.2% |
+| named | 1898 | 74.0% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (610 functions)
+  (614 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (5 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1902 functions)
+  citation yet (1898 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1908 (74.4%).**
+**Game logic remaining to port: 1904 (74.3%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -434,10 +434,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004189d0` | RenderTransitionCleanupIfActive |
 | `0x00418a00` | OverlayTextBufferRefresh |
 | `0x00418da0` | HelpWindowButtonHitTest |
-| `0x00418f80` | SelectionModeSetByIndex |
-| `0x00418fc0` | UiModeTransitionRequest |
 | `0x00419030` | HelpWindowButtonFeedbackUpdate |
-| `0x00419100` | UiModeResourcePositionsApply |
 | `0x004191a0` | MainSimStateAdmissionPredicate |
 | `0x004191f0` | UiModeResourceBit40Get |
 | `0x00419200` | UiModeResourceBit40SetClear |
@@ -1159,7 +1156,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0046b660` | CommandSampleStatsAccumulate |
 | `0x0046b700` | TimedEffectCueRequestSet |
 | `0x0046b730` | TimedEffectPersistenceSet |
-| `0x0046b770` | TimedEffectUpdateRequestSet |
 | `0x0046b7a0` | TimedEffectTimestampReset |
 | `0x0046b7c0` | TimedEffectAndCueUpdate |
 | `0x0046b8b0` | RectangularGridOverlayGeometryDraw |
