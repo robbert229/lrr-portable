@@ -651,6 +651,7 @@ Open threads, in order of value:
 | 451 | [findings/451-terrain-cell-state-neighbors-occupancy-and-traversal.md](docs/findings/451-terrain-cell-state-neighbors-occupancy-and-traversal.md) | Terrain Cell State, Neighbors, Occupancy, and Traversal |
 | 454 | [findings/454-terrain-grid-and-cell-resource-tables.md](docs/findings/454-terrain-grid-and-cell-resource-tables.md) | Terrain Grid and Cell Resource Tables |
 | 453 | [findings/453-object-search-and-placement-eligibility.md](docs/findings/453-object-search-and-placement-eligibility.md) | Object Search and Placement Eligibility |
+| 455 | [findings/455-terrain-command-feedback-and-cell-interaction.md](docs/findings/455-terrain-command-feedback-and-cell-interaction.md) | Terrain Command Feedback and Cell Interaction |
 
 | 468 | [findings/468-command-queue-and-selection-state.md](docs/findings/468-command-queue-and-selection-state.md) | Command Queue and Selection State |
 
