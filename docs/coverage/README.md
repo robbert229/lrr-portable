@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 648 | 25.3% |
+| ported | 651 | 25.4% |
 | anchored | 5 | 0.2% |
-| named | 1864 | 72.7% |
+| named | 1861 | 72.6% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (648 functions)
+  (651 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (5 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1864 functions)
+  citation yet (1861 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1870 (72.9%).**
+**Game logic remaining to port: 1867 (72.8%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -651,8 +651,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00438df0` | EntityLookupAtWorldPosition |
 | `0x00438e50` | SpatialObjectQueryCenterMask100 |
 | `0x00438f60` | DockDefinitionMatchesCell |
-| `0x00439200` | TaskKindFilteredSearch |
-| `0x00439240` | TaskEntityFlagsAndCellTaskMatch |
 | `0x00439280` | EntityBuildPlacementCommandBatchExpand |
 | `0x00439340` | EntityBuildPlacementCommandPairCreate |
 | `0x00439370` | EntityBuildPlacementCommandSetup |
@@ -681,7 +679,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0043a300` | EntityDepositActivityGate |
 | `0x0043a5f0` | EntityVisualResourceGetOrCreate |
 | `0x0043a650` | ActionKindEntityCreateAndCommandIssue |
-| `0x0043a7c0` | EntityActionKindSupported |
 | `0x0043a850` | EntityActionRecordConsumeAndCleanup |
 | `0x0043a8f0` | SimulationUpdateCounterAdd |
 | `0x0043a910` | SimulationModeCounterAdd |

@@ -904,8 +904,8 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00438e50,FUN_00438e50,named,SpatialObjectQueryCenterMask100,0,677
 00438ed0,FUN_00438ed0,ported,EntityFlagsContainRequestedSingleBit,2,722
 00438f60,FUN_00438f60,named,DockDefinitionMatchesCell,0,259
-00439200,FUN_00439200,named,TaskKindFilteredSearch,0,231
-00439240,FUN_00439240,named,TaskEntityFlagsAndCellTaskMatch,0,268
+00439200,FUN_00439200,ported,TaskKindFilteredSearch,1,231
+00439240,FUN_00439240,ported,TaskEntityFlagsAndCellTaskMatch,1,268
 00439280,FUN_00439280,named,EntityBuildPlacementCommandBatchExpand,0,857
 00439340,FUN_00439340,named,EntityBuildPlacementCommandPairCreate,0,148
 00439370,FUN_00439370,named,EntityBuildPlacementCommandSetup,0,1294
@@ -934,7 +934,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0043a300,FUN_0043a300,named,EntityDepositActivityGate,0,3240
 0043a5f0,FUN_0043a5f0,named,EntityVisualResourceGetOrCreate,0,425
 0043a650,FUN_0043a650,named,ActionKindEntityCreateAndCommandIssue,0,1350
-0043a7c0,FUN_0043a7c0,named,EntityActionKindSupported,0,603
+0043a7c0,FUN_0043a7c0,ported,EntityActionKindSupported,1,603
 0043a850,FUN_0043a850,named,EntityActionRecordConsumeAndCleanup,0,722
 0043a8f0,FUN_0043a8f0,named,SimulationUpdateCounterAdd,0,158
 0043a910,FUN_0043a910,named,SimulationModeCounterAdd,0,141

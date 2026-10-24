@@ -1540,3 +1540,63 @@ void task_type23_create_for_category_mask(EntitySlot* e, int selector,
     cmd_link_head(rec, kind);
     rec->state &= ~0x40u; /* the corpus clears bit 6 after the link */
 }
+
+/* --- the task-kind filtered search (see cmd.hpp) -----------------------------
+ * The corpus's pool walk hands the callback the slot pointer and the
+ * argument block; the port models that argument block as the selector word. */
+int entity_action_kind_supported(EntitySlot* e, int kind, int arg)
+{
+    if (e == NULL) {
+        return 0; /* deviation: the corpus reads the entity blindly */
+    }
+    if ((entity_stats_word_get(e) & 8u) == 0u) {
+        return 0;
+    }
+    switch (kind) {
+    case 6:
+        /* Corpus: NoOpCallback(1) — the callable no-op's return is
+         * corpus-undefined (finding 381), so the port never passes. */
+        return 0;
+    case 7:
+        return upgrade_resource_check((s_ctx != NULL) ? s_ctx->level
+                                                      : NULL, arg)
+                   != 0u;
+    case 9:
+    case 8:
+    case 0xb:
+    case 0xd:
+        return 1;
+    default:
+        return 0;
+    }
+}
+
+int task_entity_flags_and_cell_task_match(const EntitySlot* e, int kind)
+{
+    if ((entity_stats_word_get(e) & 8u) != 0u) {
+        return entity_action_kind_supported((EntitySlot*)e, kind, 0);
+    }
+    return 0;
+}
+
+int task_kind_filtered_search(int selector)
+{
+    if (selector == 1 || selector == 2 || selector == 4) {
+        return 0;
+    }
+    if (s_ctx == NULL) {
+        return 0; /* deviation: the corpus walks the pool blindly */
+    }
+    for (int t = 0; t < ENTITY_TYPES; ++t) {
+        for (int i = 0; i < s_ctx->entity_count[t]; ++i) {
+            const EntitySlot* e = entity_at(s_ctx, t + 1, i);
+            if (e == NULL || e->type == 0) {
+                continue; /* walker liveness: the +0x408 slot mirror */
+            }
+            if (task_entity_flags_and_cell_task_match(e, selector) != 0) {
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
