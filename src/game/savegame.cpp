@@ -747,3 +747,17 @@ void* checkpoint_blob_get(const GameContext* ctx)
 {
     return ctx != NULL ? ctx->checkpoint_blob : NULL;
 }
+
+/* SaveStateEventContextSet (FUN_00418110) — zero-init module static per
+ * the unowned-global convention (the corpus's word is DAT_0055781c). */
+static uint32_t s_save_state_event_context = 0u;
+
+void save_state_event_context_set(uint32_t value)
+{
+    s_save_state_event_context = value;
+}
+
+uint32_t save_state_event_context_peek(void)
+{
+    return s_save_state_event_context;
+}

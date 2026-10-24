@@ -132,4 +132,12 @@ uint32_t incident_message_text_catalog_get(int id);
 void     info_message_secondary_sound_set(int id, uint32_t value);
 uint32_t incident_message_state_get(void);
 
+/* DeferredCallbackSet (FUN_00453900, findings 256/440): the corpus stores
+ * the callback-presence word (DAT_004a673c) that GameConfigInit seeds with
+ * whether the corresponding message resource was found; the corpus reader
+ * (DeferredCallbackInvokeIfSet) is unported, so the word lands as
+ * zero-init storage with a peek. */
+void     deferred_callback_set(uint32_t value);
+uint32_t deferred_callback_peek(void);
+
 #endif /* LEGORRR_MESSAGE_HPP */

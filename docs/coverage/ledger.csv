@@ -27,8 +27,8 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00401bf0,FUN_00401bf0,ported,GlobalField505f88Get,2,60
 00401c00,FUN_00401c00,ported,StartLevelOverrideIfEnabledGet,1,89
 00401c20,FUN_00401c20,ported,GlobalFlagBit0IsSet,1,58
-00401c30,FUN_00401c30,ported,DisplayWidthGet,1,60
-00401c40,FUN_00401c40,ported,DisplayHeightGet,1,60
+00401c30,FUN_00401c30,named,DisplayWidthGet,0,60
+00401c40,FUN_00401c40,named,DisplayHeightGet,0,60
 00401c50,FUN_00401c50,named,FormattedTextPrintfWidth,0,149
 00401c80,FUN_00401c80,named,FormattedTextPrintf,0,178
 00401cb0,FUN_00401cb0,ported,CmdKindByName,1,368
@@ -220,7 +220,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00409a40,FUN_00409a40,ported,,1,439
 00409a90,FUN_00409a90,named,WorldObjectCreateWithTransform,0,724
 00409b30,FUN_00409b30,ported,,1,1816
-00409cd0,FUN_00409cd0,ported,CellCardinalNeighborApply,3,486
+00409cd0,FUN_00409cd0,named,CellCardinalNeighborApply,0,486
 00409d40,FUN_00409d40,ported,LevelStateStoredValueSet,1,81
 00409d50,FUN_00409d50,named,EntityCellPathEffectsApply,0,1937
 00409f20,FUN_00409f20,named,EntityPlacementCommandsBuildOnce,0,780
@@ -234,7 +234,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0040aa10,FUN_0040aa10,ported,ScreenEffectLaneDispatch,5,260
 0040aa40,FUN_0040aa40,ported,ScreenEffectOpacityUpdate,2,629
 0040aae0,FUN_0040aae0,named,EntityQuadMeshRenderRecordAllowed,0,203
-0040ab10,FUN_0040ab10,named,GlobalModeZeroInputSet,0,87
+0040ab10,FUN_0040ab10,ported,GlobalModeZeroInputSet,1,87
 0040ab30,FUN_0040ab30,ported,GridRecordFlagMaskClear,1,458
 0040ab70,FUN_0040ab70,named,DependencyGridConfigLoad,0,3170
 0040aea0,FUN_0040aea0,named,EnsureCellEntriesLoaded,0,771
@@ -309,7 +309,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0040e460,FUN_0040e460,ported,GridCellRecordPresentCheck,1,148
 0040e490,FUN_0040e490,named,EncyclopediaConfigFilesOpen,0,2964
 0040e700,FUN_0040e700,named,TerrainChoiceResourceSelect,0,789
-0040e7e0,FUN_0040e7e0,named,GlobalFlagBit0Clear,0,85
+0040e7e0,FUN_0040e7e0,ported,GlobalFlagBit0Clear,1,85
 0040e7f0,FUN_0040e7f0,ported,,1,717
 0040e8d0,FUN_0040e8d0,named,ScreenSpaceEffectDispatchIfEnabled,0,209
 0040e910,FUN_0040e910,ported,GlobalValueClearIfEqual,3,107
@@ -480,10 +480,10 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00417ff0,FUN_00417ff0,ported,CurrentSelectionContextSet,1,81
 00418000,FUN_00418000,named,ShowLevelOverlayForCurrentSelection,0,264
 00418040,FUN_00418040,named,CampaignChainSnapshotCreate,0,1040
-004180c0,FUN_004180c0,ported,OptionsContextCopyAndReplaceResource,2,605
+004180c0,FUN_004180c0,named,OptionsContextCopyAndReplaceResource,0,605
 00418110,FUN_00418110,ported,SaveStateEventContextSet,2,81
 00418120,FUN_00418120,named,IsAverageValueAbove99,0,550
-00418190,FUN_00418190,named,SelectionModeStateSet,0,81
+00418190,FUN_00418190,ported,SelectionModeStateSet,2,81
 004181a0,FUN_004181a0,ported,SelectionStateFlagClearBit0,1,85
 004181b0,FUN_004181b0,named,HelpWindowResourcesInit,0,2892
 00418450,FUN_00418450,named,HelpWindowInfoConfigStringsLoad,0,2696
@@ -1231,7 +1231,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00453220,FUN_00453220,named,AdvisorDisplayStateResourcesRelease,0,862
 004532e0,FUN_004532e0,named,IndirectHandleResolveInPlace,0,299
 00453320,FUN_00453320,named,TutorialScriptCommandDispatch,0,8480
-004538a0,FUN_004538a0,ported,CameraFocusScrollScaleCommit,3,271
+004538a0,FUN_004538a0,named,CameraFocusScrollScaleCommit,0,271
 00453900,FUN_00453900,ported,DeferredCallbackSet,2,81
 00453910,FUN_00453910,named,DeferredCallbackInvokeIfSet,0,104
 00453920,FUN_00453920,named,AdvisorScrollStepAdvance,0,842

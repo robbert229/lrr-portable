@@ -219,4 +219,29 @@ void display_resolution_filter_tuple_get(int index, int* w, int* h, int* bpp);
 uint32_t global_flag_004ff978_get(void);
 void     global_value_004ffe48_set(uint32_t value);
 
+/* --- the unowned DAT word-store band (2026-10-24; findings 37/256/392/419) -
+ * Corpus leaves storing or toggling globals with no ported owner/feeder;
+ * each lands as a zero-initialized module static per the s_system_state
+ * precedent, with port-side peek hooks standing in for the unported
+ * corpus readers. DAT_004b31bc is the advisor controller state word
+ * (findings 37/38 — its readers live in the blocked advisor family);
+ * DAT_00557860 is the task-refresh flag the 0x407340/60 pair toggles and
+ * reads (finding 392); the rest are the unresolved or config-domain
+ * stores below. */
+uint32_t global_flag_bit0_is_set(void);            /* FUN_00401c20 */
+void     state_flag_toggle_when_zero(void);        /* FUN_00407340 */
+uint32_t global_task_refresh_flag_get(void);       /* FUN_00407360 */
+void     level_state_stored_value_set(uint32_t v); /* FUN_00409d40 */
+void     global_mode_zero_input_set(int value);    /* FUN_0040ab10 */
+void     rockfall_style_table_base_set(uint32_t v);/* FUN_0040bfc0 */
+void     global_flag_bit0_clear(void);             /* FUN_0040e7e0 */
+void     global_config_value_set(uint32_t v);      /* FUN_0040f5e0 */
+uint32_t advisor_state_word_peek(void);            /* port hook */
+void     advisor_state_word_set(uint32_t v);       /* port hook */
+uint32_t level_stored_word_peek(void);             /* port hook */
+uint32_t mode_zero_input_flag_peek(void);          /* port hook */
+uint32_t rockfall_table_base_peek(void);           /* port hook */
+uint32_t ui_flag_word_peek(void);                  /* port hook */
+uint32_t global_config_word_peek(void);            /* port hook */
+
 #endif /* LEGORRR_GODS98_CRT_HPP */

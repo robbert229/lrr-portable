@@ -184,4 +184,11 @@ void checkpoint_blob_apply(GameContext* ctx, const uint8_t* blob);
 int   osf_read_dirty_flag_get(const GameContext* ctx);
 void* checkpoint_blob_get(const GameContext* ctx);
 
+/* SaveStateEventContextSet (FUN_00418110, finding 408): the corpus stores
+ * the word FrontEndStateChange follows; its corpus feeder is the unported
+ * front-end state-change path, so it lands as zero-init storage with a
+ * port-side peek. */
+void     save_state_event_context_set(uint32_t value);
+uint32_t save_state_event_context_peek(void);
+
 #endif /* LEGORRR_GAME_SAVEGAME_HPP */
