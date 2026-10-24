@@ -20,6 +20,7 @@ and curiosity; nothing in this repository is affiliated with or endorsed by the 
 
 ```
 README.md           This file
+docs/findings/      Reverse-engineering findings, 01–423 (see index below)
 docs/findings/      Reverse-engineering findings, 01–417 (see index below)
 docs/findings/      Reverse-engineering findings, 01–416 (see index below)
 tools/              WAD tooling (rrwad.py: unpack/pack/verify — see tools/README.md)
@@ -620,6 +621,7 @@ Open threads, in order of value:
 | 420 | [findings/420-renderer-and-scene-lifecycle.md](docs/findings/420-renderer-and-scene-lifecycle.md) | Renderer and Scene Lifecycle |
 | 421 | [findings/421-ui-render-tree-traversal.md](docs/findings/421-ui-render-tree-traversal.md) | UI Render-Tree Traversal |
 | 422 | [findings/422-viewport-picking-and-terrain-rendering.md](docs/findings/422-viewport-picking-and-terrain-rendering.md) | Viewport Picking and Terrain Rendering |
+| 423 | [findings/423-input-keyboard-and-cursor-state.md](docs/findings/423-input-keyboard-and-cursor-state.md) | Input, Keyboard, and Cursor State |
 
 Canonical full pseudocode corpus: [`docs/decompiles/full/LEGORR.full.c`](docs/decompiles/full/LEGORR.full.c)
 (2564 manifest functions; see its [README](docs/decompiles/full/README.md)). The
