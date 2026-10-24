@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 587 | 22.9% |
+| ported | 590 | 23.0% |
 | anchored | 5 | 0.2% |
-| named | 1925 | 75.1% |
+| named | 1922 | 75.0% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (587 functions)
+  (590 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (5 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1925 functions)
+  citation yet (1922 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1931 (75.3%).**
+**Game logic remaining to port: 1928 (75.2%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -635,14 +635,11 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00435a20` | GlobalStateLowByteClearAndRefresh |
 | `0x00435aa0` | PanelSelectionHighlightToggle |
 | `0x00435b20` | SceneObjectChainRecordCreate |
-| `0x00435d91` | EntityB8Bit3SetOrClear |
 | `0x00435dc8` | CameraViewContextClose |
 | `0x00435e0e` | CameraViewContextSet |
 | `0x00435e35` | ModelTransformCopyToSceneNode |
 | `0x00435ebb` | ScreenEffectRecordSet |
-| `0x00435ef4` | RecordFields4And14Set |
 | `0x00435f16` | CursorScreenRayContextReset |
-| `0x00435f32` | EntityFieldsA0A4StoreA8Clear |
 | `0x00436831` | CameraSetTiltBounds |
 | `0x00436860` | CameraSetTilt |
 | `0x00436921` | CameraSetScalarBounds |

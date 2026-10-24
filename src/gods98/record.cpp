@@ -474,3 +474,39 @@ void scene_object_resource_handle_set(void* object, uint32_t handle)
     }
     __builtin_memcpy((char*)object + 0x2cu, &handle, sizeof(handle));
 }
+
+/* --- entity record-field leaves (see record.hpp) --------------------------- */
+void record_fields_4_and_14_set(void* record, uint32_t value_a,
+                                uint32_t value_b)
+{
+    if (record == NULL) {
+        return;
+    }
+    __builtin_memcpy((char*)record + 0x04, &value_a, sizeof(value_a));
+    __builtin_memcpy((char*)record + 0x14, &value_b, sizeof(value_b));
+}
+
+void entity_fields_a0_a4_store_a8_clear(void* record, uint32_t value_a,
+                                        uint32_t value_b)
+{
+    if (record == NULL) {
+        return;
+    }
+    const uint32_t zero = 0u;
+    __builtin_memcpy((char*)record + 0xa0, &value_a, sizeof(value_a));
+    __builtin_memcpy((char*)record + 0xa4, &value_b, sizeof(value_b));
+    __builtin_memcpy((char*)record + 0xa8, &zero, sizeof(zero));
+}
+
+void entity_b8_bit3_set_or_clear(void* record, int set)
+{
+    if (record == NULL) {
+        return;
+    }
+    unsigned char* byte = (unsigned char*)record + 0xb8;
+    if (set != 0) {
+        *byte = (unsigned char)(*byte | 8);
+    } else {
+        *byte = (unsigned char)(*byte & ~8u);
+    }
+}

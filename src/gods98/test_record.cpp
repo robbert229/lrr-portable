@@ -671,6 +671,54 @@ int main(void)
     test_flag_and_handle_writers();
     test_straggler_reads();
     test_interpolated_z();
+    /* The entity record-field leaves (2026-10-24): plain writes with the
+     * corpus's offsets over a caller-owned record buffer. */
+    {
+        unsigned char buf[256];
+        memset(buf, 0, sizeof(buf));
+        record_fields_4_and_14_set(buf, 0x1111u, 0x2222u);
+        uint32_t v = 0;
+        __builtin_memcpy(&v, buf + 0x04, 4);
+        CHECK(v == 0x1111u, "the +4 store lands");
+        CHECK(record_field14_get(buf) == 0x2222u,
+              "the +0x14 store reads back through the ported get leaf");
+        v = 0;
+        __builtin_memcpy(&v, buf + 0x08, 4);
+        CHECK(v == 0u, "the neighbour dword stays zero");
+        record_fields_4_and_14_set(NULL, 1, 2);
+        CHECK(1, "NULL record skips");
+    }
+
+    {
+        unsigned char buf[256];
+        memset(buf, 0, sizeof(buf));
+        memset(buf + 0xa0, 0x5a, 12);
+        entity_fields_a0_a4_store_a8_clear(buf, 0x3333u, 0x4444u);
+        uint32_t v = 0;
+        __builtin_memcpy(&v, buf + 0xa0, 4);
+        CHECK(v == 0x3333u, "the +0xa0 store lands");
+        __builtin_memcpy(&v, buf + 0xa4, 4);
+        CHECK(v == 0x4444u, "the +0xa4 store lands");
+        __builtin_memcpy(&v, buf + 0xa8, 4);
+        CHECK(v == 0u, "the +0xa8 word is cleared (faithful)");
+        entity_fields_a0_a4_store_a8_clear(NULL, 1, 2);
+        CHECK(1, "NULL record skips");
+    }
+
+    {
+        unsigned char buf[256];
+        memset(buf, 0, sizeof(buf));
+        buf[0xb8] = 0x11;
+        entity_b8_bit3_set_or_clear(buf, 1);
+        CHECK(buf[0xb8] == 0x19u, "the raise sets bit 3");
+        entity_b8_bit3_set_or_clear(buf, 1);
+        CHECK(buf[0xb8] == 0x19u, "raising twice is idempotent");
+        entity_b8_bit3_set_or_clear(buf, 0);
+        CHECK(buf[0xb8] == 0x11u, "the clear drops bit 3, spares the rest");
+        entity_b8_bit3_set_or_clear(NULL, 1);
+        CHECK(1, "NULL record skips");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "record_test: %d failure(s)\n", s_failures);
         return 1;
