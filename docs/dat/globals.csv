@@ -890,9 +890,9 @@ address,decompile_reference_count,function_count,functions,finding_mentions,imag
 0x004de554,2,1,TerrainPointerCommandUpdate@0x00425d90,,.data,zero-filled virtual tail,,,unreviewed,,,
 0x004de558,2,1,TerrainPointerCommandUpdate@0x00425d90,,.data,zero-filled virtual tail,,,unreviewed,,,
 0x004de55c,3,1,TerrainPointerCommandUpdate@0x00425d90,,.data,zero-filled virtual tail,,,unreviewed,,,
-0x004de560,9,1,MainSimInteractionAndCellUpdate@0x00426520,,.data,zero-filled virtual tail,,,unreviewed,,,
-0x004de564,8,1,MainSimInteractionAndCellUpdate@0x00426520,,.data,zero-filled virtual tail,,,unreviewed,,,
-0x004de568,4,1,MainSimInteractionAndCellUpdate@0x00426520,,.data,zero-filled virtual tail,,,unreviewed,,,
+0x004de560,9,1,MainSimInteractionAndCellUpdate@0x00426520,,.data,zero-filled virtual tail,,,partial,Active pointer-drag state that gates accumulated cursor deltas and suppresses ordinary click actions,medium,"Finding 240; MainSimInteractionAndCellUpdate sets this while the primary pointer input remains held, accumulates absolute pointer deltas while active, clears the accumulators when inactive, and uses the flag to gate click/command branches"
+0x004de564,8,1,MainSimInteractionAndCellUpdate@0x00426520,,.data,zero-filled virtual tail,,,interpreted,Previous-frame snapshot of the primary pointer button state,high,"Finding 240; MainSimInteractionAndCellUpdate compares this value with the current primary pointer state to detect press/release transitions, then stores the current state here at function exit"
+0x004de568,4,1,MainSimInteractionAndCellUpdate@0x00426520,,.data,zero-filled virtual tail,,,interpreted,Previous-frame snapshot of the secondary pointer button state,high,Finding 240; MainSimInteractionAndCellUpdate compares this value with the current secondary pointer state to gate a pointer action and stores the current state here at function exit
 0x004de56c,4,1,MainSimInteractionAndCellUpdate@0x00426520,,.data,zero-filled virtual tail,,,unreviewed,,,
 0x004de570,3,1,MainSimInteractionAndCellUpdate@0x00426520,,.data,zero-filled virtual tail,,,unreviewed,,,
 0x004de574,2,1,EntityCommandStatusFeedbackDispatch@0x00428020,docs/findings/467-command-creation-and-issue-routing.md,.data,zero-filled virtual tail,,,mentioned,,,
