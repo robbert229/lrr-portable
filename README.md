@@ -1735,6 +1735,19 @@ keeps it observable). The selection-context pair
 context answers NULL, and the two leaves round-trip. `entity_test` and
 `frontend_test` pin the zero behavior and the round-trip.
 
+**Message-queue flag leaves** (2026-10-24; findings 376/441): three
+corpus set/clear leaves land in `message.*`, writing the module's own
+storage — `selection_flag10_set_clear` (0x419450) raises or drops bit
+0x10 of the flags word (`DAT_004dcd48`, so its neighbours survive),
+while `info_message_always_play_flag_set` (0x419470) and
+`indexed_selection_flag_20000_set_clear` (0x4194f0) raise or drop the
+per-id config record's 0x10000 / 0x20000 flag bits on the config entry
+the corpus keeps as the flag dword of its 0x14-stride record (finding
+441). The corpus indexes its config records blindly; the port
+bounds-checks, and flags peeks keep both storages observable.
+`message_test` pins the bit isolation, idempotent raises, and guarded
+ids.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the
