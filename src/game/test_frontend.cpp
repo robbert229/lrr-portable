@@ -1345,6 +1345,13 @@ int main(int argc, char** argv)
         indexed_record_pointer_set(0, NULL);
     }
 
+    /* The glyph measure wrapper (2026-10-24): the corpus lane is in-band. */
+    {
+        bitmap_font_glyph_measure_width(NULL, 'A'); /* in-range glyph */
+        bitmap_font_glyph_measure_width(NULL, 0u);   /* below the grid */
+        CHECK(1, "the measure wrapper runs as the corpus's void lane");
+    }
+
     if (s_failures == 0) {
         printf("frontend: all tests passed\n");
         return 0;

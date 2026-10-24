@@ -233,7 +233,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0040a5e0,FUN_0040a5e0,named,RecordCountDigitsFill,0,1580
 0040aa10,FUN_0040aa10,ported,ScreenEffectLaneDispatch,5,260
 0040aa40,FUN_0040aa40,ported,ScreenEffectOpacityUpdate,2,629
-0040aae0,FUN_0040aae0,named,EntityQuadMeshRenderRecordAllowed,0,203
+0040aae0,FUN_0040aae0,ported,EntityQuadMeshRenderRecordAllowed,3,203
 0040ab10,FUN_0040ab10,ported,GlobalModeZeroInputSet,1,87
 0040ab30,FUN_0040ab30,ported,GridRecordFlagMaskClear,1,458
 0040ab70,FUN_0040ab70,named,DependencyGridConfigLoad,0,3170
@@ -331,7 +331,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0040f6c0,FUN_0040f6c0,named,SceneNodeRecordCreate,0,1108
 0040f7b0,FUN_0040f7b0,ported,OptionalResourceDestroy,2,101
 0040f7d0,FUN_0040f7d0,named,CallbackStateRecordCreate,0,649
-0040f850,FUN_0040f850,named,CallbackStateListDispose,0,243
+0040f850,FUN_0040f850,ported,CallbackStateListDispose,3,243
 0040f890,FUN_0040f890,named,DirectionDrivenHeadingAngleStep,0,805
 0040f920,FUN_0040f920,named,KindTwoSteeringTorqueApply,0,1995
 0040fb00,FUN_0040fb00,named,MatrixRotationComposeXYZ,0,434
@@ -1391,7 +1391,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00460140,FUN_00460140,ported,TaskQuotaRefresh,1,625
 004601e0,FUN_004601e0,ported,CheckpointBlobFree,1,71
 004601f0,FUN_004601f0,ported,CheckpointBlobGet,1,60
-00460200,FUN_00460200,ported,SelectedLevelStartObjectUpdate,3,166
+00460200,FUN_00460200,ported,SelectedLevelStartObjectUpdate,4,166
 00460220,FUN_00460220,named,StartLevelSelected,0,543
 00460290,FUN_00460290,named,EntityType4IndexListBuild,0,637
 00460310,FUN_00460310,named,EntityType4IndexListAppend,0,370
@@ -1860,8 +1860,8 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00479050,FUN_00479050,ported,ConfigStringCopy,1,1143
 004790b0,FUN_004790b0,ported,ConfigPathValueGet,2,202
 004790d0,FUN_004790d0,ported,ConfigBooleanGetDefault2,6,258
-00479110,FUN_00479110,ported,ReadAngleSettingRadians,2,446
-00479170,FUN_00479170,ported,ConfigRgbVectorRead,2,722
+00479110,FUN_00479110,named,ReadAngleSettingRadians,0,446
+00479170,FUN_00479170,named,ConfigRgbVectorRead,0,722
 00479240,FUN_00479240,ported,ReleaseLinkedObjectList,3,240
 00479270,FUN_00479270,ported,BlockTextTokenAllocate,1,563
 004792c0,FUN_004792c0,ported,GlobalRecordListPushHead,3,117
@@ -1893,7 +1893,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0047a1b0,FUN_0047a1b0,named,FormattedTextDraw,0,210
 0047a1e0,FUN_0047a1e0,named,FormattedTextDrawAndMeasure,0,3292
 0047a470,FUN_0047a470,ported,BitmapFontGlyphDrawAndMeasure,5,507
-0047a520,FUN_0047a520,named,BitmapFontGlyphMeasureWidth,0,113
+0047a520,FUN_0047a520,ported,BitmapFontGlyphMeasureWidth,3,113
 0047a540,FUN_0047a540,ported,ObjectFieldBE4DwordGet,1,87
 0047a550,FUN_0047a550,named,FontRecordAndSurfaceRelease,0,141
 0047a580,FUN_0047a580,named,FixedSizeRecordPoolAcquire,0,463

@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "gods98/ptrstack.hpp"
+#include "gods98/heap.hpp"
 
 static int s_failures = 0;
 
@@ -118,6 +119,24 @@ int main(void)
 {
     test_push_pop();
     test_for_each();
+    /* CallbackStateListDispose (2026-10-24): the corpus-record drain frees. */
+    {
+        struct StackRecord { void* state; PtrStack stack; };
+        void* raw = engine_heap_alloc(sizeof(struct StackRecord));
+        struct StackRecord* rec = (struct StackRecord*)raw;
+        rec->state = NULL;
+        rec->stack.head = NULL;
+        rec->stack.count = 0u;
+        void* a = engine_heap_alloc(PTRSTACK_LINK_OFFSET + 16);
+        void* b = engine_heap_alloc(PTRSTACK_LINK_OFFSET + 16);
+        ptrstack_push(&rec->stack, a);
+        ptrstack_push(&rec->stack, b);
+        CHECK(rec->stack.count == 2u && rec->stack.head == b,
+              "the corpus-shaped record holds the stack window");
+        callback_state_list_dispose(rec); /* drains, frees entries, frees block */
+        callback_state_list_dispose(NULL); /* guarded */
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "ptrstack_test: %d failure(s)\n", s_failures);
         return 1;

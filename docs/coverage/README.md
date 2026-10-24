@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 822 | 32.1% |
+| ported | 828 | 32.3% |
 | anchored | 4 | 0.2% |
-| named | 1691 | 66.0% |
+| named | 1685 | 65.7% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (822 functions)
+  (828 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1691 functions)
+  citation yet (1685 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1696 (66.1%).**
+**Game logic remaining to port: 1690 (65.9%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -154,7 +154,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0040a4b0` | QuadMeshRenderRecordCreate |
 | `0x0040a5c0` | QuadMeshRenderRecordPoolSlotAllocate |
 | `0x0040a5e0` | RecordCountDigitsFill |
-| `0x0040aae0` | EntityQuadMeshRenderRecordAllowed |
 | `0x0040ab70` | DependencyGridConfigLoad |
 | `0x0040aea0` | EnsureCellEntriesLoaded |
 | `0x0040af40` | CellResourceEntryMatches |
@@ -227,7 +226,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0040f5f0` | ErosionEightNeighborPropagate |
 | `0x0040f6c0` | SceneNodeRecordCreate |
 | `0x0040f7d0` | CallbackStateRecordCreate |
-| `0x0040f850` | CallbackStateListDispose |
 | `0x0040f890` | DirectionDrivenHeadingAngleStep |
 | `0x0040f920` | KindTwoSteeringTorqueApply |
 | `0x0040fb00` | MatrixRotationComposeXYZ |
@@ -1120,7 +1118,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00478e20` | BlockTextTokenPoolDestroy |
 | `0x00479110` | ReadAngleSettingRadians |
 | `0x00479170` | ConfigRgbVectorRead |
-| `0x00479240` | ReleaseLinkedObjectList |
 | `0x00479490` | BlockTextTokenPoolGrow |
 | `0x00479500` | D3DRMVectorRandom |
 | `0x00479510` | D3DRMVectorRotate |
@@ -1137,7 +1134,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0047a180` | RewardTextDraw |
 | `0x0047a1b0` | FormattedTextDraw |
 | `0x0047a1e0` | FormattedTextDrawAndMeasure |
-| `0x0047a520` | BitmapFontGlyphMeasureWidth |
 | `0x0047a550` | FontRecordAndSurfaceRelease |
 | `0x0047a580` | FixedSizeRecordPoolAcquire |
 | `0x0047a5c0` | FixedSizeRecordPoolGrow |

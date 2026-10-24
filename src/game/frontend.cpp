@@ -2455,3 +2455,14 @@ void screen_right_edge_cache_refresh(void)
 }
 
 uint32_t screen_right_edge_cache_peek(void) { return s_screen_right_edge; }
+
+/* BitmapFontGlyphMeasureWidth (FUN_0047a520) — see frontend.hpp. */
+void bitmap_font_glyph_measure_width(void* font, unsigned char glyph)
+{
+    (void)font; /* deviation: no corpus font record is addressed */
+    const unsigned row = ((unsigned)(glyph - 0x20u)) / FE_FONT_GRID_COLS;
+    if (row < FE_FONT_GRID_ROWS) {
+        /* the corpus's flag-clear measure lane keeps its recomputed floats
+         * in locals — nothing observable here, faithful to the wrapper. */
+    }
+}

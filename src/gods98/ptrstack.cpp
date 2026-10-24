@@ -2,6 +2,7 @@
 /* gods98 engine — intrusive pointer stacks (see ptrstack.hpp). */
 
 #include "ptrstack.hpp"
+#include "heap.hpp"
 
 /* Item link slot: corpus item+0x9c. The corpus reads/writes a 32-bit
  * dword there; the port moves native pointers with memcpy so access is
@@ -57,4 +58,24 @@ void ptrstack_for_each(PtrStack* stack, PtrStackCallback cb, void* ctx)
         cb(stack, item, ctx);
         item = ptrstack_link_get(item);
     }
+}
+
+/* CallbackStateListDispose (FUN_0040f850) — see ptrstack.hpp. */
+void callback_state_list_dispose(void* stack_allocation)
+{
+    if (stack_allocation == NULL) {
+        return; /* deviation: the corpus strides the record blindly */
+    }
+    char* block = (char*)stack_allocation;
+    PtrStack stack;
+    __builtin_memcpy(&stack, block + sizeof(void*), sizeof stack);
+    void* item = ptrstack_pop(&stack);
+    while (item != NULL) {
+        optional_resource_destroy(item);
+        item = ptrstack_pop(&stack);
+    }
+    void* head_state = NULL;
+    __builtin_memcpy(&head_state, block, sizeof head_state);
+    engine_heap_free(head_state);
+    engine_heap_free(block);
 }

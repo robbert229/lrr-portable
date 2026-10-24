@@ -50,4 +50,14 @@ void* ptrstack_pop(PtrStack* stack);
  * current item steers the walk. */
 void ptrstack_for_each(PtrStack* stack, PtrStackCallback cb, void* ctx);
 
+/* CallbackStateListDispose (FUN_0040f850): drains the stack, releasing each
+ * entry through the resource-destroy wrapper, then frees the head-state
+ * word at stack-record +0x0 and the stack allocation itself (finding 393).
+ * Deviation: the corpus record keeps the head dword beside (+0x4) the
+ * count (+0x8) next to the state word (+0x0); the port lays the record
+ * out host-widened — state word, then the PtrStack window — and copies
+ * the window before draining. */
+void callback_state_list_dispose(void* stack_allocation);
+                                                /* FUN_0040f850 */
+
 #endif /* LEGORRR_GODS98_PTRSTACK_HPP */
