@@ -349,6 +349,23 @@ int main(void)
     CHECK(simtick_mute_word() == 0xABCDu, "simtick: the word store lands");
     simulation_global_word_set(0u);
 
+    /* The blocked-route and timer-word bit folds (2026-10-24). */
+    {
+        simtick_set_editor_state(0x1600u, 1);
+        simtick_route_position_blocked_state_set(1);
+        CHECK((simtick_route_position_state_peek() & 0x600u) == 0x200u,
+              "blocked raises bit 9 and drops bit 10");
+        simtick_set_editor_state(0x1600u, 1);
+        simtick_route_position_blocked_state_set(0);
+        CHECK(simtick_route_position_state_peek() == 0x400u,
+              "the unblocked mask drops bits 9 and 12, keeping bit 10");
+
+        simtick_manager_set_timer_word(0x1012u);
+        simtick_global_ui_flags_clear_bits12();
+        CHECK(simtick_global_ui_flags_word() == 0x1010u,
+              "the clear keeps every other bit");
+    }
+
     if (s_failures == 0) {
         printf("simtick_test: PASS\n");
         return 0;

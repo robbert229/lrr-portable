@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 809 | 31.6% |
+| ported | 813 | 31.7% |
 | anchored | 4 | 0.2% |
-| named | 1704 | 66.5% |
+| named | 1700 | 66.3% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (809 functions)
+  (813 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1704 functions)
+  citation yet (1700 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1709 (66.7%).**
+**Game logic remaining to port: 1705 (66.5%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -755,7 +755,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0044d710` | WaypointVectorRandomScaleApply |
 | `0x0044d760` | JitterStepApply |
 | `0x0044d9a0` | VectorWithinAxisTolerance |
-| `0x0044da20` | RoutePositionBlockedStateSet |
 | `0x0044da50` | ThreeChannelValueTweenStep |
 | `0x0044db50` | KeyValueEqualsFileLoad |
 | `0x0044dd40` | EngineLoaderProfileEntriesRelease |
@@ -840,7 +839,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0045a650` | PanelCategoryBoundsSet |
 | `0x0045adb0` | SimCursorInteractionTick |
 | `0x0045b310` | SimCategoryCellHitTest |
-| `0x0045b610` | GlobalUIFlags_00500860ClearBits_1_2 |
 | `0x0045b620` | PriorityListButtonActionDispatch |
 | `0x0045b740` | ScrollInfoPanelInitialize |
 | `0x0045b850` | UiOverlayCreateConfiguredElement |
@@ -962,8 +960,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0046a0f0` | MappedIndexedRecordWordAt100Get |
 | `0x0046a120` | GroupedCodeTableFindValueIndex |
 | `0x0046a330` | EntityRecordFlag400ToggleAndRefresh |
-| `0x0046a370` | LinkedRecordChainFree |
-| `0x0046a390` | GlobalLinkedRecordChainClear |
 | `0x0046a420` | SelectedGlobalPointTransformAndReturnX |
 | `0x0046a510` | SceneObjectStateDispatch |
 | `0x0046a760` | FirstSetFlagOrdinal |

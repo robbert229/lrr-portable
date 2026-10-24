@@ -2363,6 +2363,19 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Linked chain free + editor/timer word folds** (findings 389/390/433/250):
+`crt.*` ports `linked_record_chain_free` (0x46a370, the recursive successor
+chain through the widened +0x1c link then the record free) and
+`global_linked_record_chain_clear` (0x46a390, the aux word — DAT_004aa450,
+unowned, a zero-init hook — then the head chain), with a head setter hook
+standing in for the corpus's list owners. `simtick.*` ports
+`simtick_route_position_blocked_state_set` (0x44da20 — blocked folds bit 9 in
+and bit 10 out, unblocked applies the corpus's 0xffffedff mask keeping bit
+10) over the scene-transform word and `simtick_global_ui_flags_clear_bits12`
+(0x45b610, clearing bits 1 and 2 of the index-9 timer word the shared-timer
+dispatch reads), each with a peek hook. `crt_test` and `simtick_test` pin the
+chain clear, the masks, and the guards.
+
 **Grid-cell record buffer + small record leaves** (findings 463/373/378/386):
 `engine.*` takes the entity-cell field-grid trio — `grid_cell_record_buffer_allocate`
 (0x4661c0, the `width * height * 0x0c` buffer with the corpus's masked zero-word

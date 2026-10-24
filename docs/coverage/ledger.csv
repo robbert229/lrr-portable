@@ -1130,7 +1130,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0044d710,FUN_0044d710,named,WaypointVectorRandomScaleApply,0,381
 0044d760,FUN_0044d760,named,JitterStepApply,0,1937
 0044d9a0,FUN_0044d9a0,named,VectorWithinAxisTolerance,0,368
-0044da20,FUN_0044da20,named,RoutePositionBlockedStateSet,0,184
+0044da20,FUN_0044da20,ported,RoutePositionBlockedStateSet,3,184
 0044da50,FUN_0044da50,named,ThreeChannelValueTweenStep,0,864
 0044db50,FUN_0044db50,named,KeyValueEqualsFileLoad,0,2809
 0044dd40,FUN_0044dd40,named,EngineLoaderProfileEntriesRelease,0,681
@@ -1314,7 +1314,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0045adb0,FUN_0045adb0,named,SimCursorInteractionTick,0,4831
 0045b310,FUN_0045b310,named,SimCategoryCellHitTest,0,3787
 0045b590,FUN_0045b590,ported,RectContainsOffsetPoint,3,377
-0045b610,FUN_0045b610,named,GlobalUIFlags_00500860ClearBits_1_2,0,173
+0045b610,FUN_0045b610,ported,GlobalUIFlags_00500860ClearBits_1_2,3,173
 0045b620,FUN_0045b620,named,PriorityListButtonActionDispatch,0,812
 0045b740,FUN_0045b740,named,ScrollInfoPanelInitialize,0,763
 0045b850,FUN_0045b850,named,UiOverlayCreateConfiguredElement,0,295
@@ -1557,8 +1557,8 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0046a2f0,FUN_0046a2f0,ported,Entity334FloatField110Get,1,106
 0046a310,FUN_0046a310,ported,Entity334FloatField10CGet,2,106
 0046a330,FUN_0046a330,named,EntityRecordFlag400ToggleAndRefresh,0,344
-0046a370,FUN_0046a370,named,LinkedRecordChainFree,0,152
-0046a390,FUN_0046a390,named,GlobalLinkedRecordChainClear,0,111
+0046a370,FUN_0046a370,ported,LinkedRecordChainFree,2,152
+0046a390,FUN_0046a390,ported,GlobalLinkedRecordChainClear,2,111
 0046a420,FUN_0046a420,named,SelectedGlobalPointTransformAndReturnX,0,270
 0046a470,FUN_0046a470,ported,LinkedListPushAtGlobalHead,3,117
 0046a4c0,FUN_0046a4c0,ported,FlagMaskCallbacksAllPass,4,356

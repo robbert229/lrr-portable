@@ -384,6 +384,7 @@ void global_value_word_set(int value);       /* port hook */
 int  global_value_word_peek(void);
 void linked_list_push_at_global_head(void* record); /* FUN_0046a470 */
 void* linked_list_global_head_peek(void);           /* port hook */
+void  linked_list_global_head_set(void* record);      /* port hook */
 void global_record_list_push_head(void* record);    /* FUN_004792c0 */
 void* global_record_list_head_peek(void);           /* port hook */
 int  scene_effect_registry_reset(void);             /* FUN_00465380 */
@@ -394,5 +395,16 @@ void crt_fatal_exit_observer_set(void (*observer)(void));
 /* CrtNoOpStubVariant2 (FUN_00493c40): the corpus's second no-op CRT stub
  * variant — an empty body, ported faithfully as a call-through. */
 void crt_no_op_stub_variant2(void); /* FUN_00493c40 */
+
+/* LinkedRecordChainFree (FUN_0046a370): frees a record chain recursively —
+ * the successor chain through the +1c link (the port's widened link slot,
+ * same deviation as the pushes), then the record itself through the engine
+ * heap free. GlobalLinkedRecordChainClear (FUN_0046a390): clears the
+ * auxiliary global word (DAT_004aa450, unowned, zero-init hook), frees the
+ * chain at the global head, and clears the head. */
+void linked_record_chain_free(void* record);  /* FUN_0046a370 */
+void global_linked_record_chain_clear(void);  /* FUN_0046a390 */
+void* linked_list_global_aux_peek(void);      /* port hook */
+void  linked_list_global_aux_set(void* word); /* port hook */
 
 #endif /* LEGORRR_GODS98_CRT_HPP */

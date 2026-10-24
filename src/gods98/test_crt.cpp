@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "gods98/crt.hpp"
+#include "gods98/heap.hpp"
 
 static int s_failures = 0;
 
@@ -691,6 +692,32 @@ int main(void)
         crt_no_op_stub_variant2();
         CHECK(crt_surface_calls_count() == before,
               "the stub stays inert");
+    }
+
+    /* The linked-record chain free (2026-10-24): the null guard, the
+     * single-node release, and the global clear. */
+    {
+        linked_record_chain_free(NULL); /* guarded */
+        linked_list_global_head_set(NULL); /* start from a clean global
+                                            * list: earlier blocks left
+                                            * stack nodes behind */
+        const size_t k = 0x28;
+        char* solo = (char*)engine_heap_alloc(k);
+        memset(solo, 0, k);
+        linked_record_chain_free(solo); /* single node, freed in place */
+
+        char* second = (char*)engine_heap_alloc(k);
+        char* third = (char*)engine_heap_alloc(k);
+        memset(second, 0, k);
+        memset(third, 0, k);
+        linked_list_push_at_global_head(second);
+        linked_list_push_at_global_head(third); /* third links to second */
+        linked_list_global_aux_set((void*)3);
+        global_linked_record_chain_clear();
+        CHECK(linked_list_global_head_peek() == NULL,
+              "the clear empties the head");
+        CHECK(linked_list_global_aux_peek() == NULL,
+              "the aux word clears with it");
     }
 
     if (s_failures != 0) {
