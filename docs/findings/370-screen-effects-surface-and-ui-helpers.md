@@ -13,7 +13,7 @@ This pass names a screen-effect record setter, UI list/bounds operations, indexe
 | `0x00463540` | `IndexedSurfaceEntriesRestore` | Iterates the recorded entries, makes each visible, and clears the recorded count. |
 | `0x004636b0` | `InfoPanelStringEntriesInitialize` | Reads a packed argument sequence and initializes entries at stride 0x20, resolving each supplied string. |
 | `0x00464720` | `SurfaceVisibilitySet` | Forwards a visibility value and surface handle to the visibility helper. |
-| `0x00464e80` | `DeferredSoundPlayExpire` | When a pending sound index and positive timer exist, submits the sound and clears both fields. |
+| `0x00464e80` | `DeferredSoundPlayExpire` | When a pending sound handle and positive timer exist, stops that handle and clears the handle and timer. |
 | `0x00464ec0` | `DeferredSoundTimerSetIfIdle` | When no positive timer is active, clears the pending index, stores the supplied timer, and reports success; otherwise reports failure. |
 | `0x0046d1c0` | `AnimationDurationForLoopCount` | Reads duration from one or two resource handles and adjusts the selected duration by repeated-loop duration. |
 | `0x0046f1d0` | `EntityIndexedFloatLookupWithMinusOneFallback` | Looks up a float through entity-derived table indices and uses a default table value when the selected entry is -1.0. |
