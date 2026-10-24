@@ -1903,7 +1903,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0047a850,FUN_0047a850,named,SoundVolumeValueValid,0,120
 0047a870,FUN_0047a870,named,SoundBankEntryLoad,0,3087
 0047aad0,FUN_0047aad0,named,SoundBankFreeSlotFind,0,299
-0047ab00,FUN_0047ab00,named,VideoResourceSlotRelease,0,773
+0047ab00,FUN_0047ab00,named,SoundBankEntryRelease,0,773
 0047ab80,FUN_0047ab80,named,DirectSoundListenerViewSet,0,114
 0047aba0,FUN_0047aba0,ported,DirectSoundListenerUpdateTick,4,133
 0047abc0,FUN_0047abc0,ported,DirectSoundListenerSpatialUpdate,1,1845
@@ -1911,7 +1911,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0047ad30,FUN_0047ad30,named,AttachedSoundStopByEntity,0,418
 0047ad70,FUN_0047ad70,named,SoundBufferPlayWithPosition,0,4345
 0047b020,FUN_0047b020,named,SoundBufferAssociationAdd,0,283
-0047b050,FUN_0047b050,named,VideoResourceSlotEnabledSet,0,764
+0047b050,FUN_0047b050,named,SoundBankEntryVolumeSet,0,764
 0047b0d0,FUN_0047b0d0,named,IndexedRecordStride134WordGet,0,103
 0047b0f0,FUN_0047b0f0,named,SoundHandleToBuffer,0,203
 0047b130,FUN_0047b130,named,SoundBufferStopHandle,0,230
@@ -2201,7 +2201,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00489280,FUN_00489280,named,CDAudioTrackCompletionPoll,0,556
 00489330,FUN_00489330,named,CDAudioDeviceOpen,0,458
 004893a0,FUN_004893a0,named,CdAudioStopAndClose,0,324
-004893f0,FUN_004893f0,named,ResourceStateTableReset,0,211
+004893f0,FUN_004893f0,named,MapFileResourceSlotsReset,0,211
 00489410,FUN_00489410,named,MapFileResourceSlotAllocate,0,461
 00489460,FUN_00489460,named,MapFileResourceSlotRelease,0,264
 004894a0,FUN_004894a0,named,MapFileResourceSlotGet,0,173

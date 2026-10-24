@@ -46296,10 +46296,10 @@ void RenderSetup(undefined4 param_1)
 }
 
 
-// ==== ResourceStateTableReset @ 004893f0 ====
+// ==== MapFileResourceSlotsReset @ 004893f0 ====
 
 
-void ResourceStateTableReset(void)
+void MapFileResourceSlotsReset(void)
 
 {
   undefined4 *puVar1;
@@ -88538,10 +88538,10 @@ void ResourceSlotTableReleaseAll(void)
 }
 
 
-// ==== VideoResourceSlotRelease @ 0047AB00 ====
+// ==== SoundBankEntryRelease @ 0047AB00 ====
 
 
-undefined4 VideoResourceSlotRelease(int param_1)
+undefined4 SoundBankEntryRelease(int param_1)
 
 {
   int *piVar1;
@@ -88572,10 +88572,10 @@ undefined4 VideoResourceSlotRelease(int param_1)
 }
 
 
-// ==== VideoResourceSlotEnabledSet @ 0047B050 ====
+// ==== SoundBankEntryVolumeSet @ 0047B050 ====
 
 
-void VideoResourceSlotEnabledSet(int param_1,uint param_2)
+void SoundBankEntryVolumeSet(int param_1,uint param_2)
 
 {
   int *piVar1;

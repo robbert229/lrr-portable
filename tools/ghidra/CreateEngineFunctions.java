@@ -714,7 +714,7 @@ public class CreateEngineFunctions extends GhidraScript {
         0x47efd0L,  // DirectInputShutdown
         0x47ccf0L,  // DirectDrawObjectsRelease
         0x485e80L,  // RenderSetup
-        0x4893f0L,  // ResourceStateTableReset
+        0x4893f0L,  // MapFileResourceSlotsReset
         0x48b260L,  // StartupStreamStateReset
         0x48b290L,  // StartupStreamsClose
         0x48b2f0L,  // StartupConfigStreamLoad
@@ -1505,8 +1505,8 @@ public class CreateEngineFunctions extends GhidraScript {
         0x004760e0L,  // AttachedObjectDataReleaseAndClear
         0x00476d50L,  // ResourceSlotTableInitialize
         0x00476d80L,  // ResourceSlotTableReleaseAll
-        0x0047ab00L,  // VideoResourceSlotRelease
-        0x0047b050L,  // VideoResourceSlotEnabledSet
+        0x0047ab00L,  // SoundBankEntryRelease
+        0x0047b050L,  // SoundBankEntryVolumeSet
         0x0047b2a0L,  // KeyedResourceEntryRemove
         0x0048f950L,  // CrtFindHandleClose
         0x00491360L,  // CrtBufferedCharacterWrite
@@ -4316,7 +4316,7 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x47efd0: return "DirectInputShutdown";
             case 0x47ccf0: return "DirectDrawObjectsRelease";
             case 0x485e80: return "RenderSetup";
-            case 0x4893f0: return "ResourceStateTableReset";
+            case 0x4893f0: return "MapFileResourceSlotsReset";
             case 0x48b260: return "StartupStreamStateReset";
             case 0x48b290: return "StartupStreamsClose";
             case 0x48b2f0: return "StartupConfigStreamLoad";
@@ -4883,8 +4883,8 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x004760e0: return "AttachedObjectDataReleaseAndClear";
             case 0x00476d50: return "ResourceSlotTableInitialize";
             case 0x00476d80: return "ResourceSlotTableReleaseAll";
-            case 0x0047ab00: return "VideoResourceSlotRelease";
-            case 0x0047b050: return "VideoResourceSlotEnabledSet";
+            case 0x0047ab00: return "SoundBankEntryRelease";
+            case 0x0047b050: return "SoundBankEntryVolumeSet";
             case 0x0047b2a0: return "KeyedResourceEntryRemove";
             case 0x0048f950: return "CrtFindHandleClose";
             case 0x00491360: return "CrtBufferedCharacterWrite";
