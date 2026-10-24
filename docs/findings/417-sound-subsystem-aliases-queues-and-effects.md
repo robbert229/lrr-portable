@@ -42,7 +42,7 @@ and [213](213-disabling-sound-does-not-clear-packed-requests.md).
 | `0x00464c70` | `SoundAliasLookup` | Hashes and scans the built-in plus dynamic alias table; when registration is enabled, appends unknown names without checking the table capacity (finding 178). |
 | `0x00464d00` | `SoundSampleMarkerParse` | Splits a sample list, interprets leading markers, loads each sample through `SoundLoad`, and links successful slots into the alias variant chain (finding 107). |
 | `0x00464e20` | `SoundSampleVariantSelect` | Counts an alias's variant chain, chooses a random member, swaps it to the chain head, and returns its sound-bank slot (findings 107, 147). |
-| `0x00464e80` | `DeferredSoundPlayExpire` | If a pending sound index exists and the timer is positive, submits that alias and clears the pending index and timer. |
+| `0x00464e80` | `DeferredSoundPlayExpire` | If a pending sound handle exists and the timer is positive, stops that handle and clears the handle and timer. |
 | `0x00464ec0` | `DeferredSoundTimerSetIfIdle` | Sets a deferred timer only when no positive timer is active; clears the pending index and returns success. |
 | `0x00464ef0` | `SoundSubmitWithGlobalCooldown` | When the global cooldown is clear, plays an alias, records its ID, sets cooldown to selected sample duration times 25, and optionally returns the sound handle. |
 | `0x00464f60` | `SoundRequestQueueSubmit` | Appends alias and selector to the separate deferred queue while its count is below ten; overflow is silently ignored (finding 149). |
@@ -68,7 +68,7 @@ and [213](213-disabling-sound-does-not-clear-packed-requests.md).
 | `0x004659b0` | `TransientEffectInstanceRelease` | Releases the emitter render resource and scene object, unlinks it, stops an associated sound handle when present, and frees the record. Reclassified to scene resources/effects. |
 | `0x00465a90` | `TransientEffectRegistryEnableSet` | Walks all registered emitters and applies an enabled state. Reclassified to scene resources/effects. |
 | `0x00465ac0` | `TransientEffectEnableSet` | Updates the wrapped scene resource and mirrors enabled state in the emitter record. Reclassified to scene resources/effects. |
-| `0x00465b00` | `TransientEffectInstanceUpdate` | Updates emitter records and particle slots, optionally submits an associated positional sound once, and may submit effect sound when emission ends. The zero-handle latch is detailed in finding [221](221-lava-effect-latches-zero-sound-handle.md). Reclassified to scene resources/effects. |
+| `0x00465b00` | `TransientEffectInstanceUpdate` | Updates emitter records and particle slots, optionally submits an associated positional sound once, and releases the effect instance after its emission completes. The zero-handle latch is detailed in finding [221](221-lava-effect-latches-zero-sound-handle.md). Reclassified to scene resources/effects. |
 
 ## Evidence limits and follow-ups
 

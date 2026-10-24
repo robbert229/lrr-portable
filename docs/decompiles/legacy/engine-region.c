@@ -24912,7 +24912,7 @@ void TransientEffectInstanceRelease(int param_1,int param_2)
     *(undefined4 *)(*(int *)(param_1 + 0x29c) + 0x298) = *(undefined4 *)(param_1 + 0x298);
   }
   if (*(int *)(param_1 + 0x2a4) != 0) {
-    SoundSubsystemFrameTick(*(int *)(param_1 + 0x2a4));
+    SoundHandleStopForward(*(int *)(param_1 + 0x2a4));
   }
   FUN_0048db80(param_1);
   return;
@@ -38481,7 +38481,7 @@ LAB_0043cdea:
     uVar13 = EntityTypeComponentGet(piVar8);
     iVar10 = piVar8[0xd4];
 LAB_0043ce1d:
-    SoundSubsystemFrameTick(iVar10);
+    SoundHandleStopForward(iVar10);
     piVar8[0xfb] = piVar8[0xfb] & 0xffefffff;
     uVar14 = NestedWordAtOffsetC0OrC4Get(piVar8,1,0,1,0);
     SoundSubmissionRouteWrapper(uVar13,uVar14);
@@ -39443,7 +39443,7 @@ LAB_0043dcb3:
 LAB_0043ed80:
   if ((bVar7) && ((piVar8[0xfb] & 0x20000U) != 0)) {
     EntityTypeComponentGet(piVar8);
-    SoundSubsystemFrameTick(piVar8[0xd4]);
+    SoundHandleStopForward(piVar8[0xd4]);
     piVar8[0xfb] = piVar8[0xfb] & 0xffefffff;
     uVar13 = NestedWordAtOffsetC0OrC4Get(piVar8,1,0);
     SoundAliasPlay(uVar13);
