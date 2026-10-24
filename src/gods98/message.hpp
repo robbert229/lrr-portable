@@ -83,4 +83,13 @@ int  message_active_has(int id);
 /* per-id cooldown value (tests/diagnostics). */
 float message_cooldown(int id);
 
+/* SystemStateFlags / SetSystemStateFlags (FUN_00456240 / FUN_00456550,
+ * findings 04/05/440): the corpus's get / set accessors over the
+ * game-state bitmask at DAT_004ff980 — the module's own s_system_state,
+ * read directly and installed through a pointed-to value. The setter
+ * returns the installed value; NULL answers 0 and stores nothing
+ * (documented deviation; corpus callers pass live pointers). */
+uint32_t system_state_flags_get(void);
+uint32_t system_state_flags_set(const uint32_t* value);
+
 #endif /* LEGORRR_MESSAGE_HPP */

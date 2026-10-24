@@ -1688,6 +1688,24 @@ deviation). `level_test` pins the probe order, the flag-or-occupied
 equivalence, the mask-15 and mode codes, and the corner's two-probe
 mask.
 
+**Unowned DAT-global accessor band** (2026-10-24; findings 357/383/386/
+440): eleven single-address engine accessors land as static-backed
+module leaves — none of their globals has a ported owner or feeder, so
+each is a zero-initialized static (the `s_system_state` precedent), and
+the write-only ones get tests/diagnostics peeks. The counter pair
+`global_counter_004ff990_increment`/`_reset` (0x454880/0x454890) and the
+three counter bumps `global_counter_at_00555324`/`880`/`890` live in
+`crt.*`; so do the two `+1.0` floats (0x462830/0x462850) and the two
+float accumulators `global_float_accumulator_00555330_add`/
+`global_float_accumulate_00555120` (0x4628a0/0x4628c0, whose callers
+findings leave unresolved). The system-state pair
+`system_state_flags_get`/`system_state_flags_set` (0x456240/0x456550)
+land in `message.*`, whose own `s_system_state` models `DAT_004ff980`:
+the getter reads it directly, the setter installs a pointed-to value
+and returns it (NULL answers zero, deviation). `crt_test` proves the
+band's independent one-per-call bumps; `message_test` proves the
+round-trip and the shared static.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

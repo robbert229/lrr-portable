@@ -272,6 +272,50 @@ static void test_static_globals(void)
      * storage (x87 float10 deviation — double). */
     CHECK(global_float_field_00556f00_get() == 0.0,
           "the global reads zero until a writer lands");
+
+    /* The unowned counter/accumulator band (2026-10-24): each leaf is a
+     * single read-modify-write over its static-backed global. */
+    {
+        const int base_counter = (int)crt_counter_004ff990_peek();
+        global_counter_004ff990_increment();
+        global_counter_004ff990_increment();
+        CHECK(crt_counter_004ff990_peek() == (uint32_t)(base_counter + 2),
+              "the increment bumps by one per call");
+        global_counter_004ff990_reset();
+        CHECK(crt_counter_004ff990_peek() == 0u, "the reset zeroes");
+    }
+
+    {
+        const float base_a = crt_float_00554adc_peek();
+        const float base_e = crt_float_00554efc_peek();
+        global_float_at_00554adc_add_one();
+        global_float_at_00554adc_add_one();
+        global_float_at_00554efc_add_one();
+        CHECK(crt_float_00554adc_peek() == base_a + 2.0f
+                  && crt_float_00554efc_peek() == base_e + 1.0f,
+              "the add-one leaves raise each float once per call");
+    }
+
+    {
+        const unsigned b4 = crt_counter_00555324_peek();
+        const unsigned b8 = crt_counter_00555328_peek();
+        const unsigned bc = crt_counter_0055532c_peek();
+        global_counter_at_00555328_increment();
+        CHECK(crt_counter_00555324_peek() == b4
+                  && crt_counter_00555328_peek() == b8 + 1u
+                  && crt_counter_0055532c_peek() == bc,
+              "each counter bumps independently");
+    }
+
+    {
+        const float base_3 = crt_float_00555330_peek();
+        const float base_1 = crt_float_00555120_peek();
+        global_float_accumulator_00555330_add(1.5f);
+        global_float_accumulate_00555120(-0.5f);
+        CHECK(crt_float_00555330_peek() == base_3 + 1.5f
+                  && crt_float_00555120_peek() == base_1 - 0.5f,
+              "the accumulators add the argument once per call");
+    }
 }
 
 int main(void)

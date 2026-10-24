@@ -110,6 +110,23 @@ int main(void)
         block_close(bf);
     }
 
+    /* The system-state accessors (2026-10-24): get/set over the module's
+     * own DAT_004ff980 static — shared with the diagnostics setter. */
+    {
+        const uint32_t before = system_state_flags_get();
+        const uint32_t probe = 0x1234u;
+        CHECK(system_state_flags_set(&probe) == probe,
+              "the setter returns the installed value");
+        CHECK(system_state_flags_get() == 0x1234u,
+              "the getter reads it back");
+        message_set_system_state(before); /* leave the module as found */
+        CHECK(system_state_flags_get() == before,
+              "the diagnostics setter shares the same static");
+        CHECK(system_state_flags_set(NULL) == 0u
+                  && system_state_flags_get() == before,
+              "NULL answers zero and stores nothing (deviation)");
+    }
+
     if (s_failures == 0) {
         printf("message_test: PASS\n");
         return 0;

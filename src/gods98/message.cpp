@@ -89,6 +89,21 @@ void message_config_set(int id, const char* sound, float cooldown,
 
 void message_set_flags(uint32_t flags)        { s_flags = flags; }
 void message_set_system_state(uint32_t v)     { s_system_state = v; }
+
+uint32_t system_state_flags_get(void)
+{
+    return s_system_state;
+}
+
+uint32_t system_state_flags_set(const uint32_t* value)
+{
+    if (value == NULL) {
+        return 0u; /* deviation: the corpus dereferences blindly */
+    }
+    s_system_state = *value;
+    return *value;
+}
+
 void message_set_callback(MessageCallback cb) { s_callback = cb; }
 void message_set_sound_hook(MessageSoundHook h) { s_sound = h; }
 

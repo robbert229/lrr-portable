@@ -158,6 +158,45 @@ double global_float_field_00556f00_get(void);
  * deviation; corpus callers always pass a live pointer). */
 uint32_t global_value_004ff9bc_store_and_return(const void* value);
 
+/* GlobalCounter_004ff990Increment / GlobalCounter_004ff990Reset
+ * (FUN_00454880 / FUN_00454890, findings 386/440): bump / zero the global
+ * counter. No ported code owns or feeds this counter, so it lands as a
+ * zero-initialized module static (the s_system_state precedent). */
+void global_counter_004ff990_increment(void);
+void global_counter_004ff990_reset(void);
+
+/* GlobalFloatAt00554adcAddOne / GlobalFloatAt00554efcAddOne
+ * (FUN_00462830 / FUN_00462850, finding 357): add 1.0 to the named global
+ * float. Both land as zero-initialized module statics — no ported code
+ * owns or feeds them (findings leave their unit unresolved). */
+void global_float_at_00554adc_add_one(void);
+void global_float_at_00554efc_add_one(void);
+
+/* GlobalCounterAt00555324 / 00555328 / 0055532cIncrement (FUN_00462870 /
+ * FUN_00462880 / FUN_00462890, finding 357): bump the three named global
+ * counters; zero-initialized module statics (unowned precedents). */
+void global_counter_at_00555324_increment(void);
+void global_counter_at_00555328_increment(void);
+void global_counter_at_0055532c_increment(void);
+
+/* GlobalFloatAccumulator_00555330Add / GlobalFloatAccumulate_00555120
+ * (FUN_004628a0 / FUN_004628c0, findings 383/386): add the argument to
+ * the named global float accumulator; zero-initialized module statics. */
+void global_float_accumulator_00555330_add(float value);
+void global_float_accumulate_00555120(float value);
+
+/* Tests/diagnostics census of the DAT statics above (the
+ * message_active_count precedent): read-only views over the module's
+ * static-backed counter/accumulator globals. */
+uint32_t crt_counter_004ff990_peek(void);
+float    crt_float_00554adc_peek(void);
+float    crt_float_00554efc_peek(void);
+uint32_t crt_counter_00555324_peek(void);
+uint32_t crt_counter_00555328_peek(void);
+uint32_t crt_counter_0055532c_peek(void);
+float    crt_float_00555330_peek(void);
+float    crt_float_00555120_peek(void);
+
 #ifdef __cplusplus
 }
 #endif
