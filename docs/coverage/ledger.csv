@@ -1222,7 +1222,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00452870,FUN_00452870,ported,SelectionCandidateEligibilityCheck,3,359
 004528c0,FUN_004528c0,named,SelectionStateTick,0,3991
 00452be0,FUN_00452be0,ported,SelectionClear,1,568
-00452c50,FUN_00452c50,named,SelectionEntityRemove,0,458
+00452c50,FUN_00452c50,ported,SelectionEntityRemove,1,458
 00452cc0,FUN_00452cc0,named,SelectedEntityStateMonitor,0,615
 00452d60,FUN_00452d60,ported,SelectionCommandDispatch,1,791
 00452df0,FUN_00452df0,named,TutorialNerpScriptFileLoad,0,559
@@ -2274,7 +2274,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0048e090,FUN_0048e090,named,CrtAsin,0,112
 0048e0ad,FUN_0048e0ad,named,CrtAcosCore,0,1162
 0048e160,FUN_0048e160,named,RandomSeedSet,0,81
-0048e170,FUN_0048e170,ported,RandomNext,6,123
+0048e170,FUN_0048e170,ported,RandomNext,7,123
 0048e1aa,FUN_0048e1aa,named,CrtMathIntrinsicDispatch,0,61
 0048e1e0,FUN_0048e1e0,named,FormattedTextBufferBuild,0,476
 0048e250,FUN_0048e250,named,StackProbeAllocate,0,343
