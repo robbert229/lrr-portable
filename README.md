@@ -1641,6 +1641,24 @@ row is honest (it lands with the terrain-data wave). `level_test`
 drives the queue's push/swap-remove/flag corners and the dedup table's
 fill and overflow.
 
+**The tile-variant grid-record table** (2026-10-24; findings 356/377/380/
+451): six leaves over the corpus's fixed 300-block record region land in
+`level.*` as one static-backed table — the region's loaders are
+unported, so its variant-pointer words read zero and every
+record-dependent branch answers the default records (the timestamp-table
+precedent). `grid_record_flag_mask_clear` (0x40ab30) sweeps the region
+dropping mask 0x10c from each block's field words; `terrain_cell_record_get`
+(0x40af90) resolves a coordinate through its block to the variant-pair
+fields, reading the default records in port cases;
+`cell_flag4_is_set`/`cell_flag100_set`/`cell_flag100_is_set`
+(0x40b250/0x40b2a0/0x40b2e0) raise and test the per-field flag bits;
+and `grid_cell_record_present_check` (0x40e460) tests the heap present
+table, which stays NULL until the grid-initialize leaf lands
+(documented deviation, answered as zero). All corpus blind indexing
+becomes guarded, reporting the unaddressable cell as zero. `level_test`
+proves the per-cell-per-field flag isolation, the sweep's in-band drop
+and field-16 keep, and the NULL-safe record reads.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

@@ -977,6 +977,61 @@ int main(int argc, char** argv)
               "the filled table answers for its entries");
     }
 
+    /* The tile-variant grid-record table (2026-10-24). */
+    {
+        uint32_t a = 0, b = 0;
+
+        /* Fresh region: every reader answers zero. */
+        CHECK(cell_flag100_is_set(2, 1, 3) == 0, "the table starts empty");
+        CHECK(cell_flag4_is_set(2, 1, 3) == 0, "flag 4 answers zero");
+        terrain_cell_record_get(3, 2, 1, &a, &b);
+        CHECK(a == 0u && b == 0u, "the record fields start zero");
+
+        /* The 0x100 setter reads per (cell, field), never neighbours. */
+        cell_flag100_set(2, 1, 3);
+        CHECK(cell_flag100_is_set(2, 1, 3) != 0, "the flag raises");
+        CHECK(cell_flag100_is_set(2, 1, 4) == 0, "the field neighbour holds");
+        CHECK(cell_flag100_is_set(1, 2, 3) == 0, "the cell neighbour holds");
+
+        /* Flag 4 tracks the field-0 word while no variant record owns
+         * the block (the port case): the field argument is ignored. */
+        cell_flag100_set(3, 3, 0);
+        CHECK(cell_flag4_is_set(3, 3, 5) == 0,
+              "the field word answers but not bit 0x4");
+
+        /* Out-of-region coordinates skip (bounds deviation). */
+        cell_flag100_set(999999, 0, 0);
+        CHECK(cell_flag100_is_set(999999, 0, 0) == 0,
+              "the far cell stays unaddressable");
+
+        /* Records resolve to the zero defaults; NULL outputs are safe. */
+        terrain_cell_record_get(3, 0, 0, &a, &b);
+        a = 0xdeadbeefu;
+        b = 0xdeadbeefu;
+        terrain_cell_record_get(999999, 0, 0, &a, &b);
+        CHECK(a == 0xdeadbeefu && b == 0xdeadbeefu,
+              "the far cell leaves the outputs alone");
+        terrain_cell_record_get(1, 1, 0, NULL, NULL); /* NULL-safe */
+        CHECK(1, "NULL record outputs are safe");
+
+        /* The mask sweep: fields 0..15 drop, field 16 keeps. */
+        cell_flag100_set(5, 7, 16);
+        cell_flag100_set(14, 19, 7);
+        grid_record_flag_mask_clear();
+        CHECK(cell_flag100_is_set(5, 7, 3) == 0 &&
+                  cell_flag100_is_set(2, 1, 3) == 0 &&
+                  cell_flag100_is_set(14, 19, 7) == 0,
+              "the sweep clears every in-band flag");
+        CHECK(cell_flag100_is_set(5, 7, 16) != 0,
+              "the sweep leaves field 16 alone (faithful)");
+
+        /* The present table: NULL without the unported grid init. */
+        CHECK(grid_cell_record_present_check(3, 4) == 0,
+              "no cell records before the grid initialize leaf");
+        CHECK(grid_cell_record_present_check(0, 0) == 0,
+              "the origin answers zero too");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "level_test: %d failure(s)\n", s_failures);
         return 1;

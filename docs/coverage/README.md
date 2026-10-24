@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 552 | 21.5% |
+| ported | 558 | 21.8% |
 | anchored | 5 | 0.2% |
-| named | 1960 | 76.4% |
+| named | 1954 | 76.2% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (552 functions)
+  (558 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1960 functions)
+  citation yet (1954 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1966 (76.7%).**
+**Game logic remaining to port: 1960 (76.4%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -150,6 +150,8 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0040a4b0` | QuadMeshRenderRecordCreate |
 | `0x0040a5c0` | QuadMeshRenderRecordPoolSlotAllocate |
 | `0x0040a5e0` | RecordCountDigitsFill |
+| `0x0040aae0` | EntityQuadMeshRenderRecordAllowed |
+| `0x0040ab10` | GlobalModeZeroInputSet |
 | `0x0040ab70` | DependencyGridConfigLoad |
 | `0x0040aea0` | EnsureCellEntriesLoaded |
 | `0x0040af40` | CellResourceEntryMatches |
@@ -209,6 +211,9 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0040e0c0` | FenceSparkLaunchRegister |
 | `0x0040e1e0` | CellCornerOccupancyScan |
 | `0x0040e350` | CellEntityKindCreateOrRemove |
+| `0x0040e490` | EncyclopediaConfigFilesOpen |
+| `0x0040e700` | TerrainChoiceResourceSelect |
+| `0x0040e7e0` | GlobalFlagBit0Clear |
 | `0x0040e8d0` | ScreenSpaceEffectDispatchIfEnabled |
 | `0x0040e910` | GlobalValueClearIfEqual |
 | `0x0040e930` | ErosionTimingStateInit |

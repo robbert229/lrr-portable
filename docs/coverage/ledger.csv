@@ -233,8 +233,8 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0040a5e0,FUN_0040a5e0,named,RecordCountDigitsFill,0,1580
 0040aa10,FUN_0040aa10,ported,ScreenEffectLaneDispatch,5,260
 0040aa40,FUN_0040aa40,ported,ScreenEffectOpacityUpdate,2,629
-0040aae0,FUN_0040aae0,ported,EntityQuadMeshRenderRecordAllowed,3,203
-0040ab10,FUN_0040ab10,ported,GlobalModeZeroInputSet,1,87
+0040aae0,FUN_0040aae0,named,EntityQuadMeshRenderRecordAllowed,0,203
+0040ab10,FUN_0040ab10,named,GlobalModeZeroInputSet,0,87
 0040ab30,FUN_0040ab30,ported,GridRecordFlagMaskClear,1,458
 0040ab70,FUN_0040ab70,named,DependencyGridConfigLoad,0,3170
 0040aea0,FUN_0040aea0,named,EnsureCellEntriesLoaded,0,771
@@ -307,10 +307,10 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0040e1e0,FUN_0040e1e0,named,CellCornerOccupancyScan,0,1407
 0040e350,FUN_0040e350,named,CellEntityKindCreateOrRemove,0,1042
 0040e460,FUN_0040e460,ported,GridCellRecordPresentCheck,1,148
-0040e490,FUN_0040e490,ported,EncyclopediaConfigFilesOpen,2,2964
-0040e700,FUN_0040e700,ported,TerrainChoiceResourceSelect,3,789
-0040e7e0,FUN_0040e7e0,ported,GlobalFlagBit0Clear,1,85
-0040e7f0,FUN_0040e7f0,ported,,3,717
+0040e490,FUN_0040e490,named,EncyclopediaConfigFilesOpen,0,2964
+0040e700,FUN_0040e700,named,TerrainChoiceResourceSelect,0,789
+0040e7e0,FUN_0040e7e0,named,GlobalFlagBit0Clear,0,85
+0040e7f0,FUN_0040e7f0,ported,,1,717
 0040e8d0,FUN_0040e8d0,named,ScreenSpaceEffectDispatchIfEnabled,0,209
 0040e910,FUN_0040e910,ported,GlobalValueClearIfEqual,3,107
 0040e930,FUN_0040e930,ported,ErosionTimingStateInit,1,584
