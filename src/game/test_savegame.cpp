@@ -494,6 +494,21 @@ int main(void)
         }
     }
 
+    /* SavRecordPtr (2026-10-24). */
+    {
+        GameContext g;
+        memset(&g, 0, sizeof(g));
+        g.save_slot = 2;
+        g.active_slot = 2;
+        static uint8_t blob[3][0x3190];
+        g.record_count = 3;
+        g.records = &blob[0][0];
+        CHECK(sav_record_ptr(&g, 1) == &blob[1][4], "the record address lands");
+        CHECK(sav_record_ptr(&g, 3) == NULL, "the count guard answers null");
+        g.save_slot = -1;
+        CHECK(sav_record_ptr(&g, 0) == NULL, "a closed slot answers null");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "savegame_test: %d failure(s)\n", s_failures);
         return 1;

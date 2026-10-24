@@ -485,4 +485,16 @@ void     sim_status_banner_word_set(uint32_t value); /* port hook */
  * word, faithful. */
 void ui_mode_resource_bit40_set_clear(int probe, uint32_t value);
 
+/* MenuWipeStart (FUN_004103f0, finding 37): when the wipe-arm word is
+ * set, stop the running wipe clock, raise the start/pending bits in the
+ * modeled wipe flags, stamp the clock word with the (float) tick, and
+ * submit sound alias 0x27. The arm/clock words have no ported owner —
+ * zero-init statics with port hooks (the corpus's timeGetTime stamp is
+ * modeled by the tick-word hook, a documented deviation). */
+void menu_wipe_start(void);             /* FUN_004103f0 */
+void menu_wipe_arm_set(uint32_t value);
+uint32_t menu_wipe_arm_peek(void);
+float menu_wipe_clock_peek(void);
+void menu_clock_millis_set(uint32_t millis); /* port tick hook */
+
 #endif /* LEGORRR_GAME_FRONTEND_HPP */

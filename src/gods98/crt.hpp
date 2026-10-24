@@ -260,6 +260,7 @@ int  request_record_ready_flag4(int index);   /* FUN_0045ab30 */
 int  request_record_ready_flag2(int index);   /* FUN_0045ab60 */
 int  request_record_flag8_is_set(int index);  /* FUN_0045ab90 */
 void request_record_flags_set(int index, uint32_t flags); /* port hook */
+uint32_t request_record_flags_peek(int index); /* port hook */
 
 /* --- the remaining DAT one-liner stores/reads (2026-10-24; finding 392) -----
  * GlobalValueSet_0050080c (FUN_0045c4a0): the unresolved store's word.
@@ -286,5 +287,39 @@ void advisor_clear_active_state(void);  /* FUN_00401b20 */
 /* ByteRangeSwap (FUN_0048e030): byte-for-byte swap of two ranges; the
  * corpus's same-pointer shortcut keeps (documented NULL guard). */
 void byte_range_swap(void* a, void* b, size_t n);
+
+/* --- the DAT window band (2026-10-24; findings 250/252/357) -----------------
+ * Indexed pair/pointer/float windows over the corpus's data-section
+ * tables. The corpus addresses (DAT_00500128/12c, DAT_005013a8…,
+ * DAT_00552144/48, DAT_00552154, DAT_00555738/3c) have no ported owners
+ * — the tables land as zero-initialized module statics with guarded
+ * entry windows and port-side hooks standing in for the unported panel/
+ * view writers (unowned-global convention; deviations documented). */
+void indexed_pair_set(int index, uint32_t x, uint32_t y);
+                                        /* FUN_0045a6e0 */
+void indexed_pair_get(int index, uint32_t* out_x, uint32_t* out_y);
+                                        /* FUN_0045a700 */
+void indexed_float_pair_set(int index, uint32_t x, uint32_t y);
+                                        /* FUN_00463730 */
+void indexed_float_pair_peek(int index, float* out_x, float* out_y); /* port hook */
+void indexed_text_metrics_pair_set(int index, uint32_t x, uint32_t y);
+                                        /* FUN_00463ed0 */
+void indexed_text_metrics_pair_get(int index, uint32_t* out_x,
+                                   uint32_t* out_y); /* FUN_00463ea0 */
+void indexed_record_pointer_set(int index, void* record); /* port hook */
+void* indexed_record_pointer_peek(int index);
+void region_bounds_set(const uint32_t* xy_pair, uint32_t w, uint32_t h);
+                                        /* FUN_0045d370 */
+void region_bounds_peek(uint32_t* out_xy, float* out_wh);
+void panel_draw_records_set(int index, void* records); /* port hook */
+void* panel_draw_records_peek(int index);
+void panel_item_flag16_set(int panel, int item, int value);
+                                        /* FUN_0045aac0 */
+void panel_item_flag32_set(int panel, int item, int value);
+                                        /* FUN_0045abb0 */
+void panel_state_flags_toggle(int index); /* FUN_0045ab00 */
+void reward_score_add(float value);      /* FUN_00462800 */
+float reward_score_total_peek(void);
+uint32_t reward_score_count_peek(void);
 
 #endif /* LEGORRR_GODS98_CRT_HPP */

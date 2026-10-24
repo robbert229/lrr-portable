@@ -34,6 +34,8 @@ typedef struct CmdRec {
     int32_t  cell_act;   /* +0x20 cell-command action id (8/0xb/0xd)          */
     int32_t  cell_target;/* +0x24 cell-command referenced entity (-1 = unset)   */
     int32_t  cell_count; /* +0x28 cell-command entry count                      */
+    int32_t  zone;       /* +0x2c zone-command id (kind-7; the corpus writer
+                          * of this word is unported — zero-init)             */
     int32_t  grant_act;  /* +0x38 activity the command grants: the tick's
                           * deferred install (callback 0x43da62) appends it
                           * to the entity's permitted-activity list and
@@ -1918,4 +1920,51 @@ int entity_task_chain_contains_kind(const EntitySlot* e, int type)
         }
     }
     return 0;
+}
+
+/* --- the kind-7 zone word + cancel (see cmd.hpp) ----------------------------- */
+int cmd_rec_zone_get(const void* rec)
+{
+    return rec != NULL ? (int)cas_rec(rec)->zone : 0;
+}
+
+void cmd_rec_zone_set(void* rec, int zone)
+{
+    if (rec != NULL) {
+        as_rec(rec)->zone = zone;
+    }
+}
+
+void cmd_link_global_head(void* rec, int kind)
+{
+    cmd_link_head(as_rec(rec), kind);
+}
+
+/* CmdCancelByCoords (FUN_00403700) — see cmd.hpp. The corpus strides the
+ * global chain through the +0x60 link; the port's global link lands in
+ * global_next (deviation note in the struct header). */
+void cmd_cancel_by_coords(int zone, int probe, int x, int y)
+{
+    for (CmdRec* cur = s_global_head; cur != NULL;
+         cur = (CmdRec*)cur->global_next) {
+        if (cur->type == 7 && cur->zone == zone
+            && (probe == 0
+                || (x == cur->cell_act && y == cur->cell_target))) {
+            cur->state |= CMD_STATE_DONE;
+        }
+    }
+}
+
+void cmd_rec_action_set(void* rec, int action)
+{
+    if (rec != NULL) {
+        as_rec(rec)->cell_act = action;
+    }
+}
+
+void cmd_rec_target_set(void* rec, int target)
+{
+    if (rec != NULL) {
+        as_rec(rec)->cell_target = target;
+    }
 }

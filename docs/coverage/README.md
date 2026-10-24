@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 770 | 30.0% |
+| ported | 784 | 30.6% |
 | anchored | 4 | 0.2% |
-| named | 1743 | 68.0% |
+| named | 1729 | 67.4% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (770 functions)
+  (784 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1743 functions)
+  citation yet (1729 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1748 (68.2%).**
+**Game logic remaining to port: 1734 (67.6%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -65,7 +65,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00403320` | ObjectCommandTaskCreate |
 | `0x004033c0` | ObjectAttachedRecordAllocate |
 | `0x00403650` | EntityTaskBatchAppend |
-| `0x00403700` | CmdCancelByCoords |
 | `0x00403750` | CommandKindRecordIssueAndLink |
 | `0x00403810` | TerrainCellRecordCountUpdate |
 | `0x00403910` | CellRecordCountsPruneForEntity |
@@ -270,7 +269,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004102b0` | UiTextUnderscoresToSpaces |
 | `0x00410320` | StringQueueRecordOrFlush |
 | `0x004103d0` | MainMenuTextItem |
-| `0x004103f0` | MenuWipeStart |
 | `0x00410450` | StringKeyedCacheEntryFind |
 | `0x00410490` | StringRegistryIntern |
 | `0x00410520` | StringCacheLookupOrLoad |
@@ -345,8 +343,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00417df0` | SavRefreshSlots |
 | `0x00417f20` | OptionsContextSixFieldSet |
 | `0x00417f40` | SavWriteRecord |
-| `0x00417f90` | SavRecordPtr |
-| `0x00417fc0` | SavCommit |
 | `0x00418000` | ShowLevelOverlayForCurrentSelection |
 | `0x00418040` | CampaignChainSnapshotCreate |
 | `0x004180c0` | OptionsContextCopyAndReplaceResource |
@@ -849,12 +845,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0045a620` | UITextOutputObjectRelease |
 | `0x0045a630` | UIRecordCallbackForward |
 | `0x0045a650` | PanelCategoryBoundsSet |
-| `0x0045a6e0` | IndexedPairSet |
-| `0x0045a700` | IndexedPairGet |
 | `0x0045a9c0` | PanelTextureSlotsBlit |
-| `0x0045aac0` | PanelItemFlag10SetClear |
-| `0x0045ab00` | PanelStateFlagsToggle |
-| `0x0045abb0` | InputDeviceSetFlag20 |
 | `0x0045abf0` | PanelItemFlag8SetIfEnabled |
 | `0x0045ac30` | PanelTextureSlotsAllocate |
 | `0x0045adb0` | SimCursorInteractionTick |
@@ -887,7 +878,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0045d060` | PrioritiesImagePositionsConfigLoad |
 | `0x0045d110` | RegionContainmentScanUpdate |
 | `0x0045d300` | PriorityImageSelectionStateUpdate |
-| `0x0045d370` | RegionBoundsSet |
 | `0x0045d3c0` | PriorityPanelRowMoveDispatch |
 | `0x0045d3f0` | PriorityImageOrderMoveToFront |
 | `0x0045d470` | UIListEntriesSwap |
@@ -926,7 +916,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004624a0` | RewardFlhContextTick |
 | `0x00462600` | RewardTaskTextDrawAndScoreGate |
 | `0x00462700` | PointerOverrideExpiryTick |
-| `0x00462800` | RewardScoreAdd |
 | `0x004628e0` | CallbackRecordAllocateInitialize |
 | `0x00462960` | TaskTableContentsRelease |
 | `0x004629d0` | PanelEventEntryAppend |
@@ -941,14 +930,11 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00463540` | IndexedSurfaceEntriesRestore |
 | `0x00463590` | TerrainCellSurfaceNormalGet |
 | `0x004636b0` | InfoPanelStringEntriesInitialize |
-| `0x00463730` | IndexedFloatPairSet |
 | `0x00463770` | ScrollRectResourceRecordCreate |
 | `0x00463810` | ScrollRectPayloadRecordCreate |
 | `0x004638a0` | SimTrackCursorHitTest |
 | `0x00463d20` | ViewBlitRectPositionsApply |
 | `0x00463e40` | FloatRoundToNearestInt |
-| `0x00463ea0` | IndexedTextMetricsPairGet |
-| `0x00463ed0` | IndexedTextMetricsPairSet |
 | `0x00463f00` | SceneQuadGridEmit |
 | `0x00464110` | RotatedPairsScratchFill |
 | `0x004641c0` | BuildingPlacementFootprintRenderAndValidate |

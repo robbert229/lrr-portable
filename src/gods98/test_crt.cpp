@@ -465,6 +465,78 @@ int main(void)
         byte_range_swap(NULL, y, 2); /* guarded */
     }
 
+    /* The DAT window band (2026-10-24). */
+    {
+        indexed_pair_set(2, 11u, 22u);
+        indexed_pair_set(100, 1u, 1u); /* guarded */
+        uint32_t x = 0u, y = 0u;
+        indexed_pair_get(2, &x, &y);
+        CHECK(x == 11u && y == 22u, "the pair window round-trips");
+        indexed_pair_get(-1, &x, &y);
+        indexed_pair_get(2, NULL, &y); /* guarded */
+        CHECK(x == 11u && y == 22u, "the guards skip");
+
+        indexed_float_pair_set(1, 3u, 8u);
+        float fx = 0, fy = 0;
+        indexed_float_pair_peek(1, &fx, &fy);
+        CHECK(fx == 3.0f && fy == 8.0f, "the float pair casts land");
+
+        char metric[0x28];
+        memset(metric, 0, sizeof(metric));
+        indexed_record_pointer_set(3, metric);
+        indexed_text_metrics_pair_set(3, 6u, 7u);
+        CHECK(*(const uint32_t*)(metric + 0x24) == 1u, "the set raises the flag");
+        indexed_text_metrics_pair_get(3, &x, &y);
+        CHECK(x == 6u && y == 7u, "the metrics pair reads");
+        indexed_text_metrics_pair_set(4, 1u, 1u); /* empty slot: inert */
+        indexed_text_metrics_pair_get(9, &x, &y); /* guarded */
+
+        const uint32_t xy[2] = { 5u, 6u };
+        region_bounds_set(xy, 640u, 480u);
+        uint32_t rx[2] = { 0, 0 };
+        float rw[2] = { 0, 0 };
+        region_bounds_peek(rx, rw);
+        CHECK(rx[0] == 5u && rx[1] == 6u && rw[0] == 640.0f && rw[1] == 480.0f,
+              "the region quad lands");
+        region_bounds_set(NULL, 1u, 1u); /* guarded */
+
+        char block[0x2c * 3];
+        memset(block, 0, sizeof(block));
+        panel_draw_records_set(0, block);
+        CHECK(panel_draw_records_peek(0) == (void*)block, "the hook lands");
+        panel_item_flag16_set(0, 1, 1);
+        uint32_t w = 0u;
+        __builtin_memcpy(&w, block + 0x28 + 0x2c, 4);
+        CHECK(w == 0x10u, "the item word raises bit 16");
+        panel_item_flag32_set(0, 1, 1);
+        __builtin_memcpy(&w, block + 0x28 + 0x2c, 4);
+        CHECK(w == 0x30u, "bit 32 stacks");
+        panel_item_flag16_set(0, 1, 0);
+        __builtin_memcpy(&w, block + 0x28 + 0x2c, 4);
+        CHECK(w == 0x20u, "bit 16 drops alone");
+        panel_item_flag16_set(7, 0, 1); /* empty panel: guarded */
+        panel_item_flag32_set(0, -1, 1); /* guarded */
+
+        request_record_flags_set(5, 2u);
+        panel_state_flags_toggle(5);
+        CHECK(request_record_flags_peek(5) == 0xcu, "the branch-two fold");
+        request_record_flags_set(5, 8u);
+        panel_state_flags_toggle(5);
+        CHECK(request_record_flags_peek(5) == (8u & ~4u) | 0xau,
+              "the branch-one fold");
+        panel_state_flags_toggle(100); /* guarded */
+        request_record_flags_set(5, 0u);
+    }
+
+    /* RewardScoreAdd (2026-10-24). */
+    {
+        const float base = reward_score_total_peek();
+        const uint32_t n = reward_score_count_peek();
+        reward_score_add(3.5f);
+        CHECK(reward_score_total_peek() == base + 3.5f, "the score accumulates");
+        CHECK(reward_score_count_peek() == n + 1u, "the count rises once");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "crt_test: %d failure(s)\n", s_failures);
         return 1;

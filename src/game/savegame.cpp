@@ -221,6 +221,9 @@ int save_write_slot(GameContext* ctx, int slot)
     return ok;
 }
 
+/* SavCommit (FUN_00417fc0): the corpus commits the selected slot by
+ * writing the open slot context — DAT_005574d0's slot through the
+ * port's active-slot model, bootstrap-and-write faithful. */
 void save_commit(GameContext* ctx)
 {
     if (ctx == NULL || ctx->save_slot < 0) {
@@ -762,4 +765,14 @@ void* sav_build_ctx(GameContext* ctx)
         return NULL;
     }
     return sav_slot_ctx(ctx, save_slot_get(ctx));
+}
+
+/* SavRecordPtr (FUN_00417f90) — see savegame.hpp. */
+void* sav_record_ptr(GameContext* ctx, int index)
+{
+    if (sav_build_ctx(ctx) == NULL || index < 0
+        || index >= ctx->record_count) {
+        return NULL; /* the corpus's zero answer */
+    }
+    return (char*)ctx->records + (size_t)index * SAVE_RECORD_SIZE + 4;
 }

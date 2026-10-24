@@ -495,4 +495,23 @@ int  entity_task_chain_contains_kind(const EntitySlot* e, int type);
 }
 #endif
 
+/* --- the kind-7 zone-command word + cancel (2026-10-24; finding 252) ---------
+ * CmdCancelByCoords (FUN_00403700): walks the global command list and
+ * completes (state bit 0x20) every type-7 record whose zone word `+0x2c`
+ * matches `zone`; when `probe` is zero the coordinate test is skipped,
+ * otherwise the record's +0x20/+0x24 pair must equal (x, y). The corpus
+ * writer of the zone word (the kind-7 issue-and-link helper) is
+ * unported, so the field lands zero-initialized with accessors standing
+ * in (documented deviation). */
+void cmd_cancel_by_coords(int zone, int probe, int x, int y);
+int  cmd_rec_zone_get(const void* rec);
+void cmd_rec_zone_set(void* rec, int zone);
+/* Public global-head link — CmdLinkHead @ 0x404030, exported for the
+ * list-walking leaves (the corpus's own entry point). */
+void cmd_link_global_head(void* rec, int kind);
+/* Port-side staged writers for the cell-command slots (the corpus's
+ * kind-7 issuer is unported). */
+void cmd_rec_action_set(void* rec, int action);
+void cmd_rec_target_set(void* rec, int target);
+
 #endif /* LEGORRR_GAME_CMD_HPP */
