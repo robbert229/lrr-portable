@@ -343,6 +343,12 @@ uint32_t selection_state_handle_get(int index);
 
 uint32_t selection_state_flags_peek(void);
 
+/* SelectionModeStateSet (FUN_00418190, finding 478): the corpus stores the
+ * selection-mode word (DAT_004db8e8) beside the selection-state word this
+ * band models; no ported feeder, so zero-init storage with a peek. */
+void     selection_mode_state_set(uint32_t value);
+uint32_t selection_mode_state_peek(void);
+
 /* UiModeResourceBit40Get (FUN_004191f0, findings 443/474): bit 0x40 of the
  * selection-state word — the same word the band above models (this leaf
  * reads it through the corpus's mask). */

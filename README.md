@@ -2184,6 +2184,24 @@ sim-interaction update) and an empty selection answers false where the
 corpus dereferences NULL. `frontend_test` pins the gate's four walks and
 `select_test` the mask, the empty-selection deviation, and the mirror.
 
+**The unowned DAT word-store band** (2026-10-24; findings 37/256/392/408/419/440/478):
+eleven corpus leaves land. Eleven DAT globals with no ported owner store,
+clear, or toggle through blind one-liners; each lands as zero-initialized
+module storage with port-side peeks standing in for the unported corpus
+readers. `crt.*` takes eight — the advisor-word bit-0 read (0x401c20) and
+its state-word hooks (findings 37/38, the advisor readers stay blocked),
+the task-refresh flag pair `state_flag_toggle_when_zero` /
+`global_task_refresh_flag_get` (0x407340/0x407360, finding 392), the
+stored-value and config stores (0x409d40, 0x40f5e0 — the erosion-config
+slot LevelLoad feeds, finding 419), the mode-zero flag (0x40ab10), the
+rockfall table-base store (0x40bfc0), and the UI word's bit-0 clear
+(0x40e7e0). `savegame.*` takes `save_state_event_context_set` (0x418110),
+`frontend.*` the selection-mode word store (0x418190, beside the band
+that models its neighbor), and `message.*` the deferred-callback presence
+store (0x453900 — GameConfigInit seeds it from the message-resource
+find). `crt_test`, `savegame_test`, `frontend_test`, and `message_test`
+pin the stores, the toggle walk, and the guards.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

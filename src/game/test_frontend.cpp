@@ -1107,6 +1107,14 @@ int main(int argc, char** argv)
         selection_state_flags_set(0u); /* restore boot state */
     }
 
+    /* SelectionModeStateSet (2026-10-24). */
+    {
+        CHECK(selection_mode_state_peek() == 0u, "the mode word starts clear");
+        selection_mode_state_set(2u);
+        CHECK(selection_mode_state_peek() == 2u, "the store lands");
+        selection_mode_state_set(0u);
+    }
+
     if (s_failures == 0) {
         printf("frontend: all tests passed\n");
         return 0;

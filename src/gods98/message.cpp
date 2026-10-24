@@ -368,3 +368,17 @@ uint32_t incident_message_state_get(void)
 {
     return s_incident_state;
 }
+
+/* DeferredCallbackSet (FUN_00453900) — zero-init module static (the
+ * corpus's DAT_004a673c presence word). */
+static uint32_t s_deferred_callback_presence;
+
+void deferred_callback_set(uint32_t value)
+{
+    s_deferred_callback_presence = value;
+}
+
+uint32_t deferred_callback_peek(void)
+{
+    return s_deferred_callback_presence;
+}

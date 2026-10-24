@@ -525,5 +525,10 @@ int main(void)
               && checkpoint_blob_get(NULL) == NULL,
           "the blob getter threads the ctx");
 
+    /* SaveStateEventContextSet (2026-10-24). */
+    save_state_event_context_set(9u);
+    CHECK(save_state_event_context_peek() == 9u, "the store lands");
+    save_state_event_context_set(0u);
+
     return 0;
 }

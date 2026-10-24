@@ -2126,3 +2126,17 @@ int main_sim_state_admission_predicate(void)
         && (sel & 1u) != 0u
         && system_state_flags_get() == 0u;
 }
+
+/* SelectionModeStateSet (FUN_00418190) — zero-init module static (the
+ * corpus's DAT_004db8e8 word; its corpus readers are unported). */
+static uint32_t s_sel_mode_state;
+
+void selection_mode_state_set(uint32_t value)
+{
+    s_sel_mode_state = value;
+}
+
+uint32_t selection_mode_state_peek(void)
+{
+    return s_sel_mode_state;
+}

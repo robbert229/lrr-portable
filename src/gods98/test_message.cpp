@@ -180,6 +180,14 @@ int main(void)
         info_message_secondary_sound_set(7, 0u); /* restore for later tests */
     }
 
+    /* DeferredCallbackSet (2026-10-24). */
+    {
+        CHECK(deferred_callback_peek() == 0u, "presence starts absent");
+        deferred_callback_set(1u);
+        CHECK(deferred_callback_peek() == 1u, "the store lands");
+        deferred_callback_set(0u);
+    }
+
     if (s_failures == 0) {
         printf("message_test: PASS\n");
         return 0;

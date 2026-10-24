@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 702 | 27.4% |
+| ported | 713 | 27.8% |
 | anchored | 4 | 0.2% |
-| named | 1811 | 70.6% |
+| named | 1800 | 70.2% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (702 functions)
+  (713 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1811 functions)
+  citation yet (1800 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1816 (70.8%).**
+**Game logic remaining to port: 1805 (70.4%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -60,7 +60,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00401b20` | AdvisorClearActiveState |
 | `0x00401b30` | AdvisorApplySlotTransform |
 | `0x00401bf0` | GlobalField505f88Get |
-| `0x00401c20` | GlobalFlagBit0IsSet |
 | `0x00401c30` | DisplayWidthGet |
 | `0x00401c40` | DisplayHeightGet |
 | `0x00401c50` | FormattedTextPrintfWidth |
@@ -121,8 +120,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004070b0` | BubbleActionStringsInit |
 | `0x00407240` | BubbleConfigTextureLoad |
 | `0x00407300` | BubbleActionNameToIndex |
-| `0x00407340` | StateFlagToggleWhenZero |
-| `0x00407360` | GlobalTaskRefreshFlagGet |
 | `0x00407370` | ResetObjectAuxiliaryState |
 | `0x004073a0` | EntityPointerRegistriesRemove |
 | `0x00407410` | Type4ObjectRegistryInsert |
@@ -174,7 +171,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004099d0` | ReleaseAllGroupRecords |
 | `0x00409a90` | WorldObjectCreateWithTransform |
 | `0x00409cd0` | CellCardinalNeighborApply |
-| `0x00409d40` | LevelStateStoredValueSet |
 | `0x00409d50` | EntityCellPathEffectsApply |
 | `0x00409f20` | EntityPlacementCommandsBuildOnce |
 | `0x00409ff0` | EntityDestroyTrackedPointerCleanup |
@@ -184,7 +180,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0040a5c0` | QuadMeshRenderRecordPoolSlotAllocate |
 | `0x0040a5e0` | RecordCountDigitsFill |
 | `0x0040aae0` | EntityQuadMeshRenderRecordAllowed |
-| `0x0040ab10` | GlobalModeZeroInputSet |
 | `0x0040ab70` | DependencyGridConfigLoad |
 | `0x0040aea0` | EnsureCellEntriesLoaded |
 | `0x0040af40` | CellResourceEntryMatches |
@@ -205,7 +200,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0040be10` | SceneLightCreateAtPosition |
 | `0x0040beb0` | SceneMarkerCreateAtPositionOrObject |
 | `0x0040bf70` | RockFallStyleNameLookup |
-| `0x0040bfc0` | RockFallStyleTableSet |
 | `0x0040bfd0` | RockFallStylesConfigLoad |
 | `0x0040c0d0` | SceneActSlotLoadAndRegister |
 | `0x0040c1b0` | IndexedResourceHandleSetCreate |
@@ -250,7 +244,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0040e350` | CellEntityKindCreateOrRemove |
 | `0x0040e490` | EncyclopediaConfigFilesOpen |
 | `0x0040e700` | TerrainChoiceResourceSelect |
-| `0x0040e7e0` | GlobalFlagBit0Clear |
 | `0x0040e8d0` | ScreenSpaceEffectDispatchIfEnabled |
 | `0x0040e910` | GlobalValueClearIfEqual |
 | `0x0040e930` | ErosionTimingStateInit |
@@ -260,7 +253,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0040f0e0` | KindSixRandomMessageDispatchSweep |
 | `0x0040f2b0` | LavaErosionNeighborEligible |
 | `0x0040f330` | LavaErosionNeighborMutate |
-| `0x0040f5e0` | GlobalConfigValueSet |
 | `0x0040f5f0` | ErosionEightNeighborPropagate |
 | `0x0040f6c0` | SceneNodeRecordCreate |
 | `0x0040f7b0` | OptionalResourceDestroy |
@@ -368,9 +360,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00418000` | ShowLevelOverlayForCurrentSelection |
 | `0x00418040` | CampaignChainSnapshotCreate |
 | `0x004180c0` | OptionsContextCopyAndReplaceResource |
-| `0x00418110` | SaveStateEventContextSet |
 | `0x00418120` | IsAverageValueAbove99 |
-| `0x00418190` | SelectionModeStateSet |
 | `0x004181b0` | HelpWindowResourcesInit |
 | `0x00418450` | HelpWindowInfoConfigStringsLoad |
 | `0x004185f0` | HelpWindowButtonLayoutLoad |
@@ -855,7 +845,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004532e0` | IndirectHandleResolveInPlace |
 | `0x00453320` | TutorialScriptCommandDispatch |
 | `0x004538a0` | CameraFocusScrollScaleCommit |
-| `0x00453900` | DeferredCallbackSet |
 | `0x00453910` | DeferredCallbackInvokeIfSet |
 | `0x00453920` | AdvisorScrollStepAdvance |
 | `0x00453bb0` | FrameTimerArrayAdvanceAndAdvisorClear |

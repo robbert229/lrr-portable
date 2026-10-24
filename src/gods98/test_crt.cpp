@@ -361,6 +361,40 @@ int main(void)
     global_value_004ffe48_set(0xABu); /* the setter stores (no getter shape) */
     global_value_004ffe48_set(0u);    /* restore for later tests */
 
+    /* The unowned DAT word-store band (2026-10-24). */
+    {
+        CHECK(global_flag_bit0_is_set() == 0u, "the advisor word starts clear");
+        advisor_state_word_set(1u);
+        CHECK(global_flag_bit0_is_set() == 1u, "bit 0 reads through");
+        advisor_state_word_set(2u);
+        CHECK(global_flag_bit0_is_set() == 0u, "bit 1 does not count");
+        advisor_state_word_set(0u);
+
+        CHECK(global_task_refresh_flag_get() == 0u, "the flag starts clear");
+        state_flag_toggle_when_zero();
+        CHECK(global_task_refresh_flag_get() == 1u, "zero becomes one");
+        state_flag_toggle_when_zero();
+        CHECK(global_task_refresh_flag_get() == 0u, "one returns to zero");
+
+        level_state_stored_value_set(5u);
+        CHECK(level_stored_word_peek() == 5u, "the stored word lands");
+        global_mode_zero_input_set(1);
+        CHECK(mode_zero_input_flag_peek() == 0u, "nonzero clears the flag");
+        global_mode_zero_input_set(0);
+        CHECK(mode_zero_input_flag_peek() == 1u, "zero raises the flag");
+        rockfall_style_table_base_set(3u);
+        CHECK(rockfall_table_base_peek() == 3u, "the base index lands");
+
+        global_flag_bit0_clear(); /* the clear is a no-op on the zero word */
+        CHECK(ui_flag_word_peek() == 0u, "the word stays clear");
+
+        global_config_value_set(3u);
+        CHECK(global_config_word_peek() == 3u, "the erosion config lands");
+        global_config_value_set(0u);
+        level_state_stored_value_set(0u);
+        rockfall_style_table_base_set(0u);
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "crt_test: %d failure(s)\n", s_failures);
         return 1;

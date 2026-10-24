@@ -405,3 +405,60 @@ void global_value_004ffe48_set(uint32_t value)
 {
     s_value_004ffe48 = value;
 }
+
+/* --- the unowned DAT word-store band (see crt.hpp) -------------------------- */
+static uint32_t s_advisor_state_word = 0u; /* DAT_004b31bc */
+static uint32_t s_task_refresh_flag = 0u;  /* DAT_00557860 */
+static uint32_t s_level_stored_word = 0u;  /* DAT_004b8a54 */
+static uint32_t s_mode_zero_flag = 0u;     /* DAT_004c7178 */
+static uint32_t s_rockfall_base = 0u;      /* DAT_004c79a4 */
+static uint32_t s_ui_flag_word = 0u;       /* DAT_004c7ea8 */
+static uint32_t s_config_word = 0u;        /* DAT_004a1ee4 */
+
+uint32_t global_flag_bit0_is_set(void)
+{
+    return s_advisor_state_word & 1u;
+}
+
+void state_flag_toggle_when_zero(void)
+{
+    s_task_refresh_flag = (s_task_refresh_flag == 0u) ? 1u : 0u;
+}
+
+uint32_t global_task_refresh_flag_get(void)
+{
+    return s_task_refresh_flag;
+}
+
+void level_state_stored_value_set(uint32_t v)
+{
+    s_level_stored_word = v;
+}
+
+void global_mode_zero_input_set(int value)
+{
+    s_mode_zero_flag = (value == 0) ? 1u : 0u;
+}
+
+void rockfall_style_table_base_set(uint32_t v)
+{
+    s_rockfall_base = v;
+}
+
+void global_flag_bit0_clear(void)
+{
+    s_ui_flag_word &= ~1u;
+}
+
+void global_config_value_set(uint32_t v)
+{
+    s_config_word = v;
+}
+
+uint32_t advisor_state_word_peek(void)  { return s_advisor_state_word; }
+void     advisor_state_word_set(uint32_t v) { s_advisor_state_word = v; }
+uint32_t level_stored_word_peek(void)   { return s_level_stored_word; }
+uint32_t mode_zero_input_flag_peek(void){ return s_mode_zero_flag; }
+uint32_t rockfall_table_base_peek(void) { return s_rockfall_base; }
+uint32_t ui_flag_word_peek(void)        { return s_ui_flag_word; }
+uint32_t global_config_word_peek(void)  { return s_config_word; }
