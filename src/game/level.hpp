@@ -526,6 +526,12 @@ uint32_t global_state_field84_get(const LevelState* s);
  * 0 when no level object is active (finding 475's resource check). */
 uint32_t upgrade_resource_check(const LevelState* s, int selector);
 
+/* AlwaysAcceptPlaceCommandCell (FUN_00432550, finding 455): the
+ * cell-eligibility callback command kind 0x16 installs — answers accept
+ * unconditionally; any restriction lives in the callers' command tests.
+ * Corpus arguments are ignored; definition stays void. */
+int always_accept_place_command_cell(void);
+
 #ifdef __cplusplus
 }
 #endif

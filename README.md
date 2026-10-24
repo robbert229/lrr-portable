@@ -1531,6 +1531,24 @@ finding 185), and `game_file_system_type_get` (`GameFileSystemTypeGet
 start that picks WAD versus standard operations. `block_test` drives
 the split corners; `record_test` pins byte isolation.
 
+**Constant, stub and DAT-global band** (2026-10-24; findings 21/380/383/
+386/392/399/406/440/455): the pure pool's fixed-return leaves land where
+their roles live. In `src/gods98/crt.*`: the zero float (0x408930) and
+the DirectSound minimum-volume `-10000` dword (0x47c160, corpus view
+`0xffffd8f0`), the zero processor-feature fallback (0x490230) and the
+FLH magic 'UU' silent leaf (0x456210), plus the two module-backed DAT
+globals modeled on `message.cpp`'s `s_system_state` precedent — the
+meaning-unresolved float field (0x4230b0, findings 295/392) and the
+store-and-return global (0x4567c0) whose corpus writers are all
+unported, so the storage answers its initial value until they land.
+`always_accept_place_command_cell` (0x432550, `level.*`) is the kind-
+0x16 command's unconditional cell-eligibility callback (finding 455),
+and `flic_opcode25_success_stub` (0x484b90, `flic.*`) names the 8-bit
+opcode-25 success stub (finding 21 — no pixel writes; the shipped 16-bit
+coder's unsupported-coder note stands). Corpus-ignored arguments keep
+the definitions `(void)`; x87 float10 stays a documented double
+deviation. `crt_test`, `level_test` and `flic_test` drive the band.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

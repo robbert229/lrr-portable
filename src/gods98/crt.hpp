@@ -118,6 +118,46 @@ double double_build_with_exponent(uint32_t significand_low,
                                   uint32_t significand_high,
                                   int16_t exponent);
 
+/* ------------------------------------------------------------------ *
+ *  Constant and DAT-global band (2026-10-24; findings 380/383/386/
+ *  392/399/406/440). The corpus's fixed-return leaves and the two
+ *  module-backed DAT globals, modeled like message.cpp's s_system_state
+ *  precedent: no ported writer touches these addresses yet, so the
+ *  storage answers its corpus-initial value until the writers land.
+ *  Deviations: corpus x87 float10 constants and globals read as double
+ *  (as across this module); the corpus's ignored arguments keep the
+ *  definitions void (its callers pass them and drop them).
+ * ------------------------------------------------------------------ */
+
+/* ConstantZeroFloatGet (FUN_00408930, findings 380/392): the constant
+ * 0.0 leaf. */
+double constant_zero_float_get(void);
+
+/* ConstantNegative10000Get (FUN_0047c160, findings 383/406): returns
+ * -10000 (the corpus's dword 0xffffd8f0) — the DirectSound
+ * minimum-volume constant. */
+int32_t constant_negative_10000_get(void);
+
+/* ProcessorFeatureFallbackFalse (FUN_00490230, findings 386/399): zero
+ * — the fallback when IsProcessorFeaturePresent cannot be resolved. */
+uint32_t processor_feature_fallback_false(void);
+
+/* FlhMagicUuNoop (FUN_00456210, finding 440): the FLH magic 'UU'
+ * pass's silent leaf — returns zero without changing state; the corpus
+ * call sites (FLIC and CRT paths) do not reveal a further role. */
+uint32_t flh_magic_uu_noop(void);
+
+/* GlobalFloatField00556F00Get (FUN_004230b0, findings 295/392): reads
+ * the global float at DAT_00556f00. Its meaning is unresolved — the
+ * faithful read stays, storage stays static-backed (x87 deviation). */
+double global_float_field_00556f00_get(void);
+
+/* GlobalValue_004ff9bcStoreAndReturn (FUN_004567c0, findings 386/440):
+ * stores the pointed-to dword into DAT_004ff9bc-backed storage and
+ * returns it. NULL answers zero and stores nothing (documented
+ * deviation; corpus callers always pass a live pointer). */
+uint32_t global_value_004ff9bc_store_and_return(const void* value);
+
 #ifdef __cplusplus
 }
 #endif
