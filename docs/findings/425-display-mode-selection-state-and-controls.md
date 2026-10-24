@@ -13,6 +13,7 @@ This finding expands the three `player-interface/display-mode-selection` functio
 ## Filter and dialog state flow
 
 - `DirectDrawDeviceInitialize @ 0x0049d030` clears the selected adapter/mode pointers, initializes two mode-state globals to `1`, resets the filter tuple count, and appends the default 640×480×16 tuple. It conditionally appends two additional tuples. Its dialog path is supplied to `DialogBoxParamA` through callback address `0x0049d2f0`; the callback body is not present as a named manifest function in the canonical full corpus.
+- `DAT_00568058` selects the display path: value `1` initializes full-screen mode, while `0` initializes windowed mode. The same selector is passed to DirectDraw mode enumeration and controls whether the empty-list message refers to screen modes or bit modes.
 - `DisplayResolutionFilterTupleAppend` stores the tuple fields literally. `DisplayModeMatchesFilterTuple @ 0x0049d8d0` consumes the tuple list: each field is compared with the corresponding enumerated mode value, and zero fields act as wildcards. `DirectDrawDeviceInitialize` calls the matcher while searching enumerated modes; `DisplayModeListPopulate @ 0x0049d630` also uses it when rebuilding the dialog list.
 - `DisplayResolutionComboPopulate` operates on a separate list control and shared record buffer. The 0x114-byte record stride, the tested `+0x100` flag, and the chosen pointer are visible directly; the wider record schema is not established by this function alone. Its `DirectDrawDeviceCreate` call passes the adapter pointer and the shared buffer/count addresses. The callee’s decompiled prototype omits those output arguments, so their detailed contract remains based on the call site and data flow.
 - `DisplayRefreshRateControlsSync` does not directly enumerate refresh rates. It delegates to `DisplayModeDialogSetModeAndRefreshChoices`, which stores its mode argument, calls `DisplayModeListPopulate`, and updates the text of control `0x3ee`. `DisplayModeListPopulate` obtains the mode list through `DirectDrawEnumeratedDeviceCreate @ 0x0047c4b0`, filters its records with `DisplayModeMatchesFilterTuple`, repopulates control `0x3eb`, and disables the default dialog action when there are no supported modes.
@@ -29,7 +30,7 @@ This finding expands the three `player-interface/display-mode-selection` functio
 
 1. Recover and trace dialog callback `0x0049d2f0` to establish the event paths that populate the resolution list and synchronize refresh controls.
 2. Identify the structure passed through the display-mode buffers, including the meaning of flag `0x2000`, the capability bit `0x20`, and the fields used for width/height/depth matching.
-3. Trace initialization and mutation of `DAT_00568058` and `DAT_0056805c` through dialog creation and user events before assigning names to their mode-state roles.
+3. Trace initialization and mutation of `DAT_0056805c` through dialog creation and user events before assigning a role to that remaining mode-state value.
 
 ## Coverage index impact
 
