@@ -604,6 +604,7 @@ Open threads, in order of value:
 | 405 | [findings/405-level-map-loading-pipeline.md](docs/findings/405-level-map-loading-pipeline.md) | Level and Map Loading Pipeline |
 | 406 | [findings/406-audio-playback-mixing-and-spatial-sound.md](docs/findings/406-audio-playback-mixing-and-spatial-sound.md) | Audio Playback, Mixing, and Spatial Sound |
 | 407 | [findings/407-system-input-and-osf-state.md](docs/findings/407-system-input-and-osf-state.md) | System Input and OSF State |
+| 408 | [findings/408-save-slot-context-and-level-record-lifecycle.md](docs/findings/408-save-slot-context-and-level-record-lifecycle.md) | Save Slot Context and Level Record Lifecycle |
 
 Canonical full pseudocode corpus: [`docs/decompiles/full/LEGORR.full.c`](docs/decompiles/full/LEGORR.full.c)
 (2564 manifest functions; see its [README](docs/decompiles/full/README.md)). The
