@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 540 | 21.1% |
+| ported | 545 | 21.3% |
 | anchored | 5 | 0.2% |
-| named | 1973 | 77.0% |
+| named | 1968 | 76.8% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 0 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (540 functions)
+  (545 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (5 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1973 functions)
+  citation yet (1968 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (0 functions)
 
-**Game logic remaining to port: 1978 (77.1%).**
+**Game logic remaining to port: 1973 (77.0%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -666,7 +666,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00435ebb` | ScreenEffectRecordSet |
 | `0x00435ef4` | RecordFields4And14Set |
 | `0x00435f16` | CursorScreenRayContextReset |
-| `0x00435f28` | TerrainGridBorderInsetGet |
 | `0x00435f32` | EntityFieldsA0A4StoreA8Clear |
 | `0x00436831` | CameraSetTiltBounds |
 | `0x00436860` | CameraSetTilt |
@@ -948,9 +947,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0044f4e0` | TerrainCellSurfaceTypeSet |
 | `0x0044f570` | TerrainCellSurfaceTypeReset |
 | `0x0044f5c0` | TerrainCellSurfaceAppearanceApply |
-| `0x0044f700` | WorldToTerrainCellBoundsCheck |
-| `0x0044f810` | GridCoordinateClampAndStore |
-| `0x0044f870` | TerrainWorldPointToCell |
 | `0x0044fab0` | TerrainCellSurfaceTriangleVerticesSelect |
 | `0x0044fb90` | TerrainSurfacePointProjectOffset |
 | `0x00450060` | GridCellReadSurfaceVector |
@@ -962,7 +958,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00450730` | TerrainCellChangeQueueAppend |
 | `0x00450780` | TerrainCellChangeQueueFlush |
 | `0x004507d0` | TerrainCellEdgeVectorQuery |
-| `0x004508a0` | CellNeighborDirectionCode |
 | `0x00450960` | CellDirtyQueuePushAndClear |
 | `0x00450a80` | CellListMinDistanceScaleApply |
 | `0x00451180` | CellVariantEntryMatchCheck |

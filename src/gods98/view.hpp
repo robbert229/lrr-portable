@@ -167,4 +167,9 @@ void cam_set_pos(CameraHandle* c, float x, float y, float z);/* FUN_00475430 */
 void cam_get_facing(CameraHandle* c, float out[3]);         /* FUN_00475500 */
 void cam_set_facing(CameraHandle* c, const float* r);       /* FUN_00475470 */
 
+/* TerrainGridBorderInsetGet (FUN_00435f28): the tile-count edge clamp —
+ * g_view_grid_edge is DAT_005560ac with its ported writer, so this is
+ * the faithful getter. */
+int view_grid_edge_get(void);
+
 #endif /* LEGORRR_VIEW_HPP */

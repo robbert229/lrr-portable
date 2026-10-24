@@ -530,3 +530,9 @@ int menu_overlay_list_count(const void* menu)
     }
     return count;
 }
+
+/* TerrainGridBorderInsetGet (FUN_00435f28): DAT_005560ac's getter. */
+int view_grid_edge_get(void)
+{
+    return g_view_grid_edge;
+}

@@ -362,3 +362,95 @@ uint32_t indexed_record_transform_copy_in(void* record, int index,
     }
     return 1u;
 }
+
+/* --- grid-descriptor coordinate leaves (see record.hpp) ------------------ */
+
+int world_to_terrain_cell_bounds_check(const void* map, float world_x,
+                                       float world_y, int* cell_x,
+                                       int* cell_y, float* subcell)
+{
+    const int cx = (int)world_x; /* __ftol: truncate toward zero */
+    const int cy = (int)world_y;
+    if (cell_x != NULL) {
+        *cell_x = cx;
+    }
+    if (cell_y != NULL) {
+        *cell_y = cy;
+    }
+    const int w = (int)rec_dword(map, 0x00);
+    const int h = (int)rec_dword(map, 0x04);
+    if (map == NULL || !(-1 < cx && cx < w && -1 < cy && cy < h)) {
+        return 0;
+    }
+    if (subcell != NULL) {
+        const float bs = (float)(int)rec_dword(map, 0x10);
+        const float ox = (float)(int)rec_dword(map, 0x18);
+        const float oy = (float)(int)rec_dword(map, 0x1C);
+        float px = (world_x - ((float)cx * bs + ox)) / (bs * 0.5f);
+        float py = -((world_y - (oy - (float)cy * bs)) / (bs * 0.5f));
+        if (1.0f < px) {
+            px = 2.0f - px;
+        }
+        if (1.0f < py) {
+            py = 2.0f - py;
+        }
+        if (px < py) {
+            py = px;
+        }
+        *subcell = py;
+    }
+    return 1;
+}
+
+void grid_coordinate_clamp_and_store(const void* map, float world_x,
+                                     float world_y, int* cell_x, int* cell_y)
+{
+    const int w = (int)rec_dword(map, 0x00);
+    const int h = (int)rec_dword(map, 0x04);
+    int cx = (int)world_x;
+    int cy = (int)world_y;
+    if (cx < 0) {
+        cx = 0;
+    }
+    if (w <= cx) {
+        cx = w - 1;
+    }
+    if (cy < 0) {
+        cy = 0;
+    }
+    if (h <= cy) {
+        cy = h - 1;
+    }
+    if (cell_x != NULL) {
+        *cell_x = cx;
+    }
+    if (cell_y != NULL) {
+        *cell_y = cy;
+    }
+}
+
+uint32_t terrain_world_point_to_cell(const void* map, const float* point,
+                                     float* cell_out, float* offset_out)
+{
+    int cx = 0, cy = 0;
+    if (point != NULL
+        && world_to_terrain_cell_bounds_check(map, point[0], point[1],
+                                              &cx, &cy, NULL) != 0) {
+        if (cell_out != NULL) {
+            cell_out[0] = (float)cx;
+            cell_out[1] = (float)cy;
+        }
+        if (offset_out != NULL) {
+            float wx = 0.0f, wy = 0.0f;
+            map_cell_to_world_center(map, (uint32_t)cx, (uint32_t)cy,
+                                     &wx, &wy);
+            float scale_f = 0.0f;
+            __builtin_memcpy(&scale_f, (const char*)map + 0x10,
+                             sizeof(scale_f));
+            const float inv = 1.0f / scale_f;
+            offset_out[0] = inv * (point[0] - wx) + 0.5f;
+            offset_out[1] = inv * (point[1] - wy) + 0.5f;
+        }
+    }
+    return 0u;
+}

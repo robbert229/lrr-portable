@@ -568,6 +568,13 @@ void terrain_cell_flags_set_mask20108000(LevelState* s, int x, int y);
 void terrain_cell_flag40000000_clear_or_set(LevelState* s, int cx, int cy,
                                             int set);
 
+/* CellNeighborDirectionCode (FUN_004508a0): the 3x3 neighbor direction
+ * code — 0..7 for the eight adjacent cells (0 = -y, 1 = +x, 2 = +y,
+ * 3 = -x, corners continuing 4..7 clockwise from +x-up), and -1 when
+ * (x1,y1) and (x2,y2) are the same cell or not adjacent. Pure, no
+ * state. */
+int cell_neighbor_direction_code(int x1, int y1, int x2, int y2);
+
 #ifdef __cplusplus
 }
 #endif

@@ -497,6 +497,97 @@ static void test_transform_copy_in(void)
           "empty table answers success without touching anything");
 }
 
+/* Grid-descriptor coordinate leaves (findings wave 2026-10-24). The
+ * descriptor: w/h at +0/+4, int scale +0x10, int origins +0x18/+0x1C. */
+static void test_descriptor_coordinates(void)
+{
+    uint8_t desc[0x20];
+    memset(desc, 0, sizeof(desc));
+    poke_dword(desc, 0x00, 4u);
+    poke_dword(desc, 0x04, 4u);
+    poke_dword(desc, 0x10, 2u);   /* scale as an int (bounds check's view) */
+    poke_dword(desc, 0x18, 10u);
+    poke_dword(desc, 0x1C, 10u);
+
+    int cx = 0, cy = 0;
+    /* In range: cell coordinates store and the leaf answers 1. */
+    CHECK(world_to_terrain_cell_bounds_check(desc, 1.5f, 2.5f, &cx, &cy, NULL)
+              == 1,
+          "an in-range world point checks in");
+    CHECK(cx == 1 && cy == 2, "cells truncate toward zero");
+    /* Truncation on negatives: -2.5 truncates to -2 (toward zero). */
+    CHECK(world_to_terrain_cell_bounds_check(desc, -2.5f, 0.0f, &cx, &cy, NULL)
+              == 0,
+          "cell -2 fails the -1 bound");
+    CHECK(cx == -2 && cy == 0, "out-of-range coordinates still store");
+
+    /* Subcell: px = (wx - (cx*bs + ox)) / (bs/2); the y partner folds
+     * past 1 and the pair answers by lowest. Hand-computed:
+     * wx=1.5 -> px = (1.5 - 12)/1 = -10.5; wy=2.5 -> py = -(2.5-6)/1
+     * = 3.5 -> fold 2-3.5 = -1.5 -> lowest -10.5. */
+    float sub = 0.0f;
+    CHECK(world_to_terrain_cell_bounds_check(desc, 1.5f, 2.5f, &cx, &cy, &sub)
+              == 1,
+          "the subcell path answers in range");
+    CHECK(sub == -10.5f, "the subcell is the lowest folded pair value");
+
+    /* Clamp-and-store. */
+    grid_coordinate_clamp_and_store(desc, 1.9f, -0.5f, &cx, &cy);
+    CHECK(cx == 1 && cy == 0, "clamps floor at zero (truncated first)");
+    grid_coordinate_clamp_and_store(desc, 99.0f, 99.0f, &cx, &cy);
+    CHECK(cx == 3 && cy == 3, "clamps below the dimensions");
+    grid_coordinate_clamp_and_store(desc, -2.9f, 5.0f, &cx, &cy);
+    CHECK(cx == 0 && cy == 3, "negative floors, positive clamps");
+    grid_coordinate_clamp_and_store(desc, 1.0f, 1.0f, NULL, NULL);
+    CHECK(cx == 0 && cy == 3, "NULL stores change nothing");
+
+    /* The forwarder-shaped leaf: scale +0x10 read as FLOAT here, so the
+     * fixture stores float 1.0 while the center converts the same bits
+     * as an int (the corpus's own mismatch, reproduced faithfully). */
+    uint8_t desc2[0x20];
+    memset(desc2, 0, sizeof(desc2));
+    poke_dword(desc2, 0x00, 4u);
+    poke_dword(desc2, 0x04, 4u);
+    float one = 1.0f;
+    uint32_t one_bits;
+    __builtin_memcpy(&one_bits, &one, sizeof(one_bits));
+    poke_dword(desc2, 0x10, one_bits);
+    poke_dword(desc2, 0x18, 0u);
+    poke_dword(desc2, 0x1C, 0u);
+
+    float point[2] = { 1.5f, 1.5f };
+    float cell[2] = { 9, 9 };
+    float offset[2] = { 9, 9 };
+    CHECK(terrain_world_point_to_cell(desc2, point, cell, offset) == 0u,
+          "the leaf answers 0 (the corpus never answers otherwise)");
+    CHECK(cell[0] == 1.0f && cell[1] == 1.0f, "the cell coordinates stream");
+    /* Mirror the center computation for the offset check. */
+    float si = (float)(int)one_bits; /* = 1.0f: bits-as-int casts once */
+    float center_x = si * 0.5f + (float)1 * si + 0.0f;
+    float center_y = 0.0f - (si * 0.5f + (float)1 * si);
+    CHECK(offset[0] == 1.5f - center_x + 0.5f, "x offsets by +1/2 step");
+    CHECK(offset[1] == 1.5f - center_y + 0.5f, "y offsets by +1/2 step");
+
+    /* Corners: NULL point answers 0 untouched; out-of-range leaves both
+     * outputs untouched. */
+    CHECK(terrain_world_point_to_cell(desc2, NULL, cell, offset) == 0u,
+          "NULL point is safe");
+    float far_point[2] = { 99.0f, 0.0f };
+    CHECK(terrain_world_point_to_cell(desc2, far_point, cell, offset) == 0u,
+          "the out-of-range point answers 0");
+    CHECK(offset[0] == 1.5f - center_x + 0.5f,
+          "out of range changes no output");
+
+    /* NULL-map deviations (documented). */
+    cx = 42;
+    CHECK(world_to_terrain_cell_bounds_check(NULL, 1.0f, 1.0f, &cx, NULL, NULL)
+              == 0,
+          "NULL map checks nothing out");
+    CHECK(cx == 1, "the cell coordinate still stores through NULL");
+    grid_coordinate_clamp_and_store(NULL, 1.0f, 1.0f, &cx, NULL);
+    CHECK(cx == -1, "a zero width clamps the index below zero (faithful)");
+}
+
 static void test_interpolated_z(void)
 {
     /* a = 10 at +8, b = 4 at +8: v = 4 * 2.5 + 10 = 20. */
@@ -536,6 +627,7 @@ int main(void)
     test_reader_sweep();
     test_indexed_sweep();
     test_transform_copy_in();
+    test_descriptor_coordinates();
     test_straggler_reads();
     test_interpolated_z();
     if (s_failures != 0) {
