@@ -1936,3 +1936,6 @@ address,review_status,interpretation,confidence,evidence
 0x004a4594,interpreted,BoulderAnimation enum token Ice,high,LevelLoad compares the configured BoulderAnimation value with this null-terminated token and maps it to animation mode 2.
 0x00556424,partial,High-fog color transition scalar initialized to 1.0,medium,"LevelLoad initializes this float to 1.0 when both FogColourRGB and HighFogColourRGB are present; no further read of this field appears in the available decompile."
 0x00556ec0,interpreted,Fall-in enable flag derived from the NoFallins setting,high,"LevelLoad sets this to zero when NoFallins parses as true and to one otherwise; the field therefore represents the inverse of the level configuration toggle."
+0x0049f338,interpreted,DirectDraw IID_IDirectDrawSurface,high,"Direct3DRMDeviceInit passes this GUID to QueryInterface on its supplied DirectDraw object to obtain a surface interface for device creation."
+0x0049f6d8,interpreted,Direct3D IID_IDirect3DDevice3,high,"Direct3DRMDeviceInit passes this GUID to QueryInterface for the Direct3D device interface and stores the returned interface at 0x0050591c."
+0x0049fbd8,interpreted,Direct3DRM IID_IDirect3DRM3,high,"Direct3DRMDeviceInit passes this GUID to QueryInterface on the Direct3DRM runtime object and stores the returned IDirect3DRM3 interface at 0x00505914."
