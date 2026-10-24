@@ -1659,6 +1659,22 @@ becomes guarded, reporting the unaddressable cell as zero. `level_test`
 proves the per-cell-per-field flag isolation, the sweep's in-band drop
 and field-16 keep, and the NULL-safe record reads.
 
+**Corner normals and surface-type config** (2026-10-24; findings
+236/321/451): `terrain_cell_normal_sample` (0x4512d0) reads a cell's
+corner float triple through the corpus's selectors — corner 0 from the
+block's first triple, corner 2 from the +0x0c triple, corners 1/3 the
+normalized sum, with the block byte +0x19 bit-0x1 parity raising the
+selector first. The port's physical blocks carry no loader-fed corner
+floats (the corpus's vertex builders are unported), so the axis corners
+read zero and the diagonal selectors normalize the zero vector — the
+faithful answers under the same loader-less conditions. The surface-type
+config leaves `terrain_surface_type_name_get` (0x435170) and
+`surface_type_configured_value_at_index` (0x435190) sit over the config
+loader's tables, which land NULL/zero until that loader (unported) lands,
+so names answer the missing-config literal and values read zero.
+`level_test` pins the selector shapes, the zero-vector normalization, and
+the guarded fallbacks.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the
