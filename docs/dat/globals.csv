@@ -133,9 +133,9 @@ address,decompile_reference_count,function_count,functions,finding_mentions,imag
 0x004a8f34,1,1,TerrainTileStyleResolve@0x0045e9e0,,.data,file-backed,0xa7d34,00003442000000000000964200002442,unreviewed,,,
 0x004a8f38,1,1,TerrainTileStyleResolve@0x0045e9e0,,.data,file-backed,0xa7d38,0000000000009642000024420000c042,unreviewed,,,
 0x004a8f3c,1,1,TerrainTileStyleResolve@0x0045e9e0,,.data,file-backed,0xa7d3c,00009642000024420000c04200007f43,unreviewed,,,
-0x004a8f40,2,1,TerrainTileStyleResolve@0x0045e9e0,,.data,file-backed,0xa7d40,000024420000c04200007f4300007f43,unreviewed,,,
-0x004a8f44,2,1,TerrainTileStyleResolve@0x0045e9e0,,.data,file-backed,0xa7d44,0000c04200007f4300007f430000b442,unreviewed,,,
-0x004a8f48,2,1,TerrainTileStyleResolve@0x0045e9e0,,.data,file-backed,0xa7d48,00007f4300007f430000b44200000000,unreviewed,,,
+0x004a8f40,2,1,TerrainTileStyleResolve@0x0045e9e0,,.data,file-backed,0xa7d40,000024420000c04200007f4300007f43,interpreted,Red channel of the terrain tile style 7 RGB triplet (41),high,TerrainTileStyleResolve assigns this value to the output red component when style code 7 is selected; ScreenCoordNormalizeInit divides the static RGB table values by 255.
+0x004a8f44,2,1,TerrainTileStyleResolve@0x0045e9e0,,.data,file-backed,0xa7d44,0000c04200007f4300007f430000b442,interpreted,Green channel of the terrain tile style 7 RGB triplet (96),high,TerrainTileStyleResolve assigns this value to the output green component when style code 7 is selected; ScreenCoordNormalizeInit divides the static RGB table values by 255.
+0x004a8f48,2,1,TerrainTileStyleResolve@0x0045e9e0,,.data,file-backed,0xa7d48,00007f4300007f430000b44200000000,interpreted,Blue channel of the terrain tile style 7 RGB triplet (255),high,TerrainTileStyleResolve assigns this value to the output blue component when style code 7 is selected; ScreenCoordNormalizeInit divides the static RGB table values by 255.
 0x004a8f4c,1,1,TerrainTileStyleResolve@0x0045e9e0,,.data,file-backed,0xa7d4c,00007f430000b4420000000000002443,unreviewed,,,
 0x004a8f50,1,1,TerrainTileStyleResolve@0x0045e9e0,,.data,file-backed,0xa7d50,0000b442000000000000244300006343,unreviewed,,,
 0x004a8f54,1,1,TerrainTileStyleResolve@0x0045e9e0,,.data,file-backed,0xa7d54,00000000000024430000634300001543,unreviewed,,,
@@ -199,9 +199,9 @@ address,decompile_reference_count,function_count,functions,finding_mentions,imag
 0x004a9060,1,1,TerrainTileStyleResolve@0x0045e9e0,,.data,file-backed,0xa7e60,00007f4300007f430000000000000000,unreviewed,,,
 0x004a9064,1,1,TerrainTileStyleResolve@0x0045e9e0,,.data,file-backed,0xa7e64,00007f43000000000000000000003c42,unreviewed,,,
 0x004a9068,1,1,TerrainTileStyleResolve@0x0045e9e0,,.data,file-backed,0xa7e68,000000000000000000003c4200003543,unreviewed,,,
-0x004a906c,2,1,TerrainTileStyleResolve@0x0045e9e0,,.data,file-backed,0xa7e6c,0000000000003c420000354300003f43,unreviewed,,,
-0x004a9070,2,1,TerrainTileStyleResolve@0x0045e9e0,,.data,file-backed,0xa7e70,00003c420000354300003f4300003f43,unreviewed,,,
-0x004a9074,2,1,TerrainTileStyleResolve@0x0045e9e0,,.data,file-backed,0xa7e74,0000354300003f4300003f4300003f43,unreviewed,,,
+0x004a906c,2,1,TerrainTileStyleResolve@0x0045e9e0,,.data,file-backed,0xa7e6c,0000000000003c420000354300003f43,interpreted,Red channel of the terrain tile style 9 RGB triplet (0),high,TerrainTileStyleResolve assigns this value to the output red component when style code 9 is selected; ScreenCoordNormalizeInit divides the static RGB table values by 255.
+0x004a9070,2,1,TerrainTileStyleResolve@0x0045e9e0,,.data,file-backed,0xa7e70,00003c420000354300003f4300003f43,interpreted,Green channel of the terrain tile style 9 RGB triplet (47),high,TerrainTileStyleResolve assigns this value to the output green component when style code 9 is selected; ScreenCoordNormalizeInit divides the static RGB table values by 255.
+0x004a9074,2,1,TerrainTileStyleResolve@0x0045e9e0,,.data,file-backed,0xa7e74,0000354300003f4300003f4300003f43,interpreted,Blue channel of the terrain tile style 9 RGB triplet (181),high,TerrainTileStyleResolve assigns this value to the output blue component when style code 9 is selected; ScreenCoordNormalizeInit divides the static RGB table values by 255.
 0x004a9078,1,1,TerrainTileStyleResolve@0x0045e9e0,,.data,file-backed,0xa7e78,00003f4300003f4300003f430000d842,unreviewed,,,
 0x004a907c,1,1,TerrainTileStyleResolve@0x0045e9e0,,.data,file-backed,0xa7e7c,00003f4300003f430000d84200000000,unreviewed,,,
 0x004a9080,1,1,TerrainTileStyleResolve@0x0045e9e0,,.data,file-backed,0xa7e80,00003f430000d8420000000000000000,unreviewed,,,
