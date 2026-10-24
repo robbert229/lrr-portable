@@ -11,7 +11,7 @@ This finding maps the 44 assigned global/engine/level accessors and mutators. Th
 | `0x00401c40` | `DisplayHeightGet` | Returns the configured display height used by centering and bounds callers (Finding 347). |
 | `0x00402170` | `LevelNoGatherObjectSetup` | Creates and links records for the NoGather level option during level loading (Finding 225). |
 | `0x004065d0` | `GlobalDwordGet` | Returns `DAT_0076ac84` (Finding 365). |
-| `0x00407340` | `StateFlagToggleWhenZero` | Toggles `DAT_00557860` between 0 and 1: zero becomes 1; any nonzero value becomes 0. The flag's domain meaning is unresolved. |
+| `0x00407340` | `StateFlagToggleWhenZero` | Toggles `DAT_00557860` between 0 and 1 on the Space-key press edge in `MainSimStep`. When set, it gates `ResetObjectAuxiliaryState` and changes type-2 entity handling in `TickEntityScreenEffects`; the flag's broader mode purpose remains unresolved. |
 | `0x00407540` | `FlaggedObjectTimerRegistryInsert` | Inserts a qualifying object with flag `0x80` and a fixed timer into a 20-slot registry (Finding 312). |
 | `0x00408930` | `ConstantZeroFloatGet` | Returns `0.0` (Finding 380). |
 | `0x00409d40` | `LevelStateStoredValueSet` | Stores the supplied value in the global level-state slot; the field's domain remains unresolved (Finding 356). |
