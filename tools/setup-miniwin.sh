@@ -13,7 +13,7 @@ cd "$(dirname "$0")/.."
 SUB=3rdparty/isle-portable
 MK="$(git ls-tree HEAD "$SUB" | awk '{print $3}')"   # pinned commit (gitlink SHA)
 
-if [ -d "$SUB/.git" ]; then
+if [ -e "$SUB/.git" ]; then   # -e: a file after `git submodule absorbgitdirs`
     echo "$SUB already present (commit ${MK:-?})"
     exit 0
 fi
