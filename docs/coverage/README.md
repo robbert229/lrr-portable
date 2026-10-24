@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 309 | 12.1% |
+| ported | 313 | 12.2% |
 | anchored | 5 | 0.2% |
-| named | 2204 | 86.0% |
+| named | 2200 | 85.8% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 0 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (309 functions)
+  (313 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (5 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (2204 functions)
+  citation yet (2200 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (0 functions)
 
-**Game logic remaining to port: 2209 (86.2%).**
+**Game logic remaining to port: 2205 (86.0%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -1282,8 +1282,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004641c0` | BuildingPlacementFootprintRenderAndValidate |
 | `0x00464720` | SurfaceVisibilitySet |
 | `0x00464fa0` | SoundAliasPlay |
-| `0x00465010` | ConfiguredVariantPropertySet |
-| `0x00465030` | ConfiguredVariantPropertyRead |
 | `0x00465090` | PositionalSoundSubmit |
 | `0x00465160` | SoundObjectDurationGet |
 | `0x00465190` | SoundHandleStopForward |
@@ -1680,8 +1678,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0047ad30` | AttachedSoundStopByEntity |
 | `0x0047ad70` | SoundBufferPlayWithPosition |
 | `0x0047b020` | SoundBufferAssociationAdd |
-| `0x0047b050` | SoundBankEntryVolumeSet |
-| `0x0047b0d0` | IndexedRecordStride134WordGet |
 | `0x0047b0f0` | SoundHandleToBuffer |
 | `0x0047b130` | SoundBufferStopHandle |
 | `0x0047b160` | SoundSubsystemStopAll |
