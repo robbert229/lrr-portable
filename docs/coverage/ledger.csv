@@ -852,7 +852,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00436ae9,FUN_00436ae9,named,SelectionRecordPointGet,0,136
 00436b0b,FUN_00436b0b,named,SelectionRecordPointSet,0,165
 00436b33,FUN_00436b33,named,CameraGetPositionWithTerrainHeight,0,279
-00436b79,FUN_00436b79,named,CameraRotationGet,0,87
+00436b79,FUN_00436b79,ported,CameraRotationGet,3,87
 00436b87,FUN_00436b87,named,CameraPointerPanUpdate,0,504
 00436c20,FUN_00436c20,named,ActivityNameTableInit,0,5294
 00437050,FUN_00437050,named,EntityPoolResourcesRelease,0,466
@@ -1967,7 +1967,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0047d740,FUN_0047d740,named,SurfacePixelRowsFlipWithScratch,0,2087
 0047d800,FUN_0047d800,named,Bitmap24BitSurfaceConvert,0,2526
 0047d9d0,FUN_0047d9d0,ported,BitmapSurfaceLoad,6,2025
-0047db90,FUN_0047db90,named,RGBChannelsPack,0,166
+0047db90,FUN_0047db90,ported,RGBChannelsPack,3,166
 0047dbc0,FUN_0047dbc0,named,ResourceRecordAddRef,0,249
 0047dbf0,FUN_0047dbf0,ported,ImageSurfaceBlitTransformed,1,530
 0047dcb0,FUN_0047dcb0,ported,SurfaceBlitRect,2,1647
@@ -2383,7 +2383,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00492381,__fload,runtime-import,__fload,0,503
 00492bc6,FUN_00492bc6,named,CrtDoubleRemainderReduction,0,2398
 00492dcc,FUN_00492dcc,named,CrtFmodExtendedPrecision,0,525
-00493150,FUN_00493150,named,X87RoundToIntegral,0,78
+00493150,FUN_00493150,ported,X87RoundToIntegral,2,78
 00493170,FUN_00493170,named,CrtMathExceptionHandleSingleResult,0,459
 004931c0,FUN_004931c0,named,CrtMathExceptionHandleResultWithStatus,0,746
 00493280,FUN_00493280,named,CrtFloatingPointExceptionRaise,0,3724

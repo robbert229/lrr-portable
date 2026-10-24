@@ -52,4 +52,10 @@ int category_value_is_neither_zero_nor_fifteen(int value);
 int interpolated_z_within_bounds(const void* record_a, const void* record_b,
                                  float t, float target, float scale);
 
+/* CameraRotationGet (FUN_00436b79, findings 339/426): the float at
+ * camera +0x84. The axis/units of the field stay with the callers
+ * (finding 426: not established from the corpus); this is the faithful
+ * read, as in the stats accessors. NULL answers 0. */
+float camera_rotation_get(const void* camera);
+
 #endif /* LEGORRR_GODS98_RECORD_HPP */

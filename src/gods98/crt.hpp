@@ -107,3 +107,9 @@ double format_argument_read_double(uint8_t** cursor);
 #endif
 
 #endif /* LEGORRR_GODS98_CRT_HPP */
+
+/* FUN_00493150: x87 round-to-integral (FRNDINT) — the nearest integer
+ * under the round-to-nearest-even mode, as a floating value. Ported as
+ * double (the port has no x87 80-bit register; every x87 leaf here is a
+ * documented single/double deviation). */
+double x87_round_to_integral(double value);

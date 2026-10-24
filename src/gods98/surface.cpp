@@ -166,3 +166,12 @@ void surface_draw_sweep(void* px, int pitch, int w, int h, int frame)
         }
     }
 }
+/* RGBChannelsPack (FUN_0047db90, findings 23/431): the corpus's CONCAT
+ * chain drops the three bytes little-endian — argument one in bits 0-7,
+ * two in 8-15, three in 16-23, top byte zero. Callers (the palette scan
+ * of finding 23) feed the bytes in memory order, so the word is the
+ * 0x00BBGGRR triple as stored. */
+uint32_t rgb_channels_pack(uint8_t red, uint8_t green, uint8_t blue)
+{
+    return (uint32_t)red | ((uint32_t)green << 8) | ((uint32_t)blue << 16);
+}

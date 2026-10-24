@@ -197,6 +197,19 @@ static void test_crt_leaves(void)
           "word read advances two and zero-extends");
     CHECK(format_argument_read_double(&cur) == f1 && cur == buf + 14,
           "double read advances eight");
+
+    /* x87 FRNDINT: nearest-even integral, floating. */
+    CHECK(x87_round_to_integral(1.5) == 2.0, "half rounds to even (2)");
+    CHECK(x87_round_to_integral(2.5) == 2.0, "half rounds down to even (2)");
+    CHECK(x87_round_to_integral(-1.5) == -2.0, "negative half to even");
+    CHECK(x87_round_to_integral(3.2) == 3.0, "3.2 to 3");
+    CHECK(x87_round_to_integral(-3.2) == -3.0, "-3.2 to -3");
+    CHECK(x87_round_to_integral(7.0) == 7.0, "integers untouched");
+    {
+        const double neg_zero = x87_round_to_integral(-0.4);
+        CHECK(neg_zero == 0.0 && 1.0 / neg_zero < 0.0,
+              "the integral of a small negative keeps -0");
+    }
 }
 
 int main(void)

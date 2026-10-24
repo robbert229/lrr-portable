@@ -47,4 +47,10 @@ void surface_blit_texture(void* px, int pitch, int w, int h,
 /* Moving bar (animation proof; magenta). */
 void surface_draw_sweep(void* px, int pitch, int w, int h, int frame);
 
+/* RGBChannelsPack (FUN_0047db90, findings 23/431): pack three channel
+ * bytes into the corpus's 0x00BBGGRR word — first argument lands in the
+ * low byte, matching the corpus's byte-array caller (palette entries
+ * pack exactly as read: bytes 0..2 become bits 0..24). */
+uint32_t rgb_channels_pack(uint8_t red, uint8_t green, uint8_t blue);
+
 #endif /* LEGORRR_SURFACE_HPP */

@@ -1422,6 +1422,20 @@ there; the port guards it (documented deviation). `block_test` drives
 sibling order, subtree skipping, the end-of-chain corner and the
 iteration loop.
 
+**Final pure leaves: channel packer, FRNDINT, camera field** (2026-10-24;
+findings 23/379/426/431): three stragglers from the pure-leaf sweep land
+where they belong. `rgb_channels_pack` (`RGBChannelsPack @ 0x47db90`,
+`surface.*`) packs the corpus's byte triple little-endian into the
+0x00BBGGRR word the palette scan builds; a new `surface_test` drives the
+corners. `x87_round_to_integral` (`X87RoundToIntegral @ 0x493150`,
+`crt.*`) is FRNDINT — `rint()` matches the nearest-even integral
+exactly, -0 kept (the x87 single/double deviation documented across
+this band). `camera_rotation_get` (`CameraRotationGet @ 0x436b79`,
+`record.*`) is the opaque-record float at camera +0x84: finding 426
+establishes no axis/units for the field, so — like the stats accessors
+— this is the faithful read and the meaning stays with callers.
+`crt_test`/`record_test` pin the rounding corners and the field read.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the
