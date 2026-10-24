@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 713 | 27.8% |
+| ported | 720 | 28.1% |
 | anchored | 4 | 0.2% |
-| named | 1800 | 70.2% |
+| named | 1793 | 69.9% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (713 functions)
+  (720 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1800 functions)
+  citation yet (1793 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1805 (70.4%).**
+**Game logic remaining to port: 1798 (70.1%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -59,9 +59,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00401a70` | AdvisorSceneAdvanceAndCompletionCheck |
 | `0x00401b20` | AdvisorClearActiveState |
 | `0x00401b30` | AdvisorApplySlotTransform |
-| `0x00401bf0` | GlobalField505f88Get |
-| `0x00401c30` | DisplayWidthGet |
-| `0x00401c40` | DisplayHeightGet |
 | `0x00401c50` | FormattedTextPrintfWidth |
 | `0x00401c80` | FormattedTextPrintf |
 | `0x00403030` | CellCommandType3Issue |
@@ -278,7 +275,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00410320` | StringQueueRecordOrFlush |
 | `0x004103d0` | MainMenuTextItem |
 | `0x004103f0` | MenuWipeStart |
-| `0x00410440` | MenuWipeEnd |
 | `0x00410450` | StringKeyedCacheEntryFind |
 | `0x00410490` | StringRegistryIntern |
 | `0x00410520` | StringCacheLookupOrLoad |
@@ -887,9 +883,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0045a9c0` | PanelTextureSlotsBlit |
 | `0x0045aac0` | PanelItemFlag10SetClear |
 | `0x0045ab00` | PanelStateFlagsToggle |
-| `0x0045ab30` | RequestRecordSetFlag4ClearFlag8 |
-| `0x0045ab60` | RequestRecordSetFlag2ClearFlag8 |
-| `0x0045ab90` | RequestRecordFlag8IsSet |
 | `0x0045abb0` | InputDeviceSetFlag20 |
 | `0x0045abf0` | PanelItemFlag8SetIfEnabled |
 | `0x0045ac30` | PanelTextureSlotsAllocate |

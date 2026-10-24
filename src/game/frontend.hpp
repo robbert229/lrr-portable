@@ -411,4 +411,12 @@ void frontend_flow_word_set(int which, int value); /* port-side setter */
  * reads and the message_system_state model), so no new storage lands. */
 int main_sim_state_admission_predicate(void);
 
+/* MenuWipeEnd (FUN_00410440): clears the wipe flag's low two bits — the
+ * corpus's word DAT_005574f0, whose setter half (wipe start, setting 3)
+ * lives in the unported menu-wipe driver. Zero-init static with a peek
+ * stands in (deviation, documented in frontend.cpp). */
+void     menu_wipe_end(void);
+uint32_t menu_wipe_flags_peek(void);
+void     menu_wipe_flags_set(uint32_t flags); /* port hook */
+
 #endif /* LEGORRR_GAME_FRONTEND_HPP */

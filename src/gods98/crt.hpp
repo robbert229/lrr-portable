@@ -244,4 +244,21 @@ uint32_t rockfall_table_base_peek(void);           /* port hook */
 uint32_t ui_flag_word_peek(void);                  /* port hook */
 uint32_t global_config_word_peek(void);            /* port hook */
 
+/* --- display dimensions + request-record predicates (2026-10-24) -----------
+ * DisplayWidthGet (FUN_00401c30) / DisplayHeightGet (FUN_00401c40): the window-mode
+ * extent pair the renderer's window apply stores (finding 172) — the
+ * renderer side is unported, so zero-init statics with setters stand in.
+ * The request-record predicates (FUN_0045ab30/60/90) AND the flag word of
+ * the 18 0x30-stride request records in the corpus's DAT_0050013c block
+ * (panel layer unported): a zero-init flag-word window, corpus-blind
+ * indexing guarded to 18 entries (deviation), port-side setter for the
+ * unported record writers. */
+int  display_width_get(void);
+int  display_height_get(void);
+void display_dimensions_set(int w, int h); /* port hook */
+int  request_record_ready_flag4(int index);   /* FUN_0045ab30 */
+int  request_record_ready_flag2(int index);   /* FUN_0045ab60 */
+int  request_record_flag8_is_set(int index);  /* FUN_0045ab90 */
+void request_record_flags_set(int index, uint32_t flags); /* port hook */
+
 #endif /* LEGORRR_GODS98_CRT_HPP */

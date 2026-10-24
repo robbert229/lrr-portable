@@ -24,11 +24,11 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00401a70,FUN_00401a70,named,AdvisorSceneAdvanceAndCompletionCheck,0,755
 00401b20,FUN_00401b20,named,AdvisorClearActiveState,0,85
 00401b30,FUN_00401b30,named,AdvisorApplySlotTransform,0,807
-00401bf0,FUN_00401bf0,named,GlobalField505f88Get,0,60
+00401bf0,FUN_00401bf0,ported,GlobalField505f88Get,2,60
 00401c00,FUN_00401c00,ported,StartLevelOverrideIfEnabledGet,1,89
 00401c20,FUN_00401c20,ported,GlobalFlagBit0IsSet,1,58
-00401c30,FUN_00401c30,named,DisplayWidthGet,0,60
-00401c40,FUN_00401c40,named,DisplayHeightGet,0,60
+00401c30,FUN_00401c30,ported,DisplayWidthGet,1,60
+00401c40,FUN_00401c40,ported,DisplayHeightGet,1,60
 00401c50,FUN_00401c50,named,FormattedTextPrintfWidth,0,149
 00401c80,FUN_00401c80,named,FormattedTextPrintf,0,178
 00401cb0,FUN_00401cb0,ported,CmdKindByName,1,368
@@ -355,7 +355,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00410320,FUN_00410320,named,StringQueueRecordOrFlush,0,842
 004103d0,FUN_004103d0,named,MainMenuTextItem,0,97
 004103f0,FUN_004103f0,named,MenuWipeStart,0,322
-00410440,FUN_00410440,named,MenuWipeEnd,0,85
+00410440,FUN_00410440,ported,MenuWipeEnd,2,85
 00410450,FUN_00410450,named,StringKeyedCacheEntryFind,0,459
 00410490,FUN_00410490,named,StringRegistryIntern,0,1439
 00410520,FUN_00410520,named,StringCacheLookupOrLoad,0,353
@@ -1305,9 +1305,9 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0045a9c0,FUN_0045a9c0,named,PanelTextureSlotsBlit,0,1476
 0045aac0,FUN_0045aac0,named,PanelItemFlag10SetClear,0,357
 0045ab00,FUN_0045ab00,named,PanelStateFlagsToggle,0,312
-0045ab30,FUN_0045ab30,named,RequestRecordSetFlag4ClearFlag8,0,201
-0045ab60,FUN_0045ab60,named,RequestRecordSetFlag2ClearFlag8,0,201
-0045ab90,FUN_0045ab90,named,RequestRecordFlag8IsSet,0,94
+0045ab30,FUN_0045ab30,ported,RequestRecordSetFlag4ClearFlag8,2,201
+0045ab60,FUN_0045ab60,ported,RequestRecordSetFlag2ClearFlag8,1,201
+0045ab90,FUN_0045ab90,ported,RequestRecordFlag8IsSet,1,94
 0045abb0,FUN_0045abb0,named,InputDeviceSetFlag20,0,313
 0045abf0,FUN_0045abf0,named,PanelItemFlag8SetIfEnabled,0,366
 0045ac30,FUN_0045ac30,named,PanelTextureSlotsAllocate,0,2011

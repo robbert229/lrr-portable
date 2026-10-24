@@ -1115,6 +1115,18 @@ int main(int argc, char** argv)
         selection_mode_state_set(0u);
     }
 
+    /* MenuWipeEnd (2026-10-24): the low-two-bit clear. */
+    {
+        menu_wipe_flags_set(3u);
+        CHECK(menu_wipe_flags_peek() == 3u, "the hook installs the pair");
+        menu_wipe_end();
+        CHECK(menu_wipe_flags_peek() == 0u, "the end clears both bits");
+        menu_wipe_flags_set(7u);
+        menu_wipe_end();
+        CHECK(menu_wipe_flags_peek() == 4u, "high bits stay put");
+        menu_wipe_flags_set(0u);
+    }
+
     if (s_failures == 0) {
         printf("frontend: all tests passed\n");
         return 0;
