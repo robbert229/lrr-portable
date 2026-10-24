@@ -20,6 +20,8 @@ If the configured display template exists and the precheck admits the event, the
 
 `IncidentMessageFlagSet @ 0x00419ae0` sets or clears the global `DAT_004dcd48` bit `0x4` tested by the dispatcher. `IncidentMessagePanelRefreshIfActive @ 0x00419da0` examines the first active record and calls a panel update helper when its node list and leading record fields meet the observed conditions. These operations establish the global gate and a first-record refresh path; they do not establish that every dispatched event is displayed or played.
 
+The observed low bits of `DAT_004dcd48` are: `0x01` tracks a first-record/panel transition and is cleared when the first record is removed or dismissed; `0x02` marks pending text refresh and is cleared by the text consumer; `0x04` enables dispatch; `0x08` enables the per-ID cooldown and sound-reset path; and `0x10` gates a low-mode selection effect for entries marked `0x10000`. Catalog initialization sets `0x08` and `0x10`. The word may carry additional state not exercised by these paths.
+
 ## Frame update and information-panel text
 
 The `EngineTick @ 0x004232e0` snapshot calls `InfoMessageTimerDecay @ 0x0041a2c0` before the in-game render/update branch. That helper walks all 40 per-ID timer fields at `DAT_004dc704` in `0x14`-byte steps and subtracts the frame delta from positive values. `KindSixRandomMessageDispatchSweep @ 0x0040f0e0` runs when its global gate is active: after its countdown expires it samples up to 100 random grid coordinates, accepts one through `FUN_0040f190`, dispatches message ID `6` with that coordinate pointer, and rearms the countdown to a value in the observed `750`–`799` range. Finding 256 captures this producer.
