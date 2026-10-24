@@ -155,7 +155,7 @@ Assignment confidence: 700 high, 1832 medium, 32 low. Basis counts: address-clus
 | --- | ---: | --- |
 | `geometry-math-primitives` — Geometry and matrix primitives | 15 | Computes reusable geometric relations, random values, or matrix transforms used by graphics and spatial queries; does not own a gameplay subsystem. |
 | `global-state-accessors` — Global state and configuration accessors | 44 | Small accessors/mutators for global flags, fields, scalar/vector values, and level state not owned by a narrower subsystem. |
-| `linked-records-and-state-helpers` — Linked Records and State Helpers | 7 | Linked-record cleanup, global list operations, selected-point transform, flag-mask callback checks, and scene-object state dispatch. |
+| `linked-records-and-state-helpers` — Linked Records and State Helpers | 7 | Linked-record cleanup, global list operations, selector-dependent helper, flag-mask callback checks, and scene-object state dispatch. |
 | `math-geometry` — Vector and geometric math | 29 | Scalar/vector operations, curve sampling, geometric distance/projection, and matrix helpers; excludes world-grid path and occupancy decisions. |
 | `motion-config-utilities` — Motion Helpers and Resource Utilities | 13 | Small motion/interpolation helpers plus loader/profile, string-table, progress, and resource-handle utilities. |
 | `record-pool-allocation` — Record and resource pools | 6 | Allocates or grows fixed-size record pools and render-resource instance pools; pool consumers and higher-level resource ownership are outside this area. |
