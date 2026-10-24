@@ -9,7 +9,6 @@
 
 #include "game/level.hpp"
 #include "game/game.hpp"
-#include "game/objective.hpp"
 #include "game/util.hpp"
 #include "gods98/block.hpp"
 #include "gods98/heap.hpp"
@@ -478,6 +477,115 @@ int main(int argc, char** argv)
         __builtin_memcpy(rec + 0x08, &saved, 4);
         CHECK(level_cell_flag8_check(s, -1, -1) == 0, "off-grid never blocked");
         CHECK(level_cell_flag8_check(s, w, 5) == 0, "past the grid never blocked");
+    }
+
+    /* Destination/placement predicates (FUN_00432950 / FUN_00432a20). */
+    {
+        const int w = (int)level_width(s), h = (int)level_height(s);
+        uint8_t* rec = level_voxel(s, 3, 4);
+        uint32_t saved, f;
+        const uint8_t saved_b2 = rec[2];
+        __builtin_memcpy(&saved, rec + 0x08, 4);
+
+        EntitySlot mover;
+        memset(&mover, 0, sizeof(mover));
+
+        /* Usable side: mover gate open, cell walkable-marked. */
+        f = 0x10u;
+        __builtin_memcpy(rec + 0x08, &f, 4);
+        rec[2] = 6;
+        mover.flags_3e8 = 0x8000u;
+        CHECK(entity_move_destination_cell_usable(&mover, s, 3, 4) == 1,
+              "the gated mover takes the walkable cell");
+        mover.flags_3e8 = 0x8004u; /* mover bit + the placement byte bit */
+        CHECK(terrain_cell_allows_placement(&mover, s, 3, 4) == 1,
+              "the same cell passes placement (byte gate open)");
+        mover.flags_3e8 = 0x8000u;
+
+        /* Entity gates: bit 0x8000 for the mover, byte bit 0x4 for placement. */
+        mover.flags_3e8 = 0u;
+        CHECK(entity_move_destination_cell_usable(&mover, s, 3, 4) == 0,
+              "the destination gate needs flag bit 0x8000");
+        CHECK(terrain_cell_allows_placement(&mover, s, 3, 4) == 0,
+              "placement needs the +1000 byte bit 0x4");
+        mover.flags_3e8 = 0x100u; /* byte 0x01 — bit 0x4 clear */
+        CHECK(terrain_cell_allows_placement(&mover, s, 3, 4) == 0,
+              "the placement gate reads the low byte");
+        mover.flags_3e8 = 0x104u;
+        CHECK(terrain_cell_allows_placement(&mover, s, 3, 4) == 1,
+              "the low byte's 0x4 opens the placement gate");
+        CHECK(terrain_cell_allows_placement(NULL, s, 3, 4) == 1,
+              "the NULL record (config call) passes the gate");
+
+        /* Coordinate gates: zero and the 2-cell margin. */
+        mover.flags_3e8 = 0x8000u;
+        CHECK(entity_move_destination_cell_usable(&mover, s, 0, 4) == 0,
+              "zero x is not a destination");
+        CHECK(entity_move_destination_cell_usable(&mover, s, 3, 0) == 0,
+              "zero y is not a destination");
+        CHECK(entity_move_destination_cell_usable(&mover, s, w - 1, 1) == 0,
+              "the margin gate rejects the last column");
+        CHECK(terrain_cell_allows_placement(NULL, s, w - 1, 1) == 0,
+              "placement shares the margin gate");
+        CHECK(entity_move_destination_cell_usable(&mover, s, -1, 1) == 0,
+              "negative wraps outside as unsigned");
+
+        /* Cell conditions: the 0x40 walk block, the 0x20 placement block,
+         * and the excluded type sets. */
+        f = 0x10u | 0x40u;
+        __builtin_memcpy(rec + 0x08, &f, 4);
+        CHECK(entity_move_destination_cell_usable(&mover, s, 3, 4) == 0,
+              "flag 0x40 blocks the destination");
+        CHECK(terrain_cell_allows_placement(NULL, s, 3, 4) == 1,
+              "flag 0x40 is not a placement blocker");
+        f = 0x10u | 0x20u;
+        __builtin_memcpy(rec + 0x08, &f, 4);
+        CHECK(entity_move_destination_cell_usable(&mover, s, 3, 4) == 1,
+              "flag 0x20 is not a destination blocker");
+        CHECK(terrain_cell_allows_placement(NULL, s, 3, 4) == 0,
+              "flag 0x20 blocks placement");
+        f = 0u;
+        __builtin_memcpy(rec + 0x08, &f, 4);
+        CHECK(entity_move_destination_cell_usable(&mover, s, 3, 4) == 0,
+              "no walkable flag: destination unusable");
+        CHECK(terrain_cell_allows_placement(NULL, s, 3, 4) == 0,
+              "no walkable flag: placement refused");
+
+        f = 0x10u;
+        __builtin_memcpy(rec + 0x08, &f, 4);
+        rec[2] = 8;
+        CHECK(entity_move_destination_cell_usable(&mover, s, 3, 4) == 1,
+              "type 8 does not block the destination");
+        rec[2] = 11;
+        CHECK(entity_move_destination_cell_usable(&mover, s, 3, 4) == 0,
+              "type 11 blocks the destination");
+        rec[2] = 1;
+        CHECK(entity_move_destination_cell_usable(&mover, s, 3, 4) == 0,
+              "type 1 blocks the destination");
+        rec[2] = 7;
+        CHECK(entity_move_destination_cell_usable(&mover, s, 3, 4) == 0,
+              "type 7 blocks the destination");
+        rec[2] = 1;
+        CHECK(terrain_cell_allows_placement(NULL, s, 3, 4) == 1,
+              "type 1 places");
+        rec[2] = 7;
+        CHECK(terrain_cell_allows_placement(NULL, s, 3, 4) == 1,
+              "type 7 places");
+        rec[2] = 11;
+        CHECK(terrain_cell_allows_placement(NULL, s, 3, 4) == 0,
+              "type 11 blocks placement");
+        rec[2] = 8;
+        CHECK(terrain_cell_allows_placement(NULL, s, 3, 4) == 0,
+              "type 8 blocks placement");
+        rec[2] = 10;
+        CHECK(terrain_cell_allows_placement(NULL, s, 3, 4) == 0,
+              "type 10 blocks placement");
+        rec[2] = 5;
+        CHECK(terrain_cell_allows_placement(NULL, s, 3, 4) == 1,
+              "a plain type places");
+
+        __builtin_memcpy(rec + 0x08, &saved, 4);
+        rec[2] = saved_b2;
     }
 
     /* Terrain leaves: gated type read + the +5 byte classifier. */

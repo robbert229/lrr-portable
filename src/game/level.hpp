@@ -328,36 +328,6 @@ int entity_move_destination_cell_usable(const struct EntitySlot* e,
 int terrain_cell_allows_placement(const struct EntitySlot* e,
                                   const LevelState* s, int cx, int cy);
 
-/* TerrainCreate (0x44e0c0) scoped port (finding 07): builds the terrain
- * grid handle from a surface map; the handle is the opaque model of the
- * corpus terrain record (free it with terrain_destroy). */
-void* terrain_create(const char* surface_map, float blocksize);
-void terrain_destroy(void* terrain);
-
-/* TerrainCellSurfaceTypeGet (FUN_0044f540, finding 226): the per-cell
- * surface-type byte (block-table +0x24) of the terrain handle. The
- * writer is the renderer-side appearance apply (blocked), so a fresh
- * terrain answers the zero state; NULL/out of range answer 0 (bounds
- * guard added, corpus indexes blind). */
-int terrain_cell_surface_type_get(const void* terrain, int x, int y);
-
-/* TerrainCellSurfaceTypeSet / Reset / AppearanceApply (FUN_0044f4e0 /
- * FUN_0044f570 / FUN_0044f5c0, 2026-10-24; findings 226/450): the writer
- * pair over the same +0x24 byte. The setter
- * returns the prior value and applies the type's appearance triplet from
- * the shipped table (six real entries in the reference data; larger types
- * read undefined neighbours in the corpus — white substituted,
- * documented deviation). Reset applies the white appearance and clears
- * the byte. The appearance leaf's own effect is the scene mesh color and
- * alpha set — the renderer seam — so mode nonzero changes no port state,
- * while mode zero also clears the byte. All leaves guard the bounds (the
- * corpus indexes blind) and answer 0/inert on NULL or misses. */
-int   terrain_cell_surface_type_set(void* terrain, int x, int y, int type);
-void  terrain_cell_surface_type_reset(void* terrain, int x, int y);
-void  terrain_cell_surface_appearance_apply(void* terrain, int x, int y,
-                                            int mode, float r, float g,
-                                            float b);
-
 /* FUN_00432e00: set (nonzero) or clear the cell's OCCUPIED flag — the
  * entity "reservation" bit the mover-state sync raises and the arrival
  * clears. Bounds-guarded (the corpus writes OOB for bad coords). */

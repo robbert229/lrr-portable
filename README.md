@@ -1274,6 +1274,22 @@ converter, so the reader ships standalone). `view_test` pins the
 matrix order and polygon parity, `crt_test` the pair conversions,
 `model_test` the cursor walk.
 
+**Terrain destination/placement predicates** (2026-10-24; findings
+284/293): the two entity-gated cell predicates land in `src/game/level.*`
+next to `level_walkable`, whose entity-gate TODO this closes —
+`entity_move_destination_cell_usable` (`EntityMoveDestinationCellIsUsable
+@ 0x432950`: entity `+1000` — decimal, the `flags_3e8` mirror — bit
+0x8000, both destination coordinates nonzero and inside the 2-cell
+margin, cell flag 0x10 set / 0x40 clear, type not in {1, 7, 11}) and
+`terrain_cell_allows_placement` (`TerrainCellAllowsPlacement @ 0x432a20`:
+the gate passes on a NULL record or the `+1000` low byte's bit 0x4, then
+flag 0x10 set / 0x20 clear, type not in {8, 10, 11}). Both read the
+already-modeled voxel grid through `level_voxel` (the corpus computes the
+cell address unguarded past its gate; unreachable cells report unusable
+— documented deviation). `level_test` drives both gates, the coordinate
+margins, the flag and type exclusion sets and the differing
+blockers/blocked-types of the pair.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the
