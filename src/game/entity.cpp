@@ -562,3 +562,35 @@ int entity_progress_advance_by_25(EntitySlot* e)
     }
     return 0;
 }
+
+/* --- object pointer registry (see entity.hpp) ------------------------------
+ * The corpus's ten-slot table (DAT pair at 0x5563b8 / 0x5563e0 as the
+ * count): zero-initialized statics, no ported feeder. */
+static int32_t  s_obj_ptr_slots[10];
+static uint32_t s_obj_ptr_count = 0u;
+
+void object_pointer_registry_clear_match(int32_t pointer)
+{
+    for (uint32_t i = 0; i < s_obj_ptr_count && i < 10u; ++i) {
+        if (s_obj_ptr_slots[i] == pointer) {
+            s_obj_ptr_slots[i] = 0;
+        }
+    }
+}
+
+int object_pointer_registry_get_slot(uint32_t index, int32_t* out)
+{
+    if (index >= s_obj_ptr_count) {
+        return 0; /* deviation: the corpus reads blindly past the count */
+    }
+    const int32_t v = s_obj_ptr_slots[index];
+    if (out != NULL) {
+        *out = v;
+    }
+    return v != 0 ? 1 : 0;
+}
+
+uint32_t object_pointer_registry_count_peek(void)
+{
+    return s_obj_ptr_count;
+}

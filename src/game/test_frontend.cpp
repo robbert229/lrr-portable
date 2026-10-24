@@ -912,6 +912,20 @@ int main(int argc, char** argv)
     test_scroll();
     test_records();
 
+    /* The selection-context accessors (2026-10-24): the corpus writers
+     * land unset, so the context starts NULL; the leaves round-trip. */
+    {
+        int dummy = 0;
+        CHECK(current_selection_context_get() == NULL,
+              "the context starts unset (no ported feeder)");
+        current_selection_context_set(&dummy);
+        CHECK(current_selection_context_get() == &dummy,
+              "the set/get round-trips");
+        current_selection_context_set(NULL);
+        CHECK(current_selection_context_get() == NULL,
+              "the context resets for later runs");
+    }
+
     if (s_failures == 0) {
         printf("frontend: all tests passed\n");
         return 0;

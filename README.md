@@ -1720,6 +1720,21 @@ the corpus's blind indexing. A tests/diagnostics peek
 (`grid_count_table_slot_peek`) keeps the statics observable.
 `level_test` pins the zero band, the table-edge guards, and the sweep.
 
+**Registry and selection-context accessors** (2026-10-24; findings
+292/376/456): two unowned-global pairs land as faithful static-backed
+leaves. The object-pointer registry — the corpus's ten-slot entity
+pointer table and its count — lands in `entity.*`:
+`object_pointer_registry_clear_match` (0x42dfc0) zeroes the matching
+entries (a no-op while empty) and `object_pointer_registry_get_slot`
+(0x42dff0) answers a slot only when it is below the count and non-zero.
+The object-list parse that feeds it is modeled without pushing, so the
+count stays zero and no lookup fires (documented deviation; a count peek
+keeps it observable). The selection-context pair
+`current_selection_context_get`/`_set` (0x417fe0/0x417ff0) lands in
+`frontend.*`: its corpus writers leave it unset in port cases, so the
+context answers NULL, and the two leaves round-trip. `entity_test` and
+`frontend_test` pin the zero behavior and the round-trip.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

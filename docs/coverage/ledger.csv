@@ -476,8 +476,8 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00417f40,FUN_00417f40,named,SavWriteRecord,0,453
 00417f90,FUN_00417f90,named,SavRecordPtr,0,213
 00417fc0,FUN_00417fc0,named,SavCommit,0,126
-00417fe0,FUN_00417fe0,named,CurrentSelectionContextGet,0,60
-00417ff0,FUN_00417ff0,named,CurrentSelectionContextSet,0,81
+00417fe0,FUN_00417fe0,ported,CurrentSelectionContextGet,1,60
+00417ff0,FUN_00417ff0,ported,CurrentSelectionContextSet,1,81
 00418000,FUN_00418000,named,ShowLevelOverlayForCurrentSelection,0,264
 00418040,FUN_00418040,named,CampaignChainSnapshotCreate,0,1040
 004180c0,FUN_004180c0,named,OptionsContextCopyAndReplaceResource,0,605
@@ -708,8 +708,8 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0042d600,FUN_0042d600,named,ObjectNamesLoad,0,4053
 0042da20,FUN_0042da20,named,ObjectTheNamesLoad,0,4183
 0042de40,FUN_0042de40,named,ViewportTargetPositionClamp,0,2070
-0042dfc0,FUN_0042dfc0,named,ObjectPointerRegistryClearMatch,0,310
-0042dff0,FUN_0042dff0,named,ObjectPointerRegistryGetSlot,0,208
+0042dfc0,FUN_0042dfc0,ported,ObjectPointerRegistryClearMatch,1,310
+0042dff0,FUN_0042dff0,ported,ObjectPointerRegistryGetSlot,1,208
 0042e020,FUN_0042e020,ported,OListEntityRecordParse,11,9851
 0042e8b0,FUN_0042e8b0,ported,ObjectListEntityTypeResolve,7,7597
 0042ed70,FUN_0042ed70,ported,EntityPointer,1,1332

@@ -313,6 +313,15 @@ void frontend_render_credits(const TextureSurface* font,
 void frontend_help_overlay(void* px, int pitch, int w, int h,
                            const char* text, const GameOptions* opts);
 
+/* CurrentSelectionContextGet / CurrentSelectionContextSet (FUN_00417fe0 /
+ * FUN_00417ff0, finding 376): get / set accessors over the corpus's
+ * current-selection-context global. Its corpus writers (the frontend
+ * state-change leaf — unported — and the menu-build leaf, modeled without
+ * storing) leave it unset, so the context answers NULL in port cases
+ * (documented deviation). */
+void* current_selection_context_get(void);
+void current_selection_context_set(void* context);
+
 #ifdef __cplusplus
 }
 #endif

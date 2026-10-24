@@ -1888,3 +1888,16 @@ void frontend_render_credits(const TextureSurface* font,
         }
     }
 }
+
+/* --- current selection context (see frontend.hpp) -------------------------- */
+static void* s_current_selection_context;
+
+void* current_selection_context_get(void)
+{
+    return s_current_selection_context;
+}
+
+void current_selection_context_set(void* context)
+{
+    s_current_selection_context = context;
+}

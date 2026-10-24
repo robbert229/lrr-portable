@@ -164,6 +164,18 @@ int entity_type3_flag04000000_test(const EntitySlot* e);
  * entity's +0x340 bound, and answer 1 when that bound is reached. */
 int entity_progress_advance_by_25(EntitySlot* e);
 
+/* --- object pointer registry (2026-10-24) ---------------------------------
+ * ObjectPointerRegistryClearMatch / ObjectPointerRegistryGetSlot
+ * (FUN_0042dfc0 / FUN_0042dff0, findings 292/456/247): the corpus's
+ * global table of ten entity pointers plus its live count. Its only
+ * feeder — the object-list record parse — is modeled without pushing
+ * entries, so the count stays zero: clearing answers the no-op, and the
+ * slot lookup never fires (documented deviation). The peek is a
+ * tests/diagnostics view (the message_active_count precedent). */
+void object_pointer_registry_clear_match(int32_t pointer);
+int object_pointer_registry_get_slot(uint32_t index, int32_t* out);
+uint32_t object_pointer_registry_count_peek(void);
+
 #ifdef __cplusplus
 }
 #endif

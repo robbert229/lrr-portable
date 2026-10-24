@@ -836,6 +836,22 @@ int main(int argc, char** argv)
         }
     }
 
+    /* The object pointer registry (2026-10-24): no feeder lands, so the
+     * count stays zero and the slot lookup never fires. */
+    {
+        int32_t out = 0x5a5a5a5a;
+        CHECK(object_pointer_registry_count_peek() == 0u,
+              "the registry count starts zero");
+        CHECK(object_pointer_registry_get_slot(0, &out) == 0,
+              "the first slot never fires");
+        CHECK(out == 0x5a5a5a5a, "the output stays untouched out of range");
+        CHECK(object_pointer_registry_get_slot(0, NULL) == 0,
+              "the NULL output is safe (deviation)");
+        object_pointer_registry_clear_match(1234);
+        CHECK(object_pointer_registry_count_peek() == 0u,
+              "the clear-match is a no-op with no entries");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "entity_test: %d failure(s)\n", s_failures);
         return 1;
