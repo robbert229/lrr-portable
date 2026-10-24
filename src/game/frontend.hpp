@@ -350,4 +350,31 @@ void selection_state_handle_extra_set(uint32_t value);/* diagnostics */
 uint32_t selection_state_handle_slot_peek(int table, int index);
 void selection_state_handle_slot_set(int table, int index, uint32_t value);
 
+/* --- band-mode / timed-effect / positions (2026-10-24) ----------------------
+ * TimedEffectUpdateRequestSet (FUN_0046b770, findings 228/05): raises the
+ * update flag (bit 2) of a timed-effect entry. The band storage lives
+ * with the unported timed-effect update family — the port models each
+ * entry's flag word inside a guarded 16-entry window (documented bounds
+ * deviation), with a peek view for tests.
+ * UiModeTransitionRequest (FUN_00418fc0, finding 250): the band mode word
+ * (DAT_004dc64c, modeled with the selection-state band) transition —
+ * the zero-second argument arms mode 4, mode 4 hands over to the requested
+ * index (raising the band's bit 5), and a same-index request just raises
+ * the bit. The answer reports whether the requested index is now active.
+ * SelectionModeSetByIndex (FUN_00418f80, finding 250): the two-entry
+ * switch — raises the timed-effect update flags for the band modes.
+ * UiModeResourcePositionsApply (FUN_00419100, finding 250): walks the
+ * two-entry position table (the corpus writes the table from the
+ * unported help-window layout loader — zero-init statics here), and the
+ * reposition hook per found handle is the simtick-cited surface seam. */
+void timed_effect_update_request_set(int index);
+uint32_t timed_effect_flags_peek(int index);           /* diagnostics */
+bool     ui_mode_transition_request(int index, int p2, int p3);
+int      band_mode_peek(void);                        /* diagnostics */
+void     band_mode_set(int mode);                     /* diagnostics */
+void     selection_mode_set_by_index(int index);
+void     ui_mode_resource_positions_apply(void);
+void     layout_position_set(int entry, int x, int y); /* diagnostics */
+int      layout_position_get(int entry, int* x, int* y);
+
 #endif /* LEGORRR_GAME_FRONTEND_HPP */

@@ -996,6 +996,79 @@ int main(int argc, char** argv)
               "the guarded window reads zero (deviation)");
     }
 
+    /* The band-mode / timed-effect / positions cluster (2026-10-24):
+     * the transition leaf's hand-over shape, the two-entry mode switch,
+     * the timed-effect flag window, and the positions pass. */
+    {
+        const uint32_t save_flags = selection_state_flags_peek();
+        band_mode_set(0);
+        CHECK(band_mode_peek() == 0, "the band mode starts zero");
+
+        /* The transition: the zero-second-argument arm goes to mode 4. */
+        CHECK(ui_mode_transition_request(2, 0, 0) == false
+                  && band_mode_peek() == 4,
+              "the arm request lands mode 4 (prior mode answers)");
+
+        /* Mode 4 hands over when the third argument is clear. */
+        CHECK(ui_mode_transition_request(2, 1, 0) == false
+                  && band_mode_peek() == 2
+                  && (selection_state_flags_peek() & 0x20u) != 0u,
+              "the hand-over lands the index and raises bit 5");
+
+        /* A same-index request just raises bit 5 (already raised). */
+        selection_state_flags_set(selection_state_flags_peek() & ~0x20u);
+        CHECK(ui_mode_transition_request(2, 1, 1) == true
+                  && band_mode_peek() == 2
+                  && (selection_state_flags_peek() & 0x20u) != 0u,
+              "the same-index request raises bit 5");
+
+        /* A different index with the band busy answers by prior mode. */
+        CHECK(ui_mode_transition_request(5, 1, 1) == false
+                  && band_mode_peek() == 2,
+              "the mismatched index answers zero");
+
+        /* Mode 4 with the third argument set: no hand-over, no bit. */
+        band_mode_set(4);
+        selection_state_flags_set(selection_state_flags_peek() & ~0x20u);
+        CHECK(ui_mode_transition_request(3, 1, 1) == false
+                  && band_mode_peek() == 4
+                  && (selection_state_flags_peek() & 0x20u) == 0u,
+              "the blocked hand-over keeps mode 4 and the bit low");
+
+        /* The mode switch: entries 8/9, nothing else. */
+        CHECK(timed_effect_flags_peek(8) == 0u
+                  && timed_effect_flags_peek(9) == 0u,
+              "the timed-effect flags start clear");
+        selection_mode_set_by_index(0);
+        CHECK(timed_effect_flags_peek(8) == 4u
+                  && timed_effect_flags_peek(9) == 0u,
+              "index 0 raises entry 8's update bit");
+        selection_mode_set_by_index(1);
+        CHECK(timed_effect_flags_peek(9) == 4u, "index 1 raises entry 9's");
+        selection_mode_set_by_index(2);
+        CHECK(timed_effect_flags_peek(0) == 0u,
+              "the default case writes nothing");
+        timed_effect_update_request_set(0);
+        CHECK(timed_effect_flags_peek(0) == 4u,
+              "the request leaf raises bit 2 directly");
+        timed_effect_update_request_set(16); /* outside the window */
+        CHECK(timed_effect_flags_peek(16) == 0u, "the guarded window reads zero");
+
+        /* Positions: the zero table applies, the handle gate reaches the
+         * seam without touching ported state. */
+        int x = 9, y = 9;
+        CHECK(layout_position_get(0, &x, &y) == 1 && x == 0 && y == 0,
+              "the layout table starts zero (loader seam)");
+        ui_mode_resource_positions_apply(); /* nothing found — inert */
+        selection_state_handle_extra_set(0x55u); /* gate index 1 */
+        ui_mode_resource_positions_apply();     /* one found — seam */
+        selection_state_handle_extra_set(0u);
+        CHECK(layout_position_get(5, &x, &y) == 0, "the guarded entry misses");
+
+        band_mode_set(0);
+        selection_state_flags_set(save_flags);
+    }
+
     if (s_failures == 0) {
         printf("frontend: all tests passed\n");
         return 0;

@@ -1983,3 +1983,102 @@ void selection_state_handle_slot_set(int table, int index, uint32_t value)
         s_sel_handles_a[off] = value;
     }
 }
+
+/* --- band-mode / timed-effect / positions (see frontend.hpp) -----------------
+ * The band mode word joins the selection-state statics (the corpus's
+ * DAT_004dc64c, read by the transition leaf and raised in passing by the
+ * state-bit gates). The timed-effect flag words land as a guarded window:
+ * the corpus's 0x27c-stride band entries live with the unported
+ * update/timestamp family, so only the per-entry flag word is modeled. */
+#define TIMED_EFFECT_ENTRIES 16
+#define LAYOUT_POSITION_ENTRIES 2   /* corpus: two help-window buttons */
+
+static int      s_band_mode;                    /* DAT_004dc64c */
+static uint32_t s_timed_effect_flags[TIMED_EFFECT_ENTRIES];
+static int32_t  s_layout_position[LAYOUT_POSITION_ENTRIES][2];
+
+void timed_effect_update_request_set(int index)
+{
+    if (index >= 0 && index < TIMED_EFFECT_ENTRIES) {
+        s_timed_effect_flags[index] |= 4u;
+    }
+    /* deviation: the corpus raises blindly at any index. */
+}
+
+uint32_t timed_effect_flags_peek(int index)
+{
+    if (index < 0 || index >= TIMED_EFFECT_ENTRIES) {
+        return 0u;
+    }
+    return s_timed_effect_flags[index];
+}
+
+bool ui_mode_transition_request(int index, int p2, int p3)
+{
+    const int mode = s_band_mode;
+    if (p2 == 0) {
+        s_band_mode = 4;
+    } else if (s_band_mode == 4) {
+        if (p3 == 0) {
+            s_band_mode = index;
+            s_sel_state |= 0x20u;
+            return index == 4;
+        }
+    } else if (s_band_mode == index) {
+        s_sel_state |= 0x20u;
+        return true;
+    }
+    return mode == index;
+}
+
+int band_mode_peek(void) { return s_band_mode; }
+void band_mode_set(int mode) { s_band_mode = mode; }
+
+void selection_mode_set_by_index(int index)
+{
+    switch (index) {
+    case 0:
+        timed_effect_update_request_set(8);
+        break;
+    case 1:
+        timed_effect_update_request_set(9);
+        break;
+    default:
+        break;
+    }
+}
+
+void ui_mode_resource_positions_apply(void)
+{
+    for (int i = 0; i < LAYOUT_POSITION_ENTRIES; ++i) {
+        const uint32_t handle = selection_state_handle_get(i);
+        if (handle != 0u) {
+            /* Corpus: the reposition leaf with (handle, 0, &position, 0) —
+             * the surface reposition hook, cited as a seam in simtick;
+             * the position table itself lands zero (the help-window layout
+             * loader is unported). */
+        }
+    }
+}
+
+void layout_position_set(int entry, int x, int y)
+{
+    if (entry >= 0 && entry < LAYOUT_POSITION_ENTRIES) {
+        s_layout_position[entry][0] = x;
+        s_layout_position[entry][1] = y;
+    }
+}
+
+int layout_position_get(int entry, int* x, int* y)
+{
+    if (entry < 0 || entry >= LAYOUT_POSITION_ENTRIES) {
+        return 0;
+    }
+    if (x != NULL) {
+        *x = s_layout_position[entry][0];
+    }
+    if (y != NULL) {
+        *y = s_layout_position[entry][1];
+    }
+    return 1;
+}

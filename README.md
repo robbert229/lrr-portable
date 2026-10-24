@@ -1882,6 +1882,23 @@ word when the stats word's bit 0x20000 says so; the per-type teardown is
 the entity-layer seam. `cmd_test` pins eligibility, the append and cap,
 the visual success half, and both monitor shapes.
 
+**Band-mode transition + timed-effect/position leaves** (2026-10-24;
+findings 250/228/05): four UI-band one-liners land in `frontend.*` over
+the selection-state statics. `ui_mode_transition_request` (0x418fc0) is
+the mode-word transition — the zero-second-argument arm goes to mode 4,
+mode 4 hands over when the third argument is clear (raising the band's
+bit 5), and a same-index request just raises the bit.
+`selection_mode_set_by_index` (0x418f80) is the two-entry switch raising
+the timed-effect update flags for entries 8/9.
+`timed_effect_update_request_set` (0x46b770) raises an entry's bit-2 flag
+inside a guarded 16-entry window — the 0x27c-stride band storage stays
+with the unported update/timestamp family.
+`ui_mode_resource_positions_apply` (0x419100) walks the two-entry help
+layout table (zero-init statics; the layout loader is unported) and the
+reposition hook per found handle is the simtick-cited surface seam.
+`frontend_test` pins the arm/hand-over/same-index shapes, the bit-5 and
+flag windows, and the positions pass.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the
