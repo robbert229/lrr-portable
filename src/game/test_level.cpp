@@ -221,6 +221,112 @@ int main(int argc, char** argv)
         CHECK(c3c == 2, "block-pointer count reduced 6->2 at (1,1)");
     }
 
+    /* Terrain-cell flag primitives (port cluster 0x432bd0–0x433120): the
+     * flag-word accessors over a hand-driven record. (3,4) keeps no
+     * load-time state the later checks read, and its flag word is
+     * restored afterwards. */
+    {
+        const int w = (int)level_width(s), h = (int)level_height(s);
+        uint8_t* rec = level_voxel(s, 3, 4);
+        uint32_t saved, f, zero = 0;
+        __builtin_memcpy(&saved, rec + 0x08, 4);
+        __builtin_memcpy(rec + 0x08, &zero, 4);
+
+        CHECK(level_cell_speed_class(s, 3, 4) == 1, "zero flags -> class 1");
+        CHECK(level_cell_flag_wave(s, 3, 4) == 0, "zero -> no wave flag");
+        CHECK(level_cell_walkable_flag(s, 3, 4) == 0, "zero -> not traversable");
+        CHECK(level_cell_mask18_clear(s, 3, 4) == 1, "zero 0x18 -> clear");
+        CHECK(level_cell_occupied_at(s, 3, 4) == 0, "zero -> unoccupied");
+        CHECK(level_cell_mask_c0(s, 3, 4) == 0, "zero low byte -> mask 0");
+        CHECK(level_cell_flag_edge_wall(s, 3, 4) == 0, "zero -> no edge wall");
+        CHECK(level_cell_mask_180000(s, 3, 4) == 0, "zero -> no 0x180000");
+
+        f = 0x10u; __builtin_memcpy(rec + 0x08, &f, 4);
+        CHECK(level_cell_walkable_flag(s, 3, 4) == 1, "traversable bit -> walkable");
+        f = 0x18u; __builtin_memcpy(rec + 0x08, &f, 4);
+        CHECK(level_cell_walkable_flag(s, 3, 4) == 0, "blocked gate clears walkable");
+        CHECK(level_cell_mask18_clear(s, 3, 4) == 0, "set bits fail the clear test");
+
+        f = 0x200000u; __builtin_memcpy(rec + 0x08, &f, 4);
+        CHECK(level_cell_speed_class(s, 3, 4) == 0, "block bit -> class 0");
+        f = 3u; __builtin_memcpy(rec + 0x08, &f, 4);
+        CHECK(level_cell_speed_class(s, 3, 4) == 4, "type bits 3 -> class 4");
+
+        f = 0x40000u; __builtin_memcpy(rec + 0x08, &f, 4);
+        CHECK(level_cell_flag_wave(s, 3, 4) == 0x40000u, "wave flag reads masked");
+        f = 0x4000000u; __builtin_memcpy(rec + 0x08, &f, 4);
+        CHECK(level_cell_flag_edge_wall(s, 3, 4) == 0x4000000u, "edge wall reads masked");
+        f = 0x180000u; __builtin_memcpy(rec + 0x08, &f, 4);
+        CHECK(level_cell_mask_180000(s, 3, 4) == 1, "the 0x180000 pair reads in");
+        f = 0x2000u; __builtin_memcpy(rec + 0x08, &f, 4);
+        CHECK(level_cell_flag_2000(s, 3, 4) == 0x2000u, "bit 0x2000 reads");
+        f = 0x80u; __builtin_memcpy(rec + 0x08, &f, 4);
+        CHECK(level_cell_flag_80(s, 3, 4) == 0x80u, "bit 0x80 reads");
+        f = 0x8000u; __builtin_memcpy(rec + 0x08, &f, 4);
+        CHECK(level_cell_flag_8000(s, 3, 4) == 0x8000u, "bit 0x8000 reads");
+        __builtin_memcpy(rec + 0x08, &zero, 4);
+        rec[8] = 0xc0;
+        CHECK(level_cell_mask_c0(s, 3, 4) == 0xc0u, "low-byte mask reads rec+8");
+        f = 0x20000000u;
+        {
+            uint32_t low = rec[8]; rec[8] = 0; /* keep the byte write from echoing */
+            __builtin_memcpy(rec + 0x08, &f, 4);
+            rec[8] = (uint8_t)low;
+        }
+        CHECK(level_cell_occupied_at(s, 3, 4) == 1, "the occupied-class bit reads");
+
+        /* Secondary word (record+12): bit 0 test mirrors the word. */
+        uint32_t sec;
+        __builtin_memcpy(&sec, rec + 0x0C, 4);
+        CHECK(level_cell_secondary_bit0(s, 3, 4) == (sec & 1u),
+              "secondary bit 0 mirrors the word");
+        sec |= 1u;
+        __builtin_memcpy(rec + 0x0C, &sec, 4);
+        CHECK(level_cell_secondary_bit0(s, 3, 4) == 1u, "secondary bit 0 reads");
+        sec &= ~1u;
+        __builtin_memcpy(rec + 0x0C, &sec, 4);
+
+        /* Flag raise/clear word pair (the corpus's write side). */
+        __builtin_memcpy(rec + 0x08, &zero, 4);
+        level_cell_flag_10000000_set(s, 3, 4, 1);
+        f = 0;
+        __builtin_memcpy(&f, rec + 0x08, 4);
+        CHECK(f == 0x10000000u, "the flag word is raised");
+        level_cell_flag_10000000_set(s, 3, 4, 0);
+        f = 1;
+        __builtin_memcpy(&f, rec + 0x08, 4);
+        CHECK(f == 0u, "the flag word is cleared");
+        level_cell_flag_10000000_set(s, -1, 2, 1); /* OOB write ignored */
+        level_cell_flag_10000000_set(s, (int)w, 0, 1);
+
+        /* Bounds deviations: the port reads 0 / class 1 / false off-map. */
+        CHECK(level_cell_flag_wave(s, w, 0) == 0, "off-map flag word reads 0");
+        CHECK(level_cell_speed_class(s, -1, -1) == 1, "off-map class falls back to 1");
+        CHECK(level_cell_occupied_at(s, w, h) == 0, "off-map is unoccupied");
+
+        /* The corpus's dim-1 gates, kept in-map so the gate itself decides:
+         * the last column sits inside the voxels but outside dim-1. */
+        f = 0x14u; /* walkable + bit 4 */
+        __builtin_memcpy(rec + 0x08, &f, 4);
+        CHECK(level_cell_walkable_flag(s, w - 1, 0) == 0,
+              "the dim-1 gate rejects the last column");
+        CHECK(level_cell_mask18_clear(s, w - 1, 0) == 1,
+              "outside the gate counts as clear");
+        CHECK(level_cell_flag_4(s, w - 1, 0) == 0u,
+              "flag 4 reads 0 outside the gate");
+        CHECK(level_cell_flag_4(s, 3, 4) == 4u, "flag 4 reads inside the gate");
+        (void)h;
+
+        /* State-byte equality: the TerrainMap fixture (6 at (2,2), 11 at
+         * (5,5), plain 1 elsewhere). */
+        CHECK(level_cell_state_is_6(s, 2, 2) == 1, "state-6 cell matches");
+        CHECK(level_cell_state_is_1(s, 2, 2) == 0, "state 6 is not 1");
+        CHECK(level_cell_state_is_1(s, 0, 3) == 1, "plain terrain is state 1");
+        CHECK(level_cell_state_is_1(s, w, 0) == 0, "off-map equals nothing");
+
+        __builtin_memcpy(rec + 0x08, &saved, 4); /* leave the map as loaded */
+    }
+
     /* Terrain handle + block table. */
     void* terr = level_load_ptr(s, LEVEL_OFF_TERRAIN);
     CHECK(terr != NULL, "terrain created");

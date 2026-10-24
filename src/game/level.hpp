@@ -259,6 +259,69 @@ int level_tile_occupied(const LevelState* s, int cx, int cy);
 /* Cell (x,y) tile type byte (record+2), or -1 when there is no map. */
 int level_tile_type(const LevelState* s, int cx, int cy);
 
+/* --- terrain-cell flag primitives (finding 07: record+8 flag word,
+ * record+2 state byte, record+12 secondary flag word) --------------------- *
+ * The corpus family computes the voxel record address with NO bounds
+ * check (it walks the heap past the grid for bad coords); the port guards
+ * every accessor with level_voxel and reports an unaddressable cell as
+ * all-zero flags / absent state — a documented deviation. The
+ * "InBounds"/coordinate-check variants DO bounds-check in the corpus
+ * (unsigned `coord < dim - 1U`, or signed `-1 < coord < dim`); that
+ * narrower gate is reproduced exactly, including the unsigned wrap that
+ * lets every coordinate through when a grid dimension is 0. */
+
+/* FUN_00432bd0: cell inside the grid-minus-one gate with the traversable
+ * bit (0x10) set and the blocked gate (flag bit 3) clear. Bounds-checked
+ * the corpus way (as unsigned, against dim-1). */
+int level_cell_walkable_flag(const LevelState* s, int cx, int cy);
+
+/* FUN_00432c20: the wave-spawn flag bit. Returns the masked word. */
+uint32_t level_cell_flag_wave(const LevelState* s, int cx, int cy);
+
+/* FUN_00432c50: terrain speed class — 0 when flag bit 0x200000 is set,
+ * otherwise the low two terrain-type bits + 1. */
+int level_cell_speed_class(const LevelState* s, int cx, int cy);
+
+/* FUN_00432e60: the flag word's low byte masked with 0xc0 (the corpus
+ * reads it as a byte). Returns the masked byte. */
+uint32_t level_cell_mask_c0(const LevelState* s, int cx, int cy);
+
+/* FUN_00432e90: the predug edge-wall bit (flag 0x4000000, finding 07).
+ * Returns the masked word. */
+uint32_t level_cell_flag_edge_wall(const LevelState* s, int cx, int cy);
+
+/* FUN_00432ec0 / FUN_00432f00: the cell state byte (record+2) equals 1
+ * or 6. No cell, no match. */
+int level_cell_state_is_1(const LevelState* s, int cx, int cy);
+int level_cell_state_is_6(const LevelState* s, int cx, int cy);
+
+/* FUN_00432f40: the two low terrain bits (0x18) clear — cells OUTSIDE
+ * the grid-minus-one gate count as clear (as in the corpus). */
+int level_cell_mask18_clear(const LevelState* s, int cx, int cy);
+
+/* FUN_00432f90: flag bit 4 inside the grid-minus-one gate (0 outside). */
+uint32_t level_cell_flag_4(const LevelState* s, int cx, int cy);
+
+/* FUN_00432fd0 / FUN_00433000 / FUN_00433030: single-bit flag tests
+ * (0x2000, 0x80, 0x8000). Return the masked word. */
+uint32_t level_cell_flag_2000(const LevelState* s, int cx, int cy);
+uint32_t level_cell_flag_80(const LevelState* s, int cx, int cy);
+uint32_t level_cell_flag_8000(const LevelState* s, int cx, int cy);
+
+/* FUN_00433060: secondary flag word (record+12) bit 0. */
+uint32_t level_cell_secondary_bit0(const LevelState* s, int cx, int cy);
+
+/* FUN_00433090: coordinate inside [0,w)×[0,h) and the OCCUPIED-class bit
+ * 0x20000000 set (the corpus's signed bounds read as plain in-bounds). */
+int level_cell_occupied_at(const LevelState* s, int cx, int cy);
+
+/* FUN_004330e0: the terrain/wave pair mask 0x180000 — nonzero = in. */
+int level_cell_mask_180000(const LevelState* s, int cx, int cy);
+
+/* FUN_00433120: raise (set nonzero) or clear flag bit 0x10000000.
+ * Bounds-guarded (the corpus writes OOB for bad coords). */
+void level_cell_flag_10000000_set(LevelState* s, int cx, int cy, int set);
+
 #ifdef __cplusplus
 }
 #endif

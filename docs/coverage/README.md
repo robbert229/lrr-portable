@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 330 | 12.9% |
+| ported | 346 | 13.5% |
 | anchored | 5 | 0.2% |
-| named | 2183 | 85.1% |
+| named | 2167 | 84.5% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 0 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (330 functions)
+  (346 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (5 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (2183 functions)
+  citation yet (2167 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (0 functions)
 
-**Game logic remaining to port: 2188 (85.3%).**
+**Game logic remaining to port: 2172 (84.7%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -686,25 +686,9 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00432b00` | TerrainCellFlag800TestInBounds |
 | `0x00432b50` | TerrainWalkableNeighborSearch |
 | `0x00432b90` | TerrainCellTypeIs8Or10Or11 |
-| `0x00432bd0` | TerrainCellWalkableFlagCheck |
-| `0x00432c20` | TerrainCellFlag40000Test |
-| `0x00432c50` | TerrainCellTypeSpeedClassGet |
 | `0x00432c90` | TerrainCellStateUpdate |
 | `0x00432d90` | TerrainCellFlag20TestInBounds |
 | `0x00432dd0` | TerrainCellFlag08000000Test |
-| `0x00432e60` | TerrainCellFlagsMaskC0Test |
-| `0x00432e90` | TerrainCellFlag04000000Test |
-| `0x00432ec0` | TerrainCellStateEquals1 |
-| `0x00432f00` | TerrainCellStateEquals6 |
-| `0x00432f40` | TerrainCellFlagsMask18ClearInBounds |
-| `0x00432f90` | TerrainCellFlag4TestInBounds |
-| `0x00432fd0` | TerrainCellFlag2000Test |
-| `0x00433000` | TerrainCellFlag80Test |
-| `0x00433030` | TerrainCellFlag8000Test |
-| `0x00433060` | TerrainCellSecondaryFlagBit0Test |
-| `0x00433090` | TerrainCoordinateAndOccupancyCheck |
-| `0x004330e0` | TerrainCellFlagsMask180000Test |
-| `0x00433120` | TerrainCellFlag10000000SetOrClear |
 | `0x00433180` | CellTypeSpeedMultiplierResolve |
 | `0x004332c0` | TerrainCellRecordByte3Get |
 | `0x004332f0` | TerrainCellWorkFlagSet |

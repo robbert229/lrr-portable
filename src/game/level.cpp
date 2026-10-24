@@ -1044,3 +1044,161 @@ int level_tile_type(const LevelState* s, int cx, int cy)
     const uint8_t* rec = level_voxel(s, cx, cy);
     return rec != NULL ? (int)(signed char)rec[2] : -1;
 }
+
+/* --- terrain-cell flag primitives ----------------------------------------
+ * Core readers over the voxel record. The corpus family computes the record
+ * address with no bounds check at all; every port accessor goes through
+ * level_voxel, so an unaddressable cell reads as all-zero flags / no state
+ * (documented deviation in level.hpp). */
+
+static uint32_t cell_flag_word(const LevelState* s, int cx, int cy)
+{
+    const uint8_t* rec = level_voxel(s, cx, cy);
+    uint32_t flags = 0;
+    if (rec != NULL) {
+        __builtin_memcpy(&flags, rec + 0x08, sizeof(flags));
+    }
+    return flags;
+}
+
+static uint32_t cell_secondary_word(const LevelState* s, int cx, int cy)
+{
+    const uint8_t* rec = level_voxel(s, cx, cy);
+    uint32_t word = 0;
+    if (rec != NULL) {
+        __builtin_memcpy(&word, rec + 0x0C, sizeof(word));
+    }
+    return word;
+}
+
+/* FUN_00432bd0: traversable bit set, blocked gate (bit 3) clear, inside
+ * the unsigned dim-1 gate. The cast keeps the corpus's unsigned wrap: a
+ * zero dimension lets every coordinate through. */
+int level_cell_walkable_flag(const LevelState* s, int cx, int cy)
+{
+    const int w = level_int(s, LEVEL_OFF_WIDTH);
+    const int h = level_int(s, LEVEL_OFF_HEIGHT);
+    if ((unsigned)cx < ((unsigned)w - 1u) &&
+        (unsigned)cy < ((unsigned)h - 1u)) {
+        const uint32_t flags = cell_flag_word(s, cx, cy);
+        return (flags & 0x10u) != 0 && (flags & 0x8u) == 0;
+    }
+    return 0;
+}
+
+/* FUN_00432c20: wave-spawn flag bit (finding 10's wave flag). */
+uint32_t level_cell_flag_wave(const LevelState* s, int cx, int cy)
+{
+    return cell_flag_word(s, cx, cy) & 0x40000u;
+}
+
+/* FUN_00432c50: speed class 0 under the terrain block bit, else the low
+ * terrain-type bits + 1. */
+int level_cell_speed_class(const LevelState* s, int cx, int cy)
+{
+    const uint32_t flags = cell_flag_word(s, cx, cy);
+    if ((flags & 0x200000u) != 0) {
+        return 0;
+    }
+    return (int)(flags & 3u) + 1;
+}
+
+/* FUN_00432e60: flag word's LOW BYTE (corpus byte read) masked 0xc0. */
+uint32_t level_cell_mask_c0(const LevelState* s, int cx, int cy)
+{
+    const uint8_t* rec = level_voxel(s, cx, cy);
+    return rec != NULL ? (uint32_t)rec[8] & 0xc0u : 0u;
+}
+
+/* FUN_00432e90: predug edge-wall bit (finding 07, load-time 3×3 OR). */
+uint32_t level_cell_flag_edge_wall(const LevelState* s, int cx, int cy)
+{
+    return cell_flag_word(s, cx, cy) & 0x4000000u;
+}
+
+/* FUN_00432ec0 / FUN_00432f00: state byte equals 1 / 6. */
+int level_cell_state_is_1(const LevelState* s, int cx, int cy)
+{
+    return level_tile_type(s, cx, cy) == 1;
+}
+
+int level_cell_state_is_6(const LevelState* s, int cx, int cy)
+{
+    return level_tile_type(s, cx, cy) == 6;
+}
+
+/* FUN_00432f40: terrain bits 0x18 clear; outside the gate counts as
+ * clear, exactly as the corpus returns true for the early-out. */
+int level_cell_mask18_clear(const LevelState* s, int cx, int cy)
+{
+    const int w = level_int(s, LEVEL_OFF_WIDTH);
+    const int h = level_int(s, LEVEL_OFF_HEIGHT);
+    if ((unsigned)cx < ((unsigned)w - 1u) &&
+        (unsigned)cy < ((unsigned)h - 1u)) {
+        return (cell_flag_word(s, cx, cy) & 0x18u) == 0;
+    }
+    return 1;
+}
+
+/* FUN_00432f90: flag bit 4 inside the gate, 0 outside. */
+uint32_t level_cell_flag_4(const LevelState* s, int cx, int cy)
+{
+    const int w = level_int(s, LEVEL_OFF_WIDTH);
+    const int h = level_int(s, LEVEL_OFF_HEIGHT);
+    if ((unsigned)cx < ((unsigned)w - 1u) &&
+        (unsigned)cy < ((unsigned)h - 1u)) {
+        return cell_flag_word(s, cx, cy) & 4u;
+    }
+    return 0u;
+}
+
+/* FUN_00432fd0 / FUN_00433000 / FUN_00433030: single-bit masks. */
+uint32_t level_cell_flag_2000(const LevelState* s, int cx, int cy)
+{
+    return cell_flag_word(s, cx, cy) & 0x2000u;
+}
+
+uint32_t level_cell_flag_80(const LevelState* s, int cx, int cy)
+{
+    return cell_flag_word(s, cx, cy) & 0x80u;
+}
+
+uint32_t level_cell_flag_8000(const LevelState* s, int cx, int cy)
+{
+    return cell_flag_word(s, cx, cy) & 0x8000u;
+}
+
+/* FUN_00433060: secondary flag word (record+12) bit 0. */
+uint32_t level_cell_secondary_bit0(const LevelState* s, int cx, int cy)
+{
+    return cell_secondary_word(s, cx, cy) & 1u;
+}
+
+/* FUN_00433090: in-bounds and OCCUPIED-class bit 0x20000000 set. The
+ * corpus's signed `-1 < c < dim` is exactly level_voxel's gate, and its
+ * false arm returns 0 like the NULL read here. */
+int level_cell_occupied_at(const LevelState* s, int cx, int cy)
+{
+    return (cell_flag_word(s, cx, cy) & 0x20000000u) != 0;
+}
+
+/* FUN_004330e0: terrain/wave pair mask 0x180000. */
+int level_cell_mask_180000(const LevelState* s, int cx, int cy)
+{
+    return (cell_flag_word(s, cx, cy) & 0x180000u) != 0;
+}
+
+/* FUN_00433120: raise/clear flag bit 0x10000000 (bounds-guarded). */
+void level_cell_flag_10000000_set(LevelState* s, int cx, int cy, int set)
+{
+    uint8_t* rec = level_voxel(s, cx, cy);
+    if (rec == NULL) {
+        return;
+    }
+    uint32_t* flags = (uint32_t*)(rec + 0x08);
+    if (set != 0) {
+        *flags |= 0x10000000u;
+    } else {
+        *flags &= ~0x10000000u;
+    }
+}
