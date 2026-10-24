@@ -134,7 +134,7 @@ stores the pointer in `DAT_00552994`, then fills:
 | +0x1CE4 | constant `10` | task count |
 | +0x1CE8 | self-ref → blob+0x1CEC | record-array pointer |
 | +0x1CEC | tasks ×10, each 0x210 B | copied dword-verbatim from the live task block (`[DAT_00552990]+0x1CE8`), then `FUN_004600a0`/`FUN_00460140` (importance/quota refreshers) re-run over the blob records |
-| (globals) | `Reward/Timer` (default **76.9375**), `DisplayText/Images/Flics` | kept in `DAT_0055298c`, `DAT_00555bc4/c8/cc` |
+| (globals) | `Reward/Timer` (default **76.9375**) is the elapsed-time threshold used by `RewardFlhContextTick` to advance reward task/FLH state and associated sound requests; `DisplayText/Images/Flics` gates are kept in `DAT_00555bc4/c8/cc` | `DAT_0055298c`, `DAT_00555bc4/c8/cc` |
 
 After the copy `0x435940` calls `CheckpointProgressClamp @ 0x460360` (clamps every blob
 record's float at +0x38 into `0.0..100.0` — see §Task table block below), then `0x461410`
