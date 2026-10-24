@@ -20,7 +20,7 @@ and curiosity; nothing in this repository is affiliated with or endorsed by the 
 
 ```
 README.md           This file
-docs/findings/      Reverse-engineering findings, 01–441 (see index below)
+docs/findings/      Reverse-engineering findings through 468 (see index below)
 tools/              WAD tooling (rrwad.py: unpack/pack/verify — see tools/README.md)
                     + model converter (tools/rrlwo.py: .lwo → glTF 2.0)
                     + compat harness (tools/compat/a2.py — see tools/compat/README.md)
@@ -638,6 +638,7 @@ Open threads, in order of value:
 | 439 | [findings/439-hud-panel-render-and-interaction-state.md](docs/findings/439-hud-panel-render-and-interaction-state.md) | HUD Panel Rendering and Interaction State |
 | 440 | [findings/440-tutorial-and-advisor-control.md](docs/findings/440-tutorial-and-advisor-control.md) | Tutorial and Advisor Control |
 | 441 | [findings/441-incident-and-information-message-queue.md](docs/findings/441-incident-and-information-message-queue.md) | Incident and Information Message Queue |
+| 468 | [findings/468-command-queue-and-selection-state.md](docs/findings/468-command-queue-and-selection-state.md) | Command Queue and Selection State |
 
 Canonical full pseudocode corpus: [`docs/decompiles/full/LEGORR.full.c`](docs/decompiles/full/LEGORR.full.c)
 (2564 manifest functions; see its [README](docs/decompiles/full/README.md)). The
