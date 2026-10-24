@@ -1155,10 +1155,10 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0044f230,FUN_0044f230,named,TerrainCellMaterialSet,0,1258
 0044f380,FUN_0044f380,ported,TerrainVoxelNeighborsMutate,1,1054
 0044f490,FUN_0044f490,named,GridCellOperationApplyAll,0,466
-0044f4e0,FUN_0044f4e0,named,TerrainCellSurfaceTypeSet,0,546
+0044f4e0,FUN_0044f4e0,ported,TerrainCellSurfaceTypeSet,1,546
 0044f540,FUN_0044f540,ported,TerrainCellSurfaceTypeGet,3,191
-0044f570,FUN_0044f570,named,TerrainCellSurfaceTypeReset,0,261
-0044f5c0,FUN_0044f5c0,named,TerrainCellSurfaceAppearanceApply,0,488
+0044f570,FUN_0044f570,ported,TerrainCellSurfaceTypeReset,1,261
+0044f5c0,FUN_0044f5c0,ported,TerrainCellSurfaceAppearanceApply,1,488
 0044f640,FUN_0044f640,ported,MapCellToWorldCenter,3,384
 0044f6d0,FUN_0044f6d0,ported,TerrainGridPick,2,215
 0044f700,FUN_0044f700,ported,WorldToTerrainCellBoundsCheck,1,943
