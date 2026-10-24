@@ -939,6 +939,16 @@ int main(int argc, char** argv)
         context_selected_pointer_pair_set(0u, 0u);
     }
 
+    /* GlobalAnimationStateSet (2026-10-24): the counter word store. */
+    {
+        entity_global_animation_state_set(0u);
+        CHECK(entity_global_animation_state_peek() == 0u,
+              "the counter clears on store");
+        entity_global_animation_state_set(7u);
+        CHECK(entity_global_animation_state_peek() == 7u,
+              "the store reads back");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "entity_test: %d failure(s)\n", s_failures);
         return 1;

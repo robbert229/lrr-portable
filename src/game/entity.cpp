@@ -796,3 +796,16 @@ uint32_t entity_stats_flag40_test(const EntitySlot* e)
 {
     return entity_stats_word_get(e) & 0x40u;
 }
+
+/* GlobalAnimationStateSet (FUN_004383a0) — see entity.hpp. */
+static uint32_t s_global_animation_state; /* DAT_004eadc4 role: unowned */
+
+void entity_global_animation_state_set(uint32_t value)
+{
+    s_global_animation_state = value;
+}
+
+uint32_t entity_global_animation_state_peek(void)
+{
+    return s_global_animation_state;
+}

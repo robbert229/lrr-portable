@@ -825,3 +825,25 @@ void simtick_global_ui_flags_clear_bits12(void)
 }
 
 uint32_t simtick_global_ui_flags_word(void) { return s_timer_word; }
+
+/* ScenePositionResetAndEffectMotionCancel (FUN_0044cf70) — see simtick.hpp. */
+static float s_xform_current[3];   /* corpus pose seam stand-in */
+static float s_xform_config[3];    /* DAT_004eae74 role */
+
+void simtick_scene_position_reset_and_effect_motion_cancel(void)
+{
+    __builtin_memcpy(s_xform_config, s_xform_current, sizeof s_xform_config);
+    s_edit_word &= 0xffffff7fu;
+}
+
+void simtick_scene_transform_current_set(const float xyz[3])
+{
+    if (xyz != NULL) {
+        __builtin_memcpy(s_xform_current, xyz, sizeof s_xform_current);
+    }
+}
+
+const float* simtick_scene_transform_config_peek(void)
+{
+    return s_xform_config;
+}

@@ -877,8 +877,8 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00437c20,FUN_00437c20,named,DeferredOListEntityQueueAdd,0,1007
 00437cc0,FUN_00437cc0,ported,EntityFlag40000ThresholdCompare,1,281
 00437d00,FUN_00437d00,ported,EntityCreateByType,5,5113
-004382c0,FUN_004382c0,ported,PooledRecordAllocateAndReset,2,471
-00438310,FUN_00438310,ported,PooledRecordChunkAllocateAndLink,3,646
+004382c0,FUN_004382c0,named,PooledRecordAllocateAndReset,0,471
+00438310,FUN_00438310,named,PooledRecordChunkAllocateAndLink,0,646
 004383a0,FUN_004383a0,ported,GlobalAnimationStateSet,3,168
 004383b0,FUN_004383b0,named,RoverWorkQueueUpdate,0,724
 00438460,FUN_00438460,named,EntityKindRecordUpdateDispatch,0,1188
@@ -1391,7 +1391,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00460140,FUN_00460140,ported,TaskQuotaRefresh,1,625
 004601e0,FUN_004601e0,ported,CheckpointBlobFree,1,71
 004601f0,FUN_004601f0,ported,CheckpointBlobGet,1,60
-00460200,FUN_00460200,named,SelectedLevelStartObjectUpdate,0,166
+00460200,FUN_00460200,ported,SelectedLevelStartObjectUpdate,3,166
 00460220,FUN_00460220,named,StartLevelSelected,0,543
 00460290,FUN_00460290,named,EntityType4IndexListBuild,0,637
 00460310,FUN_00460310,named,EntityType4IndexListAppend,0,370
@@ -1583,7 +1583,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0046b700,FUN_0046b700,named,TimedEffectCueRequestSet,0,224
 0046b730,FUN_0046b730,named,TimedEffectPersistenceSet,0,299
 0046b770,FUN_0046b770,ported,TimedEffectUpdateRequestSet,1,143
-0046b7a0,FUN_0046b7a0,named,TimedEffectTimestampReset,0,185
+0046b7a0,FUN_0046b7a0,ported,TimedEffectTimestampReset,3,185
 0046b7c0,FUN_0046b7c0,named,TimedEffectAndCueUpdate,0,1298
 0046b8b0,FUN_0046b8b0,named,RectangularGridOverlayGeometryDraw,0,2531
 0046bc30,FUN_0046bc30,named,TimedEffectSlotRender,0,3629

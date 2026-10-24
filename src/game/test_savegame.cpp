@@ -608,6 +608,18 @@ int main(void)
         CHECK(sav_record_ptr(&g, 0) == NULL, "a closed slot answers null");
     }
 
+    /* SelectedLevelStartObjectUpdate (2026-10-24): bound-level read, guarded. */
+    {
+        GameContext ctx;
+        game_context_init(&ctx);
+        selected_level_start_object_update(NULL); /* guarded */
+        const LevelState* keep = ctx.level;
+        selected_level_start_object_update(&ctx); /* bound: reads through */
+        ctx.level = NULL;
+        selected_level_start_object_update(&ctx); /* unbound: the gate returns */
+        ctx.level = const_cast<LevelState*>(keep);
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "savegame_test: %d failure(s)\n", s_failures);
         return 1;

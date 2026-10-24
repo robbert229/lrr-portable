@@ -251,4 +251,10 @@ uint32_t entity_stats_flag10_test(const EntitySlot* e); /* FUN_00439cf0 */
 uint32_t entity_stats_flag20_test(const EntitySlot* e); /* FUN_00439d10 */
 uint32_t entity_stats_flag40_test(const EntitySlot* e); /* FUN_00439d30 */
 
+/* GlobalAnimationStateSet (FUN_004383a0): stores the global animation-state
+ * counter word (DAT_004eadc4 — the unowned global lands zero-init, finding
+ * 464). The corpus's other feeder is the kind-4 dispatch increment, whose
+ * dispatch row stays blocked. */
+void     entity_global_animation_state_set(uint32_t value); /* FUN_004383a0 */
+uint32_t entity_global_animation_state_peek(void);          /* port hook */
 #endif /* LEGORRR_GAME_ENTITY_HPP */

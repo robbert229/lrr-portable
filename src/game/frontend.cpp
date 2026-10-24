@@ -1994,12 +1994,14 @@ void selection_state_handle_slot_set(int table, int index, uint32_t value)
  * DAT_004dc64c, read by the transition leaf and raised in passing by the
  * state-bit gates). The timed-effect flag words land as a guarded window:
  * the corpus's 0x27c-stride band entries live with the unported
- * update/timestamp family, so only the per-entry flag word is modeled. */
+ * update dispatch; the flag and time fields land as guarded windows. */
 #define TIMED_EFFECT_ENTRIES 16
 #define LAYOUT_POSITION_ENTRIES 2   /* corpus: two help-window buttons */
 
 static int      s_band_mode;                    /* DAT_004dc64c */
 static uint32_t s_timed_effect_flags[TIMED_EFFECT_ENTRIES];
+static uint32_t s_timed_effect_time[TIMED_EFFECT_ENTRIES];
+static uint32_t s_timed_effect_tick; /* DAT_0054bf3c role: unowned */
 static int32_t  s_layout_position[LAYOUT_POSITION_ENTRIES][2];
 
 void timed_effect_update_request_set(int index)
@@ -2422,4 +2424,24 @@ void panel_texture_slots_blit(int panel)
             crt_surface_blit_record(handle, rec[0] + ox, rec[1] + oy);
         }
     }
+}
+
+/* TimedEffectTimestampReset (FUN_0046b7a0) — see frontend.hpp. */
+void timed_effect_timestamp_reset(int index)
+{
+    if (index >= 0 && index < TIMED_EFFECT_ENTRIES) {
+        s_timed_effect_time[index] = s_timed_effect_tick;
+    }
+    /* deviation: the corpus strides the table blindly at any index. */
+}
+
+void timed_effect_tick_word_set(uint32_t tick) { s_timed_effect_tick = tick; }
+uint32_t timed_effect_tick_word_peek(void) { return s_timed_effect_tick; }
+
+uint32_t timed_effect_time_peek(int index)
+{
+    if (index < 0 || index >= TIMED_EFFECT_ENTRIES) {
+        return 0u;
+    }
+    return s_timed_effect_time[index];
 }

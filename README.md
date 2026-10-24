@@ -2363,6 +2363,21 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Scene-motion + state-word leaves** (findings 433/385/464/08/477/459):
+`simtick.*` ports `simtick_scene_position_reset_and_effect_motion_cancel`
+(0x44cf70 — the owner-transform copy onto the configured triple, which lands
+as module statics with hooks behind the unported transform initializer, plus
+the corpus's bit-7 clear on the scene-transform word), `entity.*` ports
+`entity_global_animation_state_set` (0x4383a0, the animation-state counter
+word with a peek), `savegame.*` ports
+`selected_level_start_object_update` (0x460200, the bound-level checkpoint
+read whose result the corpus discards — the apparent argument is calling-
+convention residue), and `frontend.*` extends its timed-effect window with
+`timed_effect_timestamp_reset` (0x46b7a0, the global tick word — a zero-init
+hook — stamped into the stride-0x27c table's time field). Three display/
+renderer-word leaves join blocked.md. `simtick_test`, `entity_test`,
+`savegame_test`, and `frontend_test` pin the copies, stores, and guards.
+
 **Linked chain free + editor/timer word folds** (findings 389/390/433/250):
 `crt.*` ports `linked_record_chain_free` (0x46a370, the recursive successor
 chain through the widened +0x1c link then the record free) and

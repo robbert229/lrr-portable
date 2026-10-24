@@ -507,4 +507,14 @@ void menu_clock_millis_set(uint32_t millis); /* port tick hook */
  * word (`sim_status_banner_word_get`) exactly where the corpus does. */
 void panel_texture_slots_blit(int panel); /* FUN_0045a9c0 */
 
+/* TimedEffectTimestampReset (FUN_0046b7a0): stamps the corpus's global tick
+ * word into the band entry's time field (stride-0x27c table — the port keeps
+ * the fields the setters touch side by side). The corpus tick word
+ * (DAT_0054bf3c) belongs to the unported update family, so it lands as a
+ * zero-init module static with a set hook. Out-of-range indices are guarded
+ * (documented deviation: the corpus strides blindly). */
+void    timed_effect_timestamp_reset(int index);  /* FUN_0046b7a0 */
+void    timed_effect_tick_word_set(uint32_t tick); /* port hook */
+uint32_t timed_effect_tick_word_peek(void);
+uint32_t timed_effect_time_peek(int index);        /* diagnostics */
 #endif /* LEGORRR_GAME_FRONTEND_HPP */

@@ -366,6 +366,20 @@ int main(void)
               "the clear keeps every other bit");
     }
 
+    /* The scene-transform copy + motion-cancel bit (2026-10-24). */
+    {
+        const float cur[3] = { 1.5f, -2.5f, 3.25f };
+        simtick_scene_transform_current_set(cur);
+        simtick_set_editor_state(0x180u, 0);
+        simtick_scene_position_reset_and_effect_motion_cancel();
+        const float* cfg = simtick_scene_transform_config_peek();
+        CHECK(cfg[0] == 1.5f && cfg[1] == -2.5f && cfg[2] == 3.25f,
+              "the config triple copies the current transform");
+        CHECK(simtick_route_position_state_peek() == 0x100u,
+              "the cancel clears the motion gate bit");
+        simtick_scene_transform_current_set(NULL); /* guarded */
+    }
+
     if (s_failures == 0) {
         printf("simtick_test: PASS\n");
         return 0;
