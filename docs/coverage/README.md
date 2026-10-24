@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 676 | 26.4% |
+| ported | 677 | 26.4% |
 | anchored | 4 | 0.2% |
-| named | 1837 | 71.6% |
+| named | 1836 | 71.6% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (676 functions)
+  (677 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1837 functions)
+  citation yet (1836 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1842 (71.8%).**
+**Game logic remaining to port: 1841 (71.8%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -489,7 +489,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0041f9e0` | UpgradeResourceDebit |
 | `0x0041fa80` | StartLevelPilots |
 | `0x00422850` | MiscObjectResourcesLoad |
-| `0x00423080` | ModeDependentField24Get |
 | `0x004230c0` | DebugPanelTextDrawUpdate |
 | `0x00424560` | AirSupplyAmountUpdate |
 | `0x00424730` | SinePhaseMidpointBlendDispatch |

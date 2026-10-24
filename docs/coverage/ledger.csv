@@ -629,7 +629,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0041fb40,FUN_0041fb40,ported,TimeScaleGet,3,153
 0041fb50,FUN_0041fb50,ported,GameConfigInit,3,36610
 00422850,FUN_00422850,named,MiscObjectResourcesLoad,0,5350
-00423080,FUN_00423080,named,ModeDependentField24Get,0,233
+00423080,FUN_00423080,ported,ModeDependentField24Get,2,233
 004230b0,FUN_004230b0,ported,GlobalFloatField00556F00Get,1,153
 004230c0,FUN_004230c0,named,DebugPanelTextDrawUpdate,0,1319
 004231f0,FUN_004231f0,ported,EnginePreTick,4,1615

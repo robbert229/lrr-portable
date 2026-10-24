@@ -214,4 +214,11 @@ void EngineShutdown(EngineContext* ctx);
  * threaded through the port's EngineContext (NULL answers zero). */
 uint32_t runtime_flag40000000_get(const EngineContext* ctx);
 
+/* ModeDependentField24Get (FUN_00423080, finding 03): the corpus reads
+ * word field 0x24 — the follow-span slot — off DAT_005560e4 in-game and
+ * DAT_005560ec in editor/preview mode, and returns the mode word itself
+ * for any other mode. Threaded through the port's EngineContext (NULL
+ * views answer zero). */
+int mode_dependent_field24_get(const EngineContext* ctx);
+
 #endif /* LEGORRR_ENGINE_HPP */

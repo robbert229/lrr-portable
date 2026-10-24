@@ -2104,6 +2104,14 @@ guarded mutators on the port's `LevelState` (`global_object_field8c_increment`
 `level_test` and `enginebind_test` pin the walks, the masked read, and
 the guards.
 
+**The mode-dependent field read** (2026-10-24; finding 03):
+`mode_dependent_field24_get` (0x423080, `engine.*`) reads the corpus's
+word field 0x24 — the follow-span slot — off the in-game view object in
+mode 1 and the editor/preview view in mode 0, answering the mode word
+itself otherwise; the read threads through the port's view table with
+NULL slots answering zero. `enginebind_test` pins the selection, the
+mode passthrough, and the guards.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the
