@@ -272,6 +272,29 @@ int main(void)
     CHECK(menu_pointer_rectangle_hit_test(50, 10, 40, 5, 10, 5) == 1,
           "widget: offset rectangle contains");
 
+    /* MenuOverlayListCount (FUN_00412170): chain over pointer slots. */
+    {
+        typedef struct OverlayNode {
+            char     link_pad[0x18];
+            void*    next;
+        } OverlayNode;
+        OverlayNode chain[3] = { { {0}, NULL }, { {0}, NULL }, { {0}, NULL } };
+        chain[0].next = &chain[1];
+        chain[1].next = &chain[2];
+        struct {
+            char link_pad[0x40];
+            void* head;
+        } menu;
+        memset(&menu, 0, sizeof(menu));
+        menu.head = NULL;
+        CHECK(menu_overlay_list_count(&menu) == 0, "empty chain counts zero");
+        menu.head = &chain[0];
+        CHECK(menu_overlay_list_count(&menu) == 3, "three-node chain");
+        chain[1].next = NULL;
+        CHECK(menu_overlay_list_count(&menu) == 2, "chain shortened by a tail");
+        CHECK(menu_overlay_list_count(NULL) == 0, "NULL menu counts zero");
+    }
+
     if (s_failures == 0) {
         printf("view_test: PASS\n");
         return 0;

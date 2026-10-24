@@ -188,7 +188,7 @@ static void terrain_block_fixup(TerrainState* t, int x, int y, int which)
     }
 }
 
-TerrainState* terrain_create(const char* surface_map, float blocksize)
+void* terrain_create(const char* surface_map, float blocksize)
 {
     MapFile* m = level_map_open(surface_map);
     if (m == NULL) {
@@ -257,12 +257,33 @@ TerrainState* terrain_create(const char* surface_map, float blocksize)
     return t;
 }
 
-void terrain_destroy(TerrainState* t)
+void terrain_destroy(void* handle)
 {
+    TerrainState* t = (TerrainState*)handle;
     if (t != NULL) {
         free(t->blocks);
         free(t);
     }
+}
+
+/* TerrainCellSurfaceTypeGet (FUN_0044f540, finding 226): the per-cell
+ * surface-type byte in the physical block table — the port's terrain
+ * handle is the TerrainState model, so the corpus's record fields
+ * +0x8/+0x28 (stride, table) map to the modeled width/table pair. The
+ * byte is read, never written by this leaf: the corpus's writer is the
+ * renderer-side appearance apply (blocked, renderer seam), so a created
+ * terrain answers the zero state until that lands (documented). Bounds
+ * guard added — the corpus indexes blind (documented deviation). */
+int terrain_cell_surface_type_get(const void* terrain, int x, int y)
+{
+    const TerrainState* t = (const TerrainState*)terrain;
+    if (t == NULL || t->blocks == NULL) {
+        return 0;
+    }
+    if (x < 0 || y < 0 || x >= t->width || y >= t->height) {
+        return 0;
+    }
+    return t->blocks[0x24 + ((size_t)y * (size_t)t->width + (size_t)x) * TERRAIN_BLOCK_STRIDE];
 }
 
 /* ------------------------------------------------------------------ *
@@ -716,7 +737,8 @@ static int map_pipeline(LevelState* s, const char** names, const int* biases)
     /* names: 0 surface, 1 predug, 2 terrain(Surf), 3 blockptrs, 4 cryore,
      * 5 erode, 6 path, 7 emerge, 8 ai, 9 fallin. (Corpus positional order,
      * see level.hpp header note.) */
-    TerrainState* terrain = terrain_create(names[0], level_float(s, LEVEL_OFF_BLOCKSIZE));
+    TerrainState* terrain = (TerrainState*)terrain_create(names[0],
+                                                          level_float(s, LEVEL_OFF_BLOCKSIZE));
     if (terrain == NULL) {
         return 0;
     }
@@ -963,7 +985,7 @@ void level_destroy(LevelState* s)
     }
     free(s->ptr_voxels);
     free(s->ptr_layerl);
-    terrain_destroy((TerrainState*)s->ptr_terrain);
+    terrain_destroy(s->ptr_terrain);
     free(s->ptr_next);
     /* ptr_name is borrowed from the caller (the level *name* passed to
      * level_load); never freed here. */

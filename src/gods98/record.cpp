@@ -179,3 +179,38 @@ uint32_t packed_grid_cell_value_get(const void* grid, uint32_t packed_cell)
         + (int32_t)((packed_cell & 0xffu) >> 4);
     return cells_dword(cells, (size_t)index * 4u);
 }
+
+/* ObjectPoolListHeadGet (FUN_00456c30, finding 374): the corpus's exact
+ * in-range bounds (-1 < index < 0x37) over the +0x114 slot table. */
+int object_pool_list_head_get(const void* pools, int index)
+{
+    if (-1 < index && index < 0x37) {
+        const int32_t v = (int32_t)rec_dword(
+            pools, (size_t)(0x114 + index * 4));
+        if (v != 0) {
+            return v;
+        }
+    }
+    return 0;
+}
+
+/* ModelChildRenderEligibilityCheck (FUN_00483a70): the two-bit render
+ * gate (finding 431). NULL answers "not eligible" — the corpus would
+ * crash on it (documented deviation). */
+int model_child_render_eligibility_check(const void* object)
+{
+    if (object == NULL) {
+        return 0;
+    }
+    const uint32_t flags = rec_dword(object, 0x6c);
+    if ((flags & 1u) == 0 && (flags & 0x10000000u) == 0) {
+        return 1;
+    }
+    return 0;
+}
+
+/* EntityTypeFlagBit1Get (FUN_0046d330, findings 357/432). */
+uint32_t entity_type_flag_bit1_get(const void* record)
+{
+    return (rec_dword(record, 0x1e8) & 0xffu) >> 1 & 1u;
+}

@@ -232,6 +232,67 @@ static void test_packed_grid_cell(void)
           "an empty cell slot answers zero");
 }
 
+/* ObjectPoolListHeadGet (FUN_00456c30): +0x114 slot table, corpus bounds. */
+static void test_object_pool_head(void)
+{
+    ProbeRecord pools;
+    memset(&pools, 0, sizeof(pools));
+    poke_dword(&pools, 0x114 + 0 * 4, 0x11111111u);
+    poke_dword(&pools, 0x114 + 54 * 4, 0x22222222u);
+
+    CHECK(object_pool_list_head_get(&pools, 0) == 0x11111111,
+          "head slot zero reads");
+    CHECK(object_pool_list_head_get(&pools, 54) == 0x22222222,
+          "the 55th head reads (corpus bound is exclusive)");
+    CHECK(object_pool_list_head_get(&pools, 55) == 0,
+          "index 55 is out of range");
+    CHECK(object_pool_list_head_get(&pools, -1) == 0,
+          "index -1 is out of range");
+    CHECK(object_pool_list_head_get(&pools, 1) == 0,
+          "an empty slot answers zero");
+    CHECK(object_pool_list_head_get(NULL, 0) == 0,
+          "NULL pool table answers zero");
+}
+
+/* ModelChildRenderEligibilityCheck (FUN_00483a70): the +0x6c two-bit gate. */
+static void test_model_child_eligibility(void)
+{
+    ProbeRecord object;
+    memset(&object, 0, sizeof(object));
+    CHECK(model_child_render_eligibility_check(&object) == 1,
+          "no gate bits: eligible");
+    poke_dword(&object, 0x6c, 0x1u);
+    CHECK(model_child_render_eligibility_check(&object) == 0,
+          "bit 0x1 blocks");
+    poke_dword(&object, 0x6c, 0x10000000u);
+    CHECK(model_child_render_eligibility_check(&object) == 0,
+          "bit 0x10000000 blocks");
+    poke_dword(&object, 0x6c, 0x00000002u);
+    CHECK(model_child_render_eligibility_check(&object) == 1,
+          "other flag bits stay eligible");
+    CHECK(model_child_render_eligibility_check(NULL) == 0,
+          "NULL object answers not-eligible (deviation)");
+}
+
+/* EntityTypeFlagBit1Get (FUN_0046d330): bit 1 of the +0x1e8 flag byte. */
+static void test_entity_flag_bit1(void)
+{
+    ProbeRecord r;
+    memset(&r, 0, sizeof(r));
+    poke_dword(&r, 0x1e8, 0x2u);
+    CHECK(entity_type_flag_bit1_get(&r) == 1u, "bit 1 of the flag byte");
+    poke_dword(&r, 0x1e8, 0x0u);
+    CHECK(entity_type_flag_bit1_get(&r) == 0u, "clear byte answers zero");
+    poke_dword(&r, 0x1e8, 0x1u);
+    CHECK(entity_type_flag_bit1_get(&r) == 0u, "bit 0 does not count");
+    poke_dword(&r, 0x1e8, 0x102u);
+    CHECK(entity_type_flag_bit1_get(&r) == 1u, "high bytes do not matter");
+    poke_dword(&r, 0x1e4, 0xffu); /* byte BELOW +0x1e8 stays ignored */
+    poke_dword(&r, 0x1ec, 0xffu); /* byte above too */
+    CHECK(entity_type_flag_bit1_get(&r) == 1u, "the read is exactly +0x1e8");
+    CHECK(entity_type_flag_bit1_get(NULL) == 0u, "NULL answers zero");
+}
+
 static void test_interpolated_z(void)
 {
     /* a = 10 at +8, b = 4 at +8: v = 4 * 2.5 + 10 = 20. */
@@ -265,6 +326,9 @@ int main(void)
     test_task_flag_bit();
     test_task_pair_reads();
     test_packed_grid_cell();
+    test_object_pool_head();
+    test_model_child_eligibility();
+    test_entity_flag_bit1();
     test_interpolated_z();
     if (s_failures != 0) {
         fprintf(stderr, "record_test: %d failure(s)\n", s_failures);

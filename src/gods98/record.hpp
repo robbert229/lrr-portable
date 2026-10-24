@@ -88,4 +88,20 @@ uint32_t task_field84_get_and_field88_out(const void* task, uint32_t* out88);
  * field). */
 uint32_t packed_grid_cell_value_get(const void* grid, uint32_t packed_cell);
 
+/* ObjectPoolListHeadGet (FUN_00456c30, finding 374): the list-head slot
+ * table — index -1..0x37 (exclusive) over +0x114, with the corpus's
+ * "zero answers zero" fold. Out of range or NULL answers 0. */
+int object_pool_list_head_get(const void* pools, int index);
+
+/* ModelChildRenderEligibilityCheck (FUN_00483a70, finding 431): the
+ * render predicate — eligible when NEITHER bit 0x1 nor bit 0x10000000
+ * of the +0x6c flag word is set. NULL answers 0 (documented
+ * deviation). */
+int model_child_render_eligibility_check(const void* object);
+
+/* EntityTypeFlagBit1Get (FUN_0046d330, findings 357/432): bit 1 of the
+ * flag dword at +0x1e8; the flag's meaning stays with the callers per
+ * finding 357. NULL answers 0. */
+uint32_t entity_type_flag_bit1_get(const void* record);
+
 #endif /* LEGORRR_GODS98_RECORD_HPP */

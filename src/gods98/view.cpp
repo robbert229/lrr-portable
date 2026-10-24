@@ -511,3 +511,22 @@ int menu_pointer_rectangle_hit_test(int x, int y, int rect_x, int rect_y,
     }
     return 0;
 }
+
+/* MenuOverlayListCount (FUN_00412170): head slot + record+0x40, next
+ * slot + node+0x18, both native-size (pointer-slot deviation; see the
+ * header). */
+int menu_overlay_list_count(const void* menu)
+{
+    void* head = NULL;
+    if (menu != NULL) {
+        __builtin_memcpy(&head, (const char*)menu + 0x40, sizeof(head));
+    }
+    int count = 0;
+    while (head != NULL) {
+        void* next = NULL;
+        __builtin_memcpy(&next, (char*)head + 0x18, sizeof(next));
+        ++count;
+        head = next;
+    }
+    return count;
+}
