@@ -11,7 +11,7 @@ frame-retriever path used for credits movies (Finding 187).
 
 | Address | Function | Observed role and relationships |
 | --- | --- | --- |
-| `0x004721e0` | `DirectShowSampleSetup` | Queries the primary stream for `IDirectDrawMediaStream`, creates a sample, obtains the sample's DirectDraw surface, queries it for `IDirectDrawSurface3`, and starts the stored media stream with state `1`. Each HRESULT is checked; a failure path releases acquired interfaces and returns false. See Findings 200 and 207. |
+| `0x004721e0` | `DirectShowSampleSetup` | Queries the primary stream for `IDirectDrawMediaStream`, creates a sample, obtains the sample's DirectDraw surface, queries it for `IDirectDrawSurface3`, and starts the stored media stream with state `1`. Each HRESULT is checked; a negative result enters common cleanup, which calls `Release` through all four output slots without null checks before returning false. `ConfiguredVideoComRouteInit` zeroes those slots first, so a failure before an interface is acquired can reach a null `Release` call. The runtime effect was not measured. See Findings 200 and 207. |
 | `0x004722b0` | `ConfiguredVideoGraphSetup` | Creates the `AMMultiMediaStream` COM object, initializes it, adds the primary video stream, attempts to add primary audio, and opens the requested file. Video-stream addition failure exits setup; audio-stream addition failure is cleared and setup continues to `OpenFile` (Finding 208). |
 | `0x00472390` | `ConfiguredVideoComRouteInit` | Initializes the wrapper's interface slots and stores the supplied path and configuration values, calls `CoInitialize`, copies the path into owned storage, builds the graph, then invokes sample setup when graph setup succeeds. It does not branch on the boolean result from sample setup; the effect of a sample-setup failure on the wrapper returned to callers remains unresolved. |
 | `0x00472430` | `DirectShowInterfaceRelease` | Releases non-null graph, stream, sample, and surface interfaces held in the wrapper and frees its copied path. It does not call `SetState(STREAMSTATE_STOP)` before release (Finding 207); the graph's internal stop behavior on final release is not established. |
@@ -49,14 +49,17 @@ immediately is unknown (Finding 207).
 
 ## Open question
 
-`DirectShowSampleSetup` returns a boolean and releases partial interfaces when
-it fails. `ConfiguredVideoComRouteInit` calls it but does not test that return
-value. The decompiler also shows the route initializer's result flowing back
-through `DirectShowRenderSurfaceCreate`, despite the initializer being rendered
-as `void`. Confirming the constructor/return ABI and whether callers can enter
-playback with a partially initialized wrapper would require instruction-level
-validation and, if safe, a controlled setup-failure test. This static evidence
-is not enough to claim a use-after-release or other runtime defect.
+`DirectShowSampleSetup` returns a boolean, but `ConfiguredVideoComRouteInit`
+does not test that result. The decompiler also shows the route initializer's
+result flowing back through `DirectShowRenderSurfaceCreate`, despite the
+initializer being rendered as `void`. The setup cleanup itself calls `Release`
+through four output slots without checking whether each is non-null; because
+the route initializer zeros those slots, an early setup failure can reach a
+null `Release` call. Confirming the constructor/return ABI, the exact failure
+reachability, and the runtime effect of the unguarded cleanup would require
+instruction-level validation and a safe controlled setup-failure test. These
+static observations identify a possible null dereference and partially
+initialized wrapper path; they do not establish a reproduced runtime defect.
 
 ## Evidence and related findings
 
