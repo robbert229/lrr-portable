@@ -22,7 +22,7 @@ This finding follows level setup into the NERP script interpreter, advisor text/
 
 The separate callback relay is small but stateful. `DeferredCallbackSet @ 0x00453900` stores its argument in `DAT_004a673c`; `GameConfigInit` supplies whether the corresponding message resource was found. `DeferredCallbackInvokeIfSet @ 0x00453910` checks only whether that stored value is nonzero, then calls `SoundAliasPlayGlobal @ 0x00456810`. That helper plays the alias currently stored in `DAT_004a6768` when it is not `-1`. The UI interaction caller is in `MainSimInteractionAndCellUpdate @ 0x00426520`; it reaches the relay for the configured message region. Finding 354 records the setter/invoker pair.
 
-`FUN_00454600 @ 0x00454600` is called by the same `EngineTick` snapshot under the active-render-mode and feature-bit guards, after `FUN_00435300`. It advances a sine phase, resolves the last indexed object in `DAT_00555dec`, sets that object's `+0x3f8` field, derives screen coordinates, and blits `DAT_0055645c`. Its intended display role and the meaning of its final arguments remain uncertain.
+`AdvisorTutorialIconImageLoad @ 0x00434a00` loads the configured `TutorialIcon` bitmap and retains its resource handle in `DAT_0055645c`. `RandomVariantCellScatter @ 0x00435300` blits that image above marked cells with a sinusoidal vertical offset. `FUN_00454600 @ 0x00454600` uses the same image for an indexed-object overlay after resolving the last object in `DAT_00555dec`, setting its `+0x3f8` field, and deriving screen coordinates; the exact trigger and final arguments remain uncertain.
 
 ## Advisor text and global state
 
@@ -75,7 +75,7 @@ The remaining accessors affect nearby engine state but do not establish a tutori
 
 - What is the complete opcode and callback-name mapping for the NERP table at `0x004a5948`–`0x004a5950`, including its branch/skip records?
 - What do the colon- and dollar-prefixed token declarations mean in shipped NERP text, and who owns/releases the `:` image table?
-- What in-game effect does `FUN_00454600` render, and what are the meanings of its position and final arguments?
+- What triggers `FUN_00454600`, and what are the meanings of its position and final arguments when it draws the TutorialIcon resource?
 - What semantics distinguish objective-voice selectors `1`, `2`, and `3` in the `MainSimStep` callers?
 - What do the two global fields `DAT_004ff978` and `DAT_004ff980` represent beyond their observed setter/getter and gate uses?
 - What are the 55 tutorial coordinate-list category meanings, and which callback consumers use `CoordinateListCallbackVisit`?
