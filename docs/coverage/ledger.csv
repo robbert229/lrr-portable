@@ -2093,7 +2093,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004830c0,FUN_004830c0,named,AnimatedTextureFrameSurfaceSet,0,625
 00483140,FUN_00483140,named,IndexedRecordInterfaceRelease,0,290
 00483170,FUN_00483170,named,IndexedRecordTransformInitialize,0,825
-00483240,FUN_00483240,named,IndexedRecordTransformCopyIn,0,335
+00483240,FUN_00483240,ported,IndexedRecordTransformCopyIn,3,335
 00483270,FUN_00483270,named,RenderObjectColorVectorSet,0,1379
 00483400,FUN_00483400,ported,IndexedRecordDataAddressGet,1,105
 00483420,FUN_00483420,named,ScreenEffectItemOpacitySet,0,1367

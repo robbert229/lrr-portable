@@ -454,6 +454,49 @@ static void test_straggler_reads(void)
     CHECK(game_file_system_type_get(NULL) == 0u, "NULL handle answers zero");
 }
 
+/* IndexedRecordTransformCopyIn (FUN_00483240, findings 372/431): the
+ * inline-block 0x50-byte store at the indexed record's data address. */
+static void test_transform_copy_in(void)
+{
+    /* One record's worth of table: everything the copy touches. */
+    uint8_t table[0x10 + 0x70 + 0x50];
+    memset(table, 0, sizeof(table));
+    PokeTableRecord holder;
+    memset(&holder, 0, sizeof(holder));
+    holder.table = table;
+
+    uint32_t src[20];
+    for (int i = 0; i < 20; ++i) {
+        src[i] = 0x01020300u + (uint32_t)i;
+    }
+    CHECK(indexed_record_transform_copy_in(&holder, 0, src) == 1u,
+          "the inline copy answers success");
+    for (int i = 0; i < 20; ++i) {
+        char* dst = (char*)table + 0x10 + i * 4;
+        uint32_t got = 0;
+        __builtin_memcpy(&got, dst, 4);
+        if (got != 0x01020300u + (uint32_t)i) {
+            CHECK(0, "all twenty dwords land in order");
+            return;
+        }
+    }
+    CHECK(1, "all twenty dwords land in order");
+    /* Only the record's block moves: the +0x10 header stays put. */
+    CHECK(table[4] == 0, "the copy starts after the +0x10 header");
+    /* The address the copy targets is the reader's answer. */
+    CHECK(indexed_record_data_address_get(&holder, 0) == table + 0x10,
+          "copy target equals the data-address reader");
+    /* Deviation corners: success, no crash, no write. */
+    CHECK(indexed_record_transform_copy_in(NULL, 0, src) == 1u,
+          "NULL record answers success (deviation)");
+    CHECK(indexed_record_transform_copy_in(&holder, 0, NULL) == 1u,
+          "NULL source answers success and stores nothing");
+
+    holder.table = NULL;
+    CHECK(indexed_record_transform_copy_in(&holder, 0, src) == 1u,
+          "empty table answers success without touching anything");
+}
+
 static void test_interpolated_z(void)
 {
     /* a = 10 at +8, b = 4 at +8: v = 4 * 2.5 + 10 = 20. */
@@ -492,6 +535,7 @@ int main(void)
     test_entity_flag_bit1();
     test_reader_sweep();
     test_indexed_sweep();
+    test_transform_copy_in();
     test_straggler_reads();
     test_interpolated_z();
     if (s_failures != 0) {

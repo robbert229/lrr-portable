@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 531 | 20.7% |
+| ported | 532 | 20.7% |
 | anchored | 5 | 0.2% |
-| named | 1982 | 77.3% |
+| named | 1981 | 77.3% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 0 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (531 functions)
+  (532 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (5 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1982 functions)
+  citation yet (1981 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (0 functions)
 
-**Game logic remaining to port: 1987 (77.5%).**
+**Game logic remaining to port: 1986 (77.5%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -1655,7 +1655,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004830c0` | AnimatedTextureFrameSurfaceSet |
 | `0x00483140` | IndexedRecordInterfaceRelease |
 | `0x00483170` | IndexedRecordTransformInitialize |
-| `0x00483240` | IndexedRecordTransformCopyIn |
 | `0x00483270` | RenderObjectColorVectorSet |
 | `0x00483420` | ScreenEffectItemOpacitySet |
 | `0x00483540` | Matrix4x4IdentityInitialize |
