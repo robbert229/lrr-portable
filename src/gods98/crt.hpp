@@ -201,4 +201,15 @@ float    crt_float_00555120_peek(void);
 }
 #endif
 
+/* DisplayResolutionFilterTupleAppend (2026-10-24; findings 425/282): the
+ * resolution-filter table append. The corpus writes blindly at
+ * count * 0x110-stride slots of the DAT_00568060/64/68 trio; the port
+ * keeps 16 guarded entries (documented deviation) — nothing in the port
+ * seeds it (the seeding DirectDrawDeviceInitialize is a COM seam). The
+ * read side, DisplayModeMatchesFilterTuple, stays blocked on the
+ * display-mode enumeration globals. */
+void display_resolution_filter_tuple_append(int width, int height, int bpp);
+int  display_resolution_filter_tuple_count(void);
+void display_resolution_filter_tuple_get(int index, int* w, int* h, int* bpp);
+
 #endif /* LEGORRR_GODS98_CRT_HPP */

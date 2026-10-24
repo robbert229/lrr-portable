@@ -7,6 +7,8 @@
 #include "ai.hpp"
 #include "select.hpp"
 #include "util.hpp"
+#include "gods98/heap.hpp"
+#include "gods98/media.hpp"
 
 /* ------------------------------------------------------------------ *
  *  Command record (finding 10 §"Command record" — corpus stride 0x68).
@@ -753,4 +755,65 @@ int cmd_array_find_value_index(const int* array, unsigned count, int value,
 int cmd_queue_active_count_peek(void)
 {
     return s_queue_count[s_ping];
+}
+
+/* --- selection snapshot / dispatch (see cmd.hpp) -----------------------------
+ * The owner read takes the EntitySlot's +0x36c mirror (pointer-sized; the
+ * corpus reads the flat 32-bit word), and the flag reads take the
+ * flags_3e8 mirror's low byte as the corpus's byte read. */
+static const void* cmd_entity_owner_at(const EntitySlot* e)
+{
+    return e->owner_36c;
+}
+
+int selection_snapshot_create(void** array_out, unsigned* count_out)
+{
+    const int count = selection_count(s_ctx);
+    if (count == 0) {
+        return 0;
+    }
+    if (count_out != NULL) {
+        *count_out = (unsigned)count;
+    }
+    void* copy = engine_heap_alloc((long)count * (long)sizeof(void*));
+    if (array_out != NULL) {
+        *array_out = copy;
+    }
+    if (copy != NULL) {
+        EntitySlot* const* src = selection_record_array(s_ctx);
+        const unsigned n = (unsigned)count & 0x3fffffffu;
+        for (unsigned i = 0; i < n; ++i) {
+            ((void**)copy)[i] = src[i];
+        }
+    }
+    return 1;
+}
+
+int selection_command_dispatch(int param)
+{
+    const void* sel = media_min_distance_context();
+    if (sel != NULL) {
+        const EntitySlot* s = (const EntitySlot*)sel;
+        if ((s->flags_3e8 & 0x10u) != 0u
+            && (s->type == 2 || cmd_entity_owner_at(s) != NULL)) {
+            media_min_distance_update_mode(0, (void*)s, param);
+            return 1;
+        }
+    }
+    const int count = selection_count(s_ctx);
+    for (int i = 0; i < count; ++i) {
+        const EntitySlot* e = selection_record_array(s_ctx)[i];
+        if (e == NULL) {
+            continue; /* deviation: the corpus dereferences blindly */
+        }
+        if (e->type == 2 && cmd_entity_owner_at(e) != NULL) {
+            e = (const EntitySlot*)cmd_entity_owner_at(e);
+        } /* (the corpus checks the swapped-in entity's own owner word) */
+        if ((e->flags_3e8 & 0x10u) != 0u
+            && (e->type == 2 || cmd_entity_owner_at(e) != NULL)) {
+            media_min_distance_update_mode(0, (void*)e, param);
+            return 1;
+        }
+    }
+    return 0;
 }

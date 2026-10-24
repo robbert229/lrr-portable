@@ -8,6 +8,9 @@
 #include "game/cmd.hpp"
 #include "game/entity.hpp"
 #include "game/game.hpp"
+#include "game/select.hpp"
+#include "gods98/heap.hpp"
+#include "gods98/media.hpp"
 
 static int s_failures = 0;
 
@@ -208,6 +211,84 @@ int main(void)
               "the NULL array skips (deviation)");
         CHECK(cmd_array_find_value_index(table, 4, 7, NULL) == 1,
               "the NULL output is safe");
+    }
+
+    /* The selection snapshot / dispatch leaves (2026-10-24). */
+    {
+        GameContext sctx;
+        game_context_init(&sctx);
+        cmd_context_set(&sctx);
+
+        void* arr = (void*)1;
+        unsigned cnt = 77;
+        CHECK(selection_snapshot_create(&arr, &cnt) == 0 && arr == (void*)1
+                  && cnt == 77,
+              "the empty selection answers zero, writes nothing");
+
+        EntitySlot* e1 = make_ent(&sctx, 1, "snap1");
+        EntitySlot* e2 = make_ent(&sctx, 1, "snap2");
+        selection_add(&sctx, e1);
+        selection_add(&sctx, e2);
+        arr = NULL;
+        CHECK(selection_snapshot_create(&arr, &cnt) == 1 && cnt == 2
+                  && arr != NULL
+                  && ((EntitySlot**)arr)[0] == e1
+                  && ((EntitySlot**)arr)[1] == e2,
+              "the snapshot copies both pointers and the count");
+        engine_heap_free(arr);
+
+        /* Dispatch: nothing selected, no context — reject. */
+        media_min_distance_update_mode(1, NULL, 0);
+        selection_clear(&sctx);
+        CHECK(selection_command_dispatch(0) == 0,
+              "nothing to dispatch — zero");
+
+        /* Selection hit: a type-2 entity with the flag bit. */
+        EntitySlot* t2 = make_ent(&sctx, 2, "dispatch2");
+        t2->flags_3e8 |= 0x10u;
+        selection_add(&sctx, t2);
+        CHECK(selection_command_dispatch(5) == 1
+                  && media_min_distance_context() == (void*)t2
+                  && media_min_distance_mode() == 0,
+              "the scan dispatches mode 0 to the candidate");
+        selection_clear(&sctx);
+        media_min_distance_update_mode(1, NULL, 0); /* clear the context */
+
+        /* Owner indirection: the candidate swaps through a flagged owner. */
+        EntitySlot owner;
+        memset(&owner, 0, sizeof(owner));
+        owner.type = 2;
+        owner.flags_3e8 = 0x10u;
+        EntitySlot child;
+        memset(&child, 0, sizeof(child));
+        child.type = 2;
+        child.owner_36c = &owner;
+        selection_add(&sctx, &child);
+        CHECK(selection_command_dispatch(0) == 1
+                  && media_min_distance_context() == (void*)&owner,
+              "the dispatch follows the owner indirection");
+        selection_clear(&sctx);
+
+        /* Context gate first: a flagged, type-2 context dispatches even
+         * with an empty selection. */
+        EntitySlot sel;
+        memset(&sel, 0, sizeof(sel));
+        sel.type = 2;
+        sel.flags_3e8 = 0x10u;
+        media_min_distance_update_mode(0, &sel, 0);
+        CHECK(selection_command_dispatch(9) == 1
+                  && media_min_distance_context() == (void*)&sel,
+              "the context gate dispatches first");
+
+        /* A flagless context with an empty selection rejects. */
+        memset(&sel, 0, sizeof(sel));
+        sel.type = 1;
+        sel.flags_3e8 = 0u;
+        media_min_distance_update_mode(0, &sel, 0);
+        CHECK(selection_command_dispatch(0) == 0,
+              "the unflagged context with nothing selected rejects");
+        media_min_distance_update_mode(1, NULL, 0);
+        cmd_context_set(&ctx);
     }
 
     if (s_failures != 0) {

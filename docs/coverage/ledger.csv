@@ -1207,7 +1207,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004520d0,FUN_004520d0,ported,SelectionRoot,9,2859
 00452430,FUN_00452430,named,EntityRandomValidCellCommandCreate,0,683
 004524b0,FUN_004524b0,named,SelectionObjectDetach,0,373
-00452520,FUN_00452520,named,SelectionSnapshotCreate,0,703
+00452520,FUN_00452520,ported,SelectionSnapshotCreate,1,703
 00452580,FUN_00452580,ported,ActiveContextRecordGet,1,255
 004525b0,FUN_004525b0,ported,SelectedEntitySetHasAny,3,59
 004525c0,FUN_004525c0,ported,SelectedEntity,3,83
@@ -1224,7 +1224,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00452be0,FUN_00452be0,ported,SelectionClear,1,568
 00452c50,FUN_00452c50,named,SelectionEntityRemove,0,458
 00452cc0,FUN_00452cc0,named,SelectedEntityStateMonitor,0,615
-00452d60,FUN_00452d60,named,SelectionCommandDispatch,0,791
+00452d60,FUN_00452d60,ported,SelectionCommandDispatch,1,791
 00452df0,FUN_00452df0,named,TutorialNerpScriptFileLoad,0,559
 00452e70,FUN_00452e70,named,ObjectiveAdvisorTokenLoad,0,6179
 00453200,FUN_00453200,named,ObjectiveAdvisorTokenLookup,0,149
@@ -2554,7 +2554,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0049d5e0,FUN_0049d5e0,named,DisplayModeDialogSetModeAndRefreshChoices,0,278
 0049d630,FUN_0049d630,named,DisplayModeListPopulate,0,1276
 0049d780,FUN_0049d780,named,DisplayResolutionComboPopulate,0,950
-0049d870,FUN_0049d870,named,DisplayResolutionFilterTupleAppend,0,278
+0049d870,FUN_0049d870,ported,DisplayResolutionFilterTupleAppend,1,278
 0049d8d0,FUN_0049d8d0,named,DisplayModeMatchesFilterTuple,0,654
 0049d950,FUN_0049d950,named,DisplayModeNameIndexFind,0,979
 0049d9d0,FUN_0049d9d0,named,DisplayRefreshRateControlsSync,0,685

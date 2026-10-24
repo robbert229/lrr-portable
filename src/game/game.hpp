@@ -232,6 +232,10 @@ typedef struct EntitySlot {
     void*    wake_target;    /* +0x364: attached wake target (FUN_0044c110;
                                * the corpus fills it via the attach-pair
                                * writer 0x44c0e2, which is not ported)      */
+    const void* owner_36c;   /* +0x36c: owner pointer read by the
+                              * context-selected predicate and the
+                              * selection-command dispatch (pointer-sized
+                              * mirror of the corpus's 32-bit word)         */
     float    field_340;      /* +0x340 float; the wake mirror sets 100.0
                               * (its general corpus readers are TODO)       */
     /* --- route-progress advance (corpus +0x344/+0x2fc, finding 448) -----

@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 603 | 23.5% |
+| ported | 606 | 23.6% |
 | anchored | 5 | 0.2% |
-| named | 1909 | 74.5% |
+| named | 1906 | 74.3% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (603 functions)
+  (606 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (5 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1909 functions)
+  citation yet (1906 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1915 (74.7%).**
+**Game logic remaining to port: 1912 (74.6%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -933,12 +933,10 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00451fd0` | CaseInsensitiveNameTableLookupAtOffset8 |
 | `0x00452430` | EntityRandomValidCellCommandCreate |
 | `0x004524b0` | SelectionObjectDetach |
-| `0x00452520` | SelectionSnapshotCreate |
 | `0x004526e0` | SelectionCandidateFilter |
 | `0x004528c0` | SelectionStateTick |
 | `0x00452c50` | SelectionEntityRemove |
 | `0x00452cc0` | SelectedEntityStateMonitor |
-| `0x00452d60` | SelectionCommandDispatch |
 | `0x00452df0` | TutorialNerpScriptFileLoad |
 | `0x00452e70` | ObjectiveAdvisorTokenLoad |
 | `0x00453200` | ObjectiveAdvisorTokenLookup |
@@ -1944,7 +1942,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0049d5e0` | DisplayModeDialogSetModeAndRefreshChoices |
 | `0x0049d630` | DisplayModeListPopulate |
 | `0x0049d780` | DisplayResolutionComboPopulate |
-| `0x0049d870` | DisplayResolutionFilterTupleAppend |
 | `0x0049d8d0` | DisplayModeMatchesFilterTuple |
 | `0x0049d950` | DisplayModeNameIndexFind |
 | `0x0049d9d0` | DisplayRefreshRateControlsSync |
