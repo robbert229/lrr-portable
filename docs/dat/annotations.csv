@@ -1849,3 +1849,9 @@ address,review_status,interpretation,confidence,evidence
 0x0076adf4,interpreted,LightWave scene file type token: LWS,high,EntityVisualTypeTablesInit stores a pointer to the static LWS token in this renderer type table slot.
 0x0076adf8,interpreted,LightWave object file type token: LWO,high,EntityVisualTypeTablesInit stores a pointer to the static LWO token in this renderer type table slot.
 0x0076adec,partial,Null entry in the renderer scene-type table,medium,"EntityVisualTypeTablesInit explicitly initializes this table slot to null; the table contains neighboring MESH, FRAME, ANIM, and ACT tokens, but no consumer assigns a meaning to this empty slot."
+0x004a949c,interpreted,"Seconds display format string: ""00""",high,"RewardStatsTextFormat appends this literal when the remaining seconds are below two, padding the seconds field with two zeroes."
+0x004a94a0,interpreted,"Seconds display format string: ""0%d""",high,RewardStatsTextFormat formats the remaining single-digit seconds with a leading zero using this format.
+0x004a94a4,interpreted,"Minutes display format string: ""00.""",high,"RewardStatsTextFormat appends this literal when the minutes field is below one, padding the field and adding its separator."
+0x004a94a8,interpreted,"Minutes display format string: ""%d.""",high,RewardStatsTextFormat formats the minutes field with this integer-and-separator pattern.
+0x004a94b4,interpreted,"Hours display format string: ""00:""",high,"RewardStatsTextFormat uses this literal when elapsed time is under one hour, padding the hours field before the hour separator."
+0x004a94b8,interpreted,"Hours display format string: ""%d:""",high,RewardStatsTextFormat formats the elapsed hours with this integer-and-separator pattern.
