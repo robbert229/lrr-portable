@@ -882,7 +882,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004383a0,FUN_004383a0,ported,GlobalAnimationStateSet,3,168
 004383b0,FUN_004383b0,named,RoverWorkQueueUpdate,0,724
 00438460,FUN_00438460,named,EntityKindRecordUpdateDispatch,0,1188
-00438580,FUN_00438580,ported,EntityFlag80000000SetOrClear,2,275
+00438580,FUN_00438580,named,EntityFlag80000000SetOrClear,0,275
 004385b0,FUN_004385b0,ported,EntitySharedEligibilityCheck,3,443
 00438610,FUN_00438610,named,EntityCreateWithPosition,0,466
 00438670,FUN_00438670,named,EntityAtGridPositionLookup,0,240
@@ -953,7 +953,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0043b6c0,FUN_0043b6c0,named,ClippedRectangleCallbackDispatch,0,794
 0043b820,FUN_0043b820,named,TypeTwoEntityEventDispatch,0,247
 0043b850,FUN_0043b850,named,TypeTwoEntityPositionedCallbackDispatch,0,650
-0043baf0,FUN_0043baf0,ported,EntityFlagsMask107C33DEOr1C00203AnyTest,5,171
+0043baf0,FUN_0043baf0,ported,EntityFlagsMask107C33DEOr1C00203AnyTest,3,171
 0043bb20,FUN_0043bb20,named,BuildingDepositStateMonitor,0,740
 0043bbc0,FUN_0043bbc0,ported,EntityDetachCarriedObjectAndResetState,3,540
 0043bc40,FUN_0043bc40,named,ObjectiveSidecarAppendGate,0,5325
@@ -1010,7 +1010,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00442b10,FUN_00442b10,named,EntityMovementAccumulatorApply,0,3963
 00442f80,FUN_00442f80,named,EntityPoseOrientationDispatch,0,4398
 00443510,FUN_00443510,named,SceneObjectPosePositionSync,0,1162
-00443670,FUN_00443670,ported,TryRandomEntityActionFromCodeRange,4,583
+00443670,FUN_00443670,named,TryRandomEntityActionFromCodeRange,0,583
 004436f0,FUN_004436f0,ported,EntityType3Flag04000000Test,3,139
 00443710,FUN_00443710,named,AdjacentPositionCandidateFind,0,766
 004437f0,FUN_004437f0,ported,EntityDispatchEvent31ForPendingFlag,3,274

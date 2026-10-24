@@ -163,6 +163,24 @@ float entity_stats_float_at11c(const EntitySlot* e);  /* FUN_0046a2d0 */
 float entity_stats_float_at110(const EntitySlot* e);  /* FUN_0046a2f0 */
 float entity_stats_float_at10c(const EntitySlot* e);  /* FUN_0046a310 */
 
+/* --- entity-state eligibility predicates (findings 318/319/471/472) -------
+ * Pure reads over the +0x3e0/+0x3e4/+0x3e8 flag mirrors and the +0x340
+ * float — no cell or context state. */
+
+/* FUN_0043baf0 — true when either flag word intersects its literal mask:
+ * +0x3e0 & 0x107c33de or +0x3e4 & 0x01c00203. */
+bool entity_flags_mask107c33de_or_1c00203_any_test(const EntitySlot* e);
+
+/* FUN_004385b0 — the shared eligibility gate the command and activity
+ * layers consult: no +0x3e0 bits 0x700100 or bit 0x20000, no +0x3e4 bit
+ * 0x100000, the +0x340 float not negative, and — when the caller passes a
+ * zero second argument — +0x3e8 bit 0x20000000 set with bit 0x80000000
+ * clear. */
+int entity_shared_eligibility_check(const EntitySlot* e, int relaxed);
+
+/* FUN_004436f0 — kind-3 predicate: type == 3 and +0x3e8 bit 0x04000000. */
+int entity_type3_flag04000000_test(const EntitySlot* e);
+
 #ifdef __cplusplus
 }
 #endif

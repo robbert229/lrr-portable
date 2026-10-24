@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 465 | 18.1% |
+| ported | 468 | 18.3% |
 | anchored | 5 | 0.2% |
-| named | 2048 | 79.9% |
+| named | 2045 | 79.8% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 0 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (465 functions)
+  (468 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (2048 functions)
+  citation yet (2045 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 2053 (80.1%).**
+**Game logic remaining to port: 2050 (80.0%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -466,6 +466,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00437940` | DeferredOListEntityCreateAndLink |
 | `0x004383b0` | RoverWorkQueueUpdate |
 | `0x00438460` | EntityKindRecordUpdateDispatch |
+| `0x00438580` | EntityFlag80000000SetOrClear |
 | `0x00438610` | EntityCreateWithPosition |
 | `0x00438670` | EntityAtGridPositionLookup |
 | `0x00438770` | BuildingUpgradeResourceAdmissionCheck |
@@ -563,6 +564,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00442b10` | EntityMovementAccumulatorApply |
 | `0x00442f80` | EntityPoseOrientationDispatch |
 | `0x00443510` | SceneObjectPosePositionSync |
+| `0x00443670` | TryRandomEntityActionFromCodeRange |
 | `0x00443710` | AdjacentPositionCandidateFind |
 | `0x00443840` | EntityRouteCellCandidateAccept |
 | `0x004438b0` | PathStepAdvanceAndArrivalCheck |

@@ -1323,6 +1323,22 @@ exactly the bound position, since the corpus's remaining-count gate
 answers 0 there). `crt_test` pins the carry corners, the classifier's
 bit patterns and the bounded scan's boundary cases.
 
+**Entity-state eligibility predicates** (2026-10-24; findings
+318/319/471/472): three flag-word predicates join `src/game/entity.*`,
+all pure reads over the `+0x3e0`/`+0x3e4`/`+0x3e8` mirrors and the
+`+0x340` float that `EntitySlot` already models —
+`entity_shared_eligibility_check` (`EntitySharedEligibilityCheck @
+0x4385b0`: `+0x3e0` clear under the `0x700100` mask, `+0x3e4` bit
+`0x100000` clear, the `+0x340` float not negative, `+0x3e0` bit `0x20000`
+clear; the strict form additionally requires `+0x3e8` bit `0x20000000`
+set with `0x80000000` clear, while the corpus's nonzero second argument
+skips that clause), `entity_flags_mask107c33de_or_1c00203_any_test`
+(`EntityFlagsMask107C33DEOr1C00203AnyTest @ 0x43baf0`, the literal-mask
+any-test across both flag words) and `entity_type3_flag04000000_test`
+(`EntityType3Flag04000000Test @ 0x4436f0`, kind 3 plus `+0x3e8` bit
+`0x04000000`). `entity_test` drives each gate independently, the strict/
+relaxed pair and the kind test.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the
