@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 475 | 18.5% |
+| ported | 483 | 18.8% |
 | anchored | 5 | 0.2% |
-| named | 2038 | 79.5% |
+| named | 2030 | 79.2% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 0 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (475 functions)
+  (483 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (5 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (2038 functions)
+  citation yet (2030 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (0 functions)
 
-**Game logic remaining to port: 2043 (79.7%).**
+**Game logic remaining to port: 2035 (79.4%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -508,7 +508,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0041b2d0` | CommandContextPostToHud |
 | `0x0041b300` | MenuSelectionResourceUpdate |
 | `0x0041b3c0` | EntityQueryFlagCount |
-| `0x0041b470` | CategoryValueIsNeitherZeroNorFifteen |
 | `0x0041b680` | CatalogCallbackByIdDispatch |
 | `0x0041b9b0` | GlobalStateGet_004ddd1c |
 | `0x0041b9c0` | SelectionEntityCodeResolve |
@@ -691,7 +690,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00435e35` | ModelTransformCopyToSceneNode |
 | `0x00435ebb` | ScreenEffectRecordSet |
 | `0x00435ef4` | RecordFields4And14Set |
-| `0x00435f0b` | RecordField14Get |
 | `0x00435f16` | CursorScreenRayContextReset |
 | `0x00435f28` | TerrainGridBorderInsetGet |
 | `0x00435f32` | EntityFieldsA0A4StoreA8Clear |
@@ -1274,7 +1272,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0046c130` | SceneObjectSetAnimationWithFallback |
 | `0x0046c160` | UpgradeLevelTableParse |
 | `0x0046c340` | IndexedRecordListRebuildForValue |
-| `0x0046c3d0` | RecordFieldD8EqualsOne |
 | `0x0046c3f0` | SceneActivityPairedChannelUpdate |
 | `0x0046c510` | SceneChannelSlotsRebuild |
 | `0x0046c6f0` | VehicleTypeDefinitionParse |
@@ -1340,14 +1337,10 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004712c0` | EntityVelocityStateRecordGet |
 | `0x004712f0` | EntityVelocitySlotValueGet |
 | `0x00471310` | EntityVelocitySlotValueSet |
-| `0x00471330` | InterpolatedZWithinBounds |
 | `0x00471630` | RayHitCellDistanceMinimizeSweep |
 | `0x00471860` | SceneSegmentTraceNearestHit |
 | `0x004718d0` | ObjectPairRayHitCheck |
 | `0x00471960` | SeeThroughWallsRayCheck |
-| `0x00471a20` | ReadIndexedPairSlotDword |
-| `0x00471a40` | VelocitySlotPrimaryObjectGet |
-| `0x00471a50` | VelocitySlotSecondaryObjectGet |
 | `0x00471a60` | EntityVelocitySteerBlendUpdate |
 | `0x00471c70` | VelocitySlotVectorRead |
 | `0x00471ca0` | EntityWorldCenterPositionRead |
@@ -1736,7 +1729,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00484e50` | FlicDecode16BitDelta |
 | `0x00485030` | FlicOpcode27DecodeDispatch |
 | `0x004850c0` | IndexedWordTableLookup |
-| `0x004850e0` | ObjectField10Get |
 | `0x004850f0` | TextBufferCreate |
 | `0x00485160` | TextOutputField82CBit2SetClear |
 | `0x00485190` | TextBufferDestroy |

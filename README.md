@@ -1369,6 +1369,27 @@ skip; pop/foreach answer the empty case instead of dereferencing
 (documented deviation). `ptrstack_test` drives LIFO order, the drain to
 empty, the guards and the link-steering walk.
 
+**Record access primitives** (2026-10-24; findings 305/332/354/356/367/
+378/460): eight pure corpus readers join a new `src/gods98/record.*`
+module — `record_field14_get` (`RecordField14Get @ 0x435f0b`),
+`object_field10_get` (`ObjectField10Get @ 0x4850e0`),
+`record_field_d8_equals_one` (`RecordFieldD8EqualsOne @ 0x46c3d0`, exact
+equality with 1, not "nonzero"), `read_indexed_pair_slot_dword`
+(`ReadIndexedPairSlotDword @ 0x471a20`, base + i·8 + j·4),
+`velocity_slot_primary_object_get` / `velocity_slot_secondary_object_get`
+(`VelocitySlotPrimaryObjectGet @ 0x471a40` /
+`VelocitySlotSecondaryObjectGet @ 0x471a50`, indexed dword slots at
++0x18/+0x24 — returned as raw dwords so no corpus pointer is ever
+truncated), `category_value_is_neither_zero_nor_fifteen`
+(`CategoryValueIsNeitherZeroNorFifteen @ 0x41b470`) and
+`interpolated_z_within_bounds` (`InterpolatedZWithinBounds @ 0x471330`,
+the two-record +0x8 interpolation inside the target window). Field
+*meanings* stay with their callers, as in the entity stats accessors;
+the reads are byte-safe (the corpus's dword/float slots are not always
+pointer-aligned on 64-bit hosts) and NULL records answer 0 (documented
+deviation). `record_test` drives the offsets, the index arithmetic, the
+equality corner and the window's edges.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

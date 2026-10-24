@@ -554,7 +554,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0041b2d0,FUN_0041b2d0,named,CommandContextPostToHud,0,158
 0041b300,FUN_0041b300,named,MenuSelectionResourceUpdate,0,784
 0041b3c0,FUN_0041b3c0,named,EntityQueryFlagCount,0,1201
-0041b470,FUN_0041b470,named,CategoryValueIsNeitherZeroNorFifteen,0,118
+0041b470,FUN_0041b470,ported,CategoryValueIsNeitherZeroNorFifteen,2,118
 0041b490,FUN_0041b490,ported,AdvisorOverlayUpdate,1,1805
 0041b680,FUN_0041b680,named,CatalogCallbackByIdDispatch,0,1788
 0041b930,FUN_0041b930,ported,TimedStatusAndEventTick,1,438
@@ -834,7 +834,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00435e35,FUN_00435e35,named,ModelTransformCopyToSceneNode,0,575
 00435ebb,FUN_00435ebb,named,ScreenEffectRecordSet,0,367
 00435ef4,FUN_00435ef4,named,RecordFields4And14Set,0,173
-00435f0b,FUN_00435f0b,named,RecordField14Get,0,86
+00435f0b,FUN_00435f0b,ported,RecordField14Get,2,86
 00435f16,FUN_00435f16,named,CursorScreenRayContextReset,0,87
 00435f28,FUN_00435f28,named,TerrainGridBorderInsetGet,0,60
 00435f32,FUN_00435f32,named,EntityFieldsA0A4StoreA8Clear,0,215
@@ -1594,7 +1594,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0046c130,FUN_0046c130,named,SceneObjectSetAnimationWithFallback,0,230
 0046c160,FUN_0046c160,named,UpgradeLevelTableParse,0,3427
 0046c340,FUN_0046c340,named,IndexedRecordListRebuildForValue,0,875
-0046c3d0,FUN_0046c3d0,named,RecordFieldD8EqualsOne,0,78
+0046c3d0,FUN_0046c3d0,ported,RecordFieldD8EqualsOne,2,78
 0046c3f0,FUN_0046c3f0,named,SceneActivityPairedChannelUpdate,0,1534
 0046c510,FUN_0046c510,named,SceneChannelSlotsRebuild,0,2569
 0046c6f0,FUN_0046c6f0,named,VehicleTypeDefinitionParse,0,8620
@@ -1663,14 +1663,14 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004712c0,FUN_004712c0,named,EntityVelocityStateRecordGet,0,165
 004712f0,FUN_004712f0,named,EntityVelocitySlotValueGet,0,167
 00471310,FUN_00471310,named,EntityVelocitySlotValueSet,0,192
-00471330,FUN_00471330,named,InterpolatedZWithinBounds,0,277
+00471330,FUN_00471330,ported,InterpolatedZWithinBounds,2,277
 00471630,FUN_00471630,named,RayHitCellDistanceMinimizeSweep,0,2915
 00471860,FUN_00471860,named,SceneSegmentTraceNearestHit,0,530
 004718d0,FUN_004718d0,named,ObjectPairRayHitCheck,0,642
 00471960,FUN_00471960,named,SeeThroughWallsRayCheck,0,968
-00471a20,FUN_00471a20,named,ReadIndexedPairSlotDword,0,131
-00471a40,FUN_00471a40,named,VelocitySlotPrimaryObjectGet,0,112
-00471a50,FUN_00471a50,named,VelocitySlotSecondaryObjectGet,0,112
+00471a20,FUN_00471a20,ported,ReadIndexedPairSlotDword,2,131
+00471a40,FUN_00471a40,ported,VelocitySlotPrimaryObjectGet,2,112
+00471a50,FUN_00471a50,ported,VelocitySlotSecondaryObjectGet,2,112
 00471a60,FUN_00471a60,named,EntityVelocitySteerBlendUpdate,0,2219
 00471c70,FUN_00471c70,named,VelocitySlotVectorRead,0,238
 00471ca0,FUN_00471ca0,named,EntityWorldCenterPositionRead,0,317
@@ -2132,7 +2132,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00484e50,FUN_00484e50,named,FlicDecode16BitDelta,0,2550
 00485030,FUN_00485030,named,FlicOpcode27DecodeDispatch,0,547
 004850c0,FUN_004850c0,named,IndexedWordTableLookup,0,123
-004850e0,FUN_004850e0,named,ObjectField10Get,0,86
+004850e0,FUN_004850e0,ported,ObjectField10Get,2,86
 004850f0,FUN_004850f0,named,TextBufferCreate,0,655
 00485160,FUN_00485160,named,TextOutputField82CBit2SetClear,0,235
 00485190,FUN_00485190,named,TextBufferDestroy,0,122
