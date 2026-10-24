@@ -672,8 +672,8 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00429470,FUN_00429470,named,CameraPointerRayRoute,0,1203
 004295a0,FUN_004295a0,named,ContextSelectedGlobalPointerGet,0,157
 004295c0,FUN_004295c0,named,EntityMatchesCurrentSelectionOrOwner,0,224
-004295f0,FUN_004295f0,named,SoundMinimumDistanceUpdateMode,0,1364
-004297b0,FUN_004297b0,named,CDAudioWatchdogModeUpdate,0,344
+004295f0,FUN_004295f0,ported,SoundMinimumDistanceUpdateMode,4,1364
+004297b0,FUN_004297b0,ported,CDAudioWatchdogModeUpdate,4,344
 00429810,FUN_00429810,named,AudioPlaybackToggle,0,216
 00429850,FUN_00429850,named,ActiveEngineFieldB0Get,0,84
 00429860,FUN_00429860,named,EngineFloatField210GetByIndex,0,107
@@ -2274,7 +2274,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0048e090,FUN_0048e090,named,CrtAsin,0,112
 0048e0ad,FUN_0048e0ad,named,CrtAcosCore,0,1162
 0048e160,FUN_0048e160,named,RandomSeedSet,0,81
-0048e170,FUN_0048e170,ported,RandomNext,5,123
+0048e170,FUN_0048e170,ported,RandomNext,6,123
 0048e1aa,FUN_0048e1aa,named,CrtMathIntrinsicDispatch,0,61
 0048e1e0,FUN_0048e1e0,named,FormattedTextBufferBuild,0,476
 0048e250,FUN_0048e250,named,StackProbeAllocate,0,343
