@@ -31,6 +31,7 @@ Finding 10 maps the entity command record format, kind names, and creation paths
 - The registry initializer and configuration loaders divide the names, order values, and per-priority state across separate tables: name strings at `DAT_004b327c`, order values at `DAT_004b32e8`, and state values at `DAT_004b7ff4`. The numbers are used by sort/purge and command creation, but are not themselves function pointers.
 - Producers link records onto one of two global list heads. `CmdTickGlobal` processes both lists each simulation tick; `CmdChainPurge` first reclaims completed records and then reorders up to 300 survivors. Records may be created directly on a global list or promoted from an entity's `+0x2f0` chain by `EntityDrainCommandChain` or `FUN_004041e0`.
 - `CmdFlushAll(0)` is a stateful reset, not simply a free-every-record loop: it invokes a callback scan, sets a guard bit, drops both global heads, and clears associated tables. `CmdFlushAll(nonzero)` only clears the guard bit. Exact ordering with entity-chain drains is not established here.
+- Observed `DAT_004b8060` bits: bit 0 is set by `CmdRegistryInit` and the whole word is cleared by `HandleArrayReleaseAndReset`; bit 1 is set during `CmdFlushAll(0)`, cleared by `CmdFlushAll(nonzero)`, and blocks entity-chain drains and record removals; bit 2 is only observed as an additional `EntityTaskQueueFlush` guard; bit 31 suppresses the body of `CmdTickGlobal`. No writer for bits 2 or 31 appears in the decompiled references, so their broader lifecycle and names remain unresolved.
 - Finding 10 remains the broader source for record fields, kind/name tables, and creator behavior. Findings 254, 366, and 369 describe adjacent terrain issue and scheduler paths. This pass does not infer the semantic names of record kinds or flag bits from these call paths alone.
 
 ## Unresolved slices
@@ -38,7 +39,7 @@ Finding 10 maps the entity command record format, kind names, and creation paths
 - Recover `LAB_00403f80`'s sort ordering and establish how entries beyond the 300-record prefix are ordered over subsequent ticks.
 - Recover the entity callback bodies `LAB_004021f0`, `LAB_00404250`, and `LAB_00403ad0`; determine how each interacts with the flush guard and entity chains.
 - Establish why `CmdChainWalk` callers use a value that the decompiled signature/body do not return, using disassembly or runtime evidence.
-- Trace all writers/readers of `DAT_004b8060` and identify the exact meanings of its low guard bits and high-bit tick suppression.
+- Trace external or indirect writers of `DAT_004b8060` bits 2 and 31 and establish whether bit 0 is an initialization marker or a broader lifecycle state.
 - Determine whether `CmdFlushAll(0)` intentionally discards record allocations after the callback scan or whether callbacks are required to rehome/free all entries first.
 
 ## Related findings
