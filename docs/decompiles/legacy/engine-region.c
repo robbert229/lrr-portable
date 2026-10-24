@@ -45070,10 +45070,10 @@ code_r0x0048d69e:
 }
 
 
-// ==== MaterialResolve @ 00490090 ====
+// ==== AssetPathComponentsParse @ 00490090 ====
 
 
-void MaterialResolve(byte *param_1,byte *param_2,undefined1 *param_3,int param_4,undefined1 *param_5)
+void AssetPathComponentsParse(byte *param_1,byte *param_2,undefined1 *param_3,int param_4,undefined1 *param_5)
 
 {
   byte *pbVar1;
@@ -46237,10 +46237,10 @@ void AviFileInitialize(undefined4 param_1)
 }
 
 
-// ==== AviFileShutdown @ 0047efd0 ====
+// ==== DirectInputShutdown @ 0047efd0 ====
 
 
-void AviFileShutdown(void)
+void DirectInputShutdown(void)
 
 {
   if (DAT_0076ab0c != 0) {
@@ -46296,10 +46296,10 @@ void RenderSetup(undefined4 param_1)
 }
 
 
-// ==== ResourceStateTableReset @ 004893f0 ====
+// ==== MapFileResourceSlotsReset @ 004893f0 ====
 
 
-void ResourceStateTableReset(void)
+void MapFileResourceSlotsReset(void)
 
 {
   undefined4 *puVar1;
@@ -54472,9 +54472,9 @@ void SceneObjectStateDispatch(undefined4 param_1,uint param_2,uint param_3)
   return;
 }
 
-// ==== LwoParserRecordAtIndex @ 48bce0 ====
+// ==== WadArchiveRecordAtIndex @ 48bce0 ====
 
-undefined * LwoParserRecordAtIndex(int param_1)
+undefined * WadArchiveRecordAtIndex(int param_1)
 
 {
   return &DAT_00575500 + param_1 * 0x24;
@@ -88538,10 +88538,10 @@ void ResourceSlotTableReleaseAll(void)
 }
 
 
-// ==== VideoResourceSlotRelease @ 0047AB00 ====
+// ==== SoundBankEntryRelease @ 0047AB00 ====
 
 
-undefined4 VideoResourceSlotRelease(int param_1)
+undefined4 SoundBankEntryRelease(int param_1)
 
 {
   int *piVar1;
@@ -88572,10 +88572,10 @@ undefined4 VideoResourceSlotRelease(int param_1)
 }
 
 
-// ==== VideoResourceSlotEnabledSet @ 0047B050 ====
+// ==== SoundBankEntryVolumeSet @ 0047B050 ====
 
 
-void VideoResourceSlotEnabledSet(int param_1,uint param_2)
+void SoundBankEntryVolumeSet(int param_1,uint param_2)
 
 {
   int *piVar1;
@@ -103870,10 +103870,10 @@ int * ComInterfaceQueryOrFallback(void)
   return (int *)0x0;
 }
 
-// ==== RegistryEntryValueGet @ 0048BCF0 ====
+// ==== WadEntryLengthGet @ 0048BCF0 ====
 
 
-undefined4 RegistryEntryValueGet(undefined4 param_1,int param_2)
+undefined4 WadEntryLengthGet(undefined4 param_1,int param_2)
 
 {
   int iVar1;
@@ -103882,10 +103882,10 @@ undefined4 RegistryEntryValueGet(undefined4 param_1,int param_2)
   return *(undefined4 *)(*(int *)(iVar1 + 0x1c) + 8 + param_2 * 0x10);
 }
 
-// ==== RegistryEntryTypeGet @ 0048BD10 ====
+// ==== WadEntryField4Get @ 0048BD10 ====
 
 
-undefined4 RegistryEntryTypeGet(undefined4 param_1,int param_2)
+undefined4 WadEntryField4Get(undefined4 param_1,int param_2)
 
 {
   int iVar1;
@@ -105240,10 +105240,10 @@ undefined4 ConstantNegative10000Get(void)
   return 0xffffd8f0;
 }
 
-// ==== RegistryEntryAccessByIndex @ 0048C030 ====
+// ==== WadMemoryStreamBufferGet @ 0048C030 ====
 
 
-void RegistryEntryAccessByIndex(undefined4 param_1)
+void WadMemoryStreamBufferGet(undefined4 param_1)
 
 {
   FUN_0048bff0(param_1);

@@ -21,7 +21,7 @@ contexts were used to keep names tied to observed behavior.
 | 0x4798b0 | RandomFloatRange | Scales the engine's signed-short random value and interpolates between the supplied floating-point bounds. |
 | 0x47d700 | PopCount32 | Counts set bits in a 32-bit value with a shift-and-count loop. |
 | 0x47d720 | FindFirstSetBit32 | Returns the least-significant set-bit index, or -1 when the input is zero. |
-| 0x48bce0 | LwoParserRecordAtIndex | Returns the 36-byte parser record at the requested index in the LWO chunk table. The loader and sibling accessors use this table. |
+| 0x48bce0 | WadArchiveRecordAtIndex | Returns the 36-byte mounted-WAD registry record at `0x575500 + index * 0x24`. Its callers are the WAD index loader, archive-entry lookup/open functions, and adjacent WAD registry accessors; it is not an LWO chunk-table accessor. |
 | 0x48fb90 | GameFileReadBuffered | Reads from the engine stream buffer, refilling or reading directly as needed, updates EOF/error flags, and returns the number of bytes or elements read. |
 
 **Evidence.** Direct pseudocode for these targets is in the batch decompile

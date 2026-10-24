@@ -80783,7 +80783,7 @@ undefined4 FUN_0047aad0(int *param_1)
 }
 
 
-// ==== VideoResourceSlotRelease @ 0047AB00 [Ghidra: FUN_0047ab00] ====
+// ==== SoundBankEntryRelease @ 0047AB00 [Ghidra: FUN_0047ab00] ====
 
 
 undefined4 FUN_0047ab00(int param_1)
@@ -81107,7 +81107,7 @@ void FUN_0047b020(undefined4 param_1,undefined4 param_2,undefined4 param_3)
 }
 
 
-// ==== VideoResourceSlotEnabledSet @ 0047B050 [Ghidra: FUN_0047b050] ====
+// ==== SoundBankEntryVolumeSet @ 0047B050 [Ghidra: FUN_0047b050] ====
 
 
 void FUN_0047b050(int param_1,uint param_2)
@@ -84742,7 +84742,7 @@ int FUN_0047efb0(void)
 }
 
 
-// ==== AviFileShutdown @ 0047EFD0 [Ghidra: FUN_0047efd0] ====
+// ==== DirectInputShutdown @ 0047EFD0 [Ghidra: FUN_0047efd0] ====
 
 
 void FUN_0047efd0(void)
@@ -93627,7 +93627,7 @@ undefined4 FUN_004893a0(void)
 }
 
 
-// ==== ResourceStateTableReset @ 004893F0 [Ghidra: FUN_004893f0] ====
+// ==== MapFileResourceSlotsReset @ 004893F0 [Ghidra: FUN_004893f0] ====
 
 
 void FUN_004893f0(void)
@@ -95591,7 +95591,7 @@ LAB_0048bbad:
 }
 
 
-// ==== LwoParserRecordAtIndex @ 0048BCE0 [Ghidra: FUN_0048bce0] ====
+// ==== WadArchiveRecordAtIndex @ 0048BCE0 [Ghidra: FUN_0048bce0] ====
 
 
 undefined * FUN_0048bce0(int param_1)
@@ -95601,7 +95601,7 @@ undefined * FUN_0048bce0(int param_1)
 }
 
 
-// ==== RegistryEntryValueGet @ 0048BCF0 [Ghidra: FUN_0048bcf0] ====
+// ==== WadEntryLengthGet @ 0048BCF0 [Ghidra: FUN_0048bcf0] ====
 
 
 undefined4 FUN_0048bcf0(undefined4 param_1,int param_2)
@@ -95614,7 +95614,7 @@ undefined4 FUN_0048bcf0(undefined4 param_1,int param_2)
 }
 
 
-// ==== RegistryEntryTypeGet @ 0048BD10 [Ghidra: FUN_0048bd10] ====
+// ==== WadEntryField4Get @ 0048BD10 [Ghidra: FUN_0048bd10] ====
 
 
 undefined4 FUN_0048bd10(undefined4 param_1,int param_2)
@@ -95845,7 +95845,7 @@ void FUN_0048c010(int param_1)
 }
 
 
-// ==== RegistryEntryAccessByIndex @ 0048C030 [Ghidra: FUN_0048c030] ====
+// ==== WadMemoryStreamBufferGet @ 0048C030 [Ghidra: FUN_0048c030] ====
 
 
 void FUN_0048c030(undefined4 param_1)
@@ -100204,7 +100204,7 @@ void FUN_00490070(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== MaterialResolve @ 00490090 [Ghidra: FUN_00490090] ====
+// ==== AssetPathComponentsParse @ 00490090 [Ghidra: FUN_00490090] ====
 
 
 void FUN_00490090(byte *param_1,byte *param_2,undefined1 *param_3,int param_4,undefined1 *param_5)
