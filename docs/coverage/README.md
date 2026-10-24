@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 461 | 18.0% |
+| ported | 465 | 18.1% |
 | anchored | 5 | 0.2% |
-| named | 2052 | 80.0% |
+| named | 2048 | 79.9% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 0 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (461 functions)
+  (465 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (2052 functions)
+  citation yet (2048 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 2057 (80.2%).**
+**Game logic remaining to port: 2053 (80.1%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -1424,6 +1424,10 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00493280` | CrtFloatingPointExceptionRaise |
 | `0x004935c0` | CrtDoubleToIntegerRound |
 | `0x004938f0` | CrtMathExceptionDispatch |
+| `0x004939a0` | CrtMathErrorCodeSet |
+| `0x004939d0` | CrtMathExceptionHandlerGet |
+| `0x00493a00` | CrtMathExceptionCodeFromStatus |
+| `0x00493a40` | DoubleBuildWithExponent |
 | `0x00493ae0` | DoubleFrexpDecompose |
 | `0x00493be0` | FpuStatusWordGetVariantA |
 | `0x00493bf0` | FpuStatusWordGetVariantB |
@@ -1514,6 +1518,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00499880` | CrtTimeZoneStateInit |
 | `0x00499b30` | CrtDaylightSavingTimeCheck |
 | `0x00499da0` | CrtDaylightTransitionBoundaryCompute |
+| `0x00499fe0` | UInt96Add |
 | `0x0049a050` | ExtendedFloat96BitShiftLeftOne |
 | `0x0049a080` | ExtendedFloat96BitShiftRightOne |
 | `0x0049a0b0` | CrtDecimalDigitSequenceToExtended96 |
@@ -1522,6 +1527,8 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0049a800` | ExtendedFloatPowerOfTenScale |
 | `0x0049a890` | Win32FileDescriptorResize |
 | `0x0049aa10` | CrtSignalHandlerDispatch |
+| `0x0049ab90` | CrtSignalHandlerRecordFind |
+| `0x0049abe0` | CrtWideCharToMultiByteCompat |
 | `0x0049ae10` | CrtEnvironmentVariableLookup |
 | `0x0049aea0` | CrtFileDescriptorFlag80SetOrClear |
 | `0x0049af20` | CrtCountedStringCompare |

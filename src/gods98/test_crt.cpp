@@ -132,6 +132,47 @@ static void test_pair_conversions(void)
     CHECK(ix == 0 && iy == 5, "corners truncate toward zero");
 }
 
+static void test_crt_leaves(void)
+{
+    /* Unsigned add with carry: the sum never lies about the carry. */
+    uint32_t sum = 0;
+    CHECK(crt_unsigned_add_with_carry(1, 2, &sum) == 0 && sum == 3,
+          "small add carries nothing");
+    CHECK(crt_unsigned_add_with_carry(0xffffffffu, 1, &sum) == 1 && sum == 0,
+          "max plus one wraps with carry");
+    CHECK(crt_unsigned_add_with_carry(0xffffffffu, 0xffffffffu, &sum) == 1
+              && sum == 0xfffffffeu,
+          "double-max wraps with carry");
+
+    /* Double classifier over the bit pair (finding 399). */
+    CHECK(double_classify(0u, 0x7ff00000u) == 1, "positive infinity");
+    CHECK(double_classify(0u, 0xfff00000u) == 2, "negative infinity");
+    CHECK(double_classify(0u, 0x7ff80000u) == 3, "quiet-NaN-shaped");
+    CHECK(double_classify(1u, 0x7ff00000u) == 4,
+          "signaling-NaN-shaped via the low word");
+    CHECK(double_classify(0u, 0x7ff00001u) == 4,
+          "signaling-NaN-shaped via the high word mantissa");
+    CHECK(double_classify(0u, 0x3ff00000u) == 0, "one is finite");
+    CHECK(double_classify(1u, 0x7ff00001u) == 4, "both mantissas nonzero");
+
+    /* Wide strings: 16-bit code units. */
+    static const uint16_t s_ab[] = { 'a', 'b', 0 };
+    static const uint16_t s_long[] = { 'a', 'b', 'c', 'd', 0 };
+    static const uint16_t s_empty[] = { 0 };
+    CHECK(wide_string_length(s_ab) == 2, "length before the NUL");
+    CHECK(wide_string_length(s_empty) == 0, "empty counts zero");
+    CHECK(bounded_wide_string_length_including_null(s_ab, 4) == 3,
+          "terminator inside the bound counts itself");
+    CHECK(bounded_wide_string_length_including_null(s_long, 2) == 2,
+          "no terminator inside: answers the bound");
+    CHECK(bounded_wide_string_length_including_null(s_ab, 0) == 0,
+          "zero bound reads nothing");
+    CHECK(bounded_wide_string_length_including_null(s_empty, 1) == 1,
+          "leading NUL answers one");
+    CHECK(bounded_wide_string_length_including_null(s_long, 4) == 4,
+          "terminator exactly at the bound answers the bound");
+}
+
 int main(void)
 {
     test_memory_move();
@@ -139,6 +180,7 @@ int main(void)
     test_noop_callback();
     test_bit_numeric();
     test_pair_conversions();
+    test_crt_leaves();
     if (s_failures != 0) {
         fprintf(stderr, "crt_test: %d failure(s)\n", s_failures);
         return 1;

@@ -2389,10 +2389,10 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00493280,FUN_00493280,named,CrtFloatingPointExceptionRaise,0,3724
 004935c0,FUN_004935c0,named,CrtDoubleToIntegerRound,0,4406
 004938f0,FUN_004938f0,named,CrtMathExceptionDispatch,0,956
-004939a0,FUN_004939a0,ported,CrtMathErrorCodeSet,1,273
-004939d0,FUN_004939d0,ported,CrtMathExceptionHandlerGet,2,305
-00493a00,FUN_00493a00,ported,CrtMathExceptionCodeFromStatus,2,254
-00493a40,FUN_00493a40,ported,DoubleBuildWithExponent,3,242
+004939a0,FUN_004939a0,named,CrtMathErrorCodeSet,0,273
+004939d0,FUN_004939d0,named,CrtMathExceptionHandlerGet,0,305
+00493a00,FUN_00493a00,named,CrtMathExceptionCodeFromStatus,0,254
+00493a40,FUN_00493a40,named,DoubleBuildWithExponent,0,242
 00493a80,FUN_00493a80,ported,DoubleClassify,2,383
 00493ae0,FUN_00493ae0,named,DoubleFrexpDecompose,0,1595
 00493be0,FUN_00493be0,named,FpuStatusWordGetVariantA,0,91
@@ -2500,7 +2500,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00499b30,FUN_00499b30,named,CrtDaylightSavingTimeCheck,0,2214
 00499da0,FUN_00499da0,named,CrtDaylightTransitionBoundaryCompute,0,1648
 00499fb0,FUN_00499fb0,ported,CrtUnsignedAddWithCarry,2,254
-00499fe0,FUN_00499fe0,ported,UInt96Add,3,449
+00499fe0,FUN_00499fe0,named,UInt96Add,0,449
 0049a050,FUN_0049a050,named,ExtendedFloat96BitShiftLeftOne,0,237
 0049a080,FUN_0049a080,named,ExtendedFloat96BitShiftRightOne,0,213
 0049a0b0,FUN_0049a0b0,named,CrtDecimalDigitSequenceToExtended96,0,1136
@@ -2509,8 +2509,8 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0049a800,FUN_0049a800,named,ExtendedFloatPowerOfTenScale,0,1079
 0049a890,FUN_0049a890,named,Win32FileDescriptorResize,0,1927
 0049aa10,FUN_0049aa10,named,CrtSignalHandlerDispatch,0,1709
-0049ab90,FUN_0049ab90,ported,CrtSignalHandlerRecordFind,3,531
-0049abe0,FUN_0049abe0,ported,CrtWideCharToMultiByteCompat,3,2829
+0049ab90,FUN_0049ab90,named,CrtSignalHandlerRecordFind,0,531
+0049abe0,FUN_0049abe0,named,CrtWideCharToMultiByteCompat,0,2829
 0049add0,FUN_0049add0,ported,BoundedWideStringLengthIncludingNull,2,387
 0049ae10,FUN_0049ae10,named,CrtEnvironmentVariableLookup,0,1233
 0049aea0,FUN_0049aea0,named,CrtFileDescriptorFlag80SetOrClear,0,728

@@ -63,6 +63,29 @@ void integer_pair_divide_to_float_pair(int x, int y, int divisor,
  * zero into the integer pair (same deviation as float_to_long). */
 void float_pair_to_integer_pair(float x, float y, int* out_x, int* out_y);
 
+/* FUN_00499fb0: unsigned 32-bit add with carry — stores the sum and
+ * answers 1 when the addition carried (finding 302; the primitive the
+ * corpus's 96-bit increment/add/multiply helpers build on). */
+int crt_unsigned_add_with_carry(uint32_t a, uint32_t b, uint32_t* sum);
+
+/* FUN_00493a80: the double special-value classifier over the raw bit
+ * pair — 1 positive infinity, 2 negative infinity, 3 quiet-NaN-shaped
+ * (exponent all ones, quiet bit set), 4 signaling-NaN-shaped (exponent
+ * all ones, quiet bit clear, mantissa nonzero), 0 finite (finding
+ * 399). Sign does not steer cases 3/4, matching the corpus. */
+int double_classify(uint32_t lo, uint32_t hi);
+
+/* FUN_00499710: UTF-16 code units before the NUL terminator (finding 377
+ * — the corpus walks 16-bit units the same way strlen walks bytes). */
+int wide_string_length(const uint16_t* text);
+
+/* FUN_0049add0: scan at most `bound` wide characters; answer the
+ * terminator index plus one (the count including the NUL) when found
+ * inside the bound, otherwise the bound itself — and the bound for a
+ * zero bound, as in the corpus (findings 342/397). */
+int bounded_wide_string_length_including_null(const uint16_t* text,
+                                              int bound);
+
 #ifdef __cplusplus
 }
 #endif
