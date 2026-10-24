@@ -196,4 +196,11 @@ void simtick_scene_position_reset_and_effect_motion_cancel(void);
                                      /* FUN_0044cf70 */
 void         simtick_scene_transform_current_set(const float xyz[3]);
 const float* simtick_scene_transform_config_peek(void);
+/* ReleaseAllGroupRecords (FUN_004099f0's chain walk — FUN_004099d0): walks
+ * the bobbin chain (successor through the +0x24 link) from the global head
+ * and drops each record through the drop leaf. The corpus's drop unlinks
+ * from the chain as it walks; the port's drop is the corpus hook boundary
+ * (no-op) so the walk is read-only (documented deviation). */
+void simtick_release_all_group_records(void);       /* FUN_004099d0 */
+
 #endif /* LEGORRR_SIMTICK_HPP */

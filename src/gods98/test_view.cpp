@@ -497,6 +497,22 @@ int main(void)
         selection_record_point_get(NULL, out); /* guarded */
     }
 
+    /* The selected-point x transform (2026-10-24): mode-selected view. */
+    {
+        EngineContext ctx = {};
+        ViewContext v = {};
+        v.mode = 1;
+        ctx.context_mode = 1;
+        ctx.views[0] = &v;
+        selection_record_point_set(&v, 7.5f, -3.5f);
+        CHECK(selected_global_point_transform_and_return_x(&ctx) == 7.5f,
+              "the in-game follow view answers its x");
+        ctx.context_mode = 0; /* editor: the view-2 window is unbound */
+        CHECK(selected_global_point_transform_and_return_x(&ctx) == 0.0f,
+              "the unbound editor view answers zero");
+        selected_global_point_transform_and_return_x(NULL); /* guarded */
+    }
+
     if (s_failures == 0) {
         printf("view_test: PASS\n");
         return 0;

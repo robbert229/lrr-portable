@@ -739,3 +739,15 @@ void selection_record_point_get(ViewContext* v, float out[3])
         cam_get_pos(&v->cam_follow, out);
     }
 }
+
+/* SelectedGlobalPointTransformAndReturnX (FUN_0046a420) — see view.hpp. */
+float selected_global_point_transform_and_return_x(EngineContext* ctx)
+{
+    if (ctx == NULL) {
+        return 0.0f; /* deviation: the corpus strides the globals blindly */
+    }
+    ViewContext* v = (ctx->context_mode == 1) ? ctx->views[0] : ctx->views[2];
+    float frame[3] = { 0.0f, 0.0f, 0.0f };
+    (void)camera_get_position_with_terrain_height(v, ctx, frame);
+    return frame[0];
+}

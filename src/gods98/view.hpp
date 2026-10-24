@@ -264,4 +264,14 @@ void camera_zoom_step_adjust(void* camera, int direction, float step);
  * (cam_get_pos). Non-follow records answer nothing (the corpus's gate). */
 void selection_record_point_get(ViewContext* v, float out[3]); /* FUN_00436ae9 */
 
+/* SelectedGlobalPointTransformAndReturnX (FUN_0046a420, finding 426): picks
+ * the follow view in-game (DAT_005560e4) or the editor view otherwise
+ * (DAT_005560ec — the engine context's mode word and view windows), reads
+ * the camera position with the terrain-height replacement through the
+ * ported pair, and returns the frame array's first word (x). The corpus's
+ * level-terrain-handle read rides in the call as the ported callee's
+ * world-handle argument (folded into the bound level block per deviation). */
+float selected_global_point_transform_and_return_x(EngineContext* ctx);
+                                                /* FUN_0046a420 */
+
 #endif /* LEGORRR_VIEW_HPP */

@@ -740,6 +740,38 @@ int main(void)
         linked_object_list_release(NULL); /* guarded */
     }
 
+    /* ModelRenderListClear + CrtOwnedStreamBufferRelease (2026-10-24). */
+    {
+        char* solo = (char*)engine_heap_alloc(0x50);
+        char* tail = (char*)engine_heap_alloc(0x50);
+        memset(solo, 0, 0x50); /* the +0x44 terminator reads in-bounds */
+        memset(tail, 0, 0x50);
+        __builtin_memcpy(solo + 0x44, &tail, sizeof tail);
+        model_render_list_head_set(solo);
+        model_render_list_clear();
+        CHECK(model_render_list_head_peek() == NULL, "the list head clears");
+        model_render_list_clear(); /* the cleared head is inert */
+
+        char rec[4 * sizeof(void*) + 4];
+        memset(rec, 0, sizeof rec);
+        void* buf = engine_heap_alloc(64);
+        __builtin_memcpy(rec + 2 * sizeof(void*), &buf, sizeof buf);
+        uint32_t flags = 0x88u;
+        __builtin_memcpy(rec + 3 * sizeof(void*), &flags, sizeof flags);
+        crt_owned_stream_buffer_release(rec);
+        void* p = (void*)1;
+        __builtin_memcpy(&p, rec + 2 * sizeof(void*), sizeof p);
+        CHECK(p == NULL, "the owned buffer slot clears");
+        __builtin_memcpy(&flags, rec + 3 * sizeof(void*), sizeof flags);
+        CHECK(flags == 0x80u, "bits 3 and 11 clear, bit 7 survives");
+        flags = 0x82u; /* bit 3 clear: the gate fails, record untouched */
+        __builtin_memcpy(rec + 3 * sizeof(void*), &flags, sizeof flags);
+        crt_owned_stream_buffer_release(rec);
+        __builtin_memcpy(&flags, rec + 3 * sizeof(void*), sizeof flags);
+        CHECK(flags == 0x82u, "the gate-false record survives intact");
+        crt_owned_stream_buffer_release(NULL); /* guarded */
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "crt_test: %d failure(s)\n", s_failures);
         return 1;
