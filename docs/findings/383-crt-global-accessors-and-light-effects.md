@@ -29,7 +29,7 @@ This pass names 38 routines across the remaining high and mid ranges, plus small
 | `0x00458650` | `GlobalFlagGet_004ffe30` | Returns the global value stored at `0x004ffe30`. | Caller `FUN_0045c4b0` checks it as a gate; exact meaning is unresolved. |
 | `0x00458660` | `GlobalValueSet_004ffe48` | Stores the supplied value at `0x004ffe48`. | Direct pseudocode; the global’s meaning is unresolved. |
 | `0x0045c4a0` | `GlobalValueSet_0050080c` | Stores the supplied value at `0x0050080c`. | Direct pseudocode; the global’s meaning is unresolved. |
-| `0x0045cc10` | `IndexedGlobalValueGet_00500a9c` | Returns an indexed value from the table beginning at `0x00500a9c`. | Callers use the value in UI state setup; exact field semantics are unknown. |
+| `0x0045cc10` | `IndexedGlobalValueGet_00500a9c` | Returns a resource handle from the 56-entry pointer-cursor table beginning at `0x00500a9c`. | The cursor loader fills the table by matching config names against the fixed 56-name registry (Finding 103); pointer-cursor draw reads the selected slot. |
 | `0x0045cc60` | `GlobalValueGet_00500a98` | Returns the currently selected pointer-cursor slot index stored at `0x00500a98` (Findings 103 and 104). | Caller `FUN_0045c4b0`. |
 | `0x004628c0` | `GlobalFloatAccumulate_00555120` | Adds the supplied float to the global accumulator at `0x00555120`. | Caller `FUN_004628a0`; unit and purpose are unresolved. |
 | `0x0047c160` | `ConstantNegative10000Get` | Returns the constant `-10000`. | Direct pseudocode. |
