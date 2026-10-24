@@ -1912,3 +1912,74 @@ void current_selection_context_set(void* context)
 {
     s_current_selection_context = context;
 }
+
+/* --- selection-state band (see frontend.hpp) -------------------------------
+ * Zero-initialized module statics: the corpus's table writers (the
+ * UI-mode resource positions apply (UiModeResourcePositionsApply) and the
+ * button hit test (HelpWindowButtonHitTest) are unported, so state, hit
+ * index, and handles land at
+ * zero. The corpus's 0x1c-stride handle tables index blindly; the port
+ * guards a 16-entry window per table (index * 7 dwords). */
+#define SEL_HANDLE_ENTRIES 16
+#define SEL_HANDLE_STRIDE 7 /* dwords per 0x1c-stride entry */
+
+static uint32_t s_sel_state;                    /* DAT_004dc650 */
+static int      s_sel_hit_index;                /* DAT_004dc648 */
+static uint32_t s_sel_handles_a[SEL_HANDLE_ENTRIES * SEL_HANDLE_STRIDE];
+static uint32_t s_sel_handles_b[SEL_HANDLE_ENTRIES * SEL_HANDLE_STRIDE];
+static uint32_t s_sel_handle_extra;             /* DAT_004db934 */
+
+void selection_state_flag_clear_bit0(void)
+{
+    s_sel_state = s_sel_state & ~1u;
+}
+
+uint32_t selection_state_handle_get(int index)
+{
+    if (index == 1 && (s_sel_state & 4u) == 0) {
+        return s_sel_handle_extra;
+    }
+    if ((s_sel_state & 0x10u) != 0 && s_sel_hit_index == index) {
+        if (index < 0 || index >= SEL_HANDLE_ENTRIES) {
+            return 0u; /* deviation: the corpus indexes blindly */
+        }
+        const size_t off = (size_t)index * SEL_HANDLE_STRIDE;
+        if ((s_sel_state & 0x20u) != 0) {
+            return s_sel_handles_b[off];
+        }
+        return s_sel_handles_a[off];
+    }
+    return 0u;
+}
+
+uint32_t selection_state_flags_peek(void) { return s_sel_state; }
+void selection_state_flags_set(uint32_t flags) { s_sel_state = flags; }
+int selection_state_hit_index_peek(void) { return s_sel_hit_index; }
+void selection_state_hit_index_set(int index) { s_sel_hit_index = index; }
+uint32_t selection_state_handle_extra_peek(void) { return s_sel_handle_extra; }
+void selection_state_handle_extra_set(uint32_t value)
+{
+    s_sel_handle_extra = value;
+}
+
+uint32_t selection_state_handle_slot_peek(int table, int index)
+{
+    if (index < 0 || index >= SEL_HANDLE_ENTRIES) {
+        return 0u;
+    }
+    const size_t off = (size_t)index * SEL_HANDLE_STRIDE;
+    return (table != 0) ? s_sel_handles_b[off] : s_sel_handles_a[off];
+}
+
+void selection_state_handle_slot_set(int table, int index, uint32_t value)
+{
+    if (index < 0 || index >= SEL_HANDLE_ENTRIES) {
+        return;
+    }
+    const size_t off = (size_t)index * SEL_HANDLE_STRIDE;
+    if (table != 0) {
+        s_sel_handles_b[off] = value;
+    } else {
+        s_sel_handles_a[off] = value;
+    }
+}

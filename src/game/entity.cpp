@@ -11,8 +11,6 @@
 #include "gods98/heap.hpp"
 #include "util.hpp"
 #include "gods98/media.hpp"
-#include "gods98/resource.hpp"
-#include "frontend.hpp"
 
 int entity_stride(int type)
 {
@@ -681,4 +679,46 @@ int object_pointer_registry_get_slot(uint32_t index, int32_t* out)
 uint32_t object_pointer_registry_count_peek(void)
 {
     return s_obj_ptr_count;
+}
+
+/* --- context-selected globals (see entity.hpp) -----------------------------
+ * The corpus reads the context-mode global (DAT_00556ec8) and the
+ * current-selection pointer (DAT_00556160); both are modeled in the media
+ * layer (the port's own models, fed by SoundMinimumDistanceUpdateMode).
+ * The DAT_005560f8 / DAT_00556104 pair has no ported feeder — two
+ * zero-initialized statics (documented deviation). */
+static uint32_t s_ctx_sel_ptr_first  = 0u; /* DAT_005560f8 */
+static uint32_t s_ctx_sel_ptr_second = 0u; /* DAT_00556104 */
+
+void context_selected_pointer_pair_set(uint32_t first, uint32_t second)
+{
+    s_ctx_sel_ptr_first = first;
+    s_ctx_sel_ptr_second = second;
+}
+
+uint32_t context_selected_pointer_pair_peek(int second)
+{
+    return (second != 0) ? s_ctx_sel_ptr_second : s_ctx_sel_ptr_first;
+}
+
+uint32_t context_selected_global_pointer_get(void)
+{
+    return (media_min_distance_mode() != 0) ? s_ctx_sel_ptr_second
+                                           : s_ctx_sel_ptr_first;
+}
+
+int entity_matches_current_selection_or_owner(const void* entity)
+{
+    if (entity == NULL) {
+        return 0;
+    }
+    const void* selected = media_min_distance_context();
+    const int mode = media_min_distance_mode();
+    void* owner = NULL;
+    __builtin_memcpy(&owner, (const char*)entity + 0x36c, sizeof(owner));
+    /* corpus shape: match (mode-clear && entity == selection) or
+     * (owner != NULL && owner == selection); reject otherwise. */
+    const int direct_ok = (mode == 0) && (entity == selected);
+    const int owner_ok = (owner != NULL) && (owner == selected);
+    return (direct_ok || owner_ok) ? 1 : 0;
 }

@@ -952,6 +952,50 @@ int main(int argc, char** argv)
               "the context resets for later runs");
     }
 
+    /* The selection-state band (2026-10-24): statics start zero; the
+     * clear leaf drops bit 0; the handle leaf's gates. */
+    {
+        CHECK(selection_state_flags_peek() == 0u, "the state starts zero");
+        selection_state_flags_set(0x31u);
+        selection_state_flag_clear_bit0();
+        CHECK(selection_state_flags_peek() == 0x30u,
+              "the clear drops bit 0, spares the neighbours");
+        selection_state_flags_set(0);
+
+        /* The index-1 / bit-4 gate: extra handle while the bit is clear. */
+        selection_state_handle_extra_set(0x77u);
+        CHECK(selection_state_handle_get(1) == 0x77u,
+              "index 1 takes the extra handle (bit 4 clear)");
+        selection_state_flags_set(4u);
+        CHECK(selection_state_handle_get(1) == 0u,
+              "index 1 falls through when bit 4 is set");
+        selection_state_handle_extra_set(0u);
+        selection_state_flags_set(0);
+        CHECK(selection_state_handle_get(2) == 0u, "no gate, no handle");
+
+        /* The hit gate: bit 0x10 + matching hit index, table by bit 0x20. */
+        selection_state_handle_slot_set(0, 3, 0x11u);
+        selection_state_handle_slot_set(1, 3, 0x22u);
+        selection_state_hit_index_set(3);
+        selection_state_flags_set(0x10u);
+        CHECK(selection_state_handle_get(3) == 0x11u,
+              "the hit gate answers table A");
+        selection_state_flags_set(0x10u | 0x20u);
+        CHECK(selection_state_handle_get(3) == 0x22u,
+              "bit 0x20 switches to table B");
+        CHECK(selection_state_handle_get(4) == 0u,
+              "the non-matching index is rejected");
+        selection_state_flags_set(0x20u);
+        CHECK(selection_state_handle_get(3) == 0u,
+              "bit 0x10 is required");
+        selection_state_handle_slot_set(0, 3, 0u);
+        selection_state_handle_slot_set(1, 3, 0u);
+        selection_state_hit_index_set(0);
+        selection_state_flags_set(0);
+        CHECK(selection_state_handle_slot_peek(1, 1 << 20) == 0u,
+              "the guarded window reads zero (deviation)");
+    }
+
     if (s_failures == 0) {
         printf("frontend: all tests passed\n");
         return 0;
