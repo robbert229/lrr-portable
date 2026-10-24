@@ -283,4 +283,41 @@ int sound_request_queue_get(int index, int* alias, int* loop);
  * only inside its frame tick; exposed for tests and pre-level reuse). */
 void sound_request_queue_clear(void);
 
+/* ------------------------------------------------------------------ *
+ *  Deferred-play global cooldown (issues #326 / #327; the corpus's
+ *  float timer _DAT_00502b24 counts down in the frame tick and its
+ *  handle word DAT_00502b28 names the sound whose stop the expiry
+ *  runs).
+ *
+ *  The idle setter gates deferred plays: nothing arms while a
+ *  cooldown is already running. On expiry the corpus stops the
+ *  recorded handle through the shared stop path
+ *  (SoundHandleStopForward, unported here — instance layer TODO) and
+ *  resets both words.
+ * ------------------------------------------------------------------ */
+
+/* DeferredSoundTimerSetIfIdle @ 0x464ec0: arm the cooldown to
+ * `seconds` while idle (timer <= 0), forgetting any recorded handle
+ * (the corpus writes -1 so the arming submit cannot be expired); 1 if
+ * armed, 0 if a cooldown was already running. */
+int sound_deferred_timer_set_if_idle(float seconds);
+
+/* DeferredSoundPlayExpire @ 0x464e80: when a handle is recorded and
+ * the timer still runs, stop it (port stop seam: no-op until the
+ * instance layer lands, documented deviation), record -1, and zero
+ * the timer. Otherwise a no-op. */
+void sound_deferred_play_expire(void);
+
+/* The cooldown timer word (_DAT_00502b24). */
+float sound_deferred_cooldown(void);
+
+/* Port seam recording the submitted-handle word DAT_00502b28 exactly
+ * as the submission route's writer (SoundSubmitWithGlobalCooldown's
+ * body, whose alias-play and duration callees are unported) would:
+ * pass -1 to forget it. Expire only stops sounds this recorded. */
+void sound_deferred_handle_record(int handle);
+
+/* The recorded handle word (DAT_00502b28). */
+int sound_deferred_handle(void);
+
 #endif /* LEGORRR_SOUND_HPP */

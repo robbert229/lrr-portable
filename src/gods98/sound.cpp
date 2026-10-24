@@ -614,3 +614,47 @@ void sound_request_queue_clear(void)
      * frame tick (that consumer is unported here). */
     s_queue_count = 0;
 }
+
+/* ------------------------------------------------------------------ *
+ *  Deferred-play global cooldown (issues #326 / #327). See sound.hpp.
+ * ------------------------------------------------------------------ */
+
+static float s_cooldown_timer;   /* _DAT_00502b24 (zero-initialised) */
+static int   s_cooldown_handle;  /* DAT_00502b28  (zero-initialised) */
+
+int sound_deferred_timer_set_if_idle(float seconds)
+{
+    /* DeferredSoundTimerSetIfIdle @ 0x464ec0. */
+    if (s_cooldown_timer <= 0.0f) {
+        s_cooldown_handle = -1;
+        s_cooldown_timer = seconds;
+        return 1;
+    }
+    return 0;
+}
+
+void sound_deferred_play_expire(void)
+{
+    /* DeferredSoundPlayExpire @ 0x464e80. */
+    if (s_cooldown_handle != -1 && s_cooldown_timer > 0.0f) {
+        /* Corpus stop seam (SoundHandleStopForward -> the shared stop
+         * path). Deviation: the instance layer is TODO(corpus), so the
+         * port's seam is a no-op and only the bookkeeping runs. */
+        s_cooldown_handle = -1;
+        s_cooldown_timer = 0.0f;
+    }
+}
+
+float sound_deferred_cooldown(void)
+{
+    return s_cooldown_timer;
+}
+void sound_deferred_handle_record(int handle)
+{
+    s_cooldown_handle = handle;
+}
+
+int sound_deferred_handle(void)
+{
+    return s_cooldown_handle;
+}
