@@ -1339,6 +1339,21 @@ any-test across both flag words) and `entity_type3_flag04000000_test`
 `0x04000000`). `entity_test` drives each gate independently, the strict/
 relaxed pair and the kind test.
 
+**CRT format-argument cursor + exponent selector** (2026-10-24; findings
+231/386/395/399): four runtime leaves join `src/gods98/crt.*` — the
+varargs-cursor trio `format_argument_read_dword` /
+`format_argument_read_word` / `format_argument_read_double`
+(`FormatArgumentReadDword @ 0x491430`, `FormatArgumentReadWord @
+0x491470`, `FormatArgumentReadDouble @ 0x491450`; each reads the value at
+the cursor and advances it — four/two/eight bytes — the primitives
+`EngineFormatStringToStream`'s width/precision/value walk builds on,
+with the corpus's zero-extended word answer reproduced), and
+`double_exponent_bits_or_special` (`DoubleExponentBitsGetOrSpecialValue
+@ 0x492068`: the exponent field for ordinary values, the untouched high
+word when the exponent is all ones, per finding 399's CrtAsin
+pre-dispatch probe). `crt_test` pins the cursor arithmetic, the
+zero-extended word read and the exponent selector's corners.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

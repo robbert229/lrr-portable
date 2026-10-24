@@ -92,3 +92,17 @@ body artifact; porting them as empty functions would port unproven
 semantics. **Blocked** pending an x87 control/status stub corpus (they
 are host-CRT internals; nothing in the port drives them).
 
+
+## Surface pixel-format COM vtable pair (2026-10-24)
+
+`DirectDrawSurfacePixelFormatGet` (`0x47def0`) and `PixelChannelMaskGet`
+(`0x47df50`) are pure-parameter pseudocode, but both drive the surface's
+**COM vtable**: they zero a stack `DDSURFACEDESC2`, call the surface's
+`GetPixelFormat` slot (`*(*param_1) + 0x54`), and read the descriptor's
+channel masks/RGBBitCount back. The port's `DisplaySurface` is an
+SDL/host framebuffer behind the platform seam with no COM vtable and no
+`DDSURFACEDESC2` layout, so there is no object the pseudocode's
+`*param_1` load could address. **Blocked** until the DirectDraw seam (or
+a descriptor-shaped mock) lands; the miniwin build's fixed RGBA32 layout
+means the masks this pair derives are already compile-time constants
+here.

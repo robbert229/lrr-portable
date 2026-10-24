@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 468 | 18.3% |
+| ported | 472 | 18.4% |
 | anchored | 5 | 0.2% |
-| named | 2045 | 79.8% |
+| named | 2041 | 79.6% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 0 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (468 functions)
+  (472 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (2045 functions)
+  citation yet (2041 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 2050 (80.0%).**
+**Game logic remaining to port: 2046 (79.8%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
