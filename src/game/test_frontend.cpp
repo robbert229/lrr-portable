@@ -1210,6 +1210,19 @@ int main(int argc, char** argv)
         message_set_system_state(0u);
     }
 
+    /* The menu-tick gate + banner word (2026-10-24). */
+    {
+        int hit = 0;
+        for (int i = 0; i < 5000 && !hit; ++i) {
+            hit = menu_audio_tick_interval_reached();
+        }
+        CHECK(hit != 0, "a multiple of 400 arrives within 5000 draws");
+        CHECK(sim_status_banner_word_get() == 0u, "the banner word starts clear");
+        sim_status_banner_word_set(1u);
+        CHECK(sim_status_banner_word_get() == 1u, "the store lands");
+        sim_status_banner_word_set(0u);
+    }
+
     if (s_failures == 0) {
         printf("frontend: all tests passed\n");
         return 0;

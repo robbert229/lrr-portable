@@ -2296,3 +2296,24 @@ uint32_t cell_action_permission_table_peek(int index)
     }
     return s_cell_perm[index];
 }
+
+/* --- the menu-tick gate + status banner word (see frontend.hpp) ------------- */
+static uint32_t s_menu_rng_state = 1u;  /* the shared draw's word, modeled */
+static uint32_t s_status_banner_word;   /* DAT_004ddd1c */
+
+int menu_audio_tick_interval_reached(void)
+{
+    s_menu_rng_state = s_menu_rng_state * 0x343fdu + 0x269ec3u;
+    const int draw = (int)((s_menu_rng_state >> 16) & 0x7fffu);
+    return draw % 400 == 0;
+}
+
+uint32_t sim_status_banner_word_get(void)
+{
+    return s_status_banner_word;
+}
+
+void sim_status_banner_word_set(uint32_t value)
+{
+    s_status_banner_word = value;
+}

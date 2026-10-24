@@ -429,6 +429,16 @@ int main(void)
         cursor_screen_ray_context_reset(NULL); /* guarded */
     }
 
+    /* CurrentLevelTerrainGridPick (2026-10-24). */
+    {
+        EngineContext ec = {};
+        int gx = -1, gy = -1;
+        current_level_terrain_grid_pick(&ec, 3.7f, 4.9f, &gx, &gy);
+        CHECK(gx == 3 && gy == 4, "the pick truncates to cells");
+        current_level_terrain_grid_pick(&ec, 1.0f, 2.0f, NULL, NULL);
+        CHECK(gx == 3 && gy == 4, "null outputs keep the last write");
+    }
+
     if (s_failures == 0) {
         printf("view_test: PASS\n");
         return 0;

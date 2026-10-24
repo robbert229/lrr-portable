@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 744 | 29.0% |
+| ported | 748 | 29.2% |
 | anchored | 4 | 0.2% |
-| named | 1769 | 69.0% |
+| named | 1765 | 68.8% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (744 functions)
+  (748 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1769 functions)
+  citation yet (1765 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1774 (69.2%).**
+**Game logic remaining to port: 1770 (69.0%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -270,7 +270,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00411790` | MenuPickWidgetUnderPointer |
 | `0x00411840` | FrontendProgressValueChanged |
 | `0x00411f10` | PercentSplitSurfaceBlit |
-| `0x00412190` | MenuAudioTickIntervalReached |
 | `0x004121b0` | MenuOverlayFlicPlaybackController |
 | `0x00412450` | RenderUiFrameCell |
 | `0x004124f0` | MenuSaveImageConfigRectBlit |
@@ -357,7 +356,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0041b300` | MenuSelectionResourceUpdate |
 | `0x0041b3c0` | EntityQueryFlagCount |
 | `0x0041b680` | CatalogCallbackByIdDispatch |
-| `0x0041b9b0` | GlobalStateGet_004ddd1c |
 | `0x0041b9c0` | SelectionEntityCodeResolve |
 | `0x0041baa0` | SimulationPointerActionDispatch |
 | `0x0041c1c0` | AdvisorOverlayHitResolve |
@@ -547,6 +545,9 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0043a5f0` | EntityVisualResourceGetOrCreate |
 | `0x0043a650` | ActionKindEntityCreateAndCommandIssue |
 | `0x0043a850` | EntityActionRecordConsumeAndCleanup |
+| `0x0043a8f0` | SimulationUpdateCounterAdd |
+| `0x0043a910` | SimulationModeCounterAdd |
+| `0x0043a930` | TrackedEntityPointerArrayRemove |
 | `0x0043a9f0` | EntityPairInteractionGate |
 | `0x0043aab0` | ProximityActivityRaise |
 | `0x0043abf0` | TerrainCellVariantUpdateQueue |

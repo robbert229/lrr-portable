@@ -465,4 +465,17 @@ void cell_action_permission_table_set(int index, uint32_t value);
                                        /* port hook */
 uint32_t cell_action_permission_table_peek(int index);
 
+/* --- the menu-tick gate + status banner word (2026-10-24; findings 37/441) --
+ * MenuAudioTickIntervalReached (FUN_00412190): the corpus's menu tick asks
+ * the shared random draw whether the word is a multiple of 400. The port
+ * models the draw module-locally the way the overlay rng and the level/
+ * sound models do (same LCG constants, same 15-bit result).
+ * GlobalStateGet_004ddd1c (FUN_0041b9b0): the status-banner toggle word
+ * the corpus flips from its periodic status tick (finding 441) — that
+ * feeder is unported, so the word lands zero-initialized with port-side
+ * accessors standing in. */
+int menu_audio_tick_interval_reached(void); /* FUN_00412190 */
+uint32_t sim_status_banner_word_get(void);  /* FUN_0041b9b0 */
+void     sim_status_banner_word_set(uint32_t value); /* port hook */
+
 #endif /* LEGORRR_GAME_FRONTEND_HPP */

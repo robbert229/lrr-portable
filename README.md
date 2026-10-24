@@ -2269,6 +2269,23 @@ writer and the level-start clear are unported). `view_test`,
 `message_test`, and `frontend_test` pin the gates, the clamps, and the
 window.
 
+**The menu-tick wrapper band** (2026-10-24; findings 37/280/419/441/457):
+five rows land. `menu_audio_tick_interval_reached` (0x412190,
+`frontend.*`) asks the module-modeled shared draw whether the 15-bit word
+lands on a multiple of 400 — the LCG constants and shift are the
+corpus's. `sim_status_banner_word_get` (0x41b9b0, `frontend.*`) reads the
+status-banner toggle word whose corpus feeder, the periodic status tick,
+is unported — zero-init storage with a port setter.
+`current_level_terrain_grid_pick` (0x433be0, `view.*`) is the per-level
+pick wrapper: world root, x/y in, cell indices out, NULL outputs skipping
+their stores. `entity_queue_for_rockfall_processing_if_eligible`
+(0x43a9e0, `ai.**) is the corpus's tail call into the idle-registration
+half — type gate in, deduped table land out, with the stats-flag and
+tile probes documented deviations. The scene-list callback wrappers
+(0x410070/0x4100b0) stay blocked: their callback bodies are bare code
+thunks with no pseudocode. `view_test`, `ai_test`, and `frontend_test`
+pin the pick, the table rule, and the draws.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the
