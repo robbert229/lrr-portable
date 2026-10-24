@@ -1,0 +1,41 @@
+# Finding 442 — Advisor Scene and Action State
+
+This map connects Advisor animation configuration, per-animation position records, request admission, and the transition worker. It synthesizes 16 functions assigned by Issue #165. Raw state bits and fields remain literal where their wider meaning is not established.
+
+**Target and evidence.** Static analysis of shipped `reference/LegoRR.exe` (SHA-256 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`); pseudocode is in [`LEGORR.full.c`](../decompiles/full/LEGORR.full.c). Focused records are in [`legorr-advisor-animation.bundle`](../evidence/legorr-advisor-animation.bundle): controller setup `ev_79ee0e34716177ba6b878eb73432eed4ae1b8411b369cd3808039f2bc324e9a1`, request admission `ev_00851f2d5dd5ae373e6ea3d1f8308354666d0f0d393fcdd80399ef08d5019853`, request reset `ev_051b90cc9739dbd16ee5d6820ad21fe7743cc2f68befb1e313c56ac10f7bdb98`, transition worker `ev_3fcdebd967d4f2cf24b0059e4db108bd911cc20a613821c70668f0bffcb9ec6e`, action-window helper `ev_45182b736c7ab2c821293c026339cd41e60466598ad3d01ae1d6cc581d996327`, and slot transform `ev_bf1360b4fe12780f09c9c4ed23853601ddcff90a8934ce7a5ff7d6030658c922`. The config-slot loader is also retained in [`legorr-rev.bundle`](../evidence/legorr-rev.bundle), record `ev_0dc898d64a9bea41b5b0c8ff4c00968dac0fbc70bf2dbeda45691183e575d5d6`. Prior findings [37](37-advisor-animation-controller.md), [38](38-advisor-request-admission.md), [39](39-advisor-request-reset-sounds.md), [40](40-advisor-transition-worker.md), and [41](41-advisor-animation-window.md) preserve focused analyses.
+
+## Setup and configured records
+
+`AdvisorSceneControllerInit` (`0x00401000`) publishes strings for Advisor positions and animation names, stores the supplied base-scene and transform context, creates a companion DDiScene, attaches it to the base scene, starts it hidden, and zeros the controller state word `DAT_004b31bc`. The names include objective and interface position labels and the `Advisor_Anim_*` action labels; these are configuration keys, not proof of runtime visual meaning. `AdvisorSceneVisualStateInitialize` (`0x00401210`) initializes two resources associated with the stored context and sets a float field to approximately `0.96`.
+
+`AdvisorConfigSlotLookup` (`0x00401270`) loops over the 10 animation-name entries. For each, it looks up an `Advisor` configuration value. If the first lookup fails and feature bit `0x400000` is clear, it formats a path string and repeats the lookup; the function body does not establish the runtime effect intended by that formatted path. A successful lookup supplies a scene resource that is stored in a three-dword record, along with two configured time values multiplied by 25. A failed or absent configuration leaves that iteration's scene handle unset. The source does not establish the units of the converted values.
+
+`AdvisorPositionNameToIndex` (`0x004013e0`) and `AdvisorAnimationNameToIndex` (`0x004014c0`) perform case-insensitive searches in the fixed position and animation-name tables, returning the zero-based index when found. `AdvisorPositionConfigLoad` (`0x00401530`) reads the `AdvisorPositions` section, resolves each position name and animation name, validates configured position and mode tokens through shared lookup helpers, parses two numeric values, and calls the position-record initializer for entries passing those checks. The parsing checks show accepted/rejected configuration paths; names for the token values and numeric fields are not fully established.
+
+`AdvisorPositionRecordInitialize` (`0x004017b0`) writes a `0x24`-byte record indexed by position. It stores the animation index, raw position/mode values, two coordinate values twice (initial and current), and initial flags `0x20000`; it adds `0x10000` when the mode is `0x0c`, and `0x40000` when the position value is not `0x1a`. `AdvisorActionPositionAndModeSet` (`0x00401840`) updates the mode and two coordinates and synchronizes flag `0x10000` with the same `mode == 0x0c` condition. `AdvisorActionPositionGet` (`0x00401890`) returns the current coordinate pair at offsets `+0x1c` and `+0x20`. The observed records establish storage behavior, not semantic names for the flags or modes (see also finding 343).
+
+## Admission and transition
+
+`AdvisorRequestAdmit` (`0x004018c0`) accepts a slot only if its `0x20000` flag is set, `DAT_00556ec8` is nonzero, and controller bit 0 is clear. On acceptance it stores the slot index, calls `AdvisorRequestResetAndSubmitSound` (`0x00401930`), and sets controller bit 0. If the request's second argument is nonzero it also sets bit 1; otherwise it clears bit 1. The reset helper looks up the slot's animation scene, resets its playback state and submits associated sound values when the scene handle is nonzero. Resolved callers of admission include `0x41c4f0`, `0x456830`, `0x458be0`, and `0x45c670` (caller inventory in the evidence bundle); their callsite arguments do not establish names for the request modes.
+
+`AdvisorTransitionWorker` (`0x00401990`) reads the selected slot and, while bit 0 and `DAT_00556ec8` are set, optionally applies a mode-specific helper when flag `0x40000` is present. It updates the selected animation and companion scenes, links the companion to the selected scene, applies the slot transform, and calls `AdvisorSceneAdvanceAndCompletionCheck` (`0x00401a70`). If that helper reports continued activity, the worker returns with bit 0 set. If it reports completion, the worker clears bit 0 and restarts both scenes; outside the active transition path it also starts both scenes. The worker has a known callsite at `0x423c2c`, but its containing procedure and complete reachability context are unresolved (finding 40).
+
+`AdvisorSceneAdvanceAndCompletionCheck` advances the selected scene by the supplied delta and interprets its remaining-time result using controller bit 1. With bit 1 clear, a positive remainder signals completion. With bit 1 set, a positive remainder is added to the configured start time and remains active; once the remainder is nonpositive, it queries scene duration and wraps playback to `duration - configured_end + configured_start` when the end fits. `FUN_00475120` is decompiled as void even though the caller consumes an x87 floating-point result; the machine-level return is used, but its source-level type is unknown (finding 41).
+
+`AdvisorApplySlotTransform` (`0x00401b30`) starts from the slot's two configured offsets. When flag `0x10000` is clear it adds a queried pair of values; when set it uses zero for that pair. It combines the result with the stored controller transform context, transforms the coordinates, and writes the resulting position to the selected scene. `AdvisorClearActiveState` (`0x00401b20`) clears bit 1 only. `AdvisorAnimationEndCleanup` (`0x004011c0`) shows the selected animation and companion scene and clears bit 0. Thus the assigned functions expose distinct active/request-mode bits and cleanup paths; no global naming for the bits is established.
+
+## Confirmed / unknown ledger
+
+| Claim | State |
+| --- | --- |
+| Setup registers fixed position/action labels, creates the companion scene, and clears controller state | observed (`0x00401000`) |
+| Config loading populates animation-scene handles, timing values, and position records | observed complete bodies (`0x00401270`, `0x00401530`) |
+| Admission requires the record flag, shared gate, and clear active bit | observed (`0x004018c0`) |
+| Worker coordinates selected and companion scenes and invokes transform/window helpers | observed (`0x00401990`) |
+| Bit-dependent scene-time completion and wrap behavior | observed (`0x00401a70`); source-level return type of `FUN_00475120` unknown |
+| Semantic names for raw flags, modes, time units, and several parsed configuration fields | unknown |
+| Containing procedure and full reachability of worker callsite `0x00423c2c` | unknown |
+
+The next useful slices are to identify the configuration token/field meanings and recover the context around `0x00423c2c`. No concrete behavior change is established by this static pass.
+
+Coverage note: all 16 assigned functions already have generated function-area and coverage-ledger rows. This finding updates the root README findings range/index only; it does not add or alter generated coverage rows.
