@@ -33,7 +33,7 @@ This pass names 38 routines across the remaining high and mid ranges, plus small
 | `0x0045cc60` | `GlobalValueGet_00500a98` | Returns the global value stored at `0x00500a98`. | Caller `FUN_0045c4b0`; field semantics remain unknown. |
 | `0x004628c0` | `GlobalFloatAccumulate_00555120` | Adds the supplied float to the global accumulator at `0x00555120`. | Caller `FUN_004628a0`; unit and purpose are unresolved. |
 | `0x0047c160` | `ConstantNegative10000Get` | Returns the constant `-10000`. | Direct pseudocode. |
-| `0x0048c030` | `RegistryEntryAccessByIndex` | Calls the registry-entry accessor for the supplied index and discards its result. | Direct pseudocode; the accessor returns a registry slot value. |
+| `0x0048c030` | `WadMemoryStreamBufferGet` | Returns the active memory buffer for a WAD memory-stream slot. | Wraps `FixedRecordSlotResourceGet`; callers `WadFileRead` and `GameFileReadByte` use the returned pointer as the source of file bytes. |
 | `0x0048e1aa` | `CrtMathIntrinsicDispatch` | Calls the CRT x87 intrinsic dispatcher. | Direct pseudocode; caller uses it in math paths. |
 | `0x00491ff5` | `CrtNoOpStub` | Returns without performing visible work. | Empty pseudocode body. |
 | `0x00495bde` | `CrtAbortAfterCallback` | Runs the CRT abort callback path and then aborts. | Wrapper calls `FUN_00495ae0`, which invokes a registered callback then `_abort`. |
