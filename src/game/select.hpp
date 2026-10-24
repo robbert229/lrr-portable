@@ -30,6 +30,20 @@ void selection_remove(GameContext* ctx, const EntitySlot* e);
 
 void selection_clear(GameContext* ctx);
 int  selection_count(const GameContext* ctx);
+                                     /* FUN_004525f0 SelectionRecordCountGet */
+
+/* SelectedEntitySetHasAny (FUN_004525b0): nonzero when the selection is
+ * non-empty — the corpus's gate on DAT_004ff298. */
+int selection_has_any(const GameContext* ctx);
+
+/* SelectionRecordArrayGet (FUN_004525e0): the DAT_004fef2c selection
+ * array itself. NULL GameContext yields NULL (the port has no static). */
+EntitySlot* const* selection_record_array(const GameContext* ctx);
+
+/* SelectionRecordCountReset (FUN_00452600): zeroes only the count — the
+ * corpus leaves entries and their selected flags in place (snapshot paths
+ * overwrite the array); `selection_clear` is the flag-clean variant. */
+void selection_count_reset(GameContext* ctx);
 
 /* SelectedEntity (0x4525c0): first selection entry when nonzero, else NULL. */
 EntitySlot* selection_first(const GameContext* ctx);

@@ -74,6 +74,24 @@ int main(void)
     CHECK((a->flags & ENTITY_SELECTED) == 0, "a flag cleared");
     CHECK(selection_first(&ctx) == NULL, "empty selection first is NULL");
 
+    /* Record accessors (FUN_004525b0/5e0/5f0/600). */
+    CHECK(selection_has_any(&ctx) == 0, "empty set answers no");
+    CHECK(selection_record_array(&ctx) == ctx.selection,
+          "the array getter hands back the selection array");
+    CHECK(selection_add(&ctx, a) == 1 && selection_add(&ctx, b) == 1,
+          "re-add a and b");
+    CHECK(selection_has_any(&ctx) == 1, "nonzero count answers yes");
+    CHECK(selection_count(&ctx) == 2, "record count getter reads 2");
+    EntitySlot* const* arr = selection_record_array(&ctx);
+    CHECK(arr != NULL && arr[0] == a && arr[1] == b,
+          "the array reads in slot order");
+    selection_count_reset(&ctx);
+    CHECK(selection_count(&ctx) == 0 && (a->flags & ENTITY_SELECTED) != 0,
+          "count-only reset leaves the selected flags");
+    selection_add(&ctx, a);
+    selection_add(&ctx, b);
+    selection_clear(&ctx);
+
     /* Bad-type add rejected; special codes (5..19) share the last table. */
     CHECK(entity_create(&ctx, 6, "m6", 0, 0, 0, 0) >= 0, "special code 6 placed");
     CHECK(entity_create(&ctx, 20, "nope", 0, 0, 0, 0) < 0, "code 20 (out of range) rejected");

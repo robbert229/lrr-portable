@@ -54,7 +54,29 @@ void selection_clear(GameContext* ctx)
 
 int selection_count(const GameContext* ctx)
 {
+    /* Corpus SelectionRecordCountGet @ 0x4525f0 — DAT_004ff298. */
     return ctx != NULL ? ctx->selection_count : 0;
+}
+
+int selection_has_any(const GameContext* ctx)
+{
+    /* Corpus SelectedEntitySetHasAny @ 0x4525b0 — DAT_004ff298 != 0. */
+    return ctx != NULL && ctx->selection_count != 0;
+}
+
+EntitySlot* const* selection_record_array(const GameContext* ctx)
+{
+    /* Corpus SelectionRecordArrayGet @ 0x4525e0 — &DAT_004fef2c. */
+    return ctx != NULL ? ctx->selection : NULL;
+}
+
+void selection_count_reset(GameContext* ctx)
+{
+    /* Corpus SelectionRecordCountReset @ 0x452600 — DAT_004ff298 = 0,
+     * array entries (and their selected flags) untouched. */
+    if (ctx != NULL) {
+        ctx->selection_count = 0;
+    }
 }
 
 EntitySlot* selection_first(const GameContext* ctx)

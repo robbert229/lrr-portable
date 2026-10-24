@@ -1187,6 +1187,18 @@ bookkeeping and new-handler registry stay blocked (see
 attempt; `heap_test` covers alignment, the zero-size and overflow-gate
 quirks, the retry path and free/re-alloc flow.
 
+**Selection record accessors** (2026-10-24; finding 06): the corpus's
+selection-state leaves land in `src/game/select.*` —
+`selection_has_any` (`SelectedEntitySetHasAny @ 0x4525b0`, the
+count-nonzero gate), `selection_record_array`
+(`SelectionRecordArrayGet @ 0x4525e0`, the `DAT_004fef2c` array
+itself), the count getter (now citing `SelectionRecordCountGet @
+0x4525f0`) and `selection_count_reset` (`SelectionRecordCountReset @
+0x452600`), which zeroes only the count — the corpus leaves the entries
+and their selected flags in place for the snapshot paths, so the
+flag-clean variant stays `selection_clear`. `select_test` drives the
+gate, array identity/order, the count and the count-only reset.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

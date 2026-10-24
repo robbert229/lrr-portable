@@ -1209,11 +1209,11 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004524b0,FUN_004524b0,named,SelectionObjectDetach,0,373
 00452520,FUN_00452520,named,SelectionSnapshotCreate,0,703
 00452580,FUN_00452580,named,ActiveContextRecordGet,0,255
-004525b0,FUN_004525b0,named,SelectedEntitySetHasAny,0,59
+004525b0,FUN_004525b0,ported,SelectedEntitySetHasAny,3,59
 004525c0,FUN_004525c0,ported,SelectedEntity,3,83
-004525e0,FUN_004525e0,named,SelectionRecordArrayGet,0,63
-004525f0,FUN_004525f0,named,SelectionRecordCountGet,0,60
-00452600,FUN_00452600,named,SelectionRecordCountReset,0,61
+004525e0,FUN_004525e0,ported,SelectionRecordArrayGet,2,63
+004525f0,FUN_004525f0,ported,SelectionRecordCountGet,2,60
+00452600,FUN_00452600,ported,SelectionRecordCountReset,2,61
 00452610,FUN_00452610,ported,SelectionContainsEntity,1,228
 00452650,FUN_00452650,named,ArrayFindValueIndex,0,375
 00452690,FUN_00452690,named,SelectionCandidateAlreadySelectedOrMarked,0,190
