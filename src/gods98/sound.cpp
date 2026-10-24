@@ -655,3 +655,209 @@ int sound_deferred_handle(void)
 {
     return s_cooldown_handle;
 }
+
+/* ------------------------------------------------------------------ *
+ *  Configured sound-variant chains (issues #318 / #324). See sound.hpp.
+ * ------------------------------------------------------------------ */
+
+static int s_variant_slot[SOUND_ALIAS_MAX]; /* DAT_00501468 head slot words */
+static int s_variant_next[SOUND_ALIAS_MAX]; /* DAT_0050146c head next words */
+
+/* Corpus chain pool DAT_005023e0 (stride 8: slot word + next word),
+ * allocation counter DAT_00502a28. The corpus identifies nodes by their
+ * address and treats 0 as null, so the port reserves node id 0 for "no
+ * link" and allocates every node exactly once (monotone counter). */
+typedef struct VariantNode {
+    int slot;   /* bank slot: -1 failed link, stale until first written */
+    int next;   /* node id, 0 = end of chain */
+} VariantNode;
+
+static VariantNode s_variant_pool[SOUND_VARIANT_POOL_NODES];
+static int         s_variant_pool_next;   /* DAT_00502a28 */
+
+/* Variant draws: the corpus's thunk_FUN_0048e170 (shared RNG word
+ * DAT_004afcc8), modelled module-locally the way level.cpp and
+ * frontend.cpp do — same MSVCRT-style LCG, same 15-bit result. */
+static uint32_t s_variant_rand_state = 1;
+
+static int s_variant_rand(void)
+{
+    s_variant_rand_state = s_variant_rand_state * 214013u + 2531011u;
+    return (int)((s_variant_rand_state >> 16) & 0x7fffu);
+}
+
+static int s_variant_pool_alloc(void)
+{
+    if (s_variant_pool_next >= SOUND_VARIANT_POOL_NODES) {
+        return 0; /* port bound; the corpus scribbles past the pool */
+    }
+    ++s_variant_pool_next;
+    s_variant_pool[s_variant_pool_next].next = 0; /* DAT_005023e4 write */
+    /* The slot field keeps its previous content: unwritten links read as
+     * stale chain data, exactly like the corpus's global region. */
+    return s_variant_pool_next;
+}
+
+/* Comma split as FUN_00477440 (BlockTextTokenSplit) applies it here:
+ * splits in place, keeps empty tokens between consecutive commas, and
+ * never tests the final character as a separator start — the corpus
+ * quirk that leaves a trailing comma in the last path. Tokens beyond
+ * the port's copy of the 100-entry stack buffer split but go untracked
+ * (the corpus writes past its own frame); returns the tracked count. */
+static int s_variant_split(char* s, char** out, int max)
+{
+    if (s[0] == '\0') {
+        return 0;
+    }
+    out[0] = s;
+    int n = 1;
+    for (char* p = s; p[1] != '\0'; ++p) {
+        if (*p == ',') {
+            *p = '\0';
+            if (n < max) {
+                out[n++] = p + 1;
+            }
+        }
+    }
+    return n;
+}
+
+int sound_sample_marker_parse(const char* spec, int alias_index)
+{
+    if (spec == NULL || alias_index < 0 || alias_index >= SOUND_ALIAS_MAX) {
+        return 0; /* corpus: NULL deref / out-of-bounds scribble */
+    }
+
+    /* Chain reset: the head's next word (DAT_0050146c) zeroes — the head
+     * slot itself keeps its value until the first write. */
+    s_variant_next[alias_index] = 0;
+
+    char buf[1024]; /* corpus splits destructively in the config string;
+                     * the port splits a copy (documented deviation) */
+    snprintf(buf, sizeof(buf), "%s", spec);
+    char* tokens[SOUND_VARIANT_TOKENS];
+    int ntok = s_variant_split(buf, tokens, SOUND_VARIANT_TOKENS);
+
+    int stream_mode = 0;            /* '@' marker, sticky (finding 135) */
+    int ok = 1;
+
+    /* Corpus cursors: W (piVar9) is the link written next, C (local_1d4)
+     * the previous link. W starts at the chain head, C starts null. */
+    int w_head = 1, w_id = alias_index;
+    int c_head = 0, c_id = 0;
+    int c_valid = 0;
+
+    for (int t = 0; t < ntok; ++t) {
+        char* p = tokens[t];
+        int looping = (p[0] == '*'); /* '*' = duplicate-buffer request */
+        if (looping) {
+            ++p;
+        }
+        int volume = 0;
+        if (p[0] == '#') {           /* '#N#' millibel marker, finding 142 */
+            ++p;
+            char digits[64];         /* corpus local_1d0[64] */
+            size_t d = 0;
+            if (*p != '#') {         /* empty '#...#' parses as 0 (the
+                                     * corpus reads its stack garbage) */
+                for (; *p != '\0' && *p != '#'; ++p) {
+                    if (d < sizeof(digits) - 1) {
+                        digits[d++] = *p;
+                    }
+                }
+                if (*p == '\0') {
+                    /* Unterminated '#': the corpus walks past the NUL and
+                     * parses its stack; the port parses what it captured
+                     * and loads the (empty) tail as the path. */
+                }
+            }
+            digits[d] = '\0';
+            if (*p == '#') {
+                ++p;                 /* step over the closing '#' */
+            }
+            volume = (int)strtol(digits, NULL, 10); /* FUN_0048db70 role */
+        }
+        if (p[0] == '@') {
+            stream_mode = 1;
+            ++p;
+        }
+
+        int slot = sound_bank_entry_load(p, stream_mode, looping, volume);
+        if (w_head) {
+            s_variant_slot[w_id] = slot;   /* *piVar9 = iVar5 */
+        } else {
+            s_variant_pool[w_id].slot = slot;
+        }
+
+        if (slot == -1) {
+            ok = 0;  /* failed link stays linked with its -1 (as shipped);
+                      * both cursors stay where they were */
+            continue;
+        }
+        if (c_valid) {
+            int node = s_variant_pool_alloc();
+            if (node != 0) {
+                if (c_head) {
+                    s_variant_next[c_id] = node;
+                } else {
+                    s_variant_pool[c_id].next = node;
+                }
+                w_head = 0;
+                w_id   = node;
+            }
+            /* Pool full: the link is dropped (the corpus scribbles past
+             * the pool region instead). */
+        }
+        c_valid = 1;
+        c_head  = w_head;
+        c_id    = w_id;
+    }
+    return ok;
+}
+
+int sound_variant_select(int alias_index)
+{
+    if (alias_index <= 0 || alias_index >= SOUND_ALIAS_MAX) {
+        return -1; /* corpus: alias 0 (the silent alias) returns -1 and
+                    * negatives scribble out of bounds */
+    }
+    if (s_variant_next[alias_index] != 0) {
+        int count = 1;
+        for (int node = s_variant_next[alias_index]; node != 0;
+             node = s_variant_pool[node].next) {
+            ++count;
+        }
+        int pick = s_variant_rand() % count;
+        int head_slot = s_variant_slot[alias_index];
+        if (pick != 0) {
+            int node = s_variant_next[alias_index];
+            for (int i = 1; i < pick; ++i) {
+                node = s_variant_pool[node].next;
+            }
+            int tmp = s_variant_pool[node].slot;
+            s_variant_pool[node].slot = head_slot;
+            head_slot = tmp; /* corpus swaps picked slot with head */
+        }
+        s_variant_slot[alias_index] = head_slot;
+    }
+    return s_variant_slot[alias_index];
+}
+
+int sound_variant_chain(int alias_index, int* out_slots, int max)
+{
+    if (alias_index < 0 || alias_index >= SOUND_ALIAS_MAX || max <= 0) {
+        return 0;
+    }
+    if (out_slots != NULL) {
+        out_slots[0] = s_variant_slot[alias_index];
+    }
+    int n = 1;
+    for (int node = s_variant_next[alias_index];
+         node != 0 && n < max; node = s_variant_pool[node].next) {
+        if (out_slots != NULL) {
+            out_slots[n] = s_variant_pool[node].slot;
+        }
+        ++n;
+    }
+    return n;
+}

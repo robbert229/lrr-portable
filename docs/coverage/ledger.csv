@@ -1453,8 +1453,8 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00464740,FUN_00464740,ported,SoundAliasRegistryInit,4,3903
 00464c50,FUN_00464c50,ported,SoundDynamicAliasRegistrationSet,5,167
 00464c70,FUN_00464c70,ported,SoundAliasLookup,4,687
-00464d00,FUN_00464d00,named,SoundSampleMarkerParse,0,1910
-00464e20,FUN_00464e20,named,SoundSampleVariantSelect,0,763
+00464d00,FUN_00464d00,ported,SoundSampleMarkerParse,3,1910
+00464e20,FUN_00464e20,ported,SoundSampleVariantSelect,3,763
 00464e80,FUN_00464e80,ported,DeferredSoundPlayExpire,3,266
 00464ec0,FUN_00464ec0,ported,DeferredSoundTimerSetIfIdle,3,264
 00464ef0,FUN_00464ef0,ported,SoundSubmitWithGlobalCooldown,6,519
@@ -1820,7 +1820,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00477310,FUN_00477310,named,ComPropertyResultGet,0,578
 00477370,FUN_00477370,named,DDiSceneRenderSurfacePoolGrow,0,641
 004773e0,FUN_004773e0,named,RenderResourceTrackedReferencesRelease,0,688
-00477440,FUN_00477440,ported,BlockTextTokenSplit,3,795
+00477440,FUN_00477440,ported,BlockTextTokenSplit,4,795
 004774b0,FUN_004774b0,named,WhitespaceTokenize,0,957
 00477550,FUN_00477550,named,StringDuplicate,0,929
 00477590,FUN_00477590,named,FormattedTextEscapeDecodeAndEmit,0,670
@@ -2261,7 +2261,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0048d9e0,FUN_0048d9e0,named,FormattedStringOutput,0,466
 0048da50,FUN_0048da50,named,StringFindSubstring,0,2603
 0048dad0,FUN_0048dad0,named,ParseSignedDecimal,0,900
-0048db70,FUN_0048db70,ported,ParseIntegerWrapper,1,80
+0048db70,FUN_0048db70,ported,ParseIntegerWrapper,2,80
 0048db80,FUN_0048db80,named,EngineHeapFree,0,334
 0048dbd0,FUN_0048dbd0,named,EngineHeapAlloc,0,93
 0048dbf0,FUN_0048dbf0,named,EngineHeapAllocateWithRetry,0,460
@@ -2274,7 +2274,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0048e090,FUN_0048e090,named,CrtAsin,0,112
 0048e0ad,FUN_0048e0ad,named,CrtAcosCore,0,1162
 0048e160,FUN_0048e160,named,RandomSeedSet,0,81
-0048e170,FUN_0048e170,ported,RandomNext,3,123
+0048e170,FUN_0048e170,ported,RandomNext,5,123
 0048e1aa,FUN_0048e1aa,named,CrtMathIntrinsicDispatch,0,61
 0048e1e0,FUN_0048e1e0,named,FormattedTextBufferBuild,0,476
 0048e250,FUN_0048e250,named,StackProbeAllocate,0,343

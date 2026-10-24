@@ -888,6 +888,27 @@ sound-off paths, and record accessors. This is the root of the chain recorded
 in `docs/coverage/blocked.md`; the marker-parse/configured-variant entries
 follow it.
 
+**Configured sound-variant chains** (2026-10-24; port issues #318 / #324,
+findings 107/134/135/142): `sound_sample_marker_parse`
+(`SoundSampleMarkerParse @ 0x464d00`) turns a `Samples` config value —
+`"*path,#-400#path,@path,path"` — into the alias's variant chain, loading
+each comma-separated path into a bank record: the `*` prefix raises the
+record's duplicate-buffer (loop) bit, `#N#` carries its millibel volume,
+and `@` switches this and every later path to streamed playback
+(finding 135). `sound_variant_select` (`SoundSampleVariantSelect @
+0x464e20`) re-draws the chain with the corpus's 15-bit PRNG
+(`random_value % variant_count`) and swaps the pick to the head. The port
+reproduces the corpus's build-time quirk — the second load overwrites the
+head slot, each later token lands in the previously allocated node, and the
+last node keeps stale pool data. Deviations: the split works on a copy of
+the config string (the corpus splits it destructively), the pool is capped
+with further links dropped (the corpus scribbles past its region), empty
+`#…#` parses as 0 (the corpus reads stack), and the PRNG is modelled
+module-locally like `level.cpp`/`frontend.cpp`. `sound_test` covers the
+head-overwrite quirk, marker semantics, the stream persistence rule, the
+deterministic first draw and swaps, failure links staying linked as `-1`,
+and the split quirks.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

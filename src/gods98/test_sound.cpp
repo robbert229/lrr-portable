@@ -643,6 +643,195 @@ static void test_bank_entries(void)
     CHECK(sound_bank_count() == 0, "clear empties the bank");
 }
 
+/* ------------------------------------------------------------------ *
+ *  Configured variant chains (SoundSampleMarkerParse @ 0x464d00,
+ *  SoundSampleVariantSelect @ 0x464e20 — issues #318 / #324;
+ *  findings 107/134/135/142).
+ * ------------------------------------------------------------------ */
+
+/* Mirror of the port's module-local 15-bit draw (corpus
+ * thunk_FUN_0048e170, modelled as in level.cpp). Advance only before a
+ * select that runs on a multi-link chain: single-link selects skip the
+ * draw entirely, like the corpus. */
+static uint32_t s_variant_rand_mirror = 1;
+
+static int test_variant_draw(void)
+{
+    s_variant_rand_mirror = s_variant_rand_mirror * 214013u + 2531011u;
+    return (int)((s_variant_rand_mirror >> 16) & 0x7fffu);
+}
+
+static void test_variant_chains(void)
+{
+    sound_bank_clear();
+    sound_bank_sound_on_set(1);
+
+    uint8_t pcm[8] = { 1, 0, 2, 0, 3, 0, 4, 0 };
+    WavSeg segs[2];
+    segs[0].id = NULL;    segs[0].bytes = NULL; segs[0].len = 0;
+    segs[1].id = "DATA!"; segs[1].bytes = NULL; segs[1].len = 0;
+    size_t wsz = 0;
+    uint8_t* w = build_wav(1, 16, 11025, pcm, (uint32_t)sizeof(pcm),
+                           segs, 2, NULL, 0, &wsz);
+    if (w == NULL) {
+        printf("SKIP variant-chains: wav build failed\n");
+        return;
+    }
+    const char* files[3] = { "/tmp/opencode/svar_a.wav",
+                             "/tmp/opencode/svar_b.wav",
+                             "/tmp/opencode/svar_c.wav" };
+    char pathA[256], pathB[256], pathC[256];
+    snprintf(pathA, sizeof pathA, "%s", "/tmp/opencode/svar_a");
+    snprintf(pathB, sizeof pathB, "%s", "/tmp/opencode/svar_b");
+    snprintf(pathC, sizeof pathC, "%s", "/tmp/opencode/svar_c");
+    int ok_files = 1;
+    for (int i = 0; i < 3; ++i) {
+        FILE* fp = fopen(files[i], "wb");
+        if (fp == NULL) {
+            ok_files = 0;
+            break;
+        }
+        fwrite(w, 1, wsz, fp);
+        fclose(fp);
+    }
+    free(w);
+    if (!ok_files) {
+        printf("SKIP variant-chains: wav write failed\n");
+        return;
+    }
+
+    char spec[1600];
+    int out[16];
+    const int alias1 = 1; /* chain keys are alias indices; 1 is the first
+                           * real alias (0 is the corpus's silent alias) */
+
+    CHECK(sound_sample_marker_parse(NULL, alias1) == 0,
+          "null spec parses nothing (the corpus deref-faults)");
+    CHECK(sound_variant_select(0) == -1, "the silent alias selects -1");
+    CHECK(sound_variant_select(-1) == -1 &&
+              sound_variant_chain(-1, out, 16) == 0,
+          "chain accessors are bounded");
+
+    /* Two-path build: the second load overwrites the head slot (the
+     * corpus's quirk) and links one fresh node holding stale data. */
+    snprintf(spec, sizeof spec, "%s,%s", pathA, pathB);
+    CHECK(sound_sample_marker_parse(spec, alias1) == 1,
+          "two-path parse succeeds");
+    CHECK(sound_bank_count() == 2, "both paths claimed bank slots");
+    int n = sound_variant_chain(alias1, out, 16);
+    CHECK(n == 2 && out[0] == 1 && out[1] == 0,
+          "head keeps the second load; node holds stale 0");
+
+    /* First draw: 41 -> pick 1 of 2 -> swap node to the head. */
+    int h = 1, node = 0;
+    int pick = test_variant_draw() % 2;
+    if (pick != 0) {
+        int t = node; node = h; h = t;
+    }
+    CHECK(sound_variant_select(alias1) == h, "select returns the new head");
+    n = sound_variant_chain(alias1, out, 16);
+    CHECK(n == 2 && out[0] == h && out[1] == node,
+          "the pick swapped into the head slot");
+
+    /* Second draw: swaps only when it picks the node. */
+    h = out[0];
+    node = out[1];
+    pick = test_variant_draw() % 2;
+    if (pick != 0) {
+        int t = node; node = h; h = t;
+    }
+    CHECK(sound_variant_select(alias1) == h, "second draw keeps-or-swaps");
+    n = sound_variant_chain(alias1, out, 16);
+    CHECK(n == 2 && out[0] == h && out[1] == node,
+          "second draw leaves the chain consistent");
+
+    /* Markers: '*' duplicate-buffer flag, '#N#' volume, '@' stream mode
+     * (and the stream marker persists across later paths, finding 135). */
+    sound_bank_clear();
+    const int alias2 = 2;
+    snprintf(spec, sizeof spec, "*%s,#-500#%s,@%s,%s", pathA, pathB,
+             pathC, pathA);
+    CHECK(sound_sample_marker_parse(spec, alias2) == 1,
+          "marker spec parses");
+    CHECK(sound_bank_count() == 4, "four paths claimed slots");
+    CHECK((sound_bank_entry_flags(0) & SOUND_LOOPING) != 0 &&
+              (sound_bank_entry_flags(0) & SOUND_STREAMED) == 0,
+          "* raises only the duplicate-buffer (loop) bit");
+    CHECK(sound_bank_entry_volume(1) == -500, "#N# stores the millibel volume");
+    CHECK((sound_bank_entry_flags(2) & SOUND_STREAMED) != 0,
+          "@ loads its path streamed");
+    CHECK((sound_bank_entry_flags(3) & SOUND_STREAMED) != 0,
+          "the stream marker persists across later paths (finding 135)");
+    n = sound_variant_chain(alias2, out, 16);
+    CHECK(n == 4 && out[0] == 1 && out[1] == 2 && out[2] == 3,
+          "chain: head is the second load, nodes follow in parse order");
+    CHECK(out[3] == 0, "the last link stays unwritten (stale pool data)");
+
+    /* Out-of-range volume validates to 0, like the record layer. */
+    sound_bank_clear();
+    const int alias3 = 3;
+    snprintf(spec, sizeof spec, "#-10001#%s", pathA);
+    CHECK(sound_sample_marker_parse(spec, alias3) == 1,
+          "invalid volume still loads the path");
+    CHECK(sound_bank_entry_volume(0) == 0, "invalid volume stores 0");
+
+    /* Failed load: the parse reports 0 and the failure link stays
+     * linked as -1 (its slot word gets overwritten, the node does not). */
+    sound_bank_clear();
+    const int alias4 = 4;
+    snprintf(spec, sizeof spec, "%s,%s,/tmp/opencode/svar_missing", pathA,
+             pathB);
+    CHECK(sound_sample_marker_parse(spec, alias4) == 0,
+          "failed load drops the parse result");
+    n = sound_variant_chain(alias4, out, 16);
+    CHECK(n == 2 && out[0] == 1 && out[1] == -1,
+          "failed link stays linked as -1 (corpus-faithful)");
+    h = 1;
+    node = -1;
+    pick = test_variant_draw() % 2;
+    if (pick != 0) {
+        int t = node; node = h; h = t;
+    }
+    CHECK(sound_variant_select(alias4) == h,
+          "select can surface the failed link's -1");
+    if (h != -1) { /* swap put -1 into the node; keep the chain readable */
+        n = sound_variant_chain(alias4, out, 16);
+        CHECK(n == 2 && out[1] == -1 && out[0] == 1,
+              "the -1 link survives swaps");
+    }
+
+    /* Single-link chain: select returns the head and draws nothing. */
+    sound_bank_clear();
+    const int alias5 = 5;
+    snprintf(spec, sizeof spec, "%s", pathC);
+    CHECK(sound_sample_marker_parse(spec, alias5) == 1, "single-path parse");
+    CHECK(sound_variant_chain(alias5, NULL, 16) == 1,
+          "null slots reports the count");
+    CHECK(sound_variant_select(alias5) == 0,
+          "single-link select returns the head without drawing");
+
+    /* Split quirks: a trailing comma stays in the path (the corpus never
+     * tests the final character as a separator), and an empty spec
+     * succeeds while leaving the chain unlinked. */
+    const int alias6 = 6;
+    snprintf(spec, sizeof spec, "%s,", pathA);
+    CHECK(sound_sample_marker_parse(spec, alias6) == 0,
+          "trailing comma stays part of the path (split quirk)");
+    CHECK(sound_variant_chain(alias6, NULL, 16) == 1,
+          "the comma-path load failed with nothing linked");
+    snprintf(spec, sizeof spec, "%s,%s", pathA, pathB);
+    CHECK(sound_sample_marker_parse(spec, alias6) == 1, "reparse rebuilds");
+    CHECK(sound_variant_chain(alias6, NULL, 16) == 2,
+          "rebuild links fresh nodes (stale old nodes orphaned)");
+    CHECK(sound_sample_marker_parse("", alias6) == 1,
+          "empty spec succeeds with the chain unlinked");
+
+    sound_bank_clear();
+    for (int i = 0; i < 3; ++i) {
+        remove(files[i]);
+    }
+}
+
 int main(int argc, char** argv)
 {
     test_synthetic();
@@ -651,6 +840,7 @@ int main(int argc, char** argv)
     test_request_queue();
     test_deferred_cooldown();
     test_bank_entries();
+    test_variant_chains();
     for (int i = 1; i < argc; ++i) {
         if (strcmp(argv[i], "--real") == 0 && i + 1 < argc) {
             test_real(argv[i + 1]);

@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 307 | 12.0% |
+| ported | 309 | 12.1% |
 | anchored | 5 | 0.2% |
-| named | 2206 | 86.0% |
+| named | 2204 | 86.0% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 0 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (307 functions)
+  (309 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (5 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (2206 functions)
+  citation yet (2204 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (0 functions)
 
-**Game logic remaining to port: 2211 (86.2%).**
+**Game logic remaining to port: 2209 (86.2%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -1281,8 +1281,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00464110` | RotatedPairsScratchFill |
 | `0x004641c0` | BuildingPlacementFootprintRenderAndValidate |
 | `0x00464720` | SurfaceVisibilitySet |
-| `0x00464d00` | SoundSampleMarkerParse |
-| `0x00464e20` | SoundSampleVariantSelect |
 | `0x00464fa0` | SoundAliasPlay |
 | `0x00465010` | ConfiguredVariantPropertySet |
 | `0x00465030` | ConfiguredVariantPropertyRead |
