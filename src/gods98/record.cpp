@@ -350,3 +350,15 @@ uint32_t game_file_system_type_get(const void* handle)
 {
     return rec_dword(handle, 0);
 }
+
+/* IndexedRecordTransformCopyIn (FUN_00483240, findings 372/431): the
+ * inline-block copy into the indexed record's data slot. */
+uint32_t indexed_record_transform_copy_in(void* record, int index,
+                                          const void* source)
+{
+    void* dst = indexed_record_data_address_get(record, index);
+    if (dst != NULL && source != NULL) {
+        __builtin_memcpy(dst, source, 0x50u);
+    }
+    return 1u;
+}

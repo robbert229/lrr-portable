@@ -1549,6 +1549,19 @@ coder's unsupported-coder note stands). Corpus-ignored arguments keep
 the definitions `(void)`; x87 float10 stays a documented double
 deviation. `crt_test`, `level_test` and `flic_test` drive the band.
 
+**The indexed inline-block copy** (2026-10-24; findings 372/431):
+`indexed_record_transform_copy_in` (`IndexedRecordTransformCopyIn @
+0x483240`, `record.*`) is the copy-side twin of the data-address reader
+above — 0x50 bytes (the corpus's twenty-dword loop, byte-equivalent to
+the contiguous store) into the indexed record's inline block at
+base + 0x10 + index*0x70, always answering success. That closes the
+pure-leaf pool: the scan's ten remaining named rows are OS- and
+x87-register-bound pseudocode and land in `blocked.md` as the
+OS-bound/register-word residuals (MMIO and find-handle closes, the three
+`IsBad*Ptr` probes, the four x87 control/status readers, and the
+PE-unwind address resolver). `record_test` pins the block placement,
+the header edge and the deviation corners.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

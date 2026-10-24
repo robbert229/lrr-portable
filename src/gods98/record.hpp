@@ -188,4 +188,14 @@ uint32_t avi_player_ready_get(const void* movie);
  * versus standard operations with it. Faithful read; NULL answers 0. */
 uint32_t game_file_system_type_get(const void* handle);
 
+/* IndexedRecordTransformCopyIn (FUN_00483240, findings 372/431): copy
+ * 0x50 bytes (20 dwords) from `source` into the INDEXED RECORD's inline
+ * block — the same +0x8 table slot and base+0x10+index*0x70 address the
+ * data-address reader above hands back — and return 1. The corpus's
+ * dword-at-a-time loop is the contiguous copy below (byte-equivalent,
+ * the crt memmove precedent); NULL record or source stores nothing and
+ * still answers success (documented deviation). */
+uint32_t indexed_record_transform_copy_in(void* record, int index,
+                                          const void* source);
+
 #endif /* LEGORRR_GODS98_RECORD_HPP */

@@ -109,3 +109,20 @@ SDL/host framebuffer behind the platform seam with no COM vtable and no
 a descriptor-shaped mock) lands; the miniwin build's fixed RGBA32 layout
 means the masks this pair derives are already compile-time constants
 here.
+
+
+## CRT OS-bound and register-word residuals (2026-10-24)
+
+The pure-leaf scan's last ten named rows are pseudocode-clean only
+because Ghidra hoists OS and x87 state out of the body. Each is
+blocked on state the port does not model; porting them as constants or
+host lookalikes would claim unproven semantics (the same bar the x87
+stub-thunk note above applies).
+
+| Function (`address`) | Blocker | Next action |
+| --- | --- | --- |
+| `MmioHandleAndGlobalBufferRelease` (`0x4891d0`) | Frees a Win32 `HGLOBAL` and closes an `HMMIO` handle; the port's media loader feeds whole payloads through the audio seam and models no MMIO handles or HGLOBAL blocks. | Media-handle lifecycle model (the MMIO platform seam). |
+| `CrtFindHandleClose` (`0x48f950`) | `FindClose` on a corpus directory-search handle, with the failure path writing `DAT_005490d0 = 22` and returning `-1`; the port enumerates directories natively and has no corpus search handle to close. | File-find platform seam, if/when its corpus callers land. |
+| `PointerRangeIsReadable` (`0x499690`), `PointerRangeIsWritable` (`0x4996b0`), `FunctionPointerIsExecutable` (`0x4996d0`) | `IsBadReadPtr`/`IsBadWritePtr`/`IsBadCodePtr` wrappers — the answer is host address-space validity, and deprecated Win32 probes have no faithful portable equivalent. | If ported callers of these land, gate on port-owned ranges instead. |
+| `CrtFpuPrecisionModeCodeGet` (`0x49200c`), `FpuStatusWordGetVariantA` (`0x493be0`), `FpuStatusWordGetVariantB` (`0x493bf0`), `FpuControlWordUpdateMasked` (`0x493c10`) | x87 register readers: the precision bit comes from the corpus's CRT-bootstrapped control word and the status word reflects accumulated FP state. The port has no x87 registers to read, and constant answers would claim provenance. | Same blocker as the x87 stub thunks above — needs the control/status register model first. |
+| `CrtUnwindAddressResolve` (`0x495a60`) | Pure pointer arithmetic, but over the PE exception/unwind tables (`base + table-entry words`); the port models no PE exception data, so there is nothing to validate the resolved addresses against. | CRT loader internals, if an SEH-shaped need appears. |
