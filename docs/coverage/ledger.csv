@@ -484,7 +484,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00418110,FUN_00418110,named,SaveStateEventContextSet,0,81
 00418120,FUN_00418120,named,IsAverageValueAbove99,0,550
 00418190,FUN_00418190,named,SelectionModeStateSet,0,81
-004181a0,FUN_004181a0,named,SelectionStateFlagClearBit0,0,85
+004181a0,FUN_004181a0,ported,SelectionStateFlagClearBit0,1,85
 004181b0,FUN_004181b0,named,HelpWindowResourcesInit,0,2892
 00418450,FUN_00418450,named,HelpWindowInfoConfigStringsLoad,0,2696
 004185f0,FUN_004185f0,named,HelpWindowButtonLayoutLoad,0,1716
@@ -498,7 +498,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00418fc0,FUN_00418fc0,named,UiModeTransitionRequest,0,460
 00419030,FUN_00419030,named,HelpWindowButtonFeedbackUpdate,0,673
 00419100,FUN_00419100,named,UiModeResourcePositionsApply,0,416
-00419150,FUN_00419150,named,SelectionStateHandleGet,0,393
+00419150,FUN_00419150,ported,SelectionStateHandleGet,1,393
 004191a0,FUN_004191a0,named,MainSimStateAdmissionPredicate,0,307
 004191f0,FUN_004191f0,named,UiModeResourceBit40Get,0,61
 00419200,FUN_00419200,named,UiModeResourceBit40SetClear,0,244
@@ -670,8 +670,8 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004291a0,FUN_004291a0,ported,SceneMarkerUpdateAndDraw,5,1886
 004293b0,FUN_004293b0,named,SelectionRectangleRender,0,831
 00429470,FUN_00429470,named,CameraPointerRayRoute,0,1203
-004295a0,FUN_004295a0,named,ContextSelectedGlobalPointerGet,0,157
-004295c0,FUN_004295c0,named,EntityMatchesCurrentSelectionOrOwner,0,224
+004295a0,FUN_004295a0,ported,ContextSelectedGlobalPointerGet,1,157
+004295c0,FUN_004295c0,ported,EntityMatchesCurrentSelectionOrOwner,1,224
 004295f0,FUN_004295f0,ported,SoundMinimumDistanceUpdateMode,4,1364
 004297b0,FUN_004297b0,ported,CDAudioWatchdogModeUpdate,4,344
 00429810,FUN_00429810,ported,AudioPlaybackToggle,2,216

@@ -326,4 +326,28 @@ void current_selection_context_set(void* context);
 }
 #endif
 
+/* --- selection-state band (2026-10-24) ------------------------------------
+ * SelectionStateFlagClearBit0 / SelectionStateHandleGet (FUN_004181a0 /
+ * FUN_00419150, findings 380/478): the corpus's selection-state word
+ * (DAT_004dc650) — its bit-0 clear leaf and the mode/index-gated handle
+ * leaf over the strided handle tables (DAT_004db914/918, stride 0x1c) and
+ * the extra handle (DAT_004db934). No ported code feeds this band — the
+ * UI-mode resource positions / hit-test leaves that write the tables,
+ * hit index, and state bits are unported — so everything lands
+ * zero-initialized and the corpus's blind table indexing is guarded to a
+ * documented 16-entry window (deviation). The set/peek functions are the
+ * tests/diagnostics view (the message_active_count precedent); tests also
+ * inject through them. */
+void selection_state_flag_clear_bit0(void);
+uint32_t selection_state_handle_get(int index);
+
+uint32_t selection_state_flags_peek(void);
+void selection_state_flags_set(uint32_t flags);       /* diagnostics */
+int selection_state_hit_index_peek(void);
+void selection_state_hit_index_set(int index);        /* diagnostics */
+uint32_t selection_state_handle_extra_peek(void);
+void selection_state_handle_extra_set(uint32_t value);/* diagnostics */
+uint32_t selection_state_handle_slot_peek(int table, int index);
+void selection_state_handle_slot_set(int table, int index, uint32_t value);
+
 #endif /* LEGORRR_GAME_FRONTEND_HPP */

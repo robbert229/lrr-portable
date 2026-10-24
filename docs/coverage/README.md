@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 590 | 23.0% |
+| ported | 594 | 23.2% |
 | anchored | 5 | 0.2% |
-| named | 1922 | 75.0% |
+| named | 1918 | 74.8% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (590 functions)
+  (594 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (5 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1922 functions)
+  citation yet (1918 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1928 (75.2%).**
+**Game logic remaining to port: 1924 (75.0%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -425,7 +425,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00418110` | SaveStateEventContextSet |
 | `0x00418120` | IsAverageValueAbove99 |
 | `0x00418190` | SelectionModeStateSet |
-| `0x004181a0` | SelectionStateFlagClearBit0 |
 | `0x004181b0` | HelpWindowResourcesInit |
 | `0x00418450` | HelpWindowInfoConfigStringsLoad |
 | `0x004185f0` | HelpWindowButtonLayoutLoad |
@@ -439,7 +438,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00418fc0` | UiModeTransitionRequest |
 | `0x00419030` | HelpWindowButtonFeedbackUpdate |
 | `0x00419100` | UiModeResourcePositionsApply |
-| `0x00419150` | SelectionStateHandleGet |
 | `0x004191a0` | MainSimStateAdmissionPredicate |
 | `0x004191f0` | UiModeResourceBit40Get |
 | `0x00419200` | UiModeResourceBit40SetClear |
@@ -578,8 +576,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00429160` | TerrainCellPaletteResourceAtGridPosition |
 | `0x004293b0` | SelectionRectangleRender |
 | `0x00429470` | CameraPointerRayRoute |
-| `0x004295a0` | ContextSelectedGlobalPointerGet |
-| `0x004295c0` | EntityMatchesCurrentSelectionOrOwner |
 | `0x0042b2f0` | EntityEffectCountersApplyFromRecord |
 | `0x0042b330` | LoadTileMeshes |
 | `0x0042b480` | RectangularResourceTableDestroy |

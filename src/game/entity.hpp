@@ -176,6 +176,25 @@ void object_pointer_registry_clear_match(int32_t pointer);
 int object_pointer_registry_get_slot(uint32_t index, int32_t* out);
 uint32_t object_pointer_registry_count_peek(void);
 
+/* --- context-selected globals (2026-10-24) ---------------------------------
+ * ContextSelectedGlobalPointerGet / EntityMatchesCurrentSelectionOrOwner
+ * (FUN_004295a0 / FUN_004295c0, findings 313/324/478): the corpus's
+ * context-selected pointer leaf — the DAT_005560f8 / DAT_00556104 pair
+ * chosen by the context-mode global — and the "matches current selection
+ * or owner" predicate over the current-selection pointer (DAT_00556160)
+ * and the entity's +0x36c owner pointer. The mode and current-selection
+ * globals are modeled by the media layer (media_min_distance_mode /
+ * _context, fed by the ported SoundMinimumDistanceUpdateMode); only the
+ * pointer pair has no ported feeder, so both land zero-initialized
+ * (documented deviation). The set/peek functions are the
+ * tests/diagnostics view. The +0x36c owner read is pointer-sized on the
+ * port (the corpus reads the 32-bit word). */
+uint32_t context_selected_global_pointer_get(void);
+int entity_matches_current_selection_or_owner(const void* entity);
+uint32_t context_selected_pointer_pair_peek(int second);
+void context_selected_pointer_pair_set(uint32_t first, uint32_t second);
+
+
 #ifdef __cplusplus
 }
 #endif

@@ -1773,6 +1773,25 @@ keeps the write shape with NULL records skipping (deviation).
 `record_test` proves the round-trips through the caller-owned buffer,
 the bit isolation, and the NULL skips.
 
+**Selection-state and context-selected accessors** (2026-10-24; findings
+313/324/380/478): six selection leaves land across the two domains. The
+help-window state pair lands in `frontend.*`:
+`selection_state_flag_clear_bit0` (0x4181a0) drops bit 0 of the
+selection-state word, and `selection_state_handle_get` (0x419150) walks
+its mode/index gates over the strided handle tables and the extra
+handle. No ported code feeds that band — the resource-positions apply
+and button hit test are unported — so everything starts zero inside a
+guarded 16-entry window (the corpus indexes blindly), with set/peek
+views for tests. The context-selected pair lands in `entity.*`:
+`context_selected_global_pointer_get` (0x4295a0) picks one of two
+zero-init pointer statics by the context mode, and
+`entity_matches_current_selection_or_owner` (0x4295c0) matches an
+entity or its +0x36c owner against the current selection — both read
+the mode and selection globals through the media layer's models, fed
+by the ported sound-minimum-distance leaf. `frontend_test` pins the
+gates and table switches; `entity_test` the mode selection and the
+predicate's rejection paths.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

@@ -8,6 +8,7 @@
 #include <unistd.h>
 
 #include "game/entity.hpp"
+#include "gods98/media.hpp"
 #include "game/game.hpp"
 #include "gods98/block.hpp"
 #include "gods98/resource.hpp"
@@ -850,6 +851,52 @@ int main(int argc, char** argv)
         object_pointer_registry_clear_match(1234);
         CHECK(object_pointer_registry_count_peek() == 0u,
               "the clear-match is a no-op with no entries");
+    }
+
+    /* The context-selected globals (2026-10-24): zero-pair start, the
+     * mode-selected read, and the selection/owner predicate via the
+     * media models. */
+    {
+        CHECK(context_selected_pointer_pair_peek(0) == 0u
+                  && context_selected_pointer_pair_peek(1) == 0u,
+              "the pair starts zero (no feeder)");
+        context_selected_pointer_pair_set(0xAAu, 0xBBu);
+        /* Mode 1 (media default? no: media mode is 0 until fed) — first. */
+        CHECK(context_selected_global_pointer_get() == 0xAAu,
+              "mode 0 reads the first pointer");
+
+        /* The predicate: no selection stored yet, everything rejects. */
+        int buf[256];
+        memset(buf, 0, sizeof(buf));
+        void* owner_slot = NULL;
+        memcpy((char*)buf + 0x36c, &owner_slot, sizeof(owner_slot));
+        CHECK(entity_matches_current_selection_or_owner(buf) == 0,
+              "no selection rejects");
+        CHECK(entity_matches_current_selection_or_owner(NULL) == 0,
+              "NULL entity rejects (deviation: corpus derefs)");
+
+        /* Store a selection through the media model (mode 0 path). */
+        media_min_distance_update_mode(0, buf, 0);
+        CHECK(entity_matches_current_selection_or_owner(buf) == 1,
+              "the entity itself matches the selection");
+        void* owner = buf;
+        memcpy((char*)buf + 0x36c, &owner, sizeof(owner));
+        CHECK(entity_matches_current_selection_or_owner(buf) == 1,
+              "the owner match satisfies it too");
+
+        /* Mode 1 rejects the direct match (corpus shape). */
+        int other[256];
+        memset(other, 0, sizeof(other));
+        media_min_distance_update_mode(1, buf, 0);
+        /* mode 1 clears the context in the corpus shape. */
+        CHECK(context_selected_global_pointer_get() == 0xBBu,
+              "mode 1 reads the second pointer");
+        media_min_distance_update_mode(0, other, 0);
+        CHECK(entity_matches_current_selection_or_owner(buf) == 0,
+              "another selection rejects");
+
+        media_min_distance_update_mode(1, NULL, 0);
+        context_selected_pointer_pair_set(0u, 0u);
     }
 
     if (s_failures != 0) {
