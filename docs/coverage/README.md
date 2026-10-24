@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 318 | 12.4% |
+| ported | 320 | 12.5% |
 | anchored | 5 | 0.2% |
-| named | 2195 | 85.6% |
+| named | 2193 | 85.5% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 0 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (318 functions)
+  (320 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (2195 functions)
+  citation yet (2193 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 2200 (85.8%).**
+**Game logic remaining to port: 2198 (85.7%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -356,6 +356,12 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00429160` | TerrainCellPaletteResourceAtGridPosition |
 | `0x004293b0` | SelectionRectangleRender |
 | `0x00429470` | CameraPointerRayRoute |
+| `0x004295a0` | ContextSelectedGlobalPointerGet |
+| `0x004295c0` | EntityMatchesCurrentSelectionOrOwner |
+| `0x00429810` | AudioPlaybackToggle |
+| `0x00429850` | ActiveEngineFieldB0Get |
+| `0x00429860` | EngineFloatField210GetByIndex |
+| `0x00429880` | EngineFloatField260Get |
 | `0x0042b2f0` | EntityEffectCountersApplyFromRecord |
 | `0x0042b330` | LoadTileMeshes |
 | `0x0042b480` | RectangularResourceTableDestroy |

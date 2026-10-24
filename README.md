@@ -956,6 +956,40 @@ both submit forms, replay routing with the multi-link draw, the
 stale-loop quirk, the frame tick's timer step / queue rotation / batch
 restore, and the disabled-subsystem gate that runs before the draw.
 
+**Media-playback state machines** (2026-10-24; port issues #301 / #302):
+`src/gods98/media.*` models the two simulation-driven state machines of
+the media area plus the one-shot scheduler #301 introduces (the port
+analog of the corpus's scheduled-callback table, driven by the engine
+clock). `media_cd_watchdog_update` (`CDAudioWatchdogModeUpdate @
+0x4297b0`): enable raises bit 8 of the audio state word, draws the
+time-derived CD-track slot (random % window + start, per the CDTracks /
+CDStartTrack config) and schedules the watchdog re-arm for that many
+seconds; the callback re-arms with a fresh draw, as shipped. Disable
+clears the bit, cancels, and runs one watchdog tick with 0 — which
+touches nothing, as shipped. The stalled-track check exposes the
+port-side analog of the corpus's CD-media status query, so the state
+machine and scheduler are the observable core. Real CD-track playback
+does not exist on native hardware under this architecture — the
+track-start/stop helpers are documented no-op seams and the winapi
+reference build keeps the real behaviour (the deviation is this note,
+per the issue). `media_min_distance_update_mode`
+(`SoundMinimumDistanceUpdateMode @ 0x4295f0`): mode 0 stores the supplied
+entity/context and applies the caller-selected distance scalar (0.9 /
+0.6 listener scale, clip = min-distance base × cell distance scale, 5.0
+tracked reference distance); mode 1 clears the context and restores the
+config-derived previous values (0.5 scale, the config clip and reference
+distances); other modes update only the mode global. Finding 418 flags
+the state's higher-level purpose as uncertain, so the port models
+exactly this observable state machine — the render/audio distance
+pushes land at inert seams. `media_test` covers the scheduler
+(one-shot, overwrite, cancel), the watchdog's bit/schedule/cancel
+behaviour, deterministic draws via an LCG mirror, the stalled re-arm,
+the stale loop flag, and config zero-to-default rules, plus both modes,
+both scalars, repeated entry, unknown modes, and restore of the
+min-distance state. The corpus's simulation call paths (the music
+toggle in MainSimStep, level reset, objective tick, level setup and
+selection changes) land with their corresponding sim ports.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

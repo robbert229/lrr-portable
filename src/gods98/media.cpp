@@ -5,8 +5,6 @@
 
 #include <stddef.h>
 
-#include "sound.hpp"
-
 /* ------------------------------------------------------------------ *
  *  One-shot timer. The corpus schedules exactly one pending callback
  *  (the CD watchdog's re-arm), so the port's table is a single slot;
@@ -180,97 +178,6 @@ void media_cd_watchdog_tick(int arg)
 }
 
 /* ------------------------------------------------------------------ *
- *  AudioPlaybackToggle @ 0x429810 (issue #298).
- * ------------------------------------------------------------------ */
-
-void media_audio_playback_toggle(int enable)
-{
-    if (enable != 0) {
-        s_cd_flags |= MEDIA_FLAG_SOUND_ON;
-        sound_subsystem_enable_set_and_stop(1);
-        return;
-    }
-    s_cd_flags &= ~MEDIA_FLAG_SOUND_ON;
-    sound_subsystem_enable_set_and_stop(0);
-}
-
-/* ------------------------------------------------------------------ *
- *  Cue dispatch + pointer-cursor state (issue #300). The corpus's
- *  DAT_00500a98 / _DAT_00500efc pair lives in the cursor/renderer
- *  context; the consumers (the cursor draw) land with that port, so
- *  the state is held module-locally as the observable half.
- * ------------------------------------------------------------------ */
-
-static int   s_cursor_slot;       /* DAT_00500a98 role */
-static float s_cursor_override;   /* _DAT_00500efc role (statics: 0.0) */
-
-void media_pointer_cursor_select(int slot)
-{
-    if (s_cursor_override <= 0.0f) {
-        s_cursor_slot = slot;
-    }
-}
-
-void media_pointer_cursor_override_set(int slot, float value)
-{
-    s_cursor_slot = slot;
-    s_cursor_override = value;
-}
-
-int media_pointer_cursor_slot(void)
-{
-    return s_cursor_slot;
-}
-
-float media_pointer_cursor_override(void)
-{
-    return s_cursor_override;
-}
-
-void media_action_feedback_sound_dispatch(int event)
-{
-    int saved = sound_batch_mode_get();
-    sound_batch_queue_drain(0, 0);      /* force batch mode off, no replay */
-    int slot = 0;
-    int cue = 0;
-    switch (event) {
-    case 0:  slot = 0x14; cue = 0x13; break;
-    case 1:  slot = 0x15; cue = 0x14; break;
-    case 2:  slot = 0x15; cue = 0x1f; break;
-    case 3:  slot = 0x14; cue = 0x1e; break;
-    case 4:  slot = 0x14; cue = 0x20; break;
-    case 5:  slot = 0x14; cue = 0x21; break;
-    default:
-        /* Unknown event: submit nothing, but still restore the mode. */
-        sound_batch_queue_drain(saved, 0);
-        return;
-    }
-    media_pointer_cursor_override_set(slot, 12.5f);  /* 0x41480000 */
-    sound_alias_play(cue, 0);
-    sound_batch_queue_drain(saved, 0);  /* restore the saved mode */
-}
-
-void media_action_code_to_sound_alias(int code)
-{
-    int cue = 0;
-    int hit = 0;
-    switch (code) {
-    case 1:  cue = 0x2b; hit = 1; break;
-    case 2:  cue = 0x2c; hit = 1; break;
-    case 3:  cue = 0x2d; hit = 1; break;
-    case 4:  cue = 0x2e; hit = 1; break;
-    case 5:  cue = 0x2f; hit = 1; break;
-    case 8:  cue = 0x32; hit = 1; break;
-    case 10: cue = 0x34; hit = 1; break;
-    case 11: cue = 0x35; hit = 1; break;
-    default: break;
-    }
-    if (hit) {
-        media_pointer_cursor_select(cue);
-    }
-}
-
-/* ------------------------------------------------------------------ *
  *  SoundMinimumDistanceUpdateMode @ 0x4295f0 (issue #302).
  * ------------------------------------------------------------------ */
 
@@ -345,29 +252,3 @@ float media_min_distance_ref_distance(void)
 {
     return s_mind_ref;
 }
-
-/* --- the CD-audio availability seam (see media.hpp) -------------------------- */
-static int s_cd_audio_open; /* DAT_0054486c role: unowned, zero-init */
-
-int media_cd_audio_playback_available(void)
-{
-    return (s_cd_audio_open != 0 && sound_bank_sound_on() != 0) ? 1 : 0;
-}
-
-void media_cd_audio_open_set(int open)
-{
-    s_cd_audio_open = open;
-}
-
-/* LoaderProgressCallbackSet (FUN_004802b0) — see media.hpp. */
-static void* s_loader_progress_callback; /* DAT_005343ac role: unowned */
-static void* s_loader_progress_context;  /* DAT_005343b0 role: unowned */
-
-void loader_progress_callback_set(void* callback, void* context)
-{
-    s_loader_progress_callback = callback;
-    s_loader_progress_context = context;
-}
-
-void* loader_progress_callback_peek(void) { return s_loader_progress_callback; }
-void* loader_progress_context_peek(void) { return s_loader_progress_context; }

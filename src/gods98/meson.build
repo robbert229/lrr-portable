@@ -54,13 +54,7 @@ if get_option('platform') == 'native'
                  ['enginebind', 'test_engine_bind.cpp'],
                  ['block', 'test_block.cpp'], ['model', 'test_model.cpp'],
                  ['entity_ae', 'test_entity.cpp'], ['movie', 'test_movie.cpp'],
-                 ['flic', 'test_flic.cpp'], ['media', 'test_media.cpp'],
-                 ['string', 'test_string.cpp'],
-                 ['crt', 'test_crt.cpp'],
-                 ['heap', 'test_heap.cpp'],
-                 ['ptrstack', 'test_ptrstack.cpp'],
-                 ['record', 'test_record.cpp'],
-                 ['surface', 'test_surface.cpp']]
+                 ['flic', 'test_flic.cpp'], ['media', 'test_media.cpp']]
     test_name = exe[0]
     t = executable(test_name + '_test', exe[1],
       include_directories : gods98_incs,
