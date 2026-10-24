@@ -21,6 +21,16 @@ and curiosity; nothing in this repository is affiliated with or endorsed by the 
 ```
 README.md           This file
 docs/findings/      Reverse-engineering findings, 01–431 (see index below)
+docs/findings/      Reverse-engineering findings, 01–430 (see index below)
+docs/findings/      Reverse-engineering findings, 01–429 (see index below)
+docs/findings/      Reverse-engineering findings, 01–428 (see index below)
+docs/findings/      Reverse-engineering findings, 01–427 (see index below)
+docs/findings/      Reverse-engineering findings, 01–426 (see index below)
+docs/findings/      Reverse-engineering findings, 01–425 (see index below)
+docs/findings/      Reverse-engineering findings, 01–424 (see index below)
+docs/findings/      Reverse-engineering findings, 01–423 (see index below)
+docs/findings/      Reverse-engineering findings, 01–417 (see index below)
+docs/findings/      Reverse-engineering findings, 01–416 (see index below)
 tools/              WAD tooling (rrwad.py: unpack/pack/verify — see tools/README.md)
                     + model converter (tools/rrlwo.py: .lwo → glTF 2.0)
                     + compat harness (tools/compat/a2.py — see tools/compat/README.md)
@@ -612,6 +622,21 @@ Open threads, in order of value:
 | 413 | [findings/413-configured-directshow-video-path.md](docs/findings/413-configured-directshow-video-path.md) | Configured DirectShow Video Path |
 | 414 | [findings/414-avi-and-flic-playback-routes.md](docs/findings/414-avi-and-flic-playback-routes.md) | AVI and FLIC Playback Routes |
 | 415 | [findings/415-model-lightwave-and-animation-asset-pipeline.md](docs/findings/415-model-lightwave-and-animation-asset-pipeline.md) | Model, LightWave, and Animation Asset Pipeline |
+| 416 | [findings/416-scene-and-render-resource-lifecycle.md](docs/findings/416-scene-and-render-resource-lifecycle.md) | Scene and Render Resource Lifecycle |
+| 417 | [findings/417-sound-subsystem-aliases-queues-and-effects.md](docs/findings/417-sound-subsystem-aliases-queues-and-effects.md) | Sound aliases, submission queues, and transient effects |
+| 418 | [findings/418-movie-stream-and-audio-playback.md](docs/findings/418-movie-stream-and-audio-playback.md) | Movie, Stream, and Audio Playback Boundaries |
+| 419 | [findings/419-interface-and-presentation-config-loading.md](docs/findings/419-interface-and-presentation-config-loading.md) | Interface and Presentation Config Loading |
+| 420 | [findings/420-renderer-and-scene-lifecycle.md](docs/findings/420-renderer-and-scene-lifecycle.md) | Renderer and Scene Lifecycle |
+| 421 | [findings/421-ui-render-tree-traversal.md](docs/findings/421-ui-render-tree-traversal.md) | UI Render-Tree Traversal |
+| 422 | [findings/422-viewport-picking-and-terrain-rendering.md](docs/findings/422-viewport-picking-and-terrain-rendering.md) | Viewport Picking and Terrain Rendering |
+| 423 | [findings/423-input-keyboard-and-cursor-state.md](docs/findings/423-input-keyboard-and-cursor-state.md) | Input, Keyboard, and Cursor State |
+| 424 | [findings/424-camera-viewport-and-view-context.md](docs/findings/424-camera-viewport-and-view-context.md) | Camera, Viewport, and View-Context State |
+| 425 | [findings/425-display-mode-selection-state-and-controls.md](docs/findings/425-display-mode-selection-state-and-controls.md) | Display-Mode Selection State and Controls |
+| 426 | [findings/426-camera-selection-point-and-pointer-pan.md](docs/findings/426-camera-selection-point-and-pointer-pan.md) | Camera Selection Point and Pointer Pan |
+| 427 | [findings/427-screen-effects-and-ui-text-paths.md](docs/findings/427-screen-effects-and-ui-text-paths.md) | Screen Effects and UI Text Paths |
+| 428 | [findings/428-font-and-text-buffer-rendering.md](docs/findings/428-font-and-text-buffer-rendering.md) | Font and Text-Buffer Rendering |
+| 429 | [findings/429-advisor-and-message-ui-state.md](docs/findings/429-advisor-and-message-ui-state.md) | Advisor and Message UI State |
+| 430 | [findings/430-scene-object-action-and-animation-lifecycle.md](docs/findings/430-scene-object-action-and-animation-lifecycle.md) | Scene Object, Action, and Animation Lifecycle |
 | 431 | [findings/431-graphics-rendering-and-surface-paths.md](docs/findings/431-graphics-rendering-and-surface-paths.md) | Graphics, Rendering, and Pixel Surface Paths |
 
 Canonical full pseudocode corpus: [`docs/decompiles/full/LEGORR.full.c`](docs/decompiles/full/LEGORR.full.c)
@@ -1306,9 +1331,11 @@ finding 12, #14). Three new modules in `src/game/`:
   corner; `entity_test` checks the `Model` key lands in `model_path`.
 - **AVI movies** (2026-10-21, findings 14 §4 + 23): `src/gods98/movie.*`
   reconstructs the corpus's movie path — `AvisEnabled @ 0x414ce0` (the
-  `DontPlayAvis` gate), `MoviePlayNamed @ 0x415910` (config-key → path), the
-  modal play-until-done/ESC `MoviePlayLoop @ 0x4157c0`, and
-  `MoviePlayLevelVideo @ 0x415990` (the level's `Video` config key). The
+  `DontPlayAvis` gate), `MoviePlayNamed @ 0x415910` and
+  `MoviePlayLevelVideo @ 0x415990` (config-key and level `Video` paths through
+  the DirectShow frame-wait helper). `MoviePlayLoop @ 0x4157c0` is a separate
+  timed bitmap-surface display helper. See [Finding 418](docs/findings/418-movie-stream-and-audio-playback.md)
+  for the native call paths. The
   shipped `Data/AVI/*.avi` files (Indeo5/msvideo1 video, adpcm_ms/pcm audio)
   are decoded in-process by **FFmpeg's runtime libraries dlopen'd at
   first use** — no header, no link dependency, so the build stays

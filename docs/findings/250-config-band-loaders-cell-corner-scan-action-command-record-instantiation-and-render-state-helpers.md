@@ -75,7 +75,7 @@ that call, and `0x471a60` receives the returned base with stale stack
 arguments past it, so neither side's dispatch split is mechanically
 established. Newly examined and deferred: `0x465c50` (fills a `0x3c`-stride
 record slot with a `0.17`-scaled random unit-velocity arc and a `rand%30+40`
-delay, called only from `SoundStreamSelectorUpdate`/`SoundInstanceUpdate`;
+delay, called only from `TransientEffectEmitterCreate`/`TransientEffectInstanceUpdate`;
 the effect's subject cannot be stated mechanically), `0x473560` (scene-object
 display-mode reconfiguration with `FUN_00480870` mode handles and raw
 vtable dispatch). These carry forward the
