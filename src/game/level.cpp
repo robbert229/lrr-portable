@@ -1280,6 +1280,22 @@ void level_cell_flag_10000000_set(LevelState* s, int cx, int cy, int set)
     }
 }
 
+/* Raise/clear flag bit 0x800000 (the cell-command terrain half; see
+ * level.hpp). Bounds-guarded. */
+void level_cell_flag_800000_set(LevelState* s, int cx, int cy, int set)
+{
+    uint8_t* rec = level_voxel(s, cx, cy);
+    if (rec == NULL) {
+        return;
+    }
+    uint32_t* flags = (uint32_t*)(rec + 0x08);
+    if (set != 0) {
+        *flags |= 0x800000u;
+    } else {
+        *flags &= ~0x800000u;
+    }
+}
+
 /* --- second terrain-cell leaf cluster ------------------------------------
  * Same voxel-record model and bounds deviation. The corpus's tracking /
  * refresh companions landed later with the tracked set-family below —

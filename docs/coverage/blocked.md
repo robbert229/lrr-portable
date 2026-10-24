@@ -126,3 +126,24 @@ stub-thunk note above applies).
 | `PointerRangeIsReadable` (`0x499690`), `PointerRangeIsWritable` (`0x4996b0`), `FunctionPointerIsExecutable` (`0x4996d0`) | `IsBadReadPtr`/`IsBadWritePtr`/`IsBadCodePtr` wrappers — the answer is host address-space validity, and deprecated Win32 probes have no faithful portable equivalent. | If ported callers of these land, gate on port-owned ranges instead. |
 | `CrtFpuPrecisionModeCodeGet` (`0x49200c`), `FpuStatusWordGetVariantA` (`0x493be0`), `FpuStatusWordGetVariantB` (`0x493bf0`), `FpuControlWordUpdateMasked` (`0x493c10`) | x87 register readers: the precision bit comes from the corpus's CRT-bootstrapped control word and the status word reflects accumulated FP state. The port has no x87 registers to read, and constant answers would claim provenance. | Same blocker as the x87 stub thunks above — needs the control/status register model first. |
 | `CrtUnwindAddressResolve` (`0x495a60`) | Pure pointer arithmetic, but over the PE exception/unwind tables (`base + table-entry words`); the port models no PE exception data, so there is nothing to validate the resolved addresses against. | CRT loader internals, if an SEH-shaped need appears. |
+
+
+## Cell-record counter block and spatial-query family (2026-10-24)
+
+The terrain cell-command issuers end their links with
+`TerrainCellRecordCountUpdate` (`0x403810`), which the port records as a
+documented **seam**: its head runs `SpatialObjectQueryCenterMask01`
+(`0x438a60`) / `SpatialObjectQueryCenterMask02` (`0x438ae0`) and
+`ActionKindEntityCreateAndCommandIssue` (`0x43a650`) — the spatial object
+query and the action-kind creation chain, all unported — and its tail
+increments the `DAT_004b34f4` cell-record counter block indexed by
+`kind * 0xf0 + mode * 0x10 + arg`, which the port does not model (the
+same counter block that the `CmdFlushAll` zero path clears). The
+issuers' own observable halves — the record shape, the guards, the
+terrain marks and the links — land in `cmd.*`, so only the counter
+update and the query-driven side effects are missing there.
+
+`BuildingDepositCountGet` (`0x469bb0`) belongs to the blocked stats-config
+layer (the `DAT_00502bd8` indexed record family), which also gates the
+query helpers above. **Next action:** the spatial object-query model,
+then the counter block, which together let `0x403810` land as a leaf.

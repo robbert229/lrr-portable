@@ -6,6 +6,7 @@
 #include "cmd.hpp"
 #include "ai.hpp"
 #include "select.hpp"
+#include "level.hpp"
 #include "util.hpp"
 #include "entity.hpp"
 #include "gods98/heap.hpp"
@@ -30,6 +31,9 @@ typedef struct CmdRec {
     float    now;        /* +0x14 timeGetTime on alloc, 1500.0 on link          */
     int32_t  param2;     /* +0x18 (task param from the queue)                  */
     int32_t  behaviour;  /* +0x1c behaviour id = behaviour[kind]                */
+    int32_t  cell_act;   /* +0x20 cell-command action id (8/0xb/0xd)          */
+    int32_t  cell_target;/* +0x24 cell-command referenced entity (-1 = unset)   */
+    int32_t  cell_count; /* +0x28 cell-command entry count                      */
     int32_t  grant_act;  /* +0x38 activity the command grants: the tick's
                           * deferred install (callback 0x43da62) appends it
                           * to the entity's permitted-activity list and
@@ -1355,4 +1359,151 @@ int cmd_rec_extra_get(const void* rec)
         return -1;
     }
     return (int)cas_rec(rec)->extra;
+}
+
+/* --- terrain cell-command issuers (see cmd.hpp) ------------------------------
+ * The pair is staged into the coordinate slots as the corpus's integers (the
+ * move records keep floats there), so the getters read the int view. */
+static void cmd_cell_record_stage(CmdRec* rec, int x, int y, int act)
+{
+    __builtin_memcpy(&rec->x, &x, sizeof(rec->x));
+    __builtin_memcpy(&rec->y, &y, sizeof(rec->y));
+    rec->cell_act = act;
+    rec->cell_target = -1;
+    rec->cell_count = 0;
+    rec->state |= 0x400u;
+}
+
+void terrain_cell_command_create(int x, int y, int flag, int raise20)
+{
+    const LevelState* lvl = (s_ctx != NULL) ? s_ctx->level : NULL;
+    if (lvl == NULL) {
+        return; /* deviation: the corpus dereferences the level blindly */
+    }
+    if (level_cell_state_is_1(lvl, x, y) != 0) {
+        return;
+    }
+    if (level_cell_state_is_6(lvl, x, y) != 0) {
+        return;
+    }
+    if (level_cell_flag_4(lvl, x, y) == 0u) {
+        return;
+    }
+    CmdRec* rec = (CmdRec*)cmd_alloc(8);
+    if (rec == NULL) {
+        return;
+    }
+    cmd_cell_record_stage(rec, x, y, 0);
+    if (flag != 0) {
+        rec->state |= 8u;
+    }
+    entity_record_array_apply_zero_state(rec, 1);
+    cmd_link_head(rec, 3);
+    const uint32_t prior = rec->state;
+    rec->state = prior | 0x80u;
+    if (raise20 != 0) {
+        rec->state = prior | 0x20080u;
+    }
+    if (flag == 0) {
+        /* The terrain half: the surface-type apply and the cell's mark. */
+        LevelState* mlvl = (LevelState*)lvl;
+        if (mlvl->ptr_terrain != NULL) {
+            terrain_cell_surface_type_set(mlvl->ptr_terrain, x, y, 1);
+        }
+        level_cell_flag_800000_set(mlvl, x, y, 1);
+    }
+}
+
+int kind_nine_cell_command_issue(int x, int y, int mode)
+{
+    LevelState* lvl = (s_ctx != NULL) ? (LevelState*)s_ctx->level : NULL;
+    if (lvl == NULL) {
+        return 0; /* deviation: the corpus dereferences blindly */
+    }
+    if (level_tile_type(lvl, x, y) == 1) {
+        return 0;
+    }
+    if (level_cell_walkable_flag(lvl, x, y) == 0) {
+        return 0;
+    }
+    if (level_cell_flag_reserved(lvl, x, y) != 0u) {
+        return 0;
+    }
+    CmdRec* rec = (CmdRec*)cmd_alloc(9);
+    if (rec == NULL) {
+        return 0;
+    }
+    cmd_cell_record_stage(rec, x, y, 8);
+    if (mode == 0) {
+        entity_record_array_apply_zero_state(rec, 1);
+    }
+    cmd_link_head(rec, 3);
+    /* Counter update: the spatial-query/action-issue family and the
+     * cell-record counter block are unported (documented seam). */
+    level_tile_mark(lvl, x, y, 1);
+    if (lvl->ptr_terrain != NULL) {
+        /* The corpus tail loses the setter's register arguments; the type
+         * follows the 0x402510 shape. */
+        terrain_cell_surface_type_set(lvl->ptr_terrain, x, y, 1);
+    }
+    return 1;
+}
+
+void cell_command_type13_issue(int x, int y)
+{
+    const LevelState* lvl = (s_ctx != NULL) ? s_ctx->level : NULL;
+    if (lvl == NULL) {
+        return; /* deviation: the corpus dereferences blindly */
+    }
+    if (level_cell_flag_8_bounded(lvl, x, y) == 0u) {
+        return;
+    }
+    CmdRec* rec = (CmdRec*)cmd_alloc(0x14);
+    if (rec == NULL) {
+        return;
+    }
+    cmd_cell_record_stage(rec, x, y, 0xd);
+    entity_record_array_apply_zero_state(rec, 1);
+    cmd_link_head(rec, 3);
+    /* Counter update: the seam half above. */
+}
+
+void cell_command_type11_issue(int x, int y)
+{
+    CmdRec* rec = (CmdRec*)cmd_alloc(0xf);
+    if (rec == NULL) {
+        return;
+    }
+    cmd_cell_record_stage(rec, x, y, 0xb);
+    entity_record_array_apply_zero_state(rec, 1);
+    cmd_link_head(rec, 4);
+    /* Counter update: the seam half above. */
+    if (s_ctx != NULL && s_ctx->level != NULL) {
+        level_cell_secondary_bit8_set((LevelState*)s_ctx->level, x, y, 1);
+    }
+}
+
+int cmd_rec_cell_xy_get(const void* rec, int* x, int* y)
+{
+    if (rec == NULL) {
+        return 0;
+    }
+    const CmdRec* r = cas_rec(rec);
+    if (x != NULL) {
+        __builtin_memcpy(x, &r->x, sizeof(*x));
+    }
+    if (y != NULL) {
+        __builtin_memcpy(y, &r->y, sizeof(*y));
+    }
+    return 1;
+}
+
+int cmd_rec_action_get(const void* rec)
+{
+    return rec != NULL ? (int)cas_rec(rec)->cell_act : -1;
+}
+
+int cmd_rec_target_get(const void* rec)
+{
+    return rec != NULL ? (int)cas_rec(rec)->cell_target : -2;
 }

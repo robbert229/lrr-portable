@@ -419,6 +419,11 @@ int level_cell_mask_180000(const LevelState* s, int cx, int cy);
  * Bounds-guarded (the corpus writes OOB for bad coords). */
 void level_cell_flag_10000000_set(LevelState* s, int cx, int cy, int set);
 
+/* Raise (set nonzero) or clear flag bit 0x800000 — the cell-command
+ * issuer's terrain half marks the cell through this leaf (finding 451);
+ * no separate corpus leaf owns the write. Bounds-guarded. */
+void level_cell_flag_800000_set(LevelState* s, int cx, int cy, int set);
+
 /* --- second terrain-cell leaf cluster ----------------------------------- *
  * Same record layout and same documented bounds deviation as the block
  * above: corpus variants with no bounds check read/write via

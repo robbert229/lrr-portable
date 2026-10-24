@@ -45,7 +45,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00402210,FUN_00402210,ported,EngineMemoryFree,1,80
 00402220,FUN_00402220,ported,CmdTickGlobal,4,1057
 00402310,FUN_00402310,ported,CmdChainPurge,1,2949
-00402510,FUN_00402510,named,TerrainCellCommandCreate,0,1128
+00402510,FUN_00402510,ported,TerrainCellCommandCreate,3,1128
 00402600,FUN_00402600,ported,EntityRecordArrayApplyZeroState,1,628
 00402670,FUN_00402670,ported,EntityCommand15ValidatedRecordQueue,1,356
 004026c0,FUN_004026c0,ported,EntityDeferredWorkSchedule,1,265
@@ -61,12 +61,12 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00402b30,FUN_00402b30,ported,CoordinateCallbackDispatch,1,178
 00402b60,FUN_00402b60,ported,CoordinateCallbackDispatchByMode,1,270
 00402cd0,FUN_00402cd0,ported,CmdCancelRef,1,467
-00402d50,FUN_00402d50,named,KindNineCellCommandIssue,0,991
-00402e40,FUN_00402e40,named,CellCommandType13Issue,0,543
+00402d50,FUN_00402d50,ported,KindNineCellCommandIssue,1,991
+00402e40,FUN_00402e40,ported,CellCommandType13Issue,1,543
 00402ec0,FUN_00402ec0,ported,EntityConditionalTaskSchedule,1,496
 00402f30,FUN_00402f30,ported,EntityThresholdProgressEventQueue,1,338
 00402f70,FUN_00402f70,ported,EntityTargetCommandQueue,1,311
-00402fb0,FUN_00402fb0,named,CellCommandType11Issue,0,492
+00402fb0,FUN_00402fb0,ported,CellCommandType11Issue,1,492
 00403030,FUN_00403030,named,CellCommandType3Issue,0,499
 004030b0,FUN_004030b0,named,CoordinatePairEventQueue,0,274
 004030e0,FUN_004030e0,ported,,1,1248
