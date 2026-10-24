@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 450 | 17.6% |
+| ported | 456 | 17.8% |
 | anchored | 5 | 0.2% |
-| named | 2063 | 80.5% |
+| named | 2057 | 80.2% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 0 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (450 functions)
+  (456 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (2063 functions)
+  citation yet (2057 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 2068 (80.7%).**
+**Game logic remaining to port: 2062 (80.4%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -737,8 +737,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0045b620` | PriorityListButtonActionDispatch |
 | `0x0045b740` | ScrollInfoPanelInitialize |
 | `0x0045b850` | UiOverlayCreateConfiguredElement |
-| `0x0045b900` | IntegerPairDivideToFloatPair |
-| `0x0045b930` | FloatPairToIntegerPair |
 | `0x0045b9d0` | PanelRotationControlConfigLoad |
 | `0x0045bcd0` | CameraDragFromCursorApply |
 | `0x0045c0d0` | PairCountHistogramBuild |
@@ -1076,14 +1074,11 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00479630` | SurfaceTriangleAreaCalculate |
 | `0x004798e0` | ViewRayIntersectionTest |
 | `0x00479ab0` | PointAlongRay |
-| `0x00479b80` | PointInPolygon2D |
-| `0x00479ce0` | Matrix4Multiply |
 | `0x00479d50` | Matrix4SetRotationZ |
 | `0x00479da0` | Matrix4SetRotationY |
 | `0x00479df0` | Matrix4SetRotationZ |
 | `0x00479e40` | MatrixIdentityAndTranslationSet |
 | `0x00479e70` | Matrix4SetIdentity |
-| `0x00479ea0` | Matrix4SetZero |
 | `0x00479eb0` | Matrix4Copy |
 | `0x0047a150` | FormattedTextFormatDraw |
 | `0x0047a180` | RewardTextDraw |
@@ -1334,6 +1329,11 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0048bd50` | WadEntryFindAcrossMountedArchives |
 | `0x0048be00` | FixedRecordSlotAllocate |
 | `0x0048c010` | WadStreamLengthGet |
+| `0x0048c030` | WadMemoryStreamBufferGet |
+| `0x0048c040` | StringCaseSubstringFind |
+| `0x0048c0c0` | LwoStringDuplicate |
+| `0x0048c120` | LwoTextureProjectionModeParse |
+| `0x0048c180` | OwnedResourceTreeRelease |
 | `0x0048c360` | LwoCurves |
 | `0x0048d870` | ModelObjectFree |
 | `0x0048d940` | CrtMathDispatchTableInitialize |

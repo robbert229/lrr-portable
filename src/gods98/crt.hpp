@@ -54,6 +54,15 @@ int uint96_is_zero(const uint32_t limbs[3]);
  * so true for finite values and false for Inf/NaN. */
 int double_is_finite(double value);
 
+/* FUN_0045b900: divide an integer pair by `divisor`, both operands cast to
+ * float before the divide; results land in the float pair. */
+void integer_pair_divide_to_float_pair(int x, int y, int divisor,
+                                       float* out_x, float* out_y);
+
+/* FUN_0045b930: __ftol applied twice — the float pair truncated toward
+ * zero into the integer pair (same deviation as float_to_long). */
+void float_pair_to_integer_pair(float x, float y, int* out_x, int* out_y);
+
 #ifdef __cplusplus
 }
 #endif
