@@ -435,8 +435,8 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00415a10,FUN_00415a10,ported,SaveMenuBuild,4,2406
 00415cf0,FUN_00415cf0,named,SaveSlotSelectionClear,0,70
 00415d00,FUN_00415d00,named,SaveMenuLayoutLoad,0,7404
-00416150,FUN_00416150,named,StreamPlayLevel,0,291
-004161a0,FUN_004161a0,named,StreamPlayTutorial,0,292
+00416150,FUN_00416150,ported,StreamPlayLevel,2,291
+004161a0,FUN_004161a0,ported,StreamPlayTutorial,2,292
 004161f0,FUN_004161f0,ported,LoadMenuBuild,1,9681
 00416910,FUN_00416910,named,OptionsWriteToSlot,0,253
 00416940,FUN_00416940,ported,OptionsLoadOrDefault,2,691
@@ -1457,14 +1457,14 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00464e20,FUN_00464e20,ported,SoundSampleVariantSelect,3,763
 00464e80,FUN_00464e80,ported,DeferredSoundPlayExpire,3,266
 00464ec0,FUN_00464ec0,ported,DeferredSoundTimerSetIfIdle,3,264
-00464ef0,FUN_00464ef0,ported,SoundSubmitWithGlobalCooldown,6,519
+00464ef0,FUN_00464ef0,ported,SoundSubmitWithGlobalCooldown,8,519
 00464f60,FUN_00464f60,ported,SoundRequestQueueSubmit,3,232
-00464fa0,FUN_00464fa0,ported,SoundAliasPlay,3,570
+00464fa0,FUN_00464fa0,ported,SoundAliasPlay,4,570
 00465010,FUN_00465010,ported,ConfiguredVariantPropertySet,3,161
 00465030,FUN_00465030,ported,ConfiguredVariantPropertyRead,3,134
 00465050,FUN_00465050,ported,SoundSubmissionRouteWrapper,1,309
 00465090,FUN_00465090,ported,PositionalSoundSubmit,3,1169
-00465160,FUN_00465160,named,SoundObjectDurationGet,0,221
+00465160,FUN_00465160,ported,SoundObjectDurationGet,2,221
 00465190,FUN_00465190,named,SoundHandleStopForward,0,80
 004651a0,FUN_004651a0,ported,SoundSubsystemFrameTick,3,1011
 00465250,thunk_FUN_0047b390,runtime-import,thunk_FUN_0047b390,0,630
@@ -1931,7 +1931,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0047b580,FUN_0047b580,named,InMemoryWaveSampleLoad,0,1670
 0047b6c0,FUN_0047b6c0,named,SoundRecordCreateBuffers,0,900
 0047b790,FUN_0047b790,named,WaveSampleDuplicateBufferCreate,0,2547
-0047b8e0,FUN_0047b8e0,named,StreamedWaveBufferStepRate,0,408
+0047b8e0,FUN_0047b8e0,ported,StreamedWaveBufferStepRate,2,408
 0047b970,FUN_0047b970,named,StreamedWavePlaybackStart,0,693
 0047ba20,FUN_0047ba20,named,StreamPlaybackStopAndRelease,0,528
 0047baa0,FUN_0047baa0,named,StreamedWaveFormatAndBufferSetup,0,1627
