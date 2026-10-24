@@ -617,6 +617,11 @@ Open threads, in order of value:
 | 418 | [findings/418-movie-stream-and-audio-playback.md](docs/findings/418-movie-stream-and-audio-playback.md) | Movie, Stream, and Audio Playback Boundaries |
 | 419 | [findings/419-interface-and-presentation-config-loading.md](docs/findings/419-interface-and-presentation-config-loading.md) | Interface and Presentation Config Loading |
 | 420 | [findings/420-renderer-and-scene-lifecycle.md](docs/findings/420-renderer-and-scene-lifecycle.md) | Renderer and Scene Lifecycle |
+| 421 | [findings/421-ui-render-tree-traversal.md](docs/findings/421-ui-render-tree-traversal.md) | UI Render-Tree Traversal |
+| 422 | [findings/422-viewport-picking-and-terrain-rendering.md](docs/findings/422-viewport-picking-and-terrain-rendering.md) | Viewport Picking and Terrain Rendering |
+| 423 | [findings/423-input-keyboard-and-cursor-state.md](docs/findings/423-input-keyboard-and-cursor-state.md) | Input, Keyboard, and Cursor State |
+| 424 | [findings/424-camera-viewport-and-view-context.md](docs/findings/424-camera-viewport-and-view-context.md) | Camera, Viewport, and View-Context State |
+| 425 | [findings/425-display-mode-selection-state-and-controls.md](docs/findings/425-display-mode-selection-state-and-controls.md) | Display-Mode Selection State and Controls |
 | 437 | [findings/437-menu-widgets-and-menu-rendering.md](docs/findings/437-menu-widgets-and-menu-rendering.md) | Menu Widgets and Menu Rendering |
 
 Canonical full pseudocode corpus: [`docs/decompiles/full/LEGORR.full.c`](docs/decompiles/full/LEGORR.full.c)
