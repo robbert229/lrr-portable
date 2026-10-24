@@ -1706,6 +1706,20 @@ and returns it (NULL answers zero, deviation). `crt_test` proves the
 band's independent one-per-call bumps; `message_test` proves the
 round-trip and the shared static.
 
+**Grid-record count tables** (2026-10-24; findings 326/464): the corpus's
+two adjacent count tables — 300 cells (the 15-column grid-record
+convention) times sixteen slots, `row * 15 + column`, then `* 16 + slot` —
+land in `level.*` as zero-initialized statics: the entity create/teardown
+and stats-attach writers are modeled without feeding them, so every count
+answers zero in port cases (the findings likewise leave the exact
+meanings unestablished). `grid_record_count_tables_clear` (0x437440)
+sweeps both tables, `grid_record_count_get` (0x4374a0) reads the first,
+and `grid_record_count_difference_get` (0x437460) answers the second,
+optionally minus the matching first-table slot; all three bound-guard
+the corpus's blind indexing. A tests/diagnostics peek
+(`grid_count_table_slot_peek`) keeps the statics observable.
+`level_test` pins the zero band, the table-edge guards, and the sweep.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

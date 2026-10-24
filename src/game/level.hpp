@@ -719,6 +719,24 @@ uint32_t surface_type_configured_value_at_index(int index);
 uint32_t terrain_neighbor_coordinate_check(const LevelState* s, int x, int y,
                                            uint8_t* kind, int mode);
 
+/* --- grid-record count tables (2026-10-24) --------------------------------
+ * GridRecordCountTablesClear / GridRecordCountDifferenceGet /
+ * GridRecordCountGet (FUN_00437440 / FUN_00437460 / FUN_004374a0, findings
+ * 326/464): two adjacent count tables of 0x12c0 dwords each — 300 cells
+ * (15 columns, the grid-record convention) times sixteen slots, indexed
+ * (row * 15 + column) * 16 + slot. The corpus's writers (the entity
+ * create/teardown/stats-attach paths) are modeled without feeding these
+ * tables, so both answer zero in port cases (documented deviation; the
+ * exact count meanings are not established — findings 326). The corpus
+ * indexes blindly; the port bounds-checks and answers zero outside the
+ * tables. `grid_count_table_slot_peek` is a tests/diagnostics view over
+ * the statics (the message_active_count precedent), returning -1 outside. */
+void grid_record_count_tables_clear(void);
+int grid_record_count_difference_get(int row, int column, int slot,
+                                     int subtract_first_table);
+uint32_t grid_record_count_get(int row, int column, int slot);
+int32_t grid_count_table_slot_peek(int row, int column, int slot, int table);
+
 #ifdef __cplusplus
 }
 #endif

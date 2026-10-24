@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 573 | 22.3% |
+| ported | 576 | 22.5% |
 | anchored | 5 | 0.2% |
-| named | 1939 | 75.6% |
+| named | 1936 | 75.5% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (573 functions)
+  (576 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (5 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1939 functions)
+  citation yet (1936 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1945 (75.9%).**
+**Game logic remaining to port: 1942 (75.7%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -675,9 +675,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004372a0` | SpawnCoordinatePoolClear |
 | `0x00437300` | ProcessQueuedGridAnimations |
 | `0x004373d0` | EntityActivityToggle |
-| `0x00437440` | GridRecordCountTablesClear |
-| `0x00437460` | GridRecordCountDifferenceGet |
-| `0x004374a0` | GridRecordCountGet |
 | `0x004374d0` | TaskCounterIncrementByBranch |
 | `0x004374f0` | EntityCallbackDispatchUnlessTypeFive |
 | `0x00437540` | EntityTeardown |
