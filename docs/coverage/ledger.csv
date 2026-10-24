@@ -170,7 +170,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00407a10,FUN_00407a10,named,PendingTypeValueSlotSelect,0,3461
 00407d60,FUN_00407d60,named,BuildingTypeConfigRecordParse,0,6894
 004082e0,FUN_004082e0,named,SceneObjectScalarAdjustByDirection,0,457
-00408360,FUN_00408360,named,TaskField84GetAndField88Out,0,196
+00408360,FUN_00408360,ported,TaskField84GetAndField88Out,3,196
 00408380,FUN_00408380,named,SceneAssignEntityOwner,0,121
 004083a0,FUN_004083a0,named,SceneEntitySlotTableRebuild,0,2561
 00408570,FUN_00408570,named,SceneActivityChange,0,844
@@ -251,7 +251,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0040b5f0,FUN_0040b5f0,named,TileModelEntityRegister,0,2085
 0040b7d0,FUN_0040b7d0,named,CellVisualChannelTableDispose,0,344
 0040b810,FUN_0040b810,named,CellVisualChannelTableResourcesClear,0,424
-0040b850,FUN_0040b850,named,PackedGridCellValueGet,0,206
+0040b850,FUN_0040b850,ported,PackedGridCellValueGet,3,206
 0040b880,FUN_0040b880,named,CellVisualChannelRelay,0,1638
 0040ba00,FUN_0040ba00,named,SceneRotationFlagsApply,0,1432
 0040bb90,FUN_0040bb90,named,SceneFrameFromTripletApply,0,1260
@@ -2392,7 +2392,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004939a0,FUN_004939a0,named,CrtMathErrorCodeSet,0,273
 004939d0,FUN_004939d0,named,CrtMathExceptionHandlerGet,0,305
 00493a00,FUN_00493a00,named,CrtMathExceptionCodeFromStatus,0,254
-00493a40,FUN_00493a40,named,DoubleBuildWithExponent,0,242
+00493a40,FUN_00493a40,ported,DoubleBuildWithExponent,3,242
 00493a80,FUN_00493a80,ported,DoubleClassify,2,383
 00493ae0,FUN_00493ae0,named,DoubleFrexpDecompose,0,1595
 00493be0,FUN_00493be0,named,FpuStatusWordGetVariantA,0,91

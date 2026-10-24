@@ -166,6 +166,72 @@ static void test_task_flag_bit(void)
     CHECK(task_flag_bit_query(NULL, 0, 0) == 0u, "NULL task answers zero");
 }
 
+/* TaskField84GetAndField88Out (FUN_00408360): the +0x84/+0x88 pair. */
+static void test_task_pair_reads(void)
+{
+    ProbeRecord task;
+    memset(&task, 0, sizeof(task));
+    poke_dword(&task, 0x84, 0x11111111u);
+    poke_dword(&task, 0x88, 0x22222222u);
+
+    uint32_t out = 0;
+    CHECK(task_field84_get_and_field88_out(&task, &out) == 0x11111111u,
+          "the +0x84 dword is the answer");
+    CHECK(out == 0x22222222u, "the +0x88 dword lands in the output");
+
+    /* No output pointer: only the answer, nothing to trip. */
+    CHECK(task_field84_get_and_field88_out(&task, NULL) == 0x11111111u,
+          "the answer stands without the output");
+
+    /* NULL task: zero answer, output untouched (deviation documented). */
+    out = 0xdeadbeefu;
+    CHECK(task_field84_get_and_field88_out(NULL, &out) == 0u,
+          "NULL task answers zero");
+    CHECK(out == 0xdeadbeefu, "NULL task writes nothing through the output");
+}
+
+/* PackedGridCellValueGet (FUN_0040b850): nibble-indexed grid cells. */
+static void test_packed_grid_cell(void)
+{
+    static uint32_t cells[8 * 16 + 16];
+    for (size_t i = 0; i < sizeof(cells) / sizeof(cells[0]); ++i) {
+        cells[i] = 0x100u + (uint32_t)i;
+    }
+    typedef struct GridProbe {
+        uint32_t width;
+        uint32_t pad;
+        void* cells;
+    } GridProbe;
+    GridProbe grid;
+    grid.width = 8u;
+    grid.pad = 0u;
+    grid.cells = cells;
+
+    /* index = low nibble * width + high nibble. */
+    CHECK(packed_grid_cell_value_get(&grid, 0x00u) == cells[0],
+          "cell 0 is the origin");
+    /* Low nibble steps by the width, high nibble is the short step —
+     * finding 373's y*width + x decode of the packed byte. */
+    CHECK(packed_grid_cell_value_get(&grid, 0x10u) == cells[1],
+          "the high nibble is the short step");
+    CHECK(packed_grid_cell_value_get(&grid, 0x01u) == cells[8],
+          "the low nibble steps by the width");
+    CHECK(packed_grid_cell_value_get(&grid, 0xf7u) == cells[7 * 8u + 15],
+          "the corner cell (low 7, high 15)");
+    /* Above byte 0xff the nibble mask still rules (corpus masks first). */
+    CHECK(packed_grid_cell_value_get(&grid, 0x1f0u)
+              == cells[0u * 8u + ((0x1f0u & 0xffu) >> 4)],
+          "bits above byte zero are masked before decoding");
+
+    /* NULL grid answers zero — the corpus's own guard. */
+    CHECK(packed_grid_cell_value_get(NULL, 0x00u) == 0u,
+          "NULL grid answers zero");
+    /* NULL cell slot answers zero too (the port's pointer-slot read). */
+    grid.cells = NULL;
+    CHECK(packed_grid_cell_value_get(&grid, 0x00u) == 0u,
+          "an empty cell slot answers zero");
+}
+
 static void test_interpolated_z(void)
 {
     /* a = 10 at +8, b = 4 at +8: v = 4 * 2.5 + 10 = 20. */
@@ -197,6 +263,8 @@ int main(void)
     test_camera_rotation();
     test_map_cell_center();
     test_task_flag_bit();
+    test_task_pair_reads();
+    test_packed_grid_cell();
     test_interpolated_z();
     if (s_failures != 0) {
         fprintf(stderr, "record_test: %d failure(s)\n", s_failures);

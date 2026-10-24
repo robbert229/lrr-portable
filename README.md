@@ -1457,6 +1457,24 @@ suppress-if-set form reproduced. `record_test`, `view_test` and
 `entity_test` drive the arithmetic corners (also wiring up the
 eligibility test that had been defined but never invoked).
 
+**Bit-faithful trio: exponent builder, task pair, grid nibbles**
+(2026-10-24; findings 366/373/383/399/451): the DAT-vein and pure-leaf
+scan's next cluster. `double_build_with_exponent` (`DoubleBuildWithExponent @
+0x493a40`, `crt.*`) rebuilds the floating value from two significand
+words plus an exponent-bias input — Ghidra's CONCAT chains decompose to
+the exact bit recipe (top word = `((high >> 16) & 0x800f) | ((exp +
+0x3fe) << 4)`, halves of `high` over `low`), assembled with integer
+arithmetic and bitcast (the x87 deviation as documented across the
+band; `crt_test` pins the recipe as bit patterns).
+`task_field84_get_and_field88_out` (`TaskField84GetAndField88Out @
+0x408360`, `record.*`) is the faithful `+0x84` answer with the optional
+`+0x88` copy, field meanings staying with the task layer.
+`packed_grid_cell_value_get` (`PackedGridCellValueGet @ 0x40b850`,
+`record.*`) decodes the packed cell byte into
+`low nibble × width + high nibble` cell dwords, the corpus's own NULL
+guard reproduced and its 32-bit cell-array slot read as a native
+pointer (documented deviation).
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

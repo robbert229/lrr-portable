@@ -209,3 +209,29 @@ double x87_round_to_integral(double value)
 {
     return rint(value);
 }
+
+/* DoubleBuildWithExponent (FUN_00493a40, findings 383/399): the corpus
+ * builds the floating value from two significand words and the
+ * exponent-bias input; Ghidra renders the recipe as CONCAT chains,
+ * which decompose exactly to: top word = ((high >> 16) & 0x800f) |
+ * ((exponent + 0x3fe) << 4), and the 16-bit halves of `high` plus `low`
+ * under it. The sign bit and the fraction nibble of `high` survive the
+ * mask, the 16-bit ops truncate like the corpus's, and the assembled
+ * bits are bitcast to the port's double (x87 deviation, as documented
+ * across this band). What the built value MEANS stays with the caller
+ * (the frexp band); this leaf is the faithful bit construction. */
+double double_build_with_exponent(uint32_t significand_low,
+                                  uint32_t significand_high,
+                                  int16_t exponent)
+{
+    const uint32_t bias_shifted =
+        (uint32_t)(uint16_t)((uint32_t)(int32_t)(exponent + 0x3fe)) << 4;
+    const uint16_t top = (uint16_t)(
+        ((significand_high >> 16) & 0x800fu) | bias_shifted);
+    const uint64_t bits = ((uint64_t)top << 48)
+        | ((uint64_t)(uint16_t)(significand_high & 0xffffu) << 32)
+        | (uint64_t)significand_low;
+    double value = 0.0;
+    __builtin_memcpy(&value, &bits, sizeof(value));
+    return value;
+}

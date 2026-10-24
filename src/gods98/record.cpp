@@ -23,6 +23,28 @@ static float rec_float(const void* base, size_t off)
     return v;
 }
 
+/* Pointer slots are modeled native-size (documented deviation from the
+ * corpus's 32-bit pointers); reads stay byte-safe like the fields. */
+static void* rec_ptr(const void* base, size_t off)
+{
+    void* v = NULL;
+    if (base != NULL) {
+        __builtin_memcpy(&v, (const char*)base + off, sizeof(v));
+    }
+    return v;
+}
+
+/* Contents of a native cell array: memcpy read (the corpus's cell
+ * dwords can sit unaligned after a stride change). */
+static uint32_t cells_dword(const void* cells, size_t off)
+{
+    uint32_t v = 0;
+    if (cells != NULL) {
+        __builtin_memcpy(&v, (const char*)cells + off, sizeof(v));
+    }
+    return v;
+}
+
 /* RecordField14Get (FUN_00435f0b). */
 uint32_t record_field14_get(const void* record)
 {
@@ -128,4 +150,32 @@ uint32_t task_flag_bit_query(const void* task, uint32_t bit, int suppress)
         return 0;
     }
     return flags & mask;
+}
+
+/* TaskField84GetAndField88Out (FUN_00408360): the pair read, corpus
+ * order — the optional +0x88 write happens before the +0x84 answer. */
+uint32_t task_field84_get_and_field88_out(const void* task, uint32_t* out88)
+{
+    if (task == NULL) {
+        return 0u;
+    }
+    if (out88 != NULL) {
+        *out88 = rec_dword(task, 0x88);
+    }
+    return rec_dword(task, 0x84);
+}
+
+/* PackedGridCellValueGet (FUN_0040b850, findings 373/451): low nibble
+ * * width + high nibble indexes the cell dwords; the corpus's own NULL
+ * grid guard answers 0, reproduced. */
+uint32_t packed_grid_cell_value_get(const void* grid, uint32_t packed_cell)
+{
+    void* cells = rec_ptr(grid, 0x08);
+    if (cells == NULL) {
+        return 0u;
+    }
+    const int32_t width = (int32_t)rec_dword(grid, 0x00);
+    const int32_t index = (int32_t)(packed_cell & 0xfu) * width
+        + (int32_t)((packed_cell & 0xffu) >> 4);
+    return cells_dword(cells, (size_t)index * 4u);
 }

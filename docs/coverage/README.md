@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 496 | 19.3% |
+| ported | 499 | 19.5% |
 | anchored | 5 | 0.2% |
-| named | 2017 | 78.7% |
+| named | 2014 | 78.5% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 0 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (496 functions)
+  (499 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (5 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (2017 functions)
+  citation yet (2014 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (0 functions)
 
-**Game logic remaining to port: 2022 (78.9%).**
+**Game logic remaining to port: 2019 (78.7%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -180,7 +180,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00407a10` | PendingTypeValueSlotSelect |
 | `0x00407d60` | BuildingTypeConfigRecordParse |
 | `0x004082e0` | SceneObjectScalarAdjustByDirection |
-| `0x00408360` | TaskField84GetAndField88Out |
 | `0x00408380` | SceneAssignEntityOwner |
 | `0x004083a0` | SceneEntitySlotTableRebuild |
 | `0x00408570` | SceneActivityChange |
@@ -251,7 +250,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0040b5f0` | TileModelEntityRegister |
 | `0x0040b7d0` | CellVisualChannelTableDispose |
 | `0x0040b810` | CellVisualChannelTableResourcesClear |
-| `0x0040b850` | PackedGridCellValueGet |
 | `0x0040b880` | CellVisualChannelRelay |
 | `0x0040ba00` | SceneRotationFlagsApply |
 | `0x0040bb90` | SceneFrameFromTripletApply |
@@ -1920,7 +1918,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004939a0` | CrtMathErrorCodeSet |
 | `0x004939d0` | CrtMathExceptionHandlerGet |
 | `0x00493a00` | CrtMathExceptionCodeFromStatus |
-| `0x00493a40` | DoubleBuildWithExponent |
 | `0x00493ae0` | DoubleFrexpDecompose |
 | `0x00493be0` | FpuStatusWordGetVariantA |
 | `0x00493bf0` | FpuStatusWordGetVariantB |

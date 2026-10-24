@@ -102,14 +102,24 @@ uint32_t format_argument_read_dword(uint8_t** cursor);
 uint32_t format_argument_read_word(uint8_t** cursor);
 double format_argument_read_double(uint8_t** cursor);
 
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* LEGORRR_GODS98_CRT_HPP */
-
 /* FUN_00493150: x87 round-to-integral (FRNDINT) — the nearest integer
  * under the round-to-nearest-even mode, as a floating value. Ported as
  * double (the port has no x87 80-bit register; every x87 leaf here is a
  * documented single/double deviation). */
 double x87_round_to_integral(double value);
+
+/* FUN_00493a40 (DoubleBuildWithExponent, findings 383/399): rebuild the
+ * 8-bit-exponent floating value from the two significand words and the
+ * exponent bias input — the corpus's exact bit recipe: top word =
+ * ((param_2 >> 16) & 0x800f) | ((param_3 + 0x3fe) << 4), significand =
+ * (param_2 & 0xffff) : param_1. Ported as double (x87 deviation, as
+ * above); the bits are built with integer arithmetic and bitcast. */
+double double_build_with_exponent(uint32_t significand_low,
+                                  uint32_t significand_high,
+                                  int16_t exponent);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* LEGORRR_GODS98_CRT_HPP */
