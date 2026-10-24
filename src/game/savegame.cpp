@@ -703,3 +703,26 @@ int osf_read_path(GameContext* ctx, int slot)
     save_slot_path(ctx, path, sizeof(path), slot, "osf");
     return osf_read(ctx, path);
 }
+
+/* --- the save-slot band (2026-10-24; findings 21/408) ---------------------- */
+
+void save_slot_selection_clear(GameContext* ctx)
+{
+    if (ctx != NULL) {
+        ctx->save_slot = -1; /* the corpus's 0xffffffff sentinel */
+    }
+}
+
+void* sav_slot_ctx(GameContext* ctx, int slot)
+{
+    if (ctx == NULL) {
+        return NULL; /* deviation: the corpus reads its global blindly */
+    }
+    if (slot < 0 || slot >= SAVE_SLOTS) {
+        return NULL; /* the corpus's bounds test, faithful */
+    }
+    /* Deviation: the port keeps one active-slot context (the corpus builds
+     * the per-slot contexts inside the unported SavReadSlot/SavBuildCtx
+     * flow), so the valid index answers the port's context block. */
+    return ctx;
+}

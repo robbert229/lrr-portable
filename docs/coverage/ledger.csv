@@ -433,7 +433,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00415910,FUN_00415910,ported,MoviePlayNamed,1,479
 00415990,FUN_00415990,ported,MoviePlayLevelVideo,2,480
 00415a10,FUN_00415a10,ported,SaveMenuBuild,4,2406
-00415cf0,FUN_00415cf0,named,SaveSlotSelectionClear,0,70
+00415cf0,FUN_00415cf0,ported,SaveSlotSelectionClear,1,70
 00415d00,FUN_00415d00,named,SaveMenuLayoutLoad,0,7404
 00416150,FUN_00416150,ported,StreamPlayLevel,2,291
 004161a0,FUN_004161a0,ported,StreamPlayTutorial,2,292
@@ -467,10 +467,10 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00417a90,FUN_00417a90,ported,SavReadSlot,2,1134
 00417bd0,FUN_00417bd0,ported,SavWriteSlot,1,2260
 00417df0,FUN_00417df0,named,SavRefreshSlots,0,483
-00417e50,FUN_00417e50,named,SavSlotCtx,0,160
+00417e50,FUN_00417e50,ported,SavSlotCtx,1,160
 00417e70,FUN_00417e70,named,SavBuildCtx,0,162
 00417e90,FUN_00417e90,ported,SavGetSlot,1,60
-00417ea0,FUN_00417ea0,named,SavSetSlot,0,81
+00417ea0,FUN_00417ea0,ported,SavSetSlot,1,81
 00417eb0,FUN_00417eb0,ported,SavMarkRecord,1,694
 00417f20,FUN_00417f20,named,OptionsContextSixFieldSet,0,342
 00417f40,FUN_00417f40,named,SavWriteRecord,0,453

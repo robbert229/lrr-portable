@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 687 | 26.8% |
+| ported | 690 | 26.9% |
 | anchored | 4 | 0.2% |
-| named | 1826 | 71.2% |
+| named | 1823 | 71.1% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (687 functions)
+  (690 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1826 functions)
+  citation yet (1823 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1831 (71.4%).**
+**Game logic remaining to port: 1828 (71.3%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -341,7 +341,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00415220` | FrontEndStartLevel |
 | `0x00415360` | ScrollSliderRefresh |
 | `0x00415370` | OverlayMenuGate |
-| `0x00415cf0` | SaveSlotSelectionClear |
 | `0x00415d00` | SaveMenuLayoutLoad |
 | `0x00416910` | OptionsWriteToSlot |
 | `0x004169c0` | FrontEndStateChange |
@@ -361,9 +360,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004173e0` | SavTreeLoad |
 | `0x004179b0` | SavMenuList |
 | `0x00417df0` | SavRefreshSlots |
-| `0x00417e50` | SavSlotCtx |
 | `0x00417e70` | SavBuildCtx |
-| `0x00417ea0` | SavSetSlot |
 | `0x00417f20` | OptionsContextSixFieldSet |
 | `0x00417f40` | SavWriteRecord |
 | `0x00417f90` | SavRecordPtr |
