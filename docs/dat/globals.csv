@@ -592,11 +592,11 @@ address,decompile_reference_count,function_count,functions,finding_mentions,imag
 0x004d78bc,2,2,ErosionTimingStateInit@0x0040e930; LavaErosionDelayFromCell@0x0040e9c0,,.data,zero-filled virtual tail,,,unreviewed,,,
 0x004d78c0,2,2,ErosionTimingStateInit@0x0040e930; CellCoordinateTimestampRemember@0x0040ee00,,.data,zero-filled virtual tail,,,unreviewed,,,
 0x004d78c4,8,1,KindSixRandomMessageDispatchSweep@0x0040f0e0,docs/findings/256-command-band-step-issuers-flag-behavior-timers-and-steering-helpers.md,.data,zero-filled virtual tail,,,mentioned,,,
-0x004d78c8,2,1,StringQueueRecordOrFlush@0x00410320,,.data,zero-filled virtual tail,,,unreviewed,,,
-0x004d7b08,2,1,StringQueueRecordOrFlush@0x00410320,,.data,zero-filled virtual tail,,,unreviewed,,,
-0x004d7b48,2,1,StringQueueRecordOrFlush@0x00410320,,.data,zero-filled virtual tail,,,unreviewed,,,
+0x004d78c8,2,1,StringQueueRecordOrFlush@0x00410320,,.data,zero-filled virtual tail,,,interpreted,Base of the other per-record metadata array for the string queue,medium,Finding 393; StringQueueRecordOrFlush stores its second argument here for each queued record and supplies it to the flush helper
+0x004d7b08,2,1,StringQueueRecordOrFlush@0x00410320,,.data,zero-filled virtual tail,,,interpreted,Base of the string queue's per-record handle/value array,medium,Finding 393; StringQueueRecordOrFlush stores its first argument here for each queued record and supplies each stored value to the flush helper
+0x004d7b48,2,1,StringQueueRecordOrFlush@0x00410320,,.data,zero-filled virtual tail,,,interpreted,Base of the fifteen 0x400-byte text buffers in the string record queue,high,"Finding 393; StringQueueRecordOrFlush copies each queued string into this array at index times 0x400, then passes the stored text to the flush helper"
 0x004db748,4,1,UiTextUnderscoresToSpaces@0x004102b0,docs/findings/427-screen-effects-and-ui-text-paths.md,.data,zero-filled virtual tail,,,mentioned,,,
-0x004db850,2,1,StringQueueRecordOrFlush@0x00410320,,.data,zero-filled virtual tail,,,unreviewed,,,
+0x004db850,2,1,StringQueueRecordOrFlush@0x00410320,,.data,zero-filled virtual tail,,,interpreted,Base of one per-record metadata array for the string queue,medium,Finding 393; StringQueueRecordOrFlush stores its third argument here for each queued record and supplies it to the flush helper
 0x004db890,3,3,MenuSaveImageConfigRectBlit@0x004124f0; SaveMenuThumbnailConfigLoad@0x00413a60; InterfaceResourceHandlesRelease@0x00413b50,docs/findings/08-save-and-checkpoints.md; docs/findings/246-entity-move-route-command-and-object-clone-helpers.md; docs/findings/393-string-list-and-small-record-utilities.md,.data,zero-filled virtual tail,,,mentioned,,,
 0x004db8a4,2,2,SaveMenuThumbnailConfigLoad@0x00413a60; InterfaceResourceHandlesRelease@0x00413b50,docs/findings/393-string-list-and-small-record-utilities.md,.data,zero-filled virtual tail,,,mentioned,,,
 0x004db8a8,2,2,MenuHoverStatusTextDraw@0x00412750; SaveMenuThumbnailConfigLoad@0x00413a60,,.data,zero-filled virtual tail,,,unreviewed,,,
@@ -605,7 +605,7 @@ address,decompile_reference_count,function_count,functions,finding_mentions,imag
 0x004db8c4,2,2,MenuOverlaySurfaceAndTextSetup@0x004129d0; MenuRunLoop@0x00413b80,docs/findings/253-terrain-scatter-erosion-propagation-cell-queries-menu-records-and-buffer-helpers.md,.data,zero-filled virtual tail,,,mentioned,,,
 0x004db8c8,8,4,MenuOverlayFlicPlaybackController@0x004121b0; MenuHoverStatusTextDraw@0x00412750; MenuTick@0x00412c00; MenuRunLoop@0x00413b80,docs/findings/245-region-route-light-config-and-surface-helpers.md,.data,zero-filled virtual tail,,,mentioned,,,
 0x004db8cc,4,2,StringKeyedCacheEntryFind@0x00410450; StringRegistryIntern@0x00410490,docs/findings/255-visual-channel-relays-resource-tree-callback-walks-scene-pose-and-registry-helpers.md; docs/findings/393-string-list-and-small-record-utilities.md,.data,zero-filled virtual tail,,,mentioned,,,
-0x004db8d0,10,1,StringQueueRecordOrFlush@0x00410320,,.data,zero-filled virtual tail,,,unreviewed,,,
+0x004db8d0,10,1,StringQueueRecordOrFlush@0x00410320,,.data,zero-filled virtual tail,,,interpreted,Number of pending string records in the fixed-capacity string queue,high,"Finding 393; StringQueueRecordOrFlush appends while this count is below fifteen, uses it to index each parallel array, and resets it to zero after flushing"
 0x004db8d4,2,1,FrontendProgressValueChanged@0x00411840,,.data,zero-filled virtual tail,,,unreviewed,,,
 0x004db8dc,8,1,MenuTick@0x00412c00,,.data,zero-filled virtual tail,,,unreviewed,,,
 0x004db8e0,4,1,OverlayMenuGate@0x00415370,,.data,zero-filled virtual tail,,,unreviewed,,,
