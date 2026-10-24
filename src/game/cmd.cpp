@@ -1154,3 +1154,90 @@ void cmd_rec_state_set(void* rec, uint32_t state)
         as_rec(rec)->state = state;
     }
 }
+
+/* --- registry flush / wrappers (see cmd.hpp) ---------------------------------
+ * The handle array (DAT_004b31c8 band, 12 dwords + companion): no ported
+ * feeder (the registry initializer is the seam), so it is modeled as a
+ * zero-init static whose release walk is inert. */
+static void* s_handle_array[12];
+static int   s_handle_array_companion;  /* DAT_004b31f8 */
+
+void cmd_flush_all(int disable_mode)
+{
+    if (disable_mode != 0) {
+        s_global_enabled &= ~2;
+        return;
+    }
+    /* The entity callback sweep (LAB_004021f0) is the unported registry
+     * seam; the corpus additionally zeroes the cell-record counter block
+     * (0x12c0 entries) — registry data absent from the port. */
+    s_global_enabled |= 2;
+    s_global_head = NULL;
+    s_global_tail = NULL;
+    for (int i = 0; i < PRIORITY_ENTRY_COUNT; ++i) {
+        s_priority_state[i] = 0;
+    }
+}
+
+int cmd_global_enabled_peek(void) { return s_global_enabled; }
+
+void* engine_memory_allocate(long size)
+{
+    (void)engine_heap_alloc(size);
+    /* corpus shape: the allocation happens; the pointer is discarded. */
+    return NULL;
+}
+
+void engine_memory_free(void* ptr)
+{
+    engine_heap_free(ptr);
+}
+
+void handle_array_release_and_reset(void)
+{
+    for (int i = 0; i < 12; ++i) {
+        if (s_handle_array[i] != NULL) {
+            engine_heap_free(s_handle_array[i]);
+        }
+    }
+    s_handle_array_companion = 0;
+    s_global_enabled = 0;
+}
+
+void entity_command14_batch_issue(int count)
+{
+    const int raise_bit6 = (count == 0);
+    const int n = raise_bit6 ? 1 : count;
+    for (int i = 0; i < n; ++i) {
+        CmdRec* rec = (CmdRec*)cmd_alloc(4);
+        if (rec == NULL) {
+            continue;
+        }
+        cmd_set_kind(rec, 0x14);
+        if (raise_bit6) {
+            rec->state |= 0x40u;
+        }
+        cmd_link_tail(rec);
+    }
+}
+
+void level_no_gather_object_setup(int mode)
+{
+    if (mode == 0) {
+        entity_command14_batch_issue(0);
+    }
+    CmdRec* gather = (CmdRec*)cmd_alloc(0x18);
+    if (gather != NULL) {
+        cmd_set_kind(gather, 0x17);
+        gather->state |= 0x40u;
+        /* corpus: the manual push onto the tail pointer only (the head
+         * stays put until a head-link touches the list) — ported through
+         * the tail link (deviation: timestamp/pending housekeeping). */
+        cmd_link_tail(gather);
+    }
+    CmdRec* other = (CmdRec*)cmd_alloc(0x1b);
+    if (other != NULL) {
+        cmd_link_head(other, 0);
+        other->state = (other->state & ~0x10u) | 0x440u;
+    }
+}

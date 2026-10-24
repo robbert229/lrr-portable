@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 628 | 24.5% |
+| ported | 634 | 24.7% |
 | anchored | 5 | 0.2% |
-| named | 1884 | 73.5% |
+| named | 1878 | 73.2% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (628 functions)
+  (634 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1884 functions)
+  citation yet (1878 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1890 (73.7%).**
+**Game logic remaining to port: 1884 (73.5%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -58,14 +58,8 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00401b30` | AdvisorApplySlotTransform |
 | `0x00401c50` | FormattedTextPrintfWidth |
 | `0x00401c80` | FormattedTextPrintf |
-| `0x004020c0` | HandleArrayReleaseAndReset |
-| `0x00402100` | CmdFlushAll |
-| `0x00402170` | LevelNoGatherObjectSetup |
-| `0x004021e0` | EngineMemoryAllocate |
-| `0x00402210` | EngineMemoryFree |
 | `0x00402510` | TerrainCellCommandCreate |
 | `0x00402600` | EntityRecordArrayApplyZeroState |
-| `0x00402800` | EntityCommand14BatchIssue |
 | `0x00402890` | TaskType23CreateForCategoryMask |
 | `0x00402960` | EntityKindCommandIssue |
 | `0x00402a40` | CoordinatePairCallbackDispatch |

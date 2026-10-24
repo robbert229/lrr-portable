@@ -296,6 +296,37 @@ int  priority_entry_state_get(int kind);
 /* Diagnostic: overwrite a record's +0x5c state word. */
 void cmd_rec_state_set(void* rec, uint32_t state);
 
+/* --- registry flush / wrappers (2026-10-24) ---------------------------------
+ * CmdFlushAll (FUN_00402100, finding 466): the nonzero argument clears bit
+ * 1 of the registry word (the port's s_global_enabled view); zero runs the
+ * entity callback sweep (the unported LAB seam — inert), sets the bit,
+ * drops both list heads, and zeroes the 27-entry priority-state table.
+ * (The corpus's 0x12c0-entry cell-record counter block is registry data
+ * the port does not model — documented seam.)
+ * EngineMemoryAllocate / EngineMemoryFree (FUN_004021e0 / FUN_00402210):
+ * the engine-heap wrapper pair — allocate-and-lose (the corpus discards
+ * the return) and free.
+ * HandleArrayReleaseAndReset (FUN_004020c0, finding 393): releases each
+ * nonzero handle of the 12-dword global handle array with the heap free,
+ * then zeroes the array's companion counter and the registry word. No
+ * ported code feeds the array, so the release half is inert over the
+ * zero-init static (documented), and the reset halves are observable.
+ * EntityCommand14BatchIssue (FUN_00402800, finding 10): `count` (zero
+ * means one) type-4 records, kind 0x14 — the zero argument additionally
+ * raises each record's +0x5c bit 6.
+ * LevelNoGatherObjectSetup (FUN_00402170): optionally issues that batch,
+ * then pushes the two level-setup records: the type-0x18 record bound to
+ * kind 0x17 with bit 6 raised (corpus's manual tail push — ported through
+ * the tail link, deviation), and the type-0x1b record head-linked at kind
+ * 0 with bits 6/7/10 raised and bit 4 cleared. */
+void cmd_flush_all(int disable_mode);
+int  cmd_global_enabled_peek(void);
+void* engine_memory_allocate(long size);
+void engine_memory_free(void* ptr);
+void handle_array_release_and_reset(void);
+void entity_command14_batch_issue(int count);
+void level_no_gather_object_setup(int mode);
+
 #ifdef __cplusplus
 }
 #endif
