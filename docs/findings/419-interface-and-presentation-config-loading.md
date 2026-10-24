@@ -1,4 +1,4 @@
-# Finding 391 — Interface and Presentation Config Loading
+# Finding 419 — Interface and Presentation Config Loading
 
 These 11 assigned procedures form a connected but not single-purpose loading path. `GameConfigCallbackRegistryInit` registers `GameConfigInit` as the engine's initialization callback. That initializer parses `Lego.cfg` and stages several UI, message, sound, name, and encyclopedia resources. A separate map-load path calls `TextureSetConfigLoad`, and `LevelLoad` sets the global slide threshold through `GlobalConfigValueSet`. The encyclopedia text reader is serviced from the engine tick. The evidence below separates these call paths rather than implying every assigned function runs in one startup pass.
 
