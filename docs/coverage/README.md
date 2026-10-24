@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 439 | 17.1% |
+| ported | 450 | 17.6% |
 | anchored | 5 | 0.2% |
-| named | 2074 | 80.9% |
+| named | 2063 | 80.5% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 0 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (439 functions)
+  (450 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (2074 functions)
+  citation yet (2063 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 2079 (81.1%).**
+**Game logic remaining to port: 2068 (80.7%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -737,6 +737,8 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0045b620` | PriorityListButtonActionDispatch |
 | `0x0045b740` | ScrollInfoPanelInitialize |
 | `0x0045b850` | UiOverlayCreateConfiguredElement |
+| `0x0045b900` | IntegerPairDivideToFloatPair |
+| `0x0045b930` | FloatPairToIntegerPair |
 | `0x0045b9d0` | PanelRotationControlConfigLoad |
 | `0x0045bcd0` | CameraDragFromCursorApply |
 | `0x0045c0d0` | PairCountHistogramBuild |
@@ -765,6 +767,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0045d870` | CommandEntityReferenceRemap |
 | `0x0045db00` | TexturedSceneObjectDrawAtPosition |
 | `0x0045dbc0` | TerrainViewTileGeometryBuild |
+| `0x0045e400` | EntityTypeAndStateFlagPredicate |
 | `0x0045e6d0` | TerrainPointPickResolve |
 | `0x0045e820` | ViewportPointCallbackDispatch |
 | `0x0045e9e0` | TerrainTileStyleResolve |
@@ -1071,6 +1074,17 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00479500` | D3DRMVectorRandom |
 | `0x00479510` | D3DRMVectorRotate |
 | `0x00479630` | SurfaceTriangleAreaCalculate |
+| `0x004798e0` | ViewRayIntersectionTest |
+| `0x00479ab0` | PointAlongRay |
+| `0x00479b80` | PointInPolygon2D |
+| `0x00479ce0` | Matrix4Multiply |
+| `0x00479d50` | Matrix4SetRotationZ |
+| `0x00479da0` | Matrix4SetRotationY |
+| `0x00479df0` | Matrix4SetRotationZ |
+| `0x00479e40` | MatrixIdentityAndTranslationSet |
+| `0x00479e70` | Matrix4SetIdentity |
+| `0x00479ea0` | Matrix4SetZero |
+| `0x00479eb0` | Matrix4Copy |
 | `0x0047a150` | FormattedTextFormatDraw |
 | `0x0047a180` | RewardTextDraw |
 | `0x0047a1b0` | FormattedTextDraw |
@@ -1126,6 +1140,10 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0047d430` | SceneObjectRegistryTeardown |
 | `0x0047d470` | ImageSurfaceRelease |
 | `0x0047d490` | SurfacePixelFormatQuery |
+| `0x0047d520` | Palette8To16BitSurfaceExpand |
+| `0x0047d740` | SurfacePixelRowsFlipWithScratch |
+| `0x0047d800` | Bitmap24BitSurfaceConvert |
+| `0x0047db90` | RGBChannelsPack |
 | `0x0047dbc0` | ResourceRecordAddRef |
 | `0x0047de60` | DirectDrawSurfaceDescriptionGet |
 | `0x0047ded0` | DirectDrawSurfaceUnlock |
@@ -1460,6 +1478,13 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004976d0` | DbcsAwareBoundedStringCopy |
 | `0x00497770` | CrtFpuControlWordUpdate |
 | `0x004977b0` | CrtFpuControlWordUpdateMask |
+| `0x004977d0` | CrtControlFlagsTranslate |
+| `0x00497870` | CrtNoOpStubVariant |
+| `0x00497900` | UInt96HasNoBitsAtOrAbove |
+| `0x00497970` | UInt96IncrementAtBit |
+| `0x004979e0` | UInt96ClearFromBit |
+| `0x00497a80` | UInt96Copy |
+| `0x00497aa0` | UInt96Zero |
 | `0x00497ad0` | UInt96ShiftRight |
 | `0x00497b90` | CrtExtended80ToBinaryFloat |
 | `0x00497d60` | CrtExtendedFloatConvertFormatA |

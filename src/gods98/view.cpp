@@ -92,6 +92,88 @@ int vec_exact_equal(const float* a, const float* b) /* FUN_0047c0c0 */
     return a[0] == b[0] && a[1] == b[1] && a[2] == b[2];
 }
 
+/* ---- geometry helpers (finding 363/323) --------------------------------
+ * Pure math leaves, corpus-exact operations: the corpus computes on x87
+ * long doubles, the port on single precision (documented deviation). */
+
+/* PointDistanceWithinRadius (FUN_0045b8a0): true when the point
+ * (x1,y1)-(x2,y2) distance is under `radius`. */
+int point_distance_within_radius(float x1, float y1, float x2, float y2,
+                                 float radius)
+{
+    float dx = x2 - x1;
+    float dy = y2 - y1;
+    return sqrtf(dx * dx + dy * dy) < radius;
+}
+
+/* RectContainsPointHalfOpen (FUN_0045e660): rect is the corpus record's
+ * float quad {x, y, w, h} at +0x4…+0x10 — half-open in both axes. */
+int rect_contains_point_half_open(const float rect_xywh[4], int x, int y)
+{
+    if (((rect_xywh[0] <= (float)x) && ((float)x < rect_xywh[2] + rect_xywh[0]))
+        && ((rect_xywh[1] <= (float)y)
+            && ((float)y < rect_xywh[3] + rect_xywh[1]))) {
+        return 1;
+    }
+    return 0;
+}
+
+/* RayPlaneIntersectionParameter (FUN_00479a30): writes t = dot(q-p, n) /
+ * dot(d, n) into `t_out` for ray (p,d) against plane (q,n); answers 1 when
+ * not parallel, 0 otherwise. */
+int ray_plane_intersection_parameter(float* t_out, const float* p,
+                                     const float* d, const float* q,
+                                     const float* n)
+{
+    const float denom = n[0] * d[0] + n[2] * d[2] + n[1] * d[1];
+    if (denom != 0.0f) {
+        *t_out = ((q[0] - p[0]) * n[0] + (q[1] - p[1]) * n[1]
+                  + (q[2] - p[2]) * n[2]) / denom;
+        return 1;
+    }
+    return 0;
+}
+
+/* LineIntersection2DCompute (FUN_00479af0): intersects line1
+ * (point p1, direction d1) with line2 (point p2, direction d2); writes the
+ * hit point into `out` and returns it, or NULL when parallel. */
+float* line_intersection_2d_compute(float* out, const float* p1,
+                                    const float* d1, const float* p2,
+                                    const float* d2)
+{
+    float cross = -d1[1] * d2[0] + d1[0] * d2[1];
+    if (cross != 0.0f) {
+        float t = (p1[0] - p2[0]) * -(d2[1] / cross)
+                  + (d2[0] / cross) * (p1[1] - p2[1]);
+        out[0] = t * d1[0];
+        out[1] = t * d1[1];
+        out[0] = out[0] + p1[0];
+        out[1] = out[1] + p1[1];
+        return out;
+    }
+    return NULL;
+}
+
+/* SphereRayIntersectionDiscriminantPositive (FUN_00479c10): positive-
+ * discriminant test of ray `dir` against the sphere (center, radius). The
+ * corpus's exact discriminant expression is reproduced verbatim. */
+int sphere_ray_intersection_discriminant_positive(const float* center,
+                                                  float radius2,
+                                                  const float* origin,
+                                                  const float* dir)
+{
+    const float wy = origin[1] - center[1];
+    const float wz = origin[2] - center[2];
+    const float wx = origin[0] - center[0];
+    const float b = (dir[2] + dir[2]) * wz + (dir[1] + dir[1]) * wy
+                    + (dir[0] + dir[0]) * wx;
+    if (0.0f < b * b
+        - ((wx * wx + wz * wz + wy * wy) * 4.0f - radius2 * radius2)) {
+        return 1;
+    }
+    return 0;
+}
+
 /* ---- camera-handle primitives (record-backed) --------------------------- */
 
 void cam_offset(CameraHandle* c, float x, float y, float z)

@@ -53,6 +53,51 @@ int main(void)
     CHECK(vec_exact_equal(a, b) == 0, "different vectors unequal");
     CHECK(vec_exact_equal(a, a) == 1, "identical vectors equal");
 
+    /* geometry helpers */
+    CHECK(point_distance_within_radius(0, 0, 3, 4, 5.1f) == 1,
+          "distance under radius");
+    CHECK(point_distance_within_radius(0, 0, 3, 4, 5.0f) == 0,
+          "strictly under: equality is not under");
+    {
+        float rect[4] = { 10, 20, 30, 40 }; /* x, y, w, h */
+        CHECK(rect_contains_point_half_open(rect, 10, 20) == 1,
+              "origin corner inside");
+        CHECK(rect_contains_point_half_open(rect, 40, 20) == 0,
+              "right edge exclusive");
+        CHECK(rect_contains_point_half_open(rect, 39, 59) == 1,
+              "just inside the far corner");
+        CHECK(rect_contains_point_half_open(rect, 10, 60) == 0,
+              "top edge exclusive");
+    }
+    {
+        float p[3] = { 0, 0, 0 }, d[3] = { 0, 1, 0 }, q[3] = { 0, 5, 0 },
+              n[3] = { 0, 1, 0 };
+        float t;
+        CHECK(ray_plane_intersection_parameter(&t, p, d, q, n) == 1 && t == 5.0f,
+              "orthogonal ray-plane hit at t 5");
+        float dd[3] = { 1, 0, 0 };
+        CHECK(ray_plane_intersection_parameter(&t, p, dd, q, n) == 0,
+              "parallel ray answers 0");
+    }
+    {
+        float p1[2] = { 0, 0 }, d1[2] = { 1, 0 }, p2[2] = { 5, -3 },
+              d2[2] = { 0, 1 }, hit[2];
+        float* r = line_intersection_2d_compute(hit, p1, d1, p2, d2);
+        CHECK(r == hit && hit[0] == 5.0f && hit[1] == 0.0f,
+              "perpendicular lines meet at (5,0)");
+        float d3[2] = { 1, 0 };
+        CHECK(line_intersection_2d_compute(hit, p1, d1, p2, d3) == NULL,
+              "parallel lines answer NULL");
+    }
+    {
+        float c[3] = { 0, 0, 0 }, o[3] = { 0, 0, -10 }, dir[3] = { 0, 0, 1 };
+        CHECK(sphere_ray_intersection_discriminant_positive(c, 4, o, dir) == 1,
+              "ray aiming through the sphere discriminants positive");
+        float off[3] = { 5, 0, -10 };
+        CHECK(sphere_ray_intersection_discriminant_positive(c, 4, off, dir) == 0,
+              "missed ray discriminants non-positive");
+    }
+
     /* camera-handle primitives */
     CameraHandle c = {};
     cam_offset(&c, 1, 2, 3);
