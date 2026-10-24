@@ -255,6 +255,23 @@ int main(void)
           && lv.velocity[1] == 0.0f && lv.velocity[2] == 0.0f,
           "mode2: idles without target");
 
+    /* MenuPointerRectangleHitTest (FUN_004112e0): closed-edge widget
+     * rectangle test — the menu row band from finding 23. */
+    CHECK(menu_pointer_rectangle_hit_test(50, 10, 0, 0, 100, 20) == 1,
+          "widget: inside the row band");
+    CHECK(menu_pointer_rectangle_hit_test(0, 0, 0, 0, 100, 20) == 1,
+          "widget: lower corners inclusive");
+    CHECK(menu_pointer_rectangle_hit_test(100, 20, 0, 0, 100, 20) == 1,
+          "widget: upper corners inclusive");
+    CHECK(menu_pointer_rectangle_hit_test(101, 20, 0, 0, 100, 20) == 0,
+          "widget: one past width fails");
+    CHECK(menu_pointer_rectangle_hit_test(100, 21, 0, 0, 100, 20) == 0,
+          "widget: one past height fails");
+    CHECK(menu_pointer_rectangle_hit_test(-1, 10, 0, 0, 100, 20) == 0,
+          "widget: below the origin fails");
+    CHECK(menu_pointer_rectangle_hit_test(50, 10, 40, 5, 10, 5) == 1,
+          "widget: offset rectangle contains");
+
     if (s_failures == 0) {
         printf("view_test: PASS\n");
         return 0;

@@ -91,3 +91,41 @@ float camera_rotation_get(const void* camera)
 {
     return rec_float(camera, 0x84);
 }
+
+/* MapCellToWorldCenter (FUN_0044f640, finding 225): the descriptor's
+ * int fields convert to float at the use site — reproduced exactly,
+ * including the unsigned bounds compare. */
+int map_cell_to_world_center(const void* map, uint32_t cell_x,
+                             uint32_t cell_y, float* world_x, float* world_y)
+{
+    const uint32_t width = rec_dword(map, 0x00);
+    const uint32_t height = rec_dword(map, 0x04);
+    const int32_t scale_i = (int32_t)rec_dword(map, 0x10);
+    const int32_t origin_x_i = (int32_t)rec_dword(map, 0x18);
+    const int32_t origin_y_i = (int32_t)rec_dword(map, 0x1C);
+    const float scale = (float)scale_i;
+    const float origin_x = (float)origin_x_i;
+    const float origin_y = (float)origin_y_i;
+
+    if (cell_x < width && cell_y < height) {
+        if (world_x != NULL) {
+            *world_x = scale * 0.5f + (float)cell_x * scale + origin_x;
+        }
+        if (world_y != NULL) {
+            *world_y = origin_y - (scale * 0.5f + (float)cell_y * scale);
+        }
+        return 1;
+    }
+    return 0;
+}
+
+/* TaskFlagBitQuery (FUN_00408970, findings 366/465). */
+uint32_t task_flag_bit_query(const void* task, uint32_t bit, int suppress)
+{
+    const uint32_t mask = 1u << (bit & 0x1fu);
+    const uint32_t flags = rec_dword(task, 0x98);
+    if (suppress != 0 && (flags & mask) != 0) {
+        return 0;
+    }
+    return flags & mask;
+}

@@ -112,6 +112,60 @@ static void test_camera_rotation(void)
     CHECK(camera_rotation_get(NULL) == 0.0f, "NULL camera answers zero");
 }
 
+/* MapCellToWorldCenter (FUN_0044f640): int descriptor fields convert to
+ * float at the use site; unsigned bounds compare. */
+static void test_map_cell_center(void)
+{
+    uint8_t map[0x20];
+    memset(map, 0, sizeof(map));
+    poke_dword(map, 0x00, 4u);          /* width  */
+    poke_dword(map, 0x04, 4u);          /* height */
+    poke_dword(map, 0x10, 2u);          /* scale  */
+    poke_dword(map, 0x18, -10);         /* origin X */
+    poke_dword(map, 0x1C, 100);         /* origin Y */
+
+    float wx = 0.0f, wz = 0.0f;
+    CHECK(map_cell_to_world_center(map, 1, 2, &wx, &wz) == 1,
+          "in-bounds cell converts");
+    CHECK(wx == 2.0f * 0.5f + 1.0f * 2.0f - 10.0f, "world X formula");
+    CHECK(wz == 100.0f - (2.0f * 0.5f + 2.0f * 2.0f), "world Z formula");
+
+    CHECK(map_cell_to_world_center(map, 4, 0, &wx, &wz) == 0,
+          "x == width fails (corpus compare)");
+    CHECK(map_cell_to_world_center(map, 0, 4, &wx, &wz) == 0,
+          "y == height fails");
+    /* Negative indices enter as huge unsigned values. */
+    CHECK(map_cell_to_world_center(map, 0xffffffffu, 0, &wx, &wz) == 0,
+          "index -1 reads as unsigned-huge and fails");
+    /* NULL descriptor answers 0 (documented deviation). */
+    CHECK(map_cell_to_world_center(NULL, 0, 0, &wx, &wz) == 0,
+          "NULL map answers outside");
+}
+
+/* TaskFlagBitQuery (FUN_00408970): mask 1 << (bit & 31) over +0x98, with
+ * the suppress-if-set form. */
+static void test_task_flag_bit(void)
+{
+    ProbeRecord task;
+    memset(&task, 0, sizeof(task));
+    poke_dword(&task, 0x98, 0x104u); /* bits 2 and 8 set */
+
+    CHECK(task_flag_bit_query(&task, 2, 0) == 0x4u, "bit 2 answers its mask");
+    CHECK(task_flag_bit_query(&task, 8, 0) == 0x100u, "bit 8 answers its mask");
+    CHECK(task_flag_bit_query(&task, 3, 0) == 0u, "clear bit answers zero");
+    CHECK(task_flag_bit_query(&task, 2, 1) == 0u,
+          "suppress form zeroes a set bit");
+    CHECK(task_flag_bit_query(&task, 3, 1) == 0u,
+          "suppress form keeps the clear-bit answer");
+    /* The corpus masks the bit index: 34 behaves like 2. */
+    CHECK(task_flag_bit_query(&task, 34, 0) == 0x4u, "bit index wraps by &31");
+    /* Bit 31 corner. */
+    poke_dword(&task, 0x98, 1u << 31);
+    CHECK(task_flag_bit_query(&task, 31, 0) == (1u << 31), "top bit answers");
+    CHECK(task_flag_bit_query(&task, 31, 1) == 0u, "top bit suppresses");
+    CHECK(task_flag_bit_query(NULL, 0, 0) == 0u, "NULL task answers zero");
+}
+
 static void test_interpolated_z(void)
 {
     /* a = 10 at +8, b = 4 at +8: v = 4 * 2.5 + 10 = 20. */
@@ -141,6 +195,8 @@ int main(void)
     test_field_reads();
     test_indexed_slots();
     test_camera_rotation();
+    test_map_cell_center();
+    test_task_flag_bit();
     test_interpolated_z();
     if (s_failures != 0) {
         fprintf(stderr, "record_test: %d failure(s)\n", s_failures);

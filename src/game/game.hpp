@@ -234,6 +234,12 @@ typedef struct EntitySlot {
                                * writer 0x44c0e2, which is not ported)      */
     float    field_340;      /* +0x340 float; the wake mirror sets 100.0
                               * (its general corpus readers are TODO)       */
+    /* --- route-progress advance (corpus +0x344/+0x2fc, finding 448) -----
+     * The corpus advances a routing progress float by a fixed step and
+     * clamps it to the entity's own +0x340 bound, clearing the +0x2fc
+     * link field in passing. */
+    float    progress_344;   /* +0x344: routing progress float            */
+    uint32_t link_2fc;       /* +0x2fc: link field the advance clears     */
     /* --- path list (corpus +0x24 buffer / +0x28 count / +0x2c index) --- */
     AiWaypoint wp[AI_WAYPOINTS_MAX];
     int      wp_count;       /* +0x28: valid entries                      */

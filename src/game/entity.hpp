@@ -159,6 +159,11 @@ int entity_shared_eligibility_check(const EntitySlot* e, int relaxed);
 /* FUN_004436f0 — kind-3 predicate: type == 3 and +0x3e8 bit 0x04000000. */
 int entity_type3_flag04000000_test(const EntitySlot* e);
 
+/* FUN_00447730 — routing-progress advance (findings 377/448): add 25 to
+ * the +0x344 progress float, clear the +0x2fc link field, clamp to the
+ * entity's +0x340 bound, and answer 1 when that bound is reached. */
+int entity_progress_advance_by_25(EntitySlot* e);
+
 #ifdef __cplusplus
 }
 #endif

@@ -545,3 +545,20 @@ int entity_type3_flag04000000_test(const EntitySlot* e)
 {
     return (e->type == 3 && (e->flags_3e8 & 0x04000000u) != 0u) ? 1 : 0;
 }
+
+/* EntityProgressAdvanceBy25 (FUN_00447730, findings 377/448): the corpus
+ * routing-progress step — add 25 (the corpus writes `- -25.0`), clear
+ * the link field, clamp to the entity's own +0x340 bound, and report
+ * when the bound was reached. Field meanings stay with the routing
+ * layer per finding 448. */
+int entity_progress_advance_by_25(EntitySlot* e)
+{
+    const float advanced = e->progress_344 + 25.0f;
+    e->link_2fc = 0u;
+    e->progress_344 = advanced;
+    if (e->field_340 < advanced) {
+        e->progress_344 = e->field_340;
+        return 1;
+    }
+    return 0;
+}

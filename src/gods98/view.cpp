@@ -497,3 +497,17 @@ void view_views_tick(EngineContext* ctx, float dt, float scale)
         }
     }
 }
+/* MenuPointerRectangleHitTest (FUN_004112e0): the corpus's widget test,
+ * reproduced clause-for-clause — inclusive lower corners, inclusive
+ * upper corners via origin+size (finding 23: the widget rectangle is
+ * the 100x20 row band this routine hit-tests). */
+int menu_pointer_rectangle_hit_test(int x, int y, int rect_x, int rect_y,
+                                    int rect_w, int rect_h)
+{
+    if ((rect_x <= x) && (x <= rect_w + rect_x)) {
+        if ((rect_y <= y) && (y <= rect_h + rect_y)) {
+            return 1;
+        }
+    }
+    return 0;
+}

@@ -188,7 +188,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00408860,FUN_00408860,named,AnimationLoopTimeAdjust,0,785
 00408930,FUN_00408930,named,ConstantZeroFloatGet,0,57
 00408940,FUN_00408940,named,EntityPayloadTeardown,0,217
-00408970,FUN_00408970,named,TaskFlagBitQuery,0,245
+00408970,FUN_00408970,ported,TaskFlagBitQuery,3,245
 004089a0,FUN_004089a0,named,EntityPayloadStateSet,0,134
 004089d0,FUN_004089d0,named,Segment2DPointDistance,0,1140
 00408b00,FUN_00408b00,named,PointToPolylineMinimumSegmentDistance,0,651
@@ -380,7 +380,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00410fb0,FUN_00410fb0,named,MenuItemImageSet,0,1911
 00411100,FUN_00411100,named,MenuSectionRecordCreate,0,1530
 00411260,FUN_00411260,named,ListAppend,0,691
-004112e0,FUN_004112e0,named,MenuPointerRectangleHitTest,0,272
+004112e0,FUN_004112e0,ported,MenuPointerRectangleHitTest,3,272
 00411320,FUN_00411320,named,TextLayoutOffsetForCentering,0,337
 00411360,FUN_00411360,named,MenuMouseCoordinateUpdate,0,1934
 004114f0,FUN_004114f0,named,HasType6ItemAtIndex,0,323
@@ -1038,7 +1038,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004473b0,FUN_004473b0,named,RouteToCellCommandIssue,0,1220
 004474f0,FUN_004474f0,named,LinkedEntityProximityResponse,0,820
 004475c0,FUN_004475c0,named,EntityProgressAndNegativeDeltaHandler,0,1547
-00447730,FUN_00447730,named,EntityProgressAdvanceBy25,0,336
+00447730,FUN_00447730,ported,EntityProgressAdvanceBy25,3,336
 00447780,FUN_00447780,named,EntityClearLinkedObjectState,0,417
 004477d0,FUN_004477d0,named,PathStepLookaheadEntryWrite,0,1457
 00447900,FUN_00447900,named,TypeFourEntityCallbackDispatch,0,117
@@ -1159,7 +1159,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0044f540,FUN_0044f540,named,TerrainCellSurfaceTypeGet,0,191
 0044f570,FUN_0044f570,named,TerrainCellSurfaceTypeReset,0,261
 0044f5c0,FUN_0044f5c0,named,TerrainCellSurfaceAppearanceApply,0,488
-0044f640,FUN_0044f640,named,MapCellToWorldCenter,0,384
+0044f640,FUN_0044f640,ported,MapCellToWorldCenter,3,384
 0044f6d0,FUN_0044f6d0,ported,TerrainGridPick,2,215
 0044f700,FUN_0044f700,named,WorldToTerrainCellBoundsCheck,0,943
 0044f810,FUN_0044f810,named,GridCoordinateClampAndStore,0,492

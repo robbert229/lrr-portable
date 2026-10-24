@@ -739,6 +739,35 @@ static void eligibility_test(void)
           "the wrong kind is false with the bit set");
 }
 
+/* Routing-progress advance (FUN_00447730) — stack EntitySlot probe. */
+static void progress_advance_test(void)
+{
+    EntitySlot e;
+    memset(&e, 0, sizeof(e));
+
+    /* Clamping bound: +0x340. */
+    e.field_340 = 40.0f;
+    e.progress_344 = 10.0f;
+    e.link_2fc = 0xcafebabeu;
+    CHECK(entity_progress_advance_by_25(&e) == 0, "under the bound stays put");
+    CHECK(e.progress_344 == 35.0f, "one step adds 25");
+    CHECK(e.link_2fc == 0u, "the advance clears the link field");
+
+    CHECK(entity_progress_advance_by_25(&e) == 1, "crossing the bound reports");
+    CHECK(e.progress_344 == 40.0f, "the value clamps to the +0x340 bound");
+
+    /* The step itself advances: already at the bound, adding 25 still
+     * clamps right back and reports. */
+    CHECK(entity_progress_advance_by_25(&e) == 1, "bound is sticky");
+    CHECK(e.progress_344 == 40.0f, "the clamp is idempotent");
+
+    /* Zero bound: any step reports and pins at zero. */
+    memset(&e, 0, sizeof(e));
+    e.progress_344 = 7.0f;
+    CHECK(entity_progress_advance_by_25(&e) == 1, "zero bound crosses");
+    CHECK(e.progress_344 == 0.0f, "zero bound pins the progress");
+}
+
 int main(int argc, char** argv)
 {
     char rmcmd[64];
@@ -793,6 +822,8 @@ int main(int argc, char** argv)
     }
     fixture_roundtrip(); /* s_failures drives the exit code below */
     stats_record_test();
+    eligibility_test();
+    progress_advance_test();
 
     /* Back out of the fixture dir so the probe sees the shipped Lego.cfg
      * (and its wad mount) rather than the loose fixture. */
