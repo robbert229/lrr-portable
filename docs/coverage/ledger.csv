@@ -763,9 +763,9 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00432600,FUN_00432600,named,TerrainCellVariantFlagPropagate,0,1355
 00432710,FUN_00432710,ported,TerrainCellFlag80000ClearOrSet,2,518
 00432770,FUN_00432770,ported,TerrainCellWalkabilityQuery,5,2460
-00432950,FUN_00432950,named,EntityMoveDestinationCellIsUsable,0,713
+00432950,FUN_00432950,ported,EntityMoveDestinationCellIsUsable,3,713
 004329d0,FUN_004329d0,ported,TerrainCellFlag8CheckIfInBounds,2,374
-00432a20,FUN_00432a20,named,TerrainCellAllowsPlacement,0,681
+00432a20,FUN_00432a20,ported,TerrainCellAllowsPlacement,3,681
 00432aa0,FUN_00432aa0,ported,TerrainCellOccupancyOrFlagCheck,2,471
 00432b00,FUN_00432b00,ported,TerrainCellFlag800TestInBounds,2,325
 00432b50,FUN_00432b50,ported,TerrainWalkableNeighborSearch,2,321

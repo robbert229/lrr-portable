@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 456 | 17.8% |
+| ported | 458 | 17.9% |
 | anchored | 5 | 0.2% |
-| named | 2057 | 80.2% |
+| named | 2055 | 80.1% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 0 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (456 functions)
+  (458 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (5 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (2057 functions)
+  citation yet (2055 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (0 functions)
 
-**Game logic remaining to port: 2062 (80.4%).**
+**Game logic remaining to port: 2060 (80.3%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -659,8 +659,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00432550` | AlwaysAcceptPlaceCommandCell |
 | `0x00432560` | TerrainCellFlag40000000ClearOrSet |
 | `0x00432600` | TerrainCellVariantFlagPropagate |
-| `0x00432950` | EntityMoveDestinationCellIsUsable |
-| `0x00432a20` | TerrainCellAllowsPlacement |
 | `0x00432c90` | TerrainCellStateUpdate |
 | `0x00433180` | CellTypeSpeedMultiplierResolve |
 | `0x00433380` | TerrainCellMutationProgress |

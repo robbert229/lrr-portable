@@ -1014,6 +1014,64 @@ int level_walkable(const LevelState* s, int cx, int cy)
            type != 1 && type != 7 && type != 11;
 }
 
+/* FUN_00432950 — EntityMoveDestinationCellIsUsable. The corpus reads the
+ * cell address without a bounds check past the destination gate (the gate
+ * keeps every read in range); the port routes through level_voxel, whose
+ * NULL for an unreachable cell reports unusable (documented deviation). */
+int entity_move_destination_cell_usable(const struct EntitySlot* e,
+                                       const LevelState* s, int cx, int cy)
+{
+    /* Corpus: *(uint *)(param_1 + 1000) & 0x8000 — +1000 decimal is
+     * +0x3e8, the port's flags_3e8 mirror. */
+    if (e == NULL || (e->flags_3e8 & 0x8000u) == 0u) {
+        return 0;
+    }
+    const int w = level_width(s), h = level_height(s);
+    /* Corpus unsigned gates: cx != 0, cy != 0, and both < dim - 2. */
+    if (cx == 0 || cy == 0
+        || (unsigned)cx >= (unsigned)w - 2u
+        || (unsigned)cy >= (unsigned)h - 2u) {
+        return 0;
+    }
+    const uint8_t* rec = level_voxel(s, cx, cy);
+    if (rec == NULL) {
+        return 0;
+    }
+    uint32_t flags;
+    __builtin_memcpy(&flags, rec + 0x08, sizeof flags);
+    const int type = (int)(signed char)rec[0x02];
+    return (flags & TILE_FLAG_WALKABLE) != 0
+           && (flags & TILE_FLAG_BLOCKING) == 0
+           && type != 1 && type != 7 && type != 11;
+}
+
+/* FUN_00432a20 — TerrainCellAllowsPlacement. The gate is the corpus's
+ * byte read at +1000: the port's flags_3e8 low byte (little-endian), bit
+ * 0x4; the record-NULL case passes, matching the config-driven NULL call. */
+int terrain_cell_allows_placement(const struct EntitySlot* e,
+                                  const LevelState* s, int cx, int cy)
+{
+    if (e != NULL && (e->flags_3e8 & 0x04u) == 0u) {
+        return 0;
+    }
+    const int w = level_width(s), h = level_height(s);
+    if (cx == 0 || cy == 0
+        || (unsigned)cx >= (unsigned)w - 2u
+        || (unsigned)cy >= (unsigned)h - 2u) {
+        return 0;
+    }
+    const uint8_t* rec = level_voxel(s, cx, cy);
+    if (rec == NULL) {
+        return 0;
+    }
+    uint32_t flags;
+    __builtin_memcpy(&flags, rec + 0x08, sizeof flags);
+    const int type = (int)(signed char)rec[0x02];
+    return (flags & TILE_FLAG_WALKABLE) != 0
+           && (flags & 0x20u) == 0
+           && type != 8 && type != 10 && type != 11;
+}
+
 void level_tile_mark(LevelState* s, int cx, int cy, int set)
 {
     uint8_t* rec = level_voxel(s, cx, cy);

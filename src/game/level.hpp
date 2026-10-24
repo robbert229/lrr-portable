@@ -285,6 +285,26 @@ int level_cell_of(float v);
  * probe itself is ported (`ai_stats_speed`) and drives the mover step. */
 int level_walkable(const LevelState* s, int cx, int cy);
 
+/* FUN_00432950 — EntityMoveDestinationCellIsUsable (finding 284): the
+ * destination-cell test the mover route runs before assigning a
+ * destination. The entity gate is `+1000` (decimal; the port's flags_3e8
+ * mirror) bit 0x8000; then both destination coordinates must be nonzero and
+ * inside the 2-cell grid margin; the cell is usable when flag 0x10 is set,
+ * flag 0x40 clear, and the type byte is not in {1, 7, 11} — the walkable
+ * set again. A NULL entity skips the flag read (corpus crashes there; the
+ * port answers unusable). */
+struct EntitySlot; /* defined in game.hpp */
+int entity_move_destination_cell_usable(const struct EntitySlot* e,
+                                       const LevelState* s, int cx, int cy);
+
+/* FUN_00432a20 — TerrainCellAllowsPlacement (finding 293): placement
+ * eligibility. The gate passes when the caller's record is absent (the
+ * config-driven NULL call) or its +1000 low byte carries bit 0x4; then both
+ * coordinates nonzero and inside the 2-cell margin; the cell needs flag
+ * 0x10 set, flag 0x20 clear, and a type byte not in {8, 10, 11}. */
+int terrain_cell_allows_placement(const struct EntitySlot* e,
+                                  const LevelState* s, int cx, int cy);
+
 /* FUN_00432e00: set (nonzero) or clear the cell's OCCUPIED flag — the
  * entity "reservation" bit the mover-state sync raises and the arrival
  * clears. Bounds-guarded (the corpus writes OOB for bad coords). */
