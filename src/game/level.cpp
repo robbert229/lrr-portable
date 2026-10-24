@@ -2425,3 +2425,86 @@ void coordinate_callback_dispatch_by_mode(const void* coord_pair, int mode)
     (void)mode;
     /* Seam: same pair context, callback chosen by the mode word. */
 }
+
+/* --- the global-object field band (see level.hpp) ---------------------------
+ * The corpus's `DAT_005560d4 != 0` guard lands as the port's NULL-level
+ * guard; every other detail is the corpus's own arithmetic. */
+void global_object_field8c_increment(LevelState* s)
+{
+    if (s == NULL) {
+        return;
+    }
+    level_set_int(s, 0x8C, level_int(s, 0x8C) + 1);
+}
+
+void global_object_field8c_subtract(LevelState* s, int amount)
+{
+    if (s == NULL) {
+        return;
+    }
+    level_set_int(s, 0x8C, level_int(s, 0x8C) - amount);
+}
+
+void global_object_field98_add(LevelState* s, int amount)
+{
+    if (s == NULL) {
+        return;
+    }
+    level_set_int(s, 0x98, level_int(s, 0x98) + amount);
+}
+
+void global_object_field98_clear(LevelState* s)
+{
+    if (s != NULL) {
+        level_set_int(s, 0x98, 0);
+    }
+}
+
+void level_state_field9c_add(LevelState* s, int amount)
+{
+    if (s == NULL) {
+        return;
+    }
+    level_set_int(s, 0x9C, level_int(s, 0x9C) + amount);
+}
+
+void global_object_field94_increment(LevelState* s)
+{
+    if (s == NULL) {
+        return;
+    }
+    level_set_int(s, 0x94, level_int(s, 0x94) + 1);
+}
+
+void global_object_fielda8_increment(LevelState* s)
+{
+    if (s == NULL) {
+        return;
+    }
+    level_set_int(s, 0xA8, level_int(s, 0xA8) + 1);
+}
+
+uint32_t level_field8c_get(const LevelState* s)
+{
+    return s != NULL ? (uint32_t)level_int(s, 0x8C) : 0u;
+}
+
+uint32_t level_field98_get(const LevelState* s)
+{
+    return s != NULL ? (uint32_t)level_int(s, 0x98) : 0u;
+}
+
+uint32_t level_field9c_get(const LevelState* s)
+{
+    return s != NULL ? (uint32_t)level_int(s, 0x9C) : 0u;
+}
+
+uint32_t level_field94_get(const LevelState* s)
+{
+    return s != NULL ? (uint32_t)level_int(s, 0x94) : 0u;
+}
+
+uint32_t level_fielda8_get(const LevelState* s)
+{
+    return s != NULL ? (uint32_t)level_int(s, 0xA8) : 0u;
+}

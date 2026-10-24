@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 668 | 26.1% |
+| ported | 676 | 26.4% |
 | anchored | 4 | 0.2% |
-| named | 1845 | 72.0% |
+| named | 1837 | 71.6% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (668 functions)
+  (676 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1845 functions)
+  citation yet (1837 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1850 (72.2%).**
+**Game logic remaining to port: 1842 (71.8%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -388,14 +388,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0041f6c0` | SelectedEntityDetachCallback |
 | `0x0041f740` | CellFourNeighborWalkCheck |
 | `0x0041f840` | RemoveObjectIfClass6 |
-| `0x0041f870` | GlobalObjectField8CIncrement |
-| `0x0041f880` | GlobalObjectField8CSubtract |
-| `0x0041f8a0` | GlobalObjectField98Add |
-| `0x0041f8c0` | GlobalObjectField98Clear |
-| `0x0041f920` | LevelStateField9CAdd |
-| `0x0041f970` | RuntimeFlag40000000Get |
-| `0x0041f980` | GlobalObjectField94Increment |
-| `0x0041f990` | GlobalObjectFieldA8Increment |
 | `0x0041f9a0` | LevelResourceBalanceAddAndSound |
 | `0x0041f9e0` | UpgradeResourceDebit |
 | `0x0041fa80` | StartLevelPilots |

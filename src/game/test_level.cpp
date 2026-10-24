@@ -1247,6 +1247,47 @@ int main(int argc, char** argv)
               "the origin answers zero too");
     }
 
+    /* The global-object field band (2026-10-24). */
+    {
+        LevelState g;
+        memset(&g, 0, sizeof(g));
+        global_object_field8c_increment(&g);
+        global_object_field8c_increment(&g);
+        global_object_field8c_subtract(&g, 3);
+        CHECK((int)level_field8c_get(&g) == -1, "the 8c band walks");
+
+        global_object_field98_add(&g, 7);
+        global_object_field98_add(&g, -2);
+        CHECK((int)level_field98_get(&g) == 5, "the 98 add accumulates");
+        global_object_field98_clear(&g);
+        CHECK(level_field98_get(&g) == 0u, "the 98 clear zeroes");
+
+        level_state_field9c_add(&g, 11);
+        CHECK((int)level_field9c_get(&g) == 11, "the 9c add rides");
+
+        global_object_field94_increment(&g);
+        global_object_field94_increment(&g);
+        CHECK(level_field94_get(&g) == 2u, "the 94 increments");
+
+        global_object_fielda8_increment(&g);
+        CHECK(level_fielda8_get(&g) == 1u, "the a8 increments");
+
+        /* The NULL-level guards answer nothing, as the corpus's null
+         * global does. */
+        global_object_field8c_increment(NULL);
+        global_object_field8c_subtract(NULL, 1);
+        global_object_field98_add(NULL, 1);
+        global_object_field98_clear(NULL);
+        level_state_field9c_add(NULL, 1);
+        global_object_field94_increment(NULL);
+        global_object_fielda8_increment(NULL);
+        CHECK(level_field8c_get(NULL) == 0u && level_field98_get(NULL) == 0u
+                  && level_field9c_get(NULL) == 0u
+                  && level_field94_get(NULL) == 0u
+                  && level_fielda8_get(NULL) == 0u,
+              "the guarded null level answers zero everywhere");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "level_test: %d failure(s)\n", s_failures);
         return 1;
