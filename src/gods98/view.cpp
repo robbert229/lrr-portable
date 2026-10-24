@@ -670,3 +670,14 @@ void cursor_screen_ray_context_reset(ViewContext* v)
     }
     v->pan_accum = 0.0f; /* the corpus's view-record +0x9c slot */
 }
+
+/* CurrentLevelTerrainGridPick (FUN_00433be0) — see view.hpp. */
+void current_level_terrain_grid_pick(EngineContext* ctx, float x, float y,
+                                     int* gx, int* gy)
+{
+    const float pos[2] = { x, y };
+    int tx = 0, ty = 0;
+    int* px = gx != NULL ? gx : &tx;
+    int* py = gy != NULL ? gy : &ty;
+    (void)grid_pick(ctx, pos, px, py);
+}

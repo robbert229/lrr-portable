@@ -228,4 +228,12 @@ void camera_zoom_update(void* camera, float delta);  /* FUN_00436aa5 */
  * ViewContext slot. NULL skips (deviation: blind store). */
 void cursor_screen_ray_context_reset(ViewContext* v);
 
+/* CurrentLevelTerrainGridPick (FUN_00433be0): the corpus's per-level pick
+ * wrapper — the world pointer from the state root's +4 field, x/y floats
+ * in, grid indices out. The port's grid_pick models the pick (with the
+ * stub-boundary note above); this is the wrapper shape, and NULL index
+ * outputs skip their stores the way the corpus's bounds check does. */
+void current_level_terrain_grid_pick(EngineContext* ctx, float x, float y,
+                                     int* gx, int* gy);
+
 #endif /* LEGORRR_VIEW_HPP */

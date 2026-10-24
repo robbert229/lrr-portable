@@ -1128,6 +1128,24 @@ int main(int argc, char** argv)
         probe_real(real_dir);
     }
 
+    /* Rockfall-queue eligibility (2026-10-24). */
+    {
+        const int before = ai_idle_count();
+        EntitySlot e;
+        memset(&e, 0, sizeof(e));
+        e.type = 1;
+        entity_queue_for_rockfall_processing_if_eligible(NULL);
+        entity_queue_for_rockfall_processing_if_eligible(&e);
+        CHECK(ai_idle_count() == before + 1, "the eligible lands in the table");
+        entity_queue_for_rockfall_processing_if_eligible(&e);
+        CHECK(ai_idle_count() == before + 1, "the dedupe keeps it single");
+        EntitySlot other;
+        memset(&other, 0, sizeof(other));
+        other.type = 5;
+        entity_queue_for_rockfall_processing_if_eligible(&other);
+        CHECK(ai_idle_count() == before + 1, "a type-5 entity never lands");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "ai_test: %d failure(s)\n", s_failures);
         return 1;

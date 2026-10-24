@@ -269,6 +269,18 @@ static void idle100_register(EntitySlot* e)
     }
 }
 
+/* EntityQueueForRockfallProcessingIfEligible (FUN_0043a9e0): type-1 gate
+ * in, idle table out — see ai.hpp. */
+void entity_queue_for_rockfall_processing_if_eligible(EntitySlot* e)
+{
+    if (e == NULL || e->type != 1) {
+        return; /* the corpus's type gate */
+    }
+    /* deviation: the stats-flag word (unported stats layer) and the
+     * rockfall-tile probe stay unmodeled, per the idle-table half note. */
+    idle100_register(e);
+}
+
 /* Finish the chain-head command on `e`: unlink from both structures, free,
  * advance the chain. */
 static int finish_head(GameContext* ctx, EntitySlot* e)

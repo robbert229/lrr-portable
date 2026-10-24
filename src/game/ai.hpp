@@ -202,4 +202,12 @@ void ai_activity_grant(GameContext* ctx, EntitySlot* e, int value);
 }
 #endif
 
+/* EntityQueueForRockfallProcessingIfEligible (FUN_0043a9e0): the corpus's
+ * tail-call wrapper registering a type-1 entity for rockfall processing
+ * — it just runs FUN_0043a960's idle-registration half, so the port's
+ * wrapper models that: the type gate runs and the entity lands in the
+ * idle table through the dedupe/capacity rule (the stats-flag word and
+ * the rockfall-tile probe stay unmodeled deviations — findings 41/457). */
+void entity_queue_for_rockfall_processing_if_eligible(EntitySlot* e);
+
 #endif /* LEGORRR_GAME_AI_HPP */

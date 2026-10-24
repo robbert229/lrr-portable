@@ -393,7 +393,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00411f00,FUN_00411f00,ported,KeyContextCheck,1,99
 00411f10,FUN_00411f10,named,PercentSplitSurfaceBlit,0,2216
 00412170,FUN_00412170,ported,MenuOverlayListCount,3,209
-00412190,FUN_00412190,named,MenuAudioTickIntervalReached,0,100
+00412190,FUN_00412190,ported,MenuAudioTickIntervalReached,2,100
 004121b0,FUN_004121b0,named,MenuOverlayFlicPlaybackController,0,2748
 00412450,FUN_00412450,named,RenderUiFrameCell,0,654
 004124f0,FUN_004124f0,named,MenuSaveImageConfigRectBlit,0,2192
@@ -558,7 +558,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0041b490,FUN_0041b490,ported,AdvisorOverlayUpdate,1,1805
 0041b680,FUN_0041b680,named,CatalogCallbackByIdDispatch,0,1788
 0041b930,FUN_0041b930,ported,TimedStatusAndEventTick,1,438
-0041b9b0,FUN_0041b9b0,named,GlobalStateGet_004ddd1c,0,60
+0041b9b0,FUN_0041b9b0,ported,GlobalStateGet_004ddd1c,2,60
 0041b9c0,FUN_0041b9c0,named,SelectionEntityCodeResolve,0,319
 0041ba10,FUN_0041ba10,ported,,4,464
 0041ba90,FUN_0041ba90,ported,SimulationGlobalWordSet,2,81
@@ -798,7 +798,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004334c0,FUN_004334c0,ported,MapFileDimensionsGet,2,228
 004334f0,FUN_004334f0,named,RenderQualityConfigApply,0,2191
 00433770,FUN_00433770,named,SceneLightsBuildFromConfig,0,3185
-00433be0,FUN_00433be0,named,CurrentLevelTerrainGridPick,0,195
+00433be0,FUN_00433be0,ported,CurrentLevelTerrainGridPick,2,195
 00433c10,FUN_00433c10,named,EntityNeighborBlockedCellStepProbe,0,1935
 00433e30,FUN_00433e30,named,GridCellEntityEligibilityCheck,0,374
 00433e80,FUN_00433e80,named,TerrainProjectedCellStateRefresh,0,5569
@@ -939,8 +939,8 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0043a8f0,FUN_0043a8f0,named,SimulationUpdateCounterAdd,0,158
 0043a910,FUN_0043a910,named,SimulationModeCounterAdd,0,141
 0043a930,FUN_0043a930,named,TrackedEntityPointerArrayRemove,0,310
-0043a960,FUN_0043a960,ported,EntityLavaCrustActivityRegister,5,527
-0043a9e0,FUN_0043a9e0,named,EntityQueueForRockfallProcessingIfEligible,0,80
+0043a960,FUN_0043a960,ported,EntityLavaCrustActivityRegister,6,527
+0043a9e0,FUN_0043a9e0,ported,EntityQueueForRockfallProcessingIfEligible,2,80
 0043a9f0,FUN_0043a9f0,named,EntityPairInteractionGate,0,753
 0043aab0,FUN_0043aab0,named,ProximityActivityRaise,0,1324
 0043abf0,FUN_0043abf0,named,TerrainCellVariantUpdateQueue,0,479
