@@ -34,9 +34,9 @@ reference in REA):
 ```
 FUN_0041fb50 (boot/init)
  ├─ AvisEnabled       0x414ce0   ; gate the intro AVIs by config
- ├─ MoviePlayLoop     0x4157c0   ; play "Loading"-class movies to completion
+ ├─ MoviePlayLoop     0x4157c0   ; timed bitmap-surface display by config key
  ├─ MoviePlayNamed    0x415910   ; play a named movie (config-key → path)
- ├─ MovieShownReset   0x415cf0   ; DAT_005574d0 = 0xffffffff (movie-shown reset)
+ ├─ SaveSlotSelectionClear 0x415cf0 ; DAT_005574d0 = -1 (clear selected save-slot context)
  ├─ FrontEndActive    0x416d00   ; gate: Lego.cfg "FrontEnd TRUE" && !loader-mode
  ├─ OptionsLoadOrDefault 0x416940 ; the front-end options defaults
  ├─ MenuEnter         0x416c80   ; enter the main menu
@@ -181,10 +181,10 @@ StartLevelSelected     0x460220   ; commit pending level record → DAT_005529c4
 | addr | name | behavior (observed) |
 | --- | --- | --- |
 | `0x414ce0` | `AvisEnabled` | `Lego` cfg `DontPlayAvis` gate + `DAT_00505f88 < 3` |
-| `0x4157c0` | `MoviePlayLoop` | open movie by config key (`FUN_0047d9d0`), step until done/ESC |
+| `0x4157c0` | `MoviePlayLoop` | timed bitmap-surface display by config key; pumps frames until the deadline or quit |
 | `0x415910` | `MoviePlayNamed` | movie by key name (boot path) |
 | `0x415990` | `MoviePlayLevelVideo` | `<level> Video` key movie (LevelLoad path) |
-| `0x415700` | `MoviePlayWait` | FLIC frame loop with quit-probe cancellation |
+| `0x415700` | `MoviePlayWait` | DirectShow sample-update loop with optional quit-probe cancellation |
 | `0x414d30` | `BrightnessSet` | param/10 → RGB scalar on `DAT_005560f0/f8` |
 | `0x414de0` | `SFXVolumeSet` | `SFX_Volume` slider index → `FUN_0047b530` DirectSound attenuation table |
 | `0x414df0` | `MusicVolumeSet` | `Music_Volume` slider → param/9 L/R mixer volume (`FUN_00478980`) |
