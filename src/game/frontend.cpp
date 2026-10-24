@@ -2082,3 +2082,40 @@ int layout_position_get(int entry, int* x, int* y)
     }
     return 1;
 }
+
+/* --- the front-end flow words (see frontend.hpp) ----------------------------
+ * Zero-initialized module statics stand in for the corpus's DAT words; the
+ * load image's zero state is the faithful initial state (finding 23/438). */
+static int s_fe_flow[5]; /* DAT_0055701c / 20 / 24 / 48 / 4c, in order */
+
+int save_slot_open(void)
+{
+    return s_fe_flow[1] != -1;
+}
+
+int is_in_game(void)
+{
+    return s_fe_flow[2] != -1;
+}
+
+int quit_menu_probe(void)
+{
+    return s_fe_flow[0];
+}
+
+int level_start_flag(void)
+{
+    return s_fe_flow[3] != 0;
+}
+
+int menu_options_flag(void)
+{
+    return s_fe_flow[4] != 0;
+}
+
+void frontend_flow_word_set(int which, int value)
+{
+    if (which >= 0 && which < 5) {
+        s_fe_flow[which] = value;
+    }
+}

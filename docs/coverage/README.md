@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 681 | 26.6% |
+| ported | 687 | 26.8% |
 | anchored | 4 | 0.2% |
-| named | 1832 | 71.5% |
+| named | 1826 | 71.2% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (681 functions)
+  (687 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1832 functions)
+  citation yet (1826 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1837 (71.6%).**
+**Game logic remaining to port: 1831 (71.4%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -286,6 +286,13 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00416910` | OptionsWriteToSlot |
 | `0x004169c0` | FrontEndStateChange |
 | `0x00416c80` | MenuEnter |
+| `0x00416e00` | ActiveObjectList |
+| `0x00416e20` | ListFindName |
+| `0x00416e70` | SavClearVisited |
+| `0x00416ed0` | ListAddName |
+| `0x00416f40` | ListHasItem |
+| `0x00416fb0` | ListSetNode |
+| `0x00417020` | ListGetNode |
 | `0x00417090` | LevelNodeGet |
 | `0x00417280` | RegistryValueLookupWithLock |
 | `0x004172d0` | RegistryValueIndexLookupOrNotFound |
@@ -295,7 +302,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00417df0` | SavRefreshSlots |
 | `0x00417e50` | SavSlotCtx |
 | `0x00417e70` | SavBuildCtx |
-| `0x00417e90` | SavGetSlot |
 | `0x00417ea0` | SavSetSlot |
 | `0x00417f20` | OptionsContextSixFieldSet |
 | `0x00417f40` | SavWriteRecord |

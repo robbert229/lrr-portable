@@ -1069,6 +1069,39 @@ int main(int argc, char** argv)
         selection_state_flags_set(save_flags);
     }
 
+    /* The front-end flow words (2026-10-24). */
+    {
+        /* The load-image zero state: the sentinel words test != -1 and
+         * report true, exactly as the corpus's zero-initialized block does
+         * before the save/tutorial selections initialize. */
+        CHECK(quit_menu_probe() == 0
+                  && save_slot_open() != 0 && is_in_game() != 0
+                  && level_start_flag() == 0 && menu_options_flag() == 0,
+              "the boot state reads the zero image");
+
+        /* The port-side setter stands in for the unported callback
+         * bindings: sentinel -1 means closed. */
+        frontend_flow_word_set(1, -1);
+        frontend_flow_word_set(2, -1);
+        CHECK(save_slot_open() == 0 && is_in_game() == 0,
+              "the closed sentinels report closed");
+        frontend_flow_word_set(0, 1);
+        frontend_flow_word_set(3, 2);
+        frontend_flow_word_set(4, 1);
+        CHECK(quit_menu_probe() == 1 && level_start_flag() != 0
+                  && menu_options_flag() != 0,
+              "the flag words walk through the setter");
+        frontend_flow_word_set(5, 9); /* the guard ignores past-word writes */
+        CHECK(quit_menu_probe() == 1, "the guard keeps the words as set");
+
+        /* Restore the boot state for any later test. */
+        frontend_flow_word_set(0, 0);
+        frontend_flow_word_set(1, 0);
+        frontend_flow_word_set(2, 0);
+        frontend_flow_word_set(3, 0);
+        frontend_flow_word_set(4, 0);
+    }
+
     if (s_failures == 0) {
         printf("frontend: all tests passed\n");
         return 0;

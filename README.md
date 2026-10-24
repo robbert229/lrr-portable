@@ -2123,6 +2123,18 @@ unported — a port-side peek stands in), and `global_triple_copy_out`
 (0x426230) hands out the inert zero-init triple. `enginebind_test` pins
 the mode reads, the bit-7 walk, the guard store, and the zero triple.
 
+**The front-end flow words** (2026-10-24; findings 23/438): six rows land.
+The corpus's five DAT menu-flow words come over as zero-initialized
+module statics in `frontend.*` — `save_slot_open` 0x416d50 and `is_in_game`
+0x416d60 test the `!= -1` sentinels (true at the load image's zero state,
+faithfully, before the save/tutorial selections initialize), while
+`quit_menu_probe` 0x416dd0, `level_start_flag` 0x416de0 and
+`menu_options_flag` 0x416df0 read the flag words; a port-side setter
+stands in for the unported callback bindings. `save_slot_get`
+(SavGetSlot, 0x417e90, `savegame.*`) was already the port's model of the
+slot word — cited here. `frontend_test` pins the boot state and the
+setter walk, `savegame_test` the slot round-trip.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

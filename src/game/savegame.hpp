@@ -49,19 +49,7 @@ extern "C" {
 void save_init(GameContext* ctx);
 
 int  save_slot_get(const GameContext* ctx);  /* SavGetSlot FUN_00417e90 */
-void save_slot_set(GameContext* ctx, int slot);  /* SavSetSlot FUN_00417ea0 */
-
-/* SaveSlotSelectionClear (FUN_00415cf0, finding 408): drops the active
- * slot selection back to the corpus's closed sentinel (-1). The corpus
- * writes DAT_005574d0 blindly; NULL answers nothing (documented). */
-void save_slot_selection_clear(GameContext* ctx);
-
-/* SavSlotCtx (FUN_00417e50): the corpus hands back the slot's 0xB8 context
- * block from the DAT_00557080 array (bounds 0..5). The port models the
- * context block in GameContext, so the corpus's bounds test is reproduced
- * and the block is answered for valid slots (deviation: the port's one
- * active-slot context stands in for the corpus's six). */
-void* sav_slot_ctx(GameContext* ctx, int slot);
+void save_slot_set(GameContext* ctx, int slot);    /* SavSetSlot */
 
 /* Open `Saves\<slot>.sav` into the active-slot context. `create_if_missing`
  * mirrors SavReadSlot's `param_3`: 0 writes a fresh empty slot when the file
