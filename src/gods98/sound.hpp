@@ -361,4 +361,71 @@ int sound_variant_select(int alias_index);
  * head order into `out_slots` (up to max) and return the count. */
 int sound_variant_chain(int alias_index, int* out_slots, int max);
 
+
+/* ------------------------------------------------------------------ *
+ *  Sound submission route (issues #325 / #328 / #329 / #330 / #332;
+ *  findings 137–149).
+ *
+ *  With batch mode off, a cue plays through the sound subsystem: the
+ *  alias's variant chain is drawn (the port's select) and the picked
+ *  record goes to the instance-layer play seam. With batch mode on
+ *  (bit 3, batch-mode-get @ 0x4652b0), submissions defer into the
+ *  corpus's batch-deferred table — 10 records of six words: alias,
+ *  position word, position-vector words, and a mode word (bit 0 marks
+ *  the positional form; bit 1 the loop; bit 2 the position-selector
+ *  passed back at replay). Submissions past the tenth are dropped.
+ *  SoundBatchQueueDrain switches the mode; with replay it re-runs the
+ *  deferred entries through the route (batch mode off first) and clears
+ *  the table.
+ *
+ *  The frame tick owns the deferred-request queue: it steps the global
+ *  cooldown timer, plays last frame's rotated queue through the
+ *  alias-play route, restores batch mode if it was armed, rotates the
+ *  pending queue (#317) into the active replay copies, and pumps the
+ *  instance chain.
+ *
+ *  Deviation: the play/pump calls land at instance-layer seams that
+ *  wait on TODO(corpus); the observable state (chains, queues, records,
+ *  PRNG draws) matches the corpus.
+ * ------------------------------------------------------------------ */
+
+#define SOUND_BATCH_QUEUE_CAPACITY 10   /* DAT_00502b20 bound */
+
+/* SoundAliasPlay @ 0x464fa0: play `alias` (looping when `loop`) —
+ * immediately when not batching (variant draw + play seam when the
+ * chain's head holds a record), or deferred to the batch table. */
+void sound_alias_play(int alias, int loop);
+
+/* PositionalSoundSubmit @ 0x465090: like sound_alias_play but carries a
+ * position: `positional` selects the position-word form (`position`) or
+ * the coordinate-vector form (`xyz`, three floats); the deferred form
+ * keeps both. Returns 0 as shipped. */
+int sound_positional_sound_submit(int position, int alias, int loop,
+                                  int positional, const float* xyz);
+
+/* SoundBatchQueueDrain @ 0x4652d0: with `batch_set` raise batch mode and
+ * return (the corpus stops there); otherwise clear batch mode and, when
+ * `replay`, re-run every deferred entry through the route before
+ * clearing the queue count. */
+void sound_batch_queue_drain(int batch_set, int replay);
+
+/* SoundDeferredQueueDrain @ 0x4652c0: batch_queue_drain(batch_set, 1). */
+void sound_deferred_queue_drain(int batch_set);
+
+/* Inspection of the batch-deferred table (mode word bits: bit 0
+ * positional, bit 1 loop, bit 2 position selector). `xyz`, when given,
+ * takes the record's three coordinate words (stale where the alias
+ * form never wrote them). Out-of-range reads report 0. */
+int sound_batch_queue_count(void);
+int sound_batch_queue_get(int index, int* alias, int* position,
+                          uint32_t* mode, float* xyz);
+
+/* SoundSubsystemFrameTick @ 0x4651a0. */
+void sound_subsystem_frame_tick(float dt);
+
+/* The rotated queue the frame tick replays each frame (the corpus's
+ * active copies DAT_00502b80/DAT_00502ba8/DAT_00502bd4). */
+int sound_active_request_count(void);
+int sound_active_request_get(int index, int* alias, int* loop);
+
 #endif /* LEGORRR_SOUND_HPP */

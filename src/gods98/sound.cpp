@@ -900,3 +900,199 @@ void sound_variant_property_read(int alias_index)
     int slot = sound_variant_select(alias_index);
     (void)sound_bank_entry_volume(slot);
 }
+
+/* ------------------------------------------------------------------ *
+ *  Sound submission route (issues #325 / #328 / #329 / #330 / #332).
+ *  See sound.hpp.
+ * ------------------------------------------------------------------ */
+
+/* Corpus batch-deferred record: DAT_00502a30 +0 alias, +4 position
+ * word, +8/+12/+16 coordinate words, +20 mode word (stride 6 words,
+ * count DAT_00502b20). */
+typedef struct BatchEntry {
+    int      alias;      /* +0  DAT_00502a30 */
+    int      position;   /* +4  DAT_00502a34 */
+    float    xyz[3];     /* +8  DAT_00502a38/3c/40 */
+    uint32_t mode;       /* +20 DAT_00502a44 */
+} BatchEntry;
+
+static BatchEntry s_batch_entry[SOUND_BATCH_QUEUE_CAPACITY];
+static int        s_batch_count;   /* DAT_00502b20 */
+
+/* The frame tick's active replay copies (DAT_00502b80 alias words,
+ * DAT_00502ba8 loop words, count DAT_00502bd4). */
+static int s_active_alias[SOUND_REQUEST_QUEUE_CAPACITY];
+static int s_active_loop[SOUND_REQUEST_QUEUE_CAPACITY];
+static int s_active_count;
+
+/* Instance-layer play seam: the corpus hands (mode, position, bank
+ * slot, loop flag, coordinate vector) to the buffer-handle chain for
+ * actual playback. TODO(corpus) — the seam is inert here; every state
+ * change the route makes is already done by the time it is called. */
+static void s_play_seam(int mode, int position, int slot, int loop,
+                        const float* xyz)
+{
+    (void)mode;
+    (void)position;
+    (void)slot;
+    (void)loop;
+    (void)xyz;
+}
+
+void sound_alias_play(int alias, int loop)
+{
+    /* SoundAliasPlay @ 0x464fa0. */
+    if ((s_sound_flags & SOUND_FLAG_BATCH) == 0) {
+        if (alias != 0 && (s_sound_flags & SOUND_FLAG_ENABLED) != 0) {
+            int slot = sound_variant_select(alias);
+            /* Corpus quirk kept: a chain head reading 0 — a real bank
+             * slot, or the unwritten head — counts as "no sound". */
+            if (slot != 0) {
+                s_play_seam(2, 0, slot, loop, NULL);
+            }
+        }
+    } else if (s_batch_count < SOUND_BATCH_QUEUE_CAPACITY) {
+        /* Deferred alias form writes only the alias and clears the mode
+         * word's positional bit — the loop bit (and position words)
+         * keep whatever an earlier batch record left in the slot
+         * (corpus quirk: the deferred alias form never carries a loop
+         * flag). */
+        s_batch_entry[s_batch_count].alias = alias;
+        s_batch_entry[s_batch_count].mode &= ~1u;
+        ++s_batch_count;
+    }
+}
+
+int sound_positional_sound_submit(int position, int alias, int loop,
+                                  int positional, const float* xyz)
+{
+    /* PositionalSoundSubmit @ 0x465090. */
+    if ((s_sound_flags & SOUND_FLAG_BATCH) == 0) {
+        if (alias != 0 && (s_sound_flags & SOUND_FLAG_ENABLED) != 0) {
+            int slot = sound_variant_select(alias);
+            if (slot != 0) {
+                if (positional != 0) {
+                    s_play_seam(0, position, slot, loop, NULL);
+                } else {
+                    s_play_seam(1, 0, slot, loop, xyz);
+                }
+            }
+        }
+    } else if (s_batch_count < SOUND_BATCH_QUEUE_CAPACITY) {
+        BatchEntry* e = &s_batch_entry[s_batch_count];
+        ++s_batch_count;
+        e->alias = alias;
+        e->position = position;
+        e->mode = (uint32_t)((((positional & 1) << 1) | (loop & 1)) << 1)
+                | (e->mode & 0xfffffff9u) | 1u;
+        if (xyz != NULL) {
+            e->xyz[0] = xyz[0];
+            e->xyz[1] = xyz[1];
+            e->xyz[2] = xyz[2];
+        }
+    }
+    return 0;
+}
+
+void sound_batch_queue_drain(int batch_set, int replay)
+{
+    /* SoundBatchQueueDrain @ 0x4652d0. */
+    if (batch_set != 0) {
+        s_sound_flags |= SOUND_FLAG_BATCH; /* raise the bit and leave */
+        return;
+    }
+    s_sound_flags &= ~SOUND_FLAG_BATCH;
+    if (replay == 0) {
+        return;
+    }
+    for (int i = 0; i < s_batch_count; ++i) {
+        const BatchEntry* e = &s_batch_entry[i];
+        const uint32_t m = e->mode;
+        if ((m & 1u) == 0) {
+            /* Deferred alias form replays with the stale loop bit. */
+            sound_alias_play(e->alias, (int)((m << 30) >> 31));
+        } else {
+            sound_positional_sound_submit(e->position, e->alias,
+                                          (int)((m << 30) >> 31),
+                                          (int)((m << 29) >> 31),
+                                          (const float*)e->xyz);
+        }
+    }
+    s_batch_count = 0;
+}
+
+void sound_deferred_queue_drain(int batch_set)
+{
+    /* SoundDeferredQueueDrain @ 0x4652c0. */
+    sound_batch_queue_drain(batch_set, 1);
+}
+
+int sound_batch_queue_count(void)
+{
+    return s_batch_count;
+}
+
+int sound_batch_queue_get(int index, int* alias, int* position,
+                          uint32_t* mode, float* xyz)
+{
+    if (index < 0 || index >= s_batch_count) {
+        return 0;
+    }
+    if (alias != NULL) {
+        *alias = s_batch_entry[index].alias;
+    }
+    if (position != NULL) {
+        *position = s_batch_entry[index].position;
+    }
+    if (mode != NULL) {
+        *mode = s_batch_entry[index].mode;
+    }
+    if (xyz != NULL) {
+        xyz[0] = s_batch_entry[index].xyz[0];
+        xyz[1] = s_batch_entry[index].xyz[1];
+        xyz[2] = s_batch_entry[index].xyz[2];
+    }
+    return 1;
+}
+
+void sound_subsystem_frame_tick(float dt)
+{
+    /* SoundSubsystemFrameTick @ 0x4651a0. */
+    const int batch_saved = sound_batch_mode_get();
+    s_cooldown_timer -= dt;            /* _DAT_00502b24 step */
+    sound_batch_queue_drain(0, 0);     /* batch off for the replay pass */
+    for (int i = 0; i < s_active_count; ++i) {
+        sound_alias_play(s_active_alias[i], s_active_loop[i]);
+    }
+    if (batch_saved != 0) {
+        sound_deferred_queue_drain(1); /* restore batch mode */
+    }
+    /* Rotate the pending queue (#317) into the active replay copies. */
+    const int n = s_queue_count;
+    for (int i = 0; i < n; ++i) {
+        s_active_alias[i] = s_queue_alias[i];
+        s_active_loop[i] = s_queue_loop[i];
+    }
+    s_active_count = n;
+    s_queue_count = 0;
+    /* Instance-chain pump seam: TODO(corpus), inert. */
+}
+
+int sound_active_request_count(void)
+{
+    return s_active_count;
+}
+
+int sound_active_request_get(int index, int* alias, int* loop)
+{
+    if (index < 0 || index >= s_active_count) {
+        return 0;
+    }
+    if (alias != NULL) {
+        *alias = s_active_alias[index];
+    }
+    if (loop != NULL) {
+        *loop = s_active_loop[index];
+    }
+    return 1;
+}

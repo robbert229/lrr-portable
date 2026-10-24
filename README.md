@@ -925,6 +925,37 @@ corpus writes past the table). `sound_test` covers the draw-only read,
 head-record volume writes, invalid-value zeroing, validator and slot
 bounds, and the silent-alias no-op.
 
+**Sound submission route** (2026-10-24; port issues #325 / #328 / #329 /
+#330 / #332, findings 137–149): `sound_alias_play` (`SoundAliasPlay @
+0x464fa0`) and `sound_positional_sound_submit` (`PositionalSoundSubmit @
+0x465090`) run cues through the subsystem — with batch mode off the
+alias's variant chain is drawn and the picked record goes to the
+instance-layer play seam; with batch mode on (bit 3) submissions defer
+into the corpus's ten-record batch table (six words per record: alias,
+position word, coordinate words, and a mode word whose bit 0 marks the
+positional form, bit 1 the loop and bit 2 the position-selector handed
+back at replay). `sound_batch_queue_drain` (`SoundBatchQueueDrain @
+0x4652d0`) raises the mode with `batch_set` (returning untouched) or
+clears it and, with `replay`, re-runs every deferred record through the
+route before clearing the table; `sound_deferred_queue_drain`
+(`SoundDeferredQueueDrain @ 0x4652c0`) is the replay-1 wrapper.
+`sound_subsystem_frame_tick` (`SoundSubsystemFrameTick @ 0x4651a0`) steps
+the global cooldown timer, replays last frame's rotated request queue
+through the alias-play route, restores armed batch mode afterwards,
+rotates the pending queue (#317) into the active replay copies, and runs
+the instance pump. The corpus quirks are reproduced: an eleventh deferred
+submission is dropped, the deferred alias form never writes the loop bit
+so a replay inherits whatever an earlier occupant of the record slot
+left, slot value 0 counts as "no sound", and the silent alias defers
+like any other. Deviations: the play/pump calls land at instance-layer
+seams that wait on `TODO(corpus)` (the corpus routes through
+`SoundBufferPlayWithPosition @ 0x47ad70` and the handle chain), so the
+observable state is the chains, queues, records and PRNG draws.
+`sound_test` covers the deferral cap and drop, the mode-word packing for
+both submit forms, replay routing with the multi-link draw, the
+stale-loop quirk, the frame tick's timer step / queue rotation / batch
+restore, and the disabled-subsystem gate that runs before the draw.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the
