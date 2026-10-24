@@ -943,6 +943,198 @@ static void test_variant_properties(void)
     }
 }
 
+
+/* ------------------------------------------------------------------ *
+ *  Sound submission route (sound_alias_play @ 0x464fa0,
+ *  sound_positional_sound_submit @ 0x465090, deferred/batch drains
+ *  @ 0x4652c0 / 0x4652d0, frame tick @ 0x4651a0 — issues #325 / #328 /
+ *  #329 / #330 / #332).
+ * ------------------------------------------------------------------ */
+
+static void test_submission_route(void)
+{
+    sound_bank_clear();
+    sound_request_queue_clear();
+    sound_batch_queue_drain(0, 1);       /* mode off, deferred queue empty */
+    sound_deferred_handle_record(0);
+    sound_deferred_play_expire();        /* cooldown back to 0 */
+
+    uint8_t pcm[8] = { 1, 0, 2, 0, 3, 0, 4, 0 };
+    WavSeg segs[2];
+    segs[0].id = NULL;    segs[0].bytes = NULL; segs[0].len = 0;
+    segs[1].id = "DATA!"; segs[1].bytes = NULL; segs[1].len = 0;
+    size_t wsz = 0;
+    uint8_t* w = build_wav(1, 16, 11025, pcm, (uint32_t)sizeof(pcm),
+                           segs, 2, NULL, 0, &wsz);
+    if (w == NULL) {
+        printf("SKIP submission-route: wav build failed\n");
+        return;
+    }
+    const char* files[2] = { "/tmp/opencode/srt_a.wav",
+                             "/tmp/opencode/srt_b.wav" };
+    int ok_files = 1;
+    for (int i = 0; i < 2; ++i) {
+        FILE* fp = fopen(files[i], "wb");
+        if (fp == NULL) {
+            ok_files = 0;
+            break;
+        }
+        fwrite(w, 1, wsz, fp);
+        fclose(fp);
+    }
+    free(w);
+    if (!ok_files) {
+        printf("SKIP submission-route: wav write failed\n");
+        return;
+    }
+
+    /* Alias 12: a two-link chain — replays draw through it. Alias 11:
+     * single-link (selects never draw). Alias 13 is left unset: its
+     * select returns 0, the "no sound" head, drawing nothing. */
+    sound_subsystem_enable_set(1, 0);
+    char spec[1600];
+    snprintf(spec, sizeof spec, "%s,%s", files[0], files[1]);
+    CHECK(sound_sample_marker_parse(spec, 12) == 1, "route chain 12 parses");
+    snprintf(spec, sizeof spec, "%s", files[0]);
+    CHECK(sound_sample_marker_parse(spec, 11) == 1, "route chain 11 parses");
+
+    int out[16], al = 0, pos = 0, lp = 0;
+    uint32_t m = 0;
+
+    /* --- Deferred alias form (batch mode on) ----------------------- */
+
+    sound_batch_queue_drain(1, 1);       /* raise mode; replay arg ignored */
+    CHECK(sound_batch_mode_get() == SOUND_FLAG_BATCH, "batch mode raised");
+    CHECK(sound_batch_queue_count() == 0, "arming drains nothing");
+
+    sound_alias_play(12, 0);             /* deferred: no select, no draw */
+    CHECK(sound_variant_chain(12, out, 16) == 2 && out[0] == 1,
+          "a deferred play draws nothing");
+    CHECK(sound_batch_queue_count() == 1, "one deferred record");
+    CHECK(sound_batch_queue_get(0, &al, &pos, &m, NULL) == 1 && al == 12,
+          "the deferred record carries the alias");
+    CHECK((m & 1u) == 0, "the alias form clears the positional record bit");
+
+    sound_alias_play(0, 0);
+    CHECK(sound_batch_queue_count() == 2 &&
+              sound_batch_queue_get(1, &al, NULL, NULL, NULL) == 1 &&
+              al == 0,
+          "the silent alias defers too (the batch branch checks nothing)");
+    for (int i = 2; i < 11; ++i) {
+        sound_alias_play(11, 0);
+    }
+    CHECK(sound_batch_queue_count() == 10, "the deferred table caps at 10");
+    sound_alias_play(11, 0);
+    CHECK(sound_batch_queue_count() == 10, "the eleventh submission is dropped");
+
+    /* Replay: mode off first, every record re-runs through the route,
+     * the queue clears. Only alias 12 draws. */
+    int h = 1, nd = out[1];
+    int pick = test_variant_draw() % 2;  /* the replay's select draws */
+    if (pick != 0) {
+        int t = nd;
+        nd = h;
+        h = t;
+    }
+    sound_batch_queue_drain(0, 1);
+    CHECK(sound_batch_mode_get() == 0, "the replay drops batch mode first");
+    CHECK(sound_batch_queue_count() == 0, "the replay clears the queue");
+    CHECK(sound_variant_chain(12, out, 16) == 2 && out[0] == h && out[1] == nd,
+          "the deferred multi-link chain plays through the replay");
+
+    /* --- Positional deferred form ---------------------------------- */
+
+    sound_batch_queue_drain(1, 0);
+    const float xyz[3] = { 1.5f, -2.5f, 0.25f };
+    float got[3] = { 0, 0, 0 };
+    CHECK(sound_positional_sound_submit(7, 11, 1, 1, NULL) == 0,
+          "positional submits return 0 as shipped");
+    sound_batch_queue_get(0, &al, &pos, &m, got);
+    CHECK(al == 11 && pos == 7, "the record carries alias + position word");
+    CHECK((m & 7u) == 7u, "mode bits: positional record, loop, selector");
+
+    sound_positional_sound_submit(0, 11, 0, 0, xyz);
+    sound_batch_queue_get(1, &al, &pos, &m, got);
+    CHECK(al == 11 && (m & 7u) == 1u, "the vector form clears both mode bits");
+    CHECK(got[0] == 1.5f && got[1] == -2.5f && got[2] == 0.25f,
+          "the vector form stores the coordinates");
+    sound_batch_queue_drain(0, 1);       /* replay: single-link, draws nothing */
+
+    /* --- Stale-loop quirk ------------------------------------------ */
+
+    /* The alias deferred form writes only the alias and clears bit 0, so
+     * a replay of the record picks up whatever loop bit a previous
+     * occupant of the slot left behind. */
+    sound_batch_queue_drain(1, 0);                      /* arm mode */
+    sound_positional_sound_submit(0, 11, 1, 1, NULL);   /* loop bit set */
+    sound_batch_queue_drain(0, 1);                      /* replay and clear */
+    sound_batch_queue_drain(1, 0);                      /* arm again */
+    sound_alias_play(13, 0);                            /* same record slot */
+    CHECK(sound_batch_queue_get(0, &al, NULL, &m, NULL) == 1 && al == 13 &&
+              (m & 3u) == 2u,
+          "the stale loop bit survives the alias form's bit clear");
+    sound_batch_queue_drain(0, 1);       /* replay: unset alias, no effect */
+
+    /* --- Frame tick -------------------------------------------------- */
+
+    sound_batch_queue_drain(0, 1);       /* mode off, queue empty */
+    CHECK(sound_deferred_timer_set_if_idle(10.0f) == 1, "cooldown armed");
+    sound_batch_queue_drain(1, 0);
+    sound_request_queue_submit(13, 1);
+    sound_request_queue_submit(11, 0);
+    sound_subsystem_frame_tick(2.5f);
+    CHECK(sound_deferred_cooldown() == 7.5f, "the tick steps the cooldown timer");
+    CHECK(sound_batch_mode_get() == SOUND_FLAG_BATCH,
+          "the tick restores armed batch mode after its replay pass");
+    CHECK(sound_request_queue_count() == 0, "rotation empties the pending queue");
+    CHECK(sound_active_request_count() == 2, "the queue rotated to active");
+    CHECK(sound_active_request_get(0, &al, &lp) == 1 && al == 13 && lp == 1,
+          "the active copy keeps submission order");
+    CHECK(sound_active_request_get(2, &al, &lp) == 0, "active reads are bounded");
+
+    /* Next tick replays last frame's queue (unset and single-link aliases
+     * draw nothing) and rotates the now-empty pending queue. */
+    sound_subsystem_frame_tick(1.0f);
+    CHECK(sound_deferred_cooldown() == 6.5f, "the timer keeps stepping");
+    CHECK(sound_active_request_count() == 0, "the empty queue rotates out");
+    sound_batch_queue_drain(0, 1);       /* back to unbatched normality */
+
+    /* --- Disabled subsystem: gated before the select ---------------- */
+
+    int was_h = 1, was_nd = 0;
+    sound_variant_chain(12, out, 16);
+    was_h = out[0];
+    was_nd = out[1];
+    sound_subsystem_enable_set(0, 0);
+    sound_alias_play(12, 0);
+    sound_positional_sound_submit(5, 12, 0, 0, NULL);
+    CHECK(sound_variant_chain(12, NULL, 16) == 2 &&
+              out[0] == was_h && out[1] == was_nd,
+          "disabled plays select nothing (the gate runs before the draw)");
+    CHECK(sound_batch_queue_count() == 0,
+          "disabled submits leave nothing deferred (batch off)");
+    sound_subsystem_enable_set(1, 0);
+
+    /* Immediate multi-link play draws once through the route. */
+    h = was_h;
+    nd = was_nd;
+    pick = test_variant_draw() % 2;
+    if (pick != 0) {
+        int t = nd;
+        nd = h;
+        h = t;
+    }
+    sound_alias_play(12, 0);
+    CHECK(sound_variant_chain(12, out, 16) == 2 && out[0] == h && out[1] == nd,
+          "immediate plays draw through the variant select");
+    CHECK(sound_batch_queue_count() == 0, "immediate plays defer nothing");
+
+    sound_bank_clear();
+    for (int i = 0; i < 2; ++i) {
+        remove(files[i]);
+    }
+}
+
 int main(int argc, char** argv)
 {
     test_synthetic();
@@ -953,6 +1145,7 @@ int main(int argc, char** argv)
     test_bank_entries();
     test_variant_chains();
     test_variant_properties();
+    test_submission_route();
     for (int i = 1; i < argc; ++i) {
         if (strcmp(argv[i], "--real") == 0 && i + 1 < argc) {
             test_real(argv[i + 1]);

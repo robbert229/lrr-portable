@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 313 | 12.2% |
+| ported | 318 | 12.4% |
 | anchored | 5 | 0.2% |
-| named | 2200 | 85.8% |
+| named | 2195 | 85.6% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 0 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (313 functions)
+  (318 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (2200 functions)
+  citation yet (2195 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 2205 (86.0%).**
+**Game logic remaining to port: 2200 (85.8%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -742,13 +742,8 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00463f00` | SceneQuadGridEmit |
 | `0x004641c0` | BuildingPlacementFootprintRenderAndValidate |
 | `0x00464720` | SurfaceVisibilitySet |
-| `0x00464fa0` | SoundAliasPlay |
-| `0x00465090` | PositionalSoundSubmit |
 | `0x00465160` | SoundObjectDurationGet |
 | `0x00465190` | SoundHandleStopForward |
-| `0x004651a0` | SoundSubsystemFrameTick |
-| `0x004652c0` | SoundDeferredQueueDrain |
-| `0x004652d0` | SoundBatchQueueDrain |
 | `0x00465380` | SceneEffectRegistryReset |
 | `0x004653a0` | TransientEffectTexturesPreload |
 | `0x00465430` | TransientEffectEmitterCreate |
