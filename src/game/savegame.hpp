@@ -164,4 +164,12 @@ void checkpoint_blob_apply(GameContext* ctx, const uint8_t* blob);
 }
 #endif
 
+/* --- the save-side DAT accessor band (2026-10-24; findings 08/235) ---------
+ * OsfReadDirtyFlagGet (FUN_004593d0): the OSF dirty flag the save module
+ * already models (DAT_004ffe64); NULL answers 0 (deviation: blind read).
+ * CheckpointBlobGet (FUN_004601f0): the checkpoint blob pointer (corpus
+ * DAT_00552994), modeled on GameContext; NULL ctx answers NULL. */
+int   osf_read_dirty_flag_get(const GameContext* ctx);
+void* checkpoint_blob_get(const GameContext* ctx);
+
 #endif /* LEGORRR_GAME_SAVEGAME_HPP */

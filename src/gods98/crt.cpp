@@ -388,3 +388,20 @@ void display_resolution_filter_tuple_get(int index, int* w, int* h, int* bpp)
         *bpp = (n >= 0) ? s_filter_tuples[n].bpp : 0;
     }
 }
+
+/* --- the remaining unowned DAT one-liners (see crt.hpp) ---------------------
+ * Zero-initialized module statics per the s_system_state precedent — the
+ * globals' meanings are unresolved (finding 383) and none has a ported
+ * feeder. */
+static uint32_t s_flag_004ff978 = 0u;
+static uint32_t s_value_004ffe48 = 0u;
+
+uint32_t global_flag_004ff978_get(void)
+{
+    return s_flag_004ff978;
+}
+
+void global_value_004ffe48_set(uint32_t value)
+{
+    s_value_004ffe48 = value;
+}

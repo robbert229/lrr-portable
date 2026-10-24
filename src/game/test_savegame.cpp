@@ -515,5 +515,15 @@ int main(void)
           "the ctx accessor bounds clean");
     CHECK(sav_slot_ctx(&ctx, 2) == &ctx, "the ctx block answers valid slots");
 
+    /* The save-side DAT accessor band (2026-10-24). */
+    ctx.osf_dirty = 1;
+    CHECK(osf_read_dirty_flag_get(&ctx) == 1
+              && osf_read_dirty_flag_get(NULL) == 0,
+          "the dirty flag reads through ctx");
+    ctx.osf_dirty = 0;
+    CHECK(checkpoint_blob_get(&ctx) == ctx.checkpoint_blob
+              && checkpoint_blob_get(NULL) == NULL,
+          "the blob getter threads the ctx");
+
     return 0;
 }

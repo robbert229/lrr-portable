@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 695 | 27.1% |
+| ported | 700 | 27.3% |
 | anchored | 4 | 0.2% |
-| named | 1818 | 70.9% |
+| named | 1813 | 70.7% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (695 functions)
+  (700 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1818 functions)
+  citation yet (1813 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1823 (71.1%).**
+**Game logic remaining to port: 1818 (70.9%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -865,18 +865,14 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00454b70` | ObjectiveVoiceAliasRaiseCommit |
 | `0x00454b80` | ObjectiveVoiceAliasRaiseGateBit27 |
 | `0x004565f0` | EngineModeSet |
-| `0x00456640` | GlobalFlagGet_004ff978 |
 | `0x00456810` | SoundAliasPlayGlobal |
 | `0x00456830` | AdvisorInlineTokenRender |
 | `0x00456b80` | TutorialPathCoordinateIndex |
 | `0x00456c60` | ObjectPoolListsFreeAll |
 | `0x00456cb0` | CoordinateListCallbackVisit |
 | `0x00458650` | GlobalFlagGet_004ffe30 |
-| `0x00458660` | GlobalValueSet_004ffe48 |
 | `0x004588e0` | InputDeviceRelease |
-| `0x004589a0` | GlobalOptionLowBitsEnabled |
 | `0x00459240` | PopEntityStateOverride |
-| `0x004593d0` | OsfReadDirtyFlagGet |
 | `0x004593e0` | OsfWrite |
 | `0x00459530` | RenderThreePassUpdate |
 | `0x00459560` | HealthBarConfigLoadAndShadeDerive |
@@ -968,7 +964,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0045f7b0` | TaskFlushImages |
 | `0x0045f7d0` | TaskFlushFont |
 | `0x004601e0` | CheckpointBlobFree |
-| `0x004601f0` | CheckpointBlobGet |
 | `0x00460200` | SelectedLevelStartObjectUpdate |
 | `0x00460220` | StartLevelSelected |
 | `0x00460290` | EntityType4IndexListBuild |

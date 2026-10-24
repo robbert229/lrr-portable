@@ -2489,3 +2489,10 @@ uint32_t level_fielda8_get(const LevelState* s)
 {
     return s != NULL ? (uint32_t)level_int(s, 0xA8) : 0u;
 }
+
+/* GlobalOptionLowBitsEnabled (FUN_004589a0): faithful gate over the
+ * objective word's low three bits. */
+int global_option_low_bits_enabled(const LevelState* s)
+{
+    return s != NULL && (s->objective & 7u) != 0u;
+}

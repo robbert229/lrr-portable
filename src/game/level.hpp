@@ -810,4 +810,10 @@ void coordinate_callback_dispatch(const void* coord_pair, int value);
 void coordinate_callback_dispatch_by_mode(const void* coord_pair,
                                           int mode);
 
+/* GlobalOptionLowBitsEnabled (FUN_004589a0, findings 214/250): the corpus's
+ * option word gate — any low bit of the objective word (corpus DAT_004ffbc0,
+ * modeled as LevelState.objective) set. A NULL level answers 0 (deviation:
+ * the corpus tests its global blindly). */
+int global_option_low_bits_enabled(const LevelState* s);
+
 #endif /* LEGORRR_GAME_LEVEL_HPP */
