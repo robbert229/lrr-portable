@@ -472,10 +472,10 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00417e90,FUN_00417e90,ported,SavGetSlot,1,60
 00417ea0,FUN_00417ea0,ported,SavSetSlot,3,81
 00417eb0,FUN_00417eb0,ported,SavMarkRecord,1,694
-00417f20,FUN_00417f20,ported,OptionsContextSixFieldSet,3,342
-00417f40,FUN_00417f40,ported,SavWriteRecord,2,453
-00417f90,FUN_00417f90,ported,SavRecordPtr,2,213
-00417fc0,FUN_00417fc0,ported,SavCommit,1,126
+00417f20,FUN_00417f20,named,OptionsContextSixFieldSet,0,342
+00417f40,FUN_00417f40,named,SavWriteRecord,0,453
+00417f90,FUN_00417f90,named,SavRecordPtr,0,213
+00417fc0,FUN_00417fc0,named,SavCommit,0,126
 00417fe0,FUN_00417fe0,ported,CurrentSelectionContextGet,1,60
 00417ff0,FUN_00417ff0,ported,CurrentSelectionContextSet,1,81
 00418000,FUN_00418000,named,ShowLevelOverlayForCurrentSelection,0,264
