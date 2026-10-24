@@ -125,6 +125,13 @@ int rect_contains_point_from_object_bounds(const float* const* bounds_at_14,
  * machinery (unported) feeds it the stored pointer position. */
 int menu_pointer_rectangle_hit_test(int x, int y, int rect_x, int rect_y,
                                     int rect_w, int rect_h);
+
+/* MenuOverlayListCount (FUN_00412170, findings 23/240): count the
+ * overlay-list chain — the head pointer slot at record +0x40, nodes
+ * linked through the slot at node +0x18. Deviation: the corpus's
+ * 32-bit pointer slots are read native-size (the port's model of
+ * corpus pointer fields); NULL head answers 0. */
+int menu_overlay_list_count(const void* menu);
 /* t = dot(q-p, n) / dot(n, d) into t_out for ray (p,d) × plane (q,n);
  * answers 1 when not parallel, 0 otherwise (FUN_00479a30). */
 int ray_plane_intersection_parameter(float* t_out, const float* p,

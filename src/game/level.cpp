@@ -288,7 +288,10 @@ void terrain_destroy(void* handle)
 /* TerrainCellSurfaceTypeGet (FUN_0044f540, finding 226): the per-cell
  * surface-type byte in the physical block table — the port's terrain
  * handle is the TerrainState model, so the corpus's record fields
- * +0x8/+0x28 (stride, table) map to the modeled width/table pair. Bounds
+ * +0x8/+0x28 (stride, table) map to the modeled width/table pair. The
+ * byte is read, never written by this leaf: the corpus's writer is the
+ * renderer-side appearance apply (blocked, renderer seam), so a created
+ * terrain answers the zero state until that lands (documented). Bounds
  * guard added — the corpus indexes blind (documented deviation). */
 int terrain_cell_surface_type_get(const void* terrain, int x, int y)
 {

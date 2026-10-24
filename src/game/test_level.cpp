@@ -585,6 +585,24 @@ int main(int argc, char** argv)
               "a plain type places");
 
         __builtin_memcpy(rec + 0x08, &saved, 4);
+
+        /* Surface-type byte leaf (FUN_0044f540) over a created terrain:
+         * the +0x24 bytes stay in the zero state until the blocked
+         * renderer-side appearance apply lands; the corners to test now
+         * are the bounds guard and the NULL handle. */
+        void* terrain = terrain_create("L01_surface.map", 1.0f);
+        CHECK(terrain != NULL, "terrain built from the surface map");
+        CHECK(terrain_cell_surface_type_get(terrain, 3, 4) == 0,
+              "fresh terrain answers the zero state");
+        CHECK(terrain_cell_surface_type_get(terrain, GRID, 0) == 0,
+              "x at the width edge answers zero");
+        CHECK(terrain_cell_surface_type_get(terrain, 0, GRID) == 0,
+              "y at the height edge answers zero");
+        CHECK(terrain_cell_surface_type_get(terrain, -1, 0) == 0,
+              "a negative index answers zero");
+        CHECK(terrain_cell_surface_type_get(NULL, 0, 0) == 0,
+              "NULL terrain answers zero");
+        terrain_destroy(terrain);
         rec[2] = saved_b2;
     }
 

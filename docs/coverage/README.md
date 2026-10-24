@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 499 | 19.5% |
+| ported | 504 | 19.7% |
 | anchored | 5 | 0.2% |
-| named | 2014 | 78.5% |
+| named | 2009 | 78.4% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 0 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (499 functions)
+  (504 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (2014 functions)
+  citation yet (2009 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 2019 (78.7%).**
+**Game logic remaining to port: 2014 (78.5%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -252,6 +252,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00411790` | MenuPickWidgetUnderPointer |
 | `0x00411840` | FrontendProgressValueChanged |
 | `0x00411f10` | PercentSplitSurfaceBlit |
+| `0x00412190` | MenuAudioTickIntervalReached |
 | `0x004121b0` | MenuOverlayFlicPlaybackController |
 | `0x00412450` | RenderUiFrameCell |
 | `0x004124f0` | MenuSaveImageConfigRectBlit |
@@ -693,7 +694,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0044f230` | TerrainCellMaterialSet |
 | `0x0044f490` | GridCellOperationApplyAll |
 | `0x0044f4e0` | TerrainCellSurfaceTypeSet |
-| `0x0044f540` | TerrainCellSurfaceTypeGet |
 | `0x0044f570` | TerrainCellSurfaceTypeReset |
 | `0x0044f5c0` | TerrainCellSurfaceAppearanceApply |
 | `0x0044f700` | WorldToTerrainCellBoundsCheck |
@@ -741,6 +741,8 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00453da0` | CameraFocusTweenUpdate |
 | `0x00456810` | SoundAliasPlayGlobal |
 | `0x00456830` | AdvisorInlineTokenRender |
+| `0x00456b80` | TutorialPathCoordinateIndex |
+| `0x00456c60` | ObjectPoolListsFreeAll |
 | `0x00456cb0` | CoordinateListCallbackVisit |
 | `0x004588e0` | InputDeviceRelease |
 | `0x00459240` | PopEntityStateOverride |
@@ -903,6 +905,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0046d1a0` | SceneObjectAttachedResourceRelease |
 | `0x0046d1c0` | AnimationDurationForLoopCount |
 | `0x0046d260` | SceneResourceSlotsRebuild |
+| `0x0046d2c0` | SceneResourceVisibilitySet |
 | `0x0046d350` | SceneResourceDrawAtOrigin |
 | `0x0046d380` | AttachedModelOrientationUpdate |
 | `0x0046d9f0` | SceneResourceNamedEntryResolveWithFallback |

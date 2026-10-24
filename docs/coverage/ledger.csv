@@ -393,7 +393,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00411f00,FUN_00411f00,ported,KeyContextCheck,1,99
 00411f10,FUN_00411f10,named,PercentSplitSurfaceBlit,0,2216
 00412170,FUN_00412170,ported,MenuOverlayListCount,3,209
-00412190,FUN_00412190,ported,MenuAudioTickIntervalReached,2,100
+00412190,FUN_00412190,named,MenuAudioTickIntervalReached,0,100
 004121b0,FUN_004121b0,named,MenuOverlayFlicPlaybackController,0,2748
 00412450,FUN_00412450,named,RenderUiFrameCell,0,654
 004124f0,FUN_004124f0,named,MenuSaveImageConfigRectBlit,0,2192
@@ -1156,7 +1156,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0044f380,FUN_0044f380,ported,TerrainVoxelNeighborsMutate,1,1054
 0044f490,FUN_0044f490,named,GridCellOperationApplyAll,0,466
 0044f4e0,FUN_0044f4e0,named,TerrainCellSurfaceTypeSet,0,546
-0044f540,FUN_0044f540,named,TerrainCellSurfaceTypeGet,0,191
+0044f540,FUN_0044f540,ported,TerrainCellSurfaceTypeGet,3,191
 0044f570,FUN_0044f570,named,TerrainCellSurfaceTypeReset,0,261
 0044f5c0,FUN_0044f5c0,named,TerrainCellSurfaceAppearanceApply,0,488
 0044f640,FUN_0044f640,ported,MapCellToWorldCenter,3,384
@@ -1251,9 +1251,9 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004567c0,FUN_004567c0,ported,GlobalValue_004ff9bcStoreAndReturn,1,185
 00456810,FUN_00456810,named,SoundAliasPlayGlobal,0,113
 00456830,FUN_00456830,named,AdvisorInlineTokenRender,0,5209
-00456b80,FUN_00456b80,ported,TutorialPathCoordinateIndex,3,1260
+00456b80,FUN_00456b80,named,TutorialPathCoordinateIndex,0,1260
 00456c30,FUN_00456c30,ported,ObjectPoolListHeadGet,3,215
-00456c60,FUN_00456c60,ported,ObjectPoolListsFreeAll,3,450
+00456c60,FUN_00456c60,named,ObjectPoolListsFreeAll,0,450
 00456cb0,FUN_00456cb0,named,CoordinateListCallbackVisit,0,389
 004574e0,FUN_004574e0,ported,ObjectiveTextOverlayLoad,1,11703
 00457d40,FUN_00457d40,ported,ObjectiveConfigLoad,3,6765
@@ -1610,7 +1610,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0046d1a0,FUN_0046d1a0,named,SceneObjectAttachedResourceRelease,0,94
 0046d1c0,FUN_0046d1c0,named,AnimationDurationForLoopCount,0,625
 0046d260,FUN_0046d260,named,SceneResourceSlotsRebuild,0,544
-0046d2c0,FUN_0046d2c0,ported,SceneResourceVisibilitySet,3,690
+0046d2c0,FUN_0046d2c0,named,SceneResourceVisibilitySet,0,690
 0046d330,FUN_0046d330,ported,EntityTypeFlagGetBit1,3,93
 0046d350,FUN_0046d350,named,SceneResourceDrawAtOrigin,0,192
 0046d380,FUN_0046d380,named,AttachedModelOrientationUpdate,0,6267

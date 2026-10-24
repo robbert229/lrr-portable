@@ -1475,6 +1475,26 @@ band; `crt_test` pins the recipe as bit patterns).
 guard reproduced and its 32-bit cell-array slot read as a native
 pointer (documented deviation).
 
+**Handle sweeps: pool heads, render gates, overlay counts, cells**
+(2026-10-24; findings 226/357/374/431/432): five more pure corpus leaves,
+each in its semantic home. `object_pool_list_head_get`
+(`ObjectPoolListHeadGet @ 0x456c30`, `record.*`) indexes the 55 list
+heads at `+0x114` with the corpus's exact `-1 < idx < 55` bounds;
+`model_child_render_eligibility_check` (`ModelChildRenderEligibilityCheck
+@ 0x483a70`, `record.*`) is the two-bit render gate on the `+0x6c` word.
+`entity_type_flag_bit1_get` (`EntityTypeFlagGetBit1 @ 0x46d330`,
+`record.*`) reads bit 1 of the `+0x1e8` flag byte — meaning stays with
+callers (finding 357). `menu_overlay_list_count` (`MenuOverlayListCount
+@ 0x412170`, `view.*`) walks the overlay chain through the port's
+native pointer slots. `terrain_cell_surface_type_get`
+(`TerrainCellSurfaceTypeGet @ 0x44f540`, `level.*`) reads the surface
+byte at block-table `+0x24` of the (now header-exposed) `terrain_create`
+handle: the corpus's writer is the renderer-side appearance apply —
+blocked with the other renderer seams — so a fresh terrain answers the
+zero state, and the port adds the bounds guard the corpus lacks
+(documented deviations). `level_test` drives the handle through the
+fixture surface map.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the
