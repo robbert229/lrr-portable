@@ -708,6 +708,17 @@ const char* terrain_surface_type_name_get(int index);
  * owner), with the corpus's blind indexing guarded (deviation). */
 uint32_t surface_type_configured_value_at_index(int index);
 
+/* TerrainNeighborCoordinateCheck (FUN_0042f350): classify a cell's
+ * cardinal-neighbor state. The corpus probes north, east, south, west in
+ * order, setting mask bit i when the neighbor's flag word (+0x08) carries
+ * the occupied class 0x20000000 or the work flag 0x400; an out-of-map
+ * neighbor's second probe dereferences the corpus's table out of bounds,
+ * so the port answers it zero (bounds deviation). The mask then selects
+ * a kind nibble and a return code through two lookup tables, chosen by
+ * mode 0 versus non-zero. */
+uint32_t terrain_neighbor_coordinate_check(const LevelState* s, int x, int y,
+                                           uint8_t* kind, int mode);
+
 #ifdef __cplusplus
 }
 #endif

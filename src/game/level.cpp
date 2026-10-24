@@ -2196,3 +2196,37 @@ uint32_t surface_type_configured_value_at_index(int index)
     }
     return s_surface_type_values[index];
 }
+
+/* --- neighbor coordinate classification (see level.hpp) ------------------- */
+uint32_t terrain_neighbor_coordinate_check(const LevelState* s, int x, int y,
+                                           uint8_t* kind, int mode)
+{
+    /* Corpus neighbor deltas: (0,-1), (+1,0), (0,+1), (-1,0). */
+    static const int dx[4] = { 0, 1, 0, -1 };
+    static const int dy[4] = { -1, 0, 1, 0 };
+    /* Mask -> (kind, code) tables for mode 0 / mode != 0. */
+    static const uint8_t kind_tbl[16] = {
+        0, 2, 3, 3, 0, 0, 0, 0, 1, 2, 1, 3, 1, 2, 1, 0
+    };
+    static const uint8_t code_tbl[16] = {
+        0x65, 0x65, 0x65, 99, 0x65, 0x62, 99, 100,
+        0x65, 99, 0x62, 100, 99, 100, 100, 0x60
+    };
+    static const uint8_t alt_code_tbl[16] = {
+        0x75, 0x75, 0x75, 0x73, 0x75, 0x72, 0x73, 0x74,
+        0x75, 0x73, 0x72, 0x74, 0x73, 0x74, 0x74, 0x71
+    };
+
+    unsigned mask = 0;
+    for (unsigned i = 0; i < 4; ++i) {
+        const uint32_t w = cell_flag_word(s, x + dx[i], y + dy[i]);
+        if ((w & 0x20000000u) != 0u || (w & 0x400u) != 0u) {
+            mask |= 1u << i;
+        }
+    }
+    const uint8_t k = kind_tbl[mask];
+    if (kind != NULL) {
+        *kind = k;
+    }
+    return (mode != 0) ? alt_code_tbl[mask] : code_tbl[mask];
+}
