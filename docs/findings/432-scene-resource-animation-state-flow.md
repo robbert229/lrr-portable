@@ -2,6 +2,14 @@
 
 Issue #185 assigns 31 procedures connecting config parsing, scene resource slots, paired animation channels, entity activity changes, and attached-resource cleanup. The individual procedures are already mapped in several earlier findings; this finding joins their state flow and supplies a complete address-to-finding cross-reference. Field meanings and callback polarity remain literal where the available evidence does not resolve them.
 
+**Target and evidence.** Static analysis of shipped `reference/LegoRR.exe`,
+SHA-256 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`.
+Function bodies are in [`LEGORR.full.c`](../decompiles/full/LEGORR.full.c);
+the legacy decompile is also available in
+[`engine-region.c`](../decompiles/legacy/engine-region.c). This finding joins
+those direct body observations with caller paths and earlier behavior maps;
+interpretations and unresolved meanings are labeled in the text.
+
 ## Configuration and scene-channel registration
 
 `UpgradeLevelTableParse` (`0x0046c160`) reads the `Upgrades` config entries into a level-mask table and is called from building and vehicle definition parsing (finding 241). `VehicleTypeDefinitionParse` (`0x0046c6f0`) populates each vehicle-type record, including the model/wheel resources; the vehicle-type initializer then sets visibility and render-lock state for its scene handles (findings 225 and 409). `SceneRecordTemplateInstantiate` (`0x0046cff0`) copies the configured template, resolves and duplicates visual handles, initializes resource slots, and attaches listed child resources. `SceneAssignOwnerFromModel` (`0x0046d140`) links the scene object to its model owner (finding 28). These paths connect configuration records to the shared scene-object runtime described in findings 25 and 28.
@@ -20,7 +28,7 @@ Issue #185 assigns 31 procedures connecting config parsing, scene resource slots
 
 The resource ownership path includes several separate operations. `SceneObjectResourceGet` (`0x0046d9e0`) exposes the resource handle held by a scene object. `PairedResourceStateSet` (`0x0046ced0`) applies one state update to a resource/object pair and repeats it for the optional second pair; `SixResourceSlotsSetState` (`0x0046cfc0`) forwards the supplied state across six populated slots (finding 354). `EntityPayloadType1Release` (`0x0046ce10`) releases the payload-specific resource during entity teardown (findings 03 and 84). `SceneObjectAttachedResourceRelease` (`0x0046d1a0`) releases the object-attached resource, while `SceneObjectResourceRelease` (`0x0046db70`) releases and clears the scene-resource handle (findings 372 and 374). `AttachedEntitySlotObjectGet` (`0x0046db20`) resolves the object stored in an attached-entity slot, and `ObjectRecordField11CGet` (`0x0046db60`) returns the literal field at `+0x11c` (findings 351 and 372).
 
-`EntityActivityChangeDispatch` (`0x0046da50`) dispatches the activity transition into the scene-channel update path. The adjacent `SceneActivityUpdateDispatch` call sites set or clear several entity bits and may re-register scene slots; those call paths are described in findings 35, 70, 241, and 251. This establishes the static ordering between activity change and resource/slot updates, but not the runtime timing of every animation callback or the full semantic contract of each activity code.
+The repository name `EntityActivityChangeDispatch` for `0x0046da50` overstates this helper's role: its body checks the scene object's `+0xe0` resource, reads the indexed cache at `+0x10c + index*4`, and on a cache miss resolves and stores a named resource through `SceneResourceNamedEntryResolveWithFallback`. `SceneActivityUpdateDispatch` (`0x00447c40`) calls it from the kind-1 activity-transition path with the scene object and the entity's `+0xb8` index (finding 70). Thus the helper participates in a caller's activity transition as a resource lookup; it does not dispatch the transition itself. The adjacent `SceneActivityUpdateDispatch` call sites set or clear several entity bits and may re-register scene slots; those call paths are described in findings 35, 70, 241, and 251. This establishes a static call relationship between activity changes and resource/slot updates, but not the runtime timing of every animation callback or the full semantic contract of each activity code.
 
 ## Unresolved questions
 
