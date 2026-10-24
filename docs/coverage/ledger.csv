@@ -68,13 +68,13 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00402f70,FUN_00402f70,ported,EntityTargetCommandQueue,1,311
 00402fb0,FUN_00402fb0,ported,CellCommandType11Issue,1,492
 00403030,FUN_00403030,named,CellCommandType3Issue,0,499
-004030b0,FUN_004030b0,named,CoordinatePairEventQueue,0,274
+004030b0,FUN_004030b0,ported,CoordinatePairEventQueue,1,274
 004030e0,FUN_004030e0,ported,,1,1248
 00403190,FUN_00403190,ported,ObjectEventType2Queue,1,312
-004031e0,FUN_004031e0,ported,ActiveEntityListContainsCode,4,851
+004031e0,FUN_004031e0,named,ActiveEntityListContainsCode,0,851
 00403270,FUN_00403270,ported,SelectionDragAreaCommandCreate,1,839
 00403320,FUN_00403320,named,ObjectCommandTaskCreate,0,677
-004033c0,FUN_004033c0,ported,ObjectAttachedRecordAllocate,3,270
+004033c0,FUN_004033c0,named,ObjectAttachedRecordAllocate,0,270
 004033f0,FUN_004033f0,ported,CoordinatePairTaskRecordQueue,1,309
 00403430,FUN_00403430,ported,TaskRegistryRemoveType0EntryByPair,1,559
 004034a0,FUN_004034a0,ported,ScalarTaskRecordQueue,1,255
