@@ -1839,6 +1839,22 @@ move into the follow offsets — the zero-length case goes NaN through
 the corpus's unguarded normalize, as shipped. `view_test` pins the
 gates, the cap clamp, and the NaN shape.
 
+**Selection snapshot/dispatch + the display filter tuple** (2026-10-24;
+findings 06/10/282/425/468): `selection_snapshot_create` (0x452520) copies
+the selection through the port's heap model — nonempty answers count plus
+pointer copy, empty answers zero without writing (the corpus's dead
+byte-copy tail is absent; allocations are pointer-sized).
+`selection_command_dispatch` (0x452d60) gate-first dispatches the
+sound-minimum-distance leaf: the current-selection context's flag bit
+plus type-2/owner gate, else a selection scan that swaps through the
+owner — the port models the owner as an EntitySlot +0x36c mirror field
+(pointer-sized deviation). `display_resolution_filter_tuple_append`
+(0x49d870) lands in `crt.*` over zero-initialized statics: corpus-shaped
+unbounded counting, guarded 16-entry writes; the seeding DirectDraw
+initialize and the match read stay blocked on the COM/display seams.
+`cmd_test` pins the snapshot copy, the dispatch gates and indirection;
+`crt_test` the seeded shape and overflow.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

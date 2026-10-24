@@ -206,6 +206,22 @@ int cmd_array_find_value_index(const int* array, unsigned count, int value,
  * message_active_count precedent). */
 int cmd_queue_active_count_peek(void);
 
+/* --- selection snapshot / dispatch (2026-10-24) -----------------------------
+ * SelectionSnapshotCreate (FUN_00452520, findings 06/10/468): when the
+ * selection is nonempty, allocates a copy through the port's heap model,
+ * copies the entity pointers, and answers count + array with 1; the empty
+ * selection answers 0 without writing. (The corpus copies `count &
+ * 0x3fffffff` dwords and trails a dead zero-iteration byte loop — the
+ * dead tail is simply absent; the copy is pointer-sized on the port.)
+ * SelectionCommandDispatch (FUN_00452d60, findings 06/10, opcode 9's
+ * helper): gate the current-selection context (flag word + bit 0x10 and
+ * type-2/owner), else scan the selection array through the owner
+ * indirection, and drive the sound-minimum-distance leaf with mode 0 and
+ * the dispatch parameter as the scalar selector. NULL array output and
+ * failed allocations skip (documented deviations). */
+int selection_snapshot_create(void** array_out, unsigned* count_out);
+int selection_command_dispatch(int param);
+
 #ifdef __cplusplus
 }
 #endif

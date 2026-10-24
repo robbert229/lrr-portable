@@ -345,3 +345,46 @@ uint32_t crt_counter_00555328_peek(void) { return s_counter_00555328; }
 uint32_t crt_counter_0055532c_peek(void) { return s_counter_0055532c; }
 float    crt_float_00555330_peek(void)   { return s_float_00555330; }
 float    crt_float_00555120_peek(void)   { return s_float_00555120; }
+
+/* --- display-resolution filter tuples @ 0x49d870 (see crt.hpp) ------
+ * Zero-initialized statics; the corpus's blind slot writes land inside the
+ * guarded 16-entry window. The tuple count mirrors DAT_005754e0. */
+typedef struct FilterTuple {
+    int32_t w, h, bpp;
+} FilterTuple;
+
+#define FILTER_TUPLE_ENTRIES 16
+static FilterTuple s_filter_tuples[FILTER_TUPLE_ENTRIES];
+static int         s_filter_tuple_count;
+
+void display_resolution_filter_tuple_append(int width, int height, int bpp)
+{
+    if (s_filter_tuple_count < FILTER_TUPLE_ENTRIES) {
+        FilterTuple* t = &s_filter_tuples[s_filter_tuple_count];
+        t->w = width;
+        t->h = height;
+        t->bpp = bpp;
+    }
+    s_filter_tuple_count = s_filter_tuple_count + 1;
+}
+
+int display_resolution_filter_tuple_count(void)
+{
+    return s_filter_tuple_count;
+}
+
+void display_resolution_filter_tuple_get(int index, int* w, int* h, int* bpp)
+{
+    const int n = (index >= 0 && index < s_filter_tuple_count
+                   && index < FILTER_TUPLE_ENTRIES)
+        ? index : -1;
+    if (w != NULL) {
+        *w = (n >= 0) ? s_filter_tuples[n].w : 0;
+    }
+    if (h != NULL) {
+        *h = (n >= 0) ? s_filter_tuples[n].h : 0;
+    }
+    if (bpp != NULL) {
+        *bpp = (n >= 0) ? s_filter_tuples[n].bpp : 0;
+    }
+}

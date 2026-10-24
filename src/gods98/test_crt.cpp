@@ -328,6 +328,34 @@ int main(void)
     test_crt_leaves();
     test_constant_band();
     test_static_globals();
+    /* The display-resolution filter tuples (2026-10-24): the seeded shape,
+     * the guarded window, and the overflow count. */
+    {
+        CHECK(display_resolution_filter_tuple_count() == 0,
+              "the table starts empty (no seeding seam)");
+        display_resolution_filter_tuple_append(640, 480, 16);
+        display_resolution_filter_tuple_append(800, 600, 16);
+        display_resolution_filter_tuple_append(1024, 768, 16);
+        int w = 0, h = 0, b = 0;
+        display_resolution_filter_tuple_get(1, &w, &h, &b);
+        CHECK(display_resolution_filter_tuple_count() == 3 && w == 800
+                  && h == 600 && b == 16,
+              "the seeded tuple lands in its slot");
+        for (int i = 0; i < 13; ++i) {
+            display_resolution_filter_tuple_append(7, 7, 7);
+        }
+        display_resolution_filter_tuple_get(15, &w, &h, &b);
+        CHECK(display_resolution_filter_tuple_count() == 16 && w == 7
+                  && h == 7 && b == 7,
+              "the sixteenth slot fills");
+        display_resolution_filter_tuple_append(1, 1, 1);
+        CHECK(display_resolution_filter_tuple_count() == 17,
+              "the corpus keeps counting past the window");
+        w = 5;
+        display_resolution_filter_tuple_get(16, &w, &h, &b);
+        CHECK(w == 0, "the guarded read answers zero (deviation)");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "crt_test: %d failure(s)\n", s_failures);
         return 1;

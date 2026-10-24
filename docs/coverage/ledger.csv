@@ -1207,7 +1207,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004520d0,FUN_004520d0,ported,SelectionRoot,9,2859
 00452430,FUN_00452430,ported,EntityRandomValidCellCommandCreate,1,683
 004524b0,FUN_004524b0,named,SelectionObjectDetach,0,373
-00452520,FUN_00452520,named,SelectionSnapshotCreate,0,703
+00452520,FUN_00452520,ported,SelectionSnapshotCreate,1,703
 00452580,FUN_00452580,ported,ActiveContextRecordGet,1,255
 004525b0,FUN_004525b0,ported,SelectedEntitySetHasAny,3,59
 004525c0,FUN_004525c0,ported,SelectedEntity,3,83
@@ -1222,8 +1222,8 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00452870,FUN_00452870,ported,SelectionCandidateEligibilityCheck,3,359
 004528c0,FUN_004528c0,named,SelectionStateTick,0,3991
 00452be0,FUN_00452be0,ported,SelectionClear,1,568
-00452c50,FUN_00452c50,ported,SelectionEntityRemove,1,458
-00452cc0,FUN_00452cc0,ported,SelectedEntityStateMonitor,1,615
+00452c50,FUN_00452c50,named,SelectionEntityRemove,0,458
+00452cc0,FUN_00452cc0,named,SelectedEntityStateMonitor,0,615
 00452d60,FUN_00452d60,ported,SelectionCommandDispatch,1,791
 00452df0,FUN_00452df0,named,TutorialNerpScriptFileLoad,0,559
 00452e70,FUN_00452e70,named,ObjectiveAdvisorTokenLoad,0,6179

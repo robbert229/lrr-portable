@@ -237,19 +237,10 @@ typedef struct EntitySlot {
     void*    wake_target;    /* +0x364: attached wake target (FUN_0044c110;
                                * the corpus fills it via the attach-pair
                                * writer 0x44c0e2, which is not ported)      */
-    const void* attach_304;  /* +0x304: attached object the selection
-                              * filter follows in place of the candidate   */
     const void* owner_36c;   /* +0x36c: owner pointer read by the
                               * context-selected predicate and the
                               * selection-command dispatch (pointer-sized
                               * mirror of the corpus's 32-bit word)         */
-    /* --- carried-object pair (corpus +0x308/+0x324/+0x348) ---------------
-     * A type-3 carrier links the object it carries through +0x308; +0x324
-     * holds the carry state the detach clears, and +0x348 points at the
-     * reference whose dword the detach folds into the level's field 0x9c. */
-    void*    carry_link_308;  /* +0x308: carried object link            */
-    int32_t  carry_state_324; /* +0x324: carry state word               */
-    void*    carry_ref_348;   /* +0x348: carried reference (dword read) */
     float    field_340;      /* +0x340 float; the wake mirror sets 100.0
                               * (its general corpus readers are TODO)       */
     /* --- route-progress advance (corpus +0x344/+0x2fc, finding 448) -----
