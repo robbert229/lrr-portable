@@ -40,6 +40,10 @@ typedef struct ViewContext {
     CameraHandle cam_facing; /* [0xb] facing camera */
     int    cam_mode;   /* [0xc] */
     float  follow_span;/* [0x24] */
+    float  pan_accum;  /* +0x9c pointer-pan accumulator (CameraPointerPanUpdate) */
+    float  _gap_a5;    /* corpus dword gap after the accumulator slot */
+    float  _gap_a9;    /* ditto */
+    float  _gap_ad;    /* ditto */
     float  step;       /* [0x28] */
     int    timer_num;  /* [0x29] */
     int    timer_acc;  /* [0x2a] */
@@ -57,6 +61,12 @@ void view_views_tick(EngineContext* ctx, float dt, float scale);
  * DAT_005560ac tile-count edge clamp). */
 extern float g_view_follow_scale;
 extern int   g_view_grid_edge;
+/* DAT_005560a0 / DAT_005560a8 — the pointer-pan cap (CameraAcceleration)
+ * and per-move scale (CameraSpeed). No ported code feeds them before the
+ * view-config setter below runs, so they start zero (the pan is inert
+ * until configured — documented deviation). */
+extern float g_view_pan_cap;
+extern float g_view_pan_scale;
 
 /* Test hook: when nonzero, the mode-3 velocity-EMA target is injected. */
 extern int g_view_test_blend;
@@ -171,5 +181,27 @@ void cam_set_facing(CameraHandle* c, const float* r);       /* FUN_00475470 */
  * g_view_grid_edge is DAT_005560ac with its ported writer, so this is
  * the faithful getter. */
 int view_grid_edge_get(void);
+
+/* --- camera-selection cluster (2026-10-24) ---------------------------------
+ * CameraViewContextSet / SelectionRecordPointSet /
+ * CameraGetPositionWithTerrainHeight / CameraPointerPanUpdate
+ * (FUN_00435e0e / FUN_00436b0b / FUN_00436b33 / FUN_00436b87, findings
+ * 102/339/378/424/426): the follow-view camera leaves. The setter stores
+ * the four view-config globals (cap, follow scale, pan scale, edge). The
+ * point set writes the follow camera's x/y for follow-mode views; the
+ * position read copies the follow camera and replaces its z with the
+ * terrain height (the corpus's world-handle argument maps to the engine
+ * context's bound level block — documented deviation). The pan update
+ * normalizes the move vector, advances the per-view accumulator by
+ * amount * pan scale, caps it, scales the vector by accumulator * amount,
+ * and accumulates it into the follow offsets (the corpus's +0x18 field).
+ * Zero-length vectors normalize as-is (the corpus's unguarded leaf). */
+void camera_view_context_set(float cap, float follow_scale,
+                             float pan_scale, int edge);
+void selection_record_point_set(ViewContext* v, float x, float y);
+int  camera_get_position_with_terrain_height(ViewContext* v,
+                                             EngineContext* ctx,
+                                             float out[3]);
+void camera_pointer_pan_update(ViewContext* v, float vec[3], float amount);
 
 #endif /* LEGORRR_VIEW_HPP */

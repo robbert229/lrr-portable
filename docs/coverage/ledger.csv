@@ -830,7 +830,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00435b20,FUN_00435b20,named,SceneObjectChainRecordCreate,0,1689
 00435d91,FUN_00435d91,ported,EntityB8Bit3SetOrClear,1,228
 00435dc8,FUN_00435dc8,named,CameraViewContextClose,0,192
-00435e0e,FUN_00435e0e,named,CameraViewContextSet,0,303
+00435e0e,FUN_00435e0e,ported,CameraViewContextSet,1,303
 00435e35,FUN_00435e35,named,ModelTransformCopyToSceneNode,0,575
 00435ebb,FUN_00435ebb,named,ScreenEffectRecordSet,0,367
 00435ef4,FUN_00435ef4,ported,RecordFields4And14Set,1,173
@@ -850,10 +850,10 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00436aa5,FUN_00436aa5,named,CameraZoomUpdate,0,124
 00436ac9,FUN_00436ac9,named,RendererNodeRelativePositionSet,0,155
 00436ae9,FUN_00436ae9,named,SelectionRecordPointGet,0,136
-00436b0b,FUN_00436b0b,named,SelectionRecordPointSet,0,165
-00436b33,FUN_00436b33,named,CameraGetPositionWithTerrainHeight,0,279
+00436b0b,FUN_00436b0b,ported,SelectionRecordPointSet,1,165
+00436b33,FUN_00436b33,ported,CameraGetPositionWithTerrainHeight,1,279
 00436b79,FUN_00436b79,ported,CameraRotationGet,3,87
-00436b87,FUN_00436b87,named,CameraPointerPanUpdate,0,504
+00436b87,FUN_00436b87,ported,CameraPointerPanUpdate,1,504
 00436c20,FUN_00436c20,named,ActivityNameTableInit,0,5294
 00437050,FUN_00437050,named,EntityPoolResourcesRelease,0,466
 004370b0,FUN_004370b0,named,RenderConfigSixFieldCopyOut,0,252

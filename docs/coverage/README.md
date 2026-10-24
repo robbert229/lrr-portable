@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 599 | 23.4% |
+| ported | 603 | 23.5% |
 | anchored | 5 | 0.2% |
-| named | 1913 | 74.6% |
+| named | 1909 | 74.5% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (599 functions)
+  (603 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (5 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1913 functions)
+  citation yet (1909 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1919 (74.8%).**
+**Game logic remaining to port: 1915 (74.7%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -632,7 +632,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00435aa0` | PanelSelectionHighlightToggle |
 | `0x00435b20` | SceneObjectChainRecordCreate |
 | `0x00435dc8` | CameraViewContextClose |
-| `0x00435e0e` | CameraViewContextSet |
 | `0x00435e35` | ModelTransformCopyToSceneNode |
 | `0x00435ebb` | ScreenEffectRecordSet |
 | `0x00435f16` | CursorScreenRayContextReset |
@@ -645,9 +644,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00436aa5` | CameraZoomUpdate |
 | `0x00436ac9` | RendererNodeRelativePositionSet |
 | `0x00436ae9` | SelectionRecordPointGet |
-| `0x00436b0b` | SelectionRecordPointSet |
-| `0x00436b33` | CameraGetPositionWithTerrainHeight |
-| `0x00436b87` | CameraPointerPanUpdate |
 | `0x00436c20` | ActivityNameTableInit |
 | `0x00437050` | EntityPoolResourcesRelease |
 | `0x004370b0` | RenderConfigSixFieldCopyOut |

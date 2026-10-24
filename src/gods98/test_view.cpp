@@ -305,6 +305,77 @@ int main(void)
         g_view_grid_edge = saved;
     }
 
+    /* Camera-selection cluster (2026-10-24): the config setter, the
+     * follow-mode camera leaves, and the pointer-pan accumulator. */
+    {
+        float save_follow = g_view_follow_scale;
+        int save_edge = g_view_grid_edge;
+        float save_cap = g_view_pan_cap, save_scale = g_view_pan_scale;
+        CHECK(g_view_pan_cap == 0.0f && g_view_pan_scale == 0.0f,
+              "the pan globals start zero (unfed)");
+
+        ViewContext v = {};
+        v.mode = 1;
+        v.offset[0] = 0.0f; v.offset[1] = 0.0f; v.offset[2] = 0.0f;
+        EngineContext ctx = {};
+
+        /* The point set: follow mode writes cam_follow x/y (z zero). */
+        selection_record_point_set(&v, 12.5f, -3.0f);
+        float got[3] = { 9, 9, 9 };
+        cam_get_pos(&v.cam_follow, got);
+        CHECK(got[0] == 12.5f && got[1] == -3.0f && got[2] == 0.0f,
+              "the follow-mode point set writes the follow camera");
+        v.mode = 2;
+        selection_record_point_set(&v, 99.0f, 99.0f);
+        cam_get_pos(&v.cam_follow, got);
+        CHECK(got[0] == 12.5f, "the non-follow mode ignores the point set");
+        v.mode = 1;
+
+        /* Position + terrain: unbound level answers zero z, constant 1. */
+        float out[3] = { 7, 7, 7 };
+        CHECK(camera_get_position_with_terrain_height(&v, &ctx, out) == 1
+                  && out[2] == 0.0f,
+              "the terrain read follows the follow camera (z stub)");
+        out[0] = 7;
+        v.mode = 3;
+        CHECK(camera_get_position_with_terrain_height(&v, &ctx, out) == 1
+                  && out[0] == 7.0f,
+              "non-follow leaves the output alone (corpus shape)");
+        v.mode = 1;
+
+        /* The pan update: scale 2, cap 5. Move 1 along x three times. */
+        camera_view_context_set(5.0f, 1.0f, 2.0f, 0);
+        CHECK(g_view_follow_scale == 1.0f && g_view_grid_edge == 0,
+              "the setter lands the follow scale and edge");
+        float step[3] = { 1.0f, 0.0f, 0.0f };
+        camera_pointer_pan_update(&v, step, 1.0f);
+        CHECK(v.offset[0] == 2.0f && v.pan_accum == 2.0f,
+              "the first move scales by amount * pan scale");
+        step[0] = 1.0f;
+        camera_pointer_pan_update(&v, step, 1.0f);
+        CHECK(v.offset[0] == 6.0f && v.pan_accum == 4.0f,
+              "the accumulator compounds into the offsets");
+        step[0] = 1.0f;
+        camera_pointer_pan_update(&v, step, 1.0f);
+        CHECK(v.pan_accum == 5.0f && v.offset[0] == 11.0f,
+              "the cap clamps the accumulator (and stays clamped)");
+
+        /* Zero-length vector: the corpus's unguarded leaf (1/0 * 0), so
+         * the components go NaN and the offset keeps its value. */
+        float flat[3] = { 0.0f, 0.0f, 0.0f };
+        float offset_save = v.offset[0];
+        camera_pointer_pan_update(&v, flat, 1.0f);
+        CHECK(flat[0] != flat[0] && flat[1] != flat[1]
+                  && flat[2] != flat[2],
+              "the zero vector goes NaN (corpus's unguarded leaf)");
+        CHECK(v.offset[0] != v.offset[0],
+              "the NaN move poisons the offsets (corpus shape)");
+        (void)offset_save;
+        v.offset[0] = 0.0f; v.offset[1] = 0.0f; v.offset[2] = 0.0f;
+
+        camera_view_context_set(0.0f, save_follow, 0.0f, save_edge);
+    }
+
     if (s_failures == 0) {
         printf("view_test: PASS\n");
         return 0;
