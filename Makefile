@@ -25,12 +25,7 @@ setup:
 		meson setup "$(BUILD_DIR)" $(CROSS_FILE) -Dplatform=$(PLATFORM); \
 	fi
 
-# Meson's CMake bridge maps miniwin's EXCLUDE_FROM_ALL library to an empty
-# archive rule with no inputs. Build miniwin with its own CMake project first;
-# the rule then sees its output present and up to date, and meson compiles and
-# links LegoRR against the real archive.
 build:
-	tools/build-miniwin.sh
 	meson compile -C "$(BUILD_DIR)" src/LegoRR
 
 run: build

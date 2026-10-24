@@ -20,27 +20,54 @@ if platform == 'winapi'
   miniwin_inc = []
 elif platform == 'native'
   platform_entry = files('native/entry.cpp')
-  # miniwin is a CMake project hosted in the sparse isle-portable submodule
-  # (3rdparty/isle-portable/miniwin). A thin wrapper at
-  # subprojects/miniwin/CMakeLists.txt bridges meson's cmake.subproject to it
-  # (docs/adr/0004, Q-A/Q-F). miniwin's own CMake finds SDL3 — the host needs
-  # SDL3 devel headers.
+  # Build miniwin directly so Meson owns its compile and link graph. Renderer
+  # selection lives at the platform seam, where other backends can be added.
   fs = import('fs')
   miniwin_root_rel = '3rdparty/isle-portable/miniwin/include'
   if not fs.exists(meson.project_source_root() / miniwin_root_rel / 'miniwin' / 'windows.h')
     error('miniwin not bootstrapped — run `tools/setup-miniwin.sh` '
           + '(native backend needs the sparse isle-portable submodule)')
   endif
-  # miniwin's public headers live on the separate INTERFACE target
-  # `miniwin-headers`; meson's cmake module doesn't propagate its
-  # BUILD_INTERFACE include dir, so pin the include path here at the seam.
-  # (platform-relative: this meson.build lives in src/platform/.)
   miniwin_inc = include_directories('../../' + miniwin_root_rel)
-  cmake = import('cmake')
-  miniwin_sub = cmake.subproject('miniwin')
-  miniwin_dep = miniwin_sub.dependency('miniwin')
-  miniwin_headers_dep = miniwin_sub.dependency('miniwin-headers')
-  platsub_deps = [miniwin_dep, miniwin_headers_dep]
+  miniwin_src = '../../3rdparty/isle-portable/miniwin'
+  miniwin_sdl = dependency('sdl3', required : true)
+  miniwin_generated = miniwin_src / 'src/d3drm/backends/sdl3gpu/shaders/generated'
+  miniwin_inc_dirs = [
+    miniwin_inc,
+    include_directories(miniwin_src / 'src/internal'),
+    include_directories(miniwin_generated),
+  ]
+  miniwin_cpp_args = ['-DMINIWIN', '-DUSE_SOFTWARE_RENDER', '-DUSE_PALETTE_SW_RENDER']
+  if get_option('buildtype') == 'debug'
+    miniwin_cpp_args += '-DDEBUG'
+  endif
+  miniwin_lib = static_library('miniwin',
+    miniwin_src / 'src/windows/windows.cpp',
+    miniwin_src / 'src/ddraw/ddpalette.cpp',
+    miniwin_src / 'src/ddraw/ddraw.cpp',
+    miniwin_src / 'src/ddraw/ddsurface.cpp',
+    miniwin_src / 'src/ddraw/framebuffer.cpp',
+    miniwin_src / 'src/d3drm/d3drm.cpp',
+    miniwin_src / 'src/d3drm/d3drmdevice.cpp',
+    miniwin_src / 'src/d3drm/d3drmframe.cpp',
+    miniwin_src / 'src/d3drm/d3drmlight.cpp',
+    miniwin_src / 'src/d3drm/d3drmmesh.cpp',
+    miniwin_src / 'src/d3drm/d3drmtexture.cpp',
+    miniwin_src / 'src/d3drm/d3drmviewport.cpp',
+    miniwin_src / 'src/d3drm/d3drmrenderer.cpp',
+    miniwin_src / 'src/internal/meshutils.cpp',
+    miniwin_src / 'src/d3drm/backends/software/renderer.cpp',
+    miniwin_src / 'src/d3drm/backends/palettesw/renderer.cpp',
+    include_directories : miniwin_inc_dirs,
+    dependencies : miniwin_sdl,
+    cpp_args : miniwin_cpp_args,
+    install : false)
+  miniwin_dep = declare_dependency(
+    link_with : miniwin_lib,
+    include_directories : miniwin_inc,
+    dependencies : miniwin_sdl,
+    compile_args : ['-DMINIWIN'])
+  platsub_deps = [miniwin_dep]
 
   platform_glue = static_library('platform_glue',
     'native/frameloop.cpp',
