@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 426 | 16.6% |
+| ported | 429 | 16.7% |
 | anchored | 5 | 0.2% |
-| named | 2087 | 81.4% |
+| named | 2084 | 81.3% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 0 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (426 functions)
+  (429 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (5 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (2087 functions)
+  citation yet (2084 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (0 functions)
 
-**Game logic remaining to port: 2092 (81.6%).**
+**Game logic remaining to port: 2089 (81.5%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -438,7 +438,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004172d0` | RegistryValueIndexLookupOrNotFound |
 | `0x004172f0` | SavTreeWalk2 |
 | `0x004173e0` | SavTreeLoad |
-| `0x00417430` | FloatToLong |
 | `0x004179b0` | SavMenuList |
 | `0x00417df0` | SavRefreshSlots |
 | `0x00417e50` | SavSlotCtx |
@@ -579,7 +578,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0041f880` | GlobalObjectField8CSubtract |
 | `0x0041f8a0` | GlobalObjectField98Add |
 | `0x0041f8c0` | GlobalObjectField98Clear |
-| `0x0041f8e0` | NoOpCallback |
 | `0x0041f900` | UpgradeResourceCheck |
 | `0x0041f920` | LevelStateField9CAdd |
 | `0x0041f970` | RuntimeFlag40000000Get |
@@ -2059,7 +2057,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00497e20` | CrtDecimalMantissaRoundAndNormalize |
 | `0x00497ec0` | CrtLocaleDataGetOrInitialize |
 | `0x00497f40` | DoubleToExtended80 |
-| `0x00498000` | CrtMemoryMove |
 | `0x00498340` | CrtFatalMessageExit |
 | `0x00498350` | NumberStringScanParse |
 | `0x00498ae0` | CrtStreamBufferAllocate |

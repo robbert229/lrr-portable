@@ -462,7 +462,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004172d0,FUN_004172d0,named,RegistryValueIndexLookupOrNotFound,0,233
 004172f0,FUN_004172f0,named,SavTreeWalk2,0,1146
 004173e0,FUN_004173e0,named,SavTreeLoad,0,420
-00417430,FUN_00417430,named,FloatToLong,0,53
+00417430,FUN_00417430,ported,FloatToLong,2,53
 004179b0,FUN_004179b0,named,SavMenuList,0,837
 00417a90,FUN_00417a90,ported,SavReadSlot,2,1134
 00417bd0,FUN_00417bd0,ported,SavWriteSlot,1,2260
@@ -615,7 +615,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0041f880,FUN_0041f880,named,GlobalObjectField8CSubtract,0,156
 0041f8a0,FUN_0041f8a0,named,GlobalObjectField98Add,0,156
 0041f8c0,FUN_0041f8c0,named,GlobalObjectField98Clear,0,118
-0041f8e0,FUN_0041f8e0,named,NoOpCallback,0,41
+0041f8e0,FUN_0041f8e0,ported,NoOpCallback,2,41
 0041f900,FUN_0041f900,named,UpgradeResourceCheck,0,258
 0041f920,FUN_0041f920,named,LevelStateField9CAdd,0,156
 0041f940,FUN_0041f940,ported,,1,173
@@ -2470,7 +2470,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00497e20,FUN_00497e20,named,CrtDecimalMantissaRoundAndNormalize,0,1482
 00497ec0,FUN_00497ec0,named,CrtLocaleDataGetOrInitialize,0,445
 00497f40,FUN_00497f40,named,DoubleToExtended80,0,998
-00498000,FUN_00498000,named,CrtMemoryMove,0,9135
+00498000,FUN_00498000,ported,CrtMemoryMove,2,9135
 00498340,FUN_00498340,named,CrtFatalMessageExit,0,59
 00498350,FUN_00498350,named,NumberStringScanParse,0,9648
 00498ae0,FUN_00498ae0,named,CrtStreamBufferAllocate,0,430
