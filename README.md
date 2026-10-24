@@ -643,7 +643,11 @@ Open threads, in order of value:
 | 443 | [findings/443-help-tutorial-and-interface-resources.md](docs/findings/443-help-tutorial-and-interface-resources.md) | Help, Tutorial, and Interface Resources |
 | 446 | [findings/446-terrain-and-overlay-rendering.md](docs/findings/446-terrain-and-overlay-rendering.md) | Terrain and Overlay Rendering |
 | 445 | [findings/445-terrain-scene-geometry.md](docs/findings/445-terrain-scene-geometry.md) | Terrain Scene Geometry |
+| 448 | [findings/448-routing-and-activity-transitions.md](docs/findings/448-routing-and-activity-transitions.md) | Routing and Activity Transitions |
 | 447 | [findings/447-terrain-grid-path-search.md](docs/findings/447-terrain-grid-path-search.md) | Terrain Grid Path Search |
+| 450 | [findings/450-terrain-data-and-grid-operations.md](docs/findings/450-terrain-data-and-grid-operations.md) | Terrain Data and Grid Operations |
+| 449 | [findings/449-spatial-queries-and-candidate-search.md](docs/findings/449-spatial-queries-and-candidate-search.md) | Spatial Queries and Candidate Search |
+| 451 | [findings/451-terrain-cell-state-neighbors-occupancy-and-traversal.md](docs/findings/451-terrain-cell-state-neighbors-occupancy-and-traversal.md) | Terrain Cell State, Neighbors, Occupancy, and Traversal |
 | 468 | [findings/468-command-queue-and-selection-state.md](docs/findings/468-command-queue-and-selection-state.md) | Command Queue and Selection State |
 
 Canonical full pseudocode corpus: [`docs/decompiles/full/LEGORR.full.c`](docs/decompiles/full/LEGORR.full.c)
