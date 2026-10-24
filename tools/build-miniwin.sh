@@ -35,5 +35,9 @@ if [ ! -f "$SRC" ]; then
   echo "tools/build-miniwin.sh: expected archive not produced: $SRC" >&2
   exit 1
 fi
-cp -f "$SRC" "$DEST"
-echo "tools/build-miniwin.sh: OK -> $DEST"
+if cmp -s "$SRC" "$DEST"; then
+  echo "tools/build-miniwin.sh: OK -> $DEST (unchanged)"
+else
+  cp -f "$SRC" "$DEST"
+  echo "tools/build-miniwin.sh: OK -> $DEST"
+fi
