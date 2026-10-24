@@ -1214,12 +1214,12 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004525e0,FUN_004525e0,ported,SelectionRecordArrayGet,2,63
 004525f0,FUN_004525f0,ported,SelectionRecordCountGet,2,60
 00452600,FUN_00452600,ported,SelectionRecordCountReset,2,61
-00452610,FUN_00452610,ported,SelectionContainsEntity,1,228
+00452610,FUN_00452610,ported,SelectionContainsEntity,2,228
 00452650,FUN_00452650,ported,ArrayFindValueIndex,1,375
-00452690,FUN_00452690,named,SelectionCandidateAlreadySelectedOrMarked,0,190
+00452690,FUN_00452690,ported,SelectionCandidateAlreadySelectedOrMarked,1,190
 004526c0,FUN_004526c0,ported,SelectionCandidateFilterDefault,1,109
 004526e0,FUN_004526e0,named,SelectionCandidateFilter,0,1492
-00452870,FUN_00452870,named,SelectionCandidateEligibilityCheck,0,359
+00452870,FUN_00452870,ported,SelectionCandidateEligibilityCheck,3,359
 004528c0,FUN_004528c0,named,SelectionStateTick,0,3991
 00452be0,FUN_00452be0,ported,SelectionClear,1,568
 00452c50,FUN_00452c50,named,SelectionEntityRemove,0,458

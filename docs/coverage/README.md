@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 597 | 23.3% |
+| ported | 599 | 23.4% |
 | anchored | 5 | 0.2% |
-| named | 1915 | 74.7% |
+| named | 1913 | 74.6% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (597 functions)
+  (599 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (5 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1915 functions)
+  citation yet (1913 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1921 (74.9%).**
+**Game logic remaining to port: 1919 (74.8%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -938,9 +938,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00452430` | EntityRandomValidCellCommandCreate |
 | `0x004524b0` | SelectionObjectDetach |
 | `0x00452520` | SelectionSnapshotCreate |
-| `0x00452690` | SelectionCandidateAlreadySelectedOrMarked |
 | `0x004526e0` | SelectionCandidateFilter |
-| `0x00452870` | SelectionCandidateEligibilityCheck |
 | `0x004528c0` | SelectionStateTick |
 | `0x00452c50` | SelectionEntityRemove |
 | `0x00452cc0` | SelectedEntityStateMonitor |

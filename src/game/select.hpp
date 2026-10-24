@@ -65,4 +65,21 @@ void selection_cmd_add(GameContext* ctx, EntitySlot* e);
 }
 #endif
 
+/* SelectionContainsEntity (FUN_00452610): the dedupe scan — nonzero when
+ * `e` is in the selection array below the count. NULL context answers 0
+ * (the corpus reads its global array blindly). */
+int selection_contains_entity(const GameContext* ctx, const EntitySlot* e);
+
+/* SelectionCandidateAlreadySelectedOrMarked / SelectionCandidateEligibilityCheck
+ * (FUN_00452690 / FUN_00452870, findings 77/85/468): the selection filter's
+ * candidate leaves. Already-selected-or-marked answers through the
+ * selection array or the +0x3ec word's bit 2 (the corpus reads that word
+ * as a byte; the flag-word read is the documented deviation). The
+ * eligibility leaf requires the +0x3e8 bit-0x100 state gate, the ported
+ * shared-eligibility predicate, the +0x3e4/+0x3e0 clear-bit gates, and
+ * the type-1 +0x3e0 bit-0x40000 rejection. NULL entities reject both. */
+int selection_candidate_already_selected_or_marked(const GameContext* ctx,
+                                                   const EntitySlot* e);
+int selection_candidate_eligibility_check(const EntitySlot* e);
+
 #endif /* LEGORRR_GAME_SELECT_HPP */

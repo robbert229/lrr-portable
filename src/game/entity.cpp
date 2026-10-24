@@ -637,3 +637,32 @@ int entity_matches_current_selection_or_owner(const void* entity)
     const int owner_ok = (owner != NULL) && (owner == selected);
     return (direct_ok || owner_ok) ? 1 : 0;
 }
+
+/* SelectionCandidateEligibilityCheck (FUN_00452870, findings 77/85/468):
+ * corpus order kept — state gate, shared predicate, then the clear-bit
+ * band; the byte-read of +0x3e4's low byte (& 10 decimal) maps to the
+ * flag-word mask 0xA. */
+int selection_candidate_eligibility_check(const EntitySlot* e)
+{
+    if (e == NULL) {
+        return 0; /* deviation: the corpus dereferences blindly */
+    }
+    if ((e->flags_3e8 & 0x100u) == 0u) {
+        return 0;
+    }
+    if (entity_shared_eligibility_check(e, 1) == 0) {
+        return 0;
+    }
+    if ((e->flags_3e4 & 0xAu) != 0u) { /* corpus: low byte & 10 (decimal) */
+        return 0;
+    }
+    if ((e->flags_3e0 & 0x24000000u) != 0u) {
+        return 0;
+    }
+    if (e->type == 1 && (e->flags_3e0 & 0x00040000u) != 0u) {
+        return 0; /* corpus: `*param_1 != 1 || (word & 0x40000)` — type 1
+                   * has the extra +0x3e0 bit-0x40000 rejection (finding
+                   * 468); every other type ignores the branch */
+    }
+    return 1;
+}

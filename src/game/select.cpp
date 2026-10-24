@@ -134,3 +134,28 @@ void selection_cmd_add(GameContext* ctx, EntitySlot* e)
         cmd_produce(8, e, 0, 0, 0);
     }
 }
+
+int selection_contains_entity(const GameContext* ctx, const EntitySlot* e)
+{
+    if (ctx == NULL || e == NULL) {
+        return 0;
+    }
+    for (int i = 0; i < ctx->selection_count; ++i) {
+        if (ctx->selection[i] == e) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+int selection_candidate_already_selected_or_marked(const GameContext* ctx,
+                                                   const EntitySlot* e)
+{
+    if (e == NULL) {
+        return 0; /* deviation: the corpus dereferences blindly */
+    }
+    if (selection_contains_entity(ctx, e) != 0) {
+        return 1;
+    }
+    return (e->flags_3ec & 2u) != 0u ? 1 : 0;
+}

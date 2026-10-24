@@ -96,6 +96,65 @@ int main(void)
     CHECK(entity_create(&ctx, 6, "m6", 0, 0, 0, 0) >= 0, "special code 6 placed");
     CHECK(entity_create(&ctx, 20, "nope", 0, 0, 0, 0) < 0, "code 20 (out of range) rejected");
 
+    /* The candidate leaves (2026-10-24): the materialized dedupe, the
+     * already-selected-or-marked gate, and the eligibility predicate. */
+    {
+        GameContext empty;
+        game_context_init(&empty);
+        CHECK(selection_contains_entity(&empty, a) == 0, "empty: absent");
+        CHECK(selection_contains_entity(NULL, a) == 0, "NULL ctx: absent");
+        selection_clear(&ctx);
+        selection_add(&ctx, b);
+        CHECK(selection_contains_entity(&ctx, b) == 1, "the added entity");
+        CHECK(selection_contains_entity(&ctx, a) == 0, "the other absent");
+
+        CHECK(selection_candidate_already_selected_or_marked(&ctx, b) == 1,
+              "selected counts as taken");
+        CHECK(selection_candidate_already_selected_or_marked(&ctx, a) == 0,
+              "the unselected/unmarked answers 0");
+        CHECK(selection_candidate_already_selected_or_marked(&ctx, NULL) == 0,
+              "NULL rejects (deviation)");
+
+        EntitySlot marked;
+        memset(&marked, 0, sizeof(marked));
+        marked.flags_3ec = 2u;
+        CHECK(selection_candidate_already_selected_or_marked(&ctx, &marked) == 1,
+              "the +0x3ec mark satisfies it unselected");
+
+        /* Eligibility: minimal pass shape, then each rejection. */
+        EntitySlot e;
+        memset(&e, 0, sizeof(e));
+        e.type = 4;
+        e.flags_3e8 = 0x100u;
+        CHECK(selection_candidate_eligibility_check(&e) == 1,
+              "the state-gated entity passes");
+        e.flags_3e8 = 0u;
+        CHECK(selection_candidate_eligibility_check(&e) == 0,
+              "the state bit is required");
+        e.flags_3e8 = 0x100u;
+        e.flags_3e4 = 2u; /* corpus: low byte & 10 */
+        CHECK(selection_candidate_eligibility_check(&e) == 0,
+              "the +0x3e4 low-byte band rejects");
+        e.flags_3e4 = 0u;
+        e.flags_3e0 = 0x04000000u; /* bit 26: in the 0x24 band */
+        CHECK(selection_candidate_eligibility_check(&e) == 0,
+              "the +0x3e0 band rejects");
+        e.flags_3e0 = 0u;
+        e.type = 1;
+        CHECK(selection_candidate_eligibility_check(&e) == 1,
+              "type 1 passes clean");
+        e.flags_3e0 = 0x40000u;
+        CHECK(selection_candidate_eligibility_check(&e) == 0,
+              "type 1's extra 0x40000 rejects (finding 468)");
+        e.flags_3e0 = 0u;
+        e.type = 2;
+        CHECK(selection_candidate_eligibility_check(&e) == 1
+                  && (selection_candidate_eligibility_check(&e) != 0),
+              "the 0x40000 branch is type-1-only");
+        CHECK(selection_candidate_eligibility_check(NULL) == 0,
+              "NULL rejects (deviation)");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "select_test: %d failure(s)\n", s_failures);
         return 1;
