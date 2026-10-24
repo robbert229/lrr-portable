@@ -1263,6 +1263,175 @@ int main(void)
         cmd_context_set(&ctx);
     }
 
+    /* The task-record queue producers (2026-10-24). */
+    {
+        GameContext qctx;
+        game_context_init(&qctx);
+        cmd_context_set(&qctx);
+        cmd_init();
+        EntitySlot host;
+        memset(&host, 0, sizeof(host));
+        host.type = 2;
+        static EntitySlot picked;
+        memset(&picked, 0, sizeof(picked));
+        qctx.selection[0] = &picked;
+        qctx.selection_count = 1;
+
+#define CHAIN_COUNT(out)                                                     \
+    do {                                                                     \
+        int n_ = 0;                                                          \
+        for (void* cur_ = cmd_global_head(); cur_ != NULL;                   \
+             cur_ = cmd_global_next(cur_)) {                                 \
+            ++n_;                                                            \
+        }                                                                    \
+        out = n_;                                                            \
+    } while (0)
+
+        /* Coordinate-pair event queue. */
+        const int pair[2] = { 11, 22 };
+        coordinate_pair_event_queue(pair, &host);
+        CHECK(cmd_global_head() != NULL
+                  && cmd_rec_type(cmd_global_head()) == 0xc
+                  && cmd_rec_kind(cmd_global_head()) == 8,
+              "the pair event queue links command 8");
+        {
+            int cx = -1, cy = -1;
+            cmd_rec_cell_xy_get(cmd_global_head(), &cx, &cy);
+            CHECK(cx == 11 && cy == 22
+                      && cmd_rec_event_payload_get(cmd_global_head())
+                             == &host,
+                  "the pair and the +0x54 payload land");
+        }
+        cmd_tick_global();
+        cmd_init();
+
+        /* Object event type-2 queue: selection half plus the flag shape. */
+        CHECK(object_event_type2_queue(&host) != 0, "the queue answers one");
+        CHECK(cmd_global_head() != NULL
+                  && cmd_rec_type(cmd_global_head()) == 0x13
+                  && cmd_rec_kind(cmd_global_head()) == 2
+                  && (cmd_rec_state(cmd_global_head()) & 0x140u) == 0x100u
+                  && (cmd_rec_state(cmd_global_head())
+                          & CMD_STATE_PENDING) != 0u
+                  && cmd_rec_count_get(cmd_global_head()) == 1u,
+              "bit 8 rides the selection, bit 6 stays clear, bit 4 is up");
+        cmd_tick_global();
+        cmd_init();
+
+        /* The tail-landing producers. */
+        const int tp[2] = { 5, 6 };
+        coordinate_pair_task_record_queue(tp);
+        CHECK(cmd_global_head() != NULL
+                  && cmd_rec_type(cmd_global_head()) == 0
+                  && cmd_rec_kind(cmd_global_head()) == 0x1a
+                  && (cmd_rec_state(cmd_global_head()) & 0x50u) == 0x40u,
+              "the pair task record tails at 0x1a (bit 6, no bit 4)");
+        {
+            int cx = -1, cy = -1;
+            cmd_rec_cell_xy_get(cmd_global_head(), &cx, &cy);
+            CHECK(cx == 5 && cy == 6, "the pair lands as words");
+        }
+        cmd_tick_global();
+        cmd_init();
+        scalar_task_record_queue(&host);
+        CHECK(cmd_global_head() != NULL
+                  && cmd_rec_type(cmd_global_head()) == 0x1d
+                  && cmd_rec_kind(cmd_global_head()) == 0x19
+                  && cmd_rec_payload(cmd_global_head()) == &host
+                  && (cmd_rec_state(cmd_global_head()) & 0x40u) != 0u,
+              "the scalar record tails at 0x19 with bit 6");
+        cmd_tick_global();
+        cmd_init();
+        const int pp[2] = { 7, 8 };
+        task_pair_record_enqueue(pp);
+        CHECK(cmd_global_head() != NULL
+                  && cmd_rec_type(cmd_global_head()) == 0x19
+                  && cmd_rec_kind(cmd_global_head()) == 0x18,
+              "the pair record tails at command 0x18");
+        {
+            int cx = -1, cy = -1;
+            cmd_rec_cell_xy_get(cmd_global_head(), &cx, &cy);
+            CHECK(cx == 7 && cy == 8, "the enqueue pair lands");
+        }
+        cmd_tick_global();
+        cmd_init();
+        task_record_kind10_queue(&host);
+        CHECK(cmd_global_head() != NULL
+                  && cmd_rec_type(cmd_global_head()) == 10
+                  && cmd_rec_kind(cmd_global_head()) == 0x16
+                  && cmd_rec_payload(cmd_global_head()) == &host
+                  && (cmd_rec_state(cmd_global_head()) & 0x40u) != 0u,
+              "the kind-10 record tails at 0x16 with bit 6");
+        cmd_tick_global();
+        cmd_init();
+
+        /* The pair removal: first match only, interior and head shapes. */
+        const int r1[2] = { 1, 1 }, r2[2] = { 2, 2 }, r3[2] = { 3, 3 };
+        coordinate_pair_task_record_queue(r1);
+        coordinate_pair_task_record_queue(r2);
+        coordinate_pair_task_record_queue(r3);
+        task_registry_remove_type0_entry_by_pair(r2);
+        int cnt = 0;
+        CHAIN_COUNT(cnt);
+        CHECK(cnt == 2, "the interior removal dropped exactly the match");
+        task_registry_remove_type0_entry_by_pair(r1);
+        {
+            int cx = -1, cy = -1;
+            int cnt2 = 0;
+            CHAIN_COUNT(cnt2);
+            cmd_rec_cell_xy_get(cmd_global_head(), &cx, &cy);
+            CHECK(cnt2 == 1 && cx == 3 && cy == 3,
+                  "the head removal exposes the tail");
+        }
+        task_registry_remove_type0_entry_by_pair(r3);
+        CHECK(cmd_global_head() == NULL, "the last record goes");
+        task_registry_remove_type0_entry_by_pair(r3); /* empty chain */
+        task_registry_remove_type0_entry_by_pair(NULL); /* guarded */
+        cmd_tick_global();
+        cmd_init();
+
+        /* The kind-10 entity removal: every match. */
+        task_record_kind10_queue(&host);
+        task_record_kind10_queue(&picked);
+        task_record_kind10_queue(&host);
+        task_registry_remove_type10_entries_for_entity(&host);
+        CHECK(cmd_global_head() != NULL
+                  && cmd_rec_payload(cmd_global_head()) == &picked
+                  && cmd_global_next(cmd_global_head()) == NULL,
+              "only the other entity's entry survives");
+        task_registry_remove_type10_entries_for_entity(&picked);
+        CHECK(cmd_global_head() == NULL, "the last kind-10 entries go");
+        cmd_tick_global();
+        cmd_init();
+
+        /* The timed pair. */
+        void* timed = timed_task_record_initialize_and_link(&host, 1, -1, 3);
+        CHECK(timed != NULL
+                  && cmd_rec_type(timed) == 5
+                  && cmd_rec_kind(timed) == 10
+                  && cmd_rec_payload(timed) == &host
+                  && cmd_rec_action_get(timed) == 1
+                  && cmd_rec_target_get(timed) == -1
+                  && cmd_rec_cell_count_get(timed) == 3
+                  && (cmd_rec_state(timed) & 0x4d0u) == 0x4c0u,
+              "the timed record links command 10 with bits 6/7/10");
+        cmd_tick_global();
+        cmd_init();
+        task_record_kind11_timed_queue(&host);
+        CHECK(cmd_global_head() != NULL
+                  && cmd_rec_type(cmd_global_head()) == 0x11
+                  && cmd_rec_kind(cmd_global_head()) == 0
+                  && cmd_rec_payload(cmd_global_head()) == &host
+                  && (cmd_rec_state(cmd_global_head()) & 0xd0u) == 0xc0u,
+              "the kind-11 timed record links command 0 with bits 6/7");
+        cmd_tick_global();
+        qctx.selection_count = 0;
+        qctx.selection[0] = NULL;
+        cmd_init();
+#undef CHAIN_COUNT
+        cmd_context_set(&ctx);
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "cmd_test: %d failure(s)\n", s_failures);
         return 1;

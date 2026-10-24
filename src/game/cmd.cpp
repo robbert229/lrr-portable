@@ -49,9 +49,11 @@ typedef struct CmdRec {
                           * cmd_rec_set_activity. */
     int32_t  extra;      /* +0x3c (type-8 tasks set 8)                         */
     void*    buffer;     /* +0x40 owned buffer (freed on cmd_free)             */
+    void*    arg38;      /* +0x38 second payload slot (the 0x13 queue's word)   */
     uint32_t count;      /* +0x44 the buffer's entry count                     */
 
     int32_t  kind;       /* +0x4c kind index                                   */
+    void*    event_payload; /* +0x54 event payload (the 0xc queue's word)   */
     void*    ref;        /* +0x58 referenced record (the 0x13 "ref" pair)      */
     uint32_t state;      /* +0x5c state flags (CMD_STATE_*)                    */
     void*    next;       /* +0x60 chain link / free-list link when free        */
@@ -1599,4 +1601,177 @@ int task_kind_filtered_search(int selector)
         }
     }
     return 0;
+}
+
+/* --- the task-record queue producers (see cmd.hpp) ---------------------------
+ * The pair staging uses the corpus's int view of the coordinate slots; the
+ * global tail list DAT_004b3358 is the port's single global chain (the two
+ * corpus lists overlay one link word, so the port models one chain). */
+static void cmd_pair_stage(CmdRec* rec, const int pair[2])
+{
+    if (pair != NULL) {
+        __builtin_memcpy(&rec->x, &pair[0], sizeof(rec->x));
+        __builtin_memcpy(&rec->y, &pair[1], sizeof(rec->y));
+    }
+}
+
+void coordinate_pair_event_queue(const int pair[2], void* payload)
+{
+    CmdRec* rec = (CmdRec*)cmd_alloc(0xc);
+    if (rec == NULL) {
+        return;
+    }
+    cmd_pair_stage(rec, pair);
+    rec->event_payload = payload;
+    cmd_link_head(rec, 8);
+}
+
+int object_event_type2_queue(void* payload)
+{
+    CmdRec* rec = (CmdRec*)cmd_alloc(0x13);
+    if (rec == NULL) {
+        return 0; /* deviation: the corpus reads the allocator blindly */
+    }
+    rec->arg38 = payload;
+    rec->ref = NULL; /* the corpus stores zero into the reference slot */
+    entity_record_array_apply_zero_state(rec, 1);
+    rec->state = (rec->state & ~0x40u) | CMD_STATE_PENDING;
+    cmd_link_head(rec, 2);
+    return 1;
+}
+
+void coordinate_pair_task_record_queue(const int pair[2])
+{
+    CmdRec* rec = (CmdRec*)cmd_alloc(0);
+    if (rec == NULL) {
+        return;
+    }
+    cmd_pair_stage(rec, pair);
+    rec->state = (rec->state & ~CMD_STATE_PENDING) | 0x40u;
+    cmd_set_kind(rec, 0x1a);
+    cmd_link_tail(rec);
+}
+
+void scalar_task_record_queue(void* scalar)
+{
+    CmdRec* rec = (CmdRec*)cmd_alloc(0x1d);
+    if (rec == NULL) {
+        return;
+    }
+    rec->payload = scalar;
+    cmd_set_kind(rec, 0x19);
+    cmd_link_tail(rec);
+    rec->state |= 0x40u;
+}
+
+void task_pair_record_enqueue(const int pair[2])
+{
+    CmdRec* rec = (CmdRec*)cmd_alloc(0x19);
+    if (rec == NULL) {
+        return;
+    }
+    cmd_pair_stage(rec, pair);
+    cmd_set_kind(rec, 0x18);
+    cmd_link_tail(rec);
+}
+
+void task_record_kind10_queue(void* payload)
+{
+    CmdRec* rec = (CmdRec*)cmd_alloc(10);
+    if (rec == NULL) {
+        return;
+    }
+    rec->payload = payload;
+    cmd_set_kind(rec, 0x16);
+    cmd_link_tail(rec);
+    rec->state |= 0x40u;
+}
+
+void task_registry_remove_type0_entry_by_pair(const int pair[2])
+{
+    if (pair == NULL) {
+        return; /* deviation: the corpus reads the pair blindly */
+    }
+    CmdRec* prev = NULL;
+    for (CmdRec* cur = s_global_head; cur != NULL;) {
+        CmdRec* next = as_rec(cur->global_next);
+        int cx = 0, cy = 0;
+        cmd_rec_cell_xy_get(cur, &cx, &cy);
+        if (cur->type == 0 && cx == pair[0] && cy == pair[1]) {
+            if (prev != NULL) {
+                prev->global_next = next;
+            } else {
+                s_global_head = next;
+            }
+            if (cur == s_global_tail) {
+                s_global_tail = prev;
+            }
+            cmd_free(cur, 0);
+            return; /* corpus: the first match only */
+        }
+        prev = cur;
+        cur = next;
+    }
+}
+
+void task_registry_remove_type10_entries_for_entity(const EntitySlot* e)
+{
+    CmdRec* prev = NULL;
+    for (CmdRec* cur = s_global_head; cur != NULL;) {
+        CmdRec* next = as_rec(cur->global_next);
+        if (cur->type == 10 && cur->payload == (void*)e) {
+            if (prev != NULL) {
+                prev->global_next = next;
+            } else {
+                s_global_head = next;
+            }
+            if (cur == s_global_tail) {
+                s_global_tail = prev;
+            }
+            cmd_free(cur, 0);
+            cur = next;
+            continue; /* corpus: every match is removed */
+        }
+        prev = cur;
+        cur = next;
+    }
+}
+
+void* timed_task_record_initialize_and_link(void* payload, int arg1,
+                                            int arg2, int arg3)
+{
+    CmdRec* rec = (CmdRec*)cmd_alloc(5);
+    if (rec == NULL) {
+        return NULL; /* deviation: the corpus reads the allocator blindly */
+    }
+    rec->payload = payload;
+    rec->now = 0.0f; /* the corpus zeroes the timestamp dword */
+    rec->cell_act = arg1;
+    rec->cell_target = arg2;
+    rec->cell_count = arg3;
+    cmd_link_head(rec, 10);
+    rec->state = (rec->state & ~CMD_STATE_PENDING) | 0x4c0u;
+    return rec;
+}
+
+void task_record_kind11_timed_queue(void* payload)
+{
+    CmdRec* rec = (CmdRec*)cmd_alloc(0x11);
+    if (rec == NULL) {
+        return;
+    }
+    rec->payload = payload;
+    rec->now = 0.0f;
+    cmd_link_head(rec, 0);
+    rec->state = (rec->state & ~CMD_STATE_PENDING) | 0xc0u;
+}
+
+void* cmd_rec_event_payload_get(const void* rec)
+{
+    return rec != NULL ? cas_rec(rec)->event_payload : NULL;
+}
+
+int cmd_rec_cell_count_get(const void* rec)
+{
+    return rec != NULL ? (int)cas_rec(rec)->cell_count : -1;
 }

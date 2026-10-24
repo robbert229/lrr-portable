@@ -2057,6 +2057,21 @@ pins the gates, the four unconditional arms, both counter selectors,
 the no-op miss, the excluded selectors, and the pool walk's dead-slot
 skip.
 
+**The task-record queue producers** (2026-10-24; findings 366/369/465):
+ten leaves land in `cmd.*`. The pair-queue family (`
+coordinate_pair_event_queue` 0x4030b0, `coordinate_pair_task_record_queue`
+0x4033f0, `task_pair_record_enqueue` 0x4034e0) stages the coordinate pair
+as the corpus's integers; the scalars ride `scalar_task_record_queue`
+(0x4034a0) and `task_record_kind10_queue` (0x403520) tail-appended with
+bit 6 raised after the link; `object_event_type2_queue` (0x403190) runs
+the record-array half with bit 4 up and bit 6 clear; and the timed pair
+(`timed_task_record_initialize_and_link` 0x4038c0, which returns its
+record, and `task_record_kind11_timed_queue` 0x4039d0) zeroes the
+timestamp slot and raises the corpus's flag blocks. The registry walkers
+remove the first kind-0 pair match and every kind-10 entity match,
+unlinking and freeing through the cancel-ref path. `cmd_test` pins the
+ten shapes, both removal walks, and the empty-chain guards.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

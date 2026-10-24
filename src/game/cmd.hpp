@@ -411,6 +411,52 @@ int entity_action_kind_supported(EntitySlot* e, int kind, int arg);
 int task_entity_flags_and_cell_task_match(const EntitySlot* e, int kind);
 int task_kind_filtered_search(int selector);
 
+/* --- the task-record queue producers (2026-10-24; findings 366/369/465) ------
+ * The kind-tagged queue family: each allocates its record kind, stages the
+ * corpus's words, assigns the command kind and lands the record. Coordinate
+ * pairs ride the coordinate slots as integers (the port reads them back
+ * through cmd_rec_cell_xy_get). The DAT_004b3358 tail list is the port's
+ * single global chain, so the removal walkers sweep that chain with the
+ * same semantics. The timed pair (kind 5/0x11) stores its arguments in the
+ * cell-command slots and zeroes the timestamp slot before linking.
+ *  CoordinatePairEventQueue (FUN_004030b0): kind 0xc, pair plus the +0x54
+ *      event payload, head-linked as command 8.
+ *  ObjectEventType2Queue (FUN_00403190): kind 0x13, the argument at the
+ *      +0x38 slot, the reference slot zeroed, the record-array half,
+ *      bit 6 cleared and bit 4 raised, head-linked as command 2.
+ *  CoordinatePairTaskRecordQueue (FUN_004033f0): kind 0, pair, bit 4
+ *      cleared and bit 6 raised, command kind 0x1a, tail-appended.
+ *  ScalarTaskRecordQueue (FUN_004034a0): kind 0x1d, the scalar at +0x10,
+ *      command 0x19, tail-appended, bit 6 raised after.
+ *  TaskPairRecordEnqueue (FUN_004034e0): kind 0x19, pair, command 0x18,
+ *      tail-appended.
+ *  TaskRecordKind10Queue (FUN_00403520): kind 10, payload, command 0x16,
+ *      tail-appended, bit 6 raised after.
+ *  TaskRegistryRemoveType0EntryByPair (FUN_00403430): unlink-and-free the
+ *      first kind-0 record whose pair matches (the free runs the cancel ref).
+ *  TaskRegistryRemoveType10EntriesForEntity (FUN_00403560): unlink-and-free
+ *      every kind-10 record whose +0x10 payload is the entity.
+ *  TimedTaskRecordInitializeAndLink (FUN_004038c0): kind 5, payload, the
+ *      timestamp word zeroed, the three arguments at +0x20/+0x24/+0x28,
+ *      command 10, bit 4 cleared and bits 6/7/10 raised; returns the record.
+ *  TaskRecordKind11TimedQueue (FUN_004039d0): kind 0x11, payload, the
+ *      timestamp word zeroed, command 0, bit 4 cleared and bits 6/7 raised. */
+void coordinate_pair_event_queue(const int pair[2], void* payload);
+int  object_event_type2_queue(void* payload);
+void coordinate_pair_task_record_queue(const int pair[2]);
+void scalar_task_record_queue(void* scalar);
+void task_pair_record_enqueue(const int pair[2]);
+void task_record_kind10_queue(void* payload);
+void task_registry_remove_type0_entry_by_pair(const int pair[2]);
+void task_registry_remove_type10_entries_for_entity(const EntitySlot* e);
+void* timed_task_record_initialize_and_link(void* payload, int arg1,
+                                            int arg2, int arg3);
+void task_record_kind11_timed_queue(void* payload);
+
+/* Diagnostic: the record's +0x54 event-payload slot. */
+void* cmd_rec_event_payload_get(const void* rec);
+int cmd_rec_cell_count_get(const void* rec); /* +0x28 word (timed arg 3) */
+
 #ifdef __cplusplus
 }
 #endif

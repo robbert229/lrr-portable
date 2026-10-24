@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 651 | 25.4% |
+| ported | 661 | 25.8% |
 | anchored | 5 | 0.2% |
-| named | 1861 | 72.6% |
+| named | 1851 | 72.2% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (651 functions)
+  (661 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (5 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1861 functions)
+  citation yet (1851 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1867 (72.8%).**
+**Game logic remaining to port: 1857 (72.4%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -66,25 +66,15 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00401c50` | FormattedTextPrintfWidth |
 | `0x00401c80` | FormattedTextPrintf |
 | `0x00403030` | CellCommandType3Issue |
-| `0x004030b0` | CoordinatePairEventQueue |
-| `0x00403190` | ObjectEventType2Queue |
 | `0x004031e0` | ActiveEntityListContainsCode |
 | `0x00403320` | ObjectCommandTaskCreate |
 | `0x004033c0` | ObjectAttachedRecordAllocate |
-| `0x004033f0` | CoordinatePairTaskRecordQueue |
-| `0x00403430` | TaskRegistryRemoveType0EntryByPair |
-| `0x004034a0` | ScalarTaskRecordQueue |
-| `0x004034e0` | TaskPairRecordEnqueue |
-| `0x00403520` | TaskRecordKind10Queue |
-| `0x00403560` | TaskRegistryRemoveType10EntriesForEntity |
 | `0x00403650` | EntityTaskBatchAppend |
 | `0x00403700` | CmdCancelByCoords |
 | `0x00403750` | CommandKindRecordIssueAndLink |
 | `0x00403810` | TerrainCellRecordCountUpdate |
-| `0x004038c0` | TimedTaskRecordInitializeAndLink |
 | `0x00403910` | CellRecordCountsPruneForEntity |
 | `0x004039a0` | TaskRecordCreateAndScanGrid |
-| `0x004039d0` | TaskRecordKind11TimedQueue |
 | `0x00403a10` | TaskCallbackDispatch |
 | `0x00403a50` | EntityDrainCommandChain |
 | `0x00403af0` | EntityTaskStateUpdateAfterCleanup |
