@@ -717,7 +717,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0042efc0,FUN_0042efc0,ported,DirectShowVideoPlaybackLoop,5,726
 0042f0c0,FUN_0042f0c0,ported,PendingLevelName,1,1852
 0042f2e0,FUN_0042f2e0,ported,TerrainCellEdgeFlagSetAndUpdate,1,550
-0042f350,FUN_0042f350,named,TerrainNeighborCoordinateCheck,0,2871
+0042f350,FUN_0042f350,ported,TerrainNeighborCoordinateCheck,1,2871
 0042f6f0,FUN_0042f6f0,ported,CellInitPass,5,14655
 004302b0,FUN_004302b0,named,MapCellTrackingFlagsClearAndRefresh,0,533
 00430320,FUN_00430320,named,TerrainCellWorkFlagClear,0,1589

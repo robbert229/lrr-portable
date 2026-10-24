@@ -519,6 +519,86 @@ int main(int argc, char** argv)
             CHECK(1, "an off-map circle changes nothing");
         }
 
+        /* The neighbor coordinate classification (2026-10-24). */
+        {
+            uint32_t snap[GRID * GRID];
+            uint8_t kind = 9;
+            uint32_t ret = 0;
+            for (int yy = 0; yy < GRID; ++yy) {
+                for (int xx = 0; xx < GRID; ++xx) {
+                    __builtin_memcpy(
+                        &snap[yy * GRID + xx],
+                        level_voxel(s, xx, yy) + 0x08, 4);
+                    f = zero;
+                    __builtin_memcpy(level_voxel(s, xx, yy) + 0x08, &f, 4);
+                }
+            }
+
+            /* Empty grid: mask 0. */
+            ret = terrain_neighbor_coordinate_check(s, 3, 4, &kind, 0);
+            CHECK(ret == 0x65u && kind == 0u, "no neighbors answer case 0");
+            ret = terrain_neighbor_coordinate_check(s, 3, 4, &kind, 1);
+            CHECK(ret == 0x75u && kind == 0u,
+                  "mode 1 swaps in the 0x70 codes");
+
+            /* North through west set the bits in corpus order. */
+            f = 0x20000000u;
+            __builtin_memcpy(level_voxel(s, 3, 3) + 0x08, &f, 4);
+            ret = terrain_neighbor_coordinate_check(s, 3, 4, &kind, 0);
+            CHECK(ret == 0x65u && kind == 2u, "the north neighbor is bit 0");
+            f = 0x400u;
+            __builtin_memcpy(level_voxel(s, 4, 4) + 0x08, &f, 4);
+            ret = terrain_neighbor_coordinate_check(s, 3, 4, &kind, 0);
+            CHECK(ret == 99u && kind == 3u, "the work flag sets too");
+            f = zero;
+            __builtin_memcpy(level_voxel(s, 3, 3) + 0x08, &f, 4);
+
+            /* Mask 10: east plus west answers kind 1 (0x62 / 0x72). */
+            ret = terrain_neighbor_coordinate_check(s, 3, 4, &kind, 0);
+            f = 0x20000000u;
+            __builtin_memcpy(level_voxel(s, 2, 4) + 0x08, &f, 4);
+            ret = terrain_neighbor_coordinate_check(s, 3, 4, &kind, 0);
+            ret = terrain_neighbor_coordinate_check(s, 3, 4, &kind, 1);
+            CHECK(kind == 1u, "east plus west is kind 1");
+            f = zero;
+            __builtin_memcpy(level_voxel(s, 4, 4) + 0x08, &f, 4);
+            __builtin_memcpy(level_voxel(s, 2, 4) + 0x08, &f, 4);
+            ret = terrain_neighbor_coordinate_check(s, 3, 4, &kind, 0);
+
+            /* Mask 15: fully surrounded. */
+            f = 0x20000000u;
+            for (int d = 0; d < 4; ++d) {
+                static const int nx[4] = { 3, 4, 3, 2 };
+                static const int ny[4] = { 3, 4, 5, 4 };
+                __builtin_memcpy(level_voxel(s, nx[d], ny[d]) + 0x08,
+                                 &f, 4);
+            }
+            ret = terrain_neighbor_coordinate_check(s, 3, 4, &kind, 0);
+            CHECK(ret == 0x60u && kind == 0u, "mask 15 answers 0x60");
+            ret = terrain_neighbor_coordinate_check(s, 3, 4, &kind, 1);
+            CHECK(ret == 0x71u && kind == 0u, "mask 15 answers 0x71 alt");
+
+            /* The corner deviation: off-map neighbors answer zero, so an
+             * all-occupied corner shows only its two in-map probes
+             * (mask 6: kind 0, code 99). */
+            for (int yy = 0; yy < GRID; ++yy) {
+                for (int xx = 0; xx < GRID; ++xx) {
+                    __builtin_memcpy(level_voxel(s, xx, yy) + 0x08, &f, 4);
+                }
+            }
+            ret = terrain_neighbor_coordinate_check(s, 0, 0, &kind, 0);
+            CHECK(ret == 99u && kind == 0u,
+                  "the corner answers the two-probe mask 6");
+
+            for (int yy = 0; yy < GRID; ++yy) {
+                for (int xx = 0; xx < GRID; ++xx) {
+                    __builtin_memcpy(
+                        level_voxel(s, xx, yy) + 0x08,
+                        &snap[yy * GRID + xx], 4);
+                }
+            }
+        }
+
         /* The OR-test pair: mode 0 masks the flag word, mode 1 answers
          * whether either the flag 0x400 or the secondary byte's bit 4
          * marks the cell. */
