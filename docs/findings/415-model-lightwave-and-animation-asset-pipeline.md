@@ -1,18 +1,21 @@
 # Finding 415 — Model, LightWave, and Animation Asset Pipeline
 
 This finding maps the 18 functions listed by Issue #190 to their callers,
-callees, and data flow. Thirteen entries belong to the LightWave/model/animation
-path described here. Five entries were grouped into that area incorrectly; the
-call graph places them in sound state, generic scene-resource lifecycle, WAD
-archive indexing, or shared asset-path parsing. The coverage indexes below
-reflect those corrections.
+callees, and data flow. Twelve entries belong to the LightWave/model/animation
+path described here. Six entries were grouped into that area incorrectly; the
+call graph places them in render geometry, sound state, generic scene-resource
+lifecycle, WAD archive indexing, or shared asset-path parsing. The coverage
+indexes below reflect those corrections.
 
 **Target and evidence.** Static analysis of shipped `reference/LegoRR.exe`,
 SHA-256 `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`.
 The function bodies are in [`LEGORR.full.c`](../decompiles/full/LEGORR.full.c).
 The detailed LightWave chunk and model evidence is in [finding 11](11-model-and-scene-formats.md),
 the `.uv` grammar is in [finding 19](19-uv-grammar.md), and the texture binding
-path is in [finding 13](13-texture-system.md).
+path is in [finding 13](13-texture-system.md). Function bodies and direct call
+edges below are direct pseudocode observations. Area membership and subsystem
+labels are interpretations based on those bodies and callers; unresolved
+meanings are stated as such.
 
 ## Route overview
 
@@ -22,8 +25,11 @@ through `ModelObjectCreate @ 0x48d7c0`, assembles its render mesh, runs the
 material pass, and frees the temporary parse object. `ModelObjectCreate` calls
 `LoadLWO @ 0x48d2c0`, which fills vertex, polygon, and surface records and may
 retain a `.uv` stream for the material pass. The pass calls `ParseUV @
-0x481c50` when that stream exists. The full file grammar, mesh construction,
-and shipped-corpus validation are already recorded in findings 11 and 19.
+0x481c50` when that stream exists. `MeshSegmentVertexFill @ 0x482620` is a
+separate render-geometry helper called by `MeshBuildEightSidedSegment @
+0x470760`; it fills a selected render segment's vertex buffer. The full file
+grammar, mesh construction, and shipped-corpus validation are already recorded
+in findings 11 and 19.
 
 The scene-object animation path is separate from parsing: `SharedObjectAnimationAndTimedEventUpdate
 @ 0x487ba0` calls `SharedObjectFloatTrackInterpolateApply @ 0x488070` to sample
@@ -40,7 +46,7 @@ lifecycle work, rather than LightWave parsing.
 | --- | --- | --- |
 | `0x004809e0` `LwoModelEntryLoad` | Loads a model entry, creates the parser object, builds the render object, performs its material pass, then frees the parser object. | Called by `EntityVisualLoadACT @ 0x472cd0` and `ModelResourceResolveOrLoad @ 0x4885c0`; calls `ModelObjectCreate @ 0x48d7c0`, `CachedRenderResourceInstanceCreate @ 0x480870`, `MaterialPass @ 0x480ac0`, and `ModelObjectFree @ 0x48d870`. |
 | `0x00481c50` `ParseUV` | Reads the optional line-based `.uv` stream; writes per-corner UVs and can duplicate vertices at seams. | Sole caller is `MaterialPass @ 0x480ac0`; detailed grammar and 60-file corpus validation are in finding 19. |
-| `0x00482620` `MeshSegmentVertexFill` | Writes position, fixed attribute triple, and per-vertex pair into a selected 0x70-byte mesh segment record, at 0x20-byte vertex stride. | Sole caller is `MeshBuildEightSidedSegment @ 0x470760`; this is segment geometry population. |
+| `0x00482620` `MeshSegmentVertexFill` | Writes position, fixed attribute triple, and per-vertex pair into a selected 0x70-byte mesh segment record, at 0x20-byte vertex stride. | Sole caller is `MeshBuildEightSidedSegment @ 0x470760`; reclassified to graphics/rendering surfaces because it populates render geometry. |
 | `0x004827d0` `RecordFlag2CBit0Set` | Sets or clears bit 0 at `record + 0x2c`. | Its sole caller is `ResourceEnableSet @ 0x465ac0`, which passes the sound instance subrecord at `instance + 0x290`. Reclassified to the sound-subsystem area; the bit's product meaning remains unknown. |
 | `0x00488070` `SharedObjectFloatTrackInterpolateApply` | Masks the supplied key index to 16 bits, reads floats from the track at object `+0x1c`, and uses the last key directly or linearly blends adjacent keys by the supplied fraction. | Called from `SharedObjectAnimationAndTimedEventUpdate @ 0x487ba0`; forwards the sampled value to the downstream handler at `0x4880d0`. |
 | `0x004899f0` `ObjectHierarchyRecursiveClone` | Copies object state through interface methods and, when no live clone is supplied, duplicates, registers, and recursively clones the object's children. | Called by `SceneActFrameRecordCloneOrCreate @ 0x489660` and recursively; calls `ObjectInterfaceArrayResourceCreate @ 0x489b30`. Reclassified to generic scene-resource lifecycle. |
@@ -59,18 +65,25 @@ lifecycle work, rather than LightWave parsing.
 
 ## Index corrections and limits
 
-The issue's list has all 18 addresses, but five names or area assignments do not
-match the call evidence. `RecordFlag2CBit0Set` is the sound instance's enabled
-bit setter; the two recursive clone helpers manage shared scene resources;
-`0x48bce0` accesses mounted-WAD records; and `0x490090` only splits path
-components. The coverage README, ledger, area CSV/report, canonical decompile
-names, and Ghidra name map were updated for those corrections. Finding 230's
-description of `0x48bce0` as an LWO chunk-table accessor is corrected alongside
-this finding.
+The issue's list has all 18 addresses, but six area assignments or names do not
+match the call evidence. `MeshSegmentVertexFill` populates render geometry;
+`RecordFlag2CBit0Set` is used on a sound instance's enabled flag; the two
+recursive clone helpers manage shared scene resources; `0x48bce0` accesses
+mounted-WAD records; and `0x490090` only splits path components. These area
+labels are classifications inferred from their observed callers and field
+accesses; exact meanings of the sound flag and queried object-interface GUID
+remain unknown. The coverage README, ledger, area CSV/report, canonical
+decompile names, and Ghidra name map were updated. Finding 230's description of
+`0x48bce0` as an LWO chunk-table accessor is corrected alongside this finding.
+The adjacent WAD entry length/field accessors and memory-stream buffer getter
+also had stale registry labels; their names and coverage assignments were
+corrected in the existing helper findings and indexes.
 
 The code evidence establishes parser behavior and direct call edges, not all
 runtime ownership or visual results. `LoadLWO` and `.uv` corpus behavior have
 existing static/corpus validation (findings 11 and 19); the object-interface
 GUID's concrete type and the semantic meaning of the `+0x2c` sound flag remain
-unresolved. Focused follow-up issues should address those runtime semantics if
-they affect a concrete behavior slice.
+unresolved. Focused follow-up slices are: identify the interface represented
+by `DAT_0049fb48` and validate its ownership through clone/release paths; and
+trace the sound subrecord at `+0x290` through its initialization and tick paths
+to determine what the enabled bit gates.

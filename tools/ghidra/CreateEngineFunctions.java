@@ -2313,8 +2313,8 @@ public class CreateEngineFunctions extends GhidraScript {
         0x00487760L,  // ResourceStringTablesFree
         0x004877d0L,  // ResourceEntryIdGet
         0x004894c0L,  // ComInterfaceQueryOrFallback
-        0x0048bcf0L,  // RegistryEntryValueGet
-        0x0048bd10L,  // RegistryEntryTypeGet
+        0x0048bcf0L,  // WadEntryLengthGet
+        0x0048bd10L,  // WadEntryField4Get
         0x0048dfd0L,  // QsortSmallPartitionSort
         0x0048e250L,  // StackProbeAllocate
         0x0048e4f0L,  // CrtTerminateProcessWithHandlers
@@ -2378,7 +2378,7 @@ public class CreateEngineFunctions extends GhidraScript {
         0x0045cc60L,  // GlobalValueGet_00500a98
         0x004628c0L,  // GlobalFloatAccumulate_00555120
         0x0047c160L,  // ConstantNegative10000Get
-        0x0048c030L,  // RegistryEntryAccessByIndex
+        0x0048c030L,  // WadMemoryStreamBufferGet
         0x0048e1aaL,  // CrtMathIntrinsicDispatch
         0x00491ff5L,  // CrtNoOpStub
         0x00495bdeL,  // CrtAbortAfterCallback
@@ -4993,8 +4993,8 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x00487760: return "ResourceStringTablesFree";
             case 0x004877d0: return "ResourceEntryIdGet";
             case 0x004894c0: return "ComInterfaceQueryOrFallback";
-            case 0x0048bcf0: return "RegistryEntryValueGet";
-            case 0x0048bd10: return "RegistryEntryTypeGet";
+            case 0x0048bcf0: return "WadEntryLengthGet";
+            case 0x0048bd10: return "WadEntryField4Get";
             case 0x0048dfd0: return "QsortSmallPartitionSort";
             case 0x0048e250: return "StackProbeAllocate";
             case 0x0048e4f0: return "CrtTerminateProcessWithHandlers";
@@ -5058,7 +5058,7 @@ public class CreateEngineFunctions extends GhidraScript {
             case 0x0045cc60: return "GlobalValueGet_00500a98";
             case 0x004628c0: return "GlobalFloatAccumulate_00555120";
             case 0x0047c160: return "ConstantNegative10000Get";
-            case 0x0048c030: return "RegistryEntryAccessByIndex";
+            case 0x0048c030: return "WadMemoryStreamBufferGet";
             case 0x0048e1aa: return "CrtMathIntrinsicDispatch";
             case 0x00491ff5: return "CrtNoOpStub";
             case 0x00495bde: return "CrtAbortAfterCallback";

@@ -98,8 +98,8 @@ Assignment confidence: 702 high, 1830 medium, 32 low. Basis counts: address-clus
 | Area ID | Functions | Responsibility boundary |
 | --- | ---: | --- |
 | `camera-viewport` — Camera, viewport, and view context | 15 | Camera bounds/pan/tilt/zoom, viewport projection/target state, camera ray routing, and view-context updates. |
-| `graphics-rendering-surfaces` — Graphics, rendering, and pixel surfaces | 126 | Configures renderer/device state, prepares model/mesh/terrain geometry, draws or blits surfaces, and converts pixel formats. Resource ownership and scene-level animation are separate areas. |
-| `model-and-animation-assets` — Model, LightWave, and animation assets | 13 | Parses LightWave model structures or creates/resolves model objects and applies model animation tracks. Rendering submission and generic scene-resource management are separate. |
+| `graphics-rendering-surfaces` — Graphics, rendering, and pixel surfaces | 127 | Configures renderer/device state, prepares model/mesh/terrain geometry, draws or blits surfaces, and converts pixel formats. Resource ownership and scene-level animation are separate areas. |
+| `model-and-animation-assets` — Model, LightWave, and animation assets | 12 | Parses LightWave model structures or creates/resolves model objects and applies model animation tracks. Rendering submission and generic scene-resource management are separate. |
 | `render-animation` — Scene objects, animation, and renderer records | 55 | Scene/render object records, transforms, animation timing/visibility, render callbacks, and object-list transform updates. |
 | `renderer-scene-lifecycle` — Renderer and Scene Lifecycle | 8 | Visual type tables, renderer object-pool shutdown, shared texture directory, scene hooks, and root/object allocation. |
 | `scene-object-animation` — Scene objects, actions, and animation | 81 | Owns scene-object lifecycle and links, action/property records, frame advancement and callbacks, transforms, and entity visual setup. It stops at resource loading and lower-level renderer/device services. |
@@ -127,10 +127,10 @@ Assignment confidence: 702 high, 1830 medium, 32 low. Basis counts: address-clus
 | --- | ---: | --- |
 | `config-text-parsing` — Configuration and text parsing | 26 | Tokenizes or parses game configuration/text records, performs config lookup and value conversion, or supplies string helpers used by those readers. Excludes general CRT routines and UI text rendering. |
 | `game-config-types` — Game configuration and entity type tables | 7 | Configuration callbacks, type/name tables, building/vehicle/upgrade/monster type initialization, and config-file resource parsing. |
-| `game-file-archive-and-pools` — Game files, archives, and record pools | 75 | Routes game file operations, mounts and reads WAD/archive payloads, resolves asset paths, scans directory trees, or allocates fixed-size game records. Codec internals are grouped with archive decoding; CRT file primitives remain separate. |
+| `game-file-archive-and-pools` — Game files, archives, and record pools | 78 | Routes game file operations, mounts and reads WAD/archive payloads, resolves asset paths, scans directory trees, or allocates fixed-size game records. Codec internals are grouped with archive decoding; CRT file primitives remain separate. |
 | `level-map-loading` — Level and map loading pipeline | 15 | Level/map load orchestration, terrain layers, map dimensions/cell data, object list parsing/resolution, and pending level name. |
 | `map-and-visual-resources` — Map and Visual Resource Records | 9 | Map-file access and visual/model/list resource record creation, lookup, and release. |
-| `registry-and-startup-streams` — Registry and startup streams | 10 | Creates or reads registry paths/values and startup configuration streams. Excludes game archive/file routing and generic CRT stream implementation. |
+| `registry-and-startup-streams` — Registry and startup streams | 7 | Creates or reads registry paths/values and startup configuration streams. Excludes game archive/file routing and generic CRT stream implementation. |
 | `resource-config-loading` — Interface and presentation config loading | 11 | Loads presentation-facing panels, sounds, text messages, surface descriptions, and interface config resources. |
 
 ### platform-and-runtime

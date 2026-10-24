@@ -95601,7 +95601,7 @@ undefined * FUN_0048bce0(int param_1)
 }
 
 
-// ==== RegistryEntryValueGet @ 0048BCF0 [Ghidra: FUN_0048bcf0] ====
+// ==== WadEntryLengthGet @ 0048BCF0 [Ghidra: FUN_0048bcf0] ====
 
 
 undefined4 FUN_0048bcf0(undefined4 param_1,int param_2)
@@ -95614,7 +95614,7 @@ undefined4 FUN_0048bcf0(undefined4 param_1,int param_2)
 }
 
 
-// ==== RegistryEntryTypeGet @ 0048BD10 [Ghidra: FUN_0048bd10] ====
+// ==== WadEntryField4Get @ 0048BD10 [Ghidra: FUN_0048bd10] ====
 
 
 undefined4 FUN_0048bd10(undefined4 param_1,int param_2)
@@ -95845,7 +95845,7 @@ void FUN_0048c010(int param_1)
 }
 
 
-// ==== RegistryEntryAccessByIndex @ 0048C030 [Ghidra: FUN_0048c030] ====
+// ==== WadMemoryStreamBufferGet @ 0048C030 [Ghidra: FUN_0048c030] ====
 
 
 void FUN_0048c030(undefined4 param_1)

@@ -2230,8 +2230,8 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0048b4a0,FUN_0048b4a0,named,BufferedCharStreamReadToString,0,260
 0048b4e0,FUN_0048b4e0,named,WwadArchiveIndexLoad,0,13223
 0048bce0,FUN_0048bce0,named,WadArchiveRecordAtIndex,0,86
-0048bcf0,FUN_0048bcf0,named,RegistryEntryValueGet,0,183
-0048bd10,FUN_0048bd10,named,RegistryEntryTypeGet,0,183
+0048bcf0,FUN_0048bcf0,named,WadEntryLengthGet,0,183
+0048bd10,FUN_0048bd10,named,WadEntryField4Get,0,183
 0048bd30,FUN_0048bd30,named,WadEntrySlotAllocate,0,254
 0048bd50,FUN_0048bd50,named,WadEntryFindAcrossMountedArchives,0,405
 0048bda0,FUN_0048bda0,ported,WadEntryNameLookup,1,423
@@ -2241,7 +2241,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0048bfc0,FUN_0048bfc0,named,FixedRecordSlotResourceRelease,0,200
 0048bff0,FUN_0048bff0,named,FixedRecordSlotResourceGet,0,163
 0048c010,FUN_0048c010,named,WadStreamLengthGet,0,177
-0048c030,FUN_0048c030,named,RegistryEntryAccessByIndex,0,80
+0048c030,FUN_0048c030,named,WadMemoryStreamBufferGet,0,80
 0048c040,FUN_0048c040,named,StringCaseSubstringFind,0,1052
 0048c0c0,FUN_0048c0c0,named,LwoStringDuplicate,0,1265
 0048c120,FUN_0048c120,named,LwoTextureProjectionModeParse,0,701
