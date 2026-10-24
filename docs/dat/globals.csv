@@ -2289,8 +2289,8 @@ address,decompile_reference_count,function_count,functions,finding_mentions,imag
 0x00557510,7,3,MenuSaveImageConfigRectBlit@0x004124f0; LoadMenuBuild@0x004161f0; ObjectiveVoiceAliasPrepare@0x00458670,,.data,zero-filled virtual tail,,,unreviewed,,,
 0x00557514,2,2,MenuHoverStatusTextDraw@0x00412750; LoadMenuBuild@0x004161f0,,.data,zero-filled virtual tail,,,unreviewed,,,
 0x00557554,1,1,LoadMenuBuild@0x004161f0,,.data,zero-filled virtual tail,,,unreviewed,,,
-0x00557594,16,2,MenuHoverStatusTextDraw@0x00412750; LoadMenuBuild@0x004161f0,,.data,zero-filled virtual tail,,,unreviewed,,,
-0x00557598,10,2,MenuOverlaySurfaceAndTextSetup@0x004129d0; LoadMenuBuild@0x004161f0,,.data,zero-filled virtual tail,,,unreviewed,,,
+0x00557594,16,2,MenuHoverStatusTextDraw@0x00412750; LoadMenuBuild@0x004161f0,docs/findings/438-front-end-flow-save-slot-and-option-state.md,.data,zero-filled virtual tail,,,interpreted,Save-menu text-buffer record allocated at 0x728 bytes,high,"Finding 438; LoadMenuBuild allocates and clears it, SaveMenuLayoutLoad initializes it, and MenuHoverStatusTextDraw resets/appends/draws through its embedded text context"
+0x00557598,10,2,MenuOverlaySurfaceAndTextSetup@0x004129d0; LoadMenuBuild@0x004161f0,docs/findings/438-front-end-flow-save-slot-and-option-state.md,.data,zero-filled virtual tail,,,interpreted,Level-menu text-buffer record allocated at 0x728 bytes,high,"Finding 438; LoadMenuBuild allocates and clears it, then initializes its layout from Menu.LevelText configuration"
 0x0055759c,2,2,MenuTick@0x00412c00; LoadMenuBuild@0x004161f0,,.data,zero-filled virtual tail,,,unreviewed,,,
 0x0055761c,2,2,MenuTick@0x00412c00; LoadMenuBuild@0x004161f0,,.data,zero-filled virtual tail,,,unreviewed,,,
 0x0055771c,2,2,MenuTick@0x00412c00; LoadMenuBuild@0x004161f0,,.data,zero-filled virtual tail,,,unreviewed,,,
