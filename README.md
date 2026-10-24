@@ -1114,6 +1114,29 @@ and the per-cell CellInitPass, `docs/coverage/blocked.md`).
 word, mode test, gated reads, state set, word pairs and coordinate
 bounds.
 
+**Map-file slot registry + terrain state leaves** (2026-10-24; terrain
+wave): the corpus's 2000-entry map-image slot table —
+`level_map_slots_reset` (`0x4893f0`, leak-clearing as shipped),
+`level_map_slot_allocate` (`0x489410`, first-free claim, -1 when full),
+`level_map_slot_release` (`0x489460`) and `level_map_slot_get`
+(`0x4894a0`) — plus their accessors `level_map_dimensions_get`
+(`0x4334c0`) / `level_map_cell_get` (`0x4319e0`) that resolve the slot
+and read its `MAP ` image (dims at +8/+12, u16 cells row-major at
++0x10), and the raw-pointer twins `level_map_image_header` (`0x4515a0`)
+/ `level_map_image_cell` (`0x4515c0`). An unresolved slot reads zero —
+the corpus dereferences address 0/8/12 through a failed resolve
+(deviation documented). The opener that fills the table,
+`MapOpen2 @ 0x480170`, rides the unported wad-read seam
+(`docs/coverage/blocked.md`). Terrain leaves: `level_cell_type_get_at`
+(`0x433330`, the dim-1-gated state byte through an out param, untouched
+outside) and `level_cell_byte_state_classify` (`0x42c5b0`) — the +5
+byte indexes the {1,3,5,10,25} table by (v−1)/4 while the low bits
+route it to four outs through the corpus's b/c-swap dispatch (bytes
+past the table read stack garbage in the corpus and report 0 here).
+`level_test` covers the slot lifecycle (claim, release, re-claim, reset,
+header/cell images, zero reads through the failed-resolve deviation),
+the gated type read and every classify routing corner.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

@@ -500,6 +500,26 @@ int level_coord_pair_within_bounds(const LevelState* s, int cx, int cy);
  * short-circuit leaves it. */
 int level_cell_flag8_check(const LevelState* s, int cx, int cy);
 
+/* FUN_00433330: the state byte (record+2, unsigned) through an out
+ * param, reported as 1 — but only inside the dim-1 gate; the out param
+ * keeps its old value outside (as in the corpus). No-map cells never
+ * satisfy the gate. */
+int level_cell_type_get_at(const LevelState* s, uint32_t cx, uint32_t cy,
+                           uint32_t* out_type);
+
+/* FUN_0042c5b0: classify the cell's +5 byte: zero reports 0 with all
+ * four outs zeroed; otherwise the byte indexes the {1, 3, 5, 10, 25}
+ * table and the low index bits pick which single out receives the
+ * value. The corpus routes by (v-1)%4 as 0 -> out_a, 1 -> out_c,
+ * 2 -> out_b, 3 -> out_d — outs b/c are SWAPPED relative to the value
+ * order while the table is indexed by (v-1)/4. Lookups beyond
+ * the five-entry table (bytes above 21) read stack garbage in the
+ * corpus; the port reports 0 (documented deviation). Off-map cells
+ * report 0 with all outs zeroed. */
+int level_cell_byte_state_classify(const LevelState* s, int cx, int cy,
+                                   uint32_t* out_a, uint32_t* out_b,
+                                   uint32_t* out_c, uint32_t* out_d);
+
 #ifdef __cplusplus
 }
 #endif

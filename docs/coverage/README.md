@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 363 | 14.2% |
+| ported | 373 | 14.5% |
 | anchored | 5 | 0.2% |
-| named | 2150 | 83.9% |
+| named | 2140 | 83.5% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 0 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (363 functions)
+  (373 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (2150 functions)
+  citation yet (2140 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 2155 (84.0%).**
+**Game logic remaining to port: 2145 (83.7%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -369,6 +369,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0042b850` | SurfaceTextCharacterMapInitialize |
 | `0x0042bb60` | TextureSetConfigLoad |
 | `0x0042c330` | EmergeMapTriggerSpawn |
+| `0x0042cd50` | UpgradeNameEntryFind |
 | `0x0042cf50` | MiniFigureTypeTableLoad |
 | `0x0042d2b0` | BuildingTypesLoad |
 | `0x0042d460` | UpgradeTypesLoad |
@@ -385,6 +386,8 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004314c0` | ActivityBuildRecordRelease |
 | `0x00431530` | ActivityBuildRecordsReleaseAll |
 | `0x00431780` | TerrainStampImpactHandler |
+| `0x00431a30` | SelectedEntitiesAnyPredicateMatch |
+| `0x00431ab0` | AnyObjectCanOccupyTerrainCell |
 | `0x00431b20` | PlacementBlockedAdjacentCellScan |
 | `0x00431c70` | FirstFreeNeighborCellPick |
 | `0x00431da0` | TerrainCellRouteAndOccupancyCheck |
@@ -402,7 +405,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00432a20` | TerrainCellAllowsPlacement |
 | `0x00432c90` | TerrainCellStateUpdate |
 | `0x00433180` | CellTypeSpeedMultiplierResolve |
-| `0x00433330` | TerrainCellTypeGetAtCoords |
 | `0x00433380` | TerrainCellMutationProgress |
 | `0x004334f0` | RenderQualityConfigApply |
 | `0x00433770` | SceneLightsBuildFromConfig |

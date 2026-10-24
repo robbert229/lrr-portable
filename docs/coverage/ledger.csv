@@ -738,8 +738,8 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00431780,FUN_00431780,named,TerrainStampImpactHandler,0,2198
 004319b0,FUN_004319b0,ported,TerrainCellMaterialGet,2,199
 004319e0,FUN_004319e0,ported,MapFileCellGet,2,291
-00431a30,FUN_00431a30,ported,SelectedEntitiesAnyPredicateMatch,3,519
-00431ab0,FUN_00431ab0,ported,AnyObjectCanOccupyTerrainCell,3,480
+00431a30,FUN_00431a30,named,SelectedEntitiesAnyPredicateMatch,0,519
+00431ab0,FUN_00431ab0,named,AnyObjectCanOccupyTerrainCell,0,480
 00431b20,FUN_00431b20,named,PlacementBlockedAdjacentCellScan,0,1666
 00431c70,FUN_00431c70,named,FirstFreeNeighborCellPick,0,1654
 00431da0,FUN_00431da0,named,TerrainCellRouteAndOccupancyCheck,0,3798
@@ -793,7 +793,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00433180,FUN_00433180,named,CellTypeSpeedMultiplierResolve,0,1310
 004332c0,FUN_004332c0,ported,TerrainCellRecordByte3Get,2,199
 004332f0,FUN_004332f0,ported,TerrainCellWorkFlagSet,2,396
-00433330,FUN_00433330,named,TerrainCellTypeGetAtCoords,0,371
+00433330,FUN_00433330,ported,TerrainCellTypeGetAtCoords,2,371
 00433380,FUN_00433380,named,TerrainCellMutationProgress,0,1722
 004334c0,FUN_004334c0,ported,MapFileDimensionsGet,2,228
 004334f0,FUN_004334f0,named,RenderQualityConfigApply,0,2191

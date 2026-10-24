@@ -480,6 +480,115 @@ int main(int argc, char** argv)
         CHECK(level_cell_flag8_check(s, w, 5) == 0, "past the grid never blocked");
     }
 
+    /* Terrain leaves: gated type read + the +5 byte classifier. */
+    {
+        const int w = (int)level_width(s);
+        uint8_t* rec = level_voxel(s, 3, 4);
+        const uint8_t s2 = rec[2], s5 = rec[5];
+        uint32_t out = 0;
+
+        rec[2] = 6;
+        CHECK(level_cell_type_get_at(s, 3, 4, &out) == 1 && out == 6,
+              "the gated type read writes the byte");
+        out = 0xdeadu;
+        CHECK(level_cell_type_get_at(s, (unsigned)w - 1, 0, &out) == 0 &&
+                  out == 0xdeadu,
+              "outside the gate leaves the out param alone");
+
+        uint32_t a = 9, b = 9, c = 9, d = 9;
+        rec[5] = 0;
+        CHECK(level_cell_byte_state_classify(s, 3, 4, &a, &b, &c, &d) == 0 &&
+                  (a | b | c | d) == 0,
+              "the zero byte clears the outs and reports 0");
+        rec[5] = 1; /* idx 0: table[0] -> out_a, others stay zeroed */
+        a = b = c = d = 9;
+        CHECK(level_cell_byte_state_classify(s, 3, 4, &a, &b, &c, &d) == 1 &&
+                  a == 1 && (b | c | d) == 0,
+              "byte 1 routes table[0] to out_a");
+        rec[5] = 3; /* idx 2: table[0] -> out_b (routed before out_c) */
+        a = b = c = d = 9;
+        CHECK(level_cell_byte_state_classify(s, 3, 4, &a, &b, &c, &d) == 1 &&
+                  b == 1 && (a | c | d) == 0,
+              "the b/c swap: idx 2 writes out_b, not out_c");
+        rec[5] = 2; /* idx 1: table[0] -> out_c */
+        a = b = c = d = 9;
+        CHECK(level_cell_byte_state_classify(s, 3, 4, &a, &b, &c, &d) == 1 &&
+                  c == 1 && (a | b | d) == 0, "idx 1 routes to out_c");
+        rec[5] = 5; /* idx 4: table[1] = 3, low bits 0 -> out_a */
+        a = b = c = d = 9;
+        CHECK(level_cell_byte_state_classify(s, 3, 4, &a, &b, &c, &d) == 1 &&
+                  a == 3 && (b | c | d) == 0, "the (v-1)/4 table index wins");
+        rec[5] = 22; /* idx 21: past the table — reported 0 as documented */
+        a = b = c = d = 9;
+        CHECK(level_cell_byte_state_classify(s, 3, 4, &a, &b, &c, &d) == 1 &&
+                  (a | b | c | d) == 0, "bytes past the table report 0");
+        CHECK(level_cell_byte_state_classify(s, -1, 2, &a, &b, &c, &d) == 0 &&
+                  (a | b | c | d) == 0, "off-map classifies as 0");
+
+        rec[2] = s2;
+        rec[5] = s5;
+    }
+
+    /* Map-file resource slots (the 0x489xxx registry + accessors). */
+    {
+        level_map_slots_reset();
+        CHECK(level_map_slot_get(0) == NULL, "reset empties the table");
+        CHECK(level_map_slot_get(2001) == NULL, "past the table resolves NULL");
+
+        const size_t sz = 16 + 2 * 2 * 2;
+        int s0 = level_map_slot_allocate(sz);
+        CHECK(s0 == 0, "first claim takes slot 0");
+        int s1 = level_map_slot_allocate(sz);
+        CHECK(s1 == 1, "the next claim takes slot 1");
+
+        uint8_t* img = level_map_slot_get((uint32_t)s1);
+        CHECK(img != NULL, "a claimed slot resolves");
+        if (img != NULL) {
+            const uint32_t w2 = 2, h2 = 2;
+            __builtin_memcpy(img + 0x08, &w2, 4);
+            __builtin_memcpy(img + 0x0C, &h2, 4);
+            const uint16_t cells[4] = { 11, 12, 13, 14 };
+            for (int i = 0; i < 4; ++i) {
+                __builtin_memcpy(img + 0x10 + i * 2, &cells[i], 2);
+            }
+            uint32_t dw = 0, dh = 0;
+            level_map_dimensions_get((uint32_t)s1, &dw, &dh);
+            CHECK(dw == 2 && dh == 2, "the slot header reads dims");
+            CHECK(level_map_cell_get((uint32_t)s1, 1, 0) == 12,
+                  "the slot cell read takes x fastest");
+            CHECK(level_map_cell_get((uint32_t)s1, 0, 1) == 13,
+                  "the slot cell read steps rows by width");
+        }
+
+        level_map_slot_release((uint32_t)s1);
+        CHECK(level_map_slot_get((uint32_t)s1) == NULL, "release frees the id");
+        level_map_slot_release((uint32_t)s1); /* free id: no-op */
+        level_map_slot_release(50000u);       /* past the table: no-op */
+        CHECK(level_map_slot_allocate(sz) == 1, "the released id is re-claimed");
+
+        /* Raw header/cell twins, including the NULL guards. */
+        uint8_t buf[16 + 4];
+        memset(buf, 0, sizeof buf);
+        const uint32_t w1 = 1;
+        __builtin_memcpy(buf + 0x08, &w1, 4);
+        const uint16_t cell = 777;
+        __builtin_memcpy(buf + 0x12, &cell, 2); /* +16 + (1*2) */
+        CHECK(level_map_image_cell(buf, 1, 1, 0) == 777, "the raw cell reads");
+        uint32_t dw = 1, dh = 1;
+        level_map_image_header(NULL, &dw, &dh);
+        CHECK(dw == 0 && dh == 0, "the NULL image header reads 0");
+        CHECK(level_map_image_cell(NULL, 0, 1, 0) == 0, "the NULL image cell reads 0");
+
+        /* Unresolved slot: the corpus reads address 8/12 here; the port
+         * reports 0 (deviation) and the cell read lands on zero dims. */
+        level_map_dimensions_get(1234, &dw, &dh);
+        CHECK(dw == 0 && dh == 0 && level_map_cell_get(1234, 0, 0) == 0,
+              "the unresolved slot reads zero");
+
+        level_map_slots_reset(); /* leak-clears the table as the corpus does */
+        (void)s0;
+    }
+
     /* Terrain handle + block table. */
     void* terr = level_load_ptr(s, LEVEL_OFF_TERRAIN);
     CHECK(terr != NULL, "terrain created");
