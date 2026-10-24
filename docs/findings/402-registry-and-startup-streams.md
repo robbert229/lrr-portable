@@ -1,0 +1,31 @@
+# Finding 402 — Registry and Startup Streams
+
+This finding maps the ten functions assigned to `registry-and-startup-streams`. The area contains three related but distinct paths: startup file-stream lifecycle, Windows registry configuration reads, and WAD/archive record accessors whose assigned aliases contain “Registry”. The evidence below distinguishes these contexts rather than assuming those aliases all refer to the Windows registry.
+
+| Address | Name | Observed behavior | Caller/state flow |
+| --- | --- | --- | --- |
+| `0x0048b260` | `StartupStreamStateReset` | Clears globals `0x00575ce0`, `0x00575ce4`, `0x00575ce8`, `0x00575cec`, and `0x005764f4`. | Called during WinMain initialization before WAD mounting. The first four globals are later used as startup stream handles/state; the final flag is also written by `WindowModeFlagSet` (`0x0048b280`). |
+| `0x0048b290` | `StartupStreamsClose` | Closes each nonzero handle in `0x00575ce0`, `0x00575ce4`, and `0x00575ce8` through `GameFileClose` (`0x0047fac0`), then zeros those three globals. | Called by `StartupConfigStreamLoad` before opening the config stream, and during WinMain teardown. It does not clear `0x00575cec` in this body. |
+| `0x0048b2f0` | `StartupConfigStreamLoad` | Calls `StartupStreamsClose`, opens the path at `0x005760f0` with the filename/pattern at `0x004a52b8`, and, on success, parses into `0x00575cf0` through `FileTokenListLoadAndTreeScan` (`0x004802d0`) before closing the file. It leaves the closed handle value in `0x00575cec`. | Called at WinMain teardown after `StartupStreamsClose`; the precise path and data format are not established by this routine alone. |
+| `0x0048b330` | `RegistryPathSplit` | Copies one backslash-delimited component into the caller's output buffer, skips one separator when present, and returns the remaining path. | Used recursively by `RegistryPathCreateKeys`; the local caller buffer there is 100 bytes, with no component-length check visible in this helper. |
+| `0x0048b360` | `RegistryPathAccessor` | Forwards its five arguments to `RegistryPathCreateKeys` with predefined root `0x80000002` (`HKEY_LOCAL_MACHINE`). | WinMain reads `StandardParameters` and `NoHALMessage` under the LEGO Media Games Rock Raiders key. `WadMountStartup` also reads `CDMissing`, `DataMissing`, and `SetupError`. |
+| `0x0048b390` | `RegistryPathCreateKeys` | Splits the subkey path; for each nonempty component, calls `RegCreateKeyA`, recurses using the returned key, and closes that key while unwinding. At the leaf, calls `RegQueryValueExA` and returns whether it succeeded. | Used by `RegistryPathAccessor`. As detailed in Finding 112, this “read” path can create missing subkeys; it does not validate the returned registry value type. |
+| `0x0048b4a0` | `BufferedCharStreamReadToString` | Repeatedly reads characters with `0x0048fe20` until it returns NUL, writes a terminating NUL, and returns 1. No output-capacity check is visible. | Called twice in `WwadArchiveIndexLoad` (`0x0048b4e0`) to read strings from a buffered archive stream. |
+| `0x0048bcf0` | `RegistryEntryValueGet` | Resolves an archive-record pointer with `0x0048bce0` and returns the `+8` dword from its indexed 0x10-byte subrecord. | Called by `WadStreamLengthGet` (`0x0048c010`); `WadEntryMemoryStreamOpen` (`0x0048be40`) uses the adjacent `RegistryEntryTypeGet` accessor to obtain a size for allocation/read. This context is WAD/archive metadata, not a Windows registry API path. |
+| `0x0048bd10` | `RegistryEntryTypeGet` | Resolves the same archive-record pointer and returns the `+4` dword from its indexed 0x10-byte subrecord. | Used by `WadEntryMemoryStreamOpen` (`0x0048be40`); despite the assigned alias, the observed caller is in the WAD-entry read path. |
+| `0x0048c030` | `RegistryEntryAccessByIndex` | Forwards an index to `FixedRecordSlotResourceGet` (`0x0048bff0`), which returns the resource pointer for an occupied fixed slot or zero. | Called by `WadFileRead` (`0x0047f980`) and `GameFileReadByte` (`0x0047fc20`) to retrieve the in-memory WAD resource behind a file handle. The body does not access the Windows registry. |
+
+## Data paths and boundaries
+
+- **Startup/config lifecycle:** WinMain resets state before initialization. At teardown it closes the three stream globals, then `StartupConfigStreamLoad` repeats that close, opens the configured startup path, parses it into the token/tree state at `0x00575cf0`, and closes the newly opened stream. Exact names/roles for the three close-managed stream globals remain unresolved.
+- **Windows registry configuration:** the wrapper fixes the root to `HKEY_LOCAL_MACHINE`. The recursive helper creates each subkey path component before querying the leaf value, so missing keys may be created during lookup. Existing finding 112 covers the direct registry mechanics; this finding adds startup/WAD context and caller examples.
+- **WAD/archive metadata and resources:** the “RegistryEntry” accessors read fields from archive records and fixed file-resource slots. `WadEntryMemoryStreamOpen` uses a metadata value to allocate/read a resource, while `WadFileRead` and `GameFileReadByte` use the slot accessor to reach the loaded resource bytes.
+- **Buffered string reads:** the helper stops only on a NUL byte and writes an output terminator. Capacity safety depends on callers and stream contents; no bound is visible in its body.
+
+## Open questions and focused follow-up
+
+- Identify the three startup stream globals, their open sites, and whether they are all closed along every startup/teardown path.
+- Determine the source and format of the file opened by `StartupConfigStreamLoad`, including the meaning of `0x005760f0` and the parser's destination tree.
+- Reconcile the “RegistryEntry” aliases at `0x0048bcf0`, `0x0048bd10`, and `0x0048c030` with their observed WAD/archive/file-resource callers; avoid renaming the shared ledger until dependent references are reviewed.
+- Establish length limits for path components copied by `RegistryPathSplit` and strings read by `BufferedCharStreamReadToString`; current pseudocode shows no local bounds checks.
+- Determine the intended meaning of the selector argument at the leaf of `RegistryPathCreateKeys`; the recovered body accepts only 0 or 1 but performs the same `RegQueryValueExA` call in either branch.
