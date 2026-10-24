@@ -160,4 +160,9 @@ typedef struct SimtickBobbin {
 void simtick_set_bobbin_head(SimtickBobbin* head);
 int  simtick_bobbin_advanced(void); /* helper-invocation counter */
 
+/* SimulationGlobalWordSet (FUN_0041ba90, finding 474): the corpus assigns
+ * its argument to the global DAT_004de1f4 — the mute word the simtick
+ * models. NULL-free by shape: this is a blind global store. */
+void simulation_global_word_set(uint32_t value);
+
 #endif /* LEGORRR_SIMTICK_HPP */

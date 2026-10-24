@@ -109,4 +109,17 @@ void selection_flag10_set_clear(int set);
 void info_message_always_play_flag_set(int id, int set);
 void indexed_selection_flag_20000_set_clear(int id, int set);
 
+/* --- the incident/message DAT-global band (2026-10-24; findings 05/250/441) -
+ * The corpus's message config block (DAT_004dc6fc…, stride 0x14 — all-zero
+ * byte-read per finding 05) and the incident-state word FUN_0041a2f0 (DAT_004dcd58) have
+ * no ported feeder — the shapes land as guarded zero-init storage per the
+ * unowned-global convention. The catalog read (FUN_00419420) is the same
+ * stride-0x14 dword the corpus's InfoMessageSoundLoad populates into the
+ * record's +4 (finding 441 — despite its name it does not read a template
+ * field); the secondary-sound store (FUN_00419680) writes the adjacent
+ * dword of the same record block. */
+uint32_t incident_message_text_catalog_get(int id);
+void     info_message_secondary_sound_set(int id, uint32_t value);
+uint32_t incident_message_state_get(void);
+
 #endif /* LEGORRR_MESSAGE_HPP */

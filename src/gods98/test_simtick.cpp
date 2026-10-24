@@ -344,6 +344,11 @@ int main(void)
         simtick_sfx_seed(0, NULL);
     }
 
+    /* SimulationGlobalWordSet (2026-10-24): the faithful blind store. */
+    simulation_global_word_set(0xABCDu);
+    CHECK(simtick_mute_word() == 0xABCDu, "simtick: the word store lands");
+    simulation_global_word_set(0u);
+
     if (s_failures == 0) {
         printf("simtick_test: PASS\n");
         return 0;

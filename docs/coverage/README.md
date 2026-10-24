@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 690 | 26.9% |
+| ported | 695 | 27.1% |
 | anchored | 4 | 0.2% |
-| named | 1823 | 71.1% |
+| named | 1818 | 70.9% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (690 functions)
+  (695 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1823 functions)
+  citation yet (1818 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1828 (71.3%).**
+**Game logic remaining to port: 1823 (71.1%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -382,16 +382,13 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00418da0` | HelpWindowButtonHitTest |
 | `0x00419030` | HelpWindowButtonFeedbackUpdate |
 | `0x004191a0` | MainSimStateAdmissionPredicate |
-| `0x004191f0` | UiModeResourceBit40Get |
 | `0x00419200` | UiModeResourceBit40SetClear |
 | `0x00419230` | IncidentMessageCatalogInit |
 | `0x004193e0` | IncidentMessageConfigLookup |
-| `0x00419420` | IncidentMessageTextCatalogGet |
 | `0x00419430` | InterfaceMessageTabInfoTextLoad |
 | `0x004194b0` | IncidentMessageTemplateReplace |
 | `0x00419530` | IncidentMessageTemplateCompile |
 | `0x00419650` | InfoMessageSoundLoad |
-| `0x00419680` | InfoMessageSecondarySoundSet |
 | `0x004196a0` | MessageSubscriberDispatch |
 | `0x004196f0` | IncidentMessageQueueAppend |
 | `0x00419780` | IndexedLinkedListEntryGet |
@@ -410,7 +407,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0041a1a0` | UIEntryHitTestAndDispatch |
 | `0x0041a250` | ScrollOffsetFromCursorUpdate |
 | `0x0041a290` | ScreenRightEdgeCacheRefresh |
-| `0x0041a2f0` | IncidentMessageStateGet |
 | `0x0041a300` | InterfaceMenuActionLabelsInit |
 | `0x0041a660` | InteractionActionCodeMapInitialize |
 | `0x0041a7d0` | InputKeyGroupRegister |
@@ -430,7 +426,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0041b680` | CatalogCallbackByIdDispatch |
 | `0x0041b9b0` | GlobalStateGet_004ddd1c |
 | `0x0041b9c0` | SelectionEntityCodeResolve |
-| `0x0041ba90` | SimulationGlobalWordSet |
 | `0x0041baa0` | SimulationPointerActionDispatch |
 | `0x0041c1c0` | AdvisorOverlayHitResolve |
 | `0x0041c440` | AdvisorCallbackScheduleGate |

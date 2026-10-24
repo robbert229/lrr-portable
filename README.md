@@ -2144,6 +2144,21 @@ deviation, documented); and `save_slot_set` (SavSetSlot, 0x417ea0) was
 already the port's model of the slot word — cited.
 `savegame_test` pins the clear, the bounds, and the block answer.
 
+**The message/sim one-liner band** (2026-10-24; findings 05/250/443/474):
+five leaves land. The corpus's message-config DAT block — the stride-0x14
+catalog read (`incident_message_text_catalog_get` 0x419420, finding 441:
+the record's `+4` dword, not a template field, despite the corpus name)
+and the secondary-sound store (`info_message_secondary_sound_set`
+0x419680) — plus the incident-state word (`incident_message_state_get`
+0x41a2f0) land as guarded zero-init storage in `message.*`: the block's
+byte-read is all zeros in the shipped binary (finding 05), so the faithful
+initial state is the zero block with the corpus's index math reproduced.
+`ui_mode_resource_bit40_get` (0x4191f0, `frontend.*`) reads the
+selection-state word's 0x40 bit through the band that models it, and
+`simulation_global_word_set` (0x41ba90, `simtick.*`) is the corpus's blind
+store onto the mute word. `message_test`, `frontend_test`, and
+`simtick_test` pin the windows, the mask, and the store.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

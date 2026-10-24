@@ -500,11 +500,11 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00419100,FUN_00419100,ported,UiModeResourcePositionsApply,1,416
 00419150,FUN_00419150,ported,SelectionStateHandleGet,1,393
 004191a0,FUN_004191a0,named,MainSimStateAdmissionPredicate,0,307
-004191f0,FUN_004191f0,named,UiModeResourceBit40Get,0,61
+004191f0,FUN_004191f0,ported,UiModeResourceBit40Get,1,61
 00419200,FUN_00419200,named,UiModeResourceBit40SetClear,0,244
 00419230,FUN_00419230,named,IncidentMessageCatalogInit,0,2117
 004193e0,FUN_004193e0,named,IncidentMessageConfigLookup,0,368
-00419420,FUN_00419420,named,IncidentMessageTextCatalogGet,0,102
+00419420,FUN_00419420,ported,IncidentMessageTextCatalogGet,1,102
 00419430,FUN_00419430,named,InterfaceMessageTabInfoTextLoad,0,129
 00419450,FUN_00419450,ported,SelectionFlag10SetClear,1,170
 00419470,FUN_00419470,ported,InfoMessageAlwaysPlayFlagSet,1,304
@@ -512,7 +512,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004194f0,FUN_004194f0,ported,IndexedSelectionFlag20000SetClear,1,304
 00419530,FUN_00419530,named,IncidentMessageTemplateCompile,0,2020
 00419650,FUN_00419650,named,InfoMessageSoundLoad,0,209
-00419680,FUN_00419680,named,InfoMessageSecondarySoundSet,0,128
+00419680,FUN_00419680,ported,InfoMessageSecondarySoundSet,1,128
 004196a0,FUN_004196a0,named,MessageSubscriberDispatch,0,346
 004196f0,FUN_004196f0,named,IncidentMessageQueueAppend,0,702
 00419780,FUN_00419780,named,IndexedLinkedListEntryGet,0,366
@@ -537,7 +537,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0041a250,FUN_0041a250,named,ScrollOffsetFromCursorUpdate,0,242
 0041a290,FUN_0041a290,named,ScreenRightEdgeCacheRefresh,0,147
 0041a2c0,FUN_0041a2c0,ported,InfoMessageTimerDecay,6,239
-0041a2f0,FUN_0041a2f0,named,IncidentMessageStateGet,0,60
+0041a2f0,FUN_0041a2f0,ported,IncidentMessageStateGet,1,60
 0041a300,FUN_0041a300,named,InterfaceMenuActionLabelsInit,0,4861
 0041a660,FUN_0041a660,named,InteractionActionCodeMapInitialize,0,754
 0041a7d0,FUN_0041a7d0,named,InputKeyGroupRegister,0,1005
@@ -561,7 +561,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0041b9b0,FUN_0041b9b0,named,GlobalStateGet_004ddd1c,0,60
 0041b9c0,FUN_0041b9c0,named,SelectionEntityCodeResolve,0,319
 0041ba10,FUN_0041ba10,ported,,4,464
-0041ba90,FUN_0041ba90,named,SimulationGlobalWordSet,0,81
+0041ba90,FUN_0041ba90,ported,SimulationGlobalWordSet,2,81
 0041baa0,FUN_0041baa0,named,SimulationPointerActionDispatch,0,10110
 0041c1c0,FUN_0041c1c0,named,AdvisorOverlayHitResolve,0,1069
 0041c440,FUN_0041c440,named,AdvisorCallbackScheduleGate,0,205

@@ -790,3 +790,10 @@ void simtick_fx_bank_tick(EngineContext* c, float dt)
     /* corpus: per-entry sub-fx scan, track max, fade update, clamp 240. */
     ++s_post_n;
 }
+/* SimulationGlobalWordSet (FUN_0041ba90): the faithful blind store — the
+ * same word the mute timer reads (simtick_set_mute_word is the port-side
+ * hook with the same effect; this is the corpus's own entry point). */
+void simulation_global_word_set(uint32_t value)
+{
+    s_mute_word = value;
+}

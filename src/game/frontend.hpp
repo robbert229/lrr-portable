@@ -342,6 +342,11 @@ void selection_state_flag_clear_bit0(void);
 uint32_t selection_state_handle_get(int index);
 
 uint32_t selection_state_flags_peek(void);
+
+/* UiModeResourceBit40Get (FUN_004191f0, findings 443/474): bit 0x40 of the
+ * selection-state word — the same word the band above models (this leaf
+ * reads it through the corpus's mask). */
+uint32_t ui_mode_resource_bit40_get(void);
 void selection_state_flags_set(uint32_t flags);       /* diagnostics */
 int selection_state_hit_index_peek(void);
 void selection_state_hit_index_set(int index);        /* diagnostics */

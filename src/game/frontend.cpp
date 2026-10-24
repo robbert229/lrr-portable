@@ -1942,6 +1942,11 @@ uint32_t selection_state_handle_get(int index)
 }
 
 uint32_t selection_state_flags_peek(void) { return s_sel_state; }
+
+uint32_t ui_mode_resource_bit40_get(void)
+{
+    return s_sel_state & 0x40u;
+}
 void selection_state_flags_set(uint32_t flags) { s_sel_state = flags; }
 int selection_state_hit_index_peek(void) { return s_sel_hit_index; }
 void selection_state_hit_index_set(int index) { s_sel_hit_index = index; }
