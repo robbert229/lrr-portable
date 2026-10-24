@@ -45,7 +45,7 @@ boundary ordering and resulting null-frame behavior are detailed in findings
 | `0x0047ed50` | `AviCurrentFrameIndexGet` | Thin wrapper forwarding to the guarded playback-index getter. |
 | `0x0047ed60` | `AviStreamFrameCountGet` | Thin wrapper forwarding to the stream-length getter. |
 | `0x0047ed80` | `AviPlayerReadyGet` | Returns the movie object's ready byte at offset `+0x99`. |
-| `0x0047efd0` | `AviFileShutdown` | Conditionally invokes method slot `+0x20` on one global interface, then releases it and another global interface through slot `+8`. The exact object roles are not established by this body. |
+| `0x0047efd0` | `DirectInputShutdown` (listed by Issue #196 as `AviFileShutdown`) | If the acquired flag is set, invokes the device method at slot `+0x20` and clears the flag; then releases the DirectInput device and parent interfaces through slot `+8`. These are the globals initialized by `DirectInputInitialize` at `0x0047ed90`, so this routine is input teardown, not part of AVI/FLIC playback. The ticket’s area assignment for this address is incorrect. |
 
 The movie frame index is derived from elapsed time and the stored rate rather
 than incremented by one: after a successful frame fetch, `0x0047eb20` computes

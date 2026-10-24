@@ -2012,7 +2012,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0047ed90,FUN_0047ed90,named,DirectInputInitialize,0,2033
 0047eef0,FUN_0047eef0,ported,InputStatePoll,1,1356
 0047efb0,FUN_0047efb0,named,KeyboardDownKeyCount,0,285
-0047efd0,FUN_0047efd0,named,AviFileShutdown,0,333
+0047efd0,FUN_0047efd0,named,DirectInputShutdown,0,333
 0047f010,FUN_0047f010,ported,CursorPositionUpdate,1,772
 0047f0d0,FUN_0047f0d0,named,CursorSetClientPosition,0,307
 0047f130,FUN_0047f130,ported,WadMountStartup,1,4491

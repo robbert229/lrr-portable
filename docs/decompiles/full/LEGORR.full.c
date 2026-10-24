@@ -84742,7 +84742,7 @@ int FUN_0047efb0(void)
 }
 
 
-// ==== AviFileShutdown @ 0047EFD0 [Ghidra: FUN_0047efd0] ====
+// ==== DirectInputShutdown @ 0047EFD0 [Ghidra: FUN_0047efd0] ====
 
 
 void FUN_0047efd0(void)
