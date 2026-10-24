@@ -1458,7 +1458,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00464e80,FUN_00464e80,named,DeferredSoundPlayExpire,0,266
 00464ec0,FUN_00464ec0,named,DeferredSoundTimerSetIfIdle,0,264
 00464ef0,FUN_00464ef0,ported,SoundSubmitWithGlobalCooldown,6,519
-00464f60,FUN_00464f60,named,SoundRequestQueueSubmit,0,232
+00464f60,FUN_00464f60,ported,SoundRequestQueueSubmit,3,232
 00464fa0,FUN_00464fa0,named,SoundAliasPlay,0,570
 00465010,FUN_00465010,named,ConfiguredVariantPropertySet,0,161
 00465030,FUN_00465030,named,ConfiguredVariantPropertyRead,0,134

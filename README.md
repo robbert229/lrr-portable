@@ -850,6 +850,16 @@ registration bit. `sound_test` covers the enable/disable/and-stop
 transitions, the cooldown-word zero, batch-mode readback, and flag-bit
 independence.
 
+**Deferred request queue** (2026-10-24; port issue #317, aggregate #296
+write side): `sound_request_queue_submit` (`SoundRequestQueueSubmit @
+0x464f60`) appends alias + loop-flag requests to the corpus's two parallel
+10-entry tables (`DAT_00502b30`/`DAT_00502b58`, count `DAT_00502bd0`) and
+drops silently past capacity, exactly as shipped. The pending set is exposed
+through count/get accessors; the per-frame consumer that rotates it into the
+active playback copies (SoundSubsystemFrameTick) and the deferred/batch
+drains land with their own milestones. `sound_test` covers ordered appends,
+the drop-on-full path, bounded reads, and the count-only clear.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

@@ -162,4 +162,36 @@ int sound_batch_mode_get(void);
  * #296); disable zeroes the word. */
 double sound_deferred_last_alias(void);
 
+/* ------------------------------------------------------------------ *
+ *  Deferred sound request queue (issue #317; aggregate #296 write
+ *  side).
+ *
+ *  The corpus's queue writer appends `alias` + `loop` to two parallel
+ *  10-entry tables (the DAT_00502b30 alias words and the DAT_00502b58
+ *  loop-flag words, count in DAT_00502bd0). A submission is dropped
+ *  silently once the count reaches ten; nothing else is observable in
+ *  the writer. The per-frame owner (SoundSubsystemFrameTick, unported
+ *  here) rotates the pending slots into the active playback copies and
+ *  zeroes the count; that consumer lands with its own milestone.
+ * ------------------------------------------------------------------ */
+
+#define SOUND_REQUEST_QUEUE_CAPACITY 10 /* DAT_00502bd0 bound */
+
+/* SoundRequestQueueSubmit @ 0x464f60: append an alias request
+ * (`loop` nonzero marks the queued submission as looping — the corpus's
+ * menu/reward callers pass 1 only for the two music loops). Drops when
+ * full, like the corpus. */
+void sound_request_queue_submit(int alias, int loop);
+
+/* Pending count (DAT_00502bd0). */
+int sound_request_queue_count(void);
+
+/* Reads pending entry `index` into *alias/*loop; 1 on success, 0 out of
+ * range. */
+int sound_request_queue_get(int index, int* alias, int* loop);
+
+/* Port-side reset of the pending count (the corpus clears the queue
+ * only inside its frame tick; exposed for tests and pre-level reuse). */
+void sound_request_queue_clear(void);
+
 #endif /* LEGORRR_SOUND_HPP */

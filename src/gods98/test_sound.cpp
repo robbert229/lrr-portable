@@ -452,11 +452,62 @@ static void test_sound_enable(void)
     sound_subsystem_enable_set(0, 0);
 }
 
+/* ------------------------------------------------------------------ *
+ *  Deferred request queue (SoundRequestQueueSubmit @ 0x464f60 — issue
+ *  #317).
+ * ------------------------------------------------------------------ */
+
+static void test_request_queue(void)
+{
+    sound_request_queue_clear();
+    CHECK(sound_request_queue_count() == 0, "queue starts empty");
+    CHECK(sound_request_queue_get(0, NULL, NULL) == 0,
+          "empty queue reads nothing");
+
+    int a = -1, l = -1;
+    sound_request_queue_submit(0x2c, 1);
+    CHECK(sound_request_queue_count() == 1 &&
+              sound_request_queue_get(0, &a, &l) == 1 && a == 0x2c && l == 1,
+          "submit appends alias + loop flag in order");
+
+    sound_request_queue_submit(0x29, 0);
+    sound_request_queue_submit(0x27, 0);
+    CHECK(sound_request_queue_count() == 3, "appends grow the count");
+    CHECK(sound_request_queue_get(1, &a, &l) == 1 && a == 0x29 && l == 0,
+          "second entry keeps its values");
+    CHECK(sound_request_queue_get(-1, &a, &l) == 0 &&
+              sound_request_queue_get(3, &a, &l) == 0,
+          "get is bounded to the pending range");
+
+    /* Drop-on-full: fill to capacity, then one more. The corpus drops
+     * silently — count and stored entries stay. */
+    for (int i = 3; i < SOUND_REQUEST_QUEUE_CAPACITY; ++i) {
+        sound_request_queue_submit(0x10 + i, 0);
+    }
+    CHECK(sound_request_queue_count() == SOUND_REQUEST_QUEUE_CAPACITY,
+          "queue fills to capacity");
+    sound_request_queue_submit(0x3f, 1);
+    CHECK(sound_request_queue_count() == SOUND_REQUEST_QUEUE_CAPACITY,
+          "submission past capacity is dropped");
+    CHECK(sound_request_queue_get(SOUND_REQUEST_QUEUE_CAPACITY - 1, &a, &l)
+                  == 1 && a == 0x19 && l == 0,
+          "last stored entry is the capacity fill, not the dropped submit");
+
+    /* Clear empties the pending set but leaves stored words (the corpus
+     * only zeroes the count). */
+    sound_request_queue_clear();
+    CHECK(sound_request_queue_count() == 0,
+          "clear zeroes the count (corpus tick behaviour)");
+    CHECK(sound_request_queue_get(0, NULL, NULL) == 0,
+          "cleared queue reads nothing");
+}
+
 int main(int argc, char** argv)
 {
     test_synthetic();
     test_alias_registry();
     test_sound_enable();
+    test_request_queue();
     for (int i = 1; i < argc; ++i) {
         if (strcmp(argv[i], "--real") == 0 && i + 1 < argc) {
             test_real(argv[i + 1]);
