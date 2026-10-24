@@ -15,6 +15,18 @@ configuration. Static evidence establishes the table construction and lookup
 data shape; it does not establish the contents of a particular level's stream
 or the visible meaning of each resource token.
 
+The two dynamic tables use count/pointer pairs: `DAT_00555dac` / `DAT_00555db0`
+for colon-marked resources and `DAT_00555db4` / `DAT_00555db8` for
+dollar-marked sounds. Each entry occupies eight bytes and contains the token
+name pointer followed by the loaded handle. `AdvisorInlineTokenRender`
+resolves `<name>` through the resource table and `#name#` through the sound
+table. The sound branch consults `DAT_00555dbc` before initiating playback;
+the loader initializes that global to the sound-table count. The renderer then
+stores a matched sound index there before checking whether sound is enabled,
+and suppresses another playback attempt while that same index remains latched
+(see finding 211). The resource release routine walks both tables and releases
+their handles.
+
 Evidence: `ev_b85e67b084f3e4f58104808358264bbf35d8a22b04e4917f254dcf99157f38da`
 in [`legorr-objective-advisor-inline-markup.bundle`](../evidence/legorr-objective-advisor-inline-markup.bundle).
 
