@@ -2202,6 +2202,20 @@ store (0x453900 — GameConfigInit seeds it from the message-resource
 find). `crt_test`, `savegame_test`, `frontend_test`, and `message_test`
 pin the stores, the toggle walk, and the guards.
 
+**The app-mode + request-record band** (2026-10-24; findings 02/172):
+eight rows land. `engine_app_mode_get` (0x401bf0, `engine.*`) reads the
+app-mode word through the threaded `EngineContext`; the window-mode
+extent pair (0x401c30/c40, `crt.*`) lands as zero-init statics with a
+setter (the renderer-side store is unported), and `menu_wipe_end`
+(0x410440, `frontend.*`) clears the wipe word's low two bits with the
+corpus's start-side half unported. The three request-record predicates
+(0x45ab30/60/90, `crt.*`) AND the flag word of the 18-record 0x30-stride
+request block — the corpus's names read like setters but the bodies are
+pure tests — a zero-init flag-word window guarded to 18 entries with a
+port-side setter standing in for the unported panel-layer writers.
+`enginebind_test`, `crt_test`, and `frontend_test` pin the reads, the
+window guards, and the wipe clear.
+
 **Input core + CD/STD fallback** (findings 04/05, 22, 01): `src/gods98/input.*`
 models the corpus's three 256-byte key tables (`DAT_0076ab80/aa00/4de430`),
 edge semantics (`cur && !prev`), `KeyToAscii`/`KeyContextCheck`, the

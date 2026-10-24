@@ -2150,3 +2150,22 @@ uint32_t selection_mode_state_peek(void)
 {
     return s_sel_mode_state;
 }
+
+/* MenuWipeEnd (FUN_00410440) — DAT_005574f0 as a zero-init static; the
+ * corpus's MenuWipeStart-side setter is unported. */
+static uint32_t s_menu_wipe;
+
+void menu_wipe_end(void)
+{
+    s_menu_wipe &= ~3u;
+}
+
+uint32_t menu_wipe_flags_peek(void)
+{
+    return s_menu_wipe;
+}
+
+void menu_wipe_flags_set(uint32_t flags)
+{
+    s_menu_wipe = flags;
+}

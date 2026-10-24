@@ -239,4 +239,9 @@ int    global_scroll_guard_peek(void); /* port-side hook: the corpus reader
                                         * ScrollScaleSetAndClamp is unported */
 void   global_triple_copy_out(uint32_t* out);
 
+/* GlobalField505f88Get (FUN_00401bf0, finding 02): the corpus's app-mode
+ * word read — the EngineContext's own field. NULL answers 0 (deviation:
+ * the corpus reads its global blindly). */
+int engine_app_mode_get(const EngineContext* ctx);
+
 #endif /* LEGORRR_ENGINE_HPP */

@@ -138,6 +138,14 @@ int main(void)
               "engine_bind: the inert triple copies zero");
     }
 
+    /* The app-mode read (2026-10-24). */
+    EngineContext am = {};
+    CHECK(engine_app_mode_get(NULL) == 0, "the null context answers zero");
+    am.app_mode = 10;
+    CHECK(engine_app_mode_get(&am) == 10, "the mode word reads through");
+    am.app_mode = 0;
+
+
     if (s_failures == 0) {
         printf("engine_bind_test: PASS\n");
         return 0;

@@ -462,3 +462,56 @@ uint32_t mode_zero_input_flag_peek(void){ return s_mode_zero_flag; }
 uint32_t rockfall_table_base_peek(void) { return s_rockfall_base; }
 uint32_t ui_flag_word_peek(void)        { return s_ui_flag_word; }
 uint32_t global_config_word_peek(void)  { return s_config_word; }
+
+/* --- display dimensions + request-record predicates (see crt.hpp) ---------- */
+static int s_display_w;   /* DAT_00505924 */
+static int s_display_h;   /* DAT_00505928 */
+
+int display_width_get(void)  { return s_display_w; }
+int display_height_get(void) { return s_display_h; }
+
+void display_dimensions_set(int w, int h)
+{
+    s_display_w = w;
+    s_display_h = h;
+}
+
+/* DAT_0050013c record block: 18 records of 0x30 bytes (the 0x50013c…
+ * 0x50037c span the panel reset walks), flag word at record+0. Only the
+ * flag words are modeled — the record payloads belong to the unported
+ * panel layer. */
+#define REQUEST_RECORD_COUNT 18
+static uint32_t s_request_flags[REQUEST_RECORD_COUNT];
+
+int request_record_ready_flag4(int index)
+{
+    if (index < 0 || index >= REQUEST_RECORD_COUNT) {
+        return 0; /* deviation: the corpus strides blindly */
+    }
+    const uint32_t f = s_request_flags[index];
+    return (f & 4u) != 0u && (f & 8u) == 0u ? 1 : 0;
+}
+
+int request_record_ready_flag2(int index)
+{
+    if (index < 0 || index >= REQUEST_RECORD_COUNT) {
+        return 0; /* deviation: the corpus strides blindly */
+    }
+    const uint32_t f = s_request_flags[index];
+    return (f & 2u) != 0u && (f & 8u) == 0u ? 1 : 0;
+}
+
+int request_record_flag8_is_set(int index)
+{
+    if (index < 0 || index >= REQUEST_RECORD_COUNT) {
+        return 0; /* deviation: the corpus strides blindly */
+    }
+    return (int)(s_request_flags[index] & 8u);
+}
+
+void request_record_flags_set(int index, uint32_t flags)
+{
+    if (index >= 0 && index < REQUEST_RECORD_COUNT) {
+        s_request_flags[index] = flags;
+    }
+}

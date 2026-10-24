@@ -395,6 +395,36 @@ int main(void)
         rockfall_style_table_base_set(0u);
     }
 
+    /* Display dimensions + request-record predicates (2026-10-24). */
+    {
+        CHECK(display_width_get() == 0 && display_height_get() == 0,
+              "the extent pair starts zero");
+        display_dimensions_set(640, 480);
+        CHECK(display_width_get() == 640 && display_height_get() == 480,
+              "the hook stores the pair");
+        display_dimensions_set(0, 0);
+
+        CHECK(request_record_ready_flag4(3) == 0
+                  && request_record_flag8_is_set(3) == 0,
+              "the record window starts clear");
+        request_record_flags_set(4, 4u);
+        CHECK(request_record_ready_flag4(4) != 0, "flag 4 without 8 is ready");
+        request_record_flags_set(4, 0xCu);
+        CHECK(request_record_ready_flag4(4) == 0
+                  && request_record_flag8_is_set(4) == 8,
+              "flag 8 withholds either predicate");
+        request_record_flags_set(4, 2u);
+        CHECK(request_record_ready_flag2(4) != 0, "flag 2 without 8 is ready");
+        request_record_flags_set(5, 0u);
+        CHECK(request_record_ready_flag2(5) == 0
+                  && request_record_flag8_is_set(5) == 0,
+              "a cleared record answers nothing");
+        CHECK(request_record_ready_flag4(-1) == 0
+                  && request_record_flag8_is_set(18) == 0,
+              "the guarded window answers outside 18 entries");
+        request_record_flags_set(4, 0u);
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "crt_test: %d failure(s)\n", s_failures);
         return 1;

@@ -223,3 +223,9 @@ void global_triple_copy_out(uint32_t* out)
     out[1] = s_triple[1];
     out[2] = s_triple[2];
 }
+
+/* GlobalField505f88Get (FUN_00401bf0): threaded app-mode read. */
+int engine_app_mode_get(const EngineContext* ctx)
+{
+    return ctx != NULL ? ctx->app_mode : 0;
+}
