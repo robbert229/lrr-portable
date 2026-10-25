@@ -38,6 +38,9 @@ static void* rec_ptr(const void* base, size_t off)
     return v;
 }
 
+/* Defined with the mesh-window band below; used by the visibility setter. */
+static void rec_dword_put(void* base, size_t off, uint32_t v);
+
 /* Contents of a native cell array: memcpy read (the corpus's cell
  * dwords can sit unaligned after a stride change). */
 static uint32_t cells_dword(const void* cells, size_t off)
@@ -792,6 +795,43 @@ void scene_object_pair_apply_mode(const void* record, uint32_t flag)
     void* partner = rec_ptr(record, 0x7c);
     if (partner != NULL) {
         scene_visibility_hook_call(partner, (int)flag);
+    }
+}
+
+/* SceneResourceVisibilitySet (FUN_0046d2c0): raise (+0x1e8 |= 2) or clear
+ * (&= ~2) the record's visibility word, then route the raw flag through the
+ * leaf (FUN_00473b40) — unconditionally on the +8 object, on +0xc when it
+ * is set, and on every live child in the +0x10 window counted at +0x40.
+ * Deviations: the corpus's +8/+0xc object fields are adjacent 32-bit
+ * dwords, which the port's native-size pointer-slot model cannot carry
+ * four bytes apart — the port routes the field values as raw handles,
+ * exactly as the corpus does (what routes through the corpus's leaf is the
+ * dword itself). The children keep the band's native-size stride (the
+ * slot-window precedent) walked only to the window's six entries before
+ * +0x40 (the corpus strides its dword slots blindly past the count field);
+ * the count is read once (the leaf never touches the record) and NULL
+ * records are guarded. The flag rides the leaf raw, unlike the overlay's
+ * folded call. */
+void scene_resource_visibility_set(void* record, uint32_t flag)
+{
+    if (record == NULL) {
+        return; /* deviation: the corpus strides blindly */
+    }
+    const uint32_t word = rec_dword(record, 0x1e8);
+    rec_dword_put(record, 0x1e8, flag == 0u ? word & ~2u : word | 2u);
+    scene_visibility_hook_call(
+        (void*)(uintptr_t)rec_dword(record, 0x08), (int)flag);
+    const uint32_t secondary = rec_dword(record, 0x0c);
+    if (secondary != 0u) {
+        scene_visibility_hook_call((void*)(uintptr_t)secondary, (int)flag);
+    }
+    const uint32_t count = rec_dword(record, 0x40);
+    const uint32_t window = (0x40u - 0x10u) / (uint32_t)sizeof(void*);
+    for (uint32_t i = 0; i < count && i < window; ++i) {
+        void* child = rec_ptr(record, (size_t)0x10 + (size_t)i * sizeof(void*));
+        if (child != NULL) {
+            scene_visibility_hook_call(child, (int)flag);
+        }
     }
 }
 

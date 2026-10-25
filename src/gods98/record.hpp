@@ -384,6 +384,14 @@ void animation_object_visibility_set(const void* anim, uint32_t flag);
                                                 /* FUN_00406c90 */
 void scene_object_pair_apply_mode(const void* record, uint32_t flag);
                                                 /* FUN_00408670 */
+
+/* SceneResourceVisibilitySet (FUN_0046d2c0): raise or clear bit 1 of the
+ * record's +0x1e8 word, then route the raw flag through the visibility
+ * leaf: unconditionally on +8, on +0xc when set, and on every live child
+ * of the +0x10 window counted at +0x40. Deviations in the module notes
+ * (window-guarded native-size slot stride, single count read, NULL guard). */
+void scene_resource_visibility_set(void* record, uint32_t flag);
+                                                /* FUN_0046d2c0 */
 /* SceneObjectPairSetRenderParameters (FUN_004086c0): the pair's pose
  * dispatch lands on the ported position + facing primitives — the corpus
  * hands the dispatch (x, y, 0) plus the constant up vector (0, 0, -1),
