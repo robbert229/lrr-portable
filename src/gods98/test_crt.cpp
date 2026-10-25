@@ -962,6 +962,64 @@ int main(void)
               "clear-from-bit-1 erases bits 2 up but keeps 0 and 1");
     }
 
+    /* The renderer flag word + scene hook band (2026-10-25). */
+    {
+        renderer_flag_bit6_set(1);
+        CHECK((renderer_flag_word_peek() & 0x40u) != 0u,
+              "the flag fold raises bit 6");
+        renderer_flag_bit6_set(1); /* idempotent */
+        CHECK((renderer_flag_word_peek() & 0x40u) != 0u,
+              "the second set leaves bit 6 raised");
+        renderer_flag_bit6_set(0);
+        CHECK((renderer_flag_word_peek() & 0x40u) == 0u,
+              "the flag fold clears bit 6");
+
+        char end_obj = 0, end_val = 0, sample_obj = 0, sample_val = 0;
+        scene_end_hook_register(&end_obj, &end_val);
+        CHECK(scene_end_hook_peek() == &end_obj
+                  && scene_end_hook_value_peek() == &end_val,
+              "the end hook stores its pair");
+        renderer_flag_bit6_set(0);
+        scene_sample_hook_register(&sample_obj, &sample_val);
+        CHECK(scene_sample_hook_peek() == &sample_obj
+                  && scene_sample_hook_value_peek() == &sample_val
+                  && (renderer_flag_word_peek() & 0x40u) != 0u,
+              "the sample hook stores its pair and raises bit 6");
+        renderer_flag_bit6_set(0); /* return the word to its zero-init state */
+    }
+
+    /* The string registry pair (2026-10-25): intern + case-insensitive
+     * find over the module-static chain. */
+    {
+        string_registry_reset();
+        CHECK(string_registry_intern(NULL) == NULL,
+              "the null key answers null");
+        CHECK(string_registry_intern("") == NULL,
+              "the empty key answers null");
+        char key_buf[] = "MENUITEM";
+        void* entry = string_registry_intern(key_buf);
+        CHECK(entry != NULL, "the miss allocates an entry");
+        key_buf[1] = '\0'; /* the copy is independent */
+        CHECK(string_keyed_cache_entry_find("menuitem") == entry
+                  && string_keyed_cache_entry_find("MENUITEM") == entry,
+              "the find folds case both ways");
+        CHECK(string_registry_intern("MenuItem") == entry,
+              "the known key re-answers its entry");
+        CHECK(string_keyed_cache_entry_find("other") == NULL,
+              "the unknown key answers null");
+        void* second = string_registry_intern("OTHER");
+        CHECK(second != NULL && second != entry, "the second miss appends");
+        void* next_link = NULL; /* widened entry: field 3 is the next link */
+        __builtin_memcpy(&next_link, (char*)second + 3 * sizeof(void*),
+                         sizeof next_link);
+        CHECK(next_link == entry, "the append links the new entry at the head");
+        string_registry_reset();
+        CHECK(string_keyed_cache_entry_find("MENUITEM") == NULL
+                  && string_registry_intern("MENUITEM") != NULL,
+              "the reset empties the chain and intern restarts");
+        string_registry_reset();
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "crt_test: %d failure(s)\n", s_failures);
         return 1;

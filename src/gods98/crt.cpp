@@ -1225,6 +1225,126 @@ void shared_texture_directory_clear(void)
     s_shared_texture_dir = NULL;
 }
 
+/* --- the renderer flag word + scene hook pair band (see crt.hpp) ----------- */
+static uint32_t s_renderer_flag_word; /* DAT_0076cd94 role: unowned */
+static void*    s_scene_end_hook;     /* DAT_0076cd80 role: unowned */
+static void*    s_scene_end_value;    /* DAT_0076cd84 role: unowned */
+static void*    s_scene_sample_hook;  /* DAT_0076cd78 role: unowned */
+static void*    s_scene_sample_value; /* DAT_0076cd7c role: unowned */
+
+void renderer_flag_bit6_set(int value)
+{
+    s_renderer_flag_word = (value != 0) ? (s_renderer_flag_word | 0x40u)
+                                        : (s_renderer_flag_word & ~0x40u);
+}
+
+uint32_t renderer_flag_word_peek(void) { return s_renderer_flag_word; }
+
+void scene_end_hook_register(void* hook, void* value)
+{
+    s_scene_end_hook = hook;
+    s_scene_end_value = value;
+}
+
+void* scene_end_hook_peek(void) { return s_scene_end_hook; }
+void* scene_end_hook_value_peek(void) { return s_scene_end_value; }
+
+void scene_sample_hook_register(void* hook, void* value)
+{
+    s_scene_sample_hook = hook;
+    s_scene_sample_value = value;
+    s_renderer_flag_word |= 0x40u;
+}
+
+void* scene_sample_hook_peek(void) { return s_scene_sample_hook; }
+void* scene_sample_hook_value_peek(void) { return s_scene_sample_value; }
+
+/* --- the string registry (see crt.hpp) ------------------------------------- */
+static void* s_string_registry_head; /* DAT_004db8cc role: unowned */
+
+/* The corpus's locale-following compare, modeled on the port's fold pattern
+ * (see resource.cpp's helper). */
+static int s_strcasecmp(const char* a, const char* b)
+{
+    for (;; a++, b++) {
+        int ca = (unsigned char)*a;
+        int cb = (unsigned char)*b;
+        if (ca >= 'A' && ca <= 'Z') ca += 'a' - 'A';
+        if (cb >= 'A' && cb <= 'Z') cb += 'a' - 'A';
+        if (ca != cb) return ca - cb;
+        if (ca == 0) return 0;
+    }
+}
+
+void* string_keyed_cache_entry_find(const char* key)
+{
+    void* entry = s_string_registry_head;
+    if (entry == NULL) {
+        return NULL;
+    }
+    const long field = (long)sizeof(void*);
+    for (;;) {
+        char* name = NULL;
+        __builtin_memcpy(&name, (char*)entry + 0 * field, sizeof name);
+        if (name != NULL && s_strcasecmp(name, key) == 0) {
+            return entry;
+        }
+        void* next = NULL;
+        __builtin_memcpy(&next, (char*)entry + 3 * field, sizeof next);
+        if (next == NULL) {
+            return NULL;
+        }
+        entry = next;
+    }
+}
+
+void* string_registry_intern(const char* key)
+{
+    if (key == NULL || *key == '\0') {
+        return NULL; /* deviation: the corpus strides a null string blindly */
+    }
+    void* entry = string_keyed_cache_entry_find(key);
+    if (entry != NULL) {
+        return entry;
+    }
+    const long field = (long)sizeof(void*);
+    void* record = engine_heap_alloc(4 * field);
+    if (record == NULL) {
+        return NULL; /* corpus asserts in the heap seam */
+    }
+    const size_t n = strlen(key) + 1u;
+    char* copy = (char*)engine_heap_alloc((long)n);
+    if (copy == NULL) {
+        engine_heap_free(record);
+        return NULL;
+    }
+    memcpy(copy, key, n);
+    const void* zero = NULL;
+    __builtin_memcpy((char*)record + 0 * field, &copy, sizeof copy);
+    __builtin_memcpy((char*)record + 1 * field, &zero, sizeof zero);
+    __builtin_memcpy((char*)record + 2 * field, &zero, sizeof zero);
+    __builtin_memcpy((char*)record + 3 * field, &s_string_registry_head,
+                     sizeof s_string_registry_head);
+    s_string_registry_head = record;
+    return record;
+}
+
+void string_registry_reset(void)
+{
+    const long field = (long)sizeof(void*);
+    void* entry = s_string_registry_head;
+    while (entry != NULL) {
+        void* next = NULL;
+        __builtin_memcpy(&next, (char*)entry + 3 * field, sizeof next);
+        char* key = NULL;
+        __builtin_memcpy(&key, (char*)entry + 0 * field, sizeof key);
+        engine_heap_free(key);
+        engine_heap_free(entry);
+        entry = next;
+    }
+    s_string_registry_head = NULL;
+}
+
 /* --- the selection marker table (see crt.hpp) ------------------------------
  * DAT_004c7e00..e7c is 32 pointer slots plus the count word at e80; the
  * descriptor sits at DAT_004c7df8. All unowned: zero-init statics here. */

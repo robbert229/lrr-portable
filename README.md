@@ -2363,6 +2363,19 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Renderer flag/hook + string registry band** (2026-10-25; findings
+393/420): five rows land in `crt.*`. The renderer flag word (DAT_0076cd94,
+zero-init module static) takes `renderer_flag_bit6_set` (0x4728e0) for its
+bit-0x40 fold, and the scene hook registers store their callback pairs in
+module statics (`scene_end_hook_register`, 0x472900;
+`scene_sample_hook_register`, 0x472920 — the sample register also raises
+bit 6). The corpus's locale-following entry compare rides the port's ASCII
+fold. The DAT_004db8cc string registry has no corpus owner outside the
+pair: `string_keyed_cache_entry_find` (0x410450) walks the widened-slot
+chain case-insensitively, and `string_registry_intern` (0x410490) appends
+misses at the head with the key copy through the heap seam (null or empty
+keys answer null). `crt_test` pins the folds, hooks, chain, and reset.
+
 **Write-band leaf trio** (2026-10-24; findings 465/101): three rows land
 across `engine.*`, `view.*`, and `heap.*`. The objective/task text-origin
 setter (`objective_task_text_origin_set`, 0x426320) stores the float pair

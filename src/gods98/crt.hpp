@@ -439,6 +439,51 @@ void shared_texture_directory_set(const char* path); /* FUN_004728c0 */
 char* shared_texture_directory_peek(void);           /* port hook */
 void  shared_texture_directory_clear(void);          /* port hook: free */
 
+/* --- scene hook + renderer flag-word band (2026-10-25) ----------------------
+ * The scene-end/sample hook register pair and the renderer flag word live in
+ * the DAT_0076cd74..94 window: no ported owner, so the words land as
+ * zero-init module statics with hooks. The corpus initializes the flag word
+ * to 1 (the kind-table initializer, whose port models the table only); the
+ * deviation matters nowhere in the port because the flag word's only corpus
+ * reader — the hook dispatch in the scene frame-callback band — is the
+ * renderer seam. */
+
+/* RendererFlagBit6Set (FUN_004728e0): sets or clears bit 0x40 in the
+ * renderer flag word. */
+void renderer_flag_bit6_set(int value);             /* FUN_004728e0 */
+uint32_t renderer_flag_word_peek(void);             /* port hook */
+
+/* DDiSceneEndHookRegister (FUN_00472900): stores the scene-end callback
+ * pair — the corpus strides its code-pointer globals blindly; the port
+ * stores host pointers. */
+void scene_end_hook_register(void* hook, void* value); /* FUN_00472900 */
+void* scene_end_hook_peek(void);                       /* port hook */
+void* scene_end_hook_value_peek(void);                 /* port hook */
+
+/* DDiSceneSampleHookRegister (FUN_00472920): stores the sample callback
+ * pair and raises the flag word's bit 0x40 alongside it. */
+void scene_sample_hook_register(void* hook, void* value); /* FUN_00472920 */
+void* scene_sample_hook_peek(void);                       /* port hook */
+void* scene_sample_hook_value_peek(void);                 /* port hook */
+
+/* --- string registry (2026-10-25) ------------------------------------------
+ * The DAT_004db8cc string registry has no other corpus owner: the intern is
+ * its sole writer, so the head rides a module static. Deviation: the corpus
+ * entry is a sixteen-byte record of dwords (string at field 0, two cache
+ * handles, next link at field 3 = entry+0xc); the port carries host-width
+ * slots, and its case-insensitive compare folds ASCII only where the
+ * corpus's __strcmpi follows the locale. */
+
+/* StringKeyedCacheEntryFind (FUN_00410450): the case-insensitive walk over
+ * the registry; answers the entry or NULL. */
+void* string_keyed_cache_entry_find(const char* key); /* FUN_00410450 */
+
+/* StringRegistryIntern (FUN_00410490): interning — a null-or-empty key
+ * answers NULL, a known key answers its entry, and a miss appends a new
+ * entry (key copy through the heap seam) at the head. */
+void* string_registry_intern(const char* key);        /* FUN_00410490 */
+void  string_registry_reset(void);                    /* port hook: free */
+
 /* SelectionMarkerResourcesRelease (FUN_0040ce30, findings 378/434): frees
  * each non-null pointer in the marker resource table (DAT_004c7e00..e7c,
  * the trailing count word reset), then frees the table descriptor

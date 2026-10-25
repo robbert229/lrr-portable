@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 922 | 36.0% |
+| ported | 927 | 36.2% |
 | anchored | 4 | 0.2% |
-| named | 1591 | 62.1% |
+| named | 1586 | 61.9% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (922 functions)
+  (927 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1591 functions)
+  citation yet (1586 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1596 (62.2%).**
+**Game logic remaining to port: 1591 (62.1%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -241,8 +241,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004102b0` | UiTextUnderscoresToSpaces |
 | `0x00410320` | StringQueueRecordOrFlush |
 | `0x004103d0` | MainMenuTextItem |
-| `0x00410450` | StringKeyedCacheEntryFind |
-| `0x00410490` | StringRegistryIntern |
 | `0x00410520` | StringCacheLookupOrLoad |
 | `0x00410560` | ResourceNameCacheGetOrLoad |
 | `0x004105a0` | CampaignLevelFallbackLabel |
@@ -968,9 +966,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004726d0` | DirectShowSampleUpdateAndBlit |
 | `0x004726f0` | DirectShowWrapperDestroy |
 | `0x00472800` | DDiSceneObjectPoolShutdown |
-| `0x004728e0` | RendererFlagBit6Set |
-| `0x00472900` | DDiSceneEndHookRegister |
-| `0x00472920` | DDiSceneSampleHookRegister |
 | `0x00472950` | DDiSceneObjectAllocate |
 | `0x00472a40` | DDiSceneObjectDestroy |
 | `0x00472a50` | DDiSceneObjectDestroy |
