@@ -85,7 +85,11 @@ int save_write_thumbnail(GameContext* ctx, int slot, const void* fb,
 /* Dirty-mark record `index` (|1, plus |2 for an empty-name record). */
 void save_mark_record(GameContext* ctx, int index);
 
-/* Copy a 0x318c blob into record `index` (SavWriteRecord). */
+/* SavWriteRecord (FUN_00417f40): copies a 0x318c blob into record
+ * `index`'s window (the corpus's record base + index * 0x3190 + 4). The
+ * corpus gate is SavBuildCtx's slot context + the record-count word;
+ * the port grows the record table to fit (documented deviation).
+ * Answers 1 when the blob lands. */
 int  save_write_record(GameContext* ctx, int index, const uint8_t* blob);
 
 /* Return record `index`'s flags word pointer (SavRecordPtr + flags). */

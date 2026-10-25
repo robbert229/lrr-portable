@@ -851,4 +851,12 @@ int terrain_object_type_sfx_at_cell_get(const void* position_record);
                                  /* FUN_0044ad80 */
 void terrain_sfx_grid_cell_set(int cell, int handle);  /* port hook */
 int  terrain_sfx_grid_cell_peek(int cell);             /* port hook */
+/* CellCardinalNeighborApply (FUN_00409cd0, finding 448): runs the terrain
+ * cell refresh dispatch over a cell plus its three cardinal offsets (0,-1),
+ * (+1,0), (0,+1), (-1,0) — the corpus's stack-pair loop as four calls.
+ * Deviation: the corpus threads the cell's coordinate pair through the
+ * record window; the port threads the coordinates. */
+void cell_cardinal_neighbor_apply(const struct GameContext* ctx, int x,
+                                  int y); /* FUN_00409cd0 */
+
 #endif /* LEGORRR_GAME_LEVEL_HPP */

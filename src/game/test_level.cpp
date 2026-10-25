@@ -1364,6 +1364,41 @@ int main(int argc, char** argv)
         entity_available_resource_spend(NULL, 4, NULL); /* guarded */
     }
 
+    /* CellCardinalNeighborApply (2026-10-24): the four-call sweep. */
+    {
+        void* terrain = terrain_create("L01_surface.map", 1.0f);
+        CHECK(terrain != NULL, "the sweep terrain loads");
+        if (terrain != NULL) {
+            GameContext nctx;
+            game_context_init(&nctx);
+            static LevelState nlvl;
+            memset(&nlvl, 0, sizeof(nlvl));
+            nctx.level = &nlvl;
+            nlvl.ptr_terrain = terrain;
+            terrain_cell_surface_type_set(terrain, 2, 5, 4);
+            terrain_cell_surface_type_set(terrain, 2, 4, 4);
+            terrain_cell_surface_type_set(terrain, 3, 5, 4);
+            terrain_cell_surface_type_set(terrain, 2, 6, 4);
+            terrain_cell_surface_type_set(terrain, 1, 5, 4);
+            cell_cardinal_neighbor_apply(&nctx, 2, 5);
+            CHECK(terrain_cell_surface_type_get(terrain, 2, 5) == 4,
+                  "the anchor cell is not swept");
+            CHECK(terrain_cell_surface_type_get(terrain, 2, 4) == 0
+                      && terrain_cell_surface_type_get(terrain, 3, 5) == 0
+                      && terrain_cell_surface_type_get(terrain, 2, 6) == 0
+                      && terrain_cell_surface_type_get(terrain, 1, 5) == 0,
+                  "the four cardinal neighbors clear");
+            terrain_cell_surface_type_set(terrain, 1, 2, 6);
+            cell_cardinal_neighbor_apply(&nctx, 1, 3);
+            CHECK(terrain_cell_surface_type_get(terrain, 1, 2) == 0,
+                  "the sweep repeats over the live table");
+            nctx.level = NULL;
+            cell_cardinal_neighbor_apply(&nctx, 0, 0); /* skipped (deviation) */
+            cell_cardinal_neighbor_apply(NULL, 0, 0);
+            CHECK(1, "the missing-level and null guards stay inert");
+        }
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "level_test: %d failure(s)\n", s_failures);
         return 1;

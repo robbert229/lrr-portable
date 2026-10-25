@@ -354,6 +354,7 @@ static int save_records_grow(GameContext* ctx, int index)
     return 1;
 }
 
+/* SavWriteRecord (FUN_00417f40) — see savegame.hpp. */
 int save_write_record(GameContext* ctx, int index, const uint8_t* blob)
 {
     if (ctx == NULL || index < 0 || blob == NULL

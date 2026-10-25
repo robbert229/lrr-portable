@@ -998,6 +998,45 @@ int main(void)
         CHECK(1, "the sweeps complete");
     }
 
+    /* UI record factories (2026-10-24): windows + gates. */
+    {
+        void* rec = bounded_float_record_create(7, 1.0f, 3.0f,
+                                                0xAAu, 0xBBu, 0xCCu, 0xDDu);
+        CHECK(rec != NULL, "the bounded float record allocates");
+        uint32_t kind = 0;
+        float mn = 0.0f, mx = 0.0f, f3 = 0.0f;
+        __builtin_memcpy(&kind, (char*)rec + 0 * sizeof(void*), sizeof kind);
+        __builtin_memcpy(&mn, (char*)rec + 1 * sizeof(void*), sizeof mn);
+        __builtin_memcpy(&mx, (char*)rec + 2 * sizeof(void*), sizeof mx);
+        memcpy(&f3, (char*)rec + 3 * sizeof(void*), 4);
+        CHECK(kind == 7u && mn == 1.0f && mx == 3.0f && f3 != 0.0f,
+              "kind, bounds and payload land in the window");
+        CHECK(bounded_float_record_create(1, 3.0f, 2.0f, 0u, 0u, 0u, 0u)
+                  == NULL,
+              "the closed interval is rejected");
+        engine_heap_free(rec);
+
+        void* wide = menu_item_numeric_range_record_allocate(
+            3, 1, 10, 11u, 12u, 13u, 14u, 15u, 16u, 17u, 18u, 19u, 20u, 21u,
+            22u);
+        CHECK(wide != NULL, "the slider record allocates");
+        uint32_t wkind = 0, lo = 0, hi = 0, f12 = 0, f13 = 0, f14 = 0;
+        __builtin_memcpy(&wkind, wide + 0 * sizeof(void*), sizeof wkind);
+        __builtin_memcpy(&lo, wide + 1 * sizeof(void*), sizeof lo);
+        __builtin_memcpy(&hi, wide + 2 * sizeof(void*), sizeof hi);
+        __builtin_memcpy(&f12, wide + 12 * sizeof(void*), sizeof f12);
+        __builtin_memcpy(&f13, wide + 13 * sizeof(void*), sizeof f13);
+        __builtin_memcpy(&f14, wide + 14 * sizeof(void*), sizeof f14);
+        CHECK(wkind == 3u && lo == 1u && hi == 10u && f12 == 20u && f13 == 21u
+                  && f14 == 22u,
+              "the wide window lands in corpus field order");
+        CHECK(menu_item_numeric_range_record_allocate(
+                  1, 5, 5, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u)
+                  == NULL,
+              "equal bounds are rejected");
+        engine_heap_free(wide);
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "record_test: %d failure(s)\n", s_failures);
         return 1;

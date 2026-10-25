@@ -220,7 +220,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00409a40,FUN_00409a40,ported,,1,439
 00409a90,FUN_00409a90,named,WorldObjectCreateWithTransform,0,724
 00409b30,FUN_00409b30,ported,,1,1816
-00409cd0,FUN_00409cd0,named,CellCardinalNeighborApply,0,486
+00409cd0,FUN_00409cd0,ported,CellCardinalNeighborApply,3,486
 00409d40,FUN_00409d40,ported,LevelStateStoredValueSet,1,81
 00409d50,FUN_00409d50,named,EntityCellPathEffectsApply,0,1937
 00409f20,FUN_00409f20,named,EntityPlacementCommandsBuildOnce,0,780
@@ -371,8 +371,8 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00410b40,FUN_00410b40,named,GlobalPointerGet_004c76ab28,0,60
 00410b50,FUN_00410b50,named,GlobalPointerGet_004c76ab3c,0,60
 00410b60,FUN_00410b60,ported,ThreeWordRecordAllocateAndInitialize,2,282
-00410b90,FUN_00410b90,named,BoundedFloatRecordCreate,0,549
-00410bf0,FUN_00410bf0,named,MenuItemNumericRangeRecordAllocate,0,882
+00410b90,FUN_00410b90,ported,BoundedFloatRecordCreate,3,549
+00410bf0,FUN_00410bf0,ported,MenuItemNumericRangeRecordAllocate,3,882
 00410c70,FUN_00410c70,named,ResourceVariantRecordRelease,0,682
 00410d50,FUN_00410d50,named,MenuTextRecordMake,0,1314
 00410e20,FUN_00410e20,named,MenuButtonRecordMake,0,1789
@@ -473,7 +473,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00417ea0,FUN_00417ea0,ported,SavSetSlot,1,81
 00417eb0,FUN_00417eb0,ported,SavMarkRecord,1,694
 00417f20,FUN_00417f20,ported,OptionsContextSixFieldSet,3,342
-00417f40,FUN_00417f40,named,SavWriteRecord,0,453
+00417f40,FUN_00417f40,ported,SavWriteRecord,2,453
 00417f90,FUN_00417f90,ported,SavRecordPtr,2,213
 00417fc0,FUN_00417fc0,ported,SavCommit,1,126
 00417fe0,FUN_00417fe0,ported,CurrentSelectionContextGet,1,60

@@ -2566,3 +2566,15 @@ int entity_available_resource_spend(LevelState* level, int amount,
     global_object_field98_add(level, amount);
     return 1;
 }
+
+/* CellCardinalNeighborApply (FUN_00409cd0) — see level.hpp. The corpus's
+ * offset pairs, in its loop order: north, east, south, west. */
+void cell_cardinal_neighbor_apply(const struct GameContext* ctx, int x,
+                                  int y)
+{
+    static const int k_offsets[8] = { 0, -1, 1, 0, 0, 1, -1, 0 };
+    for (int i = 0; i < 4; ++i) {
+        terrain_cell_refresh_dispatch(ctx, x + k_offsets[2 * i],
+                                      y + k_offsets[2 * i + 1]);
+    }
+}
