@@ -21,6 +21,7 @@
 
 #include "resource.hpp"
 #include "block.hpp"
+#include "heap.hpp"
 
 static int s_failures = 0;
 
@@ -450,6 +451,35 @@ int main(int argc, char** argv)
         rest = registry_path_split("A", NULL);
         CHECK(rest != NULL && strcmp(rest, "A") == 0,
               "NULL out copies nothing and returns the path");
+    }
+
+    /* BlockTextTokenPoolDestroy (FUN_00478e20): corpus pool storage is
+     * module-local with hooks (init/grow unported); the destroy frees the
+     * nonzero slots through the engine heap and clears the head cursor
+     * and resident flag, NULLing slots along the way. */
+    {
+        void* tok0 = engine_heap_alloc(8);
+        void* tok1 = engine_heap_alloc(8);
+        block_text_token_pool_slot_set(3, tok0);
+        block_text_token_pool_slot_set(5, tok1);
+        block_text_token_pool_head_set(tok1);
+        CHECK(block_text_token_pool_slot_peek(3) == tok0, "slot 3 holds");
+        CHECK(block_text_token_pool_slot_peek(-1) == NULL
+                  && block_text_token_pool_slot_peek(32) == NULL,
+              "out-of-window peeks answer NULL (deviation)");
+        CHECK(block_text_token_pool_head_peek() == tok1,
+              "the head hook round-trips");
+        block_text_token_pool_destroy();
+        CHECK(block_text_token_pool_slot_peek(3) == NULL
+                  && block_text_token_pool_slot_peek(5) == NULL,
+              "freed slots are cleared (anti-dangling deviation)");
+        CHECK(block_text_token_pool_head_peek() == NULL,
+              "the head cursor word is cleared");
+        CHECK(block_text_token_pool_resident_peek() == 0,
+              "the resident flag drops");
+        block_text_token_pool_destroy();
+        CHECK(block_text_token_pool_slot_peek(0) == NULL,
+              "the empty pool survives a second destroy");
     }
 
     if (s_failures == 0) {

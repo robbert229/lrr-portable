@@ -11,6 +11,8 @@
 #include <string.h>
 
 #include "input.hpp"
+#include "engine.hpp"
+#include "message.hpp"
 
 static int s_failures = 0;
 
@@ -181,6 +183,58 @@ int main(void)
         player_input_flag8_set_clear(1, 1 << 20, 1);
         CHECK(player_input_flag8_get(1, 1 << 20) == 0u,
               "the far player index is guarded");
+    }
+
+    /* InputActionPressedGet / InputBindingPressedGet (FUN_0041c8f0 /
+     * FUN_0041c950): the 0x10000000 engine-state gate, the flag-8 table
+     * words' base (bit 0) versus inverted (bit 2 complement) readings,
+     * and the kind fall-through. */
+    {
+        EngineContext ec = {};
+        ec.state = 0x10000000u;
+        CHECK(input_action_pressed_get(&ec, 0, 0) == 1,
+              "the gate presses every action");
+        CHECK(input_action_pressed_get(&ec, 0x49, 0) == 0,
+              "action 0x49 stays not-pressed through the gate");
+        CHECK(input_binding_pressed_get(&ec, 1, 0, 0) == 1,
+              "the binding sees the same gate");
+        ec.state = 0u;
+
+        input_entry_flag8_set_clear(9, 1);
+        message_set_system_state(0u);
+        CHECK(input_action_pressed_get(&ec, 9, 0) == 0,
+              "the flag-8 word reads not-pressed in base position");
+        CHECK(input_action_pressed_get(&ec, 9, 1) == 0,
+              "the alt read stays base-position while the system bit 0 "
+              "is clear");
+        message_set_system_state(1u);
+        CHECK(input_action_pressed_get(&ec, 9, 1) == 1,
+              "the inverted read flips the flag-8 word");
+        CHECK(input_action_pressed_get(&ec, 9, 0) == 0,
+              "base position is unaffected by the system bit");
+        message_set_system_state(0u);
+        input_entry_flag8_set_clear(9, 0);
+
+        player_input_flag8_set_clear(1, 7, 1);
+        CHECK(input_binding_pressed_get(&ec, 1, 7, 0) == 0,
+              "kind 1 base position reads not-pressed");
+        message_set_system_state(1u);
+        CHECK(input_binding_pressed_get(&ec, 1, 7, 1) == 1,
+              "kind 1's inverted read flips");
+        CHECK(input_binding_pressed_get(&ec, 4, 7, 1) == 1,
+              "kind 4's clear word inverts to pressed (the inverted read "
+              "is bit 2 complement, so any cleared table word agrees)");
+        CHECK(input_binding_pressed_get(&ec, 2, 7, 1) == 0,
+              "other kinds fall through to not-pressed");
+        message_set_system_state(0u);
+        player_input_flag8_set_clear(1, 7, 0);
+
+        CHECK(input_action_pressed_get(NULL, 5, 0) == 0,
+              "a NULL context reads the gate clear (deviation)");
+        CHECK(input_action_pressed_get(&ec, 1 << 20, 0) == 0,
+              "the far action index reads zero (deviation)");
+        CHECK(input_binding_pressed_get(&ec, 1, 1 << 20, 0) == 0,
+              "the far entry index reads zero (deviation)");
     }
 
     if (s_failures == 0) {
