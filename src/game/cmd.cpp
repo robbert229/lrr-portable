@@ -2425,3 +2425,62 @@ void simulation_mode_counter_add(int mode, int count)
         level_resource_balance_add_and_sound(0);
     }
 }
+
+/* --- command sample stats (2026-10-25) -----------------------------------
+ * CommandSampleStatsAccumulate (FUN_0046b660): per-kind sliding-window
+ * statistics. A null sample clears the window head and the running total;
+ * a sample slides the window when the stored head falls below the sample's
+ * +8 word (the new total is (old total − old head) + the new head), then
+ * adds the sample's +4 word to the running total and raises the high-water
+ * mark. Every call appends the sample pointer to the kind's log and bumps
+ * the index. Deviations: the corpus strides its slot block blindly — the
+ * port guards the kind (the corpus's stride is 0x27c bytes per kind, of
+ * which this function touches dwords 0..24: the log at 0..+19, the index
+ * at +0x50, head +0x54, total +0x58, sum +0x5c, high +0x60) and stops the
+ * log writes at the slot edge, where the corpus's twenty-first store would
+ * stride onto the index word and corrupt it (faithfully pinned: the port
+ * keeps counting while it stops storing). */
+#define CMD_STATS_KINDS 110u /* corpus window span / slot stride */
+#define CMD_STATS_LOG_DWORDS 20u
+#define CMD_STATS_SLOT_DWORDS 25u
+
+static uint32_t s_cmd_stats[CMD_STATS_KINDS][CMD_STATS_SLOT_DWORDS];
+
+void command_sample_stats_accumulate(int kind, const void* sample)
+{
+    if (kind < 0 || (unsigned)kind >= CMD_STATS_KINDS) {
+        return;
+    }
+    uint32_t* slot = s_cmd_stats[kind];
+    if (sample == NULL) {
+        slot[21] = 0u;                       /* +0x54 head */
+        slot[23] = 0u;                       /* +0x5c sum  */
+    } else {
+        uint32_t v4 = 0u, v8 = 0u;           /* sample+4, sample+8 */
+        __builtin_memcpy(&v4, (const char*)sample + 4, sizeof v4);
+        __builtin_memcpy(&v8, (const char*)sample + 8, sizeof v8);
+        if ((int)slot[21] < (int)v8) {       /* slide the window */
+            slot[22] = (uint32_t)((int)slot[22] - (int)slot[21]);
+            slot[21] = v8;
+            slot[22] = (uint32_t)((int)slot[22] + (int)v8);
+        }
+        slot[23] = (uint32_t)((int)slot[23] + (int)v4);
+        if ((int)slot[24] < (int)slot[23]) { /* high-water mark */
+            slot[24] = slot[23];
+        }
+    }
+    const uint32_t idx = slot[20];
+    if (idx < CMD_STATS_LOG_DWORDS) {
+        slot[idx] = (uint32_t)(uintptr_t)sample;
+    }
+    slot[20] = idx + 1u;
+}
+
+uint32_t command_sample_stats_peek(int kind, int field)
+{
+    if (kind < 0 || (unsigned)kind >= CMD_STATS_KINDS
+        || field < 0 || (unsigned)field >= CMD_STATS_SLOT_DWORDS) {
+        return 0u;
+    }
+    return s_cmd_stats[kind][field];
+}

@@ -9,6 +9,7 @@
 #include "game/entity.hpp"
 #include "game/game.hpp"
 #include "game/select.hpp"
+#include "gods98/engine.hpp"
 
 static int s_failures = 0;
 
@@ -169,6 +170,51 @@ int main(void)
               "the mask ANDs the first entry's word");
         a->flags_3f0 = 0u; /* zero-init mirror: back to the shipped state */
         selection_clear(&ctx);
+    }
+
+    /* SelectionClearMarkerAndResetHud (2026-10-25): gate + raise pair. */
+    {
+        EngineContext eng = {};
+        static uint8_t rec[0x150];
+        memset(rec, 0, sizeof rec);
+        a->flags_3ec = 0u;
+        a->owner_36c = NULL;
+        a->stats_record = rec;
+
+        /* Unmarked: the whole raise path is skipped, inert. */
+        selection_clear_marker_and_reset_hud(&eng, a);
+        CHECK((eng.state & 0x10000000u) == 0u && a->flags_3ec == 0u,
+              "the unmarked entity raises nothing");
+
+        /* Marked + stats bit + clear state flags: both raises fire. */
+        a->flags_3ec = 2u;
+        rec[0x146] = 0x02u; /* stats word @+144 bit 0x20000 */
+        selection_clear_marker_and_reset_hud(&eng, a);
+        CHECK((eng.state & 0x10000000u) != 0u && (a->flags_3ec & 3u) == 3u,
+              "the marked stats-carrying entity raises both words");
+
+        /* Stats bit clear on the second word + null owner: no raise. */
+        eng.state = 0u;
+        a->flags_3ec = 2u;
+        rec[0x14a] = 0x02u; /* state-flags word @+148 bit 0x20000 */
+        selection_clear_marker_and_reset_hud(&eng, a);
+        CHECK((eng.state & 0x10000000u) == 0u && a->flags_3ec == 2u,
+              "the set state flags with no owner skips the raise");
+
+        /* Same, owner set: the owner half of the fold raises. */
+        static const int owner = 1;
+        a->owner_36c = &owner;
+        selection_clear_marker_and_reset_hud(&eng, a);
+        CHECK((eng.state & 0x10000000u) != 0u && (a->flags_3ec & 1u) != 0u,
+              "the owner present raises through the fold");
+        a->owner_36c = NULL;
+        a->flags_3ec = 0u;
+        a->stats_record = NULL;
+        memset(rec, 0, sizeof rec);
+
+        selection_clear_marker_and_reset_hud(&eng, NULL);
+        selection_clear_marker_and_reset_hud(NULL, a);
+        CHECK(1, "the null handle and null entity stay inert");
     }
 
     if (s_failures != 0) {

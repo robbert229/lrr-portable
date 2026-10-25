@@ -2363,6 +2363,26 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Command sample stats + selection marker reset** (2026-10-25): two frontier
+rows land in `cmd.*` and `select.*`. `command_sample_stats_accumulate`
+(0x46b660) keeps per-kind sliding-window statistics: a null sample clears the
+window head and the running sum, and a sample whose `+8` word exceeds the head
+rebuilds the total as `(old total − old head) + new head`, while every call
+adds the sample's `+4` word to the sum, raises the high-water mark, and appends
+the sample pointer to the kind's log. Deviations: the corpus strides the
+stride-`0x27c` slot block blindly, so the port guards the kind index and the
+window, and stops the log stores at the slot edge — where the corpus's
+twenty-first store would stride onto the index word and corrupt it (the port
+keeps counting while it stops storing). `selection_clear_marker_and_reset_hud`
+(0x44c4a0) raises the engine state word's `0x10000000` bit and the entity's
+`+0x3ec` bit 1 for a marked entity whose stats word carries `0x20000`, but only
+when the state-flags word's same bit is clear or the `+0x36c` owner is present,
+then always runs the selection-clear command post and HUD context post. The
+engine state raise threads the engine handle (deviation: the corpus strides the
+global word). `cmd_test` pins the slide fold, the null-sample clear split
+(head+sum, not the total), the signed no-slide fold, and the log-edge stop;
+`select_test` pins all four gate branches and the inert null paths.
+
 **Token-pool init + sfx-grid config load** (2026-10-25): two frontier rows
 land in `block.*` and `level.*`. `block_text_token_pool_init` (0x478df0)
 clears the 32-slot window and the head/watermark pair and raises the resident

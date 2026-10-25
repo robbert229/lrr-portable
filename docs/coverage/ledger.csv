@@ -589,7 +589,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0041d010,FUN_0041d010,named,SelectionCancelIfCursorHitsObject,0,203
 0041d040,FUN_0041d040,named,TutorialPathMenuAction,0,12473
 0041dca0,FUN_0041dca0,named,UiActionDispatch,0,8193
-0041e750,FUN_0041e750,ported,SelectionClearRequestAndHudReset,2,87
+0041e750,FUN_0041e750,ported,SelectionClearRequestAndHudReset,3,87
 0041e990,FUN_0041e990,ported,CellActionPermissionGet,1,195
 0041e9d0,FUN_0041e9d0,ported,SelectionRegionParametersSet,1,356
 0041ea50,FUN_0041ea50,ported,StoreSelectedMapCoordinate,3,538
@@ -1109,7 +1109,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0044c110,FUN_0044c110,ported,AttachedEntityWake,4,303
 0044c150,FUN_0044c150,named,EntityPairScalarFieldsSet,0,348
 0044c1b0,FUN_0044c1b0,named,EntityHeadingStepMove,0,2850
-0044c4a0,FUN_0044c4a0,named,SelectionClearMarkerAndResetHud,0,447
+0044c4a0,FUN_0044c4a0,ported,SelectionClearMarkerAndResetHud,3,447
 0044c530,FUN_0044c530,ported,EntityCanDoOrRideCheck,9,179
 0044c550,FUN_0044c550,named,GlobalScatterSpawnEnableAndDrain,0,649
 0044c710,FUN_0044c710,named,SceneObjectTransformStateInit,0,417
@@ -1579,7 +1579,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0046b1d0,FUN_0046b1d0,named,TooltipOverlayStateInitialize,0,3487
 0046b4d0,FUN_0046b4d0,named,CaseInsensitiveNameTableLookup,0,368
 0046b520,FUN_0046b520,named,UiTextEntryLoad,0,1737
-0046b660,FUN_0046b660,named,CommandSampleStatsAccumulate,0,994
+0046b660,FUN_0046b660,ported,CommandSampleStatsAccumulate,3,994
 0046b700,FUN_0046b700,ported,TimedEffectCueRequestSet,2,224
 0046b730,FUN_0046b730,ported,TimedEffectPersistenceSet,2,299
 0046b770,FUN_0046b770,ported,TimedEffectUpdateRequestSet,1,143

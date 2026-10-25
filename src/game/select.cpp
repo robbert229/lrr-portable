@@ -6,6 +6,7 @@
 #include "game.hpp"
 #include "entity.hpp"
 #include "select.hpp"
+#include "gods98/engine.hpp"
 
 int selection_add(GameContext* ctx, EntitySlot* e)
 {
@@ -169,4 +170,25 @@ int current_level_state_flags_contain_mask(const GameContext* ctx,
         return 0; /* deviation: the corpus reads *(NULL + 0x3f0) blindly */
     }
     return (e->flags_3f0 & mask) != 0u;
+}
+
+/* SelectionClearMarkerAndResetHud (FUN_0044c4a0) — see select.hpp. The
+ * marker raise lands on the DAT_00556ecc engine state word, which the
+ * port threads through the engine handle (deviation: the corpus strides
+ * the global word). The clear request always runs. */
+void selection_clear_marker_and_reset_hud(struct EngineContext* engine,
+                                          EntitySlot* e)
+{
+    if (e != NULL && (e->flags_3ec & 2u) != 0u) {
+        if ((entity_stats_word_get(e) & 0x20000u) != 0u) {
+            if ((entity_state_flags_get(e) & 0x20000u) == 0u
+                || e->owner_36c != NULL) {
+                if (engine != NULL) {
+                    engine->state |= 0x10000000u;
+                }
+                e->flags_3ec |= 1u;
+            }
+        }
+    }
+    selection_clear_request_and_hud_reset(); /* FUN_0041e750 */
 }

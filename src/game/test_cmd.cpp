@@ -2088,6 +2088,79 @@ int main(void)
               "the zero dimension skips the loop (dev)");
     }
 
+    /* Command sample stats (2026-10-25): window slide, high-water, guards. */
+    {
+        struct Sample { uint32_t hdr, v4, v8; };
+        command_sample_stats_accumulate(-1, NULL); /* kind guard inert */
+
+        /* Fresh kind: head 0 < 100 slides in, sum rides v4, high follows. */
+        struct Sample s1 = { 7u, 10u, 100u };
+        command_sample_stats_accumulate(3, &s1);
+        CHECK(command_sample_stats_peek(3, 21) == 100u
+                  && command_sample_stats_peek(3, 22) == 100u
+                  && command_sample_stats_peek(3, 23) == 10u
+                  && command_sample_stats_peek(3, 24) == 10u
+                  && command_sample_stats_peek(3, 0) == (uint32_t)(uintptr_t)&s1
+                  && command_sample_stats_peek(3, 20) == 1u,
+              "the first sample slides in and rides the log");
+
+        /* Head 100 is not below 50: no slide, sum grows, high raises. */
+        struct Sample s2 = { 7u, 5u, 50u };
+        command_sample_stats_accumulate(3, &s2);
+        CHECK(command_sample_stats_peek(3, 21) == 100u
+                  && command_sample_stats_peek(3, 22) == 100u
+                  && command_sample_stats_peek(3, 23) == 15u
+                  && command_sample_stats_peek(3, 24) == 15u,
+              "the head-gated sample only feeds the sum");
+
+        /* Head 100 < 200: slide rebuilds total as (100-100) + 200. */
+        struct Sample s3 = { 7u, 1000u, 200u };
+        command_sample_stats_accumulate(3, &s3);
+        CHECK(command_sample_stats_peek(3, 21) == 200u
+                  && command_sample_stats_peek(3, 22) == 200u
+                  && command_sample_stats_peek(3, 23) == 1015u
+                  && command_sample_stats_peek(3, 24) == 1015u
+                  && command_sample_stats_peek(3, 2) == (uint32_t)(uintptr_t)&s3,
+              "the slide keeps the head difference out of the total");
+
+        /* The null sample clears head and sum (the total and the
+         * high-water survive: the corpus clears words +54/+5c only). */
+        command_sample_stats_accumulate(3, NULL);
+        CHECK(command_sample_stats_peek(3, 21) == 0u
+                  && command_sample_stats_peek(3, 22) == 200u
+                  && command_sample_stats_peek(3, 23) == 0u
+                  && command_sample_stats_peek(3, 24) == 1015u
+                  && command_sample_stats_peek(3, 3) == 0u
+                  && command_sample_stats_peek(3, 20) == 4u,
+              "the null sample clears head+sum and logs a null entry");
+
+        /* Signed fold: a negative-size sample never slides against a
+         * fresh (zero) head. */
+        struct Sample neg = { 7u, 1u, 0xffffffffu };
+        command_sample_stats_accumulate(9, &neg);
+        CHECK(command_sample_stats_peek(9, 21) == 0u
+                  && command_sample_stats_peek(9, 23) == 1u,
+              "the negative size folds without a slide");
+
+        /* The log-edge stop: counting continues, stores stop. */
+        for (int n = 0; n < 24; ++n) {
+            command_sample_stats_accumulate(8, NULL);
+        }
+        CHECK(command_sample_stats_peek(8, 20) == 24u,
+              "the index keeps counting past the edge");
+        command_sample_stats_accumulate(8, &s1);
+        CHECK(command_sample_stats_peek(8, 0) == 0u
+                  && command_sample_stats_peek(8, 19) == 0u
+                  && command_sample_stats_peek(8, 20) == 25u,
+              "the overflowed stores stop at the slot edge (dev)");
+
+        /* Out-of-window peeks answer zero (deviation guards). */
+        CHECK(command_sample_stats_peek(-1, 0) == 0u
+                  && command_sample_stats_peek(110, 0) == 0u
+                  && command_sample_stats_peek(0, 25) == 0u,
+              "the peek guards answer zero");
+    }
+
     /* HUD post / menu-selection chain (2026-10-25): the surface-type halves
      * over a written surface map, the kind gate, and the guarded paths. */
     {

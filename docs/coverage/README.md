@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 1094 | 42.7% |
+| ported | 1096 | 42.7% |
 | anchored | 4 | 0.2% |
-| named | 1421 | 55.4% |
+| named | 1419 | 55.3% |
 | runtime-import | 44 | 1.7% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (1094 functions)
+  (1096 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1421 functions)
+  citation yet (1419 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (44 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1426 (55.6%).**
+**Game logic remaining to port: 1424 (55.5%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -608,7 +608,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0044bfd0` | ConfiguredMonsterSpawnBehaviorTick |
 | `0x0044c150` | EntityPairScalarFieldsSet |
 | `0x0044c1b0` | EntityHeadingStepMove |
-| `0x0044c4a0` | SelectionClearMarkerAndResetHud |
 | `0x0044c550` | GlobalScatterSpawnEnableAndDrain |
 | `0x0044c710` | SceneObjectTransformStateInit |
 | `0x0044c790` | ConfiguredSceneTransformEnable |
@@ -802,7 +801,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0046b1d0` | TooltipOverlayStateInitialize |
 | `0x0046b4d0` | CaseInsensitiveNameTableLookup |
 | `0x0046b520` | UiTextEntryLoad |
-| `0x0046b660` | CommandSampleStatsAccumulate |
 | `0x0046b7c0` | TimedEffectAndCueUpdate |
 | `0x0046b8b0` | RectangularGridOverlayGeometryDraw |
 | `0x0046bc30` | TimedEffectSlotRender |
