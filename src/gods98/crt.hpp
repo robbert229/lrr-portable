@@ -484,6 +484,25 @@ void* string_keyed_cache_entry_find(const char* key); /* FUN_00410450 */
 void* string_registry_intern(const char* key);        /* FUN_00410490 */
 void  string_registry_reset(void);                    /* port hook: free */
 
+/* --- entry cache get-or-load pair (2026-10-25) ------------------------------
+ * The corpus loaders ride seam cites (the port models the surface-load path
+ * in the texture module); here the loader call is a hook-boundary seam that
+ * answers NULL with no hook installed (load-answers-NULL precedent). The
+ * loaded object is unowned: registry reset drops the slots with the entry
+ * (the corpus leaks them too). */
+
+/* StringCacheLookupOrLoad (FUN_00410520): intern the key and return the
+ * entry's bitmap-slot value, loading once through the seam on a miss. */
+void* string_cache_lookup_or_load(const char* key);   /* FUN_00410520 */
+
+/* ResourceNameCacheGetOrLoad (FUN_00410560): the same for the entry's
+ * font-slot value. */
+void* resource_name_cache_get_or_load(const char* key); /* FUN_00410560 */
+
+/* port hooks: install the loader seams (NULL uninstalls, answers NULL). */
+void string_cache_bitmap_loader_set(void* (*hook)(const char*));
+void string_cache_font_loader_set(void* (*hook)(const char*));
+
 /* SelectionMarkerResourcesRelease (FUN_0040ce30, findings 378/434): frees
  * each non-null pointer in the marker resource table (DAT_004c7e00..e7c,
  * the trailing count word reset), then frees the table descriptor

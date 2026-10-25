@@ -358,8 +358,8 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00410440,FUN_00410440,ported,MenuWipeEnd,2,85
 00410450,FUN_00410450,ported,StringKeyedCacheEntryFind,2,459
 00410490,FUN_00410490,ported,StringRegistryIntern,2,1439
-00410520,FUN_00410520,named,StringCacheLookupOrLoad,0,353
-00410560,FUN_00410560,named,ResourceNameCacheGetOrLoad,0,349
+00410520,FUN_00410520,ported,StringCacheLookupOrLoad,2,353
+00410560,FUN_00410560,ported,ResourceNameCacheGetOrLoad,2,349
 004105a0,FUN_004105a0,named,CampaignLevelFallbackLabel,0,1048
 004105f0,FUN_004105f0,named,MenuParamRecordCreate,0,1044
 00410690,FUN_00410690,named,MenuRecordResourcesRelease,0,1127

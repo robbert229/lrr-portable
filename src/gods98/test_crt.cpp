@@ -319,6 +319,22 @@ static void test_static_globals(void)
     }
 }
 
+/* Shims for the entry cache get-or-load test: counting loaders. */
+static int s_bmp_loads = 0;
+static int s_font_loads = 0;
+static void* s_bmp_loader(const char* key)
+{
+    (void)key;
+    ++s_bmp_loads;
+    return (void*)0xb0;
+}
+static void* s_font_loader(const char* key)
+{
+    (void)key;
+    ++s_font_loads;
+    return (void*)0xf0;
+}
+
 int main(void)
 {
     test_memory_move();
@@ -1018,6 +1034,37 @@ int main(void)
                   && string_registry_intern("MENUITEM") != NULL,
               "the reset empties the chain and intern restarts");
         string_registry_reset();
+    }
+
+    /* The entry cache get-or-load pair (2026-10-25): loader seams ride
+     * hooks; uninstalled the load answers NULL. */
+    {
+        string_registry_reset();
+        s_bmp_loads = 0;
+        s_font_loads = 0;
+        CHECK(string_cache_lookup_or_load("KEY1") == NULL
+                  && resource_name_cache_get_or_load("KEY1") == NULL,
+              "the uninstalled seams answer NULL");
+        string_cache_bitmap_loader_set(s_bmp_loader);
+        void* v = string_cache_lookup_or_load("KEY1");
+        CHECK(v == (void*)0xb0 && s_bmp_loads == 1,
+              "the loader runs once on the bitmap miss");
+        v = string_cache_lookup_or_load("key1");
+        CHECK(v == (void*)0xb0 && s_bmp_loads == 1,
+              "the hit answers from the slot without reloading");
+        string_cache_font_loader_set(s_font_loader);
+        CHECK(resource_name_cache_get_or_load("KEY1") == (void*)0xf0
+                  && s_font_loads == 1, "the font slot rides the font seam");
+        CHECK(resource_name_cache_get_or_load("KEY1") == (void*)0xf0
+                  && s_font_loads == 1, "the font slot caches too");
+        string_registry_reset(); /* the slots drop with the entry */
+        CHECK(string_cache_lookup_or_load("KEY1") == (void*)0xb0
+                  && s_bmp_loads == 2, "the post-reset intern reloads");
+        string_cache_bitmap_loader_set(NULL);
+        string_cache_font_loader_set(NULL);
+        string_registry_reset();
+        CHECK(string_cache_lookup_or_load("KEY1") == NULL,
+              "the reset entries answer null again");
     }
 
     if (s_failures != 0) {

@@ -2363,6 +2363,17 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Entry cache get-or-load pair** (2026-10-25; finding 255): `crt.*` takes
+the two cache-lookup wrappers over the string registry.
+`string_cache_lookup_or_load` (0x410520) and
+`resource_name_cache_get_or_load` (0x410560) intern the key, answer the
+entry's bitmap/font cache slot, and run the loader once on a miss. The
+corpus's surface and font loaders ride their seam cites; here the loader
+call is a hook-boundary seam that answers NULL uninstalled
+(load-answers-NULL precedent), and the loaded objects stay unowned — the
+reset drops the slots with the entry. `crt_test` pins load-once, the hit
+paths, and the reset reload.
+
 **Renderer flag/hook + string registry band** (2026-10-25; findings
 393/420): five rows land in `crt.*`. The renderer flag word (DAT_0076cd94,
 zero-init module static) takes `renderer_flag_bit6_set` (0x4728e0) for its
