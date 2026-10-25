@@ -2363,6 +2363,23 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**View-band matrix and ray math leaves** (2026-10-24; findings 309/363):
+nine rows land, all in `view.*`. The ray pair lands first:
+`point_along_ray` (0x479ab0, origin + t·dir with the corpus's component
+order) and `view_ray_intersection_test` (0x4798e0), which normalizes both
+direction vectors and solves the scaled ray through the ported plane
+parameter before advancing. The matrix band follows the existing
+zero/multiply pair: `matrix4_set_identity` (0x479e70), the
+identity-plus-translation-row setter (0x479e40), `matrix4_copy`
+(0x479eb0), the three rotation setters (0x479d50/0x479da0/0x479df0 —
+each writes the identity and overwrites its two-row block; the corpus
+reference names call two of them Z, the port names the blocks, and the
+x87 `fcos`/`fsin` extended-precision evaluation lands as the documented
+double-deviation cast), and the perspective projection quotients
+(0x40bd60, including the corpus's roundabout m[1] product).
+`view_test` pins the ray solve, the blocks at half-pi, and the zero
+pattern.
+
 **Cell-command gate, system-word chain + voxel occupancy**
 (2026-10-24):
 `engine.*` ports `terrain_cell_command_predicate` (0x428780 — the
