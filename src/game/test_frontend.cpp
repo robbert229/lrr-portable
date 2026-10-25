@@ -1519,6 +1519,32 @@ int main(int argc, char** argv)
         selection_clear(&sctx);
     }
 
+    /* Scroll-rect + flic-mode window band (2026-10-25). */
+    {
+        const float quad[4] = { 1.0f, 2.0f, 3.0f, 4.0f };
+        scroll_rect_resource_record_create(5, 0, quad, 0, 0);
+        uint32_t handle = 0u;
+        void* ra = NULL;
+        void* rb = NULL;
+        int region = 0;
+        view_blit_window_peek(5, &handle, &ra, &rb, &region);
+        CHECK(ra != NULL && rb == NULL, "the mode-0 record lands in half A");
+        const float* pf = (const float*)ra;
+        CHECK(pf[0] == 1.0f && pf[1] == 2.0f, "the position pair lands");
+        CHECK(pf[2] == 4.0f && pf[3] == 6.0f,
+              "the extent folds x+dx and y+dy (corpus add order)");
+        CHECK(pf[4] == 0.0f && pf[5] == 0.0f && pf[6] == 0.0f,
+              "the seam dims stay zero (deviation)");
+        scroll_rect_resource_record_create(5, 1, quad, 7, 7);
+        view_blit_window_peek(5, &handle, &ra, &rb, &region);
+        CHECK(ra != NULL && rb != NULL && ra != rb,
+              "the mode-1 store fills half B and keeps half A");
+        void* first_a = ra;
+        scroll_rect_resource_record_create(-1, 0, NULL, 0, 0); /* guarded */
+        view_blit_window_peek(5, &handle, &ra, &rb, &region);
+        CHECK(ra == first_a, "the window guard keeps the slot");
+    }
+
     if (s_failures == 0) {
         printf("frontend: all tests passed\n");
         return 0;

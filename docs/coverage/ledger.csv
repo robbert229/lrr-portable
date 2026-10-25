@@ -1437,7 +1437,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00463590,FUN_00463590,named,TerrainCellSurfaceNormalGet,0,1020
 004636b0,FUN_004636b0,named,InfoPanelStringEntriesInitialize,0,699
 00463730,FUN_00463730,ported,IndexedFloatPairSet,1,172
-00463770,FUN_00463770,named,ScrollRectResourceRecordCreate,0,763
+00463770,FUN_00463770,ported,ScrollRectResourceRecordCreate,2,763
 00463810,FUN_00463810,named,ScrollRectPayloadRecordCreate,0,819
 004638a0,FUN_004638a0,named,SimTrackCursorHitTest,0,4579
 00463c00,FUN_00463c00,ported,RectContainsPointByConvertedCoords,3,377
@@ -1966,7 +1966,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0047d720,FUN_0047d720,ported,FindFirstSetBit32,2,226
 0047d740,FUN_0047d740,named,SurfacePixelRowsFlipWithScratch,0,2087
 0047d800,FUN_0047d800,named,Bitmap24BitSurfaceConvert,0,2526
-0047d9d0,FUN_0047d9d0,ported,BitmapSurfaceLoad,7,2025
+0047d9d0,FUN_0047d9d0,ported,BitmapSurfaceLoad,10,2025
 0047db90,FUN_0047db90,ported,RGBChannelsPack,3,166
 0047dbc0,FUN_0047dbc0,named,ResourceRecordAddRef,0,249
 0047dbf0,FUN_0047dbf0,ported,ImageSurfaceBlitTransformed,1,530
@@ -2120,7 +2120,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00484610,FUN_00484610,named,FlicSubrecordOpcodeDispatch,0,1068
 00484720,FUN_00484720,named,FlicChunkBufferAndContinueLK,0,669
 004847d0,FUN_004847d0,named,FlicChunkBufferAndContinueType0B,0,667
-00484880,FUN_00484880,named,FlicOpcode16ModeDispatch,0,286
+00484880,FUN_00484880,ported,FlicOpcode16ModeDispatch,2,286
 004848d0,FUN_004848d0,named,FlicDecode8BitOpcode25Mode4,0,1700
 004849d0,FUN_004849d0,named,FlicDecode16BitKeyframe,0,1963
 00484b20,FUN_00484b20,named,FlicOpcode25DecodeDispatch,0,447

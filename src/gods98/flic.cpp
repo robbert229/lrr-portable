@@ -384,3 +384,27 @@ void flic_opcode27_fallback_noop(void)
 {
     /* FUN_00484c90: pure return — faithful. */
 }
+
+/* FlicOpcode16ModeDispatch (FUN_00484880) — see flic.hpp. The corpus reads
+ * the dispatch words from its frame record; the port takes the record as a
+ * byte window (the corpus buffer shape). The fallback callee is the pure
+ * no-op the port already models, so every branch observes as 1. */
+int flic_opcode16_mode_dispatch(const uint8_t* rec)
+{
+    uint32_t mode = 0u, op = 0u;
+    if (rec != NULL) {
+        __builtin_memcpy(&mode, rec + 0x6d8, sizeof mode);
+        __builtin_memcpy(&op, rec + 0x6d4, sizeof op);
+    }
+    if (mode == 0x10u) {
+        flic_opcode27_fallback_noop();
+        return 1;
+    }
+    if (op == 0u) {
+        flic_opcode27_fallback_noop();
+    }
+    if (op == 4u) {
+        flic_opcode27_fallback_noop();
+    }
+    return 1;
+}

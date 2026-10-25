@@ -2363,6 +2363,20 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Frontier closure band** (2026-10-25): two window-portable rows land and
+the remaining portable-now frontier is recorded. `scroll_rect_resource_record_create`
+(0x463770, frontend.*) allocates the 0x1c-float rect record, folds the quad
+through the corpus's x/dx + y/dy add order, leaves the surface-load seam
+dims zero (the panel-load NULL precedent), and stores into the view
+window's rect half A/B by mode. `flic_opcode16_mode_dispatch` (0x484880,
+flic.*) runs the mode-0x10 and opcode 0/4 fallback routes over the
+frame-record window, answering 1 everywhere. The blocked.md frontier-closure
+triage section records the residual portable-now frontier by family —
+D3DRM/CDAudio/Win32/CRT-internal/platform seams, the queue-LAB thunk
+closure behind the grid-lookup thunk, the renderer and DAT bands, the
+name-table families, and the config-record chain. `flic_test` and
+`frontend_test` pin the window routes and guards.
+
 **Idle-tile update + terrain-eligibility band** (2026-10-25): four
 portable-now rows land in the ai/level band. `entity_update_and_unregister_at_tile`
 (0x440130, ai.*) strides the idle-registration table for entities standing

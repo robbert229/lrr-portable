@@ -29,6 +29,7 @@
 #include "gods98/message.hpp"
 #include "gods98/flic.hpp"
 #include "gods98/crt.hpp"
+#include "gods98/heap.hpp"
 #include "gods98/record.hpp"
 #include "gods98/texture.hpp"
 #include "gods98/sound.hpp"
@@ -2714,4 +2715,45 @@ int selection_entity_code_resolve(const GameContext* ctx, int* code_out)
         *code_out = code;
     }
     return code;
+}
+
+/* ScrollRectResourceRecordCreate (FUN_00463770) — see frontend.hpp. The
+ * view-window store preserves the window's other fields (peek/set), and
+ * the surface-load seam (FUN_0047d9d0 with the handle and zero positions)
+ * answers NULL (the panel-load precedent), so the dim halves stay zero
+ * (deviation). */
+void scroll_rect_resource_record_create(int view, int mode,
+                                        const float* quad, int tex_a,
+                                        int tex_b)
+{
+    float* pf = (float*)engine_heap_alloc(0x1c);
+    if (pf == NULL) {
+        return; /* deviation: the corpus strides the store blindly */
+    }
+    if (quad != NULL) {
+        pf[0] = quad[0];
+        pf[1] = quad[1];
+        pf[2] = quad[2] + quad[0];
+        pf[3] = quad[3] + quad[1];
+    } else {
+        pf[0] = 0.0f;
+        pf[1] = 0.0f;
+        pf[2] = 0.0f;
+        pf[3] = 0.0f;
+    }
+    pf[4] = 0.0f; /* (float)FUN_0047d9d0(tex_a,0,0): seam answers NULL */
+    pf[5] = 0.0f; /* (float)FUN_0047d9d0(tex_b,0,0): seam answers NULL */
+    pf[6] = 0.0f;
+
+    void* rect_a = NULL;
+    void* rect_b = NULL;
+    uint32_t handle = 0u;
+    int region = 0;
+    view_blit_window_peek(view, &handle, &rect_a, &rect_b, &region);
+    if (mode == 0) {
+        rect_a = pf;
+    } else {
+        rect_b = pf;
+    }
+    view_blit_window_set(view, handle, rect_a, rect_b, region);
 }

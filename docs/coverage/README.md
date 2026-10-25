@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 980 | 38.2% |
+| ported | 982 | 38.3% |
 | anchored | 4 | 0.2% |
-| named | 1533 | 59.8% |
+| named | 1531 | 59.7% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (980 functions)
+  (982 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1533 functions)
+  citation yet (1531 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1538 (60.0%).**
+**Game logic remaining to port: 1536 (59.9%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -806,7 +806,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00463540` | IndexedSurfaceEntriesRestore |
 | `0x00463590` | TerrainCellSurfaceNormalGet |
 | `0x004636b0` | InfoPanelStringEntriesInitialize |
-| `0x00463770` | ScrollRectResourceRecordCreate |
 | `0x00463810` | ScrollRectPayloadRecordCreate |
 | `0x004638a0` | SimTrackCursorHitTest |
 | `0x00463e40` | FloatRoundToNearestInt |
@@ -1248,7 +1247,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00484610` | FlicSubrecordOpcodeDispatch |
 | `0x00484720` | FlicChunkBufferAndContinueLK |
 | `0x004847d0` | FlicChunkBufferAndContinueType0B |
-| `0x00484880` | FlicOpcode16ModeDispatch |
 | `0x004848d0` | FlicDecode8BitOpcode25Mode4 |
 | `0x004849d0` | FlicDecode16BitKeyframe |
 | `0x00484b20` | FlicOpcode25DecodeDispatch |
