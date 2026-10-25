@@ -2458,7 +2458,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00497900,FUN_00497900,ported,UInt96HasNoBitsAtOrAbove,4,603
 00497970,FUN_00497970,ported,UInt96IncrementAtBit,4,712
 004979e0,FUN_004979e0,ported,UInt96ClearFromBit,4,834
-00497a80,FUN_00497a80,named,UInt96Copy,0,271
+00497a80,FUN_00497a80,ported,UInt96Copy,2,271
 00497aa0,FUN_00497aa0,ported,UInt96Zero,2,108
 00497ab0,FUN_00497ab0,ported,UInt96IsZero,2,213
 00497ad0,FUN_00497ad0,named,UInt96ShiftRight,0,900

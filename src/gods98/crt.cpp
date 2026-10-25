@@ -1721,3 +1721,112 @@ void low_texture_flag_set(void) /* FUN_00477bd0 */
         s_engine_feature_word |= 0x20u;
     }
 }
+
+/* --- integer/string helper band (2026-10-25) -------------------------------- */
+
+/* UInt96Copy (FUN_00497a80) — see crt.hpp. The corpus computes dst − src as
+ * a byte distance and walks three dwords forward, reading each source word
+ * after earlier writes land; the ordered copy reproduces the overlap. */
+void uint96_copy(uint32_t dst[3], const uint32_t src[3])
+{
+    for (int i = 0; i != 3; ++i) {
+        dst[i] = src[i];
+    }
+}
+
+/* CrtStringDuplicate (FUN_0049b660) — see crt.hpp. The corpus's length walk
+ * counts bytes through the NUL, so the copy is strlen + 1 bytes. */
+char* crt_string_duplicate(const char* text)
+{
+    if (text == NULL) {
+        return NULL; /* deviation: the corpus strides the string blindly */
+    }
+    const size_t n = strlen(text) + 1u;
+    char* copy = (char*)engine_heap_alloc((long)n);
+    if (copy != NULL) {
+        memcpy(copy, text, n);
+    }
+    return copy; /* NULL allocation answers NULL, like the corpus */
+}
+
+/* CrtUnsignedIntegerFormatRadix (FUN_0049dba0) — see crt.hpp. The corpus's
+ * digit fold is `digit < 10 ? digit + '0' : digit + 'W'`, which lands the
+ * letters lowercase; the port pins that expression shape. */
+void crt_unsigned_format_radix(uint32_t value, char* out, int radix)
+{
+    if (out == NULL) {
+        return; /* deviation: the corpus strides the buffer blindly */
+    }
+    if (radix < 2) {
+        out[0] = '0';
+        out[1] = '\0';
+        return; /* deviation: the corpus's divide loop never terminates */
+    }
+    char* end = out;
+    uint32_t v = value;
+    for (;;) {
+        const uint32_t digit = v % (uint32_t)radix;
+        v /= (uint32_t)radix;
+        *end++ = (char)(digit < 10u ? digit + (uint32_t)'0'
+                                    : digit + (uint32_t)'W');
+        if (v == 0u) {
+            break;
+        }
+    }
+    *end = '\0';
+    /* Reverse in place: the corpus swaps the last digit with the buffer
+     * head, then walks the ends toward each other until they cross. */
+    char* head = out;
+    char* tail = end - 1;
+    while (head < tail) {
+        const char t = *head;
+        *head = *tail;
+        *tail = t;
+        ++head;
+        --tail;
+    }
+}
+
+/* SignedDecimalToStringConvert (FUN_0049db60) — see crt.hpp. */
+char* crt_signed_to_string(int value, char* out, int radix)
+{
+    if (radix == 10 && value < 0) {
+        /* The corpus negates with wrapping int arithmetic; INT_MIN rides
+         * through as its 2^31 magnitude. */
+        *out = '-';
+        crt_unsigned_format_radix(
+            (uint32_t)0u - (uint32_t)value, out + 1, 10);
+    } else {
+        crt_unsigned_format_radix((uint32_t)value, out, radix);
+    }
+    return out;
+}
+
+/* StringToUpper / StringToLowercase (FUN_0049dcd0 / FUN_0049dc10) — see
+ * crt.hpp. The C-locale fast half folds ASCII letters in place; the
+ * DAT_00549180 locale half rides the recorded locale-map chain. */
+char* crt_string_to_upper(char* text)
+{
+    if (text == NULL) {
+        return NULL; /* deviation: the corpus strides the buffer blindly */
+    }
+    for (char* p = text; *p != '\0'; ++p) {
+        if (*p > '`' && *p < '{') {
+            *p = (char)(*p - 0x20);
+        }
+    }
+    return text;
+}
+
+char* crt_string_to_lower(char* text)
+{
+    if (text == NULL) {
+        return NULL; /* deviation: the corpus strides the buffer blindly */
+    }
+    for (char* p = text; *p != '\0'; ++p) {
+        if (*p > '@' && *p < '[') {
+            *p = (char)(*p + 0x20);
+        }
+    }
+    return text;
+}

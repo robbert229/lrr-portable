@@ -1135,6 +1135,62 @@ int main(void)
         engine_feature_word_install(0u);
     }
 
+    /* Integer/string helper band (2026-10-25): the uint96 dword copy, the
+     * allocator duplicate, the radix digits, and the ASCII folds. */
+    {
+        const uint32_t src[3] = { 0x11u, 0x22u, 0x33u };
+        uint32_t dst[3] = { 0, 0, 0 };
+        uint96_copy(dst, src);
+        CHECK(dst[0] == 0x11u && dst[1] == 0x22u && dst[2] == 0x33u,
+              "the three dwords copy in order");
+        /* Corpus overlap quirk: dst = src + 1 word, forward walk — the
+         * second and third words read the already-written ones. */
+        uint32_t mix[3] = { 7u, 8u, 9u };
+        uint96_copy(mix + 1, mix);
+        CHECK(mix[1] == 7u && mix[2] == 7u,
+              "the overlap copies word-by-word in the corpus's order");
+
+        char* dup = crt_string_duplicate("ab");
+        CHECK(dup != NULL && strcmp(dup, "ab") == 0, "the duplicate lands");
+        if (dup != NULL) {
+            engine_heap_free(dup);
+        }
+        CHECK(crt_string_duplicate(NULL) == NULL, "the null duplicate is guarded");
+
+        char buf[32];
+        crt_unsigned_format_radix(123u, buf, 10);
+        CHECK(strcmp(buf, "123") == 0, "the decimal digits reverse into place");
+        crt_unsigned_format_radix(0u, buf, 10);
+        CHECK(strcmp(buf, "0") == 0, "zero writes one digit");
+        crt_unsigned_format_radix(255u, buf, 16);
+        CHECK(strcmp(buf, "ff") == 0, "digits past nine fold lowercase");
+        crt_unsigned_format_radix(4294967295u, buf, 16);
+        CHECK(strcmp(buf, "ffffffff") == 0, "the full dword spans eight digits");
+        crt_unsigned_format_radix(9u, buf, 1);
+        CHECK(strcmp(buf, "0") == 0, "the radix guard answers zero (deviation)");
+
+        crt_signed_to_string(-42, buf, 10);
+        CHECK(strcmp(buf, "-42") == 0, "the negative decimal takes the sign half");
+        crt_signed_to_string(-2147483648, buf, 10);
+        CHECK(strcmp(buf, "-2147483648") == 0,
+              "INT_MIN rides the corpus's wrapping magnitude");
+        crt_signed_to_string(42, buf, 16);
+        CHECK(strcmp(buf, "2a") == 0, "the positive half folds lowercase");
+        CHECK(crt_signed_to_string(7, buf, 10) == buf, "the buffer answers");
+
+        char ascii[] = "Hello World123";
+        CHECK(crt_string_to_upper(ascii) == ascii
+                  && strcmp(ascii, "HELLO WORLD123") == 0,
+              "the uppercase fold runs the whole string");
+        crt_string_to_lower(ascii);
+        CHECK(strcmp(ascii, "hello world123") == 0, "the lowercase fold follows");
+        char empty[] = "";
+        CHECK(crt_string_to_upper(empty) == empty, "the empty string returns");
+        CHECK(crt_string_to_upper(NULL) == NULL
+                  && crt_string_to_lower(NULL) == NULL,
+              "the fold guards answer null (deviation)");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "crt_test: %d failure(s)\n", s_failures);
         return 1;

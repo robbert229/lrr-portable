@@ -619,4 +619,37 @@ uint32_t engine_feature_word_peek(void);
 void     engine_feature_word_install(uint32_t value); /* port hook */
 void     low_texture_flag_set(void);                  /* FUN_00477bd0 */
 
+/* --- integer/string helper band (2026-10-25) -------------------------------
+ * UInt96Copy (FUN_00497a80): copies the three dwords src→dst in ascending
+ * order — the corpus's dword walk reads each source word after earlier
+ * writes, so an overlapping source shows the same word duplication (the
+ * faithful model is the ordered copy). */
+void uint96_copy(uint32_t dst[3], const uint32_t src[3]);
+
+/* CrtStringDuplicate (FUN_0049b660): strlen+1 through the engine
+ * allocator, bytes and NUL copied over. A null string answers null
+ * (deviation: the corpus's strlen strides it blindly). */
+char* crt_string_duplicate(const char* text);
+
+/* CrtUnsignedIntegerFormatRadix (FUN_0049dba0): digits least-significant
+ * first, then reversed into the buffer; values ≥ 10 fold in through
+ * `+ 'W'`, the corpus's lowercase letters. The port guards radix < 2
+ * with a lone "0" (deviation: the corpus's divide loop never ends). */
+void crt_unsigned_format_radix(uint32_t value, char* out, int radix);
+
+/* SignedDecimalToStringConvert (FUN_0049db60): radix 10 over a negative
+ * value takes the sign half ('-' + unsigned magnitude, wrapping like the
+ * corpus — INT_MIN lands as 2147483648); every other case is the plain
+ * unsigned format. Answers the buffer. */
+char* crt_signed_to_string(int value, char* out, int radix);
+
+/* StringToUpper / StringToLowercase (FUN_0049dcd0 / FUN_0049dc10): the
+ * corpus's C-locale half (DAT_00549180 == 0, the port's pinned locale
+ * per KeyToAscii) folds A-Z / a-z in place; the locale half rides the
+ * unported locale-map chain (recorded). The conversion covers the whole
+ * string; the return is the buffer. Deviation: the corpus strides the
+ * buffer blindly; the port guards the null pointer. */
+char* crt_string_to_upper(char* text);   /* FUN_0049dcd0 */
+char* crt_string_to_lower(char* text);   /* FUN_0049dc10 */
+
 #endif /* LEGORRR_GODS98_CRT_HPP */
