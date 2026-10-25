@@ -1524,6 +1524,35 @@ int main(int argc, char** argv)
         CHECK(ra == first_a, "the window guard keeps the slot");
     }
 
+    /* UiOverlayAnimationAdvance (2026-10-25): both convergence halves. */
+    {
+        overlay_anim_float_install(1.0f);
+        ui_overlay_animation_advance(0, 1);
+        const float decayed = overlay_anim_float_peek();
+        CHECK(decayed >= 0.0f && decayed < 1.0f, "the decay half steps down");
+        CHECK(decayed == (1.0f - 0.05f) * 20.0f * 0.05263158f,
+              "the decay lands the corpus expression");
+        overlay_anim_float_install(1.0f);
+        ui_overlay_animation_advance(0, 3);
+        CHECK(overlay_anim_float_peek() >= 0.0f,
+              "the after-loop clamp holds through a three-step decay");
+
+        overlay_anim_float_install(0.0f);
+        ui_overlay_animation_advance(1, 1);
+        CHECK(overlay_anim_float_peek() == 0.0f - (1.0f - 0.0f) * -0.05f,
+              "the ease half steps toward one");
+        ui_overlay_animation_advance(1, 1);
+        CHECK(overlay_anim_float_peek() > 0.05f && overlay_anim_float_peek() < 1.0f,
+              "the ease half keeps converging");
+        overlay_anim_float_install(0.0f);
+        ui_overlay_animation_advance(1, 0);
+        CHECK(overlay_anim_float_peek() == 0.0f, "zero steps leave the float");
+        ui_overlay_animation_advance(1, -3);
+        CHECK(overlay_anim_float_peek() == 0.0f,
+              "the guarded runaway counts no steps (deviation)");
+        overlay_anim_float_install(0.5f);
+    }
+
     if (s_failures == 0) {
         printf("frontend: all tests passed\n");
         return 0;

@@ -1848,6 +1848,49 @@ int main(void)
 #undef C135
     }
 
+    /* Resource/ore counters + overlay advance pair (2026-10-25). */
+    {
+        GameContext lctx;
+        game_context_init(&lctx);
+        static LevelState lvl;
+        memset(&lvl, 0, sizeof(lvl));
+        cmd_context_set(&lctx);
+        lctx.level = &lvl;
+
+        overlay_anim_float_install(0.0f);
+        level_resource_balance_add_and_sound(0);
+        CHECK(level_int(&lvl, LEVEL_OFF_RES_A) == 1
+                  && level_int(&lvl, LEVEL_OFF_RES_B) == 0,
+              "the zero selector bumps +0xa0");
+        CHECK(overlay_anim_float_peek() > 0.0f
+                  && overlay_anim_float_peek() <= 0.05f + 1e-5f,
+              "the selector-0 half steps the overlay float once");
+
+        level_resource_balance_add_and_sound(1);
+        CHECK(level_int(&lvl, LEVEL_OFF_RES_B) == 1
+                  && level_int(&lvl, LEVEL_OFF_RES_A) == 1,
+              "the nonzero selector bumps +0xac");
+        const float after_five = overlay_anim_float_peek();
+        CHECK(after_five > 0.25f && after_five < 1.0f,
+              "the nonzero half steps the float five times");
+
+        overlay_anim_float_install(0.0f);
+        simulation_mode_counter_add(0, 3);
+        CHECK(level_int(&lvl, LEVEL_OFF_RES_A) == 4
+                  && level_int(&lvl, LEVEL_OFF_RES_B) == 1,
+              "the loop form runs the zero half per count");
+        CHECK(overlay_anim_float_peek() > 0.0f,
+              "each loop step advances the overlay float");
+
+        /* The no-level path: counters inert, the advance half still runs. */
+        lctx.level = NULL;
+        overlay_anim_float_install(0.0f);
+        level_resource_balance_add_and_sound(1);
+        CHECK(overlay_anim_float_peek() > 0.15f,
+              "the guarded no-level path still steps five times");
+        lctx.level = &lvl;
+    }
+
     /* HUD post / menu-selection chain (2026-10-25): the surface-type halves
      * over a written surface map, the kind gate, and the guarded paths. */
     {

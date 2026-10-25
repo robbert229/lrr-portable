@@ -91,6 +91,25 @@ float block_get_float(BlockFile* bf, const char* path, float dflt);
  * missing or unparseable → 2. */
 int   block_get_bool(BlockFile* bf, const char* path);
 
+/* ConfigRgbVectorRead (FUN_00479170): reads the path's value string,
+ * splits it on commas the way FUN_00477440 applies the DAT_004a1cd4
+ * separator (empty tokens kept, the final character never tested as a
+ * separator start), and requires exactly three tokens. The three tokens
+ * are integer-parsed (FUN_0048db70 role) and land scaled by 1/255; the
+ * corpus multiplies in x87 float10 — the port hands back plain floats
+ * (deviation) and splits a stack copy because the port's value string
+ * is the tree storage (documented deviation). */
+int config_rgb_vector_read(BlockFile* bf, const char* path,
+                           float* r, float* g, float* b);
+
+/* ReadAngleSettingRadians (FUN_00479110): the path's float value (the
+ * corpus's missing-record half defaults to its empty-string byte, so a
+ * miss parses 0.0 either way) scales degrees to radians by
+ * 1/360 * 2π. A zero — or missing — value answers zero, matching the
+ * corpus's gate that skips the multiply; the x87 float10 product lands
+ * as plain float (deviation). */
+float config_angle_radians_get(BlockFile* bf, const char* path);
+
 /* RegistryPathSplit (FUN_0048b330, finding 402): the backslash-path
  * component copier the registry key builders loop over — copies bytes
  * up to (not including) the next backslash or NUL into `out`, skips one

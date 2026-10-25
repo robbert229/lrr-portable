@@ -632,4 +632,17 @@ void scroll_rect_resource_record_create(int view, int mode,
                                         const float* quad, int tex_a,
                                         int tex_b);
 
+/* --- overlay animation float (2026-10-25) ---------------------------------
+ * UiOverlayAnimationAdvance (FUN_0045c580) steps the DAT_00500820
+ * animation float through the corpus's convergence loop: mode 0 decays
+ * by `(v - 0.05) * 20 * 0.05263158` per step, nonzero mode eases toward
+ * 1.0 by `(1 - v) * 0.05` per step, and the negative guard lands after
+ * the loop (clamping afterwards, not during). The overlay band is
+ * reference state; the port models the animated float as guarded own
+ * storage with install/peek hooks (the unowned-global deviation), and
+ * the corpus's x87 float10 storage lands as plain float (deviation). */
+void ui_overlay_animation_advance(int mode, int steps); /* FUN_0045c580 */
+float overlay_anim_float_peek(void);           /* port hook */
+void  overlay_anim_float_install(float value); /* port hook */
+
 #endif /* LEGORRR_GAME_FRONTEND_HPP */

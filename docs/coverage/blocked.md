@@ -199,7 +199,7 @@ recorded here.)
 | `AnimationObjectTransformSet` (`0x406dc0`) | Delegates the pose write to the camera facing/pose layer (`cam_set_facing` side of the camera module) — the animation object's transform owner is that unported pose seam. | Camera/animation pose seam. |
 | `SurfaceVectorNormalize` (`0x4422a0`) | Tail call into `0x44a200`, the entity-type component resolver, which the port answers zero (object layer TODO) — the normalize's object lookup has no observable behavior. | Object-layer model behind the component resolver (shared with `EntityTransformPositionGet`). |
 | `AdvisorAnimationEndCleanup` (`0x4011c0`) | Strides the advisor records at `DAT_004b2e04` (`stride 0x24`) and touches their animation-complete words — no port owner for the advisor record band. | Advisor record band with the advisor/mission layer. |
-| `UiOverlayAnimationApply` (`0x45c5f0`) | Drives the `DAT_005008xx` overlay animation band (timers, scales) — the overlay runtime band is unported reference state. | Overlay band in the frontend/UI layer, then the apply leaf. |
+| `UiOverlayAnimationApply` (`0x45c5f0`) | Drives the `DAT_005008xx` overlay animation band (timers, scales) — the animated float half landed 2026-10-25 as a port-modeled static (`ui_overlay_animation_advance`, 0x45c580) but the band's object-pointer and scale words stay unported reference state, and the apply's visibility write rides the renderer seam. | Band owner words, then the apply leaf. |
 | `AdvisorTextBoxRecordCommit` (`0x46a9e0`) | Commits into the `DAT_005036xx` advisor-text band with `__ftol` float→int rounding of the layout fields — band unported and the x87 rounding mode affects the committed integers. | Advisor text band plus x87 `__ftol` rounding model. |
 | `PriorityLabelLayoutApply` (`0x45cf00`) | Scans the two parallel priority-word bands to find the layout slot — both band owners are unported reference state with no accessor pair to write through. | Priority-band model (HUD/layout layer). |
 | `CellResourceEntryMatches` (`0x40af40`) | Matches through the record identity pair with the `+0x330` gate word and derives the task kind via `0x439200` — the record identity band and the task-kind selector's owner have no port model. | Record identity pair plus the `0x439200` task-kind model. |
@@ -207,8 +207,10 @@ recorded here.)
 | `TypeFourEntityCallbackDispatch` (`0x447900`) | Type-4 tail call into `QueueEnqueueRequest` (`0x4377b0`, ported) with the bare `LAB_00447920` code thunk — queue-dispatcher thunk family. | Recover the thunk bodies (shared with the Queue\* LAB band). |
 | `EntityAtGridPositionLookup` (`0x438670`) | Same family: enqueue at `LAB_004386b0` with the thunk's store-through the on-stack triple as the observable return — queue-dispatcher thunk family. | Same queue-thunk family. |
 | `IsAverageValueAbove99` (`0x418120`) | Sums a float table (count at +0x18, entries from +0x1c) read through the `SavBuildCtx`-modeled accessor — Ghidra's register shuffling leaves the buffer's true owner ambiguous; no port owner for the band. | Pin the buffer's owner through the call-site band, then port. |
-| `ConfigRgbVectorRead` (`0x479170`) | Reads an `r::g::b` config string through `ConfigStringCopy` (seam-cited; the config-record lookup `0x4792e0` is unported) and splits on the `DAT_004a1cd4` separator — config-lookup chain without a port owner. | Config-record lookup (shared config-seam blocker). |
-| `ReadAngleSettingRadians` (`0x479110`) | Same config-lookup chain via `ConfigPathValueGet` (seam-cited), defaulting to the corpus's `DAT_004b8a14` empty-string byte; degrees→turns→radians scaling rides the x87 float10 multiply. | Config-record lookup (shared config-seam blocker). |
+The config-seam pair `ConfigRgbVectorRead` (`0x479170`) and
+`ReadAngleSettingRadians` (`0x479110`) landed 2026-10-25 in `block.*` over
+the config model (the `0x4792e0` record lookup they were recorded against
+has since ported), closing the shared config-seam blocker.
 
 ## Frontier closure triage (2026-10-25)
 

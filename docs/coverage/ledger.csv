@@ -622,7 +622,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0041f970,FUN_0041f970,ported,RuntimeFlag40000000Get,2,67
 0041f980,FUN_0041f980,ported,GlobalObjectField94Increment,1,143
 0041f990,FUN_0041f990,ported,GlobalObjectFieldA8Increment,1,143
-0041f9a0,FUN_0041f9a0,named,LevelResourceBalanceAddAndSound,0,354
+0041f9a0,FUN_0041f9a0,ported,LevelResourceBalanceAddAndSound,2,354
 0041f9e0,FUN_0041f9e0,named,UpgradeResourceDebit,0,384
 0041fa20,FUN_0041fa20,ported,GameConfigCallbackRegistryInit,2,502
 0041fa80,FUN_0041fa80,named,StartLevelPilots,0,478
@@ -937,7 +937,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0043a7c0,FUN_0043a7c0,ported,EntityActionKindSupported,1,603
 0043a850,FUN_0043a850,named,EntityActionRecordConsumeAndCleanup,0,722
 0043a8f0,FUN_0043a8f0,ported,SimulationUpdateCounterAdd,2,158
-0043a910,FUN_0043a910,named,SimulationModeCounterAdd,0,141
+0043a910,FUN_0043a910,ported,SimulationModeCounterAdd,2,141
 0043a930,FUN_0043a930,named,TrackedEntityPointerArrayRemove,0,310
 0043a960,FUN_0043a960,ported,EntityLavaCrustActivityRegister,6,527
 0043a9e0,FUN_0043a9e0,ported,EntityQueueForRockfallProcessingIfEligible,2,80
@@ -1296,7 +1296,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0045a500,FUN_0045a500,named,PanelImageSlotEntryAllocate,0,736
 0045a590,FUN_0045a590,named,ScrollingAdvisorTextAppend,0,128
 0045a5b0,FUN_0045a5b0,named,UITextOutputPositionAndDraw,0,403
-0045a620,FUN_0045a620,named,UITextOutputObjectRelease,0,82
+0045a620,FUN_0045a620,ported,UITextOutputObjectRelease,3,82
 0045a630,FUN_0045a630,ported,UIRecordCallbackForward,3,136
 0045a650,FUN_0045a650,named,PanelCategoryBoundsSet,0,692
 0045a6e0,FUN_0045a6e0,ported,IndexedPairSet,1,174
@@ -1333,7 +1333,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0045c4a0,FUN_0045c4a0,ported,GlobalValueSet_0050080c,1,81
 0045c4b0,FUN_0045c4b0,named,PanelResourcePositionUpdateIfEnabled,0,529
 0045c520,FUN_0045c520,ported,PanelResourceHandleAndDimensionsStore,2,323
-0045c580,FUN_0045c580,named,UiOverlayAnimationAdvance,0,492
+0045c580,FUN_0045c580,ported,UiOverlayAnimationAdvance,2,492
 0045c5f0,FUN_0045c5f0,named,UiOverlayAnimationApply,0,485
 0045c670,FUN_0045c670,named,AdvisorAnimationSceneLookupAndRequest,0,240
 0045c6b0,FUN_0045c6b0,named,AdvisorAnimationSlotIdResolve,0,1173
@@ -1820,7 +1820,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00477310,FUN_00477310,named,ComPropertyResultGet,0,578
 00477370,FUN_00477370,named,DDiSceneRenderSurfacePoolGrow,0,641
 004773e0,FUN_004773e0,named,RenderResourceTrackedReferencesRelease,0,688
-00477440,FUN_00477440,ported,BlockTextTokenSplit,4,795
+00477440,FUN_00477440,ported,BlockTextTokenSplit,7,795
 004774b0,FUN_004774b0,named,WhitespaceTokenize,0,957
 00477550,FUN_00477550,ported,StringDuplicate,5,929
 00477590,FUN_00477590,named,FormattedTextEscapeDecodeAndEmit,0,670
@@ -1860,8 +1860,8 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00479050,FUN_00479050,ported,ConfigStringCopy,1,1143
 004790b0,FUN_004790b0,ported,ConfigPathValueGet,1,202
 004790d0,FUN_004790d0,ported,ConfigBooleanGetDefault2,6,258
-00479110,FUN_00479110,named,ReadAngleSettingRadians,0,446
-00479170,FUN_00479170,named,ConfigRgbVectorRead,0,722
+00479110,FUN_00479110,ported,ReadAngleSettingRadians,2,446
+00479170,FUN_00479170,ported,ConfigRgbVectorRead,2,722
 00479240,FUN_00479240,ported,ReleaseLinkedObjectList,3,240
 00479270,FUN_00479270,ported,BlockTextTokenAllocate,1,563
 004792c0,FUN_004792c0,ported,GlobalRecordListPushHead,3,117
@@ -2144,7 +2144,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00485300,FUN_00485300,named,ObjectiveAdvisorTextCopy,0,1028
 00485390,FUN_00485390,named,TextBufferDrawWrapped,0,4265
 00485710,FUN_00485710,named,TextWrapMeasureAndDrawLines,0,3496
-004859b0,FUN_004859b0,named,TextBufferReset,0,740
+004859b0,FUN_004859b0,ported,TextBufferReset,3,740
 00485a00,FUN_00485a00,ported,ObjectStatePairGet,1,182
 00485a20,FUN_00485a20,named,KeyboardKeyNamesInit,0,4292
 00485e30,FUN_00485e30,named,NamedOptionIndexFindCaseInsensitive,0,436
@@ -2261,7 +2261,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0048d9e0,FUN_0048d9e0,named,FormattedStringOutput,0,466
 0048da50,FUN_0048da50,ported,StringFindSubstring,2,2603
 0048dad0,FUN_0048dad0,named,ParseSignedDecimal,0,900
-0048db70,FUN_0048db70,ported,ParseIntegerWrapper,2,80
+0048db70,FUN_0048db70,ported,ParseIntegerWrapper,4,80
 0048db80,FUN_0048db80,ported,EngineHeapFree,3,334
 0048dbd0,FUN_0048dbd0,ported,EngineHeapAlloc,3,93
 0048dbf0,FUN_0048dbf0,ported,EngineHeapAllocateWithRetry,2,460

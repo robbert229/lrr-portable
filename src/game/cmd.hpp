@@ -596,4 +596,20 @@ void command_context_post_to_hud(int kind, const uint32_t coord[2]);
 void selection_clear_request_and_hud_reset(void); /* FUN_0041e750 */
 uint32_t menu_surface_track_peek(void);           /* port hook: DAT_004de1f0 */
 
+/* --- resource/ore counter pair (2026-10-25) --------------------------------
+ * LevelResourceBalanceAddAndSound (FUN_0041f9a0) bumps the current level's
+ * +0xa0 (selector 0) or +0xac (nonzero) counter when one is active, then
+ * steps the overlay animation float once (selector 0) or five times
+ * (nonzero); the corpus's sound-half is absent (the ledger name's sound
+ * rides elsewhere in the callers). SimulationModeCounterAdd (FUN_0043a910)
+ * is the loop form: run the zero-selector half `count` times, its first
+ * parameter rides through with no observable effect (register residue).
+ * Deviation: the corpus dereferences the current level blindly; the port
+ * guards the no-level path (the counters and the overlay float still
+ * ride — the corpus runs the advance outside the level gate). */
+void level_resource_balance_add_and_sound(int selector);
+                                                /* FUN_0041f9a0 */
+void simulation_mode_counter_add(int mode, int count);
+                                                /* FUN_0043a910 */
+
 #endif /* LEGORRR_GAME_CMD_HPP */

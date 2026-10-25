@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 1006 | 39.2% |
+| ported | 1013 | 39.5% |
 | anchored | 4 | 0.2% |
-| named | 1508 | 58.8% |
+| named | 1501 | 58.5% |
 | runtime-import | 45 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (1006 functions)
+  (1013 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1508 functions)
+  citation yet (1501 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (45 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1513 (59.0%).**
+**Game logic remaining to port: 1506 (58.7%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -369,7 +369,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0041f6c0` | SelectedEntityDetachCallback |
 | `0x0041f740` | CellFourNeighborWalkCheck |
 | `0x0041f840` | RemoveObjectIfClass6 |
-| `0x0041f9a0` | LevelResourceBalanceAddAndSound |
 | `0x0041f9e0` | UpgradeResourceDebit |
 | `0x0041fa80` | StartLevelPilots |
 | `0x00422850` | MiscObjectResourcesLoad |
@@ -504,7 +503,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0043a5f0` | EntityVisualResourceGetOrCreate |
 | `0x0043a650` | ActionKindEntityCreateAndCommandIssue |
 | `0x0043a850` | EntityActionRecordConsumeAndCleanup |
-| `0x0043a910` | SimulationModeCounterAdd |
 | `0x0043a930` | TrackedEntityPointerArrayRemove |
 | `0x0043a9f0` | EntityPairInteractionGate |
 | `0x0043aab0` | ProximityActivityRaise |
@@ -728,7 +726,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0045a500` | PanelImageSlotEntryAllocate |
 | `0x0045a590` | ScrollingAdvisorTextAppend |
 | `0x0045a5b0` | UITextOutputPositionAndDraw |
-| `0x0045a620` | UITextOutputObjectRelease |
 | `0x0045a650` | PanelCategoryBoundsSet |
 | `0x0045adb0` | SimCursorInteractionTick |
 | `0x0045b310` | SimCategoryCellHitTest |
@@ -743,7 +740,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0045c340` | PanelResourceLayoutStore |
 | `0x0045c3f0` | AdvisorProgressBarFillDraw |
 | `0x0045c4b0` | PanelResourcePositionUpdateIfEnabled |
-| `0x0045c580` | UiOverlayAnimationAdvance |
 | `0x0045c5f0` | UiOverlayAnimationApply |
 | `0x0045c670` | AdvisorAnimationSceneLookupAndRequest |
 | `0x0045c6b0` | AdvisorAnimationSlotIdResolve |
@@ -1065,8 +1061,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004789a0` | MusicMixerVolumeGet |
 | `0x004789c0` | WindowsMixerControlInit |
 | `0x00478df0` | BlockTextTokenPoolInit |
-| `0x00479110` | ReadAngleSettingRadians |
-| `0x00479170` | ConfigRgbVectorRead |
 | `0x00479500` | D3DRMVectorRandom |
 | `0x00479510` | D3DRMVectorRotate |
 | `0x00479630` | SurfaceTriangleAreaCalculate |
@@ -1249,7 +1243,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00485300` | ObjectiveAdvisorTextCopy |
 | `0x00485390` | TextBufferDrawWrapped |
 | `0x00485710` | TextWrapMeasureAndDrawLines |
-| `0x004859b0` | TextBufferReset |
 | `0x00485a20` | KeyboardKeyNamesInit |
 | `0x00485e30` | NamedOptionIndexFindCaseInsensitive |
 | `0x00485e80` | RenderSetup |

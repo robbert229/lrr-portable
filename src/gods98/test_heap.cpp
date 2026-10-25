@@ -161,6 +161,56 @@ int main(void)
         text_output_field82c_bit2_set_clear(NULL, 1); /* guarded */
     }
 
+    /* TextBufferReset (2026-10-25): the buffer sweep, the +0x18 window,
+     * and the flag words, plus the guarded holder wrapper. */
+    {
+        static char rec[0x830];
+        static char buffer[32];
+        memset(rec, 0x5a, sizeof rec);
+        memset(buffer, 0x5a, sizeof buffer);
+        void* buf = buffer;
+        const uint32_t count = 20u;
+        memcpy(rec + 0x14, &buf, sizeof buf);
+        memcpy(rec + 0x418, &count, sizeof count);
+        uint32_t word = 0xffffffffu;
+        memcpy(rec + 0x82c, &word, sizeof word);
+
+        text_buffer_reset(rec);
+        CHECK(memcmp(buffer, (const char[20]){ 0 }, 20) == 0,
+              "the count bytes sweep clear");
+        CHECK(buffer[20] == 0x5a && buffer[21] == 0x5a,
+              "the tail past the count stays");
+        int window_zero = 1;
+        for (int i = 0x18; i < 0x418; ++i) {
+            if (rec[i] != 0) { window_zero = 0; break; }
+        }
+        CHECK(window_zero, "the 0x100-dword window clears");
+        uint32_t w = 1;
+        __builtin_memcpy(&w, rec + 0x820, 4);
+        uint32_t w2 = 1;
+        __builtin_memcpy(&w2, rec + 0x41c, 4);
+        uint32_t w3 = 1;
+        __builtin_memcpy(&w3, rec + 0x82c, 4);
+        CHECK(w == 0u && w2 == 0u && w3 == 0xfffffffeu,
+              "the flag words land: +0x820/+0x41c zero, +0x82c bit 0 clear");
+        memcpy(rec + 0x418, &count, sizeof count); /* the count stays */
+
+        void* holder = rec;
+        /* Dirty the window past the widened +0x14 slot's straddled half;
+         * the reset re-zeros the slot's padding half from the buffer read. */
+        memset(rec + 0x28, 0x5a, 8);
+        ui_text_output_object_release(&holder);
+        CHECK(memcmp(rec + 0x28, (const char[8]){ 0 }, 8) == 0,
+              "the holder wrapper resets through the slot");
+        ui_text_output_object_release(NULL); /* guarded */
+
+        memset(rec + 0x14, 0, sizeof buf);
+        memset(rec + 0x28, 0x5a, 8);
+        text_buffer_reset(rec);
+        CHECK(rec[0x18] == 0, "the window still clears with no buffer");
+        text_buffer_reset(NULL); /* guarded */
+    }
+
     /* DwordListAllocateAndZero (2026-10-25). */
     {
         void** hdr = dword_list_allocate_and_zero(4);

@@ -101,6 +101,25 @@ void text_output_field82c_bit2_set_clear(void* record, int set_bit);
  * dword; the port carries a host-width pointer (documented deviation). */
 void object_field_38_release(void* record);
 
+/* TextBufferReset (FUN_004859b0): clears the text-output record in place.
+ * The record's +0x418 count of buffer bytes and +0x14 buffer pointer
+ * (widened like the destroy slot) zero `count` buffer bytes, the
+ * record's +0x18 dword window of 0x100 dwords zeroes, and the words
+ * +0x820 / +0x41c clear while +0x82c loses bit 0. The corpus strides
+ * the record and buffer blindly; the port guards the record and skips
+ * the sweep on a NULL buffer slot. Deviation: the corpus slot is a
+ * dword ending before the window, so the port's widened slot straddles
+ * the window start — the reset rewrites the slot after zeroing,
+ * keeping the record usable (the corpus-visible padding bytes stay
+ * zeroed for any pointer below 4 GiB). */
+void text_buffer_reset(void* record);           /* FUN_004859b0 */
+
+/* UITextOutputObjectRelease (FUN_0045a620): resets the text-output record
+ * held in the caller's pointer slot. The corpus dereferences blindly;
+ * the port guards the holder (deviation). */
+void ui_text_output_object_release(void* const* holder);
+                                                /* FUN_0045a620 */
+
 /* --- dword-list allocator (2026-10-25) -----------------------------------
  * ListAlloc (FUN_00414070): builds a caller-owned two-slot header
  * {data, capacity} over a fresh zero-filled array of `count` dwords. The
