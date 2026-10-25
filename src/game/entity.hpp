@@ -360,6 +360,15 @@ uint32_t stats_table_word_at_144(int type, int row); /* FUN_00469ec0 */
 uint32_t stats_table_word_at_148(int type, int row); /* FUN_00469ee0 */
 uint32_t stats_table_word_at_14c(int type, int row); /* FUN_00469f00 */
 
+/* Strided triplets: the corpus takes the instance index as its third
+ * argument (offset + index * 0x150 into the template). */
+uint32_t stats_table_word_at_b4(int type, int row, int stride_index);
+                                                   /* FUN_00469af0 */
+uint32_t stats_table_word_at_d0(int type, int row, int stride_index);
+                                                   /* FUN_00469f60 */
+uint32_t stats_table_word_at_100(int type, int row, int stride_index);
+                                                   /* FUN_0046a0f0 */
+
 /* Entity-indexed twins: the corpus's parameter is a config-block window
  * holding the type dword at +0x00, the row dword at +0x04, and the
  * instance index dword at +0x330. */

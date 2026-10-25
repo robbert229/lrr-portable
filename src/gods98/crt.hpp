@@ -611,4 +611,12 @@ void     render_surface_secondary_set(uint32_t value); /* install */
 uint32_t render_feature_flags_get(void);
 void     render_feature_flags_set(uint32_t value); /* install */
 
+/* Engine feature word band (2026-10-25): the DAT_00505f84 half-model lives
+ * here with install/peek hooks (see crt.cpp; the EngineContext::feature
+ * half in engine.hpp does not interoperate — deviation). The corpus's
+ * low-texture flag setter turns on bit 5 while bit 0x40000 is clear. */
+uint32_t engine_feature_word_peek(void);
+void     engine_feature_word_install(uint32_t value); /* port hook */
+void     low_texture_flag_set(void);                  /* FUN_00477bd0 */
+
 #endif /* LEGORRR_GODS98_CRT_HPP */

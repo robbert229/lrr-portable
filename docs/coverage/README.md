@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 1001 | 39.0% |
+| ported | 1006 | 39.2% |
 | anchored | 4 | 0.2% |
-| named | 1513 | 59.0% |
+| named | 1508 | 58.8% |
 | runtime-import | 45 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (1001 functions)
+  (1006 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1513 functions)
+  citation yet (1508 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (45 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1518 (59.2%).**
+**Game logic remaining to port: 1513 (59.0%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -818,9 +818,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004667e0` | EntityStatsConfigLoad |
 | `0x00469a90` | IndexedValueAppend |
 | `0x00469ac0` | IndexedRecordWordAtOffsetB0Get |
-| `0x00469af0` | IndexedRecordWordAtOffsetB4Get |
 | `0x00469f40` | BuildingUpgradeAdmissionCheck |
-| `0x00469f60` | IndexedRecordWordAtOffsetD0Get |
 | `0x0046a0c0` | MappedIndexedRecordWordAtFCGet |
 | `0x0046a120` | GroupedCodeTableFindValueIndex |
 | `0x0046a330` | EntityRecordFlag400ToggleAndRefresh |
@@ -1323,7 +1321,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0048bd50` | WadEntryFindAcrossMountedArchives |
 | `0x0048be00` | FixedRecordSlotAllocate |
 | `0x0048c010` | WadStreamLengthGet |
-| `0x0048c030` | WadMemoryStreamBufferGet |
 | `0x0048c040` | StringCaseSubstringFind |
 | `0x0048c0c0` | LwoStringDuplicate |
 | `0x0048c120` | LwoTextureProjectionModeParse |

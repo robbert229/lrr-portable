@@ -1288,6 +1288,19 @@ int main(int argc, char** argv)
             CHECK(stats_instance_word_at_bc(NULL) == 0u, "the NULL block guard holds");
         }
 
+        {
+            uint32_t w = 0;
+            __builtin_memcpy(&w, tmpl + 0xb4 + 0x150, 4);
+            CHECK(stats_table_word_at_b4(9, 7, 1) == w, "the b4 stride read");
+            __builtin_memcpy(&w, tmpl + 0xd0 + 0x150, 4);
+            CHECK(stats_table_word_at_d0(9, 7, 1) == w, "the d0 stride read");
+            __builtin_memcpy(&w, tmpl + 0x100 + 0x150, 4);
+            CHECK(stats_table_word_at_100(9, 7, 1) == w, "the 100 stride read");
+            CHECK(stats_table_word_at_b4(9, 7, 2) == 0u
+                      && stats_table_word_at_b4(9, 7, -1) == 0u,
+                  "the stride guards answer zero");
+        }
+
         CHECK(stats_table_word_at_b8(-1, 0) == 0u
                   && stats_type_table_cell(9, 18) == NULL
                   && stats_table_word_at_b8(16, 7) == 0u,
