@@ -205,6 +205,20 @@ void global_state_flags_bit7_set(EngineContext* ctx, int value)
     }
 }
 
+void global_state_flags_bits6_and_9_set(EngineContext* ctx, int value,
+                                        int set_bit9)
+{
+    if (ctx == NULL) {
+        return; /* deviation: the corpus writes its global blindly */
+    }
+    /* Corpus shape: bit 6 (and only bit 6) lands first through value, then
+     * bit 9 is raised or cleared through set_bit9 — bit 6 is decided before
+     * bit 9's mask applies, and bit 9 never touches bit 6's half. */
+    const uint32_t v = (value != 0) ? (ctx->debug | 0x40u)
+                                    : (ctx->debug & ~0x40u);
+    ctx->debug = (set_bit9 != 0) ? (v | 0x200u) : (v & ~0x200u);
+}
+
 void global_scroll_guard_set(int value)
 {
     s_scroll_guard = value;

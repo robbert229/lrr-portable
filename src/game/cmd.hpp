@@ -327,6 +327,18 @@ void handle_array_release_and_reset(void);
 void entity_command14_batch_issue(int count);
 void level_no_gather_object_setup(int mode);
 
+/* TaskTableContentsRelease (FUN_00462960): drain-and-free the contents of a
+ * task-table record window — count at +0x1c, entry-pointer array at +0x20,
+ * each entry carrying a sub-record slot at +0x14. Every entry (and any
+ * sub-record) goes through the heap free, then the array and the record
+ * itself; the corpus answers 1 (kept). The window rides the port's widened
+ * slot shape: entry and sub-record slots are host pointers read through
+ * the record's byte window, and the count and array slots are re-read
+ * every round, as the corpus's aliasing reloads do. Deviations: the port
+ * guards NULL windows and NULL array slots (the corpus strides both
+ * blindly); the caller frees nothing extra — this owns the whole tree. */
+int task_table_contents_release(void* record);      /* FUN_00462960 */
+
 /* --- cancellation-ref and conditional issuers (2026-10-24) --------------------
  * CmdCancelRef (FUN_00402cd0, findings 10/466): run by CmdFree unless the
  * second argument suppresses it. A type-0x13 record with a referenced record

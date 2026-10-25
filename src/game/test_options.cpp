@@ -513,6 +513,35 @@ int main(int argc, char** argv)
         options_context_six_field_set(&ctx, NULL); /* guarded */
     }
 
+    /* The scroll speed index band (2026-10-25). */
+    {
+        GameContext ctx;
+        memset(&ctx, 0, sizeof ctx);
+        scroll_scale_set(0.5f);
+        CHECK(scroll_to_slider_index() == 0, "the slow scale bands to 0");
+        scroll_scale_set(0.8f);
+        CHECK(scroll_to_slider_index() == 1, "the below-one scale bands to 1");
+        scroll_scale_set(1.0f);
+        CHECK(scroll_to_slider_index() == 2, "the unit scale bands to 2");
+        scroll_scale_set(1.5f);
+        CHECK(scroll_to_slider_index() == 3, "the mid scale bands to 3");
+        scroll_scale_set(1.6666666f);
+        CHECK(scroll_to_slider_index() == 4, "the near-two scale bands to 4");
+        scroll_scale_set(2.0f);
+        CHECK(scroll_to_slider_index() == 5, "the two scale bands to 5");
+
+        scroll_scale_set(0.5f);
+        scroll_slider_refresh(&ctx);
+        CHECK(ctx.options.game_speed == 0, "the refresh stores the band");
+        scroll_scale_set(3.0f);
+        scroll_slider_refresh(&ctx);
+        CHECK(ctx.options.game_speed == 5, "the fast refresh lands at 5");
+        scroll_scale_set(1.0f);
+        scroll_slider_refresh(NULL); /* guarded: nothing stores */
+        CHECK(scroll_to_slider_index() == 2, "the scale survives the guards");
+        scroll_scale_set(1.0f); /* leave the default scale for later suites */
+    }
+
     if (s_failures == 0) {
         printf("options_test: PASS\n");
         return 0;

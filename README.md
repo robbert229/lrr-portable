@@ -2363,6 +2363,30 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Scroll-scale and window-release band** (2026-10-25): five rows land in
+`options.*` / `engine.*` / `heap.*` / `cmd.*`. The corpus's scroll slider
+pair joins `options.*`: `scroll_to_slider_index` (0x415030) bands the
+engine's scroll-scale float into 0..5 — 0 below 0.6666667, 1 below 1.0, 2
+below 1.3333334, 3 below 1.6666666, else 4 with 5 at 2.0 and above; the
+corpus's float-promotion shape means a NaN scale answers 4 (pinned).
+`scroll_slider_refresh` (0x415360) stores that band into the options speed
+word the port models as `game_speed` (the same corpus dword). `engine.*`
+gains the bit-6/bit-9 flag pair `global_state_flags_bits6_and_9_set`
+(0x426360) over the debug word — bit 6 lands first through the value and
+bit 9 raises or clears through the second flag, as the corpus composes
+them. `heap.*` gains `dword_list_allocate_and_zero` (0x414070): the
+{data, capacity} header over a zero-filled slot array, keeping the
+corpus's masked zero-pass and dead second pass faithfully.
+`cmd.*` gains `task_table_contents_release` (0x462960): the whole
+window-tree free — count re-read every round through the record window,
+sub-record slots through the widened entry edges, array and record last,
+answering the corpus's 1. Deviations: pointer guards the corpus strides
+blindly (NULL guards store nothing), corpus-owned globals thread through
+port contexts, widened slots carry the corpus's dword strides. Tests pin
+the bands, the pair masks, the window tree, the guards, and the
+capacity/capacity-zero shapes; 34/36 (flic + frontend baseline). Ledger
+regenerates: 953 ported (+5).
+
 **Generic list window band** (2026-10-25): seven rows land in
 `savegame.*` / `level.*`. The 0x416exx/0x4170xx list band rides
 caller-supplied list-header windows as pure window operations: the fold

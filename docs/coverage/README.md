@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 948 | 37.0% |
+| ported | 953 | 37.2% |
 | anchored | 4 | 0.2% |
-| named | 1565 | 61.0% |
+| named | 1560 | 60.8% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (948 functions)
+  (953 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1565 functions)
+  citation yet (1560 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1570 (61.2%).**
+**Game logic remaining to port: 1565 (61.0%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -274,9 +274,11 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00413f30` | FilenameExtensionClassify |
 | `0x00413f90` | MenuItemRecordAlloc |
 | `0x00414010` | LoadItemStrings |
+| `0x00414c90` | MenuListFindName |
 | `0x00414de0` | GameSpeedSelect |
 | `0x00414df0` | VolumeSet |
 | `0x00414e10` | OptionMusicDefault |
+| `0x004150b0` | SaveMenuRefresh |
 | `0x00415220` | FrontEndStartLevel |
 | `0x00415370` | OverlayMenuGate |
 | `0x00415d00` | SaveMenuLayoutLoad |
@@ -388,7 +390,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00425d50` | GlobalRenderRecordSetFromInput |
 | `0x00426250` | UpdateRenderViewportState |
 | `0x004262e0` | ObjectiveScoreTextOriginSet |
-| `0x00426360` | GlobalStateFlagsBits6And9Set |
 | `0x004263c0` | GlobalSubsystemStateReset |
 | `0x00426420` | CursorRayToCameraRoute |
 | `0x00427e00` | ToolTipInfoStringsLoad |
@@ -800,7 +801,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00462600` | RewardTaskTextDrawAndScoreGate |
 | `0x00462700` | PointerOverrideExpiryTick |
 | `0x004628e0` | CallbackRecordAllocateInitialize |
-| `0x00462960` | TaskTableContentsRelease |
 | `0x004629d0` | PanelEventEntryAppend |
 | `0x00462ad0` | RewardScrollTickerAdvanceAndDraw |
 | `0x00462da0` | IndexedSurfaceResourceAllocate |
