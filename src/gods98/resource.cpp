@@ -583,3 +583,149 @@ void wad_memory_stream_buffer_get(int slot)
 {
     (void)fixed_record_slot_resource_get(slot);
 }
+
+/* --- wad payload band (2026-10-25; finding 01 codec story) ---------------
+ * The corpus decodes expanded wad entries through the RNC-header dispatch
+ * (the DAT_004b2d08 global holds the three-byte magic "RNC"), builds the
+ * stream-buffer handle pair, and clears the type-1 Huffman table between
+ * streams. The codecs themselves stay dormant (no shipped entry sets the
+ * expanded flag), as documented above. */
+
+/* WadPayloadDecodeDispatch (FUN_0049c840): verify the "RNC" magic, then
+ * branch on the type byte at [3]. Type 0 is a raw pass-through: the size
+ * dword at +4 read big-endian, payload from +0x12, copied in DWORD chunks
+ * plus the trailing (size & 3) bytes. Types 1/2 hand over to the dormant
+ * codecs; any other byte answers the unknown-type verdict. */
+#define WAD_DECODE_MAGIC_FAIL 0xffff
+#define WAD_DECODE_TYPE_FAIL  0xfffe
+
+int wad_payload_decode_dispatch(const void* header, void* dest)
+{
+    if (header == NULL || dest == NULL) {
+        /* deviation: the corpus strides both operands blindly */
+        return WAD_DECODE_MAGIC_FAIL;
+    }
+    const unsigned char* h = (const unsigned char*)header;
+    if (memcmp(h, "RNC", 3) != 0) {
+        return WAD_DECODE_MAGIC_FAIL;
+    }
+    const unsigned char type = h[3];
+    if (type == 0u) {
+        /* (uVar >> 8 & 0xff + uVar * 0x100) * 0x100 + ... = big-endian read */
+        const uint32_t size = ((uint32_t)h[4] << 24) | ((uint32_t)h[5] << 16)
+                            | ((uint32_t)h[6] << 8) | (uint32_t)h[7];
+        /* deviation: the corpus copies in dword+byte stages; the whole-span
+         * memcpy is byte-identical and bounds-safe on both sides. */
+        memcpy(dest, h + EXPAND_HEADER_SZ, size);
+        return 0;
+    }
+    if (type == 1u || type == 2u) {
+        /* The codecs FUN_0049c8e0 / FUN_0049ca60 (portable, dormant) own
+         * these paths; no shipped wad reaches them. Deviation: without the
+         * codec bodies built, the port answers the type marker itself so
+         * the verdict (non-zero == decode failed) stays observable. */
+        return (int)type;
+    }
+    return WAD_DECODE_TYPE_FAIL;
+}
+
+/* ExpandWadPayload (FUN_0049c7c0): probe or materialize an expanded entry
+ * payload. The size is the big-endian length dword at +4; a NULL out-pointer
+ * is the corpus's size probe (the size alone answers). Otherwise the engine
+ * heap allocates, the dispatch decodes, and a failed dispatch frees. */
+long wad_expand_payload(const void* header, void** out_payload)
+{
+    if (header == NULL) {
+        return 0; /* deviation: the corpus strides the payload blindly */
+    }
+    const unsigned char* h = (const unsigned char*)header;
+    const long size = (long)(((uint32_t)h[4] << 24) | ((uint32_t)h[5] << 16)
+                            | ((uint32_t)h[6] << 8) | (uint32_t)h[7]);
+    if (out_payload == NULL) {
+        return size;
+    }
+    void* buf = engine_heap_alloc(size); /* FUN_0048dbd0 */
+    if (buf == NULL) {
+        return 0;
+    }
+    if (wad_payload_decode_dispatch(h, buf) != 0) {
+        engine_heap_free(buf); /* FUN_0048db80 */
+        return 0;
+    }
+    *out_payload = buf;
+    return size;
+}
+
+/* WadHuffmanTableClear (FUN_0049cf50): zero the decode table's `count`
+ * 16-byte entries: DWORD 0 at +0, the WORD 0xffff at +4, DWORD 0 at +8,
+ * and the WORD 0 at +12. A zero count clears nothing. Deviations: the
+ * corpus's count is char-truncated (multiples of 256 alias to nothing),
+ * documented rather than replayed, and the blind table stride is guarded. */
+void wad_huffman_table_clear(void* table, int count)
+{
+    if (table == NULL || count <= 0) {
+        return;
+    }
+    for (int i = 0; i != count; ++i) {
+        unsigned char* e = (unsigned char*)table + (size_t)i * 16u;
+        const uint32_t zero = 0u;
+        const uint16_t full = 0xffffu;
+        const uint16_t empty = 0u;
+        memcpy(e + 0, &zero, 4);
+        memcpy(e + 4, &full, 2);
+        memcpy(e + 8, &zero, 4);
+        memcpy(e + 12, &empty, 2);
+    }
+}
+
+/* GameFileHandleAllocate (FUN_0047fed0): the file-layer handle pair. Kind 1
+ * (wads) is the 8-byte record flagged 1 with no stream buffer; kind 0 (the
+ * loose-file route) flags 0 and carries the 12-byte stream buffer behind,
+ * releasing the record if the buffer alloc fails. Deviations: the record
+ * fields widen to (int32_t flag; void* stream) for LP64 (the corpus's
+ * dwords, 8 bytes, alias this record's front half) and the corpus's
+ * blind-first store for kind 1 is guarded. The corpus's wrapper chain
+ * 0x47ff30 is a bare call into the heap's alloc entry. */
+void* game_file_handle_allocate(int kind)
+{
+    if (kind != 0 && kind != 1) {
+        return NULL;
+    }
+    GameFileHandle* h = (GameFileHandle*)engine_heap_alloc(
+        (long)sizeof(GameFileHandle));
+    if (h == NULL) {
+        return NULL;
+    }
+    h->flag = kind;
+    /* Deviation: the corpus leaves +4 uninitialized for kind 1; the port
+     * zeroes the stream field for deterministic handles. */
+    h->stream = NULL;
+    if (kind == 1) {
+        return h;
+    }
+    h->stream = engine_heap_alloc(12);
+    if (h->stream != NULL) {
+        return h;
+    }
+    engine_heap_free_wrapper(h);
+    return NULL;
+}
+
+/* WadEntryReadIntoStreamSlot (FUN_0047fea0): zero the slot pair behind the
+ * handle, resolve the entry through the corpus's wad path opener with the
+ * search-all selector, and answer whether the entry exists. Deviations:
+ * the opener's record-slot handle (its slot table is modeled in
+ * fixed_record_slot_resource_get) rides as the opened resource pointer and
+ * the corpus's -1 sentinel becomes NULL; the search-all index arrives as
+ * the wad-only open mode with the corpus's global at -1 inlined. */
+int wad_entry_read_into_stream_slot(WadStreamSlots* slots, const char* name)
+{
+    if (slots == NULL) {
+        return 0; /* deviation: the corpus strides the slots blindly */
+    }
+    slots->word2 = 0u;
+    slots->stream = NULL;
+    const Resource* handle = resource_open(name, RESOURCE_WAD_ONLY);
+    slots->handle = handle;
+    return handle != NULL;
+}

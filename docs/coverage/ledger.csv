@@ -2036,9 +2036,9 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0047fdb0,FUN_0047fdb0,named,GameFilePrintFormat,0,490
 0047fe20,FUN_0047fe20,ported,GameFileSystemTypeGet,2,71
 0047fe30,FUN_0047fe30,named,FileOpenRouteSelect,0,852
-0047fea0,FUN_0047fea0,named,WadEntryReadIntoStreamSlot,0,198
-0047fed0,FUN_0047fed0,named,GameFileHandleAllocate,0,493
-0047ff30,FUN_0047ff30,ported,EngineHeapAllocate,1,80
+0047fea0,FUN_0047fea0,ported,WadEntryReadIntoStreamSlot,2,198
+0047fed0,FUN_0047fed0,ported,GameFileHandleAllocate,2,493
+0047ff30,FUN_0047ff30,ported,EngineHeapAllocate,2,80
 0047ff40,FUN_0047ff40,ported,EngineHeapFree,2,80
 0047ff50,FUN_0047ff50,named,GameFileHandleRelease,0,600
 0047ffc0,FUN_0047ffc0,named,MountedPathPrefixRewrite,0,909
@@ -2262,8 +2262,8 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0048da50,FUN_0048da50,ported,StringFindSubstring,2,2603
 0048dad0,FUN_0048dad0,named,ParseSignedDecimal,0,900
 0048db70,FUN_0048db70,ported,ParseIntegerWrapper,4,80
-0048db80,FUN_0048db80,ported,EngineHeapFree,3,334
-0048dbd0,FUN_0048dbd0,ported,EngineHeapAlloc,3,93
+0048db80,FUN_0048db80,ported,EngineHeapFree,4,334
+0048dbd0,FUN_0048dbd0,ported,EngineHeapAlloc,4,93
 0048dbf0,FUN_0048dbf0,ported,EngineHeapAllocateWithRetry,2,460
 0048dc40,FUN_0048dc40,ported,EngineHeapAllocateAligned,2,268
 0048dc80,FUN_0048dc80,named,GrowHeapArray,0,2965
@@ -2536,10 +2536,10 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0049c7a8,DINPUT.DLL::DirectInputCreateA,runtime-import,DINPUT.DLL::DirectInputCreateA,0,233
 0049c7ae,DSOUND.DLL::Ordinal_1,runtime-import,DSOUND.DLL::Ordinal_1,0,215
 0049c7b4,KERNEL32.DLL::RtlUnwind,runtime-import,KERNEL32.DLL::RtlUnwind,0,343
-0049c7c0,FUN_0049c7c0,named,ExpandWadPayload,0,531
-0049c840,FUN_0049c840,named,WadPayloadDecodeDispatch,0,1016
-0049c8e0,FUN_0049c8e0,ported,DecodeWadPayloadType1,2,1564
-0049ca60,FUN_0049ca60,ported,DecodeWadPayloadType2,2,2428
+0049c7c0,FUN_0049c7c0,ported,ExpandWadPayload,2,531
+0049c840,FUN_0049c840,ported,WadPayloadDecodeDispatch,2,1016
+0049c8e0,FUN_0049c8e0,ported,DecodeWadPayloadType1,3,1564
+0049ca60,FUN_0049ca60,ported,DecodeWadPayloadType2,3,2428
 0049cc70,FUN_0049cc70,named,WadBitstreamOutputInitialize,0,361
 0049ccc0,FUN_0049ccc0,named,WadReadBitsLsbFirst,0,717
 0049cd30,FUN_0049cd30,named,WadReadBitsMsbFirst,0,669
@@ -2547,7 +2547,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0049ce00,FUN_0049ce00,named,WadHuffmanSymbolDecode,0,542
 0049ce70,FUN_0049ce70,named,WadRunLengthDecode,0,231
 0049ceb0,FUN_0049ceb0,named,WadBackreferenceOffsetDecode,0,709
-0049cf50,FUN_0049cf50,named,WadHuffmanTableClear,0,428
+0049cf50,FUN_0049cf50,ported,WadHuffmanTableClear,2,428
 0049cf90,FUN_0049cf90,ported,WadHuffmanCanonicalCodesBuild,4,680
 0049d000,FUN_0049d000,ported,WadReverseLowBits,1,421
 0049d030,FUN_0049d030,named,DirectDrawDeviceInitialize,0,2840
