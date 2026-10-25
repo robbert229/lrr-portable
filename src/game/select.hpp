@@ -107,4 +107,15 @@ int selection_candidate_already_selected_or_marked(const GameContext* ctx,
 int current_level_state_flags_contain_mask(const GameContext* ctx,
                                            uint32_t mask);
 
+/* SelectionClearMarkerAndResetHud (FUN_0044c4a0): a marked entity whose
+ * stats word carries bit 0x20000 raises the DAT_00556ecc state word's
+ * 0x10000000 bit (threaded through the engine handle, deviation) and its
+ * own +0x3ec bit 1 — but only when the state-flags word's same bit is
+ * clear or the +0x36c owner is set. The selection-clear command post and
+ * HUD context post always run. NULL handles and entities stay inert on
+ * the raise path (deviations). */
+void selection_clear_marker_and_reset_hud(struct EngineContext* engine,
+                                          EntitySlot* e);
+                                                /* FUN_0044c4a0 */
+
 #endif /* LEGORRR_GAME_SELECT_HPP */

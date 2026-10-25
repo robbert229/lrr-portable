@@ -654,4 +654,15 @@ uint32_t kind_six_random_sweep_dispatch(float delta);
 void kind_six_sweep_timer_install(float value); /* port hook */
 float kind_six_sweep_timer_peek(void);          /* port hook */
 
+/* CommandSampleStatsAccumulate (FUN_0046b660): per-kind sliding-window
+ * statistics over own storage. A null sample clears the head and total;
+ * a sample slides the window when the head falls below its +8 word and
+ * adds its +4 word to the running total, raising the high-water mark;
+ * the pointer rides the kind's log and the index increments. Deviations
+ * (kind guard, log-edge stop) in the module notes. Fields 20..24 are
+ * index/head/total/sum/high. */
+void command_sample_stats_accumulate(int kind, const void* sample);
+                                                /* FUN_0046b660 */
+uint32_t command_sample_stats_peek(int kind, int field); /* port hook */
+
 #endif /* LEGORRR_GAME_CMD_HPP */
