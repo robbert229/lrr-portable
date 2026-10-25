@@ -122,4 +122,40 @@ int  fixed_record_slot_flag_peek(int slot);        /* port hook */
  * result; the observable effect is the slot reader's. */
 void wad_memory_stream_buffer_get(int slot);       /* FUN_0048c030 */
 
+/* --- wad payload band (2026-10-25; finding 01 codec story) ----------------
+ * RNC-header decode dispatch, its expand wrapper, the type-1 Huffman table
+ * clear, the file-layer handle pair, and the wad-entry stream-slot opener.
+ * The codecs themselves stay dormant (no shipped wad sets the expanded
+ * flag), documented in resource.cpp. */
+#define WAD_DECODE_MAGIC_FAIL 0xffff /* corpus's not-RNC verdict */
+#define WAD_DECODE_TYPE_FAIL  0xfffe /* corpus's unknown-type verdict */
+
+/* Verify the "RNC" magic + type gate and copy/delegate the payload.
+ * 0 raw copy, 1/2 the dormant codecs' path markers, verdicts otherwise. */
+int wad_payload_decode_dispatch(const void* header, void* dest); /* FUN_0049c840 */
+
+/* Probe (out_payload NULL) or materialize an expanded payload; answers the
+ * decoded size, 0 on any failure. Buffer owned via engine_heap_free. */
+long wad_expand_payload(const void* header, void** out_payload); /* FUN_0049c7c0 */
+
+/* Zero 16-byte table entries: 0, word 0xffff, 0, word 0. */
+void wad_huffman_table_clear(void* table, int count);            /* FUN_0049cf50 */
+
+/* Kind 1: flagged handle record, no stream buffer. Kind 0: carries the
+ * 12-byte stream buffer behind; releases the record if it fails. */
+typedef struct GameFileHandle {
+    int32_t flag;   /* corpus record dword at +0 */
+    void*   stream; /* corpus record dword at +4 (widened, LP64 deviation) */
+} GameFileHandle;
+void* game_file_handle_allocate(int kind);                       /* FUN_0047fed0 */
+
+/* The stream-slot opener's three corpus dwords, front to back. */
+typedef struct WadStreamSlots {
+    const Resource* handle; /* slot[0]: opened entry (NULL = missing) */
+    const void*     stream; /* slot[1]: zeroed by the opener */
+    uint32_t        word2;  /* slot[2]: zeroed by the opener */
+} WadStreamSlots;
+int wad_entry_read_into_stream_slot(WadStreamSlots* slots,
+                                    const char* name);           /* FUN_0047fea0 */
+
 #endif /* LEGORRR_RESOURCE_HPP */

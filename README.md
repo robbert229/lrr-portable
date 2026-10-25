@@ -2363,6 +2363,31 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Wad payload band — RNC dispatch, expand, Huffman clear, handle pair**
+(2026-10-25): five frontier rows land in `resource.*`.
+`wad_payload_decode_dispatch` (0x49c840) gates on the corpus's three-byte
+"RNC" magic (the DAT_004b2d08 global), branches on the type byte at [3] —
+type 0 is the raw pass-through with the big-endian size dword at +4 and the
+payload from +0x12 (dword stages plus the trailing `size & 3` bytes; the
+port's single-span memcpy is byte-identical), types 1/2 hand over to the
+dormant codecs (the port answers the type marker itself), and anything else
+answers 0xfffe; bad magic answers 0xffff. `wad_expand_payload` (0x49c7c0)
+probes or materializes: the size alone answers a NULL out-pointer, else the
+engine heap allocates, the dispatch decodes, and a failed dispatch frees.
+`wad_huffman_table_clear` (0x49cf50) zeroes 16-byte decode-table entries —
+dword 0, word 0xffff, dword 0, word 0 — a zero count clears nothing.
+`game_file_handle_allocate` (0x47fed0) builds the file-layer pair: kind 1
+rides the flagged record with no stream buffer, kind 0 carries the 12-byte
+stream buffer behind and releases the record if that alloc fails.
+`wad_entry_read_into_stream_slot` (0x47fea0) zeroes the slot pair behind the
+handle, resolves the entry through the corpus's wad path opener with the
+search-all index inlined, and answers whether the entry exists. Deviations:
+the record/slot fields widen pointer-safe for LP64, the corpus's -1 sentinel
+becomes NULL, and blind strides are guarded. `resource_test` pins the magic
+verdicts, the dword+tail copy, the dormant type markers, the probe/decode/
+failure paths of expand, the cleared-entry shape and the untouched tail,
+the kind verdicts, and the slot open/miss behavior.
+
 **Surface record pixel band — flip, palette expand, 24-bit convert**
 (2026-10-25): three frontier rows land. `surface_pixel_rows_flip_with_scratch`
 (0x47d740) reverses the row order through an engine-heap scratch, three stage

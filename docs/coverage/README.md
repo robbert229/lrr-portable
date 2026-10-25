@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 1062 | 41.4% |
+| ported | 1067 | 41.6% |
 | anchored | 4 | 0.2% |
-| named | 1453 | 56.7% |
+| named | 1448 | 56.5% |
 | runtime-import | 44 | 1.7% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (1062 functions)
+  (1067 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1453 functions)
+  citation yet (1448 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (44 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1458 (56.9%).**
+**Game logic remaining to port: 1453 (56.7%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -1137,8 +1137,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0047fd40` | GameFileReadLineDispatch |
 | `0x0047fdb0` | GameFilePrintFormat |
 | `0x0047fe30` | FileOpenRouteSelect |
-| `0x0047fea0` | WadEntryReadIntoStreamSlot |
-| `0x0047fed0` | GameFileHandleAllocate |
 | `0x0047ff50` | GameFileHandleRelease |
 | `0x0047ffc0` | MountedPathPrefixRewrite |
 | `0x00480050` | ReadCrlfLine |
@@ -1473,8 +1471,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0049b4c0` | CrtEnvironmentEntryFind |
 | `0x0049b540` | CrtEnvironmentArrayClone |
 | `0x0049b5b0` | CrtMultibyteCharacterSearch |
-| `0x0049c7c0` | ExpandWadPayload |
-| `0x0049c840` | WadPayloadDecodeDispatch |
 | `0x0049cc70` | WadBitstreamOutputInitialize |
 | `0x0049ccc0` | WadReadBitsLsbFirst |
 | `0x0049cd30` | WadReadBitsMsbFirst |

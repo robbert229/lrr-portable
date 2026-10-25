@@ -323,6 +323,166 @@ int main(int argc, char** argv)
               "the slot guard runs clear");
     }
 
+    /* --- wad payload band (2026-10-25) --------------------------------- */
+    {
+        /* Dispatch: type 0 is the raw pass-through — the big-endian size
+         * dword at +4, payload from +0x12, copied in dwords plus tail. */
+        static unsigned char hdr[0x12 + 11];
+        unsigned char dst[16];
+        memset(hdr, 0, sizeof hdr);
+        memcpy(hdr, "RNC", 3);
+        hdr[3] = 0;             /* type 0 */
+        hdr[4] = 0; hdr[5] = 0; hdr[6] = 0; hdr[7] = 11; /* BE size 11 */
+        memcpy(hdr + 0x12, "payload!123", 11);
+        memset(dst, 0xEE, sizeof dst);
+        CHECK(wad_payload_decode_dispatch(hdr, dst) == 0,
+              "the raw pass-through answers 0");
+        CHECK(memcmp(dst, "payload!123", 11) == 0, "the payload lands");
+        CHECK(dst[11] == 0xEE && dst[15] == 0xEE,
+              "the copy stops at the size (dword+tail stages)");
+
+        /* The verdicts: magic, types 1/2 (dormant markers), unknown. */
+        hdr[0] = 'X';
+        CHECK(wad_payload_decode_dispatch(hdr, dst) == WAD_DECODE_MAGIC_FAIL,
+              "the bad magic answers 0xffff");
+        hdr[0] = 'R';
+        hdr[3] = 1;
+        CHECK(wad_payload_decode_dispatch(hdr, dst) == 1,
+              "the type-1 marker answers 1 (dormant codec)");
+        hdr[3] = 2;
+        CHECK(wad_payload_decode_dispatch(hdr, dst) == 2,
+              "the type-2 marker answers 2 (dormant codec)");
+        hdr[3] = 9;
+        CHECK(wad_payload_decode_dispatch(hdr, dst) == WAD_DECODE_TYPE_FAIL,
+              "the odd type answers 0xfffe");
+        CHECK(wad_payload_decode_dispatch(NULL, dst) == WAD_DECODE_MAGIC_FAIL,
+              "the null payload answers the magic verdict (deviation)");
+    }
+
+    {
+        /* Expand: probe answers the size, decode answers the buffer. */
+        static unsigned char hdr[0x12 + 11];
+        memset(hdr, 0, sizeof hdr);
+        memcpy(hdr, "RNC", 3);
+        hdr[7] = 11;
+        memcpy(hdr + 0x12, "payload!123", 11);
+        void* out = (void*)1;
+        CHECK(wad_expand_payload(hdr, NULL) == 11 && out == (void*)1,
+              "the null-pointer probe answers the size untouched");
+        void* buf = NULL;
+        CHECK(wad_expand_payload(hdr, &buf) == 11 && buf != NULL
+                  && memcmp(buf, "payload!123", 11) == 0,
+              "the decode hands over the buffer and size");
+        engine_heap_free(buf);
+
+        hdr[0] = 'X';
+        buf = NULL;
+        CHECK(wad_expand_payload(hdr, &buf) == 0 && buf == NULL,
+              "the failed dispatch releases the buffer and answers 0");
+        CHECK(wad_expand_payload(NULL, &buf) == 0,
+              "the null payload answers 0 (deviation)");
+    }
+
+    {
+        /* Huffman table clear: 16-byte entries ride 0 / word 0xffff / 0 /
+         * word 0; the entry past the count rides untouched. */
+        unsigned char table[4 * 16];
+        memset(table, 0x5A, sizeof table);
+        wad_huffman_table_clear(table, 3);
+        int ok = 1;
+        for (int i = 0; i != 3; ++i) {
+            const unsigned char* e = table + (size_t)i * 16u;
+            uint32_t d0, d8;
+            uint16_t w4, w12;
+            memcpy(&d0, e + 0, 4);
+            memcpy(&w4, e + 4, 2);
+            memcpy(&d8, e + 8, 4);
+            memcpy(&w12, e + 12, 2);
+            if (d0 != 0u || w4 != 0xffffu || d8 != 0u || w12 != 0u) {
+                ok = 0;
+            }
+        }
+        CHECK(ok, "the cleared entries land zero/0xffff/zero/zero");
+        int untouched = 1;
+        for (int i = 0; i != 16; ++i) {
+            if (table[3 * 16 + i] != 0x5Au) {
+                untouched = 0;
+            }
+        }
+        CHECK(untouched, "the count leaves the tail entry alone");
+        wad_huffman_table_clear(table, 0);
+        memset(table, 0x5A, sizeof table);
+        wad_huffman_table_clear(table, 0);
+        int all_ride = 1;
+        for (unsigned char b : table) {
+            if (b != 0x5Au) {
+                all_ride = 0;
+            }
+        }
+        CHECK(all_ride, "the zero count clears nothing");
+        wad_huffman_table_clear(NULL, 3); /* guarded */
+    }
+
+    {
+        /* File-handle pair: kind 1 rides flagged, kind 0 carries the
+         * stream buffer, anything else answers NULL. */
+        void* p = game_file_handle_allocate(1);
+        CHECK(p != NULL && ((GameFileHandle*)p)->flag == 1
+                  && ((GameFileHandle*)p)->stream == NULL,
+              "the kind-1 handle rides flagged with no stream buffer");
+        engine_heap_free(p);
+        p = game_file_handle_allocate(0);
+        CHECK(p != NULL && ((GameFileHandle*)p)->flag == 0
+                  && ((GameFileHandle*)p)->stream != NULL,
+              "the kind-0 handle carries its stream buffer");
+        engine_heap_free(((GameFileHandle*)p)->stream);
+        engine_heap_free(p);
+        CHECK(game_file_handle_allocate(2) == NULL,
+              "the odd kind answers NULL");
+    }
+
+    {
+        /* Stream-slot opener: a mounted entry answers 1 with the handle,
+         * the pair behind stays zeroed; misses answer 0. */
+        const char* tmpl = "/tmp/res_slot_XXXXXX";
+        char* dir = (char*)malloc(strlen(tmpl) + 1);
+        strcpy(dir, tmpl);
+        if (mkdtemp(dir) != NULL) {
+            resource_unmount_all();
+            TmpEntry entries[] = {
+                { "Data\\BAND.TXT", "slotpayload", 11 },
+            };
+            char wad_path[512];
+            snprintf(wad_path, sizeof(wad_path), "%s/LegoRR0.wad", dir);
+            if (ares_build_wad(wad_path, entries, 1)
+                && resource_mount(dir, "LegoRR") == 1) {
+                WadStreamSlots slots;
+                memset(&slots, 0xAB, sizeof slots);
+                CHECK(wad_entry_read_into_stream_slot(&slots,
+                                                      "Data\\BAND.TXT")
+                          == 1,
+                      "the present entry answers true");
+                CHECK(slots.handle != NULL, "the handle lands in slot zero");
+                CHECK(slots.stream == NULL && slots.word2 == 0u,
+                      "the pair behind rides zeroed");
+                resource_free((Resource*)slots.handle);
+                memset(&slots, 0xAB, sizeof slots);
+                CHECK(wad_entry_read_into_stream_slot(&slots, "no.such.e")
+                          == 0,
+                      "the missing entry answers false");
+                CHECK(slots.handle == NULL, "the miss leaves slot zero null");
+                CHECK(wad_entry_read_into_stream_slot(NULL, "x") == 0,
+                      "the null slot window answers false (deviation)");
+            } else {
+                CHECK(0, "the slot test wad mounted");
+            }
+            resource_unmount_all();
+            remove(wad_path);
+            rmdir(dir);
+        }
+        free(dir);
+    }
+
     if (s_failures == 0) {
         printf("resource_test: PASS%s\n", real_dir != NULL ? " (real wads)" : "");
         return 0;
