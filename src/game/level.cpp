@@ -8,6 +8,7 @@
 #include "gods98/heap.hpp"
 #include "gods98/message.hpp"
 #include "gods98/resource.hpp"
+#include "entity.hpp"
 #include "level.hpp"
 #include "objective.hpp"
 #include "util.hpp"
@@ -1638,6 +1639,36 @@ float engine_float_field210_get_by_index(const LevelState* s, int index)
 float engine_float_field260_get(const LevelState* s)
 {
     return s != NULL ? level_float(s, LEVEL_OFF_ENGINE_F260) : 0.0f;
+}
+
+/* AirSupplyAmountUpdate (FUN_00424560, finding 317): see level.hpp. The
+ * stats read lands before the gate (corpus order); the corpus's float10
+ * accumulation is modelled with the port's double — the documented
+ * extended-precision deviation. */
+void air_supply_amount_update(LevelState* s, const struct EntitySlot* e,
+                              float delta)
+{
+    if (s == NULL || e == NULL) {
+        return; /* deviation: the corpus strides both blindly */
+    }
+    const double stats = (double)entity_stats_float_atdc(e);
+    if (e->type == 4 && (e->flags_3e8 & 0x20000000u) == 0u) {
+        return;
+    }
+    const double rate = (double)level_float(s, LEVEL_OFF_OXYGEN_RATE);
+    const double acc = (double)level_float(s, LEVEL_OFF_AIR_SUPPLY);
+    const double next = (double)delta * 0.04 * rate * stats + acc;
+    float stored = (float)next;
+    if (next > 100.0) {
+        stored = 100.0f;
+    }
+    level_set_float(s, LEVEL_OFF_AIR_SUPPLY, stored);
+    if (stored <= 0.0f) {
+        level_set_float(s, LEVEL_OFF_AIR_SUPPLY, 0.0f);
+        if ((system_state_flags_get() & 0x08000000u) == 0u) {
+            objective_announce(s, 2);
+        }
+    }
 }
 
 /* GlobalStateField84Get (FUN_0042b500, findings 324/392): the dword at

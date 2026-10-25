@@ -633,7 +633,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004230b0,FUN_004230b0,ported,GlobalFloatField00556F00Get,1,153
 004230c0,FUN_004230c0,named,DebugPanelTextDrawUpdate,0,1319
 004231f0,FUN_004231f0,ported,EnginePreTick,4,1615
-00424560,FUN_00424560,named,AirSupplyAmountUpdate,0,677
+00424560,FUN_00424560,ported,AirSupplyAmountUpdate,5,677
 00424600,FUN_00424600,ported,TerrainCellFlagCleanup,4,1367
 00424730,FUN_00424730,named,SinePhaseMidpointBlendDispatch,0,1008
 004247d0,FUN_004247d0,named,ApplyDefaultTransformToFlaggedRenderObject,0,176

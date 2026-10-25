@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 915 | 35.7% |
+| ported | 916 | 35.7% |
 | anchored | 4 | 0.2% |
-| named | 1598 | 62.3% |
+| named | 1597 | 62.3% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (915 functions)
+  (916 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1598 functions)
+  citation yet (1597 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1603 (62.5%).**
+**Game logic remaining to port: 1602 (62.5%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -407,7 +407,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0041fa80` | StartLevelPilots |
 | `0x00422850` | MiscObjectResourcesLoad |
 | `0x004230c0` | DebugPanelTextDrawUpdate |
-| `0x00424560` | AirSupplyAmountUpdate |
 | `0x00424730` | SinePhaseMidpointBlendDispatch |
 | `0x004247d0` | ApplyDefaultTransformToFlaggedRenderObject |
 | `0x00424810` | ApplyDefaultTransformToFlaggedRenderObjects |
