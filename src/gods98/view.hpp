@@ -402,4 +402,17 @@ void scene_mesh_color_and_alpha_set(void* object, int block, float red,
                                     float green, float blue, float alpha);
                                                 /* FUN_00475020 */
 
+/* RotatedPairsScratchFill (FUN_00464110): copies count pair dwords from
+ * the source into the module scratch, applies the corpus's signed
+ * rotation class (the (param_4 + 0x8000) sign-fold mod-4 selector: 1
+ * swaps both negated, 2 negates both, 3 lands (y, -x), else identity —
+ * negative folds default), adds the offset pair, and answers the
+ * scratch pointer. Deviations: bounded scratch (the corpus writes its
+ * DAT region blindly) and count guarded. */
+void* rotated_pairs_scratch_fill(const int* offset_pair, const int* source,
+                                 int count, int rotation);          /* FUN_00464110 */
+
+/* Observer hook answering the scratch base (test pin). */
+void* rotated_pairs_scratch_peek(void);
+
 #endif /* LEGORRR_VIEW_HPP */

@@ -2363,6 +2363,29 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Advisor / indexed-list / scratch window band** (2026-10-25): six
+portable-now rows land in the unowned-window model. The advisor pair
+(objective.*): `advisor_action_position_and_mode_set` (0x401840) stores
+row mode + pair dwords, raising flag bit 0x10000 when mode is 0xc and
+clearing otherwise, and `advisor_action_position_get` (0x401890) reads
+the row's separate read-out window — a faithful quirk: the set never
+touches it. `objective_advisor_token_lookup` (0x453200) keeps the
+corpus's bounds-guarded table read (an install hook replaces the
+unported table writer). `indexed_linked_list_entry_get` (0x419780,
+message.*) walks the installed chain through the node's +0x10 link with
+the corpus's count/index guards. `rotated_pairs_scratch_fill` (0x464110,
+view.*) fills the module scratch with the corpus's sign-fold mod-4
+rotation classes (1 swaps both negated, 2 negates both, 3 lands
+(y, -x), negative folds default to identity) plus the offset pair.
+`can_spawn_expansion_entity_at_grid_cell` (0x4663f0, engine.*) scans
+the descriptor's stride-0x48 voxel buffer: the cell's own flag bit 0x08
+clears the answer, the raised self-pair lands the corpus's 0x3fc90fdb
+word, and the half-clear branch decides on the up/down neighbor bits.
+Deviations: bounded window tables (the corpus strides the unowned words
+blindly). Tests pin the flag pair, the read-out quirk, the chain walk,
+the rotation classes, and every can-spawn branch; 34/36 (flic +
+frontend baseline). Ledger regenerates: 971 ported (+6).
+
 **Field-grid + checkpoint fold band** (2026-10-25): three rows land in
 the entity-cell field grid and the checkpoint blob. `set_expansion_entity_at_grid_cell`
 (0x466380, engine.*) parks the entity on the cell slot, raises the

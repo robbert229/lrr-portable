@@ -1490,7 +1490,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00466230,FUN_00466230,ported,GridCellRecordBufferReplace,2,98
 00466250,FUN_00466250,named,ExpandCellEntitySpawn,0,1137
 00466380,FUN_00466380,ported,SetExpansionEntityAtGridCell,2,453
-004663f0,FUN_004663f0,named,CanSpawnExpansionEntityAtGridCell,0,842
+004663f0,FUN_004663f0,ported,CanSpawnExpansionEntityAtGridCell,2,842
 00466490,FUN_00466490,named,CellSightRayCheckAndFlag,0,1210
 004665c0,FUN_004665c0,ported,,4,89
 00466750,FUN_00466750,ported,GridCellInvalidateAndClearFlags,2,572

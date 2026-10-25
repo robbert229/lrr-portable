@@ -239,6 +239,50 @@ int main(void)
         set_expansion_entity_at_grid_cell(0, 0, entity); /* guarded */
     }
 
+    /* CanSpawnExpansionEntityAtGridCell (2026-10-25): the companion
+     * voxel scan over the stride-0x48 grid. */
+    {
+        static unsigned char vox[16 * 0x48];
+        memset(vox, 0, sizeof vox);
+        EngineState st = {};
+        st.grid_w = 2;
+        st.grid_h = 4;
+        st.grid_cells = vox;
+        entity_field_grid_buffer_release();
+        grid_cell_record_buffer_allocate(&st);
+        float v = -1.0f;
+        CHECK(can_spawn_expansion_entity_at_grid_cell(1, 2, &v) == 0,
+              "the clear occupancy byte answers zero");
+        char* f = (char*)vox + 8 + (2 * 2 + 1) * 0x48;
+        f[0] = 8;
+        f[0x50] = 0x10;
+        f[-0x40] = 0x10;
+        v = -1.0f;
+        CHECK(can_spawn_expansion_entity_at_grid_cell(1, 2, &v) == 1
+                  && v != 9.0f,
+              "the raised self pair answers one");
+        float got = 0.0f;
+        can_spawn_expansion_entity_at_grid_cell(1, 2, &got);
+        uint32_t bits = 0u;
+        memcpy(&bits, &got, sizeof bits);
+        CHECK(bits == 0x3fc90fdbu, "the constant word lands in the out slot");
+        /* Self pair half-clear: the up/down neighbors decide. */
+        f[0x50] = 0;
+        v = 9.0f;
+        CHECK(can_spawn_expansion_entity_at_grid_cell(1, 2, &v) == 0,
+              "the quiet neighbors answer zero");
+        CHECK(v == 9.0f, "the refused spawn leaves the out slot alone");
+        char* up = (char*)vox + 8 + (3 * 2 + 1) * 0x48;
+        char* dn = (char*)vox + 8 + (1 * 2 + 1) * 0x48;
+        up[0] = 0x10;
+        dn[0] = 0x10;
+        v = -1.0f;
+        CHECK(can_spawn_expansion_entity_at_grid_cell(1, 2, &v) == 1
+                  && v == 0.0f,
+              "the raised neighbors land a zero out slot");
+        entity_field_grid_buffer_release();
+    }
+
     /* GlobalStateLowByteClearAndRefresh (2026-10-24). */
     {
         char obj[0x20];

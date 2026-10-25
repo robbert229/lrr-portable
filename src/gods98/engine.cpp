@@ -530,3 +530,33 @@ void grid_cell_invalidate_and_clear_flags(int x, int y)
     flags &= 0xfffffeffu;
     __builtin_memcpy(cell + 0x0c, &flags, sizeof flags);
 }
+
+int can_spawn_expansion_entity_at_grid_cell(int x, int y, float* out)
+{
+    const EngineState* desc = entity_field_grid_descriptor_peek();
+    if (desc == NULL || desc->grid_cells == NULL) {
+        return 0; /* deviation: the corpus strides both words blindly */
+    }
+    const int w = (int)desc->grid_w;
+    const char* vox = (const char*)desc->grid_cells;
+    const ptrdiff_t idx = (ptrdiff_t)y * w + x;
+    const char* f = vox + 8 + idx * 0x48;
+    if ((f[0] & 8) == 0) {
+        return 0;
+    }
+    if ((f[0x50] & 0x10) == 0 || (f[-0x40] & 0x10) == 0) {
+        const char* up = vox + 8 + ((ptrdiff_t)(y + 1) * w + x) * 0x48;
+        const char* dn = vox + 8 + ((ptrdiff_t)(y - 1) * w + x) * 0x48;
+        if ((up[0] & 0x10) == 0 || (dn[0] & 0x10) == 0) {
+            return 0;
+        }
+        if (out != NULL) {
+            *out = 0.0f;
+        }
+    } else if (out != NULL) {
+        const unsigned bits = 0x3fc90fdbu; /* the corpus's float word */
+        __builtin_memcpy(out, &bits, sizeof *out);
+        return 1;
+    }
+    return 1;
+}

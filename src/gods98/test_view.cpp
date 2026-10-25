@@ -785,6 +785,26 @@ int main(void)
         /* the null corners guard (deviation); nothing crashes. */
     }
 
+    /* RotatedPairsScratchFill (2026-10-25): the mod-4 rotation classes
+     * and the offset fold over the module scratch. */
+    {
+        static const int src[4] = { 1, 2, 10, 20 };
+        static const int off[2] = { 100, 200 };
+        const int* sc = (const int*)rotated_pairs_scratch_fill(off, src, 2, 1);
+        CHECK(sc == (const int*)rotated_pairs_scratch_peek(),
+              "the fill answers the scratch base");
+        CHECK(sc[0] == 98 && sc[1] == 199 && sc[2] == 80 && sc[3] == 190,
+              "class 1 swaps both negated");
+        sc = (const int*)rotated_pairs_scratch_fill(off, src, 2, 2);
+        CHECK(sc[0] == 99 && sc[1] == 198, "class 2 negates both");
+        sc = (const int*)rotated_pairs_scratch_fill(off, src, 2, 3);
+        CHECK(sc[0] == 102 && sc[1] == 199, "class 3 lands the swap");
+        sc = (const int*)rotated_pairs_scratch_fill(off, src, 2, 0);
+        CHECK(sc[0] == 101 && sc[1] == 202, "class 0 rides the offset");
+        sc = (const int*)rotated_pairs_scratch_fill(off, src, 2, -0x9000);
+        CHECK(sc[0] == 101, "the negative fold lands identity");
+    }
+
     if (s_failures == 0) {
         printf("view_test: PASS\n");
         return 0;

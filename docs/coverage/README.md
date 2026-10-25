@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 965 | 37.6% |
+| ported | 971 | 37.9% |
 | anchored | 4 | 0.2% |
-| named | 1548 | 60.4% |
+| named | 1542 | 60.1% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (965 functions)
+  (971 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1548 functions)
+  citation yet (1542 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1553 (60.6%).**
+**Game logic remaining to port: 1547 (60.3%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -830,7 +830,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00465e00` | AdvanceTimedVisualSegmentAndFade |
 | `0x00465f40` | InstanceQuadVerticesBuild |
 | `0x00466250` | ExpandCellEntitySpawn |
-| `0x004663f0` | CanSpawnExpansionEntityAtGridCell |
 | `0x00466490` | CellSightRayCheckAndFlag |
 | `0x004667e0` | EntityStatsConfigLoad |
 | `0x00469a90` | IndexedValueAppend |
