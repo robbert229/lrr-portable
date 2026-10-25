@@ -671,6 +671,15 @@ void sav_visited_entry_set(int which, int index, void* record,
 void sav_visited_entry_peek(int which, int index, void** out_record,
                             uint32_t* out_word);       /* port hook */
 
+/* MenuListFindName (FUN_00414c90): walks the corpus's list header
+ * {record-array pointer @+0, count @+4} and answers the index of the
+ * first non-NULL entry whose name case-fold-equals the target (the
+ * corpus's __strcmpi shape); misses and non-positive counts answer -1.
+ * Deviations: the header rides explicit arguments (the header struct has
+ * no ported owner) and the entry name pointers are guarded. */
+int menu_list_find_name(void* const* entries, int count,
+                        const char* name);                /* FUN_00414c90 */
+
 /* --- screen-effect release (2026-10-24; findings 434/438) ------------------
  * ScreenEffectFlagsClearAndRelease (FUN_0040a3d0): walks the ten screen-
  *   effect entries (the corpus's DAT_004b8aa0 table stride) clearing active

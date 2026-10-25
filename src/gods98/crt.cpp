@@ -1969,3 +1969,124 @@ int crt_file_descriptor_count_peek(void)
 {
     return s_fd_flag_count;
 }
+
+/* --- the CRT control-flags / signal leaves (2026-10-25) --------------------
+ * CrtControlFlagsTranslate (FUN_004977d0): the corpus's flag fold — bits
+ * 0/2/3/4/5 cross over to 0x10/8/4/2/1 (bit 1 pairs back as 0x80000), the
+ * bits 10/11 pair folds to 0x100/0x200/0x300 (zero stays), an unset bits
+ * 8+9 pair answers 0x20000 (only the 0x200 pair answers 0x10000), and
+ * bit 12 answers 0x40000. Pure bitwork.
+ *
+ * CrtWideCharToMultibyte (FUN_00498b70): the corpus converts one wide
+ * char through the code-page API, its C-locale half (DAT_00549180 == 0,
+ * the port's pinned locale per KeyToAscii) writing the low byte for any
+ * char below 0x100. Deviations: the pinned-locale half leaves the
+ * code-page branch unreachable (the unported locale-map chain), and the
+ * failure half stores the corpus's EILSEQ-shaped 0x2a into the modeled
+ * math-error slot (_DAT_005490d0) and answers -1. */
+uint32_t crt_control_flags_translate(uint32_t flags)
+{
+    uint32_t out = 0u;
+    if ((flags & 0x01u) != 0u) { out |= 0x10u; }
+    if ((flags & 0x04u) != 0u) { out |= 0x08u; }
+    if ((flags & 0x08u) != 0u) { out |= 0x04u; }
+    if ((flags & 0x10u) != 0u) { out |= 0x02u; }
+    if ((flags & 0x20u) != 0u) { out |= 0x01u; }
+    if ((flags & 0x02u) != 0u) { out |= 0x80000u; }
+    const uint32_t pair2 = flags & 0xc00u;
+    if (pair2 == 0x400u) {
+        out |= 0x100u;
+    } else if (pair2 == 0x800u) {
+        out |= 0x200u;
+    } else if (pair2 == 0xc00u) {
+        out |= 0x300u;
+    }
+    if ((flags & 0x300u) == 0u) {
+        out |= 0x20000u;
+    } else if ((flags & 0x300u) == 0x200u) {
+        out |= 0x10000u;
+    }
+    if ((flags & 0x1000u) != 0u) {
+        out |= 0x40000u;
+    }
+    return out;
+}
+
+int crt_wide_char_to_multibyte(char* dest, uint32_t wide)
+{
+    if (dest == NULL) {
+        return 0; /* pinned: the corpus's null check answers 0 */
+    }
+    if ((wide & 0xffffu) < 0x100u) {
+        *dest = (char)wide;
+        return 1;
+    }
+    s_math_error_code = 0x2au; /* pinned: the corpus's EILSEQ-shaped store */
+    return -1;
+}
+
+/* SignalHandlerRecordFind (FUN_0049ab90): linear search of the corpus's
+ * signal-handler records — 12-byte entries (word, id, handler) in the
+ * DAT_004b22a8 table, bounded by the DAT_004b2328 count. The table's
+ * writers sit in the unported CRT startup band: own storage behind the
+ * install hooks below (the unowned-global convention). Deviations: the
+ * count-bounded scan (the corpus's end check reads the table through)
+ * and the LP64 16-byte record stride (the corpus's x86 12 bytes). */
+#define CRT_SIGNAL_RECORDS 16
+struct crt_signal_record {
+    uint32_t  word0;
+    int32_t   id;
+    uintptr_t handler;
+};
+static struct crt_signal_record s_signal_records[CRT_SIGNAL_RECORDS];
+static int s_signal_record_count; /* DAT_004b2328 role */
+
+void* crt_signal_handler_record_find(int signal)
+{
+    for (int i = 0; i < s_signal_record_count; ++i) {
+        if (s_signal_records[i].id == signal) {
+            return &s_signal_records[i];
+        }
+    }
+    return NULL;
+}
+
+void crt_signal_record_install(int index, uint32_t word0, int signal,
+                               const void* handler)
+{
+    if (index < 0 || index >= CRT_SIGNAL_RECORDS) {
+        return; /* deviation: the corpus strides the table */
+    }
+    s_signal_records[index].word0 = word0;
+    s_signal_records[index].id = signal;
+    s_signal_records[index].handler = (uintptr_t)handler;
+}
+
+void crt_signal_record_peek(int index, uint32_t* out_word0, int* out_id,
+                            const void** out_handler)
+{
+    if (index < 0 || index >= CRT_SIGNAL_RECORDS) {
+        return; /* deviation: the corpus strides the table */
+    }
+    if (out_word0 != NULL) {
+        *out_word0 = s_signal_records[index].word0;
+    }
+    if (out_id != NULL) {
+        *out_id = s_signal_records[index].id;
+    }
+    if (out_handler != NULL) {
+        *out_handler = (const void*)s_signal_records[index].handler;
+    }
+}
+
+void crt_signal_record_count_set(int count)
+{
+    s_signal_record_count = count > CRT_SIGNAL_RECORDS
+                                ? CRT_SIGNAL_RECORDS
+                                : (count < 0 ? 0 : count);
+}
+
+int crt_signal_record_count_peek(void)
+{
+    return s_signal_record_count;
+}

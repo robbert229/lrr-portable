@@ -3168,3 +3168,49 @@ void sav_visited_entry_peek(int which, int index, void** out_record,
         *out_word = words[index];
     }
 }
+
+/* --- the menu-list find (2026-10-25) ---------------------------------------
+ * MenuListFindName (FUN_00414c90): walks the corpus's list header
+ * {record-array pointer @+0, count @+4}, answering the index of the first
+ * non-NULL entry whose name case-fold-equals the target (the corpus's
+ * __strcmpi shape); misses and non-positive counts answer -1. Deviations:
+ * the header rides explicit arguments (the header struct has no ported
+ * owner) and the entry name pointers are guarded (the corpus strides). */
+static int s_name_fold_equal(const char* a, const char* b)
+{
+    for (;; ++a, ++b) {
+        unsigned char ca = (unsigned char)*a;
+        unsigned char cb = (unsigned char)*b;
+        if (ca >= 'A' && ca <= 'Z') {
+            ca += (unsigned char)('a' - 'A');
+        }
+        if (cb >= 'A' && cb <= 'Z') {
+            cb += (unsigned char)('a' - 'A');
+        }
+        if (ca != cb) {
+            return 0;
+        }
+        if (ca == 0) {
+            return 1;
+        }
+    }
+}
+
+int menu_list_find_name(void* const* entries, int count, const char* name)
+{
+    if (entries == NULL || count < 1) {
+        return -1; /* the corpus's count gate (deviation: null guard) */
+    }
+    for (int i = 0; i < count; ++i) {
+        const void* entry = entries[i];
+        if (entry == NULL) {
+            continue; /* pinned: the null entry strides on */
+        }
+        const char* const entry_name = *(const char* const*)entry;
+        if (entry_name != NULL && name != NULL
+            && s_name_fold_equal(entry_name, name)) {
+            return i;
+        }
+    }
+    return -1;
+}

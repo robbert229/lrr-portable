@@ -1294,6 +1294,79 @@ int main(void)
               "the zero count answers clear");
     }
 
+    /* The CRT control-flags / signal leaves (2026-10-25): the bit fold,
+     * the pinned-locale wide-half, and the signal-record hunt. */
+    {
+        CHECK(crt_control_flags_translate(1u) == 0x20010u,
+              "bit 0 crosses over (pair-clear rides)");
+        CHECK(crt_control_flags_translate(2u) == 0x0a0000u,
+              "bit 1 pairs high");
+        CHECK(crt_control_flags_translate(4u) == 0x20008u,
+              "bit 2 crosses over");
+        CHECK(crt_control_flags_translate(8u) == 0x20004u,
+              "bit 3 crosses over");
+        CHECK(crt_control_flags_translate(0x10u) == 0x20002u,
+              "bit 4 crosses over");
+        CHECK(crt_control_flags_translate(0x20u) == 0x20001u,
+              "bit 5 crosses over");
+        CHECK(crt_control_flags_translate(0x3fu) == 0x0a001fu,
+              "the low six fold together");
+        CHECK(crt_control_flags_translate(0u) == 0x20000u,
+              "the empty fold answers the pair-clear word");
+        CHECK(crt_control_flags_translate(0x200u) == 0x10000u,
+              "the half pair answers 0x10000");
+        CHECK(crt_control_flags_translate(0x100u) == 0u,
+              "the stray pair bit answers nothing");
+        CHECK(crt_control_flags_translate(0x400u) == 0x20100u,
+              "the pair-2 fold lands 0x100+pair-clear");
+        CHECK(crt_control_flags_translate(0x800u) == 0x20200u,
+              "the pair-2 fold lands 0x200+pair-clear");
+        CHECK(crt_control_flags_translate(0xc00u) == 0x20300u,
+              "the pair-2 fold lands 0x300+pair-clear");
+        CHECK(crt_control_flags_translate(0x1000u) == 0x60000u,
+              "bit 12 rides with the pair-clear");
+
+        static char marker_a;
+        static char marker_b;
+        char out = 'Z';
+        CHECK(crt_wide_char_to_multibyte(NULL, 0x41u) == 0,
+              "the null destination answers 0");
+        CHECK(crt_wide_char_to_multibyte(&out, 0x62u) == 1 && out == 'b',
+              "the pinned C-locale half writes the low byte");
+        out = 'Z';
+        CHECK(crt_wide_char_to_multibyte(&out, 0x10100u) == -1 && out == 'Z',
+              "the truncated half silences the store");
+        CHECK(crt_math_error_code_peek() == 0x2au,
+              "the failure half stores the EILSEQ-shaped slot");
+
+        crt_signal_record_install(0, 0xaau, 7, &marker_a);
+        crt_signal_record_install(1, 0u, 9, &marker_b);
+        crt_signal_record_install(16, 0u, 3, NULL); /* guarded (dev) */
+        crt_signal_record_count_set(2);
+        CHECK(crt_signal_record_count_peek() == 2, "the count hook lands");
+        void* hit7 = crt_signal_handler_record_find(7);
+        void* hit9 = crt_signal_handler_record_find(9);
+        CHECK(hit7 != NULL && hit9 != NULL && hit7 != hit9,
+              "the record hunt answers the entries");
+        CHECK(crt_signal_handler_record_find(11) == NULL,
+              "the miss answers null");
+        crt_signal_record_count_set(1);
+        CHECK(crt_signal_handler_record_find(9) == NULL,
+              "the count bounds the hunt");
+        CHECK(crt_signal_handler_record_find(7) != NULL,
+              "the entry-zero hit rides the bound");
+        crt_signal_record_count_set(0);
+        CHECK(crt_signal_handler_record_find(7) == NULL,
+              "the empty table bounds even the entry-zero hit");
+        uint32_t w = 0u;
+        int id = 0;
+        const void* h = NULL;
+        crt_signal_record_install(0, 0u, 0, NULL); /* leave clean */
+        crt_signal_record_install(1, 0u, 0, NULL);
+        crt_signal_record_peek(0, &w, &id, &h);
+        CHECK(w == 0u && id == 0 && h == NULL, "the clean peek rides");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "crt_test: %d failure(s)\n", s_failures);
         return 1;
