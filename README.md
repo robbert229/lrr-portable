@@ -2363,6 +2363,20 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Velocity state trio + FLIC triplet word build** (2026-10-25): four
+frontier rows land. `entity_velocity_state_record_get` (0x4712c0, record.*)
+answers the type-keyed velocity base — type 1 the +0x0c sub-record plus
+0x138, type 4 the +0x18 sub-record plus 0xa0, else NULL (the corpus walks
+the foreign type as a null base, deviation). `entity_velocity_slot_value_get`
+/ `_set` (0x4712f0 / 0x471310) roundtrip the float word at +0x98 + slot*4
+of that base — the corpus's x87 widening leaves the bits unchanged, pinned
+by the bit-pattern roundtrip. `flic_packed_triplet_table_to_word_build`
+(0x484ba0, flic.*) folds the record's 256 packed triplets at +0x11c into
+16-bit words at +0x41c, `((b1 | ((b0&0x3e)<<5))<<5) | (b2>>1)`, then clears
+the first word; the record rides the frame-record byte window (the
+opcode-16 dispatch precedent). `record_test` pins both type walks, the
+window strides, and every guard; `flic_test` folds the whole table.
+
 **Panel layout band — store + gated position update** (2026-10-25): two
 frontier rows land. `panel_resource_layout_store` (0x45c340, frontend.*)
 performs the corpus's two surface loads through the load seam (the

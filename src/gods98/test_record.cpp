@@ -1532,6 +1532,82 @@ int main(void)
         CHECK(1, "the null record is guarded (deviation)");
     }
 
+    /* Entity velocity state trio (2026-10-25): the type-keyed base walk
+     * with the +0x98 value-window roundtrip. */
+    {
+        static unsigned char sub1[0x300];
+        memset(sub1, 0, sizeof sub1);
+        static unsigned char rec1[0x20];
+        memset(rec1, 0, sizeof rec1);
+        void* sp = sub1;
+        __builtin_memcpy(rec1 + 0x0c, &sp, sizeof sp);
+        uint32_t type = 1u;
+        __builtin_memcpy(rec1, &type, sizeof type);
+        CHECK(entity_velocity_state_record_get(rec1) == (void*)(sub1 + 0x138),
+              "type 1 walks the +0x0c sub-record base");
+        float v = 3.5f;
+        uint32_t bits = 0u;
+        memcpy(&bits, &v, sizeof bits);
+        const uint32_t keep35 = bits;
+        entity_velocity_slot_value_set(rec1, bits, 0);
+        CHECK(entity_velocity_slot_value_get(rec1, 0) == 3.5f,
+              "the slot value roundtrips through the window");
+        uint32_t landed = 0u;
+        __builtin_memcpy(&landed, sub1 + 0x1d0, sizeof landed);
+        CHECK(landed == keep35, "the store lands at +0x138+0x98");
+        float g = entity_velocity_slot_value_get(rec1, 7);
+        memcpy(&bits, &g, sizeof bits);
+        CHECK(bits == 0u, "the fresh slot reads zero");
+        entity_velocity_slot_value_set(rec1, 0x1234u, 9);
+        CHECK(entity_velocity_slot_value_get(rec1, 9) != 0.0f,
+              "the high slot rides the stride");
+
+        static unsigned char sub4[0x200];
+        memset(sub4, 0, sizeof sub4);
+        static unsigned char rec4[0x20];
+        memset(rec4, 0, sizeof rec4);
+        sp = sub4;
+        __builtin_memcpy(rec4 + 0x18, &sp, sizeof sp);
+        type = 4u;
+        __builtin_memcpy(rec4, &type, sizeof type);
+        CHECK(entity_velocity_state_record_get(rec4) == (void*)(sub4 + 0xa0),
+              "type 4 walks the +0x18 sub-record base");
+        v = -2.0f;
+        memcpy(&bits, &v, sizeof bits);
+        const uint32_t keepm2 = bits;
+        entity_velocity_slot_value_set(rec4, keepm2, 3);
+        g = entity_velocity_slot_value_get(rec4, 3);
+        memcpy(&bits, &g, sizeof bits);
+        CHECK(bits == keepm2, "the type-4 slot value roundtrips (bits ride)");
+        __builtin_memcpy(&landed, sub4 + 0xa0u + 0x98u + 3u * 4u,
+                         sizeof landed);
+        CHECK(landed == keepm2, "the type-4 store lands through the base");
+        g = entity_velocity_slot_value_get(rec1, -1);
+        memcpy(&bits, &g, sizeof bits);
+        CHECK(bits == 0u, "the negative slot guards (deviation)");
+
+        static unsigned char recX[0x20];
+        memset(recX, 0, sizeof recX);
+        type = 2u;
+        __builtin_memcpy(recX, &type, sizeof type);
+        CHECK(entity_velocity_state_record_get(recX) == NULL,
+              "the foreign type answers NULL");
+        CHECK(entity_velocity_slot_value_get(recX, 0) == 0.0f,
+              "the null base answers zero");
+        entity_velocity_slot_value_set(recX, 1u, 0);
+        CHECK(1, "the null base store no-ops (deviation)");
+
+        static unsigned char recN[0x20];
+        memset(recN, 0, sizeof recN);
+        type = 1u;
+        __builtin_memcpy(recN, &type, sizeof type);
+        CHECK(entity_velocity_state_record_get(recN) == NULL,
+              "the null sub-record link guards (deviation)");
+        entity_velocity_state_record_get(NULL);
+        entity_velocity_slot_value_set(NULL, 1u, 0);
+        CHECK(1, "the null record is guarded (deviation)");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "record_test: %d failure(s)\n", s_failures);
         return 1;
