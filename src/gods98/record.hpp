@@ -353,4 +353,11 @@ void scene_assign_entity_owner(const void* scene, uint32_t owner);
 void six_resource_slots_set_state(const void* record, uint32_t flag);
                                                 /* FUN_0046cfc0 */
 
+/* UIRecordCallbackForward (FUN_0045a630, findings 386/439): dereferences the
+ * UI record's +0 handle and forwards the two outputs through the ported
+ * state-pair read. Widened handle slot like the other handle rows. */
+void ui_record_callback_forward(const void* const* ui_record,
+                                uint32_t* out_a, uint32_t* out_b);
+                                                /* FUN_0045a630 */
+
 #endif /* LEGORRR_GODS98_RECORD_HPP */

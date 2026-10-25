@@ -928,6 +928,23 @@ int main(void)
         CHECK(scene_visibility_calls() == 0, "the NULL record is guarded");
     }
 
+    /* UIRecordCallbackForward (2026-10-24): handle deref to the pair. */
+    {
+        static char record[0x900];
+        memset(record, 0, sizeof record);
+        const uint32_t va = 0x21u, vb = 0x41u;
+        __builtin_memcpy(record + 0x820, &va, sizeof va);
+        __builtin_memcpy(record + 0x824, &vb, sizeof vb);
+        void* slot = record;
+        uint32_t out_a = 0, out_b = 0;
+        ui_record_callback_forward((const void* const*)&slot, &out_a, &out_b);
+        CHECK(out_a == 0x21u && out_b == 0x41u,
+              "the forwarded read lands on the outputs");
+        ui_record_callback_forward(NULL, &out_a, &out_b); /* guarded */
+        const void* empty = NULL;
+        ui_record_callback_forward(&empty, &out_a, &out_b); /* pair guards */
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "record_test: %d failure(s)\n", s_failures);
         return 1;

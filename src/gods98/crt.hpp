@@ -429,4 +429,14 @@ void model_render_list_head_set(void* node);        /* port hook */
 void* model_render_list_head_peek(void);            /* port hook */
 void crt_owned_stream_buffer_release(char* record); /* FUN_00494df0 */
 
+/* SharedTextureDirectorySet (FUN_004728c0, findings 420/13): duplicates the
+ * argument string and installs it as the shared texture directory word
+ * (DAT_0076cd88 — no ported owner, so it lands here as a NULL-init static
+ * with hooks). Deviation: the corpus overwrites without freeing the prior
+ * copy (leak), reproduced faithfully; tests free the last copy through the
+ * peek hook. */
+void shared_texture_directory_set(const char* path); /* FUN_004728c0 */
+char* shared_texture_directory_peek(void);           /* port hook */
+void  shared_texture_directory_clear(void);          /* port hook: free */
+
 #endif /* LEGORRR_GODS98_CRT_HPP */

@@ -2363,6 +2363,17 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Texture-dir + forward + node-offset band** (findings 420/13/386/439/435/372):
+`crt.*` ports `shared_texture_directory_set` (0x4728c0 — the DAT_0076cd88
+directory word as a hooked static, the path copied through the ported string
+duplicate and the corpus's leak of the prior copy reproduced faithfully),
+`record.*` ports `ui_record_callback_forward` (0x45a630 — the UI record's +0
+handle dereferenced through the ported state-pair read), and `view.*` ports
+`renderer_node_relative_position_set` (0x436ac9 — the node's +0x28 camera
+handle rides the ported mode-1 camera-offset side with a zero z).
+`crt_test`, `record_test`, and `view_test` pin the copy, the forwarding, and
+the offset.
+
 **Global-state + six-slot refresh band** (findings 392/334/329/354/432/372):
 `engine.*` ports `global_state_low_byte_clear_and_refresh` (0x435a20 — the
 DAT_00556ed4 low byte clears, then DAT_005563b4 rides the ported surface

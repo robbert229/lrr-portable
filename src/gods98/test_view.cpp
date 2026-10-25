@@ -515,6 +515,25 @@ int main(void)
         selected_global_point_transform_and_return_x(NULL); /* guarded */
     }
 
+    /* RendererNodeRelativePositionSet (2026-10-24). */
+    {
+        CameraHandle cam;
+        memset(&cam, 0, sizeof cam);
+        cam.pos[0] = 1.0f;
+        cam.pos[1] = 2.0f;
+        char node[0x30];
+        memset(node, 0, sizeof node);
+        void* h = &cam;
+        __builtin_memcpy(node + 0x28, &h, sizeof h);
+        renderer_node_relative_position_set(node, 5.0f, 3.0f);
+        CHECK(cam.inuse == 1 && cam.pos[0] == 6.0f && cam.pos[1] == 5.0f
+                  && cam.pos[2] == 0.0f,
+              "the node handle rides the offset with a zero z");
+        renderer_node_relative_position_set(NULL, 1.0f, 1.0f); /* guarded */
+        memset(node, 0, sizeof node); /* clear handle */
+        renderer_node_relative_position_set(node, 1.0f, 1.0f); /* cam guard */
+    }
+
     if (s_failures == 0) {
         printf("view_test: PASS\n");
         return 0;

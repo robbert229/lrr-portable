@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 845 | 33.0% |
+| ported | 848 | 33.1% |
 | anchored | 4 | 0.2% |
-| named | 1668 | 65.1% |
+| named | 1665 | 64.9% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (845 functions)
+  (848 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1668 functions)
+  citation yet (1665 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1673 (65.2%).**
+**Game logic remaining to port: 1670 (65.1%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -479,7 +479,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00435ebb` | ScreenEffectRecordSet |
 | `0x00436860` | CameraSetTilt |
 | `0x00436953` | CameraSetBoundedRotationValue |
-| `0x00436ac9` | RendererNodeRelativePositionSet |
 | `0x00436c20` | ActivityNameTableInit |
 | `0x00437050` | EntityPoolResourcesRelease |
 | `0x004370b0` | RenderConfigSixFieldCopyOut |
@@ -769,7 +768,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0045a590` | ScrollingAdvisorTextAppend |
 | `0x0045a5b0` | UITextOutputPositionAndDraw |
 | `0x0045a620` | UITextOutputObjectRelease |
-| `0x0045a630` | UIRecordCallbackForward |
 | `0x0045a650` | PanelCategoryBoundsSet |
 | `0x0045adb0` | SimCursorInteractionTick |
 | `0x0045b310` | SimCategoryCellHitTest |
@@ -994,6 +992,10 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004726d0` | DirectShowSampleUpdateAndBlit |
 | `0x004726f0` | DirectShowWrapperDestroy |
 | `0x00472800` | DDiSceneObjectPoolShutdown |
+| `0x004728e0` | RendererFlagBit6Set |
+| `0x00472900` | DDiSceneEndHookRegister |
+| `0x00472920` | DDiSceneSampleHookRegister |
+| `0x00472940` | SceneRootObjectGet |
 | `0x00472950` | DDiSceneObjectAllocate |
 | `0x00472a40` | DDiSceneObjectDestroy |
 | `0x00472a50` | DDiSceneObjectDestroy |

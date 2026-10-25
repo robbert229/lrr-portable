@@ -774,3 +774,13 @@ float selected_global_point_transform_and_return_x(EngineContext* ctx)
     (void)camera_get_position_with_terrain_height(v, ctx, frame);
     return frame[0];
 }
+
+/* RendererNodeRelativePositionSet (FUN_00436ac9) — see view.hpp. */
+void renderer_node_relative_position_set(const void* node, float x, float y)
+{
+    void* handle = NULL;
+    if (node != NULL) {
+        __builtin_memcpy(&handle, (const char*)node + 0x28, sizeof handle);
+    }
+    cam_offset((CameraHandle*)handle, x, y, 0.0f);
+}
