@@ -92,6 +92,20 @@ uint32_t packed_grid_cell_value_get(const void* grid, uint32_t packed_cell);
  * table — index -1..0x37 (exclusive) over +0x114, with the corpus's
  * "zero answers zero" fold. Out of range or NULL answers 0. */
 int object_pool_list_head_get(const void* pools, int index);
+/* ObjectPoolListsFreeAll (FUN_00456c60, finding 374): frees every chain
+ * hanging off the pool table's 0x37 list heads — the corpus's head slots
+ * stride as dwords at +0x114 in the 0x284-byte level block; the port
+ * models each head as a native-size link slot (the widened-link
+ * convention), so the table passed here is a port-layout image and the
+ * head stores survive real pointers. Each chain walks the node's +0x08
+ * next link through the engine heap, then the head is cleared. The corpus
+ * threads the level-block global (CurrentLevelGet); the port threads the
+ * table as an argument.
+ * Deviations: the corpus strides the head blindly (the port guards it);
+ * object_pool_list_head_get keeps the corpus-layout dword view, a view
+ * this port storage does not share. */
+void object_pool_lists_free_all(void* pools); /* FUN_00456c60 */
+
 
 /* ModelChildRenderEligibilityCheck (FUN_00483a70, finding 431): the
  * render predicate — eligible when NEITHER bit 0x1 nor bit 0x10000000

@@ -57,6 +57,7 @@ typedef struct EngineState {
     uint32_t air_beat;   /* +0x1fc air-supply beat counter */
     uint32_t air_prev;   /* +0x204 previous air value */
     uint32_t quota_278;  /* +0x278 compared against level_time (finding 03) */
+    uint32_t focus_gate_27c; /* +0x27c focus-scroll commit gate (CameraFocusScrollScaleCommit) */
 
     /* Move-list / grid fields used by the camera cluster (camera.hpp). */
     void*    move_list;      /* +0x08 ptr, stride 0x4c (cell +0xc float) */
@@ -249,6 +250,17 @@ void  scroll_scale_set_and_clamp(float scale);  /* FUN_00425ce0 */
 float scroll_scale_peek(void);                  /* port hook */
 void  scroll_scale_set(float value);            /* port hook */
 int   scroll_speed_index_get(void);             /* port hook (band model) */
+
+/* CameraFocusScrollScaleCommit (FUN_004538a0, findings 437/398): commits a
+ * focus record's scale — a zero focus value is gated off while the level
+ * state's +0x27c gate word stands (the corpus's CurrentLevelGet root, the
+ * port's bound state block), otherwise the guard word is set to the
+ * record's guard value, the scale installs through the [0, 3]-clamped setter
+ * as focus * 0.01, and the guard is re-set. Always answers zero.
+ * Deviations: the corpus strides the record and dereferences the state root
+ * blindly (NULL root would crash); the port guards both. */
+int camera_focus_scroll_scale_commit(const EngineContext* ctx,
+                                     const void* record); /* FUN_004538a0 */
 void   global_triple_copy_out(uint32_t* out);
 
 /* GlobalField505f88Get (FUN_00401bf0, finding 02): the corpus's app-mode

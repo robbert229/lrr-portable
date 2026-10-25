@@ -1336,3 +1336,31 @@ void crt_stream_buffer_allocate(char* record)
     __builtin_memcpy(record + 1 * field, &zero, sizeof zero);
     __builtin_memcpy(record + 0 * field, &buffer, sizeof buffer);
 }
+
+/* UInt96Add (FUN_00499fe0) — see crt.hpp. Every carry-add writes its sum
+ * whether or not it carries; only the bump is gated. */
+void crt_uint96_add(uint32_t* dst, const uint32_t* src)
+{
+    if (dst == NULL || src == NULL) {
+        return; /* deviation: the corpus strides both limbs blindly */
+    }
+    uint32_t s = 0;
+    int carry = crt_unsigned_add_with_carry(dst[0], src[0], &s);
+    dst[0] = s;
+    if (carry != 0) {
+        carry = crt_unsigned_add_with_carry(dst[1], 1u, &s);
+        dst[1] = s;
+        if (carry != 0) {
+            dst[2] = dst[2] + 1u;
+        }
+    }
+    carry = crt_unsigned_add_with_carry(dst[1], src[1], &s);
+    dst[1] = s;
+    if (carry != 0) {
+        dst[2] = dst[2] + 1u;
+    }
+    if (crt_unsigned_add_with_carry(dst[2], src[2], &s) != 0) {
+        /* corpus: the carry out of the high limb is discarded */
+    }
+    dst[2] = s;
+}

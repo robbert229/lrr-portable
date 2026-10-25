@@ -874,6 +874,39 @@ int main(void)
         crt_stream_buffer_allocate(NULL); /* guarded */
     }
 
+    /* UInt96Add (2026-10-24): the three-limb carry chains. */
+    {
+        uint32_t dst[3], src[3];
+
+        dst[0] = 0xFFFFFFFFu; dst[1] = 0xFFFFFFFFu; dst[2] = 5u;
+        src[0] = 1u; src[1] = 0u; src[2] = 0u;
+        crt_uint96_add(dst, src);
+        CHECK(dst[0] == 0u && dst[1] == 0u && dst[2] == 6u,
+              "the limb-0 double carry bumps limb two");
+
+        dst[0] = 0u; dst[1] = 0xFFFFFFFFu; dst[2] = 0u;
+        src[0] = 0u; src[1] = 1u; src[2] = 0u;
+        crt_uint96_add(dst, src);
+        CHECK(dst[0] == 0u && dst[1] == 0u && dst[2] == 1u,
+              "the mid-limb carry bumps limb two");
+
+        dst[0] = 1u; dst[1] = 1u; dst[2] = 0xFFFFFFFFu;
+        src[0] = 1u; src[1] = 1u; src[2] = 1u;
+        crt_uint96_add(dst, src);
+        CHECK(dst[0] == 2u && dst[1] == 2u && dst[2] == 0u,
+              "the high carry out is discarded");
+
+        uint32_t same[3] = { 1u, 2u, 3u };
+        crt_uint96_add(same, same);
+        CHECK(same[0] == 2u && same[1] == 4u && same[2] == 6u,
+              "the in-place double lands");
+
+        crt_uint96_add(NULL, same); /* guarded */
+        crt_uint96_add(same, NULL);
+        CHECK(same[0] == 2u && same[1] == 4u && same[2] == 6u,
+              "the guards leave the sum alone");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "crt_test: %d failure(s)\n", s_failures);
         return 1;

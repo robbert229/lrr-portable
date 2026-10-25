@@ -359,3 +359,26 @@ void scroll_scale_set_and_clamp(float scale)
         }
     }
 }
+
+/* CameraFocusScrollScaleCommit (FUN_004538a0) — see engine.hpp. The corpus
+ * reads the level-state root global and strides both windows blindly. */
+int camera_focus_scroll_scale_commit(const EngineContext* ctx,
+                                     const void* record)
+{
+    if (record == NULL) {
+        return 0; /* deviation: the corpus strides the record blindly */
+    }
+    uint32_t focus = 0, guard = 0;
+    __builtin_memcpy(&focus, (const char*)record + 0x00, sizeof focus);
+    __builtin_memcpy(&guard, (const char*)record + 0x04, sizeof guard);
+    if (focus == 0) {
+        const EngineState* st = ctx != NULL ? ctx->state_block : NULL;
+        if (st != NULL && st->focus_gate_27c != 0) {
+            return 0;
+        }
+    }
+    global_scroll_guard_set((int)guard);
+    scroll_scale_set_and_clamp((float)focus * 0.01f);
+    global_scroll_guard_set((int)guard);
+    return 0;
+}
