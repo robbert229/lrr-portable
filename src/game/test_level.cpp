@@ -9,9 +9,9 @@
 
 #include "game/level.hpp"
 #include "game/game.hpp"
+#include "game/objective.hpp"
 #include "game/util.hpp"
 #include "gods98/block.hpp"
-#include "gods98/heap.hpp"
 #include "gods98/message.hpp"
 #include "gods98/resource.hpp"
 
@@ -1491,6 +1491,69 @@ int main(int argc, char** argv)
         CHECK(got == 0u, "an off-map seed sweeps the far column in-bounds");
 #undef WFW
 #undef WFPUT
+    }
+
+    /* AirSupplyAmountUpdate (FUN_00424560, 2026-10-24). */
+    {
+        static LevelState s;
+        memset(&s, 0, sizeof s);
+        static uint8_t stats[0x140];
+        memset(stats, 0, sizeof stats);
+        EntitySlot e;
+        memset(&e, 0, sizeof e);
+        e.stats_record = stats;
+        const float rate = 2.0f;
+        level_set_float(&s, LEVEL_OFF_OXYGEN_RATE, rate);
+        const uint32_t zero_word = 0u;
+        system_state_flags_set(&zero_word);
+
+        /* Stats float +0xDC = 1.0, acc 10.0: 5 * 0.04 * 2 * 1 + 10 = 10.4. */
+        const float one = 1.0f;
+        memcpy(stats + 0xdc, &one, sizeof one);
+        level_set_float(&s, LEVEL_OFF_AIR_SUPPLY, 10.0f);
+        air_supply_amount_update(&s, &e, 5.0f);
+        CHECK(level_float(&s, LEVEL_OFF_AIR_SUPPLY) == 10.4f,
+              "the delta folds through rate and stats onto the accumulator");
+
+        /* High clamp at exactly 100.0. */
+        air_supply_amount_update(&s, &e, 1e5f);
+        CHECK(level_float(&s, LEVEL_OFF_AIR_SUPPLY) == 100.0f,
+              "the accumulator clamps high");
+
+        /* Kind-4 gate: type 4 without the +0x3e8 bit keeps the acc. */
+        float before = level_float(&s, LEVEL_OFF_AIR_SUPPLY);
+        e.type = 4;
+        air_supply_amount_update(&s, &e, -1e6f);
+        CHECK(level_float(&s, LEVEL_OFF_AIR_SUPPLY) == before,
+              "the kind-4 gate skips the update");
+        e.flags_3e8 |= 0x20000000u;
+        air_supply_amount_update(&s, &e, 0.0f);
+        CHECK(level_float(&s, LEVEL_OFF_AIR_SUPPLY) == before,
+              "the gated kind-4 folds zero (0 + acc)");
+        e.type = 0;
+        e.flags_3e8 = 0u;
+
+        /* Depletion: negative lands as +0.0 and announces failure (who 2)
+         * unless the system-state bit 0x08000000 suppresses it. */
+        const uint32_t suppress = 0x08000000u;
+        s.objective = 0u;
+        level_set_float(&s, LEVEL_OFF_AIR_SUPPLY, 1.0f);
+        system_state_flags_set(&suppress);
+        air_supply_amount_update(&s, &e, -1e3f);
+        CHECK(level_float(&s, LEVEL_OFF_AIR_SUPPLY) == 0.0f &&
+                  s.objective == 0u,
+              "suppressed depletion stores zero, no announce");
+        system_state_flags_set(&zero_word);
+        air_supply_amount_update(&s, &e, 0.0f); /* acc is 0: <= 0 branch */
+        CHECK(level_float(&s, LEVEL_OFF_AIR_SUPPLY) == 0.0f &&
+                  (s.objective & 4u) != 0u,
+              "the unsuppressed zero announces the failed objective");
+
+        /* Guard: NULL entity / NULL block change nothing. */
+        air_supply_amount_update(&s, NULL, 1.0f);
+        air_supply_amount_update(NULL, &e, 1.0f);
+        CHECK(level_float(&s, LEVEL_OFF_AIR_SUPPLY) == 0.0f,
+              "the guards keep the block untouched");
     }
 
     if (s_failures != 0) {

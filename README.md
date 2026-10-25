@@ -2363,6 +2363,18 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Air-supply accumulator** (2026-10-24; findings 317/462): `level.*`
+ports `air_supply_amount_update` (0x424560). The entity's stats float
+`+0xDC` is read before the gate; a kind-4 entity skips the update unless
+its `+0x3e8` bit `0x20000000` is set. The delta folds through `0.04`, the
+configured rate at block `+0x200`, and that stats float onto the
+accumulator at `+0x1fc` — extended precision in the corpus, the port's
+double — and is stored clamped high to `100.0`; at zero-or-below the
+field is pinned to `+0.0` and the failed objective is announced (the
+ported announcer, `who == 2`) unless the system-state word's bit
+`0x08000000` suppresses it. `level_test` pins the gate, the fold, the
+clamp, both depletion sides, and the guards.
+
 **View-band matrix and ray math leaves** (2026-10-24; findings 309/363):
 nine rows land, all in `view.*`. The ray pair lands first:
 `point_along_ray` (0x479ab0, origin + t·dir with the corpus's component

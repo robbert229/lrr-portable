@@ -540,6 +540,19 @@ float engine_float_field210_get_by_index(const LevelState* s, int index);
 /* FUN_00429880: the float at +0x260. */
 float engine_float_field260_get(const LevelState* s);
 
+/* AirSupplyAmountUpdate (FUN_00424560, finding 317): the air-supply
+ * accumulator. The entity's stats float +0xDC is read before the gate:
+ * a kind-4 entity skips the update unless its +0x3e8 bit 0x20000000 is
+ * set. The update folds the delta through 0.04, the configured rate at
+ * block +0x200, and that stats float onto the accumulator at +0x1fc
+ * (extended precision in the corpus; the port accumulates in double),
+ * stores it clamped high to 100.0, and at zero-or-below pins the field
+ * to +0.0 and announces the failed objective (the ported announcer,
+ * who == 2) unless the system-state word's bit 0x08000000 suppresses it.
+ * Deviation: the corpus strides the entity and its globals blindly. */
+void air_supply_amount_update(LevelState* s, const struct EntitySlot* e,
+                              float delta);     /* FUN_00424560 */
+
 /* FUN_0042b500: the dword at +0x84 (field meaning unresolved per
  * finding 324 — this is the faithful read). */
 uint32_t global_state_field84_get(const LevelState* s);
