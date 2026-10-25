@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 959 | 37.4% |
+| ported | 962 | 37.5% |
 | anchored | 4 | 0.2% |
-| named | 1554 | 60.6% |
+| named | 1551 | 60.5% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (959 functions)
+  (962 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1554 functions)
+  citation yet (1551 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1559 (60.8%).**
+**Game logic remaining to port: 1556 (60.7%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -1015,7 +1015,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00474e90` | RenderObjectHierarchyFloat3Set |
 | `0x00474f10` | SceneObjectBoundsUnion |
 | `0x00474ff0` | SceneMeshColorSet |
-| `0x00475020` | SceneMeshColorAndAlphaSet |
 | `0x00475070` | SceneObjectCoordinateTransformInPlace |
 | `0x00475090` | SceneObjectCoordinateTransformToOutput |
 | `0x004750b0` | RenderObjectSetPackedRgbaFromFloatChannels |
@@ -1260,8 +1259,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00482d60` | ModelRenderPassDispatch |
 | `0x004830c0` | AnimatedTextureFrameSurfaceSet |
 | `0x00483140` | IndexedRecordInterfaceRelease |
-| `0x00483270` | RenderObjectColorVectorSet |
-| `0x00483420` | ScreenEffectItemOpacitySet |
 | `0x00483580` | RenderInterfaceCapabilityCheck |
 | `0x00483600` | Direct3DViewportSetup |
 | `0x00483690` | MatrixMethodPairApply |

@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "view.hpp"
+#include "record.hpp"
 
 /* Reconstruction-owned globals for corpus constants. */
 float g_view_follow_scale = 1.0f;   /* DAT_005560a4 (grid pick follow scale) */
@@ -999,4 +1000,23 @@ void surface_triangle_normal_calculate(float* out, const float* p2,
     out[0] = scale * cx;
     out[1] = scale * cy;
     out[2] = scale * cz;
+}
+
+/* SceneMeshColorAndAlphaSet (FUN_00475020) — see view.hpp. */
+void scene_mesh_color_and_alpha_set(void* object, int block, float red,
+                                    float green, float blue, float alpha)
+{
+    void* mesh = NULL;
+    void* record = NULL;
+    if (object != NULL) {
+        __builtin_memcpy(&mesh, (const char*)object + 0xc, sizeof mesh);
+    }
+    if (mesh != NULL) {
+        __builtin_memcpy(&record, (const char*)mesh + 0xc, sizeof record);
+    }
+    if (record == NULL) {
+        return; /* deviation: the corpus strides both links blindly */
+    }
+    render_object_color_vector_set(record, block, red, green, blue, 0);
+    screen_effect_item_opacity_set(record, block, alpha, 4);
 }

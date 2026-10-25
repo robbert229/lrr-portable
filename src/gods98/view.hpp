@@ -391,4 +391,15 @@ void surface_triangle_normal_calculate(float* out, const float* p2,
                                        const float* p3, const float* p4);
                                                 /* FUN_00479530 */
 
+/* SceneMeshColorAndAlphaSet (FUN_00475020): the scene-side color/alpha
+ * pair over an object's mesh record — the object's +0xc inner pointer
+ * chains to the indexed record the pair's window model reads (widened
+ * pointer slots per convention), then the RGB pair lands through the
+ * slot-0 color set and the alpha through the mode-4 opacity composition.
+ * Deviations: the corpus strides both link slots blindly — the port
+ * guards them, and a missing record leaves both windows untouched. */
+void scene_mesh_color_and_alpha_set(void* object, int block, float red,
+                                    float green, float blue, float alpha);
+                                                /* FUN_00475020 */
+
 #endif /* LEGORRR_VIEW_HPP */

@@ -857,6 +857,98 @@ static void test_mesh_window(void)
     }
 }
 
+/* The color/opacity window band (2026-10-25): clamped triples over the
+ * four color windows, the slot-0 white flag, and the mode-4 opacity flag
+ * composition over the +0x64 and +0x18 words. */
+static void test_color_window(void)
+{
+    static uint8_t table[0x70];
+    memset(table, 0, sizeof(table));
+    PokeTableRecord rec;
+    memset(&rec, 0, sizeof(rec));
+    rec.table = table;
+
+    /* Slot 0: the triple lands after the [0,1] clamp, and only an
+     * all-ones triple raises the white flag. */
+    CHECK(render_object_color_vector_set(&rec, 0, 2.0f, -1.0f, 0.5f, 0) == 1u,
+          "the color set answers 1");
+    float rgb[3];
+    memcpy(rgb, table + 0x10 + 0x04, sizeof rgb);
+    CHECK(rgb[0] == 1.0f && rgb[1] == 0.0f && rgb[2] == 0.5f,
+          "the color window clamps componentwise");
+    uint32_t flags = 0;
+    memcpy(&flags, table + 0x6cu, 4);
+    CHECK((flags & 0x100000u) == 0u, "mixed channels keep the white flag low");
+    render_object_color_vector_set(&rec, 0, 1.0f, 1.0f, 1.0f, 0);
+    memcpy(&flags, table + 0x6cu, 4);
+    CHECK((flags & 0x100000u) != 0u, "all ones raises the white flag");
+    render_object_color_vector_set(&rec, 0, 1.0f, 1.0f, 0.9f, 0);
+    memcpy(&flags, table + 0x6cu, 4);
+    CHECK((flags & 0x100000u) == 0u, "a dropped channel clears the white flag");
+
+    /* Slots 1..3: the triple strides +0x14/+0x24/+0x34 without touching
+     * the flag word; the corpus's other slots leave everything alone. */
+    render_object_color_vector_set(&rec, 0, 0.25f, 0.5f, 0.75f, 2);
+    memcpy(rgb, table + 0x10 + 0x24, sizeof rgb);
+    CHECK(rgb[0] == 0.25f && rgb[1] == 0.5f && rgb[2] == 0.75f,
+          "slot 2 lands its triple in order");
+    const uint32_t before = flags;
+    render_object_color_vector_set(&rec, 0, 0.5f, 0.5f, 0.5f, 7);
+    memcpy(&flags, table + 0x6cu, 4);
+    CHECK(flags == before, "an unknown slot answers 1 without a trace");
+
+    /* Mode 4 opacity: the flag composition over the item word (+0x64)
+     * and the record's feature word (+0x18). A mid opacity with the
+     * item word clear lands the fade bit only through the LAB tail; the
+     * opaque case never touches bit 0x80000. */
+    memset(table, 0, sizeof(table));
+    CHECK(screen_effect_item_opacity_set(&rec, 0, 1.5f, 4) == 1u,
+          "the opacity set answers 1");
+    float op = 0.0f;
+    memcpy(&op, table + 0x10 + 0x10, 4);
+    CHECK(op == 1.0f, "the opacity clamps to one");
+    memcpy(&flags, table + 0x6cu, 4);
+    CHECK((flags & 0x80000u) == 0u, "the opaque case leaves the fade bit low");
+    memset(table, 0, sizeof(table));
+    /* Corpus shape: a mid opacity raises only when the feature word's
+     * 0x1c00 bits are NOT clear (else the quiet branch is taken). */
+    poke_dword(&rec, 0x18, 0x400u);
+    screen_effect_item_opacity_set(&rec, 0, 0.5f, 4);
+    memcpy(&flags, table + 0x6cu, 4);
+    CHECK((flags & 0x80000u) != 0u, "a mid opacity raises the fade bit");
+    memset(table, 0, sizeof(table));
+    poke_dword(&rec, 0x18, 0u); /* the feature words ride back down */
+    screen_effect_item_opacity_set(&rec, 0, 0.0f, 4);
+    memcpy(&flags, table + 0x6cu, 4);
+    CHECK((flags & 0x80000u) == 0u && (flags & 0x10000000u) == 0u,
+          "zero opacity with the feature words clear stays quiet");
+
+    /* The +0x64-gated tail: a nonzero item word makes zero opacity
+     * raise bit 0x10000000 instead. */
+    memset(table, 0, sizeof(table));
+    poke_dword(table, 0x64, 1u);
+    screen_effect_item_opacity_set(&rec, 0, 0.0f, 4);
+    memcpy(&flags, table + 0x6cu, 4);
+    CHECK((flags & 0x10000000u) != 0u,
+          "the item word turns zero opacity into the suppress bit");
+
+    /* Mode 5 lands the plain window dword; other modes are no-ops. */
+    memset(table, 0, sizeof(table));
+    screen_effect_item_opacity_set(&rec, 0, 0.75f, 5);
+    memcpy(&op, table + 0x10 + 0x44, 4);
+    CHECK(op == 0.75f, "mode 5 lands the +0x44 dword");
+    memset(table, 0, sizeof(table));
+    screen_effect_item_opacity_set(&rec, 0, 0.5f, 9);
+    memcpy(&op, table + 0x10 + 0x10, 4);
+    CHECK(op == 0.0f, "an unknown mode leaves the window alone");
+
+    /* NULL corners (deviations): guarded windows answer 1 silently. */
+    CHECK(render_object_color_vector_set(NULL, 0, 1.0f, 1.0f, 1.0f, 0) == 1u,
+          "the null record answers 1 (deviation)");
+    CHECK(screen_effect_item_opacity_set(NULL, 0, 1.0f, 4) == 1u,
+          "the null window answers 1 (deviation)");
+}
+
 int main(void)
 {
     test_field_reads();
@@ -877,6 +969,7 @@ int main(void)
     test_straggler_reads();
     test_interpolated_z();
     test_mesh_window();
+    test_color_window();
     /* The entity record-field leaves (2026-10-24): plain writes with the
      * corpus's offsets over a caller-owned record buffer. */
     {
