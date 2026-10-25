@@ -1742,7 +1742,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00474e30,FUN_00474e30,named,TerrainSurfacePropertySet,0,395
 00474e90,FUN_00474e90,named,RenderObjectHierarchyFloat3Set,0,766
 00474f10,FUN_00474f10,named,SceneObjectBoundsUnion,0,1090
-00474ff0,FUN_00474ff0,ported,SceneMeshColorSet,2,292
+00474ff0,FUN_00474ff0,named,SceneMeshColorSet,0,292
 00475020,FUN_00475020,ported,SceneMeshColorAndAlphaSet,3,354
 00475070,FUN_00475070,named,SceneObjectCoordinateTransformInPlace,0,170
 00475090,FUN_00475090,named,SceneObjectCoordinateTransformToOutput,0,169
@@ -2094,9 +2094,9 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00483140,FUN_00483140,named,IndexedRecordInterfaceRelease,0,290
 00483170,FUN_00483170,ported,IndexedRecordTransformInitialize,2,825
 00483240,FUN_00483240,ported,IndexedRecordTransformCopyIn,3,335
-00483270,FUN_00483270,named,RenderObjectColorVectorSet,0,1379
+00483270,FUN_00483270,ported,RenderObjectColorVectorSet,2,1379
 00483400,FUN_00483400,ported,IndexedRecordDataAddressGet,1,105
-00483420,FUN_00483420,named,ScreenEffectItemOpacitySet,0,1367
+00483420,FUN_00483420,ported,ScreenEffectItemOpacitySet,2,1367
 00483540,FUN_00483540,ported,Matrix4x4IdentityInitialize,3,389
 00483580,FUN_00483580,named,RenderInterfaceCapabilityCheck,0,867
 00483600,FUN_00483600,named,Direct3DViewportSetup,0,886

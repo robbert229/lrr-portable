@@ -2363,6 +2363,28 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Color/opacity window band** (2026-10-25): three rows land on the
+indexed-record window model. `render_object_color_vector_set` (0x483270,
+record.*) writes a clamped RGB triple into one of the four color windows
+(`+0x14/0x24/0x34` for slots 1–3); slot 0 doubles as the white-opacity
+flag, raising `+0x6c` bit 0x100000 only when every channel reads exactly
+1.0, and the corpus clamps before every branch so a NaN channel rides
+through. `screen_effect_item_opacity_set` (0x483420, record.*) clamps
+the opacity and composes mode 4's flag word from the item word `blk+0x64`
+and the record feature word `+0x18` with the corpus's own precedence
+(mask `0xeff7ffff` first; zero opacity raises bit 0x10000000 unless both
+words read quiet; a mid opacity raises the fade bit 0x80000 only when the
+`0x1c00` gate is not clear; the tail routes by which word is nonzero),
+while mode 5 lands the plain `+0x44` dword and every other mode answers 1
+without a trace. `scene_mesh_color_and_alpha_set` (0x475020, view.*) is
+the scene wrapper: the object's `+0xc` inner pointer chains to the
+indexed record, the RGB pair lands through the slot-0 color set, and the
+alpha through the mode-4 composition. Deviations: guarded windows answer
+1 silently where the corpus strides blindly. Tests pin the componentwise
+clamps, the white-flag raise/clear pair, the mid-opacity gate, the
+suppress-bit tail, and both link-chain NULL corners; 34/36 (flic +
+frontend baseline). Ledger regenerates: 962 ported (+3).
+
 **Indexed-record mesh window band** (2026-10-25): six rows land in
 `record.*`, completing the stride-0x70 indexed-record window model the
 flag-word getter and transform-copy readers established. The block window

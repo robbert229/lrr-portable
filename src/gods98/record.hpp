@@ -510,4 +510,24 @@ uint32_t indexed_record_transform_initialize(void* record, int index);
  * link — since that is where the corpus's global lives. */
 void keyed_resource_entry_remove(int key);      /* FUN_0047b2a0 */
 
+/* ScreenEffectItemOpacitySet (FUN_00483420): writes a clamped opacity
+ * into the indexed record's effect window — mode 4 composes the +0x6c
+ * flag word from the item's +0x64 word and the record's +0x18 feature
+ * word (bits 0x8000/0x10000000, the corpus's own precedence pinned),
+ * mode 5 lands the plain +0x44 dword, and every other mode answers 1
+ * without a trace. Deviations: NULL windows store nothing yet still
+ * answer 1; the corpus reads its two flag words blindly. */
+uint32_t screen_effect_item_opacity_set(void* record, int block,
+                                        float opacity, int mode);
+                                                /* FUN_00483420 */
+
+/* RenderObjectColorVectorSet (FUN_00483270): writes a clamped RGB triple
+ * into one of the indexed record's four color windows (slot 0 doubles as
+ * the white-opacity flag: bit 0x100000 raises when every channel reads
+ * exactly 1.0). Deviations: NULL table windows store nothing yet still
+ * answer 1; the corpus's clamps run before every branch, NaN included. */
+uint32_t render_object_color_vector_set(void* record, int block, float red,
+                                        float green, float blue, int slot);
+                                                /* FUN_00483270 */
+
 #endif /* LEGORRR_GODS98_RECORD_HPP */

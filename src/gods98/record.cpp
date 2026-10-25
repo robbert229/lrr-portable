@@ -1156,3 +1156,95 @@ uint32_t indexed_record_transform_initialize(void* record, int index)
     }
     return 1u; /* the corpus answers 1 either way (deviation: guarded copy) */
 }
+
+/* --- the color/opacity window band (see record.hpp) ---------------------- */
+
+static float channel_clamp(float v)
+{
+    if (v < 0.0f) {
+        return 0.0f;
+    }
+    if (1.0f < v) {
+        return 1.0f;
+    }
+    return v; /* corpus shape: a NaN channel rides through untouched */
+}
+
+uint32_t render_object_color_vector_set(void* record, int block, float red,
+                                        float green, float blue, int slot)
+{
+    char* blk = mesh_block(record, block);
+    char* data = (char*)indexed_record_data_address_get(record, block);
+    const float r = channel_clamp(red);
+    const float g = channel_clamp(green);
+    const float b = channel_clamp(blue);
+    if (slot == 0) {
+        if (data != NULL) {
+            rec_float_put(data, 0x04, r);
+            rec_float_put(data, 0x08, g);
+            rec_float_put(data, 0x0c, b);
+        }
+        if (blk != NULL) {
+            const uint32_t flags = rec_dword(blk, 0x6c);
+            rec_dword_put(blk, 0x6c,
+                          (r == 1.0f && g == 1.0f && b == 1.0f)
+                              ? (flags | 0x100000u)
+                              : (flags & 0xffefffffu));
+        }
+        return 1u;
+    }
+    if (slot == 1 || slot == 2 || slot == 3) {
+        const size_t off = (slot == 1) ? 0x14u : ((slot == 2) ? 0x24u : 0x34u);
+        if (data != NULL) { /* the corpus stores x first, then y, then z */
+            rec_float_put(data, off + 0x00, r);
+            rec_float_put(data, off + 0x04, g);
+            rec_float_put(data, off + 0x08, b);
+        }
+        return 1u;
+    }
+    return 1u; /* the corpus leaves every other slot untouched */
+}
+
+uint32_t screen_effect_item_opacity_set(void* record, int block,
+                                        float opacity, int mode)
+{
+    const float v = channel_clamp(opacity);
+    if (mode != 4) {
+        char* data = (char*)indexed_record_data_address_get(record, block);
+        if (mode == 5 && data != NULL) {
+            rec_float_put(data, 0x44, v);
+        }
+        return 1u; /* deviation: the corpus strides a missing window blindly */
+    }
+    char* blk = mesh_block(record, block);
+    char* data = (char*)indexed_record_data_address_get(record, block);
+    if (blk == NULL) {
+        return 1u; /* deviation: the corpus strides the flag word blindly */
+    }
+    const uint32_t w64 = rec_dword(blk, 0x64);
+    const uint32_t w18 = rec_dword(record, 0x18);
+    rec_dword_put(blk, 0x6c, rec_dword(blk, 0x6c) & 0xeff7ffffu);
+    if (v == 0.0f) {
+        if (w64 != 0u || (w18 & 0x1c00u) != 0u) {
+            rec_dword_put(blk, 0x6c, rec_dword(blk, 0x6c) | 0x10000000u);
+        }
+    } else if (!(v == 1.0f || (w64 == 0u && (w18 & 0x1c00u) == 0u))) {
+        rec_dword_put(blk, 0x6c, rec_dword(blk, 0x6c) | 0x80000u);
+    }
+    if (w64 != 0u) {
+        if ((w64 & 0xc00u) != 0u) {
+            rec_dword_put(blk, 0x6c, rec_dword(blk, 0x6c) | 0x80000u);
+        }
+        if (data != NULL) {
+            rec_float_put(data, 0x10, v);
+        }
+        return 1u;
+    }
+    if ((w18 & 0xc00u) != 0u) {
+        rec_dword_put(blk, 0x6c, rec_dword(blk, 0x6c) | 0x80000u);
+    }
+    if (data != NULL) {
+        rec_float_put(data, 0x10, v);
+    }
+    return 1u;
+}

@@ -748,6 +748,43 @@ int main(void)
               "the oblique normal unitizes through the reciprocal");
     }
 
+    /* SceneMeshColorAndAlphaSet (2026-10-25): the pair lands through
+     * the object's +0xc mesh chain onto the indexed record's windows. */
+    {
+        static unsigned char table[0x70];
+        memset(table, 0, sizeof(table));
+        /* Corpus-offset windows built byte-wise (a C struct would pad
+         * the pointer past the corpus offset): record {+0x8 table},
+         * inner {+0xc record}, object {+0xc inner}. */
+        unsigned char rec[32];
+        memset(rec, 0, sizeof(rec));
+        void* tp = table;
+        __builtin_memcpy(rec + 0x08, &tp, sizeof(tp));
+        unsigned char inner[32];
+        memset(inner, 0, sizeof(inner));
+        void* rp = rec;
+        __builtin_memcpy(inner + 0x0c, &rp, sizeof(rp));
+        unsigned char obj[32];
+        memset(obj, 0, sizeof(obj));
+        void* mp = inner;
+        __builtin_memcpy(obj + 0x0c, &mp, sizeof(mp));
+        scene_mesh_color_and_alpha_set(obj, 0, 1.0f, 1.0f, 1.0f, 0.5f);
+        float rgb[3];
+        memcpy(rgb, table + 0x10 + 0x04, sizeof rgb);
+        float op = 0.0f;
+        memcpy(&op, table + 0x10 + 0x10, 4);
+        CHECK(rgb[0] == 1.0f && rgb[1] == 1.0f && rgb[2] == 1.0f
+                  && op == 0.5f,
+              "the color/alpha pair lands through the mesh chain");
+        uint32_t flags = 0;
+        memcpy(&flags, table + 0x6c, 4);
+        CHECK((flags & 0x100000u) != 0u, "the all-ones color raises the flag");
+        scene_mesh_color_and_alpha_set(NULL, 0, 0.5f, 0.5f, 0.5f, 0.5f);
+        memset(obj, 0, sizeof(obj));
+        scene_mesh_color_and_alpha_set(obj, 0, 0.5f, 0.5f, 0.5f, 0.5f);
+        /* the null corners guard (deviation); nothing crashes. */
+    }
+
     if (s_failures == 0) {
         printf("view_test: PASS\n");
         return 0;
