@@ -334,6 +334,17 @@ void set_expansion_entity_at_grid_cell(int x, int y, void* entity);
 void grid_cell_invalidate_and_clear_flags(int x, int y);
                                                 /* FUN_00466750 */
 
+/* CanSpawnExpansionEntityAtGridCell (FUN_004663f0): reads the field
+ * grid's companion voxel scan (the descriptor's +0xb8 buffer, stride
+ * 0x48): the cell's own flag byte bit 0x08 answers 0 when clear; when
+ * both the cell's +0x50 byte and the cell 0x40 earlier carry bit 0x10
+ * the out pair answers the corpus's 0x3fc90fdb constant and 1 lands;
+ * otherwise the up/down neighbors' bit 0x10 must both read raised or 0
+ * answers and the out pair zeroes. Missing grid answers 0 (deviation:
+ * blind stride). */
+int can_spawn_expansion_entity_at_grid_cell(int x, int y, float* out);
+                                                /* FUN_004663f0 */
+
 /* --- global-state refresh leaf (2026-10-24; findings 392/334/329) ----------
  * GlobalStateLowByteClearAndRefresh (FUN_00435a20): clears the low byte of
  * the DAT_00556ed4 state word, then routes DAT_005563b4 as the record

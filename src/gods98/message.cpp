@@ -405,3 +405,35 @@ int has_active_resource(const void* record)
     }
     return system_state_flags_get() != 0u ? 1 : 0;
 }
+
+/* --- the indexed-list window (see message.hpp) ---------------------------- */
+
+#define IDX_LIST_SLOTS 16 /* deviation: the corpus strides the list index */
+static void* s_idx_head[IDX_LIST_SLOTS];  /* DAT_004dca18 role */
+static int   s_idx_count[IDX_LIST_SLOTS]; /* DAT_004dca1c role */
+
+void indexed_list_install(int list, void* head, int count)
+{
+    if (list >= 0 && list < IDX_LIST_SLOTS) {
+        s_idx_head[list] = head;
+        s_idx_count[list] = count;
+    }
+}
+
+void* indexed_linked_list_entry_get(int list, int index)
+{
+    if (list < 0 || list >= IDX_LIST_SLOTS) {
+        return NULL; /* deviation: blind stride */
+    }
+    void* entry = s_idx_head[list];
+    if (index < 0 || s_idx_count[list] <= index) {
+        return NULL;
+    }
+    while (index > 0 && entry != NULL) {
+        void* next = NULL; /* deviation: the corpus strides blindly */
+        __builtin_memcpy(&next, (const char*)entry + 0x10, sizeof next);
+        entry = next;
+        --index;
+    }
+    return entry;
+}

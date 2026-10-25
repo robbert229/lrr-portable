@@ -16,8 +16,8 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00401720,FUN_00401720,ported,,3,187
 00401750,FUN_00401750,ported,Vector3Normalize,3,265
 004017b0,FUN_004017b0,named,AdvisorPositionRecordInitialize,0,897
-00401840,FUN_00401840,named,AdvisorActionPositionAndModeSet,0,496
-00401890,FUN_00401890,named,AdvisorActionPositionGet,0,212
+00401840,FUN_00401840,ported,AdvisorActionPositionAndModeSet,2,496
+00401890,FUN_00401890,ported,AdvisorActionPositionGet,2,212
 004018c0,FUN_004018c0,named,AdvisorRequestAdmit,0,405
 00401930,FUN_00401930,named,AdvisorRequestResetAndSubmitSound,0,310
 00401990,FUN_00401990,named,AdvisorTransitionWorker,0,806
@@ -515,7 +515,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00419680,FUN_00419680,ported,InfoMessageSecondarySoundSet,1,128
 004196a0,FUN_004196a0,named,MessageSubscriberDispatch,0,346
 004196f0,FUN_004196f0,named,IncidentMessageQueueAppend,0,702
-00419780,FUN_00419780,named,IndexedLinkedListEntryGet,0,366
+00419780,FUN_00419780,ported,IndexedLinkedListEntryGet,2,366
 004197b0,FUN_004197b0,named,IncidentMessageQueueRemoveAt,0,459
 00419830,FUN_00419830,named,EntityLinkedListEntriesRemoveByKey,0,719
 004198f0,FUN_004198f0,named,TerrainCellLinkedEntriesRemove,0,899
@@ -1227,7 +1227,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00452d60,FUN_00452d60,ported,SelectionCommandDispatch,1,791
 00452df0,FUN_00452df0,named,TutorialNerpScriptFileLoad,0,559
 00452e70,FUN_00452e70,named,ObjectiveAdvisorTokenLoad,0,6179
-00453200,FUN_00453200,named,ObjectiveAdvisorTokenLookup,0,149
+00453200,FUN_00453200,ported,ObjectiveAdvisorTokenLookup,2,149
 00453220,FUN_00453220,named,AdvisorDisplayStateResourcesRelease,0,862
 004532e0,FUN_004532e0,named,IndirectHandleResolveInPlace,0,299
 00453320,FUN_00453320,named,TutorialScriptCommandDispatch,0,8480
@@ -1447,7 +1447,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00463ea0,FUN_00463ea0,ported,IndexedTextMetricsPairGet,1,222
 00463ed0,FUN_00463ed0,ported,IndexedTextMetricsPairSet,1,278
 00463f00,FUN_00463f00,named,SceneQuadGridEmit,0,2818
-00464110,FUN_00464110,named,RotatedPairsScratchFill,0,1019
+00464110,FUN_00464110,ported,RotatedPairsScratchFill,2,1019
 004641c0,FUN_004641c0,named,BuildingPlacementFootprintRenderAndValidate,0,5897
 00464720,FUN_00464720,ported,SurfaceVisibilitySet,3,109
 00464740,FUN_00464740,ported,SoundAliasRegistryInit,4,3903
@@ -1490,7 +1490,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00466230,FUN_00466230,ported,GridCellRecordBufferReplace,2,98
 00466250,FUN_00466250,named,ExpandCellEntitySpawn,0,1137
 00466380,FUN_00466380,ported,SetExpansionEntityAtGridCell,2,453
-004663f0,FUN_004663f0,named,CanSpawnExpansionEntityAtGridCell,0,842
+004663f0,FUN_004663f0,ported,CanSpawnExpansionEntityAtGridCell,2,842
 00466490,FUN_00466490,named,CellSightRayCheckAndFlag,0,1210
 004665c0,FUN_004665c0,ported,,4,89
 00466750,FUN_00466750,ported,GridCellInvalidateAndClearFlags,2,572

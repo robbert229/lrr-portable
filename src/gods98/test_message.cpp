@@ -220,6 +220,25 @@ int main(void)
         system_state_flags_set(&before); /* restore */
     }
 
+    /* IndexedLinkedListEntryGet (2026-10-25): the installed chain walks
+     * the +0x10 links; out-of-range answers empty. */
+    {
+        static char node_a[32];
+        static char node_b[32];
+        void* link = node_b;
+        memcpy(node_a + 0x10, &link, sizeof link);
+        indexed_list_install(2, node_a, 2);
+        CHECK(indexed_linked_list_entry_get(2, 0) == node_a,
+              "the head lands at index zero");
+        CHECK(indexed_linked_list_entry_get(2, 1) == node_b,
+              "the chain walks the link");
+        CHECK(indexed_linked_list_entry_get(2, 2) == NULL
+                  && indexed_linked_list_entry_get(2, -1) == NULL
+                  && indexed_linked_list_entry_get(99, 0) == NULL,
+              "the guards answer empty");
+        indexed_list_install(2, NULL, 0);
+    }
+
     if (s_failures == 0) {
         printf("message_test: PASS\n");
         return 0;

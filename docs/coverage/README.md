@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 965 | 37.6% |
+| ported | 971 | 37.9% |
 | anchored | 4 | 0.2% |
-| named | 1548 | 60.4% |
+| named | 1542 | 60.1% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (965 functions)
+  (971 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1548 functions)
+  citation yet (1542 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1553 (60.6%).**
+**Game logic remaining to port: 1547 (60.3%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -51,8 +51,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004014c0` | AdvisorAnimationNameToIndex |
 | `0x00401530` | AdvisorPositionConfigLoad |
 | `0x004017b0` | AdvisorPositionRecordInitialize |
-| `0x00401840` | AdvisorActionPositionAndModeSet |
-| `0x00401890` | AdvisorActionPositionGet |
 | `0x004018c0` | AdvisorRequestAdmit |
 | `0x00401930` | AdvisorRequestResetAndSubmitSound |
 | `0x00401990` | AdvisorTransitionWorker |
@@ -317,7 +315,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00419650` | InfoMessageSoundLoad |
 | `0x004196a0` | MessageSubscriberDispatch |
 | `0x004196f0` | IncidentMessageQueueAppend |
-| `0x00419780` | IndexedLinkedListEntryGet |
 | `0x004197b0` | IncidentMessageQueueRemoveAt |
 | `0x00419830` | EntityLinkedListEntriesRemoveByKey |
 | `0x004198f0` | TerrainCellLinkedEntriesRemove |
@@ -715,7 +712,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004528c0` | SelectionStateTick |
 | `0x00452df0` | TutorialNerpScriptFileLoad |
 | `0x00452e70` | ObjectiveAdvisorTokenLoad |
-| `0x00453200` | ObjectiveAdvisorTokenLookup |
 | `0x00453220` | AdvisorDisplayStateResourcesRelease |
 | `0x004532e0` | IndirectHandleResolveInPlace |
 | `0x00453320` | TutorialScriptCommandDispatch |
@@ -830,7 +826,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004638a0` | SimTrackCursorHitTest |
 | `0x00463e40` | FloatRoundToNearestInt |
 | `0x00463f00` | SceneQuadGridEmit |
-| `0x00464110` | RotatedPairsScratchFill |
 | `0x004641c0` | BuildingPlacementFootprintRenderAndValidate |
 | `0x00465190` | SoundHandleStopForward |
 | `0x004653a0` | TransientEffectTexturesPreload |
@@ -843,7 +838,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00465e00` | AdvanceTimedVisualSegmentAndFade |
 | `0x00465f40` | InstanceQuadVerticesBuild |
 | `0x00466250` | ExpandCellEntitySpawn |
-| `0x004663f0` | CanSpawnExpansionEntityAtGridCell |
 | `0x00466490` | CellSightRayCheckAndFlag |
 | `0x004667e0` | EntityStatsConfigLoad |
 | `0x00469a90` | IndexedValueAppend |

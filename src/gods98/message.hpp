@@ -139,4 +139,12 @@ void incident_message_flag_set(int value);
  * (corpus strides blindly). */
 int has_active_resource(const void* record);       /* FUN_004119d0 */
 
+/* IndexedLinkedListEntryGet (FUN_00419780): walk the corpus's indexed
+ * list table (five-dword entries: head +0, count +4, chained through
+ * the node's +0x10 link) to the entry at index param_2; out-of-range
+ * answers 0. The corpus's table writers stay unported, so the table
+ * model starts empty (documented deviation) with install hooks. */
+void indexed_list_install(int list, void* head, int count); /* test hook */
+void* indexed_linked_list_entry_get(int list, int index);   /* FUN_00419780 */
+
 #endif /* LEGORRR_MESSAGE_HPP */
