@@ -2821,3 +2821,34 @@ void timed_effect_persistence_set(int index, int set)
         (set != 0) ? (s_timed_effect_flags[index] | 0x10u)
                    : (s_timed_effect_flags[index] & ~0x10u);
 }
+
+/* CursorTileSelectionUpdateByType (FUN_0041cc80) — see frontend.hpp. */
+static uint32_t s_cursor_tile_pair[2]; /* DAT_004ddcd8/cdc role */
+
+void cursor_tile_selection_update_by_type(int kind, uint32_t first,
+                                          uint32_t second)
+{
+    if (kind == 0x49) {
+        s_cursor_tile_pair[0] = first;
+        s_cursor_tile_pair[1] = second;
+        return;
+    }
+    if (kind == 5) {
+        s_cursor_tile_pair[0] = 0xFu;
+        s_cursor_tile_pair[1] = 0u;
+        return;
+    }
+    if (kind == 0xe) {
+        s_cursor_tile_pair[0] = 0xBu;
+        s_cursor_tile_pair[1] = 0u;
+    }
+    /* the corpus's else branch rides */
+}
+
+uint32_t cursor_tile_pair_peek(int which)
+{
+    if (which < 0 || which > 1) {
+        return 0u; /* deviation: the corpus strides the pair blindly */
+    }
+    return s_cursor_tile_pair[which];
+}

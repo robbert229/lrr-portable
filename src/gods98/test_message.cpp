@@ -255,6 +255,30 @@ int main(void)
         message_clear();
     }
 
+    /* Incident-message config lookup (2026-10-25): the ASCII-fold name
+     * walk over the config catalog with the id answer word. */
+    {
+        message_clear();
+        message_init_defaults();
+        int found = -1;
+        CHECK(incident_message_config_lookup("Landslide", &found) == 1
+                  && found == 6,
+              "the catalog name answers its index");
+        found = -1;
+        CHECK(incident_message_config_lookup("landsLIDE", &found) == 1
+                  && found == 6,
+              "the ASCII fold lands the same index");
+        int keep = 0x1234;
+        CHECK(incident_message_config_lookup("NoSuchMessage", &keep) == 0
+                  && keep == 0x1234,
+              "the miss answers zero and leaves the word");
+        CHECK(incident_message_config_lookup(NULL, &keep) == 0,
+              "the null name guards (dev)");
+        CHECK(incident_message_config_lookup("Constructed", NULL) == 0,
+              "the null answer word guards (dev)");
+        message_clear();
+    }
+
     if (s_failures == 0) {
         printf("message_test: PASS\n");
         return 0;

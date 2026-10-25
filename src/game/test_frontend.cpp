@@ -1620,6 +1620,26 @@ int main(int argc, char** argv)
               "the guarded window drops the out-of-range set (dev)");
     }
 
+    /* Cursor-tile selection pair (2026-10-25): the kind-keyed installs
+     * with the own-storage pair. */
+    {
+        cursor_tile_selection_update_by_type(0x49, 7u, 9u);
+        CHECK(cursor_tile_pair_peek(0) == 7u && cursor_tile_pair_peek(1) == 9u,
+              "the 0x49 kind installs the caller's pair");
+        cursor_tile_selection_update_by_type(5, 0xdeadu, 0xbeefu);
+        CHECK(cursor_tile_pair_peek(0) == 0xFu && cursor_tile_pair_peek(1) == 0u,
+              "the kind-5 install lands the fixed shape");
+        cursor_tile_selection_update_by_type(0xe, 1u, 2u);
+        CHECK(cursor_tile_pair_peek(0) == 0xBu && cursor_tile_pair_peek(1) == 0u,
+              "the kind-0xe install lands its shape");
+        cursor_tile_selection_update_by_type(3, 4u, 5u);
+        CHECK(cursor_tile_pair_peek(0) == 0xBu && cursor_tile_pair_peek(1) == 0u,
+              "the foreign kind rides the pair");
+        cursor_tile_selection_update_by_type(0x49, 1u, 2u);
+        CHECK(cursor_tile_pair_peek(2) == 0u,
+              "the peek guards the window (dev)");
+    }
+
     if (s_failures == 0) {
         printf("frontend: all tests passed\n");
         return 0;

@@ -465,6 +465,15 @@ uint32_t objective_selection_word_peek(void);   /* port hook */
 float    interaction_timer_peek(void);          /* port hook */
 uint32_t interaction_flags_peek(void);          /* port hook */
 
+/* CursorTileSelectionUpdateByType (FUN_0041cc80): the tile-selection pair
+ * ride (DAT_004ddcd8/cdc role) keyed by the selection kind: 0x49 installs
+ * the caller's pair, 5 and 0xe install the pair's fixed shapes, anything
+ * else rides. The corpus readers sit in the unported UI/hit-test bands, so
+ * the words ride own storage (the unowned-global deviation). */
+void cursor_tile_selection_update_by_type(int kind, uint32_t first,
+                                          uint32_t second);
+uint32_t cursor_tile_pair_peek(int which);      /* port hook: 0/1 */
+
 /* --- the cell-action permission window (2026-10-24; findings 250/419) --------
  * CellActionPermissionGet (FUN_0041e990): while the message module's
  * system-state word has bit 4 clear, every cell action is permitted (1);

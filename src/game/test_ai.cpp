@@ -1582,6 +1582,41 @@ int main(int argc, char** argv)
         ai_idle_table_reset();
     }
 
+    /* Activity toggle (2026-10-25): the off/on fold on the +0x3ec word
+     * with the activity request riding through the set-fold. */
+    {
+        EntitySlot e;
+        memset(&e, 0, sizeof e);
+        e.flags_3ec = 0x2000u;
+        e.activity_param = 7;
+        entity_activity_toggle(&e, 0);
+        CHECK(e.flags_3ec == 0x4000u, "the off edge drops bit 13 and raises bit 14");
+        CHECK(e.activity == 0x36 && e.activity_last == 0x36,
+              "the off edge requests activity 0x36");
+        CHECK(e.activity_param == 0, "the request resets the param");
+        e.activity = 1;
+        entity_activity_toggle(&e, 0);
+        CHECK(e.flags_3ec == 0x4000u && e.activity == 1,
+              "the second off call rides (bit 13 already clear)");
+        memset(&e, 0, sizeof e);
+        e.flags_3ec = 0x1000u;
+        entity_activity_toggle(&e, 1);
+        CHECK(e.flags_3ec == 0x1000u && e.activity == 0x35
+                  && e.activity_last == 0x35,
+              "the on edge with bit 13 raised rides");
+        memset(&e, 0, sizeof e);
+        entity_activity_toggle(&e, 1);
+        CHECK(e.flags_3ec == 0x1000u && e.activity == 0x35,
+              "the on edge raises bit 12 and requests 0x35");
+        memset(&e, 0, sizeof e);
+        e.flags_3ec = 0x2000u;
+        entity_activity_toggle(&e, 1);
+        CHECK(e.flags_3ec == 0x2000u && e.activity == 0,
+              "the on edge with bit 13 raised rides");
+        entity_activity_toggle(NULL, 1); /* the guarded entity (dev) */
+        memset(&e, 0, sizeof e);
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "ai_test: %d failure(s)\n", s_failures);
         return 1;

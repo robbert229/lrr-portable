@@ -73,6 +73,13 @@ void message_dispatch(int id, uint32_t p2, uint32_t p3, const void* p4);
 /* Index of the queued message id, or -1 (corpus InfoMessageQueueFindId). */
 int message_queue_find_id(int id);                /* FUN_00419b20 */
 
+/* IncidentMessageConfigLookup (FUN_004193e0): C-locale ASCII-fold lookup
+ * of the config name table; on a hit stores the id and answers 1.
+ * Deviation: the corpus strides the name-pointer table blindly (its
+ * install rides the unported catalog-init band); the port guards the name
+ * and the answer word and rides the config name model. */
+int incident_message_config_lookup(const char* name, int* out_id);
+
 /* advance the bus clock; drives cooldown comparisons. */
 void message_update(float dt);
 

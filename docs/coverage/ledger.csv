@@ -503,7 +503,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004191f0,FUN_004191f0,ported,UiModeResourceBit40Get,1,61
 00419200,FUN_00419200,ported,UiModeResourceBit40SetClear,1,244
 00419230,FUN_00419230,named,IncidentMessageCatalogInit,0,2117
-004193e0,FUN_004193e0,named,IncidentMessageConfigLookup,0,368
+004193e0,FUN_004193e0,ported,IncidentMessageConfigLookup,2,368
 00419420,FUN_00419420,ported,IncidentMessageTextCatalogGet,1,102
 00419430,FUN_00419430,named,InterfaceMessageTabInfoTextLoad,0,129
 00419450,FUN_00419450,ported,SelectionFlag10SetClear,1,170
@@ -578,7 +578,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0041cab0,FUN_0041cab0,named,IndexedEntityValueGet,0,345
 0041caf0,FUN_0041caf0,named,InputBindingValueGet,0,804
 0041cb90,FUN_0041cb90,named,InputBindingDefaultValueGet,0,704
-0041cc80,FUN_0041cc80,named,CursorTileSelectionUpdateByType,0,341
+0041cc80,FUN_0041cc80,ported,CursorTileSelectionUpdateByType,2,341
 0041cce0,FUN_0041cce0,ported,SelectionCoordinatesSet,1,292
 0041cd30,FUN_0041cd30,named,PositionTrackerBoxDraw,0,1005
 0041cea0,FUN_0041cea0,named,SelectionObjectCommandUpdate,0,658
@@ -862,7 +862,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00437150,FUN_00437150,named,ToolTipIconsConfigLoad,0,1664
 004372a0,FUN_004372a0,named,SpawnCoordinatePoolClear,0,699
 00437300,FUN_00437300,named,ProcessQueuedGridAnimations,0,794
-004373d0,FUN_004373d0,named,EntityActivityToggle,0,497
+004373d0,FUN_004373d0,ported,EntityActivityToggle,2,497
 00437440,FUN_00437440,ported,GridRecordCountTablesClear,1,337
 00437460,FUN_00437460,ported,GridRecordCountDifferenceGet,1,269
 004374a0,FUN_004374a0,ported,GridRecordCountGet,1,138
@@ -986,7 +986,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004403d0,FUN_004403d0,named,LevelDebugCellRetargetDispatch,0,4178
 004407b0,FUN_004407b0,named,SpatialEntityCallbackQuery,0,427
 004408c0,FUN_004408c0,named,SpatialEntityCallbackQueryAtOptionalCoordinate,0,426
-004409e0,FUN_004409e0,ported,EntityActivityRequestSet,10,228
+004409e0,FUN_004409e0,ported,EntityActivityRequestSet,12,228
 00440a10,FUN_00440a10,named,AttachedEntityDirectionVectorUpdate,0,2160
 00440bf0,FUN_00440bf0,named,ObjectListFieldAssignAll,0,324
 00440c30,FUN_00440c30,named,GridRouteSearchAdapter,0,291
@@ -1045,7 +1045,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00447950,FUN_00447950,named,EntityDirectionalActivityStart,0,1592
 00447b00,FUN_00447b00,ported,EntityDispatchEvent5AndSetFlag,3,172
 00447b30,FUN_00447b30,named,EntityActivityTick,0,1038
-00447c40,FUN_00447c40,ported,SceneActivityUpdateDispatch,7,2101
+00447c40,FUN_00447c40,ported,SceneActivityUpdateDispatch,10,2101
 00447ea0,FUN_00447ea0,named,EntityTypeBehaviorUpdate,0,8839
 004487c0,FUN_004487c0,named,EntityClearNestedState8Fields,0,276
 00448800,FUN_00448800,named,EntityMoveToCellCoordinates,0,577
@@ -1129,7 +1129,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0044d280,FUN_0044d280,named,RandomWaypointTimerStepApply,0,3606
 0044d710,FUN_0044d710,named,WaypointVectorRandomScaleApply,0,381
 0044d760,FUN_0044d760,named,JitterStepApply,0,1937
-0044d9a0,FUN_0044d9a0,named,VectorWithinAxisTolerance,0,368
+0044d9a0,FUN_0044d9a0,ported,VectorWithinAxisTolerance,1,368
 0044da20,FUN_0044da20,ported,RoutePositionBlockedStateSet,3,184
 0044da50,FUN_0044da50,named,ThreeChannelValueTweenStep,0,864
 0044db50,FUN_0044db50,named,KeyValueEqualsFileLoad,0,2809

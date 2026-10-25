@@ -202,6 +202,44 @@ static int message_pre_check(int id)
     return 0;
 }
 
+/* IncidentMessageConfigLookup (FUN_004193e0) — see message.hpp. The corpus
+ * uses __strcmpi (C-locale ASCII fold); the port's helper matches it. */
+static int msg_strcasecmp(const char* a, const char* b)
+{
+    for (;;) {
+        char ca = *a, cb = *b;
+        if (ca >= 'A' && ca <= 'Z') {
+            ca += 32;
+        }
+        if (cb >= 'A' && cb <= 'Z') {
+            cb += 32;
+        }
+        if (ca != cb) {
+            return (unsigned char)ca - (unsigned char)cb;
+        }
+        if (ca == 0) {
+            return 0;
+        }
+        ++a;
+        ++b;
+    }
+}
+
+int incident_message_config_lookup(const char* name, int* out_id)
+{
+    if (name == NULL || out_id == NULL) {
+        return 0; /* deviation: the corpus strides both blindly */
+    }
+    for (int i = 0; i != MESSAGE_MAX_ID; ++i) {
+        const char* n = s_cfg[i].name;
+        if (n != NULL && msg_strcasecmp(n, name) == 0) {
+            *out_id = i;
+            return 1;
+        }
+    }
+    return 0;
+}
+
 /* InfoMessageQueueFindId (FUN_00419b20): the queue's index-by-id walk.
  * The corpus strides the 5-dword queue entries against the count word;
  * the port rides its parallel-array model (documented deviation). */
