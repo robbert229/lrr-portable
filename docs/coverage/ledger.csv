@@ -123,8 +123,8 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00406480,FUN_00406480,ported,CmdFree,1,316
 004064c0,FUN_004064c0,ported,CmdPoolGrow,1,640
 00406540,FUN_00406540,named,EntityPoolCallbackSearch,0,823
-004065d0,FUN_004065d0,named,GlobalDwordGet,0,60
-004065e0,FUN_004065e0,named,RenderSurfaceSecondaryGet,0,60
+004065d0,FUN_004065d0,ported,GlobalDwordGet,1,60
+004065e0,FUN_004065e0,ported,RenderSurfaceSecondaryGet,1,60
 004065f0,FUN_004065f0,named,CubicBezierPointEvaluate,0,870
 00406730,FUN_00406730,ported,Vector2DistanceVariant,3,307
 00406760,FUN_00406760,ported,Vector2SetLength,2,210
@@ -367,9 +367,9 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00410a10,FUN_00410a10,named,MenuItemChoiceStringsAllocate,0,893
 00410aa0,FUN_00410aa0,named,ResourceHandleListAppend,0,362
 00410ae0,FUN_00410ae0,named,ResourceHandleListDispose,0,457
-00410b30,FUN_00410b30,named,GlobalPointerGet_004c76ab24,0,60
-00410b40,FUN_00410b40,named,GlobalPointerGet_004c76ab28,0,60
-00410b50,FUN_00410b50,named,GlobalPointerGet_004c76ab3c,0,60
+00410b30,FUN_00410b30,ported,GlobalPointerGet_004c76ab24,2,60
+00410b40,FUN_00410b40,ported,GlobalPointerGet_004c76ab28,2,60
+00410b50,FUN_00410b50,ported,GlobalPointerGet_004c76ab3c,2,60
 00410b60,FUN_00410b60,ported,ThreeWordRecordAllocateAndInitialize,2,282
 00410b90,FUN_00410b90,ported,BoundedFloatRecordCreate,3,549
 00410bf0,FUN_00410bf0,ported,MenuItemNumericRangeRecordAllocate,3,882
@@ -1831,7 +1831,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00477bd0,FUN_00477bd0,named,SetLowTextureFlag,0,124
 00477bf0,FUN_00477bf0,ported,CommandLineOptionParse,1,3531
 00477f30,FUN_00477f30,named,MainLoopFramePump,0,231
-00477f70,FUN_00477f70,named,RenderFeatureFlagsGet,0,60
+00477f70,FUN_00477f70,ported,RenderFeatureFlagsGet,1,60
 00477f80,FUN_00477f80,named,DisplayDeviceCapsQueryDiscard,0,140
 00477fa0,FUN_00477fa0,named,RendererBeginFrameOnce,0,170
 00477fd0,FUN_00477fd0,named,EngineCallbackTripletSet,0,233
@@ -1871,7 +1871,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00479510,FUN_00479510,named,D3DRMVectorRotate,0,166
 00479530,FUN_00479530,ported,SurfaceTriangleNormalCalculate,3,693
 00479630,FUN_00479630,named,SurfaceTriangleAreaCalculate,0,2681
-004798a0,thunk_FUN_0048e170,runtime-import,thunk_FUN_0048e170,0,129
+004798a0,thunk_FUN_0048e170,ported,thunk_FUN_0048e170,2,129
 004798b0,FUN_004798b0,ported,RandomFloatRange,2,229
 004798e0,FUN_004798e0,ported,ViewRayIntersectionTest,5,958
 00479a30,FUN_00479a30,ported,RayPlaneIntersectionParameter,3,431
@@ -2274,7 +2274,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0048e090,FUN_0048e090,named,CrtAsin,0,112
 0048e0ad,FUN_0048e0ad,named,CrtAcosCore,0,1162
 0048e160,FUN_0048e160,ported,RandomSeedSet,1,81
-0048e170,FUN_0048e170,ported,RandomNext,8,123
+0048e170,FUN_0048e170,ported,RandomNext,11,123
 0048e1aa,FUN_0048e1aa,named,CrtMathIntrinsicDispatch,0,61
 0048e1e0,FUN_0048e1e0,named,FormattedTextBufferBuild,0,476
 0048e250,FUN_0048e250,named,StackProbeAllocate,0,343

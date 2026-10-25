@@ -2363,6 +2363,22 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Renderer-word getter band** (2026-10-25): seven frontier rows land on the
+unowned-global convention. `renderer_word_a_get` / `renderer_word_b_get` /
+`renderer_word_c_get` (0x410b30/b40/b50, crt.*),
+`renderer_global_dword_get` (0x4065d0), `render_surface_secondary_get`
+(0x4065e0), and `render_feature_flags_get` (0x477f70) read the corpus's
+DAT_0076ab24/b28/b3c + DAT_0076ac84/ac8c + DAT_0050608c renderer band, each
+modeled as a zero-init module static with install hooks (the corpus writers
+are unported). `rng_thunk_draw15` (0x4798a0, level.*) forwards the seeded
+15-bit draw through the module RNG model (the corpus's thunk copy inlines
+the same DAT_004afcc8 LCG body). `crt_test` and `level_test` pin the zero
+start, installs, and the shared draw. This band also follows the frontier
+scan fix: the scanner's header regex required six digits and silently
+skipped uppercase-hex corpus headers, so the portable-now frontier resizes
+to 918 rows; triaged families stay recorded in blocked.md while the
+portable clusters land cluster by cluster.
+
 **Frontier closure band** (2026-10-25): two window-portable rows land and
 the remaining portable-now frontier is recorded. `scroll_rect_resource_record_create`
 (0x463770, frontend.*) allocates the 0x1c-float rect record, folds the quad

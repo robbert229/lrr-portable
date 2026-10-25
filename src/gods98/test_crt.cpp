@@ -1097,6 +1097,27 @@ int main(void)
               "the window and key guards hold");
     }
 
+    /* Renderer-word band (2026-10-25): zero-init statics with the
+     * install hooks. */
+    {
+        CHECK(renderer_word_a_get() == 0u && renderer_word_b_get() == 0u
+                  && renderer_word_c_get() == 0u
+                  && renderer_global_dword_get() == 0u
+                  && render_surface_secondary_get() == 0u
+                  && render_feature_flags_get() == 0u,
+              "the renderer words start zero");
+        renderer_words_set(1u, 2u, 3u);
+        renderer_global_dword_set(0xdeadu);
+        render_surface_secondary_set(7u);
+        render_feature_flags_set(8u);
+        CHECK(renderer_word_a_get() == 1u && renderer_word_b_get() == 2u
+                  && renderer_word_c_get() == 3u
+                  && renderer_global_dword_get() == 0xdeadu
+                  && render_surface_secondary_get() == 7u
+                  && render_feature_flags_get() == 8u,
+              "the getters answer their installed halves");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "crt_test: %d failure(s)\n", s_failures);
         return 1;

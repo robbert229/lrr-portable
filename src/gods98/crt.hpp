@@ -587,4 +587,28 @@ uint32_t crt_uint96_has_no_bits_at_or_above(const uint32_t limbs[3], int bit);
 uint32_t crt_uint96_clear_from_bit(uint32_t limbs[3], int bit);
                                                 /* FUN_004979e0 */
 
+/* --- the renderer-word band (2026-10-25) -------------------------------------
+ * Six renderer/global-word one-liners over the corpus's unowned .data band:
+ * the port models each word as a zero-init module static (the corpus's
+ * writers are unported), so every getter answers its installed half. */
+
+/* GlobalPointerGet variants: the three global words (see crt.cpp) —
+ * FUN_00410b30, FUN_00410b40, FUN_00410b50. */
+uint32_t renderer_word_a_get(void);
+uint32_t renderer_word_b_get(void);
+uint32_t renderer_word_c_get(void);
+void     renderer_words_set(uint32_t a, uint32_t b, uint32_t c); /* install */
+
+/* GlobalDwordGet (FUN_004065d0): the DAT_0076ac84 global dword. */
+uint32_t renderer_global_dword_get(void);
+void     renderer_global_dword_set(uint32_t value); /* install */
+
+/* RenderSurfaceSecondaryGet (FUN_004065e0): the DAT_0076ac8c surface word. */
+uint32_t render_surface_secondary_get(void);
+void     render_surface_secondary_set(uint32_t value); /* install */
+
+/* RenderFeatureFlagsGet (FUN_00477f70): the DAT_0050608c feature word. */
+uint32_t render_feature_flags_get(void);
+void     render_feature_flags_set(uint32_t value); /* install */
+
 #endif /* LEGORRR_GODS98_CRT_HPP */

@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 982 | 38.3% |
+| ported | 989 | 38.6% |
 | anchored | 4 | 0.2% |
-| named | 1531 | 59.7% |
-| runtime-import | 46 | 1.8% |
+| named | 1525 | 59.5% |
+| runtime-import | 45 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (982 functions)
+  (989 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1531 functions)
+  citation yet (1525 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
-  logic, never ported (46 functions)
+  logic, never ported (45 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1536 (59.9%).**
+**Game logic remaining to port: 1530 (59.7%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -78,8 +78,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00406360` | EntityRecordAttachAndRelink |
 | `0x004063e0` | PendingRecordEntityReferenceClear |
 | `0x00406540` | EntityPoolCallbackSearch |
-| `0x004065d0` | GlobalDwordGet |
-| `0x004065e0` | RenderSurfaceSecondaryGet |
 | `0x004065f0` | CubicBezierPointEvaluate |
 | `0x004067b0` | PolylineSegmentLengthsAndTotalCalculate |
 | `0x00406820` | BezierCurveSamplesBuild |
@@ -246,9 +244,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00410a10` | MenuItemChoiceStringsAllocate |
 | `0x00410aa0` | ResourceHandleListAppend |
 | `0x00410ae0` | ResourceHandleListDispose |
-| `0x00410b30` | GlobalPointerGet_004c76ab24 |
-| `0x00410b40` | GlobalPointerGet_004c76ab28 |
-| `0x00410b50` | GlobalPointerGet_004c76ab3c |
 | `0x00410c70` | ResourceVariantRecordRelease |
 | `0x00410d50` | MenuTextRecordMake |
 | `0x00410e20` | MenuButtonRecordMake |
@@ -1067,7 +1062,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004777a0` | WinMain |
 | `0x00477bd0` | SetLowTextureFlag |
 | `0x00477f30` | MainLoopFramePump |
-| `0x00477f70` | RenderFeatureFlagsGet |
 | `0x00477f80` | DisplayDeviceCapsQueryDiscard |
 | `0x00477fa0` | RendererBeginFrameOnce |
 | `0x00477fd0` | EngineCallbackTripletSet |

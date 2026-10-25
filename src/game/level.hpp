@@ -895,6 +895,7 @@ int level_objective_result_get(const struct LevelState* s);
  * instance only — other instances keep their own state (deviation). */
 void level_random_seed_set(uint32_t seed);
 int  level_random_draw15(void); /* the seeded instance's RandomNext draw */
+uint32_t rng_thunk_draw15(void); /* FUN_004798a0: corpus RNG-thunk forward */
 
 /* TerrainObjectTypeSfxAtCellGet (FUN_0044ad80): turns a position record's
  * coordinate pair into the grid cell through the ported two-dword copy, and
