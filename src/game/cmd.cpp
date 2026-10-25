@@ -56,6 +56,10 @@ typedef struct CmdRec {
     void*    arg38;      /* +0x38 second payload slot (the 0x13 queue's word)   */
     uint32_t count;      /* +0x44 the buffer's entry count                     */
 
+    void*    entity_ref; /* +0x48 pending entity reference (the corpus
+                          * writers are the spawn-dispatch band, unported —
+                          * zero until one installs a value)                   */
+
     int32_t  kind;       /* +0x4c kind index                                   */
     void*    event_payload; /* +0x54 event payload (the 0xc queue's word)   */
     void*    ref;        /* +0x58 referenced record (the 0x13 "ref" pair)      */
@@ -398,42 +402,6 @@ void cmd_rec_entity_ref_install(void* rec, void* ref)
     if (rec != NULL) {
         as_rec(rec)->entity_ref = ref;
     }
-}
-
-/* EntityRecordAttachAndRelink (FUN_00406360) — see cmd.hpp. The record's
- * global-list unlink rides the port's global_next slot (the corpus's one
- * +0x60 word; the chain/global context split is documented in the
- * entity command-chain housekeeping band). Deviations: NULL records /
- * entities guard where the corpus strides blindly, and the +0x18
- * task-param word takes the corpus's float-bit constant raw. */
-void entity_record_attach_and_relink(void* record, void* previous,
-                                    EntitySlot* entity)
-{
-    CmdRec* rec = (CmdRec*)record;
-    if (rec == NULL) {
-        return; /* deviation: the corpus dereferences blindly */
-    }
-    if ((rec->state & 0x40u) == 0u) {
-        if (previous == NULL) {
-            s_global_head = as_rec(rec->global_next);
-        } else {
-            as_rec(previous)->global_next = rec->global_next;
-        }
-        rec->global_next = NULL;
-        if (entity != NULL) {
-            entity->cmd_head = rec; /* corpus entity +0x2f0 */
-        }
-    } else {
-        void* copy = cmd_pending_record_copy(rec);
-        if (entity != NULL) {
-            entity->cmd_head = copy; /* the corpus relinks the copy */
-        }
-        if ((rec->state & 0x40000u) != 0u) {
-            rec->param2 = (int32_t)0x41c80000; /* +0x18 raw 25.0 bits */
-        }
-    }
-    pending_record_entity_reference_clear(entity); /* FUN_004063e0 */
-    idle_register(entity);                         /* FUN_00407450 */
 }
 
 /* Append a record to the entity's chain (entity +0x2f0 analog).

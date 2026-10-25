@@ -90,6 +90,34 @@ uint32_t velocity_slot_secondary_object_get(const void* record,
     return rec_dword(record, 0x24u + (size_t)index * 4u);
 }
 
+/* VelocitySlotVectorRead (FUN_00471c70) — see record.hpp. The corpus
+ * copies the three dwords bit-for-bit; the port reads them as floats
+ * through the NULL-guarded reader, so the words ride unchanged. */
+void velocity_slot_vector_read(const void* record, float out[3],
+                               uint32_t index)
+{
+    if (out == NULL) {
+        return; /* deviation: the corpus strides the caller's buffer */
+    }
+    const size_t off = 0x44u + (size_t)index * 12u;
+    for (int i = 0; i != 3; ++i) {
+        const float v = rec_float(record, off + (size_t)i * 4u);
+        __builtin_memcpy(&out[i], &v, sizeof v);
+    }
+}
+
+/* EntityFlag80Set (FUN_00473b20) — see record.hpp. */
+void entity_flag_80_set(void* record, int set)
+{
+    if (record == NULL) {
+        return; /* deviation: the corpus strides the record blindly */
+    }
+    uint32_t word = 0;
+    __builtin_memcpy(&word, (char*)record + 0x14, sizeof word);
+    word = (set != 0) ? (word | 0x80u) : (word & ~0x80u);
+    __builtin_memcpy((char*)record + 0x14, &word, sizeof word);
+}
+
 /* CategoryValueIsNeitherZeroNorFifteen (FUN_0041b470). */
 int category_value_is_neither_zero_nor_fifteen(int value)
 {

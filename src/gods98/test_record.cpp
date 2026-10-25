@@ -50,6 +50,13 @@ static void poke_ptr(void* base, size_t off, void* v)
     __builtin_memcpy((char*)base + off, &v, sizeof(v));
 }
 
+static uint32_t peek_dword(const void* base, size_t off)
+{
+    uint32_t v = 0;
+    __builtin_memcpy(&v, (const char*)base + off, sizeof(v));
+    return v;
+}
+
 static void poke_dword(void* base, size_t off, uint32_t v)
 {
     __builtin_memcpy((char*)base + off, &v, sizeof(v));
@@ -1446,6 +1453,47 @@ int main(void)
         keyed_resource_entry_remove(0x55);
         CHECK(sound_buffer_association_head_peek() == NULL,
               "the empty head stays quiet (deviation)");
+    }
+
+    /* Velocity slot vector + flag-80 (2026-10-25): the three-word stride
+     * vector read and the +0x14 bit-7 set/clear half. */
+    {
+        ProbeRecord r;
+        memset(&r, 0, sizeof r);
+        poke_float(&r, 0x44, 1.5f);
+        poke_float(&r, 0x48, -2.5f);
+        poke_float(&r, 0x4c, 4.0f);
+        poke_float(&r, 0x50, 7.0f);
+        poke_float(&r, 0x5c, 8.0f);
+        poke_float(&r, 0x60, 9.0f);
+        poke_float(&r, 0x64, 10.0f);
+        float v[3] = { 0, 0, 0 };
+        velocity_slot_vector_read(&r, v, 0);
+        CHECK(v[0] == 1.5f && v[1] == -2.5f && v[2] == 4.0f,
+              "slot zero walks the three words");
+        velocity_slot_vector_read(&r, v, 1);
+        CHECK(v[0] == 7.0f && v[1] == 0.0f && v[2] == 0.0f,
+              "slot one starts the 12-byte stride (the gap stays zero)");
+        velocity_slot_vector_read(&r, v, 2);
+        CHECK(v[0] == 8.0f && v[1] == 9.0f && v[2] == 10.0f,
+              "slot two lands past the stride gap");
+        velocity_slot_vector_read(NULL, v, 0);
+        CHECK(v[0] == 0.0f, "the null record reads zero words");
+        velocity_slot_vector_read(&r, NULL, 0);
+        CHECK(1, "the null out slot is guarded (deviation)");
+
+        poke_dword(&r, 0x14, 0x1234u);
+        entity_flag_80_set(&r, 1);
+        CHECK(peek_dword(&r, 0x14) == (0x1234u | 0x80u),
+              "the flag raise lands bit 7");
+        entity_flag_80_set(&r, 1);
+        CHECK(peek_dword(&r, 0x14) == (0x1234u | 0x80u),
+              "the raise is idempotent");
+        entity_flag_80_set(&r, 0);
+        CHECK(peek_dword(&r, 0x14) == 0x1234u,
+              "the clear drops bit 7 alone");
+        entity_flag_80_set(NULL, 1);
+        CHECK(1, "the null record is guarded (deviation)");
     }
 
     if (s_failures != 0) {

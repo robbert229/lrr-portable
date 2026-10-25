@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 1022 | 39.9% |
+| ported | 1026 | 40.0% |
 | anchored | 4 | 0.2% |
-| named | 1492 | 58.2% |
+| named | 1488 | 58.0% |
 | runtime-import | 45 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (1022 functions)
+  (1026 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1492 functions)
+  citation yet (1488 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (45 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1497 (58.4%).**
+**Game logic remaining to port: 1493 (58.2%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -76,7 +76,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00405950` | PendingCommandTimerFireScan |
 | `0x00405c10` | PendingCommandEntityAssignmentTick |
 | `0x00406360` | EntityRecordAttachAndRelink |
-| `0x004063e0` | PendingRecordEntityReferenceClear |
 | `0x00406540` | EntityPoolCallbackSearch |
 | `0x004065f0` | CubicBezierPointEvaluate |
 | `0x004067b0` | PolylineSegmentLengthsAndTotalCalculate |
@@ -452,7 +451,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004378e0` | GridObjectRecordsRelease |
 | `0x00437940` | DeferredOListEntityCreateAndLink |
 | `0x00437c20` | DeferredOListEntityQueueAdd |
-| `0x004382c0` | PooledRecordAllocateAndReset |
 | `0x004383b0` | RoverWorkQueueUpdate |
 | `0x00438460` | EntityKindRecordUpdateDispatch |
 | `0x00438610` | EntityCreateWithPosition |
@@ -936,7 +934,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004734f0` | DDiSceneLightCreate |
 | `0x00473560` | DDiSceneObjectKindModeSetup |
 | `0x00473690` | EntityVisualResourceLoad |
-| `0x00473b20` | EntityFlag80Set |
 | `0x00473bc0` | ResourceNameRegisterOrQuery |
 | `0x00473c60` | XfTextureNameFormat |
 | `0x00473dc0` | RendererFogEnableAndColorApply |
