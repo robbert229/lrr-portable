@@ -206,3 +206,74 @@ recorded here.)
 | `IsAverageValueAbove99` (`0x418120`) | Sums a float table (count at +0x18, entries from +0x1c) read through the `SavBuildCtx`-modeled accessor — Ghidra's register shuffling leaves the buffer's true owner ambiguous; no port owner for the band. | Pin the buffer's owner through the call-site band, then port. |
 | `ConfigRgbVectorRead` (`0x479170`) | Reads an `r::g::b` config string through `ConfigStringCopy` (seam-cited; the config-record lookup `0x4792e0` is unported) and splits on the `DAT_004a1cd4` separator — config-lookup chain without a port owner. | Config-record lookup (shared config-seam blocker). |
 | `ReadAngleSettingRadians` (`0x479110`) | Same config-lookup chain via `ConfigPathValueGet` (seam-cited), defaulting to the corpus's `DAT_004b8a14` empty-string byte; degrees→turns→radians scaling rides the x87 float10 multiply. | Config-record lookup (shared config-seam blocker). |
+
+## Frontier closure triage (2026-10-25)
+
+The portable-now frontier (all callees ported) that has no port-side model.
+Grouped by blocker family; every row names its address and next action:
+
+- **D3DRM library calls** — `D3DRMVectorRandom` (`0x479500`),
+  `D3DRMVectorRotate` (`0x479510`): tail calls into the Direct3D-RM runtime
+  vector helpers. Renderer seam (shared). Next: the renderer seam, or
+  D3DRM-shaped vector helpers if the call sites need them.
+- **CDAudio platform seam** — `CDAudioErrorTextGet` (`0x489260`),
+  `CDAudioTrackPlayFrom` (`0x489210`), `CDAudioDeviceOpen` (`0x489330`),
+  plus the `WaveDataRead` (`0x489100`) HMMIO copy loop
+  (`mmioGetInfo`/`mmioAdvance`/`mmioSetInfo`): OS-bound multimedia I/O with
+  corpus error-state DATs. Next: the media platform seam (shares #297).
+- **Win32 window/message/timer band** — `WINMM.DLL::timeGetTime`
+  (`0x478000`), `WindowMessageDispatchFilter` (`0x478010`),
+  `Win32MessagePumpDispatch` (`0x478040`): the OS window pump; the port's
+  host window layer replaces the corpus's `MSG` dispatch. Next: platform
+  seam, if/when the corpus pump's callers land.
+- **CRT/loader/platform internals** — `CrtLocalUnwindFromFrame`
+  (`0x496895`, PE unwind tables, shares `CrtUnwindAddressResolve`'s blocker),
+  `CrtCodePageLocaleIdLookup` (`0x496530`, Win32 locale API),
+  `CrtCtypeTablesReset` (`0x496590`, corpus ctype tables),
+  `CrtHeapBlockFree` (`0x491710`) and `CRTHeapReleaseUnusedPages`
+  (`0x491770`, arena pages, shares the `0x491840` blocker), `__fload`
+  (`0x492381`, x87 float-load stub family), `StdFileHandleAcquire`
+  (`0x495000`) and `CrtFileDescriptorCloseSlot` (`0x499150`, CRT stdio/fd
+  tables), `CrtEnvironmentBlockGet` (`0x496190`,
+  `GetEnvironmentStrings` copy), `CrtRuntimeErrorMessageBoxDisplay`
+  (`0x499730`, `MessageBoxA`). Next: fold into an allocator/CRT-runtime
+  port only when a corpus caller needs the observable.
+- **Queue-LAB thunk closure** — `FindNearbyPlacementCandidate` (`0x409450`)
+  and `NeighborCellEntitySearchRecurse` (`0x409470`): gated on the
+  `EntityAtGridPositionLookup` (`0x438670`) callback whose body is an
+  unrecoverable `LAB_004386b0` thunk. Next: recover the grid-lookup thunk
+  bodies from the spatial-query layer.
+- **Renderer/surface seams** — `FrontendProgressValueChanged` (`0x411840`,
+  DAT_0076ab3c renderer word), `SurfacePixelWriterSelectByFormat`
+  (`0x486690`, surface COM vtable selection), `DDiSceneRenderSurfacePoolGrow`
+  (`0x477370`, render surface pool), `BresenhamLineWalkClipped` (`0x486720`,
+  painter callback DAT_005407e8 with the DAT_005407ec..f8 clip-window
+  floats — none modeled). Next: renderer seam family.
+- **Entity registry / spatial seams** — `EntityPoolCallbackSearch`
+  (`0x406540`, DAT_004b31c8 handle band + code-thunk callbacks; the refresh
+  dispatch quotes it), `EntityDirectedLineSideCheck` (`0x470630`, behind
+  `EntityTransformPositionGet` (`0x442260`)'s renderer-transform seam),
+  `TypeFourEntityCallbackDispatch` (`0x447900`) stays recorded in the
+  callback-registry family above. Next: pool-registry model.
+- **Name/string-table families** — `BubbleActionNameToIndex` (`0x407300`),
+  `LocalizedObjectNameGet` (`0x439860`), `LocalizedObjectTheNameGet`
+  (`0x439790`, both stride the DAT_004b8a3c wide-name-table band),
+  `ResourceStringTablesFree` (`0x487760`, frees the same string-table
+  block). Next: reference-binary name-table initialization.
+- **Config-record chain families** — `LevelNodeGet` (`0x417090`, archive
+  record chain through DAT_005560c4/c0 + the LevelLinks table),
+  `CampaignChainSnapshotCreate` (`0x418040`, same config-archive chain),
+  `BubbleConfigTextureLoad` (`0x407240`, config + texture + name-table
+  mix), `ToolTipIconsConfigLoad` (`0x437150`), `HealthBarConfigLoadAndShadeDerive`
+  (`0x459560`, 22 config DATs), `OverlayMenuGate` (`0x415370`, DAT menu
+  band), `IncidentMessageCatalogInit` (`0x419230`, DAT string catalog).
+  All route the blocked config-record lookup (`0x4792e0`) and/or the
+  string/name tables. Next: config-record lookup + loader DAT band.
+- **DAT token-table band** — `DirectoryTokenListCompare` (`0x480570`):
+  compares against the DAT_0076a9e0-counted, stride-0x400
+  DAT_005769e0 directory-token table; both globals are unmodeled
+  (same band family as the renderer-word blockers). Next: model the
+  token table when its loader lands.
+
+Rescan note: this closes the recorded set for the current portable-now
+frontier; anything the scanner flags later lands in the same families.

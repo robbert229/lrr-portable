@@ -621,4 +621,15 @@ int text_layout_offset_for_centering(int x, int y, int rect_x, int rect_y,
 int selection_entity_code_resolve(const struct GameContext* ctx,
                                   int* code_out); /* FUN_0041b9c0 */
 
+/* ScrollRectResourceRecordCreate (FUN_00463770): allocate a 0x1c-float
+ * rect record, fill it from the quad (x, y, x+dx, y+dy, then the seam-
+ * derived dims where a texture handle rides), and store it in the view
+ * window's rect half — A for mode 0, B otherwise (the corpus's param*8
+ * stride maps to the port's view slots). Deviations: the window guards
+ * and the surface-load seam answering NULL (the panel-load precedent),
+ * so the dim halves stay zero. */
+void scroll_rect_resource_record_create(int view, int mode,
+                                        const float* quad, int tex_a,
+                                        int tex_b);
+
 #endif /* LEGORRR_GAME_FRONTEND_HPP */

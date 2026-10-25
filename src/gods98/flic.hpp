@@ -86,4 +86,11 @@ uint32_t flic_opcode25_success_stub(void);
  * fallback for unknown opcode 27 records is a pure return — faithful. */
 void flic_opcode27_fallback_noop(void);
 
+/* FlicOpcode16ModeDispatch (FUN_00484880): mode-word dispatch over the
+ * frame-record window (+0x6d4 opcode, +0x6d8 mode word). Mode 0x10 takes
+ * the fallback and returns; opcodes 0 and 4 run the fallback in place;
+ * all routes answer 1. Deviation: the corpus reads its own frame buffer
+ * blindly; the port guards the NULL window. */
+int flic_opcode16_mode_dispatch(const uint8_t* rec);
+
 #endif /* LEGORRR_FLIC_HPP */

@@ -370,6 +370,24 @@ int main(int argc, char** argv)
     flic_opcode27_fallback_noop();
     CHECK(1, "the opcode-27 fallback returns");
 
+    /* FlicOpcode16ModeDispatch window (2026-10-25). */
+    {
+        static uint8_t mode_rec[0x6e0];
+        memset(mode_rec, 0, sizeof mode_rec);
+        uint32_t word = 0u;
+        word = 0x10u;
+        memcpy(mode_rec + 0x6d8, &word, sizeof word);
+        CHECK(flic_opcode16_mode_dispatch(mode_rec) == 1,
+              "the mode-0x10 route answers 1");
+        word = 4u;
+        memcpy(mode_rec + 0x6d4, &word, sizeof word);
+        word = 0u;
+        memcpy(mode_rec + 0x6d8, &word, sizeof word);
+        CHECK(flic_opcode16_mode_dispatch(mode_rec) == 1
+                  && flic_opcode16_mode_dispatch(NULL) == 1,
+              "the opcode routes and the NULL window answer 1");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "flic: %d failure(s)\n", s_failures);
         return 1;
