@@ -2363,6 +2363,22 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Special-state predicate, selection sweeps + nested list removal**
+(findings 293/403/310/232/397):
+`level.*` ports `terrain_cell_special_state_predicate` (0x40d3f0 — mode-1
+occupancy, answered outright when the caller's gate word is zero, else the
+secondary word's bit 0x100 must also hit), `cmd.*` ports the two
+any-hit selection sweeps `selected_entities_any_predicate_match` (0x431a30 —
+the walkability mode-1 entity gates stay the documented seam pass) and
+`any_object_can_occupy_terrain_cell` (0x431ab0 — the placement gate reads
+each record's own flag), `frontend.*` ports `store_selected_map_coordinate`
+(0x41ea50 — the kind-switch branch raises the interaction word's bit 8 and
+fires the alias-0x16 cue, the tracked branch refreshes the live pair, and
+the kind word always re-arms), and `record.*` ports
+`nested_record_list_remove_by_key_recursive` (0x47b2e0 — the deep-first key
+sweep, matched child freed through the engine heap after its successor
+promotion). The sweep fixtures pin the gates, stores, and chains.
+
 **Panel highlight switch, action-target filter + pending record copy**
 (findings 402/318/535/306):
 `engine.*` ports `panel_selection_highlight_toggle` (0x435aa0 — the highlight
