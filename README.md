@@ -2363,6 +2363,24 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Path arc interpolation + screen projection** (2026-10-25): two pure
+frontier rows land in `view.*`. `path_arc_length_interpolate` (0x4068c0) walks
+the curve record's arc-length table (count at dword 0, point pairs at dwords
+2i−1/2i, segment lengths at dword `0x65 + segment` — the window the already-
+ported length builder stores through `+0x198`), finds the segment whose running
+total passes the travelled distance, and lerps the endpoints; exhausted travel
+rides the endpoint and answers the record count. Deviations: the corpus strides
+the record and both outputs blindly — the port guards them, and the length
+reads reinterpret the builder's stored float bits. `view_point_to_screen_geometry_transform`
+(0x45e940) projects four floats in place through the projection window: the
+`+1c`/`+20` screen offsets come off first, the `+14 / +18` scale ratio folds
+x, y, and depth, x lands through the half-size + center pair, y mirrors through
+its own, and w rides the ratio (the corpus recomputes the ratio five times —
+one divide is bit-identical). Deviations: NULL guards on both inputs.
+`view_test` pins the segment folds (2.0, 5.5, 14.0 on a 14-length record), the
+zero-travel and single-point edges, the guards, and the four-part projection
+fold.
+
 **Entity query count + terrain choice select** (2026-10-25): two frontier
 rows land in `entity.*` and `level.*`. `entity_query_flag_count` (0x41b3c0)
 answers catalog-kind queries: `0x13` returns the second catalog count word,
