@@ -1067,6 +1067,36 @@ int main(void)
               "the reset entries answer null again");
     }
 
+    /* The pair-table window pair (2026-10-25). */
+    {
+        static void* window[16];
+        memset(window, 0, sizeof window);
+        int count = 0;
+        CHECK(pair_table_find(window, 0u, "key") == NULL,
+              "the empty window answers null");
+        char key1[] = "FIRSTKEY";
+        char key2[] = "SECONDKEY";
+        pair_table_append(window, &count, key1, (void*)7);
+        pair_table_append(window, &count, key2, (void*)9);
+        CHECK(count == 2, "the appends bump the count");
+        CHECK(pair_table_find(window, 2u, "firstkey") == (void*)7
+                  && pair_table_find(window, 2u, "SECONDKEY") == (void*)9,
+              "the fold-find answers the paired values");
+        CHECK(pair_table_find(window, 2u, "nothere") == NULL,
+              "the unknown key answers null");
+        char* name = NULL;
+        __builtin_memcpy(&name, (void* const*)window, sizeof name);
+        CHECK(name != NULL && name != key1
+                  && strcmp(name, "FIRSTKEY") == 0,
+              "the append duplicates the key");
+        pair_table_append(window, &count, key1, (void*)5); /* key re-append */
+        CHECK(count == 3 && pair_table_find(window, 3u, "firstkey") == (void*)7,
+              "the find stays first-wins past the re-append");
+        CHECK(pair_table_find(NULL, 1u, "x") == NULL
+                  && pair_table_find(window, 1u, NULL) == NULL,
+              "the window and key guards hold");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "crt_test: %d failure(s)\n", s_failures);
         return 1;

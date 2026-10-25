@@ -718,6 +718,35 @@ int main(void)
         scene_node_position_set(node, NULL); /* guarded */
     }
 
+    /* Matrix4IdentityInitialize + SurfaceTriangleNormalCalculate
+     * (2026-10-25). */
+    {
+        float m[16];
+        for (int i = 0; i < 16; ++i) {
+            m[i] = 0.5f;
+        }
+        matrix4_identity_initialize(m);
+        int ok = 1;
+        for (int i = 0; i < 16; ++i) {
+            ok = ok && m[i] == ((i % 5 == 0) ? 1.0f : 0.0f);
+        }
+        CHECK(ok, "the identity init writes the corpus diagonal");
+
+        const float a[3] = {0.0f, 0.0f, 0.0f};
+        const float b[3] = {2.0f, 0.0f, 0.0f};
+        const float c[3] = {1.0f, 1.0f, 0.0f};
+        float n[3] = {0.0f, 0.0f, 0.0f};
+        surface_triangle_normal_calculate(n, a, b, c);
+        CHECK(fabsf(n[0]) < 1e-6f && fabsf(n[1]) < 1e-6f
+                  && fabsf(n[2] - 1.0f) < 1e-6f,
+              "the unit normal rides the edge cross");
+        const float d[3] = {0.0f, 0.0f, 1.0f};
+        surface_triangle_normal_calculate(n, c, b, d);
+        CHECK(fabsf(n[0] + 0.40825f) < 1e-4f && fabsf(n[1] + 0.40825f) < 1e-4f
+                  && fabsf(n[2] + 0.81650f) < 1e-4f,
+              "the oblique normal unitizes through the reciprocal");
+    }
+
     if (s_failures == 0) {
         printf("view_test: PASS\n");
         return 0;

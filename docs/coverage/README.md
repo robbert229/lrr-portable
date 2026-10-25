@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 934 | 36.4% |
+| ported | 941 | 36.7% |
 | anchored | 4 | 0.2% |
-| named | 1579 | 61.6% |
+| named | 1572 | 61.3% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (934 functions)
+  (941 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1579 functions)
+  citation yet (1572 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1584 (61.8%).**
+**Game logic remaining to port: 1577 (61.5%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -1095,7 +1095,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004773e0` | RenderResourceTrackedReferencesRelease |
 | `0x004774b0` | WhitespaceTokenize |
 | `0x00477590` | FormattedTextEscapeDecodeAndEmit |
-| `0x00477610` | CaseInsensitiveSubstringFind |
 | `0x00477670` | GameStringHashCompute |
 | `0x004777a0` | WinMain |
 | `0x00477bd0` | SetLowTextureFlag |
@@ -1124,7 +1123,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00479170` | ConfigRgbVectorRead |
 | `0x00479500` | D3DRMVectorRandom |
 | `0x00479510` | D3DRMVectorRotate |
-| `0x00479530` | SurfaceTriangleNormalCalculate |
 | `0x00479630` | SurfaceTriangleAreaCalculate |
 | `0x0047a150` | FormattedTextFormatDraw |
 | `0x0047a180` | RewardTextDraw |
@@ -1277,14 +1275,11 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00482cb0` | RendererCommandModeAndPairSend |
 | `0x00482ce0` | RendererCommandNodePrepend |
 | `0x00482d60` | ModelRenderPassDispatch |
-| `0x00483030` | TextureCacheLookup |
-| `0x00483080` | TextureCacheInsert |
 | `0x004830c0` | AnimatedTextureFrameSurfaceSet |
 | `0x00483140` | IndexedRecordInterfaceRelease |
 | `0x00483170` | IndexedRecordTransformInitialize |
 | `0x00483270` | RenderObjectColorVectorSet |
 | `0x00483420` | ScreenEffectItemOpacitySet |
-| `0x00483540` | Matrix4x4IdentityInitialize |
 | `0x00483580` | RenderInterfaceCapabilityCheck |
 | `0x00483600` | Direct3DViewportSetup |
 | `0x00483690` | MatrixMethodPairApply |
@@ -1349,8 +1344,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00488170` | AnimationTrackKeysInterpolate |
 | `0x004882e0` | SceneNodeTransformMatrixApply |
 | `0x004885c0` | ModelResourceResolveOrLoad |
-| `0x00488730` | CaseInsensitivePairTableFind |
-| `0x00488790` | CaseInsensitivePairTableAppend |
 | `0x004887c0` | SceneHierarchyInterfaceRegisterRecursive |
 | `0x00488900` | UIRenderTreeEntryProcess |
 | `0x004889a0` | UIRenderEntrySubrecordApply |

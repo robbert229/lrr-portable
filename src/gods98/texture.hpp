@@ -66,4 +66,23 @@ void texture_cache_clear(void);
  * against reference hashes produced from the shipped corpus via PIL. */
 uint32_t texture_pixel_hash(TextureSurface* t);
 
+/* --- cache-window name pair (2026-10-25) ---------------------------------
+ * TextureCacheLookup (FUN_00483030) / TextureCacheInsert (FUN_00483080):
+ * the corpus pair works over a caller-supplied cache-entry window, so the
+ * port models it as pure window operations (the corpus's twelve-byte
+ * entries land as widened slots: {word slot, name pointer, word slot}).
+ * Deviations: the port guards the table/count; the corpus strides the
+ * window blindly. */
+
+/* Fold-find the entry whose name slot matches; answers the entry address
+ * or NULL. */
+void* texture_cache_name_slot_find(const void* table, uint32_t count,
+                                   const char* name); /* FUN_00483030 */
+
+/* Append {slot_a, key copy through the string duplicate layer
+ * (FUN_00477550), slot_b} past the count word and bump it. */
+void texture_cache_name_slot_append(void* table, int* count,
+                                    const char* name, void* slot_a,
+                                    void* slot_b);    /* FUN_00483080 */
+
 #endif /* LEGORRR_TEXTURE_HPP */

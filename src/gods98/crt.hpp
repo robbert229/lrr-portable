@@ -503,6 +503,18 @@ void* resource_name_cache_get_or_load(const char* key); /* FUN_00410560 */
 void string_cache_bitmap_loader_set(void* (*hook)(const char*));
 void string_cache_font_loader_set(void* (*hook)(const char*));
 
+/* --- pair-table window pair (2026-10-25) -----------------------------------
+ * CaseInsensitivePairTableFind (FUN_00488730) / CaseInsensitivePairTableAppend
+ * (FUN_00488790): a caller-supplied {key, value} window; entries ride as
+ * widened slots (the corpus strides its 8-byte pair entries by 4-byte
+ * fields). Quirk pinned: the corpus bounds its scan with the walk index
+ * masked to its low 16 bits. Deviations: the port guards the table, the
+ * key, and the count pointer. */
+void* pair_table_find(const void* table, uint32_t count, const char* key);
+                                                /* FUN_00488730 */
+void pair_table_append(void* table, int* count, const char* key,
+                       void* value);             /* FUN_00488790 */
+
 /* SelectionMarkerResourcesRelease (FUN_0040ce30, findings 378/434): frees
  * each non-null pointer in the marker resource table (DAT_004c7e00..e7c,
  * the trailing count word reset), then frees the table descriptor

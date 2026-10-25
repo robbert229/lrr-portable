@@ -28,6 +28,18 @@ char* string_duplicate(const char* text);
  * calls strstr. */
 const char* string_find_substring(const char* haystack, const char* needle);
 
+/* CaseInsensitiveSubstringFind (FUN_00477610): the folded sibling of the
+ * plain find — every start position through the corpus's scan bound (the
+ * haystack start to the last byte; the corpus do-while skips the empty
+ * tail position) gets a bounded fold compare of the needle length.
+ * Corpus gate pinned: an empty haystack or an empty needle answers null
+ * (the corpus's strlen-shaped tests). Deviations: the port guards the
+ * two pointers, and its fold compare stops where the corpus strides a
+ * terminated haystack byte against an unterminated needle tail. */
+const char* case_insensitive_substring_find(const char* haystack,
+                                            const char* needle);
+                                                /* FUN_00477610 */
+
 /* FUN_00493ec0: length of `text` up to `limit` — index of the first NUL,
  * or `limit` when no NUL appears within the bound (the corpus returns the
  * bound itself when it runs out first; limit 0 reads nothing and answers

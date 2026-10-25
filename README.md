@@ -2363,6 +2363,20 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Pure string/geometry leaf band** (2026-10-25; findings 226/235/371/372/
+388): seven rows land across `view.*`, `texture.*`, `crt.*`, and
+`string.*`. `matrix4_identity_initialize` (0x483540) writes the corpus's
+zero-then-diagonal order (the row-looping sibling stays cited as its own
+row); `surface_triangle_normal_calculate` (0x479530) is the unit cross of
+the triangle edges with no zero-length guard, faithful. The texture
+cache pair (0x483030/0x483080) and the case-insensitive pair-table pair
+(0x488730/0x488790) model their caller-supplied entry windows as widened
+slots — append rides the string duplicate layer, find folds, and the
+pair-table scan keeps the corpus's low-16-bit walk mask.
+`case_insensitive_substring_find` (0x477610) scans every start position
+behind the corpus's both-nonempty gate. Tests pin the diagonal, the
+normalized crosses, the append/find windows, and the fold scans.
+
 **Object registry windows band** (2026-10-25): five rows land in
 `ai.*` / `cmd.*`. The 0x407xxx band registers entity records into four
 pointer/timer pair windows (flagged 20 slots with seed 0x42160000, the

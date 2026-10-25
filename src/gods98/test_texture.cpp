@@ -274,6 +274,44 @@ int main(int argc, char** argv)
             break;
         }
     }
+    /* The cache-window name pair (2026-10-25). */
+    {
+        static void* window[12];
+        memset(window, 0, sizeof window);
+        int count = 0;
+        char key1[] = "MENUFACE";
+        char key2[] = "OTHERFACE";
+        CHECK(texture_cache_name_slot_find(window, 0u, key1) == NULL,
+              "the empty window answers null");
+        texture_cache_name_slot_append(window, &count, key1, (void*)1,
+                                       (void*)2);
+        CHECK(count == 1, "the append bumps the count");
+        void* entry = texture_cache_name_slot_find(window, 1u, key1);
+        CHECK(entry == (void*)&window[0], "the fold-find lands the entry");
+        if (entry != NULL) {
+            char* name = NULL;
+            __builtin_memcpy(&name, (char*)entry + sizeof(void*),
+                             sizeof name);
+            CHECK(name != NULL && name != key1
+                      && strcmp(name, "MENUFACE") == 0,
+                  "the key rides a duplicate");
+            void* slot_b = NULL;
+            __builtin_memcpy(&slot_b, (char*)entry + 2 * sizeof(void*),
+                             sizeof slot_b);
+            CHECK(slot_b == (void*)2, "the slot pair rides with the key");
+        }
+        texture_cache_name_slot_append(window, &count, key2, (void*)3,
+                                       (void*)4);
+        CHECK(texture_cache_name_slot_find(window, 2u, "menuface")
+                  == (void*)&window[0],
+              "the find folds case on the first entry");
+        CHECK(texture_cache_name_slot_find(window, 2u, key2)
+                  == (void*)&window[3],
+              "the second append lands past the first");
+        CHECK(texture_cache_name_slot_find(window, 2u, "missing") == NULL,
+              "the miss answers null");
+    }
+
     if (s_failures == 0) {
         printf("texture_test: PASS%s\n",
                argc > 2 ? " (real wads)" : "");
