@@ -5,6 +5,7 @@
 #include "heap.hpp"
 #include "sound.hpp"
 #include "view.hpp"
+#include <math.h>  /* sqrtf for the instance-quad normal window */
 
 /* Byte-safe field reads: corpus dword/float slots at offsets that may
  * not be pointer-aligned on 64-bit hosts. */
@@ -975,4 +976,183 @@ void keyed_resource_entry_remove(int key)
         sound_buffer_association_head_set(successor);
         engine_heap_free(head);
     }
+}
+
+/* --- the indexed-record mesh window band (see record.hpp) ---------------- */
+
+static void rec_float_put(void* base, size_t off, float v)
+{
+    __builtin_memcpy((char*)base + off, &v, sizeof v);
+}
+
+static void rec_dword_put(void* base, size_t off, uint32_t v)
+{
+    __builtin_memcpy((char*)base + off, &v, sizeof v);
+}
+
+static char* mesh_block(const void* record, int block)
+{
+    char* table = (char*)rec_ptr(record, 0x08);
+    if (table == NULL) {
+        return NULL; /* deviation: the corpus strides a missing table blindly */
+    }
+    return table + (size_t)block * 0x70;
+}
+
+void mesh_vertices_scale_apply(void* record, float scale_x, float scale_y,
+                               float scale_z)
+{
+    for (uint32_t i = 0; i < rec_dword(record, 0); ++i) {
+        char* block = mesh_block(record, (int)i);
+        void* verts = block != NULL ? rec_ptr(block, 0x0c) : NULL;
+        if (verts == NULL || rec_dword(block, 0x04) == 0) {
+            continue; /* corpus: the zero-count block skips its do-while */
+        }
+        uint32_t j = 0;
+        do {
+            char* v = (char*)verts + (size_t)j * 0x20;
+            rec_float_put(v, 0x00, scale_x * rec_float(v, 0x00));
+            rec_float_put(v, 0x04, scale_y * rec_float(v, 0x04));
+            rec_float_put(v, 0x08, scale_z * rec_float(v, 0x08));
+            ++j;
+            /* corpus shape: the vertex count is re-read every round */
+        } while (j < rec_dword(block, 0x04));
+    }
+}
+
+void indexed_geometry_data_copy_to_output(void* record, int block,
+                                          int first_vertex, int count,
+                                          void* output)
+{
+    char* blk = mesh_block(record, block);
+    char* verts = blk != NULL ? (char*)rec_ptr(blk, 0x0c) : NULL;
+    if (verts == NULL || output == NULL || count == 0) {
+        return; /* deviation: the corpus strides both windows blindly */
+    }
+    /* Corpus shape: a 36-byte output slot per round, filled 3+3+2
+     * dwords — the slot's fourth dword stays untouched. */
+    size_t src = (size_t)((uint32_t)first_vertex << 5);
+    char* dst = (char*)output;
+    int n = count;
+    do {
+        __builtin_memcpy(dst + 0x00, verts + src + 0x00, 12);
+        __builtin_memcpy(dst + 0x0c, verts + src + 0x0c, 12);
+        __builtin_memcpy(dst + 0x18, verts + src + 0x18, 8);
+        src += 0x20;
+        dst += 36;
+    } while (--n != 0);
+}
+
+void instance_quad_vertex_data_fill(void* record, int block,
+                                    int first_vertex, int count,
+                                    const float* positions,
+                                    const float triple[3],
+                                    const uint32_t* pairs)
+{
+    char* blk = mesh_block(record, block);
+    char* verts = blk != NULL ? (char*)rec_ptr(blk, 0x0c) : NULL;
+    if (verts == NULL || positions == NULL || count == 0) {
+        return; /* deviation: the corpus strides its windows blindly */
+    }
+    size_t off = (size_t)((uint32_t)first_vertex << 5);
+    const float* src = positions;
+    int n = count;
+    do {
+        char* v = verts + off;
+        __builtin_memcpy(v + 0x00, src, 12);
+        float nx = triple[0] - rec_float(v, 0x00);
+        float ny = triple[1] - rec_float(v, 0x04);
+        float nz = triple[2] - rec_float(v, 0x08);
+        /* Corpus shape: the sum squares runs x², z², y² (the x87 order)
+         * and the reciprocal rides through in place. A zero normal
+         * answers inf/NaN exactly as the corpus's division does. */
+        const float inv = 1.0f / sqrtf(nx * nx + nz * nz + ny * ny);
+        rec_float_put(v, 0x0c, nx * inv);
+        rec_float_put(v, 0x10, inv * ny);
+        rec_float_put(v, 0x14, inv * nz);
+        rec_dword_put(v, 0x18, *pairs);
+        rec_dword_put(v, 0x1c, pairs[1]);
+        src += 3;
+        pairs += 2;
+        off += 0x20;
+    } while (--n != 0);
+}
+
+void mesh_segment_vertex_fill(void* record, int block, int first_vertex,
+                              int count, const float* positions,
+                              const uint32_t triple[3],
+                              const uint32_t* pairs)
+{
+    char* blk = mesh_block(record, block);
+    char* verts = blk != NULL ? (char*)rec_ptr(blk, 0x0c) : NULL;
+    if (verts == NULL || positions == NULL || count == 0) {
+        return; /* deviation: the corpus strides its windows blindly */
+    }
+    size_t off = (size_t)((uint32_t)first_vertex << 5);
+    const float* src = positions;
+    int n = count;
+    do {
+        char* v = verts + off;
+        __builtin_memcpy(v + 0x00, src, 12);
+        /* Pinned corpus quirk: the triple pointer never advances — the
+         * SAME triple lands on every vertex. */
+        rec_dword_put(v, 0x0c, triple[0]);
+        rec_dword_put(v, 0x10, triple[1]);
+        rec_dword_put(v, 0x14, triple[2]);
+        rec_dword_put(v, 0x18, *pairs);
+        rec_dword_put(v, 0x1c, pairs[1]);
+        src += 3;
+        pairs += 2;
+        off += 0x20;
+    } while (--n != 0);
+}
+
+void mesh_vertex_record_fill(void* record, int block, int first_vertex,
+                             int count, const float* positions,
+                             const void* const* triples,
+                             const uint32_t* pairs)
+{
+    char* blk = mesh_block(record, block);
+    char* verts = blk != NULL ? (char*)rec_ptr(blk, 0x0c) : NULL;
+    if (verts == NULL || positions == NULL || count == 0) {
+        return; /* deviation: the corpus strides its windows blindly */
+    }
+    size_t off = (size_t)((uint32_t)first_vertex << 5);
+    const float* src = positions;
+    int n = count;
+    do {
+        char* v = verts + off;
+        __builtin_memcpy(v + 0x00, src, 12);
+        /* Corpus shape: the triple stream advances one entry per round —
+         * each vertex receives its own triple record. */
+        if (triples != NULL && *triples != NULL) {
+            const uint32_t* t = (const uint32_t*)*triples;
+            rec_dword_put(v, 0x0c, t[0]);
+            rec_dword_put(v, 0x10, t[1]);
+            rec_dword_put(v, 0x14, t[2]);
+        }
+        rec_dword_put(v, 0x18, *pairs);
+        rec_dword_put(v, 0x1c, pairs[1]);
+        src += 3;
+        ++triples;
+        pairs += 2;
+        off += 0x20;
+    } while (--n != 0);
+}
+
+uint32_t indexed_record_transform_initialize(void* record, int index)
+{
+    uint32_t block[20];
+    const float one = 1.0f;
+    memset(block, 0, sizeof block);
+    block[0] = 0x50u; /* the block's size word, as the corpus writes it */
+    float* f = (float*)(block + 1);
+    for (int i = 0; i < 4; ++i) {
+        f[i] = one; /* the identity's four unit diagonals */
+    }
+    void* dst = indexed_record_data_address_get(record, index);
+    if (dst != NULL) {
+        __builtin_memcpy(dst, block, sizeof block);
+    }
+    return 1u; /* the corpus answers 1 either way (deviation: guarded copy) */
 }

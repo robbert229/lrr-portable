@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 
 #include "gods98/record.hpp"
 #include "gods98/heap.hpp"
@@ -668,6 +669,194 @@ static void test_interpolated_z(void)
           "NULL record_a answers outside");
 }
 
+/* The indexed-record mesh window band (2026-10-25): stride-0x70 blocks
+ * over the +0x8 table slot, 0x20-byte vertices, the three fills'
+ * documented advance quirks, and the identity transform block. */
+static void test_mesh_window(void)
+{
+    /* Two blocks: block 0 owns two vertices, block 1 is the corpus's
+     * zero-count window. */
+    static uint8_t table[2 * 0x70];
+    static uint8_t verts_a[2 * 0x20];
+    memset(table, 0, sizeof(table));
+    memset(verts_a, 0, sizeof(verts_a));
+    float one[3] = { 1.0f, 2.0f, 3.0f };
+    float two[3] = { 4.0f, 5.0f, 6.0f };
+    memcpy(verts_a + 0x00, one, sizeof one);
+    memcpy(verts_a + 0x20, two, sizeof two);
+    poke_dword(table + 0 * 0x70, 0x04, 2u);
+    poke_ptr(table + 0 * 0x70, 0x0c, verts_a);
+    poke_dword(table + 1 * 0x70, 0x04, 0u);
+    poke_ptr(table + 1 * 0x70, 0x0c, verts_a);
+    PokeTableRecord rec;
+    memset(&rec, 0, sizeof(rec));
+    rec.table = table;
+    poke_dword(&rec, 0x00, 2u); /* two blocks */
+
+    /* MeshVerticesScaleApply: components scale in x/y/z order; the
+     * zero-count second block is skipped. */
+    mesh_vertices_scale_apply(&rec, 2.0f, 3.0f, 4.0f);
+    float scaled[16];
+    memcpy(scaled, verts_a, sizeof scaled);
+    CHECK(scaled[0] == 2.0f && scaled[1] == 6.0f && scaled[2] == 12.0f,
+          "the first vertex scales componentwise");
+    CHECK(scaled[8] == 8.0f && scaled[9] == 15.0f && scaled[10] == 24.0f,
+          "the second vertex scales componentwise");
+
+    /* IndexedGeometryDataCopyToOutput: the round copies the vertex's
+     * 32-byte record into a 36-byte slot, leaving the tail dword. */
+    memset(verts_a, 0, sizeof(verts_a));
+    uint32_t dw = 1;
+    for (int i = 0; i < 2; ++i) {
+        for (int j = 0; j < 8; ++j) {
+            dw = (uint32_t)i * 10u + (uint32_t)j;
+            memcpy(verts_a + (size_t)i * 0x20 + (size_t)j * 4,
+                   &dw, 4);
+        }
+    }
+    uint8_t out[72];
+    memset(out, 0xAA, sizeof(out));
+    rec.table = table;
+    poke_dword(table + 0 * 0x70, 0x04, 2u);
+    poke_ptr(table + 0 * 0x70, 0x0c, verts_a);
+    indexed_geometry_data_copy_to_output(&rec, 0, 0, 2, out);
+    uint32_t got = 0;
+    memcpy(&got, out + 0, 4);
+    CHECK(got == 0u, "the first record's dword 0 lands");
+    memcpy(&got, out + 36, 4);
+    CHECK(got == 10u, "the second record starts the second slot");
+    memcpy(&got, out + 36 + 28, 4);
+    CHECK(got == 17u, "the record's last dword is copied");
+    memset(&got, 0, 4);
+    memcpy(&got, out + 32, 4);
+    CHECK(got == 0xAAAAAAAAu, "the slot tail stays untouched");
+
+    /* InstanceQuadVertexDataFill: positions advance, the normal is the
+     * triple minus the position, normalized; the same triple shapes
+     * every vertex. */
+    {
+        static uint8_t block[0x70];
+        static uint8_t vbuf[4 * 0x20];
+        memset(block, 0, sizeof(block));
+        memset(vbuf, 0, sizeof(vbuf));
+        poke_dword(block, 0x04, 4u);
+        poke_ptr(block, 0x0c, vbuf);
+        rec.table = block;
+        float positions[6] = { 1, 2, 3, 4, 5, 6 };
+        const float triple[3] = { 10.0f, 10.0f, 10.0f };
+        const uint32_t pairs[4] = { 7u, 8u, 9u, 10u };
+        instance_quad_vertex_data_fill(&rec, 0, 1, 2, positions, triple,
+                                       pairs);
+        float p[3];
+        memcpy(p, vbuf + 0x20 + 0x00, sizeof p);
+        CHECK(p[0] == 1.0f && p[1] == 2.0f && p[2] == 3.0f,
+              "the quad fill copies the first window position");
+        float n[3];
+        memcpy(n, vbuf + 0x20 + 0x0c, sizeof n);
+        float norm = n[0] * n[0] + n[1] * n[1] + n[2] * n[2];
+        CHECK(norm > 0.9999f && norm < 1.0001f,
+              "the first normal is unit length");
+        memcpy(p, vbuf + 0x40 + 0x00, sizeof p);
+        CHECK(p[0] == 4.0f && p[1] == 5.0f && p[2] == 6.0f,
+              "the quad fill advances the position window");
+        memcpy(n, vbuf + 0x40 + 0x0c, sizeof n);
+        norm = n[0] * n[0] + n[1] * n[1] + n[2] * n[2];
+        CHECK(norm > 0.9999f && norm < 1.0001f,
+              "the second normal is unit length");
+        uint32_t uv;
+        memcpy(&uv, vbuf + 0x20 + 0x18, 4);
+        CHECK(uv == 7u, "the pair stream lands on the first uv slot");
+        memcpy(&uv, vbuf + 0x40 + 0x1c, 4);
+        CHECK(uv == 10u, "the pair stream advances to the second slot");
+
+        /* Corpus shape: a zero normal divides by zero — inf/NaN lands. */
+        const float same[3] = { 1.0f, 2.0f, 3.0f };
+        instance_quad_vertex_data_fill(&rec, 0, 0, 1, positions, same,
+                                       pairs);
+        memcpy(n, vbuf + 0x0c, sizeof n);
+        CHECK(isnan(n[0]) != 0, "the zero normal answers NaN (corpus)");
+    }
+
+    /* MeshSegmentVertexFill: the pinned quirk — the triple pointer never
+     * advances, so the SAME triple lands on every vertex. */
+    {
+        static uint8_t block[0x70];
+        static uint8_t vbuf[2 * 0x20];
+        memset(block, 0, sizeof(block));
+        memset(vbuf, 0, sizeof(vbuf));
+        poke_dword(block, 0x04, 2u);
+        poke_ptr(block, 0x0c, vbuf);
+        rec.table = block;
+        float positions[6] = { 1, 2, 3, 4, 5, 6 };
+        const uint32_t triple[3] = { 0xDEADu, 0xBEEF, 0xC0DE };
+        const uint32_t pairs[4] = { 1u, 2u, 3u, 4u };
+        mesh_segment_vertex_fill(&rec, 0, 0, 2, positions, triple, pairs);
+        uint32_t got3[3];
+        memcpy(got3, vbuf + 0x0c, sizeof got3);
+        CHECK(got3[0] == 0xDEADu && got3[1] == 0xBEEF && got3[2] == 0xC0DE,
+              "the segment triple lands on the first vertex");
+        memcpy(got3, vbuf + 0x20 + 0x0c, sizeof got3);
+        CHECK(got3[0] == 0xDEADu && got3[1] == 0xBEEF && got3[2] == 0xC0DE,
+              "the same triple rides the second vertex (quirk)");
+        float p[3];
+        memcpy(p, vbuf + 0x20, sizeof p);
+        CHECK(p[0] == 4.0f && p[1] == 5.0f && p[2] == 6.0f,
+              "the positions still advance round by round");
+    }
+
+    /* MeshVertexRecordFill: the twin — the triple stream advances one
+     * entry per round, so each vertex gets its own triple. */
+    {
+        static uint8_t block[0x70];
+        static uint8_t vbuf[2 * 0x20];
+        static const uint32_t rec_a[3] = { 1u, 1u, 1u };
+        static const uint32_t rec_b[3] = { 2u, 2u, 2u };
+        const void* const stream[2] = { rec_a, rec_b };
+        memset(block, 0, sizeof(block));
+        memset(vbuf, 0, sizeof(vbuf));
+        poke_dword(block, 0x04, 2u);
+        poke_ptr(block, 0x0c, vbuf);
+        rec.table = block;
+        float positions[6] = { 1, 2, 3, 4, 5, 6 };
+        const uint32_t pairs[4] = { 5u, 6u, 7u, 8u };
+        mesh_vertex_record_fill(&rec, 0, 0, 2, positions, stream, pairs);
+        uint32_t got3[3];
+        memcpy(got3, vbuf + 0x0c, sizeof got3);
+        CHECK(got3[0] == 1u && got3[1] == 1u && got3[2] == 1u,
+              "the first triple record lands");
+        memcpy(got3, vbuf + 0x20 + 0x0c, sizeof got3);
+        CHECK(got3[0] == 2u && got3[1] == 2u && got3[2] == 2u,
+              "the stream advances to the second record");
+        uint32_t uv;
+        memcpy(&uv, vbuf + 0x20 + 0x18, 4);
+        CHECK(uv == 7u, "the pair stream lands on the second vertex");
+    }
+
+    /* IndexedRecordTransformInitialize: the identity block lands over the
+     * data-address window and answers 1. */
+    {
+        static uint8_t table2[2 * 0x70];
+        memset(table2, 0, sizeof(table2));
+        rec.table = table2;
+        CHECK(indexed_record_transform_initialize(&rec, 1) == 1u,
+              "the initialization answers the corpus's 1");
+        uint32_t dw2[20];
+        memcpy(dw2, table2 + 1 * 0x70 + 0x10, sizeof dw2);
+        CHECK(dw2[0] == 0x50u, "the size word lands first");
+        CHECK(dw2[1] == 0x3f800000u && dw2[4] == 0x3f800000u,
+              "the identity diagonals are unit floats");
+        int tail_zero = 1;
+        for (int i = 5; i < 20; ++i) {
+            if (dw2[i] != 0u) {
+                tail_zero = 0;
+            }
+        }
+        CHECK(tail_zero, "the block's tail stays zero");
+        CHECK(indexed_record_transform_initialize(NULL, 0) == 1u,
+              "the null record still answers 1 (deviation)");
+    }
+}
+
 int main(void)
 {
     test_field_reads();
@@ -687,6 +876,7 @@ int main(void)
     test_flag_and_handle_writers();
     test_straggler_reads();
     test_interpolated_z();
+    test_mesh_window();
     /* The entity record-field leaves (2026-10-24): plain writes with the
      * corpus's offsets over a caller-owned record buffer. */
     {

@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 953 | 37.2% |
+| ported | 959 | 37.4% |
 | anchored | 4 | 0.2% |
-| named | 1560 | 60.8% |
+| named | 1554 | 60.6% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (953 functions)
+  (959 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1560 functions)
+  citation yet (1554 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1565 (61.0%).**
+**Game logic remaining to port: 1559 (60.8%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -1226,12 +1226,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00482040` | AnimationTrackApplyWrappedFrameOffset |
 | `0x004821a0` | IndexedRecordEntryRead |
 | `0x00482220` | MeshRecordAllocateAndFill |
-| `0x00482370` | MeshVerticesScaleApply |
 | `0x004823e0` | TerrainCellQuadVerticesWrite |
-| `0x00482470` | IndexedGeometryDataCopyToOutput |
-| `0x00482500` | InstanceQuadVertexDataFill |
-| `0x00482620` | MeshSegmentVertexFill |
-| `0x004826c0` | MeshVertexRecordFill |
 | `0x004827a0` | IndexedRecordFlag6CBit0Set |
 | `0x004827d0` | RecordFlag2CBit0Set |
 | `0x00482ac0` | ModelRenderRecordStateSetup |
@@ -1241,7 +1236,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00482d60` | ModelRenderPassDispatch |
 | `0x004830c0` | AnimatedTextureFrameSurfaceSet |
 | `0x00483140` | IndexedRecordInterfaceRelease |
-| `0x00483170` | IndexedRecordTransformInitialize |
 | `0x00483270` | RenderObjectColorVectorSet |
 | `0x00483420` | ScreenEffectItemOpacitySet |
 | `0x00483580` | RenderInterfaceCapabilityCheck |

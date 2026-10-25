@@ -435,6 +435,71 @@ void* menu_item_numeric_range_record_allocate(int kind, int min_v, int max_v,
 int nested_record_list_remove_by_key_recursive(int key, void* node);
                                                 /* FUN_0047b2e0 */
 
+/* --- indexed-record mesh window band (2026-10-25) ------------------------
+ * The stride-0x70 blocks the indexed record's +0x8 table slot already
+ * strides, read through the block window the corpus established: +0x4 is
+ * the vertex count (re-read every round, as the corpus's aliasing reloads
+ * do), +0xc is the vertex-base slot (widened native pointer), vertices
+ * stride 0x20 as {position, normal, uv pair}. The +0x6c flag word and the
+ * data window (base + 0x10 + index*0x70) keep the readers ported above.
+ * Deviations: the corpus strides the table, vertex base, and every window
+ * blindly — the port guards NULL table/base slots and stores nothing;
+ * float math runs in single precision (documented x87 deviation). */
+
+/* MeshVerticesScaleApply (FUN_00482370): scale every block's vertices —
+ * x times the first component, y the second, z the third. Outer (block)
+ * count at record +0x0 and inner vertex count re-read every round; a
+ * zero-count block is skipped before its do-while ever runs. */
+void mesh_vertices_scale_apply(void* record, float scale_x, float scale_y,
+                               float scale_z);                     /* FUN_00482370 */
+
+/* IndexedGeometryDataCopyToOutput (FUN_00482470): pack `count` rounds of
+ * two whole vertices plus the first two dwords of the next from the
+ * block's vertex base (starting at first_vertex) into 36-byte output
+ * slots — the corpus's stride, with the fourth dword of each slot left
+ * untouched. */
+void indexed_geometry_data_copy_to_output(void* record, int block,
+                                          int first_vertex, int count,
+                                          void* output);            /* FUN_00482470 */
+
+/* InstanceQuadVertexDataFill (FUN_00482500): fill the block's vertex
+ * window — positions copied from the source window, the normal window
+ * recomputed as (triple - position) and normalized in place (a zero
+ * normal answers inf/NaN exactly as the corpus's division does), the uv
+ * slot taken from the advancing pair stream. The triple is read every
+ * round without advancing: the same triple shapes every vertex (pinned
+ * corpus quirk). */
+void instance_quad_vertex_data_fill(void* record, int block,
+                                    int first_vertex, int count,
+                                    const float* positions,
+                                    const float triple[3],
+                                    const uint32_t* pairs);         /* FUN_00482500 */
+
+/* MeshSegmentVertexFill (FUN_00482620): the segment twin — positions and
+ * pairs advance round by round while the triple stays exactly where it
+ * was, so every vertex receives the SAME triple (the pinned quirk this
+ * family is known for). */
+void mesh_segment_vertex_fill(void* record, int block, int first_vertex,
+                              int count, const float* positions,
+                              const uint32_t triple[3],
+                              const uint32_t* pairs);               /* FUN_00482620 */
+
+/* MeshVertexRecordFill (FUN_004826c0): the filling twin — the triple
+ * stream is an array of pointers into three-dword records, advanced one
+ * entry per round, so each vertex gets its own triple (the counterpart of
+ * the segment quirk). */
+void mesh_vertex_record_fill(void* record, int block, int first_vertex,
+                             int count, const float* positions,
+                             const void* const* triples,
+                             const uint32_t* pairs);                /* FUN_004826c0 */
+
+/* IndexedRecordTransformInitialize (FUN_00483170): lay the identity
+ * transform — {size 0x50, 1.0f x 4, sixteen zero dwords} — over the
+ * data-address window and answer 1 (the corpus's dword loop is the
+ * contiguous copy the transform-copy precedent established). */
+uint32_t indexed_record_transform_initialize(void* record, int index);
+                                                /* FUN_00483170 */
+
 /* KeyedResourceEntryRemove (FUN_0047b2a0): the keyed sweep of the
  * association list. The deep-first key cleanup runs from the list head
  * (the port hook, the corpus's unowned global); a matched head promotes

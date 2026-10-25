@@ -2363,6 +2363,33 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Indexed-record mesh window band** (2026-10-25): six rows land in
+`record.*`, completing the stride-0x70 indexed-record window model the
+flag-word getter and transform-copy readers established. The block window
+rides the table slot at record +0x8: +0x4 vertex count (re-read every
+round, as the corpus's aliasing reloads do), +0xc widened vertex-base
+slot, vertices stride 0x20 as {position, normal, uv pair}.
+`mesh_vertices_scale_apply` (0x482370) scales every block's vertices
+componentwise with the count re-read per round and the zero-count block
+skipped. `indexed_geometry_data_copy_to_output` (0x482470) packs the
+32-byte vertex records into 36-byte output slots with the corpus's
+untouched slot tail. The three fills pin the family's documented
+quirks: `instance_quad_vertex_data_fill` (0x482500) recomputes each
+normal as the triple minus the position, normalized in the corpus's
+x²+z²+y² x87 order — a zero normal answers NaN/inf exactly as the
+corpus's division does — while the same triple shapes every vertex;
+`mesh_segment_vertex_fill` (0x482620) lands the SAME triple on every
+vertex because the corpus's triple pointer never advances (pinned
+quirk); `mesh_vertex_record_fill` (0x4826c0) is the advancing twin, each
+vertex receiving its own triple record. `indexed_record_transform_initialize`
+(0x483170) lays the identity block — size 0x50 plus four unit-float
+diagonals — over the data-address window and answers 1. Deviations: NULL
+table/base guards, window-threaded arguments, single-precision float
+math where the corpus runs x87. Tests pin the componentwise scales, the
+36-byte slot layout, both fill quirks, the zero-normal NaN, the pointer
+advance, and the identity block; 34/36 (flic + frontend baseline).
+Ledger regenerates: 959 ported (+6).
+
 **Scroll-scale and window-release band** (2026-10-25): five rows land in
 `options.*` / `engine.*` / `heap.*` / `cmd.*`. The corpus's scroll slider
 pair joins `options.*`: `scroll_to_slider_index` (0x415030) bands the
