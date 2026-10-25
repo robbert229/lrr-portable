@@ -274,4 +274,12 @@ void selection_record_point_get(ViewContext* v, float out[3]); /* FUN_00436ae9 *
 float selected_global_point_transform_and_return_x(EngineContext* ctx);
                                                 /* FUN_0046a420 */
 
+/* RendererNodeRelativePositionSet (FUN_00436ac9, findings 435/372): the
+ * renderer node's +0x28 camera handle rides the ported mode-1 side of the
+ * camera teleport/offset dispatch with x/y and a zero z. Deviation: the
+ * corpus strides the handle as a dword; the port reads it as the module's
+ * widened pointer slot. */
+void renderer_node_relative_position_set(const void* node, float x, float y);
+                                                /* FUN_00436ac9 */
+
 #endif /* LEGORRR_VIEW_HPP */

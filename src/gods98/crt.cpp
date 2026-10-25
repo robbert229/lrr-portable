@@ -4,6 +4,7 @@
 
 #include "crt.hpp"
 #include "heap.hpp"
+#include "string.hpp"
 
 /* FUN_00498000: the corpus's memmove with word loops and byte tails —
  * byte-equivalent to the host memmove (findings 260/394). */
@@ -1207,4 +1208,19 @@ void crt_owned_stream_buffer_release(char* record)
         __builtin_memcpy(record + 1 * field, &zero, sizeof zero);
         __builtin_memcpy(record + 2 * field, &zero, sizeof zero);
     }
+}
+
+/* --- the shared texture directory word (see crt.hpp) ------------------------ */
+static char* s_shared_texture_dir; /* DAT_0076cd88 role: unowned */
+
+void shared_texture_directory_set(const char* path)
+{
+    s_shared_texture_dir = string_duplicate(path);
+}
+
+char* shared_texture_directory_peek(void) { return s_shared_texture_dir; }
+void shared_texture_directory_clear(void)
+{
+    engine_heap_free(s_shared_texture_dir);
+    s_shared_texture_dir = NULL;
 }

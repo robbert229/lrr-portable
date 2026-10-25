@@ -772,6 +772,25 @@ int main(void)
         crt_owned_stream_buffer_release(NULL); /* guarded */
     }
 
+    /* SharedTextureDirectorySet (2026-10-24): dup + install. */
+    {
+        shared_texture_directory_clear();
+        char path[] = "TEXTURES";
+        shared_texture_directory_set(path);
+        char* got = shared_texture_directory_peek();
+        CHECK(got != NULL && got != path, "the directory is duplicated");
+        CHECK(got != NULL && strcmp(got, "TEXTURES") == 0,
+              "the duplicate keeps the path");
+        path[1] = '\0'; /* the corpus's copy is independent */
+        CHECK(shared_texture_directory_peek() != NULL
+                  && strcmp(shared_texture_directory_peek(), "TEXTURES") == 0,
+              "the source edit stays out of the copy");
+        shared_texture_directory_clear();
+        CHECK(shared_texture_directory_peek() == NULL, "the clear frees out");
+        shared_texture_directory_set(NULL); /* guarded by the dup */
+        CHECK(shared_texture_directory_peek() == NULL, "NULL is guarded");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "crt_test: %d failure(s)\n", s_failures);
         return 1;

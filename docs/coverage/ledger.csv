@@ -848,7 +848,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00436a18,FUN_00436a18,ported,CameraSetDistanceBounds,1,237
 00436a4a,FUN_00436a4a,ported,CameraSetDistance,1,293
 00436aa5,FUN_00436aa5,ported,CameraZoomUpdate,1,124
-00436ac9,FUN_00436ac9,named,RendererNodeRelativePositionSet,0,155
+00436ac9,FUN_00436ac9,ported,RendererNodeRelativePositionSet,3,155
 00436ae9,FUN_00436ae9,ported,SelectionRecordPointGet,3,136
 00436b0b,FUN_00436b0b,ported,SelectionRecordPointSet,1,165
 00436b33,FUN_00436b33,ported,CameraGetPositionWithTerrainHeight,1,279
@@ -1297,7 +1297,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0045a590,FUN_0045a590,named,ScrollingAdvisorTextAppend,0,128
 0045a5b0,FUN_0045a5b0,named,UITextOutputPositionAndDraw,0,403
 0045a620,FUN_0045a620,named,UITextOutputObjectRelease,0,82
-0045a630,FUN_0045a630,named,UIRecordCallbackForward,0,136
+0045a630,FUN_0045a630,ported,UIRecordCallbackForward,3,136
 0045a650,FUN_0045a650,named,PanelCategoryBoundsSet,0,692
 0045a6e0,FUN_0045a6e0,ported,IndexedPairSet,1,174
 0045a700,FUN_0045a700,ported,IndexedPairGet,1,178
@@ -1693,7 +1693,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004726f0,FUN_004726f0,named,DirectShowWrapperDestroy,0,121
 00472710,FUN_00472710,ported,EntityVisualTypeTablesInit,3,1160
 00472800,FUN_00472800,named,DDiSceneObjectPoolShutdown,0,992
-004728c0,FUN_004728c0,named,SharedTextureDirectorySet,0,95
+004728c0,FUN_004728c0,ported,SharedTextureDirectorySet,2,95
 004728e0,FUN_004728e0,named,RendererFlagBit6Set,0,170
 00472900,FUN_00472900,named,DDiSceneEndHookRegister,0,126
 00472920,FUN_00472920,named,DDiSceneSampleHookRegister,0,164
