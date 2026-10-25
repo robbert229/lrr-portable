@@ -127,6 +127,19 @@ int main(void)
               "engine_bind: bit 7 clears and the word stays otherwise untouched");
         global_state_flags_bit7_set(NULL, 1);
 
+        global_state_flags_bits6_and_9_set(&ec, 1, 1);
+        CHECK(ec.debug == (0x40u | 0x200u),
+              "engine_bind: the pair raises bit 6 and bit 9");
+        global_state_flags_bits6_and_9_set(&ec, 0, 1);
+        CHECK(ec.debug == 0x200u,
+              "engine_bind: bit 6 clears with bit 9 kept");
+        global_state_flags_bits6_and_9_set(&ec, 1, 0);
+        CHECK(ec.debug == 0x40u,
+              "engine_bind: bit 6 raises with bit 9 cleared");
+        global_state_flags_bits6_and_9_set(&ec, 0, 0);
+        CHECK(ec.debug == 0u, "engine_bind: the pair clears both");
+        global_state_flags_bits6_and_9_set(NULL, 1, 1); /* guarded */
+
         objective_task_text_origin_set(&ec, NULL);
         CHECK((ec.debug & 0x8000u) == 0u,
               "engine_bind: the null origin clears bit 15");

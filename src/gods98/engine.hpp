@@ -234,6 +234,8 @@ int mode_dependent_field24_get(const EngineContext* ctx);
  * renderer update. */
 bool   current_engine_mode_is_zero(const EngineContext* ctx);
 void   global_state_flags_bit7_set(EngineContext* ctx, int value);
+void   global_state_flags_bits6_and_9_set(EngineContext* ctx, int value,
+                                          int set_bit9); /* FUN_00426360 */
 void   global_scroll_guard_set(int value);
 int    global_scroll_guard_peek(void); /* port-side hook: the corpus's reader
                                         * is ScrollScaleSetAndClamp @ 0x425ce0 */

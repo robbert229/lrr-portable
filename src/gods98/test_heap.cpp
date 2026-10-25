@@ -161,6 +161,29 @@ int main(void)
         text_output_field82c_bit2_set_clear(NULL, 1); /* guarded */
     }
 
+    /* DwordListAllocateAndZero (2026-10-25). */
+    {
+        void** hdr = dword_list_allocate_and_zero(4);
+        CHECK(hdr != NULL, "the list header allocates");
+        if (hdr != NULL) {
+            void** data = (void**)hdr[0];
+            CHECK((size_t)hdr[1] == 4u, "the header carries the capacity");
+            CHECK(data != NULL && data[0] == NULL && data[1] == NULL
+                      && data[2] == NULL && data[3] == NULL,
+                  "the slots arrive zeroed");
+            if (data != NULL) {
+                engine_heap_free(data);
+            }
+            engine_heap_free(hdr);
+        }
+        void** zero = dword_list_allocate_and_zero(0);
+        CHECK(zero != NULL && zero[1] == NULL,
+              "the zero-capacity header answers an empty window");
+        if (zero != NULL) {
+            engine_heap_free(zero);
+        }
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "heap_test: %d failure(s)\n", s_failures);
         return 1;

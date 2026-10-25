@@ -285,3 +285,31 @@ void options_context_six_field_set(struct GameContext* ctx,
         __builtin_memcpy(block + 0x1c + (size_t)i * sizeof(v), &v, sizeof v);
     }
 }
+
+/* --- the scroll speed index band (see options.hpp) ----------------------- */
+int scroll_to_slider_index(void)
+{
+    const double v = (double)scroll_scale_peek(); /* corpus reads the _DAT
+                                                   * alias of its scale word */
+    if (v < 0.6666667) {
+        return 0;
+    }
+    if (v < 1.0) {
+        return 1;
+    }
+    if (v < 1.3333334) {
+        return 2;
+    }
+    if (v < 1.6666666) {
+        return 3;
+    }
+    return (2.0 <= v) ? 5 : 4; /* corpus shape: NaN skips both tests, 4 */
+}
+
+void scroll_slider_refresh(struct GameContext* ctx)
+{
+    if (ctx == NULL) {
+        return; /* deviation: the corpus stores the global blindly */
+    }
+    ctx->options.game_speed = scroll_to_slider_index();
+}

@@ -2055,3 +2055,48 @@ int any_object_can_occupy_terrain_cell(int cx, int cy)
     }
     return 0;
 }
+
+/* TaskTableContentsRelease (FUN_00462960) — see cmd.hpp. */
+int task_table_contents_release(void* record)
+{
+    if (record == NULL) {
+        return 1; /* deviation: the corpus strides the handle blindly */
+    }
+    unsigned char* rec = (unsigned char*)record;
+    uint32_t count;
+    __builtin_memcpy(&count, rec + 0x1c, sizeof count);
+    if (count != 0u) {
+        uint32_t i = 0;
+        for (;;) {
+            void* entries = NULL;
+            void* entry = NULL;
+            void* sub = NULL;
+            __builtin_memcpy(&entries, rec + 0x20, sizeof entries);
+            if (entries != NULL) {
+                entry = ((void**)entries)[i];
+            }
+            if (entry != NULL) {
+                /* Corpus: the entry's +0x14 slot is read blindly; a NULL
+                 * entry or NULL sub-slot answers "nothing to free" here. */
+                __builtin_memcpy(&sub, (unsigned char*)entry + 0x14,
+                                 sizeof sub);
+                if (sub != NULL) {
+                    engine_heap_free(sub);
+                }
+                engine_heap_free(entry);
+            }
+            ++i;
+            __builtin_memcpy(&count, rec + 0x1c, sizeof count);
+            if (count <= i) {
+                break;
+            }
+        }
+    }
+    void* entries = NULL;
+    __builtin_memcpy(&entries, rec + 0x20, sizeof entries);
+    if (entries != NULL) {
+        engine_heap_free(entries);
+    }
+    engine_heap_free(rec);
+    return 1;
+}

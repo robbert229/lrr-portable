@@ -411,7 +411,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00413f30,FUN_00413f30,named,FilenameExtensionClassify,0,512
 00413f90,FUN_00413f90,named,MenuItemRecordAlloc,0,787
 00414010,FUN_00414010,named,LoadItemStrings,0,565
-00414070,FUN_00414070,named,ListAlloc,0,560
+00414070,FUN_00414070,ported,ListAlloc,3,560
 004140c0,FUN_004140c0,ported,MenuBuild,1,10973
 00414c90,FUN_00414c90,named,MenuListFindName,0,416
 00414ce0,FUN_00414ce0,ported,AvisEnabled,4,269
@@ -420,12 +420,12 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00414df0,FUN_00414df0,named,VolumeSet,0,121
 00414e10,FUN_00414e10,named,OptionMusicDefault,0,241
 00414f90,FUN_00414f90,ported,ScrollToSliderIndexStore,2,489
-00415030,FUN_00415030,named,ScrollToSliderIndex,0,430
+00415030,FUN_00415030,ported,ScrollToSliderIndex,2,430
 004150b0,FUN_004150b0,named,SaveMenuRefresh,0,850
 00415150,FUN_00415150,ported,OptionsApplyFromSlot,1,299
 00415220,FUN_00415220,named,FrontEndStartLevel,0,654
 004152c0,FUN_004152c0,ported,SlotSummary,1,828
-00415360,FUN_00415360,named,ScrollSliderRefresh,0,74
+00415360,FUN_00415360,ported,ScrollSliderRefresh,2,74
 00415370,FUN_00415370,named,OverlayMenuGate,0,1498
 004154b0,FUN_004154b0,ported,LevelChainBuild,3,2973
 00415700,FUN_00415700,ported,MoviePlayWait,2,879
@@ -654,7 +654,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00426250,FUN_00426250,named,UpdateRenderViewportState,0,487
 004262e0,FUN_004262e0,named,ObjectiveScoreTextOriginSet,0,344
 00426320,FUN_00426320,ported,ObjectiveTaskTextOriginSet,3,344
-00426360,FUN_00426360,named,GlobalStateFlagsBits6And9Set,0,297
+00426360,FUN_00426360,ported,GlobalStateFlagsBits6And9Set,1,297
 004263a0,FUN_004263a0,ported,GlobalStateFlagsBit7Set,1,170
 004263c0,FUN_004263c0,named,GlobalSubsystemStateReset,0,304
 00426420,FUN_00426420,named,CursorRayToCameraRoute,0,909
@@ -1421,7 +1421,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004628a0,FUN_004628a0,ported,GlobalFloatAccumulator_00555330Add,1,179
 004628c0,FUN_004628c0,ported,GlobalFloatAccumulate_00555120,1,91
 004628e0,FUN_004628e0,named,CallbackRecordAllocateInitialize,0,887
-00462960,FUN_00462960,named,TaskTableContentsRelease,0,595
+00462960,FUN_00462960,ported,TaskTableContentsRelease,3,595
 004629d0,FUN_004629d0,named,PanelEventEntryAppend,0,1632
 00462ab0,FUN_00462ab0,ported,RecordField18Set,1,112
 00462ac0,FUN_00462ac0,ported,RecordFlags24Or,1,128

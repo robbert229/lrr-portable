@@ -101,4 +101,15 @@ void text_output_field82c_bit2_set_clear(void* record, int set_bit);
  * dword; the port carries a host-width pointer (documented deviation). */
 void object_field_38_release(void* record);
 
+/* --- dword-list allocator (2026-10-25) -----------------------------------
+ * ListAlloc (FUN_00414070): builds a caller-owned two-slot header
+ * {data, capacity} over a fresh zero-filled array of `count` dwords. The
+ * corpus zero-pass covers `count & 0x3fffffff` slots and its second pass
+ * is dead code (loop seed 0); the port keeps both faithfully — slots the
+ * mask skips stay uninitialized, exactly as in the corpus's partial sweep.
+ * Deviations: the header slots and array entries are widened (the corpus
+ * strides dwords); a NULL allocation from either half releases the other
+ * half and answers NULL (the corpus strides blindly). */
+void** dword_list_allocate_and_zero(uint32_t count); /* FUN_00414070 */
+
 #endif /* LEGORRR_GODS98_HEAP_HPP */

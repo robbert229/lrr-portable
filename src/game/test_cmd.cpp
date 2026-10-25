@@ -1725,6 +1725,29 @@ int main(void)
 #undef SPUT
     }
 
+    /* TaskTableContentsRelease (2026-10-25): the whole window tree. */
+    {
+        void* rec = engine_heap_alloc(0x20 + sizeof(void*));
+        memset(rec, 0, 0x20 + sizeof(void*));
+        void** entries = (void**)engine_heap_alloc(4 * sizeof(void*));
+        uint32_t cnt = 4;
+        memcpy((unsigned char*)rec + 0x1c, &cnt, sizeof cnt);
+        memcpy((unsigned char*)rec + 0x20, &entries, sizeof entries);
+        for (int i = 0; i < 4; ++i) {
+            entries[i] = engine_heap_alloc(0x14 + sizeof(void*));
+            memset(entries[i], 0, 0x14 + sizeof(void*));
+        }
+        void* sub = engine_heap_alloc(8);
+        memset(sub, 0, 8);
+        memcpy((unsigned char*)entries[0] + 0x14, &sub, sizeof sub);
+        engine_heap_free(entries[1]); /* the corpus's NULL entry slot */
+        entries[1] = NULL;
+        CHECK(task_table_contents_release(rec) == 1,
+              "the release answers the corpus's 1");
+        CHECK(task_table_contents_release(NULL) == 1,
+              "the null window guard answers 1 too");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "cmd_test: %d failure(s)\n", s_failures);
         return 1;
