@@ -178,8 +178,8 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00408620,FUN_00408620,named,SceneObjectRecordCloneRetainHandles,0,532
 00408670,FUN_00408670,ported,SceneObjectPairApplyMode,3,216
 004086a0,FUN_004086a0,ported,AnimationObjectVisibilityGet,3,94
-004086c0,FUN_004086c0,named,SceneObjectPairSetRenderParameters,0,289
-00408710,FUN_00408710,named,SceneObjectPairSetCallbackScalar,0,408
+004086c0,FUN_004086c0,ported,SceneObjectPairSetRenderParameters,3,289
+00408710,FUN_00408710,ported,SceneObjectPairSetCallbackScalar,3,408
 00408770,FUN_00408770,named,SceneObjectIndexedHandleGetOrCreate,0,340
 004087b0,FUN_004087b0,named,SceneObjectPrimaryHandleGetOrCreate,0,330
 004087e0,FUN_004087e0,named,SceneObjectSecondaryHandleGetOrCreate,0,330

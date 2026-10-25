@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 913 | 35.6% |
+| ported | 915 | 35.7% |
 | anchored | 4 | 0.2% |
-| named | 1600 | 62.4% |
+| named | 1598 | 62.3% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (913 functions)
+  (915 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1600 functions)
+  citation yet (1598 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1605 (62.6%).**
+**Game logic remaining to port: 1603 (62.5%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -125,8 +125,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00408570` | SceneActivityChange |
 | `0x004085f0` | SceneActivityChangeSecondary |
 | `0x00408620` | SceneObjectRecordCloneRetainHandles |
-| `0x004086c0` | SceneObjectPairSetRenderParameters |
-| `0x00408710` | SceneObjectPairSetCallbackScalar |
 | `0x00408770` | SceneObjectIndexedHandleGetOrCreate |
 | `0x004087b0` | SceneObjectPrimaryHandleGetOrCreate |
 | `0x004087e0` | SceneObjectSecondaryHandleGetOrCreate |
