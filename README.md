@@ -2363,6 +2363,29 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**FLIC 16-bit keyframe + delta — the word-stream half** (2026-10-25): two
+frontier rows land. `flic_decode16_bit_keyframe` (0x4849d0) walks the word
+stream at stream+7 over rows +0x10: the literal run repeats one expanded
+word (count byte + value word, three bytes), the copy run walks successive
+words, and each row re-reads the row length +0xc past one straddle byte.
+`flic_decode16_bit_delta` (0x484e50) walks the chunk stream at stream+8
+with the pair words the corpus shape pins: the kind-0 header doubles as
+the pair count, the 0xC retire retargets the row counter by the whole-word
+subtract (the corpus counter is a ushort — the wrap is the quirk), the
+8-chunk remembers its (flag-folded) header for a lone BYTE store after
+the pair walk, 4 ends the record, the pair's low byte skips and its high
+byte runs — and a high byte with bit 7 set repeats the one word it reads
+0x100 − n times (the cursor resumes four bytes past the pair). The pixel
+expansion `((w & 0xffe0) << 1) | (w & 0x1f)` shifts the green field one
+lane up; the flag +0x6e4 keeps it where it is (`w & 0x7fe0`). LP64 fix
+en route: the corpus record is 32-bit, so the stream link +0x6d0 and the
+pixel buffer +0x6cc sit four bytes apart — two LP64 pointers cannot fit
+(reading the mode-4 window raw made the pixel store clobber the stream).
+The install hook now keeps both in side slots (the hook-boundary static
+precedent); decoders resolve through them, falling back to the guarded
+raw read. `record_test`/`flic_test` pin the pair strides, the wraps, and
+every guard.
+
 **FLIC row-record band — triplet walk + mode-4 byte stream** (2026-10-25):
 two frontier rows land on the corpus frame-record window (the triplet-word
 precedent extended with the stream link +0x6d0, pixel buffer +0x6cc, pitch
