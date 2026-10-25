@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 989 | 38.6% |
+| ported | 1001 | 39.0% |
 | anchored | 4 | 0.2% |
-| named | 1525 | 59.5% |
+| named | 1513 | 59.0% |
 | runtime-import | 45 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (989 functions)
+  (1001 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1525 functions)
+  citation yet (1513 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (45 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1530 (59.7%).**
+**Game logic remaining to port: 1518 (59.2%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -327,8 +327,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0041afd0` | InterfaceSurroundImagesConfigLoad |
 | `0x0041b1b0` | InterfaceBackButtonConfigLoad |
 | `0x0041b270` | InterfaceButtonImagesLoad |
-| `0x0041b2d0` | CommandContextPostToHud |
-| `0x0041b300` | MenuSelectionResourceUpdate |
 | `0x0041b3c0` | EntityQueryFlagCount |
 | `0x0041b680` | CatalogCallbackByIdDispatch |
 | `0x0041baa0` | SimulationPointerActionDispatch |
@@ -351,7 +349,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0041d010` | SelectionCancelIfCursorHitsObject |
 | `0x0041d040` | TutorialPathMenuAction |
 | `0x0041dca0` | UiActionDispatch |
-| `0x0041e750` | SelectionClearRequestAndHudReset |
 | `0x0041eac0` | EventTimerCountdownAdvance |
 | `0x0041ec30` | EntityPairCountRefresh |
 | `0x0041eca0` | AdvisorDialogStackLayout |
@@ -822,15 +819,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00469a90` | IndexedValueAppend |
 | `0x00469ac0` | IndexedRecordWordAtOffsetB0Get |
 | `0x00469af0` | IndexedRecordWordAtOffsetB4Get |
-| `0x00469b20` | IndexedRecordWordAtOffsetB8Get |
-| `0x00469b50` | EntityIndexedRecordWordAtOffsetBCGet |
-| `0x00469b80` | EntityIndexedRecordWordAtOffsetE0Get |
-| `0x00469bb0` | BuildingDepositCountGet |
-| `0x00469be0` | EntityIndexedRecordWordAtOffsetF0Get |
-| `0x00469e00` | IndexedRecordFloatAtOffsetDCGet |
-| `0x00469ec0` | IndexedRecordWordAtOffset144Get |
-| `0x00469ee0` | IndexedRecordWordAtOffset148Get |
-| `0x00469f00` | IndexedRecordWordAtOffset14CGet |
 | `0x00469f40` | BuildingUpgradeAdmissionCheck |
 | `0x00469f60` | IndexedRecordWordAtOffsetD0Get |
 | `0x0046a0c0` | MappedIndexedRecordWordAtFCGet |

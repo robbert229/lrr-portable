@@ -143,10 +143,13 @@ issuers' own observable halves — the record shape, the guards, the
 terrain marks and the links — land in `cmd.*`, so only the counter
 update and the query-driven side effects are missing there.
 
-`BuildingDepositCountGet` (`0x469bb0`) belongs to the blocked stats-config
-layer (the `DAT_00502bd8` indexed record family), which also gates the
-query helpers above. **Next action:** the spatial object-query model,
-then the counter block, which together let `0x403810` land as a leaf.
+The `DAT_00502bd8` indexed record family's eight accessors (`0x469b20` …
+`0x469be0`, `0x469e00` … `0x469f00`, recorded earlier here as
+`BuildingDepositCountGet`) landed 2026-10-25 as guarded reads over the
+port-modeled type table (`entity.*`); the stats-config loader that fills
+the records stays unported. The query helpers above still need the
+counter block. **Next action:** the spatial object-query model, then the
+counter block, which together let `0x403810` land as a leaf.
 
 
 ## Wrapper/thunk seams and model-shaped gaps (2026-10-24)

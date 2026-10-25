@@ -598,4 +598,24 @@ void cell_command_type3_issue(int x, int y);   /* FUN_00403030 */
 void entity_task_batch_append(EntitySlot* const* entities, int count,
                               void* payload);     /* FUN_00403650 */
 
+/* --- HUD post / menu-selection chain (2026-10-25) --------------------------
+ * CommandContextPostToHud (FUN_0041b2d0) refreshes the global state, updates
+ * the menu selection's surface state and stores the map coordinate.
+ * MenuSelectionResourceUpdate (FUN_0041b300) gates on the corpus's kind set
+ * {1,2,3,4,5,7} and routes the surface-type work over the last tracked
+ * coordinates through the frontend.* map-store model (DAT_004ddcf4/f8/cfc
+ * live there; DAT_004de1f0 lands as a module static — the unowned-global
+ * deviation). The corpus call sites lose the packer's third register: the
+ * pair shape is pinned by the cmd.cpp tail precedent, so the tracked word
+ * is the surface-type setter's type argument on the tracked half, and the
+ * parameter half applies type 4 and tracks the prior value when it is
+ * not 4. Guards: no-level and NULL-coordinate paths stay inert
+ * (deviations: the corpus dereferences the current level blindly). */
+void menu_selection_resource_update(int kind, const uint32_t coord[2]);
+                                                  /* FUN_0041b300 */
+void command_context_post_to_hud(int kind, const uint32_t coord[2]);
+                                                  /* FUN_0041b2d0 */
+void selection_clear_request_and_hud_reset(void); /* FUN_0041e750 */
+uint32_t menu_surface_track_peek(void);           /* port hook: DAT_004de1f0 */
+
 #endif /* LEGORRR_GAME_CMD_HPP */

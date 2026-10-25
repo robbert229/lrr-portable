@@ -336,4 +336,36 @@ uint32_t pooled_record_chunk_count_peek(void);
 int resolved_entity_operation_dispatch(const char* name, int slot,
                                        int subtract);          /* FUN_00460910 */
 
+/* --- DAT_00502bd8 indexed stats-type tables (2026-10-25) -------------------
+ * The corpus family FUN_00469b20 … FUN_00469be0 / FUN_00469e00 /
+ * FUN_00469ec0 … FUN_00469f00 resolves a template record through
+ * DAT_00502bd8's two-level table (`*(*DAT_00502bd8 + type * 4) + row * 4`)
+ * and reads fixed fields or stride-0x150 instance blocks from the template.
+ * The stats-config loader that fills these tables is unported (the
+ * stats-config blocker), so the port models the table as guarded own
+ * storage: cells start empty and every read answers 0; install registers
+ * a template window and its span in 0x150 strides, and window guards
+ * replace the corpus's blind strides (the unowned-global / stride
+ * deviations). Offsets stay corpus-relative. */
+#define STATS_TYPE_TABLE_TYPES 16 /* window guard: corpus table bounds unknown */
+#define STATS_TYPE_TABLE_ROWS 18  /* window guard: corpus row bounds unknown */
+
+void stats_type_table_install(int type, int row, const void* record,
+                              int stride_count);
+const void* stats_type_table_cell(int type, int row);
+
+uint32_t stats_table_word_at_b8(int type, int row);  /* FUN_00469b20 */
+float stats_table_float_at_dc(int type, int row);    /* FUN_00469e00 */
+uint32_t stats_table_word_at_144(int type, int row); /* FUN_00469ec0 */
+uint32_t stats_table_word_at_148(int type, int row); /* FUN_00469ee0 */
+uint32_t stats_table_word_at_14c(int type, int row); /* FUN_00469f00 */
+
+/* Entity-indexed twins: the corpus's parameter is a config-block window
+ * holding the type dword at +0x00, the row dword at +0x04, and the
+ * instance index dword at +0x330. */
+uint32_t stats_instance_word_at_bc(const void* config_block); /* FUN_00469b50 */
+uint32_t stats_instance_word_at_e0(const void* config_block); /* FUN_00469b80 */
+uint32_t stats_instance_word_at_ec(const void* config_block); /* FUN_00469bb0 */
+uint32_t stats_instance_word_at_f0(const void* config_block); /* FUN_00469be0 */
+
 #endif /* LEGORRR_GAME_ENTITY_HPP */
