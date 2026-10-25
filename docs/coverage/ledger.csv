@@ -1697,7 +1697,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004728e0,FUN_004728e0,named,RendererFlagBit6Set,0,170
 00472900,FUN_00472900,named,DDiSceneEndHookRegister,0,126
 00472920,FUN_00472920,named,DDiSceneSampleHookRegister,0,164
-00472940,FUN_00472940,named,SceneRootObjectGet,0,60
+00472940,FUN_00472940,ported,SceneRootObjectGet,4,60
 00472950,FUN_00472950,named,DDiSceneObjectAllocate,0,1126
 00472a40,FUN_00472a40,named,DDiSceneObjectDestroy,0,82
 00472a50,FUN_00472a50,named,DDiSceneObjectDestroy,0,3205

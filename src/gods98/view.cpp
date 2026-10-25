@@ -909,3 +909,42 @@ void renderer_node_relative_position_set(const void* node, float x, float y)
     }
     cam_offset((CameraHandle*)handle, x, y, 0.0f);
 }
+
+/* ---- scene-root hook band (2026-10-24) ----------------------------------- *
+ * SceneRootObjectGet / DDiSceneObjectArgumentsNormalize — see view.hpp. The
+ * corpus's root global (DAT_0076add4) is written only by the unported
+ * renderer-side initializer, so the port carries it as a hooked static. */
+static void* s_scene_root;
+
+void scene_root_install(void* root) { s_scene_root = root; }
+void* scene_root_peek(void) { return s_scene_root; }
+
+/* SceneRootObjectGet (FUN_00472940) — the corpus's root-object read. */
+void* scene_root_object_get(void)
+{
+    return s_scene_root;
+}
+
+/* DDiSceneObjectArgumentsNormalize (FUN_00475900) — resolve the dispatch
+ * pair: the object slot rides through, and the second slot falls back to
+ * the root object's first slot when the caller passes NULL. */
+void scene_object_arguments_normalize(const void** obj, const void** alt,
+                                      void** out_obj, const void** out_alt)
+{
+    if (obj != NULL && out_obj != NULL) {
+        *out_obj = (void*)*obj; /* corpus: blind dereference */
+    }
+    if (out_alt == NULL) {
+        return;
+    }
+    if (alt != NULL) {
+        *out_alt = *alt; /* corpus: blind dereference */
+        return;
+    }
+    /* Deviation: a missing root answers NULL; the corpus strides it. */
+    const void* root_slot = NULL;
+    if (s_scene_root != NULL) {
+        __builtin_memcpy((void*)&root_slot, s_scene_root, sizeof root_slot);
+    }
+    *out_alt = root_slot;
+}

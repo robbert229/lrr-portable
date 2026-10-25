@@ -2363,6 +2363,20 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Scene-root argument normalization band** (2026-10-24; findings
+25/349/420/430): three rows land across `view.*` and `record.*`. The
+corpus's scene-object argument normalization (`scene_object_arguments_
+normalize`, 0x475900) is the front-end of the ported camera-handle
+primitives: the dispatch object rides out of the first argument's slot,
+and the second argument resolves to its own slot or, when NULL, falls
+back to the scene root object's first slot (the corpus's null-handle
+dispatch). The root global is written only by the unported renderer-side
+initializer, so it rides a module hook shared with the root read
+(`scene_root_object_get`, 0x472940). `record.*` takes the current-object
+field writer (`scene_current_object_set`, 0x477240): the interface
+record's `+0x14` slot store whose consumer stays on the vtable seam.
+`view_test` and `record_test` pin the hook, the fallback, and the slot.
+
 **Air-supply accumulator** (2026-10-24; findings 317/462): `level.*`
 ports `air_supply_amount_update` (0x424560). The entity's stats float
 `+0xDC` is read before the gate; a kind-4 entity skips the update unless
