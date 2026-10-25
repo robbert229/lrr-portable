@@ -2363,6 +2363,23 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**View-band matrix and ray math leaves** (2026-10-24; findings 309/363):
+nine rows land, all in `view.*`. The ray pair lands first:
+`point_along_ray` (0x479ab0, origin + t·dir with the corpus's component
+order) and `view_ray_intersection_test` (0x4798e0), which normalizes both
+direction vectors and solves the scaled ray through the ported plane
+parameter before advancing. The matrix band follows the existing
+zero/multiply pair: `matrix4_set_identity` (0x479e70), the
+identity-plus-translation-row setter (0x479e40), `matrix4_copy`
+(0x479eb0), the three rotation setters (0x479d50/0x479da0/0x479df0 —
+each writes the identity and overwrites its two-row block; the corpus
+reference names call two of them Z, the port names the blocks, and the
+x87 `fcos`/`fsin` extended-precision evaluation lands as the documented
+double-deviation cast), and the perspective projection quotients
+(0x40bd60, including the corpus's roundabout m[1] product).
+`view_test` pins the ray solve, the blocks at half-pi, and the zero
+pattern.
+
 **Terrain work-flag sweep, random activity attempt, and ray-plane grid
 pick** (2026-10-24; findings 88/450/451/472): three rows land across the
 terrain, ai, and view bands. `terrain_neighbor_work_flag_scan` (0x431580,
@@ -2387,22 +2404,18 @@ until it wraps, and zero rounds grid-pick the caller's untouched buffer.
 `level_test`, `ai_test`, and `view_test` pin the sweeps, the gates, and
 the plane descent.
 
-**View-band matrix and ray math leaves** (2026-10-24; findings 309/363):
-nine rows land, all in `view.*`. The ray pair lands first:
-`point_along_ray` (0x479ab0, origin + t·dir with the corpus's component
-order) and `view_ray_intersection_test` (0x4798e0), which normalizes both
-direction vectors and solves the scaled ray through the ported plane
-parameter before advancing. The matrix band follows the existing
-zero/multiply pair: `matrix4_set_identity` (0x479e70), the
-identity-plus-translation-row setter (0x479e40), `matrix4_copy`
-(0x479eb0), the three rotation setters (0x479d50/0x479da0/0x479df0 —
-each writes the identity and overwrites its two-row block; the corpus
-reference names call two of them Z, the port names the blocks, and the
-x87 `fcos`/`fsin` extended-precision evaluation lands as the documented
-double-deviation cast), and the perspective projection quotients
-(0x40bd60, including the corpus's roundabout m[1] product).
-`view_test` pins the ray solve, the blocks at half-pi, and the zero
-pattern.
+**Scene-pair set band** (2026-10-24; findings 25/435): `record.*` takes
+the two remaining pair-set leaves. `scene_object_pair_set_render_parameters`
+(0x4086c0) hands each handle's pose dispatch to the ported position and
+facing primitives — the dispatch's argument block `(x, y, 0)` and the
+constant `(0, 0, -1)` read as position plus facing.
+`scene_object_pair_set_callback_scalar` (0x408710) runs its scalar probe
+with the (x, y) pair and the third argument, then sets each handle's
+position to (x, y, 0): the corpus consumes the probe's undefined float
+return as the camera z, and the port pins it to zero (the sole call-site
+probe, the ported height adapter, answers void). Both stride the +4
+handle first, then the +0x7c partner when non-NULL, joining the already-
+ported pair apply/visibility leaves. `record_test` pins both bands.
 
 **Cell-command gate, system-word chain + voxel occupancy**
 (2026-10-24):

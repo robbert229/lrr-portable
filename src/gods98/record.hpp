@@ -355,6 +355,22 @@ void animation_object_visibility_set(const void* anim, uint32_t flag);
                                                 /* FUN_00406c90 */
 void scene_object_pair_apply_mode(const void* record, uint32_t flag);
                                                 /* FUN_00408670 */
+/* SceneObjectPairSetRenderParameters (FUN_004086c0): the pair's pose
+ * dispatch lands on the ported position + facing primitives — the corpus
+ * hands the dispatch (x, y, 0) plus the constant up vector (0, 0, -1),
+ * which the port reads as the position (x, y, 0) and facing (0, 0, -1).
+ * SceneObjectPairSetCallbackScalar (FUN_00408710): run the scalar probe
+ * (the sole call-site probe is the ported grid-operation height probe,
+ * which answers void) and set each handle's position to (x, y, 0) — the
+ * corpus consumes the probe's undefined float return as the z; the port
+ * pins it to zero. Both stride the +4 handle, then the +0x7c partner
+ * when non-NULL. */
+void scene_object_pair_set_render_parameters(void* pair, float x, float y);
+                                                /* FUN_004086c0 */
+typedef void (*SceneScalarProbe)(float x, float y, void* arg);
+void scene_object_pair_set_callback_scalar(void* pair, float x, float y,
+                                           SceneScalarProbe probe,
+                                           void* arg); /* FUN_00408710 */
 uint32_t animation_object_visibility_get(const void* anim);
                                                 /* FUN_004086a0 */
 void scene_assign_entity_owner(const void* scene, uint32_t owner);

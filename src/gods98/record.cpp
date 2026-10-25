@@ -4,6 +4,7 @@
 #include "record.hpp"
 #include "heap.hpp"
 #include "sound.hpp"
+#include "view.hpp"
 
 /* Byte-safe field reads: corpus dword/float slots at offsets that may
  * not be pointer-aligned on 64-bit hosts. */
@@ -718,6 +719,45 @@ void scene_object_pair_apply_mode(const void* record, uint32_t flag)
         scene_visibility_hook_call(partner, (int)flag);
     }
 }
+
+/* The pair band's shared pose apply: position (x, y, 0) plus the corpus's
+ * constant (0, 0, -1) orientation, through the ported primitives. */
+static void pair_handle_set_pose(void* h, float x, float y)
+{
+    cam_set_pos((CameraHandle*)h, x, y, 0.0f);
+    const float up[3] = { 0.0f, 0.0f, -1.0f };
+    cam_set_facing((CameraHandle*)h, up);
+}
+
+/* SceneObjectPairSetRenderParameters (FUN_004086c0): the pose dispatch's
+ * argument block (x, y, 0 / 0, 0, -1) reads as position + constant facing;
+ * the partner only when the +0x7c slot is non-NULL. */
+void scene_object_pair_set_render_parameters(void* pair, float x, float y)
+{
+    pair_handle_set_pose(rec_ptr(pair, 0x04), x, y);
+    void* partner = rec_ptr(pair, 0x7c);
+    if (partner != NULL) {
+        pair_handle_set_pose(partner, x, y);
+    }
+}
+
+/* SceneObjectPairSetCallbackScalar (FUN_00408710): run the scalar probe on
+ * the (x, y) pair with its third argument — the corpus consumes the probe's
+ * undefined float return as the camera z; the port pins it to zero (the
+ * sole call-site probe, the ported height adapter, answers void). */
+void scene_object_pair_set_callback_scalar(void* pair, float x, float y,
+                                           SceneScalarProbe probe, void* arg)
+{
+    if (probe != NULL) {
+        probe(x, y, arg);
+    }
+    cam_set_pos((CameraHandle*)rec_ptr(pair, 0x04), x, y, 0.0f);
+    void* partner = rec_ptr(pair, 0x7c);
+    if (partner != NULL) {
+        cam_set_pos((CameraHandle*)partner, x, y, 0.0f);
+    }
+}
+
 
 /* AnimationObjectVisibilityGet (FUN_004086a0) — the +4 object's flag bit 3
  * through the ported getter. */

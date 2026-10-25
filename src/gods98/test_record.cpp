@@ -7,8 +7,22 @@
 #include "gods98/record.hpp"
 #include "gods98/heap.hpp"
 #include "gods98/sound.hpp"
+#include "gods98/view.hpp"
 
 static int s_failures = 0;
+
+/* Recording probe for the pair callback-scalar band. */
+static int   s_probe_hits;
+static float s_probe_x;
+static float s_probe_y;
+static void* s_probe_arg;
+static void pair_probe(float x, float y, void* arg)
+{
+    ++s_probe_hits;
+    s_probe_x = x;
+    s_probe_y = y;
+    s_probe_arg = arg;
+}
 
 #define CHECK(cond, msg)                                                       \
     do {                                                                       \
@@ -886,6 +900,46 @@ int main(void)
         CHECK(scene_visibility_calls() == 3, "the second object rides the mode");
         scene_visibility_last_call(&last, &flag);
         CHECK(last == (void*)mate, "the partner call lands last");
+
+        /* SceneObjectPairSetRenderParameters + SetCallbackScalar (2026-10-24):
+         * the pose lands on the two handles as (x, y, 0) + facing (0,0,-1). */
+        {
+            CameraHandle a, b;
+            memset(&a, 0, sizeof a);
+            memset(&b, 0, sizeof b);
+            char pair[0x90];
+            memset(pair, 0, sizeof pair);
+            void* ap = &a;
+            __builtin_memcpy(pair + 0x04, &ap, sizeof ap);
+            scene_object_pair_set_render_parameters(pair, 3.5f, 4.5f);
+            CHECK(a.pos[0] == 3.5f && a.pos[1] == 4.5f && a.pos[2] == 0.0f
+                      && a.rot[0] == 0.0f && a.rot[1] == 0.0f
+                      && a.rot[2] == -1.0f,
+                  "the partnerless pose lands on the +4 handle");
+            void* bp = &b;
+            __builtin_memcpy(pair + 0x7c, &bp, sizeof bp);
+            scene_object_pair_set_render_parameters(pair, 1.0f, 2.0f);
+            CHECK(b.pos[0] == 1.0f && b.pos[1] == 2.0f
+                      && b.rot[2] == -1.0f,
+                  "the partner rides the pose");
+
+            /* The scalar band: probe runs once with (x, y, arg), and both
+             * handles get (x, y, 0) — the probe's float return is pinned
+             * to zero (the ported corpus probe answers void). */
+            s_probe_hits = 0;
+            scene_object_pair_set_callback_scalar(pair, 7.5f, 8.5f,
+                                                  pair_probe, pair);
+            CHECK(s_probe_hits == 1 && s_probe_x == 7.5f
+                      && s_probe_y == 8.5f && s_probe_arg == (void*)pair,
+                  "the probe runs once with the pair arguments");
+            CHECK(a.pos[0] == 7.5f && a.pos[1] == 8.5f
+                      && a.pos[2] == 0.0f
+                      && b.pos[0] == 7.5f && b.pos[1] == 8.5f,
+                  "both handles ride the probed position");
+            scene_object_pair_set_callback_scalar(pair, 1.0f, 1.0f,
+                                                  NULL, NULL);
+            CHECK(a.pos[0] == 1.0f, "the NULL probe is skipped, the store rides");
+        }
 
         /* GraphicsOverlayVisibilitySet: cache gate, folded flag. */
         scene_visibility_hook_reset();
