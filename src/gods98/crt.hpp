@@ -452,4 +452,11 @@ void* selection_marker_descriptor_peek(void);         /* port hook */
 void selection_marker_count_set(uint32_t count);      /* port hook */
 uint32_t selection_marker_count_peek(void);           /* port hook */
 
+/* OwnedResourceTreeRelease (FUN_0048c180, findings 386/438): releases the
+ * owned resource tree — the +0 payload, the +8 payload, the recursive
+ * right child at +4 (owning its node), and the node itself when owned.
+ * Deviation: the corpus strides dwords (x86 handles); the port reads the
+ * slots widened and guards the NULL node. */
+void owned_resource_tree_release(void** node, int own_node); /* FUN_0048c180 */
+
 #endif /* LEGORRR_GODS98_CRT_HPP */

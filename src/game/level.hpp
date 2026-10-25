@@ -792,6 +792,17 @@ void global_object_field8c_increment(LevelState* s);
 void global_object_field8c_subtract(LevelState* s, int amount);
 void global_object_field98_add(LevelState* s, int amount);
 void global_object_field98_clear(LevelState* s);
+
+/* EntityAvailableResourceSpend (FUN_00438720, findings 251/372): the +0x1f8
+ * gate zeroes the amount when raised; then, when the no-op callback probe
+ * (FUN_0041f8e0, whose unconsumed return register the port pins to 0 as a
+ * documented deviation) is below the amount, the resource hint rides the
+ * message bus as id 0xE and the answer is 0; otherwise the amount lands in
+ * the global object's +0x98 accumulator and the answer is 1. */
+int entity_available_resource_spend(LevelState* level, int amount,
+                                    const void* resource_hint);
+                                                /* FUN_00438720 */
+
 void level_state_field9c_add(LevelState* s, int amount);
 void global_object_field94_increment(LevelState* s);
 void global_object_fielda8_increment(LevelState* s);

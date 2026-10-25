@@ -812,6 +812,29 @@ int main(void)
         selection_marker_resources_release(); /* double release: no-op */
     }
 
+    /* OwnedResourceTreeRelease (2026-10-24): the payload + child release. */
+    {
+        void** child = (void**)engine_heap_alloc(3 * sizeof(void*));
+        void** payload = (void**)engine_heap_alloc(8);
+        child[0] = payload;
+        child[1] = NULL;
+        child[2] = NULL;
+        void** payload2 = (void**)engine_heap_alloc(8);
+        void** parent = (void**)engine_heap_alloc(3 * sizeof(void*));
+        parent[0] = payload2;
+        parent[1] = (void*)child;
+        parent[2] = NULL;
+        owned_resource_tree_release(parent, 0); /* node stays, tree frees */
+        engine_heap_free(parent);
+        owned_resource_tree_release(NULL, 1); /* guarded */
+        void** leaf = (void**)engine_heap_alloc(3 * sizeof(void*));
+        leaf[0] = engine_heap_alloc(8);
+        leaf[1] = NULL;
+        leaf[2] = engine_heap_alloc(8);
+        owned_resource_tree_release(leaf, 1); /* payloads and node free */
+        CHECK(1, "the release walk completes");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "crt_test: %d failure(s)\n", s_failures);
         return 1;

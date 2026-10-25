@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 856 | 33.4% |
+| ported | 861 | 33.6% |
 | anchored | 4 | 0.2% |
-| named | 1657 | 64.6% |
+| named | 1652 | 64.4% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (856 functions)
+  (861 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1657 functions)
+  citation yet (1652 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1662 (64.8%).**
+**Game logic remaining to port: 1657 (64.6%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -291,7 +291,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00415d00` | SaveMenuLayoutLoad |
 | `0x004169c0` | FrontEndStateChange |
 | `0x00416c80` | MenuEnter |
-| `0x00416e00` | ActiveObjectList |
 | `0x00416e20` | ListFindName |
 | `0x00416e70` | SavClearVisited |
 | `0x00416ed0` | ListAddName |
@@ -644,6 +643,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00449610` | EntityCoordinateRouteAndMark |
 | `0x00449700` | RouteStepCommandIssue |
 | `0x00449880` | BlockedCellApproachWeightWrite |
+| `0x00449980` | EntityActivityTerrainEligibilityTransition |
 | `0x00449ac0` | ProximityStepCommandIssueClearingGate |
 | `0x00449cd0` | SceneObjectStateHandleApplyValue |
 | `0x00449f50` | EntityTypeOperationDispatch |
@@ -1407,7 +1407,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0048c040` | StringCaseSubstringFind |
 | `0x0048c0c0` | LwoStringDuplicate |
 | `0x0048c120` | LwoTextureProjectionModeParse |
-| `0x0048c180` | OwnedResourceTreeRelease |
 | `0x0048c360` | LwoCurves |
 | `0x0048d870` | ModelObjectFree |
 | `0x0048d940` | CrtMathDispatchTableInitialize |

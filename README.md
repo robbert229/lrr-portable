@@ -2363,6 +2363,22 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Activity-gate + selector + tree-release band** (findings 251/469/371/378/386/438/251/372):
+`ai.*` ports `entity_dispatch_event31_for_pending_flag` (0x4437f0 — the
+type-3/pending-bit gate raises the +0x3e4 marker and re-registers activity
+0x31) and `entity_activity23_state_transition` (0x449a70 — the type-2
+half-word, then the bit-0x400-gated activity-0x23 pass through the idle
+register), `frontend.*` ports `active_object_list_word` (0x416e00 — the
+in-game/out-of-game selector over the two unowned active-object words as
+hooked statics), `crt.*` ports `owned_resource_tree_release` (0x48c180 —
+the payload, payload, right-child, own-node release walk widened), and
+`level.*` ports `entity_available_resource_spend` (0x438720 — the +0x1f8
+gate zeroes the amount, the no-op-probe branch dispatches message 0xE, and
+the accumulate branch lands in the global object's +0x98). `0x490280` and
+the Queue* LAB-thunk band are recorded in blocked.md. `ai_test`,
+`crt_test`, `level_test`, and `frontend_test` pin the gates, walks, and
+branches.
+
 **Handle-gate + activity chain + marker-release band** (findings 392/386/329/469/378/434):
 `engine.*` ports `global_handle_position_apply_if_present` (0x435580 — the
 unowned DAT_00556f3c handle gates the zero-position reposition seam, which

@@ -1410,6 +1410,22 @@ int main(int argc, char** argv)
         panel_enable_word_set(0u);
     }
 
+    /* ActiveObjectList word selector (2026-10-24). */
+    {
+        frontend_flow_word_set(2, 0); /* in-game */
+        int* w_in = active_object_list_word();
+        *w_in = 42;
+        frontend_flow_word_set(2, -1); /* out of game */
+        int* w_out = active_object_list_word();
+        CHECK(w_out != w_in, "the selector flips words with the mode");
+        *w_out = 7;
+        CHECK(*w_in == 42, "the out-of-game store leaves the in-game word");
+        frontend_flow_word_set(2, 5); /* back in-game */
+        CHECK(active_object_list_word() == w_in, "the in-game word returns");
+        *w_out = 0;
+        frontend_flow_word_set(2, 0);
+    }
+
     if (s_failures == 0) {
         printf("frontend: all tests passed\n");
         return 0;

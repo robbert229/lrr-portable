@@ -1342,6 +1342,30 @@ int main(int argc, char** argv)
               "a null record answers clear");
     }
 
+    /* EntityAvailableResourceSpend (2026-10-24): gate + branches. */
+    {
+        LevelState g;
+        memset(&g, 0, sizeof g);
+        int hint = 0;
+        CHECK(entity_available_resource_spend(&g, 5, &hint) == 0,
+              "the positive spend takes the dispatch branch");
+        CHECK(level_field98_get(&g) == 0u,
+              "the dispatch branch accumulates nothing");
+        CHECK(entity_available_resource_spend(&g, -3, NULL) == 1,
+              "the clear amount takes the accumulate branch");
+        CHECK((int)level_field98_get(&g) == -3,
+              "the negative amount lands in +0x98");
+        const uint32_t one = 1u;
+        __builtin_memcpy((char*)g.word + 0x1f8, &one, sizeof one);
+        CHECK(entity_available_resource_spend(&g, 9, NULL) == 1,
+              "the raised gate zeroes the amount");
+        CHECK((int)level_field98_get(&g) == -3,
+              "the gated spend adds zero");
+        const uint32_t zero = 0u;
+        __builtin_memcpy((char*)g.word + 0x1f8, &zero, sizeof zero);
+        entity_available_resource_spend(NULL, 4, NULL); /* guarded */
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "level_test: %d failure(s)\n", s_failures);
         return 1;

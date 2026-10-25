@@ -2578,3 +2578,14 @@ void panel_seam_last(void** out_res, float* out_x, float* out_y)
         *out_y = s_panel_seam_last_y;
     }
 }
+
+/* --- the active-object word selector (see frontend.hpp) --------------------
+ * DAT_00556fd0 (in-game) / DAT_00556fe4 (out) are unowned: zero-init
+ * statics here, addressed through the ported in-game test. */
+static int s_active_object_ingame;  /* DAT_00556fd0 role */
+static int s_active_object_outgame; /* DAT_00556fe4 role */
+
+int* active_object_list_word(void)
+{
+    return is_in_game() != 0 ? &s_active_object_ingame : &s_active_object_outgame;
+}

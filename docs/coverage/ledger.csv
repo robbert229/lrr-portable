@@ -100,7 +100,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00403c00,FUN_00403c00,named,EntityActivityRecordRemoveByType,0,1303
 00403d10,FUN_00403d10,ported,EntityCommandUnlinkByKind,7,2271
 00403ef0,FUN_00403ef0,named,PendingRecordCallbackDispatch,0,94
-00403f30,FUN_00403f30,ported,EntityActivityListRegister,3,300
+00403f30,FUN_00403f30,ported,EntityActivityListRegister,5,300
 00403f60,FUN_00403f60,ported,TaskRecordKind14RemoveIfHead,1,171
 00404030,FUN_00404030,ported,CmdLinkHead,3,354
 00404070,FUN_00404070,ported,CmdLinkTail,1,235
@@ -449,7 +449,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00416dd0,FUN_00416dd0,ported,QuitMenuProbe,1,60
 00416de0,FUN_00416de0,ported,LevelStartFlag,1,59
 00416df0,FUN_00416df0,ported,MenuOptionsFlag,1,59
-00416e00,FUN_00416e00,named,ActiveObjectList,0,198
+00416e00,FUN_00416e00,ported,ActiveObjectList,2,198
 00416e20,FUN_00416e20,named,ListFindName,0,323
 00416e70,FUN_00416e70,named,SavClearVisited,0,656
 00416ed0,FUN_00416ed0,named,ListAddName,0,988
@@ -615,7 +615,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0041f880,FUN_0041f880,ported,GlobalObjectField8CSubtract,1,156
 0041f8a0,FUN_0041f8a0,ported,GlobalObjectField98Add,1,156
 0041f8c0,FUN_0041f8c0,ported,GlobalObjectField98Clear,1,118
-0041f8e0,FUN_0041f8e0,ported,NoOpCallback,2,41
+0041f8e0,FUN_0041f8e0,ported,NoOpCallback,4,41
 0041f900,FUN_0041f900,ported,UpgradeResourceCheck,2,258
 0041f920,FUN_0041f920,ported,LevelStateField9CAdd,1,156
 0041f940,FUN_0041f940,ported,,1,173
@@ -986,7 +986,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004403d0,FUN_004403d0,named,LevelDebugCellRetargetDispatch,0,4178
 004407b0,FUN_004407b0,named,SpatialEntityCallbackQuery,0,427
 004408c0,FUN_004408c0,named,SpatialEntityCallbackQueryAtOptionalCoordinate,0,426
-004409e0,FUN_004409e0,ported,EntityActivityRequestSet,12,228
+004409e0,FUN_004409e0,ported,EntityActivityRequestSet,6,228
 00440a10,FUN_00440a10,named,AttachedEntityDirectionVectorUpdate,0,2160
 00440bf0,FUN_00440bf0,named,ObjectListFieldAssignAll,0,324
 00440c30,FUN_00440c30,named,GridRouteSearchAdapter,0,291
@@ -1045,7 +1045,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00447950,FUN_00447950,named,EntityDirectionalActivityStart,0,1592
 00447b00,FUN_00447b00,ported,EntityDispatchEvent5AndSetFlag,3,172
 00447b30,FUN_00447b30,named,EntityActivityTick,0,1038
-00447c40,FUN_00447c40,ported,SceneActivityUpdateDispatch,10,2101
+00447c40,FUN_00447c40,ported,SceneActivityUpdateDispatch,5,2101
 00447ea0,FUN_00447ea0,named,EntityTypeBehaviorUpdate,0,8839
 004487c0,FUN_004487c0,named,EntityClearNestedState8Fields,0,276
 00448800,FUN_00448800,named,EntityMoveToCellCoordinates,0,577
@@ -1065,7 +1065,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00449610,FUN_00449610,named,EntityCoordinateRouteAndMark,0,870
 00449700,FUN_00449700,named,RouteStepCommandIssue,0,1600
 00449880,FUN_00449880,named,BlockedCellApproachWeightWrite,0,1341
-00449980,FUN_00449980,ported,EntityActivityTerrainEligibilityTransition,3,880
+00449980,FUN_00449980,named,EntityActivityTerrainEligibilityTransition,0,880
 00449a70,FUN_00449a70,ported,EntityActivity23StateTransition,3,298
 00449ac0,FUN_00449ac0,named,ProximityStepCommandIssueClearingGate,0,1552
 00449c00,FUN_00449c00,ported,,4,76
@@ -2245,7 +2245,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0048c040,FUN_0048c040,named,StringCaseSubstringFind,0,1052
 0048c0c0,FUN_0048c0c0,named,LwoStringDuplicate,0,1265
 0048c120,FUN_0048c120,named,LwoTextureProjectionModeParse,0,701
-0048c180,FUN_0048c180,named,OwnedResourceTreeRelease,0,289
+0048c180,FUN_0048c180,ported,OwnedResourceTreeRelease,3,289
 0048c1d0,FUN_0048c1d0,ported,LwoReadBigEndianFloat,3,419
 0048c210,FUN_0048c210,ported,LwoPoints,1,1334
 0048c360,FUN_0048c360,named,LwoCurves,0,640

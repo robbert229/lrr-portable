@@ -246,4 +246,18 @@ void     entity_state_flags_set(uint32_t value);           /* port hook */
  * reinforce (7) — the corpus's short-circuit chain, reproduced in order. */
 int scene_object_has_task_type_4_5_7(const EntitySlot* e); /* FUN_004493e0 */
 
+/* --- entity activity gate band (2026-10-24; findings 251/469) -------------
+ * EntityDispatchEvent31ForPendingFlag (FUN_004437f0): a type-3 entity whose
+ *   +0x3e8 pending bit 0x80000000 is raised and whose +0x3e4 bit 0x20000000
+ *   is not raises that bit and re-registers through the ported activity set
+ *   with name-table index 0x31 (the dispatch bookkeeping folds there).
+ * EntityActivity23StateTransition (FUN_00449a70): a type-2 entity raises
+ *   +0x3e4 bit 0x800; then while the +0x3e0 bit 0x400 is clear it raises
+ *   bit 0x40000000, re-registers through the activity set with index 0x23,
+ *   and attaches the idle chain record (the ported 0x403f30 half).
+ * Deviation: the corpus dereferences the entity blindly. */
+void entity_dispatch_event31_for_pending_flag(EntitySlot* e);
+                                                /* FUN_004437f0 */
+void entity_activity23_state_transition(EntitySlot* e); /* FUN_00449a70 */
+
 #endif /* LEGORRR_GAME_AI_HPP */
