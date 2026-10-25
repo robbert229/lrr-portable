@@ -2363,6 +2363,17 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Fixed-record slots + flag predicate** (findings 375/251/324/105):
+`resource.*` ports `fixed_record_slot_resource_release` (0x48bfc0 — the
+installed-slot heap free and flag clear) and `fixed_record_slot_resource_get`
+(0x48bff0 — the installed slot's resource word), the corpus's stride-0x10
+slot table (DAT_005756a0, whose only writer is the unported stream opener)
+as sixteen zero-init slots with install hooks, and `entity.*` ports
+`entity_type_and_state_flag_predicate` (0x45e400 — the excluded-kind set
+{4, 5, 8, 9, 0xC..0xE, 0x10..0x13} answers zero; everything else answers the
+inverse of the stats state word's bit 0x20000000). `resource_test` and
+`entity_test` pin the slots and the predicate.
+
 **String, stream-buffer, scale + attach band** (findings 375/93/437/398/251/270):
 `crt.*` ports `string_prefix_reserve` (0x4907c0 — the strlen scan feeding the
 overlapping shift that opens the prefix gap, tail NUL included) and

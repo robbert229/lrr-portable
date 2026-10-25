@@ -837,3 +837,19 @@ int task_type_and_condition_check(const EntitySlot* target, int condition)
     }
     return 1;
 }
+
+/* EntityTypeAndStateFlagPredicate (FUN_0045e400) — see entity.hpp. */
+int entity_type_and_state_flag_predicate(const EntitySlot* e)
+{
+    if (e == NULL) {
+        return 0; /* deviation: the corpus strides blindly */
+    }
+    switch (e->type) {
+    case 4: case 5: case 8: case 9: case 0xc: case 0xd:
+    case 0xe: case 0x10: case 0x11: case 0x12: case 0x13:
+        return 0;
+    default:
+        break;
+    }
+    return ((~entity_state_flags_get(e)) >> 29) & 1u; /* ~flags >> 0x1d & 1 */
+}

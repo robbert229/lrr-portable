@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 870 | 33.9% |
+| ported | 873 | 34.0% |
 | anchored | 4 | 0.2% |
-| named | 1643 | 64.1% |
+| named | 1640 | 64.0% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (870 functions)
+  (873 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1643 functions)
+  citation yet (1640 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1648 (64.3%).**
+**Game logic remaining to port: 1645 (64.2%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -806,7 +806,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0045da90` | UiRenderRecordCreate |
 | `0x0045db00` | TexturedSceneObjectDrawAtPosition |
 | `0x0045dbc0` | TerrainViewTileGeometryBuild |
-| `0x0045e400` | EntityTypeAndStateFlagPredicate |
 | `0x0045e6d0` | TerrainPointPickResolve |
 | `0x0045e820` | ViewportPointCallbackDispatch |
 | `0x0045e9e0` | TerrainTileStyleResolve |

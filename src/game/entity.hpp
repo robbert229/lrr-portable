@@ -273,4 +273,12 @@ int entity_quad_mesh_render_record_allowed(const EntitySlot* e);
 int task_type_and_condition_check(const EntitySlot* target, int condition);
                                                 /* FUN_0043c490 */
 
+/* EntityTypeAndStateFlagPredicate (FUN_0045e400, findings 324/105): the
+ * predicate answers the inverted bit 0x20000000 of the entity's stats state word
+ * (the ported +0x148 reader) for entity kinds outside the corpus's excluded
+ * set {4, 5, 8, 9, 0xC, 0xD, 0xE, 0x10, 0x11, 0x12, 0x13}; those kinds answer
+ * zero whatever the flags say.
+ * Deviation: the corpus strides the entity blindly; the port guards it. */
+int entity_type_and_state_flag_predicate(const EntitySlot* e); /* FUN_0045e400 */
+
 #endif /* LEGORRR_GAME_ENTITY_HPP */
