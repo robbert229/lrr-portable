@@ -295,4 +295,17 @@ int object_filter_matches_action_target(const void* filter_rec,
                                         const void* target_rec);
                                                 /* FUN_00404f50 */
 
+/* EntityDetachCarriedObjectAndResetState (FUN_0043bbc0): the carrier
+ * detach. Only type-3 carriers act: a linked type-6 carry loses the pair
+ * (link, state word, attach back-pointer, the flag word's 0x400 gate) and
+ * both +0x340 floats drop to -1.0, and a linked reference has its dword
+ * folded into the level's field 0x9c. The flag word's bit 0x800000 always
+ * rides along with the type-3 pass.
+ * Deviations: the corpus strides the slot words blindly (the port guards
+ * the slot pointer); the field-0x9c fold threads the level block the
+ * corpus reads through its global. */
+void entity_detach_carried_object_and_reset_state(struct EntitySlot* e,
+                                                  struct LevelState* lvl);
+                                                /* FUN_0043bbc0 */
+
 #endif /* LEGORRR_GAME_ENTITY_HPP */

@@ -8,6 +8,7 @@
 #include <unistd.h>
 
 #include "game/entity.hpp"
+#include "game/level.hpp"
 #include "gods98/media.hpp"
 #include "game/game.hpp"
 #include "gods98/block.hpp"
@@ -1094,6 +1095,63 @@ int main(int argc, char** argv)
         CHECK(object_filter_matches_action_target(NULL, targ) == 0
                   && object_filter_matches_action_target(filt, NULL) == 0,
               "the null records answer zero");
+    }
+
+    /* EntityDetachCarriedObjectAndResetState (2026-10-24): the carrier
+     * detach gates, the pair clear, and the field-0x9c fold. */
+    {
+        static EntitySlot carrier, carried, stranger;
+        static LevelState dlvl;
+        int ref_value = 7;
+        memset(&carrier, 0, sizeof carrier);
+        memset(&carried, 0, sizeof carried);
+        memset(&stranger, 0, sizeof stranger);
+        memset(&dlvl, 0, sizeof dlvl);
+
+        carrier.type = 2;
+        carrier.field_340 = 5.0f;
+        entity_detach_carried_object_and_reset_state(&carrier, &dlvl);
+        CHECK(carrier.field_340 == 5.0f && carrier.flags_3e8 == 0u,
+              "the type gate keeps non-type-3 slots untouched");
+
+        carrier.type = 3;
+        entity_detach_carried_object_and_reset_state(&carrier, &dlvl);
+        CHECK(carrier.field_340 == -1.0f && carrier.flags_3e8 == 0x800000u,
+              "the bare type-3 reset lands");
+
+        carried.type = 6;
+        carried.attach_304 = &carrier;
+        carried.field_340 = 42.0f;
+        carrier.carry_link_308 = &carried;
+        carrier.carry_state_324 = 9;
+        carrier.flags_3e0 = 0x400u;
+        entity_detach_carried_object_and_reset_state(&carrier, &dlvl);
+        CHECK(carrier.carry_link_308 == NULL
+                  && carrier.carry_state_324 == 0
+                  && carried.attach_304 == NULL
+                  && (carrier.flags_3e0 & 0x400u) == 0u
+                  && carried.field_340 == -1.0f
+                  && carrier.field_340 == -1.0f,
+              "the detach clears the carried half and the pair");
+
+        carrier.carry_link_308 = &stranger;
+        stranger.type = 5;
+        stranger.field_340 = 3.0f;
+        entity_detach_carried_object_and_reset_state(&carrier, &dlvl);
+        CHECK(carrier.carry_link_308 == &stranger
+                  && stranger.field_340 == 3.0f,
+              "the non-6 carry stays attached (the corpus type test)");
+
+        carrier.carry_link_308 = NULL;
+        carrier.carry_ref_348 = &ref_value;
+        entity_detach_carried_object_and_reset_state(&carrier, &dlvl);
+        CHECK((int)level_field9c_get(&dlvl) == 7,
+              "the reference dword folds into the level's 9c");
+        carrier.carry_ref_348 = NULL;
+        entity_detach_carried_object_and_reset_state(&carrier, NULL);
+        level_state_field9c_add(NULL, 9); /* the null guard is a no-op */
+        CHECK((int)level_field9c_get(&dlvl) == 7,
+              "the absent reference keeps the fold quiet");
     }
 
     if (s_failures != 0) {

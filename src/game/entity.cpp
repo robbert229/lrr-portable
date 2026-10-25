@@ -6,7 +6,6 @@
 #include "ai.hpp"
 #include "entity.hpp"
 #include "level.hpp"
-#include "cmd.hpp"
 #include "gods98/model.hpp"
 #include "gods98/heap.hpp"
 #include "util.hpp"
@@ -896,4 +895,31 @@ int object_filter_matches_action_target(const void* filter_rec,
         }
     }
     return 1;
+}
+
+/* EntityDetachCarriedObjectAndResetState (FUN_0043bbc0) — see entity.hpp.
+ * The carried half is read through the link as a native slot pointer; the
+ * corpus strides its dword words blindly. */
+void entity_detach_carried_object_and_reset_state(EntitySlot* e,
+                                                  LevelState* lvl)
+{
+    if (e == NULL) {
+        return; /* deviation: the corpus dereferences the slot blindly */
+    }
+    if (e->type != 3) {
+        return;
+    }
+    EntitySlot* carried = (EntitySlot*)e->carry_link_308;
+    if (carried != NULL && carried->type == 6) {
+        e->carry_link_308 = NULL;
+        e->carry_state_324 = 0;
+        carried->attach_304 = NULL;
+        e->flags_3e0 &= ~0x400u;
+        carried->field_340 = -1.0f;
+    }
+    if (e->carry_ref_348 != NULL) {
+        level_state_field9c_add(lvl, *(const int*)e->carry_ref_348);
+    }
+    e->field_340 = -1.0f;
+    e->flags_3e8 |= 0x800000u;
 }

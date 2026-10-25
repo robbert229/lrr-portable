@@ -601,4 +601,24 @@ uint32_t map_store_pair_word(int which);        /* port hook: 0/1 live pair */
 uint32_t map_store_last_word(int which);        /* port hook: 0/1 last pair */
 uint32_t map_store_kind_peek(void);             /* port hook */
 
+struct GameContext;
+
+/* TextLayoutOffsetForCentering (FUN_00411320): the centered-widget pointer
+ * test. With the center flag raised the widget rect shifts left by half
+ * its width before the closed-edge hit test runs; the corpus discards the
+ * hit result in the caller's EAX, so the port returns it (deviation). */
+int text_layout_offset_for_centering(int x, int y, int rect_x, int rect_y,
+                                     int rect_w, int rect_h, int center);
+                                                /* FUN_00411320 */
+
+/* SelectionEntityCodeResolve (FUN_0041b9c0): the selection entity code.
+ * While the interaction word's bit 8 stands with bit 7 clear, the stored
+ * code answers unchanged; otherwise the first selected record's high flag
+ * bit picks 0x22 (raised) or 0x23 (clear).
+ * Deviations: the corpus strides the interaction word and the context
+ * global blindly (the port threads the state block); a NULL first
+ * selection answers 0x23 where the corpus dereferences. */
+int selection_entity_code_resolve(const struct GameContext* ctx,
+                                  int* code_out); /* FUN_0041b9c0 */
+
 #endif /* LEGORRR_GAME_FRONTEND_HPP */
