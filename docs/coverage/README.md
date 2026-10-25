@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 941 | 36.7% |
+| ported | 948 | 37.0% |
 | anchored | 4 | 0.2% |
-| named | 1572 | 61.3% |
+| named | 1565 | 61.0% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (941 functions)
+  (948 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1572 functions)
+  citation yet (1565 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1577 (61.5%).**
+**Game logic remaining to port: 1570 (61.2%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -291,14 +291,8 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00415d00` | SaveMenuLayoutLoad |
 | `0x004169c0` | FrontEndStateChange |
 | `0x00416c80` | MenuEnter |
-| `0x00416e20` | ListFindName |
 | `0x00416e70` | SavClearVisited |
-| `0x00416ed0` | ListAddName |
-| `0x00416f40` | ListHasItem |
-| `0x00416fb0` | ListSetNode |
-| `0x00417020` | ListGetNode |
 | `0x00417090` | LevelNodeGet |
-| `0x004171c0` | SavTreeWalk |
 | `0x00417280` | RegistryValueLookupWithLock |
 | `0x004172d0` | RegistryValueIndexLookupOrNotFound |
 | `0x004172f0` | SavTreeWalk2 |
@@ -711,7 +705,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00450780` | TerrainCellChangeQueueFlush |
 | `0x004507d0` | TerrainCellEdgeVectorQuery |
 | `0x00450a80` | CellListMinDistanceScaleApply |
-| `0x00451180` | CellVariantEntryMatchCheck |
 | `0x00451230` | TerrainCellSurfaceVectorWrite |
 | `0x00451450` | TerrainCellSurfaceVectorOffsetAdd |
 | `0x004515e0` | TerrainCellRayHitTest |
