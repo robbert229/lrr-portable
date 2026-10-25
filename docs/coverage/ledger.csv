@@ -534,7 +534,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00419f30,FUN_00419f30,ported,InfoMessageQueueTick,1,1105
 0041a080,FUN_0041a080,ported,IncidentMessageTextConsumer,1,1215
 0041a1a0,FUN_0041a1a0,named,UIEntryHitTestAndDispatch,0,880
-0041a250,FUN_0041a250,named,ScrollOffsetFromCursorUpdate,0,242
+0041a250,FUN_0041a250,ported,ScrollOffsetFromCursorUpdate,2,242
 0041a290,FUN_0041a290,ported,ScreenRightEdgeCacheRefresh,3,147
 0041a2c0,FUN_0041a2c0,ported,InfoMessageTimerDecay,6,239
 0041a2f0,FUN_0041a2f0,ported,IncidentMessageStateGet,1,60
@@ -916,7 +916,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00439860,FUN_00439860,named,LocalizedObjectNameGet,0,743
 00439930,FUN_00439930,ported,CopyTwoDwordPairToOutputs,2,144
 00439950,FUN_00439950,named,ToolNameStringResourcesLoad,0,346
-00439990,FUN_00439990,named,EntityActivitySceneStateUpdate,0,274
+00439990,FUN_00439990,ported,EntityActivitySceneStateUpdate,2,274
 004399c0,FUN_004399c0,named,EntityFlag400AndHealthThresholdCheck,0,399
 00439a20,FUN_00439a20,named,GatedStepCommandIssueWithTargetRecord,0,1313
 00439b80,FUN_00439b80,named,TaskTargetCellEligibilityCheck,0,344
@@ -1284,7 +1284,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00459a50,FUN_00459a50,named,BubbleImagesPositionConfigLoad,0,755
 00459b00,FUN_00459b00,named,RenderEntityScreenRing,0,3905
 00459f50,FUN_00459f50,named,IndexedPanelResourcePositionApply,0,429
-00459fd0,FUN_00459fd0,named,PanelResourcePositionApplyIfEnabled,0,286
+00459fd0,FUN_00459fd0,ported,PanelResourcePositionApplyIfEnabled,2,286
 0045a030,FUN_0045a030,named,UiPanelNameTablesInit,0,3065
 0045a240,FUN_0045a240,named,ScrollPanelControlsInitialize,0,123
 0045a270,FUN_0045a270,named,PanelCategoryInteractionStateReset,0,774
@@ -1332,7 +1332,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0045c3f0,FUN_0045c3f0,named,AdvisorProgressBarFillDraw,0,623
 0045c4a0,FUN_0045c4a0,ported,GlobalValueSet_0050080c,1,81
 0045c4b0,FUN_0045c4b0,named,PanelResourcePositionUpdateIfEnabled,0,529
-0045c520,FUN_0045c520,named,PanelResourceHandleAndDimensionsStore,0,323
+0045c520,FUN_0045c520,ported,PanelResourceHandleAndDimensionsStore,2,323
 0045c580,FUN_0045c580,named,UiOverlayAnimationAdvance,0,492
 0045c5f0,FUN_0045c5f0,named,UiOverlayAnimationApply,0,485
 0045c670,FUN_0045c670,named,AdvisorAnimationSceneLookupAndRequest,0,240
@@ -1601,7 +1601,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0046ce10,FUN_0046ce10,named,EntityPayloadType1Release,0,916
 0046ced0,FUN_0046ced0,named,PairedResourceStateSet,0,318
 0046cf20,FUN_0046cf20,named,SceneEntityAnimationTracksSetEnabled,0,107
-0046cf40,FUN_0046cf40,named,RecordFlagBitTest,0,287
+0046cf40,FUN_0046cf40,ported,RecordFlagBitTest,3,287
 0046cf80,FUN_0046cf80,ported,EntityTypeMaskGet,1,85
 0046cf90,FUN_0046cf90,named,RecordIndexedEntriesRebuildAndRefresh,0,135
 0046cfc0,FUN_0046cfc0,ported,SixResourceSlotsSetState,3,294
@@ -1966,11 +1966,11 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0047d720,FUN_0047d720,ported,FindFirstSetBit32,2,226
 0047d740,FUN_0047d740,named,SurfacePixelRowsFlipWithScratch,0,2087
 0047d800,FUN_0047d800,named,Bitmap24BitSurfaceConvert,0,2526
-0047d9d0,FUN_0047d9d0,ported,BitmapSurfaceLoad,6,2025
+0047d9d0,FUN_0047d9d0,ported,BitmapSurfaceLoad,7,2025
 0047db90,FUN_0047db90,ported,RGBChannelsPack,3,166
 0047dbc0,FUN_0047dbc0,named,ResourceRecordAddRef,0,249
 0047dbf0,FUN_0047dbf0,ported,ImageSurfaceBlitTransformed,1,530
-0047dcb0,FUN_0047dcb0,ported,SurfaceBlitRect,2,1647
+0047dcb0,FUN_0047dcb0,ported,SurfaceBlitRect,3,1647
 0047de60,FUN_0047de60,named,DirectDrawSurfaceDescriptionGet,0,578
 0047ded0,FUN_0047ded0,named,DirectDrawSurfaceUnlock,0,117
 0047def0,FUN_0047def0,named,DirectDrawSurfacePixelFormatGet,0,643

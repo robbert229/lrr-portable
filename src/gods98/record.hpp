@@ -360,4 +360,10 @@ void ui_record_callback_forward(const void* const* ui_record,
                                 uint32_t* out_a, uint32_t* out_b);
                                                 /* FUN_0045a630 */
 
+/* RecordFlagBitTest (FUN_0046cf40, findings 367/432): the selected bit of
+ * the record's +0x130 word, optionally rejecting bits already raised in
+ * the associated type mask. The NULL guards are the documented deviations. */
+uint32_t record_flag_bit_test(const void* record, uint32_t bit_index,
+                              int reject_masked);   /* FUN_0046cf40 */
+
 #endif /* LEGORRR_GODS98_RECORD_HPP */

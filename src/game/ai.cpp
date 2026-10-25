@@ -982,3 +982,21 @@ int entity_set_activity_place(EntitySlot* e)
     e->flags_3e4 |= 0x200u;
     return 1;
 }
+
+/* --- the entity activity scene-state leaf (see ai.hpp) ---------------------
+ * DAT_004dee14's observed halves ride here as a zero-init static; the
+ * corpus reads its global level word through the threaded GameContext. */
+static uint32_t s_entity_state_flags;
+
+void entity_activity_scene_state_update(GameContext* ctx)
+{
+    if ((s_entity_state_flags & 0x10u) != 0u) {
+        s_entity_state_flags |= 8u;
+        return;
+    }
+    s_entity_state_flags |= 4u;
+    global_object_field98_clear(ctx != NULL ? ctx->level : NULL);
+}
+
+uint32_t entity_state_flags_peek(void) { return s_entity_state_flags; }
+void     entity_state_flags_set(uint32_t value) { s_entity_state_flags = value; }

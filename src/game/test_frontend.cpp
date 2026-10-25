@@ -1329,6 +1329,64 @@ int main(int argc, char** argv)
         CHECK(1, "the measure wrapper runs as the corpus's void lane");
     }
 
+    /* The panel resource + scroll leaf band (2026-10-24). */
+    {
+        char res;
+        /* PanelResourcePositionApplyIfEnabled: gate + bubble offsets. */
+        panel_seam_reset();
+        panel_enable_word_set(0u);
+        panel_resource_position_apply_if_enabled(&res, 1, 2);
+        CHECK(panel_seam_calls() == 0, "the clear gate stays silent");
+        panel_enable_word_set(0x10u);
+        bubble_offsets_set(1.5f, 2.5f);
+        panel_resource_position_apply_if_enabled(&res, 10, 20);
+        void* last_res = NULL;
+        float lx = 0.0f, ly = 0.0f;
+        panel_seam_last(&last_res, &lx, &ly);
+        CHECK(panel_seam_calls() == 1 && last_res == &res && lx == 11.5f
+                  && ly == 22.5f,
+              "the enabled pass rides the seam with the bubble offsets");
+        /* PanelResourceHandleAndDimensionsStore: the seam + stores. */
+        panel_seam_reset();
+        panel_surface_handle_set((void*)1);
+        panel_resource_handle_and_dimensions_store(&res, 64u, 32u, 0x99u);
+        CHECK(panel_surface_handle_peek() == NULL && panel_seam_calls() == 1,
+              "the load seam answers NULL and records");
+        float w = 0.0f, hh = 0.0f;
+        uint32_t extra = 0u;
+        panel_dimensions_peek(&w, &hh, &extra);
+        CHECK(w == 64.0f && hh == 32.0f && extra == 0x99u,
+              "the dimensions land in the window");
+        /* ScrollOffsetFromCursorUpdate: pair fold + metrics + cache. */
+        char metric[0x30];
+        memset(metric, 0, sizeof metric);
+        char ui_rec[0x828];
+        memset(ui_rec, 0, sizeof ui_rec);
+        indexed_record_pointer_set(0, metric);
+        panel_ui_record_set(ui_rec);
+        const uint32_t lo = 11u, hi = 4u;
+        __builtin_memcpy(ui_rec + 0x820, &lo, sizeof lo);
+        __builtin_memcpy(ui_rec + 0x824, &hi, sizeof hi);
+        scroll_offset_from_cursor_update();
+        uint32_t mx = 0u, my = 0u;
+        indexed_text_metrics_pair_get(0, &mx, &my);
+        CHECK(mx == 7u && my == 0u, "the clamped pair difference lands");
+        CHECK(screen_right_edge_cache_peek() == 7u, "the cache follows");
+        const uint32_t low2 = 2u, high2 = 9u;
+        __builtin_memcpy(ui_rec + 0x820, &low2, sizeof low2);
+        __builtin_memcpy(ui_rec + 0x824, &high2, sizeof high2);
+        scroll_offset_from_cursor_update(); /* clamps to zero */
+        indexed_text_metrics_pair_get(0, &mx, &my);
+        CHECK(mx == 0u, "the negative difference clamps at zero");
+        panel_ui_record_set(NULL);
+        scroll_offset_from_cursor_update(); /* guarded pair */
+        indexed_text_metrics_pair_get(0, &mx, &my);
+        CHECK(mx == 0u, "the clear record forwards zero");
+        indexed_text_metrics_pair_set(0, 0u, 0u);
+        indexed_record_pointer_set(0, NULL);
+        panel_enable_word_set(0u);
+    }
+
     if (s_failures == 0) {
         printf("frontend: all tests passed\n");
         return 0;

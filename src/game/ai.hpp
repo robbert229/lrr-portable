@@ -221,4 +221,16 @@ void entity_queue_for_rockfall_processing_if_eligible(EntitySlot* e);
 void entity_dispatch_event5_and_set_flag(EntitySlot* e); /* FUN_00447b00 */
 int  entity_set_activity_place(EntitySlot* e);           /* FUN_00448c50 */
 
+/* --- entity activity scene-state leaf (2026-10-24; findings 251/469) -------
+ * EntityActivitySceneStateUpdate (FUN_00439990): when the manager flag
+ * word's bit 0x10 is raised it raises bit 8 and returns; otherwise it
+ * raises bit 4 and clears the level object's +0x98 field through the
+ * ported global-object mutator. Deviation: DAT_004dee14 has no ported
+ * owner (the ai-tick docs describe the word), so the two observed bits
+ * ride a zero-init static here; the corpus's global level pointer is
+ * threaded as a GameContext argument (the module's ctx convention). */
+void entity_activity_scene_state_update(GameContext* ctx); /* FUN_00439990 */
+uint32_t entity_state_flags_peek(void);                    /* port hook */
+void     entity_state_flags_set(uint32_t value);           /* port hook */
+
 #endif /* LEGORRR_GAME_AI_HPP */
