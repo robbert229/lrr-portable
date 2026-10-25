@@ -926,6 +926,42 @@ int main(void)
               "the out-of-range limb guard stays quiet (deviation)");
     }
 
+    /* UInt96HasNoBitsAtOrAbove (FUN_00497900) + UInt96ClearFromBit
+     * (FUN_004979e0) — corpus MSB-first numbering: bit n sits in limb
+     * n / 32 at value bit 31 - n % 32. */
+    {
+        uint32_t vA[3] = { 1u, 0u, 0u }; /* bit 31 only */
+        CHECK(crt_uint96_has_no_bits_at_or_above(vA, 31) == 1u,
+              "nothing lives above bit 31 in the first limb");
+        CHECK(crt_uint96_has_no_bits_at_or_above(vA, 30) == 0u,
+              "bit 31 is above bit 30");
+        CHECK(crt_uint96_has_no_bits_at_or_above(vA, 32) == 1u,
+              "the second limb starts empty");
+        CHECK(crt_uint96_has_no_bits_at_or_above(vA, 96) == 1u,
+              "the out-of-range limb guard reads all-clear (deviation)");
+        CHECK(crt_uint96_has_no_bits_at_or_above(NULL, 5) == 1u,
+              "the NULL limb guard reads all-clear (deviation)");
+
+        uint32_t vB[3] = { 0x80000002u, 0u, 0u }; /* bits 0 + 31 */
+        CHECK(crt_uint96_clear_from_bit(vB, 0) == 0u
+                  && vB[0] == 0x80000000u && vB[1] == 0u && vB[2] == 0u,
+              "the increment branch bumps bit - 1, keeps the at-or-above "
+              "mask, and the corpus's undefined return is pinned 0");
+        uint32_t vC[3] = { 1u, 0u, 0u };
+        CHECK(crt_uint96_clear_from_bit(vC, 31) == 0u
+                  && vC[0] == 1u && vC[1] == 0u && vC[2] == 0u,
+              "a top-of-limb bit survives its own clear (the mask keeps "
+              "the at-or-above half)");
+        uint32_t vD[3] = { 0u, 1u, 1u }; /* bits 63 + 95 */
+        CHECK(crt_uint96_clear_from_bit(vD, 63) == 0u
+                  && vD[0] == 0u && vD[1] == 3u && vD[2] == 0u,
+              "the bit-62 bump lands in limb 1 and limb 2 zeroes out");
+        uint32_t vE[3] = { 0xC0000000u, 0u, 0u }; /* bits 0 + 1 */
+        CHECK(crt_uint96_clear_from_bit(vE, 1) == 0u
+                  && vE[0] == 0xC0000000u && vE[1] == 0u && vE[2] == 0u,
+              "clear-from-bit-1 erases bits 2 up but keeps 0 and 1");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "crt_test: %d failure(s)\n", s_failures);
         return 1;

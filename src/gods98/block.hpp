@@ -99,4 +99,20 @@ int   block_get_bool(BlockFile* bf, const char* path);
  * nothing (documented deviation). */
 const char* registry_path_split(const char* path, char* out);
 
+/* BlockTextTokenPoolDestroy (FUN_00478e20): frees every nonzero pool slot
+ * through the engine heap, then clears the head cursor and the resident
+ * flag. The corpus leaves the freed slot pointers dangling; the port
+ * NULLs them (anti-dangling deviation). The pool's corpus storage — 32
+ * slots at DAT_00506498, head cursor DAT_00506518, resident flag
+ * DAT_00506520 — is module-local here with the hooks below (the pool
+ * init/grow entry points are not ported); DAT_00506518's second corpus
+ * role as crt.cpp's record-list head is a documented aliasing the port
+ * does not model across translation units. */
+void  block_text_token_pool_destroy(void);
+void  block_text_token_pool_slot_set(int slot, void* token);
+void* block_text_token_pool_slot_peek(int slot);
+void  block_text_token_pool_head_set(void* head);
+void* block_text_token_pool_head_peek(void);
+int   block_text_token_pool_resident_peek(void);
+
 #endif /* LEGORRR_BLOCK_HPP */

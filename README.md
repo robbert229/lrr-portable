@@ -2363,6 +2363,26 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**uint96 bit-band clear, token-pool teardown + pressed-state reads**
+(2026-10-24):
+`crt.*` gains `crt_uint96_has_no_bits_at_or_above` (0x497900 — the
+MSB-first limb scan above the named bit) and `crt_uint96_clear_from_bit`
+(0x4979e0 — bumps bit − 1 only while some bit lives above bit + 1, keeps
+the at-or-above half of the limb mask, zeroes the higher limbs; the
+corpus's undefined increment return pins 0). `block.*` ports
+`block_text_token_pool_destroy` (0x478e20 — frees the 32-slot pool words
+through the engine heap and clears the head cursor and resident flag; the
+init/grow entry points are unported, so the corpus storage lives
+module-local behind install/peek hooks, and the head word's corpus
+aliasing with the `crt.*` record-list head is documented, not modeled
+across translation units). `input.*` adds `input_action_pressed_get`
+(0x41c8f0) and `input_binding_pressed_get` (0x41c950) — same
+0x10000000 engine-state gate, action 0x49 hard-wired not-pressed, and the
+bit-2-complement inverted read under the system-state word's bit 0 (an
+empty table word reads *pressed* there, corpus-truth pinned). `crt_test`,
+`block_test`, and `input_test` pin the masks, the bump, the teardown, and
+the gates.
+
 **Linked-object clear, keyed entry removal + bit-indexed add**
 (2026-10-24):
 `entity.*` ports `entity_clear_linked_object_state` (0x447780 — behind the

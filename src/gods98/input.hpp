@@ -138,4 +138,19 @@ uint32_t input_entry_flag8_get(int entry);
 void player_input_flag8_set_clear(int kind, int action, int set);
 uint32_t player_input_flag8_get(int kind, int action);
 
+struct EngineContext;  /* engine.hpp: the DAT_00556ecc state word lives here */
+
+/* InputActionPressedGet / InputBindingPressedGet (FUN_0041c8f0 /
+ * FUN_0041c950): "is this action/binding pressed right now?" Both read the
+ * engine-state word (DAT_00556ecc) bit 0x10000000 as a "pressed-yes-every-
+ * thing" gate — NOT the 0x40000000 RuntimeFlag40000000Get mask — and both
+ * consult the system-state word (DAT_004ff980) bit 0 for the inverted
+ * alternate reading. Action 0x49 is hard-wired not-pressed. The corpus
+ * indexes its table dwords blindly (the port bounds-checks, answering
+ * zero outside the window — deviation). */
+int input_action_pressed_get(const struct EngineContext* ctx, int action,
+                             int alt);
+int input_binding_pressed_get(const struct EngineContext* ctx, int kind,
+                              int entry, int alt);
+
 #endif /* LEGORRR_INPUT_HPP */

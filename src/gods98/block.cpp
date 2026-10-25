@@ -439,3 +439,53 @@ const char* registry_path_split(const char* path, char* out)
     *out = '\0';
     return path;
 }
+
+/* BlockTextTokenPool (FUN_00478e20 destroy; init/grow unported) — see
+ * block.hpp. Corpus storage stays module-local; the slot word array runs
+ * DAT_00506498..DAT_00506514 (the destroy loop's end condition is exactly
+ * the head cursor word), so the port's 32 slots match the corpus 1:1. */
+#define BLOCK_TOKEN_POOL_SLOTS 32
+static void* s_token_pool_slots[BLOCK_TOKEN_POOL_SLOTS];
+static void* s_token_pool_head;      /* DAT_00506518 role */
+static int   s_token_pool_resident;  /* _DAT_00506520 role */
+
+void block_text_token_pool_destroy(void)
+{
+    for (int i = 0; i < BLOCK_TOKEN_POOL_SLOTS; ++i) {
+        if (s_token_pool_slots[i] != NULL) {
+            engine_heap_free(s_token_pool_slots[i]);
+            s_token_pool_slots[i] = NULL; /* deviation: corpus dangles */
+        }
+    }
+    s_token_pool_head = NULL;
+    s_token_pool_resident = 0;
+}
+
+void block_text_token_pool_slot_set(int slot, void* token)
+{
+    if (slot >= 0 && slot < BLOCK_TOKEN_POOL_SLOTS) {
+        s_token_pool_slots[slot] = token;
+    }
+}
+
+void* block_text_token_pool_slot_peek(int slot)
+{
+    return (slot >= 0 && slot < BLOCK_TOKEN_POOL_SLOTS)
+               ? s_token_pool_slots[slot]
+               : NULL;
+}
+
+void block_text_token_pool_head_set(void* head)
+{
+    s_token_pool_head = head;
+}
+
+void* block_text_token_pool_head_peek(void)
+{
+    return s_token_pool_head;
+}
+
+int block_text_token_pool_resident_peek(void)
+{
+    return s_token_pool_resident;
+}

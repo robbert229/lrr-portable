@@ -1393,3 +1393,63 @@ void crt_uint96_increment_at_bit(uint32_t limbs[3], int bit)
         limbs[i] = sum;
     }
 }
+
+/* UInt96HasNoBitsAtOrAbove (FUN_00497900) — see crt.hpp. The bit-index
+ * numbering is the corpus's MSB-first one (bit n lives in limb n / 32 at
+ * word position 31 - n % 32), and the in-limb mask
+ * ~(-1 << (31 - bit % 32)) covers the positions STRICTLY below the named
+ * bit, i.e. the bits above it; equal-index bits don't count. */
+uint32_t crt_uint96_has_no_bits_at_or_above(const uint32_t limbs[3], int bit)
+{
+    if (limbs == NULL) {
+        return 1u; /* deviation: the corpus strides the limbs blindly */
+    }
+    const int limb = (bit + (int)((bit >> 31) & 0x1fu)) >> 5;
+    if (limb < 0 || limb > 2) {
+        return 1u; /* deviation: the corpus strides the limbs blindly */
+    }
+    const unsigned char b = (unsigned char)(bit >> 31);
+    int idx = ((((unsigned char)bit ^ b) - b) & 0x1f) ^ b;
+    idx = (idx - b) & 0x1f;
+    const uint32_t mask = ~((uint32_t)0xffffffffu << (31u - (uint32_t)idx));
+    if ((limbs[limb] & mask) != 0u) {
+        return 0u;
+    }
+    for (int i = limb + 1; i < 3; ++i) {
+        if (limbs[i] != 0u) {
+            return 0u;
+        }
+    }
+    return 1u;
+}
+
+/* UInt96ClearFromBit (FUN_004979e0) — see crt.hpp. The increment branch
+ * runs only while "bit is set AND something lives at or above bit + 1",
+ * the inverse of the intuition the name invites; after that the limb keeps
+ * the at-or-above half (mask -1 << (31 - bit % 32), the complement of the
+ * has-no-bits mask) and every higher limb goes to zero. */
+uint32_t crt_uint96_clear_from_bit(uint32_t limbs[3], int bit)
+{
+    if (limbs == NULL) {
+        return 0u; /* deviation: the corpus strides the limbs blindly */
+    }
+    const int limb = (bit + (int)((bit >> 31) & 0x1fu)) >> 5;
+    if (limb < 0 || limb > 2) {
+        return 0u; /* deviation: the corpus strides the limbs blindly */
+    }
+    const unsigned char b = (unsigned char)(bit >> 31);
+    int idx = ((((unsigned char)bit ^ b) - b) & 0x1f) ^ b;
+    idx = (idx - b) & 0x1f;
+    const uint32_t shift = 31u - (uint32_t)idx;
+    uint32_t result = 0u; /* corpus local_4: the increment's undefined
+                           * return value, pinned 0 (deviation) */
+    if ((limbs[limb] & (1u << shift)) != 0u &&
+        crt_uint96_has_no_bits_at_or_above(limbs, bit + 1) == 0u) {
+        crt_uint96_increment_at_bit(limbs, bit - 1);
+    }
+    limbs[limb] &= ((uint32_t)0xffffffffu) << shift;
+    for (int i = limb + 1; i < 3; ++i) {
+        limbs[i] = 0u;
+    }
+    return result;
+}

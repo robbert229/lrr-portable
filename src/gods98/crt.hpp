@@ -494,5 +494,21 @@ void crt_uint96_add(uint32_t* dst, const uint32_t* src); /* FUN_00499fe0 */
  * Deviation: the corpus strides the limbs blindly (the port guards 0..2). */
 void crt_uint96_increment_at_bit(uint32_t limbs[3], int bit);
                                                 /* FUN_00497970 */
+/* UInt96HasNoBitsAtOrAbove (FUN_00497900): 1 when no bit at or above the
+ * index is set. The corpus's in-limb mask tests the bits ABOVE the named
+ * bit (1 << (31 - bit % 32) is the named bit itself, the complement mask
+ * clears it), then requires the higher limbs all zero. Deviation: the
+ * corpus strides the limbs blindly (the port guards 0..2, NULL reads
+ * "all clear"). */
+uint32_t crt_uint96_has_no_bits_at_or_above(const uint32_t limbs[3], int bit);
+                                                /* FUN_00497900 */
+/* UInt96ClearFromBit (FUN_004979e0): when the named bit is set AND some
+ * bit at or above bit + 1 exists, first bumps bit - 1 with the increment
+ * chain; then keeps the at-or-above bit half of the limb and zeroes every
+ * higher limb. The corpus returns FUN_00497970's undefined value through
+ * local_4 — pinned 0 here (deviation), everything else faithful, guards
+ * included. */
+uint32_t crt_uint96_clear_from_bit(uint32_t limbs[3], int bit);
+                                                /* FUN_004979e0 */
 
 #endif /* LEGORRR_GODS98_CRT_HPP */

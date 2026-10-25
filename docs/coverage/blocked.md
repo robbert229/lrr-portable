@@ -176,3 +176,27 @@ port does not model. They stay out until their dependency lands:
 | `PopEntityStateOverride` (`0x459240`) | The stack-pop arm tail-calls `EntityBuildingIndexSet` (`0x469c10`) — same stats-config-layer blocker as `EntityAnimationStateSet` (`0x439cd0`) above; the completed-objective stack itself rides the ported `GameContext` OSF table. | Stats-config layer (shared blocker); then wrap the pop arm over the OSF pop + building-index + rename. |
 | `QueueActionRequestType2` (`0x41f230`), `QueueActionRequestValue` (`0x41f270`), `QueueActionRequestFlag100000` (`0x41f2b0`), `QueueActionRequestIndex` (`0x41f340`), `QueueCallbackRequest390` (`0x41f3c0`), `QueueCallbackRequest3E0` (`0x41f400`) | Build the on-stack request frame and hand it to `QueueEnqueueRequest` (`0x4377b0`) with a bare `LAB_*` code-thunk body (`LAB_0041f190/1f390/1f3e0`, no pseudocode) — the queue dispatcher seam blocker family. | Recover the thunk bodies with the queue-dispatcher model, then wrap. |
 | `CrtFloatingPointFeatureProbe` (`0x490280`) | Win32 `GetModuleHandleA("KERNEL32")`/`GetProcAddress("IsProcessorFeaturePresent")` and the live import call — pure OS feature-probe seam with no portable behavior the port models. | OS/runtime seam (shared with the CRT register-stub family); model as a feature flag if a caller ever branches on it. |
+
+## Scanner triage (2026-10-24)
+
+Rows surfaced by the named-wrapper scan and triaged this iteration; each
+stays blocked until the named dependency lands. (Five earlier triage picks
+— the uint96 pair, the token pool, and the two pressed-getters — were
+re-triaged as portable and landed in iteration 116, so they are not
+recorded here.)
+
+| Function (`address`) | Blocker | Next action |
+| --- | --- | --- |
+| `ScrollRectPayloadRecordCreate` (`0x463810`) | Reads and writes through the scroll-rect payload's surface-handle object — every field access rides the surface vtable/COM seam (`DDiSurface*`-style dispatch) that the port does not model. | Surface-object handle model (shared renderer-COM family). |
+| `WaypointVectorRandomScaleApply` (`0x44d710`) | Indexes the waypoint record band under `DAT_004eae**` and scales it with an x87 `float10` multiply whose load/store rounding the port cannot pin without the renderer waypoint records and an x87 model. | Waypoint record band plus x87 float10 model. |
+| `MenuShow` (`0x413e20`) | Walks the menu item pointer array (`DAT_005572xx` band) and its per-item draw blocks — the menu-item machinery behind the frontend's menu model is unported, so there is no observable effect to pin. | Menu-item pointer-array model with the frontend menu layer. |
+| `InfoPanelStringEntriesInitialize` (`0x4636b0`) | Walks a varargs triplet list into the `DAT_005521xx` info-panel string band; both the varargs walker contract and the string band have no port owner. | Info-panel string band, then the varargs init leaf. |
+| `LightEffectsMoveParametersStore` (`0x44cef0`) | Copies the light-effects move parameter set through `DAT_004eadd8`/`DAT_004eaddc` — the light-effects parameter band belongs to the renderer effects layer, which the port does not model. | Light-effects parameter band (renderer effects seam). |
+| `TerrainCellPaletteResourceAtGridPosition` (`0x429160`) | Maps grid coordinates through the `DAT_005560d4 + 0x7c`/`+ 0xb8` band into palette-resource records — the grid→palette resource association lives in the unported level-resource bookkeeping. | Grid-to-palette resource band in the level/resource seam. |
+| `AnimationObjectTransformSet` (`0x406dc0`) | Delegates the pose write to the camera facing/pose layer (`cam_set_facing` side of the camera module) — the animation object's transform owner is that unported pose seam. | Camera/animation pose seam. |
+| `SurfaceVectorNormalize` (`0x4422a0`) | Tail call into `0x44a200`, the entity-type component resolver, which the port answers zero (object layer TODO) — the normalize's object lookup has no observable behavior. | Object-layer model behind the component resolver (shared with `EntityTransformPositionGet`). |
+| `AdvisorAnimationEndCleanup` (`0x4011c0`) | Strides the advisor records at `DAT_004b2e04` (`stride 0x24`) and touches their animation-complete words — no port owner for the advisor record band. | Advisor record band with the advisor/mission layer. |
+| `UiOverlayAnimationApply` (`0x45c5f0`) | Drives the `DAT_005008xx` overlay animation band (timers, scales) — the overlay runtime band is unported reference state. | Overlay band in the frontend/UI layer, then the apply leaf. |
+| `AdvisorTextBoxRecordCommit` (`0x46a9e0`) | Commits into the `DAT_005036xx` advisor-text band with `__ftol` float→int rounding of the layout fields — band unported and the x87 rounding mode affects the committed integers. | Advisor text band plus x87 `__ftol` rounding model. |
+| `PriorityLabelLayoutApply` (`0x45cf00`) | Scans the two parallel priority-word bands to find the layout slot — both band owners are unported reference state with no accessor pair to write through. | Priority-band model (HUD/layout layer). |
+| `CellResourceEntryMatches` (`0x40af40`) | Matches through the record identity pair with the `+0x330` gate word and derives the task kind via `0x439200` — the record identity band and the task-kind selector's owner have no port model. | Record identity pair plus the `0x439200` task-kind model. |

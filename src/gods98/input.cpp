@@ -270,3 +270,51 @@ uint32_t player_input_flag8_get(int kind, int action)
     }
     return table[action] & 8u;
 }
+
+/* InputActionPressedGet (FUN_0041c8f0) — see input.hpp. Action 0x49 ('I')
+ * is hard-wired 0 before any table read; the gate is the engine-state word
+ * read verbatim (bit 0x10000000 — NOT the 0x40000000 the
+ * RuntimeFlag40000000Get port masks); alt == the corpus's param_2, and the
+ * inverted reading is taken only when the system-state word agrees. The
+ * table behind s_input_entry_flags is the corpus's DAT_004dd60c dwords. */
+int input_action_pressed_get(const EngineContext* ctx, int action, int alt)
+{
+    if (action == 0x49) {
+        return 0;
+    }
+    if (ctx != NULL && (ctx->state & 0x10000000u) != 0u) {
+        return 1; /* deviation: a NULL context reads the gate clear */
+    }
+    if (action < 0 || action >= INPUT_FLAG_TABLE_SLOTS) {
+        return 0; /* deviation: the corpus indexes blindly */
+    }
+    const uint32_t word = s_input_entry_flags[action];
+    if (alt != 0 && (system_state_flags_get() & 1u) != 0u) {
+        return (int)((~word >> 2) & 1u);
+    }
+    return (int)(word & 1u);
+}
+
+/* InputBindingPressedGet (FUN_0041c950) — see input.hpp. Same gate and
+ * inverted-reading shape, with the kind 1 / kind 4 flag tables (the
+ * corpus's DAT_004dd9a4 / DAT_004dd9a8 dwords) selected through
+ * player_flags_table; any other kind falls through to not-pressed. */
+int input_binding_pressed_get(const EngineContext* ctx, int kind, int entry,
+                              int alt)
+{
+    if (ctx != NULL && (ctx->state & 0x10000000u) != 0u) {
+        return 1; /* deviation: a NULL context reads the gate clear */
+    }
+    const uint32_t* table = player_flags_table(kind);
+    if (table == NULL) {
+        return 0;
+    }
+    if (entry < 0 || entry >= INPUT_FLAG_TABLE_SLOTS) {
+        return 0; /* deviation: the corpus indexes blindly */
+    }
+    const uint32_t word = table[entry];
+    if (alt != 0 && (system_state_flags_get() & 1u) != 0u) {
+        return (int)((~word >> 2) & 1u);
+    }
+    return (int)(word & 1u);
+}

@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 894 | 34.9% |
+| ported | 899 | 35.1% |
 | anchored | 4 | 0.2% |
-| named | 1619 | 63.1% |
+| named | 1614 | 62.9% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (894 functions)
+  (899 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1619 functions)
+  citation yet (1614 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1624 (63.3%).**
+**Game logic remaining to port: 1619 (63.1%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -354,8 +354,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0041c6e0` | PointerActionStateDispatch |
 | `0x0041c7b0` | InputActionStateUpdate |
 | `0x0041c800` | CatalogSlotFlagUpdate |
-| `0x0041c8f0` | InputActionPressedGet |
-| `0x0041c950` | InputBindingPressedGet |
 | `0x0041cab0` | IndexedEntityValueGet |
 | `0x0041caf0` | InputBindingValueGet |
 | `0x0041cb90` | InputBindingDefaultValueGet |
@@ -1104,7 +1102,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004789a0` | MusicMixerVolumeGet |
 | `0x004789c0` | WindowsMixerControlInit |
 | `0x00478df0` | BlockTextTokenPoolInit |
-| `0x00478e20` | BlockTextTokenPoolDestroy |
 | `0x00479110` | ReadAngleSettingRadians |
 | `0x00479170` | ConfigRgbVectorRead |
 | `0x00479490` | BlockTextTokenPoolGrow |
@@ -1540,8 +1537,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00497770` | CrtFpuControlWordUpdate |
 | `0x004977b0` | CrtFpuControlWordUpdateMask |
 | `0x004977d0` | CrtControlFlagsTranslate |
-| `0x00497900` | UInt96HasNoBitsAtOrAbove |
-| `0x004979e0` | UInt96ClearFromBit |
 | `0x00497a80` | UInt96Copy |
 | `0x00497ad0` | UInt96ShiftRight |
 | `0x00497b90` | CrtExtended80ToBinaryFloat |
