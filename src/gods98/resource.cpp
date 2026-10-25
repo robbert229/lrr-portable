@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "resource.hpp"
+#include "heap.hpp"
 
 #define RESOURCE_MAX_WADS 10
 #define RESOURCE_PATH_MAX 4096
@@ -535,4 +536,42 @@ void resource_free(Resource* r)
     free(r->data);
     free(r->name);
     free(r);
+}
+
+/* --- the fixed-record slot resources (see resource.hpp) -------------------- */
+#define FIXED_RECORD_SLOTS 16
+static void* s_fixed_slot[FIXED_RECORD_SLOTS];
+static int   s_fixed_flag[FIXED_RECORD_SLOTS];
+
+void fixed_record_slot_resource_release(int slot)
+{
+    if (slot < 0 || slot >= FIXED_RECORD_SLOTS) {
+        return; /* deviation: the corpus strides the index blindly */
+    }
+    if (s_fixed_flag[slot] != 0) {
+        engine_heap_free(s_fixed_slot[slot]);
+        s_fixed_slot[slot] = NULL;
+        s_fixed_flag[slot] = 0;
+    }
+}
+
+void* fixed_record_slot_resource_get(int slot)
+{
+    if (slot < 0 || slot >= FIXED_RECORD_SLOTS) {
+        return NULL; /* deviation: the corpus strides blindly */
+    }
+    return s_fixed_flag[slot] != 0 ? s_fixed_slot[slot] : NULL;
+}
+
+void fixed_record_slot_install(int slot, void* resource)
+{
+    if (slot >= 0 && slot < FIXED_RECORD_SLOTS) {
+        s_fixed_slot[slot] = resource;
+        s_fixed_flag[slot] = 1;
+    }
+}
+
+int fixed_record_slot_flag_peek(int slot)
+{
+    return (slot >= 0 && slot < FIXED_RECORD_SLOTS) ? s_fixed_flag[slot] : 0;
 }

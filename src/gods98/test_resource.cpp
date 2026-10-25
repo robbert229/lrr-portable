@@ -17,6 +17,7 @@
 #include <sys/stat.h> /* mkdir */
 
 #include "resource.hpp"
+#include "heap.hpp"
 
 static int s_failures = 0;
 
@@ -287,6 +288,26 @@ int main(int argc, char** argv)
     }
     if (real_dir != NULL) {
         test_real(real_dir);
+    }
+
+    /* Fixed-record slot resources (2026-10-24): the install/get/release. */
+    {
+        void* res = engine_heap_alloc(8);
+        fixed_record_slot_install(3, res);
+        CHECK(fixed_record_slot_resource_get(3) == res
+                  && fixed_record_slot_flag_peek(3) == 1,
+              "the installed slot answers its resource");
+        CHECK(fixed_record_slot_resource_get(4) == NULL,
+              "an untouched slot answers null");
+        fixed_record_slot_resource_release(3);
+        CHECK(fixed_record_slot_resource_get(3) == NULL
+                  && fixed_record_slot_flag_peek(3) == 0,
+              "the release frees the resource and clears the flag");
+        fixed_record_slot_resource_release(3); /* idempotent */
+        CHECK(fixed_record_slot_resource_get(-1) == NULL
+                  && fixed_record_slot_resource_get(16) == NULL
+                  && fixed_record_slot_flag_peek(99) == 0,
+              "the window guards answer clear");
     }
 
     if (s_failures == 0) {

@@ -102,4 +102,19 @@ int32_t resource_read(Resource* r);
 /* Release the handle and its payload. */
 void resource_free(Resource* r);
 
+/* --- fixed-record slot resources (2026-10-24; findings 375/251) ------------
+ * The corpus's fixed-record slot table (DAT_005756a0, stride 0x10: resource
+ *   word, installed flag, two stream words) feeds the wad memory-stream
+ *   band. FixedRecordSlotResourceRelease (FUN_0048bfc0): when the slot is
+ *   installed, frees the slot's resource through the engine heap and clears
+ *   the flag. FixedRecordSlotResourceGet (FUN_0048bff0): answers the slot's
+ *   resource word when installed, zero otherwise.
+ * Deviation: the table has no ported owner (its only corpus writer is the
+ *   unported stream opener), so it lands as sixteen zero-init slots with
+ *   install hooks; the corpus strides the index blindly. */
+void fixed_record_slot_resource_release(int slot); /* FUN_0048bfc0 */
+void* fixed_record_slot_resource_get(int slot);    /* FUN_0048bff0 */
+void fixed_record_slot_install(int slot, void* resource); /* port hook */
+int  fixed_record_slot_flag_peek(int slot);        /* port hook */
+
 #endif /* LEGORRR_RESOURCE_HPP */

@@ -1368,7 +1368,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0045daf0,FUN_0045daf0,ported,UiRenderRecordFree,1,80
 0045db00,FUN_0045db00,named,TexturedSceneObjectDrawAtPosition,0,581
 0045dbc0,FUN_0045dbc0,named,TerrainViewTileGeometryBuild,0,6350
-0045e400,FUN_0045e400,named,EntityTypeAndStateFlagPredicate,0,400
+0045e400,FUN_0045e400,ported,EntityTypeAndStateFlagPredicate,3,400
 0045e660,FUN_0045e660,ported,RectContainsPointHalfOpen,3,371
 0045e6d0,FUN_0045e6d0,named,TerrainPointPickResolve,0,1007
 0045e820,FUN_0045e820,named,ViewportPointCallbackDispatch,0,838
@@ -2238,8 +2238,8 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0048be00,FUN_0048be00,named,FixedRecordSlotAllocate,0,464
 0048be40,FUN_0048be40,ported,WadEntryMemoryStreamOpen,1,1208
 0048bf70,FUN_0048bf70,ported,WadPathOpen,2,405
-0048bfc0,FUN_0048bfc0,named,FixedRecordSlotResourceRelease,0,200
-0048bff0,FUN_0048bff0,named,FixedRecordSlotResourceGet,0,163
+0048bfc0,FUN_0048bfc0,ported,FixedRecordSlotResourceRelease,2,200
+0048bff0,FUN_0048bff0,ported,FixedRecordSlotResourceGet,2,163
 0048c010,FUN_0048c010,named,WadStreamLengthGet,0,177
 0048c030,FUN_0048c030,named,WadMemoryStreamBufferGet,0,80
 0048c040,FUN_0048c040,named,StringCaseSubstringFind,0,1052

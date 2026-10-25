@@ -1018,6 +1018,30 @@ int main(int argc, char** argv)
         }
     }
 
+    /* EntityTypeAndStateFlagPredicate (2026-10-24): set + flag gate. */
+    {
+        EntitySlot e;
+        memset(&e, 0, sizeof e);
+        CHECK(entity_type_and_state_flag_predicate(&e) == 1,
+              "an included kind with clear flags answers one");
+        static char rec[0x150];
+        memset(rec, 0, sizeof rec);
+        const uint32_t bit = 0x20000000u;
+        __builtin_memcpy(rec + 0x148, &bit, sizeof bit);
+        e.stats_record = rec;
+        CHECK(entity_type_and_state_flag_predicate(&e) == 0,
+              "the raised flag bit silences the predicate");
+        e.type = 0xe;
+        CHECK(entity_type_and_state_flag_predicate(&e) == 0,
+              "an excluded kind answers zero");
+        e.type = 1;
+        memset(rec + 0x148, 0, 4);
+        CHECK(entity_type_and_state_flag_predicate(&e) == 1,
+              "the cleared flag re-arms the predicate");
+        CHECK(entity_type_and_state_flag_predicate(NULL) == 0,
+              "the null entity answers zero");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "entity_test: %d failure(s)\n", s_failures);
         return 1;
