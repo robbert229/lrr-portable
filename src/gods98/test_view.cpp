@@ -608,6 +608,51 @@ int main(void)
               "the perspective quotients land with the zeros");
     }
 
+    /* RandomReachableGridPointSelect (2026-10-24): the ray-descending
+     * grid pick, faithful plane geometry and plane-z quirk. */
+    {
+        EngineContext ec = {};
+        float hit[3] = { 1.0f, 1.0f, 1.0f };
+        const float down[3] = { 0.0f, 0.0f, 1.0f };
+        const float p[3] = { 0.0f, 0.0f, -100.0f };
+        int gx = -1, gy = -1;
+        random_reachable_grid_point_select(&ec, p, down, hit, &gx, &gy, 1);
+        CHECK(hit[0] == 0.0f && hit[1] == 0.0f && hit[2] == -50.0f
+                  && gx == 0 && gy == 0,
+              "the first descent lands on the z=-50 plane");
+        random_reachable_grid_point_select(&ec, p, down, hit, &gx, &gy, 2);
+        CHECK(hit[2] == 0.0f && gx == 0 && gy == 0,
+              "the second iteration drops the plane onto the height");
+        random_reachable_grid_point_select(&ec, p, down, hit, &gx, &gy, 0);
+        CHECK(gx == 0 && gy == 0, "rounds of zero grid-picks the buffer");
+    }
+    {
+        /* Bound voxel: the plane descends onto the surface byte. */
+        static uint8_t lvl[0x284];
+        static uint8_t vox[4 * 0x48];
+        memset(lvl, 0, sizeof lvl);
+        memset(vox, 0, sizeof vox);
+        const int w = 2, h = 2;
+        memcpy(lvl + 0x14, &w, sizeof w);
+        memcpy(lvl + 0x18, &h, sizeof h);
+        const void* vp = vox;
+        memcpy(lvl + 0xb8, &vp, sizeof vp);
+        vox[3 * 0x48 + 0x04] = 7; /* cell (1,1) surface byte */
+        EngineContext ctx = {};
+        ctx.level_block = lvl;
+        float hit[3];
+        const float down[3] = { 0.0f, 0.0f, 1.0f };
+        const float p[3] = { 1.0f, 1.0f, -10.0f };
+        int gx = -1, gy = -1;
+        random_reachable_grid_point_select(&ctx, p, down, hit, &gx, &gy, 1);
+        CHECK(hit[0] == 1.0f && hit[1] == 1.0f && hit[2] == -50.0f
+                  && gx == 1 && gy == 1,
+              "the descent hits the z=-50 plane off the surface byte");
+        random_reachable_grid_point_select(&ctx, p, down, hit, &gx, &gy, 2);
+        CHECK(hit[2] == 7.0f && gx == 1 && gy == 1,
+              "the plane rides the voxel height for the second round");
+    }
+
     if (s_failures == 0) {
         printf("view_test: PASS\n");
         return 0;

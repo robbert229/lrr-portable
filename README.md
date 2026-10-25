@@ -2363,6 +2363,30 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Terrain work-flag sweep, random activity attempt, and ray-plane grid
+pick** (2026-10-24; findings 88/450/451/472): three rows land across the
+terrain, ai, and view bands. `terrain_neighbor_work_flag_scan` (0x431580,
+`level.*`) is the work-flag breadth-first sweep: a double-buffered
+float-pair queue from one `(w + h) * 0x20` engine-heap block, each round
+draining its page and handing flagged neighbours (work bit `0x20000`) to
+the `TerrainCellMutation` fold before clearing them and requeueing; the
+corpus quirks ride along faithfully — the enqueue stores the entry's
+col-bound float (col+1) as x so the queue drifts one column per hop, and
+the self-skip compares that bound float against the queue-buffer pointer
+and never lands, so the seed requeues too. `entity_random_activity_attempt`
+(0x443670, `ai.*`) draws the shared RNG word up to five times under the
+bit-`0x400` and mask-word gates, folds each draw (`% 0x15 + 0x38`, the
+code band) through the activity-set/registration pair, and answers 1 with
+bit `0x8000` raised on the first draw the dispatch takes (the
+early-return clause; the per-type runner return stays the scene seam).
+`random_reachable_grid_point_select` (0x450560, `view.*`) iterates a ray
+down through the z-plane at `(0, 0, -50)` `rounds` times, letting the
+terrain height ride back into the plane's z so later rounds descend, and
+grid-picks the final hit; the `!= 0` loop test makes a negative count run
+until it wraps, and zero rounds grid-pick the caller's untouched buffer.
+`level_test`, `ai_test`, and `view_test` pin the sweeps, the gates, and
+the plane descent.
+
 **View-band matrix and ray math leaves** (2026-10-24; findings 309/363):
 nine rows land, all in `view.*`. The ray pair lands first:
 `point_along_ray` (0x479ab0, origin + t·dir with the corpus's component

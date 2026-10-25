@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 910 | 35.5% |
+| ported | 913 | 35.6% |
 | anchored | 4 | 0.2% |
-| named | 1603 | 62.5% |
+| named | 1600 | 62.4% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (910 functions)
+  (913 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1603 functions)
+  citation yet (1600 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1608 (62.7%).**
+**Game logic remaining to port: 1605 (62.6%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -583,7 +583,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00442b10` | EntityMovementAccumulatorApply |
 | `0x00442f80` | EntityPoseOrientationDispatch |
 | `0x00443510` | SceneObjectPosePositionSync |
-| `0x00443670` | TryRandomEntityActionFromCodeRange |
 | `0x00443710` | AdjacentPositionCandidateFind |
 | `0x00443840` | EntityRouteCellCandidateAccept |
 | `0x004438b0` | PathStepAdvanceAndArrivalCheck |

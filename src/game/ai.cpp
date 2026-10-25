@@ -1079,6 +1079,56 @@ void entity_activity23_state_transition(EntitySlot* e)
     }
 }
 
+/* --- random activity attempt (2026-10-24) --------------------------------- */
+
+/* The corpus's shared RNG word (DAT_004afcc8), modelled module-locally
+ * the way media.cpp and sound.cpp do — same MSVCRT-style LCG, same
+ * 15-bit draw through thunk_FUN_0048e170. */
+static uint32_t s_activity_rand_state = 1;
+
+static int activity_random_draw(void)
+{
+    s_activity_rand_state = s_activity_rand_state * 214013u + 2531011u;
+    return (int)((s_activity_rand_state >> 16) & 0x7fffu);
+}
+
+/* TryRandomEntityActionFromCodeRange (FUN_00443670): up to five draws
+ * land in the activity-code band 0x38..0x4c — random_next's 15-bit word
+ * mapped through % 0x15 + 0x38 — and each draw installs its code through
+ * the activity-set fold (FUN_004409e0 with FUN_00447c40's registration)
+ * and asks the dispatch whether the activity took. Deviation: the
+ * corpus's dispatch return is the per-type runner result (the scene
+ * layer, unported); the deterministic clause the port takes as success
+ * is the dispatch's early return — 0 when the current name still equals
+ * the last bookkept name, so the attempt succeeds exactly when the code
+ * differs from what was last registered. On success the entity raises
+ * its +0x3e0 bit 0x8000 and answers 1; five same-name attempts answer 0.
+ * The gates run before any draw: bit 0x400 of +0x3e0 clear and the
+ * mask-word test (FUN_0043baf0) answering 0. */
+int entity_random_activity_attempt(EntitySlot* e)
+{
+    if (e == NULL) {
+        return 0; /* deviation: the corpus strides blindly */
+    }
+    if ((e->flags_3e0 & 0x400u) != 0u) {
+        return 0;
+    }
+    if (entity_flags_mask107c33de_or_1c00203_any_test(e)) {
+        return 0;
+    }
+    for (unsigned int attempt = 0; attempt < 5u; ++attempt) {
+        const short roll = (short)activity_random_draw();
+        const int code = (int)roll % 0x15 + 0x38;
+        const int prev = e->activity_last;
+        ai_set_activity(e, code, 0); /* FUN_004409e0; 0x447c40 folds here */
+        if (e->activity_last != prev) {
+            e->flags_3e0 |= 0x8000u;
+            return 1;
+        }
+    }
+    return 0;
+}
+
 /* --- the entity counter + link band (see ai.hpp) --------------------------- */
 
 void simulation_update_counter_add(GameContext* ctx, int count)

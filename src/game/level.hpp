@@ -646,6 +646,20 @@ void terrain_cell_edge_flag_set_and_update(LevelState* s, int cx, int cy,
 void terrain_cell_work_flag_circle_set(LevelState* s, int center_x,
                                        int center_y, int radius);
 
+/* TerrainNeighborWorkFlagScan (FUN_00431580): breadth-first sweep over the
+ * stride-0x48 cell records from the seed coordinate: each queued cell's
+ * 3×3 neighbours (row = y±1 outer, col = x±1 inner, row*w + col indexing)
+ * that carry the work flag bit 0x20000 get the mutation seam and the bit
+ * cleared, and are queued into the alternate page; rounds alternate pages
+ * until one arrives empty. Deviation: the corpus indexes out-of-bounds
+ * cells blindly and never bounds-checks the enqueue. Corpus quirk kept:
+ * the enqueue stores col+1 as x (the entry's col-bound float) with only
+ * the row faithful, and its self-skip test never lands, so every hit cell
+ * including the seed is requeued. See the level.cpp note for the full
+ * corpus-shape audit. */
+void terrain_neighbor_work_flag_scan(LevelState* s, unsigned int seed_x,
+                                     unsigned int seed_y);
+
 /* terrain_cell_dirty_flag: the corpus's byte +0x19 bit 0x10 read shape
  * on the physical block (the same byte terrain_cell_dirty_queue_
  * push_and_clear raises). Exposed as the read side of the dirty-queue

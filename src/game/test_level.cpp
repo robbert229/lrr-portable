@@ -1435,6 +1435,64 @@ int main(int argc, char** argv)
 #undef SPPUT
     }
 
+    /* TerrainNeighborWorkFlagScan (2026-10-24): the work-flag sweep. */
+    {
+        static uint8_t wfgrid[GRID * GRID * 0x48];
+        static LevelState wfs;
+        memset(wfgrid, 0, sizeof wfgrid);
+        memset(&wfs, 0, sizeof wfs);
+        wfs.word[0x14 / 4] = GRID;
+        wfs.word[0x18 / 4] = GRID;
+        wfs.ptr_voxels = wfgrid;
+#define WFW(x, y) (wfgrid + ((size_t)(y) * GRID + (size_t)(x)) * 0x48 + 0x08)
+#define WFPUT(x, y, v)                                                         \
+    do {                                                                       \
+        const uint32_t v_ = (uint32_t)(v);                                     \
+        memcpy(WFW(x, y), &v_, 4);                                             \
+    } while (0)
+        /* A single flagged cell: the sweep finds it around the seed,
+         * clears it, queues the drifted quirk copy, and stops. */
+        WFPUT(2, 2, 0x20000u);
+        terrain_neighbor_work_flag_scan(&wfs, 2, 2);
+        uint32_t got = 0;
+        memcpy(&got, WFW(2, 2), 4);
+        CHECK(got == 0u, "the seed cell loses its work flag");
+        terrain_neighbor_work_flag_scan(&wfs, 2, 2);
+        memcpy(&got, WFW(2, 2), 4);
+        CHECK(got == 0u, "the swept map stays clear when rerun");
+
+        /* Two flagged cells inside the seed's neighbourhood: both clear;
+         * the far one only by riding the queue (the col-bound drift
+         * keeps it reachable — here it also sits in the 3×3). */
+        memset(wfgrid, 0, sizeof wfgrid);
+        WFPUT(1, 1, 0x20000u);
+        WFPUT(2, 3, 0x20000u);
+        terrain_neighbor_work_flag_scan(&wfs, 2, 2);
+        memcpy(&got, WFW(1, 1), 4);
+        uint32_t got2 = 0;
+        memcpy(&got2, WFW(2, 3), 4);
+        CHECK((got & 0x20000u) == 0u && (got2 & 0x20000u) == 0u,
+              "both flagged neighbours are processed and cleared");
+
+        /* A cell only reachable through the queue (two columns away from
+         * the seed's col-bound): the sweep hops once and gets it. */
+        memset(wfgrid, 0, sizeof wfgrid);
+        WFPUT(3, 2, 0x20000u);
+        terrain_neighbor_work_flag_scan(&wfs, 2, 2);
+        memcpy(&got, WFW(3, 2), 4);
+        CHECK(got == 0u, "the queue hop clears the next-column cell");
+
+        /* Out-of-map seeds and NULL state guard: nothing writes, nothing
+         * crashes (the corpus strides both blindly). */
+        terrain_neighbor_work_flag_scan(NULL, 1, 1);
+        memset(wfgrid, 0, sizeof wfgrid);
+        terrain_neighbor_work_flag_scan(&wfs, 9999u, 1u);
+        memcpy(&got, WFW(0, 1), 4);
+        CHECK(got == 0u, "an off-map seed sweeps the far column in-bounds");
+#undef WFW
+#undef WFPUT
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "level_test: %d failure(s)\n", s_failures);
         return 1;
