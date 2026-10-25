@@ -620,6 +620,67 @@ int main(void)
         ctx.level = const_cast<LevelState*>(keep);
     }
 
+    /* SavRefreshSlots (2026-10-25): the six-slot walk. Feature bit clear
+     * bootstraps the missing files and leaves existing ones; feature bit
+     * set writes the live context into every slot on the way. */
+    {
+        static uint8_t blob[6][SAVE_BLOB_SIZE];
+        for (int s = 0; s < 6; ++s) {
+            memset(blob[s], 0x10 + s, SAVE_BLOB_SIZE);
+        }
+        GameContext ctx;
+        game_context_init(&ctx);
+        for (int s = 0; s < SAVE_SLOTS; ++s) {
+            CHECK(save_read_slot(&ctx, s, 0) != 0 || s == 0,
+                  "the slot bootstrap reads");
+            CHECK(save_write_record(&ctx, 0, blob[s]) != 0,
+                  "the distinct record lands");
+            CHECK(save_write_slot(&ctx, s) != 0, "the slot writes");
+        }
+        CHECK(save_read_slot(&ctx, SAVE_SLOTS - 1, 0) != 0,
+              "the live context reloads the last slot");
+        for (int s = 0; s < SAVE_SLOTS; ++s) {
+            char path[32];
+            snprintf(path, sizeof(path), "Saves/%d.sav", s);
+            size_t n = 0;
+            uint8_t* raw = read_all(path, &n);
+            CHECK(raw != NULL && n >= 0xB0u + 4u + SAVE_BLOB_SIZE,
+                  "the six slot files exist");
+            if (raw != NULL) {
+                CHECK(raw[0xB0u + 4u] == (uint8_t)(0x10 + s),
+                      "the slot keeps its distinct record");
+                free(raw);
+            }
+        }
+
+        /* Feature clear: reads only — the files ride. */
+        GameContext reader;
+        game_context_init(&reader);
+        engine_feature_word_install(0u);
+        sav_refresh_slots(&reader);
+        {
+            size_t n = 0;
+            uint8_t* raw = read_all("Saves/3.sav", &n);
+            CHECK(raw != NULL && raw[0xB0u + 4u] == 0x13u,
+                  "the clear-feature refresh leaves the files");
+            free(raw);
+        }
+        CHECK(reader.save_slot == SAVE_SLOTS - 1,
+              "the refresh walk ends on the last slot");
+
+        /* Feature set: the live records propagate to every slot. */
+        engine_feature_word_install(0x400u);
+        sav_refresh_slots(&ctx);
+        engine_feature_word_install(0u);
+        {
+            size_t n = 0;
+            uint8_t* raw = read_all("Saves/1.sav", &n);
+            CHECK(raw != NULL && raw[0xB0u + 4u] == 0x15u,
+                  "the set-feature refresh rewrites from the live context");
+            free(raw);
+        }
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "savegame_test: %d failure(s)\n", s_failures);
         return 1;

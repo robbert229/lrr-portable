@@ -2363,6 +2363,22 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Sav visited tables + slot refresh** (2026-10-25): two frontier rows land
+across `frontend.*` and `savegame.*`. `sav_clear_visited` (0x416e70) walks the
+corpus's two "visited" bands, out-of-game first (the modeled active-object
+count words gate DAT_00556ff0/ff4 and DAT_00556fdc/e0 item/word tables); every
+non-null entry record has its +0x10 flag word cleared and the table word
+alongside. The installers sit in the unported sav-tree loaders, so the tables
+ride own storage behind install/peek hooks (the unowned-global convention); the
+entry windows and counts are guarded. `sav_refresh_slots` (0x417df0) walks the
+six slots so every slot file exists: with the engine feature word's bit 0x400
+raised each slot is written fresh from the live context before being read
+back, otherwise it is read (and re-read once on failure). Deviation: the port's
+single active-slot context stands in for the corpus's six context blocks (the
+SavSlotCtx precedent). `savegame_test` pins both paths against distinct per-slot
+record blobs; `frontend_test` pins the clear walk, the null-item skip, and the
+guarded counts.
+
 **UI/panel category-bounds band — category store, entry bounds, priority
 state, render record** (2026-10-25): four frontier rows land in
 `frontend.*`. `panel_category_bounds_set` (0x45a650) stores the panel

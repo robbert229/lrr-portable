@@ -654,6 +654,23 @@ void     panel_seam_last(void** out_res, float* out_x, float* out_y);
  * here as zero-init statics; the selector returns the live address. */
 int* active_object_list_word(void); /* FUN_00416e00 */
 
+/* --- the sav visited-table band (2026-10-25) -------------------------------
+ * The corpus's two "visited" tables run parallel to the modeled
+ * active-object count words (out-of-game: DAT_00556fe4 count behind
+ * DAT_00556ff0/ff4 item/word arrays; in-game: DAT_00556fd0 count behind
+ * DAT_00556fdc/e0). Their installers live in the unported sav-tree
+ * loaders, so the tables ride zero-init own storage behind the install/
+ * peek hooks below (the unowned-global convention).
+ * SavClearVisited (FUN_00416e70): walk both bands, out-of-game first,
+ * clearing every non-null entry record's +0x10 flag word and the word
+ * word alongside. Deviations: entry windows and count bounds guarded,
+ * records touched through the modeled +0x10 word. */
+void sav_clear_visited(void); /* FUN_00416e70 */
+void sav_visited_entry_set(int which, int index, void* record,
+                           uint32_t word);             /* port hook */
+void sav_visited_entry_peek(int which, int index, void** out_record,
+                            uint32_t* out_word);       /* port hook */
+
 /* --- screen-effect release (2026-10-24; findings 434/438) ------------------
  * ScreenEffectFlagsClearAndRelease (FUN_0040a3d0): walks the ten screen-
  *   effect entries (the corpus's DAT_004b8aa0 table stride) clearing active
