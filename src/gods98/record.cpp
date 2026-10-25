@@ -752,3 +752,14 @@ void ui_record_callback_forward(const void* const* ui_record,
     void* handle = rec_ptr(ui_record, 0x00);
     object_state_pair_get(handle, out_a, out_b);
 }
+
+/* RecordFlagBitTest (FUN_0046cf40) — see record.hpp. */
+uint32_t record_flag_bit_test(const void* record, uint32_t bit_index,
+                              int reject_masked)
+{
+    const uint32_t bit = 1u << (bit_index & 0x1fu);
+    if (reject_masked != 0 && (entity_type_mask_get(record) & bit) != 0u) {
+        return 0u;
+    }
+    return rec_dword(record, 0x130) & bit;
+}

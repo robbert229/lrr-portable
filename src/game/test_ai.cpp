@@ -1169,6 +1169,29 @@ int main(int argc, char** argv)
         }
     }
 
+    /* EntityActivitySceneStateUpdate (2026-10-24): the gate + clear. */
+    {
+        entity_state_flags_set(0u);
+        GameContext ctx;
+        game_context_init(&ctx);
+        LevelState lv;
+        memset(&lv, 0, sizeof lv);
+        ctx.level = &lv;
+        global_object_field98_add(&lv, 7);
+        entity_activity_scene_state_update(&ctx);
+        CHECK(entity_state_flags_peek() == 4u && level_field98_get(&lv) == 0u,
+              "the gate-off pass raises bit 4 and clears +0x98");
+        entity_state_flags_set(0x10u);
+        global_object_field98_add(&lv, 3);
+        entity_activity_scene_state_update(&ctx);
+        CHECK(entity_state_flags_peek() == 0x18u && level_field98_get(&lv) == 3u,
+              "the gate-on pass raises bit 8 and leaves the state alone");
+        entity_state_flags_set(0u);
+        entity_activity_scene_state_update(NULL); /* level guard */
+        CHECK(entity_state_flags_peek() == 4u, "the NULL ctx still updates");
+        entity_state_flags_set(0u);
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "ai_test: %d failure(s)\n", s_failures);
         return 1;

@@ -945,6 +945,30 @@ int main(void)
         ui_record_callback_forward(&empty, &out_a, &out_b); /* pair guards */
     }
 
+    /* RecordFlagBitTest (2026-10-24): the +0x130 bit test + mask reject. */
+    {
+        static char rec[0x140];
+        memset(rec, 0, sizeof rec);
+        const uint32_t w = 0x100u; /* bit 8 */
+        __builtin_memcpy(rec + 0x130, &w, sizeof w);
+        CHECK(record_flag_bit_test(rec, 8u, 0) == 0x100u, "the set bit answers");
+        CHECK(record_flag_bit_test(rec, 9u, 0) == 0u, "the clear bit answers 0");
+        CHECK(record_flag_bit_test(rec, 40u, 0) == 0x100u,
+              "the bit index folds through 0x1f");
+        /* Masked reject: the bit also riding the type mask (+300) answers
+         * 0 when rejecting. */
+        const uint32_t mask = 0x111u; /* bit 8 raised in the mask */
+        __builtin_memcpy(rec + 300, &mask, sizeof mask);
+        CHECK(record_flag_bit_test(rec, 8u, 1) == 0u,
+              "the masked bit is rejected when rejecting");
+        CHECK(record_flag_bit_test(rec, 4u, 1) == 0u,
+              "a mask hit answers clear without the reject bit");
+        CHECK(record_flag_bit_test(rec, 8u, 0) == 0x100u,
+              "the same bit rides the flag without rejecting");
+        CHECK(record_flag_bit_test(NULL, 8u, 0) == 0u,
+              "the NULL record guards");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "record_test: %d failure(s)\n", s_failures);
         return 1;

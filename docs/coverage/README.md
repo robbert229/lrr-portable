@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 848 | 33.1% |
+| ported | 853 | 33.3% |
 | anchored | 4 | 0.2% |
-| named | 1665 | 64.9% |
+| named | 1660 | 64.7% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (848 functions)
+  (853 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1665 functions)
+  citation yet (1660 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1670 (65.1%).**
+**Game logic remaining to port: 1665 (64.9%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -339,7 +339,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00419e80` | RecordListEntryRemoveAndRelease |
 | `0x00419f10` | PendingRecordReleaseAll |
 | `0x0041a1a0` | UIEntryHitTestAndDispatch |
-| `0x0041a250` | ScrollOffsetFromCursorUpdate |
 | `0x0041a300` | InterfaceMenuActionLabelsInit |
 | `0x0041a920` | LevelStateCountersClear |
 | `0x0041a9c0` | CaseInsensitiveStringTableIndexFind |
@@ -757,6 +756,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004599c0` | LoadObjectHungerMeterImages |
 | `0x00459a50` | BubbleImagesPositionConfigLoad |
 | `0x00459b00` | RenderEntityScreenRing |
+| `0x00459f50` | IndexedPanelResourcePositionApply |
 | `0x0045a030` | UiPanelNameTablesInit |
 | `0x0045a240` | ScrollPanelControlsInitialize |
 | `0x0045a270` | PanelCategoryInteractionStateReset |
@@ -782,7 +782,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0045c340` | PanelResourceLayoutStore |
 | `0x0045c3f0` | AdvisorProgressBarFillDraw |
 | `0x0045c4b0` | PanelResourcePositionUpdateIfEnabled |
-| `0x0045c520` | PanelResourceHandleAndDimensionsStore |
 | `0x0045c580` | UiOverlayAnimationAdvance |
 | `0x0045c5f0` | UiOverlayAnimationApply |
 | `0x0045c670` | AdvisorAnimationSceneLookupAndRequest |
@@ -915,7 +914,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0046ce10` | EntityPayloadType1Release |
 | `0x0046ced0` | PairedResourceStateSet |
 | `0x0046cf20` | SceneEntityAnimationTracksSetEnabled |
-| `0x0046cf40` | RecordFlagBitTest |
 | `0x0046cf90` | RecordIndexedEntriesRebuildAndRefresh |
 | `0x0046cff0` | SceneRecordTemplateInstantiate |
 | `0x0046d140` | SceneAssignOwnerFromModel |

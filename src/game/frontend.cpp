@@ -29,6 +29,7 @@
 #include "gods98/message.hpp"
 #include "gods98/flic.hpp"
 #include "gods98/crt.hpp"
+#include "gods98/record.hpp"
 #include "gods98/texture.hpp"
 #include "gods98/sound.hpp"
 #include "gods98/crt.hpp"
@@ -2464,5 +2465,116 @@ void bitmap_font_glyph_measure_width(void* font, unsigned char glyph)
     if (row < FE_FONT_GRID_ROWS) {
         /* the corpus's flag-clear measure lane keeps its recomputed floats
          * in locals — nothing observable here, faithful to the wrapper. */
+    }
+}
+
+/* --- the panel resource + scroll leaf band (see frontend.hpp) --------------
+ * The corpus's unowned panel words (DAT_004ffe68 enable gate, DAT_004ffed8/
+ * edc bubble offsets, DAT_00500810..81c handle/dimensions, DAT_005007d8 UI
+ * record slot) land here as zero-init statics; both corpus seams (surface
+ * blit FUN_0047dcb0, surface load FUN_0047d9d0) are hook boundaries with
+ * no ported body — the seam calls record and the load answers NULL (the
+ * view object-layer precedent). */
+static uint32_t s_panel_enable_word; /* DAT_004ffe68 role */
+static float    s_bubble_offset_x;   /* DAT_004ffed8 role */
+static float    s_bubble_offset_y;   /* DAT_004ffedc role */
+static void*    s_panel_surface_handle; /* DAT_00500810 role */
+static float    s_panel_width;       /* DAT_00500814 role */
+static float    s_panel_height;      /* DAT_00500818 role */
+static uint32_t s_panel_extra;       /* DAT_0050081c role */
+static void*    s_panel_ui_record;   /* DAT_005007d8 role */
+
+static int    s_panel_seam_calls;
+static void*  s_panel_seam_last_res;
+static float  s_panel_seam_last_x;
+static float  s_panel_seam_last_y;
+
+static void panel_blit_seam_call(void* res, float x, float y)
+{
+    ++s_panel_seam_calls;
+    s_panel_seam_last_res = res;
+    s_panel_seam_last_x = x;
+    s_panel_seam_last_y = y;
+}
+
+static void* panel_load_seam_call(void* res)
+{
+    panel_blit_seam_call(res, 0.0f, 0.0f);
+    return NULL; /* the port has no surface layer */
+}
+
+void panel_resource_position_apply_if_enabled(void* resource, int x, int y)
+{
+    if ((s_panel_enable_word & 0x10u) != 0u) {
+        panel_blit_seam_call(resource, (float)x + s_bubble_offset_x,
+                             (float)y + s_bubble_offset_y);
+    }
+}
+
+void panel_resource_handle_and_dimensions_store(void* resource, uint32_t w,
+                                                uint32_t h, uint32_t extra)
+{
+    /* corpus order: load, +0x14 width, +0x1c extra, +0x18 height */
+    s_panel_surface_handle = panel_load_seam_call(resource);
+    s_panel_width = (float)w;
+    s_panel_extra = extra;
+    s_panel_height = (float)h;
+}
+
+void scroll_offset_from_cursor_update(void)
+{
+    uint32_t lo = 0, hi = 0;
+    ui_record_callback_forward((const void* const*)&s_panel_ui_record,
+                               &lo, &hi);
+    int diff = (int)(lo - hi);
+    if (diff < 0) {
+        diff = 0;
+    }
+    indexed_text_metrics_pair_set(0, (uint32_t)diff, 0u);
+    screen_right_edge_cache_refresh();
+}
+
+void     panel_enable_word_set(uint32_t word) { s_panel_enable_word = word; }
+uint32_t panel_enable_word_peek(void) { return s_panel_enable_word; }
+void     bubble_offsets_set(float x, float y)
+{
+    s_bubble_offset_x = x;
+    s_bubble_offset_y = y;
+}
+void  panel_surface_handle_set(void* h) { s_panel_surface_handle = h; }
+void panel_dimensions_peek(float* w, float* h, uint32_t* extra)
+{
+    if (w != NULL) {
+        *w = s_panel_width;
+    }
+    if (h != NULL) {
+        *h = s_panel_height;
+    }
+    if (extra != NULL) {
+        *extra = s_panel_extra;
+    }
+}
+void* panel_surface_handle_peek(void) { return s_panel_surface_handle; }
+void  panel_ui_record_set(void* record) { s_panel_ui_record = record; }
+void* panel_ui_record_peek(void) { return s_panel_ui_record; }
+
+void panel_seam_reset(void)
+{
+    s_panel_seam_calls = 0;
+    s_panel_seam_last_res = NULL;
+    s_panel_seam_last_x = 0.0f;
+    s_panel_seam_last_y = 0.0f;
+}
+int panel_seam_calls(void) { return s_panel_seam_calls; }
+void panel_seam_last(void** out_res, float* out_x, float* out_y)
+{
+    if (out_res != NULL) {
+        *out_res = s_panel_seam_last_res;
+    }
+    if (out_x != NULL) {
+        *out_x = s_panel_seam_last_x;
+    }
+    if (out_y != NULL) {
+        *out_y = s_panel_seam_last_y;
     }
 }

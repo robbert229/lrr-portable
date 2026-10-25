@@ -531,4 +531,37 @@ uint32_t screen_right_edge_cache_peek(void);    /* port hook */
 void bitmap_font_glyph_measure_width(void* font, unsigned char glyph);
                                                 /* FUN_0047a520 */
 
+/* --- panel resource + scroll leaf band (2026-10-24; findings 386/439/436/
+ * 444/372) -----------------------------------------------------------------
+ * PanelResourcePositionApplyIfEnabled (FUN_00459fd0): when the panel enable
+ *   word's bit 0x10 is raised, the resource rides the surface blit seam at
+ *   the supplied position plus the bubble offsets (words unowned; statics).
+ * PanelResourceHandleAndDimensionsStore (FUN_0045c520): the surface-load
+ *   seam's return lands as the panel handle word (the port has no surface
+ *   layer, so the seam answers NULL — the view object-layer precedent),
+ *   then the dimensions store.
+ * ScrollOffsetFromCursorUpdate (FUN_0041a250): the panel UI record's state
+ *   pair difference clamps at zero, lands in metrics slot 0 through the
+ *   ported pair setter, and refreshes the right-edge cache.
+ * All seams ride recorded hooks (the bobbin-drop precedent). */
+void panel_resource_position_apply_if_enabled(void* resource, int x, int y);
+                                                /* FUN_00459fd0 */
+void panel_resource_handle_and_dimensions_store(void* resource, uint32_t w,
+                                                uint32_t h, uint32_t extra);
+                                                /* FUN_0045c520 */
+void scroll_offset_from_cursor_update(void);    /* FUN_0041a250 */
+void     panel_enable_word_set(uint32_t word);  /* port hook */
+uint32_t panel_enable_word_peek(void);          /* port hook */
+void     bubble_offsets_set(float x, float y);  /* port hook */
+void     panel_surface_handle_set(void* h);     /* port hook */
+void*    panel_surface_handle_peek(void);       /* port hook */
+void     panel_dimensions_peek(float* w, float* h, uint32_t* extra);
+                                                /* port hook */
+void     panel_ui_record_set(void* record);     /* port hook */
+void*    panel_ui_record_peek(void);            /* port hook */
+void     panel_seam_reset(void);                /* port hook */
+int      panel_seam_calls(void);                /* port hook */
+void     panel_seam_last(void** out_res, float* out_x, float* out_y);
+                                                /* port hook */
+
 #endif /* LEGORRR_GAME_FRONTEND_HPP */

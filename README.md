@@ -2363,6 +2363,21 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Panel resource + scroll leaf band** (findings 367/432/251/469/386/439/436/444):
+`record.*` ports `record_flag_bit_test` (0x46cf40 — the selected +0x130 bit,
+optionally rejecting bits riding the type mask), `ai.*` ports
+`entity_activity_scene_state_update` (0x439990 — the manager flag word's
+gate pass, the cleared half threading GameContext to the ported level
+mutator), `frontend.*` ports `panel_resource_position_apply_if_enabled`
+(0x459fd0 — the enable-gated seam blit at position plus bubble offsets),
+`panel_resource_handle_and_dimensions_store` (0x45c520 — the load seam answers
+NULL with the dimensions stored as float words), and
+`scroll_offset_from_cursor_update` (0x41a250 — the UI record's state-pair
+difference clamps at zero into metrics slot 0, then the right-edge cache),
+with the panel's unowned corpus words as hooked statics and both surface
+seams recorded through the hook boundary. `record_test`, `ai_test`, and
+`frontend_test` pin the bits, gates, stores, and the clamps.
+
 **Texture-dir + forward + node-offset band** (findings 420/13/386/439/435/372):
 `crt.*` ports `shared_texture_directory_set` (0x4728c0 — the DAT_0076cd88
 directory word as a hooked static, the path copied through the ported string
