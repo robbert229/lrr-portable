@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 919 | 35.8% |
+| ported | 922 | 36.0% |
 | anchored | 4 | 0.2% |
-| named | 1594 | 62.2% |
+| named | 1591 | 62.1% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (919 functions)
+  (922 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1594 functions)
+  citation yet (1591 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1599 (62.4%).**
+**Game logic remaining to port: 1596 (62.2%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -243,7 +243,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0040fe00` | SceneObjectListUpdateTransforms |
 | `0x0040ff50` | SceneObjectListApplyFloatCallback |
 | `0x0040ffe0` | GlobalVectorSetAndNotifyListeners |
-| `0x00410020` | SceneNodePositionSet |
 | `0x00410070` | SceneObjectListApplyPositionCallback |
 | `0x004100b0` | SceneObjectListApplySecondPositionCallback |
 | `0x00410280` | CallbackOperationRunAndReturnStatus |
@@ -417,7 +416,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00425d50` | GlobalRenderRecordSetFromInput |
 | `0x00426250` | UpdateRenderViewportState |
 | `0x004262e0` | ObjectiveScoreTextOriginSet |
-| `0x00426320` | ObjectiveTaskTextOriginSet |
 | `0x00426360` | GlobalStateFlagsBits6And9Set |
 | `0x004263c0` | GlobalSubsystemStateReset |
 | `0x00426420` | CursorRayToCameraRoute |
@@ -1326,7 +1324,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00484e50` | FlicDecode16BitDelta |
 | `0x00485030` | FlicOpcode27DecodeDispatch |
 | `0x004850f0` | TextBufferCreate |
-| `0x00485160` | TextOutputField82CBit2SetClear |
 | `0x00485210` | FormattedTextAppendToRingBuffer |
 | `0x00485250` | TextBufferAppendVFormat |
 | `0x00485300` | ObjectiveAdvisorTextCopy |

@@ -186,6 +186,7 @@ int mode_dependent_field24_get(const EngineContext* ctx)
  * writer is the unported renderer-side sim-interaction update). */
 static int s_scroll_guard;        /* DAT_004de548 */
 static uint32_t s_triple[3];      /* DAT_0055651c / DAT_00556520 / DAT_00556524 */
+static float s_task_text_origin[2]; /* _DAT_00556f24 / _DAT_00556f28 */
 
 bool current_engine_mode_is_zero(const EngineContext* ctx)
 {
@@ -212,6 +213,33 @@ void global_scroll_guard_set(int value)
 int global_scroll_guard_peek(void)
 {
     return s_scroll_guard;
+}
+
+/* ObjectiveTaskTextOriginSet (FUN_00426320) — see engine.hpp. The corpus's
+ * pair has no ported reader outside the corpus's own draw band (the only
+ * writers are this setter), so it rides module storage per the unowned-
+ * global convention; the enable bit rides the bound debug word. */
+void objective_task_text_origin_set(EngineContext* ctx, const float* pair)
+{
+    if (pair != NULL) {
+        s_task_text_origin[0] = pair[0];
+        s_task_text_origin[1] = pair[1];
+        if (ctx != NULL) {
+            ctx->debug |= 0x8000u;
+        }
+        return; /* deviation: the corpus writes the word blindly */
+    }
+    if (ctx != NULL) {
+        ctx->debug &= ~0x8000u;
+    }
+}
+
+void objective_task_text_origin_peek(float out[2])
+{
+    if (out != NULL) {
+        out[0] = s_task_text_origin[0];
+        out[1] = s_task_text_origin[1];
+    }
 }
 
 void global_triple_copy_out(uint32_t* out)

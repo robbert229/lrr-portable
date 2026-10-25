@@ -127,6 +127,20 @@ int main(void)
               "engine_bind: bit 7 clears and the word stays otherwise untouched");
         global_state_flags_bit7_set(NULL, 1);
 
+        objective_task_text_origin_set(&ec, NULL);
+        CHECK((ec.debug & 0x8000u) == 0u,
+              "engine_bind: the null origin clears bit 15");
+        const float origin[2] = { 1.5f, 2.5f };
+        objective_task_text_origin_set(&ec, origin);
+        float peeked[2] = { 0.0f, 0.0f };
+        objective_task_text_origin_peek(peeked);
+        CHECK((ec.debug & 0x8000u) != 0u && peeked[0] == 1.5f
+                  && peeked[1] == 2.5f,
+              "engine_bind: the origin pair stores and raises bit 15");
+        ec.debug = 0u;
+        objective_task_text_origin_set(NULL, origin); /* ctx guarded */
+        objective_task_text_origin_peek(NULL); /* guarded */
+
         global_scroll_guard_set(7);
         CHECK(global_scroll_guard_peek() == 7, "engine_bind: the guard stores");
         global_scroll_guard_set(0);

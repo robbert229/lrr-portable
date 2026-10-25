@@ -2363,6 +2363,18 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Write-band leaf trio** (2026-10-24; findings 465/101): three rows land
+across `engine.*`, `view.*`, and `heap.*`. The objective/task text-origin
+setter (`objective_task_text_origin_set`, 0x426320) stores the float pair
+and raises the debug word's bit 0x8000 (the pair's corpus global rides
+module storage — this setter is its only writer); a null argument clears
+the bit. `view.*` takes the scene-node position store
+(`scene_node_position_set`, 0x410020): the node's +0xc valid flag goes to
+1 and the three floats land on the widened handle slot's inner object.
+`heap.*` takes the text-output flag fold (`text_output_field82c_
+bit2_set_clear`, 0x485160): the record's +0x82c word bit 2 set/clear.
+`enginebind_test`, `view_test`, and `heap_test` pin the stores and guards.
+
 **Scene-root argument normalization band** (2026-10-24; findings
 25/349/420/430): three rows land across `view.*` and `record.*`. The
 corpus's scene-object argument normalization (`scene_object_arguments_

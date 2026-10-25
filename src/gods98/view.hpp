@@ -358,6 +358,15 @@ void* scene_root_peek(void);                    /* port hook */
 /* SceneRootObjectGet (FUN_00472940): the corpus's root-object read. */
 void* scene_root_object_get(void);              /* FUN_00472940 */
 
+/* SceneNodePositionSet (FUN_00410020): the scene node's position store —
+ * the node's position-valid flag at +0xc goes to 1, and the three floats
+ * land on the inner object's +0xc/+0x10/+0x14. Deviation: the corpus
+ * strides the node's dword handle slot blindly; the port reads the inner
+ * through the module's widened pointer slot (stride native) and guards a
+ * missing handle. */
+void scene_node_position_set(void* node, const float pos[3]);
+                                                /* FUN_00410020 */
+
 /* DDiSceneObjectArgumentsNormalize (FUN_00475900): resolves the dispatch
  * pair — the first slot rides out of the first argument's slot, and the
  * second resolves to its own slot when the argument is non-NULL, else to

@@ -924,6 +924,25 @@ void* scene_root_object_get(void)
     return s_scene_root;
 }
 
+/* SceneNodePositionSet (FUN_00410020) — see view.hpp. The inner object
+ * rides the node's widened slot at +0; the corpus strides a dword. */
+void scene_node_position_set(void* node, const float pos[3])
+{
+    if (node == NULL || pos == NULL) {
+        return;
+    }
+    void* inner = NULL;
+    const uint32_t valid = 1u;
+    __builtin_memcpy((char*)node + 0x0c, &valid, sizeof valid);
+    __builtin_memcpy(&inner, (const char*)node, sizeof inner);
+    if (inner == NULL) {
+        return; /* deviation: the corpus strides the handle blindly */
+    }
+    __builtin_memcpy((char*)inner + 0x0c, &pos[0], sizeof pos[0]);
+    __builtin_memcpy((char*)inner + 0x10, &pos[1], sizeof pos[1]);
+    __builtin_memcpy((char*)inner + 0x14, &pos[2], sizeof pos[2]);
+}
+
 /* DDiSceneObjectArgumentsNormalize (FUN_00475900) — resolve the dispatch
  * pair: the object slot rides through, and the second slot falls back to
  * the root object's first slot when the caller passes NULL. */
