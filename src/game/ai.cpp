@@ -1340,6 +1340,19 @@ void ai_idle_table_reset(void)
     s_idle100_n = 0;
 }
 
+/* TrackedEntityPointerArrayRemove (FUN_0043a930) — see ai.hpp. The corpus
+ * strides the DAT_004eabcc window up to its count word blindly; the port
+ * rides the s_idle100 model's used window (the corpus keeps walking past
+ * a hit, pinned). */
+void ai_idle_table_pointer_remove(void* pointer)
+{
+    for (int i = 0; i < s_idle100_n; ++i) {
+        if (s_idle100[i] == pointer) {
+            s_idle100[i] = NULL;
+        }
+    }
+}
+
 /* EntityUpdateAndUnregisterAtTile (FUN_00440130) — see ai.hpp. The corpus
  * strides its idle-registration table (DAT_004eabcc / count DAT_004ead5c,
  * the port's s_idle100); a hit stores the link word through the +0x2fc

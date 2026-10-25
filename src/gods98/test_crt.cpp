@@ -1222,6 +1222,30 @@ int main(void)
         global_flag_004ff978_install(0u);
     }
 
+    /* Handler table + 64-bit multiply thunk (2026-10-25). */
+    {
+        crt_math_exception_handler_install(3, 77, 0xa1a2);
+        CHECK(crt_math_exception_handler_get(77) == 0xa1a2u,
+              "the id match answers the handler");
+        CHECK(crt_math_exception_handler_get(78) == 0u,
+              "an unmatched id answers zero");
+        crt_math_exception_handler_install(99, 78, 0xbeef);
+        CHECK(crt_math_exception_handler_get(78) == 0u,
+              "the guarded window drops the out-of-range install (dev)");
+        crt_math_exception_handler_install(3, 77, 0u);
+    }
+
+    {
+        CHECK(crt_integer64_multiply(3, 0, 5, 0) == 15ull,
+              "the plain word multiply lands");
+        CHECK(crt_integer64_multiply(0, 1, 2, 0) == 0x200000000ull,
+              "the high-word fold scales (2^32 x 2)");
+        CHECK(crt_integer64_multiply(1, -1, 1, 0) == 0xffffffff00000001ull,
+              "the signed cross-word half folds the bits");
+        CHECK(crt_integer64_multiply(0xffffffffu, 0, 2, 0) == 0x1fffffffeull,
+              "the wide unsigned pair stays unsigned");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "crt_test: %d failure(s)\n", s_failures);
         return 1;

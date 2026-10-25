@@ -1557,6 +1557,31 @@ int main(int argc, char** argv)
         ai_idle_table_reset();
     }
 
+    /* Idle-table pointer removal (2026-10-25): the match-zeroing walk
+     * with the count word riding (holes), dedup past holes, and the
+     * foreign-pointer walk. */
+    {
+        GameContext ctx;
+        game_context_init(&ctx);
+        EntitySlot* a = place(&ctx, 1, "rem_a", 0.0f, 0.0f);
+        EntitySlot* b = place(&ctx, 1, "rem_b", 4.0f, 0.0f);
+        a->flags_3ec |= 0x40u;
+        b->flags_3ec |= 0x40u;
+        run(&ctx, 1, 0.5f);
+        CHECK(ai_idle_count() == 2, "both idlers register");
+        ai_idle_table_pointer_remove(a);
+        CHECK(ai_idle_count() == 2, "the remove leaves the count word");
+        a->flags_3ec |= 0x40u;
+        run(&ctx, 1, 0.5f);
+        CHECK(ai_idle_count() == 3, "the removed entry re-lands past the hole");
+        b->flags_3ec |= 0x40u;
+        run(&ctx, 1, 0.5f);
+        CHECK(ai_idle_count() == 3, "the kept entry dedups through the hole");
+        ai_idle_table_pointer_remove(NULL);
+        CHECK(ai_idle_count() == 3, "the foreign pointer walks past");
+        ai_idle_table_reset();
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "ai_test: %d failure(s)\n", s_failures);
         return 1;
