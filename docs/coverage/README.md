@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 1056 | 41.2% |
+| ported | 1059 | 41.3% |
 | anchored | 4 | 0.2% |
-| named | 1459 | 56.9% |
+| named | 1456 | 56.8% |
 | runtime-import | 44 | 1.7% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (1056 functions)
+  (1059 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1459 functions)
+  citation yet (1456 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (44 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1464 (57.1%).**
+**Game logic remaining to port: 1461 (57.0%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -1202,9 +1202,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00484610` | FlicSubrecordOpcodeDispatch |
 | `0x00484720` | FlicChunkBufferAndContinueLK |
 | `0x004847d0` | FlicChunkBufferAndContinueType0B |
-| `0x00484b20` | FlicOpcode25DecodeDispatch |
-| `0x00484ca0` | FlicDecode8BitAlternateDelta |
-| `0x00485030` | FlicOpcode27DecodeDispatch |
 | `0x00485210` | FormattedTextAppendToRingBuffer |
 | `0x00485250` | TextBufferAppendVFormat |
 | `0x00485300` | ObjectiveAdvisorTextCopy |

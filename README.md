@@ -2363,6 +2363,25 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**FLIC opcode-27 8-bit delta + the decode dispatchers** (2026-10-25): three
+frontier rows land. `flic_decode8_bit_alternate_delta` (0x484ca0) is the
+palette-indexed sibling of the 16-bit delta: the same chunk walk (kind-0
+header doubles as the pair count, 0xC retires the row by the whole-word
+subtract, kind-4 ends), but pixels land as PALETTE INDEX PAIRS expanded
+through the +0x41c indexed-word table — each run word carries two byte
+indices, the pair's low byte skips in WORD units, the bit-7 back-count
+repeats the trailing pair word's bytes 0x100 − n times with the cursor
+resuming four bytes on, and the 8-chunk remembers its header byte (NO flag
+fold — the 16-bit delta's fold is its own) for a lone palette WORD store
+after the walk. `flic_opcode25_decode_dispatch` (0x484b20) and
+`flic_opcode27_decode_dispatch` (0x485030) route on depth +0x64c, op
++0x6d4, and the marker word +0x644: depth-8 op-4 picks mode-4 versus the
+alternate delta, the marker −0x50bd picks the keyframe versus the delta,
+and 0x1234 falls to the noop. Deviations pinned: the corpus's zero-argument
+callee calls leave the record in a register (the port threads it through),
+and the LP64 window-slot fix makes this band safe. `flic_test` pins the
+word-unit skips, the palette expansion, both repeats, and every route.
+
 **FLIC 16-bit keyframe + delta — the word-stream half** (2026-10-25): two
 frontier rows land. `flic_decode16_bit_keyframe` (0x4849d0) walks the word
 stream at stream+7 over rows +0x10: the literal run repeats one expanded
