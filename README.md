@@ -2363,6 +2363,29 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Cell-command / task-batch / pool window band** (2026-10-25): five
+portable-now rows land across the command, path, and entity-pool windows.
+`cell_command_type3_issue` (0x403030, cmd.*) issues while the cell is
+walkable with the bounded flag-0x20 word clear: raw coordinate dwords,
+the zero-state, and the kind-6 head link, riding the surface-type tail
+the corpus's register-losing shape (the 0x402510/0x402d50 twins' pinned
+deviation). `entity_task_batch_append` (0x403650, cmd.*) allocates a
+type-1 record per entity, arms payload + zero time words, sweeps the
+chain, and lands on the tail's +0x60 link (or the +0x2f0 head) — the
+batch stays off the global list. `path_record_allocate_and_link`
+(0x409350, level.*) stamps the serial counter store, the coordinate
+pair, and the prev link across the corpus's 0xd4 window (widened link
+slot). `pooled_record_chunk_allocate_and_link` (0x438310, entity.*)
+grows the stride-0x410 record chunk onto the free head, tail-joining
+the previous chunk. `resolved_entity_operation_dispatch` (0x460910,
+entity.*) feeds the count-difference scan from the resolver's
+(type, row) pair — table rows write it, the ore pair writes 0/1, the
+rest ride zero (a new count-table poke hook exercises the read shape).
+Deviations: guarded allocator/level/entity words where the corpus
+strides blindly. Tests pin the gate pair, the raw-word staging, the
+chain landing, the link join, and the scan mappings; 34/36 (flic +
+frontend baseline). Ledger regenerates: 976 ported (+5).
+
 **Advisor / indexed-list / scratch window band** (2026-10-25): six
 portable-now rows land in the unowned-window model. The advisor pair
 (objective.*): `advisor_action_position_and_mode_set` (0x401840) stores

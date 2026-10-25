@@ -1179,6 +1179,59 @@ int main(int argc, char** argv)
               "the missing carried slot rides the guard (deviation)");
     }
 
+    /* Pooled-record chunk window (2026-10-25): stride links and the
+     * chunk-tail join onto the previous head. */
+    {
+        const uint32_t chunks_before = pooled_record_chunk_count_peek();
+        pooled_record_chunk_allocate_and_link();
+        CHECK(pooled_record_chunk_count_peek() == chunks_before + 1u,
+              "the first chunk raises the counter");
+        void* head1 = pooled_record_head_peek();
+        CHECK(head1 != NULL, "the chunk lands on the free head");
+        void* link = (void*)0x1;
+        memcpy(&link, (char*)head1 + 0x408, sizeof link);
+        CHECK(link == NULL, "the lone record closes to the old head");
+        pooled_record_chunk_allocate_and_link(); /* counter 1 -> two records */
+        void* head2 = pooled_record_head_peek();
+        CHECK(head2 != NULL && head2 != head1, "the second chunk moves the head");
+        memcpy(&link, (char*)head2 + 0x408, sizeof link);
+        CHECK(link == (char*)head2 + 0x410, "the first link rides the stride");
+        memcpy(&link, (char*)head2 + 0x410 + 0x408, sizeof link);
+        CHECK(link == head1, "the chunk tail joins the previous head");
+        CHECK(pooled_record_chunk_count_peek() == chunks_before + 2u,
+              "the counter grows with the chunk table");
+    }
+
+    /* Resolved entity operation dispatch (2026-10-25): the resolver's
+     * (type, row) pair feeds the count-difference scan. */
+    {
+        grid_record_count_tables_clear();
+        CHECK(resolved_entity_operation_dispatch("NotAThing", 0, 0) == 0,
+              "the unknown name answers zero");
+        /* "hoverboard" = table type 1, row 0 -> cell 15; slot 3. */
+        grid_count_table_slot_poke(1, 0, 3, 1, 1234u);
+        grid_count_table_slot_poke(1, 0, 3, 0, 22u);
+        CHECK(resolved_entity_operation_dispatch("hoverboard", 3, 1) == 1212,
+              "the vehicle pair lands (type 1, row 0)");
+        /* "tinyrm" = creature type 3, row 1 -> cell 46; subtract-free. */
+        grid_count_table_slot_poke(3, 1, 1, 1, 55u);
+        CHECK(resolved_entity_operation_dispatch("tinyrm", 1, 0) == 55,
+              "the creature pair lands (type 3, row 1)");
+        /* The ore pair: dedicated index stores 0 and 1. */
+        grid_count_table_slot_poke(7, 0, 0, 1, 77u);
+        grid_count_table_slot_poke(7, 1, 0, 1, 99u);
+        CHECK(resolved_entity_operation_dispatch("Ore", 0, 0) == 77
+                  && resolved_entity_operation_dispatch("ProcessedOre", 0, 0)
+                         == 99,
+              "the ore pair lands through the case-fold");
+        /* Special names ride the zeroed row slot. */
+        grid_count_table_slot_poke(5, 0, 2, 1, 7u);
+        CHECK(resolved_entity_operation_dispatch("Boulder", 2, 0) == 7
+                  && resolved_entity_operation_dispatch("Boulder", 0, 0) == 0,
+              "the special kinds ride the zero row");
+        grid_record_count_tables_clear();
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "entity_test: %d failure(s)\n", s_failures);
         return 1;

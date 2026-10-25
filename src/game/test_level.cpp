@@ -1598,6 +1598,31 @@ int main(int argc, char** argv)
               "the missing second variant and window guards hold");
     }
 
+    /* Path record window band (2026-10-25): serial, pair, and prev link. */
+    {
+        const uint32_t before = path_record_count_peek();
+        void* first = path_record_allocate_and_link(NULL);
+        CHECK(first != NULL && path_record_count_peek() == before + 1u,
+              "the NULL pair serializes and links (guarded)");
+        CHECK(path_record_last_peek() == first, "the last slot rides the record");
+        const uint32_t pair[2] = { 0x1111u, 0x2222u };
+        void* second = path_record_allocate_and_link(pair);
+        uint32_t serial = 0u, wa = 0u, wb = 0u;
+        memcpy(&serial, (char*)second + 0x08, 4);
+        memcpy(&wa, (char*)second + 0x0c, 4);
+        memcpy(&wb, (char*)second + 0x10, 4);
+        CHECK(path_record_count_peek() == before + 2u && serial == before + 1u,
+              "the serial store rides the counter");
+        CHECK(wa == 0x1111u && wb == 0x2222u, "the coordinate pair lands");
+        void* prev = NULL;
+        memcpy(&prev, (char*)second + 0x24, sizeof prev);
+        CHECK(prev == first, "the prev link rides the previous record");
+        uint32_t word = 0xdeadbeefu;
+        memcpy(&word, (char*)first + 0x1c, 4);
+        CHECK(word == 0u, "the window arrives zeroed (corpus belt stores)");
+        CHECK(path_record_last_peek() == second, "the last slot ends on second");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "level_test: %d failure(s)\n", s_failures);
         return 1;

@@ -1784,6 +1784,84 @@ int main(void)
               "the null window guard answers 1 too");
     }
 
+    /* Cell-command type-3 issue + task batch append (2026-10-25). */
+    {
+        static unsigned char grid135[8 * 8 * 0x48];
+        memset(grid135, 0, sizeof grid135);
+        GameContext lctx;
+        game_context_init(&lctx);
+        cmd_context_set(&lctx);
+        static LevelState lvl;
+        memset(&lvl, 0, sizeof lvl);
+        lvl.word[0x14 / 4] = 8; /* width  */
+        lvl.word[0x18 / 4] = 8; /* height */
+        lvl.ptr_voxels = grid135;
+        lvl.ptr_terrain = NULL; /* the setter tail is guarded (deviation) */
+        lctx.level = &lvl;
+#define C135(x, y) (grid135 + ((size_t)(y) * 8u + (size_t)(x)) * 0x48)
+#define W135(x, y, off, v)                                                     \
+    do {                                                                       \
+        const uint32_t v_ = (uint32_t)(v);                                     \
+        memcpy(C135(x, y) + (off), &v_, 4);                                    \
+    } while (0)
+
+        lctx.level = NULL;
+        cmd_init();
+        cell_command_type3_issue(1, 1);
+        CHECK(cmd_global_head() == NULL, "the absent level skips (deviation)");
+        lctx.level = &lvl;
+
+        cmd_init();
+        cell_command_type3_issue(1, 1);
+        CHECK(cmd_global_head() == NULL, "the plain cell is refused");
+        W135(1, 1, 0x08, 0x30u); /* traversable bit 0x10 plus flag 0x20 */
+        cell_command_type3_issue(1, 1);
+        CHECK(cmd_global_head() == NULL, "the flag-0x20 word is refused");
+        W135(1, 1, 0x08, 0x10u);
+        cell_command_type3_issue(1, 1);
+        CHECK(cmd_global_head() != NULL
+                  && cmd_rec_type(cmd_global_head()) == 0xb
+                  && cmd_rec_kind(cmd_global_head()) == 6,
+              "the flagged cell issues the type-11 record at kind 6");
+        uint32_t wx = 0u, wy = 0u;
+        memcpy(&wx, (const char*)cmd_global_head() + 0x08, 4);
+        memcpy(&wy, (const char*)cmd_global_head() + 0x0c, 4);
+        CHECK(wx == 1u && wy == 1u, "the coordinates land as raw words");
+        CHECK(cmd_rec_now(cmd_global_head()) == 1500.0f,
+              "the head link arms the record's time word");
+        cell_command_type3_issue(1, 1); /* issue #2 links a second head */
+        CHECK(cmd_rec_type(cmd_global_head()) == 0xb, "the second issues too");
+        cmd_init();
+
+        GameContext ectx;
+        game_context_init(&ectx);
+        cmd_context_set(&ectx);
+        const int ia = entity_create(&ectx, 2, "b1", 0, 0, 0, 0);
+        const int ib = entity_create(&ectx, 2, "b2", 0, 0, 0, 0);
+        EntitySlot* ent_a = (EntitySlot*)entity_at(&ectx, 2, ia);
+        EntitySlot* ent_b = (EntitySlot*)entity_at(&ectx, 2, ib);
+        EntitySlot* arr[2] = { ent_a, ent_b };
+        static char payload135[16];
+        entity_task_batch_append(arr, 2, payload135);
+        void* ra = cmd_chain_walk(ent_a);
+        void* rb = cmd_chain_walk(ent_b);
+        CHECK(ra != NULL && cmd_rec_type(ra) == 1, "the first entity got its record");
+        CHECK(rb != NULL && ra != rb, "the second entity got its own record");
+        CHECK(cmd_rec_payload(ra) == payload135 && cmd_rec_payload(rb) == payload135,
+              "the payload word rides both records");
+        CHECK(cmd_rec_now(ra) == 0.0f, "the time word lands zero");
+        CHECK(cmd_global_head() == NULL,
+              "the batch stays off the global list (finding 10)");
+        entity_task_batch_append(arr, 1, payload135);
+        void* ra2 = cmd_chain_walk(ent_a);
+        CHECK(ra2 != NULL && ra2 != ra, "the second batch rides the chain tail");
+        entity_task_batch_append(arr, 0, payload135); /* the empty count does nothing */
+        EntitySlot* with_null[1] = { NULL };
+        entity_task_batch_append(with_null, 1, payload135); /* guarded */
+#undef W135
+#undef C135
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "cmd_test: %d failure(s)\n", s_failures);
         return 1;

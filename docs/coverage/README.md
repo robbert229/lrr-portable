@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 971 | 37.9% |
+| ported | 976 | 38.1% |
 | anchored | 4 | 0.2% |
-| named | 1542 | 60.1% |
+| named | 1537 | 59.9% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (971 functions)
+  (976 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1542 functions)
+  citation yet (1537 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1547 (60.3%).**
+**Game logic remaining to port: 1542 (60.1%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -58,10 +58,8 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00401b30` | AdvisorApplySlotTransform |
 | `0x00401c50` | FormattedTextPrintfWidth |
 | `0x00401c80` | FormattedTextPrintf |
-| `0x00403030` | CellCommandType3Issue |
 | `0x004031e0` | ActiveEntityListContainsCode |
 | `0x00403320` | ObjectCommandTaskCreate |
-| `0x00403650` | EntityTaskBatchAppend |
 | `0x00403750` | CommandKindRecordIssueAndLink |
 | `0x00403810` | TerrainCellRecordCountUpdate |
 | `0x00403910` | CellRecordCountsPruneForEntity |
@@ -469,7 +467,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00437940` | DeferredOListEntityCreateAndLink |
 | `0x00437c20` | DeferredOListEntityQueueAdd |
 | `0x004382c0` | PooledRecordAllocateAndReset |
-| `0x00438310` | PooledRecordChunkAllocateAndLink |
 | `0x004383b0` | RoverWorkQueueUpdate |
 | `0x00438460` | EntityKindRecordUpdateDispatch |
 | `0x00438610` | EntityCreateWithPosition |
@@ -789,7 +786,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00460290` | EntityType4IndexListBuild |
 | `0x00460310` | EntityType4IndexListAppend |
 | `0x00460360` | CheckpointBlobTaskProgressRefresh |
-| `0x00460910` | ResolvedEntityOperationDispatch |
 | `0x00460f00` | RewardStatsPanelDraw |
 | `0x00461070` | RewardStatsTextFormat |
 | `0x00461410` | RewardScreenTick |

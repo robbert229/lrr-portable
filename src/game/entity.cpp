@@ -443,15 +443,6 @@ static int entity_type_for_name(const char* name)
     return type;
 }
 
-/* Public (type, row) shape of the resolver — the corpus call form with a
- * NULL fourth output (FUN_0042e8b0(name, &type, &row, 0)): table matches
- * write both, the special names write only their dedicated rows, leaving
- * the row slot for the caller to carry. */
-int entity_type_row_for_name(const char* name, int* type_out, int* row_out)
-{
-    return entity_type_pair_for_name(name, type_out, row_out);
-}
-
 static void ol_strncpy(char* dst, size_t n, const char* src)
 {
     size_t i = 0;
@@ -942,4 +933,63 @@ void entity_clear_linked_object_state(EntitySlot* e)
         carried->flags_3e8 |= 0x2000u;
     }
     cmd_chain_drop(e, 4);
+}
+
+/* --- the pooled-record chunk window + resolved dispatch band (2026-10-25) -- */
+
+/* PooledRecordChunkAllocateAndLink (FUN_00438310) — see entity.hpp. The
+ * corpus grows a power-of-two chunk of 0x40c-stride entity records, threads
+ * them as a free list whose last link joins the previous head, and tracks
+ * the chunk table with a byte counter. Deviations: the port records widen
+ * the link slot (stride 0x410 where the corpus strides 0x40c, the
+ * port-pointer convention) and the chunk table is bounded 32 entries where
+ * the corpus strides it blindly. */
+
+#define POOL_CHUNK_COUNT_SLOTS 32 /* deviation: bounded chunk table */
+#define POOL_RECORD_STRIDE 0x410  /* corpus 0x40c widened for the link */
+#define POOL_RECORD_LINK_OFF 0x408
+
+static uint32_t s_pool_chunk_count;             /* DAT_004dee10 role */
+static void* s_pool_chunks[POOL_CHUNK_COUNT_SLOTS]; /* DAT_004de790 role */
+static void* s_pool_record_head;                /* DAT_004de810 role */
+
+void pooled_record_chunk_allocate_and_link(void)
+{
+    const uint32_t n =
+        1u << ((uint32_t)(unsigned char)s_pool_chunk_count & 0x1fu);
+    void* base = engine_heap_alloc((long)n * POOL_RECORD_STRIDE);
+    if (base == NULL) {
+        return; /* deviation: the corpus strides the allocator's word */
+    }
+    if (s_pool_chunk_count < POOL_CHUNK_COUNT_SLOTS) {
+        s_pool_chunks[s_pool_chunk_count] = base;
+    }
+    s_pool_chunk_count = s_pool_chunk_count + 1u;
+    char* cur = (char*)base;
+    for (uint32_t k = 1; k < n; ++k) {
+        void* next = cur + POOL_RECORD_STRIDE;
+        __builtin_memcpy(cur + POOL_RECORD_LINK_OFF, &next, sizeof next);
+        cur += POOL_RECORD_STRIDE;
+    }
+    __builtin_memcpy(cur + POOL_RECORD_LINK_OFF, &s_pool_record_head,
+                     sizeof(s_pool_record_head));
+    s_pool_record_head = base;
+}
+
+void* pooled_record_head_peek(void) { return s_pool_record_head; }
+uint32_t pooled_record_chunk_count_peek(void) { return s_pool_chunk_count; }
+
+/* ResolvedEntityOperationDispatch (FUN_00460910) — see entity.hpp. */
+int resolved_entity_operation_dispatch(const char* name, int slot,
+                                       int subtract)
+{
+    int column = 0;
+    /* Corpus shape: the resolver zeroes its row slot at entry and only
+     * table-row matches (and the ore pair) write it, so special names
+     * ride the column slot with zero. */
+    int type = 0;
+    if (!entity_type_pair_for_name(name, &type, &column)) {
+        return 0;
+    }
+    return grid_record_count_difference_get(type, column, slot, subtract);
 }
