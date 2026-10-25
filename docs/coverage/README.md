@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 838 | 32.7% |
+| ported | 842 | 32.8% |
 | anchored | 4 | 0.2% |
-| named | 1675 | 65.3% |
+| named | 1671 | 65.2% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (838 functions)
+  (842 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1675 functions)
+  citation yet (1671 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1680 (65.5%).**
+**Game logic remaining to port: 1676 (65.4%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -253,6 +253,12 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00410740` | SaveMenuListEntryAppend |
 | `0x00410a10` | MenuItemChoiceStringsAllocate |
 | `0x00410aa0` | ResourceHandleListAppend |
+| `0x00410ae0` | ResourceHandleListDispose |
+| `0x00410b30` | GlobalPointerGet_004c76ab24 |
+| `0x00410b40` | GlobalPointerGet_004c76ab28 |
+| `0x00410b50` | GlobalPointerGet_004c76ab3c |
+| `0x00410b90` | BoundedFloatRecordCreate |
+| `0x00410bf0` | MenuItemNumericRangeRecordAllocate |
 | `0x00410c70` | ResourceVariantRecordRelease |
 | `0x00410d50` | MenuTextRecordMake |
 | `0x00410e20` | MenuButtonRecordMake |
@@ -283,7 +289,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00415220` | FrontEndStartLevel |
 | `0x00415370` | OverlayMenuGate |
 | `0x00415d00` | SaveMenuLayoutLoad |
-| `0x00416910` | OptionsWriteToSlot |
 | `0x004169c0` | FrontEndStateChange |
 | `0x00416c80` | MenuEnter |
 | `0x00416e00` | ActiveObjectList |
@@ -1141,7 +1146,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0047ad10` | SoundPositionSetFromVector |
 | `0x0047ad30` | AttachedSoundStopByEntity |
 | `0x0047ad70` | SoundBufferPlayWithPosition |
-| `0x0047b020` | SoundBufferAssociationAdd |
 | `0x0047b0f0` | SoundHandleToBuffer |
 | `0x0047b130` | SoundBufferStopHandle |
 | `0x0047b160` | SoundSubsystemStopAll |

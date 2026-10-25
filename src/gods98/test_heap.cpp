@@ -132,6 +132,18 @@ int main(void)
         engine_heap_free(rec);
     }
 
+    /* ThreeWordRecordAllocateAndInitialize (2026-10-24). */
+    {
+        uint32_t* rec = (uint32_t*)
+            three_word_record_allocate_and_initialize(0x11u, 0x22u, 0x33u);
+        CHECK(rec != NULL, "the three-word record allocates");
+        if (rec != NULL) {
+            CHECK(rec[0] == 0x11u && rec[1] == 0x22u && rec[2] == 0x33u,
+                  "the words store in order");
+            engine_heap_free(rec);
+        }
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "heap_test: %d failure(s)\n", s_failures);
         return 1;

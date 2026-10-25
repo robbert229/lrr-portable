@@ -433,3 +433,16 @@ void incident_message_flag_set(int value)
         s_flags &= ~4u;
     }
 }
+
+/* HasActiveResource (FUN_004119d0) — see message.hpp. */
+int has_active_resource(const void* record)
+{
+    uint32_t handle = 0u;
+    if (record != NULL) {
+        __builtin_memcpy(&handle, (const char*)record + 0x38, sizeof handle);
+    }
+    if (record == NULL || handle == 0u) {
+        return 0;
+    }
+    return system_state_flags_get() != 0u ? 1 : 0;
+}

@@ -15,6 +15,8 @@
  *    (the retry handler is absent, exactly the corpus's unregistered case);
  *  - allocations are 16-byte aligned because the corpus round-ups do (the
  *    aligned path is shared by both entry points). */
+#include <stdint.h>
+
 #ifndef LEGORRR_GODS98_HEAP_HPP
 #define LEGORRR_GODS98_HEAP_HPP
 
@@ -39,6 +41,14 @@ void* engine_heap_alloc_aligned(long size);
 
 /* FUN_0048db80: free a previous allocation (NULL is a no-op). */
 void engine_heap_free(void* ptr);
+
+/* ThreeWordRecordAllocateAndInitialize (FUN_00410b60): allocate a 0xc-byte
+ * record and store the three arguments in order. Deviation: the corpus's
+ * void return leaves the record unobservable, so the port answers it for
+ * test pinning (the corpus's effect — the store — is identical). */
+void* three_word_record_allocate_and_initialize(uint32_t a, uint32_t b,
+                                                uint32_t c);
+
 
 /* FUN_0047ff40: the resource-layer free wrapper (identical call). */
 void engine_heap_free_wrapper(void* ptr);

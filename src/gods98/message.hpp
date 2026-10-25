@@ -144,4 +144,9 @@ uint32_t deferred_callback_peek(void);
  * bit 4 of the message flag word through the module's own s_flags. */
 void incident_message_flag_set(int value);
 
+/* HasActiveResource (FUN_004119d0, finding 440): a record with a nonzero
+ * +0x38 word answers through the system-state bitmask. NULL record guarded
+ * (corpus strides blindly). */
+int has_active_resource(const void* record);       /* FUN_004119d0 */
+
 #endif /* LEGORRR_MESSAGE_HPP */
