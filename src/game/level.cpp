@@ -5,6 +5,7 @@
 
 #include "game.hpp"
 #include "gods98/block.hpp"
+#include "gods98/heap.hpp"
 #include "gods98/message.hpp"
 #include "gods98/resource.hpp"
 #include "level.hpp"
@@ -1916,6 +1917,89 @@ void terrain_cell_work_flag_circle_set(LevelState* s, int center_x,
             }
         }
     }
+}
+
+/* TerrainNeighborWorkFlagScan (FUN_00431580): the work-flag breadth-first
+ * sweep. A double-buffered float-pair queue (two pages of (w+h)*2 entries
+ * carved from one (w+h)*0x20 engine-heap block — FUN_0048dbd0/FUN_0048db80)
+ * starts at the seed coordinate; each round drains the current page and, for
+ * every neighbour (row = y±1, col = x±1, indexed row*w + col in the stride-
+ * 0x48 cell records at DAT+0xb8, port: level_voxel), processes the cells
+ * carrying the work flag bit 0x20000: the corpus fires TerrainCellMutation
+ * (FUN_00430530) in mode 1 — whose side effects live in the hook-folded
+ * wave-flood core, so the word the next line clears is the only observable
+ * state here — clears the bit, and enqueues the cell into the other page.
+ * Rounds alternate pages until the new page arrives empty. Deviations: the
+ * corpus indexes out-of-bounds cells blindly, the port's level_voxel reads
+ * answer zero; and the corpus never bounds-checks the enqueue, so a sweep
+ * wider than the pages spills (the port mirrors this unbounded store).
+ * Corpus quirk, kept faithful: the enqueue writes the float of the entry's
+ * col-bound (col+1, the FPU-stack leftover) as the x coordinate and only
+ * the row rides the loop variable — queue cells drift one column right per
+ * hop — and the self-skip compares that bound float against the float of
+ * the queue-buffer pointer, a test that never lands, so every hit cell is
+ * enqueued including the seed cell itself. */
+void terrain_neighbor_work_flag_scan(LevelState* s, unsigned int seed_x,
+                                     unsigned int seed_y)
+{
+    const int w = level_width(s);
+    const int h = level_height(s);
+    const int span = w + h;
+    if (span <= 0) {
+        return; /* deviation: the corpus seeds a zero-size (1-byte) alloc
+                 * and spills into the block header; the port declines */
+    }
+    float* buf = (float*)engine_heap_alloc((long)span * 0x20);
+    if (buf == NULL) {
+        return; /* corpus: the entire scan is alloc-guarded */
+    }
+    float* page[2];
+    unsigned int count[2];
+    page[0] = buf;
+    page[1] = buf + span * 4; /* +16(w+h) bytes = 4(w+h) floats */
+    count[0] = 1u;
+    count[1] = 0u;
+    page[0][0] = (float)seed_x; /* corpus fildll's the dword's bits */
+    page[0][1] = (float)seed_y;
+    int cur = 0;
+    do {
+        if (count[cur] != 0u) {
+            const float* pf = page[cur];
+            for (unsigned int idx = 0; idx < count[cur]; ++idx, pf += 2) {
+                const int col0 = level_cell_of(pf[0]); /* FUN_0048e060 pair */
+                const int row0 = level_cell_of(pf[1]);
+                if ((long long)row0 - 1 <= (long long)row0 + 1) { /* corpus's wrap guard */
+                    for (int row = row0 - 1; row <= row0 + 1; ++row) {
+                        for (int col = col0 - 1; col <= col0 + 1; ++col) {
+                            uint8_t* rec = level_voxel(s, col, row);
+                            uint32_t word = 0;
+                            if (rec != NULL) {
+                                __builtin_memcpy(&word, rec + 0x08,
+                                                 sizeof(word));
+                            }
+                            if ((word & 0x20000u) != 0u) {
+                                /* TerrainCellMutation mode 1 (FUN_00430530):
+                                 * folded hook, see the note above. */
+                                word &= 0xfffdffffu;
+                                if (rec != NULL) {
+                                    __builtin_memcpy(rec + 0x08, &word,
+                                                     sizeof(word));
+                                }
+                                unsigned int n = count[1 - cur];
+                                float* dst = page[1 - cur];
+                                dst[2 * n] = (float)(col0 + 1);
+                                count[1 - cur] = n + 1u;
+                                dst[2 * n + 1] = (float)row;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        cur = (cur == 0) ? 1 : 0;
+        count[1 - cur] = 0u; /* the drained page's count */
+    } while (count[cur] != 0u);
+    engine_heap_free(buf);
 }
 
 /* --- cell timestamp dedup (see level.hpp) --------------------------------

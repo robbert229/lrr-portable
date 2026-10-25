@@ -1331,6 +1331,39 @@ int main(int argc, char** argv)
         linked_entity_flag_and_command_update(NULL); /* guarded */
     }
 
+    /* EntityRandomActivityAttempt (FUN_00443670, 2026-10-24). */
+    {
+        EntitySlot e;
+        memset(&e, 0, sizeof e);
+        CHECK(entity_random_activity_attempt(NULL) == 0, "NULL is guarded");
+        const int took = entity_random_activity_attempt(&e);
+        CHECK(took == 1 && e.activity >= 0x38 && e.activity <= 0x4c
+                  && (e.flags_3e0 & 0x8000u) != 0u
+                  && e.activity_last == e.activity,
+              "a cold slot takes an activity in the code band");
+
+        /* The gate pair answers zero before any draw. */
+        e.flags_3e0 |= 0x400u;
+        CHECK(entity_random_activity_attempt(&e) == 0, "the gate bit blocks");
+        e.flags_3e0 = 0u;
+        e.flags_3e0 |= 0x2u; /* mask-word intersection (bit 1 is in the mask) */
+        CHECK(entity_random_activity_attempt(&e) == 0, "the mask blocks");
+        e.flags_3e0 = 0u;
+
+        /* Same-name attempts: the dispatch's early-return clause. Keep
+         * the slot otherwise clean and let the draw walk until it lands
+         * off the registered name (five attempts per call, deterministic
+         * LCG sequence). */
+        int prev = e.activity_last, got = 0, hops = 0;
+        while (got == 0 && hops < 20) {
+            got = entity_random_activity_attempt(&e);
+            ++hops;
+        }
+        CHECK(got == 1 && e.activity != prev
+                  && (e.flags_3e0 & 0x8000u) != 0u,
+              "a registered name re-rolls until the dispatch takes");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "ai_test: %d failure(s)\n", s_failures);
         return 1;

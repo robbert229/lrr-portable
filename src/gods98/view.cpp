@@ -481,6 +481,28 @@ static float terrain_height(EngineContext* ctx, float x, float y)
     }
     return 0.0f;
 }
+
+/* RandomReachableGridPointSelect (FUN_00450560): the ray-descending
+ * grid-point pick — see view.hpp for the plane geometry. Both float*
+ * direction arguments ride the corpus's forwarded-dword convention:
+ * the point and ray direction are vectors, and Ghidra typed them as
+ * plain dwords because FUN_004798e0 only forwards them. The plane-point
+ * z quirk is faithful: FUN_004798e0 answers into `out` while the height
+ * store lands on the plane quad's z-slot, so the corpus effectively
+ * intersects against successively lower planes. */
+void random_reachable_grid_point_select(EngineContext* ctx, const float* p,
+                                        const float* dir, float* out,
+                                        int* gx, int* gy, int rounds)
+{
+    float plane[3] = { 0.0f, 0.0f, -50.0f };
+    const float normal[3] = { 0.0f, 0.0f, -1.0f };
+    for (int i = rounds; i != 0; --i) {
+        view_ray_intersection_test(out, p, dir, plane, normal);
+        plane[2] = terrain_height(ctx, out[0], out[1]);
+    }
+    (void)grid_pick(ctx, out, gx, gy); /* FUN_0044f6d0 hook */
+}
+
 static void cam_angle()
 {
     /* TODO(view): FUN_00431570/FUN_0044fe70 camera angle. */

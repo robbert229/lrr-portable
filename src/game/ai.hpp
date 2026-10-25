@@ -252,6 +252,16 @@ void entity_dispatch_event31_for_pending_flag(EntitySlot* e);
                                                 /* FUN_004437f0 */
 void entity_activity23_state_transition(EntitySlot* e); /* FUN_00449a70 */
 
+/* TryRandomEntityActionFromCodeRange (FUN_00443670): while the +0x3e0 bit
+ *   0x400 is clear and the mask-word test (FUN_0043baf0) answers 0, draw
+ *   the shared random word and map it into the activity-code band
+ *   0x38..0x4c (% 0x15 + 0x38), install it through the activity set with
+ *   the dispatch bookkeeping folded in, and answer 1 (raising +0x3e0 bit
+ *   0x8000) on the first attempt the dispatch takes; five same-name
+ *   attempts answer 0. The dispatch's per-type runner return is the
+ *   scene seam (deviation above). */
+int entity_random_activity_attempt(EntitySlot* e); /* FUN_00443670 */
+
 /* --- entity counter + link band (2026-10-24; findings 251/469/435) --------
  * SimulationUpdateCounterAdd (FUN_0043a8f0): bumps the global object's
  *   +0x8C word `count` times through the ported mutator (the corpus's first

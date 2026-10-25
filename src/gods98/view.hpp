@@ -220,6 +220,20 @@ void matrix4_set_rotation_z(float* out, float angle); /* FUN_00479df0 */
 void perspective_projection_matrix_set(float* out, float p1, float p2,
                                        float p3, float p4, float p5);
 
+/* RandomReachableGridPointSelect (FUN_00450560): iterate the ray
+ * (p, dir) down through the z-plane — starting at the plane point
+ * (0, 0, -50) with normal (0, 0, -1) — `rounds` times, letting the
+ * terrain height of the hit (the FUN_0044f940 hook; the port reads the
+ * voxel surface byte) ride back into the plane point's z, so every
+ * iteration from the second descends the plane to the previous height.
+ * The final hit's grid cell then lands in gx/gy through the FUN_0044f6d0
+ * hook. The corpus loop tests != 0, so a negative `rounds` runs until
+ * it wraps; with rounds == 0 the corpus grid-picks from uninitialized
+ * stack, so the port reads whatever `out` the caller left. */
+void random_reachable_grid_point_select(EngineContext* ctx, const float* p,
+                                        const float* dir, float* out,
+                                        int* gx, int* gy, int rounds);
+
 /* --- camera-handle primitives (record-backed) ----------------------------- */
 void cam_offset(CameraHandle* c, float x, float y, float z); /* FUN_004755e0 */
 void cam_get_pos(CameraHandle* c, float out[3]);            /* FUN_004754c0 */
