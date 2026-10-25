@@ -2363,6 +2363,21 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Token-pool grow, doubling free chunks**
+(2026-10-24):
+`block.*` ports `block_text_token_pool_grow` (0x479490 — the corpus's
+watermark doubles the chunk size (1 << watermark words of 32), the chunk
+lands on the engine heap, and its nodes chain into the free-list head:
+block i links block i + 1, the last link is the old head, and the chunk
+base becomes the new head. The watermark counter is parked slot-wise
+through the 32-slot window (the corpus strides blindly — window guard as
+deviation) and never resets, faithful through destroy. Port nodes are
+widened to eight pointer slots (stride 0x40, link = field 7) so the
+corpus's dword link rides a host-aligned slot — the stream-buffer
+field-slot model. `block_test` pins the two-chunk chain, the slot parks,
+and destroy leaving the watermark alone. The pool family completes with
+this grow plus last iteration's destroy; init stays unported.
+
 **uint96 bit-band clear, token-pool teardown + pressed-state reads**
 (2026-10-24):
 `crt.*` gains `crt_uint96_has_no_bits_at_or_above` (0x497900 — the

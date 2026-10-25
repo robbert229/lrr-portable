@@ -1866,7 +1866,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00479270,FUN_00479270,ported,BlockTextTokenAllocate,1,563
 004792c0,FUN_004792c0,ported,GlobalRecordListPushHead,3,117
 004792e0,FUN_004792e0,ported,ConfigBlockPathFind,5,3192
-00479490,FUN_00479490,named,BlockTextTokenPoolGrow,0,641
+00479490,FUN_00479490,ported,BlockTextTokenPoolGrow,4,641
 00479500,FUN_00479500,named,D3DRMVectorRandom,0,85
 00479510,FUN_00479510,named,D3DRMVectorRotate,0,166
 00479530,FUN_00479530,named,SurfaceTriangleNormalCalculate,0,693
