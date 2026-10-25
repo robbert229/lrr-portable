@@ -1018,3 +1018,40 @@ int scene_object_has_task_type_4_5_7(const EntitySlot* e)
     }
     return 0;
 }
+
+/* --- the entity activity gate band (see ai.hpp) ---------------------------- */
+
+/* FUN_004437f0: pending-flag gate, then the activity-0x31 re-register. */
+void entity_dispatch_event31_for_pending_flag(EntitySlot* e)
+{
+    if (e == NULL) {
+        return; /* deviation: the corpus strides blindly */
+    }
+    if (e->type != 3) {
+        return;
+    }
+    if ((e->flags_3e8 & 0x80000000u) == 0u) {
+        return;
+    }
+    if ((e->flags_3e4 & 0x20000000u) != 0u) {
+        return;
+    }
+    e->flags_3e4 |= 0x20000000u;
+    ai_set_activity(e, 0x31, 0); /* FUN_004409e0; 0x447c40 folds here */
+}
+
+/* FUN_00449a70: the type-2 half-word, then the bit-0x400-gated 0x23 pass. */
+void entity_activity23_state_transition(EntitySlot* e)
+{
+    if (e == NULL) {
+        return; /* deviation: the corpus strides blindly */
+    }
+    if (e->type == 2) {
+        e->flags_3e4 |= 0x800u;
+    }
+    if ((e->flags_3e0 & 0x400u) == 0u) {
+        e->flags_3e0 |= 0x40000000u;
+        ai_set_activity(e, 0x23, 0); /* FUN_004409e0; 0x447c40 folds here */
+        attach_idle_record(e);       /* FUN_00403f30 */
+    }
+}

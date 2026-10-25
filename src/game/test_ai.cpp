@@ -1213,6 +1213,51 @@ int main(int argc, char** argv)
               "the NULL slot is guarded");
     }
 
+    /* The entity activity gate band (2026-10-24). */
+    {
+        EntitySlot e;
+        memset(&e, 0, sizeof e);
+        /* EntityDispatchEvent31ForPendingFlag: the three-condition gate. */
+        e.type = 3;
+        entity_dispatch_event31_for_pending_flag(&e);
+        CHECK(e.activity == 0 && e.flags_3e4 == 0u,
+              "the clear pending bit keeps the gate silent");
+        e.flags_3e8 = 0x80000000u;
+        entity_dispatch_event31_for_pending_flag(&e);
+        CHECK(e.flags_3e4 == 0x20000000u && e.activity == 0x31
+                  && e.activity_last == 0x31,
+              "the pending pass raises the bit and sets activity 0x31");
+        e.activity = 0;
+        entity_dispatch_event31_for_pending_flag(&e);
+        CHECK(e.activity == 0, "the raised marker bit keeps the gate silent");
+        e.flags_3e4 = 0u;
+        e.activity = 0;
+        e.type = 1;
+        entity_dispatch_event31_for_pending_flag(&e);
+        CHECK(e.activity == 0, "the type gate stays silent");
+        entity_dispatch_event31_for_pending_flag(NULL); /* guarded */
+
+        /* EntityActivity23StateTransition: the half-word + gated pass. */
+        memset(&e, 0, sizeof e);
+        e.type = 2;
+        entity_activity23_state_transition(&e);
+        CHECK(e.flags_3e4 == 0x800u && (e.flags_3e0 & 0x40000000u) != 0u
+                  && e.activity == 0x23 && e.cmd_head != NULL,
+              "the type-2 pass raises the halves and registers idle");
+        e.flags_3e0 |= 0x400u; /* raise the gate bit the pass checks */
+        e.activity = 0;
+        e.type = 3;
+        entity_activity23_state_transition(&e);
+        CHECK(e.activity == 0 && (e.flags_3e4 & 0x800u) != 0u,
+              "the raised 0x400 bit leaves the activity alone");
+        memset(&e, 0, sizeof e);
+        e.type = 1;
+        entity_activity23_state_transition(&e);
+        CHECK(e.activity == 0x23 && (e.flags_3e4 & 0x800u) == 0u,
+              "the gate pass skips the type half-word");
+        entity_activity23_state_transition(NULL); /* guarded */
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "ai_test: %d failure(s)\n", s_failures);
         return 1;

@@ -564,4 +564,10 @@ int      panel_seam_calls(void);                /* port hook */
 void     panel_seam_last(void** out_res, float* out_x, float* out_y);
                                                 /* port hook */
 
+/* ActiveObjectList (FUN_00416e00, findings 371/378): the active-object word
+ * selector — in-game answers the DAT_00556fd0 word, otherwise the
+ * DAT_00556fe4 word. Neither corpus word has a ported owner, so both land
+ * here as zero-init statics; the selector returns the live address. */
+int* active_object_list_word(void); /* FUN_00416e00 */
+
 #endif /* LEGORRR_GAME_FRONTEND_HPP */

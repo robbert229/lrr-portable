@@ -5,6 +5,7 @@
 
 #include "game.hpp"
 #include "gods98/block.hpp"
+#include "gods98/message.hpp"
 #include "gods98/resource.hpp"
 #include "level.hpp"
 #include "objective.hpp"
@@ -2546,4 +2547,22 @@ int terrain_sfx_grid_cell_peek(int cell)
         return 0;
     }
     return s_terrain_sfx_grid[cell];
+}
+
+/* EntityAvailableResourceSpend (FUN_00438720) — see level.hpp.
+ * The corpus's comparison value is the unconsumed EAX of the void no-op
+ * callback; pinning it to 0 matches the corpus call's observable shape. */
+int entity_available_resource_spend(LevelState* level, int amount,
+                                    const void* resource_hint)
+{
+    if (level != NULL && level_int(level, 0x1f8) != 0) {
+        amount = 0;
+    }
+    const int probe = 0; /* FUN_0041f8e0's void call: pinned residue */
+    if (probe < amount) {
+        message_dispatch(0xe, 0, 0, resource_hint);
+        return 0;
+    }
+    global_object_field98_add(level, amount);
+    return 1;
 }
