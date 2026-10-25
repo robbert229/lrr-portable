@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 1059 | 41.3% |
+| ported | 1062 | 41.4% |
 | anchored | 4 | 0.2% |
-| named | 1456 | 56.8% |
+| named | 1453 | 56.7% |
 | runtime-import | 44 | 1.7% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (1059 functions)
+  (1062 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1456 functions)
+  citation yet (1453 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (44 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1461 (57.0%).**
+**Game logic remaining to port: 1458 (56.9%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -1090,9 +1090,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0047d430` | SceneObjectRegistryTeardown |
 | `0x0047d470` | ImageSurfaceRelease |
 | `0x0047d490` | SurfacePixelFormatQuery |
-| `0x0047d520` | Palette8To16BitSurfaceExpand |
-| `0x0047d740` | SurfacePixelRowsFlipWithScratch |
-| `0x0047d800` | Bitmap24BitSurfaceConvert |
 | `0x0047dbc0` | ResourceRecordAddRef |
 | `0x0047de60` | DirectDrawSurfaceDescriptionGet |
 | `0x0047ded0` | DirectDrawSurfaceUnlock |

@@ -2363,6 +2363,25 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Surface record pixel band — flip, palette expand, 24-bit convert**
+(2026-10-25): three frontier rows land. `surface_pixel_rows_flip_with_scratch`
+(0x47d740) reverses the row order through an engine-heap scratch, three stage
+copies per pair (top→scratch, bottom→top, scratch→bottom); rows stride at the
+EVEN-rounded row_bytes, so an odd row length swaps the even span and the
+stray byte is the corpus's rounding. `surface_palette8_to_16bit_surface_expand`
+(0x47d520) walks source bytes as palette indices and lands each entry's three
+bytes through their mask fields as ((byte >> (8 − popcount)) <<
+first-set) — byte 0 the +0x58 mask, byte 1 +0x5c, byte 2 +0x60, entries four
+bytes apart — then flips; depths 8/24/32 do no work and answer 0, any other
+depth answers 1. `surface_bitmap24_bit_surface_convert` (0x47d800) is the
+24-bit sibling: three source bytes per pixel ride the masks REVERSED (byte 0
+the high field, byte 2 the low) and rows advance by the stride over
+three-byte pixels. Deviations: the record is modeled LP64-safe as named
+fields (the surface's blind strides are guarded), and the corpus's scratch
+alloc/free rides the engine-heap seam. `surface_test` pins the pair swap,
+the middle row, the even-stride rounding, the mask-field words, the reversed
+24-bit mapping, the stride pads, and every depth verdict.
+
 **FLIC opcode-27 8-bit delta + the decode dispatchers** (2026-10-25): three
 frontier rows land. `flic_decode8_bit_alternate_delta` (0x484ca0) is the
 palette-indexed sibling of the 16-bit delta: the same chunk walk (kind-0

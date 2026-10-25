@@ -1961,11 +1961,11 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0047d430,FUN_0047d430,named,SceneObjectRegistryTeardown,0,357
 0047d470,FUN_0047d470,named,ImageSurfaceRelease,0,167
 0047d490,FUN_0047d490,named,SurfacePixelFormatQuery,0,824
-0047d520,FUN_0047d520,named,Palette8To16BitSurfaceExpand,0,2547
+0047d520,FUN_0047d520,ported,Palette8To16BitSurfaceExpand,3,2547
 0047d700,FUN_0047d700,ported,PopCount32,2,251
 0047d720,FUN_0047d720,ported,FindFirstSetBit32,2,226
-0047d740,FUN_0047d740,named,SurfacePixelRowsFlipWithScratch,0,2087
-0047d800,FUN_0047d800,named,Bitmap24BitSurfaceConvert,0,2526
+0047d740,FUN_0047d740,ported,SurfacePixelRowsFlipWithScratch,3,2087
+0047d800,FUN_0047d800,ported,Bitmap24BitSurfaceConvert,3,2526
 0047d9d0,FUN_0047d9d0,ported,BitmapSurfaceLoad,11,2025
 0047db90,FUN_0047db90,ported,RGBChannelsPack,3,166
 0047dbc0,FUN_0047dbc0,named,ResourceRecordAddRef,0,249
