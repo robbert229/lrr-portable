@@ -12,8 +12,6 @@
 #include "engine.hpp"
 #include "view.hpp"
 #include "record.hpp"
-#include "crt.hpp"
-#include "message.hpp"
 
 static int s_failures = 0;
 
@@ -174,6 +172,29 @@ int main(void)
               "release clears the word");
         entity_field_grid_buffer_release(); /* idempotent */
         grid_cell_record_buffer_allocate(NULL); /* guarded */
+    }
+
+    /* GlobalStateLowByteClearAndRefresh (2026-10-24). */
+    {
+        char obj[0x20];
+        memset(obj, 0, sizeof obj);
+        char rec[0x10];
+        memset(rec, 0, sizeof rec);
+        void* p = obj;
+        __builtin_memcpy(rec + 0x00, &p, sizeof p);
+        scene_visibility_hook_reset();
+        global_refresh_record_set(rec);
+        global_state_low_word_set(0x12345678u);
+        global_state_low_byte_clear_and_refresh();
+        CHECK(global_state_low_word_get() == 0x12345600u,
+              "the low byte clears and the high bytes stay");
+        void* last = NULL;
+        int flag = -1;
+        scene_visibility_last_call(&last, &flag);
+        CHECK(scene_visibility_calls() == 1 && last == (void*)obj && flag == 1,
+              "the refresh record rides the visibility leaf with mode 1");
+        global_state_low_word_set(0u);
+        global_refresh_record_set(NULL);
     }
 
     if (s_failures == 0) {

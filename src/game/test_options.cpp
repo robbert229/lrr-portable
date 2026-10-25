@@ -484,6 +484,35 @@ int main(int argc, char** argv)
         options_write_to_slot(NULL); /* guarded */
     }
 
+    /* OptionsContextSixFieldSet (2026-10-24): the +0x1c window stores. */
+    {
+        GameContext ctx;
+        game_context_init(&ctx);
+        const uint32_t src[6] = { 11u, 22u, 33u, 44u, 55u, 66u };
+        save_slot_set(&ctx, 1);
+        options_context_six_field_set(&ctx, src);
+        int ok = 1;
+        for (int i = 0; i < 6; ++i) {
+            uint32_t w = 0;
+            __builtin_memcpy(&w, (char*)&ctx + 0x1c + (size_t)i * sizeof w,
+                             sizeof w);
+            if (w != src[i]) {
+                ok = 0;
+            }
+        }
+        CHECK(ok, "the six fields land in the slot window");
+        ctx.options.game_speed = 5;
+        options_write_to_slot(&ctx); /* moves the +8/+12/+16 words */
+        save_slot_set(&ctx, -1); /* closed: nothing writes */
+        const uint32_t src2[6] = { 0, 0, 0, 0, 0, 0 };
+        options_context_six_field_set(&ctx, src2);
+        uint32_t w0 = 0;
+        __builtin_memcpy(&w0, (char*)&ctx + 0x1c, sizeof w0);
+        CHECK(w0 == 11u, "the closed slot leaves the window alone");
+        options_context_six_field_set(NULL, src); /* guarded */
+        options_context_six_field_set(&ctx, NULL); /* guarded */
+    }
+
     if (s_failures == 0) {
         printf("options_test: PASS\n");
         return 0;

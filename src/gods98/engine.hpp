@@ -263,4 +263,17 @@ void        grid_cell_record_buffer_replace(EngineState* block);  /* FUN_0046623
 void*       entity_field_grid_buffer_peek(void);
 EngineState* entity_field_grid_descriptor_peek(void);
 
+/* --- global-state refresh leaf (2026-10-24; findings 392/334/329) ----------
+ * GlobalStateLowByteClearAndRefresh (FUN_00435a20): clears the low byte of
+ * the DAT_00556ed4 state word, then routes DAT_005563b4 as the record
+ * through the ported surface visibility set (mode 1, per finding 392).
+ * Neither corpus word has a ported owner; both land here as zero-init
+ * statics with hooks. Deviation: the port's surface set reads the record's
+ * +0 handle through the widened pointer slot (record.cpp convention). */
+void global_state_low_byte_clear_and_refresh(void); /* FUN_00435a20 */
+uint32_t global_state_low_word_get(void);           /* port hook */
+void     global_state_low_word_set(uint32_t value); /* port hook */
+void  global_refresh_record_set(void* record);      /* port hook */
+void* global_refresh_record_peek(void);             /* port hook */
+
 #endif /* LEGORRR_ENGINE_HPP */

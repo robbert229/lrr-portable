@@ -135,4 +135,12 @@ int  options_load_header(GameOptions* o, const uint8_t* blk);
 struct GameContext;
 void options_write_to_slot(struct GameContext* ctx); /* FUN_00416910 */
 
+/* OptionsContextSixFieldSet (FUN_00417f20, findings 438/372): with a save
+ * slot open, copies six dwords from `src` into the slot context's +0x1c
+ * window. Deviation: the corpus probes the global active-slot context; the
+ * port threads a GameContext argument (the module's established shape). */
+void options_context_six_field_set(struct GameContext* ctx,
+                                   const uint32_t* src); /* FUN_00417f20 */
+
+
 #endif /* LEGORRR_GAME_OPTIONS_HPP */

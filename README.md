@@ -2363,6 +2363,17 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Global-state + six-slot refresh band** (findings 392/334/329/354/432/372):
+`engine.*` ports `global_state_low_byte_clear_and_refresh` (0x435a20 — the
+DAT_00556ed4 low byte clears, then DAT_005563b4 rides the ported surface
+visibility set with mode 1; both unowned corpus words as hooked statics),
+`record.*` ports `six_resource_slots_set_state` (0x46cfc0 — the six handle
+slots from +0x10, each nonzero one calling the visibility leaf, widened-slot
+stride), and `options.*` ports `options_context_six_field_set` (0x417f20 —
+six dwords into the open slot context's +0x1c window, with the port threading
+a GameContext argument). `engine_bind_test`, `record_test`, and
+`options_test` pin the stores, gates, and the guarded closed-slot path.
+
 **Allocate/add + slot-write leaf band** (findings 440/408/243/381): `heap.*`
 ports `three_word_record_allocate_and_initialize` (0x410b60 — the three-word
 record store, answered through the port for observability), `message.*` ports

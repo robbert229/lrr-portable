@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 842 | 32.8% |
+| ported | 845 | 33.0% |
 | anchored | 4 | 0.2% |
-| named | 1671 | 65.2% |
+| named | 1668 | 65.1% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (842 functions)
+  (845 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1671 functions)
+  citation yet (1668 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1676 (65.4%).**
+**Game logic remaining to port: 1673 (65.2%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -305,7 +305,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004173e0` | SavTreeLoad |
 | `0x004179b0` | SavMenuList |
 | `0x00417df0` | SavRefreshSlots |
-| `0x00417f20` | OptionsContextSixFieldSet |
 | `0x00417f40` | SavWriteRecord |
 | `0x00418000` | ShowLevelOverlayForCurrentSelection |
 | `0x00418040` | CampaignChainSnapshotCreate |
@@ -473,6 +472,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00435230` | RandomVariantCellScatter |
 | `0x00435550` | GlobalStateZeroTransitionDetect |
 | `0x004355c0` | MenuOptionPanelTextureUpdate |
+| `0x00435aa0` | PanelSelectionHighlightToggle |
 | `0x00435b20` | SceneObjectChainRecordCreate |
 | `0x00435dc8` | CameraViewContextClose |
 | `0x00435e35` | ModelTransformCopyToSceneNode |
