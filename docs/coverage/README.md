@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 1034 | 40.3% |
+| ported | 1040 | 40.6% |
 | anchored | 4 | 0.2% |
-| named | 1481 | 57.8% |
+| named | 1475 | 57.5% |
 | runtime-import | 44 | 1.7% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (1034 functions)
+  (1040 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1481 functions)
+  citation yet (1475 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (44 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1486 (58.0%).**
+**Game logic remaining to port: 1480 (57.7%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -77,9 +77,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00405c10` | PendingCommandEntityAssignmentTick |
 | `0x00406360` | EntityRecordAttachAndRelink |
 | `0x00406540` | EntityPoolCallbackSearch |
-| `0x004065f0` | CubicBezierPointEvaluate |
-| `0x004067b0` | PolylineSegmentLengthsAndTotalCalculate |
-| `0x00406820` | BezierCurveSamplesBuild |
 | `0x004068c0` | PathArcLengthInterpolate |
 | `0x00406990` | TypeTableResourceRowLoad |
 | `0x00406c00` | RendererObjectUpdateFromRecordField64 |
@@ -306,7 +303,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00419830` | EntityLinkedListEntriesRemoveByKey |
 | `0x004198f0` | TerrainCellLinkedEntriesRemove |
 | `0x00419a80` | IncidentMessageNodeCreate |
-| `0x00419b20` | InfoMessageQueueFindId |
 | `0x00419b50` | RemainingTimerDurationGet |
 | `0x00419da0` | IncidentMessagePanelRefreshIfActive |
 | `0x00419de0` | RecordListEntryMoveToFront |
@@ -826,7 +822,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0046b4d0` | CaseInsensitiveNameTableLookup |
 | `0x0046b520` | UiTextEntryLoad |
 | `0x0046b660` | CommandSampleStatsAccumulate |
-| `0x0046b730` | TimedEffectPersistenceSet |
 | `0x0046b7c0` | TimedEffectAndCueUpdate |
 | `0x0046b8b0` | RectangularGridOverlayGeometryDraw |
 | `0x0046bc30` | TimedEffectSlotRender |
@@ -1220,7 +1215,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00484ca0` | FlicDecode8BitAlternateDelta |
 | `0x00484e50` | FlicDecode16BitDelta |
 | `0x00485030` | FlicOpcode27DecodeDispatch |
-| `0x004850f0` | TextBufferCreate |
 | `0x00485210` | FormattedTextAppendToRingBuffer |
 | `0x00485250` | TextBufferAppendVFormat |
 | `0x00485300` | ObjectiveAdvisorTextCopy |

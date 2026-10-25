@@ -2363,6 +2363,27 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Curve band + persistence/queue leaves** (2026-10-25): six frontier rows
+land. `cubic_bezier_point_evaluate` (0x4065f0, view.*) ports the corpus's
+Horner-shaped cubic over four two-float control points with the half-term
+order kept (the x half folds the linear term first, the y half the
+t-squared term first); the endpoints are p(0)=P0, p(1)=P2 — the corpus
+expansion's algebraic identity. `bezier_curve_samples_build` (0x406820)
+builds the sample table — header {count, control pair}, then `count-1`
+samples on 1/(count-1) with the 0x31 overflow clamp.
+`polyline_segment_lengths_total` (0x4067b0) walks the packed point pairs
+(floats at +4+8i / +8+8i), stores segment lengths through the +0x198
+table, zeroes the +0x194 word, and answers the total (the vector
+distance rides the ported `vec2_dist_alt`).
+`timed_effect_persistence_set` (0x46b730, frontend.*) raises or drops the
+entry's flag-word bit 4 in the guarded window. `message_queue_find_id`
+(0x419b20, message.*) becomes the public index-by-id walk over the queue
+(renamed from the port's internal helper). `text_buffer_create` (0x4850f0,
+heap.*) allocates the 0x830 text-output record with mode/header dwords,
+the widened buffer slot + length word, and the +0x82c bit 2.
+`view_test`/`frontend_test`/`message_test`/`heap_test` pin the endpoints,
+clamps, length layout, bit folds, and record headers.
+
 **Handler-table + multiply-thunk band** (2026-10-25): four frontier rows
 land. `crt_math_exception_handler_get` (0x4939d0, crt.*) scans the corpus's
 27-entry math-handler table (own storage + install hook — the corpus

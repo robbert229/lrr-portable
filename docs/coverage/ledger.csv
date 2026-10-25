@@ -125,11 +125,11 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00406540,FUN_00406540,named,EntityPoolCallbackSearch,0,823
 004065d0,FUN_004065d0,ported,GlobalDwordGet,1,60
 004065e0,FUN_004065e0,ported,RenderSurfaceSecondaryGet,1,60
-004065f0,FUN_004065f0,named,CubicBezierPointEvaluate,0,870
+004065f0,FUN_004065f0,ported,CubicBezierPointEvaluate,2,870
 00406730,FUN_00406730,ported,Vector2DistanceVariant,3,307
 00406760,FUN_00406760,ported,Vector2SetLength,2,210
-004067b0,FUN_004067b0,named,PolylineSegmentLengthsAndTotalCalculate,0,554
-00406820,FUN_00406820,named,BezierCurveSamplesBuild,0,575
+004067b0,FUN_004067b0,ported,PolylineSegmentLengthsAndTotalCalculate,2,554
+00406820,FUN_00406820,ported,BezierCurveSamplesBuild,2,575
 004068c0,FUN_004068c0,named,PathArcLengthInterpolate,0,1051
 00406980,FUN_00406980,ported,SceneObjectModeIsOne,1,78
 00406990,FUN_00406990,named,TypeTableResourceRowLoad,0,3422
@@ -1581,7 +1581,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0046b520,FUN_0046b520,named,UiTextEntryLoad,0,1737
 0046b660,FUN_0046b660,named,CommandSampleStatsAccumulate,0,994
 0046b700,FUN_0046b700,ported,TimedEffectCueRequestSet,2,224
-0046b730,FUN_0046b730,named,TimedEffectPersistenceSet,0,299
+0046b730,FUN_0046b730,ported,TimedEffectPersistenceSet,2,299
 0046b770,FUN_0046b770,ported,TimedEffectUpdateRequestSet,1,143
 0046b7a0,FUN_0046b7a0,ported,TimedEffectTimestampReset,3,185
 0046b7c0,FUN_0046b7c0,named,TimedEffectAndCueUpdate,0,1298
@@ -2133,7 +2133,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00485030,FUN_00485030,named,FlicOpcode27DecodeDispatch,0,547
 004850c0,FUN_004850c0,ported,IndexedWordTableLookup,1,123
 004850e0,FUN_004850e0,ported,ObjectField10Get,2,86
-004850f0,FUN_004850f0,named,TextBufferCreate,0,655
+004850f0,FUN_004850f0,ported,TextBufferCreate,2,655
 00485160,FUN_00485160,ported,TextOutputField82CBit2SetClear,3,235
 00485190,FUN_00485190,ported,TextBufferDestroy,2,122
 004851b0,FUN_004851b0,ported,FloatPairAtOffset4SetFromInts,1,160

@@ -1051,3 +1051,98 @@ void* rotated_pairs_scratch_fill(const int* offset_pair, const int* source,
     }
     return s_rot_pairs;
 }
+
+/* --- the curve band (2026-10-25; see view.hpp) ----------------------------- */
+
+/* CubicBezierPointEvaluate (FUN_004065f0) — see view.hpp. The halves keep
+ * the corpus's term shapes (the x half folds A*t first, the y half the
+ * t-squared term first; the sums are commutative, bit-identical). */
+void cubic_bezier_point_evaluate(float out[2], const float* p0, const float* p1,
+                                 const float* p2, const float* p3, float t)
+{
+    if (out == NULL || p0 == NULL || p1 == NULL || p2 == NULL || p3 == NULL) {
+        return; /* deviation: the corpus strides the points blindly */
+    }
+    const double tt = (double)t * (double)t; /* the x87 t-squared word */
+    const double q = (double)p1[0] * 3.0 + (double)p0[0]; /* x: P1.x*3 + P0.x */
+    const double s4 = (q - (double)p0[0]) * 3.0;
+    const double s3 = (((double)p2[0] - (double)p3[0] * 3.0) - q) * 3.0 - s4;
+    const double s1 = ((double)p2[0] - (double)p0[0]) - s4 - s3;
+    const double r6 = (double)p1[1] * 3.0 + (double)p0[1];
+    const double t4 = (r6 - (double)p0[1]) * 3.0;
+    const double t3 = (((double)p2[1] - (double)p3[1] * 3.0) - r6) * 3.0 - t4;
+    const double t1 = ((double)p2[1] - (double)p0[1]) - t4 - t3;
+
+    double x = (double)s4 * (double)t;
+    x += (double)s3 * tt;
+    x += (double)s1 * tt * (double)t;
+    x += (double)p0[0];
+    const float fx = (float)x;
+    double y = (double)t3 * tt;
+    y += (double)t4 * (double)t;
+    y += (double)t1 * tt * (double)t;
+    y += (double)p0[1];
+    const float fy = (float)y;
+
+    __builtin_memcpy(&out[0], &fx, sizeof fx);
+    __builtin_memcpy(&out[1], &fy, sizeof fy);
+}
+
+/* BezierCurveSamplesBuild (FUN_00406820) — see view.hpp. */
+void bezier_curve_samples_build(uint32_t* dest, const uint32_t* control,
+                                const uint32_t* p3, const uint32_t* p4,
+                                const uint32_t* p5, uint32_t count)
+{
+    if (dest == NULL || control == NULL) {
+        return; /* deviation: the corpus strides the record blindly */
+    }
+    if (count > 0x31u) {
+        count = 0x32u; /* the corpus's overflow clamp, faithful */
+    }
+    dest[0] = count;
+    dest[1] = control[0];
+    dest[2] = control[1];
+    if (count <= 1u) {
+        return;
+    }
+    const float inv = 1.0f / (float)(count - 1u);
+    uint32_t* slot = dest + 3;
+    for (uint32_t i = 1u; i < count; ++i) {
+        const float t = (float)i * inv;
+        cubic_bezier_point_evaluate((float*)slot, (const float*)control,
+                                    (const float*)p3, (const float*)p4,
+                                    (const float*)p5, t);
+        slot += 2;
+    }
+}
+
+/* PolylineSegmentLengthsAndTotalCalculate (FUN_004067b0) — see view.hpp. */
+float polyline_segment_lengths_total(uint32_t* curve)
+{
+    if (curve == NULL) {
+        return 0.0f; /* deviation: the corpus strides the record blindly */
+    }
+    const uint32_t count = curve[0];
+    float zero = 0.0f;
+    __builtin_memcpy((char*)curve + 0x194, &zero, sizeof zero);
+    double total = 0.0;
+    if (count > 1u) {
+        for (uint32_t i = 1u; i < count; ++i) {
+            /* Corpus point pairs ride adjacent floats: x at +4+8i, y at
+             * +8+8i (the walker steps two dwords a hop). */
+            const size_t base = 4u + (size_t)(i - 1u) * 8u;
+            float ax = 0.0f, ay = 0.0f, bx = 0.0f, by = 0.0f;
+            __builtin_memcpy(&ax, (char*)curve + base, sizeof ax);
+            __builtin_memcpy(&ay, (char*)curve + base + 4, sizeof ay);
+            __builtin_memcpy(&bx, (char*)curve + base + 8, sizeof bx);
+            __builtin_memcpy(&by, (char*)curve + base + 12, sizeof by);
+            const float a[2] = { ax, ay };
+            const float b[2] = { bx, by };
+            const float len = vec2_dist_alt(a, b);
+            __builtin_memcpy((char*)curve + 0x198 + (size_t)(i - 1) * 4u,
+                             &len, sizeof len);
+            total += (double)len;
+        }
+    }
+    return (float)total;
+}

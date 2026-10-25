@@ -2810,3 +2810,14 @@ void ui_overlay_animation_advance(int mode, int steps)
         s_overlay_anim_float = 0.0f; /* the after-loop negative guard */
     }
 }
+
+/* TimedEffectPersistenceSet (FUN_0046b730) — see frontend.hpp. */
+void timed_effect_persistence_set(int index, int set)
+{
+    if (index < 0 || index >= TIMED_EFFECT_ENTRIES) {
+        return; /* deviation: the corpus strides the band blindly */
+    }
+    s_timed_effect_flags[index] =
+        (set != 0) ? (s_timed_effect_flags[index] | 0x10u)
+                   : (s_timed_effect_flags[index] & ~0x10u);
+}

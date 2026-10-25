@@ -234,6 +234,39 @@ int main(void)
         }
     }
 
+    /* TextBufferCreate (2026-10-25): the record header, the buffer half,
+     * the length word, and the +0x82c bit 2. */
+    {
+        const uint32_t header[4] = { 0xa1u, 0xb2u, 0xc3u, 0xd4u };
+        void* rec = text_buffer_create(7u, header, 0x40);
+        CHECK(rec != NULL, "the record allocates");
+        if (rec != NULL) {
+            uint32_t w = 0u;
+            __builtin_memcpy(&w, (char*)rec + 0x00, sizeof w);
+            CHECK(w == 7u, "the mode word installs");
+            __builtin_memcpy(&w, (char*)rec + 0x04, sizeof w);
+            CHECK(w == 0xa1u, "the first header dword rides");
+            __builtin_memcpy(&w, (char*)rec + 0x10, sizeof w);
+            CHECK(w == 0xd4u, "the last header dword rides");
+            void* buffer = NULL;
+            __builtin_memcpy(&buffer, (char*)rec + 0x14, sizeof buffer);
+            CHECK(buffer != NULL, "the buffer half allocates");
+            memset(buffer, 0x5a, 0x40); /* usable through the request */
+            __builtin_memcpy(&w, (char*)rec + 0x418, sizeof w);
+            CHECK(w == 0x40u, "the length word records");
+            __builtin_memcpy(&w, (char*)rec + 0x82c, sizeof w);
+            CHECK((w & 4u) != 0u, "the flag word raises bit 2");
+            text_buffer_destroy(rec);
+        }
+        void* naked = text_buffer_create(9u, NULL, 0x20);
+        if (naked != NULL) {
+            uint32_t w = 0xffu;
+            __builtin_memcpy(&w, (char*)naked + 0x04, sizeof w);
+            CHECK(w == 0u, "the null header stays zeroed (dev)");
+            text_buffer_destroy(naked);
+        }
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "heap_test: %d failure(s)\n", s_failures);
         return 1;

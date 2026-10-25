@@ -415,4 +415,22 @@ void* rotated_pairs_scratch_fill(const int* offset_pair, const int* source,
 /* Observer hook answering the scratch base (test pin). */
 void* rotated_pairs_scratch_peek(void);
 
+/* --- curve band (2026-10-25) -------------------------------------------------
+ * CubicBezierPointEvaluate (FUN_004065f0): the cubic at t over four two-float
+ * control points, written as the corpus's Horner-style expansion (its x half
+ * folds A*t first, the y half the t-squared term first — commutative add,
+ * bit-identical). Deviation: the corpus strides the output blindly.
+ * BezierCurveSamplesBuild (FUN_00406820): builds the sample table — header
+ * {count, control pair}, then `count` samples spaced on 1/(count-1) with the
+ * 0x31-overflow clamp. PolylineSegmentLengthsAndTotalCalculate (FUN_004067b0):
+ * walks the packed point list (float pairs every 8 bytes from +4), stores each
+ * segment's length through the +0x198 table, zeroes the +0x194 word, and
+ * answers the running total. The corpus strides the record and length window
+ * blindly; the port guards them. */
+void cubic_bezier_point_evaluate(float out[2], const float* p0, const float* p1,
+                                 const float* p2, const float* p3, float t);
+void bezier_curve_samples_build(uint32_t* dest, const uint32_t* control,
+                                const uint32_t* p3, const uint32_t* p4,
+                                const uint32_t* p5, uint32_t count);
+float polyline_segment_lengths_total(uint32_t* curve);
 #endif /* LEGORRR_VIEW_HPP */

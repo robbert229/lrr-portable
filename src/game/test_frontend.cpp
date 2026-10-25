@@ -1603,6 +1603,23 @@ int main(int argc, char** argv)
               "the guarded window drops the out-of-range request (dev)");
     }
 
+    /* Timed-effect persistence (2026-10-25): the flag word's bit 4 raise
+     * and drop, the or-shape, and the guarded window. */
+    {
+        timed_effect_persistence_set(3, 1);
+        CHECK((timed_effect_flags_peek(3) & 0x10u) != 0u,
+              "the set raises bit 4");
+        timed_effect_update_request_set(3);
+        CHECK(timed_effect_flags_peek(3) == 0x14u,
+              "the or-shape joins the update bit");
+        timed_effect_persistence_set(3, 0);
+        CHECK(timed_effect_flags_peek(3) == 0x4u,
+              "the drop leaves the update bit");
+        timed_effect_persistence_set(16, 1);
+        CHECK(timed_effect_flags_peek(16) == 0u,
+              "the guarded window drops the out-of-range set (dev)");
+    }
+
     if (s_failures == 0) {
         printf("frontend: all tests passed\n");
         return 0;
