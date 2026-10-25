@@ -342,4 +342,29 @@ void ai_object_registry_slot_set(int window, int slot, void* record,
 int  ai_object_registry_window_count(int window);
 void ai_object_registries_reset(void);  /* port hook: clear (unowned) */
 
+/* --- the idle-tile update band (2026-10-25) -------------------------------- */
+
+/* EntityUpdateAndUnregisterAtTile (FUN_00440130): stride the idle-registration
+ * table for entities standing on cell (x,y); each hit stores the link word
+ * through the +0x2fc mirror, runs the linked-entity flag/command update,
+ * and unregisters the slot. Deviation: the port scans its NULL-skipping
+ * table where the corpus strides the global blindly. */
+void entity_update_and_unregister_at_tile(int x, int y, void* link);
+                                                /* FUN_00440130 */
+void ai_idle_table_reset(void);  /* port hook: clear the idle table (unowned) */
+
+/* EntityActivityTerrainEligibilityTransition (FUN_00449980): with the +0x3e0
+ * bit 0x40 raised, probe whether the entity may still be placed at the
+ * (truncated) float cell (see crt precedent for the __ftol coordinates).
+ * On an ineligible cell: fold activity 11 in with argument 1, clear the
+ * gate bit raising the eligibility-fail bit, and clear the cell's occupied
+ * mark. On an eligible one with the activity timer spent: answer 1 without
+ * touching state. Otherwise: fold activity 0 out, queue the cell's terrain
+ * work transition (FUN_00431140), blank the +0x2f4/+0x2f8 pair to -1.0,
+ * write 1 through the result word, and clear the occupied mark. */
+int entity_activity_terrain_eligibility_transition(GameContext* ctx,
+                                                   EntitySlot* e, float x,
+                                                   float y, int* out);
+                                                /* FUN_00449980 */
+
 #endif /* LEGORRR_GAME_AI_HPP */

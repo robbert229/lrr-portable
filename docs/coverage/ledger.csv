@@ -58,7 +58,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00402a40,FUN_00402a40,ported,CoordinatePairCallbackDispatch,1,178
 00402aa0,FUN_00402aa0,ported,ArgumentCallbackDispatch,1,94
 00402ae0,FUN_00402ae0,ported,TerrainCellRefreshDispatch,1,308
-00402b30,FUN_00402b30,ported,CoordinateCallbackDispatch,1,178
+00402b30,FUN_00402b30,ported,CoordinateCallbackDispatch,2,178
 00402b60,FUN_00402b60,ported,CoordinateCallbackDispatchByMode,1,270
 00402cd0,FUN_00402cd0,ported,CmdCancelRef,1,467
 00402d50,FUN_00402d50,ported,KindNineCellCommandIssue,2,991
@@ -323,7 +323,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0040efb0,FUN_0040efb0,ported,CellCoordinateTimestampExists,1,337
 0040f000,FUN_0040f000,named,LavaErosionNeighborCheck,0,1093
 0040f0e0,FUN_0040f0e0,named,KindSixRandomMessageDispatchSweep,0,1023
-0040f190,FUN_0040f190,ported,,4,1320
+0040f190,FUN_0040f190,ported,,5,1320
 0040f2b0,FUN_0040f2b0,named,LavaErosionNeighborEligible,0,571
 0040f330,FUN_0040f330,named,LavaErosionNeighborMutate,0,2854
 0040f5e0,FUN_0040f5e0,ported,GlobalConfigValueSet,1,81
@@ -718,7 +718,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0042f0c0,FUN_0042f0c0,ported,PendingLevelName,1,1852
 0042f2e0,FUN_0042f2e0,ported,TerrainCellEdgeFlagSetAndUpdate,1,550
 0042f350,FUN_0042f350,ported,TerrainNeighborCoordinateCheck,1,2871
-0042f6f0,FUN_0042f6f0,ported,CellInitPass,5,14655
+0042f6f0,FUN_0042f6f0,ported,CellInitPass,6,14655
 004302b0,FUN_004302b0,named,MapCellTrackingFlagsClearAndRefresh,0,533
 00430320,FUN_00430320,named,TerrainCellWorkFlagClear,0,1589
 00430470,FUN_00430470,named,TerrainNeighborFlagSet,0,986
@@ -726,8 +726,8 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00430df0,FUN_00430df0,named,TerrainNeighborRefresh,0,1210
 00430ee0,FUN_00430ee0,ported,TerrainCellInitialize,8,2768
 004310f0,FUN_004310f0,ported,TerrainCellFlag20ClearAndRefresh,1,376
-00431140,FUN_00431140,named,TerrainCellQueuedWorkTransition,0,593
-004311d0,FUN_004311d0,ported,,1,2047
+00431140,FUN_00431140,ported,TerrainCellQueuedWorkTransition,4,593
+004311d0,FUN_004311d0,ported,,2,2047
 004313b0,FUN_004313b0,ported,,5,783
 00431450,FUN_00431450,ported,TerrainNeighborFlagRefresh,3,552
 004314c0,FUN_004314c0,named,ActivityBuildRecordRelease,0,490
@@ -776,7 +776,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00432c90,FUN_00432c90,named,TerrainCellStateUpdate,0,1163
 00432d90,FUN_00432d90,ported,TerrainCellFlag20TestInBounds,3,324
 00432dd0,FUN_00432dd0,ported,TerrainCellFlag08000000Test,2,189
-00432e00,FUN_00432e00,ported,TerrainCellPredugEdgeWallFlagSet,5,520
+00432e00,FUN_00432e00,ported,TerrainCellPredugEdgeWallFlagSet,7,520
 00432e60,FUN_00432e60,ported,TerrainCellFlagsMaskC0Test,2,231
 00432e90,FUN_00432e90,ported,TerrainCellFlag04000000Test,2,189
 00432ec0,FUN_00432ec0,ported,TerrainCellStateEquals1,2,187
@@ -818,7 +818,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00435170,FUN_00435170,ported,TerrainSurfaceTypeNameGet,1,211
 00435190,FUN_00435190,ported,SurfaceTypeConfiguredValueAtIndex,1,79
 004351a0,FUN_004351a0,ported,ActionCodeToSoundAlias,2,535
-00435230,FUN_00435230,named,RandomVariantCellScatter,0,1059
+00435230,FUN_00435230,ported,RandomVariantCellScatter,2,1059
 00435300,FUN_00435300,ported,,1,3362
 00435550,FUN_00435550,named,GlobalStateZeroTransitionDetect,0,183
 00435580,FUN_00435580,ported,GlobalHandlePositionApplyIfPresent,2,214
@@ -986,7 +986,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004403d0,FUN_004403d0,named,LevelDebugCellRetargetDispatch,0,4178
 004407b0,FUN_004407b0,named,SpatialEntityCallbackQuery,0,427
 004408c0,FUN_004408c0,named,SpatialEntityCallbackQueryAtOptionalCoordinate,0,426
-004409e0,FUN_004409e0,ported,EntityActivityRequestSet,8,228
+004409e0,FUN_004409e0,ported,EntityActivityRequestSet,10,228
 00440a10,FUN_00440a10,named,AttachedEntityDirectionVectorUpdate,0,2160
 00440bf0,FUN_00440bf0,named,ObjectListFieldAssignAll,0,324
 00440c30,FUN_00440c30,named,GridRouteSearchAdapter,0,291
@@ -1016,7 +1016,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004437f0,FUN_004437f0,ported,EntityDispatchEvent31ForPendingFlag,3,274
 00443840,FUN_00443840,named,EntityRouteCellCandidateAccept,0,454
 004438b0,FUN_004438b0,named,PathStepAdvanceAndArrivalCheck,0,9659
-004440a0,FUN_004440a0,ported,LinkedEntityFlagAndCommandUpdate,2,303
+004440a0,FUN_004440a0,ported,LinkedEntityFlagAndCommandUpdate,4,303
 004440f0,FUN_004440f0,named,ActivityTimeoutAccumulateAndRaise,0,1267
 00444260,FUN_00444260,named,EntityRandomCellStepRouteIssue,0,2082
 00444460,FUN_00444460,named,FlaggedVectorStepCommandIssue,0,1661
@@ -1065,7 +1065,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00449610,FUN_00449610,named,EntityCoordinateRouteAndMark,0,870
 00449700,FUN_00449700,named,RouteStepCommandIssue,0,1600
 00449880,FUN_00449880,named,BlockedCellApproachWeightWrite,0,1341
-00449980,FUN_00449980,named,EntityActivityTerrainEligibilityTransition,0,880
+00449980,FUN_00449980,ported,EntityActivityTerrainEligibilityTransition,3,880
 00449a70,FUN_00449a70,ported,EntityActivity23StateTransition,3,298
 00449ac0,FUN_00449ac0,named,ProximityStepCommandIssueClearingGate,0,1552
 00449c00,FUN_00449c00,ported,,4,76

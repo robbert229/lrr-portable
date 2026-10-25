@@ -1461,6 +1461,102 @@ int main(int argc, char** argv)
         CHECK(rec == NULL, "the reset empties the windows");
     }
 
+    /* The idle-tile update band (2026-10-25): link store, unregister, and
+     * the activity/terrain eligibility transition. */
+    {
+        ai_idle_table_reset();
+        EntitySlot idle, four;
+        memset(&idle, 0, sizeof idle);
+        memset(&four, 0, sizeof four);
+        idle.type = 1;
+        idle.x = 3.0f;
+        idle.y = 5.0f;
+        four.type = 4;
+        entity_queue_for_rockfall_processing_if_eligible(&idle);
+        CHECK(ai_idle_count() == 1, "the probe lands one entry");
+        entity_update_and_unregister_at_tile(3, 5, &four);
+        CHECK(idle.link_2fc == (uintptr_t)&four, "the link word stores");
+        CHECK((idle.flags_3ec & 0x40u) != 0u && (four.flags_3ec & 0x40u) != 0u,
+              "the type-4 link raises both +0x3ec bits");
+        entity_update_and_unregister_at_tile(3, 5, NULL);
+        CHECK(idle.link_2fc == (uintptr_t)&four,
+              "the blanked slot no longer hits (unregister)");
+        entity_update_and_unregister_at_tile(9, 9, NULL); /* coord miss */
+        CHECK((four.flags_3ec & 0x40u) != 0u, "the coordinate miss is inert");
+        ai_idle_table_reset();
+        CHECK(ai_idle_count() == 0, "the hook empties the table");
+    }
+
+    /* EntityActivityTerrainEligibilityTransition (2026-10-25): the gate,
+     * the fail fold, the spent-timer pass, and the handoff. */
+    {
+        EntitySlot e;
+        memset(&e, 0, sizeof e);
+        int out = -1;
+        CHECK(entity_activity_terrain_eligibility_transition(NULL, &e, 1.0f,
+                                                             2.0f, &out) == 0
+                  && out == 0,
+              "the gate-off answer clears the result word");
+        GameContext ctx;
+        game_context_init(&ctx);
+        e.flags_3e0 = 0x40u;
+        CHECK(entity_activity_terrain_eligibility_transition(&ctx, &e, 1.0f,
+                                                             2.0f, NULL) == 0,
+              "the missing level stays inert (deviation guard)");
+
+        static LevelState lv;
+        static uint8_t vox[8 * 8 * 0x48];
+        memset(&lv, 0, sizeof lv);
+        lv.ptr_voxels = vox;
+        level_set_int(&lv, LEVEL_OFF_WIDTH, 8);
+        level_set_int(&lv, LEVEL_OFF_HEIGHT, 8);
+        ctx.level = &lv;
+        e.flags_3e8 = 0x4u;
+        e.flags_3e0 = 0x40u;
+        out = -1;
+        CHECK(entity_activity_terrain_eligibility_transition(&ctx, &e, 3.5f,
+                                                             3.5f, &out) == 1
+                  && out == 0,
+              "the ineligible cell answers 1 with the result word cleared");
+        CHECK(e.activity == 11 && e.activity_param == 1,
+              "the fail fold lands activity 11 parameter 1");
+        CHECK(e.flags_3e0 == 0x80000000u,
+              "the fail fold moves the gate bit to the eligibility bit");
+
+        /* Eligible cell (1,2): the walkable flag raised. */
+        uint8_t* rec = vox + ((size_t)2 * 8 + 1) * 0x48;
+        const uint32_t walk = 0x10u;
+        __builtin_memcpy(rec + 0x08, &walk, sizeof walk);
+        e.activity_timer = 0.0f;
+        e.flags_3e0 = 0x40u;
+        out = -1;
+        CHECK(entity_activity_terrain_eligibility_transition(&ctx, &e, 1.5f,
+                                                             2.5f, &out) == 1
+                  && out == 0,
+              "the spent timer returns 1 untouched");
+        uint32_t now = 0u;
+        __builtin_memcpy(&now, rec + 0x08, sizeof now);
+        CHECK(now == 0x10u, "the spent pass queues no work");
+
+        e.activity_timer = 1.0f;
+        e.flags_3e0 = 0x40u;
+        e.pos_pair_2f4 = 5.0f;
+        e.pos_pair_2f8 = 6.0f;
+        out = 0;
+        CHECK(entity_activity_terrain_eligibility_transition(&ctx, &e, 1.5f,
+                                                             2.5f, &out) == 1
+                  && out == 1,
+              "the running timer hands off with the result word raised");
+        CHECK(e.activity == 0 && e.activity_param == 0,
+              "the handoff folds activity 0");
+        CHECK(e.flags_3e0 == 0u, "the handoff clears the gate bit alone");
+        CHECK(e.pos_pair_2f4 == -1.0f && e.pos_pair_2f8 == -1.0f,
+              "the coordinate pair blanks to -1");
+        __builtin_memcpy(&now, rec + 0x08, sizeof now);
+        CHECK(now == 0x30u, "the queued transition raises the work bit");
+        ai_idle_table_reset();
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "ai_test: %d failure(s)\n", s_failures);
         return 1;

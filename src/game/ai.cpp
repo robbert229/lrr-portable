@@ -1350,3 +1350,79 @@ void linked_entity_flag_and_command_update(EntitySlot* e)
     child->flags_3ec |= 0x40u;
     cmd_chain_drop(e, 0x1c);
 }
+
+/* --- the idle-tile update band (2026-10-25) -------------------------------- */
+
+/* port hook: clear the idle-registration table (unowned). */
+void ai_idle_table_reset(void)
+{
+    for (int i = 0; i < s_idle100_n; ++i) {
+        s_idle100[i] = NULL;
+    }
+    s_idle100_n = 0;
+}
+
+/* EntityUpdateAndUnregisterAtTile (FUN_00440130) — see ai.hpp. The corpus
+ * strides its idle-registration table (DAT_004eabcc / count DAT_004ead5c,
+ * the port's s_idle100); a hit stores the link word through the +0x2fc
+ * mirror, runs the linked-entity update (FUN_004440a0), and blanks the
+ * slot. Deviation: the corpus strides the table blindly; the port scans
+ * the NULL-skipping port table. */
+void entity_update_and_unregister_at_tile(int x, int y, void* link)
+{
+    for (int i = 0; i < s_idle100_n; ++i) {
+        EntitySlot* e = s_idle100[i];
+        if (e == NULL) {
+            continue;
+        }
+        if (level_cell_of(e->x) == x && level_cell_of(e->y) == y) {
+            e->link_2fc = (uintptr_t)link;          /* entity +0x2fc */
+            linked_entity_flag_and_command_update(e); /* FUN_004440a0 */
+            s_idle100[i] = NULL;                    /* unregister */
+        }
+    }
+}
+
+/* EntityActivityTerrainEligibilityTransition (FUN_00449980) — see ai.hpp.
+ * The corpus's two coordinate arguments arrive through the x87 stack and
+ * land as __ftol'd integers; the port takes them truncated (the crt
+ * precedent). Deviations: guarded entity/level words where the corpus
+ * strides blindly, and the ctx threading (port convention). */
+int entity_activity_terrain_eligibility_transition(GameContext* ctx,
+                                                   EntitySlot* e,
+                                                   float x, float y,
+                                                   int* out)
+{
+    if (out != NULL) {
+        *out = 0;
+    }
+    if (e == NULL || (e->flags_3e0 & 0x40u) == 0u) {
+        return 0; /* deviation: the corpus strides the entity word */
+    }
+    const int ix = (int)x;
+    const int iy = (int)y;
+    const LevelState* lvl = grid_of(ctx);
+    if (lvl == NULL) {
+        return 0; /* deviation: the corpus strides the level word */
+    }
+    if (terrain_cell_allows_placement(e, lvl, ix, iy) == 0) {
+        ai_set_activity(e, 11, 1);                      /* FUN_004409e0 */
+        e->flags_3e0 = (e->flags_3e0 & ~0x40u) | 0x80000000u;
+        level_tile_mark((LevelState*)lvl, ix, iy, 0);    /* FUN_00432e00 */
+        return 1;
+    }
+    if (e->activity_timer <= 0.0f) {
+        return 1;
+    }
+    e->flags_3e0 &= ~0x40u;
+    ai_set_activity(e, 0, 0);                           /* FUN_004409e0 */
+    terrain_cell_queued_work_transition(ctx, ix, iy);   /* FUN_00431140 */
+    const float invalid = -1.0f;
+    __builtin_memcpy(&e->pos_pair_2f4, &invalid, sizeof invalid);
+    __builtin_memcpy(&e->pos_pair_2f8, &invalid, sizeof invalid);
+    if (out != NULL) {
+        *out = 1;
+    }
+    level_tile_mark((LevelState*)lvl, ix, iy, 0);       /* FUN_00432e00 */
+    return 1;
+}
