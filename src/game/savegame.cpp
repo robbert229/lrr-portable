@@ -5,6 +5,7 @@
 
 #include "game.hpp"
 #include "gods98/block.hpp"
+#include "gods98/crt.hpp"
 #include "gods98/resource.hpp"
 #include "level.hpp"
 #include "savegame.hpp"
@@ -999,4 +1000,29 @@ int checkpoint_blob_task_progress_recalculate(GameContext* ctx)
     }
     blob_float_put(blob, 0x2fb4, v);
     return 1;
+}
+
+/* SavRefreshSlots (2026-10-25) — FUN_00417df0. Walk the six slot
+ * contexts so every slot file exists. With the engine feature word's
+ * bit 0x400 raised the corpus writes the slot fresh before reading it
+ * back; otherwise it reads (and re-reads once when the first attempt
+ * fails). Deviations: the port's single active-slot context stands in
+ * for the corpus's six DAT_00557080 blocks (the SavSlotCtx precedent),
+ * the null context is guarded, and the corpus reads its context-pointer
+ * block blind. */
+void sav_refresh_slots(GameContext* ctx)
+{
+    if (ctx == NULL) {
+        return; /* deviation: the corpus strides blindly */
+    }
+    for (int slot = 0; slot < SAVE_SLOTS; ++slot) {
+        const int write_first =
+            (engine_feature_word_peek() & 0x400u) != 0u;
+        if (write_first) {
+            (void)save_write_slot(ctx, slot);
+            (void)save_read_slot(ctx, slot, 0);
+        } else if (save_read_slot(ctx, slot, 0) == 0) {
+            (void)save_read_slot(ctx, slot, 0);
+        }
+    }
 }

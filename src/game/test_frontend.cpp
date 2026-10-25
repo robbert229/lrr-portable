@@ -1779,6 +1779,77 @@ int main(int argc, char** argv)
               "the null payload answers NULL (dev)");
     }
 
+    /* Sav visited tables band (2026-10-25): install/peek over the
+     * own-storage tables, the clear walk with the out-of-game band first,
+     * the null-item skip, and the guarded counts. */
+    {
+        char rec1[24];
+        char rec2[24];
+        memset(rec1, 0, sizeof rec1);
+        memset(rec2, 0, sizeof rec2);
+        ((uint32_t*)rec1)[4] = 0xdeadu; /* corpus flag word at +0x10 */
+        ((uint32_t*)rec2)[4] = 0xbeefu;
+        sav_visited_entry_set(0, 0, rec1, 1u); /* out-of-game band */
+        sav_visited_entry_set(0, 1, NULL, 2u);
+        sav_visited_entry_set(1, 0, rec2, 3u); /* in-game band */
+        void* p = NULL;
+        uint32_t w = 0u;
+        sav_visited_entry_peek(0, 0, &p, &w);
+        CHECK(p == rec1 && w == 1u, "install and peek land the pair");
+        sav_visited_entry_peek(0, 1, &p, &w);
+        CHECK(p == NULL && w == 2u, "the null item rides through");
+        sav_visited_entry_set(0, 16, rec1, 9u);  /* guarded (dev) */
+        sav_visited_entry_peek(0, 16, &p, &w);   /* guarded (dev) */
+
+        frontend_flow_word_set(2, -1);
+        int* wc = active_object_list_word();
+        *wc = 2; /* the out-of-game count */
+        frontend_flow_word_set(2, 0);
+        wc = active_object_list_word();
+        *wc = 1; /* the in-game count */
+        sav_clear_visited();
+        CHECK(((uint32_t*)rec1)[4] == 0u,
+              "the out-of-game record flag word clears");
+        sav_visited_entry_peek(0, 0, &p, &w);
+        CHECK(p == rec1 && w == 0u, "the table word clears alongside");
+        sav_visited_entry_peek(0, 1, &p, &w);
+        CHECK(w == 2u, "the null-item table word rides");
+        CHECK(((uint32_t*)rec2)[4] == 0u, "the in-game record flag clears");
+        sav_visited_entry_peek(1, 0, &p, &w);
+        CHECK(w == 0u, "the in-game table word clears");
+
+        /* Guarded counts (deviations): oversized writes nothing, the
+         * non-positive gate leaves the band. */
+        ((uint32_t*)rec1)[4] = 0xdeadu;
+        ((uint32_t*)rec2)[4] = 0xbeefu;
+        sav_visited_entry_set(0, 0, rec1, 1u);
+        sav_visited_entry_set(1, 0, rec2, 3u);
+        frontend_flow_word_set(2, -1);
+        wc = active_object_list_word();
+        *wc = 17; /* past the modeled window */
+        frontend_flow_word_set(2, 0);
+        wc = active_object_list_word();
+        *wc = 0;
+        sav_clear_visited();
+        CHECK(((uint32_t*)rec1)[4] == 0xdeadu,
+              "the oversized count skips the band (dev)");
+        CHECK(((uint32_t*)rec2)[4] == 0xbeefu,
+              "the zero count leaves the band");
+        sav_visited_entry_peek(0, 0, &p, &w);
+        CHECK(w == 1u, "the guarded band leaves its words");
+
+        /* Leave the modeled state clean. */
+        frontend_flow_word_set(2, -1);
+        wc = active_object_list_word();
+        *wc = 0;
+        frontend_flow_word_set(2, 0);
+        wc = active_object_list_word();
+        *wc = 0;
+        sav_visited_entry_set(0, 0, NULL, 0u);
+        sav_visited_entry_set(0, 1, NULL, 0u);
+        sav_visited_entry_set(1, 0, NULL, 0u);
+    }
+
     if (s_failures == 0) {
         printf("frontend: all tests passed\n");
         return 0;

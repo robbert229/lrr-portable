@@ -3093,3 +3093,78 @@ UiRenderRecord* ui_render_record_create(void* source,
                      (const unsigned char*)source + 0x10, sizeof rec->float_at_10);
     return rec;
 }
+
+/* --- the sav visited-table band (2026-10-25) ------------------------------
+ * The corpus's two "visited" tables sit parallel to the modeled
+ * active-object count words (out: DAT_00556fe4 count, DAT_00556ff0/ff4
+ * item/word arrays; in: DAT_00556fd0 count, DAT_00556fdc/e0 arrays).
+ * Their installers sit in the unported sav-tree loaders (the level-node /
+ * tree-load / menu-list paths), so the tables land as zero-init own
+ * storage behind install/peek hooks (the unowned-global convention). */
+#define SAV_VISITED_ENTRIES 16
+static void*    s_sav_visited_items_out[SAV_VISITED_ENTRIES]; /* DAT_00556ff0 */
+static uint32_t s_sav_visited_words_out[SAV_VISITED_ENTRIES]; /* DAT_00556ff4 */
+static void*    s_sav_visited_items_in[SAV_VISITED_ENTRIES];  /* DAT_00556fdc */
+static uint32_t s_sav_visited_words_in[SAV_VISITED_ENTRIES];  /* DAT_00556fe0 */
+
+/* SavClearVisited (FUN_00416e70): walk both bands, out-of-game first —
+ * every non-null entry record has its +0x10 flag word cleared and the
+ * table's word word zeroed alongside. Deviations: the entry windows and
+ * the count bounds are guarded (the corpus strides blindly) and records
+ * are touched through their modeled +0x10 word. */
+void sav_clear_visited(void)
+{
+    for (int which = 0; which < 2; ++which) {
+        void* const* items = which != 0 ? s_sav_visited_items_in
+                                       : s_sav_visited_items_out;
+        uint32_t* words = which != 0 ? s_sav_visited_words_in
+                                     : s_sav_visited_words_out;
+        const int count = *(which != 0 ? &s_active_object_ingame
+                                       : &s_active_object_outgame);
+        if (count <= 0) {
+            continue; /* the corpus's positivity gate */
+        }
+        if (count > SAV_VISITED_ENTRIES) {
+            continue; /* deviation: the corpus strides blindly */
+        }
+        for (int i = 0; i < count; ++i) {
+            void* rec = items[i];
+            if (rec != NULL) {
+                ((uint32_t*)rec)[4] = 0u; /* corpus record + 0x10 */
+                words[i] = 0u;
+            }
+        }
+    }
+}
+
+void sav_visited_entry_set(int which, int index, void* record,
+                           uint32_t word)
+{
+    void** items = which != 0 ? s_sav_visited_items_in
+                              : s_sav_visited_items_out;
+    uint32_t* words = which != 0 ? s_sav_visited_words_in
+                                 : s_sav_visited_words_out;
+    if (index < 0 || index >= SAV_VISITED_ENTRIES) {
+        return; /* deviation: the corpus strides blindly */
+    }
+    items[index] = record;
+    words[index] = word;
+}
+
+void sav_visited_entry_peek(int which, int index, void** out_record,
+                            uint32_t* out_word)
+{
+    const void* const* items = which != 0 ? s_sav_visited_items_in
+                                          : s_sav_visited_items_out;
+    const uint32_t* words = which != 0 ? s_sav_visited_words_in
+                                       : s_sav_visited_words_out;
+    if (index < 0 || index >= SAV_VISITED_ENTRIES) {
+        return; /* deviation: the corpus strides blindly */
+    }
+    if (out_record != NULL) {
+        *out_record = (void*)items[index];
+    }
+    if (out_word != NULL) {
+        *out_word = words[index];
+    }
+}

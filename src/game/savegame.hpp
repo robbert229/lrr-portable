@@ -71,6 +71,14 @@ int save_read_slot(GameContext* ctx, int slot, int create_if_missing);
 /* Write the active-slot context to `Saves\<slot>.sav` (+ `.osf`). */
 int save_write_slot(GameContext* ctx, int slot);
 
+/* SavRefreshSlots (FUN_00417df0): walk the six slots so every slot file
+ * exists. With the engine feature word's bit 0x400 raised, each slot is
+ * written fresh before being read back; otherwise each is read (and
+ * re-read once when the first attempt fails). Deviation: the port's
+ * single active-slot context stands in for the corpus's six context
+ * blocks (the SavSlotCtx precedent). */
+void sav_refresh_slots(GameContext* ctx); /* FUN_00417df0 */
+
 /* SavCommit: write the current active slot to disk. */
 void save_commit(GameContext* ctx);
 
