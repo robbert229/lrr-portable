@@ -2363,6 +2363,19 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Handler-table + multiply-thunk band** (2026-10-25): four frontier rows
+land. `crt_math_exception_handler_get` (0x4939d0, crt.*) scans the corpus's
+27-entry math-handler table (own storage + install hook — the corpus
+writer rides the unported CRT startup band). `crt_integer64_multiply`
+(0x48ea90, crt.*) ports the compiler's signed 64×64 multiply helper (plain
+word product under the double-zero high guard, else the wrapped cross-word
+fold). `objective_score_text_origin_set` (0x4262e0, engine.*) stores the
+score-text pair and rides the debug word's bit 14.
+`ai_idle_table_pointer_remove` (0x43a930, ai.*) zeroes matching idle-table
+slots through the count window — holes ride, dedup sees past them.
+`crt_test`/`enginebind_test`/`ai_test` pin the handler scan, multiply
+folds, origin pair, and hole-walking removal.
+
 **Engine-mode + math/CRT band** (2026-10-25): four frontier rows land.
 `engine_mode_set` (0x4565f0, engine.*) installs the mode into the DAT flag
 word (crt.* own storage, install hook), raises the bits-6/9 + bit-7 global

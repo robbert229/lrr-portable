@@ -670,4 +670,19 @@ int crt_math_exception_code_from_status(uint32_t status);
  * the corpus's EngineModeSet stores through. */
 void global_flag_004ff978_install(uint32_t value);
 
+/* CrtMathExceptionHandlerGet (FUN_004939d0): scans the corpus's 27-entry,
+ * 8-byte-stride math-handler table (DAT_004b2170 role; the corpus writer
+ * is the unported CRT startup band — the port models the table as own
+ * storage with an install hook). An id match answers the entry's handler
+ * word, else zero. Deviation: the corpus strides the table blind. */
+uint32_t crt_math_exception_handler_get(int id);
+void crt_math_exception_handler_install(int index, int id,
+                                        uint32_t handler); /* hook */
+
+/* CrtInteger64Multiply (FUN_0048ea90, __allmul): the compiler's signed
+ * 64-bit multiply helper — unsigned low-word product, with the two
+ * cross-word signed products folded into the high half. */
+uint64_t crt_integer64_multiply(uint32_t lo_a, int32_t hi_a,
+                                uint32_t lo_b, int32_t hi_b);
+
 #endif /* LEGORRR_GODS98_CRT_HPP */

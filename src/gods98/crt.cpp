@@ -1871,3 +1871,47 @@ void global_flag_004ff978_install(uint32_t value)
 {
     s_flag_004ff978 = value;
 }
+
+/* --- math handler table + 64-bit multiply thunk (2026-10-25) --------------- */
+
+/* CrtMathExceptionHandlerGet (FUN_004939d0) — see crt.hpp. The corpus's
+ * DAT_004b2170 table (27 entries, id word then handler word) lands as own
+ * storage; the install hook stands in for the unported CRT startup band
+ * (deviation). */
+#define CRT_MATH_HANDLER_ENTRIES 27
+static int s_math_handler_id[CRT_MATH_HANDLER_ENTRIES];
+static uint32_t s_math_handler[CRT_MATH_HANDLER_ENTRIES];
+
+uint32_t crt_math_exception_handler_get(int id)
+{
+    for (int i = 0; i != CRT_MATH_HANDLER_ENTRIES; ++i) {
+        if (s_math_handler_id[i] == id) {
+            return s_math_handler[i];
+        }
+    }
+    return 0u;
+}
+
+void crt_math_exception_handler_install(int index, int id, uint32_t handler)
+{
+    if (index >= 0 && index < CRT_MATH_HANDLER_ENTRIES) {
+        s_math_handler_id[index] = id;
+        s_math_handler[index] = handler;
+    }
+}
+
+/* CrtInteger64Multiply (FUN_0048ea90, __allmul) — see crt.hpp. The two
+ * cross-word products contribute only their low 32 bits (the bit pattern
+ * is sign-agnostic), so the fold lands as plain wrapping 32-bit adds. */
+uint64_t crt_integer64_multiply(uint32_t lo_a, int32_t hi_a,
+                                uint32_t lo_b, int32_t hi_b)
+{
+    const uint64_t low64 = (uint64_t)lo_a * (uint64_t)lo_b;
+    if (hi_a == 0 && hi_b == 0) {
+        return low64;
+    }
+    const uint32_t high32 = (uint32_t)(low64 >> 32)
+                          + (uint32_t)((uint32_t)(uint32_t)hi_a * lo_b)
+                          + (uint32_t)(lo_a * (uint32_t)(uint32_t)hi_b);
+    return ((uint64_t)high32 << 32) | (uint32_t)low64;
+}

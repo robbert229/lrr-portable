@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 1030 | 40.2% |
+| ported | 1034 | 40.3% |
 | anchored | 4 | 0.2% |
-| named | 1484 | 57.9% |
-| runtime-import | 45 | 1.8% |
+| named | 1481 | 57.8% |
+| runtime-import | 44 | 1.7% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (1030 functions)
+  (1034 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1484 functions)
+  citation yet (1481 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
-  logic, never ported (45 functions)
+  logic, never ported (44 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1489 (58.1%).**
+**Game logic remaining to port: 1486 (58.0%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -374,7 +374,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00425c30` | TransitionControl |
 | `0x00425d50` | GlobalRenderRecordSetFromInput |
 | `0x00426250` | UpdateRenderViewportState |
-| `0x004262e0` | ObjectiveScoreTextOriginSet |
 | `0x004263c0` | GlobalSubsystemStateReset |
 | `0x00426420` | CursorRayToCameraRoute |
 | `0x00427e00` | ToolTipInfoStringsLoad |
@@ -494,7 +493,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0043a5f0` | EntityVisualResourceGetOrCreate |
 | `0x0043a650` | ActionKindEntityCreateAndCommandIssue |
 | `0x0043a850` | EntityActionRecordConsumeAndCleanup |
-| `0x0043a930` | TrackedEntityPointerArrayRemove |
 | `0x0043a9f0` | EntityPairInteractionGate |
 | `0x0043aab0` | ProximityActivityRaise |
 | `0x0043abf0` | TerrainCellVariantUpdateQueue |
@@ -1399,7 +1397,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00493280` | CrtFloatingPointExceptionRaise |
 | `0x004935c0` | CrtDoubleToIntegerRound |
 | `0x004938f0` | CrtMathExceptionDispatch |
-| `0x004939d0` | CrtMathExceptionHandlerGet |
 | `0x00493ae0` | DoubleFrexpDecompose |
 | `0x00493be0` | FpuStatusWordGetVariantA |
 | `0x00493bf0` | FpuStatusWordGetVariantB |

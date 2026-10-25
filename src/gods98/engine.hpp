@@ -234,6 +234,13 @@ int mode_dependent_field24_get(const EngineContext* ctx);
  * renderer update. */
 bool   current_engine_mode_is_zero(const EngineContext* ctx);
 
+/* ObjectiveScoreTextOriginSet (FUN_004262e0): the objective/score text
+ * origin pair. A non-null pair stores into module storage and raises the
+ * debug word's bit 0x4000; a null pair drops it. Deviation: the corpus
+ * strides the pair blindly; the port guards it. */
+void objective_score_text_origin_set(EngineContext* ctx, const float* pair);
+void objective_score_text_origin_peek(float out[2]);
+
 /* EngineModeSet (FUN_004565f0): stores the mode word into the global flag
  * DAT_004ff978 (the port's crt.* own storage, through the install hook),
  * raises the bits-6/9 + bit-7 global state flags when the mode reads 1,

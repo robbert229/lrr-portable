@@ -353,6 +353,12 @@ void entity_update_and_unregister_at_tile(int x, int y, void* link);
                                                 /* FUN_00440130 */
 void ai_idle_table_reset(void);  /* port hook: clear the idle table (unowned) */
 
+/* TrackedEntityPointerArrayRemove (FUN_0043a930): walks the idle table's
+ * used window zeroing every slot holding the given pointer (the walk
+ * continues past a hit). Deviation: the corpus strides the global table
+ * and its word count blindly; the port rides the ported model's guard. */
+void ai_idle_table_pointer_remove(void* pointer);
+
 /* EntityActivityTerrainEligibilityTransition (FUN_00449980): with the +0x3e0
  * bit 0x40 raised, probe whether the entity may still be placed at the
  * (truncated) float cell (see crt precedent for the __ftol coordinates).

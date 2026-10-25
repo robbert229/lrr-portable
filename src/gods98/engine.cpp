@@ -219,6 +219,34 @@ uint32_t engine_overlay_word_peek(int which)
     return which == 0 ? s_overlay_word_03610 : s_overlay_word_03614;
 }
 
+/* ObjectiveScoreTextOriginSet (FUN_004262e0) — see engine.hpp. The pair
+ * rides unowned-global module storage (the corpus's writer side is this
+ * setter; the reader is the unported score-text draw band — deviation). */
+static float s_score_text_origin[2];
+
+void objective_score_text_origin_set(EngineContext* ctx, const float* pair)
+{
+    if (pair != NULL) {
+        s_score_text_origin[0] = pair[0];
+        s_score_text_origin[1] = pair[1];
+        if (ctx != NULL) {
+            ctx->debug |= 0x4000u;
+        }
+        return; /* deviation: the corpus writes the word blindly */
+    }
+    if (ctx != NULL) {
+        ctx->debug &= ~0x4000u;
+    }
+}
+
+void objective_score_text_origin_peek(float out[2])
+{
+    if (out != NULL) {
+        out[0] = s_score_text_origin[0];
+        out[1] = s_score_text_origin[1];
+    }
+}
+
 void global_state_flags_bit7_set(EngineContext* ctx, int value)
 {
     if (ctx == NULL) {
