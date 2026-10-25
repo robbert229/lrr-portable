@@ -6,6 +6,7 @@
 
 #include "gods98/record.hpp"
 #include "gods98/heap.hpp"
+#include "gods98/sound.hpp"
 
 static int s_failures = 0;
 
@@ -1067,6 +1068,30 @@ int main(void)
                   && nested_record_list_remove_by_key_recursive(1, NULL) == 0,
               "the empty sweep and the null guard answer zero");
         engine_heap_free(nw);
+    }
+
+    /* KeyedResourceEntryRemove (2026-10-24): the head-anchored sweep. */
+    {
+        sound_buffer_association_head_set(NULL);
+        sound_buffer_association_add(1, 1, 0xAAu);
+        sound_buffer_association_add(2, 2, 0xBBu);
+        CHECK(sound_buffer_association_head_peek() != NULL,
+              "the add chain is live");
+        keyed_resource_entry_remove(0xAA);
+        void* head = sound_buffer_association_head_peek();
+        uint32_t key = 0u;
+        __builtin_memcpy(&key, (char*)head + 2 * sizeof(void*), 4);
+        void* nxt = NULL;
+        __builtin_memcpy(&nxt, (char*)head + 3 * sizeof(void*),
+                         sizeof nxt);
+        CHECK(head != NULL && key == 0xBBu && nxt == NULL,
+              "the matched non-head node promotes and unlinks");
+        keyed_resource_entry_remove(0xBB);
+        CHECK(sound_buffer_association_head_peek() == NULL,
+              "the head match promotes its successor and frees");
+        keyed_resource_entry_remove(0x55);
+        CHECK(sound_buffer_association_head_peek() == NULL,
+              "the empty head stays quiet (deviation)");
     }
 
     if (s_failures != 0) {

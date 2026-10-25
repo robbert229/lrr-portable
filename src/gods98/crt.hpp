@@ -486,5 +486,13 @@ void stream_allocation_count_reset(void);         /* port hook */
  *   limb-2 add's carry out is discarded.
  * Deviation: the corpus strides both limbs blindly; the port guards them. */
 void crt_uint96_add(uint32_t* dst, const uint32_t* src); /* FUN_00499fe0 */
+/* UInt96IncrementAtBit (FUN_00497970): the bit-indexed add. Adds the
+ * single-bit mask 1 << (31 - bit % 32) into limb bit / 32 (the corpus's
+ * sign-biased index arithmetic reproduced) and propagates the carry toward
+ * the LOWER indices while the chain has it — this function's own limb
+ * order, not uint96 add's little-endian model.
+ * Deviation: the corpus strides the limbs blindly (the port guards 0..2). */
+void crt_uint96_increment_at_bit(uint32_t limbs[3], int bit);
+                                                /* FUN_00497970 */
 
 #endif /* LEGORRR_GODS98_CRT_HPP */

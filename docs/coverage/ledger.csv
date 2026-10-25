@@ -1039,7 +1039,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004474f0,FUN_004474f0,named,LinkedEntityProximityResponse,0,820
 004475c0,FUN_004475c0,named,EntityProgressAndNegativeDeltaHandler,0,1547
 00447730,FUN_00447730,ported,EntityProgressAdvanceBy25,3,336
-00447780,FUN_00447780,named,EntityClearLinkedObjectState,0,417
+00447780,FUN_00447780,ported,EntityClearLinkedObjectState,3,417
 004477d0,FUN_004477d0,named,PathStepLookaheadEntryWrite,0,1457
 00447900,FUN_00447900,named,TypeFourEntityCallbackDispatch,0,117
 00447950,FUN_00447950,named,EntityDirectionalActivityStart,0,1592
@@ -1918,8 +1918,8 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0047b160,FUN_0047b160,named,SoundSubsystemStopAll,0,244
 0047b1a0,FUN_0047b1a0,named,SoundInstanceTrackRegister,0,637
 0047b220,FUN_0047b220,named,SoundInstanceTrackStopAndRemove,0,751
-0047b2a0,FUN_0047b2a0,named,KeyedResourceEntryRemove,0,279
-0047b2e0,FUN_0047b2e0,ported,NestedRecordListRemoveByKeyRecursive,3,397
+0047b2a0,FUN_0047b2a0,ported,KeyedResourceEntryRemove,3,279
+0047b2e0,FUN_0047b2e0,ported,NestedRecordListRemoveByKeyRecursive,4,397
 0047b330,FUN_0047b330,named,NestedRecordListRemoveMatchingKey,0,370
 0047b390,FUN_0047b390,named,SoundSourceSpatialRefreshAll,0,620
 0047b410,FUN_0047b410,named,SoundSourceSpatialRefresh,0,792
@@ -2456,7 +2456,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004977d0,FUN_004977d0,named,CrtControlFlagsTranslate,0,876
 00497870,FUN_00497870,ported,CrtNoOpStubVariant,2,41
 00497900,FUN_00497900,named,UInt96HasNoBitsAtOrAbove,0,603
-00497970,FUN_00497970,named,UInt96IncrementAtBit,0,712
+00497970,FUN_00497970,ported,UInt96IncrementAtBit,3,712
 004979e0,FUN_004979e0,named,UInt96ClearFromBit,0,834
 00497a80,FUN_00497a80,named,UInt96Copy,0,271
 00497aa0,FUN_00497aa0,ported,UInt96Zero,2,108

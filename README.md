@@ -2363,6 +2363,19 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Linked-object clear, keyed entry removal + bit-indexed add**
+(2026-10-24):
+`entity.*` ports `entity_clear_linked_object_state` (0x447780 — behind the
+flag word's 0x400 gate the carry link and state word drop, the carried
+slot's flag bit 0x2000 raises, and the kind-4 command chain drops),
+`record.*` ports `keyed_resource_entry_remove` (0x47b2a0 — the keyed sweep
+of the association list through the sound-head hook, deep-first promotion
+and unlink through the engine heap), and `crt.*` ports
+`crt_uint96_increment_at_bit` (0x497970 — the bit-indexed single-mask add
+at limb bit/32 with the mask 1<<(31-bit%32), the carry walking DOWN the
+limb indices — this function's own order, opposite the uint96-add chain).
+The fixtures pin the gate, the head promotion, and the downward carry.
+
 **Carried-object detach, centering hit-test + selection code**
 (2026-10-24):
 `entity.*` ports `entity_detach_carried_object_and_reset_state` (0x43bbc0 —

@@ -308,4 +308,15 @@ void entity_detach_carried_object_and_reset_state(struct EntitySlot* e,
                                                   struct LevelState* lvl);
                                                 /* FUN_0043bbc0 */
 
+/* EntityClearLinkedObjectState (FUN_00447780): the linked-object clear.
+ * With the flag word's gate bit 0x400 raised: the carry link and state
+ * word drop, the gate drops, the carried slot's flag word bit 0x2000
+ * raises, and the entity's kind-4 command-chain records drop through the
+ * shared chain drop (the corpus's dispatch extras only mean the carried
+ * reference / store flag for kinds 7/0xc/0x17).
+ * Deviations: the corpus dereferences a missing carried slot blindly
+ * (the port guards); the null slot and gate skip is the faithful shape. */
+void entity_clear_linked_object_state(EntitySlot* e);
+                                                /* FUN_00447780 */
+
 #endif /* LEGORRR_GAME_ENTITY_HPP */

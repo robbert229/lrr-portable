@@ -6,6 +6,7 @@
 #include "ai.hpp"
 #include "entity.hpp"
 #include "level.hpp"
+#include "cmd.hpp"
 #include "gods98/model.hpp"
 #include "gods98/heap.hpp"
 #include "util.hpp"
@@ -922,4 +923,23 @@ void entity_detach_carried_object_and_reset_state(EntitySlot* e,
     }
     e->field_340 = -1.0f;
     e->flags_3e8 |= 0x800000u;
+}
+
+/* EntityClearLinkedObjectState (FUN_00447780) — see entity.hpp. */
+void entity_clear_linked_object_state(EntitySlot* e)
+{
+    if (e == NULL) {
+        return; /* deviation: the corpus strides the slot blindly */
+    }
+    if ((e->flags_3e0 & 0x400u) == 0u) {
+        return;
+    }
+    EntitySlot* carried = (EntitySlot*)e->carry_link_308;
+    e->flags_3e0 &= ~0x400u;
+    e->carry_state_324 = 0;
+    e->carry_link_308 = NULL;
+    if (carried != NULL) {
+        carried->flags_3e8 |= 0x2000u;
+    }
+    cmd_chain_drop(e, 4);
 }

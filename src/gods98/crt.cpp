@@ -1364,3 +1364,32 @@ void crt_uint96_add(uint32_t* dst, const uint32_t* src)
     }
     dst[2] = s;
 }
+
+/* UInt96IncrementAtBit (FUN_00497970) — see crt.hpp. The carry walks DOWN
+ * the limb indices (toward limb 0), the opposite direction from the
+ * uint96-add chain; the corpus's bit-mask reduction rides the byte-trick
+ * expression, which simplifies to bit % 32 for the non-negative inputs. */
+void crt_uint96_increment_at_bit(uint32_t limbs[3], int bit)
+{
+    if (limbs == NULL) {
+        return; /* deviation: the corpus strides the limbs blindly */
+    }
+    const int limb = (bit + (int)((bit >> 31) & 0x1fu)) >> 5;
+    if (limb < 0 || limb > 2) {
+        return; /* deviation: the corpus strides the limbs blindly */
+    }
+    const unsigned char b = (unsigned char)(bit >> 31);
+    int idx = ((((unsigned char)bit ^ b) - b) & 0x1f) ^ b;
+    idx = (idx - b) & 0x1f;
+    const uint32_t mask = 1u << (31u - (uint32_t)idx);
+    uint32_t sum = 0;
+    int carry = crt_unsigned_add_with_carry(limbs[limb], mask, &sum);
+    limbs[limb] = sum;
+    for (int i = limb - 1; i >= 0; --i) {
+        if (carry == 0) {
+            return;
+        }
+        carry = crt_unsigned_add_with_carry(limbs[i], 1u, &sum);
+        limbs[i] = sum;
+    }
+}
