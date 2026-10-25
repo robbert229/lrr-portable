@@ -104,6 +104,9 @@ int flic_opcode16_mode_dispatch(const uint8_t* rec);
  * ends one byte short of the stream (the corpus steps +1 between rows).
  * Deviation: the corpus strides the record, stream, and pixels blindly. */
 int flic_decode16_bit_row_records(void* record);
+int flic_decode8_bit_alternate_delta(void* record);
+int flic_opcode25_decode_dispatch(void* record);
+int flic_opcode27_decode_dispatch(void* record);
 
 /* FlicDecode16BitKeyframe (FUN_004849d0): the word-stream row walk at
  * stream+7 (literal runs of one expanded word, copy runs of successive

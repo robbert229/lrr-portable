@@ -823,3 +823,195 @@ void flic_frame_window_layout_install(void* rec, int row_len, int row_count,
     g_flic_windows[slot].stream = stream;
     g_flic_windows[slot].pixels = pixel_buffer;
 }
+
+/* FlicDecode8BitAlternateDelta (FUN_00484ca0) — see flic.hpp. The opcode-27
+ * 8-bit sibling of flic_decode16_bit_delta: the chunk stream rides stream+8
+ * and the header re-read quirk repeats (kind 0 doubles the header as the
+ * pair count, kind 8 advances the cursor), but the pixels land through the
+ * +0x41c indexed-word palette — each pixel is a BYTE PAIR expanded to two
+ * palette words, and the 0x100 - n back-count repeats the one pair that
+ * trails the pair word. Deviations: the corpus strides the record blindly
+ * (guarded here, like the rest of the band), and the corpus's zero-argument
+ * callee calls leave the record pointer in a register — the port threads
+ * it through, the way the window-slot fix must for the whole band. */
+int flic_decode8_bit_alternate_delta(void* record)
+{
+    if (record == NULL) {
+        return 1; /* deviation: the corpus strides the record blindly */
+    }
+    char* rec = (char*)record;
+    void* stream = NULL;
+    void* pixels = NULL;
+    if (flic_window_find(rec, &stream, &pixels) == 0) {
+        __builtin_memcpy(&stream, rec + 0x6d0, sizeof stream);
+        __builtin_memcpy(&pixels, rec + 0x6cc, sizeof pixels);
+    }
+    if (stream == NULL || pixels == NULL) {
+        return 1; /* deviation: the corpus strides the window blindly */
+    }
+    const char* cursor = (const char*)stream + 8;
+    int16_t left = 0;
+    __builtin_memcpy(&left, (const char*)stream + 6, sizeof left);
+    int16_t lap = left; /* the pair walk restores this, the tail walks it */
+    uint32_t row = 0u; /* the row counter: masked ushort at the multiply */
+    int pitch = 0;
+    __builtin_memcpy(&pitch, rec + 0x638, sizeof pitch);
+    for (;;) {
+        int16_t kind = 0;
+        char* pixel = NULL;
+        uint16_t header = 0u;
+        for (;;) {
+            if (lap == 0) {
+                return 1;
+            }
+            __builtin_memcpy(&header, cursor, sizeof header);
+            pixel = (char*)pixels
+                    + (size_t)((row & 0xffffu) * (uint32_t)pitch);
+            kind = (int16_t)((header & 0xc000u) >> 12);
+            if (kind != 0xc) {
+                break;
+            }
+            cursor += 2;
+            row = (uint32_t)(row - header); /* the whole-word subtract */
+        }
+        if (kind == 4) {
+            return 1;
+        }
+        uint8_t remembered = 0u;
+        if (kind == 8) {
+            remembered = (uint8_t)header; /* NO flag fold here */
+            cursor += 2;
+        }
+        uint16_t pairs = 0u;
+        __builtin_memcpy(&pairs, cursor, sizeof pairs);
+        cursor += 2;
+        if (pairs != 0u) {
+            uint32_t count = pairs;
+            const char* pair = cursor;
+            do {
+                uint16_t pw = 0u;
+                __builtin_memcpy(&pw, pair, sizeof pw);
+                const uint8_t skip = (uint8_t)pw;
+                const uint8_t run = (uint8_t)(pw >> 8);
+                cursor = pair + 2;
+                pixel += (size_t)skip * 2u; /* WORD units */
+                if ((run & 0x80u) == 0u) {
+                    if (run != 0u) {
+                        for (uint32_t k = (uint32_t)run; k != 0u; k = k - 1u) {
+                            uint16_t v = 0u;
+                            __builtin_memcpy(&v, cursor, sizeof v);
+                            cursor += 2;
+                            const uint16_t lo = indexed_word_table_lookup(
+                                (uint8_t)v, rec);
+                            const uint16_t hi = indexed_word_table_lookup(
+                                (uint8_t)(v >> 8), rec);
+                            __builtin_memcpy(pixel, &lo, sizeof lo);
+                            __builtin_memcpy(pixel + 2, &hi, sizeof hi);
+                            pixel += 4;
+                        }
+                    }
+                } else {
+                    uint16_t v = 0u;
+                    __builtin_memcpy(&v, pair + 2, sizeof v);
+                    cursor = pair + 4; /* the corpus resumes four bytes on */
+                    const uint32_t back = 0x100u - (uint32_t)run;
+                    if ((short)(0x100u - (uint32_t)run) != 0) {
+                        for (uint32_t k = back; k != 0u; k = k - 1u) {
+                            const uint16_t lo = indexed_word_table_lookup(
+                                (uint8_t)v, rec);
+                            const uint16_t hi = indexed_word_table_lookup(
+                                (uint8_t)(v >> 8), rec);
+                            __builtin_memcpy(pixel, &lo, sizeof lo);
+                            __builtin_memcpy(pixel + 2, &hi, sizeof hi);
+                            pixel += 4;
+                        }
+                    }
+                }
+                count = count - 1u;
+                pair = cursor;
+                lap = left;
+            } while (count != 0u);
+        }
+        if (kind == 8) {
+            const uint16_t w = indexed_word_table_lookup(remembered, rec);
+            __builtin_memcpy(pixel, &w, sizeof w); /* ONE word, not a byte */
+        }
+        left = (int16_t)(lap - 1);
+        row = (uint32_t)(row + 1u);
+        lap = left;
+    }
+}
+
+/* FlicOpcode25DecodeDispatch (FUN_00484b20) — see flic.hpp. The dispatch
+ * words ride the record window: bit depth +0x64c, mode op +0x6d4, marker
+ * word +0x644. Deviation: the corpus's keyframe call passes no argument
+ * (the record pointer rides the register) — the port threads the record
+ * through, as the window band's precedent requires. */
+int flic_opcode25_decode_dispatch(void* record)
+{
+    if (record == NULL) {
+        return 1; /* deviation: the corpus strides the record blindly */
+    }
+    char* rec = (char*)record;
+    int16_t depth = 0;
+    int op = 0;
+    int16_t marker = 0;
+    __builtin_memcpy(&depth, rec + 0x64c, sizeof depth);
+    __builtin_memcpy(&op, rec + 0x6d4, sizeof op);
+    if (depth == 8) {
+        if (op == 0) {
+            flic_opcode25_success_stub();
+        }
+        if (op == 4) {
+            flic_decode8_bit_opcode25_mode4(rec);
+            return 1;
+        }
+    } else if (depth == 0x10) {
+        __builtin_memcpy(&marker, rec + 0x644, sizeof marker);
+        if (marker == (int16_t)0xaf42 /* -0x50bd */) {
+            flic_decode16_bit_keyframe(rec);
+            return 1;
+        }
+        flic_opcode25_success_stub();
+    }
+    return 1;
+}
+
+/* FlicOpcode27DecodeDispatch (FUN_00485030) — see flic.hpp. The sibling's
+ * dispatch: the same depth word picks the family, the marker picks the
+ * 16-bit decoder (the literal 0x1234 goes to the fallback), and the 8-bit
+ * op-4 route lands in the alternate delta. Deviations ride the same two
+ * notes as flic_opcode25_decode_dispatch. */
+int flic_opcode27_decode_dispatch(void* record)
+{
+    if (record == NULL) {
+        return 1; /* deviation: the corpus strides the record blindly */
+    }
+    char* rec = (char*)record;
+    int16_t depth = 0;
+    int op = 0;
+    int16_t marker = 0;
+    __builtin_memcpy(&depth, rec + 0x64c, sizeof depth);
+    __builtin_memcpy(&op, rec + 0x6d4, sizeof op);
+    if (depth == 8) {
+        if (op == 0) {
+            flic_opcode27_fallback_noop();
+        }
+        if (op == 4) {
+            flic_decode8_bit_alternate_delta(rec);
+            return 1;
+        }
+    } else if (depth == 0x10) {
+        __builtin_memcpy(&marker, rec + 0x644, sizeof marker);
+        if (marker == (int16_t)0x1234) {
+            flic_opcode27_fallback_noop();
+            return 1;
+        }
+        if (marker == (int16_t)0xaf42 /* -0x50bd */) {
+            flic_decode16_bit_delta(rec);
+            return 1;
+        }
+        flic_opcode27_fallback_noop();
+    }
+    return 1;
+}
