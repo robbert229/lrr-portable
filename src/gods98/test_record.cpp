@@ -1037,6 +1037,38 @@ int main(void)
         engine_heap_free(wide);
     }
 
+    /* NestedRecordListRemoveByKeyRecursive (2026-10-24): the deep sweep. */
+    {
+        void* nw = engine_heap_alloc(0x18);
+        void* n1 = engine_heap_alloc(0x18);
+        void* n2 = engine_heap_alloc(0x18);
+        memset(nw, 0, 0x18);
+        memset(n1, 0, 0x18);
+        memset(n2, 0, 0x18);
+        uint32_t k1 = 2u, k2 = 3u;
+        memcpy((char*)n1 + 8, &k1, 4);
+        memcpy((char*)n2 + 8, &k2, 4);
+        memcpy((char*)nw + 0xc, &n1, sizeof n1);
+        memcpy((char*)n1 + 0xc, &n2, sizeof n2);
+
+        CHECK(nested_record_list_remove_by_key_recursive(2, nw) == 0
+                  && nested_record_list_remove_by_key_recursive(5, nw) == 0,
+              "the sweep answers through the head");
+        /* The first call freed n1; n2 is still linked. The second call
+         * finds key 2 absent (n1's successor is n2) and leaves the rest. */
+        void* head = NULL;
+        memcpy(&head, (char*)nw + 0xc, sizeof head);
+        CHECK(head == n2, "the matched node promoted its successor");
+        CHECK(nested_record_list_remove_by_key_recursive(3, nw) == 0,
+              "the tail match answers through the head too");
+        memcpy(&head, (char*)nw + 0xc, sizeof head);
+        CHECK(head == NULL, "the freed tail node unlinks");
+        CHECK(nested_record_list_remove_by_key_recursive(9, nw) == 0
+                  && nested_record_list_remove_by_key_recursive(1, NULL) == 0,
+              "the empty sweep and the null guard answer zero");
+        engine_heap_free(nw);
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "record_test: %d failure(s)\n", s_failures);
         return 1;

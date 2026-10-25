@@ -2252,6 +2252,51 @@ uint32_t objective_selection_word_peek(void)
     return s_obj_sel_word;
 }
 
+/* --- the selection-coordinate store (2026-10-24) ---------------------------
+ * Corpus band DAT_004ddcc4/cc8/cfc/dcf4/f8; the other owners of these words
+ * are unported seams, so the port models them as own storage (the
+ * unowned-global deviation). */
+static uint32_t s_map_store_pair[2];  /* DAT_004ddcc4/cc8 */
+static uint32_t s_map_store_last[2];  /* DAT_004ddcf4/f8 */
+static uint32_t s_map_store_kind;     /* DAT_004ddcfc */
+
+void store_selected_map_coordinate(int kind, const uint32_t coord[2])
+{
+    if ((s_inter_flags & 0x80u) == 0u
+        || s_obj_sel_word != (uint32_t)kind) {
+        s_inter_flags = (s_inter_flags & ~0x80u) | 0x100u;
+        sound_alias_play(0x16, 0);
+    } else {
+        s_obj_sel_word = (uint32_t)kind;
+        if (coord == NULL) {
+            s_map_store_kind = (uint32_t)kind;
+            return;
+        }
+        s_map_store_pair[0] = coord[0];
+        s_map_store_pair[1] = coord[1];
+    }
+    if (coord != NULL) {
+        s_map_store_last[0] = coord[0];
+        s_map_store_last[1] = coord[1];
+    }
+    s_map_store_kind = (uint32_t)kind;
+}
+
+uint32_t map_store_pair_word(int which)
+{
+    return (which >= 0 && which <= 1) ? s_map_store_pair[which] : 0u;
+}
+
+uint32_t map_store_last_word(int which)
+{
+    return (which >= 0 && which <= 1) ? s_map_store_last[which] : 0u;
+}
+
+uint32_t map_store_kind_peek(void)
+{
+    return s_map_store_kind;
+}
+
 float interaction_timer_peek(void)
 {
     return s_inter_timer;

@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 883 | 34.4% |
+| ported | 888 | 34.6% |
 | anchored | 4 | 0.2% |
-| named | 1630 | 63.6% |
+| named | 1625 | 63.4% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (883 functions)
+  (888 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1630 functions)
+  citation yet (1625 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1635 (63.8%).**
+**Game logic remaining to port: 1630 (63.6%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -215,7 +215,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0040d170` | CreateCellObjectIfAvailable |
 | `0x0040d1f0` | DeleteCellObject |
 | `0x0040d240` | TerrainCellHasOccupiedOrFlaggedNeighbor |
-| `0x0040d3f0` | TerrainCellSpecialStatePredicate |
 | `0x0040d4f0` | TerrainCellActivationTry |
 | `0x0040d850` | TerrainCellNeighborFloodWalk |
 | `0x0040dc20` | CellPairEdgeEffectApply |
@@ -394,7 +393,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0041d040` | TutorialPathMenuAction |
 | `0x0041dca0` | UiActionDispatch |
 | `0x0041e750` | SelectionClearRequestAndHudReset |
-| `0x0041ea50` | StoreSelectedMapCoordinate |
 | `0x0041eac0` | EventTimerCountdownAdvance |
 | `0x0041ec30` | EntityPairCountRefresh |
 | `0x0041eca0` | AdvisorDialogStackLayout |
@@ -463,8 +461,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00431530` | ActivityBuildRecordsReleaseAll |
 | `0x00431580` | TerrainNeighborWorkFlagScan |
 | `0x00431780` | TerrainStampImpactHandler |
-| `0x00431a30` | SelectedEntitiesAnyPredicateMatch |
-| `0x00431ab0` | AnyObjectCanOccupyTerrainCell |
 | `0x00431b20` | PlacementBlockedAdjacentCellScan |
 | `0x00431c70` | FirstFreeNeighborCellPick |
 | `0x00431da0` | TerrainCellRouteAndOccupancyCheck |
@@ -1189,7 +1185,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0047b1a0` | SoundInstanceTrackRegister |
 | `0x0047b220` | SoundInstanceTrackStopAndRemove |
 | `0x0047b2a0` | KeyedResourceEntryRemove |
-| `0x0047b2e0` | NestedRecordListRemoveByKeyRecursive |
 | `0x0047b330` | NestedRecordListRemoveMatchingKey |
 | `0x0047b390` | SoundSourceSpatialRefreshAll |
 | `0x0047b410` | SoundSourceSpatialRefresh |

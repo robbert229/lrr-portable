@@ -531,4 +531,18 @@ void cmd_link_global_head(void* rec, int kind);
 void cmd_rec_action_set(void* rec, int action);
 void cmd_rec_target_set(void* rec, int target);
 
+/* SelectedEntitiesAnyPredicateMatch / AnyObjectCanOccupyTerrainCell
+ * (FUN_00431a30 / FUN_00431ab0): the any-hit sweeps over the active
+ * selection context's record array. Both pull the array through the
+ * context-record getter and answer the first true predicate; an empty
+ * array answers zero.
+ * Deviations: the corpus strides the array blindly (the port guards the
+ * count and the state block); the walkability predicate's entity-gated
+ * mode-1 clauses are the documented seam pass — only the cell walkability
+ * actually discriminates the sweep. */
+int selected_entities_any_predicate_match(int cx, int cy);
+                                                /* FUN_00431a30 */
+int any_object_can_occupy_terrain_cell(int cx, int cy);
+                                                /* FUN_00431ab0 */
+
 #endif /* LEGORRR_GAME_CMD_HPP */

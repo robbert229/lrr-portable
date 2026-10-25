@@ -1399,6 +1399,40 @@ int main(int argc, char** argv)
         }
     }
 
+    /* TerrainCellSpecialStatePredicate (2026-10-24): the gate pair. */
+    {
+        static uint8_t spgrid[GRID * GRID * 0x48];
+        static LevelState sps;
+        memset(spgrid, 0, sizeof spgrid);
+        memset(&sps, 0, sizeof sps);
+        sps.word[0x14 / 4] = GRID; /* width */
+        sps.word[0x18 / 4] = GRID; /* height */
+        sps.ptr_voxels = spgrid;
+#define SPCELL(x, y) (spgrid + ((size_t)(y) * GRID + (size_t)(x)) * 0x48)
+#define SPPUT(x, y, off, v)                                                    \
+    do {                                                                       \
+        const uint32_t v_ = (uint32_t)(v);                                     \
+        memcpy(SPCELL(x, y) + (off), &v_, 4);                                  \
+    } while (0)
+        CHECK(terrain_cell_special_state_predicate(&sps, 3, 4, 0) == 0,
+              "the empty cell is not special");
+        SPPUT(3, 4, 0x08, 0x400u); /* the occupied flag */
+        CHECK(terrain_cell_special_state_predicate(&sps, 3, 4, 0) == 1,
+              "the flagged cell passes without the gate");
+        CHECK(terrain_cell_special_state_predicate(&sps, 3, 4, 1) == 0,
+              "the gated check needs the secondary 0x100");
+        SPPUT(3, 4, 0x0C, 0x100u);
+        CHECK(terrain_cell_special_state_predicate(&sps, 3, 4, 1) == 1,
+              "the secondary 0x100 lands through the gate");
+        SPPUT(3, 4, 0x08, 0u);
+        SPPUT(3, 4, 0x0C, 0u);
+        CHECK(terrain_cell_special_state_predicate(NULL, 3, 4, 0) == 0
+                  && terrain_cell_special_state_predicate(&sps, 0, 0, 1) == 0,
+              "the null state and the edge cell stay quiet (deviation)");
+#undef SPCELL
+#undef SPPUT
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "level_test: %d failure(s)\n", s_failures);
         return 1;

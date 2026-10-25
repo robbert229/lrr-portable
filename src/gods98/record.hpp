@@ -401,4 +401,15 @@ void* menu_item_numeric_range_record_allocate(int kind, int min_v, int max_v,
                                               uint32_t f13, uint32_t f14);
                                                                     /* FUN_00410bf0 */
 
+/* NestedRecordListRemoveByKeyRecursive (FUN_0047b2e0): the deep-first key
+ * sweep of a nested list. The recursion descends through the node's next
+ * link; a true child means the child's own successor gets promoted into
+ * its slot and the child is freed through the engine heap; the node then
+ * answers whether its key (+0x08) matches.
+ * Deviations: the corpus strides its dword links blindly (the port keeps
+ * the next link as a native pointer per the widened-link convention); the
+ * corpus's first argument never reads (calling-convention residue). */
+int nested_record_list_remove_by_key_recursive(int key, void* node);
+                                                /* FUN_0047b2e0 */
+
 #endif /* LEGORRR_GODS98_RECORD_HPP */
