@@ -407,3 +407,27 @@ int flic_opcode16_mode_dispatch(const uint8_t* rec)
     }
     return 1;
 }
+
+/* PackedTripletTableToWordBuild (FUN_00484ba0) — see flic.hpp. The record
+ * shape rides the frame-record byte window (the opcode-16 dispatch
+ * precedent): 256 packed RGB triplets at +0x11c become 16-bit words at
+ * +0x41c, and the first word is then cleared. Deviation: the corpus strides
+ * the record blindly. */
+void flic_packed_triplet_table_to_word_build(void* record)
+{
+    if (record == NULL) {
+        return; /* deviation: the corpus strides the record blindly */
+    }
+    const uint8_t* triples = (const uint8_t*)record + 0x11c;
+    uint8_t* words = (uint8_t*)record + 0x41c;
+    for (int i = 0; i != 0x100; ++i) {
+        const uint8_t* src = triples + (size_t)i * 3u;
+        const uint16_t w = (uint16_t)(
+            (uint16_t)((uint16_t)(src[1] | (uint16_t)((src[0] & 0x3e) << 5))
+                       << 5)
+            | (uint16_t)(src[2] >> 1));
+        __builtin_memcpy(words + (size_t)i * 2u, &w, sizeof w);
+    }
+    const uint16_t zero = 0u;
+    __builtin_memcpy(words, &zero, sizeof zero);
+}

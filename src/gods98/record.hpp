@@ -49,6 +49,17 @@ uint32_t velocity_slot_secondary_object_get(const void* record,
 void velocity_slot_vector_read(const void* record, float out[3],
                                uint32_t index);
 
+/* EntityVelocityStateRecordGet (FUN_004712c0): the type-keyed velocity
+ * state record: type 1 answers the +0x0c sub-record plus 0x138, type 4 the
+ * +0x18 sub-record plus 0xa0, anything else NULL. The value pair
+ * (FUN_004712f0 / FUN_00471310) reads/writes the float word at +0x98 of
+ * that base (the corpus's x87 widening rides the bits unchanged).
+ * Deviation: the corpus strides the type walk, the sub-record link, and
+ * a null base blindly. */
+void* entity_velocity_state_record_get(const void* record);
+float entity_velocity_slot_value_get(const void* record, int slot);
+void entity_velocity_slot_value_set(void* record, uint32_t value, int slot);
+
 /* EntityFlag80Set (FUN_00473b20): raises the record's +0x14 flag word's
  * bit 7 when set is nonzero, drops it otherwise. The port guards the
  * record (deviation: the corpus strides it blindly). */

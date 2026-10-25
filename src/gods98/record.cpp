@@ -106,6 +106,52 @@ void velocity_slot_vector_read(const void* record, float out[3],
     }
 }
 
+/* EntityVelocityStateRecordGet (FUN_004712c0) — see record.hpp. The corpus
+ * strides the type-keyed sub-record blindly (and walks into the sub-record
+ * when the type answers no base at all); the port guards both links. */
+void* entity_velocity_state_record_get(const void* record)
+{
+    if (record == NULL) {
+        return NULL; /* deviation: the corpus strides the record blindly */
+    }
+    const uint32_t type = rec_dword(record, 0x00);
+    if (type == 1u) {
+        void* sub = rec_ptr(record, 0x0c);
+        return (sub != NULL) ? (void*)((char*)sub + 0x138)
+                             : NULL; /* deviation: corpus strides blindly */
+    }
+    if (type == 4u) {
+        void* sub = rec_ptr(record, 0x18);
+        return (sub != NULL) ? (void*)((char*)sub + 0xa0)
+                             : NULL; /* deviation: corpus strides blindly */
+    }
+    return NULL; /* deviation: the corpus walks a null base */
+}
+
+/* EntityVelocitySlotValueGet (FUN_004712f0): the float word at
+ * +0x98 + slot*4 of the state record. The corpus widens through x87;
+ * the bit pattern rides unchanged. Deviation: the corpus strides a null
+ * base. */
+float entity_velocity_slot_value_get(const void* record, int slot)
+{
+    void* base = entity_velocity_state_record_get(record);
+    if (base == NULL || slot < 0) {
+        return 0.0f; /* deviation */
+    }
+    return rec_float(base, 0x98u + (size_t)slot * 4u);
+}
+
+/* EntityVelocitySlotValueSet (FUN_00471310): the store counterpart. */
+void entity_velocity_slot_value_set(void* record, uint32_t value, int slot)
+{
+    void* base = entity_velocity_state_record_get(record);
+    if (base == NULL || slot < 0) {
+        return; /* deviation */
+    }
+    __builtin_memcpy((char*)base + 0x98u + (size_t)slot * 4u, &value,
+                     sizeof value);
+}
+
 /* EntityFlag80Set (FUN_00473b20) — see record.hpp. */
 void entity_flag_80_set(void* record, int set)
 {

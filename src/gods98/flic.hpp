@@ -93,4 +93,9 @@ void flic_opcode27_fallback_noop(void);
  * blindly; the port guards the NULL window. */
 int flic_opcode16_mode_dispatch(const uint8_t* rec);
 
+/* PackedTripletTableToWordBuild (FUN_00484ba0): fold the record's 256
+ * packed RGB triplets at +0x11c into 16-bit words at +0x41c, then clear
+ * the first word. The record rides the frame-record byte window. */
+void flic_packed_triplet_table_to_word_build(void* record);
+
 #endif /* LEGORRR_FLIC_HPP */

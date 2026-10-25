@@ -1660,9 +1660,9 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00470630,FUN_00470630,named,EntityDirectedLineSideCheck,0,276
 00470690,FUN_00470690,named,TimedEntitySegmentVisualCreate,0,748
 00470760,FUN_00470760,named,MeshBuildEightSidedSegment,0,11910
-004712c0,FUN_004712c0,named,EntityVelocityStateRecordGet,0,165
-004712f0,FUN_004712f0,named,EntityVelocitySlotValueGet,0,167
-00471310,FUN_00471310,named,EntityVelocitySlotValueSet,0,192
+004712c0,FUN_004712c0,ported,EntityVelocityStateRecordGet,2,165
+004712f0,FUN_004712f0,ported,EntityVelocitySlotValueGet,2,167
+00471310,FUN_00471310,ported,EntityVelocitySlotValueSet,2,192
 00471330,FUN_00471330,ported,InterpolatedZWithinBounds,2,277
 00471630,FUN_00471630,named,RayHitCellDistanceMinimizeSweep,0,2915
 00471860,FUN_00471860,named,SceneSegmentTraceNearestHit,0,530
@@ -2125,7 +2125,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004849d0,FUN_004849d0,named,FlicDecode16BitKeyframe,0,1963
 00484b20,FUN_00484b20,named,FlicOpcode25DecodeDispatch,0,447
 00484b90,FUN_00484b90,ported,FlicOpcode25SuccessStub,3,49
-00484ba0,FUN_00484ba0,named,PackedTripletTableToWordBuild,0,433
+00484ba0,FUN_00484ba0,ported,PackedTripletTableToWordBuild,2,433
 00484c00,FUN_00484c00,named,FlicDecode16BitRowRecords,0,886
 00484c90,FUN_00484c90,ported,FlicOpcode27FallbackNoop,2,41
 00484ca0,FUN_00484ca0,named,FlicDecode8BitAlternateDelta,0,2597

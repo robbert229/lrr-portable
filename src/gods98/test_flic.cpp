@@ -388,6 +388,37 @@ int main(int argc, char** argv)
               "the opcode routes and the NULL window answer 1");
     }
 
+    /* PackedTripletTableToWordBuild (2026-10-25): the 256-triplet fold
+     * at +0x11c into the words at +0x41c, and the first-word clear. */
+    {
+        static unsigned char rec[0x620];
+        memset(rec, 0, sizeof rec);
+        for (int i = 0; i != 0x100; ++i) {
+            rec[0x11c + i * 3 + 0] = (unsigned char)(i * 7u + 11u);
+            rec[0x11c + i * 3 + 1] = (unsigned char)(i * 11u + 3u);
+            rec[0x11c + i * 3 + 2] = (unsigned char)(i * 13u + 5u);
+        }
+        flic_packed_triplet_table_to_word_build(rec);
+        int bad = 0;
+        for (int i = 1; i != 0x100; ++i) {
+            const unsigned char* t = rec + 0x11c + i * 3;
+            const uint16_t want = (uint16_t)(
+                (((unsigned)t[1] | ((unsigned)(t[0] & 0x3e) << 5)) << 5)
+                | (unsigned)(t[2] >> 1));
+            uint16_t got = 0u;
+            memcpy(&got, rec + 0x41c + i * 2, sizeof got);
+            if (got != want) {
+                bad++;
+            }
+        }
+        CHECK(bad == 0, "the whole table folds (first word excepted)");
+        uint16_t w0 = 0xffffu;
+        memcpy(&w0, rec + 0x41c, sizeof w0);
+        CHECK(w0 == 0u, "the first word is cleared after the fold");
+        flic_packed_triplet_table_to_word_build(NULL);
+        CHECK(1, "the null record is guarded (deviation)");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "flic: %d failure(s)\n", s_failures);
         return 1;

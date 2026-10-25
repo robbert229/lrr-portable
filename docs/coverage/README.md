@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 1048 | 40.9% |
+| ported | 1052 | 41.0% |
 | anchored | 4 | 0.2% |
-| named | 1467 | 57.2% |
+| named | 1463 | 57.1% |
 | runtime-import | 44 | 1.7% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (1048 functions)
+  (1052 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1467 functions)
+  citation yet (1463 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (44 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1472 (57.4%).**
+**Game logic remaining to port: 1468 (57.3%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -887,9 +887,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00470630` | EntityDirectedLineSideCheck |
 | `0x00470690` | TimedEntitySegmentVisualCreate |
 | `0x00470760` | MeshBuildEightSidedSegment |
-| `0x004712c0` | EntityVelocityStateRecordGet |
-| `0x004712f0` | EntityVelocitySlotValueGet |
-| `0x00471310` | EntityVelocitySlotValueSet |
 | `0x00471630` | RayHitCellDistanceMinimizeSweep |
 | `0x00471860` | SceneSegmentTraceNearestHit |
 | `0x004718d0` | ObjectPairRayHitCheck |
@@ -1208,7 +1205,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004848d0` | FlicDecode8BitOpcode25Mode4 |
 | `0x004849d0` | FlicDecode16BitKeyframe |
 | `0x00484b20` | FlicOpcode25DecodeDispatch |
-| `0x00484ba0` | PackedTripletTableToWordBuild |
 | `0x00484c00` | FlicDecode16BitRowRecords |
 | `0x00484ca0` | FlicDecode8BitAlternateDelta |
 | `0x00484e50` | FlicDecode16BitDelta |
