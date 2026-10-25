@@ -685,4 +685,18 @@ void crt_math_exception_handler_install(int index, int id,
 uint64_t crt_integer64_multiply(uint32_t lo_a, int32_t hi_a,
                                 uint32_t lo_b, int32_t hi_b);
 
+/* CrtFileDescriptorFlag40Get (FUN_00498b40): answers the corpus CRT table's
+ * per-descriptor flag byte bit 0x40 — the byte at block+4 over 32
+ * eight-byte entries per block, blocks indexed from the DAT_0076ddc0
+ * pointer table, bounded by the DAT_0076dec0 count word. That table is
+ * platform state with no ported owner: blocks and count ride zero-init
+ * own storage behind the install/peek hooks below (the unowned-global
+ * convention). Deviations: block window and null blocks guarded, a
+ * negative descriptor answers 0. */
+unsigned crt_file_descriptor_flag40_get(unsigned fd);  /* FUN_00498b40 */
+void  crt_file_descriptor_flag_block_set(int index, void* block);
+void* crt_file_descriptor_flag_block_peek(int index);
+void  crt_file_descriptor_count_set(int count);
+int   crt_file_descriptor_count_peek(void);
+
 #endif /* LEGORRR_GODS98_CRT_HPP */

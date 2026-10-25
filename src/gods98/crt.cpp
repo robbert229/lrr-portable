@@ -1915,3 +1915,57 @@ uint64_t crt_integer64_multiply(uint32_t lo_a, int32_t hi_a,
                           + (uint32_t)(lo_a * (uint32_t)(uint32_t)hi_b);
     return ((uint64_t)high32 << 32) | (uint32_t)low64;
 }
+
+/* --- the CRT file-descriptor flag window (2026-10-25) ---------------------
+ * CrtFileDescriptorFlag40Get (FUN_00498b40): the corpus reads bit 0x40 of
+ * the byte at block+4 in its file-descriptor table — 32 eight-byte entries
+ * per block, blocks indexed from the DAT_0076ddc0 pointer table, the bound
+ * word at DAT_0076dec0. That table is CRT platform state with no ported
+ * owner: the pointer blocks and the count word land as zero-init own
+ * storage behind install/peek hooks (the unowned-global convention).
+ * Deviations: the block window and null blocks are guarded (the corpus
+ * strides), and a negative descriptor answers 0. */
+#define CRT_FD_BLOCKS 8
+static void* s_fd_flag_blocks[CRT_FD_BLOCKS]; /* DAT_0076ddc0 role */
+static int   s_fd_flag_count;                 /* DAT_0076dec0 role */
+
+unsigned crt_file_descriptor_flag40_get(unsigned fd)
+{
+    if ((int)s_fd_flag_count <= (int)fd || fd > 0x7fffffffu) {
+        return 0; /* the corpus's unsigned bound test */
+    }
+    if ((fd >> 5) >= CRT_FD_BLOCKS) {
+        return 0; /* deviation: the corpus strides the block table */
+    }
+    const unsigned char* block =
+        (const unsigned char*)s_fd_flag_blocks[fd >> 5];
+    if (block == NULL) {
+        return 0; /* deviation: the corpus reads the block anyway */
+    }
+    return (unsigned)(block[(fd & 0x1fu) * 8u + 4u] & 0x40u) != 0u;
+}
+
+void crt_file_descriptor_flag_block_set(int index, void* block)
+{
+    if (index >= 0 && index < CRT_FD_BLOCKS) {
+        s_fd_flag_blocks[index] = block;
+    }
+}
+
+void* crt_file_descriptor_flag_block_peek(int index)
+{
+    if (index < 0 || index >= CRT_FD_BLOCKS) {
+        return NULL;
+    }
+    return s_fd_flag_blocks[index];
+}
+
+void crt_file_descriptor_count_set(int count)
+{
+    s_fd_flag_count = count;
+}
+
+int crt_file_descriptor_count_peek(void)
+{
+    return s_fd_flag_count;
+}

@@ -2242,9 +2242,9 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0048bff0,FUN_0048bff0,ported,FixedRecordSlotResourceGet,4,163
 0048c010,FUN_0048c010,named,WadStreamLengthGet,0,177
 0048c030,FUN_0048c030,ported,WadMemoryStreamBufferGet,3,80
-0048c040,FUN_0048c040,named,StringCaseSubstringFind,0,1052
-0048c0c0,FUN_0048c0c0,named,LwoStringDuplicate,0,1265
-0048c120,FUN_0048c120,named,LwoTextureProjectionModeParse,0,701
+0048c040,FUN_0048c040,ported,StringCaseSubstringFind,3,1052
+0048c0c0,FUN_0048c0c0,ported,LwoStringDuplicate,3,1265
+0048c120,FUN_0048c120,ported,LwoTextureProjectionModeParse,3,701
 0048c180,FUN_0048c180,ported,OwnedResourceTreeRelease,3,289
 0048c1d0,FUN_0048c1d0,ported,LwoReadBigEndianFloat,3,419
 0048c210,FUN_0048c210,ported,LwoPoints,1,1334
@@ -2474,7 +2474,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00498340,FUN_00498340,ported,CrtFatalMessageExit,3,59
 00498350,FUN_00498350,named,NumberStringScanParse,0,9648
 00498ae0,FUN_00498ae0,ported,CrtStreamBufferAllocate,3,430
-00498b40,FUN_00498b40,named,CrtFileDescriptorFlag40Get,0,180
+00498b40,FUN_00498b40,ported,CrtFileDescriptorFlag40Get,3,180
 00498b70,FUN_00498b70,named,CrtWideCharToMultibyte,0,683
 00498bf0,__aulldiv,runtime-import,__aulldiv,0,1246
 00498c60,__aullrem,runtime-import,__aullrem,0,1468

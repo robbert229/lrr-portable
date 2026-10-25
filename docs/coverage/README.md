@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 1073 | 41.8% |
+| ported | 1079 | 42.1% |
 | anchored | 4 | 0.2% |
-| named | 1442 | 56.2% |
+| named | 1436 | 56.0% |
 | runtime-import | 44 | 1.7% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (1073 functions)
+  (1079 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1442 functions)
+  citation yet (1436 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (44 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1447 (56.4%).**
+**Game logic remaining to port: 1441 (56.2%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -268,14 +268,12 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00415d00` | SaveMenuLayoutLoad |
 | `0x004169c0` | FrontEndStateChange |
 | `0x00416c80` | MenuEnter |
-| `0x00416e70` | SavClearVisited |
 | `0x00417090` | LevelNodeGet |
 | `0x00417280` | RegistryValueLookupWithLock |
 | `0x004172d0` | RegistryValueIndexLookupOrNotFound |
 | `0x004172f0` | SavTreeWalk2 |
 | `0x004173e0` | SavTreeLoad |
 | `0x004179b0` | SavMenuList |
-| `0x00417df0` | SavRefreshSlots |
 | `0x00418000` | ShowLevelOverlayForCurrentSelection |
 | `0x00418040` | CampaignChainSnapshotCreate |
 | `0x004180c0` | OptionsContextCopyAndReplaceResource |
@@ -1271,9 +1269,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0048bd50` | WadEntryFindAcrossMountedArchives |
 | `0x0048be00` | FixedRecordSlotAllocate |
 | `0x0048c010` | WadStreamLengthGet |
-| `0x0048c040` | StringCaseSubstringFind |
-| `0x0048c0c0` | LwoStringDuplicate |
-| `0x0048c120` | LwoTextureProjectionModeParse |
 | `0x0048c360` | LwoCurves |
 | `0x0048d870` | ModelObjectFree |
 | `0x0048d940` | CrtMathDispatchTableInitialize |
@@ -1429,7 +1424,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00497ec0` | CrtLocaleDataGetOrInitialize |
 | `0x00497f40` | DoubleToExtended80 |
 | `0x00498350` | NumberStringScanParse |
-| `0x00498b40` | CrtFileDescriptorFlag40Get |
 | `0x00498b70` | CrtWideCharToMultibyte |
 | `0x00498ce0` | CrtScanfNumericConversionAssign |
 | `0x00498e00` | CrtMultibyteToWideChar |
