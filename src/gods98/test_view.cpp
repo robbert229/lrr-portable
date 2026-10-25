@@ -534,6 +534,80 @@ int main(void)
         renderer_node_relative_position_set(node, 1.0f, 1.0f); /* cam guard */
     }
 
+    /* Matrix/ray math leaves (2026-10-24) — FUN_00479ab0 / FUN_004798e0 /
+     * FUN_00479e70 / FUN_00479e40 / FUN_00479eb0 / FUN_00479d50 /
+     * FUN_00479da0 / FUN_00479df0 / FUN_0040bd60. */
+    {
+        float out[3];
+        const float origin[3] = { 1.0f, 2.0f, 3.0f };
+        const float dir[3] = { 2.0f, 0.0f, -1.0f };
+        point_along_ray(out, origin, dir, 1.5f);
+        CHECK(out[0] == 4.0f && out[1] == 2.0f && out[2] == 1.5f,
+              "point_along_ray scales and offsets per component");
+    }
+    {
+        /* Ray (0,0,0)→(1,1,0) versus the plane through (2,2,2) with the
+         * (1,1,1) normal: both direction vectors ride their normalizers
+         * into the plane solve, answering the exact hit (3,3,0). */
+        float out[3];
+        const float p[3] = { 0.0f, 0.0f, 0.0f };
+        const float da[3] = { 1.0f, 1.0f, 0.0f };
+        const float q[3] = { 2.0f, 2.0f, 2.0f };
+        const float db[3] = { 1.0f, 1.0f, 1.0f };
+        int hit = view_ray_intersection_test(out, p, da, q, db);
+        CHECK(hit == 1 && fabsf(out[0] - 3.0f) < 1e-5f
+                  && fabsf(out[1] - 3.0f) < 1e-5f && fabsf(out[2]) < 1e-5f,
+              "view_ray_intersection_test solves the scaled ray/plane");
+        const float pa[3] = { 1.0f, 0.0f, 0.0f };
+        const float pb[3] = { 0.0f, 1.0f, 0.0f };
+        CHECK(view_ray_intersection_test(out, p, pa, q, pb) == 0,
+              "orthogonal ray and plane normal answer zero");
+    }
+    {
+        float m[16];
+        float got[16];
+        const float tr[3] = { 5.0f, 6.0f, 7.0f };
+        matrix4_set_identity(m);
+        CHECK(m[0] == 1.0f && m[5] == 1.0f && m[10] == 1.0f && m[15] == 1.0f
+                  && m[1] == 0.0f && m[12] == 0.0f,
+              "matrix4_set_identity raises the diagonal only");
+        matrix4_identity_translation_set(m, tr);
+        CHECK(m[12] == 5.0f && m[13] == 6.0f && m[14] == 7.0f
+                  && m[15] == 1.0f && m[0] == 1.0f && m[1] == 0.0f,
+              "the translation triad lands in row 3");
+        matrix4_copy(got, m);
+        CHECK(memcmp(got, m, sizeof got) == 0, "matrix4_copy moves 16 cells");
+    }
+    {
+        float m[16];
+        matrix4_set_rotation_x(m, 0.0f);
+        CHECK(m[0] == 1.0f && m[5] == 1.0f && m[6] == 0.0f && m[9] == 0.0f
+                  && m[10] == 1.0f && m[2] == 0.0f,
+              "matrix4_set_rotation_x at zero is the identity");
+        matrix4_set_rotation_x(m, 3.1415926535f / 2.0f);
+        CHECK(fabsf(m[5]) < 1e-6f && fabsf(m[6] + 1.0f) < 1e-6f
+                  && fabsf(m[9] - 1.0f) < 1e-6f && fabsf(m[10]) < 1e-6f
+                  && m[0] == 1.0f && m[2] == 0.0f,
+              "the rows 1-2 block at half-pi is (c,-s / s,c)");
+        matrix4_set_rotation_y(m, 3.1415926535f / 2.0f);
+        CHECK(fabsf(m[0]) < 1e-6f && fabsf(m[2] - 1.0f) < 1e-6f
+                  && fabsf(m[8] + 1.0f) < 1e-6f && fabsf(m[10]) < 1e-6f,
+              "the rows 0/2 block at half-pi is (c,+s / -s,c)");
+        matrix4_set_rotation_z(m, 3.1415926535f / 2.0f);
+        CHECK(fabsf(m[0]) < 1e-6f && fabsf(m[1] + 1.0f) < 1e-6f
+                  && fabsf(m[4] - 1.0f) < 1e-6f && fabsf(m[5]) < 1e-6f
+                  && m[10] == 1.0f,
+              "the rows 0-1 block at half-pi is (c,-s / s,c)");
+    }
+    {
+        float m[16];
+        perspective_projection_matrix_set(m, 1.0f, 2.0f, 3.0f, 4.0f, 5.0f);
+        CHECK(m[0] == 4.0f && m[5] == 1.5f && m[1] == 5.0f
+                  && m[10] == 1.0f && m[15] == 1.0f && m[7] == 0.0f
+                  && m[12] == 0.0f,
+              "the perspective quotients land with the zeros");
+    }
+
     if (s_failures == 0) {
         printf("view_test: PASS\n");
         return 0;

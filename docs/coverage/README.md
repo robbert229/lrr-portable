@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 901 | 35.1% |
+| ported | 910 | 35.5% |
 | anchored | 4 | 0.2% |
-| named | 1612 | 62.9% |
+| named | 1603 | 62.5% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (901 functions)
+  (910 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1612 functions)
+  citation yet (1603 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1617 (63.1%).**
+**Game logic remaining to port: 1608 (62.7%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -1106,14 +1106,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00479500` | D3DRMVectorRandom |
 | `0x00479510` | D3DRMVectorRotate |
 | `0x00479630` | SurfaceTriangleAreaCalculate |
-| `0x004798e0` | ViewRayIntersectionTest |
-| `0x00479ab0` | PointAlongRay |
-| `0x00479d50` | Matrix4SetRotationZ |
-| `0x00479da0` | Matrix4SetRotationY |
-| `0x00479df0` | Matrix4SetRotationZ |
-| `0x00479e40` | MatrixIdentityAndTranslationSet |
-| `0x00479e70` | Matrix4SetIdentity |
-| `0x00479eb0` | Matrix4Copy |
 | `0x0047a150` | FormattedTextFormatDraw |
 | `0x0047a180` | RewardTextDraw |
 | `0x0047a1b0` | FormattedTextDraw |
