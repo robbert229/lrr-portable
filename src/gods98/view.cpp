@@ -1136,6 +1136,94 @@ void bezier_curve_samples_build(uint32_t* dest, const uint32_t* control,
     }
 }
 
+/* PathArcLengthInterpolate (FUN_004068c0) — see view.hpp. The record layout
+ * is the curve band's: count at dword 0, point i (1-based) floats at dwords
+ * 2i-1/2i, segment lengths at dword 0x65+k — the same window the length
+ * builder stores through +0x198. */
+uint32_t path_arc_length_interpolate(const uint32_t* curve, float travel,
+                                     float* out)
+{
+    if (curve == NULL || out == NULL) {
+        return 0u; /* deviation: the corpus strides both blindly */
+    }
+    const uint32_t count = curve[0];
+    float accumulated = 0.0f;
+    uint32_t segment = 1u;
+    if (count > 1u) {
+        for (;;) {
+            float len = 0.0f;
+            __builtin_memcpy(&len, (const char*)curve + 4u * (0x65u + segment),
+                             sizeof len);
+            accumulated = accumulated + len;
+            if (travel < accumulated) {
+                break;
+            }
+            segment = segment + 1u;
+            if (segment >= count) {
+                break;
+            }
+        }
+    }
+
+    float sx = 0.0f, sy = 0.0f;
+    __builtin_memcpy(&sx, (const char*)curve + 4u * (2u * segment - 1u),
+                     sizeof sx);
+    __builtin_memcpy(&sy, (const char*)curve + 4u * (2u * segment), sizeof sy);
+
+    if (segment < count) {
+        float len = 0.0f;
+        __builtin_memcpy(&len, (const char*)curve + 4u * (0x65u + segment),
+                         sizeof len);
+        const float frac =
+            (travel - (accumulated - len)) / len; /* corpus ratio shape */
+        float ax = sx, ay = sy, bx = 0.0f, by = 0.0f;
+        __builtin_memcpy(&bx, (const char*)curve + 4u * (2u * segment + 1u),
+                         sizeof bx);
+        __builtin_memcpy(&by, (const char*)curve + 4u * (2u * segment + 2u),
+                         sizeof by);
+        out[0] = (bx - ax) * frac + ax;
+        out[1] = (by - ay) * frac + ay;
+    } else {
+        out[0] = sx;
+        out[1] = sy;
+    }
+    return segment;
+}
+
+/* ViewPointToScreenGeometryTransform (FUN_0045e940) — see view.hpp. The
+ * record window is the projection block: center +4/+8, half-size +c/+10,
+ * scale pair +14/+18, screen offsets +1c/+20. Deviations: NULL guards on
+ * both inputs (the corpus dereferences blindly) and the scale ratio is
+ * computed once where the corpus recomputes it five times (bit-identical
+ * for the same pair). */
+void view_point_to_screen_geometry_transform(const void* view, float p[4])
+{
+    if (view == NULL || p == NULL) {
+        return; /* deviation: the corpus strides both blindly */
+    }
+    const char* w = (const char*)view;
+    float cx = 0.0f, cy = 0.0f, half_x = 0.0f, half_y = 0.0f;
+    float scale_a = 0.0f, scale_b = 0.0f, off_x = 0.0f, off_y = 0.0f;
+    __builtin_memcpy(&cx, w + 0x04, sizeof cx);
+    __builtin_memcpy(&cy, w + 0x08, sizeof cy);
+    __builtin_memcpy(&half_x, w + 0x0c, sizeof half_x);
+    __builtin_memcpy(&half_y, w + 0x10, sizeof half_y);
+    __builtin_memcpy(&scale_a, w + 0x14, sizeof scale_a);
+    __builtin_memcpy(&scale_b, w + 0x18, sizeof scale_b);
+    __builtin_memcpy(&off_x, w + 0x1c, sizeof off_x);
+    __builtin_memcpy(&off_y, w + 0x20, sizeof off_y);
+
+    const float ratio = scale_a / scale_b;
+    p[0] = p[0] - off_x;
+    p[1] = p[1] - off_y;
+    p[0] = ratio * p[0];
+    p[1] = ratio * p[1];
+    p[2] = ratio * p[2];
+    p[0] = p[0] + half_x * 0.5f + cx;
+    p[1] = (half_y * 0.5f + cy) - p[1];
+    p[3] = ratio * p[3];
+}
+
 /* PolylineSegmentLengthsAndTotalCalculate (FUN_004067b0) — see view.hpp. */
 float polyline_segment_lengths_total(uint32_t* curve)
 {

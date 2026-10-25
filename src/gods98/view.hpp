@@ -439,4 +439,22 @@ void bezier_curve_samples_build(uint32_t* dest, const uint32_t* control,
                                 const uint32_t* p3, const uint32_t* p4,
                                 const uint32_t* p5, uint32_t count);
 float polyline_segment_lengths_total(uint32_t* curve);
+
+/* PathArcLengthInterpolate (FUN_004068c0): walks the arc-length table of a
+ * curve record (dword count at +0, point i floats at dwords 2i-1/2i,
+ * segment lengths at dword 0x65+segment) and interpolates the point at the
+ * travelled distance, answering the segment index. On or past the last
+ * segment the endpoint rides through uninterpolated. Deviations: NULL
+ * guards on record and output; the length reads reinterpret the stored
+ * float bits (the builder's window). */
+uint32_t path_arc_length_interpolate(const uint32_t* curve, float travel,
+                                     float* out);              /* FUN_004068c0 */
+
+/* ViewPointToScreenGeometryTransform (FUN_0045e940): projects four floats
+ * in place through the projection window — screen offsets at +1c/+20 come
+ * off first, the scale ratio (+14 / +18) scales x, y, and depth, x lands
+ * through the half-size + center pair, y mirrors through its own, and w
+ * rides the ratio. Deviations: NULL guards; the ratio is computed once. */
+void view_point_to_screen_geometry_transform(const void* view,
+                                             float p[4]);     /* FUN_0045e940 */
 #endif /* LEGORRR_VIEW_HPP */

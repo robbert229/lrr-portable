@@ -907,6 +907,61 @@ int main(void)
               "the null record guards (dev)");
     }
 
+    /* PathArcLengthInterpolate (2026-10-25): segment walk + fold. */
+    {
+        uint32_t curve[112];
+        memset(curve, 0, sizeof curve);
+        const float xs[4] = { 0.0f, 3.0f, 3.0f, 0.0f };
+        const float ys[4] = { 0.0f, 4.0f, 8.0f, 12.0f };
+        curve[0] = 4u;
+        for (int i = 0; i < 4; ++i) {
+            memcpy((char*)curve + 4 + 8 * i, &xs[i], 4);
+            memcpy((char*)curve + 8 + 8 * i, &ys[i], 4);
+        }
+        (void)polyline_segment_lengths_total(curve); /* fill 3+4+5=12 */
+
+        float out[2] = { -9.0f, -9.0f };
+        uint32_t seg = path_arc_length_interpolate(curve, 2.0f, out);
+        CHECK(seg == 1u && out[0] == 1.2f && out[1] == 1.6f,
+              "the first segment interpolates the 3-4-5 slope");
+        seg = path_arc_length_interpolate(curve, 5.5f, out);
+        CHECK(seg == 2u && out[0] == 3.0f && out[1] == 4.5f,
+              "the second segment folds from its own head length");
+        seg = path_arc_length_interpolate(curve, 14.0f, out);
+        CHECK(seg == 4u && out[0] == 0.0f && out[1] == 12.0f,
+              "the exhausted travel rides the endpoint");
+        seg = path_arc_length_interpolate(curve, 0.0f, out);
+        CHECK(seg == 1u && out[0] == 0.0f && out[1] == 0.0f,
+              "zero travel stays on segment one");
+        curve[0] = 1u;
+        seg = path_arc_length_interpolate(curve, 5.0f, out);
+        CHECK(seg == 1u && out[0] == 0.0f && out[1] == 0.0f,
+              "the single-point record answers its only point");
+        CHECK(path_arc_length_interpolate(NULL, 1.0f, out) == 0u,
+              "the null record guards (dev)");
+    }
+
+    /* ViewPointToScreenGeometryTransform (2026-10-25): window fold. */
+    {
+        struct View { float pad[1]; float c[2]; float half[2];
+                      float scale[2]; float off[2]; } view;
+        memset(&view, 0, sizeof view);
+        view.c[0] = 2.0f; view.c[1] = 7.0f;
+        view.half[0] = 4.0f; view.half[1] = 10.0f;
+        view.scale[0] = 6.0f; view.scale[1] = 3.0f;
+        view.off[0] = 1.0f; view.off[1] = 2.0f;
+
+        float p[4] = { 3.0f, 5.0f, 9.0f, 11.0f };
+        view_point_to_screen_geometry_transform(&view, p);
+        /* x: (3-1)*2 + 2 + 2 = 8; y: (10*0.5 + 7) - (5-2)*2 = 6;
+         * depth: 9*2 = 18; w: 11*2 = 22. */
+        CHECK(p[0] == 8.0f && p[1] == 6.0f && p[2] == 18.0f && p[3] == 22.0f,
+              "the projection fold lands all four parts");
+        view_point_to_screen_geometry_transform(NULL, p);
+        view_point_to_screen_geometry_transform(&view, NULL);
+        CHECK(p[0] == 8.0f, "the null guards leave the record alone (dev)");
+    }
+
     if (s_failures == 0) {
         printf("view_test: PASS\n");
         return 0;
