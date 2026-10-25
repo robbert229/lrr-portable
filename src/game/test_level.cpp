@@ -1682,6 +1682,81 @@ int main(int argc, char** argv)
               "the thunk forwards the module draw");
     }
 
+    /* Erosion timing band (2026-10-25): the scaled seeds, the cell delay,
+     * and the neighbour sweep on a hand-built grid. */
+    {
+        erosion_timing_state_init(1.0f, 1.0f, 2.0f);
+        int want_tick = 0;
+        const float tick50 = 2.0f * 25.0f;
+        memcpy(&want_tick, &tick50, sizeof want_tick);
+        CHECK(erosion_decay_scale_peek() == 25.0f
+                  && erosion_delay_scale_peek() == 1.0f * 25.0f * 0.2f
+                  && erosion_timestamp_tick_peek() == want_tick,
+              "the init seeds the scales and the timestamp tick (float bits)");
+        erosion_timing_state_init(0.0f, 0.0f, 0.0f);
+        CHECK(erosion_scratch_peek(0, 1999) == 0
+                  && erosion_scratch_peek(1, 999) == 0
+                  && erosion_scratch_peek(0, -1) == -1
+                  && erosion_scratch_peek(1, 1000) == -1,
+              "the scratch arrives cleared and bounded on peek");
+
+        static LevelState ev;
+        static uint8_t evox[4 * 4 * 0x48];
+        memset(evox, 0, sizeof evox);
+        memset(&ev, 0, sizeof ev);
+        ev.ptr_voxels = evox;
+        level_set_int(&ev, LEVEL_OFF_WIDTH, 4);
+        level_set_int(&ev, LEVEL_OFF_HEIGHT, 4);
+        uint8_t* seed = evox + ((size_t)2 * 4 + 2) * 0x48; /* cell (2,2) */
+        seed[2] = 6; /* lava type */
+        erosion_timing_state_init(1.0f, 1.0f, 0.0f);
+        seed[6] = 3;
+        CHECK(lava_erosion_delay_from_cell(&ev, 2, 2)
+                  == (float)(6 - 3) * (1.0f * 25.0f * 0.2f) * 25.0f,
+              "the delay counts the erosion byte down from six");
+        seed[6] = 9;
+        CHECK(lava_erosion_delay_from_cell(&ev, 2, 2)
+                  == (float)(6 - 9) * (1.0f * 25.0f * 0.2f) * 25.0f,
+              "the count goes negative past six (faithful)");
+        CHECK(lava_erosion_delay_from_cell(NULL, 0, 0) == 0.0f
+                  && lava_erosion_delay_from_cell(&ev, 9, 9) == 0.0f,
+              "the guarded grid answers zero (deviation)");
+        seed[6] = 0;
+
+        int out[2] = { -5, -5 };
+        erosion_timing_state_init(0.0f, 0.0f, 0.0f);
+
+        /* Cell (1,2) seeds the sweep. Its north neighbour (1,1) carries
+         * a coordinate timestamp from the earlier dedup fill — the table
+         * is full, so a fresh remember here would store nothing. */
+        uint8_t* seed2 = evox + ((size_t)2 * 4 + 1) * 0x48; /* (1,2) */
+        uint8_t* north = evox + ((size_t)1 * 4 + 1) * 0x48; /* (1,1) */
+        uint8_t* east = evox + ((size_t)2 * 4 + 2) * 0x48;  /* (2,2) */
+        seed2[2] = 6;
+        const uint32_t busyfree = 8u; /* bit 3, sign clear */
+        memcpy(north + 8, &busyfree, 4);
+        north[6] = 1;
+        CHECK(lava_erosion_neighbor_check(&ev, 1, 2, out) == 0,
+              "the timestamped north neighbour rides past the answer");
+        seed2[2] = 5;
+        CHECK(lava_erosion_neighbor_check(&ev, 1, 2, out) == 0,
+              "the type gate skips the whole sweep");
+        seed2[2] = 6;
+        memcpy(east + 8, &busyfree, 4);
+        east[6] = 1;
+        CHECK(lava_erosion_neighbor_check(&ev, 1, 2, out) == 1
+                  && out[0] == 2 && out[1] == 2,
+              "the busy-free untimestamped east neighbour answers");
+        const uint32_t signedflag = 0x80000008u;
+        memcpy(east + 8, &signedflag, 4);
+        CHECK(lava_erosion_neighbor_check(&ev, 1, 2, out) == 0,
+              "the sign-bit neighbour stays out");
+        /* No-grid guard + no-pair out slot still walk the neighbours. */
+        CHECK(lava_erosion_neighbor_check(NULL, 1, 1, out) == 0
+                  && lava_erosion_neighbor_check(&ev, 0, 0, NULL) == 0,
+              "the guarded seed answers zero");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "level_test: %d failure(s)\n", s_failures);
         return 1;

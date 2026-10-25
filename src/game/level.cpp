@@ -2044,7 +2044,7 @@ static int32_t  s_ts_x[LEVEL_TS_COUNT];
 static int32_t  s_ts_y[LEVEL_TS_COUNT];
 static int32_t  s_ts_active[LEVEL_TS_COUNT];
 static int32_t  s_ts_stamps[LEVEL_TS_COUNT];
-static int32_t  s_ts_now; /* _DAT_004d78c0: no ported writer yet (zero) */
+static int32_t  s_ts_now; /* _DAT_004d78c0: erosion_timing_state_init seeds the float bits (zero until then) */
 
 void cell_coordinate_timestamp_remember(int x, int y)
 {
@@ -2886,4 +2886,89 @@ void random_variant_cell_scatter(int center_x, int center_y, int radius,
 uint32_t rng_thunk_draw15(void)
 {
     return (uint32_t)level_random_draw15();
+}
+
+/* --- erosion timing band (2026-10-25) -------------------------------------
+ * The timing floats, the clear word, and the two scratch regions land as
+ * module statics (the unowned-global deviation; the corpus's scratch
+ * consumers are the hook-stubbed tickers FUN_0040e7f0 / FUN_0040e990).
+ * _DAT_004d78c0 rides the existing timestamp tick model (s_ts_now). */
+#define EROSION_MARK_COUNT 2000   /* DAT_004cfbb4 */
+#define EROSION_TICKET_COUNT 1000 /* DAT_004d6914 */
+
+static float s_erosion_decay_scale;    /* _DAT_004d78b8 */
+static float s_erosion_delay_scale;    /* _DAT_004d78bc */
+static uint32_t s_erosion_clear_word;  /* DAT_004cbd30 */
+static uint32_t s_erosion_marks[EROSION_MARK_COUNT];
+static uint32_t s_erosion_tickets[EROSION_TICKET_COUNT];
+
+void erosion_timing_state_init(float value_a, float value_b, float value_c)
+{
+    s_erosion_decay_scale = value_a * 25.0f;
+    s_erosion_delay_scale = value_b * 25.0f * 0.2f;
+    const float tick = value_c * 25.0f;
+    __builtin_memcpy(&s_ts_now, &tick, sizeof s_ts_now);
+    /* deviation: the corpus keeps the seed as a float word; the port's
+     * timestamp model reads the tick as a count, so the float bits ride. */
+    s_erosion_clear_word = 0u;
+    memset(s_erosion_marks, 0, sizeof s_erosion_marks);
+    memset(s_erosion_tickets, 0, sizeof s_erosion_tickets);
+}
+
+float erosion_decay_scale_peek(void) { return s_erosion_decay_scale; }
+float erosion_delay_scale_peek(void) { return s_erosion_delay_scale; }
+int erosion_timestamp_tick_peek(void) { return s_ts_now; }
+
+int erosion_scratch_peek(int which, int index)
+{
+    if (which == 0) {
+        return (index >= 0 && index < EROSION_MARK_COUNT)
+                   ? (int)s_erosion_marks[index] : -1;
+    }
+    return (index >= 0 && index < EROSION_TICKET_COUNT)
+               ? (int)s_erosion_tickets[index] : -1;
+}
+
+float lava_erosion_delay_from_cell(const LevelState* s, int x, int y)
+{
+    const uint8_t* rec = level_voxel(s, x, y);
+    if (rec == NULL) {
+        return 0.0f; /* deviation: the corpus strides the grid blindly */
+    }
+    const int steps = 6 - (int)rec[6];
+    return (float)steps * s_erosion_delay_scale * 25.0f;
+}
+
+int lava_erosion_neighbor_check(const LevelState* s, int seed_x, int seed_y,
+                                int out_xy[2])
+{
+    const uint8_t* seed = level_voxel(s, seed_x, seed_y);
+    if (seed == NULL || seed[2] != 6) {
+        return 0; /* deviation: guarded seed (corpus strides blindly) */
+    }
+    /* Corpus neighbour deltas; the first x-dword is uninitialized stack
+     * residue, pinned to 0 (the cardinal ring). */
+    static const int dx[4] = { 0, 1, 0, -1 };
+    static const int dy[4] = { -1, 0, 1, 0 };
+    for (int i = 0; i != 4; ++i) {
+        const int nx = seed_x + dx[i];
+        const int ny = seed_y + dy[i];
+        if (out_xy != NULL) {
+            out_xy[0] = nx;
+            out_xy[1] = ny;
+        }
+        const uint8_t* rec = level_voxel(s, nx, ny);
+        if (rec == NULL) {
+            continue; /* deviation: out-of-bounds neighbour (corpus strides) */
+        }
+        uint32_t flags = 0;
+        __builtin_memcpy(&flags, rec + 8, sizeof flags);
+        if ((flags & 0x80000000u) == 0 && (flags & 8u) != 0 &&
+            rec[6] != 0) {
+            if (cell_coordinate_timestamp_exists(nx, ny) == 0u) {
+                return 1;
+            }
+        }
+    }
+    return 0;
 }
