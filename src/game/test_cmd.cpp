@@ -1705,6 +1705,62 @@ int main(void)
         cmd_chain_purge(NULL);
     }
 
+    /* SelectedEntitiesAnyPredicateMatch / AnyObjectCanOccupyTerrainCell
+     * (2026-10-24): the any-hit sweeps over the active selection. */
+    {
+        static uint8_t sgrid[8 * 8 * 0x48];
+        static LevelState slvl;
+        static EntitySlot eligible, plain;
+        GameContext sctx;
+        memset(sgrid, 0, sizeof sgrid);
+        memset(&slvl, 0, sizeof slvl);
+        memset(&eligible, 0, sizeof eligible);
+        memset(&plain, 0, sizeof plain);
+        game_context_init(&sctx);
+        cmd_context_set(&sctx);
+        slvl.word[0x14 / 4] = 8; /* width */
+        slvl.word[0x18 / 4] = 8; /* height */
+        slvl.ptr_voxels = sgrid;
+        sctx.level = &slvl;
+
+#define SCELL(x, y) (sgrid + ((size_t)(y) * 8u + (size_t)(x)) * 0x48)
+#define SPUT(x, y, off, v)                                                     \
+    do {                                                                       \
+        const uint32_t v_ = (uint32_t)(v);                                     \
+        memcpy(SCELL(x, y) + (off), &v_, 4);                                   \
+    } while (0)
+        SPUT(5, 5, 0x08, 0x10u); /* (5,5): walkable + placeable */
+        eligible.flags_3e8 = 0x4u; /* the placement gate bit */
+
+        selection_clear(&sctx);
+        CHECK(selected_entities_any_predicate_match(5, 5) == 0
+                  && any_object_can_occupy_terrain_cell(5, 5) == 0,
+              "the empty selection answers zero");
+
+        selection_add(&sctx, &plain);
+        CHECK(selected_entities_any_predicate_match(5, 5) == 1,
+              "the walkable cell lets the sweep through");
+        CHECK(any_object_can_occupy_terrain_cell(5, 5) == 0,
+              "the flagless record stays out of the placement sweep");
+        selection_add(&sctx, &eligible);
+        CHECK(any_object_can_occupy_terrain_cell(5, 5) == 1,
+              "the eligible record lands");
+        selection_clear(&sctx);
+        selection_add(&sctx, &eligible);
+        CHECK(selected_entities_any_predicate_match(1, 1) == 0
+                  && any_object_can_occupy_terrain_cell(1, 1) == 0,
+              "the empty cell keeps both sweeps out");
+        sctx.level = NULL;
+        CHECK(selected_entities_any_predicate_match(5, 5) == 0
+                  && any_object_can_occupy_terrain_cell(5, 5) == 0,
+              "the absent level skips (deviation)");
+        sctx.level = &slvl;
+        selection_clear(&sctx);
+        cmd_context_set(NULL);
+#undef SCELL
+#undef SPUT
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "cmd_test: %d failure(s)\n", s_failures);
         return 1;

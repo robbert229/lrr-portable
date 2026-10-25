@@ -876,4 +876,15 @@ int  terrain_sfx_grid_cell_peek(int cell);             /* port hook */
 void cell_cardinal_neighbor_apply(const struct GameContext* ctx, int x,
                                   int y); /* FUN_00409cd0 */
 
+/* TerrainCellSpecialStatePredicate (FUN_0040d3f0): the cell "special"
+ * predicate. The occupancy-or-flag check runs in mode 1; a hit with the
+ * caller's second gate word zero answers true outright, otherwise the
+ * secondary flag word's bit 0x100 must also hit.
+ * Deviations: the corpus threads the coordinate pair through the stack and
+ * reads the current-level global in its callees (the port threads the
+ * state block); the corpus's first argument is calling-convention residue. */
+int terrain_cell_special_state_predicate(const LevelState* s, int cx,
+                                         int cy, int secondary_gate);
+                                                /* FUN_0040d3f0 */
+
 #endif /* LEGORRR_GAME_LEVEL_HPP */

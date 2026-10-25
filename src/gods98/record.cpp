@@ -861,3 +861,26 @@ void* menu_item_numeric_range_record_allocate(int kind, int min_v, int max_v,
     record_window_put(rec, 14, &f14);
     return rec;
 }
+
+/* NestedRecordListRemoveByKeyRecursive (FUN_0047b2e0) — see record.hpp.
+ * The corpus re-reads the node's next link after the recursion — a freed
+ * deeper node can leave a different successor in the slot — so the port
+ * re-reads before the unlink. */
+int nested_record_list_remove_by_key_recursive(int key, void* node)
+{
+    if (node == NULL) {
+        return 0; /* deviation: the corpus strides the node blindly */
+    }
+    void* next = NULL;
+    __builtin_memcpy(&next, (char*)node + 0x0c, sizeof next);
+    if (next != NULL
+        && nested_record_list_remove_by_key_recursive(key, next) != 0) {
+        void* successor = NULL;
+        __builtin_memcpy(&successor, (char*)next + 0x0c, sizeof successor);
+        __builtin_memcpy((char*)node + 0x0c, &successor, sizeof successor);
+        engine_heap_free(next);
+    }
+    uint32_t node_key = 0u;
+    __builtin_memcpy(&node_key, (char*)node + 0x08, sizeof node_key);
+    return node_key == (uint32_t)key;
+}

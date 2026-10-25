@@ -2583,3 +2583,16 @@ void cell_cardinal_neighbor_apply(const struct GameContext* ctx, int x,
                                       y + k_offsets[2 * i + 1]);
     }
 }
+
+/* TerrainCellSpecialStatePredicate (FUN_0040d3f0) — see level.hpp. */
+int terrain_cell_special_state_predicate(const LevelState* s, int cx,
+                                         int cy, int secondary_gate)
+{
+    if (level_cell_occupied_or_flag(s, cx, cy, 1) == 0u) {
+        return 0;
+    }
+    if (secondary_gate == 0) {
+        return 1;
+    }
+    return level_cell_secondary_flag_100(s, cx, cy) != 0u ? 1 : 0;
+}

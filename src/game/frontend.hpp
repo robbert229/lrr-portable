@@ -587,4 +587,18 @@ int   screen_effect_seam_calls(void);             /* port hook */
 void  screen_effect_seam_last(void** out_handle, int* out_flag);
                                                 /* port hook */
 
+/* StoreSelectedMapCoordinate (FUN_0041ea50): the selection-coordinate
+ * store. A fresh kind — or the tracked word changing under the interaction
+ * flag's bit 7 — takes the switch branch: bit 8 raises, bit 7 drops, and
+ * the alias-0x16 cue fires. The tracked case refreshes the word, stores the
+ * pair into the live slots through the non-NULL path, and always re-arms
+ * the kind word.
+ * Deviations: the corpus strides its DAT band blindly (the port's own
+ * storage, the other owners unported); the pair rides as two words. */
+void store_selected_map_coordinate(int kind, const uint32_t coord[2]);
+                                                /* FUN_0041ea50 */
+uint32_t map_store_pair_word(int which);        /* port hook: 0/1 live pair */
+uint32_t map_store_last_word(int which);        /* port hook: 0/1 last pair */
+uint32_t map_store_kind_peek(void);             /* port hook */
+
 #endif /* LEGORRR_GAME_FRONTEND_HPP */

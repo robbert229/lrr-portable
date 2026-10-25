@@ -592,7 +592,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0041e750,FUN_0041e750,named,SelectionClearRequestAndHudReset,0,87
 0041e990,FUN_0041e990,ported,CellActionPermissionGet,1,195
 0041e9d0,FUN_0041e9d0,ported,SelectionRegionParametersSet,1,356
-0041ea50,FUN_0041ea50,named,StoreSelectedMapCoordinate,0,538
+0041ea50,FUN_0041ea50,ported,StoreSelectedMapCoordinate,2,538
 0041eac0,FUN_0041eac0,named,EventTimerCountdownAdvance,0,1462
 0041ec30,FUN_0041ec30,named,EntityPairCountRefresh,0,526
 0041eca0,FUN_0041eca0,named,AdvisorDialogStackLayout,0,1868
@@ -738,8 +738,8 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00431780,FUN_00431780,named,TerrainStampImpactHandler,0,2198
 004319b0,FUN_004319b0,ported,TerrainCellMaterialGet,2,199
 004319e0,FUN_004319e0,ported,MapFileCellGet,2,291
-00431a30,FUN_00431a30,named,SelectedEntitiesAnyPredicateMatch,0,519
-00431ab0,FUN_00431ab0,named,AnyObjectCanOccupyTerrainCell,0,480
+00431a30,FUN_00431a30,ported,SelectedEntitiesAnyPredicateMatch,3,519
+00431ab0,FUN_00431ab0,ported,AnyObjectCanOccupyTerrainCell,3,480
 00431b20,FUN_00431b20,named,PlacementBlockedAdjacentCellScan,0,1666
 00431c70,FUN_00431c70,named,FirstFreeNeighborCellPick,0,1654
 00431da0,FUN_00431da0,named,TerrainCellRouteAndOccupancyCheck,0,3798
@@ -1918,8 +1918,8 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0047b160,FUN_0047b160,named,SoundSubsystemStopAll,0,244
 0047b1a0,FUN_0047b1a0,named,SoundInstanceTrackRegister,0,637
 0047b220,FUN_0047b220,named,SoundInstanceTrackStopAndRemove,0,751
-0047b2a0,FUN_0047b2a0,ported,KeyedResourceEntryRemove,3,279
-0047b2e0,FUN_0047b2e0,ported,NestedRecordListRemoveByKeyRecursive,4,397
+0047b2a0,FUN_0047b2a0,named,KeyedResourceEntryRemove,0,279
+0047b2e0,FUN_0047b2e0,ported,NestedRecordListRemoveByKeyRecursive,3,397
 0047b330,FUN_0047b330,named,NestedRecordListRemoveMatchingKey,0,370
 0047b390,FUN_0047b390,named,SoundSourceSpatialRefreshAll,0,620
 0047b410,FUN_0047b410,named,SoundSourceSpatialRefresh,0,792

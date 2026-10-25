@@ -2076,3 +2076,44 @@ void* cmd_pending_record_copy(const void* rec)
     dst->state |= 0x200u;    /* corpus +0x17 |= 0x200 */
     return dst;
 }
+
+/* SelectedEntitiesAnyPredicateMatch (FUN_00431a30) / AnyObjectCanOccupy-
+ * TerrainCell (FUN_00431ab0) — see cmd.hpp. The selection array entries
+ * ride as native record pointers; the walkability mode-1 gates are the
+ * seam pass, the placement gate reads the record's own flags. */
+int selected_entities_any_predicate_match(int cx, int cy)
+{
+    int count = 0;
+    const void* recs = active_context_record_get(&count);
+    if (recs == NULL || count <= 0) {
+        return 0;
+    }
+    const LevelState* lvl = (s_ctx != NULL)
+        ? (const LevelState*)s_ctx->level : NULL;
+    const EntitySlot* const* arr = (const EntitySlot* const*)recs;
+    for (int i = 0; i < count; ++i) {
+        (void)arr[i]; /* the mode-1 entity gates are the seam pass */
+        if (level_walkable(lvl, cx, cy) != 0) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+int any_object_can_occupy_terrain_cell(int cx, int cy)
+{
+    int count = 0;
+    const void* recs = active_context_record_get(&count);
+    if (recs == NULL || count <= 0) {
+        return 0;
+    }
+    const LevelState* lvl = (s_ctx != NULL)
+        ? (const LevelState*)s_ctx->level : NULL;
+    const EntitySlot* const* arr = (const EntitySlot* const*)recs;
+    for (int i = 0; i < count; ++i) {
+        if (terrain_cell_allows_placement(arr[i], lvl, cx, cy) != 0) {
+            return 1;
+        }
+    }
+    return 0;
+}

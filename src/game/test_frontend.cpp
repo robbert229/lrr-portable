@@ -1454,6 +1454,31 @@ int main(int argc, char** argv)
               "the window guards answer clear");
     }
 
+    /* StoreSelectedMapCoordinate (2026-10-24): switch vs tracked. */
+    {
+        const uint32_t c1[2] = { 11u, 12u };
+        const uint32_t c2[2] = { 21u, 22u };
+        objective_selection_state_reset(); /* bit 7 raises, word clears */
+        store_selected_map_coordinate(7, c1); /* word 0 != 7: switch */
+        CHECK(map_store_kind_peek() == 7u && map_store_last_word(0) == 11u
+                  && map_store_last_word(1) == 12u
+                  && map_store_pair_word(0) == 0u,
+              "the switch branch re-arms the kind and the last pair");
+        objective_selection_state_reset(); /* word 0, bit 7 set */
+        store_selected_map_coordinate(0, c2); /* tracked: word == kind */
+        CHECK(map_store_pair_word(0) == 21u && map_store_pair_word(1) == 22u
+                  && map_store_last_word(0) == 21u
+                  && map_store_kind_peek() == 0u,
+              "the tracked branch refreshes the live pair too");
+        store_selected_map_coordinate(0, NULL);
+        CHECK(map_store_pair_word(0) == 21u && map_store_kind_peek() == 0u,
+              "the null pair stays away from every slot");
+        objective_selection_state_reset();
+        store_selected_map_coordinate(9, NULL); /* word 0 != 9: switch */
+        CHECK(map_store_kind_peek() == 9u && map_store_pair_word(0) == 21u,
+              "the kind change under the flag switches again");
+    }
+
     if (s_failures == 0) {
         printf("frontend: all tests passed\n");
         return 0;
