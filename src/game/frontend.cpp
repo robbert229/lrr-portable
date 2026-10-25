@@ -2598,6 +2598,77 @@ void scroll_offset_from_cursor_update(void)
 
 void     panel_enable_word_set(uint32_t word) { s_panel_enable_word = word; }
 uint32_t panel_enable_word_peek(void) { return s_panel_enable_word; }
+
+/* --- the panel layout band (2026-10-25; frontend.hpp) ----------------------
+ * DAT_005007f0/7f4 handle slots, DAT_005007f8/7fc size floats,
+ * DAT_00500800 extra word and DAT_00500804/808 offset floats have no
+ * ported corpus owner — zero-init own storage (the unowned-global
+ * deviation). The corpus surface loads (FUN_0047d9d0) stay hook boundaries
+ * answering NULL (the panel-load precedent), and the blits ride the seam. */
+static void* s_panel_layout_surface;     /* DAT_005007f0 role */
+static void* s_panel_layout_glyph;       /* DAT_005007f4 role */
+static float s_panel_layout_size[2];     /* DAT_005007f8/7fc role */
+static uint32_t s_panel_layout_extra;    /* DAT_00500800 role */
+static float s_panel_layout_offset[2];   /* DAT_00500804/808 role */
+
+void panel_resource_layout_store(void* face_resource, uint32_t width,
+                                 uint32_t height, uint32_t extra,
+                                 void* glyph_resource, uint32_t position_x,
+                                 uint32_t position_y)
+{
+    s_panel_layout_surface = panel_load_seam_call(face_resource);
+    s_panel_layout_size[0] = (float)width;
+    s_panel_layout_size[1] = (float)height;
+    s_panel_layout_extra = extra;
+    s_panel_layout_glyph = panel_load_seam_call(glyph_resource);
+    if (s_panel_layout_glyph != NULL) {
+        panel_blit_seam_call(s_panel_layout_glyph, 0.0f, 0.0f);
+    }
+    s_panel_layout_offset[0] = (float)position_x;
+    s_panel_layout_offset[1] = (float)position_y;
+}
+
+void panel_resource_position_update(int index)
+{
+    if (s_panel_layout_glyph == NULL) {
+        return;
+    }
+    uint32_t x = 0, y = 0;
+    indexed_pair_get(index, &x, &y);
+    const float px = (float)(int32_t)x + s_panel_layout_offset[0];
+    const float py = (float)(int32_t)y + s_panel_layout_offset[1];
+    if (global_value_0050080c_peek() == 0u) {
+        return;
+    }
+    if (sim_status_banner_word_get() != 0u) {
+        panel_blit_seam_call(s_panel_layout_glyph, px, py);
+    }
+}
+
+void* panel_layout_surface_peek(void) { return s_panel_layout_surface; }
+void* panel_layout_glyph_peek(void) { return s_panel_layout_glyph; }
+uint32_t panel_layout_extra_peek(void) { return s_panel_layout_extra; }
+float panel_layout_size_peek(int which)
+{
+    if (which < 0 || which > 1) {
+        return 0.0f; /* deviation: the corpus strides the pair blindly */
+    }
+    return s_panel_layout_size[which];
+}
+void panel_layout_glyph_install(void* surface)
+{
+    s_panel_layout_glyph = surface;
+    /* deviation: the corpus glyph word lands only through the surface-load
+     * seam (NULL answers uninstalled); the hook stands in for the seam. */
+}
+
+float panel_layout_offset_peek(int which)
+{
+    if (which < 0 || which > 1) {
+        return 0.0f; /* deviation: the corpus strides the pair blindly */
+    }
+    return s_panel_layout_offset[which];
+}
 void     bubble_offsets_set(float x, float y)
 {
     s_bubble_offset_x = x;

@@ -1640,6 +1640,59 @@ int main(int argc, char** argv)
               "the peek guards the window (dev)");
     }
 
+    /* Panel layout band (2026-10-25): the store, the load-seam answers,
+     * and the gated position update through the seam. */
+    {
+        panel_seam_reset();
+        const int base = panel_seam_calls();
+        panel_resource_layout_store((void*)0x11u, 64u, 32u, 0x55u,
+                                    (void*)0x22u, 10u, 20u);
+        CHECK(panel_layout_surface_peek() == NULL
+                  && panel_layout_glyph_peek() == NULL,
+              "the load seams answer NULL");
+        CHECK(panel_seam_calls() == base + 2,
+              "the two loads record two seam calls");
+        CHECK(panel_layout_size_peek(0) == 64.0f
+                  && panel_layout_size_peek(1) == 32.0f,
+              "the size floats land");
+        CHECK(panel_layout_extra_peek() == 0x55u, "the extra word lands");
+        CHECK(panel_layout_offset_peek(0) == 10.0f
+                  && panel_layout_offset_peek(1) == 20.0f,
+              "the position floats land");
+        CHECK(panel_layout_size_peek(2) == 0.0f
+                  && panel_layout_offset_peek(2) == 0.0f,
+              "the peeks guard the window (dev)");
+        panel_resource_position_update(11);
+        CHECK(panel_seam_calls() == base + 2,
+              "the absent glyph skips the update");
+
+        static int glyph = 0;
+        panel_layout_glyph_install(&glyph);
+        indexed_pair_set(11, 10u, 5u);
+        global_value_0050080c_set(1u);
+        sim_status_banner_word_set(1u);
+        panel_seam_reset();
+        panel_resource_position_update(11);
+        void* res = NULL;
+        float sx = 0.0f, sy = 0.0f;
+        panel_seam_last(&res, &sx, &sy);
+        CHECK(panel_seam_calls() == 1 && res == &glyph
+                  && sx == 20.0f && sy == 25.0f,
+              "the update rides the pair plus the offsets to the seam");
+        global_value_0050080c_set(0u);
+        panel_seam_reset();
+        panel_resource_position_update(11);
+        CHECK(panel_seam_calls() == 0, "the layout gate closes the blit");
+        global_value_0050080c_set(1u);
+        sim_status_banner_word_set(0u);
+        panel_seam_reset();
+        panel_resource_position_update(11);
+        CHECK(panel_seam_calls() == 0, "the banner gate closes the blit");
+        sim_status_banner_word_set(1u);
+        global_value_0050080c_set(0u);
+        panel_layout_glyph_install(NULL); /* back to the seam-NULL model */
+    }
+
     if (s_failures == 0) {
         printf("frontend: all tests passed\n");
         return 0;

@@ -497,6 +497,28 @@ uint32_t cell_action_permission_table_peek(int index);
  * accessors standing in. */
 int menu_audio_tick_interval_reached(void); /* FUN_00412190 */
 uint32_t sim_status_banner_word_get(void);  /* FUN_0041b9b0 */
+
+/* PanelResourceLayoutStore (FUN_0045c340): the layout band store — both
+ * surface loads ride the load seam (NULL answers), the glyph load's
+ * transformed blit rides the blit seam when the load answered a surface,
+ * then the size/extra/position words land.
+ * PanelResourcePositionUpdateIfEnabled (FUN_0045c4b0): with the layout
+ * glyph present, the indexed pair entry plus the stored offsets ride to
+ * the blit seam, gated by the 0x50080c word and the status-banner word.
+ * Deviation: the corpus loads are hook boundaries answering NULL and the
+ * DAT words have no ported owner. */
+void panel_resource_layout_store(void* face_resource, uint32_t width,
+                                 uint32_t height, uint32_t extra,
+                                 void* glyph_resource, uint32_t position_x,
+                                 uint32_t position_y);
+void panel_resource_position_update(int index);
+void* panel_layout_surface_peek(void);    /* port hook */
+void* panel_layout_glyph_peek(void);      /* port hook */
+void  panel_layout_glyph_install(void* surface); /* test hook: the seam
+                                                   * stands-in (deviation) */
+uint32_t panel_layout_extra_peek(void);   /* port hook */
+float panel_layout_size_peek(int which);  /* port hook: 0/1 */
+float panel_layout_offset_peek(int which); /* port hook: 0/1 */
 void     sim_status_banner_word_set(uint32_t value); /* port hook */
 
 /* UiModeResourceBit40SetClear (FUN_00419200): with the first argument
