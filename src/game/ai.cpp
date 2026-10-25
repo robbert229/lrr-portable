@@ -82,6 +82,27 @@ void ai_set_activity(EntitySlot* e, int id, int param)
     e->activity_timer = 0.0f;
 }
 
+/* EntityActivityToggle (FUN_004373d0) — see ai.hpp. The corpus's trailing
+ * FUN_00447c40 bookkeeping lands on its current/last equal test at every
+ * edge that reaches it (every activity-set site syncs the last-name mirror
+ * through the ai_set_activity fold), so the port rides the fold and drops
+ * the no-op tail. */
+void entity_activity_toggle(EntitySlot* e, int on)
+{
+    if (e == NULL) {
+        return; /* deviation: the corpus strides the entity blindly */
+    }
+    if (on == 0 && (e->flags_3ec & 0x2000u) != 0) {
+        e->flags_3ec = (e->flags_3ec & ~0x2000u) | 0x4000u;
+        ai_set_activity(e, 0x36, 0); /* FUN_004409e0; 0x447c40 folds here */
+        return;
+    }
+    if (on != 0 && (e->flags_3ec & 0x2000u) == 0) {
+        e->flags_3ec |= 0x1000u;
+        ai_set_activity(e, 0x35, 0); /* FUN_004409e0; 0x447c40 folds here */
+    }
+}
+
 /* FUN_00403f30: if the chain head is not a live idle record (type 0xe),
  * prepend one so the idle poller sees this entity. */
 static void attach_idle_record(EntitySlot* e)

@@ -303,5 +303,17 @@ Grouped by blocker family; every row names its address and next action:
   (same band family as the renderer-word blockers). Next: model the
   token table when its loader lands.
 
+- **Entity per-type operation pair** — `EntityTypeOperationDispatch`
+  (`0x449f50`) and `EntityTypeOperationRelease` (`0x449ff0`): the per-type
+  object-slot dispatch/release over the entity's +0x0C…+0x20 object halves.
+  The port models no owner for those slots — the corpus writers are the
+  recorded object-layer seams, and the type-1 store path additionally needs
+  `SceneResourceVisibilitySet` (portable-now, record-seam based, ~690
+  lines). Next: model the per-type object slots with their owner, or
+  port the record-seam visibility chain first.
+- **Config-record indirection** — `RemainingTimerDurationGet` (`0x419b50`):
+  the double-deref config-record `+8` int semantics; same blocked config
+  family as the DAT band rows above. Next: config-record lookup.
+
 Rescan note: this closes the recorded set for the current portable-now
 frontier; anything the scanner flags later lands in the same families.

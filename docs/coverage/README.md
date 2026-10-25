@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 1040 | 40.6% |
+| ported | 1044 | 40.7% |
 | anchored | 4 | 0.2% |
-| named | 1475 | 57.5% |
+| named | 1471 | 57.4% |
 | runtime-import | 44 | 1.7% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (1040 functions)
+  (1044 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1475 functions)
+  citation yet (1471 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (44 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1480 (57.7%).**
+**Game logic remaining to port: 1476 (57.6%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -293,7 +293,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00418da0` | HelpWindowButtonHitTest |
 | `0x00419030` | HelpWindowButtonFeedbackUpdate |
 | `0x00419230` | IncidentMessageCatalogInit |
-| `0x004193e0` | IncidentMessageConfigLookup |
 | `0x00419430` | InterfaceMessageTabInfoTextLoad |
 | `0x004194b0` | IncidentMessageTemplateReplace |
 | `0x00419530` | IncidentMessageTemplateCompile |
@@ -335,7 +334,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0041cab0` | IndexedEntityValueGet |
 | `0x0041caf0` | InputBindingValueGet |
 | `0x0041cb90` | InputBindingDefaultValueGet |
-| `0x0041cc80` | CursorTileSelectionUpdateByType |
 | `0x0041cd30` | PositionTrackerBoxDraw |
 | `0x0041cea0` | SelectionObjectCommandUpdate |
 | `0x0041cf20` | SelectionTargetCommandUpdate |
@@ -443,7 +441,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00437150` | ToolTipIconsConfigLoad |
 | `0x004372a0` | SpawnCoordinatePoolClear |
 | `0x00437300` | ProcessQueuedGridAnimations |
-| `0x004373d0` | EntityActivityToggle |
 | `0x004374d0` | TaskCounterIncrementByBranch |
 | `0x004374f0` | EntityCallbackDispatchUnlessTypeFive |
 | `0x00437540` | EntityTeardown |
@@ -641,7 +638,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0044d280` | RandomWaypointTimerStepApply |
 | `0x0044d710` | WaypointVectorRandomScaleApply |
 | `0x0044d760` | JitterStepApply |
-| `0x0044d9a0` | VectorWithinAxisTolerance |
 | `0x0044da50` | ThreeChannelValueTweenStep |
 | `0x0044db50` | KeyValueEqualsFileLoad |
 | `0x0044dd40` | EngineLoaderProfileEntriesRelease |

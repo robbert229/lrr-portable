@@ -858,3 +858,29 @@ void simtick_release_all_group_records(void)
         node = next;
     }
 }
+
+/* --- the axis-tolerance window (2026-10-25; see simtick.hpp) ---------------
+ * The corpus tolerance triple (DAT_004eae80/84/88 role) rides own storage;
+ * its corpus writer is the recorded light-effects parameter band
+ * (deviation), so the install hook stands in. */
+static float s_xform_tolerance[3];
+
+void simtick_vector_tolerance_install(const float xyz[3])
+{
+    if (xyz != NULL) {
+        __builtin_memcpy(s_xform_tolerance, xyz, sizeof s_xform_tolerance);
+    }
+}
+
+int simtick_vector_within_axis_tolerance(const float xyz[3])
+{
+    if (xyz == NULL) {
+        return 0; /* deviation: the corpus strides the vector blindly */
+    }
+    for (int i = 0; i != 3; ++i) {
+        if (s_xform_tolerance[i] < fabsf(xyz[i] - s_xform_config[i])) {
+            return 0;
+        }
+    }
+    return 1;
+}

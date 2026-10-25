@@ -99,6 +99,14 @@ const char* ai_activity_name(int id);
  * store the param, reset the activity timer. Out-of-range ids ignored. */
 void ai_set_activity(EntitySlot* e, int id, int param);
 
+/* EntityActivityToggle (FUN_004373d0): the activity on/off fold. Off with
+ * the +0x3ec bit 13 raised drops it and raises bit 14, requesting the
+ * 0x36 activity; on with bit 13 clear raises bit 12 and requests 0x35;
+ * the corpus's activity-reregistration tail folds into the same call (the
+ * port's last-name mirror is synced by ai_set_activity). Deviation: the
+ * corpus strides the entity blindly. */
+void entity_activity_toggle(EntitySlot* e, int on);
+
 /* Append a waypoint to the entity's path list (corpus +0x24 buffer, entry
  * stride 5 dwords — the port stores {x, y, pending} per entry; see
  * AiWaypoint). Returns the entry index or -1 when the port bound

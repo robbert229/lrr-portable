@@ -393,6 +393,40 @@ int main(void)
         CHECK(1, "the chain release runs the corpus's drop walk");
     }
 
+    /* The axis-tolerance window (2026-10-25): the per-axis compares about
+     * the config triple with the installed tolerance triple. */
+    {
+        const float cfg[3] = { 10.0f, 20.0f, 30.0f };
+        simtick_scene_transform_current_set(cfg);
+        simtick_scene_position_reset_and_effect_motion_cancel();
+        const float tol[3] = { 0.5f, 1.0f, 2.0f };
+        simtick_vector_tolerance_install(tol);
+        const float inside[3] = { 10.4f, 21.0f, 28.0f };
+        CHECK(simtick_vector_within_axis_tolerance(inside) == 1,
+              "the inside vector lands");
+        const float outside_x[3] = { 10.6f, 21.0f, 28.0f };
+        CHECK(simtick_vector_within_axis_tolerance(outside_x) == 0,
+              "the first axis drops out of the window");
+        const float outside_y[3] = { 10.0f, 22.1f, 28.0f };
+        CHECK(simtick_vector_within_axis_tolerance(outside_y) == 0,
+              "the second axis drops out of the window");
+        const float outside_z[3] = { 10.0f, 21.0f, 27.0f };
+        CHECK(simtick_vector_within_axis_tolerance(outside_z) == 0,
+              "the third axis drops out of the window");
+        CHECK(simtick_vector_within_axis_tolerance(NULL) == 0,
+              "the null vector guards (dev)");
+        const float zero[3] = { 0.0f, 0.0f, 0.0f };
+        simtick_vector_tolerance_install(zero);
+        CHECK(simtick_vector_within_axis_tolerance(cfg) == 1,
+              "the zero tolerance rides exact matches");
+        simtick_vector_tolerance_install(NULL); /* guarded: stays installed */
+        CHECK(simtick_vector_within_axis_tolerance(cfg) == 1,
+              "the guarded install leaves the window");
+        simtick_scene_transform_current_set(zero);
+        simtick_scene_position_reset_and_effect_motion_cancel();
+        simtick_vector_tolerance_install(zero);
+    }
+
     if (s_failures == 0) {
         printf("simtick_test: PASS\n");
         return 0;

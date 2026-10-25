@@ -196,6 +196,14 @@ void simtick_scene_position_reset_and_effect_motion_cancel(void);
                                      /* FUN_0044cf70 */
 void         simtick_scene_transform_current_set(const float xyz[3]);
 const float* simtick_scene_transform_config_peek(void);
+
+/* VectorWithinAxisTolerance (FUN_0044d9a0): every axis of the vector must
+ * sit inside the tolerance triple's window about the config triple. The
+ * corpus's tolerance words (DAT_004eae80/84/88 role) land as own storage —
+ * their corpus writer is the recorded light-effects parameter band
+ * (deviation); the install hook stands in. */
+int simtick_vector_within_axis_tolerance(const float xyz[3]);
+void simtick_vector_tolerance_install(const float xyz[3]); /* hook */
 /* ReleaseAllGroupRecords (FUN_004099f0's chain walk — FUN_004099d0): walks
  * the bobbin chain (successor through the +0x24 link) from the global head
  * and drops each record through the drop leaf. The corpus's drop unlinks

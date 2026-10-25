@@ -2363,6 +2363,27 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Activity toggle, axis tolerance, message lookup, cursor-tile pair**
+(2026-10-25): four frontier rows land. `entity_activity_toggle` (0x4373d0,
+game/ai.*) ports the on/off fold on the entity's +0x3ec word: off with bit
+13 raised drops it and raises bit 14 while requesting activity 0x36, on
+with bit 13 clear raises bit 12 and requests 0x35; the corpus's
+activity-reregistration tail folds into the same call because the port's
+last-name mirror is synced by `ai_set_activity`.
+`simtick_vector_within_axis_tolerance` (0x44d9a0, simtick.*) compares every
+axis of a vector against the config triple's window — the corpus's
+tolerance triple rides own storage with an install hook (its corpus writer
+is the recorded light-effects parameter band, deviation).
+`incident_message_config_lookup` (0x4193e0, message.*) walks the config
+name catalog with the corpus's C-locale ASCII fold and answers the id on a
+hit (the port guards both blind strides; the catalog's install rides the
+name model rather than the unported catalog-init DAT band).
+`cursor_tile_selection_update_by_type` (0x41cc80, frontend.*) keys the
+tile-selection pair by selection kind: 0x49 installs the caller's pair,
+5 and 0xe install fixed shapes, others ride. blocked.md records the
+entity-type dispatch/release pair (per-type object slots with no ported
+owner) and the config-indirection timer getter. Tests green; 34/36.
+
 **Curve band + persistence/queue leaves** (2026-10-25): six frontier rows
 land. `cubic_bezier_point_evaluate` (0x4065f0, view.*) ports the corpus's
 Horner-shaped cubic over four two-float control points with the half-term
