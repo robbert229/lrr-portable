@@ -5,31 +5,25 @@ SHELL := /bin/bash
 BUILD_DIR ?= build
 WAD_DIR ?= $(CURDIR)/reference
 PLATFORM ?= native
-# Extra flags for `meson setup`, e.g. for the winapi reference build:
-#   make setup CROSS_FILE=--cross-file\ cross/i686.ini PLATFORM=winapi
-CROSS_FILE ?=
+CMAKE_TOOLCHAIN_FILE ?=
+TEST_WADS_DIR ?=
+MOVIES ?= auto
 
 .PHONY: all setup build run clean
 
 all: build
 
-# Configure the build directory: bootstrap the sparse miniwin submodule
-# (idempotent, no-op once present) and run meson setup. An already-configured
-# BUILD_DIR is reconfigured instead of failing.
+# Configure the build directory: bootstrap sparse miniwin for native builds,
+# then configure CMake. An existing build directory is reconfigured in place.
 setup:
-	tools/setup-miniwin.sh
-	@if [ -f "$(BUILD_DIR)/build.ninja" ]; then \
-		echo "meson setup --reconfigure $(BUILD_DIR)"; \
-		meson setup --reconfigure "$(BUILD_DIR)" $(CROSS_FILE) -Dplatform=$(PLATFORM); \
-	else \
-		meson setup "$(BUILD_DIR)" $(CROSS_FILE) -Dplatform=$(PLATFORM); \
-	fi
+	@if [ "$(PLATFORM)" = native ]; then tools/setup-miniwin.sh; fi
+	cmake -S . -B "$(BUILD_DIR)" -DPLATFORM=$(PLATFORM) -DMOVIES=$(MOVIES) -DTEST_WADS_DIR="$(TEST_WADS_DIR)" $(if $(CMAKE_TOOLCHAIN_FILE),-DCMAKE_TOOLCHAIN_FILE=$(CMAKE_TOOLCHAIN_FILE),)
 
 build:
-	meson compile -C "$(BUILD_DIR)" src/LegoRR
+	cmake --build "$(BUILD_DIR)" --target LegoRR
 
 run: build
-	LEGORRR_WAD_DIR="$(WAD_DIR)" ./$(BUILD_DIR)/src/LegoRR
+	LEGORRR_WAD_DIR="$(WAD_DIR)" ./$(BUILD_DIR)/LegoRR
 
 clean:
-	meson compile -C "$(BUILD_DIR)" --clean
+	cmake --build "$(BUILD_DIR)" --target clean

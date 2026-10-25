@@ -31,9 +31,9 @@ tools/              Analysis tooling: unwad.py, Ghidra function-naming script
 docs/adr/           Architecture decision records (build/port decisions)
 reference/          (gitignored) the original, unmodified game files
 unpacked/           (gitignored) 5,845 assets extracted from the .wad archives
-cross/              Meson cross files (i686.ini — MinGW-w64 Win32 toolchain)
-meson.build         Reconstruction build (top-level; platform=native|winapi)
-meson_options.txt   Build options (src_root, platform)
+cross/              MinGW-w64 Win32 toolchain inputs
+CMakeLists.txt      Experimental CMake build (platform=native|winapi)
+meson.build         Existing Meson build (kept during the CMake migration)
 src/                Reconstruction source tree (stubs + gods98 / game / platform)
 subprojects/        miniwin CMake bridge (sparse isle-portable submodule)
 3rdparty/           Dependency submodules (isle-portable, sparse → miniwin/)
@@ -783,8 +783,11 @@ The latest three-range helper audits are preserved in the
 
 ## Reconstruction build
 
-Meson build with one source tree and two platform backends (ADR 0004). The
-`native` build is green and the driver (`src/main.cpp`) now exercises the
+The build is being migrated experimentally from Meson to CMake on
+`integration/reprobit`. CMake is now the default through `make`; the Meson
+files remain available while parity work continues. Both build one source
+tree with two platform backends (ADR 0004). The existing Meson `native` build
+is green; the driver (`src/main.cpp`) now exercises the
 **engine scaffold** plus the **game layer** (levels, objectives, savegames —
 findings 07/08/22): `EngineTick`/`EnginePreTick`/`KeepRunning`/
 `MainSimStep`/`EngineShutdown` in `src/gods98/engine.*` mirror the corpus's
@@ -3981,15 +3984,20 @@ the `tools/rrae.py` ground-truth model.
 
 ```sh
 # native (primary)
-meson setup build-native -Dplatform=native
-tools/build-miniwin.sh                     # builds the real miniwin archive —
-meson compile -C build-native              # meson's cmake bridge alone leaves
-                                           # libminiwin.a empty (EXCLUDE_FROM_ALL)
+make setup PLATFORM=native
+make build
+make run WAD_DIR=/path/to/game
 
 # winapi reference build
-meson setup build-winapi --cross-file cross/i686.ini -Dplatform=winapi
-meson compile -C build-winapi
+make setup BUILD_DIR=build-winapi PLATFORM=winapi \
+  CMAKE_TOOLCHAIN_FILE=cross/i686-toolchain.cmake
+cmake --build build-winapi
 ```
+
+Direct CMake configuration also supports `-DTEST_WADS_DIR=<dir>`,
+`-DMOVIES=auto|enabled|disabled`, and `-DSRC_ROOT=<path>`. The legacy Meson
+configuration remains documented below until the CMake migration reaches
+feature parity.
 
 **Frame loop** (2026-10-21): the native build opens a 640×480 window, mounts
 the shipped wads, renders real corpus textures (`ROCKROOF.BMP`,
