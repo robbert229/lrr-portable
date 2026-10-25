@@ -11,6 +11,7 @@
 #include "entity.hpp"
 #include "level.hpp"
 #include "mission.hpp"
+#include "select.hpp"
 
 /* The command record's mutable `now` doubles as the task countdown for
  * task commands (the link primitives seed it with the 1500.0 "now"
@@ -1437,4 +1438,103 @@ int entity_activity_terrain_eligibility_transition(GameContext* ctx,
     }
     level_tile_mark((LevelState*)lvl, ix, iy, 0);       /* FUN_00432e00 */
     return 1;
+}
+
+/* EntityStatePairPredicate (FUN_0043c200): the (type, row) stats pair
+ * predicate. A zero first read (FUN_00469e00(type1, row1)) answers 1 with
+ * no walk (pinned); otherwise the filtered pool walk (the FUN_004377b0
+ * path — liveness mirror + the raised bit-0x80000 gate) folds every live
+ * entity's +0xDC stats float through the nested add (FUN_0043c280), then
+ * both table re-reads join the fold and the answer is 0 when the sum
+ * touches or crosses zero (pinned comparison).
+ * Deviations: the corpus rides param_2 as the row index and the float
+ * accumulator slot in one register — the port keeps them apart, the
+ * accumulator starting 0.0 as the corpus resets it before the walk; the
+ * corpus folds the three floats in float10, the port in double (exact for
+ * float-magnitude triples); the walk composes the corpus's global type
+ * tables over the ctx entity blocks (precedent in the tick above); and
+ * NULL ctx skips the walk — the table reads still answer. */
+int entity_state_pair_predicate(GameContext* ctx, int type1, int row1,
+                                int type2, int row2)
+{
+    if (stats_table_float_at_dc(type1, row1) == 0.0f) {
+        return 1; /* pinned: the zero first read short-circuits */
+    }
+    float fold = 0.0f;
+    if (ctx != NULL) {
+        for (int t = 0; t < ENTITY_TYPES; ++t) {
+            for (int i = 0; i < ctx->entity_count[t]; ++i) {
+                EntitySlot* e = &ctx->entity[t][i];
+                if (e->type == 0) {
+                    continue; /* *ent+0x408 == ent liveness mirror */
+                }
+                if ((e->flags_3e8 & 0x80000u) != 0u) {
+                    continue; /* filtered walk raises that gate */
+                }
+                entity_nested_float_add_unless_blocked(e, &fold);
+            }
+        }
+    }
+    const double sum = (double)stats_table_float_at_dc(type1, row1)
+        + (double)stats_table_float_at_dc(type2, row2) + (double)fold;
+    return sum <= 0.0 ? 0 : 1;
+}
+
+/* ActiveEntityListContainsCode (FUN_004031e0): a permitted-activity scan
+ * (FUN_0044b480) over the selection when it is non-empty, else over the
+ * corpus's global active-entity list. NULL list entries are skipped
+ * without a test (the corpus while-shape walks past them); the selection
+ * branch answers on the first hit and never falls back to the list
+ * (pinned branch isolation).
+ * Deviation: the global list (DAT_004b335c entries / DAT_004b3424 count)
+ * has no ported owner — the activation band lands through hooks — so it
+ * rides zero-init own storage behind install/count hooks with the
+ * 50-entry window the corpus region's stride suggests (the corpus strides
+ * its bounds blindly); the corpus strides a NULL selection entry into the
+ * activity scan, the port's scan answers 0 for it (guarded). */
+#define ACTIVE_ENTITY_LIST_MAX 50 /* corpus region DAT_004b335c..3424 */
+static EntitySlot* s_active_list[ACTIVE_ENTITY_LIST_MAX];
+static int s_active_count;
+
+void active_entity_list_install(const EntitySlot* const* entries, int count)
+{
+    if (entries == NULL || count < 0) {
+        count = 0;
+    }
+    if (count > ACTIVE_ENTITY_LIST_MAX) {
+        count = ACTIVE_ENTITY_LIST_MAX; /* deviation: window guard */
+    }
+    for (int i = 0; i < count; ++i) {
+        s_active_list[i] = (EntitySlot*)entries[i];
+    }
+    for (int i = count; i < ACTIVE_ENTITY_LIST_MAX; ++i) {
+        s_active_list[i] = NULL;
+    }
+    s_active_count = count;
+}
+
+int active_entity_list_count(void)
+{
+    return s_active_count;
+}
+
+int active_entity_list_contains_code(GameContext* ctx, int code)
+{
+    if (selection_has_any(ctx) == 0) {
+        for (int i = 0; i < s_active_count; ++i) {
+            if (s_active_list[i] != NULL
+                && ai_activity_scan(s_active_list[i], code) != 0) {
+                return 1;
+            }
+        }
+        return 0;
+    }
+    const int count = selection_count(ctx);
+    EntitySlot* const* records = selection_record_array(ctx);
+    for (int i = 0; records != NULL && i < count; ++i) {
+        if (ai_activity_scan(records[i], code) != 0) {
+            return 1;
+        }
+    }
+    return 0;
 }

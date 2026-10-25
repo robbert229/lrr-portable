@@ -1617,6 +1617,98 @@ int main(int argc, char** argv)
         memset(&e, 0, sizeof e);
     }
 
+    /* EntityStatePairPredicate (FUN_0043c200) — 2026-10-25. */
+    {
+        GameContext pool;
+        game_context_init(&pool);
+        static char t12[0x150], t13[0x150];
+        memset(t12, 0, sizeof t12);
+        memset(t13, 0, sizeof t13);
+        stats_type_table_install(12, 3, t12, 1);
+        stats_type_table_install(13, 0, t13, 1);
+        const float minus5 = -5.0f, minus1 = -1.0f, two = 2.0f, one = 1.0f;
+
+        EntitySlot* add = place(&pool, 1, "pairA", 0, 0);
+        static char erec[0xe0];
+        memset(erec, 0, sizeof erec);
+        __builtin_memcpy(erec + 0xdc, &two, sizeof two);
+        add->stats_record = erec;
+        add->flags_3e8 = 0u;
+
+        /* (12,3) is zero: the answer is 1 without the walk (the pool fold
+         * and the second read would otherwise drive the sum to -3). */
+        float zero = 0.0f;
+        __builtin_memcpy(t12 + 0xdc, &zero, sizeof zero);
+        __builtin_memcpy(t13 + 0xdc, &minus5, sizeof minus5);
+        CHECK(entity_state_pair_predicate(&pool, 12, 3, 13, 0) == 1,
+              "the zero first read short-circuits to 1");
+
+        /* nonzero first read: 1 + (-1) + fold(2) -> positive -> 1. */
+        __builtin_memcpy(t12 + 0xdc, &one, sizeof one);
+        __builtin_memcpy(t13 + 0xdc, &minus1, sizeof minus1);
+        CHECK(entity_state_pair_predicate(&pool, 12, 3, 13, 0) == 1,
+              "the fold lifts the sum over zero");
+
+        /* raised bit-0x80000 gate: the walk skips, 1 + (-1) + 0 -> 0. */
+        add->flags_3e8 |= 0x80000u;
+        CHECK(entity_state_pair_predicate(&pool, 12, 3, 13, 0) == 0,
+              "the gated entity drops out of the fold");
+        add->flags_3e8 = 0u;
+
+        /* the <= 0 comparison rides zero itself */
+        __builtin_memcpy(t13 + 0xdc, &zero, sizeof zero);
+        CHECK(entity_state_pair_predicate(&pool, 12, 3, 13, 0) == 1,
+              "1 + 0 + fold 2 is positive");
+
+        /* guarded reads answer zero (the port window, not the corpus stride) */
+        CHECK(entity_state_pair_predicate(&pool, 12, 99, 13, 0) == 1,
+              "the out-of-window first read short-circuits");
+        /* NULL ctx skips the walk; the re-reads still answer */
+        __builtin_memcpy(t13 + 0xdc, &minus1, sizeof minus1);
+        CHECK(entity_state_pair_predicate(NULL, 12, 3, 13, 0) == 0,
+              "NULL ctx folds nothing (dev)");
+
+        stats_type_table_install(12, 3, NULL, 0); /* release both cells */
+        stats_type_table_install(13, 0, NULL, 0);
+    }
+
+    /* ActiveEntityListContainsCode (FUN_004031e0) — 2026-10-25. */
+    {
+        GameContext sctx;
+        game_context_init(&sctx);
+        EntitySlot* s1 = place(&sctx, 1, "act1", 0, 0);
+        EntitySlot* s2 = place(&sctx, 1, "act2", 1, 0);
+        s1->act_list[0] = 7;
+        s1->act_count = 1;
+        s2->act_list[0] = 8;
+        s2->act_count = 1;
+
+        active_entity_list_install(NULL, 0);
+        CHECK(active_entity_list_count() == 0 &&
+                  active_entity_list_contains_code(&sctx, 7) == 0,
+              "the cold list answers 0");
+
+        const EntitySlot* entries[2] = { NULL, s2 };
+        active_entity_list_install(entries, 2);
+        CHECK(active_entity_list_count() == 2, "the install counts");
+        CHECK(active_entity_list_contains_code(&sctx, 7) == 0,
+              "the list holds no code 7");
+        CHECK(active_entity_list_contains_code(&sctx, 8) == 1,
+              "the NULL entry walks past into the hit");
+
+        /* the selection branch isolates the list (pinned) */
+        CHECK(selection_add(&sctx, s2) == 1, "select s2");
+        const EntitySlot* list1[1] = { s1 };
+        active_entity_list_install(list1, 1);
+        CHECK(active_entity_list_contains_code(&sctx, 7) == 0,
+              "the selection branch ignores the active list");
+        CHECK(active_entity_list_contains_code(&sctx, 8) == 1,
+              "the selection branch hits the selected entity");
+
+        active_entity_list_install(NULL, -3); /* guarded reset */
+        CHECK(active_entity_list_count() == 0, "the negative count clears");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "ai_test: %d failure(s)\n", s_failures);
         return 1;

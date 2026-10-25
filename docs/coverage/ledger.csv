@@ -71,7 +71,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004030b0,FUN_004030b0,ported,CoordinatePairEventQueue,1,274
 004030e0,FUN_004030e0,ported,,1,1248
 00403190,FUN_00403190,ported,ObjectEventType2Queue,1,312
-004031e0,FUN_004031e0,named,ActiveEntityListContainsCode,0,851
+004031e0,FUN_004031e0,ported,ActiveEntityListContainsCode,4,851
 00403270,FUN_00403270,ported,SelectionDragAreaCommandCreate,1,839
 00403320,FUN_00403320,named,ObjectCommandTaskCreate,0,677
 004033c0,FUN_004033c0,ported,ObjectAttachedRecordAllocate,3,270
@@ -869,7 +869,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004374d0,FUN_004374d0,named,TaskCounterIncrementByBranch,0,248
 004374f0,FUN_004374f0,named,EntityCallbackDispatchUnlessTypeFive,0,117
 00437540,FUN_00437540,named,EntityTeardown,0,2330
-004377b0,FUN_004377b0,ported,EntityPoolFindByCallbackFiltered,6,109
+004377b0,FUN_004377b0,ported,EntityPoolFindByCallbackFiltered,8,109
 004377d0,FUN_004377d0,ported,EntityPoolFindByCallback,2,920
 00437880,FUN_00437880,ported,EntityRename,2,500
 004378e0,FUN_004378e0,named,GridObjectRecordsRelease,0,577
@@ -957,8 +957,8 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0043bb20,FUN_0043bb20,named,BuildingDepositStateMonitor,0,740
 0043bbc0,FUN_0043bbc0,ported,EntityDetachCarriedObjectAndResetState,3,540
 0043bc40,FUN_0043bc40,named,ObjectiveSidecarAppendGate,0,5325
-0043c200,FUN_0043c200,named,EntityStatePairPredicate,0,536
-0043c280,FUN_0043c280,ported,EntityNestedFloatAddUnlessBlocked,2,288
+0043c200,FUN_0043c200,ported,EntityStatePairPredicate,4,536
+0043c280,FUN_0043c280,ported,EntityNestedFloatAddUnlessBlocked,4,288
 0043c2b0,FUN_0043c2b0,named,PeriodicTimer25Advance,0,286
 0043c3e0,FUN_0043c3e0,named,EntityType26CommandCompletionGate,0,430
 0043c440,FUN_0043c440,ported,EntityCanDoActivityClassify,9,270
@@ -1094,7 +1094,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0044b250,FUN_0044b250,named,PairingActivityRaiseAndMutualLink,0,1001
 0044b350,FUN_0044b350,ported,EntityActivityTypeSupportsCapacityRule,1,136
 0044b370,FUN_0044b370,ported,EntityActivityListAppend,11,1519
-0044b480,FUN_0044b480,ported,EntityPermittedActivityCheck,8,360
+0044b480,FUN_0044b480,ported,EntityPermittedActivityCheck,10,360
 0044b4c0,FUN_0044b4c0,named,TypeTwoEntityTargetResolveAndApply,0,310
 0044b500,FUN_0044b500,named,ObjectPositionStepCommandIssueAndLink,0,1578
 0044b680,FUN_0044b680,named,EntitySceneObjectTreeAttach,0,1324
@@ -1518,7 +1518,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00469db0,FUN_00469db0,ported,NestedFloatAtOffset7CGet,1,105
 00469dc0,FUN_00469dc0,ported,NestedFloatAtOffset80Get,1,105
 00469de0,FUN_00469de0,ported,EntityEnergyDecayRateGet,1,105
-00469e00,FUN_00469e00,ported,IndexedRecordFloatAtOffsetDCGet,3,153
+00469e00,FUN_00469e00,ported,IndexedRecordFloatAtOffsetDCGet,5,153
 00469e20,FUN_00469e20,ported,NestedFloatAtOffsetDCGet,1,105
 00469e40,FUN_00469e40,ported,NestedWordAtOffsetACGet,1,104
 00469e60,FUN_00469e60,ported,EntityStatsWordGet,1,105

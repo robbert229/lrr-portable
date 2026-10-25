@@ -2363,6 +2363,28 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Entity pair predicate + active-list scan** (2026-10-25): two frontier rows
+land in `ai.*`. `entity_state_pair_predicate` (0x43c200) reads the stats table
+at `(type1, row1)` — a zero first read answers 1 with no walk (pinned);
+otherwise the filtered pool walk (the entity-walker path with its liveness
+mirror and raised `+0x3e8` bit-0x80000 gate) folds every live entity's `+0xDC`
+stats float through the nested add, then the sum of the re-read `(type1, row1)`,
+`(type2, row2)`, and the fold answers 0 when it is `<= 0` (pinned comparison).
+Deviations: the corpus rides the row index and the float accumulator in one
+register (the port keeps them apart, the accumulator resetting to 0.0 before the
+walk, and the re-read using the saved index — pinned quirk); the corpus's float10
+fold lands as a double fold; the walk composes the corpus's global type tables
+over the port's typed entity blocks; NULL context skips the walk.
+`active_entity_list_contains_code` (0x4031e0) scans the selection through the
+permitted-activity check when a selection exists — first hit answers 1 and the
+active-list branch is never consulted (branch isolation pinned) — else the
+corpus's global active-entity list, skipping NULL entries without a test.
+Deviation: the list globals have no ported owner (the activation band is a
+hook-boundary seam), so they ride zero-init own storage behind install/count
+hooks, window-guarded to the 50 entries the corpus region's stride suggests.
+`ai_test` pins the short-circuit, the gate lift, the `<= 0` edge, branch
+isolation, and the NULL-walk-past.
+
 **Record-creation leaves** (2026-10-25): three frontier rows land in
 `ptrstack.*`, the module already owning the adjacent callback-state list
 disposal. `scene_node_record_create` (0x40f6c0) builds the 0xa0-byte scene-node
