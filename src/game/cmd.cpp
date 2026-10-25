@@ -2290,3 +2290,32 @@ uint32_t menu_surface_track_peek(void)
 {
     return s_menu_surface_track;
 }
+
+/* --- resource/ore counter pair (2026-10-25) --------------------------------
+ * The counter half runs under the corpus's current-level gate; the
+ * overlay advance half runs outside it (corpus order), so the guarded
+ * no-level path keeps stepping the float. */
+void level_resource_balance_add_and_sound(int selector)
+{
+    if (s_ctx != NULL && s_ctx->level != NULL) {
+        LevelState* lvl = (LevelState*)s_ctx->level;
+        if (selector == 0) {
+            level_set_int(lvl, LEVEL_OFF_RES_A,
+                          level_int(lvl, LEVEL_OFF_RES_A) + 1);
+        } else {
+            level_set_int(lvl, LEVEL_OFF_RES_B,
+                          level_int(lvl, LEVEL_OFF_RES_B) + 1);
+        }
+    }
+    ui_overlay_animation_advance(1, selector != 0 ? 5 : 1);
+}
+
+void simulation_mode_counter_add(int mode, int count)
+{
+    (void)mode; /* register residue: the corpus ignores it, count only */
+    /* Deviation: the corpus loops `count != 0` down by one, so a negative
+     * count runs away; the port counts toward zero. */
+    for (int i = count; i != 0; i = i > 0 ? i - 1 : i + 1) {
+        level_resource_balance_add_and_sound(0);
+    }
+}

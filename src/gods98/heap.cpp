@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 #include <stdlib.h>
+#include <string.h>
 
 #include "heap.hpp"
 
@@ -178,4 +179,49 @@ void** dword_list_allocate_and_zero(uint32_t count)
     }
     hdr[1] = (void*)(size_t)count;
     return hdr;
+}
+
+/* TextBufferReset (FUN_004859b0) — see heap.hpp. The corpus zero-pass is
+ * dword words then leftover bytes over the buffer, then the record's own
+ * 0x100-dword window and the three flag words; the port folds the sweep
+ * into byte-granular zeroing (identical observable bytes) and guards the
+ * record (deviation: the corpus strides both blindly). */
+void text_buffer_reset(void* record)
+{
+    if (record == NULL) {
+        return; /* deviation: the corpus strides the record blindly */
+    }
+
+    uint32_t count = 0;
+    void* buffer = NULL;
+    __builtin_memcpy(&count, (char*)record + 0x418, sizeof(count));
+    __builtin_memcpy(&buffer, (char*)record + 0x14, sizeof(buffer));
+    if (buffer != NULL) {
+        /* The corpus sweeps count>>2 dwords then count&3 bytes; the
+         * observable effect is count zero bytes. */
+        memset(buffer, 0, count);
+    }
+    /* Deviation: the corpus's buffer slot is a dword ending before the
+     * window, so the window zeroing never touches it; the port's widened
+     * slot straddles the window start, so the slot is restored from the
+     * pre-reset buffer value (a null slot stays zeroed either way). */
+    memset((char*)record + 0x18, 0, 0x100 * 4);
+    __builtin_memcpy((char*)record + 0x14, &buffer, sizeof(buffer));
+
+    const uint32_t zero = 0u;
+    __builtin_memcpy((char*)record + 0x820, &zero, sizeof(zero));
+    __builtin_memcpy((char*)record + 0x41c, &zero, sizeof(zero));
+    uint32_t word = 0;
+    __builtin_memcpy(&word, (char*)record + 0x82c, sizeof(word));
+    word &= ~1u;
+    __builtin_memcpy((char*)record + 0x82c, &word, sizeof(word));
+}
+
+/* UITextOutputObjectRelease (FUN_0045a620) — see heap.hpp. */
+void ui_text_output_object_release(void* const* holder)
+{
+    if (holder == NULL) {
+        return; /* deviation: the corpus dereferences blindly */
+    }
+    text_buffer_reset(*holder);
 }

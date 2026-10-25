@@ -510,6 +510,45 @@ int main(int argc, char** argv)
               "destroy leaves the watermark counter alone (faithful)");
     }
 
+    /* ConfigRgbVectorRead (2026-10-25): the comma triplet, scaled 1/255. */
+    {
+        BlockFile* bf = parse("G {\n  rgb 12,128,255\n  bad 1,2\n  four 1,2,3,4\n  "
+                              "tail 1,2,3,\n}");
+        CHECK(bf != NULL, "fixture parses");
+        const float sc = 1.0f / 255.0f;
+        float r = -1.0f, g = -1.0f, b = -1.0f;
+        CHECK(config_rgb_vector_read(bf, "G rgb", &r, &g, &b) == 1
+                  && r == 12.0f * sc && g == 128.0f * sc
+                  && b == 255.0f * sc,
+              "the triplet lands scaled");
+        CHECK(config_rgb_vector_read(bf, "G nope", &r, &g, &b) == 0
+                  && r == 12.0f * sc,
+              "a missing string answers zero and leaves the outputs");
+        CHECK(config_rgb_vector_read(bf, "G bad", &r, &g, &b) == 0,
+              "two tokens fail the count");
+        CHECK(config_rgb_vector_read(bf, "G four", &r, &g, &b) == 0,
+              "four tokens fail the count (tracked past three)");
+        CHECK(config_rgb_vector_read(bf, "G tail", &r, &g, &b) == 1
+                  && b == 3.0f * sc,
+              "the never-tested final comma rides the last token");
+        block_close(bf);
+    }
+
+    /* ReadAngleSettingRadians (2026-10-25): degrees through the gate. */
+    {
+        BlockFile* bf = parse("A {\n  deg 90\n  zero 0\n  word banana\n}");
+        CHECK(bf != NULL, "angle fixture parses");
+        const float want = 90.0f * (1.0f / 360.0f) * 6.2831855f;
+        CHECK(config_angle_radians_get(bf, "A deg") == want,
+              "the degrees land scaled");
+        CHECK(config_angle_radians_get(bf, "A zero") == 0.0f,
+              "a zero value answers zero");
+        CHECK(config_angle_radians_get(bf, "A nope") == 0.0f
+                  && config_angle_radians_get(bf, "A word") == 0.0f,
+              "missing and unparseable strings answer zero");
+        block_close(bf);
+    }
+
     if (s_failures == 0) {
         printf("block: all tests passed\n");
         return 0;

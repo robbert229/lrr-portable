@@ -2363,6 +2363,25 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Config-seam + overlay/counter band** (2026-10-25): seven frontier rows
+land. `text_buffer_reset` (0x4859b0, heap.*) zeroes the text-output
+record's buffer sweep, +0x18 window, and flag words (the widened +0x14
+slot is restored across the window zeroing, a documented deviation);
+`ui_text_output_object_release` (0x45a620) runs it through the holder
+slot. `config_rgb_vector_read` (0x479170) and `config_angle_radians_get`
+(0x479110, block.*) land over the config model — the comma triplet
+scaled 1/255 with FUN_00477440's split quirks pinned (trailing commas
+ride the last token), and the degrees→radians gate with the missing /
+unparseable strings answering zero; the shared config-seam blocker is
+closed. `ui_overlay_animation_advance` (0x45c580, frontend.*) models the
+DAT_00500820 animation float as own storage (the apply's object-word
+halves stay blocked). `level_resource_balance_add_and_sound` (0x41f9a0)
+and `simulation_mode_counter_add` (0x43a910, cmd.*) bump the level's
++0xa0/+0xac resource counters under the corpus's level gate while the
+overlay advance half runs outside it. `heap_test`, `block_test`,
+`frontend_test`, and `cmd_test` pin the sweeps, splits, convergence
+halves, and counter gates.
+
 **Stats-table stride triplets + feature/wad leaf band** (2026-10-25): five
 frontier rows land. `stats_table_word_at_b4` (0x469af0),
 `stats_table_word_at_d0` (0x469f60), and `stats_table_word_at_100`

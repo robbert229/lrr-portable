@@ -535,3 +535,59 @@ int block_text_token_pool_watermark_peek(void)
 {
     return s_token_pool_watermark;
 }
+
+/* ConfigRgbVectorRead (FUN_00479170) — see block.hpp. The corpus frees its
+ * heap copy of the value on every path; the port reads the tree storage
+ * (deviation) and splits a stack copy with FUN_00477440's quirks pinned. */
+int config_rgb_vector_read(BlockFile* bf, const char* path,
+                           float* r, float* g, float* b)
+{
+    const char* v = block_get_strptr(bf, path);
+    if (v == NULL) {
+        return 0; /* missing string: the corpus stays with its zeroes */
+    }
+    char buf[256]; /* deviation: the corpus splits the heap copy blindly */
+    snprintf(buf, sizeof buf, "%s", v);
+
+    /* FUN_00477440 over the DAT_004a1cd4 separator, pinned as in sound.*:
+     * split in place, keep empty tokens, never test the final character. */
+    int n = 0;
+    char* tok[3];
+    if (buf[0] != '\0') {
+        tok[n] = buf;
+        ++n;
+        for (char* p = buf; p[1] != '\0'; ++p) {
+            if (*p == ',') {
+                *p = '\0';
+                if (n < 3) {
+                    tok[n] = p + 1;
+                }
+                ++n; /* beyond three: counted, untracked */
+            }
+        }
+    }
+    if (n != 3) {
+        return 0;
+    }
+
+    /* FUN_0048db70 integer parse; x87 float10 lands as plain float. */
+    char* end = NULL;
+    const int vals[3] = { (int)strtol(tok[0], &end, 10),
+                          (int)strtol(tok[1], &end, 10),
+                          (int)strtol(tok[2], &end, 10) };
+    const float scale = 1.0f / 255.0f; /* the corpus's 0.003921569 */
+    if (r != NULL) { *r = (float)vals[0] * scale; }
+    if (g != NULL) { *g = (float)vals[1] * scale; }
+    if (b != NULL) { *b = (float)vals[2] * scale; }
+    return 1;
+}
+
+/* ReadAngleSettingRadians (FUN_00479110) — see block.hpp. */
+float config_angle_radians_get(BlockFile* bf, const char* path)
+{
+    const float deg = block_get_float(bf, path, 0.0f);
+    if (deg == 0.0f) {
+        return 0.0f; /* the corpus gates the multiply on value != 0 */
+    }
+    return deg * (1.0f / 360.0f) * 6.2831855f;
+}

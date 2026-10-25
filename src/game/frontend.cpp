@@ -2757,3 +2757,37 @@ void scroll_rect_resource_record_create(int view, int mode,
     }
     view_blit_window_set(view, handle, rect_a, rect_b, region);
 }
+
+/* --- overlay animation float (2026-10-25) ---------------------------------
+ * The DAT_00500820 animation float is reference state with no port owner,
+ * so it lands as a guarded static (the unowned-global deviation) and the
+ * corpus x87 float10 lands as plain float. */
+static float s_overlay_anim_float; /* DAT_00500820 */
+
+float overlay_anim_float_peek(void)
+{
+    return s_overlay_anim_float;
+}
+
+void overlay_anim_float_install(float value)
+{
+    s_overlay_anim_float = value;
+}
+
+void ui_overlay_animation_advance(int mode, int steps)
+{
+    /* Deviation: the corpus loops `param_2 != 0` down by one, so a
+     * negative count runs away; the port treats it as no steps. */
+    for (int i = steps > 0 ? steps : 0; i != 0; --i) {
+        if (mode == 0) {
+            s_overlay_anim_float =
+                (s_overlay_anim_float - 0.05f) * 20.0f * 0.05263158f;
+        } else {
+            s_overlay_anim_float =
+                s_overlay_anim_float - (1.0f - s_overlay_anim_float) * -0.05f;
+        }
+    }
+    if (s_overlay_anim_float < 0.0f) {
+        s_overlay_anim_float = 0.0f; /* the after-loop negative guard */
+    }
+}
