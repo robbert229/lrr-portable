@@ -1230,6 +1230,69 @@ int main(int argc, char** argv)
         grid_record_count_tables_clear();
     }
 
+    /* DAT_00502bd8 indexed stats-type tables (2026-10-25): window reads,
+     * install spans, instance strides and guards. Type 9 / row 7 belongs
+     * to this band. */
+    {
+        uint8_t tmpl[2 * 0x150];
+        for (int i = 0; i < (int)sizeof(tmpl); ++i) {
+            tmpl[i] = (uint8_t)(i % 256);
+        }
+        uint8_t cfg[0x334];
+        memset(cfg, 0, sizeof(cfg));
+
+        CHECK(stats_table_word_at_b8(9, 7) == 0u
+                  && stats_table_float_at_dc(9, 7) == 0.0f
+                  && stats_table_word_at_144(9, 7) == 0u
+                  && stats_table_word_at_148(9, 7) == 0u
+                  && stats_table_word_at_14c(9, 7) == 0u,
+              "uninstalled cells read zero");
+
+        stats_type_table_install(9, 7, tmpl, 2);
+        {
+            uint32_t w = 0;
+            float f = 0.0f;
+            __builtin_memcpy(&w, tmpl + 0xb8, 4);
+            CHECK(stats_table_word_at_b8(9, 7) == w, "the b8 window read");
+            __builtin_memcpy(&f, tmpl + 0xdc, 4);
+            CHECK(stats_table_float_at_dc(9, 7) == f, "the dc float window read");
+            __builtin_memcpy(&w, tmpl + 0x144, 4);
+            CHECK(stats_table_word_at_144(9, 7) == w, "the 144 window read");
+            __builtin_memcpy(&w, tmpl + 0x148, 4);
+            CHECK(stats_table_word_at_148(9, 7) == w, "the 148 window read");
+            __builtin_memcpy(&w, tmpl + 0x14c, 4);
+            CHECK(stats_table_word_at_14c(9, 7) == w, "the 14c window read");
+        }
+
+        {
+            int type = 9, row = 7;
+            __builtin_memcpy(cfg + 0x0, &type, 4);
+            __builtin_memcpy(cfg + 0x4, &row, 4);
+            int idx1 = 1;
+            __builtin_memcpy(cfg + 0x330, &idx1, 4);
+            uint32_t w = 0;
+            __builtin_memcpy(&w, tmpl + 0xbc + 0x150, 4);
+            CHECK(stats_instance_word_at_bc(cfg) == w, "the bc instance read");
+            __builtin_memcpy(&w, tmpl + 0xe0 + 0x150, 4);
+            CHECK(stats_instance_word_at_e0(cfg) == w, "the e0 instance read");
+            __builtin_memcpy(&w, tmpl + 0xec + 0x150, 4);
+            CHECK(stats_instance_word_at_ec(cfg) == w, "the ec instance read");
+            __builtin_memcpy(&w, tmpl + 0xf0 + 0x150, 4);
+            CHECK(stats_instance_word_at_f0(cfg) == w, "the f0 instance read");
+
+            int idx2 = 2; /* strides past the installed two-stride template */
+            __builtin_memcpy(cfg + 0x330, &idx2, 4);
+            CHECK(stats_instance_word_at_e0(cfg) == 0u, "the stride guard answers zero");
+            CHECK(stats_instance_word_at_bc(NULL) == 0u, "the NULL block guard holds");
+        }
+
+        CHECK(stats_table_word_at_b8(-1, 0) == 0u
+                  && stats_type_table_cell(9, 18) == NULL
+                  && stats_table_word_at_b8(16, 7) == 0u,
+              "the window guards hold");
+        stats_type_table_install(9, 7, NULL, 0); /* release the cell */
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "entity_test: %d failure(s)\n", s_failures);
         return 1;

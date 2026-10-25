@@ -2363,6 +2363,32 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Indexed stats-type table band** (2026-10-25): nine frontier rows land in
+`entity.*` over the `DAT_00502bd8` two-level type table. `stats_table_word_at_b8`
+(0x469b20), `stats_instance_word_at_bc` (0x469b50), `stats_instance_word_at_e0`
+(0x469b80), `stats_instance_word_at_ec` (0x469bb0 — the blocked.md entry is
+resolved here), `stats_instance_word_at_f0` (0x469be0),
+`stats_table_float_at_dc` (0x469e00), and `stats_table_word_at_144/148/14c`
+(0x469ec0/ee0/f00) resolve template records through `*(*DAT_00502bd8 +
+type*4) + row*4` and read fixed fields or stride-0x150 instance blocks. The
+stats-config loader stays unported, so the table is guarded own storage with
+install hooks: cells start empty, window/stride guards answer zero where the
+corpus strides blind. The entity-indexed twins read (type, row) at +0x00/
++0x04 and the instance index at +0x330. `entity_test` pins the window reads,
+the stride guards, and the install spans.
+
+**HUD post chain band** (2026-10-25): three frontier rows land in `cmd.*`.
+`menu_selection_resource_update` (0x41b300) gates on the corpus's kind set
+{1,2,3,4,5,7}, applies the tracked surface word to the last tracked
+coordinate's cell, and records the prior value when the parameter half
+applies type 4. `command_context_post_to_hud` (0x41b2d0) runs the global-
+state refresh, this update, and the map-coordinate store;
+`selection_clear_request_and_hud_reset` (0x41e750) enqueues the clear
+command and posts kind 0. The coordinate/kind words ride the frontend.*
+map-store model, DAT_004de1f0 lands as a tracked static, and the packer's
+lost register halves follow the cmd.cpp tail precedent. `cmd_test` pins the
+track/apply/gate paths over a written surface map.
+
 **Renderer-word getter band** (2026-10-25): seven frontier rows land on the
 unowned-global convention. `renderer_word_a_get` / `renderer_word_b_get` /
 `renderer_word_c_get` (0x410b30/b40/b50, crt.*),

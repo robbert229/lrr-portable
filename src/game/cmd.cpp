@@ -7,7 +7,9 @@
 #include "ai.hpp"
 #include "select.hpp"
 #include "level.hpp"
+#include "frontend.hpp"
 #include "util.hpp"
+#include "gods98/engine.hpp"
 #include "entity.hpp"
 #include "gods98/heap.hpp"
 #include "gods98/media.hpp"
@@ -899,9 +901,9 @@ int selection_entity_remove(void* entity)
         return 0;
     }
     if (index == 0) {
-        /* Corpus posts the HUD context (CommandContextPostToHud) — the
-         * HUD-chain seam (GlobalStateLowByteClearAndRefresh + the menu /
-         * map-coordinate leaves) is unported, so no ported state moves. */
+        /* Corpus posts the HUD context here; the leaves now land as
+         * command_context_post_to_hud, but this call site's arguments are
+         * lost register residue, so no ported state moves (hook boundary). */
     }
     s_ctx->selection_count = count - 1;
     arr[index] = arr[count - 1];
@@ -2158,4 +2160,71 @@ void entity_task_batch_append(EntitySlot* const* entities, int count,
             tail->next = rec;                       /* chain tail +0x60 */
         }
     }
+}
+
+/* --- HUD post / menu-selection chain (2026-10-25) --------------------------
+ * The chain lands on the port's modeled half of the corpus's HUD post: the
+ * map-store model in frontend.* owns the coordinate/kind words, and the
+ * tracked surface word (DAT_004de1f0) is a module static here. The corpus
+ * call sites lose the surface-type packer's register arguments (pinned by
+ * the cmd.cpp tail precedent), so the pair shape applies here: the tracked
+ * word rides the setter as the type on the tracked half, and the parameter
+ * half applies type 4 and tracks the prior value when it is not 4.
+ * Deviations: the no-level and NULL-coordinate paths stay inert (the
+ * corpus dereferences the current level and coordinate blindly), and the
+ * NULL terrain handle reads the zero state through the guarded leaves. */
+static uint32_t s_menu_surface_track; /* DAT_004de1f0 */
+
+static int menu_kind_gated(int kind)
+{
+    return kind == 1 || kind == 2 || kind == 3 || kind == 4
+        || kind == 5 || kind == 7;
+}
+
+void menu_selection_resource_update(int kind, const uint32_t coord[2])
+{
+    /* FUN_0041b300 */
+    if (s_ctx == NULL || s_ctx->level == NULL) {
+        return; /* deviation: no current level, no corpus chain */
+    }
+    void* terrain = s_ctx->level->ptr_terrain;
+    if (menu_kind_gated((int)map_store_kind_peek())) {
+        const int x = (int)map_store_last_word(0);
+        const int y = (int)map_store_last_word(1);
+        if (terrain_cell_surface_type_get(terrain, x, y) == 0) {
+            s_menu_surface_track = 0u;
+        } else {
+            terrain_cell_surface_type_set(terrain, x, y,
+                                          (int)s_menu_surface_track);
+        }
+    }
+    if (menu_kind_gated(kind) && coord != NULL) {
+        const uint32_t prior = (uint32_t)terrain_cell_surface_type_set(
+            terrain, (int)coord[0], (int)coord[1], 4);
+        if (prior != 4u) {
+            s_menu_surface_track = prior;
+        }
+    }
+}
+
+void command_context_post_to_hud(int kind, const uint32_t coord[2])
+{
+    /* FUN_0041b2d0 */
+    global_state_low_byte_clear_and_refresh(); /* FUN_00435a20 */
+    menu_selection_resource_update(kind, coord);
+    store_selected_map_coordinate(kind, coord); /* FUN_0041ea50 */
+}
+
+void selection_clear_request_and_hud_reset(void)
+{
+    /* FUN_0041e750: the corpus enqueues command 3 with null payload words
+     * (the fifth slot is calling-convention residue, so a null entity) and
+     * then posts the HUD context with kind 0 / no coordinate. */
+    cmd_produce(3, NULL, 0, 0, 0); /* FUN_00452060 */
+    command_context_post_to_hud(0, NULL);
+}
+
+uint32_t menu_surface_track_peek(void)
+{
+    return s_menu_surface_track;
 }

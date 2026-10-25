@@ -4,14 +4,36 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include "game/cmd.hpp"
 #include "game/entity.hpp"
+#include "game/frontend.hpp"
 #include "game/game.hpp"
 #include "game/level.hpp"
 #include "game/select.hpp"
 #include "gods98/heap.hpp"
 #include "gods98/media.hpp"
+
+#define HUD_FIX "hud_fixture"
+
+static void write_surface_map(const char* path)
+{
+    FILE* fp = fopen(path, "wb");
+    if (fp == NULL) {
+        return;
+    }
+    const char magic[4] = { 'M', 'A', 'P', ' ' };
+    const uint32_t len = 8 * 8 * 2, w = 8, h = 8;
+    const uint16_t cells[8 * 8] = { 0 };
+    fwrite(magic, 1, 4, fp);
+    fwrite(&len, 1, 4, fp);
+    fwrite(&w, 1, 4, fp);
+    fwrite(&h, 1, 4, fp);
+    fwrite(cells, 1, sizeof(cells), fp);
+    fclose(fp);
+}
 
 static int s_failures = 0;
 
@@ -1824,6 +1846,111 @@ int main(void)
         entity_task_batch_append(with_null, 1, payload135); /* guarded */
 #undef W135
 #undef C135
+    }
+
+    /* HUD post / menu-selection chain (2026-10-25): the surface-type halves
+     * over a written surface map, the kind gate, and the guarded paths. */
+    {
+        mkdir(HUD_FIX, 0755);
+        write_surface_map(HUD_FIX "/L01_surface.map");
+        if (chdir(HUD_FIX) != 0) {
+            fprintf(stderr, "hud band: chdir failed\n");
+        }
+        void* terrain = terrain_create("L01_surface.map", 1.0f);
+        CHECK(terrain != NULL, "terrain built from the surface map");
+        static LevelState lvl;
+        memset(&lvl, 0, sizeof(lvl));
+        static uint8_t grid[8 * 8 * 0x48];
+        memset(grid, 0, sizeof(grid));
+        lvl.word[0x14 / 4] = 8;
+        lvl.word[0x18 / 4] = 8;
+        lvl.ptr_voxels = grid;
+        lvl.ptr_terrain = terrain;
+        GameContext lctx;
+        game_context_init(&lctx);
+        cmd_init();
+        cmd_context_set(&lctx);
+        lctx.level = &lvl;
+
+        const uint32_t c22[2] = { 2u, 2u };
+        const uint32_t c11[2] = { 1u, 1u };
+
+        if (terrain == NULL) {
+            CHECK(1, "the chain band skips the terrain halves");
+        } else {
+            /* Guard: the no-level path is inert. */
+            lctx.level = NULL;
+            menu_selection_resource_update(1, c22);
+            command_context_post_to_hud(0, NULL);
+            CHECK(menu_surface_track_peek() == 0u,
+                  "the no-level path stays inert");
+            lctx.level = &lvl;
+
+            /* Stage: kind 7 + the last pair (2,2) through the switch
+             * branch; cells (2,2)/(5,5)/(1,1) staged. The tracked half
+             * runs before the parameter half within one call (corpus). */
+            objective_selection_state_reset();
+            store_selected_map_coordinate(7, c22);
+            const uint32_t c55[2] = { 5u, 5u };
+            terrain_cell_surface_type_set(terrain, 2, 2, 3);
+            terrain_cell_surface_type_set(terrain, 5, 5, 3);
+            terrain_cell_surface_type_set(terrain, 1, 1, 1);
+
+            /* Track: the parameter half records the prior value (not 4);
+             * the tracked half re-applied the zero word to the last cell. */
+            menu_selection_resource_update(2, c55);
+            CHECK(menu_surface_track_peek() == 3u
+                      && terrain_cell_surface_type_get(terrain, 5, 5) == 4
+                      && terrain_cell_surface_type_get(terrain, 2, 2) == 0,
+                  "the parameter half applies type 4 and tracks the prior");
+
+            /* Apply: with the last cell live again, the tracked word rides
+             * the tracked half. */
+            terrain_cell_surface_type_set(terrain, 2, 2, 3);
+            menu_selection_resource_update(1, NULL);
+            CHECK(menu_surface_track_peek() == 3u
+                      && terrain_cell_surface_type_get(terrain, 2, 2) == 3,
+                  "the tracked half applies the tracked word");
+
+            /* Gate: kind 6 applies nothing (the parameter half skips). */
+            menu_selection_resource_update(6, c11);
+            CHECK(terrain_cell_surface_type_get(terrain, 1, 1) == 1,
+                  "an ungated kind leaves the cells alone");
+
+            /* Track updates both ways: the not-4 prior re-tracks... */
+            menu_selection_resource_update(3, c11);
+            CHECK(menu_surface_track_peek() == 1u
+                      && terrain_cell_surface_type_get(terrain, 1, 1) == 4,
+                  "the not-4 prior re-tracks");
+
+            /* ... and the 4 prior keeps the tracked word. */
+            menu_selection_resource_update(4, c11);
+            CHECK(menu_surface_track_peek() == 1u
+                      && terrain_cell_surface_type_get(terrain, 1, 1) == 4
+                      && terrain_cell_surface_type_get(terrain, 2, 2) == 1,
+                  "the 4 prior keeps the tracked word");
+
+            /* The tracked word rides the tracked half again... */
+            menu_selection_resource_update(5, NULL);
+            CHECK(terrain_cell_surface_type_get(terrain, 2, 2) == 1
+                      && menu_surface_track_peek() == 1u,
+                  "the tracked word rides the tracked half again");
+
+            /* ...and a zero surface clears it. */
+            terrain_cell_surface_type_set(terrain, 2, 2, 0);
+            menu_selection_resource_update(7, NULL);
+            CHECK(menu_surface_track_peek() == 0u,
+                  "the zero surface clears the tracked word");
+        }
+
+        /* The store rides the post: last pair refreshes, NULL stays away. */
+        command_context_post_to_hud(1, c11);
+        CHECK(map_store_last_word(0) == 1u && map_store_kind_peek() == 1u,
+              "the post stores the parameter coordinates");
+        selection_clear_request_and_hud_reset();
+        CHECK(1, "the clear request runs the queue and the post inertly");
+        terrain_destroy(terrain);
+        chdir("..");
     }
 
     if (s_failures != 0) {

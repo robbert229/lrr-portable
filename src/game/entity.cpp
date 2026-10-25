@@ -993,3 +993,97 @@ int resolved_entity_operation_dispatch(const char* name, int slot,
     }
     return grid_record_count_difference_get(type, column, slot, subtract);
 }
+
+/* --- DAT_00502bd8 indexed stats-type tables (2026-10-25) ------------------
+ * The corpus reads `*(row_table[type][row])` through DAT_00502bd8's pointer
+ * tables and strides the template record blindly; the config loader that
+ * fills the tables is unported, so the port keeps guarded own storage and
+ * guards every stride (deviations documented per the DAT-window convention).
+ * The corpus float fields read as x87 float10 of the stored float; the port
+ * hands back the plain float. */
+
+static const void* s_stats_cell_ptr[STATS_TYPE_TABLE_TYPES][STATS_TYPE_TABLE_ROWS];
+static int s_stats_cell_span[STATS_TYPE_TABLE_TYPES][STATS_TYPE_TABLE_ROWS];
+
+void stats_type_table_install(int type, int row, const void* record,
+                              int stride_count)
+{
+    if (type < 0 || type >= STATS_TYPE_TABLE_TYPES
+        || row < 0 || row >= STATS_TYPE_TABLE_ROWS) {
+        return; /* deviation: the corpus strides its tables blindly */
+    }
+    if (stride_count < 0) {
+        stride_count = 0;
+    }
+    s_stats_cell_ptr[type][row] = stride_count > 0 ? record : NULL;
+    s_stats_cell_span[type][row] = stride_count;
+}
+
+const void* stats_type_table_cell(int type, int row)
+{
+    if (type < 0 || type >= STATS_TYPE_TABLE_TYPES
+        || row < 0 || row >= STATS_TYPE_TABLE_ROWS) {
+        return NULL; /* deviation: the corpus strides blindly */
+    }
+    return s_stats_cell_ptr[type][row];
+}
+
+static uint32_t stats_table_read(int type, int row, int off, int stride_index)
+{
+    if (type < 0 || type >= STATS_TYPE_TABLE_TYPES
+        || row < 0 || row >= STATS_TYPE_TABLE_ROWS || stride_index < 0) {
+        return 0u; /* deviation: the corpus strides the index blindly */
+    }
+    const void* base = s_stats_cell_ptr[type][row];
+    if (base == NULL) {
+        return 0u; /* empty cell = the zero template */
+    }
+    const long long bound = (long long)s_stats_cell_span[type][row] * 0x150;
+    const long long off64 = (long long)off + (long long)stride_index * 0x150;
+    if (off64 + 4 > bound) {
+        return 0u; /* deviation: the corpus strides past the template */
+    }
+    uint32_t word = 0u;
+    __builtin_memcpy(&word, (const uint8_t*)base + off64, sizeof(word));
+    return word;
+}
+
+uint32_t stats_table_word_at_b8(int type, int row) { return stats_table_read(type, row, 0xb8, 0); }
+/* FUN_00469b20 */
+
+float stats_table_float_at_dc(int type, int row)
+{
+    /* FUN_00469e00 */
+    const uint32_t bits = stats_table_read(type, row, 0xdc, 0);
+    float f = 0.0f;
+    __builtin_memcpy(&f, &bits, sizeof(f));
+    return f;
+}
+
+uint32_t stats_table_word_at_144(int type, int row) { return stats_table_read(type, row, 0x144, 0); }
+/* FUN_00469ec0 */
+uint32_t stats_table_word_at_148(int type, int row) { return stats_table_read(type, row, 0x148, 0); }
+/* FUN_00469ee0 */
+uint32_t stats_table_word_at_14c(int type, int row) { return stats_table_read(type, row, 0x14c, 0); }
+/* FUN_00469f00 */
+
+static uint32_t stats_instance_read(const void* config_block, int off)
+{
+    if (config_block == NULL) {
+        return 0u; /* deviation: the corpus dereferences blindly */
+    }
+    int type = 0, row = 0, index = 0;
+    __builtin_memcpy(&type, (const uint8_t*)config_block + 0x0, sizeof(type));
+    __builtin_memcpy(&row, (const uint8_t*)config_block + 0x4, sizeof(row));
+    __builtin_memcpy(&index, (const uint8_t*)config_block + 0x330, sizeof(index));
+    return stats_table_read(type, row, off, index);
+}
+
+uint32_t stats_instance_word_at_bc(const void* config_block) { return stats_instance_read(config_block, 0xbc); }
+/* FUN_00469b50 */
+uint32_t stats_instance_word_at_e0(const void* config_block) { return stats_instance_read(config_block, 0xe0); }
+/* FUN_00469b80 */
+uint32_t stats_instance_word_at_ec(const void* config_block) { return stats_instance_read(config_block, 0xec); }
+/* FUN_00469bb0 */
+uint32_t stats_instance_word_at_f0(const void* config_block) { return stats_instance_read(config_block, 0xf0); }
+/* FUN_00469be0 */
