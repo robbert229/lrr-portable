@@ -2363,6 +2363,27 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**UI/panel category-bounds band — category store, entry bounds, priority
+state, render record** (2026-10-25): four frontier rows land in
+`frontend.*`. `panel_category_bounds_set` (0x45a650) stores the panel
+category rectangle over the corpus's stride-0x30 record band (ints cast to
+floats, the record's word cleared) and routes the pair behind the record:
+the first corner while the modeled flag word's bit 2 rides, the second
+corner otherwise — the pair/flag windows already live in `crt.*`, the
+rectangle fields are own storage. `ui_entry_bounds_get` (0x45bf70) reads the
+draw-record block (stride 0x2c) and answers the position plus the derived
+size (far minus near). `priority_image_selection_state_update` (0x45d300)
+runs the sentinel-parked state pair (0x1b parked by a cleared gate; the
+sentinel branch installs the candidate and raises flag bit 2 when the skip
+word is clear; an equal state just raises the flag; the answer rides the
+pre-call word). `ui_render_record_create` (0x45da90) builds the corpus's
+record — the source, four payload words copied from the caller's array, the
+extra argument, and the source's float at byte offset +0x10 (the corpus's
+float → float10 → float round trip is exact, so the port copies).
+Deviations: blind strides guarded, the record fields widen LP64-safe.
+`frontend_test` pins the flag-gated routing, the size derivation, the full
+state-machine ladder, and the record's field-by-field copy.
+
 **Resource-handle release band — global set + list disposer** (2026-10-25):
 two frontier rows land in `resource.*`. `resource_handle_set_release`
 (0x41a850) frees the corpus's global handle set: the DAT_004ddc04 stride-8

@@ -1298,7 +1298,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0045a5b0,FUN_0045a5b0,named,UITextOutputPositionAndDraw,0,403
 0045a620,FUN_0045a620,ported,UITextOutputObjectRelease,3,82
 0045a630,FUN_0045a630,ported,UIRecordCallbackForward,3,136
-0045a650,FUN_0045a650,named,PanelCategoryBoundsSet,0,692
+0045a650,FUN_0045a650,ported,PanelCategoryBoundsSet,3,692
 0045a6e0,FUN_0045a6e0,ported,IndexedPairSet,1,174
 0045a700,FUN_0045a700,ported,IndexedPairGet,1,178
 0045a730,FUN_0045a730,ported,ManagerTick,7,2908
@@ -1324,7 +1324,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0045b9d0,FUN_0045b9d0,named,PanelRotationControlConfigLoad,0,2953
 0045bcd0,FUN_0045bcd0,named,CameraDragFromCursorApply,0,1742
 0045bf20,FUN_0045bf20,ported,CameraZoomStepAdjust,2,219
-0045bf70,FUN_0045bf70,named,UIEntryBoundsGet,0,350
+0045bf70,FUN_0045bf70,ported,UIEntryBoundsGet,3,350
 0045bfb0,FUN_0045bfb0,named,ThreeSurfaceResourcesLoadAndInitialize,0,450
 0045c040,FUN_0045c040,ported,CrystalQuotaSetup,1,629
 0045c0d0,FUN_0045c0d0,named,PairCountHistogramBuild,0,3553
@@ -1351,7 +1351,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0045cf50,FUN_0045cf50,named,PrioritiesConfigLoad,0,934
 0045d060,FUN_0045d060,named,PrioritiesImagePositionsConfigLoad,0,740
 0045d110,FUN_0045d110,named,RegionContainmentScanUpdate,0,2356
-0045d300,FUN_0045d300,named,PriorityImageSelectionStateUpdate,0,463
+0045d300,FUN_0045d300,ported,PriorityImageSelectionStateUpdate,3,463
 0045d370,FUN_0045d370,ported,RegionBoundsSet,1,294
 0045d3c0,FUN_0045d3c0,named,PriorityPanelRowMoveDispatch,0,195
 0045d3f0,FUN_0045d3f0,named,PriorityImageOrderMoveToFront,0,665
@@ -1364,7 +1364,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0045d870,FUN_0045d870,named,CommandEntityReferenceRemap,0,330
 0045d8a0,FUN_0045d8a0,ported,ObjectField14Set,1,112
 0045d8b0,FUN_0045d8b0,named,ScreenCoordNormalizeInit,0,1993
-0045da90,FUN_0045da90,named,UiRenderRecordCreate,0,538
+0045da90,FUN_0045da90,ported,UiRenderRecordCreate,3,538
 0045daf0,FUN_0045daf0,ported,UiRenderRecordFree,1,80
 0045db00,FUN_0045db00,named,TexturedSceneObjectDrawAtPosition,0,581
 0045dbc0,FUN_0045dbc0,named,TerrainViewTileGeometryBuild,0,6350
