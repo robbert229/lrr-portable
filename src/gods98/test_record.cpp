@@ -984,6 +984,23 @@ int main(void)
         CHECK(scene_visibility_calls() == 0, "the NULL record is guarded");
     }
 
+    /* SceneCurrentObjectSet (2026-10-24): the interface record's +0x14
+     * current-object slot. */
+    {
+        char rec[0x20];
+        memset(rec, 0, sizeof rec);
+        char object[8];
+        memset(object, 0, sizeof object);
+        scene_current_object_set(rec, object);
+        void* got = NULL;
+        __builtin_memcpy(&got, rec + 0x14, sizeof got);
+        CHECK(got == (void*)object, "the current-object slot stores");
+        scene_current_object_set(rec, NULL);
+        __builtin_memcpy(&got, rec + 0x14, sizeof got);
+        CHECK(got == NULL, "the slot clears through the writer");
+        scene_current_object_set(NULL, object); /* guarded */
+    }
+
     /* UIRecordCallbackForward (2026-10-24): handle deref to the pair. */
     {
         static char record[0x900];

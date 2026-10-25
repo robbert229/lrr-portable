@@ -773,6 +773,16 @@ void scene_assign_entity_owner(const void* scene, uint32_t owner)
     scene_object_owner_set(rec_ptr(scene, 0x04), owner);
 }
 
+/* SceneCurrentObjectSet (FUN_00477240) — see record.hpp. The store lands
+ * on the record's +0x14 slot; Deviation: the corpus strides a dword, the
+ * port writes the module's widened pointer slot. */
+void scene_current_object_set(void* record, void* object)
+{
+    if (record != NULL) {
+        __builtin_memcpy((char*)record + 0x14, &object, sizeof object);
+    }
+}
+
 /* SixResourceSlotsSetState (FUN_0046cfc0) — see record.hpp. */
 void six_resource_slots_set_state(const void* record, uint32_t flag)
 {

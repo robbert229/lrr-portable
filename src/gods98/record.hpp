@@ -376,6 +376,13 @@ uint32_t animation_object_visibility_get(const void* anim);
 void scene_assign_entity_owner(const void* scene, uint32_t owner);
                                                 /* FUN_00408380 */
 
+/* SceneCurrentObjectSet (FUN_00477240): the interface record's current-
+ * object slot at +0x14. Its consumer (the slot-dispatch clear pair) stays
+ * on the interface seam, so the writer rides the widened pointer slot with
+ * the corpus's dword stride documented as a deviation. */
+void scene_current_object_set(void* record, void* object);
+                                                /* FUN_00477240 */
+
 /* SixResourceSlotsSetState (FUN_0046cfc0, findings 354/432): the record's
  * six resource slots from +0x10 — each nonzero handle rides the visibility
  * leaf with the flag. Deviation: the slots are handled through the module's

@@ -346,4 +346,26 @@ float selected_global_point_transform_and_return_x(EngineContext* ctx);
 void renderer_node_relative_position_set(const void* node, float x, float y);
                                                 /* FUN_00436ac9 */
 
+/* --- scene-root hook band (2026-10-24) -------------------------------------
+ * The corpus's scene object argument normalization (the front-end of the
+ * ported camera-handle primitives) answers the root slot from its global
+ * root object. The corpus's only writer is the renderer-side scene
+ * initializer (unported), so the root rides a module hook like the other
+ * DAT one-liners; install/peek drive the fallback under test. */
+void scene_root_install(void* root);            /* port hook */
+void* scene_root_peek(void);                    /* port hook */
+
+/* SceneRootObjectGet (FUN_00472940): the corpus's root-object read. */
+void* scene_root_object_get(void);              /* FUN_00472940 */
+
+/* DDiSceneObjectArgumentsNormalize (FUN_00475900): resolves the dispatch
+ * pair — the first slot rides out of the first argument's slot, and the
+ * second resolves to its own slot when the argument is non-NULL, else to
+ * the root object's first slot (the corpus's null-handle fallback).
+ * Deviation: the corpus dereferences the first slot and the root blindly;
+ * the port answers NULL on the missing-root path. */
+void scene_object_arguments_normalize(const void** obj, const void** alt,
+                                      void** out_obj, const void** out_alt);
+                                                /* FUN_00475900 */
+
 #endif /* LEGORRR_VIEW_HPP */

@@ -1697,7 +1697,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004728e0,FUN_004728e0,named,RendererFlagBit6Set,0,170
 00472900,FUN_00472900,named,DDiSceneEndHookRegister,0,126
 00472920,FUN_00472920,named,DDiSceneSampleHookRegister,0,164
-00472940,FUN_00472940,named,SceneRootObjectGet,0,60
+00472940,FUN_00472940,ported,SceneRootObjectGet,4,60
 00472950,FUN_00472950,named,DDiSceneObjectAllocate,0,1126
 00472a40,FUN_00472a40,named,DDiSceneObjectDestroy,0,82
 00472a50,FUN_00472a50,named,DDiSceneObjectDestroy,0,3205
@@ -1767,7 +1767,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004757f0,FUN_004757f0,named,TypedChildResourceScalarGet,0,379
 00475830,FUN_00475830,named,SceneObjectFirstNonKind6ChildGet,0,539
 00475880,FUN_00475880,named,SceneObjectOwnerLinkEnsure,0,570
-00475900,FUN_00475900,named,DDiSceneObjectArgumentsNormalize,0,246
+00475900,FUN_00475900,ported,DDiSceneObjectArgumentsNormalize,4,246
 00475930,FUN_00475930,ported,EntityVisualKindDispatch,7,1401
 004759f0,FUN_004759f0,named,DDiSceneObjectArrayGrow,0,641
 00475a70,FUN_00475a70,named,SceneActionRecordActFrameScan,0,2573
@@ -1811,7 +1811,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00477010,FUN_00477010,named,DDiSceneDrawBegin,0,1925
 00477150,FUN_00477150,ported,DDiSceneDrawEnd,1,1096
 00477220,FUN_00477220,named,RenderResourceTrackAndRetain,0,193
-00477240,FUN_00477240,named,DDiSceneCurrentObjectSet,0,112
+00477240,FUN_00477240,ported,DDiSceneCurrentObjectSet,3,112
 00477250,FUN_00477250,named,ResourceInterfaceCallSlot40AndClearField14,0,193
 00477270,FUN_00477270,named,ResourceInterfaceCallSlot88,0,127
 00477290,FUN_00477290,named,CameraScreenCoordinateProject,0,181

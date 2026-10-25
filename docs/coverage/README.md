@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 916 | 35.7% |
+| ported | 919 | 35.8% |
 | anchored | 4 | 0.2% |
-| named | 1597 | 62.3% |
+| named | 1594 | 62.2% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (916 functions)
+  (919 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1597 functions)
+  citation yet (1594 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1602 (62.5%).**
+**Game logic remaining to port: 1599 (62.4%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -1004,7 +1004,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004728e0` | RendererFlagBit6Set |
 | `0x00472900` | DDiSceneEndHookRegister |
 | `0x00472920` | DDiSceneSampleHookRegister |
-| `0x00472940` | SceneRootObjectGet |
 | `0x00472950` | DDiSceneObjectAllocate |
 | `0x00472a40` | DDiSceneObjectDestroy |
 | `0x00472a50` | DDiSceneObjectDestroy |
@@ -1061,7 +1060,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004757f0` | TypedChildResourceScalarGet |
 | `0x00475830` | SceneObjectFirstNonKind6ChildGet |
 | `0x00475880` | SceneObjectOwnerLinkEnsure |
-| `0x00475900` | DDiSceneObjectArgumentsNormalize |
 | `0x004759f0` | DDiSceneObjectArrayGrow |
 | `0x00475a70` | SceneActionRecordActFrameScan |
 | `0x00475c00` | DDiSceneAnimationCallbacksSet |
@@ -1101,7 +1099,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00476ff0` | ResourceInterfaceCallSlot90 |
 | `0x00477010` | DDiSceneDrawBegin |
 | `0x00477220` | RenderResourceTrackAndRetain |
-| `0x00477240` | DDiSceneCurrentObjectSet |
 | `0x00477250` | ResourceInterfaceCallSlot40AndClearField14 |
 | `0x00477270` | ResourceInterfaceCallSlot88 |
 | `0x00477290` | CameraScreenCoordinateProject |

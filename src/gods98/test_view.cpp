@@ -652,6 +652,46 @@ int main(void)
               "the plane rides the voxel height for the second round");
     }
 
+    /* Scene-root hook band (2026-10-24) — FUN_00472940 / FUN_00475900. */
+    {
+        /* Root hook + read. */
+        char root[0x10];
+        memset(root, 0, sizeof root);
+        void* root_obj = root;
+        scene_root_install(NULL);
+        CHECK(scene_root_object_get() == NULL, "the unset root answers NULL");
+        scene_root_install(root);
+        CHECK(scene_root_object_get() == root && scene_root_peek() == root,
+              "the installed root rides the hook");
+
+        /* Normalize: obj slot rides through; the alt argument answers when
+         * given, else the root slot's first slot falls back. */
+        char alt[0x10];
+        memset(alt, 0, sizeof alt);
+        void* alt_obj = alt;
+        __builtin_memcpy(root, &root_obj, sizeof root_obj);
+        __builtin_memcpy(alt, &alt_obj, sizeof alt_obj);
+        void* obj = alt;
+        void* out_obj = NULL;
+        const void* out_alt = NULL;
+        scene_object_arguments_normalize((const void**)&obj, NULL, &out_obj,
+                                         &out_alt);
+        CHECK(out_obj == alt && out_alt == root,
+              "the missing alt falls back to the installed root slot");
+        const void* alt_slot = alt;
+        scene_object_arguments_normalize((const void**)&obj,
+                                         (const void**)&alt_slot, &out_obj,
+                                         &out_alt);
+        CHECK(out_obj == alt && out_alt == alt,
+              "the given alt rides through the dispatch pair");
+
+        /* Missing-root fallback answers NULL (documented deviation). */
+        scene_root_install(NULL);
+        scene_object_arguments_normalize((const void**)&obj, NULL, &out_obj,
+                                         &out_alt);
+        CHECK(out_alt == NULL, "the unset root answers NULL on the fallback");
+    }
+
     if (s_failures == 0) {
         printf("view_test: PASS\n");
         return 0;
