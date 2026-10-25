@@ -292,15 +292,18 @@ void   global_triple_copy_out(uint32_t* out);
 int engine_app_mode_get(const EngineContext* ctx);
 
 /* --- the grid-cell record buffer (2026-10-24; finding 463) ------------------
- * The entity-cell field grid: its own buffer of `width * height * 0x0c`
- * bytes (dimensions at the state block's +0x14/+0x18), stride-0x0c records.
- * The corpus keeps the buffer in DAT_005520e8 and the descriptor in
- * DAT_005520ec; neither word has a ported owner, so both land here as
- * module statics.
+ * The entity-cell field grid: its own buffer (dimensions at the state
+ * block's +0x14/+0x18) of cell records. The corpus keeps the buffer in
+ * DAT_005520e8 and the descriptor in DAT_005520ec; neither word has a
+ * ported owner, so both land here as module statics.
+ * Deviation (2026-10-25): a cell record widens its entity pointer slot —
+ * the port-layout image strides 0x10 as {entity slot +0x00, timer window
+ * +0x08, flag word +0x0c} where the corpus's 32-bit layout strides 0x0c
+ * as {pointer, timer, flags} (the widened-slot convention). The corpus's
+ * int multiply and masked zero count stay.
  * GridCellRecordBufferAllocate (FUN_004661c0): allocate from the state
- * block's dimensions and zero the word loop (the corpus's int multiply and
- * masked count, faithful). The descriptor lands even on an alloc failure —
- * the corpus stores it outside the buffer guard.
+ * block's dimensions and zero the word loop. The descriptor lands even
+ * on an alloc failure — the corpus stores it outside the buffer guard.
  * EntityFieldGridBufferRelease (FUN_00466210): free the current buffer and
  * clear the word (the descriptor word survives the corpus's release).
  * GridCellRecordBufferReplace (FUN_00466230): release, then allocate. */
@@ -309,6 +312,27 @@ void        entity_field_grid_buffer_release(void);               /* FUN_0046621
 void        grid_cell_record_buffer_replace(EngineState* block);  /* FUN_00466230 */
 void*       entity_field_grid_buffer_peek(void);
 EngineState* entity_field_grid_descriptor_peek(void);
+
+/* --- the field-grid cell window band (2026-10-25; see the band above) -----
+ * The corpus reads the grid as two unowned globals (the buffer word and
+ * the descriptor block); the port threads both through the statics the
+ * allocate band already models. Deviations: the guarded grid lookup
+ * (the corpus strides missing words blindly) and the widened entity
+ * slot (the corpus's cell is the 32-bit pointer view). */
+
+/* SetExpansionEntityAtGridCell (FUN_00466380): park the entity on the
+ * cell slot (re-reading order: pointer, flag raise, then the corpus's
+ * 0x42c80000 timer store — 100.0f). */
+void set_expansion_entity_at_grid_cell(int x, int y, void* entity);
+                                                /* FUN_00466380 */
+
+/* GridCellInvalidateAndClearFlags (FUN_00466750): raise the parked
+ * entity's +0x3e8 bit 0x800000 and clear its +0x3e0 bit 0x02000000 — the
+ * entity re-read from the slot before each window, as the corpus's
+ * aliasing reloads — then drop the cell's occupancy bit 0x100. A
+ * missing entity is skipped (deviation: blind stride). */
+void grid_cell_invalidate_and_clear_flags(int x, int y);
+                                                /* FUN_00466750 */
 
 /* --- global-state refresh leaf (2026-10-24; findings 392/334/329) ----------
  * GlobalStateLowByteClearAndRefresh (FUN_00435a20): clears the low byte of

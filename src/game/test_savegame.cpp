@@ -136,6 +136,90 @@ int main(void)
     }
     lvl->ptr_name = (void*)"Level01";
 
+    /* CheckpointBlobTaskProgressRecalculate (2026-10-25): the fold band
+     * over the blob's task windows. A private context keeps the blob
+     * pristine for the checks below. */
+    {
+        GameContext fc;
+        memset(&fc, 0, sizeof fc);
+        static LevelState flvl;
+        memset(&flvl, 0, sizeof flvl);
+        fc.level = &flvl;
+        CHECK(checkpoint_blob_task_progress_recalculate(NULL) == 0,
+              "the null context answers 0");
+        CHECK(checkpoint_blob_task_progress_recalculate(&fc) == 0,
+              "the missing blob answers 0");
+        checkpoint_blob_build(&fc);
+        CHECK(fc.checkpoint_blob != NULL, "the fold band built the blob");
+        char* blob = (char*)fc.checkpoint_blob;
+        float f = 0.0f;
+        int got = 0;
+        float gotf = 0.0f;
+        /* Fold shape: 100 / den * num, a zero denominator answers 100,
+         * and the clamp lands over the store. */
+        memset(blob, 0, SAVE_BLOB_SIZE);
+        f = 4.0f;
+        memcpy(blob + 0x1d1c, &f, sizeof f);
+        f = 1.0f;
+        memcpy(blob + 0x1d20, &f, sizeof f);
+        f = 0.0f;
+        memcpy(blob + 0x1f2c, &f, sizeof f);
+        f = 5.0f;
+        memcpy(blob + 0x1f30, &f, sizeof f);
+        f = 1.0f;
+        memcpy(blob + 0x213c, &f, sizeof f);
+        f = 250.0f;
+        memcpy(blob + 0x2140, &f, sizeof f);
+        got = checkpoint_blob_task_progress_recalculate(&fc);
+        memcpy(&gotf, blob + 0x1d24, sizeof gotf);
+        CHECK(got == 1 && gotf == 25.0f, "the fold divides through the den");
+        memcpy(&gotf, blob + 0x1f34, sizeof gotf);
+        CHECK(gotf == 100.0f, "a zero denominator answers 100");
+        memcpy(&gotf, blob + 0x2144, sizeof gotf);
+        CHECK(gotf == 100.0f, "the clamp lands over the fold");
+        memcpy(&gotf, blob + 0x2774, sizeof gotf);
+        CHECK(gotf == 100.0f, "the quiet folds still answer 100");
+        /* Count-up shape: rounds of +100 on the sum, the folded percent
+         * riding the carry, then the final fold plus the converted
+         * bonus word (+0x1c0, the corpus's Reward/Modifier). */
+        memset(blob, 0, SAVE_BLOB_SIZE);
+        f = 5.0f;
+        memcpy(blob + 0x1d1c, &f, sizeof f);
+        f = 1.0f;
+        memcpy(blob + 0x1d20, &f, sizeof f);
+        f = 2.0f;
+        memcpy(blob + 0x1d10, &f, sizeof f);
+        /* The bonus word is a raw dword the corpus converts to float. */
+        uint32_t bonus = 17u;
+        memcpy(blob + 0x1c0, &bonus, sizeof bonus);
+        checkpoint_blob_task_progress_recalculate(&fc);
+        memcpy(&gotf, blob + 0x2fac, sizeof gotf);
+        CHECK(gotf == 200.0f, "the count-up adds 100 a round");
+        memcpy(&gotf, blob + 0x2fb0, sizeof gotf);
+        CHECK(gotf == 40.0f, "the folded percent rides the carry");
+        memcpy(&gotf, blob + 0x2fb4, sizeof gotf);
+        CHECK(gotf == 37.0f, "the final fold adds the converted bonus");
+        /* Corpus shape: the 0x2d90 loop keeps the accumulators in
+         * registers and writes them back only at the end; a negative
+         * carry clamps to 0.0 through the final fold. */
+        memset(blob, 0, SAVE_BLOB_SIZE);
+        f = 2.0f;
+        memcpy(blob + 0x2d90, &f, sizeof f);
+        f = 150.0f;
+        memcpy(blob + 0x2da4, &f, sizeof f);
+        bonus = 17u; /* raw dword again — the corpus converts, not copies */
+        memcpy(blob + 0x1c0, &bonus, sizeof bonus);
+        checkpoint_blob_task_progress_recalculate(&fc);
+        memcpy(&gotf, blob + 0x2fac, sizeof gotf);
+        CHECK(gotf == 200.0f, "the register loop lands the sum once");
+        memcpy(&gotf, blob + 0x2fb0, sizeof gotf);
+        CHECK(gotf == 0.0f, "the negative carry clamps to zero");
+        memcpy(&gotf, blob + 0x2fb4, sizeof gotf);
+        CHECK(gotf == 17.0f, "the quiet final fold leaves the bonus alone");
+        checkpoint_blob_free(&fc);
+        CHECK(fc.checkpoint_blob == NULL, "the fold block freed its blob");
+    }
+
     /* Save record 2 with the blob, mark dirty, write slot 3.
      * The slot context must exist first (the corpus builds it from the
      * level tree; here the read-with-create path bootstraps it). */

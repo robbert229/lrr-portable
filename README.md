@@ -2363,6 +2363,28 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Field-grid + checkpoint fold band** (2026-10-25): three rows land in
+the entity-cell field grid and the checkpoint blob. `set_expansion_entity_at_grid_cell`
+(0x466380, engine.*) parks the entity on the cell slot, raises the
+occupancy bit 0x100, and stores the corpus's fixed 100.0 timer;
+`grid_cell_invalidate_and_clear_flags` (0x466750, engine.*) raises the
+parked entity's `+0x3e8` bit 0x800000, clears `+0x3e0` bit 0x02000000
+with the corpus's own mask (re-reading the entity from the slot before
+each window), then drops the cell's occupancy bit. `checkpoint_blob_task_progress_recalculate`
+(0x460950, savegame.*) folds the blob's eight stride-0x210 task windows
+as percent = 100 / den * num — a zero denominator answers 100 and the
+clamp lands over the store — then walks the count-up loops (each round
+adds 100 to the `+0x2fac` sum and the last folded percent to the
+`+0x2fb0` carry), the register-accumulator `0x2d90` loop, the clamp, and
+the final fold plus the float-converted bonus word. Deviations: the
+port-layout cell record widens the entity slot (stride 0x10 where the
+corpus strides 0x0c), the guarded grid lookup answers silently where
+the corpus strides missing words, and the fold band threads
+GameContext where the corpus uses its two globals. Tests pin the park,
+the mask, the fold shape, the zero-denominator answer, the register
+loop's one-store, and the negative-carry clamp; 34/36 (flic + frontend
+baseline). Ledger regenerates: 965 ported (+3).
+
 **Color/opacity window band** (2026-10-25): three rows land on the
 indexed-record window model. `render_object_color_vector_set` (0x483270,
 record.*) writes a clamped RGB triple into one of the four color windows

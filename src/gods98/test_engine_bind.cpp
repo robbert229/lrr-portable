@@ -203,6 +203,42 @@ int main(void)
         grid_cell_record_buffer_allocate(NULL); /* guarded */
     }
 
+    /* The field-grid cell window band (2026-10-25): the widened-record
+     * cell parks an entity and hands its flag windows over. */
+    {
+        EngineState st = {};
+        st.grid_w = 2;
+        st.grid_h = 1;
+        static unsigned char entity[0x3f0];
+        memset(entity, 0, sizeof entity);
+        /* Corpus mask 0xfdffffff clears bit 0x02000000 (bit 25), not
+         * 0x200000; the poked word carries both so the mask shows. */
+        uint32_t w = 0x02200000u;
+        memcpy(entity + 0x3e0, &w, sizeof w);
+        grid_cell_record_buffer_replace(&st);
+        set_expansion_entity_at_grid_cell(1, 0, entity);
+        const char* buf = (const char*)entity_field_grid_buffer_peek();
+        float timer = 0.0f;
+        memcpy(&timer, buf + 1 * 0x10 + 0x08, sizeof timer);
+        CHECK(timer == 100.0f, "the parked cell timer lands");
+        uint32_t flags = 0u;
+        memcpy(&flags, buf + 1 * 0x10 + 0x0c, sizeof flags);
+        CHECK((flags & 0x100u) != 0u, "the occupancy bit raises");
+        grid_cell_invalidate_and_clear_flags(1, 0);
+        uint32_t f3e8 = 0u;
+        uint32_t f3e0 = 0u;
+        memcpy(&f3e8, entity + 0x3e8, sizeof f3e8);
+        memcpy(&f3e0, entity + 0x3e0, sizeof f3e0);
+        CHECK((f3e8 & 0x800000u) != 0u && (f3e0 & 0x02000000u) == 0u
+                  && (f3e0 & 0x200000u) != 0u,
+              "the entity flag windows ride the invalidation");
+        memcpy(&flags, buf + 1 * 0x10 + 0x0c, sizeof flags);
+        CHECK((flags & 0x100u) == 0u, "the occupancy bit drops");
+        grid_cell_invalidate_and_clear_flags(0, 0); /* empty slot guarded */
+        entity_field_grid_buffer_release();
+        set_expansion_entity_at_grid_cell(0, 0, entity); /* guarded */
+    }
+
     /* GlobalStateLowByteClearAndRefresh (2026-10-24). */
     {
         char obj[0x20];
