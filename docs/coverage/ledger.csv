@@ -653,7 +653,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00426230,FUN_00426230,ported,GlobalTripleCopyOut,1,141
 00426250,FUN_00426250,named,UpdateRenderViewportState,0,487
 004262e0,FUN_004262e0,named,ObjectiveScoreTextOriginSet,0,344
-00426320,FUN_00426320,named,ObjectiveTaskTextOriginSet,0,344
+00426320,FUN_00426320,ported,ObjectiveTaskTextOriginSet,3,344
 00426360,FUN_00426360,named,GlobalStateFlagsBits6And9Set,0,297
 004263a0,FUN_004263a0,ported,GlobalStateFlagsBit7Set,1,170
 004263c0,FUN_004263c0,named,GlobalSubsystemStateReset,0,304
@@ -2134,7 +2134,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004850c0,FUN_004850c0,ported,IndexedWordTableLookup,1,123
 004850e0,FUN_004850e0,ported,ObjectField10Get,2,86
 004850f0,FUN_004850f0,named,TextBufferCreate,0,655
-00485160,FUN_00485160,named,TextOutputField82CBit2SetClear,0,235
+00485160,FUN_00485160,ported,TextOutputField82CBit2SetClear,3,235
 00485190,FUN_00485190,ported,TextBufferDestroy,2,122
 004851b0,FUN_004851b0,ported,FloatPairAtOffset4SetFromInts,1,160
 004851d0,FUN_004851d0,ported,FloatPairAtOffsetCSetFromUInts,1,167

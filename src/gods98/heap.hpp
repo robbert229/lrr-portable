@@ -89,6 +89,13 @@ void optional_resource_destroy(void* record);
  * dereferences blindly. */
 void text_buffer_destroy(void* record);
 
+/* TextOutputField82CBit2SetClear (FUN_00485160): the text-output record's
+ * +0x82c flag-word bit 2 set or clear. The corpus strides the record's
+ * dword word blindly; the port guards the record and folds through the
+ * widened model's dword window. */
+void text_output_field82c_bit2_set_clear(void* record, int set_bit);
+                                                /* FUN_00485160 */
+
 /* ObjectField38Release (FUN_00489d70): frees the allocation held in the
  * record's +0x38 slot while one is there. The corpus's slot is a 32-bit
  * dword; the port carries a host-width pointer (documented deviation). */

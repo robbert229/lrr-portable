@@ -693,6 +693,32 @@ int main(void)
         CHECK(out_alt == NULL, "the unset root answers NULL on the fallback");
     }
 
+    /* SceneNodePositionSet (2026-10-24) — FUN_00410020. The node's widened
+     * slot rides the inner object; +0xc flags the position valid. */
+    {
+        char inner[0x18];
+        memset(inner, 0, sizeof inner);
+        void* inner_ptr = inner;
+        char node[0x10];
+        memset(node, 0, sizeof node);
+        __builtin_memcpy(node, &inner_ptr, sizeof inner_ptr);
+        const float pos[3] = { 4.0f, 5.0f, 6.0f };
+        scene_node_position_set(node, pos);
+        uint32_t flag = 0;
+        __builtin_memcpy(&flag, node + 0x0c, sizeof flag);
+        float x = 0.0f, y = 0.0f, z = 0.0f;
+        __builtin_memcpy(&x, inner + 0x0c, sizeof x);
+        __builtin_memcpy(&y, inner + 0x10, sizeof y);
+        __builtin_memcpy(&z, inner + 0x14, sizeof z);
+        CHECK(flag == 1u && x == 4.0f && y == 5.0f && z == 6.0f,
+              "view: the position stores and flags valid");
+        memset(inner, 0, sizeof inner);
+        memset(node, 0, sizeof node);
+        scene_node_position_set(node, pos); /* null handle: guarded */
+        scene_node_position_set(NULL, pos); /* guarded */
+        scene_node_position_set(node, NULL); /* guarded */
+    }
+
     if (s_failures == 0) {
         printf("view_test: PASS\n");
         return 0;

@@ -115,6 +115,18 @@ void text_buffer_destroy(void* record)
     engine_heap_free(record);
 }
 
+/* TextOutputField82CBit2SetClear (FUN_00485160) — see heap.hpp. */
+void text_output_field82c_bit2_set_clear(void* record, int set_bit)
+{
+    if (record == NULL) {
+        return; /* deviation: the corpus strides the record blindly */
+    }
+    uint32_t word = 0;
+    __builtin_memcpy(&word, (char*)record + 0x82c, sizeof word);
+    word = (set_bit != 0) ? (word | 4u) : (word & ~4u);
+    __builtin_memcpy((char*)record + 0x82c, &word, sizeof word);
+}
+
 /* ObjectField38Release (FUN_00489d70) — see heap.hpp. */
 void object_field_38_release(void* record)
 {

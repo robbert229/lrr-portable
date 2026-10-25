@@ -238,6 +238,16 @@ void   global_scroll_guard_set(int value);
 int    global_scroll_guard_peek(void); /* port-side hook: the corpus's reader
                                         * is ScrollScaleSetAndClamp @ 0x425ce0 */
 
+/* ObjectiveTaskTextOriginSet (FUN_00426320): the objective/task UI origin
+ * pair. A non-null origin pair stores into module storage (the corpus's
+ * overlap-flagged float pair is write-only outside this setter, so the
+ * unowned-global convention applies) and raises the debug word's bit
+ * 0x8000; a null argument clears that bit. Deviation: the corpus threads
+ * the cheat word as a global; the port rides the bound EngineContext. */
+void objective_task_text_origin_set(EngineContext* ctx, const float* pair);
+                                                /* FUN_00426320 */
+void objective_task_text_origin_peek(float out[2]); /* port hook */
+
 /* ScrollScaleSetAndClamp (FUN_00425ce0, findings 437/398): installs a new
  * scroll-scale word when it does not run the stored scale backwards
  * (stored <= new) or the guard word (DAT_004de548) is clear. The scale word

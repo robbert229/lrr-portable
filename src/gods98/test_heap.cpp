@@ -144,6 +144,23 @@ int main(void)
         }
     }
 
+    /* TextOutputField82CBit2SetClear (2026-10-24): the +0x82c flag word. */
+    {
+        char rec[0x830];
+        memset(rec, 0, sizeof rec);
+        uint32_t word = 0;
+        text_output_field82c_bit2_set_clear(rec, 1);
+        __builtin_memcpy(&word, rec + 0x82c, sizeof word);
+        CHECK(word == 4u, "the flag word sets bit 2");
+        text_output_field82c_bit2_set_clear(rec, 1); /* idempotent */
+        __builtin_memcpy(&word, rec + 0x82c, sizeof word);
+        CHECK(word == 4u, "the second set leaves the word alone");
+        text_output_field82c_bit2_set_clear(rec, 0);
+        __builtin_memcpy(&word, rec + 0x82c, sizeof word);
+        CHECK(word == 0u, "the flag-off call clears bit 2");
+        text_output_field82c_bit2_set_clear(NULL, 1); /* guarded */
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "heap_test: %d failure(s)\n", s_failures);
         return 1;
