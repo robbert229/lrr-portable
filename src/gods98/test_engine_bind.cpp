@@ -12,6 +12,7 @@
 #include "engine.hpp"
 #include "view.hpp"
 #include "record.hpp"
+#include "crt.hpp"
 
 static int s_failures = 0;
 
@@ -276,6 +277,34 @@ int main(void)
         CHECK(camera_focus_scroll_scale_commit(&ec, NULL) == 0
                   && global_scroll_guard_peek() == 3,
               "the null record answers zero (deviation)");
+    }
+
+    /* PanelSelectionHighlightToggle (2026-10-24): switch + timer + flag. */
+    {
+        EngineContext ec = {};
+        ec.debug = 0u;
+        ec.exit_timer = 0.0f;
+        static char block[0x8c];
+        memset(block, 0, sizeof block);
+        uint32_t* w = (uint32_t*)(block + 2 * 0x2c + 0x28);
+        *w = 0x20u; /* the enable gate for panel 6, item 2 */
+        panel_draw_records_set(6, block);
+
+        panel_selection_highlight_toggle(&ec, 1);
+        CHECK((ec.debug & 1u) == 1u && ec.exit_timer == 250.0f && *w == 0x28u,
+              "the switch raises the flag, arms the timer, sets bit 8");
+        panel_selection_highlight_toggle(&ec, 0);
+        CHECK((ec.debug & 1u) == 0u && ec.exit_timer == 0.0f && *w == 0x20u,
+              "the switch off drops all three");
+        ec.exit_timer = 100.0f;
+        panel_selection_highlight_toggle(&ec, 1);
+        CHECK(ec.exit_timer == 100.0f, "the live timer is not re-armed");
+
+        ec.debug = 2u;
+        panel_selection_highlight_toggle(NULL, 1); /* deviation: wordless */
+        CHECK(ec.debug == 2u && *w == 0x28u, "the null context still fires the panel write");
+        panel_selection_highlight_toggle(NULL, 0);
+        panel_draw_records_set(6, NULL);
     }
 
     if (s_failures == 0) {

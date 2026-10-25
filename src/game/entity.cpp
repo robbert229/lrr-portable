@@ -853,3 +853,47 @@ int entity_type_and_state_flag_predicate(const EntitySlot* e)
     }
     return ((~entity_state_flags_get(e)) >> 29) & 1u; /* ~flags >> 0x1d & 1 */
 }
+
+/* ObjectFilterMatchesActionTarget (FUN_00404f50) — see entity.hpp. The
+ * identity pair (+0x20/+0x24/+0x28) stays dword; only the +0x10 entity
+ * handle widens for the host pointer it dereferences. */
+static uint32_t filt_dword(const void* rec, size_t off)
+{
+    uint32_t v = 0;
+    if (rec != NULL) {
+        __builtin_memcpy(&v, (const char*)rec + off, sizeof v);
+    }
+    return v;
+}
+
+int object_filter_matches_action_target(const void* filter_rec,
+                                        const void* target_rec)
+{
+    if (filter_rec == NULL || target_rec == NULL) {
+        return 0; /* deviation: the corpus strides both records blindly */
+    }
+    const uint32_t type = filt_dword(filter_rec, 0x00);
+    if (type != 5u) {
+        if (type != 7u && type != 9u && type != 0xfu) {
+            return 0;
+        }
+        uintptr_t handle = 0;
+        __builtin_memcpy(&handle, (const char*)filter_rec + 0x10,
+                         sizeof handle);
+        if (handle != 0
+            && entity_shared_eligibility_check((const EntitySlot*)handle, 0)
+                   == 0) {
+            return 0;
+        }
+    }
+    if (filt_dword(filter_rec, 0x20) != 0u) {
+        const uint32_t selector = filt_dword(filter_rec, 0x24);
+        if (filt_dword(target_rec, 0x00) != filt_dword(filter_rec, 0x20)
+            || (selector != 0xFFFFFFFFu
+                && filt_dword(target_rec, 0x04) != selector)
+            || filt_dword(target_rec, 0x08) != filt_dword(filter_rec, 0x28)) {
+            return 0;
+        }
+    }
+    return 1;
+}

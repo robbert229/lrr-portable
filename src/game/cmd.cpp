@@ -2055,3 +2055,24 @@ void object_attached_record_allocate(EntitySlot* e)
         e->cmd_head = rec; /* corpus store at entity +0x2f0 */
     }
 }
+
+/* PendingRecordCopyToEntityAndFlag (FUN_00406400) — see cmd.hpp. The corpus
+ * copies the 26-dword window, restores its free-list self-link at +0x19
+ * (the port keeps that bookkeeping in `next` during pooling, so a fresh
+ * alloc is clean), flags +0x17 |= 0x200 and zeroes +0x18. */
+void* cmd_pending_record_copy(const void* rec)
+{
+    if (rec == NULL) {
+        return NULL; /* deviation: the corpus strides the record blindly */
+    }
+    const CmdRec* src = cas_rec(rec);
+    CmdRec* dst = (CmdRec*)cmd_alloc(src->type);
+    if (dst == NULL) {
+        return NULL; /* deviation: the corpus strides the allocation blindly */
+    }
+    *dst = *src;
+    dst->next = NULL;        /* corpus +0x18 = 0 */
+    dst->global_next = NULL; /* port-only bookkeeping: unattached */
+    dst->state |= 0x200u;    /* corpus +0x17 |= 0x200 */
+    return dst;
+}

@@ -6,6 +6,8 @@
 #include "tickers.hpp"
 #include "view.hpp"
 #include "record.hpp"
+#include "crt.hpp"
+#include "sound.hpp"
 #include "heap.hpp"
 
 /* Frame tick — corpus EngineTick @ 0x4232e0. The numbered structure below
@@ -382,4 +384,25 @@ int camera_focus_scroll_scale_commit(const EngineContext* ctx,
     scroll_scale_set_and_clamp((float)focus * 0.01f);
     global_scroll_guard_set((int)guard);
     return 0;
+}
+
+/* PanelSelectionHighlightToggle (FUN_00435aa0) — see engine.hpp. */
+void panel_selection_highlight_toggle(EngineContext* ctx, int on)
+{
+    if (on != 0) {
+        if (ctx != NULL) {
+            ctx->debug |= 1u;
+            if (ctx->exit_timer <= 0.0f) {
+                sound_alias_play(0x19, 0);
+                ctx->exit_timer = 250.0f;
+            }
+        }
+        panel_item_flag8_set_if_enabled(6, 2, 1);
+    } else {
+        if (ctx != NULL) {
+            ctx->debug &= ~1u;
+            ctx->exit_timer = 0.0f;
+        }
+        panel_item_flag8_set_if_enabled(6, 2, 0);
+    }
 }

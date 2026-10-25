@@ -1044,6 +1044,58 @@ int main(int argc, char** argv)
               "the null entity answers zero");
     }
 
+    /* ObjectFilterMatchesActionTarget (2026-10-24): kinds + identity. */
+    {
+        uint32_t filt[12];
+        uint32_t targ[4];
+        memset(filt, 0, sizeof filt);
+        memset(targ, 0, sizeof targ);
+
+        filt[0] = 3u;
+        CHECK(object_filter_matches_action_target(filt, targ) == 0,
+              "an off-list kind answers zero");
+        filt[0] = 5u;
+        CHECK(object_filter_matches_action_target(filt, targ) == 1,
+              "the bare kind-5 matches");
+        filt[8] = 0x1111u; /* +0x20 name target */
+        CHECK(object_filter_matches_action_target(filt, targ) == 0,
+              "a name pair needs the target word");
+        targ[0] = 0x1111u;
+        CHECK(object_filter_matches_action_target(filt, targ) == 1,
+              "the name word matches through");
+        filt[10] = 0x77u; /* +0x28 companion */
+        CHECK(object_filter_matches_action_target(filt, targ) == 0,
+              "the companion word must agree too");
+        targ[2] = 0x77u;
+        CHECK(object_filter_matches_action_target(filt, targ) == 1,
+              "the full pair matches");
+        filt[9] = 5u; /* +0x24 selector */
+        CHECK(object_filter_matches_action_target(filt, targ) == 0,
+              "a set selector gates word 1");
+        targ[1] = 5u;
+        CHECK(object_filter_matches_action_target(filt, targ) == 1,
+              "the selector agreement lands");
+
+        static EntitySlot eslot;
+        memset(&eslot, 0, sizeof eslot);
+        eslot.flags_3e8 = 0x20000000u;
+        filt[0] = 7u;
+        uintptr_t handle = (uintptr_t)&eslot;
+        memcpy((char*)filt + 0x10, &handle, sizeof handle);
+        CHECK(object_filter_matches_action_target(filt, targ) == 1,
+              "the eligible handle lets kind 7 through");
+        eslot.flags_3e8 = 0u;
+        CHECK(object_filter_matches_action_target(filt, targ) == 0,
+              "the ineligible handle blocks kind 7");
+        void* zero_handle = NULL;
+        memcpy((char*)filt + 0x10, &zero_handle, sizeof zero_handle);
+        CHECK(object_filter_matches_action_target(filt, targ) == 1,
+              "the handleless kind 7 skips the check (quirk)");
+        CHECK(object_filter_matches_action_target(NULL, targ) == 0
+                  && object_filter_matches_action_target(filt, NULL) == 0,
+              "the null records answer zero");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "entity_test: %d failure(s)\n", s_failures);
         return 1;

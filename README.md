@@ -2363,6 +2363,21 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Panel highlight switch, action-target filter + pending record copy**
+(findings 402/318/535/306):
+`engine.*` ports `panel_selection_highlight_toggle` (0x435aa0 — the highlight
+switch: ON raises the debug word's bit 0, arms the 250-tick exit timer and
+kicks the alias-0x19 cue only when the timer was spent, and sets the panel-6
+item-2 flag through the gated writer; OFF drops all three), `entity.*` ports
+`object_filter_matches_action_target` (0x404f50 — kind 5 matches outright,
+7/9/0xF gate the referenced handle through the shared eligibility check, and
+the name pair +0x20/+0x24/-1-sentinel/+0x28 must agree with the target
+record's identity words), and `cmd.*` ports `cmd_pending_record_copy`
+(0x406400 — the same-type fresh allocation with the field window copied, the
+chain link cleared, and the pending bit 0x200 raised; the corpus name's
+"to entity" half never appears in its body). `engine_bind_test`,
+`entity_test` and `cmd_test` pin the switch, gates, and copy shapes.
+
 **Record factories, cardinal neighbors + a late citation** (findings 305/397/448/408):
 `record.*` ports `bounded_float_record_create` (0x410b90 — the (min, max)
 open-interval gate, kind + bounds + payload in the port record window) and

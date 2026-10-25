@@ -116,10 +116,10 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00404fc0,FUN_00404fc0,named,PlaceCommandEligibilityCheck,0,9812
 00405950,FUN_00405950,named,PendingCommandTimerFireScan,0,3682
 00405c10,FUN_00405c10,named,PendingCommandEntityAssignmentTick,0,10018
-00406360,FUN_00406360,ported,EntityRecordAttachAndRelink,3,660
-004063e0,FUN_004063e0,ported,PendingRecordEntityReferenceClear,3,235
+00406360,FUN_00406360,named,EntityRecordAttachAndRelink,0,660
+004063e0,FUN_004063e0,named,PendingRecordEntityReferenceClear,0,235
 00406400,FUN_00406400,ported,PendingRecordCopyToEntityAndFlag,3,446
-00406440,FUN_00406440,ported,CmdAlloc,3,509
+00406440,FUN_00406440,ported,CmdAlloc,1,509
 00406480,FUN_00406480,ported,CmdFree,1,316
 004064c0,FUN_004064c0,ported,CmdPoolGrow,1,640
 00406540,FUN_00406540,named,EntityPoolCallbackSearch,0,823

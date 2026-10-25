@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 880 | 34.3% |
+| ported | 883 | 34.4% |
 | anchored | 4 | 0.2% |
-| named | 1633 | 63.7% |
+| named | 1630 | 63.6% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (880 functions)
+  (883 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1633 functions)
+  citation yet (1630 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1638 (63.9%).**
+**Game logic remaining to port: 1635 (63.8%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -77,6 +77,8 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00404fc0` | PlaceCommandEligibilityCheck |
 | `0x00405950` | PendingCommandTimerFireScan |
 | `0x00405c10` | PendingCommandEntityAssignmentTick |
+| `0x00406360` | EntityRecordAttachAndRelink |
+| `0x004063e0` | PendingRecordEntityReferenceClear |
 | `0x00406540` | EntityPoolCallbackSearch |
 | `0x004065d0` | GlobalDwordGet |
 | `0x004065e0` | RenderSurfaceSecondaryGet |
@@ -464,7 +466,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00435230` | RandomVariantCellScatter |
 | `0x00435550` | GlobalStateZeroTransitionDetect |
 | `0x004355c0` | MenuOptionPanelTextureUpdate |
-| `0x00435aa0` | PanelSelectionHighlightToggle |
 | `0x00435b20` | SceneObjectChainRecordCreate |
 | `0x00435dc8` | CameraViewContextClose |
 | `0x00435e35` | ModelTransformCopyToSceneNode |
