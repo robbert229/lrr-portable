@@ -413,7 +413,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00414010,FUN_00414010,named,LoadItemStrings,0,565
 00414070,FUN_00414070,ported,ListAlloc,3,560
 004140c0,FUN_004140c0,ported,MenuBuild,1,10973
-00414c90,FUN_00414c90,named,MenuListFindName,0,416
+00414c90,FUN_00414c90,ported,MenuListFindName,3,416
 00414ce0,FUN_00414ce0,ported,AvisEnabled,4,269
 00414d30,FUN_00414d30,ported,BrightnessSet,1,371
 00414de0,FUN_00414de0,named,GameSpeedSelect,0,80
@@ -2453,7 +2453,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004976d0,FUN_004976d0,named,DbcsAwareBoundedStringCopy,0,1445
 00497770,FUN_00497770,named,CrtFpuControlWordUpdate,0,182
 004977b0,FUN_004977b0,named,CrtFpuControlWordUpdateMask,0,114
-004977d0,FUN_004977d0,named,CrtControlFlagsTranslate,0,876
+004977d0,FUN_004977d0,ported,CrtControlFlagsTranslate,3,876
 00497870,FUN_00497870,ported,CrtNoOpStubVariant,2,41
 00497900,FUN_00497900,ported,UInt96HasNoBitsAtOrAbove,4,603
 00497970,FUN_00497970,ported,UInt96IncrementAtBit,4,712
@@ -2475,7 +2475,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00498350,FUN_00498350,named,NumberStringScanParse,0,9648
 00498ae0,FUN_00498ae0,ported,CrtStreamBufferAllocate,3,430
 00498b40,FUN_00498b40,ported,CrtFileDescriptorFlag40Get,3,180
-00498b70,FUN_00498b70,named,CrtWideCharToMultibyte,0,683
+00498b70,FUN_00498b70,ported,CrtWideCharToMultibyte,3,683
 00498bf0,__aulldiv,runtime-import,__aulldiv,0,1246
 00498c60,__aullrem,runtime-import,__aullrem,0,1468
 00498ce0,FUN_00498ce0,named,CrtScanfNumericConversionAssign,0,1148
@@ -2509,7 +2509,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0049a800,FUN_0049a800,named,ExtendedFloatPowerOfTenScale,0,1079
 0049a890,FUN_0049a890,named,Win32FileDescriptorResize,0,1927
 0049aa10,FUN_0049aa10,named,CrtSignalHandlerDispatch,0,1709
-0049ab90,FUN_0049ab90,named,CrtSignalHandlerRecordFind,0,531
+0049ab90,FUN_0049ab90,ported,CrtSignalHandlerRecordFind,3,531
 0049abe0,FUN_0049abe0,named,CrtWideCharToMultiByteCompat,0,2829
 0049add0,FUN_0049add0,ported,BoundedWideStringLengthIncludingNull,2,387
 0049ae10,FUN_0049ae10,named,CrtEnvironmentVariableLookup,0,1233

@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 1079 | 42.1% |
+| ported | 1083 | 42.2% |
 | anchored | 4 | 0.2% |
-| named | 1436 | 56.0% |
+| named | 1432 | 55.9% |
 | runtime-import | 44 | 1.7% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (1079 functions)
+  (1083 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1436 functions)
+  citation yet (1432 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (44 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1441 (56.2%).**
+**Game logic remaining to port: 1437 (56.0%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -259,7 +259,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00413f30` | FilenameExtensionClassify |
 | `0x00413f90` | MenuItemRecordAlloc |
 | `0x00414010` | LoadItemStrings |
-| `0x00414c90` | MenuListFindName |
 | `0x00414de0` | GameSpeedSelect |
 | `0x00414df0` | VolumeSet |
 | `0x00414e10` | OptionMusicDefault |
@@ -1416,7 +1415,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004976d0` | DbcsAwareBoundedStringCopy |
 | `0x00497770` | CrtFpuControlWordUpdate |
 | `0x004977b0` | CrtFpuControlWordUpdateMask |
-| `0x004977d0` | CrtControlFlagsTranslate |
 | `0x00497ad0` | UInt96ShiftRight |
 | `0x00497b90` | CrtExtended80ToBinaryFloat |
 | `0x00497d60` | CrtExtendedFloatConvertFormatA |
@@ -1427,7 +1425,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00497ec0` | CrtLocaleDataGetOrInitialize |
 | `0x00497f40` | DoubleToExtended80 |
 | `0x00498350` | NumberStringScanParse |
-| `0x00498b70` | CrtWideCharToMultibyte |
 | `0x00498ce0` | CrtScanfNumericConversionAssign |
 | `0x00498e00` | CrtMultibyteToWideChar |
 | `0x00498f00` | CrtCharacterClassFlag8Check |
@@ -1454,7 +1451,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0049a800` | ExtendedFloatPowerOfTenScale |
 | `0x0049a890` | Win32FileDescriptorResize |
 | `0x0049aa10` | CrtSignalHandlerDispatch |
-| `0x0049ab90` | CrtSignalHandlerRecordFind |
 | `0x0049abe0` | CrtWideCharToMultiByteCompat |
 | `0x0049ae10` | CrtEnvironmentVariableLookup |
 | `0x0049aea0` | CrtFileDescriptorFlag80SetOrClear |

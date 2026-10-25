@@ -2363,6 +2363,26 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**CRT control-flags/signal leaves + menu-list find** (2026-10-25): four
+frontier rows land across `crt.*` and `frontend.*`. `crt_control_flags_translate`
+(0x4977d0) folds the file flags: bits 0/2/3/4/5 cross over to 0x10/8/4/2/1,
+bit 1 pairs back as 0x80000, the bits 10/11 pair folds 0x100/0x200/0x300
+(the pair-clear stays), the bits 8/9 pair answers 0x20000 when clear and
+0x10000 on the lone 0x200, bit 12 answers 0x40000.
+`crt_wide_char_to_multibyte` (0x498b70) lands the pinned-C-locale half of the
+corpus's code-page conversion: chars below 0x100 write one byte and answer 1;
+anything else stores the EILSEQ-shaped 0x2a into the modeled math-error slot
+and answers -1 (the code-page branch rides the recorded locale-map chain).
+`crt_signal_handler_record_find` (0x49ab90) hunts the corpus's signal records
+(id at entry+4, count-bounded table); the writers sit in the unported CRT
+startup band, so the records ride own storage behind install/peek hooks with
+the LP64 stride widened. `menu_list_find_name` (0x414c90) walks the corpus's
+list header {array @+0, count @+4} — deviation: explicit arguments (no ported
+owner for the header) — answering the first non-null entry whose name
+case-fold-equals the target; misses and non-positive counts answer -1.
+`crt_test` and `frontend_test` pin the folds, the failure half, the bounded
+hunt, and the name walk.
+
 **String/CRT helper leaves** (2026-10-25): four frontier rows land across
 `string.*`, `model.*` and `crt.*`. `string_case_substring_find` (0x48c040)
 walks the corpus's `__strnicmp` shape — the same bounded ASCII fold compare

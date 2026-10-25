@@ -699,4 +699,30 @@ void* crt_file_descriptor_flag_block_peek(int index);
 void  crt_file_descriptor_count_set(int count);
 int   crt_file_descriptor_count_peek(void);
 
+/* CrtControlFlagsTranslate (FUN_004977d0): the file-flag fold — bits
+ * 0/2/3/4/5 cross to 0x10/8/4/2/1, bit 1 pairs back as 0x80000, the bits
+ * 10/11 pair folds 0x100/0x200/0x300 (zero stays), the bits 8/9 pair
+ * answers 0x20000 when clear and 0x10000 when only 0x200, bit 12 answers
+ * 0x40000. Pure bitwork. CrtWideCharToMultibyte (FUN_00498b70): one wide
+ * char through the pinned C-locale half (the code-page branch rides the
+ * unported locale-map chain — deviation); chars below 0x100 write one
+ * byte and answer 1, anything else stores 0x2a in the math-error slot
+ * and answers -1. A null destination answers 0 (pinned). */
+uint32_t crt_control_flags_translate(uint32_t flags); /* FUN_004977d0 */
+int crt_wide_char_to_multibyte(char* dest, uint32_t wide);
+                                                       /* FUN_00498b70 */
+
+/* SignalHandlerRecordFind (FUN_0049ab90): finds the first record whose id
+ * matches, answering the record pointer (NULL on a miss or an empty
+ * table). The corpus's 12-byte records ride the unported CRT startup
+ * band's table: own storage behind the install/peek hooks below (the
+ * unowned-global convention); LP64 widens the record stride to 16. */
+void* crt_signal_handler_record_find(int signal);  /* FUN_0049ab90 */
+void crt_signal_record_install(int index, uint32_t word0, int signal,
+                               const void* handler);          /* hook */
+void crt_signal_record_peek(int index, uint32_t* out_word0, int* out_id,
+                            const void** out_handler);        /* hook */
+void crt_signal_record_count_set(int count);                  /* hook */
+int  crt_signal_record_count_peek(void);                      /* hook */
+
 #endif /* LEGORRR_GODS98_CRT_HPP */

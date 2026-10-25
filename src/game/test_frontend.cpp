@@ -1850,6 +1850,33 @@ int main(int argc, char** argv)
         sav_visited_entry_set(1, 0, NULL, 0u);
     }
 
+    /* MenuListFindName (2026-10-25): the folded list walk, the null-entry
+     * stride, the count gate, and the guards. */
+    {
+        struct named { const char* name; int extra; };
+        static named alpha = { "Alpha", 1 };
+        static named bravo = { "Bravo", 2 };
+        static named charlie = { "Charlie", 3 };
+        void* list[4] = { &alpha, NULL, &bravo, &charlie };
+        CHECK(menu_list_find_name(list, 4, "alpha") == 0,
+              "the fold lands the first entry");
+        CHECK(menu_list_find_name(list, 4, "ALPHA") == 0,
+              "the fold reads case-blind");
+        CHECK(menu_list_find_name(list, 4, "Bravo") == 2,
+              "the null entry strides on");
+        CHECK(menu_list_find_name(list, 4, "CHARLIE") == 3,
+              "the last entry answers last");
+        CHECK(menu_list_find_name(list, 4, "delta") == -1,
+              "the miss answers -1");
+        CHECK(menu_list_find_name(list, 1, "Bravo") == -1,
+              "the count bounds the walk");
+        CHECK(menu_list_find_name(list, 0, "Alpha") == -1
+                  && menu_list_find_name(list, -1, "Alpha") == -1,
+              "the count gate answers -1");
+        CHECK(menu_list_find_name(NULL, 4, "Alpha") == -1,
+              "the null array is guarded (dev)");
+    }
+
     if (s_failures == 0) {
         printf("frontend: all tests passed\n");
         return 0;
