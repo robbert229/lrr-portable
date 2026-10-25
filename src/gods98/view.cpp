@@ -268,6 +268,131 @@ int point_in_polygon_2d(const float point[2], const float* verts,
     return crossings & 1;
 }
 
+/* ---- matrix/ray math leaves (2026-10-24) ---------------------------------
+ * The x87 float10 deviation for the rotation setters is documented in the
+ * header; every other body is byte-equivalent single-precision arithmetic.
+ */
+
+/* PointAlongRay (FUN_00479ab0): out = origin + t · dir. The corpus reads
+ * dir[1]/dir[2] into registers before the stores; the x term is t*dir +
+ * origin while y/z add to the origin first — component order mirrored. */
+void point_along_ray(float* out, const float* origin, const float* dir,
+                     float t)
+{
+    const float dy = dir[1];
+    const float dz = dir[2];
+    out[0] = t * dir[0] + origin[0];
+    out[1] = origin[1] + dy * t;
+    out[2] = origin[2] + dz * t;
+}
+
+/* ViewRayIntersectionTest (FUN_004798e0): normalizes both direction
+ * vectors (the corpus sums each normalization as z²+y²+x², its SQRT
+ * accumulator order), runs the ray (p, dir_a) against the plane through q
+ * with normal dir_b, and advances along dir_a when they meet. */
+int view_ray_intersection_test(float* out, const float* p,
+                               const float* dir_a, const float* q,
+                               const float* dir_b)
+{
+    const float s_a = 1.0f / sqrtf(dir_a[2] * dir_a[2] + dir_a[1] * dir_a[1]
+                                   + dir_a[0] * dir_a[0]);
+    const float s_b = 1.0f / sqrtf(dir_b[2] * dir_b[2] + dir_b[1] * dir_b[1]
+                                   + dir_b[0] * dir_b[0]);
+    const float n_a[3] = { s_a * dir_a[0], s_a * dir_a[1], s_a * dir_a[2] };
+    const float n_b[3] = { s_b * dir_b[0], s_b * dir_b[1], s_b * dir_b[2] };
+    float t;
+    if (ray_plane_intersection_parameter(&t, p, n_a, q, n_b) != 0) {
+        point_along_ray(out, p, n_a, t);
+        return 1;
+    }
+    return 0;
+}
+
+/* Matrix4SetIdentity (FUN_00479e70): row loop, column loop, store 1 when
+ * the indices meet (the corpus's dword-0x3f800000 form). */
+void matrix4_set_identity(float* out)
+{
+    for (int row = 0; row < 4; ++row) {
+        for (int col = 0; col < 4; ++col) {
+            out[4 * row + col] = (row == col) ? 1.0f : 0.0f;
+        }
+    }
+}
+
+/* MatrixIdentityAndTranslationSet (FUN_00479e40): identity, then the
+ * translation triad at byte offsets +0x30/+0x34/+0x38 = row 3. */
+void matrix4_identity_translation_set(float* out, const float* translation)
+{
+    matrix4_set_identity(out);
+    out[12] = translation[0];
+    out[13] = translation[1];
+    out[14] = translation[2];
+}
+
+/* Matrix4Copy (FUN_00479eb0): the 16 dword copies. */
+void matrix4_copy(float* out, const float* src)
+{
+    for (int i = 0; i < 16; ++i) {
+        out[i] = src[i];
+    }
+}
+
+/* Matrix4SetRotationX (FUN_00479d50; the reference-name table also calls
+ * this Z, alongside FUN_00479df0): identity, then the rows 1–2 block with
+ * the corpus's signs — m[5]=c, m[6]=−s, m[9]=s, m[10]=c. */
+void matrix4_set_rotation_x(float* out, float angle)
+{
+    const float c = (float)cos(angle);
+    const float s = (float)sin(angle);
+    matrix4_set_identity(out);
+    out[5] = c;
+    out[6] = -s;
+    out[9] = s;
+    out[10] = c;
+}
+
+/* Matrix4SetRotationY (FUN_00479da0): identity, then m[0]=c, m[2]=s,
+ * m[8]=−s, m[10]=c. */
+void matrix4_set_rotation_y(float* out, float angle)
+{
+    const float c = (float)cos(angle);
+    const float s = (float)sin(angle);
+    matrix4_set_identity(out);
+    out[0] = c;
+    out[2] = s;
+    out[8] = -s;
+    out[10] = c;
+}
+
+/* Matrix4SetRotationZ (FUN_00479df0): identity, then m[0]=c, m[1]=−s,
+ * m[4]=s, m[5]=c. */
+void matrix4_set_rotation_z(float* out, float angle)
+{
+    const float c = (float)cos(angle);
+    const float s = (float)sin(angle);
+    matrix4_set_identity(out);
+    out[0] = c;
+    out[1] = -s;
+    out[4] = s;
+    out[5] = c;
+}
+
+/* BuildPerspectiveProjectionMatrix (FUN_0040bd60): zero the matrix, raise
+ * m[10]/m[15], then the three quotients — the corpus's m[1] multiplies
+ * p5/p4 by p4/p1, not p5/p1. */
+void perspective_projection_matrix_set(float* out, float p1, float p2,
+                                       float p3, float p4, float p5)
+{
+    for (int i = 0; i < 16; ++i) {
+        out[i] = 0.0f;
+    }
+    out[15] = 1.0f;
+    out[10] = 1.0f;
+    out[0] = p4 / p1;
+    out[5] = p3 / p2;
+    out[1] = (p5 / p4) * (p4 / p1);
+}
+
 /* ---- camera-handle primitives (record-backed) --------------------------- */
 
 void cam_offset(CameraHandle* c, float x, float y, float z)

@@ -170,6 +170,56 @@ void matrix4_multiply(float* out, const float* right, const float* left);
 int point_in_polygon_2d(const float point[2], const float* verts,
                         const float* next, int count);
 
+/* --- matrix/ray math leaves (2026-10-24) ----------------------------------
+ * Pure single-precision arithmetic over row-major float[16] storage; no
+ * corpus state. The corpus rotation setters evaluate x87 `fcos`/`fsin` on
+ * the angle promoted to extended precision; the port evaluates cos/sin in
+ * double and rounds each result into the float cell — the documented x87
+ * deviation (cf. x87_round_to_integral), which the float store hides at
+ * nearly every angle. */
+
+/* out = origin + t · dir, corpus component order (FUN_00479ab0). */
+void point_along_ray(float* out, const float* origin, const float* dir,
+                     float t);
+
+/* ViewRayIntersectionTest (FUN_004798e0): normalizes both directions,
+ * intersects ray (p, normalized dir_a) with the plane through q with the
+ * normalized dir_b as normal (through ray_plane_intersection_parameter),
+ * and writes out = p + t · normalized dir_a, answering 1; parallel rays
+ * answer 0 with `out` untouched. */
+int view_ray_intersection_test(float* out, const float* p,
+                               const float* dir_a, const float* q,
+                               const float* dir_b);
+
+/* Matrix4SetIdentity (FUN_00479e70): 1 on the diagonal, 0 elsewhere. */
+void matrix4_set_identity(float* out);
+
+/* MatrixIdentityAndTranslationSet (FUN_00479e40): the identity with the
+ * translation triad written into row-major row 3. */
+void matrix4_identity_translation_set(float* out, const float* translation);
+
+/* Matrix4Copy (FUN_00479eb0): 16 dword copies. */
+void matrix4_copy(float* out, const float* src);
+
+/* Rotation setters: each writes the identity, then overwrites the
+ * two-row/two-column rotation block with (cos, −sin/sin, cos) at the
+ * corpus's slots:
+ *   - matrix4_set_rotation_x: m[5]=c, m[6]=−s, m[9]=s, m[10]=c (rows 1–2);
+ *   - matrix4_set_rotation_y: m[0]=c, m[2]=s, m[8]=−s, m[10]=c (rows 0/2);
+ *   - matrix4_set_rotation_z: m[0]=c, m[1]=−s, m[4]=s, m[5]=c (rows 0–1).
+ * The corpus reference names call FUN_00479d50 "Matrix4SetRotationZ" as
+ * well as FUN_00479df0; the row/column blocks distinguish the three and
+ * are what the port names. */
+void matrix4_set_rotation_x(float* out, float angle); /* FUN_00479d50 */
+void matrix4_set_rotation_y(float* out, float angle); /* FUN_00479da0 */
+void matrix4_set_rotation_z(float* out, float angle); /* FUN_00479df0 */
+
+/* BuildPerspectiveProjectionMatrix (FUN_0040bd60): zeroes the matrix,
+ * sets m[10] = m[15] = 1, then the three quotients m[0] = p4/p1,
+ * m[5] = p3/p2, m[1] = (p5/p4) · (p4/p1) — corpus expression as written. */
+void perspective_projection_matrix_set(float* out, float p1, float p2,
+                                       float p3, float p4, float p5);
+
 /* --- camera-handle primitives (record-backed) ----------------------------- */
 void cam_offset(CameraHandle* c, float x, float y, float z); /* FUN_004755e0 */
 void cam_get_pos(CameraHandle* c, float out[3]);            /* FUN_004754c0 */
