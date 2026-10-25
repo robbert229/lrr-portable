@@ -1246,6 +1246,73 @@ int main(void)
         CHECK(graphics_overlay_word_peek() == 7u, "the overlay word sticks");
     }
 
+    /* SceneResourceVisibilitySet (2026-10-25): word fold + routed leaf band. */
+    {
+        static char rec[0x1ec];
+        memset(rec, 0, sizeof rec);
+        char primary[0x10], secondary[0x10], child1[0x10], child3[0x10];
+        memset(primary, 0, sizeof primary);
+        memset(secondary, 0, sizeof secondary);
+        memset(child1, 0, sizeof child1);
+        memset(child3, 0, sizeof child3);
+
+        void* p = primary;
+        const uint32_t hp = (uint32_t)(uintptr_t)p;
+        __builtin_memcpy(rec + 0x08, &hp, sizeof hp);
+        const uint32_t keep = 0x101u;
+        __builtin_memcpy(rec + 0x1e8, &keep, sizeof keep);
+        scene_visibility_hook_reset();
+        scene_resource_visibility_set(rec, 7u);
+        void* last = NULL;
+        int flag = -1;
+        scene_visibility_last_call(&last, &flag);
+        uint32_t word = 0;
+        __builtin_memcpy(&word, rec + 0x1e8, sizeof word);
+        CHECK(word == (keep | 2u) && flag == 7
+                  && last == (void*)(uintptr_t)hp
+                  && scene_visibility_calls() == 1,
+              "the raise sets the word and routes +8 as the raw handle");
+        scene_resource_visibility_set(rec, 0u);
+        __builtin_memcpy(&word, rec + 0x1e8, sizeof word);
+        CHECK(word == keep && scene_visibility_calls() == 2,
+              "the clear drops the bit and recalls");
+
+        /* +0xc routes only when set. */
+        const uint32_t hs = (uint32_t)(uintptr_t)secondary;
+        __builtin_memcpy(rec + 0x0c, &hs, sizeof hs);
+        scene_visibility_hook_reset();
+        scene_resource_visibility_set(rec, 1u);
+        CHECK(scene_visibility_calls() == 2, "the set secondary rides");
+        scene_visibility_last_call(&last, &flag);
+        CHECK(last == (void*)(uintptr_t)hs && flag == 1,
+              "the secondary call lands last");
+
+        /* Children: NULL slot skipped, count from +0x40. */
+        void* c1 = child1;
+        __builtin_memcpy(rec + 0x10, &c1, sizeof c1);
+        void* c3 = child3;
+        __builtin_memcpy(rec + 0x20, &c3, sizeof c3);
+        const uint32_t three = 3u;
+        __builtin_memcpy(rec + 0x40, &three, sizeof three);
+        scene_visibility_hook_reset();
+        scene_resource_visibility_set(rec, 1u);
+        CHECK(scene_visibility_calls() == 4,
+              "both live children ride the leaf");
+        scene_visibility_last_call(&last, NULL);
+        CHECK(last == (void*)child3, "the last child lands last");
+
+        /* Window guard: the corpus stride aliases the count field, the port
+         * stops before it (deviation pinned). */
+        const uint32_t big = 10u;
+        __builtin_memcpy(rec + 0x40, &big, sizeof big);
+        scene_visibility_hook_reset();
+        scene_resource_visibility_set(rec, 1u);
+        CHECK(scene_visibility_calls() == 4,
+              "the blind stride is window-guarded");
+
+        scene_resource_visibility_set(NULL, 1u); /* guarded */
+    }
+
     /* SixResourceSlotsSetState (2026-10-24): six handle slots from +0x10. */
     {
         scene_visibility_hook_reset();

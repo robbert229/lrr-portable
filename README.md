@@ -2363,6 +2363,20 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Scene-resource visibility setter** (2026-10-25): one frontier row lands in
+`record.*`. `scene_resource_visibility_set` (0x46d2c0) raises or clears bit 1 of
+the record's `+0x1e8` word and routes the raw flag through the visibility leaf:
+unconditionally on `+8`, on `+0xc` when that field is set, and on every live
+child of the `+0x10` window counted at `+0x40`. Deviations: the corpus's
+adjacent four-byte-apart `+8`/`+0xc` object fields do not fit the port's
+native-size pointer-slot model, so they route as raw 32-bit handles — exactly
+what the corpus's leaf receives; the children keep the band's native-size stride
+walked only to the six entries the window leaves before the count field (the
+corpus strides blindly past it); the count is read once and NULL records are
+guarded. The flag rides the leaf raw, unlike the overlay's folded call.
+`record_test` pins the word fold both directions, the secondary's gate, the
+NULL-slot skip, and the window guard.
+
 **Entity pair predicate + active-list scan** (2026-10-25): two frontier rows
 land in `ai.*`. `entity_state_pair_predicate` (0x43c200) reads the stats table
 at `(type1, row1)` — a zero first read answers 1 with no walk (pinned);

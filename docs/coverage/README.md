@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 1088 | 42.4% |
+| ported | 1089 | 42.5% |
 | anchored | 4 | 0.2% |
-| named | 1427 | 55.7% |
+| named | 1426 | 55.6% |
 | runtime-import | 44 | 1.7% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (1088 functions)
+  (1089 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1427 functions)
+  citation yet (1426 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (44 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1432 (55.9%).**
+**Game logic remaining to port: 1431 (55.8%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -829,7 +829,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0046d1a0` | SceneObjectAttachedResourceRelease |
 | `0x0046d1c0` | AnimationDurationForLoopCount |
 | `0x0046d260` | SceneResourceSlotsRebuild |
-| `0x0046d2c0` | SceneResourceVisibilitySet |
 | `0x0046d350` | SceneResourceDrawAtOrigin |
 | `0x0046d380` | AttachedModelOrientationUpdate |
 | `0x0046d9f0` | SceneResourceNamedEntryResolveWithFallback |

@@ -1610,7 +1610,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0046d1a0,FUN_0046d1a0,named,SceneObjectAttachedResourceRelease,0,94
 0046d1c0,FUN_0046d1c0,named,AnimationDurationForLoopCount,0,625
 0046d260,FUN_0046d260,named,SceneResourceSlotsRebuild,0,544
-0046d2c0,FUN_0046d2c0,named,SceneResourceVisibilitySet,0,690
+0046d2c0,FUN_0046d2c0,ported,SceneResourceVisibilitySet,3,690
 0046d330,FUN_0046d330,ported,EntityTypeFlagGetBit1,3,93
 0046d350,FUN_0046d350,named,SceneResourceDrawAtOrigin,0,192
 0046d380,FUN_0046d380,named,AttachedModelOrientationUpdate,0,6267
@@ -1713,7 +1713,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00473680,FUN_00473680,ported,SceneObjectWrappedPointerGet,1,71
 00473690,FUN_00473690,named,EntityVisualResourceLoad,0,7281
 00473b20,FUN_00473b20,ported,EntityFlag80Set,2,234
-00473b40,FUN_00473b40,ported,SceneRenderLockToggle,3,385
+00473b40,FUN_00473b40,ported,SceneRenderLockToggle,4,385
 00473ba0,FUN_00473ba0,ported,SceneObjectFlagBit3Get,1,92
 00473bc0,FUN_00473bc0,named,ResourceNameRegisterOrQuery,0,914
 00473c60,FUN_00473c60,named,XfTextureNameFormat,0,1386
