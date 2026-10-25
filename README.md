@@ -2363,6 +2363,19 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Scene record leaves — mesh color mode 3 + scalar direction adjust**
+(2026-10-25): two frontier rows land. `scene_mesh_color_set` (0x474ff0,
+view.*) rides the object's +0xc mesh chain onto the indexed record and
+hands mode three to the ported `render_object_color_vector_set` — the
+clamped triple lands in the block's +0x34 window without touching the
++0x6c flags (the alpha sibling's mode stays separate).
+`scene_object_scalar_adjust_by_direction` (0x4082e0, record.*) scales the
+record's +0x80 float with the corpus's two step folds — the direction-zero
+(x−0.1)·10·1/9 fold with the negative-step clamp at zero, and the
+x + (1−x)·0.1 up step whose fixed point is 1.0 — and raises the +0x148
+word's bit 2. `view_test`/`record_test` pin the window, clamp, fixed
+point, and flag fold.
+
 **Activity toggle, axis tolerance, message lookup, cursor-tile pair**
 (2026-10-25): four frontier rows land. `entity_activity_toggle` (0x4373d0,
 game/ai.*) ports the on/off fold on the entity's +0x3ec word: off with bit

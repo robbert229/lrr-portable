@@ -158,6 +158,12 @@ uint32_t scene_object_flags_get(const void* scene_object);
 /* SceneObjectOwnerGet (FUN_00473db0, finding 430): +0x20. */
 uint32_t scene_object_owner_get(const void* scene_object);
 
+/* SceneObjectScalarAdjustByDirection (FUN_004082e0): scale the record's
+ * +0x80 float scalar toward/below zero by the direction's step and raise
+ * the +0x148 word's bit 2. Deviation: the corpus strides the record
+ * blindly. */
+void scene_object_scalar_adjust_by_direction(void* record, int direction);
+
 /* SceneObjectResourceGet (FUN_0046d9e0, findings 357/432): +0x08. */
 uint32_t scene_object_resource_get(const void* scene_object);
 

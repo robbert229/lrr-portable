@@ -1276,3 +1276,30 @@ uint32_t screen_effect_item_opacity_set(void* record, int block,
     }
     return 1u;
 }
+
+/* SceneObjectScalarAdjustByDirection (FUN_004082e0) — see record.hpp. The
+ * corpus callers are the config-record parse loop and the simulation flush;
+ * the fold itself is a pure record-slot scale (the corpus's x87 double fold
+ * lands as the same double arithmetic here). */
+void scene_object_scalar_adjust_by_direction(void* record, int direction)
+{
+    if (record == NULL) {
+        return; /* deviation: the corpus strides the record blindly */
+    }
+    float scalar = 0.0f;
+    __builtin_memcpy(&scalar, (const char*)record + 0x80, sizeof scalar);
+    float result;
+    if (direction == 0) {
+        result = (float)((scalar - 0.1) * 10.0 * 0.11111111);
+    } else {
+        result = (float)(scalar - (1.0 - scalar) * -0.1);
+    }
+    if (result < 0.0f) {
+        result = 0.0f;
+    }
+    __builtin_memcpy((char*)record + 0x80, &result, sizeof result);
+    uint32_t flags = 0u;
+    __builtin_memcpy(&flags, (const char*)record + 0x148, sizeof flags);
+    flags |= 2u;
+    __builtin_memcpy((char*)record + 0x148, &flags, sizeof flags);
+}

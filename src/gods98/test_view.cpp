@@ -785,6 +785,39 @@ int main(void)
         /* the null corners guard (deviation); nothing crashes. */
     }
 
+    /* SceneMeshColorSet (2026-10-25): mode three lands the triple in the
+     * block's +0x34 window without touching the flag word. */
+    {
+        static unsigned char table[0x70];
+        memset(table, 0, sizeof(table));
+        unsigned char rec[32];
+        memset(rec, 0, sizeof(rec));
+        void* tp = table;
+        __builtin_memcpy(rec + 0x08, &tp, sizeof(tp));
+        unsigned char inner[32];
+        memset(inner, 0, sizeof(inner));
+        void* rp = rec;
+        __builtin_memcpy(inner + 0x0c, &rp, sizeof(rp));
+        unsigned char obj[32];
+        memset(obj, 0, sizeof(obj));
+        void* mp = inner;
+        __builtin_memcpy(obj + 0x0c, &mp, sizeof(mp));
+        uint32_t seed = 1u;
+        __builtin_memcpy(table + 0x6c, &seed, sizeof seed);
+        scene_mesh_color_set(obj, 0, 2.0f, 0.25f, 0.5f);
+        float rgb[3];
+        memcpy(rgb, table + 0x10 + 0x34, sizeof rgb);
+        CHECK(rgb[0] == 1.0f && rgb[1] == 0.25f && rgb[2] == 0.5f,
+              "the clamped triple lands in the +0x34 window");
+        uint32_t flags = 0u;
+        memcpy(&flags, table + 0x6c, 4);
+        CHECK(flags == 1u, "mode three leaves the +0x6c flags alone");
+        scene_mesh_color_set(NULL, 0, 0.5f, 0.5f, 0.5f);
+        memset(obj, 0, sizeof(obj));
+        scene_mesh_color_set(obj, 0, 0.5f, 0.5f, 0.5f);
+        /* the null chain guard (deviation); nothing crashes. */
+    }
+
     /* RotatedPairsScratchFill (2026-10-25): the mod-4 rotation classes
      * and the offset fold over the module scratch. */
     {
