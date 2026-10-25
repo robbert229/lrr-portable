@@ -521,6 +521,47 @@ float panel_layout_size_peek(int which);  /* port hook: 0/1 */
 float panel_layout_offset_peek(int which); /* port hook: 0/1 */
 void     sim_status_banner_word_set(uint32_t value); /* port hook */
 
+/* --- the UI/panel category-bounds band (2026-10-25) -------------------------
+ * The corpus's DAT_00500110 record band (stride 0x30, eighteen windows)
+ * carries the panel category rectangles and the per-entry draw bounds.
+ * PanelCategoryBoundsSet (FUN_0045a650): stores the rectangle (ints cast
+ * to floats), clears the record's word, and routes the pair behind — the
+ * first corner while the modeled flag word's bit 2 rides, else the second.
+ * The record's float fields have no ported owner — own storage; the pair/
+ * flag windows ride the crt.* windows already modeled for them.
+ * UiEntryBoundsGet (FUN_0045bf70): position plus derived size from the
+ * panel's installed draw-record block (stride 0x2c, far minus near). */
+void panel_category_bounds_set(int panel, int x1, int y1, int x2, int y2);
+                                        /* FUN_0045a650 */
+void panel_category_bounds_peek(int panel, float* out_x1, float* out_y1,
+                                float* out_x2, float* out_y2); /* port hook */
+void ui_entry_bounds_get(int panel, int item, float* out_bounds);
+                                        /* FUN_0045bf70 */
+
+/* PriorityImageSelectionStateUpdate (FUN_0045d300): the priority-image
+ * selection state pair (a sentinel-parked state word plus a flag word —
+ * no ported owner, own storage behind the install/peek hooks). */
+int priority_image_selection_state_update(int candidate, int gate, int skip);
+                                        /* FUN_0045d300 */
+void priority_image_state_set(int32_t state, uint32_t flags); /* port hook */
+void priority_image_state_peek(int32_t* state, uint32_t* flags);
+
+/* UiRenderRecordCreate (FUN_0045da90): the 0x3c UI render record — the
+ * source, its payload words copied from the caller's array, the extra
+ * argument, and the source's float at byte offset +0x10 (the corpus's
+ * float10 round trip is exact; the port copies). LP64-safe widened
+ * fields; the corpus's uninitialized record tail stays absent here.
+ * Paired with the heap module's bare free wrapper. */
+typedef struct UiRenderRecord {
+    void*     source;       /* corpus dword at +0 (widened, deviation) */
+    uint32_t  payload[4];   /* corpus dwords +4..+16, from the input array */
+    uint32_t  extra;        /* corpus dword +20 */
+    float     float_at_10;  /* corpus dword +24: source's float at +0x10 */
+} UiRenderRecord;
+UiRenderRecord* ui_render_record_create(void* source,
+                                        const uint32_t* payload,
+                                        uint32_t extra);       /* FUN_0045da90 */
+
 /* UiModeResourceBit40SetClear (FUN_00419200): with the first argument
  * set the corpus takes the current bit 0x40 as its second argument,
  * then installs the word with the bit set when that answer is clear and

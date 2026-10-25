@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 1069 | 41.7% |
+| ported | 1073 | 41.8% |
 | anchored | 4 | 0.2% |
-| named | 1446 | 56.4% |
+| named | 1442 | 56.2% |
 | runtime-import | 44 | 1.7% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (1069 functions)
+  (1073 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1446 functions)
+  citation yet (1442 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (44 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1451 (56.6%).**
+**Game logic remaining to port: 1447 (56.4%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -705,7 +705,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0045a500` | PanelImageSlotEntryAllocate |
 | `0x0045a590` | ScrollingAdvisorTextAppend |
 | `0x0045a5b0` | UITextOutputPositionAndDraw |
-| `0x0045a650` | PanelCategoryBoundsSet |
 | `0x0045adb0` | SimCursorInteractionTick |
 | `0x0045b310` | SimCategoryCellHitTest |
 | `0x0045b620` | PriorityListButtonActionDispatch |
@@ -713,7 +712,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0045b850` | UiOverlayCreateConfiguredElement |
 | `0x0045b9d0` | PanelRotationControlConfigLoad |
 | `0x0045bcd0` | CameraDragFromCursorApply |
-| `0x0045bf70` | UIEntryBoundsGet |
 | `0x0045bfb0` | ThreeSurfaceResourcesLoadAndInitialize |
 | `0x0045c0d0` | PairCountHistogramBuild |
 | `0x0045c3f0` | AdvisorProgressBarFillDraw |
@@ -730,7 +728,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0045cf50` | PrioritiesConfigLoad |
 | `0x0045d060` | PrioritiesImagePositionsConfigLoad |
 | `0x0045d110` | RegionContainmentScanUpdate |
-| `0x0045d300` | PriorityImageSelectionStateUpdate |
 | `0x0045d3c0` | PriorityPanelRowMoveDispatch |
 | `0x0045d3f0` | PriorityImageOrderMoveToFront |
 | `0x0045d470` | UIListEntriesSwap |
@@ -740,7 +737,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0045d7e0` | LevelIdentifierRemapTableLoad |
 | `0x0045d870` | CommandEntityReferenceRemap |
 | `0x0045d8b0` | ScreenCoordNormalizeInit |
-| `0x0045da90` | UiRenderRecordCreate |
 | `0x0045db00` | TexturedSceneObjectDrawAtPosition |
 | `0x0045dbc0` | TerrainViewTileGeometryBuild |
 | `0x0045e6d0` | TerrainPointPickResolve |

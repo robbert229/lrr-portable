@@ -27,6 +27,7 @@
 #include "game/select.hpp"
 #include "gods98/block.hpp"
 #include "gods98/crt.hpp"
+#include "gods98/heap.hpp"
 #include "gods98/message.hpp"
 #include "gods98/resource.hpp"
 #include "gods98/texture.hpp"
@@ -1691,6 +1692,112 @@ int main(int argc, char** argv)
         sim_status_banner_word_set(1u);
         global_value_0050080c_set(0u);
         panel_layout_glyph_install(NULL); /* back to the seam-NULL model */
+    }
+
+    /* UI/panel category-bounds band (2026-10-25): the category store with
+     * the flag-gated pair routing, the entry bounds get, the priority
+     * state pair, and the render record create. */
+    {
+        const int panel = 15;
+        request_record_flags_set(panel, 0u);
+        panel_category_bounds_set(panel, 1, 2, 3, 4);
+        float x1 = 0, y1 = 0, x2 = 0, y2 = 0;
+        panel_category_bounds_peek(panel, &x1, &y1, &x2, &y2);
+        CHECK(x1 == 1.0f && y1 == 2.0f && x2 == 3.0f && y2 == 4.0f,
+              "the category rectangle lands as floats");
+        uint32_t px = 0, py = 0;
+        indexed_pair_get(panel, &px, &py);
+        float pf = 0.0f;
+        __builtin_memcpy(&pf, &px, sizeof pf);
+        CHECK(pf == 3.0f, "the clear flag routes the second corner x");
+        __builtin_memcpy(&pf, &py, sizeof pf);
+        CHECK(pf == 4.0f, "the clear flag routes the second corner y");
+
+        request_record_flags_set(panel, 2u);
+        panel_category_bounds_set(panel, 10, 20, 30, 40);
+        indexed_pair_get(panel, &px, &py);
+        __builtin_memcpy(&pf, &px, sizeof pf);
+        CHECK(pf == 10.0f, "the raised flag routes the first corner x");
+        __builtin_memcpy(&pf, &py, sizeof pf);
+        CHECK(pf == 20.0f, "the raised flag routes the first corner y");
+        panel_category_bounds_peek(panel, &x1, &y1, &x2, &y2);
+        CHECK(x1 == 10.0f && x2 == 30.0f, "the rectangle fields update");
+        panel_category_bounds_set(-1, 0, 0, 0, 0); /* guarded */
+
+        static char cat_block[0x2c * 2];
+        memset(cat_block, 0, sizeof cat_block);
+        float* cat_rec = (float*)cat_block;
+        cat_rec[0] = 1.0f;
+        cat_rec[1] = 2.0f;
+        cat_rec[2] = 5.0f;
+        cat_rec[3] = 8.0f;
+        float* cat_rec2 = (float*)(cat_block + 0x2c);
+        cat_rec2[0] = 4.0f;
+        cat_rec2[1] = 6.0f;
+        cat_rec2[2] = 5.0f;
+        cat_rec2[3] = 6.0f;
+        panel_draw_records_set(panel, cat_block);
+        float bounds[4] = { 0, 0, 0, 0 };
+        ui_entry_bounds_get(panel, 0, bounds);
+        CHECK(bounds[0] == 1.0f && bounds[1] == 2.0f
+                  && bounds[2] == 4.0f && bounds[3] == 6.0f,
+              "the entry bounds answer position plus the derived size");
+        ui_entry_bounds_get(panel, 1, bounds);
+        CHECK(bounds[2] == 1.0f && bounds[3] == 0.0f,
+              "the second entry derives its size too");
+        memset(bounds, 0, sizeof bounds);
+        ui_entry_bounds_get(16, 0, bounds); /* no block installed */
+        CHECK(bounds[2] == 0.0f, "the uninstalled panel writes nothing (dev)");
+        ui_entry_bounds_get(panel, -1, bounds); /* guarded */
+        ui_entry_bounds_get(panel, 0, NULL); /* guarded */
+        panel_draw_records_set(panel, NULL);
+        request_record_flags_set(panel, 0u);
+
+        priority_image_state_set(0, 0u);
+        CHECK(priority_image_selection_state_update(7, 0, 0) == 0,
+              "the cleared gate parks the sentinel");
+        int32_t st = 0;
+        uint32_t flags = 0u;
+        priority_image_state_peek(&st, &flags);
+        CHECK(st == 0x1b && flags == 0u, "the sentinel rides alone");
+        CHECK(priority_image_selection_state_update(9, 1, 0) == 0
+                  && st != 9,
+              "the sentinel branch answers the sentinel test false");
+        priority_image_state_peek(&st, &flags);
+        CHECK(st == 9 && (flags & 2u) != 0u,
+              "the sentinel install lands the candidate plus the flag");
+        CHECK(priority_image_selection_state_update(9, 1, 1) == 1,
+              "the equal state raises the flag and answers true");
+        priority_image_state_peek(&st, &flags);
+        CHECK(st == 9, "the equal-state branch leaves the state alone");
+        CHECK(priority_image_selection_state_update(8, 1, 1) == 0,
+              "the foreign candidate answers the stale word");
+        priority_image_state_set(5, 0u);
+        CHECK(priority_image_selection_state_update(5, 1, 1) == 1,
+              "the equal branch ignores the skip argument");
+        priority_image_state_peek(&st, &flags);
+        CHECK((flags & 2u) != 0u, "the equal branch raises the flag");
+        priority_image_state_set(0x1b, 0u);
+        CHECK(priority_image_selection_state_update(9, 1, 1) == 0,
+              "the sentinel with the skip set rides stale");
+        priority_image_state_peek(&st, &flags);
+        CHECK(st == 0x1b && flags == 0u, "the skip keeps the sentinel clear");
+
+        uint32_t srcbuf[17];
+        memset(srcbuf, 0, sizeof srcbuf);
+        const float source_float = 3.5f;
+        __builtin_memcpy(&srcbuf[4], &source_float, sizeof source_float);
+        const uint32_t payload[4] = { 0xA1u, 0xB2u, 0xC3u, 0xD4u };
+        UiRenderRecord* rec = ui_render_record_create(srcbuf, payload, 0xEEu);
+        CHECK(rec != NULL && rec->source == srcbuf
+                  && rec->payload[0] == 0xA1u && rec->payload[3] == 0xD4u
+                  && rec->extra == 0xEEu && rec->float_at_10 == 3.5f,
+              "the render record copies the fields and the +0x10 float");
+        ui_render_record_free(rec);
+        CHECK(ui_render_record_create(NULL, payload, 0u) == NULL,
+              "the null source answers NULL (dev)");
+        CHECK(ui_render_record_create(srcbuf, NULL, 0u) == NULL,
+              "the null payload answers NULL (dev)");
     }
 
     if (s_failures == 0) {

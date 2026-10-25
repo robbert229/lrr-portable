@@ -2923,3 +2923,173 @@ uint32_t cursor_tile_pair_peek(int which)
     }
     return s_cursor_tile_pair[which];
 }
+
+/* --- the UI/panel category-bounds band (2026-10-25) ------------------------
+ * The corpus's DAT_00500110 record band (stride 0x30, eighteen windows —
+ * the DAT-window convention) carries the panel category rectangles. Only
+ * the record+0x18/+0x1c pair and the +0x2c flag byte were modeled earlier
+ * (the pair/flag windows in crt.*); the record's own float fields at
+ * +0x08..+0x14 and the zeroed word at +0x20 have no ported owner, so they
+ * land as own storage (the unowned-global convention). */
+
+#define PANEL_CATEGORY_WINDOWS 18
+
+typedef struct PanelCategoryRecord {
+    float    x1;    /* corpus DAT_00500118 role (record+0x08) */
+    float    y1;    /* corpus DAT_0050011c role (record+0x0c) */
+    float    x2;    /* corpus DAT_00500120 role (record+0x10) */
+    float    y2;    /* corpus DAT_00500124 role (record+0x14) */
+    uint32_t word;  /* corpus DAT_00500130 word (record+0x20) */
+} PanelCategoryRecord;
+
+static PanelCategoryRecord
+    s_panel_categories[PANEL_CATEGORY_WINDOWS];
+
+static uint32_t float_bits(float value)
+{
+    uint32_t bits;
+    __builtin_memcpy(&bits, &value, sizeof bits);
+    return bits;
+}
+
+/* PanelCategoryBoundsSet (FUN_0045a650): store the category rectangle as
+ * ints-cast-to-floats, clear the record's word, and route the pair at
+ * record+0x18/+0x1c — the first corner while the flag byte's bit 2 rides,
+ * the second corner otherwise. Deviations: the window is guarded (the
+ * corpus strides blindly) and the corpus's byte-wide bit-2 read is the
+ * word's bit 1 on the modeled flag. */
+void panel_category_bounds_set(int panel, int x1, int y1, int x2, int y2)
+{
+    if (panel < 0 || panel >= PANEL_CATEGORY_WINDOWS) {
+        return; /* deviation: the corpus strides blindly */
+    }
+    const float fx1 = (float)x1, fy1 = (float)y1;
+    const float fx2 = (float)x2, fy2 = (float)y2;
+    s_panel_categories[panel].x1 = fx1;
+    s_panel_categories[panel].y1 = fy1;
+    s_panel_categories[panel].x2 = fx2;
+    s_panel_categories[panel].y2 = fy2;
+    s_panel_categories[panel].word = 0u;
+    if ((request_record_flags_peek(panel) & 2u) != 0u) {
+        indexed_pair_set(panel, float_bits(fx1), float_bits(fy1));
+    } else {
+        indexed_pair_set(panel, float_bits(fx2), float_bits(fy2));
+    }
+}
+
+void panel_category_bounds_peek(int panel, float* out_x1, float* out_y1,
+                                float* out_x2, float* out_y2)
+{
+    if (panel < 0 || panel >= PANEL_CATEGORY_WINDOWS) {
+        return;
+    }
+    const PanelCategoryRecord* r = &s_panel_categories[panel];
+    if (out_x1 != NULL) {
+        *out_x1 = r->x1;
+    }
+    if (out_y1 != NULL) {
+        *out_y1 = r->y1;
+    }
+    if (out_x2 != NULL) {
+        *out_x2 = r->x2;
+    }
+    if (out_y2 != NULL) {
+        *out_y2 = r->y2;
+    }
+}
+
+/* UiEntryBoundsGet (FUN_0045bf70): read the entry's record out of the
+ * panel's installed draw-record block (stride 0x2c) and answer the
+ * position plus the derived size — the position dwords ride as-is, the
+ * size is the far-corner minus the near one. Deviations: the panel window
+ * and the null block are guarded (the corpus strides both). */
+void ui_entry_bounds_get(int panel, int item, float* out_bounds)
+{
+    if (panel < 0 || panel >= PANEL_CATEGORY_WINDOWS || out_bounds == NULL
+        || item < 0) {
+        return; /* deviation: the corpus strides blindly */
+    }
+    const char* block = (const char*)panel_draw_records_peek(panel);
+    if (block == NULL) {
+        return; /* deviation: the corpus strides a null block */
+    }
+    const float* rec = (const float*)(block + (size_t)item * 0x2c);
+    out_bounds[0] = rec[0];
+    out_bounds[1] = rec[1];
+    out_bounds[2] = rec[2] - rec[0];
+    out_bounds[3] = rec[3] - rec[1];
+}
+
+/* PriorityImageSelectionStateUpdate (FUN_0045d300): the corpus's
+ * priority-image selection state pair (DAT_005013b8/13bc — no ported
+ * owner, own storage). A cleared gate parks the sentinel 0x1b; while the
+ * sentinel rides, a cleared third argument installs the candidate and
+ * raises flag bit 2; otherwise an equal state just raises the flag. The
+ * answer is the pre-call state against the candidate (the corpus threads
+ * the stale word through the fall-through). */
+static int32_t  s_priority_image_state;  /* DAT_005013b8 */
+static uint32_t s_priority_image_flags;  /* DAT_005013bc */
+
+int priority_image_selection_state_update(int candidate, int gate, int skip)
+{
+    const int32_t prior = s_priority_image_state;
+    if (gate == 0) {
+        s_priority_image_state = 0x1b;
+    } else if (s_priority_image_state == 0x1b) {
+        if (skip == 0) {
+            s_priority_image_state = candidate;
+            s_priority_image_flags |= 2u;
+            return candidate == 0x1b ? 1 : 0;
+        }
+    } else if (s_priority_image_state == candidate) {
+        s_priority_image_flags |= 2u;
+        return 1;
+    }
+    return prior == candidate ? 1 : 0;
+}
+
+void priority_image_state_set(int32_t state, uint32_t flags)
+{
+    s_priority_image_state = state;
+    s_priority_image_flags = flags;
+}
+
+void priority_image_state_peek(int32_t* state, uint32_t* flags)
+{
+    if (state != NULL) {
+        *state = s_priority_image_state;
+    }
+    if (flags != NULL) {
+        *flags = s_priority_image_flags;
+    }
+}
+
+/* UiRenderRecordCreate (FUN_0045da90): build the 0x3c corpus record —
+ * the source, its four copied payload words, the extra argument, and the
+ * source's float read at byte offset +0x10 (the corpus threads that read
+ * through its float10 widening — a float -> float10 -> float round trip
+ * is exact, so the port copies). Deviations: the record fields widen
+ * LP64-safe, the payload array and source are guarded, and the corpus's
+ * uninitialized record tail stays absent from the modeled record. */
+UiRenderRecord* ui_render_record_create(void* source,
+                                        const uint32_t* payload,
+                                        uint32_t extra)
+{
+    if (source == NULL || payload == NULL) {
+        return NULL; /* deviation: the corpus strides blindly */
+    }
+    UiRenderRecord* rec = (UiRenderRecord*)engine_heap_alloc(
+        (long)sizeof(UiRenderRecord));
+    if (rec == NULL) {
+        return NULL;
+    }
+    rec->source = source;
+    rec->payload[0] = payload[0];
+    rec->payload[1] = payload[1];
+    rec->payload[2] = payload[2];
+    rec->payload[3] = payload[3];
+    rec->extra = extra;
+    __builtin_memcpy(&rec->float_at_10,
+                     (const unsigned char*)source + 0x10, sizeof rec->float_at_10);
+    return rec;
+}
