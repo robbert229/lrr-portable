@@ -297,4 +297,21 @@ void entity_detach_carried_object_and_reset_state(struct EntitySlot* e,
 void entity_clear_linked_object_state(EntitySlot* e);
                                                 /* FUN_00447780 */
 
+/* PooledRecordChunkAllocateAndLink (FUN_00438310): grows a power-of-two
+ * chunk of entity records onto the pool free list — stride links join the
+ * records and the last link joins the previous chunk head, with the chunk
+ * table tracking a byte counter. Deviations: widened link slot (stride
+ * 0x410 vs the corpus's 0x40c) and a bounded chunk table. */
+void pooled_record_chunk_allocate_and_link(void); /* FUN_00438310 */
+void* pooled_record_head_peek(void);
+uint32_t pooled_record_chunk_count_peek(void);
+
+/* ResolvedEntityOperationDispatch (FUN_00460910): resolves the name through
+ * the corpus resolver's (type, row) pair and feeds the count-difference
+ * scan — row to the column slot (unknown names answer 0). Corpus shape:
+ * the resolver zeroes the row slot at entry and only table-row matches
+ * (and the ore pair) write it, so special names ride the scan with zero. */
+int resolved_entity_operation_dispatch(const char* name, int slot,
+                                       int subtract);          /* FUN_00460910 */
+
 #endif /* LEGORRR_GAME_ENTITY_HPP */

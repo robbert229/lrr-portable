@@ -2746,3 +2746,64 @@ int terrain_cell_special_state_predicate(const LevelState* s, int cx,
     }
     return level_cell_secondary_flag_100(s, cx, cy) != 0u ? 1 : 0;
 }
+
+/* --- the path record window band (2026-10-25) ----------------------------- */
+
+/* PathRecordAllocateAndLink (FUN_00409350): allocates the corpus's 0xd4
+ * word window (53 dwords), zero-fills it the corpus way, stamps the
+ * serial counter store at +0x08, copies the source coordinate pair to
+ * +0x0c/+0x10, and links the previous most-recent record (corpus dword
+ * slot 9). Deviations: the window is widened past the corpus stride so
+ * the link holds a port pointer (port-layout convention), the corpus's
+ * belt-and-braces zero stores land inside the zero-fill, and the
+ * allocator's failure word is guarded. */
+
+#define PATH_RECORD_WINDOW 0xd4 /* the corpus's 53-dword window           */
+#define PATH_RECORD_WORDS (PATH_RECORD_WINDOW / 4u)
+
+static uint32_t s_path_record_count; /* DAT_004b8a20 role */
+static void* s_path_record_last;     /* DAT_004b8a24 role */
+
+void* path_record_allocate_and_link(const uint32_t* coord_pair)
+{
+    const size_t bytes =
+        PATH_RECORD_WINDOW + sizeof(void*) - sizeof(uint32_t);
+    char* rec = (char*)engine_heap_alloc((long)bytes);
+    if (rec == NULL) {
+        return NULL; /* deviation: the corpus strides the allocator's word */
+    }
+    const uint32_t zero = 0u;
+    for (size_t n = 0; n < bytes / sizeof(uint32_t); ++n) {
+        __builtin_memcpy(rec + n * sizeof(uint32_t), &zero, sizeof zero);
+    }
+    uint32_t serial = s_path_record_count++;
+    __builtin_memcpy(rec + 0x08, &serial, sizeof serial);   /* counter store */
+    if (coord_pair != NULL) {
+        __builtin_memcpy(rec + 0x0c, &coord_pair[0], sizeof(uint32_t));
+        __builtin_memcpy(rec + 0x10, &coord_pair[1], sizeof(uint32_t));
+    }
+    __builtin_memcpy(rec + 0x24, &s_path_record_last,
+                     sizeof(s_path_record_last));           /* prev link */
+    s_path_record_last = rec;
+    return rec;
+}
+
+uint32_t path_record_count_peek(void) { return s_path_record_count; }
+void* path_record_last_peek(void) { return s_path_record_last; }
+
+/* Test hook: stages a count-table slot (the corpus's table writers are
+ * unported, so the faithful read shape is exercised through this hook —
+ * the install-hook precedent). */
+void grid_count_table_slot_poke(int row, int column, int slot, int table,
+                                uint32_t value)
+{
+    const long long idx = grid_count_index(row, column, slot);
+    if (idx < 0) {
+        return; /* the bounds deviation rides through */
+    }
+    if (table != 0) {
+        s_grid_count_second[(size_t)idx] = value;
+    } else {
+        s_grid_count_first[(size_t)idx] = value;
+    }
+}

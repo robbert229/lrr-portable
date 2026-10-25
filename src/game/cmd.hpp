@@ -561,4 +561,19 @@ int selected_entities_any_predicate_match(int cx, int cy);
 int any_object_can_occupy_terrain_cell(int cx, int cy);
                                                 /* FUN_00431ab0 */
 
+/* CellCommandType3Issue (FUN_00403030): the kind-0xb cell-command issuer —
+ * issues while the cell is walkable with the bounded flag 0x20 word clear;
+ * stages the coordinate dwords (no act staging), applies the zero-state,
+ * links onto the global head at kind 6, and rides the surface-type tail the
+ * corpus's register-losing shape (deviations: guarded level/allocator). */
+void cell_command_type3_issue(int x, int y);   /* FUN_00403030 */
+
+/* EntityTaskBatchAppend (FUN_00403650): per entity in the array, allocates
+ * a type-1 command, stages the payload word with a zero time word, sweeps
+ * and relinks the entity's chain, then lands the record on the chain tail's
+ * +0x60 link (or the entity +0x2f0 head when the chain is empty). Deviation:
+ * guarded entity array where the corpus strides the words blindly. */
+void entity_task_batch_append(EntitySlot* const* entities, int count,
+                              void* payload);     /* FUN_00403650 */
+
 #endif /* LEGORRR_GAME_CMD_HPP */

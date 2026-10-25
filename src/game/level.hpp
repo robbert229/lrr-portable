@@ -787,6 +787,11 @@ int grid_record_count_difference_get(int row, int column, int slot,
 uint32_t grid_record_count_get(int row, int column, int slot);
 int32_t grid_count_table_slot_peek(int row, int column, int slot, int table);
 
+/* Test hook staging a count-table slot (the corpus's table writers stay
+ * unported; the install-hook convention). Out-of-bounds pokes skip. */
+void grid_count_table_slot_poke(int row, int column, int slot, int table,
+                                uint32_t value);
+
 /* --- the global-object field band (2026-10-24; findings 295/324/392) --------
  * The corpus's DAT_005560d4 word fields, threaded through the port's
  * LevelState (the corpus reads the DAT global itself; a NULL level answers
@@ -921,5 +926,15 @@ int terrain_cell_special_state_predicate(const LevelState* s, int cx,
 int cell_variant_entry_match_check(const void* grid, uint32_t x1, uint32_t y1,
                                    uint32_t x2, uint32_t y2);
                                                 /* FUN_00451180 */
+
+/* PathRecordAllocateAndLink (FUN_00409350): the corpus's path record
+ * window — 0xd4 zeroed words with a running serial counter store, the
+ * source coordinate pair, and the previous-record link. Deviations:
+ * widened link slot (port pointers) and a guarded allocator word. The
+ * peek hooks read the modeled counter/last globals (DAT roles). */
+void* path_record_allocate_and_link(const uint32_t* coord_pair);
+                                                /* FUN_00409350 */
+uint32_t path_record_count_peek(void);
+void* path_record_last_peek(void);
 
 #endif /* LEGORRR_GAME_LEVEL_HPP */

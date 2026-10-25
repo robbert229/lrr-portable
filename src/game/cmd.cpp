@@ -2100,3 +2100,62 @@ int task_table_contents_release(void* record)
     engine_heap_free(rec);
     return 1;
 }
+
+/* --- the cell-command type-3 issue + task batch append band (2026-10-25) -- */
+
+/* CellCommandType3Issue (FUN_00403030) — see cmd.hpp. */
+void cell_command_type3_issue(int x, int y)
+{
+    const LevelState* lvl = (s_ctx != NULL)
+        ? (const LevelState*)s_ctx->level : NULL;
+    if (lvl == NULL) {
+        return; /* deviation: the corpus strides the level word blindly */
+    }
+    if (level_cell_walkable_flag(lvl, x, y) == 0) {
+        return;                                    /* FUN_00432bd0 */
+    }
+    if (level_cell_flag_20_bounded(lvl, x, y) != 0u) {
+        return;                                    /* FUN_00432d90 */
+    }
+    CmdRec* rec = (CmdRec*)cmd_alloc(0xb);         /* FUN_00406440 */
+    if (rec == NULL) {
+        return; /* deviation: the corpus strides the allocator's word */
+    }
+    int cx = x, cy = y;
+    __builtin_memcpy(&rec->x, &cx, sizeof(rec->x));   /* +0x08 raw dword */
+    __builtin_memcpy(&rec->y, &cy, sizeof(rec->y));   /* +0x0c raw dword */
+    entity_record_array_apply_zero_state(rec, 1);     /* FUN_00402600 */
+    cmd_link_head(rec, 6);                            /* FUN_00404030 */
+    /* Corpus tail: the current level-height read (FUN_00431570) feeds the
+     * surface-type setter whose register arguments the corpus tail loses —
+     * the type follows the 0x402510 shape, as pinned by the 0x402d50 twin. */
+    if (lvl->ptr_terrain != NULL) {
+        terrain_cell_surface_type_set(lvl->ptr_terrain, x, y, 1);
+    }
+}
+
+/* EntityTaskBatchAppend (FUN_00403650) — see cmd.hpp. */
+void entity_task_batch_append(EntitySlot* const* entities, int count,
+                              void* payload)
+{
+    for (int i = 0; i < count; ++i) {
+        void* raw = cmd_alloc(1);                   /* FUN_00406440 */
+        if (raw == NULL) {
+            return; /* deviation: the corpus strides the allocator's word */
+        }
+        CmdRec* rec = as_rec(raw);
+        rec->payload = payload;                     /* +0x10 */
+        rec->now = 0.0f;                            /* +0x14 raw zero dword */
+        EntitySlot* e = entities[i];
+        if (e == NULL) {
+            continue; /* deviation: the corpus strides the entity word */
+        }
+        command_queue_sweep_relink(e);              /* FUN_00404100 */
+        CmdRec* tail = as_rec(cmd_chain_walk(e));   /* FUN_00404190 */
+        if (tail == NULL) {
+            e->cmd_head = rec;                      /* entity +0x2f0 head */
+        } else {
+            tail->next = rec;                       /* chain tail +0x60 */
+        }
+    }
+}

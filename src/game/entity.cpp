@@ -8,6 +8,7 @@
 #include "level.hpp"
 #include "cmd.hpp"
 #include "gods98/model.hpp"
+#include "gods98/heap.hpp"
 #include "util.hpp"
 #include "gods98/media.hpp"
 
@@ -330,17 +331,41 @@ static int nc_find(const NameCode* t, size_t n, const char* folded)
     return 0;
 }
 
+/* Table match with its row (the resolver's registry-index shape). */
+static int nc_find_indexed(const NameCode* t, size_t n, const char* folded,
+                           int* row)
+{
+    for (size_t i = 0; i < n; ++i) {
+        if (strcmp(t[i].name, folded) == 0) {
+            if (row != NULL) {
+                *row = (int)i;
+            }
+            return t[i].code;
+        }
+    }
+    return 0;
+}
+
 /* ASCII case-insensitive compare (the corpus uses __strcmpi for the .ol
  * type names and driving refs). */
 static int ci_strcmp(const char* a, const char* b);
 
-static int entity_type_for_name(const char* name)
+/* Resolver pair (FUN_0042e8b0 shape): answers known-1 with the corpus's
+ * (type, registry-row) outputs. Registry matches write both; the corpus's
+ * special names write the dedicated ore-pair rows (0/1) only, leaving the
+ * row slot for everything else (the dispatch aliases that slot onto its
+ * first argument's word — a corpus quirk, pinned in the tests). */
+static int entity_type_pair_for_name(const char* name, int* type_out,
+                                     int* row_out)
 {
     if (name == NULL || name[0] == '\0') {
         return 0; /* unregistered — the corpus aborts, the port skips */
     }
     if (ci_strcmp(name, "tvcamera") == 0) {
-        return -1; /* follow-camera branch in FUN_0042e020 */
+        if (type_out != NULL) {
+            *type_out = -1; /* follow-camera branch in FUN_0042e020 */
+        }
+        return 1;
     }
     char c[24];
     size_t i = 0;
@@ -350,23 +375,72 @@ static int entity_type_for_name(const char* name)
     }
     c[i] = '\0';
 
-    int code = nc_find(s_special_names, 13, c);
+    int code;
+    int row = 0;
+    code = nc_find_indexed(s_special_names, 13, c, &row);
     if (code != 0) {
-        return code;
+        if (type_out != NULL) {
+            *type_out = code;
+        }
+        if (row_out != NULL) {
+            if (strcmp(c, "ore") == 0) {
+                *row_out = 0; /* the corpus's dedicated index stores */
+            } else if (strcmp(c, "processedore") == 0) {
+                *row_out = 1;
+            }
+        }
+        return 1;
     }
-    code = nc_find(s_vehicle_names, 12, c);
+    code = nc_find_indexed(s_vehicle_names, 12, c, &row);
     if (code != 0) {
-        return code;
+        if (type_out != NULL) {
+            *type_out = code;
+        }
+        if (row_out != NULL) {
+            *row_out = row;
+        }
+        return 1;
     }
-    code = nc_find(s_minifig_names, 1, c);
+    code = nc_find_indexed(s_minifig_names, 1, c, &row);
     if (code != 0) {
-        return code;
+        if (type_out != NULL) {
+            *type_out = code;
+        }
+        if (row_out != NULL) {
+            *row_out = row;
+        }
+        return 1;
     }
-    code = nc_find(s_creature_names, 8, c);
+    code = nc_find_indexed(s_creature_names, 8, c, &row);
     if (code != 0) {
-        return code;
+        if (type_out != NULL) {
+            *type_out = code;
+        }
+        if (row_out != NULL) {
+            *row_out = row;
+        }
+        return 1;
     }
-    return nc_find(s_building_names, 10, c);
+    code = nc_find_indexed(s_building_names, 10, c, &row);
+    if (code != 0) {
+        if (type_out != NULL) {
+            *type_out = code;
+        }
+        if (row_out != NULL) {
+            *row_out = row;
+        }
+        return 1;
+    }
+    return 0;
+}
+
+static int entity_type_for_name(const char* name)
+{
+    int type = 0;
+    if (!entity_type_pair_for_name(name, &type, NULL)) {
+        return 0;
+    }
+    return type;
 }
 
 static void ol_strncpy(char* dst, size_t n, const char* src)
@@ -859,4 +933,63 @@ void entity_clear_linked_object_state(EntitySlot* e)
         carried->flags_3e8 |= 0x2000u;
     }
     cmd_chain_drop(e, 4);
+}
+
+/* --- the pooled-record chunk window + resolved dispatch band (2026-10-25) -- */
+
+/* PooledRecordChunkAllocateAndLink (FUN_00438310) — see entity.hpp. The
+ * corpus grows a power-of-two chunk of 0x40c-stride entity records, threads
+ * them as a free list whose last link joins the previous head, and tracks
+ * the chunk table with a byte counter. Deviations: the port records widen
+ * the link slot (stride 0x410 where the corpus strides 0x40c, the
+ * port-pointer convention) and the chunk table is bounded 32 entries where
+ * the corpus strides it blindly. */
+
+#define POOL_CHUNK_COUNT_SLOTS 32 /* deviation: bounded chunk table */
+#define POOL_RECORD_STRIDE 0x410  /* corpus 0x40c widened for the link */
+#define POOL_RECORD_LINK_OFF 0x408
+
+static uint32_t s_pool_chunk_count;             /* DAT_004dee10 role */
+static void* s_pool_chunks[POOL_CHUNK_COUNT_SLOTS]; /* DAT_004de790 role */
+static void* s_pool_record_head;                /* DAT_004de810 role */
+
+void pooled_record_chunk_allocate_and_link(void)
+{
+    const uint32_t n =
+        1u << ((uint32_t)(unsigned char)s_pool_chunk_count & 0x1fu);
+    void* base = engine_heap_alloc((long)n * POOL_RECORD_STRIDE);
+    if (base == NULL) {
+        return; /* deviation: the corpus strides the allocator's word */
+    }
+    if (s_pool_chunk_count < POOL_CHUNK_COUNT_SLOTS) {
+        s_pool_chunks[s_pool_chunk_count] = base;
+    }
+    s_pool_chunk_count = s_pool_chunk_count + 1u;
+    char* cur = (char*)base;
+    for (uint32_t k = 1; k < n; ++k) {
+        void* next = cur + POOL_RECORD_STRIDE;
+        __builtin_memcpy(cur + POOL_RECORD_LINK_OFF, &next, sizeof next);
+        cur += POOL_RECORD_STRIDE;
+    }
+    __builtin_memcpy(cur + POOL_RECORD_LINK_OFF, &s_pool_record_head,
+                     sizeof(s_pool_record_head));
+    s_pool_record_head = base;
+}
+
+void* pooled_record_head_peek(void) { return s_pool_record_head; }
+uint32_t pooled_record_chunk_count_peek(void) { return s_pool_chunk_count; }
+
+/* ResolvedEntityOperationDispatch (FUN_00460910) — see entity.hpp. */
+int resolved_entity_operation_dispatch(const char* name, int slot,
+                                       int subtract)
+{
+    int column = 0;
+    /* Corpus shape: the resolver zeroes its row slot at entry and only
+     * table-row matches (and the ore pair) write it, so special names
+     * ride the column slot with zero. */
+    int type = 0;
+    if (!entity_type_pair_for_name(name, &type, &column)) {
+        return 0;
+    }
+    return grid_record_count_difference_get(type, column, slot, subtract);
 }
