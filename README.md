@@ -2363,6 +2363,27 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Cell-list min-distance scale apply** (2026-10-25): one frontier row lands
+in `level.*`. `cell_list_min_distance_scale_apply` (0x450a80) is the sound
+min-distance color sweep: raising the applied bit (2) paints every queued
+cell through the scene object's mesh color setter — the block index folds
+the entry's `y` through the scale word plus `x` (all unsigned) and stores
+the `0.3` triple into the block's `+34` window; clearing drops the bit and
+repaints the same cells with the zero triple. Already-applied (enable) and
+not-yet-applied (disable) calls touch nothing (faithful fold gates). The
+corpus strides its cell-list context (the level block's `+10` pointer —
+scale word, scene-object slot, flag word, queue window), which has no
+ported owner, so the scale/object/flag ride zero-init own storage behind
+`cell_list_apply_state_install` / peek hooks (the unowned-DAT convention)
+over the port's module-static dirty queue, entry-for-entry the same
+capacity as the corpus's. Deviations: guarded state (the corpus dereferences
+its context blindly). `level_test` pins the fold index (block 11 for the
+(3,4) entry at scale 2), the applied-bit gates and their in-fold passes,
+and the clear repaint. Triage: the cursor-name pair (0x45c830 + 0x45cbd0)
+and the type-2 dispatch thunk (0x43b850) joined `blocked.md` — the exact
+`.rdata` string bytes of the cursor table and the queue-dispatcher thunk
+family.
+
 **Path arc interpolation + screen projection** (2026-10-25): two pure
 frontier rows land in `view.*`. `path_arc_length_interpolate` (0x4068c0) walks
 the curve record's arc-length table (count at dword 0, point pairs at dwords

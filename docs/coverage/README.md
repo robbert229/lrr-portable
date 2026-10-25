@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 1100 | 42.9% |
+| ported | 1101 | 42.9% |
 | anchored | 4 | 0.2% |
-| named | 1415 | 55.2% |
+| named | 1414 | 55.1% |
 | runtime-import | 44 | 1.7% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (1100 functions)
+  (1101 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1415 functions)
+  citation yet (1414 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (44 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1420 (55.4%).**
+**Game logic remaining to port: 1419 (55.3%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -646,7 +646,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00450730` | TerrainCellChangeQueueAppend |
 | `0x00450780` | TerrainCellChangeQueueFlush |
 | `0x004507d0` | TerrainCellEdgeVectorQuery |
-| `0x00450a80` | CellListMinDistanceScaleApply |
 | `0x00451230` | TerrainCellSurfaceVectorWrite |
 | `0x00451450` | TerrainCellSurfaceVectorOffsetAdd |
 | `0x004515e0` | TerrainCellRayHitTest |

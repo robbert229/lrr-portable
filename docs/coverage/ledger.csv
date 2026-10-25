@@ -1182,7 +1182,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00450890,FUN_00450890,ported,,1,87
 004508a0,FUN_004508a0,ported,CellNeighborDirectionCode,3,922
 00450960,FUN_00450960,ported,CellDirtyQueuePushAndClear,1,1760
-00450a80,FUN_00450a80,named,CellListMinDistanceScaleApply,0,986
+00450a80,FUN_00450a80,ported,CellListMinDistanceScaleApply,2,986
 00450b60,FUN_00450b60,ported,,1,3668
 00450f30,FUN_00450f30,anonymous,,0,2249
 00451180,FUN_00451180,ported,CellVariantEntryMatchCheck,3,953

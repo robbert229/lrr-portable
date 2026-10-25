@@ -11,6 +11,7 @@
 #include "gods98/resource.hpp"
 #include "gods98/sound.hpp"
 #include "gods98/string.hpp"
+#include "gods98/view.hpp"
 #include "entity.hpp"
 #include "frontend.hpp"
 #include "level.hpp"
@@ -2143,6 +2144,59 @@ int terrain_cell_dirty_flag(const void* terrain, int x, int y)
     return (t->blocks
             + ((size_t)y * (size_t)t->width + (size_t)x)
               * TERRAIN_BLOCK_STRIDE + 0x19)[0] & 0x10;
+}
+
+/* --- the cell-list min-distance scale apply (see level.hpp) ---------------
+ * The corpus's cell-list context (the level block's +0x10 pointer) has no
+ * ported owner, so its scale word, scene-object slot, and the applied-
+ * flag bit land as zero-init own storage behind install/peek hooks (the
+ * unowned-DAT convention). The dirty-cell queue it strides is the port's
+ * module static above, entry-for-entry the same capacity. */
+static void*    s_cell_list_object;
+static int      s_cell_list_scale;
+static uint32_t s_cell_list_flags; /* corpus word +0x73d0: bit 2 = applied */
+
+void cell_list_apply_state_install(void* scene_object, int scale)
+{
+    s_cell_list_object = scene_object;
+    s_cell_list_scale = scale;
+}
+
+void* cell_list_object_peek(void)
+{
+    return s_cell_list_object;
+}
+
+uint32_t cell_list_apply_flags_peek(void)
+{
+    return s_cell_list_flags;
+}
+
+void cell_list_min_distance_scale_apply(int enable) /* FUN_00450a80 */
+{
+    if (enable != 0 && (s_cell_list_flags & 4u) == 0) {
+        for (int i = 0; i < s_dirty_queue_count; ++i) {
+            /* The corpus strides the u16 pair entries unsigned: the
+             * index folds the y-entry through the scale word. */
+            const uint32_t x = (uint32_t)(uint16_t)s_dirty_queue_x[i];
+            const uint32_t y = (uint32_t)(uint16_t)s_dirty_queue_y[i];
+            scene_mesh_color_set(s_cell_list_object,
+                                 (int)(y * (uint32_t)s_cell_list_scale + x),
+                                 0.3f, 0.3f, 0.3f);
+        }
+        s_cell_list_flags |= 4u;
+        return;
+    }
+    if (enable == 0 && (s_cell_list_flags & 4u) != 0) {
+        for (int i = 0; i < s_dirty_queue_count; ++i) {
+            const uint32_t x = (uint32_t)(uint16_t)s_dirty_queue_x[i];
+            const uint32_t y = (uint32_t)(uint16_t)s_dirty_queue_y[i];
+            scene_mesh_color_set(s_cell_list_object,
+                                 (int)(y * (uint32_t)s_cell_list_scale + x),
+                                 0.0f, 0.0f, 0.0f);
+        }
+        s_cell_list_flags &= ~4u;
+    }
 }
 
 /* --- tile-variant grid-record table (see level.hpp) -----------------------

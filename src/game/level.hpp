@@ -749,6 +749,21 @@ int lava_erosion_neighbor_check(const LevelState* s, int seed_x, int seed_y,
 void terrain_cell_dirty_queue_push_and_clear(void* terrain, int x, int y,
                                              int push);
 
+/* CellListMinDistanceScaleApply (FUN_00450a80): the sound min-distance
+ * color sweep over the dirty-cell queue. enable != 0 raises the applied
+ * bit (2) and paints every queued cell through the scene object's mesh
+ * color setter (block = y-entry folded through the scale word + x-entry,
+ * the 0x3 triple); enable == 0 clears the bit and repaints the same cells
+ * with the 0 triple. An already-applied (enable != 0) or not-yet-applied
+ * (enable == 0) call touches nothing (faithful). The corpus strides its
+ * cell-list context (the +0x10 level-block pointer, unowned); the port
+ * threads the queue static, scene object, and scale word through
+ * install/peek hooks. */
+void cell_list_min_distance_scale_apply(int enable);
+void cell_list_apply_state_install(void* scene_object, int scale);
+void* cell_list_object_peek(void);
+uint32_t cell_list_apply_flags_peek(void);
+
 /* --- tile-variant grid-record table (2026-10-24) --------------------------
  * The corpus keeps a fixed 300-block record region (DAT block stride
  * 0x31 dwords; block word 0 is a variant-record pointer and words 1..15

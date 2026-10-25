@@ -947,6 +947,70 @@ int main(int argc, char** argv)
         rec[2] = saved_b2;
     }
 
+    /* CellListMinDistanceScaleApply (2026-10-25): the applied-bit folds
+     * over the dirty queue, the scale-folded block index, and repaint. */
+    {
+        void* terrain = terrain_create("L01_surface.map", 1.0f);
+        terrain_cell_dirty_queue_push_and_clear(terrain, 3, 4, 1);
+
+        /* Scene-object chain: obj -> inner -> rec -> table (the mesh
+         * color setter's ride, as pinned in view_test). */
+        static unsigned char table[0x1200];
+        memset(table, 0, sizeof table);
+        unsigned char rec[32];
+        memset(rec, 0, sizeof rec);
+        void* tp = table;
+        __builtin_memcpy(rec + 0x08, &tp, sizeof(tp));
+        unsigned char inner[32];
+        memset(inner, 0, sizeof inner);
+        void* rp = rec;
+        __builtin_memcpy(inner + 0x0c, &rp, sizeof(rp));
+        unsigned char obj[32];
+        memset(obj, 0, sizeof obj);
+        void* mp = inner;
+        __builtin_memcpy(obj + 0x0c, &mp, sizeof(mp));
+
+        cell_list_apply_state_install(obj, 2);
+        CHECK(cell_list_object_peek() == (void*)obj
+                  && cell_list_apply_flags_peek() == 0u,
+              "the install hook installs the state");
+
+        cell_list_min_distance_scale_apply(1);
+        /* queue entry (3,4): block = 4*2+3 = 11 -> the +0x34 window. */
+        float rgb[3] = { 0.0f, 0.0f, 0.0f };
+        __builtin_memcpy(rgb, table + 11 * 0x70 + 0x10 + 0x34, sizeof rgb);
+        CHECK(rgb[0] == 0.3f && rgb[1] == 0.3f && rgb[2] == 0.3f,
+              "the paint lands the triple on the folded block");
+        CHECK(cell_list_apply_flags_peek() == 4u, "the apply raises bit 2");
+
+        /* Re-apply (enable != 0, bit raised): nothing repaints. */
+        __builtin_memset(table + 11 * 0x70 + 0x10 + 0x34, 0, 12);
+        cell_list_min_distance_scale_apply(1);
+        __builtin_memcpy(rgb, table + 11 * 0x70 + 0x10 + 0x34, sizeof rgb);
+        CHECK(rgb[0] == 0.0f && rgb[1] == 0.0f && rgb[2] == 0.0f,
+              "the applied fold skips the repaint (faithful)");
+
+        /* The clear fold: zero triple, bit 2 drops. */
+        cell_list_min_distance_scale_apply(0);
+        __builtin_memcpy(rgb, table + 11 * 0x70 + 0x10 + 0x34, sizeof rgb);
+        CHECK(rgb[0] == 0.0f && cell_list_apply_flags_peek() == 0u,
+              "the clear repaint clears the window and the bit");
+
+        /* Re-clear: the not-applied fold touches nothing. */
+        __builtin_memset(table + 11 * 0x70 + 0x10 + 0x34, 1, 12);
+        cell_list_min_distance_scale_apply(0);
+        CHECK(table[11 * 0x70 + 0x10 + 0x34] == 1,
+              "the not-applied fold is inert");
+
+        cell_list_apply_state_install(NULL, 0);
+        cell_list_min_distance_scale_apply(1);
+        CHECK(cell_list_apply_flags_peek() == 4u, "the null object still folds");
+        cell_list_min_distance_scale_apply(0);
+
+        terrain_cell_dirty_queue_push_and_clear(terrain, 3, 4, 0);
+        terrain_destroy(terrain);
+    }
+
     /* Terrain leaves: gated type read + the +5 byte classifier. */
     {
         const int w = (int)level_width(s);
