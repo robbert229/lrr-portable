@@ -419,6 +419,149 @@ int main(int argc, char** argv)
         CHECK(1, "the null record is guarded (deviation)");
     }
 
+    /* FlicDecode16BitRowRecords (2026-10-25): the chunked triplet walk,
+     * the zero-count restart lap, and the op-4 hand-off to the fold. */
+    {
+        static unsigned char rec[0x1000];
+        static unsigned char stream[0x900];
+        memset(rec, 0, sizeof rec);
+        memset(stream, 0, sizeof stream);
+        stream[6] = 2; /* two chunks */
+        stream[8 + 0] = 2;  /* skip two triplets */
+        stream[8 + 1] = 1;  /* copy one triplet */
+        stream[8 + 2] = 0xFF;
+        stream[8 + 3] = 0xFE;
+        stream[8 + 4] = 0xFC;
+        stream[8 + 5] = 0;  /* skip zero */
+        stream[8 + 6] = 2;  /* copy two triplets */
+        stream[8 + 7] = 0x01;
+        stream[8 + 8] = 0x02;
+        stream[8 + 9] = 0x03;
+        stream[8 + 10] = 0x11;
+        stream[8 + 11] = 0x22;
+        stream[8 + 12] = 0x33;
+        void* sp = stream;
+        __builtin_memcpy(rec + 0x6d0, &sp, sizeof sp);
+        flic_decode16_bit_row_records(rec);
+        CHECK(rec[0x11c + 6] == 0x3F && rec[0x11c + 7] == 0x3F
+                  && rec[0x11c + 8] == 0x3F,
+              "the first chunk skips two triplets and copies a third");
+        CHECK(rec[0x11c + 9] == 0x00 && rec[0x11c + 12] == 0x04
+                  && rec[0x11c + 13] == 0x08 && rec[0x11c + 14] == 0x0C,
+              "the second chunk lands its six source bytes >>2");
+        CHECK(rec[0x41c] == 0u, "the fold does not ride when op is not four");
+
+        memset(rec, 0, sizeof rec);
+        memset(stream, 0, sizeof stream);
+        stream[6] = 4;
+        stream[8] = 3;   /* skip three (discarded by the restart) */
+        stream[8 + 1] = 0; /* zero count byte: full restart lap */
+        memset(stream + 8 + 2, 0xFF, 0x300);
+        __builtin_memcpy(rec + 0x6d0, &sp, sizeof sp);
+        int word4 = 4;
+        __builtin_memcpy(rec + 0x6d4, &word4, sizeof word4);
+        flic_decode16_bit_row_records(rec);
+        int bad = 0;
+        for (int i = 0; i != 0x300; ++i) {
+            if (rec[0x11c + i] != 0x3F) {
+                bad++;
+            }
+        }
+        CHECK(bad == 0, "the zero-count chunk rewrites the whole table");
+        CHECK(rec[0x11c + 0x300 + 3] == 0u,
+              "the restart lap ends the walk (the tail rides untouched)");
+        uint16_t w1 = 0u, w3 = 0u, w0 = 1u;
+        memcpy(&w1, rec + 0x41c + 2, sizeof w1);
+        memcpy(&w3, rec + 0x41c + 6, sizeof w3);
+        memcpy(&w0, rec + 0x41c, sizeof w0);
+        CHECK(w1 == 0xFFFFu && w3 == 0xFFFFu, "the op-4 fold folds the table");
+        CHECK(w0 == 0u, "the fold clears the first word");
+        CHECK(flic_decode16_bit_row_records(NULL) == 1,
+              "the null record answers 1 (deviation)");
+    }
+
+    /* FlicDecode8BitOpcode25Mode4 (2026-10-25): the literal/copy run walk
+     * with the row straddle and the palette store window. */
+    {
+        static unsigned char rec[0x1000];
+        static unsigned char stream[0x100];
+        static unsigned char pixels[0x40];
+        memset(rec, 0, sizeof rec);
+        memset(stream, 0, sizeof stream);
+        memset(pixels, 0, sizeof pixels);
+        uint16_t pal20 = 0xABCDu, pal21 = 0x1234u;
+        __builtin_memcpy(rec + 0x41c + 0x20 * 2u, &pal20, sizeof pal20);
+        __builtin_memcpy(rec + 0x41c + 0x21 * 2u, &pal21, sizeof pal21);
+        void* sp2 = stream;
+        void* pp = pixels;
+        __builtin_memcpy(rec + 0x6d0, &sp2, sizeof sp2);
+        __builtin_memcpy(rec + 0x6cc, &pp, sizeof pp);
+        uint16_t rows = 2u, row_len = 1u;
+        int pitch = 4;
+        __builtin_memcpy(rec + 0x10, &rows, sizeof rows);
+        __builtin_memcpy(rec + 0x0c, &row_len, sizeof row_len);
+        __builtin_memcpy(rec + 0x638, &pitch, sizeof pitch);
+        /* stream+7 rows: [1, idx0], +1 straddle byte, [1, idx1] */
+        stream[7 + 0] = 1;
+        stream[7 + 1] = 0x20;
+        stream[7 + 2] = 0x77; /* straddled (never consumed) */
+        stream[7 + 3] = 1;
+        stream[7 + 4] = 0x21;
+        CHECK(flic_decode8_bit_opcode25_mode4(rec) == 1, "the walk answers 1");
+        uint16_t p0 = 0u, p1 = 0u;
+        memcpy(&p0, pixels + 0, sizeof p0);
+        memcpy(&p1, pixels + 4, sizeof p1);
+        CHECK(p0 == 0xABCDu && p1 == 0x1234u,
+              "the literal runs land the palette words per row");
+
+        memset(pixels, 0, sizeof pixels);
+        memset(rec, 0, sizeof rec);
+        __builtin_memcpy(rec + 0x41c + 0x20 * 2u, &pal20, sizeof pal20);
+        __builtin_memcpy(rec + 0x41c + 0x21 * 2u, &pal21, sizeof pal21);
+        __builtin_memcpy(rec + 0x6d0, &sp2, sizeof sp2);
+        __builtin_memcpy(rec + 0x6cc, &pp, sizeof pp);
+        rows = 1u;
+        row_len = 2u;
+        __builtin_memcpy(rec + 0x10, &rows, sizeof rows);
+        __builtin_memcpy(rec + 0x0c, &row_len, sizeof row_len);
+        __builtin_memcpy(rec + 0x638, &pitch, sizeof pitch);
+        stream[7 + 0] = 0xFE; /* copy run of two */
+        stream[7 + 1] = 0x20;
+        stream[7 + 2] = 0x21;
+        flic_decode8_bit_opcode25_mode4(rec);
+        memcpy(&p0, pixels + 0, sizeof p0);
+        memcpy(&p1, pixels + 2, sizeof p1);
+        CHECK(p0 == 0xABCDu && p1 == 0x1234u,
+              "the copy run walks its own palette bytes");
+
+        memset(rec, 0, sizeof rec);
+        memset(pixels, 0, sizeof pixels);
+        __builtin_memcpy(rec + 0x41c + 0x20 * 2u, &pal20, sizeof pal20);
+        __builtin_memcpy(rec + 0x6d0, &sp2, sizeof sp2);
+        __builtin_memcpy(rec + 0x6cc, &pp, sizeof pp);
+        rows = 1u;
+        row_len = 1u;
+        __builtin_memcpy(rec + 0x10, &rows, sizeof rows);
+        __builtin_memcpy(rec + 0x0c, &row_len, sizeof row_len);
+        __builtin_memcpy(rec + 0x638, &pitch, sizeof pitch);
+        stream[7 + 0] = 0;  /* zero count: advances without writing */
+        stream[7 + 1] = 0;
+        stream[7 + 2] = 1;  /* then the single literal lands */
+        stream[7 + 3] = 0x20;
+        flic_decode8_bit_opcode25_mode4(rec);
+        memcpy(&p0, pixels + 0, sizeof p0);
+        CHECK(p0 == 0xABCDu, "the zero count byte advances, it never stops");
+        flic_frame_window_layout_install(rec, 9, 3, 64, sp2, pp, 1);
+        int16_t rl = 0, rc = 0;
+        int fl = 0;
+        memcpy(&rl, rec + 0x0c, sizeof rl);
+        memcpy(&rc, rec + 0x10, sizeof rc);
+        memcpy(&fl, rec + 0x6e4, sizeof fl);
+        CHECK(rl == 9 && rc == 3 && fl == 1, "the install hook lands");
+        CHECK(flic_decode8_bit_opcode25_mode4(NULL) == 1,
+              "the null record answers 1 (deviation)");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "flic: %d failure(s)\n", s_failures);
         return 1;
