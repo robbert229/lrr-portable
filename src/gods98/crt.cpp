@@ -1666,3 +1666,34 @@ void pair_table_append(void* table, int* count, const char* key,
     __builtin_memcpy(entry + field, &value, sizeof value);
     *count += 1;
 }
+
+/* --- the renderer-word band (2026-10-25) ------------------------------------
+ * The corpus's DAT_0076ab24/b28/b3c + DAT_0076ac84/ac8c + DAT_0050608c band
+ * has no ported writer; each word lands as a zero-init static and the six
+ * getters answer their installed half (the unowned-global deviation, per the
+ * DAT-window convention). The install hooks are port-side. */
+static uint32_t s_renderer_word_a;      /* DAT_0076ab24 */
+static uint32_t s_renderer_word_b;      /* DAT_0076ab28 */
+static uint32_t s_renderer_word_c;      /* DAT_0076ab3c */
+static uint32_t s_renderer_global_dword; /* DAT_0076ac84 */
+static uint32_t s_render_surface_secondary; /* DAT_0076ac8c */
+static uint32_t s_render_feature_flags; /* DAT_0050608c */
+
+uint32_t renderer_word_a_get(void) { return s_renderer_word_a; } /* FUN_00410b30 */
+uint32_t renderer_word_b_get(void) { return s_renderer_word_b; } /* FUN_00410b40 */
+uint32_t renderer_word_c_get(void) { return s_renderer_word_c; } /* FUN_00410b50 */
+void renderer_words_set(uint32_t a, uint32_t b, uint32_t c)
+{
+    s_renderer_word_a = a;
+    s_renderer_word_b = b;
+    s_renderer_word_c = c;
+}
+
+uint32_t renderer_global_dword_get(void) { return s_renderer_global_dword; }
+void renderer_global_dword_set(uint32_t value) { s_renderer_global_dword = value; }
+
+uint32_t render_surface_secondary_get(void) { return s_render_surface_secondary; }
+void render_surface_secondary_set(uint32_t value) { s_render_surface_secondary = value; }
+
+uint32_t render_feature_flags_get(void) { return s_render_feature_flags; }
+void render_feature_flags_set(uint32_t value) { s_render_feature_flags = value; }

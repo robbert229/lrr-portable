@@ -2878,3 +2878,12 @@ void random_variant_cell_scatter(int center_x, int center_y, int radius,
         }
     }
 }
+
+/* RandomThunkDraw15 (thunk_FUN_0048e170 at FUN_004798a0): the corpus's
+ * RNG-thunk body — the corpus inlines the 15-bit draw over DAT_004afcc8 in
+ * both thunk copies, sharing one state; the port forwards to the single
+ * module RNG model (level_random_draw15, thunk_FUN_0048e170 / 0x48e170). */
+uint32_t rng_thunk_draw15(void)
+{
+    return (uint32_t)level_random_draw15();
+}

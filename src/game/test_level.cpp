@@ -1671,6 +1671,17 @@ int main(int argc, char** argv)
         CHECK(1, "the scatter band runs every mode guarded");
     }
 
+    /* RngThunkDraw15 (2026-10-25): the corpus thunk copy forwards the same
+     * seeded 15-bit draw as the module model. */
+    {
+        level_random_seed_set(9u);
+        const uint32_t thunk = rng_thunk_draw15();
+        level_random_seed_set(9u);
+        const int model = level_random_draw15();
+        CHECK(thunk == (uint32_t)model && model >= 0 && model <= 0x7fff,
+              "the thunk forwards the module draw");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "level_test: %d failure(s)\n", s_failures);
         return 1;
