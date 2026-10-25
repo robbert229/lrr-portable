@@ -100,4 +100,17 @@ uint32_t model_digest(const Model* m);
  * reader ships as a standalone primitive. */
 int lwo_read_big_endian_float(const uint8_t** cursor, uint8_t out[4]);
 
+/* LwoStringDuplicate (FUN_0048c0c0): the corpus's dup allocates strlen + 1
+ * rounded UP TO THE NEXT EVEN size through the engine heap, zeroes the
+ * whole block (dwords then bytes), then copies strlen + 1 bytes — the
+ * corpus's own loop bounds, assembly-pinned. Deviations: the null string
+ * is guarded, and the copy rides the rounded size so the block stays a
+ * valid C string. LwoTextureProjectionModeParse (FUN_0048c120): a fold
+ * compare (the corpus's strnicmp shape via string_folded_compare) against
+ * the binary's PLANAR / CYLINDRICAL / SPHERICAL table; the first prefix
+ * match answers the table index, anything else answers 0 — PLANAR. */
+char* lwo_string_duplicate(const char* text);        /* FUN_0048c0c0 */
+int   lwo_texture_projection_mode_parse(const char* name);
+                                                      /* FUN_0048c120 */
+
 #endif /* LEGORRR_MODEL_HPP */

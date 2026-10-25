@@ -1246,6 +1246,54 @@ int main(void)
               "the wide unsigned pair stays unsigned");
     }
 
+    /* The file-descriptor flag window (2026-10-25): 32 eight-byte entries
+     * per block, the flag byte at entry+4, bit 0x40, count-bounded. */
+    {
+        static unsigned char block0[32 * 8];
+        static unsigned char block1[32 * 8];
+        memset(block0, 0, sizeof block0);
+        memset(block1, 0, sizeof block1);
+        block0[7 * 8u + 4u] = 0x40u;           /* fd 7 set */
+        block0[8 * 8u + 4u] = 0x20u;           /* fd 8: other bit */
+        block1[(1 * 8u) + 4u] = 0x40u;         /* fd 33 set */
+        crt_file_descriptor_flag_block_set(0, block0);
+        crt_file_descriptor_flag_block_set(1, block1);
+        crt_file_descriptor_flag_block_set(8, block1); /* guarded (dev) */
+        crt_file_descriptor_count_set(64);
+        CHECK(crt_file_descriptor_count_peek() == 64,
+              "the count hook round-trips");
+        CHECK(crt_file_descriptor_flag_block_peek(1) == block1,
+              "the block hook round-trips");
+        CHECK(crt_file_descriptor_flag_block_peek(-1) == NULL,
+              "the guarded peek answers null (dev)");
+        CHECK(crt_file_descriptor_flag40_get(7u) == 1u,
+              "the flag byte answers the bit");
+        CHECK(crt_file_descriptor_flag40_get(8u) == 0u,
+              "the other bit answers clear");
+        CHECK(crt_file_descriptor_flag40_get(33u) == 1u,
+              "the second block answers");
+        CHECK(crt_file_descriptor_flag40_get(64u) == 0u,
+              "the count bound answers clear");
+        crt_file_descriptor_count_set(4);
+        CHECK(crt_file_descriptor_flag40_get(7u) == 0u,
+              "the shrunk count bounds the lookup");
+
+        /* the null-block and uninstalled-window deviations */
+        crt_file_descriptor_count_set(64);
+        CHECK(crt_file_descriptor_flag40_get(5u) == 0u,
+              "the flagless entry answers clear");
+        crt_file_descriptor_flag_block_set(1, NULL);
+        CHECK(crt_file_descriptor_flag40_get(33u) == 0u,
+              "the null block answers clear (dev)");
+
+        /* leave the window clean */
+        crt_file_descriptor_flag_block_set(0, NULL);
+        crt_file_descriptor_flag_block_set(1, NULL);
+        crt_file_descriptor_count_set(0);
+        CHECK(crt_file_descriptor_flag40_get(0u) == 0u,
+              "the zero count answers clear");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "crt_test: %d failure(s)\n", s_failures);
         return 1;

@@ -2363,6 +2363,25 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**String/CRT helper leaves** (2026-10-25): four frontier rows land across
+`string.*`, `model.*` and `crt.*`. `string_case_substring_find` (0x48c040)
+walks the corpus's `__strnicmp` shape — the same bounded ASCII fold compare
+now exposed as `string_folded_compare` — answering the match pointer plus the
+byte index and needle length through optional outputs, gated on non-empty
+haystack and needle. `lwo_string_duplicate` (0x48c0c0) allocates `strlen + 1`
+rounded UP TO THE NEXT EVEN size through the engine heap, zeroes the whole
+block, then copies `strlen + 1` bytes — the corpus's own loop bounds,
+assembly-pinned over Ghidra's tail-copy guess. `lwo_texture_projection_mode_parse`
+(0x48c120) fold-compares against the binary's PLANAR / CYLINDRICAL / SPHERICAL
+table; the first prefix match answers the table index, anything else answers
+PLANAR. `crt_file_descriptor_flag40_get` (0x498b40) reads bit 0x40 of the byte
+at entry+4 in the corpus's file-descriptor table — 32 eight-byte entries per
+block, blocks indexed from an unowned CRT platform window, bounded by its count
+word; the window rides own storage behind install/peek hooks with the block
+table and descriptor count guarded. `string_test`, `model_test` and `crt_test`
+pin the folds, the even-rounded dup blocks, the table fall-through, and the
+flag-window bounds.
+
 **Sav visited tables + slot refresh** (2026-10-25): two frontier rows land
 across `frontend.*` and `savegame.*`. `sav_clear_visited` (0x416e70) walks the
 corpus's two "visited" bands, out-of-game first (the modeled active-object

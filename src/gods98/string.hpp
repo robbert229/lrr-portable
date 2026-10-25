@@ -11,6 +11,9 @@
 #ifndef LEGORRR_GODS98_STRING_HPP
 #define LEGORRR_GODS98_STRING_HPP
 
+#include <stddef.h>
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -39,6 +42,16 @@ const char* string_find_substring(const char* haystack, const char* needle);
 const char* case_insensitive_substring_find(const char* haystack,
                                             const char* needle);
                                                 /* FUN_00477610 */
+
+/* StringCaseSubstringFind (FUN_0048c040): the corpus's other
+ * case-insensitive substring walk — same __strnicmp shape (the bounded
+ * ASCII fold compare, exposed here for the LWO bands), but the match also
+ * reports its byte index and the needle length through the optional
+ * outputs. Same gates/deviations as CaseInsensitiveSubstringFind. */
+int string_folded_compare(const char* a, const char* b, size_t n);
+char* string_case_substring_find(char* haystack, const char* needle,
+                                 uint32_t* out_index,
+                                 size_t* out_length);   /* FUN_0048c040 */
 
 /* FUN_00493ec0: length of `text` up to `limit` — index of the first NUL,
  * or `limit` when no NUL appears within the bound (the corpus returns the

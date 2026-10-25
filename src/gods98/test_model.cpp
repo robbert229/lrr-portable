@@ -651,6 +651,45 @@ int main(int argc, char** argv)
     test_uv();
     test_be_float_cursor();
     test_digest_stability();
+    /* The string helper leaves (2026-10-25): the even-rounded dup and the
+     * projection-mode table parse. */
+    {
+        char* dup = lwo_string_duplicate("ab");
+        CHECK(dup != NULL && strcmp(dup, "ab") == 0,
+              "the even-length dup copies");
+        CHECK(dup != NULL && dup[2] == '\0' && dup[3] == '\0',
+              "the even-length block rides NUL to the rounded end");
+        free(dup);
+
+        char* odd = lwo_string_duplicate("abc");
+        CHECK(odd != NULL && strcmp(odd, "abc") == 0 && odd[3] == '\0'
+                  && odd[4] == '\0',
+              "the odd-length dup pads even and stays terminated");
+        free(odd);
+
+        char* empty = lwo_string_duplicate("");
+        CHECK(empty != NULL && empty[0] == '\0',
+              "the empty dup allocates the rounded byte block");
+        free(empty);
+
+        CHECK(lwo_string_duplicate(NULL) == NULL,
+              "the null guard answers null");
+
+        CHECK(lwo_texture_projection_mode_parse("PLANAR") == 0,
+              "PLANAR answers 0");
+        CHECK(lwo_texture_projection_mode_parse("CYLINDRICAL") == 1,
+              "CYLINDRICAL answers 1");
+        CHECK(lwo_texture_projection_mode_parse("SPHERICAL") == 2,
+              "SPHERICAL answers 2");
+        CHECK(lwo_texture_projection_mode_parse("spherical") == 2,
+              "the fold reads the name case-blind");
+        CHECK(lwo_texture_projection_mode_parse("SPHERICALX") == 2,
+              "the prefix match wins");
+        CHECK(lwo_texture_projection_mode_parse("cyl") == 0
+                  && lwo_texture_projection_mode_parse("other") == 0
+                  && lwo_texture_projection_mode_parse(NULL) == 0,
+              "the no-match fall-through answers PLANAR");
+    }
 
     if (argc >= 3 && strcmp(argv[1], "--real") == 0) {
         test_real(argv[2]);

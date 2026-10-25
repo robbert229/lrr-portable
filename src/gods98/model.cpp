@@ -5,7 +5,9 @@
  * models): chunk walk, POLS origin auto-detect, SRFS names, SURF records
  * anchored on SRFS names, and the finding 19 `.uv` grammar. */
 #include "model.hpp"
+#include "heap.hpp"
 #include "resource.hpp"
+#include "string.hpp"
 
 #include <ctype.h>
 #include <stdio.h>
@@ -932,4 +934,44 @@ uint32_t model_digest(const Model* m)
         }
     }
     return h;
+}
+
+/* LwoStringDuplicate (FUN_0048c0c0): the corpus's dup allocates strlen + 1
+ * rounded UP TO THE NEXT EVEN size through the engine heap, zeroes the
+ * whole block (dwords then bytes), then copies strlen + 1 bytes (the
+ * corpus's own loop bounds, assembly-pinned — Ghidra's "tail copy" was the
+ * even-size padding). On the corpus heap the allocator's even-grained
+ * blocks absorb the padding. LwoTextureProjectionModeParse (FUN_0048c120):
+ * a fold compare against the table PLANAR / CYLINDRICAL / SPHERICAL (the
+ * corpus's strnicmp shape, exposed via string_folded_compare); the first
+ * prefix match answers the table index, anything else answers 0 — the
+ * PLANAR default. */
+char* lwo_string_duplicate(const char* text)
+{
+    if (text == NULL) {
+        return NULL; /* deviation: the corpus dereferences blindly */
+    }
+    const size_t len1 = strlen(text) + 1u;
+    const size_t size = len1 + (len1 & 1u); /* even-grained corpus size */
+    char* copy = (char*)engine_heap_alloc((long)size);
+    if (copy == NULL) {
+        return NULL; /* the heap answers failure, faithful */
+    }
+    memset(copy, 0, size);
+    memcpy(copy, text, len1);
+    return copy;
+}
+
+int lwo_texture_projection_mode_parse(const char* name)
+{
+    static const char* const modes[3] = { "PLANAR", "CYLINDRICAL",
+                                          "SPHERICAL" };
+    for (int i = 0; i < 3; ++i) {
+        const size_t n = strlen(modes[i]);
+        if (name != NULL
+            && string_folded_compare(name, modes[i], n) == 0) {
+            return i;
+        }
+    }
+    return 0; /* the corpus's fall-through answers PLANAR */
 }

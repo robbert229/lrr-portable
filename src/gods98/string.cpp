@@ -134,3 +134,40 @@ const char* string_path_join(const char* root, ...)
     va_end(ap);
     return s_path;
 }
+
+/* StringCaseSubstringFind (2026-10-25) — FUN_0048c040. Case-insensitive
+ * substring walk over the corpus's __strnicmp (the same bounded fold
+ * compare as CaseInsensitiveSubstringFind): answers the match pointer and
+ * reports the byte index and the needle length through the optional
+ * outputs. The corpus gates on a non-empty haystack and a non-empty
+ * needle. Deviations: null strings are guarded (the corpus dereferences
+ * both), and the fold compare stops at NUL (the corpus strides). */
+int string_folded_compare(const char* a, const char* b, size_t n)
+{
+    return s_strnfoldcmp(a, b, n);
+}
+
+char* string_case_substring_find(char* haystack, const char* needle,
+                                 uint32_t* out_index, size_t* out_length)
+{
+    if (haystack == NULL || needle == NULL) {
+        return NULL; /* deviation: the corpus dereferences both blindly */
+    }
+    const size_t hlen = strlen(haystack);
+    const size_t nlen = strlen(needle);
+    if (hlen == 0u || nlen == 0u) {
+        return NULL; /* pinned: the corpus's strlen-shaped gate */
+    }
+    for (size_t i = 0; i < hlen; ++i) {
+        if (s_strnfoldcmp(haystack + i, needle, nlen) == 0) {
+            if (out_index != NULL) {
+                *out_index = (uint32_t)i;
+            }
+            if (out_length != NULL) {
+                *out_length = nlen;
+            }
+            return haystack + i;
+        }
+    }
+    return NULL;
+}
