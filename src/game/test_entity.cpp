@@ -1152,6 +1152,31 @@ int main(int argc, char** argv)
               "the absent reference keeps the fold quiet");
     }
 
+    /* EntityClearLinkedObjectState (2026-10-24): the gate-400 clear. */
+    {
+        static EntitySlot gate, linked;
+        memset(&gate, 0, sizeof gate);
+        memset(&linked, 0, sizeof linked);
+        gate.flags_3e0 = 0x100u;
+        gate.carry_link_308 = &linked;
+        gate.carry_state_324 = 5;
+        entity_clear_linked_object_state(&gate);
+        CHECK(gate.carry_link_308 == &linked && gate.carry_state_324 == 5,
+              "the clear stays behind the gate bit");
+        gate.flags_3e0 = 0x400u;
+        linked.flags_3e8 = 1u;
+        entity_clear_linked_object_state(&gate);
+        CHECK(gate.carry_link_308 == NULL && gate.carry_state_324 == 0
+                  && (gate.flags_3e0 & 0x400u) == 0u
+                  && linked.flags_3e8 == 0x2001u,
+              "the clear drops the pair and raises the carried 0x2000");
+        gate.flags_3e0 = 0x400u;
+        gate.carry_link_308 = NULL;
+        entity_clear_linked_object_state(&gate);
+        CHECK(gate.flags_3e0 == 0u,
+              "the missing carried slot rides the guard (deviation)");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "entity_test: %d failure(s)\n", s_failures);
         return 1;

@@ -412,4 +412,14 @@ void* menu_item_numeric_range_record_allocate(int kind, int min_v, int max_v,
 int nested_record_list_remove_by_key_recursive(int key, void* node);
                                                 /* FUN_0047b2e0 */
 
+/* KeyedResourceEntryRemove (FUN_0047b2a0): the keyed sweep of the
+ * association list. The deep-first key cleanup runs from the list head
+ * (the port hook, the corpus's unowned global); a matched head promotes
+ * its successor and frees through the engine heap.
+ * Deviations: the corpus strides the head and its dword links blindly
+ * (the port guards and widens); the sweep keeps the port's sound-buffer
+ * association node layout — field 2 carries the key word, field 3 the
+ * link — since that is where the corpus's global lives. */
+void keyed_resource_entry_remove(int key);      /* FUN_0047b2a0 */
+
 #endif /* LEGORRR_GODS98_RECORD_HPP */

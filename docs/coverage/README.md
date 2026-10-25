@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 891 | 34.8% |
+| ported | 894 | 34.9% |
 | anchored | 4 | 0.2% |
-| named | 1622 | 63.3% |
+| named | 1619 | 63.1% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (891 functions)
+  (894 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1622 functions)
+  citation yet (1619 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1627 (63.5%).**
+**Game logic remaining to port: 1624 (63.3%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -634,7 +634,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004473b0` | RouteToCellCommandIssue |
 | `0x004474f0` | LinkedEntityProximityResponse |
 | `0x004475c0` | EntityProgressAndNegativeDeltaHandler |
-| `0x00447780` | EntityClearLinkedObjectState |
 | `0x004477d0` | PathStepLookaheadEntryWrite |
 | `0x00447900` | TypeFourEntityCallbackDispatch |
 | `0x00447950` | EntityDirectionalActivityStart |
@@ -1181,7 +1180,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0047b160` | SoundSubsystemStopAll |
 | `0x0047b1a0` | SoundInstanceTrackRegister |
 | `0x0047b220` | SoundInstanceTrackStopAndRemove |
-| `0x0047b2a0` | KeyedResourceEntryRemove |
 | `0x0047b330` | NestedRecordListRemoveMatchingKey |
 | `0x0047b390` | SoundSourceSpatialRefreshAll |
 | `0x0047b410` | SoundSourceSpatialRefresh |
@@ -1591,7 +1589,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004977b0` | CrtFpuControlWordUpdateMask |
 | `0x004977d0` | CrtControlFlagsTranslate |
 | `0x00497900` | UInt96HasNoBitsAtOrAbove |
-| `0x00497970` | UInt96IncrementAtBit |
 | `0x004979e0` | UInt96ClearFromBit |
 | `0x00497a80` | UInt96Copy |
 | `0x00497ad0` | UInt96ShiftRight |

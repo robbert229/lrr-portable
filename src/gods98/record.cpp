@@ -3,6 +3,7 @@
 
 #include "record.hpp"
 #include "heap.hpp"
+#include "sound.hpp"
 
 /* Byte-safe field reads: corpus dword/float slots at offsets that may
  * not be pointer-aligned on 64-bit hosts. */
@@ -883,4 +884,45 @@ int nested_record_list_remove_by_key_recursive(int key, void* node)
     uint32_t node_key = 0u;
     __builtin_memcpy(&node_key, (char*)node + 0x08, sizeof node_key);
     return node_key == (uint32_t)key;
+}
+
+/* KeyedResourceEntryRemove (FUN_0047b2a0) — see record.hpp. The corpus
+ * routes through FUN_0047b2e0's +0x08/+0x0c node view; the port's sound
+ * association nodes widened that window, so the sweep reproduces the same
+ * deep-first promotion/unlink/free walk over the native field slots. */
+static int keyed_sweep(int key, void* node)
+{
+    if (node == NULL) {
+        return 0; /* deviation: the corpus strides the node blindly */
+    }
+    void* next = NULL;
+    __builtin_memcpy(&next, (char*)node + 3 * sizeof(void*), sizeof next);
+    if (next != NULL
+        && keyed_sweep(key, next) != 0) {
+        void* successor = NULL;
+        __builtin_memcpy(&successor, (char*)next + 3 * sizeof(void*),
+                         sizeof successor);
+        __builtin_memcpy((char*)node + 3 * sizeof(void*), &successor,
+                         sizeof successor);
+        engine_heap_free(next);
+    }
+    uint32_t node_key = 0u;
+    __builtin_memcpy(&node_key, (char*)node + 2 * sizeof(void*),
+                     sizeof node_key);
+    return node_key == (uint32_t)key;
+}
+
+void keyed_resource_entry_remove(int key)
+{
+    void* head = sound_buffer_association_head_peek();
+    if (head == NULL) {
+        return; /* deviation: the corpus strides the head blindly */
+    }
+    if (keyed_sweep(key, head) != 0) {
+        void* successor = NULL;
+        __builtin_memcpy(&successor, (char*)head + 3 * sizeof(void*),
+                         sizeof successor);
+        sound_buffer_association_head_set(successor);
+        engine_heap_free(head);
+    }
 }

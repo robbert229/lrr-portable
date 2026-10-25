@@ -907,6 +907,25 @@ int main(void)
               "the guards leave the sum alone");
     }
 
+    /* UInt96IncrementAtBit (2026-10-24): masks and the downward carry. */
+    {
+        uint32_t bits[3] = { 0u, 0u, 0u };
+        crt_uint96_increment_at_bit(bits, 0);
+        CHECK(bits[0] == 0x80000000u && bits[1] == 0u && bits[2] == 0u,
+              "the bit-0 mask lands high in limb 0");
+        crt_uint96_increment_at_bit(bits, 95);
+        CHECK(bits[2] == 1u, "the last bit lands low in limb 2");
+        crt_uint96_increment_at_bit(bits, 63);
+        CHECK(bits[1] == 1u, "the bit-63 mask rides limb 1");
+        bits[2] = 0xffffffffu;
+        crt_uint96_increment_at_bit(bits, 95);
+        CHECK(bits[2] == 0u && bits[1] == 2u,
+              "the limb-2 overflow carries +1 downward");
+        crt_uint96_increment_at_bit(bits, 200);
+        CHECK(bits[0] == 0x80000000u && bits[1] == 2u && bits[2] == 0u,
+              "the out-of-range limb guard stays quiet (deviation)");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "crt_test: %d failure(s)\n", s_failures);
         return 1;
