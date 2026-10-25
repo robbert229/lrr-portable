@@ -373,4 +373,30 @@ int entity_activity_terrain_eligibility_transition(GameContext* ctx,
                                                    float y, int* out);
                                                 /* FUN_00449980 */
 
+/* --- pair predicate + active-list scan (2026-10-25) -----------------------
+ * EntityStatePairPredicate (FUN_0043c200): reads stats table (type1, row1)
+ *   (FUN_00469e00); a zero first read answers 1 without walking (pinned).
+ *   Otherwise the filtered pool walk (FUN_004377b0's path: liveness mirror
+ *   + raised +0x3e8 bit-0x80000 gate) folds each live entity's +0xDC stats
+ *   float (FUN_0043c280) into an accumulator, then the re-read of
+ *   (type1, row1) plus (type2, row2) plus the fold answers 0 when the sum
+ *   is <= 0, else 1. Deviations: row/accumulator ride corpus-registered
+ *   together (the port keeps them apart, acc resets to 0.0 first); the
+ *   float10 fold lands as double; the walk composes the corpus's global
+ *   type tables over the ctx blocks; NULL ctx skips the walk (reads still
+ *   answer).
+ * ActiveEntityListContainsCode (FUN_004031e0): the permitted-activity
+ *   scan (FUN_0044b480) over the selection when it is non-empty (first-hit
+ *   answer, branch isolation pinned), else over the corpus's global active
+ *   entity list — DAT_004b335c/DAT_004b3424 have no ported owner, so the
+ *   list rides zero-init own storage behind install/count hooks (window
+ *   guard 50, deviations in the module notes). */
+int entity_state_pair_predicate(GameContext* ctx, int type1, int row1,
+                                int type2, int row2);
+                                                /* FUN_0043c200 */
+int active_entity_list_contains_code(GameContext* ctx, int code);
+                                                /* FUN_004031e0 */
+void active_entity_list_install(const EntitySlot* const* entries, int count);
+int  active_entity_list_count(void);            /* port hooks */
+
 #endif /* LEGORRR_GAME_AI_HPP */

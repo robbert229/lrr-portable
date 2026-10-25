@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 1086 | 42.4% |
+| ported | 1088 | 42.4% |
 | anchored | 4 | 0.2% |
-| named | 1429 | 55.7% |
+| named | 1427 | 55.7% |
 | runtime-import | 44 | 1.7% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (1086 functions)
+  (1088 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1429 functions)
+  citation yet (1427 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (44 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1434 (55.9%).**
+**Game logic remaining to port: 1432 (55.9%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -58,7 +58,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00401b30` | AdvisorApplySlotTransform |
 | `0x00401c50` | FormattedTextPrintfWidth |
 | `0x00401c80` | FormattedTextPrintf |
-| `0x004031e0` | ActiveEntityListContainsCode |
 | `0x00403320` | ObjectCommandTaskCreate |
 | `0x00403750` | CommandKindRecordIssueAndLink |
 | `0x00403810` | TerrainCellRecordCountUpdate |
@@ -493,7 +492,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0043b850` | TypeTwoEntityPositionedCallbackDispatch |
 | `0x0043bb20` | BuildingDepositStateMonitor |
 | `0x0043bc40` | ObjectiveSidecarAppendGate |
-| `0x0043c200` | EntityStatePairPredicate |
 | `0x0043c2b0` | PeriodicTimer25Advance |
 | `0x0043c3e0` | EntityType26CommandCompletionGate |
 | `0x0043c4c0` | EntityFinishState1A |
