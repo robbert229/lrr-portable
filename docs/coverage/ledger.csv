@@ -161,7 +161,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00407370,FUN_00407370,named,ResetObjectAuxiliaryState,0,164
 004073a0,FUN_004073a0,ported,EntityPointerRegistriesRemove,2,662
 00407410,FUN_00407410,ported,Type4ObjectRegistryInsert,2,518
-00407450,FUN_00407450,ported,IdleQueueRegister,2,717
+00407450,FUN_00407450,ported,IdleQueueRegister,1,717
 004074b0,FUN_004074b0,ported,Type2TimedRegistryInsert,2,717
 00407510,FUN_00407510,ported,SetType2ObjectRecordValue,2,286
 00407540,FUN_00407540,ported,FlaggedObjectTimerRegistryInsert,2,757

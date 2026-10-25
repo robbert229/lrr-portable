@@ -2363,6 +2363,25 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Object registry windows band** (2026-10-25): five rows land in
+`ai.*` / `cmd.*`. The 0x407xxx band registers entity records into four
+pointer/timer pair windows (flagged 20 slots with seed 0x42160000, the
+type-2 idle queue 20 — modeled by the cmd idle table, type-4 20, type-2
+timed 50 with seed 0x4a095440 — riding module statics, no corpus owner).
+`entity_pointer_registries_remove` (0x4073a0) sweeps all four for the
+record (window B through a new `idle_queue_clear` hook); the inserts are
+two-pass (full match pass, then first-empty append): a hit re-seeds, a
+miss appends with the seed, and a full table drops (`type4_object_
+registry_insert` 0x407410, `type2_timed_registry_insert` 0x4074b0,
+`flagged_object_timer_registry_insert` 0x407540 — the last gated on the
+capability word's bit 0x80 through the ported reader). `set_type2_
+object_record_value` (0x407510) broadcasts into occupied timed-window
+timers behind the type-2 gate. Deviation: the corpus strides the record's
+type word blindly; the port guards and reads the mirrored type. The
+corpus callers (teardown / post-create / damage-apply) stay unported, so
+the windows ride their hooks. `ai_test` pins the gates, appends,
+re-seeds, broadcasts, and resets.
+
 **Entry cache get-or-load pair** (2026-10-25; finding 255): `crt.*` takes
 the two cache-lookup wrappers over the string registry.
 `string_cache_lookup_or_load` (0x410520) and
