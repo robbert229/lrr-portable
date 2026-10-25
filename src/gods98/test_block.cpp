@@ -480,6 +480,34 @@ int main(int argc, char** argv)
         block_text_token_pool_destroy();
         CHECK(block_text_token_pool_slot_peek(0) == NULL,
               "the empty pool survives a second destroy");
+        /* BlockTextTokenPoolGrow (FUN_00479490): doubling chunks chained
+         * into the free-list head. Port node = eight pointer slots, link =
+         * field 7. */
+        block_text_token_pool_grow();
+        void* chunk1 = block_text_token_pool_head_peek();
+        const ptrdiff_t pnode = (ptrdiff_t)(8u * sizeof(void*));
+        const ptrdiff_t plink = 7 * (ptrdiff_t)sizeof(void*);
+        CHECK(chunk1 != NULL && block_text_token_pool_slot_peek(0) == chunk1
+                  && block_text_token_pool_watermark_peek() == 1,
+              "grow publishes chunk 1 and parks it in slot 0");
+        CHECK(*(void**)((char*)chunk1 + plink) == NULL,
+              "the single node links to the empty old head");
+        block_text_token_pool_grow();
+        void* chunk2 = block_text_token_pool_head_peek();
+        CHECK(chunk2 != chunk1 && block_text_token_pool_slot_peek(1) == chunk2
+                  && block_text_token_pool_watermark_peek() == 2,
+              "grow doubles to a two-node chunk parked in slot 1");
+        CHECK(*(void**)((char*)chunk2 + plink)
+                  == (void*)((char*)chunk2 + pnode)
+                  && *(void**)((char*)chunk2 + pnode + plink) == chunk1,
+              "the chunk 2 nodes chain node 0 -> node 1 -> old head");
+        block_text_token_pool_destroy();
+        CHECK(block_text_token_pool_slot_peek(0) == NULL
+                  && block_text_token_pool_slot_peek(1) == NULL
+                  && block_text_token_pool_head_peek() == NULL,
+              "destroy frees and clears the grown chunks");
+        CHECK(block_text_token_pool_watermark_peek() == 2,
+              "destroy leaves the watermark counter alone (faithful)");
     }
 
     if (s_failures == 0) {

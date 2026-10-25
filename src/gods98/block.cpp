@@ -440,14 +440,55 @@ const char* registry_path_split(const char* path, char* out)
     return path;
 }
 
-/* BlockTextTokenPool (FUN_00478e20 destroy; init/grow unported) — see
- * block.hpp. Corpus storage stays module-local; the slot word array runs
- * DAT_00506498..DAT_00506514 (the destroy loop's end condition is exactly
- * the head cursor word), so the port's 32 slots match the corpus 1:1. */
+/* BlockTextTokenPool (FUN_00478e20 destroy, FUN_00479490 grow; init
+ * unported) — see block.hpp. Corpus storage stays module-local; the slot
+ * word array runs DAT_00506498..DAT_00506514 (the destroy loop's end
+ * condition is exactly the head cursor word), so the port's 32 slots match
+ * the corpus 1:1. Grow chains doubled chunks into the free-list head role
+ * of DAT_00506518 on a host-aligned widened node layout (see grow below);
+ * the corpus's second role for that word, crt.cpp's record-list head, is
+ * documented aliasing the port does not model across translation units. */
 #define BLOCK_TOKEN_POOL_SLOTS 32
 static void* s_token_pool_slots[BLOCK_TOKEN_POOL_SLOTS];
-static void* s_token_pool_head;      /* DAT_00506518 role */
+static void* s_token_pool_head;      /* DAT_00506518 role: free-list head */
 static int   s_token_pool_resident;  /* _DAT_00506520 role */
+static int   s_token_pool_watermark; /* DAT_0050651c role: grow counter */
+
+/* BlockTextTokenPoolGrow (FUN_00479490): the watermark counter doubles the
+ * chunk size (1 << watermark), the chunk is engine-heap storage, and its
+ * nodes chain into the free-list head — block i links block i + 1, the last
+ * block links the old head, and the chunk base becomes the new head. The
+ * corpus parks the (possibly NULL) chunk in slot[watermark] before the
+ * success check and strides its slot array blindly — the port bounds the
+ * window (deviation) — and the counter never resets (the corpus's destroy
+ * leaves DAT_0050651c alone, faithful here). Deviation: corpus nodes are
+ * 0x20-byte dwords with the 32-bit link at +0x1c; the port widens the node
+ * to eight pointer slots (stride 0x40, link = field 7 at +0x38) so the
+ * pointer link stays host-aligned — the crt stream-buffer field-slot model
+ * applied here. */
+void block_text_token_pool_grow(void)
+{
+    const uint32_t shift = (uint32_t)((unsigned char)s_token_pool_watermark
+                                      & 0x1fu);
+    const uint32_t count = 1u << shift;
+    const uint32_t node = (uint32_t)(8u * sizeof(void*));
+    void* chunk = engine_heap_alloc((long)(count * node));
+    const int slot = s_token_pool_watermark;
+    if (slot >= 0 && slot < BLOCK_TOKEN_POOL_SLOTS) {
+        s_token_pool_slots[slot] = chunk; /* corpus stores NULL on failure */
+    }
+    if (chunk == NULL) {
+        return; /* deviation: the corpus still bumps nothing past here */
+    }
+    s_token_pool_watermark += 1;
+    char* base = (char*)chunk;
+    const ptrdiff_t link = 7 * (ptrdiff_t)sizeof(void*);
+    for (uint32_t i = 0; i + 1 < count; ++i) {
+        *(void**)(base + i * node + link) = base + (i + 1u) * node;
+    }
+    *(void**)(base + (count - 1u) * node + link) = s_token_pool_head;
+    s_token_pool_head = chunk;
+}
 
 void block_text_token_pool_destroy(void)
 {
@@ -488,4 +529,9 @@ void* block_text_token_pool_head_peek(void)
 int block_text_token_pool_resident_peek(void)
 {
     return s_token_pool_resident;
+}
+
+int block_text_token_pool_watermark_peek(void)
+{
+    return s_token_pool_watermark;
 }
