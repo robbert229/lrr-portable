@@ -16,6 +16,7 @@
 #include <string.h>
 
 #include "resource.hpp"
+#include "gods98/heap.hpp"
 #include "sound.hpp"
 
 static int s_failures = 0;
@@ -1311,6 +1312,32 @@ int main(int argc, char** argv)
             break;
         }
     }
+    /* SoundBufferAssociationAdd (2026-10-24): the association prepend. */
+    {
+        void* saved = sound_buffer_association_head_peek();
+        sound_buffer_association_head_set(NULL);
+        sound_buffer_association_add(1u, 2u, 3u);
+        void* h1 = sound_buffer_association_head_peek();
+        CHECK(h1 != NULL, "the first association is the head");
+        char* w = (char*)h1;
+        void* w0 = NULL; void* w1 = NULL; void* w2 = NULL; void* link = (void*)1;
+        __builtin_memcpy(&w0, w + 0 * sizeof(void*), sizeof w0);
+        __builtin_memcpy(&w1, w + 1 * sizeof(void*), sizeof w1);
+        __builtin_memcpy(&w2, w + 2 * sizeof(void*), sizeof w2);
+        __builtin_memcpy(&link, w + 3 * sizeof(void*), sizeof link);
+        CHECK(w0 == (void*)(uintptr_t)1 && w1 == (void*)(uintptr_t)2
+                  && w2 == (void*)(uintptr_t)3,
+              "the value words store in order");
+        CHECK(link == NULL, "the empty head links NULL");
+        sound_buffer_association_add(4u, 5u, 6u);
+        void* h2 = sound_buffer_association_head_peek();
+        __builtin_memcpy(&link, (char*)h2 + 3 * sizeof(void*), sizeof link);
+        CHECK(link == h1, "the second node prepends through the prior head");
+        engine_heap_free(h2);
+        engine_heap_free(h1);
+        sound_buffer_association_head_set(saved);
+    }
+
     if (s_failures == 0) {
         printf("sound_test: PASS%s\n", argc > 2 ? " (real wads)" : "");
         return 0;

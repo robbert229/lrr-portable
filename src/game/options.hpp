@@ -127,4 +127,12 @@ int  options_load_header(GameOptions* o, const uint8_t* blk);
 }
 #endif
 
+/* OptionsWriteToSlot (FUN_00416910, finding 408): with a save slot open,
+ * stores the live options words into the slot context's +8/+12/+16 window
+ * (the corpus writes +8 sfx / +12 speed / +16 music). Deviation: the port's
+ * slot context is the active context block (sav_slot_ctx), so the writes
+ * land as dwords in that block's byte window (port-side composition). */
+struct GameContext;
+void options_write_to_slot(struct GameContext* ctx); /* FUN_00416910 */
+
 #endif /* LEGORRR_GAME_OPTIONS_HPP */

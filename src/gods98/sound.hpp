@@ -467,4 +467,15 @@ int sound_submit_with_global_cooldown(int alias, int* out_handle);
 int sound_stream_play_level(int level);
 int sound_stream_play_tutorial(int level);
 
+/* SoundBufferAssociationAdd (FUN_0047b020): allocates a four-word record
+ * — the association's value words in order, the prior head last — and
+ * makes it the chain head. Deviation: the corpus's dword record is laid
+ * out host-widened (word n at record + n*sizeof(void*)); the chain head
+ * (DAT_00506684) has no ported owner, so it lands here as a zero-init
+ * static with hooks (NULL record guarded — corpus strides blindly). */
+void sound_buffer_association_add(uint32_t a, uint32_t b, uint32_t c);
+                                                /* FUN_0047b020 */
+void  sound_buffer_association_head_set(void* node); /* port hook */
+void* sound_buffer_association_head_peek(void);      /* port hook */
+
 #endif /* LEGORRR_SOUND_HPP */

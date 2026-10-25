@@ -2363,6 +2363,19 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Allocate/add + slot-write leaf band** (findings 440/408/243/381): `heap.*`
+ports `three_word_record_allocate_and_initialize` (0x410b60 — the three-word
+record store, answered through the port for observability), `message.*` ports
+`has_active_resource` (0x4119d0 — the +0x38 handle rides the system-state
+bitmask), `options.*` ports `options_write_to_slot` (0x416910 — with a slot
+open, the live speed/sfx/music words land in the slot context's +12/+8/+16
+window), and `sound.*` ports `sound_buffer_association_add` (0x47b020 — the
+four-word association record prepended onto the DAT_00506684 chain, modeled
+here with hooks). Five seam-bound candidates (0x442260, 0x46c130, 0x40c720,
+0x438f60, 0x46d350) are recorded in blocked.md with their next actions.
+`heap_test`, `message_test`, `options_test`, and `sound_test` pin the stores,
+gates, and chain.
+
 **Scene-visibility wrapper band** (findings 446/370/435/356/373/476/28):
 `record.*` ports six wrappers over the surface lock/unlock hook boundary —
 `graphics_overlay_visibility_set` (0x4634b0 — the overlay word moves the

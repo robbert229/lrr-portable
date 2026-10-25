@@ -201,6 +201,25 @@ int main(void)
         CHECK(message_flags_peek() == saved, "the test restores the word");
     }
 
+    /* HasActiveResource (2026-10-24): the +0x38 handle and the flags. */
+    {
+        char rec[0x40];
+        memset(rec, 0, sizeof rec);
+        const uint32_t before = system_state_flags_get();
+        uint32_t on = 0x1u;
+        system_state_flags_set(&on);
+        /* Clear handle: answers no even with flags set. */
+        CHECK(has_active_resource(rec) == 0, "a clear handle answers no");
+        const uint32_t handle = 0x5u;
+        __builtin_memcpy(rec + 0x38, &handle, sizeof handle);
+        CHECK(has_active_resource(rec) == 1, "the handle rides the flags");
+        uint32_t off = 0u;
+        system_state_flags_set(&off);
+        CHECK(has_active_resource(rec) == 0, "clear flags answer no");
+        CHECK(has_active_resource(NULL) == 0, "the NULL record is guarded");
+        system_state_flags_set(&before); /* restore */
+    }
+
     if (s_failures == 0) {
         printf("message_test: PASS\n");
         return 0;

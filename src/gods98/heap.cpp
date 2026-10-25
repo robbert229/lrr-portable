@@ -127,3 +127,17 @@ void object_field_38_release(void* record)
         engine_heap_free(field);
     }
 }
+
+/* ThreeWordRecordAllocateAndInitialize (FUN_00410b60) — see heap.hpp. */
+void* three_word_record_allocate_and_initialize(uint32_t a, uint32_t b,
+                                                uint32_t c)
+{
+    uint32_t* rec = (uint32_t*)engine_heap_alloc(12);
+    if (rec == NULL) {
+        return NULL; /* deviation: the corpus strides the record blindly */
+    }
+    rec[0] = a;
+    rec[1] = b;
+    rec[2] = c;
+    return rec;
+}

@@ -370,7 +370,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00410b30,FUN_00410b30,named,GlobalPointerGet_004c76ab24,0,60
 00410b40,FUN_00410b40,named,GlobalPointerGet_004c76ab28,0,60
 00410b50,FUN_00410b50,named,GlobalPointerGet_004c76ab3c,0,60
-00410b60,FUN_00410b60,named,ThreeWordRecordAllocateAndInitialize,0,282
+00410b60,FUN_00410b60,ported,ThreeWordRecordAllocateAndInitialize,2,282
 00410b90,FUN_00410b90,named,BoundedFloatRecordCreate,0,549
 00410bf0,FUN_00410bf0,named,MenuItemNumericRangeRecordAllocate,0,882
 00410c70,FUN_00410c70,named,ResourceVariantRecordRelease,0,682
@@ -388,7 +388,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00411790,FUN_00411790,named,MenuPickWidgetUnderPointer,0,735
 00411840,FUN_00411840,named,FrontendProgressValueChanged,0,189
 00411870,FUN_00411870,ported,MenuSliderPointerHandler,2,1263
-004119d0,FUN_004119d0,named,HasActiveResource,0,208
+004119d0,FUN_004119d0,ported,HasActiveResource,3,208
 00411a00,FUN_00411a00,ported,MenuInputTick,2,7402
 00411f00,FUN_00411f00,ported,KeyContextCheck,1,99
 00411f10,FUN_00411f10,named,PercentSplitSurfaceBlit,0,2216
@@ -438,7 +438,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00416150,FUN_00416150,ported,StreamPlayLevel,2,291
 004161a0,FUN_004161a0,ported,StreamPlayTutorial,2,292
 004161f0,FUN_004161f0,ported,LoadMenuBuild,1,9681
-00416910,FUN_00416910,named,OptionsWriteToSlot,0,253
+00416910,FUN_00416910,ported,OptionsWriteToSlot,3,253
 00416940,FUN_00416940,ported,OptionsLoadOrDefault,2,691
 004169c0,FUN_004169c0,named,FrontEndStateChange,0,3122
 00416c80,FUN_00416c80,named,MenuEnter,0,501
@@ -1910,7 +1910,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0047ad10,FUN_0047ad10,named,SoundPositionSetFromVector,0,145
 0047ad30,FUN_0047ad30,named,AttachedSoundStopByEntity,0,418
 0047ad70,FUN_0047ad70,named,SoundBufferPlayWithPosition,0,4345
-0047b020,FUN_0047b020,named,SoundBufferAssociationAdd,0,283
+0047b020,FUN_0047b020,ported,SoundBufferAssociationAdd,3,283
 0047b050,FUN_0047b050,ported,SoundBankEntryVolumeSet,3,764
 0047b0d0,FUN_0047b0d0,ported,IndexedRecordStride134WordGet,2,103
 0047b0f0,FUN_0047b0f0,named,SoundHandleToBuffer,0,203

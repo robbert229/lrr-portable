@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "resource.hpp"
+#include "heap.hpp"
 #include "sound.hpp"
 
 /* Bank record (corpus record of stride 0x134; port keeps the fields the
@@ -1196,3 +1197,30 @@ int sound_stream_play_tutorial(int level)
     }
     return 0;
 }
+
+/* SoundBufferAssociationAdd (FUN_0047b020) — see sound.hpp. */
+static void* s_buffer_assoc_head; /* DAT_00506684 role: unowned */
+
+void sound_buffer_association_add(uint32_t a, uint32_t b, uint32_t c)
+{
+    void* node = engine_heap_alloc(4 * sizeof(void*));
+    if (node == NULL) {
+        return; /* deviation: the corpus strides the record blindly */
+    }
+    char* w = (char*)node;
+    void* wa = (void*)(uintptr_t)a;
+    void* wb = (void*)(uintptr_t)b;
+    void* wc = (void*)(uintptr_t)c;
+    __builtin_memcpy(w + 0 * sizeof(void*), &wa, sizeof wa);
+    __builtin_memcpy(w + 1 * sizeof(void*), &wb, sizeof wb);
+    __builtin_memcpy(w + 2 * sizeof(void*), &wc, sizeof wc);
+    __builtin_memcpy(w + 3 * sizeof(void*), &s_buffer_assoc_head,
+                     sizeof s_buffer_assoc_head);
+    s_buffer_assoc_head = node;
+}
+
+void  sound_buffer_association_head_set(void* node)
+{
+    s_buffer_assoc_head = node;
+}
+void* sound_buffer_association_head_peek(void) { return s_buffer_assoc_head; }

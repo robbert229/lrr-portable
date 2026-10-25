@@ -460,6 +460,29 @@ int main(int argc, char** argv)
             real_probe(argv[a + 1]);
         }
     }
+    /* OptionsWriteToSlot (2026-10-24): the slot window stores. */
+    {
+        GameContext ctx;
+        game_context_init(&ctx);
+        ctx.options.game_speed = 3;
+        ctx.options.sfx_volume = 7;
+        ctx.options.music_volume = 4;
+        save_slot_set(&ctx, 1);
+        options_write_to_slot(&ctx);
+        uint32_t w8 = 0, w12 = 0, w16 = 0;
+        __builtin_memcpy(&w8, (char*)&ctx + 8, sizeof w8);
+        __builtin_memcpy(&w12, (char*)&ctx + 12, sizeof w12);
+        __builtin_memcpy(&w16, (char*)&ctx + 16, sizeof w16);
+        CHECK(w8 == 7u && w12 == 3u && w16 == 4u,
+              "the live options words land in the slot window");
+        ctx.options.sfx_volume = 9;
+        save_slot_set(&ctx, -1); /* closed: nothing writes */
+        options_write_to_slot(&ctx);
+        __builtin_memcpy(&w8, (char*)&ctx + 8, sizeof w8);
+        CHECK(w8 == 7u, "the closed slot leaves the window alone");
+        options_write_to_slot(NULL); /* guarded */
+    }
+
     if (s_failures == 0) {
         printf("options_test: PASS\n");
         return 0;

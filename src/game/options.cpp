@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "options.hpp"
+#include "savegame.hpp"
 
 #include "gods98/engine.hpp"
 
@@ -253,4 +254,20 @@ int options_load_header(GameOptions* o, const uint8_t* blk)
         options_set(o, (int)i, (int)s_get_u32(blk + 12 + 4 * i));
     }
     return 1;
+}
+
+/* OptionsWriteToSlot (FUN_00416910) — see options.hpp. */
+void options_write_to_slot(GameContext* ctx)
+{
+    char* block = (char*)sav_build_ctx(ctx);
+    if (block == NULL) {
+        return;
+    }
+    /* corpus: DAT_00557034 -> +8, DAT_00557030 -> +12, DAT_0055703c -> +16 */
+    const uint32_t sfx = (uint32_t)ctx->options.sfx_volume;
+    const uint32_t speed = (uint32_t)ctx->options.game_speed;
+    const uint32_t music = (uint32_t)ctx->options.music_volume;
+    __builtin_memcpy(block + 8, &sfx, sizeof sfx);
+    __builtin_memcpy(block + 12, &speed, sizeof speed);
+    __builtin_memcpy(block + 16, &music, sizeof music);
 }
