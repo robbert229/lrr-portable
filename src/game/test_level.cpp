@@ -1556,6 +1556,48 @@ int main(int argc, char** argv)
               "the guards keep the block untouched");
     }
 
+    /* CellVariantEntryMatchCheck (2026-10-25): the window probe. */
+    {
+        static char win[CELL_VARIANT_WINDOW_SIZE];
+        static unsigned char blocks[0x18 + 4 * 0x28];
+        void* blocks_ptr = blocks;
+        uint32_t u32;
+        memset(win, 0, sizeof win);
+        memset(blocks, 0xff, sizeof blocks);
+        u32 = 2; /* width */
+        memcpy(win, &u32, sizeof u32);
+        u32 = 2; /* height */
+        memcpy(win + 4, &u32, sizeof u32);
+        u32 = 1; /* stride */
+        memcpy(win + 8, &u32, sizeof u32);
+        memcpy(win + 0x28, &blocks_ptr, sizeof blocks_ptr);
+        /* cell (1,1) -> index 2; cell (0,1) -> index 1. */
+        blocks[0x18 + 2 * 0x28] = 3;
+        blocks[0x18 + 1 * 0x28] = 7;
+        CHECK(cell_variant_entry_match_check(win, 1, 1, 1, 1) == 0,
+              "the same cell answers 0");
+        CHECK(cell_variant_entry_match_check(win, 2, 1, 0, 1) == 0
+                  && cell_variant_entry_match_check(win, 1, 1, 0, 2) == 0,
+              "the bounds test answers 0");
+        CHECK(cell_variant_entry_match_check(win, 1, 1, 0, 1) == 0,
+              "the empty variant list answers 0");
+        win[0x4034u + 3u] = 1;
+        win[0x34u + 3u * 0x80u] = 7;
+        CHECK(cell_variant_entry_match_check(win, 1, 1, 0, 1) == 1,
+              "the variant list lands the match");
+        win[0x34u + 3u * 0x80u] = 8;
+        CHECK(cell_variant_entry_match_check(win, 1, 1, 0, 1) == 0,
+              "the list miss answers 0");
+        blocks[0x18 + 2 * 0x28] = 0xff;
+        CHECK(cell_variant_entry_match_check(win, 1, 1, 0, 1) == 0,
+              "the missing first variant answers 0");
+        blocks[0x18 + 2 * 0x28] = 3;
+        blocks[0x18 + 1 * 0x28] = 0xff;
+        CHECK(cell_variant_entry_match_check(win, 1, 1, 0, 1) == 0
+                  && cell_variant_entry_match_check(NULL, 1, 1, 0, 1) == 0,
+              "the missing second variant and window guards hold");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "level_test: %d failure(s)\n", s_failures);
         return 1;

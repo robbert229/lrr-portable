@@ -789,3 +789,110 @@ void selected_level_start_object_update(GameContext* ctx)
     }
     (void)checkpoint_blob_get(ctx); /* the corpus keeps no result */
 }
+
+/* --- the generic list window band (see savegame.hpp) ----------------------
+ * Shared wide-key scan: each entry slot's key rides as little-endian
+ * 16-bit units; a unit whose LOW bytes agree on zero terminates the key
+ * (pinned: the terminating unit's high byte is never compared). */
+static int list_wide_key_match(const void* node_key, const void* probe_key)
+{
+    const unsigned char* a = (const unsigned char*)node_key;
+    const unsigned char* b = (const unsigned char*)probe_key;
+    for (size_t off = 0;; off += 2) {
+        if (a[off] != b[off]) {
+            return 0;
+        }
+        if (a[off] == 0u) {
+            return 1; /* low-byte terminator */
+        }
+        if (a[off + 1] != b[off + 1]) {
+            return 0;
+        }
+    }
+}
+
+static int list_wide_scan(const SavListWindow* win, const void* wide_key)
+{
+    if (win == NULL || win->count < 1 || wide_key == NULL) {
+        return -1; /* deviation: the corpus strides the window blindly */
+    }
+    for (int i = 0; i < win->count; ++i) {
+        const void* entry = (win->entries != NULL) ? win->entries[i] : NULL;
+        if (entry != NULL && list_wide_key_match(entry, wide_key) != 0) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+int list_find_name(const SavListWindow* win, const char* name)
+{
+    if (win == NULL || win->count < 1 || name == NULL
+        || win->entries == NULL) {
+        return -1; /* deviation: the corpus strides the entries blindly */
+    }
+    for (int i = 0; i < win->count; ++i) {
+        const char* entry = (const char*)win->entries[i];
+        if (entry != NULL && strcasecmp_lite(entry, name) == 0) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+void list_add_name(SavListWindow* win, const void* wide_key, void* value)
+{
+    const int i = list_wide_scan(win, wide_key);
+    if (i >= 0 && win->values_b != NULL) {
+        win->values_b[i] = value; /* corpus: blind store through + 16 */
+    }
+}
+
+void* list_has_item(const SavListWindow* win, const void* wide_key)
+{
+    const int i = list_wide_scan(win, wide_key);
+    if (i < 0 || win->values_b == NULL) {
+        return NULL;
+    }
+    return win->values_b[i];
+}
+
+void list_set_node(SavListWindow* win, const void* wide_key, void* value)
+{
+    const int i = list_wide_scan(win, wide_key);
+    if (i >= 0 && win->values_a != NULL) {
+        win->values_a[i] = value; /* corpus: blind store through + 12 */
+    }
+}
+
+void* list_get_node(const SavListWindow* win, const void* wide_key)
+{
+    const int i = list_wide_scan(win, wide_key);
+    if (i < 0 || win->values_a == NULL) {
+        return NULL;
+    }
+    return win->values_a[i];
+}
+
+/* SavTreeWalk (FUN_004171c0) — see savegame.hpp. */
+int sav_tree_walk(void* node, sav_tree_visit visit, void* user)
+{
+    SavTreeNode* n = (SavTreeNode*)node;
+    if (n == NULL || n->visited != 0u) {
+        return 0;
+    }
+    n->visited = 1u; /* the corpus's flag store, blind in the original */
+    if (visit != NULL && visit(node, user) != 0) {
+        return 1; /* deviation: the corpus strides the callback blindly */
+    }
+    if (n->children != NULL) {
+        void** kids = (void**)n->children; /* widened slots */
+        for (uint32_t i = 0; i < n->count; ++i) {
+            if (sav_tree_walk(kids[i], visit, user) != 0) {
+                return 1;
+            }
+        }
+        return 0;
+    }
+    return 0;
+}

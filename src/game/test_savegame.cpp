@@ -670,5 +670,92 @@ int main(void)
     CHECK(sav_build_ctx(&ctx) == &ctx, "an open slot builds the block");
     save_slot_selection_clear(&ctx);
 
+    /* The generic list window band (2026-10-25). */
+    {
+        static void* entries[4];
+        static void* values_a[4];
+        static void* values_b[4];
+        SavListWindow win;
+        memset(entries, 0, sizeof entries);
+        memset(values_a, 0, sizeof values_a);
+        memset(values_b, 0, sizeof values_b);
+        win.entries = entries;
+        win.values_a = values_a;
+        win.values_b = values_b;
+
+        const uint16_t key_a[] = { 'A', 'B', 0 };
+        const uint16_t key_b[] = { 'C', 0 };
+        win.count = 0;
+        CHECK(list_get_node(&win, key_a) == NULL, "the empty window answers null");
+        CHECK(list_find_name(&win, "menu") == -1, "the empty find answers -1");
+        list_add_name(&win, key_a, (void*)5); /* no entries yet: silent */
+        win.entries[0] = (void*)key_a;
+        win.entries[1] = (void*)key_b;
+        win.count = 2;
+        list_add_name(&win, key_a, (void*)5);
+        list_add_name(&win, key_b, (void*)7);
+        CHECK(values_b[0] == (void*)5 && values_b[1] == (void*)7,
+              "the add rides value array B");
+        CHECK(list_has_item(&win, key_b) == (void*)7, "the has answers B");
+        CHECK(list_has_item(&win, entries[2]) == NULL
+                  && list_get_node(&win, entries[3]) == NULL,
+              "the wide miss answers null");
+        list_set_node(&win, key_a, (void*)9);
+        CHECK(list_get_node(&win, key_a) == (void*)9, "the set rides array A");
+        CHECK(values_b[0] == (void*)5, "the set does not touch array B");
+        CHECK(list_has_item(&win, NULL) == NULL
+                  && list_find_name(&win, NULL) == -1
+                  && list_find_name(NULL, "x") == -1,
+              "the window and key guards hold");
+        list_add_name(NULL, key_a, (void*)1); /* guarded no-ops */
+        list_set_node(NULL, key_a, (void*)1);
+        {
+            /* Pinned: the low byte terminates the wide key — the node
+             * key { 0x1200 } compares equal to the probe { 0x0000 };
+             * the terminator's high byte is never inspected. */
+            static const uint16_t key_quirk[] = { 0x1200 };
+            static const uint16_t key_probe[] = { 0x0000 };
+            win.entries[2] = (void*)key_quirk;
+            win.count = 3;
+            list_add_name(&win, key_probe, (void*)11);
+            CHECK(values_b[2] == (void*)11,
+                  "the terminator quirk lands the store");
+            win.entries[2] = NULL;
+            win.count = 2;
+        }
+    }
+
+    /* SavTreeWalk (2026-10-25). */
+    {
+        static SavTreeNode root;
+        static SavTreeNode kid1;
+        static SavTreeNode kid2;
+        static void* kids[2];
+        int visits = 0;
+        kids[0] = &kid1;
+        kids[1] = &kid2;
+        root.children = kids;
+        root.count = 2;
+        root.visited = 0;
+        kid1.children = NULL;
+        kid1.count = 0;
+        kid1.visited = 0;
+        kid2.children = NULL;
+        kid2.count = 0;
+        kid2.visited = 0;
+        CHECK(sav_tree_walk(&root, s_counting_visit, &visits) == 0
+                  && visits == 3,
+              "the walk visits each node once");
+        visits = 0;
+        CHECK(sav_tree_walk(&root, s_counting_visit, &visits) == 0
+                  && visits == 0,
+              "the revisited walk visits nothing");
+        CHECK(sav_tree_walk(NULL, s_counting_visit, &visits) == 0,
+              "the node guard holds");
+        kid2.visited = 0;
+        CHECK(sav_tree_walk(&kid2, NULL, &visits) == 0 && visits == 0,
+              "the callback guard holds (the corpus strides it)");
+    }
+
     return 0;
 }

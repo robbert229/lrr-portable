@@ -207,4 +207,60 @@ void* sav_record_ptr(GameContext* ctx, int index);
  * discards the value; the apparent argument is calling-convention residue —
  * the getter answers the blob word itself). */
 void selected_level_start_object_update(GameContext* ctx); /* FUN_00460200 */
+
+/* --- generic list window band (2026-10-25) --------------------------------
+ * The 0x416exx/0x4170xx band works over caller-supplied list-header
+ * windows: header slots {count, entry-key pointer array, value array A,
+ * value array B} (the corpus header's own +8 slot is untouched by this
+ * band). Two key views ride the same window: the fold find reads entry
+ * slots as byte-string names through the corpus's case-insensitive
+ * compare, and the four wide-key halves compare entry slots as
+ * little-endian 16-bit units — pinned quirk: the unit's LOW byte
+ * terminates the key, so a high-byte difference at the terminating unit
+ * is never inspected. The add/has halves ride value array B; the
+ * set/get halves ride value array A. Deviations: the port guards the
+ * window, entry, and key pointers (the corpus strides them blindly);
+ * entries, values, and the key slots ride widened slots (the corpus
+ * strides dword fields). */
+typedef struct SavListWindow {
+    int32_t  count;      /* corpus header + 0 */
+    void**   entries;    /* corpus + 4 (widened) */
+    void**   values_a;   /* corpus + 12 (widened): set/get values */
+    void**   values_b;   /* corpus + 16 (widened): add/has values */
+} SavListWindow;
+
+/* Fold-find the name slot; answers the entry index or -1. */
+int list_find_name(const SavListWindow* win, const char* name);
+                                                /* FUN_00416e20 */
+
+/* Wide-key scan halves: add stores the value into array B on a match;
+ * has answers the paired array-B value (NULL on a miss); set/get ride
+ * array A. */
+void  list_add_name(SavListWindow* win, const void* wide_key, void* value);
+                                                /* FUN_00416ed0 */
+void* list_has_item(const SavListWindow* win, const void* wide_key);
+                                                /* FUN_00416f40 */
+void  list_set_node(SavListWindow* win, const void* wide_key, void* value);
+                                                /* FUN_00416fb0 */
+void* list_get_node(const SavListWindow* win, const void* wide_key);
+                                                /* FUN_00417020 */
+
+/* SavTreeWalk (FUN_004171c0): visit-each-once tree recursion over
+ * node windows — children pointer slot, child count, and the walk flag;
+ * the port's node is the widened-slot shape (the corpus strides its
+ * dword fields). The callback is the corpus's plain indirect call.
+ * Deviation: the port guards the node and child-array pointers; the
+ * corpus strides the flag/store edges blindly. Answers 1 when the
+ * callback or any subtree reports it. */
+typedef struct SavTreeNode {
+    void*    children;   /* corpus + 4 (widened): child pointer array */
+    uint32_t count;      /* corpus + 8 */
+    uint32_t visited;    /* corpus + 0x10: walk flag */
+} SavTreeNode;
+
+typedef int (*sav_tree_visit)(void* node, void* user);
+
+int sav_tree_walk(void* node, sav_tree_visit visit, void* user);
+                                                /* FUN_004171c0 */
+
 #endif /* LEGORRR_GAME_SAVEGAME_HPP */

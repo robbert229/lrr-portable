@@ -2363,6 +2363,25 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Generic list window band** (2026-10-25): seven rows land in
+`savegame.*` / `level.*`. The 0x416exx/0x4170xx list band rides
+caller-supplied list-header windows as pure window operations: the fold
+find (0x416e20) answers entry indices through the corpus's
+case-insensitive compare, and the four wide-key halves (add/has
+0x416ed0/0x416f40 over value array B; set/get 0x416fb0/0x417020 over
+array A) compare keys as little-endian 16-bit units — the low byte
+terminates, so a node key ending in the unit 0x1200 answers the probe
+0x0000 equal (pinned quirk). `sav_tree_walk` (0x4171c0) is the
+visit-each-once tree recursion with the corpus's plain indirect-call
+callback over widened node slots. `cell_variant_entry_match_check`
+(0x451180) joins `level.*` as a grid-window probe: both cells bounds-
+checked, the first cell's inline variant list (count byte through the
+window's +0x4034 table, entries at +0x34 + variant * 0x80) scanned for
+the second cell's variant byte. Deviations: pointer guards everywhere
+the corpus strides blindly; the corpus's list owners stay hook-bound,
+so the windows ride their hooks. Tests pin the arrays, the terminator
+quirk, the walk, the guards, and the variant lists.
+
 **Pure string/geometry leaf band** (2026-10-25; findings 226/235/371/372/
 388): seven rows land across `view.*`, `texture.*`, `crt.*`, and
 `string.*`. `matrix4_identity_initialize` (0x483540) writes the corpus's

@@ -2695,6 +2695,46 @@ void cell_cardinal_neighbor_apply(const struct GameContext* ctx, int x,
 }
 
 /* TerrainCellSpecialStatePredicate (FUN_0040d3f0) — see level.hpp. */
+/* CellVariantEntryMatchCheck (FUN_00451180) — see level.hpp. The
+ * coordinate pair names two cells through the same window: the block
+ * table stride is the window's own dword at + 0x08. */
+int cell_variant_entry_match_check(const void* grid, uint32_t x1, uint32_t y1,
+                                   uint32_t x2, uint32_t y2)
+{
+    if (grid == NULL) {
+        return 0; /* deviation: the corpus strides the window blindly */
+    }
+    const unsigned char* w = (const unsigned char*)grid;
+    if ((y1 != y2 || x1 != x2) != 0) {
+        uint32_t width, height, stride;
+        __builtin_memcpy(&width, w + 0x00, sizeof width);
+        __builtin_memcpy(&height, w + 0x04, sizeof height);
+        __builtin_memcpy(&stride, w + 0x08, sizeof stride);
+        if (x1 < width && y1 < height && x2 < width && y2 < height) {
+            void* blocks = NULL;
+            __builtin_memcpy(&blocks, w + 0x28, sizeof blocks);
+            if (blocks == NULL) {
+                return 0; /* deviation: the corpus strides the base */
+            }
+            const unsigned char* base = (const unsigned char*)blocks + 0x18;
+            const size_t i1 = ((size_t)y1 * stride + x1) * 0x28;
+            const size_t i2 = ((size_t)y2 * stride + x2) * 0x28;
+            const uint32_t v1 = base[i1];
+            const uint32_t v2 = base[i2];
+            if (v1 != 0xffu && v2 != 0xffu) {
+                const size_t cnt = w[0x4034u + v1];
+                for (size_t i = 0; i < cnt; ++i) {
+                    if (w[0x34u + (size_t)v1 * 0x80u + i] == (unsigned char)v2) {
+                        return 1;
+                    }
+                }
+                return 0; /* corpus: the list ran out (and count 0) */
+            }
+        }
+    }
+    return 0;
+}
+
 int terrain_cell_special_state_predicate(const LevelState* s, int cx,
                                          int cy, int secondary_gate)
 {

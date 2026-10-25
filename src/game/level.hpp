@@ -914,4 +914,28 @@ int terrain_cell_special_state_predicate(const LevelState* s, int cx,
                                          int cy, int secondary_gate);
                                                 /* FUN_0040d3f0 */
 
+/* --- cell-variant match window (2026-10-25) -------------------------------
+ * CellVariantEntryMatchCheck (FUN_00451180; findings 254/450): the cell
+ * material-variant compatibility probe, modeled as a pure window
+ * operation (the corpus's sole caller stays hook-bound, so the window
+ * rides its hooks). The grid window's field shape (corpus dword strides,
+ * port reads by offset):
+ *   + 0x00 width, + 0x04 height, + 0x08 stride (dwords),
+ *   + 0x28 block-table base (widened slot; the corpus strides a dword),
+ *   block variant byte at base + 0x18 + (y * stride + x) * 0x28
+ *     (0xff = no variant),
+ *   inline variant tables: entry byte at window + 0x34 + v * 0x80 + i,
+ *     count byte at window + 0x4034 + v (so the window must span the
+ *     whole table region).
+ * Both cells must answer inside the bounds and name different cells;
+ * then the first cell's variant list is scanned for the second cell's
+ * variant byte. Deviations: the port guards the window and block-table
+ * pointers (the corpus strides both blindly); unsigned coordinate
+ * arithmetic rides the corpus shape exactly (out-of-range signed inputs
+ * wrap past the bounds test, as in the corpus). */
+#define CELL_VARIANT_WINDOW_SIZE 0x4128
+int cell_variant_entry_match_check(const void* grid, uint32_t x1, uint32_t y1,
+                                   uint32_t x2, uint32_t y2);
+                                                /* FUN_00451180 */
+
 #endif /* LEGORRR_GAME_LEVEL_HPP */
