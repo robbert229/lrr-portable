@@ -263,4 +263,26 @@ typedef int (*sav_tree_visit)(void* node, void* user);
 int sav_tree_walk(void* node, sav_tree_visit visit, void* user);
                                                 /* FUN_004171c0 */
 
+/* --- the checkpoint progress fold band (2026-10-25) ------------------------
+ * CheckpointBlobTaskProgressRecalculate (FUN_00460950): the blob's
+ * progress fold over the stride-0x210 task-window bands: zero the three
+ * accumulator words, fold each pair as percent = 100 / den * num — a
+ * zero denominator answers 100.0, and the clamp lands AFTER the store,
+ * as the corpus stores-clamps-stores (pinned quirk) — then walk the
+ * count-up loops: every round adds 100.0 to the +0x2fac sum and the
+ * last folded percent to the +0x2fb0 carry. The 0x2d90-gated loop keeps
+ * both accumulators in registers and writes them back only when it ends
+ * (pinned corpus shape), the 0x2550 loop adds the RAW window (+0x2564),
+ * then the carry clamps down to the sum and below zero to 0.0, and the
+ * final percent fold (100 / sum * carry) plus the float-converted +0x1c0
+ * word land at +0x2fb4, clamped to 100.
+ * Deviations: the corpus threads the global current level and the blob
+ * word through its two getters; the port threads GameContext (the level
+ * guard, then the blob pointer) and runs the fold math in single
+ * precision. A missing level or blob answers 0; success answers 1.
+ * Corpus offsets kept: windows +0x1b04..+0x2984 (folds), guards
+ * +0x1d10..+0x2d90 (loops), accumulators +0x2fac/+0x2fb0/+0x2fb4. */
+int checkpoint_blob_task_progress_recalculate(GameContext* ctx);
+                                                /* FUN_00460950 */
+
 #endif /* LEGORRR_GAME_SAVEGAME_HPP */

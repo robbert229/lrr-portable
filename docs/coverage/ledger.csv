@@ -1396,7 +1396,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00460290,FUN_00460290,named,EntityType4IndexListBuild,0,637
 00460310,FUN_00460310,named,EntityType4IndexListAppend,0,370
 00460360,FUN_00460360,named,CheckpointBlobTaskProgressRefresh,0,7528
-00460910,FUN_00460910,ported,ResolvedEntityOperationDispatch,3,313
+00460910,FUN_00460910,named,ResolvedEntityOperationDispatch,0,313
 00460950,FUN_00460950,ported,CheckpointBlobTaskProgressRecalculate,2,5473
 00460f00,FUN_00460f00,named,RewardStatsPanelDraw,0,1003
 00461070,FUN_00461070,named,RewardStatsTextFormat,0,5225
@@ -1490,7 +1490,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00466230,FUN_00466230,ported,GridCellRecordBufferReplace,2,98
 00466250,FUN_00466250,named,ExpandCellEntitySpawn,0,1137
 00466380,FUN_00466380,ported,SetExpansionEntityAtGridCell,2,453
-004663f0,FUN_004663f0,ported,CanSpawnExpansionEntityAtGridCell,2,842
+004663f0,FUN_004663f0,named,CanSpawnExpansionEntityAtGridCell,0,842
 00466490,FUN_00466490,named,CellSightRayCheckAndFlag,0,1210
 004665c0,FUN_004665c0,ported,,4,89
 00466750,FUN_00466750,ported,GridCellInvalidateAndClearFlags,2,572

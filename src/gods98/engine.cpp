@@ -283,10 +283,12 @@ void grid_cell_record_buffer_allocate(EngineState* block)
     }
     const int w = (int)block->grid_w;
     const int h = (int)block->grid_h;
-    void* buf = engine_heap_alloc((long)(w * h * 0xc));
+    /* Deviation: the port's cell record widens the entity slot, so the
+     * image strides 0x10 where the corpus strides 0x0c (see engine.hpp). */
+    void* buf = engine_heap_alloc((long)(w * h * 0x10));
     if (buf != NULL) {
         uint32_t* p = (uint32_t*)buf;
-        for (uint32_t n = (uint32_t)(w * h * 3) & 0x3fffffffu; n != 0u; --n) {
+        for (uint32_t n = (uint32_t)(w * h * 4) & 0x3fffffffu; n != 0u; --n) {
             *p++ = 0u;
         }
     }
@@ -471,4 +473,60 @@ int terrain_cell_command_predicate(const EngineContext* ctx, int x, int y)
         }
     }
     return 0;
+}
+
+/* --- the field-grid cell window band (see engine.hpp) --------------------- */
+
+static char* field_grid_cell(int x, int y)
+{
+    char* buf = (char*)entity_field_grid_buffer_peek();
+    const EngineState* desc = entity_field_grid_descriptor_peek();
+    if (buf == NULL || desc == NULL) {
+        return NULL; /* deviation: the corpus strides missing words blindly */
+    }
+    return buf + ((size_t)((int)desc->grid_w * y + x) * 0x10u);
+}
+
+void set_expansion_entity_at_grid_cell(int x, int y, void* entity)
+{
+    char* cell = field_grid_cell(x, y);
+    if (cell == NULL) {
+        return; /* deviation: the corpus strides the missing grid blindly */
+    }
+    __builtin_memcpy(cell + 0x00, &entity, sizeof entity);
+    uint32_t flags = 0u;
+    __builtin_memcpy(&flags, cell + 0x0c, sizeof flags);
+    flags |= 0x100u;
+    __builtin_memcpy(cell + 0x0c, &flags, sizeof flags);
+    const float timer = 100.0f; /* the corpus's 0x42c80000 store */
+    __builtin_memcpy(cell + 0x08, &timer, sizeof timer);
+}
+
+void grid_cell_invalidate_and_clear_flags(int x, int y)
+{
+    char* cell = field_grid_cell(x, y);
+    if (cell == NULL) {
+        return; /* deviation: the corpus strides the missing grid blindly */
+    }
+    /* Corpus shape: the entity is re-read from the slot before each flag
+     * window it touches (the aliasing reloads). */
+    void* entity = NULL;
+    __builtin_memcpy(&entity, cell + 0x00, sizeof entity);
+    if (entity != NULL) {
+        uint32_t w = 0u;
+        __builtin_memcpy(&w, (char*)entity + 0x3e8, sizeof w);
+        w |= 0x800000u;
+        __builtin_memcpy((char*)entity + 0x3e8, &w, sizeof w);
+        entity = NULL;
+        __builtin_memcpy(&entity, cell + 0x00, sizeof entity);
+        if (entity != NULL) {
+            __builtin_memcpy(&w, (char*)entity + 0x3e0, sizeof w);
+            w &= 0xfdffffffu;
+            __builtin_memcpy((char*)entity + 0x3e0, &w, sizeof w);
+        }
+    }
+    uint32_t flags = 0u;
+    __builtin_memcpy(&flags, cell + 0x0c, sizeof flags);
+    flags &= 0xfffffeffu;
+    __builtin_memcpy(cell + 0x0c, &flags, sizeof flags);
 }

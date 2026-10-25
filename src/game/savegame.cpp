@@ -896,3 +896,110 @@ int sav_tree_walk(void* node, sav_tree_visit visit, void* user)
     }
     return 0;
 }
+
+/* --- the checkpoint progress fold band (see savegame.hpp) ------------------ */
+
+static float blob_float_get(const char* blob, size_t off)
+{
+    float v = 0.0f;
+    __builtin_memcpy(&v, blob + off, sizeof v);
+    return v;
+}
+
+static void blob_float_put(char* blob, size_t off, float v)
+{
+    __builtin_memcpy(blob + off, &v, sizeof v);
+}
+
+/* Corpus fold shape: percent = 100 / den * num rides through only when
+ * the denominator reads non-zero, then clamps after the (invisible)
+ * first store. A zero denominator answers 100.0 whatever num holds. */
+static float blob_percent_fold(const char* blob, size_t den, size_t num)
+{
+    float v = 100.0f;
+    const float d = blob_float_get(blob, den);
+    if (d != 0.0f) {
+        v = (100.0f / d) * blob_float_get(blob, num);
+    }
+    if (100.0f < v) {
+        v = 100.0f;
+    }
+    return v;
+}
+
+/* Corpus count-up: every round adds 100.0 to the +0x2fac sum (the
+ * corpus's subtracted negative — an addition) and the window's last
+ * folded percent to the +0x2fb0 carry; the guard float is re-read every
+ * round and the counter rides as a converted uint. */
+static void blob_count_up(char* blob, size_t guard_off, size_t add_off)
+{
+    for (uint32_t n = 0u; (float)n < blob_float_get(blob, guard_off); ++n) {
+        blob_float_put(blob, 0x2fac, blob_float_get(blob, 0x2fac) + 100.0f);
+        blob_float_put(blob, 0x2fb0,
+                       blob_float_get(blob, add_off)
+                           + blob_float_get(blob, 0x2fb0));
+    }
+}
+
+int checkpoint_blob_task_progress_recalculate(GameContext* ctx)
+{
+    if (ctx == NULL || ctx->level == NULL) {
+        return 0; /* corpus: the CurrentLevelGet guard; deviation: threaded */
+    }
+    char* blob = (char*)checkpoint_blob_get(ctx);
+    if (blob == NULL) {
+        return 0; /* corpus: the blob getter guard */
+    }
+    blob_float_put(blob, 0x2fb0, 0.0f);
+    blob_float_put(blob, 0x2fac, 0.0f);
+    blob_float_put(blob, 0x2fb4, 0.0f);
+    blob_float_put(blob, 0x1d24, blob_percent_fold(blob, 0x1d1c, 0x1d20));
+    blob_float_put(blob, 0x1f34, blob_percent_fold(blob, 0x1f2c, 0x1f30));
+    blob_float_put(blob, 0x2144, blob_percent_fold(blob, 0x213c, 0x2140));
+    blob_float_put(blob, 0x1b0c, blob_percent_fold(blob, 0x1b04, 0x1b08));
+    blob_float_put(blob, 0x2b94, blob_percent_fold(blob, 0x2b8c, 0x2b90));
+    blob_float_put(blob, 0x2354, blob_percent_fold(blob, 0x234c, 0x2350));
+    blob_float_put(blob, 0x2774, blob_percent_fold(blob, 0x276c, 0x2770));
+    blob_float_put(blob, 0x2984, blob_percent_fold(blob, 0x297c, 0x2980));
+    blob_count_up(blob, 0x2760, 0x2774);
+    blob_count_up(blob, 0x1d10, 0x1d24);
+    blob_count_up(blob, 0x2b80, 0x2b94);
+    blob_count_up(blob, 0x2340, 0x2354);
+    blob_count_up(blob, 0x2550, 0x2564); /* the raw-window twin */
+    if (0.0f < blob_float_get(blob, 0x2d90)) {
+        /* Corpus shape: this loop keeps both accumulators in registers
+         * and writes them back only when it ends. */
+        float sum = blob_float_get(blob, 0x2fac);
+        float carry = blob_float_get(blob, 0x2fb0);
+        const float each = 100.0f - blob_float_get(blob, 0x2da4);
+        for (uint32_t n = 0u;
+             (float)n < blob_float_get(blob, 0x2d90); ++n) {
+            sum = sum + 100.0f;
+            carry = each + carry;
+        }
+        blob_float_put(blob, 0x2fb0, carry);
+        blob_float_put(blob, 0x2fac, sum);
+    }
+    blob_count_up(blob, 0x2970, 0x2984);
+    if (blob_float_get(blob, 0x2fac) < blob_float_get(blob, 0x2fb0)) {
+        blob_float_put(blob, 0x2fb0, blob_float_get(blob, 0x2fac));
+    }
+    if (blob_float_get(blob, 0x2fb0) < 0.0f) {
+        blob_float_put(blob, 0x2fb0, 0.0f);
+    }
+    float v = blob_percent_fold(blob, 0x2fac, 0x2fb0);
+    blob_float_put(blob, 0x2fb4, v);
+    if (100.0f < v) {
+        v = 100.0f;
+    }
+    blob_float_put(blob, 0x2fb4, v);
+    uint32_t bonus = 0u; /* the corpus's converted uint word */
+    __builtin_memcpy(&bonus, blob + 0x1c0, sizeof bonus);
+    v = (float)bonus + blob_float_get(blob, 0x2fb4);
+    blob_float_put(blob, 0x2fb4, v);
+    if (100.0f < v) {
+        v = 100.0f;
+    }
+    blob_float_put(blob, 0x2fb4, v);
+    return 1;
+}

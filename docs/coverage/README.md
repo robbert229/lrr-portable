@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 962 | 37.5% |
+| ported | 965 | 37.6% |
 | anchored | 4 | 0.2% |
-| named | 1551 | 60.5% |
+| named | 1548 | 60.4% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (962 functions)
+  (965 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1551 functions)
+  citation yet (1548 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1556 (60.7%).**
+**Game logic remaining to port: 1553 (60.6%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -789,6 +789,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00460290` | EntityType4IndexListBuild |
 | `0x00460310` | EntityType4IndexListAppend |
 | `0x00460360` | CheckpointBlobTaskProgressRefresh |
+| `0x00460910` | ResolvedEntityOperationDispatch |
 | `0x00460f00` | RewardStatsPanelDraw |
 | `0x00461070` | RewardStatsTextFormat |
 | `0x00461410` | RewardScreenTick |
@@ -829,6 +830,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00465e00` | AdvanceTimedVisualSegmentAndFade |
 | `0x00465f40` | InstanceQuadVerticesBuild |
 | `0x00466250` | ExpandCellEntitySpawn |
+| `0x004663f0` | CanSpawnExpansionEntityAtGridCell |
 | `0x00466490` | CellSightRayCheckAndFlag |
 | `0x004667e0` | EntityStatsConfigLoad |
 | `0x00469a90` | IndexedValueAppend |
