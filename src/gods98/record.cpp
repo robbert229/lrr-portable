@@ -730,3 +730,14 @@ void scene_assign_entity_owner(const void* scene, uint32_t owner)
 {
     scene_object_owner_set(rec_ptr(scene, 0x04), owner);
 }
+
+/* SixResourceSlotsSetState (FUN_0046cfc0) — see record.hpp. */
+void six_resource_slots_set_state(const void* record, uint32_t flag)
+{
+    for (int i = 0; i < 6; ++i) {
+        void* handle = rec_ptr(record, 0x10 + (size_t)i * sizeof(void*));
+        if (handle != NULL) {
+            scene_visibility_hook_call(handle, (int)flag);
+        }
+    }
+}

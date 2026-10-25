@@ -271,3 +271,17 @@ void options_write_to_slot(GameContext* ctx)
     __builtin_memcpy(block + 12, &speed, sizeof speed);
     __builtin_memcpy(block + 16, &music, sizeof music);
 }
+
+/* OptionsContextSixFieldSet (FUN_00417f20) — see options.hpp. */
+void options_context_six_field_set(struct GameContext* ctx,
+                                   const uint32_t* src)
+{
+    char* block = (char*)sav_build_ctx(ctx);
+    if (block == NULL || src == NULL) {
+        return;
+    }
+    for (int i = 0; i < 6; ++i) {
+        const uint32_t v = src[i];
+        __builtin_memcpy(block + 0x1c + (size_t)i * sizeof(v), &v, sizeof v);
+    }
+}

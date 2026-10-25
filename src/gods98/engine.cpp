@@ -4,6 +4,7 @@
 #include "mainsim.hpp"
 #include "tickers.hpp"
 #include "view.hpp"
+#include "record.hpp"
 #include "heap.hpp"
 
 /* Frame tick — corpus EngineTick @ 0x4232e0. The numbered structure below
@@ -265,3 +266,20 @@ void grid_cell_record_buffer_replace(EngineState* block)
 void* entity_field_grid_buffer_peek(void) { return s_field_grid_buf; }
 
 EngineState* entity_field_grid_descriptor_peek(void) { return s_field_grid_desc; }
+
+/* --- the global-state refresh leaf (see engine.hpp) ------------------------
+ * FUN_00435a20's two corpus words (state word, refresh record pointer) have
+ * no ported owner; they land here as zero-init statics with hooks. */
+static uint32_t s_global_low_word; /* DAT_00556ed4 role */
+static void* s_refresh_record;     /* DAT_005563b4 role */
+
+void global_state_low_byte_clear_and_refresh(void)
+{
+    s_global_low_word &= 0xffffff00u;
+    surface_visibility_set(s_refresh_record, 1u);
+}
+
+uint32_t global_state_low_word_get(void) { return s_global_low_word; }
+void global_state_low_word_set(uint32_t value) { s_global_low_word = value; }
+void  global_refresh_record_set(void* record) { s_refresh_record = record; }
+void* global_refresh_record_peek(void) { return s_refresh_record; }

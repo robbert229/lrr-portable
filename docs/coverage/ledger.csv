@@ -472,7 +472,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00417e90,FUN_00417e90,ported,SavGetSlot,1,60
 00417ea0,FUN_00417ea0,ported,SavSetSlot,1,81
 00417eb0,FUN_00417eb0,ported,SavMarkRecord,1,694
-00417f20,FUN_00417f20,named,OptionsContextSixFieldSet,0,342
+00417f20,FUN_00417f20,ported,OptionsContextSixFieldSet,3,342
 00417f40,FUN_00417f40,named,SavWriteRecord,0,453
 00417f90,FUN_00417f90,ported,SavRecordPtr,2,213
 00417fc0,FUN_00417fc0,ported,SavCommit,1,126
@@ -824,7 +824,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00435580,FUN_00435580,named,GlobalHandlePositionApplyIfPresent,0,214
 004355c0,FUN_004355c0,named,MenuOptionPanelTextureUpdate,0,2675
 00435940,FUN_00435940,ported,KeepRunning,4,936
-00435a20,FUN_00435a20,named,GlobalStateLowByteClearAndRefresh,0,117
+00435a20,FUN_00435a20,ported,GlobalStateLowByteClearAndRefresh,3,117
 00435a50,FUN_00435a50,ported,MainSimFeatureFlagLatch,2,202
 00435aa0,FUN_00435aa0,named,PanelSelectionHighlightToggle,0,419
 00435b20,FUN_00435b20,named,SceneObjectChainRecordCreate,0,1689
@@ -1604,7 +1604,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0046cf40,FUN_0046cf40,named,RecordFlagBitTest,0,287
 0046cf80,FUN_0046cf80,ported,EntityTypeMaskGet,1,85
 0046cf90,FUN_0046cf90,named,RecordIndexedEntriesRebuildAndRefresh,0,135
-0046cfc0,FUN_0046cfc0,named,SixResourceSlotsSetState,0,294
+0046cfc0,FUN_0046cfc0,ported,SixResourceSlotsSetState,3,294
 0046cff0,FUN_0046cff0,named,SceneRecordTemplateInstantiate,0,1425
 0046d140,FUN_0046d140,named,SceneAssignOwnerFromModel,0,523
 0046d1a0,FUN_0046d1a0,named,SceneObjectAttachedResourceRelease,0,94

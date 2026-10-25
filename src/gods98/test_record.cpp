@@ -900,6 +900,34 @@ int main(void)
         CHECK(graphics_overlay_word_peek() == 7u, "the overlay word sticks");
     }
 
+    /* SixResourceSlotsSetState (2026-10-24): six handle slots from +0x10. */
+    {
+        scene_visibility_hook_reset();
+        char rec[0x60];
+        memset(rec, 0, sizeof rec);
+        char slots[6][0x10];
+        for (int i = 0; i < 6; ++i) {
+            memset(slots[i], 0, sizeof slots[i]);
+            void* h = slots[i];
+            __builtin_memcpy(rec + 0x10 + (size_t)i * sizeof(void*),
+                             &h, sizeof h);
+        }
+        six_resource_slots_set_state(rec, 1u);
+        int flag = -1;
+        scene_visibility_last_call(NULL, &flag);
+        CHECK(scene_visibility_calls() == 6 && flag == 1,
+              "all six slots ride the leaf with the flag");
+        void* saved3 = NULL;
+        __builtin_memcpy(rec + 0x10 + 3 * sizeof(void*), &saved3,
+                         sizeof saved3); /* slot 3 empty: skipped */
+        scene_visibility_hook_reset();
+        six_resource_slots_set_state(rec, 0u);
+        CHECK(scene_visibility_calls() == 5, "the empty slot stays silent");
+        scene_visibility_hook_reset();
+        six_resource_slots_set_state(NULL, 1u); /* rec_ptr guards */
+        CHECK(scene_visibility_calls() == 0, "the NULL record is guarded");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "record_test: %d failure(s)\n", s_failures);
         return 1;
