@@ -157,6 +157,39 @@ int main(void)
           "queue task dispatched to the global list");
     CHECK(cmd_rec_kind(cmd_global_head()) == 2, "queue task kind for type 1");
 
+    /* Pending entity-reference clear (2026-10-25): the global walk zeroes
+     * every record holding the matching reference and rides past the
+     * rest. */
+    {
+        void* sentinel = (void*)0xa5a5u;
+        void* other = (void*)0x5a5au;
+        int touched = 0;
+        for (void* rec = cmd_global_head(); rec != NULL;
+             rec = cmd_global_next(rec)) {
+            cmd_rec_entity_ref_install(rec, sentinel);
+            ++touched;
+        }
+        CHECK(touched > 0, "the global list carries the staged records");
+        void* keeper = cmd_global_head();
+        cmd_rec_entity_ref_install(keeper, other);
+        pending_record_entity_reference_clear(sentinel);
+        int hits = 0, kept = 0;
+        for (void* rec = cmd_global_head(); rec != NULL;
+             rec = cmd_global_next(rec)) {
+            if (cmd_rec_entity_ref(rec) == other) {
+                ++kept;
+            } else if (cmd_rec_entity_ref(rec) == sentinel) {
+                ++hits;
+            }
+        }
+        CHECK(hits == 0, "the matching references are all cleared");
+        CHECK(kept == 1 && cmd_rec_entity_ref(keeper) == other,
+              "the non-matching reference rides past");
+        pending_record_entity_reference_clear(NULL);
+        CHECK(cmd_rec_entity_ref(keeper) == other,
+              "the zero reference rides past too");
+    }
+
     /* Chain purge returns records to the pool. */
     cmd_chain_purge(d);
     CHECK(d->cmd_head == NULL, "purge clears the chain head");

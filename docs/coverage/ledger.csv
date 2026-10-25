@@ -117,7 +117,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00405950,FUN_00405950,named,PendingCommandTimerFireScan,0,3682
 00405c10,FUN_00405c10,named,PendingCommandEntityAssignmentTick,0,10018
 00406360,FUN_00406360,named,EntityRecordAttachAndRelink,0,660
-004063e0,FUN_004063e0,named,PendingRecordEntityReferenceClear,0,235
+004063e0,FUN_004063e0,ported,PendingRecordEntityReferenceClear,2,235
 00406400,FUN_00406400,ported,PendingRecordCopyToEntityAndFlag,3,446
 00406440,FUN_00406440,ported,CmdAlloc,3,509
 00406480,FUN_00406480,ported,CmdFree,1,316
@@ -877,7 +877,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00437c20,FUN_00437c20,named,DeferredOListEntityQueueAdd,0,1007
 00437cc0,FUN_00437cc0,ported,EntityFlag40000ThresholdCompare,1,281
 00437d00,FUN_00437d00,ported,EntityCreateByType,5,5113
-004382c0,FUN_004382c0,named,PooledRecordAllocateAndReset,0,471
+004382c0,FUN_004382c0,ported,PooledRecordAllocateAndReset,2,471
 00438310,FUN_00438310,ported,PooledRecordChunkAllocateAndLink,3,646
 004383a0,FUN_004383a0,ported,GlobalAnimationStateSet,3,168
 004383b0,FUN_004383b0,named,RoverWorkQueueUpdate,0,724
@@ -1672,7 +1672,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00471a40,FUN_00471a40,ported,VelocitySlotPrimaryObjectGet,2,112
 00471a50,FUN_00471a50,ported,VelocitySlotSecondaryObjectGet,2,112
 00471a60,FUN_00471a60,named,EntityVelocitySteerBlendUpdate,0,2219
-00471c70,FUN_00471c70,named,VelocitySlotVectorRead,0,238
+00471c70,FUN_00471c70,ported,VelocitySlotVectorRead,2,238
 00471ca0,FUN_00471ca0,named,EntityWorldCenterPositionRead,0,317
 00471ce0,FUN_00471ce0,ported,EntityFlag100AndSharedEligibilityCheck,3,247
 00471d20,FUN_00471d20,named,VelocitySlotSteerDispatchAndSound,0,2142
@@ -1712,7 +1712,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00473560,FUN_00473560,named,DDiSceneObjectKindModeSetup,0,1297
 00473680,FUN_00473680,ported,SceneObjectWrappedPointerGet,1,71
 00473690,FUN_00473690,named,EntityVisualResourceLoad,0,7281
-00473b20,FUN_00473b20,named,EntityFlag80Set,0,234
+00473b20,FUN_00473b20,ported,EntityFlag80Set,2,234
 00473b40,FUN_00473b40,ported,SceneRenderLockToggle,3,385
 00473ba0,FUN_00473ba0,ported,SceneObjectFlagBit3Get,1,92
 00473bc0,FUN_00473bc0,named,ResourceNameRegisterOrQuery,0,914

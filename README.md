@@ -2363,6 +2363,21 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Record-pool + command/reference band** (2026-10-25): four frontier rows land.
+`pooled_record_allocate_and_reset` (0x4382c0, entity.*) pops the ported pool's
+free list, clears 0x103 dwords, self-links the busy mark, and seeds the
+−1.5 float pair at +0x2f4/+0x2f8, growing a chunk on the empty head.
+`velocity_slot_vector_read` (0x471c70, record.*) strides three float words
+from +0x44 + index·12. `entity_flag_80_set` (0x473b20, record.*) raises or
+drops bit 7 of the +0x14 flag word. `pending_record_entity_reference_clear`
+(0x4063e0, cmd.*) walks the global command list zeroing every record's new
++0x48 pending-reference slot (corpus writers of the slot ride the unported
+spawn band — zero until one installs). Recorded with their blockers: the
+object-layer/pose seams (`0x449cd0`, `0x471a60`, `0x471ca0`), the
+reference-name-table remap family (`0x451fd0`, `0x45d7e0`, `0x45d870`), and
+the wad context-table scan (`0x48be00`). `record_test`/`entity_test`/
+`cmd_test` pin the vector stride, flag bit, pool reset, and reference walk.
+
 **Erosion timing band** (2026-10-25): three frontier rows land in
 `level.*`. `erosion_timing_state_init` (0x40e930) seeds the timing scales
 (×25, second also ×0.2) and wipes the 2000/1000-dword scratch as guarded

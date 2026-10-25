@@ -979,6 +979,33 @@ void pooled_record_chunk_allocate_and_link(void)
 void* pooled_record_head_peek(void) { return s_pool_record_head; }
 uint32_t pooled_record_chunk_count_peek(void) { return s_pool_chunk_count; }
 
+/* PooledRecordAllocateAndReset (FUN_004382c0) — see entity.hpp. The
+ * corpus pops the free-list head, clears 0x103 dwords, self-links the
+ * link slot as its busy mark, and seeds the two 0xbf800000 float words
+ * (the corpus's -1.5 pair). Deviations: the port's link slot is
+ * native-size (the pool-stride convention), and the grow half answers
+ * NULL when the allocator is empty where the corpus strides the word. */
+void* pooled_record_allocate_and_reset(void)
+{
+    if (s_pool_record_head == NULL) {
+        pooled_record_chunk_allocate_and_link();
+    }
+    char* record = (char*)s_pool_record_head;
+    if (record == NULL) {
+        return NULL; /* deviation: empty allocator (corpus strides) */
+    }
+    void* link = NULL;
+    __builtin_memcpy(&link, record + POOL_RECORD_LINK_OFF, sizeof link);
+    s_pool_record_head = link;
+    memset(record, 0, 0x40cu); /* the corpus's 0x103-dword clear */
+    __builtin_memcpy(record + POOL_RECORD_LINK_OFF, &record,
+                     sizeof record); /* the busy self-link */
+    const uint32_t seeded = 0xbf800000u;
+    __builtin_memcpy(record + 0x2f4, &seeded, 4);
+    __builtin_memcpy(record + 0x2f8, &seeded, 4);
+    return record;
+}
+
 /* ResolvedEntityOperationDispatch (FUN_00460910) — see entity.hpp. */
 int resolved_entity_operation_dispatch(const char* name, int slot,
                                        int subtract)

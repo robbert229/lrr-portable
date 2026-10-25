@@ -42,6 +42,18 @@ uint32_t velocity_slot_primary_object_get(const void* record,
 uint32_t velocity_slot_secondary_object_get(const void* record,
                                             uint32_t index);
 
+/* VelocitySlotVectorRead (FUN_00471c70): copies the three float words at
+ * +0x44 + index * 12 into the caller's vector. A NULL record reads three
+ * zero words; the port guards the output slot (deviation: the corpus
+ * strides the caller's buffer and the record blindly). */
+void velocity_slot_vector_read(const void* record, float out[3],
+                               uint32_t index);
+
+/* EntityFlag80Set (FUN_00473b20): raises the record's +0x14 flag word's
+ * bit 7 when set is nonzero, drops it otherwise. The port guards the
+ * record (deviation: the corpus strides it blindly). */
+void entity_flag_80_set(void* record, int set);
+
 /* CategoryValueIsNeitherZeroNorFifteen (FUN_0041b470, findings 252/356):
  * the value filter 0 / 0xf both fail. */
 int category_value_is_neither_zero_nor_fifteen(int value);

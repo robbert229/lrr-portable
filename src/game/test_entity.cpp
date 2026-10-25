@@ -1200,6 +1200,44 @@ int main(int argc, char** argv)
               "the counter grows with the chunk table");
     }
 
+    /* Pooled record allocate-and-reset (2026-10-25): the pop, the
+     * 0x103-dword clear, the busy self-link, and the seeded floats. */
+    {
+        const uint32_t chunks_before = pooled_record_chunk_count_peek();
+        void* head = pooled_record_head_peek();
+        CHECK(head != NULL, "the chunk window leaves records on the head");
+        void* rec1 = pooled_record_allocate_and_reset();
+        CHECK(rec1 == head, "the pop answers the head record");
+        void* link = NULL;
+        memcpy(&link, (char*)rec1 + 0x408, sizeof link);
+        CHECK(link == rec1, "the busy mark self-links");
+        uint32_t word = 0xffffffffu;
+        memcpy(&word, (char*)rec1 + 0x14, 4);
+        CHECK(word == 0u, "the clear zeroes the record head");
+        memcpy(&word, (char*)rec1 + 0x2f4, 4);
+        const uint32_t seeded = word;
+        memcpy(&word, (char*)rec1 + 0x2f8, 4);
+        CHECK(seeded == 0xbf800000u && word == 0xbf800000u,
+              "the float pair seeds");
+        CHECK(pooled_record_head_peek() != rec1, "the head advanced past it");
+
+        /* Drain the window, then the empty-head grow half. */
+        int drained = 0;
+        while (pooled_record_head_peek() != NULL) {
+            CHECK(pooled_record_allocate_and_reset() != NULL,
+                  "the drain pops records (rounds)");
+            if (++drained > 64) {
+                break; /* guard the test if the head never empties */
+            }
+        }
+        CHECK(drained > 0, "the window drained to empty");
+        const void* grown = pooled_record_allocate_and_reset();
+        CHECK(grown != NULL && pooled_record_head_peek() != NULL,
+              "the empty head grows a chunk (deviation-pinned)");
+        CHECK(pooled_record_chunk_count_peek() > chunks_before,
+              "the grow raises the chunk counter");
+    }
+
     /* Resolved entity operation dispatch (2026-10-25): the resolver's
      * (type, row) pair feeds the count-difference scan. */
     {

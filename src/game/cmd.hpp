@@ -110,6 +110,16 @@ void* cmd_global_next(const void* rec);
  * its entity; completion unlinks here before cmd_free). */
 void cmd_global_unlink(const void* rec);
 
+/* PendingRecordEntityReferenceClear (FUN_004063e0): walks the global
+ * command list and zeroes every record whose +0x48 pending-entity
+ * reference equals the given reference (the walk continues past a hit).
+ * Deviations: the reference rides the port's native-size pointer slot,
+ * and the corpus writers of that word (the spawn-dispatch band) are
+ * unported, so the slot stays zero until one installs a value. */
+void pending_record_entity_reference_clear(void* reference);
+void* cmd_rec_entity_ref(const void* rec);              /* +0x48 read */
+void  cmd_rec_entity_ref_install(void* rec, void* ref); /* port hook */
+
 /* --- global tick list ---------------------------------------------------- */
 void cmd_tick_global(void);     /* CmdTickGlobal @ 0x402220 (scoped) */
 

@@ -56,6 +56,10 @@ typedef struct CmdRec {
     void*    arg38;      /* +0x38 second payload slot (the 0x13 queue's word)   */
     uint32_t count;      /* +0x44 the buffer's entry count                     */
 
+    void*    entity_ref; /* +0x48 pending entity reference (the corpus
+                          * writers are the spawn-dispatch band, unported —
+                          * zero until one installs a value)                   */
+
     int32_t  kind;       /* +0x4c kind index                                   */
     void*    event_payload; /* +0x54 event payload (the 0xc queue's word)   */
     void*    ref;        /* +0x58 referenced record (the 0x13 "ref" pair)      */
@@ -371,6 +375,32 @@ void cmd_global_unlink(const void* rec)
             return;
         }
         prev = cur;
+    }
+}
+
+/* PendingRecordEntityReferenceClear (FUN_004063e0) — see cmd.hpp. The
+ * corpus strides the global list's +0x60 link and the +0x48 dword
+ * blindly; the port rides its native-size link slot and reference slot
+ * (documented deviations). */
+void pending_record_entity_reference_clear(void* reference)
+{
+    for (CmdRec* cur = s_global_head; cur != NULL;
+         cur = as_rec(cur->global_next)) {
+        if (cur->entity_ref == reference) {
+            cur->entity_ref = NULL;
+        }
+    }
+}
+
+void* cmd_rec_entity_ref(const void* rec)
+{
+    return rec != NULL ? cas_rec(rec)->entity_ref : NULL;
+}
+
+void cmd_rec_entity_ref_install(void* rec, void* ref)
+{
+    if (rec != NULL) {
+        as_rec(rec)->entity_ref = ref;
     }
 }
 

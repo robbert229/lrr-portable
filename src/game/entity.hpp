@@ -306,6 +306,14 @@ void pooled_record_chunk_allocate_and_link(void); /* FUN_00438310 */
 void* pooled_record_head_peek(void);
 uint32_t pooled_record_chunk_count_peek(void);
 
+/* PooledRecordAllocateAndReset (FUN_004382c0): pops the pool's free-list
+ * head, zero-clears the record's first 0x40c bytes, self-links the record
+ * in the link slot (the corpus's busy mark), and seeds the two float
+ * words at +0x2f4 / +0x2f8 with 0xbf800000. When the head runs empty the
+ * corpus grows a chunk first; the port answers NULL only if that grow
+ * finds the allocator empty (deviation: the corpus strides the word). */
+void* pooled_record_allocate_and_reset(void);
+
 /* ResolvedEntityOperationDispatch (FUN_00460910): resolves the name through
  * the corpus resolver's (type, row) pair and feeds the count-difference
  * scan — row to the column slot (unknown names answer 0). Corpus shape:
