@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 927 | 36.2% |
+| ported | 929 | 36.2% |
 | anchored | 4 | 0.2% |
-| named | 1586 | 61.9% |
+| named | 1584 | 61.8% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (927 functions)
+  (929 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1586 functions)
+  citation yet (1584 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1591 (62.1%).**
+**Game logic remaining to port: 1589 (62.0%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -241,8 +241,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004102b0` | UiTextUnderscoresToSpaces |
 | `0x00410320` | StringQueueRecordOrFlush |
 | `0x004103d0` | MainMenuTextItem |
-| `0x00410520` | StringCacheLookupOrLoad |
-| `0x00410560` | ResourceNameCacheGetOrLoad |
 | `0x004105a0` | CampaignLevelFallbackLabel |
 | `0x004105f0` | MenuParamRecordCreate |
 | `0x00410690` | MenuRecordResourcesRelease |

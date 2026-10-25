@@ -1345,6 +1345,54 @@ void string_registry_reset(void)
     s_string_registry_head = NULL;
 }
 
+static void* (*s_bitmap_surface_loader)(const char*);
+static void* (*s_font_resource_loader)(const char*);
+
+void string_cache_bitmap_loader_set(void* (*hook)(const char*))
+{
+    s_bitmap_surface_loader = hook;
+}
+
+void string_cache_font_loader_set(void* (*hook)(const char*))
+{
+    s_font_resource_loader = hook;
+}
+
+/* Shared cache-slot fold: load once on a zero slot, return the word. */
+static void* s_entry_cache_slot_get(const char* key, long slot,
+                                    void* (*loader)(const char*))
+{
+    if (key == NULL || *key == '\0') {
+        return NULL;
+    }
+    void* entry = string_registry_intern(key);
+    if (entry == NULL) {
+        return NULL; /* deviation: the corpus strides the intern failure */
+    }
+    void* value = NULL;
+    __builtin_memcpy(&value, (char*)entry + slot * (long)sizeof(void*),
+                     sizeof value);
+    if (value == NULL) {
+        value = (loader != NULL) ? loader(key)
+                                 : NULL; /* seam: answers NULL uninstalled */
+        if (value != NULL) {
+            __builtin_memcpy((char*)entry + slot * (long)sizeof(void*),
+                             &value, sizeof value);
+        }
+    }
+    return value;
+}
+
+void* string_cache_lookup_or_load(const char* key)
+{
+    return s_entry_cache_slot_get(key, 1, s_bitmap_surface_loader);
+}
+
+void* resource_name_cache_get_or_load(const char* key)
+{
+    return s_entry_cache_slot_get(key, 2, s_font_resource_loader);
+}
+
 /* --- the selection marker table (see crt.hpp) ------------------------------
  * DAT_004c7e00..e7c is 32 pointer slots plus the count word at e80; the
  * descriptor sits at DAT_004c7df8. All unowned: zero-init statics here. */
