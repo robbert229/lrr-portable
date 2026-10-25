@@ -2363,6 +2363,19 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Panel layout band — store + gated position update** (2026-10-25): two
+frontier rows land. `panel_resource_layout_store` (0x45c340, frontend.*)
+performs the corpus's two surface loads through the load seam (the
+hook-boundary NULL answers; the glyph's transformed blit rides the seam
+only when a surface is present) and installs the size/extra/position
+words — the DAT_005007f0..808 window has no ported corpus owner and rides
+own storage (deviation). `panel_resource_position_update` (0x45c4b0) adds
+the indexed pair entry (`indexed_pair_get`, signed `cvtsi2ss` shape) to
+the stored offsets and rides them to the blit seam, gated by the modeled
+0x50080c word and the status-banner word. The glyph word lands only
+through the seam, so a test hook stands in (deviation). `frontend_test`
+pins the seam counts, word windows, and both gates.
+
 **Scene record leaves — mesh color mode 3 + scalar direction adjust**
 (2026-10-25): two frontier rows land. `scene_mesh_color_set` (0x474ff0,
 view.*) rides the object's +0xc mesh chain onto the indexed record and

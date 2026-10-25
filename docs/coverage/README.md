@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 1046 | 40.8% |
+| ported | 1048 | 40.9% |
 | anchored | 4 | 0.2% |
-| named | 1469 | 57.3% |
+| named | 1467 | 57.2% |
 | runtime-import | 44 | 1.7% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (1046 functions)
+  (1048 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1469 functions)
+  citation yet (1467 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (44 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1474 (57.5%).**
+**Game logic remaining to port: 1472 (57.4%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -720,9 +720,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0045bf70` | UIEntryBoundsGet |
 | `0x0045bfb0` | ThreeSurfaceResourcesLoadAndInitialize |
 | `0x0045c0d0` | PairCountHistogramBuild |
-| `0x0045c340` | PanelResourceLayoutStore |
 | `0x0045c3f0` | AdvisorProgressBarFillDraw |
-| `0x0045c4b0` | PanelResourcePositionUpdateIfEnabled |
 | `0x0045c5f0` | UiOverlayAnimationApply |
 | `0x0045c670` | AdvisorAnimationSceneLookupAndRequest |
 | `0x0045c6b0` | AdvisorAnimationSlotIdResolve |
