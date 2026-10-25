@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 873 | 34.0% |
+| ported | 876 | 34.2% |
 | anchored | 4 | 0.2% |
-| named | 1640 | 64.0% |
+| named | 1637 | 63.8% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (873 functions)
+  (876 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1640 functions)
+  citation yet (1637 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1645 (64.2%).**
+**Game logic remaining to port: 1642 (64.0%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -733,7 +733,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00453220` | AdvisorDisplayStateResourcesRelease |
 | `0x004532e0` | IndirectHandleResolveInPlace |
 | `0x00453320` | TutorialScriptCommandDispatch |
-| `0x004538a0` | CameraFocusScrollScaleCommit |
 | `0x00453910` | DeferredCallbackInvokeIfSet |
 | `0x00453920` | AdvisorScrollStepAdvance |
 | `0x00453bb0` | FrameTimerArrayAdvanceAndAdvisorClear |
@@ -742,7 +741,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00456810` | SoundAliasPlayGlobal |
 | `0x00456830` | AdvisorInlineTokenRender |
 | `0x00456b80` | TutorialPathCoordinateIndex |
-| `0x00456c60` | ObjectPoolListsFreeAll |
 | `0x00456cb0` | CoordinateListCallbackVisit |
 | `0x004588e0` | InputDeviceRelease |
 | `0x00459240` | PopEntityStateOverride |
@@ -1585,7 +1583,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00499880` | CrtTimeZoneStateInit |
 | `0x00499b30` | CrtDaylightSavingTimeCheck |
 | `0x00499da0` | CrtDaylightTransitionBoundaryCompute |
-| `0x00499fe0` | UInt96Add |
 | `0x0049a050` | ExtendedFloat96BitShiftLeftOne |
 | `0x0049a080` | ExtendedFloat96BitShiftRightOne |
 | `0x0049a0b0` | CrtDecimalDigitSequenceToExtended96 |

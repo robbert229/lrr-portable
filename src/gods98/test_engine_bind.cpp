@@ -243,6 +243,41 @@ int main(void)
         CHECK(scroll_speed_index_get() == 5, "the two-and-up band lands at five");
     }
 
+    /* CameraFocusScrollScaleCommit (2026-10-24): gate + guard + scale. */
+    {
+        EngineContext ec = {};
+        EngineState st = {};
+        ec.state_block = &st;
+        st.focus_gate_27c = 1u;
+        uint32_t rec[2] = { 0u, 9u };
+        global_scroll_guard_set(0);
+        scroll_scale_set(1.0f);
+        CHECK(camera_focus_scroll_scale_commit(&ec, rec) == 0
+                  && scroll_scale_peek() == 1.0f
+                  && global_scroll_guard_peek() == 0,
+              "the gated zero-focus commit stays away");
+        st.focus_gate_27c = 0u;
+        rec[0] = 150u;
+        CHECK(camera_focus_scroll_scale_commit(&ec, rec) == 0
+                  && scroll_scale_peek() == 1.5f
+                  && global_scroll_guard_peek() == 9,
+              "the open gate installs one and a half");
+        rec[0] = 200u;
+        rec[1] = 3u;
+        st.focus_gate_27c = 1u; /* nonzero focus ignores the gate */
+        CHECK(camera_focus_scroll_scale_commit(&ec, rec) == 0
+                  && scroll_scale_peek() == 2.0f
+                  && global_scroll_guard_peek() == 3,
+              "the live focus commits through the gate");
+        rec[0] = 0u;
+        CHECK(camera_focus_scroll_scale_commit(NULL, rec) == 0
+                  && scroll_scale_peek() == 2.0f,
+              "the null state root commits the zero focus (deviation)");
+        CHECK(camera_focus_scroll_scale_commit(&ec, NULL) == 0
+                  && global_scroll_guard_peek() == 3,
+              "the null record answers zero (deviation)");
+    }
+
     if (s_failures == 0) {
         printf("engine_bind_test: PASS\n");
         return 0;

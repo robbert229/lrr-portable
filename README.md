@@ -2363,6 +2363,20 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**96-bit add, focus-scroll commit + pool free-all** (findings 375/102/437/398/374):
+`crt.*` ports `crt_uint96_add` (0x499fe0 — the three-limb add through the
+ported carry helper: the limb-0 carry bumps limb 1 with +1 and, if that
+carries, limb 2; the mid-limb add bumps limb 2 again on its carry; the high
+carry out is discarded), `engine.*` ports `camera_focus_scroll_scale_commit`
+(0x4538a0 — the zero-focus gate against the state block's +0x27c word (new
+EngineState field), the guard-word set/set pair around the focus * 0.01 scale
+through the just-ported clamp setter) and `record.*` ports
+`object_pool_lists_free_all` (0x456c60 — freeing the chains on the 0x37 pool
+list heads, modeled as native link slots per the port's widened-link
+convention, each chain walking the node's +0x08 next link, heads cleared
+afterwards). `crt_test`, `engine_bind_test` and `record_test` pin the carry
+chains, gates, and sweeps.
+
 **Fixed-record slots + flag predicate** (findings 375/251/324/105):
 `resource.*` ports `fixed_record_slot_resource_release` (0x48bfc0 — the
 installed-slot heap free and flag clear) and `fixed_record_slot_resource_get`

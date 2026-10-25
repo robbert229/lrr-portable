@@ -477,4 +477,14 @@ void crt_stream_buffer_allocate(char* record);    /* FUN_00498ae0 */
 long stream_allocation_count_peek(void);          /* port hook */
 void stream_allocation_count_reset(void);         /* port hook */
 
+/* --- the 96-bit add (2026-10-24; findings 375/102) --------------------------
+ * UInt96Add (FUN_00499fe0): adds the three-limb value `src` onto `dst`
+ *   through the ported carry add. Quirk pinned from the pseudocode: the
+ *   limb-0 carry chain bumps the limb-1 word with +1 and, if that itself
+ *   carries, the limb-2 word; the limb-1/limb-1 add follows with the
+ *   (possibly bumped) limb word, bumping limb 2 again on its carry; the
+ *   limb-2 add's carry out is discarded.
+ * Deviation: the corpus strides both limbs blindly; the port guards them. */
+void crt_uint96_add(uint32_t* dst, const uint32_t* src); /* FUN_00499fe0 */
+
 #endif /* LEGORRR_GODS98_CRT_HPP */

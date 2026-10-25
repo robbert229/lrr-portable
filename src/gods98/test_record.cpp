@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "gods98/record.hpp"
+#include "gods98/heap.hpp"
 
 static int s_failures = 0;
 
@@ -967,6 +968,34 @@ int main(void)
               "the same bit rides the flag without rejecting");
         CHECK(record_flag_bit_test(NULL, 8u, 0) == 0u,
               "the NULL record guards");
+    }
+
+    /* ObjectPoolListsFreeAll (2026-10-24): the head sweep. */
+    {
+        static char pools[0x114 + 0x37 * sizeof(void*)];
+        memset(pools, 0, sizeof pools);
+
+        /* head 2 takes a two-node chain; head 54 takes a single node. */
+        void* n0 = engine_heap_alloc(16);
+        void* n1 = engine_heap_alloc(16);
+        void* n2 = engine_heap_alloc(16);
+        memset(n0, 0, 16);
+        memset(n1, 0, 16);
+        memset(n2, 0, 16);
+        memcpy((char*)n0 + 8, &n1, sizeof n1);
+        memcpy(pools + 0x114 + 2 * sizeof(void*), &n0, sizeof n0);
+        memcpy(pools + 0x114 + 54 * sizeof(void*), &n2, sizeof n2);
+
+        object_pool_lists_free_all(pools);
+        void* head = (void*)0x1;
+        memcpy(&head, pools + 0x114 + 2 * sizeof(void*), sizeof head);
+        CHECK(head == NULL, "the freed chain clears its head");
+        memcpy(&head, pools + 0x114 + 54 * sizeof(void*), sizeof head);
+        CHECK(head == NULL, "the last head clears too");
+
+        object_pool_lists_free_all(pools); /* empty-table walk */
+        object_pool_lists_free_all(NULL);  /* guarded */
+        CHECK(1, "the sweeps complete");
     }
 
     if (s_failures != 0) {

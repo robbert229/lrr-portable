@@ -2,6 +2,7 @@
 /* gods98 engine — corpus record access primitives (see record.hpp). */
 
 #include "record.hpp"
+#include "heap.hpp"
 
 /* Byte-safe field reads: corpus dword/float slots at offsets that may
  * not be pointer-aligned on 64-bit hosts. */
@@ -762,4 +763,27 @@ uint32_t record_flag_bit_test(const void* record, uint32_t bit_index,
         return 0u;
     }
     return rec_dword(record, 0x130) & bit;
+}
+
+/* ObjectPoolListsFreeAll (FUN_00456c60) — see record.hpp. The corpus reads
+ * each head through the bounds-checked getter and strides the dword slot
+ * blind for the clear; the port reads/clears the native link slot. */
+void object_pool_lists_free_all(void* pools)
+{
+    if (pools == NULL) {
+        return; /* deviation: the corpus strides the global blindly */
+    }
+    for (int i = 0; i < 0x37; ++i) {
+        const size_t slot = 0x114 + (size_t)i * sizeof(void*);
+        void* node = NULL;
+        __builtin_memcpy(&node, (char*)pools + slot, sizeof node);
+        while (node != NULL) {
+            void* next = NULL;
+            __builtin_memcpy(&next, (char*)node + 8, sizeof next);
+            engine_heap_free(node);
+            node = next;
+        }
+        void* zero = NULL;
+        __builtin_memcpy((char*)pools + slot, &zero, sizeof zero);
+    }
 }
