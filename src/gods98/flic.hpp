@@ -93,6 +93,22 @@ void flic_opcode27_fallback_noop(void);
  * blindly; the port guards the NULL window. */
 int flic_opcode16_mode_dispatch(const uint8_t* rec);
 
+/* FlicDecode16BitRowRecords (FUN_00484c00): the chunked triplet writer on
+ * the corpus frame-record window — stream link +0x6d0, count stream+6,
+ * bytes stream+8, triplets +0x11c (skip byte*3 per chunk; a zero count byte
+ * restarts the table for one 0x100 pass and ends the walk), and op +0x6d4
+ * 4 hands off to the triplet fold.
+ * FlicDecode8BitOpcode25Mode4 (FUN_004848d0): the byte stream at stream+7
+ * over rows +0x10 of length +0xc, pixel stores at +0x6cc plus pitch/2
+ * * row * 2, palette stores through the +0x41c word window. Each row pass
+ * ends one byte short of the stream (the corpus steps +1 between rows).
+ * Deviation: the corpus strides the record, stream, and pixels blindly. */
+int flic_decode16_bit_row_records(void* record);
+int flic_decode8_bit_opcode25_mode4(void* record);
+void flic_frame_window_layout_install(void* rec, int row_len, int row_count,
+                                     int pitch, void* stream,
+                                     void* pixel_buffer, int flag);
+
 /* PackedTripletTableToWordBuild (FUN_00484ba0): fold the record's 256
  * packed RGB triplets at +0x11c into 16-bit words at +0x41c, then clear
  * the first word. The record rides the frame-record byte window. */

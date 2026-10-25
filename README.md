@@ -2363,6 +2363,22 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**FLIC row-record band — triplet walk + mode-4 byte stream** (2026-10-25):
+two frontier rows land on the corpus frame-record window (the triplet-word
+precedent extended with the stream link +0x6d0, pixel buffer +0x6cc, pitch
++0x638, row count +0x10, row length +0xc, and an install hook).
+`flic_decode16_bit_row_records` (0x484c00) walks the chunked stream:
+per-chunk triplet skip +1*3, the copy lands every source byte >>2, a
+zero-count byte restarts the table for one 0x100-triplet lap and ends the
+walk, and op word +0x6d4 = 4 hands off to the triplet fold.
+`flic_decode8_bit_opcode25_mode4` (0x4848d0) walks the byte stream at
+stream+7 over rows of length +0xc — the literal run repeats one palette
+word, the copy run walks its own indices through the +0x41c window
+(the ported indexed-word lookup shape), and each row pass straddles one
+stream byte between rows. Deviation: both stride the record blindly; the
+port guards only the record pointer. `flic_test` pins chunk strides, the
+restart lap, op gating, runs, and the row straddle.
+
 **Velocity state trio + FLIC triplet word build** (2026-10-25): four
 frontier rows land. `entity_velocity_state_record_get` (0x4712c0, record.*)
 answers the type-keyed velocity base — type 1 the +0x0c sub-record plus

@@ -431,3 +431,144 @@ void flic_packed_triplet_table_to_word_build(void* record)
     const uint16_t zero = 0u;
     __builtin_memcpy(words, &zero, sizeof zero);
 }
+
+/* --- the corpus frame-record window band (2026-10-25) ----------------------
+ * These decoders run on the corpus's record buffer (the opcode-16 dispatch
+ * and triplet-word precedent): triplets +0x11c, words +0x41c (the ported
+ * indexed-word-table lookup window), stream link +0x6d0, pixel buffer +0x6cc,
+ * pitch +0x638, row count +0x10, row length +0xc, op +0x6d4, format flag
+ * +0x6e4. The stream chunks carry their count at stream+6 and bytes at
+ * stream+8. The corpus strides all of it blindly; the port guards only the
+ * record pointer (deviation, the dispatch precedent). */
+
+/* The corpus palette store: rec + 0x41c + index*2, folded as the ported
+ * indexed-word-table lookup (the byte window stands in for the table). */
+static uint16_t rec_palette_word(const char* rec, unsigned index)
+{
+    uint16_t w = 0u;
+    __builtin_memcpy(&w, rec + 0x41c + (size_t)(index & 0xffu) * 2u, sizeof w);
+    return w;
+}
+
+/* FlicDecode16BitRowRecords (FUN_00484c00) — see flic.hpp. The triplet copy
+ * lands each source byte >>2; the zero-flag chunk restarts the table for a
+ * full 0x100-triplet pass on the loop's last lap; op 4 hands off to the
+ * triplet fold. */
+int flic_decode16_bit_row_records(void* record)
+{
+    if (record == NULL) {
+        return 1; /* deviation: the corpus strides the record blindly */
+    }
+    char* rec = (char*)record;
+    void* stream = NULL;
+    __builtin_memcpy(&stream, rec + 0x6d0, sizeof stream);
+    char* dst = rec + 0x11c;
+    const char* chunk = (const char*)stream + 8;
+    int16_t left = 0;
+    __builtin_memcpy(&left, (const char*)stream + 6, sizeof left);
+    while (left != 0) {
+        const char* data = chunk + 2;
+        uint32_t count = (uint8_t)chunk[1];
+        dst += (size_t)(uint8_t)chunk[0] * 3u;
+        if (count == 0u) {
+            left = 1;
+            count = 0x100u;
+            dst = rec + 0x11c;
+        }
+        int32_t n = (int32_t)(count * 3u);
+        if ((short)n != 0) {
+            for (; n != 0; n = n - 1) {
+                *dst = (char)((uint8_t)*data >> 2);
+                dst = dst + 1;
+                data = data + 1;
+            }
+        }
+        chunk = data;
+        left = (short)(left - 1);
+    }
+    int op = 0;
+    __builtin_memcpy(&op, rec + 0x6d4, sizeof op);
+    if (op == 4) {
+        flic_packed_triplet_table_to_word_build(rec);
+    }
+    return 1;
+}
+
+/* FlicDecode8BitOpcode25Mode4 (FUN_004848d0) — see flic.hpp. The byte
+ * stream rides stream+7; the row walk ends each pass one byte short and
+ * the palette store lands through the indexed word window. */
+int flic_decode8_bit_opcode25_mode4(void* record)
+{
+    if (record == NULL) {
+        return 1; /* deviation: the corpus strides the record blindly */
+    }
+    char* rec = (char*)record;
+    void* stream = NULL;
+    void* pixels = NULL;
+    __builtin_memcpy(&stream, rec + 0x6d0, sizeof stream);
+    __builtin_memcpy(&pixels, rec + 0x6cc, sizeof pixels);
+    const char* src = (const char*)stream + 7;
+    uint32_t rows = 0u;
+    uint16_t rows16 = 0u;
+    __builtin_memcpy(&rows16, rec + 0x10, sizeof rows16);
+    rows = rows16;
+    if (rows != 0u) {
+        int16_t row_len = 0;
+        __builtin_memcpy(&row_len, rec + 0x0c, sizeof row_len);
+        uint32_t row_i = 0u;
+        do {
+            uint32_t pitch = 0u;
+            __builtin_memcpy(&pitch, rec + 0x638, sizeof pitch);
+            char* pixel = (char*)pixels
+                          + (size_t)(pitch >> 1) * (size_t)row_i * 2u;
+            int16_t left = row_len;
+            while (left != 0) {
+                const uint32_t b0 = (uint8_t)*src;
+                const char* next = src + 1;
+                if (b0 < 0x80u) {
+                    const uint8_t v = (uint8_t)*next;
+                    left = (short)(left - (short)b0);
+                    src = next + 1;
+                    if (b0 != 0u) {
+                        for (uint32_t k = b0; k != 0u; k = k - 1u) {
+                            const uint16_t w = rec_palette_word(rec, v);
+                            __builtin_memcpy(pixel, &w, sizeof w);
+                            pixel += 2;
+                        }
+                    }
+                } else {
+                    const uint32_t run = 0x100u - b0;
+                    left = (short)(left - (short)(uint16_t)run);
+                    src = next;
+                    for (uint32_t k = run; k != 0u; k = k - 1u) {
+                        const uint16_t w = rec_palette_word(rec, (uint8_t)*src);
+                        src = src + 1;
+                        __builtin_memcpy(pixel, &w, sizeof w);
+                        pixel += 2;
+                    }
+                }
+            }
+            row_i = row_i + 1u;
+            src = src + 1;
+            rows = rows - 1u;
+        } while (rows != 0u);
+    }
+    return 1;
+}
+
+void flic_frame_window_layout_install(void* rec, int row_len, int row_count,
+                                      int pitch, void* stream,
+                                      void* pixel_buffer, int flag)
+{
+    if (rec == NULL) {
+        return;
+    }
+    int16_t v = (int16_t)row_len;
+    __builtin_memcpy((char*)rec + 0x0c, &v, sizeof v);
+    v = (int16_t)row_count;
+    __builtin_memcpy((char*)rec + 0x10, &v, sizeof v);
+    __builtin_memcpy((char*)rec + 0x638, &pitch, sizeof pitch);
+    __builtin_memcpy((char*)rec + 0x6d0, &stream, sizeof stream);
+    __builtin_memcpy((char*)rec + 0x6cc, &pixel_buffer, sizeof pixel_buffer);
+    __builtin_memcpy((char*)rec + 0x6e4, &flag, sizeof flag);
+}
