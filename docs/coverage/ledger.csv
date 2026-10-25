@@ -1970,7 +1970,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0047db90,FUN_0047db90,ported,RGBChannelsPack,3,166
 0047dbc0,FUN_0047dbc0,named,ResourceRecordAddRef,0,249
 0047dbf0,FUN_0047dbf0,ported,ImageSurfaceBlitTransformed,1,530
-0047dcb0,FUN_0047dcb0,ported,SurfaceBlitRect,3,1647
+0047dcb0,FUN_0047dcb0,ported,SurfaceBlitRect,4,1647
 0047de60,FUN_0047de60,named,DirectDrawSurfaceDescriptionGet,0,578
 0047ded0,FUN_0047ded0,named,DirectDrawSurfaceUnlock,0,117
 0047def0,FUN_0047def0,named,DirectDrawSurfacePixelFormatGet,0,643

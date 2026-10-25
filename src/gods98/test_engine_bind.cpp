@@ -197,6 +197,26 @@ int main(void)
         global_refresh_record_set(NULL);
     }
 
+    /* GlobalHandlePositionApplyIfPresent (2026-10-24). */
+    {
+        global_position_handle_set(NULL);
+        global_position_seam_reset();
+        CHECK(global_handle_position_apply_if_present() == 0,
+              "the clear handle answers 0");
+        CHECK(global_position_seam_calls() == 0, "the clear handle stays off");
+        char handle = 0;
+        global_position_handle_set(&handle);
+        CHECK(global_handle_position_apply_if_present() == 1,
+              "the set handle answers 1");
+        void* last = NULL;
+        int lx = -1, ly = -1;
+        global_position_seam_last(&last, &lx, &ly);
+        CHECK(global_position_seam_calls() == 1 && last == &handle && lx == 0
+                  && ly == 0,
+              "the handle rides the reposition seam at zero");
+        global_position_handle_set(NULL);
+    }
+
     if (s_failures == 0) {
         printf("engine_bind_test: PASS\n");
         return 0;

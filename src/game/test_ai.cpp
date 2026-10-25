@@ -1192,6 +1192,27 @@ int main(int argc, char** argv)
         entity_state_flags_set(0u);
     }
 
+    /* SceneObjectHasTaskType4_5_7 (2026-10-24): gate + chain. */
+    {
+        EntitySlot e;
+        memset(&e, 0, sizeof e);
+        CHECK(scene_object_has_task_type_4_5_7(&e) == 0,
+              "the type gate answers for non-type-2");
+        e.type = 2;
+        CHECK(scene_object_has_task_type_4_5_7(&e) == 0,
+              "type 2 with no activities answers 0");
+        e.act_count = 1;
+        e.act_list[0] = 5;
+        CHECK(scene_object_has_task_type_4_5_7(&e) == 1,
+              "the teleport entry answers through the chain");
+        e.act_list[0] = 7;
+        CHECK(scene_object_has_task_type_4_5_7(&e) == 1,
+              "the reinforce entry answers through the chain");
+        e.act_count = 0;
+        CHECK(scene_object_has_task_type_4_5_7(NULL) == 0,
+              "the NULL slot is guarded");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "ai_test: %d failure(s)\n", s_failures);
         return 1;

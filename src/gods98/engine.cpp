@@ -284,3 +284,47 @@ uint32_t global_state_low_word_get(void) { return s_global_low_word; }
 void global_state_low_word_set(uint32_t value) { s_global_low_word = value; }
 void  global_refresh_record_set(void* record) { s_refresh_record = record; }
 void* global_refresh_record_peek(void) { return s_refresh_record; }
+
+/* --- the global position handle leaf (see engine.hpp) ----------------------
+ * DAT_00556f3c has no ported owner; the reposition seam (FUN_0047dcb0) is
+ * a hook boundary, so the call rides a recorded seam here. */
+static void* s_position_handle;   /* DAT_00556f3c role */
+static int    s_position_seam_calls;
+static void*  s_position_seam_last_handle;
+static int    s_position_seam_last_x;
+static int    s_position_seam_last_y;
+
+int global_handle_position_apply_if_present(void)
+{
+    if (s_position_handle == NULL) {
+        return 0;
+    }
+    ++s_position_seam_calls;
+    s_position_seam_last_handle = s_position_handle;
+    s_position_seam_last_x = 0;
+    s_position_seam_last_y = 0;
+    return 1;
+}
+
+void global_position_handle_set(void* handle) { s_position_handle = handle; }
+void* global_position_handle_peek(void) { return s_position_handle; }
+void global_position_seam_reset(void)
+{
+    s_position_seam_calls = 0;
+    s_position_seam_last_handle = NULL;
+    s_position_seam_last_x = 0;
+    s_position_seam_last_y = 0;
+}
+int global_position_seam_calls(void) { return s_position_seam_calls; }
+void global_position_seam_last(void** out_handle, int* out_x, int* out_y)
+{
+    if (out_handle != NULL) {
+        *out_handle = s_position_seam_last_handle;
+    }
+    if (out_x != NULL) {
+        *out_x = s_position_seam_last_x;
+    }
+    if (out_y != NULL) {
+        *out_y = s_position_seam_last_y;
+    }
+}

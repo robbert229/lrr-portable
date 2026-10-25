@@ -439,4 +439,17 @@ void shared_texture_directory_set(const char* path); /* FUN_004728c0 */
 char* shared_texture_directory_peek(void);           /* port hook */
 void  shared_texture_directory_clear(void);          /* port hook: free */
 
+/* SelectionMarkerResourcesRelease (FUN_0040ce30, findings 378/434): frees
+ * each non-null pointer in the marker resource table (DAT_004c7e00..e7c,
+ * the trailing count word reset), then frees the table descriptor
+ * (DAT_004c7df8) when present. The table/descriptor have no ported owner,
+ * so they land here as zero-init statics with install hooks. */
+void selection_marker_resources_release(void);     /* FUN_0040ce30 */
+void selection_marker_slot_set(int index, void* ptr); /* port hook */
+void* selection_marker_slot_peek(int index);          /* port hook */
+void selection_marker_descriptor_set(void* desc);     /* port hook */
+void* selection_marker_descriptor_peek(void);         /* port hook */
+void selection_marker_count_set(uint32_t count);      /* port hook */
+uint32_t selection_marker_count_peek(void);           /* port hook */
+
 #endif /* LEGORRR_GODS98_CRT_HPP */

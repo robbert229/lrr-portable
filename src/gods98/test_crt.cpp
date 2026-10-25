@@ -791,6 +791,27 @@ int main(void)
         CHECK(shared_texture_directory_peek() == NULL, "NULL is guarded");
     }
 
+    /* SelectionMarkerResourcesRelease (2026-10-24): the table release. */
+    {
+        void* slots[3];
+        for (int i = 0; i < 3; ++i) {
+            slots[i] = engine_heap_alloc(8);
+            CHECK(slots[i] != NULL, "the slot records allocate");
+            selection_marker_slot_set(i, slots[i]);
+        }
+        void* desc = engine_heap_alloc(8);
+        selection_marker_descriptor_set(desc);
+        selection_marker_count_set(3u);
+        selection_marker_resources_release();
+        CHECK(selection_marker_slot_peek(0) == NULL
+                  && selection_marker_slot_peek(2) == NULL,
+              "the freed slots clear out");
+        CHECK(selection_marker_count_peek() == 0u, "the count resets");
+        CHECK(selection_marker_descriptor_peek() == NULL,
+              "the descriptor frees out");
+        selection_marker_resources_release(); /* double release: no-op */
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "crt_test: %d failure(s)\n", s_failures);
         return 1;

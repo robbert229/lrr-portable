@@ -2363,6 +2363,18 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Handle-gate + activity chain + marker-release band** (findings 392/386/329/469/378/434):
+`engine.*` ports `global_handle_position_apply_if_present` (0x435580 — the
+unowned DAT_00556f3c handle gates the zero-position reposition seam, which
+rides a recorded hook), `ai.*` ports `scene_object_has_task_type_4_5_7`
+(0x4493e0 — the type-2 gate, then drill/teleport/reinforce through the
+ported activity-list scan), and `crt.*` ports `selection_marker_resources_release`
+(0x40ce30 — the 32-slot marker table frees, the count reset, and the
+descriptor release; the corpus's dangling slots clear as a documented
+deviation). `0x40ffe0` is recorded in blocked.md with the scene-object
+thunk family. `engine_bind_test`, `ai_test`, and `crt_test` pin the gate,
+the chain, and the release.
+
 **Panel resource + scroll leaf band** (findings 367/432/251/469/386/439/436/444):
 `record.*` ports `record_flag_bit_test` (0x46cf40 — the selected +0x130 bit,
 optionally rejecting bits riding the type mask), `ai.*` ports

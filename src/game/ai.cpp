@@ -1023,3 +1023,21 @@ void entity_activity_scene_state_update(GameContext* ctx)
 
 uint32_t entity_state_flags_peek(void) { return s_entity_state_flags; }
 void     entity_state_flags_set(uint32_t value) { s_entity_state_flags = value; }
+
+/* SceneObjectHasTaskType4_5_7 (FUN_004493e0) — see ai.hpp. */
+int scene_object_has_task_type_4_5_7(const EntitySlot* e)
+{
+    if (e == NULL || e->type != 2) {
+        return 0; /* deviation: the corpus dereferences blindly */
+    }
+    if (ai_activity_scan(e, 4) != 0) {
+        return 1;
+    }
+    if (ai_activity_scan(e, 5) != 0) {
+        return 1;
+    }
+    if (ai_activity_scan(e, 7) != 0) {
+        return 1;
+    }
+    return 0;
+}
