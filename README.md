@@ -2363,6 +2363,20 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Counter + link band** (findings 251/469/435/434/438):
+`ai.*` ports `simulation_update_counter_add` (0x43a8f0 — the global object's
++0x8C bump loop, then the scene-state pass), `entity_flag80000000_set_or_clear`
+(0x438580 — the +0x3e8 high bit raised or cleared, then the scene-state pass),
+`entity_nested_float_add_unless_blocked` (0x43c280 — a type-4 entity failing
+the strict eligibility clause skips the +0xDC stats-float fold, which otherwise
+lands on both corpus paths answering zero), and `linked_entity_flag_and_command_update`
+(0x4440a0 — a type-4 link at +0x2fc raises +0x3ec bit 0x40 on both entities and
+drops the parent's kind-0x1C records through the ported chain drop), while
+`frontend.*` ports `screen_effect_flags_clear_and_release` (0x40a3d0 — the
+ten-entry screen-effect table as hooked statics, active flags cleared with the
+handles riding the visibility seam), widening the +0x2fc link mirror.
+`ai_test` and `frontend_test` pin the loops, gates, folds, and walks.
+
 **Activity-gate + selector + tree-release band** (findings 251/469/371/378/386/438/251/372):
 `ai.*` ports `entity_dispatch_event31_for_pending_flag` (0x4437f0 — the
 type-3/pending-bit gate raises the +0x3e4 marker and re-registers activity

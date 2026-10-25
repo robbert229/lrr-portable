@@ -260,4 +260,33 @@ void entity_dispatch_event31_for_pending_flag(EntitySlot* e);
                                                 /* FUN_004437f0 */
 void entity_activity23_state_transition(EntitySlot* e); /* FUN_00449a70 */
 
+/* --- entity counter + link band (2026-10-24; findings 251/469/435) --------
+ * SimulationUpdateCounterAdd (FUN_0043a8f0): bumps the global object's
+ *   +0x8C word `count` times through the ported mutator (the corpus's first
+ *   argument is calling-convention residue), then runs the scene-state
+ *   update.
+ * EntityFlag80000000SetOrClear (FUN_00438580): the +0x3e8 high bit is raised
+ *   when `param` is zero and cleared otherwise, then the scene-state update
+ *   runs.
+ * EntityNestedFloatAddUnlessBlocked (FUN_0043c280): a type-4 entity failing
+ *   the shared eligibility gate skips the add; otherwise the entity's +0xDC
+ *   stats float folds into `*value` (the corpus's float10 fold lands as a
+ *   float add; the answer is zero on both paths).
+ * LinkedEntityFlagAndCommandUpdate (FUN_004440a0): when the +0x2fc link
+ *   lands on a type-4 entity, both entities raise the +0x3ec bit 0x40 and
+ *   the parent's kind-0x1C command records are dropped through the ported
+ *   chain drop (the trailing zero/one arguments are calling-convention
+ *   residue).
+ * Deviation: the corpus dereferences entities blindly; the guards and the
+ * threaded GameContext stand in (the scene-state update's global level
+ *   word is the module's ctx convention). */
+void simulation_update_counter_add(GameContext* ctx, int count);
+                                                /* FUN_0043a8f0 */
+void entity_flag80000000_set_or_clear(GameContext* ctx, EntitySlot* e,
+                                      int param); /* FUN_00438580 */
+int entity_nested_float_add_unless_blocked(EntitySlot* e, float* value);
+                                                /* FUN_0043c280 */
+void linked_entity_flag_and_command_update(EntitySlot* e);
+                                                /* FUN_004440a0 */
+
 #endif /* LEGORRR_GAME_AI_HPP */

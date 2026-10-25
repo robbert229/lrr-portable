@@ -1426,6 +1426,34 @@ int main(int argc, char** argv)
         frontend_flow_word_set(2, 0);
     }
 
+    /* ScreenEffectFlagsClearAndRelease (2026-10-24): the ten-entry walk. */
+    {
+        char h1;
+        char h2;
+        screen_effect_entry_set(0, &h1, 0x3u); /* active + extra bit */
+        screen_effect_entry_set(1, &h2, 2u);   /* inactive */
+        screen_effect_entry_set(2, NULL, 1u);  /* active, clear handle */
+        screen_effect_entry_set(3, NULL, 0u);  /* silent */
+        screen_effect_seam_reset();
+        screen_effect_flags_clear_and_release();
+        void* last = (void*)1;
+        int flag = -1;
+        screen_effect_seam_last(&last, &flag);
+        CHECK(screen_effect_seam_calls() == 2 && flag == 1 && last == NULL,
+              "only the active entries fire the seam");
+        CHECK(screen_effect_flag_peek(0) == 2u && screen_effect_flag_peek(1) == 2u,
+              "bit 0 clears and the other bits stay");
+        screen_effect_seam_reset();
+        screen_effect_flags_clear_and_release();
+        CHECK(screen_effect_seam_calls() == 0, "the second walk is silent");
+        for (int i = 0; i < 10; ++i) {
+            screen_effect_entry_set(i, NULL, 0u);
+        }
+        CHECK(screen_effect_flag_peek(-1) == 0u
+                  && screen_effect_handle_peek(99) == NULL,
+              "the window guards answer clear");
+    }
+
     if (s_failures == 0) {
         printf("frontend: all tests passed\n");
         return 0;

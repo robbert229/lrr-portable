@@ -570,4 +570,21 @@ void     panel_seam_last(void** out_res, float* out_x, float* out_y);
  * here as zero-init statics; the selector returns the live address. */
 int* active_object_list_word(void); /* FUN_00416e00 */
 
+/* --- screen-effect release (2026-10-24; findings 434/438) ------------------
+ * ScreenEffectFlagsClearAndRelease (FUN_0040a3d0): walks the ten screen-
+ *   effect entries (the corpus's DAT_004b8aa0 table stride) clearing active
+ *   flag bits and sending each entry's handle through the visibility seam
+ *   with mode 1. The table has no ported owner; it lands here as zero-init
+ *   statics and the seam rides a recorded hook (the bobbin-drop precedent).
+ * Deviation: the corpus blind-calls the seam even for cleared handle slots. */
+void screen_effect_flags_clear_and_release(void);  /* FUN_0040a3d0 */
+void  screen_effect_entry_set(int index, void* handle, uint32_t flags);
+                                                /* port hook */
+void* screen_effect_handle_peek(int index);       /* port hook */
+uint32_t screen_effect_flag_peek(int index);      /* port hook */
+void  screen_effect_seam_reset(void);             /* port hook */
+int   screen_effect_seam_calls(void);             /* port hook */
+void  screen_effect_seam_last(void** out_handle, int* out_flag);
+                                                /* port hook */
+
 #endif /* LEGORRR_GAME_FRONTEND_HPP */

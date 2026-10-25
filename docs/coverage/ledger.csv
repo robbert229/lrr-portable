@@ -882,7 +882,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004383a0,FUN_004383a0,ported,GlobalAnimationStateSet,3,168
 004383b0,FUN_004383b0,named,RoverWorkQueueUpdate,0,724
 00438460,FUN_00438460,named,EntityKindRecordUpdateDispatch,0,1188
-00438580,FUN_00438580,named,EntityFlag80000000SetOrClear,0,275
+00438580,FUN_00438580,ported,EntityFlag80000000SetOrClear,2,275
 004385b0,FUN_004385b0,ported,EntitySharedEligibilityCheck,3,443
 00438610,FUN_00438610,named,EntityCreateWithPosition,0,466
 00438670,FUN_00438670,named,EntityAtGridPositionLookup,0,240
@@ -936,7 +936,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0043a650,FUN_0043a650,named,ActionKindEntityCreateAndCommandIssue,0,1350
 0043a7c0,FUN_0043a7c0,ported,EntityActionKindSupported,1,603
 0043a850,FUN_0043a850,named,EntityActionRecordConsumeAndCleanup,0,722
-0043a8f0,FUN_0043a8f0,named,SimulationUpdateCounterAdd,0,158
+0043a8f0,FUN_0043a8f0,ported,SimulationUpdateCounterAdd,2,158
 0043a910,FUN_0043a910,named,SimulationModeCounterAdd,0,141
 0043a930,FUN_0043a930,named,TrackedEntityPointerArrayRemove,0,310
 0043a960,FUN_0043a960,ported,EntityLavaCrustActivityRegister,6,527
@@ -957,8 +957,8 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0043bb20,FUN_0043bb20,named,BuildingDepositStateMonitor,0,740
 0043bbc0,FUN_0043bbc0,ported,EntityDetachCarriedObjectAndResetState,3,540
 0043bc40,FUN_0043bc40,named,ObjectiveSidecarAppendGate,0,5325
-0043c200,FUN_0043c200,ported,EntityStatePairPredicate,4,536
-0043c280,FUN_0043c280,ported,EntityNestedFloatAddUnlessBlocked,4,288
+0043c200,FUN_0043c200,named,EntityStatePairPredicate,0,536
+0043c280,FUN_0043c280,ported,EntityNestedFloatAddUnlessBlocked,2,288
 0043c2b0,FUN_0043c2b0,named,PeriodicTimer25Advance,0,286
 0043c3e0,FUN_0043c3e0,named,EntityType26CommandCompletionGate,0,430
 0043c440,FUN_0043c440,ported,EntityCanDoActivityClassify,9,270
@@ -1016,7 +1016,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004437f0,FUN_004437f0,ported,EntityDispatchEvent31ForPendingFlag,3,274
 00443840,FUN_00443840,named,EntityRouteCellCandidateAccept,0,454
 004438b0,FUN_004438b0,named,PathStepAdvanceAndArrivalCheck,0,9659
-004440a0,FUN_004440a0,ported,LinkedEntityFlagAndCommandUpdate,4,303
+004440a0,FUN_004440a0,ported,LinkedEntityFlagAndCommandUpdate,2,303
 004440f0,FUN_004440f0,named,ActivityTimeoutAccumulateAndRaise,0,1267
 00444260,FUN_00444260,named,EntityRandomCellStepRouteIssue,0,2082
 00444460,FUN_00444460,named,FlaggedVectorStepCommandIssue,0,1661
