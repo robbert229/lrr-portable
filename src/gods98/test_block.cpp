@@ -454,9 +454,10 @@ int main(int argc, char** argv)
     }
 
     /* BlockTextTokenPoolDestroy (FUN_00478e20): corpus pool storage is
-     * module-local with hooks (init/grow unported); the destroy frees the
-     * nonzero slots through the engine heap and clears the head cursor
-     * and resident flag, NULLing slots along the way. */
+     * module-local with hooks (grow ported by iters 117-120, init ported
+     * 2026-10-25); the destroy frees the nonzero slots through the engine
+     * heap and clears the head cursor and resident flag, NULLing slots
+     * along the way. */
     {
         void* tok0 = engine_heap_alloc(8);
         void* tok1 = engine_heap_alloc(8);
@@ -508,6 +509,24 @@ int main(int argc, char** argv)
               "destroy frees and clears the grown chunks");
         CHECK(block_text_token_pool_watermark_peek() == 2,
               "destroy leaves the watermark counter alone (faithful)");
+
+        /* BlockTextTokenPoolInit (FUN_00478df0): window clear + flag raise. */
+        {
+            void* tok = engine_heap_alloc(8);
+            block_text_token_pool_slot_set(7, tok);
+            block_text_token_pool_head_set(tok);
+            block_text_token_pool_init();
+            CHECK(block_text_token_pool_slot_peek(7) == NULL
+                      && block_text_token_pool_slot_peek(0) == NULL
+                      && block_text_token_pool_head_peek() == NULL,
+                  "init clears the window and the head (no free, faithful)");
+            CHECK(block_text_token_pool_watermark_peek() == 0
+                      && block_text_token_pool_resident_peek() == 1,
+                  "init resets the counter and raises the resident flag");
+            /* leak-pinned: init stores NULL over the corpus's own slots the
+             * same way (startup contract, no allocator traffic). */
+            engine_heap_free(tok);
+        }
     }
 
     /* ConfigRgbVectorRead (2026-10-25): the comma triplet, scaled 1/255. */

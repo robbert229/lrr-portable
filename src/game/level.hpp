@@ -958,6 +958,15 @@ int terrain_object_type_sfx_at_cell_get(const void* position_record);
                                  /* FUN_0044ad80 */
 void terrain_sfx_grid_cell_set(int cell, int handle);  /* port hook */
 int  terrain_sfx_grid_cell_peek(int cell);             /* port hook */
+
+/* TerrainObjectTypeSfxGridConfigLoad (FUN_0044acc0): clears the grid, walks
+ * the config's S_ObjTtSFXs chain under `root_path`, and stores each entry's
+ * resolved sound alias at cell (row + type*15), the (type, row) pair coming
+ * from the entity name resolver and carried across entries (the corpus's
+ * quirk). Deviations in the module notes. */
+void terrain_object_sfx_grid_config_load(BlockFile* config,
+                                         const char* root_path);
+                                                /* FUN_0044acc0 */
 /* CellCardinalNeighborApply (FUN_00409cd0, finding 448): runs the terrain
  * cell refresh dispatch over a cell plus its three cardinal offsets (0,-1),
  * (+1,0), (0,+1), (-1,0) — the corpus's stack-pair loop as four calls.
