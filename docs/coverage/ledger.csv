@@ -284,7 +284,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0040cc40,FUN_0040cc40,named,TerrainMarkerSetsClear,0,445
 0040cce0,FUN_0040cce0,named,LavaEffectSelectAndPlace,0,1140
 0040cdc0,FUN_0040cdc0,named,MapCellRecordGridInitialize,0,811
-0040ce30,FUN_0040ce30,named,SelectionMarkerResourcesRelease,0,317
+0040ce30,FUN_0040ce30,ported,SelectionMarkerResourcesRelease,2,317
 0040ce80,FUN_0040ce80,named,MapCellStateBufferRebuild,0,98
 0040cea0,FUN_0040cea0,named,TerrainCellAndNeighborsUpdate,0,724
 0040cf50,FUN_0040cf50,named,RegisterObjectAtGridPosition,0,201
@@ -821,7 +821,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00435230,FUN_00435230,named,RandomVariantCellScatter,0,1059
 00435300,FUN_00435300,ported,,1,3362
 00435550,FUN_00435550,named,GlobalStateZeroTransitionDetect,0,183
-00435580,FUN_00435580,named,GlobalHandlePositionApplyIfPresent,0,214
+00435580,FUN_00435580,ported,GlobalHandlePositionApplyIfPresent,2,214
 004355c0,FUN_004355c0,named,MenuOptionPanelTextureUpdate,0,2675
 00435940,FUN_00435940,ported,KeepRunning,4,936
 00435a20,FUN_00435a20,ported,GlobalStateLowByteClearAndRefresh,3,117
@@ -1059,7 +1059,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004490a0,FUN_004490a0,named,ProximityStepCommandIssueWithLink,0,1969
 00449240,FUN_00449240,named,EntityWalkableTargetCellRouteIssue,0,472
 004492b0,FUN_004492b0,named,CellStepCommandIssueWithTargetMark,0,1035
-004493e0,FUN_004493e0,named,SceneObjectHasTaskType4_5_7,0,294
+004493e0,FUN_004493e0,ported,SceneObjectHasTaskType4_5_7,3,294
 00449430,FUN_00449430,named,EntityTargetCellRouteAndAssociate,0,877
 00449520,FUN_00449520,named,EntityTargetCellRouteMarker14,0,814
 00449610,FUN_00449610,named,EntityCoordinateRouteAndMark,0,870
@@ -1970,7 +1970,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0047db90,FUN_0047db90,ported,RGBChannelsPack,3,166
 0047dbc0,FUN_0047dbc0,named,ResourceRecordAddRef,0,249
 0047dbf0,FUN_0047dbf0,ported,ImageSurfaceBlitTransformed,1,530
-0047dcb0,FUN_0047dcb0,ported,SurfaceBlitRect,3,1647
+0047dcb0,FUN_0047dcb0,ported,SurfaceBlitRect,4,1647
 0047de60,FUN_0047de60,named,DirectDrawSurfaceDescriptionGet,0,578
 0047ded0,FUN_0047ded0,named,DirectDrawSurfaceUnlock,0,117
 0047def0,FUN_0047def0,named,DirectDrawSurfacePixelFormatGet,0,643

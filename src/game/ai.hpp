@@ -233,4 +233,9 @@ void entity_activity_scene_state_update(GameContext* ctx); /* FUN_00439990 */
 uint32_t entity_state_flags_peek(void);                    /* port hook */
 void     entity_state_flags_set(uint32_t value);           /* port hook */
 
+/* SceneObjectHasTaskType4_5_7 (FUN_004493e0, finding 469): a type-2 entity
+ * answers 1 when its activity list carries drill (4), teleport (5), or
+ * reinforce (7) — the corpus's short-circuit chain, reproduced in order. */
+int scene_object_has_task_type_4_5_7(const EntitySlot* e); /* FUN_004493e0 */
+
 #endif /* LEGORRR_GAME_AI_HPP */

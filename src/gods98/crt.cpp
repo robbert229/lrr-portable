@@ -1224,3 +1224,42 @@ void shared_texture_directory_clear(void)
     engine_heap_free(s_shared_texture_dir);
     s_shared_texture_dir = NULL;
 }
+
+/* --- the selection marker table (see crt.hpp) ------------------------------
+ * DAT_004c7e00..e7c is 32 pointer slots plus the count word at e80; the
+ * descriptor sits at DAT_004c7df8. All unowned: zero-init statics here. */
+static void*    s_marker_table[32];
+static uint32_t s_marker_count;
+static void*    s_marker_descriptor;
+
+void selection_marker_resources_release(void)
+{
+    for (int i = 0; i < 32; ++i) {
+        if (s_marker_table[i] != NULL) {
+            engine_heap_free(s_marker_table[i]);
+        }
+    }
+    /* Deviation: the corpus frees without clearing the slots (a repeated
+     * release would double-free); the port zeroes the window. */
+    memset(s_marker_table, 0, sizeof s_marker_table);
+    s_marker_count = 0u;
+    if (s_marker_descriptor != NULL) {
+        engine_heap_free(s_marker_descriptor);
+        s_marker_descriptor = NULL;
+    }
+}
+
+void selection_marker_slot_set(int index, void* ptr)
+{
+    if (index >= 0 && index < 32) {
+        s_marker_table[index] = ptr;
+    }
+}
+void* selection_marker_slot_peek(int index)
+{
+    return (index >= 0 && index < 32) ? s_marker_table[index] : NULL;
+}
+void  selection_marker_descriptor_set(void* desc) { s_marker_descriptor = desc; }
+void* selection_marker_descriptor_peek(void) { return s_marker_descriptor; }
+void     selection_marker_count_set(uint32_t count) { s_marker_count = count; }
+uint32_t selection_marker_count_peek(void) { return s_marker_count; }

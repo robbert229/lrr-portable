@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 853 | 33.3% |
+| ported | 856 | 33.4% |
 | anchored | 4 | 0.2% |
-| named | 1660 | 64.7% |
+| named | 1657 | 64.6% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (853 functions)
+  (856 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1660 functions)
+  citation yet (1657 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1665 (64.9%).**
+**Game logic remaining to port: 1662 (64.8%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -210,7 +210,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0040cc40` | TerrainMarkerSetsClear |
 | `0x0040cce0` | LavaEffectSelectAndPlace |
 | `0x0040cdc0` | MapCellRecordGridInitialize |
-| `0x0040ce30` | SelectionMarkerResourcesRelease |
 | `0x0040ce80` | MapCellStateBufferRebuild |
 | `0x0040cea0` | TerrainCellAndNeighborsUpdate |
 | `0x0040cf50` | RegisterObjectAtGridPosition |
@@ -500,7 +499,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004350a0` | SurfaceTypeDescriptionsConfigLoad |
 | `0x00435230` | RandomVariantCellScatter |
 | `0x00435550` | GlobalStateZeroTransitionDetect |
-| `0x00435580` | GlobalHandlePositionApplyIfPresent |
 | `0x004355c0` | MenuOptionPanelTextureUpdate |
 | `0x00435aa0` | PanelSelectionHighlightToggle |
 | `0x00435b20` | SceneObjectChainRecordCreate |
@@ -677,7 +675,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004490a0` | ProximityStepCommandIssueWithLink |
 | `0x00449240` | EntityWalkableTargetCellRouteIssue |
 | `0x004492b0` | CellStepCommandIssueWithTargetMark |
-| `0x004493e0` | SceneObjectHasTaskType4_5_7 |
 | `0x00449430` | EntityTargetCellRouteAndAssociate |
 | `0x00449520` | EntityTargetCellRouteMarker14 |
 | `0x00449610` | EntityCoordinateRouteAndMark |

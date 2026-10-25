@@ -275,4 +275,16 @@ void     global_state_low_word_set(uint32_t value); /* port hook */
 void  global_refresh_record_set(void* record);      /* port hook */
 void* global_refresh_record_peek(void);             /* port hook */
 
+/* GlobalHandlePositionApplyIfPresent (FUN_00435580, findings 392/386/329):
+ * when the global position handle word (DAT_00556f3c — no ported owner, a
+ * zero-init static with hooks here) is set, the handle rides the surface
+ * reposition seam at a zero position and the answer is 1. */
+int global_handle_position_apply_if_present(void); /* FUN_00435580 */
+void global_position_handle_set(void* handle);     /* port hook */
+void* global_position_handle_peek(void);           /* port hook */
+void global_position_seam_reset(void);             /* port hook */
+int  global_position_seam_calls(void);             /* port hook */
+void global_position_seam_last(void** out_handle, int* out_x, int* out_y);
+                                                /* port hook */
+
 #endif /* LEGORRR_ENGINE_HPP */
