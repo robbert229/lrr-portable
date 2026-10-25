@@ -459,4 +459,22 @@ uint32_t selection_marker_count_peek(void);           /* port hook */
  * slots widened and guards the NULL node. */
 void owned_resource_tree_release(void** node, int own_node); /* FUN_0048c180 */
 
+/* --- string + stream allocation leaves (2026-10-24; findings 375/93) ------
+ * StringPrefixReserve (FUN_004907c0): when `count` is nonzero the NUL-
+ *   terminated string is shifted right by `count` bytes in place through
+ *   the ported memory move — the vacated prefix is where the caller writes
+ *   (the corpus's scan is a strlen; the tail NUL rides the move).
+ * CrtStreamBufferAllocate (FUN_00498ae0): bumps the stream-allocation
+ *   counter (DAT_005493e4, unowned: hooked static), tries the engine heap
+ *   for a 0x1000 buffer, and installs it as the record's buffer window
+ *   with flag bit 3 when it lands; on failure the record's own internal
+ *   buffer takes over with flag bit 2 raised instead. The record's dword
+ *   window rides the port's stream-record layout (field n at record +
+ *   n*sizeof(void*) — the crt_owned_stream_buffer_release convention).
+ * Deviation: the corpus strides the record blindly; the port guards NULL. */
+void string_prefix_reserve(char* s, int count);   /* FUN_004907c0 */
+void crt_stream_buffer_allocate(char* record);    /* FUN_00498ae0 */
+long stream_allocation_count_peek(void);          /* port hook */
+void stream_allocation_count_reset(void);         /* port hook */
+
 #endif /* LEGORRR_GODS98_CRT_HPP */

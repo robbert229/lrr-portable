@@ -81,6 +81,14 @@ void* cmd_chain_walk(const EntitySlot* e);
  * per-type side effects, so the drop is a plain unlink+free). Returns the
  * number of records dropped. */
 int cmd_chain_drop(EntitySlot* e, int type);
+
+/* ObjectAttachedRecordAllocate (FUN_004033c0, findings 251/270): allocates a
+ * kind-0x1C attached-object record through the ported allocator and hangs it
+ * on the entity — after the chain's last record (the walk result's +0x60
+ * link), or on the entity's chain head at +0x2F0 when the chain is empty.
+ * Deviation: the corpus strides the entity blindly; the port guards it. */
+void object_attached_record_allocate(EntitySlot* e); /* FUN_004033c0 */
+
 void  cmd_chain_purge(EntitySlot* e);
 
 /* Current global command-list head (DAT_004b3354) — the most recent

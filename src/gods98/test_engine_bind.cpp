@@ -217,6 +217,32 @@ int main(void)
         global_position_handle_set(NULL);
     }
 
+    /* ScrollScaleSetAndClamp (2026-10-24): the gate + clamp + band. */
+    {
+        global_scroll_guard_set(1);
+        scroll_scale_set(1.0f);
+        scroll_scale_set_and_clamp(0.5f); /* backwards with the guard up */
+        CHECK(scroll_scale_peek() == 1.0f, "the guard blocks a backward scale");
+        scroll_scale_set_and_clamp(1.5f);
+        CHECK(scroll_scale_peek() == 1.5f, "the forward scale installs");
+        global_scroll_guard_set(0);
+        scroll_scale_set_and_clamp(-1.0f); /* guard clear lets it through */
+        CHECK(scroll_scale_peek() == 0.0f, "the negative scale clamps to zero");
+        scroll_scale_set_and_clamp(9.0f);
+        CHECK(scroll_scale_peek() == 3.0f, "the high scale clamps to three");
+
+        scroll_scale_set(0.5f);
+        CHECK(scroll_speed_index_get() == 0, "the sub-0.667 band answers zero");
+        scroll_scale_set(1.0f);
+        CHECK(scroll_speed_index_get() == 2, "the one-band lands at two");
+        scroll_scale_set(1.4f);
+        CHECK(scroll_speed_index_get() == 3, "the sub-1.667 band lands at three");
+        scroll_scale_set(1.8f);
+        CHECK(scroll_speed_index_get() == 4, "the sub-2.0 band lands at four");
+        scroll_scale_set(2.0f);
+        CHECK(scroll_speed_index_get() == 5, "the two-and-up band lands at five");
+    }
+
     if (s_failures == 0) {
         printf("engine_bind_test: PASS\n");
         return 0;

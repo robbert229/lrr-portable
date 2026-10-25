@@ -1283,3 +1283,56 @@ void owned_resource_tree_release(void** node, int own_node)
         engine_heap_free((void*)node);
     }
 }
+
+/* --- the string + stream allocation leaves (see crt.hpp) ------------------- */
+
+/* StringPrefixReserve (FUN_004907c0): the scan is a strlen; the shift is an
+ * overlapping move of the whole string (NUL included) `count` bytes right. */
+void string_prefix_reserve(char* s, int count)
+{
+    if (count == 0 || s == NULL) {
+        return; /* deviation: the corpus strides s blindly */
+    }
+    size_t len = 0;
+    while (s[len] != '\0') {
+        ++len;
+    }
+    crt_memory_move(s + count, s, len + 1); /* tail NUL rides the move */
+}
+
+/* CrtStreamBufferAllocate (FUN_00498ae0) — see crt.hpp. DAT_005493e4 is
+ * unowned: zero-init hooked static. */
+static long s_stream_alloc_count;
+
+long stream_allocation_count_peek(void) { return s_stream_alloc_count; }
+void stream_allocation_count_reset(void) { s_stream_alloc_count = 0; }
+
+void crt_stream_buffer_allocate(char* record)
+{
+    ++s_stream_alloc_count;
+    if (record == NULL) {
+        return; /* deviation: the corpus strides the record blindly */
+    }
+    /* Port layout (the crt_owned_stream_buffer_release convention): field n
+     * at record + n*sizeof(void*); field 6 is the corpus's capacity word. */
+    const long field = (long)sizeof(void*);
+    void* buffer = engine_heap_alloc(0x1000);
+    __builtin_memcpy(record + 2 * field, &buffer, sizeof buffer);
+    uint32_t flags = 0u;
+    __builtin_memcpy(&flags, record + 3 * field, sizeof flags);
+    if (buffer != NULL) {
+        flags |= 8u;
+        const uint32_t cap = 0x1000u;
+        __builtin_memcpy(record + 6 * field, &cap, sizeof cap);
+    } else {
+        flags |= 4u;
+        const uint32_t cap = 2u;
+        __builtin_memcpy(record + 6 * field, &cap, sizeof cap);
+        buffer = record + 5 * field; /* corpus: internal buffer at field 5 */
+        __builtin_memcpy(record + 2 * field, &buffer, sizeof buffer);
+    }
+    __builtin_memcpy(record + 3 * field, &flags, sizeof flags);
+    void* zero = NULL;
+    __builtin_memcpy(record + 1 * field, &zero, sizeof zero);
+    __builtin_memcpy(record + 0 * field, &buffer, sizeof buffer);
+}

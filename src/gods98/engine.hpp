@@ -234,8 +234,21 @@ int mode_dependent_field24_get(const EngineContext* ctx);
 bool   current_engine_mode_is_zero(const EngineContext* ctx);
 void   global_state_flags_bit7_set(EngineContext* ctx, int value);
 void   global_scroll_guard_set(int value);
-int    global_scroll_guard_peek(void); /* port-side hook: the corpus reader
-                                        * ScrollScaleSetAndClamp is unported */
+int    global_scroll_guard_peek(void); /* port-side hook: the corpus's reader
+                                        * is ScrollScaleSetAndClamp @ 0x425ce0 */
+
+/* ScrollScaleSetAndClamp (FUN_00425ce0, findings 437/398): installs a new
+ * scroll-scale word when it does not run the stored scale backwards
+ * (stored <= new) or the guard word (DAT_004de548) is clear. The scale word
+ * (DAT_0055615c, _DAT_0055615c) has no ported owner; it lands next to the
+ * guard word as module storage, clamped to [0, 3]. The corpus's band call
+ * (the 0x414f90 slider store) refreshes the speed index first; the port
+ * mirrors that band with the peek hook below.
+ * Deviation: the corpus reads the overlap-flagged float word blindly. */
+void  scroll_scale_set_and_clamp(float scale);  /* FUN_00425ce0 */
+float scroll_scale_peek(void);                  /* port hook */
+void  scroll_scale_set(float value);            /* port hook */
+int   scroll_speed_index_get(void);             /* port hook (band model) */
 void   global_triple_copy_out(uint32_t* out);
 
 /* GlobalField505f88Get (FUN_00401bf0, finding 02): the corpus's app-mode

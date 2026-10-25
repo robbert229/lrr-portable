@@ -1632,6 +1632,22 @@ int main(void)
         cmd_free(rec, 0);
     }
 
+    /* ObjectAttachedRecordAllocate (2026-10-24): the attach shapes. */
+    {
+        EntitySlot e;
+        memset(&e, 0, sizeof e);
+        object_attached_record_allocate(&e);
+        CHECK(e.cmd_head != NULL && cmd_rec_type(e.cmd_head) == 0x1c,
+              "the empty chain takes the record at the head");
+        object_attached_record_allocate(&e);
+        void* second = cmd_rec_next(e.cmd_head);
+        CHECK(second != NULL && cmd_rec_type(second) == 0x1c
+                  && cmd_rec_next(second) == NULL,
+              "the live chain appends after the last record");
+        object_attached_record_allocate(NULL); /* guarded */
+        cmd_chain_purge(&e);
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "cmd_test: %d failure(s)\n", s_failures);
         return 1;

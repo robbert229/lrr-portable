@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 866 | 33.8% |
+| ported | 870 | 33.9% |
 | anchored | 4 | 0.2% |
-| named | 1647 | 64.2% |
+| named | 1643 | 64.1% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (866 functions)
+  (870 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1647 functions)
+  citation yet (1643 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1652 (64.4%).**
+**Game logic remaining to port: 1648 (64.3%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -63,7 +63,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00403030` | CellCommandType3Issue |
 | `0x004031e0` | ActiveEntityListContainsCode |
 | `0x00403320` | ObjectCommandTaskCreate |
-| `0x004033c0` | ObjectAttachedRecordAllocate |
 | `0x00403650` | EntityTaskBatchAppend |
 | `0x00403750` | CommandKindRecordIssueAndLink |
 | `0x00403810` | TerrainCellRecordCountUpdate |
@@ -431,7 +430,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004248b0` | SelectedEntityGroundMarkerRender |
 | `0x00425b40` | PeriodicCallbackDispatch |
 | `0x00425c30` | TransitionControl |
-| `0x00425ce0` | ScrollScaleSetAndClamp |
 | `0x00425d50` | GlobalRenderRecordSetFromInput |
 | `0x00426250` | UpdateRenderViewportState |
 | `0x004262e0` | ObjectiveScoreTextOriginSet |
@@ -1527,7 +1525,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00490640` | CrtFloatDecimalFormatPrepare |
 | `0x004906f0` | CrtScientificFloatFormatGuarded |
 | `0x00490720` | CrtFixedDecimalFormatGuarded |
-| `0x004907c0` | StringPrefixReserve |
 | `0x004907f0` | ParseEntityHealthValue |
 | `0x004908a0` | CrtFileStreamClose |
 | `0x004909d0` | EngineFormatStringToStream |
@@ -1627,7 +1624,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00497ec0` | CrtLocaleDataGetOrInitialize |
 | `0x00497f40` | DoubleToExtended80 |
 | `0x00498350` | NumberStringScanParse |
-| `0x00498ae0` | CrtStreamBufferAllocate |
 | `0x00498b40` | CrtFileDescriptorFlag40Get |
 | `0x00498b70` | CrtWideCharToMultibyte |
 | `0x00498ce0` | CrtScanfNumericConversionAssign |

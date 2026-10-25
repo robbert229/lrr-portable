@@ -327,3 +327,35 @@ void global_position_seam_last(void** out_handle, int* out_x, int* out_y)
         *out_y = s_position_seam_last_y;
     }
 }
+
+/* ScrollScaleSetAndClamp (FUN_00425ce0) — see engine.hpp. The corpus reads
+ * its speed word through the overlapping _DAT_0055615c alias; the port keeps
+ * one float in this module's storage. */
+static float s_scroll_scale = 1.0f; /* DAT_0055615c role; corpus default 1.0 */
+
+float scroll_scale_peek(void) { return s_scroll_scale; }
+void  scroll_scale_set(float value) { s_scroll_scale = value; }
+
+int scroll_speed_index_get(void)
+{
+    const float v = s_scroll_scale;
+    if (v < 0.6666667f) { return 0; }
+    if (v < 1.0f)       { return 1; }
+    if (v < 1.3333334f) { return 2; }
+    if (v < 1.6666666f) { return 3; }
+    if (v < 2.0f)       { return 4; }
+    return 5;
+}
+
+void scroll_scale_set_and_clamp(float scale)
+{
+    if (s_scroll_scale <= scale || s_scroll_guard == 0) {
+        s_scroll_scale = scale;
+        if (s_scroll_scale < 0.0f) {
+            s_scroll_scale = 0.0f;
+        }
+        if (s_scroll_scale > 3.0f) {
+            s_scroll_scale = 3.0f;
+        }
+    }
+}

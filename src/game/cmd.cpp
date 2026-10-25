@@ -1968,3 +1968,18 @@ void cmd_rec_target_set(void* rec, int target)
         as_rec(rec)->cell_target = target;
     }
 }
+
+/* ObjectAttachedRecordAllocate (FUN_004033c0) — see cmd.hpp. */
+void object_attached_record_allocate(EntitySlot* e)
+{
+    if (e == NULL) {
+        return; /* deviation: the corpus strides blindly */
+    }
+    void* rec = cmd_alloc(0x1c);
+    void* tail = cmd_chain_walk(e);
+    if (tail != NULL) {
+        as_rec(tail)->next = rec; /* corpus store at walk-result +0x60 */
+    } else {
+        e->cmd_head = rec; /* corpus store at entity +0x2f0 */
+    }
+}

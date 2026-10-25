@@ -835,6 +835,45 @@ int main(void)
         CHECK(1, "the release walk completes");
     }
 
+    /* StringPrefixReserve (2026-10-24): the in-place shift. */
+    {
+        char buf[32];
+        memset(buf, 0, sizeof buf);
+        strcpy(buf, "abc");
+        string_prefix_reserve(buf, 2);
+        CHECK(strcmp(buf + 2, "abc") == 0, "the string lands after the gap");
+        string_prefix_reserve(buf, 0);
+        CHECK(strcmp(buf + 2, "abc") == 0, "a zero count leaves it alone");
+        string_prefix_reserve(NULL, 2); /* guarded */
+    }
+
+    /* CrtStreamBufferAllocate (2026-10-24): the buffer install. */
+    {
+        /* Record window: seven field words plus the internal 0x1000 buffer
+         * riding from field 5 — sized for the fallback shape (the heap path
+         * lands a real allocation, so the window fields are what we pin). */
+        static char rec[5 * sizeof(void*) + 0x1000];
+        memset(rec, 0, sizeof rec);
+        stream_allocation_count_reset();
+        crt_stream_buffer_allocate(rec);
+        void* buffer = NULL;
+        __builtin_memcpy(&buffer, rec + 2 * sizeof(void*), sizeof buffer);
+        uint32_t flags = 0u;
+        __builtin_memcpy(&flags, rec + 3 * sizeof(void*), sizeof flags);
+        void* front = NULL;
+        __builtin_memcpy(&front, rec + 0 * sizeof(void*), sizeof front);
+        CHECK(buffer != NULL && front == buffer,
+              "the heap buffer becomes the stream window");
+        CHECK((flags & 8u) != 0u && stream_allocation_count_peek() == 1,
+              "the owned-buffer flag raises and the counter ticks");
+        void* pos = NULL;
+        __builtin_memcpy(&pos, rec + 1 * sizeof(void*), sizeof pos);
+        CHECK(pos == NULL, "the window position starts clear");
+        crt_stream_buffer_allocate(rec); /* overwrite leaks (faithful) */
+        CHECK(stream_allocation_count_peek() == 2, "the second tick lands");
+        crt_stream_buffer_allocate(NULL); /* guarded */
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "crt_test: %d failure(s)\n", s_failures);
         return 1;
