@@ -502,6 +502,20 @@ void block_text_token_pool_destroy(void)
     s_token_pool_resident = 0;
 }
 
+/* BlockTextTokenPoolInit (FUN_00478df0): zero the 32-slot window — the
+ * corpus's window runs through DAT_00506518, so its head word gets a final
+ * explicit store too — clear the watermark counter, then raise the resident
+ * flag (`_DAT_00506520 = 1`, the port's resident-count role). Deviation:
+ * the port keeps slots and head as separate statics, so the window ends at
+ * the slots and the head store stands on its own. */
+void block_text_token_pool_init(void)
+{
+    memset(s_token_pool_slots, 0, sizeof s_token_pool_slots);
+    s_token_pool_head = NULL;
+    s_token_pool_watermark = 0;
+    s_token_pool_resident = 1;
+}
+
 void block_text_token_pool_slot_set(int slot, void* token)
 {
     if (slot >= 0 && slot < BLOCK_TOKEN_POOL_SLOTS) {

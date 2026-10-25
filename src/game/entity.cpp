@@ -443,6 +443,15 @@ static int entity_type_for_name(const char* name)
     return type;
 }
 
+/* Public (type, row) shape of the resolver — the corpus call form with a
+ * NULL fourth output (FUN_0042e8b0(name, &type, &row, 0)): table matches
+ * write both, the special names write only their dedicated rows, leaving
+ * the row slot for the caller to carry. */
+int entity_type_row_for_name(const char* name, int* type_out, int* row_out)
+{
+    return entity_type_pair_for_name(name, type_out, row_out);
+}
+
 static void ol_strncpy(char* dst, size_t n, const char* src)
 {
     size_t i = 0;

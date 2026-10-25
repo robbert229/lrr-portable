@@ -8,6 +8,8 @@
 #include "gods98/heap.hpp"
 #include "gods98/message.hpp"
 #include "gods98/resource.hpp"
+#include "gods98/sound.hpp"
+#include "gods98/string.hpp"
 #include "entity.hpp"
 #include "level.hpp"
 #include "objective.hpp"
@@ -2662,6 +2664,41 @@ int terrain_sfx_grid_cell_peek(int cell)
         return 0;
     }
     return s_terrain_sfx_grid[cell];
+}
+
+/* TerrainObjectTypeSfxGridConfigLoad (FUN_0044acc0) — see level.hpp.
+ * Deviations: the corpus strides its zero loop blindly (the port memsets
+ * the window); the corpus's two dead preamble loops leave the running
+ * pair initialized 20/15 and carry them ACROSS entries, so a name whose
+ * resolution writes only one half inherits the other from the previous
+ * entry (pinned quirk — the port carries them the same way); the corpus
+ * strides a missing value string into the alias table (the port's lookup
+ * guards NULL) and stores blind past the 300-entry window (the port
+ * guards). The entry chain is the subgroup record followed by its
+ * equal-key siblings, entry name = the object name, entry value = the
+ * sound alias reference. */
+void terrain_object_sfx_grid_config_load(BlockFile* config,
+                                         const char* root_path)
+{
+    memset(s_terrain_sfx_grid, 0, sizeof s_terrain_sfx_grid);
+    int obj_x = 20; /* the corpus's dead-loop pair, carried across entries */
+    int obj_y = 15;
+    const char* path = string_path_join(root_path, "S_ObjTtSFXs", NULL);
+    for (BlockRec* entry = block_subgroup(config, path);
+         entry != NULL; entry = block_next_equal_key(entry)) {
+        if (entity_type_row_for_name(block_name(entry), &obj_x,
+                                     &obj_y) == 0) {
+            continue;
+        }
+        int sfx = 0;
+        if (sound_alias_lookup(block_value(entry), &sfx) == 0) {
+            continue;
+        }
+        const int cell = obj_y + obj_x * 15;
+        if (cell >= 0 && cell < TERRAIN_SFX_GRID_CELLS) {
+            s_terrain_sfx_grid[cell] = sfx;
+        }
+    }
 }
 
 /* EntityAvailableResourceSpend (FUN_00438720) — see level.hpp.

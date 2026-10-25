@@ -128,6 +128,7 @@ const char* registry_path_split(const char* path, char* out);
  * DAT_00506518's second corpus role as crt.cpp's record-list head is a
  * documented aliasing the port does not model across translation units. */
 void  block_text_token_pool_destroy(void);
+void  block_text_token_pool_init(void);               /* FUN_00478df0 */
 void  block_text_token_pool_grow(void);              /* FUN_00479490 */
 void  block_text_token_pool_slot_set(int slot, void* token);
 void* block_text_token_pool_slot_peek(int slot);

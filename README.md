@@ -2363,6 +2363,23 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Token-pool init + sfx-grid config load** (2026-10-25): two frontier rows
+land in `block.*` and `level.*`. `block_text_token_pool_init` (0x478df0)
+clears the 32-slot window and the head/watermark pair and raises the resident
+flag — the corpus window includes the head word, so the port's separate head
+static takes its own store, and init clears the slots without freeing (the
+corpus's startup contract). `terrain_object_sfx_grid_config_load` (0x44acc0)
+clears the 300-cell terrain sfx grid, walks the config's `S_ObjTtSFXs` chain,
+and stores each entry's resolved sound alias at `row + type*15`, the (type,
+row) pair coming from the entity name resolver. Quirk pin: the corpus's
+two dead preamble loops initialize the pair to 20/15 and carry it ACROSS
+entries, so a name that writes only its half inherits the other from the
+previous entry (the crystal-on-ore test pins the inheritance); unresolved
+names and failed alias lookups store nothing, and negative or out-of-window
+cells are guarded (the corpus strides blindly). `block_test` pins the
+no-free clear and the flag raise; `level_test` pins the stores, the carry,
+and the clear.
+
 **Kind-six random sweep** (2026-10-25): one frontier row lands in
 `cmd.*`. `kind_six_random_sweep_dispatch` (0x40f0e0) subtracts the frame delta
 from the sweep timer; once it reaches zero it draws up to one hundred random

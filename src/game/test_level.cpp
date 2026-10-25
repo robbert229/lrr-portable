@@ -1342,6 +1342,37 @@ int main(int argc, char** argv)
               "a null record answers clear");
     }
 
+    /* TerrainObjectTypeSfxGridConfigLoad (2026-10-25): config chain walk,
+     * alias stores, and the cross-entry coordinate carry. */
+    {
+        static char text[] =
+            "Lego* {\n"
+            "  S_ObjTtSFXs { placeholder }\n"
+            "  smallDigger SFX_Drill\n"
+            "  ore SFX_RockBreak\n"
+            "  powerCrystal SFX_Ambient\n"
+            "  bogus SFX_Drip\n"
+            "  slug SFX_NOTHING\n"
+            "  tvcamera SFX_Drill\n"
+            "}\n";
+        BlockFile* bf = block_parse(text, strlen(text));
+        CHECK(bf != NULL, "the sfx config parses");
+        terrain_sfx_grid_cell_set(17, 555);
+        terrain_object_sfx_grid_config_load(bf, "Lego*");
+        CHECK(terrain_sfx_grid_cell_peek(16) == 2,
+              "the vehicle-row pair lands the drill alias");
+        CHECK(terrain_sfx_grid_cell_peek(105) == 4,
+              "the ore dedicated row lands the break alias");
+        CHECK(terrain_sfx_grid_cell_peek(90) == 6,
+              "the crystal inherits the ore row across entries (carry)");
+        CHECK(terrain_sfx_grid_cell_peek(17) == 0,
+              "the load clears the window first");
+        CHECK(terrain_sfx_grid_cell_peek(15) == 0
+                  && terrain_sfx_grid_cell_peek(106) == 0,
+              "unresolved names and failed aliases store nothing");
+        block_close(bf);
+    }
+
     /* EntityAvailableResourceSpend (2026-10-24): gate + branches. */
     {
         LevelState g;

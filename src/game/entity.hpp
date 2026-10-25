@@ -62,6 +62,11 @@ int  entity_stride(int type);
 int  entity_count(GameContext* ctx, int type);
 const EntitySlot* entity_at(GameContext* ctx, int type, int index);
 
+/* Resolver pair (FUN_0042e8b0, name -> (type, registry row)): table matches
+ * write both outputs, the special names write only their dedicated rows.
+ * The (name, &type, &row, NULL) corpus call form; NULL name answers 0. */
+int entity_type_row_for_name(const char* name, int* type_out, int* row_out);
+
 /* Load the level's `.ol` object list (`OListFile` key) from `cfg` into the
  * entity table. Returns the number of objects placed, or -1 when the
  * resource is missing/unparsable. */

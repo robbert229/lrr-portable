@@ -711,7 +711,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0042dfc0,FUN_0042dfc0,ported,ObjectPointerRegistryClearMatch,1,310
 0042dff0,FUN_0042dff0,ported,ObjectPointerRegistryGetSlot,1,208
 0042e020,FUN_0042e020,ported,OListEntityRecordParse,11,9851
-0042e8b0,FUN_0042e8b0,ported,ObjectListEntityTypeResolve,8,7597
+0042e8b0,FUN_0042e8b0,ported,ObjectListEntityTypeResolve,10,7597
 0042ed70,FUN_0042ed70,ported,EntityPointer,1,1332
 0042ef40,FUN_0042ef40,named,StatsLevelRecordCountForStatType,0,495
 0042efc0,FUN_0042efc0,ported,DirectShowVideoPlaybackLoop,5,726
@@ -1083,7 +1083,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0044a5d0,FUN_0044a5d0,named,NearestOpenCellCoordSearch,0,2011
 0044a7d0,FUN_0044a7d0,named,PolyVariantSectionModelBuild,0,1553
 0044a910,FUN_0044a910,named,BuildingPlacementPreviewUpdate,0,3256
-0044acc0,FUN_0044acc0,named,TerrainObjectTypeSfxGridConfigLoad,0,793
+0044acc0,FUN_0044acc0,ported,TerrainObjectTypeSfxGridConfigLoad,3,793
 0044ad80,FUN_0044ad80,ported,TerrainObjectTypeSfxAtCellGet,3,156
 0044adc0,FUN_0044adc0,named,ScatterSpawnGateSet,0,260
 0044ade0,FUN_0044ade0,named,EntityKindOneRandomSpawnTrigger,0,527
@@ -1851,7 +1851,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00478980,FUN_00478980,named,MusicMixerVolumeSet,0,94
 004789a0,FUN_004789a0,named,MusicMixerVolumeGet,0,109
 004789c0,FUN_004789c0,named,WindowsMixerControlInit,0,7932
-00478df0,FUN_00478df0,named,BlockTextTokenPoolInit,0,353
+00478df0,FUN_00478df0,ported,BlockTextTokenPoolInit,3,353
 00478e20,FUN_00478e20,ported,BlockTextTokenPoolDestroy,3,339
 00478e60,FUN_00478e60,ported,BlockTextOpenAndScan,3,1795
 00478f50,FUN_00478f50,ported,ConfigEntryFind,2,2731

@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 1092 | 42.6% |
+| ported | 1094 | 42.7% |
 | anchored | 4 | 0.2% |
-| named | 1423 | 55.5% |
+| named | 1421 | 55.4% |
 | runtime-import | 44 | 1.7% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (1092 functions)
+  (1094 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1423 functions)
+  citation yet (1421 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (44 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1428 (55.7%).**
+**Game logic remaining to port: 1426 (55.6%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -590,7 +590,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0044a5d0` | NearestOpenCellCoordSearch |
 | `0x0044a7d0` | PolyVariantSectionModelBuild |
 | `0x0044a910` | BuildingPlacementPreviewUpdate |
-| `0x0044acc0` | TerrainObjectTypeSfxGridConfigLoad |
 | `0x0044adc0` | ScatterSpawnGateSet |
 | `0x0044ade0` | EntityKindOneRandomSpawnTrigger |
 | `0x0044ae50` | RandomKindSixScatterSpawn |
@@ -1015,7 +1014,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00478980` | MusicMixerVolumeSet |
 | `0x004789a0` | MusicMixerVolumeGet |
 | `0x004789c0` | WindowsMixerControlInit |
-| `0x00478df0` | BlockTextTokenPoolInit |
 | `0x00479500` | D3DRMVectorRandom |
 | `0x00479510` | D3DRMVectorRotate |
 | `0x00479630` | SurfaceTriangleAreaCalculate |
