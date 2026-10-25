@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 934 | 36.4% |
+| ported | 941 | 36.7% |
 | anchored | 4 | 0.2% |
-| named | 1579 | 61.6% |
+| named | 1572 | 61.3% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (934 functions)
+  (941 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1579 functions)
+  citation yet (1572 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1584 (61.8%).**
+**Game logic remaining to port: 1577 (61.5%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -1250,7 +1250,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00483170` | IndexedRecordTransformInitialize |
 | `0x00483270` | RenderObjectColorVectorSet |
 | `0x00483420` | ScreenEffectItemOpacitySet |
-| `0x00483540` | Matrix4x4IdentityInitialize |
 | `0x00483580` | RenderInterfaceCapabilityCheck |
 | `0x00483600` | Direct3DViewportSetup |
 | `0x00483690` | MatrixMethodPairApply |

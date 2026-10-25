@@ -967,3 +967,37 @@ void scene_object_arguments_normalize(const void** obj, const void** alt,
     }
     *out_alt = root_slot;
 }
+
+/* Matrix4IdentityInitialize (FUN_00483540): the corpus writes the twelve
+ * off-diagonal dwords as zero (high to low), then the four diagonal dwords
+ * as the float-1.0 constant — the same output, in the corpus's order. */
+void matrix4_identity_initialize(float* out)
+{
+    for (int i = 1; i < 16; ++i) {
+        if (i % 5 != 0) {
+            out[i] = 0.0f;
+        }
+    }
+    for (int i = 0; i < 4; ++i) {
+        out[5 * i] = 1.0f;
+    }
+}
+
+/* SurfaceTriangleNormalCalculate (FUN_00479530): the two edges
+ * e1 = p4 − p3 and e2 = p3 − p2; the three products recombine as the
+ * cross product cross(e2, e1), so the normal is that cross normalized.
+ * The corpus divides 1.0 by SQRT with no zero-length guard (finding 388
+ * pinned); the port keeps the fold exactly. */
+void surface_triangle_normal_calculate(float* out, const float* p2,
+                                       const float* p3, const float* p4)
+{
+    const float e1[3] = {p4[0] - p3[0], p4[1] - p3[1], p4[2] - p3[2]};
+    const float e2[3] = {p3[0] - p2[0], p3[1] - p2[1], p3[2] - p2[2]};
+    const float cx = e2[1] * e1[2] - e2[2] * e1[1];
+    const float cy = e2[2] * e1[0] - e2[0] * e1[2];
+    const float cz = e2[0] * e1[1] - e2[1] * e1[0];
+    const float scale = 1.0f / (float)sqrt(cz * cz + cy * cy + cx * cx);
+    out[0] = scale * cx;
+    out[1] = scale * cy;
+    out[2] = scale * cz;
+}

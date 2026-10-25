@@ -92,6 +92,23 @@ int main(void)
     test_find_substring();
     test_length_bounded();
     test_path_join();
+    /* CaseInsensitiveSubstringFind (2026-10-25). */
+    {
+        const char* hay = "Hello World!";
+        const char* hit = case_insensitive_substring_find(hay, "lo wo");
+        CHECK(hit == hay + 3, "the fold find lands the start");
+        CHECK(case_insensitive_substring_find(hay, "nope") == NULL,
+              "the miss answers null");
+        CHECK(case_insensitive_substring_find("", "x") == NULL
+                  && case_insensitive_substring_find("abc", "") == NULL,
+              "the corpus gate answers null");
+        CHECK(case_insensitive_substring_find(NULL, "x") == NULL
+                  && case_insensitive_substring_find("abc", NULL) == NULL,
+              "the pointer guards hold");
+        CHECK(case_insensitive_substring_find("ab", "abc") == NULL,
+              "the tail overrun does not match");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "string_test: %d failure(s)\n", s_failures);
         return 1;

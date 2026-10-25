@@ -1621,3 +1621,48 @@ uint32_t crt_uint96_clear_from_bit(uint32_t limbs[3], int bit)
     }
     return result;
 }
+
+/* --- the pair-table window pair (see crt.hpp) ------------------------------
+ * The find scan keeps the corpus's masked walk: the compare index is the
+ * low 16 bits of the hop counter and the bound test reads that mask.
+ * Deviations: the port guards the table and the key; the corpus strides
+ * them (and its append blindly stores past the caller's window). */
+void* pair_table_find(const void* table, uint32_t count, const char* key)
+{
+    if (table == NULL || count == 0u || key == NULL) {
+        return NULL; /* deviation: the corpus strides the table blindly */
+    }
+    const long field = (long)sizeof(void*);
+    uint32_t hops = 0;
+    for (;;) {
+        const uint32_t idx = hops & 0xffffu; /* pinned: corpus walk mask */
+        char* name = NULL;
+        __builtin_memcpy(&name, (const char*)table + (long)idx * 2 * field,
+                         sizeof name);
+        void* value = NULL;
+        __builtin_memcpy(&value,
+                         (const char*)table + ((long)idx * 2 + 1) * field,
+                         sizeof value);
+        if (name != NULL && s_strcasecmp(key, name) == 0) {
+            return value;
+        }
+        ++hops;
+        if ((hops & 0xffffu) >= count) {
+            return NULL;
+        }
+    }
+}
+
+void pair_table_append(void* table, int* count, const char* key,
+                       void* value)
+{
+    if (table == NULL || count == NULL) {
+        return; /* deviation: the corpus strides both blindly */
+    }
+    const long field = (long)sizeof(void*);
+    char* copy = string_duplicate(key); /* FUN_00477550 */
+    char* entry = (char*)table + (long)*count * 2 * field;
+    __builtin_memcpy(entry, &copy, sizeof copy);
+    __builtin_memcpy(entry + field, &value, sizeof value);
+    *count += 1;
+}

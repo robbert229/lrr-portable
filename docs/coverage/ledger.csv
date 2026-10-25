@@ -1822,7 +1822,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004773e0,FUN_004773e0,named,RenderResourceTrackedReferencesRelease,0,688
 00477440,FUN_00477440,ported,BlockTextTokenSplit,4,795
 004774b0,FUN_004774b0,named,WhitespaceTokenize,0,957
-00477550,FUN_00477550,ported,StringDuplicate,2,929
+00477550,FUN_00477550,ported,StringDuplicate,5,929
 00477590,FUN_00477590,named,FormattedTextEscapeDecodeAndEmit,0,670
 00477610,FUN_00477610,ported,CaseInsensitiveSubstringFind,3,834
 00477670,FUN_00477670,named,GameStringHashCompute,0,853
@@ -2097,7 +2097,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00483270,FUN_00483270,named,RenderObjectColorVectorSet,0,1379
 00483400,FUN_00483400,ported,IndexedRecordDataAddressGet,1,105
 00483420,FUN_00483420,named,ScreenEffectItemOpacitySet,0,1367
-00483540,FUN_00483540,named,Matrix4x4IdentityInitialize,0,389
+00483540,FUN_00483540,ported,Matrix4x4IdentityInitialize,3,389
 00483580,FUN_00483580,named,RenderInterfaceCapabilityCheck,0,867
 00483600,FUN_00483600,named,Direct3DViewportSetup,0,886
 00483690,FUN_00483690,named,MatrixMethodPairApply,0,1588

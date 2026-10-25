@@ -37,6 +37,51 @@ const char* string_find_substring(const char* haystack, const char* needle)
     return strstr(haystack, needle);
 }
 
+/* CaseInsensitiveSubstringFind (FUN_00477610) — see string.hpp. The
+ * bounded fold compare models the corpus's __strnicmp: ASCII case-fold,
+ * exactly `n` bytes, stopping early when the bytes agree on a NUL.
+ * Deviation pinned: the corpus keeps striding a terminated haystack byte
+ * against an unterminated needle tail; the port's compare stops. */
+static int s_strnfoldcmp(const char* a, const char* b, size_t n)
+{
+    for (size_t i = 0; i < n; ++i) {
+        int ca = (unsigned char)a[i];
+        int cb = (unsigned char)b[i];
+        if (ca >= 'A' && ca <= 'Z') {
+            ca += 'a' - 'A';
+        }
+        if (cb >= 'A' && cb <= 'Z') {
+            cb += 'a' - 'A';
+        }
+        if (ca != cb) {
+            return ca - cb;
+        }
+        if (ca == 0) {
+            return 0;
+        }
+    }
+    return 0;
+}
+
+const char* case_insensitive_substring_find(const char* haystack,
+                                            const char* needle)
+{
+    if (haystack == NULL || needle == NULL) {
+        return NULL; /* deviation: the corpus dereferences both blindly */
+    }
+    const size_t hlen = strlen(haystack);
+    const size_t nlen = strlen(needle);
+    if (hlen == 0u || nlen == 0u) {
+        return NULL; /* pinned: the corpus gate (strlen-shaped tests) */
+    }
+    for (size_t i = 0; i < hlen; ++i) {
+        if (s_strnfoldcmp(haystack + i, needle, nlen) == 0) {
+            return haystack + i;
+        }
+    }
+    return NULL;
+}
+
 /* FUN_00493ec0: length bounded by `limit` (the corpus walks byte-wise,
  * decrementing the bound first, and answers `limit` when no NUL turns up
  * inside it — byte-identical to scanning min(strlen, limit)). */

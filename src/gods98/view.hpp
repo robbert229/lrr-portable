@@ -377,4 +377,18 @@ void scene_object_arguments_normalize(const void** obj, const void** alt,
                                       void** out_obj, const void** out_alt);
                                                 /* FUN_00475900 */
 
+/* Matrix4IdentityInitialize (FUN_00483540): the straight-line shape — the
+ * twelve off-diagonal dwords clear, then the four diagonal entries land as
+ * the float-1.0 dwords. (The corpus's row-looping sibling stays cited as
+ * its own row.) */
+void matrix4_identity_initialize(float* out);   /* FUN_00483540 */
+
+/* SurfaceTriangleNormalCalculate (FUN_00479530): the triangle normal as
+ * the unit cross product of the edges (p3 − p2) and (p4 − p3). Deviation
+ * kept faithful: there is no zero-length guard before the reciprocal, so
+ * degenerate input yields the corpus's inf/NaN. */
+void surface_triangle_normal_calculate(float* out, const float* p2,
+                                       const float* p3, const float* p4);
+                                                /* FUN_00479530 */
+
 #endif /* LEGORRR_VIEW_HPP */
