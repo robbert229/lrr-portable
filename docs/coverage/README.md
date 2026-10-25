@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 900 | 35.1% |
+| ported | 901 | 35.1% |
 | anchored | 4 | 0.2% |
-| named | 1613 | 62.9% |
+| named | 1612 | 62.9% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (900 functions)
+  (901 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1613 functions)
+  citation yet (1612 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1618 (63.1%).**
+**Game logic remaining to port: 1617 (63.1%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -407,7 +407,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00427f80` | LevelUpgradeNameStringsLoad |
 | `0x00428020` | EntityCommandStatusFeedbackDispatch |
 | `0x00428330` | TerrainCommandFeedbackDispatch |
-| `0x00428780` | TerrainCellCommandPredicate |
 | `0x004288e0` | LevelDebugInputCellMutatorDispatch |
 | `0x00429160` | TerrainCellPaletteResourceAtGridPosition |
 | `0x004293b0` | SelectionRectangleRender |

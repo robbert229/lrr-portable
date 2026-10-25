@@ -323,4 +323,13 @@ int  global_position_seam_calls(void);             /* port hook */
 void global_position_seam_last(void** out_handle, int* out_x, int* out_y);
                                                 /* port hook */
 
+/* TerrainCellCommandPredicate (FUN_00428780): the cell-command gate. The
+ * gate passes unconditionally while the system-state word is nonzero with
+ * bits 8 AND 4 both clear (the corpus's re-read chain); otherwise, with
+ * bit 1 set, the target cell's surface byte (voxel +0x04, index
+ * height-major like the voxel accessors) must be zero. Deviations:
+ * the corpus re-reads the system word and strides the voxel blindly, so a
+ * NULL/absent cell answers not-open (bounds-checking voxel accessors). */
+int terrain_cell_command_predicate(const EngineContext* ctx, int x, int y);
+
 #endif /* LEGORRR_ENGINE_HPP */
