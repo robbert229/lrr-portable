@@ -443,6 +443,34 @@ int main(void)
         message_set_system_state(0u);
     }
 
+    /* Engine mode set (2026-10-25): the flag-word install, the mode-1
+     * state-flag half, and the overlay-word clear. */
+    {
+        EngineContext ec = {};
+        int mode = 7;
+        CHECK(engine_mode_set(&ec, &mode) == 7, "the mode answers back");
+        CHECK(global_flag_004ff978_get() == 7u, "the flag word installs");
+
+        mode = 1;
+        ec.debug = 0xffffffffu;
+        CHECK(engine_mode_set(&ec, &mode) == 1, "the mode-one answer");
+        CHECK(global_flag_004ff978_get() == 1u, "the flag word follows");
+        CHECK((ec.debug & 0x40u) == 0u, "the mode-one drop clears bit 6");
+        CHECK((ec.debug & 0x80u) == 0u, "the mode-one drop clears bit 7");
+        CHECK((ec.debug & 0x200u) != 0u, "the mode-one raise lands bit 9");
+        CHECK(engine_overlay_word_peek(0) == 0u
+                  && engine_overlay_word_peek(1) == 0u,
+              "the overlay pair stays cleared through the set");
+
+        mode = 2;
+        ec.debug = 0u;
+        CHECK(engine_mode_set(&ec, &mode) == 2, "the mode-two answer");
+        CHECK(ec.debug == 0u, "the mode-two path leaves the debug word");
+
+        CHECK(engine_mode_set(&ec, NULL) == 0, "the null mode guards (dev)");
+        global_flag_004ff978_install(0u);
+    }
+
     if (s_failures == 0) {
         printf("engine_bind_test: PASS\n");
         return 0;

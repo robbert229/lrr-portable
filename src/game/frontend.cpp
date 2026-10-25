@@ -2009,6 +2009,25 @@ void timed_effect_update_request_set(int index)
     /* deviation: the corpus raises blindly at any index. */
 }
 
+/* TimedEffectCueRequestSet (FUN_0046b700) — see frontend.hpp. The band's
+ * cue word lands as own storage next to the flag/time windows. */
+static uint32_t s_timed_effect_cue[TIMED_EFFECT_ENTRIES];
+
+void timed_effect_cue_request_set(int index, uint32_t value)
+{
+    if (index < 0 || index >= TIMED_EFFECT_ENTRIES) {
+        return; /* deviation: the corpus strides any index blindly */
+    }
+    s_timed_effect_cue[index] = value;
+    s_timed_effect_flags[index] |= 3u;
+}
+
+uint32_t timed_effect_cue_peek(int index)
+{
+    return (index >= 0 && index < TIMED_EFFECT_ENTRIES)
+               ? s_timed_effect_cue[index] : 0u;
+}
+
 uint32_t timed_effect_flags_peek(int index)
 {
     if (index < 0 || index >= TIMED_EFFECT_ENTRIES) {

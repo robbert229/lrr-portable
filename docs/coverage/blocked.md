@@ -226,6 +226,20 @@ Grouped by blocker family; every row names its address and next action:
   `D3DRMVectorRotate` (`0x479510`): tail calls into the Direct3D-RM runtime
   vector helpers. Renderer seam (shared). Next: the renderer seam, or
   D3DRM-shaped vector helpers if the call sites need them.
+- **Win32 mixer band** — `WindowsMixerControlInit` (`0x4789c0`, the full
+  WinMM enumeration: `mixerOpen`/`mixerGetDevCapsA`/`mixerGetNumDevs`/
+  `mixerGetLineInfoA`/`mixerGetLineControlsA`/`mixerGetControlDetailsA`/
+  `mixerSetControlDetails`/`mixerClose`) and its four wrappers
+  `MusicMixerVolumeSet` (`0x478980`), `MusicMixerVolumeGet` (`0x4789a0`),
+  `VolumeSet` (`0x414df0`, the ×1/9 float fold) and `OptionMusicDefault`
+  (`0x414e10`, also x87-`__ftol`-bound): the corpus's mixer-device volume
+  model, with the volume pair landing in uninitialized stack when the
+  mixer fails open. Next: the audio platform seam (shares #297).
+- **Engine callback triplet** — `EngineCallbackTripletSet` (`0x477fd0`):
+  stores three code-callback pointers plus the installed word
+  (`DAT_0050592c/30/34/38`) whose only consumers sit in the recorded
+  `WinMain` pump (the port's frame loop replaces the corpus pump).
+  Next: the Win32 pump seam, if the corpus callbacks ever return.
 - **CDAudio platform seam** — `CDAudioErrorTextGet` (`0x489260`),
   `CDAudioTrackPlayFrom` (`0x489210`), `CDAudioDeviceOpen` (`0x489330`),
   plus the `WaveDataRead` (`0x489100`) HMMIO copy loop

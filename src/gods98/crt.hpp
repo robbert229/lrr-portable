@@ -652,4 +652,22 @@ char* crt_signed_to_string(int value, char* out, int radix);
 char* crt_string_to_upper(char* text);   /* FUN_0049dcd0 */
 char* crt_string_to_lower(char* text);   /* FUN_0049dc10 */
 
+/* --- math error band (2026-10-25) ------------------------------------------
+ * CrtMathErrorCodeSet (FUN_004939a0): stores the corpus's _DAT_005490d0
+ * math-error slot — parameter 1 stores 0x21, parameters 2 and 3 store
+ * 0x22, everything else leaves the slot. The port models the slot as
+ * guarded own storage (the corpus's fd/codec readers ride the unported
+ * CRT runtime band — deviation). */
+void crt_math_error_code_set(int param);
+uint32_t crt_math_error_code_peek(void); /* port hook */
+
+/* CrtMathExceptionCodeFromStatus (FUN_00493a00): the status-fold map —
+ * bit 0x20 answers 5, bit 8 answers 1, bit 4 answers 2, bit 1 answers 3,
+ * else the (bit 2) field doubled. */
+int crt_math_exception_code_from_status(uint32_t status);
+
+/* global_flag_004ff978_install: port hook writing the DAT_004ff978 word
+ * the corpus's EngineModeSet stores through. */
+void global_flag_004ff978_install(uint32_t value);
+
 #endif /* LEGORRR_GODS98_CRT_HPP */

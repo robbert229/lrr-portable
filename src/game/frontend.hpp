@@ -380,6 +380,13 @@ void selection_state_handle_slot_set(int table, int index, uint32_t value);
  * reposition hook per found handle is the simtick-cited surface seam. */
 void timed_effect_update_request_set(int index);
 uint32_t timed_effect_flags_peek(int index);           /* diagnostics */
+
+/* TimedEffectCueRequestSet (FUN_0046b700): stores the cue request word in
+ * the entry's band slot (+0 in the corpus's 0x27c stride, modeled as the
+ * port's guarded cue window) and raises the entry's flag bits 0 and 1.
+ * Deviation: the corpus strides any index and the stride band blindly. */
+void timed_effect_cue_request_set(int index, uint32_t value);
+uint32_t timed_effect_cue_peek(int index);             /* port hook */
 bool     ui_mode_transition_request(int index, int p2, int p3);
 int      band_mode_peek(void);                        /* diagnostics */
 void     band_mode_set(int mode);                     /* diagnostics */

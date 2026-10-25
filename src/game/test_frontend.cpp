@@ -1550,9 +1550,16 @@ int main(int argc, char** argv)
         overlay_anim_float_install(1.0f);
         ui_overlay_animation_advance(0, 1);
         const float decayed = overlay_anim_float_peek();
-        CHECK(decayed >= 0.0f && decayed < 1.0f, "the decay half steps down");
         CHECK(decayed == (1.0f - 0.05f) * 20.0f * 0.05263158f,
               "the decay lands the corpus expression");
+        CHECK(decayed == 1.0f,
+              "one is the corpus expression's fixed point (the step does "
+              "not move at the top — pinned 2026-10-25 against the corpus)");
+        overlay_anim_float_install(0.9f);
+        ui_overlay_animation_advance(0, 1);
+        CHECK(overlay_anim_float_peek() == (0.9f - 0.05f) * 20.0f * 0.05263158f
+                  && overlay_anim_float_peek() < 0.9f,
+              "below the fixed point the decay steps down the same shape");
         overlay_anim_float_install(1.0f);
         ui_overlay_animation_advance(0, 3);
         CHECK(overlay_anim_float_peek() >= 0.0f,
@@ -1572,6 +1579,28 @@ int main(int argc, char** argv)
         CHECK(overlay_anim_float_peek() == 0.0f,
               "the guarded runaway counts no steps (deviation)");
         overlay_anim_float_install(0.5f);
+    }
+
+    /* Timed-effect cue request (2026-10-25): the cue word store plus the
+     * flag-bit 0/1 raise, and the guarded window. */
+    {
+        CHECK(timed_effect_cue_peek(12) == 0u, "the cue window starts clear");
+        timed_effect_cue_request_set(12, 0x77u);
+        CHECK(timed_effect_cue_peek(12) == 0x77u, "the cue word stores");
+        CHECK((timed_effect_flags_peek(12) & 3u) == 3u,
+              "the request raises flag bits 0 and 1");
+        timed_effect_cue_request_set(12, 0u);
+        CHECK(timed_effect_cue_peek(12) == 0u, "the store accepts zero");
+        CHECK(timed_effect_flags_peek(12) == 3u,
+              "the raise is a bit-or, not a store");
+        timed_effect_cue_request_set(12, 8u);
+        timed_effect_update_request_set(12);
+        CHECK(timed_effect_flags_peek(12) == 7u,
+              "the update bit joins the cue bits");
+        timed_effect_cue_request_set(16, 1u);
+        CHECK(timed_effect_cue_peek(16) == 0u
+                  && timed_effect_flags_peek(16) == 0u,
+              "the guarded window drops the out-of-range request (dev)");
     }
 
     if (s_failures == 0) {

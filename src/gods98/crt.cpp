@@ -1830,3 +1830,44 @@ char* crt_string_to_lower(char* text)
     }
     return text;
 }
+
+/* --- math error band (2026-10-25) -------------------------------------------
+ * The corpus's _DAT_005490d0 math-error slot lands as guarded own storage
+ * (the fd/codec readers ride the unported CRT runtime band — deviation). */
+static uint32_t s_math_error_code; /* _DAT_005490d0 role */
+
+void crt_math_error_code_set(int param)
+{
+    if (param == 1) {
+        s_math_error_code = 0x21u;
+    } else if (param > 1 && param < 4) {
+        s_math_error_code = 0x22u;
+    }
+    /* other parameters: the slot stays (faithful) */
+}
+
+uint32_t crt_math_error_code_peek(void) { return s_math_error_code; }
+
+/* CrtMathExceptionCodeFromStatus (FUN_00493a00) — see crt.hpp. The fold
+ * order is the corpus's; the final arm shifts the bit-2 field left. */
+int crt_math_exception_code_from_status(uint32_t status)
+{
+    if ((status & 0x20u) != 0u) {
+        return 5;
+    }
+    if ((status & 8u) != 0u) {
+        return 1;
+    }
+    if ((status & 4u) != 0u) {
+        return 2;
+    }
+    if ((status & 1u) != 0u) {
+        return 3;
+    }
+    return (int)((status & 2u) << 1);
+}
+
+void global_flag_004ff978_install(uint32_t value)
+{
+    s_flag_004ff978 = value;
+}

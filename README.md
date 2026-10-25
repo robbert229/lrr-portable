@@ -2363,6 +2363,22 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Engine-mode + math/CRT band** (2026-10-25): four frontier rows land.
+`engine_mode_set` (0x4565f0, engine.*) installs the mode into the DAT flag
+word (crt.* own storage, install hook), raises the bits-6/9 + bit-7 global
+state flags at mode 1, and clears the overlay-word pair (modeled own-storage
+with peek hooks). `timed_effect_cue_request_set` (0x46b700, frontend.*)
+stores the cue word in the guarded band window and raises flag bits 0/1.
+`crt_math_error_code_set` (0x4939a0) models the math-error slot (param 1 →
+0x21, 2/3 → 0x22) and `crt_math_exception_code_from_status` (0x493a00) the
+status fold 0x20→5 / 8→1 / 4→2 / 1→3 / else bit-2 doubled. Recorded with
+their blockers: the Win32 mixer volume band (0x4789c0 + wrappers 0x478980,
+0x4789a0, 0x414df0, 0x414e10) and the engine callback triplet (0x477fd0,
+consumers sit in the recorded WinMain pump). The overlay-anim decay test's
+"steps down" assertion is corrected — 1.0 is the corpus formula's fixed
+point (expression pin unchanged). `crt_test`/`enginebind_test`/
+`frontend_test` pin the installs, flag folds, and cue window.
+
 **Record-pool + command/reference band** (2026-10-25): four frontier rows land.
 `pooled_record_allocate_and_reset` (0x4382c0, entity.*) pops the ported pool's
 free list, clears 0x103 dwords, self-links the busy mark, and seeds the
