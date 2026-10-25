@@ -2018,6 +2018,76 @@ int main(void)
               "the zero count answers zero");
     }
 
+    /* KindSix random sweep (2026-10-25): timer fold, re-arm, guards. */
+    {
+        GameContext sctx;
+        game_context_init(&sctx);
+        static LevelState lvl;
+        memset(&lvl, 0, sizeof lvl);
+        cmd_context_set(&sctx);
+        sctx.level = &lvl;
+        level_set_int(&lvl, LEVEL_OFF_WIDTH, 5);
+        level_set_int(&lvl, LEVEL_OFF_HEIGHT, 7);
+
+        /* A positive timer counts down, draws nothing, folds to zero. */
+        level_random_seed_set(12345u);
+        kind_six_sweep_timer_install(5.0f);
+        CHECK(kind_six_random_sweep_dispatch(1.0f) == 0
+                  && kind_six_sweep_timer_peek() == 4.0f,
+              "the positive timer counts down and folds to zero");
+
+        /* The zero crossing: 100 seeded pair draws (the seam never lands),
+         * then the re-arm. Same seed answers identically. */
+        level_random_seed_set(12345u);
+        kind_six_sweep_timer_install(1.0f);
+        const uint32_t hit1 = kind_six_random_sweep_dispatch(1.0f);
+        const float armed1 = kind_six_sweep_timer_peek();
+        level_random_seed_set(12345u);
+        kind_six_sweep_timer_install(1.0f);
+        const uint32_t hit2 = kind_six_random_sweep_dispatch(1.0f);
+        const float armed2 = kind_six_sweep_timer_peek();
+        CHECK(hit1 == hit2 && armed1 == armed2,
+              "the seeded sweep is deterministic");
+        const float rearm = armed1 - 750.0f;
+        CHECK(rearm >= 0.0f && rearm < 50.0f && hit1 < 656u
+                  && (float)hit1 * 50.0f + rearm < 32768.0f,
+              "the re-arm rides draw%50+750 and the answer draw/50");
+
+        /* A negative timer crosses straight through. */
+        kind_six_sweep_timer_install(-1.0f);
+        CHECK(kind_six_random_sweep_dispatch(0.0f) < 656u
+                  && kind_six_sweep_timer_peek() >= 750.0f,
+              "the negative timer re-arms straight");
+
+        /* The NaN fold: neither comparison fires, the 1024 bit rides. */
+        float nan_v;
+        const uint32_t bits = 0x7fc00000u;
+        __builtin_memcpy(&nan_v, &bits, sizeof nan_v);
+        kind_six_sweep_timer_install(nan_v);
+        CHECK(kind_six_random_sweep_dispatch(0.0f) == 1024u,
+              "the NaN timer folds to the NAN bit");
+
+        /* The missing level: the cell loop is skipped, the re-arm rides. */
+        sctx.level = NULL;
+        level_random_seed_set(12345u);
+        kind_six_sweep_timer_install(1.0f);
+        const uint32_t solo1 = kind_six_random_sweep_dispatch(1.0f);
+        CHECK(kind_six_sweep_timer_peek() >= 750.0f && solo1 < 656u,
+              "the guarded sweep re-arms on one draw");
+        level_random_seed_set(12345u);
+        kind_six_sweep_timer_install(1.0f);
+        CHECK(kind_six_random_sweep_dispatch(1.0f) == solo1,
+              "the guarded path is deterministic");
+
+        /* The zero-dimension guard (the corpus would take modulo zero). */
+        level_set_int(&lvl, LEVEL_OFF_WIDTH, 0);
+        sctx.level = &lvl;
+        kind_six_sweep_timer_install(1.0f);
+        CHECK(kind_six_random_sweep_dispatch(1.0f) < 656u
+                  && kind_six_sweep_timer_peek() >= 750.0f,
+              "the zero dimension skips the loop (dev)");
+    }
+
     /* HUD post / menu-selection chain (2026-10-25): the surface-type halves
      * over a written surface map, the kind gate, and the guarded paths. */
     {

@@ -13,6 +13,7 @@
 #include "entity.hpp"
 #include "gods98/heap.hpp"
 #include "gods98/media.hpp"
+#include "gods98/message.hpp"
 
 /* ------------------------------------------------------------------ *
  *  Command record (finding 10 §"Command record" — corpus stride 0x68).
@@ -2359,6 +2360,60 @@ const void* upgrade_name_entry_find(const char* name)
         }
     }
     return NULL;
+}
+
+/* --- the kind-six message sweep timer (2026-10-25) -------------------------
+ * KindSixRandomMessageDispatchSweep (FUN_0040f0e0): subtract the frame delta
+ * from the sweep timer, and once it reaches zero draw up to one hundred
+ * random grid pairs modulo the current level's width and height; a pair the
+ * grid-spawn route accepts dispatches message 6 with the coordinate pair
+ * (the route is the quote-only seam precedent — it never lands, so neither
+ * the dispatch nor its break fires). Either way the sweep re-arms the timer
+ * from one final draw at (draw % 50) + 750.0 and answers draw / 50. The
+ * corpus's flag fold over the three timer comparisons pins the positive-
+ * timer return to zero (a finite positive trips no comparison; NaN rides
+ * the 1024 bit). Deviations: the corpus strides a missing current-level
+ * handle blindly and would take a draw modulo zero — the port skips the
+ * cell loop without the level (the re-arm draw still runs, the corpus's
+ * re-arm is level-independent) and reads the dims through the word model. */
+static float s_sweep_timer; /* DAT_004d78c4 */
+
+void kind_six_sweep_timer_install(float value) { s_sweep_timer = value; }
+float kind_six_sweep_timer_peek(void) { return s_sweep_timer; }
+
+uint32_t kind_six_random_sweep_dispatch(float delta)
+{
+    s_sweep_timer = s_sweep_timer - delta;
+    const uint32_t neg = (s_sweep_timer < 0.0f) ? 1u : 0u;
+    const uint32_t nan = (s_sweep_timer != s_sweep_timer) ? 1u : 0u;
+    const uint32_t zero = (s_sweep_timer == 0.0f) ? 1u : 0u;
+    uint32_t answer = (neg << 8) | (nan << 10) | (zero << 14);
+    if (neg != 0u || zero != 0u) {
+        answer = 0;
+        const LevelState* lvl =
+            (s_ctx != NULL) ? (const LevelState*)s_ctx->level : NULL;
+        const int w = (lvl != NULL) ? level_int(lvl, LEVEL_OFF_WIDTH) : 0;
+        const int h = (lvl != NULL) ? level_int(lvl, LEVEL_OFF_HEIGHT) : 0;
+        if (w > 0 && h > 0) {
+            for (uint32_t n = 0; n < 100; ++n) {
+                int cell[2];
+                cell[0] = (int)(short)rng_thunk_draw15() % w;
+                cell[1] = (int)(short)rng_thunk_draw15() % h;
+                /* Grid-spawn route (FUN_0040f190 quote-only seam): never
+                 * lands, so the dispatch and the break cannot fire; the
+                 * coordinate pair would ride the message 6 call. */
+                const int spawn = 0;
+                if (spawn != 0) {
+                    message_dispatch(6, 0, 0, cell);
+                    break;
+                }
+            }
+        }
+        const uint32_t draw = rng_thunk_draw15();
+        answer = (uint32_t)((int)(short)draw / 0x32);
+        s_sweep_timer = (float)((int)(short)draw % 0x32) - -750.0f;
+    }
+    return answer;
 }
 
 void simulation_mode_counter_add(int mode, int count)

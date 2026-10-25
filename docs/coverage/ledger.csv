@@ -322,8 +322,8 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0040ee50,FUN_0040ee50,named,LavaErosionPendingCellAdd,0,1750
 0040efb0,FUN_0040efb0,ported,CellCoordinateTimestampExists,1,337
 0040f000,FUN_0040f000,ported,LavaErosionNeighborCheck,1,1093
-0040f0e0,FUN_0040f0e0,named,KindSixRandomMessageDispatchSweep,0,1023
-0040f190,FUN_0040f190,ported,,5,1320
+0040f0e0,FUN_0040f0e0,ported,KindSixRandomMessageDispatchSweep,3,1023
+0040f190,FUN_0040f190,ported,,6,1320
 0040f2b0,FUN_0040f2b0,named,LavaErosionNeighborEligible,0,571
 0040f330,FUN_0040f330,named,LavaErosionNeighborMutate,0,2854
 0040f5e0,FUN_0040f5e0,ported,GlobalConfigValueSet,1,81
