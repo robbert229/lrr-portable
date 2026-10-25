@@ -805,6 +805,75 @@ int main(void)
         CHECK(sc[0] == 101, "the negative fold lands identity");
     }
 
+    /* Curve band (2026-10-25): the bezier evaluate endpoints, the sample
+     * build with its count clamp, and the polyline length record. The
+     * integer control points keep the x87-equivalent double folds exact. */
+    {
+        const float p0[2] = { 0.0f, 0.0f };
+        const float p1[2] = { 1.0f, 5.0f };
+        const float p2[2] = { 2.0f, 10.0f };
+        const float p3[2] = { 3.0f, 15.0f };
+        float out[2] = { 0.0f, 0.0f };
+        cubic_bezier_point_evaluate(out, p0, p1, p2, p3, 0.0f);
+        CHECK(out[0] == 0.0f && out[1] == 0.0f, "t zero lands the first point");
+        cubic_bezier_point_evaluate(out, p0, p1, p2, p3, 1.0f);
+        CHECK(out[0] == 2.0f && out[1] == 10.0f, "t one lands the third point");
+        cubic_bezier_point_evaluate(NULL, p0, p1, p2, p3, 0.5f);
+        CHECK(out[0] == 2.0f && out[1] == 10.0f,
+              "the null output guard leaves the point (dev)");
+    }
+    {
+        uint32_t dest[128];
+        memset(dest, 0, sizeof dest);
+        const uint32_t ctrlw[2] = { 0u, 0u };
+        const float q3[2] = { 1.0f, 1.0f };
+        const float q4[2] = { 2.0f, 2.0f };
+        const float q5[2] = { 3.0f, 3.0f };
+        uint32_t w3[2], w4[2], w5[2];
+        memcpy(w3, q3, sizeof w3);
+        memcpy(w4, q4, sizeof w4);
+        memcpy(w5, q5, sizeof w5);
+        bezier_curve_samples_build(dest, ctrlw, w3, w4, w5, 5u);
+        CHECK(dest[0] == 5u, "the header count lands");
+        CHECK(dest[1] == 0u && dest[2] == 0u,
+              "the header copies the control pair bits");
+        const float* samples = (const float*)(dest + 3);
+        CHECK(samples[6] == 2.0f && samples[7] == 2.0f,
+              "the last sample at t one lands the fold");
+        bezier_curve_samples_build(dest, ctrlw, w3, w4, w5, 0x33u);
+        CHECK(dest[0] == 0x32u, "the count clamps above 0x31 (corpus)");
+        memset(dest, 0, sizeof dest);
+        bezier_curve_samples_build(dest, ctrlw, w3, w4, w5, 1u);
+        CHECK(dest[0] == 1u && dest[1] == 0u && dest[3] == 0u,
+              "the single-count build stays header-only");
+        bezier_curve_samples_build(NULL, ctrlw, w3, w4, w5, 4u);
+    }
+    {
+        uint32_t curve[112];
+        memset(curve, 0, sizeof curve);
+        const float xs[4] = { 0.0f, 3.0f, 3.0f, 0.0f };
+        const float ys[4] = { 0.0f, 4.0f, 0.0f, 0.0f };
+        curve[0] = 4u;
+        for (int i = 0; i < 4; ++i) {
+            memcpy((char*)curve + 4 + 8 * i, &xs[i], 4);
+            memcpy((char*)curve + 8 + 8 * i, &ys[i], 4);
+        }
+        CHECK(polyline_segment_lengths_total(curve) == 12.0f,
+              "the total walks the segment sums");
+        float lens[3];
+        memcpy(lens, (char*)curve + 0x198, sizeof lens);
+        CHECK(lens[0] == 5.0f && lens[1] == 4.0f && lens[2] == 3.0f,
+              "the length table lands segment by segment");
+        uint32_t word194 = 0xffffffffu;
+        memcpy(&word194, (char*)curve + 0x194, 4);
+        CHECK(word194 == 0u, "the 0x194 word clears");
+        curve[0] = 1u;
+        CHECK(polyline_segment_lengths_total(curve) == 0.0f,
+              "the single point answers zero");
+        CHECK(polyline_segment_lengths_total(NULL) == 0.0f,
+              "the null record guards (dev)");
+    }
+
     if (s_failures == 0) {
         printf("view_test: PASS\n");
         return 0;

@@ -114,6 +114,15 @@ void object_field_38_release(void* record);
  * zeroed for any pointer below 4 GiB). */
 void text_buffer_reset(void* record);           /* FUN_004859b0 */
 
+/* TextBufferCreate (FUN_004850f0): allocates the 0x830-byte text-output
+ * record, zero-clears it, installs the caller's mode word and four header
+ * dwords, allocates the buffer half (the port keeps the widened native
+ * pointer slot at +0x14 like the reset/destroy twins), records the length
+ * as a dword at +0x418, and raises the +0x82c bit 2. Deviations: the
+ * buffer-slot widening, and the record half answering NULL where the
+ * corpus strides the allocation blindly. */
+void* text_buffer_create(uint32_t mode, const uint32_t* header, long size);
+
 /* UITextOutputObjectRelease (FUN_0045a620): resets the text-output record
  * held in the caller's pointer slot. The corpus dereferences blindly;
  * the port guards the holder (deviation). */

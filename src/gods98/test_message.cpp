@@ -239,6 +239,22 @@ int main(void)
         indexed_list_install(2, NULL, 0);
     }
 
+    /* Info-message queue find-id (2026-10-25): the index-by-id walk of the
+     * queued entries, the miss answer, and the guarded miss. */
+    {
+        message_clear();
+        message_set_flags(0x4u);
+        message_config_set(5, "Sounds\\a.wav", 0.0f, 0);
+        message_config_set(9, "Sounds\\b.wav", 0.0f, 0);
+        message_dispatch(5, 0, 0, NULL);
+        message_dispatch(9, 0, 0, NULL);
+        CHECK(message_queue_find_id(5) == 0, "the first id lands at zero");
+        CHECK(message_queue_find_id(9) == 1, "the second id follows");
+        CHECK(message_queue_find_id(11) == -1, "an absent id answers minus one");
+        CHECK(message_queue_find_id(-1) == -1, "the out-of-window id misses");
+        message_clear();
+    }
+
     if (s_failures == 0) {
         printf("message_test: PASS\n");
         return 0;

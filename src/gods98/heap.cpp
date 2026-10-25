@@ -225,3 +225,26 @@ void ui_text_output_object_release(void* const* holder)
     }
     text_buffer_reset(*holder);
 }
+
+/* TextBufferCreate (FUN_004850f0) — see heap.hpp. */
+void* text_buffer_create(uint32_t mode, const uint32_t* header, long size)
+{
+    char* record = (char*)engine_heap_alloc(0x830);
+    if (record == NULL) {
+        return NULL; /* deviation: the corpus strides the allocation */
+    }
+    memset(record, 0, 0x830); /* the corpus's 0x20c-dword sweep */
+    __builtin_memcpy(record + 0x00, &mode, sizeof mode);
+    if (header != NULL) {
+        for (int i = 0; i != 4; ++i) {
+            __builtin_memcpy(record + 0x04 + i * 4, &header[i], 4);
+        }
+    }
+    /* Deviation: the header pointer is guarded (the corpus strides it). */
+    void* buffer = engine_heap_alloc(size);
+    __builtin_memcpy(record + 0x14, &buffer, sizeof buffer);
+    const uint32_t len = (uint32_t)size;
+    __builtin_memcpy(record + 0x418, &len, sizeof len);
+    text_output_field82c_bit2_set_clear(record, 1);
+    return record;
+}

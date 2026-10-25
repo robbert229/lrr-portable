@@ -387,6 +387,11 @@ uint32_t timed_effect_flags_peek(int index);           /* diagnostics */
  * Deviation: the corpus strides any index and the stride band blindly. */
 void timed_effect_cue_request_set(int index, uint32_t value);
 uint32_t timed_effect_cue_peek(int index);             /* port hook */
+
+/* TimedEffectPersistenceSet (FUN_0046b730): raises or drops the entry's
+ * flag-word bit 4 (the persistence bit). Deviation: the corpus strides
+ * the 0x27c-stride band word blindly. */
+void timed_effect_persistence_set(int index, int set);
 bool     ui_mode_transition_request(int index, int p2, int p3);
 int      band_mode_peek(void);                        /* diagnostics */
 void     band_mode_set(int mode);                     /* diagnostics */

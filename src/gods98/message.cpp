@@ -202,7 +202,10 @@ static int message_pre_check(int id)
     return 0;
 }
 
-static int message_queue_find(int id)
+/* InfoMessageQueueFindId (FUN_00419b20): the queue's index-by-id walk.
+ * The corpus strides the 5-dword queue entries against the count word;
+ * the port rides its parallel-array model (documented deviation). */
+int message_queue_find_id(int id)
 {
     for (int i = 0; i < s_queue_count; ++i) {
         if (s_queue_ids[i] == id) {
@@ -258,7 +261,7 @@ void message_dispatch(int id, uint32_t p2, uint32_t p3, const void* p4)
     }
 
     if (s_queue_count < MESSAGE_MAX_ID) {
-        int idx = message_queue_find(id);
+        int idx = message_queue_find_id(id);
         if (idx < 0) {
             idx = s_queue_count;
             s_queue_ts[idx] = s_now;
@@ -294,7 +297,7 @@ int message_active_count(void)
 
 int message_active_has(int id)
 {
-    return message_queue_find(id) >= 0;
+    return message_queue_find_id(id) >= 0;
 }
 
 float message_cooldown(int id)

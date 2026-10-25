@@ -70,6 +70,9 @@ void message_load_infomessages(BlockFile* cfg);
  * the callback; unused flags are kept for signature fidelity. */
 void message_dispatch(int id, uint32_t p2, uint32_t p3, const void* p4);
 
+/* Index of the queued message id, or -1 (corpus InfoMessageQueueFindId). */
+int message_queue_find_id(int id);                /* FUN_00419b20 */
+
 /* advance the bus clock; drives cooldown comparisons. */
 void message_update(float dt);
 
