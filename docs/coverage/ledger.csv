@@ -112,13 +112,13 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00404e00,FUN_00404e00,named,ObjectPathSubmitToGridTarget,0,680
 00404ed0,FUN_00404ed0,named,CheckObjectCandidate,0,210
 00404f10,FUN_00404f10,named,FindMatchingObjectRecord,0,264
-00404f50,FUN_00404f50,named,ObjectFilterMatchesActionTarget,0,506
+00404f50,FUN_00404f50,ported,ObjectFilterMatchesActionTarget,3,506
 00404fc0,FUN_00404fc0,named,PlaceCommandEligibilityCheck,0,9812
 00405950,FUN_00405950,named,PendingCommandTimerFireScan,0,3682
 00405c10,FUN_00405c10,named,PendingCommandEntityAssignmentTick,0,10018
 00406360,FUN_00406360,named,EntityRecordAttachAndRelink,0,660
 004063e0,FUN_004063e0,named,PendingRecordEntityReferenceClear,0,235
-00406400,FUN_00406400,named,PendingRecordCopyToEntityAndFlag,0,446
+00406400,FUN_00406400,ported,PendingRecordCopyToEntityAndFlag,3,446
 00406440,FUN_00406440,ported,CmdAlloc,1,509
 00406480,FUN_00406480,ported,CmdFree,1,316
 004064c0,FUN_004064c0,ported,CmdPoolGrow,1,640
@@ -826,7 +826,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00435940,FUN_00435940,ported,KeepRunning,4,936
 00435a20,FUN_00435a20,ported,GlobalStateLowByteClearAndRefresh,3,117
 00435a50,FUN_00435a50,ported,MainSimFeatureFlagLatch,2,202
-00435aa0,FUN_00435aa0,named,PanelSelectionHighlightToggle,0,419
+00435aa0,FUN_00435aa0,ported,PanelSelectionHighlightToggle,3,419
 00435b20,FUN_00435b20,named,SceneObjectChainRecordCreate,0,1689
 00435d91,FUN_00435d91,ported,EntityB8Bit3SetOrClear,1,228
 00435dc8,FUN_00435dc8,named,CameraViewContextClose,0,192

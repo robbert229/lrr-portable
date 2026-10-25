@@ -259,4 +259,18 @@ int task_type_and_condition_check(const EntitySlot* target, int condition);
  * Deviation: the corpus strides the entity blindly; the port guards it. */
 int entity_type_and_state_flag_predicate(const EntitySlot* e); /* FUN_0045e400 */
 
+/* ObjectFilterMatchesActionTarget (FUN_00404f50, findings 318/535): the
+ * action-target filter. Type 5 matches unconditionally (subject to the
+ * identity pair); types 7/9/0xF additionally require the referenced
+ * entity to pass the shared eligibility check when a handle is present;
+ * every other type answers 0. When the filter carries a name target
+ * (+0x20), the target record's identity words must agree: word 0 equals
+ * the name, word 1 equals the filter selector (+0x24) unless that is -1,
+ * and word 2 equals the filter's +0x28 companion.
+ * Deviations: the corpus strides both records blindly (the port guards);
+ * the +0x10 entity handle rides the port's widened-link convention. */
+int object_filter_matches_action_target(const void* filter_rec,
+                                        const void* target_rec);
+                                                /* FUN_00404f50 */
+
 #endif /* LEGORRR_GAME_ENTITY_HPP */

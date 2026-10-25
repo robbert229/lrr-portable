@@ -261,6 +261,17 @@ int   scroll_speed_index_get(void);             /* port hook (band model) */
  * blindly (NULL root would crash); the port guards both. */
 int camera_focus_scroll_scale_commit(const EngineContext* ctx,
                                      const void* record); /* FUN_004538a0 */
+
+/* PanelSelectionHighlightToggle (FUN_00435aa0): the panel-selection
+ * highlight switch. ON raises the debug word's bit 0, starts the exit
+ * timer (250, kicking off the alias-0x19 cue only when the timer was
+ * spent), and sets the panel-6 item-2 flag-8 through the gated writer;
+ * OFF drops the bit, zeroes the timer, and clears the flag.
+ * Deviations: the corpus writes its DAT globals blindly; the port threads
+ * them through the context (NULL skips the words, both branches still fire
+ * the panel write). */
+void panel_selection_highlight_toggle(EngineContext* ctx, int on);
+                                                /* FUN_00435aa0 */
 void   global_triple_copy_out(uint32_t* out);
 
 /* GlobalField505f88Get (FUN_00401bf0, finding 02): the corpus's app-mode

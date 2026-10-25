@@ -1648,6 +1648,27 @@ int main(void)
         cmd_chain_purge(&e);
     }
 
+    /* PendingRecordCopyToEntityAndFlag (2026-10-24): the copy shapes. */
+    {
+        void* src = cmd_alloc(9);
+        void* other = cmd_alloc(1);
+        cmd_rec_set_next(src, other);
+        cmd_rec_set_activity(src, 0x11);
+        cmd_rec_set_now(src, 1.5f);
+        void* dst = cmd_pending_record_copy(src);
+        CHECK(dst != NULL && cmd_rec_type(dst) == 9,
+              "the copy takes the record type");
+        CHECK(cmd_rec_activity(dst) == 0x11 && cmd_rec_now(dst) == 1.5f,
+              "the field window rides along");
+        CHECK((cmd_rec_state(dst) & 0x200u) != 0u,
+              "the pending flag raises");
+        CHECK(cmd_rec_next(dst) == NULL,
+              "the copy starts unattached");
+        CHECK(cmd_rec_next(src) == other, "the source keeps its chain link");
+        CHECK(cmd_pending_record_copy(NULL) == NULL, "the guard answers null");
+        cmd_chain_purge(NULL);
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "cmd_test: %d failure(s)\n", s_failures);
         return 1;
