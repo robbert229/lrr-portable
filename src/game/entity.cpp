@@ -1136,3 +1136,69 @@ uint32_t stats_instance_word_at_ec(const void* config_block) { return stats_inst
 /* FUN_00469bb0 */
 uint32_t stats_instance_word_at_f0(const void* config_block) { return stats_instance_read(config_block, 0xf0); }
 /* FUN_00469be0 */
+
+/* --- entity query flag count (2026-10-25) ----------------------------------
+ * EntityQueryFlagCount (FUN_0041b3c0): catalog-kind query. 0x13 answers the
+ * second catalog count word; 0x14 counts the first catalog's rows whose
+ * +148 word raises bit 0x1000 or 0x2000 while the +14c bit 8 stays clear;
+ * 0x15 counts rows with bit 0x800 raised or the +14c bit 8 raised; any
+ * other query strides the 8-byte id-pair table and answers that pair's
+ * size. Deviations: the count globals and the id table have no ported
+ * corpus owner (their loader band is unported), so they ride own storage
+ * zero-init behind install/peek hooks (the unowned-DAT convention); rows
+ * past the guarded stats table read the zero template through the ported
+ * stats getters, and the pair window is guarded (the corpus strides
+ * blindly). */
+
+static uint32_t s_catalog_count_a; /* DAT_0055627c role */
+static uint32_t s_catalog_count_b; /* DAT_00556288 role */
+#define CATALOG_ID_PAIRS 8u
+static uint32_t s_catalog_id_sizes[CATALOG_ID_PAIRS]; /* DAT_004ddc08 role */
+
+int entity_query_flag_count(int query)
+{
+    if (query == 0x13) {
+        return (int)s_catalog_count_b;
+    }
+    if (query == 0x14 || query == 0x15) {
+        int count = 0;
+        for (uint32_t row = 0; row < s_catalog_count_a; ++row) {
+            const uint32_t w148 = stats_table_word_at_148(1, (int)row);
+            const uint32_t w14c = stats_table_word_at_14c(1, (int)row);
+            if (query == 0x14) {
+                if (((w148 & 0x1000u) != 0u || (w148 & 0x2000u) != 0u)
+                    && (w14c & 8u) == 0u) {
+                    count = count + 1;
+                }
+            } else if ((w148 & 0x800u) != 0u || (w14c & 8u) != 0u) {
+                count = count + 1;
+            }
+        }
+        return count;
+    }
+    if (query < 0 || (unsigned)query >= CATALOG_ID_PAIRS) {
+        return 0; /* deviation: the corpus strides blindly */
+    }
+    return (int)s_catalog_id_sizes[query];
+}
+
+void catalog_count_install(int which, uint32_t value)
+{
+    if (which == 1) {
+        s_catalog_count_b = value;
+    } else {
+        s_catalog_count_a = value;
+    }
+}
+
+uint32_t catalog_count_peek(int which)
+{
+    return which == 1 ? s_catalog_count_b : s_catalog_count_a;
+}
+
+void catalog_id_pair_install(int entry, uint32_t size)
+{
+    if (entry >= 0 && (unsigned)entry < CATALOG_ID_PAIRS) {
+        s_catalog_id_sizes[entry] = size;
+    }
+}

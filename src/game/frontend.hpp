@@ -643,6 +643,8 @@ void     panel_dimensions_peek(float* w, float* h, uint32_t* extra);
                                                 /* port hook */
 void     panel_ui_record_set(void* record);     /* port hook */
 void*    panel_ui_record_peek(void);            /* port hook */
+void     panel_text_slot_set(void* slot);       /* port hook (DAT_005007dc) */
+void*    panel_text_slot_peek(void);            /* port hook */
 void     panel_seam_reset(void);                /* port hook */
 int      panel_seam_calls(void);                /* port hook */
 void     panel_seam_last(void** out_res, float* out_x, float* out_y);

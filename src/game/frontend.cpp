@@ -2545,6 +2545,7 @@ static float    s_panel_width;       /* DAT_00500814 role */
 static float    s_panel_height;      /* DAT_00500818 role */
 static uint32_t s_panel_extra;       /* DAT_0050081c role */
 static void*    s_panel_ui_record;   /* DAT_005007d8 role */
+static void*    s_panel_text_slot;   /* DAT_005007dc role: holder-slot address */
 
 static int    s_panel_seam_calls;
 static void*  s_panel_seam_last_res;
@@ -2690,6 +2691,8 @@ void panel_dimensions_peek(float* w, float* h, uint32_t* extra)
 void* panel_surface_handle_peek(void) { return s_panel_surface_handle; }
 void  panel_ui_record_set(void* record) { s_panel_ui_record = record; }
 void* panel_ui_record_peek(void) { return s_panel_ui_record; }
+void  panel_text_slot_set(void* slot) { s_panel_text_slot = slot; }
+void* panel_text_slot_peek(void) { return s_panel_text_slot; }
 
 void panel_seam_reset(void)
 {

@@ -1346,6 +1346,68 @@ int main(int argc, char** argv)
         stats_type_table_install(9, 7, NULL, 0); /* release the cell */
     }
 
+    /* EntityQueryFlagCount (2026-10-25): catalog counts, the 0x14/0x15
+     * flag folds over the type-1 stats rows, and the pair-table default. */
+    {
+        static uint8_t rows[3][2 * 0x150];
+        memset(rows, 0, sizeof rows);
+        for (int i = 0; i < 3; ++i) {
+            stats_type_table_install(1, i, rows[i], 2);
+        }
+
+        CHECK(entity_query_flag_count(0x13) == 0
+                  && catalog_count_peek(1) == 0u
+                  && catalog_count_peek(0) == 0u,
+              "the fresh catalog counts answer zero");
+        catalog_count_install(1, 7u);
+        CHECK(entity_query_flag_count(0x13) == 7, "the 0x13 query answers count b");
+        catalog_count_install(1, 0u);
+
+        /* Zero-count fold: no rows in range, both folds answer zero. */
+        CHECK(entity_query_flag_count(0x14) == 0 && entity_query_flag_count(0x15) == 0,
+              "the empty catalog folds zero");
+
+        /* Row 0: w148 bit 0x1000, no 14c bit — counts in 0x14, skips 0x15. */
+        uint32_t v = 0x1000u;
+        __builtin_memcpy(rows[0] + 0x148, &v, 4);
+        catalog_count_install(0, 1u);
+        CHECK(entity_query_flag_count(0x14) == 1, "the 0x1000 flag counts in 0x14");
+        CHECK(entity_query_flag_count(0x15) == 0,
+              "the 0x1000-only row skips the 0x15 fold");
+
+        /* Row 1: 0x2000 raised but the 14c bit 8 — 0x14 skips, 0x15 counts. */
+        v = 0x2000u;
+        __builtin_memcpy(rows[1] + 0x148, &v, 4);
+        v = 8u;
+        __builtin_memcpy(rows[1] + 0x14c, &v, 4);
+        catalog_count_install(0, 2u);
+        CHECK(entity_query_flag_count(0x14) == 1, "the raised bit 8 drops 0x14");
+        CHECK(entity_query_flag_count(0x15) == 1, "the raised bit 8 counts in 0x15");
+
+        /* Row 2: 0x800 — the 0x15 fold counts it through the other half.
+         * Past-count rows would stay out too: row 2 rides in only now. */
+        v = 0x800u;
+        __builtin_memcpy(rows[2] + 0x148, &v, 4);
+        catalog_count_install(0, 3u);
+        CHECK(entity_query_flag_count(0x15) == 2, "the 0x800 flag counts in 0x15");
+        CHECK(entity_query_flag_count(0x14) == 1,
+              "the 0x800-only row skips the 0x14 fold");
+
+        /* The pair-table default: own storage, guarded window. */
+        CHECK(entity_query_flag_count(2) == 0,
+              "the default query answers the empty pair table");
+        catalog_id_pair_install(2, 42u);
+        CHECK(entity_query_flag_count(2) == 42, "the installed pair answers");
+        CHECK(entity_query_flag_count(-1) == 0 && entity_query_flag_count(8) == 0,
+              "the pair-window guards answer zero");
+
+        catalog_count_install(0, 0u);
+        catalog_count_install(1, 0u);
+        for (int i = 0; i < 3; ++i) {
+            stats_type_table_install(1, i, NULL, 0); /* release */
+        }
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "entity_test: %d failure(s)\n", s_failures);
         return 1;

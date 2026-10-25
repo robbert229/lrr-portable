@@ -62,6 +62,14 @@ int  entity_stride(int type);
 int  entity_count(GameContext* ctx, int type);
 const EntitySlot* entity_at(GameContext* ctx, int type, int index);
 
+/* EntityQueryFlagCount (FUN_0041b3c0): catalog-kind query over the stats
+ * flag words and the own-storage catalog count/pair windows (install hooks
+ * below; the corpus's loader-owned globals have no ported owner). */
+int entity_query_flag_count(int query);           /* FUN_0041b3c0 */
+void     catalog_count_install(int which, uint32_t value); /* port hook */
+uint32_t catalog_count_peek(int which);           /* port hook */
+void     catalog_id_pair_install(int entry, uint32_t size); /* port hook */
+
 /* Resolver pair (FUN_0042e8b0, name -> (type, registry row)): table matches
  * write both outputs, the special names write only their dedicated rows.
  * The (name, &type, &row, NULL) corpus call form; NULL name answers 0. */

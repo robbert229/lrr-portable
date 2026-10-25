@@ -967,6 +967,21 @@ int  terrain_sfx_grid_cell_peek(int cell);             /* port hook */
 void terrain_object_sfx_grid_config_load(BlockFile* config,
                                          const char* root_path);
                                                 /* FUN_0044acc0 */
+
+/* TerrainChoiceResourceSelect (FUN_0040e700): the record pair's first word
+ * selects the active resource word — cases 1..4 through the flat choice
+ * window (word = kind-1 + the pair's second word, guarded), cases 6/7
+ * through the scalar pair, anything else clearing the selection flag's bit
+ * 0. A success raises flag bits 0+1, keeps the record pointer, and releases
+ * the panel text-output slot (frontend hook). Install/peek hooks below. */
+void terrain_choice_resource_select(const void* record);
+                                                /* FUN_0040e700 */
+void      terrain_choice_window_install(int word, uint32_t value);
+uint32_t  terrain_choice_window_peek(int word);
+void      terrain_choice_scalar_install(int scalar, uint32_t value);
+uint32_t  terrain_choice_active_peek(void);     /* port hooks */
+uint32_t  terrain_choice_flags_peek(void);
+uintptr_t terrain_choice_record_peek(void);
 /* CellCardinalNeighborApply (FUN_00409cd0, finding 448): runs the terrain
  * cell refresh dispatch over a cell plus its three cardinal offsets (0,-1),
  * (+1,0), (0,+1), (-1,0) — the corpus's stack-pair loop as four calls.

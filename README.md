@@ -2363,6 +2363,27 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Entity query count + terrain choice select** (2026-10-25): two frontier
+rows land in `entity.*` and `level.*`. `entity_query_flag_count` (0x41b3c0)
+answers catalog-kind queries: `0x13` returns the second catalog count word,
+`0x14` counts the first catalog's rows whose `+148` stats word raises bit
+`0x1000` or `0x2000` while the `+14c` bit 8 stays clear, `0x15` counts rows
+with bit `0x800` raised or the `+14c` bit 8 raised, and any other query
+strides the eight-byte id-pair table. The count globals and pair window have
+no ported corpus owner (their loader band is unported), so they ride
+zero-init own storage behind `catalog_count_install` /
+`catalog_id_pair_install` hooks (the unowned-DAT convention).
+`terrain_choice_resource_select` (0x40e700) reads the record's dword pair
+and lets the first word select the active resource word: cases 1..4 read a
+flat choice window at `(kind − 1) + index`, cases 6/7 read the scalar pair,
+and anything else clears the selection flag's bit 0. A successful select
+raises the flag's bits 0+1, stores the record pointer, and releases the
+panel's text-output holder (a new `panel_text_slot_set` hook in `frontend.*`
+models the corpus's global slot). Deviations: the corpus strides the window
+indices blindly — the port guards the edge and answers clear. `entity_test`
+pins the fold rules, the row-range edge, and the pair guards; `level_test`
+pins every case arm, the guarded stride, and the default-clear path.
+
 **Command sample stats + selection marker reset** (2026-10-25): two frontier
 rows land in `cmd.*` and `select.*`. `command_sample_stats_accumulate`
 (0x46b660) keeps per-kind sliding-window statistics: a null sample clears the

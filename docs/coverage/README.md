@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 1096 | 42.7% |
+| ported | 1098 | 42.8% |
 | anchored | 4 | 0.2% |
-| named | 1419 | 55.3% |
+| named | 1417 | 55.3% |
 | runtime-import | 44 | 1.7% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (1096 functions)
+  (1098 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1419 functions)
+  citation yet (1417 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (44 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1424 (55.5%).**
+**Game logic remaining to port: 1422 (55.5%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -203,7 +203,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0040e1e0` | CellCornerOccupancyScan |
 | `0x0040e350` | CellEntityKindCreateOrRemove |
 | `0x0040e490` | EncyclopediaConfigFilesOpen |
-| `0x0040e700` | TerrainChoiceResourceSelect |
 | `0x0040e8d0` | ScreenSpaceEffectDispatchIfEnabled |
 | `0x0040ee50` | LavaErosionPendingCellAdd |
 | `0x0040f2b0` | LavaErosionNeighborEligible |
@@ -311,7 +310,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0041afd0` | InterfaceSurroundImagesConfigLoad |
 | `0x0041b1b0` | InterfaceBackButtonConfigLoad |
 | `0x0041b270` | InterfaceButtonImagesLoad |
-| `0x0041b3c0` | EntityQueryFlagCount |
 | `0x0041b680` | CatalogCallbackByIdDispatch |
 | `0x0041baa0` | SimulationPointerActionDispatch |
 | `0x0041c1c0` | AdvisorOverlayHitResolve |
