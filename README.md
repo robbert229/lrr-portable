@@ -2363,6 +2363,20 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Kind-six random sweep** (2026-10-25): one frontier row lands in
+`cmd.*`. `kind_six_random_sweep_dispatch` (0x40f0e0) subtracts the frame delta
+from the sweep timer; once it reaches zero it draws up to one hundred random
+grid pairs modulo the current level's width and height — the grid-spawn route
+is the quote-only seam precedent (never lands, so the message-6 dispatch with
+the coordinate pair cannot fire) — and re-arms the timer at `(draw % 50) +
+750.0` from one final draw, answering `draw / 50`. Deviations: the corpus
+strides a missing current-level handle blindly and would take a draw modulo
+zero, so the port skips the cell loop without the level (the re-arm draw still
+runs, the corpus's re-arm is level-independent) and reads the dimensions
+through the word model. Pinned: a positive timer counts down through the
+three-comparison flag fold to zero, the NaN timer rides the 1024 bit, and the
+seeded sweep answers identically across runs.
+
 **Upgrade debit + name table** (2026-10-25): two frontier rows land in
 `cmd.*`. `upgrade_resource_debit` (0x41f9e0) subtracts the amount from the
 current level's `+0xa0` (selector 0) or `+0xac` (nonzero) under the level

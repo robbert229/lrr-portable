@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 1091 | 42.6% |
+| ported | 1092 | 42.6% |
 | anchored | 4 | 0.2% |
-| named | 1424 | 55.5% |
+| named | 1423 | 55.5% |
 | runtime-import | 44 | 1.7% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (1091 functions)
+  (1092 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1424 functions)
+  citation yet (1423 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (44 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1429 (55.7%).**
+**Game logic remaining to port: 1428 (55.7%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -206,7 +206,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0040e700` | TerrainChoiceResourceSelect |
 | `0x0040e8d0` | ScreenSpaceEffectDispatchIfEnabled |
 | `0x0040ee50` | LavaErosionPendingCellAdd |
-| `0x0040f0e0` | KindSixRandomMessageDispatchSweep |
 | `0x0040f2b0` | LavaErosionNeighborEligible |
 | `0x0040f330` | LavaErosionNeighborMutate |
 | `0x0040f5f0` | ErosionEightNeighborPropagate |

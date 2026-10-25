@@ -640,4 +640,18 @@ void upgrade_name_table_install(void* records, const char* const* names,
 const void* upgrade_name_entry_find(const char* name);
                                                 /* FUN_0042cd50 */
 
+/* KindSixRandomMessageDispatchSweep (FUN_0040f0e0): subtract the frame
+ * delta from the sweep timer (DAT_004d78c4 own storage); once it reaches
+ * zero, draw up to one hundred random grid pairs modulo the current
+ * level's dimensions — the grid-spawn route is the quote-only seam
+ * precedent (never lands, so the message-6 dispatch cannot fire) — and
+ * re-arm the timer at (draw % 50) + 750.0 from one final draw, answering
+ * draw / 50. A positive timer answers zero through the corpus's flag fold
+ * (pinned); a missing level skips the cell loop but the re-arm draw runs
+ * (deviation: the corpus strides a null handle and modulo zero blindly). */
+uint32_t kind_six_random_sweep_dispatch(float delta);
+                                                /* FUN_0040f0e0 */
+void kind_six_sweep_timer_install(float value); /* port hook */
+float kind_six_sweep_timer_peek(void);          /* port hook */
+
 #endif /* LEGORRR_GAME_CMD_HPP */
