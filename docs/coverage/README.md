@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 1026 | 40.0% |
+| ported | 1030 | 40.2% |
 | anchored | 4 | 0.2% |
-| named | 1488 | 58.0% |
+| named | 1484 | 57.9% |
 | runtime-import | 45 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (1026 functions)
+  (1030 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1488 functions)
+  citation yet (1484 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (45 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1493 (58.2%).**
+**Game logic remaining to port: 1489 (58.1%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -696,7 +696,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00453920` | AdvisorScrollStepAdvance |
 | `0x00453bb0` | FrameTimerArrayAdvanceAndAdvisorClear |
 | `0x00453da0` | CameraFocusTweenUpdate |
-| `0x004565f0` | EngineModeSet |
 | `0x00456810` | SoundAliasPlayGlobal |
 | `0x00456830` | AdvisorInlineTokenRender |
 | `0x00456b80` | TutorialPathCoordinateIndex |
@@ -835,7 +834,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0046b4d0` | CaseInsensitiveNameTableLookup |
 | `0x0046b520` | UiTextEntryLoad |
 | `0x0046b660` | CommandSampleStatsAccumulate |
-| `0x0046b700` | TimedEffectCueRequestSet |
 | `0x0046b730` | TimedEffectPersistenceSet |
 | `0x0046b7c0` | TimedEffectAndCueUpdate |
 | `0x0046b8b0` | RectangularGridOverlayGeometryDraw |
@@ -1407,9 +1405,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00493280` | CrtFloatingPointExceptionRaise |
 | `0x004935c0` | CrtDoubleToIntegerRound |
 | `0x004938f0` | CrtMathExceptionDispatch |
-| `0x004939a0` | CrtMathErrorCodeSet |
 | `0x004939d0` | CrtMathExceptionHandlerGet |
-| `0x00493a00` | CrtMathExceptionCodeFromStatus |
 | `0x00493ae0` | DoubleFrexpDecompose |
 | `0x00493be0` | FpuStatusWordGetVariantA |
 | `0x00493bf0` | FpuStatusWordGetVariantB |

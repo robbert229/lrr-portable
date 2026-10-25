@@ -1246,7 +1246,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00456210,FUN_00456210,ported,FlhMagicUuNoop,1,49
 00456240,FUN_00456240,ported,SystemStateFlags,2,60
 00456550,FUN_00456550,ported,SetSystemStateFlags,1,98
-004565f0,FUN_004565f0,named,EngineModeSet,0,195
+004565f0,FUN_004565f0,ported,EngineModeSet,2,195
 00456640,FUN_00456640,ported,GlobalFlagGet_004ff978,1,60
 004567c0,FUN_004567c0,ported,GlobalValue_004ff9bcStoreAndReturn,1,185
 00456810,FUN_00456810,named,SoundAliasPlayGlobal,0,113
@@ -1580,7 +1580,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0046b4d0,FUN_0046b4d0,named,CaseInsensitiveNameTableLookup,0,368
 0046b520,FUN_0046b520,named,UiTextEntryLoad,0,1737
 0046b660,FUN_0046b660,named,CommandSampleStatsAccumulate,0,994
-0046b700,FUN_0046b700,named,TimedEffectCueRequestSet,0,224
+0046b700,FUN_0046b700,ported,TimedEffectCueRequestSet,2,224
 0046b730,FUN_0046b730,named,TimedEffectPersistenceSet,0,299
 0046b770,FUN_0046b770,ported,TimedEffectUpdateRequestSet,1,143
 0046b7a0,FUN_0046b7a0,ported,TimedEffectTimestampReset,3,185
@@ -2389,9 +2389,9 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00493280,FUN_00493280,named,CrtFloatingPointExceptionRaise,0,3724
 004935c0,FUN_004935c0,named,CrtDoubleToIntegerRound,0,4406
 004938f0,FUN_004938f0,named,CrtMathExceptionDispatch,0,956
-004939a0,FUN_004939a0,named,CrtMathErrorCodeSet,0,273
+004939a0,FUN_004939a0,ported,CrtMathErrorCodeSet,1,273
 004939d0,FUN_004939d0,named,CrtMathExceptionHandlerGet,0,305
-00493a00,FUN_00493a00,named,CrtMathExceptionCodeFromStatus,0,254
+00493a00,FUN_00493a00,ported,CrtMathExceptionCodeFromStatus,2,254
 00493a40,FUN_00493a40,ported,DoubleBuildWithExponent,3,242
 00493a80,FUN_00493a80,ported,DoubleClassify,2,383
 00493ae0,FUN_00493ae0,named,DoubleFrexpDecompose,0,1595

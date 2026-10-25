@@ -193,6 +193,32 @@ bool current_engine_mode_is_zero(const EngineContext* ctx)
     return ctx != NULL && ctx->context_mode == 0;
 }
 
+/* EngineModeSet (FUN_004565f0) — see engine.hpp. The corpus's DAT_00503610/
+ * DAT_00503614 overlay pair lands as own storage (the corpus writers and
+ * readers ride the unported advisor/message bands — deviation). */
+static uint32_t s_overlay_word_03610; /* DAT_00503610 role */
+static uint32_t s_overlay_word_03614; /* DAT_00503614 role */
+
+int engine_mode_set(EngineContext* ctx, const int* mode)
+{
+    if (mode == NULL) {
+        return 0; /* deviation: the corpus strides the pointer blindly */
+    }
+    global_flag_004ff978_install((uint32_t)*mode);
+    if (*mode == 1) {
+        global_state_flags_bits6_and_9_set(ctx, 0, 1);
+        global_state_flags_bit7_set(ctx, 0);
+    }
+    s_overlay_word_03610 = 0u;
+    s_overlay_word_03614 = 0u;
+    return *mode;
+}
+
+uint32_t engine_overlay_word_peek(int which)
+{
+    return which == 0 ? s_overlay_word_03610 : s_overlay_word_03614;
+}
+
 void global_state_flags_bit7_set(EngineContext* ctx, int value)
 {
     if (ctx == NULL) {

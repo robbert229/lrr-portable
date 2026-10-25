@@ -1191,6 +1191,37 @@ int main(void)
               "the fold guards answer null (deviation)");
     }
 
+    /* Math error band (2026-10-25): the error-code storage and the
+     * exception-code status fold. */
+    {
+        crt_math_error_code_set(5);
+        CHECK(crt_math_error_code_peek() == 0u, "an untouched param stays");
+        crt_math_error_code_set(1);
+        CHECK(crt_math_error_code_peek() == 0x21u, "param one stores 33");
+        crt_math_error_code_set(2);
+        CHECK(crt_math_error_code_peek() == 0x22u, "param two stores 34");
+        crt_math_error_code_set(3);
+        CHECK(crt_math_error_code_peek() == 0x22u, "param three re-stores");
+        crt_math_error_code_set(0);
+        CHECK(crt_math_error_code_peek() == 0x22u, "the zero rides past");
+
+        CHECK(crt_math_exception_code_from_status(0x20u) == 5,
+              "the 0x20 field answers five");
+        CHECK(crt_math_exception_code_from_status(0x28u) == 5,
+              "the 0x20 field outranks the eight");
+        CHECK(crt_math_exception_code_from_status(8u) == 1, "bit 8 answers one");
+        CHECK(crt_math_exception_code_from_status(4u) == 2, "bit 4 answers two");
+        CHECK(crt_math_exception_code_from_status(1u) == 3, "bit 1 answers three");
+        CHECK(crt_math_exception_code_from_status(2u) == 4,
+              "the lone bit 2 doubles to four");
+        CHECK(crt_math_exception_code_from_status(0u) == 0,
+              "the clean status answers zero");
+
+        global_flag_004ff978_install(0x123u);
+        CHECK(global_flag_004ff978_get() == 0x123u, "the install hook lands");
+        global_flag_004ff978_install(0u);
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "crt_test: %d failure(s)\n", s_failures);
         return 1;

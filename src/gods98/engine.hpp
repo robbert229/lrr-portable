@@ -233,6 +233,16 @@ int mode_dependent_field24_get(const EngineContext* ctx);
  * documented: the corpus's only writer is the unported sim-interaction
  * renderer update. */
 bool   current_engine_mode_is_zero(const EngineContext* ctx);
+
+/* EngineModeSet (FUN_004565f0): stores the mode word into the global flag
+ * DAT_004ff978 (the port's crt.* own storage, through the install hook),
+ * raises the bits-6/9 + bit-7 global state flags when the mode reads 1,
+ * clears the corpus's DAT_00503610 / DAT_00503614 overlay words, and
+ * answers the mode. Deviation: the corpus strides the caller's mode
+ * pointer blindly — the port guards it and answers zero. */
+int engine_mode_set(EngineContext* ctx, const int* mode);
+uint32_t engine_overlay_word_peek(int which); /* 0: DAT_00503610,
+                                               * 1: DAT_00503614 (hook) */
 void   global_state_flags_bit7_set(EngineContext* ctx, int value);
 void   global_state_flags_bits6_and_9_set(EngineContext* ctx, int value,
                                           int set_bit9); /* FUN_00426360 */
