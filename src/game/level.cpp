@@ -2807,3 +2807,74 @@ void grid_count_table_slot_poke(int row, int column, int slot, int table,
         s_grid_count_first[(size_t)idx] = value;
     }
 }
+
+/* TerrainCellQueuedWorkTransition (FUN_00431140) — see level.hpp. The
+ * corpus indexes its cell records through the global level word; the port
+ * threads GameContext.level and guards the NULL. The spawn-point pass the
+ * corpus runs through its coordinate-callback hook (the port's registered
+ * spawn seam) is quoted here for the dispatch order. */
+void terrain_cell_queued_work_transition(const struct GameContext* ctx,
+                                         int x, int y)
+{
+    const LevelState* lvl = (ctx != NULL) ? ctx->level : NULL;
+    if (lvl == NULL) {
+        return;
+    }
+    const uint32_t flags = cell_flag_word(lvl, x, y);
+    if ((flags & 0x10u) == 0u || (flags & 0xe0u) != 0u) {
+        return;
+    }
+    uint8_t* rec = level_voxel(lvl, x, y);
+    if (rec == NULL) {
+        return; /* deviation: the corpus strides OOB cells blindly */
+    }
+    uint32_t* word = (uint32_t*)(rec + 0x08);
+    *word = *word | 0x20u;
+
+    terrain_cell_refresh_dispatch(ctx, x, y);   /* 0x42f6f0 pair */
+    const int pair[2] = { x, y };
+    coordinate_callback_dispatch(pair, 0);      /* 0x402b30 seam */
+    /* Hook seam FUN_004311d0: the corpus coordinate callback for the
+     * queued cell (the spawn-point pass, port-side hook). */
+    message_dispatch(0x1c, 0, 0, pair);         /* 0x419b80 */
+}
+
+/* RandomVariantCellScatter (FUN_00435230) — see level.hpp. Draws ride the
+ * module's corpus-RNG model (the shared 15-bit word thunk). */
+void random_variant_cell_scatter(int center_x, int center_y, int radius,
+                                 int mode)
+{
+    int dedup[100];
+    for (int i = 0; i < 100; ++i) {
+        dedup[i] = 0;
+    }
+    if (radius <= 0) {
+        return; /* deviation: the corpus would zero-modulo every draw */
+    }
+    const unsigned int diam = (unsigned int)(radius * 2);
+    unsigned int limit = diam * diam;
+    if (mode == 0) {
+        limit >>= 2;
+    }
+    for (unsigned int n = 0; n < limit; ++n) {
+        const unsigned int dx =
+            (unsigned int)level_random_draw15() % diam;
+        const unsigned int dy =
+            (unsigned int)level_random_draw15() % diam;
+        const unsigned int key = dy + dx * 10u;
+        if (key < 100u && dedup[key] == 0) {
+            const int cx = (int)((unsigned)center_x + dx) - radius;
+            const int cy = (int)((unsigned)center_y + dy) - radius;
+            /* Grid-spawn route (FUN_0040f190 quote-only seam): never
+             * lands, so the corpus's mode-nonzero early exit cannot
+             * fire; the cell pair and mode 1 would ride the call. */
+            (void)cx;
+            (void)cy;
+            const int spawn = 0;
+            if (spawn != 0 && mode != 0) {
+                return;
+            }
+            dedup[key] = 1;
+        }
+    }
+}

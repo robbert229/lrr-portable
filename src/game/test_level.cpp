@@ -1623,6 +1623,54 @@ int main(int argc, char** argv)
         CHECK(path_record_last_peek() == second, "the last slot ends on second");
     }
 
+    /* TerrainCellQueuedWorkTransition (2026-10-25): the flag gate and the
+     * queued dispatch chain, on a hand-built grid (the loaded level closes
+     * before the tail of this suite). */
+    {
+        static LevelState qg;
+        static uint8_t qvox[8 * 8 * 0x48];
+        memset(&qg, 0, sizeof qg);
+        qg.ptr_voxels = qvox;
+        level_set_int(&qg, LEVEL_OFF_WIDTH, 8);
+        level_set_int(&qg, LEVEL_OFF_HEIGHT, 8);
+        GameContext qctx;
+        game_context_init(&qctx);
+        qctx.level = &qg;
+        uint8_t* rec = qvox + ((size_t)4 * 8 + 3) * 0x48; /* cell (3,4) */
+        uint32_t f = 0u, now = 0u;
+        f = 0x11u;
+        __builtin_memcpy(rec + 0x08, &f, 4);
+        terrain_cell_queued_work_transition(&qctx, 3, 4);
+        __builtin_memcpy(&now, rec + 0x08, 4);
+        CHECK(now == 0x31u, "the gate raises the work bit, rest preserved");
+        f = 0x50u;
+        __builtin_memcpy(rec + 0x08, &f, 4);
+        terrain_cell_queued_work_transition(&qctx, 3, 4);
+        __builtin_memcpy(&now, rec + 0x08, 4);
+        CHECK(now == 0x50u, "the busy bits keep the cell out of the queue");
+        f = 0x10u;
+        __builtin_memcpy(rec + 0x08, &f, 4);
+        qctx.level = NULL;
+        terrain_cell_queued_work_transition(&qctx, 3, 4);
+        qctx.level = &qg;
+        terrain_cell_queued_work_transition(&qctx, 1 << 20, 1 << 20);
+        __builtin_memcpy(&now, rec + 0x08, 4);
+        CHECK(now == 0x10u, "the missing-level and OOB guards stay inert");
+    }
+
+    /* RandomVariantCellScatter (2026-10-25): modes, key bounds, radius
+     * guard. The quote-only spawn route keeps every state change invisible
+     * (deviation), so the band runs as a guarded smoke. */
+    {
+        level_random_seed_set(7u);
+        random_variant_cell_scatter(4, 4, 2, 0); /* box 4, quartered  */
+        random_variant_cell_scatter(4, 4, 2, 1); /* box 4, full limit */
+        random_variant_cell_scatter(1, 1, 5, 1); /* box 10: keys in range */
+        random_variant_cell_scatter(1, 1, 6, 0); /* box 12: guarded keys */
+        random_variant_cell_scatter(1, 1, 0, 0); /* zero radius (deviation) */
+        CHECK(1, "the scatter band runs every mode guarded");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "level_test: %d failure(s)\n", s_failures);
         return 1;

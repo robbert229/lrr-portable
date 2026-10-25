@@ -657,6 +657,30 @@ void terrain_cell_work_flag_circle_set(LevelState* s, int center_x,
 void terrain_neighbor_work_flag_scan(LevelState* s, unsigned int seed_x,
                                      unsigned int seed_y);
 
+/* TerrainCellQueuedWorkTransition (FUN_00431140): when the cell's flag word
+ * (record +0x08) has bit 0x10 raised and bits 0xe0 clear, raise the work
+ * bit 0x20 and run the queued-work dispatch chain — the refresh dispatch
+ * (port: terrain_cell_refresh_dispatch), the coordinate-pair callback
+ * dispatch (port seam), the cell's coordinate callback hook (the corpus's
+ * spawn-point pass), and the message bus with the 0x1c cell-work message.
+ * Deviation: the corpus strides its global level word blindly; the port
+ * guards the NULL level/ctx and threads ctx. */
+void terrain_cell_queued_work_transition(const struct GameContext* ctx,
+                                         int x, int y);
+
+/* RandomVariantCellScatter (FUN_00435230): scatter variant placements over
+ * the (2*radius)² box centred on the coordinate pair: two 15-bit draws per
+ * round pick the cell and its dedup key (draw_y + draw_x*10 over a
+ * zeroed 100-slot table), each unkeyed cell asks the grid-spawn route with
+ * mode 1, and mode nonzero leaves early on a landed spawn. The round limit
+ * is the box area, quartered when mode is 0. Deviations: the corpus keys
+ * the table out of bounds once the box side passes 10 (the port guards the
+ * key); the port's quote-only grid-spawn route never lands, so the early
+ * exit and the spawn itself stay unobservable. Radius ≤ 0 would be a
+ * zero-modulo crash in the corpus; the port answers the no-op. */
+void random_variant_cell_scatter(int center_x, int center_y, int radius,
+                                 int mode);
+
 /* terrain_cell_dirty_flag: the corpus's byte +0x19 bit 0x10 read shape
  * on the physical block (the same byte terrain_cell_dirty_queue_
  * push_and_clear raises). Exposed as the read side of the dirty-queue

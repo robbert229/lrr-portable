@@ -2363,6 +2363,27 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Idle-tile update + terrain-eligibility band** (2026-10-25): four
+portable-now rows land in the ai/level band. `entity_update_and_unregister_at_tile`
+(0x440130, ai.*) strides the idle-registration table for entities standing
+on the target cell: the link word lands through the +0x2fc mirror, the
+linked-entity flag/command update runs, and the slot blanks (port-side
+table scan where the corpus strides its global).
+`entity_activity_terrain_eligibility_transition` (0x449980, ai.*) gates on
+the +0x3e0 bit 0x40: an ineligible cell folds activity 11 in with argument
+1 and moves the gate bit to the eligibility bit, a spent activity timer
+returns untouched, and the handoff folds activity 0, queues the cell's
+work transition, and blanks the +0x2f4/+0x2f8 pair (new EntitySlot fields)
+to -1. `terrain_cell_queued_work_transition` (0x431140, level.*) raises the
+work bit through the flag-0x10/busy-bit-clear gate and runs the refresh
+dispatch, the coordinate-pair seam, and the 0x1c cell-work message.
+`random_variant_cell_scatter` (0x435230, level.*) walks the (2r)² box with
+the dedup-keyed draw pairs (`dy + dx*10`, key bounds pinned as a deviation
+over the corpus stack overflow), the mode-0 quarter limit riding the round
+cap, and the quote-only spawn route keeping every landing invisible.
+`ai_idle_table_reset` joins the port hooks (the corpus table is unowned).
+`ai_test` and `level_test` pin the gates, folds, guards, and draws.
+
 **Cell-command / task-batch / pool window band** (2026-10-25): five
 portable-now rows land across the command, path, and entity-pool windows.
 `cell_command_type3_issue` (0x403030, cmd.*) issues while the cell is

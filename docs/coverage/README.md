@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 976 | 38.1% |
+| ported | 980 | 38.2% |
 | anchored | 4 | 0.2% |
-| named | 1537 | 59.9% |
+| named | 1533 | 59.8% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (976 functions)
+  (980 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1537 functions)
+  citation yet (1533 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1542 (60.1%).**
+**Game logic remaining to port: 1538 (60.0%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -420,7 +420,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00430320` | TerrainCellWorkFlagClear |
 | `0x00430470` | TerrainNeighborFlagSet |
 | `0x00430df0` | TerrainNeighborRefresh |
-| `0x00431140` | TerrainCellQueuedWorkTransition |
 | `0x004314c0` | ActivityBuildRecordRelease |
 | `0x00431530` | ActivityBuildRecordsReleaseAll |
 | `0x00431780` | TerrainStampImpactHandler |
@@ -446,7 +445,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00434da0` | AdvisorTooltipAndTooltipSoundConfigLoad |
 | `0x00434e80` | InterfaceSpawnRequestEnqueue |
 | `0x004350a0` | SurfaceTypeDescriptionsConfigLoad |
-| `0x00435230` | RandomVariantCellScatter |
 | `0x00435550` | GlobalStateZeroTransitionDetect |
 | `0x004355c0` | MenuOptionPanelTextureUpdate |
 | `0x00435b20` | SceneObjectChainRecordCreate |
@@ -548,7 +546,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0043fdc0` | EntityActionTargetCellIsValid |
 | `0x0043fe70` | EntityRouteToExplicitTarget |
 | `0x0043fff0` | EntityRouteMarkerSetup |
-| `0x00440130` | EntityUpdateAndUnregisterAtTile |
 | `0x004401b0` | TerrainCellToWorldPosition |
 | `0x004403d0` | LevelDebugCellRetargetDispatch |
 | `0x004407b0` | SpatialEntityCallbackQuery |
@@ -618,7 +615,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00449610` | EntityCoordinateRouteAndMark |
 | `0x00449700` | RouteStepCommandIssue |
 | `0x00449880` | BlockedCellApproachWeightWrite |
-| `0x00449980` | EntityActivityTerrainEligibilityTransition |
 | `0x00449ac0` | ProximityStepCommandIssueClearingGate |
 | `0x00449cd0` | SceneObjectStateHandleApplyValue |
 | `0x00449f50` | EntityTypeOperationDispatch |
