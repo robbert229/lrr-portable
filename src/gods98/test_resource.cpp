@@ -310,6 +310,19 @@ int main(int argc, char** argv)
               "the window guards answer clear");
     }
 
+    /* WadMemoryStreamBufferGet (2026-10-25): the slot-routed half. */
+    {
+        int obj = 0;
+        fixed_record_slot_install(5, &obj);
+        wad_memory_stream_buffer_get(5);
+        CHECK(fixed_record_slot_resource_get(5) == &obj,
+              "the wrapper leaves the slot resolved");
+        fixed_record_slot_install(5, NULL);
+        wad_memory_stream_buffer_get(-1);
+        CHECK(fixed_record_slot_resource_get(-1) == NULL,
+              "the slot guard runs clear");
+    }
+
     if (s_failures == 0) {
         printf("resource_test: PASS%s\n", real_dir != NULL ? " (real wads)" : "");
         return 0;

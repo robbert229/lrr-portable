@@ -1497,7 +1497,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004667e0,FUN_004667e0,named,EntityStatsConfigLoad,0,66901
 00469a90,FUN_00469a90,named,IndexedValueAppend,0,207
 00469ac0,FUN_00469ac0,named,IndexedRecordWordAtOffsetB0Get,0,193
-00469af0,FUN_00469af0,named,IndexedRecordWordAtOffsetB4Get,0,193
+00469af0,FUN_00469af0,ported,IndexedRecordWordAtOffsetB4Get,2,193
 00469b20,FUN_00469b20,ported,IndexedRecordWordAtOffsetB8Get,3,193
 00469b50,FUN_00469b50,ported,EntityIndexedRecordWordAtOffsetBCGet,2,190
 00469b80,FUN_00469b80,ported,EntityIndexedRecordWordAtOffsetE0Get,2,190
@@ -1529,7 +1529,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00469f00,FUN_00469f00,ported,IndexedRecordWordAtOffset14CGet,3,153
 00469f20,FUN_00469f20,ported,ScreenShakeFlagRaise,1,105
 00469f40,FUN_00469f40,named,BuildingUpgradeAdmissionCheck,0,128
-00469f60,FUN_00469f60,named,IndexedRecordWordAtOffsetD0Get,0,193
+00469f60,FUN_00469f60,ported,IndexedRecordWordAtOffsetD0Get,2,193
 00469f90,FUN_00469f90,ported,NestedWordAtOffsetC0OrC4Get,1,204
 00469fc0,FUN_00469fc0,ported,,1,103
 00469fe0,FUN_00469fe0,ported,NestedFloatAtOffset8CGet,1,105
@@ -1540,7 +1540,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0046a080,FUN_0046a080,ported,Entity334FloatFieldF4Get,1,105
 0046a0a0,FUN_0046a0a0,ported,EntitySpeedComponentGet,1,105
 0046a0c0,FUN_0046a0c0,named,MappedIndexedRecordWordAtFCGet,0,193
-0046a0f0,FUN_0046a0f0,named,MappedIndexedRecordWordAt100Get,0,194
+0046a0f0,FUN_0046a0f0,ported,MappedIndexedRecordWordAt100Get,2,194
 0046a120,FUN_0046a120,named,GroupedCodeTableFindValueIndex,0,527
 0046a170,FUN_0046a170,ported,Entity334FloatField130Get,1,106
 0046a190,FUN_0046a190,ported,Entity334FloatField134Get,1,106
@@ -1828,7 +1828,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00477670,FUN_00477670,named,GameStringHashCompute,0,853
 00477710,FUN_00477710,ported,ConfigBooleanParse,3,564
 004777a0,FUN_004777a0,named,WinMain,0,6064
-00477bd0,FUN_00477bd0,named,SetLowTextureFlag,0,124
+00477bd0,FUN_00477bd0,ported,SetLowTextureFlag,2,124
 00477bf0,FUN_00477bf0,ported,CommandLineOptionParse,1,3531
 00477f30,FUN_00477f30,named,MainLoopFramePump,0,231
 00477f70,FUN_00477f70,ported,RenderFeatureFlagsGet,1,60
@@ -2239,9 +2239,9 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0048be40,FUN_0048be40,ported,WadEntryMemoryStreamOpen,1,1208
 0048bf70,FUN_0048bf70,ported,WadPathOpen,2,405
 0048bfc0,FUN_0048bfc0,ported,FixedRecordSlotResourceRelease,2,200
-0048bff0,FUN_0048bff0,ported,FixedRecordSlotResourceGet,2,163
+0048bff0,FUN_0048bff0,ported,FixedRecordSlotResourceGet,4,163
 0048c010,FUN_0048c010,named,WadStreamLengthGet,0,177
-0048c030,FUN_0048c030,named,WadMemoryStreamBufferGet,0,80
+0048c030,FUN_0048c030,ported,WadMemoryStreamBufferGet,3,80
 0048c040,FUN_0048c040,named,StringCaseSubstringFind,0,1052
 0048c0c0,FUN_0048c0c0,named,LwoStringDuplicate,0,1265
 0048c120,FUN_0048c120,named,LwoTextureProjectionModeParse,0,701

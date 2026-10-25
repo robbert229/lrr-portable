@@ -1051,6 +1051,19 @@ static uint32_t stats_table_read(int type, int row, int off, int stride_index)
 uint32_t stats_table_word_at_b8(int type, int row) { return stats_table_read(type, row, 0xb8, 0); }
 /* FUN_00469b20 */
 
+uint32_t stats_table_word_at_b4(int type, int row, int stride_index)
+{
+    return stats_table_read(type, row, 0xb4, stride_index); /* FUN_00469af0 */
+}
+uint32_t stats_table_word_at_d0(int type, int row, int stride_index)
+{
+    return stats_table_read(type, row, 0xd0, stride_index); /* FUN_00469f60 */
+}
+uint32_t stats_table_word_at_100(int type, int row, int stride_index)
+{
+    return stats_table_read(type, row, 0x100, stride_index); /* FUN_0046a0f0 */
+}
+
 float stats_table_float_at_dc(int type, int row)
 {
     /* FUN_00469e00 */

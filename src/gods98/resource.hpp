@@ -117,4 +117,9 @@ void* fixed_record_slot_resource_get(int slot);    /* FUN_0048bff0 */
 void fixed_record_slot_install(int slot, void* resource); /* port hook */
 int  fixed_record_slot_flag_peek(int slot);        /* port hook */
 
+/* WadMemoryStreamBufferGet (FUN_0048c030): the corpus's stream-buffer
+ * wrapper resolves the fixed-record slot half (FUN_0048bff0) and drops the
+ * result; the observable effect is the slot reader's. */
+void wad_memory_stream_buffer_get(int slot);       /* FUN_0048c030 */
+
 #endif /* LEGORRR_RESOURCE_HPP */

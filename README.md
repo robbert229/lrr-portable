@@ -2363,6 +2363,21 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Stats-table stride triplets + feature/wad leaf band** (2026-10-25): five
+frontier rows land. `stats_table_word_at_b4` (0x469af0),
+`stats_table_word_at_d0` (0x469f60), and `stats_table_word_at_100`
+(0x46a0f0), in `entity.*`, extend the `DAT_00502bd8` family with the
+corpus's (type, row, stride-index) triplets — offset + index * 0x150
+window reads over the installed template spans, guards answering zero
+where the corpus strides blind. `low_texture_flag_set` (0x477bd0, crt.*)
+turns on DAT_00505f84's bit 5 while bit 0x40000 is clear — modeled as an
+install-hooked static (the EngineContext::feature half-model stays apart,
+a documented deviation). `wad_memory_stream_buffer_get` (0x48c030,
+resource.*) routes the slot through the fixed-record slot reader
+(0x48bff0) and drops the result. `entity_test`, `crt_test`, and
+`resource_test` pin the stride guards, the gate halves, and the slot
+route.
+
 **Indexed stats-type table band** (2026-10-25): nine frontier rows land in
 `entity.*` over the `DAT_00502bd8` two-level type table. `stats_table_word_at_b8`
 (0x469b20), `stats_instance_word_at_bc` (0x469b50), `stats_instance_word_at_e0`

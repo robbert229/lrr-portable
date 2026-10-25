@@ -1697,3 +1697,27 @@ void render_surface_secondary_set(uint32_t value) { s_render_surface_secondary =
 
 uint32_t render_feature_flags_get(void) { return s_render_feature_flags; }
 void render_feature_flags_set(uint32_t value) { s_render_feature_flags = value; }
+
+/* SetLowTextureFlag (2026-10-25): the corpus's DAT_00505f84 engine word has
+ * a second half-model (EngineContext::feature in engine.hpp). This band's
+ * store carries no context, so the port models it as a module static with
+ * install/peek hooks — the two half-models do not interoperate
+ * (unowned-global deviation). */
+static uint32_t s_engine_feature_word; /* DAT_00505f84 */
+
+uint32_t engine_feature_word_peek(void)
+{
+    return s_engine_feature_word;
+}
+
+void engine_feature_word_install(uint32_t value) /* port hook */
+{
+    s_engine_feature_word = value;
+}
+
+void low_texture_flag_set(void) /* FUN_00477bd0 */
+{
+    if ((s_engine_feature_word & 0x40000u) == 0u) {
+        s_engine_feature_word |= 0x20u;
+    }
+}

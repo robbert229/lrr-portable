@@ -1118,6 +1118,23 @@ int main(void)
               "the getters answer their installed halves");
     }
 
+    /* Engine feature word band (2026-10-25): corpus half-store. */
+    {
+        engine_feature_word_install(0u);
+        low_texture_flag_set();
+        CHECK(engine_feature_word_peek() == 0x20u,
+              "the setter turns on bit 5 while bit 0x40000 is clear");
+        engine_feature_word_install(0x120u);
+        low_texture_flag_set();
+        CHECK(engine_feature_word_peek() == 0x120u,
+              "the already-set half stays");
+        engine_feature_word_install(0x40020u);
+        low_texture_flag_set();
+        CHECK(engine_feature_word_peek() == 0x40020u,
+              "the gated half skips the store");
+        engine_feature_word_install(0u);
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "crt_test: %d failure(s)\n", s_failures);
         return 1;

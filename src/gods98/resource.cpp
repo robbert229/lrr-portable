@@ -575,3 +575,11 @@ int fixed_record_slot_flag_peek(int slot)
 {
     return (slot >= 0 && slot < FIXED_RECORD_SLOTS) ? s_fixed_flag[slot] : 0;
 }
+
+/* WadMemoryStreamBufferGet (FUN_0048c030): the corpus wrapper routes the
+ * slot through the fixed-record slot reader (FUN_0048bff0) and drops the
+ * result — the observable half is the slot reader's resolution. */
+void wad_memory_stream_buffer_get(int slot)
+{
+    (void)fixed_record_slot_resource_get(slot);
+}
