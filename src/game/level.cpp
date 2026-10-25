@@ -7,10 +7,12 @@
 #include "gods98/block.hpp"
 #include "gods98/heap.hpp"
 #include "gods98/message.hpp"
+#include "gods98/record.hpp"
 #include "gods98/resource.hpp"
 #include "gods98/sound.hpp"
 #include "gods98/string.hpp"
 #include "entity.hpp"
+#include "frontend.hpp"
 #include "level.hpp"
 #include "objective.hpp"
 #include "util.hpp"
@@ -2700,6 +2702,71 @@ void terrain_object_sfx_grid_config_load(BlockFile* config,
         }
     }
 }
+
+/* --- terrain choice resource select (2026-10-25) ---------------------------
+ * TerrainChoiceResourceSelect (FUN_0040e700): copies the position record's
+ * pair (the ported pair primitive; the corpus's second read overwrites its
+ * own local while the saved original rides the last-record slot), then the
+ * record's first word selects the active resource word: cases 1..4 read the
+ * choice window (the corpus's four column bases are overlapping strides of
+ * one flat word window, word = kind-1 + index, indexed by the record's
+ * second word), cases 6/7 read the two scalar words, and everything else
+ * clears the flag's bit 0 and stores nothing. A successful select raises
+ * the flag's bits 0+1, keeps the record pointer in the last-select slot,
+ * and releases the panel's text-output holder slot. Deviations: the corpus
+ * strides the window indices blindly — the port guards the window edge and
+ * answers clear; the window and scalars have no ported corpus owner, so
+ * they ride zero-init own storage behind install hooks. */
+static uint32_t s_choice_window[4];  /* DAT_004c7e88..e94 role */
+static uint32_t s_choice_scalar[2];  /* DAT_004c7e98/e9c role */
+static uint32_t s_choice_active;     /* DAT_004c7ea0 role */
+static uint32_t s_choice_flags;      /* DAT_004c7ea8 role */
+static uintptr_t s_choice_record;    /* DAT_004c7ea4 role */
+
+void terrain_choice_resource_select(const void* record)
+{
+    uint32_t kind = 0u, index = 0u;
+    copy_two_dword_pair_to_outputs(record, &kind, &index);
+    switch (kind) {
+    case 1u: case 2u: case 3u: case 4u: {
+        const unsigned int word = (kind - 1u) + index;
+        s_choice_active = (word < 4u) ? s_choice_window[word] : 0u;
+        break;
+    }
+    case 6u: s_choice_active = s_choice_scalar[0]; break;
+    case 7u: s_choice_active = s_choice_scalar[1]; break;
+    default:
+        s_choice_active = 0u;
+        s_choice_flags &= ~1u;
+        return;
+    }
+    s_choice_flags |= 3u;
+    s_choice_record = (uintptr_t)record;
+    ui_text_output_object_release((void* const*)panel_text_slot_peek());
+}
+
+void terrain_choice_window_install(int word, uint32_t value)
+{
+    if (word >= 0 && word < 4) {
+        s_choice_window[word] = value;
+    }
+}
+
+uint32_t terrain_choice_window_peek(int word)
+{
+    return (word >= 0 && word < 4) ? s_choice_window[word] : 0u;
+}
+
+void terrain_choice_scalar_install(int scalar, uint32_t value)
+{
+    if (scalar >= 0 && scalar < 2) {
+        s_choice_scalar[scalar] = value;
+    }
+}
+
+uint32_t terrain_choice_active_peek(void) { return s_choice_active; }
+uint32_t terrain_choice_flags_peek(void) { return s_choice_flags; }
+uintptr_t terrain_choice_record_peek(void) { return s_choice_record; }
 
 /* EntityAvailableResourceSpend (FUN_00438720) — see level.hpp.
  * The corpus's comparison value is the unconsumed EAX of the void no-op

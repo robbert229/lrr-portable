@@ -1373,6 +1373,74 @@ int main(int argc, char** argv)
         block_close(bf);
     }
 
+    /* TerrainChoiceResourceSelect (2026-10-25): window/scalar selects,
+     * the default clear, the guard, and the record-pointer slot. */
+    {
+        CHECK(terrain_choice_active_peek() == 0u
+                  && terrain_choice_flags_peek() == 0u
+                  && terrain_choice_record_peek() == 0u,
+              "the selection window starts clear");
+
+        terrain_choice_window_install(0, 11u);
+        terrain_choice_window_install(1, 22u);
+        terrain_choice_window_install(2, 33u);
+        terrain_choice_window_install(3, 44u);
+        terrain_choice_scalar_install(0, 77u);
+        terrain_choice_scalar_install(1, 88u);
+        CHECK(terrain_choice_window_peek(4) == 0u, "the window guard answers zero");
+
+        /* Kind 1 / index 0 reads the first window word and raises both bits. */
+        uint32_t sel[2] = { 1u, 0u };
+        terrain_choice_resource_select(sel);
+        CHECK(terrain_choice_active_peek() == 11u && terrain_choice_flags_peek() == 3u
+                  && terrain_choice_record_peek() == (uintptr_t)sel,
+              "the kind 1 select stores the window word and the record");
+
+        /* Kind 2 / index 1 folds to window word 2. */
+        sel[0] = 2u; sel[1] = 1u;
+        terrain_choice_resource_select(sel);
+        CHECK(terrain_choice_active_peek() == 33u, "the folded window word reads");
+
+        /* Kind 3 / index 3 strides past the guarded window: the answer
+         * clears (deviation) while the success path still rides. */
+        sel[0] = 3u; sel[1] = 3u;
+        terrain_choice_resource_select(sel);
+        CHECK(terrain_choice_active_peek() == 0u && terrain_choice_flags_peek() == 3u,
+              "the guarded word answers clear on the success path (dev)");
+
+        /* Kind 4 / index 0 reaches word 3. */
+        sel[0] = 4u; sel[1] = 0u;
+        terrain_choice_resource_select(sel);
+        CHECK(terrain_choice_active_peek() == 44u, "the kind 4 select reads word 3");
+
+        /* The scalars: kind 6 / kind 7. */
+        sel[0] = 6u;
+        terrain_choice_resource_select(sel);
+        CHECK(terrain_choice_active_peek() == 77u, "the kind 6 select reads scalar 0");
+        sel[0] = 7u;
+        terrain_choice_resource_select(sel);
+        CHECK(terrain_choice_active_peek() == 88u, "the kind 7 select reads scalar 1");
+
+        /* Default kind: clears active and the flag bit 0, bit 1 survives,
+         * the record slot stays out. */
+        sel[0] = 9u;
+        terrain_choice_resource_select(sel);
+        CHECK(terrain_choice_active_peek() == 0u && terrain_choice_flags_peek() == 2u,
+              "the default kind clears bit 0 only");
+
+        /* A null record folds into the default case through the guarded
+         * pair primitive. */
+        terrain_choice_resource_select(NULL);
+        CHECK(terrain_choice_active_peek() == 0u && terrain_choice_flags_peek() == 2u,
+              "the null record stays inert on the default path");
+
+        for (int w = 0; w < 4; ++w) {
+            terrain_choice_window_install(w, 0u);
+        }
+        terrain_choice_scalar_install(0, 0u);
+        terrain_choice_scalar_install(1, 0u);
+    }
+
     /* EntityAvailableResourceSpend (2026-10-24): gate + branches. */
     {
         LevelState g;

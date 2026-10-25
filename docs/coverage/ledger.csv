@@ -308,7 +308,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0040e350,FUN_0040e350,named,CellEntityKindCreateOrRemove,0,1042
 0040e460,FUN_0040e460,ported,GridCellRecordPresentCheck,1,148
 0040e490,FUN_0040e490,named,EncyclopediaConfigFilesOpen,0,2964
-0040e700,FUN_0040e700,named,TerrainChoiceResourceSelect,0,789
+0040e700,FUN_0040e700,ported,TerrainChoiceResourceSelect,3,789
 0040e7e0,FUN_0040e7e0,ported,GlobalFlagBit0Clear,1,85
 0040e7f0,FUN_0040e7f0,ported,,3,717
 0040e8d0,FUN_0040e8d0,named,ScreenSpaceEffectDispatchIfEnabled,0,209
@@ -553,7 +553,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0041b270,FUN_0041b270,named,InterfaceButtonImagesLoad,0,312
 0041b2d0,FUN_0041b2d0,ported,CommandContextPostToHud,3,158
 0041b300,FUN_0041b300,ported,MenuSelectionResourceUpdate,3,784
-0041b3c0,FUN_0041b3c0,named,EntityQueryFlagCount,0,1201
+0041b3c0,FUN_0041b3c0,ported,EntityQueryFlagCount,3,1201
 0041b470,FUN_0041b470,ported,CategoryValueIsNeitherZeroNorFifteen,2,118
 0041b490,FUN_0041b490,ported,AdvisorOverlayUpdate,1,1805
 0041b680,FUN_0041b680,named,CatalogCallbackByIdDispatch,0,1788
