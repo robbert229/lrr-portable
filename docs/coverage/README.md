@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 1067 | 41.6% |
+| ported | 1069 | 41.7% |
 | anchored | 4 | 0.2% |
-| named | 1448 | 56.5% |
+| named | 1446 | 56.4% |
 | runtime-import | 44 | 1.7% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (1067 functions)
+  (1069 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1448 functions)
+  citation yet (1446 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (44 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1453 (56.7%).**
+**Game logic remaining to port: 1451 (56.6%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -235,7 +235,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00410740` | SaveMenuListEntryAppend |
 | `0x00410a10` | MenuItemChoiceStringsAllocate |
 | `0x00410aa0` | ResourceHandleListAppend |
-| `0x00410ae0` | ResourceHandleListDispose |
 | `0x00410c70` | ResourceVariantRecordRelease |
 | `0x00410d50` | MenuTextRecordMake |
 | `0x00410e20` | MenuButtonRecordMake |
@@ -312,7 +311,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0041a300` | InterfaceMenuActionLabelsInit |
 | `0x0041a660` | InteractionActionCodeMapInitialize |
 | `0x0041a7d0` | InputKeyGroupRegister |
-| `0x0041a850` | ResourceHandleSetRelease |
 | `0x0041a920` | LevelStateCountersClear |
 | `0x0041a9c0` | CaseInsensitiveStringTableIndexFind |
 | `0x0041aa00` | EntityTableMapsAllocate |

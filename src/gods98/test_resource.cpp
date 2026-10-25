@@ -483,6 +483,59 @@ int main(int argc, char** argv)
         free(dir);
     }
 
+    /* --- resource-handle release band (2026-10-25) --------------------- */
+    {
+        /* The set release: band slots and named globals free through the
+         * engine-heap seam and clear. */
+        CHECK(resource_handle_set_slot_peek(0) == NULL
+                  && resource_handle_set_slot_peek(24) == NULL
+                  && resource_handle_set_slot_peek(-1) == NULL
+                  && resource_handle_set_slot_peek(36) == NULL,
+              "the untouched set slots peek clear");
+        for (int i = 0; i != 3; ++i) {
+            resource_handle_set_slot_install(i, engine_heap_alloc(8));
+        }
+        resource_handle_set_slot_install(25, engine_heap_alloc(8));
+        resource_handle_set_slot_install(35, engine_heap_alloc(8));
+        resource_handle_set_slot_install(2, engine_heap_alloc(8)); /* overwrite */
+        resource_handle_set_slot_install(0, engine_heap_alloc(16));
+        resource_handle_set_slot_install(25, engine_heap_alloc(16));
+        CHECK(resource_handle_set_slot_peek(0) != NULL
+                  && resource_handle_set_slot_peek(25) != NULL,
+              "the installs land");
+        resource_handle_set_release();
+        int cleared = 1;
+        for (int s = 0; s != 36; ++s) {
+            if (resource_handle_set_slot_peek(s) != NULL) {
+                cleared = 0;
+            }
+        }
+        CHECK(cleared, "the release frees and clears every set slot");
+        resource_handle_set_release(); /* the empty band rides clean */
+    }
+
+    {
+        /* The list disposer: handles freed, then the array, then the
+         * record — and the record freed even when the array word is zero. */
+        ResourceHandleList* list =
+            (ResourceHandleList*)engine_heap_alloc(sizeof(ResourceHandleList));
+        list->word1 = 0u;
+        list->count = 3;
+        list->handles = (void**)engine_heap_alloc(3 * sizeof(void*));
+        list->handles[0] = engine_heap_alloc(8);
+        list->handles[1] = NULL; /* the zero entry rides */
+        list->handles[2] = engine_heap_alloc(8);
+        resource_handle_list_dispose(list); /* no double-free, clean run */
+        ResourceHandleList* bare =
+            (ResourceHandleList*)engine_heap_alloc(sizeof(ResourceHandleList));
+        bare->word1 = 0u;
+        bare->count = 0;
+        bare->handles = NULL;
+        resource_handle_list_dispose(bare); /* record freed, loop skipped */
+        resource_handle_list_dispose(NULL); /* guarded */
+        CHECK(1, "the list disposer runs the free ladder");
+    }
+
     if (s_failures == 0) {
         printf("resource_test: PASS%s\n", real_dir != NULL ? " (real wads)" : "");
         return 0;

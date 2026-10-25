@@ -158,4 +158,23 @@ typedef struct WadStreamSlots {
 int wad_entry_read_into_stream_slot(WadStreamSlots* slots,
                                     const char* name);           /* FUN_0047fea0 */
 
+/* --- resource-handle release band (2026-10-25) ---------------------------
+ * The corpus's global handle set (the DAT_004ddc04 stride-8 band plus
+ * twelve named globals) and the handle-list record both own no ported
+ * writer, so the set lands as own storage behind install/peek hooks; the
+ * release frees non-null slots in corpus order through the engine-heap
+ * free seam and clears them (deviation: the corpus dangles). */
+void resource_handle_set_release(void);                          /* FUN_0041a850 */
+void  resource_handle_set_slot_install(int slot, void* res);     /* port hook */
+void* resource_handle_set_slot_peek(int slot);                   /* port hook */
+
+/* The corpus's handle-list record: the array word, an unread middle word,
+ * and the count (LP64-safe widening). */
+typedef struct ResourceHandleList {
+    void**    handles; /* corpus dword at +0 */
+    uintptr_t word1;   /* corpus dword at +4 (unread by the disposer) */
+    int32_t   count;   /* corpus dword at +8 */
+} ResourceHandleList;
+void resource_handle_list_dispose(ResourceHandleList* list);     /* FUN_00410ae0 */
+
 #endif /* LEGORRR_RESOURCE_HPP */

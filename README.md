@@ -2363,6 +2363,21 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Resource-handle release band — global set + list disposer** (2026-10-25):
+two frontier rows land in `resource.*`. `resource_handle_set_release`
+(0x41a850) frees the corpus's global handle set: the DAT_004ddc04 stride-8
+record band (the walker strides pairs and frees each non-zero first dword
+until the DAT_004ddcc4 bound) followed by the twelve named globals in corpus
+order — 734/73c/744, ad4, 99c/9a4, then 738/740/748, ad8, 9a0/9a8 — through
+the engine-heap free seam. The band has no ported writer, so it lands as own
+storage behind install/peek hooks, and the port clears each freed slot (the
+corpus dangles). `resource_handle_list_dispose` (0x410ae0) frees a handle
+list: each non-zero handle in the count-bounded array, then the array, then
+the record — the record rides the ladder even when its array word is zero.
+Deviations: the record fields widen LP64-safe and the NULL record is guarded.
+`resource_test` pins the install/peek hooks, the release-and-clear sweep,
+the empty-set rerun, the zero-entry free ladder, and the guarded NULL.
+
 **Wad payload band — RNC dispatch, expand, Huffman clear, handle pair**
 (2026-10-25): five frontier rows land in `resource.*`.
 `wad_payload_decode_dispatch` (0x49c840) gates on the corpus's three-byte
