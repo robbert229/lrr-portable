@@ -567,6 +567,16 @@ static void idle_register(EntitySlot* e)
     /* timestamps handled by the (future) idle poller */
 }
 
+/* port hook: EntityPointerRegistriesRemove clears idle-queue records from
+ * the window this table models; the corpus leaves the timer words. */
+void idle_queue_clear(EntitySlot* e)
+{
+    for (int i = 0; i < IDLE_TABLE_MAX; ++i) {
+        if (s_idle[i] == e) {
+            s_idle[i] = NULL;
+        }
+    }
+}
 /* ------------------------------------------------------------------ *
  *  Queue executor (FUN_004520d0): 5-dword records, ping-pong buffered.
  * ------------------------------------------------------------------ */

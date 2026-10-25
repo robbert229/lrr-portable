@@ -1364,6 +1364,103 @@ int main(int argc, char** argv)
               "a registered name re-rolls until the dispatch takes");
     }
 
+    /* Object registry windows (2026-10-25). */
+    {
+        ai_object_registries_reset();
+        EntitySlot e4, e2a, e2b, ef;
+        memset(&e4, 0, sizeof e4);
+        memset(&e2a, 0, sizeof e2a);
+        memset(&e2b, 0, sizeof e2b);
+        memset(&ef, 0, sizeof ef);
+        e4.etype = 4;
+        e2a.etype = 2;
+        e2b.etype = 2;
+        static char caprec[0x150];
+        memset(caprec, 0, sizeof caprec);
+        const uint32_t capbit = 0x80u;
+        __builtin_memcpy(caprec + 0x14c, &capbit, sizeof capbit);
+        /* ef starts with no stats record: the gate reads zero. */
+
+        type4_object_registry_insert(NULL); /* guarded */
+        type4_object_registry_insert(&e2a); /* the type-4 gate skips */
+        void* rec = (void*)1;
+        uint32_t tmr = 1u;
+        ai_object_registry_slot_peek(1, 0, &rec, &tmr);
+        CHECK(rec == NULL, "the gated insert leaves the window empty");
+        type4_object_registry_insert(&e4);
+        ai_object_registry_slot_peek(1, 0, &rec, &tmr);
+        CHECK(rec == &e4 && tmr == 0u, "the type-4 insert rides slot zero");
+        type4_object_registry_insert(&e4); /* the no-duplicate rule */
+        int seen = 0;
+        for (int i = 0; i < 20; ++i) {
+            ai_object_registry_slot_peek(1, i, &rec, NULL);
+            if (rec == &e4) {
+                ++seen;
+            }
+        }
+        CHECK(seen == 1, "the repeat insert stays deduped");
+
+        flagged_object_timer_registry_insert(&ef); /* capability gate off */
+        ai_object_registry_slot_peek(0, 0, &rec, NULL);
+        CHECK(rec == NULL, "the gated flagged insert skips");
+        flagged_object_timer_registry_insert(NULL); /* guarded */
+        /* Raise the gate through the stats word. */
+        ef.stats_record = caprec;
+        flagged_object_timer_registry_insert(&ef);
+        ai_object_registry_slot_peek(0, 0, &rec, &tmr);
+        CHECK(rec == &ef && tmr == 0x42160000u,
+              "the flagged insert stores with the seed");
+        const uint32_t late = 7u;
+        ai_object_registry_slot_set(0, 0, &ef, late);
+        flagged_object_timer_registry_insert(&ef); /* the hit re-seeds */
+        ai_object_registry_slot_peek(0, 0, &rec, &tmr);
+        CHECK(tmr == 0x42160000u, "the hit re-seeds the timer");
+
+        type2_timed_registry_insert(&e2a);
+        type2_timed_registry_insert(&e2b);
+        ai_object_registry_slot_peek(2, 0, &rec, &tmr);
+        void* rec2 = NULL;
+        ai_object_registry_slot_peek(2, 1, &rec2, NULL);
+        CHECK(rec == &e2a && rec2 == &e2b
+                  && tmr == 0x4a095440u,
+              "the timed inserts append with the seed");
+        ai_object_registry_slot_set(2, 0, &e2a, 3u);
+        type2_timed_registry_insert(&e2a); /* the hit re-seeds */
+        ai_object_registry_slot_peek(2, 0, &rec, &tmr);
+        CHECK(tmr == 0x4a095440u, "the timed hit re-seeds");
+        ai_object_registry_slot_set(2, 0, &e2a, 5u);
+        ai_object_registry_slot_set(2, 1, &e2b, 5u);
+        set_type2_object_record_value(&e4, 0x1234u); /* gate skips */
+        ai_object_registry_slot_peek(2, 0, NULL, &tmr);
+        CHECK(tmr == 5u, "the non-type-2 broadcast is gated off");
+        set_type2_object_record_value(NULL, 0x1234u); /* guarded */
+        set_type2_object_record_value(&e2a, 0x1234u);
+        uint32_t t0 = 0, t1 = 0;
+        ai_object_registry_slot_peek(2, 0, NULL, &t0);
+        ai_object_registry_slot_peek(2, 1, NULL, &t1);
+        CHECK(t0 == 0x1234u && t1 == 0x1234u,
+              "the broadcast lands on the occupied slots");
+
+        entity_pointer_registries_remove(&e2a);
+        ai_object_registry_slot_peek(2, 0, &rec, NULL);
+        ai_object_registry_slot_peek(2, 1, &rec2, NULL);
+        CHECK(rec == NULL && rec2 == &e2b, "the remove drops the match");
+        entity_pointer_registries_remove(&ef);
+        ai_object_registry_slot_peek(0, 0, &rec, NULL);
+        CHECK(rec == NULL, "the remove clears the flagged window");
+        entity_pointer_registries_remove(NULL); /* guarded sweep */
+
+        CHECK(ai_object_registry_window_count(0) == 20
+                  && ai_object_registry_window_count(1) == 20
+                  && ai_object_registry_window_count(2) == 50,
+              "the windows ride the corpus geometries");
+        ai_object_registry_slot_peek(2, 99999, &rec, &tmr); /* guarded */
+        ai_object_registry_slot_set(1, -1, &e4, 0u); /* guarded */
+        ai_object_registries_reset();
+        ai_object_registry_slot_peek(1, 0, &rec, NULL);
+        CHECK(rec == NULL, "the reset empties the windows");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "ai_test: %d failure(s)\n", s_failures);
         return 1;

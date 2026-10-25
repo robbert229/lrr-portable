@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 929 | 36.2% |
+| ported | 934 | 36.4% |
 | anchored | 4 | 0.2% |
-| named | 1584 | 61.8% |
+| named | 1579 | 61.6% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (929 functions)
+  (934 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1584 functions)
+  citation yet (1579 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1589 (62.0%).**
+**Game logic remaining to port: 1584 (61.8%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -111,11 +111,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00407240` | BubbleConfigTextureLoad |
 | `0x00407300` | BubbleActionNameToIndex |
 | `0x00407370` | ResetObjectAuxiliaryState |
-| `0x004073a0` | EntityPointerRegistriesRemove |
-| `0x00407410` | Type4ObjectRegistryInsert |
-| `0x004074b0` | Type2TimedRegistryInsert |
-| `0x00407510` | SetType2ObjectRecordValue |
-| `0x00407540` | FlaggedObjectTimerRegistryInsert |
 | `0x004075a0` | TickEntityScreenEffects |
 | `0x004078c0` | EntityCursorTargetStepResolveAndTimerAdvance |
 | `0x00407a10` | PendingTypeValueSlotSelect |

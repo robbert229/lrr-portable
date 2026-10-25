@@ -531,6 +531,10 @@ void cmd_link_global_head(void* rec, int kind);
 void cmd_rec_action_set(void* rec, int action);
 void cmd_rec_target_set(void* rec, int target);
 
+/* port hook: drop an entity from the idle-queue table (the window B model
+ * of the object-registry band; EntityPointerRegistriesRemove calls it). */
+void idle_queue_clear(EntitySlot* e);
+
 /* SelectedEntitiesAnyPredicateMatch / AnyObjectCanOccupyTerrainCell
  * (FUN_00431a30 / FUN_00431ab0): the any-hit sweeps over the active
  * selection context's record array. Both pull the array through the

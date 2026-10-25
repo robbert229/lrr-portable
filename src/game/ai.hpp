@@ -291,4 +291,47 @@ int entity_nested_float_add_unless_blocked(EntitySlot* e, float* value);
 void linked_entity_flag_and_command_update(EntitySlot* e);
                                                 /* FUN_004440a0 */
 
+/* --- object registry windows (2026-10-25) ---------------------------------
+ * The 0x407xxx band registers entity records into four pointer/timer pair
+ * windows (corpus DAT_005579e4 / 7a84 / 7b24 / 7bc4). The windows have no
+ * other corpus owner, so they ride module storage; the type-1/2 idle queue
+ * (window B) stays modeled by the cmd module's idle table. Deviation: the
+ * corpus strides the record's type word (dword +0) blindly; the port reads
+ * the mirrored etype through a guard. */
+
+/* EntityPointerRegistriesRemove (FUN_004073a0): drop the record pointer from
+ * every window whose slot matches (the timer words ride on). */
+void entity_pointer_registries_remove(EntitySlot* record); /* FUN_004073a0 */
+
+/* Type4ObjectRegistryInsert (FUN_00407410): a type-4 record goes into the
+ * type-4 window when absent — first empty slot, timer word untouched. */
+void type4_object_registry_insert(EntitySlot* record);     /* FUN_00407410 */
+
+/* Type2TimedRegistryInsert (FUN_004074b0): the type-2 timed window.
+ * Corpus quirk pinned: the insert path gates on a 50-walk that an 18-slot
+ * window can never reach, so a miss seeds the last slot's timer without
+ * storing the pointer; a hit just re-seeds its timer. */
+void type2_timed_registry_insert(EntitySlot* record);      /* FUN_004074b0 */
+
+/* SetType2ObjectRecordValue (FUN_00407510): a type-2 record broadcasts its
+ * value into the timer word of every occupied timed-window slot. */
+void set_type2_object_record_value(EntitySlot* record, uint32_t value);
+                                                /* FUN_00407510 */
+
+/* FlaggedObjectTimerRegistryInsert (FUN_00407540): with the stats word's
+ * bit 0x80 raised (the ported capability reader), register into the
+ * flagged-timer window — hit re-seeds, miss appends at the first empty
+ * slot with the seed, and a full window drops the record. */
+void flagged_object_timer_registry_insert(EntitySlot* record);
+                                                /* FUN_00407540 */
+
+/* port hooks: peek/set windows (0 = flagged, 1 = type-4, 2 = type-2 timed);
+ * out-of-range slots guarded, counts via ai_object_registry_window_count. */
+void ai_object_registry_slot_peek(int window, int slot, void** record,
+                                  uint32_t* timer);
+void ai_object_registry_slot_set(int window, int slot, void* record,
+                                 uint32_t timer);
+int  ai_object_registry_window_count(int window);
+void ai_object_registries_reset(void);  /* port hook: clear (unowned) */
+
 #endif /* LEGORRR_GAME_AI_HPP */
