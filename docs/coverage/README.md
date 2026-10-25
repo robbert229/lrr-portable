@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 1089 | 42.5% |
+| ported | 1091 | 42.6% |
 | anchored | 4 | 0.2% |
-| named | 1426 | 55.6% |
+| named | 1424 | 55.5% |
 | runtime-import | 44 | 1.7% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (1089 functions)
+  (1091 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1426 functions)
+  citation yet (1424 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (44 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1431 (55.8%).**
+**Game logic remaining to port: 1429 (55.7%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -350,7 +350,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0041f6c0` | SelectedEntityDetachCallback |
 | `0x0041f740` | CellFourNeighborWalkCheck |
 | `0x0041f840` | RemoveObjectIfClass6 |
-| `0x0041f9e0` | UpgradeResourceDebit |
 | `0x0041fa80` | StartLevelPilots |
 | `0x00422850` | MiscObjectResourcesLoad |
 | `0x004230c0` | DebugPanelTextDrawUpdate |
@@ -379,7 +378,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0042b850` | SurfaceTextCharacterMapInitialize |
 | `0x0042bb60` | TextureSetConfigLoad |
 | `0x0042c330` | EmergeMapTriggerSpawn |
-| `0x0042cd50` | UpgradeNameEntryFind |
 | `0x0042cf50` | MiniFigureTypeTableLoad |
 | `0x0042d2b0` | BuildingTypesLoad |
 | `0x0042d460` | UpgradeTypesLoad |

@@ -622,4 +622,22 @@ void level_resource_balance_add_and_sound(int selector);
 void simulation_mode_counter_add(int mode, int count);
                                                 /* FUN_0043a910 */
 
+/* UpgradeResourceDebit (FUN_0041f9e0): subtract `amount` from the current
+ * level's +0xa0 (selector 0) or +0xac (nonzero) under the level gate, then
+ * step the overlay animation OUTSIDE the gate — pinned quirk: mode 0 here
+ * (the add half is mode 1), and the nonzero selector steps the constant 5
+ * regardless of the amount while selector 0 steps the amount.
+ * UpgradeNameEntryFind (FUN_0042cd50): case-insensitive lookup over the
+ * loader name table answering the matching 16-byte record's address, zero
+ * on a cold table or miss. The loader-owned globals (record block,
+ * name-pointer array, count) have no ported owner — the table rides
+ * zero-init own storage behind install (window 36, deviations in the
+ * module notes); NULL names skip the compare. */
+void upgrade_resource_debit(int selector, int amount);
+                                                /* FUN_0041f9e0 */
+void upgrade_name_table_install(void* records, const char* const* names,
+                                int count);     /* port hook */
+const void* upgrade_name_entry_find(const char* name);
+                                                /* FUN_0042cd50 */
+
 #endif /* LEGORRR_GAME_CMD_HPP */

@@ -623,7 +623,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0041f980,FUN_0041f980,ported,GlobalObjectField94Increment,1,143
 0041f990,FUN_0041f990,ported,GlobalObjectFieldA8Increment,1,143
 0041f9a0,FUN_0041f9a0,ported,LevelResourceBalanceAddAndSound,2,354
-0041f9e0,FUN_0041f9e0,named,UpgradeResourceDebit,0,384
+0041f9e0,FUN_0041f9e0,ported,UpgradeResourceDebit,3,384
 0041fa20,FUN_0041fa20,ported,GameConfigCallbackRegistryInit,2,502
 0041fa80,FUN_0041fa80,named,StartLevelPilots,0,478
 0041fb40,FUN_0041fb40,ported,TimeScaleGet,3,153
@@ -699,7 +699,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0042c9d0,FUN_0042c9d0,ported,LoadBlockPointers,1,2212
 0042cb70,FUN_0042cb70,ported,LavaErosionCellTimersAdvance,3,1605
 0042cc90,FUN_0042cc90,ported,LoadTerrainMap,2,1087
-0042cd50,FUN_0042cd50,named,UpgradeNameEntryFind,0,342
+0042cd50,FUN_0042cd50,ported,UpgradeNameEntryFind,3,342
 0042cda0,FUN_0042cda0,ported,VehicleTypeInit,1,2251
 0042cf50,FUN_0042cf50,named,MiniFigureTypeTableLoad,0,2255
 0042d100,FUN_0042d100,ported,RockMonsterTypesLoad,1,2257

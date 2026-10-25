@@ -1924,6 +1924,100 @@ int main(void)
         lctx.level = &lvl;
     }
 
+    /* UpgradeResourceDebit + the upgrade-name table band (2026-10-25). */
+    {
+        GameContext dctx;
+        game_context_init(&dctx);
+        static LevelState lvl;
+        memset(&lvl, 0, sizeof lvl);
+        cmd_context_set(&dctx);
+        dctx.level = &lvl;
+        level_set_int(&lvl, LEVEL_OFF_RES_A, 10);
+        level_set_int(&lvl, LEVEL_OFF_RES_B, 10);
+
+        /* Selector 0 debits +0xa0 and steps the float by the amount
+         * (mode 0: the fold decays below one per step). */
+        overlay_anim_float_install(0.5f);
+        upgrade_resource_debit(0, 3);
+        CHECK(level_int(&lvl, LEVEL_OFF_RES_A) == 7
+                  && level_int(&lvl, LEVEL_OFF_RES_B) == 10,
+              "the zero selector debits +0xa0 by the amount");
+        CHECK(overlay_anim_float_peek() < 0.5f - 1e-4f
+                  && overlay_anim_float_peek() > 0.35f,
+              "the selector-0 amount steps the overlay float");
+
+        /* The nonzero selector debits +0xac and steps the CONSTANT five
+         * regardless of the amount (pinned quirk). */
+        overlay_anim_float_install(0.5f);
+        upgrade_resource_debit(1, 1);
+        const float after_one = overlay_anim_float_peek();
+        CHECK(level_int(&lvl, LEVEL_OFF_RES_B) == 9,
+              "the nonzero selector debits +0xac by the amount");
+        overlay_anim_float_install(0.5f);
+        upgrade_resource_debit(1, 50);
+        const float diff_five = overlay_anim_float_peek() - after_one;
+        CHECK(level_int(&lvl, LEVEL_OFF_RES_B) == (9 - 50)
+                  && diff_five < 1e-5f && diff_five > -1e-5f,
+              "the amount rides the counter only; the step stays five");
+
+        /* The no-level path: counters inert, the advance half still runs. */
+        dctx.level = NULL;
+        overlay_anim_float_install(0.5f);
+        upgrade_resource_debit(0, 4);
+        CHECK(level_int(&lvl, LEVEL_OFF_RES_A) == 7, "the guard holds");
+        CHECK(overlay_anim_float_peek() < 0.5f - 1e-4f,
+              "the guarded no-level path still steps the float");
+        dctx.level = &lvl;
+    }
+
+    /* The upgrade-name table band (2026-10-25): hooks + case-folded find. */
+    {
+        static char block[3 * 16];
+        memset(block, 0, sizeof block);
+        const char* names[3];
+        names[0] = "alpha";
+        names[1] = NULL;
+        names[2] = "GAMMA";
+        upgrade_name_table_install(block, names, 3);
+        CHECK(upgrade_name_entry_find("ALPHA") == (const void*)block,
+              "the fold finds the first entry");
+        CHECK(upgrade_name_entry_find("gamma") == block + 2 * 16,
+              "the indexed record address lands at i * 16");
+        CHECK(upgrade_name_entry_find("NULL") == NULL
+                  && upgrade_name_entry_find(NULL) == NULL,
+              "the miss and the NULL name answer zero");
+        CHECK(upgrade_name_entry_find("alpha") != NULL,
+              "the NULL middle entry walks past");
+
+        /* The cold table and the install guards. */
+        upgrade_name_table_install(block, NULL, 5);
+        CHECK(upgrade_name_entry_find("alpha") == NULL,
+              "the NULL names array resets the count");
+        upgrade_name_table_install(NULL, names, -3);
+        CHECK(upgrade_name_entry_find("GAMMA") == NULL,
+              "the negative count clears (dev)");
+        upgrade_name_table_install(NULL, names, 3);
+        CHECK(upgrade_name_entry_find("alpha") == NULL,
+              "the dangling record base is guarded (dev)");
+
+        /* The 36-entry window guard (span-derived). */
+        const char* big[40];
+        for (int i = 0; i < 40; ++i) {
+            big[i] = i == 5 ? "hit" : (i == 39 ? "late" : "x");
+        }
+        static char block2[40 * 16];
+        upgrade_name_table_install(block2, big, 40);
+        CHECK(upgrade_name_entry_find("HIT") == block2 + 5 * 16,
+              "the in-window entry lands through the clamp");
+        CHECK(upgrade_name_entry_find("late") == NULL,
+              "the beyond-window entry stays unreachable (dev)");
+
+        /* The corpus's zero-count return shape (cold start). */
+        upgrade_name_table_install(block, names, 0);
+        CHECK(upgrade_name_entry_find("alpha") == NULL,
+              "the zero count answers zero");
+    }
+
     /* HUD post / menu-selection chain (2026-10-25): the surface-type halves
      * over a written surface map, the kind gate, and the guarded paths. */
     {

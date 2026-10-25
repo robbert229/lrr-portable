@@ -2363,6 +2363,22 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Upgrade debit + name table** (2026-10-25): two frontier rows land in
+`cmd.*`. `upgrade_resource_debit` (0x41f9e0) subtracts the amount from the
+current level's `+0xa0` (selector 0) or `+0xac` (nonzero) under the level
+gate, then steps the overlay animation outside the gate — pinned quirk: the
+debit half steps with mode 0 (the add half is mode 1), and a nonzero selector
+steps the constant five regardless of the amount while selector 0 steps the
+amount. `upgrade_name_entry_find` (0x42cd50) scans the loader's upgrade-name
+table case-insensitively and answers the matching 16-byte record's address,
+zero on a cold table or miss. Deviation: the loader's globals (record block,
+name-pointer array, count) have no ported owner (the config seam stays
+apart), so the table rides zero-init own storage behind an install hook,
+window-guarded to the 36 entries the corpus region's stride spans; NULL
+names skip the compare and a dangling record base is guarded. `cmd_test`
+pins the counter selectors, the five-step constant, the no-level path, the
+fold, the window clamp, and the install guards.
+
 **Scene-resource visibility setter** (2026-10-25): one frontier row lands in
 `record.*`. `scene_resource_visibility_set` (0x46d2c0) raises or clears bit 1 of
 the record's `+0x1e8` word and routes the raw flag through the visibility leaf:
