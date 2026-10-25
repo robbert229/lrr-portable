@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 861 | 33.6% |
+| ported | 866 | 33.8% |
 | anchored | 4 | 0.2% |
-| named | 1652 | 64.4% |
+| named | 1647 | 64.2% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (861 functions)
+  (866 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1652 functions)
+  citation yet (1647 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1657 (64.6%).**
+**Game logic remaining to port: 1652 (64.4%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -163,7 +163,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00409d50` | EntityCellPathEffectsApply |
 | `0x00409f20` | EntityPlacementCommandsBuildOnce |
 | `0x00409ff0` | EntityDestroyTrackedPointerCleanup |
-| `0x0040a3d0` | ScreenEffectFlagsClearAndRelease |
 | `0x0040a400` | PreloadNumberedBitmaps |
 | `0x0040a4b0` | QuadMeshRenderRecordCreate |
 | `0x0040a5c0` | QuadMeshRenderRecordPoolSlotAllocate |
@@ -525,7 +524,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00438310` | PooledRecordChunkAllocateAndLink |
 | `0x004383b0` | RoverWorkQueueUpdate |
 | `0x00438460` | EntityKindRecordUpdateDispatch |
-| `0x00438580` | EntityFlag80000000SetOrClear |
 | `0x00438610` | EntityCreateWithPosition |
 | `0x00438670` | EntityAtGridPositionLookup |
 | `0x00438770` | BuildingUpgradeResourceAdmissionCheck |
@@ -567,7 +565,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0043a5f0` | EntityVisualResourceGetOrCreate |
 | `0x0043a650` | ActionKindEntityCreateAndCommandIssue |
 | `0x0043a850` | EntityActionRecordConsumeAndCleanup |
-| `0x0043a8f0` | SimulationUpdateCounterAdd |
 | `0x0043a910` | SimulationModeCounterAdd |
 | `0x0043a930` | TrackedEntityPointerArrayRemove |
 | `0x0043a9f0` | EntityPairInteractionGate |
@@ -584,7 +581,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0043bbc0` | EntityDetachCarriedObjectAndResetState |
 | `0x0043bc40` | ObjectiveSidecarAppendGate |
 | `0x0043c200` | EntityStatePairPredicate |
-| `0x0043c280` | EntityNestedFloatAddUnlessBlocked |
 | `0x0043c2b0` | PeriodicTimer25Advance |
 | `0x0043c3e0` | EntityType26CommandCompletionGate |
 | `0x0043c4c0` | EntityFinishState1A |
@@ -634,7 +630,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00443710` | AdjacentPositionCandidateFind |
 | `0x00443840` | EntityRouteCellCandidateAccept |
 | `0x004438b0` | PathStepAdvanceAndArrivalCheck |
-| `0x004440a0` | LinkedEntityFlagAndCommandUpdate |
 | `0x004440f0` | ActivityTimeoutAccumulateAndRaise |
 | `0x00444260` | EntityRandomCellStepRouteIssue |
 | `0x00444460` | FlaggedVectorStepCommandIssue |

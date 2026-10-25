@@ -2584,3 +2584,60 @@ int* active_object_list_word(void)
 {
     return is_in_game() != 0 ? &s_active_object_ingame : &s_active_object_outgame;
 }
+
+/* --- the screen-effect release (see frontend.hpp) --------------------------
+ * The corpus table runs ten entries from DAT_004b8aa0 at stride 0x20: the
+ * handle sits at entry +0, the flag dword twenty-eight bytes above the
+ * corpus's walk pointer. Unowned: zero-init statics here. */
+#define SCREEN_EFFECT_COUNT 10
+static void*    s_screen_effect_handle[SCREEN_EFFECT_COUNT];
+static uint32_t s_screen_effect_flags[SCREEN_EFFECT_COUNT];
+static int     s_screen_effect_seam_calls;
+static void*   s_screen_effect_seam_last_handle;
+static int     s_screen_effect_seam_last_flag;
+
+void screen_effect_flags_clear_and_release(void)
+{
+    for (int i = 0; i < SCREEN_EFFECT_COUNT; ++i) {
+        if ((s_screen_effect_flags[i] & 1u) != 0u) {
+            s_screen_effect_flags[i] &= ~1u;
+            ++s_screen_effect_seam_calls;
+            s_screen_effect_seam_last_handle = s_screen_effect_handle[i];
+            s_screen_effect_seam_last_flag = 1;
+        }
+    }
+}
+
+void screen_effect_entry_set(int index, void* handle, uint32_t flags)
+{
+    if (index >= 0 && index < SCREEN_EFFECT_COUNT) {
+        s_screen_effect_handle[index] = handle;
+        s_screen_effect_flags[index] = flags;
+    }
+}
+void* screen_effect_handle_peek(int index)
+{
+    return (index >= 0 && index < SCREEN_EFFECT_COUNT)
+               ? s_screen_effect_handle[index] : NULL;
+}
+uint32_t screen_effect_flag_peek(int index)
+{
+    return (index >= 0 && index < SCREEN_EFFECT_COUNT)
+               ? s_screen_effect_flags[index] : 0u;
+}
+void screen_effect_seam_reset(void)
+{
+    s_screen_effect_seam_calls = 0;
+    s_screen_effect_seam_last_handle = NULL;
+    s_screen_effect_seam_last_flag = 0;
+}
+int screen_effect_seam_calls(void) { return s_screen_effect_seam_calls; }
+void screen_effect_seam_last(void** out_handle, int* out_flag)
+{
+    if (out_handle != NULL) {
+        *out_handle = s_screen_effect_seam_last_handle;
+    }
+    if (out_flag != NULL) {
+        *out_flag = s_screen_effect_seam_last_flag;
+    }
+}

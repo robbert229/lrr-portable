@@ -1258,6 +1258,79 @@ int main(int argc, char** argv)
         entity_activity23_state_transition(NULL); /* guarded */
     }
 
+    /* The entity counter + link band (2026-10-24). */
+    {
+        GameContext ctx;
+        game_context_init(&ctx);
+        LevelState lv;
+        memset(&lv, 0, sizeof lv);
+        ctx.level = &lv;
+        /* SimulationUpdateCounterAdd: the loop + scene-state pass. */
+        entity_state_flags_set(0u);
+        global_object_field98_add(&lv, 9);
+        simulation_update_counter_add(&ctx, 3);
+        CHECK((int)level_field8c_get(&lv) == 3 && entity_state_flags_peek() == 4u
+                  && level_field98_get(&lv) == 0u,
+              "the counter loops and the state pass clears +0x98");
+        simulation_update_counter_add(&ctx, 0);
+        CHECK((int)level_field8c_get(&lv) == 3, "a zero count leaves it alone");
+        simulation_update_counter_add(NULL, 2); /* guarded */
+        entity_state_flags_set(0u);
+
+        /* EntityFlag80000000SetOrClear: set/clear + the state pass. */
+        EntitySlot e;
+        memset(&e, 0, sizeof e);
+        global_object_field98_add(&lv, 5);
+        entity_flag80000000_set_or_clear(&ctx, &e, 0);
+        CHECK(e.flags_3e8 == 0x80000000u && entity_state_flags_peek() == 4u
+                  && level_field98_get(&lv) == 0u,
+              "the clear param raises the high bit and runs the pass");
+        entity_flag80000000_set_or_clear(&ctx, &e, 1);
+        CHECK(e.flags_3e8 == 0u, "the set param clears the high bit");
+        entity_flag80000000_set_or_clear(&ctx, NULL, 0); /* guarded */
+        entity_state_flags_set(0u);
+
+        /* EntityNestedFloatAddUnlessBlocked: the gate + fold. */
+        static char rec[0xe0];
+        memset(rec, 0, sizeof rec);
+        const float add = 2.5f;
+        __builtin_memcpy(rec + 0xdc, &add, sizeof add);
+        memset(&e, 0, sizeof e);
+        e.stats_record = rec;
+        e.type = 5;
+        float v = 1.0f;
+        CHECK(entity_nested_float_add_unless_blocked(&e, &v) == 0
+                  && v == 3.5f,
+              "the non-type-4 fold lands regardless of the gate");
+        e.type = 4;
+        v = 1.0f;
+        entity_nested_float_add_unless_blocked(&e, &v);
+        CHECK(v == 1.0f, "the ineligible type-4 entity skips the fold");
+        e.flags_3e8 = 0x20000000u; /* eligible half of the strict clause */
+        entity_nested_float_add_unless_blocked(&e, &v);
+        CHECK(v == 3.5f, "the eligible type-4 fold lands");
+        entity_nested_float_add_unless_blocked(NULL, &v); /* guarded */
+
+        /* LinkedEntityFlagAndCommandUpdate: the link flag + drop. */
+        EntitySlot parent;
+        EntitySlot child;
+        memset(&parent, 0, sizeof parent);
+        memset(&child, 0, sizeof child);
+        child.type = 4;
+        parent.link_2fc = (uintptr_t)&child;
+        linked_entity_flag_and_command_update(&parent);
+        CHECK(parent.flags_3ec == 0x40u && child.flags_3ec == 0x40u
+                  && parent.cmd_head == NULL,
+              "the linked pair raises the bit and drops kind 0x1c");
+        child.type = 3;
+        parent.flags_3ec = 0u;
+        linked_entity_flag_and_command_update(&parent);
+        CHECK(parent.flags_3ec == 0u, "the non-type-4 link stays silent");
+        parent.link_2fc = 0u;
+        linked_entity_flag_and_command_update(&parent); /* clear link */
+        linked_entity_flag_and_command_update(NULL); /* guarded */
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "ai_test: %d failure(s)\n", s_failures);
         return 1;

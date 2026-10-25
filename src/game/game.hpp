@@ -250,7 +250,8 @@ typedef struct EntitySlot {
      * clamps it to the entity's own +0x340 bound, clearing the +0x2fc
      * link field in passing. */
     float    progress_344;   /* +0x344: routing progress float            */
-    uint32_t link_2fc;       /* +0x2fc: link field the advance clears     */
+    uintptr_t link_2fc;    /* +0x2fc: link field the advance clears (corpus
+                                 * dword link, widened for the port) */
     /* --- path list (corpus +0x24 buffer / +0x28 count / +0x2c index) --- */
     AiWaypoint wp[AI_WAYPOINTS_MAX];
     int      wp_count;       /* +0x28: valid entries                      */

@@ -8,6 +8,7 @@
 
 #include "ai.hpp"
 #include "cmd.hpp"
+#include "entity.hpp"
 #include "level.hpp"
 #include "mission.hpp"
 
@@ -1054,4 +1055,57 @@ void entity_activity23_state_transition(EntitySlot* e)
         ai_set_activity(e, 0x23, 0); /* FUN_004409e0; 0x447c40 folds here */
         attach_idle_record(e);       /* FUN_00403f30 */
     }
+}
+
+/* --- the entity counter + link band (see ai.hpp) --------------------------- */
+
+void simulation_update_counter_add(GameContext* ctx, int count)
+{
+    if (ctx == NULL) {
+        return; /* deviation: the corpus strides its global level word */
+    }
+    for (; count != 0; count = count - 1) {
+        global_object_field8c_increment(ctx->level);
+    }
+    entity_activity_scene_state_update(ctx);
+}
+
+void entity_flag80000000_set_or_clear(GameContext* ctx, EntitySlot* e,
+                                      int param)
+{
+    if (e == NULL) {
+        return; /* deviation: the corpus strides blindly */
+    }
+    if (param == 0) {
+        e->flags_3e8 |= 0x80000000u;
+    } else {
+        e->flags_3e8 &= 0x7fffffffu;
+    }
+    entity_activity_scene_state_update(ctx);
+}
+
+int entity_nested_float_add_unless_blocked(EntitySlot* e, float* value)
+{
+    if (e == NULL || value == NULL) {
+        return 0; /* deviation: the corpus strides blindly */
+    }
+    if (e->type == 4 && entity_shared_eligibility_check(e, 0) == 0) {
+        return 0;
+    }
+    *value = entity_stats_float_atdc(e) + *value;
+    return 0; /* corpus answers 0 on both paths */
+}
+
+void linked_entity_flag_and_command_update(EntitySlot* e)
+{
+    if (e == NULL) {
+        return; /* deviation: the corpus strides blindly */
+    }
+    EntitySlot* child = (EntitySlot*)(uintptr_t)e->link_2fc;
+    if (child == NULL || child->type != 4) {
+        return;
+    }
+    e->flags_3ec |= 0x40u;
+    child->flags_3ec |= 0x40u;
+    cmd_chain_drop(e, 0x1c);
 }
