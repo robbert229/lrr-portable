@@ -60,4 +60,36 @@ void ptrstack_for_each(PtrStack* stack, PtrStackCallback cb, void* ctx);
 void callback_state_list_dispose(void* stack_allocation);
                                                 /* FUN_0040f850 */
 
+/* --- record-creation leaves (2026-10-25; findings 393/252/250/446) ---------
+ * SceneNodeRecordCreate (FUN_0040f6c0): builds the 0xa0-byte scene-node
+ * record — dwords 6/7/9/10/11/12/13 zero, dword 8 pinned to 1.0f, the
+ * param_2 triple at +0/+4/+8 and the param_1 triple at +12/+16/+20 (zeros
+ * when the triple is NULL), param_3..param_6 duplicated into dword pairs
+ * (0xf/0x13, 0x10/0x14, 0x11/0x15, 0xe/0x12), param_7 at dword 0x26, all
+ * over the engine heap. NULL on heap failure (deviation: assert).
+ * CallbackStateRecordCreate (FUN_0040f7d0): the 0x28-byte state record —
+ * native node pointer at +0 (LP64 widening), +0xc/+0x10 flag dwords from
+ * the two triples' non-nullness, node result stored even when its own
+ * allocation failed (pinned quirk).
+ * CallbackRecordAllocateInitialize (FUN_004628e0): the 0x28-byte record,
+ * dwords zeroed, with dwords 0..5 = param_3/param_2/param_3/param_4/
+ * param_5/param_6 (param_3 rides twice — pinned) and dword 8 (LP64: native)
+ * holding a link slot whose first word is a zeroed 0x20-byte buffer. The
+ * caller's out slot is written even when the record allocation fails
+ * (pinned quirk), guarded for NULL (deviation). */
+void* scene_node_record_create(const uint32_t* triple1,
+                               const uint32_t* triple2, uint32_t param_3,
+                               uint32_t param_4, uint32_t param_5,
+                               uint32_t param_6, uint32_t param_7);
+                                                /* FUN_0040f6c0 */
+void* callback_state_record_create(const uint32_t* triple1,
+                                   const uint32_t* triple2, uint32_t param_3,
+                                   uint32_t param_4, uint32_t param_5,
+                                   uint32_t param_6);
+                                                /* FUN_0040f7d0 */
+void* callback_record_allocate_initialize(void** out_record, uint32_t param_2,
+                                          uint32_t param_3, uint32_t param_4,
+                                          uint32_t param_5, uint32_t param_6);
+                                                /* FUN_004628e0 */
+
 #endif /* LEGORRR_GODS98_PTRSTACK_HPP */

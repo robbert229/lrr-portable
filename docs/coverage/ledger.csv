@@ -328,9 +328,9 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0040f330,FUN_0040f330,named,LavaErosionNeighborMutate,0,2854
 0040f5e0,FUN_0040f5e0,ported,GlobalConfigValueSet,1,81
 0040f5f0,FUN_0040f5f0,named,ErosionEightNeighborPropagate,0,1029
-0040f6c0,FUN_0040f6c0,named,SceneNodeRecordCreate,0,1108
+0040f6c0,FUN_0040f6c0,ported,SceneNodeRecordCreate,3,1108
 0040f7b0,FUN_0040f7b0,ported,OptionalResourceDestroy,2,101
-0040f7d0,FUN_0040f7d0,named,CallbackStateRecordCreate,0,649
+0040f7d0,FUN_0040f7d0,ported,CallbackStateRecordCreate,3,649
 0040f850,FUN_0040f850,ported,CallbackStateListDispose,3,243
 0040f890,FUN_0040f890,named,DirectionDrivenHeadingAngleStep,0,805
 0040f920,FUN_0040f920,named,KindTwoSteeringTorqueApply,0,1995
@@ -1420,7 +1420,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00462890,FUN_00462890,ported,GlobalCounterAt0055532cIncrement,1,76
 004628a0,FUN_004628a0,ported,GlobalFloatAccumulator_00555330Add,1,179
 004628c0,FUN_004628c0,ported,GlobalFloatAccumulate_00555120,1,91
-004628e0,FUN_004628e0,named,CallbackRecordAllocateInitialize,0,887
+004628e0,FUN_004628e0,ported,CallbackRecordAllocateInitialize,3,887
 00462960,FUN_00462960,ported,TaskTableContentsRelease,3,595
 004629d0,FUN_004629d0,named,PanelEventEntryAppend,0,1632
 00462ab0,FUN_00462ab0,ported,RecordField18Set,1,112
