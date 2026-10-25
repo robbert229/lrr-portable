@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 876 | 34.2% |
+| ported | 880 | 34.3% |
 | anchored | 4 | 0.2% |
-| named | 1637 | 63.8% |
+| named | 1633 | 63.7% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (876 functions)
+  (880 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1637 functions)
+  citation yet (1633 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1642 (64.0%).**
+**Game logic remaining to port: 1638 (63.9%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -146,7 +146,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00409790` | CellPathRecordRegisterApply |
 | `0x00409940` | RefreshEightNeighborCells |
 | `0x00409a90` | WorldObjectCreateWithTransform |
-| `0x00409cd0` | CellCardinalNeighborApply |
 | `0x00409d50` | EntityCellPathEffectsApply |
 | `0x00409f20` | EntityPlacementCommandsBuildOnce |
 | `0x00409ff0` | EntityDestroyTrackedPointerCleanup |
@@ -256,8 +255,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00410b30` | GlobalPointerGet_004c76ab24 |
 | `0x00410b40` | GlobalPointerGet_004c76ab28 |
 | `0x00410b50` | GlobalPointerGet_004c76ab3c |
-| `0x00410b90` | BoundedFloatRecordCreate |
-| `0x00410bf0` | MenuItemNumericRangeRecordAllocate |
 | `0x00410c70` | ResourceVariantRecordRelease |
 | `0x00410d50` | MenuTextRecordMake |
 | `0x00410e20` | MenuButtonRecordMake |
@@ -303,7 +300,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004173e0` | SavTreeLoad |
 | `0x004179b0` | SavMenuList |
 | `0x00417df0` | SavRefreshSlots |
-| `0x00417f40` | SavWriteRecord |
 | `0x00418000` | ShowLevelOverlayForCurrentSelection |
 | `0x00418040` | CampaignChainSnapshotCreate |
 | `0x004180c0` | OptionsContextCopyAndReplaceResource |

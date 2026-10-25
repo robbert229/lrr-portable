@@ -380,4 +380,25 @@ void ui_record_callback_forward(const void* const* ui_record,
 uint32_t record_flag_bit_test(const void* record, uint32_t bit_index,
                               int reject_masked);   /* FUN_0046cf40 */
 
+/* --- the UI record factories (2026-10-24; findings 305/397) -----------------
+ * BoundedFloatRecordCreate (FUN_00410b90): a `kind` record bounded to the
+ *   open interval (min, max) — rejected when min >= max — carrying six
+ *   payload words through the engine heap.
+ * MenuItemNumericRangeRecordAllocate (FUN_00410bf0): the slider variant's
+ *   wider record: kind + int bounds + twelve payload words through the same
+ *   gate. Both answer NULL on rejection or heap failure.
+ * Deviation: the corpus strides its windows as dwords; both records land
+ * in the port's record window (field n at record + n*sizeof(void*)). */
+void* bounded_float_record_create(int kind, float min_v, float max_v,
+                                  uint32_t f3, uint32_t f4, uint32_t f5,
+                                  uint32_t f6);                      /* FUN_00410b90 */
+void* menu_item_numeric_range_record_allocate(int kind, int min_v, int max_v,
+                                              uint32_t f3, uint32_t f4,
+                                              uint32_t f5, uint32_t f6,
+                                              uint32_t f7, uint32_t f8,
+                                              uint32_t f9, uint32_t f10,
+                                              uint32_t f11, uint32_t f12,
+                                              uint32_t f13, uint32_t f14);
+                                                                    /* FUN_00410bf0 */
+
 #endif /* LEGORRR_GODS98_RECORD_HPP */

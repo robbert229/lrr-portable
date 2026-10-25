@@ -2363,6 +2363,18 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Record factories, cardinal neighbors + a late citation** (findings 305/397/448/408):
+`record.*` ports `bounded_float_record_create` (0x410b90 — the (min, max)
+open-interval gate, kind + bounds + payload in the port record window) and
+`menu_item_numeric_range_record_allocate` (0x410bf0 — the slider variant's
+wider window in the corpus's late-bounds field order), `level.*` ports
+`cell_cardinal_neighbor_apply` (0x409cd0 — the four refresh dispatches over
+the north/east/south/west neighbor cells, the anchor cell left untouched),
+and `save_write_record` gains its `SavWriteRecord @ 0x417f40` citation (the
+implementation — the gated 0x318c blob copy with the record-table grow —
+predated the ledger quote). `record_test` and `level_test` pin the windows,
+gates, and sweeps.
+
 **96-bit add, focus-scroll commit + pool free-all** (findings 375/102/437/398/374):
 `crt.*` ports `crt_uint96_add` (0x499fe0 — the three-limb add through the
 ported carry helper: the limb-0 carry bumps limb 1 with +1 and, if that

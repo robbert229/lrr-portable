@@ -787,3 +787,77 @@ void object_pool_lists_free_all(void* pools)
         __builtin_memcpy((char*)pools + slot, &zero, sizeof zero);
     }
 }
+
+/* --- the UI record factories (see record.hpp) ------------------------------
+ * Corpus record windows stride as dwords; the port lays both shapes out as
+ * native field words (the crt_stream_record window convention). Field reads
+ * by later band members follow this layout. */
+
+static void record_window_put(void* rec, int field, const void* src)
+{
+    if (rec == NULL || src == NULL) {
+        return;
+    }
+    __builtin_memcpy((char*)rec + (size_t)field * sizeof(void*), src,
+                     sizeof(void*));
+}
+
+/* BoundedFloatRecordCreate (FUN_00410b90) — see record.hpp. */
+void* bounded_float_record_create(int kind, float min_v, float max_v,
+                                  uint32_t f3, uint32_t f4, uint32_t f5,
+                                  uint32_t f6)
+{
+    if (!(min_v < max_v)) {
+        return NULL;
+    }
+    void* rec = engine_heap_alloc(7 * sizeof(void*));
+    if (rec == NULL) {
+        return NULL;
+    }
+    const uint32_t kind_w = (uint32_t)kind;
+    record_window_put(rec, 0, &kind_w);
+    record_window_put(rec, 1, &min_v);
+    record_window_put(rec, 2, &max_v);
+    record_window_put(rec, 3, &f3);
+    record_window_put(rec, 4, &f4);
+    record_window_put(rec, 5, &f5);
+    record_window_put(rec, 6, &f6);
+    return rec;
+}
+
+/* MenuItemNumericRangeRecordAllocate (FUN_00410bf0) — see record.hpp.
+ * Field order follows the corpus stores: bounds land late, payload first. */
+void* menu_item_numeric_range_record_allocate(int kind, int min_v, int max_v,
+                                              uint32_t f3, uint32_t f4,
+                                              uint32_t f5, uint32_t f6,
+                                              uint32_t f7, uint32_t f8,
+                                              uint32_t f9, uint32_t f10,
+                                              uint32_t f11, uint32_t f12,
+                                              uint32_t f13, uint32_t f14)
+{
+    if (!(min_v < max_v)) {
+        return NULL;
+    }
+    const uint32_t bounds_lo = (uint32_t)min_v, bounds_hi = (uint32_t)max_v;
+    void* rec = engine_heap_alloc(15 * sizeof(void*));
+    if (rec == NULL) {
+        return NULL;
+    }
+    const uint32_t kind_w = (uint32_t)kind;
+    record_window_put(rec, 0, &kind_w);
+    record_window_put(rec, 3, &f3);
+    record_window_put(rec, 4, &f4);
+    record_window_put(rec, 5, &f5);
+    record_window_put(rec, 6, &f6);
+    record_window_put(rec, 7, &f7);
+    record_window_put(rec, 8, &f8);
+    record_window_put(rec, 9, &f9);
+    record_window_put(rec, 10, &f10);
+    record_window_put(rec, 11, &f11);
+    record_window_put(rec, 12, &f12);
+    record_window_put(rec, 1, &bounds_lo);
+    record_window_put(rec, 2, &bounds_hi);
+    record_window_put(rec, 13, &f13);
+    record_window_put(rec, 14, &f14);
+    return rec;
+}
