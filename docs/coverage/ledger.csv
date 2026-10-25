@@ -663,7 +663,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00427f80,FUN_00427f80,named,LevelUpgradeNameStringsLoad,0,1071
 00428020,FUN_00428020,named,EntityCommandStatusFeedbackDispatch,0,6657
 00428330,FUN_00428330,named,TerrainCommandFeedbackDispatch,0,6919
-00428780,FUN_00428780,named,TerrainCellCommandPredicate,0,634
+00428780,FUN_00428780,ported,TerrainCellCommandPredicate,3,634
 00428800,FUN_00428800,ported,ActionFeedbackSoundDispatch,2,735
 004288e0,FUN_004288e0,named,LevelDebugInputCellMutatorDispatch,0,8041
 00429160,FUN_00429160,named,TerrainCellPaletteResourceAtGridPosition,0,332
@@ -1244,7 +1244,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00454b80,FUN_00454b80,ported,ObjectiveVoiceAliasRaiseGateBit27,2,115
 00455300,FUN_00455300,anchored,,0,185
 00456210,FUN_00456210,ported,FlhMagicUuNoop,1,49
-00456240,FUN_00456240,ported,SystemStateFlags,1,60
+00456240,FUN_00456240,ported,SystemStateFlags,2,60
 00456550,FUN_00456550,ported,SetSystemStateFlags,1,98
 004565f0,FUN_004565f0,named,EngineModeSet,0,195
 00456640,FUN_00456640,ported,GlobalFlagGet_004ff978,1,60

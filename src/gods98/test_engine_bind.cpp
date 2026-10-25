@@ -13,6 +13,7 @@
 #include "view.hpp"
 #include "record.hpp"
 #include "crt.hpp"
+#include "message.hpp"
 
 static int s_failures = 0;
 
@@ -305,6 +306,34 @@ int main(void)
         CHECK(ec.debug == 2u && *w == 0x28u, "the null context still fires the panel write");
         panel_selection_highlight_toggle(NULL, 0);
         panel_draw_records_set(6, NULL);
+    }
+
+    /* TerrainCellCommandPredicate (FUN_00428780): the system-word gate
+     * chain, then the surface-byte occupancy on the bound 2x1 grid. */
+    {
+        EngineContext ec = {};
+        ec.level_block = level;
+        message_set_system_state(0u);
+        CHECK(terrain_cell_command_predicate(&ec, 0, 0) == 0,
+              "the dead system word answers not-allowed");
+        message_set_system_state(2u);
+        CHECK(terrain_cell_command_predicate(&ec, 9, 9) == 1,
+              "with bits 8 and 4 clear the gate free-passes (deviation: "
+              "out-of-window cells answer open too)");
+        message_set_system_state(3u);
+        CHECK(terrain_cell_command_predicate(&ec, 0, 0) == 1,
+              "the occupied cell cannot block the free-pass branch");
+        message_set_system_state(14u);
+        CHECK(terrain_cell_command_predicate(&ec, 1, 0) == 1
+                  && terrain_cell_command_predicate(&ec, 0, 0) == 0,
+              "with bit 8 raising the occupancy branch, the empty cell "
+              "opens and the occupied one blocks");
+        CHECK(terrain_cell_command_predicate(&ec, 2, 0) == 0,
+              "the out-of-bounds cell answers not-open (deviation)");
+        message_set_system_state(13u);
+        CHECK(terrain_cell_command_predicate(&ec, 1, 0) == 0,
+              "bit 4 without bit 1 answers not-allowed");
+        message_set_system_state(0u);
     }
 
     if (s_failures == 0) {

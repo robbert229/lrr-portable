@@ -2363,6 +2363,18 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Cell-command gate, system-word chain + voxel occupancy**
+(2026-10-24):
+`engine.*` ports `terrain_cell_command_predicate` (0x428780 — the
+cell-command gate: an unconditional pass while the system-state word is
+nonzero with bits 8 AND 4 both clear, else the occupancy branch under bit
+1 where the target cell's surface byte (voxel +0x04, height-major index)
+must be zero. The corpus re-reads its system word through the accessor
+and strides the voxel blindly — the port reads once and answers through
+the bounds-checking voxel accessor, deviations pinned). `enginebind_test`
+pins all three gate shapes against the bound 2×1 grid: free-pass,
+occupancy split, and the out-of-window answer.
+
 **Token-pool grow, doubling free chunks**
 (2026-10-24):
 `block.*` ports `block_text_token_pool_grow` (0x479490 — the corpus's

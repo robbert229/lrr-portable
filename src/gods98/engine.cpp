@@ -2,6 +2,7 @@
 #include "camera.hpp"
 #include "engine.hpp"
 #include "mainsim.hpp"
+#include "message.hpp"
 #include "tickers.hpp"
 #include "view.hpp"
 #include "record.hpp"
@@ -404,4 +405,28 @@ void panel_selection_highlight_toggle(EngineContext* ctx, int on)
         }
         panel_item_flag8_set_if_enabled(6, 2, 0);
     }
+}
+
+/* TerrainCellCommandPredicate (FUN_00428780) — see engine.hpp. The corpus
+ * re-reads its system-state word through FUN_00456240 and strides the
+ * voxel cell blindly; the port reads it once and answers through the
+ * bounds-checking voxel accessor (deviations). CurrentLevelGet's block is
+ * the bound level_block here. */
+int terrain_cell_command_predicate(const EngineContext* ctx, int x, int y)
+{
+    const uint32_t s = system_state_flags_get();
+    if (s != 0u) {
+        if ((s & 8u) == 0u) {
+            if ((s & 4u) == 0u) {
+                return 1;
+            }
+        }
+    }
+    if ((s & 2u) != 0u) {
+        const uint8_t* cell = engine_level_voxel(ctx, x, y);
+        if (cell != NULL && cell[0x4] == 0u) {
+            return 1; /* deviation: an absent/occupied cell blocks */
+        }
+    }
+    return 0;
 }
