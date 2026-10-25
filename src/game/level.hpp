@@ -695,14 +695,47 @@ int terrain_cell_dirty_flag(const void* terrain, int x, int y);
 /* CellCoordinateTimestampRemember (FUN_0040ee00): store the coordinate
  * pair and the CURRENT TIMESTAMP GLOBAL into the first free record of
  * the 1000-entry dedup table; a full table stores nothing. The corpus's
- * timestamp word (_DAT_004d78c0) is the tick counter its message loop
- * advances; the port models no writer yet, so the stored stamps stay
- * zero (deviation). */
+ * timestamp word (_DAT_004d78c0) is seeded by ErosionTimingStateInit
+ * (port: erosion_timing_state_init); until one runs it reads zero. */
 void cell_coordinate_timestamp_remember(int x, int y);
 
 /* CellCoordinateTimestampExists (FUN_0040efb0): answer 1 when an active
  * record holds the exact pair, 0 when the scan runs off the table. */
 uint32_t cell_coordinate_timestamp_exists(int x, int y);
+
+/* ErosionTimingStateInit (FUN_0040e930): seed the erosion timing band and
+ * wipe its scratch. The three float parameters land scaled by 25 (the
+ * second additionally by 0.2) in corpus-order; the timing word lands as
+ * the port's timestamp tick with its float bits riding (the corpus keeps
+ * it as a float word while the port's timestamp model reads a count —
+ * deviation). The two scratch regions (2000 and 1000 dwords) and the
+ * clear word land as module statics — the unowned-global deviation; the
+ * corpus's scratch consumers are the hook-stubbed tickers
+ * (FUN_0040e7f0 / FUN_0040e990). */
+void erosion_timing_state_init(float value_a, float value_b, float value_c);
+float erosion_decay_scale_peek(void);          /* port hook */
+float erosion_delay_scale_peek(void);          /* port hook */
+int   erosion_timestamp_tick_peek(void);       /* port hook */
+int   erosion_scratch_peek(int which, int index); /* which 0: 2000-mark
+                                                   * region, 1: 1000-ticket
+                                                   * region (port hook) */
+
+/* LavaErosionDelayFromCell (FUN_0040e9c0): the cell's +6 erosion byte
+ * counts down from 6 and rides the timing scale times 25; the corpus
+ * strides the grid and timing word blindly — the port guards the cell
+ * (deviation: no grid/no level answers zero). */
+float lava_erosion_delay_from_cell(const LevelState* s, int x, int y);
+
+/* LavaErosionNeighborCheck (FUN_0040f000): when the seed cell's +2 type
+ * byte reads 6, sweep the four cardinal neighbours; a neighbour that is
+ * busy-free (flag word +0x08 sign-clear with bit 3 set, byte +6 nonzero)
+ * and carries no coordinate timestamp answers 1 with its coordinates in
+ * the out pair. Deviations: the corpus strides out-of-bounds neighbours
+ * and the seed blindly — the port skips missing cells; and the first
+ * neighbour's x-offset comes off uninitialized stack in the corpus
+ * (stack residue pinned to 0, giving the cardinal ring below). */
+int lava_erosion_neighbor_check(const LevelState* s, int seed_x, int seed_y,
+                                int out_xy[2]);
 
 /* CellDirtyQueuePushAndClear (FUN_00450960): the terrain-owned dirty
  * cell queue over the physical block table. push != 0: when the cell's

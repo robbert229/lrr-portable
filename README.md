@@ -2363,6 +2363,20 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Erosion timing band** (2026-10-25): three frontier rows land in
+`level.*`. `erosion_timing_state_init` (0x40e930) seeds the timing scales
+(×25, second also ×0.2) and wipes the 2000/1000-dword scratch as guarded
+own storage (the hook-stubbed tickers own the consumers); the timing
+word lands in the timestamp tick model with its float bits riding.
+`lava_erosion_delay_from_cell` (0x40e9c0) counts the cell's +6 byte down
+from six over the delay scale (negative past six, faithful).
+`lava_erosion_neighbor_check` (0x40f000) sweeps the cardinal ring off a
+type-6 seed, answering on a busy-free untimestamped neighbour — the
+uninitialized first x-offset in the corpus table is pinned to zero
+(deviation). The `cell_coordinate_timestamp_remember` header note gains
+its first writer. `level_test` pins the seeds, the delay gate, and the
+neighbour sweep against a hand-built grid.
+
 **CRT integer/string helper band** (2026-10-25): six frontier rows land in
 `crt.*`. `uint96_copy` (0x497a80) walks three dwords forward, reproducing
 the corpus's overlap word-duplication. `crt_string_duplicate` (0x49b660)
