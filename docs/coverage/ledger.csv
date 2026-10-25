@@ -2458,7 +2458,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00497900,FUN_00497900,ported,UInt96HasNoBitsAtOrAbove,4,603
 00497970,FUN_00497970,ported,UInt96IncrementAtBit,4,712
 004979e0,FUN_004979e0,ported,UInt96ClearFromBit,4,834
-00497a80,FUN_00497a80,named,UInt96Copy,0,271
+00497a80,FUN_00497a80,ported,UInt96Copy,2,271
 00497aa0,FUN_00497aa0,ported,UInt96Zero,2,108
 00497ab0,FUN_00497ab0,ported,UInt96IsZero,2,213
 00497ad0,FUN_00497ad0,named,UInt96ShiftRight,0,900
@@ -2521,7 +2521,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0049b4c0,FUN_0049b4c0,named,CrtEnvironmentEntryFind,0,520
 0049b540,FUN_0049b540,named,CrtEnvironmentArrayClone,0,752
 0049b5b0,FUN_0049b5b0,named,CrtMultibyteCharacterSearch,0,845
-0049b660,FUN_0049b660,named,CrtStringDuplicate,0,1136
+0049b660,FUN_0049b660,ported,CrtStringDuplicate,2,1136
 0049b6b0,D3DRM.DLL::Direct3DRMCreate,runtime-import,D3DRM.DLL::Direct3DRMCreate,0,229
 0049b6b6,D3DRM.DLL::D3DRMVectorRandom,runtime-import,D3DRM.DLL::D3DRMVectorRandom,0,231
 0049b6bc,D3DRM.DLL::D3DRMVectorRotate,runtime-import,D3DRM.DLL::D3DRMVectorRotate,0,231
@@ -2559,7 +2559,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0049d950,FUN_0049d950,named,DisplayModeNameIndexFind,0,979
 0049d9d0,FUN_0049d9d0,named,DisplayRefreshRateControlsSync,0,685
 0049dab0,__strnicmp,runtime-import,__strnicmp,0,2043
-0049db60,FUN_0049db60,named,SignedDecimalToStringConvert,0,242
-0049dba0,FUN_0049dba0,named,CrtUnsignedIntegerFormatRadix,0,813
-0049dc10,FUN_0049dc10,named,StringToLowercase,0,1497
-0049dcd0,FUN_0049dcd0,named,StringToUpper,0,1499
+0049db60,FUN_0049db60,ported,SignedDecimalToStringConvert,2,242
+0049dba0,FUN_0049dba0,ported,CrtUnsignedIntegerFormatRadix,2,813
+0049dc10,FUN_0049dc10,ported,StringToLowercase,3,1497
+0049dcd0,FUN_0049dcd0,ported,StringToUpper,3,1499

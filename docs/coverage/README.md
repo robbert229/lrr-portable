@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 1013 | 39.5% |
+| ported | 1019 | 39.7% |
 | anchored | 4 | 0.2% |
-| named | 1501 | 58.5% |
+| named | 1495 | 58.3% |
 | runtime-import | 45 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (1013 functions)
+  (1019 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1501 functions)
+  citation yet (1495 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (45 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1506 (58.7%).**
+**Game logic remaining to port: 1500 (58.5%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -1472,7 +1472,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00497770` | CrtFpuControlWordUpdate |
 | `0x004977b0` | CrtFpuControlWordUpdateMask |
 | `0x004977d0` | CrtControlFlagsTranslate |
-| `0x00497a80` | UInt96Copy |
 | `0x00497ad0` | UInt96ShiftRight |
 | `0x00497b90` | CrtExtended80ToBinaryFloat |
 | `0x00497d60` | CrtExtendedFloatConvertFormatA |
@@ -1522,7 +1521,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0049b4c0` | CrtEnvironmentEntryFind |
 | `0x0049b540` | CrtEnvironmentArrayClone |
 | `0x0049b5b0` | CrtMultibyteCharacterSearch |
-| `0x0049b660` | CrtStringDuplicate |
 | `0x0049c7c0` | ExpandWadPayload |
 | `0x0049c840` | WadPayloadDecodeDispatch |
 | `0x0049cc70` | WadBitstreamOutputInitialize |
@@ -1540,10 +1538,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0049d8d0` | DisplayModeMatchesFilterTuple |
 | `0x0049d950` | DisplayModeNameIndexFind |
 | `0x0049d9d0` | DisplayRefreshRateControlsSync |
-| `0x0049db60` | SignedDecimalToStringConvert |
-| `0x0049dba0` | CrtUnsignedIntegerFormatRadix |
-| `0x0049dc10` | StringToLowercase |
-| `0x0049dcd0` | StringToUpper |
 
 ## Suggested next port target
 

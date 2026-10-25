@@ -2363,6 +2363,19 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**CRT integer/string helper band** (2026-10-25): six frontier rows land in
+`crt.*`. `uint96_copy` (0x497a80) walks three dwords forward, reproducing
+the corpus's overlap word-duplication. `crt_string_duplicate` (0x49b660)
+copies strlen+1 through the engine allocator. `crt_unsigned_format_radix`
+(0x49dba0) folds digits through the corpus's `+ 'W'` lowercase letter
+half, guarded on radix < 2 (the corpus's divide loop never ends), and
+`crt_signed_to_string` (0x49db60) takes the corpus's sign half only for
+radix 10 — INT_MIN rides the wrapping magnitude as −2147483648.
+`crt_string_to_upper`/`crt_string_to_lower` (0x49dcd0 / 0x49dc10) fold the
+whole string on the pinned C-locale half (the DAT_00549180 locale branch
+rides the recorded locale-map chain). `crt_test` pins the overlap copy,
+radix digits, sign wrapping, and ASCII folds.
+
 **Config-seam + overlay/counter band** (2026-10-25): seven frontier rows
 land. `text_buffer_reset` (0x4859b0, heap.*) zeroes the text-output
 record's buffer sweep, +0x18 window, and flag words (the widened +0x14

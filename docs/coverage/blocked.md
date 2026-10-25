@@ -234,6 +234,10 @@ Grouped by blocker family; every row names its address and next action:
 - **CRT/loader/platform internals** — `CrtLocalUnwindFromFrame`
   (`0x496895`, PE unwind tables, shares `CrtUnwindAddressResolve`'s blocker),
   `CrtCodePageLocaleIdLookup` (`0x496530`, Win32 locale API),
+  `LocaleCharacterMapString` (`0x493ca0`, `LCMapStringA/W` + codepage
+  conversion — the DAT_00549180 locale half of the corpus string folds;
+  their pinned C-locale halves landed 2026-10-25 as
+  `crt_string_to_upper`/`crt_string_to_lower`),
   `CrtCtypeTablesReset` (`0x496590`, corpus ctype tables),
   `CrtHeapBlockFree` (`0x491710`) and `CRTHeapReleaseUnusedPages`
   (`0x491770`, arena pages, shares the `0x491840` blocker), `__fload`
