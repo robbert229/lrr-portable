@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 1083 | 42.2% |
+| ported | 1086 | 42.4% |
 | anchored | 4 | 0.2% |
-| named | 1432 | 55.9% |
+| named | 1429 | 55.7% |
 | runtime-import | 44 | 1.7% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (1083 functions)
+  (1086 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1432 functions)
+  citation yet (1429 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (44 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1437 (56.0%).**
+**Game logic remaining to port: 1434 (55.9%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -211,8 +211,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0040f2b0` | LavaErosionNeighborEligible |
 | `0x0040f330` | LavaErosionNeighborMutate |
 | `0x0040f5f0` | ErosionEightNeighborPropagate |
-| `0x0040f6c0` | SceneNodeRecordCreate |
-| `0x0040f7d0` | CallbackStateRecordCreate |
 | `0x0040f890` | DirectionDrivenHeadingAngleStep |
 | `0x0040f920` | KindTwoSteeringTorqueApply |
 | `0x0040fb00` | MatrixRotationComposeXYZ |
@@ -757,7 +755,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004624a0` | RewardFlhContextTick |
 | `0x00462600` | RewardTaskTextDrawAndScoreGate |
 | `0x00462700` | PointerOverrideExpiryTick |
-| `0x004628e0` | CallbackRecordAllocateInitialize |
 | `0x004629d0` | PanelEventEntryAppend |
 | `0x00462ad0` | RewardScrollTickerAdvanceAndDraw |
 | `0x00462da0` | IndexedSurfaceResourceAllocate |

@@ -2363,6 +2363,28 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Record-creation leaves** (2026-10-25): three frontier rows land in
+`ptrstack.*`, the module already owning the adjacent callback-state list
+disposal. `scene_node_record_create` (0x40f6c0) builds the 0xa0-byte scene-node
+record over the engine heap: counter slots clear, dword 8 pinned to 1.0f, the
+`param_2` triple at +0/+4/+8 and the `param_1` triple at +12/+16/+20 (zeros on
+NULL), `param_3…param_6` duplicated into the paired dword slots
+(0xf/0x13, 0x10/0x14, 0x11/0x15, 0xe/0x12), `param_7` at dword 0x26 — the whole
+block zero-init, so the tail dwords the corpus leaves as heap garbage land
+clean (deviation). `callback_state_record_create` (0x40f7d0) allocates the
+0x28-byte state record, creates the node record through it into slot +0 (LP64:
+native pointer), and records the two triples' non-nullness at dwords 3/4 —
+pinned quirk: the node result is stored even when its own allocation fails
+(slot +0 lands NULL while the flags still land). `callback_record_allocate_initialize`
+(0x4628e0) builds the 0x28-byte record with dwords zeroed and payload
+param_2…param_6 at dwords 1…5 — pinned: `param_3` rides **twice**, dwords 0
+and 2 — with dword 8 holding a link slot whose front points at a zeroed
+0x20-byte buffer; pinned quirk: the corpus writes the caller's out slot
+*outside* the allocation-success branch, so the slot lands NULL when the record
+allocation fails (the port guards the slot pointer itself). `ptrstack_test`
+pins the layouts, the 1.0 slot, the duplicate pairs, the flag dwords, and the
+slot/buffer ladder.
+
 **CRT control-flags/signal leaves + menu-list find** (2026-10-25): four
 frontier rows land across `crt.*` and `frontend.*`. `crt_control_flags_translate`
 (0x4977d0) folds the file flags: bits 0/2/3/4/5 cross over to 0x10/8/4/2/1,
