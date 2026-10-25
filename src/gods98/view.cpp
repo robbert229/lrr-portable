@@ -1021,6 +1021,26 @@ void scene_mesh_color_and_alpha_set(void* object, int block, float red,
     screen_effect_item_opacity_set(record, block, alpha, 4);
 }
 
+/* SceneMeshColorSet (FUN_00474ff0) — see view.hpp. Same inner-record ride
+ * as the alpha sibling; mode three lands the triple in the block's +0x34
+ * slot through the ported color-vector setter. */
+void scene_mesh_color_set(void* object, int block, float red, float green,
+                          float blue)
+{
+    void* mesh = NULL;
+    void* record = NULL;
+    if (object != NULL) {
+        __builtin_memcpy(&mesh, (const char*)object + 0xc, sizeof mesh);
+    }
+    if (mesh != NULL) {
+        __builtin_memcpy(&record, (const char*)mesh + 0xc, sizeof record);
+    }
+    if (record == NULL) {
+        return; /* deviation: the corpus strides both links blindly */
+    }
+    render_object_color_vector_set(record, block, red, green, blue, 3);
+}
+
 /* --- the rotated-pairs scratch (see view.hpp) ----------------------------- */
 
 #define ROT_PAIR_SLOTS 256 /* deviation: bounded scratch (blind DAT stride) */

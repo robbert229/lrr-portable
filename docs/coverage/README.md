@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 1044 | 40.7% |
+| ported | 1046 | 40.8% |
 | anchored | 4 | 0.2% |
-| named | 1471 | 57.4% |
+| named | 1469 | 57.3% |
 | runtime-import | 44 | 1.7% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (1044 functions)
+  (1046 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1471 functions)
+  citation yet (1469 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (44 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1476 (57.6%).**
+**Game logic remaining to port: 1474 (57.5%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -105,7 +105,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004078c0` | EntityCursorTargetStepResolveAndTimerAdvance |
 | `0x00407a10` | PendingTypeValueSlotSelect |
 | `0x00407d60` | BuildingTypeConfigRecordParse |
-| `0x004082e0` | SceneObjectScalarAdjustByDirection |
 | `0x004083a0` | SceneEntitySlotTableRebuild |
 | `0x00408570` | SceneActivityChange |
 | `0x004085f0` | SceneActivityChangeSecondary |
@@ -951,7 +950,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00474e30` | TerrainSurfacePropertySet |
 | `0x00474e90` | RenderObjectHierarchyFloat3Set |
 | `0x00474f10` | SceneObjectBoundsUnion |
-| `0x00474ff0` | SceneMeshColorSet |
 | `0x00475070` | SceneObjectCoordinateTransformInPlace |
 | `0x00475090` | SceneObjectCoordinateTransformToOutput |
 | `0x004750b0` | RenderObjectSetPackedRgbaFromFloatChannels |

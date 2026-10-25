@@ -400,6 +400,12 @@ void surface_triangle_normal_calculate(float* out, const float* p2,
  * guards them, and a missing record leaves both windows untouched. */
 void scene_mesh_color_and_alpha_set(void* object, int block, float red,
                                     float green, float blue, float alpha);
+
+/* SceneMeshColorSet (FUN_00474ff0): the color triple without the alpha,
+ * mode three of the ported color-vector setter (the block's +0x34 slot).
+ * Deviation: the corpus strides both record links blindly. */
+void scene_mesh_color_set(void* object, int block, float red, float green,
+                          float blue);
                                                 /* FUN_00475020 */
 
 /* RotatedPairsScratchFill (FUN_00464110): copies count pair dwords from

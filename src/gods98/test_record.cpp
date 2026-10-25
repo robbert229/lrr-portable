@@ -1496,6 +1496,42 @@ int main(void)
         CHECK(1, "the null record is guarded (deviation)");
     }
 
+    /* SceneObjectScalarAdjustByDirection (2026-10-25): the +0x80 float
+     * scale pair with the +0x148 bit 2 raise. */
+    {
+        static unsigned char rec[0x150];
+        memset(rec, 0, sizeof rec);
+        float v = 0.5f;
+        __builtin_memcpy(rec + 0x80, &v, sizeof v);
+        uint32_t flags = 0x100u;
+        __builtin_memcpy(rec + 0x148, &flags, sizeof flags);
+        scene_object_scalar_adjust_by_direction(rec, 1);
+        __builtin_memcpy(&v, rec + 0x80, sizeof v);
+        CHECK(fabsf(v - 0.55f) < 1e-6f, "the up step lands");
+        __builtin_memcpy(&flags, rec + 0x148, sizeof flags);
+        CHECK(flags == 0x102u, "the step raises bit 2 alone");
+        scene_object_scalar_adjust_by_direction(rec, 1);
+        __builtin_memcpy(&v, rec + 0x80, sizeof v);
+        CHECK(fabsf(v - 0.595f) < 1e-6f, "the second up step lands");
+        v = 1.0f;
+        __builtin_memcpy(rec + 0x80, &v, sizeof v);
+        scene_object_scalar_adjust_by_direction(rec, 1);
+        __builtin_memcpy(&v, rec + 0x80, sizeof v);
+        CHECK(v == 1.0f, "the fixed point rides at one");
+        v = 0.9f;
+        __builtin_memcpy(rec + 0x80, &v, sizeof v);
+        scene_object_scalar_adjust_by_direction(rec, 0);
+        __builtin_memcpy(&v, rec + 0x80, sizeof v);
+        CHECK(fabsf(v - 0.8888889f) < 1e-6f, "the down fold lands");
+        v = 0.0f;
+        __builtin_memcpy(rec + 0x80, &v, sizeof v);
+        scene_object_scalar_adjust_by_direction(rec, 0);
+        __builtin_memcpy(&v, rec + 0x80, sizeof v);
+        CHECK(v == 0.0f, "the negative step clamps at zero");
+        scene_object_scalar_adjust_by_direction(NULL, 1);
+        CHECK(1, "the null record is guarded (deviation)");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "record_test: %d failure(s)\n", s_failures);
         return 1;

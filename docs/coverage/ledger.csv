@@ -169,7 +169,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004078c0,FUN_004078c0,named,EntityCursorTargetStepResolveAndTimerAdvance,0,644
 00407a10,FUN_00407a10,named,PendingTypeValueSlotSelect,0,3461
 00407d60,FUN_00407d60,named,BuildingTypeConfigRecordParse,0,6894
-004082e0,FUN_004082e0,named,SceneObjectScalarAdjustByDirection,0,457
+004082e0,FUN_004082e0,ported,SceneObjectScalarAdjustByDirection,2,457
 00408360,FUN_00408360,ported,TaskField84GetAndField88Out,3,196
 00408380,FUN_00408380,ported,SceneAssignEntityOwner,3,121
 004083a0,FUN_004083a0,named,SceneEntitySlotTableRebuild,0,2561
@@ -1742,7 +1742,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00474e30,FUN_00474e30,named,TerrainSurfacePropertySet,0,395
 00474e90,FUN_00474e90,named,RenderObjectHierarchyFloat3Set,0,766
 00474f10,FUN_00474f10,named,SceneObjectBoundsUnion,0,1090
-00474ff0,FUN_00474ff0,named,SceneMeshColorSet,0,292
+00474ff0,FUN_00474ff0,ported,SceneMeshColorSet,2,292
 00475020,FUN_00475020,ported,SceneMeshColorAndAlphaSet,3,354
 00475070,FUN_00475070,named,SceneObjectCoordinateTransformInPlace,0,170
 00475090,FUN_00475090,named,SceneObjectCoordinateTransformToOutput,0,169
