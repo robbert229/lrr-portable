@@ -2363,6 +2363,20 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**String, stream-buffer, scale + attach band** (findings 375/93/437/398/251/270):
+`crt.*` ports `string_prefix_reserve` (0x4907c0 — the strlen scan feeding the
+overlapping shift that opens the prefix gap, tail NUL included) and
+`crt_stream_buffer_allocate` (0x498ae0 — the counter tick, the 0x1000 engine-
+heap buffer installed as the record's window with flag bit 3, the internal
+buffer and flag bit 2 on failure, riding the port's stream-record layout),
+`engine.*` ports `scroll_scale_set_and_clamp` (0x425ce0 — the guard-word gate,
+the [0, 3] clamp, and the speed-slider band over the scale word as module
+storage), and `cmd.*` ports `object_attached_record_allocate` (0x4033c0 — the
+kind-0x1C record appended after the chain's last record, or hung on the
+entity head when the chain is empty). `0x459240` is recorded in blocked.md
+(stats-config layer, shared with `EntityAnimationStateSet`). `crt_test`,
+`engine_bind_test`, and `cmd_test` pin the shifts, windows, bands, and chains.
+
 **Counter + link band** (findings 251/469/435/434/438):
 `ai.*` ports `simulation_update_counter_add` (0x43a8f0 — the global object's
 +0x8C bump loop, then the scene-state pass), `entity_flag80000000_set_or_clear`

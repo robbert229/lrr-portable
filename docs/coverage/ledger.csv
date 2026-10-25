@@ -74,7 +74,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004031e0,FUN_004031e0,named,ActiveEntityListContainsCode,0,851
 00403270,FUN_00403270,ported,SelectionDragAreaCommandCreate,1,839
 00403320,FUN_00403320,named,ObjectCommandTaskCreate,0,677
-004033c0,FUN_004033c0,named,ObjectAttachedRecordAllocate,0,270
+004033c0,FUN_004033c0,ported,ObjectAttachedRecordAllocate,3,270
 004033f0,FUN_004033f0,ported,CoordinatePairTaskRecordQueue,1,309
 00403430,FUN_00403430,ported,TaskRegistryRemoveType0EntryByPair,1,559
 004034a0,FUN_004034a0,ported,ScalarTaskRecordQueue,1,255
@@ -420,8 +420,8 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00414df0,FUN_00414df0,named,VolumeSet,0,121
 00414e10,FUN_00414e10,named,OptionMusicDefault,0,241
 00414f90,FUN_00414f90,ported,ScrollToSliderIndexStore,2,489
-00415030,FUN_00415030,ported,ScrollToSliderIndex,2,430
-004150b0,FUN_004150b0,ported,SaveMenuRefresh,3,850
+00415030,FUN_00415030,named,ScrollToSliderIndex,0,430
+004150b0,FUN_004150b0,named,SaveMenuRefresh,0,850
 00415150,FUN_00415150,ported,OptionsApplyFromSlot,1,299
 00415220,FUN_00415220,named,FrontEndStartLevel,0,654
 004152c0,FUN_004152c0,ported,SlotSummary,1,828
@@ -645,7 +645,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00425b40,FUN_00425b40,named,PeriodicCallbackDispatch,0,89
 00425c30,FUN_00425c30,named,TransitionControl,0,517
 00425cd0,FUN_00425cd0,ported,Global004de548Set,1,81
-00425ce0,FUN_00425ce0,named,ScrollScaleSetAndClamp,0,377
+00425ce0,FUN_00425ce0,ported,ScrollScaleSetAndClamp,4,377
 00425d50,FUN_00425d50,named,GlobalRenderRecordSetFromInput,0,201
 00425d80,FUN_00425d80,ported,CurrentEngineModeIsZero,1,59
 00425d90,FUN_00425d90,ported,TerrainPointerCommandUpdate,4,4105
@@ -2474,9 +2474,9 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00498340,FUN_00498340,ported,CrtFatalMessageExit,3,59
 00498350,FUN_00498350,named,NumberStringScanParse,0,9648
 00498ae0,FUN_00498ae0,ported,CrtStreamBufferAllocate,3,430
-00498b40,FUN_00498b40,ported,CrtFileDescriptorFlag40Get,3,180
-00498b70,FUN_00498b70,ported,CrtWideCharToMultibyte,3,683
-00498bf0,__aulldiv,ported,__aulldiv,3,1246
+00498b40,FUN_00498b40,named,CrtFileDescriptorFlag40Get,0,180
+00498b70,FUN_00498b70,named,CrtWideCharToMultibyte,0,683
+00498bf0,__aulldiv,runtime-import,__aulldiv,0,1246
 00498c60,__aullrem,runtime-import,__aullrem,0,1468
 00498ce0,FUN_00498ce0,named,CrtScanfNumericConversionAssign,0,1148
 00498e00,FUN_00498e00,named,CrtMultibyteToWideChar,0,1386

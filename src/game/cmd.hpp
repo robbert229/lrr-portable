@@ -88,15 +88,6 @@ int cmd_chain_drop(EntitySlot* e, int type);
  * link), or on the entity's chain head at +0x2F0 when the chain is empty.
  * Deviation: the corpus strides the entity blindly; the port guards it. */
 void object_attached_record_allocate(EntitySlot* e); /* FUN_004033c0 */
-/* PendingRecordCopyToEntityAndFlag (FUN_00406400): copies a command record
- * into a fresh allocation of the same type — the corpus's 26-field image
- * copy, then the pending flag (bit 0x200 of the state word) raised and the
- * chain link cleared so the copy starts unattached. (The corpus name's
- * "to entity" half never appears in its body: the copy is allocated, not
- * attached.) Deviations: the corpus strides both the source and the
- * allocation blindly; the port guards them and answers the copy pointer
- * for observability (the corpus answers nothing; the copy leaks the same). */
-void* cmd_pending_record_copy(const void* rec); /* FUN_00406400 */
 
 void  cmd_chain_purge(EntitySlot* e);
 
