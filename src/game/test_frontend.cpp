@@ -22,6 +22,8 @@
 
 #include "game/frontend.hpp"
 #include "game/util.hpp"
+#include "game/game.hpp"
+#include "game/select.hpp"
 #include "gods98/block.hpp"
 #include "gods98/crt.hpp"
 #include "gods98/message.hpp"
@@ -1454,6 +1456,46 @@ int main(int argc, char** argv)
         store_selected_map_coordinate(9, NULL); /* word 0 != 9: switch */
         CHECK(map_store_kind_peek() == 9u && map_store_pair_word(0) == 21u,
               "the kind change under the flag switches again");
+    }
+
+    /* TextLayoutOffsetForCentering (2026-10-24): the half-width shift. */
+    {
+        CHECK(text_layout_offset_for_centering(8, 0, 0, 0, 10, 10, 0) == 1,
+              "the uncentered rect keeps the hit");
+        CHECK(text_layout_offset_for_centering(8, 0, 0, 0, 10, 10, 1) == 0,
+              "the centered shift drops the outside point");
+        CHECK(text_layout_offset_for_centering(2, 5, 0, 0, 10, 10, 1) == 1,
+              "the centered rect still catches its inside point");
+    }
+
+    /* SelectionEntityCodeResolve (2026-10-24): the flag-keep branch and
+     * the selection high-bit pick. */
+    {
+        static GameContext sctx;
+        static EntitySlot picked;
+        static const uint32_t cc[2] = { 4u, 5u };
+        game_context_init(&sctx);
+        objective_selection_state_reset(); /* inter bit 7 raises */
+        store_selected_map_coordinate(3, cc); /* switch branch: bit 7
+                                                 drops, bit 8 raises */
+        int code = 0x11;
+        CHECK(selection_entity_code_resolve(&sctx, &code) == 0x11
+                  && code == 0x11,
+              "the flag route answers the stored code unchanged");
+        objective_selection_state_reset(); /* bit 7 back: the pick branch */
+        code = 0x11;
+        CHECK(selection_entity_code_resolve(&sctx, &code) == 0x23
+                  && code == 0x23,
+              "the empty selection answers 0x23 (deviation)");
+        memset(&picked, 0, sizeof picked);
+        picked.type = 1;
+        picked.flags_3e8 = 0x80000000u;
+        selection_add(&sctx, &picked);
+        code = 0;
+        CHECK(selection_entity_code_resolve(&sctx, &code) == 0x22
+                  && code == 0x22,
+              "the high-bit pick answers 0x22 through the store");
+        selection_clear(&sctx);
     }
 
     if (s_failures == 0) {

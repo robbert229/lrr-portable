@@ -34,6 +34,8 @@
 #include "gods98/sound.hpp"
 #include "gods98/crt.hpp"
 #include "util.hpp"
+#include "select.hpp"
+#include "gods98/view.hpp"
 
 static int s_lower(int c) { return (c >= 'A' && c <= 'Z') ? c + 0x20 : c; }
 static int s_toupper(int c) { return (c >= 'a' && c <= 'z') ? c - 0x20 : c; }
@@ -2685,4 +2687,31 @@ void screen_effect_seam_last(void** out_handle, int* out_flag)
     if (out_flag != NULL) {
         *out_flag = s_screen_effect_seam_last_flag;
     }
+}
+
+/* TextLayoutOffsetForCentering (FUN_00411320) — see frontend.hpp. */
+int text_layout_offset_for_centering(int x, int y, int rect_x, int rect_y,
+                                     int rect_w, int rect_h, int center)
+{
+    const int xoff = (center == 0) ? 0 : -(rect_w / 2);
+    return menu_pointer_rectangle_hit_test(x, y, xoff + rect_x, rect_y,
+                                           rect_w, rect_h);
+}
+
+/* SelectionEntityCodeResolve (FUN_0041b9c0) — see frontend.hpp. The corpus
+ * reads the first selection first and branches afterwards; the port's
+ * order is equivalent since the read is side-effect-free. */
+int selection_entity_code_resolve(const GameContext* ctx, int* code_out)
+{
+    if ((s_inter_flags & 0x80u) == 0u && (s_inter_flags & 0x100u) != 0u) {
+        return (code_out != NULL) ? *code_out : 0;
+    }
+    const EntitySlot* first = selection_first(ctx);
+    const int code = ((first != NULL
+                       && (first->flags_3e8 & 0x80000000u) != 0u)
+                          ? 0x22 : 0x23);
+    if (code_out != NULL) {
+        *code_out = code;
+    }
+    return code;
 }

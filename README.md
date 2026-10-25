@@ -2363,6 +2363,21 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Carried-object detach, centering hit-test + selection code**
+(2026-10-24):
+`entity.*` ports `entity_detach_carried_object_and_reset_state` (0x43bbc0 —
+the type-3 carrier's detach: a linked type-6 carry loses the link, state
+word, attach back-pointer, and the flag word's 0x400 gate, both +0x340
+floats drop to -1.0, and a linked reference has its dword folded into the
+level's field 0x9c; the flag word's bit 0x800000 always rides the type-3
+pass), `frontend.*` ports `text_layout_offset_for_centering` (0x411320 —
+the centered-widget pointer test, the rect shifted left by half its width
+before the closed-edge hit test) and `selection_entity_code_resolve`
+(0x41b9c0 — the interaction word's bit-8-with-bit-7-clear state keeps the
+stored code, otherwise the first selected record's high flag bit picks
+0x22/0x23). `entity_test` and `frontend_test` pin the gates, the fold, and
+both resolve routes.
+
 **Special-state predicate, selection sweeps + nested list removal**
 (findings 293/403/310/232/397):
 `level.*` ports `terrain_cell_special_state_predicate` (0x40d3f0 — mode-1

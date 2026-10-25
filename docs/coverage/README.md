@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 888 | 34.6% |
+| ported | 891 | 34.8% |
 | anchored | 4 | 0.2% |
-| named | 1625 | 63.4% |
+| named | 1622 | 63.3% |
 | runtime-import | 46 | 1.8% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (888 functions)
+  (891 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1625 functions)
+  citation yet (1622 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (46 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1630 (63.6%).**
+**Game logic remaining to port: 1627 (63.5%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -274,7 +274,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00410fb0` | MenuItemImageSet |
 | `0x00411100` | MenuSectionRecordCreate |
 | `0x00411260` | ListAppend |
-| `0x00411320` | TextLayoutOffsetForCentering |
 | `0x00411360` | MenuMouseCoordinateUpdate |
 | `0x004114f0` | HasType6ItemAtIndex |
 | `0x00411530` | MenuWidgetItemScreenRect |
@@ -369,7 +368,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0041b300` | MenuSelectionResourceUpdate |
 | `0x0041b3c0` | EntityQueryFlagCount |
 | `0x0041b680` | CatalogCallbackByIdDispatch |
-| `0x0041b9c0` | SelectionEntityCodeResolve |
 | `0x0041baa0` | SimulationPointerActionDispatch |
 | `0x0041c1c0` | AdvisorOverlayHitResolve |
 | `0x0041c440` | AdvisorCallbackScheduleGate |
@@ -565,7 +563,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0043b820` | TypeTwoEntityEventDispatch |
 | `0x0043b850` | TypeTwoEntityPositionedCallbackDispatch |
 | `0x0043bb20` | BuildingDepositStateMonitor |
-| `0x0043bbc0` | EntityDetachCarriedObjectAndResetState |
 | `0x0043bc40` | ObjectiveSidecarAppendGate |
 | `0x0043c200` | EntityStatePairPredicate |
 | `0x0043c2b0` | PeriodicTimer25Advance |
