@@ -2122,14 +2122,14 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004847d0,FUN_004847d0,named,FlicChunkBufferAndContinueType0B,0,667
 00484880,FUN_00484880,ported,FlicOpcode16ModeDispatch,2,286
 004848d0,FUN_004848d0,ported,FlicDecode8BitOpcode25Mode4,2,1700
-004849d0,FUN_004849d0,named,FlicDecode16BitKeyframe,0,1963
+004849d0,FUN_004849d0,ported,FlicDecode16BitKeyframe,2,1963
 00484b20,FUN_00484b20,named,FlicOpcode25DecodeDispatch,0,447
 00484b90,FUN_00484b90,ported,FlicOpcode25SuccessStub,3,49
 00484ba0,FUN_00484ba0,ported,PackedTripletTableToWordBuild,2,433
 00484c00,FUN_00484c00,ported,FlicDecode16BitRowRecords,2,886
 00484c90,FUN_00484c90,ported,FlicOpcode27FallbackNoop,2,41
 00484ca0,FUN_00484ca0,named,FlicDecode8BitAlternateDelta,0,2597
-00484e50,FUN_00484e50,named,FlicDecode16BitDelta,0,2550
+00484e50,FUN_00484e50,ported,FlicDecode16BitDelta,2,2550
 00485030,FUN_00485030,named,FlicOpcode27DecodeDispatch,0,547
 004850c0,FUN_004850c0,ported,IndexedWordTableLookup,1,123
 004850e0,FUN_004850e0,ported,ObjectField10Get,2,86

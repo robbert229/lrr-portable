@@ -451,6 +451,34 @@ static uint16_t rec_palette_word(const char* rec, unsigned index)
     return w;
 }
 
+/* The corpus record is 32-bit: the stream link +0x6d0 and the pixel buffer
+ * +0x6cc sit four bytes apart, so no LP64 pointer fits in the byte window
+ * (the pixel store overwrites the stream's low half). Install-hook side
+ * slots keep both (the hook-boundary static precedent); the window keeps
+ * only the corpus-shaped decorations. Deviation: a missing install falls
+ * back to the raw window read, guarded NULL instead of a stride. */
+struct flic_window_slot {
+    const void* rec;
+    void* stream;
+    void* pixels;
+};
+static flic_window_slot g_flic_windows[16];
+static unsigned g_flic_window_next = 0u;
+
+static int flic_window_find(const void* rec, void** stream, void** pixels)
+{
+    for (int i = 0; i != 16; ++i) {
+        if (rec != NULL && g_flic_windows[i].rec == rec) {
+            *stream = g_flic_windows[i].stream;
+            if (pixels != NULL) {
+                *pixels = g_flic_windows[i].pixels;
+            }
+            return 1;
+        }
+    }
+    return 0;
+}
+
 /* FlicDecode16BitRowRecords (FUN_00484c00) — see flic.hpp. The triplet copy
  * lands each source byte >>2; the zero-flag chunk restarts the table for a
  * full 0x100-triplet pass on the loop's last lap; op 4 hands off to the
@@ -462,7 +490,12 @@ int flic_decode16_bit_row_records(void* record)
     }
     char* rec = (char*)record;
     void* stream = NULL;
-    __builtin_memcpy(&stream, rec + 0x6d0, sizeof stream);
+    if (flic_window_find(rec, &stream, NULL) == 0) {
+        __builtin_memcpy(&stream, rec + 0x6d0, sizeof stream);
+    }
+    if (stream == NULL) {
+        return 1; /* deviation: the corpus strides the window blindly */
+    }
     char* dst = rec + 0x11c;
     const char* chunk = (const char*)stream + 8;
     int16_t left = 0;
@@ -506,8 +539,13 @@ int flic_decode8_bit_opcode25_mode4(void* record)
     char* rec = (char*)record;
     void* stream = NULL;
     void* pixels = NULL;
-    __builtin_memcpy(&stream, rec + 0x6d0, sizeof stream);
-    __builtin_memcpy(&pixels, rec + 0x6cc, sizeof pixels);
+    if (flic_window_find(rec, &stream, &pixels) == 0) {
+        __builtin_memcpy(&stream, rec + 0x6d0, sizeof stream);
+        __builtin_memcpy(&pixels, rec + 0x6cc, sizeof pixels);
+    }
+    if (stream == NULL || pixels == NULL) {
+        return 1; /* deviation: the corpus strides the window blindly */
+    }
     const char* src = (const char*)stream + 7;
     uint32_t rows = 0u;
     uint16_t rows16 = 0u;
@@ -557,6 +595,199 @@ int flic_decode8_bit_opcode25_mode4(void* record)
     return 1;
 }
 
+/* The corpus 16-bit pixel expansion: the green field shifts one lane up
+ * (flag +0x6e4 keeps the field where it is), and the low five ride along. */
+static uint16_t expand16_word(const char* rec, uint16_t w)
+{
+    int flag = 0;
+    __builtin_memcpy(&flag, rec + 0x6e4, sizeof flag);
+    const uint16_t g = (flag != 0) ? (uint16_t)(w & 0x7fe0u)
+                                   : (uint16_t)(((unsigned)(w & 0xffe0u)) << 1);
+    return (uint16_t)(g | (w & 0x1fu));
+}
+
+/* FlicDecode16BitKeyframe (FUN_004849d0) — see flic.hpp. The word stream
+ * rides stream+7; each row re-reads the row length +0xc (the corpus walks
+ * one straddle byte past the row) and targets pixel_base +0x6cc with the
+ * pitch/2 stride of the row index; the row count +0x10 is read once. */
+int flic_decode16_bit_keyframe(void* record)
+{
+    if (record == NULL) {
+        return 1; /* deviation: the corpus strides the record blindly */
+    }
+    char* rec = (char*)record;
+    void* stream = NULL;
+    void* pixels = NULL;
+    if (flic_window_find(rec, &stream, &pixels) == 0) {
+        __builtin_memcpy(&stream, rec + 0x6d0, sizeof stream);
+        __builtin_memcpy(&pixels, rec + 0x6cc, sizeof pixels);
+    }
+    if (stream == NULL || pixels == NULL) {
+        return 1; /* deviation: the corpus strides the window blindly */
+    }
+    const char* cursor = (const char*)stream + 7;
+    int16_t rows = 0;
+    __builtin_memcpy(&rows, rec + 0x10, sizeof rows);
+    if (rows > 0) {
+        int pitch = 0;
+        __builtin_memcpy(&pitch, rec + 0x638, sizeof pitch);
+        uint32_t row_i = 0u;
+        for (;;) {
+            int16_t left = 0; /* the corpus re-reads the length each row */
+            __builtin_memcpy(&left, rec + 0x0c, sizeof left);
+            char* pixel = (char*)pixels
+                          + (size_t)(((uint32_t)pitch >> 1) * (uint32_t)row_i
+                                     * 2u);
+            while (left > 0) {
+                uint16_t w = 0u;
+                __builtin_memcpy(&w, cursor, sizeof w);
+                const uint32_t count = (uint8_t)w;
+                if (count < 0x80u) {
+                    uint16_t v = 0u;
+                    __builtin_memcpy(&v, cursor + 1, sizeof v);
+                    left = (short)(left - (short)count);
+                    cursor += 3;
+                    if ((uint8_t)w != 0u) {
+                        for (uint32_t k = count; k != 0u; k = k - 1u) {
+                            const uint16_t px = expand16_word(rec, v);
+                            __builtin_memcpy(pixel, &px, sizeof px);
+                            pixel += 2;
+                        }
+                    }
+                } else {
+                    const uint32_t run = 0x100u - count;
+                    left = (short)(left - (short)(uint16_t)run);
+                    cursor += 1;
+                    const char* read = cursor;
+                    for (uint32_t k = run; k != 0u; k = k - 1u) {
+                        uint16_t v = 0u;
+                        __builtin_memcpy(&v, read, sizeof v);
+                        read += 2;
+                        const uint16_t px = expand16_word(rec, v);
+                        __builtin_memcpy(pixel, &px, sizeof px);
+                        pixel += 2;
+                    }
+                    cursor = read;
+                }
+            }
+            cursor += 1; /* the row straddle */
+            row_i = row_i + 1u;
+            if (!((int)row_i < (int)rows)) {
+                break;
+            }
+        }
+    }
+    return 1;
+}
+
+/* FlicDecode16BitDelta (FUN_00484e50) — see flic.hpp. The chunk walk over
+ * the word stream at stream+8: 0xC-type words retire rows by subtracting
+ * the whole word, 8-type chunks remember one expanded pixel and land it as
+ * a lone BYTE store at the walk's end, and 4-type ends the record. The
+ * pair words advance the target by the pair's low byte and expand their
+ * own words (or a repeated one on the back-count quirk). */
+int flic_decode16_bit_delta(void* record)
+{
+    if (record == NULL) {
+        return 1; /* deviation: the corpus strides the record blindly */
+    }
+    char* rec = (char*)record;
+    void* stream = NULL;
+    void* pixels = NULL;
+    if (flic_window_find(rec, &stream, &pixels) == 0) {
+        __builtin_memcpy(&stream, rec + 0x6d0, sizeof stream);
+        __builtin_memcpy(&pixels, rec + 0x6cc, sizeof pixels);
+    }
+    if (stream == NULL || pixels == NULL) {
+        return 1; /* deviation: the corpus strides the window blindly */
+    }
+    int pitch = 0;
+    __builtin_memcpy(&pitch, rec + 0x638, sizeof pitch);
+    const char* cursor = (const char*)stream + 8;
+    int16_t left = 0;
+    __builtin_memcpy(&left, (const char*)stream + 6, sizeof left);
+    uint16_t row = 0u; /* the corpus counter is a ushort (quirk-pinned) */
+    for (;;) {
+        if (left == 0) {
+            return 1;
+        }
+        uint16_t w = 0u;
+        __builtin_memcpy(&w, cursor, sizeof w);
+        char* pixel = (char*)pixels
+                      + (size_t)((uint32_t)row * (uint32_t)pitch);
+        const int16_t kind = (int16_t)((w & 0xc000u) >> 12);
+        if (kind == 0xc) {
+            cursor += 2;
+            row = (uint16_t)(row - w); /* whole-word subtract (corpus quirk) */
+            continue;
+        }
+        if (kind == 4) {
+            return 1;
+        }
+        bool remembered = false;
+        uint16_t remember = 0u;
+        if (kind == 8) {
+            int flag = 0;
+            __builtin_memcpy(&flag, rec + 0x6e4, sizeof flag);
+            if (flag != 0) {
+                w = (uint16_t)(((unsigned)w >> 1) & 0x7ff0u) | (uint16_t)(w & 0x1fu);
+            }
+            cursor += 2;
+            remembered = true;
+            remember = w;
+        }
+        uint16_t pairs = 0u;
+        __builtin_memcpy(&pairs, cursor, sizeof pairs);
+        cursor += 2;
+        if (pairs != 0u) {
+            uint32_t keep = pairs;
+            const char* pair = cursor;
+            do {
+                uint8_t b1 = 0;
+                uint16_t w1 = 0u;
+                __builtin_memcpy(&w1, pair, sizeof w1);
+                b1 = (uint8_t)(((uint32_t)w1) >> 8);
+                const uint8_t skip = (uint8_t)w1;
+                pixel += (size_t)skip * 2u;
+                const char* next = pair + 2;
+                if ((b1 & 0x80u) == 0u) {
+                    if (b1 != 0u) {
+                        for (uint32_t k = (uint32_t)b1; k != 0u; k = k - 1u) {
+                            uint16_t v = 0u;
+                            __builtin_memcpy(&v, next, sizeof v);
+                            next += 2;
+                            const uint16_t px = expand16_word(rec, v);
+                            __builtin_memcpy(pixel, &px, sizeof px);
+                            pixel += 2;
+                        }
+                    }
+                } else {
+                    uint16_t v = 0u;
+                    __builtin_memcpy(&v, next, sizeof v);
+                    next = pair + 4; /* (the corpus's 0x100 - uVar7 quirk) */
+                    const uint32_t run = 0x100u - (uint32_t)b1;
+                    if ((short)run != 0) {
+                        for (uint32_t k = run; k != 0u; k = k - 1u) {
+                            const uint16_t px = expand16_word(rec, v);
+                            __builtin_memcpy(pixel, &px, sizeof px);
+                            pixel += 2;
+                        }
+                    }
+                }
+                pair = next;
+                keep = keep - 1u;
+            } while (keep != 0u);
+            cursor = pair;
+        }
+        if (remembered) {
+            const uint8_t low = (uint8_t)remember;
+            *pixel = (char)low;
+        }
+        row = (uint16_t)(row + 1u);
+        left = (short)(left - 1);
+    }
+}
+
 void flic_frame_window_layout_install(void* rec, int row_len, int row_count,
                                       int pitch, void* stream,
                                       void* pixel_buffer, int flag)
@@ -569,7 +800,26 @@ void flic_frame_window_layout_install(void* rec, int row_len, int row_count,
     v = (int16_t)row_count;
     __builtin_memcpy((char*)rec + 0x10, &v, sizeof v);
     __builtin_memcpy((char*)rec + 0x638, &pitch, sizeof pitch);
-    __builtin_memcpy((char*)rec + 0x6d0, &stream, sizeof stream);
-    __builtin_memcpy((char*)rec + 0x6cc, &pixel_buffer, sizeof pixel_buffer);
+    const uint32_t lo = (uint32_t)(uintptr_t)stream;
+    const uint32_t lp = (uint32_t)(uintptr_t)pixel_buffer;
+    __builtin_memcpy((char*)rec + 0x6d0, &lo, sizeof lo);
+    __builtin_memcpy((char*)rec + 0x6cc, &lp, sizeof lp);
     __builtin_memcpy((char*)rec + 0x6e4, &flag, sizeof flag);
+
+    int slot = -1;
+    for (int i = 0; i != 16; ++i) {
+        if (g_flic_windows[i].rec == rec) {
+            slot = i;
+            break;
+        }
+        if (slot < 0 && g_flic_windows[i].rec == NULL) {
+            slot = i;
+        }
+    }
+    if (slot < 0) {
+        slot = (int)(g_flic_window_next++ % 16u);
+    }
+    g_flic_windows[slot].rec = rec;
+    g_flic_windows[slot].stream = stream;
+    g_flic_windows[slot].pixels = pixel_buffer;
 }

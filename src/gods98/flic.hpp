@@ -104,6 +104,18 @@ int flic_opcode16_mode_dispatch(const uint8_t* rec);
  * ends one byte short of the stream (the corpus steps +1 between rows).
  * Deviation: the corpus strides the record, stream, and pixels blindly. */
 int flic_decode16_bit_row_records(void* record);
+
+/* FlicDecode16BitKeyframe (FUN_004849d0): the word-stream row walk at
+ * stream+7 (literal runs of one expanded word, copy runs of successive
+ * words; the row length +0xc re-reads each row past one straddle byte).
+ * FlicDecode16BitDelta (FUN_00484e50): the chunk walk over the word stream
+ * at stream+8 — 0xC rows retire by word subtraction, 8-chunks remember one
+ * expanded pixel for a byte store at the chunk's end, 4 ends the record,
+ * and pairs advance the target by their low byte. Both ride the expanded
+ * word fold (the +0x6e4 flag keeps the green field). Deviation: the corpus
+ * strides the record, stream, and pixels blindly. */
+int flic_decode16_bit_keyframe(void* record);
+int flic_decode16_bit_delta(void* record);
 int flic_decode8_bit_opcode25_mode4(void* record);
 void flic_frame_window_layout_install(void* rec, int row_len, int row_count,
                                      int pitch, void* stream,
