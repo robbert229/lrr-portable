@@ -729,3 +729,80 @@ int wad_entry_read_into_stream_slot(WadStreamSlots* slots, const char* name)
     slots->handle = handle;
     return handle != NULL;
 }
+
+/* --- resource-handle release band (2026-10-25; corpus .data band) ---------
+ * ResourceHandleSetRelease (FUN_0041a850) frees the corpus's global handle
+ * set: the DAT_004ddc04 stride-8 record band (the first DWORD of each pair,
+ * while the walker stays below DAT_004ddcc4) followed by twelve named
+ * globals, freed in corpus order. Deviations: the unowned band lands as
+ * own storage (install/peek hooks stand in for the unported setters), the
+ * corpus frees without clearing, and the port nulls each freed slot. */
+static struct {
+    void* handle;      /* corpus band dword (stride 8; the word behind rides) */
+    uint32_t word2;
+} s_handle_set_band[24]; /* DAT_004ddc04..DAT_004ddcc4, stride 8 */
+static void* s_handle_set_named[12]; /* DAT_004dd734..9a8/DAT_004ddad4/d8 */
+
+/* Port hook: slots 0..23 are the band (stride-8 units), 24..35 the named
+ * globals in address order: 734, 738, 73c, 740, 744, 748, 99c, 9a0, 9a4,
+ * 9a8, ad4, ad8. */
+void resource_handle_set_slot_install(int slot, void* res)
+{
+    if (slot < 24) {
+        s_handle_set_band[slot].handle = res;
+    } else if (slot >= 24 && slot < 36) {
+        s_handle_set_named[slot - 24] = res;
+    }
+}
+
+void* resource_handle_set_slot_peek(int slot)
+{
+    if (slot < 24) {
+        return s_handle_set_band[slot].handle;
+    }
+    if (slot >= 24 && slot < 36) {
+        return s_handle_set_named[slot - 24];
+    }
+    return NULL;
+}
+
+void resource_handle_set_release(void)
+{
+    for (int i = 0; i != 24; ++i) {
+        /* corpus: stride the band, free the non-zero dwords under cc4 */
+        if (s_handle_set_band[i].handle != NULL) {
+            engine_heap_free(s_handle_set_band[i].handle); /* FUN_0048db80 */
+            s_handle_set_band[i].handle = NULL; /* deviation: the corpus dangles */
+        }
+    }
+    /* corpus free order: 734 73c 744 ad4 99c 9a4 738 740 748 ad8 9a0 9a8 */
+    static const size_t order[12] = { 0, 2, 4, 10, 6, 8, 1, 3, 5, 11, 7, 9 };
+    for (size_t k = 0; k != 12; ++k) {
+        void** p = &s_handle_set_named[order[k]];
+        if (*p != NULL) {
+            engine_heap_free(*p);
+            *p = NULL;
+        }
+    }
+}
+
+/* ResourceHandleListDispose (FUN_00410ae0): free the list's non-zero
+ * handles (the count lives behind), then the array, then the record — the
+ * record is freed even when its array word is zero. Deviations: the record
+ * fields widen LP64-safe and the NULL record is guarded (the corpus strides
+ * blindly). */
+void resource_handle_list_dispose(ResourceHandleList* list)
+{
+    if (list == NULL) {
+        return; /* deviation: the corpus derefs blindly */
+    }
+    if (list->handles != NULL) {
+        for (int32_t i = 0; i < list->count; ++i) {
+            if (list->handles[i] != NULL) {
+                engine_heap_free(list->handles[i]); /* FUN_0048db80 */
+            }
+        }
+        engine_heap_free(list->handles);
+    }
+    engine_heap_free(list);
+}

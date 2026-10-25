@@ -366,7 +366,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00410740,FUN_00410740,named,SaveMenuListEntryAppend,0,3767
 00410a10,FUN_00410a10,named,MenuItemChoiceStringsAllocate,0,893
 00410aa0,FUN_00410aa0,named,ResourceHandleListAppend,0,362
-00410ae0,FUN_00410ae0,named,ResourceHandleListDispose,0,457
+00410ae0,FUN_00410ae0,ported,ResourceHandleListDispose,2,457
 00410b30,FUN_00410b30,ported,GlobalPointerGet_004c76ab24,2,60
 00410b40,FUN_00410b40,ported,GlobalPointerGet_004c76ab28,2,60
 00410b50,FUN_00410b50,ported,GlobalPointerGet_004c76ab3c,2,60
@@ -539,8 +539,8 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0041a2c0,FUN_0041a2c0,ported,InfoMessageTimerDecay,6,239
 0041a2f0,FUN_0041a2f0,ported,IncidentMessageStateGet,1,60
 0041a300,FUN_0041a300,named,InterfaceMenuActionLabelsInit,0,4861
-0041a660,FUN_0041a660,ported,InteractionActionCodeMapInitialize,2,754
-0041a7d0,FUN_0041a7d0,ported,InputKeyGroupRegister,2,1005
+0041a660,FUN_0041a660,named,InteractionActionCodeMapInitialize,0,754
+0041a7d0,FUN_0041a7d0,named,InputKeyGroupRegister,0,1005
 0041a850,FUN_0041a850,ported,ResourceHandleSetRelease,2,572
 0041a920,FUN_0041a920,named,LevelStateCountersClear,0,1068
 0041a990,FUN_0041a990,ported,ObjectiveSelectionStateReset,1,130
@@ -2262,7 +2262,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0048da50,FUN_0048da50,ported,StringFindSubstring,2,2603
 0048dad0,FUN_0048dad0,named,ParseSignedDecimal,0,900
 0048db70,FUN_0048db70,ported,ParseIntegerWrapper,4,80
-0048db80,FUN_0048db80,ported,EngineHeapFree,4,334
+0048db80,FUN_0048db80,ported,EngineHeapFree,6,334
 0048dbd0,FUN_0048dbd0,ported,EngineHeapAlloc,4,93
 0048dbf0,FUN_0048dbf0,ported,EngineHeapAllocateWithRetry,2,460
 0048dc40,FUN_0048dc40,ported,EngineHeapAllocateAligned,2,268
