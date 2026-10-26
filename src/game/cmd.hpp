@@ -120,6 +120,18 @@ void pending_record_entity_reference_clear(void* reference);
 void* cmd_rec_entity_ref(const void* rec);              /* +0x48 read */
 void  cmd_rec_entity_ref_install(void* rec, void* ref); /* port hook */
 
+/* EntityRecordAttachAndRelink (FUN_00406360): attaches a record to the
+ * entity's command head (entity +0x2f0). A record without the +0x5c bit
+ * 0x40 flag unlinks from the global list (head slot if prev is null,
+ * else prev's link) and attaches in place; otherwise the entity attaches
+ * to a cmd_pending_record_copy copy, and the +0x5c bit 0x40000 stamp
+ * writes the corpus's 25.0-float bits into the copy-source record's
+ * +0x18. Both lanes end with the entity-reference sweep and the idle
+ * registration. Deviations: NULL record/entity guards and the
+ * port-split global-list link (see the .cpp). */
+void entity_record_attach_and_relink(void* record, void* previous,
+                                     EntitySlot* entity);
+
 /* --- global tick list ---------------------------------------------------- */
 void cmd_tick_global(void);     /* CmdTickGlobal @ 0x402220 (scoped) */
 
@@ -283,6 +295,9 @@ int  priority_entry_state_get(int kind);
 
 /* Diagnostic: overwrite a record's +0x5c state word. */
 void cmd_rec_state_set(void* rec, uint32_t state);
+
+/* Diagnostic: read a record's +0x18 task-param word. */
+int cmd_rec_param2_get(const void* rec);
 
 /* --- registry flush / wrappers (2026-10-24) ---------------------------------
  * CmdFlushAll (FUN_00402100, finding 466): the nonzero argument clears bit

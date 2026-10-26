@@ -2317,6 +2317,82 @@ int main(void)
               "the peek hooks guard their ranges");
     }
 
+    /* EntityRecordAttachAndRelink (FUN_00406360; 2026-10-25). Stages the
+     * global task list and walks both lanes: the plain lane unlinks the
+     * record (previous link or head slot) and attaches it to the entity,
+     * the flagged lane attaches a pending-record copy instead. */
+    {
+        cmd_init();
+        GameContext fresh;
+        game_context_init(&fresh);
+        cmd_context_set(&fresh);
+        EntitySlot* holder = make_ent(&fresh, 1, "attach-holder");
+
+        /* Stage three type-3 task records: rec_new (head) -> rec_old ->
+         * rec_tail. Task state words carry no 0x40 flag. */
+        cmd_create_task(holder);
+        cmd_create_task(holder);
+        cmd_create_task(holder);
+        void* rec_new = cmd_global_head();
+        void* rec_old = cmd_global_next(rec_new);
+        void* rec_tail = cmd_global_next(rec_old);
+        CHECK(rec_new != NULL && rec_old != NULL && rec_tail != NULL
+                  && cmd_global_next(rec_tail) == NULL,
+              "three task records stage head to tail");
+        void* rec_old_link = cmd_global_next(rec_old); /* rec_tail */
+
+        /* Both surviving records carry the holder as pending reference so
+         * the tail sweep (and its walk past the first hit) is observable. */
+        cmd_rec_entity_ref_install(rec_new, holder);
+        cmd_rec_entity_ref_install(rec_old, holder);
+        cmd_rec_entity_ref_install(rec_tail, holder);
+
+        entity_record_attach_and_relink(rec_old, rec_new, holder);
+        CHECK(cmd_global_next(rec_new) == rec_old_link,
+              "the unlink splices the record's link into previous");
+        CHECK(holder->cmd_head == rec_old, "the plain lane attaches the record");
+        CHECK(cmd_rec_entity_ref(rec_new) == NULL
+                  && cmd_rec_entity_ref(rec_tail) == NULL,
+              "the sweep clears the holder reference across the whole list");
+
+        /* Head lane: previous NULL moves the head slot to the unlinking
+         * record's own link. */
+        EntitySlot* head_holder = make_ent(&fresh, 1, "head-holder");
+        entity_record_attach_and_relink(rec_new, NULL, head_holder);
+        CHECK(cmd_global_head() == rec_old_link
+                  && cmd_global_next(cmd_global_head()) == NULL,
+              "the head-slot lane shortens the list by one");
+        CHECK(head_holder->cmd_head == rec_new,
+              "the head lane attaches the unlinked record");
+        /* The unlink happens before the sweep walks, so the attached
+         * record keeps its own reference (the corpus sweeps the global
+         * list, which no longer names it). */
+        CHECK(cmd_rec_entity_ref(rec_old) == (void*)holder,
+              "the detached record keeps its reference (off the swept list)");
+
+        /* Flagged lane: 0x40 attaches a pending-record COPY, and the
+         * 0x40000 stamp writes the corpus's 25.0 float bits into the
+         * source record's +0x18. */
+        EntitySlot* copied = make_ent(&fresh, 1, "copy-holder");
+        void* flagged = cmd_alloc(3);
+        CHECK(flagged != NULL, "flagged record alloc");
+        cmd_rec_state_set(flagged, 0x40u | 0x40000u);
+        entity_record_attach_and_relink(flagged, NULL, copied);
+        CHECK(copied->cmd_head != NULL && copied->cmd_head != flagged,
+              "the flagged lane attaches a copy, not the record");
+        CHECK(cmd_rec_type(copied->cmd_head) == 3, "the copy keeps the type");
+        CHECK((cmd_rec_state(copied->cmd_head) & 0x200u) != 0u,
+              "the copy carries the pending-copy flag");
+        CHECK(cmd_rec_param2_get(flagged) == (int)0x41c80000,
+              "the 0x40000 stamp writes the +0x18 task-param bits");
+
+        /* NULL guards: a NULL record answers without touching the entity
+         * (the corpus strides the record blindly). */
+        EntitySlot* untouched = make_ent(&fresh, 1, "null-guard");
+        entity_record_attach_and_relink(NULL, NULL, untouched);
+        CHECK(untouched->cmd_head == NULL, "the NULL record guard holds");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "cmd_test: %d failure(s)\n", s_failures);
         return 1;

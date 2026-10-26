@@ -3130,3 +3130,187 @@ int lava_erosion_neighbor_check(const LevelState* s, int seed_x, int seed_y,
     }
     return 0;
 }
+
+/* --- the cell route + neighbour pick band (2026-10-25) -----------------------
+ * TerrainCellRouteAndOccupancyCheck (FUN_00431da0) answers whether an
+ * entity may move from cell (from_x, from_y) to (to_x, to_y). The corpus
+ * indexes a cardinal delta table with a dword walker, so a neighbour hit
+ * in slot 0 reads the same as "no cardinal neighbour" (pinned quirk),
+ * and the entity's own tile position rides the port's cell-round seam
+ * (level_cell_of on the entity's float pair — same precedent as the
+ * idle-registration tile probe). Deviations: every cell read routes
+ * through level_voxel (the corpus strides the base + y*w+x * 0x48 window
+ * without a bounds check; out-of-range reads answer zero), a NULL level
+ * answers through the same guards, and the entity cell check lands after
+ * the corpus's own stats gates.
+ *
+ * FirstFreeNeighborCellPick (FUN_00431c70) walks the four cardinal
+ * neighbours in a rotation that advances by the corpus's DAT_004de588
+ * pick counter (own storage here; peek hook), calling the route check
+ * with source and destination pinned to the neighbour cell. In mode 1 a
+ * neighbour that is in bounds, open (flag 0x10) and unblocked (flag 8
+ * clear) is skipped; otherwise it is tried. Deviation: the corpus
+ * reloads the level global between probes — the port reuses one pointer.
+ * Both rows guard NULL entity/level where the corpus strides blindly. */
+static const int s_cardinal_deltas[4][2] = {{0, -1}, {1, 0}, {0, 1},
+                                            {-1, 0}};
+static uint32_t s_neighbor_pick_rotation; /* DAT_004de588 role */
+
+uint32_t neighbor_pick_rotation_peek(void) { return s_neighbor_pick_rotation; }
+
+static int route_cell_byte(const LevelState* s, int x, int y, int off)
+{
+    const uint8_t* rec = level_voxel(s, x, y);
+    return rec != NULL ? (int)(signed char)rec[off] : 0;
+}
+
+static uint32_t route_cell_flags(const LevelState* s, int x, int y)
+{
+    const uint8_t* rec = level_voxel(s, x, y);
+    uint32_t flags = 0u;
+    if (rec != NULL) {
+        __builtin_memcpy(&flags, rec + 0x08, sizeof flags);
+    }
+    return flags;
+}
+
+int terrain_cell_route_and_occupancy_check(const struct EntitySlot* entity,
+                                           const LevelState* s,
+                                           int from_x, int from_y,
+                                           int to_x, int to_y, int strict)
+{
+    if (entity != NULL
+        && (entity_stats_word_get(entity) & 0x20000u) != 0u
+        && entity->owner_36c == NULL) {
+        return 0;
+    }
+
+    /* Cardinal delta walk; 4 marks "no hit" (the corpus's walker dword
+     * ends past the table). Slot 0 hits as delta_index 0 — the corpus's
+     * "param_1 == 0" gate quirk. */
+    int delta_index = 4;
+    for (int i = 0; i != 4; ++i) {
+        if (s_cardinal_deltas[i][0] + to_x == from_x
+            && to_y + s_cardinal_deltas[i][1] == from_y) {
+            delta_index = i;
+            break;
+        }
+    }
+
+    uint32_t block_relief = 0u; /* corpus +14c word & 0x200 */
+    uint32_t special = 0u;      /* stats & 1 */
+    uint32_t idle_gate = 0u;    /* stats & 0x1000000 */
+    uint32_t walk_gate = 1u;    /* stats & 0x2000000 (initial pass) */
+    uint32_t state_mask = 0u;   /* state & 0x200000 */
+    if (entity != NULL) {
+        if (entity->type == 0xb) {
+            return 0;
+        }
+        block_relief = entity_capability_flags_get(entity) & 0x200u;
+        const uint32_t stats = entity_stats_word_get(entity);
+        special = stats & 1u;
+        idle_gate = stats & 0x1000000u;
+        walk_gate = stats & 0x2000000u;
+        state_mask = entity_state_flags_get(entity) & 0x200000u;
+        if (strict == 0) {
+            /* EntityPositionToTerrainCell seam pass: the entity's own
+             * cell (level_cell_of round of the float pair) standing on
+             * (from_x, to_y) answers a straight yes. */
+            if (level_cell_of(entity->x) == from_x
+                && level_cell_of(entity->y) == to_y) {
+                return 1;
+            }
+        }
+    }
+
+    const int type = route_cell_byte(s, from_x, from_y, 0x02);
+    if (type == 9) {
+        if (idle_gate == 0u) {
+            return 0;
+        }
+    } else if (walk_gate == 0u) {
+        return 0;
+    }
+    if (type == 6 && state_mask == 0u
+        && (route_cell_flags(s, from_x, from_y) & 0x200u) == 0u) {
+        return 0;
+    }
+
+    const uint32_t flags = route_cell_flags(s, from_x, from_y);
+    if ((flags & 0x400u) != 0u) {
+        return 0;
+    }
+    if (strict != 0 && (flags & 0x40u) != 0u) {
+        return 0;
+    }
+    if (block_relief == 0u && (route_cell_byte(s, from_x, from_y, 0x0c) & 4) != 0) {
+        return 0;
+    }
+
+    int answer = 1;
+    if (special == 0u) {
+        if ((flags & 8u) == 0u) {
+            return 0;
+        }
+    } else {
+        if ((flags & 0x10u) != 0u) {
+            answer = 3; /* the corpus promotes the answer on an open cell */
+        }
+        if (route_cell_byte(s, from_x, from_y, 0x00) == 0) {
+            return 0; /* *local_28 == 0: the cell's state byte reads unset */
+        }
+        const uint32_t corner_flags = route_cell_flags(s, from_x, to_y);
+        if ((corner_flags & 0x10u) != 0u) {
+            const int above = route_cell_byte(s, from_x, to_y - 1, 0x02);
+            if (above == 6 || above == 7) {
+                return 0; /* the wall-cell pair above the corner */
+            }
+        }
+        if (delta_index == 0) {
+            if ((flags & 0x2000u) != 0u) {
+                answer = 2;
+            }
+            if ((route_cell_flags(s, to_x, to_y) & 0x2000u) != 0u) {
+                answer = 2;
+            }
+        }
+    }
+
+    if (to_x != from_x && to_y != from_y) {
+        /* diagonal corner pair along the destination row */
+        if ((route_cell_flags(s, from_x, to_y) & 8u) != 0u
+            && (route_cell_flags(s, to_x, to_y) & 8u) != 0u) {
+            return 2;
+        }
+    }
+    return answer;
+}
+
+int first_free_neighbor_cell_pick(const struct EntitySlot* entity,
+                                  const LevelState* s, const int* cell_in,
+                                  int* cell_out, int mode)
+{
+    ++s_neighbor_pick_rotation;
+    const int x = cell_in[0], y = cell_in[1];
+    for (int i = 0; i != 4; ++i) {
+        const uint32_t k
+            = (s_neighbor_pick_rotation + (uint32_t)i) & 3u;
+        const int nx = s_cardinal_deltas[k][0] + x;
+        const int ny = s_cardinal_deltas[k][1] + y;
+        if (mode != 0) {
+            const uint32_t flags = route_cell_flags(s, nx, ny);
+            if ((unsigned)nx < (unsigned)level_width(s) - 1u
+                && (unsigned)ny < (unsigned)level_height(s) - 1u
+                && (flags & 0x10u) != 0u && (flags & 8u) == 0u) {
+                continue; /* corpus bVar2: already-open cell is skipped */
+            }
+        }
+        if (terrain_cell_route_and_occupancy_check(entity, s, nx, ny, nx,
+                                                   ny, 0) != 0) {
+            cell_out[0] = nx;
+            cell_out[1] = ny;
+            return 1;
+        }
+    }
+    return 0;
+}

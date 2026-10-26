@@ -1920,6 +1920,170 @@ int main(int argc, char** argv)
               "the guarded seed answers zero");
     }
 
+    /* Cell route + neighbour pick (FUN_00431da0 / FUN_00431c70; 2026-10-25).
+     * Synthetic 8x8 grid: state byte +0x00, type byte +0x02, flag word
+     * +0x08, gate byte +0x0c — the corpus cell-record shape. */
+    {
+        static LevelState rs;
+        static uint8_t voxels[8 * 8 * LEVEL_VOXEL_STRIDE];
+        static uint8_t stats[0x150];
+        memset(&rs, 0, sizeof rs);
+        memset(voxels, 0, sizeof voxels);
+        memset(stats, 0, sizeof stats);
+        rs.ptr_voxels = voxels;
+        level_set_int(&rs, LEVEL_OFF_WIDTH, 8);
+        level_set_int(&rs, LEVEL_OFF_HEIGHT, 8);
+        auto cellput = [](LevelState* g, int x, int y, uint32_t flags,
+                          int type, int state, int gate) {
+            uint8_t* rec = level_voxel(g, x, y);
+            memcpy(rec + 0x08, &flags, 4);
+            rec[0x00] = (uint8_t)state;
+            rec[0x02] = (uint8_t)type;
+            rec[0x0c] = (uint8_t)gate;
+        };
+        auto wordput = [](uint8_t* st, int off, uint32_t v) {
+            memcpy(st + off, &v, 4);
+        };
+        /* The routine's plain-entity stats: special bit + walk relief. */
+        wordput(stats, 0x144, 1u | 0x2000000u);
+        EntitySlot mover;
+        memset(&mover, 0, sizeof mover);
+        mover.stats_record = stats;
+
+        /* The entity-less lane: only blocked (flag 8) cells answer. */
+        cellput(&rs, 3, 3, 0x8u, 1, 1, 0);
+        CHECK(terrain_cell_route_and_occupancy_check(NULL, &rs, 3, 3, 3, 3,
+                                                     0) == 1,
+              "the entity-less gate takes the blocked cell");
+        cellput(&rs, 3, 3, 0x8u | 0x400u, 1, 1, 0);
+        CHECK(terrain_cell_route_and_occupancy_check(NULL, &rs, 3, 3, 3, 3,
+                                                     0) == 0,
+              "the +0x400 flag closes the cell");
+        cellput(&rs, 3, 3, 0x8u | 0x40u, 1, 1, 0);
+        CHECK(terrain_cell_route_and_occupancy_check(NULL, &rs, 3, 3, 3, 3,
+                                                     1) == 0
+                  && terrain_cell_route_and_occupancy_check(NULL, &rs, 3, 3,
+                                                            3, 3, 0) == 1,
+              "strict mode rejects the +0x40 flag");
+        cellput(&rs, 3, 3, 0x8u, 1, 1, 4);
+        CHECK(terrain_cell_route_and_occupancy_check(NULL, &rs, 3, 3, 3, 3,
+                                                     0) == 0,
+              "the +0x0c gate byte closes the cell (no relief flag)");
+        cellput(&rs, 3, 3, 0u, 1, 1, 0);
+
+        /* The diagonal corner pair along the destination row. */
+        cellput(&rs, 3, 3, 0x8u, 1, 0, 0);
+        cellput(&rs, 3, 4, 8u, 1, 0, 0);
+        cellput(&rs, 4, 4, 8u, 1, 0, 0);
+        CHECK(terrain_cell_route_and_occupancy_check(NULL, &rs, 3, 3, 4, 4,
+                                                     0) == 2,
+              "the blocked corner pair answers 2");
+        cellput(&rs, 3, 4, 0u, 1, 0, 0);
+        CHECK(terrain_cell_route_and_occupancy_check(NULL, &rs, 3, 3, 4, 4,
+                                                     0) == 1,
+              "one open corner drops back to the plain answer");
+        cellput(&rs, 4, 4, 0u, 1, 0, 0);
+        cellput(&rs, 3, 3, 0u, 1, 1, 0);
+
+        /* The owner gate: +0x20000 stats without the +0x36c owner. */
+        wordput(stats, 0x144, 1u | 0x2000000u | 0x20000u);
+        CHECK(terrain_cell_route_and_occupancy_check(&mover, &rs, 3, 3, 3, 3,
+                                                     1) == 0,
+              "the owner-less +0x20000 entity answers zero");
+        mover.owner_36c = (const void*)&rs;
+        CHECK(terrain_cell_route_and_occupancy_check(&mover, &rs, 3, 3, 3, 3,
+                                                     1) == 1,
+              "the installed owner reopens the entity");
+        mover.owner_36c = NULL;
+
+        /* The type-11 entity gate. */
+        mover.type = 0xb;
+        CHECK(terrain_cell_route_and_occupancy_check(&mover, &rs, 3, 3, 3, 3,
+                                                     1) == 0,
+              "the type-11 entity is refused");
+        mover.type = 1;
+        wordput(stats, 0x144, 1u | 0x2000000u);
+
+        /* The on-site answer (strict skips it). */
+        cellput(&rs, 3, 3, 0u, 1, 0, 0);
+        mover.x = 3.0f;
+        mover.y = 5.0f;
+        CHECK(terrain_cell_route_and_occupancy_check(&mover, &rs, 3, 3, 3, 5,
+                                                     0) == 1,
+              "the entity standing on the destination row answers in place");
+        CHECK(terrain_cell_route_and_occupancy_check(&mover, &rs, 3, 3, 3, 5,
+                                                     1) == 0,
+              "strict skips the in-place answer (the cell reads empty)");
+        mover.x = 1.0f;
+        mover.y = 1.0f;
+
+        /* Type gates: 9 needs the +0x1000000 stats bit, 6 the state mask. */
+        cellput(&rs, 5, 5, 0u, 9, 1, 0);
+        CHECK(terrain_cell_route_and_occupancy_check(&mover, &rs, 5, 5, 5, 5,
+                                                     1) == 0,
+              "the idle-type cell needs the stats relief bit");
+        wordput(stats, 0x144, 1u | 0x2000000u | 0x1000000u);
+        CHECK(terrain_cell_route_and_occupancy_check(&mover, &rs, 5, 5, 5, 5,
+                                                     1) == 1,
+              "the idle-type cell answers once relieved");
+        cellput(&rs, 7, 7, 0u, 6, 1, 0);
+        CHECK(terrain_cell_route_and_occupancy_check(&mover, &rs, 7, 7, 7, 7,
+                                                     1) == 0,
+              "the six-type cell needs the state mask or 0x200");
+        wordput(stats, 0x144, 1u | 0x2000000u);
+        wordput(stats, 0x148, 0x200000u);
+        CHECK(terrain_cell_route_and_occupancy_check(&mover, &rs, 7, 7, 7, 7,
+                                                     1) == 1,
+              "the state mask opens the six-type cell");
+        wordput(stats, 0x148, 0u);
+
+        /* Open-cell promotion + the cardinal slot-0 quirk. */
+        cellput(&rs, 6, 3, 0x18u, 1, 1, 0);
+        CHECK(terrain_cell_route_and_occupancy_check(&mover, &rs, 6, 3, 6, 4,
+                                                     1) == 3,
+              "the open cell promotes the answer to 3");
+        cellput(&rs, 6, 2, 0x10u, 1, 1, 0);
+        cellput(&rs, 6, 3, 0x2000u, 1, 1, 0);
+        CHECK(terrain_cell_route_and_occupancy_check(&mover, &rs, 6, 2, 6, 3,
+                                                     1) == 2,
+              "the slot-0 neighbour quirk reads the 0x2000 pair (answers 2)");
+        cellput(&rs, 6, 2, 0u, 1, 1, 0);
+        cellput(&rs, 6, 3, 0u, 1, 1, 0);
+
+        /* Out-of-range / NULL guards read zero. */
+        CHECK(terrain_cell_route_and_occupancy_check(NULL, NULL, 1, 1, 1, 1,
+                                                     0) == 0
+                  && terrain_cell_route_and_occupancy_check(NULL, &rs, 99, 0,
+                                                            99, 0, 0) == 0,
+              "the guarded level and grid answer zero");
+
+        /* FirstFreeNeighborCellPick. */
+        memset(voxels, 0, sizeof voxels);
+        int center[2] = {4, 4};
+        int out[2] = {0, 0};
+        const uint32_t rot_before = neighbor_pick_rotation_peek();
+        CHECK(first_free_neighbor_cell_pick(NULL, &rs, center, out, 0) == 0,
+              "the empty grid finds nothing");
+        CHECK(neighbor_pick_rotation_peek() == rot_before + 1u,
+              "the pick advances the corpus rotation counter");
+
+        cellput(&rs, 5, 4, 0x10u, 1, 1, 0); /* open, unblocked */
+        CHECK(first_free_neighbor_cell_pick(&mover, &rs, center, out, 0) == 1
+                  && out[0] == 5 && out[1] == 4,
+              "mode 0 takes the open neighbour (rotation order aside)");
+        CHECK(first_free_neighbor_cell_pick(&mover, &rs, center, out, 1) == 0,
+              "mode 1 skips the already-open neighbour");
+        cellput(&rs, 5, 4, 0u, 1, 1, 0);
+        cellput(&rs, 4, 3, 8u, 1, 1, 0); /* blocked candidate for mode 1 */
+        CHECK(first_free_neighbor_cell_pick(&mover, &rs, center, out, 1) == 1
+                  && out[0] == 4 && out[1] == 3,
+              "mode 1 tries the non-open neighbour (route answers blocked)");
+
+        /* The NULL guards ride the same hooks. */
+        CHECK(first_free_neighbor_cell_pick(NULL, NULL, center, out, 0) == 0,
+              "the NULL level finds nothing");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "level_test: %d failure(s)\n", s_failures);
         return 1;

@@ -1034,4 +1034,29 @@ void* path_record_allocate_and_link(const uint32_t* coord_pair);
 uint32_t path_record_count_peek(void);
 void* path_record_last_peek(void);
 
+/* --- the cell route + neighbour pick band (2026-10-25) ----------------------
+ * TerrainCellRouteAndOccupancyCheck (FUN_00431da0): may the entity move
+ * from (from_x, from_y) to (to_x, to_y)? Answers 1 (move allowed / on
+ * site), 2 (blocked-but-cornered), 3 (open-cell promotion) or 0. The
+ * cardinal delta walk pins the corpus's slot-0 quirk; the entity's own
+ * tile rides the level_cell_of round seam. strict != 0 skips the
+ * on-site answer and rejects the +0x40 flag. Cell reads route through
+ * level_voxel (the corpus strides the 0x48 window blind; deviations
+ * documented in the .cpp).
+ * FirstFreeNeighborCellPick (FUN_00431c70): the four cardinal neighbours
+ * in counter-rotated order; mode 1 skips neighbours that are already
+ * in-bounds, open and unblocked. The counter is own storage (the corpus
+ * DAT_004de588 writer is inside the pick itself); the peek hook stands
+ * in for the corpus word. */
+int terrain_cell_route_and_occupancy_check(const struct EntitySlot* entity,
+                                           const LevelState* s,
+                                           int from_x, int from_y,
+                                           int to_x, int to_y, int strict);
+                                                /* FUN_00431da0 */
+int first_free_neighbor_cell_pick(const struct EntitySlot* entity,
+                                  const LevelState* s, const int* cell_in,
+                                  int* cell_out, int mode);
+                                                /* FUN_00431c70 */
+uint32_t neighbor_pick_rotation_peek(void);     /* port hook */
+
 #endif /* LEGORRR_GAME_LEVEL_HPP */

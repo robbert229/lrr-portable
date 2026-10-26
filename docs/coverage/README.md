@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 1118 | 43.6% |
+| ported | 1121 | 43.7% |
 | anchored | 4 | 0.2% |
-| named | 1400 | 54.6% |
+| named | 1397 | 54.5% |
 | runtime-import | 41 | 1.6% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (1118 functions)
+  (1121 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1400 functions)
+  citation yet (1397 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1405 (54.8%).**
+**Game logic remaining to port: 1402 (54.7%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -74,7 +74,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00404fc0` | PlaceCommandEligibilityCheck |
 | `0x00405950` | PendingCommandTimerFireScan |
 | `0x00405c10` | PendingCommandEntityAssignmentTick |
-| `0x00406360` | EntityRecordAttachAndRelink |
 | `0x00406540` | EntityPoolCallbackSearch |
 | `0x00406990` | TypeTableResourceRowLoad |
 | `0x00406c00` | RendererObjectUpdateFromRecordField64 |
@@ -385,8 +384,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00431530` | ActivityBuildRecordsReleaseAll |
 | `0x00431780` | TerrainStampImpactHandler |
 | `0x00431b20` | PlacementBlockedAdjacentCellScan |
-| `0x00431c70` | FirstFreeNeighborCellPick |
-| `0x00431da0` | TerrainCellRouteAndOccupancyCheck |
 | `0x00432600` | TerrainCellVariantFlagPropagate |
 | `0x00432c90` | TerrainCellStateUpdate |
 | `0x00433180` | CellTypeSpeedMultiplierResolve |
