@@ -153,4 +153,14 @@ int input_action_pressed_get(const struct EngineContext* ctx, int action,
 int input_binding_pressed_get(const struct EngineContext* ctx, int kind,
                               int entry, int alt);
 
+/* IndexedEntityValueGet (FUN_0041cab0): the indexed binding value — the
+ * pressed gate (FUN_0041c8f0) picks the DAT_004dd120 window, the flag-8
+ * entry reader (FUN_0041ca60) the DAT_004dd248 window, and both answers
+ * clear the DAT_004dcff8 window. All three windows are own storage (their
+ * corpus writer is the recorded interface-images config seam); the hooks
+ * install/peek them. */
+uint32_t indexed_entity_value_get(const struct EngineContext* ctx, int index);
+void     input_indexed_window_set(int which, int index, uint32_t value);
+uint32_t input_indexed_window_peek(int which, int index);
+
 #endif /* LEGORRR_INPUT_HPP */

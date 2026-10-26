@@ -2547,6 +2547,10 @@ static uint32_t s_panel_extra;       /* DAT_0050081c role */
 static void*    s_panel_ui_record;   /* DAT_005007d8 role */
 static void*    s_panel_text_slot;   /* DAT_005007dc role: holder-slot address */
 
+static void*    s_panel_position_slots[5]; /* DAT_004ffec4 role: panel slots */
+static float    s_panel_position_offset_x; /* DAT_004ffebc role */
+static float    s_panel_position_offset_y; /* DAT_004ffec0 role */
+
 static int    s_panel_seam_calls;
 static void*  s_panel_seam_last_res;
 static float  s_panel_seam_last_x;
@@ -2572,6 +2576,37 @@ void panel_resource_position_apply_if_enabled(void* resource, int x, int y)
         panel_blit_seam_call(resource, (float)x + s_bubble_offset_x,
                              (float)y + s_bubble_offset_y);
     }
+}
+
+/* IndexedPanelResourcePositionApply (FUN_00459f50) — see frontend.hpp.
+ * The corpus reads the slot selector off the record's screen-position
+ * float (+0x344), multiplied by its two float constants in the x87
+ * register's extended precision (modeled as exact double products) and
+ * truncated toward zero, then clamped at the last slot by the unsigned
+ * compare (a negative conversion clamps to 4 too); the slot table and
+ * offsets are own storage (the position-config loads are recorded config
+ * seams), and the position rides the surface blit seam. Deviations: the
+ * port takes the record float's address instead of the corpus's blind
+ * record+0x344 read, and a NULL float reads zero. */
+void indexed_panel_resource_position_apply(const float* record_position,
+                                           int x, int y)
+{
+    if ((s_panel_enable_word & 1u) == 0u) {
+        return;
+    }
+    const float v = (record_position != NULL ? *record_position : 0.0f);
+    const int sel = (int)(((double)v * (double)0.01f) * (double)5.0f);
+    uint32_t slot = (uint32_t)sel;
+    if (slot > 4u) {
+        slot = 4u; /* the corpus jbe: every out-of-range index, negative
+                    * conversions included, rides the last slot */
+    }
+    void* res = s_panel_position_slots[slot];
+    if (res == NULL) {
+        return;
+    }
+    panel_blit_seam_call(res, (float)x + s_panel_position_offset_x,
+                         (float)y + s_panel_position_offset_y);
 }
 
 void panel_resource_handle_and_dimensions_store(void* resource, uint32_t w,
@@ -2693,6 +2728,22 @@ void  panel_ui_record_set(void* record) { s_panel_ui_record = record; }
 void* panel_ui_record_peek(void) { return s_panel_ui_record; }
 void  panel_text_slot_set(void* slot) { s_panel_text_slot = slot; }
 void* panel_text_slot_peek(void) { return s_panel_text_slot; }
+
+void panel_position_slot_set(int which, void* res)
+{
+    if (which >= 0 && which < 5) {
+        s_panel_position_slots[which] = res;
+    }
+}
+void* panel_position_slot_peek(int which)
+{
+    return (which >= 0 && which < 5) ? s_panel_position_slots[which] : NULL;
+}
+void panel_position_offsets_set(float x, float y)
+{
+    s_panel_position_offset_x = x;
+    s_panel_position_offset_y = y;
+}
 
 void panel_seam_reset(void)
 {

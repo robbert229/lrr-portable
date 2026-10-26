@@ -630,6 +630,19 @@ void bitmap_font_glyph_measure_width(void* font, unsigned char glyph);
  * All seams ride recorded hooks (the bobbin-drop precedent). */
 void panel_resource_position_apply_if_enabled(void* resource, int x, int y);
                                                 /* FUN_00459fd0 */
+/* IndexedPanelResourcePositionApply (FUN_00459f50): with the panel enable
+ * word's bit 0x1 raised, the record's screen float rides the corpus's two
+ * float constant products through the x87 shape (modeled as exact double
+ * products, truncated toward zero) to pick one of five panel resource
+ * slots (the corpus's unsigned clamp puts every out-of-range answer,
+ * negatives included, on slot 4) and a non-NULL slot rides the surface
+ * blit seam at the position plus the offset pair. Slots and offsets are
+ * own storage installed through the hooks below (the corpus
+ * position-config loaders are recorded seams); the port reads the record
+ * float's address instead of the corpus's blind record+0x344 read
+ * (deviation). */
+void indexed_panel_resource_position_apply(const float* record_position,
+                                           int x, int y);
 void panel_resource_handle_and_dimensions_store(void* resource, uint32_t w,
                                                 uint32_t h, uint32_t extra);
                                                 /* FUN_0045c520 */
@@ -645,6 +658,9 @@ void     panel_ui_record_set(void* record);     /* port hook */
 void*    panel_ui_record_peek(void);            /* port hook */
 void     panel_text_slot_set(void* slot);       /* port hook (DAT_005007dc) */
 void*    panel_text_slot_peek(void);            /* port hook */
+void     panel_position_slot_set(int which, void* res);  /* port hook */
+void*    panel_position_slot_peek(int which);            /* port hook */
+void     panel_position_offsets_set(float x, float y);   /* port hook */
 void     panel_seam_reset(void);                /* port hook */
 int      panel_seam_calls(void);                /* port hook */
 void     panel_seam_last(void** out_res, float* out_x, float* out_y);

@@ -237,6 +237,45 @@ int main(void)
               "the far entry index reads zero (deviation)");
     }
 
+    /* IndexedEntityValueGet (FUN_0041cab0, 2026-10-25): the window the
+     * gate pair picks. The pressed gate answers through the engine-state
+     * bit; the flag-8 reader answers through the entry word's bit 3. */
+    {
+        EngineContext ec = {};
+        ec.state = 0x10000000u;
+        input_indexed_window_set(0, 7, 0x111u);
+        input_indexed_window_set(1, 7, 0x222u);
+        input_indexed_window_set(2, 7, 0x333u);
+        CHECK(input_indexed_window_peek(0, 7) == 0x111u
+                  && input_indexed_window_peek(1, 7) == 0x222u
+                  && input_indexed_window_peek(2, 7) == 0x333u,
+              "the window install hook round-trips");
+
+        ec.state = 0x10000000u;
+        CHECK(indexed_entity_value_get(&ec, 7) == 0x111u,
+              "the pressed gate answers the DAT_004dd120 window");
+        ec.state = 0u;
+        CHECK(indexed_entity_value_get(&ec, 7) == 0x333u,
+              "both answers clear answer the DAT_004dcff8 window");
+        input_entry_flag8_set_clear(7, 1);
+        CHECK(indexed_entity_value_get(&ec, 7) == 0x222u,
+              "the flag-8 entry answers the DAT_004dd248 window");
+        input_entry_flag8_set_clear(7, 0);
+        CHECK(indexed_entity_value_get(NULL, 7) == 0x333u,
+              "the NULL-context gate deviation falls through to the "
+              "default window");
+
+        CHECK(indexed_entity_value_get(&ec, 74) == 0u
+                  && indexed_entity_value_get(&ec, -1) == 0u,
+              "out-of-window indexes answer zero (deviation)");
+        input_indexed_window_set(2, 0x49, 0x777u);
+        CHECK(indexed_entity_value_get(&ec, 0x49) == 0x777u,
+              "the hard-wired action 0x49 never presses even as a window "
+              "index, so it rides the default window");
+        input_indexed_window_set(1, 7, 0u);
+        input_indexed_window_set(2, 7, 0u);
+    }
+
     if (s_failures == 0) {
         printf("input_test: PASS\n");
         return 0;

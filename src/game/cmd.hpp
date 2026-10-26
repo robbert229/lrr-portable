@@ -586,6 +586,20 @@ void cell_command_type3_issue(int x, int y);   /* FUN_00403030 */
 void entity_task_batch_append(EntitySlot* const* entities, int count,
                               void* payload);     /* FUN_00403650 */
 
+/* DeferredOListEntityQueueAdd (FUN_00437c20): appends one entry into the
+ * corpus's deferred ordered-list entity queue band — a 200-slot array of
+ * 11-dword entries whose counter rides the band's own end word. Entry
+ * words: 0/1 the grid-pick cell pair (ftol of the record's float pair,
+ * FUN_0044f6d0 boundary), 2/3 the record pair, then params 5/1/2/3/6 and
+ * two duplicated names (FUN_00477550). The hooks peek the band. */
+void deferred_olist_entity_queue_add(GameContext* ctx, const uint32_t record[2],
+                                     int p1, int p2, int p3, int p5, int p6,
+                                     const char* name1, const char* name2);
+uint32_t deferred_olist_entry_word(int slot, int word);
+char*    deferred_olist_entry_string(int slot, int which);
+uint32_t deferred_olist_counter_peek(void);
+void     deferred_olist_reset(void);
+
 /* --- HUD post / menu-selection chain (2026-10-25) --------------------------
  * CommandContextPostToHud (FUN_0041b2d0) refreshes the global state, updates
  * the menu selection's surface state and stores the map coordinate.

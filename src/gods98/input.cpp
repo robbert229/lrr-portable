@@ -318,3 +318,46 @@ int input_binding_pressed_get(const EngineContext* ctx, int kind, int entry,
     }
     return (int)(word & 1u);
 }
+
+/* IndexedEntityValueGet (FUN_0041cab0) — see input.hpp. The three binding
+ * windows stride in the corpus's data section as adjacent 74-dword blocks
+ * (DAT_004dcff8 / DAT_004dd120 / DAT_004dd248); their only writer, the
+ * interface-images config load, is a recorded file-seam boundary, so the
+ * port models the windows as own storage installed through the hook below.
+ * Deviations: the corpus indexes blindly (the port answers zero outside
+ * its 74-slot window), and the NULL-context gate deviation inherited
+ * from InputActionPressedGet (FUN_0041c8f0) applies. */
+#define INPUT_INDEXED_WINDOW_SLOTS 74
+
+static uint32_t s_indexed_values[3][INPUT_INDEXED_WINDOW_SLOTS];
+
+uint32_t indexed_entity_value_get(const EngineContext* ctx, int index)
+{
+    if (index < 0 || index >= INPUT_INDEXED_WINDOW_SLOTS) {
+        return 0u; /* deviation: the corpus strides its window blindly */
+    }
+    if (input_action_pressed_get(ctx, index, 0) != 0) {
+        return s_indexed_values[0][index]; /* DAT_004dd120 window */
+    }
+    if (input_entry_flag8_get(index) != 0u) {
+        return s_indexed_values[1][index]; /* DAT_004dd248 window */
+    }
+    return s_indexed_values[2][index];     /* DAT_004dcff8 window */
+}
+
+void input_indexed_window_set(int which, int index, uint32_t value)
+{
+    if (which >= 0 && which < 3
+        && index >= 0 && index < INPUT_INDEXED_WINDOW_SLOTS) {
+        s_indexed_values[which][index] = value;
+    }
+}
+
+uint32_t input_indexed_window_peek(int which, int index)
+{
+    if (which >= 0 && which < 3
+        && index >= 0 && index < INPUT_INDEXED_WINDOW_SLOTS) {
+        return s_indexed_values[which][index];
+    }
+    return 0u;
+}
