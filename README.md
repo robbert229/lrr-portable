@@ -2363,6 +2363,21 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Renderer command node prepend** (2026-10-25): one frontier row lands
+in `crt.*`. `renderer_command_node_prepend` (0x482ce0) builds the head
+node of the model-render list that the ported `model_render_list_clear`
+(0x482d30 twin) already walks: zero the node window, store the command
+kind word at `+0`, copy the sixteen payload dwords when a payload is
+given (zeros otherwise — the corpus leaves untouched fields either way),
+link the old list head into the corpus's `+0x44` slot, and raise the
+head. Deviations: the node window rides the widened host-word layout
+(the owned-stream-buffer convention, the corpus allocates `0x48`) with
+the next link widened to `void*` at the corpus byte slot (the
+`model_render_list_clear` precedent), and the alloc is guarded.
+`crt_test` pins the kind word, the payload copy, the zero fields of the
+null-payload node, the two-node head chain through `+0x44`, and the
+clear freeing the whole chain.
+
 **Options slot-context window copy** (2026-10-25): one frontier row lands
 in `options.*`. `options_context_copy_and_replace_resource` (0x4180c0) is
 the save-menu's options hand-off: with a save slot open it frees the slot

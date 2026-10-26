@@ -1186,6 +1186,29 @@ void model_render_list_clear(void)
 void model_render_list_head_set(void* node) { s_model_render_list_head = node; }
 void* model_render_list_head_peek(void) { return s_model_render_list_head; }
 
+/* RendererCommandNodePrepend (FUN_00482ce0) — see crt.hpp. */
+void renderer_command_node_prepend(uint32_t kind, const uint32_t* payload)
+{
+    /* Deviation: the port lays the corpus's dword node window out with
+     * the widened host-word window (the CrtOwnedStreamBufferRelease
+     * convention) while the next link rides as a widened void* at the
+     * corpus's byte slot +0x44 (the ModelRenderListClear precedent). */
+    char* node = (char*)engine_heap_alloc(18 * (long)sizeof(void*));
+    if (node == NULL) {
+        return; /* deviation: the corpus strides its alloc blindly */
+    }
+    memset(node, 0, 18 * (size_t)sizeof(void*));
+    const uint32_t zero = 0u;
+    __builtin_memcpy(node + 0x00, &kind, sizeof kind);
+    for (int i = 0; i < 16; ++i) {
+        const uint32_t v = (payload != NULL) ? payload[i] : zero;
+        __builtin_memcpy(node + 0x04 + (size_t)i * sizeof v, &v, sizeof v);
+    }
+    void* head = model_render_list_head_peek();
+    __builtin_memcpy(node + 0x44, &head, sizeof head);
+    model_render_list_head_set(node);
+}
+
 /* CrtOwnedStreamBufferRelease (FUN_00494df0) — see crt.hpp. */
 void crt_owned_stream_buffer_release(char* record)
 {

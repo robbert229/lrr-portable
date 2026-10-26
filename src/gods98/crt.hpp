@@ -425,6 +425,15 @@ void linked_object_list_release(void* list);          /* FUN_00479240 */
  * out as host words — field n at record + n*sizeof(void*), flags last;
  * NULL record guarded — corpus strides blindly). */
 void model_render_list_clear(void);                 /* FUN_00482d30 */
+/* RendererCommandNodePrepend (FUN_00482ce0): zero a widened host-word
+ * node window, store the command kind word, copy sixteen payload dwords
+ * when a payload is given (zeros otherwise), link the old list head into
+ * the corpus's +0x44 widened slot, and raise the head. Deviations: the
+ * node allocation is widened for the host-word layout (the
+ * CrtOwnedStreamBufferRelease convention; the corpus allocates 0x48),
+ * the alloc guard (the corpus strides it blindly). Shares the
+ * ModelRenderListClear head storage + hook. */
+void renderer_command_node_prepend(uint32_t kind, const uint32_t* payload);
 void model_render_list_head_set(void* node);        /* port hook */
 void* model_render_list_head_peek(void);            /* port hook */
 void crt_owned_stream_buffer_release(char* record); /* FUN_00494df0 */
