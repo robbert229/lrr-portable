@@ -7,6 +7,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "game/frontend.hpp" /* sav_tree_load's visited-band tail */
 #include "game/game.hpp"
 #include "game/level.hpp"
 #include "game/savegame.hpp"
@@ -815,6 +816,156 @@ int main(void)
         kid2.visited = 0;
         CHECK(sav_tree_walk(&kid2, NULL, &visits) == 0 && visits == 0,
               "the callback guard holds (the corpus strides it)");
+    }
+
+    /* SavTreeWalk2 / SavTreeLoad (2026-10-25). */
+    {
+        static SavTreeNode r;
+        static SavTreeNode k1;
+        static SavTreeNode k2;
+        static void* kids[2];
+        static uint32_t blocks[3 * 8]; /* three 0x20 block images */
+        static char winbuf[2 * 0x3190];
+        static uint32_t rec1[8];
+        static uint32_t rec2[8];
+        void* blockp = blocks;
+        SavTree2State st;
+        memset(blocks, 0, sizeof blocks);
+        memset(winbuf, 0, sizeof winbuf);
+        kids[0] = &k1;
+        kids[1] = &k2;
+        engine_feature_word_install(0u);
+        /* flag lane, flag = 1: need rides 0 everywhere — the root
+         * SETS through its carry 1, the kids CLEAR through their
+         * blocks' zero +0x1c probes, and the cursor ends per node. */
+        r.window = 1u;
+        r.children = kids;
+        r.count = 2;
+        k1.window = 0u;
+        k1.children = NULL;
+        k1.count = 0;
+        k2.window = 1u;
+        k2.children = NULL;
+        k2.count = 0;
+        r.visited = 0u;
+        k1.visited = 0u;
+        k2.visited = 0u;
+        blocks[0] = 0x80u; /* root: set lane */
+        blocks[8] = 0xBFu;  /* kid: clear lane */
+        blocks[16] = 0xCFu; /* kid: clear lane */
+        st.window_base = NULL;
+        st.window = 0u;
+        st.blocks = &blockp;
+        st.index = 0u;
+        st.flag = 1u;
+        sav_tree_walk2(&r, &st, 1, NULL);
+        CHECK(r.visited != 0u && k1.visited != 0u && k2.visited != 0u
+                  && st.index == 3u,
+              "the walk2 enters each node once, cursor included");
+        CHECK(blocks[0] == 0x84u && blocks[8] == 0xBBu
+                  && blocks[16] == 0xCBu,
+              "the carry sets and the probe-zero kids clear bit 2");
+
+        /* Re-entry visits nothing (the flag lane). */
+        sav_tree_walk2(&r, &st, 1, NULL);
+        CHECK(st.index == 3u && blocks[0] == 0x84u,
+              "the entered tree walks nothing");
+
+        /* flag = 1 + extended gate: the flag zeroes on entry, need
+         * rides 1, and every block SETS. */
+        engine_feature_word_install(0x20000u);
+        r.visited = 0u;
+        k1.visited = 0u;
+        k2.visited = 0u;
+        blocks[0] = 0xA1u;
+        blocks[8] = 0xB2u;
+        blocks[16] = 0xC8u;
+        st.index = 0u;
+        st.flag = 1u;
+        sav_tree_walk2(&r, &st, 1, NULL);
+        CHECK(blocks[0] == 0xA5u && blocks[8] == 0xB6u
+                  && blocks[16] == 0xCCu,
+              "the gate zeroes the flag and need rides 1");
+
+        /* stride lane (gate off): need bit 0 from
+         * `node.window * 0x3190 + window_base`; r (window 1) reads the
+         * zeroed slot and CLEARS its block (carry 0), k1 (window 0)
+         * reads the raised bit and SETS through its need. */
+        engine_feature_word_install(0u);
+        ((uint32_t*)winbuf)[0] = 1u;
+        r.children = kids;
+        r.window = 1u;
+        r.count = 2;
+        r.visited = 0u;
+        k1.visited = 0u;
+        k2.window = 0u;
+        k2.visited = 0u;
+        blocks[0] = 0x15u;
+        blocks[8] = 0x10u;
+        blocks[16] = 0x10u;
+        st.window_base = winbuf;
+        st.flag = 1u; /* ignored off the flag lane */
+        st.index = 0u;
+        sav_tree_walk2(&r, &st, 0, NULL);
+        CHECK(blocks[0] == 0x11u && blocks[8] == 0x14u
+                  && blocks[16] == 0x14u && st.index == 3u,
+              "the stride read rides node.window * 0x3190 + base");
+
+        /* probe lane: need 0, carry 0, block +0x1c NON-zero -> SET. */
+        r.children = NULL;
+        r.count = 0;
+        r.window = 0u;
+        r.visited = 0u;
+        blocks[0] = 0x10u;
+        blocks[7] = 5u;
+        st.window_base = NULL;
+        st.flag = 1u;
+        st.index = 0u;
+        sav_tree_walk2(&r, &st, 0, NULL);
+        CHECK(blocks[0] == 0x14u, "the nonzero +0x1c probe forces the set");
+        blocks[7] = 0u;
+
+        /* guards (deviations): the null node rides, a null block slot
+         * still advances the cursor, and a null child slot returns. */
+        const uint32_t before = st.index;
+        sav_tree_walk2(NULL, &st, 1, NULL);
+        CHECK(st.index == before, "the null node guards out");
+        st.blocks = NULL;
+        r.visited = 0u;
+        sav_tree_walk2(&r, &st, 1, NULL);
+        CHECK(st.index == before + 1u, "the null block slot still advances");
+
+        /* SavTreeLoad: stack-init the state, walk, clear the bands. */
+        memset(rec1, 0, sizeof rec1);
+        memset(rec2, 0, sizeof rec2);
+        rec1[4] = 0xdeadu; /* corpus record + 0x10 flag word */
+        rec2[4] = 0xbeefu;
+        sav_visited_entry_set(0, 0, rec1, 7u);
+        sav_visited_entry_set(1, 0, rec2, 8u);
+        frontend_flow_word_set(2, -1);
+        int* wc = active_object_list_word();
+        *wc = 1;
+        frontend_flow_word_set(2, 0);
+        wc = active_object_list_word();
+        *wc = 1;
+        r.children = kids;
+        r.count = 2;
+        r.visited = 0u;
+        k1.visited = 0u;
+        k2.visited = 0u;
+        blocks[0] = 0xA1u;
+        blocks[8] = 0xB2u;
+        blocks[16] = 0xC8u;
+        sav_tree_load(&r, NULL, &blockp, 0u, 1u, NULL);
+        CHECK(r.visited != 0u && k1.visited != 0u && k2.visited != 0u
+                  && blocks[0] == 0xA5u && (blocks[8] & 4u) == 0u,
+              "the load walks with the stack-init state");
+        CHECK(rec1[4] == 0u && ((uint32_t*)rec1)[4] == 0u,
+              "the load clears the visited band");
+        void* p = NULL;
+        uint32_t w = 0u;
+        sav_visited_entry_peek(1, 0, &p, &w);
+        CHECK(p == rec2 && w == 0u, "the in-game band clears alongside");
     }
 
     return 0;

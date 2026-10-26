@@ -2363,6 +2363,28 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Sav-tree state visitor** (2026-10-25): two frontier rows land, closing the
+`CLEAN`-bucket split. `savegame.*` takes `sav_tree_walk2` (FUN_004172f0) and
+`sav_tree_load` (FUN_004173e0) — the stateful sibling of the ported plain walk
+(FUN_004171c0). The walk enters each unvisited node once, computes a "need"
+word from the shared five-dword state (the flag lane when the stride window
+base is null or the extended-mode gate — app mode > 1 or the feature word's
+bit 0x20000 — raises, which also zeroes the flag on entry, otherwise the bit-0
+read at `node.window * 0x3190 + window_base`), then touches the block cursor:
+bit 2 clears only when need, the incoming carry, and the block's +0x1c word
+all read zero, sets otherwise, and the cursor ALWAYS advances (the corpus
+advances through a null block pointer too). Children recurse with `need` as
+the carry; the load stack-inits the state, walks with carry 1, then clears the
+installed visited bands (FUN_00416e70). Deviations: the corpus's two tree-root
+globals are unmodeled so nodes ride as arguments, app mode threads
+EngineContext, the feature word rides the crt.* half-model peek, and the
+stride/block reads are guarded memcpy lanes. Test fix found mid-cluster:
+`objective_test` raised the gate bit through the level block it had already
+destroyed — the raise gate now rides a fresh zeroed block, which also
+`MALLOC_PERTURB_`-hardens the suite (the dangling block crashed under most
+meson-injected perturbation values). Ledger 1126 -> 1128. Tests green; 34/36
+baseline.
+
 **Tutorial path coordinate chains** (2026-10-25): one frontier row lands.
 `level.*` takes `tutorial_path_coordinate_index` (0x456b80): zero the 0x37-slot
 chain table on the level block, then sweep the voxel grid x-outer / y-inner

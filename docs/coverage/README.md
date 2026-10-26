@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 1126 | 43.9% |
+| ported | 1128 | 44.0% |
 | anchored | 4 | 0.2% |
-| named | 1392 | 54.3% |
+| named | 1390 | 54.2% |
 | runtime-import | 41 | 1.6% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (1126 functions)
+  (1128 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1392 functions)
+  citation yet (1390 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1397 (54.5%).**
+**Game logic remaining to port: 1395 (54.4%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -262,8 +262,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00417090` | LevelNodeGet |
 | `0x00417280` | RegistryValueLookupWithLock |
 | `0x004172d0` | RegistryValueIndexLookupOrNotFound |
-| `0x004172f0` | SavTreeWalk2 |
-| `0x004173e0` | SavTreeLoad |
 | `0x004179b0` | SavMenuList |
 | `0x00418000` | ShowLevelOverlayForCurrentSelection |
 | `0x00418040` | CampaignChainSnapshotCreate |
