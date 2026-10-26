@@ -2290,7 +2290,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0048e870,FUN_0048e870,ported,DoubleIsFinite,2,109
 0048e890,FUN_0048e890,named,MarkupIntegerTokenParse,0,470
 0048e8e0,FUN_0048e8e0,named,CrtRoundToIntegralWithMathErrorHandlingVariant,0,1080
-0048e9e0,__alldiv,runtime-import,__alldiv,0,1679
+0048e9e0,__alldiv,ported,__alldiv,3,1679
 0048ea90,__allmul,ported,__allmul,2,451
 0048ead0,FUN_0048ead0,ported,EngineCalloc,2,82
 0048eae0,FUN_0048eae0,named,FileResourceHandleClose,0,674
@@ -2476,7 +2476,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00498ae0,FUN_00498ae0,ported,CrtStreamBufferAllocate,3,430
 00498b40,FUN_00498b40,ported,CrtFileDescriptorFlag40Get,3,180
 00498b70,FUN_00498b70,ported,CrtWideCharToMultibyte,3,683
-00498bf0,__aulldiv,runtime-import,__aulldiv,0,1246
+00498bf0,__aulldiv,ported,__aulldiv,3,1246
 00498c60,__aullrem,runtime-import,__aullrem,0,1468
 00498ce0,FUN_00498ce0,named,CrtScanfNumericConversionAssign,0,1148
 00498e00,FUN_00498e00,named,CrtMultibyteToWideChar,0,1386

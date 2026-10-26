@@ -2363,6 +2363,19 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Integer divide pair** (2026-10-25): two runtime rows land in `crt.*`
+alongside the multiply thunk. `crt_integer64_divide` (0x48e9e0, `__alldiv`)
+and `crt_unsigned64_divide` (0x498bf0, `__aulldiv`) fold the helpers'
+sign-normalizing shift/trial/repair algorithm into the LP64 division —
+the algorithm truncates toward zero throughout, so one word-pair fold and
+one native division answer every well-defined case. Quirks pinned: the
+signed pair's double normalization of `INT64_MIN / -1` never negates, so
+the wrapping quotient rides through unchanged, and the equal-extremes
+case answers one. Deviations: the zero-divisor exception path answers
+zero, and the helper's normalization wrap is the only modeled edge.
+`crt_test` pins word-pair scaling, both truncation directions, and the
+guard lanes. Tests green; 34/36 baseline.
+
 **Deferred queue trio** (2026-10-25): three frontier rows land —
 `indexed_entity_value_get` (0x41cab0) in `input.*`,
 `deferred_olist_entity_queue_add` (0x437c20) in `cmd.*`, and

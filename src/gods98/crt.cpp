@@ -1939,6 +1939,46 @@ uint64_t crt_integer64_multiply(uint32_t lo_a, int32_t hi_a,
     return ((uint64_t)high32 << 32) | (uint32_t)low64;
 }
 
+/* CrtInteger64Divide (FUN_0048e9e0, __alldiv) — see crt.hpp. The helper
+ * sign-normalizes the word-pair operands, shifts the divisor into range,
+ * takes a one-word trial quotient, and repairs the estimate with the
+ * multiply-back; every branch truncates toward zero, so the port folds
+ * the algorithm into the word-pair fold and one int64 division.
+ * Deviations: a zero divisor answers zero (the corpus helper falls into
+ * the divisor's exception path), and the helper's wrapping normalization
+ * of the single overflowing quotient (INT64_MIN / -1) is not modeled. */
+uint64_t crt_integer64_divide(uint32_t lo_a, uint32_t hi_a,
+                              uint32_t lo_b, uint32_t hi_b)
+{
+    const int64_t n = (int64_t)(((uint64_t)hi_a << 32) | lo_a);
+    const int64_t d = (int64_t)(((uint64_t)hi_b << 32) | lo_b);
+    if (d == 0) {
+        return 0u; /* deviation: the corpus exception path, not modeled */
+    }
+    if (d == -1) {
+        return (uint64_t)(n == INT64_MIN ? INT64_MIN : (int64_t)0u - n);
+        /* n / -1: the negation, with the helper's INT64_MIN wrap quirk
+         * pinned (the normalization keeps that quotient positive). */
+    }
+    return (uint64_t)(n / d);
+}
+
+/* CrtUnsigned64Divide (FUN_00498bf0, __aulldiv) — see crt.hpp. The
+ * unsigned sibling: the same shift/trial/repair shape, so the same fold;
+ * the high half of the answer is pinned zero only when the repair needs
+ * it (the estimate can overflow the 32-bit trial), never by construction.
+ * Deviation: a zero divisor answers zero (the corpus exception path). */
+uint64_t crt_unsigned64_divide(uint32_t lo_a, uint32_t hi_a,
+                              uint32_t lo_b, uint32_t hi_b)
+{
+    const uint64_t n = ((uint64_t)hi_a << 32) | lo_a;
+    const uint64_t d = ((uint64_t)hi_b << 32) | lo_b;
+    if (d == 0u) {
+        return 0u; /* deviation: the corpus exception path, not modeled */
+    }
+    return n / d;
+}
+
 /* --- the CRT file-descriptor flag window (2026-10-25) ---------------------
  * CrtFileDescriptorFlag40Get (FUN_00498b40): the corpus reads bit 0x40 of
  * the byte at block+4 in its file-descriptor table — 32 eight-byte entries
