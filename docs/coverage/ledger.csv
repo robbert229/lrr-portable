@@ -550,7 +550,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0041ada0,FUN_0041ada0,named,InterfaceImagesConfigLoad,0,2854
 0041afd0,FUN_0041afd0,named,InterfaceSurroundImagesConfigLoad,0,1739
 0041b1b0,FUN_0041b1b0,named,InterfaceBackButtonConfigLoad,0,748
-0041b270,FUN_0041b270,named,InterfaceButtonImagesLoad,0,312
+0041b270,FUN_0041b270,ported,InterfaceButtonImagesLoad,3,312
 0041b2d0,FUN_0041b2d0,ported,CommandContextPostToHud,3,158
 0041b300,FUN_0041b300,ported,MenuSelectionResourceUpdate,3,784
 0041b3c0,FUN_0041b3c0,ported,EntityQueryFlagCount,3,1201
@@ -1325,11 +1325,11 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0045bcd0,FUN_0045bcd0,named,CameraDragFromCursorApply,0,1742
 0045bf20,FUN_0045bf20,ported,CameraZoomStepAdjust,2,219
 0045bf70,FUN_0045bf70,ported,UIEntryBoundsGet,3,350
-0045bfb0,FUN_0045bfb0,named,ThreeSurfaceResourcesLoadAndInitialize,0,450
+0045bfb0,FUN_0045bfb0,ported,ThreeSurfaceResourcesLoadAndInitialize,3,450
 0045c040,FUN_0045c040,ported,CrystalQuotaSetup,1,629
 0045c0d0,FUN_0045c0d0,named,PairCountHistogramBuild,0,3553
 0045c340,FUN_0045c340,ported,PanelResourceLayoutStore,1,574
-0045c3f0,FUN_0045c3f0,named,AdvisorProgressBarFillDraw,0,623
+0045c3f0,FUN_0045c3f0,ported,AdvisorProgressBarFillDraw,3,623
 0045c4a0,FUN_0045c4a0,ported,GlobalValueSet_0050080c,1,81
 0045c4b0,FUN_0045c4b0,ported,PanelResourcePositionUpdateIfEnabled,1,529
 0045c520,FUN_0045c520,ported,PanelResourceHandleAndDimensionsStore,2,323

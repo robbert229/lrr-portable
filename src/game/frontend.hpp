@@ -662,6 +662,43 @@ void     panel_position_slot_set(int which, void* res);  /* port hook */
 void*    panel_position_slot_peek(int which);            /* port hook */
 void     panel_position_offsets_set(float x, float y);   /* port hook */
 
+/* InterfaceButtonImagesLoad (FUN_0041b270): load the two button images
+ * through the surface-load seam and call the transform seam per non-zero
+ * handle. The peek hook reads the DAT window roles (own storage). */
+void     interface_button_images_load(const char* left_path,
+                                      const char* right_path);
+uint32_t interface_button_surface_peek(int which);   /* port hook */
+
+/* ThreeSurfaceResourcesLoadAndInitialize (FUN_0045bfb0): the same fold
+ * for three paths, with the corpus's slot quirk: param_2 lands at peek
+ * index 2 and param_3 at index 1. */
+void     three_surface_resources_load(const char* first, const char* second,
+                                      const char* third);
+uint32_t advisor_bar_surface_peek(int which);        /* port hook */
+
+/* AdvisorProgressBarFillDraw (FUN_0045c3f0): gate on the layout face and
+ * a positive percent, clamp at 100, and ride the seam with the row pair
+ * (float bits) offset by the layout size pair and a {fill, face+8} size
+ * witness; fill = extra * 0.01 * percent. Deviation: the face+8 read
+ * needs panel_layout_surface_install (the load seam answers NULL). */
+void     advisor_progress_bar_fill_draw(int row, float percent);
+
+/* MenuSurfaceBlitScaled (FUN_00412af0): side-selectable face blit — flag
+ * set takes the plain destination lane, unset the scaled lane through the
+ * rect witness {-pan, -pan, 640, 480} at the origin. Own-storage record
+ * window + plane-pan window (the corpus writers are per-submenu pan,
+ * modeled apart in FeSubmenu.scroll). */
+void     menu_surface_blit_scaled(int percent_side);
+void     menu_blit_record_write(int index, uint32_t value);
+uint32_t menu_blit_record_read(int index);
+void     menu_blit_record_clear(void);
+void     menu_plane_pan_set(float x, float y);
+float    menu_plane_pan_peek(int axis);
+
+/* PanelLayoutSurfaceInstall (port hook): stands in for the loaded face
+ * record so the progress-bar fill's gate and face+8 read exercise. */
+void     panel_layout_surface_install(void* surface);  /* test hook */
+
 /* ScreenCoordNormalizeInit (FUN_0045d8b0): one pass over the corpus's
  * screen-normalization band — 90 color constants land scaled by the
  * 1/255 float constant, two stride-16 lanes fill 20 unit cells each,

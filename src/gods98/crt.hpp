@@ -358,6 +358,15 @@ int  panel_draw_count_peek(int panel);            /* port hook */
  * bit-for-bit the way the corpus's float "handles" do. */
 uint32_t crt_surface_handle_next(void);
 void     crt_surface_blit_record(uint32_t handle, float x, float y);
+/* The same seam with the corpus's optional rect witnesses: rect1 is the
+ * source rect (four floats, absent when the corpus passes NULL), rect3
+ * the size pair. crt_surface_call_get_rect answers the witnesses for a
+ * recorded call (presence flags required, data optional). */
+void     crt_surface_blit_record_rect(uint32_t handle, float x, float y,
+                                      const float* rect1,
+                                      const float* rect3);
+int      crt_surface_call_get_rect(int index, float* rect1, int* rect1_set,
+                                   float* rect3, int* rect3_set);
 int      crt_surface_calls_count(void);
 int      crt_surface_call_get(int index, uint32_t* handle, float* x,
                               float* y);

@@ -51,6 +51,24 @@ static void* s_c179_loader(const char* key)
     return NULL;
 }
 
+/* C179 (2026-10-25): a key-keyed loader standing in for the surface-load
+ * seam's bitmap string cache. */
+static char s_c179_buf[5][1];
+static void* s_c179_loader(const char* key)
+{
+    if (key == NULL) {
+        return NULL;
+    }
+    static const char* const names[5] = { "c179_l", "c179_r", "c179_p1",
+                                          "c179_p2", "c179_p3" };
+    for (int i = 0; i != 5; ++i) {
+        if (strcmp(key, names[i]) == 0) {
+            return s_c179_buf[i];
+        }
+    }
+    return NULL;
+}
+
 static int s_failures = 0;
 
 
@@ -2015,6 +2033,160 @@ int main(int argc, char** argv)
                   && screen_coord_normalize_rows_peek() == 0u,
               "the reset hook restores the seed shape");
         display_dimensions_set(0, 0);
+    }
+
+    /* Load band + progress bar + scaled menu blit (FUN_0041b270 /
+     * FUN_0045bfb0 / FUN_0045c3f0 / FUN_00412af0; 2026-10-25). */
+    {
+        auto bits_of = [](float v) {
+            uint32_t b;
+            __builtin_memcpy(&b, &v, sizeof b);
+            return b;
+        };
+        auto float_of = [](uint32_t b) {
+            float f;
+            __builtin_memcpy(&f, &b, sizeof f);
+            return f;
+        };
+        string_cache_bitmap_loader_set(s_c179_loader);
+        crt_surface_calls_clear();
+        interface_button_images_load("c179_l", "c179_r");
+        CHECK(interface_button_surface_peek(0)
+                      == (uint32_t)(uintptr_t)s_c179_buf[0]
+                  && interface_button_surface_peek(1)
+                         == (uint32_t)(uintptr_t)s_c179_buf[1],
+              "the button loads land both window slots");
+        CHECK(crt_surface_calls_count() == 2,
+              "both loads call the transform seam");
+        uint32_t h0 = 0;
+        float xb = 0, yb = 0;
+        CHECK(crt_surface_call_get(0, &h0, &xb, &yb) && h0 != 0u
+                  && xb == 0.0f && yb == 0.0f,
+              "the transform seam records (handle, 0, 0)");
+
+        crt_surface_calls_clear();
+        interface_button_images_load("c179_l", "c179_r");
+        CHECK(crt_surface_calls_count() == 2
+                  && interface_button_surface_peek(0) != 0u,
+              "the cache lane reloads (identity holds)");
+        crt_surface_calls_clear();
+        interface_button_images_load(NULL, "");
+        CHECK(crt_surface_calls_count() == 0
+                  && interface_button_surface_peek(0) == 0u
+                  && interface_button_surface_peek(1) == 0u,
+              "the empty keys stay silent");
+
+        crt_surface_calls_clear();
+        three_surface_resources_load("c179_p1", "c179_p2", "c179_p3");
+        CHECK(advisor_bar_surface_peek(0)
+                      == (uint32_t)(uintptr_t)s_c179_buf[2]
+                  && advisor_bar_surface_peek(1)
+                         == (uint32_t)(uintptr_t)s_c179_buf[4]
+                  && advisor_bar_surface_peek(2)
+                         == (uint32_t)(uintptr_t)s_c179_buf[3],
+              "the three-way quirk: param_2 rides peek 2");
+        CHECK(crt_surface_calls_count() == 3,
+              "all three transforms record");
+
+        /* the fill draw — face buffer, pair row, size pair, extra word */
+        static int face_word = 32;
+        static char face_rec[12];
+        __builtin_memcpy(face_rec + 8, &face_word, sizeof face_word);
+        uint32_t p1x = 0, p1y = 0;
+        indexed_pair_get(1, &p1x, &p1y);
+        indexed_pair_set(1, bits_of(2.5f), bits_of(1.25f));
+        panel_resource_layout_store((void*)1u, 16u, 4u, 150u, (void*)2u, 0u,
+                                    0u);
+        panel_layout_surface_install(face_rec);
+
+        crt_surface_calls_clear();
+        advisor_progress_bar_fill_draw(1, 0.0f);
+        advisor_progress_bar_fill_draw(1, -1.0f);
+        CHECK(crt_surface_calls_count() == 0,
+              "the gate silences non-positive percents");
+        crt_surface_calls_clear();
+        advisor_progress_bar_fill_draw(1, 67.0f);
+        CHECK(crt_surface_calls_count() == 1,
+              "the fill blits once per call");
+        uint32_t fh = 0;
+        float fx = 0, fy = 0;
+        CHECK(crt_surface_call_get(0, &fh, &fx, &fy)
+                  && fh == (uint32_t)(uintptr_t)face_rec
+                  && fx == 2.5f + 16.0f && fy == 1.25f + 4.0f,
+              "the dest pair reads the pair bits plus the size pair");
+        float r3[2] = { 0, 0 };
+        int r1s = 1, r3s = 0;
+        CHECK(crt_surface_call_get_rect(0, NULL, &r1s, r3, &r3s) && !r1s
+                  && r3s,
+              "the fill rides only the size witness");
+        const float want_fill
+            = (float)((double)150.0 * (double)(float)(1.0 / 100.0)
+                      * 67.0);
+        CHECK(bits_of(r3[0]) == bits_of(want_fill)
+                  && bits_of(r3[1]) == bits_of(32.0f),
+              "the size witness is fill and the face+8 float");
+
+        crt_surface_calls_clear();
+        advisor_progress_bar_fill_draw(1, 250.0f);
+        const float clamped
+            = (float)((double)150.0 * (double)(float)(1.0 / 100.0)
+                      * 100.0);
+        CHECK(crt_surface_calls_count() == 1
+                  && crt_surface_call_get_rect(0, NULL, NULL, r3, NULL)
+                  && bits_of(r3[0]) == bits_of(clamped),
+              "the clamp rides the corpus constant");
+        panel_layout_surface_install(NULL);
+        crt_surface_calls_clear();
+        advisor_progress_bar_fill_draw(1, 50.0f);
+        CHECK(crt_surface_calls_count() == 0,
+              "the missing face gate silences (dev)");
+
+        /* scaled menu blit lanes */
+        menu_blit_record_clear();
+        uint32_t sbits;
+        sbits = bits_of(7.5f);
+        menu_blit_record_write(4, 0x1234u);
+        menu_blit_record_write(5, 0x5678u);
+        menu_blit_record_write(13, 1u);
+        menu_blit_record_write(14, bits_of(7.5f));
+        menu_blit_record_write(15, bits_of(-3.5f));
+        crt_surface_calls_clear();
+        menu_surface_blit_scaled(0);
+        CHECK(crt_surface_calls_count() == 1
+                  && crt_surface_call_get(0, &h0, &xb, &yb) && h0 == 0x5678u
+                  && xb == 7.5f && yb == -3.5f,
+              "the flag lane destination-blits side 0 from +0x14");
+        int rs1 = 1;
+        CHECK(crt_surface_call_get_rect(0, NULL, &rs1, NULL, NULL)
+                  && rs1 == 0,
+              "the plain lane witnesses no rect");
+
+        menu_blit_record_write(13, 0u);
+        menu_plane_pan_set(11.5f, 22.5f);
+        crt_surface_calls_clear();
+        menu_surface_blit_scaled(1);
+        CHECK(crt_surface_calls_count() == 1
+                  && crt_surface_call_get(0, &h0, &xb, &yb) && h0 == 0x1234u
+                  && xb == 0.0f && yb == 0.0f,
+              "the scaled lane blits side 1 (+0x10) at the origin");
+        float r1[4] = { 0, 0, 0, 0 };
+        CHECK(crt_surface_call_get_rect(0, r1, &rs1, NULL, NULL) && rs1
+                  && r1[0] == -11.5f && r1[1] == -22.5f
+                  && r1[2] == 640.0f && r1[3] == 480.0f,
+              "the source rect flips the pan onto 640x480");
+        menu_blit_record_write(4, 0u);
+        menu_blit_record_write(5, 0u);
+        crt_surface_calls_clear();
+        menu_surface_blit_scaled(0);
+        CHECK(crt_surface_calls_count() == 0,
+              "the null handle stays silent");
+        CHECK(menu_plane_pan_peek(0) == 11.5f
+                  && menu_plane_pan_peek(3) == 0.0f,
+              "the pan hook bounds the window");
+
+        menu_blit_record_clear();
+        indexed_pair_set(1, p1x, p1y);
+        string_cache_bitmap_loader_set(NULL);
     }
 
     if (s_failures == 0) {

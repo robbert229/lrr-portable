@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 1114 | 43.4% |
+| ported | 1118 | 43.6% |
 | anchored | 4 | 0.2% |
-| named | 1404 | 54.8% |
+| named | 1400 | 54.6% |
 | runtime-import | 41 | 1.6% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (1114 functions)
+  (1118 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1404 functions)
+  citation yet (1400 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1409 (55.0%).**
+**Game logic remaining to port: 1405 (54.8%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -307,7 +307,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0041ada0` | InterfaceImagesConfigLoad |
 | `0x0041afd0` | InterfaceSurroundImagesConfigLoad |
 | `0x0041b1b0` | InterfaceBackButtonConfigLoad |
-| `0x0041b270` | InterfaceButtonImagesLoad |
 | `0x0041b680` | CatalogCallbackByIdDispatch |
 | `0x0041baa0` | SimulationPointerActionDispatch |
 | `0x0041c1c0` | AdvisorOverlayHitResolve |
@@ -692,9 +691,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0045b850` | UiOverlayCreateConfiguredElement |
 | `0x0045b9d0` | PanelRotationControlConfigLoad |
 | `0x0045bcd0` | CameraDragFromCursorApply |
-| `0x0045bfb0` | ThreeSurfaceResourcesLoadAndInitialize |
 | `0x0045c0d0` | PairCountHistogramBuild |
-| `0x0045c3f0` | AdvisorProgressBarFillDraw |
 | `0x0045c5f0` | UiOverlayAnimationApply |
 | `0x0045c670` | AdvisorAnimationSceneLookupAndRequest |
 | `0x0045c6b0` | AdvisorAnimationSlotIdResolve |

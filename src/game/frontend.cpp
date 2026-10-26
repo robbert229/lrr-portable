@@ -2698,6 +2698,163 @@ void panel_layout_glyph_install(void* surface)
      * seam (NULL answers uninstalled); the hook stands in for the seam. */
 }
 
+/* --- the load band + advisor progress bar (2026-10-25) ---------------------
+ * InterfaceButtonImagesLoad (FUN_0041b270) and ThreeSurfaceResourcesLoad
+ * AndInitialize (FUN_0045bfb0) load their paths through the surface-load
+ * seam (the string cache) and, for every non-zero handle, call the surface
+ * transform seam — the seam fold records the corpus's (handle, 0, 0) call.
+ * Quirk pinned: the three-way takes param_2 into the THIRD window slot and
+ * param_3 into the second (the corpus stores 7e0, 7e8, 7e4 in call order).
+ * Deviations: the corpus keeps loaded surface records; the port carries the
+ * cache value's pointer bits as the handle bits (LP64), and the DAT windows
+ * are own storage (their corpus owners are unported).
+ *
+ * AdvisorProgressBarFillDraw (FUN_0045c3f0): the fill blit — gate on the
+ * layout face surface and a strictly positive percent, clamp the percent at
+ * the corpus's 100.0 constant, then ride the seam with the row's pair (read
+ * as the corpus reads it, float bits) offset by the layout size pair and a
+ * size witness {extra * 0.01 * percent, face+8 int->float}. Deviation: the
+ * face+8 read needs an installed face buffer (the load seam answers NULL).
+ *
+ * MenuSurfaceBlitScaled (FUN_00412af0): the side-selectable menu face blit.
+ * A set flag byte (low bit of record +0x34) takes the plain destination
+ * blit from record +0x38; otherwise the scaled lane rides the seam with the
+ * source rect {-pan_x, -pan_y, 640, 480} onto the origin. Deviations: the
+ * corpus record and the plane-pan globals ride own storage (the corpus's
+ * per-submenu pan writer lands in FeSubmenu.scroll, apart from this
+ * window). */
+void panel_layout_surface_install(void* surface)
+{
+    s_panel_layout_surface = surface;
+    /* test hook: the load seam's face word (deviation as in glyph_install) */
+}
+
+static uint32_t s_interface_button_surfaces[2]; /* DAT_004de1e4/e8 roles */
+static uint32_t s_advisor_bar_surfaces[3];      /* DAT_005007e0/e8/e4 roles */
+static uint32_t s_menu_blit_record[16];         /* corpus record window */
+static float s_menu_plane_pan[2];               /* DAT_005574dc/e0 roles */
+
+static uint32_t surface_load_handle(const char* path)
+{
+    return (uint32_t)(uintptr_t)string_cache_lookup_or_load(path);
+}
+
+void interface_button_images_load(const char* left_path,
+                                  const char* right_path)
+{
+    const char* paths[2] = { left_path, right_path };
+    for (int i = 0; i != 2; ++i) {
+        const uint32_t handle = surface_load_handle(paths[i]);
+        s_interface_button_surfaces[i] = handle;
+        if (handle != 0u) {
+            crt_surface_blit_record(handle, 0.0f, 0.0f); /* transform */
+        }
+    }
+}
+
+uint32_t interface_button_surface_peek(int which)
+{
+    return (which >= 0 && which < 2) ? s_interface_button_surfaces[which] : 0u;
+}
+
+void three_surface_resources_load(const char* first, const char* second,
+                                  const char* third)
+{
+    const char* paths[3] = { first, second, third };
+    /* corpus store order: slot 0 (DAT_005007e0), slot 1 lands at the
+     * THIRD peek index (DAT_005007e8), slot 2 at the second (DAT_005007e4)
+     */
+    uint32_t* const slots[3] = { &s_advisor_bar_surfaces[0],
+                                 &s_advisor_bar_surfaces[2],
+                                 &s_advisor_bar_surfaces[1] };
+    for (int i = 0; i != 3; ++i) {
+        const uint32_t handle = surface_load_handle(paths[i]);
+        *slots[i] = handle;
+        if (handle != 0u) {
+            crt_surface_blit_record(handle, 0.0f, 0.0f); /* transform */
+        }
+    }
+}
+
+uint32_t advisor_bar_surface_peek(int which)
+{
+    return (which >= 0 && which < 3) ? s_advisor_bar_surfaces[which] : 0u;
+}
+
+void advisor_progress_bar_fill_draw(int row, float percent)
+{
+    if (s_panel_layout_surface == NULL || !(0.0f < percent)) {
+        return;
+    }
+    float pct = percent;
+    if (100.0f < pct) {
+        pct = 100.0f; /* the corpus constant */
+    }
+    int field8 = 0;
+    __builtin_memcpy(&field8, (const char*)s_panel_layout_surface + 8,
+                     sizeof field8);
+    uint32_t pair_x = 0u, pair_y = 0u;
+    indexed_pair_get(row, &pair_x, &pair_y);
+    const float dest_x
+        = crt_float_bits(pair_x) + panel_layout_size_peek(0);
+    const float dest_y
+        = crt_float_bits(pair_y) + panel_layout_size_peek(1);
+    const float size[2] = {
+        (float)((double)(float)panel_layout_extra_peek()
+                * (double)(float)(1.0 / 100.0) * (double)pct),
+        (float)field8
+    };
+    crt_surface_blit_record_rect(
+        (uint32_t)(uintptr_t)s_panel_layout_surface, dest_x, dest_y, NULL,
+        size);
+}
+
+void menu_blit_record_write(int index, uint32_t value)
+{
+    if (index >= 0 && index < 16) {
+        s_menu_blit_record[index] = value;
+    }
+}
+
+uint32_t menu_blit_record_read(int index)
+{
+    return (index >= 0 && index < 16) ? s_menu_blit_record[index] : 0u;
+}
+
+void menu_blit_record_clear(void)
+{
+    __builtin_memset(s_menu_blit_record, 0, sizeof s_menu_blit_record);
+}
+
+void menu_plane_pan_set(float x, float y)
+{
+    s_menu_plane_pan[0] = x;
+    s_menu_plane_pan[1] = y;
+}
+
+float menu_plane_pan_peek(int axis)
+{
+    return (axis >= 0 && axis < 2) ? s_menu_plane_pan[axis] : 0.0f;
+}
+
+void menu_surface_blit_scaled(int percent_side)
+{
+    const uint32_t handle
+        = s_menu_blit_record[percent_side == 0 ? 5 : 4]; /* +0x14 / +0x10 */
+    if (handle == 0u) {
+        return;
+    }
+    if ((s_menu_blit_record[13] & 1u) != 0u) { /* record +0x34 flag byte */
+        crt_surface_blit_record(handle,
+                                crt_float_bits(s_menu_blit_record[14]),
+                                crt_float_bits(s_menu_blit_record[15]));
+        return;
+    }
+    const float rect1[4] = { -s_menu_plane_pan[0], -s_menu_plane_pan[1],
+                             640.0f, 480.0f };
+    crt_surface_blit_record_rect(handle, 0.0f, 0.0f, rect1, NULL);
+}
+
 float panel_layout_offset_peek(int which)
 {
     if (which < 0 || which > 1) {
