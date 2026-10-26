@@ -304,6 +304,32 @@ void sav_tree_load(void* node, void* window_base, void** blocks,
                    uint32_t window, uint32_t flag,
                    const EngineContext* eng);  /* FUN_004173e0 */
 
+/* --- the sav-tree menu refresh (2026-10-26) --------------------------------
+ * SaveMenuRefresh (FUN_004150b0): set the open slot (FUN_00417ea0), probe
+ * the slot context (FUN_00417e70), then run the two stack-state loads
+ * (FUN_004173e0). The in-band walk enters with flag 1 and no stride
+ * window when the slot is unopened; otherwise flag 0 and the stride
+ * window taken from the context's +0x34 word. The out-of-game walk
+ * always enters with window base 0 and flag 0. Each walk's block-slot
+ * rides the corresponding slot-context chain word.
+ * Deviations: the corpus's chain dereference, the context's +0x34 word,
+ * and the two tree roots have no port-side loader, so they ride
+ * own-storage install/peek hooks (the visited-band precedent); the
+ * corpus's first param is unused, the never-read window-slot addresses
+ * land as zero, and the walks thread no EngineContext (the gate reads
+ * the port's zeroed app-mode default). */
+void save_menu_refresh(GameContext* ctx, int slot);  /* FUN_004150b0 */
+
+/* Install/peek hooks for the corpus reference state the refresh walks.
+ * slot is the corpus's port-owned block-slot address (the chain word's
+ * role); base is the slot-context stride-window base (+0x34 word role). */
+void  sav_menu_window_install(int which, void** slot);  /* port hook */
+void** sav_menu_window_peek(int which);
+void  sav_slot_stride_window_install(void* base);       /* port hook */
+void* sav_slot_stride_window_peek(void);
+void  sav_tree_root_install(int which, void* node);     /* port hook */
+void* sav_tree_root_peek(int which);
+
 /* --- the checkpoint progress fold band (2026-10-25) ------------------------
  * CheckpointBlobTaskProgressRecalculate (FUN_00460950): the blob's
  * progress fold over the stride-0x210 task-window bands: zero the three

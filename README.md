@@ -2366,6 +2366,80 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Sav-tree menu refresh** (2026-10-26): one recorded blocked row lands, the
+first of the port-the-blocked-systems program. `savegame.*` takes
+`save_menu_refresh` (FUN_004150b0) — the two-walk leaf the blocked.md
+re-scan named as next action: park the slot (FUN_00417ea0), probe the slot
+context (FUN_00417e70), then stack-init and load twice (FUN_004173e0): the
+in-band walk enters flag 1 / no stride window when the slot is unopened, or
+flag 0 / the context's `+0x34` stride window when it is; the out-of-game
+walk always enters base 0 / flag 0; each walk's block slot rides its chain
+window word. Deviations: the corpus's chain dereference, `+0x34` word, and
+two tree roots have no port-side loader, so they install/peek own-storage
+hooks (zero-default, the visited-band precedent); the corpus's first param
+is unused and the never-read window-slot addresses land as zero. Ledger
+1128 -> 1129. Tests green; 34/36 baseline.
+
+**Sav-tree state visitor** (2026-10-25): two frontier rows land, closing the
+`CLEAN`-bucket split. `savegame.*` takes `sav_tree_walk2` (FUN_004172f0) and
+`sav_tree_load` (FUN_004173e0) — the stateful sibling of the ported plain walk
+(FUN_004171c0). The walk enters each unvisited node once, computes a "need"
+word from the shared five-dword state (the flag lane when the stride window
+base is null or the extended-mode gate — app mode > 1 or the feature word's
+bit 0x20000 — raises, which also zeroes the flag on entry, otherwise the bit-0
+read at `node.window * 0x3190 + window_base`), then touches the block cursor:
+bit 2 clears only when need, the incoming carry, and the block's +0x1c word
+all read zero, sets otherwise, and the cursor ALWAYS advances (the corpus
+advances through a null block pointer too). Children recurse with `need` as
+the carry; the load stack-inits the state, walks with carry 1, then clears the
+installed visited bands (FUN_00416e70). Deviations: the corpus's two tree-root
+globals are unmodeled so nodes ride as arguments, app mode threads
+EngineContext, the feature word rides the crt.* half-model peek, and the
+stride/block reads are guarded memcpy lanes. Test fix found mid-cluster:
+`objective_test` raised the gate bit through the level block it had already
+destroyed — the raise gate now rides a fresh zeroed block, which also
+`MALLOC_PERTURB_`-hardens the suite (the dangling block crashed under most
+meson-injected perturbation values). Ledger 1126 -> 1128. Tests green; 34/36
+baseline.
+
+**Tutorial path coordinate chains** (2026-10-25): one frontier row lands.
+`level.*` takes `tutorial_path_coordinate_index` (0x456b80): zero the 0x37-slot
+chain table on the level block, then sweep the voxel grid x-outer / y-inner
+over the +0x14 width and +0x18 height and head-push every cell whose +0x04
+coordinate byte is set onto that coordinate's chain — (x, y, next) nodes
+through the heap seam, clearing the byte as consumed. The corpus strides the
++0x114 head table as 4-byte dwords inside the level block; the port keeps it
+as a widened `void* pool_heads[0x37]` image off the corpus layout (the
+`object_pool_lists_free_all` convention), the node keeps a padded 0x10 image,
+and a NULL block/voxel window or an out-of-range coordinate byte ride as
+guards where the corpus strides. A zeroing re-run leaks the superseded chains
+(as does the corpus). Deviation fix folded in: `test_savegame` freed the fake
+level mid-test and left `ctx.level` dangling — the tail blob build reads
+freed memory once `MALLOC_PERTURB_` poisons the chunk, so the reference is
+now cleared after the cleanup free (the builder already NULL-guards its name
+lane). `level_test` pins the chain order, the consumed bytes, the guard, and
+the leak-faithful re-sweep. Ledger 1125 -> 1126. Tests green; 34/36 baseline.
+
+**Encyclopedia config-file windows** (2026-10-25): one frontier row lands.
+`frontend.*` takes `encyclopedia_config_files_open` (0x40e490): for each of
+the four catalog groups it walks the count window, joins
+`<root>::Encyclopedia::<name>` through the path builder (FUN_00478f50), reads
+the config record's value token (FUN_004790b0's record+8), and opens the named
+file through the resource dispatch (FUN_0047f6e0 in "r" mode — the port's AUTO
+open); the four handle windows reallocate through the heap seam every call and
+the corpus's leaked superseded arrays leak too. Group pairing rides the
+corpus's count/name address band (0x27c/0x1e8, 0x280/0x1ec, 0x284/0x1f0,
+0x288/0x1f4), so kind 1 reads the DAT_00556288 count that already feeds the
+query lanes — the entity.* count window merged to four slots and gained the
+name-table install/peek hooks over the loader-owned band. The PowerCrystal and
+Ore singleton opens keep their last handle across a config miss (the corpus's
+stale-global lane). Deviations: the window slots ride the port's 8-byte
+handles (the corpus strides 4-byte dwords, so the zeroing strides
+sizeof(void*)), the counts/tables ride own storage (the corpus's catalog
+loader is unported), and NULL answers stand where the corpus strides.
+`frontend_test` pins the pairing, the zeroed reopen, and the stale singleton.
+Ledger 1124 -> 1125. Tests green; 34/36 baseline.
+
 **Key-group code band + catalog dispatch** (2026-10-25): three frontier
 rows land. `resource.*` takes the corpus writers of the DAT_004ddc04
 stride-8 band: `resource_input_key_group_register` (0x41a7d0) stages a

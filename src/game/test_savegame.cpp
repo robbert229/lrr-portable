@@ -968,5 +968,88 @@ int main(void)
         CHECK(p == rec2 && w == 0u, "the in-game band clears alongside");
     }
 
+    /* SaveMenuRefresh (2026-10-26). */
+    {
+        static SavTreeNode m0;
+        static SavTreeNode m1;
+        static void* mkids[1];
+        static uint32_t mblk[2 * 8]; /* two contiguous 0x20 block images */
+        static char mwinbuf[2 * 0x3190];
+        static void* mchain;
+        static uint32_t recA[8];
+        static uint32_t recB[8];
+        GameContext mctx;
+
+        engine_feature_word_install(0u);
+        memset(mblk, 0, sizeof mblk);
+        memset(mwinbuf, 0, sizeof mwinbuf);
+        ((uint32_t*)mwinbuf)[0] = 1u; /* window 0 strides a raised word */
+        mkids[0] = &m1;
+        m0.window = 1u;  /* strides the zeroed high slot */
+        m0.children = mkids;
+        m0.count = 1;
+        m1.window = 0u;
+        m1.children = NULL;
+        m1.count = 0;
+        mchain = mblk;
+        game_context_init(&mctx);
+
+        /* hooks default clear: the refresh guards through, sets the slot,
+         * and still clears the installed visited bands. */
+        memset(recA, 0, sizeof recA);
+        memset(recB, 0, sizeof recB);
+        recA[4] = 0xdeadu;
+        recB[4] = 0xbeefu;
+        sav_visited_entry_set(0, 0, recA, 9u);
+        sav_visited_entry_set(1, 0, recB, 10u);
+        frontend_flow_word_set(2, -1);
+        int* wc = active_object_list_word();
+        *wc = 1;
+        frontend_flow_word_set(2, 0);
+        wc = active_object_list_word();
+        *wc = 1;
+        save_menu_refresh(&mctx, 3);
+        CHECK(mctx.save_slot == 3, "the refresh parks the slot word");
+        CHECK(recA[4] == 0u && recB[4] == 0u,
+              "both load tails clear the visited bands");
+        CHECK(sav_menu_window_peek(2) == NULL
+                  && sav_tree_root_peek(5) == NULL,
+              "the hook bounds guard the way out");
+
+        /* slot-open stride lane: flag 0, stride window installed; the
+         * root's zeroed high slot clears nothing through its carry 1
+         * and the kid's raised window-0 slot sets through its need. */
+        sav_tree_root_install(0, &m0);
+        sav_menu_window_install(0, &mchain);
+        sav_slot_stride_window_install(mwinbuf);
+        m0.visited = 0u;
+        m1.visited = 0u;
+        mblk[0] = 0xA1u;
+        mblk[8] = 0xB2u;
+        save_menu_refresh(&mctx, 3);
+        CHECK(mblk[0] == 0xA5u && mblk[8] == 0xB6u,
+              "the stride need lanes ride through the block cursor");
+        CHECK(m0.visited != 0u && m1.visited != 0u,
+              "the in-band walk entered");
+
+        /* unopened-slot flag lane: flag 1, no stride window — the root
+         * SETS through its carry 1, the kid CLEARs through the probe. */
+        m0.visited = 0u;
+        m1.visited = 0u;
+        mblk[0] = 0xA0u;
+        mblk[8] = 0xB6u;
+        save_menu_refresh(&mctx, -1);
+        CHECK(mctx.save_slot == -1, "the unopened slot parks at -1");
+        CHECK(mblk[0] == 0xA4u && mblk[8] == 0xB2u,
+              "the flag lane sets through carry and clears through probe");
+
+        /* cleanup: uninstall every hook the refresh reads. */
+        sav_tree_root_install(1, NULL);
+        sav_tree_root_install(0, NULL);
+        sav_menu_window_install(0, NULL);
+        sav_menu_window_install(1, NULL);
+        sav_slot_stride_window_install(NULL);
+    }
+
     return 0;
 }
