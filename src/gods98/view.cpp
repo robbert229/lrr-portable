@@ -498,6 +498,7 @@ void cam_set_facing(CameraHandle* c, const float* r)
  *  FUN_0041f940 is instead the engine-state bit-0x20000 setter; no direct
  *  port setter exists yet. */
 
+// STUB: LEGORR 0x0044f6d0
 static int grid_pick(EngineContext* ctx, const float* pos, int* gx, int* gy)
 {
     /* with a bound level, cells come from the real voxel grid; terrain uses

@@ -162,7 +162,8 @@ if(PLATFORM STREQUAL "native")
   endif()
 endif()
 
-set(LRR_SOURCES ${SRC_ROOT}/main.cpp ${PLATFORM_ENTRY})
+set(LRR_SOURCES ${SRC_ROOT}/main.cpp ${PLATFORM_ENTRY}
+  ${GAME_DIR}/ledger_stubs.cpp)
 if(PLATFORM STREQUAL "winapi")
   list(APPEND LRR_SOURCES ${SRC_ROOT}/version.rc)
 endif()

@@ -222,6 +222,7 @@ static uint32_t stats_rec_word(const EntitySlot* e, int off)
 
 // FUNCTION: LEGORR 0x00469cb0
 float entity_stats_float_at20(const EntitySlot* e) { return stats_rec_float(e, 0x20); }
+// FUNCTION: LEGORR 0x00469cc0
 float entity_stats_float_at24_indexed(const EntitySlot* e, int index)
 {
     return stats_rec_float(e, 0x24 + index * 4);

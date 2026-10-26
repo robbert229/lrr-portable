@@ -9,12 +9,16 @@ and checks for a Reccmp annotation immediately above each definition.
 from __future__ import annotations
 
 import argparse
+import csv
 import re
 import sys
 from pathlib import Path
 
 
 ANNOTATION = re.compile(r"^\s*//\s*(?:FUNCTION|STUB):\s+[A-Z0-9_]+\s+0x[0-9a-fA-F]+\s*$")
+LEGORR_ADDRESS_ANNOTATION = re.compile(
+    r"^\s*//\s*(?:FUNCTION|STUB):\s+LEGORR\s+0x([0-9a-fA-F]+)\s*$"
+)
 IDENTIFIER = re.compile(r"[A-Za-z_][A-Za-z_0-9]*\s*$")
 CONTROL_NAMES = {
     "if",
@@ -183,9 +187,45 @@ def source_files(root: Path) -> list[Path]:
     )
 
 
+def ledger_functions(ledger_path: Path, statuses: set[str]) -> list[tuple[str, str]]:
+    """Return corpus functions in the requested ledger statuses."""
+    with ledger_path.open(newline="", encoding="utf-8") as ledger_file:
+        reader = csv.DictReader(ledger_file)
+        required = {"address", "status", "corpus_name", "symbol"}
+        missing = required.difference(reader.fieldnames or ())
+        if missing:
+            fields = ", ".join(sorted(missing))
+            raise ValueError(f"{ledger_path}: missing required CSV column(s): {fields}")
+
+        functions = []
+        for row in reader:
+            if row["status"] not in statuses:
+                continue
+            address = row["address"].strip().lower().removeprefix("0x").zfill(8)
+            name = row["corpus_name"].strip() or row["symbol"].strip()
+            functions.append((address, name))
+    return sorted(functions)
+
+
+def annotated_ledger_addresses(root: Path) -> set[str]:
+    """Return ledger addresses with a Reccmp FUNCTION or STUB marker in src."""
+    addresses = set()
+    for path in source_files(root / "src"):
+        for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+            match = LEGORR_ADDRESS_ANNOTATION.fullmatch(line)
+            if match:
+                addresses.add(match.group(1).lower().removeprefix("0x").zfill(8))
+    return addresses
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("root", nargs="?", type=Path, default=Path(__file__).resolve().parents[1])
+    parser.add_argument(
+        "--ledger",
+        type=Path,
+        help="coverage ledger CSV; report named functions missing a FUNCTION/STUB marker",
+    )
     args = parser.parse_args()
     root = args.root.resolve()
     missing: list[tuple[Path, int, str]] = []
@@ -196,6 +236,21 @@ def main() -> int:
             if not has_nearby_annotation(source, offset):
                 line = source.count("\n", 0, offset) + 1
                 missing.append((path, line, name))
+
+    if args.ledger:
+        ledger_path = args.ledger if args.ledger.is_absolute() else root / args.ledger
+        try:
+            annotated = annotated_ledger_addresses(root)
+            unported = [
+                row for row in ledger_functions(ledger_path, {"named"})
+                if row[0] not in annotated
+            ]
+        except (OSError, ValueError, csv.Error) as exc:
+            print(f"Could not read Reccmp coverage ledger: {exc}", file=sys.stderr)
+            return 2
+        print(f"\nNamed functions missing FUNCTION/STUB annotations: {len(unported)} from {ledger_path}")
+        for address, name in unported:
+            print(f"0x{address} {name}")
 
     if missing:
         print(f"Reccmp annotation lint failed: {len(missing)} function(s) lack FUNCTION/STUB annotations", file=sys.stderr)
