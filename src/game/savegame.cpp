@@ -956,6 +956,65 @@ void sav_tree_load(void* node, void* window_base, void** blocks,
     sav_clear_visited();
 }
 
+/* SaveMenuRefresh (FUN_004150b0) — see savegame.hpp. The corpus reads
+ * its slot-context chain, the context's +0x34 stride-window word, and
+ * the two tree roots all blind; the port models each with an
+ * own-storage hook (zero-defaulted, so an unprimed refresh just
+ * guards through both walks). */
+static void**  s_sav_menu_windows[2]; /* the chain + 0x10 word's slot role */
+static void*   s_sav_slot_stride_window; /* the context + 0x34 word's role */
+static void*   s_sav_tree_root[2]; /* the two corpus tree-root globals' role */
+
+void sav_menu_window_install(int which, void** slot)
+{
+    if (which == 0 || which == 1) {
+        s_sav_menu_windows[which] = slot;
+    }
+}
+
+void** sav_menu_window_peek(int which)
+{
+    return (which == 0 || which == 1) ? s_sav_menu_windows[which] : NULL;
+}
+
+void sav_slot_stride_window_install(void* base)
+{
+    s_sav_slot_stride_window = base;
+}
+
+void* sav_slot_stride_window_peek(void)
+{
+    return s_sav_slot_stride_window;
+}
+
+void sav_tree_root_install(int which, void* node)
+{
+    if (which == 0 || which == 1) {
+        s_sav_tree_root[which] = node;
+    }
+}
+
+void* sav_tree_root_peek(int which)
+{
+    return (which == 0 || which == 1) ? s_sav_tree_root[which] : NULL;
+}
+
+void save_menu_refresh(GameContext* ctx, int slot)
+{
+    save_slot_set(ctx, slot); /* FUN_00417ea0 */
+    void* rec = sav_build_ctx(ctx); /* FUN_00417e70 */
+    void* base = NULL;
+    uint32_t flag = 1u;
+    if (rec != NULL) {
+        flag = 0u;
+        base = sav_slot_stride_window_peek(); /* corpus: rec + 0x34 */
+    }
+    sav_tree_load(sav_tree_root_peek(0), base, sav_menu_window_peek(0),
+                  0u, flag, NULL);
+    sav_tree_load(sav_tree_root_peek(1), NULL, sav_menu_window_peek(1),
+                  0u, 0u, NULL);
+}
+
 /* --- the checkpoint progress fold band (see savegame.hpp) ------------------ */
 
 static float blob_float_get(const char* blob, size_t off)

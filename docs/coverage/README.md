@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 1128 | 44.0% |
+| ported | 1129 | 44.0% |
 | anchored | 4 | 0.2% |
-| named | 1390 | 54.2% |
+| named | 1389 | 54.2% |
 | runtime-import | 41 | 1.6% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (1128 functions)
+  (1129 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1390 functions)
+  citation yet (1389 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1395 (54.4%).**
+**Game logic remaining to port: 1394 (54.4%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -253,7 +253,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00414de0` | GameSpeedSelect |
 | `0x00414df0` | VolumeSet |
 | `0x00414e10` | OptionMusicDefault |
-| `0x004150b0` | SaveMenuRefresh |
 | `0x00415220` | FrontEndStartLevel |
 | `0x00415370` | OverlayMenuGate |
 | `0x00415d00` | SaveMenuLayoutLoad |

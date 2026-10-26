@@ -387,19 +387,18 @@ live port candidates below.)
   the feature words they read are modeled; they are the next port
   candidate (tracked as cluster 184).
 
-### Dependency re-scan after cluster 184 (1 row)
+### Dependency re-scan after cluster 184 (1 row) — LANDED 2026-10-26
 
-- `SaveMenuRefresh` (`0x4150b0`): flipping `SavTreeLoad` (`0x4173e0`) made
-  this row's ledger dependencies all-ported, but its body still resolves
-  nothing observable port-side: it reads the `DAT_00556fc4` slot-context
-  chain (in-game `+4` / out-of-game `+8` contexts through the
-  `+0x18` manager to the `+0x10` window word — the recorded window-seam
-  family) and threads the `DAT_00556ff8` / `DAT_00556ffc` tree roots that
-  **no ported function installs** (the sav-tree loaders that write them
-  are unported). Next: model the slot-context window word and give the
-  two tree roots install/peek hooks (the visited-band precedent); the
-  refresh then lands as a two-walk leaf calling the ported
-  `sav_set_slot` / `sav_build_ctx` / `sav_tree_load`.
+- `SaveMenuRefresh` (`0x4150b0`): **ported** as cluster 185 in
+  `savegame.*` (`save_menu_refresh`). The recorded next action landed:
+  the slot-context chain's `+0x10` window word and the context's
+  `+0x34` stride-window word are modeled as own-storage install/peek
+  hooks (the visited-band precedent), the two tree roots ride port
+  install hooks, and the refresh is the two-walk leaf over
+  `save_slot_set` / `sav_build_ctx` / `sav_tree_load`. Corpus loaders
+  that would install the chain/roots remain unported; the port-side
+  hooks default zero, so an unprimed refresh guards through both
+  walks. No remaining next action for this row.
 
 ### Unmodeled reference-state bands (bucket attribution ledger)
 
@@ -440,6 +439,7 @@ action: land vtable-shaped mocks as their object layers arrive.
 Closure note: after this section, every named-unported ledger row is
 either ported (cited in `src/`) or attributed — to a recorded row-level
 entry, a band entry above, a recorded dependency root (`BY-RECORDED`
-roots, all cited in this file), or the COM-class entry. Two rows
-(`SavTreeWalk2`/`SavTreeLoad`) stay actionable as cluster 184.
+roots, all cited in this file), or the COM-class entry. The two rows
+(`SavTreeWalk2`/`SavTreeLoad`) landed as cluster 184, and the
+re-scan row (`SaveMenuRefresh`) landed as cluster 185.
 

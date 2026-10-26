@@ -2363,6 +2363,20 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Sav-tree menu refresh** (2026-10-26): one recorded blocked row lands, the
+first of the port-the-blocked-systems program. `savegame.*` takes
+`save_menu_refresh` (FUN_004150b0) — the two-walk leaf the blocked.md
+re-scan named as next action: park the slot (FUN_00417ea0), probe the slot
+context (FUN_00417e70), then stack-init and load twice (FUN_004173e0): the
+in-band walk enters flag 1 / no stride window when the slot is unopened, or
+flag 0 / the context's `+0x34` stride window when it is; the out-of-game
+walk always enters base 0 / flag 0; each walk's block slot rides its chain
+window word. Deviations: the corpus's chain dereference, `+0x34` word, and
+two tree roots have no port-side loader, so they install/peek own-storage
+hooks (zero-default, the visited-band precedent); the corpus's first param
+is unused and the never-read window-slot addresses land as zero. Ledger
+1128 -> 1129. Tests green; 34/36 baseline.
+
 **Sav-tree state visitor** (2026-10-25): two frontier rows land, closing the
 `CLEAN`-bucket split. `savegame.*` takes `sav_tree_walk2` (FUN_004172f0) and
 `sav_tree_load` (FUN_004173e0) — the stateful sibling of the ported plain walk
