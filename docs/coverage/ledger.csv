@@ -1251,7 +1251,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004567c0,FUN_004567c0,ported,GlobalValue_004ff9bcStoreAndReturn,1,185
 00456810,FUN_00456810,named,SoundAliasPlayGlobal,0,113
 00456830,FUN_00456830,named,AdvisorInlineTokenRender,0,5209
-00456b80,FUN_00456b80,named,TutorialPathCoordinateIndex,0,1260
+00456b80,FUN_00456b80,ported,TutorialPathCoordinateIndex,3,1260
 00456c30,FUN_00456c30,ported,ObjectPoolListHeadGet,3,215
 00456c60,FUN_00456c60,ported,ObjectPoolListsFreeAll,3,450
 00456cb0,FUN_00456cb0,named,CoordinateListCallbackVisit,0,389

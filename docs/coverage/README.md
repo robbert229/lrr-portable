@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 1125 | 43.9% |
+| ported | 1126 | 43.9% |
 | anchored | 4 | 0.2% |
-| named | 1393 | 54.3% |
+| named | 1392 | 54.3% |
 | runtime-import | 41 | 1.6% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (1125 functions)
+  (1126 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1393 functions)
+  citation yet (1392 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1398 (54.5%).**
+**Game logic remaining to port: 1397 (54.5%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -656,7 +656,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00453da0` | CameraFocusTweenUpdate |
 | `0x00456810` | SoundAliasPlayGlobal |
 | `0x00456830` | AdvisorInlineTokenRender |
-| `0x00456b80` | TutorialPathCoordinateIndex |
 | `0x00456cb0` | CoordinateListCallbackVisit |
 | `0x004588e0` | InputDeviceRelease |
 | `0x00459240` | PopEntityStateOverride |

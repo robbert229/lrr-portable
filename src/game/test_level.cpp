@@ -12,6 +12,7 @@
 #include "game/objective.hpp"
 #include "game/util.hpp"
 #include "gods98/block.hpp"
+#include "gods98/heap.hpp"
 #include "gods98/message.hpp"
 #include "gods98/resource.hpp"
 
@@ -2082,6 +2083,80 @@ int main(int argc, char** argv)
         /* The NULL guards ride the same hooks. */
         CHECK(first_free_neighbor_cell_pick(NULL, NULL, center, out, 0) == 0,
               "the NULL level finds nothing");
+    }
+
+    /* TutorialPathCoordinateIndex (2026-10-25): the consumed-cell chain
+     * sweep over the level block's +0x114 table. */
+    {
+        static LevelState g;
+        memset(&g, 0, sizeof g);
+        static uint8_t vox[4 * 3 * 0x48];
+        memset(vox, 0, sizeof vox);
+        level_set_int(&g, LEVEL_OFF_WIDTH, 4);
+        level_set_int(&g, LEVEL_OFF_HEIGHT, 3);
+        level_store_ptr(&g, LEVEL_OFF_VOXELS, vox);
+        vox[(1 * 4 + 1) * 0x48 + 4] = 3;   /* first  (x=1, y=1) */
+        vox[(2 * 4 + 2) * 0x48 + 4] = 3;   /* later: wins the head (x=2, y=2) */
+        vox[(0 * 4 + 3) * 0x48 + 4] = 7;   /* singleton (x=3, y=0) */
+        vox[(2 * 4 + 0) * 0x48 + 4] = 200; /* out-of-range byte: guarded */
+        tutorial_path_coordinate_index(&g);
+
+        CHECK(g.pool_heads[3] != NULL && g.pool_heads[7] != NULL,
+              "both coordinates chain");
+        void* n3 = g.pool_heads[3];
+        void* n7 = g.pool_heads[7];
+        uint32_t nx = 0, ny = 0;
+        if (n3 != NULL) {
+            __builtin_memcpy(&nx, (char*)n3 + 0x0, 4);
+            __builtin_memcpy(&ny, (char*)n3 + 0x4, 4);
+        }
+        CHECK(n3 != NULL && nx == 2 && ny == 2,
+              "the last-swept cell owns the head");
+        void* n3b = NULL;
+        if (n3 != NULL) {
+            __builtin_memcpy(&n3b, (char*)n3 + 0x8, sizeof n3b);
+        }
+        void* next3 = NULL;
+        if (n3 != NULL) {
+            __builtin_memcpy(&next3, (char*)n3 + 0x8, sizeof next3);
+        }
+        CHECK(next3 != NULL && next3 != n3 && next3 == n3b,
+              "the earlier cell rides the next link");
+        if (n3b != NULL) {
+            __builtin_memcpy(&nx, (char*)n3b + 0x0, 4);
+            __builtin_memcpy(&ny, (char*)n3b + 0x4, 4);
+        }
+        CHECK(n3b != NULL && nx == 1 && ny == 1,
+              "the first-swept cell trails at (1, 1)");
+        void* next3b = (void*)0xdeadbeef;
+        if (n3b != NULL) {
+            __builtin_memcpy(&next3b, (char*)n3b + 0x8, sizeof next3b);
+        }
+        CHECK(next3b == NULL, "the chain terminates");
+        void* next7 = (void*)0xdeadbeef;
+        if (n7 != NULL) {
+            __builtin_memcpy(&next7, (char*)n7 + 0x8, sizeof next7);
+        }
+        CHECK(next7 == NULL, "the singleton chain is one node");
+
+        CHECK(vox[(1 * 4 + 1) * 0x48 + 4] == 0
+                  && vox[(2 * 4 + 2) * 0x48 + 4] == 0
+                  && vox[(0 * 4 + 3) * 0x48 + 4] == 0,
+              "the swept coordinate bytes are consumed");
+
+        /* Re-zeroing re-runs leak the superseded chains (corpus-faithful). */
+        tutorial_path_coordinate_index(&g);
+        CHECK(g.pool_heads[3] == NULL && g.pool_heads[7] == NULL,
+              "the re-sweep zeroes the table (nothing left to sweep)");
+
+        /* Free the live nodes the re-sweep orphaned. */
+        if (n3 != NULL) {
+            engine_heap_free(n3b);
+            engine_heap_free(n3);
+        }
+        if (n7 != NULL) {
+            engine_heap_free(n7);
+        }
     }
 
     if (s_failures != 0) {

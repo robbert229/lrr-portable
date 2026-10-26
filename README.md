@@ -2363,6 +2363,24 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Tutorial path coordinate chains** (2026-10-25): one frontier row lands.
+`level.*` takes `tutorial_path_coordinate_index` (0x456b80): zero the 0x37-slot
+chain table on the level block, then sweep the voxel grid x-outer / y-inner
+over the +0x14 width and +0x18 height and head-push every cell whose +0x04
+coordinate byte is set onto that coordinate's chain — (x, y, next) nodes
+through the heap seam, clearing the byte as consumed. The corpus strides the
++0x114 head table as 4-byte dwords inside the level block; the port keeps it
+as a widened `void* pool_heads[0x37]` image off the corpus layout (the
+`object_pool_lists_free_all` convention), the node keeps a padded 0x10 image,
+and a NULL block/voxel window or an out-of-range coordinate byte ride as
+guards where the corpus strides. A zeroing re-run leaks the superseded chains
+(as does the corpus). Deviation fix folded in: `test_savegame` freed the fake
+level mid-test and left `ctx.level` dangling — the tail blob build reads
+freed memory once `MALLOC_PERTURB_` poisons the chunk, so the reference is
+now cleared after the cleanup free (the builder already NULL-guards its name
+lane). `level_test` pins the chain order, the consumed bytes, the guard, and
+the leak-faithful re-sweep. Ledger 1125 -> 1126. Tests green; 34/36 baseline.
+
 **Encyclopedia config-file windows** (2026-10-25): one frontier row lands.
 `frontend.*` takes `encyclopedia_config_files_open` (0x40e490): for each of
 the four catalog groups it walks the count window, joins

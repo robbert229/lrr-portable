@@ -122,6 +122,10 @@ typedef struct LevelState {
     void*    ptr_voxels;     /* corpus +0xB8  voxel array         */
     void*    ptr_next;       /* corpus +0xB4  nextlevel name      */
     void*    ptr_name;       /* corpus +0x00  level name          */
+    /* +0x114 pool-table chain heads: the corpus strides 0x37 dword slots
+     * in the block; the port keeps them as a widened-link void* image
+     * (the object_pool_lists_free_all convention) off the corpus layout. */
+    void*    pool_heads[0x37]; /* +0x114 role, port-layout image     */
     /* --- reconstruction-side objective state (finding 22) -----------------
      * The corpus keeps these in globals (DAT_004ffbc0 / DAT_004ffe30 /
      * DAT_004ffe34); living on the level block keeps loads isolated and
@@ -200,6 +204,18 @@ static inline void* level_load_ptr(const LevelState* s, int off)
     default: return NULL;
     }
 }
+
+/* TutorialPathCoordinateIndex (FUN_00456b80): zero the 0x37-slot chain
+ * table on the level block, then sweep the voxel grid (x outer from +0x14
+ * count, y inner from +0x18) and push every cell whose +0x04 coordinate
+ * byte is set onto that coordinate's chain — (x, y, next) nodes through
+ * the heap seam, head-first, clearing the byte as consumed. Deviations:
+ * the heads and node links ride the widened port-layout image (the corpus
+ * strides 4-byte slots), the node keeps a padded 0x10 image, a NULL
+ * block/voxel window and an out-of-range coordinate byte ride as guards
+ * where the corpus strides, and a zeroing re-run leaks the superseded
+ * chains (as does the corpus). */
+void tutorial_path_coordinate_index(LevelState* s);       /* FUN_00456b80 */
 
 /* --- level loading ------------------------------------------------------ */
 /* `pending` is first consulted (PendingLevelName @ 0x42f0c0): when non-null

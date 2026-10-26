@@ -511,6 +511,10 @@ int main(void)
     checkpoint_blob_free(&ctx);
     if (ctx.level != NULL) {
         free(ctx.level);
+        ctx.level = NULL; /* the tail builds without a level (the blob
+                           * builder NULL-guards its name lane; leaving the
+                           * dangling reference reads freed memory when
+                           * MALLOC_PERTURB_ poisons the chunk) */
     }
 
     /* --- .dat slot thumbnail (FUN_0047e440 / FUN_0047c8f0 BMP dump) ------
