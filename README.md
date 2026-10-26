@@ -3984,7 +3984,6 @@ the `tools/rrae.py` ground-truth model.
 
 ```sh
 # native (primary)
-make setup PLATFORM=native
 make build
 make run WAD_DIR=/path/to/game
 
@@ -3992,7 +3991,17 @@ make run WAD_DIR=/path/to/game
 make setup BUILD_DIR=build-winapi PLATFORM=winapi \
   CMAKE_TOOLCHAIN_FILE=cross/i686-toolchain.cmake
 cmake --build build-winapi
+
+# MSVC 5.0 build with a PDB, followed by a Reccmp report
+make reccmp RECCMP_WINE_BIN=/path/to/wine \
+  RECCMP_RECCMP=/path/to/reccmp-reccmp
 ```
+
+The Reccmp report is written to
+`build-reccmp/reccmp-report/index.html` (JSON: `results.json`). The target
+defaults to `~/.local/share/reprobit/toolchains/msvc_5_0_rtm`; override it with
+`REPROBIT_MSVC_5_0_RTM_ROOT=/path/to/toolchain` when needed. `make reccmp-report`
+is an alias for `make reccmp`.
 
 Direct CMake configuration also supports `-DTEST_WADS_DIR=<dir>`,
 `-DMOVIES=auto|enabled|disabled`, and `-DSRC_ROOT=<path>`. The legacy Meson

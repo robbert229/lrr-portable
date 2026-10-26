@@ -13,6 +13,11 @@ set(TEST_WADS_DIR "" CACHE PATH "Directory containing shipped wads for real-data
 set(MOVIES "auto" CACHE STRING "Movie runtime support (auto, enabled, disabled)")
 set_property(CACHE MOVIES PROPERTY STRINGS auto enabled disabled)
 option(LRR_CLASSIC_MSVC5 "Use CMake linker flags compatible with MSVC 5.0" OFF)
+option(LRR_RECCMP "Generate a link PDB for Reccmp comparisons" OFF)
+
+if(LRR_RECCMP AND NOT LRR_CLASSIC_MSVC5)
+  message(FATAL_ERROR "LRR_RECCMP requires LRR_CLASSIC_MSVC5")
+endif()
 
 if(LRR_CLASSIC_MSVC5)
   # CMake's Windows-MSVC module emits newer spellings that the classic
@@ -42,12 +47,17 @@ if(LRR_CLASSIC_MSVC5)
     endforeach()
   endforeach()
 
-  # The final linker PDB depends on the static archives. ReproBit's current
-  # evidence model treats PDBs as compile-stage artifacts, so omit the link
-  # PDB and its /DEBUG switch for this classic build profile.
-  string(REGEX REPLACE "[ /][Pp][Dd][Bb]:<TARGET_PDB>" ""
-    _classic_exe_link_rule "${CMAKE_CXX_LINK_EXECUTABLE}")
-  set(CMAKE_CXX_LINK_EXECUTABLE "${_classic_exe_link_rule}")
+  if(LRR_RECCMP)
+    # Reccmp reads the linker PDB, so retain CMake's /PDB:<TARGET_PDB> rule
+    # and add /DEBUG explicitly after filtering newer CMake/MSVC flags above.
+    string(APPEND CMAKE_CXX_LINK_EXECUTABLE " /DEBUG")
+  else()
+    # ReproBit's current evidence model treats PDBs as compile-stage
+    # artifacts, so omit the link PDB and its /DEBUG switch for that profile.
+    string(REGEX REPLACE "[ /][Pp][Dd][Bb]:<TARGET_PDB>" ""
+      _classic_exe_link_rule "${CMAKE_CXX_LINK_EXECUTABLE}")
+    set(CMAKE_CXX_LINK_EXECUTABLE "${_classic_exe_link_rule}")
+  endif()
 
   # CMake's MSVC rule shares one compiler PDB per target. Give each object
   # its own PDB so ReproBit can model the compile steps as isolated producers.
@@ -157,6 +167,11 @@ endif()
 add_executable(program ${LRR_SOURCES})
 # Keep the shipped executable name while using ReproBit's lowercase target ID.
 set_target_properties(program PROPERTIES OUTPUT_NAME "LegoRR")
+if(LRR_RECCMP)
+  set_target_properties(program PROPERTIES
+    PDB_NAME "LegoRR"
+    PDB_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
+endif()
 # The frame-loop object in gods98 calls into game, while game itself uses
 # gods98 APIs. Repeat the archive so GNU ld resolves this static-library cycle.
 target_link_libraries(program PRIVATE game gods98 game platform_glue)

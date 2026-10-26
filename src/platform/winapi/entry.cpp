@@ -11,6 +11,7 @@
 /* Shared game-shell stub — lives in src/main.cpp, backend-neutral. */
 int LegorrrMain(void);
 
+// STUB: LEGORR 0x4777a0
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
                    LPSTR lpCmdLine, int nCmdShow)
 {
