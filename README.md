@@ -2363,6 +2363,23 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Options slot-context window copy** (2026-10-25): one frontier row lands
+in `options.*`. `options_context_copy_and_replace_resource` (0x4180c0) is
+the save-menu's options hand-off: with a save slot open it frees the slot
+context's owned resource word (the corpus's `DAT_00557080 + slot*0xb8`
+block's dword `0xd` — through the ported heap free), copies the full
+46-dword source block over the context window, and re-lands the source's
+dword `0xd` as the new owned word (the copy makes the store itself
+redundant, as in the corpus). Closed-slot and NULL-source calls touch
+nothing (the corpus's own context probe gates the whole body). Deviations:
+the corpus strides its active-slot context blindly; the corpus block has
+no ported owner, so the window and the widened (`void*`) resource ride
+zero-init own storage behind `options_slot_window_install` / peek hooks
+(the unowned-DAT convention, the fixed-record-slot precedent for
+pointer-valued corpus words). `options_test` pins the closed-slot gate
+with the owned word still held, the full-window copy with the freed
+resource, the guarded no-op, and the no-resource fold skip.
+
 **Indexed record entry read + quad vertices write** (2026-10-25): two
 frontier rows land in `record.*`. `indexed_record_entry_read` (0x4821a0)
 reads one stride-`0x70` entry of the indexed record table through the

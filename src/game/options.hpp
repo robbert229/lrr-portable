@@ -140,7 +140,22 @@ void options_write_to_slot(struct GameContext* ctx); /* FUN_00416910 */
  * window. Deviation: the corpus probes the global active-slot context; the
  * port threads a GameContext argument (the module's established shape). */
 void options_context_six_field_set(struct GameContext* ctx,
-                                   const uint32_t* src); /* FUN_00417f20 */
+                                   const uint32_t* src);
+
+/* OptionsContextCopyAndReplaceResource (FUN_004180c0): with a save slot
+ * open, frees the slot context's owned resource word (the corpus's
+ * DAT_00557080+slot*0xb8 dword 0xd through EngineHeapFree), copies the
+ * full 46-dword source block over the window, and re-lands the source's
+ * dword 0xd. Deviations: the corpus strides its active-slot context
+ * blindly (the port gates on sav_build_ctx); the corpus block has no
+ * ported owner, so the window and the widened resource ride zero-init
+ * own storage behind the install/peek hooks (the unowned-DAT
+ * convention). */
+void options_context_copy_and_replace_resource(struct GameContext* ctx,
+                                               const uint32_t* source);
+void     options_slot_window_install(const uint32_t* block, void* resource);
+uint32_t options_slot_window_dword_peek(int index);
+void*    options_slot_resource_peek(void); /* FUN_00417f20 */
 
 /* --- scroll speed index band (2026-10-25) --------------------------------
  * ScrollToSliderIndex (FUN_00415030): maps the engine's scroll-scale float

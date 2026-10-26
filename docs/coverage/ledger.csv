@@ -480,7 +480,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00417ff0,FUN_00417ff0,ported,CurrentSelectionContextSet,1,81
 00418000,FUN_00418000,named,ShowLevelOverlayForCurrentSelection,0,264
 00418040,FUN_00418040,named,CampaignChainSnapshotCreate,0,1040
-004180c0,FUN_004180c0,named,OptionsContextCopyAndReplaceResource,0,605
+004180c0,FUN_004180c0,ported,OptionsContextCopyAndReplaceResource,2,605
 00418110,FUN_00418110,ported,SaveStateEventContextSet,2,81
 00418120,FUN_00418120,named,IsAverageValueAbove99,0,550
 00418190,FUN_00418190,ported,SelectionModeStateSet,2,81

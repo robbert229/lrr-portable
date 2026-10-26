@@ -7,6 +7,7 @@
 #include "savegame.hpp"
 
 #include "gods98/engine.hpp"
+#include "gods98/heap.hpp"
 
 /* One descriptor per control: banner name (normalized for matching), the
  * shipped config range, the documented default, and the store field. The
@@ -284,6 +285,56 @@ void options_context_six_field_set(struct GameContext* ctx,
         const uint32_t v = src[i];
         __builtin_memcpy(block + 0x1c + (size_t)i * sizeof(v), &v, sizeof v);
     }
+}
+
+/* --- the slot-context options window (see options.hpp) ---------------------
+ * The corpus's 0xb8-byte DAT_00557080 block (stride 0xb8, active slot only)
+ * has no ported owner, so the 46-dword window and the owned resource word
+ * land as zero-init own storage (the unowned-DAT convention; the corpus's
+ * 32-bit pointer word is widened to void* for the port's LP64 addresses,
+ * the fixed-record-slot precedent). */
+#define OPTIONS_SLOT_WINDOW_DWORDS 46
+static uint32_t s_options_slot_window[OPTIONS_SLOT_WINDOW_DWORDS];
+static void* s_options_slot_resource;
+
+/* OptionsContextCopyAndReplaceResource (FUN_004180c0) — see options.hpp. */
+void options_context_copy_and_replace_resource(GameContext* ctx,
+                                               const uint32_t* source)
+{
+    if (sav_build_ctx(ctx) == NULL || source == NULL) {
+        return; /* deviation: the corpus strides its context blindly */
+    }
+    if (s_options_slot_resource != NULL) {
+        engine_heap_free(s_options_slot_resource);
+    }
+    __builtin_memcpy(s_options_slot_window, source,
+                     sizeof s_options_slot_window);
+    s_options_slot_resource = (void*)(uintptr_t)source[13];
+    s_options_slot_window[13] = source[13];
+}
+
+void options_slot_window_install(const uint32_t* block, void* resource)
+{
+    if (block != NULL) {
+        __builtin_memcpy(s_options_slot_window, block,
+                         sizeof s_options_slot_window);
+    } else {
+        memset(s_options_slot_window, 0, sizeof s_options_slot_window);
+    }
+    s_options_slot_resource = resource;
+}
+
+uint32_t options_slot_window_dword_peek(int index)
+{
+    if (index < 0 || index >= OPTIONS_SLOT_WINDOW_DWORDS) {
+        return 0u; /* deviation: the corpus strides the index blindly */
+    }
+    return s_options_slot_window[index];
+}
+
+void* options_slot_resource_peek(void)
+{
+    return s_options_slot_resource;
 }
 
 /* --- the scroll speed index band (see options.hpp) ----------------------- */
