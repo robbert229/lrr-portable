@@ -387,6 +387,20 @@ live port candidates below.)
   the feature words they read are modeled; they are the next port
   candidate (tracked as cluster 184).
 
+### Dependency re-scan after cluster 184 (1 row)
+
+- `SaveMenuRefresh` (`0x4150b0`): flipping `SavTreeLoad` (`0x4173e0`) made
+  this row's ledger dependencies all-ported, but its body still resolves
+  nothing observable port-side: it reads the `DAT_00556fc4` slot-context
+  chain (in-game `+4` / out-of-game `+8` contexts through the
+  `+0x18` manager to the `+0x10` window word — the recorded window-seam
+  family) and threads the `DAT_00556ff8` / `DAT_00556ffc` tree roots that
+  **no ported function installs** (the sav-tree loaders that write them
+  are unported). Next: model the slot-context window word and give the
+  two tree roots install/peek hooks (the visited-band precedent); the
+  refresh then lands as a two-walk leaf calling the ported
+  `sav_set_slot` / `sav_build_ctx` / `sav_tree_load`.
+
 ### Unmodeled reference-state bands (bucket attribution ledger)
 
 Named-unported rows that resolve to a DAT-global root attribute here:
@@ -394,20 +408,21 @@ each band is unowned reference state (its writer/loader is unported or
 unmodeled), and the rows striding it are blocked-by-band. Groups:
 
 - Media-load pointer pairs: `DAT_004a13e0`, `DAT_004a1d5c`, `DAT_004a1ee8`,
-  `DAT_004a1ef0`, `DAT_004a1ef4`, `DAT_004a1ef8`.
+  `DAT_004a1eec`, `DAT_004a1ef0`, `DAT_004a1ef4`, `DAT_004a1ef8`.
 - Game-setup option words: `DAT_004b202c`, `DAT_004b2044`, `DAT_004b205c`,
   `DAT_004b2428`, `DAT_004b24c0`, `DAT_004b2628`, `DAT_004b28a8`,
   `DAT_004b28c0`.
 - Selection-marker window words (the `DAT_004c7d*` descriptor family
   recorded with `MapCellRecordGridInitialize` / `0x40d240`): `DAT_004c7dfc`,
-  `DAT_004c7e80`, `DAT_004c7e84`, `DAT_004c7b30`, `DAT_004c7ba0`.
-- Loader scratch: `DAT_004db904`, `DAT_004dc640`, `DAT_004dc644`.
+  `DAT_004c7e80`, `DAT_004c7e84`, `DAT_004c7b30`, `DAT_004c7ba0`,
+  `DAT_004c7a50`, `DAT_004c7a88`, `DAT_004c7b68`.
+- Loader scratch: `DAT_004db904`, `DAT_004db93c`, `DAT_004dc640`, `DAT_004dc644`.
 - Key-repeat/windows band (key-binding family, above): `DAT_004dd99c`,
-  `DAT_004ddad8`, `DAT_004ddcc8`.
+  `DAT_004dd9a0`, `DAT_004ddad8`, `DAT_004ddcc8`.
 - Interface label band (the `0x41a300` entry above): `DAT_004dced0`.
 - CRT locale/error words: `DAT_005490d4`, `DAT_0054912c`.
 - Frontend flow words behind the recorded window seams: `DAT_00556eec`,
-  `DAT_00557d68`, `DAT_00558080`, `DAT_00558088`.
+  `DAT_00557d68`, `DAT_00558080`, `DAT_00558088`, `DAT_0055808c`.
 
 Next (all groups): model each band with its loader/owner.
 
