@@ -2363,6 +2363,31 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Key-group code band + catalog dispatch** (2026-10-25): three frontier
+rows land. `resource.*` takes the corpus writers of the DAT_004ddc04
+stride-8 band: `resource_input_key_group_register` (0x41a7d0) stages a
+group's count word into the pair's +4 slot, allocates the code array through
+the heap seam, and copies the action-code dwords (the corpus's stack-variadic
+values ride as an array, and the always-zero byte tail folds out);
+`interaction_action_code_map_initialize` (0x41a660) registers the eighteen
+fixed groups, leaving group 6 out. The band window now rides one merged
+model (the handle set's existing one) with `..._band_word_install/peek`
+hooks over the count word, so the entity query's id-pair reads and the
+dispatch's loop bounds share it. `entity.*` takes
+`catalog_callback_by_id_dispatch` (0x41b680): the 0x13/0x14/0x15 lanes hand
+the callback (0x49, 4, row) / (0x49, 1, row) over the flag-gated catalog
+rows (the first nonzero answer wins), and the generic lane sweeps the
+group's code array through (code, 0, 0) — 0x22/0x23 codes ride through the
+selection-code resolve, which rewrites the cached element in place, and the
+corpus re-reads the band count every hop (a callback that regrows the count
+retargets the walk mid-sweep, pinned). Deviations: the group guard answers
+where the corpus strides the band blindly, re-registering leaks the
+superseded array (as does the corpus), the query lanes thread the context
+block, and NULL callback/pair-array guards stand where the corpus strides.
+`entity_query_flag_count`'s generic lane rewires onto the merged window.
+`resource_test` and `entity_test` pin the staging, guards, and lanes.
+Ledger 1121 -> 1124. Tests green; 34/36 baseline.
+
 **Entity record attach + cell route + neighbour pick** (2026-10-25):
 three frontier rows land. `cmd.*` takes `entity_record_attach_and_relink`
 (0x406360): a record without the +0x5c bit-0x40 flag unlinks from the

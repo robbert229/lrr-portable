@@ -809,6 +809,33 @@ static int stats_flag_test(void)
     return 0;
 }
 
+/* CatalogCallbackByIdDispatch recorder: books the callback arguments so
+ * the lanes' (kind, lane, row) shapes pin; optional early stop (1-based
+ * call index) and one-shot band-count grow (the corpus's mid-sweep hop
+ * re-read) ride as hooks. */
+static int s_disp_calls;
+static int s_disp_stop_at;
+static int s_disp_grow;
+static int s_disp_kind[8];
+static int s_disp_lane[8];
+static int s_disp_row[8];
+
+static int disp_recorder(int kind, int lane, int row, void* payload)
+{
+    (void)payload;
+    int n = s_disp_calls++;
+    if (n < 8) {
+        s_disp_kind[n] = kind;
+        s_disp_lane[n] = lane;
+        s_disp_row[n] = row;
+    }
+    if (s_disp_grow != 0) {
+        resource_handle_set_band_word_install(s_disp_grow, 2u);
+        s_disp_grow = 0;
+    }
+    return s_disp_stop_at != 0 && n + 1 == s_disp_stop_at ? 1 : 0;
+}
+
 int main(int argc, char** argv)
 {
     char rmcmd[64];
@@ -1406,6 +1433,127 @@ int main(int argc, char** argv)
         for (int i = 0; i < 3; ++i) {
             stats_type_table_install(1, i, NULL, 0); /* release */
         }
+    }
+
+    /* CatalogCallbackByIdDispatch (FUN_0041b680; 2026-10-25): the three
+     * catalog lanes hand the callback their gated rows, and the generic
+     * lane sweeps a key group's code array through the shared band. */
+    {
+        GameContext dctx;
+        game_context_init(&dctx);
+        static uint8_t drows[3][2 * 0x150];
+        memset(drows, 0, sizeof drows);
+        for (int i = 0; i < 3; ++i) {
+            stats_type_table_install(1, i, drows[i], 2);
+        }
+        uint32_t v;
+        v = 0x1000u;
+        __builtin_memcpy(drows[0] + 0x148, &v, 4);
+        v = 0x2000u;
+        __builtin_memcpy(drows[1] + 0x148, &v, 4);
+        v = 8u;
+        __builtin_memcpy(drows[1] + 0x14c, &v, 4);
+        v = 0x800u;
+        __builtin_memcpy(drows[2] + 0x148, &v, 4);
+
+        /* 0x13: count_b rows, each handed over as (0x49, 4, row). */
+        catalog_count_install(1, 3u);
+        s_disp_calls = 0;
+        s_disp_stop_at = 0;
+        s_disp_grow = 0;
+        CHECK(catalog_callback_by_id_dispatch(&dctx, 0x13, disp_recorder, NULL)
+                  == 0 && s_disp_calls == 3
+                  && s_disp_kind[0] == 0x49 && s_disp_lane[0] == 4
+                  && s_disp_row[0] == 0 && s_disp_row[2] == 2,
+              "the 0x13 lane hands the callback every count_b row");
+
+        /* The first nonzero callback answer ends the dispatch. */
+        s_disp_calls = 0;
+        s_disp_stop_at = 2;
+        CHECK(catalog_callback_by_id_dispatch(&dctx, 0x13, disp_recorder, NULL)
+                  == 1 && s_disp_calls == 2,
+              "the first nonzero callback answer wins the fold");
+
+        /* 0x14: rows raising +148 bit 0x1000 or 0x2000 while the +14c bit 8
+         * stays clear; row 1's raised bit 8 drops it out. */
+        catalog_count_install(0, 3u);
+        s_disp_calls = 0;
+        s_disp_stop_at = 0;
+        CHECK(catalog_callback_by_id_dispatch(&dctx, 0x14, disp_recorder, NULL)
+                  == 0 && s_disp_calls == 1
+                  && s_disp_kind[0] == 0x49 && s_disp_lane[0] == 1
+                  && s_disp_row[0] == 0,
+              "the 0x14 gate hands over the raised-bit clear-word rows");
+
+        /* 0x15: rows raising +148 bit 0x800 or the +14c bit 8. */
+        s_disp_calls = 0;
+        CHECK(catalog_callback_by_id_dispatch(&dctx, 0x15, disp_recorder, NULL)
+                  == 0 && s_disp_calls == 2
+                  && s_disp_row[0] == 1 && s_disp_row[1] == 2,
+              "the 0x15 gate folds the other flag halves");
+        catalog_count_install(0, 0u);
+        catalog_count_install(1, 0u);
+        for (int i = 0; i < 3; ++i) {
+            stats_type_table_install(1, i, NULL, 0); /* release */
+        }
+
+        /* Generic lane, pick branch: the empty selection rewrites the
+         * cached 0x22 element in place through the selection resolve. */
+        static int codes_a[3] = { 1, 0x22, 5 };
+        objective_selection_state_reset(); /* inter bit 7: the pick branch */
+        resource_handle_set_band_word_install(0, 3);
+        resource_handle_set_slot_install(0, codes_a);
+        s_disp_calls = 0;
+        CHECK(catalog_callback_by_id_dispatch(&dctx, 0, disp_recorder, NULL)
+                  == 0 && s_disp_calls == 3
+                  && s_disp_lane[0] == 0 && s_disp_lane[1] == 0
+                  && s_disp_kind[0] == 1 && s_disp_kind[1] == 0x23
+                  && codes_a[1] == 0x23 && s_disp_kind[2] == 5,
+              "the sweep rewrites the cached 0x22 pick through the resolve");
+        resource_handle_set_band_word_install(0, 0);
+
+        /* The high-bit selection rewrites the 0x23 element back up. */
+        static EntitySlot picked;
+        memset(&picked, 0, sizeof picked);
+        picked.type = 1;
+        picked.flags_3e8 = 0x80000000u;
+        selection_add(&dctx, &picked);
+        static int codes_b[2] = { 2, 0x23 };
+        resource_handle_set_band_word_install(1, 2);
+        resource_handle_set_slot_install(1, codes_b);
+        s_disp_calls = 0;
+        CHECK(catalog_callback_by_id_dispatch(&dctx, 1, disp_recorder, NULL)
+                  == 0 && s_disp_calls == 2
+                  && s_disp_kind[1] == 0x22 && codes_b[1] == 0x22,
+              "the high-bit selection rewrites the 0x23 pick in the array");
+        selection_clear(&dctx);
+        resource_handle_set_band_word_install(1, 0);
+        resource_handle_set_slot_install(1, NULL);
+
+        /* The corpus re-reads the band word every hop: a callback that
+         * regrows the count retargets the walk mid-sweep. */
+        static int codes_c[2] = { 6, 7 };
+        resource_handle_set_band_word_install(3, 1);
+        resource_handle_set_slot_install(3, codes_c);
+        s_disp_calls = 0;
+        s_disp_grow = 3;
+        CHECK(catalog_callback_by_id_dispatch(&dctx, 3, disp_recorder, NULL)
+                  == 0 && s_disp_calls == 2 && s_disp_kind[1] == 7,
+              "the sweep re-reads the band count every hop");
+        s_disp_grow = 0;
+        resource_handle_set_band_word_install(3, 0);
+        resource_handle_set_slot_install(3, NULL);
+
+        /* Guards: the NULL callback and the missing pair array answer zero
+         * (the corpus strides both blindly). */
+        resource_handle_set_band_word_install(4, 1);
+        s_disp_calls = 0;
+        CHECK(catalog_callback_by_id_dispatch(&dctx, 4, disp_recorder, NULL) == 0
+                  && s_disp_calls == 0,
+              "the pair-array guard answers zero");
+        CHECK(catalog_callback_by_id_dispatch(&dctx, 9, NULL, NULL) == 0,
+              "the NULL callback guard answers zero");
+        resource_handle_set_band_word_install(4, 0);
     }
 
     if (s_failures != 0) {

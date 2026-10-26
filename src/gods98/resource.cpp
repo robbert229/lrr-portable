@@ -734,8 +734,8 @@ int wad_entry_read_into_stream_slot(WadStreamSlots* slots, const char* name)
  * ResourceHandleSetRelease (FUN_0041a850) frees the corpus's global handle
  * set: the DAT_004ddc04 stride-8 record band (the first DWORD of each pair,
  * while the walker stays below DAT_004ddcc4) followed by twelve named
- * globals, freed in corpus order. Deviations: the unowned band lands as
- * own storage (install/peek hooks stand in for the unported setters), the
+ * globals, freed in corpus order. Deviations: the band lands as
+ * own storage (install/peek hooks for the named globals), the
  * corpus frees without clearing, and the port nulls each freed slot. */
 static struct {
     void* handle;      /* corpus band dword (stride 8; the word behind rides) */
@@ -784,6 +784,91 @@ void resource_handle_set_release(void)
             *p = NULL;
         }
     }
+}
+
+/* --- the key-group action-code band (see resource.hpp) ---------------------
+ * InputKeyGroupRegister (FUN_0041a7d0) stages one interaction-action group:
+ * the count word rides in at the pair's +4 slot FIRST (corpus order), then
+ * a count*4 heap array takes the code dwords. Deviations: the corpus's
+ * stack-variadic values ride as an array pointer, the staging copy of the
+ * variadic window into locals (and the always-zero byte tail) fold into a
+ * direct dword copy, and the group guard answers where the corpus strides
+ * the band blindly. Registering the same group twice re-stages in place;
+ * the corpus leaks the superseded array, and so does the port. */
+void resource_input_key_group_register(int group, int count,
+                                       const uint32_t* values)
+{
+    if (group < 0 || group >= 24) {
+        return; /* deviation: the corpus strides the band blindly */
+    }
+    s_handle_set_band[group].word2 = (uint32_t)count;
+    void* array = engine_heap_alloc((long)count * 4); /* FUN_0048dbd0 */
+    s_handle_set_band[group].handle = array;
+    if (array != NULL && values != NULL) {
+        uint32_t* dst = (uint32_t*)array;
+        const uint32_t n = (uint32_t)count & 0x3fffffffu;
+        for (uint32_t i = 0; i != n; ++i) {
+            dst[i] = values[i];
+        }
+    }
+}
+
+/* InteractionActionCodeMapInitialize (FUN_0041a660): registers the fixed
+ * eighteen interaction-action groups. Group 6 is left unregistered (the
+ * corpus skips it), and the action codes ride as the corpus's own
+ * constants. */
+void interaction_action_code_map_initialize(void)
+{
+    static const uint32_t g0[] = { 1, 2, 3, 4 };
+    static const uint32_t g1[] = { 5, 6, 0xe };
+    static const uint32_t g2[] = { 7 };
+    static const uint32_t g3[] = { 0xe };
+    static const uint32_t g4[] = { 0x10 };
+    static const uint32_t g5[] = { 9, 0xe };
+    static const uint32_t g7[] = { 0xb, 0xc, 0xd, 0xf };
+    static const uint32_t g8[] = { 0x2b, 0x2f };
+    static const uint32_t g9[] = { 0x1f, 0x17, 0x15, 0x30, 0x21, 0x40, 0x39,
+                                   0x2d, 0x2e, 0x20 };
+    static const uint32_t gA[] = { 0x16, 0x14, 0x42, 0x19, 0x2d, 0x2e, 0x29 };
+    static const uint32_t gB[] = { 0x16, 0x14, 0x19, 0x2d, 0x2e, 0x1a };
+    static const uint32_t gC[] = { 0x18, 0x29 };
+    static const uint32_t gD[] = { 0x24, 0x22, 0x41, 0x28 };
+    static const uint32_t gE[] = { 0x2a };
+    static const uint32_t gF[] = { 0x2c, 0x2e, 0x2d };
+    static const uint32_t g10[] = { 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37,
+                                    0x38 };
+    static const uint32_t g11[] = { 0x3a, 0x3b, 0x3c, 0x3d, 0x3e, 0x3f };
+    static const uint32_t g12[] = { 0x43, 0x44, 0x45, 0x46 };
+    resource_input_key_group_register(0, 4, g0);
+    resource_input_key_group_register(1, 3, g1);
+    resource_input_key_group_register(2, 1, g2);
+    resource_input_key_group_register(3, 1, g3);
+    resource_input_key_group_register(4, 1, g4);
+    resource_input_key_group_register(5, 2, g5);
+    resource_input_key_group_register(7, 4, g7);
+    resource_input_key_group_register(8, 2, g8);
+    resource_input_key_group_register(10, 7, gA);
+    resource_input_key_group_register(0xb, 6, gB);
+    resource_input_key_group_register(0xc, 2, gC);
+    resource_input_key_group_register(9, 10, g9);
+    resource_input_key_group_register(0xd, 4, gD);
+    resource_input_key_group_register(0xe, 1, gE);
+    resource_input_key_group_register(0xf, 3, gF);
+    resource_input_key_group_register(0x10, 8, g10);
+    resource_input_key_group_register(0x11, 6, g11);
+    resource_input_key_group_register(0x12, 4, g12);
+}
+
+void resource_handle_set_band_word_install(int unit, uint32_t value)
+{
+    if (unit >= 0 && unit < 24) {
+        s_handle_set_band[unit].word2 = value;
+    }
+}
+
+uint32_t resource_handle_set_band_word_peek(int unit)
+{
+    return (unit >= 0 && unit < 24) ? s_handle_set_band[unit].word2 : 0u;
 }
 
 /* ResourceHandleListDispose (FUN_00410ae0): free the list's non-zero

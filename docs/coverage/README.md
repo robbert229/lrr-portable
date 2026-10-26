@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 1121 | 43.7% |
+| ported | 1124 | 43.8% |
 | anchored | 4 | 0.2% |
-| named | 1397 | 54.5% |
+| named | 1394 | 54.4% |
 | runtime-import | 41 | 1.6% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (1121 functions)
+  (1124 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1397 functions)
+  citation yet (1394 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1402 (54.7%).**
+**Game logic remaining to port: 1399 (54.6%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -297,8 +297,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00419f10` | PendingRecordReleaseAll |
 | `0x0041a1a0` | UIEntryHitTestAndDispatch |
 | `0x0041a300` | InterfaceMenuActionLabelsInit |
-| `0x0041a660` | InteractionActionCodeMapInitialize |
-| `0x0041a7d0` | InputKeyGroupRegister |
 | `0x0041a920` | LevelStateCountersClear |
 | `0x0041a9c0` | CaseInsensitiveStringTableIndexFind |
 | `0x0041aa00` | EntityTableMapsAllocate |
@@ -306,7 +304,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0041ada0` | InterfaceImagesConfigLoad |
 | `0x0041afd0` | InterfaceSurroundImagesConfigLoad |
 | `0x0041b1b0` | InterfaceBackButtonConfigLoad |
-| `0x0041b680` | CatalogCallbackByIdDispatch |
 | `0x0041baa0` | SimulationPointerActionDispatch |
 | `0x0041c1c0` | AdvisorOverlayHitResolve |
 | `0x0041c440` | AdvisorCallbackScheduleGate |

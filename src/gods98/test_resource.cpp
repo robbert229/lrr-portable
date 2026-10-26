@@ -536,6 +536,62 @@ int main(int argc, char** argv)
         CHECK(1, "the list disposer runs the free ladder");
     }
 
+    /* --- key-group action-code band (2026-10-25) ----------------------- */
+    {
+        /* InputKeyGroupRegister: the count word lands in the pair's +4
+         * slot, then the code dwords ride the heap array. */
+        static const uint32_t codes[4] = { 1, 2, 3, 4 };
+        resource_input_key_group_register(5, 4, codes);
+        CHECK(resource_handle_set_band_word_peek(5) == 4u
+                  && *(const uint32_t*)resource_handle_set_slot_peek(5) == 1u
+                  && ((const uint32_t*)resource_handle_set_slot_peek(5))[3]
+                         == 4u,
+              "the register stages the count word and the code array");
+
+        /* Guard: an out-of-range group strides nowhere (the corpus strides
+         * the band blindly). */
+        resource_input_key_group_register(24, 1, codes);
+        resource_input_key_group_register(-1, 1, codes);
+        CHECK(resource_handle_set_band_word_peek(24) == 0u
+                  && resource_handle_set_band_word_peek(-1) == 0u,
+              "the register guard answers where the corpus strides");
+
+        /* Re-registering the same group re-stages in place (the corpus
+         * leaks the superseded array, and so does the port). */
+        static const uint32_t one[] = { 9 };
+        resource_input_key_group_register(5, 1, one);
+        CHECK(resource_handle_set_band_word_peek(5) == 1u
+                  && *(const uint32_t*)resource_handle_set_slot_peek(5) == 9u,
+              "re-registering restages the group in place");
+
+        /* MapInitialize: the eighteen fixed groups, group 6 left out. */
+        interaction_action_code_map_initialize();
+        static const uint32_t counts[19] = { 4, 3, 1, 1, 1, 2, 0, 4, 2, 10,
+                                            7, 6, 2, 4, 1, 3, 8, 6, 4 };
+        int counts_ok = 1;
+        for (int g = 0; g != 19; ++g) {
+            if (resource_handle_set_band_word_peek(g) != counts[g]) {
+                counts_ok = 0;
+            }
+        }
+        CHECK(counts_ok, "the initializer stages the eighteen fixed counts");
+        CHECK(resource_handle_set_band_word_peek(6) == 0u
+                  && resource_handle_set_slot_peek(6) == NULL,
+              "group 6 stays unregistered");
+        CHECK(resource_handle_set_band_word_peek(0) == 4u
+                  && resource_handle_set_slot_peek(0) != NULL
+                  && ((const uint32_t*)resource_handle_set_slot_peek(0))[3]
+                         == 4u,
+              "group 0 rides the fixed codes {1,2,3,4}");
+        CHECK(((const uint32_t*)resource_handle_set_slot_peek(9))[0] == 0x1fu
+                  && ((const uint32_t*)resource_handle_set_slot_peek(0x10))[7]
+                         == 0x38u,
+              "the fixed code rows land in their groups");
+        resource_handle_set_release(); /* the arrays free through the seam */
+        CHECK(resource_handle_set_slot_peek(9) == NULL,
+              "the release frees the staged group arrays");
+    }
+
     if (s_failures == 0) {
         printf("resource_test: PASS%s\n", real_dir != NULL ? " (real wads)" : "");
         return 0;

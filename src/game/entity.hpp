@@ -70,6 +70,13 @@ void     catalog_count_install(int which, uint32_t value); /* port hook */
 uint32_t catalog_count_peek(int which);           /* port hook */
 void     catalog_id_pair_install(int entry, uint32_t size); /* port hook */
 
+/* CatalogCallbackByIdDispatch (FUN_0041b680): callback dispatch over the
+ * catalog query lanes and the key-group code band shared with the resource
+ * module's stride-8 window (the pair word is that window's count). */
+int catalog_callback_by_id_dispatch(const GameContext* ctx, int query,
+                                    int (*callback)(int, int, int, void*),
+                                    void* payload);     /* FUN_0041b680 */
+
 /* Resolver pair (FUN_0042e8b0, name -> (type, registry row)): table matches
  * write both outputs, the special names write only their dedicated rows.
  * The (name, &type, &row, NULL) corpus call form; NULL name answers 0. */
