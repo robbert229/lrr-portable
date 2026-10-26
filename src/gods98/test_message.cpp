@@ -110,6 +110,175 @@ int main(void)
         block_close(bf);
     }
 
+    /* The system-state accessors (2026-10-24): get/set over the module's
+     * own DAT_004ff980 static — shared with the diagnostics setter. */
+    {
+        const uint32_t before = system_state_flags_get();
+        const uint32_t probe = 0x1234u;
+        CHECK(system_state_flags_set(&probe) == probe,
+              "the setter returns the installed value");
+        CHECK(system_state_flags_get() == 0x1234u,
+              "the getter reads it back");
+        message_set_system_state(before); /* leave the module as found */
+        CHECK(system_state_flags_get() == before,
+              "the diagnostics setter shares the same static");
+        CHECK(system_state_flags_set(NULL) == 0u
+                  && system_state_flags_get() == before,
+              "NULL answers zero and stores nothing (deviation)");
+    }
+
+    /* The corpus flag leaves (2026-10-24): global bit 0x10 and the two
+     * per-id config bits over the module's own storage. */
+    {
+        message_set_flags(0);
+        selection_flag10_set_clear(1);
+        CHECK(message_flags_peek() == 0x10u, "the raise sets bit 0x10");
+        selection_flag10_set_clear(1);
+        CHECK(message_flags_peek() == 0x10u, "raising twice is idempotent");
+        selection_flag10_set_clear(0);
+        CHECK(message_flags_peek() == 0u, "the clear drops it");
+        message_set_flags(0x130u);
+        selection_flag10_set_clear(0);
+        CHECK(message_flags_peek() == (0x130u & ~0x10u),
+              "the clear spares the neighbours");
+    }
+    {
+        message_config_set(5, NULL, 0.0f, 0u);
+        indexed_selection_flag_20000_set_clear(5, 1);
+        CHECK(message_config_flags(5) == 0x20000u, "the 0x20000 leaf raises");
+        info_message_always_play_flag_set(5, 1);
+        CHECK(message_config_flags(5) == 0x30000u,
+              "the 0x10000 leaf raises next to it");
+        info_message_always_play_flag_set(5, 0);
+        indexed_selection_flag_20000_set_clear(5, 0);
+        CHECK(message_config_flags(5) == 0u, "both clears land");
+
+        indexed_selection_flag_20000_set_clear(-1, 1);
+        info_message_always_play_flag_set(MESSAGE_MAX_ID, 1);
+        CHECK(1, "the guarded ids are no-ops");
+
+        /* neighbours stay untouched (per-id isolation) */
+        message_config_set(6, NULL, 0.0f, 0x20000u);
+        indexed_selection_flag_20000_set_clear(7, 1);
+        CHECK(message_config_flags(6) == 0x20000u
+                  && message_config_flags(7) == 0x20000u,
+              "the raise stays on its id");
+        indexed_selection_flag_20000_set_clear(7, 0);
+        CHECK(message_config_flags(6) == 0x20000u, "the clear spares the id");
+    }
+
+    /* The incident/message DAT-global band (2026-10-24). */
+    {
+        CHECK(incident_message_text_catalog_get(0) == 0u
+                  && incident_message_text_catalog_get(MESSAGE_MAX_ID) == 0u,
+              "message: the catalog window answers zero, guarded");
+        info_message_secondary_sound_set(7, 0x1234u);
+        info_message_secondary_sound_set(-1, 9u);   /* guarded */
+        info_message_secondary_sound_set(MESSAGE_MAX_ID, 9u); /* guarded */
+        CHECK(incident_message_state_get() == 0u,
+              "message: the incident state word starts clear");
+        info_message_secondary_sound_set(7, 0u); /* restore for later tests */
+    }
+
+    /* DeferredCallbackSet (2026-10-24). */
+    {
+        CHECK(deferred_callback_peek() == 0u, "presence starts absent");
+        deferred_callback_set(1u);
+        CHECK(deferred_callback_peek() == 1u, "the store lands");
+        deferred_callback_set(0u);
+    }
+
+    /* IncidentMessageFlagSet (2026-10-24): s_flags bit 4. */
+    {
+        const uint32_t saved = message_flags_peek();
+        message_set_flags(0u);
+        incident_message_flag_set(1);
+        CHECK((message_flags_peek() & 4u) != 0u, "the flag rises");
+        incident_message_flag_set(0);
+        CHECK((message_flags_peek() & 4u) == 0u, "the flag drops");
+        incident_message_flag_set(1);
+        message_set_flags(saved); /* restore the boot state */
+        CHECK(message_flags_peek() == saved, "the test restores the word");
+    }
+
+    /* HasActiveResource (2026-10-24): the +0x38 handle and the flags. */
+    {
+        char rec[0x40];
+        memset(rec, 0, sizeof rec);
+        const uint32_t before = system_state_flags_get();
+        uint32_t on = 0x1u;
+        system_state_flags_set(&on);
+        /* Clear handle: answers no even with flags set. */
+        CHECK(has_active_resource(rec) == 0, "a clear handle answers no");
+        const uint32_t handle = 0x5u;
+        __builtin_memcpy(rec + 0x38, &handle, sizeof handle);
+        CHECK(has_active_resource(rec) == 1, "the handle rides the flags");
+        uint32_t off = 0u;
+        system_state_flags_set(&off);
+        CHECK(has_active_resource(rec) == 0, "clear flags answer no");
+        CHECK(has_active_resource(NULL) == 0, "the NULL record is guarded");
+        system_state_flags_set(&before); /* restore */
+    }
+
+    /* IndexedLinkedListEntryGet (2026-10-25): the installed chain walks
+     * the +0x10 links; out-of-range answers empty. */
+    {
+        static char node_a[32];
+        static char node_b[32];
+        void* link = node_b;
+        memcpy(node_a + 0x10, &link, sizeof link);
+        indexed_list_install(2, node_a, 2);
+        CHECK(indexed_linked_list_entry_get(2, 0) == node_a,
+              "the head lands at index zero");
+        CHECK(indexed_linked_list_entry_get(2, 1) == node_b,
+              "the chain walks the link");
+        CHECK(indexed_linked_list_entry_get(2, 2) == NULL
+                  && indexed_linked_list_entry_get(2, -1) == NULL
+                  && indexed_linked_list_entry_get(99, 0) == NULL,
+              "the guards answer empty");
+        indexed_list_install(2, NULL, 0);
+    }
+
+    /* Info-message queue find-id (2026-10-25): the index-by-id walk of the
+     * queued entries, the miss answer, and the guarded miss. */
+    {
+        message_clear();
+        message_set_flags(0x4u);
+        message_config_set(5, "Sounds\\a.wav", 0.0f, 0);
+        message_config_set(9, "Sounds\\b.wav", 0.0f, 0);
+        message_dispatch(5, 0, 0, NULL);
+        message_dispatch(9, 0, 0, NULL);
+        CHECK(message_queue_find_id(5) == 0, "the first id lands at zero");
+        CHECK(message_queue_find_id(9) == 1, "the second id follows");
+        CHECK(message_queue_find_id(11) == -1, "an absent id answers minus one");
+        CHECK(message_queue_find_id(-1) == -1, "the out-of-window id misses");
+        message_clear();
+    }
+
+    /* Incident-message config lookup (2026-10-25): the ASCII-fold name
+     * walk over the config catalog with the id answer word. */
+    {
+        message_clear();
+        message_init_defaults();
+        int found = -1;
+        CHECK(incident_message_config_lookup("Landslide", &found) == 1
+                  && found == 6,
+              "the catalog name answers its index");
+        found = -1;
+        CHECK(incident_message_config_lookup("landsLIDE", &found) == 1
+                  && found == 6,
+              "the ASCII fold lands the same index");
+        int keep = 0x1234;
+        CHECK(incident_message_config_lookup("NoSuchMessage", &keep) == 0
+                  && keep == 0x1234,
+              "the miss answers zero and leaves the word");
+        CHECK(incident_message_config_lookup(NULL, &keep) == 0,
+              "the null name guards (dev)");
+        CHECK(incident_message_config_lookup("Constructed", NULL) == 0,
+              "the null answer word guards (dev)");
+        message_clear();
+    }
+
     if (s_failures == 0) {
         printf("message_test: PASS\n");
         return 0;

@@ -7,9 +7,11 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "game/frontend.hpp" /* sav_tree_load's visited-band tail */
 #include "game/game.hpp"
 #include "game/level.hpp"
 #include "game/savegame.hpp"
+#include "gods98/crt.hpp"   /* engine_feature_word_install: refresh gate */
 #include "gods98/texture.hpp"   /* texture_decode: `.dat` round-trip probe */
 
 static int s_failures = 0;
@@ -47,6 +49,15 @@ static uint8_t* read_all(const char* path, size_t* out_sz)
     fclose(fp);
     *out_sz = (size_t)n;
     return buf;
+}
+
+/* Tree-walk observer: counts visits (the callback rides the corpus's
+ * plain indirect call). */
+static int s_counting_visit(void* node, void* user)
+{
+    (void)node;
+    (*(int*)user)++;
+    return 0;
 }
 
 int main(void)
@@ -126,6 +137,90 @@ int main(void)
         CHECK(caverns_quota == 1, "Level03 tutorial quota fix");
     }
     lvl->ptr_name = (void*)"Level01";
+
+    /* CheckpointBlobTaskProgressRecalculate (2026-10-25): the fold band
+     * over the blob's task windows. A private context keeps the blob
+     * pristine for the checks below. */
+    {
+        GameContext fc;
+        memset(&fc, 0, sizeof fc);
+        static LevelState flvl;
+        memset(&flvl, 0, sizeof flvl);
+        fc.level = &flvl;
+        CHECK(checkpoint_blob_task_progress_recalculate(NULL) == 0,
+              "the null context answers 0");
+        CHECK(checkpoint_blob_task_progress_recalculate(&fc) == 0,
+              "the missing blob answers 0");
+        checkpoint_blob_build(&fc);
+        CHECK(fc.checkpoint_blob != NULL, "the fold band built the blob");
+        char* blob = (char*)fc.checkpoint_blob;
+        float f = 0.0f;
+        int got = 0;
+        float gotf = 0.0f;
+        /* Fold shape: 100 / den * num, a zero denominator answers 100,
+         * and the clamp lands over the store. */
+        memset(blob, 0, SAVE_BLOB_SIZE);
+        f = 4.0f;
+        memcpy(blob + 0x1d1c, &f, sizeof f);
+        f = 1.0f;
+        memcpy(blob + 0x1d20, &f, sizeof f);
+        f = 0.0f;
+        memcpy(blob + 0x1f2c, &f, sizeof f);
+        f = 5.0f;
+        memcpy(blob + 0x1f30, &f, sizeof f);
+        f = 1.0f;
+        memcpy(blob + 0x213c, &f, sizeof f);
+        f = 250.0f;
+        memcpy(blob + 0x2140, &f, sizeof f);
+        got = checkpoint_blob_task_progress_recalculate(&fc);
+        memcpy(&gotf, blob + 0x1d24, sizeof gotf);
+        CHECK(got == 1 && gotf == 25.0f, "the fold divides through the den");
+        memcpy(&gotf, blob + 0x1f34, sizeof gotf);
+        CHECK(gotf == 100.0f, "a zero denominator answers 100");
+        memcpy(&gotf, blob + 0x2144, sizeof gotf);
+        CHECK(gotf == 100.0f, "the clamp lands over the fold");
+        memcpy(&gotf, blob + 0x2774, sizeof gotf);
+        CHECK(gotf == 100.0f, "the quiet folds still answer 100");
+        /* Count-up shape: rounds of +100 on the sum, the folded percent
+         * riding the carry, then the final fold plus the converted
+         * bonus word (+0x1c0, the corpus's Reward/Modifier). */
+        memset(blob, 0, SAVE_BLOB_SIZE);
+        f = 5.0f;
+        memcpy(blob + 0x1d1c, &f, sizeof f);
+        f = 1.0f;
+        memcpy(blob + 0x1d20, &f, sizeof f);
+        f = 2.0f;
+        memcpy(blob + 0x1d10, &f, sizeof f);
+        /* The bonus word is a raw dword the corpus converts to float. */
+        uint32_t bonus = 17u;
+        memcpy(blob + 0x1c0, &bonus, sizeof bonus);
+        checkpoint_blob_task_progress_recalculate(&fc);
+        memcpy(&gotf, blob + 0x2fac, sizeof gotf);
+        CHECK(gotf == 200.0f, "the count-up adds 100 a round");
+        memcpy(&gotf, blob + 0x2fb0, sizeof gotf);
+        CHECK(gotf == 40.0f, "the folded percent rides the carry");
+        memcpy(&gotf, blob + 0x2fb4, sizeof gotf);
+        CHECK(gotf == 37.0f, "the final fold adds the converted bonus");
+        /* Corpus shape: the 0x2d90 loop keeps the accumulators in
+         * registers and writes them back only at the end; a negative
+         * carry clamps to 0.0 through the final fold. */
+        memset(blob, 0, SAVE_BLOB_SIZE);
+        f = 2.0f;
+        memcpy(blob + 0x2d90, &f, sizeof f);
+        f = 150.0f;
+        memcpy(blob + 0x2da4, &f, sizeof f);
+        bonus = 17u; /* raw dword again — the corpus converts, not copies */
+        memcpy(blob + 0x1c0, &bonus, sizeof bonus);
+        checkpoint_blob_task_progress_recalculate(&fc);
+        memcpy(&gotf, blob + 0x2fac, sizeof gotf);
+        CHECK(gotf == 200.0f, "the register loop lands the sum once");
+        memcpy(&gotf, blob + 0x2fb0, sizeof gotf);
+        CHECK(gotf == 0.0f, "the negative carry clamps to zero");
+        memcpy(&gotf, blob + 0x2fb4, sizeof gotf);
+        CHECK(gotf == 17.0f, "the quiet final fold leaves the bonus alone");
+        checkpoint_blob_free(&fc);
+        CHECK(fc.checkpoint_blob == NULL, "the fold block freed its blob");
+    }
 
     /* Save record 2 with the blob, mark dirty, write slot 3.
      * The slot context must exist first (the corpus builds it from the
@@ -417,6 +512,10 @@ int main(void)
     checkpoint_blob_free(&ctx);
     if (ctx.level != NULL) {
         free(ctx.level);
+        ctx.level = NULL; /* the tail builds without a level (the blob
+                           * builder NULL-guards its name lane; leaving the
+                           * dangling reference reads freed memory when
+                           * MALLOC_PERTURB_ poisons the chunk) */
     }
 
     /* --- .dat slot thumbnail (FUN_0047e440 / FUN_0047c8f0 BMP dump) ------
@@ -494,10 +593,380 @@ int main(void)
         }
     }
 
+    /* SavRecordPtr (2026-10-24). */
+    {
+        GameContext g;
+        memset(&g, 0, sizeof(g));
+        g.save_slot = 2;
+        g.active_slot = 2;
+        static uint8_t blob[3][0x3190];
+        g.record_count = 3;
+        g.records = &blob[0][0];
+        CHECK(sav_record_ptr(&g, 1) == &blob[1][4], "the record address lands");
+        CHECK(sav_record_ptr(&g, 3) == NULL, "the count guard answers null");
+        g.save_slot = -1;
+        CHECK(sav_record_ptr(&g, 0) == NULL, "a closed slot answers null");
+    }
+
+    /* SelectedLevelStartObjectUpdate (2026-10-24): bound-level read, guarded. */
+    {
+        GameContext ctx;
+        game_context_init(&ctx);
+        selected_level_start_object_update(NULL); /* guarded */
+        const LevelState* keep = ctx.level;
+        selected_level_start_object_update(&ctx); /* bound: reads through */
+        ctx.level = NULL;
+        selected_level_start_object_update(&ctx); /* unbound: the gate returns */
+        ctx.level = const_cast<LevelState*>(keep);
+    }
+
+    /* SavRefreshSlots (2026-10-25): the six-slot walk. Feature bit clear
+     * bootstraps the missing files and leaves existing ones; feature bit
+     * set writes the live context into every slot on the way. */
+    {
+        static uint8_t blob[6][SAVE_BLOB_SIZE];
+        for (int s = 0; s < 6; ++s) {
+            memset(blob[s], 0x10 + s, SAVE_BLOB_SIZE);
+        }
+        GameContext ctx;
+        game_context_init(&ctx);
+        for (int s = 0; s < SAVE_SLOTS; ++s) {
+            CHECK(save_read_slot(&ctx, s, 0) != 0 || s == 0,
+                  "the slot bootstrap reads");
+            CHECK(save_write_record(&ctx, 0, blob[s]) != 0,
+                  "the distinct record lands");
+            CHECK(save_write_slot(&ctx, s) != 0, "the slot writes");
+        }
+        CHECK(save_read_slot(&ctx, SAVE_SLOTS - 1, 0) != 0,
+              "the live context reloads the last slot");
+        for (int s = 0; s < SAVE_SLOTS; ++s) {
+            char path[32];
+            snprintf(path, sizeof(path), "Saves/%d.sav", s);
+            size_t n = 0;
+            uint8_t* raw = read_all(path, &n);
+            CHECK(raw != NULL && n >= 0xB0u + 4u + SAVE_BLOB_SIZE,
+                  "the six slot files exist");
+            if (raw != NULL) {
+                CHECK(raw[0xB0u + 4u] == (uint8_t)(0x10 + s),
+                      "the slot keeps its distinct record");
+                free(raw);
+            }
+        }
+
+        /* Feature clear: reads only — the files ride. */
+        GameContext reader;
+        game_context_init(&reader);
+        engine_feature_word_install(0u);
+        sav_refresh_slots(&reader);
+        {
+            size_t n = 0;
+            uint8_t* raw = read_all("Saves/3.sav", &n);
+            CHECK(raw != NULL && raw[0xB0u + 4u] == 0x13u,
+                  "the clear-feature refresh leaves the files");
+            free(raw);
+        }
+        CHECK(reader.save_slot == SAVE_SLOTS - 1,
+              "the refresh walk ends on the last slot");
+
+        /* Feature set: the live records propagate to every slot. */
+        engine_feature_word_install(0x400u);
+        sav_refresh_slots(&ctx);
+        engine_feature_word_install(0u);
+        {
+            size_t n = 0;
+            uint8_t* raw = read_all("Saves/1.sav", &n);
+            CHECK(raw != NULL && raw[0xB0u + 4u] == 0x15u,
+                  "the set-feature refresh rewrites from the live context");
+            free(raw);
+        }
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "savegame_test: %d failure(s)\n", s_failures);
         return 1;
     }
     printf("savegame_test: OK\n");
+    /* SavGetSlot (2026-10-24): the accessor reads the port's slot global. */
+    CHECK(save_slot_get(&ctx) == ctx.save_slot, "the slot getter reads the word");
+    save_slot_set(&ctx, 3);
+    CHECK(save_slot_get(&ctx) == 3, "the slot setter round-trips");
+
+    /* The save-slot band (2026-10-24): selection clear + ctx accessor. */
+    save_slot_set(&ctx, 4);
+    save_slot_selection_clear(&ctx);
+    CHECK(save_slot_get(&ctx) == -1, "the clear drops to the closed sentinel");
+    save_slot_set(&ctx, 5);
+    CHECK(sav_slot_ctx(NULL, 0) == NULL
+              && sav_slot_ctx(&ctx, -1) == NULL
+              && sav_slot_ctx(&ctx, SAVE_SLOTS) == NULL,
+          "the ctx accessor bounds clean");
+    CHECK(sav_slot_ctx(&ctx, 2) == &ctx, "the ctx block answers valid slots");
+
+    /* The save-side DAT accessor band (2026-10-24). */
+    ctx.osf_dirty = 1;
+    CHECK(osf_read_dirty_flag_get(&ctx) == 1
+              && osf_read_dirty_flag_get(NULL) == 0,
+          "the dirty flag reads through ctx");
+    ctx.osf_dirty = 0;
+    CHECK(checkpoint_blob_get(&ctx) == ctx.checkpoint_blob
+              && checkpoint_blob_get(NULL) == NULL,
+          "the blob getter threads the ctx");
+
+    /* SaveStateEventContextSet (2026-10-24). */
+    save_state_event_context_set(9u);
+    CHECK(save_state_event_context_peek() == 9u, "the store lands");
+    save_state_event_context_set(0u);
+
+    /* CheckpointBlobFree (2026-10-24): frees and clears the port model. */
+    checkpoint_blob_build(&ctx);
+    CHECK(ctx.checkpoint_blob != NULL, "the blob builds");
+    checkpoint_blob_free(&ctx);
+    CHECK(ctx.checkpoint_blob == NULL, "the free clears the port pointer");
+    checkpoint_blob_free(&ctx); /* the double free is a no-op */
+
+    /* SavBuildCtx (2026-10-24): the slot-open probe. */
+    save_slot_selection_clear(&ctx);
+    CHECK(sav_build_ctx(&ctx) == NULL, "a closed slot builds nothing");
+    save_slot_set(&ctx, 5);
+    CHECK(sav_build_ctx(&ctx) == &ctx, "an open slot builds the block");
+    save_slot_selection_clear(&ctx);
+
+    /* The generic list window band (2026-10-25). */
+    {
+        static void* entries[4];
+        static void* values_a[4];
+        static void* values_b[4];
+        SavListWindow win;
+        memset(entries, 0, sizeof entries);
+        memset(values_a, 0, sizeof values_a);
+        memset(values_b, 0, sizeof values_b);
+        win.entries = entries;
+        win.values_a = values_a;
+        win.values_b = values_b;
+
+        const uint16_t key_a[] = { 'A', 'B', 0 };
+        const uint16_t key_b[] = { 'C', 0 };
+        win.count = 0;
+        CHECK(list_get_node(&win, key_a) == NULL, "the empty window answers null");
+        CHECK(list_find_name(&win, "menu") == -1, "the empty find answers -1");
+        list_add_name(&win, key_a, (void*)5); /* no entries yet: silent */
+        win.entries[0] = (void*)key_a;
+        win.entries[1] = (void*)key_b;
+        win.count = 2;
+        list_add_name(&win, key_a, (void*)5);
+        list_add_name(&win, key_b, (void*)7);
+        CHECK(values_b[0] == (void*)5 && values_b[1] == (void*)7,
+              "the add rides value array B");
+        CHECK(list_has_item(&win, key_b) == (void*)7, "the has answers B");
+        CHECK(list_has_item(&win, entries[2]) == NULL
+                  && list_get_node(&win, entries[3]) == NULL,
+              "the wide miss answers null");
+        list_set_node(&win, key_a, (void*)9);
+        CHECK(list_get_node(&win, key_a) == (void*)9, "the set rides array A");
+        CHECK(values_b[0] == (void*)5, "the set does not touch array B");
+        CHECK(list_has_item(&win, NULL) == NULL
+                  && list_find_name(&win, NULL) == -1
+                  && list_find_name(NULL, "x") == -1,
+              "the window and key guards hold");
+        list_add_name(NULL, key_a, (void*)1); /* guarded no-ops */
+        list_set_node(NULL, key_a, (void*)1);
+        {
+            /* Pinned: the low byte terminates the wide key — the node
+             * key { 0x1200 } compares equal to the probe { 0x0000 };
+             * the terminator's high byte is never inspected. */
+            static const uint16_t key_quirk[] = { 0x1200 };
+            static const uint16_t key_probe[] = { 0x0000 };
+            win.entries[2] = (void*)key_quirk;
+            win.count = 3;
+            list_add_name(&win, key_probe, (void*)11);
+            CHECK(values_b[2] == (void*)11,
+                  "the terminator quirk lands the store");
+            win.entries[2] = NULL;
+            win.count = 2;
+        }
+    }
+
+    /* SavTreeWalk (2026-10-25). */
+    {
+        static SavTreeNode root;
+        static SavTreeNode kid1;
+        static SavTreeNode kid2;
+        static void* kids[2];
+        int visits = 0;
+        kids[0] = &kid1;
+        kids[1] = &kid2;
+        root.children = kids;
+        root.count = 2;
+        root.visited = 0;
+        kid1.children = NULL;
+        kid1.count = 0;
+        kid1.visited = 0;
+        kid2.children = NULL;
+        kid2.count = 0;
+        kid2.visited = 0;
+        CHECK(sav_tree_walk(&root, s_counting_visit, &visits) == 0
+                  && visits == 3,
+              "the walk visits each node once");
+        visits = 0;
+        CHECK(sav_tree_walk(&root, s_counting_visit, &visits) == 0
+                  && visits == 0,
+              "the revisited walk visits nothing");
+        CHECK(sav_tree_walk(NULL, s_counting_visit, &visits) == 0,
+              "the node guard holds");
+        kid2.visited = 0;
+        CHECK(sav_tree_walk(&kid2, NULL, &visits) == 0 && visits == 0,
+              "the callback guard holds (the corpus strides it)");
+    }
+
+    /* SavTreeWalk2 / SavTreeLoad (2026-10-25). */
+    {
+        static SavTreeNode r;
+        static SavTreeNode k1;
+        static SavTreeNode k2;
+        static void* kids[2];
+        static uint32_t blocks[3 * 8]; /* three 0x20 block images */
+        static char winbuf[2 * 0x3190];
+        static uint32_t rec1[8];
+        static uint32_t rec2[8];
+        void* blockp = blocks;
+        SavTree2State st;
+        memset(blocks, 0, sizeof blocks);
+        memset(winbuf, 0, sizeof winbuf);
+        kids[0] = &k1;
+        kids[1] = &k2;
+        engine_feature_word_install(0u);
+        /* flag lane, flag = 1: need rides 0 everywhere — the root
+         * SETS through its carry 1, the kids CLEAR through their
+         * blocks' zero +0x1c probes, and the cursor ends per node. */
+        r.window = 1u;
+        r.children = kids;
+        r.count = 2;
+        k1.window = 0u;
+        k1.children = NULL;
+        k1.count = 0;
+        k2.window = 1u;
+        k2.children = NULL;
+        k2.count = 0;
+        r.visited = 0u;
+        k1.visited = 0u;
+        k2.visited = 0u;
+        blocks[0] = 0x80u; /* root: set lane */
+        blocks[8] = 0xBFu;  /* kid: clear lane */
+        blocks[16] = 0xCFu; /* kid: clear lane */
+        st.window_base = NULL;
+        st.window = 0u;
+        st.blocks = &blockp;
+        st.index = 0u;
+        st.flag = 1u;
+        sav_tree_walk2(&r, &st, 1, NULL);
+        CHECK(r.visited != 0u && k1.visited != 0u && k2.visited != 0u
+                  && st.index == 3u,
+              "the walk2 enters each node once, cursor included");
+        CHECK(blocks[0] == 0x84u && blocks[8] == 0xBBu
+                  && blocks[16] == 0xCBu,
+              "the carry sets and the probe-zero kids clear bit 2");
+
+        /* Re-entry visits nothing (the flag lane). */
+        sav_tree_walk2(&r, &st, 1, NULL);
+        CHECK(st.index == 3u && blocks[0] == 0x84u,
+              "the entered tree walks nothing");
+
+        /* flag = 1 + extended gate: the flag zeroes on entry, need
+         * rides 1, and every block SETS. */
+        engine_feature_word_install(0x20000u);
+        r.visited = 0u;
+        k1.visited = 0u;
+        k2.visited = 0u;
+        blocks[0] = 0xA1u;
+        blocks[8] = 0xB2u;
+        blocks[16] = 0xC8u;
+        st.index = 0u;
+        st.flag = 1u;
+        sav_tree_walk2(&r, &st, 1, NULL);
+        CHECK(blocks[0] == 0xA5u && blocks[8] == 0xB6u
+                  && blocks[16] == 0xCCu,
+              "the gate zeroes the flag and need rides 1");
+
+        /* stride lane (gate off): need bit 0 from
+         * `node.window * 0x3190 + window_base`; r (window 1) reads the
+         * zeroed slot and CLEARS its block (carry 0), k1 (window 0)
+         * reads the raised bit and SETS through its need. */
+        engine_feature_word_install(0u);
+        ((uint32_t*)winbuf)[0] = 1u;
+        r.children = kids;
+        r.window = 1u;
+        r.count = 2;
+        r.visited = 0u;
+        k1.visited = 0u;
+        k2.window = 0u;
+        k2.visited = 0u;
+        blocks[0] = 0x15u;
+        blocks[8] = 0x10u;
+        blocks[16] = 0x10u;
+        st.window_base = winbuf;
+        st.flag = 1u; /* ignored off the flag lane */
+        st.index = 0u;
+        sav_tree_walk2(&r, &st, 0, NULL);
+        CHECK(blocks[0] == 0x11u && blocks[8] == 0x14u
+                  && blocks[16] == 0x14u && st.index == 3u,
+              "the stride read rides node.window * 0x3190 + base");
+
+        /* probe lane: need 0, carry 0, block +0x1c NON-zero -> SET. */
+        r.children = NULL;
+        r.count = 0;
+        r.window = 0u;
+        r.visited = 0u;
+        blocks[0] = 0x10u;
+        blocks[7] = 5u;
+        st.window_base = NULL;
+        st.flag = 1u;
+        st.index = 0u;
+        sav_tree_walk2(&r, &st, 0, NULL);
+        CHECK(blocks[0] == 0x14u, "the nonzero +0x1c probe forces the set");
+        blocks[7] = 0u;
+
+        /* guards (deviations): the null node rides, a null block slot
+         * still advances the cursor, and a null child slot returns. */
+        const uint32_t before = st.index;
+        sav_tree_walk2(NULL, &st, 1, NULL);
+        CHECK(st.index == before, "the null node guards out");
+        st.blocks = NULL;
+        r.visited = 0u;
+        sav_tree_walk2(&r, &st, 1, NULL);
+        CHECK(st.index == before + 1u, "the null block slot still advances");
+
+        /* SavTreeLoad: stack-init the state, walk, clear the bands. */
+        memset(rec1, 0, sizeof rec1);
+        memset(rec2, 0, sizeof rec2);
+        rec1[4] = 0xdeadu; /* corpus record + 0x10 flag word */
+        rec2[4] = 0xbeefu;
+        sav_visited_entry_set(0, 0, rec1, 7u);
+        sav_visited_entry_set(1, 0, rec2, 8u);
+        frontend_flow_word_set(2, -1);
+        int* wc = active_object_list_word();
+        *wc = 1;
+        frontend_flow_word_set(2, 0);
+        wc = active_object_list_word();
+        *wc = 1;
+        r.children = kids;
+        r.count = 2;
+        r.visited = 0u;
+        k1.visited = 0u;
+        k2.visited = 0u;
+        blocks[0] = 0xA1u;
+        blocks[8] = 0xB2u;
+        blocks[16] = 0xC8u;
+        sav_tree_load(&r, NULL, &blockp, 0u, 1u, NULL);
+        CHECK(r.visited != 0u && k1.visited != 0u && k2.visited != 0u
+                  && blocks[0] == 0xA5u && (blocks[8] & 4u) == 0u,
+              "the load walks with the stack-init state");
+        CHECK(rec1[4] == 0u && ((uint32_t*)rec1)[4] == 0u,
+              "the load clears the visited band");
+        void* p = NULL;
+        uint32_t w = 0u;
+        sav_visited_entry_peek(1, 0, &p, &w);
+        CHECK(p == rec2 && w == 0u, "the in-game band clears alongside");
+    }
+
     return 0;
 }

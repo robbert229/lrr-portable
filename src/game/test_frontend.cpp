@@ -19,14 +19,40 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h> /* mkdtemp / rmdir */
 
 #include "game/frontend.hpp"
 #include "game/util.hpp"
+#include "game/game.hpp"
+#include "game/select.hpp"
 #include "gods98/block.hpp"
+#include "gods98/crt.hpp"
+#include "gods98/heap.hpp"
+#include "gods98/message.hpp"
 #include "gods98/resource.hpp"
 #include "gods98/texture.hpp"
+#include "game/entity.hpp"
+
+/* C179 (2026-10-25): a key-keyed loader standing in for the surface-load
+ * seam's bitmap string cache. */
+static char s_c179_buf[5][1];
+static void* s_c179_loader(const char* key)
+{
+    if (key == NULL) {
+        return NULL;
+    }
+    static const char* const names[5] = { "c179_l", "c179_r", "c179_p1",
+                                          "c179_p2", "c179_p3" };
+    for (int i = 0; i != 5; ++i) {
+        if (strcmp(key, names[i]) == 0) {
+            return s_c179_buf[i];
+        }
+    }
+    return NULL;
+}
 
 static int s_failures = 0;
+
 
 #define CHECK(cond, msg)                                                       \
     do {                                                                       \
@@ -911,6 +937,1320 @@ int main(int argc, char** argv)
     test_options();
     test_scroll();
     test_records();
+
+    /* The selection-context accessors (2026-10-24): the corpus writers
+     * land unset, so the context starts NULL; the leaves round-trip. */
+    {
+        int dummy = 0;
+        CHECK(current_selection_context_get() == NULL,
+              "the context starts unset (no ported feeder)");
+        current_selection_context_set(&dummy);
+        CHECK(current_selection_context_get() == &dummy,
+              "the set/get round-trips");
+        current_selection_context_set(NULL);
+        CHECK(current_selection_context_get() == NULL,
+              "the context resets for later runs");
+    }
+
+    /* The selection-state band (2026-10-24): statics start zero; the
+     * clear leaf drops bit 0; the handle leaf's gates. */
+    {
+        CHECK(selection_state_flags_peek() == 0u, "the state starts zero");
+        selection_state_flags_set(0x31u);
+        selection_state_flag_clear_bit0();
+        CHECK(selection_state_flags_peek() == 0x30u,
+              "the clear drops bit 0, spares the neighbours");
+        selection_state_flags_set(0);
+
+        /* The index-1 / bit-4 gate: extra handle while the bit is clear. */
+        selection_state_handle_extra_set(0x77u);
+        CHECK(selection_state_handle_get(1) == 0x77u,
+              "index 1 takes the extra handle (bit 4 clear)");
+        selection_state_flags_set(4u);
+        CHECK(selection_state_handle_get(1) == 0u,
+              "index 1 falls through when bit 4 is set");
+        selection_state_handle_extra_set(0u);
+        selection_state_flags_set(0);
+        CHECK(selection_state_handle_get(2) == 0u, "no gate, no handle");
+
+        /* The hit gate: bit 0x10 + matching hit index, table by bit 0x20. */
+        selection_state_handle_slot_set(0, 3, 0x11u);
+        selection_state_handle_slot_set(1, 3, 0x22u);
+        selection_state_hit_index_set(3);
+        selection_state_flags_set(0x10u);
+        CHECK(selection_state_handle_get(3) == 0x11u,
+              "the hit gate answers table A");
+        selection_state_flags_set(0x10u | 0x20u);
+        CHECK(selection_state_handle_get(3) == 0x22u,
+              "bit 0x20 switches to table B");
+        CHECK(selection_state_handle_get(4) == 0u,
+              "the non-matching index is rejected");
+        selection_state_flags_set(0x20u);
+        CHECK(selection_state_handle_get(3) == 0u,
+              "bit 0x10 is required");
+        selection_state_handle_slot_set(0, 3, 0u);
+        selection_state_handle_slot_set(1, 3, 0u);
+        selection_state_hit_index_set(0);
+        selection_state_flags_set(0);
+        CHECK(selection_state_handle_slot_peek(1, 1 << 20) == 0u,
+              "the guarded window reads zero (deviation)");
+    }
+
+    /* The band-mode / timed-effect / positions cluster (2026-10-24):
+     * the transition leaf's hand-over shape, the two-entry mode switch,
+     * the timed-effect flag window, and the positions pass. */
+    {
+        const uint32_t save_flags = selection_state_flags_peek();
+        band_mode_set(0);
+        CHECK(band_mode_peek() == 0, "the band mode starts zero");
+
+        /* The transition: the zero-second-argument arm goes to mode 4. */
+        CHECK(ui_mode_transition_request(2, 0, 0) == false
+                  && band_mode_peek() == 4,
+              "the arm request lands mode 4 (prior mode answers)");
+
+        /* Mode 4 hands over when the third argument is clear. */
+        CHECK(ui_mode_transition_request(2, 1, 0) == false
+                  && band_mode_peek() == 2
+                  && (selection_state_flags_peek() & 0x20u) != 0u,
+              "the hand-over lands the index and raises bit 5");
+
+        /* A same-index request just raises bit 5 (already raised). */
+        selection_state_flags_set(selection_state_flags_peek() & ~0x20u);
+        CHECK(ui_mode_transition_request(2, 1, 1) == true
+                  && band_mode_peek() == 2
+                  && (selection_state_flags_peek() & 0x20u) != 0u,
+              "the same-index request raises bit 5");
+
+        /* A different index with the band busy answers by prior mode. */
+        CHECK(ui_mode_transition_request(5, 1, 1) == false
+                  && band_mode_peek() == 2,
+              "the mismatched index answers zero");
+
+        /* Mode 4 with the third argument set: no hand-over, no bit. */
+        band_mode_set(4);
+        selection_state_flags_set(selection_state_flags_peek() & ~0x20u);
+        CHECK(ui_mode_transition_request(3, 1, 1) == false
+                  && band_mode_peek() == 4
+                  && (selection_state_flags_peek() & 0x20u) == 0u,
+              "the blocked hand-over keeps mode 4 and the bit low");
+
+        /* The mode switch: entries 8/9, nothing else. */
+        CHECK(timed_effect_flags_peek(8) == 0u
+                  && timed_effect_flags_peek(9) == 0u,
+              "the timed-effect flags start clear");
+        selection_mode_set_by_index(0);
+        CHECK(timed_effect_flags_peek(8) == 4u
+                  && timed_effect_flags_peek(9) == 0u,
+              "index 0 raises entry 8's update bit");
+        selection_mode_set_by_index(1);
+        CHECK(timed_effect_flags_peek(9) == 4u, "index 1 raises entry 9's");
+        selection_mode_set_by_index(2);
+        CHECK(timed_effect_flags_peek(0) == 0u,
+              "the default case writes nothing");
+        timed_effect_update_request_set(0);
+        CHECK(timed_effect_flags_peek(0) == 4u,
+              "the request leaf raises bit 2 directly");
+        timed_effect_update_request_set(16); /* outside the window */
+        CHECK(timed_effect_flags_peek(16) == 0u, "the guarded window reads zero");
+
+        /* Positions: the zero table applies, the handle gate reaches the
+         * seam without touching ported state. */
+        int x = 9, y = 9;
+        CHECK(layout_position_get(0, &x, &y) == 1 && x == 0 && y == 0,
+              "the layout table starts zero (loader seam)");
+        ui_mode_resource_positions_apply(); /* nothing found — inert */
+        selection_state_handle_extra_set(0x55u); /* gate index 1 */
+        ui_mode_resource_positions_apply();     /* one found — seam */
+        selection_state_handle_extra_set(0u);
+        CHECK(layout_position_get(5, &x, &y) == 0, "the guarded entry misses");
+
+        band_mode_set(0);
+        selection_state_flags_set(save_flags);
+    }
+
+    /* The front-end flow words (2026-10-24). */
+    {
+        /* The load-image zero state: the sentinel words test != -1 and
+         * report true, exactly as the corpus's zero-initialized block does
+         * before the save/tutorial selections initialize. */
+        CHECK(quit_menu_probe() == 0
+                  && save_slot_open() != 0 && is_in_game() != 0
+                  && level_start_flag() == 0 && menu_options_flag() == 0,
+              "the boot state reads the zero image");
+
+        /* The port-side setter stands in for the unported callback
+         * bindings: sentinel -1 means closed. */
+        frontend_flow_word_set(1, -1);
+        frontend_flow_word_set(2, -1);
+        CHECK(save_slot_open() == 0 && is_in_game() == 0,
+              "the closed sentinels report closed");
+        frontend_flow_word_set(0, 1);
+        frontend_flow_word_set(3, 2);
+        frontend_flow_word_set(4, 1);
+        CHECK(quit_menu_probe() == 1 && level_start_flag() != 0
+                  && menu_options_flag() != 0,
+              "the flag words walk through the setter");
+        frontend_flow_word_set(5, 9); /* the guard ignores past-word writes */
+        CHECK(quit_menu_probe() == 1, "the guard keeps the words as set");
+
+        /* Restore the boot state for any later test. */
+        frontend_flow_word_set(0, 0);
+        frontend_flow_word_set(1, 0);
+        frontend_flow_word_set(2, 0);
+        frontend_flow_word_set(3, 0);
+        frontend_flow_word_set(4, 0);
+    }
+
+    /* UiModeResourceBit40Get (2026-10-24): the masked read of the word. */
+    {
+        selection_state_flags_set(0u);
+        CHECK(ui_mode_resource_bit40_get() == 0u, "the 40 bit starts clear");
+        selection_state_flags_set(0x40u);
+        CHECK(ui_mode_resource_bit40_get() == 0x40u, "the 40 bit reads masked");
+        selection_state_flags_set(0x41u);
+        CHECK(ui_mode_resource_bit40_get() == 0x40u, "the mask keeps its shape");
+        selection_state_flags_set(0u);
+    }
+
+    /* MainSimStateAdmissionPredicate (2026-10-24). */
+    {
+        selection_state_flags_set(0u);
+        message_set_system_state(0u);
+        CHECK(main_sim_state_admission_predicate() == 0,
+              "the admission gate keeps for a clear word");
+        selection_state_flags_set(3u); /* bits 1+2, no 0x40 */
+        CHECK(main_sim_state_admission_predicate() == 0,
+              "bits 1+2 alone keep the gate shut");
+        selection_state_flags_set(0x43u);
+        CHECK(main_sim_state_admission_predicate() != 0,
+              "the three bits open the gate");
+        message_set_system_state(1u);
+        CHECK(main_sim_state_admission_predicate() == 0,
+              "a set system-state word shuts the gate");
+        message_set_system_state(0u);
+        selection_state_flags_set(0u); /* restore boot state */
+    }
+
+    /* SelectionModeStateSet (2026-10-24). */
+    {
+        CHECK(selection_mode_state_peek() == 0u, "the mode word starts clear");
+        selection_mode_state_set(2u);
+        CHECK(selection_mode_state_peek() == 2u, "the store lands");
+        selection_mode_state_set(0u);
+    }
+
+    /* MenuWipeEnd (2026-10-24): the low-two-bit clear. */
+    {
+        menu_wipe_flags_set(3u);
+        CHECK(menu_wipe_flags_peek() == 3u, "the hook installs the pair");
+        menu_wipe_end();
+        CHECK(menu_wipe_flags_peek() == 0u, "the end clears both bits");
+        menu_wipe_flags_set(7u);
+        menu_wipe_end();
+        CHECK(menu_wipe_flags_peek() == 4u, "high bits stay put");
+        menu_wipe_flags_set(0u);
+    }
+
+    /* The selection-region band (2026-10-24). */
+    {
+        const uint32_t pair[2] = { 7u, 9u };
+        selection_coordinates_set(NULL, 1u, 1u); /* guarded */
+        selection_coordinates_set(pair, 3u, 5u);
+        CHECK(selection_coordinates_peek(0) == 7.0f
+                  && selection_coordinates_peek(1) == 9.0f
+                  && selection_coordinates_peek(2) == 3.0f
+                  && selection_coordinates_peek(3) == 5.0f,
+              "the coordinate quad lands with the int-to-float casts");
+
+        selection_region_parameters_set(1.0f, 2.0f, 3.0f, 4.0f, 10.0f);
+        float reg[5];
+        selection_region_parameters_peek(reg);
+        CHECK(reg[0] == 1.0f && reg[1] == 2.0f && reg[2] == 3.0f
+                  && reg[3] == 4.0f && reg[4] == 0.4f,
+              "the region parameters land scaled by 0.04");
+
+        objective_selection_state_reset();
+        CHECK(objective_selection_word_peek() == 0u
+                  && (interaction_flags_peek() & 0x84u) == 0x84u,
+              "the reset clears, mirrors, and raises the pair");
+        interaction_timer_reset_and_flag_clear();
+        CHECK(interaction_timer_peek() == 25.0f
+                  && (interaction_flags_peek() & 0x800u) == 0u,
+              "the timer restocks to 25.0 and bit 800 drops");
+        selection_region_parameters_peek(reg);
+        CHECK(reg[2] != 0.0f, "the mirrored float stays put");
+
+        selection_state_flags_set(0u);
+        mode_flag_pair_apply_if_bit2(1);
+        CHECK(selection_state_flags_peek() == 0u, "bit 2 clear keeps quiet");
+        selection_state_flags_set(7u);
+        mode_flag_pair_apply_if_bit2(1);
+        CHECK((selection_state_flags_peek() & 3u) == 2u,
+              "bit 2 set and nonzero arms bit 1");
+        selection_state_flags_set(7u);
+        mode_flag_pair_apply_if_bit2(0);
+        CHECK((selection_state_flags_peek() & 3u) == 0u,
+              "zero drops both low bits");
+        selection_state_flags_set(0u);
+    }
+
+    /* The cell-action permission window (2026-10-24). */
+    {
+        message_set_system_state(0u);
+        CHECK(cell_action_permission_get(0, 0) == 1
+                  && cell_action_permission_get(1000, 1000) == 1,
+              "a clear system word permits every cell");
+        message_set_system_state(4u);
+        CHECK(cell_action_permission_get(0, 0) == 0, "an empty table forbids");
+        CHECK(cell_action_permission_get(-1, 0) == 0
+                  && cell_action_permission_get(0, 300) == 0,
+              "the guarded window answers outside 300 entries");
+        cell_action_permission_table_set(15, 1u); /* column 1, row 0 */
+        CHECK(cell_action_permission_get(1, 0) == 1, "the stride-15 index lands");
+        cell_action_permission_table_set(15, 0u);
+        message_set_system_state(0u);
+    }
+
+    /* The menu-tick gate + banner word (2026-10-24). */
+    {
+        int hit = 0;
+        for (int i = 0; i < 5000 && !hit; ++i) {
+            hit = menu_audio_tick_interval_reached();
+        }
+        CHECK(hit != 0, "a multiple of 400 arrives within 5000 draws");
+        CHECK(sim_status_banner_word_get() == 0u, "the banner word starts clear");
+        sim_status_banner_word_set(1u);
+        CHECK(sim_status_banner_word_get() == 1u, "the store lands");
+        sim_status_banner_word_set(0u);
+    }
+
+    /* The bit-0x40 set-clear rule (2026-10-24). */
+    {
+        selection_state_flags_set(0u);
+        ui_mode_resource_bit40_set_clear(0, 1u); /* value nonzero -> clear */
+        CHECK(selection_state_flags_peek() == 0u, "a nonzero value clears 40");
+        ui_mode_resource_bit40_set_clear(0, 0u); /* value zero -> set */
+        CHECK(selection_state_flags_peek() == 0x40u, "a zero value sets 40");
+        ui_mode_resource_bit40_set_clear(1, 9u); /* probe flips the word */
+        CHECK(selection_state_flags_peek() == 0u, "the probe flips it off");
+        ui_mode_resource_bit40_set_clear(1, 0u); /* flip again */
+        CHECK(selection_state_flags_peek() == 0x40u, "the probe flips it on");
+        ui_mode_resource_bit40_set_clear(0, 0u);
+        selection_state_flags_set(0u); /* restore boot state */
+    }
+
+    /* MenuWipeStart (2026-10-24). */
+    {
+        menu_wipe_arm_set(0u);
+        menu_wipe_flags_set(0u);
+        menu_wipe_start(); /* unarmed: inert */
+        CHECK(menu_wipe_flags_peek() == 0u, "unarmed keeps the flags");
+        menu_wipe_arm_set(1u);
+        menu_wipe_flags_set(0u);
+        menu_clock_millis_set(12345u);
+        menu_wipe_start();
+        CHECK((menu_wipe_flags_peek() & 3u) == 3u, "both start bits rise");
+        CHECK(menu_wipe_clock_peek() == 12345.0f, "the clock stamps");
+        menu_wipe_flags_set(0u);
+        menu_wipe_arm_set(0u);
+    }
+
+    /* The panel texture-slot blit (2026-10-24): the picker picks slots,
+     * the flag bits hide items, and the banner word gates the alternates. */
+    {
+        static char pblock[0x2c * 2];
+        memset(pblock, 0, sizeof(pblock));
+        float* rec = (float*)pblock;
+        rec[0] = 1.0f;
+        rec[1] = 2.0f;
+        rec[4] = 5.0f;  /* texture A */
+        rec[5] = 7.0f;  /* texture C */
+        rec[6] = 6.0f;  /* texture B */
+        uint32_t fl = 0u;
+        __builtin_memcpy(rec + 10, &fl, 4);
+        float* rec2 = (float*)(pblock + 0x2c);
+        rec2[0] = 10.0f;
+        rec2[1] = 10.0f;
+        rec2[6] = 6.0f;
+        uint32_t fl2 = 0x10u; /* hidden */
+        __builtin_memcpy(rec2 + 10, &fl2, 4);
+        panel_draw_records_set(11, pblock);
+        panel_draw_count_set(11, 2);
+        indexed_pair_set(11, 10u, 5u);
+        sim_status_banner_word_set(0u);
+        crt_surface_calls_clear();
+        panel_texture_slots_blit(11);
+        CHECK(crt_surface_calls_count() == 1, "the hidden item never blits");
+        uint32_t h = 0u;
+        float x = 0, y = 0;
+        crt_surface_call_get(0, &h, &x, &y);
+        CHECK(h == 0x40C00000u && x == 11.0f && y == 7.0f,
+              "flags clear picks the B slot at the offset position");
+        fl = 2u; /* A with the bit-2 raise */
+        __builtin_memcpy(rec + 10, &fl, 4);
+        crt_surface_calls_clear();
+        panel_texture_slots_blit(11);
+        crt_surface_call_get(0, &h, &x, &y);
+        CHECK(crt_surface_calls_count() == 1 && h == 0x40A00000u,
+              "the bit-2 raise picks the A slot");
+        fl = 8u; /* the C-slot branch */
+        __builtin_memcpy(rec + 10, &fl, 4);
+        crt_surface_calls_clear();
+        panel_texture_slots_blit(11);
+        crt_surface_call_get(0, &h, &x, &y);
+        CHECK(h == 0x40E00000u && x == 11.0f && y == 7.0f,
+              "the plain else picks the C slot");
+        fl = 0x40u | 4u; /* the banner-gated alternate */
+        __builtin_memcpy(rec + 10, &fl, 4);
+        crt_surface_calls_clear();
+        panel_texture_slots_blit(11);
+        crt_surface_call_get(0, &h, &x, &y);
+        CHECK(h == 0x40E00000u, "the else path takes the C slot while "
+                                "the banner word stays clear");
+        sim_status_banner_word_set(1u);
+        crt_surface_calls_clear();
+        panel_texture_slots_blit(11);
+        crt_surface_call_get(0, &h, &x, &y);
+        CHECK(h == 0x40A00000u, "the banner word raises the A alternate");
+        sim_status_banner_word_set(0u);
+        panel_draw_count_set(11, 0);
+        panel_draw_records_set(11, NULL);
+        crt_surface_calls_clear();
+        panel_texture_slots_blit(11);
+        CHECK(crt_surface_calls_count() == 0, "a closed panel answers nothing");
+    }
+
+    /* The timed-effect timestamp reset (2026-10-24): stamp + guard. */
+    {
+        timed_effect_tick_word_set(123u);
+        timed_effect_timestamp_reset(3);
+        CHECK(timed_effect_time_peek(3) == 123u, "the stamp lands");
+        timed_effect_timestamp_reset(-1); /* guarded */
+        CHECK(timed_effect_time_peek(-1) == 0u, "the guard answers clear");
+        timed_effect_tick_word_set(0u);
+    }
+
+    /* The screen-right-edge cache refresh (2026-10-24): metrics fold. */
+    {
+        char metric[0x30];
+        memset(metric, 0, sizeof metric);
+        indexed_record_pointer_set(0, metric);
+        indexed_text_metrics_pair_set(0, 0u, 0u);
+        screen_right_edge_cache_refresh();
+        CHECK(screen_right_edge_cache_peek() == 0u, "a clear pair caches clear");
+        indexed_text_metrics_pair_set(0, 11u, 4u);
+        screen_right_edge_cache_refresh();
+        CHECK(screen_right_edge_cache_peek() == 7u, "the fold caches x - y");
+        indexed_text_metrics_pair_set(0, 0u, 0u);
+        indexed_record_pointer_set(0, NULL);
+    }
+
+    /* The glyph measure wrapper (2026-10-24): the corpus lane is in-band. */
+    {
+        bitmap_font_glyph_measure_width(NULL, 'A'); /* in-range glyph */
+        bitmap_font_glyph_measure_width(NULL, 0u);   /* below the grid */
+        CHECK(1, "the measure wrapper runs as the corpus's void lane");
+    }
+
+    /* The panel resource + scroll leaf band (2026-10-24). */
+    {
+        char res;
+        /* PanelResourcePositionApplyIfEnabled: gate + bubble offsets. */
+        panel_seam_reset();
+        panel_enable_word_set(0u);
+        panel_resource_position_apply_if_enabled(&res, 1, 2);
+        CHECK(panel_seam_calls() == 0, "the clear gate stays silent");
+        panel_enable_word_set(0x10u);
+        bubble_offsets_set(1.5f, 2.5f);
+        panel_resource_position_apply_if_enabled(&res, 10, 20);
+        void* last_res = NULL;
+        float lx = 0.0f, ly = 0.0f;
+        panel_seam_last(&last_res, &lx, &ly);
+        CHECK(panel_seam_calls() == 1 && last_res == &res && lx == 11.5f
+                  && ly == 22.5f,
+              "the enabled pass rides the seam with the bubble offsets");
+        /* PanelResourceHandleAndDimensionsStore: the seam + stores. */
+        panel_seam_reset();
+        panel_surface_handle_set((void*)1);
+        panel_resource_handle_and_dimensions_store(&res, 64u, 32u, 0x99u);
+        CHECK(panel_surface_handle_peek() == NULL && panel_seam_calls() == 1,
+              "the load seam answers NULL and records");
+        float w = 0.0f, hh = 0.0f;
+        uint32_t extra = 0u;
+        panel_dimensions_peek(&w, &hh, &extra);
+        CHECK(w == 64.0f && hh == 32.0f && extra == 0x99u,
+              "the dimensions land in the window");
+        /* ScrollOffsetFromCursorUpdate: pair fold + metrics + cache. */
+        char metric[0x30];
+        memset(metric, 0, sizeof metric);
+        char ui_rec[0x828];
+        memset(ui_rec, 0, sizeof ui_rec);
+        indexed_record_pointer_set(0, metric);
+        panel_ui_record_set(ui_rec);
+        const uint32_t lo = 11u, hi = 4u;
+        __builtin_memcpy(ui_rec + 0x820, &lo, sizeof lo);
+        __builtin_memcpy(ui_rec + 0x824, &hi, sizeof hi);
+        scroll_offset_from_cursor_update();
+        uint32_t mx = 0u, my = 0u;
+        indexed_text_metrics_pair_get(0, &mx, &my);
+        CHECK(mx == 7u && my == 0u, "the clamped pair difference lands");
+        CHECK(screen_right_edge_cache_peek() == 7u, "the cache follows");
+        const uint32_t low2 = 2u, high2 = 9u;
+        __builtin_memcpy(ui_rec + 0x820, &low2, sizeof low2);
+        __builtin_memcpy(ui_rec + 0x824, &high2, sizeof high2);
+        scroll_offset_from_cursor_update(); /* clamps to zero */
+        indexed_text_metrics_pair_get(0, &mx, &my);
+        CHECK(mx == 0u, "the negative difference clamps at zero");
+        panel_ui_record_set(NULL);
+        scroll_offset_from_cursor_update(); /* guarded pair */
+        indexed_text_metrics_pair_get(0, &mx, &my);
+        CHECK(mx == 0u, "the clear record forwards zero");
+        indexed_text_metrics_pair_set(0, 0u, 0u);
+        indexed_record_pointer_set(0, NULL);
+        panel_enable_word_set(0u);
+    }
+
+    /* IndexedPanelResourcePositionApply (FUN_00459f50; 2026-10-25): the
+     * slot selector rides the corpus's exact x87 constant products — a
+     * float 40 answers slot 1, since the extended-precision product of
+     * 0.01 lands just under two. */
+    {
+        char slot0, slot1, slot4;
+        panel_seam_reset();
+        panel_enable_word_set(0u);
+        panel_position_offsets_set(1.5f, 2.5f);
+        panel_position_slot_set(1, &slot1);
+        float rec = 40.0f;
+        indexed_panel_resource_position_apply(&rec, 10, 20);
+        CHECK(panel_seam_calls() == 0, "the clear enable word stays silent");
+        panel_enable_word_set(1u);
+        indexed_panel_resource_position_apply(&rec, 10, 20);
+        void* last_res = NULL;
+        float lx = 0.0f, ly = 0.0f;
+        panel_seam_last(&last_res, &lx, &ly);
+        CHECK(panel_seam_calls() == 1 && last_res == &slot1
+                  && lx == 11.5f && ly == 22.5f,
+              "the extended-precision selector picks slot 1 and rides "
+              "the seam with the offset pair");
+        rec = 110.0f; /* selector 5 -> clamped */
+        panel_position_slot_set(4, &slot4);
+        indexed_panel_resource_position_apply(&rec, 1, 1);
+        panel_seam_last(&last_res, &lx, &ly);
+        CHECK(panel_seam_calls() == 2 && last_res == &slot4 && lx == 2.5f
+                  && ly == 3.5f,
+              "the out-of-range selector clamps to the last slot");
+        rec = -40.0f; /* negative truncation clamps the same way */
+        indexed_panel_resource_position_apply(&rec, 1, 1);
+        panel_seam_last(&last_res, &lx, &ly);
+        CHECK(panel_seam_calls() == 3 && last_res == &slot4,
+              "the negative conversion rides the last slot too");
+        panel_position_slot_set(4, NULL);
+        panel_seam_reset();
+        indexed_panel_resource_position_apply(&rec, 1, 1);
+        CHECK(panel_seam_calls() == 0, "an uninstalled slot stays inert");
+        panel_position_slot_set(0, &slot0);
+        indexed_panel_resource_position_apply(NULL, 3, 4); /* reads zero */
+        panel_seam_last(&last_res, &lx, &ly);
+        CHECK(panel_seam_calls() == 1 && last_res == &slot0 && lx == 4.5f
+                  && ly == 6.5f,
+              "the NULL record float reads selector zero (deviation)");
+        panel_position_slot_set(0, NULL);
+        panel_position_slot_set(1, NULL);
+        panel_position_offsets_set(0.0f, 0.0f);
+        panel_enable_word_set(0u);
+    }
+
+    /* ActiveObjectList word selector (2026-10-24). */
+    {
+        frontend_flow_word_set(2, 0); /* in-game */
+        int* w_in = active_object_list_word();
+        *w_in = 42;
+        frontend_flow_word_set(2, -1); /* out of game */
+        int* w_out = active_object_list_word();
+        CHECK(w_out != w_in, "the selector flips words with the mode");
+        *w_out = 7;
+        CHECK(*w_in == 42, "the out-of-game store leaves the in-game word");
+        frontend_flow_word_set(2, 5); /* back in-game */
+        CHECK(active_object_list_word() == w_in, "the in-game word returns");
+        *w_out = 0;
+        frontend_flow_word_set(2, 0);
+    }
+
+    /* ScreenEffectFlagsClearAndRelease (2026-10-24): the ten-entry walk. */
+    {
+        char h1;
+        char h2;
+        screen_effect_entry_set(0, &h1, 0x3u); /* active + extra bit */
+        screen_effect_entry_set(1, &h2, 2u);   /* inactive */
+        screen_effect_entry_set(2, NULL, 1u);  /* active, clear handle */
+        screen_effect_entry_set(3, NULL, 0u);  /* silent */
+        screen_effect_seam_reset();
+        screen_effect_flags_clear_and_release();
+        void* last = (void*)1;
+        int flag = -1;
+        screen_effect_seam_last(&last, &flag);
+        CHECK(screen_effect_seam_calls() == 2 && flag == 1 && last == NULL,
+              "only the active entries fire the seam");
+        CHECK(screen_effect_flag_peek(0) == 2u && screen_effect_flag_peek(1) == 2u,
+              "bit 0 clears and the other bits stay");
+        screen_effect_seam_reset();
+        screen_effect_flags_clear_and_release();
+        CHECK(screen_effect_seam_calls() == 0, "the second walk is silent");
+        for (int i = 0; i < 10; ++i) {
+            screen_effect_entry_set(i, NULL, 0u);
+        }
+        CHECK(screen_effect_flag_peek(-1) == 0u
+                  && screen_effect_handle_peek(99) == NULL,
+              "the window guards answer clear");
+    }
+
+    /* StoreSelectedMapCoordinate (2026-10-24): switch vs tracked. */
+    {
+        const uint32_t c1[2] = { 11u, 12u };
+        const uint32_t c2[2] = { 21u, 22u };
+        objective_selection_state_reset(); /* bit 7 raises, word clears */
+        store_selected_map_coordinate(7, c1); /* word 0 != 7: switch */
+        CHECK(map_store_kind_peek() == 7u && map_store_last_word(0) == 11u
+                  && map_store_last_word(1) == 12u
+                  && map_store_pair_word(0) == 0u,
+              "the switch branch re-arms the kind and the last pair");
+        objective_selection_state_reset(); /* word 0, bit 7 set */
+        store_selected_map_coordinate(0, c2); /* tracked: word == kind */
+        CHECK(map_store_pair_word(0) == 21u && map_store_pair_word(1) == 22u
+                  && map_store_last_word(0) == 21u
+                  && map_store_kind_peek() == 0u,
+              "the tracked branch refreshes the live pair too");
+        store_selected_map_coordinate(0, NULL);
+        CHECK(map_store_pair_word(0) == 21u && map_store_kind_peek() == 0u,
+              "the null pair stays away from every slot");
+        objective_selection_state_reset();
+        store_selected_map_coordinate(9, NULL); /* word 0 != 9: switch */
+        CHECK(map_store_kind_peek() == 9u && map_store_pair_word(0) == 21u,
+              "the kind change under the flag switches again");
+    }
+
+    /* TextLayoutOffsetForCentering (2026-10-24): the half-width shift. */
+    {
+        CHECK(text_layout_offset_for_centering(8, 0, 0, 0, 10, 10, 0) == 1,
+              "the uncentered rect keeps the hit");
+        CHECK(text_layout_offset_for_centering(8, 0, 0, 0, 10, 10, 1) == 0,
+              "the centered shift drops the outside point");
+        CHECK(text_layout_offset_for_centering(2, 5, 0, 0, 10, 10, 1) == 1,
+              "the centered rect still catches its inside point");
+    }
+
+    /* SelectionEntityCodeResolve (2026-10-24): the flag-keep branch and
+     * the selection high-bit pick. */
+    {
+        static GameContext sctx;
+        static EntitySlot picked;
+        static const uint32_t cc[2] = { 4u, 5u };
+        game_context_init(&sctx);
+        objective_selection_state_reset(); /* inter bit 7 raises */
+        store_selected_map_coordinate(3, cc); /* switch branch: bit 7
+                                                 drops, bit 8 raises */
+        int code = 0x11;
+        CHECK(selection_entity_code_resolve(&sctx, &code) == 0x11
+                  && code == 0x11,
+              "the flag route answers the stored code unchanged");
+        objective_selection_state_reset(); /* bit 7 back: the pick branch */
+        code = 0x11;
+        CHECK(selection_entity_code_resolve(&sctx, &code) == 0x23
+                  && code == 0x23,
+              "the empty selection answers 0x23 (deviation)");
+        memset(&picked, 0, sizeof picked);
+        picked.type = 1;
+        picked.flags_3e8 = 0x80000000u;
+        selection_add(&sctx, &picked);
+        code = 0;
+        CHECK(selection_entity_code_resolve(&sctx, &code) == 0x22
+                  && code == 0x22,
+              "the high-bit pick answers 0x22 through the store");
+        selection_clear(&sctx);
+    }
+
+    /* Scroll-rect + flic-mode window band (2026-10-25). */
+    {
+        const float quad[4] = { 1.0f, 2.0f, 3.0f, 4.0f };
+        scroll_rect_resource_record_create(5, 0, quad, 0, 0);
+        uint32_t handle = 0u;
+        void* ra = NULL;
+        void* rb = NULL;
+        int region = 0;
+        view_blit_window_peek(5, &handle, &ra, &rb, &region);
+        CHECK(ra != NULL && rb == NULL, "the mode-0 record lands in half A");
+        const float* pf = (const float*)ra;
+        CHECK(pf[0] == 1.0f && pf[1] == 2.0f, "the position pair lands");
+        CHECK(pf[2] == 4.0f && pf[3] == 6.0f,
+              "the extent folds x+dx and y+dy (corpus add order)");
+        CHECK(pf[4] == 0.0f && pf[5] == 0.0f && pf[6] == 0.0f,
+              "the seam dims stay zero (deviation)");
+        scroll_rect_resource_record_create(5, 1, quad, 7, 7);
+        view_blit_window_peek(5, &handle, &ra, &rb, &region);
+        CHECK(ra != NULL && rb != NULL && ra != rb,
+              "the mode-1 store fills half B and keeps half A");
+        void* first_a = ra;
+        scroll_rect_resource_record_create(-1, 0, NULL, 0, 0); /* guarded */
+        view_blit_window_peek(5, &handle, &ra, &rb, &region);
+        CHECK(ra == first_a, "the window guard keeps the slot");
+    }
+
+    /* UiOverlayAnimationAdvance (2026-10-25): both convergence halves. */
+    {
+        overlay_anim_float_install(1.0f);
+        ui_overlay_animation_advance(0, 1);
+        const float decayed = overlay_anim_float_peek();
+        CHECK(decayed == (1.0f - 0.05f) * 20.0f * 0.05263158f,
+              "the decay lands the corpus expression");
+        CHECK(decayed == 1.0f,
+              "one is the corpus expression's fixed point (the step does "
+              "not move at the top — pinned 2026-10-25 against the corpus)");
+        overlay_anim_float_install(0.9f);
+        ui_overlay_animation_advance(0, 1);
+        CHECK(overlay_anim_float_peek() == (0.9f - 0.05f) * 20.0f * 0.05263158f
+                  && overlay_anim_float_peek() < 0.9f,
+              "below the fixed point the decay steps down the same shape");
+        overlay_anim_float_install(1.0f);
+        ui_overlay_animation_advance(0, 3);
+        CHECK(overlay_anim_float_peek() >= 0.0f,
+              "the after-loop clamp holds through a three-step decay");
+
+        overlay_anim_float_install(0.0f);
+        ui_overlay_animation_advance(1, 1);
+        CHECK(overlay_anim_float_peek() == 0.0f - (1.0f - 0.0f) * -0.05f,
+              "the ease half steps toward one");
+        ui_overlay_animation_advance(1, 1);
+        CHECK(overlay_anim_float_peek() > 0.05f && overlay_anim_float_peek() < 1.0f,
+              "the ease half keeps converging");
+        overlay_anim_float_install(0.0f);
+        ui_overlay_animation_advance(1, 0);
+        CHECK(overlay_anim_float_peek() == 0.0f, "zero steps leave the float");
+        ui_overlay_animation_advance(1, -3);
+        CHECK(overlay_anim_float_peek() == 0.0f,
+              "the guarded runaway counts no steps (deviation)");
+        overlay_anim_float_install(0.5f);
+    }
+
+    /* Timed-effect cue request (2026-10-25): the cue word store plus the
+     * flag-bit 0/1 raise, and the guarded window. */
+    {
+        CHECK(timed_effect_cue_peek(12) == 0u, "the cue window starts clear");
+        timed_effect_cue_request_set(12, 0x77u);
+        CHECK(timed_effect_cue_peek(12) == 0x77u, "the cue word stores");
+        CHECK((timed_effect_flags_peek(12) & 3u) == 3u,
+              "the request raises flag bits 0 and 1");
+        timed_effect_cue_request_set(12, 0u);
+        CHECK(timed_effect_cue_peek(12) == 0u, "the store accepts zero");
+        CHECK(timed_effect_flags_peek(12) == 3u,
+              "the raise is a bit-or, not a store");
+        timed_effect_cue_request_set(12, 8u);
+        timed_effect_update_request_set(12);
+        CHECK(timed_effect_flags_peek(12) == 7u,
+              "the update bit joins the cue bits");
+        timed_effect_cue_request_set(16, 1u);
+        CHECK(timed_effect_cue_peek(16) == 0u
+                  && timed_effect_flags_peek(16) == 0u,
+              "the guarded window drops the out-of-range request (dev)");
+    }
+
+    /* Timed-effect persistence (2026-10-25): the flag word's bit 4 raise
+     * and drop, the or-shape, and the guarded window. */
+    {
+        timed_effect_persistence_set(3, 1);
+        CHECK((timed_effect_flags_peek(3) & 0x10u) != 0u,
+              "the set raises bit 4");
+        timed_effect_update_request_set(3);
+        CHECK(timed_effect_flags_peek(3) == 0x14u,
+              "the or-shape joins the update bit");
+        timed_effect_persistence_set(3, 0);
+        CHECK(timed_effect_flags_peek(3) == 0x4u,
+              "the drop leaves the update bit");
+        timed_effect_persistence_set(16, 1);
+        CHECK(timed_effect_flags_peek(16) == 0u,
+              "the guarded window drops the out-of-range set (dev)");
+    }
+
+    /* Cursor-tile selection pair (2026-10-25): the kind-keyed installs
+     * with the own-storage pair. */
+    {
+        cursor_tile_selection_update_by_type(0x49, 7u, 9u);
+        CHECK(cursor_tile_pair_peek(0) == 7u && cursor_tile_pair_peek(1) == 9u,
+              "the 0x49 kind installs the caller's pair");
+        cursor_tile_selection_update_by_type(5, 0xdeadu, 0xbeefu);
+        CHECK(cursor_tile_pair_peek(0) == 0xFu && cursor_tile_pair_peek(1) == 0u,
+              "the kind-5 install lands the fixed shape");
+        cursor_tile_selection_update_by_type(0xe, 1u, 2u);
+        CHECK(cursor_tile_pair_peek(0) == 0xBu && cursor_tile_pair_peek(1) == 0u,
+              "the kind-0xe install lands its shape");
+        cursor_tile_selection_update_by_type(3, 4u, 5u);
+        CHECK(cursor_tile_pair_peek(0) == 0xBu && cursor_tile_pair_peek(1) == 0u,
+              "the foreign kind rides the pair");
+        cursor_tile_selection_update_by_type(0x49, 1u, 2u);
+        CHECK(cursor_tile_pair_peek(2) == 0u,
+              "the peek guards the window (dev)");
+    }
+
+    /* Panel layout band (2026-10-25): the store, the load-seam answers,
+     * and the gated position update through the seam. */
+    {
+        panel_seam_reset();
+        const int base = panel_seam_calls();
+        panel_resource_layout_store((void*)0x11u, 64u, 32u, 0x55u,
+                                    (void*)0x22u, 10u, 20u);
+        CHECK(panel_layout_surface_peek() == NULL
+                  && panel_layout_glyph_peek() == NULL,
+              "the load seams answer NULL");
+        CHECK(panel_seam_calls() == base + 2,
+              "the two loads record two seam calls");
+        CHECK(panel_layout_size_peek(0) == 64.0f
+                  && panel_layout_size_peek(1) == 32.0f,
+              "the size floats land");
+        CHECK(panel_layout_extra_peek() == 0x55u, "the extra word lands");
+        CHECK(panel_layout_offset_peek(0) == 10.0f
+                  && panel_layout_offset_peek(1) == 20.0f,
+              "the position floats land");
+        CHECK(panel_layout_size_peek(2) == 0.0f
+                  && panel_layout_offset_peek(2) == 0.0f,
+              "the peeks guard the window (dev)");
+        panel_resource_position_update(11);
+        CHECK(panel_seam_calls() == base + 2,
+              "the absent glyph skips the update");
+
+        static int glyph = 0;
+        panel_layout_glyph_install(&glyph);
+        indexed_pair_set(11, 10u, 5u);
+        global_value_0050080c_set(1u);
+        sim_status_banner_word_set(1u);
+        panel_seam_reset();
+        panel_resource_position_update(11);
+        void* res = NULL;
+        float sx = 0.0f, sy = 0.0f;
+        panel_seam_last(&res, &sx, &sy);
+        CHECK(panel_seam_calls() == 1 && res == &glyph
+                  && sx == 20.0f && sy == 25.0f,
+              "the update rides the pair plus the offsets to the seam");
+        global_value_0050080c_set(0u);
+        panel_seam_reset();
+        panel_resource_position_update(11);
+        CHECK(panel_seam_calls() == 0, "the layout gate closes the blit");
+        global_value_0050080c_set(1u);
+        sim_status_banner_word_set(0u);
+        panel_seam_reset();
+        panel_resource_position_update(11);
+        CHECK(panel_seam_calls() == 0, "the banner gate closes the blit");
+        sim_status_banner_word_set(1u);
+        global_value_0050080c_set(0u);
+        panel_layout_glyph_install(NULL); /* back to the seam-NULL model */
+    }
+
+    /* UI/panel category-bounds band (2026-10-25): the category store with
+     * the flag-gated pair routing, the entry bounds get, the priority
+     * state pair, and the render record create. */
+    {
+        const int panel = 15;
+        request_record_flags_set(panel, 0u);
+        panel_category_bounds_set(panel, 1, 2, 3, 4);
+        float x1 = 0, y1 = 0, x2 = 0, y2 = 0;
+        panel_category_bounds_peek(panel, &x1, &y1, &x2, &y2);
+        CHECK(x1 == 1.0f && y1 == 2.0f && x2 == 3.0f && y2 == 4.0f,
+              "the category rectangle lands as floats");
+        uint32_t px = 0, py = 0;
+        indexed_pair_get(panel, &px, &py);
+        float pf = 0.0f;
+        __builtin_memcpy(&pf, &px, sizeof pf);
+        CHECK(pf == 3.0f, "the clear flag routes the second corner x");
+        __builtin_memcpy(&pf, &py, sizeof pf);
+        CHECK(pf == 4.0f, "the clear flag routes the second corner y");
+
+        request_record_flags_set(panel, 2u);
+        panel_category_bounds_set(panel, 10, 20, 30, 40);
+        indexed_pair_get(panel, &px, &py);
+        __builtin_memcpy(&pf, &px, sizeof pf);
+        CHECK(pf == 10.0f, "the raised flag routes the first corner x");
+        __builtin_memcpy(&pf, &py, sizeof pf);
+        CHECK(pf == 20.0f, "the raised flag routes the first corner y");
+        panel_category_bounds_peek(panel, &x1, &y1, &x2, &y2);
+        CHECK(x1 == 10.0f && x2 == 30.0f, "the rectangle fields update");
+        panel_category_bounds_set(-1, 0, 0, 0, 0); /* guarded */
+
+        static char cat_block[0x2c * 2];
+        memset(cat_block, 0, sizeof cat_block);
+        float* cat_rec = (float*)cat_block;
+        cat_rec[0] = 1.0f;
+        cat_rec[1] = 2.0f;
+        cat_rec[2] = 5.0f;
+        cat_rec[3] = 8.0f;
+        float* cat_rec2 = (float*)(cat_block + 0x2c);
+        cat_rec2[0] = 4.0f;
+        cat_rec2[1] = 6.0f;
+        cat_rec2[2] = 5.0f;
+        cat_rec2[3] = 6.0f;
+        panel_draw_records_set(panel, cat_block);
+        float bounds[4] = { 0, 0, 0, 0 };
+        ui_entry_bounds_get(panel, 0, bounds);
+        CHECK(bounds[0] == 1.0f && bounds[1] == 2.0f
+                  && bounds[2] == 4.0f && bounds[3] == 6.0f,
+              "the entry bounds answer position plus the derived size");
+        ui_entry_bounds_get(panel, 1, bounds);
+        CHECK(bounds[2] == 1.0f && bounds[3] == 0.0f,
+              "the second entry derives its size too");
+        memset(bounds, 0, sizeof bounds);
+        ui_entry_bounds_get(16, 0, bounds); /* no block installed */
+        CHECK(bounds[2] == 0.0f, "the uninstalled panel writes nothing (dev)");
+        ui_entry_bounds_get(panel, -1, bounds); /* guarded */
+        ui_entry_bounds_get(panel, 0, NULL); /* guarded */
+        panel_draw_records_set(panel, NULL);
+        request_record_flags_set(panel, 0u);
+
+        priority_image_state_set(0, 0u);
+        CHECK(priority_image_selection_state_update(7, 0, 0) == 0,
+              "the cleared gate parks the sentinel");
+        int32_t st = 0;
+        uint32_t flags = 0u;
+        priority_image_state_peek(&st, &flags);
+        CHECK(st == 0x1b && flags == 0u, "the sentinel rides alone");
+        CHECK(priority_image_selection_state_update(9, 1, 0) == 0
+                  && st != 9,
+              "the sentinel branch answers the sentinel test false");
+        priority_image_state_peek(&st, &flags);
+        CHECK(st == 9 && (flags & 2u) != 0u,
+              "the sentinel install lands the candidate plus the flag");
+        CHECK(priority_image_selection_state_update(9, 1, 1) == 1,
+              "the equal state raises the flag and answers true");
+        priority_image_state_peek(&st, &flags);
+        CHECK(st == 9, "the equal-state branch leaves the state alone");
+        CHECK(priority_image_selection_state_update(8, 1, 1) == 0,
+              "the foreign candidate answers the stale word");
+        priority_image_state_set(5, 0u);
+        CHECK(priority_image_selection_state_update(5, 1, 1) == 1,
+              "the equal branch ignores the skip argument");
+        priority_image_state_peek(&st, &flags);
+        CHECK((flags & 2u) != 0u, "the equal branch raises the flag");
+        priority_image_state_set(0x1b, 0u);
+        CHECK(priority_image_selection_state_update(9, 1, 1) == 0,
+              "the sentinel with the skip set rides stale");
+        priority_image_state_peek(&st, &flags);
+        CHECK(st == 0x1b && flags == 0u, "the skip keeps the sentinel clear");
+
+        uint32_t srcbuf[17];
+        memset(srcbuf, 0, sizeof srcbuf);
+        const float source_float = 3.5f;
+        __builtin_memcpy(&srcbuf[4], &source_float, sizeof source_float);
+        const uint32_t payload[4] = { 0xA1u, 0xB2u, 0xC3u, 0xD4u };
+        UiRenderRecord* rec = ui_render_record_create(srcbuf, payload, 0xEEu);
+        CHECK(rec != NULL && rec->source == srcbuf
+                  && rec->payload[0] == 0xA1u && rec->payload[3] == 0xD4u
+                  && rec->extra == 0xEEu && rec->float_at_10 == 3.5f,
+              "the render record copies the fields and the +0x10 float");
+        ui_render_record_free(rec);
+        CHECK(ui_render_record_create(NULL, payload, 0u) == NULL,
+              "the null source answers NULL (dev)");
+        CHECK(ui_render_record_create(srcbuf, NULL, 0u) == NULL,
+              "the null payload answers NULL (dev)");
+    }
+
+    /* Sav visited tables band (2026-10-25): install/peek over the
+     * own-storage tables, the clear walk with the out-of-game band first,
+     * the null-item skip, and the guarded counts. */
+    {
+        char rec1[24];
+        char rec2[24];
+        memset(rec1, 0, sizeof rec1);
+        memset(rec2, 0, sizeof rec2);
+        ((uint32_t*)rec1)[4] = 0xdeadu; /* corpus flag word at +0x10 */
+        ((uint32_t*)rec2)[4] = 0xbeefu;
+        sav_visited_entry_set(0, 0, rec1, 1u); /* out-of-game band */
+        sav_visited_entry_set(0, 1, NULL, 2u);
+        sav_visited_entry_set(1, 0, rec2, 3u); /* in-game band */
+        void* p = NULL;
+        uint32_t w = 0u;
+        sav_visited_entry_peek(0, 0, &p, &w);
+        CHECK(p == rec1 && w == 1u, "install and peek land the pair");
+        sav_visited_entry_peek(0, 1, &p, &w);
+        CHECK(p == NULL && w == 2u, "the null item rides through");
+        sav_visited_entry_set(0, 16, rec1, 9u);  /* guarded (dev) */
+        sav_visited_entry_peek(0, 16, &p, &w);   /* guarded (dev) */
+
+        frontend_flow_word_set(2, -1);
+        int* wc = active_object_list_word();
+        *wc = 2; /* the out-of-game count */
+        frontend_flow_word_set(2, 0);
+        wc = active_object_list_word();
+        *wc = 1; /* the in-game count */
+        sav_clear_visited();
+        CHECK(((uint32_t*)rec1)[4] == 0u,
+              "the out-of-game record flag word clears");
+        sav_visited_entry_peek(0, 0, &p, &w);
+        CHECK(p == rec1 && w == 0u, "the table word clears alongside");
+        sav_visited_entry_peek(0, 1, &p, &w);
+        CHECK(w == 2u, "the null-item table word rides");
+        CHECK(((uint32_t*)rec2)[4] == 0u, "the in-game record flag clears");
+        sav_visited_entry_peek(1, 0, &p, &w);
+        CHECK(w == 0u, "the in-game table word clears");
+
+        /* Guarded counts (deviations): oversized writes nothing, the
+         * non-positive gate leaves the band. */
+        ((uint32_t*)rec1)[4] = 0xdeadu;
+        ((uint32_t*)rec2)[4] = 0xbeefu;
+        sav_visited_entry_set(0, 0, rec1, 1u);
+        sav_visited_entry_set(1, 0, rec2, 3u);
+        frontend_flow_word_set(2, -1);
+        wc = active_object_list_word();
+        *wc = 17; /* past the modeled window */
+        frontend_flow_word_set(2, 0);
+        wc = active_object_list_word();
+        *wc = 0;
+        sav_clear_visited();
+        CHECK(((uint32_t*)rec1)[4] == 0xdeadu,
+              "the oversized count skips the band (dev)");
+        CHECK(((uint32_t*)rec2)[4] == 0xbeefu,
+              "the zero count leaves the band");
+        sav_visited_entry_peek(0, 0, &p, &w);
+        CHECK(w == 1u, "the guarded band leaves its words");
+
+        /* Leave the modeled state clean. */
+        frontend_flow_word_set(2, -1);
+        wc = active_object_list_word();
+        *wc = 0;
+        frontend_flow_word_set(2, 0);
+        wc = active_object_list_word();
+        *wc = 0;
+        sav_visited_entry_set(0, 0, NULL, 0u);
+        sav_visited_entry_set(0, 1, NULL, 0u);
+        sav_visited_entry_set(1, 0, NULL, 0u);
+    }
+
+    /* MenuListFindName (2026-10-25): the folded list walk, the null-entry
+     * stride, the count gate, and the guards. */
+    {
+        struct named { const char* name; int extra; };
+        static named alpha = { "Alpha", 1 };
+        static named bravo = { "Bravo", 2 };
+        static named charlie = { "Charlie", 3 };
+        void* list[4] = { &alpha, NULL, &bravo, &charlie };
+        CHECK(menu_list_find_name(list, 4, "alpha") == 0,
+              "the fold lands the first entry");
+        CHECK(menu_list_find_name(list, 4, "ALPHA") == 0,
+              "the fold reads case-blind");
+        CHECK(menu_list_find_name(list, 4, "Bravo") == 2,
+              "the null entry strides on");
+        CHECK(menu_list_find_name(list, 4, "CHARLIE") == 3,
+              "the last entry answers last");
+        CHECK(menu_list_find_name(list, 4, "delta") == -1,
+              "the miss answers -1");
+        CHECK(menu_list_find_name(list, 1, "Bravo") == -1,
+              "the count bounds the walk");
+        CHECK(menu_list_find_name(list, 0, "Alpha") == -1
+                  && menu_list_find_name(list, -1, "Alpha") == -1,
+              "the count gate answers -1");
+        CHECK(menu_list_find_name(NULL, 4, "Alpha") == -1,
+              "the null array is guarded (dev)");
+    }
+
+    /* ScreenCoordNormalizeInit (FUN_0045d8b0; 2026-10-25): the band pass
+     * over the port's display pair. The x half lands back on the corpus
+     * constants (the width constant's one-ulp bias undoes against 640),
+     * while the y half rides the height constant's bias one bit up. */
+    {
+        auto bits = [](float v) {
+            uint32_t b;
+            __builtin_memcpy(&b, &v, sizeof b);
+            return b;
+        };
+        display_dimensions_set(640, 480);
+        screen_coord_normalize_reset();
+        CHECK(screen_coord_normalize_color_peek(0) == 255.0f
+                  && screen_coord_normalize_pair_peek(0, 0, 0) == 0.0f
+                  && screen_coord_normalize_cell_peek(0, 0) == 0.0f
+                  && screen_coord_normalize_rows_peek() == 0u,
+              "the reset hook seeds the corpus data shape");
+        screen_coord_normalize_init();
+
+        CHECK(screen_coord_normalize_color_peek(0) == 1.0f
+                  && screen_coord_normalize_color_peek(2) == 0.0f
+                  && bits(screen_coord_normalize_color_peek(1))
+                         == 0x3f4cccceu,
+              "the color lane scales the corpus constants by 1/255");
+        CHECK(screen_coord_normalize_color_peek(90) == 0.0f
+                  && screen_coord_normalize_color_peek(-1) == 0.0f,
+              "the peek hook bounds the color window");
+        CHECK(screen_coord_normalize_cell_peek(0, 0) == 1.0f
+                  && screen_coord_normalize_cell_peek(1, 19) == 1.0f
+                  && screen_coord_normalize_cell_peek(0, 20) == 0.0f,
+              "both unit-cell lanes fill the stride-16 window");
+        CHECK(screen_coord_normalize_rows_peek() == 7u,
+              "the row word books seven");
+
+        static const uint32_t x_bits[7] = { 0x43a00000u, 0x43b40000u,
+            0x43b40000u, 0x43c80000u, 0x438c0000u, 0x435c0000u, 0u };
+        static const uint32_t y_bits[7] = { 0x42200001u, 0x43340001u,
+            0x43340001u, 0x43340001u, 0x43340001u, 0x43340001u, 0u };
+        static const uint32_t mx_bits[7] = { 0x43d20000u, 0x43b40000u,
+            0x43b40000u, 0x43c80000u, 0x438c0000u, 0x435c0000u,
+            0x43a00000u };
+        static const uint32_t my_bits[7] = { 0x43340001u, 0x43340001u,
+            0x43340001u, 0x43340001u, 0x43340001u, 0x43340001u,
+            0x42200001u };
+        for (int row = 0; row < 7; ++row) {
+            CHECK(bits(screen_coord_normalize_pair_peek(0, row,
+                                                        0)) == x_bits[row]
+                      && bits(screen_coord_normalize_pair_peek(0, row,
+                                                              1)) == y_bits[row]
+                      && bits(screen_coord_normalize_pair_peek(1, row,
+                                                        0)) == mx_bits[row]
+                      && bits(screen_coord_normalize_pair_peek(1, row,
+                                                              1)) == my_bits[row],
+                  "the pair rows scale the corpus constants exactly");
+        }
+        CHECK(screen_coord_normalize_pair_peek(2, 0, 0) == 0.0f,
+              "the mirror lane bounds its guards");
+
+        screen_coord_normalize_init(); /* second pass re-scales (quirk) */
+        CHECK(bits(screen_coord_normalize_color_peek(0)) == 0x3b808081u,
+              "a second pass re-scales the colors (corpus quirk)");
+        screen_coord_normalize_reset();
+        CHECK(screen_coord_normalize_color_peek(0) == 255.0f
+                  && screen_coord_normalize_cell_peek(1, 5) == 0.0f
+                  && screen_coord_normalize_rows_peek() == 0u,
+              "the reset hook restores the seed shape");
+        display_dimensions_set(0, 0);
+    }
+
+    /* Load band + progress bar + scaled menu blit (FUN_0041b270 /
+     * FUN_0045bfb0 / FUN_0045c3f0 / FUN_00412af0; 2026-10-25). */
+    {
+        auto bits_of = [](float v) {
+            uint32_t b;
+            __builtin_memcpy(&b, &v, sizeof b);
+            return b;
+        };
+        auto float_of = [](uint32_t b) {
+            float f;
+            __builtin_memcpy(&f, &b, sizeof f);
+            return f;
+        };
+        string_cache_bitmap_loader_set(s_c179_loader);
+        crt_surface_calls_clear();
+        interface_button_images_load("c179_l", "c179_r");
+        CHECK(interface_button_surface_peek(0)
+                      == (uint32_t)(uintptr_t)s_c179_buf[0]
+                  && interface_button_surface_peek(1)
+                         == (uint32_t)(uintptr_t)s_c179_buf[1],
+              "the button loads land both window slots");
+        CHECK(crt_surface_calls_count() == 2,
+              "both loads call the transform seam");
+        uint32_t h0 = 0;
+        float xb = 0, yb = 0;
+        CHECK(crt_surface_call_get(0, &h0, &xb, &yb) && h0 != 0u
+                  && xb == 0.0f && yb == 0.0f,
+              "the transform seam records (handle, 0, 0)");
+
+        crt_surface_calls_clear();
+        interface_button_images_load("c179_l", "c179_r");
+        CHECK(crt_surface_calls_count() == 2
+                  && interface_button_surface_peek(0) != 0u,
+              "the cache lane reloads (identity holds)");
+        crt_surface_calls_clear();
+        interface_button_images_load(NULL, "");
+        CHECK(crt_surface_calls_count() == 0
+                  && interface_button_surface_peek(0) == 0u
+                  && interface_button_surface_peek(1) == 0u,
+              "the empty keys stay silent");
+
+        crt_surface_calls_clear();
+        three_surface_resources_load("c179_p1", "c179_p2", "c179_p3");
+        CHECK(advisor_bar_surface_peek(0)
+                      == (uint32_t)(uintptr_t)s_c179_buf[2]
+                  && advisor_bar_surface_peek(1)
+                         == (uint32_t)(uintptr_t)s_c179_buf[4]
+                  && advisor_bar_surface_peek(2)
+                         == (uint32_t)(uintptr_t)s_c179_buf[3],
+              "the three-way quirk: param_2 rides peek 2");
+        CHECK(crt_surface_calls_count() == 3,
+              "all three transforms record");
+
+        /* the fill draw — face buffer, pair row, size pair, extra word */
+        static int face_word = 32;
+        static char face_rec[12];
+        __builtin_memcpy(face_rec + 8, &face_word, sizeof face_word);
+        uint32_t p1x = 0, p1y = 0;
+        indexed_pair_get(1, &p1x, &p1y);
+        indexed_pair_set(1, bits_of(2.5f), bits_of(1.25f));
+        panel_resource_layout_store((void*)1u, 16u, 4u, 150u, (void*)2u, 0u,
+                                    0u);
+        panel_layout_surface_install(face_rec);
+
+        crt_surface_calls_clear();
+        advisor_progress_bar_fill_draw(1, 0.0f);
+        advisor_progress_bar_fill_draw(1, -1.0f);
+        CHECK(crt_surface_calls_count() == 0,
+              "the gate silences non-positive percents");
+        crt_surface_calls_clear();
+        advisor_progress_bar_fill_draw(1, 67.0f);
+        CHECK(crt_surface_calls_count() == 1,
+              "the fill blits once per call");
+        uint32_t fh = 0;
+        float fx = 0, fy = 0;
+        CHECK(crt_surface_call_get(0, &fh, &fx, &fy)
+                  && fh == (uint32_t)(uintptr_t)face_rec
+                  && fx == 2.5f + 16.0f && fy == 1.25f + 4.0f,
+              "the dest pair reads the pair bits plus the size pair");
+        float r3[2] = { 0, 0 };
+        int r1s = 1, r3s = 0;
+        CHECK(crt_surface_call_get_rect(0, NULL, &r1s, r3, &r3s) && !r1s
+                  && r3s,
+              "the fill rides only the size witness");
+        const float want_fill
+            = (float)((double)150.0 * (double)(float)(1.0 / 100.0)
+                      * 67.0);
+        CHECK(bits_of(r3[0]) == bits_of(want_fill)
+                  && bits_of(r3[1]) == bits_of(32.0f),
+              "the size witness is fill and the face+8 float");
+
+        crt_surface_calls_clear();
+        advisor_progress_bar_fill_draw(1, 250.0f);
+        const float clamped
+            = (float)((double)150.0 * (double)(float)(1.0 / 100.0)
+                      * 100.0);
+        CHECK(crt_surface_calls_count() == 1
+                  && crt_surface_call_get_rect(0, NULL, NULL, r3, NULL)
+                  && bits_of(r3[0]) == bits_of(clamped),
+              "the clamp rides the corpus constant");
+        panel_layout_surface_install(NULL);
+        crt_surface_calls_clear();
+        advisor_progress_bar_fill_draw(1, 50.0f);
+        CHECK(crt_surface_calls_count() == 0,
+              "the missing face gate silences (dev)");
+
+        /* scaled menu blit lanes */
+        menu_blit_record_clear();
+        uint32_t sbits;
+        sbits = bits_of(7.5f);
+        menu_blit_record_write(4, 0x1234u);
+        menu_blit_record_write(5, 0x5678u);
+        menu_blit_record_write(13, 1u);
+        menu_blit_record_write(14, bits_of(7.5f));
+        menu_blit_record_write(15, bits_of(-3.5f));
+        crt_surface_calls_clear();
+        menu_surface_blit_scaled(0);
+        CHECK(crt_surface_calls_count() == 1
+                  && crt_surface_call_get(0, &h0, &xb, &yb) && h0 == 0x5678u
+                  && xb == 7.5f && yb == -3.5f,
+              "the flag lane destination-blits side 0 from +0x14");
+        int rs1 = 1;
+        CHECK(crt_surface_call_get_rect(0, NULL, &rs1, NULL, NULL)
+                  && rs1 == 0,
+              "the plain lane witnesses no rect");
+
+        menu_blit_record_write(13, 0u);
+        menu_plane_pan_set(11.5f, 22.5f);
+        crt_surface_calls_clear();
+        menu_surface_blit_scaled(1);
+        CHECK(crt_surface_calls_count() == 1
+                  && crt_surface_call_get(0, &h0, &xb, &yb) && h0 == 0x1234u
+                  && xb == 0.0f && yb == 0.0f,
+              "the scaled lane blits side 1 (+0x10) at the origin");
+        float r1[4] = { 0, 0, 0, 0 };
+        CHECK(crt_surface_call_get_rect(0, r1, &rs1, NULL, NULL) && rs1
+                  && r1[0] == -11.5f && r1[1] == -22.5f
+                  && r1[2] == 640.0f && r1[3] == 480.0f,
+              "the source rect flips the pan onto 640x480");
+        menu_blit_record_write(4, 0u);
+        menu_blit_record_write(5, 0u);
+        crt_surface_calls_clear();
+        menu_surface_blit_scaled(0);
+        CHECK(crt_surface_calls_count() == 0,
+              "the null handle stays silent");
+        CHECK(menu_plane_pan_peek(0) == 11.5f
+                  && menu_plane_pan_peek(3) == 0.0f,
+              "the pan hook bounds the window");
+
+        menu_blit_record_clear();
+        indexed_pair_set(1, p1x, p1y);
+        string_cache_bitmap_loader_set(NULL);
+    }
+
+    /* EncyclopediaConfigFilesOpen (2026-10-25): the catalog-group config
+     * file windows, the corpus's window pairing (27c/1e8, 280/1ec,
+     * 284/1f0, 288/1f4), and the stale singletons lane. */
+    {
+        char dir[] = "/tmp/opencode/ency182-XXXXXX";
+        CHECK(mkdtemp(dir) != NULL, "encyclopedia fixture dir");
+        char fA[128], fB[128], fC[128], fP[128];
+        snprintf(fA, sizeof fA, "%s/a.dat", dir);
+        snprintf(fB, sizeof fB, "%s/b.dat", dir);
+        snprintf(fC, sizeof fC, "%s/c.dat", dir);
+        snprintf(fP, sizeof fP, "%s/p.dat", dir);
+        static const char* files[4] = { fA, fB, fC, fP };
+        for (int k = 0; k != 4; ++k) {
+            FILE* fp = fopen(files[k], "wb");
+            CHECK(fp != NULL, "encyclopedia fixture file");
+            if (fp != NULL) {
+                fputc('x', fp);
+                fclose(fp);
+            }
+        }
+        static const char* t0[] = { "alpha", "beta" };
+        static const char* t1[] = { "noRecord" };
+        static const char* t2[] = { "gamma", "delta" };
+        static const char* t3[] = { "delta" };
+        catalog_name_table_install(0, t0);
+        catalog_name_table_install(1, t1);
+        catalog_name_table_install(2, t2);
+        catalog_name_table_install(3, t3);
+        catalog_count_install(0, 2u); /* DAT_0055627c role -> group 0 */
+        catalog_count_install(2, 1u); /* DAT_00556280 role -> group 1 */
+        catalog_count_install(3, 0u); /* DAT_00556284 role -> group 2 */
+        catalog_count_install(1, 1u); /* DAT_00556288 role -> group 3 */
+
+        char text[800];
+        snprintf(text, sizeof text,
+                 "EncRoot { Encyclopedia { alpha %s beta %s missing.dat %s "
+                 "gamma %s delta %s PowerCrystal %s Ore %s } }",
+                 fA, "no/such/value.dat", "none.dat", fB, fC, fP,
+                 "no/such/ore.dat");
+        BlockFile* cfg = s_parse(text);
+        encyclopedia_config_files_open(cfg, "EncRoot");
+
+        void** w0 = (void**)encyclopedia_file_window_peek(0);
+        void** w2 = (void**)encyclopedia_file_window_peek(2);
+        CHECK(w0 != NULL && w0[0] != NULL && w0[1] == NULL,
+              "group 0 opens the existing row and books the failed one");
+        CHECK(w2 != NULL, "the zero-count window still allocates");
+        void** w3 = (void**)encyclopedia_file_window_peek(3);
+        CHECK(w3 != NULL && w3[0] != NULL, "the 288-window group opens its row");
+        void* crystal = encyclopedia_crystal_file_peek();
+        CHECK(crystal != NULL && encyclopedia_ore_file_peek() == NULL,
+              "the PowerCrystal singleton opens; the failed Ore row answers "
+              "NULL (the corpus books the dispatch result blind)");
+
+        /* Pass 2: an empty encyclopedia re-zeroes every window while the
+         * singleton keeps its last handle (the corpus's stale-global lane
+         * on a config miss). */
+        BlockFile* empty_cfg = s_parse("EncRoot { Encyclopedia { } }");
+        encyclopedia_config_files_open(empty_cfg, "EncRoot");
+        void** w0b = (void**)encyclopedia_file_window_peek(0);
+        CHECK(w0b != NULL && w0b[0] == NULL && w0b[1] == NULL,
+              "the reopen zeroes the window (the corpus leaks the previous "
+              "array)");
+        CHECK(encyclopedia_crystal_file_peek() == crystal,
+              "the singleton keeps its handle across a config miss");
+        block_close(cfg);
+        block_close(empty_cfg);
+
+        for (int k = 0; k != 4; ++k) {
+            catalog_name_table_install(k, NULL);
+        }
+        catalog_count_install(0, 0u);
+        catalog_count_install(1, 0u);
+        catalog_count_install(2, 0u);
+        catalog_count_install(3, 0u);
+        for (int k = 0; k != 4; ++k) {
+            remove(files[k]);
+        }
+        rmdir(dir);
+    }
 
     if (s_failures == 0) {
         printf("frontend: all tests passed\n");

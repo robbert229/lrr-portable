@@ -361,6 +361,575 @@ int main(int argc, char** argv)
             ++a;
         }
     }
+    /* FlicOpcode25SuccessStub (FUN_00484b90, finding 21): the 8-bit
+     * opcode-25 handler is a success stub with no pixel writes. */
+    CHECK(flic_opcode25_success_stub() == 1u,
+          "the 8-bit opcode-25 handler answers success");
+
+    /* Opcode-27 fallback (2026-10-24): pure return, callable. */
+    flic_opcode27_fallback_noop();
+    CHECK(1, "the opcode-27 fallback returns");
+
+    /* FlicOpcode16ModeDispatch window (2026-10-25). */
+    {
+        static uint8_t mode_rec[0x6e0];
+        memset(mode_rec, 0, sizeof mode_rec);
+        uint32_t word = 0u;
+        word = 0x10u;
+        memcpy(mode_rec + 0x6d8, &word, sizeof word);
+        CHECK(flic_opcode16_mode_dispatch(mode_rec) == 1,
+              "the mode-0x10 route answers 1");
+        word = 4u;
+        memcpy(mode_rec + 0x6d4, &word, sizeof word);
+        word = 0u;
+        memcpy(mode_rec + 0x6d8, &word, sizeof word);
+        CHECK(flic_opcode16_mode_dispatch(mode_rec) == 1
+                  && flic_opcode16_mode_dispatch(NULL) == 1,
+              "the opcode routes and the NULL window answer 1");
+    }
+
+    /* PackedTripletTableToWordBuild (2026-10-25): the 256-triplet fold
+     * at +0x11c into the words at +0x41c, and the first-word clear. */
+    {
+        static unsigned char rec[0x620];
+        memset(rec, 0, sizeof rec);
+        for (int i = 0; i != 0x100; ++i) {
+            rec[0x11c + i * 3 + 0] = (unsigned char)(i * 7u + 11u);
+            rec[0x11c + i * 3 + 1] = (unsigned char)(i * 11u + 3u);
+            rec[0x11c + i * 3 + 2] = (unsigned char)(i * 13u + 5u);
+        }
+        flic_packed_triplet_table_to_word_build(rec);
+        int bad = 0;
+        for (int i = 1; i != 0x100; ++i) {
+            const unsigned char* t = rec + 0x11c + i * 3;
+            const uint16_t want = (uint16_t)(
+                (((unsigned)t[1] | ((unsigned)(t[0] & 0x3e) << 5)) << 5)
+                | (unsigned)(t[2] >> 1));
+            uint16_t got = 0u;
+            memcpy(&got, rec + 0x41c + i * 2, sizeof got);
+            if (got != want) {
+                bad++;
+            }
+        }
+        CHECK(bad == 0, "the whole table folds (first word excepted)");
+        uint16_t w0 = 0xffffu;
+        memcpy(&w0, rec + 0x41c, sizeof w0);
+        CHECK(w0 == 0u, "the first word is cleared after the fold");
+        flic_packed_triplet_table_to_word_build(NULL);
+        CHECK(1, "the null record is guarded (deviation)");
+    }
+
+    /* FlicDecode16BitRowRecords (2026-10-25): the chunked triplet walk,
+     * the zero-count restart lap, and the op-4 hand-off to the fold. */
+    {
+        static unsigned char rec[0x1000];
+        static unsigned char stream[0x900];
+        memset(rec, 0, sizeof rec);
+        memset(stream, 0, sizeof stream);
+        stream[6] = 2; /* two chunks */
+        stream[8 + 0] = 2;  /* skip two triplets */
+        stream[8 + 1] = 1;  /* copy one triplet */
+        stream[8 + 2] = 0xFF;
+        stream[8 + 3] = 0xFE;
+        stream[8 + 4] = 0xFC;
+        stream[8 + 5] = 0;  /* skip zero */
+        stream[8 + 6] = 2;  /* copy two triplets */
+        stream[8 + 7] = 0x01;
+        stream[8 + 8] = 0x02;
+        stream[8 + 9] = 0x03;
+        stream[8 + 10] = 0x11;
+        stream[8 + 11] = 0x22;
+        stream[8 + 12] = 0x33;
+        void* sp = stream;
+        flic_frame_window_layout_install(rec, 0, 0, 0, sp, NULL, 0);
+        flic_decode16_bit_row_records(rec);
+        CHECK(rec[0x11c + 6] == 0x3F && rec[0x11c + 7] == 0x3F
+                  && rec[0x11c + 8] == 0x3F,
+              "the first chunk skips two triplets and copies a third");
+        CHECK(rec[0x11c + 9] == 0x00 && rec[0x11c + 12] == 0x04
+                  && rec[0x11c + 13] == 0x08 && rec[0x11c + 14] == 0x0C,
+              "the second chunk lands its six source bytes >>2");
+        CHECK(rec[0x41c] == 0u, "the fold does not ride when op is not four");
+
+        memset(rec, 0, sizeof rec);
+        memset(stream, 0, sizeof stream);
+        stream[6] = 4;
+        stream[8] = 3;   /* skip three (discarded by the restart) */
+        stream[8 + 1] = 0; /* zero count byte: full restart lap */
+        memset(stream + 8 + 2, 0xFF, 0x300);
+        flic_frame_window_layout_install(rec, 0, 0, 0, sp, NULL, 0);
+        int word4 = 4;
+        __builtin_memcpy(rec + 0x6d4, &word4, sizeof word4);
+        flic_decode16_bit_row_records(rec);
+        int bad = 0;
+        for (int i = 0; i != 0x300; ++i) {
+            if (rec[0x11c + i] != 0x3F) {
+                bad++;
+            }
+        }
+        CHECK(bad == 0, "the zero-count chunk rewrites the whole table");
+        CHECK(rec[0x11c + 0x300 + 3] == 0xFFu,
+              "the restart lap ends the walk (the fold lands on the tail)");
+        CHECK(rec[0x61d] == 0u,
+              "the word tail beyond the fold rides untouched");
+        uint16_t w1 = 0u, w3 = 0u, w0 = 1u;
+        memcpy(&w1, rec + 0x41c + 2, sizeof w1);
+        memcpy(&w3, rec + 0x41c + 6, sizeof w3);
+        memcpy(&w0, rec + 0x41c, sizeof w0);
+        CHECK(w1 == 0xFFFFu && w3 == 0xFFFFu, "the op-4 fold folds the table");
+        CHECK(w0 == 0u, "the fold clears the first word");
+        CHECK(flic_decode16_bit_row_records(NULL) == 1,
+              "the null record answers 1 (deviation)");
+    }
+
+    /* FlicDecode8BitOpcode25Mode4 (2026-10-25): the literal/copy run walk
+     * with the row straddle and the palette store window. */
+    {
+        static unsigned char rec[0x1000];
+        static unsigned char stream[0x100];
+        static unsigned char pixels[0x40];
+        memset(rec, 0, sizeof rec);
+        memset(stream, 0, sizeof stream);
+        memset(pixels, 0, sizeof pixels);
+        uint16_t pal20 = 0xABCDu, pal21 = 0x1234u;
+        __builtin_memcpy(rec + 0x41c + 0x20 * 2u, &pal20, sizeof pal20);
+        __builtin_memcpy(rec + 0x41c + 0x21 * 2u, &pal21, sizeof pal21);
+        void* sp2 = stream;
+        void* pp = pixels;
+        uint16_t rows = 2u, row_len = 1u;
+        int pitch = 4;
+        flic_frame_window_layout_install(rec, (int)row_len, (int)rows,
+                                         pitch, sp2, pp, 0);
+        /* stream+7 rows: [1, idx0], +1 straddle byte, [1, idx1] */
+        stream[7 + 0] = 1;
+        stream[7 + 1] = 0x20;
+        stream[7 + 2] = 0x77; /* straddled (never consumed) */
+        stream[7 + 3] = 1;
+        stream[7 + 4] = 0x21;
+        CHECK(flic_decode8_bit_opcode25_mode4(rec) == 1, "the walk answers 1");
+        uint16_t p0 = 0u, p1 = 0u;
+        memcpy(&p0, pixels + 0, sizeof p0);
+        memcpy(&p1, pixels + 4, sizeof p1);
+        CHECK(p0 == 0xABCDu && p1 == 0x1234u,
+              "the literal runs land the palette words per row");
+
+        memset(pixels, 0, sizeof pixels);
+        memset(rec, 0, sizeof rec);
+        __builtin_memcpy(rec + 0x41c + 0x20 * 2u, &pal20, sizeof pal20);
+        __builtin_memcpy(rec + 0x41c + 0x21 * 2u, &pal21, sizeof pal21);
+        rows = 1u;
+        row_len = 2u;
+        flic_frame_window_layout_install(rec, (int)row_len, (int)rows,
+                                         pitch, sp2, pp, 0);
+        stream[7 + 0] = 0xFE; /* copy run of two */
+        stream[7 + 1] = 0x20;
+        stream[7 + 2] = 0x21;
+        flic_decode8_bit_opcode25_mode4(rec);
+        memcpy(&p0, pixels + 0, sizeof p0);
+        memcpy(&p1, pixels + 2, sizeof p1);
+        CHECK(p0 == 0xABCDu && p1 == 0x1234u,
+              "the copy run walks its own palette bytes");
+
+        memset(rec, 0, sizeof rec);
+        memset(pixels, 0, sizeof pixels);
+        __builtin_memcpy(rec + 0x41c + 0x20 * 2u, &pal20, sizeof pal20);
+        rows = 1u;
+        row_len = 1u;
+        flic_frame_window_layout_install(rec, (int)row_len, (int)rows,
+                                         pitch, sp2, pp, 0);
+        stream[7 + 0] = 0;  /* zero count: advances without writing */
+        stream[7 + 1] = 0;
+        stream[7 + 2] = 1;  /* then the single literal lands */
+        stream[7 + 3] = 0x20;
+        flic_decode8_bit_opcode25_mode4(rec);
+        memcpy(&p0, pixels + 0, sizeof p0);
+        CHECK(p0 == 0xABCDu, "the zero count byte advances, it never stops");
+        flic_frame_window_layout_install(rec, 9, 3, 64, sp2, pp, 1);
+        int16_t rl = 0, rc = 0;
+        int fl = 0;
+        memcpy(&rl, rec + 0x0c, sizeof rl);
+        memcpy(&rc, rec + 0x10, sizeof rc);
+        memcpy(&fl, rec + 0x6e4, sizeof fl);
+        CHECK(rl == 9 && rc == 3 && fl == 1, "the install hook lands");
+        CHECK(flic_decode8_bit_opcode25_mode4(NULL) == 1,
+              "the null record answers 1 (deviation)");
+    }
+
+    /* FlicDecode16BitKeyframe (2026-10-25): the word-stream row walk. */
+    {
+        static unsigned char rec[0x1000];
+        static unsigned char stream[0x100];
+        static unsigned char pixels[0x100];
+        memset(rec, 0, sizeof rec);
+        memset(stream, 0, sizeof stream);
+        memset(pixels, 0, sizeof pixels);
+        void* sp = stream;
+        void* pp = pixels;
+        int pitch = 4;
+        int16_t rows = 2, row_len = 2;
+        flic_frame_window_layout_install(rec, row_len, rows, pitch, sp, pp, 0);
+        /* row 0: literal run of two of the word 0x07C0 (green field <<1) */
+        stream[7] = 2;
+        stream[7 + 1] = 0xC0; /* the value word is read from stream+8 */
+        stream[7 + 2] = 0x07;
+        stream[7 + 3] = 0x55; /* row straddle (never consumed) */
+        /* row 1: copy run of two words */
+        stream[7 + 4] = 0xFE;
+        stream[7 + 5] = 0xC0;
+        stream[7 + 6] = 0x07;
+        stream[7 + 7] = 0x1F;
+        stream[7 + 8] = 0x00;
+        CHECK(flic_decode16_bit_keyframe(rec) == 1, "the walk answers 1");
+        uint16_t w[8];
+        memcpy(w, pixels, sizeof w);
+        CHECK(w[0] == 0x0F80u && w[1] == 0x0F80u,
+              "the literal run repeats the expanded word (green <<1)");
+        CHECK(w[2] == 0x0F80u && w[3] == 0x001Fu,
+              "the copy run walks its own words (the low five ride)");
+        memset(pixels, 0, sizeof pixels);
+        memset(rec, 0, 0x1000);
+        rows = 1;
+        row_len = 1;
+        int pitch2 = 4;
+        int flag = 1;
+        flic_frame_window_layout_install(rec, row_len, rows, pitch2, sp, pp,
+                                         flag);
+        /* zero count (advance only; consumes 3 bytes), then a literal
+         * under the flag: count 1, value word 0x07C0 */
+        stream[7] = 0;
+        stream[7 + 1] = 0;
+        stream[7 + 2] = 0;
+        stream[7 + 3] = 1;
+        stream[7 + 4] = 0xC0;
+        stream[7 + 5] = 0x07;
+        flic_decode16_bit_keyframe(rec);
+        memcpy(w, pixels, 2);
+        CHECK(w[0] == 0x07C0u, "the flag keeps the green field where it is");
+        CHECK(flic_decode16_bit_keyframe(NULL) == 1,
+              "the null record answers 1 (deviation)");
+    }
+
+    /* FlicDecode16BitDelta (2026-10-25): the chunk walk, the remembered
+     * byte store, the back-count quirk, and the whole-word row subtract. */
+    {
+        static unsigned char rec[0x1000];
+        static unsigned char stream[0x200];
+        /* The wrapped retire row (1 - 0xC111 = 0x3EF0) times the pitch
+         * lands past 0x10000: the buffer must reach the write. */
+        static unsigned char pixels[0x20000];
+        memset(rec, 0, sizeof rec);
+        void* sp = stream;
+        void* pp = pixels;
+        int pitch = 8;
+        flic_frame_window_layout_install(rec, 0, 0, pitch, sp, pp, 0);
+
+        /* (d) the plain pair chunk: the kind-0 header IS the pair count
+         * (the corpus re-reads the header word), skip 1, two words. */
+        memset(stream, 0, sizeof stream);
+        memset(pixels, 0, sizeof pixels);
+        stream[6] = 1;
+        uint16_t w16;
+        w16 = 1u;      memcpy(stream + 8, &w16, 2);       /* kind 0: one pair */
+        w16 = 0x0201u; memcpy(stream + 10, &w16, 2);      /* skip 1, run 2 */
+        w16 = 0x001Fu; memcpy(stream + 12, &w16, 2);
+        w16 = 0x003Fu; memcpy(stream + 14, &w16, 2);
+        CHECK(flic_decode16_bit_delta(rec) == 1, "the chunk answers 1");
+        uint16_t w[3];
+        memcpy(w, pixels, sizeof w);
+        CHECK(w[0] == 0u && w[1] == 0x001Fu && w[2] == 0x005Fu,
+              "the pair skips one pixel and expands its words");
+
+        /* (e) the 8-chunk: remember the header, byte-store at the end
+         * (kind 8 advances the cursor, so the pair count is a real word). */
+        memset(stream, 0, sizeof stream);
+        memset(pixels, 0, sizeof pixels);
+        stream[6] = 1;
+        w16 = 0x8041u; memcpy(stream + 8, &w16, 2);   /* kind 8, byte 0x41 */
+        w16 = 1u;      memcpy(stream + 10, &w16, 2);  /* one pair */
+        w16 = 0x0100u; memcpy(stream + 12, &w16, 2);  /* skip 0, run 1 */
+        w16 = 0x001Fu; memcpy(stream + 14, &w16, 2);
+        flic_decode16_bit_delta(rec);
+        uint16_t e0 = 0u, e1 = 0u;
+        memcpy(&e0, pixels + 0, 2);
+        memcpy(&e1, pixels + 2, 2);
+        CHECK(e0 == 0x001Fu, "the 8-chunk expands its pair word");
+        CHECK((e1 & 0xffu) == 0x41u && (e1 & 0xff00u) == 0u,
+              "the remembered pixel lands as a lone byte store");
+
+        /* (f) the back-count quirk: 0x100 - high repeats one word. */
+        memset(stream, 0, sizeof stream);
+        memset(pixels, 0, sizeof pixels);
+        stream[6] = 1;
+        w16 = 1u;      memcpy(stream + 8, &w16, 2);   /* kind 0: one pair */
+        w16 = 0x8301u; memcpy(stream + 10, &w16, 2);  /* skip 1, 0x83 */
+        w16 = 0x001Fu; memcpy(stream + 12, &w16, 2);
+        flic_decode16_bit_delta(rec);
+        int bad = 0;
+        for (int i = 0; i != 125; ++i) { /* row 0 base + the skip of one */
+            uint16_t got = 0u;
+            memcpy(&got, pixels + 2 + (size_t)i * 2u, 2);
+            if (got != 0x001Fu) {
+                bad++;
+            }
+        }
+        CHECK(bad == 0, "the back-count run repeats the one word 125 times");
+
+        /* (g) the 0xC retire quirk: the whole word rides the ushort row. */
+        memset(stream, 0, sizeof stream);
+        memset(pixels, 0, sizeof pixels);
+        stream[6] = 2;
+        w16 = 1u;      memcpy(stream + 8, &w16, 2);   /* kind 0: one pair */
+        w16 = 0x0100u; memcpy(stream + 10, &w16, 2);  /* skip 0, run 1 */
+        w16 = 0x001Fu; memcpy(stream + 12, &w16, 2);
+        w16 = 0xC111u; memcpy(stream + 14, &w16, 2);  /* retire */
+        w16 = 1u;      memcpy(stream + 16, &w16, 2);  /* kind 0: one pair */
+        w16 = 0x0100u; memcpy(stream + 18, &w16, 2);  /* skip 0, run 1 */
+        w16 = 0x1234u; memcpy(stream + 20, &w16, 2);
+        flic_decode16_bit_delta(rec);
+        uint16_t a = 0u, b = 0u;
+        memcpy(&a, pixels, 2);
+        memcpy(&b, pixels + 0x3ef0u * 8u, 2);
+        CHECK(a == 0x001Fu, "the first row lands at the row stride");
+        CHECK(b == 0x2454u,
+              "the retire retargets the row by the whole-word subtract");
+        CHECK(flic_decode16_bit_delta(NULL) == 1,
+              "the null record answers 1 (deviation)");
+    }
+
+    /* FlicDecode8BitAlternateDelta (2026-10-25): the palette-indexed sibling:
+     * pair words (skip, run) whose pixels expand through the +0x41c indexed
+     * word table, the back-count repeat, and the op-8 palette tail. */
+    {
+        static unsigned char rec[0x1000];
+        static unsigned char stream[0x200];
+        static unsigned char pixels[0x20000];
+        memset(rec, 0, sizeof rec);
+        void* sp = stream;
+        void* pp = pixels;
+        int pitch = 16;
+        flic_frame_window_layout_install(rec, 0, 0, pitch, sp, pp, 0);
+        /* the +0x41c indexed-word table, window-shaped */
+        uint16_t t5 = 0xABCDu, t6 = 0x1234u, t7 = 0x0F0Fu, t8 = 0x5A5Au;
+        uint16_t t41 = 0x4455u;
+        memcpy(rec + 0x41c + 5 * 2, &t5, 2);
+        memcpy(rec + 0x41c + 6 * 2, &t6, 2);
+        memcpy(rec + 0x41c + 7 * 2, &t7, 2);
+        memcpy(rec + 0x41c + 8 * 2, &t8, 2);
+        memcpy(rec + 0x41c + 0x41 * 2, &t41, 2);
+        uint16_t w16;
+
+        /* (a) the plain pair chunk: skip one word, run two palette pairs. */
+        memset(stream, 0, sizeof stream);
+        memset(pixels, 0, sizeof pixels);
+        stream[6] = 1;
+        w16 = 1u;      memcpy(stream + 8, &w16, 2);   /* kind 0: one pair */
+        w16 = 0x0101u; memcpy(stream + 10, &w16, 2);  /* skip 1, run 1 */
+        w16 = 0x0605u; memcpy(stream + 12, &w16, 2);  /* idx 5, then idx 6 */
+        CHECK(flic_decode8_bit_alternate_delta(rec) == 1, "the chunk answers 1");
+        uint16_t w[16];
+        memcpy(w, pixels, sizeof w);
+        CHECK(w[1] == 0xABCDu && w[2] == 0x1234u,
+              "the byte pair expands through the indexed word table");
+
+        /* (b) the back-count quirk: 0x100 - run repeats the trailing pair. */
+        memset(stream, 0, sizeof stream);
+        memset(pixels, 0, sizeof pixels);
+        stream[6] = 1;
+        w16 = 1u;      memcpy(stream + 8, &w16, 2);   /* kind 0: one pair */
+        w16 = 0x8101u; memcpy(stream + 10, &w16, 2);  /* skip 1, 0x81 */
+        w16 = 0x0807u; memcpy(stream + 12, &w16, 2);  /* the trailing pair */
+        flic_decode8_bit_alternate_delta(rec);
+        int bad = 0;
+        for (int i = 0; i != 127; ++i) { /* 0x100 - 0x81 laps */
+            uint16_t lo = 0u, hi = 0u;
+            memcpy(&lo, pixels + 2 + (size_t)i * 4u, 2);
+            memcpy(&hi, pixels + 4 + (size_t)i * 4u, 2);
+            if (lo != 0x0F0Fu || hi != 0x5A5Au) {
+                bad++;
+            }
+        }
+        CHECK(bad == 0, "the back-count repeats the trailing pair 127 times");
+
+        /* (c) the 8-chunk: remember the header byte (NO fold), one pair,
+         * then the palette tail lands one word past the pair walk. */
+        memset(stream, 0, sizeof stream);
+        memset(pixels, 0, sizeof pixels);
+        stream[6] = 1;
+        w16 = 0x8141u; memcpy(stream + 8, &w16, 2);   /* kind 8, byte 0x41 */
+        w16 = 1u;      memcpy(stream + 10, &w16, 2);  /* one pair */
+        w16 = 0x0100u; memcpy(stream + 12, &w16, 2);  /* skip 0, run 1 */
+        w16 = 0x0605u; memcpy(stream + 14, &w16, 2);  /* idx 5, idx 6 */
+        flic_decode8_bit_alternate_delta(rec);
+        memcpy(w, pixels, sizeof w);
+        CHECK(w[0] == 0xABCDu && w[1] == 0x1234u,
+              "the 8-chunk expands its pair word first");
+        CHECK(w[2] == 0x4455u,
+              "the remembered byte tails as ONE palette word (no fold)");
+
+        /* (d) the 4-chunk ends the walk without touching pixels. */
+        memset(stream, 0, sizeof stream);
+        memset(pixels, 0, sizeof pixels);
+        stream[6] = 2;
+        w16 = 0x4321u; memcpy(stream + 8, &w16, 2);   /* kind 4 */
+        flic_decode8_bit_alternate_delta(rec);
+        int touched = 0;
+        for (int i = 0; i != 64; ++i) {
+            if (pixels[i] != 0u) {
+                touched++;
+            }
+        }
+        CHECK(touched == 0, "the 4-chunk ends the walk (pixels ride)");
+
+        /* (e) the 0xC retire retargets the row by the whole-word subtract:
+         * 0 - 0xC111 = 0x3EEF, the row rides (row & 0xffff) * pitch. */
+        memset(stream, 0, sizeof stream);
+        memset(pixels, 0, sizeof pixels);
+        stream[6] = 1;
+        w16 = 0xC111u; memcpy(stream + 8, &w16, 2);   /* retire */
+        w16 = 1u;      memcpy(stream + 10, &w16, 2);  /* kind 0: one pair */
+        w16 = 0x0100u; memcpy(stream + 12, &w16, 2);  /* skip 0, run 1 */
+        w16 = 0x0605u; memcpy(stream + 14, &w16, 2);
+        flic_decode8_bit_alternate_delta(rec);
+        uint16_t q0 = 0u, q1 = 0u;
+        memcpy(&q0, pixels + 0x3eefu * 16u, 2);
+        memcpy(&q1, pixels + 0x3eefu * 16u + 2, 2);
+        CHECK(q0 == 0xABCDu && q1 == 0x1234u,
+              "the retire retargets the row (whole-word subtract)");
+        CHECK(flic_decode8_bit_alternate_delta(NULL) == 1,
+              "the null record answers 1 (deviation)");
+    }
+
+    /* The opcode-25/27 decode dispatchers (2026-10-25): the depth word
+     * +0x64c picks the family, the op +0x6d4 and the marker +0x644 pick
+     * the route. */
+    {
+        static unsigned char rec[0x1000];
+        static unsigned char stream[0x200];
+        static unsigned char pixels[0x100];
+        int16_t s16;
+        int w32;
+        uint16_t w16;
+
+        /* op-25: depth 8, op 0 -> the success stub (no work). */
+        memset(rec, 0, sizeof rec);
+        memset(stream, 0, sizeof stream);
+        memset(pixels, 0, sizeof pixels);
+        flic_frame_window_layout_install(rec, 0, 0, 4, stream, pixels, 0);
+        s16 = 8;
+        memcpy(rec + 0x64c, &s16, 2);
+        w32 = 0;
+        memcpy(rec + 0x6d4, &w32, 4);
+        CHECK(flic_opcode25_decode_dispatch(rec) == 1, "op-25 answers 1");
+        int touched = 0;
+        for (int i = 0; i != 64; ++i) {
+            if (pixels[i] != 0u) {
+                touched++;
+            }
+        }
+        CHECK(touched == 0, "the op-25 depth-8 op-0 route does no work");
+
+        /* op-25: depth 16, marker -0x50bd -> the keyframe walk runs. */
+        memset(rec, 0, sizeof rec);
+        memset(stream, 0, sizeof stream);
+        memset(pixels, 0, sizeof pixels);
+        flic_frame_window_layout_install(rec, 1, 1, 4, stream, pixels, 0);
+        s16 = 16;
+        memcpy(rec + 0x64c, &s16, 2);
+        s16 = (int16_t)0xaf42; /* -0x50bd */
+        memcpy(rec + 0x644, &s16, 2);
+        stream[7] = 1;               /* literal run of one */
+        w16 = 0x07C0u;
+        memcpy(stream + 8, &w16, 2); /* the green-field word (cursor + 1) */
+        flic_opcode25_decode_dispatch(rec);
+        uint16_t k0 = 0u;
+        memcpy(&k0, pixels, 2);
+        CHECK(k0 == 0x0F80u, "the marker-16 route runs the keyframe");
+
+        /* op-27: depth 8, op 4 -> the alternate delta walks. */
+        memset(rec, 0, sizeof rec);
+        memset(stream, 0, sizeof stream);
+        memset(pixels, 0, sizeof pixels);
+        flic_frame_window_layout_install(rec, 0, 0, 16, stream, pixels, 0);
+        s16 = 8;
+        memcpy(rec + 0x64c, &s16, 2);
+        w32 = 4;
+        memcpy(rec + 0x6d4, &w32, 4);
+        uint16_t t5 = 0xABCDu, t6 = 0x1234u;
+        memcpy(rec + 0x41c + 5 * 2, &t5, 2);
+        memcpy(rec + 0x41c + 6 * 2, &t6, 2);
+        stream[6] = 1;
+        w16 = 1u;      memcpy(stream + 8, &w16, 2);
+        w16 = 0x0100u; memcpy(stream + 10, &w16, 2); /* skip 0, run 1 */
+        w16 = 0x0605u; memcpy(stream + 12, &w16, 2);
+        CHECK(flic_opcode27_decode_dispatch(rec) == 1, "op-27 answers 1");
+        uint16_t d0 = 0u, d1 = 0u;
+        memcpy(&d0, pixels, 2);
+        memcpy(&d1, pixels + 2, 2);
+        CHECK(d0 == 0xABCDu && d1 == 0x1234u,
+              "the op-27 depth-8 op-4 route runs the alternate delta");
+
+        /* op-27: depth 16, marker 0x1234 -> the fallback (no writes, even
+         * when the delta shape would land). */
+        memset(rec, 0, sizeof rec);
+        memset(stream, 0, sizeof stream);
+        memset(pixels, 0, sizeof pixels);
+        flic_frame_window_layout_install(rec, 0, 0, 8, stream, pixels, 0);
+        s16 = 16;
+        memcpy(rec + 0x64c, &s16, 2);
+        s16 = 0x1234;
+        memcpy(rec + 0x644, &s16, 2);
+        stream[6] = 1;
+        w16 = 1u;      memcpy(stream + 8, &w16, 2);
+        w16 = 0x0100u; memcpy(stream + 10, &w16, 2);
+        w16 = 0x003Fu; memcpy(stream + 12, &w16, 2);
+        flic_opcode27_decode_dispatch(rec);
+        touched = 0;
+        for (int i = 0; i != 16; ++i) {
+            if (pixels[i] != 0u) {
+                touched++;
+            }
+        }
+        CHECK(touched == 0, "the 0x1234 marker falls back (the delta rides)");
+
+        /* op-27: depth 16, marker -0x50bd -> the delta walk runs. */
+        memset(rec, 0, sizeof rec);
+        memset(stream, 0, sizeof stream);
+        memset(pixels, 0, sizeof pixels);
+        flic_frame_window_layout_install(rec, 0, 0, 8, stream, pixels, 0);
+        s16 = 16;
+        memcpy(rec + 0x64c, &s16, 2);
+        s16 = (int16_t)0xaf42;
+        memcpy(rec + 0x644, &s16, 2);
+        stream[6] = 1;
+        w16 = 1u;      memcpy(stream + 8, &w16, 2);   /* kind 0: one pair */
+        w16 = 0x0100u; memcpy(stream + 10, &w16, 2);  /* skip 0, run 1 */
+        w16 = 0x003Fu; memcpy(stream + 12, &w16, 2);  /* expands to 0x005F */
+        flic_opcode27_decode_dispatch(rec);
+        uint16_t m0 = 0u;
+        memcpy(&m0, pixels, 2);
+        CHECK(m0 == 0x005Fu, "the marker-16 route runs the delta walk");
+
+        /* op-25 with the same 16-bit shape and no marker: the success
+         * stub answers without work. */
+        memset(rec, 0, sizeof rec);
+        memset(pixels, 0, sizeof pixels);
+        s16 = 16;
+        memcpy(rec + 0x64c, &s16, 2);
+        CHECK(flic_opcode25_decode_dispatch(rec) == 1, "op-25 answers 1");
+        touched = 0;
+        for (int i = 0; i != 16; ++i) {
+            if (pixels[i] != 0u) {
+                touched++;
+            }
+        }
+        CHECK(touched == 0, "the op-25 depth-16 fallback does no work");
+
+        CHECK(flic_opcode25_decode_dispatch(NULL) == 1,
+              "the op-25 dispatch answers 1 (deviation)");
+        CHECK(flic_opcode27_decode_dispatch(NULL) == 1,
+              "the op-27 dispatch answers 1 (deviation)");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "flic: %d failure(s)\n", s_failures);
         return 1;

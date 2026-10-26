@@ -313,8 +313,536 @@ void frontend_render_credits(const TextureSurface* font,
 void frontend_help_overlay(void* px, int pitch, int w, int h,
                            const char* text, const GameOptions* opts);
 
+/* CurrentSelectionContextGet / CurrentSelectionContextSet (FUN_00417fe0 /
+ * FUN_00417ff0, finding 376): get / set accessors over the corpus's
+ * current-selection-context global. Its corpus writers (the frontend
+ * state-change leaf — unported — and the menu-build leaf, modeled without
+ * storing) leave it unset, so the context answers NULL in port cases
+ * (documented deviation). */
+void* current_selection_context_get(void);
+void current_selection_context_set(void* context);
+
 #ifdef __cplusplus
 }
 #endif
+
+/* --- selection-state band (2026-10-24) ------------------------------------
+ * SelectionStateFlagClearBit0 / SelectionStateHandleGet (FUN_004181a0 /
+ * FUN_00419150, findings 380/478): the corpus's selection-state word
+ * (DAT_004dc650) — its bit-0 clear leaf and the mode/index-gated handle
+ * leaf over the strided handle tables (DAT_004db914/918, stride 0x1c) and
+ * the extra handle (DAT_004db934). No ported code feeds this band — the
+ * UI-mode resource positions / hit-test leaves that write the tables,
+ * hit index, and state bits are unported — so everything lands
+ * zero-initialized and the corpus's blind table indexing is guarded to a
+ * documented 16-entry window (deviation). The set/peek functions are the
+ * tests/diagnostics view (the message_active_count precedent); tests also
+ * inject through them. */
+void selection_state_flag_clear_bit0(void);
+uint32_t selection_state_handle_get(int index);
+
+uint32_t selection_state_flags_peek(void);
+
+/* SelectionModeStateSet (FUN_00418190, finding 478): the corpus stores the
+ * selection-mode word (DAT_004db8e8) beside the selection-state word this
+ * band models; no ported feeder, so zero-init storage with a peek. */
+void     selection_mode_state_set(uint32_t value);
+uint32_t selection_mode_state_peek(void);
+
+/* UiModeResourceBit40Get (FUN_004191f0, findings 443/474): bit 0x40 of the
+ * selection-state word — the same word the band above models (this leaf
+ * reads it through the corpus's mask). */
+uint32_t ui_mode_resource_bit40_get(void);
+void selection_state_flags_set(uint32_t flags);       /* diagnostics */
+int selection_state_hit_index_peek(void);
+void selection_state_hit_index_set(int index);        /* diagnostics */
+uint32_t selection_state_handle_extra_peek(void);
+void selection_state_handle_extra_set(uint32_t value);/* diagnostics */
+uint32_t selection_state_handle_slot_peek(int table, int index);
+void selection_state_handle_slot_set(int table, int index, uint32_t value);
+
+/* --- band-mode / timed-effect / positions (2026-10-24) ----------------------
+ * TimedEffectUpdateRequestSet (FUN_0046b770, findings 228/05): raises the
+ * update flag (bit 2) of a timed-effect entry. The band storage lives
+ * with the unported timed-effect update family — the port models each
+ * entry's flag word inside a guarded 16-entry window (documented bounds
+ * deviation), with a peek view for tests.
+ * UiModeTransitionRequest (FUN_00418fc0, finding 250): the band mode word
+ * (DAT_004dc64c, modeled with the selection-state band) transition —
+ * the zero-second argument arms mode 4, mode 4 hands over to the requested
+ * index (raising the band's bit 5), and a same-index request just raises
+ * the bit. The answer reports whether the requested index is now active.
+ * SelectionModeSetByIndex (FUN_00418f80, finding 250): the two-entry
+ * switch — raises the timed-effect update flags for the band modes.
+ * UiModeResourcePositionsApply (FUN_00419100, finding 250): walks the
+ * two-entry position table (the corpus writes the table from the
+ * unported help-window layout loader — zero-init statics here), and the
+ * reposition hook per found handle is the simtick-cited surface seam. */
+void timed_effect_update_request_set(int index);
+uint32_t timed_effect_flags_peek(int index);           /* diagnostics */
+
+/* TimedEffectCueRequestSet (FUN_0046b700): stores the cue request word in
+ * the entry's band slot (+0 in the corpus's 0x27c stride, modeled as the
+ * port's guarded cue window) and raises the entry's flag bits 0 and 1.
+ * Deviation: the corpus strides any index and the stride band blindly. */
+void timed_effect_cue_request_set(int index, uint32_t value);
+uint32_t timed_effect_cue_peek(int index);             /* port hook */
+
+/* TimedEffectPersistenceSet (FUN_0046b730): raises or drops the entry's
+ * flag-word bit 4 (the persistence bit). Deviation: the corpus strides
+ * the 0x27c-stride band word blindly. */
+void timed_effect_persistence_set(int index, int set);
+bool     ui_mode_transition_request(int index, int p2, int p3);
+int      band_mode_peek(void);                        /* diagnostics */
+void     band_mode_set(int mode);                     /* diagnostics */
+void     selection_mode_set_by_index(int index);
+void     ui_mode_resource_positions_apply(void);
+void     layout_position_set(int entry, int x, int y); /* diagnostics */
+int      layout_position_get(int entry, int* x, int* y);
+
+/* --- the front-end flow words (2026-10-24; findings 23/438) -----------------
+ * The corpus's five DAT_0055701c/20/24/48/4c menu-flow words, modeled as
+ * zero-initialized module statics per the unowned-global convention (the
+ * corpus's writers — OptionsLoadOrDefault's reset and the menu-callback
+ * bindings — are unported). At the corpus's load image all five read zero,
+ * and SaveSlotOpen/IsInGame test `!= -1`, so both report true exactly as
+ * the corpus does before the save/tutorial selections initialize (the
+ * assigned IsInGame label is a selection sentinel per finding 438).
+ * The port-side setter stands in for the unported callback bindings. */
+int save_slot_open(void);       /* FUN_00416d50: DAT_00557020 != -1 */
+int is_in_game(void);           /* FUN_00416d60: DAT_00557024 != -1 */
+int quit_menu_probe(void);      /* FUN_00416dd0: DAT_0055701c verbatim */
+int level_start_flag(void);     /* FUN_00416de0: DAT_00557048 != 0 */
+int menu_options_flag(void);    /* FUN_00416df0: DAT_0055704c != 0 */
+void frontend_flow_word_set(int which, int value); /* port-side setter */
+
+/* MainSimStateAdmissionPredicate (FUN_004191a0): the corpus's sim-admission
+ * gate — selection-state bits 1 and 2 set, bit 0x40 raised through the
+ * leaf above, and the message module's system-state word clear. All three
+ * models are the port's own (the same s_sel_state the selection band
+ * reads and the message_system_state model), so no new storage lands. */
+int main_sim_state_admission_predicate(void);
+
+/* MenuWipeEnd (FUN_00410440): clears the wipe flag's low two bits — the
+ * corpus's word DAT_005574f0, whose setter half (wipe start, setting 3)
+ * lives in the unported menu-wipe driver. Zero-init static with a peek
+ * stands in (deviation, documented in frontend.cpp). */
+void     menu_wipe_end(void);
+uint32_t menu_wipe_flags_peek(void);
+void     menu_wipe_flags_set(uint32_t flags); /* port hook */
+
+/* --- the selection-region band (2026-10-24; findings 06/250/478) ------------
+ * The corpus's selection/UI-state words beside the selection-state word
+ * the band above models: the coordinate quad (DAT_004ddd0c/10/14/18), the
+ * region parameters (DAT_004ddce0…cf0), the objective-selection pair
+ * (DAT_004ddccc/d0 — reset mirrors DAT_004ddce8) and the interaction
+ * timer + flag word (DAT_004de1ec/1f8). No ported feeder owns them, so
+ * everything lands zero-initialized (deviation) with port-side peeks.
+ * ModeFlagPairApplyIfBit2 (0x418800) applies the corpus's mode rule to
+ * the selection-state word this band already models. */
+void selection_coordinates_set(const uint32_t* pair, uint32_t x, uint32_t y);
+/* selection_coordinates_set (FUN_0041cce0): the pointer's two dwords go
+ * to the +0c/+10 slots; x/y arrive as integers and convert to floats for
+ * the +14/+18 slots — the corpus's int->float casts, faithful. */
+void selection_region_parameters_set(float a, float b, float c, float d,
+                                     float e);
+/* selection_region_parameters_set (FUN_0041e9d0): five region slots, the
+ * last scaled by 0.04 (the corpus's float multiply). */
+void objective_selection_state_reset(void);
+/* objective_selection_state_reset (FUN_0041a990): clears the selection
+ * word, mirrors the region's +08 float into the tracking word, and raises
+ * interaction-flag bits 0x84. */
+void interaction_timer_reset_and_flag_clear(void);
+/* interaction_timer_reset_and_flag_clear (FUN_0041ee60): restocks the
+ * interaction timer (25.0) and clears bit 0x800. */
+void mode_flag_pair_apply_if_bit2(int value);
+/* mode_flag_pair_apply_if_bit2 (FUN_00418800): with bit 2 of the
+ * selection word set, nonzero arms bits (1 set, 0 clear) and zero drops
+ * both. */
+float    selection_coordinates_peek(int which); /* 0..3 */
+void     selection_region_parameters_peek(float out[5]);
+uint32_t objective_selection_word_peek(void);   /* port hook */
+float    interaction_timer_peek(void);          /* port hook */
+uint32_t interaction_flags_peek(void);          /* port hook */
+
+/* CursorTileSelectionUpdateByType (FUN_0041cc80): the tile-selection pair
+ * ride (DAT_004ddcd8/cdc role) keyed by the selection kind: 0x49 installs
+ * the caller's pair, 5 and 0xe install the pair's fixed shapes, anything
+ * else rides. The corpus readers sit in the unported UI/hit-test bands, so
+ * the words ride own storage (the unowned-global deviation). */
+void cursor_tile_selection_update_by_type(int kind, uint32_t first,
+                                          uint32_t second);
+uint32_t cursor_tile_pair_peek(int which);      /* port hook: 0/1 */
+
+/* --- the cell-action permission window (2026-10-24; findings 250/419) --------
+ * CellActionPermissionGet (FUN_0041e990): while the message module's
+ * system-state word has bit 4 clear, every cell action is permitted (1);
+ * with bit 4 set the corpus reads its 300-entry level-permission table
+ * (dword row + column*15, zeroed at level start by the unported
+ * counters-clear path). The table lands as zero-init storage with
+ * port-side accessors standing in for the unported cell writer. */
+int cell_action_permission_get(int column, int row);
+void cell_action_permission_table_set(int index, uint32_t value);
+                                       /* port hook */
+uint32_t cell_action_permission_table_peek(int index);
+
+/* --- the menu-tick gate + status banner word (2026-10-24; findings 37/441) --
+ * MenuAudioTickIntervalReached (FUN_00412190): the corpus's menu tick asks
+ * the shared random draw whether the word is a multiple of 400. The port
+ * models the draw module-locally the way the overlay rng and the level/
+ * sound models do (same LCG constants, same 15-bit result).
+ * GlobalStateGet_004ddd1c (FUN_0041b9b0): the status-banner toggle word
+ * the corpus flips from its periodic status tick (finding 441) — that
+ * feeder is unported, so the word lands zero-initialized with port-side
+ * accessors standing in. */
+int menu_audio_tick_interval_reached(void); /* FUN_00412190 */
+uint32_t sim_status_banner_word_get(void);  /* FUN_0041b9b0 */
+
+/* PanelResourceLayoutStore (FUN_0045c340): the layout band store — both
+ * surface loads ride the load seam (NULL answers), the glyph load's
+ * transformed blit rides the blit seam when the load answered a surface,
+ * then the size/extra/position words land.
+ * PanelResourcePositionUpdateIfEnabled (FUN_0045c4b0): with the layout
+ * glyph present, the indexed pair entry plus the stored offsets ride to
+ * the blit seam, gated by the 0x50080c word and the status-banner word.
+ * Deviation: the corpus loads are hook boundaries answering NULL and the
+ * DAT words have no ported owner. */
+void panel_resource_layout_store(void* face_resource, uint32_t width,
+                                 uint32_t height, uint32_t extra,
+                                 void* glyph_resource, uint32_t position_x,
+                                 uint32_t position_y);
+void panel_resource_position_update(int index);
+void* panel_layout_surface_peek(void);    /* port hook */
+void* panel_layout_glyph_peek(void);      /* port hook */
+void  panel_layout_glyph_install(void* surface); /* test hook: the seam
+                                                   * stands-in (deviation) */
+uint32_t panel_layout_extra_peek(void);   /* port hook */
+float panel_layout_size_peek(int which);  /* port hook: 0/1 */
+float panel_layout_offset_peek(int which); /* port hook: 0/1 */
+void     sim_status_banner_word_set(uint32_t value); /* port hook */
+
+/* --- the UI/panel category-bounds band (2026-10-25) -------------------------
+ * The corpus's DAT_00500110 record band (stride 0x30, eighteen windows)
+ * carries the panel category rectangles and the per-entry draw bounds.
+ * PanelCategoryBoundsSet (FUN_0045a650): stores the rectangle (ints cast
+ * to floats), clears the record's word, and routes the pair behind — the
+ * first corner while the modeled flag word's bit 2 rides, else the second.
+ * The record's float fields have no ported owner — own storage; the pair/
+ * flag windows ride the crt.* windows already modeled for them.
+ * UiEntryBoundsGet (FUN_0045bf70): position plus derived size from the
+ * panel's installed draw-record block (stride 0x2c, far minus near). */
+void panel_category_bounds_set(int panel, int x1, int y1, int x2, int y2);
+                                        /* FUN_0045a650 */
+void panel_category_bounds_peek(int panel, float* out_x1, float* out_y1,
+                                float* out_x2, float* out_y2); /* port hook */
+void ui_entry_bounds_get(int panel, int item, float* out_bounds);
+                                        /* FUN_0045bf70 */
+
+/* PriorityImageSelectionStateUpdate (FUN_0045d300): the priority-image
+ * selection state pair (a sentinel-parked state word plus a flag word —
+ * no ported owner, own storage behind the install/peek hooks). */
+int priority_image_selection_state_update(int candidate, int gate, int skip);
+                                        /* FUN_0045d300 */
+void priority_image_state_set(int32_t state, uint32_t flags); /* port hook */
+void priority_image_state_peek(int32_t* state, uint32_t* flags);
+
+/* UiRenderRecordCreate (FUN_0045da90): the 0x3c UI render record — the
+ * source, its payload words copied from the caller's array, the extra
+ * argument, and the source's float at byte offset +0x10 (the corpus's
+ * float10 round trip is exact; the port copies). LP64-safe widened
+ * fields; the corpus's uninitialized record tail stays absent here.
+ * Paired with the heap module's bare free wrapper. */
+typedef struct UiRenderRecord {
+    void*     source;       /* corpus dword at +0 (widened, deviation) */
+    uint32_t  payload[4];   /* corpus dwords +4..+16, from the input array */
+    uint32_t  extra;        /* corpus dword +20 */
+    float     float_at_10;  /* corpus dword +24: source's float at +0x10 */
+} UiRenderRecord;
+UiRenderRecord* ui_render_record_create(void* source,
+                                        const uint32_t* payload,
+                                        uint32_t extra);       /* FUN_0045da90 */
+
+/* UiModeResourceBit40SetClear (FUN_00419200): with the first argument
+ * set the corpus takes the current bit 0x40 as its second argument,
+ * then installs the word with the bit set when that answer is clear and
+ * cleared when it is not — the bit-0x40 rule over the modeled selection
+ * word, faithful. */
+void ui_mode_resource_bit40_set_clear(int probe, uint32_t value);
+
+/* MenuWipeStart (FUN_004103f0, finding 37): when the wipe-arm word is
+ * set, stop the running wipe clock, raise the start/pending bits in the
+ * modeled wipe flags, stamp the clock word with the (float) tick, and
+ * submit sound alias 0x27. The arm/clock words have no ported owner —
+ * zero-init statics with port hooks (the corpus's timeGetTime stamp is
+ * modeled by the tick-word hook, a documented deviation). */
+void menu_wipe_start(void);             /* FUN_004103f0 */
+void menu_wipe_arm_set(uint32_t value);
+uint32_t menu_wipe_arm_peek(void);
+float menu_wipe_clock_peek(void);
+void menu_clock_millis_set(uint32_t millis); /* port tick hook */
+
+/* --- the panel texture-slot blit (2026-10-24; findings 250/252) --------------
+ * PanelTextureSlotsBlit (FUN_0045a9c0): walks the panel's draw-record block
+ * (stride 0x2c, count `panel_draw_count_peek`) with the panel's view-offset
+ * pair added to each record's position, picks the texture slot the flag
+ * word's bits 2/4/8/0x10/0x40 select — with the status-banner word as the
+ * corpus's alternate-look gate — and blits through the modeled surface
+ * seam. Bit 0x10 hides the item; the picker otherwise consults the banner
+ * word (`sim_status_banner_word_get`) exactly where the corpus does. */
+void panel_texture_slots_blit(int panel); /* FUN_0045a9c0 */
+
+/* TimedEffectTimestampReset (FUN_0046b7a0): stamps the corpus's global tick
+ * word into the band entry's time field (stride-0x27c table — the port keeps
+ * the fields the setters touch side by side). The corpus tick word
+ * (DAT_0054bf3c) belongs to the unported update family, so it lands as a
+ * zero-init module static with a set hook. Out-of-range indices are guarded
+ * (documented deviation: the corpus strides blindly). */
+void    timed_effect_timestamp_reset(int index);  /* FUN_0046b7a0 */
+void    timed_effect_tick_word_set(uint32_t tick); /* port hook */
+uint32_t timed_effect_tick_word_peek(void);
+uint32_t timed_effect_time_peek(int index);        /* diagnostics */
+/* ScreenRightEdgeCacheRefresh (FUN_0041a290): re-reads the index-0 text
+ * metrics pair through the ported getter and caches x - y into the right-edge
+ * word. The corpus's reader is the unported layout band, so the cache lands
+ * as a module static with a peek hook. */
+void     screen_right_edge_cache_refresh(void); /* FUN_0041a290 */
+uint32_t screen_right_edge_cache_peek(void);    /* port hook */
+/* BitmapFontGlyphMeasureWidth (FUN_0047a520): runs the glyph layout lane
+ * with the draw flag clear and zero coordinates — the corpus lane recomputes
+ * the measure float and returns void, changing nothing observable. Deviation:
+ * the port re-derives glyph advances inside the render lane, so the wrapper
+ * lands as the bounds-guarded call-through. */
+void bitmap_font_glyph_measure_width(void* font, unsigned char glyph);
+                                                /* FUN_0047a520 */
+
+/* --- panel resource + scroll leaf band (2026-10-24; findings 386/439/436/
+ * 444/372) -----------------------------------------------------------------
+ * PanelResourcePositionApplyIfEnabled (FUN_00459fd0): when the panel enable
+ *   word's bit 0x10 is raised, the resource rides the surface blit seam at
+ *   the supplied position plus the bubble offsets (words unowned; statics).
+ * PanelResourceHandleAndDimensionsStore (FUN_0045c520): the surface-load
+ *   seam's return lands as the panel handle word (the port has no surface
+ *   layer, so the seam answers NULL — the view object-layer precedent),
+ *   then the dimensions store.
+ * ScrollOffsetFromCursorUpdate (FUN_0041a250): the panel UI record's state
+ *   pair difference clamps at zero, lands in metrics slot 0 through the
+ *   ported pair setter, and refreshes the right-edge cache.
+ * All seams ride recorded hooks (the bobbin-drop precedent). */
+void panel_resource_position_apply_if_enabled(void* resource, int x, int y);
+                                                /* FUN_00459fd0 */
+/* IndexedPanelResourcePositionApply (FUN_00459f50): with the panel enable
+ * word's bit 0x1 raised, the record's screen float rides the corpus's two
+ * float constant products through the x87 shape (modeled as exact double
+ * products, truncated toward zero) to pick one of five panel resource
+ * slots (the corpus's unsigned clamp puts every out-of-range answer,
+ * negatives included, on slot 4) and a non-NULL slot rides the surface
+ * blit seam at the position plus the offset pair. Slots and offsets are
+ * own storage installed through the hooks below (the corpus
+ * position-config loaders are recorded seams); the port reads the record
+ * float's address instead of the corpus's blind record+0x344 read
+ * (deviation). */
+void indexed_panel_resource_position_apply(const float* record_position,
+                                           int x, int y);
+void panel_resource_handle_and_dimensions_store(void* resource, uint32_t w,
+                                                uint32_t h, uint32_t extra);
+                                                /* FUN_0045c520 */
+void scroll_offset_from_cursor_update(void);    /* FUN_0041a250 */
+void     panel_enable_word_set(uint32_t word);  /* port hook */
+uint32_t panel_enable_word_peek(void);          /* port hook */
+void     bubble_offsets_set(float x, float y);  /* port hook */
+void     panel_surface_handle_set(void* h);     /* port hook */
+void*    panel_surface_handle_peek(void);       /* port hook */
+void     panel_dimensions_peek(float* w, float* h, uint32_t* extra);
+                                                /* port hook */
+void     panel_ui_record_set(void* record);     /* port hook */
+void*    panel_ui_record_peek(void);            /* port hook */
+void     panel_text_slot_set(void* slot);       /* port hook (DAT_005007dc) */
+void*    panel_text_slot_peek(void);            /* port hook */
+void     panel_position_slot_set(int which, void* res);  /* port hook */
+void*    panel_position_slot_peek(int which);            /* port hook */
+void     panel_position_offsets_set(float x, float y);   /* port hook */
+
+/* InterfaceButtonImagesLoad (FUN_0041b270): load the two button images
+ * through the surface-load seam and call the transform seam per non-zero
+ * handle. The peek hook reads the DAT window roles (own storage). */
+void     interface_button_images_load(const char* left_path,
+                                      const char* right_path);
+uint32_t interface_button_surface_peek(int which);   /* port hook */
+
+/* EncyclopediaConfigFilesOpen (FUN_0040e490): walk the catalog name-table
+ * groups (the corpus's counts 0x27c/0x280/0x284/0x288 ride the entity.*
+ * window hooks), join `root::Encyclopedia::<name>`, read the config's
+ * value token, and open the file the value names; the four handle windows
+ * reallocate through the heap seam (the corpus leaks the superseded
+ * arrays, and so does the port). The PowerCrystal/Ore singletons keep
+ * their last handle across a config miss (the corpus's stale-global lane).
+ * Deviations: the name tables and counts ride own storage (the corpus's
+ * catalog loader is unported), NULL config/value answers where the corpus
+ * strides, and the "r" mode maps to the port's AUTO open. */
+void encyclopedia_config_files_open(BlockFile* cfg, const char* root_path);
+void* encyclopedia_file_window_peek(int group);      /* port hook, 0..3 */
+void* encyclopedia_crystal_file_peek(void);          /* port hook */
+void* encyclopedia_ore_file_peek(void);              /* port hook */
+
+/* ThreeSurfaceResourcesLoadAndInitialize (FUN_0045bfb0): the same fold
+ * for three paths, with the corpus's slot quirk: param_2 lands at peek
+ * index 2 and param_3 at index 1. */
+void     three_surface_resources_load(const char* first, const char* second,
+                                      const char* third);
+uint32_t advisor_bar_surface_peek(int which);        /* port hook */
+
+/* AdvisorProgressBarFillDraw (FUN_0045c3f0): gate on the layout face and
+ * a positive percent, clamp at 100, and ride the seam with the row pair
+ * (float bits) offset by the layout size pair and a {fill, face+8} size
+ * witness; fill = extra * 0.01 * percent. Deviation: the face+8 read
+ * needs panel_layout_surface_install (the load seam answers NULL). */
+void     advisor_progress_bar_fill_draw(int row, float percent);
+
+/* MenuSurfaceBlitScaled (FUN_00412af0): side-selectable face blit — flag
+ * set takes the plain destination lane, unset the scaled lane through the
+ * rect witness {-pan, -pan, 640, 480} at the origin. Own-storage record
+ * window + plane-pan window (the corpus writers are per-submenu pan,
+ * modeled apart in FeSubmenu.scroll). */
+void     menu_surface_blit_scaled(int percent_side);
+void     menu_blit_record_write(int index, uint32_t value);
+uint32_t menu_blit_record_read(int index);
+void     menu_blit_record_clear(void);
+void     menu_plane_pan_set(float x, float y);
+float    menu_plane_pan_peek(int axis);
+
+/* PanelLayoutSurfaceInstall (port hook): stands in for the loaded face
+ * record so the progress-bar fill's gate and face+8 read exercise. */
+void     panel_layout_surface_install(void* surface);  /* test hook */
+
+/* ScreenCoordNormalizeInit (FUN_0045d8b0): one pass over the corpus's
+ * screen-normalization band — 90 color constants land scaled by the
+ * 1/255 float constant, two stride-16 lanes fill 20 unit cells each,
+ * seven coordinate-pair rows (primary + mirror) seed from the corpus's
+ * constants and ride the display-dimension pair scaled by the 1/640 /
+ * 1/480 float constants, the row-count word books 7, and two sentinel
+ * words take all-bits. The band is own storage (its corpus owner is
+ * unported) seeded through the reset hook; the peek hooks read it.
+ * Quirks pinned: the last primary pair stays zero while its mirror
+ * takes 320/40, and the first mirror row's pair differs from the
+ * primary's. */
+void     screen_coord_normalize_init(void);               /* FUN_0045d8b0 */
+void     screen_coord_normalize_reset(void);              /* port hook */
+float    screen_coord_normalize_color_peek(int index);    /* port hook */
+float    screen_coord_normalize_pair_peek(int mirror, int row,
+                                          int axis);      /* port hook */
+float    screen_coord_normalize_cell_peek(int mirror, int index);
+                                                          /* port hook */
+uint32_t screen_coord_normalize_rows_peek(void);          /* port hook */
+void     panel_seam_reset(void);                /* port hook */
+int      panel_seam_calls(void);                /* port hook */
+void     panel_seam_last(void** out_res, float* out_x, float* out_y);
+                                                /* port hook */
+
+/* ActiveObjectList (FUN_00416e00, findings 371/378): the active-object word
+ * selector — in-game answers the DAT_00556fd0 word, otherwise the
+ * DAT_00556fe4 word. Neither corpus word has a ported owner, so both land
+ * here as zero-init statics; the selector returns the live address. */
+int* active_object_list_word(void); /* FUN_00416e00 */
+
+/* --- the sav visited-table band (2026-10-25) -------------------------------
+ * The corpus's two "visited" tables run parallel to the modeled
+ * active-object count words (out-of-game: DAT_00556fe4 count behind
+ * DAT_00556ff0/ff4 item/word arrays; in-game: DAT_00556fd0 count behind
+ * DAT_00556fdc/e0). Their installers live in the unported sav-tree
+ * loaders, so the tables ride zero-init own storage behind the install/
+ * peek hooks below (the unowned-global convention).
+ * SavClearVisited (FUN_00416e70): walk both bands, out-of-game first,
+ * clearing every non-null entry record's +0x10 flag word and the word
+ * word alongside. Deviations: entry windows and count bounds guarded,
+ * records touched through the modeled +0x10 word. */
+void sav_clear_visited(void); /* FUN_00416e70 */
+void sav_visited_entry_set(int which, int index, void* record,
+                           uint32_t word);             /* port hook */
+void sav_visited_entry_peek(int which, int index, void** out_record,
+                            uint32_t* out_word);       /* port hook */
+
+/* MenuListFindName (FUN_00414c90): walks the corpus's list header
+ * {record-array pointer @+0, count @+4} and answers the index of the
+ * first non-NULL entry whose name case-fold-equals the target (the
+ * corpus's __strcmpi shape); misses and non-positive counts answer -1.
+ * Deviations: the header rides explicit arguments (the header struct has
+ * no ported owner) and the entry name pointers are guarded. */
+int menu_list_find_name(void* const* entries, int count,
+                        const char* name);                /* FUN_00414c90 */
+
+/* --- screen-effect release (2026-10-24; findings 434/438) ------------------
+ * ScreenEffectFlagsClearAndRelease (FUN_0040a3d0): walks the ten screen-
+ *   effect entries (the corpus's DAT_004b8aa0 table stride) clearing active
+ *   flag bits and sending each entry's handle through the visibility seam
+ *   with mode 1. The table has no ported owner; it lands here as zero-init
+ *   statics and the seam rides a recorded hook (the bobbin-drop precedent).
+ * Deviation: the corpus blind-calls the seam even for cleared handle slots. */
+void screen_effect_flags_clear_and_release(void);  /* FUN_0040a3d0 */
+void  screen_effect_entry_set(int index, void* handle, uint32_t flags);
+                                                /* port hook */
+void* screen_effect_handle_peek(int index);       /* port hook */
+uint32_t screen_effect_flag_peek(int index);      /* port hook */
+void  screen_effect_seam_reset(void);             /* port hook */
+int   screen_effect_seam_calls(void);             /* port hook */
+void  screen_effect_seam_last(void** out_handle, int* out_flag);
+                                                /* port hook */
+
+/* StoreSelectedMapCoordinate (FUN_0041ea50): the selection-coordinate
+ * store. A fresh kind — or the tracked word changing under the interaction
+ * flag's bit 7 — takes the switch branch: bit 8 raises, bit 7 drops, and
+ * the alias-0x16 cue fires. The tracked case refreshes the word, stores the
+ * pair into the live slots through the non-NULL path, and always re-arms
+ * the kind word.
+ * Deviations: the corpus strides its DAT band blindly (the port's own
+ * storage, the other owners unported); the pair rides as two words. */
+void store_selected_map_coordinate(int kind, const uint32_t coord[2]);
+                                                /* FUN_0041ea50 */
+uint32_t map_store_pair_word(int which);        /* port hook: 0/1 live pair */
+uint32_t map_store_last_word(int which);        /* port hook: 0/1 last pair */
+uint32_t map_store_kind_peek(void);             /* port hook */
+
+struct GameContext;
+
+/* TextLayoutOffsetForCentering (FUN_00411320): the centered-widget pointer
+ * test. With the center flag raised the widget rect shifts left by half
+ * its width before the closed-edge hit test runs; the corpus discards the
+ * hit result in the caller's EAX, so the port returns it (deviation). */
+int text_layout_offset_for_centering(int x, int y, int rect_x, int rect_y,
+                                     int rect_w, int rect_h, int center);
+                                                /* FUN_00411320 */
+
+/* SelectionEntityCodeResolve (FUN_0041b9c0): the selection entity code.
+ * While the interaction word's bit 8 stands with bit 7 clear, the stored
+ * code answers unchanged; otherwise the first selected record's high flag
+ * bit picks 0x22 (raised) or 0x23 (clear).
+ * Deviations: the corpus strides the interaction word and the context
+ * global blindly (the port threads the state block); a NULL first
+ * selection answers 0x23 where the corpus dereferences. */
+int selection_entity_code_resolve(const struct GameContext* ctx,
+                                  int* code_out); /* FUN_0041b9c0 */
+
+/* ScrollRectResourceRecordCreate (FUN_00463770): allocate a 0x1c-float
+ * rect record, fill it from the quad (x, y, x+dx, y+dy, then the seam-
+ * derived dims where a texture handle rides), and store it in the view
+ * window's rect half — A for mode 0, B otherwise (the corpus's param*8
+ * stride maps to the port's view slots). Deviations: the window guards
+ * and the surface-load seam answering NULL (the panel-load precedent),
+ * so the dim halves stay zero. */
+void scroll_rect_resource_record_create(int view, int mode,
+                                        const float* quad, int tex_a,
+                                        int tex_b);
+
+/* --- overlay animation float (2026-10-25) ---------------------------------
+ * UiOverlayAnimationAdvance (FUN_0045c580) steps the DAT_00500820
+ * animation float through the corpus's convergence loop: mode 0 decays
+ * by `(v - 0.05) * 20 * 0.05263158` per step, nonzero mode eases toward
+ * 1.0 by `(1 - v) * 0.05` per step, and the negative guard lands after
+ * the loop (clamping afterwards, not during). The overlay band is
+ * reference state; the port models the animated float as guarded own
+ * storage with install/peek hooks (the unowned-global deviation), and
+ * the corpus's x87 float10 storage lands as plain float (deviation). */
+void ui_overlay_animation_advance(int mode, int steps); /* FUN_0045c580 */
+float overlay_anim_float_peek(void);           /* port hook */
+void  overlay_anim_float_install(float value); /* port hook */
 
 #endif /* LEGORRR_GAME_FRONTEND_HPP */

@@ -5,7 +5,10 @@
 
 #include "game.hpp"
 #include "gods98/block.hpp"
+#include "gods98/crt.hpp"
+#include "gods98/engine.hpp"
 #include "gods98/resource.hpp"
+#include "frontend.hpp"
 #include "level.hpp"
 #include "savegame.hpp"
 #include "util.hpp"
@@ -221,6 +224,9 @@ int save_write_slot(GameContext* ctx, int slot)
     return ok;
 }
 
+/* SavCommit (FUN_00417fc0): the corpus commits the selected slot by
+ * writing the open slot context — DAT_005574d0's slot through the
+ * port's active-slot model, bootstrap-and-write faithful. */
 void save_commit(GameContext* ctx)
 {
     if (ctx == NULL || ctx->save_slot < 0) {
@@ -351,6 +357,7 @@ static int save_records_grow(GameContext* ctx, int index)
     return 1;
 }
 
+/* SavWriteRecord (FUN_00417f40) — see savegame.hpp. */
 int save_write_record(GameContext* ctx, int index, const uint8_t* blob)
 {
     if (ctx == NULL || index < 0 || blob == NULL
@@ -455,6 +462,9 @@ void checkpoint_blob_build(GameContext* ctx)
     ctx->checkpoint_blob = blob;
 }
 
+/* CheckpointBlobFree (FUN_004601e0, finding 08): frees the blob. The
+ * corpus frees its global and LEAVES the dangling pointer; the port
+ * nulls it (documented deviation — port-owned storage). */
 void checkpoint_blob_free(GameContext* ctx)
 {
     if (ctx != NULL) {
@@ -702,4 +712,378 @@ int osf_read_path(GameContext* ctx, int slot)
     char path[280];
     save_slot_path(ctx, path, sizeof(path), slot, "osf");
     return osf_read(ctx, path);
+}
+
+/* --- the save-slot band (2026-10-24; findings 21/408) ---------------------- */
+
+void save_slot_selection_clear(GameContext* ctx)
+{
+    if (ctx != NULL) {
+        ctx->save_slot = -1; /* the corpus's 0xffffffff sentinel */
+    }
+}
+
+void* sav_slot_ctx(GameContext* ctx, int slot)
+{
+    if (ctx == NULL) {
+        return NULL; /* deviation: the corpus reads its global blindly */
+    }
+    if (slot < 0 || slot >= SAVE_SLOTS) {
+        return NULL; /* the corpus's bounds test, faithful */
+    }
+    /* Deviation: the port keeps one active-slot context (the corpus builds
+     * the per-slot contexts inside the unported SavReadSlot/SavBuildCtx
+     * flow), so the valid index answers the port's context block. */
+    return ctx;
+}
+
+/* --- the save-side DAT accessor band (see savegame.hpp) --------------------- */
+int osf_read_dirty_flag_get(const GameContext* ctx)
+{
+    return ctx != NULL ? ctx->osf_dirty : 0;
+}
+
+void* checkpoint_blob_get(const GameContext* ctx)
+{
+    return ctx != NULL ? ctx->checkpoint_blob : NULL;
+}
+
+/* SaveStateEventContextSet (FUN_00418110) — zero-init module static per
+ * the unowned-global convention (the corpus's word is DAT_0055781c). */
+static uint32_t s_save_state_event_context = 0u;
+
+void save_state_event_context_set(uint32_t value)
+{
+    s_save_state_event_context = value;
+}
+
+uint32_t save_state_event_context_peek(void)
+{
+    return s_save_state_event_context;
+}
+
+/* SavBuildCtx (FUN_00417e70): slot-open probe through the port's models. */
+void* sav_build_ctx(GameContext* ctx)
+{
+    if (save_slot_get(ctx) == -1) {
+        return NULL;
+    }
+    return sav_slot_ctx(ctx, save_slot_get(ctx));
+}
+
+/* SavRecordPtr (FUN_00417f90) — see savegame.hpp. */
+void* sav_record_ptr(GameContext* ctx, int index)
+{
+    if (sav_build_ctx(ctx) == NULL || index < 0
+        || index >= ctx->record_count) {
+        return NULL; /* the corpus's zero answer */
+    }
+    return (char*)ctx->records + (size_t)index * SAVE_RECORD_SIZE + 4;
+}
+
+/* SelectedLevelStartObjectUpdate (FUN_00460200) — see savegame.hpp. */
+void selected_level_start_object_update(GameContext* ctx)
+{
+    if (ctx == NULL || ctx->level == NULL) {
+        return; /* corpus: no level bound, nothing reads */
+    }
+    (void)checkpoint_blob_get(ctx); /* the corpus keeps no result */
+}
+
+/* --- the generic list window band (see savegame.hpp) ----------------------
+ * Shared wide-key scan: each entry slot's key rides as little-endian
+ * 16-bit units; a unit whose LOW bytes agree on zero terminates the key
+ * (pinned: the terminating unit's high byte is never compared). */
+static int list_wide_key_match(const void* node_key, const void* probe_key)
+{
+    const unsigned char* a = (const unsigned char*)node_key;
+    const unsigned char* b = (const unsigned char*)probe_key;
+    for (size_t off = 0;; off += 2) {
+        if (a[off] != b[off]) {
+            return 0;
+        }
+        if (a[off] == 0u) {
+            return 1; /* low-byte terminator */
+        }
+        if (a[off + 1] != b[off + 1]) {
+            return 0;
+        }
+    }
+}
+
+static int list_wide_scan(const SavListWindow* win, const void* wide_key)
+{
+    if (win == NULL || win->count < 1 || wide_key == NULL) {
+        return -1; /* deviation: the corpus strides the window blindly */
+    }
+    for (int i = 0; i < win->count; ++i) {
+        const void* entry = (win->entries != NULL) ? win->entries[i] : NULL;
+        if (entry != NULL && list_wide_key_match(entry, wide_key) != 0) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+int list_find_name(const SavListWindow* win, const char* name)
+{
+    if (win == NULL || win->count < 1 || name == NULL
+        || win->entries == NULL) {
+        return -1; /* deviation: the corpus strides the entries blindly */
+    }
+    for (int i = 0; i < win->count; ++i) {
+        const char* entry = (const char*)win->entries[i];
+        if (entry != NULL && strcasecmp_lite(entry, name) == 0) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+void list_add_name(SavListWindow* win, const void* wide_key, void* value)
+{
+    const int i = list_wide_scan(win, wide_key);
+    if (i >= 0 && win->values_b != NULL) {
+        win->values_b[i] = value; /* corpus: blind store through + 16 */
+    }
+}
+
+void* list_has_item(const SavListWindow* win, const void* wide_key)
+{
+    const int i = list_wide_scan(win, wide_key);
+    if (i < 0 || win->values_b == NULL) {
+        return NULL;
+    }
+    return win->values_b[i];
+}
+
+void list_set_node(SavListWindow* win, const void* wide_key, void* value)
+{
+    const int i = list_wide_scan(win, wide_key);
+    if (i >= 0 && win->values_a != NULL) {
+        win->values_a[i] = value; /* corpus: blind store through + 12 */
+    }
+}
+
+void* list_get_node(const SavListWindow* win, const void* wide_key)
+{
+    const int i = list_wide_scan(win, wide_key);
+    if (i < 0 || win->values_a == NULL) {
+        return NULL;
+    }
+    return win->values_a[i];
+}
+
+/* SavTreeWalk (FUN_004171c0) — see savegame.hpp. */
+int sav_tree_walk(void* node, sav_tree_visit visit, void* user)
+{
+    SavTreeNode* n = (SavTreeNode*)node;
+    if (n == NULL || n->visited != 0u) {
+        return 0;
+    }
+    n->visited = 1u; /* the corpus's flag store, blind in the original */
+    if (visit != NULL && visit(node, user) != 0) {
+        return 1; /* deviation: the corpus strides the callback blindly */
+    }
+    if (n->children != NULL) {
+        void** kids = (void**)n->children; /* widened slots */
+        for (uint32_t i = 0; i < n->count; ++i) {
+            if (sav_tree_walk(kids[i], visit, user) != 0) {
+                return 1;
+            }
+        }
+        return 0;
+    }
+    return 0;
+}
+
+/* SavTreeWalk2 (FUN_004172f0) — see savegame.hpp. */
+void sav_tree_walk2(void* node, SavTree2State* state, int carry,
+                    const EngineContext* eng)
+{
+    SavTreeNode* n = (SavTreeNode*)node;
+    if (n == NULL || n->visited != 0u) {
+        return;
+    }
+    const int extended = 1 < engine_app_mode_get(eng)
+                      || (engine_feature_word_peek() & 0x20000u) != 0u;
+    if (extended) {
+        state->flag = 0u;
+    }
+    n->visited = 1u;
+    uint32_t need;
+    if (state->window_base == NULL || extended) {
+        need = state->flag == 0u ? 1u : 0u;
+    } else {
+        const char* w = (const char*)state->window_base
+                      + (ptrdiff_t)((int32_t)n->window) * 0x3190;
+        uint32_t word = 0u;
+        __builtin_memcpy(&word, w, sizeof word);
+        need = word & 1u;
+    }
+    if (state->blocks != NULL && *state->blocks != NULL) {
+        char* blk = (char*)*state->blocks + (size_t)state->index * 0x20;
+        uint32_t flags = 0u;
+        uint32_t probe = 0u;
+        __builtin_memcpy(&flags, blk, sizeof flags);
+        __builtin_memcpy(&probe, blk + 0x1c, sizeof probe);
+        flags = (need == 0u && carry == 0 && probe == 0u)
+                    ? (flags & ~4u)
+                    : (flags | 4u);
+        __builtin_memcpy(blk, &flags, sizeof flags);
+    }
+    state->index = state->index + 1u; /* the corpus advances blindly */
+    if (n->children != NULL) {
+        void** kids = (void**)n->children; /* widened slots */
+        for (uint32_t i = 0; i < n->count; ++i) {
+            sav_tree_walk2(kids[i], state, need != 0u ? 1 : 0, eng);
+        }
+    }
+}
+
+/* SavTreeLoad (FUN_004173e0) — see savegame.hpp. */
+void sav_tree_load(void* node, void* window_base, void** blocks,
+                   uint32_t window, uint32_t flag,
+                   const EngineContext* eng)
+{
+    SavTree2State st; /* the corpus's five stack dwords */
+    st.window_base = window_base;
+    st.window = window;
+    st.blocks = blocks;
+    st.index = 0u;
+    st.flag = flag;
+    sav_tree_walk2(node, &st, 1, eng);
+    sav_clear_visited();
+}
+
+/* --- the checkpoint progress fold band (see savegame.hpp) ------------------ */
+
+static float blob_float_get(const char* blob, size_t off)
+{
+    float v = 0.0f;
+    __builtin_memcpy(&v, blob + off, sizeof v);
+    return v;
+}
+
+static void blob_float_put(char* blob, size_t off, float v)
+{
+    __builtin_memcpy(blob + off, &v, sizeof v);
+}
+
+/* Corpus fold shape: percent = 100 / den * num rides through only when
+ * the denominator reads non-zero, then clamps after the (invisible)
+ * first store. A zero denominator answers 100.0 whatever num holds. */
+static float blob_percent_fold(const char* blob, size_t den, size_t num)
+{
+    float v = 100.0f;
+    const float d = blob_float_get(blob, den);
+    if (d != 0.0f) {
+        v = (100.0f / d) * blob_float_get(blob, num);
+    }
+    if (100.0f < v) {
+        v = 100.0f;
+    }
+    return v;
+}
+
+/* Corpus count-up: every round adds 100.0 to the +0x2fac sum (the
+ * corpus's subtracted negative — an addition) and the window's last
+ * folded percent to the +0x2fb0 carry; the guard float is re-read every
+ * round and the counter rides as a converted uint. */
+static void blob_count_up(char* blob, size_t guard_off, size_t add_off)
+{
+    for (uint32_t n = 0u; (float)n < blob_float_get(blob, guard_off); ++n) {
+        blob_float_put(blob, 0x2fac, blob_float_get(blob, 0x2fac) + 100.0f);
+        blob_float_put(blob, 0x2fb0,
+                       blob_float_get(blob, add_off)
+                           + blob_float_get(blob, 0x2fb0));
+    }
+}
+
+int checkpoint_blob_task_progress_recalculate(GameContext* ctx)
+{
+    if (ctx == NULL || ctx->level == NULL) {
+        return 0; /* corpus: the CurrentLevelGet guard; deviation: threaded */
+    }
+    char* blob = (char*)checkpoint_blob_get(ctx);
+    if (blob == NULL) {
+        return 0; /* corpus: the blob getter guard */
+    }
+    blob_float_put(blob, 0x2fb0, 0.0f);
+    blob_float_put(blob, 0x2fac, 0.0f);
+    blob_float_put(blob, 0x2fb4, 0.0f);
+    blob_float_put(blob, 0x1d24, blob_percent_fold(blob, 0x1d1c, 0x1d20));
+    blob_float_put(blob, 0x1f34, blob_percent_fold(blob, 0x1f2c, 0x1f30));
+    blob_float_put(blob, 0x2144, blob_percent_fold(blob, 0x213c, 0x2140));
+    blob_float_put(blob, 0x1b0c, blob_percent_fold(blob, 0x1b04, 0x1b08));
+    blob_float_put(blob, 0x2b94, blob_percent_fold(blob, 0x2b8c, 0x2b90));
+    blob_float_put(blob, 0x2354, blob_percent_fold(blob, 0x234c, 0x2350));
+    blob_float_put(blob, 0x2774, blob_percent_fold(blob, 0x276c, 0x2770));
+    blob_float_put(blob, 0x2984, blob_percent_fold(blob, 0x297c, 0x2980));
+    blob_count_up(blob, 0x2760, 0x2774);
+    blob_count_up(blob, 0x1d10, 0x1d24);
+    blob_count_up(blob, 0x2b80, 0x2b94);
+    blob_count_up(blob, 0x2340, 0x2354);
+    blob_count_up(blob, 0x2550, 0x2564); /* the raw-window twin */
+    if (0.0f < blob_float_get(blob, 0x2d90)) {
+        /* Corpus shape: this loop keeps both accumulators in registers
+         * and writes them back only when it ends. */
+        float sum = blob_float_get(blob, 0x2fac);
+        float carry = blob_float_get(blob, 0x2fb0);
+        const float each = 100.0f - blob_float_get(blob, 0x2da4);
+        for (uint32_t n = 0u;
+             (float)n < blob_float_get(blob, 0x2d90); ++n) {
+            sum = sum + 100.0f;
+            carry = each + carry;
+        }
+        blob_float_put(blob, 0x2fb0, carry);
+        blob_float_put(blob, 0x2fac, sum);
+    }
+    blob_count_up(blob, 0x2970, 0x2984);
+    if (blob_float_get(blob, 0x2fac) < blob_float_get(blob, 0x2fb0)) {
+        blob_float_put(blob, 0x2fb0, blob_float_get(blob, 0x2fac));
+    }
+    if (blob_float_get(blob, 0x2fb0) < 0.0f) {
+        blob_float_put(blob, 0x2fb0, 0.0f);
+    }
+    float v = blob_percent_fold(blob, 0x2fac, 0x2fb0);
+    blob_float_put(blob, 0x2fb4, v);
+    if (100.0f < v) {
+        v = 100.0f;
+    }
+    blob_float_put(blob, 0x2fb4, v);
+    uint32_t bonus = 0u; /* the corpus's converted uint word */
+    __builtin_memcpy(&bonus, blob + 0x1c0, sizeof bonus);
+    v = (float)bonus + blob_float_get(blob, 0x2fb4);
+    blob_float_put(blob, 0x2fb4, v);
+    if (100.0f < v) {
+        v = 100.0f;
+    }
+    blob_float_put(blob, 0x2fb4, v);
+    return 1;
+}
+
+/* SavRefreshSlots (2026-10-25) — FUN_00417df0. Walk the six slot
+ * contexts so every slot file exists. With the engine feature word's
+ * bit 0x400 raised the corpus writes the slot fresh before reading it
+ * back; otherwise it reads (and re-reads once when the first attempt
+ * fails). Deviations: the port's single active-slot context stands in
+ * for the corpus's six DAT_00557080 blocks (the SavSlotCtx precedent),
+ * the null context is guarded, and the corpus reads its context-pointer
+ * block blind. */
+void sav_refresh_slots(GameContext* ctx)
+{
+    if (ctx == NULL) {
+        return; /* deviation: the corpus strides blindly */
+    }
+    for (int slot = 0; slot < SAVE_SLOTS; ++slot) {
+        const int write_first =
+            (engine_feature_word_peek() & 0x400u) != 0u;
+        if (write_first) {
+            (void)save_write_slot(ctx, slot);
+            (void)save_read_slot(ctx, slot, 0);
+        } else if (save_read_slot(ctx, slot, 0) == 0) {
+            (void)save_read_slot(ctx, slot, 0);
+        }
+    }
 }

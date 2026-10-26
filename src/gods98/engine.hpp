@@ -57,6 +57,7 @@ typedef struct EngineState {
     uint32_t air_beat;   /* +0x1fc air-supply beat counter */
     uint32_t air_prev;   /* +0x204 previous air value */
     uint32_t quota_278;  /* +0x278 compared against level_time (finding 03) */
+    uint32_t focus_gate_27c; /* +0x27c focus-scroll commit gate (CameraFocusScrollScaleCommit) */
 
     /* Move-list / grid fields used by the camera cluster (camera.hpp). */
     void*    move_list;      /* +0x08 ptr, stride 0x4c (cell +0xc float) */
@@ -208,5 +209,191 @@ float EngineTimeScale(EngineContext* ctx);
  * normal-play stub forwarding to FUN_004250a0; LAB_00424d00 is the full
  * teardown used in loader mode (finding 20). */
 void EngineShutdown(EngineContext* ctx);
+
+/* RuntimeFlag40000000Get (FUN_0041f970, finding 03): the DAT_00556ecc
+ * engine-state word's bit 30 — the corpus's no-argument global read,
+ * threaded through the port's EngineContext (NULL answers zero). */
+uint32_t runtime_flag40000000_get(const EngineContext* ctx);
+
+/* ModeDependentField24Get (FUN_00423080, finding 03): the corpus reads
+ * word field 0x24 — the follow-span slot — off DAT_005560e4 in-game and
+ * DAT_005560ec in editor/preview mode, and returns the mode word itself
+ * for any other mode. Threaded through the port's EngineContext (NULL
+ * views answer zero). */
+int mode_dependent_field24_get(const EngineContext* ctx);
+
+/* --- the 0x425-0x426 engine-state band (2026-10-24; findings 295/324/392) ---
+ * CurrentEngineModeIsZero (FUN_00425d80): the context-mode word reads zero.
+ * GlobalStateFlagsBit7Set (FUN_004263a0): cheat-word bit 7 on/off. Both
+ * thread through EngineContext (the corpus's DAT_00556ec8 / DAT_00556ed0).
+ * GlobalScrollGuardSet (FUN_00425cd0) stores the scroll-scale guard global
+ * (corpus DAT_004de548) — zero-init module storage, the corpus's writer
+ * side being this setter itself. GlobalTripleCopyOut (FUN_00426230) hands
+ * out the inert triple (corpus DAT_0055651c/520/524) — zero-init statics,
+ * documented: the corpus's only writer is the unported sim-interaction
+ * renderer update. */
+bool   current_engine_mode_is_zero(const EngineContext* ctx);
+
+/* ObjectiveScoreTextOriginSet (FUN_004262e0): the objective/score text
+ * origin pair. A non-null pair stores into module storage and raises the
+ * debug word's bit 0x4000; a null pair drops it. Deviation: the corpus
+ * strides the pair blindly; the port guards it. */
+void objective_score_text_origin_set(EngineContext* ctx, const float* pair);
+void objective_score_text_origin_peek(float out[2]);
+
+/* EngineModeSet (FUN_004565f0): stores the mode word into the global flag
+ * DAT_004ff978 (the port's crt.* own storage, through the install hook),
+ * raises the bits-6/9 + bit-7 global state flags when the mode reads 1,
+ * clears the corpus's DAT_00503610 / DAT_00503614 overlay words, and
+ * answers the mode. Deviation: the corpus strides the caller's mode
+ * pointer blindly — the port guards it and answers zero. */
+int engine_mode_set(EngineContext* ctx, const int* mode);
+uint32_t engine_overlay_word_peek(int which); /* 0: DAT_00503610,
+                                               * 1: DAT_00503614 (hook) */
+void   global_state_flags_bit7_set(EngineContext* ctx, int value);
+void   global_state_flags_bits6_and_9_set(EngineContext* ctx, int value,
+                                          int set_bit9); /* FUN_00426360 */
+void   global_scroll_guard_set(int value);
+int    global_scroll_guard_peek(void); /* port-side hook: the corpus's reader
+                                        * is ScrollScaleSetAndClamp @ 0x425ce0 */
+
+/* ObjectiveTaskTextOriginSet (FUN_00426320): the objective/task UI origin
+ * pair. A non-null origin pair stores into module storage (the corpus's
+ * overlap-flagged float pair is write-only outside this setter, so the
+ * unowned-global convention applies) and raises the debug word's bit
+ * 0x8000; a null argument clears that bit. Deviation: the corpus threads
+ * the cheat word as a global; the port rides the bound EngineContext. */
+void objective_task_text_origin_set(EngineContext* ctx, const float* pair);
+                                                /* FUN_00426320 */
+void objective_task_text_origin_peek(float out[2]); /* port hook */
+
+/* ScrollScaleSetAndClamp (FUN_00425ce0, findings 437/398): installs a new
+ * scroll-scale word when it does not run the stored scale backwards
+ * (stored <= new) or the guard word (DAT_004de548) is clear. The scale word
+ * (DAT_0055615c, _DAT_0055615c) has no ported owner; it lands next to the
+ * guard word as module storage, clamped to [0, 3]. The corpus's band call
+ * (the 0x414f90 slider store) refreshes the speed index first; the port
+ * mirrors that band with the peek hook below.
+ * Deviation: the corpus reads the overlap-flagged float word blindly. */
+void  scroll_scale_set_and_clamp(float scale);  /* FUN_00425ce0 */
+float scroll_scale_peek(void);                  /* port hook */
+void  scroll_scale_set(float value);            /* port hook */
+int   scroll_speed_index_get(void);             /* port hook (band model) */
+
+/* CameraFocusScrollScaleCommit (FUN_004538a0, findings 437/398): commits a
+ * focus record's scale — a zero focus value is gated off while the level
+ * state's +0x27c gate word stands (the corpus's CurrentLevelGet root, the
+ * port's bound state block), otherwise the guard word is set to the
+ * record's guard value, the scale installs through the [0, 3]-clamped setter
+ * as focus * 0.01, and the guard is re-set. Always answers zero.
+ * Deviations: the corpus strides the record and dereferences the state root
+ * blindly (NULL root would crash); the port guards both. */
+int camera_focus_scroll_scale_commit(const EngineContext* ctx,
+                                     const void* record); /* FUN_004538a0 */
+
+/* PanelSelectionHighlightToggle (FUN_00435aa0): the panel-selection
+ * highlight switch. ON raises the debug word's bit 0, starts the exit
+ * timer (250, kicking off the alias-0x19 cue only when the timer was
+ * spent), and sets the panel-6 item-2 flag-8 through the gated writer;
+ * OFF drops the bit, zeroes the timer, and clears the flag.
+ * Deviations: the corpus writes its DAT globals blindly; the port threads
+ * them through the context (NULL skips the words, both branches still fire
+ * the panel write). */
+void panel_selection_highlight_toggle(EngineContext* ctx, int on);
+                                                /* FUN_00435aa0 */
+void   global_triple_copy_out(uint32_t* out);
+
+/* GlobalField505f88Get (FUN_00401bf0, finding 02): the corpus's app-mode
+ * word read — the EngineContext's own field. NULL answers 0 (deviation:
+ * the corpus reads its global blindly). */
+int engine_app_mode_get(const EngineContext* ctx);
+
+/* --- the grid-cell record buffer (2026-10-24; finding 463) ------------------
+ * The entity-cell field grid: its own buffer (dimensions at the state
+ * block's +0x14/+0x18) of cell records. The corpus keeps the buffer in
+ * DAT_005520e8 and the descriptor in DAT_005520ec; neither word has a
+ * ported owner, so both land here as module statics.
+ * Deviation (2026-10-25): a cell record widens its entity pointer slot —
+ * the port-layout image strides 0x10 as {entity slot +0x00, timer window
+ * +0x08, flag word +0x0c} where the corpus's 32-bit layout strides 0x0c
+ * as {pointer, timer, flags} (the widened-slot convention). The corpus's
+ * int multiply and masked zero count stay.
+ * GridCellRecordBufferAllocate (FUN_004661c0): allocate from the state
+ * block's dimensions and zero the word loop. The descriptor lands even
+ * on an alloc failure — the corpus stores it outside the buffer guard.
+ * EntityFieldGridBufferRelease (FUN_00466210): free the current buffer and
+ * clear the word (the descriptor word survives the corpus's release).
+ * GridCellRecordBufferReplace (FUN_00466230): release, then allocate. */
+void        grid_cell_record_buffer_allocate(EngineState* block); /* FUN_004661c0 */
+void        entity_field_grid_buffer_release(void);               /* FUN_00466210 */
+void        grid_cell_record_buffer_replace(EngineState* block);  /* FUN_00466230 */
+void*       entity_field_grid_buffer_peek(void);
+EngineState* entity_field_grid_descriptor_peek(void);
+
+/* --- the field-grid cell window band (2026-10-25; see the band above) -----
+ * The corpus reads the grid as two unowned globals (the buffer word and
+ * the descriptor block); the port threads both through the statics the
+ * allocate band already models. Deviations: the guarded grid lookup
+ * (the corpus strides missing words blindly) and the widened entity
+ * slot (the corpus's cell is the 32-bit pointer view). */
+
+/* SetExpansionEntityAtGridCell (FUN_00466380): park the entity on the
+ * cell slot (re-reading order: pointer, flag raise, then the corpus's
+ * 0x42c80000 timer store — 100.0f). */
+void set_expansion_entity_at_grid_cell(int x, int y, void* entity);
+                                                /* FUN_00466380 */
+
+/* GridCellInvalidateAndClearFlags (FUN_00466750): raise the parked
+ * entity's +0x3e8 bit 0x800000 and clear its +0x3e0 bit 0x02000000 — the
+ * entity re-read from the slot before each window, as the corpus's
+ * aliasing reloads — then drop the cell's occupancy bit 0x100. A
+ * missing entity is skipped (deviation: blind stride). */
+void grid_cell_invalidate_and_clear_flags(int x, int y);
+                                                /* FUN_00466750 */
+
+/* CanSpawnExpansionEntityAtGridCell (FUN_004663f0): reads the field
+ * grid's companion voxel scan (the descriptor's +0xb8 buffer, stride
+ * 0x48): the cell's own flag byte bit 0x08 answers 0 when clear; when
+ * both the cell's +0x50 byte and the cell 0x40 earlier carry bit 0x10
+ * the out pair answers the corpus's 0x3fc90fdb constant and 1 lands;
+ * otherwise the up/down neighbors' bit 0x10 must both read raised or 0
+ * answers and the out pair zeroes. Missing grid answers 0 (deviation:
+ * blind stride). */
+int can_spawn_expansion_entity_at_grid_cell(int x, int y, float* out);
+                                                /* FUN_004663f0 */
+
+/* --- global-state refresh leaf (2026-10-24; findings 392/334/329) ----------
+ * GlobalStateLowByteClearAndRefresh (FUN_00435a20): clears the low byte of
+ * the DAT_00556ed4 state word, then routes DAT_005563b4 as the record
+ * through the ported surface visibility set (mode 1, per finding 392).
+ * Neither corpus word has a ported owner; both land here as zero-init
+ * statics with hooks. Deviation: the port's surface set reads the record's
+ * +0 handle through the widened pointer slot (record.cpp convention). */
+void global_state_low_byte_clear_and_refresh(void); /* FUN_00435a20 */
+uint32_t global_state_low_word_get(void);           /* port hook */
+void     global_state_low_word_set(uint32_t value); /* port hook */
+void  global_refresh_record_set(void* record);      /* port hook */
+void* global_refresh_record_peek(void);             /* port hook */
+
+/* GlobalHandlePositionApplyIfPresent (FUN_00435580, findings 392/386/329):
+ * when the global position handle word (DAT_00556f3c — no ported owner, a
+ * zero-init static with hooks here) is set, the handle rides the surface
+ * reposition seam at a zero position and the answer is 1. */
+int global_handle_position_apply_if_present(void); /* FUN_00435580 */
+void global_position_handle_set(void* handle);     /* port hook */
+void* global_position_handle_peek(void);           /* port hook */
+void global_position_seam_reset(void);             /* port hook */
+int  global_position_seam_calls(void);             /* port hook */
+void global_position_seam_last(void** out_handle, int* out_x, int* out_y);
+                                                /* port hook */
+
+/* TerrainCellCommandPredicate (FUN_00428780): the cell-command gate. The
+ * gate passes unconditionally while the system-state word is nonzero with
+ * bits 8 AND 4 both clear (the corpus's re-read chain); otherwise, with
+ * bit 1 set, the target cell's surface byte (voxel +0x04, index
+ * height-major like the voxel accessors) must be zero. Deviations:
+ * the corpus re-reads the system word and strides the voxel blindly, so a
+ * NULL/absent cell answers not-open (bounds-checking voxel accessors). */
+int terrain_cell_command_predicate(const EngineContext* ctx, int x, int y);
 
 #endif /* LEGORRR_ENGINE_HPP */

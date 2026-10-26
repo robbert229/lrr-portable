@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "resource.hpp"
+#include "string.hpp"
 #include "texture.hpp"
 
 #define TEX_CACHE_MAX 4096
@@ -334,4 +335,40 @@ uint32_t texture_pixel_hash(TextureSurface* t)
         }
     }
     return h;
+}
+
+/* --- the cache-window name pair (see texture.hpp) ------------------------- */
+/* Both corpus halves work over a caller-supplied entry window; entries
+ * ride as widened slots {word, name, word}. Deviation: the port guards
+ * the table, the count, and the name pointer (the corpus strides them). */
+void* texture_cache_name_slot_find(const void* table, uint32_t count,
+                                   const char* name)
+{
+    if (table == NULL || count == 0u) {
+        return NULL; /* deviation: the corpus answers 0 only for count 0 */
+    }
+    const long field = (long)sizeof(void*);
+    for (uint32_t i = 0; i < count; ++i) {
+        char* entry_name = NULL;
+        __builtin_memcpy(&entry_name,
+                         (const char*)table + (long)i * 3 * field + field,
+                         sizeof entry_name);
+        if (entry_name != NULL && t_strcasecmp(name, entry_name) == 0) {
+            return (void*)((const char*)table + (long)i * 3 * field);
+        }
+    }
+    return NULL;
+}
+
+void texture_cache_name_slot_append(void* table, int* count,
+                                    const char* name, void* slot_a,
+                                    void* slot_b)
+{
+    const long field = (long)sizeof(void*);
+    char* copy = string_duplicate(name); /* FUN_00477550 */
+    char* entry = (char*)table + (long)*count * 3 * field;
+    __builtin_memcpy(entry, &slot_a, sizeof slot_a);
+    __builtin_memcpy(entry + field, &copy, sizeof copy);
+    __builtin_memcpy(entry + 2 * field, &slot_b, sizeof slot_b);
+    *count += 1;
 }

@@ -122,4 +122,45 @@ int input_quit_dwell(InputState* s, int slot, int mx, int my,
                      int rect_x, int rect_y, int rect_w, int rect_h,
                      int quit_w, int quit_h, int keep_running);
 
+/* --- input-entry / player-input flag-8 leaves (2026-10-24) ----------------
+ * InputEntryFlag8SetClear / InputEntryFlag8Get (FUN_0041c9f0 / FUN_0041ca60,
+ * findings 376/444): raise/clear/read bit 0x8 of the corpus's indexed
+ * input-entry flag word. PlayerInputFlag8SetClear / PlayerInputFlag8Get
+ * (FUN_0041ca20 / FUN_0041ca70): the same bit over the two player-input
+ * tables selected by kind 1 / kind 4. None of the corpus's table owners
+ * (the pointer-table allocator and the action-state leaves, still
+ * unported) lands, so all three tables land zero-initialized with a
+ * documented 256-entry window (the corpus's own sizes come from heap
+ * allocations; the port bounds-checks, answering zero outside the window
+ * and skipping writes — deviation). */
+void input_entry_flag8_set_clear(int entry, int set);
+uint32_t input_entry_flag8_get(int entry);
+void player_input_flag8_set_clear(int kind, int action, int set);
+uint32_t player_input_flag8_get(int kind, int action);
+
+struct EngineContext;  /* engine.hpp: the DAT_00556ecc state word lives here */
+
+/* InputActionPressedGet / InputBindingPressedGet (FUN_0041c8f0 /
+ * FUN_0041c950): "is this action/binding pressed right now?" Both read the
+ * engine-state word (DAT_00556ecc) bit 0x10000000 as a "pressed-yes-every-
+ * thing" gate — NOT the 0x40000000 RuntimeFlag40000000Get mask — and both
+ * consult the system-state word (DAT_004ff980) bit 0 for the inverted
+ * alternate reading. Action 0x49 is hard-wired not-pressed. The corpus
+ * indexes its table dwords blindly (the port bounds-checks, answering
+ * zero outside the window — deviation). */
+int input_action_pressed_get(const struct EngineContext* ctx, int action,
+                             int alt);
+int input_binding_pressed_get(const struct EngineContext* ctx, int kind,
+                              int entry, int alt);
+
+/* IndexedEntityValueGet (FUN_0041cab0): the indexed binding value — the
+ * pressed gate (FUN_0041c8f0) picks the DAT_004dd120 window, the flag-8
+ * entry reader (FUN_0041ca60) the DAT_004dd248 window, and both answers
+ * clear the DAT_004dcff8 window. All three windows are own storage (their
+ * corpus writer is the recorded interface-images config seam); the hooks
+ * install/peek them. */
+uint32_t indexed_entity_value_get(const struct EngineContext* ctx, int index);
+void     input_indexed_window_set(int which, int index, uint32_t value);
+uint32_t input_indexed_window_peek(int which, int index);
+
 #endif /* LEGORRR_INPUT_HPP */

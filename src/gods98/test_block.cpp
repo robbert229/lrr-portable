@@ -21,6 +21,7 @@
 
 #include "resource.hpp"
 #include "block.hpp"
+#include "heap.hpp"
 
 static int s_failures = 0;
 
@@ -194,6 +195,38 @@ static void test_multiroot(void)
     CHECK(val_is(bf, "A x y", "1"), "multiroot: tree A");
     CHECK(val_is(bf, "B x y", "2"), "multiroot: tree B");
     CHECK(val_is(bf, "A x", "{"), "multiroot: intermediate is container");
+    block_close(bf);
+}
+
+/* SortedEntryNextEqualKey (FUN_00479020): the config loaders' sibling
+ * iteration idiom — first match then repeatedly "next at the same
+ * depth" (findings 230/403). */
+static void test_equal_key(void)
+{
+    BlockFile* bf = parse(
+        "S {\n"
+        "  c1 { g 1 }\n"
+        "  c2 2\n"
+        "  c3 { g 3 }\n"
+        "}\n");
+    BlockRec* c1 = block_find(bf, "S c1");
+    BlockRec* c2 = block_find(bf, "S c2");
+    BlockRec* c3 = block_find(bf, "S c3");
+    BlockRec* g1 = block_find(bf, "S c1 g");
+    CHECK(c1 != NULL && c2 != NULL && c3 != NULL && g1 != NULL,
+          "equal-key: fixture records");
+    CHECK(block_next_equal_key(c1) == c2, "skips c1's subtree in document order");
+    CHECK(block_next_equal_key(c2) == c3, "simple child continues the walk");
+    CHECK(block_next_equal_key(c3) == NULL, "last sibling ends the walk");
+    CHECK(block_next_equal_key(g1) == NULL, "subtree record has no sibling");
+    CHECK(block_next_equal_key(NULL) == NULL, "NULL start answers NULL");
+    /* The loaders' loop idiom. */
+    int seen = 0;
+    for (BlockRec* e = block_find(bf, "S c1"); e != NULL;
+         e = block_next_equal_key(e)) {
+        ++seen;
+    }
+    CHECK(seen == 3, "iteration walks all three siblings");
     block_close(bf);
 }
 
@@ -380,11 +413,159 @@ int main(int argc, char** argv)
     test_colon_sep();
     test_comments_braces();
     test_multiroot();
+    test_equal_key();
     test_getters();
 
     if (argc >= 3 && strcmp(argv[1], "--real") == 0) {
         test_real(argv[2]);
         test_real_spots(argv[2]);
+    }
+
+    /* RegistryPathSplit (FUN_0048b330, finding 402): component copy. */
+    {
+        char out[100];
+        const char* rest = registry_path_split("Key\\Sub\\Leaf", out);
+        CHECK(strcmp(out, "Key") == 0, "first component copied");
+        CHECK(rest != NULL && strcmp(rest, "Sub\\Leaf") == 0,
+              "rest resumes after one separator");
+        rest = registry_path_split(rest, out);
+        CHECK(strcmp(out, "Sub") == 0, "second component copied");
+        rest = registry_path_split(rest, out);
+        CHECK(strcmp(out, "Leaf") == 0, "the tail component copies whole");
+        CHECK(rest != NULL && *rest == '\0', "the tail returns the empty rest");
+        /* Leading/trailing separator corners. */
+        rest = registry_path_split("\\Lead", out);
+        CHECK(out[0] == '\0', "leading separator yields an empty component");
+        CHECK(rest != NULL && strcmp(rest, "Lead") == 0,
+              "the rest skips the leading separator");
+        rest = registry_path_split("Trail\\", out);
+        CHECK(strcmp(out, "Trail") == 0, "trailing separator component");
+        CHECK(rest != NULL && strcmp(rest, "") == 0,
+              "the rest of a trailing separator is empty");
+        /* Empty path: both ends terminated, rest is the same pointer. */
+        rest = registry_path_split("", out);
+        CHECK(out[0] == '\0' && rest != NULL && *rest == '\0',
+              "empty path splits empty");
+        /* NULL deviations. */
+        CHECK(registry_path_split(NULL, out) == NULL, "NULL path answers NULL");
+        rest = registry_path_split("A", NULL);
+        CHECK(rest != NULL && strcmp(rest, "A") == 0,
+              "NULL out copies nothing and returns the path");
+    }
+
+    /* BlockTextTokenPoolDestroy (FUN_00478e20): corpus pool storage is
+     * module-local with hooks (grow ported by iters 117-120, init ported
+     * 2026-10-25); the destroy frees the nonzero slots through the engine
+     * heap and clears the head cursor and resident flag, NULLing slots
+     * along the way. */
+    {
+        void* tok0 = engine_heap_alloc(8);
+        void* tok1 = engine_heap_alloc(8);
+        block_text_token_pool_slot_set(3, tok0);
+        block_text_token_pool_slot_set(5, tok1);
+        block_text_token_pool_head_set(tok1);
+        CHECK(block_text_token_pool_slot_peek(3) == tok0, "slot 3 holds");
+        CHECK(block_text_token_pool_slot_peek(-1) == NULL
+                  && block_text_token_pool_slot_peek(32) == NULL,
+              "out-of-window peeks answer NULL (deviation)");
+        CHECK(block_text_token_pool_head_peek() == tok1,
+              "the head hook round-trips");
+        block_text_token_pool_destroy();
+        CHECK(block_text_token_pool_slot_peek(3) == NULL
+                  && block_text_token_pool_slot_peek(5) == NULL,
+              "freed slots are cleared (anti-dangling deviation)");
+        CHECK(block_text_token_pool_head_peek() == NULL,
+              "the head cursor word is cleared");
+        CHECK(block_text_token_pool_resident_peek() == 0,
+              "the resident flag drops");
+        block_text_token_pool_destroy();
+        CHECK(block_text_token_pool_slot_peek(0) == NULL,
+              "the empty pool survives a second destroy");
+        /* BlockTextTokenPoolGrow (FUN_00479490): doubling chunks chained
+         * into the free-list head. Port node = eight pointer slots, link =
+         * field 7. */
+        block_text_token_pool_grow();
+        void* chunk1 = block_text_token_pool_head_peek();
+        const ptrdiff_t pnode = (ptrdiff_t)(8u * sizeof(void*));
+        const ptrdiff_t plink = 7 * (ptrdiff_t)sizeof(void*);
+        CHECK(chunk1 != NULL && block_text_token_pool_slot_peek(0) == chunk1
+                  && block_text_token_pool_watermark_peek() == 1,
+              "grow publishes chunk 1 and parks it in slot 0");
+        CHECK(*(void**)((char*)chunk1 + plink) == NULL,
+              "the single node links to the empty old head");
+        block_text_token_pool_grow();
+        void* chunk2 = block_text_token_pool_head_peek();
+        CHECK(chunk2 != chunk1 && block_text_token_pool_slot_peek(1) == chunk2
+                  && block_text_token_pool_watermark_peek() == 2,
+              "grow doubles to a two-node chunk parked in slot 1");
+        CHECK(*(void**)((char*)chunk2 + plink)
+                  == (void*)((char*)chunk2 + pnode)
+                  && *(void**)((char*)chunk2 + pnode + plink) == chunk1,
+              "the chunk 2 nodes chain node 0 -> node 1 -> old head");
+        block_text_token_pool_destroy();
+        CHECK(block_text_token_pool_slot_peek(0) == NULL
+                  && block_text_token_pool_slot_peek(1) == NULL
+                  && block_text_token_pool_head_peek() == NULL,
+              "destroy frees and clears the grown chunks");
+        CHECK(block_text_token_pool_watermark_peek() == 2,
+              "destroy leaves the watermark counter alone (faithful)");
+
+        /* BlockTextTokenPoolInit (FUN_00478df0): window clear + flag raise. */
+        {
+            void* tok = engine_heap_alloc(8);
+            block_text_token_pool_slot_set(7, tok);
+            block_text_token_pool_head_set(tok);
+            block_text_token_pool_init();
+            CHECK(block_text_token_pool_slot_peek(7) == NULL
+                      && block_text_token_pool_slot_peek(0) == NULL
+                      && block_text_token_pool_head_peek() == NULL,
+                  "init clears the window and the head (no free, faithful)");
+            CHECK(block_text_token_pool_watermark_peek() == 0
+                      && block_text_token_pool_resident_peek() == 1,
+                  "init resets the counter and raises the resident flag");
+            /* leak-pinned: init stores NULL over the corpus's own slots the
+             * same way (startup contract, no allocator traffic). */
+            engine_heap_free(tok);
+        }
+    }
+
+    /* ConfigRgbVectorRead (2026-10-25): the comma triplet, scaled 1/255. */
+    {
+        BlockFile* bf = parse("G {\n  rgb 12,128,255\n  bad 1,2\n  four 1,2,3,4\n  "
+                              "tail 1,2,3,\n}");
+        CHECK(bf != NULL, "fixture parses");
+        const float sc = 1.0f / 255.0f;
+        float r = -1.0f, g = -1.0f, b = -1.0f;
+        CHECK(config_rgb_vector_read(bf, "G rgb", &r, &g, &b) == 1
+                  && r == 12.0f * sc && g == 128.0f * sc
+                  && b == 255.0f * sc,
+              "the triplet lands scaled");
+        CHECK(config_rgb_vector_read(bf, "G nope", &r, &g, &b) == 0
+                  && r == 12.0f * sc,
+              "a missing string answers zero and leaves the outputs");
+        CHECK(config_rgb_vector_read(bf, "G bad", &r, &g, &b) == 0,
+              "two tokens fail the count");
+        CHECK(config_rgb_vector_read(bf, "G four", &r, &g, &b) == 0,
+              "four tokens fail the count (tracked past three)");
+        CHECK(config_rgb_vector_read(bf, "G tail", &r, &g, &b) == 1
+                  && b == 3.0f * sc,
+              "the never-tested final comma rides the last token");
+        block_close(bf);
+    }
+
+    /* ReadAngleSettingRadians (2026-10-25): degrees through the gate. */
+    {
+        BlockFile* bf = parse("A {\n  deg 90\n  zero 0\n  word banana\n}");
+        CHECK(bf != NULL, "angle fixture parses");
+        const float want = 90.0f * (1.0f / 360.0f) * 6.2831855f;
+        CHECK(config_angle_radians_get(bf, "A deg") == want,
+              "the degrees land scaled");
+        CHECK(config_angle_radians_get(bf, "A zero") == 0.0f,
+              "a zero value answers zero");
+        CHECK(config_angle_radians_get(bf, "A nope") == 0.0f
+                  && config_angle_radians_get(bf, "A word") == 0.0f,
+              "missing and unparseable strings answer zero");
+        block_close(bf);
     }
 
     if (s_failures == 0) {

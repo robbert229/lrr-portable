@@ -72,8 +72,61 @@ const uint8_t* flic_frame_rgba(Flic* f);
 /* RGB555 -> RGBA32 expansion of one pixel (the renderer's conversion). */
 uint32_t flic_rgb555_to_rgba(uint16_t c);
 
+/* FlicOpcode25SuccessStub (FUN_00484b90, finding 21): the 8-bit
+ * opcode-25 handler — a six-byte success-returning stub, no pixel
+ * writes (unused in the corpus; the 16-bit coder above owns all shipped
+ * files). Corpus arguments are ignored; definition stays void. */
+uint32_t flic_opcode25_success_stub(void);
+
 #ifdef __cplusplus
 }
 #endif
+
+/* FlicOpcode27FallbackNoop (FUN_00484c90, finding 155): the corpus's
+ * fallback for unknown opcode 27 records is a pure return — faithful. */
+void flic_opcode27_fallback_noop(void);
+
+/* FlicOpcode16ModeDispatch (FUN_00484880): mode-word dispatch over the
+ * frame-record window (+0x6d4 opcode, +0x6d8 mode word). Mode 0x10 takes
+ * the fallback and returns; opcodes 0 and 4 run the fallback in place;
+ * all routes answer 1. Deviation: the corpus reads its own frame buffer
+ * blindly; the port guards the NULL window. */
+int flic_opcode16_mode_dispatch(const uint8_t* rec);
+
+/* FlicDecode16BitRowRecords (FUN_00484c00): the chunked triplet writer on
+ * the corpus frame-record window — stream link +0x6d0, count stream+6,
+ * bytes stream+8, triplets +0x11c (skip byte*3 per chunk; a zero count byte
+ * restarts the table for one 0x100 pass and ends the walk), and op +0x6d4
+ * 4 hands off to the triplet fold.
+ * FlicDecode8BitOpcode25Mode4 (FUN_004848d0): the byte stream at stream+7
+ * over rows +0x10 of length +0xc, pixel stores at +0x6cc plus pitch/2
+ * * row * 2, palette stores through the +0x41c word window. Each row pass
+ * ends one byte short of the stream (the corpus steps +1 between rows).
+ * Deviation: the corpus strides the record, stream, and pixels blindly. */
+int flic_decode16_bit_row_records(void* record);
+int flic_decode8_bit_alternate_delta(void* record);
+int flic_opcode25_decode_dispatch(void* record);
+int flic_opcode27_decode_dispatch(void* record);
+
+/* FlicDecode16BitKeyframe (FUN_004849d0): the word-stream row walk at
+ * stream+7 (literal runs of one expanded word, copy runs of successive
+ * words; the row length +0xc re-reads each row past one straddle byte).
+ * FlicDecode16BitDelta (FUN_00484e50): the chunk walk over the word stream
+ * at stream+8 — 0xC rows retire by word subtraction, 8-chunks remember one
+ * expanded pixel for a byte store at the chunk's end, 4 ends the record,
+ * and pairs advance the target by their low byte. Both ride the expanded
+ * word fold (the +0x6e4 flag keeps the green field). Deviation: the corpus
+ * strides the record, stream, and pixels blindly. */
+int flic_decode16_bit_keyframe(void* record);
+int flic_decode16_bit_delta(void* record);
+int flic_decode8_bit_opcode25_mode4(void* record);
+void flic_frame_window_layout_install(void* rec, int row_len, int row_count,
+                                     int pitch, void* stream,
+                                     void* pixel_buffer, int flag);
+
+/* PackedTripletTableToWordBuild (FUN_00484ba0): fold the record's 256
+ * packed RGB triplets at +0x11c into 16-bit words at +0x41c, then clear
+ * the first word. The record rides the frame-record byte window. */
+void flic_packed_triplet_table_to_word_build(void* record);
 
 #endif /* LEGORRR_FLIC_HPP */

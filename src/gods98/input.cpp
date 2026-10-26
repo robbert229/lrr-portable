@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 #include <string.h>
 
+#include "engine.hpp"
 #include "input.hpp"
+#include "message.hpp"
 
 void input_reset(InputState* s)
 {
@@ -206,4 +208,156 @@ int input_quit_dwell(InputState* s, int slot, int mx, int my,
         }
     }
     return 0;
+}
+/* --- input-entry / player-input flag-8 leaves (see input.hpp) --------------
+ * Zero-initialized module statics with the documented window; the corpus
+ * indexes through (possibly heap) pointers blindly. */
+#define INPUT_FLAG_TABLE_SLOTS 256
+
+static uint32_t s_input_entry_flags[INPUT_FLAG_TABLE_SLOTS];
+static uint32_t s_player_kind1_flags[INPUT_FLAG_TABLE_SLOTS];
+static uint32_t s_player_kind4_flags[INPUT_FLAG_TABLE_SLOTS];
+
+void input_entry_flag8_set_clear(int entry, int set)
+{
+    if (entry < 0 || entry >= INPUT_FLAG_TABLE_SLOTS) {
+        return; /* deviation: the corpus indexes blindly */
+    }
+    if (set != 0) {
+        s_input_entry_flags[entry] = s_input_entry_flags[entry] | 8u;
+    } else {
+        s_input_entry_flags[entry] = s_input_entry_flags[entry] & ~8u;
+    }
+}
+
+uint32_t input_entry_flag8_get(int entry)
+{
+    if (entry < 0 || entry >= INPUT_FLAG_TABLE_SLOTS) {
+        return 0u;
+    }
+    return s_input_entry_flags[entry] & 8u;
+}
+
+static uint32_t* player_flags_table(int kind)
+{
+    if (kind == 1) {
+        return s_player_kind1_flags;   /* DAT pointer global: table A */
+    }
+    if (kind == 4) {
+        return s_player_kind4_flags;   /* DAT pointer global: table B */
+    }
+    return NULL;
+}
+
+void player_input_flag8_set_clear(int kind, int action, int set)
+{
+    uint32_t* table = player_flags_table(kind);
+    if (table == NULL || action < 0 || action >= INPUT_FLAG_TABLE_SLOTS) {
+        return; /* deviation: the corpus reads any kind through the table */
+    }
+    if (set != 0) {
+        table[action] = table[action] | 8u;
+    } else {
+        table[action] = table[action] & ~8u;
+    }
+}
+
+uint32_t player_input_flag8_get(int kind, int action)
+{
+    const uint32_t* table = player_flags_table(kind);
+    if (table == NULL || action < 0 || action >= INPUT_FLAG_TABLE_SLOTS) {
+        return 0u;
+    }
+    return table[action] & 8u;
+}
+
+/* InputActionPressedGet (FUN_0041c8f0) — see input.hpp. Action 0x49 ('I')
+ * is hard-wired 0 before any table read; the gate is the engine-state word
+ * read verbatim (bit 0x10000000 — NOT the 0x40000000 the
+ * RuntimeFlag40000000Get port masks); alt == the corpus's param_2, and the
+ * inverted reading is taken only when the system-state word agrees. The
+ * table behind s_input_entry_flags is the corpus's DAT_004dd60c dwords. */
+int input_action_pressed_get(const EngineContext* ctx, int action, int alt)
+{
+    if (action == 0x49) {
+        return 0;
+    }
+    if (ctx != NULL && (ctx->state & 0x10000000u) != 0u) {
+        return 1; /* deviation: a NULL context reads the gate clear */
+    }
+    if (action < 0 || action >= INPUT_FLAG_TABLE_SLOTS) {
+        return 0; /* deviation: the corpus indexes blindly */
+    }
+    const uint32_t word = s_input_entry_flags[action];
+    if (alt != 0 && (system_state_flags_get() & 1u) != 0u) {
+        return (int)((~word >> 2) & 1u);
+    }
+    return (int)(word & 1u);
+}
+
+/* InputBindingPressedGet (FUN_0041c950) — see input.hpp. Same gate and
+ * inverted-reading shape, with the kind 1 / kind 4 flag tables (the
+ * corpus's DAT_004dd9a4 / DAT_004dd9a8 dwords) selected through
+ * player_flags_table; any other kind falls through to not-pressed. */
+int input_binding_pressed_get(const EngineContext* ctx, int kind, int entry,
+                              int alt)
+{
+    if (ctx != NULL && (ctx->state & 0x10000000u) != 0u) {
+        return 1; /* deviation: a NULL context reads the gate clear */
+    }
+    const uint32_t* table = player_flags_table(kind);
+    if (table == NULL) {
+        return 0;
+    }
+    if (entry < 0 || entry >= INPUT_FLAG_TABLE_SLOTS) {
+        return 0; /* deviation: the corpus indexes blindly */
+    }
+    const uint32_t word = table[entry];
+    if (alt != 0 && (system_state_flags_get() & 1u) != 0u) {
+        return (int)((~word >> 2) & 1u);
+    }
+    return (int)(word & 1u);
+}
+
+/* IndexedEntityValueGet (FUN_0041cab0) — see input.hpp. The three binding
+ * windows stride in the corpus's data section as adjacent 74-dword blocks
+ * (DAT_004dcff8 / DAT_004dd120 / DAT_004dd248); their only writer, the
+ * interface-images config load, is a recorded file-seam boundary, so the
+ * port models the windows as own storage installed through the hook below.
+ * Deviations: the corpus indexes blindly (the port answers zero outside
+ * its 74-slot window), and the NULL-context gate deviation inherited
+ * from InputActionPressedGet (FUN_0041c8f0) applies. */
+#define INPUT_INDEXED_WINDOW_SLOTS 74
+
+static uint32_t s_indexed_values[3][INPUT_INDEXED_WINDOW_SLOTS];
+
+uint32_t indexed_entity_value_get(const EngineContext* ctx, int index)
+{
+    if (index < 0 || index >= INPUT_INDEXED_WINDOW_SLOTS) {
+        return 0u; /* deviation: the corpus strides its window blindly */
+    }
+    if (input_action_pressed_get(ctx, index, 0) != 0) {
+        return s_indexed_values[0][index]; /* DAT_004dd120 window */
+    }
+    if (input_entry_flag8_get(index) != 0u) {
+        return s_indexed_values[1][index]; /* DAT_004dd248 window */
+    }
+    return s_indexed_values[2][index];     /* DAT_004dcff8 window */
+}
+
+void input_indexed_window_set(int which, int index, uint32_t value)
+{
+    if (which >= 0 && which < 3
+        && index >= 0 && index < INPUT_INDEXED_WINDOW_SLOTS) {
+        s_indexed_values[which][index] = value;
+    }
+}
+
+uint32_t input_indexed_window_peek(int which, int index)
+{
+    if (which >= 0 && which < 3
+        && index >= 0 && index < INPUT_INDEXED_WINDOW_SLOTS) {
+        return s_indexed_values[which][index];
+    }
+    return 0u;
 }

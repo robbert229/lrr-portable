@@ -203,6 +203,11 @@ typedef struct EntitySlot {
     /* --- entity-tick state (callback 0x43c810, finding 10) --------- */
     uint32_t flags_3e4; /* +0x3e4 (bit 0x8000000 = wake-timer running)  */
     uint32_t flags_3ec; /* +0x3ec (activity/behaviour flags)            */
+    /* +0x3f0: level-state mask word. The corpus's two readers are this
+     * module's selection gate (CurrentLevelStateFlagsContainMask) and the
+     * unported sim-interaction update; no ported writer feeds it — a
+     * zero-init mirror per the flags_3e0 precedent. */
+    uint32_t flags_3f0;           /* +0x3f0 (level-state mask word)         */
     /* --- minion task-state (spawn-dispatch switch 0x438150) --------- *
      * The entity spawn dispatcher (FUN_00437d00) assigns the minion types
      * a +0x334 stats block — its "task state" — through the selector at
@@ -216,6 +221,13 @@ typedef struct EntitySlot {
                              * AI_TASK_STATE_NONE (= -1) for instance stats */
     int      activity_cap;  /* state +0xcc: permitted-activity capacity;
                              * 0 = unset -> ctx->stats_activity_cap          */
+    const void* stats_record; /* +0x334 record side (finding 457): the
+                               * selected stats record image read by the
+                               * entity record accessors in entity.hpp. NULL
+                               * = the zero template — the Stats config
+                               * loader that fills real records is unported
+                               * (TODO(corpus)), so reads default to zero as
+                               * the shipped static templates do. */
     int      activity;       /* +0x2e8: activity-table index, -1 = none */
     int      activity_last;  /* +0xbb: last completed activity, -1 none */
     int      activity_param; /* +0x2d8 (activity argument)              */
@@ -225,8 +237,34 @@ typedef struct EntitySlot {
     void*    wake_target;    /* +0x364: attached wake target (FUN_0044c110;
                                * the corpus fills it via the attach-pair
                                * writer 0x44c0e2, which is not ported)      */
+    const void* attach_304;  /* +0x304: attached object the selection
+                              * filter follows in place of the candidate   */
+    const void* owner_36c;   /* +0x36c: owner pointer read by the
+                              * context-selected predicate and the
+                              * selection-command dispatch (pointer-sized
+                              * mirror of the corpus's 32-bit word)         */
+    /* --- carried-object pair (corpus +0x308/+0x324/+0x348) ---------------
+     * A type-3 carrier links the object it carries through +0x308; +0x324
+     * holds the carry state the detach clears, and +0x348 points at the
+     * reference whose dword the detach folds into the level's field 0x9c. */
+    void*    carry_link_308;  /* +0x308: carried object link            */
+    int32_t  carry_state_324; /* +0x324: carry state word               */
+    void*    carry_ref_348;   /* +0x348: carried reference (dword read) */
     float    field_340;      /* +0x340 float; the wake mirror sets 100.0
                               * (its general corpus readers are TODO)       */
+    /* --- route-progress advance (corpus +0x344/+0x2fc, finding 448) -----
+     * The corpus advances a routing progress float by a fixed step and
+     * clamps it to the entity's own +0x340 bound, clearing the +0x2fc
+     * link field in passing. */
+    float    progress_344;   /* +0x344: routing progress float            */
+    uintptr_t link_2fc;    /* +0x2fc: link field the advance clears (corpus
+                                 * dword link, widened for the port) */
+    /* --- eligibility coordinate pair (corpus +0x2f4/+0x2f8) ---------------
+     * The activity/terrain eligibility transition parks its last probed
+     * cell pair here and blanks it to -1.0/-1.0 when it hands the cell off
+     * to queued work. */
+    float    pos_pair_2f4; /* +0x2f4: pair x (port-side mirror)             */
+    float    pos_pair_2f8; /* +0x2f8: pair y                                */
     /* --- path list (corpus +0x24 buffer / +0x28 count / +0x2c index) --- */
     AiWaypoint wp[AI_WAYPOINTS_MAX];
     int      wp_count;       /* +0x28: valid entries                      */

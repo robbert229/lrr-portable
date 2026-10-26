@@ -11,6 +11,8 @@
 #include <string.h>
 
 #include "input.hpp"
+#include "engine.hpp"
+#include "message.hpp"
 
 static int s_failures = 0;
 
@@ -147,6 +149,132 @@ int main(void)
     PlatformEvent f4 = { PLATFORM_EVENT_KEYDOWN, PLATFORM_KEY_UP, 0, 0, 0 };
     input_capture_events(&f, &f4, 1);
     CHECK(input_key_edge(&f, PLATFORM_KEY_UP), "flow: press-after-release edges");
+
+    /* The flag-8 leaves (2026-10-24): one bit over the three DAT tables,
+     * settable and readable through the corpus's own leaves. */
+    {
+        CHECK(input_entry_flag8_get(3) == 0u, "the entry flags start zero");
+        input_entry_flag8_set_clear(3, 1);
+        CHECK(input_entry_flag8_get(3) == 8u, "the raise lands");
+        CHECK(input_entry_flag8_get(4) == 0u, "the neighbour entry holds");
+        input_entry_flag8_set_clear(3, 0);
+        CHECK(input_entry_flag8_get(3) == 0u, "the clear lands");
+
+        CHECK(player_input_flag8_get(1, 7) == 0u
+                  && player_input_flag8_get(4, 7) == 0u,
+              "both player tables start zero");
+        player_input_flag8_set_clear(1, 7, 1);
+        CHECK(player_input_flag8_get(1, 7) == 8u
+                  && player_input_flag8_get(4, 7) == 0u,
+              "kind 1 raises its table only");
+        player_input_flag8_set_clear(4, 7, 1);
+        CHECK(player_input_flag8_get(1, 7) == 8u
+                  && player_input_flag8_get(4, 7) == 8u,
+              "the kinds stay independent");
+        player_input_flag8_set_clear(1, 7, 0);
+        CHECK(player_input_flag8_get(1, 7) == 0u
+                  && player_input_flag8_get(4, 7) == 8u,
+              "the clear spares the other kind");
+
+        /* Unknown kinds and far indices answer zero / skip (deviation). */
+        player_input_flag8_set_clear(2, 5, 1);
+        CHECK(player_input_flag8_get(2, 5) == 0u, "kind 2 never fires");
+        CHECK(input_entry_flag8_get(1 << 20) == 0u, "the far index reads zero");
+        player_input_flag8_set_clear(1, 1 << 20, 1);
+        CHECK(player_input_flag8_get(1, 1 << 20) == 0u,
+              "the far player index is guarded");
+    }
+
+    /* InputActionPressedGet / InputBindingPressedGet (FUN_0041c8f0 /
+     * FUN_0041c950): the 0x10000000 engine-state gate, the flag-8 table
+     * words' base (bit 0) versus inverted (bit 2 complement) readings,
+     * and the kind fall-through. */
+    {
+        EngineContext ec = {};
+        ec.state = 0x10000000u;
+        CHECK(input_action_pressed_get(&ec, 0, 0) == 1,
+              "the gate presses every action");
+        CHECK(input_action_pressed_get(&ec, 0x49, 0) == 0,
+              "action 0x49 stays not-pressed through the gate");
+        CHECK(input_binding_pressed_get(&ec, 1, 0, 0) == 1,
+              "the binding sees the same gate");
+        ec.state = 0u;
+
+        input_entry_flag8_set_clear(9, 1);
+        message_set_system_state(0u);
+        CHECK(input_action_pressed_get(&ec, 9, 0) == 0,
+              "the flag-8 word reads not-pressed in base position");
+        CHECK(input_action_pressed_get(&ec, 9, 1) == 0,
+              "the alt read stays base-position while the system bit 0 "
+              "is clear");
+        message_set_system_state(1u);
+        CHECK(input_action_pressed_get(&ec, 9, 1) == 1,
+              "the inverted read flips the flag-8 word");
+        CHECK(input_action_pressed_get(&ec, 9, 0) == 0,
+              "base position is unaffected by the system bit");
+        message_set_system_state(0u);
+        input_entry_flag8_set_clear(9, 0);
+
+        player_input_flag8_set_clear(1, 7, 1);
+        CHECK(input_binding_pressed_get(&ec, 1, 7, 0) == 0,
+              "kind 1 base position reads not-pressed");
+        message_set_system_state(1u);
+        CHECK(input_binding_pressed_get(&ec, 1, 7, 1) == 1,
+              "kind 1's inverted read flips");
+        CHECK(input_binding_pressed_get(&ec, 4, 7, 1) == 1,
+              "kind 4's clear word inverts to pressed (the inverted read "
+              "is bit 2 complement, so any cleared table word agrees)");
+        CHECK(input_binding_pressed_get(&ec, 2, 7, 1) == 0,
+              "other kinds fall through to not-pressed");
+        message_set_system_state(0u);
+        player_input_flag8_set_clear(1, 7, 0);
+
+        CHECK(input_action_pressed_get(NULL, 5, 0) == 0,
+              "a NULL context reads the gate clear (deviation)");
+        CHECK(input_action_pressed_get(&ec, 1 << 20, 0) == 0,
+              "the far action index reads zero (deviation)");
+        CHECK(input_binding_pressed_get(&ec, 1, 1 << 20, 0) == 0,
+              "the far entry index reads zero (deviation)");
+    }
+
+    /* IndexedEntityValueGet (FUN_0041cab0, 2026-10-25): the window the
+     * gate pair picks. The pressed gate answers through the engine-state
+     * bit; the flag-8 reader answers through the entry word's bit 3. */
+    {
+        EngineContext ec = {};
+        ec.state = 0x10000000u;
+        input_indexed_window_set(0, 7, 0x111u);
+        input_indexed_window_set(1, 7, 0x222u);
+        input_indexed_window_set(2, 7, 0x333u);
+        CHECK(input_indexed_window_peek(0, 7) == 0x111u
+                  && input_indexed_window_peek(1, 7) == 0x222u
+                  && input_indexed_window_peek(2, 7) == 0x333u,
+              "the window install hook round-trips");
+
+        ec.state = 0x10000000u;
+        CHECK(indexed_entity_value_get(&ec, 7) == 0x111u,
+              "the pressed gate answers the DAT_004dd120 window");
+        ec.state = 0u;
+        CHECK(indexed_entity_value_get(&ec, 7) == 0x333u,
+              "both answers clear answer the DAT_004dcff8 window");
+        input_entry_flag8_set_clear(7, 1);
+        CHECK(indexed_entity_value_get(&ec, 7) == 0x222u,
+              "the flag-8 entry answers the DAT_004dd248 window");
+        input_entry_flag8_set_clear(7, 0);
+        CHECK(indexed_entity_value_get(NULL, 7) == 0x333u,
+              "the NULL-context gate deviation falls through to the "
+              "default window");
+
+        CHECK(indexed_entity_value_get(&ec, 74) == 0u
+                  && indexed_entity_value_get(&ec, -1) == 0u,
+              "out-of-window indexes answer zero (deviation)");
+        input_indexed_window_set(2, 0x49, 0x777u);
+        CHECK(indexed_entity_value_get(&ec, 0x49) == 0x777u,
+              "the hard-wired action 0x49 never presses even as a window "
+              "index, so it rides the default window");
+        input_indexed_window_set(1, 7, 0u);
+        input_indexed_window_set(2, 7, 0u);
+    }
 
     if (s_failures == 0) {
         printf("input_test: PASS\n");

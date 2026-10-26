@@ -8,9 +8,13 @@
 #include <unistd.h>
 
 #include "game/entity.hpp"
+#include "game/level.hpp"
+#include "gods98/media.hpp"
 #include "game/game.hpp"
 #include "gods98/block.hpp"
 #include "gods98/resource.hpp"
+#include "game/frontend.hpp"
+#include "game/select.hpp"
 #include "util.hpp"
 
 static int s_failures = 0;
@@ -555,6 +559,283 @@ static int ol_probe(const char* wad_dir)
     return files;
 }
 
+/* --- entity record accessors (the +0x334 stats record family) ----------- *
+ * Drive every offset getter over a synthetic 0x150-byte record image and
+ * check the read lands where the corpus reads it. */
+static int stats_record_test(void)
+{
+    uint8_t rec[ENTITY_STATS_RECORD_SIZE];
+    __builtin_memset(rec, 0, sizeof rec);
+    for (int i = 0; i < ENTITY_STATS_RECORD_SIZE; ++i) {
+        /* Small bytes: keeps the float high byte away from the 0x7F/0xFF
+         * exponent patterns so `==` never hits a NaN bit pattern. */
+        rec[i] = (uint8_t)(1 + i % 100);
+    }
+
+    GameContext ctx;
+    game_context_init(&ctx);
+    int idx = entity_create(&ctx, 1, "StatsProbe", 0.0f, 0.0f, 0.0f, 0.0f);
+    CHECK(idx >= 0, "probe slot created");
+    if (idx < 0) {
+        return 1;
+    }
+
+    /* Zero-template fallback: an unselected record reads zero everywhere. */
+    CHECK(entity_stats_float_at20(&ctx.entity[0][idx]) == 0.0f,
+          "unset record reads zero float");
+    CHECK(entity_stats_word_get(&ctx.entity[0][idx]) == 0u,
+          "unset record reads zero word");
+    CHECK(entity_state_flags_get(&ctx.entity[0][idx]) == 0u,
+          "unset record reads zero state flags");
+
+    EntitySlot* e = &ctx.entity[0][idx];
+    e->stats_record = rec;
+
+    /* Float fields: rec[off] is i%256 at offset off, so the expected float
+     * is the raw pattern little-endian at that offset. */
+#define FLOAT_AT(fn, off)                                                      \
+    do {                                                                       \
+        float want, got;                                                       \
+        __builtin_memcpy(&want, rec + (off), 4);                               \
+        got = (fn)(e);                                                         \
+        CHECK(got == want, #fn " reads record offset");                        \
+    } while (0)
+
+    FLOAT_AT(entity_stats_float_at20, 0x20);
+    FLOAT_AT(entity_stats_float_atd4, 0xd4);
+    FLOAT_AT(entity_stats_float_at9c, 0x9c);
+    FLOAT_AT(entity_stats_float_atd8, 0xd8);
+    FLOAT_AT(entity_stats_float_at6c, 0x6c);
+    FLOAT_AT(entity_stats_float_at74, 0x74);
+    FLOAT_AT(entity_stats_float_at78, 0x78);
+    FLOAT_AT(entity_stats_float_ate8, 0xe8);
+    FLOAT_AT(entity_stats_float_at70, 0x70);
+    FLOAT_AT(entity_stats_float_at7c, 0x7c);
+    FLOAT_AT(entity_stats_float_at80, 0x80);
+    FLOAT_AT(entity_energy_decay_rate_get, 0x84);
+    FLOAT_AT(entity_stats_float_atdc, 0xdc);
+    FLOAT_AT(entity_stats_float_at88, 0x88);
+    FLOAT_AT(entity_stats_float_at8c, 0x8c);
+    FLOAT_AT(entity_stats_float_at90, 0x90);
+    FLOAT_AT(entity_stats_float_at98, 0x98);
+    FLOAT_AT(entity_stats_float_at94, 0x94);
+    FLOAT_AT(entity_stats_float_atf4, 0xf4);
+    FLOAT_AT(entity_speed_component_get, 0xf8);
+    FLOAT_AT(entity_stats_float_at130, 0x130);
+    FLOAT_AT(entity_stats_float_at134, 0x134);
+    FLOAT_AT(entity_stats_float_at120, 0x120);
+    FLOAT_AT(entity_stats_float_at128, 0x128);
+    FLOAT_AT(entity_stats_float_at124, 0x124);
+    FLOAT_AT(entity_stats_float_at12c, 0x12c);
+    FLOAT_AT(entity_stats_float_at138, 0x138);
+    FLOAT_AT(entity_collision_radius_get, 0xe4);
+    FLOAT_AT(entity_stats_float_at114, 0x114);
+    FLOAT_AT(entity_stats_float_at118, 0x118);
+    FLOAT_AT(entity_stats_float_at11c, 0x11c);
+    FLOAT_AT(entity_stats_float_at110, 0x110);
+    FLOAT_AT(entity_stats_float_at10c, 0x10c);
+
+    /* Indexed terrain-speed floats: +24 + index*4. */
+    {
+        float want2, want5, want;
+        __builtin_memcpy(&want2, rec + 0x24 + 2 * 4, 4);
+        __builtin_memcpy(&want5, rec + 0x24 + 5 * 4, 4);
+        want = entity_stats_float_at24_indexed(e, 2);
+        CHECK(want == want2, "indexed speed reads +24+index*4 (2)");
+        want = entity_stats_float_at24_indexed(e, 5);
+        CHECK(want == want5, "indexed speed reads +24+index*4 (5)");
+    }
+
+    /* Word fields. */
+    uint32_t w;
+#define WORD_AT(fn, off, ...)                                                  \
+    do {                                                                       \
+        __builtin_memcpy(&w, rec + (off), 4);                                  \
+        CHECK((fn)(__VA_ARGS__) == w, #fn " reads record offset");             \
+    } while (0)
+    WORD_AT(entity_stats_word_atac, 0xac, e);
+    WORD_AT(entity_stats_word_get, 0x144, e);
+    WORD_AT(entity_state_flags_get, 0x148, e);
+    WORD_AT(entity_capability_flags_get, 0x14c, e);
+    WORD_AT(entity_stats_word_at13c, 0x13c, e);
+
+    /* Selector pair: 0 -> +c0, nonzero -> +c4. */
+    __builtin_memcpy(&w, rec + 0xc0, 4);
+    CHECK(entity_stats_word_at_c0_or_c4(e, 0) == w, "selector 0 reads +c0");
+    __builtin_memcpy(&w, rec + 0xc4, 4);
+    CHECK(entity_stats_word_at_c0_or_c4(e, 1) == w, "selector 1 reads +c4");
+
+    /* The address getter hands back record+0xa0 itself. */
+    CHECK(entity_stats_field_at_a0(e) == (void*)(rec + 0xa0),
+          "the field getter returns the record address");
+
+    /* Clear back to the zero template and check both flag words. */
+    e->stats_record = NULL;
+    CHECK(entity_stats_word_get(e) == 0u && entity_stats_field_at_a0(e) != NULL,
+          "unset record falls back to the zero template");
+
+    ctx.cfg = NULL; /* no resources owned by this probe */
+    return 0;
+}
+
+/* Eligibility predicates over the flag mirrors (FUN_004385b0 /
+ * FUN_0043baf0 / FUN_004436f0) — stack EntitySlot probes. */
+static void eligibility_test(void)
+{
+    EntitySlot e;
+    memset(&e, 0, sizeof(e));
+    e.type = 3;
+
+    /* Mask-any test: the +3e0 and +3e4 masks are disjoint from zero. */
+    CHECK(entity_flags_mask107c33de_or_1c00203_any_test(&e) == false,
+          "clean flags mask nothing");
+    e.flags_3e0 = 0x00000100u; /* inside 0x107c33de */
+    CHECK(entity_flags_mask107c33de_or_1c00203_any_test(&e) == true,
+          "the +3e0 mask bites");
+    e.flags_3e0 = 0u;
+    e.flags_3e4 = 0x01c00203u; /* the exact +3e4 mask */
+    CHECK(entity_flags_mask107c33de_or_1c00203_any_test(&e) == true,
+          "the +3e4 mask bites");
+    e.flags_3e4 = 0u;
+
+    /* Shared eligibility: the clean entity is eligible only through the
+     * relaxed form — the strict form needs the +3e8 pair. */
+    e.field_340 = 100.0f;
+    CHECK(entity_shared_eligibility_check(&e, 1) == 1,
+          "relaxed form passes a clean entity");
+    CHECK(entity_shared_eligibility_check(&e, 0) == 0,
+          "strict form needs the +3e8 bit pair");
+    e.flags_3e8 = 0x20000000u;
+    CHECK(entity_shared_eligibility_check(&e, 0) == 1,
+          "the +3e8 pair opens the strict form");
+    e.flags_3e8 |= 0x80000000u;
+    CHECK(entity_shared_eligibility_check(&e, 0) == 0,
+          "the high bit closes the strict form again");
+    e.flags_3e8 = 0u;
+
+    /* Each gate independently. */
+    e.flags_3e0 = 0x00000100u; /* bit in 0x700100 */
+    CHECK(entity_shared_eligibility_check(&e, 1) == 0,
+          "the +3e0 mask 0x700100 gates");
+    e.flags_3e0 = 0x00020000u;
+    CHECK(entity_shared_eligibility_check(&e, 1) == 0,
+          "+3e0 bit 0x20000 gates");
+    e.flags_3e0 = 0u;
+    e.flags_3e4 = 0x00100000u;
+    CHECK(entity_shared_eligibility_check(&e, 1) == 0,
+          "+3e4 bit 0x100000 gates");
+    e.flags_3e4 = 0u;
+    e.field_340 = -0.001f;
+    CHECK(entity_shared_eligibility_check(&e, 1) == 0,
+          "a negative +340 float gates");
+    e.field_340 = 0.0f;
+    CHECK(entity_shared_eligibility_check(&e, 1) == 1,
+          "zero is not negative");
+
+    /* Kind-3 test. */
+    CHECK(entity_type3_flag04000000_test(&e) == 0,
+          "kind 3 without the bit is false");
+    e.flags_3e8 = 0x04000000u;
+    CHECK(entity_type3_flag04000000_test(&e) == 1,
+          "kind 3 with the bit is true");
+    e.type = 6;
+    CHECK(entity_type3_flag04000000_test(&e) == 0,
+          "the wrong kind is false with the bit set");
+}
+
+/* Routing-progress advance (FUN_00447730) — stack EntitySlot probe. */
+static void progress_advance_test(void)
+{
+    EntitySlot e;
+    memset(&e, 0, sizeof(e));
+
+    /* Clamping bound: +0x340. */
+    e.field_340 = 40.0f;
+    e.progress_344 = 10.0f;
+    e.link_2fc = 0xcafebabeu;
+    CHECK(entity_progress_advance_by_25(&e) == 0, "under the bound stays put");
+    CHECK(e.progress_344 == 35.0f, "one step adds 25");
+    CHECK(e.link_2fc == 0u, "the advance clears the link field");
+
+    CHECK(entity_progress_advance_by_25(&e) == 1, "crossing the bound reports");
+    CHECK(e.progress_344 == 40.0f, "the value clamps to the +0x340 bound");
+
+    /* The step itself advances: already at the bound, adding 25 still
+     * clamps right back and reports. */
+    CHECK(entity_progress_advance_by_25(&e) == 1, "bound is sticky");
+    CHECK(e.progress_344 == 40.0f, "the clamp is idempotent");
+
+    /* Zero bound: any step reports and pins at zero. */
+    memset(&e, 0, sizeof(e));
+    e.progress_344 = 7.0f;
+    CHECK(entity_progress_advance_by_25(&e) == 1, "zero bound crosses");
+    CHECK(e.progress_344 == 0.0f, "zero bound pins the progress");
+}
+
+static int stats_flag_test(void)
+{
+    /* EntityStatsWordFlag10/20/40Test (2026-10-24): the bit tests mask the
+     * stats reader's word exactly. */
+    uint8_t rec[ENTITY_STATS_RECORD_SIZE];
+    memset(rec, 0, sizeof rec);
+    GameContext ctx;
+    game_context_init(&ctx);
+    int a = entity_create(&ctx, 1, "FlagA", 0.0f, 0.0f, 0.0f, 0.0f);
+    int b = entity_create(&ctx, 1, "FlagB", 0.0f, 0.0f, 0.0f, 0.0f);
+    if (a < 0 || b < 0) {
+        CHECK(0, "probe slots created");
+        return 1;
+    }
+    EntitySlot* e = &ctx.entity[0][a];
+    e->stats_record = rec;
+    CHECK(entity_stats_flag10_test(e) == 0u
+              && entity_stats_flag20_test(e) == 0u
+              && entity_stats_flag40_test(e) == 0u,
+          "a clear record answers no bits");
+    const uint32_t w1 = 0x133u;
+    memcpy(rec + 0x144, &w1, 4);
+    CHECK(entity_stats_flag10_test(e) == 0x10u, "bit 0x10 comes masked");
+    CHECK(entity_stats_flag20_test(e) == 0x20u, "bit 0x20 comes masked");
+    CHECK(entity_stats_flag40_test(e) == 0u, "a clear bit 0x40 answers 0");
+    const uint32_t w2 = 0x40u;
+    memcpy(rec + 0x144, &w2, 4);
+    CHECK(entity_stats_flag40_test(e) == 0x40u, "bit 0x40 comes masked");
+    CHECK(entity_stats_flag10_test(e) == 0u, "the other bits stay clear");
+    EntitySlot* n = &ctx.entity[0][b];
+    CHECK(entity_stats_flag10_test(n) == 0u
+              && entity_stats_flag20_test(n) == 0u
+              && entity_stats_flag40_test(n) == 0u,
+          "an unset record answers no bits");
+    return 0;
+}
+
+/* CatalogCallbackByIdDispatch recorder: books the callback arguments so
+ * the lanes' (kind, lane, row) shapes pin; optional early stop (1-based
+ * call index) and one-shot band-count grow (the corpus's mid-sweep hop
+ * re-read) ride as hooks. */
+static int s_disp_calls;
+static int s_disp_stop_at;
+static int s_disp_grow;
+static int s_disp_kind[8];
+static int s_disp_lane[8];
+static int s_disp_row[8];
+
+static int disp_recorder(int kind, int lane, int row, void* payload)
+{
+    (void)payload;
+    int n = s_disp_calls++;
+    if (n < 8) {
+        s_disp_kind[n] = kind;
+        s_disp_lane[n] = lane;
+        s_disp_row[n] = row;
+    }
+    if (s_disp_grow != 0) {
+        resource_handle_set_band_word_install(s_disp_grow, 2u);
+        s_disp_grow = 0;
+    }
+    return s_disp_stop_at != 0 && n + 1 == s_disp_stop_at ? 1 : 0;
+}
+
 int main(int argc, char** argv)
 {
     char rmcmd[64];
@@ -608,6 +889,10 @@ int main(int argc, char** argv)
         return 1;
     }
     fixture_roundtrip(); /* s_failures drives the exit code below */
+    stats_record_test();
+    stats_flag_test();
+    eligibility_test();
+    progress_advance_test();
 
     /* Back out of the fixture dir so the probe sees the shipped Lego.cfg
      * (and its wad mount) rather than the loose fixture. */
@@ -618,6 +903,657 @@ int main(int argc, char** argv)
             ol_probe(argv[a + 1]);
             ++a;
         }
+    }
+
+    /* The object pointer registry (2026-10-24): no feeder lands, so the
+     * count stays zero and the slot lookup never fires. */
+    {
+        int32_t out = 0x5a5a5a5a;
+        CHECK(object_pointer_registry_count_peek() == 0u,
+              "the registry count starts zero");
+        CHECK(object_pointer_registry_get_slot(0, &out) == 0,
+              "the first slot never fires");
+        CHECK(out == 0x5a5a5a5a, "the output stays untouched out of range");
+        CHECK(object_pointer_registry_get_slot(0, NULL) == 0,
+              "the NULL output is safe (deviation)");
+        object_pointer_registry_clear_match(1234);
+        CHECK(object_pointer_registry_count_peek() == 0u,
+              "the clear-match is a no-op with no entries");
+    }
+
+    /* The context-selected globals (2026-10-24): zero-pair start, the
+     * mode-selected read, and the selection/owner predicate via the
+     * media models. */
+    {
+        CHECK(context_selected_pointer_pair_peek(0) == 0u
+                  && context_selected_pointer_pair_peek(1) == 0u,
+              "the pair starts zero (no feeder)");
+        context_selected_pointer_pair_set(0xAAu, 0xBBu);
+        /* Mode 1 (media default? no: media mode is 0 until fed) — first. */
+        CHECK(context_selected_global_pointer_get() == 0xAAu,
+              "mode 0 reads the first pointer");
+
+        /* The predicate: no selection stored yet, everything rejects. */
+        int buf[256];
+        memset(buf, 0, sizeof(buf));
+        void* owner_slot = NULL;
+        memcpy((char*)buf + 0x36c, &owner_slot, sizeof(owner_slot));
+        CHECK(entity_matches_current_selection_or_owner(buf) == 0,
+              "no selection rejects");
+        CHECK(entity_matches_current_selection_or_owner(NULL) == 0,
+              "NULL entity rejects (deviation: corpus derefs)");
+
+        /* Store a selection through the media model (mode 0 path). */
+        media_min_distance_update_mode(0, buf, 0);
+        CHECK(entity_matches_current_selection_or_owner(buf) == 1,
+              "the entity itself matches the selection");
+        void* owner = buf;
+        memcpy((char*)buf + 0x36c, &owner, sizeof(owner));
+        CHECK(entity_matches_current_selection_or_owner(buf) == 1,
+              "the owner match satisfies it too");
+
+        /* Mode 1 rejects the direct match (corpus shape). */
+        int other[256];
+        memset(other, 0, sizeof(other));
+        media_min_distance_update_mode(1, buf, 0);
+        /* mode 1 clears the context in the corpus shape. */
+        CHECK(context_selected_global_pointer_get() == 0xBBu,
+              "mode 1 reads the second pointer");
+        media_min_distance_update_mode(0, other, 0);
+        CHECK(entity_matches_current_selection_or_owner(buf) == 0,
+              "another selection rejects");
+
+        media_min_distance_update_mode(1, NULL, 0);
+        context_selected_pointer_pair_set(0u, 0u);
+    }
+
+    /* GlobalAnimationStateSet (2026-10-24): the counter word store. */
+    {
+        entity_global_animation_state_set(0u);
+        CHECK(entity_global_animation_state_peek() == 0u,
+              "the counter clears on store");
+        entity_global_animation_state_set(7u);
+        CHECK(entity_global_animation_state_peek() == 7u,
+              "the store reads back");
+    }
+
+    /* The eligibility + admission leaves (2026-10-24). */
+    {
+        GameContext ctx;
+        game_context_init(&ctx);
+        int idx = entity_create(&ctx, 1, "EligLeaf", 0.0f, 0.0f, 0.0f, 0.0f);
+        CHECK(idx >= 0, "eligibility leaf slot created");
+        if (idx >= 0) {
+            EntitySlot* e = &ctx.entity[0][idx];
+            e->flags_3e0 = 0u;
+            e->flags_3e4 = 0u;
+            e->flags_3e8 = 0u;
+            e->field_340 = 0.0f;
+            char rec[ENTITY_STATS_RECORD_SIZE];
+            memset(rec, 0, sizeof rec);
+            e->stats_record = rec;
+            /* quad-mesh admission: clear stats, type 1 answers allowed. */
+            CHECK(entity_quad_mesh_render_record_allowed(e) == 1,
+                  "a clear stats word allows the record");
+            const uint32_t hi = 0x08000000u;
+            memcpy(rec + 0x148, &hi, 4);
+            CHECK(entity_quad_mesh_render_record_allowed(e) == 0,
+                  "the stats bit admits nothing");
+            const uint32_t zero = 0u;
+            memcpy(rec + 0x148, &zero, 4);
+            e->type = 8;
+            CHECK(entity_quad_mesh_render_record_allowed(e) == 0,
+                  "type 8 is excluded");
+            e->type = 13;
+            CHECK(entity_quad_mesh_render_record_allowed(e) == 0,
+                  "type 13 is excluded");
+            e->type = 1;
+            /* flag-100 + shared eligibility: gate follows stats bit 0x100. */
+            CHECK(entity_flag100_and_shared_eligibility_check(e) == 0,
+                  "a clear stats word answers no");
+            const uint32_t f100 = 0x100u;
+            memcpy(rec + 0x148, &f100, 4);
+            CHECK(entity_flag100_and_shared_eligibility_check(e) == 1,
+                  "bit 100 rides through the relaxed gate");
+            e->type = 4; /* the gate takes the strict clause */
+            e->flags_3e8 = 0x20000000u;
+            CHECK(entity_flag100_and_shared_eligibility_check(e) == 1,
+                  "the strict clause answers through its word");
+            e->flags_3e8 = 0u;
+            CHECK(entity_flag100_and_shared_eligibility_check(e) == 0,
+                  "the strict clause fails its word");
+            /* task type + condition: the gate and the caller's condition. */
+            CHECK(task_type_and_condition_check(e, 1) == 1,
+                  "the relaxed gate carries the condition");
+            CHECK(task_type_and_condition_check(e, 0) == 0,
+                  "a clear condition answers no");
+            e->flags_3e0 = 0x100u; /* blocks the gate */
+            CHECK(task_type_and_condition_check(e, 1) == 0,
+                  "the blocked gate answers no");
+        }
+    }
+
+    /* The shared eligibility gate's own negative field (2026-10-24). */
+    {
+        GameContext ctx;
+        game_context_init(&ctx);
+        int idx = entity_create(&ctx, 1, "EligNeg", 0.0f, 0.0f, 0.0f, 0.0f);
+        if (idx >= 0) {
+            EntitySlot* e = &ctx.entity[0][idx];
+            e->flags_3e0 = 0u;
+            e->flags_3e4 = 0u;
+            e->field_340 = -1.0f;
+            CHECK(entity_flag100_and_shared_eligibility_check(e) == 0,
+                  "the negative bound fails the gate");
+        }
+    }
+
+    /* EntityTypeAndStateFlagPredicate (2026-10-24): set + flag gate. */
+    {
+        EntitySlot e;
+        memset(&e, 0, sizeof e);
+        CHECK(entity_type_and_state_flag_predicate(&e) == 1,
+              "an included kind with clear flags answers one");
+        static char rec[0x150];
+        memset(rec, 0, sizeof rec);
+        const uint32_t bit = 0x20000000u;
+        __builtin_memcpy(rec + 0x148, &bit, sizeof bit);
+        e.stats_record = rec;
+        CHECK(entity_type_and_state_flag_predicate(&e) == 0,
+              "the raised flag bit silences the predicate");
+        e.type = 0xe;
+        CHECK(entity_type_and_state_flag_predicate(&e) == 0,
+              "an excluded kind answers zero");
+        e.type = 1;
+        memset(rec + 0x148, 0, 4);
+        CHECK(entity_type_and_state_flag_predicate(&e) == 1,
+              "the cleared flag re-arms the predicate");
+        CHECK(entity_type_and_state_flag_predicate(NULL) == 0,
+              "the null entity answers zero");
+    }
+
+    /* ObjectFilterMatchesActionTarget (2026-10-24): kinds + identity. */
+    {
+        uint32_t filt[12];
+        uint32_t targ[4];
+        memset(filt, 0, sizeof filt);
+        memset(targ, 0, sizeof targ);
+
+        filt[0] = 3u;
+        CHECK(object_filter_matches_action_target(filt, targ) == 0,
+              "an off-list kind answers zero");
+        filt[0] = 5u;
+        CHECK(object_filter_matches_action_target(filt, targ) == 1,
+              "the bare kind-5 matches");
+        filt[8] = 0x1111u; /* +0x20 name target */
+        CHECK(object_filter_matches_action_target(filt, targ) == 0,
+              "a name pair needs the target word");
+        targ[0] = 0x1111u;
+        CHECK(object_filter_matches_action_target(filt, targ) == 1,
+              "the name word matches through");
+        filt[10] = 0x77u; /* +0x28 companion */
+        CHECK(object_filter_matches_action_target(filt, targ) == 0,
+              "the companion word must agree too");
+        targ[2] = 0x77u;
+        CHECK(object_filter_matches_action_target(filt, targ) == 1,
+              "the full pair matches");
+        filt[9] = 5u; /* +0x24 selector */
+        CHECK(object_filter_matches_action_target(filt, targ) == 0,
+              "a set selector gates word 1");
+        targ[1] = 5u;
+        CHECK(object_filter_matches_action_target(filt, targ) == 1,
+              "the selector agreement lands");
+
+        static EntitySlot eslot;
+        memset(&eslot, 0, sizeof eslot);
+        eslot.flags_3e8 = 0x20000000u;
+        filt[0] = 7u;
+        uintptr_t handle = (uintptr_t)&eslot;
+        memcpy((char*)filt + 0x10, &handle, sizeof handle);
+        CHECK(object_filter_matches_action_target(filt, targ) == 1,
+              "the eligible handle lets kind 7 through");
+        eslot.flags_3e8 = 0u;
+        CHECK(object_filter_matches_action_target(filt, targ) == 0,
+              "the ineligible handle blocks kind 7");
+        void* zero_handle = NULL;
+        memcpy((char*)filt + 0x10, &zero_handle, sizeof zero_handle);
+        CHECK(object_filter_matches_action_target(filt, targ) == 1,
+              "the handleless kind 7 skips the check (quirk)");
+        CHECK(object_filter_matches_action_target(NULL, targ) == 0
+                  && object_filter_matches_action_target(filt, NULL) == 0,
+              "the null records answer zero");
+    }
+
+    /* EntityDetachCarriedObjectAndResetState (2026-10-24): the carrier
+     * detach gates, the pair clear, and the field-0x9c fold. */
+    {
+        static EntitySlot carrier, carried, stranger;
+        static LevelState dlvl;
+        int ref_value = 7;
+        memset(&carrier, 0, sizeof carrier);
+        memset(&carried, 0, sizeof carried);
+        memset(&stranger, 0, sizeof stranger);
+        memset(&dlvl, 0, sizeof dlvl);
+
+        carrier.type = 2;
+        carrier.field_340 = 5.0f;
+        entity_detach_carried_object_and_reset_state(&carrier, &dlvl);
+        CHECK(carrier.field_340 == 5.0f && carrier.flags_3e8 == 0u,
+              "the type gate keeps non-type-3 slots untouched");
+
+        carrier.type = 3;
+        entity_detach_carried_object_and_reset_state(&carrier, &dlvl);
+        CHECK(carrier.field_340 == -1.0f && carrier.flags_3e8 == 0x800000u,
+              "the bare type-3 reset lands");
+
+        carried.type = 6;
+        carried.attach_304 = &carrier;
+        carried.field_340 = 42.0f;
+        carrier.carry_link_308 = &carried;
+        carrier.carry_state_324 = 9;
+        carrier.flags_3e0 = 0x400u;
+        entity_detach_carried_object_and_reset_state(&carrier, &dlvl);
+        CHECK(carrier.carry_link_308 == NULL
+                  && carrier.carry_state_324 == 0
+                  && carried.attach_304 == NULL
+                  && (carrier.flags_3e0 & 0x400u) == 0u
+                  && carried.field_340 == -1.0f
+                  && carrier.field_340 == -1.0f,
+              "the detach clears the carried half and the pair");
+
+        carrier.carry_link_308 = &stranger;
+        stranger.type = 5;
+        stranger.field_340 = 3.0f;
+        entity_detach_carried_object_and_reset_state(&carrier, &dlvl);
+        CHECK(carrier.carry_link_308 == &stranger
+                  && stranger.field_340 == 3.0f,
+              "the non-6 carry stays attached (the corpus type test)");
+
+        carrier.carry_link_308 = NULL;
+        carrier.carry_ref_348 = &ref_value;
+        entity_detach_carried_object_and_reset_state(&carrier, &dlvl);
+        CHECK((int)level_field9c_get(&dlvl) == 7,
+              "the reference dword folds into the level's 9c");
+        carrier.carry_ref_348 = NULL;
+        entity_detach_carried_object_and_reset_state(&carrier, NULL);
+        level_state_field9c_add(NULL, 9); /* the null guard is a no-op */
+        CHECK((int)level_field9c_get(&dlvl) == 7,
+              "the absent reference keeps the fold quiet");
+    }
+
+    /* EntityClearLinkedObjectState (2026-10-24): the gate-400 clear. */
+    {
+        static EntitySlot gate, linked;
+        memset(&gate, 0, sizeof gate);
+        memset(&linked, 0, sizeof linked);
+        gate.flags_3e0 = 0x100u;
+        gate.carry_link_308 = &linked;
+        gate.carry_state_324 = 5;
+        entity_clear_linked_object_state(&gate);
+        CHECK(gate.carry_link_308 == &linked && gate.carry_state_324 == 5,
+              "the clear stays behind the gate bit");
+        gate.flags_3e0 = 0x400u;
+        linked.flags_3e8 = 1u;
+        entity_clear_linked_object_state(&gate);
+        CHECK(gate.carry_link_308 == NULL && gate.carry_state_324 == 0
+                  && (gate.flags_3e0 & 0x400u) == 0u
+                  && linked.flags_3e8 == 0x2001u,
+              "the clear drops the pair and raises the carried 0x2000");
+        gate.flags_3e0 = 0x400u;
+        gate.carry_link_308 = NULL;
+        entity_clear_linked_object_state(&gate);
+        CHECK(gate.flags_3e0 == 0u,
+              "the missing carried slot rides the guard (deviation)");
+    }
+
+    /* Pooled-record chunk window (2026-10-25): stride links and the
+     * chunk-tail join onto the previous head. */
+    {
+        const uint32_t chunks_before = pooled_record_chunk_count_peek();
+        pooled_record_chunk_allocate_and_link();
+        CHECK(pooled_record_chunk_count_peek() == chunks_before + 1u,
+              "the first chunk raises the counter");
+        void* head1 = pooled_record_head_peek();
+        CHECK(head1 != NULL, "the chunk lands on the free head");
+        void* link = (void*)0x1;
+        memcpy(&link, (char*)head1 + 0x408, sizeof link);
+        CHECK(link == NULL, "the lone record closes to the old head");
+        pooled_record_chunk_allocate_and_link(); /* counter 1 -> two records */
+        void* head2 = pooled_record_head_peek();
+        CHECK(head2 != NULL && head2 != head1, "the second chunk moves the head");
+        memcpy(&link, (char*)head2 + 0x408, sizeof link);
+        CHECK(link == (char*)head2 + 0x410, "the first link rides the stride");
+        memcpy(&link, (char*)head2 + 0x410 + 0x408, sizeof link);
+        CHECK(link == head1, "the chunk tail joins the previous head");
+        CHECK(pooled_record_chunk_count_peek() == chunks_before + 2u,
+              "the counter grows with the chunk table");
+    }
+
+    /* Pooled record allocate-and-reset (2026-10-25): the pop, the
+     * 0x103-dword clear, the busy self-link, and the seeded floats. */
+    {
+        const uint32_t chunks_before = pooled_record_chunk_count_peek();
+        void* head = pooled_record_head_peek();
+        CHECK(head != NULL, "the chunk window leaves records on the head");
+        void* rec1 = pooled_record_allocate_and_reset();
+        CHECK(rec1 == head, "the pop answers the head record");
+        void* link = NULL;
+        memcpy(&link, (char*)rec1 + 0x408, sizeof link);
+        CHECK(link == rec1, "the busy mark self-links");
+        uint32_t word = 0xffffffffu;
+        memcpy(&word, (char*)rec1 + 0x14, 4);
+        CHECK(word == 0u, "the clear zeroes the record head");
+        memcpy(&word, (char*)rec1 + 0x2f4, 4);
+        const uint32_t seeded = word;
+        memcpy(&word, (char*)rec1 + 0x2f8, 4);
+        CHECK(seeded == 0xbf800000u && word == 0xbf800000u,
+              "the float pair seeds");
+        CHECK(pooled_record_head_peek() != rec1, "the head advanced past it");
+
+        /* Drain the window, then the empty-head grow half. */
+        int drained = 0;
+        while (pooled_record_head_peek() != NULL) {
+            CHECK(pooled_record_allocate_and_reset() != NULL,
+                  "the drain pops records (rounds)");
+            if (++drained > 64) {
+                break; /* guard the test if the head never empties */
+            }
+        }
+        CHECK(drained > 0, "the window drained to empty");
+        const void* grown = pooled_record_allocate_and_reset();
+        CHECK(grown != NULL && pooled_record_head_peek() != NULL,
+              "the empty head grows a chunk (deviation-pinned)");
+        CHECK(pooled_record_chunk_count_peek() > chunks_before,
+              "the grow raises the chunk counter");
+    }
+
+    /* Resolved entity operation dispatch (2026-10-25): the resolver's
+     * (type, row) pair feeds the count-difference scan. */
+    {
+        grid_record_count_tables_clear();
+        CHECK(resolved_entity_operation_dispatch("NotAThing", 0, 0) == 0,
+              "the unknown name answers zero");
+        /* "hoverboard" = table type 1, row 0 -> cell 15; slot 3. */
+        grid_count_table_slot_poke(1, 0, 3, 1, 1234u);
+        grid_count_table_slot_poke(1, 0, 3, 0, 22u);
+        CHECK(resolved_entity_operation_dispatch("hoverboard", 3, 1) == 1212,
+              "the vehicle pair lands (type 1, row 0)");
+        /* "tinyrm" = creature type 3, row 1 -> cell 46; subtract-free. */
+        grid_count_table_slot_poke(3, 1, 1, 1, 55u);
+        CHECK(resolved_entity_operation_dispatch("tinyrm", 1, 0) == 55,
+              "the creature pair lands (type 3, row 1)");
+        /* The ore pair: dedicated index stores 0 and 1. */
+        grid_count_table_slot_poke(7, 0, 0, 1, 77u);
+        grid_count_table_slot_poke(7, 1, 0, 1, 99u);
+        CHECK(resolved_entity_operation_dispatch("Ore", 0, 0) == 77
+                  && resolved_entity_operation_dispatch("ProcessedOre", 0, 0)
+                         == 99,
+              "the ore pair lands through the case-fold");
+        /* Special names ride the zeroed row slot. */
+        grid_count_table_slot_poke(5, 0, 2, 1, 7u);
+        CHECK(resolved_entity_operation_dispatch("Boulder", 2, 0) == 7
+                  && resolved_entity_operation_dispatch("Boulder", 0, 0) == 0,
+              "the special kinds ride the zero row");
+        grid_record_count_tables_clear();
+    }
+
+    /* DAT_00502bd8 indexed stats-type tables (2026-10-25): window reads,
+     * install spans, instance strides and guards. Type 9 / row 7 belongs
+     * to this band. */
+    {
+        uint8_t tmpl[2 * 0x150];
+        for (int i = 0; i < (int)sizeof(tmpl); ++i) {
+            tmpl[i] = (uint8_t)(i % 256);
+        }
+        uint8_t cfg[0x334];
+        memset(cfg, 0, sizeof(cfg));
+
+        CHECK(stats_table_word_at_b8(9, 7) == 0u
+                  && stats_table_float_at_dc(9, 7) == 0.0f
+                  && stats_table_word_at_144(9, 7) == 0u
+                  && stats_table_word_at_148(9, 7) == 0u
+                  && stats_table_word_at_14c(9, 7) == 0u,
+              "uninstalled cells read zero");
+
+        stats_type_table_install(9, 7, tmpl, 2);
+        {
+            uint32_t w = 0;
+            float f = 0.0f;
+            __builtin_memcpy(&w, tmpl + 0xb8, 4);
+            CHECK(stats_table_word_at_b8(9, 7) == w, "the b8 window read");
+            __builtin_memcpy(&f, tmpl + 0xdc, 4);
+            CHECK(stats_table_float_at_dc(9, 7) == f, "the dc float window read");
+            __builtin_memcpy(&w, tmpl + 0x144, 4);
+            CHECK(stats_table_word_at_144(9, 7) == w, "the 144 window read");
+            __builtin_memcpy(&w, tmpl + 0x148, 4);
+            CHECK(stats_table_word_at_148(9, 7) == w, "the 148 window read");
+            __builtin_memcpy(&w, tmpl + 0x14c, 4);
+            CHECK(stats_table_word_at_14c(9, 7) == w, "the 14c window read");
+        }
+
+        {
+            int type = 9, row = 7;
+            __builtin_memcpy(cfg + 0x0, &type, 4);
+            __builtin_memcpy(cfg + 0x4, &row, 4);
+            int idx1 = 1;
+            __builtin_memcpy(cfg + 0x330, &idx1, 4);
+            uint32_t w = 0;
+            __builtin_memcpy(&w, tmpl + 0xbc + 0x150, 4);
+            CHECK(stats_instance_word_at_bc(cfg) == w, "the bc instance read");
+            __builtin_memcpy(&w, tmpl + 0xe0 + 0x150, 4);
+            CHECK(stats_instance_word_at_e0(cfg) == w, "the e0 instance read");
+            __builtin_memcpy(&w, tmpl + 0xec + 0x150, 4);
+            CHECK(stats_instance_word_at_ec(cfg) == w, "the ec instance read");
+            __builtin_memcpy(&w, tmpl + 0xf0 + 0x150, 4);
+            CHECK(stats_instance_word_at_f0(cfg) == w, "the f0 instance read");
+
+            int idx2 = 2; /* strides past the installed two-stride template */
+            __builtin_memcpy(cfg + 0x330, &idx2, 4);
+            CHECK(stats_instance_word_at_e0(cfg) == 0u, "the stride guard answers zero");
+            CHECK(stats_instance_word_at_bc(NULL) == 0u, "the NULL block guard holds");
+        }
+
+        {
+            uint32_t w = 0;
+            __builtin_memcpy(&w, tmpl + 0xb4 + 0x150, 4);
+            CHECK(stats_table_word_at_b4(9, 7, 1) == w, "the b4 stride read");
+            __builtin_memcpy(&w, tmpl + 0xd0 + 0x150, 4);
+            CHECK(stats_table_word_at_d0(9, 7, 1) == w, "the d0 stride read");
+            __builtin_memcpy(&w, tmpl + 0x100 + 0x150, 4);
+            CHECK(stats_table_word_at_100(9, 7, 1) == w, "the 100 stride read");
+            CHECK(stats_table_word_at_b4(9, 7, 2) == 0u
+                      && stats_table_word_at_b4(9, 7, -1) == 0u,
+                  "the stride guards answer zero");
+        }
+
+        CHECK(stats_table_word_at_b8(-1, 0) == 0u
+                  && stats_type_table_cell(9, 18) == NULL
+                  && stats_table_word_at_b8(16, 7) == 0u,
+              "the window guards hold");
+        stats_type_table_install(9, 7, NULL, 0); /* release the cell */
+    }
+
+    /* EntityQueryFlagCount (2026-10-25): catalog counts, the 0x14/0x15
+     * flag folds over the type-1 stats rows, and the pair-table default. */
+    {
+        static uint8_t rows[3][2 * 0x150];
+        memset(rows, 0, sizeof rows);
+        for (int i = 0; i < 3; ++i) {
+            stats_type_table_install(1, i, rows[i], 2);
+        }
+
+        CHECK(entity_query_flag_count(0x13) == 0
+                  && catalog_count_peek(1) == 0u
+                  && catalog_count_peek(0) == 0u,
+              "the fresh catalog counts answer zero");
+        catalog_count_install(1, 7u);
+        CHECK(entity_query_flag_count(0x13) == 7, "the 0x13 query answers count b");
+        catalog_count_install(1, 0u);
+
+        /* Zero-count fold: no rows in range, both folds answer zero. */
+        CHECK(entity_query_flag_count(0x14) == 0 && entity_query_flag_count(0x15) == 0,
+              "the empty catalog folds zero");
+
+        /* Row 0: w148 bit 0x1000, no 14c bit — counts in 0x14, skips 0x15. */
+        uint32_t v = 0x1000u;
+        __builtin_memcpy(rows[0] + 0x148, &v, 4);
+        catalog_count_install(0, 1u);
+        CHECK(entity_query_flag_count(0x14) == 1, "the 0x1000 flag counts in 0x14");
+        CHECK(entity_query_flag_count(0x15) == 0,
+              "the 0x1000-only row skips the 0x15 fold");
+
+        /* Row 1: 0x2000 raised but the 14c bit 8 — 0x14 skips, 0x15 counts. */
+        v = 0x2000u;
+        __builtin_memcpy(rows[1] + 0x148, &v, 4);
+        v = 8u;
+        __builtin_memcpy(rows[1] + 0x14c, &v, 4);
+        catalog_count_install(0, 2u);
+        CHECK(entity_query_flag_count(0x14) == 1, "the raised bit 8 drops 0x14");
+        CHECK(entity_query_flag_count(0x15) == 1, "the raised bit 8 counts in 0x15");
+
+        /* Row 2: 0x800 — the 0x15 fold counts it through the other half.
+         * Past-count rows would stay out too: row 2 rides in only now. */
+        v = 0x800u;
+        __builtin_memcpy(rows[2] + 0x148, &v, 4);
+        catalog_count_install(0, 3u);
+        CHECK(entity_query_flag_count(0x15) == 2, "the 0x800 flag counts in 0x15");
+        CHECK(entity_query_flag_count(0x14) == 1,
+              "the 0x800-only row skips the 0x14 fold");
+
+        /* The pair-table default: own storage, guarded window. */
+        CHECK(entity_query_flag_count(2) == 0,
+              "the default query answers the empty pair table");
+        catalog_id_pair_install(2, 42u);
+        CHECK(entity_query_flag_count(2) == 42, "the installed pair answers");
+        CHECK(entity_query_flag_count(-1) == 0 && entity_query_flag_count(8) == 0,
+              "the pair-window guards answer zero");
+
+        catalog_count_install(0, 0u);
+        catalog_count_install(1, 0u);
+        for (int i = 0; i < 3; ++i) {
+            stats_type_table_install(1, i, NULL, 0); /* release */
+        }
+    }
+
+    /* CatalogCallbackByIdDispatch (FUN_0041b680; 2026-10-25): the three
+     * catalog lanes hand the callback their gated rows, and the generic
+     * lane sweeps a key group's code array through the shared band. */
+    {
+        GameContext dctx;
+        game_context_init(&dctx);
+        static uint8_t drows[3][2 * 0x150];
+        memset(drows, 0, sizeof drows);
+        for (int i = 0; i < 3; ++i) {
+            stats_type_table_install(1, i, drows[i], 2);
+        }
+        uint32_t v;
+        v = 0x1000u;
+        __builtin_memcpy(drows[0] + 0x148, &v, 4);
+        v = 0x2000u;
+        __builtin_memcpy(drows[1] + 0x148, &v, 4);
+        v = 8u;
+        __builtin_memcpy(drows[1] + 0x14c, &v, 4);
+        v = 0x800u;
+        __builtin_memcpy(drows[2] + 0x148, &v, 4);
+
+        /* 0x13: count_b rows, each handed over as (0x49, 4, row). */
+        catalog_count_install(1, 3u);
+        s_disp_calls = 0;
+        s_disp_stop_at = 0;
+        s_disp_grow = 0;
+        CHECK(catalog_callback_by_id_dispatch(&dctx, 0x13, disp_recorder, NULL)
+                  == 0 && s_disp_calls == 3
+                  && s_disp_kind[0] == 0x49 && s_disp_lane[0] == 4
+                  && s_disp_row[0] == 0 && s_disp_row[2] == 2,
+              "the 0x13 lane hands the callback every count_b row");
+
+        /* The first nonzero callback answer ends the dispatch. */
+        s_disp_calls = 0;
+        s_disp_stop_at = 2;
+        CHECK(catalog_callback_by_id_dispatch(&dctx, 0x13, disp_recorder, NULL)
+                  == 1 && s_disp_calls == 2,
+              "the first nonzero callback answer wins the fold");
+
+        /* 0x14: rows raising +148 bit 0x1000 or 0x2000 while the +14c bit 8
+         * stays clear; row 1's raised bit 8 drops it out. */
+        catalog_count_install(0, 3u);
+        s_disp_calls = 0;
+        s_disp_stop_at = 0;
+        CHECK(catalog_callback_by_id_dispatch(&dctx, 0x14, disp_recorder, NULL)
+                  == 0 && s_disp_calls == 1
+                  && s_disp_kind[0] == 0x49 && s_disp_lane[0] == 1
+                  && s_disp_row[0] == 0,
+              "the 0x14 gate hands over the raised-bit clear-word rows");
+
+        /* 0x15: rows raising +148 bit 0x800 or the +14c bit 8. */
+        s_disp_calls = 0;
+        CHECK(catalog_callback_by_id_dispatch(&dctx, 0x15, disp_recorder, NULL)
+                  == 0 && s_disp_calls == 2
+                  && s_disp_row[0] == 1 && s_disp_row[1] == 2,
+              "the 0x15 gate folds the other flag halves");
+        catalog_count_install(0, 0u);
+        catalog_count_install(1, 0u);
+        for (int i = 0; i < 3; ++i) {
+            stats_type_table_install(1, i, NULL, 0); /* release */
+        }
+
+        /* Generic lane, pick branch: the empty selection rewrites the
+         * cached 0x22 element in place through the selection resolve. */
+        static int codes_a[3] = { 1, 0x22, 5 };
+        objective_selection_state_reset(); /* inter bit 7: the pick branch */
+        resource_handle_set_band_word_install(0, 3);
+        resource_handle_set_slot_install(0, codes_a);
+        s_disp_calls = 0;
+        CHECK(catalog_callback_by_id_dispatch(&dctx, 0, disp_recorder, NULL)
+                  == 0 && s_disp_calls == 3
+                  && s_disp_lane[0] == 0 && s_disp_lane[1] == 0
+                  && s_disp_kind[0] == 1 && s_disp_kind[1] == 0x23
+                  && codes_a[1] == 0x23 && s_disp_kind[2] == 5,
+              "the sweep rewrites the cached 0x22 pick through the resolve");
+        resource_handle_set_band_word_install(0, 0);
+
+        /* The high-bit selection rewrites the 0x23 element back up. */
+        static EntitySlot picked;
+        memset(&picked, 0, sizeof picked);
+        picked.type = 1;
+        picked.flags_3e8 = 0x80000000u;
+        selection_add(&dctx, &picked);
+        static int codes_b[2] = { 2, 0x23 };
+        resource_handle_set_band_word_install(1, 2);
+        resource_handle_set_slot_install(1, codes_b);
+        s_disp_calls = 0;
+        CHECK(catalog_callback_by_id_dispatch(&dctx, 1, disp_recorder, NULL)
+                  == 0 && s_disp_calls == 2
+                  && s_disp_kind[1] == 0x22 && codes_b[1] == 0x22,
+              "the high-bit selection rewrites the 0x23 pick in the array");
+        selection_clear(&dctx);
+        resource_handle_set_band_word_install(1, 0);
+        resource_handle_set_slot_install(1, NULL);
+
+        /* The corpus re-reads the band word every hop: a callback that
+         * regrows the count retargets the walk mid-sweep. */
+        static int codes_c[2] = { 6, 7 };
+        resource_handle_set_band_word_install(3, 1);
+        resource_handle_set_slot_install(3, codes_c);
+        s_disp_calls = 0;
+        s_disp_grow = 3;
+        CHECK(catalog_callback_by_id_dispatch(&dctx, 3, disp_recorder, NULL)
+                  == 0 && s_disp_calls == 2 && s_disp_kind[1] == 7,
+              "the sweep re-reads the band count every hop");
+        s_disp_grow = 0;
+        resource_handle_set_band_word_install(3, 0);
+        resource_handle_set_slot_install(3, NULL);
+
+        /* Guards: the NULL callback and the missing pair array answer zero
+         * (the corpus strides both blindly). */
+        resource_handle_set_band_word_install(4, 1);
+        s_disp_calls = 0;
+        CHECK(catalog_callback_by_id_dispatch(&dctx, 4, disp_recorder, NULL) == 0
+                  && s_disp_calls == 0,
+              "the pair-array guard answers zero");
+        CHECK(catalog_callback_by_id_dispatch(&dctx, 9, NULL, NULL) == 0,
+              "the NULL callback guard answers zero");
+        resource_handle_set_band_word_install(4, 0);
     }
 
     if (s_failures != 0) {

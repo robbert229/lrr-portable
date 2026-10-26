@@ -88,7 +88,27 @@ void message_config_set(int id, const char* sound, float cooldown,
 }
 
 void message_set_flags(uint32_t flags)        { s_flags = flags; }
+uint32_t message_flags_peek(void)             { return s_flags; }
+uint32_t message_config_flags(int id)
+{
+    return (id >= 0 && id < MESSAGE_MAX_ID) ? s_cfg[id].flags : 0u;
+}
 void message_set_system_state(uint32_t v)     { s_system_state = v; }
+
+uint32_t system_state_flags_get(void)
+{
+    return s_system_state;
+}
+
+uint32_t system_state_flags_set(const uint32_t* value)
+{
+    if (value == NULL) {
+        return 0u; /* deviation: the corpus dereferences blindly */
+    }
+    s_system_state = *value;
+    return *value;
+}
+
 void message_set_callback(MessageCallback cb) { s_callback = cb; }
 void message_set_sound_hook(MessageSoundHook h) { s_sound = h; }
 
@@ -182,7 +202,48 @@ static int message_pre_check(int id)
     return 0;
 }
 
-static int message_queue_find(int id)
+/* IncidentMessageConfigLookup (FUN_004193e0) — see message.hpp. The corpus
+ * uses __strcmpi (C-locale ASCII fold); the port's helper matches it. */
+static int msg_strcasecmp(const char* a, const char* b)
+{
+    for (;;) {
+        char ca = *a, cb = *b;
+        if (ca >= 'A' && ca <= 'Z') {
+            ca += 32;
+        }
+        if (cb >= 'A' && cb <= 'Z') {
+            cb += 32;
+        }
+        if (ca != cb) {
+            return (unsigned char)ca - (unsigned char)cb;
+        }
+        if (ca == 0) {
+            return 0;
+        }
+        ++a;
+        ++b;
+    }
+}
+
+int incident_message_config_lookup(const char* name, int* out_id)
+{
+    if (name == NULL || out_id == NULL) {
+        return 0; /* deviation: the corpus strides both blindly */
+    }
+    for (int i = 0; i != MESSAGE_MAX_ID; ++i) {
+        const char* n = s_cfg[i].name;
+        if (n != NULL && msg_strcasecmp(n, name) == 0) {
+            *out_id = i;
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/* InfoMessageQueueFindId (FUN_00419b20): the queue's index-by-id walk.
+ * The corpus strides the 5-dword queue entries against the count word;
+ * the port rides its parallel-array model (documented deviation). */
+int message_queue_find_id(int id)
 {
     for (int i = 0; i < s_queue_count; ++i) {
         if (s_queue_ids[i] == id) {
@@ -238,7 +299,7 @@ void message_dispatch(int id, uint32_t p2, uint32_t p3, const void* p4)
     }
 
     if (s_queue_count < MESSAGE_MAX_ID) {
-        int idx = message_queue_find(id);
+        int idx = message_queue_find_id(id);
         if (idx < 0) {
             idx = s_queue_count;
             s_queue_ts[idx] = s_now;
@@ -274,7 +335,7 @@ int message_active_count(void)
 
 int message_active_has(int id)
 {
-    return message_queue_find(id) >= 0;
+    return message_queue_find_id(id) >= 0;
 }
 
 float message_cooldown(int id)
@@ -283,4 +344,137 @@ float message_cooldown(int id)
         return 0.0f;
     }
     return s_cfg[id].cooldown;
+}
+/* --- corpus flag leaves (see message.hpp) -------------------------------- */
+void selection_flag10_set_clear(int set)
+{
+    if (set != 0) {
+        s_flags = s_flags | 0x10u;
+    } else {
+        s_flags = s_flags & ~0x10u;
+    }
+}
+
+void info_message_always_play_flag_set(int id, int set)
+{
+    if (id < 0 || id >= MESSAGE_MAX_ID) {
+        return; /* deviation: the corpus indexes blindly */
+    }
+    MessageConfig* c = &s_cfg[id];
+    if (set != 0) {
+        c->flags = c->flags | 0x10000u;
+    } else {
+        c->flags = c->flags & ~0x10000u;
+    }
+}
+
+void indexed_selection_flag_20000_set_clear(int id, int set)
+{
+    if (id < 0 || id >= MESSAGE_MAX_ID) {
+        return; /* deviation: the corpus indexes blindly */
+    }
+    MessageConfig* c = &s_cfg[id];
+    if (set != 0) {
+        c->flags = c->flags | 0x20000u;
+    } else {
+        c->flags = c->flags & ~0x20000u;
+    }
+}
+
+/* --- the incident/message DAT-global band (see message.hpp) -----------------
+ * Zero-init storage per the unowned-global convention (finding 05's all-zero
+ * byte-read is the faithful initial state); the corpus's index math and the
+ * stride-0x14 record window are reproduced. */
+#define MSG_DAT_WINDOW 0x28 /* the corpus's 40-entry block per finding 05 */
+static uint32_t s_msg_catalog[MSG_DAT_WINDOW]; /* DAT_004dc6fc stride-0x14 block */
+static uint32_t s_msg_secondary[MSG_DAT_WINDOW]; /* DAT_004dc700 stride-0x14 block */
+static uint32_t s_incident_state;              /* DAT_004dcd58 */
+
+uint32_t incident_message_text_catalog_get(int id)
+{
+    if (id < 0 || id >= MSG_DAT_WINDOW) {
+        return 0u; /* deviation: the corpus strides blindly past the block */
+    }
+    return s_msg_catalog[id];
+}
+
+void info_message_secondary_sound_set(int id, uint32_t value)
+{
+    if (id >= 0 && id < MSG_DAT_WINDOW) {
+        s_msg_secondary[id] = value;
+    }
+}
+
+uint32_t incident_message_state_get(void)
+{
+    return s_incident_state;
+}
+
+/* DeferredCallbackSet (FUN_00453900) — zero-init module static (the
+ * corpus's DAT_004a673c presence word). */
+static uint32_t s_deferred_callback_presence;
+
+void deferred_callback_set(uint32_t value)
+{
+    s_deferred_callback_presence = value;
+}
+
+uint32_t deferred_callback_peek(void)
+{
+    return s_deferred_callback_presence;
+}
+
+/* IncidentMessageFlagSet (FUN_00419ae0) — s_flags bit 4. */
+void incident_message_flag_set(int value)
+{
+    if (value != 0) {
+        s_flags |= 4u;
+    } else {
+        s_flags &= ~4u;
+    }
+}
+
+/* HasActiveResource (FUN_004119d0) — see message.hpp. */
+int has_active_resource(const void* record)
+{
+    uint32_t handle = 0u;
+    if (record != NULL) {
+        __builtin_memcpy(&handle, (const char*)record + 0x38, sizeof handle);
+    }
+    if (record == NULL || handle == 0u) {
+        return 0;
+    }
+    return system_state_flags_get() != 0u ? 1 : 0;
+}
+
+/* --- the indexed-list window (see message.hpp) ---------------------------- */
+
+#define IDX_LIST_SLOTS 16 /* deviation: the corpus strides the list index */
+static void* s_idx_head[IDX_LIST_SLOTS];  /* DAT_004dca18 role */
+static int   s_idx_count[IDX_LIST_SLOTS]; /* DAT_004dca1c role */
+
+void indexed_list_install(int list, void* head, int count)
+{
+    if (list >= 0 && list < IDX_LIST_SLOTS) {
+        s_idx_head[list] = head;
+        s_idx_count[list] = count;
+    }
+}
+
+void* indexed_linked_list_entry_get(int list, int index)
+{
+    if (list < 0 || list >= IDX_LIST_SLOTS) {
+        return NULL; /* deviation: blind stride */
+    }
+    void* entry = s_idx_head[list];
+    if (index < 0 || s_idx_count[list] <= index) {
+        return NULL;
+    }
+    while (index > 0 && entry != NULL) {
+        void* next = NULL; /* deviation: the corpus strides blindly */
+        __builtin_memcpy(&next, (const char*)entry + 0x10, sizeof next);
+        entry = next;
+        --index;
+    }
+    return entry;
 }

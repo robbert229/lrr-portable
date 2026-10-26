@@ -4,11 +4,22 @@
 #include <string.h>
 
 #include "resource.hpp"
+#include "heap.hpp"
 #include "sound.hpp"
 
-static const char* s_bank_names[SOUND_BANK_SLOTS];
-static Sound*      s_bank_sounds[SOUND_BANK_SLOTS];
-static int         s_bank_count = 0;
+/* Bank record (corpus record of stride 0x134; port keeps the fields the
+ * shipped record carries where observable: name at record +0, volume at
+ * +0x110, the flag word at +0x130). `sound` is the port-side payload
+ * handle standing in for the record's data/buffer fields. */
+typedef struct BankSlot {
+    char     name[260];      /* stored "<base>.wav" resource name */
+    Sound*   sound;          /* loaded payload, NULL until loaded */
+    uint32_t flags;          /* SOUND_SLOT_* + SOUND_LOOPING/STREAMED */
+    int      volume;         /* +0x110: validated millibels */
+} BankSlot;
+
+static BankSlot s_bank[SOUND_BANK_SLOTS];
+static int      s_bank_sound_on = 1; /* DAT_00533878 seam, see sound.hpp */
 
 /* ------------------------------------------------------------------ *
  *  RIFF/WAVE parse (finding 14 §2).
@@ -100,6 +111,7 @@ Sound* sound_parse(const uint8_t* data, uint32_t size)
     }
     s->format = fmt;
     s->data_len = pcm_len;
+    s->file_len = size;   /* the corpus stores the streamed file size */
     s->data = (uint8_t*)malloc(pcm_len > 0 ? pcm_len : 1u);
     if (s->data == NULL) {
         free(s);
@@ -160,37 +172,12 @@ static int s_has_wav_suffix(const char* name)
 
 int sound_bank_load(const char* name, int streamed, int looping)
 {
-    char full[1024];
-    if (!s_has_wav_suffix(name)) {
-        if (strlen(name) + 5 >= sizeof(full)) {
-            return -1;
-        }
-        snprintf(full, sizeof(full), "%s.wav", name);
-    } else {
-        if (strlen(name) + 1 >= sizeof(full)) {
-            return -1;
-        }
-        snprintf(full, sizeof(full), "%s", name);
+    /* Port convenience over the corpus entry load: skip when already
+     * present, like the shipped loader's own dedupe callers. */
+    if (sound_bank_find(name) != NULL) {
+        return 0;
     }
-
-    if (sound_bank_find(full) != NULL) {
-        return 0; /* already loaded */
-    }
-    if (s_bank_count >= SOUND_BANK_SLOTS) {
-        return -1;
-    }
-
-    Sound* s = sound_load(full);
-    if (s == NULL) {
-        return -1;
-    }
-    s->flags = (streamed ? SOUND_STREAMED : 0)
-             | (looping ? SOUND_LOOPING : 0);
-
-    s_bank_names[s_bank_count] = s->name;
-    s_bank_sounds[s_bank_count] = s;
-    ++s_bank_count;
-    return 0;
+    return sound_bank_entry_load(name, streamed, looping, 0) >= 0 ? 0 : -1;
 }
 
 Sound* sound_bank_find(const char* fullname)
@@ -207,9 +194,10 @@ Sound* sound_bank_find(const char* fullname)
         snprintf(full, sizeof(full), "%s.wav", fullname);
         fullname = full;
     }
-    for (int i = 0; i < s_bank_count; ++i) {
-        if (s_strcasecmp(s_bank_names[i], fullname) == 0) {
-            return s_bank_sounds[i];
+    for (int i = 0; i < SOUND_BANK_SLOTS; ++i) {
+        if ((s_bank[i].flags & SOUND_SLOT_BUSY) != 0
+            && s_strcasecmp(s_bank[i].name, fullname) == 0) {
+            return s_bank[i].sound;
         }
     }
     return NULL;
@@ -217,15 +205,148 @@ Sound* sound_bank_find(const char* fullname)
 
 int sound_bank_count(void)
 {
-    return s_bank_count;
+    int count = 0;
+    for (int i = 0; i < SOUND_BANK_SLOTS; ++i) {
+        if ((s_bank[i].flags & SOUND_SLOT_BUSY) != 0) {
+            ++count;
+        }
+    }
+    return count;
 }
 
 void sound_bank_clear(void)
 {
-    for (int i = 0; i < s_bank_count; ++i) {
-        sound_free(s_bank_sounds[i]);
+    for (int i = 0; i < SOUND_BANK_SLOTS; ++i) {
+        if (s_bank[i].sound != NULL) {
+            sound_free(s_bank[i].sound);
+        }
+        s_bank[i].sound = NULL;
+        s_bank[i].flags = 0;
+        s_bank[i].volume = 0;
+        s_bank[i].name[0] = '\0';
     }
-    s_bank_count = 0;
+}
+
+void sound_bank_sound_on_set(int on)
+{
+    s_bank_sound_on = (on != 0);
+}
+
+int sound_bank_sound_on(void)
+{
+    return s_bank_sound_on;
+}
+
+int sound_bank_free_slot_find(int* out_slot)
+{
+    /* SoundBankFreeSlotFind @ 0x47aad0. */
+    if (out_slot == NULL) {
+        return 0;
+    }
+    for (int i = 0; i < SOUND_BANK_SLOTS; ++i) {
+        if ((s_bank[i].flags & SOUND_SLOT_BUSY) == 0) {
+            *out_slot = i;
+            return 1;
+        }
+    }
+    return 0;
+}
+
+int sound_volume_value_valid(int millibels)
+{
+    /* SoundVolumeValueValid @ 0x47a850: (-10001 < v < 1). */
+    return (millibels < 1 && -10001 < millibels) ? 1 : 0;
+}
+
+int sound_bank_entry_load(const char* name, int streamed, int looping,
+                          int volume)
+{
+    /* SoundBankEntryLoad @ 0x47a870. */
+    if (!s_bank_sound_on) {
+        return -1; /* corpus's DAT_00533878 gate */
+    }
+    int slot;
+    if (name == NULL || !sound_bank_free_slot_find(&slot)) {
+        return -1;
+    }
+
+    BankSlot* rec = &s_bank[slot];
+    rec->flags = 0;      /* claimed record starts with cleared flags */
+    rec->sound = NULL;
+    rec->volume = 0;
+    rec->name[0] = '\0';
+
+    char full[1024];
+    if (!s_has_wav_suffix(name)) {
+        if (strlen(name) + 5 >= sizeof(full)) {
+            return -1;
+        }
+        snprintf(full, sizeof(full), "%s.wav", name);
+    } else {
+        if (strlen(name) + 1 >= sizeof(full)) {
+            return -1;
+        }
+        snprintf(full, sizeof(full), "%s", name);
+    }
+
+    /* Loader seam: the port's resource-layer loader stands in for the
+     * corpus's platform mmio path (InMemoryWaveSampleLoad's role),
+     * producing the same observable loaded record. */
+    Sound* s = sound_load(full);
+    if (s == NULL) {
+        return -1; /* flags stay zeroed: the slot was never claimed */
+    }
+    if (streamed != 0) {
+        rec->flags |= SOUND_STREAMED;
+    } else {
+        if (looping != 0) {
+            rec->flags |= SOUND_LOOPING;
+        }
+    }
+
+    size_t n = strlen(full);
+    if (n >= sizeof(rec->name)) {
+        n = sizeof(rec->name) - 1; /* truncate like the record copy loop */
+    }
+    memcpy(rec->name, full, n);
+    rec->name[n] = '\0';
+    s->flags = rec->flags & (SOUND_LOOPING | SOUND_STREAMED);
+    rec->sound = s;
+    rec->volume = sound_volume_value_valid(volume) ? volume : 0;
+    rec->flags |= SOUND_SLOT_BUSY | SOUND_SLOT_LOADED;
+    return slot;
+}
+
+void sound_bank_entry_release(int slot)
+{
+    /* SoundBankEntryRelease @ 0x47ab00. */
+    if (!s_bank_sound_on || slot < 0 || slot >= SOUND_BANK_SLOTS) {
+        return;
+    }
+    s_bank[slot].flags &= ~(uint32_t)SOUND_SLOT_BUSY;
+    if (s_bank[slot].sound != NULL) {
+        sound_free(s_bank[slot].sound);
+        s_bank[slot].sound = NULL;
+    }
+    /* Corpus: releases the three buffer interfaces through their
+     * vtables — TODO(corpus), no instance layer to hand them back to. */
+}
+
+uint32_t sound_bank_entry_flags(int slot)
+{
+    if (slot < 0 || slot >= SOUND_BANK_SLOTS) {
+        return 0;
+    }
+    return s_bank[slot].flags;
+}
+
+int sound_bank_entry_volume(int slot)
+{
+    /* IndexedRecordStride134WordGet @ 0x47b0d0 (record +0x110 word). */
+    if (slot < 0 || slot >= SOUND_BANK_SLOTS) {
+        return 0;
+    }
+    return s_bank[slot].volume;
 }
 
 uint32_t sound_pcm_hash(Sound* s)
@@ -240,3 +361,866 @@ uint32_t sound_pcm_hash(Sound* s)
     }
     return h;
 }
+
+/* ------------------------------------------------------------------ *
+ *  Sound alias registry (finding 137; issues #313 / #321 / #314).
+ *  See sound.hpp for the corpus model and documented deviations.
+ * ------------------------------------------------------------------ */
+
+/* SoundAliasRegistryInit @ 0x00464740: the 45 hard-coded SFX_* names in
+ * slot order (literal strings s_SFX_NULL..s_SFX_AmbientMusicLoop at
+ * 0x4a9794..0x4a94d0; indices 7, 0x26, 0x29 and 0x2c are pinned by
+ * findings 137/144). */
+static const char* const s_alias_builtins[SOUND_ALIAS_BUILTINS] = {
+    "SFX_NULL",                  /* 0  */
+    "SFX_Stamp",                 /* 1  */
+    "SFX_Drill",                 /* 2  */
+    "SFX_DrillFade",             /* 3  */
+    "SFX_RockBreak",             /* 4  */
+    "SFX_Drip",                  /* 5  */
+    "SFX_Ambient",               /* 6  */
+    "SFX_AmbientLoop",           /* 7  */
+    "SFX_Step",                  /* 8  */
+    "SFX_RockMonster",           /* 9  */
+    "SFX_RockMonster2",          /* 10 */
+    "SFX_RockMonsterStep",       /* 11 */
+    "SFX_MFDeposit",             /* 12 */
+    "SFX_ButtonPressed",         /* 13 */
+    "SFX_MFLift",                /* 14 */
+    "SFX_MFThrow",               /* 15 */
+    "SFX_Walker",                /* 16 */
+    "SFX_YesSir",                /* 17 */
+    "SFX_Build",                 /* 18 */
+    "SFX_Okay",                  /* 19 */
+    "SFX_NotOkay",               /* 20 */
+    "SFX_InterfaceSlideOnScreen",  /* 21 */
+    "SFX_InterfaceSlideOffScreen", /* 22 */
+    "SFX_PanelSlideOnScreen",    /* 23 */
+    "SFX_PanelSlideOffScreen",   /* 24 */
+    "SFX_Siren",                 /* 25 */
+    "SFX_CrystalRecharge",       /* 26 */
+    "SFX_Laser",                 /* 27 */
+    "SFX_LaserHit",              /* 28 */
+    "SFX_LazerRecharge",         /* 29 */
+    "SFX_TopPriority",           /* 30 */
+    "SFX_ImmovableRock",         /* 31 */
+    "SFX_Wall",                  /* 32 */
+    "SFX_Floor",                 /* 33 */
+    "SFX_BoulderHit",            /* 34 */
+    "SFX_Place",                 /* 35 */
+    "SFX_PlaceOre",              /* 36 */
+    "SFX_PlaceCrystal",          /* 37 */
+    "SFX_Lava",                  /* 38 (0x26) */
+    "SFX_RockWipe",              /* 39 */
+    "SFX_FallIn",                /* 40 */
+    "SFX_MusicLoop",             /* 41 (0x29) */
+    "SFX_CaptainSlide",          /* 42 */
+    "SFX_Dynamite",              /* 43 */
+    "SFX_AmbientMusicLoop",      /* 44 (0x2c) */
+};
+
+/* Dynamic (config-registered) aliases appended by the lookup, mirroring
+ * the corpus DAT_00502a24 slots behind the 45 built-ins. */
+static char* s_alias_dynamic[SOUND_ALIAS_MAX - SOUND_ALIAS_BUILTINS];
+static int   s_alias_dynamic_count;
+
+/* The corpus's DAT_00502a2c sound flag word: bit 0 subsystem-enabled
+ * (enable-set @ 0x465260), bit 1 dynamic-alias registration, bit 3 batch
+ * mode (batch-mode-get @ 0x4652b0). */
+static uint32_t s_sound_flags;
+
+/* _DAT_00502b2c — the global-cooldown word (the corpus types it as a
+ * double; it holds the alias submitted under the cooldown, whose writer
+ * lands with #296). */
+static double s_cooldown_alias;
+
+static char* s_dupstr(const char* s)
+{
+    size_t n = strlen(s) + 1;
+    char* copy = (char*)calloc(n, 1);
+    if (copy != NULL) {
+        memcpy(copy, s, n);
+    }
+    return copy;
+}
+
+void sound_alias_registry_init(void)
+{
+    /* Corpus: the built-in hashes are written into a fresh allocation;
+     * the port's built-ins are static. Deviation (documented): the
+     * corpus's repeated call leaks the table yet keeps the stale dynamic
+     * count; the port frees and zeroes the dynamic side and leaves the
+     * registration flag as-is, exactly the DAT_00502a2c behaviour. */
+    for (int i = 0; i < s_alias_dynamic_count; ++i) {
+        free(s_alias_dynamic[i]);
+        s_alias_dynamic[i] = NULL;
+    }
+    s_alias_dynamic_count = 0;
+}
+
+void sound_alias_registration_set(int enable)
+{
+    /* SoundDynamicAliasRegistrationSet @ 0x00464c50: raises/clears the
+     * value-2 bit of DAT_00502a2c (`|= 2` / `&= 0xfffffffd`). */
+    if (enable != 0) {
+        s_sound_flags |= SOUND_FLAG_REG_UNKNOWN;
+    } else {
+        s_sound_flags &= ~SOUND_FLAG_REG_UNKNOWN;
+    }
+}
+
+int sound_alias_lookup(const char* name, int* out_index)
+{
+    /* SoundAliasLookup @ 0x00464c70. The corpus compares hash keys under
+     * the KeyToAscii uppercase fold; s_strcasecmp applies the same fold
+     * to the names. */
+    if (name == NULL || out_index == NULL) {
+        return 0; /* corpus's param_1 != 0 guard */
+    }
+    for (int i = 0; i < SOUND_ALIAS_BUILTINS; ++i) {
+        if (s_strcasecmp(name, s_alias_builtins[i]) == 0) {
+            *out_index = i;
+            return 1;
+        }
+    }
+    for (int i = 0; i < s_alias_dynamic_count; ++i) {
+        if (s_strcasecmp(name, s_alias_dynamic[i]) == 0) {
+            *out_index = SOUND_ALIAS_BUILTINS + i;
+            return 1;
+        }
+    }
+    if ((s_sound_flags & SOUND_FLAG_REG_UNKNOWN) != 0) {
+        if (s_alias_dynamic_count >= SOUND_ALIAS_MAX - SOUND_ALIAS_BUILTINS) {
+            return 0; /* port bound: the corpus writes past its 0x7bc
+                       * table instead of failing */
+        }
+        int index = SOUND_ALIAS_BUILTINS + s_alias_dynamic_count;
+        char* copy = s_dupstr(name);
+        if (copy == NULL) {
+            return 0;
+        }
+        s_alias_dynamic[s_alias_dynamic_count] = copy;
+        ++s_alias_dynamic_count;
+        *out_index = index;
+        return 1;
+    }
+    return 0;
+}
+
+int sound_alias_count(void)
+{
+    return SOUND_ALIAS_BUILTINS + s_alias_dynamic_count;
+}
+
+const char* sound_alias_name(int index)
+{
+    if (index < 0) {
+        return NULL;
+    }
+    if (index < SOUND_ALIAS_BUILTINS) {
+        return s_alias_builtins[index];
+    }
+    if (index < SOUND_ALIAS_BUILTINS + s_alias_dynamic_count) {
+        return s_alias_dynamic[index - SOUND_ALIAS_BUILTINS];
+    }
+    return NULL;
+}
+
+/* ------------------------------------------------------------------ *
+ *  Sound subsystem enable state (issues #315 / #322 / #323 / #316;
+ *  finding 137 flag word DAT_00502a2c).
+ * ------------------------------------------------------------------ */
+
+void sound_subsystem_enable_set(int enable, int stop_active)
+{
+    /* SoundSubsystemEnableSet @ 0x00465260. */
+    if (enable != 0) {
+        s_sound_flags |= SOUND_FLAG_ENABLED;
+        return;
+    }
+    s_sound_flags &= ~SOUND_FLAG_ENABLED;
+    if (stop_active != 0) {
+        /* Corpus stop seam (instance-chain walk, TODO(corpus) — see
+         * sound.hpp). Deviation: the port's disable leaves live playback
+         * running until the instance layer lands. */
+    }
+    s_cooldown_alias = 0.0;
+}
+
+void sound_subsystem_enable_set_and_stop(int enable)
+{
+    /* SoundSubsystemEnableSetAndStop @ 0x004652a0. */
+    sound_subsystem_enable_set(enable, 1);
+}
+
+int sound_subsystem_enabled(void)
+{
+    return (s_sound_flags & SOUND_FLAG_ENABLED) != 0;
+}
+
+int sound_batch_mode_get(void)
+{
+    /* SoundBatchModeGet @ 0x004652b0: `return DAT_00502a2c & 8` — the
+     * corpus returns the masked word, so 8 (not 1) when set. */
+    return (int)(s_sound_flags & SOUND_FLAG_BATCH);
+}
+
+double sound_deferred_last_alias(void)
+{
+    return s_cooldown_alias;
+}
+
+/* ------------------------------------------------------------------ *
+ *  Deferred sound request queue (issue #317). See sound.hpp.
+ * ------------------------------------------------------------------ */
+
+static int s_queue_alias[SOUND_REQUEST_QUEUE_CAPACITY];  /* DAT_00502b30 */
+static int s_queue_loop[SOUND_REQUEST_QUEUE_CAPACITY];   /* DAT_00502b58 */
+static int s_queue_count;                                /* DAT_00502bd0 */
+
+void sound_request_queue_submit(int alias, int loop)
+{
+    /* SoundRequestQueueSubmit @ 0x464f60. */
+    if (s_queue_count >= SOUND_REQUEST_QUEUE_CAPACITY) {
+        return; /* corpus drop-on-full: no counter bump, no error */
+    }
+    s_queue_alias[s_queue_count] = alias;
+    s_queue_loop[s_queue_count] = loop;
+    ++s_queue_count;
+}
+
+int sound_request_queue_count(void)
+{
+    return s_queue_count;
+}
+
+int sound_request_queue_get(int index, int* alias, int* loop)
+{
+    if (index < 0 || index >= s_queue_count) {
+        return 0;
+    }
+    if (alias != NULL) {
+        *alias = s_queue_alias[index];
+    }
+    if (loop != NULL) {
+        *loop = s_queue_loop[index];
+    }
+    return 1;
+}
+
+void sound_request_queue_clear(void)
+{
+    /* Port-side helper: the corpus zeroes DAT_00502bd0 only in its
+     * frame tick (that consumer is unported here). */
+    s_queue_count = 0;
+}
+
+/* ------------------------------------------------------------------ *
+ *  Deferred-play global cooldown (issues #326 / #327). See sound.hpp.
+ * ------------------------------------------------------------------ */
+
+static float s_cooldown_timer;   /* _DAT_00502b24 (zero-initialised) */
+static int   s_cooldown_handle;  /* DAT_00502b28  (zero-initialised) */
+
+int sound_deferred_timer_set_if_idle(float seconds)
+{
+    /* DeferredSoundTimerSetIfIdle @ 0x464ec0. */
+    if (s_cooldown_timer <= 0.0f) {
+        s_cooldown_handle = -1;
+        s_cooldown_timer = seconds;
+        return 1;
+    }
+    return 0;
+}
+
+void sound_deferred_play_expire(void)
+{
+    /* DeferredSoundPlayExpire @ 0x464e80. */
+    if (s_cooldown_handle != -1 && s_cooldown_timer > 0.0f) {
+        /* Corpus stop seam (SoundHandleStopForward -> the shared stop
+         * path). Deviation: the instance layer is TODO(corpus), so the
+         * port's seam is a no-op and only the bookkeeping runs. */
+        s_cooldown_handle = -1;
+        s_cooldown_timer = 0.0f;
+    }
+}
+
+float sound_deferred_cooldown(void)
+{
+    return s_cooldown_timer;
+}
+void sound_deferred_handle_record(int handle)
+{
+    s_cooldown_handle = handle;
+}
+
+int sound_deferred_handle(void)
+{
+    return s_cooldown_handle;
+}
+
+/* ------------------------------------------------------------------ *
+ *  Configured sound-variant chains (issues #318 / #324). See sound.hpp.
+ * ------------------------------------------------------------------ */
+
+static int s_variant_slot[SOUND_ALIAS_MAX]; /* DAT_00501468 head slot words */
+static int s_variant_next[SOUND_ALIAS_MAX]; /* DAT_0050146c head next words */
+
+/* Corpus chain pool DAT_005023e0 (stride 8: slot word + next word),
+ * allocation counter DAT_00502a28. The corpus identifies nodes by their
+ * address and treats 0 as null, so the port reserves node id 0 for "no
+ * link" and allocates every node exactly once (monotone counter). */
+typedef struct VariantNode {
+    int slot;   /* bank slot: -1 failed link, stale until first written */
+    int next;   /* node id, 0 = end of chain */
+} VariantNode;
+
+static VariantNode s_variant_pool[SOUND_VARIANT_POOL_NODES];
+static int         s_variant_pool_next;   /* DAT_00502a28 */
+
+/* Variant draws: the corpus's thunk_FUN_0048e170 (shared RNG word
+ * DAT_004afcc8), modelled module-locally the way level.cpp and
+ * frontend.cpp do — same MSVCRT-style LCG, same 15-bit result. */
+static uint32_t s_variant_rand_state = 1;
+
+static int s_variant_rand(void)
+{
+    s_variant_rand_state = s_variant_rand_state * 214013u + 2531011u;
+    return (int)((s_variant_rand_state >> 16) & 0x7fffu);
+}
+
+static int s_variant_pool_alloc(void)
+{
+    if (s_variant_pool_next >= SOUND_VARIANT_POOL_NODES) {
+        return 0; /* port bound; the corpus scribbles past the pool */
+    }
+    ++s_variant_pool_next;
+    s_variant_pool[s_variant_pool_next].next = 0; /* DAT_005023e4 write */
+    /* The slot field keeps its previous content: unwritten links read as
+     * stale chain data, exactly like the corpus's global region. */
+    return s_variant_pool_next;
+}
+
+/* Comma split as FUN_00477440 (BlockTextTokenSplit) applies it here:
+ * splits in place, keeps empty tokens between consecutive commas, and
+ * never tests the final character as a separator start — the corpus
+ * quirk that leaves a trailing comma in the last path. Tokens beyond
+ * the port's copy of the 100-entry stack buffer split but go untracked
+ * (the corpus writes past its own frame); returns the tracked count. */
+static int s_variant_split(char* s, char** out, int max)
+{
+    if (s[0] == '\0') {
+        return 0;
+    }
+    out[0] = s;
+    int n = 1;
+    for (char* p = s; p[1] != '\0'; ++p) {
+        if (*p == ',') {
+            *p = '\0';
+            if (n < max) {
+                out[n++] = p + 1;
+            }
+        }
+    }
+    return n;
+}
+
+int sound_sample_marker_parse(const char* spec, int alias_index)
+{
+    if (spec == NULL || alias_index < 0 || alias_index >= SOUND_ALIAS_MAX) {
+        return 0; /* corpus: NULL deref / out-of-bounds scribble */
+    }
+
+    /* Chain reset: the head's next word (DAT_0050146c) zeroes — the head
+     * slot itself keeps its value until the first write. */
+    s_variant_next[alias_index] = 0;
+
+    char buf[1024]; /* corpus splits destructively in the config string;
+                     * the port splits a copy (documented deviation) */
+    snprintf(buf, sizeof(buf), "%s", spec);
+    char* tokens[SOUND_VARIANT_TOKENS];
+    int ntok = s_variant_split(buf, tokens, SOUND_VARIANT_TOKENS);
+
+    int stream_mode = 0;            /* '@' marker, sticky (finding 135) */
+    int ok = 1;
+
+    /* Corpus cursors: W (piVar9) is the link written next, C (local_1d4)
+     * the previous link. W starts at the chain head, C starts null. */
+    int w_head = 1, w_id = alias_index;
+    int c_head = 0, c_id = 0;
+    int c_valid = 0;
+
+    for (int t = 0; t < ntok; ++t) {
+        char* p = tokens[t];
+        int looping = (p[0] == '*'); /* '*' = duplicate-buffer request */
+        if (looping) {
+            ++p;
+        }
+        int volume = 0;
+        if (p[0] == '#') {           /* '#N#' millibel marker, finding 142 */
+            ++p;
+            char digits[64];         /* corpus local_1d0[64] */
+            size_t d = 0;
+            if (*p != '#') {         /* empty '#...#' parses as 0 (the
+                                     * corpus reads its stack garbage) */
+                for (; *p != '\0' && *p != '#'; ++p) {
+                    if (d < sizeof(digits) - 1) {
+                        digits[d++] = *p;
+                    }
+                }
+                if (*p == '\0') {
+                    /* Unterminated '#': the corpus walks past the NUL and
+                     * parses its stack; the port parses what it captured
+                     * and loads the (empty) tail as the path. */
+                }
+            }
+            digits[d] = '\0';
+            if (*p == '#') {
+                ++p;                 /* step over the closing '#' */
+            }
+            volume = (int)strtol(digits, NULL, 10); /* FUN_0048db70 role */
+        }
+        if (p[0] == '@') {
+            stream_mode = 1;
+            ++p;
+        }
+
+        int slot = sound_bank_entry_load(p, stream_mode, looping, volume);
+        if (w_head) {
+            s_variant_slot[w_id] = slot;   /* *piVar9 = iVar5 */
+        } else {
+            s_variant_pool[w_id].slot = slot;
+        }
+
+        if (slot == -1) {
+            ok = 0;  /* failed link stays linked with its -1 (as shipped);
+                      * both cursors stay where they were */
+            continue;
+        }
+        if (c_valid) {
+            int node = s_variant_pool_alloc();
+            if (node != 0) {
+                if (c_head) {
+                    s_variant_next[c_id] = node;
+                } else {
+                    s_variant_pool[c_id].next = node;
+                }
+                w_head = 0;
+                w_id   = node;
+            }
+            /* Pool full: the link is dropped (the corpus scribbles past
+             * the pool region instead). */
+        }
+        c_valid = 1;
+        c_head  = w_head;
+        c_id    = w_id;
+    }
+    return ok;
+}
+
+int sound_variant_select(int alias_index)
+{
+    if (alias_index <= 0 || alias_index >= SOUND_ALIAS_MAX) {
+        return -1; /* corpus: alias 0 (the silent alias) returns -1 and
+                    * negatives scribble out of bounds */
+    }
+    if (s_variant_next[alias_index] != 0) {
+        int count = 1;
+        for (int node = s_variant_next[alias_index]; node != 0;
+             node = s_variant_pool[node].next) {
+            ++count;
+        }
+        int pick = s_variant_rand() % count;
+        int head_slot = s_variant_slot[alias_index];
+        if (pick != 0) {
+            int node = s_variant_next[alias_index];
+            for (int i = 1; i < pick; ++i) {
+                node = s_variant_pool[node].next;
+            }
+            int tmp = s_variant_pool[node].slot;
+            s_variant_pool[node].slot = head_slot;
+            head_slot = tmp; /* corpus swaps picked slot with head */
+        }
+        s_variant_slot[alias_index] = head_slot;
+    }
+    return s_variant_slot[alias_index];
+}
+
+int sound_variant_chain(int alias_index, int* out_slots, int max)
+{
+    if (alias_index < 0 || alias_index >= SOUND_ALIAS_MAX || max <= 0) {
+        return 0;
+    }
+    if (out_slots != NULL) {
+        out_slots[0] = s_variant_slot[alias_index];
+    }
+    int n = 1;
+    for (int node = s_variant_next[alias_index];
+         node != 0 && n < max; node = s_variant_pool[node].next) {
+        if (out_slots != NULL) {
+            out_slots[n] = s_variant_pool[node].slot;
+        }
+        ++n;
+    }
+    return n;
+}
+
+/* ------------------------------------------------------------------ *
+ *  Bank-record volume write + configured variant properties (issues
+ *  #319 / #320). See sound.hpp.
+ * ------------------------------------------------------------------ */
+
+void sound_bank_entry_volume_set(int slot, int millibels)
+{
+    /* SoundBankEntryVolumeSet @ 0x47b050. */
+    if (slot < 0 || slot >= SOUND_BANK_SLOTS) {
+        return; /* corpus writes without bounds */
+    }
+    /* Validate-and-store: invalid millibel values land as 0. */
+    s_bank[slot].volume = sound_volume_value_valid(millibels) ? millibels : 0;
+
+    /* Corpus: when the loop bit is set the value goes to all three of
+     * the record's buffer interfaces through their vtables (SetVolume
+     * role), otherwise to buffer 0 only. Instance layer TODO(corpus):
+     * the seam is a no-op. */
+}
+
+void sound_variant_property_set(int alias_index, int millibels)
+{
+    /* ConfiguredVariantPropertySet @ 0x465010. Deviation: the corpus's
+     * millibel argument is register-passed and invisible to the
+     * decompile, so the port takes it explicitly (issue #319). */
+    int slot = sound_variant_select(alias_index);
+    sound_bank_entry_volume_set(slot, millibels);
+}
+
+void sound_variant_property_read(int alias_index)
+{
+    /* ConfiguredVariantPropertyRead @ 0x465030: only the variant draw
+     * is observable — the corpus reads IndexedRecordStride134WordGet's
+     * word (@ 0x47b0d0, via sound_bank_entry_volume) but discards it. */
+    int slot = sound_variant_select(alias_index);
+    (void)sound_bank_entry_volume(slot);
+}
+
+/* ------------------------------------------------------------------ *
+ *  Sound submission route (issues #325 / #328 / #329 / #330 / #332).
+ *  See sound.hpp.
+ * ------------------------------------------------------------------ */
+
+/* Corpus batch-deferred record: DAT_00502a30 +0 alias, +4 position
+ * word, +8/+12/+16 coordinate words, +20 mode word (stride 6 words,
+ * count DAT_00502b20). */
+typedef struct BatchEntry {
+    int      alias;      /* +0  DAT_00502a30 */
+    int      position;   /* +4  DAT_00502a34 */
+    float    xyz[3];     /* +8  DAT_00502a38/3c/40 */
+    uint32_t mode;       /* +20 DAT_00502a44 */
+} BatchEntry;
+
+static BatchEntry s_batch_entry[SOUND_BATCH_QUEUE_CAPACITY];
+static int        s_batch_count;   /* DAT_00502b20 */
+
+/* The frame tick's active replay copies (DAT_00502b80 alias words,
+ * DAT_00502ba8 loop words, count DAT_00502bd4). */
+static int s_active_alias[SOUND_REQUEST_QUEUE_CAPACITY];
+static int s_active_loop[SOUND_REQUEST_QUEUE_CAPACITY];
+static int s_active_count;
+
+/* Instance-layer play seam: the corpus hands (mode, position, bank
+ * slot, loop flag, coordinate vector) to the buffer-handle chain for
+ * actual playback. TODO(corpus) — the seam is inert here; every state
+ * change the route makes is already done by the time it is called. */
+static void s_play_seam(int mode, int position, int slot, int loop,
+                        const float* xyz)
+{
+    (void)mode;
+    (void)position;
+    (void)slot;
+    (void)loop;
+    (void)xyz;
+}
+
+void sound_alias_play(int alias, int loop)
+{
+    /* SoundAliasPlay @ 0x464fa0. */
+    if ((s_sound_flags & SOUND_FLAG_BATCH) == 0) {
+        if (alias != 0 && (s_sound_flags & SOUND_FLAG_ENABLED) != 0) {
+            int slot = sound_variant_select(alias);
+            /* Corpus quirk kept: a chain head reading 0 — a real bank
+             * slot, or the unwritten head — counts as "no sound". */
+            if (slot != 0) {
+                s_play_seam(2, 0, slot, loop, NULL);
+            }
+        }
+    } else if (s_batch_count < SOUND_BATCH_QUEUE_CAPACITY) {
+        /* Deferred alias form writes only the alias and clears the mode
+         * word's positional bit — the loop bit (and position words)
+         * keep whatever an earlier batch record left in the slot
+         * (corpus quirk: the deferred alias form never carries a loop
+         * flag). */
+        s_batch_entry[s_batch_count].alias = alias;
+        s_batch_entry[s_batch_count].mode &= ~1u;
+        ++s_batch_count;
+    }
+}
+
+int sound_positional_sound_submit(int position, int alias, int loop,
+                                  int positional, const float* xyz)
+{
+    /* PositionalSoundSubmit @ 0x465090. */
+    if ((s_sound_flags & SOUND_FLAG_BATCH) == 0) {
+        if (alias != 0 && (s_sound_flags & SOUND_FLAG_ENABLED) != 0) {
+            int slot = sound_variant_select(alias);
+            if (slot != 0) {
+                if (positional != 0) {
+                    s_play_seam(0, position, slot, loop, NULL);
+                } else {
+                    s_play_seam(1, 0, slot, loop, xyz);
+                }
+            }
+        }
+    } else if (s_batch_count < SOUND_BATCH_QUEUE_CAPACITY) {
+        BatchEntry* e = &s_batch_entry[s_batch_count];
+        ++s_batch_count;
+        e->alias = alias;
+        e->position = position;
+        e->mode = (uint32_t)((((positional & 1) << 1) | (loop & 1)) << 1)
+                | (e->mode & 0xfffffff9u) | 1u;
+        if (xyz != NULL) {
+            e->xyz[0] = xyz[0];
+            e->xyz[1] = xyz[1];
+            e->xyz[2] = xyz[2];
+        }
+    }
+    return 0;
+}
+
+void sound_batch_queue_drain(int batch_set, int replay)
+{
+    /* SoundBatchQueueDrain @ 0x4652d0. */
+    if (batch_set != 0) {
+        s_sound_flags |= SOUND_FLAG_BATCH; /* raise the bit and leave */
+        return;
+    }
+    s_sound_flags &= ~SOUND_FLAG_BATCH;
+    if (replay == 0) {
+        return;
+    }
+    for (int i = 0; i < s_batch_count; ++i) {
+        const BatchEntry* e = &s_batch_entry[i];
+        const uint32_t m = e->mode;
+        if ((m & 1u) == 0) {
+            /* Deferred alias form replays with the stale loop bit. */
+            sound_alias_play(e->alias, (int)((m << 30) >> 31));
+        } else {
+            sound_positional_sound_submit(e->position, e->alias,
+                                          (int)((m << 30) >> 31),
+                                          (int)((m << 29) >> 31),
+                                          (const float*)e->xyz);
+        }
+    }
+    s_batch_count = 0;
+}
+
+void sound_deferred_queue_drain(int batch_set)
+{
+    /* SoundDeferredQueueDrain @ 0x4652c0. */
+    sound_batch_queue_drain(batch_set, 1);
+}
+
+int sound_batch_queue_count(void)
+{
+    return s_batch_count;
+}
+
+int sound_batch_queue_get(int index, int* alias, int* position,
+                          uint32_t* mode, float* xyz)
+{
+    if (index < 0 || index >= s_batch_count) {
+        return 0;
+    }
+    if (alias != NULL) {
+        *alias = s_batch_entry[index].alias;
+    }
+    if (position != NULL) {
+        *position = s_batch_entry[index].position;
+    }
+    if (mode != NULL) {
+        *mode = s_batch_entry[index].mode;
+    }
+    if (xyz != NULL) {
+        xyz[0] = s_batch_entry[index].xyz[0];
+        xyz[1] = s_batch_entry[index].xyz[1];
+        xyz[2] = s_batch_entry[index].xyz[2];
+    }
+    return 1;
+}
+
+void sound_subsystem_frame_tick(float dt)
+{
+    /* SoundSubsystemFrameTick @ 0x4651a0. */
+    const int batch_saved = sound_batch_mode_get();
+    s_cooldown_timer -= dt;            /* _DAT_00502b24 step */
+    sound_batch_queue_drain(0, 0);     /* batch off for the replay pass */
+    for (int i = 0; i < s_active_count; ++i) {
+        sound_alias_play(s_active_alias[i], s_active_loop[i]);
+    }
+    if (batch_saved != 0) {
+        sound_deferred_queue_drain(1); /* restore batch mode */
+    }
+    /* Rotate the pending queue (#317) into the active replay copies. */
+    const int n = s_queue_count;
+    for (int i = 0; i < n; ++i) {
+        s_active_alias[i] = s_queue_alias[i];
+        s_active_loop[i] = s_queue_loop[i];
+    }
+    s_active_count = n;
+    s_queue_count = 0;
+    /* Instance-chain pump seam: TODO(corpus), inert. */
+}
+
+int sound_active_request_count(void)
+{
+    return s_active_count;
+}
+
+int sound_active_request_get(int index, int* alias, int* loop)
+{
+    if (index < 0 || index >= s_active_count) {
+        return 0;
+    }
+    if (alias != NULL) {
+        *alias = s_active_alias[index];
+    }
+    if (loop != NULL) {
+        *loop = s_active_loop[index];
+    }
+    return 1;
+}
+
+/* ------------------------------------------------------------------ *
+ *  Streamed-voice duration + configured stream triggers (issues
+ *  #297 / #299; findings 406 / 217).
+ *
+ *  A stream's duration is its stored file size divided by the format's
+ *  average bytes per second. The corpus keeps that in a side record
+ *  table and picks between a cached copy and a dereferenced format
+ *  word by the record's stream flag — both resolve to the same value
+ *  in the port, whose bank records carry the loaded WAV. The
+ *  division has no zero guard as shipped: unloaded or zero-rate
+ *  records yield infinity/NaN, and a NaN cooldown would then never
+ *  expire (finding 217), kept as-is.
+ * ------------------------------------------------------------------ */
+
+double sound_streamed_wave_buffer_step_rate(int slot)
+{
+    /* StreamedWaveBufferStepRate @ 0x47b8e0. slot -1 is the variant
+     * select's "no sound" result: zero, before any table read. */
+    if (slot == -1) {
+        return 0.0;
+    }
+    if (slot < 0 || slot >= SOUND_BANK_SLOTS) {
+        return 0.0; /* deviation: the corpus reads past its record table */
+    }
+    const BankSlot* rec = &s_bank[slot];
+    const Sound* snd = rec->sound;
+    uint32_t bytes = (snd != NULL) ? snd->file_len : 0u;
+    double rate = (snd != NULL) ? (double)snd->format.byte_rate : 0.0;
+    return (double)bytes / rate;
+}
+
+double sound_object_duration_get(int alias)
+{
+    /* SoundObjectDurationGet @ 0x465160: duration of whatever the alias's
+     * chain selects — one PRNG draw per call (a global-cooldown submit
+     * therefore draws twice: play's select and this one, as corpus). */
+    int slot = sound_variant_select(alias);
+    return sound_streamed_wave_buffer_step_rate(slot);
+}
+
+int sound_submit_with_global_cooldown(int alias, int* out_handle)
+{
+    /* SoundSubmitWithGlobalCooldown @ 0x464ef0. */
+    if (s_cooldown_timer <= 0.0f) {
+        const int batched = (s_sound_flags & SOUND_FLAG_BATCH) != 0;
+        const int enabled = (s_sound_flags & SOUND_FLAG_ENABLED) != 0;
+        sound_alias_play(alias, 0);       /* the submit's play (0x464fa0) */
+
+        /* Corpus DAT_00502b28 = the play's instance-layer handle.
+         * Deviation: the instance layer is TODO(corpus), so the port
+         * records the routed bank slot — and -1 when nothing routed:
+         * alias 0, a disabled subsystem, a chain head that reads 0 (the
+         * "no sound" quirk), or a batch-mode deferral (no instance
+         * handle until the replay). */
+        int handle = -1;
+        if (!batched && alias != 0 && enabled && alias > 0
+            && alias < SOUND_ALIAS_MAX && s_variant_slot[alias] != 0) {
+            handle = s_variant_slot[alias];
+        }
+
+        if (handle != -1) {
+            s_cooldown_alias = (double)alias;   /* _DAT_00502b2c */
+            s_cooldown_timer =
+                (float)(sound_object_duration_get(alias) * 25.0);
+            s_cooldown_handle = handle;         /* DAT_00502b28 */
+            if (out_handle != NULL) {
+                *out_handle = handle;
+            }
+            return 1;
+        }
+    }
+    return 0;
+}
+
+int sound_stream_play_level(int level)
+{
+    /* StreamPlayLevel @ 0x416150: the Stream_LevelName_Level_%d alias,
+     * submitted through the global cooldown when it resolves. */
+    char name[128];
+    snprintf(name, sizeof(name), "Stream_LevelName_Level_%d", level);
+    int alias = 0;
+    if (sound_alias_lookup(name, &alias) != 0) {
+        return sound_submit_with_global_cooldown(alias, NULL);
+    }
+    return 0;
+}
+
+int sound_stream_play_tutorial(int level)
+{
+    /* StreamPlayTutorial @ 0x4161a0. */
+    char name[128];
+    snprintf(name, sizeof(name), "Stream_LevelName_TLevel_%d", level);
+    int alias = 0;
+    if (sound_alias_lookup(name, &alias) != 0) {
+        return sound_submit_with_global_cooldown(alias, NULL);
+    }
+    return 0;
+}
+
+/* SoundBufferAssociationAdd (FUN_0047b020) — see sound.hpp. */
+static void* s_buffer_assoc_head; /* DAT_00506684 role: unowned */
+
+void sound_buffer_association_add(uint32_t a, uint32_t b, uint32_t c)
+{
+    void* node = engine_heap_alloc(4 * sizeof(void*));
+    if (node == NULL) {
+        return; /* deviation: the corpus strides the record blindly */
+    }
+    char* w = (char*)node;
+    void* wa = (void*)(uintptr_t)a;
+    void* wb = (void*)(uintptr_t)b;
+    void* wc = (void*)(uintptr_t)c;
+    __builtin_memcpy(w + 0 * sizeof(void*), &wa, sizeof wa);
+    __builtin_memcpy(w + 1 * sizeof(void*), &wb, sizeof wb);
+    __builtin_memcpy(w + 2 * sizeof(void*), &wc, sizeof wc);
+    __builtin_memcpy(w + 3 * sizeof(void*), &s_buffer_assoc_head,
+                     sizeof s_buffer_assoc_head);
+    s_buffer_assoc_head = node;
+}
+
+void  sound_buffer_association_head_set(void* node)
+{
+    s_buffer_assoc_head = node;
+}
+void* sound_buffer_association_head_peek(void) { return s_buffer_assoc_head; }

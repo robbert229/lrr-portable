@@ -344,6 +344,89 @@ int main(void)
         simtick_sfx_seed(0, NULL);
     }
 
+    /* SimulationGlobalWordSet (2026-10-24): the faithful blind store. */
+    simulation_global_word_set(0xABCDu);
+    CHECK(simtick_mute_word() == 0xABCDu, "simtick: the word store lands");
+    simulation_global_word_set(0u);
+
+    /* The blocked-route and timer-word bit folds (2026-10-24). */
+    {
+        simtick_set_editor_state(0x1600u, 1);
+        simtick_route_position_blocked_state_set(1);
+        CHECK((simtick_route_position_state_peek() & 0x600u) == 0x200u,
+              "blocked raises bit 9 and drops bit 10");
+        simtick_set_editor_state(0x1600u, 1);
+        simtick_route_position_blocked_state_set(0);
+        CHECK(simtick_route_position_state_peek() == 0x400u,
+              "the unblocked mask drops bits 9 and 12, keeping bit 10");
+
+        simtick_manager_set_timer_word(0x1012u);
+        simtick_global_ui_flags_clear_bits12();
+        CHECK(simtick_global_ui_flags_word() == 0x1010u,
+              "the clear keeps every other bit");
+    }
+
+    /* The scene-transform copy + motion-cancel bit (2026-10-24). */
+    {
+        const float cur[3] = { 1.5f, -2.5f, 3.25f };
+        simtick_scene_transform_current_set(cur);
+        simtick_set_editor_state(0x180u, 0);
+        simtick_scene_position_reset_and_effect_motion_cancel();
+        const float* cfg = simtick_scene_transform_config_peek();
+        CHECK(cfg[0] == 1.5f && cfg[1] == -2.5f && cfg[2] == 3.25f,
+              "the config triple copies the current transform");
+        CHECK(simtick_route_position_state_peek() == 0x100u,
+              "the cancel clears the motion gate bit");
+        simtick_scene_transform_current_set(NULL); /* guarded */
+    }
+
+    /* The group-record chain release (2026-10-24). */
+    {
+        SimtickBobbin a = {};
+        SimtickBobbin b = {};
+        a.next = &b;
+        b.next = NULL;
+        simtick_set_bobbin_head(&a);
+        simtick_release_all_group_records(); /* walks both records */
+        simtick_set_bobbin_head(NULL);
+        simtick_release_all_group_records(); /* the empty head walks empty */
+        CHECK(1, "the chain release runs the corpus's drop walk");
+    }
+
+    /* The axis-tolerance window (2026-10-25): the per-axis compares about
+     * the config triple with the installed tolerance triple. */
+    {
+        const float cfg[3] = { 10.0f, 20.0f, 30.0f };
+        simtick_scene_transform_current_set(cfg);
+        simtick_scene_position_reset_and_effect_motion_cancel();
+        const float tol[3] = { 0.5f, 1.0f, 2.0f };
+        simtick_vector_tolerance_install(tol);
+        const float inside[3] = { 10.4f, 21.0f, 28.0f };
+        CHECK(simtick_vector_within_axis_tolerance(inside) == 1,
+              "the inside vector lands");
+        const float outside_x[3] = { 10.6f, 21.0f, 28.0f };
+        CHECK(simtick_vector_within_axis_tolerance(outside_x) == 0,
+              "the first axis drops out of the window");
+        const float outside_y[3] = { 10.0f, 22.1f, 28.0f };
+        CHECK(simtick_vector_within_axis_tolerance(outside_y) == 0,
+              "the second axis drops out of the window");
+        const float outside_z[3] = { 10.0f, 21.0f, 27.0f };
+        CHECK(simtick_vector_within_axis_tolerance(outside_z) == 0,
+              "the third axis drops out of the window");
+        CHECK(simtick_vector_within_axis_tolerance(NULL) == 0,
+              "the null vector guards (dev)");
+        const float zero[3] = { 0.0f, 0.0f, 0.0f };
+        simtick_vector_tolerance_install(zero);
+        CHECK(simtick_vector_within_axis_tolerance(cfg) == 1,
+              "the zero tolerance rides exact matches");
+        simtick_vector_tolerance_install(NULL); /* guarded: stays installed */
+        CHECK(simtick_vector_within_axis_tolerance(cfg) == 1,
+              "the guarded install leaves the window");
+        simtick_scene_transform_current_set(zero);
+        simtick_scene_position_reset_and_effect_motion_cancel();
+        simtick_vector_tolerance_install(zero);
+    }
+
     if (s_failures == 0) {
         printf("simtick_test: PASS\n");
         return 0;

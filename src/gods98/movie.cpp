@@ -894,6 +894,78 @@ void movie_scale_rgba(const uint8_t* src, int sw, int sh, int spitch,
     }
 }
 
+/* ------------------------------------------------------------------ *
+ *  Rect-aware video pump (port issue #303; DirectShowVideoPlaybackLoop
+ *  @ 0x42efc0). See movie.hpp for the corpus mapping and the deviation
+ *  note (finding 206: the corpus's own Blit ignores the rect).
+ * ------------------------------------------------------------------ */
+
+int movie_video_playback_loop(const MoviePump* pump)
+{
+    if (pump == NULL || pump->next == NULL || pump->present == NULL
+        || pump->info == NULL) {
+        return 0;
+    }
+    /* Corpus: the rect branch restores the render surface from the
+     * primary once, before the pump starts (the corpus's
+     * RenderSurfaceRestoreFromPrimary role); the null branch starts
+     * immediately. */
+    if (pump->rect != NULL && pump->restore != NULL) {
+        pump->restore(pump->restore_user);
+    }
+    int frames = 0;
+    for (;;) {
+        MovieOut out;
+        memset(&out, 0, sizeof(out));
+        if (pump->next(&out, pump->next_user) != 0) {
+            break;                    /* EOF or error ends the branch */
+        }
+        if (pump->present(&out, pump->info, pump->rect,
+                          pump->present_user) != 0) {
+            break;
+        }
+        ++frames;
+        if (pump->quit != NULL && pump->quit(pump->quit_user) != 0) {
+            break;                    /* message-pump quit between frames */
+        }
+    }
+    return frames;
+}
+
+void movie_scale_rgba_rect(const uint8_t* src, int sw, int sh, int spitch,
+                           uint8_t* dst, int dw, int dh, int dpitch,
+                           const MovieRect* rect)
+{
+    if (src == NULL || dst == NULL || rect == NULL || sw <= 0 || sh <= 0
+        || dw <= 0 || dh <= 0 || dpitch < dw * 4 || spitch < sw * 4
+        || rect->w <= 0 || rect->h <= 0) {
+        return;
+    }
+    int x0 = rect->x > 0 ? rect->x : 0;
+    int y0 = rect->y > 0 ? rect->y : 0;
+    int x1 = rect->x + rect->w < dw ? rect->x + rect->w : dw;
+    int y1 = rect->y + rect->h < dh ? rect->y + rect->h : dh;
+    for (int y = y0; y < y1; ++y) {
+        int sy = (int)(((int64_t)(y - rect->y) * sh) / rect->h);
+        if (sy >= sh) {
+            sy = sh - 1;
+        }
+        const uint8_t* s = src + (size_t)sy * spitch;
+        uint8_t* d = dst + (size_t)y * dpitch;
+        for (int x = x0; x < x1; ++x) {
+            int sx = (int)(((int64_t)(x - rect->x) * sw) / rect->w);
+            if (sx >= sw) {
+                sx = sw - 1;
+            }
+            const uint8_t* p = s + (size_t)sx * 4;
+            d[x * 4 + 0] = p[0];
+            d[x * 4 + 1] = p[1];
+            d[x * 4 + 2] = p[2];
+            d[x * 4 + 3] = p[3];
+        }
+    }
+}
+
 int movie_avis_enabled(BlockFile* cfg)
 {
     if (cfg == NULL) {

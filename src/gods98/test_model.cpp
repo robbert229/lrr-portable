@@ -396,6 +396,36 @@ static void test_uv(void)
     model_free(m);
 }
 
+/* LwoReadBigEndianFloat (corpus FUN_0048c1d0): the four stream bytes land
+ * byte-reversed so a little-endian read recovers the big-endian float, the
+ * cursor advances four, and the return is always 1. */
+static void test_be_float_cursor(void)
+{
+    /* 3.14159... as big-endian bytes. */
+    static const uint8_t stream[] = { 0x40, 0x49, 0x0F, 0xD0 };
+    const uint8_t* cursor = stream;
+    uint8_t out[4];
+
+    CHECK(lwo_read_big_endian_float(&cursor, out) == 1, "be reader answers 1");
+    CHECK(cursor == stream + 4, "the cursor advanced four");
+
+    float f;
+    memcpy(&f, out, sizeof f);
+    CHECK(f > 3.1415f && f < 3.1416f, "byte reversal recovers the float");
+
+    /* Successive reads keep advancing the cursor. */
+    static const uint8_t stream2[] = { 0x3F, 0x80, 0x00, 0x00, 0x41, 0x20,
+                                       0x00, 0x00 };
+    const uint8_t* c2 = stream2;
+    float a, b;
+    lwo_read_big_endian_float(&c2, out);
+    memcpy(&a, out, 4);
+    lwo_read_big_endian_float(&c2, out);
+    memcpy(&b, out, 4);
+    CHECK(a == 1.0f && b == 10.0f, "two reads give the two big-endian floats");
+    CHECK(c2 == stream2 + 8, "the cursor advanced twice");
+}
+
 static void test_digest_stability(void)
 {
     unsigned char* end;
@@ -619,7 +649,47 @@ int main(int argc, char** argv)
     test_pols();
     test_srfs_surf();
     test_uv();
+    test_be_float_cursor();
     test_digest_stability();
+    /* The string helper leaves (2026-10-25): the even-rounded dup and the
+     * projection-mode table parse. */
+    {
+        char* dup = lwo_string_duplicate("ab");
+        CHECK(dup != NULL && strcmp(dup, "ab") == 0,
+              "the even-length dup copies");
+        CHECK(dup != NULL && dup[2] == '\0' && dup[3] == '\0',
+              "the even-length block rides NUL to the rounded end");
+        free(dup);
+
+        char* odd = lwo_string_duplicate("abc");
+        CHECK(odd != NULL && strcmp(odd, "abc") == 0 && odd[3] == '\0'
+                  && odd[4] == '\0',
+              "the odd-length dup pads even and stays terminated");
+        free(odd);
+
+        char* empty = lwo_string_duplicate("");
+        CHECK(empty != NULL && empty[0] == '\0',
+              "the empty dup allocates the rounded byte block");
+        free(empty);
+
+        CHECK(lwo_string_duplicate(NULL) == NULL,
+              "the null guard answers null");
+
+        CHECK(lwo_texture_projection_mode_parse("PLANAR") == 0,
+              "PLANAR answers 0");
+        CHECK(lwo_texture_projection_mode_parse("CYLINDRICAL") == 1,
+              "CYLINDRICAL answers 1");
+        CHECK(lwo_texture_projection_mode_parse("SPHERICAL") == 2,
+              "SPHERICAL answers 2");
+        CHECK(lwo_texture_projection_mode_parse("spherical") == 2,
+              "the fold reads the name case-blind");
+        CHECK(lwo_texture_projection_mode_parse("SPHERICALX") == 2,
+              "the prefix match wins");
+        CHECK(lwo_texture_projection_mode_parse("cyl") == 0
+                  && lwo_texture_projection_mode_parse("other") == 0
+                  && lwo_texture_projection_mode_parse(NULL) == 0,
+              "the no-match fall-through answers PLANAR");
+    }
 
     if (argc >= 3 && strcmp(argv[1], "--real") == 0) {
         test_real(argv[2]);

@@ -66,6 +66,15 @@ const char* block_name(const BlockRec* r);
 const char* block_value(const BlockRec* r);     /* NULL when no value token */
 BlockRec*   block_first_child(const BlockRec* r);
 BlockRec*   block_next_sibling(const BlockRec* r);
+
+/* SortedEntryNextEqualKey (FUN_00479020, findings 230/403): follow the
+ * sorted record chain and answer the next record whose depth (+0xc)
+ * equals the starting record's depth — "equal key" is the depth word,
+ * and the walk stops the moment the chain gets shallower. The corpus
+ * reads the followed entry's depth before checking it (NULL next
+ * crashes — guarded here); in the port's tree model the walk is exactly
+ * the next record under the same parent, so this is next-sibling. */
+BlockRec* block_next_equal_key(const BlockRec* r);
 int         block_has_children(const BlockRec* r);
 size_t      block_record_count(const BlockFile* bf);
 /* Records in document (creation) order — iteration for validators/tools. */
@@ -81,5 +90,51 @@ float block_get_float(BlockFile* bf, const char* path, float dflt);
 /* Corpus bool (FUN_004790d0/77710): TRUE|YES|ON → 1, FALSE|NO|OFF → 0,
  * missing or unparseable → 2. */
 int   block_get_bool(BlockFile* bf, const char* path);
+
+/* ConfigRgbVectorRead (FUN_00479170): reads the path's value string,
+ * splits it on commas the way FUN_00477440 applies the DAT_004a1cd4
+ * separator (empty tokens kept, the final character never tested as a
+ * separator start), and requires exactly three tokens. The three tokens
+ * are integer-parsed (FUN_0048db70 role) and land scaled by 1/255; the
+ * corpus multiplies in x87 float10 — the port hands back plain floats
+ * (deviation) and splits a stack copy because the port's value string
+ * is the tree storage (documented deviation). */
+int config_rgb_vector_read(BlockFile* bf, const char* path,
+                           float* r, float* g, float* b);
+
+/* ReadAngleSettingRadians (FUN_00479110): the path's float value (the
+ * corpus's missing-record half defaults to its empty-string byte, so a
+ * miss parses 0.0 either way) scales degrees to radians by
+ * 1/360 * 2π. A zero — or missing — value answers zero, matching the
+ * corpus's gate that skips the multiply; the x87 float10 product lands
+ * as plain float (deviation). */
+float config_angle_radians_get(BlockFile* bf, const char* path);
+
+/* RegistryPathSplit (FUN_0048b330, finding 402): the backslash-path
+ * component copier the registry key builders loop over — copies bytes
+ * up to (not including) the next backslash or NUL into `out`, skips one
+ * separator, and returns the rest of the path. Same split idiom as the
+ * config nested paths above. NULL path answers NULL, out NULL copies
+ * nothing (documented deviation). */
+const char* registry_path_split(const char* path, char* out);
+
+/* BlockTextTokenPoolDestroy (FUN_00478e20): frees every nonzero pool slot
+ * through the engine heap, then clears the head cursor and the resident
+ * flag. The corpus leaves the freed slot pointers dangling; the port
+ * NULLs them (anti-dangling deviation). The pool's corpus storage — 32
+ * slots at DAT_00506498, grow watermark DAT_0050651c, free-list head
+ * DAT_00506518, resident flag DAT_00506520 — is module-local here with
+ * the hooks below (the pool init entry point is not ported);
+ * DAT_00506518's second corpus role as crt.cpp's record-list head is a
+ * documented aliasing the port does not model across translation units. */
+void  block_text_token_pool_destroy(void);
+void  block_text_token_pool_init(void);               /* FUN_00478df0 */
+void  block_text_token_pool_grow(void);              /* FUN_00479490 */
+void  block_text_token_pool_slot_set(int slot, void* token);
+void* block_text_token_pool_slot_peek(int slot);
+void  block_text_token_pool_head_set(void* head);
+void* block_text_token_pool_head_peek(void);
+int   block_text_token_pool_resident_peek(void);
+int   block_text_token_pool_watermark_peek(void);    /* port hook */
 
 #endif /* LEGORRR_BLOCK_HPP */

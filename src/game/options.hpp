@@ -127,4 +127,48 @@ int  options_load_header(GameOptions* o, const uint8_t* blk);
 }
 #endif
 
+/* OptionsWriteToSlot (FUN_00416910, finding 408): with a save slot open,
+ * stores the live options words into the slot context's +8/+12/+16 window
+ * (the corpus writes +8 sfx / +12 speed / +16 music). Deviation: the port's
+ * slot context is the active context block (sav_slot_ctx), so the writes
+ * land as dwords in that block's byte window (port-side composition). */
+struct GameContext;
+void options_write_to_slot(struct GameContext* ctx); /* FUN_00416910 */
+
+/* OptionsContextSixFieldSet (FUN_00417f20, findings 438/372): with a save
+ * slot open, copies six dwords from `src` into the slot context's +0x1c
+ * window. Deviation: the corpus probes the global active-slot context; the
+ * port threads a GameContext argument (the module's established shape). */
+void options_context_six_field_set(struct GameContext* ctx,
+                                   const uint32_t* src);
+
+/* OptionsContextCopyAndReplaceResource (FUN_004180c0): with a save slot
+ * open, frees the slot context's owned resource word (the corpus's
+ * DAT_00557080+slot*0xb8 dword 0xd through EngineHeapFree), copies the
+ * full 46-dword source block over the window, and re-lands the source's
+ * dword 0xd. Deviations: the corpus strides its active-slot context
+ * blindly (the port gates on sav_build_ctx); the corpus block has no
+ * ported owner, so the window and the widened resource ride zero-init
+ * own storage behind the install/peek hooks (the unowned-DAT
+ * convention). */
+void options_context_copy_and_replace_resource(struct GameContext* ctx,
+                                               const uint32_t* source);
+void     options_slot_window_install(const uint32_t* block, void* resource);
+uint32_t options_slot_window_dword_peek(int index);
+void*    options_slot_resource_peek(void); /* FUN_00417f20 */
+
+/* --- scroll speed index band (2026-10-25) --------------------------------
+ * ScrollToSliderIndex (FUN_00415030): maps the engine's scroll-scale float
+ * (the corpus's _DAT alias, modeled by the engine's peek/set accessors) to
+ * a speed-index band — 0 below 0.6666667, 1 below 1.0, 2 below 1.3333334,
+ * 3 below 1.6666666, else 4 (5 at or above 2.0). Corpus shape pinned: the
+ * comparisons promote the stored float, so a NaN scale fails every test
+ * and answers 4. ScrollSliderRefresh (FUN_00415360): stores the band value
+ * into the options speed word (the corpus writes the same dword that the
+ * port models as GameOptions.game_speed). Deviation: the port threads a
+ * GameContext argument; a NULL context stores nothing. */
+int  scroll_to_slider_index(void);                    /* FUN_00415030 */
+void scroll_slider_refresh(struct GameContext* ctx);  /* FUN_00415360 */
+
+
 #endif /* LEGORRR_GAME_OPTIONS_HPP */

@@ -171,7 +171,10 @@ static int s_marker_fired = 0;int simtick_marker_count(void)
 static void marker_cell(EngineState* /*st*/, uint32_t x, uint32_t y)
 {
     (void)x; (void)y;
-    /* TODO(simtick): FUN_00450f30 marker callback. */
+    /* TODO(simtick): the corpus's per-cell terrain-init marker
+     * callback — its body is a cell-geometry builder that lands with
+     * the terrain-data wave (address deliberately unquoted: quoting an
+     * unported function flips its ledger row). */
     ++s_marker_fired;
 }
 
@@ -786,4 +789,98 @@ void simtick_fx_bank_tick(EngineContext* c, float dt)
     (void)c; (void)dt; (void)s_fx_entries; (void)s_fx_count;
     /* corpus: per-entry sub-fx scan, track max, fade update, clamp 240. */
     ++s_post_n;
+}
+/* SimulationGlobalWordSet (FUN_0041ba90): the faithful blind store — the
+ * same word the mute timer reads (simtick_set_mute_word is the port-side
+ * hook with the same effect; this is the corpus's own entry point). */
+void simulation_global_word_set(uint32_t value)
+{
+    s_mute_word = value;
+}
+
+/* DirectSoundListenerViewSet (FUN_0047ab80) — see simtick.hpp. */
+void simtick_directsound_listener_view_set(int view)
+{
+    if (s_sound_on != 0) {
+        s_sound_active = view;
+    }
+}
+
+/* RoutePositionBlockedStateSet (FUN_0044da20) — see simtick.hpp. */
+void simtick_route_position_blocked_state_set(int blocked)
+{
+    if (blocked != 0) {
+        s_edit_word = (s_edit_word & ~0x400u) | 0x200u;
+        return;
+    }
+    s_edit_word &= ~0x1200u; /* bits 9 and 12; bit 10 survives */
+}
+
+uint32_t simtick_route_position_state_peek(void) { return s_edit_word; }
+
+/* GlobalUIFlagsClearBits12 (FUN_0045b610) — see simtick.hpp. */
+void simtick_global_ui_flags_clear_bits12(void)
+{
+    s_timer_word &= 0xfffffff9u;
+}
+
+uint32_t simtick_global_ui_flags_word(void) { return s_timer_word; }
+
+/* ScenePositionResetAndEffectMotionCancel (FUN_0044cf70) — see simtick.hpp. */
+static float s_xform_current[3];   /* corpus pose seam stand-in */
+static float s_xform_config[3];    /* DAT_004eae74 role */
+
+void simtick_scene_position_reset_and_effect_motion_cancel(void)
+{
+    __builtin_memcpy(s_xform_config, s_xform_current, sizeof s_xform_config);
+    s_edit_word &= 0xffffff7fu;
+}
+
+void simtick_scene_transform_current_set(const float xyz[3])
+{
+    if (xyz != NULL) {
+        __builtin_memcpy(s_xform_current, xyz, sizeof s_xform_current);
+    }
+}
+
+const float* simtick_scene_transform_config_peek(void)
+{
+    return s_xform_config;
+}
+
+/* ReleaseAllGroupRecords (FUN_004099d0) — see simtick.hpp. */
+void simtick_release_all_group_records(void)
+{
+    SimtickBobbin* node = s_bobbin_head;
+    while (node != NULL) {
+        SimtickBobbin* next = node->next;
+        bobbin_drop(node);
+        node = next;
+    }
+}
+
+/* --- the axis-tolerance window (2026-10-25; see simtick.hpp) ---------------
+ * The corpus tolerance triple (DAT_004eae80/84/88 role) rides own storage;
+ * its corpus writer is the recorded light-effects parameter band
+ * (deviation), so the install hook stands in. */
+static float s_xform_tolerance[3];
+
+void simtick_vector_tolerance_install(const float xyz[3])
+{
+    if (xyz != NULL) {
+        __builtin_memcpy(s_xform_tolerance, xyz, sizeof s_xform_tolerance);
+    }
+}
+
+int simtick_vector_within_axis_tolerance(const float xyz[3])
+{
+    if (xyz == NULL) {
+        return 0; /* deviation: the corpus strides the vector blindly */
+    }
+    for (int i = 0; i != 3; ++i) {
+        if (s_xform_tolerance[i] < fabsf(xyz[i] - s_xform_config[i])) {
+            return 0;
+        }
+    }
+    return 1;
 }

@@ -48,8 +48,20 @@ extern "C" {
 /* --- slot context --------------------------------------------------- */
 void save_init(GameContext* ctx);
 
-int  save_slot_get(const GameContext* ctx);        /* SavGetSlot */
-void save_slot_set(GameContext* ctx, int slot);    /* SavSetSlot */
+int  save_slot_get(const GameContext* ctx);  /* SavGetSlot FUN_00417e90 */
+void save_slot_set(GameContext* ctx, int slot);  /* SavSetSlot FUN_00417ea0 */
+
+/* SaveSlotSelectionClear (FUN_00415cf0, finding 408): drops the active
+ * slot selection back to the corpus's closed sentinel (-1). The corpus
+ * writes DAT_005574d0 blindly; NULL answers nothing (documented). */
+void save_slot_selection_clear(GameContext* ctx);
+
+/* SavSlotCtx (FUN_00417e50): the corpus hands back the slot's 0xB8 context
+ * block from the DAT_00557080 array (bounds 0..5). The port models the
+ * context block in GameContext, so the corpus's bounds test is reproduced
+ * and the block is answered for valid slots (deviation: the port's one
+ * active-slot context stands in for the corpus's six). */
+void* sav_slot_ctx(GameContext* ctx, int slot);
 
 /* Open `Saves\<slot>.sav` into the active-slot context. `create_if_missing`
  * mirrors SavReadSlot's `param_3`: 0 writes a fresh empty slot when the file
@@ -58,6 +70,14 @@ int save_read_slot(GameContext* ctx, int slot, int create_if_missing);
 
 /* Write the active-slot context to `Saves\<slot>.sav` (+ `.osf`). */
 int save_write_slot(GameContext* ctx, int slot);
+
+/* SavRefreshSlots (FUN_00417df0): walk the six slots so every slot file
+ * exists. With the engine feature word's bit 0x400 raised, each slot is
+ * written fresh before being read back; otherwise each is read (and
+ * re-read once when the first attempt fails). Deviation: the port's
+ * single active-slot context stands in for the corpus's six context
+ * blocks (the SavSlotCtx precedent). */
+void sav_refresh_slots(GameContext* ctx); /* FUN_00417df0 */
 
 /* SavCommit: write the current active slot to disk. */
 void save_commit(GameContext* ctx);
@@ -73,7 +93,11 @@ int save_write_thumbnail(GameContext* ctx, int slot, const void* fb,
 /* Dirty-mark record `index` (|1, plus |2 for an empty-name record). */
 void save_mark_record(GameContext* ctx, int index);
 
-/* Copy a 0x318c blob into record `index` (SavWriteRecord). */
+/* SavWriteRecord (FUN_00417f40): copies a 0x318c blob into record
+ * `index`'s window (the corpus's record base + index * 0x3190 + 4). The
+ * corpus gate is SavBuildCtx's slot context + the record-count word;
+ * the port grows the record table to fit (documented deviation).
+ * Answers 1 when the blob lands. */
 int  save_write_record(GameContext* ctx, int index, const uint8_t* blob);
 
 /* Return record `index`'s flags word pointer (SavRecordPtr + flags). */
@@ -151,5 +175,155 @@ void checkpoint_blob_apply(GameContext* ctx, const uint8_t* blob);
 #ifdef __cplusplus
 }
 #endif
+
+/* --- the save-side DAT accessor band (2026-10-24; findings 08/235) ---------
+ * OsfReadDirtyFlagGet (FUN_004593d0): the OSF dirty flag the save module
+ * already models (DAT_004ffe64); NULL answers 0 (deviation: blind read).
+ * CheckpointBlobGet (FUN_004601f0): the checkpoint blob pointer (corpus
+ * DAT_00552994), modeled on GameContext; NULL ctx answers NULL. */
+int   osf_read_dirty_flag_get(const GameContext* ctx);
+void* checkpoint_blob_get(const GameContext* ctx);
+
+/* SaveStateEventContextSet (FUN_00418110, finding 408): the corpus stores
+ * the word FrontEndStateChange follows; its corpus feeder is the unported
+ * front-end state-change path, so it lands as zero-init storage with a
+ * port-side peek. */
+void     save_state_event_context_set(uint32_t value);
+uint32_t save_state_event_context_peek(void);
+
+/* SavBuildCtx (FUN_00417e70, finding 408): the corpus's active-slot
+ * context probe — the slot accessor's block when a slot is open, NULL
+ * when the selection is closed. The port's save_slot_get/sav_slot_ctx
+ * models both halves, so this composes them. */
+void* sav_build_ctx(GameContext* ctx);
+
+/* SavRecordPtr (FUN_00417f90): the record address for `index` —
+ * base + index * 0x3190 + 4 once the slot context is open and the index
+ * is under the count. NULL when the corpus's guard answers 0. */
+void* sav_record_ptr(GameContext* ctx, int index);
+
+/* SelectedLevelStartObjectUpdate (FUN_00460200): when the level block is
+ * bound, reads the checkpoint blob through the ported getter (the corpus
+ * discards the value; the apparent argument is calling-convention residue —
+ * the getter answers the blob word itself). */
+void selected_level_start_object_update(GameContext* ctx); /* FUN_00460200 */
+
+/* --- generic list window band (2026-10-25) --------------------------------
+ * The 0x416exx/0x4170xx band works over caller-supplied list-header
+ * windows: header slots {count, entry-key pointer array, value array A,
+ * value array B} (the corpus header's own +8 slot is untouched by this
+ * band). Two key views ride the same window: the fold find reads entry
+ * slots as byte-string names through the corpus's case-insensitive
+ * compare, and the four wide-key halves compare entry slots as
+ * little-endian 16-bit units — pinned quirk: the unit's LOW byte
+ * terminates the key, so a high-byte difference at the terminating unit
+ * is never inspected. The add/has halves ride value array B; the
+ * set/get halves ride value array A. Deviations: the port guards the
+ * window, entry, and key pointers (the corpus strides them blindly);
+ * entries, values, and the key slots ride widened slots (the corpus
+ * strides dword fields). */
+typedef struct SavListWindow {
+    int32_t  count;      /* corpus header + 0 */
+    void**   entries;    /* corpus + 4 (widened) */
+    void**   values_a;   /* corpus + 12 (widened): set/get values */
+    void**   values_b;   /* corpus + 16 (widened): add/has values */
+} SavListWindow;
+
+/* Fold-find the name slot; answers the entry index or -1. */
+int list_find_name(const SavListWindow* win, const char* name);
+                                                /* FUN_00416e20 */
+
+/* Wide-key scan halves: add stores the value into array B on a match;
+ * has answers the paired array-B value (NULL on a miss); set/get ride
+ * array A. */
+void  list_add_name(SavListWindow* win, const void* wide_key, void* value);
+                                                /* FUN_00416ed0 */
+void* list_has_item(const SavListWindow* win, const void* wide_key);
+                                                /* FUN_00416f40 */
+void  list_set_node(SavListWindow* win, const void* wide_key, void* value);
+                                                /* FUN_00416fb0 */
+void* list_get_node(const SavListWindow* win, const void* wide_key);
+                                                /* FUN_00417020 */
+
+/* SavTreeWalk (FUN_004171c0): visit-each-once tree recursion over
+ * node windows — children pointer slot, child count, and the walk flag;
+ * the port's node is the widened-slot shape (the corpus strides its
+ * dword fields). The callback is the corpus's plain indirect call.
+ * Deviation: the port guards the node and child-array pointers; the
+ * corpus strides the flag/store edges blindly. Answers 1 when the
+ * callback or any subtree reports it. */
+struct EngineContext;
+
+typedef struct SavTreeNode {
+    uint32_t window;     /* corpus + 0x0: stride-selector word (walk2 read) */
+    void*    children;   /* corpus + 4 (widened): child pointer array */
+    uint32_t count;      /* corpus + 8 */
+    uint32_t visited;    /* corpus + 0x10: walk flag */
+} SavTreeNode;
+
+typedef int (*sav_tree_visit)(void* node, void* user);
+
+int sav_tree_walk(void* node, sav_tree_visit visit, void* user);
+                                                /* FUN_004171c0 */
+
+/* --- the sav-tree state visitor (2026-10-25) --------------------------------
+ * SavTreeWalk2 (FUN_004172f0): the stateful sibling of SavTreeWalk
+ * (FUN_004171c0). It enters every unvisited node once (the +0x10 walk
+ * flag, as the plain walk), computes the "need" word from the shared
+ * state: the flag-test lane when the window base is null or the
+ * extended-mode gate (app mode > 1, or the feature word's bit 0x20000)
+ * raises — the gate also zeroes the flag on entry — otherwise the bit-0
+ * read at `node.window * 0x3190 + window_base`. Then it touches the
+ * block cursor: clearing bit 2 of the block's +0x0 word only when need
+ * and the incoming carry and the block's +0x1c word all read zero,
+ * setting it otherwise, and ALWAYS advances the cursor (the corpus
+ * advances through a null block pointer too). Children recurse with
+ * `need` as the carry.
+ * Deviations: the corpus strides the block array and the stride read
+ * blind; the port guards the block slot/pointer and reads the window
+ * through memcpy lanes. The two corpus tree-root globals are unmodeled,
+ * so nodes ride as arguments (the walk-model convention); app mode
+ * threads through EngineContext (the corpus strides its global) and the
+ * feature word rides the crt.* half-model peek. */
+typedef struct SavTree2State {
+    void*    window_base; /* corpus + 0x0: stride-0x3190 window base */
+    uint32_t window;      /* corpus + 0x4: stored word (the walk never reads it) */
+    void**   blocks;      /* corpus + 0x8: block-array pointer slot */
+    uint32_t index;       /* corpus + 0xc: visit-order block cursor */
+    uint32_t flag;        /* corpus + 0x10: needs-visit flag */
+} SavTree2State;
+
+void sav_tree_walk2(void* node, SavTree2State* state, int carry,
+                    const EngineContext* eng);  /* FUN_004172f0 */
+
+/* SavTreeLoad (FUN_004173e0): stack-init the state's five dwords the way
+ * the corpus builds them (window base, stored word, block slot, zero
+ * cursor, flag), walk with carry 1, then SavClearVisited (FUN_00416e70)
+ * over the installed visited bands. */
+void sav_tree_load(void* node, void* window_base, void** blocks,
+                   uint32_t window, uint32_t flag,
+                   const EngineContext* eng);  /* FUN_004173e0 */
+
+/* --- the checkpoint progress fold band (2026-10-25) ------------------------
+ * CheckpointBlobTaskProgressRecalculate (FUN_00460950): the blob's
+ * progress fold over the stride-0x210 task-window bands: zero the three
+ * accumulator words, fold each pair as percent = 100 / den * num — a
+ * zero denominator answers 100.0, and the clamp lands AFTER the store,
+ * as the corpus stores-clamps-stores (pinned quirk) — then walk the
+ * count-up loops: every round adds 100.0 to the +0x2fac sum and the
+ * last folded percent to the +0x2fb0 carry. The 0x2d90-gated loop keeps
+ * both accumulators in registers and writes them back only when it ends
+ * (pinned corpus shape), the 0x2550 loop adds the RAW window (+0x2564),
+ * then the carry clamps down to the sum and below zero to 0.0, and the
+ * final percent fold (100 / sum * carry) plus the float-converted +0x1c0
+ * word land at +0x2fb4, clamped to 100.
+ * Deviations: the corpus threads the global current level and the blob
+ * word through its two getters; the port threads GameContext (the level
+ * guard, then the blob pointer) and runs the fold math in single
+ * precision. A missing level or blob answers 0; success answers 1.
+ * Corpus offsets kept: windows +0x1b04..+0x2984 (folds), guards
+ * +0x1d10..+0x2d90 (loops), accumulators +0x2fac/+0x2fb0/+0x2fb4. */
+int checkpoint_blob_task_progress_recalculate(GameContext* ctx);
+                                                /* FUN_00460950 */
 
 #endif /* LEGORRR_GAME_SAVEGAME_HPP */

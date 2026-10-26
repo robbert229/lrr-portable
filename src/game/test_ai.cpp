@@ -1128,6 +1128,587 @@ int main(int argc, char** argv)
         probe_real(real_dir);
     }
 
+    /* Rockfall-queue eligibility (2026-10-24). */
+    {
+        const int before = ai_idle_count();
+        EntitySlot e;
+        memset(&e, 0, sizeof(e));
+        e.type = 1;
+        entity_queue_for_rockfall_processing_if_eligible(NULL);
+        entity_queue_for_rockfall_processing_if_eligible(&e);
+        CHECK(ai_idle_count() == before + 1, "the eligible lands in the table");
+        entity_queue_for_rockfall_processing_if_eligible(&e);
+        CHECK(ai_idle_count() == before + 1, "the dedupe keeps it single");
+        EntitySlot other;
+        memset(&other, 0, sizeof(other));
+        other.type = 5;
+        entity_queue_for_rockfall_processing_if_eligible(&other);
+        CHECK(ai_idle_count() == before + 1, "a type-5 entity never lands");
+    }
+
+    /* Activity-request wrappers (2026-10-24): corpus indices 5 and 30. */
+    {
+        GameContext ctx;
+        game_context_init(&ctx);
+        int idx = entity_create(&ctx, 1, "ActReq", 0.0f, 0.0f, 0.0f, 0.0f);
+        CHECK(idx >= 0, "activity-request probe slot created");
+        if (idx >= 0) {
+            EntitySlot* e = &ctx.entity[0][idx];
+            e->flags_3e0 = 0u;
+            e->flags_3e4 = 0u;
+            entity_dispatch_event5_and_set_flag(e);
+            CHECK(e->activity == 5
+                      && (e->flags_3e0 & 0x200000u) != 0u,
+                  "the index-5 request sets activity 5 and bit 0x200000");
+            CHECK(entity_set_activity_place(e) == 1
+                      && e->activity == 30
+                      && (e->flags_3e4 & 0x200u) != 0u,
+                  "the index-30 request sets activity 30 and bit 0x200");
+            entity_dispatch_event5_and_set_flag(NULL); /* guarded */
+            CHECK(entity_set_activity_place(NULL) == 1, "the null store answers 1");
+        }
+    }
+
+    /* EntityActivitySceneStateUpdate (2026-10-24): the gate + clear. */
+    {
+        entity_state_flags_set(0u);
+        GameContext ctx;
+        game_context_init(&ctx);
+        LevelState lv;
+        memset(&lv, 0, sizeof lv);
+        ctx.level = &lv;
+        global_object_field98_add(&lv, 7);
+        entity_activity_scene_state_update(&ctx);
+        CHECK(entity_state_flags_peek() == 4u && level_field98_get(&lv) == 0u,
+              "the gate-off pass raises bit 4 and clears +0x98");
+        entity_state_flags_set(0x10u);
+        global_object_field98_add(&lv, 3);
+        entity_activity_scene_state_update(&ctx);
+        CHECK(entity_state_flags_peek() == 0x18u && level_field98_get(&lv) == 3u,
+              "the gate-on pass raises bit 8 and leaves the state alone");
+        entity_state_flags_set(0u);
+        entity_activity_scene_state_update(NULL); /* level guard */
+        CHECK(entity_state_flags_peek() == 4u, "the NULL ctx still updates");
+        entity_state_flags_set(0u);
+    }
+
+    /* SceneObjectHasTaskType4_5_7 (2026-10-24): gate + chain. */
+    {
+        EntitySlot e;
+        memset(&e, 0, sizeof e);
+        CHECK(scene_object_has_task_type_4_5_7(&e) == 0,
+              "the type gate answers for non-type-2");
+        e.type = 2;
+        CHECK(scene_object_has_task_type_4_5_7(&e) == 0,
+              "type 2 with no activities answers 0");
+        e.act_count = 1;
+        e.act_list[0] = 5;
+        CHECK(scene_object_has_task_type_4_5_7(&e) == 1,
+              "the teleport entry answers through the chain");
+        e.act_list[0] = 7;
+        CHECK(scene_object_has_task_type_4_5_7(&e) == 1,
+              "the reinforce entry answers through the chain");
+        e.act_count = 0;
+        CHECK(scene_object_has_task_type_4_5_7(NULL) == 0,
+              "the NULL slot is guarded");
+    }
+
+    /* The entity activity gate band (2026-10-24). */
+    {
+        EntitySlot e;
+        memset(&e, 0, sizeof e);
+        /* EntityDispatchEvent31ForPendingFlag: the three-condition gate. */
+        e.type = 3;
+        entity_dispatch_event31_for_pending_flag(&e);
+        CHECK(e.activity == 0 && e.flags_3e4 == 0u,
+              "the clear pending bit keeps the gate silent");
+        e.flags_3e8 = 0x80000000u;
+        entity_dispatch_event31_for_pending_flag(&e);
+        CHECK(e.flags_3e4 == 0x20000000u && e.activity == 0x31
+                  && e.activity_last == 0x31,
+              "the pending pass raises the bit and sets activity 0x31");
+        e.activity = 0;
+        entity_dispatch_event31_for_pending_flag(&e);
+        CHECK(e.activity == 0, "the raised marker bit keeps the gate silent");
+        e.flags_3e4 = 0u;
+        e.activity = 0;
+        e.type = 1;
+        entity_dispatch_event31_for_pending_flag(&e);
+        CHECK(e.activity == 0, "the type gate stays silent");
+        entity_dispatch_event31_for_pending_flag(NULL); /* guarded */
+
+        /* EntityActivity23StateTransition: the half-word + gated pass. */
+        memset(&e, 0, sizeof e);
+        e.type = 2;
+        entity_activity23_state_transition(&e);
+        CHECK(e.flags_3e4 == 0x800u && (e.flags_3e0 & 0x40000000u) != 0u
+                  && e.activity == 0x23 && e.cmd_head != NULL,
+              "the type-2 pass raises the halves and registers idle");
+        e.flags_3e0 |= 0x400u; /* raise the gate bit the pass checks */
+        e.activity = 0;
+        e.type = 3;
+        entity_activity23_state_transition(&e);
+        CHECK(e.activity == 0 && (e.flags_3e4 & 0x800u) != 0u,
+              "the raised 0x400 bit leaves the activity alone");
+        memset(&e, 0, sizeof e);
+        e.type = 1;
+        entity_activity23_state_transition(&e);
+        CHECK(e.activity == 0x23 && (e.flags_3e4 & 0x800u) == 0u,
+              "the gate pass skips the type half-word");
+        entity_activity23_state_transition(NULL); /* guarded */
+    }
+
+    /* The entity counter + link band (2026-10-24). */
+    {
+        GameContext ctx;
+        game_context_init(&ctx);
+        LevelState lv;
+        memset(&lv, 0, sizeof lv);
+        ctx.level = &lv;
+        /* SimulationUpdateCounterAdd: the loop + scene-state pass. */
+        entity_state_flags_set(0u);
+        global_object_field98_add(&lv, 9);
+        simulation_update_counter_add(&ctx, 3);
+        CHECK((int)level_field8c_get(&lv) == 3 && entity_state_flags_peek() == 4u
+                  && level_field98_get(&lv) == 0u,
+              "the counter loops and the state pass clears +0x98");
+        simulation_update_counter_add(&ctx, 0);
+        CHECK((int)level_field8c_get(&lv) == 3, "a zero count leaves it alone");
+        simulation_update_counter_add(NULL, 2); /* guarded */
+        entity_state_flags_set(0u);
+
+        /* EntityFlag80000000SetOrClear: set/clear + the state pass. */
+        EntitySlot e;
+        memset(&e, 0, sizeof e);
+        global_object_field98_add(&lv, 5);
+        entity_flag80000000_set_or_clear(&ctx, &e, 0);
+        CHECK(e.flags_3e8 == 0x80000000u && entity_state_flags_peek() == 4u
+                  && level_field98_get(&lv) == 0u,
+              "the clear param raises the high bit and runs the pass");
+        entity_flag80000000_set_or_clear(&ctx, &e, 1);
+        CHECK(e.flags_3e8 == 0u, "the set param clears the high bit");
+        entity_flag80000000_set_or_clear(&ctx, NULL, 0); /* guarded */
+        entity_state_flags_set(0u);
+
+        /* EntityNestedFloatAddUnlessBlocked: the gate + fold. */
+        static char rec[0xe0];
+        memset(rec, 0, sizeof rec);
+        const float add = 2.5f;
+        __builtin_memcpy(rec + 0xdc, &add, sizeof add);
+        memset(&e, 0, sizeof e);
+        e.stats_record = rec;
+        e.type = 5;
+        float v = 1.0f;
+        CHECK(entity_nested_float_add_unless_blocked(&e, &v) == 0
+                  && v == 3.5f,
+              "the non-type-4 fold lands regardless of the gate");
+        e.type = 4;
+        v = 1.0f;
+        entity_nested_float_add_unless_blocked(&e, &v);
+        CHECK(v == 1.0f, "the ineligible type-4 entity skips the fold");
+        e.flags_3e8 = 0x20000000u; /* eligible half of the strict clause */
+        entity_nested_float_add_unless_blocked(&e, &v);
+        CHECK(v == 3.5f, "the eligible type-4 fold lands");
+        entity_nested_float_add_unless_blocked(NULL, &v); /* guarded */
+
+        /* LinkedEntityFlagAndCommandUpdate: the link flag + drop. */
+        EntitySlot parent;
+        EntitySlot child;
+        memset(&parent, 0, sizeof parent);
+        memset(&child, 0, sizeof child);
+        child.type = 4;
+        parent.link_2fc = (uintptr_t)&child;
+        linked_entity_flag_and_command_update(&parent);
+        CHECK(parent.flags_3ec == 0x40u && child.flags_3ec == 0x40u
+                  && parent.cmd_head == NULL,
+              "the linked pair raises the bit and drops kind 0x1c");
+        child.type = 3;
+        parent.flags_3ec = 0u;
+        linked_entity_flag_and_command_update(&parent);
+        CHECK(parent.flags_3ec == 0u, "the non-type-4 link stays silent");
+        parent.link_2fc = 0u;
+        linked_entity_flag_and_command_update(&parent); /* clear link */
+        linked_entity_flag_and_command_update(NULL); /* guarded */
+    }
+
+    /* EntityRandomActivityAttempt (FUN_00443670, 2026-10-24). */
+    {
+        EntitySlot e;
+        memset(&e, 0, sizeof e);
+        CHECK(entity_random_activity_attempt(NULL) == 0, "NULL is guarded");
+        const int took = entity_random_activity_attempt(&e);
+        CHECK(took == 1 && e.activity >= 0x38 && e.activity <= 0x4c
+                  && (e.flags_3e0 & 0x8000u) != 0u
+                  && e.activity_last == e.activity,
+              "a cold slot takes an activity in the code band");
+
+        /* The gate pair answers zero before any draw. */
+        e.flags_3e0 |= 0x400u;
+        CHECK(entity_random_activity_attempt(&e) == 0, "the gate bit blocks");
+        e.flags_3e0 = 0u;
+        e.flags_3e0 |= 0x2u; /* mask-word intersection (bit 1 is in the mask) */
+        CHECK(entity_random_activity_attempt(&e) == 0, "the mask blocks");
+        e.flags_3e0 = 0u;
+
+        /* Same-name attempts: the dispatch's early-return clause. Keep
+         * the slot otherwise clean and let the draw walk until it lands
+         * off the registered name (five attempts per call, deterministic
+         * LCG sequence). */
+        int prev = e.activity_last, got = 0, hops = 0;
+        while (got == 0 && hops < 20) {
+            got = entity_random_activity_attempt(&e);
+            ++hops;
+        }
+        CHECK(got == 1 && e.activity != prev
+                  && (e.flags_3e0 & 0x8000u) != 0u,
+              "a registered name re-rolls until the dispatch takes");
+    }
+
+    /* Object registry windows (2026-10-25). */
+    {
+        ai_object_registries_reset();
+        EntitySlot e4, e2a, e2b, ef;
+        memset(&e4, 0, sizeof e4);
+        memset(&e2a, 0, sizeof e2a);
+        memset(&e2b, 0, sizeof e2b);
+        memset(&ef, 0, sizeof ef);
+        e4.etype = 4;
+        e2a.etype = 2;
+        e2b.etype = 2;
+        static char caprec[0x150];
+        memset(caprec, 0, sizeof caprec);
+        const uint32_t capbit = 0x80u;
+        __builtin_memcpy(caprec + 0x14c, &capbit, sizeof capbit);
+        /* ef starts with no stats record: the gate reads zero. */
+
+        type4_object_registry_insert(NULL); /* guarded */
+        type4_object_registry_insert(&e2a); /* the type-4 gate skips */
+        void* rec = (void*)1;
+        uint32_t tmr = 1u;
+        ai_object_registry_slot_peek(1, 0, &rec, &tmr);
+        CHECK(rec == NULL, "the gated insert leaves the window empty");
+        type4_object_registry_insert(&e4);
+        ai_object_registry_slot_peek(1, 0, &rec, &tmr);
+        CHECK(rec == &e4 && tmr == 0u, "the type-4 insert rides slot zero");
+        type4_object_registry_insert(&e4); /* the no-duplicate rule */
+        int seen = 0;
+        for (int i = 0; i < 20; ++i) {
+            ai_object_registry_slot_peek(1, i, &rec, NULL);
+            if (rec == &e4) {
+                ++seen;
+            }
+        }
+        CHECK(seen == 1, "the repeat insert stays deduped");
+
+        flagged_object_timer_registry_insert(&ef); /* capability gate off */
+        ai_object_registry_slot_peek(0, 0, &rec, NULL);
+        CHECK(rec == NULL, "the gated flagged insert skips");
+        flagged_object_timer_registry_insert(NULL); /* guarded */
+        /* Raise the gate through the stats word. */
+        ef.stats_record = caprec;
+        flagged_object_timer_registry_insert(&ef);
+        ai_object_registry_slot_peek(0, 0, &rec, &tmr);
+        CHECK(rec == &ef && tmr == 0x42160000u,
+              "the flagged insert stores with the seed");
+        const uint32_t late = 7u;
+        ai_object_registry_slot_set(0, 0, &ef, late);
+        flagged_object_timer_registry_insert(&ef); /* the hit re-seeds */
+        ai_object_registry_slot_peek(0, 0, &rec, &tmr);
+        CHECK(tmr == 0x42160000u, "the hit re-seeds the timer");
+
+        type2_timed_registry_insert(&e2a);
+        type2_timed_registry_insert(&e2b);
+        ai_object_registry_slot_peek(2, 0, &rec, &tmr);
+        void* rec2 = NULL;
+        ai_object_registry_slot_peek(2, 1, &rec2, NULL);
+        CHECK(rec == &e2a && rec2 == &e2b
+                  && tmr == 0x4a095440u,
+              "the timed inserts append with the seed");
+        ai_object_registry_slot_set(2, 0, &e2a, 3u);
+        type2_timed_registry_insert(&e2a); /* the hit re-seeds */
+        ai_object_registry_slot_peek(2, 0, &rec, &tmr);
+        CHECK(tmr == 0x4a095440u, "the timed hit re-seeds");
+        ai_object_registry_slot_set(2, 0, &e2a, 5u);
+        ai_object_registry_slot_set(2, 1, &e2b, 5u);
+        set_type2_object_record_value(&e4, 0x1234u); /* gate skips */
+        ai_object_registry_slot_peek(2, 0, NULL, &tmr);
+        CHECK(tmr == 5u, "the non-type-2 broadcast is gated off");
+        set_type2_object_record_value(NULL, 0x1234u); /* guarded */
+        set_type2_object_record_value(&e2a, 0x1234u);
+        uint32_t t0 = 0, t1 = 0;
+        ai_object_registry_slot_peek(2, 0, NULL, &t0);
+        ai_object_registry_slot_peek(2, 1, NULL, &t1);
+        CHECK(t0 == 0x1234u && t1 == 0x1234u,
+              "the broadcast lands on the occupied slots");
+
+        entity_pointer_registries_remove(&e2a);
+        ai_object_registry_slot_peek(2, 0, &rec, NULL);
+        ai_object_registry_slot_peek(2, 1, &rec2, NULL);
+        CHECK(rec == NULL && rec2 == &e2b, "the remove drops the match");
+        entity_pointer_registries_remove(&ef);
+        ai_object_registry_slot_peek(0, 0, &rec, NULL);
+        CHECK(rec == NULL, "the remove clears the flagged window");
+        entity_pointer_registries_remove(NULL); /* guarded sweep */
+
+        CHECK(ai_object_registry_window_count(0) == 20
+                  && ai_object_registry_window_count(1) == 20
+                  && ai_object_registry_window_count(2) == 50,
+              "the windows ride the corpus geometries");
+        ai_object_registry_slot_peek(2, 99999, &rec, &tmr); /* guarded */
+        ai_object_registry_slot_set(1, -1, &e4, 0u); /* guarded */
+        ai_object_registries_reset();
+        ai_object_registry_slot_peek(1, 0, &rec, NULL);
+        CHECK(rec == NULL, "the reset empties the windows");
+    }
+
+    /* The idle-tile update band (2026-10-25): link store, unregister, and
+     * the activity/terrain eligibility transition. */
+    {
+        ai_idle_table_reset();
+        EntitySlot idle, four;
+        memset(&idle, 0, sizeof idle);
+        memset(&four, 0, sizeof four);
+        idle.type = 1;
+        idle.x = 3.0f;
+        idle.y = 5.0f;
+        four.type = 4;
+        entity_queue_for_rockfall_processing_if_eligible(&idle);
+        CHECK(ai_idle_count() == 1, "the probe lands one entry");
+        entity_update_and_unregister_at_tile(3, 5, &four);
+        CHECK(idle.link_2fc == (uintptr_t)&four, "the link word stores");
+        CHECK((idle.flags_3ec & 0x40u) != 0u && (four.flags_3ec & 0x40u) != 0u,
+              "the type-4 link raises both +0x3ec bits");
+        entity_update_and_unregister_at_tile(3, 5, NULL);
+        CHECK(idle.link_2fc == (uintptr_t)&four,
+              "the blanked slot no longer hits (unregister)");
+        entity_update_and_unregister_at_tile(9, 9, NULL); /* coord miss */
+        CHECK((four.flags_3ec & 0x40u) != 0u, "the coordinate miss is inert");
+        ai_idle_table_reset();
+        CHECK(ai_idle_count() == 0, "the hook empties the table");
+    }
+
+    /* EntityActivityTerrainEligibilityTransition (2026-10-25): the gate,
+     * the fail fold, the spent-timer pass, and the handoff. */
+    {
+        EntitySlot e;
+        memset(&e, 0, sizeof e);
+        int out = -1;
+        CHECK(entity_activity_terrain_eligibility_transition(NULL, &e, 1.0f,
+                                                             2.0f, &out) == 0
+                  && out == 0,
+              "the gate-off answer clears the result word");
+        GameContext ctx;
+        game_context_init(&ctx);
+        e.flags_3e0 = 0x40u;
+        CHECK(entity_activity_terrain_eligibility_transition(&ctx, &e, 1.0f,
+                                                             2.0f, NULL) == 0,
+              "the missing level stays inert (deviation guard)");
+
+        static LevelState lv;
+        static uint8_t vox[8 * 8 * 0x48];
+        memset(&lv, 0, sizeof lv);
+        lv.ptr_voxels = vox;
+        level_set_int(&lv, LEVEL_OFF_WIDTH, 8);
+        level_set_int(&lv, LEVEL_OFF_HEIGHT, 8);
+        ctx.level = &lv;
+        e.flags_3e8 = 0x4u;
+        e.flags_3e0 = 0x40u;
+        out = -1;
+        CHECK(entity_activity_terrain_eligibility_transition(&ctx, &e, 3.5f,
+                                                             3.5f, &out) == 1
+                  && out == 0,
+              "the ineligible cell answers 1 with the result word cleared");
+        CHECK(e.activity == 11 && e.activity_param == 1,
+              "the fail fold lands activity 11 parameter 1");
+        CHECK(e.flags_3e0 == 0x80000000u,
+              "the fail fold moves the gate bit to the eligibility bit");
+
+        /* Eligible cell (1,2): the walkable flag raised. */
+        uint8_t* rec = vox + ((size_t)2 * 8 + 1) * 0x48;
+        const uint32_t walk = 0x10u;
+        __builtin_memcpy(rec + 0x08, &walk, sizeof walk);
+        e.activity_timer = 0.0f;
+        e.flags_3e0 = 0x40u;
+        out = -1;
+        CHECK(entity_activity_terrain_eligibility_transition(&ctx, &e, 1.5f,
+                                                             2.5f, &out) == 1
+                  && out == 0,
+              "the spent timer returns 1 untouched");
+        uint32_t now = 0u;
+        __builtin_memcpy(&now, rec + 0x08, sizeof now);
+        CHECK(now == 0x10u, "the spent pass queues no work");
+
+        e.activity_timer = 1.0f;
+        e.flags_3e0 = 0x40u;
+        e.pos_pair_2f4 = 5.0f;
+        e.pos_pair_2f8 = 6.0f;
+        out = 0;
+        CHECK(entity_activity_terrain_eligibility_transition(&ctx, &e, 1.5f,
+                                                             2.5f, &out) == 1
+                  && out == 1,
+              "the running timer hands off with the result word raised");
+        CHECK(e.activity == 0 && e.activity_param == 0,
+              "the handoff folds activity 0");
+        CHECK(e.flags_3e0 == 0u, "the handoff clears the gate bit alone");
+        CHECK(e.pos_pair_2f4 == -1.0f && e.pos_pair_2f8 == -1.0f,
+              "the coordinate pair blanks to -1");
+        __builtin_memcpy(&now, rec + 0x08, sizeof now);
+        CHECK(now == 0x30u, "the queued transition raises the work bit");
+        ai_idle_table_reset();
+    }
+
+    /* Idle-table pointer removal (2026-10-25): the match-zeroing walk
+     * with the count word riding (holes), dedup past holes, and the
+     * foreign-pointer walk. */
+    {
+        GameContext ctx;
+        game_context_init(&ctx);
+        EntitySlot* a = place(&ctx, 1, "rem_a", 0.0f, 0.0f);
+        EntitySlot* b = place(&ctx, 1, "rem_b", 4.0f, 0.0f);
+        a->flags_3ec |= 0x40u;
+        b->flags_3ec |= 0x40u;
+        run(&ctx, 1, 0.5f);
+        CHECK(ai_idle_count() == 2, "both idlers register");
+        ai_idle_table_pointer_remove(a);
+        CHECK(ai_idle_count() == 2, "the remove leaves the count word");
+        a->flags_3ec |= 0x40u;
+        run(&ctx, 1, 0.5f);
+        CHECK(ai_idle_count() == 3, "the removed entry re-lands past the hole");
+        b->flags_3ec |= 0x40u;
+        run(&ctx, 1, 0.5f);
+        CHECK(ai_idle_count() == 3, "the kept entry dedups through the hole");
+        ai_idle_table_pointer_remove(NULL);
+        CHECK(ai_idle_count() == 3, "the foreign pointer walks past");
+        ai_idle_table_reset();
+    }
+
+    /* Activity toggle (2026-10-25): the off/on fold on the +0x3ec word
+     * with the activity request riding through the set-fold. */
+    {
+        EntitySlot e;
+        memset(&e, 0, sizeof e);
+        e.flags_3ec = 0x2000u;
+        e.activity_param = 7;
+        entity_activity_toggle(&e, 0);
+        CHECK(e.flags_3ec == 0x4000u, "the off edge drops bit 13 and raises bit 14");
+        CHECK(e.activity == 0x36 && e.activity_last == 0x36,
+              "the off edge requests activity 0x36");
+        CHECK(e.activity_param == 0, "the request resets the param");
+        e.activity = 1;
+        entity_activity_toggle(&e, 0);
+        CHECK(e.flags_3ec == 0x4000u && e.activity == 1,
+              "the second off call rides (bit 13 already clear)");
+        memset(&e, 0, sizeof e);
+        e.flags_3ec = 0x1000u;
+        entity_activity_toggle(&e, 1);
+        CHECK(e.flags_3ec == 0x1000u && e.activity == 0x35
+                  && e.activity_last == 0x35,
+              "the on edge with bit 13 raised rides");
+        memset(&e, 0, sizeof e);
+        entity_activity_toggle(&e, 1);
+        CHECK(e.flags_3ec == 0x1000u && e.activity == 0x35,
+              "the on edge raises bit 12 and requests 0x35");
+        memset(&e, 0, sizeof e);
+        e.flags_3ec = 0x2000u;
+        entity_activity_toggle(&e, 1);
+        CHECK(e.flags_3ec == 0x2000u && e.activity == 0,
+              "the on edge with bit 13 raised rides");
+        entity_activity_toggle(NULL, 1); /* the guarded entity (dev) */
+        memset(&e, 0, sizeof e);
+    }
+
+    /* EntityStatePairPredicate (FUN_0043c200) — 2026-10-25. */
+    {
+        GameContext pool;
+        game_context_init(&pool);
+        static char t12[0x150], t13[0x150];
+        memset(t12, 0, sizeof t12);
+        memset(t13, 0, sizeof t13);
+        stats_type_table_install(12, 3, t12, 1);
+        stats_type_table_install(13, 0, t13, 1);
+        const float minus5 = -5.0f, minus1 = -1.0f, two = 2.0f, one = 1.0f;
+
+        EntitySlot* add = place(&pool, 1, "pairA", 0, 0);
+        static char erec[0xe0];
+        memset(erec, 0, sizeof erec);
+        __builtin_memcpy(erec + 0xdc, &two, sizeof two);
+        add->stats_record = erec;
+        add->flags_3e8 = 0u;
+
+        /* (12,3) is zero: the answer is 1 without the walk (the pool fold
+         * and the second read would otherwise drive the sum to -3). */
+        float zero = 0.0f;
+        __builtin_memcpy(t12 + 0xdc, &zero, sizeof zero);
+        __builtin_memcpy(t13 + 0xdc, &minus5, sizeof minus5);
+        CHECK(entity_state_pair_predicate(&pool, 12, 3, 13, 0) == 1,
+              "the zero first read short-circuits to 1");
+
+        /* nonzero first read: 1 + (-1) + fold(2) -> positive -> 1. */
+        __builtin_memcpy(t12 + 0xdc, &one, sizeof one);
+        __builtin_memcpy(t13 + 0xdc, &minus1, sizeof minus1);
+        CHECK(entity_state_pair_predicate(&pool, 12, 3, 13, 0) == 1,
+              "the fold lifts the sum over zero");
+
+        /* raised bit-0x80000 gate: the walk skips, 1 + (-1) + 0 -> 0. */
+        add->flags_3e8 |= 0x80000u;
+        CHECK(entity_state_pair_predicate(&pool, 12, 3, 13, 0) == 0,
+              "the gated entity drops out of the fold");
+        add->flags_3e8 = 0u;
+
+        /* the <= 0 comparison rides zero itself */
+        __builtin_memcpy(t13 + 0xdc, &zero, sizeof zero);
+        CHECK(entity_state_pair_predicate(&pool, 12, 3, 13, 0) == 1,
+              "1 + 0 + fold 2 is positive");
+
+        /* guarded reads answer zero (the port window, not the corpus stride) */
+        CHECK(entity_state_pair_predicate(&pool, 12, 99, 13, 0) == 1,
+              "the out-of-window first read short-circuits");
+        /* NULL ctx skips the walk; the re-reads still answer */
+        __builtin_memcpy(t13 + 0xdc, &minus1, sizeof minus1);
+        CHECK(entity_state_pair_predicate(NULL, 12, 3, 13, 0) == 0,
+              "NULL ctx folds nothing (dev)");
+
+        stats_type_table_install(12, 3, NULL, 0); /* release both cells */
+        stats_type_table_install(13, 0, NULL, 0);
+    }
+
+    /* ActiveEntityListContainsCode (FUN_004031e0) — 2026-10-25. */
+    {
+        GameContext sctx;
+        game_context_init(&sctx);
+        EntitySlot* s1 = place(&sctx, 1, "act1", 0, 0);
+        EntitySlot* s2 = place(&sctx, 1, "act2", 1, 0);
+        s1->act_list[0] = 7;
+        s1->act_count = 1;
+        s2->act_list[0] = 8;
+        s2->act_count = 1;
+
+        active_entity_list_install(NULL, 0);
+        CHECK(active_entity_list_count() == 0 &&
+                  active_entity_list_contains_code(&sctx, 7) == 0,
+              "the cold list answers 0");
+
+        const EntitySlot* entries[2] = { NULL, s2 };
+        active_entity_list_install(entries, 2);
+        CHECK(active_entity_list_count() == 2, "the install counts");
+        CHECK(active_entity_list_contains_code(&sctx, 7) == 0,
+              "the list holds no code 7");
+        CHECK(active_entity_list_contains_code(&sctx, 8) == 1,
+              "the NULL entry walks past into the hit");
+
+        /* the selection branch isolates the list (pinned) */
+        CHECK(selection_add(&sctx, s2) == 1, "select s2");
+        const EntitySlot* list1[1] = { s1 };
+        active_entity_list_install(list1, 1);
+        CHECK(active_entity_list_contains_code(&sctx, 7) == 0,
+              "the selection branch ignores the active list");
+        CHECK(active_entity_list_contains_code(&sctx, 8) == 1,
+              "the selection branch hits the selected entity");
+
+        active_entity_list_install(NULL, -3); /* guarded reset */
+        CHECK(active_entity_list_count() == 0, "the negative count clears");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "ai_test: %d failure(s)\n", s_failures);
         return 1;
