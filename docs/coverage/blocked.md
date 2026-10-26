@@ -349,3 +349,82 @@ Grouped by blocker family; every row names its address and next action:
 
 Rescan note: this closes the recorded set for the current portable-now
 frontier; anything the scanner flags later lands in the same families.
+
+## Frontier residuals + audit-close sweep (2026-10-25)
+
+Post-cluster-183, the corrected scanner reports 37 portable-now rows. Every
+one was triaged in earlier iterations; this section records them in
+blocked.md so the attribution is explicit, and closes the bucket side with
+band/class entries. (A 4-row `CLEAN` bucket artifact — mutually recursive
+rows the fixed-point never promotes — split into two recorded rows and two
+live port candidates below.)
+
+### Portable-now residuals by family
+
+| Rows (`address`) | Blocker | Next action |
+| --- | --- | --- |
+| **Win32 DLL import thunks** (13): `AVIFileInit` (`0x49b6ec`), `AVIStreamGetFrame` (`0x49b6e6`), `AVIStreamInfoA` (`0x49b6ce`), `AVIStreamRelease` (`0x49b6e0`), `AVIStreamOpenFromFileA` (`0x49b6da`), `AVIStreamGetFrameOpen` (`0x49b6d4`), `DirectDrawCreate` (`0x49b6c8`), `DirectDrawEnumerateA` (`0x49b6c2`), `Direct3DRMCreate` (`0x49b6b0`), `D3DRMVectorRandom` (`0x49b6b6`), `D3DRMVectorRotate` (`0x49b6bc`), `DirectInputCreateA` (`0x49c7a8`), `DSOUND ordinal_1` (`0x49c7ae`) | IAT-shaped thunks into system libraries; the port's host layers (SDL/display/host audio) replace the corpus's library binding, so the thunks have no observable port-side effect. (The D3DRM vector pair `0x479500`/`0x479510` is the corpus-side call shape, recorded above.) | Blocked-by-design; fold in only if a library-binding layer is ever modeled. |
+| **SEH / PE-unwind + CRT math stubs** (4): `__global_unwind2` (`0x48ef10`), `__abnormal_termination` (`0x48efba`), `__math_exit` (`0x49208b`), `RtlUnwind` (`0x49c7b4`) | PE exception/unwind-table machinery and the CRT math-exit internal — same blocker as `CrtUnwindAddressResolve` (`0x495a60`): the port models no PE exception data, and nothing in the port raises or unwinds corpus frames. | CRT-runtime port, if an SEH-shaped need appears. |
+| **AVI video layer** (4): `AviStreamFrameCountGet` (`0x47ebe0`), `AviPlaybackFrameIndexGet` (`0x47ec60`), `AviFileInitialize` (`0x47ec80`), `AviFrameSeekAndClockRebase` (`0x47ebf0`) | Playback over `AVIFIL32.DLL` (the import-thunk family above); the seek half strides its context through a caller-pinned `ECX` residue (register-shaped, no frame model) and the `timeGetTime` clock word. Shares the media-platform seam (#297). | Video-playback model with the media platform seam. |
+| **Advisor record band** (3): `AdvisorPositionNameToIndex` (`0x4013e0`), `AdvisorAnimationNameToIndex` (`0x4014c0`), `AdvisorPositionRecordInitialize` (`0x4017b0`) | Stride/index the `DAT_004b2db0`/`DAT_004b2e04`/`DAT_004b30f8`/`DAT_004b3124` advisor bands (band owner recorded with `AdvisorAnimationEndCleanup`); name resolution `__strcmpi`-walks the `s_Advisor_*` reference strings, exact bytes only in the corpus `.rdata`. | Advisor band owner + reference-string extraction (shared name-table family). |
+| **Reference-binary name/string tables** (5): `RockFallStyleNameLookup` (`0x40bf70`, `DAT_004c7990/9a0` band), `CaseInsensitiveIndexedStringLookup` (`0x45a410`, `DAT_00500350` band), `MessageStringTableInitialize` (`0x451cd0`, fills `DAT_004ff190` from `s_Message_*`), `InterfaceMenuActionLabelsInit` (`0x41a300`, fills the `DAT_004dced0` label band), `TerrainTileStyleResolve` (`0x45e9e0`, 7 KB tile-style resolution over the `DAT_004a8f4x/90x` style tables) | Exact table strings/table entries live only in the reference binary's `.rdata` (Ghidra names give sanitized prefixes); the table loaders have no port owner. Shared reference-name-table blocker. | Exact `.rdata` string/table extraction, then the band initializers land as leaves. |
+| **Key-binding tables** (3): `InputBindingDefaultValueGet` (`0x41cb90`), `InputBindingValueGet` (`0x41caf0`), `InputKeyMappingAddBidirectional` (`0x44f1a0`) | Read/write the `DAT_004dd1xx`/`DAT_004dd73x` binding-value band; the loader that fills it (config key-map chain, with the key-name lookups riding the reference name tables) has no port owner. Related band-ownership note: `LevelStateCountersClear` (`0x41a920`). | Key-binding config loader + band owner, then the getter/adder leaves. |
+| **x87 float10** (2): `DoubleToExtended80` (`0x497f40`), `DriftOffsetStepApply` (`0x44d0d0`) | Extended-precision (`float10`) conversion/accumulation with `__ftol` rounding — the port has no x87 model and constant/float64 answers would claim unproven semantics. Shares the CRT x87 stub-blocker class. | x87/control-word model (shared stub-family blocker). |
+| **Engine pool internals** (2): `EnginePoolChunkTryAllocate` (`0x491b40`), `SmallHeapBlockResizeInPlace` (`0x491cc0`) | The corpus heap's small-arena pool machinery — shared blocker with `EnginePoolAllocate` (`0x491900`) above; the port routes through the host allocator with no arena consumers. | Only with a dedicated allocator port. |
+| **Marker-grid window** (1): `TerrainCellHasOccupiedOrFlaggedNeighbor` (`0x40d240`) | Strides the `DAT_004c7dfc` marker-window descriptor pair (dims `+0x14`, voxel array `+0xb8`) with a stack-local 16-entry neighbor-offset table — the same window that `MapCellRecordGridInitialize` (`0x40cdc0`) blocks on: the `crt.*`/`level.*` descriptor split must merge first. | Merge the `DAT_004c7d*` window model (shared with `0x40cdc0`), then this lands as a leaf. |
+
+### Scanner `CLEAN`-bucket split (4)
+
+- `RegistryValueLookupWithLock` (`0x417280`) and
+  `RegistryValueIndexLookupOrNotFound` (`0x4172d0`): the lookup walks
+  through the **ported** `SavTreeWalk` (`0x4171c0`) with the bare
+  `LAB_00417250` callback thunk — the queue/thunk-body blocker family.
+  Next: recover the thunk body with the registry-layer model.
+- `SavTreeWalk2` (`0x4172f0`) and `SavTreeLoad` (`0x4173e0`): NOT blocked —
+  mutually recursive, which hid them from the scanner's fixed point (it
+  placed them in the bucket `CLEAN` artifact). Their callees
+  (`SavClearVisited` `0x416e70`, `SavTreeWalk` `0x4171c0`) are ported and
+  the feature words they read are modeled; they are the next port
+  candidate (tracked as cluster 184).
+
+### Unmodeled reference-state bands (bucket attribution ledger)
+
+Named-unported rows that resolve to a DAT-global root attribute here:
+each band is unowned reference state (its writer/loader is unported or
+unmodeled), and the rows striding it are blocked-by-band. Groups:
+
+- Media-load pointer pairs: `DAT_004a13e0`, `DAT_004a1d5c`, `DAT_004a1ee8`,
+  `DAT_004a1ef0`, `DAT_004a1ef4`, `DAT_004a1ef8`.
+- Game-setup option words: `DAT_004b202c`, `DAT_004b2044`, `DAT_004b205c`,
+  `DAT_004b2428`, `DAT_004b24c0`, `DAT_004b2628`, `DAT_004b28a8`,
+  `DAT_004b28c0`.
+- Selection-marker window words (the `DAT_004c7d*` descriptor family
+  recorded with `MapCellRecordGridInitialize` / `0x40d240`): `DAT_004c7dfc`,
+  `DAT_004c7e80`, `DAT_004c7e84`, `DAT_004c7b30`, `DAT_004c7ba0`.
+- Loader scratch: `DAT_004db904`, `DAT_004dc640`, `DAT_004dc644`.
+- Key-repeat/windows band (key-binding family, above): `DAT_004dd99c`,
+  `DAT_004ddad8`, `DAT_004ddcc8`.
+- Interface label band (the `0x41a300` entry above): `DAT_004dced0`.
+- CRT locale/error words: `DAT_005490d4`, `DAT_0054912c`.
+- Frontend flow words behind the recorded window seams: `DAT_00556eec`,
+  `DAT_00557d68`, `DAT_00558080`, `DAT_00558088`.
+
+Next (all groups): model each band with its loader/owner.
+
+### COM/vtable class (659 rows)
+
+The single largest bucket is C++/COM object dispatch — bodies shaped
+`(**(code **)(obj + slot))` over renderer/DirectX/sound object vtables.
+Every row in it is blocked by the shared renderer/sound **COM-seam**
+class blocker (recorded piecemeal above: the DirectDraw pair, the scene
+pose/vtable dispatches, the sound-object slot pair). No row in this class
+has port-side observable behavior without the corpus's object vtables;
+the port's host objects replace them behind the platform seams. Next
+action: land vtable-shaped mocks as their object layers arrive.
+
+Closure note: after this section, every named-unported ledger row is
+either ported (cited in `src/`) or attributed — to a recorded row-level
+entry, a band entry above, a recorded dependency root (`BY-RECORDED`
+roots, all cited in this file), or the COM-class entry. Two rows
+(`SavTreeWalk2`/`SavTreeLoad`) stay actionable as cluster 184.
+
