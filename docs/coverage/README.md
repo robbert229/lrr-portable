@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 1111 | 43.3% |
+| ported | 1114 | 43.4% |
 | anchored | 4 | 0.2% |
-| named | 1406 | 54.8% |
-| runtime-import | 42 | 1.6% |
+| named | 1404 | 54.8% |
+| runtime-import | 41 | 1.6% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (1111 functions)
+  (1114 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1406 functions)
+  citation yet (1404 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
-  logic, never ported (42 functions)
+  logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1411 (55.0%).**
+**Game logic remaining to port: 1409 (55.0%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -716,7 +716,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0045d640` | UiCursorMoveToElementCenter |
 | `0x0045d7e0` | LevelIdentifierRemapTableLoad |
 | `0x0045d870` | CommandEntityReferenceRemap |
-| `0x0045d8b0` | ScreenCoordNormalizeInit |
 | `0x0045db00` | TexturedSceneObjectDrawAtPosition |
 | `0x0045dbc0` | TerrainViewTileGeometryBuild |
 | `0x0045e6d0` | TerrainPointPickResolve |
@@ -1424,7 +1423,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0049a800` | ExtendedFloatPowerOfTenScale |
 | `0x0049a890` | Win32FileDescriptorResize |
 | `0x0049aa10` | CrtSignalHandlerDispatch |
-| `0x0049abe0` | CrtWideCharToMultiByteCompat |
 | `0x0049ae10` | CrtEnvironmentVariableLookup |
 | `0x0049aea0` | CrtFileDescriptorFlag80SetOrClear |
 | `0x0049af20` | CrtCountedStringCompare |

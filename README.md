@@ -2363,6 +2363,29 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**CRT string leaves + screen band** (2026-10-25): three frontier rows
+land — `crt_string_copy_n` (0x48e770, library `_strncpy`) and
+`crt_wide_char_to_multi_byte_compat` (0x49abe0) in `crt.*`, and
+`screen_coord_normalize_init` (0x45d8b0) in `frontend.*`. The strncpy fold
+drops the aligned-dword fast paths: every lane copies source bytes up to
+the count, copies the NUL when it lands, pads the window with zeros, and
+never lands a NUL past an expired count. The compat wrapper pins the
+port's C-locale half (the locale-map branch stays recorded): a null
+destination answers the NUL-excluded wide length, the store lane copies
+low bytes until the NUL or the count, and a char over `0xff` takes the
+corpus's EILSEQ-shaped math-error store with the `-1` answer — the same
+shape as the code-page leaf. The normalize pass runs the corpus's screen
+band: 90 color constants scale by the exact 1/255 float, two stride-16
+lanes fill twenty unit cells, and seven pair rows seed from the corpus
+constants and scale by the width/height through the 1/640 and 1/480
+constants — the x half lands back on the constants while the y half
+rides the height constant's bias one bit up (pinned as next-float).
+Quirks pinned: the last primary pair rides zero while its mirror takes
+the first row's constants, the first mirror row's pair differs from the
+primary's, and a second pass re-scales the colors again. Deviations: the
+band is own storage (its corpus owner is unported), and the locale-half
+conversion branches ride recorded. Tests green; 34/36 baseline.
+
 **Integer divide pair** (2026-10-25): two runtime rows land in `crt.*`
 alongside the multiply thunk. `crt_integer64_divide` (0x48e9e0, `__alldiv`)
 and `crt_unsigned64_divide` (0x498bf0, `__aulldiv`) fold the helpers'

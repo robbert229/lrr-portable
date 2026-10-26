@@ -1948,6 +1948,75 @@ int main(int argc, char** argv)
               "the null array is guarded (dev)");
     }
 
+    /* ScreenCoordNormalizeInit (FUN_0045d8b0; 2026-10-25): the band pass
+     * over the port's display pair. The x half lands back on the corpus
+     * constants (the width constant's one-ulp bias undoes against 640),
+     * while the y half rides the height constant's bias one bit up. */
+    {
+        auto bits = [](float v) {
+            uint32_t b;
+            __builtin_memcpy(&b, &v, sizeof b);
+            return b;
+        };
+        display_dimensions_set(640, 480);
+        screen_coord_normalize_reset();
+        CHECK(screen_coord_normalize_color_peek(0) == 255.0f
+                  && screen_coord_normalize_pair_peek(0, 0, 0) == 0.0f
+                  && screen_coord_normalize_cell_peek(0, 0) == 0.0f
+                  && screen_coord_normalize_rows_peek() == 0u,
+              "the reset hook seeds the corpus data shape");
+        screen_coord_normalize_init();
+
+        CHECK(screen_coord_normalize_color_peek(0) == 1.0f
+                  && screen_coord_normalize_color_peek(2) == 0.0f
+                  && bits(screen_coord_normalize_color_peek(1))
+                         == 0x3f4cccceu,
+              "the color lane scales the corpus constants by 1/255");
+        CHECK(screen_coord_normalize_color_peek(90) == 0.0f
+                  && screen_coord_normalize_color_peek(-1) == 0.0f,
+              "the peek hook bounds the color window");
+        CHECK(screen_coord_normalize_cell_peek(0, 0) == 1.0f
+                  && screen_coord_normalize_cell_peek(1, 19) == 1.0f
+                  && screen_coord_normalize_cell_peek(0, 20) == 0.0f,
+              "both unit-cell lanes fill the stride-16 window");
+        CHECK(screen_coord_normalize_rows_peek() == 7u,
+              "the row word books seven");
+
+        static const uint32_t x_bits[7] = { 0x43a00000u, 0x43b40000u,
+            0x43b40000u, 0x43c80000u, 0x438c0000u, 0x435c0000u, 0u };
+        static const uint32_t y_bits[7] = { 0x42200001u, 0x43340001u,
+            0x43340001u, 0x43340001u, 0x43340001u, 0x43340001u, 0u };
+        static const uint32_t mx_bits[7] = { 0x43d20000u, 0x43b40000u,
+            0x43b40000u, 0x43c80000u, 0x438c0000u, 0x435c0000u,
+            0x43a00000u };
+        static const uint32_t my_bits[7] = { 0x43340001u, 0x43340001u,
+            0x43340001u, 0x43340001u, 0x43340001u, 0x43340001u,
+            0x42200001u };
+        for (int row = 0; row < 7; ++row) {
+            CHECK(bits(screen_coord_normalize_pair_peek(0, row,
+                                                        0)) == x_bits[row]
+                      && bits(screen_coord_normalize_pair_peek(0, row,
+                                                              1)) == y_bits[row]
+                      && bits(screen_coord_normalize_pair_peek(1, row,
+                                                        0)) == mx_bits[row]
+                      && bits(screen_coord_normalize_pair_peek(1, row,
+                                                              1)) == my_bits[row],
+                  "the pair rows scale the corpus constants exactly");
+        }
+        CHECK(screen_coord_normalize_pair_peek(2, 0, 0) == 0.0f,
+              "the mirror lane bounds its guards");
+
+        screen_coord_normalize_init(); /* second pass re-scales (quirk) */
+        CHECK(bits(screen_coord_normalize_color_peek(0)) == 0x3b808081u,
+              "a second pass re-scales the colors (corpus quirk)");
+        screen_coord_normalize_reset();
+        CHECK(screen_coord_normalize_color_peek(0) == 255.0f
+                  && screen_coord_normalize_cell_peek(1, 5) == 0.0f
+                  && screen_coord_normalize_rows_peek() == 0u,
+              "the reset hook restores the seed shape");
+        display_dimensions_set(0, 0);
+    }
+
     if (s_failures == 0) {
         printf("frontend: all tests passed\n");
         return 0;
