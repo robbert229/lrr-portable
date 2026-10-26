@@ -2363,6 +2363,27 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Selection state tick** (2026-10-25): one frontier row lands in `select.*`
+with the command queue's op-2d seam now routed for real.
+`selection_state_tick` (0x4528c0, finding 468) is the selection filter
+pass: scan the whole selection and classify it — kind 2 without the
+`+0x36c` owner ends the scan (context 9); kind 1 splits clean/flagged by
+the stats word's bits `0x20000`/`0x2000000` and the `+0x3ec` bit `0x40`;
+kind 4 takes `0xd`; kind 11 with the `+0x3e4` bit `0x2000000` takes `0xe`;
+and bit `0x20000` without an owner takes `0xc`. The class ladder posts
+one HUD context (`CommandContextPostToHud`, ported), silences the lower
+classes, and the second walk keeps only entries in the chosen class —
+swap-with-last compaction that revisits the swapped-in slot — with every
+dropped entity losing the selected bit (the `+0x3e8` bit `0x200000`
+mirror). Quirks pinned: the class-none shape posts 0 and drops every
+entry, the owner-set bit-17 entry survives only in the class its flag
+pair picked, and the bit-17 rider of the clean class needs its owner.
+Deviations: the widened owner mirror (the pointer-word convention), the
+corpus's `+0x3ec` byte read lands on the flag word's low byte, and the
+NULL-slot guard. `select_test` pins the ladder end to end (contexts
+9/10/11/12/13/14/0 with the surviving shapes), the compaction revisit,
+and the guarded call.
+
 **Renderer command node prepend** (2026-10-25): one frontier row lands
 in `crt.*`. `renderer_command_node_prepend` (0x482ce0) builds the head
 node of the model-render list that the ported `model_render_list_clear`

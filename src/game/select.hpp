@@ -48,6 +48,23 @@ void selection_count_reset(GameContext* ctx);
 /* SelectedEntity (0x4525c0): first selection entry when nonzero, else NULL. */
 EntitySlot* selection_first(const GameContext* ctx);
 
+/* SelectionStateTick (FUN_004528c0, finding 468): the selection filter
+ * pass. Walk the whole selection and classify it — kind 2 without the
+ * +0x36c owner (context 9, scan ends there); kind 1 split clean/flagged
+ * by the stats word's bits 0x20000/0x2000000 and the +0x3ec bit 0x40;
+ * kind 4 (context 0xd); kind 0xb with the +0x3e4 bit 0x2000000 (context
+ * 0xe); and the bit-0x20000-with-no-owner class (context 0xc). The class
+ * ladder posts one HUD context (CommandContextPostToHud ported), silences
+ * the lower classes, and a second walk keeps only entries in the chosen
+ * class — swap-with-last compaction that revisits the swapped-in slot —
+ * clearing the selected bit (the +0x3e8 bit 0x200000 mirror) on every
+ * dropped entity. Quirks pinned: the class-none shape posts 0 and drops
+ * every entry, and the swap compaction revisits the swapped-in slot
+ * (an entry removed twice loses the selected bit twice — inert).
+ * Deviations: the widened owner mirror (pointer convention), the +0x3ec
+ * low-byte read, the NULL-slot guard. */
+void selection_state_tick(GameContext* ctx);
+
 /* Pick the placed entity nearest grid cell (cx,cy) within `tol` cells.
  * Returns NULL when nothing is close enough. */
 EntitySlot* selection_pick(GameContext* ctx, float cx, float cy,

@@ -1220,7 +1220,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 004526c0,FUN_004526c0,ported,SelectionCandidateFilterDefault,1,109
 004526e0,FUN_004526e0,ported,SelectionCandidateFilter,1,1492
 00452870,FUN_00452870,ported,SelectionCandidateEligibilityCheck,3,359
-004528c0,FUN_004528c0,named,SelectionStateTick,0,3991
+004528c0,FUN_004528c0,ported,SelectionStateTick,2,3991
 00452be0,FUN_00452be0,ported,SelectionClear,1,568
 00452c50,FUN_00452c50,ported,SelectionEntityRemove,1,458
 00452cc0,FUN_00452cc0,ported,SelectedEntityStateMonitor,1,615

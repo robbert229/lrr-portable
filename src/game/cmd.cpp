@@ -746,7 +746,7 @@ void cmd_queue_tick(void)
         case 0x21: mgr_stub("op21", q->a2); break;
         case 0x23: mgr_stub("op23", q->a2); break;
         case 0x25: mgr_stub("op25", q->a2); break;
-        case 0x2d: mgr_stub("op2d", 0);       break; /* selection filter stub */
+        case 0x2d: selection_state_tick(s_ctx); break;
         case 0x34: mgr_stub("op34", q->a2); break;
         case 0x36: mgr_stub("op36", q->a2); break;
         case 0x40: mgr_stub("op40", 0);       break;
