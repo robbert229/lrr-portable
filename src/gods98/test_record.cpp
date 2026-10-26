@@ -738,6 +738,106 @@ static void test_mesh_window(void)
     memcpy(&got, out + 32, 4);
     CHECK(got == 0xAAAAAAAAu, "the slot tail stays untouched");
 
+    /* IndexedRecordEntryRead (2026-10-25): the entry band — field word,
+     * the shape-kind answer (3), count, and the ushort index walk. */
+    {
+        static uint8_t etable[0x70];
+        memset(etable, 0, sizeof(etable));
+        static const uint16_t idx[3] = { 7u, 8u, 9u };
+        poke_dword(etable, 0x00, 3u);
+        poke_dword(etable, 0x04, 0x5au);
+        poke_ptr(etable, 0x08, (void*)idx);
+        PokeTableRecord erec;
+        memset(&erec, 0, sizeof(erec));
+        erec.table = etable;
+        uint32_t field = 0u, kind = 0u, count = 0u;
+        uint32_t got_idx[4] = { 0x1111u, 0x1111u, 0x1111u, 0x1111u };
+        indexed_record_entry_read(&erec, 0, &field, &kind, &count, got_idx);
+        CHECK(field == 0x5au && kind == 3u && count == 3u,
+              "the entry band reads out");
+        CHECK(got_idx[0] == 7u && got_idx[1] == 8u && got_idx[2] == 9u,
+              "the ushort indices widen into the answers");
+        CHECK(got_idx[3] == 0x1111u, "the write stops at the count");
+        /* Zero count: the gate leaves the index answers alone. */
+        memset(etable, 0, sizeof(etable));
+        uint32_t zero_cnt = 0xDEADu;
+        uint32_t keep[1] = { 0x2222u };
+        indexed_record_entry_read(&erec, 0, NULL, NULL, &zero_cnt, keep);
+        CHECK(zero_cnt == 0u && keep[0] == 0x2222u,
+              "the zero-count gate skips the walk");
+        /* Missing table: the guard answers early (deviation: the corpus
+         * strides its table pointer blindly). */
+        PokeTableRecord empty;
+        memset(&empty, 0, sizeof(empty));
+        uint32_t sentinel = 1u;
+        indexed_record_entry_read(&empty, 0, &sentinel, NULL, NULL, NULL);
+        CHECK(sentinel == 1u, "the missing table answers early");
+    }
+
+    /* TerrainCellQuadVerticesWrite (2026-10-25): the mirror — eight dwords
+     * per 36-byte source slot into the 32-byte stride, ninth dword home. */
+    {
+        static uint8_t wtable[0x70];
+        memset(wtable, 0, sizeof(wtable));
+        static uint8_t vbuf[3 * 0x20];
+        memset(vbuf, 0, sizeof(vbuf));
+        poke_ptr(wtable, 0x0c, vbuf);
+        PokeTableRecord wrec;
+        memset(&wrec, 0, sizeof(wrec));
+        wrec.table = wtable;
+        uint32_t src[18];
+        for (int i = 0; i < 18; ++i) {
+            src[i] = 1u + (uint32_t)i;
+        }
+        terrain_cell_quad_vertices_write(&wrec, 0, 1, 2, src);
+        int ok0 = 1, ok1 = 1, first_zero = 1;
+        for (int d = 0; d < 8; ++d) {
+            uint32_t g0 = 0u, g1 = 0u, gf = 0u;
+            memcpy(&g0, vbuf + 0x20 + d * 4, 4);
+            memcpy(&g1, vbuf + 0x40 + d * 4, 4);
+            memcpy(&gf, vbuf + d * 4, 4);
+            if (g0 != src[0 * 9 + d]) {
+                ok0 = 0;
+            }
+            if (g1 != src[1 * 9 + d]) {
+                ok1 = 0;
+            }
+            if (gf != 0u) {
+                first_zero = 0;
+            }
+        }
+        CHECK(ok0, "the first written quad takes its slot's eight dwords");
+        CHECK(ok1, "the next quad skips the previous slot's ninth dword");
+        CHECK(first_zero, "the unwritten first quad stays zero");
+        /* Zero count: the gate leaves the buffer alone. */
+        memset(vbuf, 0, sizeof(vbuf));
+        terrain_cell_quad_vertices_write(&wrec, 0, 0, 0, src);
+        int still_zero = 1;
+        for (int i = 0; i < 0x60; ++i) {
+            if (vbuf[i] != 0u) {
+                still_zero = 0;
+            }
+        }
+        CHECK(still_zero, "the zero-count gate leaves the buffer alone");
+        /* Guard deviations: NULL record, missing table, missing vertex
+         * buffer, NULL source — every one answers inert. */
+        PokeTableRecord tempty;
+        memset(&tempty, 0, sizeof(tempty));
+        terrain_cell_quad_vertices_write(NULL, 0, 0, 1, src);
+        terrain_cell_quad_vertices_write(&tempty, 0, 0, 1, src);
+        poke_ptr(wtable, 0x0c, NULL);
+        terrain_cell_quad_vertices_write(&wrec, 0, 0, 1, src);
+        poke_ptr(wtable, 0x0c, vbuf);
+        terrain_cell_quad_vertices_write(&wrec, 0, 0, 1, NULL);
+        still_zero = 1;
+        for (int i = 0; i < 0x60; ++i) {
+            if (vbuf[i] != 0u) {
+                still_zero = 0;
+            }
+        }
+        CHECK(still_zero, "the guarded calls touch nothing");
+    }
+
     /* InstanceQuadVertexDataFill: positions advance, the normal is the
      * triple minus the position, normalized; the same triple shapes
      * every vertex. */

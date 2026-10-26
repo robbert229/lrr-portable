@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 1101 | 42.9% |
+| ported | 1103 | 43.0% |
 | anchored | 4 | 0.2% |
-| named | 1414 | 55.1% |
+| named | 1412 | 55.1% |
 | runtime-import | 44 | 1.7% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (1101 functions)
+  (1103 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1414 functions)
+  citation yet (1412 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (44 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1419 (55.3%).**
+**Game logic remaining to port: 1417 (55.3%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -1140,9 +1140,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00481b80` | CounterFormatStringBuild |
 | `0x00481fa0` | MeshVertexCoordinateRemap |
 | `0x00482040` | AnimationTrackApplyWrappedFrameOffset |
-| `0x004821a0` | IndexedRecordEntryRead |
 | `0x00482220` | MeshRecordAllocateAndFill |
-| `0x004823e0` | TerrainCellQuadVerticesWrite |
 | `0x004827a0` | IndexedRecordFlag6CBit0Set |
 | `0x004827d0` | RecordFlag2CBit0Set |
 | `0x00482ac0` | ModelRenderRecordStateSetup |

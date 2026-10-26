@@ -2363,6 +2363,23 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Indexed record entry read + quad vertices write** (2026-10-25): two
+frontier rows land in `record.*`. `indexed_record_entry_read` (0x4821a0)
+reads one stride-`0x70` entry of the indexed record table through the
+record's `+0x08` pointer — the `+0x04` field word, the shape-kind answer
+(`3`), the `+0x00` vertex count, and the count `ushort` indices striding
+through the entry's own `+0x08` index pointer (widened to `uint32` answers
+as the corpus folds them). `terrain_cell_quad_vertices_write` (0x4823e0)
+is the exact mirror of the ported indexed geometry copy: eight dwords per
+round (3+3+2) from `36`-byte source slots into the block's `32`-byte
+vertex stride starting at the `first_vertex` quad; each slot's ninth
+dword stays home. A zero-count write answers inert. Deviations: guarded
+table, index pointer, vertex buffer, and source (the corpus strides all
+of them blindly). `record_test` pins the entry band (field `0x5a`, kind
+`3`, three widened indices, the count-bounded write, and the zero-count
+and missing-table gates) and the mirror write (slot-to-quad dword map,
+the ninth-dword skip, the untouched first quad, and the guard band).
+
 **Cell-list min-distance scale apply** (2026-10-25): one frontier row lands
 in `level.*`. `cell_list_min_distance_scale_apply` (0x450a80) is the sound
 min-distance color sweep: raising the applied bit (2) paints every queued
