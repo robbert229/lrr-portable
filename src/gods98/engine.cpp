@@ -16,6 +16,7 @@
  * body is filled in from the corpus one at a time; the *order* here is the
  * observed call order and must stay stable.
  */
+// FUNCTION: LEGORR 0x004232e0
 int EngineTick(EngineContext* ctx, float dt)
 {
     /* 1. Gate — loader/benchmark mode idles out of the frame. */

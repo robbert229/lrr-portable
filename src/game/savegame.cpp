@@ -1031,6 +1031,7 @@ static int sav_tree_nth_visit(void* node, void* user)
     return 0;
 }
 
+// FUNCTION: LEGORR 0x00417280
 void* registry_value_lookup(void* root, uint32_t index)
 {
     SavTreeNthState st = { NULL, index, 0u, 0u };
@@ -1039,6 +1040,7 @@ void* registry_value_lookup(void* root, uint32_t index)
     return hit != 0 ? st.found : NULL;
 }
 
+// FUNCTION: LEGORR 0x004172d0
 uint32_t registry_value_index_lookup_or_not_found(void* root, uint32_t index)
 {
     void* node = registry_value_lookup(root, index);
@@ -1093,6 +1095,7 @@ void* sav_tree_root_peek(int which)
     return (which == 0 || which == 1) ? s_sav_tree_root[which] : NULL;
 }
 
+// FUNCTION: LEGORR 0x004150b0
 void save_menu_refresh(GameContext* ctx, int slot)
 {
     save_slot_set(ctx, slot); /* FUN_00417ea0 */

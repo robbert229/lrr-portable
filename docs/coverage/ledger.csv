@@ -421,7 +421,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00414e10,FUN_00414e10,named,OptionMusicDefault,0,241
 00414f90,FUN_00414f90,ported,ScrollToSliderIndexStore,4,489
 00415030,FUN_00415030,ported,ScrollToSliderIndex,3,430
-004150b0,FUN_004150b0,ported,SaveMenuRefresh,3,850
+004150b0,FUN_004150b0,ported,SaveMenuRefresh,4,850
 00415150,FUN_00415150,ported,OptionsApplyFromSlot,1,299
 00415220,FUN_00415220,named,FrontEndStartLevel,0,654
 004152c0,FUN_004152c0,ported,SlotSummary,1,828
@@ -458,8 +458,8 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00417020,FUN_00417020,ported,ListGetNode,2,962
 00417090,FUN_00417090,named,LevelNodeGet,0,1461
 004171c0,FUN_004171c0,ported,SavTreeWalk,6,653
-00417280,FUN_00417280,ported,RegistryValueLookupWithLock,3,394
-004172d0,FUN_004172d0,ported,RegistryValueIndexLookupOrNotFound,2,233
+00417280,FUN_00417280,ported,RegistryValueLookupWithLock,4,394
+004172d0,FUN_004172d0,ported,RegistryValueIndexLookupOrNotFound,3,233
 004172f0,FUN_004172f0,ported,SavTreeWalk2,4,1146
 004173e0,FUN_004173e0,ported,SavTreeLoad,5,420
 00417430,FUN_00417430,ported,FloatToLong,3,53
