@@ -2363,6 +2363,20 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Registry indexed-visit lookups** (2026-10-26): two recorded blocked rows
+land with the program's first recovered code thunk. `savegame.*` takes
+`registry_value_lookup` (FUN_00417280) and
+`registry_value_index_lookup_or_not_found` (FUN_004172d0) — walk-the-tree
+(FUN_004171c0) plus the callback body recovered from
+`reference/LegoRR.exe`'s code section (objdump at the `LAB_*` thunk): the
+callback carries `(want, seen)` in the user block, records the node
+pointer and hit index and answers 1 at the want-th visited node, or bumps
+the counter and answers 0. The tail runs the installed visited-band clear
+(FUN_00416e70) as the corpus's either-path call; the word reader answers
+the found node's leading dword or -1. Deviation: the corpus strides the
+user block and the node read blind; the port models the state.
+Ledger 1129 -> 1131. Tests green; 34/36 baseline.
+
 **Sav-tree menu refresh** (2026-10-26): one recorded blocked row lands, the
 first of the port-the-blocked-systems program. `savegame.*` takes
 `save_menu_refresh` (FUN_004150b0) — the two-walk leaf the blocked.md

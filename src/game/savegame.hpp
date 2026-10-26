@@ -304,6 +304,24 @@ void sav_tree_load(void* node, void* window_base, void** blocks,
                    uint32_t window, uint32_t flag,
                    const EngineContext* eng);  /* FUN_004173e0 */
 
+/* --- the sav-tree indexed visit lookups (2026-10-26) -----------------------
+ * RegistryValueLookupWithLock (FUN_00417280) walks the tree (FUN_004171c0)
+ * with the thunk recovered from the corpus's code section: the callback
+ * carries (want, seen) through the walk's user block and answers 1 at the
+ * want-th visited node — recording that node's pointer and its index (the
+ * write lands the same value both dwords already hold) — or bumping seen
+ * and returning 0. Either way the tail runs the installed visited-band
+ * clear (FUN_00416e70); the tree's own visit flags stay raised (the band
+ * clears the records installed in it, tree nodes included only as that
+ * band's records). RegistryValueIndexLookupOrNotFound (FUN_004172d0) reads
+ * the found node's leading dword back, or -1.
+ * Deviation: the corpus strides the user block's words blindly; the port
+ * models the state and guards the found-node read. */
+void* registry_value_lookup(void* root, uint32_t index);
+                                                /* FUN_00417280 */
+uint32_t registry_value_index_lookup_or_not_found(void* root, uint32_t index);
+                                                /* FUN_004172d0 */
+
 /* --- the sav-tree menu refresh (2026-10-26) --------------------------------
  * SaveMenuRefresh (FUN_004150b0): set the open slot (FUN_00417ea0), probe
  * the slot context (FUN_00417e70), then run the two stack-state loads
