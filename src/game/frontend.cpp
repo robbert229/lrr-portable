@@ -37,6 +37,9 @@
 #include "util.hpp"
 #include "select.hpp"
 #include "gods98/view.hpp"
+#include "gods98/string.hpp"
+#include "gods98/resource.hpp"
+#include "entity.hpp"
 
 static int s_lower(int c) { return (c >= 'A' && c <= 'Z') ? c + 0x20 : c; }
 static int s_toupper(int c) { return (c >= 'a' && c <= 'z') ? c - 0x20 : c; }
@@ -502,7 +505,7 @@ static void fe_parse_submenu(FrontEnd* fe, FeMenu* m, const char* name,
     snprintf(buf, sizeof(buf), "%s PlayRandom", pre);
     sub->play_random = block_get_bool(fe->cfg, buf) == 1;
     sub->overlay_count = 0;
-    for (j = 1; j <= FE_OVERLAYS_MAX && sub->overlay_count < FE_OVERLAYS_MAX;
+    for (int j =  1; j <= FE_OVERLAYS_MAX && sub->overlay_count < FE_OVERLAYS_MAX;
          ++j) {
         snprintf(buf, sizeof(buf), "%s !Overlay%d", pre, j);
         const char* ov = block_get_strptr(fe->cfg, buf);
@@ -799,7 +802,7 @@ int fe_record_for_level(const FrontEnd* fe, const char* level)
             return i;
         }
     }
-    for (i = 0; i < fe->campaign_n; i++) {
+    for (int i =  0; i < fe->campaign_n; i++) {
         if (s_strcaseeq(level, fe->campaign[i])) {
             return fe->tutorial_n + i;
         }
@@ -1808,7 +1811,7 @@ void frontend_render(FrontEnd* fe, const TextureSurface* hi_font,
         }
     }
 
-    for (i = 0; i < sub->item_count; i++) {
+    for (int i =  0; i < sub->item_count; i++) {
         const FeItem* it = &sub->items[i];
         int x, y;
         fe_item_pos(fe, it, i, w, hi_font, &x, &y);
@@ -3646,4 +3649,70 @@ int menu_list_find_name(void* const* entries, int count, const char* name)
         }
     }
     return -1;
+}
+
+/* --- the encyclopedia config-file window (2026-10-25) --------------------
+ * EncyclopediaConfigFilesOpen (FUN_0040e490) — see frontend.hpp. The group
+ * pairs (count window, name table) ride the corpus's address pairing:
+ * 0x27c/0x1e8, 0x280/0x1ec, 0x284/0x1f0, 0x288/0x1f4. */
+static void* s_ency_files[4];   /* DAT_004c7e88/ec/90/94 roles */
+static void* s_ency_crystal;    /* DAT_004c7e98 role */
+static void* s_ency_ore;        /* DAT_004c7e9c role */
+
+/* The corpus joins `<root>::Encyclopedia::<name>` through the path builder
+ * (FUN_00478f50), reads the record's +8 value token (FUN_004790b0's
+ * record+8), and dispatches the file open (FUN_0047f6e0 in "r" mode — the
+ * port's AUTO open). NULL answers ride where the corpus strides. */
+static void encyclopedia_value_open(BlockFile* cfg, const char* root_path,
+                                    const char* name, void** slot)
+{
+    const char* path = string_path_join(root_path, "Encyclopedia", name,
+                                        (char*)NULL);
+    const char* value = block_get_strptr(cfg, path);
+    if (value != NULL) {
+        *slot = resource_open(value, RESOURCE_AUTO);
+    }
+}
+
+// FUNCTION: LEGORR 0x0040e490
+void encyclopedia_config_files_open(BlockFile* cfg, const char* root_path)
+{
+    static const int count_slot[4] = { 0, 2, 3, 1 }; /* 0x27c/80/84/88 */
+    for (int kind = 0; kind != 4; ++kind) {
+        const uint32_t count = catalog_count_peek(count_slot[kind]);
+        /* The corpus strides count 4-byte handle slots (its windows are
+         * undefined4 arrays sized count * 4); on the pointer-sized port the
+         * window is count void* slots, so the allocation and zeroing stride
+         * sizeof(void*) to cover every handle (deviation: slot width). */
+        void* array = engine_heap_alloc((long)count * (long)sizeof(void*));
+        s_ency_files[kind] = array;
+        if (array == NULL) {
+            continue; /* deviation: the corpus strides the store blindly */
+        }
+        memset(array, 0, (size_t)count * sizeof(void*));
+        const char* const* table =
+            (const char* const*)catalog_name_table_peek(kind);
+        for (uint32_t i = 0; i != count; ++i) {
+            const char* name = (table != NULL) ? table[i] : NULL;
+            encyclopedia_value_open(cfg, root_path, name,
+                                    &((void**)array)[i]);
+        }
+    }
+    encyclopedia_value_open(cfg, root_path, "PowerCrystal", &s_ency_crystal);
+    encyclopedia_value_open(cfg, root_path, "Ore", &s_ency_ore);
+}
+
+void* encyclopedia_file_window_peek(int group)
+{
+    return (group >= 0 && group < 4) ? s_ency_files[group] : NULL;
+}
+
+void* encyclopedia_crystal_file_peek(void)
+{
+    return s_ency_crystal;
+}
+
+void* encyclopedia_ore_file_peek(void)
+{
+    return s_ency_ore;
 }

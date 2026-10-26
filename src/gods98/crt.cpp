@@ -230,15 +230,7 @@ double format_argument_read_double(uint8_t** cursor)
 // FUNCTION: LEGORR 0x00493150
 double x87_round_to_integral(double value)
 {
-    const double lower = floor(value);
-    const double fraction = value - lower;
-    if (fraction < 0.5) {
-        return lower;
-    }
-    if (fraction > 0.5) {
-        return lower + 1.0;
-    }
-    return fmod(lower, 2.0) == 0.0 ? lower : lower + 1.0;
+    return rint(value);
 }
 
 /* DoubleBuildWithExponent (FUN_00493a40, findings 383/399): the corpus

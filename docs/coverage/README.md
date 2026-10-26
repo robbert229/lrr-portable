@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 1124 | 43.8% |
+| ported | 1131 | 44.1% |
 | anchored | 4 | 0.2% |
-| named | 1394 | 54.4% |
+| named | 1387 | 54.1% |
 | runtime-import | 41 | 1.6% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (1124 functions)
+  (1131 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1394 functions)
+  citation yet (1387 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1399 (54.6%).**
+**Game logic remaining to port: 1392 (54.3%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -200,7 +200,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0040e0c0` | FenceSparkLaunchRegister |
 | `0x0040e1e0` | CellCornerOccupancyScan |
 | `0x0040e350` | CellEntityKindCreateOrRemove |
-| `0x0040e490` | EncyclopediaConfigFilesOpen |
 | `0x0040e8d0` | ScreenSpaceEffectDispatchIfEnabled |
 | `0x0040ee50` | LavaErosionPendingCellAdd |
 | `0x0040f2b0` | LavaErosionNeighborEligible |
@@ -515,6 +514,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004422a0` | SurfaceVectorNormalize |
 | `0x00442300` | EntityVelocityVectorDispatch |
 | `0x00442480` | VectorDirectionAngleRadiansGet |
+| `0x004424f0` | EntityPositionToTerrainCell |
 | `0x004425f0` | SubobjectPoseDeltaNormalizeAndDispatch |
 | `0x004428a0` | EntityWorldPositionSet |
 | `0x00442b10` | EntityMovementAccumulatorApply |
@@ -657,11 +657,9 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00453da0` | CameraFocusTweenUpdate |
 | `0x00456810` | SoundAliasPlayGlobal |
 | `0x00456830` | AdvisorInlineTokenRender |
-| `0x00456b80` | TutorialPathCoordinateIndex |
 | `0x00456cb0` | CoordinateListCallbackVisit |
 | `0x004588e0` | InputDeviceRelease |
 | `0x00459240` | PopEntityStateOverride |
-| `0x004593e0` | OsfWrite |
 | `0x00459530` | RenderThreePassUpdate |
 | `0x00459560` | HealthBarConfigLoadAndShadeDerive |
 | `0x00459900` | HungerImagesPositionConfigLoad |
@@ -746,6 +744,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00463e40` | FloatRoundToNearestInt |
 | `0x00463f00` | SceneQuadGridEmit |
 | `0x004641c0` | BuildingPlacementFootprintRenderAndValidate |
+| `0x00465050` | SoundSubmissionRouteWrapper |
 | `0x00465190` | SoundHandleStopForward |
 | `0x004653a0` | TransientEffectTexturesPreload |
 | `0x00465430` | TransientEffectEmitterCreate |
@@ -888,7 +887,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00473ec0` | RenderObjectStateApplyToEntries |
 | `0x00474410` | ParseIndexedSurfaceName |
 | `0x004744f0` | TextureSurfaceCreate |
-| `0x00474710` | TextureRelease |
 | `0x00474760` | InterfaceArrayForwardSync |
 | `0x004748f0` | MeshRecordAllocateOrAppend |
 | `0x00474a20` | AnimatedTextureFrameCount |
@@ -971,19 +969,16 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004774b0` | WhitespaceTokenize |
 | `0x00477590` | FormattedTextEscapeDecodeAndEmit |
 | `0x00477670` | GameStringHashCompute |
-| `0x004777a0` | WinMain |
 | `0x00477f30` | MainLoopFramePump |
 | `0x00477f80` | DisplayDeviceCapsQueryDiscard |
 | `0x00477fa0` | RendererBeginFrameOnce |
 | `0x00477fd0` | EngineCallbackTripletSet |
 | `0x00478010` | WindowMessageDispatchFilter |
-| `0x00478040` | Win32MessagePumpDispatch |
 | `0x004780b0` | RendererWindowModeApply |
 | `0x004781d0` | Direct3DRMDeviceInit |
 | `0x00478310` | WindowRectAdjustForWindowedMode |
 | `0x00478330` | Direct3DRenderPreferencesApply |
 | `0x004783d0` | WindowTitleSet |
-| `0x004783f0` | WindowCreate |
 | `0x004784c0` | GameWindowProcedure |
 | `0x004786c0` | MainWindowActivationAndCloseHandler |
 | `0x004788d0` | Direct3DRenderStateSetCached |
@@ -1033,7 +1028,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0047c2e0` | DirectDrawDeviceCreate |
 | `0x0047c4b0` | DirectDrawEnumeratedDeviceCreate |
 | `0x0047c610` | DirectDrawRendererInit |
-| `0x0047c8d0` | RenderSurfacePresent |
 | `0x0047cc20` | RenderSurfaceRestoreFromPrimary |
 | `0x0047cc50` | WindowedRenderSurfaceBlit |
 | `0x0047ccf0` | DirectDrawObjectsRelease |
@@ -1223,7 +1217,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0048b280` | WindowModeFlagSet |
 | `0x0048b290` | StartupStreamsClose |
 | `0x0048b2f0` | StartupConfigStreamLoad |
-| `0x0048b360` | RegistryPathAccessor |
 | `0x0048b390` | RegistryPathCreateKeys |
 | `0x0048b4a0` | BufferedCharStreamReadToString |
 | `0x0048b4e0` | WwadArchiveIndexLoad |

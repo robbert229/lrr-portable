@@ -68,6 +68,8 @@ const EntitySlot* entity_at(GameContext* ctx, int type, int index);
 int entity_query_flag_count(int query);           /* FUN_0041b3c0 */
 void     catalog_count_install(int which, uint32_t value); /* port hook */
 uint32_t catalog_count_peek(int which);           /* port hook */
+void     catalog_name_table_install(int kind, const void* names); /* hook */
+const void* catalog_name_table_peek(int kind);    /* port hook */
 void     catalog_id_pair_install(int entry, uint32_t size); /* port hook */
 
 /* CatalogCallbackByIdDispatch (FUN_0041b680): callback dispatch over the

@@ -670,7 +670,7 @@ void simtick_sfx_bank(EngineContext* c, float dt)
     /* post-step. */
     ++s_post_n;
     /* pass 3: stride-4 timer slots: negative timer -> release + reset. */
-    for (i = 0; i < s_sfx_n; ++i) {
+    for (int i =  0; i < s_sfx_n; ++i) {
         float* f = (float*)((uint8_t*)s_sfx_entries[i] + 12);
         if (*f < 0.0f) {
             ++s_sfx_rels; /* FUN_004820d0 release hook x2 */
