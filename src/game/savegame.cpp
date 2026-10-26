@@ -1009,6 +1009,47 @@ void sav_tree_load(void* node, void* window_base, void** blocks,
     sav_clear_visited();
 }
 
+/* RegistryValueLookupWithLock (FUN_00417280) — see savegame.hpp. The
+ * user block is the corpus's four stack dwords: found node, the probe
+ * index, the visit counter, and the hit-index write. */
+typedef struct SavTreeNthState {
+    void*    found;
+    uint32_t want;
+    uint32_t seen;
+    uint32_t found_at;
+} SavTreeNthState;
+
+static int sav_tree_nth_visit(void* node, void* user)
+{
+    SavTreeNthState* st = (SavTreeNthState*)user;
+    if (st->want == st->seen) {
+        st->found_at = st->seen;
+        st->found = node;
+        return 1;
+    }
+    st->seen = st->seen + 1u;
+    return 0;
+}
+
+void* registry_value_lookup(void* root, uint32_t index)
+{
+    SavTreeNthState st = { NULL, index, 0u, 0u };
+    const int hit = sav_tree_walk(root, sav_tree_nth_visit, &st);
+    sav_clear_visited();
+    return hit != 0 ? st.found : NULL;
+}
+
+uint32_t registry_value_index_lookup_or_not_found(void* root, uint32_t index)
+{
+    void* node = registry_value_lookup(root, index);
+    if (node == NULL) {
+        return 0xffffffffu;
+    }
+    uint32_t word = 0u;
+    __builtin_memcpy(&word, node, sizeof word); /* corpus reads blind */
+    return word;
+}
+
 /* SaveMenuRefresh (FUN_004150b0) — see savegame.hpp. The corpus reads
  * its slot-context chain, the context's +0x34 stride-window word, and
  * the two tree roots all blind; the port models each with an

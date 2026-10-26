@@ -1051,5 +1051,64 @@ int main(void)
         sav_slot_stride_window_install(NULL);
     }
 
+    /* Registry indexed-visit lookups (2026-10-26). */
+    {
+        static SavTreeNode r1;
+        static SavTreeNode k1;
+        static SavTreeNode g1;
+        static SavTreeNode l1;
+        static void* rkids[2];
+        static void* kkids[1];
+        static void* n;
+        static uint32_t w;
+
+        rkids[0] = &k1;
+        rkids[1] = &l1;
+        kkids[0] = &g1;
+        r1.window = 0xA5u;
+        r1.children = rkids;
+        r1.count = 2;
+        k1.window = 0x11u;
+        k1.children = kkids;
+        k1.count = 1;
+        g1.window = 0x22u;
+        g1.children = NULL;
+        g1.count = 0;
+        l1.window = 0x33u;
+        l1.children = NULL;
+        l1.count = 0;
+#define RESET_VISITS() ((void)(r1.visited = k1.visited = 0u), \
+                        (void)(g1.visited = l1.visited = 0u))
+
+        /* visit order R, K, G, L: the thunk records the want-th node. */
+        RESET_VISITS();
+        n = registry_value_lookup(&r1, 0u);
+        CHECK(n == &r1, "index 0 hits the root");
+        RESET_VISITS();
+        n = registry_value_lookup(&r1, 2u);
+        CHECK(n == &g1, "the counter walks into the first subtree");
+        RESET_VISITS();
+        n = registry_value_lookup(&r1, 3u);
+        CHECK(n == &l1, "the counter reaches the second child");
+        RESET_VISITS();
+        n = registry_value_lookup(&r1, 4u);
+        CHECK(n == NULL, "past the last visit answers null");
+
+        /* the word reader: node head dword, or -1. */
+        RESET_VISITS();
+        w = registry_value_index_lookup_or_not_found(&r1, 1u);
+        CHECK(w == 0x11u, "the found node's head word reads back");
+        RESET_VISITS();
+        w = registry_value_index_lookup_or_not_found(&r1, 9u);
+        CHECK(w == 0xffffffffu, "the miss answers -1");
+
+        /* an already-entered tree visits nothing new. */
+        RESET_VISITS();
+        r1.visited = 1u;
+        n = registry_value_lookup(&r1, 0u);
+        CHECK(n == NULL, "the entered tree skips the flagged root entirely");
+#undef RESET_VISITS
+    }
+
     return 0;
 }

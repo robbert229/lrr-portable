@@ -376,10 +376,14 @@ live port candidates below.)
 ### Scanner `CLEAN`-bucket split (4)
 
 - `RegistryValueLookupWithLock` (`0x417280`) and
-  `RegistryValueIndexLookupOrNotFound` (`0x4172d0`): the lookup walks
-  through the **ported** `SavTreeWalk` (`0x4171c0`) with the bare
-  `LAB_00417250` callback thunk — the queue/thunk-body blocker family.
-  Next: recover the thunk body with the registry-layer model.
+  `RegistryValueIndexLookupOrNotFound` (`0x4172d0`): **LANDED 2026-10-26**
+  (cluster 186). The `LAB_00417250` callback thunk was recovered from
+  `reference/LegoRR.exe`'s code section with objdump — it carries
+  `(want, seen)` in the user block and records the want-th visited node —
+  and `registry_value_lookup` /
+  `registry_value_index_lookup_or_not_found` land in `savegame.*`. The
+  queue/thunk-body blocker family stays open for the rest, recovered the
+  same way row by row.
 - `SavTreeWalk2` (`0x4172f0`) and `SavTreeLoad` (`0x4173e0`): NOT blocked —
   mutually recursive, which hid them from the scanner's fixed point (it
   placed them in the bucket `CLEAN` artifact). Their callees
