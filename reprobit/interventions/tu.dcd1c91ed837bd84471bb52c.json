@@ -1,1 +1,0 @@
-{"build_target":"platform_glue","interventions":[],"schema_version":3,"source":"src/platform/winapi/frameloop.cpp","source_digest":{"algorithm":"sha256","value":"128d0c2901506a365ff6321e30db3ab7284545a5d5b0e9cae4cb9861d98ceaeb"},"target_id":"program","translation_unit_id":"tu.dcd1c91ed837bd84471bb52c"}

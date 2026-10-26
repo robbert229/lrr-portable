@@ -21,7 +21,6 @@ rbit import cmake /var/home/johnrowl/.codex/worktrees/c71a/lrr-portable \
 REPROBIT_MSVC_5_0_RTM_ROOT=/var/home/johnrowl/.local/share/reprobit/toolchains/msvc_5_0_rtm \
   rbit build /var/home/johnrowl/.codex/worktrees/c71a/lrr-portable
 
-# REPROBIT_MSVC_5_0_RTM_ROOT=/var/home/johnrowl/.local/share/reprobit/toolchains/msvc_5_0_rtm \
-#   rbit repair /var/home/johnrowl/.codex/worktrees/c71a/lrr-portable
-#
+REPROBIT_MSVC_5_0_RTM_ROOT=/var/home/johnrowl/.local/share/reprobit/toolchains/msvc_5_0_rtm \
+  rbit repair /var/home/johnrowl/.codex/worktrees/c71a/lrr-portable
 #
