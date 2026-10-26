@@ -218,6 +218,110 @@ int main(void)
         CHECK(1, "the null handle and null entity stay inert");
     }
 
+    /* SelectionStateTick (2026-10-25): the class ladder, the HUD context
+     * post, and the compaction pass. Stats ride the zero template
+     * (NULL record) unless pinned. */
+    {
+        static uint32_t bad_rec[0x150 / 4];   /* stats +0x144: bit 0x2000000 */
+        static uint32_t flag_rec[0x150 / 4];  /* stats +0x144: bit 0x20000 */
+        static uint32_t both_rec[0x150 / 4];  /* stats +0x144: both bits */
+        bad_rec[0x144 / 4] = 0x2000000u;
+        flag_rec[0x144 / 4] = 0x20000u;
+        both_rec[0x144 / 4] = 0x02020000u; /* bit 17 | bit 25 */
+        static const int sentinel = 1;
+
+        EntitySlot* clean1 = place(&ctx, 1, "cleanTick1", 30, 5);
+        EntitySlot* bad25 = place(&ctx, 1, "badTick1", 31, 5);
+        EntitySlot* ownedFlag = place(&ctx, 1, "ownedTick1", 32, 5);
+        EntitySlot* flaggedBad = place(&ctx, 1, "flagTick1", 36, 5);
+        EntitySlot* noOwnerFlag = place(&ctx, 1, "freeTick1", 33, 5);
+        EntitySlot* gen3 = place(&ctx, 3, "genTick3", 34, 5);
+        EntitySlot* miner11 = place(&ctx, 11, "minerTick11", 35, 5);
+        bad25->stats_record = bad_rec;
+        ownedFlag->stats_record = flag_rec;
+        ownedFlag->owner_36c = (void*)&sentinel;
+        flaggedBad->stats_record = both_rec;
+        flaggedBad->owner_36c = (void*)&sentinel;
+        noOwnerFlag->stats_record = flag_rec;
+        miner11->flags_3e4 = 0x2000000u;
+        gen3->flags_3e8 |= ENTITY_SELECTED; /* visible on the class-none drop */
+
+        /* Empty selection: nothing classifies, context 0, nothing to remove. */
+        selection_state_tick(&ctx);
+        CHECK(selection_count(&ctx) == 0 && map_store_kind_peek() == 0u,
+              "the empty selection posts 0");
+
+        /* Kind-2 class: the unowned kind 2 wins the ladder, compaction
+         * revisits the swapped-in slot, and only kind 2 survives. */
+        selection_clear(&ctx);
+        selection_add(&ctx, clean1);
+        selection_add(&ctx, b); /* the file's type-2 entity, unowned */
+        clean1->flags_3e8 |= ENTITY_SELECTED;
+        selection_state_tick(&ctx);
+        CHECK(map_store_kind_peek() == 9u, "kind 2 posts context 9");
+        CHECK(selection_count(&ctx) == 1 && ctx.selection[0] == b,
+              "only the kind-2 entry survives the compaction");
+        CHECK((clean1->flags_3e8 & ENTITY_SELECTED) == 0,
+              "the dropped entry loses the selected bit");
+
+        /* Kind-1 flagged class: the owner-set bit-17+bit-25 rider rides the
+         * bad class alongside the bit-25 kind 1 (both survive). */
+        selection_clear(&ctx);
+        selection_add(&ctx, flaggedBad);
+        selection_add(&ctx, bad25);
+        selection_state_tick(&ctx);
+        CHECK(map_store_kind_peek() == 10u, "the flagged kind 1 posts 10");
+        CHECK(selection_count(&ctx) == 2,
+              "both kind-1 flagged shapes survive the flagged class");
+
+        /* Kind-1 clean class: the owner-set bit-17 entry is a clean-class
+         * rider, and the unowned bit-17 entry drops out of it. */
+        selection_clear(&ctx);
+        selection_add(&ctx, clean1);
+        selection_add(&ctx, ownedFlag);
+        selection_state_tick(&ctx);
+        CHECK(map_store_kind_peek() == 0xbu && selection_count(&ctx) == 2,
+              "the clean class keeps both its shapes");
+        selection_add(&ctx, noOwnerFlag);
+        selection_state_tick(&ctx);
+        CHECK(map_store_kind_peek() == 0xbu && selection_count(&ctx) == 2
+                  && ctx.selection[1] != noOwnerFlag,
+              "the unowned bit-17 entry drops from the clean class");
+
+        /* Flag class: the unowned bit-17 entry owns context 0xc. */
+        selection_clear(&ctx);
+        selection_add(&ctx, noOwnerFlag);
+        selection_state_tick(&ctx);
+        CHECK(map_store_kind_peek() == 0xcu && selection_count(&ctx) == 1
+                  && ctx.selection[0] == noOwnerFlag,
+              "the flag class keeps the unowned bit-17 entry");
+
+        /* Kind 4 and kind 11 classes. */
+        selection_clear(&ctx);
+        selection_add(&ctx, c); /* the file's type-4 entity */
+        selection_state_tick(&ctx);
+        CHECK(map_store_kind_peek() == 0xdu && selection_count(&ctx) == 1
+                  && ctx.selection[0] == c,
+              "kind 4 owns context 0xd");
+        selection_clear(&ctx);
+        selection_add(&ctx, miner11);
+        selection_state_tick(&ctx);
+        CHECK(map_store_kind_peek() == 0xeu && selection_count(&ctx) == 1
+                  && ctx.selection[0] == miner11,
+              "kind 11 with the +0x3e4 bit owns context 0xe");
+
+        /* Class-none: an entry that classifies nothing posts 0 and every
+         * entry drops (the quirk pinned). */
+        selection_clear(&ctx);
+        selection_add(&ctx, gen3);
+        selection_state_tick(&ctx);
+        CHECK(selection_count(&ctx) == 0
+                  && (gen3->flags_3e8 & ENTITY_SELECTED) == 0,
+              "the class-none shape drops every entry");
+
+        selection_state_tick(NULL); /* guarded */
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "select_test: %d failure(s)\n", s_failures);
         return 1;

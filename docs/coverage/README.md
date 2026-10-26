@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 1105 | 43.1% |
+| ported | 1106 | 43.1% |
 | anchored | 4 | 0.2% |
-| named | 1410 | 55.0% |
+| named | 1409 | 55.0% |
 | runtime-import | 44 | 1.7% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (1105 functions)
+  (1106 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1410 functions)
+  citation yet (1409 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (44 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1415 (55.2%).**
+**Game logic remaining to port: 1414 (55.1%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -655,7 +655,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00451cd0` | MessageStringTableInitialize |
 | `0x00451fd0` | CaseInsensitiveNameTableLookupAtOffset8 |
 | `0x004524b0` | SelectionObjectDetach |
-| `0x004528c0` | SelectionStateTick |
 | `0x00452df0` | TutorialNerpScriptFileLoad |
 | `0x00452e70` | ObjectiveAdvisorTokenLoad |
 | `0x00453220` | AdvisorDisplayStateResourcesRelease |
