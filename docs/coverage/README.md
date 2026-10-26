@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 1106 | 43.1% |
+| ported | 1109 | 43.3% |
 | anchored | 4 | 0.2% |
-| named | 1409 | 55.0% |
+| named | 1406 | 54.8% |
 | runtime-import | 44 | 1.7% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (1106 functions)
+  (1109 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1409 functions)
+  citation yet (1406 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (44 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1414 (55.1%).**
+**Game logic remaining to port: 1411 (55.0%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -317,7 +317,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0041c6e0` | PointerActionStateDispatch |
 | `0x0041c7b0` | InputActionStateUpdate |
 | `0x0041c800` | CatalogSlotFlagUpdate |
-| `0x0041cab0` | IndexedEntityValueGet |
 | `0x0041caf0` | InputBindingValueGet |
 | `0x0041cb90` | InputBindingDefaultValueGet |
 | `0x0041cd30` | PositionTrackerBoxDraw |
@@ -430,7 +429,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00437540` | EntityTeardown |
 | `0x004378e0` | GridObjectRecordsRelease |
 | `0x00437940` | DeferredOListEntityCreateAndLink |
-| `0x00437c20` | DeferredOListEntityQueueAdd |
 | `0x004383b0` | RoverWorkQueueUpdate |
 | `0x00438460` | EntityKindRecordUpdateDispatch |
 | `0x00438610` | EntityCreateWithPosition |
@@ -678,7 +676,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004599c0` | LoadObjectHungerMeterImages |
 | `0x00459a50` | BubbleImagesPositionConfigLoad |
 | `0x00459b00` | RenderEntityScreenRing |
-| `0x00459f50` | IndexedPanelResourcePositionApply |
 | `0x0045a030` | UiPanelNameTablesInit |
 | `0x0045a240` | ScrollPanelControlsInitialize |
 | `0x0045a270` | PanelCategoryInteractionStateReset |

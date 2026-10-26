@@ -11,9 +11,11 @@
 #include "util.hpp"
 #include "gods98/engine.hpp"
 #include "entity.hpp"
+#include "gods98/crt.hpp"
 #include "gods98/heap.hpp"
 #include "gods98/media.hpp"
 #include "gods98/message.hpp"
+#include "gods98/string.hpp"
 
 /* ------------------------------------------------------------------ *
  *  Command record (finding 10 §"Command record" — corpus stride 0x68).
@@ -2191,6 +2193,84 @@ void entity_task_batch_append(EntitySlot* const* entities, int count,
             tail->next = rec;                       /* chain tail +0x60 */
         }
     }
+}
+
+/* DeferredOListEntityQueueAdd (FUN_00437c20) — see cmd.hpp. The corpus band
+ * is a 200-slot array of 11-dword entries ending at its own counter word;
+ * the pick tail (FUN_00431570 feeding the FUN_0044f6d0 grid-pick boundary)
+ * only lands its ftol of the record's float pair in entry words 0/1, so
+ * the port pins that shape and models the boundary's word read through
+ * the level mirror (deviations: the corpus's register-passed tail extras
+ * are not modeled, the band's past-capacity writes into the counter word
+ * are dropped, NULL records crash the corpus, and NULL name parameters
+ * leave stale corpus words where the port keeps zero). */
+#define DEFERRED_OLIST_SLOTS 200
+
+struct DeferredOListEntry {
+    uint32_t w[9];    /* entry +0x00 .. +0x20 (the 11-dword stride)   */
+    char*    names[2]; /* widened mirrors of entry +0x24 / +0x28       */
+};
+
+static DeferredOListEntry s_deferred_olist[DEFERRED_OLIST_SLOTS];
+static uint32_t           s_deferred_olist_next; /* DAT_004ea7a4 */
+
+void deferred_olist_entity_queue_add(GameContext* ctx, const uint32_t record[2],
+                                     int p1, int p2, int p3, int p5, int p6,
+                                     const char* name1, const char* name2)
+{
+    const uint32_t slot = s_deferred_olist_next++;
+    if (ctx != NULL && ctx->level != NULL) {
+        (void)level_height((const LevelState*)ctx->level); /* boundary read */
+    }
+    if (record == NULL || slot >= DEFERRED_OLIST_SLOTS) {
+        return; /* deviations: pinned above */
+    }
+    DeferredOListEntry* e = &s_deferred_olist[slot];
+    float x, y;
+    __builtin_memcpy(&x, &record[0], sizeof(x));
+    __builtin_memcpy(&y, &record[1], sizeof(y));
+    e->w[0] = (uint32_t)float_to_long(x); /* the pick's cell word pair    */
+    e->w[1] = (uint32_t)float_to_long(y);
+    e->w[2] = record[0];
+    e->w[3] = record[1];
+    e->w[4] = (uint32_t)p5; /* entry +0x10 */
+    e->w[5] = (uint32_t)p1; /* entry +0x14 */
+    e->w[6] = (uint32_t)p2; /* entry +0x18 */
+    e->w[7] = (uint32_t)p3; /* entry +0x1c */
+    e->w[8] = (uint32_t)p6; /* entry +0x20 */
+    if (name1 != NULL) {
+        e->names[0] = string_duplicate(name1); /* FUN_00477550 */
+    }
+    if (name2 != NULL) {
+        e->names[1] = string_duplicate(name2); /* FUN_00477550 */
+    }
+}
+
+uint32_t deferred_olist_entry_word(int slot, int word)
+{
+    if (slot < 0 || slot >= DEFERRED_OLIST_SLOTS || word < 0 || word > 8) {
+        return 0u;
+    }
+    return s_deferred_olist[slot].w[word];
+}
+
+char* deferred_olist_entry_string(int slot, int which)
+{
+    if (slot < 0 || slot >= DEFERRED_OLIST_SLOTS || which < 0 || which > 1) {
+        return NULL;
+    }
+    return s_deferred_olist[slot].names[which];
+}
+
+uint32_t deferred_olist_counter_peek(void)
+{
+    return s_deferred_olist_next;
+}
+
+void deferred_olist_reset(void)
+{
+    __builtin_memset(s_deferred_olist, 0, sizeof(s_deferred_olist));
+    s_deferred_olist_next = 0u;
 }
 
 /* --- HUD post / menu-selection chain (2026-10-25) --------------------------

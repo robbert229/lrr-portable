@@ -2363,6 +2363,33 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Deferred queue trio** (2026-10-25): three frontier rows land —
+`indexed_entity_value_get` (0x41cab0) in `input.*`,
+`deferred_olist_entity_queue_add` (0x437c20) in `cmd.*`, and
+`indexed_panel_resource_position_apply` (0x459f50) in `frontend.*`. The
+first reads the corpus's three adjacent 74-dword binding windows through
+the ported gate pair (the pressed gate picks `DAT_004dd120`, the flag-8
+entry reader `DAT_004dd248`, both clear answers `DAT_004dcff8`); the
+windows are own storage since their only corpus writer is the recorded
+interface-images config seam. The second appends into the corpus's
+deferred ordered-list band: 200 slots of 11-dword entries ending at the
+counter word; entry words 0/1 carry the grid-pick cell pair (the ftol of
+the record's float pair — the pick tail's register-passed extras and the
+level's grid-word read are pinned as boundary deviations), words 2/3 the
+record pair, then params 5/1/2/3/6 and two duplicated names (the string
+duplicate, ported). The last gates on the panel enable word's bit `0x1`
+and puts the record's screen float through the corpus's exact x87 product
+of its two float constants (`*0.01 *5`, modeled as exact double
+products), truncated toward zero and clamped by the corpus's unsigned
+compare — every out-of-range answer, negative conversions included,
+rides the last slot — then sends the installed slot over the surface
+blit seam with the offset pair. Quirks pinned: action `0x49`'s
+hard-wire rides the window index, the band's past-capacity writes land
+as drops, clear name parameters keep the port's zero slots, and float
+40 answers slot 1 because the extended-precision product of `0.01`
+lands just under two. Deviations: the blind-window/corpus-layout reads
+become guarded reads and pointer mirrors. Tests green; 34/36 baseline.
+
 **Selection state tick** (2026-10-25): one frontier row lands in `select.*`
 with the command queue's op-2d seam now routed for real.
 `selection_state_tick` (0x4528c0, finding 468) is the selection filter

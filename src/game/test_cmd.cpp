@@ -2266,6 +2266,57 @@ int main(void)
         chdir("..");
     }
 
+    /* DeferredOListEntityQueueAdd (FUN_00437c20; 2026-10-25): the band,
+     * the pick-cell words, the param scatter, and the duplicated names. */
+    {
+        deferred_olist_reset();
+        float rx = 1.7f, ry = -2.7f;
+        uint32_t rec[2];
+        __builtin_memcpy(&rec[0], &rx, sizeof rec[0]);
+        __builtin_memcpy(&rec[1], &ry, sizeof rec[1]);
+        deferred_olist_entity_queue_add(NULL, rec, 11, 12, 13, 15, 16,
+                                        "first", "second");
+        CHECK(deferred_olist_counter_peek() == 1u,
+              "the counter books the appended slot");
+        CHECK(deferred_olist_entry_word(0, 0) == 1u
+                  && deferred_olist_entry_word(0, 1) == 0xfffffffeu,
+              "the pick cells truncate the record float pair toward zero");
+        CHECK(deferred_olist_entry_word(0, 2) == rec[0]
+                  && deferred_olist_entry_word(0, 3) == rec[1],
+              "the record pair rides entry words 2/3");
+        CHECK(deferred_olist_entry_word(0, 4) == 15u /* p5 +0x10 */
+                  && deferred_olist_entry_word(0, 5) == 11u /* p1  +0x14 */
+                  && deferred_olist_entry_word(0, 6) == 12u /* p2  +0x18 */
+                  && deferred_olist_entry_word(0, 7) == 13u /* p3  +0x1c */
+                  && deferred_olist_entry_word(0, 8) == 16u, /* p6 +0x20 */
+              "the parameters land on their entry offsets");
+        const char* s0 = deferred_olist_entry_string(0, 0);
+        const char* s1 = deferred_olist_entry_string(0, 1);
+        CHECK(s0 != NULL && strcmp(s0, "first") == 0 && s1 != NULL
+                  && strcmp(s1, "second") == 0,
+              "the name parameters ride the duplicated string slots");
+        deferred_olist_entity_queue_add(NULL, rec, 1, 2, 3, 4, 5, NULL, NULL);
+        CHECK(deferred_olist_entry_string(1, 0) == NULL
+                  && deferred_olist_entry_string(1, 1) == NULL,
+              "clear name parameters keep the port's zero slots");
+        deferred_olist_entity_queue_add(NULL, NULL, 0, 0, 0, 0, 0,
+                                        NULL, NULL);
+        CHECK(deferred_olist_counter_peek() == 3u
+                  && deferred_olist_entry_word(2, 2) == 0u,
+              "the NULL record books the slot but writes nothing "
+              "(deviation: the corpus strides the pair blindly)");
+        deferred_olist_entity_queue_add(NULL, rec, 1, 1, 1, 1, 1, "x", NULL);
+        deferred_olist_reset();
+        CHECK(deferred_olist_counter_peek() == 0u
+                  && deferred_olist_entry_word(0, 2) == 0u
+                  && deferred_olist_entry_string(0, 0) == NULL,
+              "the reset hook restores the band");
+        CHECK(deferred_olist_entry_word(-1, 0) == 0u
+                  && deferred_olist_entry_word(0, 9) == 0u
+                  && deferred_olist_entry_string(0, 2) == NULL,
+              "the peek hooks guard their ranges");
+    }
+
     if (s_failures != 0) {
         fprintf(stderr, "cmd_test: %d failure(s)\n", s_failures);
         return 1;

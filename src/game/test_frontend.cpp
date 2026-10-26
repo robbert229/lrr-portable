@@ -1390,6 +1390,56 @@ int main(int argc, char** argv)
         panel_enable_word_set(0u);
     }
 
+    /* IndexedPanelResourcePositionApply (FUN_00459f50; 2026-10-25): the
+     * slot selector rides the corpus's exact x87 constant products — a
+     * float 40 answers slot 1, since the extended-precision product of
+     * 0.01 lands just under two. */
+    {
+        char slot0, slot1, slot4;
+        panel_seam_reset();
+        panel_enable_word_set(0u);
+        panel_position_offsets_set(1.5f, 2.5f);
+        panel_position_slot_set(1, &slot1);
+        float rec = 40.0f;
+        indexed_panel_resource_position_apply(&rec, 10, 20);
+        CHECK(panel_seam_calls() == 0, "the clear enable word stays silent");
+        panel_enable_word_set(1u);
+        indexed_panel_resource_position_apply(&rec, 10, 20);
+        void* last_res = NULL;
+        float lx = 0.0f, ly = 0.0f;
+        panel_seam_last(&last_res, &lx, &ly);
+        CHECK(panel_seam_calls() == 1 && last_res == &slot1
+                  && lx == 11.5f && ly == 22.5f,
+              "the extended-precision selector picks slot 1 and rides "
+              "the seam with the offset pair");
+        rec = 110.0f; /* selector 5 -> clamped */
+        panel_position_slot_set(4, &slot4);
+        indexed_panel_resource_position_apply(&rec, 1, 1);
+        panel_seam_last(&last_res, &lx, &ly);
+        CHECK(panel_seam_calls() == 2 && last_res == &slot4 && lx == 2.5f
+                  && ly == 3.5f,
+              "the out-of-range selector clamps to the last slot");
+        rec = -40.0f; /* negative truncation clamps the same way */
+        indexed_panel_resource_position_apply(&rec, 1, 1);
+        panel_seam_last(&last_res, &lx, &ly);
+        CHECK(panel_seam_calls() == 3 && last_res == &slot4,
+              "the negative conversion rides the last slot too");
+        panel_position_slot_set(4, NULL);
+        panel_seam_reset();
+        indexed_panel_resource_position_apply(&rec, 1, 1);
+        CHECK(panel_seam_calls() == 0, "an uninstalled slot stays inert");
+        panel_position_slot_set(0, &slot0);
+        indexed_panel_resource_position_apply(NULL, 3, 4); /* reads zero */
+        panel_seam_last(&last_res, &lx, &ly);
+        CHECK(panel_seam_calls() == 1 && last_res == &slot0 && lx == 4.5f
+                  && ly == 6.5f,
+              "the NULL record float reads selector zero (deviation)");
+        panel_position_slot_set(0, NULL);
+        panel_position_slot_set(1, NULL);
+        panel_position_offsets_set(0.0f, 0.0f);
+        panel_enable_word_set(0u);
+    }
+
     /* ActiveObjectList word selector (2026-10-24). */
     {
         frontend_flow_word_set(2, 0); /* in-game */
