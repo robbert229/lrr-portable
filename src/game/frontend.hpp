@@ -661,6 +661,26 @@ void*    panel_text_slot_peek(void);            /* port hook */
 void     panel_position_slot_set(int which, void* res);  /* port hook */
 void*    panel_position_slot_peek(int which);            /* port hook */
 void     panel_position_offsets_set(float x, float y);   /* port hook */
+
+/* ScreenCoordNormalizeInit (FUN_0045d8b0): one pass over the corpus's
+ * screen-normalization band — 90 color constants land scaled by the
+ * 1/255 float constant, two stride-16 lanes fill 20 unit cells each,
+ * seven coordinate-pair rows (primary + mirror) seed from the corpus's
+ * constants and ride the display-dimension pair scaled by the 1/640 /
+ * 1/480 float constants, the row-count word books 7, and two sentinel
+ * words take all-bits. The band is own storage (its corpus owner is
+ * unported) seeded through the reset hook; the peek hooks read it.
+ * Quirks pinned: the last primary pair stays zero while its mirror
+ * takes 320/40, and the first mirror row's pair differs from the
+ * primary's. */
+void     screen_coord_normalize_init(void);               /* FUN_0045d8b0 */
+void     screen_coord_normalize_reset(void);              /* port hook */
+float    screen_coord_normalize_color_peek(int index);    /* port hook */
+float    screen_coord_normalize_pair_peek(int mirror, int row,
+                                          int axis);      /* port hook */
+float    screen_coord_normalize_cell_peek(int mirror, int index);
+                                                          /* port hook */
+uint32_t screen_coord_normalize_rows_peek(void);          /* port hook */
 void     panel_seam_reset(void);                /* port hook */
 int      panel_seam_calls(void);                /* port hook */
 void     panel_seam_last(void** out_res, float* out_x, float* out_y);

@@ -2088,6 +2088,64 @@ int crt_wide_char_to_multibyte(char* dest, uint32_t wide)
     return -1;
 }
 
+/* CrtStrncpy (library `_strncpy`, FUN_0048e770) — see crt.hpp. The corpus's
+ * aligned-dword fast path is an implementation detail: every lane copies
+ * source bytes up to the count, copies the NUL when it lands, and pads the
+ * rest of the window with zeros. The fold is that observable behavior;
+ * source reads stay inside the count. */
+char* crt_string_copy_n(char* dest, const char* src, uint32_t count)
+{
+    if (count == 0u) {
+        return dest;
+    }
+    uint32_t i = 0u;
+    for (; i < count; ++i) {
+        const char c = src[i];
+        dest[i] = c;
+        if (c == '\0') {
+            ++i;
+            break;
+        }
+    }
+    for (; i < count; ++i) {
+        dest[i] = 0;
+    }
+    return dest;
+}
+
+/* CrtWideCharToMultiByteCompat (FUN_0049abe0) — see crt.hpp. Pinned to the
+ * port's C-locale half (the DAT_00549180 locale half rides the recorded
+ * locale-map chain, as in the string-case and codepage leaves): the
+ * dest-NULL lane answers the wide length, and the store lane copies low
+ * bytes until the NUL or the count. The wide-over-0xff exit takes the
+ * corpus's EILSEQ-shaped math-error store and answers -1. */
+int crt_wide_char_to_multi_byte_compat(char* dest, const uint16_t* wide,
+                                       uint32_t count)
+{
+    if (dest != NULL && count == 0u) {
+        return 0;
+    }
+    if (dest == NULL) {
+        return wide_string_length(wide);
+    }
+    uint32_t i = 0u;
+    for (;;) {
+        const uint32_t ch = wide[i];
+        if (ch >= 0x100u) {
+            s_math_error_code = 0x2au;
+            return -1;
+        }
+        dest[i] = (char)ch;
+        if (ch == 0u) {
+            return (int)i;
+        }
+        ++i;
+        if (count <= i) {
+            return (int)i;
+        }
+    }
+}
+
 /* SignalHandlerRecordFind (FUN_0049ab90): linear search of the corpus's
  * signal-handler records — 12-byte entries (word, id, handler) in the
  * DAT_004b22a8 table, bounded by the DAT_004b2328 count. The table's

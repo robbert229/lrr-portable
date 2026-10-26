@@ -1363,7 +1363,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0045d7e0,FUN_0045d7e0,named,LevelIdentifierRemapTableLoad,0,675
 0045d870,FUN_0045d870,named,CommandEntityReferenceRemap,0,330
 0045d8a0,FUN_0045d8a0,ported,ObjectField14Set,1,112
-0045d8b0,FUN_0045d8b0,named,ScreenCoordNormalizeInit,0,1993
+0045d8b0,FUN_0045d8b0,ported,ScreenCoordNormalizeInit,4,1993
 0045da90,FUN_0045da90,ported,UiRenderRecordCreate,3,538
 0045daf0,FUN_0045daf0,ported,UiRenderRecordFree,1,80
 0045db00,FUN_0045db00,named,TexturedSceneObjectDrawAtPosition,0,581
@@ -2286,7 +2286,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0048e4f0,FUN_0048e4f0,named,CrtTerminateProcessWithHandlers,0,1045
 0048e5a0,FUN_0048e5a0,named,CrtRunCallbackArray,0,211
 0048e680,FUN_0048e680,named,CrtDoubleAbsoluteValue,0,913
-0048e770,_strncpy,runtime-import,_strncpy,0,2709
+0048e770,_strncpy,ported,_strncpy,3,2709
 0048e870,FUN_0048e870,ported,DoubleIsFinite,2,109
 0048e890,FUN_0048e890,named,MarkupIntegerTokenParse,0,470
 0048e8e0,FUN_0048e8e0,named,CrtRoundToIntegralWithMathErrorHandlingVariant,0,1080
@@ -2510,7 +2510,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0049a890,FUN_0049a890,named,Win32FileDescriptorResize,0,1927
 0049aa10,FUN_0049aa10,named,CrtSignalHandlerDispatch,0,1709
 0049ab90,FUN_0049ab90,ported,CrtSignalHandlerRecordFind,3,531
-0049abe0,FUN_0049abe0,named,CrtWideCharToMultiByteCompat,0,2829
+0049abe0,FUN_0049abe0,ported,CrtWideCharToMultiByteCompat,3,2829
 0049add0,FUN_0049add0,ported,BoundedWideStringLengthIncludingNull,2,387
 0049ae10,FUN_0049ae10,named,CrtEnvironmentVariableLookup,0,1233
 0049aea0,FUN_0049aea0,named,CrtFileDescriptorFlag80SetOrClear,0,728

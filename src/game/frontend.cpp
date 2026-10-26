@@ -2745,6 +2745,111 @@ void panel_position_offsets_set(float x, float y)
     s_panel_position_offset_y = y;
 }
 
+/* ScreenCoordNormalizeInit (FUN_0045d8b0) — see frontend.hpp. The corpus's
+ * screen-normalization band spans one data-section block: 90 color
+ * constants (scaled *1/255), two stride-16 lanes of 20 unit cells, 14
+ * coordinate pairs as seven rows of two mirrors, a row-count word, and
+ * two sentinel words. The constants ride the corpus's static data (the
+ * colors are pre-scaled values there, the rest zero), so the port keeps
+ * the band as own storage seeded by the reset hook; the scaling rides
+ * the port's display-dimension pair through the corpus's exact float
+ * constants (each lane is one exact x87 product modeled as a double).
+ * Quirks pinned: the last primary pair is never written (rides zero)
+ * while its mirror takes the first row's constants, and the first
+ * mirror row carries a different pair than its primary. */
+static const float s_snorm_colors_init[90] = {
+    255.0f, 204.0f, 0.0f, 45.0f, 0.0f, 75.0f, 41.0f, 96.0f, 255.0f, 255.0f,
+    90.0f, 0.0f, 164.0f, 227.0f, 149.0f, 97.0f, 203.0f, 86.0f, 0.0f, 175.0f,
+    12.0f, 0.0f, 93.0f, 0.0f, 0.0f, 47.0f, 0.0f, 199.0f, 123.0f, 255.0f,
+    174.0f, 89.0f, 233.0f, 144.0f, 60.0f, 200.0f, 115.0f, 30.0f, 168.0f,
+    86.0f, 2.0f, 136.0f, 255.0f, 204.0f, 0.0f, 255.0f, 0.0f, 0.0f, 0.0f,
+    255.0f, 0.0f, 255.0f, 123.0f, 251.0f, 233.0f, 89.0f, 226.0f, 200.0f,
+    60.0f, 192.0f, 168.0f, 30.0f, 158.0f, 136.0f, 2.0f, 125.0f, 255.0f,
+    255.0f, 0.0f, 157.0f, 155.0f, 0.0f, 155.0f, 65.0f, 14.0f, 180.0f,
+    255.0f, 0.0f, 255.0f, 255.0f, 0.0f, 0.0f, 47.0f, 181.0f, 191.0f,
+    191.0f, 191.0f, 108.0f, 0.0f, 0.0f
+};
+static float s_snorm_colors[90];                /* DAT band role */
+static float s_snorm_cells[2][20];              /* stride-16 unit lanes */
+static float s_snorm_pairs[2][7][2];            /* seven rows of mirrors */
+static uint32_t s_snorm_rows;                   /* DAT_004a9318 role */
+static uint32_t s_snorm_sentinels[2];           /* DAT band sentinels */
+
+static const float s_snorm_pair_consts[2][7][2] = {
+    {{320.0f, 40.0f},  {360.0f, 180.0f}, {360.0f, 180.0f}, {400.0f, 180.0f},
+     {280.0f, 180.0f}, {220.0f, 180.0f}, {0.0f, 0.0f}},
+    {{420.0f, 180.0f}, {360.0f, 180.0f}, {360.0f, 180.0f}, {400.0f, 180.0f},
+     {280.0f, 180.0f}, {220.0f, 180.0f}, {320.0f, 40.0f}}
+};
+
+void screen_coord_normalize_reset(void)
+{
+    __builtin_memcpy(s_snorm_colors, s_snorm_colors_init,
+                     sizeof s_snorm_colors);
+    __builtin_memset(s_snorm_cells, 0, sizeof s_snorm_cells);
+    __builtin_memset(s_snorm_pairs, 0, sizeof s_snorm_pairs);
+    s_snorm_rows = 0u;
+    s_snorm_sentinels[0] = 0u;
+    s_snorm_sentinels[1] = 0u;
+}
+
+void screen_coord_normalize_init(void)
+{
+    const double color_k = (double)((float)(1.0 / 255.0));
+    for (int i = 0; i < 90; ++i) {
+        s_snorm_colors[i] = (float)((double)s_snorm_colors[i] * color_k);
+    }
+    for (int i = 0; i < 20; ++i) {
+        s_snorm_cells[0][i] = 1.0f;
+        s_snorm_cells[1][i] = 1.0f;
+    }
+    for (int mirror = 0; mirror < 2; ++mirror) {
+        for (int row = 0; row < 7; ++row) {
+            s_snorm_pairs[mirror][row][0] = s_snorm_pair_consts[mirror][row][0];
+            s_snorm_pairs[mirror][row][1] = s_snorm_pair_consts[mirror][row][1];
+        }
+    }
+    s_snorm_rows = 7u;
+    const double w = (double)((float)display_width_get());
+    const double h = (double)((float)display_height_get());
+    const double kx = (double)((float)(1.0 / 640.0));
+    const double ky = (double)((float)(1.0 / 480.0));
+    for (int mirror = 0; mirror < 2; ++mirror) {
+        for (int row = 0; row < 7; ++row) {
+            s_snorm_pairs[mirror][row][0]
+                = (float)((w * kx) * (double)s_snorm_pairs[mirror][row][0]);
+            s_snorm_pairs[mirror][row][1]
+                = (float)((h * ky) * (double)s_snorm_pairs[mirror][row][1]);
+        }
+    }
+    s_snorm_sentinels[0] = 0xffffffffu;
+    s_snorm_sentinels[1] = 0xffffffffu;
+}
+
+float screen_coord_normalize_color_peek(int index)
+{
+    return (index >= 0 && index < 90) ? s_snorm_colors[index] : 0.0f;
+}
+
+float screen_coord_normalize_pair_peek(int mirror, int row, int axis)
+{
+    if (mirror < 0 || mirror > 1 || row < 0 || row > 6 || axis < 0
+        || axis > 1) {
+        return 0.0f;
+    }
+    return s_snorm_pairs[mirror][row][axis];
+}
+
+float screen_coord_normalize_cell_peek(int mirror, int index)
+{
+    if (mirror < 0 || mirror > 1 || index < 0 || index >= 20) {
+        return 0.0f;
+    }
+    return s_snorm_cells[mirror][index];
+}
+
+uint32_t screen_coord_normalize_rows_peek(void) { return s_snorm_rows; }
+
 void panel_seam_reset(void)
 {
     s_panel_seam_calls = 0;

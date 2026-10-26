@@ -733,6 +733,22 @@ uint32_t crt_control_flags_translate(uint32_t flags); /* FUN_004977d0 */
 int crt_wide_char_to_multibyte(char* dest, uint32_t wide);
                                                        /* FUN_00498b70 */
 
+/* CrtStrncpy (library `_strncpy`, FUN_0048e770): copy at most `count`
+ * source bytes into `dest`, copying the NUL when it lands and padding the
+ * rest of the window with zeros. The corpus's aligned fast paths fold
+ * into this behavior; the answer is the destination. */
+char* crt_string_copy_n(char* dest, const char* src, uint32_t count);
+
+/* CrtWideCharToMultiByteCompat (FUN_0049abe0): the wide->byte convert's
+ * compat wrapper, pinned to the port's C-locale half (the locale half
+ * rides the recorded locale-map chain, as in the code-page leaf). With
+ * dest clear it answers the NUL-excluded wide length (WideStringLength);
+ * with dest set it copies low bytes until the NUL (answering the length
+ * so far) or the count (answering the count), and a wide char over 0xff
+ * takes the corpus's EILSEQ-shaped math-error store, answering -1. */
+int crt_wide_char_to_multi_byte_compat(char* dest, const uint16_t* wide,
+                                       uint32_t count);
+
 /* SignalHandlerRecordFind (FUN_0049ab90): finds the first record whose id
  * matches, answering the record pointer (NULL on a miss or an empty
  * table). The corpus's 12-byte records ride the unported CRT startup

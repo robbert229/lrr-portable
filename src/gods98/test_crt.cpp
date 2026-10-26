@@ -1413,6 +1413,56 @@ int main(void)
         CHECK(crt_math_error_code_peek() == 0x2au,
               "the failure half stores the EILSEQ-shaped slot");
 
+        /* CrtStrncpy / CrtWideCharToMultiByteCompat (FUN_0048e770 /
+         * FUN_0049abe0; 2026-10-25): the copy fold, the padded window,
+         * and the pinned C-locale conversion lanes. */
+        {
+            char buf[16];
+            memset(buf, 0x5a, sizeof buf);
+            crt_string_copy_n(buf, "abc", 6u);
+            CHECK(memcmp(buf, "abc\0\0\0", 6) == 0
+                      && (unsigned char)buf[6] == 0x5au,
+                  "the NUL-padded window copies and pads (2026-10-25)");
+            memset(buf, 0x5a, sizeof buf);
+            crt_string_copy_n(buf, "abcdefghij", 5u);
+            CHECK(memcmp(buf, "abcde", 5) == 0
+                      && (unsigned char)buf[5] == 0x5au,
+                  "the expired count never lands a NUL");
+            CHECK(crt_string_copy_n(buf, "x", 0u) == buf && buf[0] == 'a',
+                  "the zero count answers the destination untouched");
+            memset(buf, 0x5a, sizeof buf);
+            crt_string_copy_n(buf, "mid", 5u);
+            CHECK(memcmp(buf, "mid\0\0", 5) == 0,
+                  "the exact-length copy still pads its NUL");
+        }
+
+        {
+            static const uint16_t ascii_wide[] = {'h', 'i', 0};
+            static const uint16_t far_wide[] = {0x120, 0x41, 0};
+            static const uint16_t long_wide[] = {'a', 'b', 'c', 'd', 0};
+            char dest[8];
+            memset(dest, 0x5a, sizeof dest);
+            CHECK(crt_wide_char_to_multi_byte_compat(NULL, ascii_wide,
+                                                     8u) == 2,
+                  "the null destination answers the wide length");
+            CHECK(crt_wide_char_to_multi_byte_compat(dest, ascii_wide, 0u)
+                      == 0 && dest[0] == 0x5a,
+                  "the zero count stays silent (deviation-free lane)");
+            CHECK(crt_wide_char_to_multi_byte_compat(dest, ascii_wide, 8u)
+                      == 2 && dest[0] == 'h' && dest[1] == 'i',
+                  "the store lane copies to the NUL and answers the len");
+            memset(dest, 0x5a, sizeof dest);
+            CHECK(crt_wide_char_to_multi_byte_compat(dest, long_wide, 3u)
+                      == 3 && dest[0] == 'a' && dest[2] == 'c',
+                  "the bounded lane answers the count");
+            memset(dest, 0x5a, sizeof dest);
+            CHECK(crt_wide_char_to_multi_byte_compat(dest, far_wide, 8u)
+                      == -1 && (unsigned char)dest[0] == 0x5au,
+                  "the over-0xff char silences and errors (2026-10-25)");
+            CHECK(crt_math_error_code_peek() == 0x2au,
+                  "the compat half stores the EILSEQ-shaped slot");
+        }
+
         crt_signal_record_install(0, 0xaau, 7, &marker_a);
         crt_signal_record_install(1, 0u, 9, &marker_b);
         crt_signal_record_install(16, 0u, 3, NULL); /* guarded (dev) */
