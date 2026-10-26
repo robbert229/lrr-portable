@@ -788,6 +788,47 @@ int main(void)
         crt_owned_stream_buffer_release(NULL); /* guarded */
     }
 
+    /* RendererCommandNodePrepend (2026-10-25): the node window, the kind
+     * word, the payload copy, the head link — then the twin clear frees. */
+    {
+        model_render_list_head_set(NULL);
+        uint32_t payload[16];
+        for (int i = 0; i < 16; ++i) {
+            payload[i] = 0x10u + (uint32_t)i;
+        }
+        renderer_command_node_prepend(7u, payload);
+        void* one = model_render_list_head_peek();
+        CHECK(one != NULL, "the prepend raises the head");
+        uint32_t kind = 0u;
+        __builtin_memcpy(&kind, (char*)one + 0x00, sizeof kind);
+        CHECK(kind == 7u, "the kind word lands");
+        int ok = 1;
+        for (int i = 0; i < 16; ++i) {
+            uint32_t w = 0u;
+            __builtin_memcpy(&w, (char*)one + 0x04 + (size_t)i * 4u,
+                             sizeof w);
+            if (w != payload[i]) {
+                ok = 0;
+            }
+        }
+        CHECK(ok, "the sixteen payload dwords copy in");
+        void* link = (void*)1;
+        __builtin_memcpy(&link, (char*)one + 0x44, sizeof link);
+        CHECK(link == NULL, "the first node terminates the chain");
+        renderer_command_node_prepend(9u, NULL);
+        void* two = model_render_list_head_peek();
+        CHECK(two != NULL && two != one,
+              "the second prepend raises the head");
+        __builtin_memcpy(&link, (char*)two + 0x44, sizeof link);
+        CHECK(link == one, "the new head links to the old one");
+        uint32_t w0 = 0xdeadbeefu;
+        __builtin_memcpy(&w0, (char*)two + 0x04, sizeof w0);
+        CHECK(w0 == 0u, "the null payload leaves the fields zero");
+        model_render_list_clear();
+        CHECK(model_render_list_head_peek() == NULL,
+              "the prepend chain clears through the widened walk");
+    }
+
     /* SharedTextureDirectorySet (2026-10-24): dup + install. */
     {
         shared_texture_directory_clear();

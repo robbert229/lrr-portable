@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 1104 | 43.1% |
+| ported | 1105 | 43.1% |
 | anchored | 4 | 0.2% |
-| named | 1411 | 55.0% |
+| named | 1410 | 55.0% |
 | runtime-import | 44 | 1.7% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (1104 functions)
+  (1105 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1411 functions)
+  citation yet (1410 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (44 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1416 (55.2%).**
+**Game logic remaining to port: 1415 (55.2%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -1145,7 +1145,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00482ac0` | ModelRenderRecordStateSetup |
 | `0x00482b50` | RenderStateFlagsApply |
 | `0x00482cb0` | RendererCommandModeAndPairSend |
-| `0x00482ce0` | RendererCommandNodePrepend |
 | `0x00482d60` | ModelRenderPassDispatch |
 | `0x004830c0` | AnimatedTextureFrameSurfaceSet |
 | `0x00483140` | IndexedRecordInterfaceRelease |
