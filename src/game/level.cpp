@@ -3108,6 +3108,49 @@ void* path_record_allocate_and_link(const uint32_t* coord_pair)
 uint32_t path_record_count_peek(void) { return s_path_record_count; }
 void* path_record_last_peek(void) { return s_path_record_last; }
 
+/* TutorialPathCoordinateIndex (FUN_00456b80) — see level.hpp. The corpus
+ * sweeps x-outer/y-inner over the grid dims and head-pushes each cell's
+ * coordinate byte onto the chain table, clearing the byte as consumed. */
+// FUNCTION: LEGORR 0x00456b80
+void tutorial_path_coordinate_index(LevelState* s)
+{
+    if (s == NULL) {
+        return; /* deviation: the corpus strides the block blindly */
+    }
+    for (int i = 0; i != 0x37; ++i) {
+        s->pool_heads[i] = NULL;
+    }
+    const int w = level_int(s, LEVEL_OFF_WIDTH);
+    const int h = level_int(s, LEVEL_OFF_HEIGHT);
+    if (level_load_ptr(s, LEVEL_OFF_VOXELS) == NULL) {
+        return; /* deviation: the corpus strides the voxel global */
+    }
+    for (int x = 0; x < w; ++x) {
+        for (int y = 0; y < h; ++y) {
+            uint8_t* cell = voxel_at(s, x, y) + 0x04;
+            const int coord = *cell;
+            if (coord != 0) {
+                const uint32_t ux = (uint32_t)x;
+                const uint32_t uy = (uint32_t)y;
+                /* the corpus reads the superseded head and threads the
+                 * node's next link after the allocation */
+                void* old = (coord < 0x37) ? s->pool_heads[coord] : NULL;
+                void* node = engine_heap_alloc(16); /* widened node image */
+                if (node == NULL) {
+                    continue; /* deviation: the corpus strides the alloc */
+                }
+                __builtin_memcpy((char*)node + 0x0, &ux, 4);
+                __builtin_memcpy((char*)node + 0x4, &uy, 4);
+                __builtin_memcpy((char*)node + 0x8, &old, sizeof(old));
+                if (coord < 0x37) {
+                    s->pool_heads[coord] = node;
+                }
+                *cell = 0;
+            }
+        }
+    }
+}
+
 /* Test hook: stages a count-table slot (the corpus's table writers are
  * unported, so the faithful read shape is exercised through this hook —
  * the install-hook precedent). */

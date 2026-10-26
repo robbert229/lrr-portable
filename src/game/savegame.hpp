@@ -253,6 +253,7 @@ void* list_get_node(const SavListWindow* win, const void* wide_key);
  * corpus strides the flag/store edges blindly. Answers 1 when the
  * callback or any subtree reports it. */
 typedef struct SavTreeNode {
+    uint32_t window;     /* corpus + 0x0: stride-selector word (walk2 read) */
     void*    children;   /* corpus + 4 (widened): child pointer array */
     uint32_t count;      /* corpus + 8 */
     uint32_t visited;    /* corpus + 0x10: walk flag */
@@ -262,6 +263,46 @@ typedef int (*sav_tree_visit)(void* node, void* user);
 
 int sav_tree_walk(void* node, sav_tree_visit visit, void* user);
                                                 /* FUN_004171c0 */
+
+/* --- the sav-tree state visitor (2026-10-25) --------------------------------
+ * SavTreeWalk2 (FUN_004172f0): the stateful sibling of SavTreeWalk
+ * (FUN_004171c0). It enters every unvisited node once (the +0x10 walk
+ * flag, as the plain walk), computes the "need" word from the shared
+ * state: the flag-test lane when the window base is null or the
+ * extended-mode gate (app mode > 1, or the feature word's bit 0x20000)
+ * raises — the gate also zeroes the flag on entry — otherwise the bit-0
+ * read at `node.window * 0x3190 + window_base`. Then it touches the
+ * block cursor: clearing bit 2 of the block's +0x0 word only when need
+ * and the incoming carry and the block's +0x1c word all read zero,
+ * setting it otherwise, and ALWAYS advances the cursor (the corpus
+ * advances through a null block pointer too). Children recurse with
+ * `need` as the carry.
+ * Deviations: the corpus strides the block array and the stride read
+ * blind; the port guards the block slot/pointer and reads the window
+ * through memcpy lanes. The two corpus tree-root globals are unmodeled,
+ * so nodes ride as arguments (the walk-model convention); app mode
+ * threads through EngineContext (the corpus strides its global) and the
+ * feature word rides the crt.* half-model peek. */
+typedef struct SavTree2State {
+    void*    window_base; /* corpus + 0x0: stride-0x3190 window base */
+    uint32_t window;      /* corpus + 0x4: stored word (the walk never reads it) */
+    void**   blocks;      /* corpus + 0x8: block-array pointer slot */
+    uint32_t index;       /* corpus + 0xc: visit-order block cursor */
+    uint32_t flag;        /* corpus + 0x10: needs-visit flag */
+} SavTree2State;
+
+struct EngineContext;
+
+void sav_tree_walk2(void* node, SavTree2State* state, int carry,
+                    const EngineContext* eng);  /* FUN_004172f0 */
+
+/* SavTreeLoad (FUN_004173e0): stack-init the state's five dwords the way
+ * the corpus builds them (window base, stored word, block slot, zero
+ * cursor, flag), walk with carry 1, then SavClearVisited (FUN_00416e70)
+ * over the installed visited bands. */
+void sav_tree_load(void* node, void* window_base, void** blocks,
+                   uint32_t window, uint32_t flag,
+                   const EngineContext* eng);  /* FUN_004173e0 */
 
 /* --- the checkpoint progress fold band (2026-10-25) ------------------------
  * CheckpointBlobTaskProgressRecalculate (FUN_00460950): the blob's

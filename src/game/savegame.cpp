@@ -6,6 +6,7 @@
 #include "game.hpp"
 #include "gods98/block.hpp"
 #include "gods98/crt.hpp"
+#include "gods98/engine.hpp"
 #include "gods98/resource.hpp"
 #include "frontend.hpp"
 #include "level.hpp"
@@ -945,6 +946,67 @@ int sav_tree_walk(void* node, sav_tree_visit visit, void* user)
         return 0;
     }
     return 0;
+}
+
+/* SavTreeWalk2 (FUN_004172f0) — see savegame.hpp. */
+// FUNCTION: LEGORR 0x004172f0
+void sav_tree_walk2(void* node, SavTree2State* state, int carry,
+                    const EngineContext* eng)
+{
+    SavTreeNode* n = (SavTreeNode*)node;
+    if (n == NULL || n->visited != 0u) {
+        return;
+    }
+    const int extended = 1 < engine_app_mode_get(eng)
+                      || (engine_feature_word_peek() & 0x20000u) != 0u;
+    if (extended) {
+        state->flag = 0u;
+    }
+    n->visited = 1u;
+    uint32_t need;
+    if (state->window_base == NULL || extended) {
+        need = state->flag == 0u ? 1u : 0u;
+    } else {
+        const char* w = (const char*)state->window_base
+                      + (ptrdiff_t)((int32_t)n->window) * 0x3190;
+        uint32_t word = 0u;
+        __builtin_memcpy(&word, w, sizeof word);
+        need = word & 1u;
+    }
+    if (state->blocks != NULL && *state->blocks != NULL) {
+        char* blk = (char*)*state->blocks + (size_t)state->index * 0x20;
+        uint32_t flags = 0u;
+        uint32_t probe = 0u;
+        __builtin_memcpy(&flags, blk, sizeof flags);
+        __builtin_memcpy(&probe, blk + 0x1c, sizeof probe);
+        flags = (need == 0u && carry == 0 && probe == 0u)
+                    ? (flags & ~4u)
+                    : (flags | 4u);
+        __builtin_memcpy(blk, &flags, sizeof flags);
+    }
+    state->index = state->index + 1u; /* the corpus advances blindly */
+    if (n->children != NULL) {
+        void** kids = (void**)n->children; /* widened slots */
+        for (uint32_t i = 0; i < n->count; ++i) {
+            sav_tree_walk2(kids[i], state, need != 0u ? 1 : 0, eng);
+        }
+    }
+}
+
+/* SavTreeLoad (FUN_004173e0) — see savegame.hpp. */
+// FUNCTION: LEGORR 0x004173e0
+void sav_tree_load(void* node, void* window_base, void** blocks,
+                   uint32_t window, uint32_t flag,
+                   const EngineContext* eng)
+{
+    SavTree2State st; /* the corpus's five stack dwords */
+    st.window_base = window_base;
+    st.window = window;
+    st.blocks = blocks;
+    st.index = 0u;
+    st.flag = flag;
+    sav_tree_walk2(node, &st, 1, eng);
+    sav_clear_visited();
 }
 
 /* --- the checkpoint progress fold band (see savegame.hpp) ------------------ */
