@@ -31,6 +31,7 @@ typedef struct ResourceWad {
 
 static ResourceWad s_wads[RESOURCE_MAX_WADS];
 static int       s_wad_count = 0;
+static char      s_wad_prefix[RESOURCE_PATH_MAX] = "LegoRR";
 
 /* CD/STD fallback state (finding 01). */
 #ifdef LEGORRR_BACKEND_WINAPI
@@ -60,6 +61,19 @@ static const char* ares_cd_path(const char* name, char* out, size_t out_sz)
     }
     out[off] = '\0';
     return out;
+}
+
+/* SoundPathFallbackFormat (FUN_0047f660): only format the fallback when a
+ * drive is configured. The port permits a mounted-root override and applies
+ * host separators/bounds checks inside ares_cd_path. */
+// FUNCTION: LEGORR 0x0047f660
+static int ares_cd_fallback_path(const char* name, char* out, size_t out_sz)
+{
+    if (s_cd_drive == 0) {
+        return 0;
+    }
+    ares_cd_path(name, out, out_sz);
+    return 1;
 }
 
 void resource_set_cd_drive(char drive)
@@ -270,6 +284,10 @@ static int ares_parse(FILE* fp, ResourceWad* out)
  *  Public API
  * ------------------------------------------------------------------ */
 
+/* Partial WadMountStartup (FUN_0047f130): try the numbered WAD archive
+ * paths and mount every archive that exists. The original startup routine
+ * also handles CD detection, retry dialogs, and missing-data exits. */
+// FUNCTION: LEGORR 0x0047f130
 int resource_mount(const char* dir, const char* prefix)
 {
     for (int i = 0; i < RESOURCE_MAX_WADS; ++i) {
@@ -294,6 +312,19 @@ int resource_mount(const char* dir, const char* prefix)
     return s_wad_count;
 }
 
+void resource_set_wad_prefix(const char* prefix)
+{
+    if (prefix == NULL || prefix[0] == '\0') {
+        return;
+    }
+    snprintf(s_wad_prefix, sizeof(s_wad_prefix), "%s", prefix);
+}
+
+const char* resource_get_wad_prefix(void)
+{
+    return s_wad_prefix;
+}
+
 int resource_mounted_count(void)
 {
     return s_wad_count;
@@ -315,6 +346,9 @@ void resource_unmount_all(void)
     s_wad_count = 0;
 }
 
+/* WadEntryNameLookup: case-insensitive scan of one mounted archive's names;
+ * return its entry index or -1. Bounds checks are port safeguards. */
+// FUNCTION: LEGORR 0x0048bda0
 int resource_wad_lookup(int wad_idx, const char* name)
 {
     if (wad_idx < 0 || wad_idx >= s_wad_count) {
@@ -378,6 +412,26 @@ static Resource* ares_open_wad(int wad_idx, int entry_idx, const char* name)
     return r;
 }
 
+/* Partial WadPathOpen (FUN_0048bf70): scan mounted archives from newest to
+ * oldest, resolve the entry, and return its resource handle. The original
+ * opens the entry into a fixed stream slot immediately; this port reads its
+ * payload lazily through resource_read. */
+// FUNCTION: LEGORR 0x0048bf70
+static Resource* ares_open_wad_path(const char* name, int mode)
+{
+    for (int w = s_wad_count - 1; w >= 0; --w) {
+        int e = resource_wad_lookup(w, name);
+        if (e >= 0) {
+            Resource* r = ares_open_wad(w, e, name);
+            if (r != NULL) {
+                r->mode = mode;
+            }
+            return r;
+        }
+    }
+    return NULL;
+}
+
 /* Open a loose file (STD branch) — payload read lazily by resource_read. */
 static Resource* ares_open_std(const char* name, int mode)
 {
@@ -407,6 +461,9 @@ static Resource* ares_open_std(const char* name, int mode)
     return r;
 }
 
+/* GameFileOpenDispatch (FUN_0047f6e0): choose the WAD or loose-file path
+ * for the requested mode. Payload reading is deferred to resource_read. */
+// FUNCTION: LEGORR 0x0047f6e0
 Resource* resource_open(const char* name, int mode)
 {
     if (name == NULL || name[0] == '\0') {
@@ -424,27 +481,21 @@ Resource* resource_open(const char* name, int mode)
         }
     }
 
-    /* WAD branch: scan mounted wads highest-first so later mounts shadow
-     * earlier ones (finding 01, FUN_0048bf70 with idx == -1). */
-    for (int w = s_wad_count - 1; w >= 0; --w) {
-        int e = resource_wad_lookup(w, name);
-        if (e >= 0) {
-            Resource* r = ares_open_wad(w, e, name);
-            if (r != NULL) {
-                r->mode = mode;
-            }
-            return r;
-        }
+    /* WAD branch: later mounts shadow earlier ones. */
+    Resource* wad = ares_open_wad_path(name, mode);
+    if (wad != NULL) {
+        return wad;
     }
 
     /* CD/STD fallback (AUTO only): "%c:\%s\%s" with the drive letter +
      * data dir (finding 01, FUN_0047f660). */
-    if (mode == RESOURCE_AUTO && s_cd_drive != 0) {
+    if (mode == RESOURCE_AUTO) {
         char path[RESOURCE_PATH_MAX];
-        ares_cd_path(name, path, sizeof(path));
-        Resource* r = ares_open_std(path, mode);
-        if (r != NULL) {
-            return r;
+        if (ares_cd_fallback_path(name, path, sizeof(path))) {
+            Resource* r = ares_open_std(path, mode);
+            if (r != NULL) {
+                return r;
+            }
         }
     }
     return NULL;
@@ -543,6 +594,7 @@ void resource_free(Resource* r)
 static void* s_fixed_slot[FIXED_RECORD_SLOTS];
 static int   s_fixed_flag[FIXED_RECORD_SLOTS];
 
+// FUNCTION: LEGORR 0x0048bfc0
 void fixed_record_slot_resource_release(int slot)
 {
     if (slot < 0 || slot >= FIXED_RECORD_SLOTS) {
@@ -555,6 +607,7 @@ void fixed_record_slot_resource_release(int slot)
     }
 }
 
+// FUNCTION: LEGORR 0x0048bff0
 void* fixed_record_slot_resource_get(int slot)
 {
     if (slot < 0 || slot >= FIXED_RECORD_SLOTS) {
@@ -579,6 +632,7 @@ int fixed_record_slot_flag_peek(int slot)
 /* WadMemoryStreamBufferGet (FUN_0048c030): the corpus wrapper routes the
  * slot through the fixed-record slot reader (FUN_0048bff0) and drops the
  * result — the observable half is the slot reader's resolution. */
+// FUNCTION: LEGORR 0x0048c030
 void wad_memory_stream_buffer_get(int slot)
 {
     (void)fixed_record_slot_resource_get(slot);
@@ -599,6 +653,7 @@ void wad_memory_stream_buffer_get(int slot)
 #define WAD_DECODE_MAGIC_FAIL 0xffff
 #define WAD_DECODE_TYPE_FAIL  0xfffe
 
+// FUNCTION: LEGORR 0x0049c840
 int wad_payload_decode_dispatch(const void* header, void* dest)
 {
     if (header == NULL || dest == NULL) {
@@ -633,6 +688,7 @@ int wad_payload_decode_dispatch(const void* header, void* dest)
  * payload. The size is the big-endian length dword at +4; a NULL out-pointer
  * is the corpus's size probe (the size alone answers). Otherwise the engine
  * heap allocates, the dispatch decodes, and a failed dispatch frees. */
+// FUNCTION: LEGORR 0x0049c7c0
 long wad_expand_payload(const void* header, void** out_payload)
 {
     if (header == NULL) {
@@ -661,6 +717,7 @@ long wad_expand_payload(const void* header, void** out_payload)
  * and the WORD 0 at +12. A zero count clears nothing. Deviations: the
  * corpus's count is char-truncated (multiples of 256 alias to nothing),
  * documented rather than replayed, and the blind table stride is guarded. */
+// FUNCTION: LEGORR 0x0049cf50
 void wad_huffman_table_clear(void* table, int count)
 {
     if (table == NULL || count <= 0) {
@@ -686,6 +743,7 @@ void wad_huffman_table_clear(void* table, int count)
  * dwords, 8 bytes, alias this record's front half) and the corpus's
  * blind-first store for kind 1 is guarded. The corpus's wrapper chain
  * 0x47ff30 is a bare call into the heap's alloc entry. */
+// FUNCTION: LEGORR 0x0047fed0
 void* game_file_handle_allocate(int kind)
 {
     if (kind != 0 && kind != 1) {
@@ -718,6 +776,7 @@ void* game_file_handle_allocate(int kind)
  * fixed_record_slot_resource_get) rides as the opened resource pointer and
  * the corpus's -1 sentinel becomes NULL; the search-all index arrives as
  * the wad-only open mode with the corpus's global at -1 inlined. */
+// FUNCTION: LEGORR 0x0047fea0
 int wad_entry_read_into_stream_slot(WadStreamSlots* slots, const char* name)
 {
     if (slots == NULL) {
@@ -766,6 +825,7 @@ void* resource_handle_set_slot_peek(int slot)
     return NULL;
 }
 
+// FUNCTION: LEGORR 0x0041a850
 void resource_handle_set_release(void)
 {
     for (int i = 0; i != 24; ++i) {
@@ -795,6 +855,7 @@ void resource_handle_set_release(void)
  * direct dword copy, and the group guard answers where the corpus strides
  * the band blindly. Registering the same group twice re-stages in place;
  * the corpus leaks the superseded array, and so does the port. */
+// FUNCTION: LEGORR 0x0041a7d0
 void resource_input_key_group_register(int group, int count,
                                        const uint32_t* values)
 {
@@ -817,6 +878,7 @@ void resource_input_key_group_register(int group, int count,
  * eighteen interaction-action groups. Group 6 is left unregistered (the
  * corpus skips it), and the action codes ride as the corpus's own
  * constants. */
+// FUNCTION: LEGORR 0x0041a660
 void interaction_action_code_map_initialize(void)
 {
     static const uint32_t g0[] = { 1, 2, 3, 4 };
@@ -876,6 +938,7 @@ uint32_t resource_handle_set_band_word_peek(int unit)
  * record is freed even when its array word is zero. Deviations: the record
  * fields widen LP64-safe and the NULL record is guarded (the corpus strides
  * blindly). */
+// FUNCTION: LEGORR 0x00410ae0
 void resource_handle_list_dispose(ResourceHandleList* list)
 {
     if (list == NULL) {

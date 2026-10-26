@@ -1,0 +1,18 @@
+targets:
+  LEGORR:
+    filename: LegoRR.exe
+    source_root: .
+    hash:
+      sha256: c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f
+    data_sources: []
+    encoding:
+    ghidra:
+      ignore_types: []
+      ignore_functions: []
+      name_substitutions: []
+      allow_hash_mismatch: false
+    report:
+      ignore_functions: []
+      ignore_variables: []
+      icon:
+    marker_aliases: {}

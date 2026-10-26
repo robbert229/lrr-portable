@@ -45,6 +45,7 @@ static void m_toggle_hud(EngineContext* ctx, uint32_t* flag, uint32_t bit,
     main_hud_text(ctx, buf);
 }
 
+// FUNCTION: LEGORR 0x004250c0
 int main_sim_step(EngineContext* ctx, float scale, float dt,
                   uint32_t* o1, uint32_t* o2, uint32_t* o3)
 {

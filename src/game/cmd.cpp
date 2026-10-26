@@ -104,6 +104,7 @@ static CmdRec* s_global_head = NULL; /* DAT_004b3354 */
 static CmdRec* s_global_tail = NULL; /* DAT_004b3358 */
 static int   s_global_enabled = 1; /* DAT_004b8060 */
 
+// FUNCTION: LEGORR 0x004064c0
 static void cmd_pool_grow(void)
 {
     int level = s_pool_level;
@@ -126,6 +127,7 @@ static void cmd_pool_grow(void)
     s_free = block;
 }
 
+// FUNCTION: LEGORR 0x00406440
 void* cmd_alloc(int type)
 {
     if (s_free == NULL) {
@@ -142,6 +144,7 @@ void* cmd_alloc(int type)
     return rec;
 }
 
+// FUNCTION: LEGORR 0x00406480
 void cmd_free(void* rec, int cancel)
 {
     if (rec == NULL) {
@@ -195,9 +198,11 @@ static int cmd_strcasecmp(const char* a, const char* b)
     }
 }
 
+// FUNCTION: LEGORR 0x00401cf0
 void cmd_init(void)
 {
-    for (int i = 0; i < CMD_POOL_MAX_BLOCKS; ++i) {
+    int i;
+    for (i = 0; i < CMD_POOL_MAX_BLOCKS; ++i) {
         s_blocks[i] = NULL;
     }
     s_pool_level = 0;
@@ -206,7 +211,7 @@ void cmd_init(void)
     s_global_tail = NULL;
     s_global_enabled = 1;
 
-    for (int i = 0; i < 27; ++i) {
+    for (i = 0; i < 27; ++i) {
         s_behaviour[i] = 0x31;
     }
     s_behaviour[0]  = 0x37;
@@ -228,6 +233,7 @@ void cmd_init(void)
     s_behaviour[26] = 99;
 }
 
+// FUNCTION: LEGORR 0x00401cb0
 int cmd_kind_by_name(const char* name, int* out)
 {
     if (name == NULL || out == NULL) {
@@ -273,6 +279,7 @@ static void cmd_bind_kind(CmdRec* rec, int kind)
     rec->kind = kind;
 }
 
+// FUNCTION: LEGORR 0x00404030
 static void cmd_link_head(CmdRec* rec, int kind)
 {
     if (s_global_head == NULL) {
@@ -285,6 +292,7 @@ static void cmd_link_head(CmdRec* rec, int kind)
     cmd_bind_kind(rec, kind);
 }
 
+// FUNCTION: LEGORR 0x00404070
 static void cmd_link_tail(CmdRec* rec)
 {
     rec->global_next = NULL;
@@ -298,6 +306,7 @@ static void cmd_link_tail(CmdRec* rec)
     rec->state &= ~CMD_STATE_PENDING;
 }
 
+// FUNCTION: LEGORR 0x00404190
 void* cmd_chain_walk(const EntitySlot* e)
 {
     if (e == NULL || e->cmd_head == NULL) {
@@ -320,6 +329,7 @@ static void idle_register(EntitySlot* e);
  * (its types 7/0xc/0x17/3 branches) are not included here — the port only
  * needs the plain drop FUN_00403d10(ent, 0x13, 0, 1) performs on the
  * deferred-grant path. */
+// FUNCTION: LEGORR 0x00403d10
 int cmd_chain_drop(EntitySlot* e, int type)
 {
     if (e == NULL || e->cmd_head == NULL) {
@@ -385,6 +395,7 @@ void cmd_global_unlink(const void* rec)
  * corpus strides the global list's +0x60 link and the +0x48 dword
  * blindly; the port rides its native-size link slot and reference slot
  * (documented deviations). */
+// FUNCTION: LEGORR 0x004063e0
 void pending_record_entity_reference_clear(void* reference)
 {
     for (CmdRec* cur = s_global_head; cur != NULL;
@@ -413,6 +424,7 @@ void cmd_rec_entity_ref_install(void* rec, void* ref)
  * entity command-chain housekeeping band). Deviations: NULL records /
  * entities guard where the corpus strides blindly, and the +0x18
  * task-param word takes the corpus's float-bit constant raw. */
+// FUNCTION: LEGORR 0x00406360
 void entity_record_attach_and_relink(void* record, void* previous,
                                     EntitySlot* entity)
 {
@@ -455,6 +467,7 @@ void entity_record_attach_and_relink(void* record, void* previous,
  * the first command's tail link, giving double ownership of one record.
  * (Exposed by the executor move test: a move issued to a *selection* of two
  * entities creates exactly that conflict.) */
+
 static void cmd_chain_append(EntitySlot* e, CmdRec* rec, int as_move)
 {
     CmdRec* tail = as_rec(cmd_chain_walk(e));
@@ -477,6 +490,7 @@ static void cmd_chain_append(EntitySlot* e, CmdRec* rec, int as_move)
 
 static GameContext* s_ctx = NULL;
 
+// FUNCTION: LEGORR 0x004035c0
 void cmd_create_move(EntitySlot* e, float x, float y, int flag)
 {
     if (e == NULL) {
@@ -502,6 +516,7 @@ void cmd_create_move(EntitySlot* e, float x, float y, int flag)
     cmd_chain_append(e, rec, 1);
 }
 
+// FUNCTION: LEGORR 0x004036c0
 void cmd_create_target(EntitySlot* e, void* target)
 {
     if (e == NULL) {
@@ -516,6 +531,7 @@ void cmd_create_target(EntitySlot* e, void* target)
     cmd_chain_append(e, rec, 0);
 }
 
+// FUNCTION: LEGORR 0x00403610
 void cmd_create_gated(EntitySlot* e, void* target)
 {
     if (e == NULL) {
@@ -534,6 +550,7 @@ void cmd_create_gated(EntitySlot* e, void* target)
 }
 
 /* Task kind derived from the entity type (FUN_00402720's bVar3 switch). */
+
 static int task_kind_for(EntitySlot* e)
 {
     switch (e->etype) {
@@ -545,6 +562,25 @@ static int task_kind_for(EntitySlot* e)
     }
 }
 
+/* MinionCompanionCmd (FUN_00402850): append the extra kind-0x15 task that
+ * accompanies a type-6 minion's primary task. */
+// FUNCTION: LEGORR 0x00402850
+static void cmd_minion_companion(EntitySlot* e)
+{
+    if (e == NULL || e->etype != 6) {
+        return;
+    }
+    CmdRec* rec = (CmdRec*)cmd_alloc(3);
+    if (rec == NULL) {
+        return;
+    }
+    rec->payload = e;
+    cmd_bind_kind(rec, 0x15);
+    cmd_link_tail(rec);
+    rec->state |= CMD_STATE_MINION;
+}
+
+// FUNCTION: LEGORR 0x00402720
 void cmd_create_task(EntitySlot* e)
 {
     if (e == NULL) {
@@ -561,17 +597,7 @@ void cmd_create_task(EntitySlot* e)
         rec->extra = 8; /* type-8 trains set the extra slot */
     }
     cmd_link_head(rec, kind);
-    /* MinionCompanionCmd: type-6 minions get a second task (kind 0x15)
-     * linked at the tail, flagged 0x2000. */
-    if (e->etype == 6) {
-        CmdRec* rec2 = (CmdRec*)cmd_alloc(3);
-        if (rec2 != NULL) {
-            rec2->payload = e;
-            cmd_bind_kind(rec2, 0x15);
-            cmd_link_tail(rec2);
-            rec2->state |= CMD_STATE_MINION;
-        }
-    }
+    cmd_minion_companion(e);
 }
 
 /* ------------------------------------------------------------------ *
@@ -618,6 +644,7 @@ void cmd_tick_global(void)
 #define IDLE_TABLE_MAX 20
 static EntitySlot* s_idle[IDLE_TABLE_MAX];
 
+// FUNCTION: LEGORR 0x00407450
 static void idle_register(EntitySlot* e)
 {
     if (e == NULL || e->etype != 2) {
@@ -675,6 +702,7 @@ void cmd_context_set(GameContext* ctx)
     }
 }
 
+// FUNCTION: LEGORR 0x00452060
 void cmd_produce(int op, const void* a1, int a2, int a3, int a4)
 {
     int block = s_ping;
@@ -703,6 +731,7 @@ typedef struct KeyBind {
 static KeyBind s_keybinds[KEYBIND_MAX];
 static int     s_keybind_count = 0;
 
+// FUNCTION: LEGORR 0x00452010
 void cmd_bind_key(int key, int op, int a1, int a2, int a3, int a4)
 {
     if (s_keybind_count >= KEYBIND_MAX) {
@@ -734,6 +763,7 @@ static void mgr_stub(const char* what, int a)
     (void)a;
 }
 
+// FUNCTION: LEGORR 0x004520d0
 void cmd_queue_tick(void)
 {
     /* 1. Producer block: the held-key pre-pass (SelectionRoot step 1 —
@@ -800,6 +830,7 @@ void cmd_queue_tick(void)
  * cursor; the loop bound is the running count).
  * Comparison deviation: the corpus matches the 32-bit second field, the
  * port matches the stored pointer through the uintptr cast. */
+// FUNCTION: LEGORR 0x00451f60
 void cmd_queue_cancel_match(int value)
 {
     const int block = s_ping;
@@ -814,7 +845,7 @@ void cmd_queue_cancel_match(int value)
         i = i + 1;
     }
 }
-
+// FUNCTION: LEGORR 0x00452580
 const void* active_context_record_get(int* count_out)
 {
     const int count = selection_count(s_ctx);
@@ -830,6 +861,7 @@ const void* active_context_record_get(int* count_out)
     return (const void*)selection_record_array(s_ctx);
 }
 
+// FUNCTION: LEGORR 0x00452650
 int cmd_array_find_value_index(const int* array, unsigned count, int value,
                                unsigned* index_out)
 {
@@ -860,7 +892,7 @@ static const void* cmd_entity_owner_at(const EntitySlot* e)
 {
     return e->owner_36c;
 }
-
+// FUNCTION: LEGORR 0x00452520
 int selection_snapshot_create(void** array_out, unsigned* count_out)
 {
     const int count = selection_count(s_ctx);
@@ -883,7 +915,7 @@ int selection_snapshot_create(void** array_out, unsigned* count_out)
     }
     return 1;
 }
-
+// FUNCTION: LEGORR 0x00452d60
 int selection_command_dispatch(int param)
 {
     const void* sel = media_min_distance_context();
@@ -923,7 +955,7 @@ static int cmd_rand15(void)
     s_cmd_rand_state = s_cmd_rand_state * 214013u + 2531011u;
     return (int)((s_cmd_rand_state >> 16) & 0x7fffu);
 }
-
+// FUNCTION: LEGORR 0x00452430
 void entity_random_valid_cell_command_create(void* entity)
 {
     const LevelState* lvl = (s_ctx != NULL) ? s_ctx->level : NULL;
@@ -948,7 +980,7 @@ void entity_random_valid_cell_command_create(void* entity)
         cmd_produce(0x24, entity, 0, x, y);
     }
 }
-
+// FUNCTION: LEGORR 0x00452c50
 int selection_entity_remove(void* entity)
 {
     if (s_ctx == NULL || entity == NULL) {
@@ -985,6 +1017,7 @@ int selection_entity_remove(void* entity)
  * The corpus's selection-array append + flag-word set land on the port's
  * modeled selection storage; everything it would hand to the entity /
  * activity / visual layers is documented there as an unported seam. */
+// FUNCTION: LEGORR 0x004526e0
 int selection_candidate_filter(void* entity, int mode, int param_3)
 {
     if (s_ctx == NULL || entity == NULL) {
@@ -1036,6 +1069,15 @@ int selection_candidate_filter(void* entity, int mode, int param_3)
     return 0;
 }
 
+/* SelectionCandidateFilterDefault (FUN_004526c0) is the exact mode-1
+ * forwarding wrapper around SelectionCandidateFilter. */
+// FUNCTION: LEGORR 0x004526c0
+void selection_candidate_filter_default(void* entity, int mode)
+{
+    (void)selection_candidate_filter(entity, mode, 1);
+}
+
+// FUNCTION: LEGORR 0x00452cc0
 int selected_entity_state_monitor(void)
 {
     const int count = (s_ctx != NULL) ? s_ctx->selection_count : 0;
@@ -1064,6 +1106,7 @@ int selected_entity_state_monitor(void)
 /* --- entity record schedulers (see cmd.hpp) ----------------------------------
  * Corpus note: the queue leaf's CurrentLevelGet call discards its result
  * (the corpus's level-state touch) — no ported state depends on it. */
+// FUNCTION: LEGORR 0x00402670
 void entity_command15_validated_record_queue(EntitySlot* e)
 {
     if (e != NULL && entity_flag40000_threshold_compare(e) != 0) {
@@ -1073,7 +1116,7 @@ void entity_command15_validated_record_queue(EntitySlot* e)
         rec->state = (rec->state & ~0x10u) | 0x40040u;
     }
 }
-
+// FUNCTION: LEGORR 0x004026c0
 void entity_deferred_work_schedule(EntitySlot* e)
 {
     if (e == NULL) {
@@ -1092,7 +1135,7 @@ void entity_deferred_work_schedule(EntitySlot* e)
  * registry initializer loop — zero-init static, 27 entries. */
 #define PRIORITY_ENTRY_COUNT 27
 static int s_priority_state[PRIORITY_ENTRY_COUNT];
-
+// FUNCTION: LEGORR 0x00402000
 void cmd_mark_matching(int type, int payload, const int coords[2])
 {
     for (CmdRec* cur = s_global_head; cur != NULL;
@@ -1114,7 +1157,7 @@ void cmd_mark_matching(int type, int payload, const int coords[2])
         }
     }
 }
-
+// FUNCTION: LEGORR 0x00402060
 void cmd_set_kind(void* rec, int kind)
 {
     if (rec == NULL) {
@@ -1128,7 +1171,7 @@ void cmd_set_kind(void* rec, int kind)
     }
     r->kind = kind;
 }
-
+// FUNCTION: LEGORR 0x00402090
 void priority_entry_order_value_set(int kind, int value)
 {
     if (kind >= 0 && kind < 27) {
@@ -1136,14 +1179,14 @@ void priority_entry_order_value_set(int kind, int value)
     }
     /* deviation: the corpus writes blindly into the order table. */
 }
-
+// FUNCTION: LEGORR 0x004020a0
 void priority_entry_state_set(int kind, int value)
 {
     if (kind >= 0 && kind < PRIORITY_ENTRY_COUNT) {
         s_priority_state[kind] = value;
     }
 }
-
+// FUNCTION: LEGORR 0x004020b0
 int priority_entry_state_get(int kind)
 {
     if (kind < 0 || kind >= PRIORITY_ENTRY_COUNT) {
@@ -1170,7 +1213,7 @@ int cmd_rec_param2_get(const void* rec)
  * zero-init static whose release walk is inert. */
 static void* s_handle_array[12];
 static int   s_handle_array_companion;  /* DAT_004b31f8 */
-
+// FUNCTION: LEGORR 0x00402100
 void cmd_flush_all(int disable_mode)
 {
     if (disable_mode != 0) {
@@ -1189,19 +1232,19 @@ void cmd_flush_all(int disable_mode)
 }
 
 int cmd_global_enabled_peek(void) { return s_global_enabled; }
-
+// FUNCTION: LEGORR 0x004021e0
 void* engine_memory_allocate(long size)
 {
     (void)engine_heap_alloc(size);
     /* corpus shape: the allocation happens; the pointer is discarded. */
     return NULL;
 }
-
+// FUNCTION: LEGORR 0x00402210
 void engine_memory_free(void* ptr)
 {
     engine_heap_free(ptr);
 }
-
+// FUNCTION: LEGORR 0x004020c0
 void handle_array_release_and_reset(void)
 {
     for (int i = 0; i < 12; ++i) {
@@ -1212,7 +1255,7 @@ void handle_array_release_and_reset(void)
     s_handle_array_companion = 0;
     s_global_enabled = 0;
 }
-
+// FUNCTION: LEGORR 0x00402800
 void entity_command14_batch_issue(int count)
 {
     const int raise_bit6 = (count == 0);
@@ -1229,7 +1272,7 @@ void entity_command14_batch_issue(int count)
         cmd_link_tail(rec);
     }
 }
-
+// FUNCTION: LEGORR 0x00402170
 void level_no_gather_object_setup(int mode)
 {
     if (mode == 0) {
@@ -1256,6 +1299,7 @@ void level_no_gather_object_setup(int mode)
  * shipped binary's spawn-dispatch switch allocates through CmdAlloc(0x13);
  * port-side producers leave it NULL, so both halves answer inert unless a
  * test stages the reference. */
+// FUNCTION: LEGORR 0x00402cd0
 void cmd_cancel_ref(void* rec)
 {
     if (rec == NULL) {
@@ -1280,7 +1324,7 @@ void cmd_cancel_ref(void* rec)
         }
     }
 }
-
+// FUNCTION: LEGORR 0x00402ec0
 void entity_conditional_task_schedule(EntitySlot* e)
 {
     if (e == NULL) {
@@ -1299,7 +1343,7 @@ void entity_conditional_task_schedule(EntitySlot* e)
         rec->state = (rec->state & ~0x40u) | 0x100010u;
     }
 }
-
+// FUNCTION: LEGORR 0x00402f30
 void entity_threshold_progress_event_queue(void* payload, int flag)
 {
     const int set_flag = (flag != 0);
@@ -1315,7 +1359,7 @@ void entity_threshold_progress_event_queue(void* payload, int flag)
     /* corpus kind: (-1 & 0xc) + 7 = 0x13 when the flag is set, else 7. */
     cmd_link_head(rec, set_flag ? 0x13 : 7);
 }
-
+// FUNCTION: LEGORR 0x00402f70
 void entity_target_command_queue(EntitySlot* e, void* target)
 {
     CmdRec* rec = (CmdRec*)cmd_alloc(0x11);
@@ -1359,6 +1403,7 @@ void cmd_rec_type_set(void* rec, int type)
  * the attached-object list detach) belong to the unported teardown family, so
  * the loop below is the seam half — the guard, the raised bits, and the
  * snapshot's ownership by the record are the ported observable half. */
+// FUNCTION: LEGORR 0x00402600
 void entity_record_array_apply_zero_state(void* rec, int mode)
 {
     if (rec == NULL) {
@@ -1388,7 +1433,7 @@ void entity_record_array_apply_zero_state(void* rec, int mode)
     }
     (void)mode;
 }
-
+// FUNCTION: LEGORR 0x00402960
 void entity_kind_command_issue(EntitySlot* e)
 {
     if (e == NULL) {
@@ -1425,6 +1470,7 @@ void entity_kind_command_issue(EntitySlot* e)
     cmd_link_head(rec, 0xc);
 }
 
+// STUB: LEGORR 0x00402a40
 void coordinate_pair_callback_dispatch(const void* coord_pair)
 {
     /* Seam: pairs the coordinate word with zero and traverses the entity
@@ -1432,6 +1478,7 @@ void coordinate_pair_callback_dispatch(const void* coord_pair)
     (void)coord_pair;
 }
 
+// STUB: LEGORR 0x00402aa0
 void argument_callback_dispatch(void* arg)
 {
     /* Seam: dispatches the argument through the fixed pool callback. */
@@ -1463,7 +1510,7 @@ static void cmd_cell_record_stage(CmdRec* rec, int x, int y, int act)
     rec->cell_count = 0;
     rec->state |= 0x400u;
 }
-
+// FUNCTION: LEGORR 0x00402510
 void terrain_cell_command_create(int x, int y, int flag, int raise20)
 {
     const LevelState* lvl = (s_ctx != NULL) ? s_ctx->level : NULL;
@@ -1503,7 +1550,7 @@ void terrain_cell_command_create(int x, int y, int flag, int raise20)
         level_cell_flag_800000_set(mlvl, x, y, 1);
     }
 }
-
+// FUNCTION: LEGORR 0x00402d50
 int kind_nine_cell_command_issue(int x, int y, int mode)
 {
     LevelState* lvl = (s_ctx != NULL) ? (LevelState*)s_ctx->level : NULL;
@@ -1538,7 +1585,7 @@ int kind_nine_cell_command_issue(int x, int y, int mode)
     }
     return 1;
 }
-
+// FUNCTION: LEGORR 0x00402e40
 void cell_command_type13_issue(int x, int y)
 {
     const LevelState* lvl = (s_ctx != NULL) ? s_ctx->level : NULL;
@@ -1557,7 +1604,7 @@ void cell_command_type13_issue(int x, int y)
     cmd_link_head(rec, 3);
     /* Counter update: the seam half above. */
 }
-
+// FUNCTION: LEGORR 0x00402fb0
 void cell_command_type11_issue(int x, int y)
 {
     CmdRec* rec = (CmdRec*)cmd_alloc(0xf);
@@ -1601,6 +1648,7 @@ int cmd_rec_target_get(const void* rec)
 /* --- task-type-23 category-mask issuer (see cmd.hpp) -------------------------
  * The corpus's entity argument rides every read blindly; the port guards the
  * entity slot because the selector gate reads its stats record. */
+// FUNCTION: LEGORR 0x00402890
 void task_type23_create_for_category_mask(EntitySlot* e, int selector,
                                           int issue_records)
 {
@@ -1634,6 +1682,7 @@ void task_type23_create_for_category_mask(EntitySlot* e, int selector,
 /* --- the task-kind filtered search (see cmd.hpp) -----------------------------
  * The corpus's pool walk hands the callback the slot pointer and the
  * argument block; the port models that argument block as the selector word. */
+// FUNCTION: LEGORR 0x0043a7c0
 int entity_action_kind_supported(EntitySlot* e, int kind, int arg)
 {
     if (e == NULL) {
@@ -1660,7 +1709,7 @@ int entity_action_kind_supported(EntitySlot* e, int kind, int arg)
         return 0;
     }
 }
-
+// FUNCTION: LEGORR 0x00439240
 int task_entity_flags_and_cell_task_match(const EntitySlot* e, int kind)
 {
     if ((entity_stats_word_get(e) & 8u) != 0u) {
@@ -1668,7 +1717,7 @@ int task_entity_flags_and_cell_task_match(const EntitySlot* e, int kind)
     }
     return 0;
 }
-
+// FUNCTION: LEGORR 0x00439200
 int task_kind_filtered_search(int selector)
 {
     if (selector == 1 || selector == 2 || selector == 4) {
@@ -1702,7 +1751,7 @@ static void cmd_pair_stage(CmdRec* rec, const int pair[2])
         __builtin_memcpy(&rec->y, &pair[1], sizeof(rec->y));
     }
 }
-
+// FUNCTION: LEGORR 0x004030b0
 void coordinate_pair_event_queue(const int pair[2], void* payload)
 {
     CmdRec* rec = (CmdRec*)cmd_alloc(0xc);
@@ -1713,7 +1762,7 @@ void coordinate_pair_event_queue(const int pair[2], void* payload)
     rec->event_payload = payload;
     cmd_link_head(rec, 8);
 }
-
+// FUNCTION: LEGORR 0x00403190
 int object_event_type2_queue(void* payload)
 {
     CmdRec* rec = (CmdRec*)cmd_alloc(0x13);
@@ -1727,7 +1776,7 @@ int object_event_type2_queue(void* payload)
     cmd_link_head(rec, 2);
     return 1;
 }
-
+// FUNCTION: LEGORR 0x004033f0
 void coordinate_pair_task_record_queue(const int pair[2])
 {
     CmdRec* rec = (CmdRec*)cmd_alloc(0);
@@ -1739,7 +1788,7 @@ void coordinate_pair_task_record_queue(const int pair[2])
     cmd_set_kind(rec, 0x1a);
     cmd_link_tail(rec);
 }
-
+// FUNCTION: LEGORR 0x004034a0
 void scalar_task_record_queue(void* scalar)
 {
     CmdRec* rec = (CmdRec*)cmd_alloc(0x1d);
@@ -1751,7 +1800,7 @@ void scalar_task_record_queue(void* scalar)
     cmd_link_tail(rec);
     rec->state |= 0x40u;
 }
-
+// FUNCTION: LEGORR 0x004034e0
 void task_pair_record_enqueue(const int pair[2])
 {
     CmdRec* rec = (CmdRec*)cmd_alloc(0x19);
@@ -1762,7 +1811,7 @@ void task_pair_record_enqueue(const int pair[2])
     cmd_set_kind(rec, 0x18);
     cmd_link_tail(rec);
 }
-
+// FUNCTION: LEGORR 0x00403520
 void task_record_kind10_queue(void* payload)
 {
     CmdRec* rec = (CmdRec*)cmd_alloc(10);
@@ -1774,7 +1823,7 @@ void task_record_kind10_queue(void* payload)
     cmd_link_tail(rec);
     rec->state |= 0x40u;
 }
-
+// FUNCTION: LEGORR 0x00403430
 void task_registry_remove_type0_entry_by_pair(const int pair[2])
 {
     if (pair == NULL) {
@@ -1801,7 +1850,7 @@ void task_registry_remove_type0_entry_by_pair(const int pair[2])
         cur = next;
     }
 }
-
+// FUNCTION: LEGORR 0x00403560
 void task_registry_remove_type10_entries_for_entity(const EntitySlot* e)
 {
     CmdRec* prev = NULL;
@@ -1824,7 +1873,7 @@ void task_registry_remove_type10_entries_for_entity(const EntitySlot* e)
         cur = next;
     }
 }
-
+// FUNCTION: LEGORR 0x004038c0
 void* timed_task_record_initialize_and_link(void* payload, int arg1,
                                             int arg2, int arg3)
 {
@@ -1841,7 +1890,7 @@ void* timed_task_record_initialize_and_link(void* payload, int arg1,
     rec->state = (rec->state & ~CMD_STATE_PENDING) | 0x4c0u;
     return rec;
 }
-
+// FUNCTION: LEGORR 0x004039d0
 void task_record_kind11_timed_queue(void* payload)
 {
     CmdRec* rec = (CmdRec*)cmd_alloc(0x11);
@@ -1877,7 +1926,7 @@ static void cmd_raw_head_insert(CmdRec* rec)
     }
     s_global_head = rec;
 }
-
+// FUNCTION: LEGORR 0x004041e0
 void* entity_command_chain_head_remove(EntitySlot* e)
 {
     if (e == NULL) {
@@ -1899,7 +1948,7 @@ void* entity_command_chain_head_remove(EntitySlot* e)
     }
     return e->cmd_head;
 }
-
+// FUNCTION: LEGORR 0x00403a50
 void entity_drain_command_chain(EntitySlot* e)
 {
     if (e == NULL) {
@@ -1928,7 +1977,7 @@ void entity_drain_command_chain(EntitySlot* e)
      * LAB_00403ad0 callback (bit 5 onto the records whose +0x10 payload
      * is this entity) — is the DAT_004b31c8 registry seam. */
 }
-
+// FUNCTION: LEGORR 0x00403af0
 void entity_task_state_update_after_cleanup(EntitySlot* e, int flag)
 {
     if (e == NULL || e->cmd_head == NULL) {
@@ -1945,14 +1994,14 @@ void entity_task_state_update_after_cleanup(EntitySlot* e, int flag)
         }
     }
 }
-
+// FUNCTION: LEGORR 0x00403b40
 void entity_pending_task_flag_clear(EntitySlot* e)
 {
     if (e != NULL && e->cmd_head != NULL) {
         as_rec(e->cmd_head)->state &= ~1u;
     }
 }
-
+// FUNCTION: LEGORR 0x00403f60
 void task_record_kind14_remove_if_head(EntitySlot* e)
 {
     if (e != NULL && e->cmd_head != NULL
@@ -1960,7 +2009,7 @@ void task_record_kind14_remove_if_head(EntitySlot* e)
         entity_command_chain_head_remove(e);
     }
 }
-
+// FUNCTION: LEGORR 0x00404100
 void command_queue_sweep_relink(EntitySlot* e)
 {
     if (e == NULL) {
@@ -1993,7 +2042,7 @@ void command_queue_sweep_relink(EntitySlot* e)
     }
     e->cmd_head = keep;
 }
-
+// FUNCTION: LEGORR 0x004041b0
 int entity_task_chain_contains_kind(const EntitySlot* e, int type)
 {
     if (e == NULL) {
@@ -2029,6 +2078,7 @@ void cmd_link_global_head(void* rec, int kind)
 /* CmdCancelByCoords (FUN_00403700) — see cmd.hpp. The corpus strides the
  * global chain through the +0x60 link; the port's global link lands in
  * global_next (deviation note in the struct header). */
+// FUNCTION: LEGORR 0x403700
 void cmd_cancel_by_coords(int zone, int probe, int x, int y)
 {
     for (CmdRec* cur = s_global_head; cur != NULL;
@@ -2056,6 +2106,7 @@ void cmd_rec_target_set(void* rec, int target)
 }
 
 /* ObjectAttachedRecordAllocate (FUN_004033c0) — see cmd.hpp. */
+// FUNCTION: LEGORR 0x004033c0
 void object_attached_record_allocate(EntitySlot* e)
 {
     if (e == NULL) {
@@ -2074,6 +2125,7 @@ void object_attached_record_allocate(EntitySlot* e)
  * copies the 26-dword window, restores its free-list self-link at +0x19
  * (the port keeps that bookkeeping in `next` during pooling, so a fresh
  * alloc is clean), flags +0x17 |= 0x200 and zeroes +0x18. */
+// FUNCTION: LEGORR 0x00406400
 void* cmd_pending_record_copy(const void* rec)
 {
     if (rec == NULL) {
@@ -2095,6 +2147,7 @@ void* cmd_pending_record_copy(const void* rec)
  * TerrainCell (FUN_00431ab0) — see cmd.hpp. The selection array entries
  * ride as native record pointers; the walkability mode-1 gates are the
  * seam pass, the placement gate reads the record's own flags. */
+// FUNCTION: LEGORR 0x00431a30
 int selected_entities_any_predicate_match(int cx, int cy)
 {
     int count = 0;
@@ -2114,6 +2167,7 @@ int selected_entities_any_predicate_match(int cx, int cy)
     return 0;
 }
 
+// FUNCTION: LEGORR 0x00431ab0
 int any_object_can_occupy_terrain_cell(int cx, int cy)
 {
     int count = 0;
@@ -2133,6 +2187,7 @@ int any_object_can_occupy_terrain_cell(int cx, int cy)
 }
 
 /* TaskTableContentsRelease (FUN_00462960) — see cmd.hpp. */
+// FUNCTION: LEGORR 0x00462960
 int task_table_contents_release(void* record)
 {
     if (record == NULL) {
@@ -2180,6 +2235,7 @@ int task_table_contents_release(void* record)
 /* --- the cell-command type-3 issue + task batch append band (2026-10-25) -- */
 
 /* CellCommandType3Issue (FUN_00403030) — see cmd.hpp. */
+// FUNCTION: LEGORR 0x00403030
 void cell_command_type3_issue(int x, int y)
 {
     const LevelState* lvl = (s_ctx != NULL)
@@ -2211,6 +2267,7 @@ void cell_command_type3_issue(int x, int y)
 }
 
 /* EntityTaskBatchAppend (FUN_00403650) — see cmd.hpp. */
+// FUNCTION: LEGORR 0x00403650
 void entity_task_batch_append(EntitySlot* const* entities, int count,
                               void* payload)
 {
@@ -2255,6 +2312,7 @@ struct DeferredOListEntry {
 static DeferredOListEntry s_deferred_olist[DEFERRED_OLIST_SLOTS];
 static uint32_t           s_deferred_olist_next; /* DAT_004ea7a4 */
 
+// FUNCTION: LEGORR 0x00437c20
 void deferred_olist_entity_queue_add(GameContext* ctx, const uint32_t record[2],
                                      int p1, int p2, int p3, int p5, int p6,
                                      const char* name1, const char* name2)
@@ -2333,6 +2391,7 @@ static int menu_kind_gated(int kind)
         || kind == 5 || kind == 7;
 }
 
+// FUNCTION: LEGORR 0x0041b300
 void menu_selection_resource_update(int kind, const uint32_t coord[2])
 {
     /* FUN_0041b300 */
@@ -2359,6 +2418,7 @@ void menu_selection_resource_update(int kind, const uint32_t coord[2])
     }
 }
 
+// FUNCTION: LEGORR 0x0041b2d0
 void command_context_post_to_hud(int kind, const uint32_t coord[2])
 {
     /* FUN_0041b2d0 */
@@ -2367,6 +2427,7 @@ void command_context_post_to_hud(int kind, const uint32_t coord[2])
     store_selected_map_coordinate(kind, coord); /* FUN_0041ea50 */
 }
 
+// FUNCTION: LEGORR 0x0041e750
 void selection_clear_request_and_hud_reset(void)
 {
     /* FUN_0041e750: the corpus enqueues command 3 with null payload words
@@ -2385,6 +2446,7 @@ uint32_t menu_surface_track_peek(void)
  * The counter half runs under the corpus's current-level gate; the
  * overlay advance half runs outside it (corpus order), so the guarded
  * no-level path keeps stepping the float. */
+// FUNCTION: LEGORR 0x0041f9a0
 void level_resource_balance_add_and_sound(int selector)
 {
     if (s_ctx != NULL && s_ctx->level != NULL) {
@@ -2406,6 +2468,7 @@ void level_resource_balance_add_and_sound(int selector)
  * with mode 0 (the add half is mode 1), and a nonzero selector steps the
  * constant 5 regardless of the amount — selector 0 steps the amount.
  * Deviation: the corpus's DAT-null gate is the port's ctx/level guard. */
+// FUNCTION: LEGORR 0x0041f9e0
 void upgrade_resource_debit(int selector, int amount)
 {
     if (s_ctx != NULL && s_ctx->level != NULL) {
@@ -2451,22 +2514,24 @@ static int upgrade_strcasecmp(const char* a, const char* b)
 void upgrade_name_table_install(void* records, const char* const* names,
                                 int count)
 {
+    int i;
     if (names == NULL || count < 0) {
         count = 0; /* deviation: the corpus strides blindly */
     }
     if (count > UPGRADE_NAME_TABLE_MAX) {
         count = UPGRADE_NAME_TABLE_MAX;
     }
-    for (int i = 0; i < count; ++i) {
+    for (i = 0; i < count; ++i) {
         s_upgrade_names[i] = names != NULL ? names[i] : NULL;
     }
-    for (int i = count; i < UPGRADE_NAME_TABLE_MAX; ++i) {
+    for (i = count; i < UPGRADE_NAME_TABLE_MAX; ++i) {
         s_upgrade_names[i] = NULL;
     }
     s_upgrade_records = records;
     s_upgrade_count = count;
 }
 
+// FUNCTION: LEGORR 0x0042cd50
 const void* upgrade_name_entry_find(const char* name)
 {
     if (name == NULL || s_upgrade_count == 0 || s_upgrade_records == NULL) {
@@ -2502,6 +2567,7 @@ static float s_sweep_timer; /* DAT_004d78c4 */
 void kind_six_sweep_timer_install(float value) { s_sweep_timer = value; }
 float kind_six_sweep_timer_peek(void) { return s_sweep_timer; }
 
+// FUNCTION: LEGORR 0x0040f0e0
 uint32_t kind_six_random_sweep_dispatch(float delta)
 {
     s_sweep_timer = s_sweep_timer - delta;
@@ -2537,6 +2603,7 @@ uint32_t kind_six_random_sweep_dispatch(float delta)
     return answer;
 }
 
+// FUNCTION: LEGORR 0x0043a910
 void simulation_mode_counter_add(int mode, int count)
 {
     (void)mode; /* register residue: the corpus ignores it, count only */
@@ -2567,6 +2634,7 @@ void simulation_mode_counter_add(int mode, int count)
 
 static uint32_t s_cmd_stats[CMD_STATS_KINDS][CMD_STATS_SLOT_DWORDS];
 
+// FUNCTION: LEGORR 0x0046b660
 void command_sample_stats_accumulate(int kind, const void* sample)
 {
     if (kind < 0 || (unsigned)kind >= CMD_STATS_KINDS) {

@@ -53,18 +53,21 @@ static uint32_t cells_dword(const void* cells, size_t off)
 }
 
 /* RecordField14Get (FUN_00435f0b). */
+// FUNCTION: LEGORR 0x00435f0b
 uint32_t record_field14_get(const void* record)
 {
     return rec_dword(record, 0x14);
 }
 
 /* ObjectField10Get (FUN_004850e0). */
+// FUNCTION: LEGORR 0x004850e0
 uint32_t object_field10_get(const void* object)
 {
     return rec_dword(object, 0x10);
 }
 
 /* RecordFieldD8EqualsOne (FUN_0046c3d0): int == 1, not "nonzero". */
+// FUNCTION: LEGORR 0x0046c3d0
 int record_field_d8_equals_one(const void* record)
 {
     const int32_t v = (int32_t)rec_dword(record, 0xd8);
@@ -73,6 +76,7 @@ int record_field_d8_equals_one(const void* record)
 
 /* ReadIndexedPairSlotDword (FUN_00471a20): base + i*8 + j*4, exactly as
  * the corpus computes it. */
+// FUNCTION: LEGORR 0x00471a20
 uint32_t read_indexed_pair_slot_dword(const void* base, uint32_t i,
                                       uint32_t j)
 {
@@ -81,12 +85,14 @@ uint32_t read_indexed_pair_slot_dword(const void* base, uint32_t i,
 
 /* VelocitySlotPrimaryObjectGet / SecondaryObjectGet (FUN_00471a40 /
  * FUN_00471a50): indexed slot at +0x18 / +0x24. */
+// FUNCTION: LEGORR 0x00471a40
 uint32_t velocity_slot_primary_object_get(const void* record,
                                           uint32_t index)
 {
     return rec_dword(record, 0x18u + (size_t)index * 4u);
 }
 
+// FUNCTION: LEGORR 0x00471a50
 uint32_t velocity_slot_secondary_object_get(const void* record,
                                             uint32_t index)
 {
@@ -96,6 +102,7 @@ uint32_t velocity_slot_secondary_object_get(const void* record,
 /* VelocitySlotVectorRead (FUN_00471c70) — see record.hpp. The corpus
  * copies the three dwords bit-for-bit; the port reads them as floats
  * through the NULL-guarded reader, so the words ride unchanged. */
+// FUNCTION: LEGORR 0x00471c70
 void velocity_slot_vector_read(const void* record, float out[3],
                                uint32_t index)
 {
@@ -112,6 +119,7 @@ void velocity_slot_vector_read(const void* record, float out[3],
 /* EntityVelocityStateRecordGet (FUN_004712c0) — see record.hpp. The corpus
  * strides the type-keyed sub-record blindly (and walks into the sub-record
  * when the type answers no base at all); the port guards both links. */
+// FUNCTION: LEGORR 0x004712c0
 void* entity_velocity_state_record_get(const void* record)
 {
     if (record == NULL) {
@@ -135,6 +143,7 @@ void* entity_velocity_state_record_get(const void* record)
  * +0x98 + slot*4 of the state record. The corpus widens through x87;
  * the bit pattern rides unchanged. Deviation: the corpus strides a null
  * base. */
+// FUNCTION: LEGORR 0x004712f0
 float entity_velocity_slot_value_get(const void* record, int slot)
 {
     void* base = entity_velocity_state_record_get(record);
@@ -145,6 +154,7 @@ float entity_velocity_slot_value_get(const void* record, int slot)
 }
 
 /* EntityVelocitySlotValueSet (FUN_00471310): the store counterpart. */
+// FUNCTION: LEGORR 0x00471310
 void entity_velocity_slot_value_set(void* record, uint32_t value, int slot)
 {
     void* base = entity_velocity_state_record_get(record);
@@ -156,6 +166,7 @@ void entity_velocity_slot_value_set(void* record, uint32_t value, int slot)
 }
 
 /* EntityFlag80Set (FUN_00473b20) — see record.hpp. */
+// FUNCTION: LEGORR 0x00473b20
 void entity_flag_80_set(void* record, int set)
 {
     if (record == NULL) {
@@ -168,6 +179,7 @@ void entity_flag_80_set(void* record, int set)
 }
 
 /* CategoryValueIsNeitherZeroNorFifteen (FUN_0041b470). */
+// FUNCTION: LEGORR 0x0041b470
 int category_value_is_neither_zero_nor_fifteen(int value)
 {
     if (value != 0 && value != 0xf) {
@@ -178,6 +190,7 @@ int category_value_is_neither_zero_nor_fifteen(int value)
 
 /* InterpolatedZWithinBounds (FUN_00471330): corpus order — the
  * interpolation, then `v <= target` and `target - t <= v`. */
+// FUNCTION: LEGORR 0x00471330
 int interpolated_z_within_bounds(const void* record_a, const void* record_b,
                                  float t, float target, float scale)
 {
@@ -190,6 +203,7 @@ int interpolated_z_within_bounds(const void* record_a, const void* record_b,
 
 /* CameraRotationGet (FUN_00436b79): the float at +0x84 (opaque-record
  * reader; see header). */
+// FUNCTION: LEGORR 0x00436b79
 float camera_rotation_get(const void* camera)
 {
     return rec_float(camera, 0x84);
@@ -198,6 +212,7 @@ float camera_rotation_get(const void* camera)
 /* MapCellToWorldCenter (FUN_0044f640, finding 225): the descriptor's
  * int fields convert to float at the use site — reproduced exactly,
  * including the unsigned bounds compare. */
+// FUNCTION: LEGORR 0x0044f640
 int map_cell_to_world_center(const void* map, uint32_t cell_x,
                              uint32_t cell_y, float* world_x, float* world_y)
 {
@@ -223,6 +238,7 @@ int map_cell_to_world_center(const void* map, uint32_t cell_x,
 }
 
 /* TaskFlagBitQuery (FUN_00408970, findings 366/465). */
+// FUNCTION: LEGORR 0x00408970
 uint32_t task_flag_bit_query(const void* task, uint32_t bit, int suppress)
 {
     const uint32_t mask = 1u << (bit & 0x1fu);
@@ -235,6 +251,7 @@ uint32_t task_flag_bit_query(const void* task, uint32_t bit, int suppress)
 
 /* TaskField84GetAndField88Out (FUN_00408360): the pair read, corpus
  * order — the optional +0x88 write happens before the +0x84 answer. */
+// FUNCTION: LEGORR 0x00408360
 uint32_t task_field84_get_and_field88_out(const void* task, uint32_t* out88)
 {
     if (task == NULL) {
@@ -249,6 +266,7 @@ uint32_t task_field84_get_and_field88_out(const void* task, uint32_t* out88)
 /* PackedGridCellValueGet (FUN_0040b850, findings 373/451): low nibble
  * * width + high nibble indexes the cell dwords; the corpus's own NULL
  * grid guard answers 0, reproduced. */
+// FUNCTION: LEGORR 0x0040b850
 uint32_t packed_grid_cell_value_get(const void* grid, uint32_t packed_cell)
 {
     void* cells = rec_ptr(grid, 0x08);
@@ -263,6 +281,7 @@ uint32_t packed_grid_cell_value_get(const void* grid, uint32_t packed_cell)
 
 /* ObjectPoolListHeadGet (FUN_00456c30, finding 374): the corpus's exact
  * in-range bounds (-1 < index < 0x37) over the +0x114 slot table. */
+// FUNCTION: LEGORR 0x00456c30
 int object_pool_list_head_get(const void* pools, int index)
 {
     if (-1 < index && index < 0x37) {
@@ -278,6 +297,7 @@ int object_pool_list_head_get(const void* pools, int index)
 /* ModelChildRenderEligibilityCheck (FUN_00483a70): the two-bit render
  * gate (finding 431). NULL answers "not eligible" — the corpus would
  * crash on it (documented deviation). */
+// FUNCTION: LEGORR 0x00483a70
 int model_child_render_eligibility_check(const void* object)
 {
     if (object == NULL) {
@@ -291,6 +311,7 @@ int model_child_render_eligibility_check(const void* object)
 }
 
 /* EntityTypeFlagBit1Get (FUN_0046d330, findings 357/432). */
+// FUNCTION: LEGORR 0x0046d330
 uint32_t entity_type_flag_bit1_get(const void* record)
 {
     return (rec_dword(record, 0x1e8) & 0xffu) >> 1 & 1u;
@@ -299,61 +320,73 @@ uint32_t entity_type_flag_bit1_get(const void* record)
 /* ------------------------------------------------------------------ *
  *  Field-reader sweep (see record.hpp). */
 
+// FUNCTION: LEGORR 0x0046db60
 uint32_t object_record_field11c_get(const void* record)
 {
     return rec_dword(record, 0x11c);
 }
 
+// FUNCTION: LEGORR 0x0047a540
 uint32_t object_field_be4_dword_get(const void* record)
 {
     return rec_dword(record, 0xbe4);
 }
 
+// FUNCTION: LEGORR 0x0046cf80
 uint32_t entity_type_mask_get(const void* record)
 {
     return rec_dword(record, 300);
 }
 
+// FUNCTION: LEGORR 0x00482210
 uint32_t pointer_value_get(const void* pointed)
 {
     return rec_dword(pointed, 0);
 }
 
+// FUNCTION: LEGORR 0x00408850
 uint32_t scene_object_flags_get(const void* scene_object)
 {
     return rec_dword(scene_object, 0x70);
 }
 
+// FUNCTION: LEGORR 0x00473db0
 uint32_t scene_object_owner_get(const void* scene_object)
 {
     return rec_dword(scene_object, 0x20);
 }
 
+// FUNCTION: LEGORR 0x0046d9e0
 uint32_t scene_object_resource_get(const void* scene_object)
 {
     return rec_dword(scene_object, 0x08);
 }
 
+// FUNCTION: LEGORR 0x00473680
 uint32_t scene_object_wrapped_pointer_get(const void* wrapped)
 {
     return rec_dword(wrapped, 0);
 }
 
+// FUNCTION: LEGORR 0x00473ba0
 uint32_t scene_object_flag_bit3_get(const void* scene_object)
 {
     return (rec_dword(scene_object, 0x14) & 0xffu) >> 3 & 1u;
 }
 
+// FUNCTION: LEGORR 0x00406980
 int scene_object_mode_is_one(const void* scene_object)
 {
     return rec_dword(scene_object, 0x28) == 1u ? 1 : 0;
 }
 
+// FUNCTION: LEGORR 0x00406e30
 uint32_t animation_object_handle_get(const void* animation_object)
 {
     return rec_dword(animation_object, 0x04);
 }
 
+// FUNCTION: LEGORR 0x004877d0
 uint32_t resource_entry_id_get(const void* entry)
 {
     if (entry != NULL) {
@@ -364,6 +397,7 @@ uint32_t resource_entry_id_get(const void* entry)
     return 0u;
 }
 
+// FUNCTION: LEGORR 0x004850c0
 uint32_t indexed_word_table_lookup(uint32_t index, const void* table)
 {
     const size_t off = 0x41c + (size_t)(index & 0xffu) * 2u;
@@ -375,6 +409,7 @@ uint32_t indexed_word_table_lookup(uint32_t index, const void* table)
     return 0u;
 }
 
+// FUNCTION: LEGORR 0x00482780
 uint32_t indexed_record_flag6c_bit0_get(const void* record, int index)
 {
     const char* base = (const char*)rec_ptr(record, 0x08);
@@ -385,6 +420,7 @@ uint32_t indexed_record_flag6c_bit0_get(const void* record, int index)
     return rec_dword(base + off, 0) & 1u;
 }
 
+// FUNCTION: LEGORR 0x00483400
 void* indexed_record_data_address_get(const void* record, int index)
 {
     char* base = (char*)rec_ptr(record, 0x08);
@@ -394,6 +430,7 @@ void* indexed_record_data_address_get(const void* record, int index)
     return (void*)(base + (size_t)((size_t)index * 0x70u + 0x10u));
 }
 
+// FUNCTION: LEGORR 0x00408e10
 int count_matching_coordinates_in_list(const void* manager,
                                        int32_t coord_x, int32_t coord_y)
 {
@@ -415,6 +452,7 @@ int count_matching_coordinates_in_list(const void* manager,
 
 /* AviPlayerReadyGet (FUN_0047ed80, findings 185/414): the readiness
  * byte at +0x99 (byte-safe — the corpus reads it as a raw byte). */
+// FUNCTION: LEGORR 0x0047ed80
 uint32_t avi_player_ready_get(const void* movie)
 {
     if (movie != NULL) {
@@ -427,6 +465,7 @@ uint32_t avi_player_ready_get(const void* movie)
 
 /* GameFileSystemTypeGet (FUN_0047fe20, findings 234/404): the handle's
  * leading type dword. */
+// FUNCTION: LEGORR 0x0047fe20
 uint32_t game_file_system_type_get(const void* handle)
 {
     return rec_dword(handle, 0);
@@ -434,6 +473,7 @@ uint32_t game_file_system_type_get(const void* handle)
 
 /* IndexedRecordTransformCopyIn (FUN_00483240, findings 372/431): the
  * inline-block copy into the indexed record's data slot. */
+// FUNCTION: LEGORR 0x00483240
 uint32_t indexed_record_transform_copy_in(void* record, int index,
                                           const void* source)
 {
@@ -446,6 +486,7 @@ uint32_t indexed_record_transform_copy_in(void* record, int index,
 
 /* --- grid-descriptor coordinate leaves (see record.hpp) ------------------ */
 
+// FUNCTION: LEGORR 0x0044f700
 int world_to_terrain_cell_bounds_check(const void* map, float world_x,
                                        float world_y, int* cell_x,
                                        int* cell_y, float* subcell)
@@ -483,6 +524,7 @@ int world_to_terrain_cell_bounds_check(const void* map, float world_x,
     return 1;
 }
 
+// FUNCTION: LEGORR 0x0044f810
 void grid_coordinate_clamp_and_store(const void* map, float world_x,
                                      float world_y, int* cell_x, int* cell_y)
 {
@@ -510,6 +552,7 @@ void grid_coordinate_clamp_and_store(const void* map, float world_x,
     }
 }
 
+// FUNCTION: LEGORR 0x0044f870
 uint32_t terrain_world_point_to_cell(const void* map, const float* point,
                                      float* cell_out, float* offset_out)
 {
@@ -538,6 +581,7 @@ uint32_t terrain_world_point_to_cell(const void* map, const float* point,
 
 /* --- indexed flag slot and resource-handle writers (see record.hpp) ------ */
 
+// FUNCTION: LEGORR 0x0044e6b0
 void indexed_flag_value_set_one(void* record, uint32_t index)
 {
     if (record == NULL) {
@@ -548,6 +592,7 @@ void indexed_flag_value_set_one(void* record, uint32_t index)
     __builtin_memcpy((char*)record + off, &one, sizeof(one));
 }
 
+// FUNCTION: LEGORR 0x0044f220
 void scene_object_resource_handle_set(void* object, uint32_t handle)
 {
     if (object == NULL) {
@@ -557,6 +602,7 @@ void scene_object_resource_handle_set(void* object, uint32_t handle)
 }
 
 /* --- entity record-field leaves (see record.hpp) --------------------------- */
+// FUNCTION: LEGORR 0x00435ef4
 void record_fields_4_and_14_set(void* record, uint32_t value_a,
                                 uint32_t value_b)
 {
@@ -567,6 +613,7 @@ void record_fields_4_and_14_set(void* record, uint32_t value_a,
     __builtin_memcpy((char*)record + 0x14, &value_b, sizeof(value_b));
 }
 
+// FUNCTION: LEGORR 0x00435f32
 void entity_fields_a0_a4_store_a8_clear(void* record, uint32_t value_a,
                                         uint32_t value_b)
 {
@@ -579,6 +626,7 @@ void entity_fields_a0_a4_store_a8_clear(void* record, uint32_t value_a,
     __builtin_memcpy((char*)record + 0xa8, &zero, sizeof(zero));
 }
 
+// FUNCTION: LEGORR 0x00435d91
 void entity_b8_bit3_set_or_clear(void* record, int set)
 {
     if (record == NULL) {
@@ -593,6 +641,7 @@ void entity_b8_bit3_set_or_clear(void* record, int set)
 }
 
 /* --- the record-field write band (see record.hpp) --------------------------- */
+// FUNCTION: LEGORR 0x00462ab0
 void record_field18_set(void* record, uint32_t value)
 {
     if (record == NULL) {
@@ -601,6 +650,7 @@ void record_field18_set(void* record, uint32_t value)
     __builtin_memcpy((char*)record + 0x18, &value, sizeof(value));
 }
 
+// FUNCTION: LEGORR 0x00462ac0
 void record_flags_24_or(void* record, uint32_t flags)
 {
     if (record == NULL) {
@@ -612,6 +662,7 @@ void record_flags_24_or(void* record, uint32_t flags)
     __builtin_memcpy((char*)record + 0x24, &f, sizeof(f));
 }
 
+// FUNCTION: LEGORR 0x0045d8a0
 void object_field14_set(void* record, uint32_t value)
 {
     if (record == NULL) {
@@ -620,6 +671,7 @@ void object_field14_set(void* record, uint32_t value)
     __builtin_memcpy((char*)record + 0x14, &value, sizeof(value));
 }
 
+// FUNCTION: LEGORR 0x00451c30
 void linked_record_field4_clear(void* record)
 {
     if (record == NULL) {
@@ -636,6 +688,7 @@ void linked_record_field4_clear(void* record)
 }
 
 /* CopyTwoDwordPairToOutputs (FUN_00439930) — see record.hpp. */
+// FUNCTION: LEGORR 0x00439930
 void copy_two_dword_pair_to_outputs(const void* record, uint32_t* out_a,
                                     uint32_t* out_b)
 {
@@ -646,6 +699,7 @@ void copy_two_dword_pair_to_outputs(const void* record, uint32_t* out_a,
     __builtin_memcpy(out_b, (const char*)record + 4, 4);
 }
 
+// FUNCTION: LEGORR 0x00473da0
 void scene_object_owner_set(void* scene_object, uint32_t owner)
 {
     if (scene_object == NULL) {
@@ -655,6 +709,7 @@ void scene_object_owner_set(void* scene_object, uint32_t owner)
 }
 
 /* --- the record primitive band (see record.hpp) ----------------------------- */
+// FUNCTION: LEGORR 0x00482350
 void indexed_record_field64_set(void* record, int index, uint32_t value)
 {
     void* base = NULL;
@@ -669,6 +724,7 @@ void indexed_record_field64_set(void* record, int index, uint32_t value)
                      &value, sizeof(value));
 }
 
+// FUNCTION: LEGORR 0x0040ff70
 void object_vector3_set(void* object_block, float x, float y, float z)
 {
     void* base = NULL;
@@ -684,6 +740,7 @@ void object_vector3_set(void* object_block, float x, float y, float z)
     __builtin_memcpy((char*)base + 0x44, &z, sizeof(z));
 }
 
+// FUNCTION: LEGORR 0x004851b0
 void float_pair_at_offset4_set_from_ints(void* record, int x, int y)
 {
     if (record == NULL) {
@@ -695,6 +752,7 @@ void float_pair_at_offset4_set_from_ints(void* record, int x, int y)
     __builtin_memcpy((char*)record + 0x08, &fy, sizeof(fy));
 }
 
+// FUNCTION: LEGORR 0x004851d0
 void float_pair_at_offsetc_set_from_uints(void* record, uint32_t x,
                                           uint32_t y)
 {
@@ -707,6 +765,7 @@ void float_pair_at_offsetc_set_from_uints(void* record, uint32_t x,
     __builtin_memcpy((char*)record + 0x10, &fy, sizeof(fy));
 }
 
+// FUNCTION: LEGORR 0x00485a00
 void object_state_pair_get(const void* record, uint32_t* out_a,
                            uint32_t* out_b)
 {
@@ -757,6 +816,7 @@ void scene_visibility_last_call(void** out_object, int* out_flag)
 static uint32_t s_overlay_word;  /* DAT_00552180 role */
 static uint32_t s_overlay_cache; /* DAT_0055218c role */
 
+// FUNCTION: LEGORR 0x004634b0
 void graphics_overlay_visibility_set(uint32_t flag)
 {
     if (s_overlay_cache != flag) {
@@ -775,12 +835,14 @@ void graphics_overlay_word_set(uint32_t handle_word)
 uint32_t graphics_overlay_word_peek(void) { return s_overlay_word; }
 
 /* SurfaceVisibilitySet (FUN_00464720) — record +0 handle through the leaf. */
+// FUNCTION: LEGORR 0x00464720
 void surface_visibility_set(const void* record, uint32_t flag)
 {
     scene_visibility_hook_call(rec_ptr(record, 0x00), (int)flag);
 }
 
 /* AnimationObjectVisibilitySet (FUN_00406c90) — animation record +4. */
+// FUNCTION: LEGORR 0x00406c90
 void animation_object_visibility_set(const void* anim, uint32_t flag)
 {
     scene_visibility_hook_call(rec_ptr(anim, 0x04), (int)flag);
@@ -789,6 +851,7 @@ void animation_object_visibility_set(const void* anim, uint32_t flag)
 /* SceneObjectPairApplyMode (FUN_00408670) — the +4 object, then the +0x7c
  * partner when nonzero. Deviation: the partner test strides a dword in the
  * corpus; the port's widened slot answers through the pointer. */
+// FUNCTION: LEGORR 0x00408670
 void scene_object_pair_apply_mode(const void* record, uint32_t flag)
 {
     scene_visibility_hook_call(rec_ptr(record, 0x04), (int)flag);
@@ -812,6 +875,7 @@ void scene_object_pair_apply_mode(const void* record, uint32_t flag)
  * the count is read once (the leaf never touches the record) and NULL
  * records are guarded. The flag rides the leaf raw, unlike the overlay's
  * folded call. */
+// FUNCTION: LEGORR 0x0046d2c0
 void scene_resource_visibility_set(void* record, uint32_t flag)
 {
     if (record == NULL) {
@@ -847,6 +911,7 @@ static void pair_handle_set_pose(void* h, float x, float y)
 /* SceneObjectPairSetRenderParameters (FUN_004086c0): the pose dispatch's
  * argument block (x, y, 0 / 0, 0, -1) reads as position + constant facing;
  * the partner only when the +0x7c slot is non-NULL. */
+// FUNCTION: LEGORR 0x004086c0
 void scene_object_pair_set_render_parameters(void* pair, float x, float y)
 {
     pair_handle_set_pose(rec_ptr(pair, 0x04), x, y);
@@ -860,6 +925,7 @@ void scene_object_pair_set_render_parameters(void* pair, float x, float y)
  * the (x, y) pair with its third argument — the corpus consumes the probe's
  * undefined float return as the camera z; the port pins it to zero (the
  * sole call-site probe, the ported height adapter, answers void). */
+// FUNCTION: LEGORR 0x00408710
 void scene_object_pair_set_callback_scalar(void* pair, float x, float y,
                                            SceneScalarProbe probe, void* arg)
 {
@@ -876,6 +942,7 @@ void scene_object_pair_set_callback_scalar(void* pair, float x, float y,
 
 /* AnimationObjectVisibilityGet (FUN_004086a0) — the +4 object's flag bit 3
  * through the ported getter. */
+// FUNCTION: LEGORR 0x004086a0
 uint32_t animation_object_visibility_get(const void* anim)
 {
     return scene_object_flag_bit3_get(rec_ptr(anim, 0x04));
@@ -883,6 +950,7 @@ uint32_t animation_object_visibility_get(const void* anim)
 
 /* SceneAssignEntityOwner (FUN_00408380) — owner store on the +4 object
  * through the ported owner set. */
+// FUNCTION: LEGORR 0x00408380
 void scene_assign_entity_owner(const void* scene, uint32_t owner)
 {
     scene_object_owner_set(rec_ptr(scene, 0x04), owner);
@@ -891,6 +959,7 @@ void scene_assign_entity_owner(const void* scene, uint32_t owner)
 /* SceneCurrentObjectSet (FUN_00477240) — see record.hpp. The store lands
  * on the record's +0x14 slot; Deviation: the corpus strides a dword, the
  * port writes the module's widened pointer slot. */
+// FUNCTION: LEGORR 0x00477240
 void scene_current_object_set(void* record, void* object)
 {
     if (record != NULL) {
@@ -899,6 +968,7 @@ void scene_current_object_set(void* record, void* object)
 }
 
 /* SixResourceSlotsSetState (FUN_0046cfc0) — see record.hpp. */
+// FUNCTION: LEGORR 0x0046cfc0
 void six_resource_slots_set_state(const void* record, uint32_t flag)
 {
     for (int i = 0; i < 6; ++i) {
@@ -910,6 +980,7 @@ void six_resource_slots_set_state(const void* record, uint32_t flag)
 }
 
 /* UIRecordCallbackForward (FUN_0045a630) — see record.hpp. */
+// FUNCTION: LEGORR 0x0045a630
 void ui_record_callback_forward(const void* const* ui_record,
                                 uint32_t* out_a, uint32_t* out_b)
 {
@@ -921,6 +992,7 @@ void ui_record_callback_forward(const void* const* ui_record,
 }
 
 /* RecordFlagBitTest (FUN_0046cf40) — see record.hpp. */
+// FUNCTION: LEGORR 0x0046cf40
 uint32_t record_flag_bit_test(const void* record, uint32_t bit_index,
                               int reject_masked)
 {
@@ -934,6 +1006,7 @@ uint32_t record_flag_bit_test(const void* record, uint32_t bit_index,
 /* ObjectPoolListsFreeAll (FUN_00456c60) — see record.hpp. The corpus reads
  * each head through the bounds-checked getter and strides the dword slot
  * blind for the clear; the port reads/clears the native link slot. */
+// FUNCTION: LEGORR 0x00456c60
 void object_pool_lists_free_all(void* pools)
 {
     if (pools == NULL) {
@@ -969,6 +1042,7 @@ static void record_window_put(void* rec, int field, const void* src)
 }
 
 /* BoundedFloatRecordCreate (FUN_00410b90) — see record.hpp. */
+// FUNCTION: LEGORR 0x00410b90
 void* bounded_float_record_create(int kind, float min_v, float max_v,
                                   uint32_t f3, uint32_t f4, uint32_t f5,
                                   uint32_t f6)
@@ -993,6 +1067,7 @@ void* bounded_float_record_create(int kind, float min_v, float max_v,
 
 /* MenuItemNumericRangeRecordAllocate (FUN_00410bf0) — see record.hpp.
  * Field order follows the corpus stores: bounds land late, payload first. */
+// FUNCTION: LEGORR 0x00410bf0
 void* menu_item_numeric_range_record_allocate(int kind, int min_v, int max_v,
                                               uint32_t f3, uint32_t f4,
                                               uint32_t f5, uint32_t f6,
@@ -1032,6 +1107,7 @@ void* menu_item_numeric_range_record_allocate(int kind, int min_v, int max_v,
  * The corpus re-reads the node's next link after the recursion — a freed
  * deeper node can leave a different successor in the slot — so the port
  * re-reads before the unlink. */
+// FUNCTION: LEGORR 0x0047b2e0
 int nested_record_list_remove_by_key_recursive(int key, void* node)
 {
     if (node == NULL) {
@@ -1077,6 +1153,7 @@ static int keyed_sweep(int key, void* node)
     return node_key == (uint32_t)key;
 }
 
+// FUNCTION: LEGORR 0x0047b2a0
 void keyed_resource_entry_remove(int key)
 {
     void* head = sound_buffer_association_head_peek();
@@ -1113,6 +1190,7 @@ static char* mesh_block(const void* record, int block)
     return table + (size_t)block * 0x70;
 }
 
+// FUNCTION: LEGORR 0x00482370
 void mesh_vertices_scale_apply(void* record, float scale_x, float scale_y,
                                float scale_z)
 {
@@ -1134,6 +1212,7 @@ void mesh_vertices_scale_apply(void* record, float scale_x, float scale_y,
     }
 }
 
+// FUNCTION: LEGORR 0x00482470
 void indexed_geometry_data_copy_to_output(void* record, int block,
                                           int first_vertex, int count,
                                           void* output)
@@ -1158,6 +1237,7 @@ void indexed_geometry_data_copy_to_output(void* record, int block,
 }
 
 /* IndexedRecordEntryRead (FUN_004821a0) — see record.hpp. */
+// FUNCTION: LEGORR 0x004821a0
 void indexed_record_entry_read(void* record, int block, uint32_t* field_out,
                                uint32_t* kind_out, uint32_t* count_out,
                                uint32_t* indices_out)
@@ -1190,6 +1270,7 @@ void indexed_record_entry_read(void* record, int block, uint32_t* field_out,
 }
 
 /* TerrainCellQuadVerticesWrite (FUN_004823e0) — see record.hpp. */
+// FUNCTION: LEGORR 0x004823e0
 void terrain_cell_quad_vertices_write(void* record, int block,
                                       int first_vertex, int count,
                                       const void* source)
@@ -1213,6 +1294,7 @@ void terrain_cell_quad_vertices_write(void* record, int block,
     } while (--n != 0);
 }
 
+// FUNCTION: LEGORR 0x00482500
 void instance_quad_vertex_data_fill(void* record, int block,
                                     int first_vertex, int count,
                                     const float* positions,
@@ -1248,6 +1330,7 @@ void instance_quad_vertex_data_fill(void* record, int block,
     } while (--n != 0);
 }
 
+// FUNCTION: LEGORR 0x00482620
 void mesh_segment_vertex_fill(void* record, int block, int first_vertex,
                               int count, const float* positions,
                               const uint32_t triple[3],
@@ -1277,6 +1360,7 @@ void mesh_segment_vertex_fill(void* record, int block, int first_vertex,
     } while (--n != 0);
 }
 
+// FUNCTION: LEGORR 0x004826c0
 void mesh_vertex_record_fill(void* record, int block, int first_vertex,
                              int count, const float* positions,
                              const void* const* triples,
@@ -1310,6 +1394,7 @@ void mesh_vertex_record_fill(void* record, int block, int first_vertex,
     } while (--n != 0);
 }
 
+// FUNCTION: LEGORR 0x00483170
 uint32_t indexed_record_transform_initialize(void* record, int index)
 {
     uint32_t block[20];
@@ -1340,6 +1425,7 @@ static float channel_clamp(float v)
     return v; /* corpus shape: a NaN channel rides through untouched */
 }
 
+// FUNCTION: LEGORR 0x00483270
 uint32_t render_object_color_vector_set(void* record, int block, float red,
                                         float green, float blue, int slot)
 {
@@ -1375,6 +1461,7 @@ uint32_t render_object_color_vector_set(void* record, int block, float red,
     return 1u; /* the corpus leaves every other slot untouched */
 }
 
+// FUNCTION: LEGORR 0x00483420
 uint32_t screen_effect_item_opacity_set(void* record, int block,
                                         float opacity, int mode)
 {
@@ -1423,6 +1510,7 @@ uint32_t screen_effect_item_opacity_set(void* record, int block,
  * corpus callers are the config-record parse loop and the simulation flush;
  * the fold itself is a pure record-slot scale (the corpus's x87 double fold
  * lands as the same double arithmetic here). */
+// FUNCTION: LEGORR 0x004082e0
 void scene_object_scalar_adjust_by_direction(void* record, int direction)
 {
     if (record == NULL) {

@@ -94,6 +94,7 @@ static void obj_split_two(const char* s, long* a, long* b)
 }
 
 /* Corpus FUN_00458580 — crystal/ore objectives. */
+// FUNCTION: LEGORR 0x00458580
 static void obj_set_resources(LevelState* s, long crystal, long ore)
 {
     if (crystal != 0) {
@@ -107,6 +108,7 @@ static void obj_set_resources(LevelState* s, long crystal, long ore)
 }
 
 /* Corpus FUN_004585c0 — block objective (two targets). */
+// FUNCTION: LEGORR 0x004585c0
 static void obj_set_block(LevelState* s, long a, long b)
 {
     s->objective |= LVL_OBJECTIVE_BLOCK;
@@ -115,6 +117,7 @@ static void obj_set_block(LevelState* s, long a, long b)
 }
 
 /* Corpus FUN_004585f0 — timer objective (ticks = seconds*25). */
+// FUNCTION: LEGORR 0x004585f0
 static void obj_set_timer(LevelState* s, float ticks, int hit_time_fail)
 {
     s->objective |= LVL_OBJECTIVE_TIMER;
@@ -125,6 +128,7 @@ static void obj_set_timer(LevelState* s, float ticks, int hit_time_fail)
 }
 
 /* Corpus FUN_00458620 — construction objective. */
+// FUNCTION: LEGORR 0x00458620
 static void obj_set_construction(LevelState* s, long a, long b)
 {
     s->objective |= LVL_OBJECTIVE_CONSTRUCTION;
@@ -132,6 +136,7 @@ static void obj_set_construction(LevelState* s, long a, long b)
     level_set_int(s, OBJ_OFF_CONSTRUCT_B, (int32_t)b);
 }
 
+// FUNCTION: LEGORR 0x00457d40
 void objective_load(BlockFile* cfg, const char* level_name, LevelState* s)
 {
     if (cfg == NULL || s == NULL) {
@@ -218,6 +223,7 @@ void objective_load(BlockFile* cfg, const char* level_name, LevelState* s)
     }
 }
 
+// FUNCTION: LEGORR 0x00459050
 int objective_check(LevelState* s, int* mark, float dt)
 {
     if (s == NULL) {
@@ -252,6 +258,7 @@ int objective_check(LevelState* s, int* mark, float dt)
     return 1;
 }
 
+// FUNCTION: LEGORR 0x00458670
 void objective_announce(LevelState* s, int who)
 {
     if (s == NULL) {
@@ -323,6 +330,7 @@ int objective_advisor_shown(const LevelState* s)
     return (s->objective & suppress) == 0 ? 1 : 0;
 }
 
+// FUNCTION: LEGORR 0x00458be0
 int objective_tick(LevelState* s, float dt)
 {
     if (s == NULL) {
@@ -348,6 +356,7 @@ int objective_tick(LevelState* s, float dt)
     return 1;
 }
 
+// FUNCTION: LEGORR 0x00454b70
 int objective_voice_alias_raise_commit(LevelState* s)
 {
     objective_announce(s, 1);
@@ -355,6 +364,7 @@ int objective_voice_alias_raise_commit(LevelState* s)
 }
 
 /* ObjectiveVoiceAliasRaiseGateBit27 (FUN_00454b80) — see objective.hpp. */
+// FUNCTION: LEGORR 0x00454b80
 int objective_voice_alias_raise_gate_bit27(LevelState* s)
 {
     if ((media_cd_flags_get() & 0x8000000u) == 0u) {
@@ -371,6 +381,7 @@ int objective_voice_alias_raise_gate_bit27(LevelState* s)
  * read-out pair +0x0c/+0x10, flag word +0x14. */
 static uint32_t s_adv_actions[ADV_ACTION_ROWS][9];
 
+// FUNCTION: LEGORR 0x00401840
 void advisor_action_position_and_mode_set(int row, int mode,
                                           uint32_t dword_a, uint32_t dword_b)
 {
@@ -388,6 +399,7 @@ void advisor_action_position_and_mode_set(int row, int mode,
     }
 }
 
+// FUNCTION: LEGORR 0x00401890
 void advisor_action_position_get(int row, uint32_t* dword_c, uint32_t* dword_d)
 {
     if (row < 0 || row >= ADV_ACTION_ROWS) {
@@ -419,6 +431,7 @@ void objective_advisor_tokens_install(const uint32_t* table, uint32_t count)
     s_adv_token_count = count;
 }
 
+// FUNCTION: LEGORR 0x00453200
 int objective_advisor_token_lookup(uint32_t index)
 {
     if (index < s_adv_token_count && s_adv_tokens != NULL) {

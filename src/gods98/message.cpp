@@ -95,11 +95,13 @@ uint32_t message_config_flags(int id)
 }
 void message_set_system_state(uint32_t v)     { s_system_state = v; }
 
+// FUNCTION: LEGORR 0x00456240
 uint32_t system_state_flags_get(void)
 {
     return s_system_state;
 }
 
+// FUNCTION: LEGORR 0x00456550
 uint32_t system_state_flags_set(const uint32_t* value)
 {
     if (value == NULL) {
@@ -132,6 +134,7 @@ static int msg_streql(const char* a, const char* b)
     }
 }
 
+// FUNCTION: LEGORR 0x00434c10
 void message_load_infomessages(BlockFile* cfg)
 {
     if (cfg == NULL) {
@@ -184,6 +187,7 @@ void message_load_infomessages(BlockFile* cfg)
 }
 
 /* Dedupe-with-live-callback (corpus MessagePreCheck FUN_004199f0). */
+// FUNCTION: LEGORR 0x004199f0
 static int message_pre_check(int id)
 {
     if (id == 10 || id == 11 || id == 12 || id == 38) {
@@ -225,6 +229,7 @@ static int msg_strcasecmp(const char* a, const char* b)
     }
 }
 
+// FUNCTION: LEGORR 0x004193e0
 int incident_message_config_lookup(const char* name, int* out_id)
 {
     if (name == NULL || out_id == NULL) {
@@ -243,6 +248,7 @@ int incident_message_config_lookup(const char* name, int* out_id)
 /* InfoMessageQueueFindId (FUN_00419b20): the queue's index-by-id walk.
  * The corpus strides the 5-dword queue entries against the count word;
  * the port rides its parallel-array model (documented deviation). */
+// FUNCTION: LEGORR 0x00419b20
 int message_queue_find_id(int id)
 {
     for (int i = 0; i < s_queue_count; ++i) {
@@ -253,6 +259,7 @@ int message_queue_find_id(int id)
     return -1;
 }
 
+// FUNCTION: LEGORR 0x00419b80
 void message_dispatch(int id, uint32_t p2, uint32_t p3, const void* p4)
 {
     (void)p2; (void)p3; (void)p4;
@@ -319,6 +326,7 @@ void message_update(float dt)
 
 /* corpus FUN_0041a2c0: the ticker walks the cooldown array (stride 5 in the
  * corpus block; per-id here) and decrements toward zero. */
+// FUNCTION: LEGORR 0x0041a2c0
 void message_cooldown_tick(float dt)
 {
     for (int i = 0; i < MESSAGE_MAX_ID; ++i) {
@@ -346,6 +354,7 @@ float message_cooldown(int id)
     return s_cfg[id].cooldown;
 }
 /* --- corpus flag leaves (see message.hpp) -------------------------------- */
+// FUNCTION: LEGORR 0x00419450
 void selection_flag10_set_clear(int set)
 {
     if (set != 0) {
@@ -355,6 +364,7 @@ void selection_flag10_set_clear(int set)
     }
 }
 
+// FUNCTION: LEGORR 0x00419470
 void info_message_always_play_flag_set(int id, int set)
 {
     if (id < 0 || id >= MESSAGE_MAX_ID) {
@@ -368,6 +378,7 @@ void info_message_always_play_flag_set(int id, int set)
     }
 }
 
+// FUNCTION: LEGORR 0x004194f0
 void indexed_selection_flag_20000_set_clear(int id, int set)
 {
     if (id < 0 || id >= MESSAGE_MAX_ID) {
@@ -390,6 +401,7 @@ static uint32_t s_msg_catalog[MSG_DAT_WINDOW]; /* DAT_004dc6fc stride-0x14 block
 static uint32_t s_msg_secondary[MSG_DAT_WINDOW]; /* DAT_004dc700 stride-0x14 block */
 static uint32_t s_incident_state;              /* DAT_004dcd58 */
 
+// FUNCTION: LEGORR 0x00419420
 uint32_t incident_message_text_catalog_get(int id)
 {
     if (id < 0 || id >= MSG_DAT_WINDOW) {
@@ -398,6 +410,7 @@ uint32_t incident_message_text_catalog_get(int id)
     return s_msg_catalog[id];
 }
 
+// FUNCTION: LEGORR 0x00419680
 void info_message_secondary_sound_set(int id, uint32_t value)
 {
     if (id >= 0 && id < MSG_DAT_WINDOW) {
@@ -405,6 +418,7 @@ void info_message_secondary_sound_set(int id, uint32_t value)
     }
 }
 
+// FUNCTION: LEGORR 0x0041a2f0
 uint32_t incident_message_state_get(void)
 {
     return s_incident_state;
@@ -414,6 +428,7 @@ uint32_t incident_message_state_get(void)
  * corpus's DAT_004a673c presence word). */
 static uint32_t s_deferred_callback_presence;
 
+// FUNCTION: LEGORR 0x00453900
 void deferred_callback_set(uint32_t value)
 {
     s_deferred_callback_presence = value;
@@ -425,6 +440,7 @@ uint32_t deferred_callback_peek(void)
 }
 
 /* IncidentMessageFlagSet (FUN_00419ae0) — s_flags bit 4. */
+// FUNCTION: LEGORR 0x00419ae0
 void incident_message_flag_set(int value)
 {
     if (value != 0) {
@@ -435,6 +451,7 @@ void incident_message_flag_set(int value)
 }
 
 /* HasActiveResource (FUN_004119d0) — see message.hpp. */
+// FUNCTION: LEGORR 0x004119d0
 int has_active_resource(const void* record)
 {
     uint32_t handle = 0u;
@@ -461,6 +478,7 @@ void indexed_list_install(int list, void* head, int count)
     }
 }
 
+// FUNCTION: LEGORR 0x00419780
 void* indexed_linked_list_entry_get(int list, int index)
 {
     if (list < 0 || list >= IDX_LIST_SLOTS) {

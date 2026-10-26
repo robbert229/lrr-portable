@@ -1,7 +1,13 @@
 /* Minimal version resource so the stub exe carries sane file properties.
  * The shipped binary's .rsrc is only 3 KB (finding 01); a full icon/splash
  * resource set is not needed for the smoke test. */
-#include <windows.h>
+/* Keep this RC self-contained: windows.h pulls in unrelated SDK headers that
+ * the classic resource scanner does not need to inspect. Values match the
+ * MSVC 5.0 winver.h definitions. */
+#define VS_VERSION_INFO 1
+#define VOS__WINDOWS32  0x00000004L
+#define VFT_APP         0x00000001L
+#define VFT2_UNKNOWN    0x00000000L
 
 VS_VERSION_INFO VERSIONINFO
  FILEVERSION     0,1,0,0

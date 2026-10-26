@@ -37,9 +37,6 @@
 #include "util.hpp"
 #include "select.hpp"
 #include "gods98/view.hpp"
-#include "gods98/string.hpp"
-#include "gods98/resource.hpp"
-#include "entity.hpp"
 
 static int s_lower(int c) { return (c >= 'A' && c <= 'Z') ? c + 0x20 : c; }
 static int s_toupper(int c) { return (c >= 'a' && c <= 'z') ? c - 0x20 : c; }
@@ -151,6 +148,7 @@ static int fe_cfg_int(BlockFile* cfg, const char* level, const char* key,
 
 /* --- the StartLevel / TutorialStartLevel + NextLevel chains -------------- */
 
+// FUNCTION: LEGORR 0x004154b0
 static int fe_build_chain(BlockFile* cfg, const char* start_key,
                           char names[][FE_LEVEL_NAME_MAX],
                           char labels[][FE_NAME_MAX], int max)
@@ -186,6 +184,7 @@ static int fe_build_chain(BlockFile* cfg, const char* start_key,
 
 /* --- Item%i value grammar ------------------------------------------------- */
 
+// FUNCTION: LEGORR 0x00413e60
 static int fe_item_kind(const char* tok)
 {
     if (s_strcaseeq(tok, "cycle"))       return FE_ITEM_CYCLE;
@@ -503,7 +502,7 @@ static void fe_parse_submenu(FrontEnd* fe, FeMenu* m, const char* name,
     snprintf(buf, sizeof(buf), "%s PlayRandom", pre);
     sub->play_random = block_get_bool(fe->cfg, buf) == 1;
     sub->overlay_count = 0;
-    for (int j = 1; j <= FE_OVERLAYS_MAX && sub->overlay_count < FE_OVERLAYS_MAX;
+    for (j = 1; j <= FE_OVERLAYS_MAX && sub->overlay_count < FE_OVERLAYS_MAX;
          ++j) {
         snprintf(buf, sizeof(buf), "%s !Overlay%d", pre, j);
         const char* ov = block_get_strptr(fe->cfg, buf);
@@ -545,6 +544,9 @@ static void fe_parse_submenu(FrontEnd* fe, FeMenu* m, const char* name,
     }
 }
 
+/* Per-menu config constructor (the surrounding frontend_build composes the
+ * main/save/pause/options menus; submenu/item parsing is delegated below). */
+// FUNCTION: LEGORR 0x004140c0
 static int fe_parse_menu(FrontEnd* fe, int mi, const char* name)
 {
     FeMenu* m = &fe->menus[mi];
@@ -797,7 +799,7 @@ int fe_record_for_level(const FrontEnd* fe, const char* level)
             return i;
         }
     }
-    for (int i = 0; i < fe->campaign_n; i++) {
+    for (i = 0; i < fe->campaign_n; i++) {
         if (s_strcaseeq(level, fe->campaign[i])) {
             return fe->tutorial_n + i;
         }
@@ -822,6 +824,7 @@ int fe_level_for_record(const FrontEnd* fe, int rec, char* out, size_t sz)
     return 0;
 }
 
+// FUNCTION: LEGORR 0x00416d00
 int frontend_enabled(BlockFile* cfg)
 {    if (cfg == NULL) {
         return 0;
@@ -830,6 +833,11 @@ int frontend_enabled(BlockFile* cfg)
     return block_get_bool(cfg, "Lego* Main FrontEnd") == 1;
 }
 
+/* Partial SaveMenuBuild (FUN_00415a10): populate the save/load menu lists
+ * with runtime slot rows. The corpus also resolves config keys, initializes
+ * slot summaries, and registers level/tutorial callbacks; those surrounding
+ * responsibilities are not implemented by this helper. */
+// FUNCTION: LEGORR 0x00415a10
 int frontend_build_slots(FrontEnd* fe, const FeSlot* slots, int n)
 {
     if (fe == NULL || slots == NULL || n <= 0) {
@@ -921,7 +929,59 @@ static int fe_scroll_measure(const FeSubmenu* sub);
 static void fe_item_pos(const FrontEnd* fe, const FeItem* it, int i,
                         int w, const TextureSurface* measure, int* x, int* y);
 
+/* Partial MenuSliderPointerHandler (FUN_00411870): the base slider-track
+ * drag branch routed by MenuInputTick. The alternate arrow regions in the
+ * original handler are not implemented by this port. */
+// FUNCTION: LEGORR 0x00411870
+static void fe_slider_pointer_handle(FrontEnd* fe, FeSubmenu* sub,
+                                     const FeInput* in,
+                                     const TextureSurface* measure)
+{
+    if (!in->mdown || fe->sel >= sub->item_count) {
+        return;
+    }
+    FeItem* dit = &sub->items[fe->sel];
+    if (dit->kind != FE_ITEM_SLIDER && dit->kind != FE_ITEM_REALSLIDER) {
+        return;
+    }
+    int bx = 0, by = 0;
+    fe_item_pos(fe, dit, fe->sel, 0, measure, &bx, &by);
+    if (in->mouse_x < bx || in->mouse_x > bx + 100
+        || in->mouse_y < by || in->mouse_y > by + 20) {
+        return;
+    }
+    float f = (float)(in->mouse_x - bx) * 0.01f;
+    if (f < 0.0f) {
+        f = 0.0f;
+    }
+    if (f > 1.0f) {
+        f = 1.0f;
+    }
+    int v = (int)(f * (float)(dit->max - dit->min) + 0.5f);
+    if (v < dit->min) {
+        v = dit->min;
+    }
+    if (v > dit->max) {
+        v = dit->max;
+    }
+    if (v != dit->value) {
+        dit->value = v;
+        fe_options_write(fe, dit);
+        fe->option_changed = 1;
+    }
+}
+
 /* --- activation (Enter or a pointer click resolves to this) -------------- */
+
+/* Partial FrontEndSelectedAction (FUN_00416d70): resolve the selected
+ * campaign/tutorial picker row to its level key. Save-slot list resolution
+ * remains in the frame-loop load path. */
+// FUNCTION: LEGORR 0x00416d70
+static const char* fe_selected_level_action(const FrontEnd* fe)
+{
+    const FeItem* it = frontend_active_item(fe);
+    return it->level_start ? it->target : NULL;
+}
 
 static FeEvent fe_activate(FrontEnd* fe)
 {
@@ -937,8 +997,9 @@ static FeEvent fe_activate(FrontEnd* fe)
     }
 
     /* picker row: start the selected level */
-    if (it->level_start) {
-        snprintf(fe->pending_level, FE_LEVEL_NAME_MAX, "%s", it->target);
+    const char* level_action = fe_selected_level_action(fe);
+    if (level_action != NULL) {
+        snprintf(fe->pending_level, FE_LEVEL_NAME_MAX, "%s", level_action);
         frontend_close(fe);
         return FE_EVT_START_LEVEL;
     }
@@ -1124,35 +1185,7 @@ FeEvent frontend_tick(FrontEnd* fe, const FeInput* in,
          * keyboard path keeps; every shipped slider is min 0, and the port
          * clamps to [min,max] so a hypothetical min>0 row cannot sink below
          * its floor. */
-        if (in->mdown && fe->sel < sub->item_count) {
-            FeItem* dit = &sub->items[fe->sel];
-            if (dit->kind == FE_ITEM_SLIDER || dit->kind == FE_ITEM_REALSLIDER) {
-                int bx = 0, by = 0;
-                fe_item_pos(fe, dit, fe->sel, 0, measure, &bx, &by);
-                if (in->mouse_x >= bx && in->mouse_x <= bx + 100
-                    && in->mouse_y >= by && in->mouse_y <= by + 20) {
-                    float f = (float)(in->mouse_x - bx) * 0.01f;
-                    if (f < 0.0f) {
-                        f = 0.0f;
-                    }
-                    if (f > 1.0f) {
-                        f = 1.0f;
-                    }
-                    int v = (int)(f * (float)(dit->max - dit->min) + 0.5f);
-                    if (v < dit->min) {
-                        v = dit->min;
-                    }
-                    if (v > dit->max) {
-                        v = dit->max;
-                    }
-                    if (v != dit->value) {
-                        dit->value = v;
-                        fe_options_write(fe, dit);
-                        fe->option_changed = 1;
-                    }
-                }
-            }
-        }
+        fe_slider_pointer_handle(fe, sub, in, measure);
 
         if (in->click) {
             if (hit) {
@@ -1184,7 +1217,7 @@ FeEvent frontend_tick(FrontEnd* fe, const FeInput* in,
 
 const FeMenu* frontend_menu(const FrontEnd* fe, int menu)
 {
-    static const FeMenu s_empty = {};
+    static const FeMenu s_empty = { 0 };
     if (fe == NULL || menu < 0 || menu >= FE_MENU_COUNT) {
         return &s_empty;
     }
@@ -1193,7 +1226,7 @@ const FeMenu* frontend_menu(const FrontEnd* fe, int menu)
 
 const FeSubmenu* frontend_active_submenu(const FrontEnd* fe)
 {
-    static const FeSubmenu s_empty = {};
+    static const FeSubmenu s_empty = { 0 };
     if (fe == NULL || !fe->open || fe->menu < 0 || fe->menu >= FE_MENU_COUNT) {
         return &s_empty;
     }
@@ -1460,6 +1493,7 @@ static int fe_font_key_hit(uint32_t p, const uint32_t keys[2])
  * exactly this box (FUN_00479ee0's right-edge scan / per-glyph rect), which
  * keeps each face's background AND frame strips out while retaining the
  * glyph's dark outline when it is inside the box. */
+// FUNCTION: LEGORR 0x00479ee0
 static int fe_font_ink_box(const TextureSurface* f, int cw, int ch, int g,
                            const uint32_t keys[2], int* minx, int* miny,
                            int* maxx, int* maxy)
@@ -1530,6 +1564,24 @@ static void fe_blit_glyph(void* px, int pitch, int w, int h,
     }
 }
 
+/* Partial BitmapFontGlyphDrawAndMeasure (FUN_0047a470): combine the port's
+ * software glyph blit with the glyph advance calculation. The corpus uses
+ * its DirectDraw surface and stored float advances; this path clips RGBA
+ * pixels and derives the advance from the glyph's ink bounds. */
+// FUNCTION: LEGORR 0x0047a470
+static int fe_font_glyph_draw_and_measure(void* px, int pitch, int w, int h,
+                                          int x, int y,
+                                          const TextureSurface* f,
+                                          int cw, int ch, int g,
+                                          const uint32_t keys[2], int draw)
+{
+    int advance = fe_font_advance(f, cw, ch, g, keys);
+    if (draw != 0) {
+        fe_blit_glyph(px, pitch, w, h, x, y, f, cw, ch, g, keys);
+    }
+    return advance;
+}
+
 /* Draw `s` with a bitmap font at (x,y). `_` renders as a space, matching
  * the shipped menu labels. Returns the advance. */
 static int fe_draw_font_text(void* px, int pitch, int w, int h,
@@ -1550,11 +1602,11 @@ static int fe_draw_font_text(void* px, int pitch, int w, int h,
             cx += cw / 2;
             continue;
         }
-        int adv = fe_font_advance(f, cw, chh, g, keys);
+        int adv = fe_font_glyph_draw_and_measure(
+            px, pitch, w, h, cx, y, f, cw, chh, g, keys, 1);
         if (adv <= 0) {
             adv = (c == ' ') ? cw / 2 : cw;        /* blank cell fallback */
         }
-        fe_blit_glyph(px, pitch, w, h, cx, y, f, cw, chh, g, keys);
         cx += adv;
     }
     return cx - x;
@@ -1589,6 +1641,7 @@ static int fe_font_text_width(const char* s, const TextureSurface* f)
  * Back buttons are e.g. x=-314 on Position 320:200 -> left edge). Picker
  * rows carry absolute FrontEndX/Y scatter coords (their submenu Position is
  * 0:0). */
+// FUNCTION: LEGORR 0x00412c00
 static void fe_item_pos(const FrontEnd* fe, const FeItem* it, int i,
                         int w, const TextureSurface* measure, int* x, int* y)
 {
@@ -1755,7 +1808,7 @@ void frontend_render(FrontEnd* fe, const TextureSurface* hi_font,
         }
     }
 
-    for (int i = 0; i < sub->item_count; i++) {
+    for (i = 0; i < sub->item_count; i++) {
         const FeItem* it = &sub->items[i];
         int x, y;
         fe_item_pos(fe, it, i, w, hi_font, &x, &y);
@@ -1903,11 +1956,13 @@ void frontend_render_credits(const TextureSurface* font,
 /* --- current selection context (see frontend.hpp) -------------------------- */
 static void* s_current_selection_context;
 
+// FUNCTION: LEGORR 0x00417fe0
 void* current_selection_context_get(void)
 {
     return s_current_selection_context;
 }
 
+// FUNCTION: LEGORR 0x00417ff0
 void current_selection_context_set(void* context)
 {
     s_current_selection_context = context;
@@ -1929,11 +1984,13 @@ static uint32_t s_sel_handles_a[SEL_HANDLE_ENTRIES * SEL_HANDLE_STRIDE];
 static uint32_t s_sel_handles_b[SEL_HANDLE_ENTRIES * SEL_HANDLE_STRIDE];
 static uint32_t s_sel_handle_extra;             /* DAT_004db934 */
 
+// FUNCTION: LEGORR 0x004181a0
 void selection_state_flag_clear_bit0(void)
 {
     s_sel_state = s_sel_state & ~1u;
 }
 
+// FUNCTION: LEGORR 0x00419150
 uint32_t selection_state_handle_get(int index)
 {
     if (index == 1 && (s_sel_state & 4u) == 0) {
@@ -1954,6 +2011,7 @@ uint32_t selection_state_handle_get(int index)
 
 uint32_t selection_state_flags_peek(void) { return s_sel_state; }
 
+// FUNCTION: LEGORR 0x004191f0
 uint32_t ui_mode_resource_bit40_get(void)
 {
     return s_sel_state & 0x40u;
@@ -2004,6 +2062,7 @@ static uint32_t s_timed_effect_time[TIMED_EFFECT_ENTRIES];
 static uint32_t s_timed_effect_tick; /* DAT_0054bf3c role: unowned */
 static int32_t  s_layout_position[LAYOUT_POSITION_ENTRIES][2];
 
+// FUNCTION: LEGORR 0x0046b770
 void timed_effect_update_request_set(int index)
 {
     if (index >= 0 && index < TIMED_EFFECT_ENTRIES) {
@@ -2016,6 +2075,7 @@ void timed_effect_update_request_set(int index)
  * cue word lands as own storage next to the flag/time windows. */
 static uint32_t s_timed_effect_cue[TIMED_EFFECT_ENTRIES];
 
+// FUNCTION: LEGORR 0x0046b700
 void timed_effect_cue_request_set(int index, uint32_t value)
 {
     if (index < 0 || index >= TIMED_EFFECT_ENTRIES) {
@@ -2039,6 +2099,7 @@ uint32_t timed_effect_flags_peek(int index)
     return s_timed_effect_flags[index];
 }
 
+// FUNCTION: LEGORR 0x00418fc0
 bool ui_mode_transition_request(int index, int p2, int p3)
 {
     const int mode = s_band_mode;
@@ -2060,6 +2121,7 @@ bool ui_mode_transition_request(int index, int p2, int p3)
 int band_mode_peek(void) { return s_band_mode; }
 void band_mode_set(int mode) { s_band_mode = mode; }
 
+// FUNCTION: LEGORR 0x00418f80
 void selection_mode_set_by_index(int index)
 {
     switch (index) {
@@ -2074,6 +2136,7 @@ void selection_mode_set_by_index(int index)
     }
 }
 
+// STUB: LEGORR 0x00419100
 void ui_mode_resource_positions_apply(void)
 {
     for (int i = 0; i < LAYOUT_POSITION_ENTRIES; ++i) {
@@ -2114,26 +2177,31 @@ int layout_position_get(int entry, int* x, int* y)
  * load image's zero state is the faithful initial state (finding 23/438). */
 static int s_fe_flow[5]; /* DAT_0055701c / 20 / 24 / 48 / 4c, in order */
 
+// FUNCTION: LEGORR 0x00416d50
 int save_slot_open(void)
 {
     return s_fe_flow[1] != -1;
 }
 
+// FUNCTION: LEGORR 0x00416d60
 int is_in_game(void)
 {
     return s_fe_flow[2] != -1;
 }
 
+// FUNCTION: LEGORR 0x00416dd0
 int quit_menu_probe(void)
 {
     return s_fe_flow[0];
 }
 
+// FUNCTION: LEGORR 0x00416de0
 int level_start_flag(void)
 {
     return s_fe_flow[3] != 0;
 }
 
+// FUNCTION: LEGORR 0x00416df0
 int menu_options_flag(void)
 {
     return s_fe_flow[4] != 0;
@@ -2149,6 +2217,7 @@ void frontend_flow_word_set(int which, int value)
 /* MainSimStateAdmissionPredicate (FUN_004191a0) — see frontend.hpp. The
  * corpus reads bits 1/2 of the selection word directly and the 0x40 bit
  * through its own leaf; all three reduce to the same modeled word. */
+// FUNCTION: LEGORR 0x4191a0
 int main_sim_state_admission_predicate(void)
 {
     const uint32_t sel = s_sel_state;
@@ -2162,6 +2231,7 @@ int main_sim_state_admission_predicate(void)
  * corpus's DAT_004db8e8 word; its corpus readers are unported). */
 static uint32_t s_sel_mode_state;
 
+// FUNCTION: LEGORR 0x418190
 void selection_mode_state_set(uint32_t value)
 {
     s_sel_mode_state = value;
@@ -2176,6 +2246,7 @@ uint32_t selection_mode_state_peek(void)
  * corpus's MenuWipeStart-side setter is unported. */
 static uint32_t s_menu_wipe;
 
+// FUNCTION: LEGORR 0x410440
 void menu_wipe_end(void)
 {
     s_menu_wipe &= ~3u;
@@ -2205,6 +2276,7 @@ static uint32_t s_obj_track_word; /* DAT_004ddcd0 */
 static float    s_inter_timer = 0.0f; /* DAT_004de1ec */
 static uint32_t s_inter_flags;    /* DAT_004de1f8 */
 
+// FUNCTION: LEGORR 0x0041cce0
 void selection_coordinates_set(const uint32_t* pair, uint32_t x, uint32_t y)
 {
     if (pair == NULL) {
@@ -2216,6 +2288,7 @@ void selection_coordinates_set(const uint32_t* pair, uint32_t x, uint32_t y)
     s_sel_c18 = (float)y;
 }
 
+// FUNCTION: LEGORR 0x0041e9d0
 void selection_region_parameters_set(float a, float b, float c, float d,
                                      float e)
 {
@@ -2226,6 +2299,7 @@ void selection_region_parameters_set(float a, float b, float c, float d,
     s_reg[4] = (float)(e * 0.04); /* the corpus's double-prec scale */
 }
 
+// FUNCTION: LEGORR 0x0041a990
 void objective_selection_state_reset(void)
 {
     s_obj_sel_word = 0u;
@@ -2233,12 +2307,14 @@ void objective_selection_state_reset(void)
     s_inter_flags |= 0x84u;
 }
 
+// FUNCTION: LEGORR 0x0041ee60
 void interaction_timer_reset_and_flag_clear(void)
 {
     s_inter_timer = 25.0f; /* corpus 0x41c80000 */
     s_inter_flags &= ~0x800u;
 }
 
+// FUNCTION: LEGORR 0x00418800
 void mode_flag_pair_apply_if_bit2(int value)
 {
     if ((s_sel_state & 4u) == 0u) {
@@ -2285,6 +2361,7 @@ static uint32_t s_map_store_pair[2];  /* DAT_004ddcc4/cc8 */
 static uint32_t s_map_store_last[2];  /* DAT_004ddcf4/f8 */
 static uint32_t s_map_store_kind;     /* DAT_004ddcfc */
 
+// FUNCTION: LEGORR 0x0041ea50
 void store_selected_map_coordinate(int kind, const uint32_t coord[2])
 {
     if ((s_inter_flags & 0x80u) == 0u
@@ -2336,6 +2413,7 @@ uint32_t interaction_flags_peek(void)
 #define CELL_PERMISSION_ENTRIES 300 /* corpus's 300-dword clear loop */
 static uint32_t s_cell_perm[CELL_PERMISSION_ENTRIES];
 
+// FUNCTION: LEGORR 0x0041e990
 int cell_action_permission_get(int column, int row)
 {
     if ((system_state_flags_get() & 4u) == 0u) {
@@ -2367,6 +2445,7 @@ uint32_t cell_action_permission_table_peek(int index)
 static uint32_t s_menu_rng_state = 1u;  /* the shared draw's word, modeled */
 static uint32_t s_status_banner_word;   /* DAT_004ddd1c */
 
+// FUNCTION: LEGORR 0x00412190
 int menu_audio_tick_interval_reached(void)
 {
     s_menu_rng_state = s_menu_rng_state * 0x343fdu + 0x269ec3u;
@@ -2374,6 +2453,7 @@ int menu_audio_tick_interval_reached(void)
     return draw % 400 == 0;
 }
 
+// FUNCTION: LEGORR 0x0041b9b0
 uint32_t sim_status_banner_word_get(void)
 {
     return s_status_banner_word;
@@ -2384,6 +2464,7 @@ void sim_status_banner_word_set(uint32_t value)
     s_status_banner_word = value;
 }
 
+// FUNCTION: LEGORR 0x00419200
 void ui_mode_resource_bit40_set_clear(int probe, uint32_t value)
 {
     uint32_t v = value;
@@ -2403,6 +2484,7 @@ static uint32_t s_menu_wipe_stop; /* DAT_005574f4 */
 static float    s_menu_wipe_clock;/* DAT_005574f8 */
 static uint32_t s_menu_clock_millis; /* timeGetTime model */
 
+// FUNCTION: LEGORR 0x004103f0
 void menu_wipe_start(void)
 {
     if (s_menu_wipe_arm == 0u) {
@@ -2428,6 +2510,7 @@ void menu_clock_millis_set(uint32_t millis)
  * handles are the +0x10/+0x14/+0x18 float views carried bit-for-bit. A
  * missing draw-record block answers nothing (deviation: the corpus walks
  * the window unconditionally once its count word reads non-null). */
+// FUNCTION: LEGORR 0x0045a9c0
 void panel_texture_slots_blit(int panel)
 {
     const int count = panel_draw_count_peek(panel);
@@ -2491,6 +2574,7 @@ void panel_texture_slots_blit(int panel)
 }
 
 /* TimedEffectTimestampReset (FUN_0046b7a0) — see frontend.hpp. */
+// FUNCTION: LEGORR 0x46b7a0
 void timed_effect_timestamp_reset(int index)
 {
     if (index >= 0 && index < TIMED_EFFECT_ENTRIES) {
@@ -2513,6 +2597,7 @@ uint32_t timed_effect_time_peek(int index)
 /* ScreenRightEdgeCacheRefresh (FUN_0041a290) — see frontend.hpp. */
 static uint32_t s_screen_right_edge; /* DAT_004dcd44 role: unowned */
 
+// FUNCTION: LEGORR 0x41a290
 void screen_right_edge_cache_refresh(void)
 {
     uint32_t x = 0, y = 0;
@@ -2523,6 +2608,7 @@ void screen_right_edge_cache_refresh(void)
 uint32_t screen_right_edge_cache_peek(void) { return s_screen_right_edge; }
 
 /* BitmapFontGlyphMeasureWidth (FUN_0047a520) — see frontend.hpp. */
+// FUNCTION: LEGORR 0x47a520
 void bitmap_font_glyph_measure_width(void* font, unsigned char glyph)
 {
     (void)font; /* deviation: no corpus font record is addressed */
@@ -2573,6 +2659,7 @@ static void* panel_load_seam_call(void* res)
     return NULL; /* the port has no surface layer */
 }
 
+// FUNCTION: LEGORR 0x00459fd0
 void panel_resource_position_apply_if_enabled(void* resource, int x, int y)
 {
     if ((s_panel_enable_word & 0x10u) != 0u) {
@@ -2591,6 +2678,7 @@ void panel_resource_position_apply_if_enabled(void* resource, int x, int y)
  * seams), and the position rides the surface blit seam. Deviations: the
  * port takes the record float's address instead of the corpus's blind
  * record+0x344 read, and a NULL float reads zero. */
+// FUNCTION: LEGORR 0x00459f50
 void indexed_panel_resource_position_apply(const float* record_position,
                                            int x, int y)
 {
@@ -2612,6 +2700,7 @@ void indexed_panel_resource_position_apply(const float* record_position,
                          (float)y + s_panel_position_offset_y);
 }
 
+// FUNCTION: LEGORR 0x0045c520
 void panel_resource_handle_and_dimensions_store(void* resource, uint32_t w,
                                                 uint32_t h, uint32_t extra)
 {
@@ -2622,6 +2711,7 @@ void panel_resource_handle_and_dimensions_store(void* resource, uint32_t w,
     s_panel_height = (float)h;
 }
 
+// FUNCTION: LEGORR 0x0041a250
 void scroll_offset_from_cursor_update(void)
 {
     uint32_t lo = 0, hi = 0;
@@ -2650,6 +2740,7 @@ static float s_panel_layout_size[2];     /* DAT_005007f8/7fc role */
 static uint32_t s_panel_layout_extra;    /* DAT_00500800 role */
 static float s_panel_layout_offset[2];   /* DAT_00500804/808 role */
 
+// FUNCTION: LEGORR 0x0045c340
 void panel_resource_layout_store(void* face_resource, uint32_t width,
                                  uint32_t height, uint32_t extra,
                                  void* glyph_resource, uint32_t position_x,
@@ -2667,6 +2758,7 @@ void panel_resource_layout_store(void* face_resource, uint32_t width,
     s_panel_layout_offset[1] = (float)position_y;
 }
 
+// FUNCTION: LEGORR 0x0045c4b0
 void panel_resource_position_update(int index)
 {
     if (s_panel_layout_glyph == NULL) {
@@ -2742,6 +2834,7 @@ static uint32_t surface_load_handle(const char* path)
     return (uint32_t)(uintptr_t)string_cache_lookup_or_load(path);
 }
 
+// FUNCTION: LEGORR 0x0041b270
 void interface_button_images_load(const char* left_path,
                                   const char* right_path)
 {
@@ -2760,6 +2853,7 @@ uint32_t interface_button_surface_peek(int which)
     return (which >= 0 && which < 2) ? s_interface_button_surfaces[which] : 0u;
 }
 
+// FUNCTION: LEGORR 0x0045bfb0
 void three_surface_resources_load(const char* first, const char* second,
                                   const char* third)
 {
@@ -2784,6 +2878,7 @@ uint32_t advisor_bar_surface_peek(int which)
     return (which >= 0 && which < 3) ? s_advisor_bar_surfaces[which] : 0u;
 }
 
+// FUNCTION: LEGORR 0x0045c3f0
 void advisor_progress_bar_fill_draw(int row, float percent)
 {
     if (s_panel_layout_surface == NULL || !(0.0f < percent)) {
@@ -2840,6 +2935,7 @@ float menu_plane_pan_peek(int axis)
     return (axis >= 0 && axis < 2) ? s_menu_plane_pan[axis] : 0.0f;
 }
 
+// FUNCTION: LEGORR 0x00412af0
 void menu_surface_blit_scaled(int percent_side)
 {
     const uint32_t handle
@@ -2856,71 +2952,6 @@ void menu_surface_blit_scaled(int percent_side)
     const float rect1[4] = { -s_menu_plane_pan[0], -s_menu_plane_pan[1],
                              640.0f, 480.0f };
     crt_surface_blit_record_rect(handle, 0.0f, 0.0f, rect1, NULL);
-}
-
-/* --- the encyclopedia config-file window (2026-10-25) --------------------
- * EncyclopediaConfigFilesOpen (FUN_0040e490) — see frontend.hpp. The group
- * pairs (count window, name table) ride the corpus's address pairing:
- * 0x27c/0x1e8, 0x280/0x1ec, 0x284/0x1f0, 0x288/0x1f4. */
-static void* s_ency_files[4];   /* DAT_004c7e88/ec/90/94 roles */
-static void* s_ency_crystal;    /* DAT_004c7e98 role */
-static void* s_ency_ore;        /* DAT_004c7e9c role */
-
-/* The corpus joins `<root>::Encyclopedia::<name>` through the path builder
- * (FUN_00478f50), reads the record's +8 value token (FUN_004790b0's
- * record+8), and dispatches the file open (FUN_0047f6e0 in "r" mode — the
- * port's AUTO open). NULL answers ride where the corpus strides. */
-static void encyclopedia_value_open(BlockFile* cfg, const char* root_path,
-                                    const char* name, void** slot)
-{
-    const char* path = string_path_join(root_path, "Encyclopedia", name,
-                                        (char*)NULL);
-    const char* value = block_get_strptr(cfg, path);
-    if (value != NULL) {
-        *slot = resource_open(value, RESOURCE_AUTO);
-    }
-}
-
-void encyclopedia_config_files_open(BlockFile* cfg, const char* root_path)
-{
-    static const int count_slot[4] = { 0, 2, 3, 1 }; /* 0x27c/80/84/88 */
-    for (int kind = 0; kind != 4; ++kind) {
-        const uint32_t count = catalog_count_peek(count_slot[kind]);
-        /* The corpus strides count 4-byte handle slots (its windows are
-         * undefined4 arrays sized count * 4); on the pointer-sized port the
-         * window is count void* slots, so the allocation and zeroing stride
-         * sizeof(void*) to cover every handle (deviation: slot width). */
-        void* array = engine_heap_alloc((long)count * (long)sizeof(void*));
-        s_ency_files[kind] = array;
-        if (array == NULL) {
-            continue; /* deviation: the corpus strides the store blindly */
-        }
-        memset(array, 0, (size_t)count * sizeof(void*));
-        const char* const* table =
-            (const char* const*)catalog_name_table_peek(kind);
-        for (uint32_t i = 0; i != count; ++i) {
-            const char* name = (table != NULL) ? table[i] : NULL;
-            encyclopedia_value_open(cfg, root_path, name,
-                                    &((void**)array)[i]);
-        }
-    }
-    encyclopedia_value_open(cfg, root_path, "PowerCrystal", &s_ency_crystal);
-    encyclopedia_value_open(cfg, root_path, "Ore", &s_ency_ore);
-}
-
-void* encyclopedia_file_window_peek(int group)
-{
-    return (group >= 0 && group < 4) ? s_ency_files[group] : NULL;
-}
-
-void* encyclopedia_crystal_file_peek(void)
-{
-    return s_ency_crystal;
-}
-
-void* encyclopedia_ore_file_peek(void)
-{
-    return s_ency_ore;
 }
 
 float panel_layout_offset_peek(int which)
@@ -3018,18 +3049,22 @@ void screen_coord_normalize_reset(void)
     s_snorm_sentinels[1] = 0u;
 }
 
+// FUNCTION: LEGORR 0x0045d8b0
 void screen_coord_normalize_init(void)
 {
     const double color_k = (double)((float)(1.0 / 255.0));
-    for (int i = 0; i < 90; ++i) {
+    int i;
+    int mirror;
+    int row;
+    for (i = 0; i < 90; ++i) {
         s_snorm_colors[i] = (float)((double)s_snorm_colors[i] * color_k);
     }
-    for (int i = 0; i < 20; ++i) {
+    for (i = 0; i < 20; ++i) {
         s_snorm_cells[0][i] = 1.0f;
         s_snorm_cells[1][i] = 1.0f;
     }
-    for (int mirror = 0; mirror < 2; ++mirror) {
-        for (int row = 0; row < 7; ++row) {
+    for (mirror = 0; mirror < 2; ++mirror) {
+        for (row = 0; row < 7; ++row) {
             s_snorm_pairs[mirror][row][0] = s_snorm_pair_consts[mirror][row][0];
             s_snorm_pairs[mirror][row][1] = s_snorm_pair_consts[mirror][row][1];
         }
@@ -3039,8 +3074,8 @@ void screen_coord_normalize_init(void)
     const double h = (double)((float)display_height_get());
     const double kx = (double)((float)(1.0 / 640.0));
     const double ky = (double)((float)(1.0 / 480.0));
-    for (int mirror = 0; mirror < 2; ++mirror) {
-        for (int row = 0; row < 7; ++row) {
+    for (mirror = 0; mirror < 2; ++mirror) {
+        for (row = 0; row < 7; ++row) {
             s_snorm_pairs[mirror][row][0]
                 = (float)((w * kx) * (double)s_snorm_pairs[mirror][row][0]);
             s_snorm_pairs[mirror][row][1]
@@ -3102,6 +3137,7 @@ void panel_seam_last(void** out_res, float* out_x, float* out_y)
 static int s_active_object_ingame;  /* DAT_00556fd0 role */
 static int s_active_object_outgame; /* DAT_00556fe4 role */
 
+// FUNCTION: LEGORR 0x00416e00
 int* active_object_list_word(void)
 {
     return is_in_game() != 0 ? &s_active_object_ingame : &s_active_object_outgame;
@@ -3118,6 +3154,7 @@ static int     s_screen_effect_seam_calls;
 static void*   s_screen_effect_seam_last_handle;
 static int     s_screen_effect_seam_last_flag;
 
+// FUNCTION: LEGORR 0x0040a3d0
 void screen_effect_flags_clear_and_release(void)
 {
     for (int i = 0; i < SCREEN_EFFECT_COUNT; ++i) {
@@ -3165,6 +3202,7 @@ void screen_effect_seam_last(void** out_handle, int* out_flag)
 }
 
 /* TextLayoutOffsetForCentering (FUN_00411320) — see frontend.hpp. */
+// FUNCTION: LEGORR 0x411320
 int text_layout_offset_for_centering(int x, int y, int rect_x, int rect_y,
                                      int rect_w, int rect_h, int center)
 {
@@ -3176,6 +3214,7 @@ int text_layout_offset_for_centering(int x, int y, int rect_x, int rect_y,
 /* SelectionEntityCodeResolve (FUN_0041b9c0) — see frontend.hpp. The corpus
  * reads the first selection first and branches afterwards; the port's
  * order is equivalent since the read is side-effect-free. */
+// FUNCTION: LEGORR 0x41b9c0
 int selection_entity_code_resolve(const GameContext* ctx, int* code_out)
 {
     if ((s_inter_flags & 0x80u) == 0u && (s_inter_flags & 0x100u) != 0u) {
@@ -3196,6 +3235,7 @@ int selection_entity_code_resolve(const GameContext* ctx, int* code_out)
  * the surface-load seam (FUN_0047d9d0 with the handle and zero positions)
  * answers NULL (the panel-load precedent), so the dim halves stay zero
  * (deviation). */
+// FUNCTION: LEGORR 0x463770
 void scroll_rect_resource_record_create(int view, int mode,
                                         const float* quad, int tex_a,
                                         int tex_b)
@@ -3248,6 +3288,7 @@ void overlay_anim_float_install(float value)
     s_overlay_anim_float = value;
 }
 
+// FUNCTION: LEGORR 0x0045c580
 void ui_overlay_animation_advance(int mode, int steps)
 {
     /* Deviation: the corpus loops `param_2 != 0` down by one, so a
@@ -3267,6 +3308,7 @@ void ui_overlay_animation_advance(int mode, int steps)
 }
 
 /* TimedEffectPersistenceSet (FUN_0046b730) — see frontend.hpp. */
+// FUNCTION: LEGORR 0x0046b730
 void timed_effect_persistence_set(int index, int set)
 {
     if (index < 0 || index >= TIMED_EFFECT_ENTRIES) {
@@ -3280,6 +3322,7 @@ void timed_effect_persistence_set(int index, int set)
 /* CursorTileSelectionUpdateByType (FUN_0041cc80) — see frontend.hpp. */
 static uint32_t s_cursor_tile_pair[2]; /* DAT_004ddcd8/cdc role */
 
+// FUNCTION: LEGORR 0x0041cc80
 void cursor_tile_selection_update_by_type(int kind, uint32_t first,
                                           uint32_t second)
 {
@@ -3342,6 +3385,7 @@ static uint32_t float_bits(float value)
  * the second corner otherwise. Deviations: the window is guarded (the
  * corpus strides blindly) and the corpus's byte-wide bit-2 read is the
  * word's bit 1 on the modeled flag. */
+// FUNCTION: LEGORR 0x0045a650
 void panel_category_bounds_set(int panel, int x1, int y1, int x2, int y2)
 {
     if (panel < 0 || panel >= PANEL_CATEGORY_WINDOWS) {
@@ -3387,6 +3431,7 @@ void panel_category_bounds_peek(int panel, float* out_x1, float* out_y1,
  * position plus the derived size — the position dwords ride as-is, the
  * size is the far-corner minus the near one. Deviations: the panel window
  * and the null block are guarded (the corpus strides both). */
+// FUNCTION: LEGORR 0x0045bf70
 void ui_entry_bounds_get(int panel, int item, float* out_bounds)
 {
     if (panel < 0 || panel >= PANEL_CATEGORY_WINDOWS || out_bounds == NULL
@@ -3414,6 +3459,7 @@ void ui_entry_bounds_get(int panel, int item, float* out_bounds)
 static int32_t  s_priority_image_state;  /* DAT_005013b8 */
 static uint32_t s_priority_image_flags;  /* DAT_005013bc */
 
+// FUNCTION: LEGORR 0x0045d300
 int priority_image_selection_state_update(int candidate, int gate, int skip)
 {
     const int32_t prior = s_priority_image_state;
@@ -3455,6 +3501,7 @@ void priority_image_state_peek(int32_t* state, uint32_t* flags)
  * is exact, so the port copies). Deviations: the record fields widen
  * LP64-safe, the payload array and source are guarded, and the corpus's
  * uninitialized record tail stays absent from the modeled record. */
+// FUNCTION: LEGORR 0x0045da90
 UiRenderRecord* ui_render_record_create(void* source,
                                         const uint32_t* payload,
                                         uint32_t extra)
@@ -3496,6 +3543,7 @@ static uint32_t s_sav_visited_words_in[SAV_VISITED_ENTRIES];  /* DAT_00556fe0 */
  * table's word word zeroed alongside. Deviations: the entry windows and
  * the count bounds are guarded (the corpus strides blindly) and records
  * are touched through their modeled +0x10 word. */
+// FUNCTION: LEGORR 0x00416e70
 void sav_clear_visited(void)
 {
     for (int which = 0; which < 2; ++which) {
@@ -3580,6 +3628,7 @@ static int s_name_fold_equal(const char* a, const char* b)
     }
 }
 
+// FUNCTION: LEGORR 0x00414c90
 int menu_list_find_name(void* const* entries, int count, const char* name)
 {
     if (entries == NULL || count < 1) {

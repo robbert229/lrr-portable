@@ -669,21 +669,6 @@ void     interface_button_images_load(const char* left_path,
                                       const char* right_path);
 uint32_t interface_button_surface_peek(int which);   /* port hook */
 
-/* EncyclopediaConfigFilesOpen (FUN_0040e490): walk the catalog name-table
- * groups (the corpus's counts 0x27c/0x280/0x284/0x288 ride the entity.*
- * window hooks), join `root::Encyclopedia::<name>`, read the config's
- * value token, and open the file the value names; the four handle windows
- * reallocate through the heap seam (the corpus leaks the superseded
- * arrays, and so does the port). The PowerCrystal/Ore singletons keep
- * their last handle across a config miss (the corpus's stale-global lane).
- * Deviations: the name tables and counts ride own storage (the corpus's
- * catalog loader is unported), NULL config/value answers where the corpus
- * strides, and the "r" mode maps to the port's AUTO open. */
-void encyclopedia_config_files_open(BlockFile* cfg, const char* root_path);
-void* encyclopedia_file_window_peek(int group);      /* port hook, 0..3 */
-void* encyclopedia_crystal_file_peek(void);          /* port hook */
-void* encyclopedia_ore_file_peek(void);              /* port hook */
-
 /* ThreeSurfaceResourcesLoadAndInitialize (FUN_0045bfb0): the same fold
  * for three paths, with the corpus's slot quirk: param_2 lands at peek
  * index 2 and param_3 at index 1. */

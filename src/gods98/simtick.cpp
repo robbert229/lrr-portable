@@ -27,6 +27,7 @@ void simtick_set_mute_hook(int (*hook)(uint32_t, int))
     s_mute_hook = hook;
 }
 
+// FUNCTION: LEGORR 0x0041ba10
 void simtick_mute_timer(EngineContext* c, float dt)
 {
     (void)c;
@@ -72,11 +73,13 @@ int simtick_effect_last_fired(void)
     return s_effect_fired;
 }
 
+// STUB: LEGORR 0x0040aa40
 static int effect_helper(SimtickEffect* /*e*/, float /*dt*/)
 {
     return 0; /* TODO(simtick): FUN_0040aa40 per-entry effect helper. */
 }
 
+// FUNCTION: LEGORR 0x0040aa10
 void simtick_table_dispatch(EngineContext* c, float dt, float scale)
 {
     (void)c; (void)scale;
@@ -105,6 +108,7 @@ static void post_step(int /*id*/)
     ++s_post_steps;
 }
 
+// FUNCTION: LEGORR 0x0040d450
 void simtick_post_cluster(EngineContext* c)
 {
     (void)c;
@@ -127,13 +131,20 @@ int simtick_bobbin_advanced(void)
     return s_bobbin_advance;
 }
 
+// STUB: LEGORR 0x00409270
 static int bobbin_spawn(SimtickBobbin* /*n*/)  { return 0; } /* FUN_00409270 */
+// STUB: LEGORR 0x00409a40
 static void bobbin_delayed(SimtickBobbin* /*n*/) {}          /* FUN_00409a40 */
+// STUB: LEGORR 0x00409b30
 static void bobbin_mark(SimtickBobbin* /*n*/) {}             /* FUN_00409b30 */
+// STUB: LEGORR 0x004099f0
 static void bobbin_drop(SimtickBobbin* /*n*/) {}             /* FUN_004099f0 */
+// STUB: LEGORR 0x004027a0
 static void bobbin_clear_delay(SimtickBobbin* /*n*/) {}      /* FUN_004027a0 */
+// STUB: LEGORR 0x00409550
 static void bobbin_die(SimtickBobbin* /*n*/) {}              /* FUN_00409550 */
 
+// FUNCTION: LEGORR 0x004091e0
 void simtick_bobbins(EngineContext* c)
 {
     (void)c;
@@ -178,6 +189,7 @@ static void marker_cell(EngineState* /*st*/, uint32_t x, uint32_t y)
     ++s_marker_fired;
 }
 
+// FUNCTION: LEGORR 0x0044eff0
 void simtick_marker_sweep(EngineContext* c, float dt, float scale)
 {
     (void)dt; (void)scale;
@@ -274,6 +286,7 @@ void simtick_manager_set_timer_word(uint32_t w)
     s_timer_word = w;
 }
 
+// FUNCTION: LEGORR 0x0045a730
 void simtick_manager_tick(int index, float dt, int ingame)
 {
     if (index < 0 || index >= s_mgr_count) {
@@ -368,6 +381,7 @@ void simtick_set_keepalive_hook(int (*h)(int, int, int))
     s_keepalive = h;
 }
 
+// FUNCTION: LEGORR 0x0047aba0
 void simtick_sound_keepalive(EngineContext* c)
 {
     (void)c;
@@ -399,6 +413,7 @@ int simtick_editor_steps_run(void)
     return s_edit_steps;
 }
 
+// FUNCTION: LEGORR 0x0044cfa0
 void simtick_editor_steps(EngineContext* c)
 {
     (void)c;
@@ -435,6 +450,7 @@ int simtick_tree_fired(void)
     return s_tree_fired;
 }
 
+// FUNCTION: LEGORR 0x0049cf90
 void simtick_bitfield_tree(int* base, int code)
 {
     s_tree_fired = 0;
@@ -475,6 +491,7 @@ void simtick_bitfield_tree(int* base, int code)
 static int s_post_n = 0;
 int simtick_post_steps_count(void) { return s_post_n; }
 
+// STUB: LEGORR 0x004665c0
 void simtick_post_step(EngineContext* c)
 {
     (void)c;
@@ -506,6 +523,7 @@ void simtick_set_minion_hooks(int (*d)(int, float), void (*a)(int),
 int simtick_minion_actions(void)   { return s_minion_actions; }
 int simtick_minion_failures(void)  { return s_minion_fails; }
 
+// FUNCTION: LEGORR 0x004313b0
 void simtick_minion_states(EngineContext* c, float dt, float scale)
 {
     (void)dt;
@@ -563,6 +581,7 @@ void simtick_cell_seed(int n, const int* xs, const int* ys)
 
 int simtick_cell_dispatches(void) { return s_cell_disp; }
 
+// FUNCTION: LEGORR 0x00424600
 void simtick_grid_cell_pass(EngineContext* c)
 {
     EngineState* st = c != NULL ? c->state_block : NULL;
@@ -594,6 +613,7 @@ void simtick_set_scene_word(uint32_t w) { s_scene_word = w; }
 void simtick_set_scene_broadcast(void (*h)(int)) { s_scene_broadcast = h; }
 int  simtick_scene_broadcasts(void)    { return s_scene_bcasts; }
 
+// FUNCTION: LEGORR 0x0043b270
 void simtick_scene_pass(EngineContext* c, float dt)
 {
     (void)c;
@@ -638,6 +658,7 @@ void simtick_sfx_seed(int n, const void** entries)
 
 int simtick_sfx_releases(void) { return s_sfx_rels; }
 
+// FUNCTION: LEGORR 0x0046f550
 void simtick_sfx_bank(EngineContext* c, float dt)
 {
     (void)c;
@@ -649,7 +670,7 @@ void simtick_sfx_bank(EngineContext* c, float dt)
     /* post-step. */
     ++s_post_n;
     /* pass 3: stride-4 timer slots: negative timer -> release + reset. */
-    for (int i = 0; i < s_sfx_n; ++i) {
+    for (i = 0; i < s_sfx_n; ++i) {
         float* f = (float*)((uint8_t*)s_sfx_entries[i] + 12);
         if (*f < 0.0f) {
             ++s_sfx_rels; /* FUN_004820d0 release hook x2 */
@@ -672,6 +693,7 @@ static int s_picks = 0;
 void simtick_set_pick_hook(int (*h)(int, int)) { s_pick = h; }
 int  simtick_mouse_picks(void) { return s_picks; }
 
+// FUNCTION: LEGORR 0x00425d90
 void simtick_mouse_world(EngineContext* c, float dt)
 {
     (void)dt;
@@ -701,6 +723,7 @@ static uint32_t s_frame = 0, s_frame_a = 0, s_frame_b = 0, s_frame_c = 0;
 uint32_t simtick_frame(void) { return s_frame; }
 int simtick_frame_bump(void) { return (int)s_frame; }
 
+// FUNCTION: LEGORR 0x00402220
 void simtick_frame_counter(EngineContext* c)
 {
     (void)c;
@@ -723,6 +746,7 @@ static int   (*s_spawn_hook)(int) = NULL;
 void simtick_set_spawn_hook(int (*h)(int)) { s_spawn_hook = h; }
 int  simtick_spawn_calls(void) { return s_spawns; }
 
+// FUNCTION: LEGORR 0x0040eab0
 void simtick_ambient_spawn(EngineContext* c, float dt)
 {
     (void)c;
@@ -740,6 +764,7 @@ void simtick_ambient_spawn(EngineContext* c, float dt)
  * game layer (src/game/cmd.cpp); kept out of the simtick module. */
 
 /* FUN_00465b00: sound-bank ticker — linked entries with init/lifetime. */
+// FUNCTION: LEGORR 0x00465b00
 void simtick_sound_bank_tick(EngineContext* c, float dt)
 {
     (void)c; (void)dt;
@@ -749,6 +774,7 @@ void simtick_sound_bank_tick(EngineContext* c, float dt)
 }
 
 /* FUN_004291a0: render-pass entry (in-game camera probe / world collect). */
+// FUNCTION: LEGORR 0x004291a0
 void simtick_render_pass(EngineContext* c, float dt, float scale, uint32_t o1)
 {
     (void)dt; (void)o1;
@@ -760,8 +786,9 @@ void simtick_render_pass(EngineContext* c, float dt, float scale, uint32_t o1)
     ++s_post_n;
 }
 
-/* FUN_00449c00: a single ordered render step. */
 int simtick_render_steps(void) { return s_post_n; }
+/* FUN_00449c00: a single ordered render step. */
+// FUNCTION: LEGORR 0x00449c00
 void simtick_render_step(EngineContext* c)
 {
     (void)c;
@@ -769,6 +796,7 @@ void simtick_render_step(EngineContext* c)
 }
 
 /* FUN_00426520: vu/timer accumulators gated on input buttons. */
+// FUNCTION: LEGORR 0x00426520
 void simtick_vu_meter(EngineContext* c, float dt)
 {
     if (c == NULL) return;
@@ -782,8 +810,9 @@ void simtick_vu_meter(EngineContext* c, float dt)
 }
 
 /* FUN_0046e390: fx-bank ticker — per-entry sub-fx scan with fade/clamp. */
-static int s_fx_entries[8] = {};
+static int s_fx_entries[8] = { 0 };
 static int s_fx_count = 0;
+// STUB: LEGORR 0x0046e390
 void simtick_fx_bank_tick(EngineContext* c, float dt)
 {
     (void)c; (void)dt; (void)s_fx_entries; (void)s_fx_count;
@@ -793,12 +822,14 @@ void simtick_fx_bank_tick(EngineContext* c, float dt)
 /* SimulationGlobalWordSet (FUN_0041ba90): the faithful blind store — the
  * same word the mute timer reads (simtick_set_mute_word is the port-side
  * hook with the same effect; this is the corpus's own entry point). */
+// FUNCTION: LEGORR 0x0041ba90
 void simulation_global_word_set(uint32_t value)
 {
     s_mute_word = value;
 }
 
 /* DirectSoundListenerViewSet (FUN_0047ab80) — see simtick.hpp. */
+// FUNCTION: LEGORR 0x0047ab80
 void simtick_directsound_listener_view_set(int view)
 {
     if (s_sound_on != 0) {
@@ -807,6 +838,7 @@ void simtick_directsound_listener_view_set(int view)
 }
 
 /* RoutePositionBlockedStateSet (FUN_0044da20) — see simtick.hpp. */
+// FUNCTION: LEGORR 0x0044da20
 void simtick_route_position_blocked_state_set(int blocked)
 {
     if (blocked != 0) {
@@ -819,6 +851,7 @@ void simtick_route_position_blocked_state_set(int blocked)
 uint32_t simtick_route_position_state_peek(void) { return s_edit_word; }
 
 /* GlobalUIFlagsClearBits12 (FUN_0045b610) — see simtick.hpp. */
+// FUNCTION: LEGORR 0x0045b610
 void simtick_global_ui_flags_clear_bits12(void)
 {
     s_timer_word &= 0xfffffff9u;
@@ -830,6 +863,7 @@ uint32_t simtick_global_ui_flags_word(void) { return s_timer_word; }
 static float s_xform_current[3];   /* corpus pose seam stand-in */
 static float s_xform_config[3];    /* DAT_004eae74 role */
 
+// FUNCTION: LEGORR 0x0044cf70
 void simtick_scene_position_reset_and_effect_motion_cancel(void)
 {
     __builtin_memcpy(s_xform_config, s_xform_current, sizeof s_xform_config);
@@ -849,6 +883,7 @@ const float* simtick_scene_transform_config_peek(void)
 }
 
 /* ReleaseAllGroupRecords (FUN_004099d0) — see simtick.hpp. */
+// FUNCTION: LEGORR 0x004099d0
 void simtick_release_all_group_records(void)
 {
     SimtickBobbin* node = s_bobbin_head;
@@ -872,6 +907,7 @@ void simtick_vector_tolerance_install(const float xyz[3])
     }
 }
 
+// FUNCTION: LEGORR 0x0044d9a0
 int simtick_vector_within_axis_tolerance(const float xyz[3])
 {
     if (xyz == NULL) {

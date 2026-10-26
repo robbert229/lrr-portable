@@ -34,6 +34,7 @@ static int s_strcasecmp(const char* a, const char* b)
     }
 }
 
+// FUNCTION: LEGORR 0x00475930
 int entity_kind_lookup(const char* kind, int* notexture)
 {
     if (notexture != NULL) {
@@ -67,6 +68,7 @@ int entity_kind_lookup(const char* kind, int* notexture)
 
 /* --- .ae assembly (FUN_00472cd0, ACT branch) ---------------------------------- */
 
+// FUNCTION: LEGORR 0x00472cd0
 EntityAssembly* entity_assembly_parse(BlockFile* bf, const char* root,
                                      uint32_t feature)
 {

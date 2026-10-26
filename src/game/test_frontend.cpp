@@ -51,6 +51,24 @@ static void* s_c179_loader(const char* key)
     return NULL;
 }
 
+/* C179 (2026-10-25): a key-keyed loader standing in for the surface-load
+ * seam's bitmap string cache. */
+static char s_c179_buf[5][1];
+static void* s_c179_loader(const char* key)
+{
+    if (key == NULL) {
+        return NULL;
+    }
+    static const char* const names[5] = { "c179_l", "c179_r", "c179_p1",
+                                          "c179_p2", "c179_p3" };
+    for (int i = 0; i != 5; ++i) {
+        if (strcmp(key, names[i]) == 0) {
+            return s_c179_buf[i];
+        }
+    }
+    return NULL;
+}
+
 static int s_failures = 0;
 
 
@@ -2169,87 +2187,6 @@ int main(int argc, char** argv)
         menu_blit_record_clear();
         indexed_pair_set(1, p1x, p1y);
         string_cache_bitmap_loader_set(NULL);
-    }
-
-    /* EncyclopediaConfigFilesOpen (2026-10-25): the catalog-group config
-     * file windows, the corpus's window pairing (27c/1e8, 280/1ec,
-     * 284/1f0, 288/1f4), and the stale singletons lane. */
-    {
-        char dir[] = "/tmp/opencode/ency182-XXXXXX";
-        CHECK(mkdtemp(dir) != NULL, "encyclopedia fixture dir");
-        char fA[128], fB[128], fC[128], fP[128];
-        snprintf(fA, sizeof fA, "%s/a.dat", dir);
-        snprintf(fB, sizeof fB, "%s/b.dat", dir);
-        snprintf(fC, sizeof fC, "%s/c.dat", dir);
-        snprintf(fP, sizeof fP, "%s/p.dat", dir);
-        static const char* files[4] = { fA, fB, fC, fP };
-        for (int k = 0; k != 4; ++k) {
-            FILE* fp = fopen(files[k], "wb");
-            CHECK(fp != NULL, "encyclopedia fixture file");
-            if (fp != NULL) {
-                fputc('x', fp);
-                fclose(fp);
-            }
-        }
-        static const char* t0[] = { "alpha", "beta" };
-        static const char* t1[] = { "noRecord" };
-        static const char* t2[] = { "gamma", "delta" };
-        static const char* t3[] = { "delta" };
-        catalog_name_table_install(0, t0);
-        catalog_name_table_install(1, t1);
-        catalog_name_table_install(2, t2);
-        catalog_name_table_install(3, t3);
-        catalog_count_install(0, 2u); /* DAT_0055627c role -> group 0 */
-        catalog_count_install(2, 1u); /* DAT_00556280 role -> group 1 */
-        catalog_count_install(3, 0u); /* DAT_00556284 role -> group 2 */
-        catalog_count_install(1, 1u); /* DAT_00556288 role -> group 3 */
-
-        char text[800];
-        snprintf(text, sizeof text,
-                 "EncRoot { Encyclopedia { alpha %s beta %s missing.dat %s "
-                 "gamma %s delta %s PowerCrystal %s Ore %s } }",
-                 fA, "no/such/value.dat", "none.dat", fB, fC, fP,
-                 "no/such/ore.dat");
-        BlockFile* cfg = s_parse(text);
-        encyclopedia_config_files_open(cfg, "EncRoot");
-
-        void** w0 = (void**)encyclopedia_file_window_peek(0);
-        void** w2 = (void**)encyclopedia_file_window_peek(2);
-        CHECK(w0 != NULL && w0[0] != NULL && w0[1] == NULL,
-              "group 0 opens the existing row and books the failed one");
-        CHECK(w2 != NULL, "the zero-count window still allocates");
-        void** w3 = (void**)encyclopedia_file_window_peek(3);
-        CHECK(w3 != NULL && w3[0] != NULL, "the 288-window group opens its row");
-        void* crystal = encyclopedia_crystal_file_peek();
-        CHECK(crystal != NULL && encyclopedia_ore_file_peek() == NULL,
-              "the PowerCrystal singleton opens; the failed Ore row answers "
-              "NULL (the corpus books the dispatch result blind)");
-
-        /* Pass 2: an empty encyclopedia re-zeroes every window while the
-         * singleton keeps its last handle (the corpus's stale-global lane
-         * on a config miss). */
-        BlockFile* empty_cfg = s_parse("EncRoot { Encyclopedia { } }");
-        encyclopedia_config_files_open(empty_cfg, "EncRoot");
-        void** w0b = (void**)encyclopedia_file_window_peek(0);
-        CHECK(w0b != NULL && w0b[0] == NULL && w0b[1] == NULL,
-              "the reopen zeroes the window (the corpus leaks the previous "
-              "array)");
-        CHECK(encyclopedia_crystal_file_peek() == crystal,
-              "the singleton keeps its handle across a config miss");
-        block_close(cfg);
-        block_close(empty_cfg);
-
-        for (int k = 0; k != 4; ++k) {
-            catalog_name_table_install(k, NULL);
-        }
-        catalog_count_install(0, 0u);
-        catalog_count_install(1, 0u);
-        catalog_count_install(2, 0u);
-        catalog_count_install(3, 0u);
-        for (int k = 0; k != 4; ++k) {
-            remove(files[k]);
-        }
-        rmdir(dir);
     }
 
     if (s_failures == 0) {

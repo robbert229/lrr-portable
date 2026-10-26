@@ -10,18 +10,21 @@ float g_camera_countdown  = 0.0f;    /* DAT_00556ed8 */
 /* --- helper stubs (fill from the corpus one at a time) ------------------- */
 
 /* FUN_0046a700 — move pipeline step over the DAT_004aa458 entry list. */
+// STUB: LEGORR 0x0046a700
 static void move_pipeline_hook(EngineState* /*state*/, EngineContext* /*ctx*/)
 {
     /* TODO(camera): FUN_0046a700 — walk the move list. */
 }
 
 /* FUN_004377b0 — post-step hook over the LAB_0046a5c0 label region. */
+// STUB: LEGORR 0x004377b0
 static void move_post_hook(int /*mode*/)
 {
     /* TODO(camera): FUN_004377b0 — post-step hook. */
 }
 
 /* FUN_0046a4c0(id) — control-registry probe; nonzero = control present. */
+// STUB: LEGORR 0x0046a4c0
 static int control_probe(uint32_t /*id*/)
 {
     /* TODO(camera): FUN_0046a4c0(0x40b) control-registry exist check. */
@@ -29,6 +32,7 @@ static int control_probe(uint32_t /*id*/)
 }
 
 /* FUN_0040f190(&coords, hint) — grid cell spawn; nonzero = spawned. */
+// STUB: LEGORR 0x0040f190
 static int grid_spawn(uint32_t* /*coords*/, uint32_t /*hint*/)
 {
     /* TODO(camera): FUN_0040f190 — instantiate at grid cell. */
@@ -36,10 +40,12 @@ static int grid_spawn(uint32_t* /*coords*/, uint32_t /*hint*/)
 }
 
 /* FUN_00438960 — spawn registry probe; FUN_0043ad50 — issue a spawn. */
+// STUB: LEGORR 0x00438960
 static int spawn_probe(int /*a*/, int /*b*/)
 {
     return 1; /* corpus probe returns nonzero here in the shipped config */
 }
+// STUB: LEGORR 0x0043ad50
 static void spawn_issue(int /*a*/, uint32_t /*type*/)
 {
     /* TODO(camera): FUN_0043ad50 — spawn entity of `type`. */
@@ -47,6 +53,9 @@ static void spawn_issue(int /*a*/, uint32_t /*type*/)
 
 /* --- the six corpus functions -------------------------------------------- */
 
+/* CameraMoveCommandRoute preserves the corpus's move-list call followed by
+ * the conditional post-step walk; both collaborators remain explicit stubs. */
+// FUNCTION: LEGORR 0x0046a730
 void camera_move_pipeline(EngineContext* ctx)
 {
     if (ctx == NULL) {
@@ -58,6 +67,10 @@ void camera_move_pipeline(EngineContext* ctx)
     }
 }
 
+/* MainSimFeatureFlagLatch (FUN_00435a50): probe control 0x40b when state
+ * bit 0x08000000 is set, then latch debug bit 0x2. Context-owned state is
+ * the port adaptation of the original globals. */
+// FUNCTION: LEGORR 0x00435a50
 void camera_registry_probe(EngineContext* ctx)
 {
     if (ctx == NULL) {
@@ -70,11 +83,15 @@ void camera_registry_probe(EngineContext* ctx)
     }
 }
 
+/* CurrentLevelGet (FUN_00431560): return the active level-state root.
+ * The port carries the original global through EngineContext. */
+// FUNCTION: LEGORR 0x00431560
 EngineState* camera_state_root(EngineContext* ctx)
 {
     return ctx != NULL ? ctx->state_block : NULL;
 }
 
+// FUNCTION: LEGORR 0x0042c440
 void camera_grid_timers(EngineContext* ctx, float dt)
 {
     EngineState* st = ctx != NULL ? ctx->state_block : NULL;
@@ -90,6 +107,7 @@ void camera_grid_timers(EngineContext* ctx, float dt)
     }
 }
 
+// FUNCTION: LEGORR 0x0042cb70
 void camera_grid_expiry(EngineContext* ctx, float dt)
 {
     EngineState* st = ctx != NULL ? ctx->state_block : NULL;
@@ -135,6 +153,7 @@ void camera_grid_expiry(EngineContext* ctx, float dt)
     }
 }
 
+// FUNCTION: LEGORR 0x004261c0
 void camera_spawn_countdown(EngineContext* ctx, float dt)
 {
     EngineState* st = ctx != NULL ? ctx->state_block : NULL;

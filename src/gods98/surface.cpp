@@ -174,6 +174,7 @@ void surface_draw_sweep(void* px, int pitch, int w, int h, int frame)
  * two in 8-15, three in 16-23, top byte zero. Callers (the palette scan
  * of finding 23) feed the bytes in memory order, so the word is the
  * 0x00BBGGRR triple as stored. */
+// FUNCTION: LEGORR 0x0047db90
 uint32_t rgb_channels_pack(uint8_t red, uint8_t green, uint8_t blue)
 {
     return (uint32_t)red | ((uint32_t)green << 8) | ((uint32_t)blue << 16);
@@ -187,6 +188,7 @@ uint32_t rgb_channels_pack(uint8_t red, uint8_t green, uint8_t blue)
  * The dword/tail split sums to exactly that, so the port copies the whole
  * even span per stage. Deviations: NULL record/pixels return (the corpus
  * strides its surface blindly) and a non-positive row count skips the walk. */
+// FUNCTION: LEGORR 0x0047d740
 void surface_pixel_rows_flip_with_scratch(SurfaceRecord* rec)
 {
     if (rec == NULL || rec->pixels == NULL) {
@@ -224,6 +226,7 @@ void surface_pixel_rows_flip_with_scratch(SurfaceRecord* rec)
  * stored word — byte 0 rides the +0x58 mask, byte 1 the +0x5c mask, byte 2
  * the +0x60 mask, the entries four bytes apart. Rows then flip. Deviations:
  * the blind record/job/source strides are guarded. */
+// FUNCTION: LEGORR 0x0047d520
 int surface_palette8_to_16bit_surface_expand(SurfaceRecord* rec,
                                              const SurfaceConvertJob* job)
 {
@@ -275,6 +278,7 @@ int surface_palette8_to_16bit_surface_expand(SurfaceRecord* rec,
  * +0x60 (high) field, byte 1 in +0x5c, byte 2 in +0x58 — and rows advance
  * by the source stride over three-byte pixels. Deviations and the flip tail
  * ride the palette walk's notes. */
+// FUNCTION: LEGORR 0x0047d800
 int surface_bitmap24_bit_surface_convert(SurfaceRecord* rec,
                                          const SurfaceConvertJob* job)
 {

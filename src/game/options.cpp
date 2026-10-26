@@ -117,12 +117,27 @@ static int* option_field(GameOptions* o, int id)
     return (int*)((char*)o + s_opts[id].off);
 }
 
+/* Partial OptionsLoadOrDefault (FUN_00416940): the original fallback branch
+ * assigns these three effective settings. Slot selection and loading are
+ * handled by the caller; the remaining option defaults are port additions. */
+// FUNCTION: LEGORR 0x00416940
+static void options_load_corpus_defaults(GameOptions* o)
+{
+    if (o == NULL) {
+        return;
+    }
+    o->game_speed = OPT_DFLT_GAME_SPEED;
+    o->sfx_volume = OPT_DFLT_SFX_VOLUME;
+    o->music_volume = OPT_DFLT_MUSIC_VOLUME;
+}
+
 void options_defaults(GameOptions* o)
 {
     if (o == NULL) {
         return;
     }
-    for (int i = 0; i < GAME_OPT_COUNT; i++) {
+    options_load_corpus_defaults(o);
+    for (int i = 3; i < GAME_OPT_COUNT; i++) {
         int* f = option_field(o, i);
         if (f != NULL) {
             *f = options_default(i);
@@ -258,6 +273,7 @@ int options_load_header(GameOptions* o, const uint8_t* blk)
 }
 
 /* OptionsWriteToSlot (FUN_00416910) — see options.hpp. */
+// FUNCTION: LEGORR 0x416910
 void options_write_to_slot(GameContext* ctx)
 {
     char* block = (char*)sav_build_ctx(ctx);
@@ -274,6 +290,7 @@ void options_write_to_slot(GameContext* ctx)
 }
 
 /* OptionsContextSixFieldSet (FUN_00417f20) — see options.hpp. */
+// FUNCTION: LEGORR 0x417f20
 void options_context_six_field_set(struct GameContext* ctx,
                                    const uint32_t* src)
 {
@@ -298,6 +315,7 @@ static uint32_t s_options_slot_window[OPTIONS_SLOT_WINDOW_DWORDS];
 static void* s_options_slot_resource;
 
 /* OptionsContextCopyAndReplaceResource (FUN_004180c0) — see options.hpp. */
+// FUNCTION: LEGORR 0x4180c0
 void options_context_copy_and_replace_resource(GameContext* ctx,
                                                const uint32_t* source)
 {
@@ -338,6 +356,7 @@ void* options_slot_resource_peek(void)
 }
 
 /* --- the scroll speed index band (see options.hpp) ----------------------- */
+// FUNCTION: LEGORR 0x00415030
 int scroll_to_slider_index(void)
 {
     const double v = (double)scroll_scale_peek(); /* corpus reads the _DAT
@@ -357,10 +376,19 @@ int scroll_to_slider_index(void)
     return (2.0 <= v) ? 5 : 4; /* corpus shape: NaN skips both tests, 4 */
 }
 
-void scroll_slider_refresh(struct GameContext* ctx)
+/* ScrollToSliderIndexStore (FUN_00414f90) stores the same speed band in the
+ * context-owned option word; the corpus writes its module global. */
+// FUNCTION: LEGORR 0x414f90
+static void options_scroll_index_store(struct GameContext* ctx)
 {
     if (ctx == NULL) {
         return; /* deviation: the corpus stores the global blindly */
     }
     ctx->options.game_speed = scroll_to_slider_index();
+}
+
+// FUNCTION: LEGORR 0x00415360
+void scroll_slider_refresh(struct GameContext* ctx)
+{
+    options_scroll_index_store(ctx);
 }

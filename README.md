@@ -31,9 +31,9 @@ tools/              Analysis tooling: unwad.py, Ghidra function-naming script
 docs/adr/           Architecture decision records (build/port decisions)
 reference/          (gitignored) the original, unmodified game files
 unpacked/           (gitignored) 5,845 assets extracted from the .wad archives
-cross/              Meson cross files (i686.ini — MinGW-w64 Win32 toolchain)
-meson.build         Reconstruction build (top-level; platform=native|winapi)
-meson_options.txt   Build options (src_root, platform)
+cross/              MinGW-w64 Win32 toolchain inputs
+CMakeLists.txt      Experimental CMake build (platform=native|winapi)
+meson.build         Existing Meson build (kept during the CMake migration)
 src/                Reconstruction source tree (stubs + gods98 / game / platform)
 subprojects/        miniwin CMake bridge (sparse isle-portable submodule)
 3rdparty/           Dependency submodules (isle-portable, sparse → miniwin/)
@@ -783,8 +783,11 @@ The latest three-range helper audits are preserved in the
 
 ## Reconstruction build
 
-Meson build with one source tree and two platform backends (ADR 0004). The
-`native` build is green and the driver (`src/main.cpp`) now exercises the
+The build is being migrated experimentally from Meson to CMake on
+`integration/reprobit`. CMake is now the default through `make`; the Meson
+files remain available while parity work continues. Both build one source
+tree with two platform backends (ADR 0004). The existing Meson `native` build
+is green; the driver (`src/main.cpp`) now exercises the
 **engine scaffold** plus the **game layer** (levels, objectives, savegames —
 findings 07/08/22): `EngineTick`/`EnginePreTick`/`KeepRunning`/
 `MainSimStep`/`EngineShutdown` in `src/gods98/engine.*` mirror the corpus's
@@ -2362,66 +2365,6 @@ type-7 records on the modeled zone word (+0x2c, the corpus's kind-7
 issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
-
-**Sav-tree state visitor** (2026-10-25): two frontier rows land, closing the
-`CLEAN`-bucket split. `savegame.*` takes `sav_tree_walk2` (FUN_004172f0) and
-`sav_tree_load` (FUN_004173e0) — the stateful sibling of the ported plain walk
-(FUN_004171c0). The walk enters each unvisited node once, computes a "need"
-word from the shared five-dword state (the flag lane when the stride window
-base is null or the extended-mode gate — app mode > 1 or the feature word's
-bit 0x20000 — raises, which also zeroes the flag on entry, otherwise the bit-0
-read at `node.window * 0x3190 + window_base`), then touches the block cursor:
-bit 2 clears only when need, the incoming carry, and the block's +0x1c word
-all read zero, sets otherwise, and the cursor ALWAYS advances (the corpus
-advances through a null block pointer too). Children recurse with `need` as
-the carry; the load stack-inits the state, walks with carry 1, then clears the
-installed visited bands (FUN_00416e70). Deviations: the corpus's two tree-root
-globals are unmodeled so nodes ride as arguments, app mode threads
-EngineContext, the feature word rides the crt.* half-model peek, and the
-stride/block reads are guarded memcpy lanes. Test fix found mid-cluster:
-`objective_test` raised the gate bit through the level block it had already
-destroyed — the raise gate now rides a fresh zeroed block, which also
-`MALLOC_PERTURB_`-hardens the suite (the dangling block crashed under most
-meson-injected perturbation values). Ledger 1126 -> 1128. Tests green; 34/36
-baseline.
-
-**Tutorial path coordinate chains** (2026-10-25): one frontier row lands.
-`level.*` takes `tutorial_path_coordinate_index` (0x456b80): zero the 0x37-slot
-chain table on the level block, then sweep the voxel grid x-outer / y-inner
-over the +0x14 width and +0x18 height and head-push every cell whose +0x04
-coordinate byte is set onto that coordinate's chain — (x, y, next) nodes
-through the heap seam, clearing the byte as consumed. The corpus strides the
-+0x114 head table as 4-byte dwords inside the level block; the port keeps it
-as a widened `void* pool_heads[0x37]` image off the corpus layout (the
-`object_pool_lists_free_all` convention), the node keeps a padded 0x10 image,
-and a NULL block/voxel window or an out-of-range coordinate byte ride as
-guards where the corpus strides. A zeroing re-run leaks the superseded chains
-(as does the corpus). Deviation fix folded in: `test_savegame` freed the fake
-level mid-test and left `ctx.level` dangling — the tail blob build reads
-freed memory once `MALLOC_PERTURB_` poisons the chunk, so the reference is
-now cleared after the cleanup free (the builder already NULL-guards its name
-lane). `level_test` pins the chain order, the consumed bytes, the guard, and
-the leak-faithful re-sweep. Ledger 1125 -> 1126. Tests green; 34/36 baseline.
-
-**Encyclopedia config-file windows** (2026-10-25): one frontier row lands.
-`frontend.*` takes `encyclopedia_config_files_open` (0x40e490): for each of
-the four catalog groups it walks the count window, joins
-`<root>::Encyclopedia::<name>` through the path builder (FUN_00478f50), reads
-the config record's value token (FUN_004790b0's record+8), and opens the named
-file through the resource dispatch (FUN_0047f6e0 in "r" mode — the port's AUTO
-open); the four handle windows reallocate through the heap seam every call and
-the corpus's leaked superseded arrays leak too. Group pairing rides the
-corpus's count/name address band (0x27c/0x1e8, 0x280/0x1ec, 0x284/0x1f0,
-0x288/0x1f4), so kind 1 reads the DAT_00556288 count that already feeds the
-query lanes — the entity.* count window merged to four slots and gained the
-name-table install/peek hooks over the loader-owned band. The PowerCrystal and
-Ore singleton opens keep their last handle across a config miss (the corpus's
-stale-global lane). Deviations: the window slots ride the port's 8-byte
-handles (the corpus strides 4-byte dwords, so the zeroing strides
-sizeof(void*)), the counts/tables ride own storage (the corpus's catalog
-loader is unported), and NULL answers stand where the corpus strides.
-`frontend_test` pins the pairing, the zeroed reopen, and the stale singleton.
-Ledger 1124 -> 1125. Tests green; 34/36 baseline.
 
 **Key-group code band + catalog dispatch** (2026-10-25): three frontier
 rows land. `resource.*` takes the corpus writers of the DAT_004ddc04
@@ -4041,15 +3984,31 @@ the `tools/rrae.py` ground-truth model.
 
 ```sh
 # native (primary)
-meson setup build-native -Dplatform=native
-tools/build-miniwin.sh                     # builds the real miniwin archive —
-meson compile -C build-native              # meson's cmake bridge alone leaves
-                                           # libminiwin.a empty (EXCLUDE_FROM_ALL)
+make build
+make run WAD_DIR=/path/to/game
 
 # winapi reference build
-meson setup build-winapi --cross-file cross/i686.ini -Dplatform=winapi
-meson compile -C build-winapi
+make setup BUILD_DIR=build-winapi PLATFORM=winapi \
+  CMAKE_TOOLCHAIN_FILE=cross/i686-toolchain.cmake
+cmake --build build-winapi
+
+# MSVC 5.0 build with a PDB, followed by a Reccmp report
+make reccmp RECCMP_WINE_BIN=/path/to/wine \
+  RECCMP_RECCMP=/path/to/reccmp-reccmp
 ```
+
+The Reccmp report is written to
+`build-reccmp/reccmp-report/index.html` (JSON: `results.json`). The target
+defaults to `~/.local/share/reprobit/toolchains/msvc_5_0_rtm`; override it with
+`REPROBIT_MSVC_5_0_RTM_ROOT=/path/to/toolchain` when needed. `make reccmp-report`
+is an alias for `make reccmp`. Run `make reccmp-lint` to check that each
+production function definition under `src/` has a nearby Reccmp `FUNCTION:` or
+`STUB:` annotation; it exits with an error and lists missing annotations.
+
+Direct CMake configuration also supports `-DTEST_WADS_DIR=<dir>`,
+`-DMOVIES=auto|enabled|disabled`, and `-DSRC_ROOT=<path>`. The legacy Meson
+configuration remains documented below until the CMake migration reaches
+feature parity.
 
 **Frame loop** (2026-10-21): the native build opens a 640×480 window, mounts
 the shipped wads, renders real corpus textures (`ROCKROOF.BMP`,

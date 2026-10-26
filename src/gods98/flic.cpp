@@ -221,6 +221,7 @@ static void fli_decode_chunk(Flic* f, const FlicChunk* ch)
 
 /* --- open / close --------------------------------------------------------- */
 
+// FUNCTION: LEGORR 0x00483c80
 Flic* flic_open(const char* name)
 {
     if (name == NULL || name[0] == '\0') {
@@ -328,6 +329,7 @@ void flic_close(Flic* f)
     free(f);
 }
 
+// FUNCTION: LEGORR 0x004841d0
 int flic_tick_loop(Flic* f, int loop)
 {
     if (f == NULL) {
@@ -375,11 +377,13 @@ const uint8_t* flic_frame_rgba(Flic* f)
 }
 
 /* FlicOpcode25SuccessStub (FUN_00484b90, finding 21): success, no work. */
+// FUNCTION: LEGORR 0x00484b90
 uint32_t flic_opcode25_success_stub(void)
 {
     return 1u;
 }
 
+// STUB: LEGORR 0x00484c90
 void flic_opcode27_fallback_noop(void)
 {
     /* FUN_00484c90: pure return — faithful. */
@@ -389,6 +393,7 @@ void flic_opcode27_fallback_noop(void)
  * the dispatch words from its frame record; the port takes the record as a
  * byte window (the corpus buffer shape). The fallback callee is the pure
  * no-op the port already models, so every branch observes as 1. */
+// FUNCTION: LEGORR 0x00484880
 int flic_opcode16_mode_dispatch(const uint8_t* rec)
 {
     uint32_t mode = 0u, op = 0u;
@@ -414,6 +419,7 @@ int flic_opcode16_mode_dispatch(const uint8_t* rec)
  * precedent): 256 packed RGB triplets at +0x11c become 16-bit words at
  * +0x41c, and the first word is then cleared. Deviation: the corpus strides
  * the record blindly. */
+// FUNCTION: LEGORR 0x00484ba0
 void flic_packed_triplet_table_to_word_build(void* record)
 {
     if (record == NULL) {
@@ -483,6 +489,7 @@ static int flic_window_find(const void* rec, void** stream, void** pixels)
  * lands each source byte >>2; the zero-flag chunk restarts the table for a
  * full 0x100-triplet pass on the loop's last lap; op 4 hands off to the
  * triplet fold. */
+// FUNCTION: LEGORR 0x00484c00
 int flic_decode16_bit_row_records(void* record)
 {
     if (record == NULL) {
@@ -531,6 +538,7 @@ int flic_decode16_bit_row_records(void* record)
 /* FlicDecode8BitOpcode25Mode4 (FUN_004848d0) — see flic.hpp. The byte
  * stream rides stream+7; the row walk ends each pass one byte short and
  * the palette store lands through the indexed word window. */
+// FUNCTION: LEGORR 0x004848d0
 int flic_decode8_bit_opcode25_mode4(void* record)
 {
     if (record == NULL) {
@@ -610,6 +618,7 @@ static uint16_t expand16_word(const char* rec, uint16_t w)
  * rides stream+7; each row re-reads the row length +0xc (the corpus walks
  * one straddle byte past the row) and targets pixel_base +0x6cc with the
  * pitch/2 stride of the row index; the row count +0x10 is read once. */
+// FUNCTION: LEGORR 0x004849d0
 int flic_decode16_bit_keyframe(void* record)
 {
     if (record == NULL) {
@@ -686,6 +695,7 @@ int flic_decode16_bit_keyframe(void* record)
  * a lone BYTE store at the walk's end, and 4-type ends the record. The
  * pair words advance the target by the pair's low byte and expand their
  * own words (or a repeated one on the back-count quirk). */
+// FUNCTION: LEGORR 0x00484e50
 int flic_decode16_bit_delta(void* record)
 {
     if (record == NULL) {
@@ -834,6 +844,7 @@ void flic_frame_window_layout_install(void* rec, int row_len, int row_count,
  * (guarded here, like the rest of the band), and the corpus's zero-argument
  * callee calls leave the record pointer in a register — the port threads
  * it through, the way the window-slot fix must for the whole band. */
+// FUNCTION: LEGORR 0x00484ca0
 int flic_decode8_bit_alternate_delta(void* record)
 {
     if (record == NULL) {
@@ -947,6 +958,7 @@ int flic_decode8_bit_alternate_delta(void* record)
  * word +0x644. Deviation: the corpus's keyframe call passes no argument
  * (the record pointer rides the register) — the port threads the record
  * through, as the window band's precedent requires. */
+// FUNCTION: LEGORR 0x00484b20
 int flic_opcode25_decode_dispatch(void* record)
 {
     if (record == NULL) {
@@ -982,6 +994,7 @@ int flic_opcode25_decode_dispatch(void* record)
  * 16-bit decoder (the literal 0x1234 goes to the fallback), and the 8-bit
  * op-4 route lands in the alternate delta. Deviations ride the same two
  * notes as flic_opcode25_decode_dispatch. */
+// FUNCTION: LEGORR 0x00485030
 int flic_opcode27_decode_dispatch(void* record)
 {
     if (record == NULL) {

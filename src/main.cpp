@@ -20,7 +20,7 @@ int LegorrrMain(void)
 {
     /* GUI-subsystem / SDL builds have no console; write an observable log. */
     FILE* log = fopen("legoRR-stub.log", "w");
-    if (log == nullptr) {
+    if (log == 0) {
         return 1;
     }
 
