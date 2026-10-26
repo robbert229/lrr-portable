@@ -10,3 +10,5 @@ subprojects/.wraplock
 build/
 /.reprobit-state/
 /.reprobit-transactions/
+reccmp-user.yml
+reccmp-build.yml
