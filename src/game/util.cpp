@@ -41,11 +41,13 @@ const char* util_level_cfg_path(BlockFile* cfg, const char* level,
     return block_get_strptr(cfg, out) != NULL ? out : NULL;
 }
 
+// FUNCTION: LEGORR 0x0048db70
 long util_atoi(const char* s)
 {
     return s != NULL ? strtol(s, NULL, 10) : 0;
 }
 
+// FUNCTION: LEGORR 0x0048d980
 float util_atof(const char* s)
 {
     return s != NULL ? (float)strtod(s, NULL) : 0.0f;

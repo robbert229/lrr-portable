@@ -354,6 +354,7 @@ static void credits_free_lines(char** lines, int count)
 
 /* CreditsTextFile + CreditsBackAVI @ 0x40a0c0: scroll centered text over
  * the configured AVI until the player presses a key or clicks. */
+// FUNCTION: LEGORR 0x0040a0c0
 static void frameloop_credits(PlatformWindow* win, DisplaySurface* surf,
                               BlockFile* cfg, const char* wad_dir,
                               AudioPlayer* ap, int audio_status, int* quit,
@@ -609,7 +610,7 @@ int LegorrrRun(void)
         log = stderr;
     }
 
-    int mounted = resource_mount(wad_dir, "LegoRR");
+    int mounted = resource_mount(wad_dir, resource_get_wad_prefix());
     resource_set_cd_root(wad_dir);
     fprintf(log, "frameloop: mounted %d wad(s) from %s\n", mounted, wad_dir);
     if (mounted == 0) {

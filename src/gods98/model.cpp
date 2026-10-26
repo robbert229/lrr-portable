@@ -44,6 +44,7 @@ static float bef32(const uint8_t* p)
  * at the cursor, byte-reverse them into `out`, advance the cursor, answer
  * 1. The corpus's LwoPoints/LwoSurfaceSettings readers call it for every
  * big-endian float field; byte-reversal is exactly be32 + host store. */
+// FUNCTION: LEGORR 0x0048c1d0
 int lwo_read_big_endian_float(const uint8_t** cursor, uint8_t out[4])
 {
     const uint8_t* p = *cursor;
@@ -183,6 +184,7 @@ static int dup_assign(char** dst, const char* src, size_t len)
 
 /* --- SRFS: NUL-terminated names, even-padded records --------------------------- */
 
+// FUNCTION: LEGORR 0x0048c690
 static int parse_srfs(Parse* P, const uint8_t* pay, size_t size)
 {
     size_t p = 0;
@@ -211,6 +213,7 @@ static int parse_srfs(Parse* P, const uint8_t* pay, size_t size)
 
 /* python polys(): {u16 count, count x i16 indices, u16 surface}; stops on
  * count 0 or truncation; surface = max(signed - 1, 0). */
+// FUNCTION: LEGORR 0x0048c3e0
 static int parse_pols(Parse* P, const uint8_t* d, size_t size)
 {
     size_t p = 0;
@@ -311,6 +314,7 @@ static int block_find(const SurfRec* r, const char* tag, const uint8_t** out, si
 
 /* python surf_records(): SRFS-name anchors delimit records inside SURF
  * chunks; between them {4 printable tag bytes, u16 size, payload, pad}. */
+// FUNCTION: LEGORR 0x0048c820
 static int parse_surf_chunk(Parse* P, const uint8_t* d, size_t size)
 {
     size_t* starts = NULL;
@@ -528,6 +532,23 @@ static const Chunk* chunk_find_first(const Parse* P, const char* tag)
     return NULL;
 }
 
+/* LwoPoints: convert each PNTS triple from big-endian float bits and append
+ * the host-order coordinates to the model's vertex buffer. */
+// FUNCTION: LEGORR 0x0048c210
+static int parse_points(Parse* P, const Chunk* c)
+{
+    for (size_t q = 0; q + 12 <= c->size; q += 12) {
+        for (int k = 0; k < 3; k++) {
+            float f = bef32(c->pay + q + 4 * k);
+            if (!buf_append(&P->vb, &f, sizeof f)) {
+                return 0;
+            }
+        }
+    }
+    return 1;
+}
+
+// FUNCTION: LEGORR 0x0048d2c0
 Model* model_parse(const uint8_t* data, size_t len)
 {
     if (len < 12 || memcmp(data, "FORM", 4) != 0 || memcmp(data + 8, "LWOB", 4) != 0)
@@ -562,15 +583,7 @@ Model* model_parse(const uint8_t* data, size_t len)
 
     const Chunk* c;
     if ((c = chunk_find_first(&P, "PNTS"))) {
-        /* f32 triples converted to host order for the float table */
-        for (size_t q = 0; q + 12 <= c->size; q += 12) {
-            for (int k = 0; k < 3; k++) {
-                float f = bef32(c->pay + q + 4 * k);
-                if (!buf_append(&P.vb, &f, sizeof f)) { ok = 0; break; }
-            }
-            if (!ok)
-                break;
-        }
+        ok = parse_points(&P, c);
     }
     /* POLS / SRFS: first occurrence each */
     if (ok) {
@@ -679,6 +692,9 @@ typedef struct UvBlock {
     float* uv; /* 2*count pairs (u, -v) */
 } UvBlock;
 
+/* ParseUV: parse the .uv text and apply its polygon UV pairs to the model.
+ * The caller supplies buffered text instead of the corpus stream handle. */
+// FUNCTION: LEGORR 0x00481c50
 int model_apply_uv_text(Model* m, const char* text, size_t len)
 {
     /* Split the way parse_uv's python does: CRLF acts as the line break
@@ -828,6 +844,7 @@ done:
 
 /* --- open / free / digest ------------------------------------------------------------- */
 
+// FUNCTION: LEGORR 0x0048d7c0
 Model* model_open(const char* path)
 {
     Resource* r = resource_open(path, RESOURCE_AUTO);
@@ -951,6 +968,7 @@ uint32_t model_digest(const Model* m)
  * corpus's strnicmp shape, exposed via string_folded_compare); the first
  * prefix match answers the table index, anything else answers 0 — the
  * PLANAR default. */
+// FUNCTION: LEGORR 0x0048c0c0
 char* lwo_string_duplicate(const char* text)
 {
     if (text == NULL) {
@@ -967,6 +985,7 @@ char* lwo_string_duplicate(const char* text)
     return copy;
 }
 
+// FUNCTION: LEGORR 0x0048c120
 int lwo_texture_projection_mode_parse(const char* name)
 {
     static const char* const modes[3] = { "PLANAR", "CYLINDRICAL",

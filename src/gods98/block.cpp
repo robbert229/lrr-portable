@@ -210,6 +210,7 @@ fail:
     return NULL;
 }
 
+// FUNCTION: LEGORR 0x00478e60
 BlockFile* block_open(const char* path)
 {
     Resource* res = resource_open(path, RESOURCE_AUTO);
@@ -268,6 +269,7 @@ static int seg_match_len(const BlockRec* r, const char* seg, size_t len,
  * token and `::` as the group separator ("LegoRR Main Menu::MainMenuFull
  * MenuCount" — DAT_004aab18 = "::", finding 23), so a segment boundary is
  * either a space or a "::" run; matching is otherwise unchanged. */
+// FUNCTION: LEGORR 0x004792e0
 BlockRec* block_find(BlockFile* bf, const char* path)
 {
     if (bf == NULL || path == NULL || *path == '\0') {
@@ -320,6 +322,7 @@ BlockRec* block_find(BlockFile* bf, const char* path)
     return cur;
 }
 
+// FUNCTION: LEGORR 0x00478ff0
 BlockRec* block_subgroup(BlockFile* bf, const char* path)
 {
     BlockRec* r = block_find(bf, path);
@@ -332,6 +335,7 @@ BlockRec* block_subgroup(BlockFile* bf, const char* path)
 /* --- accessors ------------------------------------------------------------ */
 
 const char* block_name(const BlockRec* r)  { return r ? r->name : NULL; }
+// FUNCTION: LEGORR 0x004790b0
 const char* block_value(const BlockRec* r) { return r ? r->value : NULL; }
 
 BlockRec* block_first_child(const BlockRec* r) { return r ? r->child : NULL; }
@@ -340,6 +344,7 @@ BlockRec* block_next_sibling(const BlockRec* r) { return r ? r->sibling : NULL; 
 /* SortedEntryNextEqualKey (FUN_00479020): next record at the same depth
  * is next-sibling in the tree model (see header; corpus next-pointer
  * read guarded). */
+// FUNCTION: LEGORR 0x00479020
 BlockRec* block_next_equal_key(const BlockRec* r)
 {
     return block_next_sibling(r);
@@ -398,6 +403,7 @@ float block_get_float(BlockFile* bf, const char* path, float dflt)
 
 /* Corpus FUN_00477710: YES/TRUE/ON → 1; NO/FALSE/OFF → 0; else 2.
  * Missing path is also 2 (FUN_004790d0's init value). */
+// FUNCTION: LEGORR 0x00477710
 int block_get_bool(BlockFile* bf, const char* path)
 {
     const char* v = block_get_strptr(bf, path);
@@ -420,6 +426,7 @@ int block_get_bool(BlockFile* bf, const char* path)
  * separator. The registry's 100-byte caller buffer bound is the
  * caller's business (finding 402 notes the helper itself is unbounded —
  * reproduced, caller checks live where the registry lands). */
+// FUNCTION: LEGORR 0x0048b330
 const char* registry_path_split(const char* path, char* out)
 {
     if (path == NULL || out == NULL) {
@@ -466,6 +473,7 @@ static int   s_token_pool_watermark; /* DAT_0050651c role: grow counter */
  * to eight pointer slots (stride 0x40, link = field 7 at +0x38) so the
  * pointer link stays host-aligned — the crt stream-buffer field-slot model
  * applied here. */
+// FUNCTION: LEGORR 0x00479490
 void block_text_token_pool_grow(void)
 {
     const uint32_t shift = (uint32_t)((unsigned char)s_token_pool_watermark
@@ -490,6 +498,7 @@ void block_text_token_pool_grow(void)
     s_token_pool_head = chunk;
 }
 
+// FUNCTION: LEGORR 0x00478e20
 void block_text_token_pool_destroy(void)
 {
     for (int i = 0; i < BLOCK_TOKEN_POOL_SLOTS; ++i) {
@@ -508,6 +517,7 @@ void block_text_token_pool_destroy(void)
  * flag (`_DAT_00506520 = 1`, the port's resident-count role). Deviation:
  * the port keeps slots and head as separate statics, so the window ends at
  * the slots and the head store stands on its own. */
+// FUNCTION: LEGORR 0x00478df0
 void block_text_token_pool_init(void)
 {
     memset(s_token_pool_slots, 0, sizeof s_token_pool_slots);
@@ -553,6 +563,7 @@ int block_text_token_pool_watermark_peek(void)
 /* ConfigRgbVectorRead (FUN_00479170) — see block.hpp. The corpus frees its
  * heap copy of the value on every path; the port reads the tree storage
  * (deviation) and splits a stack copy with FUN_00477440's quirks pinned. */
+// FUNCTION: LEGORR 0x00479170
 int config_rgb_vector_read(BlockFile* bf, const char* path,
                            float* r, float* g, float* b)
 {
@@ -597,6 +608,7 @@ int config_rgb_vector_read(BlockFile* bf, const char* path,
 }
 
 /* ReadAngleSettingRadians (FUN_00479110) — see block.hpp. */
+// FUNCTION: LEGORR 0x00479110
 float config_angle_radians_get(BlockFile* bf, const char* path)
 {
     const float deg = block_get_float(bf, path, 0.0f);

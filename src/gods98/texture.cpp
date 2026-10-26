@@ -51,11 +51,26 @@ static int t_strcasecmp(const char* a, const char* b)
     }
 }
 
-TextureSurface* texture_decode(const uint8_t* data, uint32_t size)
+typedef struct TextureBitmapLayout {
+    int32_t width, height;
+    int bpp;
+    uint32_t data_off, row_stride, num_colors;
+    int top_down;
+    uint8_t r[256], g[256], b[256];
+} TextureBitmapLayout;
+
+/* IndexedBitmapPaletteDataPrepare: read bitmap dimensions/format/scanline
+ * layout and normalize the optional indexed palette for the software path.
+ * The port validates file bounds and supports OS/2 headers as deviations. */
+// FUNCTION: LEGORR 0x00489c30
+static int texture_bitmap_layout_prepare(const uint8_t* data, uint32_t size,
+                                         TextureBitmapLayout* layout)
 {
-    if (size < 26 || data[0] != 'B' || data[1] != 'M') {
-        return NULL;
+    if (layout == NULL || size < 26 || data[0] != 'B' || data[1] != 'M') {
+        return 0;
     }
+
+    memset(layout, 0, sizeof(*layout));
 
     uint32_t data_off = t_le32(data + 10);
     uint32_t hdr_size = t_le32(data + 14);
@@ -94,12 +109,12 @@ TextureSurface* texture_decode(const uint8_t* data, uint32_t size)
         pal_start  = 54;
         pal_stride = 4; /* BGR(0) */
     } else {
-        return NULL; /* unknown header size */
+        return 0; /* unknown header size */
     }
 
     if (w <= 0 || h <= 0 || bpp < 1 || bpp > 32
         || num_colors > 256u || data_off > size) {
-        return NULL;
+        return 0;
     }
 
     /* Palette entries may be fewer than the implied count (files sometimes
@@ -112,7 +127,7 @@ TextureSurface* texture_decode(const uint8_t* data, uint32_t size)
     /* Palette must sit inside the file, before the pixel data. */
     uint64_t pal_end = (uint64_t)pal_start + (uint64_t)num_colors * pal_stride;
     if (pal_end > data_off) {
-        return NULL;
+        return 0;
     }
 
     /* Row stride: each row padded to a multiple of 4 bytes. */
@@ -120,22 +135,49 @@ TextureSurface* texture_decode(const uint8_t* data, uint32_t size)
     uint32_t row_stride = ((row_bits + 31u) / 32u) * 4u;
     uint64_t pixel_bytes = (uint64_t)row_stride * (uint64_t)h;
     if (pixel_bytes > (uint64_t)size - data_off) {
-        return NULL;
+        return 0;
     }
 
     /* Palette table, converted to 24-bit RGB. Zero-filled: entries past the
      * table read as black, mirroring the zero-padded 0x400 palette copy in
      * the corpus loader (FUN_00489c30). */
-    uint8_t r[256] = { 0 }, g[256] = { 0 }, b[256] = { 0 };
     for (uint32_t i = 0; i < num_colors; ++i) {
         const uint8_t* e = data + pal_start + i * pal_stride;
         if (e + pal_stride > data + size) {
             break; /* palette table ends early; rest reads as black */
         }
-        b[i] = e[0];
-        g[i] = e[1];
-        r[i] = e[2];
+        layout->b[i] = e[0];
+        layout->g[i] = e[1];
+        layout->r[i] = e[2];
     }
+
+    layout->width = w;
+    layout->height = h;
+    layout->bpp = bpp;
+    layout->data_off = data_off;
+    layout->row_stride = row_stride;
+    layout->num_colors = num_colors;
+    layout->top_down = top_down;
+    return 1;
+}
+
+/* BitmapSurfaceLoad: interpret the BMP header/palette and convert its pixel
+ * rows into a software surface. Resource lookup and DirectDraw surface setup
+ * from the original function live in texture_load's ported boundary. */
+// FUNCTION: LEGORR 0x0047d9d0
+TextureSurface* texture_decode(const uint8_t* data, uint32_t size)
+{
+    TextureBitmapLayout layout;
+    if (!texture_bitmap_layout_prepare(data, size, &layout)) {
+        return NULL;
+    }
+    const int32_t w = layout.width;
+    const int32_t h = layout.height;
+    const int bpp = layout.bpp;
+    const uint32_t data_off = layout.data_off;
+    const uint32_t row_stride = layout.row_stride;
+    const uint32_t num_colors = layout.num_colors;
+    const int top_down = layout.top_down;
 
     TextureSurface* t = (TextureSurface*)calloc(1, sizeof(TextureSurface));
     if (t == NULL) {
@@ -150,8 +192,9 @@ TextureSurface* texture_decode(const uint8_t* data, uint32_t size)
          * 0x3fc..0x3fe) as the two colour keys of every 8bpp face. */
         for (int i = 0; i < 2; ++i) {
             uint32_t idx = (i == 0) ? 0u : 255u;
-            t->keys[i] = 0xff000000u | ((uint32_t)r[idx] << 16)
-                       | ((uint32_t)g[idx] << 8) | (uint32_t)b[idx];
+            t->keys[i] = 0xff000000u | ((uint32_t)layout.r[idx] << 16)
+                       | ((uint32_t)layout.g[idx] << 8)
+                       | (uint32_t)layout.b[idx];
         }
         t->key_count = 2;
     }
@@ -170,17 +213,17 @@ TextureSurface* texture_decode(const uint8_t* data, uint32_t size)
             if (bpp == 8) {
                 uint32_t idx = row[x];
                 if (idx < num_colors) {
-                    pr = r[idx]; pg = g[idx]; pb = b[idx];
+                    pr = layout.r[idx]; pg = layout.g[idx]; pb = layout.b[idx];
                 }
             } else if (bpp == 4) {
                 uint32_t idx = (row[x / 2] >> (x & 1 ? 0 : 4)) & 0xf;
                 if (idx < num_colors) {
-                    pr = r[idx]; pg = g[idx]; pb = b[idx];
+                    pr = layout.r[idx]; pg = layout.g[idx]; pb = layout.b[idx];
                 }
             } else if (bpp == 1) {
                 uint32_t idx = (row[x / 8] >> (7 - (x & 7))) & 1;
                 if (idx < num_colors) {
-                    pr = r[idx]; pg = g[idx]; pb = b[idx];
+                    pr = layout.r[idx]; pg = layout.g[idx]; pb = layout.b[idx];
                 }
             } else if (bpp == 16) {
                 uint32_t v = t_le16(row + x * 2);
@@ -215,6 +258,9 @@ TextureSurface* texture_decode(const uint8_t* data, uint32_t size)
  *  Load + get-or-load cache (finding 13 §2).
  * ------------------------------------------------------------------ */
 
+/* CreateBmpSurface: resource-backed BMP decode into the port's software
+ * surface; DirectDraw surface creation/upload is replaced by TextureSurface. */
+// FUNCTION: LEGORR 0x00474050
 TextureSurface* texture_load(const char* name)
 {
     Resource* r = resource_open(name, RESOURCE_AUTO);
@@ -231,6 +277,9 @@ TextureSurface* texture_load(const char* name)
     return t;
 }
 
+/* TextureGetOrCreate: name-keyed hit/refcount or load-and-cache path. The
+ * port has one cache and no original secondary shared-texture fallback. */
+// FUNCTION: LEGORR 0x00482e70
 TextureSurface* texture_get_or_load(const char* base, const char* file)
 {
     char joined[1024];
@@ -274,6 +323,7 @@ TextureSurface* texture_get_or_load(const char* base, const char* file)
     return t;
 }
 
+// FUNCTION: LEGORR 0x00474710
 void texture_release(TextureSurface* t)
 {
     if (t == NULL) {
@@ -341,6 +391,7 @@ uint32_t texture_pixel_hash(TextureSurface* t)
 /* Both corpus halves work over a caller-supplied entry window; entries
  * ride as widened slots {word, name, word}. Deviation: the port guards
  * the table, the count, and the name pointer (the corpus strides them). */
+// FUNCTION: LEGORR 0x00483030
 void* texture_cache_name_slot_find(const void* table, uint32_t count,
                                    const char* name)
 {
@@ -360,6 +411,7 @@ void* texture_cache_name_slot_find(const void* table, uint32_t count,
     return NULL;
 }
 
+// FUNCTION: LEGORR 0x00483080
 void texture_cache_name_slot_append(void* table, int* count,
                                     const char* name, void* slot_a,
                                     void* slot_b)

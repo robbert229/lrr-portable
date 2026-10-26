@@ -19,6 +19,7 @@ int   g_view_test_blend  = 0;       /* test hook for the mode-3 EMA target */
  *   FUN_00401240 vec2_dist, FUN_00406730 vec2_dist_alt,
  *   FUN_0047c0c0 vec_exact_equal. */
 
+// FUNCTION: LEGORR 0x00401720
 void vec_scale(float* dst, const float* src, float s) /* FUN_00401720 */
 {
     dst[0] = s * src[0];
@@ -26,6 +27,7 @@ void vec_scale(float* dst, const float* src, float s) /* FUN_00401720 */
     dst[2] = s * src[2];
 }
 
+// FUNCTION: LEGORR 0x00401500
 void vec_add(float* dst, const float* a, const float* b) /* FUN_00401500 */
 {
     dst[0] = a[0] + b[0];
@@ -33,6 +35,7 @@ void vec_add(float* dst, const float* a, const float* b) /* FUN_00401500 */
     dst[2] = a[2] + b[2];
 }
 
+// FUNCTION: LEGORR 0x004016c0
 void vec_sub(float* dst, const float* a, const float* b) /* FUN_004016c0 */
 {
     dst[0] = a[0] - b[0];
@@ -40,6 +43,7 @@ void vec_sub(float* dst, const float* a, const float* b) /* FUN_004016c0 */
     dst[2] = a[2] - b[2];
 }
 
+// FUNCTION: LEGORR 0x00401470
 void vec_cross(float* dst, const float* b, const float* c) /* FUN_00401470 */
 {
     dst[0] = b[1] * c[2] - b[2] * c[1];
@@ -47,6 +51,7 @@ void vec_cross(float* dst, const float* b, const float* c) /* FUN_00401470 */
     dst[2] = b[0] * c[1] - b[1] * c[0];
 }
 
+// FUNCTION: LEGORR 0x00401750
 void vec_normalize(float* v) /* FUN_00401750 (zero length unguarded, as corpus) */
 {
     float s = 1.0f / sqrtf(v[0] * v[0] + v[2] * v[2] + v[1] * v[1]);
@@ -55,22 +60,26 @@ void vec_normalize(float* v) /* FUN_00401750 (zero length unguarded, as corpus) 
     v[2] = s * v[2];
 }
 
+// FUNCTION: LEGORR 0x00401420
 float vec_dist(const float* a, const float* b) /* FUN_00401420 */
 {
     float dx = a[0] - b[0], dy = a[1] - b[1], dz = a[2] - b[2];
     return sqrtf(dx * dx + dy * dy + dz * dz);
 }
 
+// FUNCTION: LEGORR 0x004016f0
 float vec_dot(const float* a, const float* b) /* FUN_004016f0 */
 {
     return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 }
 
+// FUNCTION: LEGORR 0x004013a0
 float vec_len(const float* a) /* FUN_004013a0 */
 {
     return sqrtf(a[0] * a[0] + a[1] * a[1] + a[2] * a[2]);
 }
 
+// FUNCTION: LEGORR 0x00401240
 float vec2_dist(const float* a, const float* b) /* FUN_00401240 */
 {
     float dx = a[0] - b[0];
@@ -78,6 +87,7 @@ float vec2_dist(const float* a, const float* b) /* FUN_00401240 */
     return sqrtf(dx * dx + dy * dy);
 }
 
+// FUNCTION: LEGORR 0x00406730
 float vec2_dist_alt(const float* a, const float* b) /* FUN_00406730 */
 {
     /* Corpus variant: dy term first, x term through an extra round-trip —
@@ -87,6 +97,7 @@ float vec2_dist_alt(const float* a, const float* b) /* FUN_00406730 */
     return sqrtf(dy * dy + dx * dx);
 }
 
+// FUNCTION: LEGORR 0x0047c0c0
 int vec_exact_equal(const float* a, const float* b) /* FUN_0047c0c0 */
 {
     return a[0] == b[0] && a[1] == b[1] && a[2] == b[2];
@@ -98,6 +109,7 @@ int vec_exact_equal(const float* a, const float* b) /* FUN_0047c0c0 */
 
 /* PointDistanceWithinRadius (FUN_0045b8a0): true when the point
  * (x1,y1)-(x2,y2) distance is under `radius`. */
+// FUNCTION: LEGORR 0x0045b8a0
 int point_distance_within_radius(float x1, float y1, float x2, float y2,
                                  float radius)
 {
@@ -108,6 +120,7 @@ int point_distance_within_radius(float x1, float y1, float x2, float y2,
 
 /* RectContainsPointHalfOpen (FUN_0045e660): rect is the corpus record's
  * float quad {x, y, w, h} at +0x4…+0x10 — half-open in both axes. */
+// FUNCTION: LEGORR 0x0045e660
 int rect_contains_point_half_open(const float rect_xywh[4], int x, int y)
 {
     if (((rect_xywh[0] <= (float)x) && ((float)x < rect_xywh[2] + rect_xywh[0]))
@@ -135,6 +148,7 @@ static int rect_contains_converted(const float rect[4], float off_x,
 
 /* RectContainsOffsetPoint (FUN_0045b590): the category-cell hit walk's
  * containment test — bounds quad plus the float offset pair. */
+// FUNCTION: LEGORR 0x0045b590
 int rect_contains_offset_point(const float rect_bounds[4], float off_x,
                                float off_y, int x, int y)
 {
@@ -143,6 +157,7 @@ int rect_contains_offset_point(const float rect_bounds[4], float off_x,
 
 /* RectContainsPointByConvertedCoords (FUN_00463c00): the region-route
  * walk's copy — the pseudocode is identical to the category walk's. */
+// FUNCTION: LEGORR 0x00463c00
 int rect_contains_point_by_converted_coords(const float rect_bounds[4],
                                             float off_x, float off_y,
                                             int x, int y)
@@ -153,6 +168,7 @@ int rect_contains_point_by_converted_coords(const float rect_bounds[4],
 /* RectContainsPointFromObjectBounds (FUN_00463c90): same test, bounds via
  * the pointer stored at the record's +0x14. The corpus dereferences the
  * slot unguarded; the port answers 0 for a NULL slot or rect. */
+// FUNCTION: LEGORR 0x00463c90
 int rect_contains_point_from_object_bounds(const float* const* bounds_at_14,
                                            float off_x, float off_y,
                                            int x, int y)
@@ -166,6 +182,7 @@ int rect_contains_point_from_object_bounds(const float* const* bounds_at_14,
 /* RayPlaneIntersectionParameter (FUN_00479a30): writes t = dot(q-p, n) /
  * dot(d, n) into `t_out` for ray (p,d) against plane (q,n); answers 1 when
  * not parallel, 0 otherwise. */
+// FUNCTION: LEGORR 0x00479a30
 int ray_plane_intersection_parameter(float* t_out, const float* p,
                                      const float* d, const float* q,
                                      const float* n)
@@ -182,6 +199,7 @@ int ray_plane_intersection_parameter(float* t_out, const float* p,
 /* LineIntersection2DCompute (FUN_00479af0): intersects line1
  * (point p1, direction d1) with line2 (point p2, direction d2); writes the
  * hit point into `out` and returns it, or NULL when parallel. */
+// FUNCTION: LEGORR 0x00479af0
 float* line_intersection_2d_compute(float* out, const float* p1,
                                     const float* d1, const float* p2,
                                     const float* d2)
@@ -202,6 +220,7 @@ float* line_intersection_2d_compute(float* out, const float* p1,
 /* SphereRayIntersectionDiscriminantPositive (FUN_00479c10): positive-
  * discriminant test of ray `dir` against the sphere (center, radius). The
  * corpus's exact discriminant expression is reproduced verbatim. */
+// FUNCTION: LEGORR 0x00479c10
 int sphere_ray_intersection_discriminant_positive(const float* center,
                                                   float radius2,
                                                   const float* origin,
@@ -222,6 +241,7 @@ int sphere_ray_intersection_discriminant_positive(const float* center,
 /* ---- 4x4 matrices + polygon parity (finding 309/388) --------------------- */
 
 /* Matrix4SetZero (FUN_00479ea0): the corpus's 16 zero stores. */
+// FUNCTION: LEGORR 0x00479ea0
 void matrix4_set_zero(float* out)
 {
     for (int i = 0; i < 16; ++i) {
@@ -233,6 +253,7 @@ void matrix4_set_zero(float* out)
  * zeroes the output, then accumulates each cell as the four-term dot
  * product out[row][col] = Σ_k left[row][k] · right[k][col] — i.e.
  * out = left × right, row-major. */
+// FUNCTION: LEGORR 0x00479ce0
 void matrix4_multiply(float* out, const float* right, const float* left)
 {
     matrix4_set_zero(out);
@@ -251,6 +272,7 @@ void matrix4_multiply(float* out, const float* right, const float* left)
  * so the in-lockstep indexing below reads the same bytes for any caller
  * passing the shifted-ring pair. The boundary semantics, zero-span divide
  * and all, are the corpus's. */
+// FUNCTION: LEGORR 0x00479b80
 int point_in_polygon_2d(const float point[2], const float* verts,
                         const float* next, int count)
 {
@@ -277,6 +299,7 @@ int point_in_polygon_2d(const float point[2], const float* verts,
 /* PointAlongRay (FUN_00479ab0): out = origin + t · dir. The corpus reads
  * dir[1]/dir[2] into registers before the stores; the x term is t*dir +
  * origin while y/z add to the origin first — component order mirrored. */
+// FUNCTION: LEGORR 0x00479ab0
 void point_along_ray(float* out, const float* origin, const float* dir,
                      float t)
 {
@@ -291,6 +314,7 @@ void point_along_ray(float* out, const float* origin, const float* dir,
  * vectors (the corpus sums each normalization as z²+y²+x², its SQRT
  * accumulator order), runs the ray (p, dir_a) against the plane through q
  * with normal dir_b, and advances along dir_a when they meet. */
+// FUNCTION: LEGORR 0x004798e0
 int view_ray_intersection_test(float* out, const float* p,
                                const float* dir_a, const float* q,
                                const float* dir_b)
@@ -311,6 +335,7 @@ int view_ray_intersection_test(float* out, const float* p,
 
 /* Matrix4SetIdentity (FUN_00479e70): row loop, column loop, store 1 when
  * the indices meet (the corpus's dword-0x3f800000 form). */
+// FUNCTION: LEGORR 0x00479e70
 void matrix4_set_identity(float* out)
 {
     for (int row = 0; row < 4; ++row) {
@@ -322,6 +347,7 @@ void matrix4_set_identity(float* out)
 
 /* MatrixIdentityAndTranslationSet (FUN_00479e40): identity, then the
  * translation triad at byte offsets +0x30/+0x34/+0x38 = row 3. */
+// FUNCTION: LEGORR 0x00479e40
 void matrix4_identity_translation_set(float* out, const float* translation)
 {
     matrix4_set_identity(out);
@@ -331,6 +357,7 @@ void matrix4_identity_translation_set(float* out, const float* translation)
 }
 
 /* Matrix4Copy (FUN_00479eb0): the 16 dword copies. */
+// FUNCTION: LEGORR 0x00479eb0
 void matrix4_copy(float* out, const float* src)
 {
     for (int i = 0; i < 16; ++i) {
@@ -341,6 +368,7 @@ void matrix4_copy(float* out, const float* src)
 /* Matrix4SetRotationX (FUN_00479d50; the reference-name table also calls
  * this Z, alongside FUN_00479df0): identity, then the rows 1–2 block with
  * the corpus's signs — m[5]=c, m[6]=−s, m[9]=s, m[10]=c. */
+// FUNCTION: LEGORR 0x00479d50
 void matrix4_set_rotation_x(float* out, float angle)
 {
     const float c = (float)cos(angle);
@@ -354,6 +382,7 @@ void matrix4_set_rotation_x(float* out, float angle)
 
 /* Matrix4SetRotationY (FUN_00479da0): identity, then m[0]=c, m[2]=s,
  * m[8]=−s, m[10]=c. */
+// FUNCTION: LEGORR 0x00479da0
 void matrix4_set_rotation_y(float* out, float angle)
 {
     const float c = (float)cos(angle);
@@ -367,6 +396,7 @@ void matrix4_set_rotation_y(float* out, float angle)
 
 /* Matrix4SetRotationZ (FUN_00479df0): identity, then m[0]=c, m[1]=−s,
  * m[4]=s, m[5]=c. */
+// FUNCTION: LEGORR 0x00479df0
 void matrix4_set_rotation_z(float* out, float angle)
 {
     const float c = (float)cos(angle);
@@ -381,6 +411,7 @@ void matrix4_set_rotation_z(float* out, float angle)
 /* BuildPerspectiveProjectionMatrix (FUN_0040bd60): zero the matrix, raise
  * m[10]/m[15], then the three quotients — the corpus's m[1] multiplies
  * p5/p4 by p4/p1, not p5/p1. */
+// FUNCTION: LEGORR 0x0040bd60
 void perspective_projection_matrix_set(float* out, float p1, float p2,
                                        float p3, float p4, float p5)
 {
@@ -396,6 +427,7 @@ void perspective_projection_matrix_set(float* out, float p1, float p2,
 
 /* ---- camera-handle primitives (record-backed) --------------------------- */
 
+// FUNCTION: LEGORR 0x004755e0
 void cam_offset(CameraHandle* c, float x, float y, float z)
 {
     if (c == NULL) {
@@ -407,6 +439,7 @@ void cam_offset(CameraHandle* c, float x, float y, float z)
     c->pos[2] += z;
 }
 
+// FUNCTION: LEGORR 0x004754c0
 void cam_get_pos(CameraHandle* c, float out[3])
 {
     if (c != NULL && out != NULL) {
@@ -416,6 +449,7 @@ void cam_get_pos(CameraHandle* c, float out[3])
     }
 }
 
+// FUNCTION: LEGORR 0x00475430
 void cam_set_pos(CameraHandle* c, float x, float y, float z)
 {
     if (c == NULL) {
@@ -427,6 +461,7 @@ void cam_set_pos(CameraHandle* c, float x, float y, float z)
     c->pos[2] = z;
 }
 
+// FUNCTION: LEGORR 0x00475500
 void cam_get_facing(CameraHandle* c, float out[3])
 {
     if (c != NULL && out != NULL) {
@@ -436,6 +471,7 @@ void cam_get_facing(CameraHandle* c, float out[3])
     }
 }
 
+// FUNCTION: LEGORR 0x00475470
 void cam_set_facing(CameraHandle* c, const float* r)
 {
     if (c == NULL || r == NULL) {
@@ -448,12 +484,19 @@ void cam_set_facing(CameraHandle* c, const float* r)
 }
 
 /* ---- world/stub boundaries ---------------------------------------------- */
-/*  FUN_0044f6d0 grid pick   -> floor floor of the camera position.
- *  FUN_0044f940 terrain height-> 0 (no level/world data yet).
- *  FUN_00431570/FUN_0044fe70 camera angle -> 0.
+/*  FUN_0044f6d0 grid pick -> bounded voxel-grid coordinates.
+ *  FUN_0044f940 / FUN_0044fe70 terrain heights -> sampled voxel byte, not
+ *  the original selected-triangle corner-height interpolation.
+ *  FUN_00431570 returns the current level's +4 terrain handle despite its
+ *  Ghidra label CurrentLevelHeightGet.
  *  FUN_0044a200 object lookup -> 0 (no object layer yet; mode 2 idles).
  *  FUN_0044a070 velocity blend-> returns 0 (targeted EMA deferred).
- *  FUN_0041f940 / FUN_004369f4 / FUN_004798b0 camera steps -> no-ops/1. */
+ *  FUN_004369f4 is the camera tilt-axis setter; main_view_key_step groups it
+ *  with separate pan/zoom operations and has no one-to-one source boundary.
+ *  FUN_004798b0 is RandomFloatRange, not a camera helper; the port models the
+ *  shared RNG draw but has no float-range wrapper.
+ *  FUN_0041f940 is instead the engine-state bit-0x20000 setter; no direct
+ *  port setter exists yet. */
 
 static int grid_pick(EngineContext* ctx, const float* pos, int* gx, int* gy)
 {
@@ -491,6 +534,7 @@ static float terrain_height(EngineContext* ctx, float x, float y)
  * z quirk is faithful: FUN_004798e0 answers into `out` while the height
  * store lands on the plane quad's z-slot, so the corpus effectively
  * intersects against successively lower planes. */
+// FUNCTION: LEGORR 0x00450560
 void random_reachable_grid_point_select(EngineContext* ctx, const float* p,
                                         const float* dir, float* out,
                                         int* gx, int* gy, int rounds)
@@ -504,14 +548,16 @@ void random_reachable_grid_point_select(EngineContext* ctx, const float* p,
     (void)grid_pick(ctx, out, gx, gy); /* FUN_0044f6d0 hook */
 }
 
-static void cam_angle()
+static void cam_surface_height_stub()
 {
-    /* TODO(view): FUN_00431570/FUN_0044fe70 camera angle. */
+    /* TODO(view): FUN_00431570 terrain handle -> FUN_0044fe70 surface height. */
 }
+// STUB: LEGORR 0x0044a200
 static int object_lookup(int /*id*/)
 {
     return 0; /* TODO(view): FUN_0044a200 object layer. */
 }
+// STUB: LEGORR 0x0044a070
 static int target_blend(int /*id*/, int /*mode*/, float* blend,
                         float* facing)
 {
@@ -536,7 +582,6 @@ static void view_tail(ViewContext* v, float scale)
     } else {
         float decay = ((float)(v->timer_num - v->timer_acc) / (float)v->timer_num)
                     * v->step;
-        /* corpus FUN_004798b0 ramp (D3DRM math helper) modeled as 1.0 */
         vec_scale(v->velocity, v->velocity, decay);
         v->timer_acc += (int)scale;
         cam_offset(&v->cam_world, -v->velocity[0], -v->velocity[1],
@@ -544,6 +589,7 @@ static void view_tail(ViewContext* v, float scale)
     }
 }
 
+// FUNCTION: LEGORR 0x00435f5c
 void view_tick(ViewContext* v, EngineContext* ctx, float dt, float scale)
 {
     if (v == NULL) {
@@ -577,9 +623,11 @@ void view_tick(ViewContext* v, EngineContext* ctx, float dt, float scale)
             }
             float h = terrain_height(ctx, pos[0], pos[1]);
             cam_set_pos(&v->cam_facing, pos[0], pos[1], h);
-            cam_angle(); /* rotor; sets yaw below in the corpus */
-            float yaw = v->follow_span + (-0.0f);
-            cam_set_pos(&v->cam_world, 0.0f, 0.0f, -yaw);
+            cam_surface_height_stub();
+            /* Corpus adds the negative interpolated terrain height to the
+             * follow span before positioning the world camera. */
+            float z = v->follow_span + (-0.0f);
+            cam_set_pos(&v->cam_world, 0.0f, 0.0f, -z);
         }
         view_tail(v, scale);
         return;
@@ -649,6 +697,7 @@ void view_views_tick(EngineContext* ctx, float dt, float scale)
  * reproduced clause-for-clause — inclusive lower corners, inclusive
  * upper corners via origin+size (finding 23: the widget rectangle is
  * the 100x20 row band this routine hit-tests). */
+// FUNCTION: LEGORR 0x004112e0
 int menu_pointer_rectangle_hit_test(int x, int y, int rect_x, int rect_y,
                                     int rect_w, int rect_h)
 {
@@ -663,6 +712,7 @@ int menu_pointer_rectangle_hit_test(int x, int y, int rect_x, int rect_y,
 /* MenuOverlayListCount (FUN_00412170): head slot + record+0x40, next
  * slot + node+0x18, both native-size (pointer-slot deviation; see the
  * header). */
+// FUNCTION: LEGORR 0x00412170
 int menu_overlay_list_count(const void* menu)
 {
     void* head = NULL;
@@ -680,6 +730,7 @@ int menu_overlay_list_count(const void* menu)
 }
 
 /* TerrainGridBorderInsetGet (FUN_00435f28): DAT_005560ac's getter. */
+// FUNCTION: LEGORR 0x00435f28
 int view_grid_edge_get(void)
 {
     return g_view_grid_edge;
@@ -693,6 +744,7 @@ int view_grid_edge_get(void)
 float g_view_pan_cap   = 0.0f;  /* DAT_005560a0 (CameraAcceleration) */
 float g_view_pan_scale = 0.0f;  /* DAT_005560a8 (CameraSpeed) */
 
+// FUNCTION: LEGORR 0x00435e0e
 void camera_view_context_set(float cap, float follow_scale,
                              float pan_scale, int edge)
 {
@@ -702,6 +754,7 @@ void camera_view_context_set(float cap, float follow_scale,
     g_view_grid_edge = edge;
 }
 
+// FUNCTION: LEGORR 0x00436b0b
 void selection_record_point_set(ViewContext* v, float x, float y)
 {
     if (v != NULL && v->mode == 1) {
@@ -710,6 +763,7 @@ void selection_record_point_set(ViewContext* v, float x, float y)
     }
 }
 
+// FUNCTION: LEGORR 0x00436b33
 int camera_get_position_with_terrain_height(ViewContext* v,
                                             EngineContext* ctx,
                                             float out[3])
@@ -723,6 +777,7 @@ int camera_get_position_with_terrain_height(ViewContext* v,
     return 1; /* corpus: constant success, untouched output for mode != 1 */
 }
 
+// FUNCTION: LEGORR 0x00436b87
 void camera_pointer_pan_update(ViewContext* v, float vec[3], float amount)
 {
     if (v == NULL || vec == NULL) {
@@ -756,6 +811,7 @@ static void cam_or_flags(void* rec, uint8_t mask)
     *(uint8_t*)((char*)rec + CAM_FLAGS_OFF) = f;
 }
 
+// FUNCTION: LEGORR 0x00436831
 void camera_tilt_bounds_set(void* camera, float lo, float hi)
 {
     if (camera == NULL) {
@@ -766,6 +822,7 @@ void camera_tilt_bounds_set(void* camera, float lo, float hi)
     __builtin_memcpy((char*)camera + 0x80, &hi, sizeof(hi));
 }
 
+// FUNCTION: LEGORR 0x00436921
 void camera_scalar_bounds_set(void* camera, float lo, float hi)
 {
     if (camera == NULL) {
@@ -776,6 +833,7 @@ void camera_scalar_bounds_set(void* camera, float lo, float hi)
     __builtin_memcpy((char*)camera + 0x8c, &hi, sizeof(hi));
 }
 
+// FUNCTION: LEGORR 0x00436a18
 void camera_distance_bounds_set(void* camera, float lo, float hi)
 {
     if (camera == NULL) {
@@ -786,6 +844,7 @@ void camera_distance_bounds_set(void* camera, float lo, float hi)
     __builtin_memcpy((char*)camera + 0x98, &hi, sizeof(hi));
 }
 
+// FUNCTION: LEGORR 0x00436a4a
 void camera_distance_set(void* camera, float value)
 {
     if (camera == NULL) {
@@ -800,6 +859,7 @@ void camera_distance_set(void* camera, float value)
     }
 }
 
+// FUNCTION: LEGORR 0x00436aa5
 void camera_zoom_update(void* camera, float delta)
 {
     if (camera == NULL) {
@@ -811,6 +871,7 @@ void camera_zoom_update(void* camera, float delta)
 }
 
 /* CursorScreenRayContextReset (FUN_00435f16) — see view.hpp. */
+// FUNCTION: LEGORR 0x00435f16
 void cursor_screen_ray_context_reset(ViewContext* v)
 {
     if (v == NULL) {
@@ -820,6 +881,7 @@ void cursor_screen_ray_context_reset(ViewContext* v)
 }
 
 /* CurrentLevelTerrainGridPick (FUN_00433be0) — see view.hpp. */
+// FUNCTION: LEGORR 0x00433be0
 void current_level_terrain_grid_pick(EngineContext* ctx, float x, float y,
                                      int* gx, int* gy)
 {
@@ -831,6 +893,7 @@ void current_level_terrain_grid_pick(EngineContext* ctx, float x, float y,
 }
 
 /* GridOperationArgumentAdapter (FUN_00442540) — see view.hpp. */
+// FUNCTION: LEGORR 0x00442540
 void grid_operation_argument_adapter(float x, float y, EngineContext* ctx)
 {
     if (ctx == NULL) {
@@ -840,12 +903,14 @@ void grid_operation_argument_adapter(float x, float y, EngineContext* ctx)
 }
 
 /* SetGlobalScalarToOne (FUN_0040fec0) — see view.hpp. */
+// FUNCTION: LEGORR 0x0040fec0
 void set_global_scalar_to_one(void)
 {
     /* the corpus's ramp draw is discarded; faithful no-op */
 }
 
 /* FloatNegateAbsoluteValue (FUN_0044d250) — see view.hpp. */
+// FUNCTION: LEGORR 0x0044d250
 void float_negate_absolute_value(float* value)
 {
     if (value == NULL) {
@@ -855,6 +920,7 @@ void float_negate_absolute_value(float* value)
 }
 
 /* Vector2SetLength (FUN_00406760) — see view.hpp. */
+// FUNCTION: LEGORR 0x00406760
 void vector2_set_length(float v[2], float length)
 {
     if (v == NULL) {
@@ -869,6 +935,7 @@ void vector2_set_length(float v[2], float length)
 }
 
 /* CameraZoomStepAdjust (FUN_0045bf20) — see view.hpp. */
+// FUNCTION: LEGORR 0x0045bf20
 void camera_zoom_step_adjust(void* camera, int direction, float step)
 {
     if (direction == 0) {
@@ -880,6 +947,7 @@ void camera_zoom_step_adjust(void* camera, int direction, float step)
 }
 
 /* SelectionRecordPointGet (FUN_00436ae9) — see view.hpp. */
+// FUNCTION: LEGORR 0x00436ae9
 void selection_record_point_get(ViewContext* v, float out[3])
 {
     if (v != NULL && out != NULL && v->mode == 1) {
@@ -889,6 +957,7 @@ void selection_record_point_get(ViewContext* v, float out[3])
 }
 
 /* SelectedGlobalPointTransformAndReturnX (FUN_0046a420) — see view.hpp. */
+// FUNCTION: LEGORR 0x0046a420
 float selected_global_point_transform_and_return_x(EngineContext* ctx)
 {
     if (ctx == NULL) {
@@ -901,6 +970,7 @@ float selected_global_point_transform_and_return_x(EngineContext* ctx)
 }
 
 /* RendererNodeRelativePositionSet (FUN_00436ac9) — see view.hpp. */
+// FUNCTION: LEGORR 0x00436ac9
 void renderer_node_relative_position_set(const void* node, float x, float y)
 {
     void* handle = NULL;
@@ -920,6 +990,7 @@ void scene_root_install(void* root) { s_scene_root = root; }
 void* scene_root_peek(void) { return s_scene_root; }
 
 /* SceneRootObjectGet (FUN_00472940) — the corpus's root-object read. */
+// FUNCTION: LEGORR 0x00472940
 void* scene_root_object_get(void)
 {
     return s_scene_root;
@@ -927,6 +998,7 @@ void* scene_root_object_get(void)
 
 /* SceneNodePositionSet (FUN_00410020) — see view.hpp. The inner object
  * rides the node's widened slot at +0; the corpus strides a dword. */
+// FUNCTION: LEGORR 0x00410020
 void scene_node_position_set(void* node, const float pos[3])
 {
     if (node == NULL || pos == NULL) {
@@ -947,6 +1019,7 @@ void scene_node_position_set(void* node, const float pos[3])
 /* DDiSceneObjectArgumentsNormalize (FUN_00475900) — resolve the dispatch
  * pair: the object slot rides through, and the second slot falls back to
  * the root object's first slot when the caller passes NULL. */
+// FUNCTION: LEGORR 0x00475900
 void scene_object_arguments_normalize(const void** obj, const void** alt,
                                       void** out_obj, const void** out_alt)
 {
@@ -971,14 +1044,16 @@ void scene_object_arguments_normalize(const void** obj, const void** alt,
 /* Matrix4IdentityInitialize (FUN_00483540): the corpus writes the twelve
  * off-diagonal dwords as zero (high to low), then the four diagonal dwords
  * as the float-1.0 constant — the same output, in the corpus's order. */
+// FUNCTION: LEGORR 0x00483540
 void matrix4_identity_initialize(float* out)
 {
-    for (int i = 1; i < 16; ++i) {
+    int i;
+    for (i = 1; i < 16; ++i) {
         if (i % 5 != 0) {
             out[i] = 0.0f;
         }
     }
-    for (int i = 0; i < 4; ++i) {
+    for (i = 0; i < 4; ++i) {
         out[5 * i] = 1.0f;
     }
 }
@@ -988,6 +1063,7 @@ void matrix4_identity_initialize(float* out)
  * cross product cross(e2, e1), so the normal is that cross normalized.
  * The corpus divides 1.0 by SQRT with no zero-length guard (finding 388
  * pinned); the port keeps the fold exactly. */
+// FUNCTION: LEGORR 0x00479530
 void surface_triangle_normal_calculate(float* out, const float* p2,
                                        const float* p3, const float* p4)
 {
@@ -1003,6 +1079,7 @@ void surface_triangle_normal_calculate(float* out, const float* p2,
 }
 
 /* SceneMeshColorAndAlphaSet (FUN_00475020) — see view.hpp. */
+// FUNCTION: LEGORR 0x00475020
 void scene_mesh_color_and_alpha_set(void* object, int block, float red,
                                     float green, float blue, float alpha)
 {
@@ -1024,6 +1101,7 @@ void scene_mesh_color_and_alpha_set(void* object, int block, float red,
 /* SceneMeshColorSet (FUN_00474ff0) — see view.hpp. Same inner-record ride
  * as the alpha sibling; mode three lands the triple in the block's +0x34
  * slot through the ported color-vector setter. */
+// FUNCTION: LEGORR 0x00474ff0
 void scene_mesh_color_set(void* object, int block, float red, float green,
                           float blue)
 {
@@ -1048,6 +1126,7 @@ static int s_rot_pairs[ROT_PAIR_SLOTS * 2];
 
 void* rotated_pairs_scratch_peek(void) { return s_rot_pairs; }
 
+// FUNCTION: LEGORR 0x00464110
 void* rotated_pairs_scratch_fill(const int* offset_pair, const int* source,
                                  int count, int rotation)
 {
@@ -1077,6 +1156,7 @@ void* rotated_pairs_scratch_fill(const int* offset_pair, const int* source,
 /* CubicBezierPointEvaluate (FUN_004065f0) — see view.hpp. The halves keep
  * the corpus's term shapes (the x half folds A*t first, the y half the
  * t-squared term first; the sums are commutative, bit-identical). */
+// FUNCTION: LEGORR 0x004065f0
 void cubic_bezier_point_evaluate(float out[2], const float* p0, const float* p1,
                                  const float* p2, const float* p3, float t)
 {
@@ -1109,6 +1189,7 @@ void cubic_bezier_point_evaluate(float out[2], const float* p0, const float* p1,
 }
 
 /* BezierCurveSamplesBuild (FUN_00406820) — see view.hpp. */
+// FUNCTION: LEGORR 0x00406820
 void bezier_curve_samples_build(uint32_t* dest, const uint32_t* control,
                                 const uint32_t* p3, const uint32_t* p4,
                                 const uint32_t* p5, uint32_t count)
@@ -1140,6 +1221,7 @@ void bezier_curve_samples_build(uint32_t* dest, const uint32_t* control,
  * is the curve band's: count at dword 0, point i (1-based) floats at dwords
  * 2i-1/2i, segment lengths at dword 0x65+k — the same window the length
  * builder stores through +0x198. */
+// FUNCTION: LEGORR 0x004068c0
 uint32_t path_arc_length_interpolate(const uint32_t* curve, float travel,
                                      float* out)
 {
@@ -1196,6 +1278,7 @@ uint32_t path_arc_length_interpolate(const uint32_t* curve, float travel,
  * both inputs (the corpus dereferences blindly) and the scale ratio is
  * computed once where the corpus recomputes it five times (bit-identical
  * for the same pair). */
+// FUNCTION: LEGORR 0x0045e940
 void view_point_to_screen_geometry_transform(const void* view, float p[4])
 {
     if (view == NULL || p == NULL) {
@@ -1225,6 +1308,7 @@ void view_point_to_screen_geometry_transform(const void* view, float p[4])
 }
 
 /* PolylineSegmentLengthsAndTotalCalculate (FUN_004067b0) — see view.hpp. */
+// FUNCTION: LEGORR 0x004067b0
 float polyline_segment_lengths_total(uint32_t* curve)
 {
     if (curve == NULL) {

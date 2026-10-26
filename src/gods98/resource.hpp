@@ -72,6 +72,9 @@ typedef struct Resource {
  * Returns the number of wads mounted (0 => none; error message -> stderr).
  * Only the first successful parse is required to be a valid WWAD. */
 int resource_mount(const char* dir, const char* prefix);
+/* Entry-derived default prefix used by the main frame loop (LegoRR by default). */
+void resource_set_wad_prefix(const char* prefix);
+const char* resource_get_wad_prefix(void);
 
 /* Number of wads currently mounted. */
 int resource_mounted_count(void);

@@ -854,6 +854,7 @@ int movie_info(struct Movie* m, MovieInfo* out)
 
 int movie_available(void) { return 0; }
 void movie_unload(void) { }
+// STUB: LEGORR 0x0047ec90
 Movie* movie_open_path(const char* os_path) { (void)os_path; return NULL; }
 void movie_close(Movie* m) { (void)m; }
 int movie_info(Movie* m, MovieInfo* out) { (void)m; (void)out; return -1; }
@@ -900,6 +901,7 @@ void movie_scale_rgba(const uint8_t* src, int sw, int sh, int spitch,
  *  note (finding 206: the corpus's own Blit ignores the rect).
  * ------------------------------------------------------------------ */
 
+// FUNCTION: LEGORR 0x0042efc0
 int movie_video_playback_loop(const MoviePump* pump)
 {
     if (pump == NULL || pump->next == NULL || pump->present == NULL
@@ -966,6 +968,7 @@ void movie_scale_rgba_rect(const uint8_t* src, int sw, int sh, int spitch,
     }
 }
 
+// FUNCTION: LEGORR 0x00414ce0
 int movie_avis_enabled(BlockFile* cfg)
 {
     if (cfg == NULL) {
@@ -975,6 +978,9 @@ int movie_avis_enabled(BlockFile* cfg)
     return block_get_bool(cfg, "Lego* Main DontPlayAvis") != 1;
 }
 
+/* Partial MoviePlayNamed (FUN_00415910): extracts and normalizes the named
+ * Lego* Main path; opening and playback are dispatched by the frame loop. */
+// FUNCTION: LEGORR 0x00415910
 int movie_key_path(BlockFile* cfg, const char* key, char* out, size_t sz)
 {
     if (cfg == NULL || key == NULL || out == NULL || sz == 0) {
@@ -995,6 +1001,9 @@ int movie_key_path(BlockFile* cfg, const char* key, char* out, size_t sz)
     return 1;
 }
 
+/* Partial MoviePlayLevelVideo (FUN_00415990): reads and normalizes the
+ * level's Video config path; opening and playback happen in the caller. */
+// FUNCTION: LEGORR 0x00415990
 int movie_level_video_path(BlockFile* cfg, const char* level,
                            char* out, size_t sz)
 {

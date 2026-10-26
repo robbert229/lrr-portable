@@ -139,11 +139,25 @@ static int task_fields(const char* token, char out[UTIL_QUERY_MAX_FIELDS][256])
     return util_query_fields(token, out, sizeof(out[0]));
 }
 
+/* StrReplace (FUN_00413f00): replace one byte through the bounded reward
+ * text field. The original scans to NUL; the 0x20 cap preserves this port's
+ * modeled field boundary. */
+// FUNCTION: LEGORR 0x00413f00
+static void mission_replace_char(char* text, char from, char to, int limit)
+{
+    for (int i = 0; i < limit && text[i] != '\0'; ++i) {
+        if (text[i] == from) {
+            text[i] = to;
+        }
+    }
+}
+
 /* ------------------------------------------------------------------ *
  *  Field loaders (corpus order in TaskBlockInit).
  * ------------------------------------------------------------------ */
 
 /* FUN_0045f3e0 — `Reward Images.<name>`: coords at +0x57/0x58, flag |2. */
+// FUNCTION: LEGORR 0x0045f3e0
 static void task_loader_images(BlockFile* cfg, const char* root,
                                const char* level, GameTask* t)
 {
@@ -164,6 +178,7 @@ static void task_loader_images(BlockFile* cfg, const char* root,
  * DAT_004a26b0 = "Text"): field 0 -> display text at +0x54 with '_'
  * mapped to ' ' over the first 0x20 bytes (corpus FUN_00413f00),
  * fields 1/2 -> text-draw x/y at +0x154/+0x158, flag |= 0x31. */
+// FUNCTION: LEGORR 0x0045f530
 static void task_loader_text(BlockFile* cfg, const char* root,
                              const char* level, GameTask* t)
 {
@@ -176,19 +191,14 @@ static void task_loader_text(BlockFile* cfg, const char* root,
         return;
     }
     task_put_str(t, TASK_OFF_TEXT, f[0], 0x100);
-    /* corpus FUN_00413f00(buf, '_', ' ', 0x20) */
-    char* dst = (char*)t->data + TASK_OFF_TEXT;
-    for (int i = 0; i < 0x20 && dst[i] != '\0'; ++i) {
-        if (dst[i] == '_') {
-            dst[i] = ' ';
-        }
-    }
+    mission_replace_char((char*)t->data + TASK_OFF_TEXT, '_', ' ', 0x20);
     task_put_int(t, TASK_OFF_TEXT_XY, (int32_t)util_atoi(f[1]));
     task_put_int(t, TASK_OFF_TEXT_XY + 4, (int32_t)util_atoi(f[2]));
     task_add_flag(t, TASK_FLAG_MASK);
 }
 
 /* FUN_0045f5f0 — `Reward Flics.<name>`: path +0x5b, rect +0x7b..0x7e, |4. */
+// FUNCTION: LEGORR 0x0045f5f0
 static void task_loader_flics(BlockFile* cfg, const char* root,
                               const char* level, GameTask* t)
 {
@@ -208,6 +218,7 @@ static void task_loader_flics(BlockFile* cfg, const char* root,
 }
 
 /* FUN_0045f230 — `Reward Fonts.<name>` at +0x204. */
+// FUNCTION: LEGORR 0x0045f230
 static void task_loader_font(BlockFile* cfg, const char* root,
                              const char* level, GameTask* t)
 {
@@ -216,6 +227,7 @@ static void task_loader_font(BlockFile* cfg, const char* root,
 }
 
 /* FUN_0045f1f0 — `Reward Sounds.<name>` at +0x208. */
+// FUNCTION: LEGORR 0x0045f1f0
 static void task_loader_sound(BlockFile* cfg, const char* root,
                               const char* level, GameTask* t)
 {
@@ -224,6 +236,7 @@ static void task_loader_sound(BlockFile* cfg, const char* root,
 }
 
 /* FUN_0045f290 — `Reward BoxImages.<name>`: coords +0x59/0x5a, |0x40. */
+// FUNCTION: LEGORR 0x0045f290
 static void task_loader_boximages(BlockFile* cfg, const char* root,
                                   const char* level, GameTask* t)
 {
@@ -252,6 +265,9 @@ const char* mission_task_name_at(GameContext* ctx, int slot)
     return task_name(&ctx->tasks[slot]);
 }
 
+/* Partial TaskBlockInit port: seeds the context-owned task records and runs
+ * the six field loaders; the original allocates one session-global block. */
+// FUNCTION: LEGORR 0x0045f030
 void mission_task_init(GameContext* ctx, BlockFile* cfg, const char* level_name)
 {
     if (ctx == NULL) {
@@ -280,6 +296,40 @@ void mission_task_init(GameContext* ctx, BlockFile* cfg, const char* level_name)
     mission_task_refresh(ctx);
 }
 
+/* TaskImportanceRefresh @ 0x4600a0: load one task's Reward Importance
+ * value into record +0x24. The global level/config become explicit port
+ * context; mission_task_refresh preserves the corpus's per-task ordering. */
+// FUNCTION: LEGORR 0x004600a0
+static void mission_task_importance_refresh(BlockFile* cfg, const char* root,
+                                            const char* level, GameTask* t)
+{
+    float imp = rw_float(cfg, root, level, "Importance", task_name(t), 0.0f);
+    __builtin_memcpy(t->data + TASK_OFF_IMPORTANCE, &imp, 4);
+}
+
+/* TaskQuotaRefresh @ 0x460140: load one task's Reward Quota value into
+ * record +0x28. */
+// FUNCTION: LEGORR 0x00460140
+static void mission_task_quota_refresh(BlockFile* cfg, const char* root,
+                                       const char* level, GameTask* t)
+{
+    int32_t quota = (int32_t)rw_int(cfg, root, level, "Quota", task_name(t), 0);
+    __builtin_memcpy(t->data + TASK_OFF_QUOTA, &quota, 4);
+}
+
+/* CrystalQuotaSetup @ 0x45c040: read the configured crystal quota, using
+ * the corpus's zero/over-limit fallback. The context owns the ported value. */
+// FUNCTION: LEGORR 0x0045c040
+static void mission_crystal_quota_setup(BlockFile* cfg, const char* root,
+                                        const char* level, GameContext* ctx)
+{
+    int quota = rw_int(cfg, root, level, "Quota", "Crystals", 0);
+    if (quota > MISS_CRYSTAL_QUOTA || quota == 0) {
+        quota = MISS_CRYSTAL_QUOTA;
+    }
+    ctx->crystal_quota = quota;
+}
+
 void mission_task_refresh(GameContext* ctx)
 {
     if (ctx == NULL) {
@@ -292,20 +342,11 @@ void mission_task_refresh(GameContext* ctx)
     const char* root = util_root_name(ctx->cfg);
     for (int i = 0; i < GAME_TASK_COUNT; ++i) {
         GameTask* t = &ctx->tasks[i];
-        /* TaskImportanceRefresh: `Reward Importance.<name>` -> +0x24. */
-        float imp = rw_float(ctx->cfg, root, level, "Importance", task_name(t), 0.0f);
-        __builtin_memcpy(t->data + TASK_OFF_IMPORTANCE, &imp, 4);
-        /* TaskQuotaRefresh: `Reward Quota.<name>` -> +0x28. */
-        int32_t quota = (int32_t)rw_int(ctx->cfg, root, level, "Quota", task_name(t), 0);
-        __builtin_memcpy(t->data + TASK_OFF_QUOTA, &quota, 4);
+        mission_task_importance_refresh(ctx->cfg, root, level, t);
+        mission_task_quota_refresh(ctx->cfg, root, level, t);
         /* Defaults: absence parses as 0; the corpus reads the same way. */
     }
-    /* CrystalQuotaSetup: `Reward Quota Crystals`, clamp to 26. */
-    int q = rw_int(ctx->cfg, root, level, "Quota", "Crystals", 0);
-    if (q > MISS_CRYSTAL_QUOTA || q == 0) {
-        q = MISS_CRYSTAL_QUOTA;
-    }
-    ctx->crystal_quota = q;
+    mission_crystal_quota_setup(ctx->cfg, root, level, ctx);
 }
 
 void mission_set_crystals(GameContext* ctx, int32_t v)
@@ -359,6 +400,9 @@ int mission_update(GameContext* ctx)
     return completed;
 }
 
+/* Partial RewardInit port: reproduces the display/config settings while
+ * resource handles remain owned by the platform/render seams. */
+// FUNCTION: LEGORR 0x0045f7f0
 void mission_reward_init(GameContext* ctx, BlockFile* cfg, const char* level_name)
 {
     if (ctx == NULL) {
@@ -445,6 +489,7 @@ static int zone_hit(float x, float y, float w, float h, int mx, int my)
     return mx >= x && mx < x + w && my >= y && my < y + h;
 }
 
+// FUNCTION: LEGORR 0x00461dd0
 int mission_reward_zone(GameContext* ctx, int mx, int my,
                         int* hit_save, int* hit_advance)
 {
@@ -474,6 +519,7 @@ int mission_reward_zone(GameContext* ctx, int mx, int my,
     return 0;
 }
 
+// FUNCTION: LEGORR 0x00462780
 int mission_reward_click(GameContext* ctx, int hit_save)
 {
     if (ctx == NULL) {

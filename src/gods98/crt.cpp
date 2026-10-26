@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 #include <math.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "crt.hpp"
@@ -8,6 +9,7 @@
 
 /* FUN_00498000: the corpus's memmove with word loops and byte tails —
  * byte-equivalent to the host memmove (findings 260/394). */
+// FUNCTION: LEGORR 0x00498000
 void* crt_memory_move(void* dest, const void* src, size_t count)
 {
     return memmove(dest, src, count);
@@ -16,17 +18,20 @@ void* crt_memory_move(void* dest, const void* src, size_t count)
 /* FUN_00417430: __ftol under the truncate-toward-zero control word the
  * compiler switches to — a C++ cast (findings 381/393). Overflow values
  * are outside the corpus's caller set (deviation in crt.hpp). */
+// FUNCTION: LEGORR 0x00417430
 int float_to_long(float value)
 {
     return (int)value;
 }
 
 /* FUN_0041f8e0: empty body; the corpus's callable no-op (finding 381). */
+// FUNCTION: LEGORR 0x0041f8e0
 void noop_callback(void)
 {
 }
 
 /* FUN_0047d3f0: popcount via the clear-lowest-set-bit loop. */
+// FUNCTION: LEGORR 0x0047d3f0
 int bit_count32(uint32_t value)
 {
     int n = 0;
@@ -38,6 +43,7 @@ int bit_count32(uint32_t value)
 }
 
 /* FUN_0047d700: popcount via the per-position test loop. */
+// FUNCTION: LEGORR 0x0047d700
 int pop_count32(uint32_t value)
 {
     int n = 0;
@@ -50,6 +56,7 @@ int pop_count32(uint32_t value)
 }
 
 /* FUN_0047d720: index of the lowest set bit, 0xffffffff for zero. */
+// FUNCTION: LEGORR 0x0047d720
 uint32_t find_first_set_bit32(uint32_t value)
 {
     for (uint32_t i = 0; i < 32u; ++i) {
@@ -61,18 +68,21 @@ uint32_t find_first_set_bit32(uint32_t value)
 }
 
 /* FUN_0047e7e0: the corpus's second identical position-loop body. */
+// FUNCTION: LEGORR 0x0047e7e0
 int bit_count32_by_position(uint32_t value)
 {
     return pop_count32(value);
 }
 
 /* FUN_00497ab0: zero over exactly 3 dwords. */
+// FUNCTION: LEGORR 0x00497ab0
 int uint96_is_zero(const uint32_t limbs[3])
 {
     return limbs[0] == 0u && limbs[1] == 0u && limbs[2] == 0u;
 }
 
 /* FUN_0048e870: the double's exponent field not all-ones. */
+// FUNCTION: LEGORR 0x0048e870
 int double_is_finite(double value)
 {
     uint64_t bits;
@@ -82,6 +92,7 @@ int double_is_finite(double value)
 
 /* FUN_0045b900: the corpus casts the int pair and the divisor to float
  * before both divides (the results land in a caller float pair). */
+// FUNCTION: LEGORR 0x0045b900
 void integer_pair_divide_to_float_pair(int x, int y, int divisor,
                                        float* out_x, float* out_y)
 {
@@ -91,6 +102,7 @@ void integer_pair_divide_to_float_pair(int x, int y, int divisor,
 
 /* FUN_0045b930: the compiler's two-shot __ftol — each float truncates
  * toward zero into its int output (same deviation as float_to_long). */
+// FUNCTION: LEGORR 0x0045b930
 void float_pair_to_integer_pair(float x, float y, int* out_x, int* out_y)
 {
     *out_x = (int)x;
@@ -99,6 +111,7 @@ void float_pair_to_integer_pair(float x, float y, int* out_x, int* out_y)
 
 /* FUN_00499fb0: the corpus's carry test — the sum below either operand
  * means the addition carried out of the 32-bit result. */
+// FUNCTION: LEGORR 0x00499fb0
 int crt_unsigned_add_with_carry(uint32_t a, uint32_t b, uint32_t* sum)
 {
     const uint32_t s = a + b;
@@ -109,6 +122,7 @@ int crt_unsigned_add_with_carry(uint32_t a, uint32_t b, uint32_t* sum)
 /* FUN_00493a80: the exponent/quiet-bit pattern classifier over the two
  * bit words, corpus masks verbatim (finding 399). The corpus masks the
  * high word's top 16 bits with 0x7ff8 — exponent plus quiet bit. */
+// FUNCTION: LEGORR 0x00493a80
 int double_classify(uint32_t lo, uint32_t hi)
 {
     const uint32_t exp_quiet = (hi >> 16) & 0x7ff8u;
@@ -128,6 +142,7 @@ int double_classify(uint32_t lo, uint32_t hi)
 }
 
 /* FUN_00499710: the 16-bit strlen — code units counted up to the NUL. */
+// FUNCTION: LEGORR 0x00499710
 int wide_string_length(const uint16_t* text)
 {
     const uint16_t* p = text;
@@ -140,6 +155,7 @@ int wide_string_length(const uint16_t* text)
 /* FUN_0049add0: bounded scan — the terminator index plus one when found
  * within `bound` (count including the NUL), the bound otherwise; a zero
  * bound returns the bound without reading. */
+// FUNCTION: LEGORR 0x0049add0
 int bounded_wide_string_length_including_null(const uint16_t* text,
                                               int bound)
 {
@@ -165,6 +181,7 @@ int bounded_wide_string_length_including_null(const uint16_t* text,
  * exponent is all ones (Inf/NaN) so the caller sees the full pattern.
  * The corpus takes the double's high word as its only live argument
  * (the first parameter is the unused low word). */
+// FUNCTION: LEGORR 0x00492068
 uint32_t double_exponent_bits_or_special(uint32_t high_word)
 {
     if ((high_word & 0x7ff00000u) != 0x7ff00000u) {
@@ -175,6 +192,7 @@ uint32_t double_exponent_bits_or_special(uint32_t high_word)
 
 /* FormatArgumentReadDword (FUN_00491430, finding 395): read the dword
  * at the cursor, then advance it by four. */
+// FUNCTION: LEGORR 0x00491430
 uint32_t format_argument_read_dword(uint8_t** cursor)
 {
     uint32_t v;
@@ -186,6 +204,7 @@ uint32_t format_argument_read_dword(uint8_t** cursor)
 /* FormatArgumentReadWord (FUN_00491470, finding 395): read the word,
  * advance by two, return zero-extended (the corpus's CONCAT of the
  * advanced pointer's high half — zero for 32-bit cursors). */
+// FUNCTION: LEGORR 0x00491470
 uint32_t format_argument_read_word(uint8_t** cursor)
 {
     uint16_t v;
@@ -196,6 +215,7 @@ uint32_t format_argument_read_word(uint8_t** cursor)
 
 /* FormatArgumentReadDouble (FUN_00491450, finding 395): read eight
  * bytes, advance by eight. */
+// FUNCTION: LEGORR 0x00491450
 double format_argument_read_double(uint8_t** cursor)
 {
     double v;
@@ -207,9 +227,18 @@ double format_argument_read_double(uint8_t** cursor)
 /* X87RoundToIntegral (FUN_00493150, finding 379): FRNDINT under the
  * default control word — nearest-even integral, still floating.
  * rint() matches it exactly (and keeps -0, per the x87 answer). */
+// FUNCTION: LEGORR 0x00493150
 double x87_round_to_integral(double value)
 {
-    return rint(value);
+    const double lower = floor(value);
+    const double fraction = value - lower;
+    if (fraction < 0.5) {
+        return lower;
+    }
+    if (fraction > 0.5) {
+        return lower + 1.0;
+    }
+    return fmod(lower, 2.0) == 0.0 ? lower : lower + 1.0;
 }
 
 /* DoubleBuildWithExponent (FUN_00493a40, findings 383/399): the corpus
@@ -222,6 +251,7 @@ double x87_round_to_integral(double value)
  * bits are bitcast to the port's double (x87 deviation, as documented
  * across this band). What the built value MEANS stays with the caller
  * (the frexp band); this leaf is the faithful bit construction. */
+// FUNCTION: LEGORR 0x00493a40
 double double_build_with_exponent(uint32_t significand_low,
                                   uint32_t significand_high,
                                   int16_t exponent)
@@ -241,21 +271,25 @@ double double_build_with_exponent(uint32_t significand_low,
 /* ------------------------------------------------------------------ *
  *  Constant and DAT-global band (see crt.hpp). */
 
+// FUNCTION: LEGORR 0x00408930
 double constant_zero_float_get(void)
 {
     return 0.0;
 }
 
+// FUNCTION: LEGORR 0x0047c160
 int32_t constant_negative_10000_get(void)
 {
     return -10000;
 }
 
+// FUNCTION: LEGORR 0x00490230
 uint32_t processor_feature_fallback_false(void)
 {
     return 0u;
 }
 
+// FUNCTION: LEGORR 0x00456210
 uint32_t flh_magic_uu_noop(void)
 {
     return 0u;
@@ -266,11 +300,13 @@ uint32_t flh_magic_uu_noop(void)
 static double   s_global_float_00556f00 = 0.0;
 static uint32_t s_global_dword_004ff9bc = 0u;
 
+// FUNCTION: LEGORR 0x004230b0
 double global_float_field_00556f00_get(void)
 {
     return s_global_float_00556f00;
 }
 
+// FUNCTION: LEGORR 0x004567c0
 uint32_t global_value_004ff9bc_store_and_return(const void* value)
 {
     if (value == NULL) {
@@ -294,46 +330,55 @@ static uint32_t s_counter_0055532c = 0u;
 static float    s_float_00555330   = 0.0f;
 static float    s_float_00555120   = 0.0f;
 
+// FUNCTION: LEGORR 0x00454880
 void global_counter_004ff990_increment(void)
 {
     s_counter_004ff990 = s_counter_004ff990 + 1u;
 }
 
+// FUNCTION: LEGORR 0x00454890
 void global_counter_004ff990_reset(void)
 {
     s_counter_004ff990 = 0u;
 }
 
+// FUNCTION: LEGORR 0x00462830
 void global_float_at_00554adc_add_one(void)
 {
     s_float_00554adc = s_float_00554adc + 1.0f; /* corpus: x - -1.0 */
 }
 
+// FUNCTION: LEGORR 0x00462850
 void global_float_at_00554efc_add_one(void)
 {
     s_float_00554efc = s_float_00554efc + 1.0f;
 }
 
+// FUNCTION: LEGORR 0x00462870
 void global_counter_at_00555324_increment(void)
 {
     s_counter_00555324 = s_counter_00555324 + 1u;
 }
 
+// FUNCTION: LEGORR 0x00462880
 void global_counter_at_00555328_increment(void)
 {
     s_counter_00555328 = s_counter_00555328 + 1u;
 }
 
+// FUNCTION: LEGORR 0x00462890
 void global_counter_at_0055532c_increment(void)
 {
     s_counter_0055532c = s_counter_0055532c + 1u;
 }
 
+// FUNCTION: LEGORR 0x004628a0
 void global_float_accumulator_00555330_add(float value)
 {
     s_float_00555330 = s_float_00555330 + value;
 }
 
+// FUNCTION: LEGORR 0x004628c0
 void global_float_accumulate_00555120(float value)
 {
     s_float_00555120 = s_float_00555120 + value;
@@ -359,6 +404,7 @@ typedef struct FilterTuple {
 static FilterTuple s_filter_tuples[FILTER_TUPLE_ENTRIES];
 static int         s_filter_tuple_count;
 
+// FUNCTION: LEGORR 0x0049d870
 void display_resolution_filter_tuple_append(int width, int height, int bpp)
 {
     if (s_filter_tuple_count < FILTER_TUPLE_ENTRIES) {
@@ -398,11 +444,13 @@ void display_resolution_filter_tuple_get(int index, int* w, int* h, int* bpp)
 static uint32_t s_flag_004ff978 = 0u;
 static uint32_t s_value_004ffe48 = 0u;
 
+// FUNCTION: LEGORR 0x00456640
 uint32_t global_flag_004ff978_get(void)
 {
     return s_flag_004ff978;
 }
 
+// FUNCTION: LEGORR 0x00458660
 void global_value_004ffe48_set(uint32_t value)
 {
     s_value_004ffe48 = value;
@@ -417,41 +465,49 @@ static uint32_t s_rockfall_base = 0u;      /* DAT_004c79a4 */
 static uint32_t s_ui_flag_word = 0u;       /* DAT_004c7ea8 */
 static uint32_t s_config_word = 0u;        /* DAT_004a1ee4 */
 
+// FUNCTION: LEGORR 0x00401c20
 uint32_t global_flag_bit0_is_set(void)
 {
     return s_advisor_state_word & 1u;
 }
 
+// FUNCTION: LEGORR 0x00407340
 void state_flag_toggle_when_zero(void)
 {
     s_task_refresh_flag = (s_task_refresh_flag == 0u) ? 1u : 0u;
 }
 
+// FUNCTION: LEGORR 0x00407360
 uint32_t global_task_refresh_flag_get(void)
 {
     return s_task_refresh_flag;
 }
 
+// FUNCTION: LEGORR 0x00409d40
 void level_state_stored_value_set(uint32_t v)
 {
     s_level_stored_word = v;
 }
 
+// FUNCTION: LEGORR 0x0040ab10
 void global_mode_zero_input_set(int value)
 {
     s_mode_zero_flag = (value == 0) ? 1u : 0u;
 }
 
+// FUNCTION: LEGORR 0x0040bfc0
 void rockfall_style_table_base_set(uint32_t v)
 {
     s_rockfall_base = v;
 }
 
+// FUNCTION: LEGORR 0x0040e7e0
 void global_flag_bit0_clear(void)
 {
     s_ui_flag_word &= ~1u;
 }
 
+// FUNCTION: LEGORR 0x0040f5e0
 void global_config_value_set(uint32_t v)
 {
     s_config_word = v;
@@ -469,7 +525,9 @@ uint32_t global_config_word_peek(void)  { return s_config_word; }
 static int s_display_w;   /* DAT_00505924 */
 static int s_display_h;   /* DAT_00505928 */
 
+// FUNCTION: LEGORR 0x00401c30
 int display_width_get(void)  { return s_display_w; }
+// FUNCTION: LEGORR 0x00401c40
 int display_height_get(void) { return s_display_h; }
 
 void display_dimensions_set(int w, int h)
@@ -485,6 +543,7 @@ void display_dimensions_set(int w, int h)
 #define REQUEST_RECORD_COUNT 18
 static uint32_t s_request_flags[REQUEST_RECORD_COUNT];
 
+// FUNCTION: LEGORR 0x0045ab30
 int request_record_ready_flag4(int index)
 {
     if (index < 0 || index >= REQUEST_RECORD_COUNT) {
@@ -494,6 +553,7 @@ int request_record_ready_flag4(int index)
     return (f & 4u) != 0u && (f & 8u) == 0u ? 1 : 0;
 }
 
+// FUNCTION: LEGORR 0x0045ab60
 int request_record_ready_flag2(int index)
 {
     if (index < 0 || index >= REQUEST_RECORD_COUNT) {
@@ -503,6 +563,7 @@ int request_record_ready_flag2(int index)
     return (f & 2u) != 0u && (f & 8u) == 0u ? 1 : 0;
 }
 
+// FUNCTION: LEGORR 0x0045ab90
 int request_record_flag8_is_set(int index)
 {
     if (index < 0 || index >= REQUEST_RECORD_COUNT) {
@@ -531,6 +592,7 @@ static uint32_t s_value_0050080c = 0u;
 static uint32_t s_font_words[16];   /* DAT_00500a9c window */
 static uint32_t s_cursor_word = 0u; /* DAT_00500a98 */
 
+// FUNCTION: LEGORR 0x0045c4a0
 void global_value_0050080c_set(uint32_t value)
 {
     s_value_0050080c = value;
@@ -541,6 +603,7 @@ uint32_t global_value_0050080c_peek(void)
     return s_value_0050080c;
 }
 
+// FUNCTION: LEGORR 0x0045cc10
 uint32_t indexed_global_value_at_get(int index)
 {
     if (index < 0 || index >= 16) {
@@ -549,6 +612,7 @@ uint32_t indexed_global_value_at_get(int index)
     return s_font_words[index];
 }
 
+// FUNCTION: LEGORR 0x0045cc60
 uint32_t global_cursor_word_get(void)
 {
     return s_cursor_word;
@@ -566,21 +630,25 @@ void font_cursor_word_set(int index, uint32_t v)
 }
 
 /* --- pure-return stubs + advisor word clear (see crt.hpp) -------------------- */
+// STUB: LEGORR 0x00491ff5
 void crt_no_op_stub(void)
 {
     /* FUN_00491ff5: pure return — faithful. */
 }
 
+// FUNCTION: LEGORR 0x00497870
 void crt_no_op_stub_variant(void)
 {
     /* FUN_00497870: pure return — faithful. */
 }
 
+// FUNCTION: LEGORR 0x00401b20
 void advisor_clear_active_state(void)
 {
     s_advisor_state_word &= ~2u;
 }
 
+// FUNCTION: LEGORR 0x0048e030
 void byte_range_swap(void* a, void* b, size_t n)
 {
     if (a == NULL || b == NULL) {
@@ -614,6 +682,7 @@ static float    s_region_wh[2];  /* DAT_005013b0/b4 */
 static void*    s_panel_records[DAT_WINDOW_COUNT]; /* DAT_00500134 */
 
 
+// FUNCTION: LEGORR 0x0045a6e0
 void indexed_pair_set(int index, uint32_t x, uint32_t y)
 {
     if (index < 0 || index >= DAT_WINDOW_COUNT) {
@@ -623,6 +692,7 @@ void indexed_pair_set(int index, uint32_t x, uint32_t y)
     s_pair_b[index] = y;
 }
 
+// FUNCTION: LEGORR 0x0045a700
 void indexed_pair_get(int index, uint32_t* out_x, uint32_t* out_y)
 {
     if (index < 0 || index >= DAT_WINDOW_COUNT
@@ -633,6 +703,7 @@ void indexed_pair_get(int index, uint32_t* out_x, uint32_t* out_y)
     *out_y = s_pair_b[index];
 }
 
+// FUNCTION: LEGORR 0x00463730
 void indexed_float_pair_set(int index, uint32_t x, uint32_t y)
 {
     if (index < 0 || index >= DAT_WINDOW_COUNT) {
@@ -652,6 +723,7 @@ void indexed_float_pair_peek(int index, float* out_x, float* out_y)
     *out_y = s_fpair_b[index];
 }
 
+// FUNCTION: LEGORR 0x00463ed0
 void indexed_text_metrics_pair_set(int index, uint32_t x, uint32_t y)
 {
     if (index < 0 || index >= DAT_WINDOW_COUNT) {
@@ -667,6 +739,7 @@ void indexed_text_metrics_pair_set(int index, uint32_t x, uint32_t y)
     __builtin_memcpy(rec + 0x24, &one, sizeof(one));
 }
 
+// FUNCTION: LEGORR 0x00463ea0
 void indexed_text_metrics_pair_get(int index, uint32_t* out_x,
                                    uint32_t* out_y)
 {
@@ -697,6 +770,7 @@ void* indexed_record_pointer_peek(int index)
     return s_metric_records[index];
 }
 
+// FUNCTION: LEGORR 0x0045d370
 void region_bounds_set(const uint32_t* xy_pair, uint32_t w, uint32_t h)
 {
     if (xy_pair == NULL) {
@@ -747,6 +821,7 @@ static uint32_t* panel_item_word(int panel, int item)
     return (uint32_t*)(block + 0x28 + (size_t)item * 0x2c);
 }
 
+// FUNCTION: LEGORR 0x0045aac0
 void panel_item_flag16_set(int panel, int item, int value)
 {
     uint32_t* w = panel_item_word(panel, item);
@@ -756,6 +831,7 @@ void panel_item_flag16_set(int panel, int item, int value)
     *w = value != 0 ? *w | 0x10u : *w & ~0x10u;
 }
 
+// FUNCTION: LEGORR 0x0045abb0
 void panel_item_flag32_set(int panel, int item, int value)
 {
     uint32_t* w = panel_item_word(panel, item);
@@ -765,6 +841,7 @@ void panel_item_flag32_set(int panel, int item, int value)
     *w = value != 0 ? *w | 0x20u : *w & ~0x20u;
 }
 
+// FUNCTION: LEGORR 0x0045ab00
 void panel_state_flags_toggle(int index)
 {
     if (index < 0 || index >= DAT_WINDOW_COUNT) {
@@ -781,6 +858,7 @@ void panel_state_flags_toggle(int index)
 static float    s_reward_score;  /* DAT_00555738 */
 static float    s_reward_count;  /* DAT_0055573c */
 
+// FUNCTION: LEGORR 0x00462800
 void reward_score_add(float value)
 {
     s_reward_count = s_reward_count - -1.0f; /* corpus shape */
@@ -962,6 +1040,7 @@ int panel_draw_count_peek(int panel)
 /* PanelItemFlag8SetIfEnabled (FUN_0045abf0) — see crt.hpp. Bit 8 of the
  * stride-0x2c item's word at +0x28 only follows the flag while bit 32
  * (the enable gate) is set; otherwise the write is skipped. */
+// FUNCTION: LEGORR 0x0045abf0
 void panel_item_flag8_set_if_enabled(int panel, int item, int value)
 {
     uint32_t* w = panel_item_word(panel, item);
@@ -979,6 +1058,7 @@ void panel_item_flag8_set_if_enabled(int panel, int item, int value)
  * handles), +0x18 the flag word. The corpus strides its own block and
  * dereferences every window blindly — the guards here are the documented
  * deviation. */
+// FUNCTION: LEGORR 0x00463d20
 void view_blit_rect_positions_apply(int view)
 {
     if (view < 0 || view >= DAT_WINDOW_COUNT) {
@@ -1027,6 +1107,7 @@ void view_blit_rect_positions_apply(int view)
  * The corpus stores the new block over the panel's previous one without
  * freeing it (faithful); a null allocator answer skips the fill loop
  * (deviation: the corpus strides on through the failure). */
+// FUNCTION: LEGORR 0x0045ac30
 void panel_texture_slots_allocate(int panel, int count, const int* slot_index,
                                   const float* stream, const int* tex1,
                                   const int* tex2, const int* tex3,
@@ -1074,6 +1155,7 @@ void panel_texture_slots_allocate(int panel, int count, const int* slot_index,
 
 /* --- the small global primitives band (see crt.hpp) -------------------------- */
 
+// FUNCTION: LEGORR 0x00497aa0
 void uint96_zero(uint32_t limbs[3])
 {
     if (limbs == NULL) {
@@ -1088,6 +1170,7 @@ void uint96_zero(uint32_t limbs[3])
  * (the corpus's DAT_004c7ea4, unowned) clears only on a matching release. */
 static int s_global_value_word;
 
+// FUNCTION: LEGORR 0x0040e910
 void global_value_clear_if_equal(int value)
 {
     if (s_global_value_word == value) {
@@ -1114,6 +1197,7 @@ static void record_list_push(void** head, void* record)
     *head = record;
 }
 
+// FUNCTION: LEGORR 0x0046a470
 void linked_list_push_at_global_head(void* record)
 {
     record_list_push(&s_linked_list_head, record);
@@ -1126,6 +1210,7 @@ void linked_list_global_head_set(void* record)
     s_linked_list_head = record;
 }
 
+// FUNCTION: LEGORR 0x004792c0
 void global_record_list_push_head(void* record)
 {
     record_list_push(&s_record_list_head, record);
@@ -1138,6 +1223,7 @@ void* global_record_list_head_peek(void) { return s_record_list_head; }
  * exactly as the corpus does. */
 static uint32_t s_scene_effect_words[3];
 
+// FUNCTION: LEGORR 0x00465380
 int scene_effect_registry_reset(void)
 {
     s_scene_effect_words[0] = 0u;
@@ -1161,6 +1247,7 @@ void scene_effect_registry_words_peek(uint32_t out_words[3])
  * observer hook when installed so the path is testable (deviation). */
 static void (*s_fatal_exit_observer)(void);
 
+// FUNCTION: LEGORR 0x00498340
 void crt_fatal_message_exit(void)
 {
     if (s_fatal_exit_observer != NULL) {
@@ -1176,6 +1263,7 @@ void crt_fatal_exit_observer_set(void (*observer)(void))
 }
 
 /* CrtNoOpStubVariant2 (FUN_00493c40) — see crt.hpp. */
+// FUNCTION: LEGORR 0x00493c40
 void crt_no_op_stub_variant2(void)
 {
     return;
@@ -1184,6 +1272,7 @@ void crt_no_op_stub_variant2(void)
 /* LinkedRecordChainFree / GlobalLinkedRecordChainClear — see crt.hpp. */
 static void* s_linked_list_aux; /* DAT_004aa450 role: unowned, zero-init */
 
+// FUNCTION: LEGORR 0x0046a370
 void linked_record_chain_free(void* record)
 {
     if (record == NULL) {
@@ -1195,6 +1284,7 @@ void linked_record_chain_free(void* record)
     engine_heap_free(record);
 }
 
+// FUNCTION: LEGORR 0x0046a390
 void global_linked_record_chain_clear(void)
 {
     s_linked_list_aux = NULL;
@@ -1206,6 +1296,7 @@ void* linked_list_global_aux_peek(void) { return s_linked_list_aux; }
 void  linked_list_global_aux_set(void* word) { s_linked_list_aux = word; }
 
 /* ReleaseLinkedObjectList (FUN_00479240) — see crt.hpp. */
+// FUNCTION: LEGORR 0x00479240
 void linked_object_list_release(void* list)
 {
     if (list == NULL) {
@@ -1225,6 +1316,7 @@ void linked_object_list_release(void* list)
 /* ModelRenderListClear (FUN_00482d30) — see crt.hpp. */
 static void* s_model_render_list_head; /* DAT_005343c4 role: unowned */
 
+// FUNCTION: LEGORR 0x00482d30
 void model_render_list_clear(void)
 {
     void* node = s_model_render_list_head;
@@ -1241,6 +1333,7 @@ void model_render_list_head_set(void* node) { s_model_render_list_head = node; }
 void* model_render_list_head_peek(void) { return s_model_render_list_head; }
 
 /* RendererCommandNodePrepend (FUN_00482ce0) — see crt.hpp. */
+// FUNCTION: LEGORR 0x00482ce0
 void renderer_command_node_prepend(uint32_t kind, const uint32_t* payload)
 {
     /* Deviation: the port lays the corpus's dword node window out with
@@ -1264,6 +1357,7 @@ void renderer_command_node_prepend(uint32_t kind, const uint32_t* payload)
 }
 
 /* CrtOwnedStreamBufferRelease (FUN_00494df0) — see crt.hpp. */
+// FUNCTION: LEGORR 0x00494df0
 void crt_owned_stream_buffer_release(char* record)
 {
     if (record == NULL) {
@@ -1290,6 +1384,7 @@ void crt_owned_stream_buffer_release(char* record)
 /* --- the shared texture directory word (see crt.hpp) ------------------------ */
 static char* s_shared_texture_dir; /* DAT_0076cd88 role: unowned */
 
+// FUNCTION: LEGORR 0x004728c0
 void shared_texture_directory_set(const char* path)
 {
     s_shared_texture_dir = string_duplicate(path);
@@ -1309,6 +1404,7 @@ static void*    s_scene_end_value;    /* DAT_0076cd84 role: unowned */
 static void*    s_scene_sample_hook;  /* DAT_0076cd78 role: unowned */
 static void*    s_scene_sample_value; /* DAT_0076cd7c role: unowned */
 
+// FUNCTION: LEGORR 0x004728e0
 void renderer_flag_bit6_set(int value)
 {
     s_renderer_flag_word = (value != 0) ? (s_renderer_flag_word | 0x40u)
@@ -1317,6 +1413,7 @@ void renderer_flag_bit6_set(int value)
 
 uint32_t renderer_flag_word_peek(void) { return s_renderer_flag_word; }
 
+// FUNCTION: LEGORR 0x00472900
 void scene_end_hook_register(void* hook, void* value)
 {
     s_scene_end_hook = hook;
@@ -1326,6 +1423,7 @@ void scene_end_hook_register(void* hook, void* value)
 void* scene_end_hook_peek(void) { return s_scene_end_hook; }
 void* scene_end_hook_value_peek(void) { return s_scene_end_value; }
 
+// FUNCTION: LEGORR 0x00472920
 void scene_sample_hook_register(void* hook, void* value)
 {
     s_scene_sample_hook = hook;
@@ -1353,6 +1451,7 @@ static int s_strcasecmp(const char* a, const char* b)
     }
 }
 
+// FUNCTION: LEGORR 0x00410450
 void* string_keyed_cache_entry_find(const char* key)
 {
     void* entry = s_string_registry_head;
@@ -1375,6 +1474,7 @@ void* string_keyed_cache_entry_find(const char* key)
     }
 }
 
+// FUNCTION: LEGORR 0x00410490
 void* string_registry_intern(const char* key)
 {
     if (key == NULL || *key == '\0') {
@@ -1460,11 +1560,13 @@ static void* s_entry_cache_slot_get(const char* key, long slot,
     return value;
 }
 
+// FUNCTION: LEGORR 0x00410520
 void* string_cache_lookup_or_load(const char* key)
 {
     return s_entry_cache_slot_get(key, 1, s_bitmap_surface_loader);
 }
 
+// FUNCTION: LEGORR 0x00410560
 void* resource_name_cache_get_or_load(const char* key)
 {
     return s_entry_cache_slot_get(key, 2, s_font_resource_loader);
@@ -1477,6 +1579,7 @@ static void*    s_marker_table[32];
 static uint32_t s_marker_count;
 static void*    s_marker_descriptor;
 
+// FUNCTION: LEGORR 0x0040ce30
 void selection_marker_resources_release(void)
 {
     for (int i = 0; i < 32; ++i) {
@@ -1510,6 +1613,7 @@ void     selection_marker_count_set(uint32_t count) { s_marker_count = count; }
 uint32_t selection_marker_count_peek(void) { return s_marker_count; }
 
 /* OwnedResourceTreeRelease (FUN_0048c180) — see crt.hpp. */
+// FUNCTION: LEGORR 0x0048c180
 void owned_resource_tree_release(void** node, int own_node)
 {
     if (node == NULL) {
@@ -1533,6 +1637,7 @@ void owned_resource_tree_release(void** node, int own_node)
 
 /* StringPrefixReserve (FUN_004907c0): the scan is a strlen; the shift is an
  * overlapping move of the whole string (NUL included) `count` bytes right. */
+// FUNCTION: LEGORR 0x004907c0
 void string_prefix_reserve(char* s, int count)
 {
     if (count == 0 || s == NULL) {
@@ -1552,6 +1657,7 @@ static long s_stream_alloc_count;
 long stream_allocation_count_peek(void) { return s_stream_alloc_count; }
 void stream_allocation_count_reset(void) { s_stream_alloc_count = 0; }
 
+// FUNCTION: LEGORR 0x00498ae0
 void crt_stream_buffer_allocate(char* record)
 {
     ++s_stream_alloc_count;
@@ -1584,6 +1690,7 @@ void crt_stream_buffer_allocate(char* record)
 
 /* UInt96Add (FUN_00499fe0) — see crt.hpp. Every carry-add writes its sum
  * whether or not it carries; only the bump is gated. */
+// FUNCTION: LEGORR 0x00499fe0
 void crt_uint96_add(uint32_t* dst, const uint32_t* src)
 {
     if (dst == NULL || src == NULL) {
@@ -1614,6 +1721,7 @@ void crt_uint96_add(uint32_t* dst, const uint32_t* src)
  * the limb indices (toward limb 0), the opposite direction from the
  * uint96-add chain; the corpus's bit-mask reduction rides the byte-trick
  * expression, which simplifies to bit % 32 for the non-negative inputs. */
+// FUNCTION: LEGORR 0x00497970
 void crt_uint96_increment_at_bit(uint32_t limbs[3], int bit)
 {
     if (limbs == NULL) {
@@ -1644,6 +1752,7 @@ void crt_uint96_increment_at_bit(uint32_t limbs[3], int bit)
  * word position 31 - n % 32), and the in-limb mask
  * ~(-1 << (31 - bit % 32)) covers the positions STRICTLY below the named
  * bit, i.e. the bits above it; equal-index bits don't count. */
+// FUNCTION: LEGORR 0x00497900
 uint32_t crt_uint96_has_no_bits_at_or_above(const uint32_t limbs[3], int bit)
 {
     if (limbs == NULL) {
@@ -1673,6 +1782,7 @@ uint32_t crt_uint96_has_no_bits_at_or_above(const uint32_t limbs[3], int bit)
  * the inverse of the intuition the name invites; after that the limb keeps
  * the at-or-above half (mask -1 << (31 - bit % 32), the complement of the
  * has-no-bits mask) and every higher limb goes to zero. */
+// FUNCTION: LEGORR 0x004979e0
 uint32_t crt_uint96_clear_from_bit(uint32_t limbs[3], int bit)
 {
     if (limbs == NULL) {
@@ -1704,6 +1814,7 @@ uint32_t crt_uint96_clear_from_bit(uint32_t limbs[3], int bit)
  * low 16 bits of the hop counter and the bound test reads that mask.
  * Deviations: the port guards the table and the key; the corpus strides
  * them (and its append blindly stores past the caller's window). */
+// FUNCTION: LEGORR 0x00488730
 void* pair_table_find(const void* table, uint32_t count, const char* key)
 {
     if (table == NULL || count == 0u || key == NULL) {
@@ -1730,6 +1841,7 @@ void* pair_table_find(const void* table, uint32_t count, const char* key)
     }
 }
 
+// FUNCTION: LEGORR 0x00488790
 void pair_table_append(void* table, int* count, const char* key,
                        void* value)
 {
@@ -1756,8 +1868,11 @@ static uint32_t s_renderer_global_dword; /* DAT_0076ac84 */
 static uint32_t s_render_surface_secondary; /* DAT_0076ac8c */
 static uint32_t s_render_feature_flags; /* DAT_0050608c */
 
+// FUNCTION: LEGORR 0x00410b30
 uint32_t renderer_word_a_get(void) { return s_renderer_word_a; } /* FUN_00410b30 */
+// FUNCTION: LEGORR 0x00410b40
 uint32_t renderer_word_b_get(void) { return s_renderer_word_b; } /* FUN_00410b40 */
+// FUNCTION: LEGORR 0x00410b50
 uint32_t renderer_word_c_get(void) { return s_renderer_word_c; } /* FUN_00410b50 */
 void renderer_words_set(uint32_t a, uint32_t b, uint32_t c)
 {
@@ -1766,12 +1881,15 @@ void renderer_words_set(uint32_t a, uint32_t b, uint32_t c)
     s_renderer_word_c = c;
 }
 
+// FUNCTION: LEGORR 0x004065d0
 uint32_t renderer_global_dword_get(void) { return s_renderer_global_dword; }
 void renderer_global_dword_set(uint32_t value) { s_renderer_global_dword = value; }
 
+// FUNCTION: LEGORR 0x004065e0
 uint32_t render_surface_secondary_get(void) { return s_render_surface_secondary; }
 void render_surface_secondary_set(uint32_t value) { s_render_surface_secondary = value; }
 
+// FUNCTION: LEGORR 0x00477f70
 uint32_t render_feature_flags_get(void) { return s_render_feature_flags; }
 void render_feature_flags_set(uint32_t value) { s_render_feature_flags = value; }
 
@@ -1792,6 +1910,7 @@ void engine_feature_word_install(uint32_t value) /* port hook */
     s_engine_feature_word = value;
 }
 
+// FUNCTION: LEGORR 0x00477bd0
 void low_texture_flag_set(void) /* FUN_00477bd0 */
 {
     if ((s_engine_feature_word & 0x40000u) == 0u) {
@@ -1804,6 +1923,7 @@ void low_texture_flag_set(void) /* FUN_00477bd0 */
 /* UInt96Copy (FUN_00497a80) — see crt.hpp. The corpus computes dst − src as
  * a byte distance and walks three dwords forward, reading each source word
  * after earlier writes land; the ordered copy reproduces the overlap. */
+// FUNCTION: LEGORR 0x00497a80
 void uint96_copy(uint32_t dst[3], const uint32_t src[3])
 {
     for (int i = 0; i != 3; ++i) {
@@ -1813,6 +1933,7 @@ void uint96_copy(uint32_t dst[3], const uint32_t src[3])
 
 /* CrtStringDuplicate (FUN_0049b660) — see crt.hpp. The corpus's length walk
  * counts bytes through the NUL, so the copy is strlen + 1 bytes. */
+// FUNCTION: LEGORR 0x0049b660
 char* crt_string_duplicate(const char* text)
 {
     if (text == NULL) {
@@ -1829,6 +1950,7 @@ char* crt_string_duplicate(const char* text)
 /* CrtUnsignedIntegerFormatRadix (FUN_0049dba0) — see crt.hpp. The corpus's
  * digit fold is `digit < 10 ? digit + '0' : digit + 'W'`, which lands the
  * letters lowercase; the port pins that expression shape. */
+// FUNCTION: LEGORR 0x0049dba0
 void crt_unsigned_format_radix(uint32_t value, char* out, int radix)
 {
     if (out == NULL) {
@@ -1865,6 +1987,7 @@ void crt_unsigned_format_radix(uint32_t value, char* out, int radix)
 }
 
 /* SignedDecimalToStringConvert (FUN_0049db60) — see crt.hpp. */
+// FUNCTION: LEGORR 0x0049db60
 char* crt_signed_to_string(int value, char* out, int radix)
 {
     if (radix == 10 && value < 0) {
@@ -1882,6 +2005,7 @@ char* crt_signed_to_string(int value, char* out, int radix)
 /* StringToUpper / StringToLowercase (FUN_0049dcd0 / FUN_0049dc10) — see
  * crt.hpp. The C-locale fast half folds ASCII letters in place; the
  * DAT_00549180 locale half rides the recorded locale-map chain. */
+// FUNCTION: LEGORR 0x0049dcd0
 char* crt_string_to_upper(char* text)
 {
     if (text == NULL) {
@@ -1895,6 +2019,7 @@ char* crt_string_to_upper(char* text)
     return text;
 }
 
+// FUNCTION: LEGORR 0x0049dc10
 char* crt_string_to_lower(char* text)
 {
     if (text == NULL) {
@@ -1913,6 +2038,7 @@ char* crt_string_to_lower(char* text)
  * (the fd/codec readers ride the unported CRT runtime band — deviation). */
 static uint32_t s_math_error_code; /* _DAT_005490d0 role */
 
+// FUNCTION: LEGORR 0x004939a0
 void crt_math_error_code_set(int param)
 {
     if (param == 1) {
@@ -1927,6 +2053,7 @@ uint32_t crt_math_error_code_peek(void) { return s_math_error_code; }
 
 /* CrtMathExceptionCodeFromStatus (FUN_00493a00) — see crt.hpp. The fold
  * order is the corpus's; the final arm shifts the bit-2 field left. */
+// FUNCTION: LEGORR 0x00493a00
 int crt_math_exception_code_from_status(uint32_t status)
 {
     if ((status & 0x20u) != 0u) {
@@ -1959,6 +2086,7 @@ void global_flag_004ff978_install(uint32_t value)
 static int s_math_handler_id[CRT_MATH_HANDLER_ENTRIES];
 static uint32_t s_math_handler[CRT_MATH_HANDLER_ENTRIES];
 
+// FUNCTION: LEGORR 0x004939d0
 uint32_t crt_math_exception_handler_get(int id)
 {
     for (int i = 0; i != CRT_MATH_HANDLER_ENTRIES; ++i) {
@@ -1980,6 +2108,7 @@ void crt_math_exception_handler_install(int index, int id, uint32_t handler)
 /* CrtInteger64Multiply (FUN_0048ea90, __allmul) — see crt.hpp. The two
  * cross-word products contribute only their low 32 bits (the bit pattern
  * is sign-agnostic), so the fold lands as plain wrapping 32-bit adds. */
+// FUNCTION: LEGORR 0x0048ea90
 uint64_t crt_integer64_multiply(uint32_t lo_a, int32_t hi_a,
                                 uint32_t lo_b, int32_t hi_b)
 {
@@ -2001,6 +2130,7 @@ uint64_t crt_integer64_multiply(uint32_t lo_a, int32_t hi_a,
  * Deviations: a zero divisor answers zero (the corpus helper falls into
  * the divisor's exception path), and the helper's wrapping normalization
  * of the single overflowing quotient (INT64_MIN / -1) is not modeled. */
+// FUNCTION: LEGORR 0x0048e9e0
 uint64_t crt_integer64_divide(uint32_t lo_a, uint32_t hi_a,
                               uint32_t lo_b, uint32_t hi_b)
 {
@@ -2010,7 +2140,10 @@ uint64_t crt_integer64_divide(uint32_t lo_a, uint32_t hi_a,
         return 0u; /* deviation: the corpus exception path, not modeled */
     }
     if (d == -1) {
-        return (uint64_t)(n == INT64_MIN ? INT64_MIN : (int64_t)0u - n);
+        if (hi_a == 0x80000000u && lo_a == 0u) {
+            return ((uint64_t)hi_a << 32) | lo_a;
+        }
+        return (uint64_t)(0 - n);
         /* n / -1: the negation, with the helper's INT64_MIN wrap quirk
          * pinned (the normalization keeps that quotient positive). */
     }
@@ -2022,6 +2155,7 @@ uint64_t crt_integer64_divide(uint32_t lo_a, uint32_t hi_a,
  * the high half of the answer is pinned zero only when the repair needs
  * it (the estimate can overflow the 32-bit trial), never by construction.
  * Deviation: a zero divisor answers zero (the corpus exception path). */
+// FUNCTION: LEGORR 0x00498bf0
 uint64_t crt_unsigned64_divide(uint32_t lo_a, uint32_t hi_a,
                               uint32_t lo_b, uint32_t hi_b)
 {
@@ -2046,6 +2180,7 @@ uint64_t crt_unsigned64_divide(uint32_t lo_a, uint32_t hi_a,
 static void* s_fd_flag_blocks[CRT_FD_BLOCKS]; /* DAT_0076ddc0 role */
 static int   s_fd_flag_count;                 /* DAT_0076dec0 role */
 
+// FUNCTION: LEGORR 0x00498b40
 unsigned crt_file_descriptor_flag40_get(unsigned fd)
 {
     if ((int)s_fd_flag_count <= (int)fd || fd > 0x7fffffffu) {
@@ -2101,6 +2236,7 @@ int crt_file_descriptor_count_peek(void)
  * code-page branch unreachable (the unported locale-map chain), and the
  * failure half stores the corpus's EILSEQ-shaped 0x2a into the modeled
  * math-error slot (_DAT_005490d0) and answers -1. */
+// FUNCTION: LEGORR 0x004977d0
 uint32_t crt_control_flags_translate(uint32_t flags)
 {
     uint32_t out = 0u;
@@ -2129,6 +2265,7 @@ uint32_t crt_control_flags_translate(uint32_t flags)
     return out;
 }
 
+// FUNCTION: LEGORR 0x00498b70
 int crt_wide_char_to_multibyte(char* dest, uint32_t wide)
 {
     if (dest == NULL) {
@@ -2147,6 +2284,7 @@ int crt_wide_char_to_multibyte(char* dest, uint32_t wide)
  * source bytes up to the count, copies the NUL when it lands, and pads the
  * rest of the window with zeros. The fold is that observable behavior;
  * source reads stay inside the count. */
+// FUNCTION: LEGORR 0x0048e770
 char* crt_string_copy_n(char* dest, const char* src, uint32_t count)
 {
     if (count == 0u) {
@@ -2173,6 +2311,7 @@ char* crt_string_copy_n(char* dest, const char* src, uint32_t count)
  * dest-NULL lane answers the wide length, and the store lane copies low
  * bytes until the NUL or the count. The wide-over-0xff exit takes the
  * corpus's EILSEQ-shaped math-error store and answers -1. */
+// FUNCTION: LEGORR 0x0049abe0
 int crt_wide_char_to_multi_byte_compat(char* dest, const uint16_t* wide,
                                        uint32_t count)
 {
@@ -2216,6 +2355,7 @@ struct crt_signal_record {
 static struct crt_signal_record s_signal_records[CRT_SIGNAL_RECORDS];
 static int s_signal_record_count; /* DAT_004b2328 role */
 
+// FUNCTION: LEGORR 0x0049ab90
 void* crt_signal_handler_record_find(int signal)
 {
     for (int i = 0; i < s_signal_record_count; ++i) {

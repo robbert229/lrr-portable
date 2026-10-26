@@ -4001,7 +4001,9 @@ The Reccmp report is written to
 `build-reccmp/reccmp-report/index.html` (JSON: `results.json`). The target
 defaults to `~/.local/share/reprobit/toolchains/msvc_5_0_rtm`; override it with
 `REPROBIT_MSVC_5_0_RTM_ROOT=/path/to/toolchain` when needed. `make reccmp-report`
-is an alias for `make reccmp`.
+is an alias for `make reccmp`. Run `make reccmp-lint` to check that each
+production function definition under `src/` has a nearby Reccmp `FUNCTION:` or
+`STUB:` annotation; it exits with an error and lists missing annotations.
 
 Direct CMake configuration also supports `-DTEST_WADS_DIR=<dir>`,
 `-DMOVIES=auto|enabled|disabled`, and `-DSRC_ROOT=<path>`. The legacy Meson

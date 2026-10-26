@@ -140,6 +140,7 @@ float entity_stats_float_at88(const EntitySlot* e);   /* FUN_00469f20
 uint32_t entity_stats_word_at_c0_or_c4(const EntitySlot* e, int selector);
                                       /* FUN_00469f90: +c4 if selector
                                        * nonzero, else +c0 */
+uint32_t entity_stats_word_atc8(const EntitySlot* e); /* FUN_00469fc0 */
 float entity_stats_float_at8c(const EntitySlot* e);   /* FUN_00469fe0 */
 float entity_stats_float_at90(const EntitySlot* e);   /* FUN_0046a000 */
 float entity_stats_float_at98(const EntitySlot* e);   /* FUN_0046a020 */

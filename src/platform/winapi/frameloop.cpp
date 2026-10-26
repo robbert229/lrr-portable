@@ -9,6 +9,7 @@
  */
 #include "platform/platform.h"
 
+// STUB: LEGORR 0x004783f0
 PlatformWindow* platform_create_window(const char* title, int width, int height)
 {
     (void)title; (void)width; (void)height;
@@ -44,12 +45,14 @@ int platform_poll_events(PlatformWindow* win)
     return 1;
 }
 
+// STUB: LEGORR 0x00478040
 int platform_pump_events(PlatformWindow* win, PlatformEvent* out, int cap)
 {
     (void)win; (void)out; (void)cap;
     return 0;
 }
 
+// STUB: LEGORR 0x0047c8d0
 void platform_present_pixels(PlatformWindow* win, const void* pixels, int pitch,
                              int width, int height)
 {

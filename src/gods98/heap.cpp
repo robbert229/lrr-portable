@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
 
 #include "heap.hpp"
 
 /* Engine heap seam implementation — deviations in heap.hpp. */
 
+// FUNCTION: LEGORR 0x0048dc40
 void* engine_heap_alloc_aligned(long size)
 {
     /* The corpus body: 16-byte round-up, then (pool absent) the heap
@@ -14,9 +16,20 @@ void* engine_heap_alloc_aligned(long size)
     if (rounded == 0u) {
         rounded = 16u; /* size 0 allocates one byte through the heap */
     }
+#if defined(LEGORRR_BACKEND_WINAPI)
+    void* base = malloc(rounded + 16u + sizeof(void*));
+    if (base == NULL) {
+        return NULL;
+    }
+    uintptr_t aligned = ((uintptr_t)base + sizeof(void*) + 15u) & ~15u;
+    ((void**)aligned)[-1] = base;
+    return (void*)aligned;
+#else
     return aligned_alloc(16u, rounded);
+#endif
 }
 
+// FUNCTION: LEGORR 0x0048dbf0
 void* engine_heap_alloc_retry(long size, int (*retry_handler)(long))
 {
     if ((unsigned)size == 0u) {
@@ -39,6 +52,7 @@ void* engine_heap_alloc_retry(long size, int (*retry_handler)(long))
     }
 }
 
+// FUNCTION: LEGORR 0x0048dbd0
 void* engine_heap_alloc(long size)
 {
     /* Corpus: EngineHeapAllocateWithRetry(size, DAT_00549154) with the
@@ -46,23 +60,31 @@ void* engine_heap_alloc(long size)
     return engine_heap_alloc_retry(size, NULL);
 }
 
+// FUNCTION: LEGORR 0x0048db80
 void engine_heap_free(void* ptr)
 {
     if (ptr != NULL) {
+#if defined(LEGORRR_BACKEND_WINAPI)
+        free(((void**)ptr)[-1]);
+#else
         free(ptr);
+#endif
     }
 }
 
+// FUNCTION: LEGORR 0x0047ff40
 void engine_heap_free_wrapper(void* ptr)
 {
     engine_heap_free(ptr);
 }
 
+// FUNCTION: LEGORR 0x0045daf0
 void ui_render_record_free(void* record)
 {
     engine_heap_free(record);
 }
 
+// FUNCTION: LEGORR 0x0047ff30
 void engine_heap_allocate(long size)
 {
     (void)engine_heap_alloc(size);
@@ -76,6 +98,7 @@ void engine_heap_allocate(long size)
  * the corpus's own unset-handler reading. */
 static int (*s_new_handler)(long);
 
+// FUNCTION: LEGORR 0x00491d90
 int crt_new_handler_invoke(long size)
 {
     if (s_new_handler != NULL) {
@@ -91,12 +114,14 @@ void crt_new_handler_set(int (*handler)(long))
     s_new_handler = handler;
 }
 
+// FUNCTION: LEGORR 0x0048ead0
 void* engine_calloc(long size)
 {
     return engine_heap_alloc_retry(size, crt_new_handler_invoke);
 }
 
 /* OptionalResourceDestroy (FUN_0040f7b0) — see heap.hpp. */
+// FUNCTION: LEGORR 0x0040f7b0
 void optional_resource_destroy(void* record)
 {
     if (record != NULL) {
@@ -105,6 +130,7 @@ void optional_resource_destroy(void* record)
 }
 
 /* TextBufferDestroy (FUN_00485190) — see heap.hpp. */
+// FUNCTION: LEGORR 0x00485190
 void text_buffer_destroy(void* record)
 {
     if (record == NULL) {
@@ -117,6 +143,7 @@ void text_buffer_destroy(void* record)
 }
 
 /* TextOutputField82CBit2SetClear (FUN_00485160) — see heap.hpp. */
+// FUNCTION: LEGORR 0x00485160
 void text_output_field82c_bit2_set_clear(void* record, int set_bit)
 {
     if (record == NULL) {
@@ -129,6 +156,7 @@ void text_output_field82c_bit2_set_clear(void* record, int set_bit)
 }
 
 /* ObjectField38Release (FUN_00489d70) — see heap.hpp. */
+// FUNCTION: LEGORR 0x00489d70
 void object_field_38_release(void* record)
 {
     if (record == NULL) {
@@ -142,6 +170,7 @@ void object_field_38_release(void* record)
 }
 
 /* ThreeWordRecordAllocateAndInitialize (FUN_00410b60) — see heap.hpp. */
+// FUNCTION: LEGORR 0x00410b60
 void* three_word_record_allocate_and_initialize(uint32_t a, uint32_t b,
                                                 uint32_t c)
 {
@@ -156,6 +185,7 @@ void* three_word_record_allocate_and_initialize(uint32_t a, uint32_t b,
 }
 
 /* DwordListAllocateAndZero (FUN_00414070) — see heap.hpp. */
+// FUNCTION: LEGORR 0x00414070
 void** dword_list_allocate_and_zero(uint32_t count)
 {
     void** hdr = (void**)engine_heap_alloc(2 * sizeof(void*));
@@ -186,6 +216,7 @@ void** dword_list_allocate_and_zero(uint32_t count)
  * 0x100-dword window and the three flag words; the port folds the sweep
  * into byte-granular zeroing (identical observable bytes) and guards the
  * record (deviation: the corpus strides both blindly). */
+// FUNCTION: LEGORR 0x004859b0
 void text_buffer_reset(void* record)
 {
     if (record == NULL) {
@@ -218,6 +249,7 @@ void text_buffer_reset(void* record)
 }
 
 /* UITextOutputObjectRelease (FUN_0045a620) — see heap.hpp. */
+// FUNCTION: LEGORR 0x0045a620
 void ui_text_output_object_release(void* const* holder)
 {
     if (holder == NULL) {
@@ -227,6 +259,7 @@ void ui_text_output_object_release(void* const* holder)
 }
 
 /* TextBufferCreate (FUN_004850f0) — see heap.hpp. */
+// FUNCTION: LEGORR 0x004850f0
 void* text_buffer_create(uint32_t mode, const uint32_t* header, long size)
 {
     char* record = (char*)engine_heap_alloc(0x830);

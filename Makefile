@@ -13,7 +13,7 @@ RECCMP_WINE_BIN ?=
 RECCMP_RECCMP ?=
 REPROBIT_MSVC_5_0_RTM_ROOT ?=
 
-.PHONY: all setup build run clean reccmp reccmp-report
+.PHONY: all setup build run clean reccmp reccmp-report reccmp-lint
 
 all: build
 
@@ -36,6 +36,9 @@ reccmp-report:
 	RECCMP_RECCMP="$(RECCMP_RECCMP)" \
 	REPROBIT_MSVC_5_0_RTM_ROOT="$(REPROBIT_MSVC_5_0_RTM_ROOT)" \
 	  ./tools/reccmp.sh
+
+reccmp-lint:
+	python3 ./tools/lint_reccmp_annotations.py
 
 run: build
 	LEGORRR_WAD_DIR="$(WAD_DIR)" "$(BUILD_DIR)/LegoRR"

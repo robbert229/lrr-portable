@@ -26,6 +26,7 @@ static void ptrstack_link_set(void* item, void* next)
 
 /* PointerStackPush (FUN_0040fe40): link item → current head, make item
  * the head, count++. Corpus guard: both pointers nonzero. */
+// FUNCTION: LEGORR 0x0040fe40
 void ptrstack_push(PtrStack* stack, void* item)
 {
     if (stack == NULL || item == NULL) {
@@ -38,6 +39,7 @@ void ptrstack_push(PtrStack* stack, void* item)
 
 /* PointerStackPop (FUN_0040fe60): nonempty stack answers the head and
  * advances it through the item link, decrementing the count. */
+// FUNCTION: LEGORR 0x0040fe60
 void* ptrstack_pop(PtrStack* stack)
 {
     if (stack == NULL || stack->count == 0) {
@@ -51,6 +53,7 @@ void* ptrstack_pop(PtrStack* stack)
 
 /* PointerStackForEach (FUN_0040fe90): callback walk. The corpus's for-
  * loop fetches item+0x9c AFTER the callback body runs — reproduced. */
+// FUNCTION: LEGORR 0x0040fe90
 void ptrstack_for_each(PtrStack* stack, PtrStackCallback cb, void* ctx)
 {
     if (stack == NULL || cb == NULL) {
@@ -63,6 +66,7 @@ void ptrstack_for_each(PtrStack* stack, PtrStackCallback cb, void* ctx)
 }
 
 /* CallbackStateListDispose (FUN_0040f850) — see ptrstack.hpp. */
+// FUNCTION: LEGORR 0x0040f850
 void callback_state_list_dispose(void* stack_allocation)
 {
     if (stack_allocation == NULL) {
@@ -111,6 +115,7 @@ void callback_state_list_dispose(void* stack_allocation)
  * the allocation-success branch, so the slot lands NULL when the record
  * allocation fails. Deviations: the caller slot write is guarded, and the
  * slot (corpus 4 bytes) and its buffer pointer widen to native pointers. */
+// FUNCTION: LEGORR 0x0040f6c0
 void* scene_node_record_create(const uint32_t* triple1,
                                const uint32_t* triple2, uint32_t param_3,
                                uint32_t param_4, uint32_t param_5,
@@ -139,6 +144,7 @@ void* scene_node_record_create(const uint32_t* triple1,
     return record;
 }
 
+// FUNCTION: LEGORR 0x0040f7d0
 void* callback_state_record_create(const uint32_t* triple1,
                                    const uint32_t* triple2, uint32_t param_3,
                                    uint32_t param_4, uint32_t param_5,
@@ -159,6 +165,7 @@ void* callback_state_record_create(const uint32_t* triple1,
     return record;
 }
 
+// FUNCTION: LEGORR 0x004628e0
 void* callback_record_allocate_initialize(void** out_record, uint32_t param_2,
                                           uint32_t param_3, uint32_t param_4,
                                           uint32_t param_5, uint32_t param_6)

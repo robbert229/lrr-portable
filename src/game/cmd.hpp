@@ -254,6 +254,9 @@ int selection_entity_remove(void* entity);
  * teardown calls are the unported entity-layer teardown family, like the
  * media mode-leaf's hooks. NULL entries skip (deviation). */
 int selection_candidate_filter(void* entity, int mode, int param_3);
+/* SelectionCandidateFilterDefault (FUN_004526c0): forwards `mode` to the
+ * filter with its third argument fixed at 1. */
+void selection_candidate_filter_default(void* entity, int mode);
 int selected_entity_state_monitor(void);
 
 /* --- entity record schedulers (2026-10-24) ----------------------------------

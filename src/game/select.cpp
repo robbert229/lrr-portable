@@ -42,6 +42,7 @@ void selection_remove(GameContext* ctx, const EntitySlot* e)
     }
 }
 
+// FUNCTION: LEGORR 0x00452be0
 void selection_clear(GameContext* ctx)
 {
     if (ctx == NULL) {
@@ -53,24 +54,28 @@ void selection_clear(GameContext* ctx)
     ctx->selection_count = 0;
 }
 
+// FUNCTION: LEGORR 0x004525f0
 int selection_count(const GameContext* ctx)
 {
     /* Corpus SelectionRecordCountGet @ 0x4525f0 — DAT_004ff298. */
     return ctx != NULL ? ctx->selection_count : 0;
 }
 
+// FUNCTION: LEGORR 0x004525b0
 int selection_has_any(const GameContext* ctx)
 {
     /* Corpus SelectedEntitySetHasAny @ 0x4525b0 — DAT_004ff298 != 0. */
     return ctx != NULL && ctx->selection_count != 0;
 }
 
+// FUNCTION: LEGORR 0x004525e0
 EntitySlot* const* selection_record_array(const GameContext* ctx)
 {
     /* Corpus SelectionRecordArrayGet @ 0x4525e0 — &DAT_004fef2c. */
     return ctx != NULL ? ctx->selection : NULL;
 }
 
+// FUNCTION: LEGORR 0x00452600
 void selection_count_reset(GameContext* ctx)
 {
     /* Corpus SelectionRecordCountReset @ 0x452600 — DAT_004ff298 = 0,
@@ -80,6 +85,7 @@ void selection_count_reset(GameContext* ctx)
     }
 }
 
+// FUNCTION: LEGORR 0x004525c0
 EntitySlot* selection_first(const GameContext* ctx)
 {
     if (ctx == NULL || ctx->selection_count == 0) {
@@ -89,6 +95,7 @@ EntitySlot* selection_first(const GameContext* ctx)
 }
 
 /* SelectionStateTick (FUN_004528c0) — see select.hpp. */
+// FUNCTION: LEGORR 0x004528c0
 void selection_state_tick(GameContext* ctx)
 {
     if (ctx == NULL) {
@@ -105,7 +112,8 @@ void selection_state_tick(GameContext* ctx)
     int cls_none = 0; /* the class-none shape: every entry is stale */
     int cls_two = 0, cls_bad = 0, cls_clean = 0, cls_flag = 0;
     int cls_four = 0, cls_eleven = 0;
-    for (int i = 0; i < *count; ++i) {
+    int i;
+    for (i = 0; i < *count; ++i) {
         EntitySlot* e = sel[i];
         if (e == NULL) {
             continue; /* deviation: the corpus strides the slot blindly */
@@ -167,7 +175,7 @@ void selection_state_tick(GameContext* ctx)
      * compaction that revisits the swapped-in slot (the corpus's index
      * quirk) — and every dropped entity loses the selected bit. The
      * class-none shape drops everything (quirk pinned). */
-    for (int i = 0; i < *count; ) {
+    for (i = 0; i < *count; ) {
         EntitySlot* e = sel[i];
         const int type = e->type;
         const uint32_t stats = entity_stats_word_get(e);
@@ -250,6 +258,7 @@ void selection_cmd_add(GameContext* ctx, EntitySlot* e)
     }
 }
 
+// FUNCTION: LEGORR 0x00452610
 int selection_contains_entity(const GameContext* ctx, const EntitySlot* e)
 {
     if (ctx == NULL || e == NULL) {
@@ -263,6 +272,7 @@ int selection_contains_entity(const GameContext* ctx, const EntitySlot* e)
     return 0;
 }
 
+// FUNCTION: LEGORR 0x00452690
 int selection_candidate_already_selected_or_marked(const GameContext* ctx,
                                                    const EntitySlot* e)
 {
@@ -276,6 +286,7 @@ int selection_candidate_already_selected_or_marked(const GameContext* ctx,
 }
 
 /* CurrentLevelStateFlagsContainMask (FUN_0041f720) — see select.hpp. */
+// FUNCTION: LEGORR 0x0041f720
 int current_level_state_flags_contain_mask(const GameContext* ctx,
                                            uint32_t mask)
 {
@@ -290,6 +301,7 @@ int current_level_state_flags_contain_mask(const GameContext* ctx,
  * marker raise lands on the DAT_00556ecc engine state word, which the
  * port threads through the engine handle (deviation: the corpus strides
  * the global word). The clear request always runs. */
+// FUNCTION: LEGORR 0x0044c4a0
 void selection_clear_marker_and_reset_hud(struct EngineContext* engine,
                                           EntitySlot* e)
 {

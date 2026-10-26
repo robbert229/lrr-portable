@@ -237,6 +237,7 @@ int sound_bank_sound_on(void)
     return s_bank_sound_on;
 }
 
+// FUNCTION: LEGORR 0x0047aad0
 int sound_bank_free_slot_find(int* out_slot)
 {
     /* SoundBankFreeSlotFind @ 0x47aad0. */
@@ -252,12 +253,14 @@ int sound_bank_free_slot_find(int* out_slot)
     return 0;
 }
 
+// FUNCTION: LEGORR 0x0047a850
 int sound_volume_value_valid(int millibels)
 {
     /* SoundVolumeValueValid @ 0x47a850: (-10001 < v < 1). */
     return (millibels < 1 && -10001 < millibels) ? 1 : 0;
 }
 
+// FUNCTION: LEGORR 0x0047a870
 int sound_bank_entry_load(const char* name, int streamed, int looping,
                           int volume)
 {
@@ -317,6 +320,7 @@ int sound_bank_entry_load(const char* name, int streamed, int looping,
     return slot;
 }
 
+// FUNCTION: LEGORR 0x0047ab00
 void sound_bank_entry_release(int slot)
 {
     /* SoundBankEntryRelease @ 0x47ab00. */
@@ -340,6 +344,7 @@ uint32_t sound_bank_entry_flags(int slot)
     return s_bank[slot].flags;
 }
 
+// FUNCTION: LEGORR 0x0047b0d0
 int sound_bank_entry_volume(int slot)
 {
     /* IndexedRecordStride134WordGet @ 0x47b0d0 (record +0x110 word). */
@@ -444,6 +449,7 @@ static char* s_dupstr(const char* s)
     return copy;
 }
 
+// FUNCTION: LEGORR 0x00464740
 void sound_alias_registry_init(void)
 {
     /* Corpus: the built-in hashes are written into a fresh allocation;
@@ -458,6 +464,7 @@ void sound_alias_registry_init(void)
     s_alias_dynamic_count = 0;
 }
 
+// FUNCTION: LEGORR 0x00464c50
 void sound_alias_registration_set(int enable)
 {
     /* SoundDynamicAliasRegistrationSet @ 0x00464c50: raises/clears the
@@ -469,6 +476,7 @@ void sound_alias_registration_set(int enable)
     }
 }
 
+// FUNCTION: LEGORR 0x00464c70
 int sound_alias_lookup(const char* name, int* out_index)
 {
     /* SoundAliasLookup @ 0x00464c70. The corpus compares hash keys under
@@ -477,13 +485,14 @@ int sound_alias_lookup(const char* name, int* out_index)
     if (name == NULL || out_index == NULL) {
         return 0; /* corpus's param_1 != 0 guard */
     }
-    for (int i = 0; i < SOUND_ALIAS_BUILTINS; ++i) {
+    int i;
+    for (i = 0; i < SOUND_ALIAS_BUILTINS; ++i) {
         if (s_strcasecmp(name, s_alias_builtins[i]) == 0) {
             *out_index = i;
             return 1;
         }
     }
-    for (int i = 0; i < s_alias_dynamic_count; ++i) {
+    for (i = 0; i < s_alias_dynamic_count; ++i) {
         if (s_strcasecmp(name, s_alias_dynamic[i]) == 0) {
             *out_index = SOUND_ALIAS_BUILTINS + i;
             return 1;
@@ -531,6 +540,7 @@ const char* sound_alias_name(int index)
  *  finding 137 flag word DAT_00502a2c).
  * ------------------------------------------------------------------ */
 
+// FUNCTION: LEGORR 0x00465260
 void sound_subsystem_enable_set(int enable, int stop_active)
 {
     /* SoundSubsystemEnableSet @ 0x00465260. */
@@ -547,17 +557,20 @@ void sound_subsystem_enable_set(int enable, int stop_active)
     s_cooldown_alias = 0.0;
 }
 
+// FUNCTION: LEGORR 0x004652a0
 void sound_subsystem_enable_set_and_stop(int enable)
 {
     /* SoundSubsystemEnableSetAndStop @ 0x004652a0. */
     sound_subsystem_enable_set(enable, 1);
 }
 
+// FUNCTION: LEGORR 0x00465370
 int sound_subsystem_enabled(void)
 {
     return (s_sound_flags & SOUND_FLAG_ENABLED) != 0;
 }
 
+// FUNCTION: LEGORR 0x004652b0
 int sound_batch_mode_get(void)
 {
     /* SoundBatchModeGet @ 0x004652b0: `return DAT_00502a2c & 8` — the
@@ -578,6 +591,7 @@ static int s_queue_alias[SOUND_REQUEST_QUEUE_CAPACITY];  /* DAT_00502b30 */
 static int s_queue_loop[SOUND_REQUEST_QUEUE_CAPACITY];   /* DAT_00502b58 */
 static int s_queue_count;                                /* DAT_00502bd0 */
 
+// FUNCTION: LEGORR 0x00464f60
 void sound_request_queue_submit(int alias, int loop)
 {
     /* SoundRequestQueueSubmit @ 0x464f60. */
@@ -622,6 +636,7 @@ void sound_request_queue_clear(void)
 static float s_cooldown_timer;   /* _DAT_00502b24 (zero-initialised) */
 static int   s_cooldown_handle;  /* DAT_00502b28  (zero-initialised) */
 
+// FUNCTION: LEGORR 0x00464ec0
 int sound_deferred_timer_set_if_idle(float seconds)
 {
     /* DeferredSoundTimerSetIfIdle @ 0x464ec0. */
@@ -633,6 +648,7 @@ int sound_deferred_timer_set_if_idle(float seconds)
     return 0;
 }
 
+// FUNCTION: LEGORR 0x00464e80
 void sound_deferred_play_expire(void)
 {
     /* DeferredSoundPlayExpire @ 0x464e80. */
@@ -707,6 +723,7 @@ static int s_variant_pool_alloc(void)
  * quirk that leaves a trailing comma in the last path. Tokens beyond
  * the port's copy of the 100-entry stack buffer split but go untracked
  * (the corpus writes past its own frame); returns the tracked count. */
+// FUNCTION: LEGORR 0x00477440
 static int s_variant_split(char* s, char** out, int max)
 {
     if (s[0] == '\0') {
@@ -725,6 +742,7 @@ static int s_variant_split(char* s, char** out, int max)
     return n;
 }
 
+// FUNCTION: LEGORR 0x00464d00
 int sound_sample_marker_parse(const char* spec, int alias_index)
 {
     if (spec == NULL || alias_index < 0 || alias_index >= SOUND_ALIAS_MAX) {
@@ -818,6 +836,7 @@ int sound_sample_marker_parse(const char* spec, int alias_index)
     return ok;
 }
 
+// FUNCTION: LEGORR 0x00464e20
 int sound_variant_select(int alias_index)
 {
     if (alias_index <= 0 || alias_index >= SOUND_ALIAS_MAX) {
@@ -870,6 +889,7 @@ int sound_variant_chain(int alias_index, int* out_slots, int max)
  *  #319 / #320). See sound.hpp.
  * ------------------------------------------------------------------ */
 
+// FUNCTION: LEGORR 0x0047b050
 void sound_bank_entry_volume_set(int slot, int millibels)
 {
     /* SoundBankEntryVolumeSet @ 0x47b050. */
@@ -885,6 +905,7 @@ void sound_bank_entry_volume_set(int slot, int millibels)
      * the seam is a no-op. */
 }
 
+// FUNCTION: LEGORR 0x00465010
 void sound_variant_property_set(int alias_index, int millibels)
 {
     /* ConfiguredVariantPropertySet @ 0x465010. Deviation: the corpus's
@@ -894,6 +915,7 @@ void sound_variant_property_set(int alias_index, int millibels)
     sound_bank_entry_volume_set(slot, millibels);
 }
 
+// FUNCTION: LEGORR 0x00465030
 void sound_variant_property_read(int alias_index)
 {
     /* ConfiguredVariantPropertyRead @ 0x465030: only the variant draw
@@ -941,6 +963,7 @@ static void s_play_seam(int mode, int position, int slot, int loop,
     (void)xyz;
 }
 
+// FUNCTION: LEGORR 0x00464fa0
 void sound_alias_play(int alias, int loop)
 {
     /* SoundAliasPlay @ 0x464fa0. */
@@ -965,6 +988,7 @@ void sound_alias_play(int alias, int loop)
     }
 }
 
+// FUNCTION: LEGORR 0x00465090
 int sound_positional_sound_submit(int position, int alias, int loop,
                                   int positional, const float* xyz)
 {
@@ -996,6 +1020,7 @@ int sound_positional_sound_submit(int position, int alias, int loop,
     return 0;
 }
 
+// FUNCTION: LEGORR 0x004652d0
 void sound_batch_queue_drain(int batch_set, int replay)
 {
     /* SoundBatchQueueDrain @ 0x4652d0. */
@@ -1023,6 +1048,7 @@ void sound_batch_queue_drain(int batch_set, int replay)
     s_batch_count = 0;
 }
 
+// FUNCTION: LEGORR 0x004652c0
 void sound_deferred_queue_drain(int batch_set)
 {
     /* SoundDeferredQueueDrain @ 0x4652c0. */
@@ -1057,13 +1083,15 @@ int sound_batch_queue_get(int index, int* alias, int* position,
     return 1;
 }
 
+// FUNCTION: LEGORR 0x004651a0
 void sound_subsystem_frame_tick(float dt)
 {
     /* SoundSubsystemFrameTick @ 0x4651a0. */
     const int batch_saved = sound_batch_mode_get();
+    int i;
     s_cooldown_timer -= dt;            /* _DAT_00502b24 step */
     sound_batch_queue_drain(0, 0);     /* batch off for the replay pass */
-    for (int i = 0; i < s_active_count; ++i) {
+    for (i = 0; i < s_active_count; ++i) {
         sound_alias_play(s_active_alias[i], s_active_loop[i]);
     }
     if (batch_saved != 0) {
@@ -1071,7 +1099,7 @@ void sound_subsystem_frame_tick(float dt)
     }
     /* Rotate the pending queue (#317) into the active replay copies. */
     const int n = s_queue_count;
-    for (int i = 0; i < n; ++i) {
+    for (i = 0; i < n; ++i) {
         s_active_alias[i] = s_queue_alias[i];
         s_active_loop[i] = s_queue_loop[i];
     }
@@ -1113,6 +1141,7 @@ int sound_active_request_get(int index, int* alias, int* loop)
  *  expire (finding 217), kept as-is.
  * ------------------------------------------------------------------ */
 
+// FUNCTION: LEGORR 0x0047b8e0
 double sound_streamed_wave_buffer_step_rate(int slot)
 {
     /* StreamedWaveBufferStepRate @ 0x47b8e0. slot -1 is the variant
@@ -1130,6 +1159,7 @@ double sound_streamed_wave_buffer_step_rate(int slot)
     return (double)bytes / rate;
 }
 
+// FUNCTION: LEGORR 0x00465160
 double sound_object_duration_get(int alias)
 {
     /* SoundObjectDurationGet @ 0x465160: duration of whatever the alias's
@@ -1139,6 +1169,7 @@ double sound_object_duration_get(int alias)
     return sound_streamed_wave_buffer_step_rate(slot);
 }
 
+// FUNCTION: LEGORR 0x00464ef0
 int sound_submit_with_global_cooldown(int alias, int* out_handle)
 {
     /* SoundSubmitWithGlobalCooldown @ 0x464ef0. */
@@ -1173,6 +1204,7 @@ int sound_submit_with_global_cooldown(int alias, int* out_handle)
     return 0;
 }
 
+// FUNCTION: LEGORR 0x00416150
 int sound_stream_play_level(int level)
 {
     /* StreamPlayLevel @ 0x416150: the Stream_LevelName_Level_%d alias,
@@ -1186,6 +1218,7 @@ int sound_stream_play_level(int level)
     return 0;
 }
 
+// FUNCTION: LEGORR 0x004161a0
 int sound_stream_play_tutorial(int level)
 {
     /* StreamPlayTutorial @ 0x4161a0. */
@@ -1201,6 +1234,7 @@ int sound_stream_play_tutorial(int level)
 /* SoundBufferAssociationAdd (FUN_0047b020) — see sound.hpp. */
 static void* s_buffer_assoc_head; /* DAT_00506684 role: unowned */
 
+// FUNCTION: LEGORR 0x0047b020
 void sound_buffer_association_add(uint32_t a, uint32_t b, uint32_t c)
 {
     void* node = engine_heap_alloc(4 * sizeof(void*));

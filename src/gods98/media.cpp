@@ -120,6 +120,7 @@ void media_cd_config_set(int start_track_base, int track_count)
     s_cd_window = track_count != 0 ? track_count : 1;
 }
 
+// FUNCTION: LEGORR 0x004297b0
 void media_cd_watchdog_update(int enable)
 {
     if (enable != 0) {
@@ -183,6 +184,7 @@ void media_cd_watchdog_tick(int arg)
  *  AudioPlaybackToggle @ 0x429810 (issue #298).
  * ------------------------------------------------------------------ */
 
+// FUNCTION: LEGORR 0x00429810
 void media_audio_playback_toggle(int enable)
 {
     if (enable != 0) {
@@ -204,6 +206,7 @@ void media_audio_playback_toggle(int enable)
 static int   s_cursor_slot;       /* DAT_00500a98 role */
 static float s_cursor_override;   /* _DAT_00500efc role (statics: 0.0) */
 
+// FUNCTION: LEGORR 0x0045cc20
 void media_pointer_cursor_select(int slot)
 {
     if (s_cursor_override <= 0.0f) {
@@ -211,6 +214,7 @@ void media_pointer_cursor_select(int slot)
     }
 }
 
+// FUNCTION: LEGORR 0x0045cc40
 void media_pointer_cursor_override_set(int slot, float value)
 {
     s_cursor_slot = slot;
@@ -227,6 +231,7 @@ float media_pointer_cursor_override(void)
     return s_cursor_override;
 }
 
+// FUNCTION: LEGORR 0x00428800
 void media_action_feedback_sound_dispatch(int event)
 {
     int saved = sound_batch_mode_get();
@@ -250,6 +255,7 @@ void media_action_feedback_sound_dispatch(int event)
     sound_batch_queue_drain(saved, 0);  /* restore the saved mode */
 }
 
+// FUNCTION: LEGORR 0x004351a0
 void media_action_code_to_sound_alias(int code)
 {
     int cue = 0;
@@ -293,6 +299,7 @@ void media_min_distance_config_set(float cell_scale, float clip_base,
     s_mind_dist_base = min_dist_base;
 }
 
+// FUNCTION: LEGORR 0x004295f0
 void media_min_distance_update_mode(int mode, void* context,
                                     int scalar_selector)
 {
@@ -349,6 +356,7 @@ float media_min_distance_ref_distance(void)
 /* --- the CD-audio availability seam (see media.hpp) -------------------------- */
 static int s_cd_audio_open; /* DAT_0054486c role: unowned, zero-init */
 
+// FUNCTION: LEGORR 0x00488b90
 int media_cd_audio_playback_available(void)
 {
     return (s_cd_audio_open != 0 && sound_bank_sound_on() != 0) ? 1 : 0;
@@ -363,6 +371,7 @@ void media_cd_audio_open_set(int open)
 static void* s_loader_progress_callback; /* DAT_005343ac role: unowned */
 static void* s_loader_progress_context;  /* DAT_005343b0 role: unowned */
 
+// FUNCTION: LEGORR 0x004802b0
 void loader_progress_callback_set(void* callback, void* context)
 {
     s_loader_progress_callback = callback;

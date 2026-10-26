@@ -36,6 +36,7 @@ static const char* MODE_WB = "wb";
 
 /* Corpus FUN_0048ff10's case-folded strcmp (used by the Level03
  * checkpoint hard-code comparison). */
+// FUNCTION: LEGORR 0x0048ff10
 static int strcasecmp_lite(const char* a, const char* b)
 {
     for (;;) {
@@ -67,11 +68,13 @@ void save_init(GameContext* ctx)
     ctx->osf_shadow_dirty = 0;
 }
 
+// FUNCTION: LEGORR 0x00417e90
 int save_slot_get(const GameContext* ctx)
 {
     return ctx != NULL ? ctx->save_slot : -1;
 }
 
+// FUNCTION: LEGORR 0x00417ea0
 void save_slot_set(GameContext* ctx, int slot)
 {
     if (ctx != NULL) {
@@ -118,6 +121,7 @@ static int save_bootstrap_records(GameContext* ctx, int count)
 }
 
 /* Serialise the active slot to `<dir>\<slot>.sav` (SavWriteSlot). */
+// FUNCTION: LEGORR 0x00417bd0
 static int sav_write_slot_file(GameContext* ctx)
 {
     /* The corpus driver creates the Saves/ directory; the writer mirrors it. */
@@ -149,6 +153,7 @@ static int sav_write_slot_file(GameContext* ctx)
     return 1;
 }
 
+// FUNCTION: LEGORR 0x00417a90
 int save_read_slot(GameContext* ctx, int slot, int create_if_missing)
 {
     if (ctx == NULL || slot < 0 || slot >= SAVE_SLOTS) {
@@ -226,6 +231,7 @@ int save_write_slot(GameContext* ctx, int slot)
 /* SavCommit (FUN_00417fc0): the corpus commits the selected slot by
  * writing the open slot context — DAT_005574d0's slot through the
  * port's active-slot model, bootstrap-and-write faithful. */
+// FUNCTION: LEGORR 0x00417fc0
 void save_commit(GameContext* ctx)
 {
     if (ctx == NULL || ctx->save_slot < 0) {
@@ -244,6 +250,7 @@ void save_commit(GameContext* ctx)
  * XPel/YPel 1, palette counts 0; pixels BGR, rows padded to four bytes.
  * The port's surface is B,G,R,A in memory (see fe_blit_glyph), so the
  * component map is a straight byte copy. */
+// FUNCTION: LEGORR 0x0047c8f0
 int save_write_thumbnail(GameContext* ctx, int slot, const void* fb,
                          int pitch, int w, int h)
 {
@@ -319,6 +326,7 @@ uint32_t* save_record_flags(GameContext* ctx, int index)
     return (uint32_t*)(ctx->records + (size_t)index * SAVE_RECORD_SIZE);
 }
 
+// FUNCTION: LEGORR 0x00417eb0
 void save_mark_record(GameContext* ctx, int index)
 {
     uint32_t* flags = save_record_flags(ctx, index);
@@ -357,6 +365,7 @@ static int save_records_grow(GameContext* ctx, int index)
 }
 
 /* SavWriteRecord (FUN_00417f40) — see savegame.hpp. */
+// FUNCTION: LEGORR 0x00417f40
 int save_write_record(GameContext* ctx, int index, const uint8_t* blob)
 {
     if (ctx == NULL || index < 0 || blob == NULL
@@ -412,6 +421,7 @@ static void checkpoint_reward_group(GameContext* ctx, const char* level_name)
     }
 }
 
+// FUNCTION: LEGORR 0x0045fda0
 void checkpoint_blob_build(GameContext* ctx)
 {
     if (ctx == NULL) {
@@ -464,6 +474,7 @@ void checkpoint_blob_build(GameContext* ctx)
 /* CheckpointBlobFree (FUN_004601e0, finding 08): frees the blob. The
  * corpus frees its global and LEAVES the dangling pointer; the port
  * nulls it (documented deviation — port-owned storage). */
+// FUNCTION: LEGORR 0x004601e0
 void checkpoint_blob_free(GameContext* ctx)
 {
     if (ctx != NULL) {
@@ -546,6 +557,7 @@ void checkpoint_refresh(GameContext* ctx)
     checkpoint_blob_build(ctx);
 }
 
+// FUNCTION: LEGORR 0x00462270
 void checkpoint_step(GameContext* ctx)
 {
     if (ctx == NULL) {
@@ -587,6 +599,7 @@ void checkpoint_step(GameContext* ctx)
  *  Completed-objective table (`.osf`).
  * ------------------------------------------------------------------ */
 
+// FUNCTION: LEGORR 0x00459190
 void osf_add(GameContext* ctx, int32_t id, int32_t ref, const char* name)
 {
     if (ctx == NULL || ctx->osf_count >= GAME_OSF_MAX) {
@@ -603,6 +616,7 @@ void osf_add(GameContext* ctx, int32_t id, int32_t ref, const char* name)
     ctx->osf_dirty = 1;
 }
 
+// FUNCTION: LEGORR 0x004592e0
 void osf_snapshot(GameContext* ctx)
 {
     if (ctx == NULL || ctx->osf_count == 0) {
@@ -614,6 +628,7 @@ void osf_snapshot(GameContext* ctx)
     ctx->osf_shadow_dirty = 1;
 }
 
+// FUNCTION: LEGORR 0x004593e0
 int osf_write(GameContext* ctx, const char* path)
 {
     if (ctx == NULL || path == NULL) {
@@ -646,6 +661,32 @@ int osf_write_path(GameContext* ctx, int slot)
     return osf_write(ctx, path);
 }
 
+/* The corpus drops its live OSF table and resets its count/capacity before
+ * reading another sidecar. The port's fixed table has no allocation to free;
+ * its count/capacity words are the corresponding state. */
+// FUNCTION: LEGORR 0x004592a0
+static void osf_read_state_reset(GameContext* ctx)
+{
+    if (ctx == NULL) {
+        return;
+    }
+    ctx->osf_count = 0;
+    ctx->osf_capacity = 0;
+}
+
+/* GameFileLengthGet (FUN_0047fca0): query the stream length and restore its
+ * original position, matching the original's save/seek-end/read-position /
+ * seek-back sequence. */
+// FUNCTION: LEGORR 0x0047fca0
+static long save_stream_length(FILE* fp)
+{
+    long position = ftell(fp);
+    fseek(fp, 0, SEEK_END);
+    long length = ftell(fp);
+    fseek(fp, position, SEEK_SET);
+    return length;
+}
+
 /* Load-side `.osf` restore — OsfRead @ 0x459470, entered from LevelLoad @
  * 0x429890 (finding 08 §".osf load-side restore"). Mirrors FUN_00459470:
  * clear the live table first (OsfClear @ 0x4592a0), open `path` "rb",
@@ -659,27 +700,23 @@ int osf_write_path(GameContext* ctx, int slot)
  * (osf_count == 0 on a bad sidecar) is what distinguishes them. `count`
  * is additionally capped at the port's fixed-array GAME_OSF_MAX (the
  * corpus reallocs its table; the port's array cannot grow past that). */
+// FUNCTION: LEGORR 0x00459470
 int osf_read(GameContext* ctx, const char* path)
 {
     if (ctx == NULL || path == NULL) {
         return 0;
     }
-    /* OsfClear — the live table is dropped before the open. The port's
-     * shadow is cleared too (the corpus frees/reallocs its shadow on the
-     * next snapshot; clearing here is the fixed-array equivalent, leaving
-     * nothing shadowed or stale from an earlier slot). */
-    ctx->osf_count = 0;
-    ctx->osf_capacity = 0;
+    /* The port also clears its shadow here (the corpus frees/reallocs its
+     * shadow on the next snapshot; clearing is the fixed-array equivalent,
+     * leaving nothing shadowed or stale from an earlier slot). */
+    osf_read_state_reset(ctx);
     ctx->osf_shadow_count = 0;
     ctx->osf_shadow_dirty = 0;
     FILE* fp = fopen(path, MODE_RB);
     if (fp == NULL) {
         return 0;
     }
-    /* FUN_0047fca0 — file size (seek end, remember, seek back). */
-    fseek(fp, 0, SEEK_END);
-    long int fsz = ftell(fp);
-    fseek(fp, 0, SEEK_SET);
+    long int fsz = save_stream_length(fp);
     uint8_t hdr[8];
     size_t got = fread(hdr, 1, 8, fp);
     int ok = (got == 8);
@@ -715,6 +752,7 @@ int osf_read_path(GameContext* ctx, int slot)
 
 /* --- the save-slot band (2026-10-24; findings 21/408) ---------------------- */
 
+// FUNCTION: LEGORR 0x00415cf0
 void save_slot_selection_clear(GameContext* ctx)
 {
     if (ctx != NULL) {
@@ -722,6 +760,7 @@ void save_slot_selection_clear(GameContext* ctx)
     }
 }
 
+// FUNCTION: LEGORR 0x00417e50
 void* sav_slot_ctx(GameContext* ctx, int slot)
 {
     if (ctx == NULL) {
@@ -737,11 +776,13 @@ void* sav_slot_ctx(GameContext* ctx, int slot)
 }
 
 /* --- the save-side DAT accessor band (see savegame.hpp) --------------------- */
+// FUNCTION: LEGORR 0x004593d0
 int osf_read_dirty_flag_get(const GameContext* ctx)
 {
     return ctx != NULL ? ctx->osf_dirty : 0;
 }
 
+// FUNCTION: LEGORR 0x004601f0
 void* checkpoint_blob_get(const GameContext* ctx)
 {
     return ctx != NULL ? ctx->checkpoint_blob : NULL;
@@ -751,6 +792,7 @@ void* checkpoint_blob_get(const GameContext* ctx)
  * the unowned-global convention (the corpus's word is DAT_0055781c). */
 static uint32_t s_save_state_event_context = 0u;
 
+// FUNCTION: LEGORR 0x00418110
 void save_state_event_context_set(uint32_t value)
 {
     s_save_state_event_context = value;
@@ -762,6 +804,7 @@ uint32_t save_state_event_context_peek(void)
 }
 
 /* SavBuildCtx (FUN_00417e70): slot-open probe through the port's models. */
+// FUNCTION: LEGORR 0x00417e70
 void* sav_build_ctx(GameContext* ctx)
 {
     if (save_slot_get(ctx) == -1) {
@@ -771,6 +814,7 @@ void* sav_build_ctx(GameContext* ctx)
 }
 
 /* SavRecordPtr (FUN_00417f90) — see savegame.hpp. */
+// FUNCTION: LEGORR 0x00417f90
 void* sav_record_ptr(GameContext* ctx, int index)
 {
     if (sav_build_ctx(ctx) == NULL || index < 0
@@ -781,6 +825,7 @@ void* sav_record_ptr(GameContext* ctx, int index)
 }
 
 /* SelectedLevelStartObjectUpdate (FUN_00460200) — see savegame.hpp. */
+// FUNCTION: LEGORR 0x00460200
 void selected_level_start_object_update(GameContext* ctx)
 {
     if (ctx == NULL || ctx->level == NULL) {
@@ -824,6 +869,7 @@ static int list_wide_scan(const SavListWindow* win, const void* wide_key)
     return -1;
 }
 
+// FUNCTION: LEGORR 0x00416e20
 int list_find_name(const SavListWindow* win, const char* name)
 {
     if (win == NULL || win->count < 1 || name == NULL
@@ -839,6 +885,7 @@ int list_find_name(const SavListWindow* win, const char* name)
     return -1;
 }
 
+// FUNCTION: LEGORR 0x00416ed0
 void list_add_name(SavListWindow* win, const void* wide_key, void* value)
 {
     const int i = list_wide_scan(win, wide_key);
@@ -847,6 +894,7 @@ void list_add_name(SavListWindow* win, const void* wide_key, void* value)
     }
 }
 
+// FUNCTION: LEGORR 0x00416f40
 void* list_has_item(const SavListWindow* win, const void* wide_key)
 {
     const int i = list_wide_scan(win, wide_key);
@@ -856,6 +904,7 @@ void* list_has_item(const SavListWindow* win, const void* wide_key)
     return win->values_b[i];
 }
 
+// FUNCTION: LEGORR 0x00416fb0
 void list_set_node(SavListWindow* win, const void* wide_key, void* value)
 {
     const int i = list_wide_scan(win, wide_key);
@@ -864,6 +913,7 @@ void list_set_node(SavListWindow* win, const void* wide_key, void* value)
     }
 }
 
+// FUNCTION: LEGORR 0x00417020
 void* list_get_node(const SavListWindow* win, const void* wide_key)
 {
     const int i = list_wide_scan(win, wide_key);
@@ -874,6 +924,7 @@ void* list_get_node(const SavListWindow* win, const void* wide_key)
 }
 
 /* SavTreeWalk (FUN_004171c0) — see savegame.hpp. */
+// FUNCTION: LEGORR 0x004171c0
 int sav_tree_walk(void* node, sav_tree_visit visit, void* user)
 {
     SavTreeNode* n = (SavTreeNode*)node;
@@ -940,6 +991,7 @@ static void blob_count_up(char* blob, size_t guard_off, size_t add_off)
     }
 }
 
+// FUNCTION: LEGORR 0x00460950
 int checkpoint_blob_task_progress_recalculate(GameContext* ctx)
 {
     if (ctx == NULL || ctx->level == NULL) {
@@ -1011,6 +1063,7 @@ int checkpoint_blob_task_progress_recalculate(GameContext* ctx)
  * for the corpus's six DAT_00557080 blocks (the SavSlotCtx precedent),
  * the null context is guarded, and the corpus reads its context-pointer
  * block blind. */
+// FUNCTION: LEGORR 0x00417df0
 void sav_refresh_slots(GameContext* ctx)
 {
     if (ctx == NULL) {

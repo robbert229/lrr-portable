@@ -9,6 +9,7 @@
 /* FUN_00477550: allocate strlen+1 through the heap seam and copy. The
  * corpus allocates via its engine-heap wrapper (TODO(corpus)); the port
  * mallocs (deviation in string.hpp). */
+// FUNCTION: LEGORR 0x00477550
 char* string_duplicate(const char* text)
 {
     if (text == NULL) {
@@ -26,6 +27,7 @@ char* string_duplicate(const char* text)
 /* FUN_0048da50: substring find. The corpus's aligned-word/SWAR scan is a
  * byte-equivalent strstr, plus the same early-outs (empty needle -> the
  * haystack start). */
+// FUNCTION: LEGORR 0x0048da50
 const char* string_find_substring(const char* haystack, const char* needle)
 {
     if (haystack == NULL || needle == NULL) {
@@ -63,6 +65,7 @@ static int s_strnfoldcmp(const char* a, const char* b, size_t n)
     return 0;
 }
 
+// FUNCTION: LEGORR 0x00477610
 const char* case_insensitive_substring_find(const char* haystack,
                                             const char* needle)
 {
@@ -85,6 +88,7 @@ const char* case_insensitive_substring_find(const char* haystack,
 /* FUN_00493ec0: length bounded by `limit` (the corpus walks byte-wise,
  * decrementing the bound first, and answers `limit` when no NUL turns up
  * inside it — byte-identical to scanning min(strlen, limit)). */
+// FUNCTION: LEGORR 0x00493ec0
 int string_length_bounded(const char* text, int limit)
 {
     if (text == NULL || limit <= 0) {
@@ -98,6 +102,7 @@ int string_length_bounded(const char* text, int limit)
 }
 
 /* FUN_00478f50: `root::comp1::comp2…` into the static builder. */
+// FUNCTION: LEGORR 0x00478f50
 const char* string_path_join(const char* root, ...)
 {
     static char s_path[STRING_PATH_MAX]; /* the corpus static scratch */
@@ -142,11 +147,13 @@ const char* string_path_join(const char* root, ...)
  * outputs. The corpus gates on a non-empty haystack and a non-empty
  * needle. Deviations: null strings are guarded (the corpus dereferences
  * both), and the fold compare stops at NUL (the corpus strides). */
+
 int string_folded_compare(const char* a, const char* b, size_t n)
 {
     return s_strnfoldcmp(a, b, n);
 }
 
+// FUNCTION: LEGORR 0x0048c040
 char* string_case_substring_find(char* haystack, const char* needle,
                                  uint32_t* out_index, size_t* out_length)
 {

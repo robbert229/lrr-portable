@@ -83,13 +83,15 @@ set(GAME_DIR "${SRC_ROOT}/game")
 set(PLATFORM_DIR "${SRC_ROOT}/platform")
 
 add_library(gods98 STATIC
-  ${ENGINE_DIR}/gods98.cpp ${ENGINE_DIR}/engine.cpp ${ENGINE_DIR}/tickers.cpp
+  ${ENGINE_DIR}/gods98.cpp ${ENGINE_DIR}/string.cpp ${ENGINE_DIR}/crt.cpp
+  ${ENGINE_DIR}/heap.cpp ${ENGINE_DIR}/ptrstack.cpp ${ENGINE_DIR}/record.cpp
+  ${ENGINE_DIR}/engine.cpp ${ENGINE_DIR}/tickers.cpp
   ${ENGINE_DIR}/resource.cpp ${ENGINE_DIR}/texture.cpp ${ENGINE_DIR}/sound.cpp
   ${ENGINE_DIR}/input.cpp ${ENGINE_DIR}/surface.cpp ${ENGINE_DIR}/frameloop.cpp
   ${ENGINE_DIR}/audio.cpp ${ENGINE_DIR}/camera.cpp ${ENGINE_DIR}/view.cpp
   ${ENGINE_DIR}/message.cpp ${ENGINE_DIR}/mainsim.cpp ${ENGINE_DIR}/simtick.cpp
   ${ENGINE_DIR}/block.cpp ${ENGINE_DIR}/model.cpp ${ENGINE_DIR}/entity.cpp
-  ${ENGINE_DIR}/movie.cpp ${ENGINE_DIR}/flic.cpp)
+  ${ENGINE_DIR}/movie.cpp ${ENGINE_DIR}/flic.cpp ${ENGINE_DIR}/media.cpp)
 target_include_directories(gods98 PUBLIC ${SRC_ROOT} ${ENGINE_DIR})
 
 add_library(game STATIC

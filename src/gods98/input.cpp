@@ -24,6 +24,10 @@ void input_reset(InputState* s)
     s->text_cap = 0;
 }
 
+/* InputStatePoll's successful-device state rollover (the previous/current
+ * 256-byte tables) is represented here; the DirectInput acquisition and
+ * retry path remain platform-owned. */
+// FUNCTION: LEGORR 0x0047eef0
 void input_begin_frame(InputState* s)
 {
     if (s == NULL) {
@@ -124,6 +128,7 @@ int input_mouse_pressed(const InputState* s)
  * table; that path is structural here (returns the scancode unchanged)
  * until a keyboard-layout provider exists (frame-loop/OS milestone).
  */
+// FUNCTION: LEGORR 0x0048e380
 uint32_t input_key_to_ascii(const InputState* s, uint32_t scancode)
 {
     if (s == NULL || s->hkl_present == 0) {
@@ -140,6 +145,7 @@ uint32_t input_key_to_ascii(const InputState* s, uint32_t scancode)
     return scancode;
 }
 
+// FUNCTION: LEGORR 0x00411f00
 uint32_t input_key_context(const InputState* s, uint32_t key)
 {
     if (s == NULL || key >= INPUT_KEY_COUNT) {
@@ -183,6 +189,7 @@ void input_text_pump(InputState* s, char* buf, int cap, int* len_out, int clear)
  *   dwell; the corpus's quit path then probes KeepRunning and only quits
  *   when that probe agrees (quitFlag = KeepRunning()==0).
  */
+// FUNCTION: LEGORR 0x004589c0
 int input_quit_dwell(InputState* s, int slot, int mx, int my,
                      int rect_x, int rect_y, int rect_w, int rect_h,
                      int quit_w, int quit_h, int keep_running)
@@ -218,6 +225,7 @@ static uint32_t s_input_entry_flags[INPUT_FLAG_TABLE_SLOTS];
 static uint32_t s_player_kind1_flags[INPUT_FLAG_TABLE_SLOTS];
 static uint32_t s_player_kind4_flags[INPUT_FLAG_TABLE_SLOTS];
 
+// FUNCTION: LEGORR 0x0041c9f0
 void input_entry_flag8_set_clear(int entry, int set)
 {
     if (entry < 0 || entry >= INPUT_FLAG_TABLE_SLOTS) {
@@ -230,6 +238,7 @@ void input_entry_flag8_set_clear(int entry, int set)
     }
 }
 
+// FUNCTION: LEGORR 0x0041ca60
 uint32_t input_entry_flag8_get(int entry)
 {
     if (entry < 0 || entry >= INPUT_FLAG_TABLE_SLOTS) {
@@ -249,6 +258,7 @@ static uint32_t* player_flags_table(int kind)
     return NULL;
 }
 
+// FUNCTION: LEGORR 0x0041ca20
 void player_input_flag8_set_clear(int kind, int action, int set)
 {
     uint32_t* table = player_flags_table(kind);
@@ -262,6 +272,7 @@ void player_input_flag8_set_clear(int kind, int action, int set)
     }
 }
 
+// FUNCTION: LEGORR 0x0041ca70
 uint32_t player_input_flag8_get(int kind, int action)
 {
     const uint32_t* table = player_flags_table(kind);
@@ -277,6 +288,7 @@ uint32_t player_input_flag8_get(int kind, int action)
  * RuntimeFlag40000000Get port masks); alt == the corpus's param_2, and the
  * inverted reading is taken only when the system-state word agrees. The
  * table behind s_input_entry_flags is the corpus's DAT_004dd60c dwords. */
+// FUNCTION: LEGORR 0x0041c8f0
 int input_action_pressed_get(const EngineContext* ctx, int action, int alt)
 {
     if (action == 0x49) {
@@ -299,6 +311,7 @@ int input_action_pressed_get(const EngineContext* ctx, int action, int alt)
  * inverted-reading shape, with the kind 1 / kind 4 flag tables (the
  * corpus's DAT_004dd9a4 / DAT_004dd9a8 dwords) selected through
  * player_flags_table; any other kind falls through to not-pressed. */
+// FUNCTION: LEGORR 0x0041c950
 int input_binding_pressed_get(const EngineContext* ctx, int kind, int entry,
                               int alt)
 {
@@ -331,6 +344,7 @@ int input_binding_pressed_get(const EngineContext* ctx, int kind, int entry,
 
 static uint32_t s_indexed_values[3][INPUT_INDEXED_WINDOW_SLOTS];
 
+// FUNCTION: LEGORR 0x0041cab0
 uint32_t indexed_entity_value_get(const EngineContext* ctx, int index)
 {
     if (index < 0 || index >= INPUT_INDEXED_WINDOW_SLOTS) {

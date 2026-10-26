@@ -94,6 +94,7 @@ int EngineTick(EngineContext* ctx, float dt)
  * (the frame-loop clears it at the frame boundary; the corpus's in-place
  * clear is incompatible with per-frame device capture).
  */
+// FUNCTION: LEGORR 0x004231f0
 void EnginePreTick(EngineContext* ctx)
 {
     if (ctx->input == NULL) {
@@ -114,6 +115,7 @@ void EnginePreTick(EngineContext* ctx)
  * splash/quit checks and the app-state test (FUN_00431560, FUN_00416d00 …);
  * a quit request ends up here. For the scaffold the frame never asks to quit.
  */
+// STUB: LEGORR 0x00435940
 int EngineKeepRunning(EngineContext* ctx)
 {
     (void)ctx;
@@ -124,6 +126,7 @@ int EngineKeepRunning(EngineContext* ctx)
 /* Time-scale factor — corpus FUN_0041fb40, read once per frame in the tick.
  * Multiplies dt into the *scaled* delta passed to subsystem tickers.
  */
+// FUNCTION: LEGORR 0x0041fb40
 float EngineTimeScale(EngineContext* ctx)
 {
     /* Corpus FUN_0041fb40: the config-derived speed factor. Issue #85 wires
@@ -140,6 +143,7 @@ float EngineTimeScale(EngineContext* ctx)
  * selected LAB_00424cf0 (normal play) or LAB_00424d00 (loader mode) at
  * registration time (FUN_0041fa20); that choice is reproduced here.
  */
+// FUNCTION: LEGORR 0x0041fa20
 void EngineShutdown(EngineContext* ctx)
 {
     if (ctx->app_mode == ENGINE_APP_LOADER) {
@@ -151,6 +155,7 @@ void EngineShutdown(EngineContext* ctx)
 }
 /* RuntimeFlag40000000Get (FUN_0041f970): the faithful masked read of the
  * port's engine-state word. */
+// FUNCTION: LEGORR 0x0041f970
 uint32_t runtime_flag40000000_get(const EngineContext* ctx)
 {
     return ctx != NULL ? (ctx->state & 0x40000000u) : 0u;
@@ -162,6 +167,7 @@ uint32_t runtime_flag40000000_get(const EngineContext* ctx)
  * follow_span slot (the corpus's word 0x24) through the threaded view
  * table (deviation: NULL slots answer zero, corpus dereferences blindly).
  */
+// FUNCTION: LEGORR 0x00423080
 int mode_dependent_field24_get(const EngineContext* ctx)
 {
     if (ctx == NULL) {
@@ -188,6 +194,7 @@ static int s_scroll_guard;        /* DAT_004de548 */
 static uint32_t s_triple[3];      /* DAT_0055651c / DAT_00556520 / DAT_00556524 */
 static float s_task_text_origin[2]; /* _DAT_00556f24 / _DAT_00556f28 */
 
+// FUNCTION: LEGORR 0x00425d80
 bool current_engine_mode_is_zero(const EngineContext* ctx)
 {
     return ctx != NULL && ctx->context_mode == 0;
@@ -199,6 +206,7 @@ bool current_engine_mode_is_zero(const EngineContext* ctx)
 static uint32_t s_overlay_word_03610; /* DAT_00503610 role */
 static uint32_t s_overlay_word_03614; /* DAT_00503614 role */
 
+// FUNCTION: LEGORR 0x004565f0
 int engine_mode_set(EngineContext* ctx, const int* mode)
 {
     if (mode == NULL) {
@@ -224,6 +232,7 @@ uint32_t engine_overlay_word_peek(int which)
  * setter; the reader is the unported score-text draw band — deviation). */
 static float s_score_text_origin[2];
 
+// FUNCTION: LEGORR 0x004262e0
 void objective_score_text_origin_set(EngineContext* ctx, const float* pair)
 {
     if (pair != NULL) {
@@ -247,6 +256,7 @@ void objective_score_text_origin_peek(float out[2])
     }
 }
 
+// FUNCTION: LEGORR 0x004263a0
 void global_state_flags_bit7_set(EngineContext* ctx, int value)
 {
     if (ctx == NULL) {
@@ -259,6 +269,7 @@ void global_state_flags_bit7_set(EngineContext* ctx, int value)
     }
 }
 
+// FUNCTION: LEGORR 0x00426360
 void global_state_flags_bits6_and_9_set(EngineContext* ctx, int value,
                                         int set_bit9)
 {
@@ -273,6 +284,7 @@ void global_state_flags_bits6_and_9_set(EngineContext* ctx, int value,
     ctx->debug = (set_bit9 != 0) ? (v | 0x200u) : (v & ~0x200u);
 }
 
+// FUNCTION: LEGORR 0x00425cd0
 void global_scroll_guard_set(int value)
 {
     s_scroll_guard = value;
@@ -287,6 +299,7 @@ int global_scroll_guard_peek(void)
  * pair has no ported reader outside the corpus's own draw band (the only
  * writers are this setter), so it rides module storage per the unowned-
  * global convention; the enable bit rides the bound debug word. */
+// FUNCTION: LEGORR 0x00426320
 void objective_task_text_origin_set(EngineContext* ctx, const float* pair)
 {
     if (pair != NULL) {
@@ -310,6 +323,7 @@ void objective_task_text_origin_peek(float out[2])
     }
 }
 
+// FUNCTION: LEGORR 0x00426230
 void global_triple_copy_out(uint32_t* out)
 {
     if (out == NULL) {
@@ -321,6 +335,7 @@ void global_triple_copy_out(uint32_t* out)
 }
 
 /* GlobalField505f88Get (FUN_00401bf0): threaded app-mode read. */
+// FUNCTION: LEGORR 0x00401bf0
 int engine_app_mode_get(const EngineContext* ctx)
 {
     return ctx != NULL ? ctx->app_mode : 0;
@@ -330,6 +345,7 @@ int engine_app_mode_get(const EngineContext* ctx)
 static void*        s_field_grid_buf;   /* DAT_005520e8 role */
 static EngineState* s_field_grid_desc;  /* DAT_005520ec role */
 
+// FUNCTION: LEGORR 0x004661c0
 void grid_cell_record_buffer_allocate(EngineState* block)
 {
     if (block == NULL) {
@@ -350,6 +366,7 @@ void grid_cell_record_buffer_allocate(EngineState* block)
     s_field_grid_desc = block;
 }
 
+// FUNCTION: LEGORR 0x00466210
 void entity_field_grid_buffer_release(void)
 {
     if (s_field_grid_buf != NULL) {
@@ -358,6 +375,7 @@ void entity_field_grid_buffer_release(void)
     }
 }
 
+// FUNCTION: LEGORR 0x00466230
 void grid_cell_record_buffer_replace(EngineState* block)
 {
     entity_field_grid_buffer_release();
@@ -374,6 +392,7 @@ EngineState* entity_field_grid_descriptor_peek(void) { return s_field_grid_desc;
 static uint32_t s_global_low_word; /* DAT_00556ed4 role */
 static void* s_refresh_record;     /* DAT_005563b4 role */
 
+// FUNCTION: LEGORR 0x00435a20
 void global_state_low_byte_clear_and_refresh(void)
 {
     s_global_low_word &= 0xffffff00u;
@@ -394,6 +413,7 @@ static void*  s_position_seam_last_handle;
 static int    s_position_seam_last_x;
 static int    s_position_seam_last_y;
 
+// FUNCTION: LEGORR 0x00435580
 int global_handle_position_apply_if_present(void)
 {
     if (s_position_handle == NULL) {
@@ -448,6 +468,7 @@ int scroll_speed_index_get(void)
     return 5;
 }
 
+// FUNCTION: LEGORR 0x00425ce0
 void scroll_scale_set_and_clamp(float scale)
 {
     if (s_scroll_scale <= scale || s_scroll_guard == 0) {
@@ -463,6 +484,7 @@ void scroll_scale_set_and_clamp(float scale)
 
 /* CameraFocusScrollScaleCommit (FUN_004538a0) — see engine.hpp. The corpus
  * reads the level-state root global and strides both windows blindly. */
+// FUNCTION: LEGORR 0x004538a0
 int camera_focus_scroll_scale_commit(const EngineContext* ctx,
                                      const void* record)
 {
@@ -485,6 +507,7 @@ int camera_focus_scroll_scale_commit(const EngineContext* ctx,
 }
 
 /* PanelSelectionHighlightToggle (FUN_00435aa0) — see engine.hpp. */
+// FUNCTION: LEGORR 0x00435aa0
 void panel_selection_highlight_toggle(EngineContext* ctx, int on)
 {
     if (on != 0) {
@@ -510,6 +533,7 @@ void panel_selection_highlight_toggle(EngineContext* ctx, int on)
  * voxel cell blindly; the port reads it once and answers through the
  * bounds-checking voxel accessor (deviations). CurrentLevelGet's block is
  * the bound level_block here. */
+// FUNCTION: LEGORR 0x00428780
 int terrain_cell_command_predicate(const EngineContext* ctx, int x, int y)
 {
     const uint32_t s = system_state_flags_get();
@@ -541,6 +565,7 @@ static char* field_grid_cell(int x, int y)
     return buf + ((size_t)((int)desc->grid_w * y + x) * 0x10u);
 }
 
+// FUNCTION: LEGORR 0x00466380
 void set_expansion_entity_at_grid_cell(int x, int y, void* entity)
 {
     char* cell = field_grid_cell(x, y);
@@ -556,6 +581,7 @@ void set_expansion_entity_at_grid_cell(int x, int y, void* entity)
     __builtin_memcpy(cell + 0x08, &timer, sizeof timer);
 }
 
+// FUNCTION: LEGORR 0x00466750
 void grid_cell_invalidate_and_clear_flags(int x, int y)
 {
     char* cell = field_grid_cell(x, y);
@@ -585,6 +611,7 @@ void grid_cell_invalidate_and_clear_flags(int x, int y)
     __builtin_memcpy(cell + 0x0c, &flags, sizeof flags);
 }
 
+// FUNCTION: LEGORR 0x004663f0
 int can_spawn_expansion_entity_at_grid_cell(int x, int y, float* out)
 {
     const EngineState* desc = entity_field_grid_descriptor_peek();

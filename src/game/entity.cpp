@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
 
 #include "ai.hpp"
 #include "entity.hpp"
@@ -46,6 +47,10 @@ int entity_count(GameContext* ctx, int type)
     return ctx->entity_count[entity_tab(type)];
 }
 
+/* EntityPointer's types 1..4 table lookup (FUN_0042ed70). The port adds
+ * bounds/null guards and groups the original special singleton types into
+ * one table, so only the regular typed-array branch is represented here. */
+// FUNCTION: LEGORR 0x0042ed70
 const EntitySlot* entity_at(GameContext* ctx, int type, int index)
 {
     if (ctx == NULL || type < 1 || type > 19) {
@@ -215,56 +220,98 @@ static uint32_t stats_rec_word(const EntitySlot* e, int off)
     return w;
 }
 
+// FUNCTION: LEGORR 0x00469cb0
 float entity_stats_float_at20(const EntitySlot* e) { return stats_rec_float(e, 0x20); }
 float entity_stats_float_at24_indexed(const EntitySlot* e, int index)
 {
     return stats_rec_float(e, 0x24 + index * 4);
 }
+// FUNCTION: LEGORR 0x00469ce0
 float entity_stats_float_atd4(const EntitySlot* e) { return stats_rec_float(e, 0xd4); }
+// FUNCTION: LEGORR 0x00469d00
 float entity_stats_float_at9c(const EntitySlot* e) { return stats_rec_float(e, 0x9c); }
+// FUNCTION: LEGORR 0x00469d20
 float entity_stats_float_atd8(const EntitySlot* e) { return stats_rec_float(e, 0xd8); }
+// FUNCTION: LEGORR 0x00469d40
 float entity_stats_float_at6c(const EntitySlot* e) { return stats_rec_float(e, 0x6c); }
+// FUNCTION: LEGORR 0x00469d50
 float entity_stats_float_at74(const EntitySlot* e) { return stats_rec_float(e, 0x74); }
+// FUNCTION: LEGORR 0x00469d60
 float entity_stats_float_at78(const EntitySlot* e) { return stats_rec_float(e, 0x78); }
+// FUNCTION: LEGORR 0x00469d70
 float entity_stats_float_ate8(const EntitySlot* e) { return stats_rec_float(e, 0xe8); }
+// FUNCTION: LEGORR 0x00469d90
 float entity_stats_float_at70(const EntitySlot* e) { return stats_rec_float(e, 0x70); }
+// FUNCTION: LEGORR 0x00469da0
 void* entity_stats_field_at_a0(const EntitySlot* e)
 {
     /* the corpus returns the ADDRESS record+0xa0, not its contents */
     return (void*)(stats_rec(e) + 0xa0);
 }
+// FUNCTION: LEGORR 0x00469db0
 float entity_stats_float_at7c(const EntitySlot* e) { return stats_rec_float(e, 0x7c); }
+// FUNCTION: LEGORR 0x00469dc0
 float entity_stats_float_at80(const EntitySlot* e) { return stats_rec_float(e, 0x80); }
+// FUNCTION: LEGORR 0x00469de0
 float entity_energy_decay_rate_get(const EntitySlot* e) { return stats_rec_float(e, 0x84); }
+// FUNCTION: LEGORR 0x00469e20
 float entity_stats_float_atdc(const EntitySlot* e) { return stats_rec_float(e, 0xdc); }
+// FUNCTION: LEGORR 0x00469e40
 uint32_t entity_stats_word_atac(const EntitySlot* e) { return stats_rec_word(e, 0xac); }
+// FUNCTION: LEGORR 0x00469e60
 uint32_t entity_stats_word_get(const EntitySlot* e) { return stats_rec_word(e, 0x144); }
+// FUNCTION: LEGORR 0x00469e80
 uint32_t entity_state_flags_get(const EntitySlot* e) { return stats_rec_word(e, 0x148); }
+// FUNCTION: LEGORR 0x00469ea0
 uint32_t entity_capability_flags_get(const EntitySlot* e) { return stats_rec_word(e, 0x14c); }
+// FUNCTION: LEGORR 0x00469f20
 float entity_stats_float_at88(const EntitySlot* e) { return stats_rec_float(e, 0x88); }
+// FUNCTION: LEGORR 0x00469f90
 uint32_t entity_stats_word_at_c0_or_c4(const EntitySlot* e, int selector)
 {
     return stats_rec_word(e, selector != 0 ? 0xc4 : 0xc0);
 }
+// FUNCTION: LEGORR 0x00469fc0
+uint32_t entity_stats_word_atc8(const EntitySlot* e) { return stats_rec_word(e, 0xc8); }
+// FUNCTION: LEGORR 0x00469fe0
 float entity_stats_float_at8c(const EntitySlot* e) { return stats_rec_float(e, 0x8c); }
+// FUNCTION: LEGORR 0x0046a000
 float entity_stats_float_at90(const EntitySlot* e) { return stats_rec_float(e, 0x90); }
+// FUNCTION: LEGORR 0x0046a020
 float entity_stats_float_at98(const EntitySlot* e) { return stats_rec_float(e, 0x98); }
+// FUNCTION: LEGORR 0x0046a040
 float entity_stats_float_at94(const EntitySlot* e) { return stats_rec_float(e, 0x94); }
+// FUNCTION: LEGORR 0x0046a080
 float entity_stats_float_atf4(const EntitySlot* e) { return stats_rec_float(e, 0xf4); }
+// FUNCTION: LEGORR 0x0046a0a0
 float entity_speed_component_get(const EntitySlot* e) { return stats_rec_float(e, 0xf8); }
+// FUNCTION: LEGORR 0x0046a170
 float entity_stats_float_at130(const EntitySlot* e) { return stats_rec_float(e, 0x130); }
+// FUNCTION: LEGORR 0x0046a190
 float entity_stats_float_at134(const EntitySlot* e) { return stats_rec_float(e, 0x134); }
+// FUNCTION: LEGORR 0x0046a1b0
 float entity_stats_float_at120(const EntitySlot* e) { return stats_rec_float(e, 0x120); }
+// FUNCTION: LEGORR 0x0046a1d0
 float entity_stats_float_at128(const EntitySlot* e) { return stats_rec_float(e, 0x128); }
+// FUNCTION: LEGORR 0x0046a1f0
 float entity_stats_float_at124(const EntitySlot* e) { return stats_rec_float(e, 0x124); }
+// FUNCTION: LEGORR 0x0046a210
 uint32_t entity_stats_word_at13c(const EntitySlot* e) { return stats_rec_word(e, 0x13c); }
+// FUNCTION: LEGORR 0x0046a230
 float entity_stats_float_at12c(const EntitySlot* e) { return stats_rec_float(e, 0x12c); }
+// FUNCTION: LEGORR 0x0046a250
 float entity_stats_float_at138(const EntitySlot* e) { return stats_rec_float(e, 0x138); }
+// FUNCTION: LEGORR 0x0046a270
 float entity_collision_radius_get(const EntitySlot* e) { return stats_rec_float(e, 0xe4); }
+// FUNCTION: LEGORR 0x0046a290
 float entity_stats_float_at114(const EntitySlot* e) { return stats_rec_float(e, 0x114); }
+// FUNCTION: LEGORR 0x0046a2b0
 float entity_stats_float_at118(const EntitySlot* e) { return stats_rec_float(e, 0x118); }
+// FUNCTION: LEGORR 0x0046a2d0
 float entity_stats_float_at11c(const EntitySlot* e) { return stats_rec_float(e, 0x11c); }
+// FUNCTION: LEGORR 0x0046a2f0
 float entity_stats_float_at110(const EntitySlot* e) { return stats_rec_float(e, 0x110); }
+// FUNCTION: LEGORR 0x0046a310
 float entity_stats_float_at10c(const EntitySlot* e) { return stats_rec_float(e, 0x10c); }
 
 
@@ -357,6 +404,7 @@ static int ci_strcmp(const char* a, const char* b);
  * special names write the dedicated ore-pair rows (0/1) only, leaving the
  * row slot for everything else (the dispatch aliases that slot onto its
  * first argument's word — a corpus quirk, pinned in the tests). */
+// FUNCTION: LEGORR 0x0042e8b0
 static int entity_type_pair_for_name(const char* name, int* type_out,
                                      int* row_out)
 {
@@ -504,6 +552,7 @@ int object_list_load(GameContext* ctx, BlockFile* cfg, const char* level_name)
     return object_list_load_file(ctx, olist);
 }
 
+// FUNCTION: LEGORR 0x0042e020
 int object_list_load_file(GameContext* ctx, const char* olist)
 {
     if (ctx == NULL || olist == NULL || olist[0] == '\0') {
@@ -588,6 +637,7 @@ int object_list_load_file(GameContext* ctx, const char* olist)
 
 /* EntityFlagsMask107C33DEOr1C00203AnyTest (FUN_0043baf0, finding 319):
  * either flag word intersects its literal mask. */
+// FUNCTION: LEGORR 0x0043baf0
 bool entity_flags_mask107c33de_or_1c00203_any_test(const EntitySlot* e)
 {
     if ((e->flags_3e0 & 0x107c33deu) != 0u) {
@@ -602,6 +652,7 @@ bool entity_flags_mask107c33de_or_1c00203_any_test(const EntitySlot* e)
  * +0x3e0 bit 0x20000 clear; a nonzero `relaxed` skips the +0x3e8 clause,
  * otherwise bit 0x20000000 must be set and bit 0x80000000 clear.
  * (+1000 decimal is +0x3e8 — the flags_3e8 mirror.) */
+// FUNCTION: LEGORR 0x004385b0
 int entity_shared_eligibility_check(const EntitySlot* e, int relaxed)
 {
     if ((e->flags_3e0 & 0x00700100u) != 0u) {
@@ -629,6 +680,7 @@ int entity_shared_eligibility_check(const EntitySlot* e, int relaxed)
 /* EntityType3Flag04000000Test (FUN_004436f0, finding 318): kind 3 with
  * +0x3e8 bit 0x04000000. The corpus reads the flag word as
  * entity[0xfa] (dword-indexed +0x3e8). */
+// FUNCTION: LEGORR 0x004436f0
 int entity_type3_flag04000000_test(const EntitySlot* e)
 {
     return (e->type == 3 && (e->flags_3e8 & 0x04000000u) != 0u) ? 1 : 0;
@@ -639,6 +691,7 @@ int entity_type3_flag04000000_test(const EntitySlot* e)
  * the link field, clamp to the entity's own +0x340 bound, and report
  * when the bound was reached. Field meanings stay with the routing
  * layer per finding 448. */
+// FUNCTION: LEGORR 0x00447730
 int entity_progress_advance_by_25(EntitySlot* e)
 {
     const float advanced = e->progress_344 + 25.0f;
@@ -657,6 +710,7 @@ int entity_progress_advance_by_25(EntitySlot* e)
 static int32_t  s_obj_ptr_slots[10];
 static uint32_t s_obj_ptr_count = 0u;
 
+// FUNCTION: LEGORR 0x0042dfc0
 void object_pointer_registry_clear_match(int32_t pointer)
 {
     for (uint32_t i = 0; i < s_obj_ptr_count && i < 10u; ++i) {
@@ -666,6 +720,7 @@ void object_pointer_registry_clear_match(int32_t pointer)
     }
 }
 
+// FUNCTION: LEGORR 0x0042dff0
 int object_pointer_registry_get_slot(uint32_t index, int32_t* out)
 {
     if (index >= s_obj_ptr_count) {
@@ -703,12 +758,14 @@ uint32_t context_selected_pointer_pair_peek(int second)
     return (second != 0) ? s_ctx_sel_ptr_second : s_ctx_sel_ptr_first;
 }
 
+// FUNCTION: LEGORR 0x004295a0
 uint32_t context_selected_global_pointer_get(void)
 {
     return (media_min_distance_mode() != 0) ? s_ctx_sel_ptr_second
                                            : s_ctx_sel_ptr_first;
 }
 
+// FUNCTION: LEGORR 0x004295c0
 int entity_matches_current_selection_or_owner(const void* entity)
 {
     if (entity == NULL) {
@@ -729,6 +786,7 @@ int entity_matches_current_selection_or_owner(const void* entity)
  * corpus order kept — state gate, shared predicate, then the clear-bit
  * band; the byte-read of +0x3e4's low byte (& 10 decimal) maps to the
  * flag-word mask 0xA. */
+// FUNCTION: LEGORR 0x00452870
 int selection_candidate_eligibility_check(const EntitySlot* e)
 {
     if (e == NULL) {
@@ -755,6 +813,7 @@ int selection_candidate_eligibility_check(const EntitySlot* e)
 }
 
 /* EntityFlag40000ThresholdCompare (see entity.hpp). */
+// FUNCTION: LEGORR 0x00437cc0
 int entity_flag40000_threshold_compare(const EntitySlot* e)
 {
     if ((entity_state_flags_get(e) & 0x40000u) != 0u) {
@@ -769,6 +828,7 @@ int entity_flag40000_threshold_compare(const EntitySlot* e)
  * The corpus re-reads the word at each chain rung; the selector arms and
  * the flag bits pair one-to-one, so one read through the switch is the
  * identical answer. */
+// FUNCTION: LEGORR 0x00438ed0
 int entity_flags_contain_requested_single_bit(const EntitySlot* e,
                                               int selector)
 {
@@ -784,16 +844,19 @@ int entity_flags_contain_requested_single_bit(const EntitySlot* e,
     }
 }
 
+// FUNCTION: LEGORR 0x00439cf0
 uint32_t entity_stats_flag10_test(const EntitySlot* e)
 {
     return entity_stats_word_get(e) & 0x10u;
 }
 
+// FUNCTION: LEGORR 0x00439d10
 uint32_t entity_stats_flag20_test(const EntitySlot* e)
 {
     return entity_stats_word_get(e) & 0x20u;
 }
 
+// FUNCTION: LEGORR 0x00439d30
 uint32_t entity_stats_flag40_test(const EntitySlot* e)
 {
     return entity_stats_word_get(e) & 0x40u;
@@ -802,6 +865,7 @@ uint32_t entity_stats_flag40_test(const EntitySlot* e)
 /* GlobalAnimationStateSet (FUN_004383a0) — see entity.hpp. */
 static uint32_t s_global_animation_state; /* DAT_004eadc4 role: unowned */
 
+// FUNCTION: LEGORR 0x004383a0
 void entity_global_animation_state_set(uint32_t value)
 {
     s_global_animation_state = value;
@@ -813,6 +877,7 @@ uint32_t entity_global_animation_state_peek(void)
 }
 
 /* EntityFlag100AndSharedEligibilityCheck (FUN_00471ce0) — see entity.hpp. */
+// FUNCTION: LEGORR 0x00471ce0
 int entity_flag100_and_shared_eligibility_check(const EntitySlot* e)
 {
     if ((entity_state_flags_get(e) & 0x100u) == 0u) {
@@ -822,6 +887,7 @@ int entity_flag100_and_shared_eligibility_check(const EntitySlot* e)
 }
 
 /* EntityQuadMeshRenderRecordAllowed (FUN_0040aae0) — see entity.hpp. */
+// FUNCTION: LEGORR 0x0040aae0
 int entity_quad_mesh_render_record_allowed(const EntitySlot* e)
 {
     if ((entity_state_flags_get(e) & 0x08000000u) == 0u && e->type != 8
@@ -832,6 +898,7 @@ int entity_quad_mesh_render_record_allowed(const EntitySlot* e)
 }
 
 /* TaskTypeAndConditionCheck (FUN_0043c490) — see entity.hpp. */
+// FUNCTION: LEGORR 0x0043c490
 int task_type_and_condition_check(const EntitySlot* target, int condition)
 {
     if (entity_shared_eligibility_check(target, 1) == 0 || condition == 0) {
@@ -841,6 +908,7 @@ int task_type_and_condition_check(const EntitySlot* target, int condition)
 }
 
 /* EntityTypeAndStateFlagPredicate (FUN_0045e400) — see entity.hpp. */
+// FUNCTION: LEGORR 0x0045e400
 int entity_type_and_state_flag_predicate(const EntitySlot* e)
 {
     if (e == NULL) {
@@ -868,6 +936,7 @@ static uint32_t filt_dword(const void* rec, size_t off)
     return v;
 }
 
+// FUNCTION: LEGORR 0x00404f50
 int object_filter_matches_action_target(const void* filter_rec,
                                         const void* target_rec)
 {
@@ -903,6 +972,7 @@ int object_filter_matches_action_target(const void* filter_rec,
 /* EntityDetachCarriedObjectAndResetState (FUN_0043bbc0) — see entity.hpp.
  * The carried half is read through the link as a native slot pointer; the
  * corpus strides its dword words blindly. */
+// FUNCTION: LEGORR 0x0043bbc0
 void entity_detach_carried_object_and_reset_state(EntitySlot* e,
                                                   LevelState* lvl)
 {
@@ -928,6 +998,7 @@ void entity_detach_carried_object_and_reset_state(EntitySlot* e,
 }
 
 /* EntityClearLinkedObjectState (FUN_00447780) — see entity.hpp. */
+// FUNCTION: LEGORR 0x00447780
 void entity_clear_linked_object_state(EntitySlot* e)
 {
     if (e == NULL) {
@@ -964,6 +1035,7 @@ static uint32_t s_pool_chunk_count;             /* DAT_004dee10 role */
 static void* s_pool_chunks[POOL_CHUNK_COUNT_SLOTS]; /* DAT_004de790 role */
 static void* s_pool_record_head;                /* DAT_004de810 role */
 
+// FUNCTION: LEGORR 0x00438310
 void pooled_record_chunk_allocate_and_link(void)
 {
     const uint32_t n =
@@ -996,6 +1068,7 @@ uint32_t pooled_record_chunk_count_peek(void) { return s_pool_chunk_count; }
  * (the corpus's -1.5 pair). Deviations: the port's link slot is
  * native-size (the pool-stride convention), and the grow half answers
  * NULL when the allocator is empty where the corpus strides the word. */
+// FUNCTION: LEGORR 0x004382c0
 void* pooled_record_allocate_and_reset(void)
 {
     if (s_pool_record_head == NULL) {
@@ -1018,6 +1091,7 @@ void* pooled_record_allocate_and_reset(void)
 }
 
 /* ResolvedEntityOperationDispatch (FUN_00460910) — see entity.hpp. */
+// FUNCTION: LEGORR 0x00460910
 int resolved_entity_operation_dispatch(const char* name, int slot,
                                        int subtract)
 {
@@ -1076,8 +1150,8 @@ static uint32_t stats_table_read(int type, int row, int off, int stride_index)
     if (base == NULL) {
         return 0u; /* empty cell = the zero template */
     }
-    const long long bound = (long long)s_stats_cell_span[type][row] * 0x150;
-    const long long off64 = (long long)off + (long long)stride_index * 0x150;
+    const int64_t bound = (int64_t)s_stats_cell_span[type][row] * 0x150;
+    const int64_t off64 = (int64_t)off + (int64_t)stride_index * 0x150;
     if (off64 + 4 > bound) {
         return 0u; /* deviation: the corpus strides past the template */
     }
@@ -1086,22 +1160,27 @@ static uint32_t stats_table_read(int type, int row, int off, int stride_index)
     return word;
 }
 
+// FUNCTION: LEGORR 0x00469b20
 uint32_t stats_table_word_at_b8(int type, int row) { return stats_table_read(type, row, 0xb8, 0); }
 /* FUN_00469b20 */
 
+// FUNCTION: LEGORR 0x00469af0
 uint32_t stats_table_word_at_b4(int type, int row, int stride_index)
 {
     return stats_table_read(type, row, 0xb4, stride_index); /* FUN_00469af0 */
 }
+// FUNCTION: LEGORR 0x00469f60
 uint32_t stats_table_word_at_d0(int type, int row, int stride_index)
 {
     return stats_table_read(type, row, 0xd0, stride_index); /* FUN_00469f60 */
 }
+// FUNCTION: LEGORR 0x0046a0f0
 uint32_t stats_table_word_at_100(int type, int row, int stride_index)
 {
     return stats_table_read(type, row, 0x100, stride_index); /* FUN_0046a0f0 */
 }
 
+// FUNCTION: LEGORR 0x00469e00
 float stats_table_float_at_dc(int type, int row)
 {
     /* FUN_00469e00 */
@@ -1111,10 +1190,13 @@ float stats_table_float_at_dc(int type, int row)
     return f;
 }
 
+// FUNCTION: LEGORR 0x00469ec0
 uint32_t stats_table_word_at_144(int type, int row) { return stats_table_read(type, row, 0x144, 0); }
 /* FUN_00469ec0 */
+// FUNCTION: LEGORR 0x00469ee0
 uint32_t stats_table_word_at_148(int type, int row) { return stats_table_read(type, row, 0x148, 0); }
 /* FUN_00469ee0 */
+// FUNCTION: LEGORR 0x00469f00
 uint32_t stats_table_word_at_14c(int type, int row) { return stats_table_read(type, row, 0x14c, 0); }
 /* FUN_00469f00 */
 
@@ -1130,12 +1212,16 @@ static uint32_t stats_instance_read(const void* config_block, int off)
     return stats_table_read(type, row, off, index);
 }
 
+// FUNCTION: LEGORR 0x00469b50
 uint32_t stats_instance_word_at_bc(const void* config_block) { return stats_instance_read(config_block, 0xbc); }
 /* FUN_00469b50 */
+// FUNCTION: LEGORR 0x00469b80
 uint32_t stats_instance_word_at_e0(const void* config_block) { return stats_instance_read(config_block, 0xe0); }
 /* FUN_00469b80 */
+// FUNCTION: LEGORR 0x00469bb0
 uint32_t stats_instance_word_at_ec(const void* config_block) { return stats_instance_read(config_block, 0xec); }
 /* FUN_00469bb0 */
+// FUNCTION: LEGORR 0x00469be0
 uint32_t stats_instance_word_at_f0(const void* config_block) { return stats_instance_read(config_block, 0xf0); }
 /* FUN_00469be0 */
 
@@ -1156,6 +1242,7 @@ static uint32_t s_catalog_count_a; /* DAT_0055627c role */
 static uint32_t s_catalog_count_b; /* DAT_00556288 role */
 #define CATALOG_ID_PAIRS 8u
 
+// FUNCTION: LEGORR 0x0041b3c0
 int entity_query_flag_count(int query)
 {
     if (query == 0x13) {
@@ -1213,6 +1300,7 @@ uint32_t catalog_count_peek(int which)
  * context block (the resolve's state window is not a corpus argument),
  * NULL callback/pair arrays answer zero where the corpus strides
  * blindly, and the guarded reads fold the corpus's blind strides. */
+// FUNCTION: LEGORR 0x0041b680
 int catalog_callback_by_id_dispatch(const GameContext* ctx, int query,
                                     int (*callback)(int, int, int, void*),
                                     void* payload)
