@@ -1287,6 +1287,39 @@ int main(void)
               "the wide unsigned pair stays unsigned");
     }
 
+    /* CrtInteger64Divide / CrtUnsigned64Divide (FUN_0048e9e0 /
+     * FUN_00498bf0; 2026-10-25): the word-pair division helpers fold to
+     * the LP64 division, truncating toward zero. */
+    {
+        CHECK(crt_integer64_divide(7u, 0u, 2u, 0u) == 3ull,
+              "the plain signed pair divides");
+        CHECK(crt_integer64_divide(7u, 0u, 0xfffffffeu, 0xffffffffu)
+                  == 0xfffffffffffffffdull,
+              "the negative divisor truncates toward zero (-7/2)");
+        CHECK(crt_integer64_divide(0u, 0x80000000u, 0u, 0x80000000u) == 1ull,
+              "the equal extremes divide to one");
+        CHECK(crt_integer64_divide(0u, 0x80000000u, 0xffffffffu, 0xffffffffu)
+                  == 0x8000000000000000ull,
+              "the INT64_MIN / -1 quotient keeps the wrap quirk "
+              "(the double normalization never negates)");
+        CHECK(crt_integer64_divide(0u, 0x80000000u, 1u, 0u)
+                  == 0x8000000000000000ull,
+              "INT64_MIN over one rides through unchanged");
+        CHECK(crt_integer64_divide(1u, 1u, 0u, 0u) == 0ull,
+              "the zero divisor answers zero (deviation)");
+
+        CHECK(crt_unsigned64_divide(7u, 0u, 2u, 0u) == 3ull,
+              "the plain unsigned pair divides");
+        CHECK(crt_unsigned64_divide(0u, 0x80000000u, 0u, 2u) == 0x40000000ull,
+              "the high-word shift scales (2^32 / 2)");
+        CHECK(crt_unsigned64_divide(0xffffffffu, 1u, 2u, 0u) == 0xffffffffull,
+              "the pair fold answers the scaled quotient");
+        CHECK(crt_unsigned64_divide(2u, 1u, 0u, 1u) == 1ull,
+              "the pair-scale division answers with the pair quotient");
+        CHECK(crt_unsigned64_divide(5u, 0u, 0u, 0u) == 0ull,
+              "the zero divisor answers zero (deviation)");
+    }
+
     /* The file-descriptor flag window (2026-10-25): 32 eight-byte entries
      * per block, the flag byte at entry+4, bit 0x40, count-bounded. */
     {

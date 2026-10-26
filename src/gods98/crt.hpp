@@ -694,6 +694,18 @@ void crt_math_exception_handler_install(int index, int id,
 uint64_t crt_integer64_multiply(uint32_t lo_a, int32_t hi_a,
                                 uint32_t lo_b, int32_t hi_b);
 
+/* CrtInteger64Divide / CrtUnsigned64Divide (FUN_0048e9e0 __alldiv /
+ * FUN_00498bf0 __aulldiv): the compiler's 64-bit division helpers, both
+ * word-pair shaped. The sign-normalizing shift/trial/repair algorithm
+ * truncates toward zero throughout, so the port folds it to the int64 /
+ * uint64 fold and one division. Deviations: a zero divisor answers zero
+ * (the corpus helper exception-traps); for the signed pair the double
+ * normalization of INT64_MIN / -1 keeps the wrapping quotient, pinned. */
+uint64_t crt_integer64_divide(uint32_t lo_a, uint32_t hi_a,
+                              uint32_t lo_b, uint32_t hi_b);
+uint64_t crt_unsigned64_divide(uint32_t lo_a, uint32_t hi_a,
+                               uint32_t lo_b, uint32_t hi_b);
+
 /* CrtFileDescriptorFlag40Get (FUN_00498b40): answers the corpus CRT table's
  * per-descriptor flag byte bit 0x40 — the byte at block+4 over 32
  * eight-byte entries per block, blocks indexed from the DAT_0076ddc0
