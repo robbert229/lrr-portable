@@ -2363,6 +2363,32 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Load band + progress bar + scaled menu blit** (2026-10-25): four
+frontier rows land in `frontend.*` — `interface_button_images_load`
+(0x41b270), `three_surface_resources_load` (0x45bfb0),
+`advisor_progress_bar_fill_draw` (0x45c3f0), and `menu_surface_blit_scaled`
+(0x412af0). The two load folds run their paths through the surface-load
+seam (the string cache), book the handles into own-storage DAT windows,
+and record the corpus's transform calls for every non-zero handle; the
+three-way quirk (param_2 lands in the THIRD peek slot, param_3 in the
+second) is pinned. The fill draw gates on the layout face surface and a
+strictly positive percent, clamps at the corpus's 100.0 constant, and
+blits through a new seam witness: the dest pair is the row's pair (read as
+float bits, the way the corpus reads it) offset by the layout size pair,
+and the size witness carries `extra * 0.01 * percent` (double-chain
+modeling, single final rounding) and the face record's +8 int-to-float.
+The scaled menu blit reads a record window: the flag byte's low bit picks
+the plain destination lane, unset takes the scaled lane with the source
+rect {-pan, -pan, 640, 480} at the origin. Deviations: the loaded cache
+value's pointer bits ride as the handle bits (LP64), the face record and
+record window are own storage (their corpus owners are unported), and the
+plane-pan globals are modeled apart from FeSubmenu.scroll. In `crt.*` the
+surface seam grows the optional rect1/rect3 witnesses
+(`crt_surface_blit_record_rect` / `crt_surface_call_get_rect`). Percent-
+split `0x411f10` and `0x41a920` were triaged to blocked.md (stale-stack
+hit-test rect arguments; the counters-clear band aliases the resource-modeled
+handle slots). Tests green; 34/36 baseline.
+
 **CRT string leaves + screen band** (2026-10-25): three frontier rows
 land — `crt_string_copy_n` (0x48e770, library `_strncpy`) and
 `crt_wide_char_to_multi_byte_compat` (0x49abe0) in `crt.*`, and

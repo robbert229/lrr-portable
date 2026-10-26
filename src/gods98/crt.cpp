@@ -805,6 +805,37 @@ static uint32_t s_call_handle[CRT_SURFACE_CALLS];
 static float    s_call_x[CRT_SURFACE_CALLS];
 static float    s_call_y[CRT_SURFACE_CALLS];
 static int      s_call_n;
+/* Optional rect witnesses: rect1 is the corpus's source rect (4 floats)
+ * and rect3 the size pair (2 floats); the plain record leaves both
+ * absent. */
+static float    s_call_rect1[CRT_SURFACE_CALLS][4];
+static float    s_call_rect3[CRT_SURFACE_CALLS][2];
+static uint8_t  s_call_rect1_set[CRT_SURFACE_CALLS];
+static uint8_t  s_call_rect3_set[CRT_SURFACE_CALLS];
+
+static void surface_call_store(uint32_t handle, float x, float y,
+                               const float* rect1, const float* rect3)
+{
+    if (s_call_n >= CRT_SURFACE_CALLS) {
+        return;
+    }
+    s_call_handle[s_call_n] = handle;
+    s_call_x[s_call_n] = x;
+    s_call_y[s_call_n] = y;
+    s_call_rect1_set[s_call_n] = 0u;
+    s_call_rect3_set[s_call_n] = 0u;
+    if (rect1 != NULL) {
+        __builtin_memcpy(s_call_rect1[s_call_n], rect1,
+                         sizeof s_call_rect1[s_call_n]);
+        s_call_rect1_set[s_call_n] = 1u;
+    }
+    if (rect3 != NULL) {
+        __builtin_memcpy(s_call_rect3[s_call_n], rect3,
+                         sizeof s_call_rect3[s_call_n]);
+        s_call_rect3_set[s_call_n] = 1u;
+    }
+    ++s_call_n;
+}
 
 uint32_t crt_surface_handle_next(void)
 {
@@ -815,12 +846,13 @@ uint32_t crt_surface_handle_next(void)
 
 void crt_surface_blit_record(uint32_t handle, float x, float y)
 {
-    if (s_call_n < CRT_SURFACE_CALLS) {
-        s_call_handle[s_call_n] = handle;
-        s_call_x[s_call_n] = x;
-        s_call_y[s_call_n] = y;
-        ++s_call_n;
-    }
+    surface_call_store(handle, x, y, NULL, NULL);
+}
+
+void crt_surface_blit_record_rect(uint32_t handle, float x, float y,
+                                  const float* rect1, const float* rect3)
+{
+    surface_call_store(handle, x, y, rect1, rect3);
 }
 
 int crt_surface_calls_count(void) { return s_call_n; }
@@ -838,6 +870,28 @@ int crt_surface_call_get(int index, uint32_t* handle, float* x, float* y)
     }
     if (y != NULL) {
         *y = s_call_y[index];
+    }
+    return 1;
+}
+
+int crt_surface_call_get_rect(int index, float* rect1, int* rect1_set,
+                              float* rect3, int* rect3_set)
+{
+    if (index < 0 || index >= s_call_n) {
+        return 0;
+    }
+    if (rect1_set != NULL) {
+        *rect1_set = s_call_rect1_set[index] != 0u;
+    }
+    if (rect3_set != NULL) {
+        *rect3_set = s_call_rect3_set[index] != 0u;
+    }
+    if (s_call_rect1_set[index] != 0u && rect1 != NULL) {
+        __builtin_memcpy(rect1, s_call_rect1[index],
+                         4 * sizeof(float));
+    }
+    if (s_call_rect3_set[index] != 0u && rect3 != NULL) {
+        __builtin_memcpy(rect3, s_call_rect3[index], 2 * sizeof(float));
     }
     return 1;
 }

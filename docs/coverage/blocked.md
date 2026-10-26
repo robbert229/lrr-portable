@@ -319,6 +319,19 @@ Grouped by blocker family; every row names its address and next action:
 - **Config-record indirection** — `RemainingTimerDurationGet` (`0x419b50`):
   the double-deref config-record `+8` int semantics; same blocked config
   family as the DAT band rows above. Next: config-record lookup.
+- **Stale-stack hit-test rect args** — `PercentSplitSurfaceBlit`
+  (`0x411f10`): the overlay-lane `FUN_004112e0` calls pass only three
+  pushed args, so the hit test's rect dimensions read the function's own
+  (branch-dependent, stale) stack window, and the `__ftol` call frame at
+  the widget reads is ambiguous (two pushed dwords, pair-to-int fold
+  contested). Pinning needs an exact frame-state trace of every path to
+  the call. Next: objdump frame trace of the rect-buffer writes.
+- **Counters-clear band aliasing** — `LevelStateCountersClear`
+  (`0x41a920`): the rep-stos windows `DAT_004ddad4/ad8/9a4/9a8` (sized by
+  the entity-modeled count globals) overlap the named handle slots that
+  `resource_handle_set_*` already owns; a faithful clear needs one merged
+  band model shared by both owners. Next: merge the DAT_004dd* band
+  model across resource.* and entity.*.
 
 Rescan note: this closes the recorded set for the current portable-now
 frontier; anything the scanner flags later lands in the same families.
