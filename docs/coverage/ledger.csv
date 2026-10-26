@@ -2068,12 +2068,12 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00481fa0,FUN_00481fa0,named,MeshVertexCoordinateRemap,0,864
 00482040,FUN_00482040,named,AnimationTrackApplyWrappedFrameOffset,0,682
 004820d0,FUN_004820d0,ported,,1,1149
-004821a0,FUN_004821a0,named,IndexedRecordEntryRead,0,689
+004821a0,FUN_004821a0,ported,IndexedRecordEntryRead,2,689
 00482210,FUN_00482210,ported,PointerValueGet,1,71
 00482220,FUN_00482220,named,MeshRecordAllocateAndFill,0,1574
 00482350,FUN_00482350,ported,IndexedRecordField64Set,1,154
 00482370,FUN_00482370,ported,MeshVerticesScaleApply,2,1004
-004823e0,FUN_004823e0,named,TerrainCellQuadVerticesWrite,0,885
+004823e0,FUN_004823e0,ported,TerrainCellQuadVerticesWrite,2,885
 00482470,FUN_00482470,ported,IndexedGeometryDataCopyToOutput,2,885
 00482500,FUN_00482500,ported,InstanceQuadVertexDataFill,2,1573
 00482620,FUN_00482620,ported,MeshSegmentVertexFill,2,1052

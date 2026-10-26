@@ -1157,6 +1157,62 @@ void indexed_geometry_data_copy_to_output(void* record, int block,
     } while (--n != 0);
 }
 
+/* IndexedRecordEntryRead (FUN_004821a0) — see record.hpp. */
+void indexed_record_entry_read(void* record, int block, uint32_t* field_out,
+                               uint32_t* kind_out, uint32_t* count_out,
+                               uint32_t* indices_out)
+{
+    const char* blk = (const char*)mesh_block(record, block);
+    if (blk == NULL) {
+        return; /* deviation: the corpus strides a missing table blindly */
+    }
+    if (field_out != NULL) {
+        *field_out = rec_dword(blk, 0x04);
+    }
+    if (kind_out != NULL) {
+        *kind_out = 3u; /* corpus: the entry read answers shape kind 3 */
+    }
+    const uint32_t count = rec_dword(blk, 0x00);
+    if (count_out != NULL) {
+        *count_out = count;
+    }
+    if (indices_out != NULL && count != 0u) {
+        const char* idx = (const char*)rec_ptr(blk, 0x08);
+        if (idx == NULL) {
+            return; /* deviation: the corpus strides a missing pointer */
+        }
+        for (uint32_t i = 0; i < count; ++i) {
+            uint16_t v = 0u;
+            __builtin_memcpy(&v, idx + (size_t)i * 2u, sizeof v);
+            indices_out[i] = v;
+        }
+    }
+}
+
+/* TerrainCellQuadVerticesWrite (FUN_004823e0) — see record.hpp. */
+void terrain_cell_quad_vertices_write(void* record, int block,
+                                      int first_vertex, int count,
+                                      const void* source)
+{
+    char* blk = mesh_block(record, block);
+    char* verts = blk != NULL ? (char*)rec_ptr(blk, 0x0c) : NULL;
+    if (verts == NULL || source == NULL || count == 0) {
+        return; /* deviation: the corpus strides both windows blindly */
+    }
+    /* Corpus shape: eight dwords per round (3+3+2) from 36-byte source
+     * slots into the block's 32-byte vertex stride. */
+    size_t dst = (size_t)((uint32_t)first_vertex << 5);
+    const char* src = (const char*)source;
+    int n = count;
+    do {
+        __builtin_memcpy(verts + dst + 0x00, src + 0x00, 12);
+        __builtin_memcpy(verts + dst + 0x0c, src + 0x0c, 12);
+        __builtin_memcpy(verts + dst + 0x18, src + 0x18, 8);
+        dst += 0x20;
+        src += 36;
+    } while (--n != 0);
+}
+
 void instance_quad_vertex_data_fill(void* record, int block,
                                     int first_vertex, int count,
                                     const float* positions,

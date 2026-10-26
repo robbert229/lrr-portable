@@ -506,6 +506,27 @@ void indexed_geometry_data_copy_to_output(void* record, int block,
  * slot taken from the advancing pair stream. The triple is read every
  * round without advancing: the same triple shapes every vertex (pinned
  * corpus quirk). */
+/* IndexedRecordEntryRead (FUN_004821a0): read one stride-0x70 entry of
+ * the indexed record table through record +0x08 — the +0x04 field word,
+ * the shape-kind answer (3), the +0x00 vertex count, and the count
+ * ushort indices striding through the entry's +0x08 pointer (widened to
+ * uint32 answers as the corpus folds them). Deviations: guarded table
+ * and index pointer (the corpus strides both blindly); each requested
+ * output honors the corpus's own null checks. */
+void indexed_record_entry_read(void* record, int block, uint32_t* field_out,
+                               uint32_t* kind_out, uint32_t* count_out,
+                               uint32_t* indices_out);
+
+/* TerrainCellQuadVerticesWrite (FUN_004823e0): the exact mirror of the
+ * indexed geometry copy — write quads into the block's vertex buffer
+ * from 36-byte source slots, eight dwords per quad (3+3+2) at the 32-byte
+ * record stride, starting at the first_vertex quad. The ninth source
+ * dword of each slot stays home. Deviations: guarded buffer and source,
+ * and the zero-count round gate lands early. */
+void terrain_cell_quad_vertices_write(void* record, int block,
+                                      int first_vertex, int count,
+                                      const void* source);
+
 void instance_quad_vertex_data_fill(void* record, int block,
                                     int first_vertex, int count,
                                     const float* positions,
