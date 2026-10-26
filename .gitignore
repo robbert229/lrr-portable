@@ -8,3 +8,5 @@ legoRR-stub.log
 subprojects/.wraplock
 
 build/
+/.reprobit-state/
+/.reprobit-transactions/

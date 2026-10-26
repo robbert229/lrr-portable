@@ -235,8 +235,9 @@ void* terrain_create(const char* surface_map, float blocksize)
         free(t);
         return NULL;
     }
-    for (int y = 0; y < m->height; ++y) {
-        for (int x = 0; x < m->width; ++x) {
+    int x, y;
+    for (y = 0; y < m->height; ++y) {
+        for (x = 0; x < m->width; ++x) {
             uint8_t* rec = t->blocks
                            + ((size_t)y * m->width + x) * TERRAIN_BLOCK_STRIDE;
             rec[0x18] = 0;
@@ -261,8 +262,8 @@ void* terrain_create(const char* surface_map, float blocksize)
         }
     }
     /* Edge-continuity fix-ups (corpus FUN_0044edf0 / FUN_004514f0). */
-    for (int y = 0; y + 1 < m->height; ++y) {
-        for (int x = 0; x < m->width; ++x) {
+    for (y = 0; y + 1 < m->height; ++y) {
+        for (x = 0; x < m->width; ++x) {
             uint8_t* a = t->blocks
                          + ((size_t)y * m->width + x) * TERRAIN_BLOCK_STRIDE;
             int d1 = (int)a[0x1A] - (int)a[0x1A + TERRAIN_BLOCK_STRIDE];
@@ -348,6 +349,7 @@ static void predug_wall_cell(LevelState* s, int x, int y)
 {
     int w = level_int(s, LEVEL_OFF_WIDTH);
     int h = level_int(s, LEVEL_OFF_HEIGHT);
+    int dx, dy;
     if (x == 0 || y == 0 || (unsigned)x >= (unsigned)w - 2u ||
         (unsigned)y >= (unsigned)h - 2u) {
         return;
@@ -360,8 +362,8 @@ static void predug_wall_cell(LevelState* s, int x, int y)
     }
 
     /* Wave seed over the northwest 2x2 footprint (record+0 = flooded). */
-    for (int dy = 0; dy <= 1; ++dy) {
-        for (int dx = 0; dx <= 1; ++dx) {
+    for (dy = 0; dy <= 1; ++dy) {
+        for (dx = 0; dx <= 1; ++dx) {
             uint8_t* f = voxel_at(s, x + dx, y + dy);
             if (f[0x00] == 0) {
                 f[0x00] = 1;
@@ -370,8 +372,8 @@ static void predug_wall_cell(LevelState* s, int x, int y)
     }
 
     /* The eight neighbours: traversable mark over non-cave cells. */
-    for (int dy = -1; dy <= 1; ++dy) {
-        for (int dx = -1; dx <= 1; ++dx) {
+    for (dy = -1; dy <= 1; ++dy) {
+        for (dx = -1; dx <= 1; ++dx) {
             uint8_t* n = voxel_at(s, x + dx, y + dy);
             uint32_t nf;
             __builtin_memcpy(&nf, n + 0x08, sizeof(nf));

@@ -1,0 +1,8 @@
+/* SPDX-License-Identifier: LGPL-3.0-or-later */
+/* MSVC 5.0 has no standard <cstdint> wrapper. */
+#ifndef LRR_CLASSIC_MSVC5_CSTDINT
+#define LRR_CLASSIC_MSVC5_CSTDINT
+
+#include <stdint.h>
+
+#endif /* LRR_CLASSIC_MSVC5_CSTDINT */

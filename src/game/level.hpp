@@ -39,6 +39,7 @@
 
 #include <cstdint>
 #include <cstddef>
+#include <string.h>
 
 #include "gods98/block.hpp"
 

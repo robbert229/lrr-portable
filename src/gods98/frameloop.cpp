@@ -104,9 +104,13 @@ static int demo_msg_cb(int id)
  * uses timeGetTime; the port is libc-portable). */
 static int64_t now_ms(void)
 {
+#if defined(LEGORRR_BACKEND_WINAPI)
+    return (int64_t)GetTickCount();
+#else
     struct timespec ts;
     timespec_get(&ts, TIME_UTC);
     return (int64_t)ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+#endif
 }
 
 /* Play one AVI through the software decoder (src/gods98/movie.*) through
@@ -130,7 +134,7 @@ typedef struct MoviePumpState {
     int                skipped;
     int64_t            next_t;
     int                frame_ms;
-    long long          frames;
+    int                frames;
 } MoviePumpState;
 
 static int s_movie_frame_next(MovieOut* out, void* user)
@@ -268,8 +272,8 @@ static int movie_play_avi_rect(const char* os_path, const char* label,
     movie_video_playback_loop(&pump);
 
     movie_close(mv);
-    fprintf(log, "movie: %s done — %lld frames%s\n", label,
-            (long long)st.frames, st.skipped ? " (skipped)" : "");
+    fprintf(log, "movie: %s done — %d frames%s\n", label, st.frames,
+            st.skipped ? " (skipped)" : "");
     return 1;
 }
 
@@ -629,12 +633,12 @@ int LegorrrRun(void)
     fprintf(log, "frameloop: save slot %d %s\n", SAVE_DEFAULT_SLOT,
             save_loaded ? "loaded" : "bootstrap");
 
-    EngineState state = {};
-    InputState  input = {};
+    EngineState state = { 0 };
+    InputState  input = { 0 };
     input_reset(&input);
     /* The three view contexts (DAT_005560e4/e8/ec): free/cruise cameras with
      * a glide step; the demo has no world yet, so they tick quietly. */
-    ViewContext views[3] = {};
+    ViewContext views[3] = { 0 };
     for (int i = 0; i < 3; ++i) {
         views[i].mode = 3;
         views[i].step = 8.0f;
@@ -692,7 +696,7 @@ int LegorrrRun(void)
     }
 
     /* Audio: open the DirectSound-analog surface + play a real corpus wav. */
-    AudioPlayer ap = {};
+    AudioPlayer ap = { 0 };
     int audio_status = audio_open(&ap);
     int sfx_frames = 0;
     if (audio_status == 0) {

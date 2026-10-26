@@ -258,8 +258,9 @@ void mission_task_init(GameContext* ctx, BlockFile* cfg, const char* level_name)
         return;
     }
     const char* root = cfg != NULL ? util_root_name(cfg) : "Lego*";
+    int i;
     /* Zero the slots and name them (TaskBlockInit's name pass). */
-    for (int i = 0; i < GAME_TASK_COUNT; ++i) {
+    for (i = 0; i < GAME_TASK_COUNT; ++i) {
         __builtin_memset(&ctx->tasks[i], 0, GAME_TASK_STRIDE);
         task_set_name(&ctx->tasks[i], TASK_NAMES[i]);
     }
@@ -267,7 +268,7 @@ void mission_task_init(GameContext* ctx, BlockFile* cfg, const char* level_name)
         return;
     }
     /* The six field loaders, in the corpus's TaskBlockInit order. */
-    for (int i = 0; i < GAME_TASK_COUNT; ++i) {
+    for (i = 0; i < GAME_TASK_COUNT; ++i) {
         GameTask* t = &ctx->tasks[i];
         task_loader_images(cfg, root, level_name, t);
         task_loader_text(cfg, root, level_name, t);

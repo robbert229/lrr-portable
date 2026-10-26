@@ -649,7 +649,7 @@ void simtick_sfx_bank(EngineContext* c, float dt)
     /* post-step. */
     ++s_post_n;
     /* pass 3: stride-4 timer slots: negative timer -> release + reset. */
-    for (int i = 0; i < s_sfx_n; ++i) {
+    for (i = 0; i < s_sfx_n; ++i) {
         float* f = (float*)((uint8_t*)s_sfx_entries[i] + 12);
         if (*f < 0.0f) {
             ++s_sfx_rels; /* FUN_004820d0 release hook x2 */
@@ -782,7 +782,7 @@ void simtick_vu_meter(EngineContext* c, float dt)
 }
 
 /* FUN_0046e390: fx-bank ticker — per-entry sub-fx scan with fade/clamp. */
-static int s_fx_entries[8] = {};
+static int s_fx_entries[8] = { 0 };
 static int s_fx_count = 0;
 void simtick_fx_bank_tick(EngineContext* c, float dt)
 {

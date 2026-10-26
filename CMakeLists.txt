@@ -12,6 +12,48 @@ set(SRC_ROOT "src" CACHE PATH "Directory containing the reconstruction source tr
 set(TEST_WADS_DIR "" CACHE PATH "Directory containing shipped wads for real-data tests")
 set(MOVIES "auto" CACHE STRING "Movie runtime support (auto, enabled, disabled)")
 set_property(CACHE MOVIES PROPERTY STRINGS auto enabled disabled)
+option(LRR_CLASSIC_MSVC5 "Use CMake linker flags compatible with MSVC 5.0" OFF)
+
+if(LRR_CLASSIC_MSVC5)
+  # CMake's Windows-MSVC module emits newer spellings that the classic
+  # toolchain's ReproBit command model does not admit.
+  include_directories(BEFORE "${CMAKE_CURRENT_SOURCE_DIR}/src/compat/msvc5")
+
+  string(REGEX REPLACE "[ /]Zm[0-9]+" "" _classic_cxx_flags " ${CMAKE_CXX_FLAGS}")
+  string(STRIP "${_classic_cxx_flags}" _classic_cxx_flags)
+  set(CMAKE_CXX_FLAGS "${_classic_cxx_flags}" CACHE STRING
+    "Classic MSVC 5.0 compatible compiler flags" FORCE)
+
+  foreach(_link_kind IN ITEMS STATIC EXE SHARED MODULE)
+    foreach(_config IN ITEMS "" DEBUG MINSIZEREL RELEASE RELWITHDEBINFO)
+      if(_config)
+        set(_link_flags "CMAKE_${_link_kind}_LINKER_FLAGS_${_config}")
+      else()
+        set(_link_flags "CMAKE_${_link_kind}_LINKER_FLAGS")
+      endif()
+      string(REGEX REPLACE "/[Mm][Aa][Cc][Hh][Ii][Nn][Ee]:[Xx]86" "/machine:i386"
+        _classic_link_flags "${${_link_flags}}")
+      string(REGEX REPLACE "/[Pp][Dd][Bb][Tt][Yy][Pp][Ee]:[Ss][Ee][Pp][Tt]"
+        "" _classic_link_flags "${_classic_link_flags}")
+      string(REGEX REPLACE "[ /][Dd][Ee][Bb][Uu][Gg]" ""
+        _classic_link_flags "${_classic_link_flags}")
+      set(${_link_flags} "${_classic_link_flags}" CACHE STRING
+        "Classic MSVC 5.0 compatible linker flags" FORCE)
+    endforeach()
+  endforeach()
+
+  # The final linker PDB depends on the static archives. ReproBit's current
+  # evidence model treats PDBs as compile-stage artifacts, so omit the link
+  # PDB and its /DEBUG switch for this classic build profile.
+  string(REGEX REPLACE "[ /][Pp][Dd][Bb]:<TARGET_PDB>" ""
+    _classic_exe_link_rule "${CMAKE_CXX_LINK_EXECUTABLE}")
+  set(CMAKE_CXX_LINK_EXECUTABLE "${_classic_exe_link_rule}")
+
+  # CMake's MSVC rule shares one compiler PDB per target. Give each object
+  # its own PDB so ReproBit can model the compile steps as isolated producers.
+  set(CMAKE_CXX_COMPILE_OBJECT
+    "<CMAKE_CXX_COMPILER> /nologo /TP <DEFINES> <INCLUDES> <FLAGS> /Fo<OBJECT> /Fd<OBJECT>.pdb -c <SOURCE>")
+endif()
 
 if(NOT PLATFORM STREQUAL "native" AND NOT PLATFORM STREQUAL "winapi")
   message(FATAL_ERROR "PLATFORM must be native or winapi")
@@ -112,12 +154,14 @@ set(LRR_SOURCES ${SRC_ROOT}/main.cpp ${PLATFORM_ENTRY})
 if(PLATFORM STREQUAL "winapi")
   list(APPEND LRR_SOURCES ${SRC_ROOT}/version.rc)
 endif()
-add_executable(LegoRR ${LRR_SOURCES})
+add_executable(program ${LRR_SOURCES})
+# Keep the shipped executable name while using ReproBit's lowercase target ID.
+set_target_properties(program PROPERTIES OUTPUT_NAME "LegoRR")
 # The frame-loop object in gods98 calls into game, while game itself uses
 # gods98 APIs. Repeat the archive so GNU ld resolves this static-library cycle.
-target_link_libraries(LegoRR PRIVATE game gods98 game platform_glue)
+target_link_libraries(program PRIVATE game gods98 game platform_glue)
 if(WIN32)
-  set_target_properties(LegoRR PROPERTIES WIN32_EXECUTABLE TRUE)
+  set_target_properties(program PROPERTIES WIN32_EXECUTABLE TRUE)
 endif()
 
 include(CTest)

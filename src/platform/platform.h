@@ -19,6 +19,7 @@
 #ifndef LEGORRR_PLATFORM_H
 #define LEGORRR_PLATFORM_H
 
+#include <stdint.h>
 #include <cstddef>
 
 #if defined(LEGORRR_BACKEND_MINIWIN)

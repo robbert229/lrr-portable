@@ -500,7 +500,7 @@ static void fe_parse_submenu(FrontEnd* fe, FeMenu* m, const char* name,
     snprintf(buf, sizeof(buf), "%s PlayRandom", pre);
     sub->play_random = block_get_bool(fe->cfg, buf) == 1;
     sub->overlay_count = 0;
-    for (int j = 1; j <= FE_OVERLAYS_MAX && sub->overlay_count < FE_OVERLAYS_MAX;
+    for (j = 1; j <= FE_OVERLAYS_MAX && sub->overlay_count < FE_OVERLAYS_MAX;
          ++j) {
         snprintf(buf, sizeof(buf), "%s !Overlay%d", pre, j);
         const char* ov = block_get_strptr(fe->cfg, buf);
@@ -794,7 +794,7 @@ int fe_record_for_level(const FrontEnd* fe, const char* level)
             return i;
         }
     }
-    for (int i = 0; i < fe->campaign_n; i++) {
+    for (i = 0; i < fe->campaign_n; i++) {
         if (s_strcaseeq(level, fe->campaign[i])) {
             return fe->tutorial_n + i;
         }
@@ -1181,7 +1181,7 @@ FeEvent frontend_tick(FrontEnd* fe, const FeInput* in,
 
 const FeMenu* frontend_menu(const FrontEnd* fe, int menu)
 {
-    static const FeMenu s_empty = {};
+    static const FeMenu s_empty = { 0 };
     if (fe == NULL || menu < 0 || menu >= FE_MENU_COUNT) {
         return &s_empty;
     }
@@ -1190,7 +1190,7 @@ const FeMenu* frontend_menu(const FrontEnd* fe, int menu)
 
 const FeSubmenu* frontend_active_submenu(const FrontEnd* fe)
 {
-    static const FeSubmenu s_empty = {};
+    static const FeSubmenu s_empty = { 0 };
     if (fe == NULL || !fe->open || fe->menu < 0 || fe->menu >= FE_MENU_COUNT) {
         return &s_empty;
     }
@@ -1752,7 +1752,7 @@ void frontend_render(FrontEnd* fe, const TextureSurface* hi_font,
         }
     }
 
-    for (int i = 0; i < sub->item_count; i++) {
+    for (i = 0; i < sub->item_count; i++) {
         const FeItem* it = &sub->items[i];
         int x, y;
         fe_item_pos(fe, it, i, w, hi_font, &x, &y);

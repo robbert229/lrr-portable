@@ -13,9 +13,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#if defined(_MSC_VER)
+#define strcasecmp _stricmp
+#else
 #include <strings.h>
+#endif
 
-#if !(defined(__cplusplus) && (__cplusplus >= 201103L))
+#if !(defined(_MSC_VER) && (_MSC_VER <= 1100)) \
+    && !(defined(__cplusplus) && (__cplusplus >= 201103L))
 #error "C++11"
 #endif
 static_assert(sizeof(float) == 4, "model loader reads IEEE-754 binary32");
@@ -344,7 +349,7 @@ static int parse_surf_chunk(Parse* P, const uint8_t* d, size_t size)
         free(needle);
     }
     /* insertion sort ascending */
-    for (size_t i = 1; i < nst; i++)
+    for (i = 1; i < nst; i++)
         for (size_t j = i; j > 0 && starts[j - 1] > starts[j]; j--) {
             size_t t = starts[j - 1];
             starts[j - 1] = starts[j];
@@ -368,7 +373,7 @@ static int parse_surf_chunk(Parse* P, const uint8_t* d, size_t size)
             continue;
         /* python `seen`: exact names, first record wins */
         int dup = 0;
-        for (size_t i = 0; i < P->nrecs && !dup; i++)
+        for (i = 0; i < P->nrecs && !dup; i++)
             if (strcmp(P->recs[i].name, P->sname[slot]) == 0)
                 dup = 1;
         if (dup)
@@ -506,7 +511,7 @@ static void parse_free(Parse* P)
     for (size_t i = 0; i < P->nsname; i++)
         free(P->sname[i]);
     free(P->sname);
-    for (size_t i = 0; i < P->nrecs; i++) {
+    for (i = 0; i < P->nrecs; i++) {
         free(P->recs[i].tags);
         free(P->recs[i].off);
         free(P->recs[i].size);
@@ -815,7 +820,7 @@ int model_apply_uv_text(Model* m, const char* text, size_t len)
         free(blocks);
     }
 done:
-    for (size_t i = 0; i < nlines; i++)
+    for (i = 0; i < nlines; i++)
         free(lines[i]);
     free(lines);
     return applied;
@@ -900,7 +905,7 @@ uint32_t model_digest(const Model* m)
         dgbits(&h, m->verts[i * 3 + 2]);
     }
     dg32(&h, (uint32_t)m->n_polys);
-    for (size_t i = 0; i < m->n_polys; i++) {
+    for (i = 0; i < m->n_polys; i++) {
         const ModelPoly* p = &m->polys[i];
         dg32(&h, p->count);
         dg32(&h, p->surface);
@@ -908,11 +913,11 @@ uint32_t model_digest(const Model* m)
         for (uint16_t k = 0; k < p->count; k++)
             dg32(&h, (uint32_t)(int16_t)p->ring[k]);
         dg32(&h, (uint32_t)p->uv_count);
-        for (size_t k = 0; k < 2 * p->uv_count; k++)
+        for (k = 0; k < 2 * p->uv_count; k++)
             dgbits(&h, p->uv[k]);
     }
     dg32(&h, (uint32_t)m->n_surfaces);
-    for (size_t i = 0; i < m->n_surfaces; i++) {
+    for (i = 0; i < m->n_surfaces; i++) {
         const ModelSurface* s = &m->surfaces[i];
         uint32_t l = (uint32_t)strlen(s->name ? s->name : "");
         dg32(&h, l);
@@ -928,7 +933,7 @@ uint32_t model_digest(const Model* m)
         dgbits(&h, s->tsiz[1]);
         l = s->timg ? (uint32_t)strlen(s->timg) : 0;
         dg32(&h, l);
-        for (uint32_t k = 0; k < l; k++) {
+        for (k = 0; k < l; k++) {
             h ^= (uint8_t)s->timg[k];
             h *= 16777619u;
         }

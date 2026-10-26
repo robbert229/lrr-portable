@@ -197,7 +197,8 @@ static int cmd_strcasecmp(const char* a, const char* b)
 
 void cmd_init(void)
 {
-    for (int i = 0; i < CMD_POOL_MAX_BLOCKS; ++i) {
+    int i;
+    for (i = 0; i < CMD_POOL_MAX_BLOCKS; ++i) {
         s_blocks[i] = NULL;
     }
     s_pool_level = 0;
@@ -206,7 +207,7 @@ void cmd_init(void)
     s_global_tail = NULL;
     s_global_enabled = 1;
 
-    for (int i = 0; i < 27; ++i) {
+    for (i = 0; i < 27; ++i) {
         s_behaviour[i] = 0x31;
     }
     s_behaviour[0]  = 0x37;
