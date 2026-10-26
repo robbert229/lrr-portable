@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 1103 | 43.0% |
+| ported | 1104 | 43.1% |
 | anchored | 4 | 0.2% |
-| named | 1412 | 55.1% |
+| named | 1411 | 55.0% |
 | runtime-import | 44 | 1.7% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (1103 functions)
+  (1104 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1412 functions)
+  citation yet (1411 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (44 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1417 (55.3%).**
+**Game logic remaining to port: 1416 (55.2%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -269,7 +269,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004179b0` | SavMenuList |
 | `0x00418000` | ShowLevelOverlayForCurrentSelection |
 | `0x00418040` | CampaignChainSnapshotCreate |
-| `0x004180c0` | OptionsContextCopyAndReplaceResource |
 | `0x00418120` | IsAverageValueAbove99 |
 | `0x004181b0` | HelpWindowResourcesInit |
 | `0x00418450` | HelpWindowInfoConfigStringsLoad |

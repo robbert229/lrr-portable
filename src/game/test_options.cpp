@@ -513,6 +513,56 @@ int main(int argc, char** argv)
         options_context_six_field_set(&ctx, NULL); /* guarded */
     }
 
+    /* OptionsContextCopyAndReplaceResource (2026-10-25): the full window
+     * copy and the owned-resource fold. */
+    {
+        GameContext ctx;
+        game_context_init(&ctx);
+        static uint32_t init_block[46];
+        memset(init_block, 0, sizeof init_block);
+        void* owned = engine_heap_alloc(16);
+        options_slot_window_install(init_block, owned);
+        uint32_t src[46];
+        for (int i = 0; i < 46; ++i) {
+            src[i] = 0x100u + (uint32_t)i;
+        }
+        /* The widened resource word: the port test keeps the source's
+         * dword 0xd zero (a port test cannot forge corpus 32-bit
+         * addresses; the widened install hook drives the owned half). */
+        src[13] = 0u;
+        /* Closed slot: the gate answers, the resource stays owned. */
+        save_slot_set(&ctx, -1);
+        options_context_copy_and_replace_resource(&ctx, src);
+        CHECK(options_slot_window_dword_peek(1) == 0u
+                  && options_slot_resource_peek() == owned,
+              "the closed slot copies nothing");
+        /* Open slot: the window copies in and the owned word is freed. */
+        save_slot_set(&ctx, 1);
+        options_context_copy_and_replace_resource(&ctx, src);
+        int ok = 1;
+        for (int i = 0; i < 46; ++i) {
+            if (options_slot_window_dword_peek(i) != src[i]) {
+                ok = 0;
+            }
+        }
+        CHECK(ok, "the 46-dword window copies in");
+        CHECK(options_slot_resource_peek() == NULL,
+              "the replace frees the owned resource");
+        /* NULL source: guarded (deviation, pinned). */
+        options_context_copy_and_replace_resource(&ctx, NULL);
+        CHECK(options_slot_window_dword_peek(0) == 0x100u,
+              "the guarded copy leaves the window alone");
+        /* A re-install with the zero word folds the free-gate skip. */
+        options_slot_window_install(src, NULL);
+        src[13] = 0u;
+        options_context_copy_and_replace_resource(&ctx, src);
+        CHECK(options_slot_resource_peek() == NULL
+                  && options_slot_window_dword_peek(13) == 0u,
+              "the no-resource fold copies without freeing");
+        options_context_copy_and_replace_resource(NULL, src); /* guarded */
+        options_slot_window_install(NULL, NULL); /* reset storage */
+    }
+
     /* The scroll speed index band (2026-10-25). */
     {
         GameContext ctx;
