@@ -1152,18 +1152,22 @@ uint32_t stats_instance_word_at_f0(const void* config_block) { return stats_inst
  * stats getters, and the pair window is guarded (the corpus strides
  * blindly). */
 
-static uint32_t s_catalog_count_a; /* DAT_0055627c role */
-static uint32_t s_catalog_count_b; /* DAT_00556288 role */
+/* The catalog window band: the four count words and the four name tables
+ * the encyclopedia loader indexes (the corpus's loader band is unported,
+ * so the window rides own storage behind the hooks below; counts 0/1 are
+ * the DAT_0055627c/88 roles the query lanes already used). */
+static uint32_t s_catalog_counts[4]; /* DAT_0055627c/80/84/88 roles */
+static const void* s_catalog_name_tables[4]; /* DAT_005561e8/ec/f0/f4 roles */
 #define CATALOG_ID_PAIRS 8u
 
 int entity_query_flag_count(int query)
 {
     if (query == 0x13) {
-        return (int)s_catalog_count_b;
+        return (int)s_catalog_counts[1];
     }
     if (query == 0x14 || query == 0x15) {
         int count = 0;
-        for (uint32_t row = 0; row < s_catalog_count_a; ++row) {
+        for (uint32_t row = 0; row < s_catalog_counts[0]; ++row) {
             const uint32_t w148 = stats_table_word_at_148(1, (int)row);
             const uint32_t w14c = stats_table_word_at_14c(1, (int)row);
             if (query == 0x14) {
@@ -1188,16 +1192,28 @@ int entity_query_flag_count(int query)
 
 void catalog_count_install(int which, uint32_t value)
 {
-    if (which == 1) {
-        s_catalog_count_b = value;
-    } else {
-        s_catalog_count_a = value;
+    if (which >= 0 && which < 4) {
+        s_catalog_counts[which] = value;
     }
 }
 
 uint32_t catalog_count_peek(int which)
 {
-    return which == 1 ? s_catalog_count_b : s_catalog_count_a;
+    return (which >= 0 && which < 4) ? s_catalog_counts[which] : 0u;
+}
+
+/* Port hooks over the encyclopedia loader's name-table windows: kind 0..3
+ * ride the DAT_005561e8/ec/f0/f4 arrays in address order. */
+void catalog_name_table_install(int kind, const void* names)
+{
+    if (kind >= 0 && kind < 4) {
+        s_catalog_name_tables[kind] = names;
+    }
+}
+
+const void* catalog_name_table_peek(int kind)
+{
+    return (kind >= 0 && kind < 4) ? s_catalog_name_tables[kind] : NULL;
 }
 
 /* CatalogCallbackByIdDispatch (FUN_0041b680): dispatch over the shared
@@ -1221,7 +1237,7 @@ int catalog_callback_by_id_dispatch(const GameContext* ctx, int query,
         return 0; /* deviation: the corpus calls the pointer blindly */
     }
     if (query == 0x13) {
-        for (uint32_t row = 0; row < s_catalog_count_b; ++row) {
+        for (uint32_t row = 0; row < s_catalog_counts[1]; ++row) {
             if (callback(0x49, 4, (int)row, payload) != 0) {
                 return 1;
             }
@@ -1229,7 +1245,7 @@ int catalog_callback_by_id_dispatch(const GameContext* ctx, int query,
         return 0;
     }
     if (query == 0x14 || query == 0x15) {
-        for (uint32_t row = 0; row < s_catalog_count_a; ++row) {
+        for (uint32_t row = 0; row < s_catalog_counts[0]; ++row) {
             int answer = 0;
             if (query == 0x14) {
                 const uint32_t w148 = stats_table_word_at_148(1, (int)row);

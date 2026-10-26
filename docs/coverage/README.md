@@ -11,25 +11,25 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 1124 | 43.8% |
+| ported | 1125 | 43.9% |
 | anchored | 4 | 0.2% |
-| named | 1394 | 54.4% |
+| named | 1393 | 54.3% |
 | runtime-import | 41 | 1.6% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (1124 functions)
+  (1125 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1394 functions)
+  citation yet (1393 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1399 (54.6%).**
+**Game logic remaining to port: 1398 (54.5%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -200,7 +200,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0040e0c0` | FenceSparkLaunchRegister |
 | `0x0040e1e0` | CellCornerOccupancyScan |
 | `0x0040e350` | CellEntityKindCreateOrRemove |
-| `0x0040e490` | EncyclopediaConfigFilesOpen |
 | `0x0040e8d0` | ScreenSpaceEffectDispatchIfEnabled |
 | `0x0040ee50` | LavaErosionPendingCellAdd |
 | `0x0040f2b0` | LavaErosionNeighborEligible |

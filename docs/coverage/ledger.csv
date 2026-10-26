@@ -307,7 +307,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0040e1e0,FUN_0040e1e0,named,CellCornerOccupancyScan,0,1407
 0040e350,FUN_0040e350,named,CellEntityKindCreateOrRemove,0,1042
 0040e460,FUN_0040e460,ported,GridCellRecordPresentCheck,1,148
-0040e490,FUN_0040e490,named,EncyclopediaConfigFilesOpen,0,2964
+0040e490,FUN_0040e490,ported,EncyclopediaConfigFilesOpen,2,2964
 0040e700,FUN_0040e700,ported,TerrainChoiceResourceSelect,3,789
 0040e7e0,FUN_0040e7e0,ported,GlobalFlagBit0Clear,1,85
 0040e7f0,FUN_0040e7f0,ported,,3,717
@@ -1854,11 +1854,11 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00478df0,FUN_00478df0,ported,BlockTextTokenPoolInit,3,353
 00478e20,FUN_00478e20,ported,BlockTextTokenPoolDestroy,3,339
 00478e60,FUN_00478e60,ported,BlockTextOpenAndScan,3,1795
-00478f50,FUN_00478f50,ported,ConfigEntryFind,2,2731
+00478f50,FUN_00478f50,ported,ConfigEntryFind,3,2731
 00478ff0,FUN_00478ff0,ported,ConfigNestedPathChildFind,1,263
 00479020,FUN_00479020,ported,SortedEntryNextEqualKey,3,316
 00479050,FUN_00479050,ported,ConfigStringCopy,1,1143
-004790b0,FUN_004790b0,ported,ConfigPathValueGet,1,202
+004790b0,FUN_004790b0,ported,ConfigPathValueGet,2,202
 004790d0,FUN_004790d0,ported,ConfigBooleanGetDefault2,6,258
 00479110,FUN_00479110,ported,ReadAngleSettingRadians,2,446
 00479170,FUN_00479170,ported,ConfigRgbVectorRead,2,722
@@ -2022,7 +2022,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0047f640,FUN_0047f640,named,MountWadFromPath,0,99
 0047f660,FUN_0047f660,ported,SoundPathFallbackFormat,3,226
 0047f6a0,FUN_0047f6a0,named,SaveDirectoryEnsureExists,0,181
-0047f6e0,FUN_0047f6e0,ported,GameFileOpenDispatch,1,1471
+0047f6e0,FUN_0047f6e0,ported,GameFileOpenDispatch,2,1471
 0047f850,FUN_0047f850,named,WadFileSeek,0,1614
 0047f980,FUN_0047f980,named,WadFileRead,0,1327
 0047fa50,FUN_0047fa50,named,GameFileWrite,0,557

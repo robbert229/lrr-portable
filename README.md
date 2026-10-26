@@ -2363,6 +2363,26 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Encyclopedia config-file windows** (2026-10-25): one frontier row lands.
+`frontend.*` takes `encyclopedia_config_files_open` (0x40e490): for each of
+the four catalog groups it walks the count window, joins
+`<root>::Encyclopedia::<name>` through the path builder (FUN_00478f50), reads
+the config record's value token (FUN_004790b0's record+8), and opens the named
+file through the resource dispatch (FUN_0047f6e0 in "r" mode — the port's AUTO
+open); the four handle windows reallocate through the heap seam every call and
+the corpus's leaked superseded arrays leak too. Group pairing rides the
+corpus's count/name address band (0x27c/0x1e8, 0x280/0x1ec, 0x284/0x1f0,
+0x288/0x1f4), so kind 1 reads the DAT_00556288 count that already feeds the
+query lanes — the entity.* count window merged to four slots and gained the
+name-table install/peek hooks over the loader-owned band. The PowerCrystal and
+Ore singleton opens keep their last handle across a config miss (the corpus's
+stale-global lane). Deviations: the window slots ride the port's 8-byte
+handles (the corpus strides 4-byte dwords, so the zeroing strides
+sizeof(void*)), the counts/tables ride own storage (the corpus's catalog
+loader is unported), and NULL answers stand where the corpus strides.
+`frontend_test` pins the pairing, the zeroed reopen, and the stale singleton.
+Ledger 1124 -> 1125. Tests green; 34/36 baseline.
+
 **Key-group code band + catalog dispatch** (2026-10-25): three frontier
 rows land. `resource.*` takes the corpus writers of the DAT_004ddc04
 stride-8 band: `resource_input_key_group_register` (0x41a7d0) stages a
