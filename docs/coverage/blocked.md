@@ -326,6 +326,20 @@ Grouped by blocker family; every row names its address and next action:
   the widget reads is ambiguous (two pushed dwords, pair-to-int fold
   contested). Pinning needs an exact frame-state trace of every path to
   the call. Next: objdump frame trace of the rect-buffer writes.
+- **Marker-grid window split** — `MapCellRecordGridInitialize`
+  (`0x40cdc0`): allocates the cell-record window through the heap seam,
+  zeroes it, and resets the DAT_004c7df8/dfc descriptor pair that the
+  selection-marker model in `crt.*` already owns. A faithful port needs
+  one window model shared across `crt.*` and `level.*` before the row
+  can land without double-owning the descriptor. Next: merge the
+  DAT_004c7d* window model.
+- **Heavy own-storage histogram** — `PairCountHistogramBuild`
+  (`0x45c0d0`): builds the pair-count tables entirely in own storage
+  (DAT_005007e*/8*/9* window, size ~18 KB) with no ported feeder; the
+  row is portable but only lands as a large modeled window with the
+  corpus's scan passes and the FUN_0045a410 name-table dependency
+  resolved. Next: pair-histogram storage model after the name-table
+  family clears.
 - **Counters-clear band aliasing** — `LevelStateCountersClear`
   (`0x41a920`): the rep-stos windows `DAT_004ddad4/ad8/9a4/9a8` (sized by
   the entity-modeled count globals) overlap the named handle slots that

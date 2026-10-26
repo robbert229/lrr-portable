@@ -116,8 +116,8 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00404fc0,FUN_00404fc0,named,PlaceCommandEligibilityCheck,0,9812
 00405950,FUN_00405950,named,PendingCommandTimerFireScan,0,3682
 00405c10,FUN_00405c10,named,PendingCommandEntityAssignmentTick,0,10018
-00406360,FUN_00406360,named,EntityRecordAttachAndRelink,0,660
-004063e0,FUN_004063e0,ported,PendingRecordEntityReferenceClear,2,235
+00406360,FUN_00406360,ported,EntityRecordAttachAndRelink,3,660
+004063e0,FUN_004063e0,ported,PendingRecordEntityReferenceClear,3,235
 00406400,FUN_00406400,ported,PendingRecordCopyToEntityAndFlag,3,446
 00406440,FUN_00406440,ported,CmdAlloc,3,509
 00406480,FUN_00406480,ported,CmdFree,1,316
@@ -161,7 +161,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00407370,FUN_00407370,named,ResetObjectAuxiliaryState,0,164
 004073a0,FUN_004073a0,ported,EntityPointerRegistriesRemove,2,662
 00407410,FUN_00407410,ported,Type4ObjectRegistryInsert,2,518
-00407450,FUN_00407450,ported,IdleQueueRegister,1,717
+00407450,FUN_00407450,ported,IdleQueueRegister,2,717
 004074b0,FUN_004074b0,ported,Type2TimedRegistryInsert,2,717
 00407510,FUN_00407510,ported,SetType2ObjectRecordValue,2,286
 00407540,FUN_00407540,ported,FlaggedObjectTimerRegistryInsert,2,757
@@ -741,8 +741,8 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00431a30,FUN_00431a30,ported,SelectedEntitiesAnyPredicateMatch,3,519
 00431ab0,FUN_00431ab0,ported,AnyObjectCanOccupyTerrainCell,3,480
 00431b20,FUN_00431b20,named,PlacementBlockedAdjacentCellScan,0,1666
-00431c70,FUN_00431c70,named,FirstFreeNeighborCellPick,0,1654
-00431da0,FUN_00431da0,named,TerrainCellRouteAndOccupancyCheck,0,3798
+00431c70,FUN_00431c70,ported,FirstFreeNeighborCellPick,4,1654
+00431da0,FUN_00431da0,ported,TerrainCellRouteAndOccupancyCheck,4,3798
 00432100,FUN_00432100,ported,TerrainCellFlag100SetAndTrack,1,454
 00432170,FUN_00432170,ported,TerrainCellFlag100Test,2,187
 004321a0,FUN_004321a0,ported,TerrainCellUpdateQueueFlush,1,496

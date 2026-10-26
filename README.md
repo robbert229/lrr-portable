@@ -2363,6 +2363,35 @@ issuer unported — accessors stand in), completing on the flag-0x20
 state. `crt_test`, `frontend_test`, `cmd_test`, and `savegame_test`
 pin the windows, guards, and folds.
 
+**Entity record attach + cell route + neighbour pick** (2026-10-25):
+three frontier rows land. `cmd.*` takes `entity_record_attach_and_relink`
+(0x406360): a record without the +0x5c bit-0x40 flag unlinks from the
+global list (head slot when previous is null, else previous's link) and
+attaches to the entity's command head; the flagged lane attaches a
+pending-record copy instead and — with the +0x5c bit-0x40000 stamp —
+writes the corpus's 25.0-float bits (0x41c80000) raw into the source
+record's +0x18 task-param word. Both lanes end with the entity-reference
+sweep and the idle registration; the detach-before-sweep ordering leaves
+the attached record's own reference intact (pinned). `level.*` takes the
+terrain cell route pair `terrain_cell_route_and_occupancy_check`
+(0x431da0) / `first_free_neighbor_cell_pick` (0x431c70): the route
+answers 1/2/3/0 through the stats/state gates, the type-9 idle-type and
+type-6 relief gates, the +0x0c gate byte, the open-cell promotion, and
+the blocked corner pair along the destination row; the pick walks the
+four cardinal neighbours in a counter-rotation that advances the
+corpus's pick counter (own storage, `neighbor_pick_rotation_peek`), and
+mode 1 skips already-open neighbours. Quirks pinned: the cardinal delta
+table's slot-0 hit reads as "no neighbour" through the corpus's dword
+walker and lands on the 0x2000 flag pair, and the strict lane skips the
+on-site answer (the entity's own cell rides the `level_cell_of` seam).
+Deviations: every cell read routes through `level_voxel` (the corpus
+strides the 0x48 window blind), the entity/NULL guards stand where the
+corpus strides blindly, and the pick's level-global reload reuses one
+pointer. `level_test` and `cmd_test` pin the gates, lanes, and folds.
+Ledger 1118 -> 1121; deferred frontier rows `MapCellRecordGridInitialize`
+(0x40cdc0) and `PairCountHistogramBuild` (0x45c0d0) triaged to
+blocked.md. Tests green; 34/36 baseline.
+
 **Load band + progress bar + scaled menu blit** (2026-10-25): four
 frontier rows land in `frontend.*` — `interface_button_images_load`
 (0x41b270), `three_surface_resources_load` (0x45bfb0),
