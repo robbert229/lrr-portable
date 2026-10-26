@@ -539,8 +539,8 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0041a2c0,FUN_0041a2c0,ported,InfoMessageTimerDecay,6,239
 0041a2f0,FUN_0041a2f0,ported,IncidentMessageStateGet,1,60
 0041a300,FUN_0041a300,named,InterfaceMenuActionLabelsInit,0,4861
-0041a660,FUN_0041a660,named,InteractionActionCodeMapInitialize,0,754
-0041a7d0,FUN_0041a7d0,named,InputKeyGroupRegister,0,1005
+0041a660,FUN_0041a660,ported,InteractionActionCodeMapInitialize,2,754
+0041a7d0,FUN_0041a7d0,ported,InputKeyGroupRegister,2,1005
 0041a850,FUN_0041a850,ported,ResourceHandleSetRelease,2,572
 0041a920,FUN_0041a920,named,LevelStateCountersClear,0,1068
 0041a990,FUN_0041a990,ported,ObjectiveSelectionStateReset,1,130
@@ -556,7 +556,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0041b3c0,FUN_0041b3c0,ported,EntityQueryFlagCount,3,1201
 0041b470,FUN_0041b470,ported,CategoryValueIsNeitherZeroNorFifteen,2,118
 0041b490,FUN_0041b490,ported,AdvisorOverlayUpdate,1,1805
-0041b680,FUN_0041b680,named,CatalogCallbackByIdDispatch,0,1788
+0041b680,FUN_0041b680,ported,CatalogCallbackByIdDispatch,4,1788
 0041b930,FUN_0041b930,ported,TimedStatusAndEventTick,1,438
 0041b9b0,FUN_0041b9b0,ported,GlobalStateGet_004ddd1c,2,60
 0041b9c0,FUN_0041b9c0,ported,SelectionEntityCodeResolve,3,319
@@ -2263,7 +2263,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0048dad0,FUN_0048dad0,named,ParseSignedDecimal,0,900
 0048db70,FUN_0048db70,ported,ParseIntegerWrapper,4,80
 0048db80,FUN_0048db80,ported,EngineHeapFree,6,334
-0048dbd0,FUN_0048dbd0,ported,EngineHeapAlloc,4,93
+0048dbd0,FUN_0048dbd0,ported,EngineHeapAlloc,5,93
 0048dbf0,FUN_0048dbf0,ported,EngineHeapAllocateWithRetry,2,460
 0048dc40,FUN_0048dc40,ported,EngineHeapAllocateAligned,2,268
 0048dc80,FUN_0048dc80,named,GrowHeapArray,0,2965

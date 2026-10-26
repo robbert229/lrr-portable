@@ -168,6 +168,24 @@ void resource_handle_set_release(void);                          /* FUN_0041a850
 void  resource_handle_set_slot_install(int slot, void* res);     /* port hook */
 void* resource_handle_set_slot_peek(int slot);                   /* port hook */
 
+/* --- the key-group action-code band (2026-10-25) ---------------------------
+ * The corpus writers of the DAT_004ddc04 stride-8 band land here: the
+ * group register stages each interaction-action group as a heap array of
+ * code dwords with the count riding behind it, and the map initializer
+ * registers the fixed eighteen groups. The band word behind each pair is
+ * shared with the entity query's id-pair reads and the dispatch's loop
+ * bound, so one merged window model (the handle set's) owns it: the
+ * install/peek pair below reads and writes that word. */
+void resource_input_key_group_register(int group, int count,
+                                       const uint32_t* values);
+                                                /* FUN_0041a7d0 */
+void interaction_action_code_map_initialize(void); /* FUN_0041a660 */
+
+/* Port hooks over the shared band word (the corpus's +4 of each pair):
+ * the count the register stages, read by the query/dispatch lanes. */
+void     resource_handle_set_band_word_install(int unit, uint32_t value);
+uint32_t resource_handle_set_band_word_peek(int unit);   /* port hook */
+
 /* The corpus's handle-list record: the array word, an unread middle word,
  * and the count (LP64-safe widening). */
 typedef struct ResourceHandleList {
