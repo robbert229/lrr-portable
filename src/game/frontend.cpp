@@ -490,13 +490,13 @@ static void fe_parse_submenu(FrontEnd* fe, FeMenu* m, const char* name,
         ic = FE_ITEMS_MAX;
     }
     sub->item_count = ic;
-    for (int j = 0; j < ic; j++) {
-        snprintf(buf, sizeof(buf), "%s Item%d", pre, j + 1);
+    for (int item_index = 0; item_index < ic; item_index++) {
+        snprintf(buf, sizeof(buf), "%s Item%d", pre, item_index + 1);
         const char* item = block_get_strptr(fe->cfg, buf);
         if (item == NULL) {
             continue;
         }
-        fe_parse_item(item, &sub->items[j]);
+        fe_parse_item(item, &sub->items[item_index]);
     }
 
     /* FLIC overlays (`!Overlay%i <avi\X.flh>:<SFX>:x:y`) + PlayRandom —
@@ -505,9 +505,11 @@ static void fe_parse_submenu(FrontEnd* fe, FeMenu* m, const char* name,
     snprintf(buf, sizeof(buf), "%s PlayRandom", pre);
     sub->play_random = block_get_bool(fe->cfg, buf) == 1;
     sub->overlay_count = 0;
-    for (int j =  1; j <= FE_OVERLAYS_MAX && sub->overlay_count < FE_OVERLAYS_MAX;
-         ++j) {
-        snprintf(buf, sizeof(buf), "%s !Overlay%d", pre, j);
+    for (int overlay_index =  1;
+         overlay_index <= FE_OVERLAYS_MAX &&
+             sub->overlay_count < FE_OVERLAYS_MAX;
+         ++overlay_index) {
+        snprintf(buf, sizeof(buf), "%s !Overlay%d", pre, overlay_index);
         const char* ov = block_get_strptr(fe->cfg, buf);
         if (ov == NULL || ov[0] == '\0') {
             continue;
@@ -797,14 +799,16 @@ int fe_record_for_level(const FrontEnd* fe, const char* level)
     if (fe == NULL || !fe->built || level == NULL || level[0] == '\0') {
         return -1;
     }
-    for (int i = 0; i < fe->tutorial_n; i++) {
-        if (s_strcaseeq(level, fe->tutorial[i])) {
-            return i;
+    for (int tutorial_index = 0; tutorial_index < fe->tutorial_n;
+         tutorial_index++) {
+        if (s_strcaseeq(level, fe->tutorial[tutorial_index])) {
+            return tutorial_index;
         }
     }
-    for (int i =  0; i < fe->campaign_n; i++) {
-        if (s_strcaseeq(level, fe->campaign[i])) {
-            return fe->tutorial_n + i;
+    for (int campaign_index =  0; campaign_index < fe->campaign_n;
+         campaign_index++) {
+        if (s_strcaseeq(level, fe->campaign[campaign_index])) {
+            return fe->tutorial_n + campaign_index;
         }
     }
     return -1;
@@ -1753,8 +1757,9 @@ void frontend_render(FrontEnd* fe, const TextureSurface* hi_font,
     /* .flh overlay lane (finding 23): blit each open overlay's current
      * frame at its configured (x,y), native size, over the menu backdrop
      * and under the items. */
-    for (int i = 0; i < sub->overlay_count; ++i) {
-        const FeOverlay* o = &sub->overlays[i];
+    for (int overlay_index = 0; overlay_index < sub->overlay_count;
+         ++overlay_index) {
+        const FeOverlay* o = &sub->overlays[overlay_index];
         if (o == NULL || o->flic == NULL) {
             continue;
         }
@@ -1811,10 +1816,10 @@ void frontend_render(FrontEnd* fe, const TextureSurface* hi_font,
         }
     }
 
-    for (int i =  0; i < sub->item_count; i++) {
-        const FeItem* it = &sub->items[i];
+    for (int item_index =  0; item_index < sub->item_count; item_index++) {
+        const FeItem* it = &sub->items[item_index];
         int x, y;
-        fe_item_pos(fe, it, i, w, hi_font, &x, &y);
+        fe_item_pos(fe, it, item_index, w, hi_font, &x, &y);
         if (x < 0) {
             x = 8;
         }
@@ -1825,7 +1830,7 @@ void frontend_render(FrontEnd* fe, const TextureSurface* hi_font,
             continue;   /* scrolled row: outside the plane window */
         }
 
-        int selected = (i == fe->sel);
+        int selected = (item_index == fe->sel);
         const TextureSurface* font = selected ? hi_font : lo_font;
         char label[FE_NAME_MAX];
         fe_display_label(it->label, label, sizeof(label));

@@ -664,13 +664,14 @@ void simtick_sfx_bank(EngineContext* c, float dt)
     (void)c;
     s_sfx_rels = 0;
     /* pass 1: active stride-0xac entries -> effect hook. */
-    for (int i = 0; i < s_sfx_n; ++i) {
+    int i;
+    for (i = 0; i < s_sfx_n; ++i) {
         ++s_post_n; /* FUN_0046f920 effect hook */
     }
     /* post-step. */
     ++s_post_n;
     /* pass 3: stride-4 timer slots: negative timer -> release + reset. */
-    for (int i =  0; i < s_sfx_n; ++i) {
+    for (i =  0; i < s_sfx_n; ++i) {
         float* f = (float*)((uint8_t*)s_sfx_entries[i] + 12);
         if (*f < 0.0f) {
             ++s_sfx_rels; /* FUN_004820d0 release hook x2 */

@@ -230,7 +230,19 @@ double format_argument_read_double(uint8_t** cursor)
 // FUNCTION: LEGORR 0x00493150
 double x87_round_to_integral(double value)
 {
+#if defined(_MSC_VER) && defined(_M_IX86)
+    /* MSVC 5.0 has no rint() declaration. Keep this leaf on the same x87
+     * instruction as the original CRT implementation. */
+    double result;
+    __asm {
+        fld qword ptr [value]
+        frndint
+        fstp qword ptr [result]
+    }
+    return result;
+#else
     return rint(value);
+#endif
 }
 
 /* DoubleBuildWithExponent (FUN_00493a40, findings 383/399): the corpus
