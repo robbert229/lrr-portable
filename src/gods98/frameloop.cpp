@@ -390,9 +390,8 @@ static void credits_free_lines(char** lines, int count)
     free(lines);
 }
 
-/* CreditsTextFile + CreditsBackAVI @ 0x40a0c0: scroll centered text over
- * the configured AVI until the player presses a key or clicks. */
-// FUNCTION: LEGORR 0x0040a0c0
+/* CreditsTextFile + CreditsBackAVI: scroll centered text over the configured
+ * AVI until the player presses a key or clicks. */
 static void frameloop_credits(PlatformWindow* win, DisplaySurface* surf,
                               BlockFile* cfg, const char* wad_dir,
                               AudioPlayer* ap, int audio_status, int* quit,
@@ -1088,9 +1087,9 @@ int LegorrrRun(void)
                                && (is_sfx || is_music) && oit->max > 0;
                     if (live && ap.dev != NULL) {
                         if (is_sfx) {
-                            audio_menu_sfx_volume_set(&ap, oit->value);
+                            audio_menu_sfx_volume_set(oit->value);
                         } else {
-                            audio_menu_volume_set(&ap, oit->value);
+                            audio_menu_volume_set(oit->value);
                         }
                     }
                     fprintf(log, "frameloop: option %s -> %d/%d (%s)\n",
@@ -1387,9 +1386,9 @@ int LegorrrRun(void)
                                    && (is_sfx || is_music) && oit->max > 0;
                         if (live && ap.dev != NULL) {
                             if (is_sfx) {
-                                audio_menu_sfx_volume_set(&ap, oit->value);
+                                audio_menu_sfx_volume_set(oit->value);
                             } else {
-                                audio_menu_volume_set(&ap, oit->value);
+                                audio_menu_volume_set(oit->value);
                             }
                         }
                         fprintf(log, "frameloop: option %s -> %d/%d (%s)\n",

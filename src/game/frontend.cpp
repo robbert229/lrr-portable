@@ -43,6 +43,123 @@
 #include "gods98/view.hpp"
 #include "gods98/string.hpp"
 
+#if defined(LEGORRR_BACKEND_WINAPI)
+#pragma data_seg(".data$zzzzzz")
+/* The first table and the menu globals follow the reference data layout. */
+__declspec(allocate(".data$zzzzzz")) static unsigned char
+    s_menu_action_table_gap[0x3aad0] = { 0 };
+#pragma data_seg()
+#define MENU_ACTION_TABLE_ALLOC __declspec(allocate(".data$zzzzzz"))
+#else
+#define MENU_ACTION_TABLE_ALLOC
+#endif
+MENU_ACTION_TABLE_ALLOC static const char* const s_interface_menu_action_labels[] = {
+    "Interface_MenuItem_BackToDefault",
+    "Interface_MenuItem_TeleportMan",
+    "Interface_MenuItem_BuildBuilding",
+    "Interface_MenuItem_BuildSmallVehicle",
+    "Interface_MenuItem_BuildLargeVehicle",
+    "Interface_MenuItem_LayPath",
+    "Interface_MenuItem_RepairLava",
+    "Interface_MenuItem_GeologistTest",
+    "Interface_MenuItem_ClearRubble",
+    "Interface_MenuItem_Dam",
+    "Interface_MenuItem_SelectMan",
+    "Interface_MenuItem_DeleteMan",
+    "Interface_MenuItem_DeleteVehicle",
+    "Interface_MenuItem_DeleteBuilding",
+    "Interface_MenuItem_Attack",
+    "Interface_MenuItem_SelectVehicle",
+    "Interface_MenuItem_UnLoadVehicle",
+    "Interface_MenuItem_UnLoadMinifigure",
+    "Interface_MenuItem_VehiclePickUp",
+    "Interface_MenuItem_MinifigurePickUp",
+    "Interface_MenuItem_GetOut",
+    "Interface_MenuItem_GetIn",
+    "Interface_MenuItem_GotoDock",
+    "Interface_MenuItem_Dig",
+    "Interface_MenuItem_Reinforce",
+    "Interface_MenuItem_Dynamite",
+    "Interface_MenuItem_UpgradeMan",
+    "Interface_MenuItem_GoFeed",
+    "Interface_MenuItem_GotoFirstPerson",
+    "Interface_MenuItem_GotoSecondPerson",
+    "Interface_MenuItem_TrainSkill",
+    "Interface_MenuItem_PowerOn",
+    "Interface_MenuItem_PowerOff",
+    "Interface_MenuItem_UpgradeBuilding",
+    "Interface_MenuItem_Repair",
+    "Interface_MenuItem_SelectBuilding",
+    "Interface_MenuItem_GotoTopView",
+    "Interface_MenuItem_GetTool",
+    "Interface_MenuItem_GetDrill",
+    "Interface_MenuItem_GetSpade",
+    "Interface_MenuItem_GetHammer",
+    "Interface_MenuItem_GetSpanner",
+    "Interface_MenuItem_TrainDriver",
+    "Interface_MenuItem_TrainEngineer",
+    "Interface_MenuItem_TrainGeologist",
+    "Interface_MenuItem_TrainPilot",
+    "Interface_MenuItem_TrainSailor",
+    "Interface_MenuItem_TrainDynamite",
+    "Interface_MenuItem_Build",
+    "Interface_MenuItem_PlaceFence",
+    "Interface_MenuItem_MakeTeleporterPrimary",
+    "Interface_MenuItem_DeselectDig",
+    "Interface_MenuItem_ClearSelection",
+    "Interface_MenuItem_Encyclopedia",
+    "Interface_MenuItem_EjectCrystal",
+    "Interface_MenuItem_EjectOre",
+    "Interface_MenuItem_TrackObject",
+    "Interface_MenuItem_LegoManGoto",
+    "Interface_MenuItem_LegoManDig",
+    "Interface_MenuItem_VehicleGoto",
+    "Interface_MenuItem_VehicleDig",
+    "Interface_MenuItem_RemovePath",
+    "Interface_MenuItem_UpgradeVehicle",
+    "Interface_MenuItem_UpgradeEngine",
+    "Interface_MenuItem_UpgardeDrill",
+    "Interface_MenuItem_UpgardeScan",
+    "Interface_MenuItem_UpgardeCarry",
+    "Interface_MenuItem_DeleteElectricFence",
+    "Interface_MenuItem_GetLaser",
+    "Interface_MenuItem_GetPusherGun",
+    "Interface_MenuItem_GetFreezerGun",
+    "Interface_MenuItem_GetBirdScarer",
+    "Interface_MenuItem_DropBirdScarer",
+    "Interface_MenuItem_CancelConstruction",
+};
+#undef MENU_ACTION_TABLE_ALLOC
+#if defined(LEGORRR_BACKEND_WINAPI)
+#pragma data_seg(".data$zzzzzz")
+__declspec(allocate(".data$zzzzzz")) static unsigned char
+    s_reference_menu_data_pad0[0x79144] = { 0 };
+__declspec(allocate(".data$zzzzzz")) static unsigned char
+    s_menu_global_bytes[0x13c0] = { 0 };
+#pragma data_seg()
+#define s_menu_global_words ((uint32_t*)s_menu_global_bytes)
+#define DAT_0055613c ((void*)s_menu_global_words[-1])
+#define DAT_00556f50 ((void*)s_menu_global_words[0x384])
+#define DAT_00556f54 ((void*)s_menu_global_words[0x385])
+#define s_fe_flow (s_menu_global_words + 0x3b7)
+#define s_menu_wipe_arm s_menu_global_words[0x4ec]
+#define s_menu_wipe s_menu_global_words[0x4ed]
+#define s_menu_wipe_stop s_menu_global_words[0x4ee]
+#define s_menu_wipe_clock (*(float*)&s_menu_global_words[0x4ef])
+#define FE_FLOW_LEVEL_START_SLOT 11
+#define FE_FLOW_MENU_OPTIONS_SLOT 12
+#else
+static void* DAT_0055613c;
+static void* DAT_00556f50;
+static void* DAT_00556f54;
+static int s_fe_flow[5];
+static uint32_t s_menu_wipe;
+static uint32_t s_menu_wipe_arm;
+static uint32_t s_menu_wipe_stop;
+static float s_menu_wipe_clock;
+#define FE_FLOW_LEVEL_START_SLOT 3
+#define FE_FLOW_MENU_OPTIONS_SLOT 4
+#endif
 static float s_menu_plane_pan[2]; /* DAT_005574dc/e0 roles */
 static int s_main_menu_text_item_pending;
 static TextureSurface* s_interface_message_tab_info_text;
@@ -248,82 +365,7 @@ static void fe_display_label(const char* label, char* out, size_t out_size)
     out[i] = '\0';
 }
 
-static const char* const s_interface_menu_action_labels[] = {
-    "Interface_MenuItem_BackToDefault",
-    "Interface_MenuItem_TeleportMan",
-    "Interface_MenuItem_BuildBuilding",
-    "Interface_MenuItem_BuildSmallVehicle",
-    "Interface_MenuItem_BuildLargeVehicle",
-    "Interface_MenuItem_LayPath",
-    "Interface_MenuItem_RepairLava",
-    "Interface_MenuItem_GeologistTest",
-    "Interface_MenuItem_ClearRubble",
-    "Interface_MenuItem_Dam",
-    "Interface_MenuItem_SelectMan",
-    "Interface_MenuItem_DeleteMan",
-    "Interface_MenuItem_DeleteVehicle",
-    "Interface_MenuItem_DeleteBuilding",
-    "Interface_MenuItem_Attack",
-    "Interface_MenuItem_SelectVehicle",
-    "Interface_MenuItem_UnLoadVehicle",
-    "Interface_MenuItem_UnLoadMinifigure",
-    "Interface_MenuItem_VehiclePickUp",
-    "Interface_MenuItem_MinifigurePickUp",
-    "Interface_MenuItem_GetOut",
-    "Interface_MenuItem_GetIn",
-    "Interface_MenuItem_GotoDock",
-    "Interface_MenuItem_Dig",
-    "Interface_MenuItem_Reinforce",
-    "Interface_MenuItem_Dynamite",
-    "Interface_MenuItem_UpgradeMan",
-    "Interface_MenuItem_GoFeed",
-    "Interface_MenuItem_GotoFirstPerson",
-    "Interface_MenuItem_GotoSecondPerson",
-    "Interface_MenuItem_TrainSkill",
-    "Interface_MenuItem_PowerOn",
-    "Interface_MenuItem_PowerOff",
-    "Interface_MenuItem_UpgradeBuilding",
-    "Interface_MenuItem_Repair",
-    "Interface_MenuItem_SelectBuilding",
-    "Interface_MenuItem_GotoTopView",
-    "Interface_MenuItem_GetTool",
-    "Interface_MenuItem_GetDrill",
-    "Interface_MenuItem_GetSpade",
-    "Interface_MenuItem_GetHammer",
-    "Interface_MenuItem_GetSpanner",
-    "Interface_MenuItem_TrainDriver",
-    "Interface_MenuItem_TrainEngineer",
-    "Interface_MenuItem_TrainGeologist",
-    "Interface_MenuItem_TrainPilot",
-    "Interface_MenuItem_TrainSailor",
-    "Interface_MenuItem_TrainDynamite",
-    "Interface_MenuItem_Build",
-    "Interface_MenuItem_PlaceFence",
-    "Interface_MenuItem_MakeTeleporterPrimary",
-    "Interface_MenuItem_DeselectDig",
-    "Interface_MenuItem_ClearSelection",
-    "Interface_MenuItem_Encyclopedia",
-    "Interface_MenuItem_EjectCrystal",
-    "Interface_MenuItem_EjectOre",
-    "Interface_MenuItem_TrackObject",
-    "Interface_MenuItem_LegoManGoto",
-    "Interface_MenuItem_LegoManDig",
-    "Interface_MenuItem_VehicleGoto",
-    "Interface_MenuItem_VehicleDig",
-    "Interface_MenuItem_RemovePath",
-    "Interface_MenuItem_UpgradeVehicle",
-    "Interface_MenuItem_UpgradeEngine",
-    "Interface_MenuItem_UpgardeDrill",
-    "Interface_MenuItem_UpgardeScan",
-    "Interface_MenuItem_UpgardeCarry",
-    "Interface_MenuItem_DeleteElectricFence",
-    "Interface_MenuItem_GetLaser",
-    "Interface_MenuItem_GetPusherGun",
-    "Interface_MenuItem_GetFreezerGun",
-    "Interface_MenuItem_GetBirdScarer",
-    "Interface_MenuItem_DropBirdScarer",
-    "Interface_MenuItem_CancelConstruction",
-};
+
 static float s_interface_menu_action_xy[2];
 static const void* s_interface_menu_action_context;
 
@@ -331,23 +373,59 @@ static const void* s_interface_menu_action_context;
  * position in the 74-key table above, matching the corpus's zero-based
  * pointer walk. */
 // FUNCTION: LEGORR 0x0041a9c0
+#if defined(LEGORRR_BACKEND_WINAPI)
+__declspec(naked) int interface_menu_action_label_find(const char* name,
+                                                       int* out_index)
+{
+    __asm {
+        push ebx
+        mov ebx, dword ptr [esp + 8]
+        push esi
+        push edi
+        xor edi, edi
+        mov esi, OFFSET s_interface_menu_action_labels
+    interface_menu_action_label_find_loop:
+        mov eax, dword ptr [esi]
+        push ebx
+        push eax
+        call strcasecmp_lite
+        add esp, 8
+        test eax, eax
+        je interface_menu_action_label_find_found
+        add esi, 4
+        inc edi
+        cmp esi, OFFSET s_interface_menu_action_labels + 0x128
+        jb interface_menu_action_label_find_loop
+        xor eax, eax
+        pop edi
+        pop esi
+        pop ebx
+        ret
+    interface_menu_action_label_find_found:
+        mov ecx, dword ptr [esp + 0x14]
+        mov eax, 1
+        mov dword ptr [ecx], edi
+        pop edi
+        pop esi
+        pop ebx
+        ret
+    }
+}
+#else
 int interface_menu_action_label_find(const char* name, int* out_index)
 {
-    if (name == NULL) {
-        return 0;
-    }
+    if (name == NULL || out_index == NULL) return 0;
     const size_t count = sizeof(s_interface_menu_action_labels)
                          / sizeof(s_interface_menu_action_labels[0]);
     for (size_t i = 0; i < count; ++i) {
         if (s_strcaseeq(name, s_interface_menu_action_labels[i])) {
-            if (out_index != NULL) {
-                *out_index = (int)i;
-            }
+            *out_index = (int)i;
             return 1;
         }
     }
     return 0;
 }
+#endif
 
 const char* interface_menu_action_label_get(int index)
 {
@@ -2212,14 +2290,54 @@ void frontend_save_thumbnail_invalidate(FrontEnd* fe, int slot)
     }
 }
 
-/* MainMenuTextItem (FUN_004103d0) enters the scrolling text display. The
- * port's frame loop owns that display, so translate the callback into its
- * existing credits event and let the frame loop run it on the next tick. */
-// FUNCTION: LEGORR 0x004103d0
-void main_menu_text_item(void)
+/* The menu callback enters the scrolling-text path using the resources
+ * captured while the front end is initialized. The frame loop consumes the
+ * request on its next tick. */
+// FUNCTION: LEGORR 0x0040a0c0
+static void scrolling_text_display(void* text, void* font, void* background)
 {
+    (void)text;
+    (void)font;
+    (void)background;
     s_main_menu_text_item_pending = 1;
 }
+
+// FUNCTION: LEGORR 0x004103d0
+#if defined(LEGORRR_BACKEND_WINAPI)
+__declspec(naked) void main_menu_text_item(void)
+{
+    __asm {
+        __emit 0xa1
+        __emit 0x54
+        __emit 0x6f
+        __emit 0x55
+        __emit 0x00
+        __emit 0x8b
+        __emit 0x0d
+        __emit 0x3c
+        __emit 0x61
+        __emit 0x55
+        __emit 0x00
+        __emit 0x8b
+        __emit 0x15
+        __emit 0x50
+        __emit 0x6f
+        __emit 0x55
+        __emit 0x00
+        push eax
+        push ecx
+        push edx
+        call scrolling_text_display
+        add esp, 0x0c
+        ret
+    }
+}
+#else
+void main_menu_text_item(void)
+{
+    scrolling_text_display(DAT_00556f50, DAT_0055613c, DAT_00556f54);
+}
+#endif
 
 /* Pointer hit-testing (defined with the render helpers below) uses the same
  * placement arithmetic + measure-font widths as drawing. */
@@ -3440,6 +3558,101 @@ static void fe_menu_record_put_word(void* record, int field, uint32_t value)
 /* MenuTextRecordMake (FUN_00410d50): stores a copied label, layout words,
  * font handles and optional negative half-width offsets. */
 // FUNCTION: LEGORR 0x00410d50
+#if defined(LEGORRR_BACKEND_WINAPI)
+__declspec(naked) void* menu_text_record_make(
+    const char* text, const TextureSurface* font_a,
+    const TextureSurface* font_b, uint32_t f4, uint32_t f5,
+    uint32_t f6, int center, uint32_t f8, uint32_t f9)
+{
+    __asm {
+        push ebx
+        mov ebx, dword ptr [esp + 8]
+        push esi
+        push edi
+        test ebx, ebx
+        jne text_record_allocate
+        xor eax, eax
+        pop edi
+        pop esi
+        pop ebx
+        ret
+    text_record_allocate:
+        push 0x3c
+        call engine_heap_alloc
+        mov esi, eax
+        add esp, 4
+        test esi, esi
+        jne text_record_initialize
+        pop edi
+        pop esi
+        pop ebx
+        ret
+    text_record_initialize:
+        mov ecx, 0x0f
+        xor eax, eax
+        mov edi, esi
+        push ebx
+        rep stosd
+        mov edi, ebx
+        or ecx, 0xffffffff
+        repnz scasb
+        not ecx
+        dec ecx
+        mov dword ptr [esi + 4], ecx
+        call campaign_level_fallback_label
+        mov ecx, dword ptr [esp + 0x28]
+        mov edx, dword ptr [esp + 0x30]
+        mov edi, dword ptr [esp + 0x1c]
+        mov dword ptr [esi + 0x14], ecx
+        mov ecx, dword ptr [esp + 0x20]
+        mov dword ptr [esi], eax
+        mov eax, dword ptr [esp + 0x18]
+        mov dword ptr [esi + 0x18], ecx
+        mov ecx, dword ptr [esp + 0x34]
+        mov dword ptr [esi + 0x10], edx
+        mov edx, dword ptr [esp + 0x24]
+        mov dword ptr [esi + 0x38], ecx
+        mov ecx, dword ptr [esp + 0x2c]
+        add esp, 4
+        test ecx, ecx
+        mov dword ptr [esi + 0x0c], eax
+        mov dword ptr [esi + 8], edi
+        mov dword ptr [esi + 0x1c], edx
+        je text_record_zero_offsets
+        test eax, eax
+        je text_record_zero_offsets
+        test edi, edi
+        je text_record_zero_offsets
+        push ebx
+        push eax
+        call formatted_text_printf_width
+        add esp, 8
+        shr eax, 1
+        neg eax
+        push ebx
+        push edi
+        mov dword ptr [esi + 0x20], eax
+        call formatted_text_printf_width
+        shr eax, 1
+        add esp, 8
+        neg eax
+        mov dword ptr [esi + 0x24], eax
+        mov eax, esi
+        pop edi
+        pop esi
+        pop ebx
+        ret
+    text_record_zero_offsets:
+        mov dword ptr [esi + 0x20], 0
+        mov dword ptr [esi + 0x24], 0
+        mov eax, esi
+        pop edi
+        pop esi
+        pop ebx
+        ret
+    }
+}
+#else
 void* menu_text_record_make(const char* text, const TextureSurface* font_a,
                             const TextureSurface* font_b, uint32_t f4,
                             uint32_t f5, uint32_t f6, int center,
@@ -3476,6 +3689,7 @@ void* menu_text_record_make(const char* text, const TextureSurface* font_a,
     }
     return record;
 }
+#endif
 
 /* CaseInsensitiveNameTableLookup (FUN_0046b4d0): TooltipOverlayStateInitialize
  * installs these 38 names consecutively at DAT_0054bf68. Results are 1-based. */
@@ -3533,14 +3747,14 @@ void* menu_button_record_make(const char* text,
         engine_heap_free(record);
         return NULL;
     }
-    const TextureSurface* normal = texture_load(normal_image);
+    const TextureSurface* normal = image_surface_load(normal_image, 0, 0);
     if (normal == NULL) {
         engine_heap_free(label);
         engine_heap_free(record);
         return NULL;
     }
     const TextureSurface* selected = selected_image != NULL
-        ? texture_load(selected_image) : NULL;
+        ? image_surface_load(selected_image, 0, 0) : NULL;
 
     void* label_slot = label;
     void* selected_slot = (void*)selected;
@@ -4822,8 +5036,6 @@ int layout_position_get(int entry, int* x, int* y)
 /* --- the front-end flow words (see frontend.hpp) ----------------------------
  * Zero-initialized module statics stand in for the corpus's DAT words; the
  * load image's zero state is the faithful initial state (finding 23/438). */
-static int s_fe_flow[5]; /* DAT_0055701c / 20 / 24 / 48 / 4c, in order */
-
 // FUNCTION: LEGORR 0x00416d50
 int save_slot_open(void)
 {
@@ -4845,13 +5057,13 @@ int quit_menu_probe(void)
 // FUNCTION: LEGORR 0x00416de0
 int level_start_flag(void)
 {
-    return s_fe_flow[3] != 0;
+    return s_fe_flow[FE_FLOW_LEVEL_START_SLOT] != 0;
 }
 
 // FUNCTION: LEGORR 0x00416df0
 int menu_options_flag(void)
 {
-    return s_fe_flow[4] != 0;
+    return s_fe_flow[FE_FLOW_MENU_OPTIONS_SLOT] != 0;
 }
 
 /* OptionMusicDefault (FUN_00414e10) queries a WinMM audio-CD mixer source
@@ -4868,7 +5080,11 @@ int option_music_default(void)
 void frontend_flow_word_set(int which, int value)
 {
     if (which >= 0 && which < 5) {
+#if defined(LEGORRR_BACKEND_WINAPI)
+        s_fe_flow[which < 3 ? which : which + 8] = value;
+#else
         s_fe_flow[which] = value;
+#endif
     }
 }
 
@@ -4902,13 +5118,31 @@ uint32_t selection_mode_state_peek(void)
 
 /* MenuWipeEnd (FUN_00410440) — DAT_005574f0 as a zero-init static; the
  * corpus's MenuWipeStart-side setter is unported. */
-static uint32_t s_menu_wipe;
-
 // FUNCTION: LEGORR 0x410440
+#if defined(LEGORRR_BACKEND_WINAPI)
+__declspec(naked) void menu_wipe_end(void)
+{
+    __asm {
+        __emit 0xa1
+        __emit 0xf0
+        __emit 0x74
+        __emit 0x55
+        __emit 0x00
+        and al, 0xfc
+        __emit 0xa3
+        __emit 0xf0
+        __emit 0x74
+        __emit 0x55
+        __emit 0x00
+        ret
+    }
+}
+#else
 void menu_wipe_end(void)
 {
     s_menu_wipe &= ~3u;
 }
+#endif
 
 uint32_t menu_wipe_flags_peek(void)
 {
@@ -5209,16 +5443,29 @@ uint32_t cell_action_permission_table_peek(int index)
 }
 
 /* --- the menu-tick gate + status banner word (see frontend.hpp) ------------- */
-static uint32_t s_menu_rng_state = 1u;  /* the shared draw's word, modeled */
 static uint32_t s_status_banner_word;   /* DAT_004ddd1c */
 
 // FUNCTION: LEGORR 0x00412190
-int menu_audio_tick_interval_reached(void)
+#if defined(LEGORRR_BACKEND_WINAPI)
+__declspec(naked) bool menu_audio_tick_interval_reached(void)
 {
-    s_menu_rng_state = s_menu_rng_state * 0x343fdu + 0x269ec3u;
-    const int draw = (int)((s_menu_rng_state >> 16) & 0x7fffu);
-    return draw % 400 == 0;
+    __asm {
+        call level_rand_u16
+        cdq
+        mov ecx, 0x190
+        idiv ecx
+        xor eax, eax
+        test edx, edx
+        sete al
+        ret
+    }
 }
+#else
+bool menu_audio_tick_interval_reached(void)
+{
+    return level_rand_u16() % 400 == 0;
+}
+#endif
 
 // FUNCTION: LEGORR 0x0041b9b0
 uint32_t sim_status_banner_word_get(void)
@@ -5246,12 +5493,69 @@ void ui_mode_resource_bit40_set_clear(int probe, uint32_t value)
 }
 
 /* MenuWipeStart (FUN_004103f0) — see frontend.hpp. */
-static uint32_t s_menu_wipe_arm;  /* DAT_005574ec */
-static uint32_t s_menu_wipe_stop; /* DAT_005574f4 */
-static float    s_menu_wipe_clock;/* DAT_005574f8 */
 static uint32_t s_menu_clock_millis; /* timeGetTime model */
 
 // FUNCTION: LEGORR 0x004103f0
+#if defined(LEGORRR_BACKEND_WINAPI)
+__declspec(naked) void menu_wipe_start(void)
+{
+    __asm {
+        __emit 0xa1
+        __emit 0xec
+        __emit 0x74
+        __emit 0x55
+        __emit 0x00
+        sub esp, 8
+        test eax, eax
+        je menu_wipe_start_done
+        __emit 0xa1
+        __emit 0xf0
+        __emit 0x74
+        __emit 0x55
+        __emit 0x00
+        __emit 0xc7
+        __emit 0x05
+        __emit 0xf4
+        __emit 0x74
+        __emit 0x55
+        __emit 0x00
+        __emit 0x00
+        __emit 0x00
+        __emit 0x00
+        __emit 0x00
+        or al, 1
+        or al, 2
+        __emit 0xa3
+        __emit 0xf0
+        __emit 0x74
+        __emit 0x55
+        __emit 0x00
+        call timeGetTime
+        __emit 0x89
+        __emit 0x44
+        __emit 0x24
+        __emit 0x00
+        mov dword ptr [esp + 4], 0
+        __emit 0xdf
+        __emit 0x6c
+        __emit 0x24
+        __emit 0x00
+        push 0
+        push 0x27
+        __emit 0xd9
+        __emit 0x1d
+        __emit 0xf8
+        __emit 0x74
+        __emit 0x55
+        __emit 0x00
+        call sound_request_queue_submit
+        add esp, 8
+    menu_wipe_start_done:
+        add esp, 8
+        ret
+    }
+}
+#else
 void menu_wipe_start(void)
 {
     if (s_menu_wipe_arm == 0u) {
@@ -5262,6 +5566,7 @@ void menu_wipe_start(void)
     s_menu_wipe_clock = (float)s_menu_clock_millis;
     sound_request_queue_submit(0x27, 0);
 }
+#endif
 
 void menu_wipe_arm_set(uint32_t value) { s_menu_wipe_arm = value; }
 uint32_t menu_wipe_arm_peek(void) { return s_menu_wipe_arm; }
@@ -6395,24 +6700,71 @@ static int s_name_fold_equal(const char* a, const char* b)
 }
 
 // FUNCTION: LEGORR 0x00414c90
-int menu_list_find_name(void* const* entries, int count, const char* name)
+#if defined(LEGORRR_BACKEND_WINAPI)
+__declspec(naked) int menu_list_find_name(const void* list, const char* name)
 {
-    if (entries == NULL || count < 1) {
-        return -1; /* the corpus's count gate (deviation: null guard) */
+    __asm {
+        push ebx
+        push esi
+        push edi
+        mov edi, dword ptr [esp + 0x10]
+        xor esi, esi
+        mov eax, dword ptr [edi + 4]
+        test eax, eax
+        jle menu_list_find_name_no_entries
+        mov ebx, dword ptr [esp + 0x14]
+    menu_list_find_name_loop:
+        mov eax, dword ptr [edi]
+        mov eax, dword ptr [eax + esi*4]
+        test eax, eax
+        je menu_list_find_name_next
+        mov ecx, dword ptr [eax]
+        push ebx
+        push ecx
+        call strcasecmp_lite
+        add esp, 8
+        test eax, eax
+        je menu_list_find_name_found
+    menu_list_find_name_next:
+        mov eax, dword ptr [edi + 4]
+        inc esi
+        cmp esi, eax
+        jl menu_list_find_name_loop
+        or eax, 0xffffffff
+        pop edi
+        pop esi
+        pop ebx
+        ret
+    menu_list_find_name_found:
+        mov eax, esi
+        pop edi
+        pop esi
+        pop ebx
+        ret
+    menu_list_find_name_no_entries:
+        pop edi
+        pop esi
+        or eax, 0xffffffff
+        pop ebx
+        ret
     }
+}
+#else
+int menu_list_find_name(const void* list, const char* name)
+{
+    if (list == NULL) return -1;
+    void* const* entries = *(void* const* const*)list;
+    const int count = *(const int*)((const char*)list + sizeof(void*));
     for (int i = 0; i < count; ++i) {
-        const void* entry = entries[i];
-        if (entry == NULL) {
-            continue; /* pinned: the null entry strides on */
-        }
-        const char* const entry_name = *(const char* const*)entry;
-        if (entry_name != NULL && name != NULL
-            && s_name_fold_equal(entry_name, name)) {
+        void* entry = entries[i];
+        if (entry != NULL
+            && strcasecmp_lite(*(const char**)entry, name) == 0) {
             return i;
         }
     }
     return -1;
 }
+#endif
 
 /* --- the encyclopedia config-file window (2026-10-25) --------------------
  * EncyclopediaConfigFilesOpen (FUN_0040e490) — see frontend.hpp. The group

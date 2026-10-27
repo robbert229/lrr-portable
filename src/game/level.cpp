@@ -88,10 +88,10 @@ void level_random_seed_set(uint32_t seed)
  * level_random_seed_set and return its 15-bit LCG result. The original uses
  * one shared global; the port keeps additional module-local RNG models. */
 // FUNCTION: LEGORR 0x0048e170
-static uint16_t level_rand_u16(void)
+int level_rand_u16(void)
 {
     s_rand_state = s_rand_state * 214013u + 2531011u;
-    return (uint16_t)((s_rand_state >> 16) & 0x7fffu);
+    return (((int32_t)s_rand_state) >> 16) & 0x7fff;
 }
 
 int level_random_draw15(void)

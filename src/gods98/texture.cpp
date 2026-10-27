@@ -161,10 +161,8 @@ static int texture_bitmap_layout_prepare(const uint8_t* data, uint32_t size,
     return 1;
 }
 
-/* BitmapSurfaceLoad: interpret the BMP header/palette and convert its pixel
- * rows into a software surface. Resource lookup and DirectDraw surface setup
- * from the original function live in texture_load's ported boundary. */
-// FUNCTION: LEGORR 0x0047d9d0
+/* Decode a full BMP buffer into the port's software surface. The reference
+ * BitmapSurfaceLoad entry at 0x0047d9d0 also owns resource lookup. */
 TextureSurface* texture_decode(const uint8_t* data, uint32_t size)
 {
     TextureBitmapLayout layout;
@@ -252,6 +250,16 @@ TextureSurface* texture_decode(const uint8_t* data, uint32_t size)
         }
     }
     return t;
+}
+
+/* BitmapSurfaceLoad: resource-backed image load used by menu item records. */
+// FUNCTION: LEGORR 0x0047d9d0
+TextureSurface* image_surface_load(const char* name, uint32_t flags,
+                                   uint32_t color_key)
+{
+    (void)flags;
+    (void)color_key;
+    return texture_load(name);
 }
 
 /* ------------------------------------------------------------------ *

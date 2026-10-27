@@ -39,14 +39,15 @@ float audio_sfx_volume_gain(int index);
 void audio_sound_volume_set(AudioPlayer* p, int millibels);
 /* SoundVolumeIndexSet (FUN_0047b530): map the options index 0..10 through
  * the corpus attenuation table and apply it. */
-void audio_sound_volume_index_set(AudioPlayer* p, int index);
+void audio_sound_volume_index_set(int index);
 /* GameSpeedSelect (FUN_00414de0; actually the SFX volume callback): delegate
  * the selected slider index to SoundVolumeIndexSet. */
-void audio_menu_sfx_volume_set(AudioPlayer* p, int index);
+void audio_menu_sfx_volume_set(int index);
 /* VolumeSet (FUN_00414df0): map the menu's 0..9 volume value to the
  * normalized master gain. The port has one output gain in place of the
  * corpus's paired music-mixer channels. */
-void audio_menu_volume_set(AudioPlayer* p, int value);
+void audio_menu_volume_set(int value);
+void music_mixer_volume_set(float music, float sfx);
 
 /* Submit one bank sound as a one-shot. Returns the number of frames queued,
  * or -1 on failure. */

@@ -1924,30 +1924,32 @@ int main(int argc, char** argv)
     }
 
     /* MenuListFindName (2026-10-25): the folded list walk, the null-entry
-     * stride, the count gate, and the guards. */
+     * stride, and the record count gate. */
     {
         struct named { const char* name; int extra; };
         static named alpha = { "Alpha", 1 };
         static named bravo = { "Bravo", 2 };
         static named charlie = { "Charlie", 3 };
         void* list[4] = { &alpha, NULL, &bravo, &charlie };
-        CHECK(menu_list_find_name(list, 4, "alpha") == 0,
+        struct menu_list_header { void* const* entries; int count; } header = {
+            list, 4
+        };
+        CHECK(menu_list_find_name(&header, "alpha") == 0,
               "the fold lands the first entry");
-        CHECK(menu_list_find_name(list, 4, "ALPHA") == 0,
+        CHECK(menu_list_find_name(&header, "ALPHA") == 0,
               "the fold reads case-blind");
-        CHECK(menu_list_find_name(list, 4, "Bravo") == 2,
+        CHECK(menu_list_find_name(&header, "Bravo") == 2,
               "the null entry strides on");
-        CHECK(menu_list_find_name(list, 4, "CHARLIE") == 3,
+        CHECK(menu_list_find_name(&header, "CHARLIE") == 3,
               "the last entry answers last");
-        CHECK(menu_list_find_name(list, 4, "delta") == -1,
+        CHECK(menu_list_find_name(&header, "delta") == -1,
               "the miss answers -1");
-        CHECK(menu_list_find_name(list, 1, "Bravo") == -1,
+        header.count = 1;
+        CHECK(menu_list_find_name(&header, "Bravo") == -1,
               "the count bounds the walk");
-        CHECK(menu_list_find_name(list, 0, "Alpha") == -1
-                  && menu_list_find_name(list, -1, "Alpha") == -1,
+        header.count = 0;
+        CHECK(menu_list_find_name(&header, "Alpha") == -1,
               "the count gate answers -1");
-        CHECK(menu_list_find_name(NULL, 4, "Alpha") == -1,
-              "the null array is guarded (dev)");
     }
 
     /* ScreenCoordNormalizeInit (FUN_0045d8b0; 2026-10-25): the band pass

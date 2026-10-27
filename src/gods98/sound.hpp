@@ -23,6 +23,9 @@
 #define SOUND_STREAMED 0x8u
 #define SOUND_BANK_SLOTS 600 /* finding 14 §1: (0x5339a8 - 0x506798)/0x134 */
 
+/* In-place token split used by both menu image records and sound variants. */
+int sound_variant_split(char* text, char** out, const char* separators);
+
 /* fmt chunk (16 bytes, PCM). */
 typedef struct WavSample {
     uint16_t format_tag;    /* 1 = PCM */

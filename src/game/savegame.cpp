@@ -50,7 +50,7 @@ void save_directory_ensure_exists(const char* path)
 /* Corpus FUN_0048ff10's case-folded strcmp (used by the Level03
  * checkpoint hard-code comparison). */
 // FUNCTION: LEGORR 0x0048ff10
-static int strcasecmp_lite(const char* a, const char* b)
+int strcasecmp_lite(const char* a, const char* b)
 {
     for (;;) {
         int ca = (unsigned char)*a++;

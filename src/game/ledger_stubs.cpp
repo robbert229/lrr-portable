@@ -3391,10 +3391,6 @@ void ledger_stub_004788d0_Direct3DRenderStateSetCached() {}
 // STUB: LEGORR 0x00478940
 void ledger_stub_00478940_D3DMaterialStateFlush() {}
 
-// MusicMixerVolumeSet
-// STUB: LEGORR 0x00478980
-void ledger_stub_00478980_MusicMixerVolumeSet() {}
-
 // MusicMixerVolumeGet
 // STUB: LEGORR 0x004789a0
 void ledger_stub_004789a0_MusicMixerVolumeGet() {}
@@ -3590,10 +3586,6 @@ void ledger_stub_0047d410_RendererRecordTableInitialize() {}
 // SceneObjectRegistryTeardown
 // STUB: LEGORR 0x0047d430
 void ledger_stub_0047d430_SceneObjectRegistryTeardown() {}
-
-// ImageSurfaceRelease
-// STUB: LEGORR 0x0047d470
-void ledger_stub_0047d470_ImageSurfaceRelease() {}
 
 // SurfacePixelFormatQuery
 // STUB: LEGORR 0x0047d490

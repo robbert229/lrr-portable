@@ -794,14 +794,13 @@ uint32_t cell_action_permission_table_peek(int index);
 
 /* --- the menu-tick gate + status banner word (2026-10-24; findings 37/441) --
  * MenuAudioTickIntervalReached (FUN_00412190): the corpus's menu tick asks
- * the shared random draw whether the word is a multiple of 400. The port
- * models the draw module-locally the way the overlay rng and the level/
- * sound models do (same LCG constants, same 15-bit result).
+ * the shared random draw whether the word is a multiple of 400. It uses the
+ * same RandomNext state as the level and sound paths.
  * GlobalStateGet_004ddd1c (FUN_0041b9b0): the status-banner toggle word
  * the corpus flips from its periodic status tick (finding 441) — that
  * feeder is unported, so the word lands zero-initialized with port-side
  * accessors standing in. */
-int menu_audio_tick_interval_reached(void); /* FUN_00412190 */
+bool menu_audio_tick_interval_reached(void); /* FUN_00412190 */
 uint32_t sim_status_banner_word_get(void);  /* FUN_0041b9b0 */
 
 /* PanelResourceLayoutStore (FUN_0045c340): the layout band store — both
@@ -1071,9 +1070,9 @@ void sav_visited_entry_peek(int which, int index, void** out_record,
  * {record-array pointer @+0, count @+4} and answers the index of the
  * first non-NULL entry whose name case-fold-equals the target (the
  * corpus's __strcmpi shape); misses and non-positive counts answer -1.
- * Deviations: the header rides explicit arguments (the header struct has
- * no ported owner) and the entry name pointers are guarded. */
-int menu_list_find_name(void* const* entries, int count,
+ * The unowned header rides an explicit pointer; its count and entry-array
+ * fields are at +4 and +0, matching the corpus record. */
+int menu_list_find_name(const void* list_header,
                         const char* name);                /* FUN_00414c90 */
 
 /* --- screen-effect release (2026-10-24; findings 434/438) ------------------

@@ -47,6 +47,7 @@ extern "C" {
 
 /* --- slot context --------------------------------------------------- */
 void save_init(GameContext* ctx);
+int strcasecmp_lite(const char* a, const char* b);
 
 int  save_slot_get(const GameContext* ctx);  /* SavGetSlot FUN_00417e90 */
 void save_slot_set(GameContext* ctx, int slot);  /* SavSetSlot FUN_00417ea0 */

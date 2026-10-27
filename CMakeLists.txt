@@ -178,6 +178,9 @@ endif()
 # The frame-loop object in gods98 calls into game, while game itself uses
 # gods98 APIs. Repeat the archive so GNU ld resolves this static-library cycle.
 target_link_libraries(program PRIVATE game gods98 game platform_glue)
+if(PLATFORM STREQUAL "winapi")
+  target_link_libraries(program PRIVATE winmm)
+endif()
 if(WIN32)
   set_target_properties(program PROPERTIES WIN32_EXECUTABLE TRUE)
 endif()

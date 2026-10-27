@@ -500,7 +500,7 @@ void resource_variant_record_release(void* record); /* FUN_00410c70 */
 void resource_record_and_children_release(void* record); /* FUN_00410f30 */
 int menu_item_image_set(void* item, const char* image_config,
                         int primary); /* FUN_00410fb0 */
-int filename_extension_classify(const char* filename); /* FUN_00413f30 */
+int filename_extension_classify(const void* record); /* FUN_00413f30 */
 void* menu_item_record_alloc(const char* name, void** list_head,
                              uint32_t f3, uint32_t f4,
                              uint32_t f5); /* FUN_00413f90 */

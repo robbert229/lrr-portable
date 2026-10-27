@@ -48,6 +48,10 @@ typedef struct TextureSurface {
  * else (including RLE). Caller owns the returned surface. */
 TextureSurface* texture_decode(const uint8_t* data, uint32_t size);
 
+/* Reference BitmapSurfaceLoad path: open and decode a named image. */
+TextureSurface* image_surface_load(const char* name, uint32_t flags,
+                                   uint32_t color_key);
+
 /* Load + decode by name through the resource layer (RESOURCE_AUTO). */
 TextureSurface* texture_load(const char* name);
 
