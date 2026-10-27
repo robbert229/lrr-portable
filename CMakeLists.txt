@@ -162,7 +162,8 @@ if(PLATFORM STREQUAL "native")
   endif()
 endif()
 
-set(LRR_SOURCES ${SRC_ROOT}/main.cpp ${PLATFORM_ENTRY})
+set(LRR_SOURCES ${SRC_ROOT}/main.cpp ${PLATFORM_ENTRY}
+  ${GAME_DIR}/ledger_stubs.cpp)
 if(PLATFORM STREQUAL "winapi")
   list(APPEND LRR_SOURCES ${SRC_ROOT}/version.rc)
 endif()
@@ -177,6 +178,9 @@ endif()
 # The frame-loop object in gods98 calls into game, while game itself uses
 # gods98 APIs. Repeat the archive so GNU ld resolves this static-library cycle.
 target_link_libraries(program PRIVATE game gods98 game platform_glue)
+if(PLATFORM STREQUAL "winapi")
+  target_link_libraries(program PRIVATE winmm)
+endif()
 if(WIN32)
   set_target_properties(program PROPERTIES WIN32_EXECUTABLE TRUE)
 endif()

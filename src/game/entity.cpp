@@ -63,6 +63,51 @@ const EntitySlot* entity_at(GameContext* ctx, int type, int index)
     return &ctx->entity[tab][index];
 }
 
+/* EntityPoolFindByCallback (FUN_004377d0): the corpus walks each allocated
+ * entity chunk, accepts only self-linked live records, optionally filters
+ * the +0x3e8 0x80000 bit, and returns on the first callback match. The port's
+ * typed arrays and entity_count values are its live-record registry. */
+// FUNCTION: LEGORR 0x004377D0
+int entity_pool_find_by_callback(GameContext* ctx,
+                                 int (*callback)(EntitySlot*, void*),
+                                 void* payload, int filter_flagged)
+{
+    if (ctx == NULL || callback == NULL) {
+        return 0;
+    }
+    for (int table = 0; table < ENTITY_TYPES; ++table) {
+        int count = ctx->entity_count[table];
+        if (count < 0) {
+            count = 0;
+        }
+        if (count > ENTITY_CAP) {
+            count = ENTITY_CAP;
+        }
+        for (int i = 0; i < count; ++i) {
+            EntitySlot* entity = &ctx->entity[table][i];
+            if (entity->type == 0) {
+                continue; /* corpus +0x408 self-link liveness marker */
+            }
+            if (filter_flagged != 0 && (entity->flags_3e8 & 0x80000u) != 0u) {
+                continue;
+            }
+            if (callback(entity, payload) != 0) {
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
+
+/* EntityPoolFindByCallbackFiltered (FUN_004377b0) fixes the filter on. */
+// FUNCTION: LEGORR 0x004377B0
+int entity_pool_find_by_callback_filtered(GameContext* ctx,
+                                          int (*callback)(EntitySlot*, void*),
+                                          void* payload)
+{
+    return entity_pool_find_by_callback(ctx, callback, payload, 1);
+}
+
 int entity_create(GameContext* ctx, int type, const char* name,
                   float x, float y, float z, float rot)
 {
@@ -222,6 +267,7 @@ static uint32_t stats_rec_word(const EntitySlot* e, int off)
 
 // FUNCTION: LEGORR 0x00469cb0
 float entity_stats_float_at20(const EntitySlot* e) { return stats_rec_float(e, 0x20); }
+// FUNCTION: LEGORR 0x00469cc0
 float entity_stats_float_at24_indexed(const EntitySlot* e, int index)
 {
     return stats_rec_float(e, 0x24 + index * 4);
@@ -258,6 +304,7 @@ float entity_energy_decay_rate_get(const EntitySlot* e) { return stats_rec_float
 float entity_stats_float_atdc(const EntitySlot* e) { return stats_rec_float(e, 0xdc); }
 // FUNCTION: LEGORR 0x00469e40
 uint32_t entity_stats_word_atac(const EntitySlot* e) { return stats_rec_word(e, 0xac); }
+uint32_t entity_stats_word_at_ec(const EntitySlot* e) { return stats_rec_word(e, 0xec); }
 // FUNCTION: LEGORR 0x00469e60
 uint32_t entity_stats_word_get(const EntitySlot* e) { return stats_rec_word(e, 0x144); }
 // FUNCTION: LEGORR 0x00469e80
@@ -1140,6 +1187,22 @@ const void* stats_type_table_cell(int type, int row)
     return s_stats_cell_ptr[type][row];
 }
 
+/* BuildingUpgradeAdmissionCheck (FUN_00469f40) reads the raw word stored
+ * beside the stats table. The loader writes the parsed integer as a float;
+ * callers then consume that float's bits through an integer table read. */
+// FUNCTION: LEGORR 0x00469f40
+uint32_t building_upgrade_admission_check(int type, int row)
+{
+    if (type < 0 || type >= STATS_TYPE_TABLE_TYPES
+        || row < 0 || row >= STATS_TYPE_TABLE_ROWS) {
+        return 0u; /* deviation: the corpus indexes the table blindly */
+    }
+    const float level_count = (float)s_stats_cell_span[type][row];
+    uint32_t raw_word = 0u;
+    __builtin_memcpy(&raw_word, &level_count, sizeof(raw_word));
+    return raw_word;
+}
+
 static uint32_t stats_table_read(int type, int row, int off, int stride_index)
 {
     if (type < 0 || type >= STATS_TYPE_TABLE_TYPES
@@ -1238,19 +1301,23 @@ uint32_t stats_instance_word_at_f0(const void* config_block) { return stats_inst
  * stats getters, and the pair window is guarded (the corpus strides
  * blindly). */
 
-static uint32_t s_catalog_count_a; /* DAT_0055627c role */
-static uint32_t s_catalog_count_b; /* DAT_00556288 role */
+/* The catalog window band: the four count words and the four name tables
+ * the encyclopedia loader indexes (the corpus's loader band is unported,
+ * so the window rides own storage behind the hooks below; counts 0/1 are
+ * the DAT_0055627c/88 roles the query lanes already used). */
+static uint32_t s_catalog_counts[4]; /* DAT_0055627c/80/84/88 roles */
+static const void* s_catalog_name_tables[4]; /* DAT_005561e8/ec/f0/f4 roles */
 #define CATALOG_ID_PAIRS 8u
 
 // FUNCTION: LEGORR 0x0041b3c0
 int entity_query_flag_count(int query)
 {
     if (query == 0x13) {
-        return (int)s_catalog_count_b;
+        return (int)s_catalog_counts[1];
     }
     if (query == 0x14 || query == 0x15) {
         int count = 0;
-        for (uint32_t row = 0; row < s_catalog_count_a; ++row) {
+        for (uint32_t row = 0; row < s_catalog_counts[0]; ++row) {
             const uint32_t w148 = stats_table_word_at_148(1, (int)row);
             const uint32_t w14c = stats_table_word_at_14c(1, (int)row);
             if (query == 0x14) {
@@ -1275,16 +1342,28 @@ int entity_query_flag_count(int query)
 
 void catalog_count_install(int which, uint32_t value)
 {
-    if (which == 1) {
-        s_catalog_count_b = value;
-    } else {
-        s_catalog_count_a = value;
+    if (which >= 0 && which < 4) {
+        s_catalog_counts[which] = value;
     }
 }
 
 uint32_t catalog_count_peek(int which)
 {
-    return which == 1 ? s_catalog_count_b : s_catalog_count_a;
+    return (which >= 0 && which < 4) ? s_catalog_counts[which] : 0u;
+}
+
+/* Port hooks over the encyclopedia loader's name-table windows: kind 0..3
+ * ride the DAT_005561e8/ec/f0/f4 arrays in address order. */
+void catalog_name_table_install(int kind, const void* names)
+{
+    if (kind >= 0 && kind < 4) {
+        s_catalog_name_tables[kind] = names;
+    }
+}
+
+const void* catalog_name_table_peek(int kind)
+{
+    return (kind >= 0 && kind < 4) ? s_catalog_name_tables[kind] : NULL;
 }
 
 /* CatalogCallbackByIdDispatch (FUN_0041b680): dispatch over the shared
@@ -1309,7 +1388,7 @@ int catalog_callback_by_id_dispatch(const GameContext* ctx, int query,
         return 0; /* deviation: the corpus calls the pointer blindly */
     }
     if (query == 0x13) {
-        for (uint32_t row = 0; row < s_catalog_count_b; ++row) {
+        for (uint32_t row = 0; row < s_catalog_counts[1]; ++row) {
             if (callback(0x49, 4, (int)row, payload) != 0) {
                 return 1;
             }
@@ -1317,7 +1396,7 @@ int catalog_callback_by_id_dispatch(const GameContext* ctx, int query,
         return 0;
     }
     if (query == 0x14 || query == 0x15) {
-        for (uint32_t row = 0; row < s_catalog_count_a; ++row) {
+        for (uint32_t row = 0; row < s_catalog_counts[0]; ++row) {
             int answer = 0;
             if (query == 0x14) {
                 const uint32_t w148 = stats_table_word_at_148(1, (int)row);

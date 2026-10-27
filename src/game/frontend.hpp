@@ -33,10 +33,13 @@
 
 #include <cstdint>
 #include <cstddef>
+#include <stdarg.h>
 
 #include "gods98/block.hpp"
 #include "gods98/texture.hpp"
 #include "options.hpp"
+
+struct EngineContext;
 
 #ifdef __cplusplus
 extern "C" {
@@ -44,6 +47,8 @@ extern "C" {
 
 struct Flic; /* gods98/flic.hpp — `.flh` overlay player (lazily opened) */
 struct AudioPlayer; /* gods98/audio.hpp — optional front-end SFX output */
+struct SavTreeNode;
+struct SavListWindow;
 
 #define FE_ITEMS_MAX      32   /* ItemCount cap — ≥ the 24-level campaign picker */
 #define FE_SUBMENUS_MAX   8    /* MenuCount cap */
@@ -86,10 +91,18 @@ struct AudioPlayer; /* gods98/audio.hpp — optional front-end SFX output */
 #define FE_MENU_OPTIONS 3
 #define FE_MENU_COUNT   4
 
+/* FrontEndStateChange (FUN_004169c0) flow selectors. */
+#define FE_STATE_MAIN       0
+#define FE_STATE_MISSIONS   1
+#define FE_STATE_TRAINING   2
+#define FE_STATE_OPTIONS    3
+#define FE_STATE_SAVE_REWARD 4
+
 typedef struct FeItem {
     int   kind;
     int   x, y;      /* cfg anchor (or per-level FrontEndX/Y for picker rows) */
     char  label[FE_NAME_MAX];  /* display text (underscores shown as spaces) */
+    char  status[FE_NAME_MAX]; /* hover/status text for save-list rows */
     char  target[FE_NAME_MAX]; /* "Menu%i" target, or the level group name    */
     int   flag;                /* Trigger flag / Cycle count / slider lo      */
     int   level_start;         /* 1 = grafted picker row: Enter starts a level */
@@ -137,14 +150,84 @@ typedef struct FeMenu {
 } FeMenu;
 
 #define FE_SLOT_COUNT 6    /* SAVE_SLOTS */
+#define FE_SAVE_THUMBNAIL_COUNT 5 /* InterfaceResourceHandlesRelease slots */
 
 /* A runtime save slot row (SaveMenuBuild @ 0x415a10 builds these from the
  * `Save_Game_%i` keys): the slot's label + whether it has any records. */
 typedef struct FeSlot {
     int   id;
     char  label[FE_NAME_MAX];
+    char  status[FE_NAME_MAX];
     int   present;
 } FeSlot;
+
+/* SaveMenuLayoutLoad (FUN_00415d00): the corpus stores these paths and
+ * rectangles in a 0x728-byte resource record; this is its typed frontend
+ * view. */
+typedef struct FeSaveMenuLayout {
+    char load[FE_PATH_MAX];
+    char save[FE_PATH_MAX];
+    char slot[FE_PATH_MAX];
+    char save_sel[FE_PATH_MAX];
+    char load_sel[FE_PATH_MAX];
+    char level[FE_PATH_MAX];
+    char tutorial[FE_PATH_MAX];
+    int window_x, window_y, window_w, window_h;
+    int has_window;
+    char panel_path[FE_PATH_MAX];
+    int panel_x, panel_y, panel_w, panel_h;
+    int has_panel;
+} FeSaveMenuLayout;
+
+#define FE_LEVEL_MENU_LISTS 2
+#define FE_LEVEL_MENU_ROWS  32
+typedef struct FeLevelMenuRow {
+    char level[FE_LEVEL_NAME_MAX];
+    char full_name[FE_NAME_MAX];
+    char menu_bmp[FE_PATH_MAX];
+    int x, y;
+    int open;
+} FeLevelMenuRow;
+
+typedef struct FeLevelMenuList {
+    int native_id; /* SavMenuList selector 4 (campaign) or 5 (tutorial) */
+    char title[FE_NAME_MAX];
+    int row_count;
+    FeLevelMenuRow rows[FE_LEVEL_MENU_ROWS];
+} FeLevelMenuList;
+
+#define FE_SURROUND_IMAGES_MAX 11
+typedef struct FeSurroundImage {
+    TextureSurface* image;
+    int x, y, width, height;
+    TextureSurface* image_without_back;
+    int without_back_x, without_back_y;
+} FeSurroundImage;
+
+#define FE_INTERFACE_ACTION_COUNT 74
+typedef struct FeInterfaceImage {
+    TextureSurface* normal;
+    TextureSurface* disabled;
+    TextureSurface* pressed;
+    char normal_tooltip[FE_PATH_MAX];
+    char disabled_tooltip[FE_PATH_MAX];
+    int normal_sound;
+    int disabled_sound;
+    char shortcut_name[FE_NAME_MAX];
+    uint8_t shortcut_code;
+    int has_shortcut_code;
+    int optional_flag;
+    int has_optional_flag;
+} FeInterfaceImage;
+
+typedef struct FeInterfaceBuildImage {
+    TextureSurface* normal;
+    TextureSurface* disabled;
+    TextureSurface* pressed;
+    char shortcut_name[FE_NAME_MAX];
+    uint8_t shortcut_code;
+    int has_shortcut_code;
+} FeInterfaceBuildImage;
 
 typedef struct FrontEnd {
     BlockFile* cfg;               /* Lego.cfg DB (not owned) */
@@ -163,10 +246,16 @@ typedef struct FrontEnd {
      * frontend_build_slots). */
     int    slot_count;
     FeSlot slots[FE_SLOT_COUNT];
+    TextureSurface* save_thumbnails[FE_SAVE_THUMBNAIL_COUNT];
+    FeSaveMenuLayout save_text_layout;
+    FeSaveMenuLayout level_text_layout;
+    FeLevelMenuList level_menu_lists[FE_LEVEL_MENU_LISTS];
 
     /* --- runtime (modal menu) state ------------------------------------ */
     int  open;                      /* 1 while the menu loop is showing   */
     int  menu;                      /* FE_MENU_* (MAIN / PAUSED reachable) */
+    int  flow_state;                /* FrontEndStateChange selector 0..4 */
+    int  save_action;               /* mode 4: selecting a slot saves */
     int  sub;                       /* active submenu index               */
     int  sel;                       /* selected item index                */
     int  quit;                      /* user chose Quit (Yes on the confirm) */
@@ -213,6 +302,7 @@ typedef enum {
     FE_EVT_NONE = 0,
     FE_EVT_START_LEVEL,   /* frontend.pending_level holds the level group */
     FE_EVT_LOAD_GAME,     /* frontend.load_slot holds the save slot id    */
+    FE_EVT_SAVE_GAME,     /* reward save: frontend.load_slot is target slot */
     FE_EVT_RESUME,        /* close a modal overlay (pause Continue / Esc)   */
     FE_EVT_CREDITS,       /* show the main-menu scrolling credits view      */
     FE_EVT_QUIT,          /* user quit the app from the front end */
@@ -221,6 +311,74 @@ typedef enum {
 /* --- lifecycle ---------------------------------------------------------- */
 
 void frontend_init(FrontEnd* fe);
+int save_menu_layout_load(FrontEnd* fe, const char* group,
+                          FeSaveMenuLayout* layout); /* FUN_00415d00 */
+int interface_back_button_config_load(BlockFile* cfg); /* FUN_0041b1b0 */
+int interface_back_button_dimensions(int* width, int* height);
+TextureSurface* interface_back_button_image(int pressed);
+const char* interface_back_button_action(void);
+int interface_surround_images_config_load(BlockFile* cfg); /* FUN_0041afd0 */
+const FeSurroundImage* interface_surround_image_peek(int index);
+int interface_images_config_load(BlockFile* cfg); /* FUN_0041ada0 */
+const FeInterfaceImage* interface_image_peek(int action_index);
+int interface_build_images_config_load(BlockFile* cfg); /* FUN_0041ab00 */
+uint32_t interface_build_image_count(int group);
+const FeInterfaceBuildImage* interface_build_image_peek(int group, int index);
+TextureSurface* interface_build_image_binding_value_get(
+    const struct EngineContext* engine, int kind, int index);
+void* input_binding_default_value_get(int kind, int index, int mode);
+void keyboard_key_names_init(void); /* FUN_00485a20 */
+int named_option_index_find_case_insensitive(const char* name,
+                                             uint8_t* out_index); /* FUN_00485e30 */
+void main_menu_text_item(void); /* FUN_004103d0; requests scrolling credits */
+
+/* FormattedTextPrintfWidth / MenuTextRecordMake: menu text measurement and
+ * the 15-word text-record constructor used by legacy menu builders. */
+uint32_t formatted_text_printf_width(const TextureSurface* font,
+                                     const char* text); /* FUN_00401c50 */
+void formatted_text_draw(const TextureSurface* font, void* px, int pitch,
+                         int w, int h, int x, int y, const char* text);
+uint32_t formatted_text_draw_and_measure(const TextureSurface* font,
+                                         void* px, int pitch, int w, int h,
+                                         int x, int y, const char* text,
+                                         int* line_count);
+void formatted_text_format_draw(const TextureSurface* font,
+                                uint32_t* width_out, int* line_count,
+                                void* px, int pitch, int w, int h,
+                                int x, int y, const char* format,
+                                va_list args);
+void formatted_text_printf(const TextureSurface* font,
+                           uint32_t* width_out, int* line_count,
+                           void* px, int pitch, int w, int h,
+                           int x, int y, const char* format, ...);
+void reward_text_draw(const TextureSurface* font, void* px, int pitch,
+                      int w, int h, int x, int y, const char* format, ...);
+char* formatted_text_escape_decode_and_emit(const char* format, ...);
+typedef const TextureSurface* (*FeFormattedTextTextureResolve)(uint32_t handle);
+void formatted_text_texture_resolver_set(FeFormattedTextTextureResolve resolve);
+void* menu_text_record_make(const char* text, const TextureSurface* font_a,
+                            const TextureSurface* font_b, uint32_t f4,
+                            uint32_t f5, uint32_t f6, int center,
+                            uint32_t f8, uint32_t f9); /* FUN_00410d50 */
+int case_insensitive_name_table_lookup(const char* name,
+                                       int* out_index); /* FUN_0046b4d0 */
+void* menu_button_record_make(const char* text,
+                              const TextureSurface* normal_font,
+                              const TextureSurface* selected_font,
+                              const char* normal_image,
+                              const char* selected_image, uint32_t x,
+                              uint32_t y, uint32_t flags, int centered,
+                              const char* optional_name,
+                              uint32_t extra); /* FUN_00410e20 */
+int menu_mouse_coordinate_update(const void* root, const void* item,
+                                 const void* row); /* FUN_00411360 */
+int has_type6_item_at_index(const void* menu, int index); /* FUN_004114f0 */
+int menu_widget_item_screen_rect(const void* menu, int index, int* x, int* y,
+                                int* width, int* height); /* FUN_00411530 */
+int menu_pick_widget_under_pointer(const void* menu,
+                                   int* picked_index); /* FUN_00411790 */
+int frontend_progress_value_changed(void); /* FUN_00411840 */
+int option_music_default(void); /* FUN_00414e10 */
 
 /* Parse the four menus from `cfg` (Menus FE_MENU_*), then graft the level
  * pickers (campaign/tutorial chains) onto the sub-menus whose MenuImage
@@ -238,6 +396,18 @@ void frontend_options_sync(FrontEnd* fe);
  * (The corpus ANDs the loader-mode check DAT_00505f88 < 3; the port only
  * tracks the flag — the loader-mode notion is Win32-side.) */
 int  frontend_enabled(BlockFile* cfg);
+/* UiTextUnderscoresToSpaces (FUN_004102b0): return a shared display copy
+ * with underscores changed to spaces for strings up to 255 bytes. */
+const char* ui_text_underscores_to_spaces(const char* text);
+/* InterfaceMenuActionLabelsInit / CaseInsensitiveStringTableIndexFind
+ * (FUN_0041a300 / FUN_0041a9c0): initialize the 74 action-name keys and
+ * selection region, then find a key case-insensitively (zero-based index). */
+void interface_menu_action_labels_init(uint32_t x, uint32_t y,
+                                       const void* context);
+const char* interface_menu_action_label_get(int index);
+int interface_menu_action_label_find(const char* name, int* out_index);
+void interface_menu_action_layout_peek(float out_xy[2]);
+const void* interface_menu_action_context_peek(void);
 
 /* Checkpoint record <-> level mapping (the port's stand-in for the corpus's
  * sav-tree node record slots, SavTreeWalk2 / CheckpointStep's ListFindName
@@ -249,7 +419,13 @@ int  fe_level_for_record(const FrontEnd* fe, int rec, char* out, size_t sz);
 
 /* Enter the modal menu at `menu`/submenu 0, selection 0. */
 int  frontend_open(FrontEnd* fe, int menu);
+/* Prepare one native front-end flow (save-tree/global setup is port state). */
+int  frontend_state_change(FrontEnd* fe, int state); /* FUN_004169c0 */
+int  menu_enter(FrontEnd* fe, int mode); /* FUN_00416c80 */
+int  save_menu_open_from_reward(FrontEnd* fe); /* FUN_00462030 */
 void frontend_close(FrontEnd* fe);
+void interface_resource_handles_release(FrontEnd* fe); /* FUN_00413b50 */
+void frontend_save_thumbnail_invalidate(FrontEnd* fe, int slot);
 void frontend_set_audio(FrontEnd* fe, struct AudioPlayer* audio);
 
 /* Register the runtime save/load slot rows (from save_slot_state) and graft
@@ -257,6 +433,12 @@ void frontend_set_audio(FrontEnd* fe, struct AudioPlayer* audio);
  * shipped Load_A_Saved_Game screens), after the cfg items. Selecting a row
  * returns FE_EVT_LOAD_GAME with fe.load_slot = the slot id. */
 int  frontend_build_slots(FrontEnd* fe, const FeSlot* slots, int n);
+int  frontend_update_slot(FrontEnd* fe, const FeSlot* slot);
+int  frontend_sav_menu_list(FrontEnd* fe, int list_id,
+                            const struct SavTreeNode* root,
+                            const struct SavListWindow* registry);
+const FeLevelMenuList* frontend_level_menu_list_peek(const FrontEnd* fe,
+                                                      int list_id);
 
 /* Step the modal menu one frame. Returns the event the frame loop must act
  * on; FE_EVT_NONE while the menu stays up. `measure` is the submenu's
@@ -298,6 +480,66 @@ const char* frontend_active_image(const FrontEnd* fe);
 void frontend_render(FrontEnd* fe, const TextureSurface* hi_font,
                      const TextureSurface* lo_font,
                      int w, int h, void* px, int pitch);
+void menu_render_ui_frame_cell(void* px, int pitch, int w, int h,
+                               int x, int y, int text_row,
+                               const char* text,
+                               const TextureSurface* image);
+typedef struct FePercentSplitSurface {
+    const TextureSurface* right_fill;      /* packed record +0x18 */
+    const TextureSurface* left_fill;       /* packed record +0x1c */
+    const TextureSurface* left_overlay;    /* packed record +0x20 */
+    const TextureSurface* right_overlay;   /* packed record +0x24 */
+    const TextureSurface* right_idle;      /* packed record +0x28 */
+    const TextureSurface* right_hover;     /* packed record +0x30 */
+    const TextureSurface* left_idle;       /* packed record +0x2c */
+    const TextureSurface* left_hover;      /* packed record +0x34 */
+} FePercentSplitSurface;
+void menu_percent_split_surface_blit(void* px, int pitch, int w, int h,
+                                     const FePercentSplitSurface* surface,
+                                     int x, int y, int numerator,
+                                     int denominator, int mouse_x,
+                                     int mouse_y);
+typedef struct FeMenuPanelText {
+    const char* text;
+    int x, y, width;
+    int centered;
+} FeMenuPanelText;
+typedef struct FeMenuOptionPanel {
+    const TextureSurface* image;
+    const TextureSurface* contrast;
+    int contrast_x, contrast_y;
+    const TextureSurface* font;
+    const TextureSurface* hover_font;
+    FeMenuPanelText title, body, ok, cancel;
+} FeMenuOptionPanel;
+int menu_option_panel_texture_update(const FeMenuOptionPanel* panel,
+                                    void* px, int pitch, int w, int h,
+                                    int mouse_x, int mouse_y);
+typedef struct FeOverlayMenuEntry {
+    int handle;
+    int action_state;
+} FeOverlayMenuEntry;
+typedef struct FeOverlayMenuSet {
+    FeOverlayMenuEntry entries[3];
+} FeOverlayMenuSet;
+typedef struct FeOverlayMenuGateState {
+    FeOverlayMenuSet menus[2]; /* 0 = PausedMenu, 1 = OptionsMenu */
+    int active_item;
+    int cached_menu;
+    int level_start_flag;
+    int options_flag;
+    int action_flag;
+    int blocked;
+} FeOverlayMenuGateState;
+typedef void (*FeOverlayMenuScrollRefresh)(void* context);
+typedef int (*FeOverlayMenuTick)(void* context, int active_item, int mode);
+int overlay_menu_gate(FeOverlayMenuGateState* state, int mode,
+                      FeOverlayMenuScrollRefresh refresh_scroll,
+                      FeOverlayMenuTick menu_tick, void* context);
+void menu_hover_status_text_draw(FrontEnd* fe, const TextureSurface* font,
+                                 int w, int h, void* px, int pitch);
+void interface_message_tab_info_text_load(const char* path); /* FUN_00419430 */
+TextureSurface* interface_message_tab_info_text(void); /* port accessor */
 
 /* Draw one frame of the scrolling credits lane over the caller's backdrop.
  * scroll_px advances one pixel per frame; the text cycles from below the
@@ -377,7 +619,10 @@ void selection_state_handle_slot_set(int table, int index, uint32_t value);
  * UiModeResourcePositionsApply (FUN_00419100, finding 250): walks the
  * two-entry position table (the corpus writes the table from the
  * unported help-window layout loader — zero-init statics here), and the
- * reposition hook per found handle is the simtick-cited surface seam. */
+ * reposition hook per found handle is the simtick-cited surface seam.
+ * HelpWindowButtonHitTest (FUN_00418da0): the two-button inclusive rectangle
+ * hit test and mode transition flow are ported; rectangle installation and
+ * the legacy sound clear are exposed through explicit hooks. */
 void timed_effect_update_request_set(int index);
 uint32_t timed_effect_flags_peek(int index);           /* diagnostics */
 
@@ -397,6 +642,56 @@ int      band_mode_peek(void);                        /* diagnostics */
 void     band_mode_set(int mode);                     /* diagnostics */
 void     selection_mode_set_by_index(int index);
 void     ui_mode_resource_positions_apply(void);
+void     ui_mode_resource_reposition_hook_set(
+             int (*hook)(uint32_t handle, int x, int y));
+void     help_window_button_feedback_update(int action, float amount);
+void     help_window_feedback_state_set(float position, float limit);
+float    help_window_feedback_position_get(void);
+void     help_window_feedback_hooks_set(void (*reset)(int, int),
+                                        void (*cleanup)(void),
+                                        void (*finish)(int));
+void     help_render_transition_clear_hook_set(void (*hook)(int, int));
+void     help_render_transition_cleanup_if_active(void);
+void     help_window_button_rect_set(int index, float x, float y,
+                                     float width, float height);
+typedef struct FeHelpWindowResourceOps {
+    void* context;
+    void (*info_strings_load)(void* context, BlockFile* cfg);
+    const char* const* info_group_names[3];
+    size_t info_group_counts[3];
+    void (*info_string_store)(void* context, int group,
+                              size_t catalog_index, int line_index,
+                              const char* text);
+    uint32_t (*resource_load)(void* context, const char* name, int x, int y);
+    void (*background_apply)(void* context, uint32_t handle);
+    uint32_t (*text_area_create)(void* context, uint32_t mode,
+                                 const int rect[4], uint32_t flags);
+    void (*text_load)(void* context, int slot, const char* name);
+    void (*label_set)(void* context, int index, const char* text);
+    void (*refresh)(void* context, int p1, int p2);
+} FeHelpWindowResourceOps;
+/* HelpWindowInfoConfigStringsLoad (FUN_00418450): loads the sixteen
+ * HelpWindowInfo rows for each catalog name in the three corpus groups.
+ * Catalog tables and destination storage are inputs because those globals
+ * are not owned by the front-end model. */
+void     help_window_info_config_strings_load(
+             BlockFile* cfg, const char* const* const group_names[3],
+             const size_t group_counts[3],
+             void (*store)(void* context, int group, size_t catalog_index,
+                           int line_index, const char* text),
+             void* context);
+void     help_window_resources_init(BlockFile* cfg,
+                                    const FeHelpWindowResourceOps* ops);
+void     help_window_button_layout_load(
+             BlockFile* cfg, float offset_x, float offset_y,
+             uint32_t (*resource_load)(void* context, const char* name,
+                                       int x, int y),
+             void (*text_load)(void* context, int slot, const char* name),
+             void* context);
+void     help_window_sound_clear_hook_set(void (*hook)(int));
+int      help_window_button_hit_test(uint32_t x, uint32_t y, int mode,
+                                     int transition_flags, int active,
+                                     float feedback_amount);
 void     layout_position_set(int entry, int x, int y); /* diagnostics */
 int      layout_position_get(int entry, int* x, int* y);
 
@@ -464,6 +759,17 @@ void     selection_region_parameters_peek(float out[5]);
 uint32_t objective_selection_word_peek(void);   /* port hook */
 float    interaction_timer_peek(void);          /* port hook */
 uint32_t interaction_flags_peek(void);          /* port hook */
+/* PointerActionStateDispatch (FUN_0041c6e0): drive the pointer action
+ * latch and matching input-entry/player flags. */
+int pointer_action_state_dispatch(int action, int kind, int entry,
+                                  int active, int suppress_initial);
+typedef void (*FeAdvisorCallbackSchedule)(uint32_t selector, void* context);
+void advisor_callback_schedule_enabled_set(int enabled); /* port hook */
+void advisor_callback_schedule_gate(FeAdvisorCallbackSchedule schedule,
+                                    void* context); /* FUN_0041c440 */
+int advisor_animation_slot_id_resolve(uint32_t animation_kind,
+                                      uint32_t position_index,
+                                      uint32_t* slot_id); /* FUN_0045c6b0 */
 
 /* CursorTileSelectionUpdateByType (FUN_0041cc80): the tile-selection pair
  * ride (DAT_004ddcd8/cdc role) keyed by the selection kind: 0x49 installs
@@ -488,14 +794,13 @@ uint32_t cell_action_permission_table_peek(int index);
 
 /* --- the menu-tick gate + status banner word (2026-10-24; findings 37/441) --
  * MenuAudioTickIntervalReached (FUN_00412190): the corpus's menu tick asks
- * the shared random draw whether the word is a multiple of 400. The port
- * models the draw module-locally the way the overlay rng and the level/
- * sound models do (same LCG constants, same 15-bit result).
+ * the shared random draw whether the word is a multiple of 400. It uses the
+ * same RandomNext state as the level and sound paths.
  * GlobalStateGet_004ddd1c (FUN_0041b9b0): the status-banner toggle word
  * the corpus flips from its periodic status tick (finding 441) — that
  * feeder is unported, so the word lands zero-initialized with port-side
  * accessors standing in. */
-int menu_audio_tick_interval_reached(void); /* FUN_00412190 */
+bool menu_audio_tick_interval_reached(void); /* FUN_00412190 */
 uint32_t sim_status_banner_word_get(void);  /* FUN_0041b9b0 */
 
 /* PanelResourceLayoutStore (FUN_0045c340): the layout band store — both
@@ -669,6 +974,21 @@ void     interface_button_images_load(const char* left_path,
                                       const char* right_path);
 uint32_t interface_button_surface_peek(int which);   /* port hook */
 
+/* EncyclopediaConfigFilesOpen (FUN_0040e490): walk the catalog name-table
+ * groups (the corpus's counts 0x27c/0x280/0x284/0x288 ride the entity.*
+ * window hooks), join `root::Encyclopedia::<name>`, read the config's
+ * value token, and open the file the value names; the four handle windows
+ * reallocate through the heap seam (the corpus leaks the superseded
+ * arrays, and so does the port). The PowerCrystal/Ore singletons keep
+ * their last handle across a config miss (the corpus's stale-global lane).
+ * Deviations: the name tables and counts ride own storage (the corpus's
+ * catalog loader is unported), NULL config/value answers where the corpus
+ * strides, and the "r" mode maps to the port's AUTO open. */
+void encyclopedia_config_files_open(BlockFile* cfg, const char* root_path);
+void* encyclopedia_file_window_peek(int group);      /* port hook, 0..3 */
+void* encyclopedia_crystal_file_peek(void);          /* port hook */
+void* encyclopedia_ore_file_peek(void);              /* port hook */
+
 /* ThreeSurfaceResourcesLoadAndInitialize (FUN_0045bfb0): the same fold
  * for three paths, with the corpus's slot quirk: param_2 lands at peek
  * index 2 and param_3 at index 1. */
@@ -750,9 +1070,9 @@ void sav_visited_entry_peek(int which, int index, void** out_record,
  * {record-array pointer @+0, count @+4} and answers the index of the
  * first non-NULL entry whose name case-fold-equals the target (the
  * corpus's __strcmpi shape); misses and non-positive counts answer -1.
- * Deviations: the header rides explicit arguments (the header struct has
- * no ported owner) and the entry name pointers are guarded. */
-int menu_list_find_name(void* const* entries, int count,
+ * The unowned header rides an explicit pointer; its count and entry-array
+ * fields are at +4 and +0, matching the corpus record. */
+int menu_list_find_name(const void* list_header,
                         const char* name);                /* FUN_00414c90 */
 
 /* --- screen-effect release (2026-10-24; findings 434/438) ------------------

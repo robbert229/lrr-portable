@@ -13,6 +13,7 @@
 #include "gods98/resource.hpp"
 #include "gods98/sound.hpp"
 #include "gods98/string.hpp"
+#include "gods98/crt.hpp"
 #include "gods98/view.hpp"
 #include "entity.hpp"
 #include "frontend.hpp"
@@ -87,10 +88,10 @@ void level_random_seed_set(uint32_t seed)
  * level_random_seed_set and return its 15-bit LCG result. The original uses
  * one shared global; the port keeps additional module-local RNG models. */
 // FUNCTION: LEGORR 0x0048e170
-static uint16_t level_rand_u16(void)
+int level_rand_u16(void)
 {
     s_rand_state = s_rand_state * 214013u + 2531011u;
-    return (uint16_t)((s_rand_state >> 16) & 0x7fffu);
+    return (((int32_t)s_rand_state) >> 16) & 0x7fff;
 }
 
 int level_random_draw15(void)
@@ -1061,6 +1062,39 @@ void level_destroy(LevelState* s)
 int level_width(const LevelState* s) { return s ? level_int(s, LEVEL_OFF_WIDTH) : 0; }
 int level_height(const LevelState* s) { return s ? level_int(s, LEVEL_OFF_HEIGHT) : 0; }
 
+/* TerrainDescriptorFindExact (FUN_004090c0): when a pair key is supplied,
+ * both words must match; otherwise the optional single key is compared
+ * against the node's single-key field. The global list head is threaded in
+ * as `list`. */
+// FUNCTION: LEGORR 0x004090C0
+TerrainDescriptorNode* terrain_descriptor_find_exact(
+    TerrainDescriptorNode* list, const uint32_t* pair_key,
+    const uint32_t* single_key)
+{
+    for (TerrainDescriptorNode* node = list; node != NULL; node = node->next) {
+        if (pair_key != NULL) {
+            if (node->key_pair_first == pair_key[0]
+                && node->key_pair_second == pair_key[1]) {
+                return node;
+            }
+        }
+        else if (single_key != NULL && node->key_single == *single_key) {
+            return node;
+        }
+    }
+    return NULL;
+}
+
+/* TerrainCellPredicateCheck (FUN_004090a0): the public path passes a pair
+ * key and a NULL single-key alternative, then reports whether an exact
+ * descriptor exists. */
+// FUNCTION: LEGORR 0x004090A0
+int terrain_cell_predicate_check(TerrainDescriptorNode* list,
+                                 const uint32_t* pair_key)
+{
+    return terrain_descriptor_find_exact(list, pair_key, NULL) != NULL;
+}
+
 const char* level_next_name(const LevelState* s)
 {
     return s != NULL ? (const char*)s->ptr_next : NULL;
@@ -1079,6 +1113,27 @@ uint8_t* level_voxel(const LevelState* s, int x, int y)
 int level_cell_of(float v)
 {
     return (int)__builtin_nearbyintf(v);
+}
+
+/* EntityPositionToTerrainCell (FUN_004424f0): the corpus obtains the
+ * entity's scene position, then passes its x/y pair through the current
+ * terrain's grid picker. EntitySlot::x/y are the port's logical mirrors
+ * for that scene position (deviation: no renderer transform is available). */
+// FUNCTION: LEGORR 0x004424F0
+void entity_position_to_terrain_cell(const struct EntitySlot* entity,
+                                     const LevelState* s,
+                                     int* cell_x, int* cell_y)
+{
+    if (entity == NULL || s == NULL || cell_x == NULL || cell_y == NULL) {
+        return;
+    }
+    const int x = level_cell_of(entity->x);
+    const int y = level_cell_of(entity->y);
+    if (level_coord_pair_within_bounds(s, x, y) == 0) {
+        return; /* deviation: the corpus grid picker owns this failure case */
+    }
+    *cell_x = x;
+    *cell_y = y;
 }
 
 // FUNCTION: LEGORR 0x00432770
@@ -1466,6 +1521,31 @@ uint32_t level_cell_occupied_or_flag(const LevelState* s, int cx, int cy,
         return 0;
     }
     return 1;
+}
+
+/* CellFourNeighborWalkCheck (FUN_0041f740): the tutorial path gate uses
+ * this asymmetric cardinal-neighbor rule before submitting a cell action.
+ * Neighbor order follows the corpus's local table: east, south, west,
+ * north. */
+// FUNCTION: LEGORR 0x0041f740
+int cell_four_neighbor_walk_check(const LevelState* s, int cx, int cy)
+{
+    static const int8_t offsets[4][2] = {
+        { 1, 0 }, { 0, 1 }, { -1, 0 }, { 0, -1 },
+    };
+    const int marked = level_cell_mask_c0(s, cx, cy) != 0;
+    int occupied_neighbors = 0;
+    for (int i = 0; i < 4; ++i) {
+        const int neighbor = level_cell_occupied_or_flag(
+            s, cx + offsets[i][0], cy + offsets[i][1], 1) != 0;
+        if (neighbor != 0) {
+            if (marked == 0) {
+                return 0;
+            }
+            ++occupied_neighbors;
+        }
+    }
+    return marked == 0 || occupied_neighbors <= 1;
 }
 
 /* FUN_00432b00 / FUN_00432b50 / FUN_00432d90: dim-1-gated bit reads. */
@@ -2402,6 +2482,49 @@ void terrain_cell_record_get(int x, int y, int field,
     }
 }
 
+/* The cell-entry readiness bits are the zero-init DAT_004b8c4c table.
+ * This source model has no writer for nonempty resource-entry lists, so
+ * the current record accessor supplies count zero; that path succeeds just
+ * like the corpus loop's empty-list case. Nonempty lists reject until the
+ * cell resource records are modeled. */
+#define CELL_ENTRY_SLOT_TYPES 16
+#define CELL_ENTRY_SLOT_ROWS 15
+#define CELL_ENTRY_SLOT_COUNT 49
+static uint8_t s_cell_entry_ready_flags[CELL_ENTRY_SLOT_TYPES
+                                         * CELL_ENTRY_SLOT_ROWS
+                                         * CELL_ENTRY_SLOT_COUNT];
+
+// FUNCTION: LEGORR 0x0040AEA0
+int ensure_cell_entries_loaded(uint32_t kind, int row, int slot)
+{
+    if (global_mode_zero_input_peek() != 0u) {
+        return 1;
+    }
+    if (kind >= CELL_ENTRY_SLOT_TYPES || row < 0
+        || row >= CELL_ENTRY_SLOT_ROWS || slot < 0
+        || slot >= CELL_ENTRY_SLOT_COUNT) {
+        return 0;
+    }
+    const size_t index = ((size_t)kind * CELL_ENTRY_SLOT_ROWS
+                          + (size_t)row) * CELL_ENTRY_SLOT_COUNT
+                         + (size_t)slot;
+    uint8_t* const ready = &s_cell_entry_ready_flags[index];
+    if ((*ready & 2u) != 0u) {
+        return 1;
+    }
+    uint32_t records = 0u;
+    uint32_t count = 0u;
+    terrain_cell_record_get((int)kind, row, slot, &records, &count);
+    (void)records;
+    if (count != 0u) {
+        return 0;
+    }
+    if ((*ready & 1u) != 0u) {
+        *ready |= 2u;
+    }
+    return 1;
+}
+
 // FUNCTION: LEGORR 0x0040b250
 uint32_t cell_flag4_is_set(int x, int y, int field)
 {
@@ -3063,6 +3186,42 @@ int terrain_cell_special_state_predicate(const LevelState* s, int cx,
     return level_cell_secondary_flag_100(s, cx, cy) != 0u ? 1 : 0;
 }
 
+/* TerrainCellHasOccupiedOrFlaggedNeighbor (FUN_0040d240): preserve the
+ * corpus's center rejection and its two ordered cardinal rings. The
+ * per-cell DAT_004c7df8 side table is threaded as a query callback. */
+// FUNCTION: LEGORR 0x0040D240
+int terrain_cell_has_occupied_or_flagged_neighbor(
+    const LevelState* s, int cx, int cy,
+    TerrainCellSidecarPresenceQuery sidecar_present)
+{
+    const uint8_t* center = level_voxel(s, cx, cy);
+    if (center == NULL || (center[8] & 8u) == 0u
+        || center[2] == 6u || center[2] == 7u) {
+        return 0;
+    }
+    if ((sidecar_present != NULL && sidecar_present(s, cx, cy) != 0)
+        || terrain_cell_special_state_predicate(s, cx, cy, 0) != 0) {
+        return 0;
+    }
+
+    static const int8_t offsets[8][2] = {
+        { 0, 1 }, { 1, 0 }, { 0, -1 }, { -1, 0 },
+        { 0, 2 }, { 2, 0 }, { 0, -2 }, { -2, 0 },
+    };
+    for (int i = 0; i < 8; ++i) {
+        const int x = cx + offsets[i][0];
+        const int y = cy + offsets[i][1];
+        if (level_coord_pair_within_bounds(s, x, y) == 0) {
+            continue;
+        }
+        if ((sidecar_present != NULL && sidecar_present(s, x, y) != 0)
+            || terrain_cell_special_state_predicate(s, x, y, 0) != 0) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
 /* --- the path record window band (2026-10-25) ----------------------------- */
 
 /* PathRecordAllocateAndLink (FUN_00409350): allocates the corpus's 0xd4
@@ -3107,6 +3266,49 @@ void* path_record_allocate_and_link(const uint32_t* coord_pair)
 
 uint32_t path_record_count_peek(void) { return s_path_record_count; }
 void* path_record_last_peek(void) { return s_path_record_last; }
+
+/* TutorialPathCoordinateIndex (FUN_00456b80) — see level.hpp. The corpus
+ * sweeps x-outer/y-inner over the grid dims and head-pushes each cell's
+ * coordinate byte onto the chain table, clearing the byte as consumed. */
+// FUNCTION: LEGORR 0x00456b80
+void tutorial_path_coordinate_index(LevelState* s)
+{
+    if (s == NULL) {
+        return; /* deviation: the corpus strides the block blindly */
+    }
+    for (int i = 0; i != 0x37; ++i) {
+        s->pool_heads[i] = NULL;
+    }
+    const int w = level_int(s, LEVEL_OFF_WIDTH);
+    const int h = level_int(s, LEVEL_OFF_HEIGHT);
+    if (level_load_ptr(s, LEVEL_OFF_VOXELS) == NULL) {
+        return; /* deviation: the corpus strides the voxel global */
+    }
+    for (int x = 0; x < w; ++x) {
+        for (int y = 0; y < h; ++y) {
+            uint8_t* cell = voxel_at(s, x, y) + 0x04;
+            const int coord = *cell;
+            if (coord != 0) {
+                const uint32_t ux = (uint32_t)x;
+                const uint32_t uy = (uint32_t)y;
+                /* the corpus reads the superseded head and threads the
+                 * node's next link after the allocation */
+                void* old = (coord < 0x37) ? s->pool_heads[coord] : NULL;
+                void* node = engine_heap_alloc(16); /* widened node image */
+                if (node == NULL) {
+                    continue; /* deviation: the corpus strides the alloc */
+                }
+                __builtin_memcpy((char*)node + 0x0, &ux, 4);
+                __builtin_memcpy((char*)node + 0x4, &uy, 4);
+                __builtin_memcpy((char*)node + 0x8, &old, sizeof(old));
+                if (coord < 0x37) {
+                    s->pool_heads[coord] = node;
+                }
+                *cell = 0;
+            }
+        }
+    }
+}
 
 /* Test hook: stages a count-table slot (the corpus's table writers are
  * unported, so the faithful read shape is exercised through this hook —

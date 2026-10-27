@@ -1,7 +1,27 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 #include <stdlib.h>
+#include <math.h>
 
 #include "audio.hpp"
+
+static AudioPlayer* s_active_audio_player;
+#if defined(LEGORRR_BACKEND_WINAPI)
+#pragma pack(push, 1)
+struct MenuCompatData {
+    unsigned char scale_prefix[0x25a08];
+    float volume_scale;
+    unsigned char null_label_prefix[0x4210];
+    char null_label[5];
+};
+#pragma pack(pop)
+#pragma data_seg(".data$yyyyyy")
+__declspec(allocate(".data$yyyyyy")) static MenuCompatData
+    s_menu_compat_data = { { 0 }, 0.11111111f, { 0 }, "Null" };
+#pragma data_seg()
+#define s_menu_volume_scale s_menu_compat_data.volume_scale
+#else
+static const float s_menu_volume_scale = 0.11111111f;
+#endif
 
 int audio_open(AudioPlayer* p)
 {
@@ -12,6 +32,7 @@ int audio_open(AudioPlayer* p)
     if (p->dev == NULL) {
         return -1;
     }
+    s_active_audio_player = p;
     p->volume = 1.0f;
     platform_audio_set_gain(p->dev, p->volume);
     return 0;
@@ -25,6 +46,9 @@ void audio_close(AudioPlayer* p)
     platform_audio_close(p->dev);
     p->dev = NULL;
     p->loop_sound = NULL;
+    if (s_active_audio_player == p) {
+        s_active_audio_player = NULL;
+    }
 }
 
 void audio_set_volume(AudioPlayer* p, float volume)
@@ -42,6 +66,91 @@ void audio_set_volume(AudioPlayer* p, float volume)
     if (p->dev != NULL) {
         platform_audio_set_gain(p->dev, volume);
     }
+}
+
+static const int s_sfx_attenuation[11] = {
+    -10000, -5000, -3500, -2000, -1500, -1000,
+      -700,  -400,  -200,   -80,     0
+};
+
+float audio_sfx_volume_gain(int index)
+{
+    if (index < 0 || index >= 11) {
+        return -1.0f;
+    }
+    if (s_sfx_attenuation[index] <= -10000) {
+        return 0.0f; /* DirectSound defines -100 dB as silence. */
+    }
+    /* DirectSound SetVolume uses hundredths of a decibel. Convert dB to
+     * amplitude: 10^(dB/20), hence attenuation/2000. */
+    return powf(10.0f, (float)s_sfx_attenuation[index] / 2000.0f);
+}
+
+/* SoundBufferVolumeSet (FUN_0047b500): DirectSound's attenuation maps to
+ * the port's single master stream gain. Invalid corpus attenuation values
+ * are ignored by the same range predicate used by sound-bank records. */
+// FUNCTION: LEGORR 0x0047b500
+void audio_sound_volume_set(AudioPlayer* p, int millibels)
+{
+    if (p == NULL || !sound_bank_sound_on()
+        || !sound_volume_value_valid(millibels)) {
+        return;
+    }
+    const float gain = millibels <= -10000
+        ? 0.0f : powf(10.0f, (float)millibels / 2000.0f);
+    audio_set_volume(p, gain);
+}
+
+/* SoundVolumeIndexSet (FUN_0047b530): the table lookup is bounded to the
+ * eleven menu slider entries, then the selected attenuation is applied. */
+// FUNCTION: LEGORR 0x0047b530
+void audio_sound_volume_index_set(int index)
+{
+    if (index < 0 || index >= 11) {
+        return;
+    }
+    audio_sound_volume_set(s_active_audio_player, s_sfx_attenuation[index]);
+}
+
+/* GameSpeedSelect (FUN_00414de0): the ledger name is misleading; this is
+ * the SFX slider callback and simply forwards its index. */
+// FUNCTION: LEGORR 0x00414de0
+void audio_menu_sfx_volume_set(int index)
+{
+    audio_sound_volume_index_set(index);
+}
+
+/* VolumeSet (FUN_00414df0): the corpus sends param_1 / 9 to both mixer
+ * channels. AudioPlayer exposes one master output gain, so apply the same
+ * normalized value once; audio_set_volume provides the device-side clamp. */
+// FUNCTION: LEGORR 0x00414df0
+#if defined(LEGORRR_BACKEND_WINAPI)
+__declspec(naked) void audio_menu_volume_set(int value)
+{
+    __asm {
+        fild dword ptr [esp + 4]
+        fmul dword ptr [s_menu_volume_scale]
+        fstp dword ptr [esp + 4]
+        mov eax, dword ptr [esp + 4]
+        push eax
+        push eax
+        call music_mixer_volume_set
+        add esp, 8
+        ret
+    }
+}
+#else
+void audio_menu_volume_set(int value)
+{
+    audio_set_volume(s_active_audio_player, (float)value * 0.11111111f);
+}
+#endif
+
+// FUNCTION: LEGORR 0x00478980
+void music_mixer_volume_set(float music, float sfx)
+{
+    (void)sfx;
+    audio_set_volume(s_active_audio_player, music);
 }
 
 /* Corpus sounds are all PCM: 8-bit unsigned or 16-bit signed LE, mostly

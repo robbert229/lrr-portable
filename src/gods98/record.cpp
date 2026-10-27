@@ -5,7 +5,14 @@
 #include "heap.hpp"
 #include "sound.hpp"
 #include "view.hpp"
+#include "texture.hpp"
+#include "resource.hpp"
+#include "crt.hpp"
+#include "game/util.hpp"
 #include <math.h>  /* sqrtf for the instance-quad normal window */
+#include <limits.h>
+#include <string.h>
+#include <stdlib.h>
 
 /* Byte-safe field reads: corpus dword/float slots at offsets that may
  * not be pointer-aligned on 64-bit hosts. */
@@ -524,6 +531,17 @@ int world_to_terrain_cell_bounds_check(const void* map, float world_x,
     return 1;
 }
 
+/* TerrainGridPick (FUN_0044f6d0): forward the same cell outputs and retain
+ * the bounds result; the corpus's temporary subcell write is discarded. */
+// FUNCTION: LEGORR 0x0044f6d0
+int terrain_grid_pick(const void* map, float world_x, float world_y,
+                      int* cell_x, int* cell_y)
+{
+    float unused_subcell = 0.0f;
+    return world_to_terrain_cell_bounds_check(
+        map, world_x, world_y, cell_x, cell_y, &unused_subcell);
+}
+
 // FUNCTION: LEGORR 0x0044f810
 void grid_coordinate_clamp_and_store(const void* map, float world_x,
                                      float world_y, int* cell_x, int* cell_y)
@@ -1038,7 +1056,681 @@ static void record_window_put(void* rec, int field, const void* src)
         return;
     }
     __builtin_memcpy((char*)rec + (size_t)field * sizeof(void*), src,
-                     sizeof(void*));
+                     sizeof(uint32_t));
+}
+
+static void record_window_put_ptr(void* rec, int field, const void* value)
+{
+    if (rec != NULL) {
+        __builtin_memcpy((char*)rec + (size_t)field * sizeof(void*), &value,
+                         sizeof(value));
+    }
+}
+
+static void record_window_put_u32(void* rec, int field, uint32_t value)
+{
+    record_window_put(rec, field, &value);
+}
+
+/* Resource rows keep the corpus's 0x20-byte shape on x86. On a 64-bit
+ * host, widen pointer fields and the row stride so none of the handles are
+ * truncated. Menu resource producers must use this same layout. */
+#if UINTPTR_MAX == UINT32_MAX
+typedef struct MenuResourceEntry {
+    uint32_t flags;
+    void* owned_string;
+    TextureSurface* textures[3];
+    uint32_t reserved[3];
+} MenuResourceEntry;
+#else
+typedef struct MenuResourceEntry {
+    uint32_t flags;
+    uint32_t reserved0;
+    void* owned_string;
+    TextureSurface* textures[3];
+} MenuResourceEntry;
+#endif
+
+// FUNCTION: LEGORR 0x0047d470
+void image_surface_release(TextureSurface* surface)
+{
+    texture_release(surface);
+}
+
+static void menu_resource_entry_release(MenuResourceEntry* entry)
+{
+    if ((entry->flags & 1u) != 0) {
+        engine_heap_free(entry->owned_string);
+    } else if ((entry->flags & 2u) != 0) {
+        for (int i = 0; i < 3; ++i) {
+            image_surface_release(entry->textures[i]);
+        }
+    }
+}
+
+// FUNCTION: LEGORR 0x004105a0
+char* campaign_level_fallback_label(const char* label)
+{
+    if (label == NULL) return NULL;
+    const size_t length = strlen(label);
+    if (length >= 0x7fffffffU) return NULL;
+    char* copy = (char*)engine_heap_alloc((long)length + 1);
+    if (copy != NULL) memcpy(copy, label, length + 1);
+    return copy;
+}
+
+// FUNCTION: LEGORR 0x00410a10
+#if defined(LEGORRR_BACKEND_WINAPI)
+__declspec(naked) void* menu_item_choice_strings_allocate(
+    uint32_t count, uint32_t f3, uint32_t f4, uint32_t f5, uint32_t f6)
+{
+    __asm {
+        push ebx
+        push ebp
+        push esi
+        push edi
+        push 0x1c
+        call engine_heap_alloc
+        mov esi, eax
+        add esp, 4
+        test esi, esi
+        jne have_record
+        pop edi
+        pop esi
+        pop ebp
+        pop ebx
+        ret
+    have_record:
+        mov ebp, dword ptr [esp + 0x14]
+        lea ebx, [ebp * 4]
+        push ebx
+        call engine_heap_alloc
+        mov edi, eax
+        add esp, 4
+        test edi, edi
+        mov dword ptr [esi], edi
+        jne have_strings
+        push esi
+        call resource_handle_list_dispose
+        add esp, 4
+        xor eax, eax
+        pop edi
+        pop esi
+        pop ebp
+        pop ebx
+        ret
+    have_strings:
+        mov ecx, ebx
+        xor eax, eax
+        mov edx, ecx
+        shr ecx, 2
+        rep stosd
+        mov ecx, edx
+        mov edx, dword ptr [esp + 0x20]
+        and ecx, 3
+        rep stosb
+        mov eax, dword ptr [esp + 0x18]
+        mov ecx, dword ptr [esp + 0x1c]
+        mov dword ptr [esi + 0x0c], eax
+        mov eax, dword ptr [esp + 0x24]
+        mov dword ptr [esi + 0x18], eax
+        mov dword ptr [esi + 4], ebp
+        mov dword ptr [esi + 8], 0
+        mov dword ptr [esi + 0x10], ecx
+        mov dword ptr [esi + 0x14], edx
+        mov eax, esi
+        pop edi
+        pop esi
+        pop ebp
+        pop ebx
+        ret
+    }
+}
+#else
+void* menu_item_choice_strings_allocate(uint32_t count, uint32_t f3,
+                                        uint32_t f4, uint32_t f5,
+                                        uint32_t f6)
+{
+    if ((size_t)count > (size_t)LONG_MAX / sizeof(void*)) return NULL;
+    void* rec = engine_heap_alloc(7 * sizeof(void*));
+    if (rec == NULL) return NULL;
+    memset(rec, 0, 7 * sizeof(void*));
+    void* strings = engine_heap_alloc((long)((size_t)count * sizeof(void*)));
+    if (strings == NULL) {
+        engine_heap_free(rec);
+        return NULL;
+    }
+    memset(strings, 0, (size_t)count * sizeof(void*));
+    *(void**)((char*)rec + 0 * sizeof(void*)) = strings;
+    *(uint32_t*)((char*)rec + 1 * sizeof(void*)) = count;
+    *(uint32_t*)((char*)rec + 2 * sizeof(void*)) = 0;
+    *(uint32_t*)((char*)rec + 3 * sizeof(void*)) = f3;
+    *(uint32_t*)((char*)rec + 4 * sizeof(void*)) = f4;
+    *(uint32_t*)((char*)rec + 5 * sizeof(void*)) = f5;
+    *(uint32_t*)((char*)rec + 6 * sizeof(void*)) = f6;
+    return rec;
+}
+#endif
+
+// FUNCTION: LEGORR 0x004105f0
+#if defined(LEGORRR_BACKEND_WINAPI)
+__declspec(naked) void* menu_param_record_create(
+    uint32_t mode, const char* first, const char* second, uint32_t f4,
+    uint32_t f5, uint32_t f6, uint32_t f7, uint32_t f8, uint32_t f9,
+    uint32_t f10, uint32_t f11, uint32_t f12, uint32_t f13, uint32_t f14)
+{
+    __asm {
+        push esi
+        push edi
+        push 0x5c
+        call engine_heap_alloc
+        mov esi, eax
+        mov ecx, 0x17
+        xor eax, eax
+        mov edi, esi
+        add esp, 4
+        rep stosd
+        mov eax, dword ptr [esp + 0x10]
+        push eax
+        call campaign_level_fallback_label
+        mov ecx, dword ptr [esp + 0x18]
+        add esp, 4
+        mov dword ptr [esi + 0x20], eax
+        push ecx
+        call campaign_level_fallback_label
+        mov edx, dword ptr [esp + 0x10]
+        mov ecx, dword ptr [esp + 0x20]
+        mov dword ptr [esi + 0x24], eax
+        mov eax, dword ptr [esp + 0x1c]
+        mov dword ptr [esi + 0x2c], eax
+        mov eax, dword ptr [esp + 0x28]
+        mov dword ptr [esi + 0x28], edx
+        mov edx, dword ptr [esp + 0x24]
+        mov dword ptr [esi + 0x30], ecx
+        mov ecx, dword ptr [esp + 0x2c]
+        mov dword ptr [esi + 0x38], eax
+        mov eax, dword ptr [esp + 0x34]
+        mov dword ptr [esi + 0x34], edx
+        mov edx, dword ptr [esp + 0x30]
+        mov dword ptr [esi + 0x3c], ecx
+        mov ecx, dword ptr [esp + 0x38]
+        mov dword ptr [esi + 0x44], eax
+        mov eax, dword ptr [esp + 0x40]
+        add esp, 4
+        mov dword ptr [esi + 0x40], edx
+        mov edx, dword ptr [esp + 0x38]
+        mov dword ptr [esi + 0x48], ecx
+        mov ecx, dword ptr [esp + 0x40]
+        mov dword ptr [esi + 0x54], eax
+        mov dword ptr [esi + 0x50], edx
+        mov dword ptr [esi + 0x4c], 0
+        mov dword ptr [esi + 0x58], ecx
+        mov eax, esi
+        pop edi
+        pop esi
+        ret
+    }
+}
+#else
+void* menu_param_record_create(uint32_t mode, const char* first,
+                              const char* second, uint32_t f4,
+                              uint32_t f5, uint32_t f6, uint32_t f7,
+                              uint32_t f8, uint32_t f9, uint32_t f10,
+                              uint32_t f11, uint32_t f12, uint32_t f13,
+                              uint32_t f14)
+{
+    void* rec = engine_heap_alloc(23 * sizeof(void*));
+    if (rec == NULL) return NULL;
+    memset(rec, 0, 23 * sizeof(void*));
+    char* first_copy = campaign_level_fallback_label(first);
+    char* second_copy = campaign_level_fallback_label(second);
+    if ((first != NULL && first_copy == NULL)
+        || (second != NULL && second_copy == NULL)) {
+        engine_heap_free(first_copy);
+        engine_heap_free(second_copy);
+        engine_heap_free(rec);
+        return NULL;
+    }
+    char* bytes = (char*)rec;
+    *(void**)(bytes + 8 * sizeof(void*)) = first_copy;
+    *(void**)(bytes + 9 * sizeof(void*)) = second_copy;
+    *(uint32_t*)(bytes + 10 * sizeof(void*)) = mode;
+    *(uint32_t*)(bytes + 11 * sizeof(void*)) = f4;
+    *(uint32_t*)(bytes + 12 * sizeof(void*)) = f5;
+    *(uint32_t*)(bytes + 13 * sizeof(void*)) = f6;
+    *(uint32_t*)(bytes + 14 * sizeof(void*)) = f7;
+    *(uint32_t*)(bytes + 15 * sizeof(void*)) = f8;
+    *(uint32_t*)(bytes + 16 * sizeof(void*)) = f9;
+    *(uint32_t*)(bytes + 17 * sizeof(void*)) = f10;
+    *(uint32_t*)(bytes + 18 * sizeof(void*)) = f11;
+    *(uint32_t*)(bytes + 20 * sizeof(void*)) = f12;
+    *(uint32_t*)(bytes + 21 * sizeof(void*)) = f13;
+    *(uint32_t*)(bytes + 22 * sizeof(void*)) = f14;
+    return rec;
+}
+#endif
+
+// FUNCTION: LEGORR 0x00410690
+#if defined(LEGORRR_BACKEND_WINAPI)
+__declspec(naked) void menu_record_resources_release(void* record)
+{
+    __asm {
+        push ebp
+        push edi
+        mov edi, dword ptr [esp + 0x0c]
+        xor ebp, ebp
+        cmp edi, ebp
+        je release_done
+        mov eax, dword ptr [edi + 0x20]
+        push esi
+        cmp eax, ebp
+        push ebx
+        je release_second
+        push eax
+        call engine_heap_free
+        add esp, 4
+    release_second:
+        mov eax, dword ptr [edi + 0x24]
+        cmp eax, ebp
+        je release_entries
+        push eax
+        call engine_heap_free
+        add esp, 4
+    release_entries:
+        cmp dword ptr [edi], ebp
+        je release_record
+        mov eax, dword ptr [edi + 0x1c]
+        mov dword ptr [esp + 0x14], ebp
+        cmp eax, ebp
+        jle release_array
+    release_entry_loop:
+        mov eax, dword ptr [edi]
+        lea ecx, [eax + ebp]
+        mov eax, dword ptr [eax + ebp]
+        test al, 1
+        je release_textures_test
+        mov ecx, dword ptr [ecx + 4]
+        push ecx
+        call engine_heap_free
+        add esp, 4
+        jmp release_entry_next
+    release_textures_test:
+        test al, 2
+        je release_entry_next
+        lea esi, [ebp + 8]
+        mov ebx, 3
+    release_texture_loop:
+        mov edx, dword ptr [edi]
+        mov eax, dword ptr [edx + esi]
+        push eax
+        call image_surface_release
+        add esp, 4
+        add esi, 4
+        dec ebx
+        jne release_texture_loop
+    release_entry_next:
+        mov eax, dword ptr [esp + 0x14]
+        mov ecx, dword ptr [edi + 0x1c]
+        inc eax
+        add ebp, 0x20
+        cmp eax, ecx
+        mov dword ptr [esp + 0x14], eax
+        jl release_entry_loop
+    release_array:
+        mov ecx, dword ptr [edi]
+        push ecx
+        call engine_heap_free
+        add esp, 4
+    release_record:
+        push edi
+        call engine_heap_free
+        add esp, 4
+        pop ebx
+        pop esi
+    release_done:
+        pop edi
+        pop ebp
+        ret
+    }
+}
+#else
+void menu_record_resources_release(void* record)
+{
+    if (record == NULL) return;
+    engine_heap_free(rec_ptr(record, 8 * sizeof(void*)));
+    engine_heap_free(rec_ptr(record, 9 * sizeof(void*)));
+    void* resources = rec_ptr(record, 0);
+    const uint32_t count = rec_dword(record, 7 * sizeof(void*));
+    if (resources != NULL) {
+        for (uint32_t i = 0; i < count; ++i) {
+            menu_resource_entry_release((MenuResourceEntry*)resources + i);
+        }
+        engine_heap_free(resources);
+    }
+    engine_heap_free(record);
+}
+#endif
+
+/* ResourceRecordAddRef (FUN_0047dbc0): the wrapped DirectDraw object's
+ * SetColorKey(DDCKEY_SRCBLT, range) equivalent, then mark flag bit 1. */
+// FUNCTION: LEGORR 0x0047dbc0
+void resource_record_add_ref(void* record)
+{
+    if (record == NULL) return;
+    TextureSurface* surface = (TextureSurface*)record;
+    const uint32_t low = surface->key_count > 0 ? surface->keys[0] : 0;
+    const uint32_t high = surface->key_count > 1 ? surface->keys[1] : low;
+    texture_source_color_key_set(surface, low, high);
+    surface->resource_flags |= 2u;
+}
+
+/* LoadItemStrings (FUN_00414010): the corpus uses eight dword resource
+ * pointers at byte offset 0x20. This port reads the equivalent eight
+ * native-width pointer slots beginning at slot 4, preserving handles on
+ * 64-bit hosts. */
+// FUNCTION: LEGORR 0x00414010
+void load_item_strings(uint32_t record_type, const void* record,
+                       void* out_resources[8])
+{
+    if (out_resources == NULL) {
+        return;
+    }
+    for (int i = 0; i < 8; ++i) {
+        out_resources[i] = NULL;
+    }
+    if (record_type != 0x10 || record == NULL) {
+        return;
+    }
+    for (int resource_index = 0; resource_index < 8; ++resource_index) {
+        const char* key = (const char*)rec_ptr(
+            record, (size_t)(4 + resource_index) * sizeof(void*));
+        void* resource = string_cache_lookup_or_load(key);
+        out_resources[resource_index] = resource;
+        if (resource != NULL) {
+            resource_record_add_ref(resource);
+        }
+    }
+}
+
+// FUNCTION: LEGORR 0x00411100
+void* menu_section_record_create(const char* name, const char* title,
+                                 uint32_t f3, uint32_t f4, uint32_t f5,
+                                 uint32_t f6, uint32_t f7, uint32_t f8,
+                                 uint32_t f9, const char* integer_pair)
+{
+    if (name == NULL || title == NULL) return NULL;
+    void* rec = engine_heap_alloc(40 * sizeof(void*));
+    if (rec == NULL) return NULL;
+    memset(rec, 0, 40 * sizeof(void*));
+    char* name_copy = campaign_level_fallback_label(name);
+    char* title_copy = campaign_level_fallback_label(title);
+    if (name_copy == NULL || title_copy == NULL) {
+        engine_heap_free(name_copy);
+        engine_heap_free(title_copy);
+        engine_heap_free(rec);
+        return NULL;
+    }
+    void* child = engine_heap_alloc(15 * sizeof(void*));
+    if (child == NULL) {
+        engine_heap_free(name_copy);
+        engine_heap_free(title_copy);
+        engine_heap_free(rec);
+        return NULL;
+    }
+    memset(child, 0, 15 * sizeof(void*));
+    record_window_put_ptr(rec, 0, name_copy);
+    record_window_put_ptr(rec, 1, title_copy);
+    record_window_put_u32(rec, 2, (uint32_t)strlen(name));
+    record_window_put_ptr(rec, 6, child);
+    record_window_put_u32(rec, 3, f3);
+    record_window_put_u32(rec, 11, f4);
+    record_window_put_u32(rec, 12, f5);
+    record_window_put_u32(rec, 17, f6);
+    record_window_put_u32(rec, 18, f7);
+    record_window_put_u32(rec, 22, f8);
+    record_window_put_u32(rec, 8, 15);
+    record_window_put_u32(rec, 13, f9 != 0 ? 2u : 0u);
+    if (integer_pair != NULL && integer_pair[0] != '\0') {
+        char copy[1024];
+        size_t length = strlen(integer_pair);
+        if (length >= sizeof(copy)) length = sizeof(copy) - 1;
+        memcpy(copy, integer_pair, length);
+        copy[length] = '\0';
+        char* first = copy;
+        char* second = NULL;
+        for (size_t i = 0; i + 1 < length; ++i) {
+            if (copy[i] == ',') {
+                copy[i] = '\0';
+                second = copy + i + 1;
+                break;
+            }
+        }
+        if (second != NULL) {
+            record_window_put_u32(rec, 19, 1);
+            record_window_put_u32(rec, 20, (uint32_t)strtol(first, NULL, 10));
+            record_window_put_u32(rec, 21, (uint32_t)strtol(second, NULL, 10));
+        }
+    }
+    return rec;
+}
+
+// FUNCTION: LEGORR 0x00410c70
+void resource_variant_record_release(void* record)
+{
+    if (record == NULL) return;
+    engine_heap_free(rec_ptr(record, 0));
+    const uint32_t kind = rec_dword(record, 5 * sizeof(void*));
+    void* payload = rec_ptr(record, 4 * sizeof(void*));
+    switch (kind) {
+    case 0:
+        resource_handle_list_dispose((ResourceHandleList*)payload);
+        break;
+    case 1:
+    case 2:
+    case 3:
+    case 4:
+        optional_resource_destroy(payload);
+        break;
+    case 6:
+        menu_record_resources_release(payload);
+        break;
+    default:
+        break;
+    }
+    engine_heap_free(record);
+}
+
+// FUNCTION: LEGORR 0x00410f30
+void resource_record_and_children_release(void* record)
+{
+    if (record == NULL) return;
+    engine_heap_free(rec_ptr(record, 0));
+    engine_heap_free(rec_ptr(record, sizeof(void*)));
+    void* children = rec_ptr(record, 6 * sizeof(void*));
+    const uint32_t count = rec_dword(record, 7 * sizeof(void*));
+    /* The original frees the pointer array before walking it. Keep the
+     * same ownership result while releasing children before their array. */
+    for (uint32_t i = 0; children != NULL && i < count; ++i) {
+        void* child = NULL;
+        __builtin_memcpy(&child, (char*)children + (size_t)i * sizeof(void*),
+                         sizeof(child));
+        resource_variant_record_release(child);
+    }
+    engine_heap_free(children);
+    texture_release((TextureSurface*)rec_ptr(record, 4 * sizeof(void*)));
+    engine_heap_free(record);
+}
+
+// FUNCTION: LEGORR 0x00410fb0
+int menu_item_image_set(void* item, const char* image_config, int primary)
+{
+    if (item == NULL || image_config == NULL) return 0;
+    char text[1024];
+    size_t length = strlen(image_config);
+    if (length >= sizeof(text)) return 0;
+    memcpy(text, image_config, length + 1);
+    char* tokens[4] = { NULL, NULL, NULL, NULL };
+    const int count = sound_variant_split(text, tokens, ",");
+    if (count == 0) return 0;
+    if (count > 2) {
+        const size_t flags_offset = 13 * sizeof(void*);
+        const uint32_t flags = rec_dword(item, flags_offset) | 1u;
+        __builtin_memcpy((char*)item + flags_offset, &flags, sizeof(flags));
+        const float x = util_atof(tokens[1]);
+        const float y = util_atof(tokens[2]);
+        __builtin_memcpy((char*)item + 14 * sizeof(void*), &x, sizeof(x));
+        __builtin_memcpy((char*)item + 15 * sizeof(void*), &y, sizeof(y));
+    }
+    TextureSurface* surface = (TextureSurface*)string_cache_lookup_or_load(tokens[0]);
+    const int field = primary ? 4 : 5;
+    *(void**)((char*)item + (size_t)field * sizeof(void*)) = surface;
+    if (surface == NULL) return 0;
+    if (count == 4 && util_atoi(tokens[3]) == 1) {
+        if (primary) {
+            resource_record_add_ref(surface);
+        } else {
+            /* The corpus calls ImageSurfaceBlitTransformed with zero
+             * transform/color arguments on this branch. */
+            texture_source_color_key_set(surface, 0, 0);
+            surface->resource_flags |= 2u;
+        }
+    }
+    return 1;
+}
+
+static int menu_ascii_casecmp_n(const char* a, const char* b, size_t n)
+{
+    for (size_t i = 0; i < n; ++i) {
+        unsigned char ca = (unsigned char)a[i];
+        unsigned char cb = (unsigned char)b[i];
+        if (ca >= 'A' && ca <= 'Z') ca = (unsigned char)(ca + ('a' - 'A'));
+        if (cb >= 'A' && cb <= 'Z') cb = (unsigned char)(cb + ('a' - 'A'));
+        if (ca != cb) return (int)ca - (int)cb;
+        if (ca == '\0') return 0;
+    }
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x00413f30
+int filename_extension_classify(const void* record)
+{
+    const char* suffix = *(const char* const*)record;
+    while (*suffix != '.') ++suffix;
+    if (strcmp(suffix, ".avi") == 0) return 1;
+    if (strcmp(suffix, ".bmp") == 0) return 2;
+    if (strcmp(suffix, ".lws") == 0) return 3;
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x00413f90
+#if defined(LEGORRR_BACKEND_WINAPI)
+#else
+static const char s_menu_null_label[] = "Null";
+#endif
+#if defined(LEGORRR_BACKEND_WINAPI)
+__declspec(naked) void* menu_item_record_alloc(const char* name,
+                                               void** list_head,
+                                               uint32_t f3, uint32_t f4,
+                                               uint32_t f5)
+{
+    __asm {
+        push esi
+        push edi
+        push 0x20
+        call engine_heap_alloc
+        mov esi, eax
+        mov ecx, 8
+        xor eax, eax
+        mov edi, esi
+        add esp, 4
+        rep stosd
+        mov edi, dword ptr [esp + 0x0c]
+        push 4
+        push 0x4a23f4
+        push edi
+        call _strnicmp
+        add esp, 0x0c
+        test eax, eax
+        je item_record_done
+        test edi, edi
+        je item_record_link
+        push edi
+        call campaign_level_fallback_label
+        add esp, 4
+        mov dword ptr [esi], eax
+    item_record_link:
+        push esi
+        call filename_extension_classify
+        mov edx, dword ptr [esp + 0x18]
+        mov dword ptr [esi + 4], eax
+        mov eax, dword ptr [esp + 0x14]
+        mov dword ptr [esi + 0x1c], 0
+        add esp, 4
+        mov ecx, dword ptr [eax]
+        mov dword ptr [esi + 0x0c], edx
+        mov edx, dword ptr [esp + 0x1c]
+        mov dword ptr [esi + 0x18], ecx
+        mov ecx, dword ptr [esp + 0x18]
+        mov dword ptr [esi + 0x14], edx
+        mov dword ptr [esi + 0x10], ecx
+        mov dword ptr [eax], esi
+    item_record_done:
+        mov eax, esi
+        pop edi
+        pop esi
+        ret
+    }
+}
+#else
+void* menu_item_record_alloc(const char* name, void** list_head,
+                             uint32_t f3, uint32_t f4, uint32_t f5)
+{
+    void* rec = engine_heap_alloc(8 * sizeof(void*));
+    if (rec == NULL) return NULL;
+    memset(rec, 0, 8 * sizeof(void*));
+    if (name != NULL && menu_ascii_casecmp_n(name, "Null", 4) != 0) {
+        char* name_copy = campaign_level_fallback_label(name);
+        *(void**)((char*)rec + 0x00) = name_copy;
+        *(uint32_t*)((char*)rec + 0x04) =
+            (uint32_t)filename_extension_classify(rec);
+        *(uint32_t*)((char*)rec + 0x0c) = f3;
+        *(uint32_t*)((char*)rec + 0x10) = f4;
+        *(uint32_t*)((char*)rec + 0x14) = f5;
+        *(void**)((char*)rec + 0x18) =
+            list_head != NULL ? *list_head : NULL;
+        if (list_head != NULL) *list_head = rec;
+    }
+    return rec;
+}
+#endif
+
+// FUNCTION: LEGORR 0x00411260
+int menu_list_append(void* list, void* value)
+{
+    if (list == NULL || value == NULL) return 0;
+    void* items = rec_ptr(list, 6 * sizeof(void*));
+    const uint32_t count = rec_dword(list, 7 * sizeof(void*));
+    const uint32_t capacity = rec_dword(list, 8 * sizeof(void*));
+    if (count == capacity) {
+        if (capacity > (uint32_t)(LONG_MAX / (long)sizeof(void*) - 15)) {
+            return 0;
+        }
+        const uint32_t new_capacity = capacity + 15;
+        void* grown = engine_heap_alloc((long)((size_t)new_capacity * sizeof(void*)));
+        if (grown == NULL) return 0;
+        memset(grown, 0, (size_t)new_capacity * sizeof(void*));
+        if (items != NULL) {
+            memcpy(grown, items, (size_t)count * sizeof(void*));
+            engine_heap_free(items);
+        }
+        items = grown;
+        record_window_put_ptr(list, 6, items);
+        record_window_put_u32(list, 8, new_capacity);
+    }
+    __builtin_memcpy((char*)items + (size_t)count * sizeof(void*), &value,
+                     sizeof(value));
+    record_window_put_u32(list, 7, count + 1);
+    return 1;
 }
 
 /* BoundedFloatRecordCreate (FUN_00410b90) — see record.hpp. */
@@ -1066,42 +1758,97 @@ void* bounded_float_record_create(int kind, float min_v, float max_v,
 }
 
 /* MenuItemNumericRangeRecordAllocate (FUN_00410bf0) — see record.hpp.
- * Field order follows the corpus stores: bounds land late, payload first. */
+ * The record has fourteen dword fields: kind, bounds, then eleven payload
+ * words. Bounds are stored after the first payload fields in corpus order. */
 // FUNCTION: LEGORR 0x00410bf0
+#if defined(LEGORRR_BACKEND_WINAPI)
+__declspec(naked) void* menu_item_numeric_range_record_allocate(
+    int kind, int min_v, int max_v, uint32_t f3, uint32_t f4, uint32_t f5,
+    uint32_t f6, uint32_t f7, uint32_t f8, uint32_t f9, uint32_t f10,
+    uint32_t f11, uint32_t f12, uint32_t f13)
+{
+    __asm {
+        push esi
+        mov esi, dword ptr [esp + 0x10]
+        push edi
+        mov edi, dword ptr [esp + 0x10]
+        cmp esi, edi
+        jg menu_item_numeric_range_record_allocate_alloc
+        xor eax, eax
+        pop edi
+        pop esi
+        ret
+    menu_item_numeric_range_record_allocate_alloc:
+        push 0x38
+        call engine_heap_alloc
+        add esp, 4
+        test eax, eax
+        jne menu_item_numeric_range_record_allocate_store
+        pop edi
+        pop esi
+        ret
+    menu_item_numeric_range_record_allocate_store:
+        mov ecx, dword ptr [esp + 0x0c]
+        mov edx, dword ptr [esp + 0x18]
+        mov dword ptr [eax], ecx
+        mov ecx, dword ptr [esp + 0x1c]
+        mov dword ptr [eax + 0x0c], edx
+        mov edx, dword ptr [esp + 0x20]
+        mov dword ptr [eax + 0x10], ecx
+        mov ecx, dword ptr [esp + 0x24]
+        mov dword ptr [eax + 0x14], edx
+        mov edx, dword ptr [esp + 0x28]
+        mov dword ptr [eax + 0x18], ecx
+        mov ecx, dword ptr [esp + 0x2c]
+        mov dword ptr [eax + 0x1c], edx
+        mov edx, dword ptr [esp + 0x30]
+        mov dword ptr [eax + 0x20], ecx
+        mov ecx, dword ptr [esp + 0x34]
+        mov dword ptr [eax + 0x24], edx
+        mov edx, dword ptr [esp + 0x38]
+        mov dword ptr [eax + 0x28], ecx
+        mov ecx, dword ptr [esp + 0x3c]
+        mov dword ptr [eax + 0x2c], edx
+        mov edx, dword ptr [esp + 0x40]
+        mov dword ptr [eax + 4], edi
+        mov dword ptr [eax + 8], esi
+        pop edi
+        mov dword ptr [eax + 0x30], ecx
+        mov dword ptr [eax + 0x34], edx
+        pop esi
+        ret
+    }
+}
+#else
 void* menu_item_numeric_range_record_allocate(int kind, int min_v, int max_v,
                                               uint32_t f3, uint32_t f4,
                                               uint32_t f5, uint32_t f6,
                                               uint32_t f7, uint32_t f8,
                                               uint32_t f9, uint32_t f10,
                                               uint32_t f11, uint32_t f12,
-                                              uint32_t f13, uint32_t f14)
+                                              uint32_t f13)
 {
-    if (!(min_v < max_v)) {
-        return NULL;
-    }
-    const uint32_t bounds_lo = (uint32_t)min_v, bounds_hi = (uint32_t)max_v;
-    void* rec = engine_heap_alloc(15 * sizeof(void*));
-    if (rec == NULL) {
-        return NULL;
-    }
-    const uint32_t kind_w = (uint32_t)kind;
-    record_window_put(rec, 0, &kind_w);
-    record_window_put(rec, 3, &f3);
-    record_window_put(rec, 4, &f4);
-    record_window_put(rec, 5, &f5);
-    record_window_put(rec, 6, &f6);
-    record_window_put(rec, 7, &f7);
-    record_window_put(rec, 8, &f8);
-    record_window_put(rec, 9, &f9);
-    record_window_put(rec, 10, &f10);
-    record_window_put(rec, 11, &f11);
-    record_window_put(rec, 12, &f12);
-    record_window_put(rec, 1, &bounds_lo);
-    record_window_put(rec, 2, &bounds_hi);
-    record_window_put(rec, 13, &f13);
-    record_window_put(rec, 14, &f14);
+    if (!(min_v < max_v)) return NULL;
+    void* rec = engine_heap_alloc(14 * sizeof(void*));
+    if (rec == NULL) return NULL;
+    char* bytes = (char*)rec;
+    *(uint32_t*)(bytes + 0 * sizeof(void*)) = (uint32_t)kind;
+    *(uint32_t*)(bytes + 3 * sizeof(void*)) = f3;
+    *(uint32_t*)(bytes + 4 * sizeof(void*)) = f4;
+    *(uint32_t*)(bytes + 5 * sizeof(void*)) = f5;
+    *(uint32_t*)(bytes + 6 * sizeof(void*)) = f6;
+    *(uint32_t*)(bytes + 7 * sizeof(void*)) = f7;
+    *(uint32_t*)(bytes + 8 * sizeof(void*)) = f8;
+    *(uint32_t*)(bytes + 9 * sizeof(void*)) = f9;
+    *(uint32_t*)(bytes + 10 * sizeof(void*)) = f10;
+    *(uint32_t*)(bytes + 11 * sizeof(void*)) = f11;
+    *(uint32_t*)(bytes + 12 * sizeof(void*)) = f12;
+    *(uint32_t*)(bytes + 1 * sizeof(void*)) = (uint32_t)min_v;
+    *(uint32_t*)(bytes + 2 * sizeof(void*)) = (uint32_t)max_v;
+    *(uint32_t*)(bytes + 13 * sizeof(void*)) = f13;
     return rec;
 }
+#endif
 
 /* NestedRecordListRemoveByKeyRecursive (FUN_0047b2e0) — see record.hpp.
  * The corpus re-reads the node's next link after the recursion — a freed

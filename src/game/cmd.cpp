@@ -604,6 +604,7 @@ void cmd_create_task(EntitySlot* e)
  *  Global tick + purge (scoped; AI execution receivers are stubs).
  * ------------------------------------------------------------------ */
 
+// STUB: LEGORR 0x00402310
 void cmd_chain_purge(EntitySlot* e)
 {
     if (e == NULL) {

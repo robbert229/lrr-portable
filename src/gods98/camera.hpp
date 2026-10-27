@@ -65,7 +65,8 @@ int g_move_hook_enabled(void);
 void camera_set_move_hook_enabled(int v);
 
 /* Stub boundaries (corpus addresses; fill one at a time):
- *  FUN_0046a700 / FUN_004377b0 / FUN_0046a4c0 / FUN_0040f190 /
+ *  FUN_0046a700 / LAB_0046a5c0 (callback through FUN_004377b0) /
+ *  FUN_0046a4c0 / FUN_0040f190 /
  *  FUN_00438960 / FUN_0043ad50 / FUN_00419b80 (message.hpp) */
 
 #endif /* LEGORRR_CAMERA_HPP */

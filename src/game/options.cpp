@@ -8,6 +8,7 @@
 
 #include "gods98/engine.hpp"
 #include "gods98/heap.hpp"
+#include "gods98/audio.hpp"
 
 /* One descriptor per control: banner name (normalized for matching), the
  * shipped config range, the documented default, and the store field. The
@@ -220,7 +221,7 @@ float options_audio_gain(const GameOptions* o)
     if (v > 10) {
         v = 10;
     }
-    return (float)v / 10.0f;
+    return audio_sfx_volume_gain(v);
 }
 
 /* --- save-context serialisation ----------------------------------------- */

@@ -717,14 +717,11 @@ static int s_variant_pool_alloc(void)
     return s_variant_pool_next;
 }
 
-/* Comma split as FUN_00477440 (BlockTextTokenSplit) applies it here:
- * splits in place, keeps empty tokens between consecutive commas, and
- * never tests the final character as a separator start — the corpus
- * quirk that leaves a trailing comma in the last path. Tokens beyond
- * the port's copy of the 100-entry stack buffer split but go untracked
- * (the corpus writes past its own frame); returns the tracked count. */
+/* In-place split on any byte in the separator string. The reference leaves
+ * a trailing separator attached to the final token by not testing the last
+ * character as a separator start. */
 // FUNCTION: LEGORR 0x00477440
-static int s_variant_split(char* s, char** out, int max)
+int sound_variant_split(char* s, char** out, const char* separators)
 {
     if (s[0] == '\0') {
         return 0;
@@ -732,11 +729,9 @@ static int s_variant_split(char* s, char** out, int max)
     out[0] = s;
     int n = 1;
     for (char* p = s; p[1] != '\0'; ++p) {
-        if (*p == ',') {
+        if (strchr(separators, *p) != NULL) {
             *p = '\0';
-            if (n < max) {
-                out[n++] = p + 1;
-            }
+            out[n++] = p + 1;
         }
     }
     return n;
@@ -757,7 +752,7 @@ int sound_sample_marker_parse(const char* spec, int alias_index)
                      * the port splits a copy (documented deviation) */
     snprintf(buf, sizeof(buf), "%s", spec);
     char* tokens[SOUND_VARIANT_TOKENS];
-    int ntok = s_variant_split(buf, tokens, SOUND_VARIANT_TOKENS);
+    int ntok = sound_variant_split(buf, tokens, ",");
 
     int stream_mode = 0;            /* '@' marker, sticky (finding 135) */
     int ok = 1;

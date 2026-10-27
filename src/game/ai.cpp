@@ -130,13 +130,10 @@ int ai_idle_count(void) { return s_idle100_n; }
 
 static const LevelState* grid_of(const GameContext* ctx);
 
-/* FUN_00469cc0: `return *(float *)(*(ent + 0x334) + 0x24 + type * 4)` —
- * the stats speed table behind the entity's stats block, indexed by the
- * terrain type byte. The port models the stats block's table as the
- * one game-wide `ctx->stats_speed_sec` (see game.hpp), so the probe
- * becomes a guarded table read: zero entries and out-of-range types fall
- * back to the AI_MOVE_SPEED_CPS-equivalent seconds/cell. */
-// FUNCTION: LEGORR 0x00469cc0
+/* Port-side view of the terrain speed table. The source binary's indexed
+ * component getter (FUN_00469cc0) is mirrored by
+ * entity_stats_float_at24_indexed; this higher-level context adapter adds
+ * the port's bounds and fallback policy. */
 float ai_stats_speed(const GameContext* ctx, int tile_type)
 {
     const float def = 1.0f / AI_MOVE_SPEED_CPS;

@@ -50,6 +50,18 @@ def scan_src_anchors() -> dict:
     return anchors
 
 
+def scan_src_stubs() -> set:
+    """Return corpus entry addresses explicitly marked as Reccmp STUBs."""
+    stubs = set()
+    marker = re.compile(r"//\s*STUB:\s+LEGORR\s+0x([0-9a-fA-F]{1,8})\b")
+    for f in SRC_DIR.rglob("*"):
+        if f.suffix not in (".cpp", ".hpp", ".c", ".h"):
+            continue
+        text = f.read_text(errors="replace")
+        stubs.update(norm(m.group(1)) for m in marker.finditer(text))
+    return stubs
+
+
 def read_manifest() -> list:
     rows = []
     with MANIFEST.open() as fh:
@@ -102,7 +114,7 @@ RUNTIME_OR_IMPORT = re.compile(
 )
 
 
-def classify(rows, anchors, named):
+def classify(rows, anchors, named, stubs):
     """rows: manifest rows; anchors: address->citation count from src/."""
     entries = [norm(r["address"]) for r in rows]
     out = []
@@ -113,7 +125,7 @@ def classify(rows, anchors, named):
         cited = anchors.get(a, 0)
         named_at = named.get(a)
         if cited > 0:
-            status = "ported"
+            status = "stubbed" if a in stubs else "ported"
         elif RUNTIME_OR_IMPORT.match(sym or ""):
             status = "runtime-import"
         elif named_at or human:
@@ -160,7 +172,8 @@ def main():
     anchors = scan_src_anchors()
     named = read_corpus_names(FULL_CORPUS)
     supplement = read_supplement_names(SUPPLEMENT)
-    ledger = classify(rows, anchors, named)
+    stubs = scan_src_stubs()
+    ledger = classify(rows, anchors, named, stubs)
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -175,6 +188,7 @@ def main():
     from collections import Counter
     by_status = Counter(e["status"] for e in ledger)
     ported = [e for e in ledger if e["status"] == "ported"]
+    stubbed = [e for e in ledger if e["status"] == "stubbed"]
     named_e = [e for e in ledger if e["status"] == "named"]
     anon = [e for e in ledger if e["status"] == "anonymous"]
     runtime = [e for e in ledger if e["status"] == "runtime-import"]
@@ -186,7 +200,7 @@ def main():
         by_region[region(e["address"])] += 1
     region_rows = sorted(by_region.items(), key=lambda kv: -kv[1])
 
-    named_in_region = [e for e in ledger if e["status"] == "named"]
+    named_in_region = [e for e in ledger if e["status"] in ("named", "stubbed")]
 
     md = [
         "# Reconstruction coverage ledger",
@@ -203,13 +217,15 @@ def main():
         f"| Status | Count | Share |",
         f"| --- | ---: | ---: |",
     ]
-    for s in ("ported", "anchored", "named", "runtime-import", "anonymous"):
+    for s in ("ported", "stubbed", "anchored", "named", "runtime-import", "anonymous"):
         md.append(f"| {s} | {by_status[s]} | {by_status[s]/total*100:.1f}% |")
 
     md += [
         "",
         "- **ported** — entry address or `FUN_*` name cited directly in `src/`",
         f"  ({len(ported)} functions)",
+        "- **stubbed** — entry address has a Reccmp `STUB` annotation, but the",
+        f"  function remains a placeholder ({len(stubbed)} functions)",
         "- **anchored** — only an *interior* address (a call site / offset inside",
         "  the body) is cited in `src/`; the function is touched but its entry is",
         f"  not named ({len(anchored)} functions)",
@@ -220,8 +236,8 @@ def main():
         "- **anonymous** — `FUN_*` only, unreferenced in `src/`",
         f"  ({len(anon)} functions)",
         "",
-        f"**Game logic remaining to port: {len(named_e) + len(anon) + len(anchored)} "
-        f"({(len(named_e) + len(anon) + len(anchored)) / total * 100:.1f}%).**",
+        f"**Game logic remaining to port: {len(stubbed) + len(named_e) + len(anon) + len(anchored)} "
+        f"({(len(stubbed) + len(named_e) + len(anon) + len(anchored)) / total * 100:.1f}%).**",
         "",
         "## Largest anonymous regions (by 64 KB page)",
         "",
@@ -235,7 +251,7 @@ def main():
         "",
         "## Named-but-unported corpus functions",
         "",
-        "Human-named in the corpus but with no `src/` citation yet.",
+        "Human-named in the corpus that have no source citation or only a `STUB`.",
         "",
         "| Address | Name |",
         "| --- | --- |",

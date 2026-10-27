@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: LGPL-3.0-only
+#include <stdarg.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
 
 #include "heap.hpp"
+#include "string.hpp"
 
 /* Engine heap seam implementation — deviations in heap.hpp. */
 
@@ -280,4 +283,67 @@ void* text_buffer_create(uint32_t mode, const uint32_t* header, long size)
     __builtin_memcpy(record + 0x418, &len, sizeof len);
     text_output_field82c_bit2_set_clear(record, 1);
     return record;
+}
+
+/* TextBufferAppendVFormat (FUN_00485250): append formatted bytes to the
+ * text-output circular buffer, optionally starting after `skip_bells` BEL
+ * markers. The record layout follows TextBufferCreate/Reset. */
+// FUNCTION: LEGORR 0x00485250
+void text_buffer_append_vformat(void* record, int skip_bells,
+                                const char* format, va_list args)
+{
+    if (record == NULL || format == NULL) return;
+
+    char formatted[1024];
+    const uint32_t length = formatted_text_buffer_build(
+        formatted, sizeof(formatted), format, args);
+
+    uint32_t capacity = 0;
+    uint32_t cursor = 0;
+    uint32_t flags = 0;
+    void* buffer = NULL;
+    memcpy(&buffer, (char*)record + 0x14, sizeof(buffer));
+    memcpy(&capacity, (char*)record + 0x418, sizeof(capacity));
+    memcpy(&cursor, (char*)record + 0x41c, sizeof(cursor));
+    memcpy(&flags, (char*)record + 0x82c, sizeof(flags));
+    if (buffer == NULL || capacity == 0 || cursor >= capacity) return;
+
+    size_t start = 0;
+    int bells = 0;
+    while (start < length && bells < skip_bells) {
+        if (formatted[start] == '\a') ++bells;
+        ++start;
+    }
+    for (uint32_t i = (uint32_t)start; i < length; ++i) {
+        ((char*)buffer)[cursor++] = formatted[i];
+        if (cursor == capacity) {
+            cursor = 0;
+            flags |= 1u;
+        }
+    }
+    memcpy((char*)record + 0x41c, &cursor, sizeof(cursor));
+    memcpy((char*)record + 0x82c, &flags, sizeof(flags));
+}
+
+/* TextBufferAppendFormat (FUN_00485230): variadic wrapper with bell-skip
+ * count fixed at zero, matching the decompiled call to TextBufferAppendVFormat. */
+// FUNCTION: LEGORR 0x00485230
+void text_buffer_append_format(void* record, const char* format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    text_buffer_append_vformat(record, 0, format, args);
+    va_end(args);
+}
+
+/* FormattedTextAppendToRingBuffer (FUN_00485210): variadic face of the
+ * text-buffer append path, forwarding its argument list to the VFormat body. */
+// FUNCTION: LEGORR 0x00485210
+void formatted_text_append_to_ring_buffer(void* record, int skip_bells,
+                                          const char* format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    text_buffer_append_vformat(record, skip_bells, format, args);
+    va_end(args);
 }

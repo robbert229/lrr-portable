@@ -48,6 +48,56 @@ void selection_count_reset(GameContext* ctx);
 /* SelectedEntity (0x4525c0): first selection entry when nonzero, else NULL. */
 EntitySlot* selection_first(const GameContext* ctx);
 
+/* SelectedEntitiesAnyMatch (FUN_0041f420): call `predicate` in selection
+ * order with its shared 32-bit argument; stop at the first nonzero result.
+ * A NULL context, callback, or entry is treated as no match (the corpus
+ * uses a global selection and dereferences its entries directly). */
+int selected_entities_any_match(const GameContext* ctx,
+                                int (*predicate)(EntitySlot*, uint32_t),
+                                uint32_t argument);
+
+/* ObjectInteractionFlagsAllow (FUN_0041f100): map the first matching
+ * stats-row capability bit to its required entity-stats bit, then search
+ * the filtered live-entity pool for a match. */
+int object_interaction_flags_allow(GameContext* ctx, int type, int row);
+
+/* Entity-pool request predicates used by TutorialPathMenuAction. */
+int queue_action_request_type2(GameContext* ctx);
+int queue_action_request_value(GameContext* ctx, uint32_t state_mask);
+int queue_action_request_flag100000(GameContext* ctx);
+int queue_action_request_pair(GameContext* ctx, int entity_type,
+                              uint32_t entity_subtype);
+int queue_action_request_index(GameContext* ctx, uint32_t flags_mask);
+
+/* QueueCallbackRequest3E0 (FUN_0041f400): test whether any filtered live
+ * entity passes TerrainCellAllowsPlacement at the given cell. */
+int queue_callback_request_3e0(GameContext* ctx, int x, int y);
+
+/* QueueCallbackRequest390 (FUN_0041f3c0): search live entities, skipping
+ * +0x3e8 bit 0x80000, for one whose requested cell is walkable. The corpus
+ * forwards to TerrainCellWalkabilityQuery in simple mode and applies its
+ * entity flags, owner, and per-terrain speed gates. */
+int queue_callback_request_390(GameContext* ctx, int x, int y);
+
+/* TutorialPathMenuAction (FUN_0041d040). All explicit switch branches,
+ * default no-op behavior, and the final global-mode gate are implemented.
+ * Callbacks supply neighboring subsystems that remain independently
+ * unported in the corpus. */
+int tutorial_path_menu_action(
+    GameContext* ctx, const struct EngineContext* engine,
+    struct TerrainDescriptorNode* descriptors,
+    int (*sidecar_query)(const struct LevelState*, int, int),
+    int (*target_cell_valid)(EntitySlot*),
+    int (*route_marker_candidate)(EntitySlot*, int),
+    int (*vehicle_unload_eligible)(EntitySlot*, int),
+    int (*entity_unload_cell_available)(EntitySlot*, int),
+    /* Route/pick tail for the capability-1 branch of action 0x14/0x15. */
+    int (*selected_action_14_15_route_predicate)(EntitySlot*),
+    int (*building_upgrade_allowed)(EntitySlot*),
+    int (*entity_action_kind_prerequisite)(EntitySlot*, int),
+    int (*building_upgrade_limit_allows)(EntitySlot*),
+    int action, int x, int y);
+
 /* SelectionStateTick (FUN_004528c0, finding 468): the selection filter
  * pass. Walk the whole selection and classify it — kind 2 without the
  * +0x36c owner (context 9, scan ends there); kind 1 split clean/flagged
@@ -86,6 +136,23 @@ void selection_cmd_add(GameContext* ctx, EntitySlot* e);
  * `e` is in the selection array below the count. NULL context answers 0
  * (the corpus reads its global array blindly). */
 int selection_contains_entity(const GameContext* ctx, const EntitySlot* e);
+
+/* Coordinate-matched UI action cancellation helpers (FUN_0041cf80,
+ * FUN_0041cfb0 and FUN_0041cfe0). `coordinate` points to two map words. */
+void selection_mode7_cancel_at_point(const uint32_t coordinate[2]);
+void cancel_action_for_matching_coordinates(const uint32_t coordinate[2]);
+void selection_mode5_cancel_at_point(const uint32_t coordinate[2]);
+
+/* Selection-mode HUD command updates (FUN_0041cea0/0041cf20). */
+void selection_object_command_update(GameContext* ctx, EntitySlot* entity);
+void selection_target_command_update(GameContext* ctx, EntitySlot* entity);
+
+/* SelectionCancelIfCursorHitsObject (FUN_0041d010): in gameplay context,
+ * clear the current command/HUD selection request when the candidate is
+ * selected or carries the cursor-hit flag (+0x3e8 bit 0x200000). */
+void selection_cancel_if_cursor_hits_object(struct EngineContext* engine,
+                                             GameContext* ctx,
+                                             EntitySlot* entity);
 
 /* SelectionCandidateAlreadySelectedOrMarked / SelectionCandidateEligibilityCheck
  * (FUN_00452690 / FUN_00452870, findings 77/85/468): the selection filter's

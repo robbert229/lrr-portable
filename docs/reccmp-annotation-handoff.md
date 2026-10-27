@@ -79,16 +79,22 @@ and can be run with:
 
 ```sh
 make reccmp-lint
+# use a different ledger when needed
+make reccmp-lint RECCMP_LEDGER=path/to/ledger.csv
 # or
 python3 tools/lint_reccmp_annotations.py
 ```
 
-The linter is a source-level heuristic. It reports definitions lacking
-markers; it does not determine whether a valid original address exists and it
-does not validate address correctness or uniqueness. A nonzero exit is
-therefore expected while source functions without reliable address evidence
-remain. Review its output rather than filling every reported line with a
-guess.
+Alongside source definitions lacking markers, `make reccmp-lint` lists ledger
+entries with status `named` only when their entry address has no `FUNCTION` or
+`STUB` annotation in production source. Already annotated stubs are not listed
+in this section. This is a ledger-based inventory, not proof that no related
+implementation exists in the source.
+The source linter remains a heuristic; it does not determine whether a valid
+original address exists and it does not validate address correctness or
+uniqueness. A nonzero exit is therefore expected while source functions
+without reliable address evidence remain. Review its output rather than
+filling every reported line with a guess.
 
 Check formatting and address uniqueness independently:
 

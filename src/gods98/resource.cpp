@@ -954,3 +954,21 @@ void resource_handle_list_dispose(ResourceHandleList* list)
     }
     engine_heap_free(list);
 }
+
+/* ResourceHandleListAppend (FUN_00410aa0): append a heap-owned string only
+ * while the preallocated handle array has capacity. */
+// FUNCTION: LEGORR 0x00410aa0
+void resource_handle_list_append(ResourceHandleList* list, const char* value)
+{
+    if (list == NULL || list->handles == NULL
+        || list->count >= (int32_t)(uint32_t)list->word1 || value == NULL) {
+        return;
+    }
+    const size_t length = strlen(value);
+    if (length >= 0x7fffffffU) return;
+    char* copy = (char*)engine_heap_alloc((long)length + 1);
+    if (copy == NULL) return;
+    memcpy(copy, value, length + 1);
+    list->handles[list->count] = copy;
+    ++list->count;
+}

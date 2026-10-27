@@ -148,13 +148,17 @@ int main(void)
 
     /* ObjectiveVoiceAliasRaiseGateBit27 (2026-10-24): the modeled gate bit
      * never lands set, so the raise announces the failed result (2) and
-     * answers 1 — the corpus's unset-word reading. */
-    level_set_int(s, OBJ_OFF_TIMER_TARGET, 0);
-    int g = objective_voice_alias_raise_gate_bit27(s);
+     * answers 1 — the corpus's unset-word reading. (The `s` block was
+     * destroyed above, so the raise rides a fresh zeroed block — the
+     * corpus's unset-word reading needs no config.) */
+    LevelState* s4 = fresh_level();
+    level_set_int(s4, OBJ_OFF_TIMER_TARGET, 0);
+    int g = objective_voice_alias_raise_gate_bit27(s4);
     CHECK(g == 1, "the raise answers one");
-    CHECK(strstr(objective_stream(s), "Failed") != NULL
-              || (s->objective & 8u) != 0,
+    CHECK(strstr(objective_stream(s4), "Failed") != NULL
+              || (s4->objective & 8u) != 0,
           "the raise announces the failed result");
+    level_destroy(s4);
 
     /* Advisor action window band (2026-10-25): the row table's mode/pair
      * stores, the 0xc mode flag raise/clear pair, and the token table. */

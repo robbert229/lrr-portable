@@ -484,7 +484,9 @@ void cam_set_facing(CameraHandle* c, const float* r)
 }
 
 /* ---- world/stub boundaries ---------------------------------------------- */
-/*  FUN_0044f6d0 grid pick -> bounded voxel-grid coordinates.
+/* EngineContext grid lookup -> bounded voxel-grid coordinates. This adapter
+ * is used where only the widened LevelState block is available; the actual
+ * descriptor-based TerrainGridPick lives in record.cpp.
  *  FUN_0044f940 / FUN_0044fe70 terrain heights -> sampled voxel byte, not
  *  the original selected-triangle corner-height interpolation.
  *  FUN_00431570 returns the current level's +4 terrain handle despite its
@@ -498,7 +500,8 @@ void cam_set_facing(CameraHandle* c, const float* r)
  *  FUN_0041f940 is instead the engine-state bit-0x20000 setter; no direct
  *  port setter exists yet. */
 
-static int grid_pick(EngineContext* ctx, const float* pos, int* gx, int* gy)
+static int engine_context_grid_pick(EngineContext* ctx, const float* pos,
+                                    int* gx, int* gy)
 {
     /* with a bound level, cells come from the real voxel grid; terrain uses
      * the voxel surface byte (+0x04). */
@@ -545,7 +548,7 @@ void random_reachable_grid_point_select(EngineContext* ctx, const float* p,
         view_ray_intersection_test(out, p, dir, plane, normal);
         plane[2] = terrain_height(ctx, out[0], out[1]);
     }
-    (void)grid_pick(ctx, out, gx, gy); /* FUN_0044f6d0 hook */
+    (void)engine_context_grid_pick(ctx, out, gx, gy);
 }
 
 static void cam_surface_height_stub()
@@ -610,7 +613,7 @@ void view_tick(ViewContext* v, EngineContext* ctx, float dt, float scale)
         cam_get_facing(&v->cam_follow, fac);
         (void)fac;
         int gx = 0, gy = 0;
-        if (!grid_pick(ctx, pos, &gx, &gy)) {
+        if (!engine_context_grid_pick(ctx, pos, &gx, &gy)) {
             cam_offset(&v->cam_follow, -v->offset[0], -v->offset[1],
                        -v->offset[2]);
         } else {
@@ -698,16 +701,43 @@ void view_views_tick(EngineContext* ctx, float dt, float scale)
  * upper corners via origin+size (finding 23: the widget rectangle is
  * the 100x20 row band this routine hit-tests). */
 // FUNCTION: LEGORR 0x004112e0
+#if defined(LEGORRR_BACKEND_WINAPI)
+__declspec(naked) int menu_pointer_rectangle_hit_test(
+    int x, int y, int rect_x, int rect_y, int rect_w, int rect_h)
+{
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        mov ecx, dword ptr [esp + 0x0c]
+        cmp eax, ecx
+        jl menu_pointer_rectangle_hit_test_miss
+        mov edx, dword ptr [esp + 0x14]
+        add edx, ecx
+        cmp eax, edx
+        jg menu_pointer_rectangle_hit_test_miss
+        mov eax, dword ptr [esp + 8]
+        mov ecx, dword ptr [esp + 0x10]
+        cmp eax, ecx
+        jl menu_pointer_rectangle_hit_test_miss
+        mov edx, dword ptr [esp + 0x18]
+        add edx, ecx
+        cmp eax, edx
+        jg menu_pointer_rectangle_hit_test_miss
+        mov eax, 1
+        ret
+    menu_pointer_rectangle_hit_test_miss:
+        xor eax, eax
+        ret
+    }
+}
+#else
 int menu_pointer_rectangle_hit_test(int x, int y, int rect_x, int rect_y,
                                     int rect_w, int rect_h)
 {
-    if ((rect_x <= x) && (x <= rect_w + rect_x)) {
-        if ((rect_y <= y) && (y <= rect_h + rect_y)) {
-            return 1;
-        }
-    }
-    return 0;
+    if (x < rect_x || x > rect_w + rect_x) return 0;
+    if (y < rect_y || y > rect_h + rect_y) return 0;
+    return 1;
 }
+#endif
 
 /* MenuOverlayListCount (FUN_00412170): head slot + record+0x40, next
  * slot + node+0x18, both native-size (pointer-slot deviation; see the
@@ -715,16 +745,11 @@ int menu_pointer_rectangle_hit_test(int x, int y, int rect_x, int rect_y,
 // FUNCTION: LEGORR 0x00412170
 int menu_overlay_list_count(const void* menu)
 {
-    void* head = NULL;
-    if (menu != NULL) {
-        __builtin_memcpy(&head, (const char*)menu + 0x40, sizeof(head));
-    }
     int count = 0;
+    void* head = *(void* const*)((const char*)menu + 0x40);
     while (head != NULL) {
-        void* next = NULL;
-        __builtin_memcpy(&next, (char*)head + 0x18, sizeof(next));
         ++count;
-        head = next;
+        head = *(void**)((char*)head + 0x18);
     }
     return count;
 }
@@ -889,7 +914,7 @@ void current_level_terrain_grid_pick(EngineContext* ctx, float x, float y,
     int tx = 0, ty = 0;
     int* px = gx != NULL ? gx : &tx;
     int* py = gy != NULL ? gy : &ty;
-    (void)grid_pick(ctx, pos, px, py);
+    (void)engine_context_grid_pick(ctx, pos, px, py);
 }
 
 /* GridOperationArgumentAdapter (FUN_00442540) — see view.hpp. */

@@ -1546,21 +1546,18 @@ int main(void)
         engine_heap_free(rec);
 
         void* wide = menu_item_numeric_range_record_allocate(
-            3, 1, 10, 11u, 12u, 13u, 14u, 15u, 16u, 17u, 18u, 19u, 20u, 21u,
-            22u);
+            3, 1, 10, 11u, 12u, 13u, 14u, 15u, 16u, 17u, 18u, 19u, 20u, 21u);
         CHECK(wide != NULL, "the slider record allocates");
-        uint32_t wkind = 0, lo = 0, hi = 0, f12 = 0, f13 = 0, f14 = 0;
+        uint32_t wkind = 0, lo = 0, hi = 0, f12 = 0, f13 = 0;
         __builtin_memcpy(&wkind, wide + 0 * sizeof(void*), sizeof wkind);
         __builtin_memcpy(&lo, wide + 1 * sizeof(void*), sizeof lo);
         __builtin_memcpy(&hi, wide + 2 * sizeof(void*), sizeof hi);
         __builtin_memcpy(&f12, wide + 12 * sizeof(void*), sizeof f12);
         __builtin_memcpy(&f13, wide + 13 * sizeof(void*), sizeof f13);
-        __builtin_memcpy(&f14, wide + 14 * sizeof(void*), sizeof f14);
-        CHECK(wkind == 3u && lo == 1u && hi == 10u && f12 == 20u && f13 == 21u
-                  && f14 == 22u,
+        CHECK(wkind == 3u && lo == 1u && hi == 10u && f12 == 20u && f13 == 21u,
               "the wide window lands in corpus field order");
         CHECK(menu_item_numeric_range_record_allocate(
-                  1, 5, 5, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u)
+                  1, 5, 5, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u)
                   == NULL,
               "equal bounds are rejected");
         engine_heap_free(wide);

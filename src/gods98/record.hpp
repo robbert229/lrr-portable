@@ -257,6 +257,10 @@ uint32_t indexed_record_transform_copy_in(void* record, int index,
 int world_to_terrain_cell_bounds_check(const void* map, float world_x,
                                        float world_y, int* cell_x,
                                        int* cell_y, float* subcell);
+/* TerrainGridPick (FUN_0044f6d0): same bounded conversion, discarding the
+ * optional folded subcell fraction. */
+int terrain_grid_pick(const void* map, float world_x, float world_y,
+                      int* cell_x, int* cell_y);
 
 /* GridCoordinateClampAndStore (FUN_0044f810): truncate a world point to
  * cells and clamp each into 0..dim-1 before storing (NULL-safe stores). */
@@ -445,10 +449,11 @@ uint32_t record_flag_bit_test(const void* record, uint32_t bit_index,
  *   open interval (min, max) — rejected when min >= max — carrying six
  *   payload words through the engine heap.
  * MenuItemNumericRangeRecordAllocate (FUN_00410bf0): the slider variant's
- *   wider record: kind + int bounds + twelve payload words through the same
+ *   wider record: kind + int bounds + eleven payload words through the same
  *   gate. Both answer NULL on rejection or heap failure.
  * Deviation: the corpus strides its windows as dwords; both records land
- * in the port's record window (field n at record + n*sizeof(void*)). */
+ * in the port's record window (field n at record + n*sizeof(void*)). Each
+ * field stores one dword even on hosts where pointer slots are wider. */
 void* bounded_float_record_create(int kind, float min_v, float max_v,
                                   uint32_t f3, uint32_t f4, uint32_t f5,
                                   uint32_t f6);                      /* FUN_00410b90 */
@@ -458,8 +463,48 @@ void* menu_item_numeric_range_record_allocate(int kind, int min_v, int max_v,
                                               uint32_t f7, uint32_t f8,
                                               uint32_t f9, uint32_t f10,
                                               uint32_t f11, uint32_t f12,
-                                              uint32_t f13, uint32_t f14);
+                                              uint32_t f13);
                                                                     /* FUN_00410bf0 */
+
+/* MenuParamRecordCreate (FUN_004105f0): a 23-word parameter record. The
+ * two string fields are copied through the engine heap; remaining words
+ * preserve the corpus field order. Pointer slots are native-width in this
+ * port, matching its record-window convention. */
+void* menu_param_record_create(uint32_t mode, const char* first,
+                              const char* second, uint32_t f4,
+                              uint32_t f5, uint32_t f6, uint32_t f7,
+                              uint32_t f8, uint32_t f9, uint32_t f10,
+                              uint32_t f11, uint32_t f12, uint32_t f13,
+                              uint32_t f14);
+/* Releases copied strings, resource rows, row-owned strings/texture handles,
+ * and the record. Resource rows use x86's 0x20-byte layout on 32-bit builds;
+ * 64-bit producers must use the widened native-pointer row layout. */
+void menu_record_resources_release(void* record); /* FUN_00410690 */
+char* campaign_level_fallback_label(const char* label); /* FUN_004105a0 */
+void* menu_item_choice_strings_allocate(uint32_t count, uint32_t f3,
+                                        uint32_t f4, uint32_t f5,
+                                        uint32_t f6); /* FUN_00410a10 */
+void resource_record_add_ref(void* record); /* FUN_0047dbc0 */
+/* LoadItemStrings (FUN_00414010): for record type 0x10 resolve and retain
+ * the eight string-cache resources stored from pointer slot 4 onward;
+ * other types produce eight null outputs. Pointer slots are native-width
+ * in the port, following the widened record-window convention. */
+void load_item_strings(uint32_t record_type, const void* record,
+                       void* out_resources[8]);
+void* menu_section_record_create(const char* name, const char* title,
+                                 uint32_t f3, uint32_t f4, uint32_t f5,
+                                 uint32_t f6, uint32_t f7, uint32_t f8,
+                                 uint32_t f9, const char* integer_pair);
+                                                      /* FUN_00411100 */
+void resource_variant_record_release(void* record); /* FUN_00410c70 */
+void resource_record_and_children_release(void* record); /* FUN_00410f30 */
+int menu_item_image_set(void* item, const char* image_config,
+                        int primary); /* FUN_00410fb0 */
+int filename_extension_classify(const void* record); /* FUN_00413f30 */
+void* menu_item_record_alloc(const char* name, void** list_head,
+                             uint32_t f3, uint32_t f4,
+                             uint32_t f5); /* FUN_00413f90 */
+int menu_list_append(void* list, void* value); /* FUN_00411260 */
 
 /* NestedRecordListRemoveByKeyRecursive (FUN_0047b2e0): the deep-first key
  * sweep of a nested list. The recursion descends through the node's next

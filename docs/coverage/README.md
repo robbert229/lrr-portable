@@ -11,25 +11,28 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 1124 | 43.8% |
+| ported | 1103 | 43.0% |
+| stubbed | 1415 | 55.2% |
 | anchored | 4 | 0.2% |
-| named | 1394 | 54.4% |
+| named | 0 | 0.0% |
 | runtime-import | 41 | 1.6% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (1124 functions)
+  (1103 functions)
+- **stubbed** — entry address has a Reccmp `STUB` annotation, but the
+  function remains a placeholder (1415 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (1394 functions)
+  citation yet (0 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 
-**Game logic remaining to port: 1399 (54.6%).**
+**Game logic remaining to port: 1420 (55.4%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
@@ -39,7 +42,7 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 ## Named-but-unported corpus functions
 
-Human-named in the corpus but with no `src/` citation yet.
+Human-named in the corpus that have no source citation or only a `STUB`.
 
 | Address | Name |
 | --- | --- |
@@ -58,6 +61,12 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00401b30` | AdvisorApplySlotTransform |
 | `0x00401c50` | FormattedTextPrintfWidth |
 | `0x00401c80` | FormattedTextPrintf |
+| `0x00402310` | CmdChainPurge |
+| `0x004027a0` |  |
+| `0x00402a40` | CoordinatePairCallbackDispatch |
+| `0x00402aa0` | ArgumentCallbackDispatch |
+| `0x00402b30` | CoordinateCallbackDispatch |
+| `0x00402b60` | CoordinateCallbackDispatchByMode |
 | `0x00403320` | ObjectCommandTaskCreate |
 | `0x00403750` | CommandKindRecordIssueAndLink |
 | `0x00403810` | TerrainCellRecordCountUpdate |
@@ -126,14 +135,19 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004090c0` | TerrainDescriptorFindExact |
 | `0x00409110` | ReleaseSelectionGroupResources |
 | `0x00409150` | ClearSelectionGroup |
+| `0x00409270` |  |
 | `0x00409300` | TutorialPathDescriptorCreate |
 | `0x004093b0` | PassableAdjacentCellSearchExpand |
 | `0x00409450` | FindNearbyPlacementCandidate |
 | `0x00409470` | NeighborCellEntitySearchRecurse |
+| `0x00409550` |  |
 | `0x00409600` | TerrainDescriptorTilesResetAndFree |
 | `0x00409790` | CellPathRecordRegisterApply |
 | `0x00409940` | RefreshEightNeighborCells |
+| `0x004099f0` |  |
+| `0x00409a40` |  |
 | `0x00409a90` | WorldObjectCreateWithTransform |
+| `0x00409b30` |  |
 | `0x00409d50` | EntityCellPathEffectsApply |
 | `0x00409f20` | EntityPlacementCommandsBuildOnce |
 | `0x00409ff0` | EntityDestroyTrackedPointerCleanup |
@@ -141,6 +155,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0040a4b0` | QuadMeshRenderRecordCreate |
 | `0x0040a5c0` | QuadMeshRenderRecordPoolSlotAllocate |
 | `0x0040a5e0` | RecordCountDigitsFill |
+| `0x0040aa40` | ScreenEffectOpacityUpdate |
 | `0x0040ab70` | DependencyGridConfigLoad |
 | `0x0040aea0` | EnsureCellEntriesLoaded |
 | `0x0040af40` | CellResourceEntryMatches |
@@ -200,9 +215,9 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0040e0c0` | FenceSparkLaunchRegister |
 | `0x0040e1e0` | CellCornerOccupancyScan |
 | `0x0040e350` | CellEntityKindCreateOrRemove |
-| `0x0040e490` | EncyclopediaConfigFilesOpen |
 | `0x0040e8d0` | ScreenSpaceEffectDispatchIfEnabled |
 | `0x0040ee50` | LavaErosionPendingCellAdd |
+| `0x0040f190` |  |
 | `0x0040f2b0` | LavaErosionNeighborEligible |
 | `0x0040f330` | LavaErosionNeighborMutate |
 | `0x0040f5f0` | ErosionEightNeighborPropagate |
@@ -254,17 +269,12 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00414de0` | GameSpeedSelect |
 | `0x00414df0` | VolumeSet |
 | `0x00414e10` | OptionMusicDefault |
-| `0x004150b0` | SaveMenuRefresh |
 | `0x00415220` | FrontEndStartLevel |
 | `0x00415370` | OverlayMenuGate |
 | `0x00415d00` | SaveMenuLayoutLoad |
 | `0x004169c0` | FrontEndStateChange |
 | `0x00416c80` | MenuEnter |
 | `0x00417090` | LevelNodeGet |
-| `0x00417280` | RegistryValueLookupWithLock |
-| `0x004172d0` | RegistryValueIndexLookupOrNotFound |
-| `0x004172f0` | SavTreeWalk2 |
-| `0x004173e0` | SavTreeLoad |
 | `0x004179b0` | SavMenuList |
 | `0x00418000` | ShowLevelOverlayForCurrentSelection |
 | `0x00418040` | CampaignChainSnapshotCreate |
@@ -278,6 +288,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00418a00` | OverlayTextBufferRefresh |
 | `0x00418da0` | HelpWindowButtonHitTest |
 | `0x00419030` | HelpWindowButtonFeedbackUpdate |
+| `0x00419100` | UiModeResourcePositionsApply |
 | `0x00419230` | IncidentMessageCatalogInit |
 | `0x00419430` | InterfaceMessageTabInfoTextLoad |
 | `0x004194b0` | IncidentMessageTemplateReplace |
@@ -377,6 +388,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00430320` | TerrainCellWorkFlagClear |
 | `0x00430470` | TerrainNeighborFlagSet |
 | `0x00430df0` | TerrainNeighborRefresh |
+| `0x004311d0` |  |
 | `0x004314c0` | ActivityBuildRecordRelease |
 | `0x00431530` | ActivityBuildRecordsReleaseAll |
 | `0x00431780` | TerrainStampImpactHandler |
@@ -402,6 +414,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004350a0` | SurfaceTypeDescriptionsConfigLoad |
 | `0x00435550` | GlobalStateZeroTransitionDetect |
 | `0x004355c0` | MenuOptionPanelTextureUpdate |
+| `0x00435940` | KeepRunning |
 | `0x00435b20` | SceneObjectChainRecordCreate |
 | `0x00435dc8` | CameraViewContextClose |
 | `0x00435e35` | ModelTransformCopyToSceneNode |
@@ -419,6 +432,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004374d0` | TaskCounterIncrementByBranch |
 | `0x004374f0` | EntityCallbackDispatchUnlessTypeFive |
 | `0x00437540` | EntityTeardown |
+| `0x004377b0` | EntityPoolFindByCallbackFiltered |
 | `0x004378e0` | GridObjectRecordsRelease |
 | `0x00437940` | DeferredOListEntityCreateAndLink |
 | `0x004383b0` | RoverWorkQueueUpdate |
@@ -428,6 +442,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00438770` | BuildingUpgradeResourceAdmissionCheck |
 | `0x004387f0` | BuildingUpgradeCommit |
 | `0x004388b0` | EntityActionKindPrerequisiteCheck |
+| `0x00438960` |  |
 | `0x004389e0` | EntityRouteMarkerCandidateFind |
 | `0x00438a60` | SpatialObjectQueryCenterMask01 |
 | `0x00438ae0` | SpatialObjectQueryCenterMask02 |
@@ -467,6 +482,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0043a9f0` | EntityPairInteractionGate |
 | `0x0043aab0` | ProximityActivityRaise |
 | `0x0043abf0` | TerrainCellVariantUpdateQueue |
+| `0x0043ad50` | PredugSpawnCoordinateSelectAndCreate |
 | `0x0043aea0` | EmergenceRandomSpawnAttempt |
 | `0x0043af30` | CreatureSpawnFromEmergence |
 | `0x0043b320` | EntityIterationCallbackGuard |
@@ -515,6 +531,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004422a0` | SurfaceVectorNormalize |
 | `0x00442300` | EntityVelocityVectorDispatch |
 | `0x00442480` | VectorDirectionAngleRadiansGet |
+| `0x004424f0` | EntityPositionToTerrainCell |
 | `0x004425f0` | SubobjectPoseDeltaNormalizeAndDispatch |
 | `0x004428a0` | EntityWorldPositionSet |
 | `0x00442b10` | EntityMovementAccumulatorApply |
@@ -568,10 +585,13 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00449cd0` | SceneObjectStateHandleApplyValue |
 | `0x00449f50` | EntityTypeOperationDispatch |
 | `0x00449ff0` | EntityTypeOperationRelease |
+| `0x0044a070` |  |
+| `0x0044a200` | EntityTypeComponentGet |
 | `0x0044a2a0` | EntityWorkObjectPositionGet |
 | `0x0044a310` | ObjectMovementInputAccumulate |
 | `0x0044a390` | Type11CellCoordinateAppend |
 | `0x0044a3d0` | PlaceCellNearestResolve |
+| `0x0044a4b0` | PredugCoordinatePoolAppend |
 | `0x0044a4f0` | NearestCellCoordinateWorldResolve |
 | `0x0044a5d0` | NearestOpenCellCoordSearch |
 | `0x0044a7d0` | PolyVariantSectionModelBuild |
@@ -625,6 +645,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0044f1a0` | InputKeyMappingAddBidirectional |
 | `0x0044f230` | TerrainCellMaterialSet |
 | `0x0044f490` | GridCellOperationApplyAll |
+| `0x0044f6d0` | TerrainGridPick |
 | `0x0044fab0` | TerrainCellSurfaceTriangleVerticesSelect |
 | `0x0044fb90` | TerrainSurfacePointProjectOffset |
 | `0x00450060` | GridCellReadSurfaceVector |
@@ -657,11 +678,9 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00453da0` | CameraFocusTweenUpdate |
 | `0x00456810` | SoundAliasPlayGlobal |
 | `0x00456830` | AdvisorInlineTokenRender |
-| `0x00456b80` | TutorialPathCoordinateIndex |
 | `0x00456cb0` | CoordinateListCallbackVisit |
 | `0x004588e0` | InputDeviceRelease |
 | `0x00459240` | PopEntityStateOverride |
-| `0x004593e0` | OsfWrite |
 | `0x00459530` | RenderThreePassUpdate |
 | `0x00459560` | HealthBarConfigLoadAndShadeDerive |
 | `0x00459900` | HungerImagesPositionConfigLoad |
@@ -746,6 +765,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00463e40` | FloatRoundToNearestInt |
 | `0x00463f00` | SceneQuadGridEmit |
 | `0x004641c0` | BuildingPlacementFootprintRenderAndValidate |
+| `0x00465050` | SoundSubmissionRouteWrapper |
 | `0x00465190` | SoundHandleStopForward |
 | `0x004653a0` | TransientEffectTexturesPreload |
 | `0x00465430` | TransientEffectEmitterCreate |
@@ -758,6 +778,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00465f40` | InstanceQuadVerticesBuild |
 | `0x00466250` | ExpandCellEntitySpawn |
 | `0x00466490` | CellSightRayCheckAndFlag |
+| `0x004665c0` |  |
 | `0x004667e0` | EntityStatsConfigLoad |
 | `0x00469a90` | IndexedValueAppend |
 | `0x00469ac0` | IndexedRecordWordAtOffsetB0Get |
@@ -765,7 +786,9 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0046a0c0` | MappedIndexedRecordWordAtFCGet |
 | `0x0046a120` | GroupedCodeTableFindValueIndex |
 | `0x0046a330` | EntityRecordFlag400ToggleAndRefresh |
+| `0x0046a4c0` | FlagMaskCallbacksAllPass |
 | `0x0046a510` | SceneObjectStateDispatch |
+| `0x0046a700` |  |
 | `0x0046a760` | FirstSetFlagOrdinal |
 | `0x0046a7f0` | UiMessageStringsInit |
 | `0x0046a950` | TextLayoutGeometryStoreAndApply |
@@ -817,6 +840,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0046e1c0` | GlobalEntityRenderParameterModeSet |
 | `0x0046e220` | CellSurfaceQuadHeightFill |
 | `0x0046e330` | GridSurfaceEntryReset |
+| `0x0046e390` |  |
 | `0x0046e610` | TerrainEdgeFlagMidpointUpdate |
 | `0x0046e8a0` | WorldSpatialRecordFindAtGridCoordinate |
 | `0x0046e9d0` | StagedCellCandidateCollect |
@@ -888,7 +912,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00473ec0` | RenderObjectStateApplyToEntries |
 | `0x00474410` | ParseIndexedSurfaceName |
 | `0x004744f0` | TextureSurfaceCreate |
-| `0x00474710` | TextureRelease |
 | `0x00474760` | InterfaceArrayForwardSync |
 | `0x004748f0` | MeshRecordAllocateOrAppend |
 | `0x00474a20` | AnimatedTextureFrameCount |
@@ -971,7 +994,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x004774b0` | WhitespaceTokenize |
 | `0x00477590` | FormattedTextEscapeDecodeAndEmit |
 | `0x00477670` | GameStringHashCompute |
-| `0x004777a0` | WinMain |
 | `0x00477f30` | MainLoopFramePump |
 | `0x00477f80` | DisplayDeviceCapsQueryDiscard |
 | `0x00477fa0` | RendererBeginFrameOnce |
@@ -1074,6 +1096,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0047ebf0` | AviFrameSeekAndClockRebase |
 | `0x0047ec60` | AviPlaybackFrameIndexGet |
 | `0x0047ec80` | AviFileInitialize |
+| `0x0047ec90` | AviPlayerCreate |
 | `0x0047ecf0` | AviFrameUpdate |
 | `0x0047ed00` | AviPlaybackFrameLoop |
 | `0x0047ed40` | AviFrameIndexAndClockReset |
@@ -1151,6 +1174,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00484610` | FlicSubrecordOpcodeDispatch |
 | `0x00484720` | FlicChunkBufferAndContinueLK |
 | `0x004847d0` | FlicChunkBufferAndContinueType0B |
+| `0x00484c90` | FlicOpcode27FallbackNoop |
 | `0x00485210` | FormattedTextAppendToRingBuffer |
 | `0x00485250` | TextBufferAppendVFormat |
 | `0x00485300` | ObjectiveAdvisorTextCopy |
@@ -1223,7 +1247,6 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x0048b280` | WindowModeFlagSet |
 | `0x0048b290` | StartupStreamsClose |
 | `0x0048b2f0` | StartupConfigStreamLoad |
-| `0x0048b360` | RegistryPathAccessor |
 | `0x0048b390` | RegistryPathCreateKeys |
 | `0x0048b4a0` | BufferedCharStreamReadToString |
 | `0x0048b4e0` | WwadArchiveIndexLoad |
@@ -1314,6 +1337,7 @@ Human-named in the corpus but with no `src/` citation yet.
 | `0x00491b40` | EnginePoolChunkTryAllocate |
 | `0x00491cc0` | SmallHeapBlockResizeInPlace |
 | `0x00491f80` | CrtOneArgumentMathErrorHandlingStart |
+| `0x00491ff5` | CrtNoOpStub |
 | `0x0049200c` | CrtFpuPrecisionModeCodeGet |
 | `0x0049221e` | CrtFloatingPointExceptionResultDispatch |
 | `0x00492225` | CrtFloatingPointExceptionResultDispatchVariant |

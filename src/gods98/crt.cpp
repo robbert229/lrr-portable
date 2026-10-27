@@ -230,15 +230,19 @@ double format_argument_read_double(uint8_t** cursor)
 // FUNCTION: LEGORR 0x00493150
 double x87_round_to_integral(double value)
 {
-    const double lower = floor(value);
-    const double fraction = value - lower;
-    if (fraction < 0.5) {
-        return lower;
+#if defined(_MSC_VER) && defined(_M_IX86)
+    /* MSVC 5.0 has no rint() declaration. Keep this leaf on the same x87
+     * instruction as the original CRT implementation. */
+    double result;
+    __asm {
+        fld qword ptr [value]
+        frndint
+        fstp qword ptr [result]
     }
-    if (fraction > 0.5) {
-        return lower + 1.0;
-    }
-    return fmod(lower, 2.0) == 0.0 ? lower : lower + 1.0;
+    return result;
+#else
+    return rint(value);
+#endif
 }
 
 /* DoubleBuildWithExponent (FUN_00493a40, findings 383/399): the corpus
@@ -393,16 +397,218 @@ uint32_t crt_counter_0055532c_peek(void) { return s_counter_0055532c; }
 float    crt_float_00555330_peek(void)   { return s_float_00555330; }
 float    crt_float_00555120_peek(void)   { return s_float_00555120; }
 
-/* --- display-resolution filter tuples @ 0x49d870 (see crt.hpp) ------
- * Zero-initialized statics; the corpus's blind slot writes land inside the
- * guarded 16-entry window. The tuple count mirrors DAT_005754e0. */
+/* --- DirectDraw display-mode records + filter tuples -------------------- */
 typedef struct FilterTuple {
     int32_t w, h, bpp;
 } FilterTuple;
 
 #define FILTER_TUPLE_ENTRIES 16
+#define DISPLAY_MODE_ENTRIES CRT_DISPLAY_MODE_ENTRIES
+#define DISPLAY_MODE_KINDS 2
+static CrtDisplayModeEntry
+    s_display_modes[DISPLAY_MODE_KINDS][CRT_DISPLAY_MODE_ENTRIES];
+static int s_display_mode_counts[DISPLAY_MODE_KINDS];
+static int s_active_display_mode;
+static CrtDisplayResolutionEntry
+    s_display_resolutions[CRT_DISPLAY_RESOLUTION_ENTRIES];
+static int s_display_resolution_count;
+static int s_display_resolution_enumeration_succeeded;
 static FilterTuple s_filter_tuples[FILTER_TUPLE_ENTRIES];
 static int         s_filter_tuple_count;
+
+/* Caller-side DirectDraw enumeration replacement. This record occupies
+ * 0x110 bytes, with `name` at the same +0x0c offset as the native list. */
+int display_mode_entry_append(int mode, int width, int height, int bpp,
+                              const char* name)
+{
+    const int kind = mode != 0 ? 1 : 0;
+    int* count = &s_display_mode_counts[kind];
+    if (name == NULL || *count >= DISPLAY_MODE_ENTRIES) {
+        return 0;
+    }
+    CrtDisplayModeEntry* entry = &s_display_modes[kind][*count];
+    entry->width = width;
+    entry->height = height;
+    entry->bpp = bpp;
+    size_t length = strlen(name);
+    if (length >= sizeof(entry->name)) {
+        length = sizeof(entry->name) - 1;
+    }
+    memcpy(entry->name, name, length);
+    entry->name[length] = '\0';
+    ++*count;
+    return 1;
+}
+
+int display_mode_entry_count(void)
+{
+    return s_display_mode_counts[s_active_display_mode];
+}
+
+int display_mode_entry_get(int index, CrtDisplayModeEntry* out)
+{
+    if (out == NULL || index < 0 ||
+        index >= s_display_mode_counts[s_active_display_mode]) {
+        return 0;
+    }
+    *out = s_display_modes[s_active_display_mode][index];
+    return 1;
+}
+
+/* DisplayModeNameIndexFind (FUN_0049d950) compares mode-name bytes exactly
+ * and returns the first matching row's zero-based index. */
+// FUNCTION: LEGORR 0x0049D950
+int display_mode_name_index_find(const char* name, uint32_t* out_index)
+{
+    const int count = s_display_mode_counts[s_active_display_mode];
+    if (name == NULL || count <= 0) {
+        return 0;
+    }
+    for (int index = 0; index < count; ++index) {
+        if (strcmp(name, s_display_modes[s_active_display_mode][index].name) == 0) {
+            if (out_index != NULL) {
+                *out_index = (uint32_t)index;
+            }
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/* DisplayModeListPopulate (FUN_0049d630): form the exact supported-mode
+ * index list for a dialog. The native combo box is represented by an
+ * ordered array; the first match is selected, and an empty list disables
+ * the dialog's default action. */
+// FUNCTION: LEGORR 0x0049D630
+void display_mode_list_populate(int mode, int desktop_bpp,
+                                CrtDisplayModeList* out)
+{
+    if (out == NULL) return;
+    s_active_display_mode = mode != 0 ? 1 : 0;
+    memset(out, 0, sizeof(*out));
+    out->desktop_bpp = desktop_bpp;
+    out->selected_mode_index = 0xffffffffu;
+    out->empty_message_kind = mode == 0 ? 1 : 2;
+    const int mode_count = s_display_mode_counts[s_active_display_mode];
+    for (int index = 0; index < mode_count; ++index) {
+        if (!display_mode_matches_filter_tuple(index)) continue;
+        if (out->count >= CRT_DISPLAY_MODE_ENTRIES) break;
+        out->mode_indices[out->count++] = (uint32_t)index;
+    }
+    out->default_action_enabled = out->count != 0;
+    out->selected_index = 0;
+    if (out->count != 0) {
+        out->selected_mode_index = out->mode_indices[0];
+        out->empty_message_kind = 0;
+    }
+}
+
+/* DisplayModeDialogSetModeAndRefreshChoices (FUN_0049d5e0): store the
+ * windowed/fullscreen selector, repopulate its list, and select the
+ * matching localized label resource. */
+// FUNCTION: LEGORR 0x0049D5E0
+void display_mode_dialog_set_mode_and_refresh_choices(
+    CrtDisplayModeDialog* dialog, int mode, int desktop_bpp)
+{
+    if (dialog == NULL) return;
+    dialog->mode = mode;
+    dialog->mode_label_resource = mode != 0 ? 0x004b2d44u : 0x004b2d38u;
+    display_mode_list_populate(mode, desktop_bpp, &dialog->modes);
+}
+
+/* DisplayRefreshRateControlsSync (FUN_0049d9d0): adapter flag 0x20 controls
+ * whether the refresh-rate selector is available. When unavailable, force
+ * the dialog to its non-refresh mode and remember the previous mode for
+ * restoration if a later adapter supports refresh selection. */
+// FUNCTION: LEGORR 0x0049D9D0
+void display_refresh_rate_controls_sync(CrtDisplayModeDialog* dialog,
+                                        uint32_t adapter_flags,
+                                        int desktop_bpp)
+{
+    if (dialog == NULL) return;
+    if ((adapter_flags & 0x20u) == 0u) {
+        dialog->previous_mode = dialog->mode;
+        display_mode_dialog_set_mode_and_refresh_choices(dialog, 1,
+                                                         desktop_bpp);
+        dialog->refresh_rate_control_enabled = 0;
+        dialog->checkbox_3ed_checked = 0;
+        dialog->checkbox_3ec_checked = 1;
+        return;
+    }
+
+    dialog->refresh_rate_control_enabled = 1;
+    if (dialog->previous_mode == 0) {
+        display_mode_dialog_set_mode_and_refresh_choices(dialog, 0,
+                                                         desktop_bpp);
+        dialog->checkbox_3ec_checked = 0;
+        dialog->checkbox_3ed_checked = 1;
+    }
+}
+
+/* Platform enumeration handoff for DisplayResolutionComboPopulate. Reset
+ * starts a new DirectDraw enumeration result; records retain the names and
+ * 0x2000 preferred-mode bit that the native combo builder consumes. */
+void display_resolution_entries_reset(int enumeration_succeeded)
+{
+    s_display_resolution_count = 0;
+    s_display_resolution_enumeration_succeeded =
+        enumeration_succeeded != 0;
+}
+
+int display_resolution_entry_append(const char* name, uint32_t flags)
+{
+    if (!s_display_resolution_enumeration_succeeded || name == NULL ||
+        s_display_resolution_count >= CRT_DISPLAY_RESOLUTION_ENTRIES) {
+        return 0;
+    }
+    CrtDisplayResolutionEntry* entry =
+        &s_display_resolutions[s_display_resolution_count];
+    size_t length = strlen(name);
+    if (length >= sizeof(entry->name)) {
+        length = sizeof(entry->name) - 1;
+    }
+    memcpy(entry->name, name, length);
+    entry->name[length] = '\0';
+    entry->flags = flags;
+    ++s_display_resolution_count;
+    return 1;
+}
+
+int display_resolution_entry_count(void)
+{
+    return s_display_resolution_count;
+}
+
+int display_resolution_entry_get(int index,
+                                 CrtDisplayResolutionEntry* out)
+{
+    if (out == NULL || index < 0 || index >= s_display_resolution_count) {
+        return 0;
+    }
+    *out = s_display_resolutions[index];
+    return 1;
+}
+
+/* DisplayResolutionComboPopulate (FUN_0049d780): include every enumerated
+ * display resolution, selecting the last row marked with 0x2000. Failure
+ * contributes the DirectX error resource as one placeholder row. */
+// FUNCTION: LEGORR 0x0049D780
+void display_resolution_combo_populate(CrtDisplayResolutionList* out)
+{
+    if (out == NULL) return;
+    memset(out, 0, sizeof(*out));
+    if (!s_display_resolution_enumeration_succeeded) {
+        out->count = 1;
+        out->error_resource = 0x004b2d90u;
+        return;
+    }
+    out->count = (uint32_t)s_display_resolution_count;
+    for (int index = 0; index < s_display_resolution_count; ++index) {
+        if ((s_display_resolutions[index].flags & 0x2000u) != 0u) {
+            out->selected_index = (uint32_t)index;
+        }
+    }
+}
 
 // FUNCTION: LEGORR 0x0049d870
 void display_resolution_filter_tuple_append(int width, int height, int bpp)
@@ -435,6 +641,35 @@ void display_resolution_filter_tuple_get(int index, int* w, int* h, int* bpp)
     if (bpp != NULL) {
         *bpp = (n >= 0) ? s_filter_tuples[n].bpp : 0;
     }
+}
+
+/* DisplayModeMatchesFilterTuple (FUN_0049d8d0): any registered tuple may
+ * match; zero tuple fields are wildcards, as in the DirectDraw path. */
+// FUNCTION: LEGORR 0x0049D8D0
+int display_mode_matches_filter_tuple(int mode_index)
+{
+    if (s_filter_tuple_count <= 0) {
+        return 1;
+    }
+    if (mode_index < 0 ||
+        mode_index >= s_display_mode_counts[s_active_display_mode]) {
+        return 0;
+    }
+    const CrtDisplayModeEntry* mode =
+        &s_display_modes[s_active_display_mode][mode_index];
+    int count = s_filter_tuple_count;
+    if (count > FILTER_TUPLE_ENTRIES) {
+        count = FILTER_TUPLE_ENTRIES;
+    }
+    for (int i = 0; i < count; ++i) {
+        const FilterTuple* tuple = &s_filter_tuples[i];
+        if ((tuple->w == 0 || tuple->w == mode->width) &&
+            (tuple->h == 0 || tuple->h == mode->height) &&
+            (tuple->bpp == 0 || tuple->bpp == mode->bpp)) {
+            return 1;
+        }
+    }
+    return 0;
 }
 
 /* --- the remaining unowned DAT one-liners (see crt.hpp) ---------------------
@@ -493,6 +728,11 @@ void level_state_stored_value_set(uint32_t v)
 void global_mode_zero_input_set(int value)
 {
     s_mode_zero_flag = (value == 0) ? 1u : 0u;
+}
+
+uint32_t global_mode_zero_input_peek(void)
+{
+    return s_mode_zero_flag;
 }
 
 // FUNCTION: LEGORR 0x0040bfc0

@@ -818,5 +818,297 @@ int main(void)
               "the callback guard holds (the corpus strides it)");
     }
 
+    /* SavTreeWalk2 / SavTreeLoad (2026-10-25). */
+    {
+        static SavTreeNode r;
+        static SavTreeNode k1;
+        static SavTreeNode k2;
+        static void* kids[2];
+        static uint32_t blocks[3 * 8]; /* three 0x20 block images */
+        static char winbuf[2 * 0x3190];
+        static uint32_t rec1[8];
+        static uint32_t rec2[8];
+        void* blockp = blocks;
+        SavTree2State st;
+        memset(blocks, 0, sizeof blocks);
+        memset(winbuf, 0, sizeof winbuf);
+        kids[0] = &k1;
+        kids[1] = &k2;
+        engine_feature_word_install(0u);
+        /* flag lane, flag = 1: need rides 0 everywhere — the root
+         * SETS through its carry 1, the kids CLEAR through their
+         * blocks' zero +0x1c probes, and the cursor ends per node. */
+        r.window = 1u;
+        r.children = kids;
+        r.count = 2;
+        k1.window = 0u;
+        k1.children = NULL;
+        k1.count = 0;
+        k2.window = 1u;
+        k2.children = NULL;
+        k2.count = 0;
+        r.visited = 0u;
+        k1.visited = 0u;
+        k2.visited = 0u;
+        blocks[0] = 0x80u; /* root: set lane */
+        blocks[8] = 0xBFu;  /* kid: clear lane */
+        blocks[16] = 0xCFu; /* kid: clear lane */
+        st.window_base = NULL;
+        st.window = 0u;
+        st.blocks = &blockp;
+        st.index = 0u;
+        st.flag = 1u;
+        sav_tree_walk2(&r, &st, 1, NULL);
+        CHECK(r.visited != 0u && k1.visited != 0u && k2.visited != 0u
+                  && st.index == 3u,
+              "the walk2 enters each node once, cursor included");
+        CHECK(blocks[0] == 0x84u && blocks[8] == 0xBBu
+                  && blocks[16] == 0xCBu,
+              "the carry sets and the probe-zero kids clear bit 2");
+
+        /* Re-entry visits nothing (the flag lane). */
+        sav_tree_walk2(&r, &st, 1, NULL);
+        CHECK(st.index == 3u && blocks[0] == 0x84u,
+              "the entered tree walks nothing");
+
+        /* flag = 1 + extended gate: the flag zeroes on entry, need
+         * rides 1, and every block SETS. */
+        engine_feature_word_install(0x20000u);
+        r.visited = 0u;
+        k1.visited = 0u;
+        k2.visited = 0u;
+        blocks[0] = 0xA1u;
+        blocks[8] = 0xB2u;
+        blocks[16] = 0xC8u;
+        st.index = 0u;
+        st.flag = 1u;
+        sav_tree_walk2(&r, &st, 1, NULL);
+        CHECK(blocks[0] == 0xA5u && blocks[8] == 0xB6u
+                  && blocks[16] == 0xCCu,
+              "the gate zeroes the flag and need rides 1");
+
+        /* stride lane (gate off): need bit 0 from
+         * `node.window * 0x3190 + window_base`; r (window 1) reads the
+         * zeroed slot and CLEARS its block (carry 0), k1 (window 0)
+         * reads the raised bit and SETS through its need. */
+        engine_feature_word_install(0u);
+        ((uint32_t*)winbuf)[0] = 1u;
+        r.children = kids;
+        r.window = 1u;
+        r.count = 2;
+        r.visited = 0u;
+        k1.visited = 0u;
+        k2.window = 0u;
+        k2.visited = 0u;
+        blocks[0] = 0x15u;
+        blocks[8] = 0x10u;
+        blocks[16] = 0x10u;
+        st.window_base = winbuf;
+        st.flag = 1u; /* ignored off the flag lane */
+        st.index = 0u;
+        sav_tree_walk2(&r, &st, 0, NULL);
+        CHECK(blocks[0] == 0x11u && blocks[8] == 0x14u
+                  && blocks[16] == 0x14u && st.index == 3u,
+              "the stride read rides node.window * 0x3190 + base");
+
+        /* probe lane: need 0, carry 0, block +0x1c NON-zero -> SET. */
+        r.children = NULL;
+        r.count = 0;
+        r.window = 0u;
+        r.visited = 0u;
+        blocks[0] = 0x10u;
+        blocks[7] = 5u;
+        st.window_base = NULL;
+        st.flag = 1u;
+        st.index = 0u;
+        sav_tree_walk2(&r, &st, 0, NULL);
+        CHECK(blocks[0] == 0x14u, "the nonzero +0x1c probe forces the set");
+        blocks[7] = 0u;
+
+        /* guards (deviations): the null node rides, a null block slot
+         * still advances the cursor, and a null child slot returns. */
+        const uint32_t before = st.index;
+        sav_tree_walk2(NULL, &st, 1, NULL);
+        CHECK(st.index == before, "the null node guards out");
+        st.blocks = NULL;
+        r.visited = 0u;
+        sav_tree_walk2(&r, &st, 1, NULL);
+        CHECK(st.index == before + 1u, "the null block slot still advances");
+
+        /* SavTreeLoad: stack-init the state, walk, clear the bands. */
+        memset(rec1, 0, sizeof rec1);
+        memset(rec2, 0, sizeof rec2);
+        rec1[4] = 0xdeadu; /* corpus record + 0x10 flag word */
+        rec2[4] = 0xbeefu;
+        sav_visited_entry_set(0, 0, rec1, 7u);
+        sav_visited_entry_set(1, 0, rec2, 8u);
+        frontend_flow_word_set(2, -1);
+        int* wc = active_object_list_word();
+        *wc = 1;
+        frontend_flow_word_set(2, 0);
+        wc = active_object_list_word();
+        *wc = 1;
+        r.children = kids;
+        r.count = 2;
+        r.visited = 0u;
+        k1.visited = 0u;
+        k2.visited = 0u;
+        blocks[0] = 0xA1u;
+        blocks[8] = 0xB2u;
+        blocks[16] = 0xC8u;
+        sav_tree_load(&r, NULL, &blockp, 0u, 1u, NULL);
+        CHECK(r.visited != 0u && k1.visited != 0u && k2.visited != 0u
+                  && blocks[0] == 0xA5u && (blocks[8] & 4u) == 0u,
+              "the load walks with the stack-init state");
+        CHECK(rec1[4] == 0u && ((uint32_t*)rec1)[4] == 0u,
+              "the load clears the visited band");
+        void* p = NULL;
+        uint32_t w = 0u;
+        sav_visited_entry_peek(1, 0, &p, &w);
+        CHECK(p == rec2 && w == 0u, "the in-game band clears alongside");
+    }
+
+    /* SaveMenuRefresh (2026-10-26). */
+    {
+        static SavTreeNode m0;
+        static SavTreeNode m1;
+        static void* mkids[1];
+        static uint32_t mblk[2 * 8]; /* two contiguous 0x20 block images */
+        static char mwinbuf[2 * 0x3190];
+        static void* mchain;
+        static uint32_t recA[8];
+        static uint32_t recB[8];
+        GameContext mctx;
+
+        engine_feature_word_install(0u);
+        memset(mblk, 0, sizeof mblk);
+        memset(mwinbuf, 0, sizeof mwinbuf);
+        ((uint32_t*)mwinbuf)[0] = 1u; /* window 0 strides a raised word */
+        mkids[0] = &m1;
+        m0.window = 1u;  /* strides the zeroed high slot */
+        m0.children = mkids;
+        m0.count = 1;
+        m1.window = 0u;
+        m1.children = NULL;
+        m1.count = 0;
+        mchain = mblk;
+        game_context_init(&mctx);
+
+        /* hooks default clear: the refresh guards through, sets the slot,
+         * and still clears the installed visited bands. */
+        memset(recA, 0, sizeof recA);
+        memset(recB, 0, sizeof recB);
+        recA[4] = 0xdeadu;
+        recB[4] = 0xbeefu;
+        sav_visited_entry_set(0, 0, recA, 9u);
+        sav_visited_entry_set(1, 0, recB, 10u);
+        frontend_flow_word_set(2, -1);
+        int* wc = active_object_list_word();
+        *wc = 1;
+        frontend_flow_word_set(2, 0);
+        wc = active_object_list_word();
+        *wc = 1;
+        save_menu_refresh(&mctx, 3);
+        CHECK(mctx.save_slot == 3, "the refresh parks the slot word");
+        CHECK(recA[4] == 0u && recB[4] == 0u,
+              "both load tails clear the visited bands");
+        CHECK(sav_menu_window_peek(2) == NULL
+                  && sav_tree_root_peek(5) == NULL,
+              "the hook bounds guard the way out");
+
+        /* slot-open stride lane: flag 0, stride window installed; the
+         * root's zeroed high slot clears nothing through its carry 1
+         * and the kid's raised window-0 slot sets through its need. */
+        sav_tree_root_install(0, &m0);
+        sav_menu_window_install(0, &mchain);
+        sav_slot_stride_window_install(mwinbuf);
+        m0.visited = 0u;
+        m1.visited = 0u;
+        mblk[0] = 0xA1u;
+        mblk[8] = 0xB2u;
+        save_menu_refresh(&mctx, 3);
+        CHECK(mblk[0] == 0xA5u && mblk[8] == 0xB6u,
+              "the stride need lanes ride through the block cursor");
+        CHECK(m0.visited != 0u && m1.visited != 0u,
+              "the in-band walk entered");
+
+        /* unopened-slot flag lane: flag 1, no stride window — the root
+         * SETS through its carry 1, the kid CLEARs through the probe. */
+        m0.visited = 0u;
+        m1.visited = 0u;
+        mblk[0] = 0xA0u;
+        mblk[8] = 0xB6u;
+        save_menu_refresh(&mctx, -1);
+        CHECK(mctx.save_slot == -1, "the unopened slot parks at -1");
+        CHECK(mblk[0] == 0xA4u && mblk[8] == 0xB2u,
+              "the flag lane sets through carry and clears through probe");
+
+        /* cleanup: uninstall every hook the refresh reads. */
+        sav_tree_root_install(1, NULL);
+        sav_tree_root_install(0, NULL);
+        sav_menu_window_install(0, NULL);
+        sav_menu_window_install(1, NULL);
+        sav_slot_stride_window_install(NULL);
+    }
+
+    /* Registry indexed-visit lookups (2026-10-26). */
+    {
+        static SavTreeNode r1;
+        static SavTreeNode k1;
+        static SavTreeNode g1;
+        static SavTreeNode l1;
+        static void* rkids[2];
+        static void* kkids[1];
+        static void* n;
+        static uint32_t w;
+
+        rkids[0] = &k1;
+        rkids[1] = &l1;
+        kkids[0] = &g1;
+        r1.window = 0xA5u;
+        r1.children = rkids;
+        r1.count = 2;
+        k1.window = 0x11u;
+        k1.children = kkids;
+        k1.count = 1;
+        g1.window = 0x22u;
+        g1.children = NULL;
+        g1.count = 0;
+        l1.window = 0x33u;
+        l1.children = NULL;
+        l1.count = 0;
+#define RESET_VISITS() ((void)(r1.visited = k1.visited = 0u), \
+                        (void)(g1.visited = l1.visited = 0u))
+
+        /* visit order R, K, G, L: the thunk records the want-th node. */
+        RESET_VISITS();
+        n = registry_value_lookup(&r1, 0u);
+        CHECK(n == &r1, "index 0 hits the root");
+        RESET_VISITS();
+        n = registry_value_lookup(&r1, 2u);
+        CHECK(n == &g1, "the counter walks into the first subtree");
+        RESET_VISITS();
+        n = registry_value_lookup(&r1, 3u);
+        CHECK(n == &l1, "the counter reaches the second child");
+        RESET_VISITS();
+        n = registry_value_lookup(&r1, 4u);
+        CHECK(n == NULL, "past the last visit answers null");
+
+        /* the word reader: node head dword, or -1. */
+        RESET_VISITS();
+        w = registry_value_index_lookup_or_not_found(&r1, 1u);
+        CHECK(w == 0x11u, "the found node's head word reads back");
+        RESET_VISITS();
+        w = registry_value_index_lookup_or_not_found(&r1, 9u);
+        CHECK(w == 0xffffffffu, "the miss answers -1");
+
+        /* an already-entered tree visits nothing new. */
+        RESET_VISITS();
+        r1.visited = 1u;
+        n = registry_value_lookup(&r1, 0u);
+        CHECK(n == NULL, "the entered tree skips the flagged root entirely");
+#undef RESET_VISITS
+    }
+
     return 0;
 }

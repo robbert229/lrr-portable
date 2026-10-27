@@ -9,6 +9,7 @@ CMAKE_TOOLCHAIN_FILE ?=
 TEST_WADS_DIR ?=
 MOVIES ?= auto
 RECCMP_BUILD_DIR ?= $(CURDIR)/build-reccmp
+RECCMP_LEDGER ?= docs/coverage/ledger.csv
 RECCMP_WINE_BIN ?=
 RECCMP_RECCMP ?=
 REPROBIT_MSVC_5_0_RTM_ROOT ?=
@@ -38,7 +39,7 @@ reccmp-report:
 	  ./tools/reccmp.sh
 
 reccmp-lint:
-	python3 ./tools/lint_reccmp_annotations.py
+	python3 ./tools/lint_reccmp_annotations.py --ledger "$(RECCMP_LEDGER)"
 
 run: build
 	LEGORRR_WAD_DIR="$(WAD_DIR)" "$(BUILD_DIR)/LegoRR"

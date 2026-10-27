@@ -249,6 +249,7 @@ typedef struct EntitySlot {
      * reference whose dword the detach folds into the level's field 0x9c. */
     void*    carry_link_308;  /* +0x308: carried object link            */
     int32_t  carry_state_324; /* +0x324: carry state word               */
+    uint32_t field_328;       /* +0x328 counter read by tutorial 0x14/0x15 */
     void*    carry_ref_348;   /* +0x348: carried reference (dword read) */
     float    field_340;      /* +0x340 float; the wake mirror sets 100.0
                               * (its general corpus readers are TODO)       */

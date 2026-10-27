@@ -11,6 +11,7 @@
 #include "game/frontend.hpp"
 #include "game/level.hpp"
 #include "game/mission.hpp"
+#include "game/options.hpp"
 #include "game/objective.hpp"
 #include "game/render.hpp"
 #include "game/savegame.hpp"
@@ -28,6 +29,7 @@
 #include "view.hpp"
 #include "camera.hpp"
 #include "message.hpp"
+#include "game/util.hpp"
 
 #define WINDOW_W 640
 #define WINDOW_H 480
@@ -93,6 +95,42 @@ static void demo_msg_sound(int id, float vol)
     } else {
         audio_play_named(s_demo_ap, "Sounds\\Buildings\\elec5.wav");
     }
+}
+
+typedef struct FrameloopOverlayMenuContext {
+    FrontEnd* fe;
+    GameContext* game;
+    FeOverlayMenuGateState* gate;
+    const FeInput* input;
+    const TextureSurface* measure;
+    FeEvent event;
+    int mode;
+} FrameloopOverlayMenuContext;
+
+static void frameloop_overlay_menu_scroll_refresh(void* context)
+{
+    FrameloopOverlayMenuContext* gate_ctx =
+        (FrameloopOverlayMenuContext*)context;
+    scroll_slider_refresh(gate_ctx != NULL ? gate_ctx->game : NULL);
+}
+
+static int frameloop_overlay_menu_tick(void* context, int active_item, int mode)
+{
+    FrameloopOverlayMenuContext* gate_ctx =
+        (FrameloopOverlayMenuContext*)context;
+    (void)active_item;
+    (void)mode;
+    if (gate_ctx == NULL || gate_ctx->fe == NULL || gate_ctx->input == NULL) {
+        return 0;
+    }
+    gate_ctx->event = frontend_tick(gate_ctx->fe, gate_ctx->input,
+                                    gate_ctx->measure);
+    if (gate_ctx->event != FE_EVT_NONE && gate_ctx->gate != NULL) {
+        FeOverlayMenuSet* menu = &gate_ctx->gate->menus[gate_ctx->mode];
+        const int slot = gate_ctx->mode == 0 && gate_ctx->fe->sel == 2 ? 2 : 0;
+        menu->entries[slot].action_state = 1;
+    }
+    return gate_ctx->fe->open ? gate_ctx->fe->sel + 1 : 0;
 }
 static int demo_msg_cb(int id)
 {
@@ -352,9 +390,8 @@ static void credits_free_lines(char** lines, int count)
     free(lines);
 }
 
-/* CreditsTextFile + CreditsBackAVI @ 0x40a0c0: scroll centered text over
- * the configured AVI until the player presses a key or clicks. */
-// FUNCTION: LEGORR 0x0040a0c0
+/* CreditsTextFile + CreditsBackAVI: scroll centered text over the configured
+ * AVI until the player presses a key or clicks. */
 static void frameloop_credits(PlatformWindow* win, DisplaySurface* surf,
                               BlockFile* cfg, const char* wad_dir,
                               AudioPlayer* ap, int audio_status, int* quit,
@@ -559,12 +596,85 @@ static void frameloop_load_level(FILE* log, const char* wad_dir,
     }
 }
 
+static void menu_save_image_config_rect_blit(FrontEnd* fe,
+                                             GameContext* game,
+                                             int item_index, void* pixels,
+                                             int pitch, int width, int height);
+
+static void frameloop_blit_texture_scaled(const TextureSurface* texture,
+                                          void* pixels, int pitch,
+                                          int width, int height, int x, int y,
+                                          int draw_w, int draw_h)
+{
+    if (texture == NULL || texture->pixels == NULL || pixels == NULL
+        || texture->width <= 0 || texture->height <= 0
+        || draw_w <= 0 || draw_h <= 0) {
+        return;
+    }
+    for (int dy = 0; dy < draw_h; ++dy) {
+        int py = y + dy;
+        if (py < 0 || py >= height) {
+            continue;
+        }
+        int sy = (int)((int64_t)dy * texture->height / draw_h);
+        uint8_t* dst = (uint8_t*)pixels + (size_t)py * pitch;
+        for (int dx = 0; dx < draw_w; ++dx) {
+            int px = x + dx;
+            if (px < 0 || px >= width) {
+                continue;
+            }
+            int sx = (int)((int64_t)dx * texture->width / draw_w);
+            uint32_t color = texture->pixels[(size_t)sy * texture->width + sx];
+            dst[(size_t)px * 4 + 0] = (uint8_t)(color >> 16);
+            dst[(size_t)px * 4 + 1] = (uint8_t)(color >> 8);
+            dst[(size_t)px * 4 + 2] = (uint8_t)color;
+            dst[(size_t)px * 4 + 3] = (uint8_t)(color >> 24);
+        }
+    }
+}
+
+/* MenuOverlaySurfaceAndTextSetup (FUN_004129d0): the corpus resets the
+ * save/load panel surface and its text resources when entering these menu
+ * records. The frame-driven adapter composes the typed panel layout and the
+ * current menu text on the software surface. */
+// FUNCTION: LEGORR 0x004129d0
+static void menu_overlay_surface_and_text_setup(
+    FrontEnd* fe, const TextureSurface* hi_font, const TextureSurface* lo_font,
+    void* pixels, int pitch, int width, int height)
+{
+    if (fe == NULL || pixels == NULL) {
+        return;
+    }
+    const char* image = frontend_active_image(fe);
+    const FeSubmenu* active = frontend_active_submenu(fe);
+    if (active != NULL
+        && (fe->menu == FE_MENU_SAVE
+            || (fe->menu == FE_MENU_MAIN && image != NULL
+                && s_icontains(image, "SaveLoad")))) {
+        const FeSaveMenuLayout* layout = fe->save_action
+                                             ? &fe->save_text_layout
+                                             : &fe->level_text_layout;
+        if (layout->has_panel && layout->panel_path[0] != '\0') {
+            TextureSurface* panel = texture_get_or_load(NULL,
+                                                        layout->panel_path);
+            if (panel != NULL) {
+                frameloop_blit_texture_scaled(panel, pixels, pitch, width,
+                                              height, layout->panel_x,
+                                              layout->panel_y, layout->panel_w,
+                                              layout->panel_h);
+                texture_release(panel);
+            }
+        }
+    }
+    frontend_render(fe, hi_font, lo_font, width, height, pixels, pitch);
+}
+
 /* Draw one front-end frame: frozen level (in-game pause) or a plain fill
  * (boot menu), then the submenu's MenuImage art + the menu layer. */
 static void frameloop_menu_render(PlatformWindow* win, DisplaySurface* surf,
                                   FrontEnd* fe, const TextureSurface* hi_font,
                                   const TextureSurface* lo_font,
-                                  const GameContext* game, int frame)
+                                  GameContext* game, int frame)
 {
     void* pixels = NULL;
     int   pitch = 0;
@@ -583,14 +693,96 @@ static void frameloop_menu_render(PlatformWindow* win, DisplaySurface* surf,
         if (bg != NULL) {
             surface_blit_texture(pixels, pitch, WINDOW_W, WINDOW_H, bg, 0, 0);
         }
+        texture_release(bg);
     }
-    frontend_render(fe, hi_font, lo_font, WINDOW_W, WINDOW_H, pixels, pitch);
+    menu_overlay_surface_and_text_setup(fe, hi_font,
+                                        lo_font, pixels, pitch, WINDOW_W,
+                                        WINDOW_H);
+    const FeSubmenu* active = frontend_active_submenu(fe);
+    if (active != NULL) {
+        for (int i = 0; i < active->item_count; ++i) {
+            menu_save_image_config_rect_blit(fe, game, i, pixels, pitch,
+                                             WINDOW_W, WINDOW_H);
+        }
+    }
     /* Brightness (issue #85) is a post-pass over the finished frame. */
     render_apply_brightness(pixels, pitch, WINDOW_W, WINDOW_H,
                             game->options.brightness);
     platform_screenshot(win, pixels, pitch, WINDOW_W, WINDOW_H, frame);
     platform_present_pixels(win, pixels, pitch, WINDOW_W, WINDOW_H);
     surface_unlock(surf, pixels);
+}
+
+/* MenuSaveImageConfigRectBlit (FUN_004124f0): load the selected slot's
+ * framebuffer thumbnail and draw it in the configured SaveImage rectangle.
+ * The port's TextureSurface replaces the corpus's cached DirectDraw handle. */
+// FUNCTION: LEGORR 0x004124f0
+static void menu_save_image_config_rect_blit(FrontEnd* fe,
+                                             GameContext* game,
+                                             int item_index, void* pixels,
+                                             int pitch, int width, int height)
+{
+    if (fe == NULL || game == NULL || pixels == NULL || fe->cfg == NULL
+        || item_index < 0) {
+        return;
+    }
+    const FeSubmenu* sub = frontend_active_submenu(fe);
+    const char* image = frontend_active_image(fe);
+    if (sub == NULL || image == NULL || !s_icontains(image, "SaveLoad")
+        || item_index >= sub->item_count) {
+        return;
+    }
+    const FeItem* item = &sub->items[item_index];
+    if (item->load_slot <= 0) {
+        return;
+    }
+
+    char key[160];
+    snprintf(key, sizeof(key), "%s Menu::SaveImage pos%d",
+             util_root_name(fe->cfg), item->load_slot);
+    const char* position = block_get_strptr(fe->cfg, key);
+    if (position == NULL) {
+        return;
+    }
+    char* end = NULL;
+    long x = strtol(position, &end, 10);
+    if (end == position || *end != ':') {
+        return;
+    }
+    char* y_start = end + 1;
+    long y = strtol(y_start, &end, 10);
+    if (end == y_start) {
+        return;
+    }
+    snprintf(key, sizeof(key), "%s Menu::SaveImage Width",
+             util_root_name(fe->cfg));
+    int draw_w = block_get_int(fe->cfg, key, 160);
+    snprintf(key, sizeof(key), "%s Menu::SaveImage Height",
+             util_root_name(fe->cfg));
+    int draw_h = block_get_int(fe->cfg, key, 120);
+    if (draw_w <= 0 || draw_h <= 0 || draw_w > width * 2
+        || draw_h > height * 2) {
+        return;
+    }
+
+    char thumb_path[320];
+    save_slot_path(game, thumb_path, sizeof(thumb_path), item->load_slot,
+                   "dat");
+    const int cache_index = item->load_slot - 1;
+    if (cache_index < 0 || cache_index >= FE_SAVE_THUMBNAIL_COUNT) {
+        return;
+    }
+    if (fe->save_thumbnails[cache_index] == NULL) {
+        fe->save_thumbnails[cache_index] =
+            texture_get_or_load(NULL, thumb_path);
+    }
+    TextureSurface* thumb = fe->save_thumbnails[cache_index];
+    if (thumb == NULL || thumb->pixels == NULL || thumb->width <= 0
+        || thumb->height <= 0) {
+        return;
+    }
+    frameloop_blit_texture_scaled(thumb, pixels, pitch, width, height,
+                                  (int)x, (int)y, draw_w, draw_h);
 }
 
 int LegorrrRun(void)
@@ -808,8 +1000,19 @@ int LegorrrRun(void)
         for (int s = 1; s < SAVE_SLOTS; s++) {
             int filled = 0, completed = 0, resume = -1;
             save_slot_state(&game, s, &filled, &completed, &resume);
+            memset(&slots[sn], 0, sizeof(slots[sn]));
             snprintf(slots[sn].label, FE_NAME_MAX, "Slot %d%s",
                      s, (filled > 0) ? "" : " (empty)");
+            if (resume >= 0) {
+                char level[FE_LEVEL_NAME_MAX];
+                if (fe_level_for_record(&fe, resume, level, sizeof(level))) {
+                    snprintf(slots[sn].status, FE_NAME_MAX,
+                             "%s (%d complete)", level, completed);
+                }
+            } else if (filled > 0) {
+                snprintf(slots[sn].status, FE_NAME_MAX,
+                         "Saved game (%d records)", filled);
+            }
             slots[sn].id = s;
             slots[sn].present = filled > 0;
             sn++;
@@ -830,7 +1033,7 @@ int LegorrrRun(void)
                     music != NULL ? music : "(missing SFX_AmbientMusicLoop)",
                     music_rc == 0 ? "queued" : "unavailable", music_rc);
         }
-        frontend_open(&fe, FE_MENU_MAIN);
+        menu_enter(&fe, 0);
         fprintf(log, "frameloop: front end up — main menu (arrows select, "
                      "Enter/Space act, Esc quits)\n");
         while (!quit) {
@@ -877,13 +1080,17 @@ int LegorrrRun(void)
             if (fe.option_changed) {
                 const FeItem* oit = frontend_active_item(&fe);
                 if (oit != NULL) {
-                    int live = (s_icontains(oit->label, "sfx")
-                                || s_icontains(oit->label, "music")
-                                || s_icontains(oit->label, "sound"))
-                               && oit->max > 0;
+                    int is_sfx = s_icontains(oit->label, "sfx")
+                                 || s_icontains(oit->label, "sound");
+                    int is_music = s_icontains(oit->label, "music");
+                    int live = oit->kind == FE_ITEM_SLIDER
+                               && (is_sfx || is_music) && oit->max > 0;
                     if (live && ap.dev != NULL) {
-                        audio_set_volume(&ap, (float)oit->value
-                                                / (float)oit->max);
+                        if (is_sfx) {
+                            audio_menu_sfx_volume_set(oit->value);
+                        } else {
+                            audio_menu_volume_set(oit->value);
+                        }
                     }
                     fprintf(log, "frameloop: option %s -> %d/%d (%s)\n",
                             oit->label, oit->value, oit->max,
@@ -1026,13 +1233,91 @@ int LegorrrRun(void)
             break;
         }
 
+        /* SaveMenuOpenFromReward is frame-driven in this port: once mode 4
+         * opens the slot picker, consume frames here until a slot is saved or
+         * the user backs out. The level sim remains paused under the menu. */
+        if (fe.open && fe.save_action) {
+            const FeSubmenu* fs = frontend_active_submenu(&fe);
+            TextureSurface* hi_font = fs != NULL && fs->hifont[0] != '\0'
+                                          ? texture_get_or_load(NULL, fs->hifont)
+                                          : NULL;
+            TextureSurface* lo_font = fs != NULL && fs->lofont[0] != '\0'
+                                          ? texture_get_or_load(NULL, fs->lofont)
+                                          : NULL;
+            FeInput fi;
+            fi.up = input_key_edge(&input, PLATFORM_KEY_UP);
+            fi.down = input_key_edge(&input, PLATFORM_KEY_DOWN);
+            fi.left = fi.right = 0;
+            fi.enter = input_key_edge(&input, ' ')
+                       || input_key_edge(&input, PLATFORM_KEY_ENTER);
+            fi.esc = input_key_edge(&input, PLATFORM_KEY_ESC);
+            fi.mouse_x = input.mouse_x;
+            fi.mouse_y = input.mouse_y;
+            fi.click = input_mouse_pressed(&input);
+            fi.mdown = input.mouse_down;
+            FeEvent save_ev = frontend_tick(&fe, &fi, hi_font);
+            if (save_ev == FE_EVT_SAVE_GAME) {
+                save_slot_set(&game, fe.load_slot);
+                checkpoint_blob_build(&game);
+                save_write_record(&game, game.current_record,
+                                  game.checkpoint_blob);
+                save_mark_record(&game, game.current_record);
+                show_level_overlay_for_current_selection(&game);
+                int filled = 0, completed = 0, resume = -1;
+                if (save_slot_state(&game, fe.load_slot, &filled, &completed,
+                                    &resume)) {
+                    FeSlot saved_slot;
+                    memset(&saved_slot, 0, sizeof(saved_slot));
+                    saved_slot.id = fe.load_slot;
+                    saved_slot.present = filled > 0;
+                    snprintf(saved_slot.label, sizeof(saved_slot.label),
+                             "Slot %d%s", fe.load_slot,
+                             filled > 0 ? "" : " (empty)");
+                    if (resume >= 0) {
+                        char level[FE_LEVEL_NAME_MAX];
+                        if (fe_level_for_record(&fe, resume, level,
+                                                sizeof(level))) {
+                            snprintf(saved_slot.status,
+                                     sizeof(saved_slot.status),
+                                     "%s (%d complete)", level, completed);
+                        }
+                    } else if (filled > 0) {
+                        snprintf(saved_slot.status,
+                                 sizeof(saved_slot.status),
+                                 "Saved game (%d records)", filled);
+                    }
+                    frontend_update_slot(&fe, &saved_slot);
+                }
+                mission_reward_set_active(&game, 0);
+                thumb_slot = fe.load_slot;
+                fprintf(log, "frameloop: reward checkpoint saved to slot %d\n",
+                        fe.load_slot);
+            }
+            if (fe.open) {
+                frameloop_menu_render(win, &surf, &fe, hi_font, lo_font,
+                                      &game, (int)frames);
+            }
+            if (audio_status == 0) {
+                audio_update(&ap);
+            }
+            Sleep((DWORD)FRAME_MS);
+            ++frames;
+            input_begin_frame(&input);
+            continue;
+        }
+
         /* Esc (or the LEGORRR_AUTOPAUSE_FRAMES CI hook) opens the in-game
          * pause overlay — the shipped PausedMenu — instead of quitting. */
         if (input_key_edge(&input, PLATFORM_KEY_ESC)
             || (autopause > 0 && frames == autopause)) {
             snprintf(fe.resume_level, sizeof(fe.resume_level), "%s",
                      level_name);
-            frontend_open(&fe, FE_MENU_PAUSED);
+            menu_enter(&fe, 2);
+            FeOverlayMenuGateState overlay_gate;
+            memset(&overlay_gate, 0, sizeof(overlay_gate));
+            overlay_gate.cached_menu = -1;
+            overlay_gate.menus[0].entries[0].handle = 1;
+            overlay_gate.menus[0].entries[2].handle = 1;
             fprintf(log, "frameloop: paused (Continue / Options / Restart / "
                          "Quit)\n");
             int want_reload = 0;
@@ -1075,17 +1360,36 @@ int LegorrrRun(void)
                 fi.mouse_y = input.mouse_y;
                 fi.click = input_mouse_pressed(&input);
                 fi.mdown = input.mouse_down;
-                FeEvent ev = frontend_tick(&fe, &fi, hi_font);
+                FrameloopOverlayMenuContext gate_ctx;
+                gate_ctx.fe = &fe;
+                gate_ctx.game = &game;
+                gate_ctx.gate = &overlay_gate;
+                gate_ctx.input = &fi;
+                gate_ctx.measure = hi_font;
+                gate_ctx.event = FE_EVT_NONE;
+                gate_ctx.mode = 0;
+                overlay_gate.level_start_flag = level_start_flag();
+                overlay_gate.options_flag = menu_options_flag();
+                overlay_gate.blocked =
+                    global_option_low_bits_enabled(game.level);
+                (void)overlay_menu_gate(&overlay_gate, 0,
+                                        frameloop_overlay_menu_scroll_refresh,
+                                        frameloop_overlay_menu_tick, &gate_ctx);
+                FeEvent ev = gate_ctx.event;
                 if (fe.option_changed) {
                     const FeItem* oit = frontend_active_item(&fe);
                     if (oit != NULL) {
-                        int live = (s_icontains(oit->label, "sfx")
-                                    || s_icontains(oit->label, "music")
-                                    || s_icontains(oit->label, "sound"))
-                                   && oit->max > 0;
+                        int is_sfx = s_icontains(oit->label, "sfx")
+                                     || s_icontains(oit->label, "sound");
+                        int is_music = s_icontains(oit->label, "music");
+                        int live = oit->kind == FE_ITEM_SLIDER
+                                   && (is_sfx || is_music) && oit->max > 0;
                         if (live && ap.dev != NULL) {
-                            audio_set_volume(&ap, (float)oit->value
-                                                    / (float)oit->max);
+                            if (is_sfx) {
+                                audio_menu_sfx_volume_set(oit->value);
+                            } else {
+                                audio_menu_volume_set(oit->value);
+                            }
                         }
                         fprintf(log, "frameloop: option %s -> %d/%d (%s)\n",
                                 oit->label, oit->value, oit->max,
@@ -1320,15 +1624,10 @@ int LegorrrRun(void)
                                             input.mouse_y, &hit_save,
                                             &hit_advance)) {
                         if (hit_save) {
-                            mission_reward_click(&game, 1);
-                            fprintf(log, "frameloop: reward Save clicked -> "
-                                         "checkpoint committed\n");
-                            /* Corpus save-confirm also dumps a `.dat`
-                             * thumbnail of the framebuffer (FUN_00413b80 ->
-                             * FUN_0047e440); the dump lands right after
-                             * this frame's render. */
-                            thumb_slot = game.save_slot < 0 ? SAVE_DEFAULT_SLOT
-                                                            : game.save_slot;
+                            if (save_menu_open_from_reward(&fe)) {
+                                fprintf(log, "frameloop: reward Save clicked -> "
+                                             "save-slot menu opened\n");
+                            }
                         } else {
                             const char* nm = mission_reward_advance(&game);
                             fprintf(log, "frameloop: reward Advance clicked -> "
@@ -1383,6 +1682,7 @@ int LegorrrRun(void)
                  * just presented to Saves\<slot>.dat as a 24bpp BMP. */
                 save_write_thumbnail(&game, thumb_slot, pixels, pitch,
                                      WINDOW_W, WINDOW_H);
+                frontend_save_thumbnail_invalidate(&fe, thumb_slot);
                 fprintf(log, "frameloop: .dat thumbnail written (slot %d)\n",
                         thumb_slot);
                 thumb_slot = -1;

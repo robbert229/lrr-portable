@@ -6,6 +6,8 @@
 #include "game.hpp"
 #include "gods98/block.hpp"
 #include "gods98/crt.hpp"
+#include "gods98/engine.hpp"
+#include "gods98/heap.hpp"
 #include "gods98/resource.hpp"
 #include "frontend.hpp"
 #include "level.hpp"
@@ -34,10 +36,21 @@
 static const char* MODE_RB = "rb";
 static const char* MODE_WB = "wb";
 
+/* SaveDirectoryEnsureExists (FUN_0047f6a0): the engine's directory-create
+ * wrapper. The port receives the resolved save path directly rather than
+ * prefixing the corpus's shared `Data` directory. */
+// FUNCTION: LEGORR 0x0047f6a0
+void save_directory_ensure_exists(const char* path)
+{
+    if (path != NULL && path[0] != '\0') {
+        LRR_MKDIR(path);
+    }
+}
+
 /* Corpus FUN_0048ff10's case-folded strcmp (used by the Level03
  * checkpoint hard-code comparison). */
 // FUNCTION: LEGORR 0x0048ff10
-static int strcasecmp_lite(const char* a, const char* b)
+int strcasecmp_lite(const char* a, const char* b)
 {
     for (;;) {
         int ca = (unsigned char)*a++;
@@ -124,8 +137,8 @@ static int save_bootstrap_records(GameContext* ctx, int count)
 // FUNCTION: LEGORR 0x00417bd0
 static int sav_write_slot_file(GameContext* ctx)
 {
-    /* The corpus driver creates the Saves/ directory; the writer mirrors it. */
-    LRR_MKDIR(ctx->saves_dir[0] != '\0' ? ctx->saves_dir : "Saves");
+    save_directory_ensure_exists(ctx->saves_dir[0] != '\0'
+                                     ? ctx->saves_dir : "Saves");
     char path[280];
     save_slot_path(ctx, path, sizeof(path), ctx->save_slot, "sav");
     FILE* fp = fopen(path, MODE_WB);
@@ -159,6 +172,8 @@ int save_read_slot(GameContext* ctx, int slot, int create_if_missing)
     if (ctx == NULL || slot < 0 || slot >= SAVE_SLOTS) {
         return 0;
     }
+    save_directory_ensure_exists(ctx->saves_dir[0] != '\0'
+                                     ? ctx->saves_dir : "Saves");
     char path[280];
     save_slot_path(ctx, path, sizeof(path), slot, "sav");
     FILE* fp = fopen(path, MODE_RB);
@@ -284,7 +299,8 @@ int save_write_thumbnail(GameContext* ctx, int slot, const void* fb,
     memcpy(hdr + 38, &ppm, 4);
     memcpy(hdr + 42, &ppm, 4);
 
-    LRR_MKDIR(ctx->saves_dir[0] != '\0' ? ctx->saves_dir : "Saves");
+    save_directory_ensure_exists(ctx->saves_dir[0] != '\0'
+                                     ? ctx->saves_dir : "Saves");
     char path[280];
     save_slot_path(ctx, path, sizeof(path), slot, "dat");
     FILE* fp = fopen(path, MODE_WB);
@@ -506,6 +522,8 @@ int save_slot_state(GameContext* ctx, int slot, int* out_filled,
     if (out_filled) { *out_filled = 0; }
     if (out_completed) { *out_completed = 0; }
     if (out_resume) { *out_resume = -1; }
+    save_directory_ensure_exists(ctx->saves_dir[0] != '\0'
+                                     ? ctx->saves_dir : "Saves");
     /* Probe the file directly: save_read_slot(_,_,0) would *create* a fresh
      * slot when the file is absent (finding 08's SavReadSlot bootstrap). */
     char path[280];
@@ -923,6 +941,104 @@ void* list_get_node(const SavListWindow* win, const void* wide_key)
     return win->values_a[i];
 }
 
+/* LevelNodeGet (FUN_00417090): recursively materialize the LevelLinks tree.
+ * The native routine gets its config from globals and caches both an
+ * in-progress marker and the node in the two registry value arrays; this
+ * adapter takes the config explicitly and uses the same cache slots. */
+static SavTreeNode* level_node_get_inner(SavListWindow* win, BlockFile* cfg,
+                                         const char* level_name, int depth)
+{
+    if (win == NULL || cfg == NULL || level_name == NULL || depth >= 128) {
+        return NULL;
+    }
+    const int index = list_find_name(win, level_name);
+    if (index < 0 || win->values_a == NULL || win->values_b == NULL) {
+        return NULL;
+    }
+    const void* registry_key = win->entries[index];
+    if (list_has_item(win, registry_key) != NULL) {
+        return (SavTreeNode*)list_get_node(win, registry_key);
+    }
+
+    SavTreeNode* node = (SavTreeNode*)engine_heap_alloc(sizeof(*node));
+    if (node == NULL) {
+        return NULL;
+    }
+    memset(node, 0, sizeof(*node));
+    node->window = (uint32_t)index;
+    list_add_name(win, registry_key, (void*)1); /* break LevelLinks cycles */
+    list_set_node(win, registry_key, node);
+
+    const char* group = strstr(level_name, "::");
+    group = group != NULL ? group + 2 : level_name;
+    char path[256];
+    const char* root = util_root_name(cfg);
+    snprintf(path, sizeof(path), "%s Levels %s LevelLinks", root, group);
+    const char* links = block_get_strptr(cfg, path);
+    if (links == NULL) {
+        snprintf(path, sizeof(path), "%s %s LevelLinks", root, group);
+        links = block_get_strptr(cfg, path);
+    }
+    if (links == NULL || links[0] == '\0') {
+        return node;
+    }
+
+    char names[15][FE_LEVEL_NAME_MAX];
+    uint32_t count = 0;
+    const char* p = links;
+    while (*p != '\0' && count < 15) {
+        while (*p == ',' || *p == ' ' || *p == '\t') {
+            ++p;
+        }
+        if (*p == '\0') {
+            break;
+        }
+        const char* end = p;
+        while (*end != '\0' && *end != ',') {
+            ++end;
+        }
+        size_t len = (size_t)(end - p);
+        while (len > 0 && (p[len - 1] == ' ' || p[len - 1] == '\t')) {
+            --len;
+        }
+        if (len >= FE_LEVEL_NAME_MAX) {
+            len = FE_LEVEL_NAME_MAX - 1;
+        }
+        if (len != 0) {
+            memcpy(names[count], p, len);
+            names[count][len] = '\0';
+            ++count;
+        }
+        p = *end == ',' ? end + 1 : end;
+    }
+    if (count == 0) {
+        return node;
+    }
+
+    SavTreeNode** children = (SavTreeNode**)engine_heap_alloc(
+        (long)(count * sizeof(*children)));
+    if (children == NULL) {
+        list_set_node(win, registry_key, NULL);
+        list_add_name(win, registry_key, NULL);
+        engine_heap_free(node);
+        return NULL;
+    }
+    memset(children, 0, count * sizeof(*children));
+    node->children = children;
+    node->count = count;
+    for (uint32_t i = 0; i < count; ++i) {
+        children[i] = level_node_get_inner(win, cfg, names[i], depth + 1);
+    }
+    return node;
+}
+
+// FUNCTION: LEGORR 0x00417090
+SavTreeNode* level_node_get(SavListWindow* win, BlockFile* cfg,
+                            const char* level_name)
+{
+    return level_node_get_inner(win, cfg, level_name, 0);
+}
+
 /* SavTreeWalk (FUN_004171c0) — see savegame.hpp. */
 // FUNCTION: LEGORR 0x004171c0
 int sav_tree_walk(void* node, sav_tree_visit visit, void* user)
@@ -945,6 +1061,186 @@ int sav_tree_walk(void* node, sav_tree_visit visit, void* user)
         return 0;
     }
     return 0;
+}
+
+/* SavTreeWalk2 (FUN_004172f0) — see savegame.hpp. */
+// FUNCTION: LEGORR 0x004172f0
+void sav_tree_walk2(void* node, SavTree2State* state, int carry,
+                    const EngineContext* eng)
+{
+    SavTreeNode* n = (SavTreeNode*)node;
+    if (n == NULL || n->visited != 0u) {
+        return;
+    }
+    const int extended = 1 < engine_app_mode_get(eng)
+                      || (engine_feature_word_peek() & 0x20000u) != 0u;
+    if (extended) {
+        state->flag = 0u;
+    }
+    n->visited = 1u;
+    uint32_t need;
+    if (state->window_base == NULL || extended) {
+        need = state->flag == 0u ? 1u : 0u;
+    } else {
+        const char* w = (const char*)state->window_base
+                      + (ptrdiff_t)((int32_t)n->window) * 0x3190;
+        uint32_t word = 0u;
+        __builtin_memcpy(&word, w, sizeof word);
+        need = word & 1u;
+    }
+    if (state->blocks != NULL && *state->blocks != NULL) {
+        char* blk = (char*)*state->blocks + (size_t)state->index * 0x20;
+        uint32_t flags = 0u;
+        uint32_t probe = 0u;
+        __builtin_memcpy(&flags, blk, sizeof flags);
+        __builtin_memcpy(&probe, blk + 0x1c, sizeof probe);
+        flags = (need == 0u && carry == 0 && probe == 0u)
+                    ? (flags & ~4u)
+                    : (flags | 4u);
+        __builtin_memcpy(blk, &flags, sizeof flags);
+    }
+    state->index = state->index + 1u; /* the corpus advances blindly */
+    if (n->children != NULL) {
+        void** kids = (void**)n->children; /* widened slots */
+        for (uint32_t i = 0; i < n->count; ++i) {
+            sav_tree_walk2(kids[i], state, need != 0u ? 1 : 0, eng);
+        }
+    }
+}
+
+/* SavTreeLoad (FUN_004173e0) — see savegame.hpp. */
+// FUNCTION: LEGORR 0x004173e0
+void sav_tree_load(void* node, void* window_base, void** blocks,
+                   uint32_t window, uint32_t flag,
+                   const EngineContext* eng)
+{
+    SavTree2State st; /* the corpus's five stack dwords */
+    st.window_base = window_base;
+    st.window = window;
+    st.blocks = blocks;
+    st.index = 0u;
+    st.flag = flag;
+    sav_tree_walk2(node, &st, 1, eng);
+    sav_clear_visited();
+}
+
+/* RegistryValueLookupWithLock (FUN_00417280) — see savegame.hpp. The
+ * user block is the corpus's four stack dwords: found node, the probe
+ * index, the visit counter, and the hit-index write. */
+typedef struct SavTreeNthState {
+    void*    found;
+    uint32_t want;
+    uint32_t seen;
+    uint32_t found_at;
+} SavTreeNthState;
+
+static int sav_tree_nth_visit(void* node, void* user)
+{
+    SavTreeNthState* st = (SavTreeNthState*)user;
+    if (st->want == st->seen) {
+        st->found_at = st->seen;
+        st->found = node;
+        return 1;
+    }
+    st->seen = st->seen + 1u;
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x00417280
+void* registry_value_lookup(void* root, uint32_t index)
+{
+    SavTreeNthState st = { NULL, index, 0u, 0u };
+    const int hit = sav_tree_walk(root, sav_tree_nth_visit, &st);
+    sav_clear_visited();
+    return hit != 0 ? st.found : NULL;
+}
+
+// FUNCTION: LEGORR 0x004172d0
+uint32_t registry_value_index_lookup_or_not_found(void* root, uint32_t index)
+{
+    void* node = registry_value_lookup(root, index);
+    if (node == NULL) {
+        return 0xffffffffu;
+    }
+    uint32_t word = 0u;
+    __builtin_memcpy(&word, node, sizeof word); /* corpus reads blind */
+    return word;
+}
+
+/* SaveMenuRefresh (FUN_004150b0) — see savegame.hpp. The corpus reads
+ * its slot-context chain, the context's +0x34 stride-window word, and
+ * the two tree roots all blind; the port models each with an
+ * own-storage hook (zero-defaulted, so an unprimed refresh just
+ * guards through both walks). */
+static void**  s_sav_menu_windows[2]; /* the chain + 0x10 word's slot role */
+static void*   s_sav_slot_stride_window; /* the context + 0x34 word's role */
+static void*   s_sav_tree_root[2]; /* the two corpus tree-root globals' role */
+
+void sav_menu_window_install(int which, void** slot)
+{
+    if (which == 0 || which == 1) {
+        s_sav_menu_windows[which] = slot;
+    }
+}
+
+void** sav_menu_window_peek(int which)
+{
+    return (which == 0 || which == 1) ? s_sav_menu_windows[which] : NULL;
+}
+
+void sav_slot_stride_window_install(void* base)
+{
+    s_sav_slot_stride_window = base;
+}
+
+void* sav_slot_stride_window_peek(void)
+{
+    return s_sav_slot_stride_window;
+}
+
+void sav_tree_root_install(int which, void* node)
+{
+    if (which == 0 || which == 1) {
+        s_sav_tree_root[which] = node;
+    }
+}
+
+void* sav_tree_root_peek(int which)
+{
+    return (which == 0 || which == 1) ? s_sav_tree_root[which] : NULL;
+}
+
+// FUNCTION: LEGORR 0x004150b0
+void save_menu_refresh(GameContext* ctx, int slot)
+{
+    save_slot_set(ctx, slot); /* FUN_00417ea0 */
+    void* rec = sav_build_ctx(ctx); /* FUN_00417e70 */
+    void* base = NULL;
+    uint32_t flag = 1u;
+    if (rec != NULL) {
+        flag = 0u;
+        base = sav_slot_stride_window_peek(); /* corpus: rec + 0x34 */
+    }
+    sav_tree_load(sav_tree_root_peek(0), base, sav_menu_window_peek(0),
+                  0u, flag, NULL);
+    sav_tree_load(sav_tree_root_peek(1), NULL, sav_menu_window_peek(1),
+                  0u, 0u, NULL);
+}
+
+/* ShowLevelOverlayForCurrentSelection (FUN_00418000): commit the currently
+ * selected save slot, then rebuild the campaign/tutorial save-tree views.
+ * The frame loop renders the selected level summary from its FrontEnd row;
+ * this function handles the save and tree-refresh side effects that preceded
+ * the original descriptor display. */
+// FUNCTION: LEGORR 0x00418000
+void show_level_overlay_for_current_selection(GameContext* ctx)
+{
+    const int slot = save_slot_get(ctx); /* FUN_00417e90 */
+    if (ctx == NULL || slot < 0 || slot >= SAVE_SLOTS) {
+        return;
+    }
+    (void)save_write_slot(ctx, slot); /* FUN_00417bd0 */
+    save_menu_refresh(ctx, slot);     /* FUN_004173e0 pair */
 }
 
 /* --- the checkpoint progress fold band (see savegame.hpp) ------------------ */

@@ -321,11 +321,11 @@ static int parse_surf_chunk(Parse* P, const uint8_t* d, size_t size)
     size_t nst = 0, scap = 0;
     int ok = 1;
 
-    for (size_t i = 0; i < P->nsname && ok; i++) {
-        size_t nlen = strlen(P->sname[i]);
+    for (size_t name_index = 0; name_index < P->nsname && ok; name_index++) {
+        size_t nlen = strlen(P->sname[name_index]);
         uint8_t* needle = (uint8_t*)malloc(nlen + 1);
         if (!needle) { ok = 0; break; }
-        memcpy(needle, P->sname[i], nlen);
+        memcpy(needle, P->sname[name_index], nlen);
         needle[nlen] = 0;
         for (size_t pos = 0; pos + nlen + 1 <= size;) {
             const uint8_t* hit = (const uint8_t*)xmemmem(d + pos, size - pos, needle, nlen + 1);
@@ -353,11 +353,13 @@ static int parse_surf_chunk(Parse* P, const uint8_t* d, size_t size)
         free(needle);
     }
     /* insertion sort ascending */
-    for (i = 1; i < nst; i++)
-        for (size_t j = i; j > 0 && starts[j - 1] > starts[j]; j--) {
-            size_t t = starts[j - 1];
-            starts[j - 1] = starts[j];
-            starts[j] = t;
+    for (int sort_index =  1; sort_index < nst; sort_index++)
+        for (size_t sort_cursor = sort_index;
+             sort_cursor > 0 && starts[sort_cursor - 1] > starts[sort_cursor];
+             sort_cursor--) {
+            size_t t = starts[sort_cursor - 1];
+            starts[sort_cursor - 1] = starts[sort_cursor];
+            starts[sort_cursor] = t;
         }
 
     for (size_t k = 0; k < nst && ok; k++) {
@@ -366,10 +368,10 @@ static int parse_surf_chunk(Parse* P, const uint8_t* d, size_t size)
         /* first anchor (SRFS order) matching here */
         size_t slot = P->nsname;
         size_t alen = 0;
-        for (size_t i = 0; i < P->nsname; i++) {
-            alen = strlen(P->sname[i]);
-            if (memcmp(d + e, P->sname[i], alen) == 0 && d[e + alen] == 0) {
-                slot = i;
+        for (size_t anchor_index = 0; anchor_index < P->nsname; anchor_index++) {
+            alen = strlen(P->sname[anchor_index]);
+            if (memcmp(d + e, P->sname[anchor_index], alen) == 0 && d[e + alen] == 0) {
+                slot = anchor_index;
                 break;
             }
         }
@@ -377,8 +379,8 @@ static int parse_surf_chunk(Parse* P, const uint8_t* d, size_t size)
             continue;
         /* python `seen`: exact names, first record wins */
         int dup = 0;
-        for (i = 0; i < P->nrecs && !dup; i++)
-            if (strcmp(P->recs[i].name, P->sname[slot]) == 0)
+        for (int rec_index =  0; rec_index < P->nrecs && !dup; rec_index++)
+            if (strcmp(P->recs[rec_index].name, P->sname[slot]) == 0)
                 dup = 1;
         if (dup)
             continue;
@@ -512,14 +514,14 @@ static void parse_free(Parse* P)
     buf_free(&P->pcnt);
     buf_free(&P->psurf);
     buf_free(&P->pflip);
-    for (size_t i = 0; i < P->nsname; i++)
-        free(P->sname[i]);
+    for (size_t name_index = 0; name_index < P->nsname; name_index++)
+        free(P->sname[name_index]);
     free(P->sname);
-    for (i = 0; i < P->nrecs; i++) {
-        free(P->recs[i].tags);
-        free(P->recs[i].off);
-        free(P->recs[i].size);
-        buf_free(&P->recs[i].blocks_data);
+    for (int rec_index =  0; rec_index < P->nrecs; rec_index++) {
+        free(P->recs[rec_index].tags);
+        free(P->recs[rec_index].off);
+        free(P->recs[rec_index].size);
+        buf_free(&P->recs[rec_index].blocks_data);
     }
     free(P->recs);
 }
@@ -701,8 +703,8 @@ int model_apply_uv_text(Model* m, const char* text, size_t len)
      * (the \r is the pair's terminator, dropped), blank lines never reach
      * the engine's state machine and are dropped here too. */
     size_t cap = 2;
-    for (size_t i = 0; i < len; i++)
-        if (text[i] == '\n')
+    for (size_t text_index = 0; text_index < len; text_index++)
+        if (text[text_index] == '\n')
             cap++;
     char** lines = (char**)malloc(cap * sizeof *lines);
     if (!lines)
@@ -722,8 +724,8 @@ int model_apply_uv_text(Model* m, const char* text, size_t len)
         memcpy(ln, p, ll);
         ln[ll] = 0;
         int blank = 1;
-        for (size_t i = 0; i < ll; i++)
-            if (!isspace((unsigned char)ln[i]))
+        for (size_t line_index = 0; line_index < ll; line_index++)
+            if (!isspace((unsigned char)ln[line_index]))
                 blank = 0;
         if (!blank)
             lines[nlines++] = ln;
@@ -772,10 +774,10 @@ int model_apply_uv_text(Model* m, const char* text, size_t len)
             if (cnt > 0) {
                 nb.uv = (float*)malloc(2 * (size_t)cnt * sizeof(float));
                 if (!nb.uv) { err = 1; break; }
-                for (long k = 0; k < cnt; k++) {
+                for (long uv_index = 0; uv_index < cnt; uv_index++) {
                     const char* cs[8];
                     const char* ce[8];
-                    if (line_tokens(lines[q + 1 + k], cs, ce, 8) < 2) {
+                    if (line_tokens(lines[q + 1 + uv_index], cs, ce, 8) < 2) {
                         free(nb.uv);
                         nb.uv = NULL;
                         err = 1;
@@ -788,8 +790,8 @@ int model_apply_uv_text(Model* m, const char* text, size_t len)
                         err = 1;
                         break;
                     }
-                    nb.uv[2 * (size_t)k] = u;
-                    nb.uv[2 * (size_t)k + 1] = -v; /* v negated (19 §4) */
+                    nb.uv[2 * (size_t)uv_index] = u;
+                    nb.uv[2 * (size_t)uv_index + 1] = -v; /* v negated (19 §4) */
                 }
                 if (err)
                     break;
@@ -802,42 +804,45 @@ int model_apply_uv_text(Model* m, const char* text, size_t len)
         if (!err) {
             /* path lines replace the surface TIMG (19 §3): the block is
              * s names then s paths, so path i lives at line 2 + s + i */
-            for (long i = 0; i < s && (size_t)i < m->n_surfaces; i++) {
-                const char* pl = lines[2 + (size_t)s + (size_t)i];
+            for (long surface_index = 0;
+                 surface_index < s && (size_t)surface_index < m->n_surfaces;
+                 surface_index++) {
+                const char* pl = lines[2 + (size_t)s + (size_t)surface_index];
                 size_t sl = strlen(pl);
                 size_t a = 0, b = sl;
                 while (a < b && isspace((unsigned char)pl[a]))
                     a++;
                 while (b > a && isspace((unsigned char)pl[b - 1]))
                     b--;
-                if (b > a && !dup_assign(&m->surfaces[i].timg, pl + a, b - a)) {
+                if (b > a && !dup_assign(&m->surfaces[surface_index].timg, pl + a, b - a)) {
                     err = 1;
                     break;
                 }
             }
         }
         if (!err) {
-            for (size_t i = 0; i < nblocks; i++) {
-                if (blocks[i].idx >= 0 && (size_t)blocks[i].idx < m->n_polys) {
-                    ModelPoly* p = &m->polys[blocks[i].idx];
+            for (size_t block_index = 0; block_index < nblocks; block_index++) {
+                if (blocks[block_index].idx >= 0 &&
+                    (size_t)blocks[block_index].idx < m->n_polys) {
+                    ModelPoly* p = &m->polys[blocks[block_index].idx];
                     free(p->uv);
-                    p->uv = blocks[i].uv;
-                    p->uv_count = blocks[i].count;
-                    blocks[i].uv = NULL;
+                    p->uv = blocks[block_index].uv;
+                    p->uv_count = blocks[block_index].count;
+                    blocks[block_index].uv = NULL;
                 } else {
-                    free(blocks[i].uv);
+                    free(blocks[block_index].uv);
                 }
             }
             m->uv_applied = 1;
             applied = 1;
         }
-        for (size_t i = 0; i < nblocks; i++)
-            free(blocks[i].uv);
+        for (size_t block_index = 0; block_index < nblocks; block_index++)
+            free(blocks[block_index].uv);
         free(blocks);
     }
 done:
-    for (i = 0; i < nlines; i++)
-        free(lines[i]);
+    for (int line_index =  0; line_index < nlines; line_index++)
+        free(lines[line_index]);
     free(lines);
     return applied;
 }
@@ -916,30 +921,30 @@ uint32_t model_digest(const Model* m)
 {
     uint32_t h = 2166136261u;
     dg32(&h, (uint32_t)m->n_verts);
-    for (size_t i = 0; i < m->n_verts; i++) {
-        dgbits(&h, m->verts[i * 3]);
-        dgbits(&h, m->verts[i * 3 + 1]);
-        dgbits(&h, m->verts[i * 3 + 2]);
+    for (size_t vertex_index = 0; vertex_index < m->n_verts; vertex_index++) {
+        dgbits(&h, m->verts[vertex_index * 3]);
+        dgbits(&h, m->verts[vertex_index * 3 + 1]);
+        dgbits(&h, m->verts[vertex_index * 3 + 2]);
     }
     dg32(&h, (uint32_t)m->n_polys);
-    for (i = 0; i < m->n_polys; i++) {
-        const ModelPoly* p = &m->polys[i];
+    for (int poly_index =  0; poly_index < m->n_polys; poly_index++) {
+        const ModelPoly* p = &m->polys[poly_index];
         dg32(&h, p->count);
         dg32(&h, p->surface);
         dg32(&h, (uint32_t)(p->flipped != 0));
-        for (uint16_t k = 0; k < p->count; k++)
-            dg32(&h, (uint32_t)(int16_t)p->ring[k]);
+        for (uint16_t ring_index = 0; ring_index < p->count; ring_index++)
+            dg32(&h, (uint32_t)(int16_t)p->ring[ring_index]);
         dg32(&h, (uint32_t)p->uv_count);
-        for (k = 0; k < 2 * p->uv_count; k++)
-            dgbits(&h, p->uv[k]);
+        for (int uv_index =  0; uv_index < 2 * p->uv_count; uv_index++)
+            dgbits(&h, p->uv[uv_index]);
     }
     dg32(&h, (uint32_t)m->n_surfaces);
-    for (i = 0; i < m->n_surfaces; i++) {
-        const ModelSurface* s = &m->surfaces[i];
+    for (int surface_index =  0; surface_index < m->n_surfaces; surface_index++) {
+        const ModelSurface* s = &m->surfaces[surface_index];
         uint32_t l = (uint32_t)strlen(s->name ? s->name : "");
         dg32(&h, l);
-        for (uint32_t k = 0; k < l; k++) {
-            h ^= (uint8_t)s->name[k];
+        for (uint32_t name_index = 0; name_index < l; name_index++) {
+            h ^= (uint8_t)s->name[name_index];
             h *= 16777619u;
         }
         dg32(&h, (uint32_t)(s->has_colr != 0));
@@ -950,8 +955,8 @@ uint32_t model_digest(const Model* m)
         dgbits(&h, s->tsiz[1]);
         l = s->timg ? (uint32_t)strlen(s->timg) : 0;
         dg32(&h, l);
-        for (k = 0; k < l; k++) {
-            h ^= (uint8_t)s->timg[k];
+        for (int timg_index =  0; timg_index < l; timg_index++) {
+            h ^= (uint8_t)s->timg[timg_index];
             h *= 16777619u;
         }
     }
