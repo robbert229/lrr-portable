@@ -146,6 +146,7 @@ int  osf_read_path(GameContext* ctx, int slot);
 /* Builder for `Saves\<slot>.<ext>` path (native vs winapi separators). */
 void save_slot_path(GameContext* ctx, char* out, size_t out_sz, int slot,
                     const char* ext);
+void save_directory_ensure_exists(const char* path); /* FUN_0047f6a0 */
 
 /* Current-level record index used by checkpoint_step (ListFindName stand-in
  * until the level tree is walked from config). */
@@ -245,6 +246,14 @@ void  list_set_node(SavListWindow* win, const void* wide_key, void* value);
 void* list_get_node(const SavListWindow* win, const void* wide_key);
                                                 /* FUN_00417020 */
 
+/* LevelNodeGet (FUN_00417090): get or recursively build the LevelLinks node
+ * for a name in the level registry. `cfg` is the Lego configuration backing
+ * the registry; this explicit argument replaces the corpus global. */
+struct BlockFile;
+struct SavTreeNode;
+SavTreeNode* level_node_get(SavListWindow* win, BlockFile* cfg,
+                            const char* level_name);  /* FUN_00417090 */
+
 /* SavTreeWalk (FUN_004171c0): visit-each-once tree recursion over
  * node windows — children pointer slot, child count, and the walk flag;
  * the port's node is the widened-slot shape (the corpus strides its
@@ -337,6 +346,7 @@ uint32_t registry_value_index_lookup_or_not_found(void* root, uint32_t index);
  * land as zero, and the walks thread no EngineContext (the gate reads
  * the port's zeroed app-mode default). */
 void save_menu_refresh(GameContext* ctx, int slot);  /* FUN_004150b0 */
+void show_level_overlay_for_current_selection(GameContext* ctx); /* FUN_00418000 */
 
 /* Install/peek hooks for the corpus reference state the refresh walks.
  * slot is the corpus's port-owned block-slot address (the chain word's

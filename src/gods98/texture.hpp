@@ -34,6 +34,12 @@ typedef struct TextureSurface {
      * falls back to its own heuristic for those. */
     uint32_t  keys[2];
     int32_t   key_count;
+    /* The legacy resource-record path applies DDCOLORKEY_SRCBLT to the
+     * wrapped surface. Preserve that range in the software surface too. */
+    uint32_t  source_key_low;
+    uint32_t  source_key_high;
+    int32_t   source_key_set;
+    uint32_t  resource_flags;
 } TextureSurface;
 
 /* Decode a full .bmp file buffer. Windows BITMAPINFOHEADER (size >= 40) and
@@ -54,6 +60,11 @@ TextureSurface* texture_get_or_load(const char* base, const char* file);
 /* Cache-branch release: refcount--, frees + unregisters at 0. For a surface
  * that was never registered, frees immediately. */
 void texture_release(TextureSurface* t);
+
+/* ResourceRecordAddRef's software equivalent of IDirectDrawSurface
+ * SetColorKey(DDCKEY_SRCBLT, range). */
+void texture_source_color_key_set(TextureSurface* t, uint32_t low,
+                                  uint32_t high);
 
 /* Unconditional free (do not use on surfaces still reachable by name). */
 void texture_free(TextureSurface* t);

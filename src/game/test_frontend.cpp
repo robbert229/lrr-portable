@@ -685,6 +685,7 @@ static void test_slots(void)
     FrontEnd fe;
     frontend_build(&fe, cfg);
     FeSlot slots[3];
+    memset(slots, 0, sizeof(slots));
     snprintf(slots[0].label, FE_NAME_MAX, "%s", "Slot 1 (empty)");
     slots[0].id = 1; slots[0].present = 0;
     snprintf(slots[1].label, FE_NAME_MAX, "%s", "Slot 2");

@@ -137,6 +137,23 @@ typedef struct LevelState {
     char     obj_stream[80];    /* DAT_004ffe38: "Stream Objective_…" text */
 } LevelState;
 
+/* Logical view of the terrain descriptor list headed at DAT_004b8a24. The
+ * corpus stores the single key at +0x08, pair words at +0x0c/+0x10, and
+ * next at +0x24; this typed view avoids imposing that x86 layout on 64-bit
+ * builds. */
+typedef struct TerrainDescriptorNode {
+    uint32_t key_single;
+    uint32_t key_pair_first;
+    uint32_t key_pair_second;
+    struct TerrainDescriptorNode* next;
+} TerrainDescriptorNode;
+
+TerrainDescriptorNode* terrain_descriptor_find_exact(
+    TerrainDescriptorNode* list, const uint32_t* pair_key,
+    const uint32_t* single_key);
+int terrain_cell_predicate_check(TerrainDescriptorNode* list,
+                                 const uint32_t* pair_key);
+
 /* Objective word bits (finding 22 §2). */
 #define LVL_OBJECTIVE_STILL_PENDING 0x1u
 #define LVL_OBJECTIVE_ACHIEVED      0x2u
@@ -297,6 +314,15 @@ uint16_t level_map_cell_get(uint32_t slot, int x, int y);
 /* FUN_0048e060: x87 round-to-nearest float→integer (the control-word
  * round-to-nearest `fistp` trick). World units are cell units 1:1. */
 int level_cell_of(float v);
+
+/* EntityPositionToTerrainCell (FUN_004424f0): convert an entity's world
+ * x/y position to the current level's grid cell. The port threads the level
+ * and output pointers; it uses EntitySlot's position mirrors in place of
+ * the unmodeled scene-object transform and leaves outputs unchanged when
+ * the level/entity/cell is unavailable. */
+void entity_position_to_terrain_cell(const struct EntitySlot* entity,
+                                     const LevelState* s,
+                                     int* cell_x, int* cell_y);
 
 /* FUN_00432770 simple mode (param_4 == 0, the walkability check the move
  * branch calls with): the cell must sit inside a 2-cell grid margin and
@@ -469,6 +495,13 @@ uint32_t level_cell_secondary_flag_8(const LevelState* s, int cx, int cy);
  * marks the cell. */
 uint32_t level_cell_occupied_or_flag(const LevelState* s, int cx, int cy,
                                      int mode);
+
+/* CellFourNeighborWalkCheck (FUN_0041f740): when the center lacks the
+ * 0xc0 marker, all four cardinal neighbors must lack occupied/secondary
+ * bit 0x400; when marked, at most one neighbor may carry that condition.
+ * The port takes the level explicitly and bounds-guards through the cell
+ * accessors (the corpus uses global state and unchecked cell addresses). */
+int cell_four_neighbor_walk_check(const LevelState* s, int cx, int cy);
 
 /* FUN_00432b00 / FUN_00432b50 / FUN_00432d90: bounded single-bit reads
  * (flags 0x800, 0x8, 0x20) — 0 outside the dim-1 gate. */
@@ -803,6 +836,10 @@ void grid_record_flag_mask_clear(void);
 void terrain_cell_record_get(int x, int y, int field,
                              uint32_t* value_a, uint32_t* value_b);
 
+/* EnsureCellEntriesLoaded (FUN_0040aea0): validate the cell's configured
+ * resource entries before marking a requested cell slot loaded. */
+int ensure_cell_entries_loaded(uint32_t kind, int row, int slot);
+
 /* CellFlag4IsSet (FUN_0040b250): the block's field-0 word carries the
  * flag bit 0x4 when the block has no variant record (the port case);
  * with one, the requested field word answers. */
@@ -1016,6 +1053,15 @@ void cell_cardinal_neighbor_apply(const struct GameContext* ctx, int x,
 int terrain_cell_special_state_predicate(const LevelState* s, int cx,
                                          int cy, int secondary_gate);
                                                 /* FUN_0040d3f0 */
+
+/* TerrainCellHasOccupiedOrFlaggedNeighbor (FUN_0040d240): reject a center
+ * with no flag-8 mark, state 6/7, or special/sidecar state; then look for a
+ * special/sidecar state at cardinal distance 1 or 2. DAT_004c7df8's
+ * per-cell sidecar is supplied by `sidecar_present`; NULL means absent. */
+typedef int (*TerrainCellSidecarPresenceQuery)(const LevelState*, int, int);
+int terrain_cell_has_occupied_or_flagged_neighbor(
+    const LevelState* s, int cx, int cy,
+    TerrainCellSidecarPresenceQuery sidecar_present);
 
 /* --- cell-variant match window (2026-10-25) -------------------------------
  * CellVariantEntryMatchCheck (FUN_00451180; findings 254/450): the cell

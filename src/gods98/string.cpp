@@ -24,6 +24,24 @@ char* string_duplicate(const char* text)
     return copy;
 }
 
+/* FormattedTextBufferBuild (FUN_0048e1e0): bounded software equivalent of
+ * the engine's va_list formatter. The returned count excludes the NUL. */
+// FUNCTION: LEGORR 0x0048E1E0
+uint32_t formatted_text_buffer_build(char* out, size_t capacity,
+                                     const char* format, va_list args)
+{
+    if (out == NULL || capacity == 0) return 0;
+    out[0] = '\0';
+    if (format == NULL) return 0;
+#if defined(_MSC_VER) && _MSC_VER < 1900
+    const int result = _vsnprintf(out, capacity, format, args);
+    if (result < 0) out[capacity - 1] = '\0';
+#else
+    (void)vsnprintf(out, capacity, format, args);
+#endif
+    return (uint32_t)strlen(out);
+}
+
 /* FUN_0048da50: substring find. The corpus's aligned-word/SWAR scan is a
  * byte-equivalent strstr, plus the same early-outs (empty needle -> the
  * haystack start). */

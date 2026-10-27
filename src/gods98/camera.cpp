@@ -16,11 +16,12 @@ static void move_pipeline_hook(EngineState* /*state*/, EngineContext* /*ctx*/)
     /* TODO(camera): FUN_0046a700 — walk the move list. */
 }
 
-/* FUN_004377b0 — post-step hook over the LAB_0046a5c0 label region. */
-// STUB: LEGORR 0x004377b0
+/* The corpus post-step callback is LAB_0046a5c0, dispatched through
+ * EntityPoolFindByCallbackFiltered (FUN_004377b0). The generic entity walk
+ * is ported; the callback's behavior remains a camera-specific seam. */
 static void move_post_hook(int /*mode*/)
 {
-    /* TODO(camera): FUN_004377b0 — post-step hook. */
+    /* TODO(camera): port LAB_0046a5c0 and dispatch it through the walker. */
 }
 
 /* FUN_0046a4c0(id) — control-registry probe; nonzero = control present. */

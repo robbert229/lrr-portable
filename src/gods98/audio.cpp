@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 #include <stdlib.h>
+#include <math.h>
 
 #include "audio.hpp"
 
@@ -42,6 +43,67 @@ void audio_set_volume(AudioPlayer* p, float volume)
     if (p->dev != NULL) {
         platform_audio_set_gain(p->dev, volume);
     }
+}
+
+static const int s_sfx_attenuation[11] = {
+    -10000, -5000, -3500, -2000, -1500, -1000,
+      -700,  -400,  -200,   -80,     0
+};
+
+float audio_sfx_volume_gain(int index)
+{
+    if (index < 0 || index >= 11) {
+        return -1.0f;
+    }
+    if (s_sfx_attenuation[index] <= -10000) {
+        return 0.0f; /* DirectSound defines -100 dB as silence. */
+    }
+    /* DirectSound SetVolume uses hundredths of a decibel. Convert dB to
+     * amplitude: 10^(dB/20), hence attenuation/2000. */
+    return powf(10.0f, (float)s_sfx_attenuation[index] / 2000.0f);
+}
+
+/* SoundBufferVolumeSet (FUN_0047b500): DirectSound's attenuation maps to
+ * the port's single master stream gain. Invalid corpus attenuation values
+ * are ignored by the same range predicate used by sound-bank records. */
+// FUNCTION: LEGORR 0x0047b500
+void audio_sound_volume_set(AudioPlayer* p, int millibels)
+{
+    if (p == NULL || !sound_bank_sound_on()
+        || !sound_volume_value_valid(millibels)) {
+        return;
+    }
+    const float gain = millibels <= -10000
+        ? 0.0f : powf(10.0f, (float)millibels / 2000.0f);
+    audio_set_volume(p, gain);
+}
+
+/* SoundVolumeIndexSet (FUN_0047b530): the table lookup is bounded to the
+ * eleven menu slider entries, then the selected attenuation is applied. */
+// FUNCTION: LEGORR 0x0047b530
+void audio_sound_volume_index_set(AudioPlayer* p, int index)
+{
+    if (index < 0 || index >= 11) {
+        return;
+    }
+    audio_sound_volume_set(p, s_sfx_attenuation[index]);
+}
+
+/* GameSpeedSelect (FUN_00414de0): the ledger name is misleading; this is
+ * the SFX slider callback and simply forwards its index. */
+// FUNCTION: LEGORR 0x00414de0
+void audio_menu_sfx_volume_set(AudioPlayer* p, int index)
+{
+    audio_sound_volume_index_set(p, index);
+}
+
+/* VolumeSet (FUN_00414df0): the corpus sends param_1 / 9 to both mixer
+ * channels. AudioPlayer exposes one master output gain, so apply the same
+ * normalized value once; audio_set_volume provides the device-side clamp. */
+// FUNCTION: LEGORR 0x00414df0
+void audio_menu_volume_set(AudioPlayer* p, int value)
+{
+    audio_set_volume(p, (float)value * 0.11111111f);
 }
 
 /* Corpus sounds are all PCM: 8-bit unsigned or 16-bit signed LE, mostly

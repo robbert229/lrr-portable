@@ -484,7 +484,9 @@ void cam_set_facing(CameraHandle* c, const float* r)
 }
 
 /* ---- world/stub boundaries ---------------------------------------------- */
-/*  FUN_0044f6d0 grid pick -> bounded voxel-grid coordinates.
+/* EngineContext grid lookup -> bounded voxel-grid coordinates. This adapter
+ * is used where only the widened LevelState block is available; the actual
+ * descriptor-based TerrainGridPick lives in record.cpp.
  *  FUN_0044f940 / FUN_0044fe70 terrain heights -> sampled voxel byte, not
  *  the original selected-triangle corner-height interpolation.
  *  FUN_00431570 returns the current level's +4 terrain handle despite its
@@ -498,8 +500,8 @@ void cam_set_facing(CameraHandle* c, const float* r)
  *  FUN_0041f940 is instead the engine-state bit-0x20000 setter; no direct
  *  port setter exists yet. */
 
-// STUB: LEGORR 0x0044f6d0
-static int grid_pick(EngineContext* ctx, const float* pos, int* gx, int* gy)
+static int engine_context_grid_pick(EngineContext* ctx, const float* pos,
+                                    int* gx, int* gy)
 {
     /* with a bound level, cells come from the real voxel grid; terrain uses
      * the voxel surface byte (+0x04). */
@@ -546,7 +548,7 @@ void random_reachable_grid_point_select(EngineContext* ctx, const float* p,
         view_ray_intersection_test(out, p, dir, plane, normal);
         plane[2] = terrain_height(ctx, out[0], out[1]);
     }
-    (void)grid_pick(ctx, out, gx, gy); /* FUN_0044f6d0 hook */
+    (void)engine_context_grid_pick(ctx, out, gx, gy);
 }
 
 static void cam_surface_height_stub()
@@ -611,7 +613,7 @@ void view_tick(ViewContext* v, EngineContext* ctx, float dt, float scale)
         cam_get_facing(&v->cam_follow, fac);
         (void)fac;
         int gx = 0, gy = 0;
-        if (!grid_pick(ctx, pos, &gx, &gy)) {
+        if (!engine_context_grid_pick(ctx, pos, &gx, &gy)) {
             cam_offset(&v->cam_follow, -v->offset[0], -v->offset[1],
                        -v->offset[2]);
         } else {
@@ -890,7 +892,7 @@ void current_level_terrain_grid_pick(EngineContext* ctx, float x, float y,
     int tx = 0, ty = 0;
     int* px = gx != NULL ? gx : &tx;
     int* py = gy != NULL ? gy : &ty;
-    (void)grid_pick(ctx, pos, px, py);
+    (void)engine_context_grid_pick(ctx, pos, px, py);
 }
 
 /* GridOperationArgumentAdapter (FUN_00442540) — see view.hpp. */

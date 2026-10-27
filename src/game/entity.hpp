@@ -62,6 +62,17 @@ int  entity_stride(int type);
 int  entity_count(GameContext* ctx, int type);
 const EntitySlot* entity_at(GameContext* ctx, int type, int index);
 
+/* EntityPoolFindByCallback / EntityPoolFindByCallbackFiltered
+ * (FUN_004377d0 / FUN_004377b0): scan live entity slots in table order,
+ * optionally skipping records with +0x3e8 bit 0x80000, and stop at the
+ * first callback match. */
+int entity_pool_find_by_callback(GameContext* ctx,
+                                int (*callback)(EntitySlot*, void*),
+                                void* payload, int filter_flagged);
+int entity_pool_find_by_callback_filtered(GameContext* ctx,
+                                          int (*callback)(EntitySlot*, void*),
+                                          void* payload);
+
 /* EntityQueryFlagCount (FUN_0041b3c0): catalog-kind query over the stats
  * flag words and the own-storage catalog count/pair windows (install hooks
  * below; the corpus's loader-owned globals have no ported owner). */
@@ -140,6 +151,8 @@ uint32_t entity_capability_flags_get(const EntitySlot* e); /* FUN_00469ea0 (+14c
 float entity_stats_float_at88(const EntitySlot* e);   /* FUN_00469f20
                                          * (the "screen shake" reader) */
 uint32_t entity_stats_word_at_c0_or_c4(const EntitySlot* e, int selector);
+/* Record +0xec value used by tutorial action 0x14/0x15. */
+uint32_t entity_stats_word_at_ec(const EntitySlot* e);
                                       /* FUN_00469f90: +c4 if selector
                                        * nonzero, else +c0 */
 uint32_t entity_stats_word_atc8(const EntitySlot* e); /* FUN_00469fc0 */
@@ -362,6 +375,8 @@ int resolved_entity_operation_dispatch(const char* name, int slot,
 void stats_type_table_install(int type, int row, const void* record,
                               int stride_count);
 const void* stats_type_table_cell(int type, int row);
+/* FUN_00469f40: raw float word for the stats loader's parsed level count. */
+uint32_t building_upgrade_admission_check(int type, int row);
 
 uint32_t stats_table_word_at_b8(int type, int row);  /* FUN_00469b20 */
 float stats_table_float_at_dc(int type, int row);    /* FUN_00469e00 */

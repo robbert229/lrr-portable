@@ -16,6 +16,7 @@
  *  - allocations are 16-byte aligned because the corpus round-ups do (the
  *    aligned path is shared by both entry points). */
 #include <stdint.h>
+#include <stdarg.h>
 
 #ifndef LEGORRR_GODS98_HEAP_HPP
 #define LEGORRR_GODS98_HEAP_HPP
@@ -122,6 +123,11 @@ void text_buffer_reset(void* record);           /* FUN_004859b0 */
  * buffer-slot widening, and the record half answering NULL where the
  * corpus strides the allocation blindly. */
 void* text_buffer_create(uint32_t mode, const uint32_t* header, long size);
+void text_buffer_append_vformat(void* record, int skip_bells,
+                                const char* format, va_list args);
+void text_buffer_append_format(void* record, const char* format, ...);
+void formatted_text_append_to_ring_buffer(void* record, int skip_bells,
+                                          const char* format, ...);
 
 /* UITextOutputObjectRelease (FUN_0045a620): resets the text-output record
  * held in the caller's pointer slot. The corpus dereferences blindly;

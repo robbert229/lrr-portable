@@ -197,5 +197,7 @@ typedef struct ResourceHandleList {
     int32_t   count;   /* corpus dword at +8 */
 } ResourceHandleList;
 void resource_handle_list_dispose(ResourceHandleList* list);     /* FUN_00410ae0 */
+void resource_handle_list_append(ResourceHandleList* list,
+                                 const char* value);              /* FUN_00410aa0 */
 
 #endif /* LEGORRR_RESOURCE_HPP */

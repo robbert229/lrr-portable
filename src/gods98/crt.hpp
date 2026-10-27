@@ -201,16 +201,70 @@ float    crt_float_00555120_peek(void);
 }
 #endif
 
-/* DisplayResolutionFilterTupleAppend (2026-10-24; findings 425/282): the
- * resolution-filter table append. The corpus writes blindly at
- * count * 0x110-stride slots of the DAT_00568060/64/68 trio; the port
- * keeps 16 guarded entries (documented deviation) — nothing in the port
- * seeds it (the seeding DirectDrawDeviceInitialize is a COM seam). The
- * read side, DisplayModeMatchesFilterTuple, stays blocked on the
- * display-mode enumeration globals. */
+/* Display-mode list and resolution-filter rows (findings 425/282). The
+ * entry layout keeps the corpus's 0x110-byte stride: width, height, bpp,
+ * then the mode name at +0x0c. Enumeration remains a platform seam; the
+ * caller supplies rows to the port-side registry. */
+#define CRT_DISPLAY_MODE_NAME_MAX 260
+#define CRT_DISPLAY_MODE_ENTRIES 256
+typedef struct CrtDisplayModeEntry {
+    int32_t width, height, bpp;
+    char name[CRT_DISPLAY_MODE_NAME_MAX];
+} CrtDisplayModeEntry;
+typedef struct CrtDisplayModeList {
+    uint32_t count;
+    uint32_t selected_index;
+    uint32_t selected_mode_index;
+    int32_t default_action_enabled;
+    int32_t empty_message_kind; /* 1 = bit-depth modes, 2 = screen modes */
+    int32_t desktop_bpp;
+    uint32_t mode_indices[CRT_DISPLAY_MODE_ENTRIES];
+} CrtDisplayModeList;
+typedef struct CrtDisplayModeDialog {
+    int32_t mode;
+    uint32_t mode_label_resource; /* 0x4b2d38 or 0x4b2d44 */
+    int32_t previous_mode;
+    int32_t refresh_rate_control_enabled;
+    int32_t checkbox_3ec_checked;
+    int32_t checkbox_3ed_checked;
+    CrtDisplayModeList modes;
+} CrtDisplayModeDialog;
+int  display_mode_entry_append(int mode, int width, int height, int bpp,
+                               const char* name);
+int  display_mode_entry_count(void);
+int  display_mode_entry_get(int index, CrtDisplayModeEntry* out);
+int  display_mode_name_index_find(const char* name, uint32_t* out_index);
+void display_mode_list_populate(int mode, int desktop_bpp,
+                                CrtDisplayModeList* out);
+void display_mode_dialog_set_mode_and_refresh_choices(
+    CrtDisplayModeDialog* dialog, int mode, int desktop_bpp);
+void display_refresh_rate_controls_sync(CrtDisplayModeDialog* dialog,
+                                        uint32_t adapter_flags,
+                                        int desktop_bpp);
+
+#define CRT_DISPLAY_RESOLUTION_ENTRIES 256
+typedef struct CrtDisplayResolutionEntry {
+    char name[CRT_DISPLAY_MODE_NAME_MAX];
+    uint32_t flags;
+} CrtDisplayResolutionEntry;
+typedef struct CrtDisplayResolutionList {
+    uint32_t count;
+    uint32_t selected_index;
+    uint32_t error_resource;
+} CrtDisplayResolutionList;
+void display_resolution_entries_reset(int enumeration_succeeded);
+int  display_resolution_entry_append(const char* name, uint32_t flags);
+int  display_resolution_entry_count(void);
+int  display_resolution_entry_get(int index,
+                                  CrtDisplayResolutionEntry* out);
+void display_resolution_combo_populate(CrtDisplayResolutionList* out);
+
+/* The filter table mirrors DAT_00568060/64/68. Its 16-entry guard is a
+ * documented safety deviation from the corpus's blind write. */
 void display_resolution_filter_tuple_append(int width, int height, int bpp);
 int  display_resolution_filter_tuple_count(void);
 void display_resolution_filter_tuple_get(int index, int* w, int* h, int* bpp);
+int  display_mode_matches_filter_tuple(int mode_index);
 
 /* --- the remaining unowned DAT one-liners (2026-10-24; finding 383) --------
  * GlobalFlagGet_004ff978 (FUN_00456640): the unresolved flag the corpus
@@ -233,6 +287,7 @@ void     state_flag_toggle_when_zero(void);        /* FUN_00407340 */
 uint32_t global_task_refresh_flag_get(void);       /* FUN_00407360 */
 void     level_state_stored_value_set(uint32_t v); /* FUN_00409d40 */
 void     global_mode_zero_input_set(int value);    /* FUN_0040ab10 */
+uint32_t global_mode_zero_input_peek(void);         /* port hook */
 void     rockfall_style_table_base_set(uint32_t v);/* FUN_0040bfc0 */
 void     global_flag_bit0_clear(void);             /* FUN_0040e7e0 */
 void     global_config_value_set(uint32_t v);      /* FUN_0040f5e0 */

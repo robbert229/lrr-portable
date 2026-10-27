@@ -108,10 +108,10 @@ struct EngineContext;
 float options_scale_frame(const GameOptions* o, struct EngineContext* ctx,
                           float dt);
 
-/* Master audio gain 0..1 for the store — SFX_Volume / 10, the same mapping
- * the live menu adjustment feeds to audio_set_volume. Applied at the audio
- * start so settings restored from the active save context take effect
- * immediately (issue #85), not only after another menu nudge. */
+/* Master audio gain for the store — the SFX_Volume index maps through the
+ * corpus's nonlinear DirectSound attenuation table (FUN_0047b530), then to
+ * a linear amplitude. Applied at audio start so restored settings take
+ * effect immediately (issue #85). */
 float options_audio_gain(const GameOptions* o);
 
 /* --- save-context serialisation -----------------------------------------

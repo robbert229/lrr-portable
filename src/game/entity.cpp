@@ -63,6 +63,51 @@ const EntitySlot* entity_at(GameContext* ctx, int type, int index)
     return &ctx->entity[tab][index];
 }
 
+/* EntityPoolFindByCallback (FUN_004377d0): the corpus walks each allocated
+ * entity chunk, accepts only self-linked live records, optionally filters
+ * the +0x3e8 0x80000 bit, and returns on the first callback match. The port's
+ * typed arrays and entity_count values are its live-record registry. */
+// FUNCTION: LEGORR 0x004377D0
+int entity_pool_find_by_callback(GameContext* ctx,
+                                 int (*callback)(EntitySlot*, void*),
+                                 void* payload, int filter_flagged)
+{
+    if (ctx == NULL || callback == NULL) {
+        return 0;
+    }
+    for (int table = 0; table < ENTITY_TYPES; ++table) {
+        int count = ctx->entity_count[table];
+        if (count < 0) {
+            count = 0;
+        }
+        if (count > ENTITY_CAP) {
+            count = ENTITY_CAP;
+        }
+        for (int i = 0; i < count; ++i) {
+            EntitySlot* entity = &ctx->entity[table][i];
+            if (entity->type == 0) {
+                continue; /* corpus +0x408 self-link liveness marker */
+            }
+            if (filter_flagged != 0 && (entity->flags_3e8 & 0x80000u) != 0u) {
+                continue;
+            }
+            if (callback(entity, payload) != 0) {
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
+
+/* EntityPoolFindByCallbackFiltered (FUN_004377b0) fixes the filter on. */
+// FUNCTION: LEGORR 0x004377B0
+int entity_pool_find_by_callback_filtered(GameContext* ctx,
+                                          int (*callback)(EntitySlot*, void*),
+                                          void* payload)
+{
+    return entity_pool_find_by_callback(ctx, callback, payload, 1);
+}
+
 int entity_create(GameContext* ctx, int type, const char* name,
                   float x, float y, float z, float rot)
 {
@@ -259,6 +304,7 @@ float entity_energy_decay_rate_get(const EntitySlot* e) { return stats_rec_float
 float entity_stats_float_atdc(const EntitySlot* e) { return stats_rec_float(e, 0xdc); }
 // FUNCTION: LEGORR 0x00469e40
 uint32_t entity_stats_word_atac(const EntitySlot* e) { return stats_rec_word(e, 0xac); }
+uint32_t entity_stats_word_at_ec(const EntitySlot* e) { return stats_rec_word(e, 0xec); }
 // FUNCTION: LEGORR 0x00469e60
 uint32_t entity_stats_word_get(const EntitySlot* e) { return stats_rec_word(e, 0x144); }
 // FUNCTION: LEGORR 0x00469e80
@@ -1139,6 +1185,22 @@ const void* stats_type_table_cell(int type, int row)
         return NULL; /* deviation: the corpus strides blindly */
     }
     return s_stats_cell_ptr[type][row];
+}
+
+/* BuildingUpgradeAdmissionCheck (FUN_00469f40) reads the raw word stored
+ * beside the stats table. The loader writes the parsed integer as a float;
+ * callers then consume that float's bits through an integer table read. */
+// FUNCTION: LEGORR 0x00469f40
+uint32_t building_upgrade_admission_check(int type, int row)
+{
+    if (type < 0 || type >= STATS_TYPE_TABLE_TYPES
+        || row < 0 || row >= STATS_TYPE_TABLE_ROWS) {
+        return 0u; /* deviation: the corpus indexes the table blindly */
+    }
+    const float level_count = (float)s_stats_cell_span[type][row];
+    uint32_t raw_word = 0u;
+    __builtin_memcpy(&raw_word, &level_count, sizeof(raw_word));
+    return raw_word;
 }
 
 static uint32_t stats_table_read(int type, int row, int off, int stride_index)

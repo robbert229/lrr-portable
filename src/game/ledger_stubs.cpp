@@ -56,14 +56,6 @@ void ledger_stub_00401a70_AdvisorSceneAdvanceAndCompletionCheck() {}
 // STUB: LEGORR 0x00401b30
 void ledger_stub_00401b30_AdvisorApplySlotTransform() {}
 
-// FormattedTextPrintfWidth
-// STUB: LEGORR 0x00401c50
-void ledger_stub_00401c50_FormattedTextPrintfWidth() {}
-
-// FormattedTextPrintf
-// STUB: LEGORR 0x00401c80
-void ledger_stub_00401c80_FormattedTextPrintf() {}
-
 // ObjectCommandTaskCreate
 // STUB: LEGORR 0x00403320
 void ledger_stub_00403320_ObjectCommandTaskCreate() {}
@@ -320,14 +312,6 @@ void ledger_stub_00408e50_CreateRepeatedResourceInstances() {}
 // STUB: LEGORR 0x00408ec0
 void ledger_stub_00408ec0_KindNineNeighborEmitForFootprintCells() {}
 
-// TerrainCellPredicateCheck
-// STUB: LEGORR 0x004090a0
-void ledger_stub_004090a0_TerrainCellPredicateCheck() {}
-
-// TerrainDescriptorFindExact
-// STUB: LEGORR 0x004090c0
-void ledger_stub_004090c0_TerrainDescriptorFindExact() {}
-
 // ReleaseSelectionGroupResources
 // STUB: LEGORR 0x00409110
 void ledger_stub_00409110_ReleaseSelectionGroupResources() {}
@@ -399,10 +383,6 @@ void ledger_stub_0040a5e0_RecordCountDigitsFill() {}
 // DependencyGridConfigLoad
 // STUB: LEGORR 0x0040ab70
 void ledger_stub_0040ab70_DependencyGridConfigLoad() {}
-
-// EnsureCellEntriesLoaded
-// STUB: LEGORR 0x0040aea0
-void ledger_stub_0040aea0_EnsureCellEntriesLoaded() {}
 
 // CellResourceEntryMatches
 // STUB: LEGORR 0x0040af40
@@ -596,10 +576,6 @@ void ledger_stub_0040d170_CreateCellObjectIfAvailable() {}
 // STUB: LEGORR 0x0040d1f0
 void ledger_stub_0040d1f0_DeleteCellObject() {}
 
-// TerrainCellHasOccupiedOrFlaggedNeighbor
-// STUB: LEGORR 0x0040d240
-void ledger_stub_0040d240_TerrainCellHasOccupiedOrFlaggedNeighbor() {}
-
 // TerrainCellActivationTry
 // STUB: LEGORR 0x0040d4f0
 void ledger_stub_0040d4f0_TerrainCellActivationTry() {}
@@ -704,177 +680,9 @@ void ledger_stub_004100b0_SceneObjectListApplySecondPositionCallback() {}
 // STUB: LEGORR 0x00410280
 void ledger_stub_00410280_CallbackOperationRunAndReturnStatus() {}
 
-// UiTextUnderscoresToSpaces
-// STUB: LEGORR 0x004102b0
-void ledger_stub_004102b0_UiTextUnderscoresToSpaces() {}
-
 // StringQueueRecordOrFlush
 // STUB: LEGORR 0x00410320
 void ledger_stub_00410320_StringQueueRecordOrFlush() {}
-
-// MainMenuTextItem
-// STUB: LEGORR 0x004103d0
-void ledger_stub_004103d0_MainMenuTextItem() {}
-
-// CampaignLevelFallbackLabel
-// STUB: LEGORR 0x004105a0
-void ledger_stub_004105a0_CampaignLevelFallbackLabel() {}
-
-// MenuParamRecordCreate
-// STUB: LEGORR 0x004105f0
-void ledger_stub_004105f0_MenuParamRecordCreate() {}
-
-// MenuRecordResourcesRelease
-// STUB: LEGORR 0x00410690
-void ledger_stub_00410690_MenuRecordResourcesRelease() {}
-
-// SaveMenuListEntryAppend
-// STUB: LEGORR 0x00410740
-void ledger_stub_00410740_SaveMenuListEntryAppend() {}
-
-// MenuItemChoiceStringsAllocate
-// STUB: LEGORR 0x00410a10
-void ledger_stub_00410a10_MenuItemChoiceStringsAllocate() {}
-
-// ResourceHandleListAppend
-// STUB: LEGORR 0x00410aa0
-void ledger_stub_00410aa0_ResourceHandleListAppend() {}
-
-// ResourceVariantRecordRelease
-// STUB: LEGORR 0x00410c70
-void ledger_stub_00410c70_ResourceVariantRecordRelease() {}
-
-// MenuTextRecordMake
-// STUB: LEGORR 0x00410d50
-void ledger_stub_00410d50_MenuTextRecordMake() {}
-
-// MenuButtonRecordMake
-// STUB: LEGORR 0x00410e20
-void ledger_stub_00410e20_MenuButtonRecordMake() {}
-
-// ResourceRecordAndChildrenRelease
-// STUB: LEGORR 0x00410f30
-void ledger_stub_00410f30_ResourceRecordAndChildrenRelease() {}
-
-// MenuItemImageSet
-// STUB: LEGORR 0x00410fb0
-void ledger_stub_00410fb0_MenuItemImageSet() {}
-
-// MenuSectionRecordCreate
-// STUB: LEGORR 0x00411100
-void ledger_stub_00411100_MenuSectionRecordCreate() {}
-
-// ListAppend
-// STUB: LEGORR 0x00411260
-void ledger_stub_00411260_ListAppend() {}
-
-// MenuMouseCoordinateUpdate
-// STUB: LEGORR 0x00411360
-void ledger_stub_00411360_MenuMouseCoordinateUpdate() {}
-
-// HasType6ItemAtIndex
-// STUB: LEGORR 0x004114f0
-void ledger_stub_004114f0_HasType6ItemAtIndex() {}
-
-// MenuWidgetItemScreenRect
-// STUB: LEGORR 0x00411530
-void ledger_stub_00411530_MenuWidgetItemScreenRect() {}
-
-// MenuPickWidgetUnderPointer
-// STUB: LEGORR 0x00411790
-void ledger_stub_00411790_MenuPickWidgetUnderPointer() {}
-
-// FrontendProgressValueChanged
-// STUB: LEGORR 0x00411840
-void ledger_stub_00411840_FrontendProgressValueChanged() {}
-
-// PercentSplitSurfaceBlit
-// STUB: LEGORR 0x00411f10
-void ledger_stub_00411f10_PercentSplitSurfaceBlit() {}
-
-// MenuOverlayFlicPlaybackController
-// STUB: LEGORR 0x004121b0
-void ledger_stub_004121b0_MenuOverlayFlicPlaybackController() {}
-
-// RenderUiFrameCell
-// STUB: LEGORR 0x00412450
-void ledger_stub_00412450_RenderUiFrameCell() {}
-
-// MenuSaveImageConfigRectBlit
-// STUB: LEGORR 0x004124f0
-void ledger_stub_004124f0_MenuSaveImageConfigRectBlit() {}
-
-// MenuHoverStatusTextDraw
-// STUB: LEGORR 0x00412750
-void ledger_stub_00412750_MenuHoverStatusTextDraw() {}
-
-// MenuOverlaySurfaceAndTextSetup
-// STUB: LEGORR 0x004129d0
-void ledger_stub_004129d0_MenuOverlaySurfaceAndTextSetup() {}
-
-// InterfaceResourceHandlesRelease
-// STUB: LEGORR 0x00413b50
-void ledger_stub_00413b50_InterfaceResourceHandlesRelease() {}
-
-// MenuShow
-// STUB: LEGORR 0x00413e20
-void ledger_stub_00413e20_MenuShow() {}
-
-// FilenameExtensionClassify
-// STUB: LEGORR 0x00413f30
-void ledger_stub_00413f30_FilenameExtensionClassify() {}
-
-// MenuItemRecordAlloc
-// STUB: LEGORR 0x00413f90
-void ledger_stub_00413f90_MenuItemRecordAlloc() {}
-
-// LoadItemStrings
-// STUB: LEGORR 0x00414010
-void ledger_stub_00414010_LoadItemStrings() {}
-
-// GameSpeedSelect
-// STUB: LEGORR 0x00414de0
-void ledger_stub_00414de0_GameSpeedSelect() {}
-
-// VolumeSet
-// STUB: LEGORR 0x00414df0
-void ledger_stub_00414df0_VolumeSet() {}
-
-// OptionMusicDefault
-// STUB: LEGORR 0x00414e10
-void ledger_stub_00414e10_OptionMusicDefault() {}
-
-// FrontEndStartLevel
-// STUB: LEGORR 0x00415220
-void ledger_stub_00415220_FrontEndStartLevel() {}
-
-// OverlayMenuGate
-// STUB: LEGORR 0x00415370
-void ledger_stub_00415370_OverlayMenuGate() {}
-
-// SaveMenuLayoutLoad
-// STUB: LEGORR 0x00415d00
-void ledger_stub_00415d00_SaveMenuLayoutLoad() {}
-
-// FrontEndStateChange
-// STUB: LEGORR 0x004169c0
-void ledger_stub_004169c0_FrontEndStateChange() {}
-
-// MenuEnter
-// STUB: LEGORR 0x00416c80
-void ledger_stub_00416c80_MenuEnter() {}
-
-// LevelNodeGet
-// STUB: LEGORR 0x00417090
-void ledger_stub_00417090_LevelNodeGet() {}
-
-// SavMenuList
-// STUB: LEGORR 0x004179b0
-void ledger_stub_004179b0_SavMenuList() {}
-
-// ShowLevelOverlayForCurrentSelection
-// STUB: LEGORR 0x00418000
-void ledger_stub_00418000_ShowLevelOverlayForCurrentSelection() {}
 
 // CampaignChainSnapshotCreate
 // STUB: LEGORR 0x00418040
@@ -884,18 +692,6 @@ void ledger_stub_00418040_CampaignChainSnapshotCreate() {}
 // STUB: LEGORR 0x00418120
 void ledger_stub_00418120_IsAverageValueAbove99() {}
 
-// HelpWindowResourcesInit
-// STUB: LEGORR 0x004181b0
-void ledger_stub_004181b0_HelpWindowResourcesInit() {}
-
-// HelpWindowInfoConfigStringsLoad
-// STUB: LEGORR 0x00418450
-void ledger_stub_00418450_HelpWindowInfoConfigStringsLoad() {}
-
-// HelpWindowButtonLayoutLoad
-// STUB: LEGORR 0x004185f0
-void ledger_stub_004185f0_HelpWindowButtonLayoutLoad() {}
-
 // BuildingUpgradeStateChangedEventDispatch
 // STUB: LEGORR 0x00418830
 void ledger_stub_00418830_BuildingUpgradeStateChangedEventDispatch() {}
@@ -904,29 +700,13 @@ void ledger_stub_00418830_BuildingUpgradeStateChangedEventDispatch() {}
 // STUB: LEGORR 0x00418920
 void ledger_stub_00418920_CategoryCellCandidateListBuild() {}
 
-// RenderTransitionCleanupIfActive
-// STUB: LEGORR 0x004189d0
-void ledger_stub_004189d0_RenderTransitionCleanupIfActive() {}
-
 // OverlayTextBufferRefresh
 // STUB: LEGORR 0x00418a00
 void ledger_stub_00418a00_OverlayTextBufferRefresh() {}
 
-// HelpWindowButtonHitTest
-// STUB: LEGORR 0x00418da0
-void ledger_stub_00418da0_HelpWindowButtonHitTest() {}
-
-// HelpWindowButtonFeedbackUpdate
-// STUB: LEGORR 0x00419030
-void ledger_stub_00419030_HelpWindowButtonFeedbackUpdate() {}
-
 // IncidentMessageCatalogInit
 // STUB: LEGORR 0x00419230
 void ledger_stub_00419230_IncidentMessageCatalogInit() {}
-
-// InterfaceMessageTabInfoTextLoad
-// STUB: LEGORR 0x00419430
-void ledger_stub_00419430_InterfaceMessageTabInfoTextLoad() {}
 
 // IncidentMessageTemplateReplace
 // STUB: LEGORR 0x004194b0
@@ -992,37 +772,13 @@ void ledger_stub_00419f10_PendingRecordReleaseAll() {}
 // STUB: LEGORR 0x0041a1a0
 void ledger_stub_0041a1a0_UIEntryHitTestAndDispatch() {}
 
-// InterfaceMenuActionLabelsInit
-// STUB: LEGORR 0x0041a300
-void ledger_stub_0041a300_InterfaceMenuActionLabelsInit() {}
-
 // LevelStateCountersClear
 // STUB: LEGORR 0x0041a920
 void ledger_stub_0041a920_LevelStateCountersClear() {}
 
-// CaseInsensitiveStringTableIndexFind
-// STUB: LEGORR 0x0041a9c0
-void ledger_stub_0041a9c0_CaseInsensitiveStringTableIndexFind() {}
-
 // EntityTableMapsAllocate
 // STUB: LEGORR 0x0041aa00
 void ledger_stub_0041aa00_EntityTableMapsAllocate() {}
-
-// InterfaceBuildImagesConfigLoad
-// STUB: LEGORR 0x0041ab00
-void ledger_stub_0041ab00_InterfaceBuildImagesConfigLoad() {}
-
-// InterfaceImagesConfigLoad
-// STUB: LEGORR 0x0041ada0
-void ledger_stub_0041ada0_InterfaceImagesConfigLoad() {}
-
-// InterfaceSurroundImagesConfigLoad
-// STUB: LEGORR 0x0041afd0
-void ledger_stub_0041afd0_InterfaceSurroundImagesConfigLoad() {}
-
-// InterfaceBackButtonConfigLoad
-// STUB: LEGORR 0x0041b1b0
-void ledger_stub_0041b1b0_InterfaceBackButtonConfigLoad() {}
 
 // SimulationPointerActionDispatch
 // STUB: LEGORR 0x0041baa0
@@ -1032,17 +788,9 @@ void ledger_stub_0041baa0_SimulationPointerActionDispatch() {}
 // STUB: LEGORR 0x0041c1c0
 void ledger_stub_0041c1c0_AdvisorOverlayHitResolve() {}
 
-// AdvisorCallbackScheduleGate
-// STUB: LEGORR 0x0041c440
-void ledger_stub_0041c440_AdvisorCallbackScheduleGate() {}
-
 // AdvisorAnimationPositionAndRequestUpdate
 // STUB: LEGORR 0x0041c4f0
 void ledger_stub_0041c4f0_AdvisorAnimationPositionAndRequestUpdate() {}
-
-// PointerActionStateDispatch
-// STUB: LEGORR 0x0041c6e0
-void ledger_stub_0041c6e0_PointerActionStateDispatch() {}
 
 // InputActionStateUpdate
 // STUB: LEGORR 0x0041c7b0
@@ -1052,45 +800,12 @@ void ledger_stub_0041c7b0_InputActionStateUpdate() {}
 // STUB: LEGORR 0x0041c800
 void ledger_stub_0041c800_CatalogSlotFlagUpdate() {}
 
-// InputBindingValueGet
-// STUB: LEGORR 0x0041caf0
-void ledger_stub_0041caf0_InputBindingValueGet() {}
-
-// InputBindingDefaultValueGet
-// STUB: LEGORR 0x0041cb90
-void ledger_stub_0041cb90_InputBindingDefaultValueGet() {}
-
 // PositionTrackerBoxDraw
 // STUB: LEGORR 0x0041cd30
 void ledger_stub_0041cd30_PositionTrackerBoxDraw() {}
 
-// SelectionObjectCommandUpdate
-// STUB: LEGORR 0x0041cea0
-void ledger_stub_0041cea0_SelectionObjectCommandUpdate() {}
-
-// SelectionTargetCommandUpdate
-// STUB: LEGORR 0x0041cf20
-void ledger_stub_0041cf20_SelectionTargetCommandUpdate() {}
-
-// SelectionMode7CancelAtPoint
-// STUB: LEGORR 0x0041cf80
-void ledger_stub_0041cf80_SelectionMode7CancelAtPoint() {}
-
-// CancelActionForMatchingCoordinates
-// STUB: LEGORR 0x0041cfb0
-void ledger_stub_0041cfb0_CancelActionForMatchingCoordinates() {}
-
-// SelectionMode5CancelAtPoint
-// STUB: LEGORR 0x0041cfe0
-void ledger_stub_0041cfe0_SelectionMode5CancelAtPoint() {}
-
 // SelectionCancelIfCursorHitsObject
 // STUB: LEGORR 0x0041d010
-void ledger_stub_0041d010_SelectionCancelIfCursorHitsObject() {}
-
-// TutorialPathMenuAction
-// STUB: LEGORR 0x0041d040
-void ledger_stub_0041d040_TutorialPathMenuAction() {}
 
 // UiActionDispatch
 // STUB: LEGORR 0x0041dca0
@@ -1112,49 +827,9 @@ void ledger_stub_0041eca0_AdvisorDialogStackLayout() {}
 // STUB: LEGORR 0x0041ee80
 void ledger_stub_0041ee80_CellGridPointHitTest() {}
 
-// ObjectInteractionFlagsAllow
-// STUB: LEGORR 0x0041f100
-void ledger_stub_0041f100_ObjectInteractionFlagsAllow() {}
-
-// QueueActionRequestType2
-// STUB: LEGORR 0x0041f230
-void ledger_stub_0041f230_QueueActionRequestType2() {}
-
-// QueueActionRequestValue
-// STUB: LEGORR 0x0041f270
-void ledger_stub_0041f270_QueueActionRequestValue() {}
-
-// QueueActionRequestFlag100000
-// STUB: LEGORR 0x0041f2b0
-void ledger_stub_0041f2b0_QueueActionRequestFlag100000() {}
-
-// QueueActionRequestPair
-// STUB: LEGORR 0x0041f2f0
-void ledger_stub_0041f2f0_QueueActionRequestPair() {}
-
-// QueueActionRequestIndex
-// STUB: LEGORR 0x0041f340
-void ledger_stub_0041f340_QueueActionRequestIndex() {}
-
-// QueueCallbackRequest390
-// STUB: LEGORR 0x0041f3c0
-void ledger_stub_0041f3c0_QueueCallbackRequest390() {}
-
-// QueueCallbackRequest3E0
-// STUB: LEGORR 0x0041f400
-void ledger_stub_0041f400_QueueCallbackRequest3E0() {}
-
-// SelectedEntitiesAnyMatch
-// STUB: LEGORR 0x0041f420
-void ledger_stub_0041f420_SelectedEntitiesAnyMatch() {}
-
 // SelectedEntityDetachCallback
 // STUB: LEGORR 0x0041f6c0
 void ledger_stub_0041f6c0_SelectedEntityDetachCallback() {}
-
-// CellFourNeighborWalkCheck
-// STUB: LEGORR 0x0041f740
-void ledger_stub_0041f740_CellFourNeighborWalkCheck() {}
 
 // RemoveObjectIfClass6
 // STUB: LEGORR 0x0041f840
@@ -1411,10 +1086,6 @@ void ledger_stub_004350a0_SurfaceTypeDescriptionsConfigLoad() {}
 // GlobalStateZeroTransitionDetect
 // STUB: LEGORR 0x00435550
 void ledger_stub_00435550_GlobalStateZeroTransitionDetect() {}
-
-// MenuOptionPanelTextureUpdate
-// STUB: LEGORR 0x004355c0
-void ledger_stub_004355c0_MenuOptionPanelTextureUpdate() {}
 
 // SceneObjectChainRecordCreate
 // STUB: LEGORR 0x00435b20
@@ -1867,10 +1538,6 @@ void ledger_stub_00442300_EntityVelocityVectorDispatch() {}
 // VectorDirectionAngleRadiansGet
 // STUB: LEGORR 0x00442480
 void ledger_stub_00442480_VectorDirectionAngleRadiansGet() {}
-
-// EntityPositionToTerrainCell
-// STUB: LEGORR 0x004424f0
-void ledger_stub_004424f0_EntityPositionToTerrainCell() {}
 
 // SubobjectPoseDeltaNormalizeAndDispatch
 // STUB: LEGORR 0x004425f0
@@ -2556,10 +2223,6 @@ void ledger_stub_0045c5f0_UiOverlayAnimationApply() {}
 // STUB: LEGORR 0x0045c670
 void ledger_stub_0045c670_AdvisorAnimationSceneLookupAndRequest() {}
 
-// AdvisorAnimationSlotIdResolve
-// STUB: LEGORR 0x0045c6b0
-void ledger_stub_0045c6b0_AdvisorAnimationSlotIdResolve() {}
-
 // PointerCursorNameRegistryInit
 // STUB: LEGORR 0x0045c830
 void ledger_stub_0045c830_PointerCursorNameRegistryInit() {}
@@ -2699,10 +2362,6 @@ void ledger_stub_00461790_RewardDisplayTick() {}
 // RewardScoreTaskTextDraw
 // STUB: LEGORR 0x00461c90
 void ledger_stub_00461c90_RewardScoreTaskTextDraw() {}
-
-// SaveMenuOpenFromReward
-// STUB: LEGORR 0x00462030
-void ledger_stub_00462030_SaveMenuOpenFromReward() {}
 
 // RewardScreenTransitionTick
 // STUB: LEGORR 0x00462390
@@ -2852,10 +2511,6 @@ void ledger_stub_00469a90_IndexedValueAppend() {}
 // STUB: LEGORR 0x00469ac0
 void ledger_stub_00469ac0_IndexedRecordWordAtOffsetB0Get() {}
 
-// BuildingUpgradeAdmissionCheck
-// STUB: LEGORR 0x00469f40
-void ledger_stub_00469f40_BuildingUpgradeAdmissionCheck() {}
-
 // MappedIndexedRecordWordAtFCGet
 // STUB: LEGORR 0x0046a0c0
 void ledger_stub_0046a0c0_MappedIndexedRecordWordAtFCGet() {}
@@ -2919,10 +2574,6 @@ void ledger_stub_0046ad00_AdvisorTextDisplayWorker() {}
 // TooltipOverlayStateInitialize
 // STUB: LEGORR 0x0046b1d0
 void ledger_stub_0046b1d0_TooltipOverlayStateInitialize() {}
-
-// CaseInsensitiveNameTableLookup
-// STUB: LEGORR 0x0046b4d0
-void ledger_stub_0046b4d0_CaseInsensitiveNameTableLookup() {}
 
 // UiTextEntryLoad
 // STUB: LEGORR 0x0046b520
@@ -3680,10 +3331,6 @@ void ledger_stub_004773e0_RenderResourceTrackedReferencesRelease() {}
 // STUB: LEGORR 0x004774b0
 void ledger_stub_004774b0_WhitespaceTokenize() {}
 
-// FormattedTextEscapeDecodeAndEmit
-// STUB: LEGORR 0x00477590
-void ledger_stub_00477590_FormattedTextEscapeDecodeAndEmit() {}
-
 // GameStringHashCompute
 // STUB: LEGORR 0x00477670
 void ledger_stub_00477670_GameStringHashCompute() {}
@@ -3768,22 +3415,6 @@ void ledger_stub_00479510_D3DRMVectorRotate() {}
 // STUB: LEGORR 0x00479630
 void ledger_stub_00479630_SurfaceTriangleAreaCalculate() {}
 
-// FormattedTextFormatDraw
-// STUB: LEGORR 0x0047a150
-void ledger_stub_0047a150_FormattedTextFormatDraw() {}
-
-// RewardTextDraw
-// STUB: LEGORR 0x0047a180
-void ledger_stub_0047a180_RewardTextDraw() {}
-
-// FormattedTextDraw
-// STUB: LEGORR 0x0047a1b0
-void ledger_stub_0047a1b0_FormattedTextDraw() {}
-
-// FormattedTextDrawAndMeasure
-// STUB: LEGORR 0x0047a1e0
-void ledger_stub_0047a1e0_FormattedTextDrawAndMeasure() {}
-
 // FontRecordAndSurfaceRelease
 // STUB: LEGORR 0x0047a550
 void ledger_stub_0047a550_FontRecordAndSurfaceRelease() {}
@@ -3855,14 +3486,6 @@ void ledger_stub_0047b4a0_SoundTrackedBuffersSetMinDistance() {}
 // SoundTrackedBuffersSetMaxDistance
 // STUB: LEGORR 0x0047b4d0
 void ledger_stub_0047b4d0_SoundTrackedBuffersSetMaxDistance() {}
-
-// SoundBufferVolumeSet
-// STUB: LEGORR 0x0047b500
-void ledger_stub_0047b500_SoundBufferVolumeSet() {}
-
-// SoundVolumeIndexSet
-// STUB: LEGORR 0x0047b530
-void ledger_stub_0047b530_SoundVolumeIndexSet() {}
 
 // SoundBufferVolumeSetMinus300
 // STUB: LEGORR 0x0047b550
@@ -3975,10 +3598,6 @@ void ledger_stub_0047d470_ImageSurfaceRelease() {}
 // SurfacePixelFormatQuery
 // STUB: LEGORR 0x0047d490
 void ledger_stub_0047d490_SurfacePixelFormatQuery() {}
-
-// ResourceRecordAddRef
-// STUB: LEGORR 0x0047dbc0
-void ledger_stub_0047dbc0_ResourceRecordAddRef() {}
 
 // DirectDrawSurfaceDescriptionGet
 // STUB: LEGORR 0x0047de60
@@ -4139,10 +3758,6 @@ void ledger_stub_0047f600_DebugOutputFormat() {}
 // MountWadFromPath
 // STUB: LEGORR 0x0047f640
 void ledger_stub_0047f640_MountWadFromPath() {}
-
-// SaveDirectoryEnsureExists
-// STUB: LEGORR 0x0047f6a0
-void ledger_stub_0047f6a0_SaveDirectoryEnsureExists() {}
 
 // WadFileSeek
 // STUB: LEGORR 0x0047f850
@@ -4392,14 +4007,6 @@ void ledger_stub_00484720_FlicChunkBufferAndContinueLK() {}
 // STUB: LEGORR 0x004847d0
 void ledger_stub_004847d0_FlicChunkBufferAndContinueType0B() {}
 
-// FormattedTextAppendToRingBuffer
-// STUB: LEGORR 0x00485210
-void ledger_stub_00485210_FormattedTextAppendToRingBuffer() {}
-
-// TextBufferAppendVFormat
-// STUB: LEGORR 0x00485250
-void ledger_stub_00485250_TextBufferAppendVFormat() {}
-
 // ObjectiveAdvisorTextCopy
 // STUB: LEGORR 0x00485300
 void ledger_stub_00485300_ObjectiveAdvisorTextCopy() {}
@@ -4411,14 +4018,6 @@ void ledger_stub_00485390_TextBufferDrawWrapped() {}
 // TextWrapMeasureAndDrawLines
 // STUB: LEGORR 0x00485710
 void ledger_stub_00485710_TextWrapMeasureAndDrawLines() {}
-
-// KeyboardKeyNamesInit
-// STUB: LEGORR 0x00485a20
-void ledger_stub_00485a20_KeyboardKeyNamesInit() {}
-
-// NamedOptionIndexFindCaseInsensitive
-// STUB: LEGORR 0x00485e30
-void ledger_stub_00485e30_NamedOptionIndexFindCaseInsensitive() {}
 
 // RenderSetup
 // STUB: LEGORR 0x00485e80
@@ -4763,10 +4362,6 @@ void ledger_stub_0048e0ad_CrtAcosCore() {}
 // CrtMathIntrinsicDispatch
 // STUB: LEGORR 0x0048e1aa
 void ledger_stub_0048e1aa_CrtMathIntrinsicDispatch() {}
-
-// FormattedTextBufferBuild
-// STUB: LEGORR 0x0048e1e0
-void ledger_stub_0048e1e0_FormattedTextBufferBuild() {}
 
 // StackProbeAllocate
 // STUB: LEGORR 0x0048e250
@@ -5507,29 +5102,5 @@ void ledger_stub_0049ceb0_WadBackreferenceOffsetDecode() {}
 // DirectDrawDeviceInitialize
 // STUB: LEGORR 0x0049d030
 void ledger_stub_0049d030_DirectDrawDeviceInitialize() {}
-
-// DisplayModeDialogSetModeAndRefreshChoices
-// STUB: LEGORR 0x0049d5e0
-void ledger_stub_0049d5e0_DisplayModeDialogSetModeAndRefreshChoices() {}
-
-// DisplayModeListPopulate
-// STUB: LEGORR 0x0049d630
-void ledger_stub_0049d630_DisplayModeListPopulate() {}
-
-// DisplayResolutionComboPopulate
-// STUB: LEGORR 0x0049d780
-void ledger_stub_0049d780_DisplayResolutionComboPopulate() {}
-
-// DisplayModeMatchesFilterTuple
-// STUB: LEGORR 0x0049d8d0
-void ledger_stub_0049d8d0_DisplayModeMatchesFilterTuple() {}
-
-// DisplayModeNameIndexFind
-// STUB: LEGORR 0x0049d950
-void ledger_stub_0049d950_DisplayModeNameIndexFind() {}
-
-// DisplayRefreshRateControlsSync
-// STUB: LEGORR 0x0049d9d0
-void ledger_stub_0049d9d0_DisplayRefreshRateControlsSync() {}
 
 } // namespace unported_ledger_stubs

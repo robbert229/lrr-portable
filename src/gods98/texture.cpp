@@ -346,6 +346,15 @@ void texture_release(TextureSurface* t)
     texture_free(t);
 }
 
+void texture_source_color_key_set(TextureSurface* t, uint32_t low,
+                                  uint32_t high)
+{
+    if (t == NULL) return;
+    t->source_key_low = low;
+    t->source_key_high = high;
+    t->source_key_set = 1;
+}
+
 void texture_free(TextureSurface* t)
 {
     if (t == NULL) {

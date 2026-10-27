@@ -4,8 +4,8 @@
  * Rides the platform's audio surface (platform.h, a DirectSound analog over
  * SDL). Converts any bank Sound — 8-bit unsigned or 16-bit signed, mono or
  * stereo, arbitrary sample rate — to mono 16-bit signed and submits it as a
- * one-shot. Playback of the loop/streamed voices and volume/3D positioning
- * (FUN_00464ef0, RollOffFor3DSounds…) are later milestones.
+ * one-shot. Loop/streamed voices and spatial positioning remain later
+ * milestones; the menu master-gain path models DirectSound attenuation.
  */
 #ifndef LEGORRR_AUDIO_HPP
 #define LEGORRR_AUDIO_HPP
@@ -31,6 +31,22 @@ void audio_close(AudioPlayer* p);
 
 /* Master volume 0..1 (FUN_00464ef0 analog); applied to the audio stream. */
 void audio_set_volume(AudioPlayer* p, float volume);
+/* Convert the SFX option's DirectSound attenuation step (0..10) to a
+ * linear gain; invalid indices return -1. */
+float audio_sfx_volume_gain(int index);
+/* SoundBufferVolumeSet (FUN_0047b500): apply DirectSound hundredth-dB
+ * attenuation as the port's single output gain. */
+void audio_sound_volume_set(AudioPlayer* p, int millibels);
+/* SoundVolumeIndexSet (FUN_0047b530): map the options index 0..10 through
+ * the corpus attenuation table and apply it. */
+void audio_sound_volume_index_set(AudioPlayer* p, int index);
+/* GameSpeedSelect (FUN_00414de0; actually the SFX volume callback): delegate
+ * the selected slider index to SoundVolumeIndexSet. */
+void audio_menu_sfx_volume_set(AudioPlayer* p, int index);
+/* VolumeSet (FUN_00414df0): map the menu's 0..9 volume value to the
+ * normalized master gain. The port has one output gain in place of the
+ * corpus's paired music-mixer channels. */
+void audio_menu_volume_set(AudioPlayer* p, int value);
 
 /* Submit one bank sound as a one-shot. Returns the number of frames queued,
  * or -1 on failure. */

@@ -326,12 +326,12 @@ static void test_audio_restoration(void)
 
     options_set(&store, OPT_SFX_VOLUME, 0);
     audio_set_volume(&ap, options_audio_gain(&store));
-    CHECK(ap.volume == 0.0f, "audio: saved zero volume opens silent");
+    CHECK(ap.volume == 0.0f, "audio: SFX index 0 maps to DirectSound silence");
 
     options_set(&store, OPT_SFX_VOLUME, 3);
     audio_set_volume(&ap, options_audio_gain(&store));
-    CHECK(ap.volume > 0.29f && ap.volume < 0.31f,
-        "audio: saved SFX 3 opens at 0.3");
+    CHECK(ap.volume > 0.09f && ap.volume < 0.11f,
+        "audio: saved SFX 3 restores the -20 dB table step");
 }
 
 /* --- 4. save-context round trip --------------------------------------------- */

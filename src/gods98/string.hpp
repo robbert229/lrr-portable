@@ -13,6 +13,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdarg.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -23,6 +24,12 @@ extern "C" {
  * NULL on allocation failure (corpus would have asserted in the heap
  * seam). Caller frees. */
 char* string_duplicate(const char* text);
+
+/* FormattedTextBufferBuild (FUN_0048e1e0): format into caller-owned storage
+ * and return the number of bytes present before NUL. Capacity bounds the
+ * fixed scratch buffers used by the software port. */
+uint32_t formatted_text_buffer_build(char* out, size_t capacity,
+                                     const char* format, va_list args);
 
 /* FUN_0048da50: first occurrence of `needle` in `haystack`, or NULL.
  * Empty needle yields the haystack start, exactly as the corpus's

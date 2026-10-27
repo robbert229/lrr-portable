@@ -5,8 +5,12 @@
 #include "cmd.hpp"
 #include "game.hpp"
 #include "entity.hpp"
+#include "level.hpp"
 #include "select.hpp"
+#include "ai.hpp"
+#include "frontend.hpp"
 #include "gods98/engine.hpp"
+#include "gods98/view.hpp"
 
 int selection_add(GameContext* ctx, EntitySlot* e)
 {
@@ -92,6 +96,744 @@ EntitySlot* selection_first(const GameContext* ctx)
         return NULL;
     }
     return ctx->selection[0];
+}
+
+/* SelectedEntitiesAnyMatch (FUN_0041f420): the corpus fetches count and
+ * array through 0x4525f0/0x4525e0, then returns on the first callback hit.
+ * The port threads the owning GameContext instead of relying on a global
+ * selection. */
+// FUNCTION: LEGORR 0x0041f420
+int selected_entities_any_match(const GameContext* ctx,
+                                int (*predicate)(EntitySlot*, uint32_t),
+                                uint32_t argument)
+{
+    if (ctx == NULL || predicate == NULL) {
+        return 0;
+    }
+    for (int i = 0; i < ctx->selection_count; ++i) {
+        EntitySlot* const entity = ctx->selection[i];
+        if (entity != NULL && predicate(entity, argument)) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+typedef struct EntityActionRequest {
+    uint32_t type;
+    uint32_t subtype;
+    uint32_t stats_mask;
+    uint32_t state_mask;
+    uint32_t flags3f0_mask;
+    uint32_t mode;
+} EntityActionRequest;
+
+static int entity_action_request_matches(EntitySlot* entity, void* payload)
+{
+    const EntityActionRequest* request = (const EntityActionRequest*)payload;
+    if (entity == NULL || request == NULL) {
+        return 0;
+    }
+    if (entity->type == 4 && entity_shared_eligibility_check(entity, 0) == 0) {
+        return 0;
+    }
+    if ((request->mode & 1u) != 0u
+        && ((uint32_t)entity->type != request->type
+            || (uint32_t)entity->etype != request->subtype)) {
+        return 0;
+    }
+    if ((request->mode & 2u) != 0u
+        && (entity->flags_3f0 & request->flags3f0_mask) == 0u) {
+        return 0;
+    }
+    if (request->stats_mask != 0u
+        && (entity_stats_word_get(entity) & request->stats_mask) == 0u) {
+        return 0;
+    }
+    if (request->state_mask != 0u
+        && (entity_state_flags_get(entity) & request->state_mask) == 0u) {
+        return 0;
+    }
+    return 1;
+}
+
+static int entity_action_request_find(GameContext* ctx,
+                                     const EntityActionRequest* request)
+{
+    return entity_pool_find_by_callback_filtered(
+        ctx, entity_action_request_matches, (void*)request);
+}
+
+static int selected_entity_activity_present(EntitySlot* entity,
+                                            uint32_t activity)
+{
+    return ai_activity_scan(entity, (int)activity);
+}
+
+static int selected_entity_activity_missing(EntitySlot* entity,
+                                            uint32_t activity)
+{
+    return entity != NULL && ai_activity_scan(entity, (int)activity) == 0;
+}
+
+static int selected_entity_action_state_matches(EntitySlot* entity,
+                                                uint32_t unused)
+{
+    (void)unused;
+    return entity != NULL && (entity->flags_3e0 & 0x400u) != 0u
+        && (entity->flags_3e0 & 0x2000u) == 0u;
+}
+
+static int selected_entity_progress_below_100(EntitySlot* entity,
+                                              uint32_t unused)
+{
+    (void)unused;
+    return entity != NULL && entity->progress_344 < 100.0f;
+}
+
+static int selected_entity_field340_below_100(EntitySlot* entity,
+                                              uint32_t unused)
+{
+    (void)unused;
+    return entity != NULL && entity->field_340 < 100.0f;
+}
+
+static int selected_action_14_15_nonroute_matches(EntitySlot* entity)
+{
+    if (entity == NULL || (entity_capability_flags_get(entity) & 1u) != 0u) {
+        return 0;
+    }
+    if (entity->type == 2) {
+        return (entity->flags_3e0 & 0x400u) == 0u
+            && (entity->flags_3e8 & 0x60u) == 0x60u;
+    }
+    if ((entity->flags_3e8 & 0x60u) != 0x60u) {
+        return 0;
+    }
+    uint32_t limit = entity->field_328;
+    const uint32_t deposit_count = entity_stats_word_at_ec(entity);
+    if (deposit_count < limit) {
+        limit = deposit_count;
+    }
+    return (uint32_t)entity->carry_state_324 < limit;
+}
+
+/* QueueActionRequestType2 (FUN_0041f230): the callback tests state +0x148
+ * bit 2 across all live entities, after the pool's +0x3e8 filter. */
+// FUNCTION: LEGORR 0x0041F230
+int queue_action_request_type2(GameContext* ctx)
+{
+    const EntityActionRequest request = { 0, 0, 0, 2u, 0, 0 };
+    return entity_action_request_find(ctx, &request);
+}
+
+/* QueueActionRequestValue (FUN_0041f270): search state +0x148 for the
+ * supplied mask. */
+// FUNCTION: LEGORR 0x0041F270
+int queue_action_request_value(GameContext* ctx, uint32_t state_mask)
+{
+    const EntityActionRequest request = { 0, 0, 0, state_mask, 0, 0 };
+    return entity_action_request_find(ctx, &request);
+}
+
+/* QueueActionRequestFlag100000 (FUN_0041f2b0): search stats word +0x144
+ * for bit 0x100000. */
+// FUNCTION: LEGORR 0x0041F2B0
+int queue_action_request_flag100000(GameContext* ctx)
+{
+    const EntityActionRequest request = { 0, 0, 0x100000u, 0, 0, 0 };
+    return entity_action_request_find(ctx, &request);
+}
+
+/* QueueActionRequestPair (FUN_0041f2f0): mode 1 compares both leading
+ * entity words with the two request values. */
+// FUNCTION: LEGORR 0x0041F2F0
+int queue_action_request_pair(GameContext* ctx, int entity_type,
+                              uint32_t entity_subtype)
+{
+    const EntityActionRequest request = {
+        (uint32_t)entity_type, entity_subtype, 0, 0, 0, 1u
+    };
+    return entity_action_request_find(ctx, &request);
+}
+
+/* QueueActionRequestIndex (FUN_0041f340): mode 2 asks whether any entity
+ * has the requested bit in its +0x3f0 flags word. */
+// FUNCTION: LEGORR 0x0041F340
+int queue_action_request_index(GameContext* ctx, uint32_t flags_mask)
+{
+    const EntityActionRequest request = { 0, 0, 0, 0, flags_mask, 2u };
+    return entity_action_request_find(ctx, &request);
+}
+
+/* ObjectInteractionFlagsAllow (FUN_0041f100): flags are checked in the
+ * corpus's priority order. Only the first present capability bit selects
+ * a state mask; no capability bits means the action is allowed directly. */
+// FUNCTION: LEGORR 0x0041f100
+int object_interaction_flags_allow(GameContext* ctx, int type, int row)
+{
+    const uint32_t capabilities = stats_table_word_at_148(type, row);
+    uint32_t required_stats;
+    if ((capabilities & 0x1000u) != 0u) {
+        required_stats = 0x10u;
+    }
+    else if ((capabilities & 0x800u) != 0u) {
+        required_stats = 0x20u;
+    }
+    else if ((capabilities & 0x2000u) != 0u) {
+        required_stats = 0x40u;
+    }
+    else if ((capabilities & 0x400000u) != 0u) {
+        required_stats = 0x80000000u;
+    }
+    else {
+        return 1;
+    }
+    const EntityActionRequest request = { 0, 0, required_stats, 0, 0, 0 };
+    return entity_action_request_find(ctx, &request);
+}
+
+typedef struct QueueCellRequest {
+    const LevelState* level;
+    int x;
+    int y;
+} QueueCellRequest;
+
+static int queue_placement_cell_matches(EntitySlot* entity, void* payload)
+{
+    const QueueCellRequest* cell = (const QueueCellRequest*)payload;
+    return cell != NULL
+        && terrain_cell_allows_placement(entity, cell->level, cell->x, cell->y);
+}
+
+/* QueueCallbackRequest3E0 (FUN_0041f400): its callback forwards each live
+ * entity and the requested cell to TerrainCellAllowsPlacement (FUN_00432a20). */
+// FUNCTION: LEGORR 0x0041F400
+int queue_callback_request_3e0(GameContext* ctx, int x, int y)
+{
+    if (ctx == NULL || ctx->level == NULL) {
+        return 0;
+    }
+    QueueCellRequest cell = { ctx->level, x, y };
+    return entity_pool_find_by_callback_filtered(
+        ctx, queue_placement_cell_matches, &cell);
+}
+
+static int queue_walkable_cell_matches(EntitySlot* entity, void* payload)
+{
+    const QueueCellRequest* cell = (const QueueCellRequest*)payload;
+    if (entity == NULL || cell == NULL || cell->level == NULL) {
+        return 0;
+    }
+    if ((entity_stats_word_get(entity) & 0x20000u) != 0u
+        && entity->owner_36c == NULL) {
+        return 0;
+    }
+    if ((entity->flags_3e8 & 2u) == 0u) {
+        return 0;
+    }
+    const uint8_t* voxel = level_voxel(cell->level, cell->x, cell->y);
+    if (voxel == NULL) {
+        return 0;
+    }
+    const int terrain_type = (int)(signed char)voxel[2];
+    if (terrain_type < 0 || terrain_type >= AI_STATS_TERRAIN_TYPES
+        || entity_stats_float_at24_indexed(entity, terrain_type) == 0.0f) {
+        return 0;
+    }
+    return level_walkable(cell->level, cell->x, cell->y);
+}
+
+/* QueueCallbackRequest390 (FUN_0041f3c0): LAB_0041f390 invokes
+ * TerrainCellWalkabilityQuery(entity, x, y, 0, 0). This preserves that
+ * call's entity flag/owner and per-terrain speed gates before the simple
+ * cell walkability predicate. */
+// FUNCTION: LEGORR 0x0041F3C0
+int queue_callback_request_390(GameContext* ctx, int x, int y)
+{
+    if (ctx == NULL || ctx->level == NULL) {
+        return 0;
+    }
+    QueueCellRequest cell = { ctx->level, x, y };
+    return entity_pool_find_by_callback_filtered(
+        ctx, queue_walkable_cell_matches, &cell);
+}
+
+/* TutorialPathMenuAction switch cases before the final runtime gate. */
+static int tutorial_path_menu_action_precheck_raw(
+    GameContext* ctx, const EngineContext* engine,
+    TerrainDescriptorNode* descriptors,
+    TerrainCellSidecarPresenceQuery sidecar_query,
+    int (*target_cell_valid)(EntitySlot*),
+    int (*route_marker_candidate)(EntitySlot*, int),
+    int (*vehicle_unload_eligible)(EntitySlot*, int),
+    int (*entity_unload_cell_available)(EntitySlot*, int),
+    int (*selected_action_14_15_route_predicate)(EntitySlot*),
+    int (*building_upgrade_allowed)(EntitySlot*),
+    int (*entity_action_kind_prerequisite)(EntitySlot*, int),
+    int (*building_upgrade_limit_allows)(EntitySlot*),
+    int action, int x, int y)
+{
+    if (action != 0 && action != 1 && action != 5 && action != 6 && action != 7
+        && action != 0xb
+        && action != 0xc && action != 0xd && action != 0xe && action != 0x10
+        && action != 0x9
+        && action != 0x1d && action != 0x1e && action != 0x1f
+        && action != 0x21 && action != 0x22 && action != 0x23
+        && action != 0x24 && action != 0x25
+        && action != 0x26 && action != 0x27
+        && action != 0x16 && action != 0x17
+        && action != 0x18
+        && action != 0x19
+        && action != 0x1a
+        && action != 0x1b && action != 0x1c
+        && action != 0x14 && action != 0x15
+        && action != 0x20
+        && action != 0x29 && action != 0x30 && action != 0x31
+        && action != 0x32 && action != 0x33 && action != 0x34
+        && action != 0x35 && action != 0x36 && action != 0x37
+        && action != 0x38 && action != 0x39 && action != 0x3a
+        && action != 0x3b && action != 0x3c && action != 0x3d
+        && action != 0x3e && action != 0x3f && action != 0x2d
+        && action != 0x2e && action != 0x40 && action != 0x41 && action != 0x42
+        && action != 0x43 && action != 0x44 && action != 0x45
+        && action != 0x46) {
+        return 1; /* the reference switch's default branch is a no-op */
+    }
+    if (action == 0x1b || action == 0x1c || action == 0x20) {
+        return 1;
+    }
+    if (action == 0x14 || action == 0x15) {
+        if (ctx == NULL) {
+            return 0;
+        }
+        for (int i = 0; i < ctx->selection_count; ++i) {
+            EntitySlot* const entity = ctx->selection[i];
+            if (entity == NULL) {
+                continue;
+            }
+            if ((entity_capability_flags_get(entity) & 1u) != 0u) {
+                if ((entity->flags_3e0 & 0x400u) == 0u
+                    && (entity->flags_3ec & 0x10000u) == 0u
+                    && selected_action_14_15_route_predicate != NULL
+                    && selected_action_14_15_route_predicate(entity) != 0) {
+                    return 1;
+                }
+            }
+            else if (selected_action_14_15_nonroute_matches(entity) != 0) {
+                return 1;
+            }
+        }
+        return 0;
+    }
+    if (action == 0) {
+        return map_store_kind_peek() != 0xfu;
+    }
+    if (action >= 0x41 && action <= 0x46) {
+        EntitySlot* const entity = selection_first(ctx);
+        if (entity == NULL) {
+            return 0;
+        }
+        if (action == 0x41) {
+            return building_upgrade_allowed != NULL
+                && building_upgrade_allowed(entity) != 0;
+        }
+        if (queue_action_request_type2(ctx) == 0
+            || entity_action_kind_prerequisite == NULL) {
+            return 0;
+        }
+        if (action == 0x42) {
+            return entity_action_kind_prerequisite(entity, 1) != 0
+                || entity_action_kind_prerequisite(entity, 0) != 0
+                || entity_action_kind_prerequisite(entity, 2) != 0
+                || entity_action_kind_prerequisite(entity, 3) != 0;
+        }
+        return entity_action_kind_prerequisite(
+            entity, action == 0x43 ? 1 : action == 0x44 ? 0
+                : action == 0x45 ? 2 : 3) != 0;
+    }
+    if (action == 0x40) {
+        EntitySlot* const entity = selection_first(ctx);
+        return entity != NULL && (entity->flags_3e0 & 0x400u) == 0u
+            && building_upgrade_limit_allows != NULL
+            && building_upgrade_limit_allows(entity) != 0
+            && queue_action_request_flag100000(ctx) != 0;
+    }
+    if (ctx == NULL) {
+        return 0;
+    }
+
+    if (action == 1) {
+        int barracks_type = 0;
+        int barracks_row = 0;
+        (void)entity_type_row_for_name(
+            "Barracks", &barracks_type, &barracks_row);
+        return object_interaction_flags_allow(ctx, 2, 0) != 0
+            && ensure_cell_entries_loaded(2u, 0, 0) != 0
+            && entity_state_pair_predicate(
+                   ctx, 2, 0, barracks_type, barracks_row) != 0;
+    }
+
+    if (action == 0x2d || action == 0x2e) {
+        if (engine == NULL || engine->views[2] == NULL) {
+            return 0;
+        }
+        const int required_view_mode = (action == 0x2d) ? 0 : 1;
+        return selection_first(ctx) != current_selection_context_get()
+            || engine->views[2]->a5 != required_view_mode;
+    }
+
+    if (action == 0x9) {
+        return selection_has_any(ctx) == 0
+            || active_entity_list_contains_code(ctx, 1) != 0
+            || queue_action_request_flag100000(ctx) != 0;
+    }
+    if (action == 0x1e) {
+        return active_entity_list_contains_code(ctx, 0) != 0
+            || queue_action_request_flag100000(ctx) != 0;
+    }
+    if (action == 0x30) {
+        return queue_action_request_flag100000(ctx);
+    }
+    if (action == 0x1f) {
+        return selected_entities_any_match(
+            ctx, selected_entity_progress_below_100, 0u);
+    }
+    if (action == 0x1a) {
+        EntitySlot* const entity = selection_first(ctx);
+        return entity != NULL
+            && (entity->flags_3e0 & 2u) == 0u
+            && (entity_stats_word_get(entity) & 0x20000u) != 0u
+            && (entity->flags_3ec & 0x40u) == 0u
+            && route_marker_candidate != NULL
+            && route_marker_candidate(entity, 1) != 0;
+    }
+    if (action == 0x19) {
+        EntitySlot* const entity = selection_first(ctx);
+        if (entity == NULL || (entity->flags_3e0 & 1u) != 0u
+            || (entity_stats_word_get(entity) & 0x20000u) == 0u) {
+            return 0;
+        }
+        const uint32_t stats_flags = entity_stats_word_get(entity);
+        return (stats_flags & 0x2000000u) != 0u
+            || (vehicle_unload_eligible != NULL
+                && vehicle_unload_eligible(entity, 0) != 0)
+            || (entity->flags_3ec & 0x40u) != 0u;
+    }
+    if (action == 0x18) {
+        EntitySlot* const entity = selection_first(ctx);
+        if (entity == NULL) {
+            return 0;
+        }
+
+        int request_index = 2;
+        uint32_t request_state_mask = 8u;
+        const uint32_t capabilities = entity_capability_flags_get(entity);
+        if ((capabilities & 0x100u) != 0u) {
+            request_index = 1;
+            request_state_mask = 4u;
+        }
+        else {
+            const uint32_t stats_flags = entity_stats_word_get(entity);
+            if ((stats_flags & 0x2000000u) != 0u) {
+                if ((stats_flags & 0x1000000u) != 0u) {
+                    request_index = 1;
+                    request_state_mask = 4u;
+                }
+                else {
+                    request_index = 4;
+                    request_state_mask = 0x10u;
+                }
+            }
+        }
+
+        const int has_unload_capability = (capabilities & 0x20u) != 0u;
+        const int has_unload_override = (entity->flags_3ec & 0x40u) != 0u;
+        if ((!has_unload_capability || has_unload_override)
+            && request_index == 2 && !has_unload_override) {
+            return 0;
+        }
+        if (has_unload_capability && !has_unload_override
+            && (entity_unload_cell_available == NULL
+                || entity_unload_cell_available(entity, 0) == 0)) {
+            return 0;
+        }
+        if ((entity->flags_3e4 & 0x10u) != 0u) {
+            return 0;
+        }
+        return queue_action_request_index(ctx, (uint32_t)request_index) != 0
+            || (queue_action_request_pair(ctx, 2, 0u) != 0
+                && queue_action_request_value(ctx, request_state_mask) != 0);
+    }
+    if (action == 0x21) {
+        return selected_entities_any_match(
+            ctx, selected_entity_activity_present, 6u);
+    }
+    if (action == 0x22 || action == 0x23) {
+        EntitySlot* const entity = selection_first(ctx);
+        return entity != NULL
+            && (entity_state_flags_get(entity) & 0x400u) == 0u
+            && (entity->flags_3e8 & 0x20000000u) != 0u;
+    }
+    if (action == 0x24) {
+        if (selected_entities_any_match(
+                ctx, selected_entity_field340_below_100, 0u) == 0) {
+            return 0;
+        }
+        if (queue_action_request_index(ctx, 0x10u) != 0) {
+            return 1;
+        }
+        return queue_action_request_pair(ctx, 2, 0u) != 0
+            && queue_action_request_value(ctx, 0x40u) != 0;
+    }
+    if (action == 0x25) {
+        EntitySlot* const entity = selection_first(ctx);
+        return entity != NULL
+            && (entity_stats_word_get(entity) & 0x70u) != 0u;
+    }
+    if (action == 0x16 || action == 0x17) {
+        EntitySlot* const entity = selection_first(ctx);
+        if (entity == NULL) {
+            return 0;
+        }
+        if ((entity->flags_3e0 & 0x400u) != 0u
+            && entity->carry_link_308 != NULL
+            && ((const EntitySlot*)entity->carry_link_308)->type == 9) {
+            return 0;
+        }
+        if ((entity_capability_flags_get(entity) & 1u) != 0u
+            && (target_cell_valid == NULL
+                || target_cell_valid(entity) == 0)) {
+            return 0;
+        }
+        return selected_entities_any_match(
+            ctx, selected_entity_action_state_matches, 0u);
+    }
+    if (action == 0x26 || action == 0x27) {
+        EntitySlot* const entity = selection_first(ctx);
+        if (entity == NULL) {
+            return 0;
+        }
+        if (action == 0x26
+            && entity_action_kind_supported(entity, 6, 0) == 0) {
+            return 0;
+        }
+        return entity_action_kind_supported(entity, 7, 0);
+    }
+    if (action >= 0x31 && action <= 0x38) {
+        static const uint8_t activities[8] = { 0, 1, 2, 3, 4, 5, 7, 6 };
+        const uint32_t activity = activities[action - 0x31];
+        return selected_entities_any_match(
+                   ctx, selected_entity_activity_missing, activity) != 0
+            && queue_action_request_flag100000(ctx) != 0;
+    }
+    if (action == 0x39) {
+        if (queue_action_request_value(ctx, 0xfcu) == 0) {
+            return 0;
+        }
+        const EntitySlot* entity = selection_first(ctx);
+        if (entity == NULL) {
+            return 0;
+        }
+        const uint32_t flags = entity->flags_3f0;
+        return (flags & 0x3fu) != 0x3fu;
+    }
+    if (action >= 0x3a && action <= 0x3f) {
+        static const uint32_t current_masks[6] = {
+            4u, 0x10u, 0x20u, 1u, 2u, 8u
+        };
+        static const uint32_t request_masks[6] = {
+            0x10u, 0x40u, 0x80u, 4u, 8u, 0x20u
+        };
+        EntitySlot* const entity = selection_first(ctx);
+        const int index = action - 0x3a;
+        return entity != NULL && ctx->level != NULL
+            && current_level_state_flags_contain_mask(
+                   ctx, current_masks[index]) == 0
+            && queue_action_request_value(ctx, request_masks[index]) != 0
+            && entity_stats_float_atf4(entity)
+                   >= engine_float_field260_get(ctx->level);
+    }
+
+    if (action == 0x1d) {
+        EntitySlot* const entity = selection_first(ctx);
+        if (entity == NULL) {
+            return 0;
+        }
+        return (entity->flags_3e8 & 2u) != 0u
+            && (entity->flags_3e0 & 0x400u) == 0u;
+    }
+
+    if (ctx->level == NULL) {
+        return 0;
+    }
+
+    if (action == 6) {
+        return level_cell_occupied_at(ctx->level,
+                                      (int)map_store_pair_word(0),
+                                      (int)map_store_pair_word(1));
+    }
+
+    if (action == 5) {
+        const uint32_t target[2] = {
+            map_store_pair_word(0), map_store_pair_word(1)
+        };
+        return terrain_cell_predicate_check(descriptors, target) == 0
+            && level_cell_occupied_at(ctx->level, (int)target[0],
+                                      (int)target[1]) == 0
+            && ensure_cell_entries_loaded(0xfu, 0, 0) != 0;
+    }
+
+    if (action == 7) {
+        const uint32_t target[2] = {
+            map_store_pair_word(0), map_store_pair_word(1)
+        };
+        const uint8_t* voxel = level_voxel(
+            ctx->level, (int)target[0], (int)target[1]);
+        return terrain_cell_predicate_check(descriptors, target) == 0
+            && voxel != NULL && voxel[2] != 6u;
+    }
+
+    if (action == 0xe) {
+        return level_cell_secondary_flag_8(ctx->level, x, y) == 0u
+            && terrain_cell_has_occupied_or_flagged_neighbor(
+                   ctx->level, x, y, sidecar_query) != 0
+            && ensure_cell_entries_loaded(0xbu, 0, 0) != 0;
+    }
+
+    if (action == 0x10) {
+        const uint8_t* voxel = level_voxel(ctx->level, x, y);
+        if (voxel == NULL) {
+            return 0;
+        }
+        uint32_t cell_flags;
+        __builtin_memcpy(&cell_flags, voxel + 0x08, sizeof(cell_flags));
+        return (cell_flags & 0x40100000u) != 0u
+            && level_cell_flag_8000(ctx->level, x, y) == 0u
+            && level_cell_occupied_at(ctx->level, x, y) == 0
+            && level_cell_occupied_or_flag(ctx->level, x, y, 1) == 0u;
+    }
+
+    if (action == 0x29) {
+        EntitySlot* const entity = selection_first(ctx);
+        if (entity == NULL) {
+            return 0;
+        }
+        int cell_x = -1;
+        int cell_y = -1;
+        entity_position_to_terrain_cell(entity, ctx->level, &cell_x, &cell_y);
+        if (entity->owner_36c != NULL
+            && terrain_cell_route_and_occupancy_check(
+                   (const EntitySlot*)entity->owner_36c, ctx->level,
+                   cell_x, cell_y, cell_x, cell_y, 1) == 0) {
+            return 0;
+        }
+        if ((entity_capability_flags_get(entity) & 1u) != 0u
+            && (entity->flags_3e0 & 0x400u) != 0u
+            && entity->carry_link_308 != NULL
+            && terrain_cell_route_and_occupancy_check(
+                   (const EntitySlot*)entity->carry_link_308, ctx->level,
+                   cell_x, cell_y, cell_x, cell_y, 1) == 0) {
+            return 0;
+        }
+        return (entity_state_flags_get(entity) & 0x2000000u) != 0u
+            || (entity->flags_3ec & 0x40u) != 0u;
+    }
+
+    if (cell_four_neighbor_walk_check(ctx->level, x, y) == 0) {
+        return 0;
+    }
+
+    if (action == 0xb) {
+        if (selection_has_any(ctx) == 0) {
+            return queue_callback_request_390(ctx, x, y);
+        }
+        if (active_entity_list_contains_code(ctx, 0) == 0
+            && queue_action_request_flag100000(ctx) == 0) {
+            return 0;
+        }
+        for (int i = 0; i < ctx->selection_count; ++i) {
+            if (ctx->selection[i] != NULL
+                && level_walkable(ctx->level, x, y) != 0) {
+                return 1;
+            }
+        }
+        return 0;
+    }
+
+    if (action == 0xd) {
+        const uint8_t* voxel = level_voxel(ctx->level, x, y);
+        if (voxel == NULL || voxel[2] == 1 || voxel[2] == 11
+            || level_cell_walkable_flag(ctx->level, x, y) == 0
+            || level_cell_flag_reserved(ctx->level, x, y) != 0u
+            || queue_action_request_flag100000(ctx) == 0) {
+            return 0;
+        }
+        if (queue_action_request_index(ctx, 8u) != 0u) {
+            return 1;
+        }
+        return queue_action_request_pair(ctx, 2, 0u) != 0
+            && queue_action_request_value(ctx, 0x20u) != 0;
+    }
+
+    if (level_cell_flag_20_bounded(ctx->level, x, y) != 0u
+        || level_cell_mask_c0(ctx->level, x, y) != 0u
+        || terrain_cell_allows_placement(NULL, ctx->level, x, y) == 0) {
+        return 0;
+    }
+    if (selection_has_any(ctx) == 0) {
+        return queue_callback_request_3e0(ctx, x, y);
+    }
+    if (active_entity_list_contains_code(ctx, 2) == 0
+        && queue_action_request_flag100000(ctx) == 0) {
+        return 0;
+    }
+    for (int i = 0; i < ctx->selection_count; ++i) {
+        if (ctx->selection[i] != NULL
+            && terrain_cell_allows_placement(ctx->selection[i], ctx->level,
+                                             x, y) != 0) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x0041D040
+int tutorial_path_menu_action(
+    GameContext* ctx, const EngineContext* engine,
+    TerrainDescriptorNode* descriptors,
+    TerrainCellSidecarPresenceQuery sidecar_query,
+    int (*target_cell_valid)(EntitySlot*),
+    int (*route_marker_candidate)(EntitySlot*, int),
+    int (*vehicle_unload_eligible)(EntitySlot*, int),
+    int (*entity_unload_cell_available)(EntitySlot*, int),
+    int (*selected_action_14_15_route_predicate)(EntitySlot*),
+    int (*building_upgrade_allowed)(EntitySlot*),
+    int (*entity_action_kind_prerequisite)(EntitySlot*, int),
+    int (*building_upgrade_limit_allows)(EntitySlot*),
+    int action, int x, int y)
+{
+    const int action_result = tutorial_path_menu_action_precheck_raw(
+        ctx, engine, descriptors, sidecar_query, target_cell_valid,
+        route_marker_candidate, vehicle_unload_eligible,
+        entity_unload_cell_available, selected_action_14_15_route_predicate,
+        building_upgrade_allowed, entity_action_kind_prerequisite,
+        building_upgrade_limit_allows, action, x, y);
+    if (action_result <= 0) {
+        return action_result;
+    }
+
+    const uint32_t global_flags = global_state_low_word_get();
+    if ((global_flags & 0x6u) != 0u) {
+        return action == 0 || (action >= 0x1b && action <= 0x1c);
+    }
+    if ((global_flags & 0x18u) != 0u) {
+        return action == 0 || (action >= 0x14 && action <= 0x15);
+    }
+    if ((global_flags & 0x60u) != 0u) {
+        return action == 0 || (action >= 0x1d && action <= 0x1e);
+    }
+    return action_result;
 }
 
 /* SelectionStateTick (FUN_004528c0) — see select.hpp. */
@@ -270,6 +1012,128 @@ int selection_contains_entity(const GameContext* ctx, const EntitySlot* e)
         }
     }
     return 0;
+}
+
+static int selected_map_coordinate_matches(const uint32_t coordinate[2])
+{
+    return coordinate != NULL
+        && map_store_pair_word(0) == coordinate[0]
+        && map_store_pair_word(1) == coordinate[1];
+}
+
+static void cancel_action_if_map_coordinate_matches(uint32_t mode,
+                                                     uint32_t required_mode,
+                                                     const uint32_t coordinate[2])
+{
+    if (mode == required_mode && selected_map_coordinate_matches(coordinate)) {
+        selection_clear_request_and_hud_reset();
+    }
+}
+
+/* SelectionMode7CancelAtPoint (FUN_0041cf80): cancel on a matching map
+ * coordinate while objective selection mode 7 is active. */
+// FUNCTION: LEGORR 0x0041CF80
+void selection_mode7_cancel_at_point(const uint32_t coordinate[2])
+{
+    cancel_action_if_map_coordinate_matches(
+        objective_selection_word_peek(), 7u, coordinate);
+}
+
+/* CancelActionForMatchingCoordinates (FUN_0041cfb0): modes 1 and 4 cancel
+ * when the clicked coordinate matches the stored map target. */
+// FUNCTION: LEGORR 0x0041CFB0
+void cancel_action_for_matching_coordinates(const uint32_t coordinate[2])
+{
+    const uint32_t mode = objective_selection_word_peek();
+    if ((mode == 1u || mode == 4u)
+        && selected_map_coordinate_matches(coordinate)) {
+        selection_clear_request_and_hud_reset();
+    }
+}
+
+/* SelectionMode5CancelAtPoint (FUN_0041cfe0): the same coordinate match
+ * cancels only while objective selection mode 5 is active. */
+// FUNCTION: LEGORR 0x0041CFE0
+void selection_mode5_cancel_at_point(const uint32_t coordinate[2])
+{
+    if (objective_selection_word_peek() == 5u
+        && selected_map_coordinate_matches(coordinate)) {
+        selection_clear_request_and_hud_reset();
+    }
+}
+
+/* SelectionObjectCommandUpdate (FUN_0041cea0): in mode 12, find the
+ * argument in the current selection. A singleton selection updates the HUD
+ * action to 10 or 11 from the entity's action flags; a multi-selection
+ * clears the pending command context. */
+// FUNCTION: LEGORR 0x0041CEA0
+void selection_object_command_update(GameContext* ctx, EntitySlot* entity)
+{
+    if (objective_selection_word_peek() != 12u || ctx == NULL
+        || entity == NULL || ctx->selection_count <= 0) {
+        return;
+    }
+    int found = 0;
+    for (int i = 0; i < ctx->selection_count; ++i) {
+        if (ctx->selection[i] == entity) {
+            found = 1;
+            break;
+        }
+    }
+    if (found == 0) {
+        return;
+    }
+    if (ctx->selection_count != 1) {
+        selection_clear_request_and_hud_reset();
+        return;
+    }
+    const uint32_t capabilities = entity_capability_flags_get(entity);
+    const uint32_t action_flags = entity->flags_3ec;
+    const int action = ((capabilities & 0x02000000u) != 0u
+                        || (action_flags & 0x40u) != 0u) ? 10 : 11;
+    command_context_post_to_hud(action, NULL);
+}
+
+/* SelectionTargetCommandUpdate (FUN_0041cf20): in modes 10, 11, and 18,
+ * match the passed entity's owner against the selection. A matching
+ * singleton posts HUD action 12; a matching multi-selection clears it. */
+// FUNCTION: LEGORR 0x0041CF20
+void selection_target_command_update(GameContext* ctx, EntitySlot* entity)
+{
+    const uint32_t mode = objective_selection_word_peek();
+    if ((mode != 10u && mode != 11u && mode != 18u) || ctx == NULL
+        || entity == NULL || ctx->selection_count <= 0) {
+        return;
+    }
+    const void* const owner = entity->owner_36c;
+    for (int i = 0; i < ctx->selection_count; ++i) {
+        if ((const void*)ctx->selection[i] != owner) {
+            continue;
+        }
+        if (ctx->selection_count == 1) {
+            command_context_post_to_hud(12, NULL);
+        }
+        else {
+            selection_clear_request_and_hud_reset();
+        }
+    }
+}
+
+/* SelectionCancelIfCursorHitsObject (FUN_0041d010): only active in game
+ * context, and only when the entity is selected or has the cursor-hit flag.
+ * The corpus then queues command 3 and clears the HUD action context. */
+// FUNCTION: LEGORR 0x0041D010
+void selection_cancel_if_cursor_hits_object(EngineContext* engine,
+                                             GameContext* ctx,
+                                             EntitySlot* entity)
+{
+    if (engine == NULL || engine->context_mode == 0 || entity == NULL) {
+        return;
+    }
+    if (selection_contains_entity(ctx, entity) != 0
+        || (entity->flags_3e8 & 0x200000u) != 0u) {
+        selection_clear_request_and_hud_reset();
+    }
 }
 
 // FUNCTION: LEGORR 0x00452690
