@@ -20,18 +20,6 @@ static const char* TASK_NAMES[GAME_TASK_COUNT] = {
 
 #define MISS_CRYSTAL_QUOTA 26 /* crystal display budget (CrystalQuotaSetup) */
 
-static int strcasecmp_lite(const char* a, const char* b)
-{
-    for (;;) {
-        int ca = (unsigned char)*a++;
-        int cb = (unsigned char)*b++;
-        if (ca >= 'a' && ca <= 'z') ca -= 0x20;
-        if (cb >= 'a' && cb <= 'z') cb -= 0x20;
-        if (ca != cb) return ca - cb;
-        if (ca == 0) return 0;
-    }
-}
-
 /* Path helper: level-scoped `Reward [<sub>] [<name>]` key, resolved via
  * util_level_cfg_path (Levels container first, flat fallback). */
 static void rw_path(char* out, size_t out_sz, BlockFile* cfg,

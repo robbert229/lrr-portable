@@ -11,7 +11,7 @@
  *
  * Actions (frontend_tick) — keyboard-first for this milestone:
  *   Enter on a picker row        -> FE_EVT_START_LEVEL (pending_level set)
- *   Enter on a Trigger, flag!=0  -> FE_EVT_QUIT       (the ship's "Yes" quit)
+ *   Enter on a Trigger, flag!=0  -> contextual action (quit/back/confirm)
  *   Enter on a Next to "Menu%i"  -> navigate submenus
  *   Esc on a submenu             -> back to the root submenu
  *   Esc on the root submenu      -> quit
@@ -365,7 +365,6 @@ static void fe_display_label(const char* label, char* out, size_t out_size)
     out[i] = '\0';
 }
 
-
 static float s_interface_menu_action_xy[2];
 static const void* s_interface_menu_action_context;
 
@@ -610,8 +609,8 @@ static int fe_option_default(const char* banner, int lo, int hi);
  * "Slider:x1:y1:x2:y2:banner:lo:hi:img…") into ':'-fields. Position x/y are
  * fields 1/2 for every kind; the display label differs per kind (finding 23):
  * Next/Trigger put it at field 3, Slider/Cycle/RealSlider at field 5
- * (x1:y1:x2:y2), and Trigger's image form carries images+tooltip before the
- * flag. */
+ * (x1:y1:x2:y2). Image-backed Next/Trigger entries carry normal and
+ * selected images plus a tooltip before their target/flag. */
 static void fe_parse_item(const char* value, FeItem* it)
 {
     it->kind = FE_ITEM_NEXT;
@@ -619,10 +618,11 @@ static void fe_parse_item(const char* value, FeItem* it)
     it->load_slot = 0;
     it->min = 0; it->max = 0; it->value = 0; it->cycle_count = 0;
     it->label[0] = '\0'; it->target[0] = '\0';
+    it->image_normal[0] = it->image_selected[0] = '\0';
     if (value == NULL) {
         return;
     }
-    char fields[12][64];
+    char fields[12][FE_PATH_MAX];
     int n = 0;
     const char* p = value;
     while (n < 12) {
@@ -637,8 +637,8 @@ static void fe_parse_item(const char* value, FeItem* it)
             ++p;
         }
         int len = (int)(p - s);
-        if (len > 63) {
-            len = 63;
+        if (len >= FE_PATH_MAX) {
+            len = FE_PATH_MAX - 1;
         }
         memcpy(fields[n], s, (size_t)len);
         fields[n][len] = '\0';
@@ -651,22 +651,37 @@ static void fe_parse_item(const char* value, FeItem* it)
     int atoi1 = (n > 1) ? (int)strtol(fields[1], NULL, 10) : 0;
     int atoi2 = (n > 2) ? (int)strtol(fields[2], NULL, 10) : 0;
     switch (it->kind) {
-    case FE_ITEM_NEXT:
+    case FE_ITEM_NEXT: {
         it->x = atoi1;
         it->y = atoi2;
-        if (n > 3) {
+        const int image_form = n > 7 && s_stristr(fields[3], ".bmp");
+        if (image_form) {
+            snprintf(it->image_normal, sizeof(it->image_normal), "%s",
+                     fields[3]);
+            snprintf(it->image_selected, sizeof(it->image_selected), "%s",
+                     fields[4]);
+            snprintf(it->label, FE_NAME_MAX, "%s", fields[6]);
+            snprintf(it->target, FE_NAME_MAX, "%s", fields[7]);
+        } else if (n > 3) {
             snprintf(it->label, FE_NAME_MAX, "%s", fields[3]);
-        }
-        if (n > 4) {
-            snprintf(it->target, FE_NAME_MAX, "%s", fields[4]);
+            if (n > 4) {
+                snprintf(it->target, FE_NAME_MAX, "%s", fields[4]);
+            }
         }
         break;
+    }
     case FE_ITEM_TRIGGER: {
         it->x = atoi1;
         it->y = atoi2;
         /* image trigger form: Trigger:x:y:imgN:imgG:imgD:tooltip:1 */
         int image_form = (n > 3) && s_stristr(fields[3], ".bmp");
         if (image_form) {
+            snprintf(it->image_normal, sizeof(it->image_normal), "%s",
+                     fields[3]);
+            if (n > 4) {
+                snprintf(it->image_selected, sizeof(it->image_selected),
+                         "%s", fields[4]);
+            }
             if (n > 6) {
                 snprintf(it->label, FE_NAME_MAX, "%s", fields[6]);
             } else {
@@ -799,15 +814,25 @@ static void fe_options_write(FrontEnd* fe, FeItem* it)
 static void fe_parse_submenu(FrontEnd* fe, FeMenu* m, const char* name,
                              int idx)
 {
+    if (fe == NULL || m == NULL || name == NULL || idx < 0
+        || idx >= FE_SUBMENUS_MAX || fe->cfg == NULL) {
+        return;
+    }
     FeSubmenu* sub = &m->submenus[idx];
     sub->item_count = 0;
     sub->base_x = sub->base_y = 0;
-    sub->title_anchor_y = 0;
+    sub->title_anchor_x = sub->title_anchor_y = 0;
     sub->auto_center = 0;
     sub->display_title = 0;
     sub->can_scroll = 0;
-    sub->title[0] = sub->image[0] = '\0';
+    sub->play_random = 0;
+    sub->scroll = sub->scroll_extent = 0;
+    sub->full_name[0] = sub->title[0] = '\0';
+    sub->image[0] = sub->image_dark[0] = '\0';
+    sub->lofont[0] = sub->hifont[0] = '\0';
     memset(sub->items, 0, sizeof(sub->items));
+    memset(sub->overlays, 0, sizeof(sub->overlays));
+    sub->overlay_count = 0;
     char pre[FE_PATH_MAX * 2];
     snprintf(pre, sizeof(pre), "%s Menu::%s %s", util_root_name(fe->cfg),
              name, fe_menu_name_idx(idx));
@@ -817,19 +842,31 @@ static void fe_parse_submenu(FrontEnd* fe, FeMenu* m, const char* name,
     if (block_get_strptr(fe->cfg, buf) != NULL) {
         snprintf(sub->title, FE_NAME_MAX, "%s", block_get_strptr(fe->cfg, buf));
     }
+    snprintf(buf, sizeof(buf), "%s FullName", pre);
+    const char* v = block_get_strptr(fe->cfg, buf);
+    if (v != NULL) {
+        snprintf(sub->full_name, sizeof(sub->full_name), "%s", v);
+        for (char* p = sub->full_name; *p != '\0'; ++p) {
+            if (*p == '_') *p = ' ';
+        }
+    }
 
     /* Position x:y */
     snprintf(buf, sizeof(buf), "%s Position", pre);
-    const char* v = block_get_strptr(fe->cfg, buf);
+    v = block_get_strptr(fe->cfg, buf);
     if (v != NULL) {
         const char* c = strchr(v, ':');
         if (c != NULL) {
-            char xb[16], yb[16];
-            int xl = (int)(c - v) < 15 ? (int)(c - v) : 15;
-            memcpy(xb, v, (size_t)xl); xb[xl] = '\0';
-            snprintf(yb, sizeof(yb), "%s", c + 1);
-            sub->base_x = (int)strtol(xb, NULL, 10);
-            sub->base_y = (int)strtol(yb, NULL, 10);
+            char* x_end = NULL;
+            long x = strtol(v, &x_end, 10);
+            if (x_end == c) {
+                char* y_end = NULL;
+                long y = strtol(c + 1, &y_end, 10);
+                if (y_end != c + 1) {
+                    sub->base_x = (int)x;
+                    sub->base_y = (int)y;
+                }
+            }
         }
     }
 
@@ -837,14 +874,18 @@ static void fe_parse_submenu(FrontEnd* fe, FeMenu* m, const char* name,
     sub->auto_center = block_get_bool(fe->cfg, buf) == 1;
     snprintf(buf, sizeof(buf), "%s DisplayTitle", pre);
     sub->display_title = block_get_bool(fe->cfg, buf) == 1;
-    /* The original menu renderer centers DisplayTitle on the screen and
-     * draws it at Position.y + Anchored.y. Anchored.x is not used for the
-     * title's horizontal placement. */
+    /* Anchored is stored as x:y; title placement currently uses its y value. */
     snprintf(buf, sizeof(buf), "%s Anchored", pre);
     v = block_get_strptr(fe->cfg, buf);
     if (v != NULL) {
         const char* c = strchr(v, ':');
         if (c != NULL) {
+            char xbuf[16];
+            size_t xlen = (size_t)(c - v);
+            if (xlen >= sizeof(xbuf)) xlen = sizeof(xbuf) - 1;
+            memcpy(xbuf, v, xlen);
+            xbuf[xlen] = '\0';
+            sub->title_anchor_x = (int)strtol(xbuf, NULL, 10);
             sub->title_anchor_y = (int)strtol(c + 1, NULL, 10);
         }
     }
@@ -859,6 +900,15 @@ static void fe_parse_submenu(FrontEnd* fe, FeMenu* m, const char* name,
         snprintf(raw, sizeof(raw), "%s", v);
         const char* c = strchr(raw, ':');
         snprintf(sub->image, FE_PATH_MAX, "%.*s",
+                 c != NULL ? (int)(c - raw) : (int)strlen(raw), raw);
+    }
+    snprintf(buf, sizeof(buf), "%s MenuImageDark", pre);
+    v = block_get_strptr(fe->cfg, buf);
+    if (v != NULL) {
+        char raw[FE_PATH_MAX];
+        snprintf(raw, sizeof(raw), "%s", v);
+        const char* c = strchr(raw, ':');
+        snprintf(sub->image_dark, sizeof(sub->image_dark), "%.*s",
                  c != NULL ? (int)(c - raw) : (int)strlen(raw), raw);
     }
 
@@ -958,6 +1008,9 @@ static void fe_parse_submenu(FrontEnd* fe, FeMenu* m, const char* name,
 // FUNCTION: LEGORR 0x004140c0
 static int fe_parse_menu(FrontEnd* fe, int mi, const char* name)
 {
+    if (fe == NULL || mi < 0 || mi >= FE_MENU_COUNT || name == NULL) {
+        return 0;
+    }
     FeMenu* m = &fe->menus[mi];
     m->submenu_count = 0;
     snprintf(m->name, FE_NAME_MAX, "%s", name);
@@ -968,6 +1021,9 @@ static int fe_parse_menu(FrontEnd* fe, int mi, const char* name)
     snprintf(buf, sizeof(buf), "%s Menu::%s MenuCount", util_root_name(fe->cfg),
              name);
     int count = block_get_int(fe->cfg, buf, 0);
+    if (count < 0) {
+        count = 0;
+    }
     if (count > FE_SUBMENUS_MAX) {
         count = FE_SUBMENUS_MAX;
     }
@@ -2440,6 +2496,11 @@ static FeEvent fe_activate(FrontEnd* fe)
      * on the pause overlay they are Continue / the quit-confirm / the
      * restart-confirm; on the main menu the only one is the Quit confirm. */
     if (it->kind == FE_ITEM_TRIGGER && it->flag != 0) {
+        if (fe->menu == FE_MENU_SAVE) {
+            /* SaveMenu's configured image trigger is the back button. */
+            frontend_close(fe);
+            return FE_EVT_NONE;
+        }
         if (fe->menu == FE_MENU_PAUSED) {
             switch (fe->sub) {
             case 0:   /* pause Menu1: Continue_Game / Replay_Objective */
@@ -4113,8 +4174,18 @@ static int fe_item_pick(const FrontEnd* fe, int mx, int my,
         fe_display_label(it->label, label, sizeof(label));
         int tw = measure != NULL ? fe_font_text_width(label, measure)
                                  : fe_text_width(label);
+        int hit_h = rh;
+        if (it->image_normal[0] != '\0') {
+            TextureSurface* image = texture_get_or_load(NULL,
+                                                        it->image_normal);
+            if (image != NULL) {
+                tw = image->width;
+                hit_h = image->height;
+                texture_release(image);
+            }
+        }
         if (mx >= x - 4 && mx <= x + tw + 4
-            && my >= y - 2 && my <= y + rh) {
+            && my >= y - 2 && my <= y + hit_h) {
             if (out_idx != NULL) {
                 *out_idx = i;
             }
@@ -4140,24 +4211,58 @@ void menu_hover_status_text_draw(FrontEnd* fe, const TextureSurface* font,
     const char* image = frontend_active_image(fe);
     const FeItem* item = frontend_active_item(fe);
     if (sub == NULL || image == NULL || item == NULL
-        || !s_stristr(image, "SaveLoad") || item->load_slot <= 0
-        || item->status[0] == '\0') {
+        || !s_stristr(image, "SaveLoad")) {
         return;
     }
-    char status[FE_NAME_MAX];
-    fe_display_label(item->status, status, sizeof(status));
-    int text_w = font != NULL ? fe_font_text_width(status, font)
-                              : fe_text_width(status);
-    int x = (w - text_w) / 2;
-    int y = h - 12;
-    if (font != NULL) {
-        int cell_w = 0, cell_h = 0;
-        if (fe_font_cell(font, &cell_w, &cell_h)) {
-            y = h - cell_h - 4;
+
+    /* SaveMenuLayoutLoad reads these strings and the Window rect from the
+     * shipped Menu::SaveText config. The reference draws an instruction and
+     * a completion line in this lower panel, independently of the selected
+     * row's optional save summary. */
+    const FeSaveMenuLayout* layout = &fe->save_text_layout;
+    const char* prompt = fe->save_action ? layout->save : layout->load;
+    if (prompt[0] != '\0' && layout->slot[0] != '\0') {
+        /* SaveText uses the small green briefing font, not the large cyan
+         * FrontEnd button font passed to this renderer. */
+        TextureSurface* save_text_font = texture_get_or_load(
+            NULL, "Interface\\Fonts\\MBriefFONT2.bmp");
+        const TextureSurface* text_font = save_text_font != NULL
+                                              ? save_text_font : font;
+        char instruction[FE_NAME_MAX];
+        char progress[FE_NAME_MAX];
+        snprintf(instruction, sizeof(instruction), "%s",
+                 ui_text_underscores_to_spaces(prompt));
+        /* The config's Slot format is e.g. "%d%%_of_game_completed.". */
+        snprintf(progress, sizeof(progress), layout->slot, 0);
+        char normalized_progress[FE_NAME_MAX];
+        snprintf(normalized_progress, sizeof(normalized_progress), "%s",
+                 ui_text_underscores_to_spaces(progress));
+        int wx = layout->has_window ? layout->window_x : 0;
+        int wy = layout->has_window ? layout->window_y : h - 45;
+        int ww = layout->has_window ? layout->window_w : w;
+        int line_h = 12;
+        if (text_font != NULL) {
+            int cell_w = 0;
+            (void)fe_font_cell(text_font, &cell_w, &line_h);
         }
-        formatted_text_draw(font, px, pitch, w, h, x, y, status);
-    } else {
-        fe_draw_text(px, pitch, w, h, x, y, status, 220, 220, 220);
+        const char* lines[2] = { instruction, normalized_progress };
+        for (int line = 0; line < 2; ++line) {
+            int text_w = text_font != NULL
+                             ? fe_font_text_width(lines[line], text_font)
+                             : fe_text_width(lines[line]);
+            int x = wx + (ww - text_w) / 2;
+            int y = wy + 4 + line * line_h;
+            if (text_font != NULL) {
+                formatted_text_draw(text_font, px, pitch, w, h, x, y,
+                                    lines[line]);
+            } else {
+                fe_draw_text(px, pitch, w, h, x, y, lines[line],
+                             150, 255, 80);
+            }
+        }
+        if (save_text_font != NULL) {
+            texture_release(save_text_font);
+        }
     }
 }
 
@@ -4281,7 +4386,22 @@ void frontend_render(FrontEnd* fe, const TextureSurface* hi_font,
         fe_display_label(it->label, label, sizeof(label));
         int lw = font != NULL ? fe_font_text_width(label, font)
                               : fe_text_width(label);
-        if (font != NULL) {
+        if (it->image_normal[0] != '\0') {
+            const char* image_path = selected && it->image_selected[0] != '\0'
+                                         ? it->image_selected
+                                         : it->image_normal;
+            TextureSurface* image = texture_get_or_load(NULL, image_path);
+            if (image != NULL) {
+                surface_blit_texture(px, pitch, w, h, image, x, y);
+                texture_release(image);
+            } else if (font != NULL) {
+                formatted_text_draw(font, px, pitch, w, h, x, y, label);
+            } else {
+                fe_draw_text(px, pitch, w, h, x, y, label,
+                             selected ? 255 : 200, selected ? 255 : 200,
+                             selected ? 255 : 160);
+            }
+        } else if (font != NULL) {
             formatted_text_draw(font, px, pitch, w, h, x, y, label);
         } else {
             fe_draw_text(px, pitch, w, h, x, y, label,
@@ -4410,6 +4530,7 @@ void frontend_render_credits(const TextureSurface* font,
 }
 
 /* --- current selection context (see frontend.hpp) -------------------------- */
+// GLOBAL: LEGORR 0x00557500
 static void* s_current_selection_context;
 
 // FUNCTION: LEGORR 0x00417fe0
@@ -4434,6 +4555,7 @@ void current_selection_context_set(void* context)
 #define SEL_HANDLE_ENTRIES 16
 #define SEL_HANDLE_STRIDE 7 /* dwords per 0x1c-stride entry */
 
+// GLOBAL: LEGORR 0x004dc650
 static uint32_t s_sel_state;                    /* DAT_004dc650 */
 static int      s_sel_hit_index;                /* DAT_004dc648 */
 static uint32_t s_sel_handles_a[SEL_HANDLE_ENTRIES * SEL_HANDLE_STRIDE];
@@ -5103,6 +5225,7 @@ int main_sim_state_admission_predicate(void)
 
 /* SelectionModeStateSet (FUN_00418190) — zero-init module static (the
  * corpus's DAT_004db8e8 word; its corpus readers are unported). */
+// GLOBAL: LEGORR 0x004db8e8
 static uint32_t s_sel_mode_state;
 
 // FUNCTION: LEGORR 0x418190

@@ -360,6 +360,10 @@ int terrain_cell_allows_placement(const struct EntitySlot* e,
  * corpus terrain record (free it with terrain_destroy). */
 void* terrain_create(const char* surface_map, float blocksize);
 void terrain_destroy(void* terrain);
+/* Read the retained heightfield used to build the terrain mesh. Heights are
+ * the unsigned cell values from SurfaceMap; invalid cells answer zero. */
+int terrain_surface_height_get(const void* terrain, int x, int y);
+float terrain_blocksize_get(const void* terrain);
 
 /* TerrainCellSurfaceTypeGet (FUN_0044f540, finding 226): the per-cell
  * surface-type byte (block-table +0x24) of the terrain handle. The

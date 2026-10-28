@@ -99,6 +99,7 @@ void engine_heap_allocate(long size)
  * the port-side setter; nothing registers while that seam is absent, so
  * the invoke answers 0 and EngineCalloc behaves like the plain entry —
  * the corpus's own unset-handler reading. */
+// GLOBAL: LEGORR 0x00549158
 static int (*s_new_handler)(long);
 
 // FUNCTION: LEGORR 0x00491d90

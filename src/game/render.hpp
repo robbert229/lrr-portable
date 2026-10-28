@@ -10,7 +10,7 @@
  *
  * Cell → pixel is orthographic: cell (cx,cy) maps to pixel
  * (cx/W*w, cy/H*h) with a level-relative->pixel scale, matching how the
- * selection demo maps the mouse back to cells (select.cpp). Entities draw as
+ * scene input maps the mouse through the perspective camera. Entities draw as
  * type-coloured markers with a yellow ring when selected; the tracked mouse
  * cell gets a white outline so picking is visible.
  */
@@ -30,6 +30,20 @@ extern "C" {
 void level_render_map(const LevelState* lvl, const GameContext* ctx,
                       int mouse_x, int mouse_y,
                       int w, int h, void* pixels, int pitch);
+
+/* Render the loaded terrain heightfield and placed entities with a
+ * perspective camera into the game framebuffer. */
+void level_render_scene(const LevelState* lvl, const GameContext* ctx,
+                       int w, int h, void* pixels, int pitch);
+/* Convert scene-space pointer input using the same perspective camera as the
+ * renderer. Entity picking returns the nearest visible placed actor. */
+int level_scene_mouse_cell(const GameContext* ctx, const LevelState* lvl,
+                           int w, int h,
+                           int mouse_x, int mouse_y,
+                           float* cell_x, float* cell_y);
+EntitySlot* level_scene_pick_entity(GameContext* ctx, const LevelState* lvl,
+                                    int w, int h, int mouse_x, int mouse_y,
+                                    float radius_pixels);
 
 /* Multiply the finished frame by the Brightness option (issue #85): the
  * scalar is BrightnessSet's @ 0x414d30 (value * 0.1) — 10 is neutral, the

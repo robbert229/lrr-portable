@@ -102,6 +102,8 @@ typedef struct FeItem {
     int   kind;
     int   x, y;      /* cfg anchor (or per-level FrontEndX/Y for picker rows) */
     char  label[FE_NAME_MAX];  /* display text (underscores shown as spaces) */
+    char  image_normal[FE_PATH_MAX];  /* image-backed Next/Trigger item */
+    char  image_selected[FE_PATH_MAX];
     char  status[FE_NAME_MAX]; /* hover/status text for save-list rows */
     char  target[FE_NAME_MAX]; /* "Menu%i" target, or the level group name    */
     int   flag;                /* Trigger flag / Cycle count / slider lo      */
@@ -127,11 +129,14 @@ typedef struct FeOverlay {
 typedef struct FeSubmenu {
     int   item_count;             /* cfg ItemCount + grafted chain rows */
     FeItem items[FE_ITEMS_MAX];
+    char  full_name[FE_NAME_MAX]; /* FullName key (underscore-normalized) */
     char  title[FE_NAME_MAX];     /* Title key (underscored display text) */
-    char  image[FE_PATH_MAX];     /* MenuImage / MenuImageDark (render lane) */
+    char  image[FE_PATH_MAX];     /* MenuImage */
+    char  image_dark[FE_PATH_MAX];/* MenuImageDark */
     char  lofont[FE_PATH_MAX];    /* LoFont key — unselected items (Menu_Font_Lo.bmp) */
     char  hifont[FE_PATH_MAX];    /* HiFont key — selected items  (Menu_Font_Hi.bmp) */
     int   base_x, base_y;         /* Position key (x:y) */
+    int   title_anchor_x;         /* Anchored x:y */
     int   title_anchor_y;         /* Anchored x:y; title adds y to Position.y */
     int   auto_center;            /* AutoCenter TRUE|FALSE */
     int   display_title;          /* DisplayTitle TRUE|FALSE */

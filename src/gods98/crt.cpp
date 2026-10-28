@@ -677,6 +677,7 @@ int display_mode_matches_filter_tuple(int mode_index)
  * globals' meanings are unresolved (finding 383) and none has a ported
  * feeder. */
 static uint32_t s_flag_004ff978 = 0u;
+// GLOBAL: LEGORR 0x004ffe48
 static uint32_t s_value_004ffe48 = 0u;
 
 // FUNCTION: LEGORR 0x00456640
@@ -692,10 +693,15 @@ void global_value_004ffe48_set(uint32_t value)
 }
 
 /* --- the unowned DAT word-store band (see crt.hpp) -------------------------- */
+// GLOBAL: LEGORR 0x004b31bc
 static uint32_t s_advisor_state_word = 0u; /* DAT_004b31bc */
+// GLOBAL: LEGORR 0x00557860
 static uint32_t s_task_refresh_flag = 0u;  /* DAT_00557860 */
+// GLOBAL: LEGORR 0x004b8a54
 static uint32_t s_level_stored_word = 0u;  /* DAT_004b8a54 */
+// GLOBAL: LEGORR 0x004c7178
 static uint32_t s_mode_zero_flag = 0u;     /* DAT_004c7178 */
+// GLOBAL: LEGORR 0x004c79a4
 static uint32_t s_rockfall_base = 0u;      /* DAT_004c79a4 */
 static uint32_t s_ui_flag_word = 0u;       /* DAT_004c7ea8 */
 static uint32_t s_config_word = 0u;        /* DAT_004a1ee4 */
@@ -1408,6 +1414,7 @@ void uint96_zero(uint32_t limbs[3])
 
 /* GlobalValueClearIfEqual (FUN_0040e910) — the screen-effect handle word
  * (the corpus's DAT_004c7ea4, unowned) clears only on a matching release. */
+// GLOBAL: LEGORR 0x004c7ea4
 static int s_global_value_word;
 
 // FUNCTION: LEGORR 0x0040e910
@@ -1554,6 +1561,7 @@ void linked_object_list_release(void* list)
 }
 
 /* ModelRenderListClear (FUN_00482d30) — see crt.hpp. */
+// GLOBAL: LEGORR 0x005343c4
 static void* s_model_render_list_head; /* DAT_005343c4 role: unowned */
 
 // FUNCTION: LEGORR 0x00482d30
@@ -1622,6 +1630,7 @@ void crt_owned_stream_buffer_release(char* record)
 }
 
 /* --- the shared texture directory word (see crt.hpp) ------------------------ */
+// GLOBAL: LEGORR 0x0076cd88
 static char* s_shared_texture_dir; /* DAT_0076cd88 role: unowned */
 
 // FUNCTION: LEGORR 0x004728c0
@@ -1638,6 +1647,7 @@ void shared_texture_directory_clear(void)
 }
 
 /* --- the renderer flag word + scene hook pair band (see crt.hpp) ----------- */
+// GLOBAL: LEGORR 0x0076cd94
 static uint32_t s_renderer_flag_word; /* DAT_0076cd94 role: unowned */
 static void*    s_scene_end_hook;     /* DAT_0076cd80 role: unowned */
 static void*    s_scene_end_value;    /* DAT_0076cd84 role: unowned */
@@ -2138,6 +2148,7 @@ void render_feature_flags_set(uint32_t value) { s_render_feature_flags = value; 
  * store carries no context, so the port models it as a module static with
  * install/peek hooks — the two half-models do not interoperate
  * (unowned-global deviation). */
+// GLOBAL: LEGORR 0x00505f84
 static uint32_t s_engine_feature_word; /* DAT_00505f84 */
 
 uint32_t engine_feature_word_peek(void)
@@ -2410,14 +2421,17 @@ uint64_t crt_unsigned64_divide(uint32_t lo_a, uint32_t hi_a,
 /* --- the CRT file-descriptor flag window (2026-10-25) ---------------------
  * CrtFileDescriptorFlag40Get (FUN_00498b40): the corpus reads bit 0x40 of
  * the byte at block+4 in its file-descriptor table — 32 eight-byte entries
- * per block, blocks indexed from the DAT_0076ddc0 pointer table, the bound
- * word at DAT_0076dec0. That table is CRT platform state with no ported
- * owner: the pointer blocks and the count word land as zero-init own
- * storage behind install/peek hooks (the unowned-global convention).
+ * per block, blocks indexed by one of the 64 pointers at DAT_0076ddc0. The
+ * bound word at DAT_0076dec0 follows that 0x100-byte pointer table. This
+ * table is CRT platform state with no ported owner: the pointer blocks and
+ * count word land as zero-init own storage behind install/peek hooks (the
+ * unowned-global convention).
  * Deviations: the block window and null blocks are guarded (the corpus
  * strides), and a negative descriptor answers 0. */
-#define CRT_FD_BLOCKS 8
+#define CRT_FD_BLOCKS 64
+// GLOBAL: LEGORR 0x0076ddc0
 static void* s_fd_flag_blocks[CRT_FD_BLOCKS]; /* DAT_0076ddc0 role */
+// GLOBAL: LEGORR 0x0076dec0
 static int   s_fd_flag_count;                 /* DAT_0076dec0 role */
 
 // FUNCTION: LEGORR 0x00498b40

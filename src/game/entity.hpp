@@ -284,7 +284,8 @@ int entity_flag100_and_shared_eligibility_check(const EntitySlot* e);
                                                 /* FUN_00471ce0 */
 int entity_quad_mesh_render_record_allowed(const EntitySlot* e);
                                                 /* FUN_0040aae0 */
-int task_type_and_condition_check(const EntitySlot* target, int condition);
+int task_type_and_condition_check(const void* unused,
+                                 const EntitySlot* target, int condition);
                                                 /* FUN_0043c490 */
 
 /* EntityTypeAndStateFlagPredicate (FUN_0045e400, findings 324/105): the

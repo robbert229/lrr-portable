@@ -9,7 +9,9 @@
 static MessageConfig s_cfg[MESSAGE_MAX_ID];
 static int           s_queue_ids[MESSAGE_MAX_ID];
 static float         s_queue_ts[MESSAGE_MAX_ID];
+// GLOBAL: LEGORR 0x004dcd38
 static int           s_queue_count = 0;
+// GLOBAL: LEGORR 0x004dcd48
 static uint32_t      s_flags = 0u;          /* DAT_004dcd48 */
 static uint32_t      s_system_state = 0u;   /* DAT_004ff980 */
 static float         s_now = 0.0f;          /* _DAT_0049e264 analog */

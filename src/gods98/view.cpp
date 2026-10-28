@@ -376,8 +376,8 @@ void matrix4_set_rotation_x(float* out, float angle)
     matrix4_set_identity(out);
     out[5] = c;
     out[6] = -s;
-    out[9] = s;
     out[10] = c;
+    out[9] = s;
 }
 
 /* Matrix4SetRotationY (FUN_00479da0): identity, then m[0]=c, m[2]=s,
@@ -389,9 +389,9 @@ void matrix4_set_rotation_y(float* out, float angle)
     const float s = (float)sin(angle);
     matrix4_set_identity(out);
     out[0] = c;
-    out[2] = s;
     out[8] = -s;
     out[10] = c;
+    out[2] = s;
 }
 
 /* Matrix4SetRotationZ (FUN_00479df0): identity, then m[0]=c, m[1]=−s,
@@ -404,8 +404,8 @@ void matrix4_set_rotation_z(float* out, float angle)
     matrix4_set_identity(out);
     out[0] = c;
     out[1] = -s;
-    out[4] = s;
     out[5] = c;
+    out[4] = s;
 }
 
 /* BuildPerspectiveProjectionMatrix (FUN_0040bd60): zero the matrix, raise

@@ -4,10 +4,12 @@
 
 #include "message.hpp"
 #include "simtick.hpp"
+#include "sound.hpp"
 
 #define SIMTICK_MUTE_RESET 25.0f
 
 /* ---- mute timer (FUN_0041ba10) ------------------------------------------ */
+// GLOBAL: LEGORR 0x004de1f4
 static uint32_t s_mute_word    = 0;       /* DAT_004de1f4 */
 static uint32_t s_mute_last    = 0;       /* DAT_004de1fc */
 static float    s_mute_timer   = SIMTICK_MUTE_RESET; /* _DAT_004a2b58, boot fresh */
@@ -368,6 +370,8 @@ void simtick_manager_tick(int index, float dt, int ingame)
 
 /* ---- tranche 8: sound keep-alive (FUN_0047aba0) ------------------------- */
 static int s_sound_on = 0, s_sound_active = 0;
+// GLOBAL: LEGORR 0x00506688
+static int s_listener_view = 0;
 static int (*s_keepalive)(int, int, int) = NULL;
 
 void simtick_set_sound_guards(int sound_on, int active)
@@ -392,6 +396,7 @@ void simtick_sound_keepalive(EngineContext* c)
 }
 
 /* ---- tranche 8: editor steps (FUN_0044cfa0) ------------------------------ */
+// GLOBAL: LEGORR 0x004eaec8
 static uint32_t s_edit_word = 0;
 static int      s_edit_active = 0;
 static int      s_edit_steps = 0;
@@ -833,8 +838,8 @@ void simulation_global_word_set(uint32_t value)
 // FUNCTION: LEGORR 0x0047ab80
 void simtick_directsound_listener_view_set(int view)
 {
-    if (s_sound_on != 0) {
-        s_sound_active = view;
+    if (s_bank_sound_on != 0) {
+        s_listener_view = view;
     }
 }
 

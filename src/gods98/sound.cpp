@@ -19,7 +19,8 @@ typedef struct BankSlot {
 } BankSlot;
 
 static BankSlot s_bank[SOUND_BANK_SLOTS];
-static int      s_bank_sound_on = 1; /* DAT_00533878 seam, see sound.hpp */
+// GLOBAL: LEGORR 0x00533878
+int             s_bank_sound_on = 1; /* DAT_00533878 seam, see sound.hpp */
 
 /* ------------------------------------------------------------------ *
  *  RIFF/WAVE parse (finding 14 §2).
@@ -432,6 +433,7 @@ static int   s_alias_dynamic_count;
 /* The corpus's DAT_00502a2c sound flag word: bit 0 subsystem-enabled
  * (enable-set @ 0x465260), bit 1 dynamic-alias registration, bit 3 batch
  * mode (batch-mode-get @ 0x4652b0). */
+// GLOBAL: LEGORR 0x00502a2c
 static uint32_t s_sound_flags;
 
 /* _DAT_00502b2c — the global-cooldown word (the corpus types it as a

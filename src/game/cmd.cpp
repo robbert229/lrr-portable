@@ -100,6 +100,7 @@ static CmdRec* s_blocks[CMD_POOL_MAX_BLOCKS];
 static int     s_pool_level = 0;
 static void*   s_free       = NULL;
 
+// GLOBAL: LEGORR 0x004b3354
 static CmdRec* s_global_head = NULL; /* DAT_004b3354 */
 static CmdRec* s_global_tail = NULL; /* DAT_004b3358 */
 static int   s_global_enabled = 1; /* DAT_004b8060 */

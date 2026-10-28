@@ -354,12 +354,13 @@ float media_min_distance_ref_distance(void)
 }
 
 /* --- the CD-audio availability seam (see media.hpp) -------------------------- */
+// GLOBAL: LEGORR 0x0054486c
 static int s_cd_audio_open; /* DAT_0054486c role: unowned, zero-init */
 
 // FUNCTION: LEGORR 0x00488b90
 int media_cd_audio_playback_available(void)
 {
-    return (s_cd_audio_open != 0 && sound_bank_sound_on() != 0) ? 1 : 0;
+    return (s_cd_audio_open != 0 && s_bank_sound_on != 0) ? 1 : 0;
 }
 
 void media_cd_audio_open_set(int open)

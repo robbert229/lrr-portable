@@ -808,6 +808,7 @@ void* checkpoint_blob_get(const GameContext* ctx)
 
 /* SaveStateEventContextSet (FUN_00418110) — zero-init module static per
  * the unowned-global convention (the corpus's word is DAT_0055781c). */
+// GLOBAL: LEGORR 0x0055781c
 static uint32_t s_save_state_event_context = 0u;
 
 // FUNCTION: LEGORR 0x00418110
@@ -1159,12 +1160,12 @@ void* registry_value_lookup(void* root, uint32_t index)
 uint32_t registry_value_index_lookup_or_not_found(void* root, uint32_t index)
 {
     void* node = registry_value_lookup(root, index);
-    if (node == NULL) {
-        return 0xffffffffu;
+    if (node != NULL) {
+        uint32_t word = 0u;
+        __builtin_memcpy(&word, node, sizeof word); /* corpus reads blind */
+        return word;
     }
-    uint32_t word = 0u;
-    __builtin_memcpy(&word, node, sizeof word); /* corpus reads blind */
-    return word;
+    return 0xffffffffu;
 }
 
 /* SaveMenuRefresh (FUN_004150b0) — see savegame.hpp. The corpus reads

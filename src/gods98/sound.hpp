@@ -92,6 +92,7 @@ void sound_bank_clear(void);
  * engine's config read drives it when that milestone lands. */
 void sound_bank_sound_on_set(int on);
 int  sound_bank_sound_on(void);
+extern int s_bank_sound_on; /* DAT_00533878, read directly by media.cpp */
 
 /* SoundBankFreeSlotFind @ 0x47aad0: first slot whose busy bit is clear.
  * 1 with *out_slot set, or 0 when all 600 slots are claimed. */

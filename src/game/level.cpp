@@ -75,6 +75,7 @@ static const char* K_INITORE        = "InitialOre";
  *  emergence scatter). MSVCRT-style LCG so results match the era machine.
  * ------------------------------------------------------------------ */
 
+// GLOBAL: LEGORR 0x004afcc8
 static uint32_t s_rand_state = 1;
 
 // FUNCTION: LEGORR 0x0048e160
@@ -293,6 +294,23 @@ void terrain_destroy(void* handle)
         free(t->blocks);
         free(t);
     }
+}
+
+int terrain_surface_height_get(const void* handle, int x, int y)
+{
+    const TerrainState* t = (const TerrainState*)handle;
+    if (t == NULL || t->blocks == NULL || x < 0 || y < 0
+        || x >= t->width || y >= t->height) {
+        return 0;
+    }
+    return t->blocks[((size_t)y * (size_t)t->width + (size_t)x)
+                      * TERRAIN_BLOCK_STRIDE + 0x1a];
+}
+
+float terrain_blocksize_get(const void* handle)
+{
+    const TerrainState* t = (const TerrainState*)handle;
+    return t != NULL ? t->blocksize : 0.0f;
 }
 
 /* TerrainCellSurfaceTypeGet (FUN_0044f540, finding 226): the per-cell

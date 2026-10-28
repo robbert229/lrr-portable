@@ -1023,12 +1023,12 @@ int main(int argc, char** argv)
             CHECK(entity_flag100_and_shared_eligibility_check(e) == 0,
                   "the strict clause fails its word");
             /* task type + condition: the gate and the caller's condition. */
-            CHECK(task_type_and_condition_check(e, 1) == 1,
+            CHECK(task_type_and_condition_check(NULL, e, 1) == 1,
                   "the relaxed gate carries the condition");
-            CHECK(task_type_and_condition_check(e, 0) == 0,
+            CHECK(task_type_and_condition_check(NULL, e, 0) == 0,
                   "a clear condition answers no");
             e->flags_3e0 = 0x100u; /* blocks the gate */
-            CHECK(task_type_and_condition_check(e, 1) == 0,
+            CHECK(task_type_and_condition_check(NULL, e, 1) == 0,
                   "the blocked gate answers no");
         }
     }

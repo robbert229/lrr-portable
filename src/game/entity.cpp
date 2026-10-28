@@ -910,7 +910,8 @@ uint32_t entity_stats_flag40_test(const EntitySlot* e)
 }
 
 /* GlobalAnimationStateSet (FUN_004383a0) — see entity.hpp. */
-static uint32_t s_global_animation_state; /* DAT_004eadc4 role: unowned */
+// GLOBAL: LEGORR 0x004eadc4
+static uint32_t s_global_animation_state; /* DAT_004eadc4 */
 
 // FUNCTION: LEGORR 0x004383a0
 void entity_global_animation_state_set(uint32_t value)
@@ -946,8 +947,10 @@ int entity_quad_mesh_render_record_allowed(const EntitySlot* e)
 
 /* TaskTypeAndConditionCheck (FUN_0043c490) — see entity.hpp. */
 // FUNCTION: LEGORR 0x0043c490
-int task_type_and_condition_check(const EntitySlot* target, int condition)
+int task_type_and_condition_check(const void* unused,
+                                  const EntitySlot* target, int condition)
 {
+    (void)unused;
     if (entity_shared_eligibility_check(target, 1) == 0 || condition == 0) {
         return 0;
     }

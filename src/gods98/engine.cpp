@@ -191,6 +191,7 @@ int mode_dependent_field24_get(const EngineContext* ctx)
  * and cheat-word globals; the two DAT-global shapes land as zero-initialized
  * module storage per the unowned-global convention (the triple's only corpus
  * writer is the unported renderer-side sim-interaction update). */
+// GLOBAL: LEGORR 0x004de548
 static int s_scroll_guard;        /* DAT_004de548 */
 static uint32_t s_triple[3];      /* DAT_0055651c / DAT_00556520 / DAT_00556524 */
 static float s_task_text_origin[2]; /* _DAT_00556f24 / _DAT_00556f28 */
@@ -343,6 +344,7 @@ int engine_app_mode_get(const EngineContext* ctx)
 }
 
 /* --- the grid-cell record buffer (see engine.hpp) ---------------------------- */
+// GLOBAL: LEGORR 0x005520e8
 static void*        s_field_grid_buf;   /* DAT_005520e8 role */
 static EngineState* s_field_grid_desc;  /* DAT_005520ec role */
 
