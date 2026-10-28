@@ -540,8 +540,7 @@ int main(int argc, char** argv)
     {
         /* InputKeyGroupRegister: the count word lands in the pair's +4
          * slot, then the code dwords ride the heap array. */
-        static const uint32_t codes[4] = { 1, 2, 3, 4 };
-        resource_input_key_group_register(5, 4, codes);
+        resource_input_key_group_register(5, 4, 1, 2, 3, 4);
         CHECK(resource_handle_set_band_word_peek(5) == 4u
                   && *(const uint32_t*)resource_handle_set_slot_peek(5) == 1u
                   && ((const uint32_t*)resource_handle_set_slot_peek(5))[3]
@@ -550,16 +549,15 @@ int main(int argc, char** argv)
 
         /* Guard: an out-of-range group strides nowhere (the corpus strides
          * the band blindly). */
-        resource_input_key_group_register(24, 1, codes);
-        resource_input_key_group_register(-1, 1, codes);
+        resource_input_key_group_register(24, 1, 1);
+        resource_input_key_group_register(-1, 1, 1);
         CHECK(resource_handle_set_band_word_peek(24) == 0u
                   && resource_handle_set_band_word_peek(-1) == 0u,
               "the register guard answers where the corpus strides");
 
         /* Re-registering the same group re-stages in place (the corpus
          * leaks the superseded array, and so does the port). */
-        static const uint32_t one[] = { 9 };
-        resource_input_key_group_register(5, 1, one);
+        resource_input_key_group_register(5, 1, 9);
         CHECK(resource_handle_set_band_word_peek(5) == 1u
                   && *(const uint32_t*)resource_handle_set_slot_peek(5) == 9u,
               "re-registering restages the group in place");

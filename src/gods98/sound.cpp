@@ -1228,10 +1228,10 @@ int sound_submit_with_global_cooldown(int alias, int* out_handle)
 // FUNCTION: LEGORR 0x00416150
 int sound_stream_play_level(int level)
 {
-    /* StreamPlayLevel @ 0x416150: the Stream_LevelName_Level_%d alias,
-     * submitted through the global cooldown when it resolves. */
+    /* StreamPlayLevel @ 0x416150: the Stream_LevelName_Level%d alias at
+     * 0x4a25c8, submitted through the global cooldown when it resolves. */
     char name[128];
-    snprintf(name, sizeof(name), "Stream_LevelName_Level_%d", level);
+    snprintf(name, sizeof(name), "Stream_LevelName_Level%d", level);
     int alias = 0;
     if (sound_alias_lookup(name, &alias) != 0) {
         return sound_submit_with_global_cooldown(alias, NULL);
@@ -1244,7 +1244,7 @@ int sound_stream_play_tutorial(int level)
 {
     /* StreamPlayTutorial @ 0x4161a0. */
     char name[128];
-    snprintf(name, sizeof(name), "Stream_LevelName_TLevel_%d", level);
+    snprintf(name, sizeof(name), "Stream_LevelName_TLevel%d", level);
     int alias = 0;
     if (sound_alias_lookup(name, &alias) != 0) {
         return sound_submit_with_global_cooldown(alias, NULL);

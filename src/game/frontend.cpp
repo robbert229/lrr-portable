@@ -4858,22 +4858,41 @@ void help_window_feedback_hooks_set(void (*reset)(int, int),
     s_help_window_feedback_finish = finish;
 }
 
+/* Install API for the transition-clear hook. Deviation: the corpus's
+ * RenderTransitionCleanupIfActive calls its two cleanup callees directly, so
+ * this static has no reader left — the setter stays as dead install API. */
 void help_render_transition_clear_hook_set(void (*hook)(int, int))
 {
     s_help_render_transition_clear = hook;
 }
 
+/* TransitionControl (FUN_00425c30): the corpus's opaque transition leaf. Like
+ * flic.cpp's 0x00484c90 fallback, the port carries a file-local no-op so the
+ * call site lands the corpus's two pushes; the ledger_stubs entry stays the
+ * link-time no-op for the unported callers. */
+// STUB: LEGORR 0x00425c30
+static void help_transition_control_noop(int a, int b)
+{
+    (void)a;
+    (void)b;
+    /* FUN_00425c30: pure return — faithful. */
+}
+
+/* RenderTransitionCleanupIfActive (FUN_004189d0): the corpus gates two byte
+ * tests of the selection-state DAT, calls TransitionControl(0, 0) and
+ * ObjectiveScoreTextOriginSet unconditionally (no hook indirection), then
+ * re-reads the DAT and clears bit 0. ObjectiveScoreTextOriginSet arrives with
+ * a null pair and a null context, so it writes nothing and drops no debug bit
+ * (the corpus's own push of a single 0 reads the same way). */
 // FUNCTION: LEGORR 0x004189d0
 void help_render_transition_cleanup_if_active(void)
 {
-    if ((s_sel_state & 2u) != 0 && (s_sel_state & 1u) != 0) {
-        if (s_help_render_transition_clear != NULL) {
-            s_help_render_transition_clear(0, 0);
+    if (((unsigned char)s_sel_state & 0x2u) != 0u) {
+        if (((unsigned char)s_sel_state & 0x1u) != 0u) {
+            help_transition_control_noop(0, 0);
+            objective_score_text_origin_set(NULL, NULL);
+            s_sel_state &= ~1u;
         }
-        if (s_help_window_feedback_finish != NULL) {
-            s_help_window_feedback_finish(0);
-        }
-        s_sel_state &= ~1u;
     }
 }
 

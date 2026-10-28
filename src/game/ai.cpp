@@ -129,6 +129,7 @@ static int s_idle100_n;
 int ai_idle_count(void) { return s_idle100_n; }
 
 static const LevelState* grid_of(const GameContext* ctx);
+static void activity_register_bookkeeping(EntitySlot* e);
 
 /* Port-side view of the terrain speed table. The source binary's indexed
  * component getter (FUN_00469cc0) is mirrored by
@@ -1199,7 +1200,16 @@ void entity_dispatch_event5_and_set_flag(EntitySlot* e)
         return; /* deviation: the corpus strides blindly */
     }
     ai_set_activity(e, 5, 0); /* corpus activity index 5 */
+    activity_register_bookkeeping(e); /* corpus site-level re-registration */
     e->flags_3e0 |= 0x200000u;
+}
+
+/* ActivityRegister — the corpus's site-level re-registration is folded into
+ * ai_set_activity (see finding 10); the call remains for code shape. */
+// STUB: LEGORR 0x00447c40
+static void activity_register_bookkeeping(EntitySlot* /*e*/)
+{
+    /* FUN_00447c40: no-op here — the fold at ai_set_activity covers it. */
 }
 
 /* EntitySetActivityPlace (FUN_00448c50) — see ai.hpp. */
@@ -1210,6 +1220,7 @@ int entity_set_activity_place(EntitySlot* e)
         return 1; /* deviation: the corpus strides blindly, answers 1 */
     }
     ai_set_activity(e, 30, 0); /* corpus activity index 30 */
+    activity_register_bookkeeping(e); /* corpus site-level re-registration */
     e->flags_3e4 |= 0x200u;
     return 1;
 }

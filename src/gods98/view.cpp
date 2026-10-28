@@ -997,7 +997,9 @@ void camera_zoom_step_adjust(void* camera, int direction, float step)
 {
     if (direction == 0) {
         camera_zoom_update(camera, step * -3.0f);
-    } else if (direction == 1) {
+        return; /* layout: the corpus's arm0 ends at its own ret (0x45bf44) */
+    }
+    if (direction == 1) {
         camera_zoom_update(camera, step * 3.0f);
     }
     /* other directions: the corpus's early exit — inert */
@@ -1141,16 +1143,16 @@ void surface_triangle_normal_calculate(float* out, const float* p2,
 void scene_mesh_color_and_alpha_set(void* object, int block, float red,
                                     float green, float blue, float alpha)
 {
-    void* mesh = NULL;
-    void* record = NULL;
-    if (object != NULL) {
-        __builtin_memcpy(&mesh, (const char*)object + 0xc, sizeof mesh);
+    if (object == NULL) {
+        return; /* pinned deviation: the corpus strides the object blindly */
     }
-    if (mesh != NULL) {
-        __builtin_memcpy(&record, (const char*)mesh + 0xc, sizeof record);
+    void* mesh = *(void**)((char*)object + 0xc);
+    if (mesh == NULL) {
+        return; /* deviation: the corpus strides the mesh link blindly */
     }
+    void* record = *(void**)((char*)mesh + 0xc);
     if (record == NULL) {
-        return; /* deviation: the corpus strides both links blindly */
+        return; /* corpus: the single record gate */
     }
     render_object_color_vector_set(record, block, red, green, blue, 0);
     screen_effect_item_opacity_set(record, block, alpha, 4);

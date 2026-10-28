@@ -100,21 +100,24 @@ EntitySlot* selection_first(const GameContext* ctx)
 
 /* SelectedEntitiesAnyMatch (FUN_0041f420): the corpus fetches count and
  * array through 0x4525f0/0x4525e0, then returns on the first callback hit.
- * The port threads the owning GameContext instead of relying on a global
- * selection. */
+ * The port routes through selection_count/selection_record_array, whose own
+ * NULL guards cover ctx, and hands each entry to the predicate blind — the
+ * predicates NULL-check it themselves. */
 // FUNCTION: LEGORR 0x0041f420
 int selected_entities_any_match(const GameContext* ctx,
                                 int (*predicate)(EntitySlot*, uint32_t),
                                 uint32_t argument)
 {
-    if (ctx == NULL || predicate == NULL) {
-        return 0;
-    }
-    for (int i = 0; i < ctx->selection_count; ++i) {
-        EntitySlot* const entity = ctx->selection[i];
-        if (entity != NULL && predicate(entity, argument)) {
+    int count = selection_count(ctx);
+    EntitySlot* const* entries = selection_record_array(ctx);
+    unsigned i = 0;
+    EntitySlot* const* p = entries;
+    while (i < (unsigned)count) {
+        if (predicate(*p, argument) != 0) {
             return 1;
         }
+        ++i;
+        ++p;
     }
     return 0;
 }

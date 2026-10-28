@@ -957,33 +957,31 @@ int flic_decode8_bit_alternate_delta(void* record)
 
 /* FlicOpcode25DecodeDispatch (FUN_00484b20) — see flic.hpp. The dispatch
  * words ride the record window: bit depth +0x64c, mode op +0x6d4, marker
- * word +0x644. Deviation: the corpus's keyframe call passes no argument
- * (the record pointer rides the register) — the port threads the record
- * through, as the window band's precedent requires. */
+ * word +0x644. The corpus loads the depth once into ax and gates both the
+ * 8 and the 16 routes from it, reloads the op dword raw for the mode-4
+ * gate, and compares the op and the marker straight against memory (cmp
+ * DWORD PTR,4 / cmp WORD PTR,0xaf43) — plain typed loads, no staging.
+ * Deviation: the corpus's keyframe call passes no argument (the record
+ * pointer rides the register) — the port threads the record through, as
+ * the window band's precedent requires. */
 // FUNCTION: LEGORR 0x00484b20
 int flic_opcode25_decode_dispatch(void* record)
 {
     if (record == NULL) {
-        return 1; /* deviation: the corpus strides the record blindly */
+        return 1; /* pinned deviation: the corpus strides the record blindly */
     }
     char* rec = (char*)record;
-    int16_t depth = 0;
-    int op = 0;
-    int16_t marker = 0;
-    __builtin_memcpy(&depth, rec + 0x64c, sizeof depth);
-    __builtin_memcpy(&op, rec + 0x6d4, sizeof op);
-    if (depth == 8) {
-        if (op == 0) {
+    const uint16_t depth = *(const uint16_t*)(rec + 0x64c); /* ax, once */
+    if (depth == 8u) {
+        if (*(const uint32_t*)(rec + 0x6d4) == 0u) {
             flic_opcode25_success_stub();
         }
-        __builtin_memcpy(&op, rec + 0x6d4, sizeof op); /* corpus reloads it raw */
-        if (op == 4) {
+        if (*(const uint32_t*)(rec + 0x6d4) == 4u) { /* corpus: cmp mem,4 */
             flic_decode8_bit_opcode25_mode4(rec);
             return 1;
         }
-    } else if (depth == 0x10) {
-        __builtin_memcpy(&marker, rec + 0x644, sizeof marker);
-        if (marker == (int16_t)0xaf43 /* -0x50bd = 0xaf43 */) {
+    } else if (depth == 0x10u) {
+        if (*(const uint16_t*)(rec + 0x644) == 0xaf43u) { /* cmp mem,0xaf43 */
             flic_decode16_bit_keyframe(rec);
             return 1;
         }

@@ -1042,14 +1042,14 @@ int sav_tree_walk(void* node, sav_tree_visit visit, void* user)
     if (visit != NULL && visit(node, user) != 0) {
         return 1; /* deviation: the corpus strides the callback blindly */
     }
-    if (n->children != NULL) {
-        void** kids = (void**)n->children; /* widened slots */
-        for (uint32_t i = 0; i < n->count; ++i) {
-            if (sav_tree_walk(kids[i], visit, user) != 0) {
-                return 1;
-            }
-        }
+    if (n->children == NULL) {
         return 0;
+    }
+    /* the corpus re-reads the children slot every pass (widened slots) */
+    for (uint32_t i = 0; i < n->count; ++i) {
+        if (sav_tree_walk(((void**)n->children)[i], visit, user) != 0) {
+            return 1;
+        }
     }
     return 0;
 }

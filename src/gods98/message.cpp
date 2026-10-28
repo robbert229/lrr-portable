@@ -38,7 +38,10 @@ static float         s_now = 0.0f;          /* _DAT_0049e264 analog */
 static MessageCallback  s_callback = NULL;
 static MessageSoundHook s_sound = NULL;
 
-/* The InfoMessages catalog — finding 22's 40 names, in table order. */
+/* The InfoMessages catalog — finding 22's 40 names, in table order.
+ * (Corpus fills its stride-4 table at DAT_004dc658 at runtime through
+ * CatalogInit, so the object stays unannotated: image bytes are zero
+ * there, ours are the name pointers.) */
 static const char* const s_catalog[MESSAGE_MAX_ID] = {
     "CrystalFound", "OreSeamFound", "RockMonster", "LavaRockMonster",
     "IceRockMonster", "UnderAttack", "Landslide", "CaveIn", "Constructed",
@@ -230,16 +233,21 @@ static int message_pre_check(int id)
 /* IncidentMessageConfigLookup (FUN_004193e0) — see message.hpp. The corpus
  * calls the shared case-insensitive compare strcasecmp_lite (0x48ff10) on
  * each table entry blindly, with no null check before the call; the walk
- * keeps the port's record-array stride as a documented layout deviation. */
+ * strides the port's stride-4 name table (s_catalog, DAT_004dc658) exactly
+ * as the corpus strides its name array. */
 // FUNCTION: LEGORR 0x004193e0
 int incident_message_config_lookup(const char* name, int* out_id)
 {
     if (name == NULL || out_id == NULL) {
-        return 0; /* deviation: the corpus strides both blindly */
+        return 0; /* pinned deviation: the corpus strides both blindly */
     }
-    for (int i = 0; i != MESSAGE_MAX_ID; ++i) {
-        const char* n = s_cfg[i].name;
-        if (strcasecmp_lite(n, name) == 0) {
+    /* stride-4 name-table walk, as the corpus: unsigned end compare (the
+     * loop-back is jb) with the index counter beside the pointer (edi) */
+    const char* const* entry = s_catalog;
+    const char* const* end = s_catalog + MESSAGE_MAX_ID;
+    int i = 0;
+    for (; entry < end; ++entry, ++i) {
+        if (strcasecmp_lite(*entry, name) == 0) {
             *out_id = i;
             return 1;
         }

@@ -453,7 +453,7 @@ static int ci_strcmp(const char* a, const char* b);
  * first argument's word — a corpus quirk, pinned in the tests). */
 // FUNCTION: LEGORR 0x0042e8b0
 static int entity_type_pair_for_name(const char* name, int* type_out,
-                                     int* row_out)
+                                     int* row_out, int* zero_out)
 {
     if (name == NULL || name[0] == '\0') {
         return 0; /* unregistered — the corpus aborts, the port skips */
@@ -461,6 +461,11 @@ static int entity_type_pair_for_name(const char* name, int* type_out,
     if (ci_strcmp(name, "tvcamera") == 0) {
         if (type_out != NULL) {
             *type_out = -1; /* follow-camera branch in FUN_0042e020 */
+        }
+        /* corpus: the special-name answer also zeroes the fourth word
+         * (test a3 / store) — every port caller threads NULL. */
+        if (zero_out != NULL) {
+            *zero_out = 0;
         }
         return 1;
     }
@@ -534,7 +539,7 @@ static int entity_type_pair_for_name(const char* name, int* type_out,
 static int entity_type_for_name(const char* name)
 {
     int type = 0;
-    if (!entity_type_pair_for_name(name, &type, NULL)) {
+    if (!entity_type_pair_for_name(name, &type, NULL, NULL)) {
         return 0;
     }
     return type;
@@ -546,7 +551,7 @@ static int entity_type_for_name(const char* name)
  * the row slot for the caller to carry. */
 int entity_type_row_for_name(const char* name, int* type_out, int* row_out)
 {
-    return entity_type_pair_for_name(name, type_out, row_out);
+    return entity_type_pair_for_name(name, type_out, row_out, NULL);
 }
 
 static void ol_strncpy(char* dst, size_t n, const char* src)
@@ -1152,9 +1157,12 @@ int resolved_entity_operation_dispatch(const char* name, int slot,
     int column = 0;
     /* Corpus shape: the resolver zeroes its row slot at entry and only
      * table-row matches (and the ore pair) write it, so special names
-     * ride the column slot with zero. */
-    int type = 0;
-    if (!entity_type_pair_for_name(name, &type, &column)) {
+     * ride the column slot with zero. The corpus's resolver call rides a
+     * fourth word (the dispatch aliases it onto its first argument's
+     * slot — port-threaded NULL; the arg1/arg2 aliasing of the count
+     * callee is a known residual). */
+    int type;
+    if (!entity_type_pair_for_name(name, &type, &column, NULL)) {
         return 0;
     }
     return grid_record_count_difference_get(type, column, slot, subtract);

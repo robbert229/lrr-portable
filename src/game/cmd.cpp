@@ -1675,7 +1675,9 @@ int cmd_rec_target_get(const void* rec)
 
 /* --- task-type-23 category-mask issuer (see cmd.hpp) -------------------------
  * The corpus's entity argument rides every read blindly; the port guards the
- * entity slot because the selector gate reads its stats record. */
+ * entity slot because the selector gate reads its stats record. The allocator's
+ * result is stored blindly, +0x10 payload before +0x3c extra, the selector
+ * riding the interleaved stores straight from the argument. */
 // FUNCTION: LEGORR 0x00402890
 void task_type23_create_for_category_mask(EntitySlot* e, int selector,
                                           int issue_records)
@@ -1687,9 +1689,8 @@ void task_type23_create_for_category_mask(EntitySlot* e, int selector,
         return;
     }
     CmdRec* rec = (CmdRec*)cmd_alloc(0x17);
-    if (rec == NULL) {
-        return;
-    }
+    /* Corpus: no null check on the allocation — the +0x10/+0x3c stores ride
+     * the cmp blind, interleaved between range test and jump table. */
     rec->payload = e;
     rec->extra = (int32_t)selector;
     int kind;
@@ -1740,8 +1741,11 @@ int entity_action_kind_supported(EntitySlot* e, int kind, int arg)
 // FUNCTION: LEGORR 0x00439240
 int task_entity_flags_and_cell_task_match(const EntitySlot* e, int kind)
 {
-    if ((entity_stats_word_get(e) & 8u) != 0u) {
-        return entity_action_kind_supported((EntitySlot*)e, kind, 0);
+    /* Corpus: test al,0x8 — the byte test of the stats word return. */
+    if (((unsigned char)entity_stats_word_get(e) & 0x8u) != 0u) {
+        if (entity_action_kind_supported((EntitySlot*)e, kind, 0) != 0) {
+            return 1; /* corpus: mov eax,0x1 ahead of the shared return-0 tail */
+        }
     }
     return 0;
 }
@@ -1794,9 +1798,7 @@ void coordinate_pair_event_queue(const int pair[2], void* payload)
 int object_event_type2_queue(void* payload)
 {
     CmdRec* rec = (CmdRec*)cmd_alloc(0x13);
-    if (rec == NULL) {
-        return 0; /* deviation: the corpus reads the allocator blindly */
-    }
+    /* Corpus: no null check on the allocation — the slots are stored blind. */
     rec->arg38 = payload;
     rec->ref = NULL; /* the corpus stores zero into the reference slot */
     entity_record_array_apply_zero_state(rec, 1);
@@ -1832,10 +1834,10 @@ void scalar_task_record_queue(void* scalar)
 void task_pair_record_enqueue(const int pair[2])
 {
     CmdRec* rec = (CmdRec*)cmd_alloc(0x19);
-    if (rec == NULL) {
-        return;
-    }
-    cmd_pair_stage(rec, pair);
+    /* Corpus: no null check on the allocation — the pair rides the
+     * coordinate slots blind, read straight from the caller's words. */
+    *(int*)&rec->x = pair[0]; /* +0x08 raw dword, corpus inline store */
+    *(int*)&rec->y = pair[1]; /* +0x0c raw dword */
     cmd_set_kind(rec, 0x18);
     cmd_link_tail(rec);
 }

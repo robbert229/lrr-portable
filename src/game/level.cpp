@@ -1670,21 +1670,33 @@ int level_cell_flag8_check(const LevelState* s, int cx, int cy)
 }
 
 /* --- map-file resource slots ---------------------------------------------
- * The corpus table interleaves (ptr, flag) pairs across 2000 entries; the
- * port keeps parallel arrays. See level.hpp for the deviation notes (the
- * corpus's MapOpen2 opener rides the unported wad seam; the allocator's
- * engine-heap wrapper is a TODO(corpus) seam mapped to calloc). */
+ * The corpus table interleaves (ptr, flag) pairs across 2000 entries as one
+ * 8-byte stride record array; the port mirrors that layout. See level.hpp
+ * for the deviation notes (the corpus's MapOpen2 opener rides the unported
+ * wad seam; the allocator's engine-heap wrapper is a TODO(corpus) seam
+ * mapped to calloc). */
 
-static uint8_t* s_map_slot_ptr[LEVEL_MAP_SLOT_COUNT];
-static uint32_t s_map_slot_used[LEVEL_MAP_SLOT_COUNT];
+/* One record array, stride 8: pointer at +0, used flag byte at +4
+ * (corpus tests bit 0 of the byte — MapFileResourceSlot* @ 0x4893f0..). */
+typedef struct MapFileResourceSlot {
+    uint8_t* ptr;   /* +0x00 */
+    uint8_t  used;  /* +0x04, bit 0 */
+    uint8_t  pad[3];
+} MapFileResourceSlot;
+
+/* ptr 4 + used 1 + pad 3 = 8: a wrong stride fails this typedef. */
+typedef char map_file_resource_slot_stride_check[sizeof(MapFileResourceSlot) == 8u ? 1 : -1];
+
+// GLOBAL: LEGORR 0x00544a20
+static MapFileResourceSlot s_map_slots[LEVEL_MAP_SLOT_COUNT];
 
 /* FUN_004893f0: clear every pair (no frees — the corpus leak loop). */
 // FUNCTION: LEGORR 0x004893f0
 void level_map_slots_reset(void)
 {
     for (int i = 0; i < LEVEL_MAP_SLOT_COUNT; ++i) {
-        s_map_slot_ptr[i] = NULL;
-        s_map_slot_used[i] = 0;
+        s_map_slots[i].ptr = NULL;
+        s_map_slots[i].used = 0;
     }
 }
 
@@ -1693,13 +1705,13 @@ void level_map_slots_reset(void)
 int level_map_slot_allocate(size_t size)
 {
     for (int i = 0; i < LEVEL_MAP_SLOT_COUNT; ++i) {
-        if (s_map_slot_used[i] == 0) {
+        if ((s_map_slots[i].used & 1u) == 0u) {
             void* img = calloc(1, size != 0 ? size : 1u);
             if (img == NULL) {
                 return -1; /* corpus: heap seam would have asserted */
             }
-            s_map_slot_ptr[i] = (uint8_t*)img;
-            s_map_slot_used[i] = 1;
+            s_map_slots[i].ptr = (uint8_t*)img;
+            s_map_slots[i].used = 1;
             return i;
         }
     }
@@ -1710,10 +1722,10 @@ int level_map_slot_allocate(size_t size)
 // FUNCTION: LEGORR 0x00489460
 void level_map_slot_release(uint32_t slot)
 {
-    if (slot < LEVEL_MAP_SLOT_COUNT && s_map_slot_used[slot] != 0) {
-        free(s_map_slot_ptr[slot]);
-        s_map_slot_ptr[slot] = NULL;
-        s_map_slot_used[slot] = 0;
+    if (slot < LEVEL_MAP_SLOT_COUNT && (s_map_slots[slot].used & 1u) != 0u) {
+        free(s_map_slots[slot].ptr);
+        s_map_slots[slot].ptr = NULL;
+        s_map_slots[slot].used = 0;
     }
 }
 
@@ -1721,8 +1733,8 @@ void level_map_slot_release(uint32_t slot)
 // FUNCTION: LEGORR 0x004894a0
 uint8_t* level_map_slot_get(uint32_t slot)
 {
-    if (slot < LEVEL_MAP_SLOT_COUNT && s_map_slot_used[slot] != 0) {
-        return s_map_slot_ptr[slot];
+    if (slot < LEVEL_MAP_SLOT_COUNT && (s_map_slots[slot].used & 1u) != 0u) {
+        return s_map_slots[slot].ptr;
     }
     return NULL;
 }

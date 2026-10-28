@@ -1583,12 +1583,10 @@ void linked_object_list_release(void* list)
     if (list == NULL) {
         return; /* deviation: the corpus strides the head blindly */
     }
-    void* owner = NULL;
-    __builtin_memcpy(&owner, (char*)list, sizeof owner);
+    void* owner = *(void* const*)list;
     engine_heap_free(owner);
     for (void* node = list; node != NULL;) {
-        void* next = NULL;
-        __builtin_memcpy(&next, (char*)node + 0x14, sizeof next);
+        void* next = *(void* const*)((char*)node + 0x14);
         global_record_list_push_head(node);
         node = next;
     }

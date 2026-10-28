@@ -226,7 +226,8 @@ void** dword_list_allocate_and_zero(uint32_t count)
  * dword words then leftover bytes over the buffer, then the record's own
  * 0x100-dword window and the three flag words; the port folds the sweep
  * into byte-granular zeroing (identical observable bytes) and guards the
- * record (deviation: the corpus strides both blindly). */
+ * record and the null buffer slot (deviation: the corpus strides both
+ * blindly). The memset calls render the corpus's rep stos pairs. */
 // FUNCTION: LEGORR 0x004859b0
 void text_buffer_reset(void* record)
 {
@@ -234,13 +235,12 @@ void text_buffer_reset(void* record)
         return; /* deviation: the corpus strides the record blindly */
     }
 
-    uint32_t count = 0;
-    void* buffer = NULL;
-    __builtin_memcpy(&count, (char*)record + 0x418, sizeof(count));
-    __builtin_memcpy(&buffer, (char*)record + 0x14, sizeof(buffer));
+    uint32_t count = *(uint32_t const*)((char*)record + 0x418);
+    char* buffer = *(char* const*)((char*)record + 0x14);
     if (buffer != NULL) {
-        /* The corpus sweeps count>>2 dwords then count&3 bytes; the
-         * observable effect is count zero bytes. */
+        /* Pinned deviation (test_heap resets with a null slot): the corpus
+         * sweeps count>>2 dwords then count&3 bytes blind through the slot;
+         * the observable effect is count zero bytes. */
         memset(buffer, 0, count);
     }
     /* Deviation: the corpus's buffer slot is a dword ending before the
@@ -248,15 +248,13 @@ void text_buffer_reset(void* record)
      * slot straddles the window start, so the slot is restored from the
      * pre-reset buffer value (a null slot stays zeroed either way). */
     memset((char*)record + 0x18, 0, 0x100 * 4);
-    __builtin_memcpy((char*)record + 0x14, &buffer, sizeof(buffer));
+    *(void**)((char*)record + 0x14) = buffer;
 
-    const uint32_t zero = 0u;
-    __builtin_memcpy((char*)record + 0x820, &zero, sizeof(zero));
-    __builtin_memcpy((char*)record + 0x41c, &zero, sizeof(zero));
-    uint32_t word = 0;
-    __builtin_memcpy(&word, (char*)record + 0x82c, sizeof(word));
+    *(uint32_t*)((char*)record + 0x820) = 0u;
+    *(uint32_t*)((char*)record + 0x41c) = 0u;
+    uint32_t word = *(uint32_t*)((char*)record + 0x82c);
     word &= ~1u;
-    __builtin_memcpy((char*)record + 0x82c, &word, sizeof(word));
+    *(uint32_t*)((char*)record + 0x82c) = word;
 }
 
 /* UITextOutputObjectRelease (FUN_0045a620) — see heap.hpp. */
@@ -264,7 +262,7 @@ void text_buffer_reset(void* record)
 void ui_text_output_object_release(void* const* holder)
 {
     if (holder == NULL) {
-        return; /* deviation: the corpus dereferences blindly */
+        return; /* pinned deviation: the corpus dereferences blindly */
     }
     text_buffer_reset(*holder);
 }
@@ -275,7 +273,7 @@ void* text_buffer_create(uint32_t mode, const uint32_t* header, long size)
 {
     char* record = (char*)engine_heap_alloc(0x830);
     if (record == NULL) {
-        return NULL; /* deviation: the corpus strides the allocation */
+        return NULL; /* corpus: je — the allocation guard exists in the original */
     }
     memset(record, 0, 0x830); /* the corpus's 0x20c-dword sweep */
     __builtin_memcpy(record + 0x00, &mode, sizeof mode);
@@ -287,7 +285,8 @@ void* text_buffer_create(uint32_t mode, const uint32_t* header, long size)
     /* Deviation: the header pointer is guarded (the corpus strides it).
      * The lea-based destination base and early header load of the corpus
      * are unreachable with the guard (the mode store precedes the check);
-     * the unroll/polarity variants scored lower — tested. */
+     * the unroll/polarity variants scored lower — tested (b34: plain
+     * typed stores also scored lower, reverted). */
     void* buffer = engine_heap_alloc(size);
     __builtin_memcpy(record + 0x14, &buffer, sizeof buffer);
     const uint32_t len = (uint32_t)size;

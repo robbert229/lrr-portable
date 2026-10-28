@@ -513,10 +513,17 @@ void block_text_token_pool_grow(void)
 // FUNCTION: LEGORR 0x00478e20
 void block_text_token_pool_destroy(void)
 {
-    for (int i = 0; i < BLOCK_TOKEN_POOL_SLOTS; ++i) {
-        if (s_token_pool_slots[i] != NULL) {
-            engine_heap_free(s_token_pool_slots[i]);
-            s_token_pool_slots[i] = NULL; /* deviation: corpus dangles */
+    /* Corpus walk: the 32-slot window is walked pointer-wise from
+     * DAT_00506498 up to the head cursor word at DAT_00506518
+     * (add esi, 0x4 / cmp esi, 0x506518 / jb), freeing each non-null chunk
+     * and leaving the slot dangling. Plain pointer operands keep that
+     * loop-back unsigned (jb, not jl). */
+    void** slot = s_token_pool_slots;
+    void** end = s_token_pool_slots + BLOCK_TOKEN_POOL_SLOTS;
+    for (; slot < end; ++slot) {
+        if (*slot != NULL) {
+            engine_heap_free(*slot);
+            *slot = NULL; /* deviation: corpus dangles */
         }
     }
     s_token_pool_head = NULL;
