@@ -187,13 +187,20 @@ void media_cd_watchdog_tick(int arg)
 // FUNCTION: LEGORR 0x00429810
 void media_audio_playback_toggle(int enable)
 {
+    /* One flags read before the test, stored before each arm's call
+     * (the corpus duplicates the call site); the callee takes the raw
+     * enable, not a literal. */
+    uint32_t flags = s_cd_flags;
     if (enable != 0) {
-        s_cd_flags |= MEDIA_FLAG_SOUND_ON;
-        sound_subsystem_enable_set_and_stop(1);
-        return;
+        flags |= MEDIA_FLAG_SOUND_ON;
+        s_cd_flags = flags;
+        sound_subsystem_enable_set_and_stop(enable);
     }
-    s_cd_flags &= ~MEDIA_FLAG_SOUND_ON;
-    sound_subsystem_enable_set_and_stop(0);
+    else {
+        flags &= ~MEDIA_FLAG_SOUND_ON;
+        s_cd_flags = flags;
+        sound_subsystem_enable_set_and_stop(enable);
+    }
 }
 
 /* ------------------------------------------------------------------ *

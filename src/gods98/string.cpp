@@ -4,23 +4,20 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "heap.hpp"
 #include "string.hpp"
 
-/* FUN_00477550: allocate strlen+1 through the heap seam and copy. The
- * corpus allocates via its engine-heap wrapper (TODO(corpus)); the port
- * mallocs (deviation in string.hpp). */
 // FUNCTION: LEGORR 0x00477550
 char* string_duplicate(const char* text)
 {
     if (text == NULL) {
-        return NULL;
+        return NULL; /* pinned deviation: the corpus scas's blindly */
     }
-    const size_t n = strlen(text) + 1u;
-    char* copy = (char*)malloc(n);
-    if (copy == NULL) {
-        return NULL; /* corpus: the heap seam would have asserted */
-    }
-    memcpy(copy, text, n);
+    /* Corpus: engine_heap_alloc(len+1) then the strcpy intrinsic (second
+     * scas + dword/byte rep movs). engine_heap_alloc failure rides blind
+     * exactly like the corpus (no guard). */
+    char* copy = (char*)engine_heap_alloc((long)(strlen(text) + 1u));
+    strcpy(copy, text);
     return copy;
 }
 

@@ -690,10 +690,10 @@ int object_list_load_file(GameContext* ctx, const char* olist)
 /* EntityFlagsMask107C33DEOr1C00203AnyTest (FUN_0043baf0, finding 319):
  * either flag word intersects its literal mask. */
 // FUNCTION: LEGORR 0x0043baf0
-bool entity_flags_mask107c33de_or_1c00203_any_test(const EntitySlot* e)
+int entity_flags_mask107c33de_or_1c00203_any_test(const EntitySlot* e)
 {
     if ((e->flags_3e0 & 0x107c33deu) != 0u) {
-        return true;
+        return 1;
     }
     return (e->flags_3e4 & 0x01c00203u) != 0u;
 }
@@ -704,6 +704,14 @@ bool entity_flags_mask107c33de_or_1c00203_any_test(const EntitySlot* e)
  * +0x3e0 bit 0x20000 clear; a nonzero `relaxed` skips the +0x3e8 clause,
  * otherwise bit 0x20000000 must be set and bit 0x80000000 clear.
  * (+1000 decimal is +0x3e8 — the flags_3e8 mirror.) */
+
+/* The corpus's eligibility gate compares the +0x340 bound against this
+ * .rdata zero dword (objdump-verified fcomp operand of
+ * EntitySharedEligibilityCheck); a named const static keeps the fcomp
+ * operand resolvable by Reccmp. */
+// GLOBAL: LEGORR 0x0049e3a4
+static const float s_eligibility_floor = 0.0f;   /* DAT_0049e3a4, verified */
+
 // FUNCTION: LEGORR 0x004385b0
 int entity_shared_eligibility_check(const EntitySlot* e, int relaxed)
 {
@@ -713,7 +721,7 @@ int entity_shared_eligibility_check(const EntitySlot* e, int relaxed)
     if ((e->flags_3e4 & 0x00100000u) != 0u) {
         return 0;
     }
-    if (!(0.0f <= e->field_340)) {
+    if (!(e->field_340 >= s_eligibility_floor)) {
         return 0;
     }
     if ((e->flags_3e0 & 0x00020000u) != 0u) {

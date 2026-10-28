@@ -183,7 +183,7 @@ float entity_stats_float_at10c(const EntitySlot* e);  /* FUN_0046a310 */
 
 /* FUN_0043baf0 — true when either flag word intersects its literal mask:
  * +0x3e0 & 0x107c33de or +0x3e4 & 0x01c00203. */
-bool entity_flags_mask107c33de_or_1c00203_any_test(const EntitySlot* e);
+int entity_flags_mask107c33de_or_1c00203_any_test(const EntitySlot* e);
 
 /* FUN_004385b0 — the shared eligibility gate the command and activity
  * layers consult: no +0x3e0 bits 0x700100 or bit 0x20000, no +0x3e4 bit

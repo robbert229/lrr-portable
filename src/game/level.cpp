@@ -1673,11 +1673,12 @@ int level_cell_flag8_check(const LevelState* s, int cx, int cy)
  * The corpus table interleaves (ptr, flag) pairs across 2000 entries as one
  * 8-byte stride record array; the port mirrors that layout. See level.hpp
  * for the deviation notes (the corpus's MapOpen2 opener rides the unported
- * wad seam; the allocator's engine-heap wrapper is a TODO(corpus) seam
- * mapped to calloc). */
+ * wad seam; the claim and release ride the corpus's engine-heap allocator
+ * pair, 0x48dbd0 / 0x48db80). */
 
 /* One record array, stride 8: pointer at +0, used flag byte at +4
- * (corpus tests bit 0 of the byte — MapFileResourceSlot* @ 0x4893f0..). */
+ * (corpus tests bit 0 of the byte, but claims with a dword load/or/store
+ * and clears both fields as dwords — MapFileResourceSlot* @ 0x4893f0..). */
 typedef struct MapFileResourceSlot {
     uint8_t* ptr;   /* +0x00 */
     uint8_t  used;  /* +0x04, bit 0 */
@@ -1690,42 +1691,56 @@ typedef char map_file_resource_slot_stride_check[sizeof(MapFileResourceSlot) == 
 // GLOBAL: LEGORR 0x00544a20
 static MapFileResourceSlot s_map_slots[LEVEL_MAP_SLOT_COUNT];
 
-/* FUN_004893f0: clear every pair (no frees — the corpus leak loop). */
+/* FUN_004893f0: clear every pair (no frees — the corpus leak loop). The
+ * corpus walks the used words from 0x544a24 up to 0x5488a4 (add 8 / cmp /
+ * jb) and dword-zeroes both fields, so the clears are raw dword stores. */
 // FUNCTION: LEGORR 0x004893f0
 void level_map_slots_reset(void)
 {
-    for (int i = 0; i < LEVEL_MAP_SLOT_COUNT; ++i) {
-        s_map_slots[i].ptr = NULL;
-        s_map_slots[i].used = 0;
+    /* Plain pointer operands keep the walk's loop-back unsigned (jb). */
+    MapFileResourceSlot* s = s_map_slots;
+    MapFileResourceSlot* const end = s_map_slots + LEVEL_MAP_SLOT_COUNT;
+    for (; s < end; ++s) {
+        *(uint32_t*)&s->ptr = 0;
+        *(uint32_t*)&s->used = 0;
     }
 }
 
-/* FUN_00489410: first free slot, zero-filled image, -1 when full. */
+/* FUN_00489410: first free slot, engine-heap image, -1 when full. The
+ * corpus allocates through the engine-heap wrapper with no zero-fill and
+ * no failure check (an allocator NULL rides straight into the slot and
+ * faults on use), keeps the scan index in a second register, and raises
+ * bit 0 with a dword load/or/store. The port keeps the indexed scan —
+ * the walk form tested lower (register-role roulette, b24 class). */
 // FUNCTION: LEGORR 0x00489410
 int level_map_slot_allocate(size_t size)
 {
+    /* Indexed, like the corpus's hit path (mov [esi*8+0x544a20]): the
+     * scale-index operand rides the loop counter. */
     for (int i = 0; i < LEVEL_MAP_SLOT_COUNT; ++i) {
         if ((s_map_slots[i].used & 1u) == 0u) {
-            void* img = calloc(1, size != 0 ? size : 1u);
-            if (img == NULL) {
-                return -1; /* corpus: heap seam would have asserted */
-            }
+            /* Blind like the corpus: no zero-fill, no NULL check (the
+             * retry carrier's zero-size quirk covers size 0). */
+            void* img = engine_heap_alloc((long)size);
             s_map_slots[i].ptr = (uint8_t*)img;
-            s_map_slots[i].used = 1;
+            *(uint32_t*)&s_map_slots[i].used |= 1u;
             return i;
         }
     }
-    return -1;
+    return -1; /* the corpus's or eax, 0xffffffff */
 }
 
-/* FUN_00489460: free + clear an in-use slot; bad/free ids are no-ops. */
+/* FUN_00489460: free + clear an in-use slot; bad/free ids are no-ops.
+ * The corpus frees through the engine-heap free (0x48db80) and clears
+ * both fields as dwords. */
 // FUNCTION: LEGORR 0x00489460
 void level_map_slot_release(uint32_t slot)
 {
     if (slot < LEVEL_MAP_SLOT_COUNT && (s_map_slots[slot].used & 1u) != 0u) {
-        free(s_map_slots[slot].ptr);
-        s_map_slots[slot].ptr = NULL;
-        s_map_slots[slot].used = 0;
+        MapFileResourceSlot* s = &s_map_slots[slot];
+        engine_heap_free(s->ptr);
+        *(uint32_t*)&s->ptr = 0;
+        *(uint32_t*)&s->used = 0;
     }
 }
 
@@ -3262,13 +3277,15 @@ int terrain_cell_has_occupied_or_flagged_neighbor(
  * +0x0c/+0x10, and links the previous most-recent record (corpus dword
  * slot 9). Deviations: the window is widened past the corpus stride so
  * the link holds a port pointer (port-layout convention), the corpus's
- * belt-and-braces zero stores land inside the zero-fill, and the
- * allocator's failure word is guarded. */
+ * belt-and-braces zero stores are spelled explicitly after the fill, and
+ * the allocator's failure word is guarded. */
 
 #define PATH_RECORD_WINDOW 0xd4 /* the corpus's 53-dword window           */
 #define PATH_RECORD_WORDS (PATH_RECORD_WINDOW / 4u)
 
-static uint32_t s_path_record_count; /* DAT_004b8a20 role */
+/* DAT_004b8a20 role */
+// GLOBAL: LEGORR 0x004b8a20
+static uint32_t s_path_record_count;
 static void* s_path_record_last;     /* DAT_004b8a24 role */
 
 // FUNCTION: LEGORR 0x00409350
@@ -3280,18 +3297,17 @@ void* path_record_allocate_and_link(const uint32_t* coord_pair)
     if (rec == NULL) {
         return NULL; /* deviation: the corpus strides the allocator's word */
     }
-    const uint32_t zero = 0u;
-    for (size_t n = 0; n < bytes / sizeof(uint32_t); ++n) {
-        __builtin_memcpy(rec + n * sizeof(uint32_t), &zero, sizeof zero);
-    }
-    uint32_t serial = s_path_record_count++;
-    __builtin_memcpy(rec + 0x08, &serial, sizeof serial);   /* counter store */
+    __builtin_memset(rec, 0, bytes); /* the corpus's rep stos zero-fill  */
+    /* The corpus writes these two belt words after the sweep and MSVC5
+     * keeps the stores (the disassembly shows them landing blind). */
+    *(uint32_t*)(rec + 0x20) = 0u;
+    *(uint32_t*)(rec + 0x1c) = 0u;
+    *(uint32_t*)(rec + 0x08) = s_path_record_count++;   /* counter store */
     if (coord_pair != NULL) {
-        __builtin_memcpy(rec + 0x0c, &coord_pair[0], sizeof(uint32_t));
-        __builtin_memcpy(rec + 0x10, &coord_pair[1], sizeof(uint32_t));
+        *(uint32_t*)(rec + 0x0c) = coord_pair[0];
+        *(uint32_t*)(rec + 0x10) = coord_pair[1];
     }
-    __builtin_memcpy(rec + 0x24, &s_path_record_last,
-                     sizeof(s_path_record_last));           /* prev link */
+    *(void**)(rec + 0x24) = s_path_record_last;         /* prev link */
     s_path_record_last = rec;
     return rec;
 }

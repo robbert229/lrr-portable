@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "gods98/heap.hpp"
 #include "gods98/string.hpp"
 
 static int s_failures = 0;
@@ -24,11 +25,11 @@ static void test_duplicate(void)
     char* dup = string_duplicate(src);
     CHECK(dup != NULL, "duplicate allocated");
     CHECK(dup != src && strcmp(dup, src) == 0, "duplicate is an equal copy");
-    free(dup);
+    engine_heap_free(dup);
 
     char* empty = string_duplicate("");
     CHECK(empty != NULL && empty[0] == '\0', "empty string duplicates to a byte");
-    free(empty);
+    engine_heap_free(empty);
 
     CHECK(string_duplicate(NULL) == NULL, "NULL duplicates to NULL");
 }

@@ -878,8 +878,8 @@ UiRenderRecord* ui_render_record_create(void* source,
  * set the corpus takes the current bit 0x40 as its second argument,
  * then installs the word with the bit set when that answer is clear and
  * cleared when it is not — the bit-0x40 rule over the modeled selection
- * word, faithful. */
-void ui_mode_resource_bit40_set_clear(int probe, uint32_t value);
+ * word, faithful; the installed word answers in eax. */
+uint32_t ui_mode_resource_bit40_set_clear(int probe, uint32_t value);
 
 /* MenuWipeStart (FUN_004103f0, finding 37): when the wipe-arm word is
  * set, stop the running wipe clock, raise the start/pending bits in the

@@ -1141,9 +1141,12 @@ static int sav_tree_nth_visit(void* node, void* user)
 void* registry_value_lookup(void* root, uint32_t index)
 {
     SavTreeNthState st = { NULL, index, 0u, 0u };
-    const int hit = sav_tree_walk(root, sav_tree_nth_visit, &st);
-    sav_clear_visited();
-    return hit != 0 ? st.found : NULL;
+    if (sav_tree_walk(root, sav_tree_nth_visit, &st) != 0) {
+        sav_clear_visited(); /* corpus call site 1: the hit path */
+        return st.found;
+    }
+    sav_clear_visited(); /* corpus call site 2: the miss path */
+    return NULL;
 }
 
 // FUNCTION: LEGORR 0x004172d0

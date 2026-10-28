@@ -88,8 +88,11 @@ int bounded_wide_string_length_including_null(const uint16_t* text,
 
 /* FUN_00492068: double high-word exponent selector — the exponent field
  * for ordinary values, the untouched high word when the exponent is all
- * ones (Inf/NaN) (findings 386/399; CrtAsin's pre-dispatch probe). */
-uint32_t double_exponent_bits_or_special(uint32_t high_word);
+ * ones (Inf/NaN) (findings 386/399; CrtAsin's pre-dispatch probe). The
+ * corpus callee takes a cdecl double: the low word is unused, the high
+ * word is live — two uint32_t params so MSVC5 loads [esp+8]. */
+uint32_t double_exponent_bits_or_special(uint32_t low_word,
+                                         uint32_t high_word);
 
 /* Format-argument cursor reads (FUN_00491430 / FUN_00491470 /
  * FUN_00491450; findings 231/395 — EngineFormatStringToStream's
@@ -148,9 +151,9 @@ uint32_t processor_feature_fallback_false(void);
 uint32_t flh_magic_uu_noop(void);
 
 /* GlobalFloatField00556F00Get (FUN_004230b0, findings 295/392): reads
- * the global float at DAT_00556f00. Its meaning is unresolved — the
- * faithful read stays, storage stays static-backed (x87 deviation). */
-double global_float_field_00556f00_get(void);
+ * the global float at DAT_00556f00 as the corpus does (fld DWORD).
+ * Its meaning is unresolved — storage stays static-backed. */
+float global_float_field_00556f00_get(void);
 
 /* GlobalValue_004ff9bcStoreAndReturn (FUN_004567c0, findings 386/440):
  * stores the pointed-to dword into DAT_004ff9bc-backed storage and

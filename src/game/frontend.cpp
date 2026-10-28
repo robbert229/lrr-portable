@@ -5740,17 +5740,21 @@ void sim_status_banner_word_set(uint32_t value)
 }
 
 // FUNCTION: LEGORR 0x00419200
-void ui_mode_resource_bit40_set_clear(int probe, uint32_t value)
+uint32_t ui_mode_resource_bit40_set_clear(int probe, uint32_t value)
 {
     uint32_t v = value;
     if (probe != 0) {
         v = s_sel_state & 0x40u;
     }
-    if (v == 0u) {
-        s_sel_state |= 0x40u;
-    } else {
+    /* Corpus layout: the nonzero answer falls through to the clear, the
+     * zero answer jumps to the set tail; the word answers after the
+     * store in both arms. */
+    if (v != 0u) {
         s_sel_state &= ~0x40u;
+    } else {
+        s_sel_state |= 0x40u;
     }
+    return s_sel_state;
 }
 
 /* MenuWipeStart (FUN_004103f0) — see frontend.hpp. */

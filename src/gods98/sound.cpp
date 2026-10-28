@@ -545,6 +545,16 @@ const char* sound_alias_name(int index)
  *  finding 137 flag word DAT_00502a2c).
  * ------------------------------------------------------------------ */
 
+/* SoundSubsystemStopAll @ 0x47b160 — the corpus's disable seam. Its
+ * instance-chain walk over the live playback list lands with the instance
+ * layer; until then the port's disable leaves playback running (documented
+ * deviation, see sound.hpp). */
+// STUB: LEGORR 0x0047b160
+static void s_subsystem_stop_all(void)
+{
+    /* TODO(corpus): walk the instance chain and stop each voice. */
+}
+
 // FUNCTION: LEGORR 0x00465260
 void sound_subsystem_enable_set(int enable, int stop_active)
 {
@@ -553,11 +563,13 @@ void sound_subsystem_enable_set(int enable, int stop_active)
         s_sound_flags |= SOUND_FLAG_ENABLED;
         return;
     }
-    s_sound_flags &= ~SOUND_FLAG_ENABLED;
+    /* Corpus disable order: the flag word is read once, bit 0 cleared and
+     * stored back before stop_active is tested — the store precedes the
+     * stop call, and both sub-paths then zero the cooldown word. */
+    uint32_t cleared = s_sound_flags & ~SOUND_FLAG_ENABLED;
+    s_sound_flags = cleared;
     if (stop_active != 0) {
-        /* Corpus stop seam (instance-chain walk, TODO(corpus) — see
-         * sound.hpp). Deviation: the port's disable leaves live playback
-         * running until the instance layer lands. */
+        s_subsystem_stop_all();
     }
     s_cooldown_alias = 0.0;
 }
@@ -592,8 +604,11 @@ double sound_deferred_last_alias(void)
  *  Deferred sound request queue (issue #317). See sound.hpp.
  * ------------------------------------------------------------------ */
 
+// GLOBAL: LEGORR 0x00502b30
 static int s_queue_alias[SOUND_REQUEST_QUEUE_CAPACITY];  /* DAT_00502b30 */
+// GLOBAL: LEGORR 0x00502b58
 static int s_queue_loop[SOUND_REQUEST_QUEUE_CAPACITY];   /* DAT_00502b58 */
+// GLOBAL: LEGORR 0x00502bd0
 static int s_queue_count;                                /* DAT_00502bd0 */
 
 // FUNCTION: LEGORR 0x00464f60
@@ -960,8 +975,11 @@ static int        s_batch_count;   /* DAT_00502b20 */
 
 /* The frame tick's active replay copies (DAT_00502b80 alias words,
  * DAT_00502ba8 loop words, count DAT_00502bd4). */
+// GLOBAL: LEGORR 0x00502b80
 static int s_active_alias[SOUND_REQUEST_QUEUE_CAPACITY];
+// GLOBAL: LEGORR 0x00502ba8
 static int s_active_loop[SOUND_REQUEST_QUEUE_CAPACITY];
+// GLOBAL: LEGORR 0x00502bd4
 static int s_active_count;
 
 /* Instance-layer play seam: the corpus hands (mode, position, bank
@@ -1106,19 +1124,24 @@ void sound_subsystem_frame_tick(float dt)
     int i;
     s_cooldown_timer -= dt;            /* _DAT_00502b24 step */
     sound_batch_queue_drain(0, 0);     /* batch off for the replay pass */
-    for (i = 0; i < s_active_count; ++i) {
+    /* Replay pass: the corpus re-reads the active count every iteration
+     * (0x4651e2) and gates it unsigned, so neither is hoisted. */
+    for (i = 0; i < (unsigned) s_active_count; ++i) {
         sound_alias_play(s_active_alias[i], s_active_loop[i]);
     }
     if (batch_saved != 0) {
         sound_deferred_queue_drain(1); /* restore batch mode */
     }
-    /* Rotate the pending queue (#317) into the active replay copies. */
-    const int n = s_queue_count;
-    for (i = 0; i < n; ++i) {
+    /* Rotate the pending queue (#317) into the active replay copies:
+     * two rep-movs passes over the pending count, then the count moves
+     * and the pending count clears. */
+    for (i = 0; i < (unsigned) s_queue_count; ++i) {
         s_active_alias[i] = s_queue_alias[i];
+    }
+    for (i = 0; i < (unsigned) s_queue_count; ++i) {
         s_active_loop[i] = s_queue_loop[i];
     }
-    s_active_count = n;
+    s_active_count = s_queue_count;
     s_queue_count = 0;
     /* Instance-chain pump seam: TODO(corpus), inert. */
 }

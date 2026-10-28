@@ -970,7 +970,7 @@ uint32_t model_digest(const Model* m)
  * even-size padding). On the corpus heap the allocator's even-grained
  * blocks absorb the padding. LwoTextureProjectionModeParse (FUN_0048c120):
  * a fold compare against the table PLANAR / CYLINDRICAL / SPHERICAL (the
- * corpus's strnicmp shape, exposed via string_folded_compare); the first
+ * corpus calls the strnicmp_lite carrier directly); the first
  * prefix match answers the table index, anything else answers 0 — the
  * PLANAR default. */
 // FUNCTION: LEGORR 0x0048c0c0
@@ -994,11 +994,11 @@ int lwo_texture_projection_mode_parse(const char* name)
 {
     static const char* const modes[3] = { "PLANAR", "CYLINDRICAL",
                                           "SPHERICAL" };
-    for (int i = 0; i < 3; ++i) {
+    for (uint32_t i = 0; i < 3u; ++i) {
         const size_t n = strlen(modes[i]);
-        if (name != NULL
-            && string_folded_compare(name, modes[i], n) == 0) {
-            return i;
+        /* pinned deviation: the corpus pushes name blind at 0x48c159 */
+        if (name != NULL && strnicmp_lite(name, modes[i], (int)n) == 0) {
+            return (int)i;
         }
     }
     return 0; /* the corpus's fall-through answers PLANAR */

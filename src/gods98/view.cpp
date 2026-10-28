@@ -1148,11 +1148,11 @@ void scene_mesh_color_and_alpha_set(void* object, int block, float red,
     }
     void* mesh = *(void**)((char*)object + 0xc);
     if (mesh == NULL) {
-        return; /* deviation: the corpus strides the mesh link blindly */
+        return; /* pinned deviation: the corpus strides the mesh link blindly */
     }
     void* record = *(void**)((char*)mesh + 0xc);
     if (record == NULL) {
-        return; /* corpus: the single record gate */
+        return; /* corpus: the single gate, the record test at 0x47502b */
     }
     render_object_color_vector_set(record, block, red, green, blue, 0);
     screen_effect_item_opacity_set(record, block, alpha, 4);
@@ -1168,13 +1168,13 @@ void scene_mesh_color_set(void* object, int block, float red, float green,
     void* mesh = NULL;
     void* record = NULL;
     if (object != NULL) {
-        __builtin_memcpy(&mesh, (const char*)object + 0xc, sizeof mesh);
+        mesh = *(void* const*)((const char*)object + 0x0c);
     }
     if (mesh != NULL) {
-        __builtin_memcpy(&record, (const char*)mesh + 0xc, sizeof record);
+        record = *(void* const*)((const char*)mesh + 0x0c);
     }
     if (record == NULL) {
-        return; /* deviation: the corpus strides both links blindly */
+        return; /* pinned deviation: the corpus strides both links blindly */
     }
     render_object_color_vector_set(record, block, red, green, blue, 3);
 }

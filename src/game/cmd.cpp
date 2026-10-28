@@ -196,18 +196,6 @@ static const char* const PRIO_NAMES[27] = {
 };
 static int8_t s_behaviour[27]; /* DAT_004b32e8 by kind */
 
-static int cmd_strcasecmp(const char* a, const char* b)
-{
-    for (;;) {
-        int ca = (unsigned char)*a++;
-        int cb = (unsigned char)*b++;
-        if (ca >= 'a' && ca <= 'z') ca -= 0x20;
-        if (cb >= 'a' && cb <= 'z') cb -= 0x20;
-        if (ca != cb) return ca - cb;
-        if (ca == 0) return 0;
-    }
-}
-
 // FUNCTION: LEGORR 0x00401cf0
 void cmd_init(void)
 {
@@ -246,11 +234,13 @@ void cmd_init(void)
 // FUNCTION: LEGORR 0x00401cb0
 int cmd_kind_by_name(const char* name, int* out)
 {
-    if (name == NULL || out == NULL) {
-        return 0;
-    }
-    for (int i = 0; i < 27; ++i) {
-        if (cmd_strcasecmp(name, PRIO_NAMES[i]) == 0) {
+    /* stride-4 name-table walk, as the corpus: unsigned end compare (the
+     * loop-back is jb) with the index counter beside the pointer (edi) */
+    const char* const* entry = PRIO_NAMES;
+    const char* const* end = PRIO_NAMES + 27;   /* 0x4b32e8 - 0x4b327c */
+    int i = 0;
+    for (; entry < end; ++entry, ++i) {
+        if (strcasecmp_lite(*entry, name) == 0) {   /* corpus order: entry first */
             *out = i;
             return 1;
         }
@@ -1356,15 +1346,15 @@ void cmd_cancel_ref(void* rec)
 void entity_conditional_task_schedule(EntitySlot* e)
 {
     if (e == NULL) {
-        return; /* deviation: the corpus reads the entity blindly */
+        return; /* pinned anti-crash guard — the corpus reads the entity
+                 * blindly; the test hands in NULL */
     }
     if ((entity_capability_flags_get(e) & 1u) != 0u
         && (e->flags_3e0 & 0x400u) == 0u
         && (e->flags_3ec & 0x10000u) == 0u) {
         CmdRec* rec = (CmdRec*)cmd_alloc(0x1e);
-        if (rec == NULL) {
-            return;
-        }
+        /* Corpus: no null check on the allocation — the payload store and
+         * the flag word ride blind. */
         rec->payload = e;
         e->flags_3ec |= 0x10000u;
         cmd_link_head(rec, 0x11);
@@ -1391,18 +1381,13 @@ void entity_threshold_progress_event_queue(void* payload, int flag)
 void entity_target_command_queue(EntitySlot* e, void* target)
 {
     CmdRec* rec = (CmdRec*)cmd_alloc(0x11);
-    if (rec == NULL) {
-        return;
-    }
+    /* Corpus: no null checks — the payload and chain slots ride blind. */
     rec->payload = target;
-    if (e == NULL) {
-        return; /* deviation: the corpus writes +0x2f0 blindly */
-    }
     CmdRec* tail = as_rec(cmd_chain_walk(e));
     if (tail != NULL) {
-        tail->next = rec;
+        tail->next = rec; /* corpus [tail+0x60] */
     } else {
-        e->cmd_head = rec;
+        e->cmd_head = rec; /* corpus [e+0x2f0] */
     }
     /* The corpus writes only the chain pointer: no timestamp, no pending
      * clear, no idle registration (the append helper's extras). */
@@ -1810,10 +1795,10 @@ int object_event_type2_queue(void* payload)
 void coordinate_pair_task_record_queue(const int pair[2])
 {
     CmdRec* rec = (CmdRec*)cmd_alloc(0);
-    if (rec == NULL) {
-        return;
-    }
-    cmd_pair_stage(rec, pair);
+    /* Corpus: no null check on the allocation — the pair rides the
+     * coordinate slots blind, read straight from the caller's words. */
+    *(int*)&rec->x = pair[0]; /* +0x08 raw dword, corpus inline store */
+    *(int*)&rec->y = pair[1]; /* +0x0c raw dword */
     rec->state = (rec->state & ~CMD_STATE_PENDING) | 0x40u;
     cmd_set_kind(rec, 0x1a);
     cmd_link_tail(rec);

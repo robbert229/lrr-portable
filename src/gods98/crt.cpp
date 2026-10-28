@@ -188,11 +188,13 @@ int bounded_wide_string_length_including_null(const uint16_t* text,
 /* DoubleExponentBitsGetOrSpecialValue (FUN_00492068, findings 386/399):
  * exponent field for ordinary values; the untouched high word when the
  * exponent is all ones (Inf/NaN) so the caller sees the full pattern.
- * The corpus takes the double's high word as its only live argument
- * (the first parameter is the unused low word). */
+ * The corpus callee takes a cdecl double: the low word at [esp+4] is
+ * unused, the high word at [esp+8] is live — two uint32_t params so
+ * MSVC5 reads the high word at [esp+8]. */
 // FUNCTION: LEGORR 0x00492068
-uint32_t double_exponent_bits_or_special(uint32_t high_word)
+uint32_t double_exponent_bits_or_special(uint32_t low_word, uint32_t high_word)
 {
+    (void)low_word; /* the corpus reads only [esp+8] */
     if ((high_word & 0x7ff00000u) != 0x7ff00000u) {
         return high_word & 0x7ff00000u;
     }
@@ -309,12 +311,15 @@ uint32_t flh_magic_uu_noop(void)
 }
 
 /* The two DAT globals, static-backed until the corpus's writers (all
- * still unported) land — message.cpp's s_system_state precedent. */
-static double   s_global_float_00556f00 = 0.0;
-static uint32_t s_global_dword_004ff9bc = 0u;
+ * still unported) land — message.cpp's s_system_state precedent. The
+ * float width is the corpus's own: 0x4230b0 flds a DWORD. */
+// GLOBAL: LEGORR 0x00556f00
+static float    s_global_float_00556f00;
+// GLOBAL: LEGORR 0x004ff9bc
+static uint32_t s_global_dword_004ff9bc;
 
 // FUNCTION: LEGORR 0x004230b0
-double global_float_field_00556f00_get(void)
+float global_float_field_00556f00_get(void)
 {
     return s_global_float_00556f00;
 }
@@ -325,8 +330,7 @@ uint32_t global_value_004ff9bc_store_and_return(const void* value)
     if (value == NULL) {
         return 0u; /* deviation: corpus dereferences blindly */
     }
-    uint32_t v = 0u;
-    memcpy(&v, value, sizeof(v));
+    uint32_t v = *(const uint32_t*)value;
     s_global_dword_004ff9bc = v;
     return v;
 }
@@ -801,54 +805,60 @@ void display_dimensions_set(int w, int h)
 }
 
 /* DAT_0050013c record block: 18 records of 0x30 bytes (the 0x50013c…
- * 0x50037c span the panel reset walks), flag word at record+0. Only the
- * flag words are modeled — the record payloads belong to the unported
- * panel layer. */
+ * 0x50037c span the panel reset walks), flag dword at record+0x2c — one
+ * array at the corpus's DAT_00500110 base, stride 0x30 (the lea
+ * [eax+eax*2]/shl 4 = 3*16 walks, no bounds tests), all-zero image bytes
+ * filled at runtime. Only the flag words are modeled — the record
+ * payloads belong to the unported panel layer. */
 #define REQUEST_RECORD_COUNT 18
-static uint32_t s_request_flags[REQUEST_RECORD_COUNT];
+
+typedef struct RequestRecord {
+    uint8_t  pad[0x2c];
+    uint32_t flags;   /* +0x2c */
+} RequestRecord;
+
+// GLOBAL: LEGORR 0x00500110
+static RequestRecord s_request_records[REQUEST_RECORD_COUNT];
 
 // FUNCTION: LEGORR 0x0045ab30
 int request_record_ready_flag4(int index)
 {
-    if (index < 0 || index >= REQUEST_RECORD_COUNT) {
+    if ((unsigned)index >= REQUEST_RECORD_COUNT) {
         return 0; /* deviation: the corpus strides blindly */
     }
-    const uint32_t f = s_request_flags[index];
+    const uint32_t f = s_request_records[index].flags;
     return (f & 4u) != 0u && (f & 8u) == 0u ? 1 : 0;
 }
 
 // FUNCTION: LEGORR 0x0045ab60
 int request_record_ready_flag2(int index)
 {
-    if (index < 0 || index >= REQUEST_RECORD_COUNT) {
-        return 0; /* deviation: the corpus strides blindly */
-    }
-    const uint32_t f = s_request_flags[index];
+    const uint32_t f = s_request_records[index].flags;
     return (f & 2u) != 0u && (f & 8u) == 0u ? 1 : 0;
 }
 
 // FUNCTION: LEGORR 0x0045ab90
 int request_record_flag8_is_set(int index)
 {
-    if (index < 0 || index >= REQUEST_RECORD_COUNT) {
+    if ((unsigned)index >= REQUEST_RECORD_COUNT) {
         return 0; /* deviation: the corpus strides blindly */
     }
-    return (int)(s_request_flags[index] & 8u);
+    return (int)(s_request_records[index].flags & 8u);
 }
 
 void request_record_flags_set(int index, uint32_t flags)
 {
-    if (index >= 0 && index < REQUEST_RECORD_COUNT) {
-        s_request_flags[index] = flags;
+    if ((unsigned)index < REQUEST_RECORD_COUNT) {
+        s_request_records[index].flags = flags;
     }
 }
 
 uint32_t request_record_flags_peek(int index)
 {
-    if (index < 0 || index >= REQUEST_RECORD_COUNT) {
+    if ((unsigned)index >= REQUEST_RECORD_COUNT) {
         return 0u;
     }
-    return s_request_flags[index];
+    return s_request_records[index].flags;
 }
 
 /* --- the remaining DAT one-liner stores/reads (see crt.hpp) ----------------- */
@@ -1109,14 +1119,14 @@ void panel_item_flag32_set(int panel, int item, int value)
 // FUNCTION: LEGORR 0x0045ab00
 void panel_state_flags_toggle(int index)
 {
-    if (index < 0 || index >= DAT_WINDOW_COUNT) {
+    if ((unsigned)index >= DAT_WINDOW_COUNT) {
         return;
     }
-    const uint32_t f = s_request_flags[index];
+    const uint32_t f = s_request_records[index].flags;
     if ((f & 2u) != 0u) {
-        s_request_flags[index] = f & ~2u | 0xcu;
+        s_request_records[index].flags = f & ~2u | 0xcu;
     } else {
-        s_request_flags[index] = f & ~4u | 0xau;
+        s_request_records[index].flags = f & ~4u | 0xau;
     }
 }
 
@@ -1749,12 +1759,11 @@ void* string_keyed_cache_entry_find(const char* key)
     if (entry == NULL) {
         return NULL;
     }
-    const long field = (long)sizeof(void*);
     for (;;) {
         if (strcasecmp_lite(*(char**)entry, key) == 0) {
             return entry;
         }
-        entry = *(void**)((char*)entry + 3 * field);
+        entry = *(void**)((char*)entry + 0xc); /* corpus mov esi,[esi+0xc] */
         if (entry == NULL) {
             return NULL;
         }

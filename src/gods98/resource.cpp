@@ -592,19 +592,31 @@ void resource_free(Resource* r)
 
 /* --- the fixed-record slot resources (see resource.hpp) -------------------- */
 #define FIXED_RECORD_SLOTS 16
-static void* s_fixed_slot[FIXED_RECORD_SLOTS];
-static int   s_fixed_flag[FIXED_RECORD_SLOTS];
+
+/* The fixed-record slot band: sixteen 16-byte records {resource@+0x00,
+ * in-use flag@+0x04} at DAT_005756a0 (all-zero image bytes; the corpus
+ * scales the index shl 4 and strides blindly). The +0x08/+0x0c words
+ * belong to the unported reader (FUN_0048c010) — pad only. */
+typedef struct FixedRecordSlot {
+    void*    resource;  /* +0x00 */
+    uint32_t in_use;    /* +0x04 */
+    uint8_t  pad[8];    /* +0x08..0x0f */
+} FixedRecordSlot;
+
+typedef char fixed_record_slot_stride_check[sizeof(FixedRecordSlot) == 16u ? 1 : -1];
+
+// GLOBAL: LEGORR 0x005756a0
+static FixedRecordSlot s_fixed_slots[FIXED_RECORD_SLOTS];
 
 // FUNCTION: LEGORR 0x0048bfc0
 void fixed_record_slot_resource_release(int slot)
 {
-    if (slot < 0 || slot >= FIXED_RECORD_SLOTS) {
-        return; /* deviation: the corpus strides the index blindly */
-    }
-    if (s_fixed_flag[slot] != 0) {
-        engine_heap_free(s_fixed_slot[slot]);
-        s_fixed_slot[slot] = NULL;
-        s_fixed_flag[slot] = 0;
+    /* The corpus scales the index shl 4 and strides blindly (the tests only
+     * release in-range slots) and clears ONLY the flag — the stale pointer
+     * is unobservable because the get path checks the flag first. */
+    if (s_fixed_slots[slot].in_use != 0) {
+        engine_heap_free(s_fixed_slots[slot].resource);
+        s_fixed_slots[slot].in_use = 0;
     }
 }
 
@@ -614,20 +626,20 @@ void* fixed_record_slot_resource_get(int slot)
     if (slot < 0 || slot >= FIXED_RECORD_SLOTS) {
         return NULL; /* deviation: the corpus strides blindly */
     }
-    return s_fixed_flag[slot] != 0 ? s_fixed_slot[slot] : NULL;
+    return s_fixed_slots[slot].in_use != 0 ? s_fixed_slots[slot].resource : NULL;
 }
 
 void fixed_record_slot_install(int slot, void* resource)
 {
     if (slot >= 0 && slot < FIXED_RECORD_SLOTS) {
-        s_fixed_slot[slot] = resource;
-        s_fixed_flag[slot] = 1;
+        s_fixed_slots[slot].resource = resource;
+        s_fixed_slots[slot].in_use = 1;
     }
 }
 
 int fixed_record_slot_flag_peek(int slot)
 {
-    return (slot >= 0 && slot < FIXED_RECORD_SLOTS) ? s_fixed_flag[slot] : 0;
+    return (slot >= 0 && slot < FIXED_RECORD_SLOTS) ? (int)s_fixed_slots[slot].in_use : 0;
 }
 
 /* WadMemoryStreamBufferGet (FUN_0048c030): the corpus wrapper routes the

@@ -311,18 +311,22 @@ int model_child_render_eligibility_check(const void* object)
     if (object == NULL) {
         return 0;
     }
-    const uint32_t flags = rec_dword(object, 0x6c);
-    if ((flags & 1u) == 0 && (flags & 0x10000000u) == 0) {
+    const uint32_t flags = *(const uint32_t*)((const char*)object + 0x6c);
+    if ((flags & 1u) == 0u && (flags & 0x10000000u) == 0u) {
         return 1;
     }
     return 0;
 }
 
-/* EntityTypeFlagBit1Get (FUN_0046d330, findings 357/432). */
+/* EntityTypeFlagBit1Get (FUN_0046d330, findings 357/432): the corpus
+ * reads +0x1e8 with one mov, no helper call, so the load is direct. */
 // FUNCTION: LEGORR 0x0046d330
 uint32_t entity_type_flag_bit1_get(const void* record)
 {
-    return (rec_dword(record, 0x1e8) & 0xffu) >> 1 & 1u;
+    if (record == NULL) {
+        return 0u; /* pinned deviation: the corpus loads blindly */
+    }
+    return (*(const uint32_t*)((const char*)record + 0x1e8) & 0xffu) >> 1 & 1u;
 }
 
 /* ------------------------------------------------------------------ *
@@ -376,10 +380,18 @@ uint32_t scene_object_wrapped_pointer_get(const void* wrapped)
     return rec_dword(wrapped, 0);
 }
 
+/* SceneObjectFlagBit3Get (FUN_00473ba0): one corpus mov on +0x14, so the
+ * load is direct. animation_object_visibility_get can hand us a NULL +4
+ * handle through the guarded rec_ptr; NULL answers zero (the corpus
+ * would crash on it). */
 // FUNCTION: LEGORR 0x00473ba0
 uint32_t scene_object_flag_bit3_get(const void* scene_object)
 {
-    return (rec_dword(scene_object, 0x14) & 0xffu) >> 3 & 1u;
+    if (scene_object == NULL) {
+        return 0u; /* pinned deviation: the corpus loads blindly */
+    }
+    return (*(const uint32_t*)((const char*)scene_object + 0x14) & 0xffu)
+           >> 3 & 1u;
 }
 
 // FUNCTION: LEGORR 0x00406980

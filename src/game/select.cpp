@@ -1097,27 +1097,35 @@ void selection_object_command_update(GameContext* ctx, EntitySlot* entity)
     command_context_post_to_hud(action, NULL);
 }
 
-/* SelectionTargetCommandUpdate (FUN_0041cf20): in modes 10, 11, and 18,
- * match the passed entity's owner against the selection. A matching
- * singleton posts HUD action 12; a matching multi-selection clears it. */
+/* SelectionTargetCommandUpdate (FUN_0041cf20): in modes 10, 18, and 11,
+ * read the selection through the count/array helpers (a NULL context
+ * reads as empty) and match the passed entity's owner against every
+ * entry. A matching singleton posts HUD action 12; a matching
+ * multi-selection clears it. Deviation: a NULL entity faults at the
+ * corpus's blind [entity+0x36c] read. */
 // FUNCTION: LEGORR 0x0041CF20
 void selection_target_command_update(GameContext* ctx, EntitySlot* entity)
 {
     const uint32_t mode = objective_selection_word_peek();
-    if ((mode != 10u && mode != 11u && mode != 18u) || ctx == NULL
-        || entity == NULL || ctx->selection_count <= 0) {
-        return;
-    }
-    const void* const owner = entity->owner_36c;
-    for (int i = 0; i < ctx->selection_count; ++i) {
-        if ((const void*)ctx->selection[i] != owner) {
-            continue;
-        }
-        if (ctx->selection_count == 1) {
-            command_context_post_to_hud(12, NULL);
-        }
-        else {
-            selection_clear_request_and_hud_reset();
+    if (mode == 10u || mode == 18u || mode == 11u) {
+        const int count = selection_count(ctx);
+        EntitySlot* const* records = selection_record_array(ctx);
+        if (count > 0) {
+            EntitySlot* const* p = records;
+            int n = count;
+            do {
+                /* the corpus re-reads [entity+0x36c] on every pass */
+                if (entity->owner_36c == (const void*)*p) {
+                    if (count == 1) {
+                        command_context_post_to_hud(12, NULL);
+                    }
+                    else {
+                        selection_clear_request_and_hud_reset();
+                    }
+                }
+                ++p;
+                --n;
+            } while (n != 0);
         }
     }
 }
