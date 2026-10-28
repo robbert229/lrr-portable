@@ -2459,6 +2459,7 @@ void cell_list_min_distance_scale_apply(int enable) /* FUN_00450a80 */
 #define GRID_REC_STRIDE        0x31  /* dwords per record block */
 #define GRID_REC_FIELD_WORDS   16    /* cleared by the mask sweep */
 
+// GLOBAL: LEGORR 0x004b8bc8
 static uint32_t s_grid_rec[GRID_REC_REGION_DWORDS];
 
 /* Flat dword index of a block's record-pointer word, or -1 when the
@@ -3011,6 +3012,7 @@ int level_objective_result_get(const LevelState* s)
 
 /* TerrainObjectTypeSfxAtCellGet (FUN_0044ad80) — see level.hpp. */
 #define TERRAIN_SFX_GRID_CELLS 300
+// GLOBAL: LEGORR 0x004de814
 static int s_terrain_sfx_grid[TERRAIN_SFX_GRID_CELLS]; /* DAT_004de814 role */
 
 // FUNCTION: LEGORR 0x0044ad80
@@ -3052,8 +3054,10 @@ int terrain_sfx_grid_cell_peek(int cell)
  * entry (pinned quirk — the port carries them the same way); the corpus
  * strides a missing value string into the alias table (the port's lookup
  * guards NULL) and stores blind past the 300-entry window (the port
- * guards). The entry chain is the subgroup record followed by its
- * equal-key siblings, entry name = the object name, entry value = the
+ * stores blind as well). The entry chain is the subgroup record followed
+ * by its equal-key siblings, entry name = the object name (the corpus
+ * reads the name blind at its record +4; the port record keeps the name
+ * token in its first word, so the load lands there), entry value = the
  * sound alias reference. */
 // FUNCTION: LEGORR 0x0044acc0
 void terrain_object_sfx_grid_config_load(BlockFile* config,
@@ -3065,7 +3069,11 @@ void terrain_object_sfx_grid_config_load(BlockFile* config,
     const char* path = string_path_join(root_path, "S_ObjTtSFXs", NULL);
     for (BlockRec* entry = block_subgroup(config, path);
          entry != NULL; entry = block_next_equal_key(entry)) {
-        if (entity_type_row_for_name(block_name(entry), &obj_x,
+        /* The corpus loads the name blind (mov ecx,[esi+4]); the port
+         * record keeps the name token in the first word. The chain
+         * already proved entry non-NULL. */
+        const char* name = *(const char* const*)((const char*)entry);
+        if (entity_type_row_for_name(name, &obj_x,
                                      &obj_y) == 0) {
             continue;
         }
@@ -3074,9 +3082,7 @@ void terrain_object_sfx_grid_config_load(BlockFile* config,
             continue;
         }
         const int cell = obj_y + obj_x * 15;
-        if (cell >= 0 && cell < TERRAIN_SFX_GRID_CELLS) {
-            s_terrain_sfx_grid[cell] = sfx;
-        }
+        s_terrain_sfx_grid[cell] = sfx; /* the corpus's blind scale store */
     }
 }
 

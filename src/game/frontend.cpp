@@ -5315,18 +5315,15 @@ uint32_t selection_mode_state_peek(void)
 #if defined(LEGORRR_BACKEND_WINAPI)
 __declspec(naked) void menu_wipe_end(void)
 {
+    /* Symbolic operands (like menu_wipe_start): __emit-encoded operand
+     * dwords carry no relocation, so reccmp resolved them as an OFFSET
+     * into s_reference_menu_data_pad0 and scored the two movs as
+     * mismatches (measured 50.0%); the symbolic form resolves through
+     * the 0x005574f0 annotation as DATA. */
     __asm {
-        __emit 0xa1
-        __emit 0xf0
-        __emit 0x74
-        __emit 0x55
-        __emit 0x00
+        mov eax, s_menu_wipe
         and al, 0xfc
-        __emit 0xa3
-        __emit 0xf0
-        __emit 0x74
-        __emit 0x55
-        __emit 0x00
+        mov s_menu_wipe, eax
         ret
     }
 }
@@ -5750,9 +5747,11 @@ uint32_t ui_mode_resource_bit40_set_clear(int probe, uint32_t value)
      * zero answer jumps to the set tail; the word answers after the
      * store in both arms. */
     if (v != 0u) {
-        s_sel_state &= ~0x40u;
+        s_sel_state = s_sel_state & ~0x40u; /* plain form: keeps the
+            * corpus's mov/and al,0xbf/mov register round-trip (b45
+            * global_flag_bit0_clear lesson) */
     } else {
-        s_sel_state |= 0x40u;
+        s_sel_state = s_sel_state | 0x40u;
     }
     return s_sel_state;
 }

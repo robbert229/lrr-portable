@@ -286,10 +286,17 @@ double double_build_with_exponent(uint32_t significand_low,
 /* ------------------------------------------------------------------ *
  *  Constant and DAT-global band (see crt.hpp). */
 
+/* The corpus's .rdata +0.0f (file bytes verified 00 00 00 00): the
+ * leaf flds a DWORD data operand (the s_global_float_00556f00 fld
+ * width), so the zero rides a file-scope float carrier — the
+ * float-to-double widening is free on the x87 return stack. */
+// GLOBAL: LEGORR 0x0049e084
+static const float  s_zero_float     = 0.0f; /* DAT_0049e084 */
+
 // FUNCTION: LEGORR 0x00408930
 double constant_zero_float_get(void)
 {
-    return 0.0;
+    return (double)s_zero_float; /* corpus: fld DWORD ds:0049e084 / ret */
 }
 
 // FUNCTION: LEGORR 0x0047c160
@@ -723,6 +730,7 @@ static uint32_t s_level_stored_word = 0u;  /* DAT_004b8a54 */
 static uint32_t s_mode_zero_flag = 0u;     /* DAT_004c7178 */
 // GLOBAL: LEGORR 0x004c79a4
 static uint32_t s_rockfall_base = 0u;      /* DAT_004c79a4 */
+// GLOBAL: LEGORR 0x004c7ea8
 static uint32_t s_ui_flag_word = 0u;       /* DAT_004c7ea8 */
 static uint32_t s_config_word = 0u;        /* DAT_004a1ee4 */
 
@@ -770,7 +778,11 @@ void rockfall_style_table_base_set(uint32_t v)
 // FUNCTION: LEGORR 0x0040e7e0
 void global_flag_bit0_clear(void)
 {
-    s_ui_flag_word &= ~1u;
+    /* corpus: mov eax,ds:004c7ea8 / and al,0FEh / mov ds:004c7ea8,eax.
+     * The plain load-op-store spelling (not the &= compound) keeps the
+     * /Od register round-trip instead of folding to and mem,imm; the
+     * corpus's byte-sized and is MSVC's own narrowing of the mask. */
+    s_ui_flag_word = s_ui_flag_word & ~1u;
 }
 
 // FUNCTION: LEGORR 0x0040f5e0
@@ -2236,10 +2248,12 @@ void uint96_copy(uint32_t dst[3], const uint32_t src[3])
 {
     const uint32_t* p = src;
     const ptrdiff_t delta = (char*)dst - (const char*)src;
-    for (int n = 0; n != 3; ++n) {
+    int n = 3;
+    do {
         *(uint32_t*)((char*)p + delta) = *p;
         p += 1;
-    }
+        --n;
+    } while (n != 0);
 }
 
 /* CrtStringDuplicate (FUN_0049b660) — see crt.hpp. The corpus's length walk

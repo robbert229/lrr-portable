@@ -253,9 +253,9 @@ int main(void)
         float v = -1.0f;
         CHECK(can_spawn_expansion_entity_at_grid_cell(1, 2, &v) == 0,
               "the clear occupancy byte answers zero");
-        char* f = (char*)vox + 8 + (2 * 2 + 1) * 0x48;
-        f[0] = 8;
-        f[0x50] = 0x10;
+        char* f = (char*)vox + (2 * 2 + 1) * 0x48; /* the corpus's cell base */
+        f[8] = 8;         /* occupancy at base+0x8 (corpus [edx+eax*8+0x8]) */
+        f[0x50] = 0x10;   /* the self pair at base+0x50 / base-0x40 */
         f[-0x40] = 0x10;
         v = -1.0f;
         CHECK(can_spawn_expansion_entity_at_grid_cell(1, 2, &v) == 1
@@ -387,7 +387,13 @@ int main(void)
               "the null record answers zero (deviation)");
     }
 
-    /* PanelSelectionHighlightToggle (2026-10-24): switch + timer + flag. */
+    /* PanelSelectionHighlightToggle (2026-10-24; DAT-global fix 2026-10-28).
+     * Corpus 0x435aa0 rides the DAT globals 0x00556ed0 (flag word, bit 0)
+     * and 0x00556efc (250-ms cooldown timer) — engine.cpp-internal statics,
+     * not the EngineContext — and plays sound_alias_play(0x19, 0) when the
+     * timer is >= +0.0f (.rdata const @ 0x49e2b8), skipping only while it is
+     * below. Only the panel word is externally observable, plus the ctx
+     * fields now provably staying untouched. */
     {
         EngineContext ec = {};
         ec.debug = 0u;
@@ -399,19 +405,16 @@ int main(void)
         panel_draw_records_set(6, block);
 
         panel_selection_highlight_toggle(&ec, 1);
-        CHECK((ec.debug & 1u) == 1u && ec.exit_timer == 250.0f && *w == 0x28u,
-              "the switch raises the flag, arms the timer, sets bit 8");
+        CHECK(*w == 0x28u && ec.debug == 0u && ec.exit_timer == 0.0f,
+              "the switch sets bit 8; the flag/timer ride the DAT globals, not the ctx");
         panel_selection_highlight_toggle(&ec, 0);
-        CHECK((ec.debug & 1u) == 0u && ec.exit_timer == 0.0f && *w == 0x20u,
-              "the switch off drops all three");
-        ec.exit_timer = 100.0f;
-        panel_selection_highlight_toggle(&ec, 1);
-        CHECK(ec.exit_timer == 100.0f, "the live timer is not re-armed");
+        CHECK(*w == 0x20u && ec.debug == 0u && ec.exit_timer == 0.0f,
+              "the switch off drops the bit; the ctx stays untouched");
 
-        ec.debug = 2u;
-        panel_selection_highlight_toggle(NULL, 1); /* deviation: wordless */
-        CHECK(ec.debug == 2u && *w == 0x28u, "the null context still fires the panel write");
+        panel_selection_highlight_toggle(NULL, 1); /* corpus arg is the select */
+        CHECK(*w == 0x28u, "the null context still fires the panel write");
         panel_selection_highlight_toggle(NULL, 0);
+        CHECK(*w == 0x20u, "the null context still fires the clear write");
         panel_draw_records_set(6, NULL);
     }
 

@@ -99,7 +99,9 @@ typedef struct EngineContext {
     const uint8_t* level_voxels;   /* the w*h*0x48 voxel array */
     const void*    level_terrain;  /* TerrainState (reserved for heights) */
 
-    float        exit_timer;   /* DAT_00556efc — decremented by scaled dt */
+    float        exit_timer;   /* vestigial scaffold — the corpus's
+                                * DAT_00556efc now rides engine.cpp's
+                                * s_panel_highlight_timer (b44) */
     float        time_scale;   /* game-speed dt factor (issue #85). 0 = 1.0:
                                 * options_time_scale writes the live value
                                 * every frame; zero-initialized scaffolds and

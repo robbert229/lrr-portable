@@ -10,6 +10,15 @@
 #include "sound.hpp"
 #include "heap.hpp"
 
+/* PanelSelectionHighlightToggle/EngineTick DAT globals (see the function
+ * comments at their use sites): bit-0 flag word and the 250-ms cooldown in
+ * the zero-filled .data virtual tail. Declared here because EngineTick owns
+ * the corpus's scaled countdown of DAT_00556efc. */
+// GLOBAL: LEGORR 0x00556ed0
+static uint32_t s_panel_highlight_flags; /* DAT_00556ed0 bit 0 */
+// GLOBAL: LEGORR 0x00556efc
+static float s_panel_highlight_timer;    /* DAT_00556efc 250-ms cooldown */
+
 /* Frame tick — corpus EngineTick @ 0x4232e0. The numbered structure below
  * mirrors finding 03 §"Tick structure" and the first 130 lines of the corpus.
  * Every subsystem ticker is a registered stub in tickers.cpp whose function
@@ -84,7 +93,7 @@ int EngineTick(EngineContext* ctx, float dt)
     EngineAirBeat(ctx, scale);
 
     /* Exit timer counts down in scaled time (corpus: DAT_00556efc -= scale). */
-    ctx->exit_timer -= scale;
+    s_panel_highlight_timer = s_panel_highlight_timer - scale;
 
     return 1;
 }
@@ -354,6 +363,7 @@ int engine_app_mode_get(const EngineContext* ctx)
 /* --- the grid-cell record buffer (see engine.hpp) ---------------------------- */
 // GLOBAL: LEGORR 0x005520e8
 static void*        s_field_grid_buf;   /* DAT_005520e8 role */
+// GLOBAL: LEGORR 0x005520ec
 static EngineState* s_field_grid_desc;  /* DAT_005520ec role */
 
 // FUNCTION: LEGORR 0x004661c0
@@ -517,24 +527,32 @@ int camera_focus_scroll_scale_commit(const EngineContext* ctx,
     return 0;
 }
 
-/* PanelSelectionHighlightToggle (FUN_00435aa0) — see engine.hpp. */
+/* PanelSelectionHighlightToggle (FUN_00435aa0) — see engine.hpp. The corpus
+ * rides two DAT globals, not the context: bit 0 of the shared debug/cheat
+ * flag word DAT_00556ed0 (25 further corpus claimants — docs/dat/globals.csv)
+ * and the cooldown timer DAT_00556efc, both in the zero-filled .data virtual
+ * tail. The sound gate is the corpus's fld/fcomp/fnstsw, test ah,0x41, je:
+ * the sound is skipped only while the timer is BELOW the .rdata constant
+ * +0.0f @ 0x0049e2b8, i.e. it plays (and re-arms the timer to 250) when the
+ * timer is >= +0.0f. The ctx parameter is port-only carry-over (callers and
+ * tests use it — documented ctx-param mismatch class); the corpus's single
+ * cdecl arg is the on/off select, mapped here to `on`. */
+/* (The DAT objects live above EngineTick — single definition, two sites.) */
+
 // FUNCTION: LEGORR 0x00435aa0
 void panel_selection_highlight_toggle(EngineContext* ctx, int on)
 {
+    (void)ctx; /* the corpus dereferences nothing; it only tests the arg */
     if (on != 0) {
-        if (ctx != NULL) {
-            ctx->debug |= 1u;
-            if (ctx->exit_timer <= 0.0f) {
-                sound_alias_play(0x19, 0);
-                ctx->exit_timer = 250.0f;
-            }
+        s_panel_highlight_flags = s_panel_highlight_flags | 1u;
+        if (!(s_panel_highlight_timer < 0.0f)) {
+            sound_alias_play(0x19, 0);
+            s_panel_highlight_timer = 250.0f;
         }
         panel_item_flag8_set_if_enabled(6, 2, 1);
     } else {
-        if (ctx != NULL) {
-            ctx->debug &= ~1u;
-            ctx->exit_timer = 0.0f;
-        }
+        s_panel_highlight_flags = s_panel_highlight_flags & ~1u;
+        s_panel_highlight_timer = 0.0f;
         panel_item_flag8_set_if_enabled(6, 2, 0);
     }
 }
@@ -625,29 +643,28 @@ void grid_cell_invalidate_and_clear_flags(int x, int y)
 // FUNCTION: LEGORR 0x004663f0
 int can_spawn_expansion_entity_at_grid_cell(int x, int y, float* out)
 {
-    const EngineState* desc = entity_field_grid_descriptor_peek();
-    if (desc == NULL || desc->grid_cells == NULL) {
-        return 0; /* deviation: the corpus strides both words blindly */
-    }
+    const EngineState* desc = s_field_grid_desc;
     const int w = (int)desc->grid_w;
     const char* vox = (const char*)desc->grid_cells;
-    const ptrdiff_t idx = (ptrdiff_t)y * w + x;
-    const char* f = vox + 8 + idx * 0x48;
-    if ((f[0] & 8) == 0) {
+    const long i = (long)y * w + x;
+    const long s = i * 9; /* the corpus's lea [eax+eax*8], *8 rides the scale */
+    const char* base = vox + s * 8;
+    if ((base[8] & 8) == 0) {
         return 0;
     }
-    if ((f[0x50] & 0x10) == 0 || (f[-0x40] & 0x10) == 0) {
-        const char* up = vox + 8 + ((ptrdiff_t)(y + 1) * w + x) * 0x48;
-        const char* dn = vox + 8 + ((ptrdiff_t)(y - 1) * w + x) * 0x48;
-        if ((up[0] & 0x10) == 0 || (dn[0] & 0x10) == 0) {
+    if ((base[0x50] & 0x10) == 0 || (base[-0x40] & 0x10) == 0) {
+        const long iu = (long)(y + 1) * w + x;
+        const long su = iu * 9;
+        const long id = (long)(y - 1) * w + x;
+        const long sd = id * 9;
+        if ((vox[su * 8 + 8] & 0x10) == 0 || (vox[sd * 8 + 8] & 0x10) == 0) {
             return 0;
         }
         if (out != NULL) {
-            *out = 0.0f;
+            *(uint32_t*)out = 0u; /* the corpus's zero immediate dword */
         }
     } else if (out != NULL) {
-        const unsigned bits = 0x3fc90fdbu; /* the corpus's float word */
-        __builtin_memcpy(out, &bits, sizeof *out);
+        *(uint32_t*)out = 0x3fc90fdbu; /* the corpus's immediate dword */
         return 1;
     }
     return 1;

@@ -1054,16 +1054,18 @@ void object_pool_lists_free_all(void* pools)
     }
     for (int i = 0; i < 0x37; ++i) {
         const size_t slot = 0x114 + (size_t)i * sizeof(void*);
+        /* The corpus calls the bounds-checked head getter for this read;
+         * that carrier keeps the corpus-layout dword view (stride 4, a
+         * 32-bit answer) and this table is the widened-link native image,
+         * so the native slot is read in place. */
         void* node = NULL;
         __builtin_memcpy(&node, (char*)pools + slot, sizeof node);
         while (node != NULL) {
-            void* next = NULL;
-            __builtin_memcpy(&next, (char*)node + 8, sizeof next);
+            void* next = *(void* const*)((const char*)node + 8);
             engine_heap_free(node);
             node = next;
         }
-        void* zero = NULL;
-        __builtin_memcpy((char*)pools + slot, &zero, sizeof zero);
+        *(void**)((char*)pools + slot) = NULL; /* blind clear */
     }
 }
 

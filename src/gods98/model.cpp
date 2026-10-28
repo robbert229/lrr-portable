@@ -992,13 +992,24 @@ char* lwo_string_duplicate(const char* text)
 // FUNCTION: LEGORR 0x0048c120
 int lwo_texture_projection_mode_parse(const char* name)
 {
-    static const char* const modes[3] = { "PLANAR", "CYLINDRICAL",
-                                          "SPHERICAL" };
+    /* corpus entry 0x48c12b-0x48c13b fills these three immediates onto the
+     * stack (the .rdata strings are verified at 0x4afa0c / 0x4afa00 /
+     * 0x4af9f4); the port mirrors that with per-call stores. */
+    const char* modes[3];
+    modes[0] = "PLANAR";
+    modes[1] = "CYLINDRICAL";
+    modes[2] = "SPHERICAL";
+
+    /* pinned deviation: the corpus pushes name blind at 0x48c159; the port
+     * answers the PLANAR default (0) on NULL. */
+    if (name == NULL) {
+        return 0;
+    }
     for (uint32_t i = 0; i < 3u; ++i) {
-        const size_t n = strlen(modes[i]);
-        /* pinned deviation: the corpus pushes name blind at 0x48c159 */
-        if (name != NULL && strnicmp_lite(name, modes[i], (int)n) == 0) {
-            return (int)i;
+        const size_t len = strlen(modes[i]); /* the corpus inlines this as
+                                              * repnz scas at 0x48c152 */
+        if (strnicmp_lite(name, modes[i], (int)len) == 0) {
+            return (int)i; /* corpus 0x48c164: je exits the loop on match */
         }
     }
     return 0; /* the corpus's fall-through answers PLANAR */

@@ -261,6 +261,9 @@ static uint32_t* player_flags_table(int kind)
 // FUNCTION: LEGORR 0x0041ca20
 void player_input_flag8_set_clear(int kind, int action, int set)
 {
+    /* MEASURED: the inlined kind 1/kind 4 ladder scored 24.0% vs the
+     * player_flags_table helper CALL at 45.0% — MSVC5 re-canonicalizes
+     * the inline form (b27 helper-route class). Keep the helper. */
     uint32_t* table = player_flags_table(kind);
     if (table == NULL || action < 0 || action >= INPUT_FLAG_TABLE_SLOTS) {
         return; /* deviation: the corpus reads any kind through the table */
