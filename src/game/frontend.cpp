@@ -142,24 +142,51 @@ __declspec(allocate(".data$zzzzzz")) static unsigned char
 #define DAT_00556f50 ((void*)s_menu_global_words[0x384])
 #define DAT_00556f54 ((void*)s_menu_global_words[0x385])
 #define s_fe_flow (s_menu_global_words + 0x3b7)
-#define s_menu_wipe_arm s_menu_global_words[0x4ec]
-#define s_menu_wipe s_menu_global_words[0x4ed]
-#define s_menu_wipe_stop s_menu_global_words[0x4ee]
-#define s_menu_wipe_clock (*(float*)&s_menu_global_words[0x4ef])
+/* The five flow words land as own storage: the corpus addresses them as
+ * individual dwords, and Reccmp only resolves whole-object operands (the
+ * s_menu_global_bytes band cannot carry the annotation). */
+// GLOBAL: LEGORR 0x0055701c
+static int s_fe_flow_quit;
+// GLOBAL: LEGORR 0x00557020
+static int s_fe_flow_save_slot;
+// GLOBAL: LEGORR 0x00557024
+static int s_fe_flow_ingame;
+// GLOBAL: LEGORR 0x00557048
+static int s_fe_flow_level_start;
+// GLOBAL: LEGORR 0x0055704c
+static int s_fe_flow_menu_options;
 #define FE_FLOW_LEVEL_START_SLOT 11
 #define FE_FLOW_MENU_OPTIONS_SLOT 12
+#define FE_FLOW_QUIT_WORD       s_fe_flow_quit
+#define FE_FLOW_SAVE_SLOT       s_fe_flow_save_slot
+#define FE_FLOW_INGAME_SLOT     s_fe_flow_ingame
+#define FE_FLOW_LEVEL_START     s_fe_flow_level_start
+#define FE_FLOW_MENU_OPTIONS    s_fe_flow_menu_options
 #else
 static void* DAT_0055613c;
 static void* DAT_00556f50;
 static void* DAT_00556f54;
 static int s_fe_flow[5];
-static uint32_t s_menu_wipe;
-static uint32_t s_menu_wipe_arm;
-static uint32_t s_menu_wipe_stop;
-static float s_menu_wipe_clock;
 #define FE_FLOW_LEVEL_START_SLOT 3
 #define FE_FLOW_MENU_OPTIONS_SLOT 4
+#define FE_FLOW_QUIT_WORD       s_fe_flow[0]
+#define FE_FLOW_SAVE_SLOT       s_fe_flow[1]
+#define FE_FLOW_INGAME_SLOT     s_fe_flow[2]
+#define FE_FLOW_LEVEL_START     s_fe_flow[FE_FLOW_LEVEL_START_SLOT]
+#define FE_FLOW_MENU_OPTIONS    s_fe_flow[FE_FLOW_MENU_OPTIONS_SLOT]
 #endif
+/* The wipe quad lands as own storage: the corpus addresses each word as
+ * an individual dword (objdump-verified 0x5574ec/f0/f4/f8) and Reccmp
+ * only resolves whole-object operands (the s_menu_global_bytes band
+ * cannot carry the annotation, and its winapi indices were word-shifted). */
+// GLOBAL: LEGORR 0x005574ec
+static uint32_t s_menu_wipe_arm;
+// GLOBAL: LEGORR 0x005574f0
+static uint32_t s_menu_wipe;
+// GLOBAL: LEGORR 0x005574f4
+static uint32_t s_menu_wipe_stop;
+// GLOBAL: LEGORR 0x005574f8
+static float s_menu_wipe_clock;
 static float s_menu_plane_pan[2]; /* DAT_005574dc/e0 roles */
 static int s_main_menu_text_item_pending;
 static TextureSurface* s_interface_message_tab_info_text;
@@ -4082,15 +4109,21 @@ int menu_pick_widget_under_pointer(const void* menu, int* picked_index)
     return 0;
 }
 
+/* The previous-renderer-word memory is corpus-owned (DAT_004db8d4, the
+ * zero-filled tail); the current word is crt's g_renderer_word_c — the
+ * corpus loads both directly, so the port does too (the getter call was
+ * the only operand mismatch). */
+// GLOBAL: LEGORR 0x004db8d4
+static uint32_t s_progress_previous;
+
 /* FrontendProgressValueChanged (FUN_00411840): detect the transition from
  * progress-active (1) back to idle (0) in the renderer's third word. */
 // FUNCTION: LEGORR 0x00411840
 int frontend_progress_value_changed(void)
 {
-    static uint32_t previous = 0; /* DAT_004db8d4 */
-    const uint32_t current = renderer_word_c_get();
-    const int changed_to_idle = current == 0 && previous == 1;
-    previous = current;
+    const uint32_t current = g_renderer_word_c;
+    const int changed_to_idle = current == 0u && s_progress_previous == 1u;
+    s_progress_previous = current;
     return changed_to_idle;
 }
 
@@ -5156,36 +5189,37 @@ int layout_position_get(int entry, int* x, int* y)
 }
 
 /* --- the front-end flow words (see frontend.hpp) ----------------------------
- * Zero-initialized module statics stand in for the corpus's DAT words; the
- * load image's zero state is the faithful initial state (finding 23/438). */
+ * Each word is its own zero-initialized static; the winapi build annotates
+ * them individually at their corpus DAT addresses, whose zero-filled .data
+ * tail makes that the faithful initial state (finding 23/438). */
 // FUNCTION: LEGORR 0x00416d50
 int save_slot_open(void)
 {
-    return s_fe_flow[1] != -1;
+    return FE_FLOW_SAVE_SLOT != -1;
 }
 
 // FUNCTION: LEGORR 0x00416d60
 int is_in_game(void)
 {
-    return s_fe_flow[2] != -1;
+    return FE_FLOW_INGAME_SLOT != -1;
 }
 
 // FUNCTION: LEGORR 0x00416dd0
 int quit_menu_probe(void)
 {
-    return s_fe_flow[0];
+    return FE_FLOW_QUIT_WORD;
 }
 
 // FUNCTION: LEGORR 0x00416de0
 int level_start_flag(void)
 {
-    return s_fe_flow[FE_FLOW_LEVEL_START_SLOT] != 0;
+    return FE_FLOW_LEVEL_START != 0;
 }
 
 // FUNCTION: LEGORR 0x00416df0
 int menu_options_flag(void)
 {
-    return s_fe_flow[FE_FLOW_MENU_OPTIONS_SLOT] != 0;
+    return FE_FLOW_MENU_OPTIONS != 0;
 }
 
 /* OptionMusicDefault (FUN_00414e10) queries a WinMM audio-CD mixer source
@@ -5202,11 +5236,13 @@ int option_music_default(void)
 void frontend_flow_word_set(int which, int value)
 {
     if (which >= 0 && which < 5) {
-#if defined(LEGORRR_BACKEND_WINAPI)
-        s_fe_flow[which < 3 ? which : which + 8] = value;
-#else
-        s_fe_flow[which] = value;
-#endif
+        switch (which) {
+        case 0:  FE_FLOW_QUIT_WORD = value;      break;
+        case 1:  FE_FLOW_SAVE_SLOT = value;      break;
+        case 2:  FE_FLOW_INGAME_SLOT = value;    break;
+        case 3:  FE_FLOW_LEVEL_START = value;    break;
+        default: FE_FLOW_MENU_OPTIONS = value;   break;
+        }
     }
 }
 
@@ -5285,10 +5321,27 @@ static uint32_t s_sel_c0c;        /* DAT_004ddd0c */
 static uint32_t s_sel_c10;        /* DAT_004ddd10 */
 static float    s_sel_c14;        /* DAT_004ddd14 */
 static float    s_sel_c18;        /* DAT_004ddd18 */
-static float    s_reg[5];         /* DAT_004ddce0/e4/e8/ec + f0 */
+/* The corpus's parameter register quintet, DAT_004ddce0..f0 at stride 4.
+ * Each float carries its own GLOBAL annotation: Reccmp only resolves
+ * whole-object operands, so a shared-array base never matches the corpus's
+ * absolute accesses in the FUN_0041a990 and FUN_0041e9d0 readers. */
+// GLOBAL: LEGORR 0x004ddce0
+static float s_reg_e0;            /* DAT_004ddce0 */
+// GLOBAL: LEGORR 0x004ddce4
+static float s_reg_e4;            /* DAT_004ddce4 */
+// GLOBAL: LEGORR 0x004ddce8
+static float s_reg_e8;            /* DAT_004ddce8 */
+// GLOBAL: LEGORR 0x004ddcec
+static float s_reg_ec;            /* DAT_004ddcec */
+// GLOBAL: LEGORR 0x004ddcf0
+static float s_reg_f0;            /* DAT_004ddcf0 */
+// GLOBAL: LEGORR 0x004ddccc
 static uint32_t s_obj_sel_word;   /* DAT_004ddccc */
+// GLOBAL: LEGORR 0x004ddcd0
 static uint32_t s_obj_track_word; /* DAT_004ddcd0 */
+// GLOBAL: LEGORR 0x004de1ec
 static float    s_inter_timer = 0.0f; /* DAT_004de1ec */
+// GLOBAL: LEGORR 0x004de1f8
 static uint32_t s_inter_flags;    /* DAT_004de1f8 */
 static uint32_t s_pointer_action_type; /* DAT_004ddd00 */
 static uint32_t s_pointer_action_kind; /* DAT_004ddd04 */
@@ -5358,18 +5411,18 @@ void selection_coordinates_set(const uint32_t* pair, uint32_t x, uint32_t y)
 void selection_region_parameters_set(float a, float b, float c, float d,
                                      float e)
 {
-    s_reg[0] = a;
-    s_reg[1] = b;
-    s_reg[2] = c;
-    s_reg[3] = d;
-    s_reg[4] = (float)(e * 0.04); /* the corpus's double-prec scale */
+    s_reg_e0 = a;
+    s_reg_e4 = b;
+    s_reg_e8 = c;
+    s_reg_ec = d;
+    s_reg_f0 = (float)(e * 0.04); /* the corpus's double-prec scale */
 }
 
 // FUNCTION: LEGORR 0x0041a990
 void objective_selection_state_reset(void)
 {
     s_obj_sel_word = 0u;
-    __builtin_memcpy(&s_obj_track_word, &s_reg[2], sizeof(s_obj_track_word));
+    __builtin_memcpy(&s_obj_track_word, &s_reg_e8, sizeof(s_obj_track_word));
     s_inter_flags |= 0x84u;
 }
 
@@ -5409,9 +5462,11 @@ void selection_region_parameters_peek(float out[5])
     if (out == NULL) {
         return;
     }
-    for (int i = 0; i < 5; ++i) {
-        out[i] = s_reg[i];
-    }
+    out[0] = s_reg_e0;
+    out[1] = s_reg_e4;
+    out[2] = s_reg_e8;
+    out[3] = s_reg_ec;
+    out[4] = s_reg_f0;
 }
 
 uint32_t objective_selection_word_peek(void)
@@ -5422,9 +5477,18 @@ uint32_t objective_selection_word_peek(void)
 /* --- the selection-coordinate store (2026-10-24) ---------------------------
  * Corpus band DAT_004ddcc4/cc8/cfc/dcf4/f8; the other owners of these words
  * are unported seams, so the port models them as own storage (the
- * unowned-global deviation). */
-static uint32_t s_map_store_pair[2];  /* DAT_004ddcc4/cc8 */
-static uint32_t s_map_store_last[2];  /* DAT_004ddcf4/f8 */
+ * unowned-global deviation). Each word carries its own GLOBAL annotation:
+ * Reccmp only resolves whole-object operands, so accesses at an offset
+ * inside a shared array never match. */
+// GLOBAL: LEGORR 0x004ddcc4
+static uint32_t s_map_store_pair_x;   /* DAT_004ddcc4 */
+// GLOBAL: LEGORR 0x004ddcc8
+static uint32_t s_map_store_pair_y;   /* DAT_004ddcc8 */
+// GLOBAL: LEGORR 0x004ddcf4
+static uint32_t s_map_store_last_x;   /* DAT_004ddcf4 */
+// GLOBAL: LEGORR 0x004ddcf8
+static uint32_t s_map_store_last_y;   /* DAT_004ddcf8 */
+// GLOBAL: LEGORR 0x004ddcfc
 static uint32_t s_map_store_kind;     /* DAT_004ddcfc */
 
 // FUNCTION: LEGORR 0x0041ea50
@@ -5440,24 +5504,36 @@ void store_selected_map_coordinate(int kind, const uint32_t coord[2])
             s_map_store_kind = (uint32_t)kind;
             return;
         }
-        s_map_store_pair[0] = coord[0];
-        s_map_store_pair[1] = coord[1];
+        s_map_store_pair_x = coord[0];
+        s_map_store_pair_y = coord[1];
     }
     if (coord != NULL) {
-        s_map_store_last[0] = coord[0];
-        s_map_store_last[1] = coord[1];
+        s_map_store_last_x = coord[0];
+        s_map_store_last_y = coord[1];
     }
     s_map_store_kind = (uint32_t)kind;
 }
 
 uint32_t map_store_pair_word(int which)
 {
-    return (which >= 0 && which <= 1) ? s_map_store_pair[which] : 0u;
+    if (which == 0) {
+        return s_map_store_pair_x;
+    }
+    if (which == 1) {
+        return s_map_store_pair_y;
+    }
+    return 0u;
 }
 
 uint32_t map_store_last_word(int which)
 {
-    return (which >= 0 && which <= 1) ? s_map_store_last[which] : 0u;
+    if (which == 0) {
+        return s_map_store_last_x;
+    }
+    if (which == 1) {
+        return s_map_store_last_y;
+    }
+    return 0u;
 }
 
 uint32_t map_store_kind_peek(void)
@@ -5623,54 +5699,22 @@ static uint32_t s_menu_clock_millis; /* timeGetTime model */
 __declspec(naked) void menu_wipe_start(void)
 {
     __asm {
-        __emit 0xa1
-        __emit 0xec
-        __emit 0x74
-        __emit 0x55
-        __emit 0x00
+        mov eax, s_menu_wipe_arm
         sub esp, 8
         test eax, eax
         je menu_wipe_start_done
-        __emit 0xa1
-        __emit 0xf0
-        __emit 0x74
-        __emit 0x55
-        __emit 0x00
-        __emit 0xc7
-        __emit 0x05
-        __emit 0xf4
-        __emit 0x74
-        __emit 0x55
-        __emit 0x00
-        __emit 0x00
-        __emit 0x00
-        __emit 0x00
-        __emit 0x00
+        mov eax, s_menu_wipe
+        mov dword ptr s_menu_wipe_stop, 0
         or al, 1
         or al, 2
-        __emit 0xa3
-        __emit 0xf0
-        __emit 0x74
-        __emit 0x55
-        __emit 0x00
+        mov s_menu_wipe, eax
         call timeGetTime
-        __emit 0x89
-        __emit 0x44
-        __emit 0x24
-        __emit 0x00
+        mov dword ptr [esp], eax
         mov dword ptr [esp + 4], 0
-        __emit 0xdf
-        __emit 0x6c
-        __emit 0x24
-        __emit 0x00
+        fild qword ptr [esp]
         push 0
         push 0x27
-        __emit 0xd9
-        __emit 0x1d
-        __emit 0xf8
-        __emit 0x74
-        __emit 0x55
-        __emit 0x00
+        fstp dword ptr s_menu_wipe_clock
         call sound_request_queue_submit
         add esp, 8
     menu_wipe_start_done:
@@ -6328,7 +6372,9 @@ void panel_seam_last(void** out_res, float* out_x, float* out_y)
 /* --- the active-object word selector (see frontend.hpp) --------------------
  * DAT_00556fd0 (in-game) / DAT_00556fe4 (out) are unowned: zero-init
  * statics here, addressed through the ported in-game test. */
+// GLOBAL: LEGORR 0x00556fd0
 static int s_active_object_ingame;  /* DAT_00556fd0 role */
+// GLOBAL: LEGORR 0x00556fe4
 static int s_active_object_outgame; /* DAT_00556fe4 role */
 
 // FUNCTION: LEGORR 0x00416e00
@@ -6400,7 +6446,7 @@ void screen_effect_seam_last(void** out_handle, int* out_flag)
 int text_layout_offset_for_centering(int x, int y, int rect_x, int rect_y,
                                      int rect_w, int rect_h, int center)
 {
-    const int xoff = (center == 0) ? 0 : -(rect_w / 2);
+    const int xoff = (center != 0) ? -(rect_w / 2) : 0;
     return menu_pointer_rectangle_hit_test(x, y, xoff + rect_x, rect_y,
                                            rect_w, rect_h);
 }

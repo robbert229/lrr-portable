@@ -834,6 +834,7 @@ uint32_t request_record_flags_peek(int index)
 }
 
 /* --- the remaining DAT one-liner stores/reads (see crt.hpp) ----------------- */
+// GLOBAL: LEGORR 0x0050080c
 static uint32_t s_value_0050080c = 0u;
 static uint32_t s_font_words[16];   /* DAT_00500a9c window */
 static uint32_t s_cursor_word = 0u; /* DAT_00500a98 */
@@ -1651,7 +1652,9 @@ void shared_texture_directory_clear(void)
 static uint32_t s_renderer_flag_word; /* DAT_0076cd94 role: unowned */
 static void*    s_scene_end_hook;     /* DAT_0076cd80 role: unowned */
 static void*    s_scene_end_value;    /* DAT_0076cd84 role: unowned */
+// GLOBAL: LEGORR 0x0076cd78
 static void*    s_scene_sample_hook;  /* DAT_0076cd78 role: unowned */
+// GLOBAL: LEGORR 0x0076cd7c
 static void*    s_scene_sample_value; /* DAT_0076cd7c role: unowned */
 
 // FUNCTION: LEGORR 0x004728e0
@@ -2113,7 +2116,8 @@ void pair_table_append(void* table, int* count, const char* key,
  * DAT-window convention). The install hooks are port-side. */
 static uint32_t s_renderer_word_a;      /* DAT_0076ab24 */
 static uint32_t s_renderer_word_b;      /* DAT_0076ab28 */
-static uint32_t s_renderer_word_c;      /* DAT_0076ab3c */
+// GLOBAL: LEGORR 0x0076ab3c
+uint32_t g_renderer_word_c;             /* DAT_0076ab3c */
 static uint32_t s_renderer_global_dword; /* DAT_0076ac84 */
 static uint32_t s_render_surface_secondary; /* DAT_0076ac8c */
 static uint32_t s_render_feature_flags; /* DAT_0050608c */
@@ -2123,12 +2127,12 @@ uint32_t renderer_word_a_get(void) { return s_renderer_word_a; } /* FUN_00410b30
 // FUNCTION: LEGORR 0x00410b40
 uint32_t renderer_word_b_get(void) { return s_renderer_word_b; } /* FUN_00410b40 */
 // FUNCTION: LEGORR 0x00410b50
-uint32_t renderer_word_c_get(void) { return s_renderer_word_c; } /* FUN_00410b50 */
+uint32_t renderer_word_c_get(void) { return g_renderer_word_c; } /* FUN_00410b50 */
 void renderer_words_set(uint32_t a, uint32_t b, uint32_t c)
 {
     s_renderer_word_a = a;
     s_renderer_word_b = b;
-    s_renderer_word_c = c;
+    g_renderer_word_c = c;
 }
 
 // FUNCTION: LEGORR 0x004065d0

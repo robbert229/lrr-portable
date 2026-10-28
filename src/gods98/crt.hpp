@@ -670,6 +670,7 @@ uint32_t crt_uint96_clear_from_bit(uint32_t limbs[3], int bit);
 uint32_t renderer_word_a_get(void);
 uint32_t renderer_word_b_get(void);
 uint32_t renderer_word_c_get(void);
+extern uint32_t g_renderer_word_c;      /* DAT_0076ab3c (renderer word C) */
 void     renderer_words_set(uint32_t a, uint32_t b, uint32_t c); /* install */
 
 /* GlobalDwordGet (FUN_004065d0): the DAT_0076ac84 global dword. */
