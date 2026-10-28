@@ -13,6 +13,129 @@
 #define ENTRY_FLAG_EXPANDED 0x2u
 #define EXPAND_HEADER_SZ  0x12u
 
+static void wad_huffman_table_clear(void* table, int count);
+static void wad_huffman_canonical_codes_build(void* table, int count);
+
+typedef struct WadCodecTableEntry {
+    uint32_t code;
+    uint16_t max;
+    uint16_t pad;
+    uint32_t unused;
+    uint16_t len;
+    uint16_t pad2;
+} WadCodecTableEntry;
+
+static unsigned int wad_reverse_low_bits(unsigned int v, unsigned int n)
+{
+    unsigned int out = 0;
+    while (n--) { out = (out << 1) | (v & 1u); v >>= 1; }
+    return out;
+}
+static void wad_huffman_canonical_codes_build(void* table, int count)
+{
+    WadCodecTableEntry* e;
+    unsigned int next, unit, len;
+    int i;
+    e = (WadCodecTableEntry*)table;
+    next = 0;
+    unit = 0x80000000u;
+    for (len=1; len<=16; ++len, unit >>= 1) {
+        for (i=0; i<count; ++i) if (e[i*8].len == len) {
+            e[i*8].code = wad_reverse_low_bits(next / unit, len);
+            next += unit;
+        }
+    }
+}
+
+/* WAD codec state mirrors the executable's shared, non-reentrant decoder. */
+static const unsigned char* wad_codec_in;
+static unsigned char* wad_codec_out;
+static unsigned char* wad_codec_end;
+static unsigned int wad_codec_bits, wad_codec_lsb, wad_codec_msb;
+
+static void wad_codec_initialize(const void* src, void* dst)
+{
+    const unsigned char* p;
+    uint32_t n;
+    p = (const unsigned char*)src;
+    wad_codec_in = p ? p + 0x12 : NULL;
+    wad_codec_out = (unsigned char*)dst;
+    n = p ? ((uint32_t)p[4]<<24)|((uint32_t)p[5]<<16)|((uint32_t)p[6]<<8)|p[7] : 0;
+    wad_codec_end = dst ? (unsigned char*)dst + n : NULL;
+    wad_codec_bits = wad_codec_lsb = wad_codec_msb = 0;
+}
+static unsigned int wad_codec_read_lsb(unsigned int n)
+{
+    unsigned int v, mask;
+    v = 0;
+    mask = 1;
+    while(n--) {
+        if(!wad_codec_bits) {
+            wad_codec_lsb=wad_codec_in[0]|((unsigned int)wad_codec_in[1]<<8);
+            wad_codec_in+=2;
+            wad_codec_bits=16;
+        }
+        if(wad_codec_lsb&1) v|=mask;
+        mask<<=1;
+        wad_codec_lsb>>=1;
+        --wad_codec_bits;
+    }
+    return v;
+}
+static unsigned int wad_codec_read_msb(unsigned int n)
+{
+    unsigned int v;
+    v=0;
+    while(n--) {
+        if(!wad_codec_bits) { wad_codec_msb=*wad_codec_in++; wad_codec_bits=8; }
+        v=(v<<1)|((wad_codec_msb>>7)&1);
+        wad_codec_msb=(wad_codec_msb<<1)&255;
+        --wad_codec_bits;
+    }
+    return v;
+}
+static short wad_codec_run(void) { short a=(short)wad_codec_read_msb(1), b=(short)wad_codec_read_msb(1); if(!b)return a+4; return (short)(wad_codec_read_msb(1)-2+(a+4)*2); }
+static int wad_codec_offset(void)
+{
+    unsigned int v=0; if(wad_codec_read_msb(1)) { v=wad_codec_read_msb(1); if(!wad_codec_read_msb(1)) { if(!v)v=wad_codec_read_msb(1)+2; }
+    else { v=(wad_codec_read_msb(1)+v*2)|4; if(!wad_codec_read_msb(1))v=wad_codec_read_msb(1)+v*2; } }
+    return v*256+1+*wad_codec_in++;
+}
+// FUNCTION: LEGORR 0x0049cc70
+static void wad_bitstream_output_initialize(const void* src, void* dst) { wad_codec_initialize(src,dst); }
+// FUNCTION: LEGORR 0x0049ccc0
+static unsigned int wad_read_bits_lsb_first(unsigned int n) { return wad_codec_read_lsb(n); }
+// FUNCTION: LEGORR 0x0049cd30
+static unsigned int wad_read_bits_msb_first(unsigned int n) { return wad_codec_read_msb(n); }
+// FUNCTION: LEGORR 0x0049ce70
+static short wad_run_length_decode(void) { return wad_codec_run(); }
+// FUNCTION: LEGORR 0x0049ceb0
+static int wad_backreference_offset_decode(void) { return wad_codec_offset(); }
+
+// FUNCTION: LEGORR 0x0049cd90
+static void wad_huffman_table_read(void* table, unsigned int count)
+{
+    unsigned int n, i;
+    WadCodecTableEntry* e;
+    wad_huffman_table_clear(table, (int)count);
+    n=wad_read_bits_lsb_first(5);
+    if(n>16)n=16;
+    e=(WadCodecTableEntry*)table;
+    for(i=0;i<n;i++) e[i*8].len=(uint16_t)wad_read_bits_lsb_first(4);
+    if(n) wad_huffman_canonical_codes_build(table,(int)n);
+}
+// FUNCTION: LEGORR 0x0049ce00
+static unsigned int wad_huffman_symbol_decode(void* table)
+{
+    WadCodecTableEntry* e;
+    unsigned int i, v;
+    e=(WadCodecTableEntry*)table;
+    i=0;
+    while(e[i*8].len==0 || (((1u<< (e[i*8].len&31))-1u & wad_codec_lsb)!=e[i*8].code)) ++i;
+    v=wad_read_bits_lsb_first(e[i*8].len);
+    return i<2 ? i : (wad_read_bits_lsb_first(i-1)|(1u<<(i-1)));
+}
+
 typedef struct WadEntry {
     uint32_t flags;
     uint32_t orig;    /* uncompressed length */

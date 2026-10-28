@@ -7,6 +7,47 @@
 #include "heap.hpp"
 #include "string.hpp"
 
+/* CRT inverse-trigonometric entries. The original uses x87 register inputs
+ * and computes the acos core with fpatan(sqrt((1-x)(1+x)), x); these portable
+ * double interfaces preserve the mathematical result for the engine's
+ * ordinary finite inputs. */
+// FUNCTION: LEGORR 0x0048e090
+double crt_asin(double value)
+{
+    return asin(value);
+}
+
+// FUNCTION: LEGORR 0x0048e0ad
+double crt_acos_core(double value)
+{
+    return atan2(sqrt((1.0 - value) * (1.0 + value)), value);
+}
+
+/* The 96-bit extended-integer helpers operate on three little-endian DWORDs.
+ * Keeping the carries explicit also works with the VC5 compiler used by the
+ * original target. */
+// FUNCTION: LEGORR 0x0049a050
+void extended_float96_bit_shift_left_one(uint32_t* value)
+{
+    uint32_t low;
+    uint32_t middle;
+    low = value[0];
+    middle = value[1];
+    value[0] = low << 1;
+    value[1] = (middle << 1) | (low >> 31);
+    value[2] = (value[2] << 1) | (middle >> 31);
+}
+
+// FUNCTION: LEGORR 0x0049a080
+void extended_float96_bit_shift_right_one(uint32_t* value)
+{
+    uint32_t middle;
+    middle = value[1];
+    value[1] = (middle >> 1) | (value[2] << 31);
+    value[2] >>= 1;
+    value[0] = (value[0] >> 1) | (middle << 31);
+}
+
 /* FUN_00498000: the corpus's memmove with word loops and byte tails —
  * byte-equivalent to the host memmove (findings 260/394). */
 // FUNCTION: LEGORR 0x00498000

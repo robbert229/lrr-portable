@@ -4343,14 +4343,6 @@ void ledger_stub_0048de20_ArraySortWithComparator() {}
 // STUB: LEGORR 0x0048dfd0
 void ledger_stub_0048dfd0_QsortSmallPartitionSort() {}
 
-// CrtAsin
-// STUB: LEGORR 0x0048e090
-void ledger_stub_0048e090_CrtAsin() {}
-
-// CrtAcosCore
-// STUB: LEGORR 0x0048e0ad
-void ledger_stub_0048e0ad_CrtAcosCore() {}
-
 // CrtMathIntrinsicDispatch
 // STUB: LEGORR 0x0048e1aa
 void ledger_stub_0048e1aa_CrtMathIntrinsicDispatch() {}
@@ -4995,14 +4987,6 @@ void ledger_stub_00499b30_CrtDaylightSavingTimeCheck() {}
 // STUB: LEGORR 0x00499da0
 void ledger_stub_00499da0_CrtDaylightTransitionBoundaryCompute() {}
 
-// ExtendedFloat96BitShiftLeftOne
-// STUB: LEGORR 0x0049a050
-void ledger_stub_0049a050_ExtendedFloat96BitShiftLeftOne() {}
-
-// ExtendedFloat96BitShiftRightOne
-// STUB: LEGORR 0x0049a080
-void ledger_stub_0049a080_ExtendedFloat96BitShiftRightOne() {}
-
 // CrtDecimalDigitSequenceToExtended96
 // STUB: LEGORR 0x0049a0b0
 void ledger_stub_0049a0b0_CrtDecimalDigitSequenceToExtended96() {}
@@ -5062,34 +5046,6 @@ void ledger_stub_0049b540_CrtEnvironmentArrayClone() {}
 // CrtMultibyteCharacterSearch
 // STUB: LEGORR 0x0049b5b0
 void ledger_stub_0049b5b0_CrtMultibyteCharacterSearch() {}
-
-// WadBitstreamOutputInitialize
-// STUB: LEGORR 0x0049cc70
-void ledger_stub_0049cc70_WadBitstreamOutputInitialize() {}
-
-// WadReadBitsLsbFirst
-// STUB: LEGORR 0x0049ccc0
-void ledger_stub_0049ccc0_WadReadBitsLsbFirst() {}
-
-// WadReadBitsMsbFirst
-// STUB: LEGORR 0x0049cd30
-void ledger_stub_0049cd30_WadReadBitsMsbFirst() {}
-
-// WadHuffmanTableRead
-// STUB: LEGORR 0x0049cd90
-void ledger_stub_0049cd90_WadHuffmanTableRead() {}
-
-// WadHuffmanSymbolDecode
-// STUB: LEGORR 0x0049ce00
-void ledger_stub_0049ce00_WadHuffmanSymbolDecode() {}
-
-// WadRunLengthDecode
-// STUB: LEGORR 0x0049ce70
-void ledger_stub_0049ce70_WadRunLengthDecode() {}
-
-// WadBackreferenceOffsetDecode
-// STUB: LEGORR 0x0049ceb0
-void ledger_stub_0049ceb0_WadBackreferenceOffsetDecode() {}
 
 // DirectDrawDeviceInitialize
 // STUB: LEGORR 0x0049d030
