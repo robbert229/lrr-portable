@@ -96,8 +96,15 @@ void cmd_rec_set_next(void* rec, void* next) { as_rec(rec)->next = next; }
  * ------------------------------------------------------------------ */
 
 #define CMD_POOL_MAX_BLOCKS 12
+/* Pool bookkeeping is the corpus's DAT_004b31c8 band: CmdPoolGrow stores
+ * each block at [level*4+0x4b31c8] and the level at DAT_004b31fc;
+ * CmdAlloc/CmdFree pop and push the freelist through DAT_004b31f8
+ * (records link at +0x64). All three are zero-init in the corpus. */
+// GLOBAL: LEGORR 0x004b31c8
 static CmdRec* s_blocks[CMD_POOL_MAX_BLOCKS];
+// GLOBAL: LEGORR 0x004b31fc
 static int     s_pool_level = 0;
+// GLOBAL: LEGORR 0x004b31f8
 static void*   s_free       = NULL;
 
 // GLOBAL: LEGORR 0x004b3354
@@ -148,17 +155,19 @@ void* cmd_alloc(int type)
 // FUNCTION: LEGORR 0x00406480
 void cmd_free(void* rec, int cancel)
 {
-    if (rec == NULL) {
-        return;
-    }
+    /* corpus: no NULL-record path — the gate is the second argument
+     * (test [esp+8] / jne) and the record is dereferenced blindly. */
     if (cancel == 0) {
         cmd_cancel_ref(rec); /* corpus: unless the argument suppresses it */
     }
     CmdRec* r = as_rec(rec);
     if (r->buffer != NULL && (r->state & CMD_STATE_BUFOUT) == 0) {
-        free(r->buffer);
-        r->buffer = NULL;
+        engine_heap_free(r->buffer); /* corpus: push eax / call 0x48db80 */
+        /* corpus: the pointer is never cleared — cmd_alloc zeroes the
+         * whole record, so the next owner starts from NULL. */
     }
+    /* corpus: load ds:0x4b31f8, link it at [rec+0x64], store the record
+     * back as that head — s_free is this freelist head. */
     r->next = s_free;
     s_free = r;
 }
@@ -568,15 +577,14 @@ static int task_kind_for(EntitySlot* e)
 // FUNCTION: LEGORR 0x00402850
 static void cmd_minion_companion(EntitySlot* e)
 {
-    if (e == NULL || e->etype != 6) {
+    /* Corpus parity: strides the entity blindly, uses the record blindly,
+     * and routes the kind through the corpus's own cmd_set_kind. */
+    if (e->etype != 6) {
         return;
     }
     CmdRec* rec = (CmdRec*)cmd_alloc(3);
-    if (rec == NULL) {
-        return;
-    }
     rec->payload = e;
-    cmd_bind_kind(rec, 0x15);
+    cmd_set_kind(rec, 0x15);
     cmd_link_tail(rec);
     rec->state |= CMD_STATE_MINION;
 }
@@ -867,15 +875,17 @@ const void* active_context_record_get(int* count_out)
 int cmd_array_find_value_index(const int* array, unsigned count, int value,
                                unsigned* index_out)
 {
-    if (array == NULL) {
-        return 0; /* deviation: the corpus dereferences blindly */
-    }
-    for (unsigned i = 0; i < count; ++i) {
-        if (array[i] == value) {
-            if (index_out != NULL) {
-                *index_out = i;
+    if (count != 0) { /* deviation: the corpus tests the count first */
+        if (array != NULL) { /* pinned anti-crash guard — the corpus
+                              * dereferences blindly */
+            for (unsigned i = 0; i != count; ++i) {
+                if (array[i] == value) {
+                    if (index_out != NULL) {
+                        *index_out = i;
+                    }
+                    return 1;
+                }
             }
-            return 1;
         }
     }
     return 0;
@@ -1210,11 +1220,10 @@ int cmd_rec_param2_get(const void* rec)
 }
 
 /* --- registry flush / wrappers (see cmd.hpp) ---------------------------------
- * The handle array (DAT_004b31c8 band, 12 dwords + companion): no ported
- * feeder (the registry initializer is the seam), so it is modeled as a
- * zero-init static whose release walk is inert. */
-static void* s_handle_array[12];
-static int   s_handle_array_companion;  /* DAT_004b31f8 */
+ * The "handle array" the corpus's TaskTableContentsRelease walks IS the
+ * cmd pool block array (0x4b31c8 band, bounded by the freelist head at
+ * 0x4b31f8 — corpus-verified at 0x004020c0), so the release walks the pool
+ * statics directly rather than a duplicate model. */
 // FUNCTION: LEGORR 0x00402100
 void cmd_flush_all(int disable_mode)
 {
@@ -1237,38 +1246,55 @@ int cmd_global_enabled_peek(void) { return s_global_enabled; }
 // FUNCTION: LEGORR 0x004021e0
 void* engine_memory_allocate(long size)
 {
-    (void)engine_heap_alloc(size);
-    /* corpus shape: the allocation happens; the pointer is discarded. */
-    return NULL;
+    /* corpus shape: forwards the allocation's result; engine_heap_alloc is FUN_0048dbd0. */
+    return engine_heap_alloc(size);
 }
 // FUNCTION: LEGORR 0x00402210
 void engine_memory_free(void* ptr)
 {
     engine_heap_free(ptr);
 }
+/* TaskTableContentsRelease (FUN_004020c0): frees every non-null pool
+ * block pointer (the corpus walks esi from DAT_004b31c8 up to the
+ * freelist-head address at 0x4b31f8 with a pointer walk), clears the
+ * freelist head, and drops the enable word. */
 // FUNCTION: LEGORR 0x004020c0
 void handle_array_release_and_reset(void)
 {
-    for (int i = 0; i < 12; ++i) {
-        if (s_handle_array[i] != NULL) {
-            engine_heap_free(s_handle_array[i]);
+    CmdRec** walk = s_blocks;
+    CmdRec** const end = s_blocks + CMD_POOL_MAX_BLOCKS;
+    while (walk < end) {
+        if (*walk != NULL) {
+            engine_heap_free(*walk);
         }
+        ++walk;
     }
-    s_handle_array_companion = 0;
+    s_free = NULL;
     s_global_enabled = 0;
 }
 // FUNCTION: LEGORR 0x00402800
+/* EntityCommand14BatchIssue (FUN_00402800): the corpus materializes the
+ * flag by mutation, not by a sete — edi starts at 0, the count==0
+ * fall-through stores 1 into it and reuses it as the loop bound (the
+ * test/jne shape) — then strides the loop blindly: cmd_alloc(4) is
+ * dereferenced with no NULL check (deviation removed: the port's guard
+ * let an exhausted pool skip records the corpus would stride onto).
+ * Deviation: the corpus's unsigned gate (test eax,eax / jbe) runs away
+ * on a negative count; the port keeps the signed loop, so a negative
+ * count issues nothing. */
 void entity_command14_batch_issue(int count)
 {
-    const int raise_bit6 = (count == 0);
-    const int n = raise_bit6 ? 1 : count;
+    unsigned flag = 0;
+    int n = count;
+    if (n == 0) {
+        flag = 1u;
+        n = 1;
+    }
     for (int i = 0; i < n; ++i) {
         CmdRec* rec = (CmdRec*)cmd_alloc(4);
-        if (rec == NULL) {
-            continue;
-        }
+        /* corpus: no alloc guard, the record is used blindly */
         cmd_set_kind(rec, 0x14);
-        if (raise_bit6) {
+        if (flag != 0u) {
             rec->state |= 0x40u;
         }
         cmd_link_tail(rec);

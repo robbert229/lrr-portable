@@ -200,16 +200,27 @@ void media_audio_playback_toggle(int enable)
  *  Cue dispatch + pointer-cursor state (issue #300). The corpus's
  *  DAT_00500a98 / _DAT_00500efc pair lives in the cursor/renderer
  *  context; the consumers (the cursor draw) land with that port, so
- *  the state is held module-locally as the observable half.
+ *  the state is held module-locally as the observable half. The
+ *  PointerCursorSelect gate is `test ah, 0x41` on an fcomp against
+ *  0.0f, so it skips only strictly-positive overrides: zero, negative
+ *  AND NaN all store the slot.
  * ------------------------------------------------------------------ */
 
+// GLOBAL: LEGORR 0x00500a98
 static int   s_cursor_slot;       /* DAT_00500a98 role */
+// GLOBAL: LEGORR 0x00500efc
 static float s_cursor_override;   /* _DAT_00500efc role (statics: 0.0) */
+
+/* The corpus's override gate compares against this .rdata zero dword
+ * (objdump-verified fcomp operand of PointerCursorSelect); a named const
+ * static keeps the fcomp operand resolvable by Reccmp. */
+// GLOBAL: LEGORR 0x0049e64c
+static const float s_cursor_gate = 0.0f;   /* DAT_0049e64c, verified */
 
 // FUNCTION: LEGORR 0x0045cc20
 void media_pointer_cursor_select(int slot)
 {
-    if (s_cursor_override <= 0.0f) {
+    if (!(s_cursor_override > s_cursor_gate)) {
         s_cursor_slot = slot;
     }
 }
@@ -369,7 +380,9 @@ void media_cd_audio_open_set(int open)
 }
 
 /* LoaderProgressCallbackSet (FUN_004802b0) — see media.hpp. */
+// GLOBAL: LEGORR 0x005343ac
 static void* s_loader_progress_callback; /* DAT_005343ac role: unowned */
+// GLOBAL: LEGORR 0x005343b0
 static void* s_loader_progress_context;  /* DAT_005343b0 role: unowned */
 
 // FUNCTION: LEGORR 0x004802b0

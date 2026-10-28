@@ -120,18 +120,27 @@ int crt_unsigned_add_with_carry(uint32_t a, uint32_t b, uint32_t* sum)
 }
 
 /* FUN_00493a80: the exponent/quiet-bit pattern classifier over the two
- * bit words, corpus masks verbatim (finding 399). The corpus masks the
- * high word's top 16 bits with 0x7ff8 — exponent plus quiet bit. */
+ * bit words, corpus masks verbatim (finding 399). The corpus loads both
+ * parameters up front and tests the infinities first, then reads the
+ * exponent+quiet field as a raw dword at esp+0xa — six bytes past the
+ * low parameter's address, the high half of the hi word plus two bytes
+ * past the last parameter, which the 0x7ff8 mask discards — and compares
+ * it as a WORD. */
 // FUNCTION: LEGORR 0x00493a80
 int double_classify(uint32_t lo, uint32_t hi)
 {
-    const uint32_t exp_quiet = (hi >> 16) & 0x7ff8u;
     if (hi == 0x7ff00000u && lo == 0u) {
         return 1;                                   /* +infinity */
     }
     if (hi == 0xfff00000u && lo == 0u) {
         return 2;                                   /* -infinity */
     }
+    /* The corpus reads the exponent+quiet field as a raw dword six bytes
+     * past &lo — esp+0xa, the high half of the hi word plus two bytes
+     * past the parameter, which the 0x7ff8 mask discards — and compares
+     * it as a WORD; mirror the read shape through the parameter bytes. */
+    const uint16_t exp_quiet = (uint16_t)(
+        *(const uint32_t*)((const char*)&lo + 6) & 0x7ff8u);
     if (exp_quiet == 0x7ff8u) {
         return 3;                                   /* quiet-NaN-shaped */
     }
@@ -325,13 +334,19 @@ uint32_t global_value_004ff9bc_store_and_return(const void* value)
 /* --- unowned DAT-global counter/accumulator band (see crt.hpp) -----------
  * None of these globals has a ported owner or feeder, so each lands as a
  * zero-initialized module static (the s_system_state precedent). */
+// GLOBAL: LEGORR 0x004ff990
 static uint32_t s_counter_004ff990 = 0u;
 static float    s_float_00554adc   = 0.0f;
 static float    s_float_00554efc   = 0.0f;
+// GLOBAL: LEGORR 0x00555324
 static uint32_t s_counter_00555324 = 0u;
+// GLOBAL: LEGORR 0x00555328
 static uint32_t s_counter_00555328 = 0u;
+// GLOBAL: LEGORR 0x0055532c
 static uint32_t s_counter_0055532c = 0u;
+// GLOBAL: LEGORR 0x00555330
 static float    s_float_00555330   = 0.0f;
+// GLOBAL: LEGORR 0x00555120
 static float    s_float_00555120   = 0.0f;
 
 // FUNCTION: LEGORR 0x00454880
@@ -676,6 +691,7 @@ int display_mode_matches_filter_tuple(int mode_index)
  * Zero-initialized module statics per the s_system_state precedent — the
  * globals' meanings are unresolved (finding 383) and none has a ported
  * feeder. */
+// GLOBAL: LEGORR 0x004ff978
 static uint32_t s_flag_004ff978 = 0u;
 // GLOBAL: LEGORR 0x004ffe48
 static uint32_t s_value_004ffe48 = 0u;
@@ -768,7 +784,9 @@ uint32_t ui_flag_word_peek(void)        { return s_ui_flag_word; }
 uint32_t global_config_word_peek(void)  { return s_config_word; }
 
 /* --- display dimensions + request-record predicates (see crt.hpp) ---------- */
+// GLOBAL: LEGORR 0x00505924
 static int s_display_w;   /* DAT_00505924 */
+// GLOBAL: LEGORR 0x00505928
 static int s_display_h;   /* DAT_00505928 */
 
 // FUNCTION: LEGORR 0x00401c30
@@ -837,7 +855,7 @@ uint32_t request_record_flags_peek(int index)
 // GLOBAL: LEGORR 0x0050080c
 static uint32_t s_value_0050080c = 0u;
 static uint32_t s_font_words[16];   /* DAT_00500a9c window */
-static uint32_t s_cursor_word = 0u; /* DAT_00500a98 */
+static uint32_t s_cursor_slot = 0u; /* DAT_00500a98 */
 
 // FUNCTION: LEGORR 0x0045c4a0
 void global_value_0050080c_set(uint32_t value)
@@ -862,13 +880,13 @@ uint32_t indexed_global_value_at_get(int index)
 // FUNCTION: LEGORR 0x0045cc60
 uint32_t global_cursor_word_get(void)
 {
-    return s_cursor_word;
+    return s_cursor_slot;
 }
 
 void font_cursor_word_set(int index, uint32_t v)
 {
     if (index == -1) {
-        s_cursor_word = v; /* the DAT_00500a98 word itself */
+        s_cursor_slot = v; /* the DAT_00500a98 word itself */
         return;
     }
     if (index >= 0 && index < 16) {
@@ -1433,7 +1451,12 @@ int  global_value_word_peek(void) { return s_global_value_word; }
  * head words have no ported owner, so the heads land here; the link field
  * at record +0x28 is a port-side pointer-sized slot (the corpus's 32-bit
  * dword, widened with the host — deviation documented). */
-static void* s_linked_list_head;  /* DAT_004aa458 role */
+/* Datacmp note: the corpus words at 0x4aa450/0x4aa458 are file-backed
+ * zeros while the port's zero-init statics land in the exe's zero-fill
+ * tail; reccmp-datacmp reads only file bytes per side and flags the pair
+ * (uninitialized) — both sides are genuinely zero (image-verified). */
+// GLOBAL: LEGORR 0x004aa458
+static void* s_linked_list_head = NULL;  /* DAT_004aa458 role */
 static void* s_record_list_head;  /* DAT_00506518 role */
 
 static void record_list_push(void** head, void* record)
@@ -1468,15 +1491,23 @@ void* global_record_list_head_peek(void) { return s_record_list_head; }
 
 /* SceneEffectRegistryReset (FUN_00465380) — the transient-effect registry
  * words (head/tail/shared-texture, unowned) clear and the reset answers 1
- * exactly as the corpus does. */
-static uint32_t s_scene_effect_words[3];
+ * exactly as the corpus does. The corpus addresses the trio individually at
+ * 0x00552128/0x0055212c/0x00552130, so each word is its own annotated
+ * static (the s_indexed_window precedent); all three are zero-filled
+ * virtual tail, matching the zero-initialized statics here. */
+// GLOBAL: LEGORR 0x00552128
+static uint32_t s_scene_effect_head;     /* DAT_00552128 role: transient-effect head */
+// GLOBAL: LEGORR 0x0055212c
+static uint32_t s_scene_effect_tail;     /* DAT_0055212c role: transient-effect tail */
+// GLOBAL: LEGORR 0x00552130
+static uint32_t s_scene_effect_shared;   /* DAT_00552130 role: shared texture */
 
 // FUNCTION: LEGORR 0x00465380
 int scene_effect_registry_reset(void)
 {
-    s_scene_effect_words[0] = 0u;
-    s_scene_effect_words[1] = 0u;
-    s_scene_effect_words[2] = 0u;
+    s_scene_effect_head = 0u;    /* corpus clears in address order */
+    s_scene_effect_tail = 0u;
+    s_scene_effect_shared = 0u;
     return 1;
 }
 
@@ -1485,9 +1516,9 @@ void scene_effect_registry_words_peek(uint32_t out_words[3])
     if (out_words == NULL) {
         return;
     }
-    for (int i = 0; i < 3; ++i) {
-        out_words[i] = s_scene_effect_words[i];
-    }
+    out_words[0] = s_scene_effect_head;
+    out_words[1] = s_scene_effect_tail;
+    out_words[2] = s_scene_effect_shared;
 }
 
 /* CrtFatalMessageExit (FUN_00498340) — the corpus's exhausted-memory
@@ -1518,7 +1549,8 @@ void crt_no_op_stub_variant2(void)
 }
 
 /* LinkedRecordChainFree / GlobalLinkedRecordChainClear — see crt.hpp. */
-static void* s_linked_list_aux; /* DAT_004aa450 role: unowned, zero-init */
+// GLOBAL: LEGORR 0x004aa450
+static void* s_linked_list_aux = NULL; /* DAT_004aa450 role: unowned, zero-init */
 
 // FUNCTION: LEGORR 0x0046a370
 void linked_record_chain_free(void* record)
@@ -1535,8 +1567,9 @@ void linked_record_chain_free(void* record)
 // FUNCTION: LEGORR 0x0046a390
 void global_linked_record_chain_clear(void)
 {
+    void* head = s_linked_list_head; /* the corpus reads the head first */
     s_linked_list_aux = NULL;
-    linked_record_chain_free(s_linked_list_head);
+    linked_record_chain_free(head);
     s_linked_list_head = NULL;
 }
 
@@ -1650,7 +1683,9 @@ void shared_texture_directory_clear(void)
 /* --- the renderer flag word + scene hook pair band (see crt.hpp) ----------- */
 // GLOBAL: LEGORR 0x0076cd94
 static uint32_t s_renderer_flag_word; /* DAT_0076cd94 role: unowned */
+// GLOBAL: LEGORR 0x0076cd80
 static void*    s_scene_end_hook;     /* DAT_0076cd80 role: unowned */
+// GLOBAL: LEGORR 0x0076cd84
 static void*    s_scene_end_value;    /* DAT_0076cd84 role: unowned */
 // GLOBAL: LEGORR 0x0076cd78
 static void*    s_scene_sample_hook;  /* DAT_0076cd78 role: unowned */
@@ -1688,6 +1723,7 @@ void* scene_sample_hook_peek(void) { return s_scene_sample_hook; }
 void* scene_sample_hook_value_peek(void) { return s_scene_sample_value; }
 
 /* --- the string registry (see crt.hpp) ------------------------------------- */
+// GLOBAL: LEGORR 0x004db8cc
 static void* s_string_registry_head; /* DAT_004db8cc role: unowned */
 
 /* The corpus's locale-following compare, modeled on the port's fold pattern
@@ -1707,23 +1743,23 @@ static int s_strcasecmp(const char* a, const char* b)
 // FUNCTION: LEGORR 0x00410450
 void* string_keyed_cache_entry_find(const char* key)
 {
+    /* Corpus walk: the head gates once, the name rides strcasecmp_lite
+     * untested (intern only ever links an entry whose duplicated name
+     * landed), and the +0x0c link advances through a bottom-tested
+     * test/jne. */
     void* entry = s_string_registry_head;
     if (entry == NULL) {
         return NULL;
     }
     const long field = (long)sizeof(void*);
     for (;;) {
-        char* name = NULL;
-        __builtin_memcpy(&name, (char*)entry + 0 * field, sizeof name);
-        if (name != NULL && s_strcasecmp(name, key) == 0) {
+        if (strcasecmp_lite(*(char**)entry, key) == 0) {
             return entry;
         }
-        void* next = NULL;
-        __builtin_memcpy(&next, (char*)entry + 3 * field, sizeof next);
-        if (next == NULL) {
+        entry = *(void**)((char*)entry + 3 * field);
+        if (entry == NULL) {
             return NULL;
         }
-        entry = next;
     }
 }
 
@@ -1737,24 +1773,19 @@ void* string_registry_intern(const char* key)
     if (entry != NULL) {
         return entry;
     }
-    const long field = (long)sizeof(void*);
-    void* record = engine_heap_alloc(4 * field);
-    if (record == NULL) {
-        return NULL; /* corpus asserts in the heap seam */
-    }
-    const size_t n = strlen(key) + 1u;
-    char* copy = (char*)engine_heap_alloc((long)n);
-    if (copy == NULL) {
-        engine_heap_free(record);
-        return NULL;
-    }
-    memcpy(copy, key, n);
-    const void* zero = NULL;
-    __builtin_memcpy((char*)record + 0 * field, &copy, sizeof copy);
-    __builtin_memcpy((char*)record + 1 * field, &zero, sizeof zero);
-    __builtin_memcpy((char*)record + 2 * field, &zero, sizeof zero);
-    __builtin_memcpy((char*)record + 3 * field, &s_string_registry_head,
-                     sizeof s_string_registry_head);
+    /* Corpus strdup idiom: both allocations are unchecked (the corpus
+     * stores blind — a NULL allocator answer writes through it), the
+     * length rides the inlined strlen intrinsic into the alloc push, and
+     * the copy pointer lands in field 0 before the inlined strcpy runs. */
+    void* record = engine_heap_alloc(0x10);
+    char** slots = (char**)record;
+    char* copy = (char*)engine_heap_alloc((long)strlen(key) + 1);
+    slots[0] = copy; /* the corpus stores the copy pointer before the copy */
+    strcpy(copy, key);
+    void* head = s_string_registry_head; /* the head is loaded once, here */
+    slots[1] = NULL;
+    slots[3] = (char*)head;
+    slots[2] = NULL;
     s_string_registry_head = record;
     return record;
 }
@@ -1828,21 +1859,29 @@ void* resource_name_cache_get_or_load(const char* key)
 /* --- the selection marker table (see crt.hpp) ------------------------------
  * DAT_004c7e00..e7c is 32 pointer slots plus the count word at e80; the
  * descriptor sits at DAT_004c7df8. All unowned: zero-init statics here. */
+// GLOBAL: LEGORR 0x004c7e00
 static void*    s_marker_table[32];
+// GLOBAL: LEGORR 0x004c7e80
 static uint32_t s_marker_count;
+// GLOBAL: LEGORR 0x004c7df8
 static void*    s_marker_descriptor;
 
 // FUNCTION: LEGORR 0x0040ce30
 void selection_marker_resources_release(void)
 {
-    for (int i = 0; i < 32; ++i) {
-        if (s_marker_table[i] != NULL) {
-            engine_heap_free(s_marker_table[i]);
+    /* Corpus walk: an unsigned add-4 pointer stride bounded by the table
+     * end. Deviation: each freed slot is cleared in place (the corpus
+     * dangles, which a second release could double-free), so the window
+     * stays idempotent. */
+    void** p = s_marker_table;
+    while (p < s_marker_table + 32) {
+        void* slot = *p;
+        if (slot != NULL) {
+            engine_heap_free(slot);
+            *p = NULL;
         }
+        ++p;
     }
-    /* Deviation: the corpus frees without clearing the slots (a repeated
-     * release would double-free); the port zeroes the window. */
-    memset(s_marker_table, 0, sizeof s_marker_table);
     s_marker_count = 0u;
     if (s_marker_descriptor != NULL) {
         engine_heap_free(s_marker_descriptor);
@@ -2114,12 +2153,17 @@ void pair_table_append(void* table, int* count, const char* key,
  * has no ported writer; each word lands as a zero-init static and the six
  * getters answer their installed half (the unowned-global deviation, per the
  * DAT-window convention). The install hooks are port-side. */
+// GLOBAL: LEGORR 0x0076ab24
 static uint32_t s_renderer_word_a;      /* DAT_0076ab24 */
+// GLOBAL: LEGORR 0x0076ab28
 static uint32_t s_renderer_word_b;      /* DAT_0076ab28 */
 // GLOBAL: LEGORR 0x0076ab3c
 uint32_t g_renderer_word_c;             /* DAT_0076ab3c */
+// GLOBAL: LEGORR 0x0076ac84
 static uint32_t s_renderer_global_dword; /* DAT_0076ac84 */
+// GLOBAL: LEGORR 0x0076ac8c
 static uint32_t s_render_surface_secondary; /* DAT_0076ac8c */
+// GLOBAL: LEGORR 0x0050608c
 static uint32_t s_render_feature_flags; /* DAT_0050608c */
 
 // FUNCTION: LEGORR 0x00410b30
@@ -2176,13 +2220,18 @@ void low_texture_flag_set(void) /* FUN_00477bd0 */
 /* --- integer/string helper band (2026-10-25) -------------------------------- */
 
 /* UInt96Copy (FUN_00497a80) — see crt.hpp. The corpus computes dst − src as
- * a byte distance and walks three dwords forward, reading each source word
- * after earlier writes land; the ordered copy reproduces the overlap. */
+ * a byte distance and walks three dwords forward through the *source* side,
+ * reading each word at the walked pointer and writing it back through the
+ * delta, so each source word is read only after earlier writes land; the
+ * ordered copy reproduces the overlap. */
 // FUNCTION: LEGORR 0x00497a80
 void uint96_copy(uint32_t dst[3], const uint32_t src[3])
 {
-    for (int i = 0; i != 3; ++i) {
-        dst[i] = src[i];
+    const uint32_t* p = src;
+    const ptrdiff_t delta = (char*)dst - (const char*)src;
+    for (int n = 0; n != 3; ++n) {
+        *(uint32_t*)((char*)p + delta) = *p;
+        p += 1;
     }
 }
 
@@ -2333,21 +2382,68 @@ void global_flag_004ff978_install(uint32_t value)
 
 /* --- math handler table + 64-bit multiply thunk (2026-10-25) --------------- */
 
-/* CrtMathExceptionHandlerGet (FUN_004939d0) — see crt.hpp. The corpus's
- * DAT_004b2170 table (27 entries, id word then handler word) lands as own
- * storage; the install hook stands in for the unported CRT startup band
- * (deviation). */
+/* CrtMathExceptionHandlerGet (FUN_004939d0) — see crt.hpp. The corpus scans
+ * the DAT_004b2170 table (27 stride-8 records, id dword then handler dword)
+ * with an add-8 pointer walk bounded by 0x4b2248 and loads a hit through the
+ * scaled index; the table is no longer zeroed own storage, the seed below
+ * reproduces its image bytes. The install hook still stands in for the
+ * unported CRT startup band (deviation). */
 #define CRT_MATH_HANDLER_ENTRIES 27
-static int s_math_handler_id[CRT_MATH_HANDLER_ENTRIES];
-static uint32_t s_math_handler[CRT_MATH_HANDLER_ENTRIES];
+
+/* The corpus's stride-8 handler table (id dword, handler dword), image-
+ * populated with the CRT startup band's twenty-seven stub handlers
+ * (0x49ec70..0x49ed20); seeded so the DAT's initial bytes match. */
+struct CrtMathHandlerRecord {
+    int      id;
+    uint32_t handler;
+};
+
+// GLOBAL: LEGORR 0x004b2170
+static CrtMathHandlerRecord s_math_handlers[CRT_MATH_HANDLER_ENTRIES] = {
+    { 0x14, 0x49ed20u },
+    { 0x1d, 0x49ed1cu },
+    { 0x1a, 0x49ed18u },
+    { 0x1b, 0x49ed10u },
+    { 0x1f, 0x49ed08u },
+    { 0x13, 0x49ed00u },
+    { 0x21, 0x49ecf8u },
+    { 0xe,  0x49ecf0u },
+    { 0xd,  0x49ece8u },
+    { 0xf,  0x49ece0u },
+    { 0x10, 0x49ecd8u },
+    { 5,    0x49ecd0u },
+    { 0x1e, 0x49ecccu },
+    { 0x12, 0x49ecc8u },
+    { 0x20, 0x49ecc4u },
+    { 0xc,  0x49ecbcu },
+    { 0xb,  0x49ecb4u },
+    { 0x15, 0x49ecacu },
+    { 0x1c, 0x49eca4u },
+    { 0x19, 0x49ec9cu },
+    { 0x11, 0x49ec94u },
+    { 0x18, 0x49ec8cu },
+    { 0x16, 0x49ec84u },
+    { 0x17, 0x49ec7cu },
+    { 0x22, 0x49ec78u },
+    { 0x23, 0x49ec74u },
+    { 0x24, 0x49ec70u }
+};
 
 // FUNCTION: LEGORR 0x004939d0
 uint32_t crt_math_exception_handler_get(int id)
 {
-    for (int i = 0; i != CRT_MATH_HANDLER_ENTRIES; ++i) {
-        if (s_math_handler_id[i] == id) {
-            return s_math_handler[i];
+    /* Corpus walk shape: the counter clears before the walk seeds, the
+     * add-8 pointer bounds the scan against the table end through a
+     * SIGNED (long) compare so MSVC emits jl, and the hit loads back
+     * through the hop counter's scaled index. */
+    int i = 0;
+    const CrtMathHandlerRecord* p = s_math_handlers;
+    while ((long)p < (long)(s_math_handlers + CRT_MATH_HANDLER_ENTRIES)) {
+        if (p->id == id) {
+            return s_math_handlers[i].handler;
         }
+        ++p;
+        ++i;
     }
     return 0u;
 }
@@ -2355,15 +2451,48 @@ uint32_t crt_math_exception_handler_get(int id)
 void crt_math_exception_handler_install(int index, int id, uint32_t handler)
 {
     if (index >= 0 && index < CRT_MATH_HANDLER_ENTRIES) {
-        s_math_handler_id[index] = id;
-        s_math_handler[index] = handler;
+        s_math_handlers[index].id = id;
+        s_math_handlers[index].handler = handler;
     }
 }
 
 /* CrtInteger64Multiply (FUN_0048ea90, __allmul) — see crt.hpp. The two
  * cross-word products contribute only their low 32 bits (the bit pattern
- * is sign-agnostic), so the fold lands as plain wrapping 32-bit adds. */
+ * is sign-agnostic), so the fold lands as plain wrapping 32-bit adds.
+ * The winapi branch is a byte-faithful naked reproduction of the corpus's
+ * unsigned mul sequence, including the fast-path skip: when both high
+ * words are zero the cross terms are never computed (the `or`/`jne`
+ * test at the top); the portable branch keeps the same three-way fold
+ * in C. */
 // FUNCTION: LEGORR 0x0048ea90
+#if defined(LEGORRR_BACKEND_WINAPI)
+__declspec(naked) uint64_t crt_integer64_multiply(uint32_t lo_a, int32_t hi_a,
+                                                  uint32_t lo_b, int32_t hi_b)
+{
+    __asm {
+        mov eax, [esp + 8]
+        mov ecx, [esp + 0x10]
+        or ecx, eax
+        mov ecx, [esp + 0xc]
+        jne cross_terms
+        mov eax, [esp + 4]
+        mul ecx
+        ret 0x10
+    cross_terms:
+        push ebx
+        mul ecx
+        mov ebx, eax
+        mov eax, [esp + 8]
+        mul dword ptr [esp + 0x14]
+        add ebx, eax
+        mov eax, [esp + 8]
+        mul ecx
+        add edx, ebx
+        pop ebx
+        ret 0x10
+    }
+}
+#else
 uint64_t crt_integer64_multiply(uint32_t lo_a, int32_t hi_a,
                                 uint32_t lo_b, int32_t hi_b)
 {
@@ -2376,6 +2505,7 @@ uint64_t crt_integer64_multiply(uint32_t lo_a, int32_t hi_a,
                           + (uint32_t)(lo_a * (uint32_t)(uint32_t)hi_b);
     return ((uint64_t)high32 << 32) | (uint32_t)low64;
 }
+#endif
 
 /* CrtInteger64Divide (FUN_0048e9e0, __alldiv) — see crt.hpp. The helper
  * sign-normalizes the word-pair operands, shifts the divisor into range,
@@ -2497,14 +2627,15 @@ int crt_file_descriptor_count_peek(void)
 // FUNCTION: LEGORR 0x004977d0
 uint32_t crt_control_flags_translate(uint32_t flags)
 {
-    uint32_t out = 0u;
-    if ((flags & 0x01u) != 0u) { out |= 0x10u; }
+    uint32_t out = ((flags & 0x01u) != 0u) ? 0x10u : 0u;
     if ((flags & 0x04u) != 0u) { out |= 0x08u; }
     if ((flags & 0x08u) != 0u) { out |= 0x04u; }
     if ((flags & 0x10u) != 0u) { out |= 0x02u; }
     if ((flags & 0x20u) != 0u) { out |= 0x01u; }
     if ((flags & 0x02u) != 0u) { out |= 0x80000u; }
-    const uint32_t pair2 = flags & 0xc00u;
+    /* corpus: the low word is masked once and both pair tests ride it */
+    const uint32_t low16 = flags & 0xffffu;
+    const uint32_t pair2 = low16 & 0xc00u;
     if (pair2 == 0x400u) {
         out |= 0x100u;
     } else if (pair2 == 0x800u) {
@@ -2512,10 +2643,12 @@ uint32_t crt_control_flags_translate(uint32_t flags)
     } else if (pair2 == 0xc00u) {
         out |= 0x300u;
     }
-    if ((flags & 0x300u) == 0u) {
+    if ((low16 & 0x300u) != 0u) {
+        if ((low16 & 0x300u) == 0x200u) {
+            out |= 0x10000u;
+        }
+    } else {
         out |= 0x20000u;
-    } else if ((flags & 0x300u) == 0x200u) {
-        out |= 0x10000u;
     }
     if ((flags & 0x1000u) != 0u) {
         out |= 0x40000u;

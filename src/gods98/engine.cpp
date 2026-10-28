@@ -190,10 +190,18 @@ int mode_dependent_field24_get(const EngineContext* ctx)
  * The two threaded one-liners are the corpus's own reads of the context-mode
  * and cheat-word globals; the two DAT-global shapes land as zero-initialized
  * module storage per the unowned-global convention (the triple's only corpus
- * writer is the unported renderer-side sim-interaction update). */
+ * writer is the unported renderer-side sim-interaction update). The triple is
+ * three individually-addressed dwords in the corpus, so it carves into one
+ * annotated static per dword — reccmp resolves whole objects only and an
+ * array's tail elements would render as (OFFSET) fragments. */
 // GLOBAL: LEGORR 0x004de548
 static int s_scroll_guard;        /* DAT_004de548 */
-static uint32_t s_triple[3];      /* DAT_0055651c / DAT_00556520 / DAT_00556524 */
+// GLOBAL: LEGORR 0x0055651c
+static uint32_t s_triple_first;  /* DAT_0055651c role: unowned */
+// GLOBAL: LEGORR 0x00556520
+static uint32_t s_triple_second; /* DAT_00556520 role: unowned */
+// GLOBAL: LEGORR 0x00556524
+static uint32_t s_triple_third;  /* DAT_00556524 role: unowned */
 static float s_task_text_origin[2]; /* _DAT_00556f24 / _DAT_00556f28 */
 
 // FUNCTION: LEGORR 0x00425d80
@@ -331,9 +339,9 @@ void global_triple_copy_out(uint32_t* out)
     if (out == NULL) {
         return; /* deviation: the corpus writes through blindly */
     }
-    out[0] = s_triple[0];
-    out[1] = s_triple[1];
-    out[2] = s_triple[2];
+    out[0] = s_triple_first;
+    out[1] = s_triple_second;
+    out[2] = s_triple_third;
 }
 
 /* GlobalField505f88Get (FUN_00401bf0): threaded app-mode read. */

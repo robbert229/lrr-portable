@@ -47,21 +47,6 @@ void save_directory_ensure_exists(const char* path)
     }
 }
 
-/* Corpus FUN_0048ff10's case-folded strcmp (used by the Level03
- * checkpoint hard-code comparison). */
-// FUNCTION: LEGORR 0x0048ff10
-int strcasecmp_lite(const char* a, const char* b)
-{
-    for (;;) {
-        int ca = (unsigned char)*a++;
-        int cb = (unsigned char)*b++;
-        if (ca >= 'a' && ca <= 'z') ca -= 0x20;
-        if (cb >= 'a' && cb <= 'z') cb -= 0x20;
-        if (ca != cb) return ca - cb;
-        if (ca == 0) return 0;
-    }
-}
-
 void save_init(GameContext* ctx)
 {
     if (ctx == NULL) {
@@ -891,13 +876,18 @@ static int list_wide_scan(const SavListWindow* win, const void* wide_key)
 // FUNCTION: LEGORR 0x00416e20
 int list_find_name(const SavListWindow* win, const char* name)
 {
-    if (win == NULL || win->count < 1 || name == NULL
-        || win->entries == NULL) {
-        return -1; /* deviation: the corpus strides the entries blindly */
+    if (win == NULL || name == NULL) {
+        return -1; /* deviation: the corpus strides the window and the key
+                    * blindly; these guards are pinned by test_savegame
+                    * ("the window and key guards hold") */
+    }
+    if (win->count <= 0) { /* the corpus's single cmp [count],0 / jle */
+        return -1;
     }
     for (int i = 0; i < win->count; ++i) {
-        const char* entry = (const char*)win->entries[i];
-        if (entry != NULL && strcasecmp_lite(entry, name) == 0) {
+        /* corpus: the entries base and count reload each pass and the
+         * entry rides into strcasecmp_lite untested */
+        if (strcasecmp_lite((const char*)win->entries[i], name) == 0) {
             return i;
         }
     }

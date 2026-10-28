@@ -83,6 +83,66 @@ static int s_strnfoldcmp(const char* a, const char* b, size_t n)
     return 0;
 }
 
+/* __strcmpi (FUN_0048ff10): the CRT's case-folded strcmp — lower A-Z folds
+ * upward via range checks, compares byte-wise, answers the byte difference
+ * (0 on match). Used by the corpus's Level03 checkpoint hard-code
+ * comparison and the string-registry walk. */
+// FUNCTION: LEGORR 0x0048ff10
+int strcasecmp_lite(const char* a, const char* b)
+{
+    for (;;) {
+        int ca = (unsigned char)*a++;
+        int cb = (unsigned char)*b++;
+        if (ca >= 'a' && ca <= 'z') ca -= 0x20;
+        if (cb >= 'a' && cb <= 'z') cb -= 0x20;
+        if (ca != cb) return ca - cb;
+        if (ca == 0) return 0;
+    }
+}
+
+/* __strnicmp (FUN_0049dab0): the CRT's bounded case-insensitive compare —
+ * ASCII-folded (A-Z += 0x20 via range checks, the corpus's table-uninit
+ * fallback shape), stops at NUL or the count, answers 0/-1/+1 (the corpus's
+ * sign-normalized result, not the character difference). Deviation: the
+ * corpus lazy-builds a fold table at DAT_00549178; the port folds inline. */
+// FUNCTION: LEGORR 0x0049dab0
+int strnicmp_lite(const char* a, const char* b, int count)
+{
+    if (count == 0) {
+        return 0;
+    }
+    const unsigned char* pa = (const unsigned char*)a;
+    const unsigned char* pb = (const unsigned char*)b;
+    unsigned char ca = 0;
+    unsigned char cb = 0;
+    for (;;) {
+        ca = *pa;
+        cb = *pb;
+        if (ca == 0u || cb == 0u) {
+            break; /* the corpus compares the raw bytes at a NUL break */
+        }
+        ++pa;
+        ++pb;
+        if (ca >= (unsigned char)'A' && ca <= (unsigned char)'Z') {
+            ca = (unsigned char)(ca + 0x20u);
+        }
+        if (cb >= (unsigned char)'A' && cb <= (unsigned char)'Z') {
+            cb = (unsigned char)(cb + 0x20u);
+        }
+        if (ca != cb) {
+            break;
+        }
+        --count;
+        if (count == 0) {
+            return 0;
+        }
+    }
+    if (ca == cb) {
+        return 0;
+    }
+    return (ca < cb) ? -1 : 1;
+}
+
 // FUNCTION: LEGORR 0x00477610
 const char* case_insensitive_substring_find(const char* haystack,
                                             const char* needle)
@@ -96,7 +156,7 @@ const char* case_insensitive_substring_find(const char* haystack,
         return NULL; /* pinned: the corpus gate (strlen-shaped tests) */
     }
     for (size_t i = 0; i < hlen; ++i) {
-        if (s_strnfoldcmp(haystack + i, needle, nlen) == 0) {
+        if (strnicmp_lite(haystack + i, needle, (int)nlen) == 0) {
             return haystack + i;
         }
     }
@@ -178,21 +238,32 @@ char* string_case_substring_find(char* haystack, const char* needle,
     if (haystack == NULL || needle == NULL) {
         return NULL; /* deviation: the corpus dereferences both blindly */
     }
-    const size_t hlen = strlen(haystack);
-    const size_t nlen = strlen(needle);
-    if (hlen == 0u || nlen == 0u) {
+    /* Corpus walk: two intrinsic strlens into registers, three entry gates,
+     * then a walking haystack pointer beside an inc counter with an unsigned
+     * bound (the needle is re-read from its stack slot every pass). */
+    char* hay = haystack;
+    long hlen = (long)strlen(haystack);
+    long nlen = (long)strlen(needle);
+    if (hlen == 0) {
         return NULL; /* pinned: the corpus's strlen-shaped gate */
     }
-    for (size_t i = 0; i < hlen; ++i) {
-        if (s_strnfoldcmp(haystack + i, needle, nlen) == 0) {
+    if (nlen == 0) {
+        return NULL; /* pinned: the corpus's strlen-shaped gate */
+    }
+    if (hlen <= 0) {
+        return NULL; /* the corpus's unsigned test/jbe bound before the walk */
+    }
+    for (unsigned index = 0; index < (unsigned)hlen; ++index) {
+        if (strnicmp_lite(hay, needle, (int)nlen) == 0) {
             if (out_index != NULL) {
-                *out_index = (uint32_t)i;
+                *out_index = (uint32_t)index;
             }
             if (out_length != NULL) {
-                *out_length = nlen;
+                *out_length = (size_t)nlen;
             }
-            return haystack + i;
+            return hay;
         }
+        ++hay;
     }
     return NULL;
 }

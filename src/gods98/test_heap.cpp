@@ -17,19 +17,6 @@ static int s_failures = 0;
         }                                                                      \
     } while (0)
 
-static int retry_count = 0;
-static int retry_failing(long size)
-{
-    (void)size;
-    ++retry_count;
-    return 0;
-}
-static int retry_second_success(long size)
-{
-    ++retry_count;
-    return retry_count >= 2;
-}
-
 static void test_alloc_pair(void)
 {
     void* p = engine_heap_alloc(128);
@@ -45,7 +32,7 @@ static void test_alloc_pair(void)
     engine_heap_free(zero);
 
     CHECK(engine_heap_alloc(-1) == NULL, "the overflow gate answers NULL");
-    CHECK(engine_heap_alloc_retry(-1, NULL) == NULL,
+    CHECK(engine_heap_alloc_retry(-1, 0) == NULL,
           "the gate survives the retry entry");
 }
 
@@ -59,16 +46,27 @@ static void test_aligned_and_retry(void)
     CHECK(p != NULL, "the aligned body allocates for zero");
     engine_heap_free(p);
 
-    /* Unregistered retry (NULL handler): exactly one attempt, then NULL. */
-    retry_count = 0;
-    CHECK(engine_heap_alloc_retry(-1, retry_failing) == NULL,
+    /* No-retry flag: exactly one attempt, then NULL. */
+    CHECK(engine_heap_alloc_retry(-1, 0) == NULL,
           "the signed overflow gate answers NULL");
 
-    /* A handler that succeeds on the second pass must get the block. */
-    retry_count = 1; /* pretend the first attempt already burned one retry */
-    void* q = engine_heap_alloc_retry(64, retry_second_success);
-    CHECK(q != NULL, "the retry handler path allocates on the retry pass");
-    engine_heap_free(q);
+    /* The retry flag with the allocation succeeding first pass: the block
+     * lands without the installed handler ever running — there is no
+     * fault-injection seam left to burn a retry through. */
+    {
+        static int s_hits;
+        s_hits = 0;
+        crt_new_handler_set([](long size) -> int {
+            (void)size;
+            ++s_hits;
+            return 1; /* would keep retrying if it were ever asked */
+        });
+        void* q = engine_heap_alloc_retry(64, 1);
+        CHECK(q != NULL, "the retry flag returns the block first pass");
+        CHECK(s_hits == 0, "the installed handler stays uninvoked");
+        engine_heap_free(q);
+        crt_new_handler_set(NULL); /* restore the corpus's unset case */
+    }
 
     /* Free through the wrapper pair, then reuse. */
     void* r = engine_heap_alloc(16);

@@ -2710,7 +2710,9 @@ uint32_t terrain_neighbor_coordinate_check(const LevelState* s, int x, int y,
  * table 1 the second (the difference's minimend). */
 #define GRID_COUNT_TABLE_DWORDS 0x12c0 /* 300 cells * 16 slots */
 
+// GLOBAL: LEGORR 0x004dee44
 static uint32_t s_grid_count_first[GRID_COUNT_TABLE_DWORDS];
+// GLOBAL: LEGORR 0x004e3944
 static uint32_t s_grid_count_second[GRID_COUNT_TABLE_DWORDS];
 
 static int64_t grid_count_index(int row, int column, int slot)

@@ -38,6 +38,14 @@ uint32_t formatted_text_buffer_build(char* out, size_t capacity,
  * calls strstr. */
 const char* string_find_substring(const char* haystack, const char* needle);
 
+/* __strnicmp (FUN_0049dab0): the CRT's bounded case-insensitive compare —
+ * ASCII fold, stops at NUL or the count, answers 0/-1/+1 (the corpus's
+ * sign-normalized result, not the character difference). */
+/* __strcmpi FUN_0048ff10: case-folded strcmp, byte difference (0 on match) */
+int strcasecmp_lite(const char* a, const char* b);
+/* __strnicmp FUN_0049dab0: bounded case-insensitive compare, 0/-1/+1 */
+int strnicmp_lite(const char* a, const char* b, int count);
+
 /* CaseInsensitiveSubstringFind (FUN_00477610): the folded sibling of the
  * plain find — every start position through the corpus's scan bound (the
  * haystack start to the last byte; the corpus do-while skips the empty

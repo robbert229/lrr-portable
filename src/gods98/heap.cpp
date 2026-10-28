@@ -33,23 +33,31 @@ void* engine_heap_alloc_aligned(long size)
 }
 
 // FUNCTION: LEGORR 0x0048dbf0
-void* engine_heap_alloc_retry(long size, int (*retry_handler)(long))
+void* engine_heap_alloc_retry(long size, int retry_via_new_handler)
 {
-    if ((unsigned)size == 0u) {
-        size = 1; /* corpus zero-size quirk */
-    }
-    if ((unsigned)size >= 0xffffffe1u) {
+    /* Corpus order: the unsigned bound test runs before the zero-size
+     * replacement, and the loop re-tests it before every allocation
+     * (dead — the size is loop-invariant — but present in the corpus). */
+    if ((unsigned)size > 0xffffffe0u) {
         return NULL;
     }
+    if (size == 0) {
+        size = 1; /* corpus zero-size quirk */
+    }
     for (;;) {
-        void* p = engine_heap_alloc_aligned(size);
+        void* p;
+        if ((unsigned)size <= 0xffffffe0u) {
+            p = engine_heap_alloc_aligned(size);
+        } else {
+            p = NULL;
+        }
         if (p != NULL) {
             return p;
         }
-        if (retry_handler == NULL) {
-            return NULL; /* unregistered handler: no retry (corpus parity) */
+        if (retry_via_new_handler == 0) {
+            return NULL; /* no-retry flag (corpus parity) */
         }
-        if (retry_handler(size) == 0) {
+        if (crt_new_handler_invoke(size) == 0) {
             return NULL;
         }
     }
@@ -59,8 +67,8 @@ void* engine_heap_alloc_retry(long size, int (*retry_handler)(long))
 void* engine_heap_alloc(long size)
 {
     /* Corpus: EngineHeapAllocateWithRetry(size, DAT_00549154) with the
-     * retry global unset in the port — single attempt. */
-    return engine_heap_alloc_retry(size, NULL);
+     * retry global unset in the port — single attempt, flag clear. */
+    return engine_heap_alloc_retry(size, 0);
 }
 
 // FUNCTION: LEGORR 0x0048db80
@@ -94,11 +102,13 @@ void engine_heap_allocate(long size)
 }
 
 /* --- the retry-handler pair (see heap.hpp) ----------------------------------
- * The corpus handler word (DAT_00549158, registered through the CRT's
- * set_new_handler machinery — unported) lands as zero-init storage with
- * the port-side setter; nothing registers while that seam is absent, so
- * the invoke answers 0 and EngineCalloc behaves like the plain entry —
- * the corpus's own unset-handler reading. */
+ * The retry flag on EngineHeapAllocateWithRetry says "retry through that
+ * handler"; the handler itself arrives through the corpus handler word
+ * (DAT_00549158, registered through the CRT's set_new_handler machinery —
+ * unported), which lands as zero-init storage with the port-side setter.
+ * Nothing registers while that seam is absent, so the invoke answers 0 and
+ * EngineCalloc behaves like the plain entry — the corpus's own
+ * unset-handler reading. */
 // GLOBAL: LEGORR 0x00549158
 static int (*s_new_handler)(long);
 
@@ -121,7 +131,7 @@ void crt_new_handler_set(int (*handler)(long))
 // FUNCTION: LEGORR 0x0048ead0
 void* engine_calloc(long size)
 {
-    return engine_heap_alloc_retry(size, crt_new_handler_invoke);
+    return engine_heap_alloc_retry(size, 1); /* corpus pushes the retry flag */
 }
 
 /* OptionalResourceDestroy (FUN_0040f7b0) — see heap.hpp. */
@@ -137,9 +147,6 @@ void optional_resource_destroy(void* record)
 // FUNCTION: LEGORR 0x00485190
 void text_buffer_destroy(void* record)
 {
-    if (record == NULL) {
-        return; /* deviation: the corpus strides the record blindly */
-    }
     void* buffer = NULL;
     __builtin_memcpy(&buffer, (char*)record + 0x14, sizeof(buffer));
     engine_heap_free(buffer);
@@ -277,7 +284,10 @@ void* text_buffer_create(uint32_t mode, const uint32_t* header, long size)
             __builtin_memcpy(record + 0x04 + i * 4, &header[i], 4);
         }
     }
-    /* Deviation: the header pointer is guarded (the corpus strides it). */
+    /* Deviation: the header pointer is guarded (the corpus strides it).
+     * The lea-based destination base and early header load of the corpus
+     * are unreachable with the guard (the mode store precedes the check);
+     * the unroll/polarity variants scored lower — tested. */
     void* buffer = engine_heap_alloc(size);
     __builtin_memcpy(record + 0x14, &buffer, sizeof buffer);
     const uint32_t len = (uint32_t)size;

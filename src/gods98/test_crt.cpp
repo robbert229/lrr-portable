@@ -1285,6 +1285,12 @@ int main(void)
               "the signed cross-word half folds the bits");
         CHECK(crt_integer64_multiply(0xffffffffu, 0, 2, 0) == 0x1fffffffeull,
               "the wide unsigned pair stays unsigned");
+        CHECK(crt_integer64_multiply(2, 0, 3, 1)
+                  == (uint64_t)6 + ((uint64_t)2 << 32),
+              "hi_b contributes lo_a*hi_b");
+        CHECK(crt_integer64_multiply(3, 3, 5, 2)
+                  == (((uint64_t)(15u + 6u) << 32) | 15u),
+              "hi_a*lo_b + lo_a*hi_b fold");
     }
 
     /* CrtInteger64Divide / CrtUnsigned64Divide (FUN_0048e9e0 /

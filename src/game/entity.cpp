@@ -928,10 +928,14 @@ uint32_t entity_global_animation_state_peek(void)
 // FUNCTION: LEGORR 0x00471ce0
 int entity_flag100_and_shared_eligibility_check(const EntitySlot* e)
 {
-    if ((entity_state_flags_get(e) & 0x100u) == 0u) {
-        return 0;
+    /* Corpus shape: both gates jump to the shared zero tail, only the
+     * double pass answers 1. */
+    if ((entity_state_flags_get(e) & 0x100u) != 0u) {
+        if (entity_shared_eligibility_check(e, e->type != 4) != 0) {
+            return 1;
+        }
     }
-    return entity_shared_eligibility_check(e, e->type != 4) != 0 ? 1 : 0;
+    return 0;
 }
 
 /* EntityQuadMeshRenderRecordAllowed (FUN_0040aae0) — see entity.hpp. */

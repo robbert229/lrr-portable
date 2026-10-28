@@ -227,6 +227,7 @@ static int  (*s_attach)(int, int, int, int) = NULL;
 static int  s_metrics[2] = { 0, 0 };
 static int  s_repos_n = 0, s_attach_n = 0;
 
+// GLOBAL: LEGORR 0x00500860
 static uint32_t s_timer_word = 0;
 static int      s_timer_handles[4] = { 0, 0, 0, 0 }; /* DAT_00500850..5c */
 static const uint32_t s_timer_bits[4] = { 0x10u, 0x20u, 0x40u, 0x80u };

@@ -982,11 +982,10 @@ char* lwo_string_duplicate(const char* text)
     const size_t len1 = strlen(text) + 1u;
     const size_t size = len1 + (len1 & 1u); /* even-grained corpus size */
     char* copy = (char*)engine_heap_alloc((long)size);
-    if (copy == NULL) {
-        return NULL; /* the heap answers failure, faithful */
-    }
+    /* Corpus parity: the copy is filled unchecked — sole-caller audit found
+     * no test or caller that survives a NULL allocator answer anyway. */
     memset(copy, 0, size);
-    memcpy(copy, text, len1);
+    strcpy(copy, text);
     return copy;
 }
 

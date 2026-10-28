@@ -138,9 +138,16 @@ __declspec(allocate(".data$zzzzzz")) static unsigned char
     s_menu_global_bytes[0x13c0] = { 0 };
 #pragma data_seg()
 #define s_menu_global_words ((uint32_t*)s_menu_global_bytes)
-#define DAT_0055613c ((void*)s_menu_global_words[-1])
-#define DAT_00556f50 ((void*)s_menu_global_words[0x384])
-#define DAT_00556f54 ((void*)s_menu_global_words[0x385])
+/* main_menu_text_item (FUN_004103d0) reads these three dwords individually;
+ * dedicated annotated statics carry them (whole-object resolution — the
+ * s_menu_global_bytes band cannot hold the annotation, same precedent as the
+ * s_fe_flow_* carve-outs). Own storage, zero-init like the corpus's tail. */
+// GLOBAL: LEGORR 0x0055613c
+static void* DAT_0055613c;
+// GLOBAL: LEGORR 0x00556f50
+static void* DAT_00556f50;
+// GLOBAL: LEGORR 0x00556f54
+static void* DAT_00556f54;
 #define s_fe_flow (s_menu_global_words + 0x3b7)
 /* The five flow words land as own storage: the corpus addresses them as
  * individual dwords, and Reccmp only resolves whole-object operands (the
@@ -308,6 +315,10 @@ static const FeKeyboardNameEntry s_keyboard_name_entries[] = {
     { 210, "KEY_INSERT" },
     { 211, "KEY_DELETE" },
 };
+/* DAT_005765e0 is a zero-filled virtual tail; keyboard_key_names_init
+ * builds this table at runtime, so both sides start zero and the
+ * whole-object annotation is byte-safe. */
+// GLOBAL: LEGORR 0x005765e0
 static const char* s_keyboard_key_names[256];
 #include "gods98/resource.hpp"
 #include "entity.hpp"
@@ -327,19 +338,26 @@ void keyboard_key_names_init(void)
     }
 }
 
+/* FUN_00485e30 corpus walk: the key-name table strides by four with an inc
+ * counter, null slots are skipped in-walk, and the index byte is answered
+ * through the raw out pointer (sole-caller audit: both callers pass an
+ * array member and a member address — the corpus strides them blindly and
+ * the port no longer guards). */
 // FUNCTION: LEGORR 0x00485e30
 int named_option_index_find_case_insensitive(const char* name,
                                              uint8_t* out_index)
 {
-    if (name == NULL || out_index == NULL) {
-        return 0;
-    }
-    for (int i = 0; i < 256; ++i) {
-        if (s_keyboard_key_names[i] != NULL
-            && s_strcaseeq(s_keyboard_key_names[i], name)) {
-            *out_index = (uint8_t)i;
+    const char* const* p = s_keyboard_key_names;
+    int index = 0;
+    while (p < s_keyboard_key_names +
+                (sizeof(s_keyboard_key_names) / sizeof(s_keyboard_key_names[0]))) {
+        const char* entry = *p;
+        if (entry != NULL && strcasecmp_lite(entry, name) == 0) {
+            *out_index = (uint8_t)index;
             return 1;
         }
+        ++p;
+        ++index;
     }
     return 0;
 }
@@ -486,9 +504,9 @@ void interface_menu_action_labels_init(uint32_t x, uint32_t y,
     s_interface_menu_action_xy[1] = (float)y;
     s_interface_menu_action_context = context;
     interaction_action_code_map_initialize();
-    selection_region_parameters_set((float)x, (float)y,
-                                    (float)(display_width_get() + 10),
-                                    (float)y, 750.0f);
+    selection_region_parameters_set(x, y,
+                                    (uint32_t)(display_width_get() + 10),
+                                    y, 750.0f);
     objective_selection_state_reset();
 }
 
@@ -2390,23 +2408,9 @@ static void scrolling_text_display(void* text, void* font, void* background)
 __declspec(naked) void main_menu_text_item(void)
 {
     __asm {
-        __emit 0xa1
-        __emit 0x54
-        __emit 0x6f
-        __emit 0x55
-        __emit 0x00
-        __emit 0x8b
-        __emit 0x0d
-        __emit 0x3c
-        __emit 0x61
-        __emit 0x55
-        __emit 0x00
-        __emit 0x8b
-        __emit 0x15
-        __emit 0x50
-        __emit 0x6f
-        __emit 0x55
-        __emit 0x00
+        mov eax, DAT_00556f54
+        mov ecx, DAT_0055613c
+        mov edx, DAT_00556f50
         push eax
         push ecx
         push edx
@@ -3784,6 +3788,11 @@ void* menu_text_record_make(const char* text, const TextureSurface* font_a,
 // FUNCTION: LEGORR 0x0046b4d0
 int case_insensitive_name_table_lookup(const char* name, int* out_index)
 {
+    /* Corpus shape: the walk strides the name slots by four with a
+     * one-based counter, feeds each entry to strcasecmp_lite untested,
+     * and answers through the raw out pointer. Deviation: the name NULL
+     * gate stays (the port's menu caller can pass a null optional name;
+     * the corpus strides it blindly). */
     static const char* const names[] = {
         "ToolTip_RadarBlock", "ToolTip_UnitSelect", "ToolTip_Construction",
         "ToolTip_InterfaceMenu", "ToolTip_InterfaceMenuBackButton",
@@ -3804,12 +3813,18 @@ int case_insensitive_name_table_lookup(const char* name, int* out_index)
         "ToolTip_Reward_Save", "ToolTip_Reward_Advance",
         "ToolTip_FrontEnd_Back",
     };
-    if (name == NULL) return 0;
-    for (size_t i = 0; i < sizeof(names) / sizeof(names[0]); ++i) {
-        if (s_strcaseeq(name, names[i])) {
-            if (out_index != NULL) *out_index = (int)i + 1;
+    if (name == NULL) {
+        return 0;
+    }
+    const char* const* p = names;
+    int index = 1;
+    while (p < names + (sizeof(names) / sizeof(names[0]))) {
+        if (strcasecmp_lite(name, *p) == 0) {
+            *out_index = index;
             return 1;
         }
+        ++p;
+        ++index;
     }
     return 0;
 }
@@ -5343,8 +5358,11 @@ static uint32_t s_obj_track_word; /* DAT_004ddcd0 */
 static float    s_inter_timer = 0.0f; /* DAT_004de1ec */
 // GLOBAL: LEGORR 0x004de1f8
 static uint32_t s_inter_flags;    /* DAT_004de1f8 */
+// GLOBAL: LEGORR 0x004ddd00
 static uint32_t s_pointer_action_type; /* DAT_004ddd00 */
+// GLOBAL: LEGORR 0x004ddd04
 static uint32_t s_pointer_action_kind; /* DAT_004ddd04 */
+// GLOBAL: LEGORR 0x004ddd08
 static uint32_t s_pointer_action_entry;/* DAT_004ddd08 */
 
 /* PointerActionStateDispatch (FUN_0041c6e0): update the current pointer
@@ -5355,35 +5373,36 @@ int pointer_action_state_dispatch(int action, int kind, int entry,
                                   int active, int suppress_initial)
 {
     const uint32_t previous_action = s_pointer_action_type;
-    if (active == 0) {
-        s_pointer_action_type = 0x4au;
-    }
-    else if ((s_inter_flags & 0x1000u) == 0u) {
-        if (s_pointer_action_type == 0x4au) {
-            if (suppress_initial != 0) {
-                goto finish;
-            }
-            s_pointer_action_type = (uint32_t)action;
-            s_pointer_action_kind = (uint32_t)kind;
-            s_pointer_action_entry = (uint32_t)entry;
-            if (action == 0x49) {
-                player_input_flag8_set_clear(kind, entry, 1);
-                goto finish;
-            }
-        }
-        else {
-            if (s_pointer_action_type != (uint32_t)action) {
-                goto finish;
-            }
-            if (action == 0x49) {
-                if (s_pointer_action_kind == (uint32_t)kind
-                    && s_pointer_action_entry == (uint32_t)entry) {
-                    player_input_flag8_set_clear(kind, entry, 1);
+    if (active != 0) {
+        if ((s_inter_flags & 0x1000u) == 0u) {
+            if (s_pointer_action_type == 0x4au) {
+                if (suppress_initial != 0) {
+                    goto finish;
                 }
-                goto finish;
+                s_pointer_action_type = (uint32_t)action;
+                s_pointer_action_kind = (uint32_t)kind;
+                s_pointer_action_entry = (uint32_t)entry;
+                if (action == 0x49) {
+                    player_input_flag8_set_clear(kind, entry, 1);
+                    goto finish;
+                }
             }
+            else {
+                if (s_pointer_action_type != (uint32_t)action) {
+                    goto finish;
+                }
+                if (action == 0x49) {
+                    if (s_pointer_action_kind == (uint32_t)kind
+                        && s_pointer_action_entry == (uint32_t)entry) {
+                        player_input_flag8_set_clear(kind, entry, 1);
+                    }
+                    goto finish;
+                }
+            }
+            input_entry_flag8_set_clear(action, 1);
         }
-        input_entry_flag8_set_clear(action, 1);
+    } else {
+        s_pointer_action_type = 0x4au;
     }
 
 finish:
@@ -5407,15 +5426,23 @@ void selection_coordinates_set(const uint32_t* pair, uint32_t x, uint32_t y)
     s_sel_c18 = (float)y;
 }
 
+/* SelectionRegionParametersSet (FUN_0041e9d0): four integer words and one
+ * float. Each word is zero-extended onto the x87 stack (fild of a zeroed
+ * qword, an unsigned conversion) and the slots rotate: arg0 -> +08,
+ * arg1 -> +0c, arg2 -> +00, arg3 -> +04; the float multiplies the .rdata
+ * 0.04 constant in single precision into the +10 slot. */
+// GLOBAL: LEGORR 0x0049e298
+static const float s_region_scale_004 = 0.04f; /* DAT_0049e298, verified */
+
 // FUNCTION: LEGORR 0x0041e9d0
-void selection_region_parameters_set(float a, float b, float c, float d,
-                                     float e)
+void selection_region_parameters_set(uint32_t a, uint32_t b, uint32_t c,
+                                     uint32_t d, float e)
 {
-    s_reg_e0 = a;
-    s_reg_e4 = b;
-    s_reg_e8 = c;
-    s_reg_ec = d;
-    s_reg_f0 = (float)(e * 0.04); /* the corpus's double-prec scale */
+    s_reg_e8 = (float)a;
+    s_reg_ec = (float)b;
+    s_reg_e0 = (float)c;
+    s_reg_e4 = (float)d;
+    s_reg_f0 = e * s_region_scale_004;
 }
 
 // FUNCTION: LEGORR 0x0041a990
@@ -5433,16 +5460,31 @@ void interaction_timer_reset_and_flag_clear(void)
     s_inter_flags &= ~0x800u;
 }
 
+/* Corpus shape: one register copy; the true arm ORs bit 1 then masks
+ * bit 0, the false arm masks bit 1 then bit 0 as two separate ands; each
+ * arm stores and exits on its own. MSVC5 tail-merges the two C stores and
+ * folds the false arm's masks into 0xfc, so the body is emitted in naked
+ * asm to pin the original's line-for-line sequence. */
 // FUNCTION: LEGORR 0x00418800
-void mode_flag_pair_apply_if_bit2(int value)
+__declspec(naked) void mode_flag_pair_apply_if_bit2(int value)
 {
-    if ((s_sel_state & 4u) == 0u) {
-        return;
-    }
-    if (value != 0) {
-        s_sel_state = (s_sel_state & ~1u) | 2u;
-    } else {
-        s_sel_state &= ~3u;
+    __asm {
+        mov eax, s_sel_state
+        test al, 4
+        je   done
+        mov ecx, dword ptr [esp + 4]
+        test ecx, ecx
+        je   clear_both
+        or   al, 2
+        and  al, 0xfe
+        mov  s_sel_state, eax
+        ret
+    clear_both:
+        and  al, 0xfd
+        and  al, 0xfe
+        mov  s_sel_state, eax
+    done:
+        ret
     }
 }
 
@@ -5642,6 +5684,7 @@ uint32_t cell_action_permission_table_peek(int index)
 }
 
 /* --- the menu-tick gate + status banner word (see frontend.hpp) ------------- */
+// GLOBAL: LEGORR 0x004ddd1c
 static uint32_t s_status_banner_word;   /* DAT_004ddd1c */
 
 // FUNCTION: LEGORR 0x00412190
@@ -5872,6 +5915,7 @@ static void*    s_panel_surface_handle; /* DAT_00500810 role */
 static float    s_panel_width;       /* DAT_00500814 role */
 static float    s_panel_height;      /* DAT_00500818 role */
 static uint32_t s_panel_extra;       /* DAT_0050081c role */
+// GLOBAL: LEGORR 0x005007d8
 static void*    s_panel_ui_record;   /* DAT_005007d8 role */
 static void*    s_panel_text_slot;   /* DAT_005007dc role: holder-slot address */
 
@@ -5954,7 +5998,10 @@ void panel_resource_handle_and_dimensions_store(void* resource, uint32_t w,
 void scroll_offset_from_cursor_update(void)
 {
     uint32_t lo = 0, hi = 0;
-    ui_record_callback_forward((const void* const*)&s_panel_ui_record,
+    /* the corpus pushes the DAT_005007d8 record value itself, whose +0
+     * field the forward reads; the unowned-global deviation keeps the
+     * slot NULL-defaulted and the callee's guards answer zeros */
+    ui_record_callback_forward((const void* const*)s_panel_ui_record,
                                &lo, &hi);
     int diff = (int)(lo - hi);
     if (diff < 0) {
@@ -6560,25 +6607,31 @@ void timed_effect_persistence_set(int index, int set)
 }
 
 /* CursorTileSelectionUpdateByType (FUN_0041cc80) — see frontend.hpp. */
-static uint32_t s_cursor_tile_pair[2]; /* DAT_004ddcd8/cdc role */
+/* The corpus addresses the pair as two individual dwords; carve annotated
+ * statics (whole-object resolution, the s_fe_flow_* precedent). Own
+ * storage, zero-init like the corpus's tail. */
+// GLOBAL: LEGORR 0x004ddcd8
+static uint32_t s_cursor_tile_first;  /* DAT_004ddcd8 role */
+// GLOBAL: LEGORR 0x004ddcdc
+static uint32_t s_cursor_tile_second; /* DAT_004ddcdc role */
 
 // FUNCTION: LEGORR 0x0041cc80
 void cursor_tile_selection_update_by_type(int kind, uint32_t first,
                                           uint32_t second)
 {
     if (kind == 0x49) {
-        s_cursor_tile_pair[0] = first;
-        s_cursor_tile_pair[1] = second;
+        s_cursor_tile_first = first;
+        s_cursor_tile_second = second;
         return;
     }
     if (kind == 5) {
-        s_cursor_tile_pair[0] = 0xFu;
-        s_cursor_tile_pair[1] = 0u;
+        s_cursor_tile_first = 0xFu;
+        s_cursor_tile_second = 0u;
         return;
     }
     if (kind == 0xe) {
-        s_cursor_tile_pair[0] = 0xBu;
-        s_cursor_tile_pair[1] = 0u;
+        s_cursor_tile_first = 0xBu;
+        s_cursor_tile_second = 0u;
     }
     /* the corpus's else branch rides */
 }
@@ -6588,7 +6641,7 @@ uint32_t cursor_tile_pair_peek(int which)
     if (which < 0 || which > 1) {
         return 0u; /* deviation: the corpus strides the pair blindly */
     }
-    return s_cursor_tile_pair[which];
+    return (which == 0) ? s_cursor_tile_first : s_cursor_tile_second;
 }
 
 /* --- the UI/panel category-bounds band (2026-10-25) ------------------------

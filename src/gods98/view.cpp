@@ -10,6 +10,19 @@ float g_view_follow_scale = 1.0f;   /* DAT_005560a4 (grid pick follow scale) */
 int   g_view_grid_edge   = 0;       /* DAT_005560ac (tile-count edge clamp) */
 int   g_view_test_blend  = 0;       /* test hook for the mode-3 EMA target */
 
+/* The corpus's normalize numerator is the .rdata dword 1.0 at 0x49e008
+ * (objdump-verified fdivr operand in FUN_00401750); a named const static
+ * keeps the fld operand resolvable by Reccmp. */
+// GLOBAL: LEGORR 0x0049e008
+static const float s_normalize_unit = 1.0f;   /* DAT_0049e008, verified */
+
+/* The curve builder's divisor is the .rdata dword 1.0 at 0x49e050
+ * (objdump-verified fdivr operand in FUN_00406820; a different .rdata dword
+ * from 0x49e008, since Reccmp resolves constants per-address); a named
+ * const static keeps the fld operand resolvable by Reccmp. */
+// GLOBAL: LEGORR 0x0049e050
+static const float s_curve_unit = 1.0f;   /* DAT_0049e050, verified */
+
 /* ---- pure vector helpers ------------------------------------------------
  * Corpus mapping (finding 280; the corpus bodies use x87 float10, the port
  * computes the byte-equivalent single-precision results):
@@ -54,7 +67,7 @@ void vec_cross(float* dst, const float* b, const float* c) /* FUN_00401470 */
 // FUNCTION: LEGORR 0x00401750
 void vec_normalize(float* v) /* FUN_00401750 (zero length unguarded, as corpus) */
 {
-    float s = 1.0f / sqrtf(v[0] * v[0] + v[2] * v[2] + v[1] * v[1]);
+    float s = s_normalize_unit / sqrtf(v[0] * v[0] + (v[1] * v[1] + v[2] * v[2]));
     v[0] = s * v[0];
     v[1] = s * v[1];
     v[2] = s * v[2];
@@ -179,18 +192,29 @@ int rect_contains_point_from_object_bounds(const float* const* bounds_at_14,
     return rect_contains_converted(*bounds_at_14, off_x, off_y, x, y);
 }
 
+/* The corpus's identity constants are .rdata dwords (objdump-verified
+ * 1.0 at 0x49e920, 0.0 at 0x49e924); named const statics keep the fld
+ * operands resolvable by Reccmp. */
+// GLOBAL: LEGORR 0x0049e920
+static const float s_matrix_one = 1.0f;   /* DAT_0049e920 */
+// GLOBAL: LEGORR 0x0049e924
+static const float s_matrix_zero = 0.0f;  /* DAT_0049e924 */
+
 /* RayPlaneIntersectionParameter (FUN_00479a30): writes t = dot(q-p, n) /
- * dot(d, n) into `t_out` for ray (p,d) against plane (q,n); answers 1 when
- * not parallel, 0 otherwise. */
+ * dot(d, n) into `t_out` for ray (p,d) against plane (q,n); answers 1 for a
+ * non-zero denominator (the corpus gates with fcomp against the .rdata 0.0
+ * dword at 0x49e924 and jumps to the 0 answer when that compare flags
+ * equality, test ah, 0x40), 0 otherwise. Both dot products accumulate z,
+ * y, x, matching the corpus's fadd order. */
 // FUNCTION: LEGORR 0x00479a30
 int ray_plane_intersection_parameter(float* t_out, const float* p,
                                      const float* d, const float* q,
                                      const float* n)
 {
-    const float denom = n[0] * d[0] + n[2] * d[2] + n[1] * d[1];
-    if (denom != 0.0f) {
-        *t_out = ((q[0] - p[0]) * n[0] + (q[1] - p[1]) * n[1]
-                  + (q[2] - p[2]) * n[2]) / denom;
+    const float denom = d[2] * n[2] + d[1] * n[1] + d[0] * n[0];
+    if (denom != s_matrix_zero) {
+        *t_out = ((q[2] - p[2]) * n[2] + (q[1] - p[1]) * n[1]
+                  + (q[0] - p[0]) * n[0]) / denom;
         return 1;
     }
     return 0;
@@ -205,7 +229,7 @@ float* line_intersection_2d_compute(float* out, const float* p1,
                                     const float* d2)
 {
     float cross = -d1[1] * d2[0] + d1[0] * d2[1];
-    if (cross != 0.0f) {
+    if (cross != s_matrix_zero) {
         float t = (p1[0] - p2[0]) * -(d2[1] / cross)
                   + (d2[0] / cross) * (p1[1] - p2[1]);
         out[0] = t * d1[0];
@@ -217,9 +241,17 @@ float* line_intersection_2d_compute(float* out, const float* p1,
     return NULL;
 }
 
+/* The corpus's quadrupling factor is the .rdata dword 4.0 at 0x49e938
+ * (objdump-verified operand of the corpus discriminant term); a named
+ * const static keeps the fmul operand resolvable by Reccmp. */
+// GLOBAL: LEGORR 0x0049e938
+static const float s_sphere_quadruple = 4.0f;   /* DAT_0049e938 */
+
 /* SphereRayIntersectionDiscriminantPositive (FUN_00479c10): positive-
  * discriminant test of ray `dir` against the sphere (center, radius). The
- * corpus's exact discriminant expression is reproduced verbatim. */
+ * corpus's exact discriminant expression is reproduced verbatim; the sign
+ * gate is the corpus's fcomp against the 0.0 dword (0x49e924) with
+ * test ah, 0x41 — strictly positive. */
 // FUNCTION: LEGORR 0x00479c10
 int sphere_ray_intersection_discriminant_positive(const float* center,
                                                   float radius2,
@@ -231,8 +263,8 @@ int sphere_ray_intersection_discriminant_positive(const float* center,
     const float wx = origin[0] - center[0];
     const float b = (dir[2] + dir[2]) * wz + (dir[1] + dir[1]) * wy
                     + (dir[0] + dir[0]) * wx;
-    if (0.0f < b * b
-        - ((wx * wx + wz * wz + wy * wy) * 4.0f - radius2 * radius2)) {
+    if (b * b - ((wx * wx + wz * wz + wy * wy) * s_sphere_quadruple
+                 - radius2 * radius2) > s_matrix_zero) {
         return 1;
     }
     return 0;
@@ -340,7 +372,7 @@ void matrix4_set_identity(float* out)
 {
     for (int row = 0; row < 4; ++row) {
         for (int col = 0; col < 4; ++col) {
-            out[4 * row + col] = (row == col) ? 1.0f : 0.0f;
+            out[4 * row + col] = (row == col) ? s_matrix_one : s_matrix_zero;
         }
     }
 }
@@ -1009,6 +1041,7 @@ void renderer_node_relative_position_set(const void* node, float x, float y)
  * SceneRootObjectGet / DDiSceneObjectArgumentsNormalize — see view.hpp. The
  * corpus's root global (DAT_0076add4) is written only by the unported
  * renderer-side initializer, so the port carries it as a hooked static. */
+// GLOBAL: LEGORR 0x0076add4
 static void* s_scene_root;
 
 void scene_root_install(void* root) { s_scene_root = root; }
@@ -1231,7 +1264,7 @@ void bezier_curve_samples_build(uint32_t* dest, const uint32_t* control,
     if (count <= 1u) {
         return;
     }
-    const float inv = 1.0f / (float)(count - 1u);
+    const float inv = s_curve_unit / (float)(count - 1u);
     uint32_t* slot = dest + 3;
     for (uint32_t i = 1u; i < count; ++i) {
         const float t = (float)i * inv;

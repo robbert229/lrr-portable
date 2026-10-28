@@ -26,10 +26,12 @@ extern "C" {
 #endif
 
 /* FUN_0048dbf0: allocate `size` bytes; size 0 allocates 1 (corpus quirk);
- * sizes at/above 0xffffffe1 fail with NULL (corpus overflow gate). With a
- * NULL retry handler the port makes the single attempt the corpus makes
- * when nothing is registered: on failure, NULL — no spin. */
-void* engine_heap_alloc_retry(long size, int (*retry_handler)(long));
+ * sizes at/above 0xffffffe1 fail with NULL (corpus overflow gate). The
+ * retry flag is the corpus's second argument: zero makes the single
+ * attempt the corpus makes with the flag off — on failure, NULL, no spin;
+ * nonzero sends each failure through crt_new_handler_invoke and retries
+ * while that answers nonzero. */
+void* engine_heap_alloc_retry(long size, int retry_via_new_handler);
 
 /* FUN_0048dbd0: the plain entry — same path with the corpus's retry-flag
  * global, which the port leaves unregistered (single attempt). */
@@ -86,8 +88,8 @@ void optional_resource_destroy(void* record);
 /* TextBufferDestroy (FUN_00485190): frees the buffer held in the text
  * buffer record's +0x14 slot, then the record itself. The corpus's slot
  * is a 32-bit dword; the port carries a host-width pointer there
- * (documented deviation). A null record lands guarded — the corpus's
- * dereferences blindly. */
+ * (documented deviation). The corpus dereferences the record blindly and
+ * so does the port — callers own non-null. */
 void text_buffer_destroy(void* record);
 
 /* TextOutputField82CBit2SetClear (FUN_00485160): the text-output record's

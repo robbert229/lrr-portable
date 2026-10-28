@@ -342,7 +342,17 @@ int input_binding_pressed_get(const EngineContext* ctx, int kind, int entry,
  * from InputActionPressedGet (FUN_0041c8f0) applies. */
 #define INPUT_INDEXED_WINDOW_SLOTS 74
 
-static uint32_t s_indexed_values[3][INPUT_INDEXED_WINDOW_SLOTS];
+/* The corpus keeps the three 74-slot windows as individually-addressed
+ * tables (DAT_004dcff8 / DAT_004dd120 / DAT_004dd248, contiguous zero-tail
+ * band 0x4dcff8..0x4dd370); Reccmp only resolves whole-object operands, so
+ * each window gets its own annotated array (the s_fe_flow_* carve-out
+ * precedent). Own storage, zero-init like the corpus's tail. */
+// GLOBAL: LEGORR 0x004dcff8
+static uint32_t s_indexed_window_c[INPUT_INDEXED_WINDOW_SLOTS]; /* default window */
+// GLOBAL: LEGORR 0x004dd120
+static uint32_t s_indexed_window_a[INPUT_INDEXED_WINDOW_SLOTS]; /* pressed window */
+// GLOBAL: LEGORR 0x004dd248
+static uint32_t s_indexed_window_b[INPUT_INDEXED_WINDOW_SLOTS]; /* flag8 window */
 
 // FUNCTION: LEGORR 0x0041cab0
 uint32_t indexed_entity_value_get(const EngineContext* ctx, int index)
@@ -351,27 +361,41 @@ uint32_t indexed_entity_value_get(const EngineContext* ctx, int index)
         return 0u; /* deviation: the corpus strides its window blindly */
     }
     if (input_action_pressed_get(ctx, index, 0) != 0) {
-        return s_indexed_values[0][index]; /* DAT_004dd120 window */
+        return s_indexed_window_a[index]; /* DAT_004dd120 window */
     }
     if (input_entry_flag8_get(index) != 0u) {
-        return s_indexed_values[1][index]; /* DAT_004dd248 window */
+        return s_indexed_window_b[index]; /* DAT_004dd248 window */
     }
-    return s_indexed_values[2][index];     /* DAT_004dcff8 window */
+    return s_indexed_window_c[index];     /* DAT_004dcff8 window */
 }
 
 void input_indexed_window_set(int which, int index, uint32_t value)
 {
+    uint32_t* window;
     if (which >= 0 && which < 3
         && index >= 0 && index < INPUT_INDEXED_WINDOW_SLOTS) {
-        s_indexed_values[which][index] = value;
+        window = NULL;
+        switch (which) {
+        case 0:  window = s_indexed_window_a; break; /* pressed */
+        case 1:  window = s_indexed_window_b; break; /* flag8 */
+        default: window = s_indexed_window_c; break; /* default */
+        }
+        window[index] = value;
     }
 }
 
 uint32_t input_indexed_window_peek(int which, int index)
 {
+    uint32_t* window;
     if (which >= 0 && which < 3
         && index >= 0 && index < INPUT_INDEXED_WINDOW_SLOTS) {
-        return s_indexed_values[which][index];
+        window = NULL;
+        switch (which) {
+        case 0:  window = s_indexed_window_a; break; /* pressed */
+        case 1:  window = s_indexed_window_b; break; /* flag8 */
+        default: window = s_indexed_window_c; break; /* default */
+        }
+        return window[index];
     }
     return 0u;
 }

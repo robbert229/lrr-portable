@@ -2,7 +2,7 @@
 
 ## Objective and scope
 
-Continue improving the `lrr-portable` reconstruction toward an exact Reccmp match of `reference/LegoRR.exe`, especially by identifying and annotating original DAT globals. The user has repeatedly asked for batches of eight functions and explicitly prefers GPT-6 Luna High subagents supervised by the primary agent. Treat a follow-up “another 8” as eight *fresh* functions. No PR has been created.
+Continue improving the `lrr-portable` reconstruction toward an exact Reccmp match of `reference/LegoRR.exe`, especially by identifying and annotating original DAT globals. The user has repeatedly asked for batches of eight functions and explicitly prefers 2x Qwen3.8 Flash Next local subagents supervised by the primary agent. Treat a follow-up “another 8” as eight *fresh* functions. No PR has been created.
 
 Read the repository's `AGENTS.md` before editing: C/C++ must remain MSVC 5.0 compatible, validate with `make reccmp-report` when available, and never merge/squash/auto-merge a PR. Preserve all existing uncommitted changes. Many dirty files predate this work; inspect scoped diffs before editing. The recent batches primarily added `// GLOBAL: LEGORR 0x...` mappings and a few small source fixes. See `git diff` rather than copying prior changes into a new patch.
 

@@ -4,6 +4,7 @@
 #include "record.hpp"
 #include "heap.hpp"
 #include "sound.hpp"
+#include "string.hpp"
 #include "view.hpp"
 #include "texture.hpp"
 #include "resource.hpp"
@@ -479,7 +480,9 @@ uint32_t game_file_system_type_get(const void* handle)
 }
 
 /* IndexedRecordTransformCopyIn (FUN_00483240, findings 372/431): the
- * inline-block copy into the indexed record's data slot. */
+ * inline-block copy into the indexed record's data slot. Deviation: the
+ * corpus strides both links and the copy blindly; the three null answers
+ * are pinned by test_record.cpp, and the helper route scored best. */
 // FUNCTION: LEGORR 0x00483240
 uint32_t indexed_record_transform_copy_in(void* record, int index,
                                           const void* source)
@@ -985,14 +988,18 @@ void scene_current_object_set(void* record, void* object)
     }
 }
 
-/* SixResourceSlotsSetState (FUN_0046cfc0) — see record.hpp. */
+/* SixResourceSlotsSetState (FUN_0046cfc0) — see record.hpp. The corpus
+ * walks record+0x10..0x24 with a 6-count dec/jne loop from a lea'd cursor
+ * and loads each slot directly; mirror that shape here. */
 // FUNCTION: LEGORR 0x0046cfc0
 void six_resource_slots_set_state(const void* record, uint32_t flag)
 {
-    for (int i = 0; i < 6; ++i) {
-        void* handle = rec_ptr(record, 0x10 + (size_t)i * sizeof(void*));
+    const void* const* slot =
+        (const void* const*)((const char*)record + 0x10);
+    for (int remaining = 6; remaining != 0; --remaining, ++slot) {
+        const void* handle = *slot;
         if (handle != NULL) {
-            scene_visibility_hook_call(handle, (int)flag);
+            scene_visibility_hook_call((void*)handle, (int)flag);
         }
     }
 }
@@ -1014,11 +1021,14 @@ void ui_record_callback_forward(const void* const* ui_record,
 uint32_t record_flag_bit_test(const void* record, uint32_t bit_index,
                               int reject_masked)
 {
-    const uint32_t bit = 1u << (bit_index & 0x1fu);
+    /* The corpus shifts blind; the x86 shift masks the count to 5 bits. */
+    const uint32_t bit = 1u << bit_index;
     if (reject_masked != 0 && (entity_type_mask_get(record) & bit) != 0u) {
         return 0u;
     }
-    return rec_dword(record, 0x130) & bit;
+    uint32_t flags = 0u;
+    __builtin_memcpy(&flags, (const char*)record + 0x130, sizeof(flags));
+    return flags & bit;
 }
 
 /* ObjectPoolListsFreeAll (FUN_00456c60) — see record.hpp. The corpus reads
@@ -1111,11 +1121,18 @@ static void menu_resource_entry_release(MenuResourceEntry* entry)
 // FUNCTION: LEGORR 0x004105a0
 char* campaign_level_fallback_label(const char* label)
 {
-    if (label == NULL) return NULL;
-    const size_t length = strlen(label);
-    if (length >= 0x7fffffffU) return NULL;
-    char* copy = (char*)engine_heap_alloc((long)length + 1);
-    if (copy != NULL) memcpy(copy, label, length + 1);
+    if (label == NULL) {
+        return NULL;
+    }
+    /* Corpus strdup idiom: engine_heap_alloc(strlen+1) then the inlined
+     * strcpy intrinsic (rep scas + rep movs). The port's 0x7fffffff
+     * length bound was a deviation — the corpus bounds nothing (audited:
+     * no test and both callers pass ordinary config labels). */
+    char* copy = (char*)engine_heap_alloc((long)strlen(label) + 1);
+    if (copy == NULL) {
+        return NULL;
+    }
+    strcpy(copy, label);
     return copy;
 }
 
@@ -1622,11 +1639,13 @@ int filename_extension_classify(const void* record)
     return 0;
 }
 
+/* The corpus compares names against the .data "Null" literal (objdump-
+ * verified bytes 4E 75 6C 6C 00 at 0x4a23f4); a named const array keeps
+ * the push operand resolvable by Reccmp. */
+// GLOBAL: LEGORR 0x004a23f4
+static const char s_menu_null_label[5] = "Null";
+
 // FUNCTION: LEGORR 0x00413f90
-#if defined(LEGORRR_BACKEND_WINAPI)
-#else
-static const char s_menu_null_label[] = "Null";
-#endif
 #if defined(LEGORRR_BACKEND_WINAPI)
 __declspec(naked) void* menu_item_record_alloc(const char* name,
                                                void** list_head,
@@ -1646,9 +1665,9 @@ __declspec(naked) void* menu_item_record_alloc(const char* name,
         rep stosd
         mov edi, dword ptr [esp + 0x0c]
         push 4
-        push 0x4a23f4
+        push offset s_menu_null_label
         push edi
-        call _strnicmp
+        call strnicmp_lite
         add esp, 0x0c
         test eax, eax
         je item_record_done
@@ -1688,7 +1707,7 @@ void* menu_item_record_alloc(const char* name, void** list_head,
     void* rec = engine_heap_alloc(8 * sizeof(void*));
     if (rec == NULL) return NULL;
     memset(rec, 0, 8 * sizeof(void*));
-    if (name != NULL && menu_ascii_casecmp_n(name, "Null", 4) != 0) {
+    if (name != NULL && menu_ascii_casecmp_n(name, s_menu_null_label, 4) != 0) {
         char* name_copy = campaign_level_fallback_label(name);
         *(void**)((char*)rec + 0x00) = name_copy;
         *(uint32_t*)((char*)rec + 0x04) =

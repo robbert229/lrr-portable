@@ -2,17 +2,37 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include "game/savegame.hpp"
 #include "message.hpp"
 
 #define MESSAGE_CD_RESET 25.0f /* 0x41c80000 */
 
+/* The corpus's decay gate compares each countdown against this .rdata zero
+ * dword (objdump-verified fcomp operand of InfoMessageTimerDecay); a named
+ * const static keeps the fcomp operand resolvable by Reccmp. */
+// GLOBAL: LEGORR 0x0049e264
+static const float s_cooldown_zero = 0.0f;   /* DAT_0049e264, verified */
+
+/* The corpus's 40 stride-0x14 incident-message records (MessageConfig);
+ * the countdown at +0x00 is what the corpus walk reads and resets. */
+// GLOBAL: LEGORR 0x004dc704
 static MessageConfig s_cfg[MESSAGE_MAX_ID];
-static int           s_queue_ids[MESSAGE_MAX_ID];
-static float         s_queue_ts[MESSAGE_MAX_ID];
+/* The corpus keeps each queued message as one 0x14-byte record at
+ * DAT_004dca20 with the id at +0 (the timestamp rides inside the record);
+ * the parallel-array model emitted add ecx, 4 where the corpus strides
+ * 0x14. Own storage, zero-init like the corpus's zero-filled tail. */
+struct MessageQueueRecord {
+    uint32_t id;
+    float timestamp;
+    unsigned char pad[12];
+};
+// GLOBAL: LEGORR 0x004dca20
+static MessageQueueRecord s_queue_records[MESSAGE_MAX_ID];
 // GLOBAL: LEGORR 0x004dcd38
 static int           s_queue_count = 0;
 // GLOBAL: LEGORR 0x004dcd48
 static uint32_t      s_flags = 0u;          /* DAT_004dcd48 */
+// GLOBAL: LEGORR 0x004ff980
 static uint32_t      s_system_state = 0u;   /* DAT_004ff980 */
 static float         s_now = 0.0f;          /* _DAT_0049e264 analog */
 static MessageCallback  s_callback = NULL;
@@ -68,8 +88,7 @@ void message_init_defaults(void)
 void message_clear(void)
 {
     memset(s_cfg, 0, sizeof(s_cfg));
-    memset(s_queue_ids, 0, sizeof(s_queue_ids));
-    memset(s_queue_ts, 0, sizeof(s_queue_ts));
+    memset(s_queue_records, 0, sizeof(s_queue_records));
     s_queue_count = 0;
     s_now = 0.0f;
     s_flags = 0;
@@ -196,7 +215,7 @@ static int message_pre_check(int id)
         return 0; /* exception list skips dedupe */
     }
     for (int i = 0; i < s_queue_count; ++i) {
-        if (s_queue_ids[i] == id) {
+        if (s_queue_records[i].id == id) {
             /* the queued entry's stored callback runs immediately; when a
              * callback hook exists and handles it, the re-dispatch is
              * suppressed. */
@@ -209,28 +228,9 @@ static int message_pre_check(int id)
 }
 
 /* IncidentMessageConfigLookup (FUN_004193e0) — see message.hpp. The corpus
- * uses __strcmpi (C-locale ASCII fold); the port's helper matches it. */
-static int msg_strcasecmp(const char* a, const char* b)
-{
-    for (;;) {
-        char ca = *a, cb = *b;
-        if (ca >= 'A' && ca <= 'Z') {
-            ca += 32;
-        }
-        if (cb >= 'A' && cb <= 'Z') {
-            cb += 32;
-        }
-        if (ca != cb) {
-            return (unsigned char)ca - (unsigned char)cb;
-        }
-        if (ca == 0) {
-            return 0;
-        }
-        ++a;
-        ++b;
-    }
-}
-
+ * calls the shared case-insensitive compare strcasecmp_lite (0x48ff10) on
+ * each table entry blindly, with no null check before the call; the walk
+ * keeps the port's record-array stride as a documented layout deviation. */
 // FUNCTION: LEGORR 0x004193e0
 int incident_message_config_lookup(const char* name, int* out_id)
 {
@@ -239,7 +239,7 @@ int incident_message_config_lookup(const char* name, int* out_id)
     }
     for (int i = 0; i != MESSAGE_MAX_ID; ++i) {
         const char* n = s_cfg[i].name;
-        if (n != NULL && msg_strcasecmp(n, name) == 0) {
+        if (strcasecmp_lite(n, name) == 0) {
             *out_id = i;
             return 1;
         }
@@ -248,13 +248,13 @@ int incident_message_config_lookup(const char* name, int* out_id)
 }
 
 /* InfoMessageQueueFindId (FUN_00419b20): the queue's index-by-id walk.
- * The corpus strides the 5-dword queue entries against the count word;
- * the port rides its parallel-array model (documented deviation). */
+ * The corpus strides the 5-dword queue records against the count word;
+ * the port's record array mirrors that layout. */
 // FUNCTION: LEGORR 0x00419b20
 int message_queue_find_id(int id)
 {
     for (int i = 0; i < s_queue_count; ++i) {
-        if (s_queue_ids[i] == id) {
+        if (s_queue_records[i].id == id) {
             return i;
         }
     }
@@ -311,10 +311,10 @@ void message_dispatch(int id, uint32_t p2, uint32_t p3, const void* p4)
         int idx = message_queue_find_id(id);
         if (idx < 0) {
             idx = s_queue_count;
-            s_queue_ts[idx] = s_now;
+            s_queue_records[idx].timestamp = s_now;
             s_queue_count += 1;
         }
-        s_queue_ids[idx] = id;
+        s_queue_records[idx].id = id;
         if (s_callback != NULL) {
             s_callback(id);
         }
@@ -326,14 +326,18 @@ void message_update(float dt)
     s_now += dt;
 }
 
-/* corpus FUN_0041a2c0: the ticker walks the cooldown array (stride 5 in the
- * corpus block; per-id here) and decrements toward zero. */
+/* corpus FUN_0041a2c0 (InfoMessageTimerDecay): walks the 40 stride-0x14
+ * records at DAT_004dc704 (add ecx, 0x14; end at 0x4dca24) and subtracts
+ * the frame delta from each strictly-positive countdown — the corpus gates
+ * with fcomp against the .rdata 0.0 dword (0x49e264), test ah, 0x41. */
 // FUNCTION: LEGORR 0x0041a2c0
 void message_cooldown_tick(float dt)
 {
-    for (int i = 0; i < MESSAGE_MAX_ID; ++i) {
-        if (s_cfg[i].cooldown > 0.0f) {
-            s_cfg[i].cooldown -= dt;
+    /* pointer walk, as the corpus: the end compare lands on &s_cfg[40] and
+     * stays unsigned (the corpus loop-back is jb, not jl) */
+    for (MessageConfig* rec = s_cfg; rec < &s_cfg[MESSAGE_MAX_ID]; ++rec) {
+        if (rec->cooldown > s_cooldown_zero) {
+            rec->cooldown -= dt;
         }
     }
 }
@@ -401,6 +405,7 @@ void indexed_selection_flag_20000_set_clear(int id, int set)
 #define MSG_DAT_WINDOW 0x28 /* the corpus's 40-entry block per finding 05 */
 static uint32_t s_msg_catalog[MSG_DAT_WINDOW]; /* DAT_004dc6fc stride-0x14 block */
 static uint32_t s_msg_secondary[MSG_DAT_WINDOW]; /* DAT_004dc700 stride-0x14 block */
+// GLOBAL: LEGORR 0x004dcd58
 static uint32_t s_incident_state;              /* DAT_004dcd58 */
 
 // FUNCTION: LEGORR 0x00419420

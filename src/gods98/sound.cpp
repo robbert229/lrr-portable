@@ -257,7 +257,10 @@ int sound_bank_free_slot_find(int* out_slot)
 // FUNCTION: LEGORR 0x0047a850
 int sound_volume_value_valid(int millibels)
 {
-    /* SoundVolumeValueValid @ 0x47a850: (-10001 < v < 1). */
+    /* SoundVolumeValueValid @ 0x47a850: (-10001 < v < 1). Deviation: the
+     * corpus gates with test/jg then cmp -10000/jl; MSVC5 canonicalizes
+     * the split-gate source shape into cmp/setge form, so keep the
+     * two-sided expression which scores best. */
     return (millibels < 1 && -10001 < millibels) ? 1 : 0;
 }
 
@@ -635,14 +638,23 @@ void sound_request_queue_clear(void)
  *  Deferred-play global cooldown (issues #326 / #327). See sound.hpp.
  * ------------------------------------------------------------------ */
 
+// GLOBAL: LEGORR 0x00502b24
 static float s_cooldown_timer;   /* _DAT_00502b24 (zero-initialised) */
+// GLOBAL: LEGORR 0x00502b28
 static int   s_cooldown_handle;  /* DAT_00502b28  (zero-initialised) */
+
+/* The corpus compares against a file-backed .rdata dword (0x49e73c, bytes
+ * 00 00 00 00). A const zero-initialized static lands with real file bytes
+ * in .rdata — plain zero-initialized storage would sit in the image's zero
+ * tail, which reccmp-datacmp reads as uninitialized. */
+// GLOBAL: LEGORR 0x0049e73c
+static const float s_deferred_zero = 0.0f; /* DAT_0049e73c role: 0.0 constant */
 
 // FUNCTION: LEGORR 0x00464ec0
 int sound_deferred_timer_set_if_idle(float seconds)
 {
     /* DeferredSoundTimerSetIfIdle @ 0x464ec0. */
-    if (s_cooldown_timer <= 0.0f) {
+    if (s_cooldown_timer <= s_deferred_zero) {
         s_cooldown_handle = -1;
         s_cooldown_timer = seconds;
         return 1;
@@ -907,9 +919,13 @@ void sound_variant_property_set(int alias_index, int millibels)
 {
     /* ConfiguredVariantPropertySet @ 0x465010. Deviation: the corpus's
      * millibel argument is register-passed and invisible to the
-     * decompile, so the port takes it explicitly (issue #319). */
-    int slot = sound_variant_select(alias_index);
-    sound_bank_entry_volume_set(slot, millibels);
+     * decompile, so the port takes it explicitly (issue #319). The
+     * corpus loads millibels (eax) then alias_index (ecx) before the
+     * select call; mirror the load order with eager locals. */
+    const int value = millibels; /* corpus: eax = [esp+8] first */
+    const int alias = alias_index; /* corpus: ecx = [esp+4] second */
+    int slot = sound_variant_select(alias);
+    sound_bank_entry_volume_set(slot, value);
 }
 
 // FUNCTION: LEGORR 0x00465030
@@ -937,7 +953,9 @@ typedef struct BatchEntry {
     uint32_t mode;       /* +20 DAT_00502a44 */
 } BatchEntry;
 
+// GLOBAL: LEGORR 0x00502a44
 static BatchEntry s_batch_entry[SOUND_BATCH_QUEUE_CAPACITY];
+// GLOBAL: LEGORR 0x00502b20
 static int        s_batch_count;   /* DAT_00502b20 */
 
 /* The frame tick's active replay copies (DAT_00502b80 alias words,
@@ -1161,9 +1179,15 @@ double sound_object_duration_get(int alias)
 {
     /* SoundObjectDurationGet @ 0x465160: duration of whatever the alias's
      * chain selects — one PRNG draw per call (a global-cooldown submit
-     * therefore draws twice: play's select and this one, as corpus). */
+     * therefore draws twice: play's select and this one, as corpus). The
+     * corpus tests the select (test eax,eax / je 0x46517b): a zero slot
+     * never reaches the step-rate, it loads the 0x49e73c zero instead. */
     int slot = sound_variant_select(alias);
-    return sound_streamed_wave_buffer_step_rate(slot);
+    if (slot != 0) {
+        return sound_streamed_wave_buffer_step_rate(slot);
+    }
+    return s_deferred_zero; /* the corpus's test/je tail: a zero chain head
+                             * (no sound) loads the 0x49e73c zero instead */
 }
 
 // FUNCTION: LEGORR 0x00464ef0

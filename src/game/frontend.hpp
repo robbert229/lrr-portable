@@ -744,10 +744,12 @@ void selection_coordinates_set(const uint32_t* pair, uint32_t x, uint32_t y);
 /* selection_coordinates_set (FUN_0041cce0): the pointer's two dwords go
  * to the +0c/+10 slots; x/y arrive as integers and convert to floats for
  * the +14/+18 slots — the corpus's int->float casts, faithful. */
-void selection_region_parameters_set(float a, float b, float c, float d,
-                                     float e);
-/* selection_region_parameters_set (FUN_0041e9d0): five region slots, the
- * last scaled by 0.04 (the corpus's float multiply). */
+void selection_region_parameters_set(uint32_t a, uint32_t b, uint32_t c,
+                                     uint32_t d, float e);
+/* selection_region_parameters_set (FUN_0041e9d0): four integer words
+ * convert from unsigned and rotate across the region slots (a -> +08,
+ * b -> +0c, c -> +00, d -> +04); the float scales by the corpus's .rdata
+ * 0.04 in single precision into the +10 slot. */
 void objective_selection_state_reset(void);
 /* objective_selection_state_reset (FUN_0041a990): clears the selection
  * word, mirrors the region's +08 float into the tracking word, and raises

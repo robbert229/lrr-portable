@@ -423,17 +423,19 @@ int flic_opcode16_mode_dispatch(const uint8_t* rec)
 void flic_packed_triplet_table_to_word_build(void* record)
 {
     if (record == NULL) {
-        return; /* deviation: the corpus strides the record blindly */
+        return; /* deviation: pinned by test_flic.cpp:418 — the corpus strides blindly */
     }
-    const uint8_t* triples = (const uint8_t*)record + 0x11c;
     uint8_t* words = (uint8_t*)record + 0x41c;
-    for (int i = 0; i != 0x100; ++i) {
-        const uint8_t* src = triples + (size_t)i * 3u;
+    const uint8_t* src = (const uint8_t*)record + 0x11c;
+    uint8_t* dst = words;
+    for (int count = 0x100; count != 0; --count) {
         const uint16_t w = (uint16_t)(
             (uint16_t)((uint16_t)(src[1] | (uint16_t)((src[0] & 0x3e) << 5))
                        << 5)
             | (uint16_t)(src[2] >> 1));
-        __builtin_memcpy(words + (size_t)i * 2u, &w, sizeof w);
+        __builtin_memcpy(dst, &w, sizeof w);
+        dst += 2;
+        src += 3;
     }
     const uint16_t zero = 0u;
     __builtin_memcpy(words, &zero, sizeof zero);
@@ -974,13 +976,14 @@ int flic_opcode25_decode_dispatch(void* record)
         if (op == 0) {
             flic_opcode25_success_stub();
         }
+        __builtin_memcpy(&op, rec + 0x6d4, sizeof op); /* corpus reloads it raw */
         if (op == 4) {
             flic_decode8_bit_opcode25_mode4(rec);
             return 1;
         }
     } else if (depth == 0x10) {
         __builtin_memcpy(&marker, rec + 0x644, sizeof marker);
-        if (marker == (int16_t)0xaf42 /* -0x50bd */) {
+        if (marker == (int16_t)0xaf43 /* -0x50bd = 0xaf43 */) {
             flic_decode16_bit_keyframe(rec);
             return 1;
         }
@@ -1010,6 +1013,7 @@ int flic_opcode27_decode_dispatch(void* record)
         if (op == 0) {
             flic_opcode27_fallback_noop();
         }
+        __builtin_memcpy(&op, rec + 0x6d4, sizeof op); /* corpus reloads it raw */
         if (op == 4) {
             flic_decode8_bit_alternate_delta(rec);
             return 1;
@@ -1020,7 +1024,7 @@ int flic_opcode27_decode_dispatch(void* record)
             flic_opcode27_fallback_noop();
             return 1;
         }
-        if (marker == (int16_t)0xaf42 /* -0x50bd */) {
+        if (marker == (int16_t)FLIC_MAGIC_AF43 /* -0x50bd = 0xaf43 */) {
             flic_decode16_bit_delta(rec);
             return 1;
         }

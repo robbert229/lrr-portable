@@ -430,15 +430,23 @@ int block_get_bool(BlockFile* bf, const char* path)
 const char* registry_path_split(const char* path, char* out)
 {
     if (path == NULL || out == NULL) {
-        return path;
+        return path; /* deviation: pinned by test_block.cpp — corpus strides blind */
     }
+    /* Corpus shape: NUL the destination, seed the character, gate entry on
+     * it, then a do-while whose back edge is the character's own test —
+     * the source advances before the byte is stored. */
     *out = '\0';
     char c = *path;
-    while (c != '\0' && c != '\\') {
-        *out = c;
-        ++out;
-        ++path;
-        c = *path;
+    if (c != '\0') {
+        do {
+            if (c == '\\') {
+                break;
+            }
+            ++path;
+            *out = c;
+            ++out;
+            c = *path;
+        } while (c != '\0');
     }
     if (*path == '\\') {
         ++path;
@@ -456,9 +464,13 @@ const char* registry_path_split(const char* path, char* out)
  * the corpus's second role for that word, crt.cpp's record-list head, is
  * documented aliasing the port does not model across translation units. */
 #define BLOCK_TOKEN_POOL_SLOTS 32
+// GLOBAL: LEGORR 0x00506498
 static void* s_token_pool_slots[BLOCK_TOKEN_POOL_SLOTS];
+// GLOBAL: LEGORR 0x00506518
 static void* s_token_pool_head;      /* DAT_00506518 role: free-list head */
+// GLOBAL: LEGORR 0x00506520
 static int   s_token_pool_resident;  /* _DAT_00506520 role */
+// GLOBAL: LEGORR 0x0050651c
 static int   s_token_pool_watermark; /* DAT_0050651c role: grow counter */
 
 /* BlockTextTokenPoolGrow (FUN_00479490): the watermark counter doubles the

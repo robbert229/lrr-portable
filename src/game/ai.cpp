@@ -1374,8 +1374,8 @@ void entity_flag80000000_set_or_clear(GameContext* ctx, EntitySlot* e,
 // FUNCTION: LEGORR 0x0043c280
 int entity_nested_float_add_unless_blocked(EntitySlot* e, float* value)
 {
-    if (e == NULL || value == NULL) {
-        return 0; /* deviation: the corpus strides blindly */
+    if (e == NULL) {
+        return 0; /* deviation: the port guards the entity, the corpus strides the value blindly */
     }
     if (e->type == 4 && entity_shared_eligibility_check(e, 0) == 0) {
         return 0;
@@ -1534,9 +1534,13 @@ int entity_state_pair_predicate(GameContext* ctx, int type1, int row1,
 
 /* ActiveEntityListContainsCode (FUN_004031e0): a permitted-activity scan
  * (FUN_0044b480) over the selection when it is non-empty, else over the
- * corpus's global active-entity list. NULL list entries are skipped
- * without a test (the corpus while-shape walks past them); the selection
- * branch answers on the first hit and never falls back to the list
+ * corpus's global active-entity list. The selection branch caches the
+ * count (the corpus's ebx), walks the record array with a pointer and an
+ * unsigned counter (add reg,4 / inc / cmp-jb) and passes entries BLIND to
+ * the scan — the corpus has no NULL-entry test there, the scan itself
+ * answers 0; the fallback branch skips NULL entries (the corpus's
+ * test/je) and re-reads the count every iteration. The selection branch
+ * answers on the first hit and never falls back to the list
  * (pinned branch isolation).
  * Deviation: the global list (DAT_004b335c entries / DAT_004b3424 count)
  * has no ported owner — the activation band lands through hooks — so it
@@ -1574,8 +1578,15 @@ int active_entity_list_count(void)
 // FUNCTION: LEGORR 0x004031e0
 int active_entity_list_contains_code(GameContext* ctx, int code)
 {
+    unsigned count;
+    EntitySlot* const* records;
+    EntitySlot* const* walk;
+    unsigned i;
+
     if (selection_has_any(ctx) == 0) {
-        for (int i = 0; i < s_active_count; ++i) {
+        /* the fallback re-reads the count (the corpus's DAT_004b3424
+         * load) on every iteration and skips NULL entries (test/je). */
+        for (i = 0; i < (unsigned) s_active_count; ++i) {
             if (s_active_list[i] != NULL
                 && ai_activity_scan(s_active_list[i], code) != 0) {
                 return 1;
@@ -1583,10 +1594,14 @@ int active_entity_list_contains_code(GameContext* ctx, int code)
         }
         return 0;
     }
-    const int count = selection_count(ctx);
-    EntitySlot* const* records = selection_record_array(ctx);
-    for (int i = 0; records != NULL && i < count; ++i) {
-        if (ai_activity_scan(records[i], code) != 0) {
+    /* selection branch: cached count (corpus ebx), unsigned counter and
+     * a walk pointer (inc / add reg,4 / cmp-jb); entries go BLIND to
+     * the scan — the corpus has no NULL test here and the scan
+     * (FUN_0044b480) answers 0 for NULL. */
+    count = (unsigned) selection_count(ctx);
+    records = selection_record_array(ctx);
+    for (i = 0, walk = records; records != NULL && i < count; ++i, ++walk) {
+        if (ai_activity_scan(*walk, code) != 0) {
             return 1;
         }
     }
