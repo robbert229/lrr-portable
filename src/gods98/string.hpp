@@ -2,9 +2,9 @@
 /* Corpus text primitives (findings 397/12): the string helpers the engine
  * callers use throughout, from the CRT string region.
  *
- * Deviations (documented): the substring scanner's aligned
- * word-at-a-time SWAR scan is a pure speed optimization — the port uses
- * plain byte semantics, identical results. The config path builder writes
+ * Deviations (documented): the substring scanner's corpus
+ * leading-byte/leading-pair gates and paired tail comparison are reproduced
+ * in plain C — identical results. The config path builder writes
  * into a fixed static buffer and stops appending when full, where the
  * corpus copies through the static limit. */
 #ifndef LEGORRR_GODS98_STRING_HPP

@@ -15,13 +15,24 @@
 
 static void wad_huffman_canonical_codes_build(void* table, int count);
 
+/* The corpus's 16-byte Huffman decode entry. The roles come from the corpus
+ * bytes, not from the port's earlier guess: WadHuffmanTableRead (0x0049cd90)
+ * stores the read_bits(4) verdict as the WORD at +12 (`lea esi,[ebp+0xc]` /
+ * `mov [esi],ax`, `add esi,0x10`), WadHuffmanSymbolDecode (0x0049ce00) tests
+ * the WORD at +12 and compares `(1<<len)-1 & lsb` against the DWORD at +8
+ * (`mov cx,[eax+0xc]` / `mov ecx,[eax+0x8]` / `add eax,0x10`), and the
+ * canonical builder (0x0049cf90) matches the WORD at +12 and stores the
+ * reversed code into the DWORD at +8. WadHuffmanTableClear (0x0049cf50)
+ * zeroes the DWORD at +0, writes 0xffff into the WORD at +4, zeroes the
+ * DWORD at +8 and the WORD at +12; the +0/+4 pair is untouched by this band,
+ * so those two fields keep their corpus offsets and an inert role. */
 typedef struct WadCodecTableEntry {
-    uint32_t code;
-    uint16_t max;
-    uint16_t pad;
-    uint32_t unused;
-    uint16_t len;
-    uint16_t pad2;
+    uint32_t reserved; /* +0  DWORD: cleared to 0, unread by the decode band */
+    uint16_t max;      /* +4  WORD: cleared to 0xffff, unread by that band */
+    uint16_t pad;      /* +6  padding */
+    uint32_t code;     /* +8  DWORD: the canonical code for this length */
+    uint16_t len;      /* +12 WORD: the code's bit length */
+    uint16_t pad2;     /* +14 padding */
 } WadCodecTableEntry;
 
 static unsigned int wad_reverse_low_bits(unsigned int v, unsigned int n)
@@ -39,8 +50,8 @@ static void wad_huffman_canonical_codes_build(void* table, int count)
     next = 0;
     unit = 0x80000000u;
     for (len=1; len<=16; ++len, unit >>= 1) {
-        for (i=0; i<count; ++i) if (e[i*8].len == len) {
-            e[i*8].code = wad_reverse_low_bits(next / unit, len);
+        for (i=0; i<count; ++i) if (e[i].len == len) {
+            e[i].code = wad_reverse_low_bits(next / unit, len);
             next += unit;
         }
     }
@@ -52,7 +63,8 @@ static unsigned char* wad_codec_out;
 static unsigned char* wad_codec_end;
 static unsigned int wad_codec_bits, wad_codec_lsb, wad_codec_msb;
 
-static void wad_codec_initialize(const void* src, void* dst)
+// FUNCTION: LEGORR 0x0049cc70
+static void wad_bitstream_output_initialize(const void* src, void* dst)
 {
     const unsigned char* p;
     uint32_t n;
@@ -63,7 +75,8 @@ static void wad_codec_initialize(const void* src, void* dst)
     wad_codec_end = dst ? (unsigned char*)dst + n : NULL;
     wad_codec_bits = wad_codec_lsb = wad_codec_msb = 0;
 }
-static unsigned int wad_codec_read_lsb(unsigned int n)
+// FUNCTION: LEGORR 0x0049ccc0
+static unsigned int wad_read_bits_lsb_first(unsigned int n)
 {
     unsigned int v, mask;
     v = 0;
@@ -81,7 +94,8 @@ static unsigned int wad_codec_read_lsb(unsigned int n)
     }
     return v;
 }
-static unsigned int wad_codec_read_msb(unsigned int n)
+// FUNCTION: LEGORR 0x0049cd30
+static unsigned int wad_read_bits_msb_first(unsigned int n)
 {
     unsigned int v;
     v=0;
@@ -93,23 +107,15 @@ static unsigned int wad_codec_read_msb(unsigned int n)
     }
     return v;
 }
-static short wad_codec_run(void) { short a=(short)wad_codec_read_msb(1), b=(short)wad_codec_read_msb(1); if(!b)return a+4; return (short)(wad_codec_read_msb(1)-2+(a+4)*2); }
-static int wad_codec_offset(void)
+// FUNCTION: LEGORR 0x0049ce70
+static short wad_run_length_decode(void) { short a=(short)wad_read_bits_msb_first(1), b=(short)wad_read_bits_msb_first(1); if(!b)return a+4; return (short)(wad_read_bits_msb_first(1)-2+(a+4)*2); }
+// FUNCTION: LEGORR 0x0049ceb0
+static int wad_backreference_offset_decode(void)
 {
-    unsigned int v=0; if(wad_codec_read_msb(1)) { v=wad_codec_read_msb(1); if(!wad_codec_read_msb(1)) { if(!v)v=wad_codec_read_msb(1)+2; }
-    else { v=(wad_codec_read_msb(1)+v*2)|4; if(!wad_codec_read_msb(1))v=wad_codec_read_msb(1)+v*2; } }
+    unsigned int v=0; if(wad_read_bits_msb_first(1)) { v=wad_read_bits_msb_first(1); if(!wad_read_bits_msb_first(1)) { if(!v)v=wad_read_bits_msb_first(1)+2; }
+    else { v=(wad_read_bits_msb_first(1)+v*2)|4; if(!wad_read_bits_msb_first(1))v=wad_read_bits_msb_first(1)+v*2; } }
     return v*256+1+*wad_codec_in++;
 }
-// FUNCTION: LEGORR 0x0049cc70
-static void wad_bitstream_output_initialize(const void* src, void* dst) { wad_codec_initialize(src,dst); }
-// FUNCTION: LEGORR 0x0049ccc0
-static unsigned int wad_read_bits_lsb_first(unsigned int n) { return wad_codec_read_lsb(n); }
-// FUNCTION: LEGORR 0x0049cd30
-static unsigned int wad_read_bits_msb_first(unsigned int n) { return wad_codec_read_msb(n); }
-// FUNCTION: LEGORR 0x0049ce70
-static short wad_run_length_decode(void) { return wad_codec_run(); }
-// FUNCTION: LEGORR 0x0049ceb0
-static int wad_backreference_offset_decode(void) { return wad_codec_offset(); }
 
 // FUNCTION: LEGORR 0x0049cd90
 static void wad_huffman_table_read(void* table, unsigned int count)
@@ -120,7 +126,7 @@ static void wad_huffman_table_read(void* table, unsigned int count)
     n=wad_read_bits_lsb_first(5);
     if(n>16)n=16;
     e=(WadCodecTableEntry*)table;
-    for(i=0;i<n;i++) e[i*8].len=(uint16_t)wad_read_bits_lsb_first(4);
+    for(i=0;i<n;i++) e[i].len=(uint16_t)wad_read_bits_lsb_first(4);
     if(n) wad_huffman_canonical_codes_build(table,(int)n);
 }
 // FUNCTION: LEGORR 0x0049ce00
@@ -130,8 +136,8 @@ static unsigned int wad_huffman_symbol_decode(void* table)
     unsigned int i, v;
     e=(WadCodecTableEntry*)table;
     i=0;
-    while(e[i*8].len==0 || (((1u<< (e[i*8].len&31))-1u & wad_codec_lsb)!=e[i*8].code)) ++i;
-    v=wad_read_bits_lsb_first(e[i*8].len);
+    while(e[i].len==0 || (((1u<< (e[i].len&31))-1u & wad_codec_lsb)!=e[i].code)) ++i;
+    v=wad_read_bits_lsb_first(e[i].len);
     return i<2 ? i : (wad_read_bits_lsb_first(i-1)|(1u<<(i-1)));
 }
 
@@ -787,9 +793,12 @@ void wad_memory_stream_buffer_get(int slot)
 
 /* DAT_00557d80 / DAT_00557e80 / DAT_00557f80 roles, module-local: the type-1
  * codec's three 16-symbol Huffman tables (literal counts, back-reference
- * offsets, match lengths). The corpus bands are sixteen 16-byte entries each
- * in zero-init .data; these buffers ride wider so the ported table helpers'
- * e[i*8] indexing inside 0x0049cd90 / 0x0049ce00 stays in bounds. */
+ * offsets, match lengths). The corpus bands are 256 bytes each (sixteen
+ * 16-byte entries, count 16 at 0x0049c914/0x0049c923/0x0049c932) in
+ * zero-init .data, and only those sixteen entries are ever written; these
+ * buffers ride wider so the corpus's blind scan in WadHuffmanSymbolDecode
+ * (0x0049ce0e..0x0049ce2d, `while (len == 0 || mask&&lsb != code) ++i;`)
+ * stays inside one object when no entry matches. */
 static WadCodecTableEntry s_wad_huff_literal[128];
 static WadCodecTableEntry s_wad_huff_offset[128];
 static WadCodecTableEntry s_wad_huff_length[128];
@@ -1029,13 +1038,10 @@ void wad_huffman_table_clear(void* table, int count)
     }
     for (int i = 0; i != count; ++i) {
         unsigned char* e = (unsigned char*)table + (size_t)i * 16u;
-        const uint32_t zero = 0u;
-        const uint16_t full = 0xffffu;
-        const uint16_t empty = 0u;
-        memcpy(e + 0, &zero, 4);
-        memcpy(e + 4, &full, 2);
-        memcpy(e + 8, &zero, 4);
-        memcpy(e + 12, &empty, 2);
+        *(uint32_t*)(e + 0)  = 0u;        /* corpus: mov DWORD [x],0    */
+        *(uint16_t*)(e + 4)  = 0xffffu;   /* corpus: mov WORD [x+4],0xffff */
+        *(uint32_t*)(e + 8)  = 0u;        /* corpus: mov DWORD [x+8],0  */
+        *(uint16_t*)(e + 12) = 0u;        /* corpus: mov WORD [x+12],0  */
     }
 }
 

@@ -124,23 +124,27 @@ void velocity_slot_vector_read(const void* record, float out[3],
     }
 }
 
-/* EntityVelocityStateRecordGet (FUN_004712c0) — see record.hpp. The corpus
- * strides the type-keyed sub-record blindly (and walks into the sub-record
- * when the type answers no base at all); the port guards both links. */
+/* EntityVelocityStateRecordGet (FUN_004712c0): the corpus loads the type,
+ * decrements it, then subtracts three for the type-4 arm (`dec eax; je`,
+ * `sub eax,3; je`). Keep the NULL record/link guards pinned by test_record;
+ * direct field loads and the same subtract/compare sequence remove helper
+ * calls and track the corpus's non-NULL path. */
 // FUNCTION: LEGORR 0x004712c0
 void* entity_velocity_state_record_get(const void* record)
 {
     if (record == NULL) {
         return NULL; /* deviation: the corpus strides the record blindly */
     }
-    const uint32_t type = rec_dword(record, 0x00);
-    if (type == 1u) {
-        void* sub = rec_ptr(record, 0x0c);
+    uint32_t type = *(const uint32_t*)record;
+    type -= 1u;
+    if (type == 0u) {
+        void* sub = *(void* const*)((const char*)record + 0x0c);
         return (sub != NULL) ? (void*)((char*)sub + 0x138)
                              : NULL; /* deviation: corpus strides blindly */
     }
-    if (type == 4u) {
-        void* sub = rec_ptr(record, 0x18);
+    type -= 3u;
+    if (type == 0u) {
+        void* sub = *(void* const*)((const char*)record + 0x18);
         return (sub != NULL) ? (void*)((char*)sub + 0xa0)
                              : NULL; /* deviation: corpus strides blindly */
     }
@@ -257,8 +261,9 @@ uint32_t task_flag_bit_query(const void* task, uint32_t bit, int suppress)
     return flags & mask;
 }
 
-/* TaskField84GetAndField88Out (FUN_00408360): the pair read, corpus
- * order — the optional +0x88 write happens before the +0x84 answer. */
+/* TaskField84GetAndField88Out (FUN_00408360): after the pinned NULL-task
+ * guard, mirror `test eax,eax; je`, the optional +0x88 load/store, then the
+ * +0x84 answer load. The corpus itself does not guard the task pointer. */
 // FUNCTION: LEGORR 0x00408360
 uint32_t task_field84_get_and_field88_out(const void* task, uint32_t* out88)
 {
@@ -266,9 +271,9 @@ uint32_t task_field84_get_and_field88_out(const void* task, uint32_t* out88)
         return 0u;
     }
     if (out88 != NULL) {
-        *out88 = rec_dword(task, 0x88);
+        *out88 = *(const uint32_t*)((const char*)task + 0x88);
     }
-    return rec_dword(task, 0x84);
+    return *(const uint32_t*)((const char*)task + 0x84);
 }
 
 /* PackedGridCellValueGet (FUN_0040b850, findings 373/451): low nibble
@@ -443,11 +448,17 @@ uint32_t indexed_record_flag6c_bit0_get(const void* record, int index)
 // FUNCTION: LEGORR 0x00483400
 void* indexed_record_data_address_get(const void* record, int index)
 {
-    char* base = (char*)rec_ptr(record, 0x08);
+    if (record == NULL) {
+        return NULL; /* pinned deviation: the corpus loads blindly */
+    }
+    char* base = (char*)*(void* const*)((const char*)record + 0x08);
     if (base == NULL) {
         return NULL;
     }
-    return (void*)(base + (size_t)((size_t)index * 0x70u + 0x10u));
+    /* Corpus arithmetic: `(index << 3) - index`, then `<< 4` makes
+     * index*0x70 (`shl ecx,3; sub ecx,eax; shl ecx,4`); add +0x10. */
+    const size_t scaled = (((size_t)index << 3) - (size_t)index) << 4;
+    return (void*)(base + scaled + 0x10u);
 }
 
 // FUNCTION: LEGORR 0x00408e10
@@ -817,6 +828,7 @@ static int s_scene_vis_calls;
 static void* s_scene_vis_last_obj;
 static int s_scene_vis_last_flag;
 
+// FUNCTION: LEGORR 0x00473b40
 static void scene_visibility_hook_call(void* object, int flag)
 {
     ++s_scene_vis_calls;
@@ -2110,34 +2122,45 @@ void instance_quad_vertex_data_fill(void* record, int block,
     } while (--n != 0);
 }
 
+/* MeshSegmentVertexFill (FUN_00482620): keep the corpus's blind table and
+ * vertex-buffer accesses (there are no NULL-input pins/callers for this
+ * leaf), calculate the 0x70 table stride inline, and retain its bottom-test
+ * loop. The disassembly uses `test edi,edi; jbe` for the zero-count gate,
+ * advances positions by 12 and pairs by 8, and reloads the same triple
+ * pointer at `[esp+0x28]` on every round. */
 // FUNCTION: LEGORR 0x00482620
 void mesh_segment_vertex_fill(void* record, int block, int first_vertex,
                               int count, const float* positions,
                               const uint32_t triple[3],
                               const uint32_t* pairs)
 {
-    char* blk = mesh_block(record, block);
-    char* verts = blk != NULL ? (char*)rec_ptr(blk, 0x0c) : NULL;
-    if (verts == NULL || positions == NULL || count == 0) {
-        return; /* deviation: the corpus strides its windows blindly */
+    const size_t block_offset = (((size_t)block << 3) - (size_t)block) << 4;
+    char* table = (char*)*(void* const*)((char*)record + 0x08);
+    char* blk = table + block_offset;
+    if (count == 0) {
+        return;
     }
-    size_t off = (size_t)((uint32_t)first_vertex << 5);
-    const float* src = positions;
-    int n = count;
+    const uint32_t vertex_index = (uint32_t)first_vertex;
+    const uint32_t* src = (const uint32_t*)positions;
+    const uint32_t* pair = pairs;
+    const size_t vertex_offset = (size_t)(vertex_index << 5);
+    char* verts = (char*)*(void* const*)(blk + 0x0c);
+    char* dst = verts + vertex_offset;
+    uint32_t remaining = (uint32_t)count;
     do {
-        char* v = verts + off;
-        __builtin_memcpy(v + 0x00, src, 12);
-        /* Pinned corpus quirk: the triple pointer never advances — the
-         * SAME triple lands on every vertex. */
-        rec_dword_put(v, 0x0c, triple[0]);
-        rec_dword_put(v, 0x10, triple[1]);
-        rec_dword_put(v, 0x14, triple[2]);
-        rec_dword_put(v, 0x18, *pairs);
-        rec_dword_put(v, 0x1c, pairs[1]);
+        *(uint32_t*)(dst + 0x00) = src[0];
+        *(uint32_t*)(dst + 0x04) = src[1];
+        *(uint32_t*)(dst + 0x08) = src[2];
+        /* Pinned corpus quirk: the triple pointer never advances. */
+        *(uint32_t*)(dst + 0x0c) = triple[0];
+        *(uint32_t*)(dst + 0x10) = triple[1];
+        *(uint32_t*)(dst + 0x14) = triple[2];
+        *(uint32_t*)(dst + 0x18) = pair[0];
+        *(uint32_t*)(dst + 0x1c) = pair[1];
         src += 3;
-        pairs += 2;
-        off += 0x20;
-    } while (--n != 0);
+        pair += 2;
+        dst += 0x20;
+    } while (--remaining != 0u);
 }
 
 // FUNCTION: LEGORR 0x004826c0

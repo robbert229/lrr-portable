@@ -611,10 +611,14 @@ void osf_add(GameContext* ctx, int32_t id, int32_t ref, const char* name)
     GameOsfEntry* e = &ctx->osf[ctx->osf_count++];
     e->id = id;
     e->ref = ref;
+    /* The corpus clears the whole 12-byte slot before its strncpy(0xb),
+     * leaving the final byte zero even when the name fills the copy window. */
+    const uint32_t zero = 0u;
+    __builtin_memcpy(e->name + 0, &zero, sizeof zero);
+    __builtin_memcpy(e->name + 4, &zero, sizeof zero);
+    __builtin_memcpy(e->name + 8, &zero, sizeof zero);
     if (name != NULL) {
-        for (int i = 0; i < 11 && name[i] != '\0'; ++i) {
-            e->name[i] = name[i];
-        }
+        crt_string_copy_n(e->name, name, 11u); /* corpus calls 0x48e770 */
     }
     ctx->osf_dirty = 1;
 }
@@ -839,39 +843,10 @@ void selected_level_start_object_update(GameContext* ctx)
 }
 
 /* --- the generic list window band (see savegame.hpp) ----------------------
- * Shared wide-key scan: each entry slot's key rides as little-endian
- * 16-bit units; a unit whose LOW bytes agree on zero terminates the key
- * (pinned: the terminating unit's high byte is never compared). */
-static int list_wide_key_match(const void* node_key, const void* probe_key)
-{
-    const unsigned char* a = (const unsigned char*)node_key;
-    const unsigned char* b = (const unsigned char*)probe_key;
-    for (size_t off = 0;; off += 2) {
-        if (a[off] != b[off]) {
-            return 0;
-        }
-        if (a[off] == 0u) {
-            return 1; /* low-byte terminator */
-        }
-        if (a[off + 1] != b[off + 1]) {
-            return 0;
-        }
-    }
-}
-
-static int list_wide_scan(const SavListWindow* win, const void* wide_key)
-{
-    if (win == NULL || win->count < 1 || wide_key == NULL) {
-        return -1; /* deviation: the corpus strides the window blindly */
-    }
-    for (int i = 0; i < win->count; ++i) {
-        const void* entry = (win->entries != NULL) ? win->entries[i] : NULL;
-        if (entry != NULL && list_wide_key_match(entry, wide_key) != 0) {
-            return i;
-        }
-    }
-    return -1;
-}
+ * Each wide-key accessor carries its scan inline like the corpus. The test-
+ * pinned null window/key guards remain; the corpus otherwise walks the entry
+ * and value arrays blindly. Its two-byte compare exits when either byte of
+ * the matching unit is zero (including the high-byte-zero ASCII case). */
 
 // FUNCTION: LEGORR 0x00416e20
 int list_find_name(const SavListWindow* win, const char* name)
@@ -897,39 +872,193 @@ int list_find_name(const SavListWindow* win, const char* name)
 // FUNCTION: LEGORR 0x00416ed0
 void list_add_name(SavListWindow* win, const void* wide_key, void* value)
 {
-    const int i = list_wide_scan(win, wide_key);
-    if (i >= 0 && win->values_b != NULL) {
-        win->values_b[i] = value; /* corpus: blind store through + 16 */
+    if (win == NULL || wide_key == NULL) {
+        return; /* tested port guard; the corpus dereferences both */
+    }
+    const int count = win->count;
+    if (count <= 0) {
+        return;
+    }
+    void** entry = win->entries;
+    const unsigned char* probe = (const unsigned char*)wide_key;
+    int index = 0;
+    while (index < count) {
+        const unsigned char* key = (const unsigned char*)*entry;
+        const unsigned char* other = probe;
+        int compare;
+        for (;;) {
+            unsigned char ch = *key;
+            if (ch != *other) {
+                compare = ch < *other ? -1 : 1;
+                break;
+            }
+            if (ch == 0u) {
+                compare = 0;
+                break;
+            }
+            ch = key[1];
+            if (ch != other[1]) {
+                compare = ch < other[1] ? -1 : 1;
+                break;
+            }
+            key += 2;
+            other += 2;
+            if (ch == 0u) {
+                compare = 0;
+                break;
+            }
+        }
+        if (compare == 0) {
+            win->values_b[index] = value; /* corpus: blind store through +16 */
+            return;
+        }
+        ++index;
+        ++entry;
     }
 }
 
 // FUNCTION: LEGORR 0x00416f40
 void* list_has_item(const SavListWindow* win, const void* wide_key)
 {
-    const int i = list_wide_scan(win, wide_key);
-    if (i < 0 || win->values_b == NULL) {
+    if (win == NULL || wide_key == NULL) {
         return NULL;
     }
-    return win->values_b[i];
+    const int count = win->count;
+    if (count <= 0) {
+        return NULL;
+    }
+    void* const* entry = win->entries;
+    const unsigned char* probe = (const unsigned char*)wide_key;
+    int index = 0;
+    while (index < count) {
+        const unsigned char* key = (const unsigned char*)*entry;
+        const unsigned char* other = probe;
+        int compare;
+        for (;;) {
+            unsigned char ch = *key;
+            if (ch != *other) {
+                compare = ch < *other ? -1 : 1;
+                break;
+            }
+            if (ch == 0u) {
+                compare = 0;
+                break;
+            }
+            ch = key[1];
+            if (ch != other[1]) {
+                compare = ch < other[1] ? -1 : 1;
+                break;
+            }
+            key += 2;
+            other += 2;
+            if (ch == 0u) {
+                compare = 0;
+                break;
+            }
+        }
+        if (compare == 0) {
+            return win->values_b[index];
+        }
+        ++index;
+        ++entry;
+    }
+    return NULL;
 }
 
 // FUNCTION: LEGORR 0x00416fb0
 void list_set_node(SavListWindow* win, const void* wide_key, void* value)
 {
-    const int i = list_wide_scan(win, wide_key);
-    if (i >= 0 && win->values_a != NULL) {
-        win->values_a[i] = value; /* corpus: blind store through + 12 */
+    if (win == NULL || wide_key == NULL) {
+        return; /* tested port guard; the corpus dereferences both */
+    }
+    const int count = win->count;
+    if (count <= 0) {
+        return;
+    }
+    void** entry = win->entries;
+    const unsigned char* probe = (const unsigned char*)wide_key;
+    int index = 0;
+    while (index < count) {
+        const unsigned char* key = (const unsigned char*)*entry;
+        const unsigned char* other = probe;
+        int compare;
+        for (;;) {
+            unsigned char ch = *key;
+            if (ch != *other) {
+                compare = ch < *other ? -1 : 1;
+                break;
+            }
+            if (ch == 0u) {
+                compare = 0;
+                break;
+            }
+            ch = key[1];
+            if (ch != other[1]) {
+                compare = ch < other[1] ? -1 : 1;
+                break;
+            }
+            key += 2;
+            other += 2;
+            if (ch == 0u) {
+                compare = 0;
+                break;
+            }
+        }
+        if (compare == 0) {
+            win->values_a[index] = value; /* corpus: blind store through +12 */
+            return;
+        }
+        ++index;
+        ++entry;
     }
 }
 
 // FUNCTION: LEGORR 0x00417020
 void* list_get_node(const SavListWindow* win, const void* wide_key)
 {
-    const int i = list_wide_scan(win, wide_key);
-    if (i < 0 || win->values_a == NULL) {
+    if (win == NULL || wide_key == NULL) {
         return NULL;
     }
-    return win->values_a[i];
+    const int count = win->count;
+    if (count <= 0) {
+        return NULL;
+    }
+    void* const* entry = win->entries;
+    const unsigned char* probe = (const unsigned char*)wide_key;
+    int index = 0;
+    while (index < count) {
+        const unsigned char* key = (const unsigned char*)*entry;
+        const unsigned char* other = probe;
+        int compare;
+        for (;;) {
+            unsigned char ch = *key;
+            if (ch != *other) {
+                compare = ch < *other ? -1 : 1;
+                break;
+            }
+            if (ch == 0u) {
+                compare = 0;
+                break;
+            }
+            ch = key[1];
+            if (ch != other[1]) {
+                compare = ch < other[1] ? -1 : 1;
+                break;
+            }
+            key += 2;
+            other += 2;
+            if (ch == 0u) {
+                compare = 0;
+                break;
+            }
+        }
+        if (compare == 0) {
+            return win->values_a[index];
+        }
+        ++index;
+        ++entry;
+    }
+    return NULL;
 }
 
 /* LevelNodeGet (FUN_00417090): recursively materialize the LevelLinks tree.
@@ -1125,6 +1254,7 @@ typedef struct SavTreeNthState {
     uint32_t found_at;
 } SavTreeNthState;
 
+// FUNCTION: LEGORR 0x00417250
 static int sav_tree_nth_visit(void* node, void* user)
 {
     SavTreeNthState* st = (SavTreeNthState*)user;

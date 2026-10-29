@@ -276,21 +276,41 @@ void media_action_feedback_sound_dispatch(int event)
 // FUNCTION: LEGORR 0x004351a0
 void media_action_code_to_sound_alias(int code)
 {
-    int cue = 0;
-    int hit = 0;
-    switch (code) {
-    case 1:  cue = 0x2b; hit = 1; break;
-    case 2:  cue = 0x2c; hit = 1; break;
-    case 3:  cue = 0x2d; hit = 1; break;
-    case 4:  cue = 0x2e; hit = 1; break;
-    case 5:  cue = 0x2f; hit = 1; break;
-    case 8:  cue = 0x32; hit = 1; break;
-    case 10: cue = 0x34; hit = 1; break;
-    case 11: cue = 0x35; hit = 1; break;
-    default: break;
+    /* Corpus at 0x4351a0 uses an ordered compare/call/return ladder:
+     * each match pushes its literal cue to PointerCursorSelect, while a
+     * miss falls through to the next comparison. Keep the arguments
+     * literal and the returns local to preserve that /Od shape. */
+    if (code == 1) {
+        media_pointer_cursor_select(0x2b);
+        return;
     }
-    if (hit) {
-        media_pointer_cursor_select(cue);
+    if (code == 2) {
+        media_pointer_cursor_select(0x2c);
+        return;
+    }
+    if (code == 3) {
+        media_pointer_cursor_select(0x2d);
+        return;
+    }
+    if (code == 4) {
+        media_pointer_cursor_select(0x2e);
+        return;
+    }
+    if (code == 5) {
+        media_pointer_cursor_select(0x2f);
+        return;
+    }
+    if (code == 8) {
+        media_pointer_cursor_select(0x32);
+        return;
+    }
+    if (code == 10) {
+        media_pointer_cursor_select(0x34);
+        return;
+    }
+    if (code == 11) {
+        media_pointer_cursor_select(0x35);
+        return;
     }
 }
 

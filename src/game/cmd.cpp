@@ -240,7 +240,8 @@ int cmd_kind_by_name(const char* name, int* out)
     const char* const* end = PRIO_NAMES + 27;   /* 0x4b32e8 - 0x4b327c */
     int i = 0;
     for (; entry < end; ++entry, ++i) {
-        if (strcasecmp_lite(*entry, name) == 0) {   /* corpus order: entry first */
+        /* cdecl stack order: push the table entry, then the query name. */
+        if (strcasecmp_lite(name, *entry) == 0) {
             *out = i;
             return 1;
         }
@@ -576,7 +577,8 @@ static void cmd_minion_companion(EntitySlot* e)
     rec->payload = e;
     cmd_set_kind(rec, 0x15);
     cmd_link_tail(rec);
-    rec->state |= CMD_STATE_MINION;
+    /* Corpus: mov eax,[+0x5c] / or ah,0x20 / mov [+0x5c],eax. */
+    rec->state = rec->state | CMD_STATE_MINION;
 }
 
 // FUNCTION: LEGORR 0x00402720

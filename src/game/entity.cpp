@@ -457,12 +457,11 @@ static int ci_strcmp(const char* a, const char* b);
 static int entity_type_pair_for_name(const char* name, int* type_out,
                                      int* row_out, int* zero_out)
 {
-    /* Deviation: the corpus zeroes the row slot blind; the port's
-     * NULL-threading callers (entity_type_for_name, the wrapper's corpus
-     * call form) pin the guard. */
-    if (row_out != NULL) {
-        *row_out = 0;
-    }
+    /* The corpus's entry zeroing, blind (mov ebx,[esp+0x10] / mov [ebx],0
+     * at 0x42e8b8): every in-tree caller threads a live row slot
+     * (entity_type_for_name carries a sink; the wrapper's two callers pass
+     * &barracks_row / &obj_y; the dispatch aliases its name slot). */
+    *row_out = 0;
     if (name == NULL || name[0] == '\0') {
         return 0; /* unregistered — the corpus aborts, the port skips */
     }
@@ -547,16 +546,18 @@ static int entity_type_pair_for_name(const char* name, int* type_out,
 static int entity_type_for_name(const char* name)
 {
     int type = 0;
-    if (!entity_type_pair_for_name(name, &type, NULL, NULL)) {
+    int row_sink = 0; /* the entry zeroing lands here (corpus-blind form) */
+    if (!entity_type_pair_for_name(name, &type, &row_sink, NULL)) {
         return 0;
     }
     return type;
 }
 
 /* Public (type, row) shape of the resolver — the corpus call form with a
- * NULL fourth output (FUN_0042e8b0(name, &type, &row, 0)): table matches
- * write both, the special names write only their dedicated rows, leaving
- * the row slot for the caller to carry. */
+ * NULL fourth output (FUN_0042e8b0(name, &type, &row, 0)): the corpus's
+ * entry zeroing clears the row slot first (guarded here), table matches
+ * then write both, the special names write only their dedicated rows,
+ * so everything else answers a zero row. */
 int entity_type_row_for_name(const char* name, int* type_out, int* row_out)
 {
     return entity_type_pair_for_name(name, type_out, row_out, NULL);
@@ -751,7 +752,12 @@ int entity_shared_eligibility_check(const EntitySlot* e, int relaxed)
 // FUNCTION: LEGORR 0x004436f0
 int entity_type3_flag04000000_test(const EntitySlot* e)
 {
-    return (e->type == 3 && (e->flags_3e8 & 0x04000000u) != 0u) ? 1 : 0;
+    if (e->type == 3) {
+        if ((e->flags_3e8 & 0x04000000u) != 0u) {
+            return 1;
+        }
+    }
+    return 0;
 }
 
 /* EntityProgressAdvanceBy25 (FUN_00447730, findings 377/448): the corpus
@@ -1182,7 +1188,8 @@ int resolved_entity_operation_dispatch(const char* name, int slot,
     if (!entity_type_pair_for_name(name, &type, (int*)&name, NULL)) {
         return 0;
     }
-    return grid_record_count_difference_get(type, (int)name, slot, subtract);
+    return grid_record_count_difference_get(type, *(int*)&name, slot,
+                                            subtract);
 }
 
 /* --- DAT_00502bd8 indexed stats-type tables (2026-10-25) ------------------
