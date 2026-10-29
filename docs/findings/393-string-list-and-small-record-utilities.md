@@ -13,7 +13,7 @@ This finding maps the 46 functions assigned to `shared-primitives/utility-string
 - `BoundedFloatRecordCreate @ 0x00410b90` rejects `max <= min`, otherwise allocates `0x1c` bytes and stores seven supplied fields (including the lower and upper floats). Its caller is `MenuBuild @ 0x004140c0`.
 - `ThreeValueRecordCopyAndMarkReady @ 0x0040fdb0` copies three dwords through the pointer in record field 0 and sets record field 4 to 1. `EntityMotionToSceneNodeSync @ 0x0044bc30` calls it.
 - `RecordCountDigitsFill @ 0x0040a5e0` lays out four digit slots, decomposes an unsigned count in base 10, writes digit glyphs, terminates the visible sequence, hides remaining slots, and stores the visible count plus terminator at `record+8`. `QuadMeshRenderRecordCreate @ 0x0040a4b0` calls it.
-- `FloatToLong @ 0x00417430` forwards to the CRT `__ftol` conversion helper; `SlotSummary @ 0x004152c0` calls it.
+- `FloatToLong @ 0x00417430` forwards to the CRT `__ftol` conversion helper at `0x0048e060`; `SlotSummary @ 0x004152c0` calls it.
 
 ### String tables, substitutions, and string-keyed caches
 

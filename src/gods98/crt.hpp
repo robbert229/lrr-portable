@@ -4,10 +4,10 @@
  *
  * Deviations (documented): the corpus's word-at-a-time memmove loops are
  * byte-equivalent memmove behavior, so the port calls memmove. The
- * corpus's FloatToLong is the compiler's __ftol helper — under the x87
- * control word it sets, that is C++ truncation toward zero; the port uses
- * the C++ cast (the corpus's 32-bit fist result vs the host cast is the
- * usual x87/IEEE deviation; overflow values are outside the corpus's
+ * corpus's FloatToLong app helper calls the compiler's __ftol routine —
+ * under the x87 control word it sets, that is C++ truncation toward zero;
+ * the port uses the C++ cast (the corpus's 32-bit fist result vs the host
+ * cast is the usual x87/IEEE deviation; overflow values are outside the
  * caller set). NoOpCallback's return value is undefined per finding 381 —
  * callers only use it as a callable no-op. */
 #ifndef LEGORRR_GODS98_CRT_HPP
@@ -25,8 +25,8 @@ extern "C" {
  * otherwise. Returns the destination. */
 void* crt_memory_move(void* dest, const void* src, size_t count);
 
-/* FUN_00417430: __ftol — float to 32-bit integer, truncated toward zero
- * (the corpus's 32-bit fist result; the port mirrors the width). */
+/* FUN_00417430: forwards a float to 32-bit integer conversion through
+ * the CRT's __ftol routine. */
 int float_to_long(float value);
 
 /* FUN_0041f8e0: the callable no-op installed by several engine paths. */

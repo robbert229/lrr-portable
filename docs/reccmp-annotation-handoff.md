@@ -1,5 +1,27 @@
 # Reccmp function annotation handoff
 
+## VC5 static CRT profile
+
+The original `LegoRR.exe` has no `MSVCRT.DLL` import, and its `memmove`,
+`strncpy`, and `__ftol` bodies match the corresponding objects in the installed
+VC5 static CRT. The Reccmp profile therefore selects the multithreaded static
+CRT (`LIBCMT.LIB`, selected by `/MT`) instead of CMake's default `/MD` import
+library. The lack of a `MSVCRT.DLL` import establishes static/embedded CRT
+code, but does not by itself distinguish VC5 `/ML` from `/MT`; `/MT` is the
+profile chosen here because its library members match the identified routines.
+`tools/reprobit.sh` supplies the same archive to ReproBit's link model. The
+MinGW cross build remains a compatibility build and keeps its own CRT.
+
+The confirmed library routines use Reccmp `LIBRARY` symbol annotations:
+`memmove @ 0x00498000`, `strncpy @ 0x0048e770`, and `__ftol @ 0x0048e060`.
+`FloatToLong @ 0x00417430` remains a game function that forwards to `__ftol`.
+The normal report still includes them; `tools/reccmp.sh` also writes a
+`game-only.html` / `game-only.json` report with Reccmp's `--nolib` filter.
+Add a `LIBRARY` annotation only when the original address and VC5 archive
+symbol are both supported by evidence. This keeps the filtered report useful
+without hiding hand-implemented CRT routines that are not supplied by the
+archive.
+
 ## Objective
 
 Backfill `FUNCTION` / `STUB` address markers in production code when the source

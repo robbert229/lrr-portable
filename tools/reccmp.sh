@@ -55,4 +55,8 @@ mkdir -p "${report_dir}"
 "${reccmp_bin}" --target LEGORR \
   --html "${report_dir}/index.html" \
   --json "${report_dir}/results.json"
+"${reccmp_bin}" --target LEGORR --nolib \
+  --html "${report_dir}/game-only.html" \
+  --json "${report_dir}/game-only.json"
 echo "Reccmp HTML report: ${report_dir}/index.html"
+echo "Reccmp game-only report: ${report_dir}/game-only.html"

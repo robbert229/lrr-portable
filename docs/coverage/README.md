@@ -11,15 +11,16 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 1103 | 43.0% |
+| ported | 1100 | 42.9% |
 | stubbed | 1415 | 55.2% |
 | anchored | 4 | 0.2% |
 | named | 0 | 0.0% |
 | runtime-import | 41 | 1.6% |
+| runtime-library | 3 | 0.1% |
 | anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (1103 functions)
+  (1100 functions)
 - **stubbed** — entry address has a Reccmp `STUB` annotation, but the
   function remains a placeholder (1415 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
@@ -29,6 +30,9 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
   citation yet (0 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (41 functions)
+- **runtime-library** — CRT/compiler-runtime bodies supplied by the selected
+  link library and marked `LIBRARY` for Reccmp; not ported as game logic
+  (3 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
   (1 functions)
 

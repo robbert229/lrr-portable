@@ -146,15 +146,16 @@ void extended_float96_bit_shift_right_one(uint32_t* value)
 
 /* FUN_00498000: the corpus's memmove with word loops and byte tails —
  * byte-equivalent to the host memmove (findings 260/394). */
-// FUNCTION: LEGORR 0x00498000
+// LIBRARY: LEGORR 0x00498000 SYMBOL
+// _memmove
 void* crt_memory_move(void* dest, const void* src, size_t count)
 {
     return memmove(dest, src, count);
 }
 
-/* FUN_00417430: __ftol under the truncate-toward-zero control word the
- * compiler switches to — a C++ cast (findings 381/393). Overflow values
- * are outside the corpus's caller set (deviation in crt.hpp). */
+/* FUN_00417430: app helper that forwards to the CRT __ftol routine under
+ * the truncate-toward-zero control word (findings 381/393). Overflow
+ * values are outside the corpus's caller set (deviation in crt.hpp). */
 // FUNCTION: LEGORR 0x00417430
 int float_to_long(float value)
 {
@@ -8119,7 +8120,8 @@ int crt_wide_char_to_multibyte(char* dest, uint32_t wide)
  * source bytes up to the count, copies the NUL when it lands, and pads the
  * rest of the window with zeros. The fold is that observable behavior;
  * source reads stay inside the count. */
-// FUNCTION: LEGORR 0x0048e770
+// LIBRARY: LEGORR 0x0048e770 SYMBOL
+// _strncpy
 char* crt_string_copy_n(char* dest, const char* src, uint32_t count)
 {
     if (count == 0u) {

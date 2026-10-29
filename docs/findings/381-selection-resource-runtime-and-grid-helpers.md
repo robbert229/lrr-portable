@@ -19,7 +19,7 @@ This pass names 45 routines from the three address ranges. Names follow the obse
 | `0x00410b30` | `GlobalPointerGet_004c76ab24` | Returns the global pointer stored at `0x004c76ab24`. | Called by `FUN_00471d20`; semantic role of the global is unknown. |
 | `0x00410b40` | `GlobalPointerGet_004c76ab28` | Returns the global pointer stored at `0x004c76ab28`. | Called by `FUN_00471d20`; semantic role of the global is unknown. |
 | `0x00410b50` | `GlobalPointerGet_004c76ab3c` | Returns the global pointer stored at `0x004c76ab3c`. | Called by `FUN_00471d20`; semantic role of the global is unknown. |
-| `0x00417430` | `FloatToLong` | Calls the compiler runtime floating-point-to-long conversion helper. | Called by `FUN_004152c0`; CRT thunk behavior is explicit. |
+| `0x00417430` | `FloatToLong` | App-level adapter that calls the compiler runtime floating-point-to-long conversion helper at `0x0048e060`. | Called by `FUN_004152c0`; CRT thunk behavior is explicit. |
 | `0x00418000` | `ShowLevelOverlayForCurrentSelection` | Gets the selected level, refreshes its state, and shows the associated UI descriptor. | Caller `FUN_00462030`; descriptor purpose is not further identified. |
 | `0x00419b50` | `RemainingTimerDurationGet` | Starts from `333.0` and subtracts the duration field at offset `+8` for each active timer record. | Caller `FUN_00419b80` uses the result while adding a timer; timer interpretation follows the caller. |
 | `0x0041b9b0` | `GlobalStateGet_004ddd1c` | Returns the global state value at `0x004ddd1c`. | Callers `FUN_0045a9c0`, `FUN_0045c4b0`, `FUN_0045dbc0`, and `FUN_0046ad00` branch on the value; exact state meaning is unknown. |

@@ -2270,7 +2270,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0048de20,FUN_0048de20,stubbed,ArraySortWithComparator,1,2004
 0048dfd0,FUN_0048dfd0,stubbed,QsortSmallPartitionSort,1,425
 0048e030,FUN_0048e030,ported,ByteRangeSwap,2,333
-0048e060,__ftol,ported,X87FloatToLongLongRound,5,164
+0048e060,__ftol,runtime-library,X87FloatToLongLongRound,5,164
 0048e090,FUN_0048e090,stubbed,CrtAsin,1,112
 0048e0ad,FUN_0048e0ad,stubbed,CrtAcosCore,1,1162
 0048e160,FUN_0048e160,ported,RandomSeedSet,2,81
@@ -2286,7 +2286,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0048e4f0,FUN_0048e4f0,stubbed,CrtTerminateProcessWithHandlers,1,1045
 0048e5a0,FUN_0048e5a0,stubbed,CrtRunCallbackArray,1,211
 0048e680,FUN_0048e680,stubbed,CrtDoubleAbsoluteValue,1,913
-0048e770,_strncpy,ported,_strncpy,4,2709
+0048e770,_strncpy,runtime-library,_strncpy,4,2709
 0048e870,FUN_0048e870,ported,DoubleIsFinite,3,109
 0048e890,FUN_0048e890,stubbed,MarkupIntegerTokenParse,1,470
 0048e8e0,FUN_0048e8e0,stubbed,CrtRoundToIntegralWithMathErrorHandlingVariant,1,1080
@@ -2470,7 +2470,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 00497e20,FUN_00497e20,stubbed,CrtDecimalMantissaRoundAndNormalize,1,1482
 00497ec0,FUN_00497ec0,ported,CrtLocaleDataGetOrInitialize,1,445
 00497f40,FUN_00497f40,stubbed,DoubleToExtended80,1,998
-00498000,FUN_00498000,ported,CrtMemoryMove,3,9135
+00498000,FUN_00498000,runtime-library,CrtMemoryMove,3,9135
 00498340,FUN_00498340,ported,CrtFatalMessageExit,4,59
 00498350,FUN_00498350,stubbed,NumberStringScanParse,1,9648
 00498ae0,FUN_00498ae0,ported,CrtStreamBufferAllocate,4,430

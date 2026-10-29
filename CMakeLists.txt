@@ -1,5 +1,16 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 cmake_minimum_required(VERSION 3.20)
+
+# The original LegoRR executable has no MSVCRT.DLL import table entry, so its
+# VC5 CRT is linked into the image. Keep the Reccmp build on the matching
+# static runtime instead of CMake's default /MD DLL runtime.
+if(LRR_CLASSIC_MSVC5)
+  if(POLICY CMP0091)
+    cmake_policy(SET CMP0091 NEW)
+  endif()
+  set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded")
+endif()
+
 project(lrr-portable VERSION 0.1.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)

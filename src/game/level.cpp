@@ -1127,8 +1127,9 @@ uint8_t* level_voxel(const LevelState* s, int x, int y)
     return voxel_at((LevelState*)s, x, y);
 }
 
-/* FUN_0048e060 — x87 round-to-nearest float→int (control-word trick). */
-// FUNCTION: LEGORR 0x0048e060
+/* The original address is the VC5 CRT's x87 float-to-long helper. */
+// LIBRARY: LEGORR 0x0048e060 SYMBOL
+// __ftol
 int level_cell_of(float v)
 {
     return (int)__builtin_nearbyintf(v);
