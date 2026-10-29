@@ -5,6 +5,13 @@
 #include "audio.hpp"
 
 static AudioPlayer* s_active_audio_player;
+
+/* The corpus menu-volume gain is a standalone .rdata dword (verified
+ * 0x49e1e0 = 0.11111111f); the compat band's volume_scale member is now
+ * dead space whose bytes the band still carries. */
+// GLOBAL: LEGORR 0x0049e1e0
+static const float s_menu_volume_scale = 0.11111111f; /* DAT_0049e1e0 */
+
 #if defined(LEGORRR_BACKEND_WINAPI)
 #pragma pack(push, 1)
 struct MenuCompatData {
@@ -18,9 +25,6 @@ struct MenuCompatData {
 __declspec(allocate(".data$yyyyyy")) static MenuCompatData
     s_menu_compat_data = { { 0 }, 0.11111111f, { 0 }, "Null" };
 #pragma data_seg()
-#define s_menu_volume_scale s_menu_compat_data.volume_scale
-#else
-static const float s_menu_volume_scale = 0.11111111f;
 #endif
 
 int audio_open(AudioPlayer* p)
@@ -106,7 +110,8 @@ void audio_sound_volume_set(AudioPlayer* p, int millibels)
 // FUNCTION: LEGORR 0x0047b530
 void audio_sound_volume_index_set(int index)
 {
-    if (index < 0 || index >= 11) {
+    /* The corpus uses `index < 0 || index > 10` for its eleven entries. */
+    if (index < 0 || index > 10) {
         return;
     }
     audio_sound_volume_set(s_active_audio_player, s_sfx_attenuation[index]);

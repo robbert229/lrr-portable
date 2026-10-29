@@ -99,7 +99,9 @@ typedef struct EngineContext {
     const uint8_t* level_voxels;   /* the w*h*0x48 voxel array */
     const void*    level_terrain;  /* TerrainState (reserved for heights) */
 
-    float        exit_timer;   /* DAT_00556efc — decremented by scaled dt */
+    float        exit_timer;   /* vestigial scaffold — the corpus's
+                                * DAT_00556efc now rides engine.cpp's
+                                * s_panel_highlight_timer (b44) */
     float        time_scale;   /* game-speed dt factor (issue #85). 0 = 1.0:
                                 * options_time_scale writes the live value
                                 * every frame; zero-initialized scaffolds and
@@ -231,15 +233,20 @@ int mode_dependent_field24_get(const EngineContext* ctx);
  * side being this setter itself. GlobalTripleCopyOut (FUN_00426230) hands
  * out the inert triple (corpus DAT_0055651c/520/524) — zero-init statics,
  * documented: the corpus's only writer is the unported sim-interaction
- * renderer update. */
+ * renderer update. Deviation: the corpus strides the caller's buffer
+ * blindly; the port guards it (NULL skips the three stores). */
 bool   current_engine_mode_is_zero(const EngineContext* ctx);
 
 /* ObjectiveScoreTextOriginSet (FUN_004262e0): the objective/score text
- * origin pair. A non-null pair stores into module storage and raises the
- * debug word's bit 0x4000; a null pair drops it. Deviation: the corpus
- * strides the pair blindly; the port guards it. */
-void objective_score_text_origin_set(EngineContext* ctx, const float* pair);
+ * origin pair, ONE cdecl argument (b60: the corpus callee reads only
+ * [esp+4]). A non-null pair stores into module storage and raises bit 14
+ * of the shared debug/cheat word DAT_00556ed0 (`or ah,0x40` /
+ * `and ah,0xbf`); a null pair drops it. The earlier ctx parameter was a
+ * port-only invention that added a call-site push the corpus never makes
+ * (0x4189d0 pushes one zero) and rerouted the flag to ctx->debug. */
+void objective_score_text_origin_set(const float* pair);
 void objective_score_text_origin_peek(float out[2]);
+uint32_t engine_debug_word_peek(void);
 
 /* EngineModeSet (FUN_004565f0): stores the mode word into the global flag
  * DAT_004ff978 (the port's crt.* own storage, through the install hook),

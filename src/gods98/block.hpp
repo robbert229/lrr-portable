@@ -10,7 +10,9 @@
  * Corpus functions covered (finding 12 §3 function map):
  *   FUN_00478e60  BlockOpen       — comment-strip + token scan + depth
  *   FUN_004792e0  BlockFindPath   — space-separated path, case-insensitive
- *   FUN_004790b0  value getter    — record+8 (value token pointer)
+ *   FUN_004790b0  path value ptr  — BlockFindPath then record+8, NULL when
+ *                                   missing (the port's block_get_strptr;
+ *                                   the 1-arg record accessor is port-local)
  *   FUN_00478ff0  BlockSubgroup   — path + must have children
  *   FUN_00479050  value string    — heap copy; 0 when missing
  *   FUN_004790d0  bool getter     — FUN_00477710 vocab, default 2

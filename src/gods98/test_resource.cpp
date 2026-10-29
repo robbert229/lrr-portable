@@ -341,17 +341,27 @@ int main(int argc, char** argv)
         CHECK(dst[11] == 0xEE && dst[15] == 0xEE,
               "the copy stops at the size (dword+tail stages)");
 
-        /* The verdicts: magic, types 1/2 (dormant markers), unknown. */
+        /* The verdicts: magic, types 1/2 (ported codecs), unknown. The
+         * codecs answer the corpus's xor ax,ax = 0 on every path; with a
+         * zero size dword the output cursor starts at the end, so the
+         * codec exits before touching the stream or the buffer. */
         hdr[0] = 'X';
         CHECK(wad_payload_decode_dispatch(hdr, dst) == WAD_DECODE_MAGIC_FAIL,
               "the bad magic answers 0xffff");
         hdr[0] = 'R';
+        hdr[7] = 0;             /* size 0: the codecs gate out immediately */
         hdr[3] = 1;
-        CHECK(wad_payload_decode_dispatch(hdr, dst) == 1,
-              "the type-1 marker answers 1 (dormant codec)");
+        memset(dst, 0xEE, sizeof dst);
+        CHECK(wad_payload_decode_dispatch(hdr, dst) == 0,
+              "the type-1 codec answers the corpus verdict 0");
+        CHECK(dst[0] == 0xEE && dst[15] == 0xEE,
+              "the zero-size type-1 stream writes nothing");
         hdr[3] = 2;
-        CHECK(wad_payload_decode_dispatch(hdr, dst) == 2,
-              "the type-2 marker answers 2 (dormant codec)");
+        memset(dst, 0xEE, sizeof dst);
+        CHECK(wad_payload_decode_dispatch(hdr, dst) == 0,
+              "the type-2 codec answers the corpus verdict 0");
+        CHECK(dst[0] == 0xEE && dst[15] == 0xEE,
+              "the zero-size type-2 stream writes nothing");
         hdr[3] = 9;
         CHECK(wad_payload_decode_dispatch(hdr, dst) == WAD_DECODE_TYPE_FAIL,
               "the odd type answers 0xfffe");
@@ -540,8 +550,7 @@ int main(int argc, char** argv)
     {
         /* InputKeyGroupRegister: the count word lands in the pair's +4
          * slot, then the code dwords ride the heap array. */
-        static const uint32_t codes[4] = { 1, 2, 3, 4 };
-        resource_input_key_group_register(5, 4, codes);
+        resource_input_key_group_register(5, 4, 1, 2, 3, 4);
         CHECK(resource_handle_set_band_word_peek(5) == 4u
                   && *(const uint32_t*)resource_handle_set_slot_peek(5) == 1u
                   && ((const uint32_t*)resource_handle_set_slot_peek(5))[3]
@@ -550,16 +559,15 @@ int main(int argc, char** argv)
 
         /* Guard: an out-of-range group strides nowhere (the corpus strides
          * the band blindly). */
-        resource_input_key_group_register(24, 1, codes);
-        resource_input_key_group_register(-1, 1, codes);
+        resource_input_key_group_register(24, 1, 1);
+        resource_input_key_group_register(-1, 1, 1);
         CHECK(resource_handle_set_band_word_peek(24) == 0u
                   && resource_handle_set_band_word_peek(-1) == 0u,
               "the register guard answers where the corpus strides");
 
         /* Re-registering the same group re-stages in place (the corpus
          * leaks the superseded array, and so does the port). */
-        static const uint32_t one[] = { 9 };
-        resource_input_key_group_register(5, 1, one);
+        resource_input_key_group_register(5, 1, 9);
         CHECK(resource_handle_set_band_word_peek(5) == 1u
                   && *(const uint32_t*)resource_handle_set_slot_peek(5) == 9u,
               "re-registering restages the group in place");

@@ -219,9 +219,10 @@ int main(void)
     /* The queue-adjacent leaves (2026-10-24): the corpus-shaped cancel,
      * the active-context hand-out, and the pure value search. */
     {
-        cmd_produce(11, (const void*)(uintptr_t)1, 0, 0, 0);
-        cmd_produce(11, (const void*)(uintptr_t)2, 0, 0, 0);
-        cmd_produce(11, (const void*)(uintptr_t)1, 0, 0, 0);
+        int pair[2] = { 0, 0 };
+        cmd_produce(11, (const void*)(uintptr_t)1, 0, pair);
+        cmd_produce(11, (const void*)(uintptr_t)2, 0, pair);
+        cmd_produce(11, (const void*)(uintptr_t)1, 0, pair);
         CHECK(cmd_queue_active_count_peek() == 3, "the bank holds three");
         cmd_queue_cancel_match(1);
         /* Corpus shape: the [1,2,1] sweep removes the slot-0 match (the
@@ -238,8 +239,8 @@ int main(void)
 
         /* Corpus swap-skip on [1,2]: cancel(1) leaves count 1 with the
          * successor swapped into the cursor's slot. */
-        cmd_produce(11, (const void*)(uintptr_t)1, 0, 0, 0);
-        cmd_produce(11, (const void*)(uintptr_t)2, 0, 0, 0);
+        cmd_produce(11, (const void*)(uintptr_t)1, 0, pair);
+        cmd_produce(11, (const void*)(uintptr_t)2, 0, pair);
         cmd_queue_cancel_match(1);
         CHECK(cmd_queue_active_count_peek() == 1,
               "the swapped-in successor is not rechecked (faithful)");

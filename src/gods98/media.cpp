@@ -187,29 +187,47 @@ void media_cd_watchdog_tick(int arg)
 // FUNCTION: LEGORR 0x00429810
 void media_audio_playback_toggle(int enable)
 {
+    /* One flags read before the test, stored before each arm's call
+     * (the corpus duplicates the call site); the callee takes the raw
+     * enable, not a literal. */
+    uint32_t flags = s_cd_flags;
     if (enable != 0) {
-        s_cd_flags |= MEDIA_FLAG_SOUND_ON;
-        sound_subsystem_enable_set_and_stop(1);
-        return;
+        flags |= MEDIA_FLAG_SOUND_ON;
+        s_cd_flags = flags;
+        sound_subsystem_enable_set_and_stop(enable);
     }
-    s_cd_flags &= ~MEDIA_FLAG_SOUND_ON;
-    sound_subsystem_enable_set_and_stop(0);
+    else {
+        flags &= ~MEDIA_FLAG_SOUND_ON;
+        s_cd_flags = flags;
+        sound_subsystem_enable_set_and_stop(enable);
+    }
 }
 
 /* ------------------------------------------------------------------ *
  *  Cue dispatch + pointer-cursor state (issue #300). The corpus's
  *  DAT_00500a98 / _DAT_00500efc pair lives in the cursor/renderer
  *  context; the consumers (the cursor draw) land with that port, so
- *  the state is held module-locally as the observable half.
+ *  the state is held module-locally as the observable half. The
+ *  PointerCursorSelect gate is `test ah, 0x41` on an fcomp against
+ *  0.0f, so it skips only strictly-positive overrides: zero, negative
+ *  AND NaN all store the slot.
  * ------------------------------------------------------------------ */
 
+// GLOBAL: LEGORR 0x00500a98
 static int   s_cursor_slot;       /* DAT_00500a98 role */
+// GLOBAL: LEGORR 0x00500efc
 static float s_cursor_override;   /* _DAT_00500efc role (statics: 0.0) */
+
+/* The corpus's override gate compares against this .rdata zero dword
+ * (objdump-verified fcomp operand of PointerCursorSelect); a named const
+ * static keeps the fcomp operand resolvable by Reccmp. */
+// GLOBAL: LEGORR 0x0049e64c
+static const float s_cursor_gate = 0.0f;   /* DAT_0049e64c, verified */
 
 // FUNCTION: LEGORR 0x0045cc20
 void media_pointer_cursor_select(int slot)
 {
-    if (s_cursor_override <= 0.0f) {
+    if (!(s_cursor_override > s_cursor_gate)) {
         s_cursor_slot = slot;
     }
 }
@@ -258,21 +276,41 @@ void media_action_feedback_sound_dispatch(int event)
 // FUNCTION: LEGORR 0x004351a0
 void media_action_code_to_sound_alias(int code)
 {
-    int cue = 0;
-    int hit = 0;
-    switch (code) {
-    case 1:  cue = 0x2b; hit = 1; break;
-    case 2:  cue = 0x2c; hit = 1; break;
-    case 3:  cue = 0x2d; hit = 1; break;
-    case 4:  cue = 0x2e; hit = 1; break;
-    case 5:  cue = 0x2f; hit = 1; break;
-    case 8:  cue = 0x32; hit = 1; break;
-    case 10: cue = 0x34; hit = 1; break;
-    case 11: cue = 0x35; hit = 1; break;
-    default: break;
+    /* Corpus at 0x4351a0 uses an ordered compare/call/return ladder:
+     * each match pushes its literal cue to PointerCursorSelect, while a
+     * miss falls through to the next comparison. Keep the arguments
+     * literal and the returns local to preserve that /Od shape. */
+    if (code == 1) {
+        media_pointer_cursor_select(0x2b);
+        return;
     }
-    if (hit) {
-        media_pointer_cursor_select(cue);
+    if (code == 2) {
+        media_pointer_cursor_select(0x2c);
+        return;
+    }
+    if (code == 3) {
+        media_pointer_cursor_select(0x2d);
+        return;
+    }
+    if (code == 4) {
+        media_pointer_cursor_select(0x2e);
+        return;
+    }
+    if (code == 5) {
+        media_pointer_cursor_select(0x2f);
+        return;
+    }
+    if (code == 8) {
+        media_pointer_cursor_select(0x32);
+        return;
+    }
+    if (code == 10) {
+        media_pointer_cursor_select(0x34);
+        return;
+    }
+    if (code == 11) {
+        media_pointer_cursor_select(0x35);
+        return;
     }
 }
 
@@ -369,7 +407,9 @@ void media_cd_audio_open_set(int open)
 }
 
 /* LoaderProgressCallbackSet (FUN_004802b0) — see media.hpp. */
+// GLOBAL: LEGORR 0x005343ac
 static void* s_loader_progress_callback; /* DAT_005343ac role: unowned */
+// GLOBAL: LEGORR 0x005343b0
 static void* s_loader_progress_context;  /* DAT_005343b0 role: unowned */
 
 // FUNCTION: LEGORR 0x004802b0

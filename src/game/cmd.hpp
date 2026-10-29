@@ -166,8 +166,9 @@ void  cmd_rec_set_now(void* rec, float v);
 void cmd_context_set(GameContext* ctx);
 
 /* Producer (FUN_00452060): append a 5-dword command record to the active
- * buffer; silent drop when the buffer is full. */
-void cmd_produce(int op, const void* a1, int a2, int a3, int a4);
+ * buffer; the optional pair supplies record words 3 and 4, otherwise both
+ * are zero. The corpus silently drops when the buffer is full. */
+void cmd_produce(int op, const void* a1, int a2, const int* pair);
 
 /* Queue a command for an entity (opcode, entity, param, extra…) — the
  * entity-aware convenience over cmd_produce. */

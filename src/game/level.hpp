@@ -262,10 +262,12 @@ uint8_t* level_voxel(const LevelState* s, int x, int y);
 /* --- map-file resource slots (finding 07: 0x489410's slot registry) ----- *
  * The corpus keeps an interleaved (ptr, in-use-flag) pair table of 2000
  * map-image buffers; MapOpen2 opens through it (unported wad seam, see
- * docs/coverage/blocked.md). The port models the table as parallel
- * arrays; the allocator calloc's the image (the corpus allocates through
- * the engine-heap wrapper, TODO(corpus)). Reset clears without freeing,
- * exactly as the corpus leak loop does. */
+ * docs/coverage/blocked.md). The port models the table as one stride-8
+ * record array (pointer at +0, used byte at +4) to match the corpus's
+ * MapFileResourceSlot layout at DAT 0x00544a20; the claim rides the
+ * corpus's engine-heap allocator pair (0x48dbd0 / 0x48db80) — no
+ * zero-fill, no failure check, fault-on-use like the corpus. Reset
+ * clears without freeing, exactly as the corpus leak loop does. */
 
 #define LEVEL_MAP_SLOT_COUNT 2000 /* the corpus table length */
 

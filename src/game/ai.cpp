@@ -85,26 +85,30 @@ void ai_set_activity(EntitySlot* e, int id, int param)
     e->activity_timer = 0.0f;
 }
 
-/* EntityActivityToggle (FUN_004373d0) — see ai.hpp. The corpus's trailing
- * FUN_00447c40 bookkeeping lands on its current/last equal test at every
- * edge that reaches it (every activity-set site syncs the last-name mirror
- * through the ai_set_activity fold), so the port rides the fold and drops
- * the no-op tail. */
+static void activity_register_bookkeeping(EntitySlot* e);
+
+/* EntityActivityToggle (FUN_004373d0) — see ai.hpp. The corpus ends every
+ * path — both arms and both flag-test skips (the returns at 0x43740a and the
+ * shared tail at 0x437431) — on the FUN_00447c40 bookkeeping call, so the
+ * port calls the file-local carrier there for code shape; the flag folds
+ * stay the dword spelling of the corpus's byte ops on the +0x3ec word. */
 // FUNCTION: LEGORR 0x004373d0
 void entity_activity_toggle(EntitySlot* e, int on)
 {
     if (e == NULL) {
-        return; /* deviation: the corpus strides the entity blindly */
+        return; /* deviation: the corpus strides the entity blindly (pinned) */
     }
-    if (on == 0 && (e->flags_3ec & 0x2000u) != 0) {
-        e->flags_3ec = (e->flags_3ec & ~0x2000u) | 0x4000u;
-        ai_set_activity(e, 0x36, 0); /* FUN_004409e0; 0x447c40 folds here */
-        return;
+    if (on == 0) {
+        if ((e->flags_3ec & 0x2000u) != 0u) {
+            e->flags_3ec = (e->flags_3ec & ~0x2000u) | 0x4000u;
+            ai_set_activity(e, 0x36, 0); /* FUN_004409e0 */
+        }
     }
-    if (on != 0 && (e->flags_3ec & 0x2000u) == 0) {
+    else if ((e->flags_3ec & 0x2000u) == 0u) {
         e->flags_3ec |= 0x1000u;
-        ai_set_activity(e, 0x35, 0); /* FUN_004409e0; 0x447c40 folds here */
+        ai_set_activity(e, 0x35, 0); /* FUN_004409e0 */
     }
+    activity_register_bookkeeping(e); /* FUN_00447c40, corpus tail call */
 }
 
 /* FUN_00403f30: if the chain head is not a live idle record (type 0xe),
@@ -123,7 +127,9 @@ static void attach_idle_record(EntitySlot* e)
 
 /* FUN_0043a960's idle table, DAT_004eabcc, max 100 (DAT_004ead5c). */
 #define AI_IDLE_TABLE_MAX 100
+// GLOBAL: LEGORR 0x004eabcc
 static EntitySlot* s_idle100[AI_IDLE_TABLE_MAX];
+// GLOBAL: LEGORR 0x004ead5c
 static int s_idle100_n;
 
 int ai_idle_count(void) { return s_idle100_n; }
@@ -300,14 +306,18 @@ static void idle100_register(EntitySlot* e)
     }
 }
 
-/* Partial EntityLavaCrustActivityRegister (FUN_0043a960): the caller owns
- * the activity-eligibility gates; this helper resolves the entity's tile
- * and appends it to the capped idle table. Deviations: a missing level grid
- * permits registration, the original stats-bit gate is not modeled here,
- * and the port deduplicates table entries. */
+/* Partial EntityLavaCrustActivityRegister (FUN_0043a960): the corpus's own
+ * gate order — the type-1 test (0x43a968) first, then the tile probe that
+ * decides whether the entity joins the capped idle table. Deviations: a
+ * missing level grid permits registration, the original stats-bit gate
+ * (0x43a976) is not modeled here, the port deduplicates table entries, and
+ * a NULL entity returns instead of faulting on the corpus's type test. */
 // FUNCTION: LEGORR 0x0043a960
 static void ai_lava_crust_activity_register(GameContext* ctx, EntitySlot* e)
 {
+    if (e == NULL || e->type != 1) {
+        return; /* the corpus's type gate, in place at 0x43a968 */
+    }
     const LevelState* grid = grid_of(ctx);
     if (grid == NULL ||
         level_tile_type(grid, level_cell_of(e->x),
@@ -494,17 +504,14 @@ void ai_object_registries_reset(void)
     memset(s_reg_type2, 0, sizeof s_reg_type2);
 }
 
-/* EntityQueueForRockfallProcessingIfEligible (FUN_0043a9e0): type-1 gate
- * in, idle table out — see ai.hpp. */
+/* EntityQueueForRockfallProcessingIfEligible (FUN_0043a9e0): a pure forwarder
+ * in the corpus (0x43a9e5: push e / call FUN_0043a960), which owns every
+ * gate; the port forwards blind — no level is bound here, so the tile probe
+ * takes its documented no-grid path. */
 // FUNCTION: LEGORR 0x0043a9e0
 void entity_queue_for_rockfall_processing_if_eligible(EntitySlot* e)
 {
-    if (e == NULL || e->type != 1) {
-        return; /* the corpus's type gate */
-    }
-    /* deviation: the stats-flag word (unported stats layer) and the
-     * rockfall-tile probe stay unmodeled, per the idle-table half note. */
-    idle100_register(e);
+    ai_lava_crust_activity_register(NULL, e);
 }
 
 /* Finish the chain-head command on `e`: unlink from both structures, free,
@@ -1199,7 +1206,16 @@ void entity_dispatch_event5_and_set_flag(EntitySlot* e)
         return; /* deviation: the corpus strides blindly */
     }
     ai_set_activity(e, 5, 0); /* corpus activity index 5 */
+    activity_register_bookkeeping(e); /* corpus site-level re-registration */
     e->flags_3e0 |= 0x200000u;
+}
+
+/* ActivityRegister — the corpus's site-level re-registration is folded into
+ * ai_set_activity (see finding 10); the call remains for code shape. */
+// STUB: LEGORR 0x00447c40
+static void activity_register_bookkeeping(EntitySlot* /*e*/)
+{
+    /* FUN_00447c40: no-op here — the fold at ai_set_activity covers it. */
 }
 
 /* EntitySetActivityPlace (FUN_00448c50) — see ai.hpp. */
@@ -1210,6 +1226,7 @@ int entity_set_activity_place(EntitySlot* e)
         return 1; /* deviation: the corpus strides blindly, answers 1 */
     }
     ai_set_activity(e, 30, 0); /* corpus activity index 30 */
+    activity_register_bookkeeping(e); /* corpus site-level re-registration */
     e->flags_3e4 |= 0x200u;
     return 1;
 }
@@ -1374,8 +1391,8 @@ void entity_flag80000000_set_or_clear(GameContext* ctx, EntitySlot* e,
 // FUNCTION: LEGORR 0x0043c280
 int entity_nested_float_add_unless_blocked(EntitySlot* e, float* value)
 {
-    if (e == NULL || value == NULL) {
-        return 0; /* deviation: the corpus strides blindly */
+    if (e == NULL) {
+        return 0; /* deviation: the port guards the entity, the corpus strides the value blindly */
     }
     if (e->type == 4 && entity_shared_eligibility_check(e, 0) == 0) {
         return 0;
@@ -1534,9 +1551,13 @@ int entity_state_pair_predicate(GameContext* ctx, int type1, int row1,
 
 /* ActiveEntityListContainsCode (FUN_004031e0): a permitted-activity scan
  * (FUN_0044b480) over the selection when it is non-empty, else over the
- * corpus's global active-entity list. NULL list entries are skipped
- * without a test (the corpus while-shape walks past them); the selection
- * branch answers on the first hit and never falls back to the list
+ * corpus's global active-entity list. The selection branch caches the
+ * count (the corpus's ebx), walks the record array with a pointer and an
+ * unsigned counter (add reg,4 / inc / cmp-jb) and passes entries BLIND to
+ * the scan — the corpus has no NULL-entry test there, the scan itself
+ * answers 0; the fallback branch skips NULL entries (the corpus's
+ * test/je) and re-reads the count every iteration. The selection branch
+ * answers on the first hit and never falls back to the list
  * (pinned branch isolation).
  * Deviation: the global list (DAT_004b335c entries / DAT_004b3424 count)
  * has no ported owner — the activation band lands through hooks — so it
@@ -1574,8 +1595,15 @@ int active_entity_list_count(void)
 // FUNCTION: LEGORR 0x004031e0
 int active_entity_list_contains_code(GameContext* ctx, int code)
 {
+    unsigned count;
+    EntitySlot* const* records;
+    EntitySlot* const* walk;
+    unsigned i;
+
     if (selection_has_any(ctx) == 0) {
-        for (int i = 0; i < s_active_count; ++i) {
+        /* the fallback re-reads the count (the corpus's DAT_004b3424
+         * load) on every iteration and skips NULL entries (test/je). */
+        for (i = 0; i < (unsigned) s_active_count; ++i) {
             if (s_active_list[i] != NULL
                 && ai_activity_scan(s_active_list[i], code) != 0) {
                 return 1;
@@ -1583,10 +1611,14 @@ int active_entity_list_contains_code(GameContext* ctx, int code)
         }
         return 0;
     }
-    const int count = selection_count(ctx);
-    EntitySlot* const* records = selection_record_array(ctx);
-    for (int i = 0; records != NULL && i < count; ++i) {
-        if (ai_activity_scan(records[i], code) != 0) {
+    /* selection branch: cached count (corpus ebx), unsigned counter and
+     * a walk pointer (inc / add reg,4 / cmp-jb); entries go BLIND to
+     * the scan — the corpus has no NULL test here and the scan
+     * (FUN_0044b480) answers 0 for NULL. */
+    count = (unsigned) selection_count(ctx);
+    records = selection_record_array(ctx);
+    for (i = 0, walk = records; records != NULL && i < count; ++i, ++walk) {
+        if (ai_activity_scan(*walk, code) != 0) {
             return 1;
         }
     }

@@ -970,7 +970,7 @@ uint32_t model_digest(const Model* m)
  * even-size padding). On the corpus heap the allocator's even-grained
  * blocks absorb the padding. LwoTextureProjectionModeParse (FUN_0048c120):
  * a fold compare against the table PLANAR / CYLINDRICAL / SPHERICAL (the
- * corpus's strnicmp shape, exposed via string_folded_compare); the first
+ * corpus calls the strnicmp_lite carrier directly); the first
  * prefix match answers the table index, anything else answers 0 — the
  * PLANAR default. */
 // FUNCTION: LEGORR 0x0048c0c0
@@ -979,28 +979,42 @@ char* lwo_string_duplicate(const char* text)
     if (text == NULL) {
         return NULL; /* deviation: the corpus dereferences blindly */
     }
-    const size_t len1 = strlen(text) + 1u;
-    const size_t size = len1 + (len1 & 1u); /* even-grained corpus size */
+    /* Keep the corpus's length, terminator, and even-rounding steps separate
+     * (0x48c0d2-0x48c0db: dec, inc, then add the low bit). */
+    size_t size = strlen(text);
+    ++size;
+    size += size & 1u;
     char* copy = (char*)engine_heap_alloc((long)size);
-    if (copy == NULL) {
-        return NULL; /* the heap answers failure, faithful */
-    }
+    /* Corpus parity: the copy is filled unchecked — sole-caller audit found
+     * no test or caller that survives a NULL allocator answer anyway. */
     memset(copy, 0, size);
-    memcpy(copy, text, len1);
+    strcpy(copy, text);
     return copy;
 }
+
+// GLOBAL: LEGORR 0x004afa0c
+static const char s_lwo_projection_planar[] = "PLANAR";
+// GLOBAL: LEGORR 0x004afa00
+static const char s_lwo_projection_cylindrical[] = "CYLINDRICAL";
+// GLOBAL: LEGORR 0x004af9f4
+static const char s_lwo_projection_spherical[] = "SPHERICAL";
 
 // FUNCTION: LEGORR 0x0048c120
 int lwo_texture_projection_mode_parse(const char* name)
 {
-    static const char* const modes[3] = { "PLANAR", "CYLINDRICAL",
-                                          "SPHERICAL" };
-    for (int i = 0; i < 3; ++i) {
-        const size_t n = strlen(modes[i]);
-        if (name != NULL
-            && string_folded_compare(name, modes[i], n) == 0) {
-            return i;
-        }
+    /* Corpus entry 0x48c12b-0x48c13b copies these literal addresses into
+     * the stack table. */
+    const char* modes[3];
+    modes[0] = s_lwo_projection_planar;
+    modes[1] = s_lwo_projection_cylindrical;
+    modes[2] = s_lwo_projection_spherical;
+
+    uint32_t i = 0;
+    for (; i < 3u; ++i) {
+        const size_t len = strlen(modes[i]); /* the corpus inlines this as
+                                              * repnz scas at 0x48c152 */
+        if (strnicmp_lite(name, modes[i], (int)len) == 0) break;
     }
-    return 0; /* the corpus's fall-through answers PLANAR */
+    if (i == 3u) i = 0u; /* corpus 0x48c16f-0x48c174 resets exhausted scan */
+    return (int)i;
 }

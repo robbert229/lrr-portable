@@ -4,23 +4,17 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "heap.hpp"
 #include "string.hpp"
 
-/* FUN_00477550: allocate strlen+1 through the heap seam and copy. The
- * corpus allocates via its engine-heap wrapper (TODO(corpus)); the port
- * mallocs (deviation in string.hpp). */
 // FUNCTION: LEGORR 0x00477550
 char* string_duplicate(const char* text)
 {
-    if (text == NULL) {
-        return NULL;
-    }
-    const size_t n = strlen(text) + 1u;
-    char* copy = (char*)malloc(n);
-    if (copy == NULL) {
-        return NULL; /* corpus: the heap seam would have asserted */
-    }
-    memcpy(copy, text, n);
+    /* Corpus: engine_heap_alloc(len+1) then the strcpy intrinsic (second
+     * scas + dword/byte rep movs). engine_heap_alloc failure rides blind
+     * exactly like the corpus (no guard). */
+    char* copy = (char*)engine_heap_alloc((long)(strlen(text) + 1u));
+    strcpy(copy, text);
     return copy;
 }
 
@@ -42,19 +36,58 @@ uint32_t formatted_text_buffer_build(char* out, size_t capacity,
     return (uint32_t)strlen(out);
 }
 
-/* FUN_0048da50: substring find. The corpus's aligned-word/SWAR scan is a
- * byte-equivalent strstr, plus the same early-outs (empty needle -> the
- * haystack start). */
+/* FUN_0048da50: substring find. Keep the corpus's leading-byte/leading-pair
+ * gates and compare the remaining needle two bytes at a time. Advancing the
+ * candidate one byte after a failed pair retains strstr's overlapping-match
+ * behavior. */
 // FUNCTION: LEGORR 0x0048da50
 const char* string_find_substring(const char* haystack, const char* needle)
 {
-    if (haystack == NULL || needle == NULL) {
-        return NULL;
-    }
-    if (*needle == '\0') {
+    const unsigned char* text = (const unsigned char*)haystack;
+    const unsigned char* pattern = (const unsigned char*)needle;
+    const unsigned char first = pattern[0];
+    if (first == 0u) {
         return haystack;
     }
-    return strstr(haystack, needle);
+    const unsigned char second = pattern[1];
+    if (second == 0u) {
+        return (const char*)strchr(haystack, first);
+    }
+    for (;;) {
+        unsigned char current;
+        while ((current = *text) != first) {
+            if (current == 0u) {
+                return NULL;
+            }
+            ++text;
+        }
+        const unsigned char* candidate = text;
+        ++text;
+        if (*text == second) {
+            const unsigned char* scan = text + 1;
+            const unsigned char* next = pattern + 2;
+            for (;;) {
+                const unsigned char first_tail = *next;
+                if (first_tail == 0u) {
+                    return (const char*)candidate;
+                }
+                if (*scan != first_tail) {
+                    break;
+                }
+                ++scan;
+                ++next;
+                const unsigned char second_tail = *next;
+                if (second_tail == 0u) {
+                    return (const char*)candidate;
+                }
+                if (*scan != second_tail) {
+                    break;
+                }
+                ++scan;
+                ++next;
+            }
+        }
+    }
 }
 
 /* CaseInsensitiveSubstringFind (FUN_00477610) — see string.hpp. The
@@ -83,40 +116,121 @@ static int s_strnfoldcmp(const char* a, const char* b, size_t n)
     return 0;
 }
 
+/* __strcmpi (FUN_0048ff10): compare raw bytes first, then fold ASCII A-Z on
+ * a mismatch and retry when the folded bytes agree. The corpus normalizes a
+ * remaining mismatch to -1/+1 (not the byte difference); its initialized
+ * locale-table branch calls the shared fold helper instead. This inline
+ * range-check spelling covers the corpus's table-uninitialized branch. */
+// FUNCTION: LEGORR 0x0048ff10
+int strcasecmp_lite(const char* a, const char* b)
+{
+    const unsigned char* pa = (const unsigned char*)a;
+    const unsigned char* pb = (const unsigned char*)b;
+    for (;;) {
+        unsigned char ca = *pa++;
+        unsigned char cb = *pb++;
+        if (ca == cb) {
+            if (ca == 0u) return 0;
+            continue;
+        }
+        if (ca >= (unsigned char)'A' && ca <= (unsigned char)'Z') {
+            ca = (unsigned char)(ca + 0x20u);
+        }
+        if (cb >= (unsigned char)'A' && cb <= (unsigned char)'Z') {
+            cb = (unsigned char)(cb + 0x20u);
+        }
+        if (ca != cb) return ca < cb ? -1 : 1;
+    }
+}
+
+/* __strnicmp (FUN_0049dab0): the CRT's bounded case-insensitive compare —
+ * ASCII-folded (A-Z += 0x20 via range checks, the corpus's table-uninit
+ * fallback shape), stops at NUL or the count, answers 0/-1/+1 (the corpus's
+ * sign-normalized result, not the character difference). Deviation: the
+ * corpus lazy-builds a fold table at DAT_00549178; the port folds inline. */
+// FUNCTION: LEGORR 0x0049dab0
+int strnicmp_lite(const char* a, const char* b, int count)
+{
+    if (count == 0) {
+        return 0;
+    }
+    const unsigned char* pa = (const unsigned char*)a;
+    const unsigned char* pb = (const unsigned char*)b;
+    unsigned char ca;
+    unsigned char cb;
+    do {
+        ca = *pa;
+        cb = *pb;
+        if (ca == 0u || cb == 0u) {
+            break; /* the corpus compares the raw bytes at a NUL break */
+        }
+        ++pa;
+        ++pb;
+        if (ca >= (unsigned char)'A' && ca <= (unsigned char)'Z') {
+            ca = (unsigned char)(ca + 0x20u);
+        }
+        if (cb >= (unsigned char)'A' && cb <= (unsigned char)'Z') {
+            cb = (unsigned char)(cb + 0x20u);
+        }
+        if (ca != cb) {
+            break;
+        }
+        --count;
+    } while (count != 0);
+    if (ca == cb) {
+        return 0;
+    }
+    return (ca < cb) ? -1 : 1;
+}
+
 // FUNCTION: LEGORR 0x00477610
 const char* case_insensitive_substring_find(const char* haystack,
                                             const char* needle)
 {
     if (haystack == NULL || needle == NULL) {
-        return NULL; /* deviation: the corpus dereferences both blindly */
+        return NULL; /* pinned deviation: the corpus dereferences both blindly */
     }
-    const size_t hlen = strlen(haystack);
-    const size_t nlen = strlen(needle);
-    if (hlen == 0u || nlen == 0u) {
-        return NULL; /* pinned: the corpus gate (strlen-shaped tests) */
+    /* Corpus walk: keep the haystack pointer in its walking register before
+     * the two intrinsic strlen scans, then use separate zero-length gates
+     * and an unsigned bound beside an incrementing counter (the needle is
+     * re-read from its stack slot every pass, the length hoisted into ebp).
+     * On a miss the corpus increments the index before the hay pointer
+     * (0x477655 inc edi; 0x477656 inc esi), then tests cmp/jb at 0x477657. */
+    const char* hay = haystack;
+    const unsigned hlen = (unsigned)strlen(hay);
+    const unsigned nlen = (unsigned)strlen(needle);
+    if (hlen == 0u) {
+        return NULL; /* pinned: the corpus's strlen-shaped gate */
     }
-    for (size_t i = 0; i < hlen; ++i) {
-        if (s_strnfoldcmp(haystack + i, needle, nlen) == 0) {
-            return haystack + i;
+    if (nlen == 0u) {
+        return NULL; /* pinned: the corpus's strlen-shaped gate */
+    }
+    for (unsigned i = 0; i < hlen; ++i, ++hay) {
+        if (strnicmp_lite(hay, needle, (int)nlen) == 0) {
+            return hay;
         }
     }
     return NULL;
 }
 
-/* FUN_00493ec0: length bounded by `limit` (the corpus walks byte-wise,
- * decrementing the bound first, and answers `limit` when no NUL turns up
- * inside it — byte-identical to scanning min(strlen, limit)). */
+/* FUN_00493ec0: the corpus walks byte-wise, decrementing the bound before
+ * checking each byte, then returns the original bound if no NUL was found. */
 // FUNCTION: LEGORR 0x00493ec0
 int string_length_bounded(const char* text, int limit)
 {
-    if (text == NULL || limit <= 0) {
-        return 0;
+    const char* p = text;
+    int remaining = limit;
+    while (remaining != 0) {
+        --remaining;
+        if (*p == '\0') {
+            break;
+        }
+        ++p;
     }
-    int n = 0;
-    while (n < limit && text[n] != '\0') {
-        ++n;
+    if (*p != '\0') {
+        return limit;
     }
-    return n;
+    return (int)(p - text);
 }
 
 /* FUN_00478f50: `root::comp1::comp2…` into the static builder. */
@@ -163,8 +277,7 @@ const char* string_path_join(const char* root, ...)
  * compare as CaseInsensitiveSubstringFind): answers the match pointer and
  * reports the byte index and the needle length through the optional
  * outputs. The corpus gates on a non-empty haystack and a non-empty
- * needle. Deviations: null strings are guarded (the corpus dereferences
- * both), and the fold compare stops at NUL (the corpus strides). */
+ * needle. The fold compare uses the CRT's bounded compare. */
 
 int string_folded_compare(const char* a, const char* b, size_t n)
 {
@@ -176,23 +289,35 @@ char* string_case_substring_find(char* haystack, const char* needle,
                                  uint32_t* out_index, size_t* out_length)
 {
     if (haystack == NULL || needle == NULL) {
-        return NULL; /* deviation: the corpus dereferences both blindly */
+        return NULL; /* pinned deviation: test_string.cpp:145-147 */
     }
-    const size_t hlen = strlen(haystack);
-    const size_t nlen = strlen(needle);
-    if (hlen == 0u || nlen == 0u) {
+    /* Corpus walk: two intrinsic strlens into registers, three entry gates,
+     * then a walking haystack pointer beside an inc counter with an unsigned
+     * bound and test/jbe gate (the needle is re-read from its stack slot
+     * every pass). */
+    char* hay = haystack;
+    unsigned int hlen = (unsigned int)strlen(haystack);
+    unsigned int nlen = (unsigned int)strlen(needle);
+    if (hlen == 0u) {
         return NULL; /* pinned: the corpus's strlen-shaped gate */
     }
-    for (size_t i = 0; i < hlen; ++i) {
-        if (s_strnfoldcmp(haystack + i, needle, nlen) == 0) {
+    if (nlen == 0u) {
+        return NULL; /* pinned: the corpus's strlen-shaped gate */
+    }
+    if (hlen <= 0u) {
+        return NULL; /* the corpus's unsigned test/jbe bound before the walk */
+    }
+    for (unsigned index = 0; index < hlen; ++index) {
+        if (strnicmp_lite(hay, needle, (int)nlen) == 0) {
             if (out_index != NULL) {
-                *out_index = (uint32_t)i;
+                *out_index = (uint32_t)index;
             }
             if (out_length != NULL) {
-                *out_length = nlen;
+                *out_length = (size_t)nlen;
             }
-            return haystack + i;
+            return hay;
         }
+        ++hay;
     }
     return NULL;
 }

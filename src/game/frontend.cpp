@@ -53,6 +53,9 @@ __declspec(allocate(".data$zzzzzz")) static unsigned char
 #else
 #define MENU_ACTION_TABLE_ALLOC
 #endif
+// The corpus keeps this 74-pointer label table in the runtime-filled band at
+// 0x4dced0 (zero-init at image load), so it takes no // GLOBAL annotation:
+// static initializers against a zero-filled corpus tail break reccmp-datacmp.
 MENU_ACTION_TABLE_ALLOC static const char* const s_interface_menu_action_labels[] = {
     "Interface_MenuItem_BackToDefault",
     "Interface_MenuItem_TeleportMan",
@@ -138,28 +141,62 @@ __declspec(allocate(".data$zzzzzz")) static unsigned char
     s_menu_global_bytes[0x13c0] = { 0 };
 #pragma data_seg()
 #define s_menu_global_words ((uint32_t*)s_menu_global_bytes)
-#define DAT_0055613c ((void*)s_menu_global_words[-1])
-#define DAT_00556f50 ((void*)s_menu_global_words[0x384])
-#define DAT_00556f54 ((void*)s_menu_global_words[0x385])
+/* main_menu_text_item (FUN_004103d0) reads these three dwords individually;
+ * dedicated annotated statics carry them (whole-object resolution — the
+ * s_menu_global_bytes band cannot hold the annotation, same precedent as the
+ * s_fe_flow_* carve-outs). Own storage, zero-init like the corpus's tail. */
+// GLOBAL: LEGORR 0x0055613c
+static void* DAT_0055613c;
+// GLOBAL: LEGORR 0x00556f50
+static void* DAT_00556f50;
+// GLOBAL: LEGORR 0x00556f54
+static void* DAT_00556f54;
 #define s_fe_flow (s_menu_global_words + 0x3b7)
-#define s_menu_wipe_arm s_menu_global_words[0x4ec]
-#define s_menu_wipe s_menu_global_words[0x4ed]
-#define s_menu_wipe_stop s_menu_global_words[0x4ee]
-#define s_menu_wipe_clock (*(float*)&s_menu_global_words[0x4ef])
+/* The five flow words land as own storage: the corpus addresses them as
+ * individual dwords, and Reccmp only resolves whole-object operands (the
+ * s_menu_global_bytes band cannot carry the annotation). */
+// GLOBAL: LEGORR 0x0055701c
+static int s_fe_flow_quit;
+// GLOBAL: LEGORR 0x00557020
+static int s_fe_flow_save_slot;
+// GLOBAL: LEGORR 0x00557024
+static int s_fe_flow_ingame;
+// GLOBAL: LEGORR 0x00557048
+static int s_fe_flow_level_start;
+// GLOBAL: LEGORR 0x0055704c
+static int s_fe_flow_menu_options;
 #define FE_FLOW_LEVEL_START_SLOT 11
 #define FE_FLOW_MENU_OPTIONS_SLOT 12
+#define FE_FLOW_QUIT_WORD       s_fe_flow_quit
+#define FE_FLOW_SAVE_SLOT       s_fe_flow_save_slot
+#define FE_FLOW_INGAME_SLOT     s_fe_flow_ingame
+#define FE_FLOW_LEVEL_START     s_fe_flow_level_start
+#define FE_FLOW_MENU_OPTIONS    s_fe_flow_menu_options
 #else
 static void* DAT_0055613c;
 static void* DAT_00556f50;
 static void* DAT_00556f54;
 static int s_fe_flow[5];
-static uint32_t s_menu_wipe;
-static uint32_t s_menu_wipe_arm;
-static uint32_t s_menu_wipe_stop;
-static float s_menu_wipe_clock;
 #define FE_FLOW_LEVEL_START_SLOT 3
 #define FE_FLOW_MENU_OPTIONS_SLOT 4
+#define FE_FLOW_QUIT_WORD       s_fe_flow[0]
+#define FE_FLOW_SAVE_SLOT       s_fe_flow[1]
+#define FE_FLOW_INGAME_SLOT     s_fe_flow[2]
+#define FE_FLOW_LEVEL_START     s_fe_flow[FE_FLOW_LEVEL_START_SLOT]
+#define FE_FLOW_MENU_OPTIONS    s_fe_flow[FE_FLOW_MENU_OPTIONS_SLOT]
 #endif
+/* The wipe quad lands as own storage: the corpus addresses each word as
+ * an individual dword (objdump-verified 0x5574ec/f0/f4/f8) and Reccmp
+ * only resolves whole-object operands (the s_menu_global_bytes band
+ * cannot carry the annotation, and its winapi indices were word-shifted). */
+// GLOBAL: LEGORR 0x005574ec
+static uint32_t s_menu_wipe_arm;
+// GLOBAL: LEGORR 0x005574f0
+static uint32_t s_menu_wipe;
+// GLOBAL: LEGORR 0x005574f4
+static uint32_t s_menu_wipe_stop;
+// GLOBAL: LEGORR 0x005574f8
+static float s_menu_wipe_clock;
 static float s_menu_plane_pan[2]; /* DAT_005574dc/e0 roles */
 static int s_main_menu_text_item_pending;
 static TextureSurface* s_interface_message_tab_info_text;
@@ -281,6 +318,10 @@ static const FeKeyboardNameEntry s_keyboard_name_entries[] = {
     { 210, "KEY_INSERT" },
     { 211, "KEY_DELETE" },
 };
+/* DAT_005765e0 is a zero-filled virtual tail; keyboard_key_names_init
+ * builds this table at runtime, so both sides start zero and the
+ * whole-object annotation is byte-safe. */
+// GLOBAL: LEGORR 0x005765e0
 static const char* s_keyboard_key_names[256];
 #include "gods98/resource.hpp"
 #include "entity.hpp"
@@ -300,19 +341,26 @@ void keyboard_key_names_init(void)
     }
 }
 
+/* FUN_00485e30 corpus walk: the key-name table strides by four with an inc
+ * counter, null slots are skipped in-walk, and the index byte is answered
+ * through the raw out pointer (sole-caller audit: both callers pass an
+ * array member and a member address — the corpus strides them blindly and
+ * the port no longer guards). */
 // FUNCTION: LEGORR 0x00485e30
 int named_option_index_find_case_insensitive(const char* name,
                                              uint8_t* out_index)
 {
-    if (name == NULL || out_index == NULL) {
-        return 0;
-    }
-    for (int i = 0; i < 256; ++i) {
-        if (s_keyboard_key_names[i] != NULL
-            && s_strcaseeq(s_keyboard_key_names[i], name)) {
-            *out_index = (uint8_t)i;
+    const char* const* p = s_keyboard_key_names;
+    int index = 0;
+    while (p < s_keyboard_key_names +
+                (sizeof(s_keyboard_key_names) / sizeof(s_keyboard_key_names[0]))) {
+        const char* entry = *p;
+        if (entry != NULL && strcasecmp_lite(entry, name) == 0) {
+            *out_index = (uint8_t)index;
             return 1;
         }
+        ++p;
+        ++index;
     }
     return 0;
 }
@@ -459,9 +507,9 @@ void interface_menu_action_labels_init(uint32_t x, uint32_t y,
     s_interface_menu_action_xy[1] = (float)y;
     s_interface_menu_action_context = context;
     interaction_action_code_map_initialize();
-    selection_region_parameters_set((float)x, (float)y,
-                                    (float)(display_width_get() + 10),
-                                    (float)y, 750.0f);
+    selection_region_parameters_set(x, y,
+                                    (uint32_t)(display_width_get() + 10),
+                                    y, 750.0f);
     objective_selection_state_reset();
 }
 
@@ -590,15 +638,42 @@ static int fe_build_chain(BlockFile* cfg, const char* start_key,
 
 /* --- Item%i value grammar ------------------------------------------------- */
 
+/* Item-kind matcher. The corpus compares all six names through the CRT's
+ * case-folded compare (six `call 0x48ff10` sites, literals pushed second:
+ * `push 0x4a23dc /*"cycle" / push esi / call 0x48ff10 / add esp,8 / test
+ * eax,eax / jne`), answers 0..4 from mov-immediates, and folds the tail
+ * match arithmetically (`neg eax / sbb eax,eax / and al,0xfa / add eax,5`
+ * — MSVC's `? 5 : -1` idiom). Unknown tokens answer -1, which the caller's
+ * switch routes to the generic banner arm; the earlier local spelling
+ * (s_strcaseeq, no "next" case, unknown folded to Next) predates the
+ * corpus read. */
+/* The corpus compares against its .data token strings at 0x4a23ac..0x4a23e3
+ * (eight/12-byte strides, image bytes verified against the reference PE:
+ * next, realslider, slider, textinput, trigger, cycle). Annotating them as
+ * DATs lets each `push` land on the corpus's immediate address — the six
+ * `push imm` vs `push STRING` pairs were this function's entire residual. */
+// GLOBAL: LEGORR 0x004a23ac
+static const char s_item_token_next[5] = "next";
+// GLOBAL: LEGORR 0x004a23b4
+static const char s_item_token_realslider[11] = "realslider";
+// GLOBAL: LEGORR 0x004a23c0
+static const char s_item_token_slider[7] = "slider";
+// GLOBAL: LEGORR 0x004a23c8
+static const char s_item_token_textinput[10] = "textinput";
+// GLOBAL: LEGORR 0x004a23d4
+static const char s_item_token_trigger[8] = "trigger";
+// GLOBAL: LEGORR 0x004a23dc
+static const char s_item_token_cycle[6] = "cycle";
+
 // FUNCTION: LEGORR 0x00413e60
 static int fe_item_kind(const char* tok)
 {
-    if (s_strcaseeq(tok, "cycle"))       return FE_ITEM_CYCLE;
-    if (s_strcaseeq(tok, "trigger"))     return FE_ITEM_TRIGGER;
-    if (s_strcaseeq(tok, "textinput"))   return FE_ITEM_TEXTINPUT;
-    if (s_strcaseeq(tok, "slider"))      return FE_ITEM_SLIDER;
-    if (s_strcaseeq(tok, "realslider"))  return FE_ITEM_REALSLIDER;
-    return FE_ITEM_NEXT;                 /* "Next" and anything unknown */
+    if (strcasecmp_lite(tok, s_item_token_cycle) == 0)      return FE_ITEM_CYCLE;
+    if (strcasecmp_lite(tok, s_item_token_trigger) == 0)    return FE_ITEM_TRIGGER;
+    if (strcasecmp_lite(tok, s_item_token_textinput) == 0)  return FE_ITEM_TEXTINPUT;
+    if (strcasecmp_lite(tok, s_item_token_slider) == 0)     return FE_ITEM_SLIDER;
+    if (strcasecmp_lite(tok, s_item_token_realslider) == 0) return FE_ITEM_REALSLIDER;
+    return strcasecmp_lite(tok, s_item_token_next) == 0 ? FE_ITEM_NEXT : -1;
 }
 
 /* Slider initial values per banner — the corpus's option defaults
@@ -1459,7 +1534,12 @@ int interface_images_config_load(BlockFile* cfg)
                 valid = 0;
                 break;
             }
-            *states[state] = texture_get_or_load(NULL, path);
+            /* The corpus calls BitmapSurfaceLoad directly (FUN_0047d9d0),
+             * not the port's name-keyed cache. This keeps the call site on
+             * the annotated twin; surfaces in this table therefore follow
+             * the corpus's independent-load identity rather than cache
+             * sharing. */
+            *states[state] = image_surface_load(path, 0u, 0u);
         }
         if (!valid) {
             for (int state = 0; state < 3; ++state) {
@@ -1746,14 +1826,10 @@ int interface_surround_images_config_load(BlockFile* cfg)
             }
             memcpy(token, fields[field], lengths[field]);
             token[lengths[field]] = '\0';
-            char* end = NULL;
-            long number = strtol(token, &end, 10);
-            if (end == token || *end != '\0' || number < -32768
-                || number > 32767) {
-                valid = 0;
-                break;
-            }
-            numbers[n] = (int)number;
+            /* The corpus uses its annotated atoi twin (FUN_0048db70):
+             * numeric prefixes are accepted and the parsed value is not
+             * narrowed to the port's earlier signed-16-bit safety range. */
+            numbers[n] = (int)util_atoi(token);
         }
         if (!valid) {
             continue;
@@ -1773,7 +1849,9 @@ int interface_surround_images_config_load(BlockFile* cfg)
             char image_path[FE_PATH_MAX];
             memcpy(image_path, fields[0], lengths[0]);
             image_path[lengths[0]] = '\0';
-            record->image = texture_get_or_load(NULL, image_path);
+            /* FUN_0041afd0 calls BitmapSurfaceLoad (FUN_0047d9d0), rather
+             * than the port's name-keyed cache. */
+            record->image = image_surface_load(image_path, 0u, 0u);
             record->x = numbers[0];
             record->y = numbers[1];
             record->width = numbers[2];
@@ -1783,7 +1861,8 @@ int interface_surround_images_config_load(BlockFile* cfg)
             char image_path[FE_PATH_MAX];
             memcpy(image_path, fields[5], lengths[5]);
             image_path[lengths[5]] = '\0';
-            record->image_without_back = texture_get_or_load(NULL, image_path);
+            record->image_without_back = image_surface_load(image_path,
+                                                            0u, 0u);
             record->without_back_x = numbers[4];
             record->without_back_y = numbers[5];
         }
@@ -2363,23 +2442,9 @@ static void scrolling_text_display(void* text, void* font, void* background)
 __declspec(naked) void main_menu_text_item(void)
 {
     __asm {
-        __emit 0xa1
-        __emit 0x54
-        __emit 0x6f
-        __emit 0x55
-        __emit 0x00
-        __emit 0x8b
-        __emit 0x0d
-        __emit 0x3c
-        __emit 0x61
-        __emit 0x55
-        __emit 0x00
-        __emit 0x8b
-        __emit 0x15
-        __emit 0x50
-        __emit 0x6f
-        __emit 0x55
-        __emit 0x00
+        mov eax, DAT_00556f54
+        mov ecx, DAT_0055613c
+        mov edx, DAT_00556f50
         push eax
         push ecx
         push edx
@@ -3757,6 +3822,11 @@ void* menu_text_record_make(const char* text, const TextureSurface* font_a,
 // FUNCTION: LEGORR 0x0046b4d0
 int case_insensitive_name_table_lookup(const char* name, int* out_index)
 {
+    /* Corpus shape: the walk strides the name slots by four with a
+     * one-based counter, feeds each entry to strcasecmp_lite untested,
+     * and answers through the raw out pointer. Deviation: the name NULL
+     * gate stays (the port's menu caller can pass a null optional name;
+     * the corpus strides it blindly). */
     static const char* const names[] = {
         "ToolTip_RadarBlock", "ToolTip_UnitSelect", "ToolTip_Construction",
         "ToolTip_InterfaceMenu", "ToolTip_InterfaceMenuBackButton",
@@ -3777,12 +3847,18 @@ int case_insensitive_name_table_lookup(const char* name, int* out_index)
         "ToolTip_Reward_Save", "ToolTip_Reward_Advance",
         "ToolTip_FrontEnd_Back",
     };
-    if (name == NULL) return 0;
-    for (size_t i = 0; i < sizeof(names) / sizeof(names[0]); ++i) {
-        if (s_strcaseeq(name, names[i])) {
-            if (out_index != NULL) *out_index = (int)i + 1;
+    if (name == NULL) {
+        return 0;
+    }
+    const char* const* p = names;
+    int index = 1;
+    while (p < names + (sizeof(names) / sizeof(names[0]))) {
+        if (strcasecmp_lite(name, *p) == 0) {
+            *out_index = index;
             return 1;
         }
+        ++p;
+        ++index;
     }
     return 0;
 }
@@ -4054,43 +4130,48 @@ int menu_widget_item_screen_rect(const void* menu, int index, int* x, int* y,
     return 1;
 }
 
-/* MenuPickWidgetUnderPointer (FUN_00411790): walk items in draw order until
- * the pointer hits a regular widget or an active type-6 row. */
+/* MenuPickWidgetUnderPointer (FUN_00411790): the regular-rect helper gates
+ * the walk; a failed rect returns unless the type-6 helper hits. */
 // FUNCTION: LEGORR 0x00411790
 int menu_pick_widget_under_pointer(const void* menu, int* picked_index)
 {
-    if (menu == NULL) return 0;
-    const uint32_t count = fe_legacy_dword(menu, 7);
-    const int mouse_x = (int32_t)renderer_word_a_get();
-    const int mouse_y = (int32_t)renderer_word_b_get();
-    for (uint32_t i = 0; i < count; ++i) {
-        int x = 0, y = 0, width = 0, height = 0;
-        if (!menu_widget_item_screen_rect(menu, (int)i, &x, &y,
-                                          &width, &height)) {
-            if (has_type6_item_at_index(menu, (int)i)) {
-                if (picked_index != NULL) *picked_index = (int)i;
-                return 1;
-            }
-            continue;
+    int x = 0, y = 0, width = 0, height = 0;
+    int index = 0;
+    int type6_hit = 0;
+    for (;;) {
+        const int has_rect = menu_widget_item_screen_rect(menu, index, &x, &y,
+                                                          &width, &height);
+        if (!has_rect) {
+            type6_hit = has_type6_item_at_index(menu, index);
+            if (!type6_hit) return 0;
         }
-        if (menu_pointer_rectangle_hit_test(mouse_x, mouse_y, x, y,
-                                            width, height)) {
-            if (picked_index != NULL) *picked_index = (int)i;
-            return 1;
+        if (type6_hit) break;
+        if (menu_pointer_rectangle_hit_test(
+                (int32_t)renderer_word_a_get(),
+                (int32_t)renderer_word_b_get(), x, y, width, height)) {
+            break;
         }
+        ++index;
     }
-    return 0;
+    if (picked_index != NULL) *picked_index = index;
+    return 1;
 }
+
+/* The previous-renderer-word memory is corpus-owned (DAT_004db8d4, the
+ * zero-filled tail); the current word is crt's g_renderer_word_c — the
+ * corpus loads both directly, so the port does too (the getter call was
+ * the only operand mismatch). */
+// GLOBAL: LEGORR 0x004db8d4
+static uint32_t s_progress_previous;
 
 /* FrontendProgressValueChanged (FUN_00411840): detect the transition from
  * progress-active (1) back to idle (0) in the renderer's third word. */
 // FUNCTION: LEGORR 0x00411840
 int frontend_progress_value_changed(void)
 {
-    static uint32_t previous = 0; /* DAT_004db8d4 */
-    const uint32_t current = renderer_word_c_get();
-    const int changed_to_idle = current == 0 && previous == 1;
-    previous = current;
+    const uint32_t current = g_renderer_word_c;
+    const int changed_to_idle = current == 0u && s_progress_previous == 1u;
+    s_progress_previous = current;
     return changed_to_idle;
 }
 
@@ -4273,7 +4354,7 @@ void interface_message_tab_info_text_load(const char* path)
 {
     s_interface_message_tab_info_text =
         (path != NULL && path[0] != '\0')
-            ? texture_get_or_load(NULL, path) : NULL;
+            ? image_surface_load(path, 0u, 0u) : NULL;
     resource_record_add_ref(s_interface_message_tab_info_text);
 }
 
@@ -4633,12 +4714,14 @@ void selection_state_handle_slot_set(int table, int index, uint32_t value)
  * update dispatch; the flag and time fields land as guarded windows. */
 #define TIMED_EFFECT_ENTRIES 16
 #define LAYOUT_POSITION_ENTRIES 2   /* corpus: two help-window buttons */
+#define LAYOUT_POSITION_STRIDE 7    /* corpus advances 0x1c bytes per entry */
 
 static int      s_band_mode;                    /* DAT_004dc64c */
 static uint32_t s_timed_effect_flags[TIMED_EFFECT_ENTRIES];
 static uint32_t s_timed_effect_time[TIMED_EFFECT_ENTRIES];
 static uint32_t s_timed_effect_tick; /* DAT_0054bf3c role: unowned */
-static int32_t  s_layout_position[LAYOUT_POSITION_ENTRIES][2];
+static int32_t  s_layout_position[LAYOUT_POSITION_ENTRIES]
+                                  [LAYOUT_POSITION_STRIDE];
 static float s_help_window_button_rects[LAYOUT_POSITION_ENTRIES][4];
 static int (*s_ui_resource_reposition_hook)(uint32_t handle, int x, int y);
 static float s_help_background_offset_x;
@@ -4722,6 +4805,9 @@ void selection_mode_set_by_index(int index)
         break;
     case 1:
         timed_effect_update_request_set(9);
+        break;
+    case 2:
+    case 3:
         break;
     default:
         break;
@@ -4810,22 +4896,41 @@ void help_window_feedback_hooks_set(void (*reset)(int, int),
     s_help_window_feedback_finish = finish;
 }
 
+/* Install API for the transition-clear hook. Deviation: the corpus's
+ * RenderTransitionCleanupIfActive calls its two cleanup callees directly, so
+ * this static has no reader left — the setter stays as dead install API. */
 void help_render_transition_clear_hook_set(void (*hook)(int, int))
 {
     s_help_render_transition_clear = hook;
 }
 
+/* TransitionControl (FUN_00425c30): the corpus's opaque transition leaf. Like
+ * flic.cpp's 0x00484c90 fallback, the port carries a file-local no-op so the
+ * call site lands the corpus's two pushes; the ledger_stubs entry stays the
+ * link-time no-op for the unported callers. */
+// STUB: LEGORR 0x00425c30
+static void help_transition_control_noop(int a, int b)
+{
+    (void)a;
+    (void)b;
+    /* FUN_00425c30: pure return — faithful. */
+}
+
+/* RenderTransitionCleanupIfActive (FUN_004189d0): the corpus gates two byte
+ * tests of the selection-state DAT, calls TransitionControl(0, 0) and
+ * ObjectiveScoreTextOriginSet unconditionally (no hook indirection), then
+ * re-reads the DAT and clears bit 0. ObjectiveScoreTextOriginSet arrives with
+ * a null pair and a null context, so it writes nothing and drops no debug bit
+ * (the corpus's own push of a single 0 reads the same way). */
 // FUNCTION: LEGORR 0x004189d0
 void help_render_transition_cleanup_if_active(void)
 {
-    if ((s_sel_state & 2u) != 0 && (s_sel_state & 1u) != 0) {
-        if (s_help_render_transition_clear != NULL) {
-            s_help_render_transition_clear(0, 0);
+    if (((unsigned char)s_sel_state & 0x2u) != 0u) {
+        if (((unsigned char)s_sel_state & 0x1u) != 0u) {
+            help_transition_control_noop(0, 0);
+            objective_score_text_origin_set(NULL);
+            s_sel_state &= ~1u;
         }
-        if (s_help_window_feedback_finish != NULL) {
-            s_help_window_feedback_finish(0);
-        }
-        s_sel_state &= ~1u;
     }
 }
 
@@ -5156,36 +5261,37 @@ int layout_position_get(int entry, int* x, int* y)
 }
 
 /* --- the front-end flow words (see frontend.hpp) ----------------------------
- * Zero-initialized module statics stand in for the corpus's DAT words; the
- * load image's zero state is the faithful initial state (finding 23/438). */
+ * Each word is its own zero-initialized static; the winapi build annotates
+ * them individually at their corpus DAT addresses, whose zero-filled .data
+ * tail makes that the faithful initial state (finding 23/438). */
 // FUNCTION: LEGORR 0x00416d50
 int save_slot_open(void)
 {
-    return s_fe_flow[1] != -1;
+    return FE_FLOW_SAVE_SLOT != -1;
 }
 
 // FUNCTION: LEGORR 0x00416d60
 int is_in_game(void)
 {
-    return s_fe_flow[2] != -1;
+    return FE_FLOW_INGAME_SLOT != -1;
 }
 
 // FUNCTION: LEGORR 0x00416dd0
 int quit_menu_probe(void)
 {
-    return s_fe_flow[0];
+    return FE_FLOW_QUIT_WORD;
 }
 
 // FUNCTION: LEGORR 0x00416de0
 int level_start_flag(void)
 {
-    return s_fe_flow[FE_FLOW_LEVEL_START_SLOT] != 0;
+    return FE_FLOW_LEVEL_START != 0;
 }
 
 // FUNCTION: LEGORR 0x00416df0
 int menu_options_flag(void)
 {
-    return s_fe_flow[FE_FLOW_MENU_OPTIONS_SLOT] != 0;
+    return FE_FLOW_MENU_OPTIONS != 0;
 }
 
 /* OptionMusicDefault (FUN_00414e10) queries a WinMM audio-CD mixer source
@@ -5202,11 +5308,13 @@ int option_music_default(void)
 void frontend_flow_word_set(int which, int value)
 {
     if (which >= 0 && which < 5) {
-#if defined(LEGORRR_BACKEND_WINAPI)
-        s_fe_flow[which < 3 ? which : which + 8] = value;
-#else
-        s_fe_flow[which] = value;
-#endif
+        switch (which) {
+        case 0:  FE_FLOW_QUIT_WORD = value;      break;
+        case 1:  FE_FLOW_SAVE_SLOT = value;      break;
+        case 2:  FE_FLOW_INGAME_SLOT = value;    break;
+        case 3:  FE_FLOW_LEVEL_START = value;    break;
+        default: FE_FLOW_MENU_OPTIONS = value;   break;
+        }
     }
 }
 
@@ -5245,18 +5353,15 @@ uint32_t selection_mode_state_peek(void)
 #if defined(LEGORRR_BACKEND_WINAPI)
 __declspec(naked) void menu_wipe_end(void)
 {
+    /* Symbolic operands (like menu_wipe_start): __emit-encoded operand
+     * dwords carry no relocation, so reccmp resolved them as an OFFSET
+     * into s_reference_menu_data_pad0 and scored the two movs as
+     * mismatches (measured 50.0%); the symbolic form resolves through
+     * the 0x005574f0 annotation as DATA. */
     __asm {
-        __emit 0xa1
-        __emit 0xf0
-        __emit 0x74
-        __emit 0x55
-        __emit 0x00
+        mov eax, s_menu_wipe
         and al, 0xfc
-        __emit 0xa3
-        __emit 0xf0
-        __emit 0x74
-        __emit 0x55
-        __emit 0x00
+        mov s_menu_wipe, eax
         ret
     }
 }
@@ -5285,13 +5390,33 @@ static uint32_t s_sel_c0c;        /* DAT_004ddd0c */
 static uint32_t s_sel_c10;        /* DAT_004ddd10 */
 static float    s_sel_c14;        /* DAT_004ddd14 */
 static float    s_sel_c18;        /* DAT_004ddd18 */
-static float    s_reg[5];         /* DAT_004ddce0/e4/e8/ec + f0 */
+/* The corpus's parameter register quintet, DAT_004ddce0..f0 at stride 4.
+ * Each float carries its own GLOBAL annotation: Reccmp only resolves
+ * whole-object operands, so a shared-array base never matches the corpus's
+ * absolute accesses in the FUN_0041a990 and FUN_0041e9d0 readers. */
+// GLOBAL: LEGORR 0x004ddce0
+static float s_reg_e0;            /* DAT_004ddce0 */
+// GLOBAL: LEGORR 0x004ddce4
+static float s_reg_e4;            /* DAT_004ddce4 */
+// GLOBAL: LEGORR 0x004ddce8
+static float s_reg_e8;            /* DAT_004ddce8 */
+// GLOBAL: LEGORR 0x004ddcec
+static float s_reg_ec;            /* DAT_004ddcec */
+// GLOBAL: LEGORR 0x004ddcf0
+static float s_reg_f0;            /* DAT_004ddcf0 */
+// GLOBAL: LEGORR 0x004ddccc
 static uint32_t s_obj_sel_word;   /* DAT_004ddccc */
+// GLOBAL: LEGORR 0x004ddcd0
 static uint32_t s_obj_track_word; /* DAT_004ddcd0 */
+// GLOBAL: LEGORR 0x004de1ec
 static float    s_inter_timer = 0.0f; /* DAT_004de1ec */
+// GLOBAL: LEGORR 0x004de1f8
 static uint32_t s_inter_flags;    /* DAT_004de1f8 */
+// GLOBAL: LEGORR 0x004ddd00
 static uint32_t s_pointer_action_type; /* DAT_004ddd00 */
+// GLOBAL: LEGORR 0x004ddd04
 static uint32_t s_pointer_action_kind; /* DAT_004ddd04 */
+// GLOBAL: LEGORR 0x004ddd08
 static uint32_t s_pointer_action_entry;/* DAT_004ddd08 */
 
 /* PointerActionStateDispatch (FUN_0041c6e0): update the current pointer
@@ -5302,44 +5427,53 @@ int pointer_action_state_dispatch(int action, int kind, int entry,
                                   int active, int suppress_initial)
 {
     const uint32_t previous_action = s_pointer_action_type;
-    if (active == 0) {
-        s_pointer_action_type = 0x4au;
-    }
-    else if ((s_inter_flags & 0x1000u) == 0u) {
-        if (s_pointer_action_type == 0x4au) {
-            if (suppress_initial != 0) {
-                goto finish;
-            }
-            s_pointer_action_type = (uint32_t)action;
-            s_pointer_action_kind = (uint32_t)kind;
-            s_pointer_action_entry = (uint32_t)entry;
-            if (action == 0x49) {
-                player_input_flag8_set_clear(kind, entry, 1);
-                goto finish;
-            }
-        }
-        else {
-            if (s_pointer_action_type != (uint32_t)action) {
-                goto finish;
-            }
-            if (action == 0x49) {
-                if (s_pointer_action_kind == (uint32_t)kind
-                    && s_pointer_action_entry == (uint32_t)entry) {
-                    player_input_flag8_set_clear(kind, entry, 1);
+    if (active != 0) {
+        if ((s_inter_flags & 0x1000u) == 0u) {
+            if (s_pointer_action_type == 0x4au) {
+                if (suppress_initial != 0) {
+                    goto finish;
                 }
-                goto finish;
+                s_pointer_action_type = (uint32_t)action;
+                s_pointer_action_kind = (uint32_t)kind;
+                s_pointer_action_entry = (uint32_t)entry;
+                if (action == 0x49) {
+                    player_input_flag8_set_clear(kind, entry, 1);
+                    goto finish;
+                }
             }
+            else {
+                if (s_pointer_action_type != (uint32_t)action) {
+                    goto finish;
+                }
+                if (action == 0x49) {
+                    if (s_pointer_action_kind == (uint32_t)kind
+                        && s_pointer_action_entry == (uint32_t)entry) {
+                        player_input_flag8_set_clear(kind, entry, 1);
+                    }
+                    goto finish;
+                }
+            }
+            input_entry_flag8_set_clear(action, 1);
         }
-        input_entry_flag8_set_clear(action, 1);
+    } else {
+        s_pointer_action_type = 0x4au;
     }
 
 finish:
     if (previous_action != (uint32_t)action) {
         return 0;
     }
-    return action != 0x49
-        || (s_pointer_action_kind == (uint32_t)kind
-            && s_pointer_action_entry == (uint32_t)entry);
+    /* FUN_0041c6e0 has distinct true exits for the non-0x49 and pair arms. */
+    if (action == 0x49) {
+        if (s_pointer_action_kind == (uint32_t)kind
+            && s_pointer_action_entry == (uint32_t)entry) {
+            return 1;
+        }
+    }
+    else {
+        return 1;
+    }
+    return 0;
 }
 
 // FUNCTION: LEGORR 0x0041cce0
@@ -5354,22 +5488,30 @@ void selection_coordinates_set(const uint32_t* pair, uint32_t x, uint32_t y)
     s_sel_c18 = (float)y;
 }
 
+/* SelectionRegionParametersSet (FUN_0041e9d0): four integer words and one
+ * float. Each word is zero-extended onto the x87 stack (fild of a zeroed
+ * qword, an unsigned conversion) and the slots rotate: arg0 -> +08,
+ * arg1 -> +0c, arg2 -> +00, arg3 -> +04; the float multiplies the .rdata
+ * 0.04 constant in single precision into the +10 slot. */
+// GLOBAL: LEGORR 0x0049e298
+static const float s_region_scale_004 = 0.04f; /* DAT_0049e298, verified */
+
 // FUNCTION: LEGORR 0x0041e9d0
-void selection_region_parameters_set(float a, float b, float c, float d,
-                                     float e)
+void selection_region_parameters_set(uint32_t a, uint32_t b, uint32_t c,
+                                     uint32_t d, float e)
 {
-    s_reg[0] = a;
-    s_reg[1] = b;
-    s_reg[2] = c;
-    s_reg[3] = d;
-    s_reg[4] = (float)(e * 0.04); /* the corpus's double-prec scale */
+    s_reg_e0 = (float)c;
+    s_reg_e4 = (float)d;
+    s_reg_f0 = e * s_region_scale_004;
+    s_reg_e8 = (float)a;
+    s_reg_ec = (float)b;
 }
 
 // FUNCTION: LEGORR 0x0041a990
 void objective_selection_state_reset(void)
 {
     s_obj_sel_word = 0u;
-    __builtin_memcpy(&s_obj_track_word, &s_reg[2], sizeof(s_obj_track_word));
+    __builtin_memcpy(&s_obj_track_word, &s_reg_e8, sizeof(s_obj_track_word));
     s_inter_flags |= 0x84u;
 }
 
@@ -5380,16 +5522,31 @@ void interaction_timer_reset_and_flag_clear(void)
     s_inter_flags &= ~0x800u;
 }
 
+/* Corpus shape: one register copy; the true arm ORs bit 1 then masks
+ * bit 0, the false arm masks bit 1 then bit 0 as two separate ands; each
+ * arm stores and exits on its own. MSVC5 tail-merges the two C stores and
+ * folds the false arm's masks into 0xfc, so the body is emitted in naked
+ * asm to pin the original's line-for-line sequence. */
 // FUNCTION: LEGORR 0x00418800
-void mode_flag_pair_apply_if_bit2(int value)
+__declspec(naked) void mode_flag_pair_apply_if_bit2(int value)
 {
-    if ((s_sel_state & 4u) == 0u) {
-        return;
-    }
-    if (value != 0) {
-        s_sel_state = (s_sel_state & ~1u) | 2u;
-    } else {
-        s_sel_state &= ~3u;
+    __asm {
+        mov eax, s_sel_state
+        test al, 4
+        je   done
+        mov ecx, dword ptr [esp + 4]
+        test ecx, ecx
+        je   clear_both
+        or   al, 2
+        and  al, 0xfe
+        mov  s_sel_state, eax
+        ret
+    clear_both:
+        and  al, 0xfd
+        and  al, 0xfe
+        mov  s_sel_state, eax
+    done:
+        ret
     }
 }
 
@@ -5409,9 +5566,11 @@ void selection_region_parameters_peek(float out[5])
     if (out == NULL) {
         return;
     }
-    for (int i = 0; i < 5; ++i) {
-        out[i] = s_reg[i];
-    }
+    out[0] = s_reg_e0;
+    out[1] = s_reg_e4;
+    out[2] = s_reg_e8;
+    out[3] = s_reg_ec;
+    out[4] = s_reg_f0;
 }
 
 uint32_t objective_selection_word_peek(void)
@@ -5422,9 +5581,18 @@ uint32_t objective_selection_word_peek(void)
 /* --- the selection-coordinate store (2026-10-24) ---------------------------
  * Corpus band DAT_004ddcc4/cc8/cfc/dcf4/f8; the other owners of these words
  * are unported seams, so the port models them as own storage (the
- * unowned-global deviation). */
-static uint32_t s_map_store_pair[2];  /* DAT_004ddcc4/cc8 */
-static uint32_t s_map_store_last[2];  /* DAT_004ddcf4/f8 */
+ * unowned-global deviation). Each word carries its own GLOBAL annotation:
+ * Reccmp only resolves whole-object operands, so accesses at an offset
+ * inside a shared array never match. */
+// GLOBAL: LEGORR 0x004ddcc4
+static uint32_t s_map_store_pair_x;   /* DAT_004ddcc4 */
+// GLOBAL: LEGORR 0x004ddcc8
+static uint32_t s_map_store_pair_y;   /* DAT_004ddcc8 */
+// GLOBAL: LEGORR 0x004ddcf4
+static uint32_t s_map_store_last_x;   /* DAT_004ddcf4 */
+// GLOBAL: LEGORR 0x004ddcf8
+static uint32_t s_map_store_last_y;   /* DAT_004ddcf8 */
+// GLOBAL: LEGORR 0x004ddcfc
 static uint32_t s_map_store_kind;     /* DAT_004ddcfc */
 
 // FUNCTION: LEGORR 0x0041ea50
@@ -5440,24 +5608,36 @@ void store_selected_map_coordinate(int kind, const uint32_t coord[2])
             s_map_store_kind = (uint32_t)kind;
             return;
         }
-        s_map_store_pair[0] = coord[0];
-        s_map_store_pair[1] = coord[1];
+        s_map_store_pair_x = coord[0];
+        s_map_store_pair_y = coord[1];
     }
     if (coord != NULL) {
-        s_map_store_last[0] = coord[0];
-        s_map_store_last[1] = coord[1];
+        s_map_store_last_x = coord[0];
+        s_map_store_last_y = coord[1];
     }
     s_map_store_kind = (uint32_t)kind;
 }
 
 uint32_t map_store_pair_word(int which)
 {
-    return (which >= 0 && which <= 1) ? s_map_store_pair[which] : 0u;
+    if (which == 0) {
+        return s_map_store_pair_x;
+    }
+    if (which == 1) {
+        return s_map_store_pair_y;
+    }
+    return 0u;
 }
 
 uint32_t map_store_last_word(int which)
 {
-    return (which >= 0 && which <= 1) ? s_map_store_last[which] : 0u;
+    if (which == 0) {
+        return s_map_store_last_x;
+    }
+    if (which == 1) {
+        return s_map_store_last_y;
+    }
+    return 0u;
 }
 
 uint32_t map_store_kind_peek(void)
@@ -5566,6 +5746,7 @@ uint32_t cell_action_permission_table_peek(int index)
 }
 
 /* --- the menu-tick gate + status banner word (see frontend.hpp) ------------- */
+// GLOBAL: LEGORR 0x004ddd1c
 static uint32_t s_status_banner_word;   /* DAT_004ddd1c */
 
 // FUNCTION: LEGORR 0x00412190
@@ -5602,17 +5783,27 @@ void sim_status_banner_word_set(uint32_t value)
 }
 
 // FUNCTION: LEGORR 0x00419200
-void ui_mode_resource_bit40_set_clear(int probe, uint32_t value)
+uint32_t ui_mode_resource_bit40_set_clear(int probe, uint32_t value)
 {
-    uint32_t v = value;
+    uint32_t v;
     if (probe != 0) {
         v = s_sel_state & 0x40u;
     }
-    if (v == 0u) {
-        s_sel_state |= 0x40u;
-    } else {
-        s_sel_state &= ~0x40u;
+    else {
+        /* FUN_00419200 fetches the value argument only after the probe test. */
+        v = value;
     }
+    /* Corpus layout: the nonzero answer falls through to the clear, the
+     * zero answer jumps to the set tail; the word answers after the
+     * store in both arms. */
+    if (v != 0u) {
+        s_sel_state = s_sel_state & ~0x40u; /* plain form: keeps the
+            * corpus's mov/and al,0xbf/mov register round-trip (b45
+            * global_flag_bit0_clear lesson) */
+    } else {
+        s_sel_state = s_sel_state | 0x40u;
+    }
+    return s_sel_state;
 }
 
 /* MenuWipeStart (FUN_004103f0) — see frontend.hpp. */
@@ -5623,54 +5814,22 @@ static uint32_t s_menu_clock_millis; /* timeGetTime model */
 __declspec(naked) void menu_wipe_start(void)
 {
     __asm {
-        __emit 0xa1
-        __emit 0xec
-        __emit 0x74
-        __emit 0x55
-        __emit 0x00
+        mov eax, s_menu_wipe_arm
         sub esp, 8
         test eax, eax
         je menu_wipe_start_done
-        __emit 0xa1
-        __emit 0xf0
-        __emit 0x74
-        __emit 0x55
-        __emit 0x00
-        __emit 0xc7
-        __emit 0x05
-        __emit 0xf4
-        __emit 0x74
-        __emit 0x55
-        __emit 0x00
-        __emit 0x00
-        __emit 0x00
-        __emit 0x00
-        __emit 0x00
+        mov eax, s_menu_wipe
+        mov dword ptr s_menu_wipe_stop, 0
         or al, 1
         or al, 2
-        __emit 0xa3
-        __emit 0xf0
-        __emit 0x74
-        __emit 0x55
-        __emit 0x00
+        mov s_menu_wipe, eax
         call timeGetTime
-        __emit 0x89
-        __emit 0x44
-        __emit 0x24
-        __emit 0x00
+        mov dword ptr [esp], eax
         mov dword ptr [esp + 4], 0
-        __emit 0xdf
-        __emit 0x6c
-        __emit 0x24
-        __emit 0x00
+        fild qword ptr [esp]
         push 0
         push 0x27
-        __emit 0xd9
-        __emit 0x1d
-        __emit 0xf8
-        __emit 0x74
-        __emit 0x55
-        __emit 0x00
+        fstp dword ptr s_menu_wipe_clock
         call sound_request_queue_submit
         add esp, 8
     menu_wipe_start_done:
@@ -5828,6 +5987,7 @@ static void*    s_panel_surface_handle; /* DAT_00500810 role */
 static float    s_panel_width;       /* DAT_00500814 role */
 static float    s_panel_height;      /* DAT_00500818 role */
 static uint32_t s_panel_extra;       /* DAT_0050081c role */
+// GLOBAL: LEGORR 0x005007d8
 static void*    s_panel_ui_record;   /* DAT_005007d8 role */
 static void*    s_panel_text_slot;   /* DAT_005007dc role: holder-slot address */
 
@@ -5857,9 +6017,14 @@ static void* panel_load_seam_call(void* res)
 // FUNCTION: LEGORR 0x00459fd0
 void panel_resource_position_apply_if_enabled(void* resource, int x, int y)
 {
-    if ((s_panel_enable_word & 0x10u) != 0u) {
-        panel_blit_seam_call(resource, (float)x + s_bubble_offset_x,
-                             (float)y + s_bubble_offset_y);
+    /* The corpus tests the enable byte, then FILD/FADD-stores x before y
+     * into its local coordinate pair. FUN_0047dcb0 is an unported hook
+     * boundary here, so preserve the observable test seam. */
+    if (((unsigned char)s_panel_enable_word & 0x10u) != 0u) {
+        float position[2];
+        position[0] = (float)x + s_bubble_offset_x;
+        position[1] = (float)y + s_bubble_offset_y;
+        panel_blit_seam_call(resource, position[0], position[1]);
     }
 }
 
@@ -5910,7 +6075,10 @@ void panel_resource_handle_and_dimensions_store(void* resource, uint32_t w,
 void scroll_offset_from_cursor_update(void)
 {
     uint32_t lo = 0, hi = 0;
-    ui_record_callback_forward((const void* const*)&s_panel_ui_record,
+    /* the corpus pushes the DAT_005007d8 record value itself, whose +0
+     * field the forward reads; the unowned-global deviation keeps the
+     * slot NULL-defaulted and the callee's guards answer zeros */
+    ui_record_callback_forward((const void* const*)s_panel_ui_record,
                                &lo, &hi);
     int diff = (int)(lo - hi);
     if (diff < 0) {
@@ -6328,7 +6496,9 @@ void panel_seam_last(void** out_res, float* out_x, float* out_y)
 /* --- the active-object word selector (see frontend.hpp) --------------------
  * DAT_00556fd0 (in-game) / DAT_00556fe4 (out) are unowned: zero-init
  * statics here, addressed through the ported in-game test. */
+// GLOBAL: LEGORR 0x00556fd0
 static int s_active_object_ingame;  /* DAT_00556fd0 role */
+// GLOBAL: LEGORR 0x00556fe4
 static int s_active_object_outgame; /* DAT_00556fe4 role */
 
 // FUNCTION: LEGORR 0x00416e00
@@ -6400,7 +6570,7 @@ void screen_effect_seam_last(void** out_handle, int* out_flag)
 int text_layout_offset_for_centering(int x, int y, int rect_x, int rect_y,
                                      int rect_w, int rect_h, int center)
 {
-    const int xoff = (center == 0) ? 0 : -(rect_w / 2);
+    const int xoff = (center != 0) ? -(rect_w / 2) : 0;
     return menu_pointer_rectangle_hit_test(x, y, xoff + rect_x, rect_y,
                                            rect_w, rect_h);
 }
@@ -6514,25 +6684,31 @@ void timed_effect_persistence_set(int index, int set)
 }
 
 /* CursorTileSelectionUpdateByType (FUN_0041cc80) — see frontend.hpp. */
-static uint32_t s_cursor_tile_pair[2]; /* DAT_004ddcd8/cdc role */
+/* The corpus addresses the pair as two individual dwords; carve annotated
+ * statics (whole-object resolution, the s_fe_flow_* precedent). Own
+ * storage, zero-init like the corpus's tail. */
+// GLOBAL: LEGORR 0x004ddcd8
+static uint32_t s_cursor_tile_first;  /* DAT_004ddcd8 role */
+// GLOBAL: LEGORR 0x004ddcdc
+static uint32_t s_cursor_tile_second; /* DAT_004ddcdc role */
 
 // FUNCTION: LEGORR 0x0041cc80
 void cursor_tile_selection_update_by_type(int kind, uint32_t first,
                                           uint32_t second)
 {
     if (kind == 0x49) {
-        s_cursor_tile_pair[0] = first;
-        s_cursor_tile_pair[1] = second;
+        s_cursor_tile_first = first;
+        s_cursor_tile_second = second;
         return;
     }
     if (kind == 5) {
-        s_cursor_tile_pair[0] = 0xFu;
-        s_cursor_tile_pair[1] = 0u;
+        s_cursor_tile_first = 0xFu;
+        s_cursor_tile_second = 0u;
         return;
     }
     if (kind == 0xe) {
-        s_cursor_tile_pair[0] = 0xBu;
-        s_cursor_tile_pair[1] = 0u;
+        s_cursor_tile_first = 0xBu;
+        s_cursor_tile_second = 0u;
     }
     /* the corpus's else branch rides */
 }
@@ -6542,7 +6718,7 @@ uint32_t cursor_tile_pair_peek(int which)
     if (which < 0 || which > 1) {
         return 0u; /* deviation: the corpus strides the pair blindly */
     }
-    return s_cursor_tile_pair[which];
+    return (which == 0) ? s_cursor_tile_first : s_cursor_tile_second;
 }
 
 /* --- the UI/panel category-bounds band (2026-10-25) ------------------------
@@ -6732,32 +6908,34 @@ static uint32_t s_sav_visited_words_out[SAV_VISITED_ENTRIES]; /* DAT_00556ff4 */
 static void*    s_sav_visited_items_in[SAV_VISITED_ENTRIES];  /* DAT_00556fdc */
 static uint32_t s_sav_visited_words_in[SAV_VISITED_ENTRIES];  /* DAT_00556fe0 */
 
-/* SavClearVisited (FUN_00416e70): walk both bands, out-of-game first —
- * every non-null entry record has its +0x10 flag word cleared and the
- * table's word word zeroed alongside. Deviations: the entry windows and
- * the count bounds are guarded (the corpus strides blindly) and records
- * are touched through their modeled +0x10 word. */
+/* SavClearVisited (FUN_00416e70): the corpus walks the out-of-game band
+ * first (DAT_00556fe4 / DAT_00556ff0 / DAT_00556ff4), then the in-game
+ * band (DAT_00556fd0 / DAT_00556fdc / DAT_00556fe0). A non-null record
+ * has its +0x10 dword and paired table word cleared. Keep pointer-array
+ * indexing typed: it emits corpus dword strides on x86 and scales pointer
+ * slots for the LP64 host. The port-only upper-bound checks stay because
+ * the oversized-count test pins the whole band unchanged. */
 // FUNCTION: LEGORR 0x00416e70
 void sav_clear_visited(void)
 {
-    for (int which = 0; which < 2; ++which) {
-        void* const* items = which != 0 ? s_sav_visited_items_in
-                                       : s_sav_visited_items_out;
-        uint32_t* words = which != 0 ? s_sav_visited_words_in
-                                     : s_sav_visited_words_out;
-        const int count = *(which != 0 ? &s_active_object_ingame
-                                       : &s_active_object_outgame);
-        if (count <= 0) {
-            continue; /* the corpus's positivity gate */
-        }
-        if (count > SAV_VISITED_ENTRIES) {
-            continue; /* deviation: the corpus strides blindly */
-        }
-        for (int i = 0; i < count; ++i) {
-            void* rec = items[i];
+    int i;
+    if (s_active_object_outgame > 0 &&
+        s_active_object_outgame <= SAV_VISITED_ENTRIES) {
+        for (i = 0; i < s_active_object_outgame; ++i) {
+            void* rec = s_sav_visited_items_out[i];
             if (rec != NULL) {
                 ((uint32_t*)rec)[4] = 0u; /* corpus record + 0x10 */
-                words[i] = 0u;
+                s_sav_visited_words_out[i] = 0u;
+            }
+        }
+    }
+    if (s_active_object_ingame > 0 &&
+        s_active_object_ingame <= SAV_VISITED_ENTRIES) {
+        for (i = 0; i < s_active_object_ingame; ++i) {
+            void* rec = s_sav_visited_items_in[i];
+            if (rec != NULL) {
+                ((uint32_t*)rec)[4] = 0u; /* corpus record + 0x10 */
+                s_sav_visited_words_in[i] = 0u;
             }
         }
     }

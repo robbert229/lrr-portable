@@ -423,17 +423,19 @@ int flic_opcode16_mode_dispatch(const uint8_t* rec)
 void flic_packed_triplet_table_to_word_build(void* record)
 {
     if (record == NULL) {
-        return; /* deviation: the corpus strides the record blindly */
+        return; /* deviation: pinned by test_flic.cpp:418 — the corpus strides blindly */
     }
-    const uint8_t* triples = (const uint8_t*)record + 0x11c;
     uint8_t* words = (uint8_t*)record + 0x41c;
-    for (int i = 0; i != 0x100; ++i) {
-        const uint8_t* src = triples + (size_t)i * 3u;
+    const uint8_t* src = (const uint8_t*)record + 0x11c;
+    uint8_t* dst = words;
+    for (int count = 0x100; count != 0; --count) {
         const uint16_t w = (uint16_t)(
             (uint16_t)((uint16_t)(src[1] | (uint16_t)((src[0] & 0x3e) << 5))
                        << 5)
             | (uint16_t)(src[2] >> 1));
-        __builtin_memcpy(words + (size_t)i * 2u, &w, sizeof w);
+        __builtin_memcpy(dst, &w, sizeof w);
+        dst += 2;
+        src += 3;
     }
     const uint16_t zero = 0u;
     __builtin_memcpy(words, &zero, sizeof zero);
@@ -955,32 +957,31 @@ int flic_decode8_bit_alternate_delta(void* record)
 
 /* FlicOpcode25DecodeDispatch (FUN_00484b20) — see flic.hpp. The dispatch
  * words ride the record window: bit depth +0x64c, mode op +0x6d4, marker
- * word +0x644. Deviation: the corpus's keyframe call passes no argument
- * (the record pointer rides the register) — the port threads the record
- * through, as the window band's precedent requires. */
+ * word +0x644. The corpus loads the depth once into ax and gates both the
+ * 8 and the 16 routes from it, reloads the op dword raw for the mode-4
+ * gate, and compares the op and the marker straight against memory (cmp
+ * DWORD PTR,4 / cmp WORD PTR,0xaf43) — plain typed loads, no staging.
+ * Deviation: the corpus's keyframe call passes no argument (the record
+ * pointer rides the register) — the port threads the record through, as
+ * the window band's precedent requires. */
 // FUNCTION: LEGORR 0x00484b20
 int flic_opcode25_decode_dispatch(void* record)
 {
     if (record == NULL) {
-        return 1; /* deviation: the corpus strides the record blindly */
+        return 1; /* pinned deviation: the corpus strides the record blindly */
     }
     char* rec = (char*)record;
-    int16_t depth = 0;
-    int op = 0;
-    int16_t marker = 0;
-    __builtin_memcpy(&depth, rec + 0x64c, sizeof depth);
-    __builtin_memcpy(&op, rec + 0x6d4, sizeof op);
-    if (depth == 8) {
-        if (op == 0) {
+    const uint16_t depth = *(const uint16_t*)(rec + 0x64c); /* ax, once */
+    if (depth == 8u) {
+        if (*(const uint32_t*)(rec + 0x6d4) == 0u) {
             flic_opcode25_success_stub();
         }
-        if (op == 4) {
+        if (*(const uint32_t*)(rec + 0x6d4) == 4u) { /* corpus: cmp mem,4 */
             flic_decode8_bit_opcode25_mode4(rec);
             return 1;
         }
-    } else if (depth == 0x10) {
-        __builtin_memcpy(&marker, rec + 0x644, sizeof marker);
-        if (marker == (int16_t)0xaf42 /* -0x50bd */) {
+    } else if (depth == 0x10u) {
+        if (*(const uint16_t*)(rec + 0x644) == 0xaf43u) { /* cmp mem,0xaf43 */
             flic_decode16_bit_keyframe(rec);
             return 1;
         }
@@ -990,37 +991,36 @@ int flic_opcode25_decode_dispatch(void* record)
 }
 
 /* FlicOpcode27DecodeDispatch (FUN_00485030) — see flic.hpp. The sibling's
- * dispatch: the same depth word picks the family, the marker picks the
- * 16-bit decoder (the literal 0x1234 goes to the fallback), and the 8-bit
- * op-4 route lands in the alternate delta. Deviations ride the same two
- * notes as flic_opcode25_decode_dispatch. */
+ * dispatch: the corpus loads the depth once into ax and gates both the 8
+ * and the 16 routes from it, compares the op dword straight against memory
+ * (cmp DWORD PTR,4), and loads the marker WORD only on the 16-bit route and
+ * reuses ax for both gates (cmp ax,0x1234 / cmp ax,0xaf43) — plain typed
+ * loads, no staging. The literal 0x1234 goes to the fallback, and so does a
+ * mismatch; the 8-bit op-4 route lands in the alternate delta. Deviations
+ * ride the same two notes as flic_opcode25_decode_dispatch. */
 // FUNCTION: LEGORR 0x00485030
 int flic_opcode27_decode_dispatch(void* record)
 {
     if (record == NULL) {
-        return 1; /* deviation: the corpus strides the record blindly */
+        return 1; /* pinned deviation: the corpus strides the record blindly */
     }
     char* rec = (char*)record;
-    int16_t depth = 0;
-    int op = 0;
-    int16_t marker = 0;
-    __builtin_memcpy(&depth, rec + 0x64c, sizeof depth);
-    __builtin_memcpy(&op, rec + 0x6d4, sizeof op);
-    if (depth == 8) {
-        if (op == 0) {
+    const uint16_t depth = *(const uint16_t*)(rec + 0x64c); /* ax, once */
+    if (depth == 8u) {
+        if (*(const uint32_t*)(rec + 0x6d4) == 0u) {
             flic_opcode27_fallback_noop();
         }
-        if (op == 4) {
+        if (*(const uint32_t*)(rec + 0x6d4) == 4u) { /* corpus: cmp mem,4 */
             flic_decode8_bit_alternate_delta(rec);
             return 1;
         }
-    } else if (depth == 0x10) {
-        __builtin_memcpy(&marker, rec + 0x644, sizeof marker);
-        if (marker == (int16_t)0x1234) {
+    } else if (depth == 0x10u) {
+        const uint16_t marker = *(const uint16_t*)(rec + 0x644); /* ax here */
+        if (marker == 0x1234u) {
             flic_opcode27_fallback_noop();
             return 1;
         }
-        if (marker == (int16_t)0xaf42 /* -0x50bd */) {
+        if (marker == 0xaf43u) { /* cmp mem,0xaf43 */
             flic_decode16_bit_delta(rec);
             return 1;
         }

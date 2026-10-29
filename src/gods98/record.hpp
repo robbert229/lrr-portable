@@ -525,7 +525,9 @@ int nested_record_list_remove_by_key_recursive(int key, void* node);
  * stride 0x20 as {position, normal, uv pair}. The +0x6c flag word and the
  * data window (base + 0x10 + index*0x70) keep the readers ported above.
  * Deviations: the corpus strides the table, vertex base, and every window
- * blindly — the port guards NULL table/base slots and stores nothing;
+ * blindly — the port guards NULL table/base slots and stores nothing,
+ * except MeshSegmentVertexFill, which strides the table, vertex base, and
+ * buffers blind exactly like the corpus (no test or caller feeds it NULL);
  * float math runs in single precision (documented x87 deviation). */
 
 /* MeshVerticesScaleApply (FUN_00482370): scale every block's vertices —

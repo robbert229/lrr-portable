@@ -182,13 +182,13 @@ static void test_crt_leaves(void)
           "terminator exactly at the bound answers the bound");
 
     /* Double exponent selector over the high word (finding 399). */
-    CHECK(double_exponent_bits_or_special(0x40080000u) == 0x40000000u,
+    CHECK(double_exponent_bits_or_special(0u, 0x40080000u) == 0x40000000u,
           "ordinary value answers its exponent field");
-    CHECK(double_exponent_bits_or_special(0x3ff00000u) == 0x3ff00000u,
+    CHECK(double_exponent_bits_or_special(0u, 0x3ff00000u) == 0x3ff00000u,
           "one's exponent is untouched");
-    CHECK(double_exponent_bits_or_special(0x7ff00000u) == 0x7ff00000u,
+    CHECK(double_exponent_bits_or_special(0u, 0x7ff00000u) == 0x7ff00000u,
           "infinity answers the full high word");
-    CHECK(double_exponent_bits_or_special(0x7ff80000u) == 0x7ff80000u,
+    CHECK(double_exponent_bits_or_special(0u, 0x7ff80000u) == 0x7ff80000u,
           "NaN answers the full high word");
 
     /* Format-argument cursor: reads consume and advance. */
@@ -1199,15 +1199,15 @@ int main(void)
         CHECK(crt_string_duplicate(NULL) == NULL, "the null duplicate is guarded");
 
         char buf[32];
-        crt_unsigned_format_radix(123u, buf, 10);
+        crt_unsigned_format_radix(123u, buf, 10, 0);
         CHECK(strcmp(buf, "123") == 0, "the decimal digits reverse into place");
-        crt_unsigned_format_radix(0u, buf, 10);
+        crt_unsigned_format_radix(0u, buf, 10, 0);
         CHECK(strcmp(buf, "0") == 0, "zero writes one digit");
-        crt_unsigned_format_radix(255u, buf, 16);
+        crt_unsigned_format_radix(255u, buf, 16, 0);
         CHECK(strcmp(buf, "ff") == 0, "digits past nine fold lowercase");
-        crt_unsigned_format_radix(4294967295u, buf, 16);
+        crt_unsigned_format_radix(4294967295u, buf, 16, 0);
         CHECK(strcmp(buf, "ffffffff") == 0, "the full dword spans eight digits");
-        crt_unsigned_format_radix(9u, buf, 1);
+        crt_unsigned_format_radix(9u, buf, 1, 0);
         CHECK(strcmp(buf, "0") == 0, "the radix guard answers zero (deviation)");
 
         crt_signed_to_string(-42, buf, 10);
@@ -1285,6 +1285,12 @@ int main(void)
               "the signed cross-word half folds the bits");
         CHECK(crt_integer64_multiply(0xffffffffu, 0, 2, 0) == 0x1fffffffeull,
               "the wide unsigned pair stays unsigned");
+        CHECK(crt_integer64_multiply(2, 0, 3, 1)
+                  == (uint64_t)6 + ((uint64_t)2 << 32),
+              "hi_b contributes lo_a*hi_b");
+        CHECK(crt_integer64_multiply(3, 3, 5, 2)
+                  == (((uint64_t)(15u + 6u) << 32) | 15u),
+              "hi_a*lo_b + lo_a*hi_b fold");
     }
 
     /* CrtInteger64Divide / CrtUnsigned64Divide (FUN_0048e9e0 /

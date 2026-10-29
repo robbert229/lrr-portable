@@ -134,7 +134,8 @@ void wad_memory_stream_buffer_get(int slot);       /* FUN_0048c030 */
 #define WAD_DECODE_TYPE_FAIL  0xfffe /* corpus's unknown-type verdict */
 
 /* Verify the "RNC" magic + type gate and copy/delegate the payload.
- * 0 raw copy, 1/2 the dormant codecs' path markers, verdicts otherwise. */
+ * 0 raw copy, 1/2 the ported codecs (xor ax,ax verdict 0), verdicts
+ * otherwise. */
 int wad_payload_decode_dispatch(const void* header, void* dest); /* FUN_0049c840 */
 
 /* Probe (out_payload NULL) or materialize an expanded payload; answers the
@@ -174,13 +175,13 @@ void* resource_handle_set_slot_peek(int slot);                   /* port hook */
 /* --- the key-group action-code band (2026-10-25) ---------------------------
  * The corpus writers of the DAT_004ddc04 stride-8 band land here: the
  * group register stages each interaction-action group as a heap array of
- * code dwords with the count riding behind it, and the map initializer
+ * code dwords with the count riding behind it — the codes arrive as the
+ * corpus's cdecl varargs (one stack slot each) — and the map initializer
  * registers the fixed eighteen groups. The band word behind each pair is
  * shared with the entity query's id-pair reads and the dispatch's loop
  * bound, so one merged window model (the handle set's) owns it: the
  * install/peek pair below reads and writes that word. */
-void resource_input_key_group_register(int group, int count,
-                                       const uint32_t* values);
+void resource_input_key_group_register(int group, int count, ...);
                                                 /* FUN_0041a7d0 */
 void interaction_action_code_map_initialize(void); /* FUN_0041a660 */
 

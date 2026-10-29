@@ -2756,13 +2756,14 @@ corpus's startup contract). `terrain_object_sfx_grid_config_load` (0x44acc0)
 clears the 300-cell terrain sfx grid, walks the config's `S_ObjTtSFXs` chain,
 and stores each entry's resolved sound alias at `row + type*15`, the (type,
 row) pair coming from the entity name resolver. Quirk pin: the corpus's
-two dead preamble loops initialize the pair to 20/15 and carry it ACROSS
-entries, so a name that writes only its half inherits the other from the
-previous entry (the crystal-on-ore test pins the inheritance); unresolved
+two dead preamble loops initialize the pair to 20/15, but the resolver
+zeroes the row half at its entry — only the type half carries ACROSS
+entries, and only into skipped iterations (the crystal-on-ore test pins
+the entry-zeroed row); unresolved
 names and failed alias lookups store nothing, and negative or out-of-window
 cells are guarded (the corpus strides blindly). `block_test` pins the
-no-free clear and the flag raise; `level_test` pins the stores, the carry,
-and the clear.
+no-free clear and the flag raise; `level_test` pins the stores, the
+entry-zeroed row, and the clear.
 
 **Kind-six random sweep** (2026-10-25): one frontier row lands in
 `cmd.*`. `kind_six_random_sweep_dispatch` (0x40f0e0) subtracts the frame delta

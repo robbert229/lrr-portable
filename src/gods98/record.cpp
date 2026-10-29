@@ -4,6 +4,7 @@
 #include "record.hpp"
 #include "heap.hpp"
 #include "sound.hpp"
+#include "string.hpp"
 #include "view.hpp"
 #include "texture.hpp"
 #include "resource.hpp"
@@ -123,23 +124,27 @@ void velocity_slot_vector_read(const void* record, float out[3],
     }
 }
 
-/* EntityVelocityStateRecordGet (FUN_004712c0) — see record.hpp. The corpus
- * strides the type-keyed sub-record blindly (and walks into the sub-record
- * when the type answers no base at all); the port guards both links. */
+/* EntityVelocityStateRecordGet (FUN_004712c0): the corpus loads the type,
+ * decrements it, then subtracts three for the type-4 arm (`dec eax; je`,
+ * `sub eax,3; je`). Keep the NULL record/link guards pinned by test_record;
+ * direct field loads and the same subtract/compare sequence remove helper
+ * calls and track the corpus's non-NULL path. */
 // FUNCTION: LEGORR 0x004712c0
 void* entity_velocity_state_record_get(const void* record)
 {
     if (record == NULL) {
         return NULL; /* deviation: the corpus strides the record blindly */
     }
-    const uint32_t type = rec_dword(record, 0x00);
-    if (type == 1u) {
-        void* sub = rec_ptr(record, 0x0c);
+    uint32_t type = *(const uint32_t*)record;
+    type -= 1u;
+    if (type == 0u) {
+        void* sub = *(void* const*)((const char*)record + 0x0c);
         return (sub != NULL) ? (void*)((char*)sub + 0x138)
                              : NULL; /* deviation: corpus strides blindly */
     }
-    if (type == 4u) {
-        void* sub = rec_ptr(record, 0x18);
+    type -= 3u;
+    if (type == 0u) {
+        void* sub = *(void* const*)((const char*)record + 0x18);
         return (sub != NULL) ? (void*)((char*)sub + 0xa0)
                              : NULL; /* deviation: corpus strides blindly */
     }
@@ -195,8 +200,10 @@ int category_value_is_neither_zero_nor_fifteen(int value)
     return 0;
 }
 
-/* InterpolatedZWithinBounds (FUN_00471330): corpus order — the
- * interpolation, then `v <= target` and `target - t <= v`. */
+/* InterpolatedZWithinBounds (FUN_00471330): the corpus loads the +8 floats
+ * directly in b, a order, then interpolates before `v <= target` and
+ * `target - t <= v`. Keep rec_float's NULL-to-zero behavior without helper
+ * calls so the native-width loads follow that operand schedule. */
 // FUNCTION: LEGORR 0x00471330
 int interpolated_z_within_bounds(const void* record_a, const void* record_b,
                                  float t, float target, float scale)
@@ -256,8 +263,9 @@ uint32_t task_flag_bit_query(const void* task, uint32_t bit, int suppress)
     return flags & mask;
 }
 
-/* TaskField84GetAndField88Out (FUN_00408360): the pair read, corpus
- * order — the optional +0x88 write happens before the +0x84 answer. */
+/* TaskField84GetAndField88Out (FUN_00408360): after the pinned NULL-task
+ * guard, mirror `test eax,eax; je`, the optional +0x88 load/store, then the
+ * +0x84 answer load. The corpus itself does not guard the task pointer. */
 // FUNCTION: LEGORR 0x00408360
 uint32_t task_field84_get_and_field88_out(const void* task, uint32_t* out88)
 {
@@ -265,9 +273,9 @@ uint32_t task_field84_get_and_field88_out(const void* task, uint32_t* out88)
         return 0u;
     }
     if (out88 != NULL) {
-        *out88 = rec_dword(task, 0x88);
+        *out88 = *(const uint32_t*)((const char*)task + 0x88);
     }
-    return rec_dword(task, 0x84);
+    return *(const uint32_t*)((const char*)task + 0x84);
 }
 
 /* PackedGridCellValueGet (FUN_0040b850, findings 373/451): low nibble
@@ -310,18 +318,22 @@ int model_child_render_eligibility_check(const void* object)
     if (object == NULL) {
         return 0;
     }
-    const uint32_t flags = rec_dword(object, 0x6c);
-    if ((flags & 1u) == 0 && (flags & 0x10000000u) == 0) {
+    const uint32_t flags = *(const uint32_t*)((const char*)object + 0x6c);
+    if ((flags & 1u) == 0u && (flags & 0x10000000u) == 0u) {
         return 1;
     }
     return 0;
 }
 
-/* EntityTypeFlagBit1Get (FUN_0046d330, findings 357/432). */
+/* EntityTypeFlagBit1Get (FUN_0046d330, findings 357/432): the corpus
+ * reads +0x1e8 with one mov, no helper call, so the load is direct. */
 // FUNCTION: LEGORR 0x0046d330
 uint32_t entity_type_flag_bit1_get(const void* record)
 {
-    return (rec_dword(record, 0x1e8) & 0xffu) >> 1 & 1u;
+    if (record == NULL) {
+        return 0u; /* pinned deviation: the corpus loads blindly */
+    }
+    return (*(const uint32_t*)((const char*)record + 0x1e8) & 0xffu) >> 1 & 1u;
 }
 
 /* ------------------------------------------------------------------ *
@@ -375,10 +387,18 @@ uint32_t scene_object_wrapped_pointer_get(const void* wrapped)
     return rec_dword(wrapped, 0);
 }
 
+/* SceneObjectFlagBit3Get (FUN_00473ba0): one corpus mov on +0x14, so the
+ * load is direct. animation_object_visibility_get can hand us a NULL +4
+ * handle through the guarded rec_ptr; NULL answers zero (the corpus
+ * would crash on it). */
 // FUNCTION: LEGORR 0x00473ba0
 uint32_t scene_object_flag_bit3_get(const void* scene_object)
 {
-    return (rec_dword(scene_object, 0x14) & 0xffu) >> 3 & 1u;
+    if (scene_object == NULL) {
+        return 0u; /* pinned deviation: the corpus loads blindly */
+    }
+    return (*(const uint32_t*)((const char*)scene_object + 0x14) & 0xffu)
+           >> 3 & 1u;
 }
 
 // FUNCTION: LEGORR 0x00406980
@@ -430,11 +450,17 @@ uint32_t indexed_record_flag6c_bit0_get(const void* record, int index)
 // FUNCTION: LEGORR 0x00483400
 void* indexed_record_data_address_get(const void* record, int index)
 {
-    char* base = (char*)rec_ptr(record, 0x08);
+    if (record == NULL) {
+        return NULL; /* pinned deviation: the corpus loads blindly */
+    }
+    char* base = (char*)*(void* const*)((const char*)record + 0x08);
     if (base == NULL) {
         return NULL;
     }
-    return (void*)(base + (size_t)((size_t)index * 0x70u + 0x10u));
+    /* Corpus arithmetic: `(index << 3) - index`, then `<< 4` makes
+     * index*0x70 (`shl ecx,3; sub ecx,eax; shl ecx,4`); add +0x10. */
+    const size_t scaled = (((size_t)index << 3) - (size_t)index) << 4;
+    return (void*)(base + scaled + 0x10u);
 }
 
 // FUNCTION: LEGORR 0x00408e10
@@ -479,7 +505,9 @@ uint32_t game_file_system_type_get(const void* handle)
 }
 
 /* IndexedRecordTransformCopyIn (FUN_00483240, findings 372/431): the
- * inline-block copy into the indexed record's data slot. */
+ * inline-block copy into the indexed record's data slot. Deviation: the
+ * corpus strides both links and the copy blindly; the three null answers
+ * are pinned by test_record.cpp, and the helper route scored best. */
 // FUNCTION: LEGORR 0x00483240
 uint32_t indexed_record_transform_copy_in(void* record, int index,
                                           const void* source)
@@ -742,19 +770,20 @@ void indexed_record_field64_set(void* record, int index, uint32_t value)
                      &value, sizeof(value));
 }
 
+/* The corpus reloads the base slot for each store and dereferences it
+ * blindly. The outer NULL guard is retained because test_record pins it. */
 // FUNCTION: LEGORR 0x0040ff70
 void object_vector3_set(void* object_block, float x, float y, float z)
 {
-    void* base = NULL;
     if (object_block == NULL) {
         return; /* deviation: the corpus reads blindly */
     }
+    void* base;
     __builtin_memcpy(&base, (char*)object_block, sizeof(base));
-    if (base == NULL) {
-        return; /* deviation: the corpus dereferences blindly */
-    }
     __builtin_memcpy((char*)base + 0x3c, &x, sizeof(x));
+    __builtin_memcpy(&base, (char*)object_block, sizeof(base));
     __builtin_memcpy((char*)base + 0x40, &y, sizeof(y));
+    __builtin_memcpy(&base, (char*)object_block, sizeof(base));
     __builtin_memcpy((char*)base + 0x44, &z, sizeof(z));
 }
 
@@ -783,15 +812,17 @@ void float_pair_at_offsetc_set_from_uints(void* record, uint32_t x,
     __builtin_memcpy((char*)record + 0x10, &fy, sizeof(fy));
 }
 
+/* The corpus loads +0x820/+0x824 in order and writes both outputs blindly;
+ * only the record-NULL guard remains as a test-pinned deviation. */
 // FUNCTION: LEGORR 0x00485a00
 void object_state_pair_get(const void* record, uint32_t* out_a,
                            uint32_t* out_b)
 {
-    if (record == NULL || out_a == NULL || out_b == NULL) {
-        return; /* deviation: the corpus dereferences blindly */
+    if (record == NULL) {
+        return; /* deviation: the corpus dereferences blindly; test pins this */
     }
-    __builtin_memcpy(out_a, (const char*)record + 0x820, sizeof(*out_a));
-    __builtin_memcpy(out_b, (const char*)record + 0x824, sizeof(*out_b));
+    *out_a = *(const uint32_t*)((const char*)record + 0x820);
+    *out_b = *(const uint32_t*)((const char*)record + 0x824);
 }
 
 /* --- the scene-visibility wrapper band (see record.hpp) ---------------------
@@ -802,6 +833,7 @@ static int s_scene_vis_calls;
 static void* s_scene_vis_last_obj;
 static int s_scene_vis_last_flag;
 
+// FUNCTION: LEGORR 0x00473b40
 static void scene_visibility_hook_call(void* object, int flag)
 {
     ++s_scene_vis_calls;
@@ -838,10 +870,14 @@ static uint32_t s_overlay_cache; /* DAT_0055218c role */
 void graphics_overlay_visibility_set(uint32_t flag)
 {
     if (s_overlay_cache != flag) {
+        /* The corpus commits the cache before testing the requested flag
+         * (0x4634c0, then 0x4634c5) and dispatches separate 1/0 paths. */
         s_overlay_cache = flag;
-        /* corpus: the handle rides the call, flag folded to 1/0. */
-        scene_visibility_hook_call((void*)(uintptr_t)s_overlay_word,
-                                   flag != 0u ? 1 : 0);
+        if (flag != 0u) {
+            scene_visibility_hook_call((void*)(uintptr_t)s_overlay_word, 1);
+        } else {
+            scene_visibility_hook_call((void*)(uintptr_t)s_overlay_word, 0);
+        }
     }
 }
 
@@ -866,14 +902,19 @@ void animation_object_visibility_set(const void* anim, uint32_t flag)
     scene_visibility_hook_call(rec_ptr(anim, 0x04), (int)flag);
 }
 
-/* SceneObjectPairApplyMode (FUN_00408670) — the +4 object, then the +0x7c
- * partner when nonzero. Deviation: the partner test strides a dword in the
- * corpus; the port's widened slot answers through the pointer. */
+/* SceneObjectPairApplyMode (FUN_00408670) — the corpus blindly loads the +4
+ * object and +0x7c partner. Copy native-width port pointer slots inline to
+ * avoid rec_ptr calls; the port retains its widened-slot layout (the corpus
+ * tests a dword at +0x7c). NULL record behavior therefore follows the corpus
+ * and is no longer guarded. */
 // FUNCTION: LEGORR 0x00408670
 void scene_object_pair_apply_mode(const void* record, uint32_t flag)
 {
-    scene_visibility_hook_call(rec_ptr(record, 0x04), (int)flag);
-    void* partner = rec_ptr(record, 0x7c);
+    void* object;
+    __builtin_memcpy(&object, (const char*)record + 0x04, sizeof(object));
+    scene_visibility_hook_call(object, (int)flag);
+    void* partner;
+    __builtin_memcpy(&partner, (const char*)record + 0x7c, sizeof(partner));
     if (partner != NULL) {
         scene_visibility_hook_call(partner, (int)flag);
     }
@@ -926,14 +967,19 @@ static void pair_handle_set_pose(void* h, float x, float y)
     cam_set_facing((CameraHandle*)h, up);
 }
 
-/* SceneObjectPairSetRenderParameters (FUN_004086c0): the pose dispatch's
- * argument block (x, y, 0 / 0, 0, -1) reads as position + constant facing;
- * the partner only when the +0x7c slot is non-NULL. */
+/* SceneObjectPairSetRenderParameters (FUN_004086c0): the corpus blindly
+ * loads the +4 object and +0x7c partner; inline native-width copies match
+ * those loads without rec_ptr calls. The pose dispatch's argument block
+ * (x, y, 0 / 0, 0, -1) reads as position + constant facing; the partner is
+ * used only when the +0x7c slot is non-NULL. */
 // FUNCTION: LEGORR 0x004086c0
 void scene_object_pair_set_render_parameters(void* pair, float x, float y)
 {
-    pair_handle_set_pose(rec_ptr(pair, 0x04), x, y);
-    void* partner = rec_ptr(pair, 0x7c);
+    void* object;
+    __builtin_memcpy(&object, (char*)pair + 0x04, sizeof(object));
+    pair_handle_set_pose(object, x, y);
+    void* partner;
+    __builtin_memcpy(&partner, (char*)pair + 0x7c, sizeof(partner));
     if (partner != NULL) {
         pair_handle_set_pose(partner, x, y);
     }
@@ -985,14 +1031,18 @@ void scene_current_object_set(void* record, void* object)
     }
 }
 
-/* SixResourceSlotsSetState (FUN_0046cfc0) — see record.hpp. */
+/* SixResourceSlotsSetState (FUN_0046cfc0) — see record.hpp. The corpus
+ * walks record+0x10..0x24 with a 6-count dec/jne loop from a lea'd cursor
+ * and loads each slot directly; mirror that shape here. */
 // FUNCTION: LEGORR 0x0046cfc0
 void six_resource_slots_set_state(const void* record, uint32_t flag)
 {
-    for (int i = 0; i < 6; ++i) {
-        void* handle = rec_ptr(record, 0x10 + (size_t)i * sizeof(void*));
+    const void* const* slot =
+        (const void* const*)((const char*)record + 0x10);
+    for (int remaining = 6; remaining != 0; --remaining, ++slot) {
+        const void* handle = *slot;
         if (handle != NULL) {
-            scene_visibility_hook_call(handle, (int)flag);
+            scene_visibility_hook_call((void*)handle, (int)flag);
         }
     }
 }
@@ -1014,11 +1064,14 @@ void ui_record_callback_forward(const void* const* ui_record,
 uint32_t record_flag_bit_test(const void* record, uint32_t bit_index,
                               int reject_masked)
 {
-    const uint32_t bit = 1u << (bit_index & 0x1fu);
+    /* The corpus shifts blind; the x86 shift masks the count to 5 bits. */
+    const uint32_t bit = 1u << bit_index;
     if (reject_masked != 0 && (entity_type_mask_get(record) & bit) != 0u) {
         return 0u;
     }
-    return rec_dword(record, 0x130) & bit;
+    uint32_t flags = 0u;
+    __builtin_memcpy(&flags, (const char*)record + 0x130, sizeof(flags));
+    return flags & bit;
 }
 
 /* ObjectPoolListsFreeAll (FUN_00456c60) — see record.hpp. The corpus reads
@@ -1032,16 +1085,18 @@ void object_pool_lists_free_all(void* pools)
     }
     for (int i = 0; i < 0x37; ++i) {
         const size_t slot = 0x114 + (size_t)i * sizeof(void*);
+        /* The corpus calls the bounds-checked head getter for this read;
+         * that carrier keeps the corpus-layout dword view (stride 4, a
+         * 32-bit answer) and this table is the widened-link native image,
+         * so the native slot is read in place. */
         void* node = NULL;
         __builtin_memcpy(&node, (char*)pools + slot, sizeof node);
         while (node != NULL) {
-            void* next = NULL;
-            __builtin_memcpy(&next, (char*)node + 8, sizeof next);
+            void* next = *(void* const*)((const char*)node + 8);
             engine_heap_free(node);
             node = next;
         }
-        void* zero = NULL;
-        __builtin_memcpy((char*)pools + slot, &zero, sizeof zero);
+        *(void**)((char*)pools + slot) = NULL; /* blind clear */
     }
 }
 
@@ -1111,11 +1166,18 @@ static void menu_resource_entry_release(MenuResourceEntry* entry)
 // FUNCTION: LEGORR 0x004105a0
 char* campaign_level_fallback_label(const char* label)
 {
-    if (label == NULL) return NULL;
-    const size_t length = strlen(label);
-    if (length >= 0x7fffffffU) return NULL;
-    char* copy = (char*)engine_heap_alloc((long)length + 1);
-    if (copy != NULL) memcpy(copy, label, length + 1);
+    if (label == NULL) {
+        return NULL;
+    }
+    /* Corpus strdup idiom: engine_heap_alloc(strlen+1) then the inlined
+     * strcpy intrinsic (rep scas + rep movs). The port's 0x7fffffff
+     * length bound was a deviation — the corpus bounds nothing (audited:
+     * no test and both callers pass ordinary config labels). */
+    char* copy = (char*)engine_heap_alloc((long)strlen(label) + 1);
+    if (copy == NULL) {
+        return NULL;
+    }
+    strcpy(copy, label);
     return copy;
 }
 
@@ -1622,11 +1684,13 @@ int filename_extension_classify(const void* record)
     return 0;
 }
 
+/* The corpus compares names against the .data "Null" literal (objdump-
+ * verified bytes 4E 75 6C 6C 00 at 0x4a23f4); a named const array keeps
+ * the push operand resolvable by Reccmp. */
+// GLOBAL: LEGORR 0x004a23f4
+static const char s_menu_null_label[5] = "Null";
+
 // FUNCTION: LEGORR 0x00413f90
-#if defined(LEGORRR_BACKEND_WINAPI)
-#else
-static const char s_menu_null_label[] = "Null";
-#endif
 #if defined(LEGORRR_BACKEND_WINAPI)
 __declspec(naked) void* menu_item_record_alloc(const char* name,
                                                void** list_head,
@@ -1646,9 +1710,9 @@ __declspec(naked) void* menu_item_record_alloc(const char* name,
         rep stosd
         mov edi, dword ptr [esp + 0x0c]
         push 4
-        push 0x4a23f4
+        push offset s_menu_null_label
         push edi
-        call _strnicmp
+        call strnicmp_lite
         add esp, 0x0c
         test eax, eax
         je item_record_done
@@ -1688,7 +1752,7 @@ void* menu_item_record_alloc(const char* name, void** list_head,
     void* rec = engine_heap_alloc(8 * sizeof(void*));
     if (rec == NULL) return NULL;
     memset(rec, 0, 8 * sizeof(void*));
-    if (name != NULL && menu_ascii_casecmp_n(name, "Null", 4) != 0) {
+    if (name != NULL && menu_ascii_casecmp_n(name, s_menu_null_label, 4) != 0) {
         char* name_copy = campaign_level_fallback_label(name);
         *(void**)((char*)rec + 0x00) = name_copy;
         *(uint32_t*)((char*)rec + 0x04) =
@@ -2077,34 +2141,48 @@ void instance_quad_vertex_data_fill(void* record, int block,
     } while (--n != 0);
 }
 
+/* MeshSegmentVertexFill (FUN_00482620): keep the corpus's blind table and
+ * vertex-buffer accesses, calculate the 0x70 table stride inline, and retain
+ * its bottom-test loop. The disassembly reloads the vertex-buffer slot for
+ * each position/pair group, advances positions by 12 and pairs by 8, and
+ * reloads the same triple pointer at `[esp+0x28]` on every round. */
 // FUNCTION: LEGORR 0x00482620
 void mesh_segment_vertex_fill(void* record, int block, int first_vertex,
                               int count, const float* positions,
                               const uint32_t triple[3],
                               const uint32_t* pairs)
 {
-    char* blk = mesh_block(record, block);
-    char* verts = blk != NULL ? (char*)rec_ptr(blk, 0x0c) : NULL;
-    if (verts == NULL || positions == NULL || count == 0) {
-        return; /* deviation: the corpus strides its windows blindly */
+    const size_t block_offset = (((size_t)block << 3) - (size_t)block) << 4;
+    char* table = (char*)*(void* const*)((char*)record + 0x08);
+    char* blk = table + block_offset;
+    if (count == 0) {
+        return;
     }
-    size_t off = (size_t)((uint32_t)first_vertex << 5);
-    const float* src = positions;
-    int n = count;
+    const uint32_t* src = (const uint32_t*)positions;
+    const uint32_t* pair = pairs;
+    uint32_t vertex_offset = (uint32_t)first_vertex << 5;
+    uint32_t remaining = (uint32_t)count;
     do {
-        char* v = verts + off;
-        __builtin_memcpy(v + 0x00, src, 12);
-        /* Pinned corpus quirk: the triple pointer never advances — the
-         * SAME triple lands on every vertex. */
-        rec_dword_put(v, 0x0c, triple[0]);
-        rec_dword_put(v, 0x10, triple[1]);
-        rec_dword_put(v, 0x14, triple[2]);
-        rec_dword_put(v, 0x18, *pairs);
-        rec_dword_put(v, 0x1c, pairs[1]);
+        char* verts = (char*)*(void* const*)(blk + 0x0c);
+        *(uint32_t*)(verts + vertex_offset + 0x00) = src[0];
+        verts = (char*)*(void* const*)(blk + 0x0c);
+        *(uint32_t*)(verts + vertex_offset + 0x04) = src[1];
+        verts = (char*)*(void* const*)(blk + 0x0c);
+        *(uint32_t*)(verts + vertex_offset + 0x08) = src[2];
+        /* Pinned corpus quirk: the triple pointer never advances. */
+        verts = (char*)*(void* const*)(blk + 0x0c);
+        char* triple_dst = verts + vertex_offset + 0x0c;
+        *(uint32_t*)(triple_dst + 0x00) = triple[0];
+        *(uint32_t*)(triple_dst + 0x04) = triple[1];
+        *(uint32_t*)(triple_dst + 0x08) = triple[2];
+        verts = (char*)*(void* const*)(blk + 0x0c);
+        *(uint32_t*)(verts + vertex_offset + 0x18) = pair[0];
+        verts = (char*)*(void* const*)(blk + 0x0c);
+        *(uint32_t*)(verts + vertex_offset + 0x1c) = pair[1];
         src += 3;
-        pairs += 2;
-        off += 0x20;
-    } while (--n != 0);
+        pair += 2;
+        vertex_offset += 0x20;
+    } while (--remaining != 0u);
 }
 
 // FUNCTION: LEGORR 0x004826c0

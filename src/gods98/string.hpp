@@ -2,12 +2,11 @@
 /* Corpus text primitives (findings 397/12): the string helpers the engine
  * callers use throughout, from the CRT string region.
  *
- * Deviations (documented): the corpus allocates the duplicate through its
- * engine-heap wrapper (TODO(corpus) seam); the port mallocs. The substring
- * scanner's aligned word-at-a-time SWAR scan is a pure speed optimization —
- * the port uses plain byte semantics, identical results. The config path
- * builder writes into a fixed static buffer and stops appending when full,
- * where the corpus copies through the static limit. */
+ * Deviations (documented): the substring scanner's corpus
+ * leading-byte/leading-pair gates and paired tail comparison are reproduced
+ * in plain C — identical results. The config path builder writes
+ * into a fixed static buffer and stops appending when full, where the
+ * corpus copies through the static limit. */
 #ifndef LEGORRR_GODS98_STRING_HPP
 #define LEGORRR_GODS98_STRING_HPP
 
@@ -20,9 +19,10 @@ extern "C" {
 #endif
 
 /* FUN_00477550: NUL copy through the engine heap. The corpus copies
- * strlen+1 bytes via EngineHeapAlloc (TODO(corpus) wrapper — malloc here);
- * NULL on allocation failure (corpus would have asserted in the heap
- * seam). Caller frees. */
+ * strlen+1 bytes via EngineHeapAlloc (the port calls the annotated
+ * engine_heap_alloc carrier); an allocation failure rides blind like the
+ * corpus. NULL only for a NULL source (guarded deviation). Caller frees
+ * through the engine heap. */
 char* string_duplicate(const char* text);
 
 /* FormattedTextBufferBuild (FUN_0048e1e0): format into caller-owned storage
@@ -37,6 +37,14 @@ uint32_t formatted_text_buffer_build(char* out, size_t capacity,
  * word-at-a-time SWAR loop are byte-equivalent strstr behavior; the port
  * calls strstr. */
 const char* string_find_substring(const char* haystack, const char* needle);
+
+/* __strnicmp (FUN_0049dab0): the CRT's bounded case-insensitive compare —
+ * ASCII fold, stops at NUL or the count, answers 0/-1/+1 (the corpus's
+ * sign-normalized result, not the character difference). */
+/* __strcmpi FUN_0048ff10: case-folded strcmp, byte difference (0 on match) */
+int strcasecmp_lite(const char* a, const char* b);
+/* __strnicmp FUN_0049dab0: bounded case-insensitive compare, 0/-1/+1 */
+int strnicmp_lite(const char* a, const char* b, int count);
 
 /* CaseInsensitiveSubstringFind (FUN_00477610): the folded sibling of the
  * plain find — every start position through the corpus's scan bound (the

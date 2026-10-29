@@ -100,21 +100,24 @@ EntitySlot* selection_first(const GameContext* ctx)
 
 /* SelectedEntitiesAnyMatch (FUN_0041f420): the corpus fetches count and
  * array through 0x4525f0/0x4525e0, then returns on the first callback hit.
- * The port threads the owning GameContext instead of relying on a global
- * selection. */
+ * The port routes through selection_count/selection_record_array, whose own
+ * NULL guards cover ctx, and hands each entry to the predicate blind — the
+ * predicates NULL-check it themselves. */
 // FUNCTION: LEGORR 0x0041f420
 int selected_entities_any_match(const GameContext* ctx,
                                 int (*predicate)(EntitySlot*, uint32_t),
                                 uint32_t argument)
 {
-    if (ctx == NULL || predicate == NULL) {
-        return 0;
-    }
-    for (int i = 0; i < ctx->selection_count; ++i) {
-        EntitySlot* const entity = ctx->selection[i];
-        if (entity != NULL && predicate(entity, argument)) {
+    int count = selection_count(ctx);
+    EntitySlot* const* entries = selection_record_array(ctx);
+    unsigned i = 0;
+    EntitySlot* const* p = entries;
+    while (i < (unsigned)count) {
+        if (predicate(*p, argument) != 0) {
             return 1;
         }
+        ++i;
+        ++p;
     }
     return 0;
 }
@@ -246,24 +249,43 @@ int queue_action_request_flag100000(GameContext* ctx)
 }
 
 /* QueueActionRequestPair (FUN_0041f2f0): mode 1 compares both leading
- * entity words with the two request values. */
+ * entity words with the two request values. The corpus at 0x41f2f0 clears
+ * the inactive masks, ORs mode 1 into a zero word, then supplies the pair. */
 // FUNCTION: LEGORR 0x0041F2F0
 int queue_action_request_pair(GameContext* ctx, int entity_type,
                               uint32_t entity_subtype)
 {
-    const EntityActionRequest request = {
-        (uint32_t)entity_type, entity_subtype, 0, 0, 0, 1u
-    };
-    return entity_action_request_find(ctx, &request);
+    EntityActionRequest request;
+    request.subtype = 0u;
+    request.stats_mask = 0u;
+    request.state_mask = 0u;
+    request.flags3f0_mask = 0u;
+    uint32_t mode = 0u;
+    mode |= 1u;
+    request.mode = mode;
+    request.type = (uint32_t)entity_type;
+    request.subtype = entity_subtype;
+    return entity_pool_find_by_callback_filtered(
+        ctx, entity_action_request_matches, &request);
 }
 
 /* QueueActionRequestIndex (FUN_0041f340): mode 2 asks whether any entity
- * has the requested bit in its +0x3f0 flags word. */
+ * has the requested bit in its +0x3f0 flags word. Keep the 0x41f340
+ * zero-mask / zero-word-then-OR setup shared with QueueActionRequestPair. */
 // FUNCTION: LEGORR 0x0041F340
 int queue_action_request_index(GameContext* ctx, uint32_t flags_mask)
 {
-    const EntityActionRequest request = { 0, 0, 0, 0, flags_mask, 2u };
-    return entity_action_request_find(ctx, &request);
+    EntityActionRequest request;
+    request.subtype = 0u;
+    request.stats_mask = 0u;
+    request.state_mask = 0u;
+    request.flags3f0_mask = 0u;
+    uint32_t mode = 0u;
+    mode |= 2u;
+    request.mode = mode;
+    request.flags3f0_mask = flags_mask;
+    return entity_pool_find_by_callback_filtered(
+        ctx, entity_action_request_matches, &request);
 }
 
 /* ObjectInteractionFlagsAllow (FUN_0041f100): flags are checked in the
@@ -987,7 +1009,10 @@ int selection_cmd_move(GameContext* ctx, float tx, float ty)
     }
     int n = 0;
     for (int i = 0; i < ctx->selection_count; ++i) {
-        cmd_produce(5, ctx->selection[i], 0, (int)tx, (int)ty);
+        int pair[2];
+        pair[0] = (int)tx;
+        pair[1] = (int)ty;
+        cmd_produce(5, ctx->selection[i], 0, pair);
         ++n;
     }
     return n;
@@ -996,7 +1021,7 @@ int selection_cmd_move(GameContext* ctx, float tx, float ty)
 void selection_cmd_add(GameContext* ctx, EntitySlot* e)
 {
     if (ctx != NULL && e != NULL) {
-        cmd_produce(8, e, 0, 0, 0);
+        cmd_produce(8, e, 0, NULL);
     }
 }
 
@@ -1094,27 +1119,35 @@ void selection_object_command_update(GameContext* ctx, EntitySlot* entity)
     command_context_post_to_hud(action, NULL);
 }
 
-/* SelectionTargetCommandUpdate (FUN_0041cf20): in modes 10, 11, and 18,
- * match the passed entity's owner against the selection. A matching
- * singleton posts HUD action 12; a matching multi-selection clears it. */
+/* SelectionTargetCommandUpdate (FUN_0041cf20): in modes 10, 18, and 11,
+ * read the selection through the count/array helpers (a NULL context
+ * reads as empty) and match the passed entity's owner against every
+ * entry. A matching singleton posts HUD action 12; a matching
+ * multi-selection clears it. Deviation: a NULL entity faults at the
+ * corpus's blind [entity+0x36c] read. */
 // FUNCTION: LEGORR 0x0041CF20
 void selection_target_command_update(GameContext* ctx, EntitySlot* entity)
 {
     const uint32_t mode = objective_selection_word_peek();
-    if ((mode != 10u && mode != 11u && mode != 18u) || ctx == NULL
-        || entity == NULL || ctx->selection_count <= 0) {
-        return;
-    }
-    const void* const owner = entity->owner_36c;
-    for (int i = 0; i < ctx->selection_count; ++i) {
-        if ((const void*)ctx->selection[i] != owner) {
-            continue;
-        }
-        if (ctx->selection_count == 1) {
-            command_context_post_to_hud(12, NULL);
-        }
-        else {
-            selection_clear_request_and_hud_reset();
+    if (mode == 10u || mode == 18u || mode == 11u) {
+        const int count = selection_count(ctx);
+        EntitySlot* const* records = selection_record_array(ctx);
+        if (count > 0) {
+            EntitySlot* const* p = records;
+            int n = count;
+            do {
+                /* the corpus re-reads [entity+0x36c] on every pass */
+                if (entity->owner_36c == (const void*)*p) {
+                    if (count == 1) {
+                        command_context_post_to_hud(12, NULL);
+                    }
+                    else {
+                        selection_clear_request_and_hud_reset();
+                    }
+                }
+                ++p;
+                --n;
+            } while (n != 0);
         }
     }
 }

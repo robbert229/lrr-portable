@@ -14,6 +14,9 @@
 #include "heap.hpp"
 #include "resource.hpp"
 
+/* FUN_0048d980's port lives in the game utility module. */
+extern "C" float util_atof(const char* s);
+
 typedef struct BlockRec {
     char* name;                 /* token pointer into BlockFile::buffer */
     char* value;                /* NULL = none; container value is "{" */
@@ -326,7 +329,7 @@ BlockRec* block_find(BlockFile* bf, const char* path)
 BlockRec* block_subgroup(BlockFile* bf, const char* path)
 {
     BlockRec* r = block_find(bf, path);
-    if (r != NULL && r->child == NULL) {
+    if (r == NULL || r->child == NULL) {
         return NULL;          /* corpus gate: record.depth < parent.depth */
     }
     return r;
@@ -335,7 +338,6 @@ BlockRec* block_subgroup(BlockFile* bf, const char* path)
 /* --- accessors ------------------------------------------------------------ */
 
 const char* block_name(const BlockRec* r)  { return r ? r->name : NULL; }
-// FUNCTION: LEGORR 0x004790b0
 const char* block_value(const BlockRec* r) { return r ? r->value : NULL; }
 
 BlockRec* block_first_child(const BlockRec* r) { return r ? r->child : NULL; }
@@ -373,10 +375,11 @@ int block_get_str(BlockFile* bf, const char* path, char* buf, size_t sz)
     return 1;
 }
 
+// FUNCTION: LEGORR 0x004790b0
 const char* block_get_strptr(BlockFile* bf, const char* path)
 {
     BlockRec* r = block_find(bf, path);
-    return (r == NULL || r->value == NULL) ? NULL : r->value;
+    return r == NULL ? NULL : r->value;
 }
 
 int block_get_int(BlockFile* bf, const char* path, int dflt)
@@ -430,15 +433,23 @@ int block_get_bool(BlockFile* bf, const char* path)
 const char* registry_path_split(const char* path, char* out)
 {
     if (path == NULL || out == NULL) {
-        return path;
+        return path; /* deviation: pinned by test_block.cpp — corpus strides blind */
     }
+    /* Corpus shape: NUL the destination, seed the character, gate entry on
+     * it, then a do-while whose back edge is the character's own test —
+     * the source advances before the byte is stored. */
     *out = '\0';
     char c = *path;
-    while (c != '\0' && c != '\\') {
-        *out = c;
-        ++out;
-        ++path;
-        c = *path;
+    if (c != '\0') {
+        do {
+            if (c == '\\') {
+                break;
+            }
+            ++path;
+            *out = c;
+            ++out;
+            c = *path;
+        } while (c != '\0');
     }
     if (*path == '\\') {
         ++path;
@@ -456,9 +467,13 @@ const char* registry_path_split(const char* path, char* out)
  * the corpus's second role for that word, crt.cpp's record-list head, is
  * documented aliasing the port does not model across translation units. */
 #define BLOCK_TOKEN_POOL_SLOTS 32
+// GLOBAL: LEGORR 0x00506498
 static void* s_token_pool_slots[BLOCK_TOKEN_POOL_SLOTS];
+// GLOBAL: LEGORR 0x00506518
 static void* s_token_pool_head;      /* DAT_00506518 role: free-list head */
+// GLOBAL: LEGORR 0x00506520
 static int   s_token_pool_resident;  /* _DAT_00506520 role */
+// GLOBAL: LEGORR 0x0050651c
 static int   s_token_pool_watermark; /* DAT_0050651c role: grow counter */
 
 /* BlockTextTokenPoolGrow (FUN_00479490): the watermark counter doubles the
@@ -501,10 +516,17 @@ void block_text_token_pool_grow(void)
 // FUNCTION: LEGORR 0x00478e20
 void block_text_token_pool_destroy(void)
 {
-    for (int i = 0; i < BLOCK_TOKEN_POOL_SLOTS; ++i) {
-        if (s_token_pool_slots[i] != NULL) {
-            engine_heap_free(s_token_pool_slots[i]);
-            s_token_pool_slots[i] = NULL; /* deviation: corpus dangles */
+    /* Corpus walk: the 32-slot window is walked pointer-wise from
+     * DAT_00506498 up to the head cursor word at DAT_00506518
+     * (add esi, 0x4 / cmp esi, 0x506518 / jb), freeing each non-null chunk
+     * and leaving the slot dangling. Plain pointer operands keep that
+     * loop-back unsigned (jb, not jl). */
+    void** slot = s_token_pool_slots;
+    void** end = s_token_pool_slots + BLOCK_TOKEN_POOL_SLOTS;
+    for (; slot < end; ++slot) {
+        if (*slot != NULL) {
+            engine_heap_free(*slot);
+            *slot = NULL; /* deviation: corpus dangles */
         }
     }
     s_token_pool_head = NULL;
@@ -607,13 +629,25 @@ int config_rgb_vector_read(BlockFile* bf, const char* path,
     return 1;
 }
 
-/* ReadAngleSettingRadians (FUN_00479110) — see block.hpp. */
+/* ReadAngleSettingRadians (FUN_00479110): the corpus tests the path getter,
+ * calls it again for a present value, and sends either that string or the
+ * empty literal through FUN_0048d980 before the zero gate and two x87 scales. */
+/* These are the corpus's direct x87 operands in ReadAngleSettingRadians.
+ * PE bytes: 00 00 00 00, 61 0b 36 3b, db 0f c9 40 respectively. */
+// GLOBAL: LEGORR 0x0049e8f8
+static const float s_config_angle_zero = 0.0f;
+// GLOBAL: LEGORR 0x0049e8fc
+static const float s_config_angle_degrees_to_turn = 1.0f / 360.0f;
+// GLOBAL: LEGORR 0x0049e900
+static const float s_config_angle_turn_radians = 6.2831855f;
+
 // FUNCTION: LEGORR 0x00479110
 float config_angle_radians_get(BlockFile* bf, const char* path)
 {
-    const float deg = block_get_float(bf, path, 0.0f);
-    if (deg == 0.0f) {
-        return 0.0f; /* the corpus gates the multiply on value != 0 */
+    const float deg = util_atof(block_get_strptr(bf, path) != NULL
+                                ? block_get_strptr(bf, path) : "");
+    if (deg == s_config_angle_zero) {
+        return s_config_angle_zero; /* the corpus gates the multiply on value != 0 */
     }
-    return deg * (1.0f / 360.0f) * 6.2831855f;
+    return (deg * s_config_angle_degrees_to_turn) * s_config_angle_turn_radians;
 }

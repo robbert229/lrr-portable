@@ -63,7 +63,7 @@ This investigation maps the 83 functions assigned to `runtime-numeric-and-floati
 | `0x004938f0` | `CrtMathExceptionDispatch` | Looks up the registered handler by operation code, builds a callback argument record, clears FPU status as required, invokes the handler, and falls back to CRT error-code state when no handler handles it. | Called by the two math-result handlers; calls `CrtMathExceptionHandlerGet` and `CrtMathErrorCodeSet`. |
 | `0x004939a0` | `CrtMathErrorCodeSet` | Stores `EDOM` (`0x21`) for operation 1 and `ERANGE` (`0x22`) for operation codes 2–3 in CRT `errno` at `DAT_005490d0`. | Used by math exception and numeric conversion paths; see Finding 237 for corroborating file-error assignments. |
 | `0x004939d0` | `CrtMathExceptionHandlerGet` | Searches a fixed table of operation codes and returns the associated registered callback, or null if absent. | Called by `CrtMathExceptionDispatch`. |
-| `0x00493a00` | `CrtMathExceptionCodeFromStatus` | Maps selected x87 status bits to CRT math exception codes, checking overflow/underflow/inexact/invalid-related masks in priority order. | Called by the status-bearing math-result handler. |
+| `0x00493a00` | `CrtMathExceptionCodeFromStatus` | Maps selected x87 status bits to CRT math exception codes in priority order (`0x20`→5, `8`→1, `4`→2, `1`→3); when none match, the shipped instruction returns the status low byte. This last behavior differs from Ghidra's pseudocode, which shifts bit 1 left. | Called by the status-bearing math-result handler. |
 
 ## Floating-point representation and decimal conversion
 
@@ -74,7 +74,7 @@ This investigation maps the 83 functions assigned to `runtime-numeric-and-floati
 | `0x00493ae0` | `DoubleFrexpDecompose` | Produces a normalized significand and writes the corresponding exponent to the output; zero returns exponent 0, and subnormals are shifted until normalized. | Used by `CrtDoubleToIntegerRound`; delegates representation assembly to `DoubleBuildWithExponent`. |
 | `0x00493be0` | `FpuStatusWordGetVariantA` | Returns the current x87 status word. | Used when constructing Windows floating-point exception state. |
 | `0x00493bf0` | `FpuStatusWordGetVariantB` | Returns the current x87 status word, matching the adjacent variant's visible behavior. | Called by exception-record construction after the first status read. |
-| `0x00493c10` | `FpuControlWordUpdateMasked` | Returns the current x87 control word; despite the alias, this body does not update or mask it. | Used by rounding/error handlers to save the current state. Rename is deferred pending broader alias/index reconciliation. |
+| `0x00493c10` | `FpuControlWordUpdateMasked` | Reads the current x87 control word, merges `(value & mask) | (old & ~mask)`, loads the result, and returns the previous signed control word. Ghidra's decompile omits both stack arguments; instruction-level evidence is recorded in Finding 233. | Used by rounding/error handlers to update selected control-word bits. |
 | `0x00493ca0` | `LocaleCharacterMapString` | Selects ANSI or Unicode locale mapping based on runtime capability; if only the wide API works, converts input to wide characters, maps it, converts output back, and frees temporary buffers. | Called by case conversion and locale-aware character helpers. |
 | `0x00497770` | `CrtFpuControlWordUpdate` | Computes a masked/merged control-word value and returns it. It passes the value to `0x00497870`, whose body is an empty return, so no x87 control-word write is visible on this path. | Called by `CrtFpuControlWordUpdateMask`; uses `CrtControlFlagsTranslate`. The no-op callee is also assigned in issue #215. |
 | `0x004977b0` | `CrtFpuControlWordUpdateMask` | Clears mask bit `0x80000` from the second argument, then delegates the update to `CrtFpuControlWordUpdate`. | Called by `__setdefaultprecision`. |
@@ -128,6 +128,5 @@ and the complete built-in table layout remain unresolved.
 
 - Confirm the exact entry/alias relationship for `0x004798a0` and `0x0048e170`; the local entry's body is an LCG step while its corpus name indicates a thunk.
 - The one-operand/two-operand transcendental dispatchers contain unrecovered indirect jump tables. Decode the operation table and document supported operation IDs and result handlers.
-- `0x00493c10` is assigned the alias `FpuControlWordUpdateMasked`, but its body only returns the current x87 control word. Reconcile this misleading alias across the coverage ledger, heading annotations, and dependent findings before renaming.
 - Determine the precise `DAT_005490cc` and `DAT_005490c8` roles, plus the external CRT error-handler contract, from runtime evidence or authoritative CRT matching.
 - Compare the floating-point paths with the shipped executable on boundary inputs (subnormal, signed zero, infinities, signaling/quiet NaNs, and rounding-mode transitions) before turning any suspected issues into correctness claims.
