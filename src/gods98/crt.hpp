@@ -32,6 +32,16 @@ int float_to_long(float value);
 /* FUN_0041f8e0: the callable no-op installed by several engine paths. */
 void noop_callback(void);
 
+/* CRT runtime-error reporting (FUN_004968b0 / FUN_004968f0 / FUN_00499730).
+ * The callback is invoked between the 0xfc and 0xff marker messages when
+ * the CRT's runtime-error reporting gate is enabled. */
+void crt_runtime_error_message_enter_exit(void);
+void crt_runtime_error_message(int error_code);
+int crt_runtime_error_message_box_display(const char* message,
+                                          const char* title,
+                                          unsigned int flags);
+void crt_terminate_handler_invoke_and_abort(void);
+
 /* FUN_0047d3f0: bit count (corpus: clear-lowest-set-bit loop). */
 int bit_count32(uint32_t value);
 
@@ -153,6 +163,23 @@ double crt_math_exception_dispatch(uint32_t error_code, uint32_t operation,
                                    uint32_t result_low,
                                    uint32_t result_high,
                                    uint32_t fpu_control_word);
+double crt_math_exception_handle_single_result(uint32_t operation,
+                                                uint32_t result_low,
+                                                uint32_t result_high,
+                                                uint32_t fpu_control_word);
+void crt_floating_point_exception_raise(uint32_t* record,
+                                       uint32_t* control_word,
+                                       uint8_t exception_flags,
+                                       uint32_t precision,
+                                       const uint32_t* argument,
+                                       uint32_t* result);
+double crt_math_exception_handle_result_with_status(uint32_t status,
+                                                     uint32_t operation,
+                                                     uint32_t argument_low,
+                                                     uint32_t argument_high,
+                                                     uint32_t result_low,
+                                                     uint32_t result_high,
+                                                     uint32_t fpu_control_word);
 
 /* CrtDoubleToIntegerRound (FUN_004935c0): fold exception status into the
  * caller's double result and report whether all status bits were handled. */
@@ -691,7 +718,9 @@ void crt_decimal_digit_sequence_to_extended96(const char* digits, int count,
                                               void* out_extended96);
 /* FUN_00497f40: expand the IEEE double bit pattern into the runtime's
  * 10-byte extended80 representation in a 12-byte temporary. */
-void crt_double_to_extended80(const void* source_double, void* out_extended80);
+void crt_double_to_extended80(void* out_extended80, const void* source_double);
+void crt_extended80_multiply(uint16_t* destination,
+                             const uint16_t* source); /* FUN_0049a540 */
 /* UInt96IncrementAtBit (FUN_00497970): the bit-indexed add. Adds the
  * single-bit mask 1 << (31 - bit % 32) into limb bit / 32 (the corpus's
  * sign-biased index arithmetic reproduced) and propagates the carry toward
@@ -776,6 +805,23 @@ char* crt_string_duplicate(const char* text);
  * pointer array and duplicate each entry through the engine heap. */
 char** crt_environment_array_clone(char** entries);
 
+/* CRT process-environment support (FUN_00495df0 / 00496190 / 0049ae10 /
+ * 0049af20 / 0049af60 / 0049afe0 / 0049b2b0 / 0049b4c0). The environment
+ * block and strings use engine-heap ownership, matching the CRT startup
+ * and _putenv paths. CompareString compatibility returns the Win32 ordering
+ * values 1/2/3, or zero on API failure. */
+void crt_environment_pointer_array_build(void);
+char* crt_environment_block_get(void);
+char* crt_environment_variable_lookup(const char* name);
+int crt_counted_string_compare(const char* left, const char* right, int count);
+int crt_wide_environment_string_list_convert(void);
+int crt_compare_string_compat(uint32_t locale, uint32_t flags,
+                              const char* left, int left_count,
+                              const char* right, int right_count,
+                              uint32_t codepage);
+int crt_put_env_update(char* text, int sync_process);
+int crt_environment_entry_find(const char* name, int name_length);
+
 /* CrtCommandLineArgumentScan (FUN_00495f80): parse argv[0] and the remaining
  * command line. Null output pointers request the sizing pass; counts include
  * the trailing null argv slot and all string terminators. */
@@ -795,16 +841,79 @@ struct CrtDecimalFormatContext {
 };
 void crt_decimal_mantissa_round_and_normalize(char* output, int precision,
                                                CrtDecimalFormatContext* context);
+void crt_extended_float_power_of_ten_scale(uint16_t value[6],
+                                           uint32_t exponent,
+                                           int initialize); /* FUN_0049a800 */
+uint32_t crt_extended_float_to_decimal(uint32_t significand_low,
+                                       uint32_t significand_high,
+                                       uint16_t sign_exponent,
+                                       int precision,
+                                       uint8_t flags,
+                                       uint8_t* output); /* FUN_0049a1b0 */
+CrtDecimalFormatContext* crt_locale_data_get_or_initialize(
+    uint32_t double_low, uint32_t double_high); /* FUN_00497ec0 */
+char* crt_scientific_float_format_append(const uint32_t* value,
+                                         char* output,
+                                         int precision,
+                                         int uppercase); /* FUN_00490400 */
+char* crt_fixed_float_fraction_format(const uint32_t* value,
+                                      char* output,
+                                      uint32_t precision); /* FUN_00490540 */
+void crt_float_decimal_format_prepare(const uint32_t* value,
+                                      char* output,
+                                      int precision,
+                                      int uppercase); /* FUN_00490640 */
+void crt_scientific_float_format_guarded(const uint32_t* value,
+                                         char* output,
+                                         int precision,
+                                         int uppercase); /* FUN_004906f0 */
+void crt_fixed_decimal_format_guarded(const uint32_t* value,
+                                      char* output,
+                                      uint32_t precision); /* FUN_00490720 */
 
 /* CrtCharacterClassFlagTest (FUN_00495db0): test the locale byte flags,
  * then the base CRT character-class flags for the low input byte. */
 uint32_t crt_character_class_flag_test(uint32_t value, uint32_t flags,
                                       uint8_t byte_mask);
 uint32_t crt_is_dbcs_lead_byte(uint32_t value); /* FUN_00495d90 */
+uint32_t crt_character_classify_mask(int value, uint32_t mask); /* FUN_0048f1d0 */
+int crt_get_string_type_a_compat(uint32_t info_type, const char* source,
+                                 int source_count, uint16_t* result,
+                                 uint32_t codepage, uint32_t locale);
+int crt_locale_character_map_string(uint32_t locale, uint32_t flags,
+                                     const char* source, int source_count,
+                                     void* destination,
+                                     int destination_count,
+                                     uint32_t codepage);
+uint32_t crt_multibyte_to_wide_char(uint16_t* output,
+                                    const uint8_t* source,
+                                    uint32_t max_bytes);
+uint32_t crt_character_class_flag8_check(int value);
+int crt_locale_codepage_table_update(int codepage);
+void crt_ansi_codepage_tables_init(void);
+uint32_t crt_character_to_lower_locale(uint32_t value);
 
 /* CrtCodePageLocaleIdLookup (FUN_00496530): map the four CRT DBCS code
  * pages to their Windows locale identifiers, or return zero. */
 uint32_t crt_codepage_locale_id_lookup(uint32_t codepage);
+int crt_codepage_get(int codepage); /* FUN_004964e0 */
+int32_t crt_calendar_fields_to_time_scalar(int year, int month, int day,
+                                            int hour, int minute, int second,
+                                            int daylight_mode); /* FUN_00496f50 */
+void crt_timezone_initialize_once(void); /* FUN_00499860 */
+void crt_timezone_state_init(void); /* FUN_00499880 */
+int crt_daylight_saving_time_check(const int* calendar_fields); /* FUN_00499b30 */
+void crt_daylight_transition_boundary_compute(int is_start,
+                                              int use_nth_weekday,
+                                              uint32_t year,
+                                              int month_index,
+                                              int week,
+                                              int weekday,
+                                              int fixed_day,
+                                              int hour,
+                                              int minute,
+                                              int second,
+                                              int millisecond); /* FUN_00499da0 */
 
 /* CrtCtypeTablesReset (FUN_00496590): clear the active multibyte/code-page
  * state while preserving the base _pctype table and OS-fallback flag. */
@@ -813,6 +922,11 @@ void crt_ctype_tables_reset(void);
 /* CrtMultibyteCharacterSearch (FUN_0049b5b0): find a byte or DBCS pair in
  * a zero-terminated string using the active CRT code-page tables. */
 char* crt_multibyte_character_search(char* text, uint32_t value);
+int crt_parse_signed_decimal(const unsigned char* text); /* FUN_0048dad0 */
+void crt_normalize_decimal_point(char* text); /* FUN_004902b0 */
+char* crt_strchr(char* text, int character); /* FUN_004914a0 */
+char* crt_dbcs_aware_bounded_string_copy(char* dest, const char* src,
+                                         uint32_t count); /* FUN_004976d0 */
 
 /* CrtUnsignedIntegerFormatRadix (FUN_0049dba0): digits least-significant
  * first, then reversed into the buffer; values ≥ 10 fold in through
@@ -880,15 +994,21 @@ uint64_t crt_integer64_multiply(uint32_t lo_a, int32_t hi_a,
 
 /* CrtInteger64Divide / CrtUnsigned64Divide (FUN_0048e9e0 __alldiv /
  * FUN_00498bf0 __aulldiv): the compiler's 64-bit division helpers, both
- * word-pair shaped. The sign-normalizing shift/trial/repair algorithm
- * truncates toward zero throughout, so the port folds it to the int64 /
- * uint64 fold and one division. The unsigned helper leaves division by
- * zero to the native divide fault; the signed helper pins its wrapping
- * INT64_MIN / -1 quotient. */
+ * word-pair shaped. The unsigned x86 path preserves the target's 32-bit
+ * normalization, quotient estimate, and multiply-back correction; the
+ * portable fallback uses equivalent word-pair arithmetic. The signed
+ * helper folds its sign-normalizing algorithm to int64 division and pins
+ * its wrapping INT64_MIN / -1 quotient. Both leave division by zero to the
+ * native divide fault. */
 uint64_t crt_integer64_divide(uint32_t lo_a, uint32_t hi_a,
                               uint32_t lo_b, uint32_t hi_b);
+#if defined(_MSC_VER) && defined(_M_IX86)
+uint64_t __stdcall crt_unsigned64_divide(uint32_t lo_a, uint32_t hi_a,
+                                        uint32_t lo_b, uint32_t hi_b);
+#else
 uint64_t crt_unsigned64_divide(uint32_t lo_a, uint32_t hi_a,
                                uint32_t lo_b, uint32_t hi_b);
+#endif
 
 /* CrtFileDescriptorFlag40Get (FUN_00498b40): answers the corpus CRT table's
  * per-descriptor flag byte bit 0x40 — the byte at block+4 over 32
@@ -902,11 +1022,32 @@ int crt_file_descriptor_handle_get(unsigned fd); /* FUN_004991f0 */
 int crt_file_descriptor_allocate(void); /* FUN_00498fe0 */
 int crt_file_descriptor_set_handle(unsigned fd, int handle); /* FUN_004990a0 */
 int crt_file_descriptor_close_slot(unsigned fd); /* FUN_00499150 */
+int crt_find_handle_close(int handle); /* FUN_0048f950 */
+int crt_file_descriptor_close(unsigned fd); /* FUN_00494d10 */
+int crt_standard_stream_buffer_install(int* stream); /* FUN_004974d0 */
+void crt_stream_buffer_flush_and_release(int installed, int* stream); /* FUN_00497570 */
+void crt_file_descriptor_table_init(void); /* FUN_004965d0 */
+int crt_win32_file_descriptor_read(uint32_t fd, char* buffer, uint32_t count); /* FUN_00497130 */
+uint32_t crt_stream_read_byte(int* stream); /* FUN_00497040 */
+int crt_win32_file_descriptor_open(const char* path, uint32_t flags,
+                                   uint32_t share, uint32_t attributes); /* FUN_00499240 */
 int crt_file_descriptor_flag80_set_or_clear(unsigned fd, int mode);
 void  crt_file_descriptor_flag_block_set(int index, void* block);
 void* crt_file_descriptor_flag_block_peek(int index);
 void  crt_file_descriptor_count_set(int count);
 int   crt_file_descriptor_count_peek(void);
+void crt_win32_error_map_to_errno(uint32_t error); /* FUN_00496ee0 */
+uint32_t crt_win32_file_descriptor_seek(uint32_t fd, int32_t distance,
+                                        uint32_t method); /* FUN_00496c00 */
+int crt_win32_file_descriptor_write(uint32_t fd, char* buffer,
+                                     uint32_t count); /* FUN_00496cc0 */
+uint32_t crt_file_stream_close(uint32_t value, int* stream); /* FUN_004908a0 */
+uint32_t crt_flush_stream_buffer(int* stream); /* FUN_0048fd20 */
+void crt_buffered_character_write(uint32_t value, int* stream, int* written);
+void crt_write_repeated_char(uint32_t value, int count, int* stream,
+                             int* written);
+void crt_write_string_bounded(const char* text, int count, int* stream,
+                              int* written);
 
 /* CrtStreamUngetByte (FUN_00498f50): puts one byte back into the stream's
  * input buffer when its flags permit it; returns the byte or -1. */

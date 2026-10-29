@@ -1,15 +1,28 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 #include <math.h>
+#include <ctype.h>
+#include <errno.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 
 #if defined(LEGORRR_BACKEND_WINAPI)
 #include <windows.h>
+#elif !defined(_MSC_VER)
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <strings.h>
+extern char** environ;
 #endif
 
 #include "crt.hpp"
 #include "heap.hpp"
 #include "string.hpp"
+
+#if defined(_MSC_VER)
+extern "C" void __cdecl _amsg_exit(int);
+#endif
 
 #if defined(_MSC_VER) && (_MSC_VER < 1300)
 #define CRT_U64(value) value##ui64
@@ -30,7 +43,19 @@ double crt_asin(double value)
 // FUNCTION: LEGORR 0x0048e0ad
 double crt_acos_core(double value)
 {
-    return atan2(sqrt((1.0 - value) * (1.0 + value)), value);
+    double root = sqrt((1.0 - value) * (1.0 + value));
+#if defined(_MSC_VER) && defined(_M_IX86)
+    double result;
+    __asm {
+        fld qword ptr [root]
+        fld qword ptr [value]
+        fpatan
+        fstp qword ptr [result]
+    }
+    return result;
+#else
+    return atan2(root, value);
+#endif
 }
 
 /* The 96-bit extended-integer helpers operate on three little-endian DWORDs.
@@ -108,6 +133,221 @@ int float_to_long(float value)
 // FUNCTION: LEGORR 0x0041f8e0
 void noop_callback(void)
 {
+}
+
+/* The executable owns these two runtime-error controls. The callback and
+ * mode word are zero-filled image globals; the separate mode selector has
+ * the image's initialized value 2. */
+// GLOBAL: LEGORR 0x00549124
+static int s_runtime_error_mode;
+// GLOBAL: LEGORR 0x004afd64
+static int s_runtime_error_console_mode = 2;
+// GLOBAL: LEGORR 0x005493d8
+static void (*s_runtime_error_callback)(void);
+// GLOBAL: LEGORR 0x005491a0
+static void (*s_terminate_handler_callback)(void);
+
+// FUNCTION: LEGORR 0x00495ae0
+void crt_terminate_handler_invoke_and_abort(void)
+{
+    if (s_terminate_handler_callback != NULL) {
+        (*s_terminate_handler_callback)();
+    }
+    abort();
+}
+
+typedef struct CrtRuntimeErrorText {
+    int code;
+    const char* text;
+} CrtRuntimeErrorText;
+
+static const CrtRuntimeErrorText s_runtime_error_messages[] = {
+    { 0x02, "R6002\r\n- floating point not loaded\r\n" },
+    { 0x08, "R6008\r\n- not enough space for arguments\r\n" },
+    { 0x09, "R6009\r\n- not enough space for environment\r\n" },
+    { 0x0a, "abnormal program termination\r\n" },
+    { 0x10, "R6016\r\n- not enough space for thread data\r\n" },
+    { 0x11, "R6017\r\n- unexpected multithread lock error\r\n" },
+    { 0x12, "R6018\r\n- unexpected heap error\r\n" },
+    { 0x13, "R6019\r\n- unable to open console device\r\n" },
+    { 0x18, "R6024\r\n- not enough space for _onexit/atexit table\r\n" },
+    { 0x19, "R6025\r\n- pure virtual function call\r\n" },
+    { 0x1a, "R6026\r\n- not enough space for stdio initialization\r\n" },
+    { 0x1b, "R6027\r\n- not enough space for lowio initialization\r\n" },
+    { 0x1c, "R6028\r\n- unable to initialize heap\r\n" },
+    { 0x78, "DOMAIN error\r\n" },
+    { 0x79, "SING error\r\n" },
+    { 0x7a, "TLOSS error\r\n" },
+    { 0xfc, "\r\n" },
+    { 0xff, "runtime error " }
+};
+
+static const char* crt_runtime_error_text_get(int code)
+{
+    unsigned int i;
+    for (i = 0u; i < sizeof(s_runtime_error_messages) /
+                           sizeof(s_runtime_error_messages[0]); ++i) {
+        if (s_runtime_error_messages[i].code == code) {
+            return s_runtime_error_messages[i].text;
+        }
+    }
+    return NULL;
+}
+
+static void crt_runtime_error_buffer_append(char* buffer, unsigned int capacity,
+                                            const char* text)
+{
+    unsigned int used = 0u;
+    if (buffer == NULL || text == NULL || capacity == 0u) {
+        return;
+    }
+    while (used + 1u < capacity && buffer[used] != '\0') {
+        ++used;
+    }
+    while (used + 1u < capacity && *text != '\0') {
+        buffer[used++] = *text++;
+    }
+    buffer[used] = '\0';
+}
+
+static int crt_runtime_error_reporting_enabled(void)
+{
+    return s_runtime_error_mode == 1 ||
+        (s_runtime_error_mode == 0 && s_runtime_error_console_mode == 1);
+}
+
+// FUNCTION: LEGORR 0x004968b0
+void crt_runtime_error_message_enter_exit(void)
+{
+    if (crt_runtime_error_reporting_enabled()) {
+        crt_runtime_error_message(0xfc);
+        if (s_runtime_error_callback != NULL) {
+            (*s_runtime_error_callback)();
+        }
+        crt_runtime_error_message(0xff);
+    }
+}
+
+// FUNCTION: LEGORR 0x004968f0
+void crt_runtime_error_message(int error_code)
+{
+    const char* message = crt_runtime_error_text_get(error_code);
+    if (message == NULL) {
+        return;
+    }
+    if (crt_runtime_error_reporting_enabled()) {
+        int handle = crt_file_descriptor_handle_get(2u);
+        if (handle == -1) {
+#if defined(LEGORRR_BACKEND_WINAPI)
+            HANDLE standard_error = GetStdHandle((DWORD)-12);
+            DWORD written;
+            WriteFile(standard_error, message, (DWORD)strlen(message),
+                      &written, NULL);
+#elif !defined(_MSC_VER)
+            (void)write(2, message, strlen(message));
+#else
+            (void)fputs(message, stderr);
+#endif
+        }
+        else {
+#if defined(LEGORRR_BACKEND_WINAPI)
+            DWORD written;
+            WriteFile((HANDLE)handle, message, (DWORD)strlen(message),
+                      &written, NULL);
+#elif !defined(_MSC_VER)
+            (void)write(handle, message, strlen(message));
+#else
+            (void)fputs(message, stderr);
+#endif
+        }
+        return;
+    }
+    if (error_code != 0xfc) {
+        char module_name[260];
+        char dialog[512];
+        module_name[0] = '\0';
+#if defined(LEGORRR_BACKEND_WINAPI)
+        if (GetModuleFileNameA(NULL, module_name, sizeof(module_name)) == 0u) {
+            strcpy(module_name, "<program name unknown>");
+        }
+#elif !defined(_MSC_VER)
+        {
+            ssize_t count = readlink("/proc/self/exe", module_name,
+                                     sizeof(module_name) - 1u);
+            if (count < 0) {
+                strcpy(module_name, "<program name unknown>");
+            }
+            else {
+                module_name[count] = '\0';
+            }
+        }
+#else
+        strcpy(module_name, "<program name unknown>");
+#endif
+        if (strlen(module_name) > 60u) {
+            memmove(module_name + 3, module_name + strlen(module_name) - 57u,
+                    58u);
+            module_name[0] = '.';
+            module_name[1] = '.';
+            module_name[2] = '.';
+        }
+        dialog[0] = '\0';
+        crt_runtime_error_buffer_append(dialog, sizeof(dialog),
+                                        "Runtime Error!\n\nProgram: ");
+        crt_runtime_error_buffer_append(dialog, sizeof(dialog), module_name);
+        crt_runtime_error_buffer_append(dialog, sizeof(dialog), "\n\n");
+        crt_runtime_error_buffer_append(dialog, sizeof(dialog), message);
+        (void)crt_runtime_error_message_box_display(
+            dialog, "Microsoft Visual C++ Runtime Library", 0u);
+    }
+}
+
+// GLOBAL: LEGORR 0x00549428
+static void* s_runtime_message_box_proc;
+// GLOBAL: LEGORR 0x0054942c
+static void* s_runtime_active_window_proc;
+// GLOBAL: LEGORR 0x00549430
+static void* s_runtime_last_popup_proc;
+
+// FUNCTION: LEGORR 0x00499730
+int crt_runtime_error_message_box_display(const char* message,
+                                          const char* title,
+                                          unsigned int flags)
+{
+#if defined(LEGORRR_BACKEND_WINAPI)
+    typedef int (WINAPI *CrtMessageBoxAProc)(HWND, LPCSTR, LPCSTR, UINT);
+    typedef HWND (WINAPI *CrtGetActiveWindowProc)(void);
+    typedef HWND (WINAPI *CrtGetLastActivePopupProc)(HWND);
+    HMODULE module;
+    HWND owner = NULL;
+    if (s_runtime_message_box_proc == NULL) {
+        module = LoadLibraryA("user32.dll");
+        if (module == NULL) {
+            return 0;
+        }
+        s_runtime_message_box_proc = (void*)GetProcAddress(module, "MessageBoxA");
+        if (s_runtime_message_box_proc == NULL) {
+            return 0;
+        }
+        s_runtime_active_window_proc =
+            (void*)GetProcAddress(module, "GetActiveWindow");
+        s_runtime_last_popup_proc =
+            (void*)GetProcAddress(module, "GetLastActivePopup");
+    }
+    if (s_runtime_active_window_proc != NULL) {
+        owner = ((CrtGetActiveWindowProc)s_runtime_active_window_proc)();
+    }
+    if (owner != NULL && s_runtime_last_popup_proc != NULL) {
+        owner = ((CrtGetLastActivePopupProc)s_runtime_last_popup_proc)(owner);
+    }
+    return ((CrtMessageBoxAProc)s_runtime_message_box_proc)(
+        owner, message, title, (UINT)flags);
+#else
+    (void)message;
+    (void)title;
+    (void)flags;
+    return 0;
+#endif
 }
 
 /* FUN_0047d3f0: popcount via the clear-lowest-set-bit loop. */
@@ -353,6 +593,38 @@ double x87_round_to_integral(double value)
 #endif
 }
 
+/* CrtRoundToIntegralWithMathErrorHandling reads the active x87 control word
+ * before deciding whether FRNDINT raised an unmasked precision exception. */
+static uint32_t crt_fpu_control_word_get(void)
+{
+    unsigned short control = 0x037fu;
+#if defined(_MSC_VER) && defined(_M_IX86)
+    __asm { fnstcw control }
+#elif defined(__i386__) || defined(__x86_64__)
+    __asm__ __volatile__("fnstcw %0" : "=m"(control));
+#endif
+    return (uint32_t)control;
+}
+
+static int crt_double_classify_words(uint32_t low, uint32_t high)
+{
+    uint32_t exponent_and_quiet = (high >> 16) & 0x7ff8u;
+    if (high == 0x7ff00000u && low == 0u) {
+        return 1;
+    }
+    if (high == 0xfff00000u && low == 0u) {
+        return 2;
+    }
+    if (exponent_and_quiet == 0x7ff8u) {
+        return 3;
+    }
+    if (exponent_and_quiet == 0x7ff0u &&
+        ((high & 0x000fffffu) != 0u || low != 0u)) {
+        return 4;
+    }
+    return 0;
+}
+
 /* CrtMathDispatchTableInitialize (FUN_0048d940): the six consecutive
  * callback slots contain the CRT fatal handler until startup replaces them
  * with the formatting and decimal-point routines below. Keep the image
@@ -398,7 +670,40 @@ void crt_math_intrinsic_dispatch(void)
 // FUNCTION: LEGORR 0x0048e280
 double crt_round_to_integral_with_math_error_handling(double value)
 {
-    return x87_round_to_integral(value);
+    union {
+        double value;
+        uint64_t bits;
+    } input, rounded;
+    uint32_t control = crt_fpu_control_word_get();
+    uint32_t words[2];
+    int classification;
+
+    input.value = value;
+    words[0] = (uint32_t)input.bits;
+    words[1] = (uint32_t)(input.bits >> 32);
+    if (((words[1] >> 20) & 0x7ffu) != 0x7ffu) {
+        rounded.value = x87_round_to_integral(value);
+        if (rounded.bits != input.bits && (control & 0x20u) == 0u) {
+            return crt_math_exception_handle_result_with_status(
+                0x10u, 0x0bu, words[0], words[1],
+                (uint32_t)rounded.bits, (uint32_t)(rounded.bits >> 32),
+                control);
+        }
+        return rounded.value;
+    }
+
+    classification = crt_double_classify_words(words[0], words[1]);
+    if (classification == 1 || classification == 2) {
+        return value;
+    }
+    if (classification == 3) {
+        return crt_math_exception_handle_single_result(
+            0x0bu, words[0], words[1], control);
+    }
+    rounded.value = value + 1.0;
+    return crt_math_exception_handle_result_with_status(
+        8u, 0x0bu, words[0], words[1],
+        (uint32_t)rounded.bits, (uint32_t)(rounded.bits >> 32), control);
 }
 
 /* CrtRoundToIntegralWithMathErrorHandlingVariant (FUN_0048e8e0) has the
@@ -408,21 +713,80 @@ double crt_round_to_integral_with_math_error_handling(double value)
 // FUNCTION: LEGORR 0x0048e8e0
 double crt_round_to_integral_with_math_error_handling_variant(double value)
 {
-    return x87_round_to_integral(value);
+    union {
+        double value;
+        uint64_t bits;
+    } input, rounded;
+    uint32_t control = crt_fpu_control_word_get();
+    uint32_t words[2];
+    int classification;
+
+    input.value = value;
+    words[0] = (uint32_t)input.bits;
+    words[1] = (uint32_t)(input.bits >> 32);
+    if (((words[1] >> 20) & 0x7ffu) != 0x7ffu) {
+        rounded.value = x87_round_to_integral(value);
+        if (rounded.bits != input.bits && (control & 0x20u) == 0u) {
+            return crt_math_exception_handle_result_with_status(
+                0x10u, 0x0cu, words[0], words[1],
+                (uint32_t)rounded.bits, (uint32_t)(rounded.bits >> 32),
+                control);
+        }
+        return rounded.value;
+    }
+
+    classification = crt_double_classify_words(words[0], words[1]);
+    if (classification == 1 || classification == 2) {
+        return value;
+    }
+    if (classification == 3) {
+        return crt_math_exception_handle_single_result(
+            0x0cu, words[0], words[1], control);
+    }
+    rounded.value = value + 1.0;
+    return crt_math_exception_handle_result_with_status(
+        8u, 0x0cu, words[0], words[1],
+        (uint32_t)rounded.bits, (uint32_t)(rounded.bits >> 32), control);
 }
 
-/* CrtDoubleAbsoluteValue (FUN_0048e680): clearing only the sign bit
- * reproduces the ordinary finite and infinity result without introducing
- * a host libm NaN policy. The CRT's quiet/signaling-NaN branches call its
- * exception handlers, which are not yet available in this port. */
+/* CrtDoubleAbsoluteValue (FUN_0048e680): the finite lane uses ABS, while
+ * infinities are classified explicitly. Quiet/signaling NaNs still use the
+ * sign-clearing result because their CRT math-error dispatch is unported. */
 // FUNCTION: LEGORR 0x0048e680
 double crt_double_absolute_value(double value)
 {
+    uint32_t words[2];
     uint32_t high_word;
-    memcpy(&high_word, ((char*)&value) + 4, sizeof(high_word));
-    high_word &= 0x7fffffffu;
-    memcpy(((char*)&value) + 4, &high_word, sizeof(high_word));
-    return value;
+    int classification;
+
+    memcpy(words, &value, sizeof(words));
+    high_word = words[1];
+    if (((high_word >> 16) & 0x7ff0u) != 0x7ff0u) {
+        return fabs(value);
+    }
+    classification = crt_double_classify_words(words[0], words[1]);
+    if (classification == 1) {
+        return value;
+    }
+    if (classification == 2) {
+        return -value;
+    }
+
+    if (classification == 3) {
+        return crt_math_exception_handle_single_result(
+            0x15u, words[0], words[1], crt_fpu_control_word_get());
+    }
+    {
+        union {
+            double value;
+            uint64_t bits;
+        } result;
+        result.value = value + 1.0;
+        return crt_math_exception_handle_result_with_status(
+            8u, 0x15u, words[0], words[1],
+            (uint32_t)result.bits, (uint32_t)(result.bits >> 32),
+            crt_fpu_control_word_get());
+    }
 }
 
 /* CrtRunCallbackArray (FUN_0048e5a0): invoke each nonnull callback in the
@@ -2193,6 +2557,8 @@ void string_prefix_reserve(char* s, int count)
  * unowned: zero-init hooked static. */
 // GLOBAL: LEGORR 0x005493e4
 static long s_stream_alloc_count;
+// GLOBAL: LEGORR 0x005493e8
+static void* s_standard_stream_buffers[2];
 
 long stream_allocation_count_peek(void) { return s_stream_alloc_count; }
 void stream_allocation_count_reset(void) { s_stream_alloc_count = 0; }
@@ -2204,7 +2570,6 @@ void crt_stream_buffer_allocate(char* record)
     const long field = (long)sizeof(void*);
     void* buffer = engine_heap_alloc(0x1000);
     void* zero = NULL;
-    uint32_t flags;
     ++s_stream_alloc_count;
     __builtin_memcpy(record + 2 * field, &buffer, sizeof buffer);
     __builtin_memcpy(&flags, record + 3 * field, sizeof flags);
@@ -2347,7 +2712,7 @@ void crt_decimal_digit_sequence_to_extended96(const char* digits, int count,
 }
 
 // FUNCTION: LEGORR 0x00497f40
-void crt_double_to_extended80(const void* source_double, void* out_extended80)
+void crt_double_to_extended80(void* out_extended80, const void* source_double)
 {
     const uint32_t* source = (const uint32_t*)source_double;
     uint32_t* destination = (uint32_t*)out_extended80;
@@ -2389,6 +2754,168 @@ void crt_double_to_extended80(const void* source_double, void* out_extended80)
     }
     *(uint16_t*)(destination + 2) =
         (uint16_t)(extended_exponent | (source_high & 0x8000u));
+}
+
+// FUNCTION: LEGORR 0x0049a540
+void crt_extended80_multiply(uint16_t* destination, const uint16_t* source)
+{
+    uint16_t left[5];
+    uint16_t right[5];
+    uint16_t accumulator[6];
+    uint16_t left_exponent;
+    uint16_t right_exponent;
+    uint16_t exponent;
+    uint16_t sign;
+    uint32_t sticky;
+    uint32_t i;
+    uint32_t j;
+
+    for (i = 0; i < 5u; ++i) {
+        left[i] = destination[i];
+        right[i] = source[i];
+    }
+    for (i = 0; i < 6u; ++i) {
+        accumulator[i] = 0u;
+    }
+    sticky = 0u;
+    left_exponent = destination[5] & 0x7fffu;
+    right_exponent = source[5] & 0x7fffu;
+    sign = (uint16_t)((destination[5] ^ source[5]) & 0x8000u);
+    exponent = (uint16_t)(left_exponent + right_exponent);
+
+    if (left_exponent > 0x7ffeu || right_exponent > 0x7ffeu ||
+        exponent > 0xbffdu) {
+        destination[0] = 0u;
+        destination[1] = 0u;
+        destination[2] = 0u;
+        destination[3] = 0u;
+        destination[4] = 0x8000u;
+        destination[5] = (uint16_t)(0x7fffu | sign);
+        return;
+    }
+    if (exponent < 0x3fc0u) {
+        for (i = 0; i < 6u; ++i) {
+            destination[i] = 0u;
+        }
+        return;
+    }
+    if (left_exponent == 0u && left[0] == 0u && left[1] == 0u &&
+        left[2] == 0u && left[3] == 0u && left[4] == 0u) {
+        destination[5] = 0u;
+        return;
+    }
+    if (right_exponent == 0u && right[0] == 0u && right[1] == 0u &&
+        right[2] == 0u && right[3] == 0u && right[4] == 0u) {
+        for (i = 0; i < 6u; ++i) {
+            destination[i] = 0u;
+        }
+        return;
+    }
+
+    for (i = 0; i < 5u; ++i) {
+        for (j = 0; j < 5u - i; ++j) {
+            uint32_t pair;
+            uint32_t product;
+            uint32_t sum;
+            uint32_t carry;
+
+            product = (uint32_t)left[i + j] * (uint32_t)right[4u - j];
+            pair = (uint32_t)accumulator[i] |
+                   ((uint32_t)accumulator[i + 1u] << 16);
+            carry = (uint32_t)crt_unsigned_add_with_carry(pair, product, &sum);
+            accumulator[i] = (uint16_t)sum;
+            accumulator[i + 1u] = (uint16_t)(sum >> 16);
+            if (carry != 0u) {
+                if (i == 4u) {
+                    ++sticky;
+                }
+                else {
+                    accumulator[i + 2u] =
+                        (uint16_t)(accumulator[i + 2u] + 1u);
+                }
+            }
+        }
+    }
+
+    exponent = (uint16_t)(exponent + 0xc002u);
+    while ((int16_t)exponent > 0 && (accumulator[5] & 0x8000u) == 0u) {
+        uint32_t limbs[3];
+        limbs[0] = (uint32_t)accumulator[0] |
+                   ((uint32_t)accumulator[1] << 16);
+        limbs[1] = (uint32_t)accumulator[2] |
+                   ((uint32_t)accumulator[3] << 16);
+        limbs[2] = (uint32_t)accumulator[4] |
+                   ((uint32_t)accumulator[5] << 16);
+        extended_float96_bit_shift_left_one(limbs);
+        accumulator[0] = (uint16_t)limbs[0];
+        accumulator[1] = (uint16_t)(limbs[0] >> 16);
+        accumulator[2] = (uint16_t)limbs[1];
+        accumulator[3] = (uint16_t)(limbs[1] >> 16);
+        accumulator[4] = (uint16_t)limbs[2];
+        accumulator[5] = (uint16_t)(limbs[2] >> 16);
+        exponent = (uint16_t)(exponent - 1u);
+    }
+    if ((int16_t)exponent < 1) {
+        int shifts;
+        exponent = (uint16_t)(exponent - 1u);
+        if ((int16_t)exponent < 0) {
+            shifts = -(int16_t)exponent;
+            exponent = (uint16_t)(exponent + (int16_t)shifts);
+            while (shifts != 0) {
+                uint32_t limbs[3];
+                if ((accumulator[0] & 1u) != 0u) {
+                    ++sticky;
+                }
+                limbs[0] = (uint32_t)accumulator[0] |
+                           ((uint32_t)accumulator[1] << 16);
+                limbs[1] = (uint32_t)accumulator[2] |
+                           ((uint32_t)accumulator[3] << 16);
+                limbs[2] = (uint32_t)accumulator[4] |
+                           ((uint32_t)accumulator[5] << 16);
+                extended_float96_bit_shift_right_one(limbs);
+                accumulator[0] = (uint16_t)limbs[0];
+                accumulator[1] = (uint16_t)(limbs[0] >> 16);
+                accumulator[2] = (uint16_t)limbs[1];
+                accumulator[3] = (uint16_t)(limbs[1] >> 16);
+                accumulator[4] = (uint16_t)limbs[2];
+                accumulator[5] = (uint16_t)(limbs[2] >> 16);
+                --shifts;
+            }
+        }
+        if (sticky != 0u) {
+            accumulator[0] = (uint16_t)(accumulator[0] | 1u);
+        }
+    }
+
+    if (accumulator[0] > 0x8000u ||
+        (((uint32_t)accumulator[0] |
+          ((uint32_t)accumulator[1] << 16)) & 0x1ffffu) == 0x18000u) {
+        i = 1u;
+        while (i < 6u) {
+            accumulator[i] = (uint16_t)(accumulator[i] + 1u);
+            if (accumulator[i] != 0u) {
+                break;
+            }
+            ++i;
+        }
+        if (i == 6u) {
+            accumulator[5] = 0x8000u;
+            exponent = (uint16_t)(exponent + 1u);
+        }
+    }
+    if (exponent > 0x7ffeu) {
+        destination[0] = 0u;
+        destination[1] = 0u;
+        destination[2] = 0u;
+        destination[3] = 0u;
+        destination[4] = 0x8000u;
+        destination[5] = (uint16_t)(0x7fffu | sign);
+        return;
+    }
+    for (i = 0; i < 5u; ++i) {
+        destination[i] = accumulator[i + 1u];
+    }
+    destination[5] = (uint16_t)(exponent | sign);
 }
 
 /* UInt96IncrementAtBit (FUN_00497970) — see crt.hpp. The carry walks DOWN
@@ -2484,13 +3011,7 @@ uint32_t crt_uint96_has_no_bits_at_or_above(const uint32_t limbs[3], int bit)
 // FUNCTION: LEGORR 0x004979e0
 uint32_t crt_uint96_clear_from_bit(uint32_t limbs[3], int bit)
 {
-    if (limbs == NULL) {
-        return 0u; /* deviation: the corpus strides the limbs blindly */
-    }
     const int limb = (bit + (int)((bit >> 31) & 0x1fu)) >> 5;
-    if (limb < 0 || limb > 2) {
-        return 0u; /* deviation: the corpus strides the limbs blindly */
-    }
     const unsigned char b = (unsigned char)(bit >> 31);
     int idx = ((((unsigned char)bit ^ b) - b) & 0x1f) ^ b;
     idx = (idx - b) & 0x1f;
@@ -2867,8 +3388,8 @@ static uint32_t s_crt_locale_handle; /* DAT_00549180: zero-init locale handle */
 // FUNCTION: LEGORR 0x0049dcd0
 char* crt_string_to_upper(char* text)
 {
+    char* original = text;
     if (s_crt_locale_handle == 0u) {
-        char* original = text;
         if (*text != '\0') {
             do {
                 char* next = text + 1;
@@ -2880,14 +3401,30 @@ char* crt_string_to_upper(char* text)
             return original;
         }
     }
-    return text;
+    else {
+        int mapped_count = crt_locale_character_map_string(
+            s_crt_locale_handle, 0x200u, text, -1, NULL, 0, 0u);
+        if (mapped_count != 0) {
+            char* mapped = (char*)engine_heap_alloc((long)mapped_count);
+            if (mapped != NULL) {
+                if (crt_locale_character_map_string(
+                        s_crt_locale_handle, 0x200u, text, -1,
+                        mapped, mapped_count, 0u) != 0) {
+                    size_t copy_count = strlen(mapped) + 1u;
+                    memcpy(text, mapped, copy_count);
+                }
+                engine_heap_free(mapped);
+            }
+        }
+    }
+    return original;
 }
 
 // FUNCTION: LEGORR 0x0049dc10
 char* crt_string_to_lower(char* text)
 {
+    char* original = text;
     if (s_crt_locale_handle == 0u) {
-        char* original = text;
         if (*text != '\0') {
             do {
                 char* next = text + 1;
@@ -2899,7 +3436,23 @@ char* crt_string_to_lower(char* text)
             return original;
         }
     }
-    return text;
+    else {
+        int mapped_count = crt_locale_character_map_string(
+            s_crt_locale_handle, 0x100u, text, -1, NULL, 0, 0u);
+        if (mapped_count != 0) {
+            char* mapped = (char*)engine_heap_alloc((long)mapped_count);
+            if (mapped != NULL) {
+                if (crt_locale_character_map_string(
+                        s_crt_locale_handle, 0x100u, text, -1,
+                        mapped, mapped_count, 0u) != 0) {
+                    size_t copy_count = strlen(mapped) + 1u;
+                    memcpy(text, mapped, copy_count);
+                }
+                engine_heap_free(mapped);
+            }
+        }
+    }
+    return original;
 }
 
 /* --- math error band (2026-10-25) -------------------------------------------
@@ -2909,6 +3462,8 @@ char* crt_string_to_lower(char* text)
 static uint32_t s_math_error_code; /* _DAT_005490d0 role */
 // GLOBAL: LEGORR 0x005490d4
 static uint32_t s_win32_error_code; /* DAT_005490d4 role */
+// GLOBAL: LEGORR 0x004b28e0
+static uint32_t s_math_exception_mode[4] = { 0x2694u, 0u, 0u, 0u };
 
 // FUNCTION: LEGORR 0x004939a0
 void crt_math_error_code_set(int param)
@@ -2957,6 +3512,32 @@ int fpu_status_word_get_variant_b(void)
 }
 
 // FUNCTION: LEGORR 0x00493c10
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) int fpu_control_word_update_masked(uint32_t value,
+                                                     uint32_t mask)
+{
+    __asm {
+        push ebp
+        mov ebp, esp
+        push ecx
+        fnstcw word ptr [ebp - 4]
+        mov eax, dword ptr [ebp + 0ch]
+        mov ecx, dword ptr [ebp + 8]
+        mov edx, eax
+        and edx, ecx
+        mov ecx, dword ptr [ebp - 4]
+        not eax
+        and eax, ecx
+        or edx, eax
+        mov dword ptr [ebp + 0ch], edx
+        fldcw word ptr [ebp + 0ch]
+        movsx eax, cx
+        mov esp, ebp
+        pop ebp
+        ret
+    }
+}
+#else
 int fpu_control_word_update_masked(uint32_t value, uint32_t mask)
 {
     unsigned short old_word = 0;
@@ -2975,6 +3556,7 @@ int fpu_control_word_update_masked(uint32_t value, uint32_t mask)
 #endif
     return (int)(short)old_word;
 }
+#endif
 
 /* CrtMathExceptionCodeFromStatus (FUN_00493a00) — see crt.hpp. The priority
  * arms follow the decompile; the final raw low-byte return follows the
@@ -3176,7 +3758,7 @@ uint64_t crt_integer64_divide(uint32_t lo_a, uint32_t hi_a,
         uint32_t product_lo;
         uint32_t product_overflow;
 
-        while (shifted_divisor_hi != 0) {
+        do {
             uint32_t divisor_carry = shifted_divisor_hi & 1;
             uint32_t dividend_carry = shifted_dividend_hi & 1;
             shifted_divisor_hi >>= 1;
@@ -3185,7 +3767,7 @@ uint64_t crt_integer64_divide(uint32_t lo_a, uint32_t hi_a,
             shifted_dividend_hi >>= 1;
             shifted_dividend_lo = (shifted_dividend_lo >> 1)
                                 | (dividend_carry << 31);
-        }
+        } while (shifted_divisor_hi != 0);
 
         trial_quotient = (uint32_t)((((uint64_t)shifted_dividend_hi << 32)
                                     | shifted_dividend_lo)
@@ -3215,13 +3797,136 @@ uint64_t crt_integer64_divide(uint32_t lo_a, uint32_t hi_a,
  * the high half of the answer is pinned zero only when the repair needs
  * it (the estimate can overflow the 32-bit trial), never by construction. */
 // FUNCTION: LEGORR 0x00498bf0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) uint64_t __stdcall crt_unsigned64_divide(
+    uint32_t lo_a, uint32_t hi_a, uint32_t lo_b, uint32_t hi_b)
+{
+    __asm {
+        push ebx
+        push esi
+        mov eax, dword ptr [esp + 18h]
+        or eax, eax
+        jne divide_wide
+        mov ecx, dword ptr [esp + 14h]
+        mov eax, dword ptr [esp + 10h]
+        xor edx, edx
+        div ecx
+        mov ebx, eax
+        mov eax, dword ptr [esp + 0ch]
+        div ecx
+        mov edx, ebx
+        jmp divide_return
+
+    divide_wide:
+        mov ecx, dword ptr [esp + 14h]
+        mov ebx, dword ptr [esp + 18h]
+        mov edx, dword ptr [esp + 10h]
+        mov eax, dword ptr [esp + 0ch]
+    divide_normalize:
+        shr ecx, 1
+        rcr ebx, 1
+        shr edx, 1
+        rcr eax, 1
+        or ecx, ecx
+        jne divide_normalize
+        div ebx
+        mov esi, eax
+        mul dword ptr [esp + 18h]
+        mov ecx, eax
+        mov eax, dword ptr [esp + 14h]
+        mul esi
+        add edx, ecx
+        jb divide_adjust
+        cmp edx, dword ptr [esp + 10h]
+        ja divide_adjust
+        jb divide_no_adjust
+        cmp eax, dword ptr [esp + 0ch]
+        jbe divide_no_adjust
+    divide_adjust:
+        dec esi
+    divide_no_adjust:
+        xor edx, edx
+        mov eax, esi
+    divide_return:
+        pop esi
+        pop ebx
+        ret 10h
+    }
+}
+#else
 uint64_t crt_unsigned64_divide(uint32_t lo_a, uint32_t hi_a,
                               uint32_t lo_b, uint32_t hi_b)
 {
-    const uint64_t n = ((uint64_t)hi_a << 32) | lo_a;
-    const uint64_t d = ((uint64_t)hi_b << 32) | lo_b;
-    return n / d;
+    uint32_t quotient_low;
+    uint32_t quotient_high;
+    uint32_t remainder;
+    uint32_t shifted_dividend_low;
+    uint32_t shifted_dividend_high;
+    uint32_t shifted_divisor_low;
+    uint32_t shifted_divisor_high;
+    uint32_t trial_quotient;
+    uint32_t product_low;
+    uint32_t product_high;
+    uint32_t product_overflow;
+    uint64_t trial_product;
+
+    if (hi_b == 0u) {
+        quotient_high = hi_a / lo_b;
+        remainder = hi_a % lo_b;
+#if defined(_MSC_VER) && defined(_M_IX86)
+        __asm {
+            mov eax, lo_a
+            mov edx, remainder
+            div lo_b
+            mov quotient_low, eax
+        }
+#else
+        quotient_low = (uint32_t)((((uint64_t)remainder << 32) | lo_a)
+                                  / lo_b);
+#endif
+    }
+    else {
+        shifted_dividend_low = lo_a;
+        shifted_dividend_high = hi_a;
+        shifted_divisor_low = lo_b;
+        shifted_divisor_high = hi_b;
+        do {
+            uint32_t divisor_carry = shifted_divisor_high & 1u;
+            uint32_t dividend_carry = shifted_dividend_high & 1u;
+            shifted_divisor_high >>= 1;
+            shifted_divisor_low = (shifted_divisor_low >> 1) |
+                                  (divisor_carry << 31);
+            shifted_dividend_high >>= 1;
+            shifted_dividend_low = (shifted_dividend_low >> 1) |
+                                   (dividend_carry << 31);
+        } while (shifted_divisor_high != 0u);
+#if defined(_MSC_VER) && defined(_M_IX86)
+        __asm {
+            mov eax, shifted_dividend_low
+            mov edx, shifted_dividend_high
+            div shifted_divisor_low
+            mov trial_quotient, eax
+        }
+#else
+        trial_quotient = (uint32_t)((((uint64_t)shifted_dividend_high << 32) |
+                                     shifted_dividend_low) /
+                                    shifted_divisor_low);
+#endif
+        trial_product = (uint64_t)lo_b * trial_quotient;
+        product_low = (uint32_t)trial_product;
+        product_high = (uint32_t)(trial_product >> 32);
+        product_overflow = product_high + trial_quotient * hi_b;
+        if (product_overflow < product_high || hi_a < product_overflow ||
+            (hi_a == product_overflow && lo_a < product_low)) {
+            --trial_quotient;
+        }
+        quotient_low = trial_quotient;
+        quotient_high = 0u;
+    }
+
+    return ((uint64_t)quotient_high << 32) | quotient_low;
 }
+#endif
 
 // GLOBAL: LEGORR 0x004afd72
 static uint16_t s_ctype_character_flags[256] = {
@@ -3249,16 +3954,224 @@ static uint16_t* volatile s_ctype_pointer = s_ctype_character_flags;
 static uint8_t s_multibyte_character_flags[257];
 // GLOBAL: LEGORR 0x005493bc
 static uint32_t s_active_codepage;
+// GLOBAL: LEGORR 0x00549190
+static uint32_t s_ansi_codepage;
 // GLOBAL: LEGORR 0x005493c0
 static uint32_t s_active_locale_table;
+// GLOBAL: LEGORR 0x005490f8
+static char** s_environment;
+// GLOBAL: LEGORR 0x005490fc
+static char** s_environment_sentinel;
+// GLOBAL: LEGORR 0x00549100
+static uint16_t** s_wide_environment;
+// GLOBAL: LEGORR 0x0054911c
+static char* s_environment_block;
+// GLOBAL: LEGORR 0x005492b0
+static int32_t s_environment_api_mode;
+// GLOBAL: LEGORR 0x00549510
+static int32_t s_compare_string_api_mode;
 // GLOBAL: LEGORR 0x005493c8
 static uint32_t s_codepage_metadata_word0;
 // GLOBAL: LEGORR 0x005493cc
 static uint32_t s_codepage_metadata_word1;
 // GLOBAL: LEGORR 0x005493d0
 static uint32_t s_codepage_metadata_word2;
+// GLOBAL: LEGORR 0x005493d4
+static uint32_t s_codepage_fallback_mode;
+// GLOBAL: LEGORR 0x005490d8
+static uint32_t s_file_open_attribute_policy;
+// GLOBAL: LEGORR 0x005494f4
+static uint32_t s_file_open_share_state;
+// GLOBAL: LEGORR 0x00549170
+static int32_t s_locale_map_api_mode;
+// GLOBAL: LEGORR 0x005493e0
+static int32_t s_string_type_api_mode;
+// GLOBAL: LEGORR 0x004b2330
+static const uint8_t s_predefined_codepage_masks[4] = { 1u, 2u, 4u, 8u };
+// GLOBAL: LEGORR 0x004b2338
+static const uint8_t s_predefined_codepage_records[5][48] = {
+    { 0xa4u,0x03u,0x00u,0x00u,0x60u,0x82u,0x79u,0x82u,
+      0x21u,0x00u,0x00u,0x00u,0x00u,0x00u,0x00u,0x00u,
+      0xa6u,0xdfu,0x00u,0x00u,0x00u,0x00u,0x00u,0x00u,
+      0xa1u,0xa5u,0x00u,0x00u,0x00u,0x00u,0x00u,0x00u,
+      0x81u,0x9fu,0xe0u,0xfcu,0x00u,0x00u,0x00u,0x00u,
+      0x40u,0x7eu,0x80u,0xfcu,0x00u,0x00u,0x00u,0x00u },
+    { 0xa8u,0x03u,0x00u,0x00u,0xc1u,0xa3u,0xdau,0xa3u,
+      0x20u,0x00u,0x00u,0x00u,0x00u,0x00u,0x00u,0x00u,
+      0x00u,0x00u,0x00u,0x00u,0x00u,0x00u,0x00u,0x00u,
+      0x00u,0x00u,0x00u,0x00u,0x00u,0x00u,0x00u,0x00u,
+      0x81u,0xfeu,0x00u,0x00u,0x00u,0x00u,0x00u,0x00u,
+      0x40u,0xfeu,0x00u,0x00u,0x00u,0x00u,0x00u,0x00u },
+    { 0xb5u,0x03u,0x00u,0x00u,0xc1u,0xa3u,0xdau,0xa3u,
+      0x20u,0x00u,0x00u,0x00u,0x00u,0x00u,0x00u,0x00u,
+      0x00u,0x00u,0x00u,0x00u,0x00u,0x00u,0x00u,0x00u,
+      0x00u,0x00u,0x00u,0x00u,0x00u,0x00u,0x00u,0x00u,
+      0x81u,0xfeu,0x00u,0x00u,0x00u,0x00u,0x00u,0x00u,
+      0x41u,0xfeu,0x00u,0x00u,0x00u,0x00u,0x00u,0x00u },
+    { 0xb6u,0x03u,0x00u,0x00u,0xcfu,0xa2u,0xe4u,0xa2u,
+      0x1au,0x00u,0xe5u,0xa2u,0xe8u,0xa2u,0x5bu,0x00u,
+      0x00u,0x00u,0x00u,0x00u,0x00u,0x00u,0x00u,0x00u,
+      0x00u,0x00u,0x00u,0x00u,0x00u,0x00u,0x00u,0x00u,
+      0x81u,0xfeu,0x00u,0x00u,0x00u,0x00u,0x00u,0x00u,
+      0x40u,0x7eu,0xa1u,0xfeu,0x00u,0x00u,0x00u,0x00u },
+    { 0x51u,0x05u,0x00u,0x00u,0x51u,0xdau,0x5eu,0xdau,
+      0x20u,0x00u,0x5fu,0xdau,0x6au,0xdau,0x32u,0x00u,
+      0x00u,0x00u,0x00u,0x00u,0x00u,0x00u,0x00u,0x00u,
+      0x00u,0x00u,0x00u,0x00u,0x00u,0x00u,0x00u,0x00u,
+      0x81u,0xd3u,0xd8u,0xdeu,0xe0u,0xf9u,0x00u,0x00u,
+      0x31u,0x7eu,0x81u,0xfeu,0x00u,0x00u,0x00u,0x00u }
+};
+// GLOBAL: LEGORR 0x004b28f0
+static int32_t s_timezone_bias_seconds = 28800;
+// GLOBAL: LEGORR 0x004b28f4
+static int32_t s_daylight_saving_available = 1;
+// GLOBAL: LEGORR 0x004b28f8
+static int32_t s_daylight_saving_bias_seconds = -3600;
+// GLOBAL: LEGORR 0x004b2900
+static char s_standard_timezone_name_buffer[64] = "PST";
+// GLOBAL: LEGORR 0x004b2940
+static char s_daylight_timezone_name_buffer[64] = "PDT";
+// GLOBAL: LEGORR 0x004b2980
+static char* s_standard_timezone_name = s_standard_timezone_name_buffer;
+// GLOBAL: LEGORR 0x004b2984
+static char* s_daylight_timezone_name = s_daylight_timezone_name_buffer;
+struct CrtDaylightTransitionCache {
+    uint32_t start_year;
+    int32_t start_day;
+    int32_t start_milliseconds;
+    uint32_t reserved;
+    uint32_t end_year;
+    int32_t end_day;
+    int32_t end_milliseconds;
+};
+// GLOBAL: LEGORR 0x004b2988
+static CrtDaylightTransitionCache s_daylight_transition_cache = {
+    0xffffffffu, 0, 0, 0, 0xffffffffu, 0, 0
+};
+#define s_daylight_start_year (s_daylight_transition_cache.start_year)
+#define s_daylight_start_day (s_daylight_transition_cache.start_day)
+#define s_daylight_start_milliseconds (s_daylight_transition_cache.start_milliseconds)
+#define s_daylight_end_year (s_daylight_transition_cache.end_year)
+#define s_daylight_end_day (s_daylight_transition_cache.end_day)
+#define s_daylight_end_milliseconds (s_daylight_transition_cache.end_milliseconds)
+// GLOBAL: LEGORR 0x00549438
+static int32_t s_timezone_from_windows;
+
+/* TIME_ZONE_INFORMATION has a fixed 0xac-byte layout. Using 16-bit name
+ * elements keeps this layout identical on hosts where wchar_t is 32 bits. */
+struct CrtSystemTime {
+    uint16_t year;
+    uint16_t month;
+    uint16_t day_of_week;
+    uint16_t day;
+    uint16_t hour;
+    uint16_t minute;
+    uint16_t second;
+    uint16_t milliseconds;
+};
+
+struct CrtTimeZoneInformation {
+    int32_t bias;
+    uint16_t standard_name[32];
+    CrtSystemTime standard_date;
+    int32_t standard_bias;
+    uint16_t daylight_name[32];
+    CrtSystemTime daylight_date;
+    int32_t daylight_bias;
+};
+
+// GLOBAL: LEGORR 0x00549440
+static CrtTimeZoneInformation s_timezone_information;
+// GLOBAL: LEGORR 0x005494ec
+static char* s_timezone_environment_copy;
+// GLOBAL: LEGORR 0x005494f0
+static int32_t s_timezone_initialized;
+// GLOBAL: LEGORR 0x004b29a4
+static const int32_t s_leap_month_day_offsets[14] = {
+    0, -1, 30, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365
+};
+// GLOBAL: LEGORR 0x004b29dc
+static const int32_t s_common_month_day_offsets[14] = {
+    0, -1, 30, 58, 89, 119, 150, 180, 211, 242, 272, 303, 333, 364
+};
+// GLOBAL: LEGORR 0x004b2a18
+static const uint16_t s_positive_power_of_ten_table[28][6] = {
+    { 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0xa000u, 0x4002u },
+    { 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0xc800u, 0x4005u },
+    { 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0xfa00u, 0x4008u },
+    { 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x9c40u, 0x400cu },
+    { 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0xc350u, 0x400fu },
+    { 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0xf424u, 0x4012u },
+    { 0x0000u, 0x0000u, 0x0000u, 0x8000u, 0x9896u, 0x4016u },
+    { 0x0000u, 0x0000u, 0x0000u, 0x2000u, 0xbebcu, 0x4019u },
+    { 0x0000u, 0x0000u, 0x0400u, 0xc9bfu, 0x8e1bu, 0x4034u },
+    { 0x0000u, 0xa100u, 0xccedu, 0x1bceu, 0xd3c2u, 0x404eu },
+    { 0xf020u, 0xb59eu, 0x2b70u, 0xada8u, 0x9dc5u, 0x4069u },
+    { 0x5dd0u, 0x25fdu, 0x1ae5u, 0x4f8eu, 0xeb19u, 0x4083u },
+    { 0x9671u, 0x95d7u, 0x0e43u, 0x8d05u, 0xaf29u, 0x409eu },
+    { 0xbff9u, 0x44a0u, 0x81edu, 0x8f12u, 0x8281u, 0x40b9u },
+    { 0x3cbfu, 0xa6d5u, 0xffcfu, 0x1f49u, 0xc278u, 0x40d3u },
+    { 0xc66fu, 0x8ce0u, 0x80e9u, 0x47c9u, 0x93bau, 0x41a8u },
+    { 0x85bcu, 0x556bu, 0x3927u, 0xf78du, 0xe070u, 0x427cu },
+    { 0xddbcu, 0xde8eu, 0x9df9u, 0xebfbu, 0xaa7eu, 0x4351u },
+    { 0xe6a1u, 0xe376u, 0xf2ccu, 0x2f29u, 0x8184u, 0x4426u },
+    { 0x1028u, 0xaa17u, 0xaef8u, 0xe310u, 0xc4c5u, 0x44fau },
+    { 0xa7ebu, 0xf3d4u, 0xebf7u, 0x4ae1u, 0x957au, 0x45cfu },
+    { 0xcc65u, 0x91c7u, 0xa60eu, 0xa0aeu, 0xe319u, 0x46a3u },
+    { 0x650du, 0x0c17u, 0x8175u, 0x7586u, 0xc976u, 0x4d48u },
+    { 0x4258u, 0xa7e4u, 0x3993u, 0x353bu, 0xb2b8u, 0x53edu },
+    { 0xa74du, 0x5de5u, 0xc53du, 0x3b5du, 0x9e8bu, 0x5a92u },
+    { 0x5dffu, 0xf0a6u, 0x20a1u, 0x54c0u, 0x8ca5u, 0x6137u },
+    { 0xfdd1u, 0x5a8bu, 0xd88bu, 0x5d25u, 0xf989u, 0x67dbu },
+    { 0x95aau, 0xf3f8u, 0xbf27u, 0xc8a2u, 0xdd5du, 0x6e80u }
+};
+// GLOBAL: LEGORR 0x004b2b78
+static const uint16_t s_negative_power_of_ten_table[28][6] = {
+    { 0xcccdu, 0xcccdu, 0xccccu, 0xccccu, 0xccccu, 0x3ffbu },
+    { 0x3d71u, 0xd70au, 0x70a3u, 0x0a3du, 0xa3d7u, 0x3ff8u },
+    { 0x645au, 0xdf3bu, 0x8d4fu, 0x6e97u, 0x8312u, 0x3ff5u },
+    { 0xd3c3u, 0x652cu, 0xe219u, 0x1758u, 0xd1b7u, 0x3ff1u },
+    { 0x0fd0u, 0x8423u, 0x1b47u, 0xac47u, 0xa7c5u, 0x3feeu },
+    { 0xa640u, 0x69b6u, 0xaf6cu, 0xbd05u, 0x8637u, 0x3febu },
+    { 0x3d33u, 0x42bcu, 0xe57au, 0x94d5u, 0xd6bfu, 0x3fe7u },
+    { 0xfdc2u, 0xcefdu, 0x8461u, 0x7711u, 0xabccu, 0x3fe4u },
+    { 0x4c2fu, 0xe15bu, 0xc44du, 0x94beu, 0xe695u, 0x3fc9u },
+    { 0xc492u, 0x3b53u, 0x4475u, 0x14cdu, 0x9abeu, 0x3fafu },
+    { 0x67deu, 0x94bau, 0x4539u, 0x1eadu, 0xcfb1u, 0x3f94u },
+    { 0x2324u, 0xe2c6u, 0xbabcu, 0x313bu, 0x8b61u, 0x3f7au },
+    { 0x5561u, 0xc159u, 0xb17eu, 0x7c53u, 0xbb12u, 0x3f5fu },
+    { 0xeed7u, 0x8d2fu, 0xbe06u, 0x8592u, 0xfb15u, 0x3f44u },
+    { 0x3f24u, 0xe9a5u, 0xa539u, 0xea27u, 0xa87fu, 0x3f2au },
+    { 0xac7du, 0xe4a1u, 0x64bcu, 0x467cu, 0xddd0u, 0x3e55u },
+    { 0x7b63u, 0xcc06u, 0x5423u, 0x8377u, 0x91ffu, 0x3d81u },
+    { 0xfa91u, 0x193au, 0x637au, 0x4325u, 0xc031u, 0x3cacu },
+    { 0x8921u, 0x38d1u, 0x4782u, 0xb897u, 0xfd00u, 0x3bd7u },
+    { 0x88dcu, 0x0858u, 0xb11bu, 0xe3e8u, 0xa686u, 0x3b03u },
+    { 0x84c6u, 0x4245u, 0xb607u, 0x7599u, 0xdb37u, 0x3a2eu },
+    { 0x7133u, 0xd21cu, 0xdb23u, 0xee32u, 0x9049u, 0x395au },
+    { 0x87a6u, 0xc0beu, 0xda57u, 0x82a5u, 0xa2a6u, 0x32b5u },
+    { 0x68e2u, 0x11b2u, 0x52a7u, 0x449fu, 0xb759u, 0x2c10u },
+    { 0x4925u, 0x2de4u, 0x3436u, 0x534fu, 0xceaeu, 0x256bu },
+    { 0x598fu, 0xa404u, 0xdec0u, 0x7dc2u, 0xe8fbu, 0x1ec6u },
+    { 0xe79eu, 0x5a88u, 0x9157u, 0xbf3cu, 0x8350u, 0x1822u },
+    { 0x4b4eu, 0x6265u, 0x83fdu, 0xaf8fu, 0x9406u, 0x117du }
+};
+// GLOBAL: LEGORR 0x00549128
+static CrtDecimalFormatContext* s_current_decimal_format;
+// GLOBAL: LEGORR 0x0054912c
+static uint8_t s_decimal_format_prepared;
+// GLOBAL: LEGORR 0x00549130
+static int32_t s_decimal_format_position;
+// GLOBAL: LEGORR 0x00549134
+static uint8_t s_decimal_format_truncated;
+// GLOBAL: LEGORR 0x005493f0
+static uint8_t s_decimal_conversion_buffer[32];
+// GLOBAL: LEGORR 0x00549410
+static CrtDecimalFormatContext s_decimal_format_context;
 // GLOBAL: LEGORR 0x004aff74
 static volatile uint32_t s_max_multibyte_width = 1u;
+// GLOBAL: LEGORR 0x004aff78
+static char s_decimal_separator = '.';
 
 /* CrtCodePageLocaleIdLookup (FUN_00496530): the four DBCS pages with
  * built-in Windows locale mappings; all other pages have no mapped LCID. */
@@ -3274,6 +4187,401 @@ uint32_t crt_codepage_locale_id_lookup(uint32_t codepage)
     }
 }
 
+/* CrtDaylightTransitionBoundaryCompute (FUN_00499da0): calculate a
+ * transition's zero-based day-of-year and millisecond-of-day from either
+ * an nth-weekday rule or a fixed day rule, then update its cached year. */
+// FUNCTION: LEGORR 0x00499da0
+void crt_daylight_transition_boundary_compute(int is_start,
+                                              int use_nth_weekday,
+                                              uint32_t year,
+                                              int month_index,
+                                              int week,
+                                              int weekday,
+                                              int fixed_day,
+                                              int hour,
+                                              int minute,
+                                              int second,
+                                              int millisecond)
+{
+    const int32_t* offsets;
+    int32_t day;
+    int32_t first_weekday;
+    int32_t time_of_day;
+
+    offsets = ((year & 3u) == 0u)
+        ? s_leap_month_day_offsets : s_common_month_day_offsets;
+    if (use_nth_weekday == 1) {
+        day = offsets[month_index];
+        first_weekday = (int32_t)(((int32_t)(year - 1u) >> 2) - 0x63db +
+                                  year * 0x16du + day + 1) % 7;
+        if (first_weekday < weekday) {
+            day = day - 6 + (week * 7 - first_weekday) + weekday;
+        } else {
+            day = day + 1 + (week * 7 - first_weekday) + weekday;
+        }
+        if (week == 5 && day > offsets[month_index + 1]) {
+            day -= 7;
+        }
+    } else {
+        day = offsets[month_index] + fixed_day;
+    }
+
+    time_of_day = millisecond +
+        (second + (minute + hour * 60) * 60) * 1000;
+    if (is_start == 1) {
+        s_daylight_start_day = day;
+        s_daylight_start_year = year;
+        s_daylight_start_milliseconds = time_of_day;
+        return;
+    }
+
+    s_daylight_end_day = day;
+    s_daylight_end_milliseconds =
+        time_of_day + s_daylight_saving_bias_seconds * 1000;
+    if (s_daylight_end_milliseconds < 0) {
+        s_daylight_end_year = year;
+        s_daylight_end_milliseconds += 86399999;
+        return;
+    }
+    if (s_daylight_end_milliseconds > 86399999) {
+        s_daylight_end_milliseconds -= 86399999;
+    }
+    s_daylight_end_year = year;
+}
+
+/* CrtCalendarFieldsToTimeScalar (FUN_00496f50): build the CRT's 32-bit
+ * seconds value from calendar fields and optionally apply its DST bias. */
+// FUNCTION: LEGORR 0x00496f50
+int32_t crt_calendar_fields_to_time_scalar(int year, int month, int day,
+                                            int hour, int minute, int second,
+                                            int daylight_mode)
+{
+    int32_t calendar_fields[9];
+    uint32_t year_since_1900;
+    int32_t day_of_year;
+    int32_t result;
+
+    year_since_1900 = (uint32_t)(year - 1900);
+    if ((int32_t)year_since_1900 < 0x46 ||
+        (int32_t)year_since_1900 > 0x8a) {
+        return -1;
+    }
+
+    day_of_year = s_common_month_day_offsets[month] + day;
+    if ((year_since_1900 & 3u) == 0u && month > 2) {
+        ++day_of_year;
+    }
+
+    crt_timezone_initialize_once();
+    result = second + (minute + (hour +
+        (((year - 1901) >> 2) + (int32_t)year_since_1900 * 365 +
+         day_of_year) * 24) * 60) * 60 + 0x7c558180 +
+        s_timezone_bias_seconds;
+
+    if (daylight_mode != 1 && daylight_mode != -1) {
+        return result;
+    }
+    if (daylight_mode == -1) {
+        if (s_daylight_saving_available == 0) {
+            return result;
+        }
+        memset(calendar_fields, 0, sizeof(calendar_fields));
+        calendar_fields[0] = second;
+        calendar_fields[1] = minute;
+        calendar_fields[2] = hour;
+        calendar_fields[4] = month - 1;
+        calendar_fields[5] = (int32_t)year_since_1900;
+        calendar_fields[7] = day_of_year;
+        if (crt_daylight_saving_time_check(calendar_fields) == 0) {
+            return result;
+        }
+    }
+    return result + s_daylight_saving_bias_seconds;
+}
+
+/* CrtTimeZoneInitializeOnce (FUN_00499860): the CRT's one-shot timezone
+ * setup guard. */
+// FUNCTION: LEGORR 0x00499860
+void crt_timezone_initialize_once(void)
+{
+    if (s_timezone_initialized == 0) {
+        crt_timezone_state_init();
+        ++s_timezone_initialized;
+    }
+}
+
+/* CrtTimeZoneStateInit (FUN_00499880): load Windows timezone settings when
+ * TZ is absent, otherwise cache and parse the POSIX TZ prefix used by this
+ * runtime. The original parser consumes the offset and three-letter DST
+ * abbreviation; it does not consume POSIX transition-rule suffixes. */
+// FUNCTION: LEGORR 0x00499880
+void crt_timezone_state_init(void)
+{
+    char* timezone_text;
+    int negative_offset;
+
+    s_timezone_from_windows = 0;
+    s_daylight_end_year = 0xffffffffu;
+    s_daylight_start_year = 0xffffffffu;
+
+    timezone_text = crt_environment_variable_lookup("TZ");
+    if (timezone_text == NULL) {
+#if defined(LEGORRR_BACKEND_WINAPI)
+        DWORD timezone_result;
+        timezone_result = GetTimeZoneInformation(
+            (LPTIME_ZONE_INFORMATION)&s_timezone_information);
+        if (timezone_result != TIME_ZONE_ID_INVALID) {
+            s_timezone_from_windows = 1;
+            s_timezone_bias_seconds = s_timezone_information.bias * 60;
+            if (s_timezone_information.standard_date.month != 0) {
+                s_timezone_bias_seconds +=
+                    s_timezone_information.standard_bias * 60;
+            }
+            if (s_timezone_information.daylight_date.month == 0 ||
+                s_timezone_information.daylight_bias == 0) {
+                s_daylight_saving_available = 0;
+                s_daylight_saving_bias_seconds = 0;
+            } else {
+                s_daylight_saving_available = 1;
+                s_daylight_saving_bias_seconds =
+                    (s_timezone_information.daylight_bias -
+                     s_timezone_information.standard_bias) * 60;
+            }
+            crt_wide_char_to_multi_byte_compat(
+                s_standard_timezone_name,
+                s_timezone_information.standard_name, 0x40u);
+            crt_wide_char_to_multi_byte_compat(
+                s_daylight_timezone_name,
+                s_timezone_information.daylight_name, 0x40u);
+            s_standard_timezone_name[63] = '\0';
+            s_daylight_timezone_name[63] = '\0';
+        }
+#endif
+        return;
+    }
+    if (*timezone_text == '\0') {
+        return;
+    }
+
+    if (s_timezone_environment_copy != NULL &&
+        strcmp(timezone_text, s_timezone_environment_copy) == 0) {
+        return;
+    }
+    engine_heap_free(s_timezone_environment_copy);
+    s_timezone_environment_copy = (char*)engine_heap_alloc(
+        (long)strlen(timezone_text) + 1L);
+    if (s_timezone_environment_copy == NULL) {
+        return;
+    }
+    strcpy(s_timezone_environment_copy, timezone_text);
+
+    crt_string_copy_n(s_standard_timezone_name, timezone_text, 3u);
+    s_standard_timezone_name[3] = '\0';
+    timezone_text += 3;
+    negative_offset = (*timezone_text == '-');
+    if (negative_offset != 0) {
+        ++timezone_text;
+    }
+    s_timezone_bias_seconds = crt_parse_signed_decimal(
+        (const unsigned char*)timezone_text) * 3600;
+    while ((*timezone_text == '+' ||
+            (*timezone_text > '/' && *timezone_text < ':'))) {
+        ++timezone_text;
+    }
+    if (*timezone_text == ':') {
+        ++timezone_text;
+        s_timezone_bias_seconds += crt_parse_signed_decimal(
+            (const unsigned char*)timezone_text) * 60;
+        while (*timezone_text > '/' && *timezone_text < ':') {
+            ++timezone_text;
+        }
+        if (*timezone_text == ':') {
+            ++timezone_text;
+            s_timezone_bias_seconds += crt_parse_signed_decimal(
+                (const unsigned char*)timezone_text);
+            while (*timezone_text > '/' && *timezone_text < ':') {
+                ++timezone_text;
+            }
+        }
+    }
+    if (negative_offset != 0) {
+        s_timezone_bias_seconds = -s_timezone_bias_seconds;
+    }
+
+    s_daylight_saving_available = (int)(signed char)*timezone_text;
+    if (s_daylight_saving_available != 0) {
+        crt_string_copy_n(s_daylight_timezone_name, timezone_text, 3u);
+        s_daylight_timezone_name[3] = '\0';
+    } else {
+        s_daylight_timezone_name[0] = '\0';
+    }
+}
+
+/* CrtDaylightSavingTimeCheck (FUN_00499b30): compare a CRT tm-like field
+ * vector against cached start/end transition day and time boundaries. */
+// FUNCTION: LEGORR 0x00499b30
+int crt_daylight_saving_time_check(const int* calendar_fields)
+{
+    uint32_t year;
+    int32_t day_of_year;
+    int32_t time_of_day;
+
+    if (s_daylight_saving_available == 0) {
+        return 0;
+    }
+    year = (uint32_t)calendar_fields[5];
+    if (year != s_daylight_start_year || year != s_daylight_end_year) {
+        if (s_timezone_from_windows == 0) {
+            crt_daylight_transition_boundary_compute(
+                1, 1, year, 4, 1, 0, 0, 2, 0, 0, 0);
+        } else {
+            CrtSystemTime* daylight_date =
+                &s_timezone_information.daylight_date;
+            int use_nth_weekday;
+            int weekday;
+            int week;
+            int fixed_day;
+
+            use_nth_weekday = daylight_date->year == 0;
+            weekday = use_nth_weekday ? daylight_date->day_of_week : 0;
+            week = use_nth_weekday ? daylight_date->day : 0;
+            fixed_day = use_nth_weekday ? 0 : daylight_date->day;
+            crt_daylight_transition_boundary_compute(
+                1, use_nth_weekday, year, daylight_date->month,
+                week, weekday, fixed_day, daylight_date->hour,
+                daylight_date->minute, daylight_date->second,
+                daylight_date->milliseconds);
+        }
+
+        if (s_timezone_from_windows == 0) {
+            crt_daylight_transition_boundary_compute(
+                0, 1, year, 10, 5, 0, 0, 2, 0, 0, 0);
+        } else {
+            CrtSystemTime* standard_date =
+                &s_timezone_information.standard_date;
+            int use_nth_weekday;
+            int weekday;
+            int week;
+            int fixed_day;
+
+            use_nth_weekday = standard_date->year == 0;
+            weekday = use_nth_weekday ? standard_date->day_of_week : 0;
+            week = use_nth_weekday ? standard_date->day : 0;
+            fixed_day = use_nth_weekday ? 0 : standard_date->day;
+            crt_daylight_transition_boundary_compute(
+                0, use_nth_weekday, year, standard_date->month,
+                week, weekday, fixed_day, standard_date->hour,
+                standard_date->minute, standard_date->second,
+                standard_date->milliseconds);
+        }
+    }
+
+    day_of_year = calendar_fields[7];
+    if (s_daylight_start_day < s_daylight_end_day) {
+        if (day_of_year < s_daylight_start_day ||
+            s_daylight_end_day < day_of_year) {
+            return 0;
+        }
+        if (s_daylight_start_day < day_of_year &&
+            day_of_year < s_daylight_end_day) {
+            return 1;
+        }
+    } else {
+        if (day_of_year < s_daylight_end_day ||
+            s_daylight_start_day < day_of_year) {
+            return 1;
+        }
+        if (s_daylight_end_day < day_of_year &&
+            day_of_year < s_daylight_start_day) {
+            return 0;
+        }
+    }
+
+    time_of_day = (calendar_fields[0] +
+        (calendar_fields[1] + calendar_fields[2] * 60) * 60) * 1000;
+    if (day_of_year != s_daylight_start_day) {
+        return time_of_day < s_daylight_end_milliseconds;
+    }
+    return s_daylight_start_milliseconds <= time_of_day;
+}
+
+/* ExtendedFloatPowerOfTenScale (FUN_0049a800): consume three exponent bits
+ * per table row, multiplying the 80-bit value by that row's power of ten. */
+// FUNCTION: LEGORR 0x0049a800
+void crt_extended_float_power_of_ten_scale(uint16_t value[6],
+                                           uint32_t exponent,
+                                           int initialize)
+{
+    const uint16_t (*table)[6] = s_positive_power_of_ten_table;
+    uint32_t group;
+
+    if (exponent == 0u) {
+        return;
+    }
+    if ((int32_t)exponent < 0) {
+        exponent = 0u - exponent;
+        table = s_negative_power_of_ten_table;
+    }
+    if (initialize == 0) {
+        value[0] = 0u;
+    }
+
+    group = 0u;
+    while (exponent != 0u) {
+        const uint32_t digit = exponent & 7u;
+        exponent >>= 3;
+        if (digit != 0u && group < 4u) {
+            const uint16_t* factor = table[group * 7u + digit - 1u];
+            uint16_t adjusted[6];
+
+            if (factor[0] > 0x7fffu) {
+                uint32_t middle;
+                uint32_t i;
+                for (i = 0u; i < 6u; ++i) {
+                    adjusted[i] = factor[i];
+                }
+                middle = (uint32_t)adjusted[1] |
+                         ((uint32_t)adjusted[2] << 16);
+                --middle;
+                adjusted[1] = (uint16_t)middle;
+                adjusted[2] = (uint16_t)(middle >> 16);
+                factor = adjusted;
+            }
+            crt_extended80_multiply(value, factor);
+        }
+        ++group;
+    }
+}
+
+/* CrtCodePageGet (FUN_004964e0): select the OEM/ANSI code page or update
+ * the fallback-mode flag before returning an explicit/current page. */
+// FUNCTION: LEGORR 0x004964e0
+int crt_codepage_get(int codepage)
+{
+    if (codepage == -2) {
+        s_codepage_fallback_mode = 1u;
+#if defined(LEGORRR_BACKEND_WINAPI)
+        return (int)GetOEMCP();
+#else
+        return 0;
+#endif
+    }
+    if (codepage == -3) {
+        s_codepage_fallback_mode = 1u;
+#if defined(LEGORRR_BACKEND_WINAPI)
+        return (int)GetACP();
+#else
+        return 0;
+#endif
+    }
+    if (codepage == -4) {
+        s_codepage_fallback_mode = 1u;
+        return (int)s_ansi_codepage;
+    }
+    s_codepage_fallback_mode = 0u;
+    return codepage;
+}
+
 /* CrtCtypeTablesReset (FUN_00496590): reset only the lead-byte flag table
  * and the active code-page conversion metadata. The separate _pctype table
  * and the GetACP/GetOEMCP fallback flag are left as the image leaves them. */
@@ -3286,6 +4594,293 @@ void crt_ctype_tables_reset(void)
     s_codepage_metadata_word0 = 0u;
     s_codepage_metadata_word1 = 0u;
     s_codepage_metadata_word2 = 0u;
+}
+
+/* CrtLocaleCodePageTableUpdate (FUN_004962f0): load one of the image's
+ * five byte-range tables, or ask Windows for the current page's lead bytes. */
+// FUNCTION: LEGORR 0x004962f0
+int crt_locale_codepage_table_update(int requested_codepage)
+{
+    const uint32_t codepage = (uint32_t)crt_codepage_get(requested_codepage);
+    unsigned record_index;
+
+    if (codepage == s_active_codepage) {
+        return 0;
+    }
+    if (codepage == 0u) {
+        crt_ctype_tables_reset();
+        return 0;
+    }
+
+    for (record_index = 0u; record_index < 5u; ++record_index) {
+        const uint8_t* record = s_predefined_codepage_records[record_index];
+        uint32_t record_codepage;
+        memcpy(&record_codepage, record, sizeof record_codepage);
+        if (record_codepage == codepage) {
+            unsigned group;
+            memset(s_multibyte_character_flags, 0,
+                   sizeof s_multibyte_character_flags);
+            for (group = 0u; group < 4u; ++group) {
+                const uint8_t* ranges = record + 16u + group * 8u;
+                unsigned pair;
+                for (pair = 0u; pair < 4u; ++pair) {
+                    const uint8_t first = ranges[pair * 2u];
+                    const uint8_t last = ranges[pair * 2u + 1u];
+                    unsigned value;
+                    if (first == 0u || last == 0u) {
+                        break;
+                    }
+                    for (value = first; value <= (unsigned)last; ++value) {
+                        s_multibyte_character_flags[value + 1u] |=
+                            s_predefined_codepage_masks[group];
+                    }
+                }
+            }
+            s_active_codepage = codepage;
+            s_active_locale_table = crt_codepage_locale_id_lookup(codepage);
+            memcpy(&s_codepage_metadata_word0, record + 4u, 4u);
+            memcpy(&s_codepage_metadata_word1, record + 8u, 4u);
+            memcpy(&s_codepage_metadata_word2, record + 12u, 4u);
+            return 0;
+        }
+    }
+
+#if defined(LEGORRR_BACKEND_WINAPI)
+    {
+        CPINFO info;
+        if (GetCPInfo((UINT)codepage, &info) == 0) {
+            if (s_codepage_fallback_mode == 0u) {
+                return -1;
+            }
+            crt_ctype_tables_reset();
+            return 0;
+        }
+        memset(s_multibyte_character_flags, 0,
+               sizeof s_multibyte_character_flags);
+        if (info.MaxCharSize < 2u) {
+            s_active_codepage = 0u;
+            s_active_locale_table = 0u;
+        }
+        else {
+            unsigned byte_index;
+            unsigned range_index;
+            for (range_index = 0u; range_index + 1u < 12u;
+                 range_index += 2u) {
+                const unsigned first = info.LeadByte[range_index];
+                const unsigned last = info.LeadByte[range_index + 1u];
+                if (first == 0u || last == 0u) {
+                    break;
+                }
+                for (byte_index = first; byte_index <= last; ++byte_index) {
+                    s_multibyte_character_flags[byte_index + 1u] |= 4u;
+                }
+            }
+            for (byte_index = 1u; byte_index < 0xffu; ++byte_index) {
+                s_multibyte_character_flags[byte_index + 1u] |= 8u;
+            }
+            s_active_codepage = codepage;
+            s_active_locale_table =
+                crt_codepage_locale_id_lookup(codepage);
+        }
+        s_codepage_metadata_word0 = 0u;
+        s_codepage_metadata_word1 = 0u;
+        s_codepage_metadata_word2 = 0u;
+        return 0;
+    }
+#else
+    if (s_codepage_fallback_mode == 0u) {
+        return -1;
+    }
+    crt_ctype_tables_reset();
+    return 0;
+#endif
+}
+
+/* CrtAnsiCodePageTablesInit (FUN_004965c0): select the system ANSI page. */
+// FUNCTION: LEGORR 0x004965c0
+void crt_ansi_codepage_tables_init(void)
+{
+    (void)crt_locale_codepage_table_update(-3);
+}
+
+/* CharacterClassifyMask (FUN_0048f1d0): use _pctype for byte/EOF values;
+ * wider values are classified by the active Windows locale when available. */
+// FUNCTION: LEGORR 0x0048f1d0
+uint32_t crt_character_classify_mask(int value, uint32_t mask)
+{
+    uint32_t flags;
+    unsigned char bytes[4];
+    unsigned count;
+    uint32_t wide_flags;
+
+    if (((uint32_t)value + 1u) < 0x101u) {
+        if (value == -1) {
+            return 0x20u & mask;
+        }
+        return (uint32_t)(s_ctype_pointer[(unsigned)value] &
+                          (uint16_t)mask);
+    }
+
+    if (((s_ctype_pointer[((uint32_t)value >> 8) & 0xffu] >> 8) & 0x80u)
+        == 0u) {
+        bytes[0] = (unsigned char)value;
+        count = 1u;
+    }
+    else {
+        bytes[0] = (unsigned char)value;
+        bytes[1] = (unsigned char)((uint32_t)value >> 8);
+        bytes[2] = (unsigned char)((uint32_t)value >> 16);
+        count = 2u;
+    }
+    wide_flags = 0u;
+    flags = crt_get_string_type_a_compat(1u, (const char*)bytes,
+                                         (int)count, (uint16_t*)&wide_flags,
+                                         0u, 0u);
+    if (flags == 0u) {
+        return 0u;
+    }
+    return wide_flags & 0xffffu & mask;
+}
+
+/* CrtGetStringTypeACompat (FUN_00496ad0): prefer the ANSI API, falling back
+ * to its Unicode form after converting through the requested code page. */
+// FUNCTION: LEGORR 0x00496ad0
+int crt_get_string_type_a_compat(uint32_t info_type, const char* source,
+                                 int source_count, uint16_t* result,
+                                 uint32_t codepage, uint32_t locale)
+{
+#if defined(LEGORRR_BACKEND_WINAPI)
+    if (s_string_type_api_mode == 0) {
+        WORD probe;
+        if (GetStringTypeA(0, 1u, "", 1, &probe) != 0) {
+            s_string_type_api_mode = 2;
+        }
+        else if (GetStringTypeW(1u, L"", 1, &probe) != 0) {
+            s_string_type_api_mode = 1;
+        }
+        else {
+            return 0;
+        }
+    }
+    if (s_string_type_api_mode == 2) {
+        if (locale == 0u) {
+            locale = s_crt_locale_handle;
+        }
+        return GetStringTypeA((LCID)locale, info_type, source,
+                              source_count, (LPWORD)result);
+    }
+    if (s_string_type_api_mode == 1) {
+        int wide_count;
+        WCHAR* wide_source = NULL;
+        BOOL success;
+        if (codepage == 0u) {
+            codepage = s_ansi_codepage;
+        }
+        wide_count = MultiByteToWideChar((UINT)codepage, 9u, source,
+                                         source_count, NULL, 0);
+        if (wide_count != 0) {
+            wide_source = (WCHAR*)engine_heap_alloc(2L * wide_count);
+            if (wide_source != NULL) {
+                wide_count = MultiByteToWideChar((UINT)codepage, 1u, source,
+                                                 source_count, wide_source,
+                                                 wide_count);
+                if (wide_count != 0) {
+                    success = GetStringTypeW(info_type, wide_source,
+                                             wide_count, (LPWORD)result);
+                    engine_heap_free(wide_source);
+                    return success;
+                }
+            }
+        }
+        engine_heap_free(wide_source);
+        return 0;
+    }
+    return s_string_type_api_mode;
+#else
+    (void)info_type;
+    (void)source;
+    (void)source_count;
+    (void)result;
+    (void)codepage;
+    (void)locale;
+    return 0;
+#endif
+}
+
+/* CrtMultibyteToWideChar (FUN_00498e00): convert one CRT character, retaining
+ * the original error and incomplete-sequence behavior. */
+// FUNCTION: LEGORR 0x00498e00
+uint32_t crt_multibyte_to_wide_char(uint16_t* output, const uint8_t* source,
+                                    uint32_t max_bytes)
+{
+    uint8_t first;
+    int converted;
+    if (source == NULL || max_bytes == 0u) {
+        return 0u;
+    }
+    first = *source;
+    if (first == 0u) {
+        if (output != NULL) {
+            *output = 0u;
+            return 0u;
+        }
+        return 0u;
+    }
+    if (s_crt_locale_handle == 0u) {
+        if (output != NULL) {
+            *output = first;
+        }
+        return 1u;
+    }
+    if ((s_ctype_pointer[(unsigned)first] & 0x8000u) == 0u) {
+#if defined(LEGORRR_BACKEND_WINAPI)
+        converted = MultiByteToWideChar(s_ansi_codepage, 9u,
+                                        (const char*)source, 1,
+                                        (LPWSTR)output,
+                                        output != NULL ? 1 : 0);
+        if (converted != 0) {
+            return 1u;
+        }
+#endif
+        s_math_error_code = 0x2au;
+        return 0xffffffffu;
+    }
+    if (s_max_multibyte_width > 1u &&
+        s_max_multibyte_width <= max_bytes) {
+#if defined(LEGORRR_BACKEND_WINAPI)
+        converted = MultiByteToWideChar(s_ansi_codepage, 9u,
+                                        (const char*)source,
+                                        (int)s_max_multibyte_width,
+                                        (LPWSTR)output,
+                                        output != NULL ? 1 : 0);
+        if (converted != 0) {
+            return s_max_multibyte_width;
+        }
+#endif
+    }
+    if (max_bytes < s_max_multibyte_width) {
+        s_math_error_code = 0x2au;
+        return 0xffffffffu;
+    }
+    if (source[1] != 0u) {
+        return s_max_multibyte_width;
+    }
+    s_math_error_code = 0x2au;
+    return 0xffffffffu;
+}
+
+/* CrtCharacterClassFlag8Check (FUN_00498f00): read the CRT space bit for
+ * single-byte locales and delegate full character classification for DBCS. */
+// FUNCTION: LEGORR 0x00498f00
+uint32_t crt_character_class_flag8_check(int value)
+{
+    if (s_max_multibyte_width > 1u) {
+        return crt_character_classify_mask(value, 8u);
+    }
+    if (value < 0) {
+        return 0u;
+    }
+    return (uint32_t)(s_ctype_pointer[(unsigned)value] & 8u);
 }
 
 /* CrtScanFormatCharNormalize (FUN_00494c30) — see crt.hpp. The image's
@@ -3326,10 +4921,354 @@ uint32_t crt_character_class_flag_test(uint32_t value, uint32_t flags,
     return 0u;
 }
 
+/* LocaleCharacterMapString (FUN_00493ca0): use the native ANSI mapper when
+ * available, otherwise convert through UTF-16 and convert mapped text back. */
+// FUNCTION: LEGORR 0x00493ca0
+int crt_locale_character_map_string(uint32_t locale, uint32_t flags,
+                                     const char* source, int source_count,
+                                     void* destination,
+                                     int destination_count,
+                                     uint32_t codepage)
+{
+#if defined(LEGORRR_BACKEND_WINAPI)
+    int input_count = source_count;
+    if (s_locale_map_api_mode == 0) {
+        if (LCMapStringA(0, 0x100u, "", 1, NULL, 0) != 0) {
+            s_locale_map_api_mode = 2;
+        }
+        else if (LCMapStringW(0, 0x100u, L"", 1, NULL, 0) != 0) {
+            s_locale_map_api_mode = 1;
+        }
+        else {
+            return 0;
+        }
+    }
+    if (input_count > 0) {
+        int length = 0;
+        while (length < input_count && source[length] != '\0') {
+            ++length;
+        }
+        input_count = length;
+    }
+    if (s_locale_map_api_mode == 2) {
+        return LCMapStringA((LCID)locale, flags, source, input_count,
+                            (LPSTR)destination, destination_count);
+    }
+    if (s_locale_map_api_mode == 1) {
+        WCHAR* wide_source;
+        WCHAR* wide_mapped = NULL;
+        int wide_count;
+        int mapped_count;
+        int result;
+        if (codepage == 0u) {
+            codepage = s_ansi_codepage;
+        }
+        wide_count = MultiByteToWideChar((UINT)codepage, 9u, source,
+                                         input_count, NULL, 0);
+        if (wide_count == 0) {
+            return 0;
+        }
+        wide_source = (WCHAR*)engine_heap_alloc((long)wide_count * 2L);
+        if (wide_source == NULL) {
+            return 0;
+        }
+        if (MultiByteToWideChar((UINT)codepage, 1u, source, input_count,
+                                wide_source, wide_count) == 0) {
+            engine_heap_free(wide_source);
+            return 0;
+        }
+        mapped_count = LCMapStringW((LCID)locale, flags, wide_source,
+                                    wide_count, NULL, 0);
+        if (mapped_count == 0) {
+            engine_heap_free(wide_source);
+            return 0;
+        }
+        if ((flags & 0x400u) != 0u) {
+            if (destination_count == 0 || destination_count < mapped_count) {
+                engine_heap_free(wide_source);
+                return 0;
+            }
+            result = LCMapStringW((LCID)locale, flags, wide_source,
+                                  wide_count, (LPWSTR)destination,
+                                  destination_count);
+            engine_heap_free(wide_source);
+            return result;
+        }
+        wide_mapped = (WCHAR*)engine_heap_alloc((long)mapped_count * 2L);
+        if (wide_mapped == NULL) {
+            engine_heap_free(wide_source);
+            return 0;
+        }
+        if (LCMapStringW((LCID)locale, flags, wide_source, wide_count,
+                         wide_mapped, mapped_count) == 0) {
+            engine_heap_free(wide_source);
+            engine_heap_free(wide_mapped);
+            return 0;
+        }
+        result = WideCharToMultiByte((UINT)codepage, 0x220u, wide_mapped,
+                                     mapped_count, (LPSTR)destination,
+                                     destination_count, NULL, NULL);
+        engine_heap_free(wide_source);
+        engine_heap_free(wide_mapped);
+        return result;
+    }
+    return s_locale_map_api_mode;
+#else
+    (void)locale;
+    (void)flags;
+    (void)source;
+    (void)source_count;
+    (void)destination;
+    (void)destination_count;
+    (void)codepage;
+    return 0;
+#endif
+}
+
+/* CrtCharacterToLowerLocale (FUN_004975d0): apply the CRT locale's lower
+ * mapping while preserving DBCS characters as their high-byte-first value. */
+// FUNCTION: LEGORR 0x004975d0
+uint32_t crt_character_to_lower_locale(uint32_t value)
+{
+    uint32_t input_value;
+    uint32_t mapped[2];
+    unsigned count;
+    if (s_crt_locale_handle == 0u) {
+        if (value > (uint32_t)'A' && value < (uint32_t)'Z' + 1u) {
+            return value + 0x20u;
+        }
+        return value;
+    }
+    if (value < 0x100u) {
+        if (s_max_multibyte_width < 2u) {
+            if ((s_ctype_pointer[value] & 1u) == 0u) {
+                return value;
+            }
+        }
+        else if (crt_character_classify_mask((int)value, 1u) == 0u) {
+            return value;
+        }
+    }
+    if ((s_ctype_pointer[(value >> 8) & 0xffu] & 0x8000u) != 0u) {
+        input_value = ((value & 0xffu) << 8) | ((value >> 8) & 0xffu);
+        count = 2u;
+    }
+    else {
+        input_value = value & 0xffu;
+        count = 1u;
+    }
+    if (crt_locale_character_map_string(s_crt_locale_handle, 0x100u,
+                                        (const char*)&input_value,
+                                        (int)count,
+                                        mapped, 3, 0u) == 0) {
+        return value;
+    }
+    if (count == 1u) {
+        return mapped[0] & 0xffu;
+    }
+    return ((mapped[0] >> 8) & 0xffu) << 8 | (mapped[0] & 0xffu);
+}
+
 // FUNCTION: LEGORR 0x00495d90
 uint32_t crt_is_dbcs_lead_byte(uint32_t value)
 {
     return crt_character_class_flag_test(value, 0u, 4u);
+}
+
+// FUNCTION: LEGORR 0x0048dad0
+int crt_parse_signed_decimal(const unsigned char* text)
+{
+    uint32_t value;
+    uint32_t character;
+    uint32_t class_flags;
+    int negative;
+
+    while (1) {
+        if (s_max_multibyte_width < 2u) {
+            class_flags = s_ctype_pointer[*text] & 8u;
+        }
+        else {
+            class_flags = crt_character_classify_mask((int)*text, 8u);
+        }
+        if (class_flags == 0u) {
+            break;
+        }
+        ++text;
+    }
+    character = *text++;
+    negative = 0;
+    if (character == (uint32_t)'-' || character == (uint32_t)'+') {
+        if (character == (uint32_t)'-') {
+            negative = 1;
+        }
+        character = *text++;
+    }
+    value = 0u;
+    while (1) {
+        if (s_max_multibyte_width < 2u) {
+            class_flags = s_ctype_pointer[character] & 4u;
+        }
+        else {
+            class_flags = crt_character_classify_mask((int)character, 4u);
+        }
+        if (class_flags == 0u) {
+            break;
+        }
+        value = (character - (uint32_t)'0') + value * 10u;
+        character = *text++;
+    }
+    if (negative != 0) {
+        value = 0u - value;
+    }
+    return (int32_t)value;
+}
+
+// FUNCTION: LEGORR 0x004902b0
+void crt_normalize_decimal_point(char* text)
+{
+    uint32_t first;
+    int current;
+    char displaced;
+
+    first = crt_character_to_lower_locale((int)*text);
+    if (first != (uint32_t)'e') {
+        if (s_max_multibyte_width < 2u) {
+            do {
+                ++text;
+            } while ((s_ctype_pointer[(unsigned char)*text] & 4u) != 0u);
+        }
+        else {
+            do {
+                ++text;
+            } while (crt_character_classify_mask((int)*text, 4u) != 0u);
+        }
+    }
+    displaced = *text;
+    *text = s_decimal_separator;
+    do {
+        ++text;
+        current = (int)*text;
+        *text = displaced;
+        displaced = (char)current;
+    } while (*text != '\0');
+}
+
+// FUNCTION: LEGORR 0x004914a0
+char* crt_strchr(char* text, int character)
+{
+    const uint32_t wanted = (uint8_t)character;
+    const uint32_t repeated = wanted * 0x01010101u;
+
+    while (((uintptr_t)text & 3u) != 0u) {
+        const uint8_t byte = (uint8_t)*text;
+        if (byte == (uint8_t)wanted) {
+            return text;
+        }
+        if (byte == 0u) {
+            return NULL;
+        }
+        ++text;
+    }
+
+    for (;;) {
+        uint32_t word;
+        uint32_t candidate;
+        uint32_t zero_candidate;
+        uint32_t sum;
+
+        memcpy(&word, text, sizeof(word));
+        /* Keep the target's 32-bit wraparound probes; byte checks below
+         * resolve the candidate lanes in address order. */
+        candidate = word ^ repeated;
+        sum = candidate + 0x7efefeffu;
+        candidate = (candidate ^ 0xffffffffu ^ sum) & 0x81010100u;
+        if (candidate == 0u) {
+            sum = word + 0x7efefeffu;
+            zero_candidate =
+                (word ^ 0xffffffffu ^ sum) & 0x81010100u;
+            if (zero_candidate != 0u) {
+                if ((zero_candidate & 0x01010100u) != 0u ||
+                    (sum & 0x80000000u) == 0u) {
+                    return NULL;
+                }
+            }
+            text += 4;
+            continue;
+        }
+
+        if ((uint8_t)word == (uint8_t)wanted) {
+            return text;
+        }
+        if ((uint8_t)word == 0u) {
+            return NULL;
+        }
+        if ((uint8_t)(word >> 8) == (uint8_t)wanted) {
+            return text + 1;
+        }
+        if ((uint8_t)(word >> 8) == 0u) {
+            return NULL;
+        }
+        if ((uint8_t)(word >> 16) == (uint8_t)wanted) {
+            return text + 2;
+        }
+        if ((uint8_t)(word >> 16) == 0u) {
+            return NULL;
+        }
+        if ((uint8_t)(word >> 24) == (uint8_t)wanted) {
+            return text + 3;
+        }
+        if ((uint8_t)(word >> 24) == 0u) {
+            return NULL;
+        }
+        text += 4;
+    }
+}
+
+// FUNCTION: LEGORR 0x004976d0
+char* crt_dbcs_aware_bounded_string_copy(char* dest, const char* src,
+                                         uint32_t count)
+{
+    char* cursor;
+    uint32_t remaining;
+
+    if (s_active_codepage == 0u) {
+        return strncpy(dest, src, count);
+    }
+    cursor = dest;
+    remaining = count;
+    while (remaining != 0u) {
+        unsigned char first;
+        first = (unsigned char)*src;
+        *cursor = (char)first;
+        if ((s_multibyte_character_flags[(uint32_t)first + 1u] & 4u) == 0u) {
+            ++cursor;
+            ++src;
+            --remaining;
+            if (first == 0u) {
+                break;
+            }
+        }
+        else {
+            if (remaining == 1u) {
+                *cursor = '\0';
+                remaining = 0u;
+                break;
+            }
+            cursor[1] = src[1];
+            cursor += 2;
+            src += 2;
+            remaining -= 2u;
+            if (cursor[-1] == '\0') {
+                cursor[-2] = '\0';
+                break;
+            }
+        }
+    }
+    while (remaining != 0u) {
+        *cursor++ = '\0';
+        --remaining;
+    }
+    return dest;
 }
 
 /* CrtMultibyteCharacterSearch (FUN_0049b5b0): when no multibyte code page
@@ -3399,6 +5338,395 @@ char** crt_environment_array_clone(char** entries)
     }
     copy[count] = NULL;
     return copy;
+}
+
+// FUNCTION: LEGORR 0x00496190
+char* crt_environment_block_get(void)
+{
+#if defined(LEGORRR_BACKEND_WINAPI)
+    WCHAR* wide_block = NULL;
+    char* narrow_block = NULL;
+    if (s_environment_api_mode == 0) {
+        wide_block = GetEnvironmentStringsW();
+        if (wide_block != NULL) s_environment_api_mode = 1;
+        else {
+            narrow_block = GetEnvironmentStringsA();
+            if (narrow_block == NULL) return NULL;
+            s_environment_api_mode = 2;
+        }
+    }
+    if (s_environment_api_mode == 1) {
+        int count = 0;
+        int converted;
+        WCHAR* end;
+        if (wide_block == NULL) wide_block = GetEnvironmentStringsW();
+        if (wide_block == NULL) return NULL;
+        end = wide_block;
+        while (*end != 0) {
+            while (*end != 0) ++end;
+            ++end;
+        }
+        count = (int)(end - wide_block) + 1;
+        converted = WideCharToMultiByte(CP_ACP, 0, wide_block, count,
+                                        NULL, 0, NULL, NULL);
+        if (converted > 0) {
+            narrow_block = (char*)engine_heap_alloc(converted);
+            if (narrow_block != NULL &&
+                WideCharToMultiByte(CP_ACP, 0, wide_block, count, narrow_block,
+                                    converted, NULL, NULL) == 0) {
+                engine_heap_free(narrow_block);
+                narrow_block = NULL;
+            }
+        }
+        FreeEnvironmentStringsW(wide_block);
+        return narrow_block;
+    }
+    if (s_environment_api_mode == 2) {
+        int count = 0;
+        int i;
+        char* end;
+        if (narrow_block == NULL) narrow_block = GetEnvironmentStringsA();
+        if (narrow_block == NULL) return NULL;
+        end = narrow_block;
+        while (*end != '\0') {
+            while (*end != '\0') ++end;
+            ++end;
+        }
+        count = (int)(end - narrow_block) + 1;
+        {
+            char* result = (char*)engine_heap_alloc(count);
+            if (result != NULL) {
+                for (i = 0; i < count; ++i) result[i] = narrow_block[i];
+            }
+            FreeEnvironmentStringsA(narrow_block);
+            return result;
+        }
+    }
+#else
+    char** entry;
+    long count = 1;
+    char* block;
+    char* output;
+    if (s_environment_api_mode == 0) s_environment_api_mode = 2;
+    if (environ == NULL) return NULL;
+    for (entry = environ; *entry != NULL; ++entry) count += (long)strlen(*entry) + 1;
+    block = (char*)engine_heap_alloc(count + 1);
+    if (block == NULL) return NULL;
+    output = block;
+    for (entry = environ; *entry != NULL; ++entry) {
+        const char* source = *entry;
+        while (*source != '\0') *output++ = *source++;
+        *output++ = '\0';
+    }
+    *output = '\0';
+    return block;
+#endif
+    return NULL;
+}
+
+// FUNCTION: LEGORR 0x00495df0
+void crt_environment_pointer_array_build(void)
+{
+    char* cursor;
+    int count = 0;
+    int length;
+    char** entries;
+    char** entry_out;
+    if (s_environment_block == NULL) return;
+    cursor = s_environment_block;
+    while (*cursor != '\0') {
+        if (*cursor != '=') ++count;
+        length = (int)strlen(cursor) + 1;
+        cursor += length;
+    }
+    entries = (char**)engine_heap_alloc((long)(count + 1) * (long)sizeof(char*));
+    s_environment = entries;
+    if (entries == NULL) {
+        crt_fatal_message_exit();
+        return;
+    }
+    entry_out = entries;
+    cursor = s_environment_block;
+    while (*cursor != '\0') {
+        length = (int)strlen(cursor) + 1;
+        if (*cursor != '=') {
+            *entry_out = crt_string_duplicate(cursor);
+            if (*entry_out == NULL) {
+                crt_fatal_message_exit();
+                return;
+            }
+            ++entry_out;
+        }
+        cursor += length;
+    }
+    *entry_out = NULL;
+    engine_heap_free(s_environment_block);
+    s_environment_block = NULL;
+    s_environment = entries;
+}
+
+// FUNCTION: LEGORR 0x0049afe0
+int crt_compare_string_compat(uint32_t locale, uint32_t flags,
+                              const char* left, int left_count,
+                              const char* right, int right_count,
+                              uint32_t codepage)
+{
+    int left_length = left_count;
+    int right_length = right_count;
+    int i;
+    if (left_count > 0) {
+        for (left_length = 0; left_length < left_count && left[left_length] != '\0'; ++left_length) {}
+    }
+    if (right_count > 0) {
+        for (right_length = 0; right_length < right_count && right[right_length] != '\0'; ++right_length) {}
+    }
+#if defined(LEGORRR_BACKEND_WINAPI)
+    if (s_compare_string_api_mode == 0) {
+        if (CompareStringA(0, 0, "", 1, "", 1) != 0) s_compare_string_api_mode = 2;
+        else if (CompareStringW(0, 0, L"", 1, L"", 1) != 0) s_compare_string_api_mode = 1;
+        else return 0;
+    }
+    if (s_compare_string_api_mode == 2) {
+        return CompareStringA((LCID)locale, (DWORD)flags, left, left_length,
+                              right, right_length);
+    }
+    if (s_compare_string_api_mode == 1) {
+        WCHAR* wide_left;
+        WCHAR* wide_right;
+        int wide_left_count;
+        int wide_right_count;
+        int result;
+        if (codepage == 0) codepage = s_ansi_codepage;
+        if (left_length == 0 || right_length == 0) {
+            CPINFO info;
+            const char* candidate;
+            int candidate_length;
+            int order;
+            if (left_length == right_length) return 2;
+            if (right_length > 1) return 1;
+            if (left_length > 1) return 3;
+            if (!GetCPInfo((UINT)codepage, &info)) return 0;
+            candidate = left_length > 0 ? left : right;
+            candidate_length = left_length > 0 ? left_length : right_length;
+            order = left_length > 0 ? 3 : 1;
+            if (info.MaxCharSize < 2 || candidate_length <= 0) return order;
+            for (i = 0; i + 1 < (int)sizeof(info.LeadByte); i += 2) {
+                if (info.LeadByte[i] == 0 || info.LeadByte[i + 1] == 0) break;
+                if (info.LeadByte[i] <= (BYTE)candidate[0] &&
+                    (BYTE)candidate[0] <= info.LeadByte[i + 1]) return 2;
+            }
+            return order;
+        }
+        wide_left_count = MultiByteToWideChar((UINT)codepage, 9, left, left_length, NULL, 0);
+        if (wide_left_count == 0) return 0;
+        wide_left = (WCHAR*)engine_heap_alloc((long)wide_left_count * sizeof(WCHAR));
+        if (wide_left == NULL) return 0;
+        if (MultiByteToWideChar((UINT)codepage, 1, left, left_length,
+                                wide_left, wide_left_count) == 0) {
+            engine_heap_free(wide_left);
+            return 0;
+        }
+        wide_right_count = MultiByteToWideChar((UINT)codepage, 9, right, right_length, NULL, 0);
+        if (wide_right_count == 0) {
+            engine_heap_free(wide_left);
+            return 0;
+        }
+        wide_right = (WCHAR*)engine_heap_alloc((long)wide_right_count * sizeof(WCHAR));
+        if (wide_right == NULL) {
+            engine_heap_free(wide_left);
+            return 0;
+        }
+        if (MultiByteToWideChar((UINT)codepage, 1, right, right_length,
+                                wide_right, wide_right_count) == 0) result = 0;
+        else result = CompareStringW((LCID)locale, (DWORD)flags, wide_left,
+                                     wide_left_count, wide_right, wide_right_count);
+        engine_heap_free(wide_left);
+        engine_heap_free(wide_right);
+        return result;
+    }
+#else
+    (void)locale;
+    if (left_length < 0) left_length = (int)strlen(left);
+    if (right_length < 0) right_length = (int)strlen(right);
+    if ((flags & 1u) != 0u) {
+        int limit = left_length < right_length ? left_length : right_length;
+        for (i = 0; i < limit; ++i) {
+            int a = tolower((unsigned char)left[i]);
+            int b = tolower((unsigned char)right[i]);
+            if (a < b) return 1;
+            if (a > b) return 3;
+        }
+        if (left_length < right_length) return 1;
+        if (left_length > right_length) return 3;
+        return 2;
+    }
+    i = left_length < right_length ? left_length : right_length;
+    i = memcmp(left, right, (size_t)i);
+    if (i < 0) return 1;
+    if (i > 0) return 3;
+    if (left_length < right_length) return 1;
+    if (left_length > right_length) return 3;
+    return 2;
+#endif
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x0049af20
+int crt_counted_string_compare(const char* left, const char* right, int count)
+{
+    int result;
+    if (count == 0) return 0;
+    result = crt_compare_string_compat(s_active_locale_table, 1u, left, count,
+                                       right, count, s_active_codepage);
+    if (result == 0) return 0x7fffffff;
+    return result - 2;
+}
+
+// FUNCTION: LEGORR 0x0049b4c0
+int crt_environment_entry_find(const char* name, int name_length)
+{
+    int index = 0;
+    char** entry = s_environment;
+    if (entry == NULL || *entry == NULL) return 0;
+    while (*entry != NULL) {
+        int comparison = crt_counted_string_compare(name, *entry, name_length);
+        if (comparison == 0 && ((*entry)[name_length] == '=' || (*entry)[name_length] == '\0')) {
+            return index;
+        }
+        ++entry;
+        ++index;
+    }
+    return -index;
+}
+
+static char** crt_environment_array_resize(char** entries, int slot_count)
+{
+    int old_count = 0;
+    int copy_count;
+    int i;
+    char** resized;
+    if (entries != NULL) while (entries[old_count] != NULL) ++old_count;
+    resized = (char**)engine_heap_alloc((long)slot_count * (long)sizeof(char*));
+    if (resized == NULL) return NULL;
+    copy_count = (entries == NULL) ? 0 : old_count + 1;
+    if (copy_count > slot_count) copy_count = slot_count;
+    for (i = 0; i < copy_count; ++i) resized[i] = entries[i];
+    if (copy_count < slot_count) resized[copy_count] = NULL;
+    if (entries != NULL) engine_heap_free(entries);
+    return resized;
+}
+
+// FUNCTION: LEGORR 0x0049b2b0
+int crt_put_env_update(char* text, int sync_process)
+{
+    char* equals;
+    int deleting;
+    int index;
+    int name_length;
+    char** entries;
+    if (text == NULL) return -1;
+    equals = crt_multibyte_character_search(text, '=');
+    if (equals == NULL || equals == text) return -1;
+    deleting = equals[1] == '\0';
+    if (s_environment == s_environment_sentinel) s_environment = crt_environment_array_clone(s_environment);
+    if (s_environment == NULL) {
+        if (sync_process == 0 || s_wide_environment == NULL) {
+            if (deleting) return 0;
+            s_environment = (char**)engine_heap_alloc((long)sizeof(char*));
+            if (s_environment == NULL) return -1;
+            s_environment[0] = NULL;
+            if (s_wide_environment == NULL) {
+                s_wide_environment = (uint16_t**)engine_heap_alloc((long)sizeof(uint16_t*));
+                if (s_wide_environment == NULL) return -1;
+                s_wide_environment[0] = NULL;
+            }
+        }
+        else if (crt_wide_environment_string_list_convert() != 0) return -1;
+    }
+    entries = s_environment;
+    name_length = (int)(equals - text);
+    index = crt_environment_entry_find(text, name_length);
+    if (index < 0 || entries[0] == NULL) {
+        if (deleting) return 0;
+        if (index < 0) index = -index;
+        entries = crt_environment_array_resize(entries, index + 2);
+        if (entries == NULL) return -1;
+        entries[index] = text;
+        entries[index + 1] = NULL;
+        s_environment = entries;
+    }
+    else if (deleting) {
+        int cursor = index;
+        engine_heap_free(entries[index]);
+        do {
+            entries[cursor] = entries[cursor + 1];
+        } while (entries[cursor++] != NULL);
+        {
+            char** shrunk = crt_environment_array_resize(entries, cursor);
+            if (shrunk != NULL) s_environment = shrunk;
+        }
+    }
+    else entries[index] = text;
+
+    if (sync_process != 0) {
+        int length = (int)strlen(text) + 1;
+        char* copy = (char*)engine_heap_alloc(length);
+        if (copy != NULL) {
+            int i;
+            for (i = 0; i < length; ++i) copy[i] = text[i];
+            copy[name_length] = '\0';
+#if defined(LEGORRR_BACKEND_WINAPI)
+            SetEnvironmentVariableA(copy, deleting ? NULL : copy + name_length + 1);
+#else
+            if (deleting) unsetenv(copy);
+            else setenv(copy, copy + name_length + 1, 1);
+#endif
+            engine_heap_free(copy);
+        }
+    }
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x0049af60
+int crt_wide_environment_string_list_convert(void)
+{
+#if defined(LEGORRR_BACKEND_WINAPI)
+    uint16_t** entry = s_wide_environment;
+    if (entry == NULL || *entry == NULL) return 0;
+    while (*entry != NULL) {
+        int count = WideCharToMultiByte(CP_OEMCP, 0, (LPCWCH)*entry, -1,
+                                        NULL, 0, NULL, NULL);
+        char* converted;
+        if (count == 0) return -1;
+        converted = (char*)engine_heap_alloc(count);
+        if (converted == NULL) return -1;
+        if (WideCharToMultiByte(CP_OEMCP, 0, (LPCWCH)*entry, -1,
+                                converted, count, NULL, NULL) == 0) return -1;
+        crt_put_env_update(converted, 0);
+        ++entry;
+    }
+    return 0;
+#else
+    return (s_wide_environment == NULL || *s_wide_environment == NULL) ? 0 : -1;
+#endif
+}
+
+// FUNCTION: LEGORR 0x0049ae10
+char* crt_environment_variable_lookup(const char* name)
+{
+    int name_length;
+    char** entry;
+    if (s_environment == NULL && s_wide_environment != NULL &&
+        crt_wide_environment_string_list_convert() != 0) return NULL;
+    if (name == NULL || s_environment == NULL) return NULL;
+    name_length = (int)strlen(name);
+    for (entry = s_environment; *entry != NULL; ++entry) {
+        if ((int)strlen(*entry) > name_length && (*entry)[name_length] == '=' &&
+            crt_counted_string_compare(*entry, name, name_length) == 0) {
+            return *entry + name_length + 1;
+        }
+    }
+    return NULL;
 }
 
 /* CrtCommandLineArgumentScan (FUN_00495f80): the CRT's two-pass command-line
@@ -3608,6 +5936,363 @@ void crt_decimal_mantissa_round_and_normalize(char* output, int precision,
     }
 }
 
+// FUNCTION: LEGORR 0x0049a1b0
+uint32_t crt_extended_float_to_decimal(uint32_t significand_low,
+                                      uint32_t significand_high,
+                                      uint16_t sign_exponent,
+                                      int precision,
+                                      uint8_t flags,
+                                      uint8_t* output)
+{
+    uint16_t exponent_field = sign_exponent & 0x7fffu;
+    uint16_t value[6];
+    uint32_t limbs[3];
+    uint32_t i;
+    uint32_t digit_count;
+    uint32_t estimate;
+    int decimal_exponent;
+    int exponent_delta;
+    int count;
+    int end;
+    const uint8_t sign = (sign_exponent & 0x8000u) != 0u ? '-' : ' ';
+
+    output[2] = sign;
+    if (exponent_field == 0u && significand_high == 0u &&
+        significand_low == 0u) {
+        *(uint16_t*)output = 0u;
+        output[2] = ' ';
+        output[3] = 1u;
+        output[4] = '0';
+        output[5] = '\0';
+        return 1u;
+    }
+
+    if (exponent_field == 0x7fffu) {
+        *(uint16_t*)output = 1u;
+        if ((significand_high != 0x80000000u || significand_low != 0u) &&
+            (significand_high & 0x40000000u) == 0u) {
+            output[3] = 6u;
+            memcpy(output + 4, "1#SNAN", 7u);
+            return 0u;
+        }
+        if ((sign_exponent & 0x8000u) != 0u &&
+            significand_high == 0xc0000000u && significand_low == 0u) {
+            output[3] = 5u;
+            memcpy(output + 4, "1#IND", 6u);
+            return 0u;
+        }
+        if (significand_high == 0x80000000u && significand_low == 0u) {
+            output[3] = 5u;
+            memcpy(output + 4, "1#INF", 6u);
+            return 0u;
+        }
+        output[3] = 6u;
+        memcpy(output + 4, "1#QNAN", 7u);
+        return 0u;
+    }
+
+    value[0] = 0u;
+    value[1] = (uint16_t)significand_low;
+    value[2] = (uint16_t)(significand_low >> 16);
+    value[3] = (uint16_t)significand_high;
+    value[4] = (uint16_t)(significand_high >> 16);
+    value[5] = exponent_field;
+    estimate = (((uint32_t)(exponent_field >> 8) +
+                 (significand_high >> 24) * 2u) * 0x4du) +
+               0xecbced0cu + (uint32_t)exponent_field * 0x4d10u;
+    decimal_exponent = (int16_t)(estimate >> 16);
+    crt_extended_float_power_of_ten_scale(value,
+                                          (uint32_t)(-decimal_exponent), 1);
+
+    if (exponent_field > 0x3ffeu) {
+        static const uint16_t tenth[6] = {
+            0xccccu, 0xccccu, 0xccccu, 0xccccu, 0xccccu, 0x3ffbu
+        };
+        ++decimal_exponent;
+        crt_extended80_multiply(value, tenth);
+    }
+    *(int16_t*)output = (int16_t)decimal_exponent;
+
+    count = precision;
+    if ((flags & 1u) != 0u) {
+        count += decimal_exponent;
+        if (count < 1) {
+            *(int16_t*)output = 0;
+            output[2] = ' ';
+            output[3] = 1u;
+            output[4] = '0';
+            output[5] = '\0';
+            return 1u;
+        }
+    }
+    if (count > 21) {
+        count = 21;
+    }
+
+    exponent_delta = (int16_t)value[5] - 0x3ffe;
+    limbs[0] = (uint32_t)value[0] | ((uint32_t)value[1] << 16);
+    limbs[1] = (uint32_t)value[2] | ((uint32_t)value[3] << 16);
+    limbs[2] = (uint32_t)value[4] << 16;
+    for (i = 0u; i < 8u; ++i) {
+        extended_float96_bit_shift_left_one(limbs);
+    }
+    if (exponent_delta < 0) {
+        int shifts = -exponent_delta;
+        while (shifts != 0) {
+            extended_float96_bit_shift_right_one(limbs);
+            --shifts;
+        }
+    }
+
+    limbs[2] &= 0x00ffffffu;
+    digit_count = (uint32_t)(count + 1);
+    for (i = 0u; i < digit_count; ++i) {
+        uint32_t original[3];
+        uint32_t digit;
+
+        original[0] = limbs[0];
+        original[1] = limbs[1];
+        original[2] = limbs[2];
+        extended_float96_bit_shift_left_one(limbs);
+        extended_float96_bit_shift_left_one(limbs);
+        crt_uint96_add(limbs, original);
+        extended_float96_bit_shift_left_one(limbs);
+        digit = (limbs[2] >> 24) & 0xffu;
+        output[4u + i] = (uint8_t)(digit + (uint32_t)'0');
+        limbs[2] &= 0x00ffffffu;
+    }
+
+    end = (int)digit_count - 1;
+    if (output[4u + end] < '5') {
+        while (end >= 0 && output[4u + end] == '0') {
+            --end;
+        }
+        if (end < 0) {
+            *(int16_t*)output = 0;
+            output[2] = ' ';
+            output[3] = 1u;
+            output[4] = '0';
+            output[5] = '\0';
+            return 1u;
+        }
+    }
+    else {
+        while (end >= 0 && output[4u + end] == '9') {
+            output[4u + end] = '0';
+            --end;
+        }
+        if (end < 0) {
+            ++*(int16_t*)output;
+            output[4] = '1';
+            end = 0;
+        }
+        else {
+            ++output[4u + end];
+        }
+    }
+    output[3] = (uint8_t)(end + 1);
+    output[4u + (uint32_t)end + 1u] = '\0';
+    return 1u;
+}
+
+// FUNCTION: LEGORR 0x00497ec0
+CrtDecimalFormatContext* crt_locale_data_get_or_initialize(
+    uint32_t double_low, uint32_t double_high)
+{
+    uint32_t source[2];
+    uint32_t extended[3];
+    uint32_t converted;
+
+    source[0] = double_low;
+    source[1] = double_high;
+    crt_double_to_extended80(extended, source);
+    converted = crt_extended_float_to_decimal(
+        extended[0], extended[1], (uint16_t)extended[2], 0x11, 0,
+        s_decimal_conversion_buffer);
+
+    s_decimal_format_context.first = (int8_t)s_decimal_conversion_buffer[2];
+    s_decimal_format_context.exponent =
+        *(int16_t*)s_decimal_conversion_buffer;
+    s_decimal_format_context.locale_result = (char*)converted;
+    s_decimal_format_context.digits =
+        (char*)s_decimal_conversion_buffer + 4;
+    return &s_decimal_format_context;
+}
+
+// FUNCTION: LEGORR 0x00490400
+char* crt_scientific_float_format_append(const uint32_t* value,
+                                         char* output,
+                                         int precision,
+                                         int uppercase)
+{
+    CrtDecimalFormatContext* context = s_current_decimal_format;
+    char* cursor;
+    char* exponent_text;
+    int exponent;
+    uint32_t exponent_prefix;
+    uint16_t exponent_suffix;
+
+    if (s_decimal_format_prepared == 0u) {
+        context = crt_locale_data_get_or_initialize(value[0], value[1]);
+        crt_decimal_mantissa_round_and_normalize(
+            output + (context->first == '-' ? 1 : 0) +
+                (precision > 0 ? 1 : 0),
+            precision + 1, context);
+    }
+    else {
+        string_prefix_reserve(output + (context->first == '-' ? 1 : 0),
+                              precision > 0);
+    }
+
+    cursor = output;
+    if (context->first == '-') {
+        *cursor++ = '-';
+    }
+    if (precision > 0) {
+        cursor[0] = cursor[1];
+        ++cursor;
+        *cursor = s_decimal_separator;
+    }
+    exponent_text = cursor + precision +
+                    (s_decimal_format_prepared == 0u ? 1 : 0);
+    exponent_prefix = 0x30302b65u;
+    exponent_suffix = 0x0030u;
+    memcpy(exponent_text, &exponent_prefix, sizeof(exponent_prefix));
+    memcpy(exponent_text + 4, &exponent_suffix, sizeof(exponent_suffix));
+    if (uppercase != 0) {
+        exponent_text[0] = 'E';
+    }
+
+    if (context->digits[0] != '0') {
+        exponent = context->exponent - 1;
+        if (exponent < 0) {
+            exponent = -exponent;
+            exponent_text[1] = '-';
+        }
+        if (exponent >= 100) {
+            exponent_text[2] = (char)('0' + exponent / 100);
+            exponent %= 100;
+        }
+        if (exponent >= 10) {
+            exponent_text[3] = (char)('0' + exponent / 10);
+            exponent %= 10;
+        }
+        exponent_text[4] = (char)('0' + exponent);
+    }
+    return output;
+}
+
+// FUNCTION: LEGORR 0x00490540
+char* crt_fixed_float_fraction_format(const uint32_t* value,
+                                      char* output,
+                                      uint32_t precision)
+{
+    CrtDecimalFormatContext* context = s_current_decimal_format;
+    char* cursor;
+    int integer_digits;
+
+    if (s_decimal_format_prepared == 0u) {
+        context = crt_locale_data_get_or_initialize(value[0], value[1]);
+        crt_decimal_mantissa_round_and_normalize(
+            output + (context->first == '-' ? 1 : 0),
+            context->exponent + (int)precision, context);
+    }
+    else if (s_decimal_format_position == (int32_t)precision) {
+        const uint32_t zero_index =
+            precision + (context->first == '-' ? 1u : 0u);
+        output[zero_index] = '0';
+        output[zero_index + 1u] = '\0';
+    }
+
+    cursor = output;
+    if (context->first == '-') {
+        *cursor++ = '-';
+    }
+    integer_digits = context->exponent;
+    if (integer_digits < 1) {
+        string_prefix_reserve(cursor, 1);
+        *cursor++ = '0';
+    }
+    else {
+        cursor += integer_digits;
+    }
+
+    if (precision != 0u) {
+        string_prefix_reserve(cursor, 1);
+        *cursor++ = s_decimal_separator;
+        if (integer_digits < 0) {
+            int zero_count = (int)precision;
+            if (s_decimal_format_prepared != 0u ||
+                -integer_digits <= (int)precision) {
+                zero_count = -integer_digits;
+            }
+            string_prefix_reserve(cursor, zero_count);
+            while (zero_count > 0) {
+                *cursor++ = '0';
+                --zero_count;
+            }
+        }
+    }
+    return output;
+}
+
+// FUNCTION: LEGORR 0x00490640
+void crt_float_decimal_format_prepare(const uint32_t* value,
+                                      char* output,
+                                      int precision,
+                                      int uppercase)
+{
+    char* digits;
+    char* end;
+
+    s_current_decimal_format =
+        crt_locale_data_get_or_initialize(value[0], value[1]);
+    s_decimal_format_position = s_current_decimal_format->exponent - 1;
+    digits = output + (s_current_decimal_format->first == '-' ? 1 : 0);
+    crt_decimal_mantissa_round_and_normalize(digits, precision,
+                                              s_current_decimal_format);
+    s_decimal_format_truncated =
+        (uint8_t)(s_decimal_format_position <
+                  s_current_decimal_format->exponent - 1);
+    s_decimal_format_position = s_current_decimal_format->exponent - 1;
+
+    if (s_decimal_format_position >= -4 &&
+        s_decimal_format_position < precision) {
+        if (s_decimal_format_truncated != 0) {
+            end = digits;
+            while (*end != '\0') {
+                ++end;
+            }
+            end[-1] = '\0';
+        }
+        crt_fixed_decimal_format_guarded(value, output,
+                                          (uint32_t)precision);
+        return;
+    }
+    crt_scientific_float_format_guarded(value, output, precision, uppercase);
+}
+
+// FUNCTION: LEGORR 0x004906f0
+void crt_scientific_float_format_guarded(const uint32_t* value,
+                                         char* output,
+                                         int precision,
+                                         int uppercase)
+{
+    s_decimal_format_prepared = 1u;
+    crt_scientific_float_format_append(value, output, precision, uppercase);
+    s_decimal_format_prepared = 0u;
+}
+
+// FUNCTION: LEGORR 0x00490720
+void crt_fixed_decimal_format_guarded(const uint32_t* value,
+                                      char* output,
+                                      uint32_t precision)
+{
+    s_decimal_format_prepared = 1u;
+    crt_fixed_float_fraction_format(value, output, precision);
+    s_decimal_format_prepared = 0u;
+}
+
 /* --- the CRT file-descriptor flag window (2026-10-25) ---------------------
  * CrtFileDescriptorFlag40Get (FUN_00498b40): the corpus reads bit 0x40 of
  * the byte at block+4 in its file-descriptor table — 32 eight-byte entries
@@ -3623,6 +6308,14 @@ void crt_decimal_mantissa_round_and_normalize(char* output, int precision,
 static void* s_fd_flag_blocks[CRT_FD_BLOCKS]; /* DAT_0076ddc0 role */
 // GLOBAL: LEGORR 0x0076dec0
 static int   s_fd_flag_count;                 /* DAT_0076dec0 role */
+// GLOBAL: LEGORR 0x004b2428
+static unsigned char s_fd_fallback_record[8] = {
+    0xffu, 0xffu, 0xffu, 0xffu, 0u, 10u, 0u, 0u
+};
+// GLOBAL: LEGORR 0x004b2648
+static int s_standard_stream_record_0[8] = { 0, 0, 0, 2, 1, 0, 0, 0 };
+// GLOBAL: LEGORR 0x004b2668
+static int s_standard_stream_record_1[8] = { 0, 0, 0, 2, 2, 0, 0, 0 };
 
 // FUNCTION: LEGORR 0x00498b40
 unsigned crt_file_descriptor_flag40_get(unsigned fd)
@@ -3660,34 +6353,34 @@ int crt_file_descriptor_handle_get(unsigned fd)
 int crt_file_descriptor_allocate(void)
 {
     int block_index;
+    int block_base = 0;
     for (block_index = 0; block_index < CRT_FD_BLOCKS; ++block_index) {
         unsigned char* block = (unsigned char*)s_fd_flag_blocks[block_index];
         if (block == NULL) {
-            int slot;
+            unsigned char* entry;
             block = (unsigned char*)engine_heap_alloc(0x100);
             if (block == NULL) {
                 return -1;
             }
             s_fd_flag_count += 0x20;
             s_fd_flag_blocks[block_index] = block;
-            for (slot = 0; slot < 0x20; ++slot) {
-                unsigned char* entry = block + slot * 8;
+            for (entry = block; entry < block + 0x100; entry += 8) {
                 *(int*)entry = -1;
                 entry[4] = 0;
                 entry[5] = 10;
             }
-            return block_index << 5;
+            return block_base;
         }
         else {
-            int slot;
-            for (slot = 0; slot < 0x20; ++slot) {
-                unsigned char* entry = block + slot * 8;
+            unsigned char* entry;
+            for (entry = block; entry < block + 0x100; entry += 8) {
                 if ((entry[4] & 1u) == 0u) {
                     *(int*)entry = -1;
-                    return (block_index << 5) + slot;
+                    return (int)(entry - block) / 8 + block_base;
                 }
             }
         }
+        block_base += 0x20;
     }
     return -1;
 }
@@ -3703,6 +6396,23 @@ int crt_file_descriptor_set_handle(unsigned fd, int handle)
         unsigned char* entry =
             (unsigned char*)s_fd_flag_blocks[fd >> 5] + (fd & 0x1fu) * 8u;
         if (*(int*)entry == -1) {
+#if defined(LEGORRR_BACKEND_WINAPI)
+            if (s_runtime_error_console_mode == 1) {
+                if (fd == 0u) {
+                    SetStdHandle((DWORD)-10, (HANDLE)handle);
+                }
+                else if (fd == 1u) {
+                    SetStdHandle((DWORD)-11, (HANDLE)handle);
+                    *(int*)entry = handle;
+                    return 0;
+                }
+                else if (fd == 2u) {
+                    SetStdHandle((DWORD)-12, (HANDLE)handle);
+                    *(int*)entry = handle;
+                    return 0;
+                }
+            }
+#endif
             *(int*)entry = handle;
             return 0;
         }
@@ -3721,6 +6431,19 @@ int crt_file_descriptor_close_slot(unsigned fd)
         unsigned char* entry =
             (unsigned char*)s_fd_flag_blocks[fd >> 5] + (fd & 0x1fu) * 8u;
         if ((entry[4] & 1u) != 0u && *(int*)entry != -1) {
+#if defined(LEGORRR_BACKEND_WINAPI)
+            if (s_runtime_error_console_mode == 1) {
+                if (fd == 0u) {
+                    SetStdHandle((DWORD)-10, NULL);
+                }
+                else if (fd == 1u) {
+                    SetStdHandle((DWORD)-11, NULL);
+                }
+                else if (fd == 2u) {
+                    SetStdHandle((DWORD)-12, NULL);
+                }
+            }
+#endif
             *(int*)entry = -1;
             return 0;
         }
@@ -3728,6 +6451,713 @@ int crt_file_descriptor_close_slot(unsigned fd)
     s_math_error_code = 9u;
     s_win32_error_code = 0u;
     return -1;
+}
+
+/* CrtFindHandleClose (FUN_0048f950): close one search handle and set the
+ * CRT invalid-argument error when the platform close operation fails. */
+// FUNCTION: LEGORR 0x0048f950
+int crt_find_handle_close(int handle)
+{
+#if defined(LEGORRR_BACKEND_WINAPI)
+    if (FindClose((HANDLE)handle) != 0) {
+        return 0;
+    }
+    s_math_error_code = 0x16u;
+    return -1;
+#elif !defined(_MSC_VER)
+    (void)handle;
+    s_math_error_code = EINVAL;
+    return -1;
+#else
+    (void)handle;
+    s_math_error_code = 0x16u;
+    return -1;
+#endif
+}
+
+/* CrtFileDescriptorClose (FUN_00494d10): close an active descriptor, keeping
+ * shared stdout/stderr handles open while releasing the descriptor slot. */
+// FUNCTION: LEGORR 0x00494d10
+int crt_file_descriptor_close(unsigned fd)
+{
+    unsigned char* block;
+    unsigned char* entry;
+    int handle;
+    uint32_t os_error;
+    if (fd >= (unsigned)s_fd_flag_count || (fd >> 5) >= CRT_FD_BLOCKS) {
+        s_math_error_code = 9u;
+        s_win32_error_code = 0u;
+        return -1;
+    }
+    block = (unsigned char*)s_fd_flag_blocks[fd >> 5];
+    if (block == NULL) {
+        s_math_error_code = 9u;
+        s_win32_error_code = 0u;
+        return -1;
+    }
+    entry = block + (fd & 0x1fu) * 8u;
+    if ((entry[4] & 1u) == 0u) {
+        s_math_error_code = 9u;
+        s_win32_error_code = 0u;
+        return -1;
+    }
+    os_error = 0u;
+    handle = crt_file_descriptor_handle_get(fd);
+    if (handle != -1) {
+        if (fd == 1u || fd == 2u) {
+            if (crt_file_descriptor_handle_get(1u) ==
+                crt_file_descriptor_handle_get(2u)) {
+                handle = -1;
+            }
+        }
+        if (handle != -1) {
+#if defined(LEGORRR_BACKEND_WINAPI)
+            if (CloseHandle((HANDLE)handle) == 0) {
+                os_error = GetLastError();
+            }
+#elif !defined(_MSC_VER)
+            if (close(handle) != 0) {
+                s_math_error_code = (uint32_t)errno;
+                s_win32_error_code = 0u;
+                os_error = 0xffffffffu;
+            }
+#else
+            s_math_error_code = 9u;
+            s_win32_error_code = 0u;
+            os_error = 0xffffffffu;
+#endif
+        }
+    }
+    (void)crt_file_descriptor_close_slot(fd);
+    entry[4] = 0u;
+    if (os_error == 0u) {
+        return 0;
+    }
+    if (os_error != 0xffffffffu) {
+        crt_win32_error_map_to_errno(os_error);
+    }
+    return -1;
+}
+
+/* Win32FileDescriptorOpen (FUN_00499240): translate CRT open flags to the
+ * corresponding Win32 access, sharing, disposition, and handle flags, then
+ * register the resulting operating-system handle in the CRT descriptor table. */
+// FUNCTION: LEGORR 0x00499240
+int crt_win32_file_descriptor_open(const char* path, uint32_t flags,
+                                   uint32_t share, uint32_t attributes)
+{
+    uint32_t access;
+    uint32_t disposition;
+    uint32_t handle_flags;
+    uint32_t share_mode;
+    unsigned char descriptor_flags;
+    int fd;
+    if ((flags & 3u) == 0u) {
+        access = 0x80000000u;
+    }
+    else if ((flags & 3u) == 1u) {
+        access = 0x40000000u;
+    }
+    else if ((flags & 3u) == 2u) {
+        access = 0xc0000000u;
+    }
+    else {
+        s_math_error_code = 0x16u;
+        s_win32_error_code = 0u;
+        return -1;
+    }
+    switch (share) {
+    case 0x10u: share_mode = 0u; break;
+    case 0x20u: share_mode = 1u; break;
+    case 0x30u: share_mode = 2u; break;
+    case 0x40u: share_mode = 3u; break;
+    default:
+        s_math_error_code = 0x16u;
+        s_win32_error_code = 0u;
+        return -1;
+    }
+    switch (flags & 0x700u) {
+    case 0x000u: case 0x400u: disposition = 3u; break;
+    case 0x100u: disposition = 4u; break;
+    case 0x200u: case 0x600u: disposition = 5u; break;
+    case 0x300u: disposition = 2u; break;
+    case 0x500u: case 0x700u: disposition = 1u; break;
+    default:
+        s_math_error_code = 0x16u;
+        s_win32_error_code = 0u;
+        return -1;
+    }
+    descriptor_flags = (unsigned char)((flags & 0x80u) == 0u ? 0u : 0x10u);
+    if ((flags & 0x8000u) == 0u &&
+        ((flags & 0x4000u) != 0u || s_file_open_share_state != 0x8000u)) {
+        descriptor_flags |= 0x80u;
+    }
+    handle_flags = 0x80u;
+    if ((flags & 0x100u) != 0u &&
+        (((unsigned char)attributes & (unsigned char)~s_file_open_attribute_policy & 0x80u) == 0u)) {
+        handle_flags = 1u;
+    }
+    if ((flags & 0x40u) != 0u) {
+        handle_flags |= 0x04000000u;
+        access |= 0x10000u;
+    }
+    if ((flags & 0x1000u) != 0u) {
+        handle_flags |= 0x100u;
+    }
+    if ((flags & 0x20u) != 0u) {
+        handle_flags |= 0x08000000u;
+    }
+    else if ((flags & 0x10u) != 0u) {
+        handle_flags |= 0x10000000u;
+    }
+    fd = crt_file_descriptor_allocate();
+    if (fd < 0) {
+        s_math_error_code = 0x18u;
+        s_win32_error_code = 0u;
+        return -1;
+    }
+#if defined(LEGORRR_BACKEND_WINAPI)
+    {
+        SECURITY_ATTRIBUTES security;
+        HANDLE handle;
+        DWORD type;
+        security.nLength = sizeof security;
+        security.lpSecurityDescriptor = NULL;
+        security.bInheritHandle = ((flags & 0x80u) == 0u) ? TRUE : FALSE;
+        descriptor_flags = (unsigned char)((flags & 0x80u) == 0u ? 0u : 0x10u);
+        if ((flags & 0x8000u) == 0u &&
+            ((flags & 0x4000u) != 0u || s_file_open_share_state != 0x8000u)) {
+            descriptor_flags |= 0x80u;
+        }
+        handle = CreateFileA(path, access, share_mode, &security, disposition,
+                             handle_flags, NULL);
+        if (handle == INVALID_HANDLE_VALUE) {
+            crt_win32_error_map_to_errno(GetLastError());
+            return -1;
+        }
+        type = GetFileType(handle);
+        if (type == 0u) {
+            DWORD error = GetLastError();
+            (void)CloseHandle(handle);
+            crt_win32_error_map_to_errno(error);
+            return -1;
+        }
+        if ((type & 0xffu) == 2u) {
+            descriptor_flags |= 0x40u;
+        }
+        else if ((type & 0xffu) == 3u) {
+            descriptor_flags |= 8u;
+        }
+        (void)crt_file_descriptor_set_handle((unsigned)fd, (int)handle);
+        {
+            unsigned char* entry = (unsigned char*)s_fd_flag_blocks[fd >> 5] +
+                                  (fd & 0x1f) * 8u;
+            entry[4] = (unsigned char)(descriptor_flags | 1u);
+            if ((descriptor_flags & 0x48u) == 0u &&
+                (descriptor_flags & 0x80u) != 0u && (flags & 2u) != 0u) {
+                uint32_t last = crt_win32_file_descriptor_seek((uint32_t)fd, -1, 2u);
+                if (last == 0xffffffffu) {
+                    if (s_math_error_code != 0x83u) {
+                        (void)crt_file_descriptor_close((unsigned)fd);
+                        return -1;
+                    }
+                }
+                else {
+                    unsigned char last_byte = 0u;
+#if defined(LEGORRR_BACKEND_WINAPI)
+                    DWORD transferred = 0u;
+                    int read_count = ReadFile(handle, &last_byte, 1u,
+                                              &transferred, NULL) != 0 &&
+                                     transferred == 1u ? 1 : 0;
+#else
+                    int read_count = 0;
+#endif
+                    if (read_count == 0 && last_byte == 0x1au) {
+                        SetLastError(NO_ERROR);
+                        if ((uint32_t)SetFilePointer(handle, (LONG)last, NULL, FILE_BEGIN) == 0xffffffffu &&
+                            GetLastError() != NO_ERROR) {
+                            crt_win32_error_map_to_errno(GetLastError());
+                            (void)crt_file_descriptor_close((unsigned)fd);
+                            return -1;
+                        }
+                        if (SetEndOfFile(handle) == 0) {
+                            crt_win32_error_map_to_errno(GetLastError());
+                            (void)crt_file_descriptor_close((unsigned)fd);
+                            return -1;
+                        }
+                    }
+                    if (crt_win32_file_descriptor_seek((uint32_t)fd, 0, 0u) == 0xffffffffu) {
+                        (void)crt_file_descriptor_close((unsigned)fd);
+                        return -1;
+                    }
+                }
+            }
+            if ((descriptor_flags & 0x48u) == 0u && (flags & 8u) != 0u) {
+                entry[4] |= 0x20u;
+            }
+        }
+    }
+#elif !defined(_MSC_VER)
+    {
+        int native_flags;
+        int native_fd;
+        unsigned char* entry;
+        native_flags = (flags & 3u) == 0u ? O_RDONLY :
+                       (flags & 3u) == 1u ? O_WRONLY : O_RDWR;
+        if ((flags & 0x700u) == 0x100u) native_flags |= O_CREAT;
+        else if ((flags & 0x700u) == 0x200u || (flags & 0x700u) == 0x600u)
+            native_flags |= O_TRUNC;
+        else if ((flags & 0x700u) == 0x300u) native_flags |= O_CREAT | O_TRUNC;
+        else if ((flags & 0x700u) == 0x500u || (flags & 0x700u) == 0x700u)
+            native_flags |= O_CREAT | O_EXCL;
+#ifdef O_BINARY
+        if ((flags & 0x8000u) != 0u) native_flags |= O_BINARY;
+#endif
+        native_fd = open(path, native_flags, 0666);
+        if (native_fd < 0) {
+            s_math_error_code = (uint32_t)errno;
+            s_win32_error_code = 0u;
+            (void)crt_file_descriptor_close_slot((unsigned)fd);
+            return -1;
+        }
+        entry = (unsigned char*)s_fd_flag_blocks[fd >> 5] + (fd & 0x1f) * 8u;
+        *(int*)entry = native_fd;
+        entry[4] = (unsigned char)(descriptor_flags | 1u | 0x80u);
+        if ((flags & 8u) != 0u) entry[4] |= 0x20u;
+    }
+#else
+    (void)path;
+    (void)flags;
+    (void)share;
+    (void)attributes;
+    (void)access;
+    (void)disposition;
+    (void)handle_flags;
+    (void)share_mode;
+    (void)descriptor_flags;
+    (void)fd;
+    s_math_error_code = 9u;
+    s_win32_error_code = 0u;
+    return -1;
+#endif
+    return fd;
+}
+
+/* CrtStandardStreamBufferInstall (FUN_004974d0): install one of the two
+ * cached 4K buffers on its matching standard stream record. */
+// FUNCTION: LEGORR 0x004974d0
+int crt_standard_stream_buffer_install(int* stream)
+{
+    int stream_index;
+    unsigned fd;
+    uint32_t* fields;
+    if (stream == NULL) {
+        return 0;
+    }
+    fd = (unsigned)stream[4];
+    if (crt_file_descriptor_flag40_get(fd) == 0u) {
+        return 0;
+    }
+    if (stream == s_standard_stream_record_0) {
+        stream_index = 0;
+    }
+    else if (stream == s_standard_stream_record_1) {
+        stream_index = 1;
+    }
+    else {
+        return 0;
+    }
+    ++s_stream_alloc_count;
+    fields = (uint32_t*)stream;
+    if ((fields[3] & 0x10cu) == 0u) {
+        if (s_standard_stream_buffers[stream_index] == NULL) {
+            s_standard_stream_buffers[stream_index] =
+                engine_heap_alloc(0x1000);
+            if (s_standard_stream_buffers[stream_index] == NULL) {
+                return 0;
+            }
+        }
+        fields[6] = 0x1000u;
+        fields[2] = (uint32_t)s_standard_stream_buffers[stream_index];
+        fields[0] = (uint32_t)s_standard_stream_buffers[stream_index];
+        fields[1] = 0x1000u;
+        fields[3] |= 0x1102u;
+        return 1;
+    }
+    return 0;
+}
+
+/* CrtFileDescriptorTableInit (FUN_004965d0): create the first 32 CRT
+ * descriptors, import inherited Win32 handles, then seed descriptors 0-2. */
+// FUNCTION: LEGORR 0x004965d0
+void crt_file_descriptor_table_init(void)
+{
+    unsigned char* first_block;
+    unsigned char* entry;
+    unsigned slot;
+    first_block = (unsigned char*)engine_heap_alloc(0x100);
+    if (first_block == NULL) {
+#if defined(_MSC_VER)
+        _amsg_exit(0x1b);
+#else
+        abort();
+#endif
+    }
+    s_fd_flag_count = 0x20;
+    s_fd_flag_blocks[0] = first_block;
+    for (entry = first_block; entry < first_block + 0x100; entry += 8) {
+        *(int*)entry = -1;
+        entry[4] = 0u;
+        entry[5] = 10u;
+    }
+#if defined(LEGORRR_BACKEND_WINAPI)
+    {
+        STARTUPINFOA startup;
+        GetStartupInfoA(&startup);
+        if (startup.cbReserved2 != 0u && startup.lpReserved2 != NULL) {
+            const unsigned char* reserved = startup.lpReserved2;
+            uint32_t inherited_count;
+            uint32_t import_count;
+            const unsigned char* inherited_flags;
+            const unsigned char* inherited_handles;
+            memcpy(&inherited_count, reserved, sizeof inherited_count);
+            inherited_flags = reserved + 4u;
+            inherited_handles = inherited_flags + inherited_count;
+            import_count = inherited_count;
+            if (import_count > 0x800u) {
+                import_count = 0x800u;
+            }
+            while ((uint32_t)s_fd_flag_count < import_count) {
+                const unsigned block_index = (unsigned)s_fd_flag_count >> 5;
+                unsigned char* block =
+                    (unsigned char*)engine_heap_alloc(0x100);
+                if (block == NULL) {
+                    import_count = (uint32_t)s_fd_flag_count;
+                    break;
+                }
+                s_fd_flag_blocks[block_index] = block;
+                s_fd_flag_count += 0x20;
+                for (entry = block; entry < block + 0x100; entry += 8) {
+                    *(int*)entry = -1;
+                    entry[4] = 0u;
+                    entry[5] = 10u;
+                }
+            }
+            for (slot = 0u; slot < import_count; ++slot) {
+                uint32_t raw_handle;
+                const unsigned block_index = slot >> 5;
+                const unsigned entry_index = slot & 0x1fu;
+                unsigned char* entry;
+                memcpy(&raw_handle, inherited_handles + slot * 4u, 4u);
+                if (raw_handle == 0xffffffffu ||
+                    (inherited_flags[slot] & 1u) == 0u) {
+                    continue;
+                }
+                if ((inherited_flags[slot] & 8u) == 0u &&
+                    GetFileType((HANDLE)raw_handle) == 0u) {
+                    continue;
+                }
+                entry = (unsigned char*)s_fd_flag_blocks[block_index] +
+                        entry_index * 8u;
+                *(uint32_t*)entry = raw_handle;
+                entry[4] = inherited_flags[slot];
+            }
+        }
+    }
+#elif !defined(_MSC_VER)
+    for (slot = 0u; slot < 3u; ++slot) {
+        unsigned char* entry = first_block + slot * 8u;
+        *(int*)entry = (int)slot;
+        entry[4] = (unsigned char)(0x81u | (isatty((int)slot) ? 8u : 0u));
+    }
+#endif
+    for (slot = 0u; slot < 3u; ++slot) {
+        unsigned char* entry = first_block + slot * 8u;
+        if (*(int*)entry == -1) {
+#if defined(LEGORRR_BACKEND_WINAPI)
+            DWORD standard_id = slot == 0u ? (DWORD)-10 :
+                                slot == 1u ? (DWORD)-11 : (DWORD)-12;
+            HANDLE handle = GetStdHandle(standard_id);
+            DWORD file_type;
+            entry[4] = 0x81u;
+            if (handle == INVALID_HANDLE_VALUE ||
+                (file_type = GetFileType(handle)) == 0u) {
+                entry[4] |= 0x40u;
+            }
+            else {
+                *(HANDLE*)entry = handle;
+                if ((file_type & 0xffu) == 2u) {
+                    entry[4] |= 0x40u;
+                }
+                else if ((file_type & 0xffu) == 3u) {
+                    entry[4] |= 8u;
+                }
+            }
+#else
+            entry[4] = 0x81u;
+#endif
+        }
+        else {
+            entry[4] |= 0x80u;
+        }
+    }
+#if defined(LEGORRR_BACKEND_WINAPI)
+    (void)SetHandleCount((unsigned)s_fd_flag_count);
+#endif
+}
+
+/* Win32FileDescriptorRead (FUN_00497130): refill a CRT descriptor buffer,
+ * translate text-mode CR/LF and Ctrl-Z, and preserve a terminal lookahead. */
+// FUNCTION: LEGORR 0x00497130
+int crt_win32_file_descriptor_read(uint32_t fd, char* buffer,
+                                   uint32_t count)
+{
+    unsigned char* block;
+    unsigned char* entry;
+    unsigned char flags;
+    int output_count;
+    uint32_t bytes_read;
+    uint32_t os_error;
+    char* output;
+    if (fd >= (uint32_t)s_fd_flag_count || (fd >> 5) >= CRT_FD_BLOCKS ||
+        buffer == NULL) {
+        s_math_error_code = 9u;
+        s_win32_error_code = 0u;
+        return -1;
+    }
+    block = (unsigned char*)s_fd_flag_blocks[fd >> 5];
+    if (block == NULL) {
+        s_math_error_code = 9u;
+        s_win32_error_code = 0u;
+        return -1;
+    }
+    entry = block + (fd & 0x1fu) * 8u;
+    flags = entry[4];
+    if ((flags & 1u) == 0u) {
+        s_math_error_code = 9u;
+        s_win32_error_code = 0u;
+        return -1;
+    }
+    if (count == 0u || (flags & 2u) != 0u) {
+        return 0;
+    }
+    output_count = 0;
+    output = buffer;
+    if ((flags & 0x48u) != 0u && entry[5] != (unsigned char)'\n') {
+        *output++ = (char)entry[5];
+        output_count = 1;
+        entry[5] = (unsigned char)'\n';
+        --count;
+    }
+    bytes_read = 0u;
+    os_error = 0u;
+    if (count != 0u) {
+#if defined(LEGORRR_BACKEND_WINAPI)
+    {
+        DWORD transferred = 0u;
+        if (ReadFile((HANDLE)*(int*)entry, output, count, &transferred,
+                     NULL) == 0) {
+            os_error = GetLastError();
+        }
+        else {
+            bytes_read = (uint32_t)transferred;
+        }
+    }
+#elif !defined(_MSC_VER)
+    {
+        ssize_t transferred = read(*(int*)entry, output, count);
+        if (transferred < 0) {
+            os_error = (uint32_t)errno;
+        }
+        else {
+            bytes_read = (uint32_t)transferred;
+        }
+    }
+#else
+    os_error = 9u;
+#endif
+    }
+    if (os_error != 0u) {
+#if !defined(LEGORRR_BACKEND_WINAPI) && !defined(_MSC_VER)
+        s_math_error_code = os_error;
+        s_win32_error_code = 0u;
+        return -1;
+#else
+        if (os_error == 5u) {
+            s_win32_error_code = os_error;
+            s_math_error_code = 9u;
+            return -1;
+        }
+        if (os_error == 0x6du) {
+            return 0;
+        }
+        crt_win32_error_map_to_errno(os_error);
+        return -1;
+#endif
+    }
+    output_count += (int)bytes_read;
+    if ((entry[4] & 0x80u) == 0u) {
+        return output_count;
+    }
+    if (bytes_read == 0u || buffer[0] != '\n') {
+        entry[4] = (unsigned char)(entry[4] & 0xfbu);
+    }
+    else {
+        entry[4] = (unsigned char)(entry[4] | 4u);
+    }
+    {
+        char* input = buffer;
+        char* input_end = buffer + output_count;
+        output = buffer;
+        while (input < input_end && *input != '\x1a') {
+            if (*input != '\r') {
+                *output++ = *input++;
+                continue;
+            }
+            if (input + 1 < input_end) {
+                if (input[1] == '\n') {
+                    *output++ = '\n';
+                    input += 2;
+                }
+                else {
+                    *output++ = *input++;
+                }
+                continue;
+            }
+            ++input;
+            {
+                unsigned char lookahead = 0u;
+                uint32_t lookahead_read = 0u;
+                uint32_t lookahead_error = 0u;
+#if defined(LEGORRR_BACKEND_WINAPI)
+                DWORD transferred = 0u;
+                if (ReadFile((HANDLE)*(int*)entry, &lookahead, 1u,
+                             &transferred, NULL) == 0) {
+                    lookahead_error = GetLastError();
+                }
+                else {
+                    lookahead_read = (uint32_t)transferred;
+                }
+#elif !defined(_MSC_VER)
+                ssize_t transferred = read(*(int*)entry, &lookahead, 1u);
+                if (transferred < 0) {
+                    lookahead_error = (uint32_t)errno;
+                }
+                else {
+                    lookahead_read = (uint32_t)transferred;
+                }
+#endif
+                if (lookahead_error == 0u && lookahead_read != 0u) {
+                    if ((entry[4] & 0x48u) == 0u) {
+                        if (output == buffer && lookahead == '\n') {
+                            *output++ = '\n';
+                            continue;
+                        }
+                        (void)crt_win32_file_descriptor_seek(fd, -1, 1u);
+                        if (lookahead != '\n') {
+                            *output++ = '\r';
+                        }
+                        continue;
+                    }
+                    if (lookahead == '\n') {
+                        *output++ = '\n';
+                        continue;
+                    }
+                    *output++ = '\r';
+                    entry[5] = lookahead;
+                    continue;
+                }
+            }
+            *output++ = '\r';
+        }
+        if (input < input_end && *input == '\x1a' &&
+            (entry[4] & 0x40u) == 0u) {
+            entry[4] = (unsigned char)(entry[4] | 2u);
+        }
+        return (int)(output - buffer);
+    }
+}
+
+/* CrtStreamReadByte (FUN_00497040): return the next byte from a buffered
+ * CRT stream, refilling through Win32FileDescriptorRead as needed. */
+// FUNCTION: LEGORR 0x00497040
+uint32_t crt_stream_read_byte(int* stream)
+{
+    uint32_t flags;
+    int read_count;
+    unsigned char* descriptor;
+    if (stream == NULL) {
+        return 0xffffffffu;
+    }
+    flags = (uint32_t)stream[3];
+    if ((flags & 0x83u) == 0u || (flags & 0x40u) != 0u) {
+        return 0xffffffffu;
+    }
+    if ((flags & 2u) != 0u) {
+        stream[3] = (int)(flags | 0x20u);
+        return 0xffffffffu;
+    }
+    stream[3] = (int)(flags | 1u);
+    if ((flags & 0x10cu) == 0u) {
+        crt_stream_buffer_allocate((char*)stream);
+    }
+    else {
+        stream[0] = stream[2];
+    }
+    read_count = crt_win32_file_descriptor_read((uint32_t)stream[4],
+                                                (char*)stream[2],
+                                                (uint32_t)stream[6]);
+    stream[1] = read_count;
+    if (read_count != 0 && read_count != -1) {
+        if ((stream[3] & 0x82) == 0) {
+            if ((uint32_t)stream[4] == 0xffffffffu) {
+                descriptor = s_fd_fallback_record;
+            }
+            else if ((uint32_t)stream[4] < (uint32_t)s_fd_flag_count &&
+                     ((uint32_t)stream[4] >> 5) < CRT_FD_BLOCKS &&
+                     s_fd_flag_blocks[(uint32_t)stream[4] >> 5] != NULL) {
+                descriptor = (unsigned char*)s_fd_flag_blocks[
+                    (uint32_t)stream[4] >> 5] +
+                    ((uint32_t)stream[4] & 0x1fu) * 8u;
+            }
+            else {
+                descriptor = s_fd_fallback_record;
+            }
+            if ((descriptor[4] & 0x82u) == 0x82u) {
+                stream[3] |= 0x2000;
+            }
+        }
+        if (stream[6] == 0x200 && (stream[3] & 8) != 0 &&
+            (stream[3] & 0x400) == 0) {
+            stream[6] = 0x1000;
+        }
+        stream[1] = read_count - 1;
+        {
+            uint32_t value = *(unsigned char*)stream[0];
+            ++stream[0];
+            return value;
+        }
+    }
+    stream[1] = 0;
+    stream[3] |= (read_count != 0 ? 0x20 : 0x10);
+    return 0xffffffffu;
+}
+
+/* CrtStreamBufferFlushAndRelease (FUN_00497570): flush a managed buffer and
+ * optionally detach it; cached standard-stream storage remains allocated. */
+// FUNCTION: LEGORR 0x00497570
+void crt_stream_buffer_flush_and_release(int installed, int* stream)
+{
+    if (stream == NULL || (stream[3] & 0x1000) == 0) {
+        return;
+    }
+    (void)crt_flush_stream_buffer(stream);
+    if (installed != 0) {
+        stream[6] = 0;
+        stream[3] &= (int)0xffffeeffu;
+        stream[0] = 0;
+        stream[2] = 0;
+    }
 }
 
 // FUNCTION: LEGORR 0x0049aea0
@@ -3778,6 +7208,409 @@ void crt_file_descriptor_count_set(int count)
 int crt_file_descriptor_count_peek(void)
 {
     return s_fd_flag_count;
+}
+
+/* Win32ErrorMapToErrno (FUN_00496ee0) scans the image's 45 pairs at
+ * 0x4b24c0, then applies the CRT's two range fallbacks. The initial bytes
+ * were checked directly against LegoRR.exe. */
+// GLOBAL: LEGORR 0x004b24c0
+static const uint32_t s_win32_error_errno_pairs[45][2] = {
+    { 0x00000001u, 0x00000016u }, { 0x00000002u, 0x00000002u },
+    { 0x00000003u, 0x00000002u }, { 0x00000004u, 0x00000018u },
+    { 0x00000005u, 0x0000000du }, { 0x00000006u, 0x00000009u },
+    { 0x00000007u, 0x0000000cu }, { 0x00000008u, 0x0000000cu },
+    { 0x00000009u, 0x0000000cu }, { 0x0000000au, 0x00000007u },
+    { 0x0000000bu, 0x00000008u }, { 0x0000000cu, 0x00000016u },
+    { 0x0000000du, 0x00000016u }, { 0x0000000fu, 0x00000002u },
+    { 0x00000010u, 0x0000000du }, { 0x00000011u, 0x00000012u },
+    { 0x00000012u, 0x00000002u }, { 0x00000021u, 0x0000000du },
+    { 0x00000035u, 0x00000002u }, { 0x00000041u, 0x0000000du },
+    { 0x00000043u, 0x00000002u }, { 0x00000050u, 0x00000011u },
+    { 0x00000052u, 0x0000000du }, { 0x00000053u, 0x0000000du },
+    { 0x00000057u, 0x00000016u }, { 0x00000059u, 0x0000000bu },
+    { 0x0000006cu, 0x0000000du }, { 0x0000006du, 0x00000020u },
+    { 0x00000070u, 0x0000001cu }, { 0x00000072u, 0x00000009u },
+    { 0x00000006u, 0x00000016u }, { 0x00000080u, 0x0000000au },
+    { 0x00000081u, 0x0000000au }, { 0x00000082u, 0x00000009u },
+    { 0x00000083u, 0x00000016u }, { 0x00000084u, 0x0000000du },
+    { 0x00000091u, 0x00000029u }, { 0x0000009eu, 0x0000000du },
+    { 0x000000a1u, 0x00000002u }, { 0x000000a4u, 0x0000000bu },
+    { 0x000000a7u, 0x0000000du }, { 0x000000b7u, 0x00000011u },
+    { 0x000000ceu, 0x00000002u }, { 0x000000d7u, 0x0000000bu },
+    { 0x00000718u, 0x0000000cu }
+};
+
+// FUNCTION: LEGORR 0x00496ee0
+void crt_win32_error_map_to_errno(uint32_t error)
+{
+    unsigned i;
+    s_win32_error_code = error;
+    for (i = 0; i < 45u; ++i) {
+        if (s_win32_error_errno_pairs[i][0] == error) {
+            s_math_error_code = s_win32_error_errno_pairs[i][1];
+            return;
+        }
+    }
+    if (error > 0x12u && error < 0x25u) {
+        s_math_error_code = 0x0du;
+    }
+    else if (error >= 0xbcu && error <= 0xcau) {
+        s_math_error_code = 8u;
+    }
+    else {
+        s_math_error_code = 0x16u;
+    }
+}
+
+// FUNCTION: LEGORR 0x00496c00
+uint32_t crt_win32_file_descriptor_seek(uint32_t fd, int32_t distance,
+                                        uint32_t method)
+{
+    unsigned char* block;
+    unsigned char* entry;
+    int handle;
+    if (fd < (uint32_t)s_fd_flag_count) {
+        block = (unsigned char*)s_fd_flag_blocks[fd >> 5];
+        entry = block + (fd & 0x1fu) * 8u;
+        if ((entry[4] & 1u) != 0u) {
+            handle = crt_file_descriptor_handle_get(fd);
+            if (handle == -1) {
+                s_math_error_code = 9u;
+                return 0xffffffffu;
+            }
+#if defined(LEGORRR_BACKEND_WINAPI)
+            {
+                DWORD result = SetFilePointer((HANDLE)handle, (LONG)distance,
+                                              NULL, (DWORD)method);
+                DWORD error = (result == 0xffffffffu) ? GetLastError() : 0u;
+                if (error != 0u) {
+                    crt_win32_error_map_to_errno(error);
+                    return 0xffffffffu;
+                }
+                entry[4] = (unsigned char)(entry[4] & 0xfdu);
+                return (uint32_t)result;
+            }
+#elif !defined(_MSC_VER)
+            {
+                int whence = (method == 0u) ? SEEK_SET :
+                             (method == 1u) ? SEEK_CUR : SEEK_END;
+                off_t result = lseek(handle, (off_t)distance, whence);
+                if (result == (off_t)-1) {
+                    s_math_error_code = (uint32_t)errno;
+                    s_win32_error_code = 0u;
+                    return 0xffffffffu;
+                }
+                entry[4] = (unsigned char)(entry[4] & 0xfdu);
+                return (uint32_t)result;
+            }
+#else
+            (void)distance;
+            (void)method;
+            s_math_error_code = 9u;
+            s_win32_error_code = 0u;
+            return 0xffffffffu;
+#endif
+        }
+    }
+    {
+        s_math_error_code = 9u;
+        s_win32_error_code = 0u;
+        return 0xffffffffu;
+    }
+}
+
+// FUNCTION: LEGORR 0x00496cc0
+int crt_win32_file_descriptor_write(uint32_t fd, char* buffer,
+                                    uint32_t count)
+{
+    unsigned char* block;
+    unsigned char* entry;
+    unsigned char flags;
+    int handle;
+    uint32_t written_total;
+    uint32_t inserted_crs;
+    uint32_t os_error;
+    if (fd >= (uint32_t)s_fd_flag_count) {
+        s_math_error_code = 9u;
+        s_win32_error_code = 0u;
+        return -1;
+    }
+    block = (unsigned char*)s_fd_flag_blocks[fd >> 5];
+    entry = block + (fd & 0x1fu) * 8u;
+    flags = entry[4];
+    if ((flags & 1u) == 0u) {
+        s_math_error_code = 9u;
+        s_win32_error_code = 0u;
+        return -1;
+    }
+    if (count == 0u) {
+        return 0;
+    }
+    if ((flags & 0x20u) != 0u) {
+        crt_win32_file_descriptor_seek(fd, 0, 2u);
+    }
+    handle = *(int*)entry;
+    written_total = 0u;
+    inserted_crs = 0u;
+    os_error = 0u;
+    if ((entry[5] & 0x80u) == 0u) {
+#if defined(LEGORRR_BACKEND_WINAPI)
+        DWORD written = 0u;
+        if (!WriteFile((HANDLE)handle, buffer, count, &written, NULL)) {
+            os_error = GetLastError();
+        }
+        else {
+            written_total = (uint32_t)written;
+        }
+#elif !defined(_MSC_VER)
+        ssize_t written = write(handle, buffer, count);
+        if (written < 0) {
+            s_math_error_code = (uint32_t)errno;
+            s_win32_error_code = 0u;
+            return -1;
+        }
+        written_total = (uint32_t)written;
+#else
+        s_math_error_code = 9u;
+        s_win32_error_code = 0u;
+        return -1;
+#endif
+    }
+    else {
+        char translated[0x404];
+        char* source = buffer;
+        char* source_end = buffer + count;
+        while (source < source_end) {
+            char* out = translated;
+            uint32_t out_count;
+            do {
+                char ch;
+                if (source_end <= source) {
+                    break;
+                }
+                ch = *source++;
+                if (ch == '\n') {
+                    *out++ = '\r';
+                    ++inserted_crs;
+                }
+                *out++ = ch;
+            } while (out - translated < 0x400);
+            out_count = (uint32_t)(out - translated);
+#if defined(LEGORRR_BACKEND_WINAPI)
+            {
+                DWORD written = 0u;
+                if (!WriteFile((HANDLE)handle, translated, out_count,
+                               &written, NULL)) {
+                    os_error = GetLastError();
+                    break;
+                }
+                written_total += (uint32_t)written;
+                if (written < out_count || source_end <= source) {
+                    break;
+                }
+            }
+#elif !defined(_MSC_VER)
+            {
+                ssize_t written = write(handle, translated, out_count);
+                if (written < 0) {
+                    s_math_error_code = (uint32_t)errno;
+                    s_win32_error_code = 0u;
+                    return -1;
+                }
+                written_total += (uint32_t)written;
+                if ((uint32_t)written < out_count || source_end <= source) {
+                    break;
+                }
+            }
+#else
+            s_math_error_code = 9u;
+            s_win32_error_code = 0u;
+            return -1;
+#endif
+        }
+    }
+    if (written_total != 0u) {
+        return (int)(written_total - inserted_crs);
+    }
+    if (os_error == 0u) {
+        if ((entry[4] & 0x40u) != 0u && buffer[0] == 0x1a) {
+            return 0;
+        }
+        s_math_error_code = 0x1cu;
+        s_win32_error_code = 0u;
+        return -1;
+    }
+    if (os_error == 5u) {
+        s_win32_error_code = os_error;
+        s_math_error_code = 9u;
+        return -1;
+    }
+    crt_win32_error_map_to_errno(os_error);
+    return -1;
+}
+
+/* CrtFileStreamClose (FUN_004908a0) is the CRT's buffered character
+ * writer. The function name is inherited from the image's symbol map. */
+// FUNCTION: LEGORR 0x004908a0
+uint32_t crt_file_stream_close(uint32_t value, int* stream)
+{
+    uint32_t flags = (uint32_t)stream[3];
+    uint32_t fd = (uint32_t)stream[4];
+    int expected;
+    int result = 0;
+    if ((flags & 0x82u) == 0u || (flags & 0x40u) != 0u) {
+        stream[3] = (int)(flags | 0x20u);
+        return 0xffffffffu;
+    }
+    if ((flags & 1u) != 0u) {
+        stream[1] = 0;
+        if ((flags & 0x10u) == 0u) {
+            stream[3] = (int)(flags | 0x20u);
+            return 0xffffffffu;
+        }
+        *stream = stream[2];
+        stream[3] = (int)(flags & 0xfffffffeu);
+    }
+    flags = (uint32_t)stream[3];
+    stream[1] = 0;
+    stream[3] = (int)((flags & 0xffffffefu) | 2u);
+    if ((flags & 0x10cu) == 0u) {
+        if (stream == s_standard_stream_record_0 ||
+            stream == s_standard_stream_record_1) {
+            if (crt_file_descriptor_flag40_get(fd) == 0u) {
+                crt_stream_buffer_allocate((char*)stream);
+            }
+        }
+        else {
+            crt_stream_buffer_allocate((char*)stream);
+        }
+    }
+    if (((uint32_t)stream[3] & 0x108u) == 0u) {
+        expected = 1;
+        result = crt_win32_file_descriptor_write(fd, (char*)&value, 1u);
+    }
+    else {
+        int pending = *stream - stream[2];
+        *stream = stream[2] + 1;
+        stream[1] = stream[6] - 1;
+        if (pending < 1) {
+            unsigned char* entry;
+            if (fd == 0xffffffffu) {
+                entry = s_fd_fallback_record;
+            }
+            else if (fd < (uint32_t)s_fd_flag_count
+                     && (fd >> 5) < CRT_FD_BLOCKS
+                     && s_fd_flag_blocks[fd >> 5] != NULL) {
+                entry = (unsigned char*)s_fd_flag_blocks[fd >> 5]
+                      + (fd & 0x1fu) * 8u;
+            }
+            else {
+                entry = NULL;
+            }
+            if (entry != NULL && (entry[4] & 0x20u) != 0u) {
+                crt_win32_file_descriptor_seek(fd, 0, 2u);
+            }
+            *(unsigned char*)stream[2] = (unsigned char)value;
+        }
+        else {
+            result = crt_win32_file_descriptor_write(fd, (char*)stream[2],
+                                                      (uint32_t)pending);
+            *(unsigned char*)stream[2] = (unsigned char)value;
+        }
+        expected = pending;
+    }
+    if (result != expected) {
+        stream[3] |= 0x20;
+        return 0xffffffffu;
+    }
+    return value & 0xffu;
+}
+
+// FUNCTION: LEGORR 0x0048fd20
+uint32_t crt_flush_stream_buffer(int* stream)
+{
+    uint32_t flags = (uint32_t)stream[3];
+    int pending;
+    int result = 0;
+    if ((flags & 3u) == 2u && (flags & 0x108u) != 0u) {
+        pending = *stream - stream[2];
+        if (pending > 0) {
+            result = crt_win32_file_descriptor_write((uint32_t)stream[4],
+                                                      (char*)stream[2],
+                                                      (uint32_t)pending);
+            flags = (uint32_t)stream[3];
+            if (result == pending) {
+                if ((flags & 0x80u) != 0u) {
+                    stream[1] = 0;
+                    stream[3] = (int)(flags & 0xfffffffdu);
+                    *stream = stream[2];
+                    return 0u;
+                }
+            }
+            else {
+                stream[3] = (int)(flags | 0x20u);
+                result = -1;
+            }
+        }
+    }
+    stream[1] = 0;
+    *stream = stream[2];
+    return (uint32_t)result;
+}
+
+// FUNCTION: LEGORR 0x00491360
+void crt_buffered_character_write(uint32_t value, int* stream, int* written)
+{
+    int available = stream[1] - 1;
+    stream[1] = available;
+    if (available >= 0) {
+        *(unsigned char*)*stream = (unsigned char)value;
+        *stream += 1;
+        value &= 0xffu;
+    }
+    else {
+        value = crt_file_stream_close(value, stream);
+    }
+    if (value == 0xffffffffu) {
+        *written = -1;
+        return;
+    }
+    *written += 1;
+}
+
+// FUNCTION: LEGORR 0x004913b0
+void crt_write_repeated_char(uint32_t value, int count, int* stream,
+                             int* written)
+{
+    for (;;) {
+        if (count < 1) {
+            return;
+        }
+        count = count - 1;
+        crt_buffered_character_write(value, stream, written);
+        if (*written == -1) {
+            return;
+        }
+    }
+}
+
+// FUNCTION: LEGORR 0x004913f0
+void crt_write_string_bounded(const char* text, int count, int* stream,
+                              int* written)
+{
+    for (;;) {
+        char ch;
+        if (count < 1) {
+            return;
+        }
+        count = count - 1;
+        ch = *text;
+        ++text;
+        crt_buffered_character_write((uint32_t)(int32_t)ch, stream, written);
+        if (*written == -1) {
+            return;
+        }
+    }
 }
 
 /* --- the CRT control-flags / signal leaves (2026-10-25) --------------------
@@ -3847,14 +7680,28 @@ void crt_fpu_control_word_update_mask(uint32_t value, uint32_t mask)
 // FUNCTION: LEGORR 0x00498b70
 int crt_wide_char_to_multibyte(char* dest, uint32_t wide)
 {
+    uint16_t ch = (uint16_t)wide;
     if (dest == NULL) {
         return 0; /* pinned: the corpus's null check answers 0 */
     }
-    const uint16_t ch = (uint16_t)wide;
-    if (ch <= 0xffu) {
-        *dest = (char)ch;
-        return 1;
+    if (s_crt_locale_handle == 0u) {
+        if (ch <= 0xffu) {
+            *dest = (char)ch;
+            return 1;
+        }
     }
+#if defined(LEGORRR_BACKEND_WINAPI)
+    else {
+        BOOL used_default = FALSE;
+        int converted = WideCharToMultiByte((UINT)s_ansi_codepage, 0x220u,
+                                            (LPCWSTR)&ch, 1, dest,
+                                            (int)s_max_multibyte_width,
+                                            NULL, &used_default);
+        if (converted != 0 && used_default == FALSE) {
+            return converted;
+        }
+    }
+#endif
     s_math_error_code = 0x2au; /* pinned: the corpus's EILSEQ-shaped store */
     return -1;
 }
@@ -3901,20 +7748,22 @@ int crt_wide_char_to_multi_byte_compat(char* dest, const uint16_t* wide,
     if (dest == NULL) {
         return wide_string_length(wide);
     }
-    uint32_t i = 0u;
-    for (;;) {
-        const uint32_t ch = wide[i];
-        if (ch >= 0x100u) {
-            s_math_error_code = 0x2au;
-            return -1;
-        }
-        dest[i] = (char)ch;
-        if (ch == 0u) {
-            return (int)i;
-        }
-        ++i;
-        if (count <= i) {
-            return (int)i;
+    {
+        uint32_t i = 0u;
+        for (;;) {
+            const uint32_t ch = wide[i];
+            if (ch >= 0x100u) {
+                s_math_error_code = 0x2au;
+                return -1;
+            }
+            dest[i] = (char)ch;
+            if (ch == 0u) {
+                return (int)i;
+            }
+            ++i;
+            if (count <= i) {
+                return (int)i;
+            }
         }
     }
 }
@@ -4085,6 +7934,207 @@ double crt_math_exception_dispatch(uint32_t error_code, uint32_t operation,
     return result.value;
 }
 
+/* CrtFloatingPointExceptionRaise (FUN_00493280): build the CRT's 21-word
+ * FPIEEE exception record, raise the corresponding Win32 floating-point
+ * exception, then fold any handler changes back into the control word and
+ * result. The caller owns and initializes record word zero before entry. */
+// FUNCTION: LEGORR 0x00493280
+void crt_floating_point_exception_raise(uint32_t* record,
+                                        uint32_t* control_word,
+                                        uint8_t exception_flags,
+                                        uint32_t precision,
+                                        const uint32_t* argument,
+                                        uint32_t* result)
+{
+    uint32_t exception_code = (uint32_t)(uintptr_t)record;
+    uint32_t status_word;
+    uint32_t flags;
+    uint32_t rounding;
+    uint32_t precision_code;
+#if defined(LEGORRR_BACKEND_WINAPI)
+    DWORD exception_argument;
+#endif
+
+    record[1] = 0u;
+    record[2] = 0u;
+    record[3] = 0u;
+    if ((exception_flags & 0x10u) != 0u) {
+        record[1] |= 1u;
+        exception_code = 0xc000008fu;
+    }
+    if ((exception_flags & 0x02u) != 0u) {
+        record[1] |= 2u;
+        exception_code = 0xc0000093u;
+    }
+    if ((exception_flags & 0x01u) != 0u) {
+        record[1] |= 4u;
+        exception_code = 0xc0000091u;
+    }
+    if ((exception_flags & 0x04u) != 0u) {
+        record[1] |= 8u;
+        exception_code = 0xc000008eu;
+    }
+    if ((exception_flags & 0x08u) != 0u) {
+        record[1] |= 0x10u;
+        exception_code = 0xc0000090u;
+    }
+
+    flags = *control_word;
+    if ((flags & 1u) == 0u) { record[2] |= 0x10u; }
+    if ((flags & 4u) == 0u) { record[2] |= 0x08u; }
+    if ((flags & 8u) == 0u) { record[2] |= 0x04u; }
+    if ((flags & 0x10u) == 0u) { record[2] |= 0x02u; }
+    if ((flags & 0x20u) == 0u) { record[2] |= 0x01u; }
+
+    status_word = (uint32_t)fpu_status_word_get_variant_b();
+    if ((status_word & 0x0001u) != 0u) { record[3] |= 0x10u; }
+    if ((status_word & 0x0004u) != 0u) { record[3] |= 0x08u; }
+    if ((status_word & 0x0008u) != 0u) { record[3] |= 0x04u; }
+    if ((status_word & 0x0010u) != 0u) { record[3] |= 0x02u; }
+    if ((status_word & 0x0020u) != 0u) { record[3] |= 0x01u; }
+
+    rounding = flags & 0x0c00u;
+    if (rounding == 0x0400u) {
+        record[0] = (record[0] & ~3u) | 1u;
+    } else if (rounding == 0x0800u) {
+        record[0] = (record[0] & ~3u) | 2u;
+    } else if (rounding == 0x0c00u) {
+        record[0] |= 3u;
+    } else {
+        record[0] &= ~3u;
+    }
+    rounding = flags & 0x0300u;
+    if (rounding == 0u) {
+        record[0] = (record[0] & ~0x14u) | 8u;
+    } else if (rounding == 0x0200u) {
+        record[0] = (record[0] & ~0x18u) | 4u;
+    } else if (rounding == 0x0300u) {
+        record[0] &= ~0x1cu;
+    }
+    record[0] = (record[0] & 0xfffe001fu) | ((precision & 0xfffu) << 5);
+    record[8] = (record[8] | 1u) & ~0x1cu | 2u;
+    record[4] = argument[0];
+    record[5] = argument[1];
+    record[20] = (record[20] | 1u) & ~0x1cu | 2u;
+    record[16] = result[0];
+    record[17] = result[1];
+
+#if defined(LEGORRR_BACKEND_WINAPI)
+    exception_argument = (DWORD)record;
+    RaiseException((DWORD)exception_code, 0u, 1u, &exception_argument);
+#else
+    (void)exception_code;
+#endif
+
+    flags = *control_word;
+    if ((record[2] & 0x10u) != 0u) { flags &= ~1u; }
+    if ((record[2] & 0x08u) != 0u) { flags &= ~4u; }
+    if ((record[2] & 0x04u) != 0u) { flags &= ~8u; }
+    if ((record[2] & 0x02u) != 0u) { flags &= ~0x10u; }
+    if ((record[2] & 0x01u) != 0u) { flags &= ~0x20u; }
+
+    switch (record[0] & 3u) {
+    case 0u: flags &= ~0x0c00u; break;
+    case 1u: flags = (flags & ~0x0800u) | 0x0400u; break;
+    case 2u: flags = (flags & ~0x0400u) | 0x0800u; break;
+    default: flags |= 0x0c00u; break;
+    }
+    precision_code = (record[0] >> 2) & 7u;
+    if (precision_code == 0u) {
+        flags = (flags & ~0x0c00u) | 0x0300u;
+    } else if (precision_code == 1u) {
+        flags = (flags & ~0x0c00u) | 0x0200u;
+    } else if (precision_code == 2u) {
+        flags &= ~0x0c00u;
+    }
+    *control_word = flags;
+    result[0] = record[16];
+    result[1] = record[17];
+}
+
+/* CrtMathExceptionHandleSingleResult (FUN_00493170): report a domain
+ * error through the CRT dispatcher when its mode word is zero; otherwise
+ * set EDOM, restore the supplied x87 control word, and return the supplied
+ * double result. The original carries this result in x87 extended format;
+ * the portable interface retains the project's double-width ABI. */
+// FUNCTION: LEGORR 0x00493170
+double crt_math_exception_handle_single_result(uint32_t operation,
+                                                uint32_t result_low,
+                                                uint32_t result_high,
+                                                uint32_t fpu_control_word)
+{
+    union {
+        uint64_t bits;
+        double value;
+    } result;
+
+    if (s_math_exception_mode[0] == 0u) {
+        return crt_math_exception_dispatch(1u, operation,
+                                           result_low, result_high,
+                                           0u, 0u,
+                                           result_low, result_high,
+                                           fpu_control_word);
+    }
+
+    s_math_error_code = 0x21u;
+    (void)fpu_control_word_update_masked(fpu_control_word, 0xffffu);
+    result.bits = ((uint64_t)result_high << 32) | result_low;
+    return result.value;
+}
+
+/* CrtMathExceptionHandleResultWithStatus (FUN_004931c0): first fold
+ * hardware exception status into the result, raise an FPIEEE exception for
+ * any unhandled flags, then dispatch the CRT math-error callback or return
+ * the result with the selected error/control-word state. */
+// FUNCTION: LEGORR 0x004931c0
+double crt_math_exception_handle_result_with_status(uint32_t status,
+                                                     uint32_t operation,
+                                                     uint32_t argument_low,
+                                                     uint32_t argument_high,
+                                                     uint32_t result_low,
+                                                     uint32_t result_high,
+                                                     uint32_t fpu_control_word)
+{
+    uint32_t record[21];
+    uint32_t argument[2];
+    uint32_t result_words[2];
+    union {
+        uint64_t bits;
+        double value;
+    } result;
+    int error_code;
+
+    result.bits = ((uint64_t)result_high << 32) | result_low;
+    if (crt_double_to_integer_round(status, &result.value,
+                                    fpu_control_word) == 0) {
+        unsigned i;
+        for (i = 0u; i < 21u; ++i) {
+            record[i] = 0u;
+        }
+        argument[0] = argument_low;
+        argument[1] = argument_high;
+        result_words[0] = (uint32_t)result.bits;
+        result_words[1] = (uint32_t)(result.bits >> 32);
+        crt_floating_point_exception_raise(record, &fpu_control_word,
+                                           (uint8_t)status, operation,
+                                           argument, result_words);
+        result.bits = ((uint64_t)result_words[1] << 32) | result_words[0];
+    }
+
+    error_code = crt_math_exception_code_from_status(status);
+    if (s_math_exception_mode[0] == 0u && error_code != 0) {
+        return crt_math_exception_dispatch((uint32_t)error_code, operation,
+                                           argument_low, argument_high,
+                                           0u, 0u,
+                                           (uint32_t)result.bits,
+                                           (uint32_t)(result.bits >> 32),
+                                           fpu_control_word);
+    }
+    crt_math_error_code_set(error_code);
+    (void)fpu_control_word_update_masked(fpu_control_word, 0xffffu);
+    return result.value;
+}
+
 /* CrtDoubleToIntegerRound (FUN_004935c0): masked status bits are cleared;
  * integer conversion truncates toward zero, and overflow saturates according
  * to the saved x87 rounding mode. */
@@ -4149,24 +8199,62 @@ int crt_double_to_integer_round(uint32_t status, double* value,
         }
     }
     if ((remaining & 2u) != 0u && (fpu_control_word & 0x10u) != 0u) {
-        uint32_t exponent_bits = (uint32_t)((number.bits >> 52) & 0x7ffu);
-        int binary_exponent = (int)exponent_bits - 1023;
-        uint64_t discarded_mask = 0u;
+        int binary_exponent;
+        double normalized;
+        union {
+            double value;
+            uint64_t bits;
+        } significand;
+        int inexact;
 
-        if (exponent_bits == 0u || binary_exponent < 0) {
-            if ((number.bits & CRT_U64(0x7fffffffffffffff)) != 0u) {
-                crt_no_op_stub_variant2();
-            }
-            number.bits &= CRT_U64(0x8000000000000000);
+        /* Overflow handling above may have replaced the caller's value with
+         * a saturated result; the underflow lane operates on that current
+         * result, as the CRT does. */
+        number.value = *value;
+        inexact = (status & 0x10u) != 0u;
+        if (number.value == 0.0) {
+            inexact = 1;
         }
-        else if (binary_exponent < 52) {
-            discarded_mask = (CRT_U64(1) << (unsigned)(52 - binary_exponent)) - CRT_U64(1);
-            if ((number.bits & discarded_mask) != 0u) {
-                crt_no_op_stub_variant2();
+        else {
+            normalized = double_frexp_decompose(
+                (uint32_t)number.bits, (uint32_t)(number.bits >> 32),
+                &binary_exponent);
+            binary_exponent -= 0x600;
+            if (binary_exponent < -0x432) {
+                inexact = 1;
+                number.bits = 0u;
+                *value = number.value;
             }
-            number.bits &= ~discarded_mask;
+            else {
+                union {
+                    double value;
+                    uint64_t bits;
+                } normalized_bits;
+                uint64_t mantissa;
+                normalized_bits.value = normalized;
+                mantissa = (normalized_bits.bits &
+                            CRT_U64(0x000fffffffffffff)) |
+                           CRT_U64(0x0010000000000000);
+                significand.value = (double)(int64_t)mantissa;
+                if (binary_exponent < -0x3fd) {
+                    int shift_count = -0x3fd - binary_exponent;
+                    while (shift_count != 0) {
+                        if ((significand.bits & 1u) != 0u && !inexact) {
+                            inexact = 1;
+                        }
+                        significand.bits >>= 1;
+                        --shift_count;
+                    }
+                }
+                if (normalized < 0.0) {
+                    significand.value = -significand.value;
+                }
+                *value = significand.value;
+            }
         }
-        *value = number.value;
+        if (inexact) {
+            crt_no_op_stub_variant2();
+        }
         remaining &= ~2u;
     }
     if ((remaining & 0x10u) != 0u && (fpu_control_word & 0x20u) != 0u) {
