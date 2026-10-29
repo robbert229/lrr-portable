@@ -1199,15 +1199,15 @@ int main(void)
         CHECK(crt_string_duplicate(NULL) == NULL, "the null duplicate is guarded");
 
         char buf[32];
-        crt_unsigned_format_radix(123u, buf, 10);
+        crt_unsigned_format_radix(123u, buf, 10, 0);
         CHECK(strcmp(buf, "123") == 0, "the decimal digits reverse into place");
-        crt_unsigned_format_radix(0u, buf, 10);
+        crt_unsigned_format_radix(0u, buf, 10, 0);
         CHECK(strcmp(buf, "0") == 0, "zero writes one digit");
-        crt_unsigned_format_radix(255u, buf, 16);
+        crt_unsigned_format_radix(255u, buf, 16, 0);
         CHECK(strcmp(buf, "ff") == 0, "digits past nine fold lowercase");
-        crt_unsigned_format_radix(4294967295u, buf, 16);
+        crt_unsigned_format_radix(4294967295u, buf, 16, 0);
         CHECK(strcmp(buf, "ffffffff") == 0, "the full dword spans eight digits");
-        crt_unsigned_format_radix(9u, buf, 1);
+        crt_unsigned_format_radix(9u, buf, 1, 0);
         CHECK(strcmp(buf, "0") == 0, "the radix guard answers zero (deviation)");
 
         crt_signed_to_string(-42, buf, 10);

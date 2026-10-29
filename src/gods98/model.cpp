@@ -976,9 +976,6 @@ uint32_t model_digest(const Model* m)
 // FUNCTION: LEGORR 0x0048c0c0
 char* lwo_string_duplicate(const char* text)
 {
-    if (text == NULL) {
-        return NULL; /* deviation: the corpus dereferences blindly */
-    }
     const size_t len1 = strlen(text) + 1u;
     const size_t size = len1 + (len1 & 1u); /* even-grained corpus size */
     char* copy = (char*)engine_heap_alloc((long)size);
@@ -989,22 +986,23 @@ char* lwo_string_duplicate(const char* text)
     return copy;
 }
 
+// GLOBAL: LEGORR 0x004afa0c
+static const char s_lwo_projection_planar[] = "PLANAR";
+// GLOBAL: LEGORR 0x004afa00
+static const char s_lwo_projection_cylindrical[] = "CYLINDRICAL";
+// GLOBAL: LEGORR 0x004af9f4
+static const char s_lwo_projection_spherical[] = "SPHERICAL";
+
 // FUNCTION: LEGORR 0x0048c120
 int lwo_texture_projection_mode_parse(const char* name)
 {
-    /* corpus entry 0x48c12b-0x48c13b fills these three immediates onto the
-     * stack (the .rdata strings are verified at 0x4afa0c / 0x4afa00 /
-     * 0x4af9f4); the port mirrors that with per-call stores. */
+    /* Corpus entry 0x48c12b-0x48c13b copies these literal addresses into
+     * the stack table. */
     const char* modes[3];
-    modes[0] = "PLANAR";
-    modes[1] = "CYLINDRICAL";
-    modes[2] = "SPHERICAL";
+    modes[0] = s_lwo_projection_planar;
+    modes[1] = s_lwo_projection_cylindrical;
+    modes[2] = s_lwo_projection_spherical;
 
-    /* pinned deviation: the corpus pushes name blind at 0x48c159; the port
-     * answers the PLANAR default (0) on NULL. */
-    if (name == NULL) {
-        return 0;
-    }
     for (uint32_t i = 0; i < 3u; ++i) {
         const size_t len = strlen(modes[i]); /* the corpus inlines this as
                                               * repnz scas at 0x48c152 */

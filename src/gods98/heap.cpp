@@ -16,9 +16,11 @@ void* engine_heap_alloc_aligned(long size)
     /* The corpus body: 16-byte round-up, then (pool absent) the heap
      * allocation. No gate of its own — the entry points check first. */
     unsigned rounded = ((unsigned)size + 15u) & 0xfffffff0u;
+#if !defined(LEGORRR_BACKEND_WINAPI)
     if (rounded == 0u) {
-        rounded = 16u; /* size 0 allocates one byte through the heap */
+        rounded = 16u; /* host aligned_alloc requires a nonzero allocation */
     }
+#endif
 #if defined(LEGORRR_BACKEND_WINAPI)
     void* base = malloc(rounded + 16u + sizeof(void*));
     if (base == NULL) {
@@ -63,12 +65,15 @@ void* engine_heap_alloc_retry(long size, int retry_via_new_handler)
     }
 }
 
+// GLOBAL: LEGORR 0x00549154
+static int s_heap_alloc_retry_enabled;
+
 // FUNCTION: LEGORR 0x0048dbd0
 void* engine_heap_alloc(long size)
 {
-    /* Corpus: EngineHeapAllocateWithRetry(size, DAT_00549154) with the
-     * retry global unset in the port — single attempt, flag clear. */
-    return engine_heap_alloc_retry(size, 0);
+    /* Corpus: EngineHeapAllocateWithRetry(size, DAT_00549154). The original
+     * retry global is zero-initialized in the image. */
+    return engine_heap_alloc_retry(size, s_heap_alloc_retry_enabled);
 }
 
 // FUNCTION: LEGORR 0x0048db80
@@ -132,6 +137,40 @@ void crt_new_handler_set(int (*handler)(long))
 void* engine_calloc(long size)
 {
     return engine_heap_alloc_retry(size, 1); /* corpus pushes the retry flag */
+}
+
+/* CrtCallocAligned (FUN_004997c0): unsigned product, 16-byte size rounding,
+ * and zero-fill. The original first asks its small-block pool (which is
+ * still a port seam); engine_heap_alloc_aligned is the matching aligned
+ * fallback. The original retry flag is shared with EngineHeapAllocate. */
+// FUNCTION: LEGORR 0x004997c0
+void* crt_calloc_aligned(int count, int size)
+{
+    uint32_t bytes = (uint32_t)count * (uint32_t)size;
+
+    if (bytes < 0xffffffe1u) {
+        if (bytes == 0u) {
+            bytes = 16u;
+        }
+        else {
+            bytes = (bytes + 15u) & 0xfffffff0u;
+        }
+    }
+    if (bytes >= 0xffffffe1u) {
+        return NULL;
+    }
+
+    for (;;) {
+        void* block = engine_heap_alloc_aligned((long)bytes);
+        if (block != NULL) {
+            memset(block, 0, bytes);
+            return block;
+        }
+        if (s_heap_alloc_retry_enabled == 0 ||
+            crt_new_handler_invoke((long)bytes) == 0) {
+            return NULL;
+        }
+    }
 }
 
 /* OptionalResourceDestroy (FUN_0040f7b0) — see heap.hpp. */

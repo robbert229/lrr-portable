@@ -156,6 +156,8 @@ typedef struct ResourceWad {
 static ResourceWad s_wads[RESOURCE_MAX_WADS];
 static int       s_wad_count = 0;
 static char      s_wad_prefix[RESOURCE_PATH_MAX] = "LegoRR";
+static char      s_wad_mount_path_cache[0x400];
+static int       s_wad_mount_path_cache_valid;
 
 /* CD/STD fallback state (finding 01). */
 #ifdef LEGORRR_BACKEND_WINAPI
@@ -404,6 +406,64 @@ static int ares_parse(FILE* fp, ResourceWad* out)
     return 1;
 }
 
+/* WwadArchiveIndexLoad (FUN_0048b4e0): open and index one archive into the
+ * next archive record. The port guards the corpus's fixed record array. */
+// FUNCTION: LEGORR 0x0048b4e0
+int wwad_archive_index_load(const char* path)
+{
+    ResourceWad* wad;
+    FILE* fp;
+    if (path == NULL || s_wad_count >= RESOURCE_MAX_WADS) {
+        return -1;
+    }
+    fp = fopen(path, "rb");
+    if (fp == NULL) {
+        return -1;
+    }
+    wad = &s_wads[s_wad_count];
+    memset(wad, 0, sizeof(*wad));
+    wad->fp = fp;
+    if (!ares_parse(fp, wad)) {
+        free(wad->names);
+        free(wad->entries);
+        memset(wad, 0, sizeof(*wad));
+        fclose(fp);
+        return -1;
+    }
+    snprintf(wad->path, sizeof(wad->path), "%s", path);
+    ++s_wad_count;
+    return s_wad_count - 1;
+}
+
+/* WadMountPathCacheStore (FUN_0047f590): keep a nonempty path shorter than
+ * 0x401 bytes; invalid input clears the cache and its validity flag. */
+// FUNCTION: LEGORR 0x0047f590
+void wad_mount_path_cache_store(const char* path)
+{
+    size_t length;
+    if (path != NULL) {
+        length = strlen(path);
+        if (length != 0 && length < sizeof(s_wad_mount_path_cache)) {
+            memcpy(s_wad_mount_path_cache, path, length + 1);
+            s_wad_mount_path_cache_valid = 1;
+            return;
+        }
+    }
+    s_wad_mount_path_cache[0] = '\0';
+    s_wad_mount_path_cache_valid = 0;
+}
+
+/* MountWadFromPath (FUN_0047f640): reset mounted archive state and load the
+ * requested archive path. */
+// FUNCTION: LEGORR 0x0047f640
+void mount_wad_from_path(const char* path)
+{
+    resource_unmount_all();
+    if (path != NULL) {
+        (void)wwad_archive_index_load(path);
+    }
+}
+
 /* ------------------------------------------------------------------ *
  *  Public API
  * ------------------------------------------------------------------ */
@@ -515,6 +575,54 @@ const char* resource_wad_entry_name(int wad_idx, int entry_idx)
     }
     ResourceWad* w = &s_wads[wad_idx];
     return w->names + w->entries[entry_idx].name_off;
+}
+
+/* FUNCTION: LEGORR 0x0048bce0 */
+void* wad_archive_record_at_index(int index)
+{
+    if (index < 0 || index >= s_wad_count) {
+        return NULL;
+    }
+    return &s_wads[index];
+}
+
+/* FUNCTION: LEGORR 0x0048bcf0 */
+uint32_t wad_entry_length_get(int wad_idx, int entry_idx)
+{
+    if (wad_idx < 0 || wad_idx >= s_wad_count || entry_idx < 0
+        || (uint32_t)entry_idx >= s_wads[wad_idx].entry_count) {
+        return 0;
+    }
+    return s_wads[wad_idx].entries[entry_idx].stored;
+}
+
+/* FUNCTION: LEGORR 0x0048bd10 */
+uint32_t wad_entry_field4_get(int wad_idx, int entry_idx)
+{
+    if (wad_idx < 0 || wad_idx >= s_wad_count || entry_idx < 0
+        || (uint32_t)entry_idx >= s_wads[wad_idx].entry_count) {
+        return 0;
+    }
+    return s_wads[wad_idx].entries[entry_idx].orig;
+}
+
+/* FUNCTION: LEGORR 0x0048bd50 */
+int wad_entry_find_across_mounted_archives(const char* name, int wad_idx)
+{
+    int i;
+    if (name == NULL) {
+        return -1;
+    }
+    if (wad_idx != -1) {
+        return resource_wad_lookup(wad_idx, name);
+    }
+    for (i = s_wad_count - 1; i >= 0; --i) {
+        int entry = resource_wad_lookup(i, name);
+        if (entry != -1) {
+            return entry;
+        }
+    }
+    return -1;
 }
 
 /* Open an entry inside mounted wad `wad_idx` (no payload yet). */
@@ -731,6 +839,23 @@ typedef char fixed_record_slot_stride_check[sizeof(FixedRecordSlot) == 16u ? 1 :
 // GLOBAL: LEGORR 0x005756a0
 static FixedRecordSlot s_fixed_slots[FIXED_RECORD_SLOTS];
 
+typedef struct WadFileStreamState {
+    int slot;
+    int32_t cursor;
+} WadFileStreamState;
+
+/* FUNCTION: LEGORR 0x0048bd30 */
+int wad_entry_slot_allocate(void)
+{
+    int i;
+    for (i = 0; i < FIXED_RECORD_SLOTS; ++i) {
+        if (s_fixed_slots[i].in_use == 0) {
+            return i;
+        }
+    }
+    return -1;
+}
+
 // FUNCTION: LEGORR 0x0048bfc0
 void fixed_record_slot_resource_release(int slot)
 {
@@ -750,6 +875,91 @@ void* fixed_record_slot_resource_get(int slot)
         return NULL; /* deviation: the corpus strides blindly */
     }
     return s_fixed_slots[slot].in_use != 0 ? s_fixed_slots[slot].resource : NULL;
+}
+
+/* WadStreamLengthGet (FUN_0048c010): resolve the stream slot's resource and
+ * report its materialized payload length. */
+// FUNCTION: LEGORR 0x0048c010
+int wad_stream_length_get(int slot)
+{
+    Resource* resource;
+    int32_t length;
+    resource = (Resource*)fixed_record_slot_resource_get(slot);
+    if (resource == NULL) {
+        return 0;
+    }
+    length = resource_read(resource);
+    return length > 0 ? (int)length : 0;
+}
+
+/* WadFileSeek (FUN_0047f850): update the WAD stream cursor for SET/CUR/END.
+ * The END case preserves the corpus's length-plus-offset behavior. */
+// FUNCTION: LEGORR 0x0047f850
+int wad_file_seek(GameFileHandle* handle, int offset, int origin)
+{
+    WadFileStreamState* state;
+    int length;
+    if (handle == NULL || handle->flag != 1 || handle->stream == NULL) {
+        return 0;
+    }
+    state = (WadFileStreamState*)handle->stream;
+    length = wad_stream_length_get(state->slot);
+    if (origin == 0) {
+        state->cursor = offset;
+    }
+    else if (origin == 1) {
+        state->cursor += offset;
+    }
+    else if (origin == 2) {
+        state->cursor = length + offset;
+        return 0;
+    }
+    else {
+        return 0;
+    }
+    if (state->cursor > length) state->cursor = length;
+    if (state->cursor < 0) state->cursor = 0;
+    return 0;
+}
+
+/* WadFileRead (FUN_0047f980): read complete elements from the slot resource,
+ * clipping the byte count at its end and advancing the cursor. */
+// FUNCTION: LEGORR 0x0047f980
+int wad_file_read(void* destination, int element_size, int element_count,
+                  GameFileHandle* handle)
+{
+    WadFileStreamState* state;
+    Resource* resource;
+    int length;
+    unsigned int bytes;
+    if (destination == NULL || handle == NULL || handle->flag != 1
+        || handle->stream == NULL || element_size <= 0 || element_count <= 0) {
+        return 0;
+    }
+    state = (WadFileStreamState*)handle->stream;
+    resource = (Resource*)fixed_record_slot_resource_get(state->slot);
+    if (resource == NULL) return 0;
+    length = resource_read(resource);
+    if (length <= 0 || state->cursor < 0 || state->cursor >= length) return 0;
+    bytes = (unsigned int)element_size * (unsigned int)element_count;
+    if (bytes > (unsigned int)(length - state->cursor)) {
+        bytes = (unsigned int)(length - state->cursor);
+    }
+    memcpy(destination, resource->data + state->cursor, bytes);
+    state->cursor += (int32_t)bytes;
+    return (int)(bytes / (unsigned int)element_size);
+}
+
+/* WadFileCursorGet (FUN_0047fb10): return the current WAD stream cursor. */
+// FUNCTION: LEGORR 0x0047fb10
+int wad_file_cursor_get(GameFileHandle* handle)
+{
+    WadFileStreamState* state;
+    if (handle == NULL || handle->flag != 1 || handle->stream == NULL) {
+        return 0;
+    }
+    state = (WadFileStreamState*)handle->stream;
+    return state->cursor;
 }
 
 void fixed_record_slot_install(int slot, void* resource)

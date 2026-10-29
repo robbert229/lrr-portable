@@ -80,6 +80,7 @@ void engine_heap_allocate(long size);
 int   crt_new_handler_invoke(long size);
 void  crt_new_handler_set(int (*handler)(long)); /* port hook */
 void* engine_calloc(long size);                  /* FUN_0048ead0 */
+void* crt_calloc_aligned(int count, int size);  /* FUN_004997c0 */
 
 /* OptionalResourceDestroy (FUN_0040f7b0): frees the optional resource
  * record only when one is there — the corpus's gate over the engine free. */

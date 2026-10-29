@@ -10,9 +10,6 @@
 // FUNCTION: LEGORR 0x00477550
 char* string_duplicate(const char* text)
 {
-    if (text == NULL) {
-        return NULL; /* pinned deviation: the corpus scas's blindly */
-    }
     /* Corpus: engine_heap_alloc(len+1) then the strcpy intrinsic (second
      * scas + dword/byte rep movs). engine_heap_alloc failure rides blind
      * exactly like the corpus (no guard). */
@@ -144,9 +141,6 @@ int strnicmp_lite(const char* a, const char* b, int count)
 const char* case_insensitive_substring_find(const char* haystack,
                                             const char* needle)
 {
-    if (haystack == NULL || needle == NULL) {
-        return NULL; /* pinned deviation: the corpus dereferences both blindly */
-    }
     /* Corpus walk: two intrinsic strlens into registers, two separate
      * zero-length gates, then a walking haystack pointer beside an inc
      * counter with an unsigned bound (the needle is re-read from its stack
@@ -169,20 +163,24 @@ const char* case_insensitive_substring_find(const char* haystack,
     return NULL;
 }
 
-/* FUN_00493ec0: length bounded by `limit` (the corpus walks byte-wise,
- * decrementing the bound first, and answers `limit` when no NUL turns up
- * inside it — byte-identical to scanning min(strlen, limit)). */
+/* FUN_00493ec0: the corpus walks byte-wise, decrementing the bound before
+ * checking each byte, then returns the original bound if no NUL was found. */
 // FUNCTION: LEGORR 0x00493ec0
 int string_length_bounded(const char* text, int limit)
 {
-    if (text == NULL || limit <= 0) {
-        return 0;
+    const char* p = text;
+    int remaining = limit;
+    while (remaining != 0) {
+        --remaining;
+        if (*p == '\0') {
+            break;
+        }
+        ++p;
     }
-    int n = 0;
-    while (n < limit && text[n] != '\0') {
-        ++n;
+    if (*p != '\0') {
+        return limit;
     }
-    return n;
+    return (int)(p - text);
 }
 
 /* FUN_00478f50: `root::comp1::comp2…` into the static builder. */
@@ -229,8 +227,7 @@ const char* string_path_join(const char* root, ...)
  * compare as CaseInsensitiveSubstringFind): answers the match pointer and
  * reports the byte index and the needle length through the optional
  * outputs. The corpus gates on a non-empty haystack and a non-empty
- * needle. Deviations: null strings are guarded (the corpus dereferences
- * both), and the fold compare stops at NUL (the corpus strides). */
+ * needle. The fold compare uses the CRT's bounded compare. */
 
 int string_folded_compare(const char* a, const char* b, size_t n)
 {
@@ -241,9 +238,6 @@ int string_folded_compare(const char* a, const char* b, size_t n)
 char* string_case_substring_find(char* haystack, const char* needle,
                                  uint32_t* out_index, size_t* out_length)
 {
-    if (haystack == NULL || needle == NULL) {
-        return NULL; /* deviation: the corpus dereferences both blindly */
-    }
     /* Corpus walk: two intrinsic strlens into registers, three entry gates,
      * then a walking haystack pointer beside an inc counter with an unsigned
      * bound (the needle is re-read from its stack slot every pass). */
