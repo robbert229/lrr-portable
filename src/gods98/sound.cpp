@@ -19,8 +19,19 @@ typedef struct BankSlot {
 } BankSlot;
 
 static BankSlot s_bank[SOUND_BANK_SLOTS];
+/* Corpus-faithful default: the original's DAT_00533878 image bytes are
+ * zero-fill (past the reference .data file span).  The corpus clears it
+ * on sound-system init entry (0x47a649), raises it to 1 only when
+ * DirectSound init succeeds (0x47a766), and clears it at teardown
+ * (0x47a842); the frameloop's audio-open success branch carries that
+ * 0x47a766 write.  Plain zero-init (.bss) keeps both gates green: the
+ * // GLOBAL: annotation resolves (same shape as the 0x4aa450/0x4aa458
+ * pair above) and datacmp sees (uninitialized) on both sides, like the
+ * corpus-zero s_listener_view.  A file-backed 0 instead (explicit
+ * .data segment) keeps datacmp flagging the pair anyway and perturbs
+ * reccmp's neighbouring-global verification — measured, so avoided. */
 // GLOBAL: LEGORR 0x00533878
-int             s_bank_sound_on = 1; /* DAT_00533878 seam, see sound.hpp */
+int             s_bank_sound_on = 0; /* DAT_00533878 seam, see sound.hpp */
 
 /* ------------------------------------------------------------------ *
  *  RIFF/WAVE parse (finding 14 §2).

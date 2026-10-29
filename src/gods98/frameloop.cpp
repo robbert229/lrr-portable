@@ -24,6 +24,7 @@
 #include "movie.hpp"
 #include "resource.hpp"
 #include "surface.hpp"
+#include "sound.hpp"
 #include "texture.hpp"
 #include "tickers.hpp"
 #include "view.hpp"
@@ -1054,6 +1055,10 @@ int LegorrrRun(void)
     int audio_status = audio_open(&ap);
     int sfx_frames = 0;
     if (audio_status == 0) {
+        /* Sound-system init succeeded: raise the bank gate, mirroring the
+         * corpus's DAT_00533878 = 1 on the DirectSound-init success path
+         * (0x47a766); the static stays 0 when audio is unavailable. */
+        sound_bank_sound_on_set(1);
         /* Master gain from the store, not a fixed 0.6: the active save
          * context's restored SFX_Volume (or the default) applies immediately
          * (issue #85) — saved settings take effect without a menu nudge. */

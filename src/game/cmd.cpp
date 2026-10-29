@@ -2008,6 +2008,13 @@ static void cmd_raw_head_insert(CmdRec* rec)
 // FUNCTION: LEGORR 0x004041e0
 void* entity_command_chain_head_remove(EntitySlot* e)
 {
+    /* The corpus's three tail-chain arms (here 0x40421b, 0x403a85 in
+     * entity_drain_command_chain, 0x40413b in command_queue_sweep_relink)
+     * all test state bit 13 (test ch,0x20), while the only matching
+     * producer, cmd_mark_matching (0x402000), raises bit 16 (mov esi,
+     * 0x10000 at 0x402019) and no corpus site ever sets bit 13 — so the
+     * arm is dead in the shipped original and marked records fall through
+     * to cmd_free.  Kept verbatim; the port's mark bit stays 0x10000. */
     if (e == NULL) {
         return NULL; /* deviation: the corpus reads the entity blindly */
     }
@@ -2019,7 +2026,7 @@ void* entity_command_chain_head_remove(EntitySlot* e)
     head->next = NULL;
     if ((head->state & 0x10u) != 0u && (head->state & 0x20u) == 0u) {
         cmd_raw_head_insert(head); /* the pending-and-undone head moves on */
-    } else if ((head->state & 0x10000u) != 0u /* corpus test $0x20,%ch */
+    } else if ((head->state & 0x2000u) != 0u /* corpus 0x40421b: test ch,0x20 -> state bit 13 */
                && (head->state & 0x20u) == 0u) {
         cmd_raw_head_insert(head); /* the tail list is the port's one chain */
     } else {
@@ -2042,10 +2049,10 @@ void entity_drain_command_chain(EntitySlot* e)
         if ((cur->state & 0x10u) != 0u && (cur->state & 0x20u) == 0u) {
             cur->next = NULL;
             cmd_link_head(cur, cur->kind); /* the pending head link (full) */
-        } else if ((cur->state & 0x10000u) != 0u /* corpus test $0x20,%ch */
+        } else if ((cur->state & 0x2000u) != 0u /* corpus 0x403a85: test ch,0x20 -> state bit 13 */
                    && (cur->state & 0x20u) == 0u) {
             cur->next = NULL;
-            cmd_link_tail(cur); /* the bit-16 tail link (full) */
+            cmd_link_tail(cur); /* the bit-13 tail link (full) */
         } else {
             cmd_free(cur, 0);
         }
@@ -2104,7 +2111,7 @@ void command_queue_sweep_relink(EntitySlot* e)
             cmd_free(cur, 0); /* the flag bit-2 record goes */
         } else if ((cur->state & 0x10u) != 0u && (cur->state & 0x20u) == 0u) {
             cmd_raw_head_insert(cur); /* raw onto the head list */
-        } else if ((cur->state & 0x10000u) != 0u /* corpus test $0x20,%ch */
+        } else if ((cur->state & 0x2000u) != 0u /* corpus 0x40413b: test ch,0x20 -> state bit 13 */
                    && (cur->state & 0x20u) == 0u
                    && (cur->state & 0x10u) == 0u) {
             cmd_raw_head_insert(cur); /* raw onto the tail list */

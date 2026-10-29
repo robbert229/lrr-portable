@@ -173,3 +173,24 @@ With this table every nonstub candidate outside the documented barrier
 families has been through an instruction-level audit: the 38–41% band is
 now barrier-classified per target, and the two winnable shapes in the
 band were captured. The pick-four loop is closed.
+
+## Post-loop rulings applied (port-loop-3, `feat/port-loop-3`)
+
+The three human-decision items above were ruled and implemented on
+`feat/port-loop-3` off `main` (`888ecb52`), certified against a fresh
+same-environment anchor:
+
+| Item | Ruling | Outcome |
+|---|---|---|
+| `s_bank_sound_on` (`0x533878`) default | **corpus wins** | Static default flipped `1` → `0` (plain zero-init `.bss`, image-faithful); the `0x47a766` DirectSound-success write is carried by `sound_bank_sound_on_set(1)` in the frameloop's `audio_open` success branch. datacmp 3 → **2** issues. A file-backed `= 0` (explicit `.data` segment) was measured to re-orphan the annotation and reshuffle neighbours; plain `.bss` is the shape that keeps both reccmp resolution and datacmp clean. |
+| `0x4041e0`/`0x403a50`/`0x404100` tail-chain bit | **corpus wins** | The three consumer sites now test state bit 13 (`test ch,0x20` @ `0x40421b`/`0x403a85`/`0x40413b`); the `cmd_mark_matching` producer keeps bit 16 (`mov esi,0x10000` @ `0x402019`) — the arm is dead in the shipped original, so marked heads now fall through to `cmd_free` exactly as the corpus does. `test_cmd.cpp` re-pinned (bit-13 relink arms + a new pin that a bit-16-only head frees). `0x4041e0` 40.9% → 43.7%. |
+| `s_linked_list_aux`/`s_linked_list_head` (`0x4aa450/458`) | **tests win / no change** | Confirmed a `reccmp-datacmp` file-bytes artifact (corpus file-backed zeros vs the port's zero-fill `.bss` tail; both sides genuinely zero, image-verified). Annotations kept; the pair remains 2 of the 2 documented issues. |
+
+Certification (isolated worktree + `888ecb52` anchor, wine-ge-8-26):
+one changed nonstub score in the whole report (`0x4041e0` above),
+zero regressions, exact 217 → 217, Accuracy 42.40%, datacmp 252 vars /
+2 issues, `git diff --check` clean. MSVC5 `__asm` blocks and 32-bit
+stride asserts in `resource.cpp`/`level.cpp` make the native x86-64
+build of the full tree non-compilable since port-loop-2, so the winapi
+reccmp build remains the only compile gate; `test_cmd.cpp` compiles
+standalone (`g++ -fsyntax-only`) but cannot be run on this host.
