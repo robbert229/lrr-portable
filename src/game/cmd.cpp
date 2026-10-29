@@ -1105,17 +1105,39 @@ int selected_entity_state_monitor(void)
     return count;
 }
 
-/* --- entity record schedulers (see cmd.hpp) ----------------------------------
- * Corpus note: the queue leaf's CurrentLevelGet call discards its result
- * (the corpus's level-state touch) — no ported state depends on it. */
+/* --- entity record schedulers (see cmd.hpp) ---------------------------------- */
+
+/* CurrentLevelGet (FUN_00431560): the corpus's no-arg level-state touch.
+ * The scored port of this address (camera_state_root, gods98/camera.cpp)
+ * takes an EngineContext — a callee-signature barrier (b26) — so this
+ * file-local no-op carrier reproduces the corpus's blind no-arg call at
+ * the entry of 0x402670. NOTE (b46): the carrier must NOT carry the
+ * `// STUB: LEGORR 0x00431560` annotation — duplicating a ledger-stub
+ * address scores fine, but duplicating a *scored* // FUNCTION: claim
+ * steals the ledger match away from camera_state_root. */
+static void current_level_get(void)
+{
+    /* TODO(corpus): the level-state root touch; the corpus discards the
+     * result and no ported state depends on it. */
+}
+
 // FUNCTION: LEGORR 0x00402670
 void entity_command15_validated_record_queue(EntitySlot* e)
 {
+    current_level_get(); /* corpus: call 0x431560 on entry, result discarded */
     if (e != NULL && entity_flag40000_threshold_compare(e) != 0) {
         CmdRec* rec = (CmdRec*)cmd_alloc(0x1a);
         cmd_link_head(rec, 0xf);
-        rec->payload = e;
-        rec->state = (rec->state & ~0x10u) | 0x40040u;
+        /* Corpus RMW schedule: mov eax,[rec+0x5c] / and al,0xef /
+         * mov [rec+0x10],edi / or eax,0x40040 / mov [rec+0x5c],eax — the
+         * payload store lands between the two state ops. Keeping the value
+         * live in eax across that store would need a local (a /Od local
+         * stack-spills, b45), so the port keeps the plain split; bit 4 is
+         * disjoint from 0x40040, so the pair is value-identical to the
+         * corpus's single (state & ~0x10) | 0x40040 fold. */
+        rec->state = rec->state & ~0x10u; /* +0x5c, pre-payload half */
+        rec->payload = e;                 /* +0x10 */
+        rec->state = rec->state | 0x40040u; /* +0x5c, post-payload half */
     }
 }
 // FUNCTION: LEGORR 0x004026c0
@@ -1807,13 +1829,16 @@ void coordinate_pair_task_record_queue(const int pair[2])
 void scalar_task_record_queue(void* scalar)
 {
     CmdRec* rec = (CmdRec*)cmd_alloc(0x1d);
-    if (rec == NULL) {
-        return;
-    }
-    rec->payload = scalar;
+    /* Corpus: no null check on the allocation — the scalar rides the
+     * +0x10 payload slot blind (the b33 twin at 0x4034e0 precedent). */
+    rec->payload = scalar; /* +0x10 */
     cmd_set_kind(rec, 0x19);
     cmd_link_tail(rec);
-    rec->state |= 0x40u;
+    /* Corpus: mov eax,[rec+0x5c] / or al,0x40 / mov [rec+0x5c],eax. The
+     * plain load-op-store spelling (not the |= compound) keeps the /Od
+     * register round-trip instead of folding to or mem,imm (b45
+     * global_flag_bit0_clear lesson). */
+    rec->state = rec->state | 0x40u; /* +0x5c */
 }
 // FUNCTION: LEGORR 0x004034e0
 void task_pair_record_enqueue(const int pair[2])
@@ -1830,13 +1855,16 @@ void task_pair_record_enqueue(const int pair[2])
 void task_record_kind10_queue(void* payload)
 {
     CmdRec* rec = (CmdRec*)cmd_alloc(10);
-    if (rec == NULL) {
-        return;
-    }
-    rec->payload = payload;
+    /* Corpus: no null check on the allocation — the payload rides the
+     * +0x10 slot blind (the b33 twin at 0x4034e0 precedent). */
+    rec->payload = payload; /* +0x10 */
     cmd_set_kind(rec, 0x16);
     cmd_link_tail(rec);
-    rec->state |= 0x40u;
+    /* Corpus: mov eax,[rec+0x5c] / or al,0x40 / mov [rec+0x5c],eax. The
+     * plain load-op-store spelling (not the |= compound) keeps the /Od
+     * register round-trip instead of folding to or mem,imm (b45
+     * global_flag_bit0_clear lesson). */
+    rec->state = rec->state | 0x40u; /* +0x5c */
 }
 // FUNCTION: LEGORR 0x00403430
 void task_registry_remove_type0_entry_by_pair(const int pair[2])
@@ -1893,29 +1921,31 @@ void* timed_task_record_initialize_and_link(void* payload, int arg1,
                                             int arg2, int arg3)
 {
     CmdRec* rec = (CmdRec*)cmd_alloc(5);
-    if (rec == NULL) {
-        return NULL; /* deviation: the corpus reads the allocator blindly */
-    }
-    rec->payload = payload;
-    rec->now = 0.0f; /* the corpus zeroes the timestamp dword */
-    rec->cell_act = arg1;
-    rec->cell_target = arg2;
-    rec->cell_count = arg3;
+    /* Corpus: no null check on the allocation — the slots are stored
+     * blind (the b33 sibling at 0x4034e0 precedent). */
+    rec->payload = payload;   /* +0x10 */
+    rec->now = 0.0f;          /* +0x14: the corpus zeroes the timestamp dword */
+    rec->cell_act = arg1;     /* +0x20 */
+    rec->cell_target = arg2;  /* +0x24 */
+    rec->cell_count = arg3;   /* +0x28 */
     cmd_link_head(rec, 10);
-    rec->state = (rec->state & ~CMD_STATE_PENDING) | 0x4c0u;
+    /* Corpus: mov ecx,[+0x5c] / and ecx,0xffffffef / or ecx,0x4c0 /
+     * mov [+0x5c],ecx — the plain round-trip form (b45 lesson). */
+    rec->state = (rec->state & ~CMD_STATE_PENDING) | 0x4c0u; /* +0x5c */
     return rec;
 }
 // FUNCTION: LEGORR 0x004039d0
 void task_record_kind11_timed_queue(void* payload)
 {
     CmdRec* rec = (CmdRec*)cmd_alloc(0x11);
-    if (rec == NULL) {
-        return;
-    }
-    rec->payload = payload;
-    rec->now = 0.0f;
+    /* Corpus: no null check on the allocation — the slots are stored
+     * blind (the b33 sibling at 0x4034e0 precedent). */
+    rec->payload = payload; /* +0x10 */
+    rec->now = 0.0f;        /* +0x14: the corpus zeroes the timestamp dword */
     cmd_link_head(rec, 0);
-    rec->state = (rec->state & ~CMD_STATE_PENDING) | 0xc0u;
+    /* Corpus: mov ecx,[+0x5c] / and ecx,0xffffffef / or cl,0xc0 /
+     * mov [+0x5c],ecx — the plain round-trip form (b45 lesson). */
+    rec->state = (rec->state & ~CMD_STATE_PENDING) | 0xc0u; /* +0x5c */
 }
 
 void* cmd_rec_event_payload_get(const void* rec)
@@ -2131,9 +2161,9 @@ void object_attached_record_allocate(EntitySlot* e)
     void* tail = cmd_chain_walk(e);
     if (tail != NULL) {
         as_rec(tail)->next = rec; /* corpus store at walk-result +0x60 */
-    } else {
-        e->cmd_head = rec; /* corpus store at entity +0x2f0 */
+        return; /* corpus: the taken branch ends on its own pop/pop/ret */
     }
+    e->cmd_head = rec; /* corpus store at entity +0x2f0 */
 }
 
 /* PendingRecordCopyToEntityAndFlag (FUN_00406400) — see cmd.hpp. The corpus

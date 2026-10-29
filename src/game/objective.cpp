@@ -258,6 +258,16 @@ int objective_check(LevelState* s, int* mark, float dt)
     return 1;
 }
 
+/* Corpus-shape verification (2026-10-28): 0x458670 reads exactly ONE stack
+ * argument — the announce id at [esp+4] (`mov eax,[esp+0x11c]` reached on a
+ * balanced stack; the prologue is `sub esp,0x108` + push ebx/ebp/esi/edi, so
+ * [esp+0x11c] == entry+4) — and resolves the level block blindly through
+ * `call 0x431560` (the current_level_get carrier; the result lands in ebx and
+ * `[ebx+0x27c]` is the result index write). The port's extra `s` parameter is
+ * therefore a threaded-state divergence, not a corpus argument: the port's
+ * announcer needs the threaded level block the corpus reads blindly (see the
+ * objective.hpp note), so callers thread `s` and push the extra arg the
+ * corpus does not. Left as-is. */
 // FUNCTION: LEGORR 0x00458670
 void objective_announce(LevelState* s, int who)
 {

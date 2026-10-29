@@ -134,7 +134,8 @@ void wad_memory_stream_buffer_get(int slot);       /* FUN_0048c030 */
 #define WAD_DECODE_TYPE_FAIL  0xfffe /* corpus's unknown-type verdict */
 
 /* Verify the "RNC" magic + type gate and copy/delegate the payload.
- * 0 raw copy, 1/2 the dormant codecs' path markers, verdicts otherwise. */
+ * 0 raw copy, 1/2 the ported codecs (xor ax,ax verdict 0), verdicts
+ * otherwise. */
 int wad_payload_decode_dispatch(const void* header, void* dest); /* FUN_0049c840 */
 
 /* Probe (out_payload NULL) or materialize an expanded payload; answers the

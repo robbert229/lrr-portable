@@ -447,14 +447,22 @@ static int nc_find_indexed(const NameCode* t, size_t n, const char* folded,
 static int ci_strcmp(const char* a, const char* b);
 
 /* Resolver pair (FUN_0042e8b0 shape): answers known-1 with the corpus's
- * (type, registry-row) outputs. Registry matches write both; the corpus's
- * special names write the dedicated ore-pair rows (0/1) only, leaving the
- * row slot for everything else (the dispatch aliases that slot onto its
- * first argument's word — a corpus quirk, pinned in the tests). */
+ * (type, registry-row) outputs. The corpus zeroes the row slot at entry
+ * (`mov ebx,[esp+0x10]` / `mov [ebx],0` at 0x42e8b8, before the name load
+ * and on every path, even the failed ones); registry matches then write
+ * both, the special names write the dedicated ore-pair rows (0/1) only,
+ * so everything else answers a zero row (the dispatch aliases that slot
+ * onto its first argument's word — a corpus quirk, pinned in the tests). */
 // FUNCTION: LEGORR 0x0042e8b0
 static int entity_type_pair_for_name(const char* name, int* type_out,
                                      int* row_out, int* zero_out)
 {
+    /* Deviation: the corpus zeroes the row slot blind; the port's
+     * NULL-threading callers (entity_type_for_name, the wrapper's corpus
+     * call form) pin the guard. */
+    if (row_out != NULL) {
+        *row_out = 0;
+    }
     if (name == NULL || name[0] == '\0') {
         return 0; /* unregistered — the corpus aborts, the port skips */
     }
@@ -1162,18 +1170,19 @@ void* pooled_record_allocate_and_reset(void)
 int resolved_entity_operation_dispatch(const char* name, int slot,
                                        int subtract)
 {
-    int column = 0;
-    /* Corpus shape: the resolver zeroes its row slot at entry and only
-     * table-row matches (and the ore pair) write it, so special names
-     * ride the column slot with zero. The corpus's resolver call rides a
-     * fourth word (the dispatch aliases it onto its first argument's
-     * slot — port-threaded NULL; the arg1/arg2 aliasing of the count
-     * callee is a known residual). */
+    /* Corpus shape: one local (the type slot, `push ecx`) and the resolver's
+     * row output aliased onto this function's first-parameter stack slot
+     * (`lea eax,[esp+0x8]` at 0x460915), so the resolver's entry zeroing
+     * clears it for special names while table/ore matches write the row
+     * there, and the post-resolver count scan reads its column word back
+     * out of the name parameter (`mov edx,[esp+0x8]` at 0x460936). The
+     * corpus's fourth resolver word is the immediate 0 (its NULL-guarded
+     * tvcamera store never fires from here). */
     int type;
-    if (!entity_type_pair_for_name(name, &type, &column, NULL)) {
+    if (!entity_type_pair_for_name(name, &type, (int*)&name, NULL)) {
         return 0;
     }
-    return grid_record_count_difference_get(type, column, slot, subtract);
+    return grid_record_count_difference_get(type, (int)name, slot, subtract);
 }
 
 /* --- DAT_00502bd8 indexed stats-type tables (2026-10-25) ------------------

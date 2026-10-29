@@ -13,7 +13,6 @@
 #define ENTRY_FLAG_EXPANDED 0x2u
 #define EXPAND_HEADER_SZ  0x12u
 
-static void wad_huffman_table_clear(void* table, int count);
 static void wad_huffman_canonical_codes_build(void* table, int count);
 
 typedef struct WadCodecTableEntry {
@@ -680,9 +679,10 @@ int32_t resource_read(Resource* r)
     uint32_t len  = ((uint32_t)stored[4] << 24) | ((uint32_t)stored[5] << 16)
                   | ((uint32_t)stored[6] << 8) | (uint32_t)stored[7];
     if (type != 0) {
-        /* FUN_0049c8e0 (1) / FUN_0049ca60 (2) — dormant: no shipped entry
-         * sets the expanded flag, so the codecs are intentionally not
-         * ported yet (finding 01 §"dormant"). */
+        /* FUN_0049c8e0 (1) / FUN_0049ca60 (2): the codecs are ported in the
+         * wad payload band below and wired through the dispatch; no shipped
+         * entry sets the expanded flag, so this reader still answers -1 for
+         * the compressed types (finding 01 §"dormant" is now history). */
         free(stored);
         return -1;
     }
@@ -778,17 +778,180 @@ void wad_memory_stream_buffer_get(int slot)
  * The corpus decodes expanded wad entries through the RNC-header dispatch
  * (the DAT_004b2d08 global holds the three-byte magic "RNC"), builds the
  * stream-buffer handle pair, and clears the type-1 Huffman table between
- * streams. The codecs themselves stay dormant (no shipped entry sets the
- * expanded flag), as documented above. */
+ * streams. The codecs themselves are ported above the dispatch (the
+ * FUN_0049c8e0 / FUN_0049ca60 pair); no shipped entry sets the expanded
+ * flag, so their live callers stay the dispatch and the tests. */
+
+#define WAD_DECODE_MAGIC_FAIL 0xffff
+#define WAD_DECODE_TYPE_FAIL  0xfffe
+
+/* DAT_00557d80 / DAT_00557e80 / DAT_00557f80 roles, module-local: the type-1
+ * codec's three 16-symbol Huffman tables (literal counts, back-reference
+ * offsets, match lengths). The corpus bands are sixteen 16-byte entries each
+ * in zero-init .data; these buffers ride wider so the ported table helpers'
+ * e[i*8] indexing inside 0x0049cd90 / 0x0049ce00 stays in bounds. */
+static WadCodecTableEntry s_wad_huff_literal[128];
+static WadCodecTableEntry s_wad_huff_offset[128];
+static WadCodecTableEntry s_wad_huff_length[128];
+
+/* DecodeWadPayloadType1 (FUN_0049c8e0): the RNC type-1 stream. One or more
+ * outer passes reload the three tables, read the 16-bit block total
+ * (LSB-first), then alternate literal runs (count from the literal table,
+ * bytes copied straight from the input cursor) and back-reference matches
+ * (out - u16(offset) - 1, length u16(sym + 2)); after every literal the
+ * three bytes at the input cursor inject themselves into the LSB accumulator
+ * at the live bit position without advancing it. Always answers 0 (corpus
+ * xor ax,ax); the output cursor stores are blind, as in the corpus. */
+// FUNCTION: LEGORR 0x0049c8e0
+static int wad_payload_decode_type1(const void* src, void* dst)
+{
+    unsigned int total;
+    unsigned int sym;
+    unsigned int count;
+    unsigned int i;
+    unsigned int bits;
+    unsigned int peek;
+    const unsigned char* back;
+
+    wad_bitstream_output_initialize(src, dst);
+    (void)wad_read_bits_lsb_first(2u);            /* 0x49c8f2: value dropped */
+    if (wad_codec_out >= wad_codec_end) {         /* 0x49c907: unsigned jae */
+        return 0;
+    }
+    for (;;) {                                    /* outer_loop 0x49c912 */
+        wad_huffman_table_read(s_wad_huff_literal, 16u);
+        wad_huffman_table_read(s_wad_huff_offset, 16u);
+        wad_huffman_table_read(s_wad_huff_length, 16u);
+        total = wad_read_bits_lsb_first(16u);     /* 0x49c949: edi */
+        for (;;) {                                /* loopA 0x49c94b */
+            sym = wad_huffman_symbol_decode(s_wad_huff_literal);
+            count = (unsigned short)sym;          /* 0x49c965: u16(sym) */
+            for (i = 0; i < count; ++i) {         /* copyA 0x49c972 */
+                *wad_codec_out++ = *wad_codec_in++;
+            }
+            /* 0x49c99d: three-byte peek at the input cursor (never
+             * advanced), merged into the LSB accumulator at the live bit
+             * count, which the corpus leaves untouched. */
+            bits = wad_codec_bits;
+            peek = (unsigned int)wad_codec_in[0]
+                 | ((unsigned int)wad_codec_in[1] << 8)
+                 | ((unsigned int)wad_codec_in[2] << 16);
+            wad_codec_lsb = (peek << bits)
+                          | (wad_codec_lsb & ((1u << bits) - 1u));
+            total += 0xffffu;                     /* 0x49c9cc: countdown */
+            if ((total & 0xffffu) == 0u) {        /* 0x49c9d7: test di,di */
+                break;
+            }
+            sym = wad_huffman_symbol_decode(s_wad_huff_offset);
+            back = wad_codec_out - (unsigned short)sym - 1u; /* 0x49c9ec..fe */
+            sym = wad_huffman_symbol_decode(s_wad_huff_length);
+            count = (unsigned short)(sym + 2u);   /* 0x49ca07/0x49ca1e */
+            for (i = 0; i < count; ++i) {         /* copyB 0x49ca24 */
+                *wad_codec_out++ = *back++;
+            }
+        }
+        if (wad_codec_out >= wad_codec_end) {     /* 0x49ca44: jb outer_loop */
+            break;
+        }
+    }
+    return 0;                                     /* 0x49ca5a: xor ax,ax */
+}
+
+/* DecodeWadPayloadType2 (FUN_0049ca60): the RNC type-2 stream, MSB-first.
+ * Each top-level bit opens a literal run (bytes copied from the input
+ * cursor while the follow-up bits stay 0) or hands over to the match
+ * gate: 0-run-length block, 10+10 short match (offset byte + 1, two bytes),
+ * 110 match (offset from the back-reference decoder, three bytes) or 111
+ * match (length byte + 9, offset from the decoder; a zero length byte is
+ * the end marker). Always answers 0 (corpus xor ax,ax); the output cursor
+ * stores are blind, as in the corpus. */
+// FUNCTION: LEGORR 0x0049ca60
+static int wad_payload_decode_type2(const void* src, void* dst)
+{
+    unsigned int run;
+    unsigned int off;
+    unsigned int count;
+    unsigned int i;
+    const unsigned char* back;
+
+    wad_bitstream_output_initialize(src, dst);
+    (void)wad_read_bits_msb_first(2u);            /* 0x49ca72: value dropped */
+    if (wad_codec_out >= wad_codec_end) {         /* 0x49ca87: unsigned jae */
+        return 0;
+    }
+    for (;;) {                                    /* loop_top 0x49ca90 */
+        if (wad_read_bits_msb_first(1u) == 0u) {  /* 0x49ca9a */
+            /* 0x49ca9f: raw literal run, one byte per zero follow-up bit */
+            for (;;) {
+                *wad_codec_out++ = *wad_codec_in++;
+                if (wad_read_bits_msb_first(1u) != 0u) {
+                    break;
+                }
+            }
+        }
+        if (wad_read_bits_msb_first(1u) == 0u) {  /* 0x49cadf: raw block */
+            run = (unsigned int)wad_run_length_decode();   /* 0x49cb8a */
+            if ((unsigned short)run == 9u) {      /* 0x49cb91: extended run */
+                count = (wad_read_bits_msb_first(4u) * 4u + 0xcu) & 0xffffu;
+                for (i = 0; i < count; ++i) {     /* copyD 0x49cbbf */
+                    *wad_codec_out++ = *wad_codec_in++;
+                }
+                continue;
+            }
+            off = (unsigned int)wad_backreference_offset_decode(); /* 0x49cbf1 */
+            back = wad_codec_out - (unsigned short)off; /* 0x49cbf9/0x49cc07 */
+            if ((unsigned short)run == 0u) {      /* 0x49cc0f/0x49cc12 */
+                continue;
+            }
+            count = (unsigned short)run;          /* 0x49cc18: u16(si) */
+            for (i = 0; i < count; ++i) {         /* copyE 0x49cc1f */
+                *wad_codec_out++ = *back++;
+            }
+            continue;
+        }
+        if (wad_read_bits_msb_first(1u) == 0u) {  /* 0x49caf2: short match */
+            off = (unsigned int)*wad_codec_in + 1u;        /* 0x49cb02 */
+            ++wad_codec_in;
+            back = wad_codec_out - (unsigned short)off;
+            count = 2u;                           /* esi = 2 at 0x49caf9 */
+            for (i = 0; i < count; ++i) {         /* copyC 0x49cb6d */
+                *wad_codec_out++ = *back++;
+            }
+            continue;
+        }
+        if (wad_read_bits_msb_first(1u) == 0u) {  /* 0x49cb10/0x49cb1d */
+            off = (unsigned int)wad_backreference_offset_decode(); /* 0x49cb42 */
+            back = wad_codec_out - (unsigned short)off;
+            count = 3u;                           /* esi = 3 at 0x49cb1f */
+        } else {
+            count = ((unsigned int)*wad_codec_in + 8u) & 0xffffu; /* 0x49cb2b */
+            ++wad_codec_in;
+            if (count == 8u) {                    /* 0x49cb3c: end marker */
+                (void)wad_read_bits_msb_first(1u);/* 0x49cc3f: value dropped */
+                if (wad_codec_out < wad_codec_end) { /* 0x49cc56: jb loop_top */
+                    continue;
+                }
+                break;                            /* falls into the exit */
+            }
+            off = (unsigned int)wad_backreference_offset_decode(); /* 0x49cb42 */
+            back = wad_codec_out - (unsigned short)off;
+        }
+        if (count == 0u) {                        /* 0x49cb5d: test ax,ax */
+            continue;
+        }
+        for (i = 0; i < count; ++i) {             /* copyC 0x49cb6d */
+            *wad_codec_out++ = *back++;
+        }
+    }
+    return 0;                                     /* 0x49cc5d: xor ax,ax */
+}
 
 /* WadPayloadDecodeDispatch (FUN_0049c840): verify the "RNC" magic, then
  * branch on the type byte at [3]. Type 0 is a raw pass-through: the size
  * dword at +4 read big-endian, payload from +0x12, copied in DWORD chunks
- * plus the trailing (size & 3) bytes. Types 1/2 hand over to the dormant
- * codecs; any other byte answers the unknown-type verdict. */
-#define WAD_DECODE_MAGIC_FAIL 0xffff
-#define WAD_DECODE_TYPE_FAIL  0xfffe
-
+ * plus the trailing (size & 3) bytes. Types 1/2 hand over to the ported
+ * codecs, which answer the corpus's xor ax,ax verdict; any other byte
+ * answers the unknown-type verdict. */
 // FUNCTION: LEGORR 0x0049c840
 int wad_payload_decode_dispatch(const void* header, void* dest)
 {
@@ -810,12 +973,11 @@ int wad_payload_decode_dispatch(const void* header, void* dest)
         memcpy(dest, h + EXPAND_HEADER_SZ, size);
         return 0;
     }
-    if (type == 1u || type == 2u) {
-        /* The codecs FUN_0049c8e0 / FUN_0049ca60 (portable, dormant) own
-         * these paths; no shipped wad reaches them. Deviation: without the
-         * codec bodies built, the port answers the type marker itself so
-         * the verdict (non-zero == decode failed) stays observable. */
-        return (int)type;
+    if (type == 1u) {
+        return wad_payload_decode_type1(h, dest); /* 0x49c889: push/call */
+    }
+    if (type == 2u) {
+        return wad_payload_decode_type2(h, dest); /* 0x49c878: push/call */
     }
     return WAD_DECODE_TYPE_FAIL;
 }

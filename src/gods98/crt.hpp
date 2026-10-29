@@ -710,9 +710,12 @@ char* crt_string_duplicate(const char* text);
 
 /* CrtUnsignedIntegerFormatRadix (FUN_0049dba0): digits least-significant
  * first, then reversed into the buffer; values ≥ 10 fold in through
- * `+ 'W'`, the corpus's lowercase letters. The port guards radix < 2
- * with a lone "0" (deviation: the corpus's divide loop never ends). */
-void crt_unsigned_format_radix(uint32_t value, char* out, int radix);
+ * `+ 'W'`, the corpus's lowercase letters. A nonzero `negate` prepends
+ * '-' and wraps the value (corpus 0x49dbac, the corpus's sign half). The
+ * port guards radix < 2 with a lone "0" (deviation: the corpus's divide
+ * loop never ends). */
+void crt_unsigned_format_radix(uint32_t value, char* out, int radix,
+                               int negate);
 
 /* SignedDecimalToStringConvert (FUN_0049db60): radix 10 over a negative
  * value takes the sign half ('-' + unsigned magnitude, wrapping like the
