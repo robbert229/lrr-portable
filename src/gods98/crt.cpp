@@ -699,15 +699,11 @@ int display_mode_entry_get(int index, CrtDisplayModeEntry* out)
 // FUNCTION: LEGORR 0x0049D950
 int display_mode_name_index_find(const char* name, uint32_t* out_index)
 {
-    const int count = s_display_mode_counts[s_active_display_mode];
-    if (name == NULL || count <= 0) {
-        return 0;
-    }
-    for (int index = 0; index < count; ++index) {
-        if (strcmp(name, s_display_modes[s_active_display_mode][index].name) == 0) {
-            if (out_index != NULL) {
-                *out_index = (uint32_t)index;
-            }
+    const uint32_t count = (uint32_t)s_display_mode_counts[s_active_display_mode];
+    const CrtDisplayModeEntry* row = s_display_modes[s_active_display_mode];
+    for (uint32_t index = 0; index < count; ++index, ++row) {
+        if (strcmp(name, row->name) == 0) {
+            *out_index = index;
             return 1;
         }
     }
@@ -2118,21 +2114,28 @@ static void*    s_marker_descriptor;
 void selection_marker_resources_release(void)
 {
     /* Corpus walk: an unsigned add-4 pointer stride bounded by the table
-     * end. Deviation: each freed slot is cleared in place (the corpus
-     * dangles, which a second release could double-free), so the window
-     * stays idempotent. */
-    void** p = s_marker_table;
-    while (p < s_marker_table + 32) {
+     * end, entered unconditionally and bottom-tested (body, add, cmp, jb —
+     * no pre-loop check). Deviation: each freed slot is cleared in place
+     * (the corpus dangles, which a second release could double-free), so
+     * the window stays idempotent; pinned by test_crt.cpp's "the freed
+     * slots clear out" / double-release checks. */
+    void** p;
+    void*  desc;
+
+    p = s_marker_table;
+    do {
         void* slot = *p;
         if (slot != NULL) {
             engine_heap_free(slot);
             *p = NULL;
         }
         ++p;
-    }
-    s_marker_count = 0u;
-    if (s_marker_descriptor != NULL) {
-        engine_heap_free(s_marker_descriptor);
+    } while (p < s_marker_table + 32);
+
+    desc = s_marker_descriptor; /* the corpus loads it once... */
+    s_marker_count = 0u;        /* ...before the count resets */
+    if (desc != NULL) {
+        engine_heap_free(desc); /* the loaded word rides the push */
         s_marker_descriptor = NULL;
     }
 }
@@ -2838,11 +2841,16 @@ void crt_unsigned_format_radix(uint32_t value, char* out, int radix,
     }
 }
 
-/* SignedDecimalToStringConvert (FUN_0049db60) — see crt.hpp. */
+/* SignedDecimalToStringConvert (FUN_0049db60) — see crt.hpp. The corpus
+ * picks the callee's negate flag: 1 only for radix 10 with a negative
+ * value (push 1 / push 0 at 0x49db77/0x49db90), the sign half living in
+ * the callee at 0x49dbac. */
 // FUNCTION: LEGORR 0x0049db60
 char* crt_signed_to_string(int value, char* out, int radix)
 {
     if (radix == 10 && value < 0) {
+        /* The corpus negates with wrapping int arithmetic; INT_MIN rides
+         * through as its 2^31 magnitude. */
         crt_unsigned_format_radix((uint32_t)value, out, 10, 1);
     } else {
         crt_unsigned_format_radix((uint32_t)value, out, radix, 0);

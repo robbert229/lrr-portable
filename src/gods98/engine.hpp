@@ -233,7 +233,8 @@ int mode_dependent_field24_get(const EngineContext* ctx);
  * side being this setter itself. GlobalTripleCopyOut (FUN_00426230) hands
  * out the inert triple (corpus DAT_0055651c/520/524) — zero-init statics,
  * documented: the corpus's only writer is the unported sim-interaction
- * renderer update. */
+ * renderer update. Deviation: the corpus strides the caller's buffer
+ * blindly; the port guards it (NULL skips the three stores). */
 bool   current_engine_mode_is_zero(const EngineContext* ctx);
 
 /* ObjectiveScoreTextOriginSet (FUN_004262e0): the objective/score text
