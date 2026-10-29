@@ -1,10 +1,11 @@
 # Port-loop-2 closeout report
 
 Final state of the Reccmp match-improvement loop started from
-`hack/port-loop-2.md`. The loop's work is committed on
-`feat/frontend-carveout-globals` (PR #367 head `4e037090`); PR #367
-remains open for human merge — nothing was merged by the loop, per the
-workflow rule.
+`hack/port-loop-2.md`. The loop's work was committed on
+`feat/frontend-carveout-globals` and merged into `feat/more-port-loop`
+as `22bfa397` (PR #367, merged by the human on 2026-10-29 — the loop
+itself performed no merge, per the workflow rule). The merged tree
+re-verified at 217 exact / 42.40% Accuracy, datacmp 252/3.
 
 ## Headline numbers
 
