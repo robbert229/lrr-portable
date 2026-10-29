@@ -615,7 +615,10 @@ static int s_queue_count;                                /* DAT_00502bd0 */
 void sound_request_queue_submit(int alias, int loop)
 {
     /* SoundRequestQueueSubmit @ 0x464f60. */
-    if (s_queue_count >= SOUND_REQUEST_QUEUE_CAPACITY) {
+    /* 0x464f68 uses the unsigned `jae` full gate. The private count starts at
+     * zero and only this bounded submit path increments it. */
+    if ((unsigned int)s_queue_count >=
+        (unsigned int)SOUND_REQUEST_QUEUE_CAPACITY) {
         return; /* corpus drop-on-full: no counter bump, no error */
     }
     s_queue_alias[s_queue_count] = alias;
@@ -1034,7 +1037,10 @@ int sound_positional_sound_submit(int position, int alias, int loop,
                 }
             }
         }
-    } else if (s_batch_count < SOUND_BATCH_QUEUE_CAPACITY) {
+    /* ORIG 0x4650a4 also uses `jae`; the queue count is bounded by both
+     * append gates and reset by replay drain @ 0x4652d0. */
+    } else if ((unsigned int)s_batch_count <
+               (unsigned int)SOUND_BATCH_QUEUE_CAPACITY) {
         BatchEntry* e = &s_batch_entry[s_batch_count];
         ++s_batch_count;
         e->alias = alias;
@@ -1062,7 +1068,10 @@ void sound_batch_queue_drain(int batch_set, int replay)
     if (replay == 0) {
         return;
     }
-    for (int i = 0; i < s_batch_count; ++i) {
+    /* The corpus uses an unsigned zero gate and an unsigned back edge
+     * (0x465309 jbe / 0x46535a jb). Both append sites cap this private
+     * count at SOUND_BATCH_QUEUE_CAPACITY, so it remains nonnegative. */
+    for (unsigned int i = 0; i < (unsigned int)s_batch_count; ++i) {
         const BatchEntry* e = &s_batch_entry[i];
         const uint32_t m = e->mode;
         if ((m & 1u) == 0) {

@@ -479,7 +479,10 @@ int has_active_resource(const void* record)
     if (record == NULL || handle == 0u) {
         return 0;
     }
-    return system_state_flags_get() != 0u ? 1 : 0;
+    if (system_state_flags_get() == 0u) {
+        return 0;
+    }
+    return 1;
 }
 
 /* --- the indexed-list window (see message.hpp) ---------------------------- */

@@ -88,7 +88,18 @@ void cmd_rec_set_next(void* rec, void* next) { as_rec(rec)->next = next; }
 /* Pool bookkeeping is the corpus's DAT_004b31c8 band: CmdPoolGrow stores
  * each block at [level*4+0x4b31c8] and the level at DAT_004b31fc;
  * CmdAlloc/CmdFree pop and push the freelist through DAT_004b31f8
- * (records link at +0x64). All three are zero-init in the corpus. */
+ * (records link at +0x64). All three are zero-init in the corpus.
+ * On the 64-bit host test build, keep the pointer-sized `next` link because
+ * the private +0x64 word is only 32 bits; the 32-bit target uses grant_act. */
+#if defined(_M_IX86) || defined(__i386__)
+#define CMD_POOL_LINK_GET(rec) \
+    ((CmdRec*)(uintptr_t)(uint32_t)(rec)->grant_act)
+#define CMD_POOL_LINK_SET(rec, value) \
+    ((rec)->grant_act = (int32_t)(uintptr_t)(value))
+#else
+#define CMD_POOL_LINK_GET(rec) ((rec)->next)
+#define CMD_POOL_LINK_SET(rec, value) ((rec)->next = (value))
+#endif
 // GLOBAL: LEGORR 0x004b31c8
 static CmdRec* s_blocks[CMD_POOL_MAX_BLOCKS];
 /* The corpus table ends at the free-list head: HandleArrayReleaseAndReset
@@ -121,10 +132,10 @@ static void cmd_pool_grow(void)
     ++s_pool_level;
     if (n > 1) {
         for (uint32_t i = 0; i + 1 < n; ++i) {
-            block[i].next = &block[i + 1];
+            CMD_POOL_LINK_SET(&block[i], &block[i + 1]);
         }
     }
-    block[n - 1].next = s_free;
+    CMD_POOL_LINK_SET(&block[n - 1], s_free);
     s_free = block;
 }
 
@@ -138,7 +149,7 @@ void* cmd_alloc(int type)
         return NULL;
     }
     CmdRec* rec = (CmdRec*)s_free;
-    s_free = rec->next;
+    s_free = CMD_POOL_LINK_GET(rec);
     memset(rec, 0, CMD_STRIDE);
     rec->next = NULL;
     rec->type = type;
@@ -161,9 +172,11 @@ void cmd_free(void* rec, int cancel)
     }
     /* corpus: load ds:0x4b31f8, link it at [rec+0x64], store the record
      * back as that head — s_free is this freelist head. */
-    r->next = s_free;
+    CMD_POOL_LINK_SET(r, s_free);
     s_free = r;
 }
+#undef CMD_POOL_LINK_GET
+#undef CMD_POOL_LINK_SET
 
 /* ------------------------------------------------------------------ *
  *  Registry (CmdRegistryInit / CmdKindByName): 31 AI task types and
@@ -674,7 +687,7 @@ void idle_queue_clear(EntitySlot* e)
  *  Queue executor (FUN_004520d0): 5-dword records, ping-pong buffered.
  * ------------------------------------------------------------------ */
 
-#define CMD_QUEUE_CAP 64
+#define CMD_QUEUE_CAP 0x800
 
 typedef struct QueueRec {
     int        opcode;
@@ -684,8 +697,11 @@ typedef struct QueueRec {
     int        a4;
 } QueueRec;
 
+// GLOBAL: LEGORR 0x004eaf20
 static QueueRec s_queue[2][CMD_QUEUE_CAP];
+// GLOBAL: LEGORR 0x004fef20
 static int      s_queue_count[2];
+// GLOBAL: LEGORR 0x004fef28
 static int      s_ping; /* active producer block (DAT_004fef28) */
 
 void cmd_context_set(GameContext* ctx)
@@ -698,23 +714,30 @@ void cmd_context_set(GameContext* ctx)
 }
 
 // FUNCTION: LEGORR 0x00452060
-void cmd_produce(int op, const void* a1, int a2, int a3, int a4)
+void cmd_produce(int op, const void* a1, int a2, const int* pair)
 {
     int block = s_ping;
-    if (s_queue_count[block] >= CMD_QUEUE_CAP) {
+    if ((unsigned)s_queue_count[block] >= CMD_QUEUE_CAP) {
         return; /* queue full: silent drop (FUN_00452060) */
     }
     QueueRec* q = &s_queue[block][s_queue_count[block]++];
+    /* b63 note: an explicit zero-fill phase + single pair null-test was
+     * tried (corpus 0x452092..0x4520ba shape) and measured LOWER — the
+     * toolchain's store/register scheduling diverges; the fused writes
+     * below are the measured-best shape. */
     q->opcode = op;
     q->a1 = a1;
     q->a2 = a2;
-    q->a3 = a3;
-    q->a4 = a4;
+    q->a3 = (pair != NULL) ? pair[0] : 0;
+    q->a4 = (pair != NULL) ? pair[1] : 0;
 }
 
 void cmd_enqueue(int opcode, const EntitySlot* e, int param, int p1, int p2)
 {
-    cmd_produce(opcode, e, param, p1, p2);
+    int pair[2];
+    pair[0] = p1;
+    pair[1] = p2;
+    cmd_produce(opcode, e, param, pair);
 }
 
 /* Cheat/debug keybinds (FUN_00452010). */
@@ -746,7 +769,7 @@ void cmd_keybind_tick(int (*keyheld)(int key))
         KeyBind* b = &s_keybinds[i];
         if (keyheld(b->key)) {
             cmd_produce(b->op, (const void*)(uintptr_t)b->a1,
-                        b->a2, b->a3, b->a4);
+                        b->a2, &b->a3);
         }
     }
 }
@@ -972,9 +995,11 @@ void entity_random_valid_cell_command_create(void* entity)
         }
     }
     if (found != 0) {
-        /* deviation: the corpus queues a pointer to its stack pair; the
-         * port stores the coordinates by value in the record. */
-        cmd_produce(0x24, entity, 0, x, y);
+        /* FUN_00452060 copies the two optional words from a stack pair. */
+        int pair[2];
+        pair[0] = x;
+        pair[1] = y;
+        cmd_produce(0x24, entity, 0, pair);
     }
 }
 // FUNCTION: LEGORR 0x00452c50
@@ -1286,18 +1311,17 @@ void handle_array_release_and_reset(void)
  * test/jne shape) — then strides the loop blindly: cmd_alloc(4) is
  * dereferenced with no NULL check (deviation removed: the port's guard
  * let an exhausted pool skip records the corpus would stride onto).
- * Deviation: the corpus's unsigned gate (test eax,eax / jbe) runs away
- * on a negative count; the port keeps the signed loop, so a negative
- * count issues nothing. */
+ * Corpus 0x402817 uses the unsigned `jbe` gate; keep the bound and loop
+ * index unsigned so MSVC does not emit the port's signed `jle` for negatives. */
 void entity_command14_batch_issue(int count)
 {
     unsigned flag = 0;
-    int n = count;
+    unsigned n = (unsigned)count;
     if (n == 0) {
         flag = 1u;
         n = 1;
     }
-    for (int i = 0; i < n; ++i) {
+    for (unsigned i = 0; i < n; ++i) {
         CmdRec* rec = (CmdRec*)cmd_alloc(4);
         /* corpus: no alloc guard, the record is used blindly */
         cmd_set_kind(rec, 0x14);
@@ -1314,19 +1338,18 @@ void level_no_gather_object_setup(int mode)
         entity_command14_batch_issue(0);
     }
     CmdRec* gather = (CmdRec*)cmd_alloc(0x18);
-    if (gather != NULL) {
-        cmd_set_kind(gather, 0x17);
-        gather->state |= 0x40u;
-        /* corpus: the manual push onto the tail pointer only (the head
-         * stays put until a head-link touches the list) — ported through
-         * the tail link (deviation: timestamp/pending housekeeping). */
-        cmd_link_tail(gather);
-    }
+    /* Corpus 0x40218d..0x4021a8 uses the allocation blindly. The only
+     * in-tree callers are the two test cases, both after cmd_init(). */
+    cmd_set_kind(gather, 0x17);
+    gather->state |= 0x40u;
+    /* Corpus 0x4021a3..0x4021ad manually pushes onto the tail pointer;
+     * the port uses its forward global-chain link (and its timestamp / state
+     * housekeeping) to preserve cmd_global_next() behavior. */
+    cmd_link_tail(gather);
     CmdRec* other = (CmdRec*)cmd_alloc(0x1b);
-    if (other != NULL) {
-        cmd_link_head(other, 0);
-        other->state = (other->state & ~0x10u) | 0x440u;
-    }
+    /* Corpus 0x4021bb..0x4021c0 likewise links the allocation blindly. */
+    cmd_link_head(other, 0);
+    other->state = (other->state & ~0x10u) | 0x440u;
 }
 
 /* --- cancellation-ref and conditional issuers (see cmd.hpp) ------------------
@@ -1480,13 +1503,17 @@ void entity_kind_command_issue(EntitySlot* e)
     e->flags_3e4 |= 0x10u;
     const uint32_t cap = entity_capability_flags_get(e);
     if ((cap & 0x100u) == 0u) {
-        const uint32_t stats = entity_stats_word_get(e);
-        if ((stats & 0x2000000u) == 0u) {
-            if ((stats & 0x1000000u) != 0u) {
+        /* Corpus 0x402960 calls FUN_00469e60 separately in each branch. */
+        if ((entity_stats_word_get(e) & 0x2000000u) == 0u) {
+            if ((entity_stats_word_get(e) & 0x1000000u) != 0u) {
                 rec->extra = 2;
             }
         } else {
-            rec->extra = ((stats & 0x1000000u) == 0u) ? 4 : 1;
+            if ((entity_stats_word_get(e) & 0x1000000u) != 0u) {
+                rec->extra = 1;
+            } else {
+                rec->extra = 4;
+            }
         }
     } else {
         rec->extra = 1;
@@ -1629,7 +1656,13 @@ void cell_command_type13_issue(int x, int y)
     if (rec == NULL) {
         return;
     }
-    cmd_cell_record_stage(rec, x, y, 0xd);
+    /* Corpus 0x402e60..0x402e8e writes the pair and cell fields directly. */
+    __builtin_memcpy(&rec->x, &x, sizeof(rec->x));
+    __builtin_memcpy(&rec->y, &y, sizeof(rec->y));
+    rec->cell_act = 0xd;
+    rec->cell_target = -1;
+    rec->cell_count = 0;
+    rec->state |= 0x400u;
     entity_record_array_apply_zero_state(rec, 1);
     cmd_link_head(rec, 3);
     /* Counter update: the seam half above. */
@@ -1641,7 +1674,13 @@ void cell_command_type11_issue(int x, int y)
     if (rec == NULL) {
         return;
     }
-    cmd_cell_record_stage(rec, x, y, 0xb);
+    /* Corpus 0x402fc2..0x402feb writes these fields before its helper calls. */
+    __builtin_memcpy(&rec->x, &x, sizeof(rec->x));
+    __builtin_memcpy(&rec->y, &y, sizeof(rec->y));
+    rec->cell_act = 0xb;
+    rec->cell_target = -1;
+    rec->cell_count = 0;
+    rec->state |= 0x400u;
     entity_record_array_apply_zero_state(rec, 1);
     cmd_link_head(rec, 4);
     /* Counter update: the seam half above. */
@@ -2020,17 +2059,19 @@ void entity_drain_command_chain(EntitySlot* e)
 // FUNCTION: LEGORR 0x00403af0
 void entity_task_state_update_after_cleanup(EntitySlot* e, int flag)
 {
-    if (e == NULL || e->cmd_head == NULL) {
+    if (e->cmd_head == NULL) {
         return;
     }
     if (flag == 0) {
-        as_rec(e->cmd_head)->state &= ~1u;
+        /* Corpus 0x403b2d clears bit zero directly at CmdRec +0x5c. */
+        ((CmdRec*)e->cmd_head)->state &= ~1u;
         return;
     }
-    if (as_rec(e->cmd_head)->type == 0) {
+    if (((CmdRec*)e->cmd_head)->type == 0) {
         entity_command_chain_head_remove(e);
         if (e->type == 3) {
-            cmd_enqueue(7, e, 0, 0, 0); /* operation 7 for kind-3 entities */
+            /* Corpus 0x403b1c..0x403b28 calls FUN_00452060 with a null pair. */
+            cmd_produce(7, e, 0, NULL);
         }
     }
 }
@@ -2155,7 +2196,8 @@ void object_attached_record_allocate(EntitySlot* e)
     void* rec = cmd_alloc(0x1c);
     void* tail = cmd_chain_walk(e);
     if (tail != NULL) {
-        as_rec(tail)->next = rec; /* corpus store at walk-result +0x60 */
+        /* Corpus: mov [eax+0x60], esi — keep the store direct. */
+        ((CmdRec*)tail)->next = rec;
         return; /* corpus: the taken branch ends on its own pop/pop/ret */
     }
     e->cmd_head = rec; /* corpus store at entity +0x2f0 */
@@ -2192,13 +2234,15 @@ int selected_entities_any_predicate_match(int cx, int cy)
 {
     int count = 0;
     const void* recs = active_context_record_get(&count);
-    if (recs == NULL || count <= 0) {
+    const unsigned remaining_count = (unsigned)count;
+    /* Corpus 0x431a54 tests the count as unsigned; zero is the empty case. */
+    if (recs == NULL || remaining_count == 0u) {
         return 0;
     }
     const LevelState* lvl = (s_ctx != NULL)
         ? (const LevelState*)s_ctx->level : NULL;
     const EntitySlot* const* arr = (const EntitySlot* const*)recs;
-    for (int i = 0; i < count; ++i) {
+    for (unsigned i = 0; i < remaining_count; ++i) {
         (void)arr[i]; /* the mode-1 entity gates are the seam pass */
         if (level_walkable(lvl, cx, cy) != 0) {
             return 1;
@@ -2218,8 +2262,12 @@ int any_object_can_occupy_terrain_cell(int cx, int cy)
     const LevelState* lvl = (s_ctx != NULL)
         ? (const LevelState*)s_ctx->level : NULL;
     const EntitySlot* const* arr = (const EntitySlot* const*)recs;
-    for (int i = 0; i < count; ++i) {
-        if (terrain_cell_allows_placement(arr[i], lvl, cx, cy) != 0) {
+    /* Corpus 0x431aef..0x431af5 advances the array pointer and uses an
+     * unsigned loop bound. Keep the signed nonpositive guard above so a
+     * negative port count still answers zero before the unsigned walk. */
+    const EntitySlot* const* current = arr;
+    for (unsigned i = 0; i < (unsigned)count; ++i, ++current) {
+        if (terrain_cell_allows_placement(*current, lvl, cx, cy) != 0) {
             return 1;
         }
     }
@@ -2470,10 +2518,9 @@ void command_context_post_to_hud(int kind, const uint32_t coord[2])
 // FUNCTION: LEGORR 0x0041e750
 void selection_clear_request_and_hud_reset(void)
 {
-    /* FUN_0041e750: the corpus enqueues command 3 with null payload words
-     * (the fifth slot is calling-convention residue, so a null entity) and
-     * then posts the HUD context with kind 0 / no coordinate. */
-    cmd_produce(3, NULL, 0, 0, 0); /* FUN_00452060 */
+    /* FUN_0041e750 enqueues command 3 with a null entity and pair, then posts
+     * the HUD context with kind 0 / no coordinate. */
+    cmd_produce(3, NULL, 0, NULL); /* FUN_00452060 */
     command_context_post_to_hud(0, NULL);
 }
 
@@ -2537,19 +2584,7 @@ void upgrade_resource_debit(int selector, int amount)
 #define UPGRADE_NAME_TABLE_MAX 36 /* span-derived window guard */
 static const char* s_upgrade_names[UPGRADE_NAME_TABLE_MAX];
 static void* s_upgrade_records;
-static int s_upgrade_count;
-
-static int upgrade_strcasecmp(const char* a, const char* b)
-{
-    for (;; a++, b++) {
-        int ca = (unsigned char)*a;
-        int cb = (unsigned char)*b;
-        if (ca >= 'A' && ca <= 'Z') ca += 'a' - 'A';
-        if (cb >= 'A' && cb <= 'Z') cb += 'a' - 'A';
-        if (ca != cb) return ca - cb;
-        if (ca == 0) return 0;
-    }
-}
+static unsigned s_upgrade_count;
 
 void upgrade_name_table_install(void* records, const char* const* names,
                                 int count)
@@ -2568,20 +2603,23 @@ void upgrade_name_table_install(void* records, const char* const* names,
         s_upgrade_names[i] = NULL;
     }
     s_upgrade_records = records;
-    s_upgrade_count = count;
+    s_upgrade_count = (unsigned)count;
 }
 
 // FUNCTION: LEGORR 0x0042cd50
 const void* upgrade_name_entry_find(const char* name)
 {
-    if (name == NULL || s_upgrade_count == 0 || s_upgrade_records == NULL) {
+    /* Install clamps negatives to zero. Corpus 0x42cd5b/0x42cd7f uses
+     * unsigned count gates and an unsigned index bound. */
+    if (name == NULL || s_upgrade_count == 0u || s_upgrade_records == NULL) {
         /* deviation: the corpus strides a dangling record base blindly */
         return NULL;
     }
-    for (int i = 0; i < s_upgrade_count; ++i) {
+    for (unsigned i = 0; i < s_upgrade_count; ++i) {
         const char* entry = s_upgrade_names[i];
-        if (entry != NULL
-            && upgrade_strcasecmp(name, entry) == 0) {
+        /* Corpus 0x42cd6b calls the annotated strcasecmp_lite twin at
+         * 0x48ff10; this caller observes equality only. */
+        if (entry != NULL && strcasecmp_lite(name, entry) == 0) {
             return (const char*)s_upgrade_records + (size_t)i * 16;
         }
     }

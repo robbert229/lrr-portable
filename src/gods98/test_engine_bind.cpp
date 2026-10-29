@@ -480,15 +480,15 @@ int main(void)
         EngineContext ec = {};
         const float pair[2] = { 64.5f, 212.25f };
         ec.debug = 0u;
-        objective_score_text_origin_set(&ec, pair);
+        objective_score_text_origin_set(pair);
         float out[2] = { 0.0f, 0.0f };
         objective_score_text_origin_peek(out);
         CHECK(out[0] == 64.5f && out[1] == 212.25f, "the pair stores");
-        CHECK((ec.debug & 0x4000u) != 0u, "the store raises bit 14");
-        objective_score_text_origin_set(&ec, NULL);
-        CHECK((ec.debug & 0x4000u) == 0u, "the null pair drops bit 14");
+        CHECK((engine_debug_word_peek() & 0x4000u) != 0u, "the store raises bit 14");
+        objective_score_text_origin_set(NULL);
+        CHECK((engine_debug_word_peek() & 0x4000u) == 0u, "the null pair drops bit 14");
         const float zero[2] = { 0.0f, 0.0f };
-        objective_score_text_origin_set(&ec, zero);
+        objective_score_text_origin_set(zero);
         objective_score_text_origin_peek(out);
         CHECK(out[0] == 0.0f && out[1] == 0.0f, "the zero pair re-stores");
     }

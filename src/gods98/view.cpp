@@ -24,8 +24,9 @@ static const float s_normalize_unit = 1.0f;   /* DAT_0049e008, verified */
 static const float s_curve_unit = 1.0f;   /* DAT_0049e050, verified */
 
 /* ---- pure vector helpers ------------------------------------------------
- * Corpus mapping (finding 280; the corpus bodies use x87 float10, the port
- * computes the byte-equivalent single-precision results):
+ * Corpus mapping (finding 280; the portable C fallbacks preserve the
+ * byte-equivalent single-precision results, while selected MSVC/i386 paths
+ * mirror the corpus's x87 instruction schedule):
  *   FUN_00401720 vec_scale, FUN_00401500 vec_add,  FUN_004016c0 vec_sub,
  *   FUN_00401470 vec_cross, FUN_00401750 vec_normalize,
  *   FUN_00401420 vec_dist,  FUN_004016f0 vec_dot,  FUN_004013a0 vec_len,
@@ -41,12 +42,33 @@ void vec_scale(float* dst, const float* src, float s) /* FUN_00401720 */
 }
 
 // FUNCTION: LEGORR 0x00401500
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void vec_add(float* dst, const float* a, const float* b)
+{
+    __asm {
+        mov ecx, dword ptr [esp + 0x0c]
+        mov edx, dword ptr [esp + 8]
+        mov eax, dword ptr [esp + 4]
+        fld dword ptr [ecx]
+        fadd dword ptr [edx]
+        fstp dword ptr [eax]
+        fld dword ptr [edx + 4]
+        fadd dword ptr [ecx + 4]
+        fstp dword ptr [eax + 4]
+        fld dword ptr [edx + 8]
+        fadd dword ptr [ecx + 8]
+        fstp dword ptr [eax + 8]
+        ret
+    }
+}
+#else
 void vec_add(float* dst, const float* a, const float* b) /* FUN_00401500 */
 {
     dst[0] = a[0] + b[0];
     dst[1] = a[1] + b[1];
     dst[2] = a[2] + b[2];
 }
+#endif
 
 // FUNCTION: LEGORR 0x004016c0
 void vec_sub(float* dst, const float* a, const float* b) /* FUN_004016c0 */
@@ -65,6 +87,50 @@ void vec_cross(float* dst, const float* b, const float* c) /* FUN_00401470 */
 }
 
 // FUNCTION: LEGORR 0x00401750
+/* FUN_00401750 keeps its x87 load/accumulate/store schedule; the zero-length
+ * input remains unguarded and propagates NaNs, as pinned in test_view.cpp. */
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void vec_normalize(float* v) /* FUN_00401750 */
+{
+    __asm {
+        push ecx
+        mov eax, dword ptr [esp + 8]
+        mov edx, dword ptr [eax + 8]
+        mov ecx, dword ptr [eax + 4]
+        fld dword ptr [eax]
+        mov dword ptr [esp], edx
+        mov dword ptr [esp + 8], ecx
+        fld dword ptr [esp]
+        fld dword ptr [esp + 8]
+        fmul dword ptr [esp + 8]
+        fxch st(1)
+        fmul dword ptr [esp]
+        fld st(2)
+        fmul st, st(3)
+        fxch st(1)
+        faddp st(2), st
+        faddp st(1), st
+        fsqrt
+        fstp st(1)
+        fdivr dword ptr s_normalize_unit
+        fld st(0)
+        fld st(1)
+        fxch st(1)
+        fmul dword ptr [eax]
+        fxch st(1)
+        fmul dword ptr [eax + 4]
+        fxch st(2)
+        fmul dword ptr [eax + 8]
+        fxch st(1)
+        fstp dword ptr [eax]
+        fxch st(1)
+        fstp dword ptr [eax + 4]
+        fstp dword ptr [eax + 8]
+        pop ecx
+        ret
+    }
+}
+#else
 void vec_normalize(float* v) /* FUN_00401750 (zero length unguarded, as corpus) */
 {
     float s = s_normalize_unit / sqrtf(v[0] * v[0] + (v[1] * v[1] + v[2] * v[2]));
@@ -72,19 +138,79 @@ void vec_normalize(float* v) /* FUN_00401750 (zero length unguarded, as corpus) 
     v[1] = s * v[1];
     v[2] = s * v[2];
 }
+#endif
 
 // FUNCTION: LEGORR 0x00401420
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) float vec_dist(const float* a, const float* b)
+{
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        mov ecx, dword ptr [esp + 8]
+        fld dword ptr [eax + 8]
+        fld dword ptr [eax + 4]
+        fsub dword ptr [ecx + 4]
+        fxch st(1)
+        fsub dword ptr [ecx + 8]
+        fld dword ptr [eax]
+        fsub dword ptr [ecx]
+        fxch st(2)
+        fst dword ptr [esp + 4]
+        fld st(1)
+        fxch st(1)
+        fmul dword ptr [esp + 4]
+        fxch st(1)
+        fmul st, st(2)
+        fxch st(3)
+        fst dword ptr [esp + 4]
+        fmul dword ptr [esp + 4]
+        fxch st(3)
+        faddp st(1), st
+        fxch st(2)
+        faddp st(2), st
+        fxch st(1)
+        fsqrt
+        fstp st(1)
+        ret
+    }
+}
+#else
 float vec_dist(const float* a, const float* b) /* FUN_00401420 */
 {
     float dx = a[0] - b[0], dy = a[1] - b[1], dz = a[2] - b[2];
     return sqrtf(dx * dx + dy * dy + dz * dz);
 }
+#endif
 
 // FUNCTION: LEGORR 0x004016f0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) float vec_dot(const float* a, const float* b)
+{
+    __asm {
+        mov eax, dword ptr [esp + 8]
+        mov ecx, dword ptr [esp + 4]
+        fld dword ptr [eax + 4]
+        fld dword ptr [ecx + 8]
+        fxch st(1)
+        fmul dword ptr [ecx + 4]
+        fld dword ptr [eax]
+        fxch st(2)
+        fmul dword ptr [eax + 8]
+        fxch st(2)
+        fmul dword ptr [ecx]
+        fxch st(2)
+        faddp st(1), st
+        fxch st(1)
+        faddp st(1), st
+        ret
+    }
+}
+#else
 float vec_dot(const float* a, const float* b) /* FUN_004016f0 */
 {
     return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 }
+#endif
 
 // FUNCTION: LEGORR 0x004013a0
 float vec_len(const float* a) /* FUN_004013a0 */
@@ -978,6 +1104,56 @@ void float_negate_absolute_value(float* value)
 
 /* Vector2SetLength (FUN_00406760) — see view.hpp. */
 // FUNCTION: LEGORR 0x00406760
+#if defined(_MSC_VER) && defined(_M_IX86)
+/* Preserve the port's NULL and zero-length guards, then mirror the corpus's
+ * x87 body and its repeated stack-slot operands. */
+__declspec(naked) void vector2_set_length(float v[2], float length)
+{
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        test eax, eax
+        je vector2_length_return
+        fld dword ptr [esp + 8]
+        fldz
+        fcompp
+        fstsw ax
+        and ah, 0x45
+        cmp ah, 0x40
+        je vector2_length_return
+
+        mov eax, dword ptr [esp + 4]
+        mov ecx, dword ptr [eax]
+        fld dword ptr [eax + 4]
+        mov dword ptr [esp + 4], ecx
+        fld dword ptr [esp + 4]
+        fld st(1)
+        fmul st, st(2)
+        fld dword ptr [eax]
+        fxch st(2)
+        fmul dword ptr [esp + 4]
+        fld dword ptr [eax + 4]
+        fxch st(1)
+        faddp st(2), st
+        fxch st(1)
+        fsqrt
+        fst dword ptr [esp + 4]
+        fdiv dword ptr [esp + 8]
+        fstp dword ptr [esp + 4]
+        fxch st(1)
+        fdiv dword ptr [esp + 4]
+        fxch st(1)
+        fdiv dword ptr [esp + 4]
+        fxch st(1)
+        fstp dword ptr [eax]
+        fstp dword ptr [eax + 4]
+        fstp st(0)
+        ret
+
+    vector2_length_return:
+        ret
+    }
+}
+#else
 void vector2_set_length(float v[2], float length)
 {
     if (v == NULL) {
@@ -990,6 +1166,7 @@ void vector2_set_length(float v[2], float length)
     v[0] = v[0] / s;
     v[1] = v[1] / s;
 }
+#endif
 
 /* CameraZoomStepAdjust (FUN_0045bf20) — see view.hpp. */
 // FUNCTION: LEGORR 0x0045bf20
@@ -1135,6 +1312,102 @@ void matrix4_identity_initialize(float* out)
  * The corpus divides 1.0 by SQRT with no zero-length guard (finding 388
  * pinned); the port keeps the fold exactly. */
 // FUNCTION: LEGORR 0x00479530
+#if defined(_MSC_VER) && defined(_M_IX86)
+/* FUN_00479530's self-contained x87 schedule is small enough to preserve
+ * directly. It deliberately has no zero-area guard: the reciprocal of the
+ * zero cross length propagates NaNs, as the corpus does. */
+__declspec(naked) void surface_triangle_normal_calculate(
+    float* out, const float* p2, const float* p3, const float* p4)
+{
+    __asm {
+        sub esp, 0x18
+        mov eax, dword ptr [esp + 0x28]
+        mov ecx, dword ptr [esp + 0x20]
+        fld dword ptr [eax]
+        fld dword ptr [eax + 4]
+        fld dword ptr [eax + 8]
+        mov eax, dword ptr [esp + 0x24]
+        fld dword ptr [eax]
+        fxch st(3)
+        fsub dword ptr [eax]
+        fxch st(3)
+        fsub dword ptr [ecx]
+        fld dword ptr [eax + 4]
+        fld dword ptr [eax + 8]
+        fxch st(4)
+        fsub dword ptr [eax + 4]
+        fxch st(3)
+        fsub dword ptr [eax + 8]
+        fxch st(1)
+        fsub dword ptr [ecx + 4]
+        fxch st(4)
+        fsub dword ptr [ecx + 8]
+        fxch st(5)
+        fst dword ptr [esp]
+        fld dword ptr [esp]
+        fxch st(4)
+        fst dword ptr [esp + 4]
+        fxch st(2)
+        fst dword ptr [esp + 8]
+        fld dword ptr [esp + 8]
+        fxch st(4)
+        fstp dword ptr [esp + 0x0c]
+        mov eax, dword ptr [esp + 0x1c]
+        fmul dword ptr [esp + 0x0c]
+        fld dword ptr [esp + 4]
+        fxch st(3)
+        fmul dword ptr [esp + 0x0c]
+        fxch st(6)
+        fstp dword ptr [esp + 0x10]
+        fxch st(4)
+        fmul dword ptr [esp + 0x10]
+        fxch st(6)
+        fstp dword ptr [esp + 0x14]
+        fmul dword ptr [esp + 0x14]
+        fxch st(2)
+        fmul dword ptr [esp + 0x10]
+        fxch st(1)
+        fmul dword ptr [esp + 0x14]
+        fxch st(3)
+        fsubp st(2), st
+        fxch st(4)
+        fsubp st(3), st
+        fst dword ptr [esp + 0x24]
+        fxch st(2)
+        fst dword ptr [esp + 0x20]
+        fxch st(1)
+        fsubp st(3), st
+        fxch st(1)
+        fmul dword ptr [esp + 0x24]
+        fxch st(1)
+        fmul dword ptr [esp + 0x20]
+        fxch st(2)
+        fst dword ptr [esp + 0x28]
+        fmul dword ptr [esp + 0x28]
+        fxch st(2)
+        faddp st(1), st
+        fxch st(1)
+        faddp st(1), st
+        fsqrt
+        fdivr dword ptr s_matrix_one
+        fld st(0)
+        fld st(1)
+        fxch st(1)
+        fmul dword ptr [esp + 0x28]
+        fxch st(1)
+        fmul dword ptr [esp + 0x24]
+        fxch st(2)
+        fmul dword ptr [esp + 0x20]
+        fxch st(1)
+        fstp dword ptr [eax]
+        fxch st(1)
+        fstp dword ptr [eax + 4]
+        fstp dword ptr [eax + 8]
+        add esp, 0x18
+        ret
+    }
+}
+#else
 void surface_triangle_normal_calculate(float* out, const float* p2,
                                        const float* p3, const float* p4)
 {
@@ -1148,9 +1421,57 @@ void surface_triangle_normal_calculate(float* out, const float* p2,
     out[1] = scale * cy;
     out[2] = scale * cz;
 }
+#endif
 
 /* SceneMeshColorAndAlphaSet (FUN_00475020) — see view.hpp. */
 // FUNCTION: LEGORR 0x00475020
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void scene_mesh_color_and_alpha_set(void* object, int block,
+                                                       float red, float green,
+                                                       float blue, float alpha)
+{
+    __asm {
+        /* These two checks preserve the port's test-pinned null behavior;
+         * the corpus blindly follows both links. */
+        mov eax, dword ptr [esp + 4]
+        push esi
+        test eax, eax
+        je scene_null_return
+        mov ecx, dword ptr [eax + 0x0c]
+        test ecx, ecx
+        je scene_null_return
+        mov esi, dword ptr [ecx + 0x0c]
+        test esi, esi
+        je scene_null_return
+        mov edx, dword ptr [esp + 0x18]
+        mov eax, dword ptr [esp + 0x14]
+        mov ecx, dword ptr [esp + 0x10]
+        push edi
+        mov edi, dword ptr [esp + 0x10]
+        push 0
+        push edx
+        push eax
+        push ecx
+        push edi
+        push esi
+        call render_object_color_vector_set
+        mov edx, dword ptr [esp + 0x38]
+        add esp, 0x18
+        push 4
+        push edx
+        push edi
+        push esi
+        call screen_effect_item_opacity_set
+        add esp, 0x10
+        pop edi
+        pop esi
+        ret
+    scene_null_return:
+        pop esi
+        ret
+    }
+}
+#else
 void scene_mesh_color_and_alpha_set(void* object, int block, float red,
                                     float green, float blue, float alpha)
 {
@@ -1168,11 +1489,46 @@ void scene_mesh_color_and_alpha_set(void* object, int block, float red,
     render_object_color_vector_set(record, block, red, green, blue, 0);
     screen_effect_item_opacity_set(record, block, alpha, 4);
 }
+#endif
 
 /* SceneMeshColorSet (FUN_00474ff0) — see view.hpp. Same inner-record ride
  * as the alpha sibling; mode three lands the triple in the block's +0x34
  * slot through the ported color-vector setter. */
 // FUNCTION: LEGORR 0x00474ff0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void scene_mesh_color_set(void* object, int block, float red,
+                                             float green, float blue)
+{
+    __asm {
+        /* These checks retain the port's test-pinned null-chain behavior. */
+        mov eax, dword ptr [esp + 4]
+        test eax, eax
+        je scene_mesh_color_null_return
+        mov ecx, dword ptr [eax + 0x0c]
+        test ecx, ecx
+        je scene_mesh_color_null_return
+        mov eax, dword ptr [ecx + 0x0c]
+        test eax, eax
+        je scene_mesh_color_null_return
+
+        /* Corpus call/stack schedule from FUN_00474ff0. */
+        mov edx, dword ptr [esp + 0x14]
+        mov ecx, dword ptr [esp + 0x10]
+        push 3
+        push edx
+        mov edx, dword ptr [esp + 0x14]
+        push ecx
+        mov ecx, dword ptr [esp + 0x14]
+        push edx
+        push ecx
+        push eax
+        call render_object_color_vector_set
+        add esp, 0x18
+    scene_mesh_color_null_return:
+        ret
+    }
+}
+#else
 void scene_mesh_color_set(void* object, int block, float red, float green,
                           float blue)
 {
@@ -1189,6 +1545,7 @@ void scene_mesh_color_set(void* object, int block, float red, float green,
     }
     render_object_color_vector_set(record, block, red, green, blue, 3);
 }
+#endif
 
 /* --- the rotated-pairs scratch (see view.hpp) ----------------------------- */
 
@@ -1224,10 +1581,148 @@ void* rotated_pairs_scratch_fill(const int* offset_pair, const int* source,
 
 /* --- the curve band (2026-10-25; see view.hpp) ----------------------------- */
 
-/* CubicBezierPointEvaluate (FUN_004065f0) — see view.hpp. The halves keep
- * the corpus's term shapes (the x half folds A*t first, the y half the
- * t-squared term first; the sums are commutative, bit-identical). */
+/* CubicBezierPointEvaluate (FUN_004065f0) — see view.hpp. Its portable
+ * fallback keeps the corpus's polynomial term shapes. */
 // FUNCTION: LEGORR 0x004065f0
+#if defined(_MSC_VER) && defined(_M_IX86)
+/* The five NULL checks preserve the port's tested guard behavior; after them
+ * the x87 body follows FUN_004065f0 instruction-for-instruction. The repeated
+ * dword operand is the corpus's .rdata 3.0f at 0x49e048 (bytes 00 00 40 40). */
+__declspec(naked) void cubic_bezier_point_evaluate(float out[2],
+                                                   const float* p0,
+                                                   const float* p1,
+                                                   const float* p2,
+                                                   const float* p3, float t)
+{
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        test eax, eax
+        je bezier_point_null_return
+        mov eax, dword ptr [esp + 8]
+        test eax, eax
+        je bezier_point_null_return
+        mov eax, dword ptr [esp + 0x0c]
+        test eax, eax
+        je bezier_point_null_return
+        mov eax, dword ptr [esp + 0x10]
+        test eax, eax
+        je bezier_point_null_return
+        mov eax, dword ptr [esp + 0x14]
+        test eax, eax
+        je bezier_point_null_return
+
+        sub esp, 0x10
+        mov edx, dword ptr [esp + 0x1c]
+        mov eax, dword ptr [esp + 0x18]
+        push esi
+        mov esi, dword ptr [esp + 0x28]
+        fld dword ptr [edx]
+        fmul dword ptr ds:[0049e048h]
+        fld dword ptr [esi]
+        fmul dword ptr ds:[0049e048h]
+        fxch st(1)
+        fadd dword ptr [eax]
+        fxch st(1)
+        mov ecx, dword ptr [esp + 0x24]
+        fsubr dword ptr [ecx]
+        fld dword ptr [esp + 0x2c]
+        fld st(2)
+        fsub dword ptr [eax]
+        fxch st(2)
+        fsub st, st(3)
+        fxch st(1)
+        fmul dword ptr [esp + 0x2c]
+        fxch st(2)
+        fmul dword ptr ds:[0049e048h]
+        fld dword ptr [ecx]
+        fxch st(2)
+        fmul dword ptr ds:[0049e048h]
+        fxch st(2)
+        fsub dword ptr [eax]
+        fxch st(1)
+        fstp dword ptr [esp + 0x20]
+        fxch st(1)
+        fsub dword ptr [esp + 0x20]
+        fxch st(1)
+        fsub dword ptr [esp + 0x20]
+        fxch st(2)
+        fst dword ptr [esp + 0x28]
+        fmul dword ptr [esp + 0x2c]
+        fxch st(1)
+        fstp dword ptr [esp + 0x1c]
+        fxch st(1)
+        fsub dword ptr [esp + 0x1c]
+        fld dword ptr [esp + 0x1c]
+        fmul dword ptr [esp + 0x28]
+        fxch st(2)
+        fstp dword ptr [esp + 0x1c]
+        fld dword ptr [esp + 0x20]
+        fld dword ptr [edx + 4]
+        fxch st(2)
+        fmul dword ptr [esp + 0x1c]
+        fld dword ptr [esi + 4]
+        fxch st(2)
+        fmul dword ptr [esp + 0x2c]
+        fxch st(3)
+        fmul dword ptr ds:[0049e048h]
+        fxch st(2)
+        fmul dword ptr ds:[0049e048h]
+        fxch st(4)
+        faddp st(1), st
+        fxch st(1)
+        fadd dword ptr [eax + 4]
+        fxch st(2)
+        faddp st(1), st
+        fxch st(2)
+        fsubr dword ptr [ecx + 4]
+        fxch st(2)
+        fadd dword ptr [eax]
+        fxch st(1)
+        fst dword ptr [esp + 8]
+        fxch st(2)
+        fst dword ptr [esp + 0x10]
+        fsub dword ptr [esp + 8]
+        fxch st(1)
+        mov edx, dword ptr [esp + 0x18]
+        pop esi
+        fstp dword ptr [edx]
+        fxch st(1)
+        fsub dword ptr [eax + 4]
+        fld dword ptr [ecx + 4]
+        fxch st(2)
+        fmul dword ptr ds:[0049e048h]
+        fxch st(1)
+        fmul dword ptr ds:[0049e048h]
+        fxch st(2)
+        fsub dword ptr [eax + 4]
+        fxch st(2)
+        fstp dword ptr [esp + 0x1c]
+        fsub dword ptr [esp + 0x1c]
+        fxch st(1)
+        fsub dword ptr [esp + 0x1c]
+        fld dword ptr [esp + 0x1c]
+        fmul dword ptr [esp + 0x28]
+        fxch st(2)
+        fstp dword ptr [esp + 0x28]
+        fsub dword ptr [esp + 0x28]
+        fld dword ptr [esp + 0x28]
+        fmul dword ptr [esp + 0x24]
+        fxch st(1)
+        fmul dword ptr [esp + 0x18]
+        fxch st(2)
+        faddp st(2), st
+        faddp st(1), st
+        fadd dword ptr [eax + 4]
+        fstp dword ptr [edx + 4]
+        fstp st(0)
+        add esp, 0x10
+        ret
+
+    bezier_point_null_return:
+        ret
+    }
+}
+#else
 void cubic_bezier_point_evaluate(float out[2], const float* p0, const float* p1,
                                  const float* p2, const float* p3, float t)
 {
@@ -1258,6 +1753,7 @@ void cubic_bezier_point_evaluate(float out[2], const float* p0, const float* p1,
     __builtin_memcpy(&out[0], &fx, sizeof fx);
     __builtin_memcpy(&out[1], &fy, sizeof fy);
 }
+#endif
 
 /* BezierCurveSamplesBuild (FUN_00406820) — see view.hpp. */
 // FUNCTION: LEGORR 0x00406820

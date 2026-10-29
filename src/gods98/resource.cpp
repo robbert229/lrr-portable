@@ -6,6 +6,7 @@
 
 #include "resource.hpp"
 #include "heap.hpp"
+#include "string.hpp"
 
 #define RESOURCE_MAX_WADS 10
 #define RESOURCE_PATH_MAX 4096
@@ -108,13 +109,41 @@ static unsigned int wad_read_bits_msb_first(unsigned int n)
     return v;
 }
 // FUNCTION: LEGORR 0x0049ce70
-static short wad_run_length_decode(void) { short a=(short)wad_read_bits_msb_first(1), b=(short)wad_read_bits_msb_first(1); if(!b)return a+4; return (short)(wad_read_bits_msb_first(1)-2+(a+4)*2); }
+static short wad_run_length_decode(void)
+{
+    short a;
+    short b;
+
+    a = (short)wad_read_bits_msb_first(1);
+    a += 4; /* 0x49ce7b/0x49ce7e: mov si,ax; add esi,4 */
+    b = (short)wad_read_bits_msb_first(1);
+    if (!b) {
+        return a; /* 0x49ce90: mov ax,si */
+    }
+    return (short)(wad_read_bits_msb_first(1) - 2 + a * 2);
+}
 // FUNCTION: LEGORR 0x0049ceb0
 static int wad_backreference_offset_decode(void)
 {
-    unsigned int v=0; if(wad_read_bits_msb_first(1)) { v=wad_read_bits_msb_first(1); if(!wad_read_bits_msb_first(1)) { if(!v)v=wad_read_bits_msb_first(1)+2; }
-    else { v=(wad_read_bits_msb_first(1)+v*2)|4; if(!wad_read_bits_msb_first(1))v=wad_read_bits_msb_first(1)+v*2; } }
-    return v*256+1+*wad_codec_in++;
+    unsigned int v;
+
+    v = 0;
+    if ((unsigned short)wad_read_bits_msb_first(1) != 0) {
+        v = wad_read_bits_msb_first(1);
+        if ((unsigned short)wad_read_bits_msb_first(1) != 0) {
+            v = wad_read_bits_msb_first(1) + v * 2;
+            v |= 4u; /* 0x49cee4/0x49ceea/0x49ceec: double, add, OR low byte */
+            if ((unsigned short)wad_read_bits_msb_first(1) == 0) {
+                v = wad_read_bits_msb_first(1) + v * 2;
+            }
+        }
+        else if ((unsigned short)v == 0) {
+            v = (unsigned short)wad_read_bits_msb_first(1);
+            v += 2; /* 0x49cf1e/0x49cf24: mov si,ax; add esi,2 */
+        }
+    }
+    /* 0x49cf27-0x49cf35: scale by 256, add the next byte, advance input. */
+    return v * 256u + 1u + *wad_codec_in++;
 }
 
 // FUNCTION: LEGORR 0x0049cd90
@@ -124,10 +153,13 @@ static void wad_huffman_table_read(void* table, unsigned int count)
     WadCodecTableEntry* e;
     wad_huffman_table_clear(table, (int)count);
     n=wad_read_bits_lsb_first(5);
+    /* 0x49cdb1 skips the rest after a zero count; every positive count
+     * reaches the canonical builder with the capped count. */
+    if(n == 0) return;
     if(n>16)n=16;
     e=(WadCodecTableEntry*)table;
     for(i=0;i<n;i++) e[i].len=(uint16_t)wad_read_bits_lsb_first(4);
-    if(n) wad_huffman_canonical_codes_build(table,(int)n);
+    wad_huffman_canonical_codes_build(table,(int)n);
 }
 // FUNCTION: LEGORR 0x0049ce00
 static unsigned int wad_huffman_symbol_decode(void* table)
@@ -260,28 +292,6 @@ int resource_data_present(void)
     }
     fclose(fp);
     return 1;
-}
-
-/* ------------------------------------------------------------------ *
- *  Small helpers (no STL, no locale — ASCII fold only).
- * ------------------------------------------------------------------ */
-
-static int ares_islower(int c) { return c >= 'a' && c <= 'z'; }
-
-static int ares_strcasecmp(const char* a, const char* b)
-{
-    for (;;) {
-        int ca = (unsigned char)*a++;
-        int cb = (unsigned char)*b++;
-        if (ares_islower(ca)) ca -= 0x20;
-        if (ares_islower(cb)) cb -= 0x20;
-        if (ca != cb) {
-            return ca - cb;
-        }
-        if (ca == 0) {
-            return 0;
-        }
-    }
 }
 
 static uint32_t ares_le32(const uint8_t* p)
@@ -546,7 +556,7 @@ int resource_wad_lookup(int wad_idx, const char* name)
     ResourceWad* w = &s_wads[wad_idx];
     for (uint32_t i = 0; i < w->entry_count; ++i) {
         const char* cand = w->names + w->entries[i].name_off;
-        if (ares_strcasecmp(cand, name) == 0) {
+        if (strcasecmp_lite(cand, name) == 0) {
             return (int)i;
         }
     }
@@ -1024,9 +1034,9 @@ static WadCodecTableEntry s_wad_huff_length[128];
 // FUNCTION: LEGORR 0x0049c8e0
 static int wad_payload_decode_type1(const void* src, void* dst)
 {
-    unsigned int total;
+    unsigned short total;
     unsigned int sym;
-    unsigned int count;
+    unsigned short count;
     unsigned int i;
     unsigned int bits;
     unsigned int peek;
@@ -1041,7 +1051,7 @@ static int wad_payload_decode_type1(const void* src, void* dst)
         wad_huffman_table_read(s_wad_huff_literal, 16u);
         wad_huffman_table_read(s_wad_huff_offset, 16u);
         wad_huffman_table_read(s_wad_huff_length, 16u);
-        total = wad_read_bits_lsb_first(16u);     /* 0x49c949: edi */
+        total = (unsigned short)wad_read_bits_lsb_first(16u); /* 0x49c949: edi */
         for (;;) {                                /* loopA 0x49c94b */
             sym = wad_huffman_symbol_decode(s_wad_huff_literal);
             count = (unsigned short)sym;          /* 0x49c965: u16(sym) */
@@ -1058,7 +1068,7 @@ static int wad_payload_decode_type1(const void* src, void* dst)
             wad_codec_lsb = (peek << bits)
                           | (wad_codec_lsb & ((1u << bits) - 1u));
             total += 0xffffu;                     /* 0x49c9cc: countdown */
-            if ((total & 0xffffu) == 0u) {        /* 0x49c9d7: test di,di */
+            if (total == 0u) {                    /* 0x49c9d7: test di,di */
                 break;
             }
             sym = wad_huffman_symbol_decode(s_wad_huff_offset);
@@ -1266,21 +1276,26 @@ void wad_huffman_table_clear(void* table, int count)
 // FUNCTION: LEGORR 0x0047fed0
 void* game_file_handle_allocate(int kind)
 {
-    if (kind != 0 && kind != 1) {
+    GameFileHandle* h;
+    if (kind == 1) {
+        h = (GameFileHandle*)engine_heap_alloc((long)sizeof(GameFileHandle));
+        if (h == NULL) {
+            return NULL;
+        }
+        h->flag = 1;
+        /* Test-pinned deviation: unlike the corpus, the port leaves the
+         * kind-1 stream slot deterministically NULL. */
+        h->stream = NULL;
+        return h;
+    }
+    if (kind != 0) {
         return NULL;
     }
-    GameFileHandle* h = (GameFileHandle*)engine_heap_alloc(
-        (long)sizeof(GameFileHandle));
+    h = (GameFileHandle*)engine_heap_alloc((long)sizeof(GameFileHandle));
     if (h == NULL) {
         return NULL;
     }
-    h->flag = kind;
-    /* Deviation: the corpus leaves +4 uninitialized for kind 1; the port
-     * zeroes the stream field for deterministic handles. */
-    h->stream = NULL;
-    if (kind == 1) {
-        return h;
-    }
+    h->flag = 0;
     h->stream = engine_heap_alloc(12);
     if (h->stream != NULL) {
         return h;

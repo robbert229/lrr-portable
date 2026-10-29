@@ -329,7 +329,7 @@ BlockRec* block_find(BlockFile* bf, const char* path)
 BlockRec* block_subgroup(BlockFile* bf, const char* path)
 {
     BlockRec* r = block_find(bf, path);
-    if (r != NULL && r->child == NULL) {
+    if (r == NULL || r->child == NULL) {
         return NULL;          /* corpus gate: record.depth < parent.depth */
     }
     return r;
@@ -379,7 +379,7 @@ int block_get_str(BlockFile* bf, const char* path, char* buf, size_t sz)
 const char* block_get_strptr(BlockFile* bf, const char* path)
 {
     BlockRec* r = block_find(bf, path);
-    return (r == NULL || r->value == NULL) ? NULL : r->value;
+    return r == NULL ? NULL : r->value;
 }
 
 int block_get_int(BlockFile* bf, const char* path, int dflt)
@@ -632,13 +632,22 @@ int config_rgb_vector_read(BlockFile* bf, const char* path,
 /* ReadAngleSettingRadians (FUN_00479110): the corpus tests the path getter,
  * calls it again for a present value, and sends either that string or the
  * empty literal through FUN_0048d980 before the zero gate and two x87 scales. */
+/* These are the corpus's direct x87 operands in ReadAngleSettingRadians.
+ * PE bytes: 00 00 00 00, 61 0b 36 3b, db 0f c9 40 respectively. */
+// GLOBAL: LEGORR 0x0049e8f8
+static const float s_config_angle_zero = 0.0f;
+// GLOBAL: LEGORR 0x0049e8fc
+static const float s_config_angle_degrees_to_turn = 1.0f / 360.0f;
+// GLOBAL: LEGORR 0x0049e900
+static const float s_config_angle_turn_radians = 6.2831855f;
+
 // FUNCTION: LEGORR 0x00479110
 float config_angle_radians_get(BlockFile* bf, const char* path)
 {
     const float deg = util_atof(block_get_strptr(bf, path) != NULL
                                 ? block_get_strptr(bf, path) : "");
-    if (deg == 0.0f) {
-        return 0.0f; /* the corpus gates the multiply on value != 0 */
+    if (deg == s_config_angle_zero) {
+        return s_config_angle_zero; /* the corpus gates the multiply on value != 0 */
     }
-    return deg * (1.0f / 360.0f) * 6.2831855f;
+    return (deg * s_config_angle_degrees_to_turn) * s_config_angle_turn_radians;
 }

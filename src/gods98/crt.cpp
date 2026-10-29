@@ -105,6 +105,35 @@ void extended_float96_bit_shift_left_one(uint32_t* value)
 #endif
 
 // FUNCTION: LEGORR 0x0049a080
+#if defined(_MSC_VER) && defined(_M_IX86)
+/* Corpus 0x49a080..0x49a0ac shifts the three dwords high-to-low. */
+__declspec(naked) void extended_float96_bit_shift_right_one(uint32_t* value)
+{
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        push esi
+        push edi
+        mov edx, dword ptr [eax + 8]
+        mov ecx, dword ptr [eax + 4]
+        mov esi, edx
+        mov edi, ecx
+        shl esi, 1fh
+        shr ecx, 1
+        or ecx, esi
+        mov dword ptr [eax + 4], ecx
+        mov ecx, dword ptr [eax]
+        shl edi, 1fh
+        shr ecx, 1
+        shr edx, 1
+        or ecx, edi
+        pop edi
+        mov dword ptr [eax + 8], edx
+        mov dword ptr [eax], ecx
+        pop esi
+        ret
+    }
+}
+#else
 void extended_float96_bit_shift_right_one(uint32_t* value)
 {
     uint32_t middle;
@@ -113,6 +142,7 @@ void extended_float96_bit_shift_right_one(uint32_t* value)
     value[2] >>= 1;
     value[0] = (value[0] >> 1) | (middle << 31);
 }
+#endif
 
 /* FUN_00498000: the corpus's memmove with word loops and byte tails —
  * byte-equivalent to the host memmove (findings 260/394). */
@@ -221,7 +251,10 @@ static int crt_runtime_error_reporting_enabled(void)
 // FUNCTION: LEGORR 0x004968b0
 void crt_runtime_error_message_enter_exit(void)
 {
-    if (crt_runtime_error_reporting_enabled()) {
+    /* Corpus 0x4968b0 tests both mode globals here rather than calling the
+     * shared reporting predicate. */
+    if (s_runtime_error_mode == 1 ||
+        (s_runtime_error_mode == 0 && s_runtime_error_console_mode == 1)) {
         crt_runtime_error_message(0xfc);
         if (s_runtime_error_callback != NULL) {
             (*s_runtime_error_callback)();
@@ -535,6 +568,24 @@ int bounded_wide_string_length_including_null(const uint16_t* text,
  * unused, the high word at [esp+8] is live — two uint32_t params so
  * MSVC5 reads the high word at [esp+8]. */
 // FUNCTION: LEGORR 0x00492068
+#if defined(_MSC_VER) && defined(_M_IX86)
+/* Corpus 0x492068..0x49207d tests the exponent bits in EAX, returning the
+ * masked word unless it is all ones, then reloads the original high word. */
+__declspec(naked) uint32_t double_exponent_bits_or_special(uint32_t low_word,
+                                                            uint32_t high_word)
+{
+    __asm {
+        mov eax, dword ptr [esp + 8]
+        and eax, 07ff00000h
+        cmp eax, 07ff00000h
+        je special_value
+        ret
+    special_value:
+        mov eax, dword ptr [esp + 8]
+        ret
+    }
+}
+#else
 uint32_t double_exponent_bits_or_special(uint32_t low_word, uint32_t high_word)
 {
     (void)low_word; /* the corpus reads only [esp+8] */
@@ -543,6 +594,7 @@ uint32_t double_exponent_bits_or_special(uint32_t low_word, uint32_t high_word)
     }
     return high_word;
 }
+#endif
 
 /* FormatArgumentReadDword (FUN_00491430, finding 395): read the dword
  * at the cursor, then advance it by four. */
@@ -634,7 +686,8 @@ static int crt_double_classify_words(uint32_t low, uint32_t high)
 /* CrtMathDispatchTableInitialize (FUN_0048d940): the six consecutive
  * callback slots contain the CRT fatal handler until startup replaces them
  * with the formatting and decimal-point routines below. Keep the image
- * addresses as DWORDs; they are not callable host pointers. */
+ * addresses as DWORDs; function-valued slots use their declared symbols,
+ * but are not called through host pointers here. */
 // GLOBAL: LEGORR 0x004aff80
 static volatile uint32_t s_math_dispatch_table[6] = {
     0x00498340u, 0x00498340u, 0x00498340u,
@@ -647,7 +700,8 @@ void crt_math_dispatch_table_initialize(void)
     s_math_dispatch_table[1] = 0x00490310u;
     s_math_dispatch_table[0] = 0x00490750u;
     s_math_dispatch_table[2] = 0x004903a0u;
-    s_math_dispatch_table[3] = 0x004902b0u;
+    s_math_dispatch_table[3] =
+        (uint32_t)(uintptr_t)&crt_normalize_decimal_point;
     s_math_dispatch_table[4] = 0x00490380u;
     s_math_dispatch_table[5] = 0x00490750u;
 }
@@ -915,14 +969,15 @@ float global_float_field_00556f00_get(void)
 }
 
 // FUNCTION: LEGORR 0x004567c0
+/* Corpus 0x4567c4..0x4567ce stores one load and reloads the argument for
+ * return. Keep the port's NULL behavior because test_static_globals pins it. */
 uint32_t global_value_004ff9bc_store_and_return(const void* value)
 {
     if (value == NULL) {
-        return 0u; /* deviation: corpus dereferences blindly */
+        return 0u; /* test-pinned deviation: corpus dereferences blindly */
     }
-    uint32_t v = *(const uint32_t*)value;
-    s_global_dword_004ff9bc = v;
-    return v;
+    s_global_dword_004ff9bc = *(const uint32_t*)value;
+    return *(const uint32_t*)value;
 }
 
 /* --- unowned DAT-global counter/accumulator band (see crt.hpp) -----------
@@ -1395,16 +1450,17 @@ void display_dimensions_set(int w, int h)
     s_display_h = h;
 }
 
-/* DAT_0050013c record block: 18 records of 0x30 bytes (the 0x50013c…
- * 0x50037c span the panel reset walks), flag dword at record+0x2c — one
- * array at the corpus's DAT_00500110 base, stride 0x30 (the lea
- * [eax+eax*2]/shl 4 = 3*16 walks, no bounds tests), all-zero image bytes
- * filled at runtime. Only the flag words are modeled — the record
- * payloads belong to the unported panel layer. */
+/* DAT_00500110 record block: 0x30-byte panel-category records. The corpus
+ * 0x45a6e0 pair setter addresses +0x18/+0x1c at that stride; 0x45ab00 reads
+ * the flag dword at +0x2c. The image bytes are zero-filled and populated at
+ * runtime, so model only the fields used by this port. */
 #define REQUEST_RECORD_COUNT 18
 
 typedef struct RequestRecord {
-    uint8_t  pad[0x2c];
+    uint8_t  pad[0x18];
+    uint32_t pair_x;  /* +0x18: DAT_00500128, 0x30-byte category stride */
+    uint32_t pair_y;  /* +0x1c: DAT_0050012c, 0x30-byte category stride */
+    uint8_t  reserved[0x0c];
     uint32_t flags;   /* +0x2c */
 } RequestRecord;
 
@@ -1417,17 +1473,20 @@ int request_record_ready_flag4(int index)
     if ((unsigned)index >= REQUEST_RECORD_COUNT) {
         return 0; /* deviation: the corpus strides blindly */
     }
-    const uint32_t f = s_request_records[index].flags;
+    RequestRecord* record = s_request_records + index;
+    const uint32_t f = record->flags;
     return (f & 4u) != 0u && (f & 8u) == 0u ? 1 : 0;
 }
 
-/* The corpus's 0x45ab6f `mov eax,[eax+0x2c]` reads the flag word after its
- * unchecked 0x30-byte record stride; the 0x45ab72/78 tests keep bit 2 then
- * bit 8 in this short-circuit order. */
+/* The corpus's 0x45ab6a/6f sequence adds the unchecked 0x30-byte record
+ * address to DAT_00500110, then loads +0x2c; the 0x45ab72/78 tests keep bit
+ * 2 then bit 8 in this short-circuit order. Keep the pointer step explicit
+ * rather than folding the field offset into the global's displacement. */
 // FUNCTION: LEGORR 0x0045ab60
 int request_record_ready_flag2(int index)
 {
-    const uint32_t f = s_request_records[index].flags;
+    RequestRecord* record = s_request_records + index;
+    const uint32_t f = record->flags;
     if ((f & 2u) != 0u && (f & 8u) == 0u) {
         return 1;
     }
@@ -1510,9 +1569,12 @@ void crt_no_op_stub(void)
 
 /* CrtFpuPrecisionModeCodeGet (FUN_0049200c): this helper consumes the
  * caller's EAX value directly and returns 7 when bit 0x80000 is set, else
- * 1. Preserve that register contract on the original MSVC5 x86 target. */
+ * 1. Its default arm also adds the corpus's 1.0 operand to ST(0). Preserve
+ * both register contracts on the original MSVC5 x86 target. */
 #if defined(_MSC_VER) && defined(_M_IX86)
 #define CRT_FPU_PRECISION_NAKED __declspec(naked)
+/* Corpus 0x492019 adds its 1.0 operand (PE bytes: 00 00 00 00 00 00 f0 3f). */
+static const double s_fpu_precision_mode_one = 1.0;
 #else
 #define CRT_FPU_PRECISION_NAKED
 #endif
@@ -1526,6 +1588,7 @@ CRT_FPU_PRECISION_NAKED uint32_t crt_fpu_precision_mode_code_get(void)
         mov eax, 7
         ret
     precision_default:
+        fadd qword ptr [s_fpu_precision_mode_one]
         mov eax, 1
         ret
     }
@@ -1567,13 +1630,11 @@ void byte_range_swap(void* a, void* b, size_t n)
 }
 
 /* --- the DAT window band (see crt.hpp) ---------------------------------------
- * All tables are 18-entry zero-initialized statics (the corpus's .data
- * tables have no ported owner; the corpus strides/blind-derefs — guarded
- * here, the unowned-global deviation). */
+ * Auxiliary tables are zero-initialized statics. The panel position pair
+ * lives in the corresponding 0x30-byte RequestRecord, preserving the
+ * corpus's indexed record stride; public port hooks remain guarded. */
 #define DAT_WINDOW_COUNT 18
 
-static uint32_t s_pair_a[DAT_WINDOW_COUNT]; /* DAT_00500128 entries */
-static uint32_t s_pair_b[DAT_WINDOW_COUNT]; /* DAT_0050012c entries */
 static float    s_fpair_a[DAT_WINDOW_COUNT]; /* DAT_00552144 entries */
 static float    s_fpair_b[DAT_WINDOW_COUNT]; /* DAT_00552148 entries */
 static void*    s_metric_records[DAT_WINDOW_COUNT]; /* DAT_00552154 */
@@ -1588,8 +1649,8 @@ void indexed_pair_set(int index, uint32_t x, uint32_t y)
     if (index < 0 || index >= DAT_WINDOW_COUNT) {
         return; /* deviation: the corpus strides blindly */
     }
-    s_pair_a[index] = x;
-    s_pair_b[index] = y;
+    s_request_records[index].pair_x = x;
+    s_request_records[index].pair_y = y;
 }
 
 // FUNCTION: LEGORR 0x0045a700
@@ -1599,8 +1660,8 @@ void indexed_pair_get(int index, uint32_t* out_x, uint32_t* out_y)
         || out_x == NULL || out_y == NULL) {
         return; /* deviation: the corpus dereferences blindly */
     }
-    *out_x = s_pair_a[index];
-    *out_y = s_pair_b[index];
+    *out_x = s_request_records[index].pair_x;
+    *out_y = s_request_records[index].pair_y;
 }
 
 // FUNCTION: LEGORR 0x00463730
@@ -1968,8 +2029,10 @@ void view_blit_rect_positions_apply(int view)
     if (k < 0 || k >= DAT_WINDOW_COUNT) {
         return; /* deviation: the corpus strides its own block blindly */
     }
-    const float ox = s_fpair_a[view] + (float)(int)s_pair_a[k];
-    const float oy = s_fpair_b[view] + (float)(int)s_pair_b[k];
+    const float ox = s_fpair_a[view] +
+                     (float)(int)s_request_records[k].pair_x;
+    const float oy = s_fpair_b[view] +
+                     (float)(int)s_request_records[k].pair_y;
     crt_surface_blit_record(s_view_handle[view], ox, oy);
 
     for (int which = 0; which <= 1; ++which) {
@@ -2347,21 +2410,47 @@ void* scene_sample_hook_value_peek(void) { return s_scene_sample_value; }
 // GLOBAL: LEGORR 0x004db8cc
 static void* s_string_registry_head; /* DAT_004db8cc role: unowned */
 
-/* The corpus's locale-following compare, modeled on the port's fold pattern
- * (see resource.cpp's helper). */
-static int s_strcasecmp(const char* a, const char* b)
+// FUNCTION: LEGORR 0x00410450
+#if defined(_MSC_VER) && defined(_M_IX86)
+/* Corpus 0x410450..0x410485 keeps the empty-head exit and list walk in this
+ * order, including the annotated strcasecmp_lite call. */
+__declspec(naked) void* string_keyed_cache_entry_find(const char* key)
 {
-    for (;; a++, b++) {
-        int ca = (unsigned char)*a;
-        int cb = (unsigned char)*b;
-        if (ca >= 'A' && ca <= 'Z') ca += 'a' - 'A';
-        if (cb >= 'A' && cb <= 'Z') cb += 'a' - 'A';
-        if (ca != cb) return ca - cb;
-        if (ca == 0) return 0;
+    __asm {
+        push esi
+        mov esi, dword ptr [s_string_registry_head]
+        test esi, esi
+        push edi
+        je string_cache_empty
+        mov edi, dword ptr [esp + 0ch]
+    string_cache_next:
+        mov eax, dword ptr [esi]
+        push eax
+        push edi
+        call strcasecmp_lite
+        add esp, 8
+        test eax, eax
+        je string_cache_match
+        mov esi, dword ptr [esi + 0ch]
+        test esi, esi
+        jne string_cache_next
+        xor eax, eax
+        pop edi
+        pop esi
+        ret
+    string_cache_match:
+        mov eax, esi
+        pop edi
+        pop esi
+        ret
+    string_cache_empty:
+        pop edi
+        xor eax, eax
+        pop esi
+        ret
     }
 }
-
-// FUNCTION: LEGORR 0x00410450
+#else
 void* string_keyed_cache_entry_find(const char* key)
 {
     /* Corpus walk: the head gates once, the name rides strcasecmp_lite
@@ -2382,6 +2471,7 @@ void* string_keyed_cache_entry_find(const char* key)
         }
     }
 }
+#endif
 
 // FUNCTION: LEGORR 0x00410490
 void* string_registry_intern(const char* key)
@@ -2582,6 +2672,7 @@ void crt_stream_buffer_allocate(char* record)
     const long field = (long)sizeof(void*);
     void* buffer = engine_heap_alloc(0x1000);
     void* zero = NULL;
+    uint32_t flags;
     ++s_stream_alloc_count;
     __builtin_memcpy(record + 2 * field, &buffer, sizeof buffer);
     __builtin_memcpy(&flags, record + 3 * field, sizeof flags);
@@ -2612,7 +2703,7 @@ void crt_stream_buffer_allocate(char* record)
     if (buffer != NULL) {
         fields[3] |= 8u;
         fields[6] = 0x1000;
-        fields[0] = (uint32_t)buffer;
+        fields[0] = fields[2];
         fields[1] = 0;
     } else {
         fields[6] = 2;
@@ -2628,7 +2719,6 @@ void crt_stream_buffer_allocate(char* record)
 uint32_t crt_stream_unget_byte(uint32_t value, char* record)
 {
     int* fields = (int*)record;
-    int current;
     uint32_t flags;
     if (value != 0xffffffffu &&
         (((uint32_t)fields[3] & 1u) != 0u ||
@@ -2643,17 +2733,15 @@ uint32_t crt_stream_unget_byte(uint32_t value, char* record)
             }
             fields[0] = fields[0] + 1;
         }
-        if (((uint32_t)fields[3] & 0x40u) == 0u) {
-            current = fields[0];
-            fields[0] = current - 1;
-            *(char*)(current - 1) = (char)value;
-        } else {
-            current = fields[0];
-            fields[0] = current - 1;
-            if (*(char*)(current - 1) != (char)value) {
-                fields[0] = current;
+        if (((uint32_t)fields[3] & 0x40u) != 0u) {
+            fields[0]--;
+            if (*(char*)fields[0] != (char)value) {
+                fields[0]++;
                 return 0xffffffffu;
             }
+        } else {
+            fields[0]--;
+            *(char*)fields[0] = (char)value;
         }
         fields[1] = fields[1] + 1;
         fields[3] = (fields[3] & 0xffffffefu) | 1;
@@ -2704,7 +2792,8 @@ void crt_decimal_digit_sequence_to_extended96(const char* digits, int count,
         crt_uint96_add(limbs, original);
         extended_float96_bit_shift_left_one(limbs);
 
-        digit[0] = (uint8_t)digits[i];
+        /* Corpus 0x49a116 sign-extends the current digit byte with MOVSX. */
+        digit[0] = (uint32_t)(int32_t)digits[i];
         digit[1] = 0;
         digit[2] = 0;
         crt_uint96_add(limbs, digit);
@@ -3042,7 +3131,8 @@ uint32_t crt_uint96_clear_from_bit(uint32_t limbs[3], int bit)
 
 /* --- the pair-table window pair (see crt.hpp) ------------------------------
  * The find scan keeps the corpus's masked walk: the compare index is the
- * low 16 bits of the hop counter and the bound test reads that mask.
+ * low 16 bits of the hop counter and the bound test reads that mask. It also
+ * calls the shared strcasecmp_lite helper, as the corpus does.
  * Deviations: the port guards the table and the key; the corpus strides
  * them (and its append blindly stores past the caller's window). */
 // FUNCTION: LEGORR 0x00488730
@@ -3062,7 +3152,7 @@ void* pair_table_find(const void* table, uint32_t count, const char* key)
         __builtin_memcpy(&value,
                          (const char*)table + ((long)idx * 2 + 1) * field,
                          sizeof value);
-        if (name != NULL && s_strcasecmp(key, name) == 0) {
+        if (name != NULL && strcasecmp_lite(key, name) == 0) {
             return value;
         }
         ++hops;
@@ -3400,15 +3490,17 @@ static uint32_t s_crt_locale_handle; /* DAT_00549180: zero-init locale handle */
 // FUNCTION: LEGORR 0x0049dcd0
 char* crt_string_to_upper(char* text)
 {
+    if (text == NULL) {
+        return NULL;
+    }
     char* original = text;
     if (s_crt_locale_handle == 0u) {
         if (*text != '\0') {
             do {
-                char* next = text + 1;
-                if (*text > '`' && *text < '{') {
+                if (*text >= 'a' && *text <= 'z') {
                     *text = (char)(*text - 0x20);
                 }
-                text = next;
+                ++text;
             } while (*text != '\0');
             return original;
         }
@@ -3435,15 +3527,17 @@ char* crt_string_to_upper(char* text)
 // FUNCTION: LEGORR 0x0049dc10
 char* crt_string_to_lower(char* text)
 {
+    if (text == NULL) {
+        return NULL;
+    }
     char* original = text;
     if (s_crt_locale_handle == 0u) {
         if (*text != '\0') {
             do {
-                char* next = text + 1;
-                if (*text > '@' && *text < '[') {
+                if (*text >= 'A' && *text <= 'Z') {
                     *text = (char)(*text + 0x20);
                 }
-                text = next;
+                ++text;
             } while (*text != '\0');
             return original;
         }
@@ -3494,19 +3588,31 @@ void crt_math_error_code_set(int param)
 uint32_t crt_math_error_code_peek(void) { return s_math_error_code; }
 
 // FUNCTION: LEGORR 0x00493be0
+#if defined(_MSC_VER) && defined(_M_IX86)
+/* Corpus 0x493be4 waits, then stores the status word to [ebp-2]. */
+__declspec(naked) int fpu_status_word_get_variant_a(void)
+{
+    __asm {
+        push ebp
+        mov ebp, esp
+        push ecx
+        fstsw word ptr [ebp - 2]
+        movsx eax, word ptr [ebp - 2]
+        mov esp, ebp
+        pop ebp
+        ret
+    }
+}
+#else
 int fpu_status_word_get_variant_a(void)
 {
     unsigned short status = 0;
-#if defined(_MSC_VER) && defined(_M_IX86)
-    __asm {
-        fnstsw ax
-        mov status, ax
-    }
-#elif defined(__i386__) || defined(__x86_64__)
+#if defined(__i386__) || defined(__x86_64__)
     __asm__ __volatile__("fnstsw %0" : "=a"(status));
 #endif
     return (int)(short)status;
 }
+#endif
 
 // FUNCTION: LEGORR 0x00493bf0
 int fpu_status_word_get_variant_b(void)
@@ -3532,7 +3638,7 @@ __declspec(naked) int fpu_control_word_update_masked(uint32_t value,
         push ebp
         mov ebp, esp
         push ecx
-        fnstcw word ptr [ebp - 4]
+        fstcw word ptr [ebp - 4]
         mov eax, dword ptr [ebp + 0ch]
         mov ecx, dword ptr [ebp + 8]
         mov edx, eax
@@ -3908,6 +4014,7 @@ uint64_t crt_integer64_divide(uint32_t lo_a, uint32_t hi_a,
  * it (the estimate can overflow the 32-bit trial), never by construction. */
 // FUNCTION: LEGORR 0x00498bf0
 #if defined(_MSC_VER) && defined(_M_IX86)
+/* Corpus 0x498c12 reuses EAX's high divisor and loads its low word into EBX. */
 __declspec(naked) uint64_t __stdcall crt_unsigned64_divide(
     uint32_t lo_a, uint32_t hi_a, uint32_t lo_b, uint32_t hi_b)
 {
@@ -3928,8 +4035,8 @@ __declspec(naked) uint64_t __stdcall crt_unsigned64_divide(
         jmp divide_return
 
     divide_wide:
-        mov ecx, dword ptr [esp + 14h]
-        mov ebx, dword ptr [esp + 18h]
+        mov ecx, eax
+        mov ebx, dword ptr [esp + 14h]
         mov edx, dword ptr [esp + 10h]
         mov eax, dword ptr [esp + 0ch]
     divide_normalize:
@@ -4488,28 +4595,30 @@ void crt_timezone_state_init(void)
     crt_string_copy_n(s_standard_timezone_name, timezone_text, 3u);
     s_standard_timezone_name[3] = '\0';
     timezone_text += 3;
-    negative_offset = (*timezone_text == '-');
-    if (negative_offset != 0) {
+    /* Corpus 0x499a3b and 0x499a70..0x499ae2 use '-' and ASCII 0..9 gates. */
+    negative_offset = 0;
+    if (*timezone_text == '-') {
+        negative_offset = 1;
         ++timezone_text;
     }
     s_timezone_bias_seconds = crt_parse_signed_decimal(
         (const unsigned char*)timezone_text) * 3600;
     while ((*timezone_text == '+' ||
-            (*timezone_text > '/' && *timezone_text < ':'))) {
+            (*timezone_text >= '0' && *timezone_text <= '9'))) {
         ++timezone_text;
     }
     if (*timezone_text == ':') {
         ++timezone_text;
         s_timezone_bias_seconds += crt_parse_signed_decimal(
             (const unsigned char*)timezone_text) * 60;
-        while (*timezone_text > '/' && *timezone_text < ':') {
+        while (*timezone_text >= '0' && *timezone_text <= '9') {
             ++timezone_text;
         }
         if (*timezone_text == ':') {
             ++timezone_text;
             s_timezone_bias_seconds += crt_parse_signed_decimal(
                 (const unsigned char*)timezone_text);
-            while (*timezone_text > '/' && *timezone_text < ':') {
+            while (*timezone_text >= '0' && *timezone_text <= '9') {
                 ++timezone_text;
             }
         }
@@ -4668,6 +4777,8 @@ void crt_extended_float_power_of_ten_scale(uint16_t value[6],
 // FUNCTION: LEGORR 0x004964e0
 int crt_codepage_get(int codepage)
 {
+    /* Corpus 0x4964e4 clears fallback mode before testing the selector. */
+    s_codepage_fallback_mode = 0u;
     if (codepage == -2) {
         s_codepage_fallback_mode = 1u;
 #if defined(LEGORRR_BACKEND_WINAPI)
@@ -4685,10 +4796,11 @@ int crt_codepage_get(int codepage)
 #endif
     }
     if (codepage == -4) {
+        /* Corpus 0x49651d loads the page before setting fallback mode. */
+        const int ansi_codepage = (int)s_ansi_codepage;
         s_codepage_fallback_mode = 1u;
-        return (int)s_ansi_codepage;
+        return ansi_codepage;
     }
-    s_codepage_fallback_mode = 0u;
     return codepage;
 }
 
@@ -4767,7 +4879,8 @@ int crt_locale_codepage_table_update(int requested_codepage)
         }
         memset(s_multibyte_character_flags, 0,
                sizeof s_multibyte_character_flags);
-        if (info.MaxCharSize < 2u) {
+        /* Corpus 0x496370 uses the unsigned <= 1 width gate. */
+        if (info.MaxCharSize <= 1u) {
             s_active_codepage = 0u;
             s_active_locale_table = 0u;
         }
@@ -4823,26 +4936,28 @@ uint32_t crt_character_classify_mask(int value, uint32_t mask)
     unsigned count;
     uint32_t wide_flags;
 
-    if (((uint32_t)value + 1u) < 0x101u) {
+    /* Corpus 0x48f1d6..0x48f1de uses the inclusive unsigned 0x100 gate. */
+    if (((uint32_t)value + 1u) <= 0x100u) {
         if (value == -1) {
             return 0x20u & mask;
         }
-        return (uint32_t)(s_ctype_pointer[(unsigned)value] &
-                          (uint16_t)mask);
+        return (uint32_t)(s_ctype_pointer[value] & mask);
     }
 
-    if (((s_ctype_pointer[((uint32_t)value >> 8) & 0xffu] >> 8) & 0x80u)
-        == 0u) {
-        bytes[0] = (unsigned char)value;
-        count = 1u;
+    /* Corpus 0x48f1fb..0x48f231 tests the signed high byte and presents a
+     * DBCS pair high-byte first to CrtGetStringTypeACompat. */
+    if (((s_ctype_pointer[(uint32_t)(value >> 8) & 0xffu] >> 8) & 0x80u)
+        != 0u) {
+        bytes[0] = (unsigned char)(value >> 8);
+        bytes[1] = (unsigned char)value;
+        bytes[2] = 0u;
+        count = 2u;
     }
     else {
         bytes[0] = (unsigned char)value;
-        bytes[1] = (unsigned char)((uint32_t)value >> 8);
-        bytes[2] = (unsigned char)((uint32_t)value >> 16);
-        count = 2u;
+        bytes[1] = 0u;
+        count = 1u;
     }
-    wide_flags = 0u;
     flags = crt_get_string_type_a_compat(1u, (const char*)bytes,
                                          (int)count, (uint16_t*)&wide_flags,
                                          0u, 0u);
@@ -4889,7 +5004,7 @@ int crt_get_string_type_a_compat(uint32_t info_type, const char* source,
         wide_count = MultiByteToWideChar((UINT)codepage, 9u, source,
                                          source_count, NULL, 0);
         if (wide_count != 0) {
-            wide_source = (WCHAR*)engine_heap_alloc(2L * wide_count);
+            wide_source = (WCHAR*)crt_calloc_aligned(2, wide_count);
             if (wide_source != NULL) {
                 wide_count = MultiByteToWideChar((UINT)codepage, 1u, source,
                                                  source_count, wide_source,
@@ -4942,39 +5057,41 @@ uint32_t crt_multibyte_to_wide_char(uint16_t* output, const uint8_t* source,
         }
         return 1u;
     }
-    if ((s_ctype_pointer[(unsigned)first] & 0x8000u) == 0u) {
+    /* Corpus 0x498e5b..0x498e79 handles lead bytes first and uses signed
+     * comparisons for the API width gate. */
+    if ((s_ctype_pointer[(unsigned)first] & 0x8000u) != 0u) {
+        if ((int)s_max_multibyte_width > 1 &&
+            (int)s_max_multibyte_width <= (int)max_bytes) {
 #if defined(LEGORRR_BACKEND_WINAPI)
-        converted = MultiByteToWideChar(s_ansi_codepage, 9u,
-                                        (const char*)source, 1,
-                                        (LPWSTR)output,
-                                        output != NULL ? 1 : 0);
-        if (converted != 0) {
-            return 1u;
-        }
+            converted = MultiByteToWideChar(s_ansi_codepage, 9u,
+                                            (const char*)source,
+                                            (int)s_max_multibyte_width,
+                                            (LPWSTR)output,
+                                            output != NULL ? 1 : 0);
+            if (converted != 0) {
+                return s_max_multibyte_width;
+            }
 #endif
-        s_math_error_code = 0x2au;
-        return 0xffffffffu;
-    }
-    if (s_max_multibyte_width > 1u &&
-        s_max_multibyte_width <= max_bytes) {
-#if defined(LEGORRR_BACKEND_WINAPI)
-        converted = MultiByteToWideChar(s_ansi_codepage, 9u,
-                                        (const char*)source,
-                                        (int)s_max_multibyte_width,
-                                        (LPWSTR)output,
-                                        output != NULL ? 1 : 0);
-        if (converted != 0) {
+        }
+        if (max_bytes < s_max_multibyte_width) {
+            s_math_error_code = 0x2au;
+            return 0xffffffffu;
+        }
+        if (source[1] != 0u) {
             return s_max_multibyte_width;
         }
-#endif
-    }
-    if (max_bytes < s_max_multibyte_width) {
         s_math_error_code = 0x2au;
         return 0xffffffffu;
     }
-    if (source[1] != 0u) {
-        return s_max_multibyte_width;
+#if defined(LEGORRR_BACKEND_WINAPI)
+    converted = MultiByteToWideChar(s_ansi_codepage, 9u,
+                                    (const char*)source, 1,
+                                    (LPWSTR)output,
+                                    output != NULL ? 1 : 0);
+    if (converted != 0) {
+        return 1u;
     }
+#endif
     s_math_error_code = 0x2au;
     return 0xffffffffu;
 }
@@ -4984,13 +5101,12 @@ uint32_t crt_multibyte_to_wide_char(uint16_t* output, const uint8_t* source,
 // FUNCTION: LEGORR 0x00498f00
 uint32_t crt_character_class_flag8_check(int value)
 {
-    if (s_max_multibyte_width > 1u) {
+    /* Corpus 0x498f04..0x498f29 uses a signed <= 1 gate, then indexes the
+     * single-byte table directly with the supplied value. */
+    if ((int)s_max_multibyte_width > 1) {
         return crt_character_classify_mask(value, 8u);
     }
-    if (value < 0) {
-        return 0u;
-    }
-    return (uint32_t)(s_ctype_pointer[(unsigned)value] & 8u);
+    return (uint32_t)(s_ctype_pointer[value] & 8u);
 }
 
 /* CrtScanFormatCharNormalize (FUN_00494c30) — see crt.hpp. The image's
@@ -5191,14 +5307,16 @@ int crt_parse_signed_decimal(const unsigned char* text)
     uint32_t value;
     uint32_t character;
     uint32_t class_flags;
-    int negative;
+    int sign_character;
 
+    /* Corpus 0x48dad8/0x48db25 use signed <= 1 gates; 0x48db13 retains
+     * the original sign byte so the final '-' test needs no boolean flag. */
     while (1) {
-        if (s_max_multibyte_width < 2u) {
-            class_flags = s_ctype_pointer[*text] & 8u;
+        if ((int)s_max_multibyte_width > 1) {
+            class_flags = crt_character_classify_mask((int)*text, 8u);
         }
         else {
-            class_flags = crt_character_classify_mask((int)*text, 8u);
+            class_flags = s_ctype_pointer[*text] & 8u;
         }
         if (class_flags == 0u) {
             break;
@@ -5206,20 +5324,17 @@ int crt_parse_signed_decimal(const unsigned char* text)
         ++text;
     }
     character = *text++;
-    negative = 0;
+    sign_character = (int)character;
     if (character == (uint32_t)'-' || character == (uint32_t)'+') {
-        if (character == (uint32_t)'-') {
-            negative = 1;
-        }
         character = *text++;
     }
     value = 0u;
     while (1) {
-        if (s_max_multibyte_width < 2u) {
-            class_flags = s_ctype_pointer[character] & 4u;
+        if ((int)s_max_multibyte_width > 1) {
+            class_flags = crt_character_classify_mask((int)character, 4u);
         }
         else {
-            class_flags = crt_character_classify_mask((int)character, 4u);
+            class_flags = s_ctype_pointer[character] & 4u;
         }
         if (class_flags == 0u) {
             break;
@@ -5227,7 +5342,7 @@ int crt_parse_signed_decimal(const unsigned char* text)
         value = (character - (uint32_t)'0') + value * 10u;
         character = *text++;
     }
-    if (negative != 0) {
+    if (sign_character == '-') {
         value = 0u - value;
     }
     return (int32_t)value;
@@ -5242,15 +5357,15 @@ void crt_normalize_decimal_point(char* text)
 
     first = crt_character_to_lower_locale((int)*text);
     if (first != (uint32_t)'e') {
-        if (s_max_multibyte_width < 2u) {
+        if ((int)s_max_multibyte_width > 1) {
             do {
                 ++text;
-            } while ((s_ctype_pointer[(unsigned char)*text] & 4u) != 0u);
+            } while (crt_character_classify_mask((int)*text, 4u) != 0u);
         }
         else {
             do {
                 ++text;
-            } while (crt_character_classify_mask((int)*text, 4u) != 0u);
+            } while ((s_ctype_pointer[(int)(signed char)(*text)] & 4u) != 0u);
         }
     }
     displaced = *text;
@@ -5695,18 +5810,21 @@ int crt_counted_string_compare(const char* left, const char* right, int count)
 // FUNCTION: LEGORR 0x0049b4c0
 int crt_environment_entry_find(const char* name, int name_length)
 {
-    int index = 0;
     char** entry = s_environment;
-    if (entry == NULL || *entry == NULL) return 0;
+    /* Corpus 0x49b4c9 dereferences the environment root without a NULL
+     * check. The in-repo call path reaches this through crt_put_env_update
+     * with sync_process == 0, which creates the array before searching; the
+     * NULL-root behavior was not test-pinned. */
+    if (*entry == NULL) return 0;
     while (*entry != NULL) {
         int comparison = crt_counted_string_compare(name, *entry, name_length);
         if (comparison == 0 && ((*entry)[name_length] == '=' || (*entry)[name_length] == '\0')) {
-            return index;
+            return (int)(entry - s_environment);
         }
         ++entry;
-        ++index;
     }
-    return -index;
+    /* Corpus 0x49b4fd computes the negative index from the end pointer. */
+    return -(int)(entry - s_environment);
 }
 
 static char** crt_environment_array_resize(char** entries, int slot_count)
@@ -5830,8 +5948,9 @@ char* crt_environment_variable_lookup(const char* name)
         crt_wide_environment_string_list_convert() != 0) return NULL;
     if (name == NULL || s_environment == NULL) return NULL;
     name_length = (int)strlen(name);
+    /* Corpus 0x49ae64 uses an unsigned JBE length gate. */
     for (entry = s_environment; *entry != NULL; ++entry) {
-        if ((int)strlen(*entry) > name_length && (*entry)[name_length] == '=' &&
+        if (strlen(*entry) > name_length && (*entry)[name_length] == '=' &&
             crt_counted_string_compare(*entry, name, name_length) == 0) {
             return *entry + name_length + 1;
         }
@@ -6209,13 +6328,21 @@ uint32_t crt_extended_float_to_decimal(uint32_t significand_low,
 CrtDecimalFormatContext* crt_locale_data_get_or_initialize(
     uint32_t double_low, uint32_t double_high)
 {
+#if !defined(_M_IX86) && !defined(__i386__)
     uint32_t source[2];
+#endif
     uint32_t extended[3];
     uint32_t converted;
 
+#if defined(_M_IX86) || defined(__i386__)
+    /* Corpus 0x497ec3..0x497ecc passes the adjacent cdecl words in place. */
+    (void)double_high;
+    crt_double_to_extended80(extended, &double_low);
+#else
     source[0] = double_low;
     source[1] = double_high;
     crt_double_to_extended80(extended, source);
+#endif
     converted = crt_extended_float_to_decimal(
         extended[0], extended[1], (uint16_t)extended[2], 0x11, 0,
         s_decimal_conversion_buffer);
@@ -6230,12 +6357,14 @@ CrtDecimalFormatContext* crt_locale_data_get_or_initialize(
 }
 
 // FUNCTION: LEGORR 0x00490400
+/* Both format appenders load s_current_decimal_format only in the prepared
+ * branch, matching the corpus's branch-local context load. */
 char* crt_scientific_float_format_append(const uint32_t* value,
                                          char* output,
                                          int precision,
                                          int uppercase)
 {
-    CrtDecimalFormatContext* context = s_current_decimal_format;
+    CrtDecimalFormatContext* context;
     char* cursor;
     char* exponent_text;
     int exponent;
@@ -6250,6 +6379,7 @@ char* crt_scientific_float_format_append(const uint32_t* value,
             precision + 1, context);
     }
     else {
+        context = s_current_decimal_format;
         string_prefix_reserve(output + (context->first == '-' ? 1 : 0),
                               precision > 0);
     }
@@ -6569,11 +6699,11 @@ int crt_file_descriptor_close_slot(unsigned fd)
 int crt_find_handle_close(int handle)
 {
 #if defined(LEGORRR_BACKEND_WINAPI)
-    if (FindClose((HANDLE)handle) != 0) {
-        return 0;
+    if (FindClose((HANDLE)handle) == 0) {
+        s_math_error_code = 0x16u;
+        return -1;
     }
-    s_math_error_code = 0x16u;
-    return -1;
+    return 0;
 #elif !defined(_MSC_VER)
     (void)handle;
     s_math_error_code = EINVAL;
@@ -6854,16 +6984,15 @@ int crt_win32_file_descriptor_open(const char* path, uint32_t flags,
 }
 
 /* CrtStandardStreamBufferInstall (FUN_004974d0): install one of the two
- * cached 4K buffers on its matching standard stream record. */
+ * cached 4K buffers on its matching standard stream record. Corpus 0x4974d6
+ * dereferences the stream before checking its descriptor, with no null guard;
+ * preserve that unchecked input behavior (there is no test pin for NULL). */
 // FUNCTION: LEGORR 0x004974d0
 int crt_standard_stream_buffer_install(int* stream)
 {
     int stream_index;
     unsigned fd;
     uint32_t* fields;
-    if (stream == NULL) {
-        return 0;
-    }
     fd = (unsigned)stream[4];
     if (crt_file_descriptor_flag40_get(fd) == 0u) {
         return 0;
@@ -7189,16 +7318,15 @@ int crt_win32_file_descriptor_read(uint32_t fd, char* buffer,
 }
 
 /* CrtStreamReadByte (FUN_00497040): return the next byte from a buffered
- * CRT stream, refilling through Win32FileDescriptorRead as needed. */
+ * CRT stream, refilling through Win32FileDescriptorRead as needed. The
+ * corpus reads the stream's +0x0c flags before any null check; there are no
+ * port tests or internal callers that pin a NULL stream here. */
 // FUNCTION: LEGORR 0x00497040
 uint32_t crt_stream_read_byte(int* stream)
 {
     uint32_t flags;
     int read_count;
     unsigned char* descriptor;
-    if (stream == NULL) {
-        return 0xffffffffu;
-    }
     flags = (uint32_t)stream[3];
     if ((flags & 0x83u) == 0u || (flags & 0x40u) != 0u) {
         return 0xffffffffu;
@@ -7356,12 +7484,13 @@ void crt_win32_error_map_to_errno(uint32_t error)
     unsigned i;
     s_win32_error_code = error;
     for (i = 0; i < 45u; ++i) {
-        if (s_win32_error_errno_pairs[i][0] == error) {
+        if (error == s_win32_error_errno_pairs[i][0]) {
             s_math_error_code = s_win32_error_errno_pairs[i][1];
             return;
         }
     }
-    if (error > 0x12u && error < 0x25u) {
+    /* Corpus 0x496f00 uses unsigned inclusive bounds for this fallback. */
+    if (error >= 0x13u && error <= 0x24u) {
         s_math_error_code = 0x0du;
     }
     else if (error >= 0xbcu && error <= 0xcau) {
@@ -7603,7 +7732,7 @@ uint32_t crt_file_stream_close(uint32_t value, int* stream)
         int pending = *stream - stream[2];
         *stream = stream[2] + 1;
         stream[1] = stream[6] - 1;
-        if (pending < 1) {
+        if (pending <= 0) { /* Corpus 0x49092a compares against zero (signed JLE). */
             unsigned char* entry;
             if (fd == 0xffffffffu) {
                 entry = s_fd_fallback_record;
@@ -7675,8 +7804,8 @@ void crt_buffered_character_write(uint32_t value, int* stream, int* written)
     stream[1] = available;
     if (available >= 0) {
         *(unsigned char*)*stream = (unsigned char)value;
-        *stream += 1;
         value &= 0xffu;
+        *stream += 1;
     }
     else {
         value = crt_file_stream_close(value, stream);
@@ -7749,15 +7878,20 @@ uint32_t crt_control_flags_translate(uint32_t flags)
     if ((flags & 0x10u) != 0u) { out |= 0x02u; }
     if ((flags & 0x20u) != 0u) { out |= 0x01u; }
     if ((flags & 0x02u) != 0u) { out |= 0x80000u; }
-    /* corpus: the low word is masked once and both pair tests ride it */
+    /* Corpus: the low word is masked once; the signed 0x400 gate routes
+     * the greater pair values before checking 0x800 and then 0xc00. */
     const uint32_t low16 = flags & 0xffffu;
-    const uint32_t pair2 = low16 & 0xc00u;
-    if (pair2 == 0x400u) {
-        out |= 0x100u;
-    } else if (pair2 == 0x800u) {
+    const int pair2 = (int)(low16 & 0xc00u);
+    if (pair2 <= 0x400) {
+        if (pair2 == 0x400) {
+            out |= 0x100u;
+        }
+    } else if (pair2 != 0x800) {
+        if (pair2 == 0xc00) {
+            out |= 0x300u;
+        }
+    } else {
         out |= 0x200u;
-    } else if (pair2 == 0xc00u) {
-        out |= 0x300u;
     }
     if ((low16 & 0x300u) != 0u) {
         if ((low16 & 0x300u) == 0x200u) {
@@ -7880,11 +8014,14 @@ int crt_wide_char_to_multi_byte_compat(char* dest, const uint16_t* wide,
 
 /* SignalHandlerRecordFind (FUN_0049ab90): linear search of the corpus's
  * signal-handler records — 12-byte entries (word, id, handler) in the
- * DAT_004b22a8 table, bounded by the DAT_004b2328 count. The table's
- * writers sit in the unported CRT startup band: own storage behind the
- * install hooks below (the unowned-global convention). Deviations: the
- * count-bounded scan (the corpus's end check reads the table through)
- * and the LP64 16-byte record stride (the corpus's x86 12 bytes). */
+ * DAT_004b22a8 table, bounded by the DAT_004b2328 count. The corpus loads
+ * the first record's id (0x49ab94) BEFORE the count (0x49ab9b) and forms
+ * the count end with `lea [esi+esi*2]` / `lea [ecx*4+table]` at both the
+ * loop and final checks; the port mirrors the load order and keeps one
+ * cached end (LP64-portable). The table's writers sit in the unported CRT
+ * startup band: own storage behind the install hooks below (the
+ * unowned-global convention). The LP64 host has a 16-byte record stride;
+ * x86 uses 12. */
 #define CRT_SIGNAL_RECORDS 10
 struct crt_signal_record {
     uint32_t  word0;
@@ -7911,8 +8048,9 @@ static int s_signal_record_count = CRT_SIGNAL_RECORDS;
 void* crt_signal_handler_record_find(int signal)
 {
     struct crt_signal_record* found = &s_signal_records[0];
-    struct crt_signal_record* end = found + s_signal_record_count;
-    if (found->id != signal) {
+    int first_id = found->id;
+    struct crt_signal_record* end = s_signal_records + s_signal_record_count;
+    if (first_id != signal) {
         struct crt_signal_record* previous = found;
         do {
             found = previous + 1;
@@ -8162,12 +8300,51 @@ void crt_floating_point_exception_raise(uint32_t* record,
     result[1] = record[17];
 }
 
-/* CrtMathExceptionHandleSingleResult (FUN_00493170): report a domain
- * error through the CRT dispatcher when its mode word is zero; otherwise
- * set EDOM, restore the supplied x87 control word, and return the supplied
- * double result. The original carries this result in x87 extended format;
- * the portable interface retains the project's double-width ABI. */
+/* CrtMathExceptionHandleSingleResult (FUN_00493170): the x86 corpus carries
+ * this path's value on the x87 stack and keeps its argument loads and
+ * cleanup in a specific order. Retain the C implementation as the
+ * non-MSVC-x86 fallback. */
 // FUNCTION: LEGORR 0x00493170
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) double crt_math_exception_handle_single_result(
+    uint32_t operation, uint32_t result_low, uint32_t result_high,
+    uint32_t fpu_control_word)
+{
+    __asm {
+        mov eax, dword ptr [s_math_exception_mode]
+        test eax, eax
+        jne math_exception_mode_enabled
+
+        mov eax, dword ptr [esp + 10h]
+        mov ecx, dword ptr [esp + 8]
+        push eax
+        mov eax, dword ptr [esp + 10h]
+        push eax
+        push ecx
+        push 0
+        push 0
+        push eax
+        push ecx
+        mov ecx, dword ptr [esp + 20h]
+        push ecx
+        push 1
+        call crt_math_exception_dispatch
+        add esp, 24h
+        ret
+
+    math_exception_mode_enabled:
+        mov edx, dword ptr [esp + 10h]
+        push 0ffffh
+        push edx
+        mov dword ptr [s_math_error_code], 21h
+        call fpu_control_word_update_masked
+        add esp, 8
+        fld qword ptr [esp + 10h]
+        add esp, 8
+        ret
+    }
+}
+#else
 double crt_math_exception_handle_single_result(uint32_t operation,
                                                 uint32_t result_low,
                                                 uint32_t result_high,
@@ -8191,6 +8368,7 @@ double crt_math_exception_handle_single_result(uint32_t operation,
     result.bits = ((uint64_t)result_high << 32) | result_low;
     return result.value;
 }
+#endif
 
 /* CrtMathExceptionHandleResultWithStatus (FUN_004931c0): first fold
  * hardware exception status into the result, raise an FPIEEE exception for

@@ -249,24 +249,43 @@ int queue_action_request_flag100000(GameContext* ctx)
 }
 
 /* QueueActionRequestPair (FUN_0041f2f0): mode 1 compares both leading
- * entity words with the two request values. */
+ * entity words with the two request values. The corpus at 0x41f2f0 clears
+ * the inactive masks, ORs mode 1 into a zero word, then supplies the pair. */
 // FUNCTION: LEGORR 0x0041F2F0
 int queue_action_request_pair(GameContext* ctx, int entity_type,
                               uint32_t entity_subtype)
 {
-    const EntityActionRequest request = {
-        (uint32_t)entity_type, entity_subtype, 0, 0, 0, 1u
-    };
-    return entity_action_request_find(ctx, &request);
+    EntityActionRequest request;
+    request.subtype = 0u;
+    request.stats_mask = 0u;
+    request.state_mask = 0u;
+    request.flags3f0_mask = 0u;
+    uint32_t mode = 0u;
+    mode |= 1u;
+    request.mode = mode;
+    request.type = (uint32_t)entity_type;
+    request.subtype = entity_subtype;
+    return entity_pool_find_by_callback_filtered(
+        ctx, entity_action_request_matches, &request);
 }
 
 /* QueueActionRequestIndex (FUN_0041f340): mode 2 asks whether any entity
- * has the requested bit in its +0x3f0 flags word. */
+ * has the requested bit in its +0x3f0 flags word. Keep the 0x41f340
+ * zero-mask / zero-word-then-OR setup shared with QueueActionRequestPair. */
 // FUNCTION: LEGORR 0x0041F340
 int queue_action_request_index(GameContext* ctx, uint32_t flags_mask)
 {
-    const EntityActionRequest request = { 0, 0, 0, 0, flags_mask, 2u };
-    return entity_action_request_find(ctx, &request);
+    EntityActionRequest request;
+    request.subtype = 0u;
+    request.stats_mask = 0u;
+    request.state_mask = 0u;
+    request.flags3f0_mask = 0u;
+    uint32_t mode = 0u;
+    mode |= 2u;
+    request.mode = mode;
+    request.flags3f0_mask = flags_mask;
+    return entity_pool_find_by_callback_filtered(
+        ctx, entity_action_request_matches, &request);
 }
 
 /* ObjectInteractionFlagsAllow (FUN_0041f100): flags are checked in the
@@ -990,7 +1009,10 @@ int selection_cmd_move(GameContext* ctx, float tx, float ty)
     }
     int n = 0;
     for (int i = 0; i < ctx->selection_count; ++i) {
-        cmd_produce(5, ctx->selection[i], 0, (int)tx, (int)ty);
+        int pair[2];
+        pair[0] = (int)tx;
+        pair[1] = (int)ty;
+        cmd_produce(5, ctx->selection[i], 0, pair);
         ++n;
     }
     return n;
@@ -999,7 +1021,7 @@ int selection_cmd_move(GameContext* ctx, float tx, float ty)
 void selection_cmd_add(GameContext* ctx, EntitySlot* e)
 {
     if (ctx != NULL && e != NULL) {
-        cmd_produce(8, e, 0, 0, 0);
+        cmd_produce(8, e, 0, NULL);
     }
 }
 

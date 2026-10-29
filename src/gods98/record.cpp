@@ -200,8 +200,10 @@ int category_value_is_neither_zero_nor_fifteen(int value)
     return 0;
 }
 
-/* InterpolatedZWithinBounds (FUN_00471330): corpus order — the
- * interpolation, then `v <= target` and `target - t <= v`. */
+/* InterpolatedZWithinBounds (FUN_00471330): the corpus loads the +8 floats
+ * directly in b, a order, then interpolates before `v <= target` and
+ * `target - t <= v`. Keep rec_float's NULL-to-zero behavior without helper
+ * calls so the native-width loads follow that operand schedule. */
 // FUNCTION: LEGORR 0x00471330
 int interpolated_z_within_bounds(const void* record_a, const void* record_b,
                                  float t, float target, float scale)
@@ -768,19 +770,20 @@ void indexed_record_field64_set(void* record, int index, uint32_t value)
                      &value, sizeof(value));
 }
 
+/* The corpus reloads the base slot for each store and dereferences it
+ * blindly. The outer NULL guard is retained because test_record pins it. */
 // FUNCTION: LEGORR 0x0040ff70
 void object_vector3_set(void* object_block, float x, float y, float z)
 {
-    void* base = NULL;
     if (object_block == NULL) {
         return; /* deviation: the corpus reads blindly */
     }
+    void* base;
     __builtin_memcpy(&base, (char*)object_block, sizeof(base));
-    if (base == NULL) {
-        return; /* deviation: the corpus dereferences blindly */
-    }
     __builtin_memcpy((char*)base + 0x3c, &x, sizeof(x));
+    __builtin_memcpy(&base, (char*)object_block, sizeof(base));
     __builtin_memcpy((char*)base + 0x40, &y, sizeof(y));
+    __builtin_memcpy(&base, (char*)object_block, sizeof(base));
     __builtin_memcpy((char*)base + 0x44, &z, sizeof(z));
 }
 
@@ -809,15 +812,17 @@ void float_pair_at_offsetc_set_from_uints(void* record, uint32_t x,
     __builtin_memcpy((char*)record + 0x10, &fy, sizeof(fy));
 }
 
+/* The corpus loads +0x820/+0x824 in order and writes both outputs blindly;
+ * only the record-NULL guard remains as a test-pinned deviation. */
 // FUNCTION: LEGORR 0x00485a00
 void object_state_pair_get(const void* record, uint32_t* out_a,
                            uint32_t* out_b)
 {
-    if (record == NULL || out_a == NULL || out_b == NULL) {
-        return; /* deviation: the corpus dereferences blindly */
+    if (record == NULL) {
+        return; /* deviation: the corpus dereferences blindly; test pins this */
     }
-    __builtin_memcpy(out_a, (const char*)record + 0x820, sizeof(*out_a));
-    __builtin_memcpy(out_b, (const char*)record + 0x824, sizeof(*out_b));
+    *out_a = *(const uint32_t*)((const char*)record + 0x820);
+    *out_b = *(const uint32_t*)((const char*)record + 0x824);
 }
 
 /* --- the scene-visibility wrapper band (see record.hpp) ---------------------
@@ -865,10 +870,14 @@ static uint32_t s_overlay_cache; /* DAT_0055218c role */
 void graphics_overlay_visibility_set(uint32_t flag)
 {
     if (s_overlay_cache != flag) {
+        /* The corpus commits the cache before testing the requested flag
+         * (0x4634c0, then 0x4634c5) and dispatches separate 1/0 paths. */
         s_overlay_cache = flag;
-        /* corpus: the handle rides the call, flag folded to 1/0. */
-        scene_visibility_hook_call((void*)(uintptr_t)s_overlay_word,
-                                   flag != 0u ? 1 : 0);
+        if (flag != 0u) {
+            scene_visibility_hook_call((void*)(uintptr_t)s_overlay_word, 1);
+        } else {
+            scene_visibility_hook_call((void*)(uintptr_t)s_overlay_word, 0);
+        }
     }
 }
 
@@ -893,14 +902,19 @@ void animation_object_visibility_set(const void* anim, uint32_t flag)
     scene_visibility_hook_call(rec_ptr(anim, 0x04), (int)flag);
 }
 
-/* SceneObjectPairApplyMode (FUN_00408670) — the +4 object, then the +0x7c
- * partner when nonzero. Deviation: the partner test strides a dword in the
- * corpus; the port's widened slot answers through the pointer. */
+/* SceneObjectPairApplyMode (FUN_00408670) — the corpus blindly loads the +4
+ * object and +0x7c partner. Copy native-width port pointer slots inline to
+ * avoid rec_ptr calls; the port retains its widened-slot layout (the corpus
+ * tests a dword at +0x7c). NULL record behavior therefore follows the corpus
+ * and is no longer guarded. */
 // FUNCTION: LEGORR 0x00408670
 void scene_object_pair_apply_mode(const void* record, uint32_t flag)
 {
-    scene_visibility_hook_call(rec_ptr(record, 0x04), (int)flag);
-    void* partner = rec_ptr(record, 0x7c);
+    void* object;
+    __builtin_memcpy(&object, (const char*)record + 0x04, sizeof(object));
+    scene_visibility_hook_call(object, (int)flag);
+    void* partner;
+    __builtin_memcpy(&partner, (const char*)record + 0x7c, sizeof(partner));
     if (partner != NULL) {
         scene_visibility_hook_call(partner, (int)flag);
     }
@@ -953,14 +967,19 @@ static void pair_handle_set_pose(void* h, float x, float y)
     cam_set_facing((CameraHandle*)h, up);
 }
 
-/* SceneObjectPairSetRenderParameters (FUN_004086c0): the pose dispatch's
- * argument block (x, y, 0 / 0, 0, -1) reads as position + constant facing;
- * the partner only when the +0x7c slot is non-NULL. */
+/* SceneObjectPairSetRenderParameters (FUN_004086c0): the corpus blindly
+ * loads the +4 object and +0x7c partner; inline native-width copies match
+ * those loads without rec_ptr calls. The pose dispatch's argument block
+ * (x, y, 0 / 0, 0, -1) reads as position + constant facing; the partner is
+ * used only when the +0x7c slot is non-NULL. */
 // FUNCTION: LEGORR 0x004086c0
 void scene_object_pair_set_render_parameters(void* pair, float x, float y)
 {
-    pair_handle_set_pose(rec_ptr(pair, 0x04), x, y);
-    void* partner = rec_ptr(pair, 0x7c);
+    void* object;
+    __builtin_memcpy(&object, (char*)pair + 0x04, sizeof(object));
+    pair_handle_set_pose(object, x, y);
+    void* partner;
+    __builtin_memcpy(&partner, (char*)pair + 0x7c, sizeof(partner));
     if (partner != NULL) {
         pair_handle_set_pose(partner, x, y);
     }
@@ -2123,11 +2142,10 @@ void instance_quad_vertex_data_fill(void* record, int block,
 }
 
 /* MeshSegmentVertexFill (FUN_00482620): keep the corpus's blind table and
- * vertex-buffer accesses (there are no NULL-input pins/callers for this
- * leaf), calculate the 0x70 table stride inline, and retain its bottom-test
- * loop. The disassembly uses `test edi,edi; jbe` for the zero-count gate,
- * advances positions by 12 and pairs by 8, and reloads the same triple
- * pointer at `[esp+0x28]` on every round. */
+ * vertex-buffer accesses, calculate the 0x70 table stride inline, and retain
+ * its bottom-test loop. The disassembly reloads the vertex-buffer slot for
+ * each position/pair group, advances positions by 12 and pairs by 8, and
+ * reloads the same triple pointer at `[esp+0x28]` on every round. */
 // FUNCTION: LEGORR 0x00482620
 void mesh_segment_vertex_fill(void* record, int block, int first_vertex,
                               int count, const float* positions,
@@ -2140,26 +2158,30 @@ void mesh_segment_vertex_fill(void* record, int block, int first_vertex,
     if (count == 0) {
         return;
     }
-    const uint32_t vertex_index = (uint32_t)first_vertex;
     const uint32_t* src = (const uint32_t*)positions;
     const uint32_t* pair = pairs;
-    const size_t vertex_offset = (size_t)(vertex_index << 5);
-    char* verts = (char*)*(void* const*)(blk + 0x0c);
-    char* dst = verts + vertex_offset;
+    uint32_t vertex_offset = (uint32_t)first_vertex << 5;
     uint32_t remaining = (uint32_t)count;
     do {
-        *(uint32_t*)(dst + 0x00) = src[0];
-        *(uint32_t*)(dst + 0x04) = src[1];
-        *(uint32_t*)(dst + 0x08) = src[2];
+        char* verts = (char*)*(void* const*)(blk + 0x0c);
+        *(uint32_t*)(verts + vertex_offset + 0x00) = src[0];
+        verts = (char*)*(void* const*)(blk + 0x0c);
+        *(uint32_t*)(verts + vertex_offset + 0x04) = src[1];
+        verts = (char*)*(void* const*)(blk + 0x0c);
+        *(uint32_t*)(verts + vertex_offset + 0x08) = src[2];
         /* Pinned corpus quirk: the triple pointer never advances. */
-        *(uint32_t*)(dst + 0x0c) = triple[0];
-        *(uint32_t*)(dst + 0x10) = triple[1];
-        *(uint32_t*)(dst + 0x14) = triple[2];
-        *(uint32_t*)(dst + 0x18) = pair[0];
-        *(uint32_t*)(dst + 0x1c) = pair[1];
+        verts = (char*)*(void* const*)(blk + 0x0c);
+        char* triple_dst = verts + vertex_offset + 0x0c;
+        *(uint32_t*)(triple_dst + 0x00) = triple[0];
+        *(uint32_t*)(triple_dst + 0x04) = triple[1];
+        *(uint32_t*)(triple_dst + 0x08) = triple[2];
+        verts = (char*)*(void* const*)(blk + 0x0c);
+        *(uint32_t*)(verts + vertex_offset + 0x18) = pair[0];
+        verts = (char*)*(void* const*)(blk + 0x0c);
+        *(uint32_t*)(verts + vertex_offset + 0x1c) = pair[1];
         src += 3;
         pair += 2;
-        dst += 0x20;
+        vertex_offset += 0x20;
     } while (--remaining != 0u);
 }
 

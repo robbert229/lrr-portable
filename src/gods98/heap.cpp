@@ -255,7 +255,6 @@ int crt_heap_initialize(void)
 #endif
         return 0;
     }
-    if (s_preferred_arena == NULL) s_preferred_arena = &s_pool_root;
     s_heap_initialized = 1;
     return 1;
 }
@@ -264,7 +263,6 @@ int crt_heap_initialize(void)
 void crt_heap_block_free(void* block)
 {
     CrtHeapArena* arena = (CrtHeapArena*)block;
-    if (arena == NULL) return;
 #if defined(LEGORRR_BACKEND_WINAPI)
     VirtualFree((LPVOID)(uintptr_t)arena->reserve_base, 0, MEM_RELEASE);
 #else
@@ -274,10 +272,18 @@ void crt_heap_block_free(void* block)
     if (arena != &s_pool_root) {
         arena->previous->next = arena->next;
         arena->next->previous = arena->previous;
+#if defined(LEGORRR_BACKEND_WINAPI)
+        HeapFree(s_process_heap, 0, arena);
+#else
         crt_pool_descriptor_free(arena);
+#endif
     }
     else {
-        CRT_POOL_SET_RESERVE(arena, (unsigned char*)-1, (unsigned char*)-1);
+#if defined(LEGORRR_BACKEND_WINAPI)
+        s_pool_root.reserve_base = 0xffffffffu;
+#else
+        s_pool_root.reserve_base = (unsigned char*)-1;
+#endif
     }
 }
 
@@ -289,7 +295,6 @@ void crt_heap_release_unused_pages(int page_count)
     do {
         int released = 0;
         int page_index;
-        next = (arena == &s_pool_root) ? s_pool_root.previous : arena->previous;
         if (CRT_POOL_HAS_RESERVATION(arena)) {
             for (page_index = 1023; page_index >= 0; --page_index) {
                 CrtHeapPageEntry* entry = &arena->pages[page_index];
@@ -299,23 +304,22 @@ void crt_heap_release_unused_pages(int page_count)
                     entry->free_units = -1;
                     --s_free_small_page_count;
                     if (arena->first_uncommitted == NULL ||
-                        entry < arena->first_uncommitted) arena->first_uncommitted = entry;
+                        arena->first_uncommitted > entry) arena->first_uncommitted = entry;
                     ++released;
                     --page_count;
                     if (page_count == 0) break;
                 }
             }
-            if (released != 0 && arena->pages[0].free_units == -1) {
-                for (page_index = 1; page_index < 1024; ++page_index) {
-                    if (arena->pages[page_index].free_units != -1) break;
-                }
-                if (page_index == 1024) crt_heap_block_free(arena);
-            }
         }
-        if (page_count < 1) return;
-        if (arena == &s_pool_root) return;
+        next = arena->previous;
+        if (released != 0 && arena->pages[0].free_units == -1) {
+            for (page_index = 1; page_index < 1024; ++page_index) {
+                if (arena->pages[page_index].free_units != -1) break;
+            }
+            if (page_index == 1024) crt_heap_block_free(arena);
+        }
         arena = next;
-    } while (1);
+    } while (arena != &s_pool_root && page_count > 0);
 }
 
 // FUNCTION: LEGORR 0x00491840
@@ -543,18 +547,14 @@ void* engine_heap_alloc_aligned(long size)
     /* The corpus body: 16-byte round-up, then the small pool below its
      * 480-byte threshold, followed by the process heap. */
     unsigned rounded = ((unsigned)size + 15u) & 0xfffffff0u;
+    unsigned size_units = rounded >> 4;
 #if !defined(LEGORRR_BACKEND_WINAPI)
     if (rounded == 0u) {
         rounded = 16u; /* host aligned_alloc requires a nonzero allocation */
     }
 #endif
-#if defined(LEGORRR_BACKEND_WINAPI)
-    if (!s_heap_initialized) crt_heap_initialize();
-#else
-    if (!s_heap_initialized) crt_heap_initialize();
-#endif
-    if (s_heap_initialized && rounded <= s_pool_small_threshold) {
-        void* block = engine_pool_allocate(((unsigned)size + 15u) >> 4);
+    if (rounded <= s_pool_small_threshold) {
+        void* block = engine_pool_allocate(size_units);
         if (block != NULL) return block;
     }
 #if defined(LEGORRR_BACKEND_WINAPI)
@@ -618,8 +618,8 @@ void* engine_heap_alloc(long size)
 void engine_heap_free(void* ptr)
 {
     if (ptr != NULL) {
-        void* arena = NULL;
-        void* page_base = NULL;
+        void* arena;
+        void* page_base;
         unsigned char* allocation_tag = (unsigned char*)
             crt_heap_locate_allocation_page(ptr, &arena, &page_base);
         if (allocation_tag != NULL) {

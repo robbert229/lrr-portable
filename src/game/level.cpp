@@ -1699,11 +1699,11 @@ static MapFileResourceSlot s_map_slots[LEVEL_MAP_SLOT_COUNT];
 void level_map_slots_reset(void)
 {
     /* Plain pointer operands keep the walk's loop-back unsigned (jb). */
-    MapFileResourceSlot* s = s_map_slots;
-    MapFileResourceSlot* const end = s_map_slots + LEVEL_MAP_SLOT_COUNT;
-    for (; s < end; ++s) {
-        *(uint32_t*)&s->ptr = 0;
-        *(uint32_t*)&s->used = 0;
+    uint32_t* s = (uint32_t*)&s_map_slots[0].used;
+    uint32_t* const end = s + LEVEL_MAP_SLOT_COUNT * 2;
+    for (; s < end; s += 2) {
+        s[-1] = 0;
+        s[0] = 0;
     }
 }
 
@@ -2312,7 +2312,7 @@ static int32_t  s_ts_now; /* _DAT_004d78c0: erosion_timing_state_init seeds the 
 // FUNCTION: LEGORR 0x0040ee00
 void cell_coordinate_timestamp_remember(int x, int y)
 {
-    int i;
+    unsigned int i;
     for (i = 0; i < LEVEL_TS_COUNT; ++i) {
         if (s_ts_active[i] == 0) {
             s_ts_x[i] = x;
@@ -2437,7 +2437,9 @@ uint32_t cell_list_apply_flags_peek(void)
 void cell_list_min_distance_scale_apply(int enable) /* FUN_00450a80 */
 {
     if (enable != 0 && (s_cell_list_flags & 4u) == 0) {
-        for (int i = 0; i < s_dirty_queue_count; ++i) {
+        /* The queue count is nonnegative (zero-init, bounded append, and
+         * remove-only-after-find), matching the corpus's unsigned gate. */
+        for (uint32_t i = 0u; i < (uint32_t)s_dirty_queue_count; ++i) {
             /* The corpus strides the u16 pair entries unsigned: the
              * index folds the y-entry through the scale word. */
             const uint32_t x = (uint32_t)(uint16_t)s_dirty_queue_x[i];
@@ -2450,7 +2452,8 @@ void cell_list_min_distance_scale_apply(int enable) /* FUN_00450a80 */
         return;
     }
     if (enable == 0 && (s_cell_list_flags & 4u) != 0) {
-        for (int i = 0; i < s_dirty_queue_count; ++i) {
+        /* Same bounded, nonnegative queue-count invariant as the apply arm. */
+        for (uint32_t i = 0u; i < (uint32_t)s_dirty_queue_count; ++i) {
             const uint32_t x = (uint32_t)(uint16_t)s_dirty_queue_x[i];
             const uint32_t y = (uint32_t)(uint16_t)s_dirty_queue_y[i];
             scene_mesh_color_set(s_cell_list_object,
@@ -3323,7 +3326,10 @@ void* path_record_allocate_and_link(const uint32_t* coord_pair)
      * keeps the stores (the disassembly shows them landing blind). */
     *(uint32_t*)(rec + 0x20) = 0u;
     *(uint32_t*)(rec + 0x1c) = 0u;
-    *(uint32_t*)(rec + 0x08) = s_path_record_count++;   /* counter store */
+    /* Keep the corpus's two counter reads separate: the record receives the
+     * old word at 0x40936e, then 0x409379 reloads and increments the global. */
+    *(uint32_t*)(rec + 0x08) = s_path_record_count;
+    s_path_record_count = s_path_record_count + 1u;
     if (coord_pair != NULL) {
         *(uint32_t*)(rec + 0x0c) = coord_pair[0];
         *(uint32_t*)(rec + 0x10) = coord_pair[1];

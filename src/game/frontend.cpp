@@ -53,6 +53,9 @@ __declspec(allocate(".data$zzzzzz")) static unsigned char
 #else
 #define MENU_ACTION_TABLE_ALLOC
 #endif
+// The corpus keeps this 74-pointer label table in the runtime-filled band at
+// 0x4dced0 (zero-init at image load), so it takes no // GLOBAL annotation:
+// static initializers against a zero-filled corpus tail break reccmp-datacmp.
 MENU_ACTION_TABLE_ALLOC static const char* const s_interface_menu_action_labels[] = {
     "Interface_MenuItem_BackToDefault",
     "Interface_MenuItem_TeleportMan",
@@ -4127,32 +4130,31 @@ int menu_widget_item_screen_rect(const void* menu, int index, int* x, int* y,
     return 1;
 }
 
-/* MenuPickWidgetUnderPointer (FUN_00411790): walk items in draw order until
- * the pointer hits a regular widget or an active type-6 row. */
+/* MenuPickWidgetUnderPointer (FUN_00411790): the regular-rect helper gates
+ * the walk; a failed rect returns unless the type-6 helper hits. */
 // FUNCTION: LEGORR 0x00411790
 int menu_pick_widget_under_pointer(const void* menu, int* picked_index)
 {
-    if (menu == NULL) return 0;
-    const uint32_t count = fe_legacy_dword(menu, 7);
-    const int mouse_x = (int32_t)renderer_word_a_get();
-    const int mouse_y = (int32_t)renderer_word_b_get();
-    for (uint32_t i = 0; i < count; ++i) {
-        int x = 0, y = 0, width = 0, height = 0;
-        if (!menu_widget_item_screen_rect(menu, (int)i, &x, &y,
-                                          &width, &height)) {
-            if (has_type6_item_at_index(menu, (int)i)) {
-                if (picked_index != NULL) *picked_index = (int)i;
-                return 1;
-            }
-            continue;
+    int x = 0, y = 0, width = 0, height = 0;
+    int index = 0;
+    int type6_hit = 0;
+    for (;;) {
+        const int has_rect = menu_widget_item_screen_rect(menu, index, &x, &y,
+                                                          &width, &height);
+        if (!has_rect) {
+            type6_hit = has_type6_item_at_index(menu, index);
+            if (!type6_hit) return 0;
         }
-        if (menu_pointer_rectangle_hit_test(mouse_x, mouse_y, x, y,
-                                            width, height)) {
-            if (picked_index != NULL) *picked_index = (int)i;
-            return 1;
+        if (type6_hit) break;
+        if (menu_pointer_rectangle_hit_test(
+                (int32_t)renderer_word_a_get(),
+                (int32_t)renderer_word_b_get(), x, y, width, height)) {
+            break;
         }
+        ++index;
     }
-    return 0;
+    if (picked_index != NULL) *picked_index = index;
+    return 1;
 }
 
 /* The previous-renderer-word memory is corpus-owned (DAT_004db8d4, the
@@ -4352,7 +4354,7 @@ void interface_message_tab_info_text_load(const char* path)
 {
     s_interface_message_tab_info_text =
         (path != NULL && path[0] != '\0')
-            ? texture_get_or_load(NULL, path) : NULL;
+            ? image_surface_load(path, 0u, 0u) : NULL;
     resource_record_add_ref(s_interface_message_tab_info_text);
 }
 
@@ -4712,12 +4714,14 @@ void selection_state_handle_slot_set(int table, int index, uint32_t value)
  * update dispatch; the flag and time fields land as guarded windows. */
 #define TIMED_EFFECT_ENTRIES 16
 #define LAYOUT_POSITION_ENTRIES 2   /* corpus: two help-window buttons */
+#define LAYOUT_POSITION_STRIDE 7    /* corpus advances 0x1c bytes per entry */
 
 static int      s_band_mode;                    /* DAT_004dc64c */
 static uint32_t s_timed_effect_flags[TIMED_EFFECT_ENTRIES];
 static uint32_t s_timed_effect_time[TIMED_EFFECT_ENTRIES];
 static uint32_t s_timed_effect_tick; /* DAT_0054bf3c role: unowned */
-static int32_t  s_layout_position[LAYOUT_POSITION_ENTRIES][2];
+static int32_t  s_layout_position[LAYOUT_POSITION_ENTRIES]
+                                  [LAYOUT_POSITION_STRIDE];
 static float s_help_window_button_rects[LAYOUT_POSITION_ENTRIES][4];
 static int (*s_ui_resource_reposition_hook)(uint32_t handle, int x, int y);
 static float s_help_background_offset_x;
@@ -4801,6 +4805,9 @@ void selection_mode_set_by_index(int index)
         break;
     case 1:
         timed_effect_update_request_set(9);
+        break;
+    case 2:
+    case 3:
         break;
     default:
         break;
@@ -4921,7 +4928,7 @@ void help_render_transition_cleanup_if_active(void)
     if (((unsigned char)s_sel_state & 0x2u) != 0u) {
         if (((unsigned char)s_sel_state & 0x1u) != 0u) {
             help_transition_control_noop(0, 0);
-            objective_score_text_origin_set(NULL, NULL);
+            objective_score_text_origin_set(NULL);
             s_sel_state &= ~1u;
         }
     }
@@ -5456,9 +5463,17 @@ finish:
     if (previous_action != (uint32_t)action) {
         return 0;
     }
-    return action != 0x49
-        || (s_pointer_action_kind == (uint32_t)kind
-            && s_pointer_action_entry == (uint32_t)entry);
+    /* FUN_0041c6e0 has distinct true exits for the non-0x49 and pair arms. */
+    if (action == 0x49) {
+        if (s_pointer_action_kind == (uint32_t)kind
+            && s_pointer_action_entry == (uint32_t)entry) {
+            return 1;
+        }
+    }
+    else {
+        return 1;
+    }
+    return 0;
 }
 
 // FUNCTION: LEGORR 0x0041cce0
@@ -5485,11 +5500,11 @@ static const float s_region_scale_004 = 0.04f; /* DAT_0049e298, verified */
 void selection_region_parameters_set(uint32_t a, uint32_t b, uint32_t c,
                                      uint32_t d, float e)
 {
-    s_reg_e8 = (float)a;
-    s_reg_ec = (float)b;
     s_reg_e0 = (float)c;
     s_reg_e4 = (float)d;
     s_reg_f0 = e * s_region_scale_004;
+    s_reg_e8 = (float)a;
+    s_reg_ec = (float)b;
 }
 
 // FUNCTION: LEGORR 0x0041a990
@@ -5770,9 +5785,13 @@ void sim_status_banner_word_set(uint32_t value)
 // FUNCTION: LEGORR 0x00419200
 uint32_t ui_mode_resource_bit40_set_clear(int probe, uint32_t value)
 {
-    uint32_t v = value;
+    uint32_t v;
     if (probe != 0) {
         v = s_sel_state & 0x40u;
+    }
+    else {
+        /* FUN_00419200 fetches the value argument only after the probe test. */
+        v = value;
     }
     /* Corpus layout: the nonzero answer falls through to the clear, the
      * zero answer jumps to the set tail; the word answers after the

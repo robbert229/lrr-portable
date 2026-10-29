@@ -1185,11 +1185,11 @@ int resolved_entity_operation_dispatch(const char* name, int slot,
      * corpus's fourth resolver word is the immediate 0 (its NULL-guarded
      * tvcamera store never fires from here). */
     int type;
-    if (!entity_type_pair_for_name(name, &type, (int*)&name, NULL)) {
-        return 0;
+    if (entity_type_pair_for_name(name, &type, (int*)&name, NULL)) {
+        return grid_record_count_difference_get(type, *(int*)&name, slot,
+                                                subtract);
     }
-    return grid_record_count_difference_get(type, *(int*)&name, slot,
-                                            subtract);
+    return 0;
 }
 
 /* --- DAT_00502bd8 indexed stats-type tables (2026-10-25) ------------------
@@ -1438,17 +1438,15 @@ int catalog_callback_by_id_dispatch(const GameContext* ctx, int query,
         for (uint32_t row = 0; row < s_catalog_counts[0]; ++row) {
             int answer = 0;
             if (query == 0x14) {
-                const uint32_t w148 = stats_table_word_at_148(1, (int)row);
-                if ((w148 & 0x1000u) != 0u || (w148 & 0x2000u) != 0u) {
-                    const uint32_t w14c = stats_table_word_at_14c(1, (int)row);
-                    if ((w14c & 8u) == 0u) {
+                if ((stats_table_word_at_148(1, (int)row) & 0x1000u) != 0u
+                    || (stats_table_word_at_148(1, (int)row) & 0x2000u) != 0u) {
+                    if ((stats_table_word_at_14c(1, (int)row) & 8u) == 0u) {
                         answer = callback(0x49, 1, (int)row, payload);
                     }
                 }
             } else {
-                const uint32_t w148 = stats_table_word_at_148(1, (int)row);
-                const uint32_t w14c = stats_table_word_at_14c(1, (int)row);
-                if ((w148 & 0x800u) != 0u || (w14c & 8u) != 0u) {
+                if ((stats_table_word_at_148(1, (int)row) & 0x800u) != 0u
+                    || (stats_table_word_at_14c(1, (int)row) & 8u) != 0u) {
                     answer = callback(0x49, 1, (int)row, payload);
                 }
             }

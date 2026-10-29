@@ -979,8 +979,11 @@ char* lwo_string_duplicate(const char* text)
     if (text == NULL) {
         return NULL; /* deviation: the corpus dereferences blindly */
     }
-    const size_t len1 = strlen(text) + 1u;
-    const size_t size = len1 + (len1 & 1u); /* even-grained corpus size */
+    /* Keep the corpus's length, terminator, and even-rounding steps separate
+     * (0x48c0d2-0x48c0db: dec, inc, then add the low bit). */
+    size_t size = strlen(text);
+    ++size;
+    size += size & 1u;
     char* copy = (char*)engine_heap_alloc((long)size);
     /* Corpus parity: the copy is filled unchecked — sole-caller audit found
      * no test or caller that survives a NULL allocator answer anyway. */
@@ -1006,12 +1009,12 @@ int lwo_texture_projection_mode_parse(const char* name)
     modes[1] = s_lwo_projection_cylindrical;
     modes[2] = s_lwo_projection_spherical;
 
-    for (uint32_t i = 0; i < 3u; ++i) {
+    uint32_t i = 0;
+    for (; i < 3u; ++i) {
         const size_t len = strlen(modes[i]); /* the corpus inlines this as
                                               * repnz scas at 0x48c152 */
-        if (strnicmp_lite(name, modes[i], (int)len) == 0) {
-            return (int)i; /* corpus 0x48c164: je exits the loop on match */
-        }
+        if (strnicmp_lite(name, modes[i], (int)len) == 0) break;
     }
-    return 0; /* the corpus's fall-through answers PLANAR */
+    if (i == 3u) i = 0u; /* corpus 0x48c16f-0x48c174 resets exhausted scan */
+    return (int)i;
 }

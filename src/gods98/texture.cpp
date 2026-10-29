@@ -411,17 +411,14 @@ uint32_t texture_pixel_hash(TextureSurface* t)
 void* texture_cache_name_slot_find(const void* table, uint32_t count,
                                    const char* name)
 {
-    /* Corpus shape: the count gates alone, the name field rides strcasecmp
-     * untested, and the walk strides name-field to name-field by three
-     * fields with a bottom-tested counter. */
+    /* Corpus 0x483030 gates the unsigned count once, then walks name fields
+     * at 0x0c-byte strides; its bottom comparison is unsigned (jb). */
     const long field = (long)sizeof(void*);
-    if (count > 0u) {
-        for (uint32_t i = 0; i != count; ++i) {
-            const char* entry_name = *(const char* const*)
-                ((const char*)table + (long)i * 3 * field + field);
-            if (strcasecmp_lite(name, entry_name) == 0) {
-                return (void*)((const char*)table + (long)i * 3 * field);
-            }
+    for (uint32_t i = 0u; i < count; ++i) {
+        const char* entry_name = *(const char* const*)
+            ((const char*)table + (long)i * 3 * field + field);
+        if (strcasecmp_lite(name, entry_name) == 0) {
+            return (void*)((const char*)table + (long)i * 3 * field);
         }
     }
     return NULL;

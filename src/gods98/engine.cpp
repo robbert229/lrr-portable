@@ -259,19 +259,24 @@ uint32_t engine_overlay_word_peek(int which)
 static float s_score_text_origin[2];
 
 // FUNCTION: LEGORR 0x004262e0
-void objective_score_text_origin_set(EngineContext* ctx, const float* pair)
+void objective_score_text_origin_set(const float* pair)
 {
     if (pair != NULL) {
         s_score_text_origin[0] = pair[0];
         s_score_text_origin[1] = pair[1];
-        if (ctx != NULL) {
-            ctx->debug |= 0x4000u;
-        }
-        return; /* deviation: the corpus writes the word blindly */
+        /* Corpus 0x4262f3..0x426301: mov eax,ds:0x556ed0 / or ah,0x40 /
+         * mov ds:0x556ed0,eax — the shared debug/cheat word (the panel
+         * highlight flag word), not the caller's context. */
+        s_panel_highlight_flags = s_panel_highlight_flags | 0x4000u;
+        return;
     }
-    if (ctx != NULL) {
-        ctx->debug &= ~0x4000u;
-    }
+    /* Corpus 0x426307..0x42630f: mov / and ah,0xbf / mov. */
+    s_panel_highlight_flags = s_panel_highlight_flags & ~0x4000u;
+}
+
+uint32_t engine_debug_word_peek(void)
+{
+    return s_panel_highlight_flags;
 }
 
 void objective_score_text_origin_peek(float out[2])

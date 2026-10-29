@@ -860,9 +860,9 @@ int list_find_name(const SavListWindow* win, const char* name)
         return -1;
     }
     for (int i = 0; i < win->count; ++i) {
-        /* corpus: the entries base and count reload each pass and the
-         * entry rides into strcasecmp_lite untested */
-        if (strcasecmp_lite((const char*)win->entries[i], name) == 0) {
+        /* corpus reloads entries and count each pass; name is arg 1 and
+         * the untested entry is arg 2 to strcasecmp_lite. */
+        if (strcasecmp_lite(name, (const char*)win->entries[i]) == 0) {
             return i;
         }
     }
@@ -1570,22 +1570,22 @@ int checkpoint_blob_task_progress_recalculate(GameContext* ctx)
 }
 
 /* SavRefreshSlots (2026-10-25) — FUN_00417df0. Walk the six slot
- * contexts so every slot file exists. With the engine feature word's
- * bit 0x400 raised the corpus writes the slot fresh before reading it
- * back; otherwise it reads (and re-reads once when the first attempt
- * fails). Deviations: the port's single active-slot context stands in
- * for the corpus's six DAT_00557080 blocks (the SavSlotCtx precedent),
- * the null context is guarded, and the corpus reads its context-pointer
- * block blind. */
+ * contexts so every slot file exists. The corpus samples the engine
+ * feature word once before the walk: with bit 0x400 raised it writes
+ * each slot fresh before reading it back; otherwise it reads (and
+ * re-reads once when the first attempt fails). Deviations: the port's
+ * single active-slot context stands in for the corpus's six
+ * DAT_00557080 blocks (the SavSlotCtx precedent), the null context is
+ * guarded, and the corpus reads its context-pointer block blind. */
 // FUNCTION: LEGORR 0x00417df0
 void sav_refresh_slots(GameContext* ctx)
 {
     if (ctx == NULL) {
         return; /* deviation: the corpus strides blindly */
     }
+    const int write_first =
+        (engine_feature_word_peek() & 0x400u) != 0u;
     for (int slot = 0; slot < SAVE_SLOTS; ++slot) {
-        const int write_first =
-            (engine_feature_word_peek() & 0x400u) != 0u;
         if (write_first) {
             (void)save_write_slot(ctx, slot);
             (void)save_read_slot(ctx, slot, 0);

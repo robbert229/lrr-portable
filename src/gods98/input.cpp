@@ -303,11 +303,12 @@ int input_action_pressed_get(const EngineContext* ctx, int action, int alt)
     if (action < 0 || action >= INPUT_FLAG_TABLE_SLOTS) {
         return 0; /* deviation: the corpus indexes blindly */
     }
-    const uint32_t word = s_input_entry_flags[action];
+    /* Corpus 0x41c927 and 0x41c938 loads the table word separately in each
+     * result arm, after the optional system-state getter call. */
     if (alt != 0 && (system_state_flags_get() & 1u) != 0u) {
-        return (int)((~word >> 2) & 1u);
+        return (int)((~s_input_entry_flags[action] >> 2) & 1u);
     }
-    return (int)(word & 1u);
+    return (int)(s_input_entry_flags[action] & 1u);
 }
 
 /* InputBindingPressedGet (FUN_0041c950) — see input.hpp. Same gate and

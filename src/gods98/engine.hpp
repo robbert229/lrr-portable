@@ -238,11 +238,15 @@ int mode_dependent_field24_get(const EngineContext* ctx);
 bool   current_engine_mode_is_zero(const EngineContext* ctx);
 
 /* ObjectiveScoreTextOriginSet (FUN_004262e0): the objective/score text
- * origin pair. A non-null pair stores into module storage and raises the
- * debug word's bit 0x4000; a null pair drops it. Deviation: the corpus
- * strides the pair blindly; the port guards it. */
-void objective_score_text_origin_set(EngineContext* ctx, const float* pair);
+ * origin pair, ONE cdecl argument (b60: the corpus callee reads only
+ * [esp+4]). A non-null pair stores into module storage and raises bit 14
+ * of the shared debug/cheat word DAT_00556ed0 (`or ah,0x40` /
+ * `and ah,0xbf`); a null pair drops it. The earlier ctx parameter was a
+ * port-only invention that added a call-site push the corpus never makes
+ * (0x4189d0 pushes one zero) and rerouted the flag to ctx->debug. */
+void objective_score_text_origin_set(const float* pair);
 void objective_score_text_origin_peek(float out[2]);
+uint32_t engine_debug_word_peek(void);
 
 /* EngineModeSet (FUN_004565f0): stores the mode word into the global flag
  * DAT_004ff978 (the port's crt.* own storage, through the install hook),

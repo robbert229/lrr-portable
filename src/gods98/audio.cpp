@@ -110,7 +110,8 @@ void audio_sound_volume_set(AudioPlayer* p, int millibels)
 // FUNCTION: LEGORR 0x0047b530
 void audio_sound_volume_index_set(int index)
 {
-    if (index < 0 || index >= 11) {
+    /* The corpus uses `index < 0 || index > 10` for its eleven entries. */
+    if (index < 0 || index > 10) {
         return;
     }
     audio_sound_volume_set(s_active_audio_player, s_sfx_attenuation[index]);

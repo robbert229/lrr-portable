@@ -193,7 +193,9 @@ const char* case_insensitive_substring_find(const char* haystack,
     /* Corpus walk: keep the haystack pointer in its walking register before
      * the two intrinsic strlen scans, then use separate zero-length gates
      * and an unsigned bound beside an incrementing counter (the needle is
-     * re-read from its stack slot every pass, the length hoisted into ebp). */
+     * re-read from its stack slot every pass, the length hoisted into ebp).
+     * On a miss the corpus increments the index before the hay pointer
+     * (0x477655 inc edi; 0x477656 inc esi), then tests cmp/jb at 0x477657. */
     const char* hay = haystack;
     const unsigned hlen = (unsigned)strlen(hay);
     const unsigned nlen = (unsigned)strlen(needle);
@@ -203,11 +205,10 @@ const char* case_insensitive_substring_find(const char* haystack,
     if (nlen == 0u) {
         return NULL; /* pinned: the corpus's strlen-shaped gate */
     }
-    for (unsigned i = 0; i < hlen; ++i) {
+    for (unsigned i = 0; i < hlen; ++i, ++hay) {
         if (strnicmp_lite(hay, needle, (int)nlen) == 0) {
             return hay;
         }
-        ++hay;
     }
     return NULL;
 }
@@ -287,22 +288,26 @@ int string_folded_compare(const char* a, const char* b, size_t n)
 char* string_case_substring_find(char* haystack, const char* needle,
                                  uint32_t* out_index, size_t* out_length)
 {
+    if (haystack == NULL || needle == NULL) {
+        return NULL; /* pinned deviation: test_string.cpp:145-147 */
+    }
     /* Corpus walk: two intrinsic strlens into registers, three entry gates,
      * then a walking haystack pointer beside an inc counter with an unsigned
-     * bound (the needle is re-read from its stack slot every pass). */
+     * bound and test/jbe gate (the needle is re-read from its stack slot
+     * every pass). */
     char* hay = haystack;
-    long hlen = (long)strlen(haystack);
-    long nlen = (long)strlen(needle);
-    if (hlen == 0) {
+    unsigned int hlen = (unsigned int)strlen(haystack);
+    unsigned int nlen = (unsigned int)strlen(needle);
+    if (hlen == 0u) {
         return NULL; /* pinned: the corpus's strlen-shaped gate */
     }
-    if (nlen == 0) {
+    if (nlen == 0u) {
         return NULL; /* pinned: the corpus's strlen-shaped gate */
     }
-    if (hlen <= 0) {
+    if (hlen <= 0u) {
         return NULL; /* the corpus's unsigned test/jbe bound before the walk */
     }
-    for (unsigned index = 0; index < (unsigned)hlen; ++index) {
+    for (unsigned index = 0; index < hlen; ++index) {
         if (strnicmp_lite(hay, needle, (int)nlen) == 0) {
             if (out_index != NULL) {
                 *out_index = (uint32_t)index;
