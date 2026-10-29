@@ -128,6 +128,10 @@ double x87_round_to_integral(double value);
  * finite and infinity behavior; CRT matherr callbacks remain unported. */
 void crt_math_dispatch_table_initialize(void);
 void crt_math_intrinsic_dispatch(void);
+void crt_floating_point_exception_result_dispatch(void);
+void crt_floating_point_exception_result_dispatch_variant(void);
+double crt_double_remainder_reduction(double dividend, double divisor);
+double crt_fmod_extended_precision(double dividend, double divisor);
 uint32_t crt_fpu_precision_mode_code_get(void);
 double crt_round_to_integral_with_math_error_handling(double value);
 double crt_round_to_integral_with_math_error_handling_variant(double value);
@@ -795,6 +799,10 @@ uint32_t crt_extended_float_convert_format_a(const uint16_t* source,
                                              uint32_t* destination);
 uint32_t crt_extended_float_convert_format_b(const uint16_t* source,
                                              uint32_t* destination);
+uint32_t crt_double_to_extended_float_convert_a(uint32_t* destination,
+                                                double value);
+uint32_t crt_double_to_extended_float_convert_b(uint32_t* destination,
+                                                double value);
 
 /* CrtStringDuplicate (FUN_0049b660): strlen+1 through the engine
  * allocator, bytes and NUL copied over. A null string answers null

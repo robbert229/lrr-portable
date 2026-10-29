@@ -714,11 +714,154 @@ void crt_math_dispatch_table_initialize(void)
  * as a seam until its caller/runtime frame is ported. */
 // GLOBAL: LEGORR 0x00549168
 static volatile unsigned char s_math_intrinsic_dispatch_seen;
+// GLOBAL: LEGORR 0x005490c8
+static uint32_t s_math_exception_dispatch_mode;
+// GLOBAL: LEGORR 0x00549160
+static double s_math_exception_dispatch_result;
 
 // FUNCTION: LEGORR 0x0048e1aa
 void crt_math_intrinsic_dispatch(void)
 {
     s_math_intrinsic_dispatch_seen = 1;
+}
+
+/* The two result dispatch entries are called with the caller's EBP frame and
+ * x87 ST(0) still live. On the reference x86 backend, the naked adapters keep
+ * that calling convention and pass the frame/status to this C implementation.
+ * Other backends have no equivalent implicit x87 context. */
+static void crt_floating_point_exception_dispatch_core(uint8_t* frame,
+                                                        uint32_t fpu_status,
+                                                        int clear_dispatch_flag)
+{
+    int8_t exception_kind;
+    uint16_t control_word;
+    uint8_t* exception_context;
+    uint32_t status;
+    int8_t operation;
+    union {
+        double value;
+        uint64_t bits;
+    } result;
+
+    if (clear_dispatch_flag != 0) {
+        s_math_intrinsic_dispatch_seen = 0u;
+    }
+    if (s_math_exception_dispatch_mode != 0u) {
+        return;
+    }
+
+    exception_context = *(uint8_t**)(frame - 0x94);
+    exception_kind = *(int8_t*)(frame - 0x90);
+    control_word = *(uint16_t*)(frame - 0xa4);
+    result.value = s_math_exception_dispatch_result;
+    if (exception_kind == 0) {
+        if ((control_word & 0x20u) != 0u || (fpu_status & 0x20u) == 0u) {
+            return;
+        }
+        status = 8u;
+    }
+    else if (exception_kind == -1 || exception_kind == -2) {
+        const uint32_t high = (uint32_t)(result.bits >> 32);
+        if ((high & 0x7ff00000u) == 0u) {
+            status = 4u;
+        }
+        else if ((*(uint16_t*)((uint8_t*)&s_math_exception_dispatch_result + 6)
+                  & 0x7ff0u) == 0x7ff0u) {
+            status = 3u;
+        }
+        else {
+            if ((control_word & 0x20u) != 0u || (fpu_status & 0x20u) == 0u) {
+                return;
+            }
+            status = 8u;
+        }
+    }
+    else {
+        status = (uint32_t)(int32_t)exception_kind;
+    }
+
+    if (s_math_intrinsic_dispatch_seen == 0u) {
+        memcpy(frame - 0x86, frame + 8, 8u);
+        if (exception_context[0x0d] != 1u) {
+            memcpy(frame - 0x7e, frame + 0x10, 8u);
+        }
+    }
+    operation = (int8_t)exception_context[0x0e];
+    memcpy(frame - 0x76, &result.value, sizeof(result.value));
+    result.value = crt_math_exception_handle_result_with_status(
+        status, (uint32_t)(int32_t)operation,
+        *(uint32_t*)(frame - 0x86), *(uint32_t*)(frame - 0x82),
+        *(uint32_t*)(frame - 0x76), *(uint32_t*)(frame - 0x72),
+        control_word);
+    s_math_exception_dispatch_result = result.value;
+}
+
+// FUNCTION: LEGORR 0x0049221e
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void crt_floating_point_exception_result_dispatch(void)
+{
+    __asm {
+        fst qword ptr [s_math_exception_dispatch_result]
+        fnstsw ax
+        movzx eax, ax
+        push eax
+        mov eax, ebp
+        push eax
+        push 1
+        call crt_floating_point_exception_dispatch_core
+        add esp, 0ch
+        fld qword ptr [s_math_exception_dispatch_result]
+        fldcw word ptr [ebp-0a4h]
+        fwait
+        ret
+    }
+}
+
+// FUNCTION: LEGORR 0x00492225
+__declspec(naked) void crt_floating_point_exception_result_dispatch_variant(void)
+{
+    __asm {
+        fst qword ptr [s_math_exception_dispatch_result]
+        fnstsw ax
+        movzx eax, ax
+        push eax
+        mov eax, ebp
+        push eax
+        push 0
+        call crt_floating_point_exception_dispatch_core
+        add esp, 0ch
+        fld qword ptr [s_math_exception_dispatch_result]
+        fldcw word ptr [ebp-0a4h]
+        fwait
+        ret
+    }
+}
+#else
+void crt_floating_point_exception_result_dispatch(void)
+{
+    s_math_intrinsic_dispatch_seen = 0u;
+}
+
+void crt_floating_point_exception_result_dispatch_variant(void)
+{
+}
+#endif
+
+/* CrtDoubleRemainderReduction / CrtFmodExtendedPrecision (FUN_00492bc6 /
+ * FUN_00492dcc): the original entries exchange extended x87 values through
+ * ST(0)/ST(1) and use a private stack record. The C interface accepts the same
+ * operands explicitly; the CRT fmod implementation supplies truncating
+ * remainder semantics and handles NaN, infinity, and zero-divisor cases. */
+// FUNCTION: LEGORR 0x00492bc6
+double crt_double_remainder_reduction(double dividend, double divisor)
+{
+    return fmod(dividend, divisor);
+}
+
+// FUNCTION: LEGORR 0x00492dcc
+double crt_fmod_extended_precision(double dividend, double divisor)
+{
+    return crt_double_remainder_reduction(dividend, divisor);
 }
 
 /* CrtRoundToIntegralWithMathErrorHandling (FUN_0048e280): for finite
@@ -3399,6 +3542,27 @@ uint32_t crt_extended_float_convert_format_b(const uint16_t* source,
 {
     return crt_extended80_to_binary_float(source, destination,
                                           s_extended_float_format_b);
+}
+
+/* CrtDoubleToExtendedFloatConvertA/B (FUN_00497da0/00497de0): expand the
+ * by-value IEEE double into the CRT's 80-bit temporary, then convert it to
+ * the selected binary format. */
+// FUNCTION: LEGORR 0x00497da0
+uint32_t crt_double_to_extended_float_convert_a(uint32_t* destination,
+                                                double value)
+{
+    uint16_t extended[6];
+    crt_double_to_extended80(extended, &value);
+    return crt_extended_float_convert_format_a(extended, destination);
+}
+
+// FUNCTION: LEGORR 0x00497de0
+uint32_t crt_double_to_extended_float_convert_b(uint32_t* destination,
+                                                double value)
+{
+    uint16_t extended[6];
+    crt_double_to_extended80(extended, &value);
+    return crt_extended_float_convert_format_b(extended, destination);
 }
 
 /* CrtStringDuplicate (FUN_0049b660) — see crt.hpp. The corpus's length walk

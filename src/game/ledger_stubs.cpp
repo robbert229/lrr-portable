@@ -4453,22 +4453,6 @@ void ledger_stub_00491cc0_SmallHeapBlockResizeInPlace() {}
 // STUB: LEGORR 0x00491f80
 void ledger_stub_00491f80_CrtOneArgumentMathErrorHandlingStart() {}
 
-// CrtFloatingPointExceptionResultDispatch
-// STUB: LEGORR 0x0049221e
-void ledger_stub_0049221e_CrtFloatingPointExceptionResultDispatch() {}
-
-// CrtFloatingPointExceptionResultDispatchVariant
-// STUB: LEGORR 0x00492225
-void ledger_stub_00492225_CrtFloatingPointExceptionResultDispatchVariant() {}
-
-// CrtDoubleRemainderReduction
-// STUB: LEGORR 0x00492bc6
-void ledger_stub_00492bc6_CrtDoubleRemainderReduction() {}
-
-// CrtFmodExtendedPrecision
-// STUB: LEGORR 0x00492dcc
-void ledger_stub_00492dcc_CrtFmodExtendedPrecision() {}
-
 // LocaleCharacterMapString
 
 // CrtFormattedScanV
@@ -4558,14 +4542,6 @@ void ledger_stub_00496895_CrtLocalUnwindFromFrame() {}
 // CrtGetStringTypeACompat
 
 // CrtCharacterToLowerLocale
-
-// CrtDoubleToExtendedFloatConvertA
-// STUB: LEGORR 0x00497da0
-void ledger_stub_00497da0_CrtDoubleToExtendedFloatConvertA() {}
-
-// CrtDoubleToExtendedFloatConvertB
-// STUB: LEGORR 0x00497de0
-void ledger_stub_00497de0_CrtDoubleToExtendedFloatConvertB() {}
 
 // NumberStringScanParse
 // STUB: LEGORR 0x00498350
