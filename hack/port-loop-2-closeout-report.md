@@ -1,18 +1,19 @@
 # Port-loop-2 closeout report
 
 Final state of the Reccmp match-improvement loop started from
-`hack/port-loop-2.md`. All work is uncommitted on top of `30ff059f`
-(24 modified files); PR #367 remains open for human merge — nothing was
-merged by the loop, per the workflow rule.
+`hack/port-loop-2.md`. The loop's work is committed on
+`feat/frontend-carveout-globals` (PR #367 head `4e037090`); PR #367
+remains open for human merge — nothing was merged by the loop, per the
+workflow rule.
 
 ## Headline numbers
 
 | Metric | Session start | Final |
 |---|---|---|
 | Exact-matched nonstub functions | 155 | **217** |
-| Accuracy | 37.98% | **42.38%** |
+| Accuracy | 37.98% | **42.40%** |
 | Implemented | — | 51.52% (1253/2432) |
-| Progress | — | 21.84% |
+| Progress | — | 21.85% |
 
 Verification gates at closeout (all green on the final tree):
 
@@ -26,7 +27,8 @@ Verification gates at closeout (all green on the final tree):
 
 ## Batches
 
-74 verified batches (b1–b74). Every batch ended with: each target at
+75 verified batches (b1–b75; the b75 per-target barrier table is at the
+end of this report). Every batch ended with: each target at
 exact or safest-achievable state, **zero nonstub regressions** vs the
 fresh `/tmp` anchor, datacmp steady, diff-check clean. Highlights of the
 recent window (b60–b74):
