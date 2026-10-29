@@ -763,9 +763,10 @@ static int load_layer_m(LevelState* s, const char* name)
     return 1;
 }
 
-/* CellInitPass @ 0x42f6f0 — scoped port. The corpus sweeps every cell and
- * derives the cave/block relationship from the neighbourhood. The flag side
- * later systems read is kept; render calls are stubbed. */
+/* CellInitPass @ 0x42f6f0 — scoped load-path approximation. The corpus entry
+ * handles one cell and its neighbours per call; this port folds the retained
+ * cave/block flag subset into a bulk grid sweep. Activity, renderer, and
+ * message paths from the per-cell body are not represented. */
 // FUNCTION: LEGORR 0x0042f6f0
 static void cell_init_pass(LevelState* s)
 {
@@ -1971,8 +1972,8 @@ static void cell_visited_track_push(int cx, int cy)
 static void cell_refresh_seam(LevelState* s, int cx, int cy)
 {
     (void)s; (void)cx; (void)cy;
-    /* TODO(corpus): FUN_0042f6f0(manager, x, y, 0) per-cell refresh;
-     * the load-path cell_init_pass covers the sweep form. */
+    /* TODO(corpus): FUN_0042f6f0(manager, x, y, 0) per-cell refresh. The
+     * load-path cell_init_pass is only a scoped bulk approximation. */
 }
 
 // FUNCTION: LEGORR 0x00432100
@@ -2025,9 +2026,16 @@ void terrain_cell_primary_flags_mask_clear_and_refresh(LevelState* s,
         return;
     }
     uint32_t* primary = (uint32_t*)(rec + 0x08);
-    *primary &= 0xdfef7bffu;
+    /* Corpus 0x432385-0x43238d loads the dword into esi, masks it, then
+     * stores it back. Keep that separate RMW sequence under /Od. */
+    uint32_t primary_value = *primary;
+    primary_value &= 0xdfef7bffu;
+    *primary = primary_value;
     uint32_t* secondary = (uint32_t*)(rec + 0x0C);
-    *secondary &= 0xfffffffbu;
+    /* Same load/and/store shape for the secondary word at 0x4323a7-0x4323ac. */
+    uint32_t secondary_value = *secondary;
+    secondary_value &= 0xfffffffbu;
+    *secondary = secondary_value;
     cell_refresh_seam(s, cx, cy);
 }
 
@@ -2039,9 +2047,15 @@ void terrain_cell_flags_set_and_refresh(LevelState* s, int cx, int cy)
         return;
     }
     uint32_t* primary = (uint32_t*)(rec + 0x08);
-    *primary |= 0x108000u;
+    /* Corpus 0x432415-0x43241d uses load/or/store, then repeats the
+     * operation for the secondary word. */
+    uint32_t primary_value = *primary;
+    primary_value |= 0x108000u;
+    *primary = primary_value;
     uint32_t* secondary = (uint32_t*)(rec + 0x0C);
-    *secondary |= 4u;
+    uint32_t secondary_value = *secondary;
+    secondary_value |= 4u;
+    *secondary = secondary_value;
     cell_refresh_seam(s, cx, cy);
 }
 
@@ -3049,9 +3063,10 @@ int terrain_sfx_grid_cell_peek(int cell)
 /* TerrainObjectTypeSfxGridConfigLoad (FUN_0044acc0) — see level.hpp.
  * Deviations: the corpus strides its zero loop blindly (the port memsets
  * the window); the corpus's two dead preamble loops leave the running
- * pair initialized 20/15 and carry them ACROSS entries, so a name whose
- * resolution writes only one half inherits the other from the previous
- * entry (pinned quirk — the port carries them the same way); the corpus
+ * pair initialized 20/15, but the resolver zeroes the row half at its
+ * entry (0x42e8b8) — only the TYPE half carries across entries, and only
+ * into skipped (`continue`) iterations; a resolved name therefore always
+ * sees a fresh row (the port's resolver carries the entry zeroing); the corpus
  * strides a missing value string into the alias table (the port's lookup
  * guards NULL) and stores blind past the 300-entry window (the port
  * stores blind as well). The entry chain is the subgroup record followed

@@ -19,12 +19,13 @@
 
 /* ------------------------------------------------------------------ *
  *  Command record (finding 10 §"Command record" — corpus stride 0x68).
- *  The struct is a semantic model, not a byte clone: the corpus packs
- *  next(+0x60) and free-list link(+0x64) into consecutive 4-byte words and
- *  payload(+0x10)/buffer(+0x40) as 32-bit pointers; here the record is a
- *  stable pool object. A separate port-only global link keeps another
- *  entity's commands from extending this entity's chain. Field names carry
- *  the corpus offsets.
+ *  Corpus 0x403190 has "mov [esi+0x38], eax", "mov [esi+0x58], 0", and
+ *  state read/write instructions at +0x5c; keep those named fields at their
+ *  corpus offsets. The port-only global-list link uses the intervening +0x50
+ *  word; private staging values follow the corpus +0x60 chain link.
+ *  CMD_STRIDE is sizeof(CmdRec), so the
+ *  pool allocation includes the private tail rather than overlapping the
+ *  corpus-visible fields (the x86 port record is 0x6c bytes).
  * ------------------------------------------------------------------ */
 
 typedef struct CmdRec {
@@ -41,34 +42,22 @@ typedef struct CmdRec {
     int32_t  cell_count; /* +0x28 cell-command entry count                      */
     int32_t  zone;       /* +0x2c zone-command id (kind-7; the corpus writer
                           * of this word is unported — zero-init)             */
-    int32_t  grant_act;  /* +0x38 activity the command grants: the tick's
-                          * deferred install (callback 0x43da62) appends it
-                          * to the entity's permitted-activity list and
-                          * drops type-0x13 grant records (cmd_chain_drop).
-                          * The corpus writer of the record's +0x38 — the
-                          * task-state granter — is config/runtime-driven
-                          * (finding 10 §"Spawn-dispatch task-state switch";
-                          * the shipped binary creates type-0x13 "ref"
-                          * records via CmdAlloc(0x13) — verified site
-                          * 0x403108 inside FUN_004030e0 — but pins no
-                          * +0x38 grant/flag pair);
-                          * port-side writers stage grants through
-                          * cmd_rec_set_activity. */
-    int32_t  extra;      /* +0x3c (type-8 tasks set 8)                         */
-    void*    buffer;     /* +0x40 owned buffer (freed on cmd_free)             */
+    uint8_t  pad_30[8];  /* +0x30..+0x37 (keeps the corpus +0x38 slot)          */
     void*    arg38;      /* +0x38 second payload slot (the 0x13 queue's word)   */
+    uint8_t  pad_3c[4];  /* +0x3c..+0x3f (buffer begins at the corpus +0x40)    */
+    void*    buffer;     /* +0x40 owned buffer (freed on cmd_free)             */
     uint32_t count;      /* +0x44 the buffer's entry count                     */
-
     void*    entity_ref; /* +0x48 pending entity reference (the corpus
-                          * writers are the spawn-dispatch band, unported —
-                          * zero until one installs a value)                   */
-
+                           * writers are the spawn-dispatch band, unported —
+                           * zero until one installs a value)                   */
     int32_t  kind;       /* +0x4c kind index                                   */
-    void*    event_payload; /* +0x54 event payload (the 0xc queue's word)   */
+    void*    global_next; /* +0x50 port-only global command-list link           */
+    void*    event_payload; /* +0x54 event payload (the 0xc queue's word)       */
     void*    ref;        /* +0x58 referenced record (the 0x13 "ref" pair)      */
     uint32_t state;      /* +0x5c state flags (CMD_STATE_*)                    */
-    void*    next;       /* +0x60 chain link / free-list link when free        */
-    void*    global_next; /* port-only global command-list link               */
+    void*    next;       /* +0x60 entity-chain link; port reuses it when free  */
+    int32_t  grant_act;  /* port-only staged activity (deferred install 0x43da62) */
+    int32_t  extra;      /* port-only task selector (type-8 tasks set 8)        */
 } CmdRec;
 
 #define CMD_STRIDE sizeof(CmdRec)
@@ -102,15 +91,19 @@ void cmd_rec_set_next(void* rec, void* next) { as_rec(rec)->next = next; }
  * (records link at +0x64). All three are zero-init in the corpus. */
 // GLOBAL: LEGORR 0x004b31c8
 static CmdRec* s_blocks[CMD_POOL_MAX_BLOCKS];
-// GLOBAL: LEGORR 0x004b31fc
-static int     s_pool_level = 0;
+/* The corpus table ends at the free-list head: HandleArrayReleaseAndReset
+ * advances four bytes at a time and compares esi with 0x4b31f8. Keep this
+ * declaration immediately after the 12 table entries. */
 // GLOBAL: LEGORR 0x004b31f8
 static void*   s_free       = NULL;
+// GLOBAL: LEGORR 0x004b31fc
+static int     s_pool_level = 0;
 
 // GLOBAL: LEGORR 0x004b3354
 static CmdRec* s_global_head = NULL; /* DAT_004b3354 */
 static CmdRec* s_global_tail = NULL; /* DAT_004b3358 */
-static int   s_global_enabled = 1; /* DAT_004b8060 */
+// GLOBAL: LEGORR 0x004b8060
+static int   s_global_enabled = 0; /* DAT_004b8060: zero-init; cmd_init sets bit 0 */
 
 // FUNCTION: LEGORR 0x004064c0
 static void cmd_pool_grow(void)
@@ -240,7 +233,8 @@ int cmd_kind_by_name(const char* name, int* out)
     const char* const* end = PRIO_NAMES + 27;   /* 0x4b32e8 - 0x4b327c */
     int i = 0;
     for (; entry < end; ++entry, ++i) {
-        if (strcasecmp_lite(*entry, name) == 0) {   /* corpus order: entry first */
+        /* cdecl stack order: push the table entry, then the query name. */
+        if (strcasecmp_lite(name, *entry) == 0) {
             *out = i;
             return 1;
         }
@@ -576,7 +570,8 @@ static void cmd_minion_companion(EntitySlot* e)
     rec->payload = e;
     cmd_set_kind(rec, 0x15);
     cmd_link_tail(rec);
-    rec->state |= CMD_STATE_MINION;
+    /* Corpus: mov eax,[+0x5c] / or ah,0x20 / mov [+0x5c],eax. */
+    rec->state = rec->state | CMD_STATE_MINION;
 }
 
 // FUNCTION: LEGORR 0x00402720
@@ -1267,9 +1262,9 @@ void engine_memory_free(void* ptr)
     engine_heap_free(ptr);
 }
 /* TaskTableContentsRelease (FUN_004020c0): frees every non-null pool
- * block pointer (the corpus walks esi from DAT_004b31c8 up to the
- * freelist-head address at 0x4b31f8 with a pointer walk), clears the
- * freelist head, and drops the enable word. */
+ * block pointer. The corpus increments esi by four and compares it with
+ * s_free at 0x4b31f8 ("cmp esi, 0x4b31f8"), then clears that head and the
+ * scheduler word at 0x4b8060. */
 // FUNCTION: LEGORR 0x004020c0
 void handle_array_release_and_reset(void)
 {

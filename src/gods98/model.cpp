@@ -976,6 +976,9 @@ uint32_t model_digest(const Model* m)
 // FUNCTION: LEGORR 0x0048c0c0
 char* lwo_string_duplicate(const char* text)
 {
+    if (text == NULL) {
+        return NULL; /* deviation: the corpus dereferences blindly */
+    }
     const size_t len1 = strlen(text) + 1u;
     const size_t size = len1 + (len1 & 1u); /* even-grained corpus size */
     char* copy = (char*)engine_heap_alloc((long)size);

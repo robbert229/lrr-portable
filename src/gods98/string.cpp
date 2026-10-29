@@ -36,19 +36,58 @@ uint32_t formatted_text_buffer_build(char* out, size_t capacity,
     return (uint32_t)strlen(out);
 }
 
-/* FUN_0048da50: substring find. The corpus's aligned-word/SWAR scan is a
- * byte-equivalent strstr, plus the same early-outs (empty needle -> the
- * haystack start). */
+/* FUN_0048da50: substring find. Keep the corpus's leading-byte/leading-pair
+ * gates and compare the remaining needle two bytes at a time. Advancing the
+ * candidate one byte after a failed pair retains strstr's overlapping-match
+ * behavior. */
 // FUNCTION: LEGORR 0x0048da50
 const char* string_find_substring(const char* haystack, const char* needle)
 {
-    if (haystack == NULL || needle == NULL) {
-        return NULL;
-    }
-    if (*needle == '\0') {
+    const unsigned char* text = (const unsigned char*)haystack;
+    const unsigned char* pattern = (const unsigned char*)needle;
+    const unsigned char first = pattern[0];
+    if (first == 0u) {
         return haystack;
     }
-    return strstr(haystack, needle);
+    const unsigned char second = pattern[1];
+    if (second == 0u) {
+        return (const char*)strchr(haystack, first);
+    }
+    for (;;) {
+        unsigned char current;
+        while ((current = *text) != first) {
+            if (current == 0u) {
+                return NULL;
+            }
+            ++text;
+        }
+        const unsigned char* candidate = text;
+        ++text;
+        if (*text == second) {
+            const unsigned char* scan = text + 1;
+            const unsigned char* next = pattern + 2;
+            for (;;) {
+                const unsigned char first_tail = *next;
+                if (first_tail == 0u) {
+                    return (const char*)candidate;
+                }
+                if (*scan != first_tail) {
+                    break;
+                }
+                ++scan;
+                ++next;
+                const unsigned char second_tail = *next;
+                if (second_tail == 0u) {
+                    return (const char*)candidate;
+                }
+                if (*scan != second_tail) {
+                    break;
+                }
+                ++scan;
+                ++next;
+            }
+        }
+    }
 }
 
 /* CaseInsensitiveSubstringFind (FUN_00477610) — see string.hpp. The
@@ -77,20 +116,30 @@ static int s_strnfoldcmp(const char* a, const char* b, size_t n)
     return 0;
 }
 
-/* __strcmpi (FUN_0048ff10): the CRT's case-folded strcmp — lower A-Z folds
- * upward via range checks, compares byte-wise, answers the byte difference
- * (0 on match). Used by the corpus's Level03 checkpoint hard-code
- * comparison and the string-registry walk. */
+/* __strcmpi (FUN_0048ff10): compare raw bytes first, then fold ASCII A-Z on
+ * a mismatch and retry when the folded bytes agree. The corpus normalizes a
+ * remaining mismatch to -1/+1 (not the byte difference); its initialized
+ * locale-table branch calls the shared fold helper instead. This inline
+ * range-check spelling covers the corpus's table-uninitialized branch. */
 // FUNCTION: LEGORR 0x0048ff10
 int strcasecmp_lite(const char* a, const char* b)
 {
+    const unsigned char* pa = (const unsigned char*)a;
+    const unsigned char* pb = (const unsigned char*)b;
     for (;;) {
-        int ca = (unsigned char)*a++;
-        int cb = (unsigned char)*b++;
-        if (ca >= 'a' && ca <= 'z') ca -= 0x20;
-        if (cb >= 'a' && cb <= 'z') cb -= 0x20;
-        if (ca != cb) return ca - cb;
-        if (ca == 0) return 0;
+        unsigned char ca = *pa++;
+        unsigned char cb = *pb++;
+        if (ca == cb) {
+            if (ca == 0u) return 0;
+            continue;
+        }
+        if (ca >= (unsigned char)'A' && ca <= (unsigned char)'Z') {
+            ca = (unsigned char)(ca + 0x20u);
+        }
+        if (cb >= (unsigned char)'A' && cb <= (unsigned char)'Z') {
+            cb = (unsigned char)(cb + 0x20u);
+        }
+        if (ca != cb) return ca < cb ? -1 : 1;
     }
 }
 
@@ -107,9 +156,9 @@ int strnicmp_lite(const char* a, const char* b, int count)
     }
     const unsigned char* pa = (const unsigned char*)a;
     const unsigned char* pb = (const unsigned char*)b;
-    unsigned char ca = 0;
-    unsigned char cb = 0;
-    for (;;) {
+    unsigned char ca;
+    unsigned char cb;
+    do {
         ca = *pa;
         cb = *pb;
         if (ca == 0u || cb == 0u) {
@@ -127,10 +176,7 @@ int strnicmp_lite(const char* a, const char* b, int count)
             break;
         }
         --count;
-        if (count == 0) {
-            return 0;
-        }
-    }
+    } while (count != 0);
     if (ca == cb) {
         return 0;
     }
@@ -141,11 +187,15 @@ int strnicmp_lite(const char* a, const char* b, int count)
 const char* case_insensitive_substring_find(const char* haystack,
                                             const char* needle)
 {
-    /* Corpus walk: two intrinsic strlens into registers, two separate
-     * zero-length gates, then a walking haystack pointer beside an inc
-     * counter with an unsigned bound (the needle is re-read from its stack
-     * slot every pass, the length hoisted once into ebp). */
-    const unsigned hlen = (unsigned)strlen(haystack);
+    if (haystack == NULL || needle == NULL) {
+        return NULL; /* pinned deviation: the corpus dereferences both blindly */
+    }
+    /* Corpus walk: keep the haystack pointer in its walking register before
+     * the two intrinsic strlen scans, then use separate zero-length gates
+     * and an unsigned bound beside an incrementing counter (the needle is
+     * re-read from its stack slot every pass, the length hoisted into ebp). */
+    const char* hay = haystack;
+    const unsigned hlen = (unsigned)strlen(hay);
     const unsigned nlen = (unsigned)strlen(needle);
     if (hlen == 0u) {
         return NULL; /* pinned: the corpus's strlen-shaped gate */
@@ -153,7 +203,6 @@ const char* case_insensitive_substring_find(const char* haystack,
     if (nlen == 0u) {
         return NULL; /* pinned: the corpus's strlen-shaped gate */
     }
-    const char* hay = haystack;
     for (unsigned i = 0; i < hlen; ++i) {
         if (strnicmp_lite(hay, needle, (int)nlen) == 0) {
             return hay;

@@ -95,19 +95,19 @@ float vec_len(const float* a) /* FUN_004013a0 */
 // FUNCTION: LEGORR 0x00401240
 float vec2_dist(const float* a, const float* b) /* FUN_00401240 */
 {
-    float dx = a[0] - b[0];
     float dy = a[1] - b[1];
-    return sqrtf(dx * dx + dy * dy);
+    float dx = a[0] - b[0];
+    return sqrtf(dy * dy + dx * dx);
 }
 
 // FUNCTION: LEGORR 0x00406730
 float vec2_dist_alt(const float* a, const float* b) /* FUN_00406730 */
 {
-    /* Corpus variant: dy term first, x term through an extra round-trip —
-     * identical single-precision result. */
-    float dy = a[1] - b[1];
+    /* Corpus variant: x term first through an extra round-trip, then y —
+     * opposite the primary helper's x87 arithmetic order. */
     float dx = a[0] - b[0];
-    return sqrtf(dy * dy + dx * dx);
+    float dy = a[1] - b[1];
+    return sqrtf(dx * dx + dy * dy);
 }
 
 // FUNCTION: LEGORR 0x0047c0c0
@@ -1101,21 +1101,32 @@ void scene_object_arguments_normalize(const void** obj, const void** alt,
     *out_alt = root_slot;
 }
 
-/* Matrix4IdentityInitialize (FUN_00483540): the corpus writes the twelve
- * off-diagonal dwords as zero (high to low), then the four diagonal dwords
- * as the float-1.0 constant — the same output, in the corpus's order. */
+/* Matrix4IdentityInitialize (FUN_00483540): spell the float bit patterns as
+ * dword stores so MSVC 5 /Od uses the corpus's shared zero/one registers.
+ * Preserve its non-monotonic order: the twelve off-diagonal words are zeroed
+ * high-to-low, then the diagonal words receive 1.0f's IEEE-754 pattern. */
 // FUNCTION: LEGORR 0x00483540
 void matrix4_identity_initialize(float* out)
 {
-    int i;
-    for (i = 1; i < 16; ++i) {
-        if (i % 5 != 0) {
-            out[i] = 0.0f;
-        }
-    }
-    for (i = 0; i < 4; ++i) {
-        out[5 * i] = 1.0f;
-    }
+    uint32_t* words = (uint32_t*)out;
+    const uint32_t zero = 0u;
+    words[7] = zero;
+    words[6] = zero;
+    words[4] = zero;
+    words[3] = zero;
+    words[2] = zero;
+    words[1] = zero;
+    words[14] = zero;
+    words[13] = zero;
+    words[12] = zero;
+    words[11] = zero;
+    words[9] = zero;
+    words[8] = zero;
+    const uint32_t one = 0x3f800000u;
+    words[15] = one;
+    words[10] = one;
+    words[5] = one;
+    words[0] = one;
 }
 
 /* SurfaceTriangleNormalCalculate (FUN_00479530): the two edges
@@ -1257,24 +1268,30 @@ void bezier_curve_samples_build(uint32_t* dest, const uint32_t* control,
     if (dest == NULL || control == NULL) {
         return; /* deviation: the corpus strides the record blindly */
     }
-    if (count > 0x31u) {
+    /* `cmp ebx,0x32` / `jb` leaves counts below 50 untouched. */
+    if (count >= 0x32u) {
         count = 0x32u; /* the corpus's overflow clamp, faithful */
     }
+    uint32_t i = 1u;
     dest[0] = count;
     dest[1] = control[0];
     dest[2] = control[1];
-    if (count <= 1u) {
+    if (count <= i) {
         return;
     }
-    const float inv = s_curve_unit / (float)(count - 1u);
+    const uint32_t denominator = count - 1u;
     uint32_t* slot = dest + 3;
-    for (uint32_t i = 1u; i < count; ++i) {
+    /* The corpus forms `lea edx,[ebx-1]`, advances the output, then converts
+     * the denominator with `fild QWORD PTR` before dividing the 1.0 constant. */
+    const float inv = s_curve_unit / (float)denominator;
+    do {
         const float t = (float)i * inv;
         cubic_bezier_point_evaluate((float*)slot, (const float*)control,
                                     (const float*)p3, (const float*)p4,
                                     (const float*)p5, t);
+        i = i + 1u;
         slot += 2;
-    }
+    } while (i < count);
 }
 
 /* PathArcLengthInterpolate (FUN_004068c0) — see view.hpp. The record layout

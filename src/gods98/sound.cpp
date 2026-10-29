@@ -932,15 +932,12 @@ void sound_bank_entry_volume_set(int slot, int millibels)
 // FUNCTION: LEGORR 0x00465010
 void sound_variant_property_set(int alias_index, int millibels)
 {
-    /* ConfiguredVariantPropertySet @ 0x465010. Deviation: the corpus's
-     * millibel argument is register-passed and invisible to the
-     * decompile, so the port takes it explicitly (issue #319). The
-     * corpus loads millibels (eax) then alias_index (ecx) before the
-     * select call; mirror the load order with eager locals. */
-    const int value = millibels; /* corpus: eax = [esp+8] first */
-    const int alias = alias_index; /* corpus: ecx = [esp+4] second */
-    int slot = sound_variant_select(alias);
-    sound_bank_entry_volume_set(slot, value);
+    /* ConfiguredVariantPropertySet @ 0x465010. Keep the selector nested in
+     * the volume setter's first argument: MSVC 5 /Od evaluates the setter's
+     * right argument first, staging millibels before calling the selector.
+     * The corpus loads [esp+8] then [esp+4], pushes value then alias, calls
+     * the selector, and reuses the staged value for the volume write. */
+    sound_bank_entry_volume_set(sound_variant_select(alias_index), millibels);
 }
 
 // FUNCTION: LEGORR 0x00465030

@@ -341,9 +341,12 @@ void message_update(float dt)
 // FUNCTION: LEGORR 0x0041a2c0
 void message_cooldown_tick(float dt)
 {
+    MessageConfig* rec;
+
     /* pointer walk, as the corpus: the end compare lands on &s_cfg[40] and
      * stays unsigned (the corpus loop-back is jb, not jl) */
-    for (MessageConfig* rec = s_cfg; rec < &s_cfg[MESSAGE_MAX_ID]; ++rec) {
+    rec = s_cfg;
+    for (; rec < &s_cfg[MESSAGE_MAX_ID]; ++rec) {
         if (rec->cooldown > s_cooldown_zero) {
             rec->cooldown -= dt;
         }

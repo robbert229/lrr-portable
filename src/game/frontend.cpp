@@ -635,15 +635,42 @@ static int fe_build_chain(BlockFile* cfg, const char* start_key,
 
 /* --- Item%i value grammar ------------------------------------------------- */
 
+/* Item-kind matcher. The corpus compares all six names through the CRT's
+ * case-folded compare (six `call 0x48ff10` sites, literals pushed second:
+ * `push 0x4a23dc /*"cycle" / push esi / call 0x48ff10 / add esp,8 / test
+ * eax,eax / jne`), answers 0..4 from mov-immediates, and folds the tail
+ * match arithmetically (`neg eax / sbb eax,eax / and al,0xfa / add eax,5`
+ * — MSVC's `? 5 : -1` idiom). Unknown tokens answer -1, which the caller's
+ * switch routes to the generic banner arm; the earlier local spelling
+ * (s_strcaseeq, no "next" case, unknown folded to Next) predates the
+ * corpus read. */
+/* The corpus compares against its .data token strings at 0x4a23ac..0x4a23e3
+ * (eight/12-byte strides, image bytes verified against the reference PE:
+ * next, realslider, slider, textinput, trigger, cycle). Annotating them as
+ * DATs lets each `push` land on the corpus's immediate address — the six
+ * `push imm` vs `push STRING` pairs were this function's entire residual. */
+// GLOBAL: LEGORR 0x004a23ac
+static const char s_item_token_next[5] = "next";
+// GLOBAL: LEGORR 0x004a23b4
+static const char s_item_token_realslider[11] = "realslider";
+// GLOBAL: LEGORR 0x004a23c0
+static const char s_item_token_slider[7] = "slider";
+// GLOBAL: LEGORR 0x004a23c8
+static const char s_item_token_textinput[10] = "textinput";
+// GLOBAL: LEGORR 0x004a23d4
+static const char s_item_token_trigger[8] = "trigger";
+// GLOBAL: LEGORR 0x004a23dc
+static const char s_item_token_cycle[6] = "cycle";
+
 // FUNCTION: LEGORR 0x00413e60
 static int fe_item_kind(const char* tok)
 {
-    if (s_strcaseeq(tok, "cycle"))       return FE_ITEM_CYCLE;
-    if (s_strcaseeq(tok, "trigger"))     return FE_ITEM_TRIGGER;
-    if (s_strcaseeq(tok, "textinput"))   return FE_ITEM_TEXTINPUT;
-    if (s_strcaseeq(tok, "slider"))      return FE_ITEM_SLIDER;
-    if (s_strcaseeq(tok, "realslider"))  return FE_ITEM_REALSLIDER;
-    return FE_ITEM_NEXT;                 /* "Next" and anything unknown */
+    if (strcasecmp_lite(tok, s_item_token_cycle) == 0)      return FE_ITEM_CYCLE;
+    if (strcasecmp_lite(tok, s_item_token_trigger) == 0)    return FE_ITEM_TRIGGER;
+    if (strcasecmp_lite(tok, s_item_token_textinput) == 0)  return FE_ITEM_TEXTINPUT;
+    if (strcasecmp_lite(tok, s_item_token_slider) == 0)     return FE_ITEM_SLIDER;
+    if (strcasecmp_lite(tok, s_item_token_realslider) == 0) return FE_ITEM_REALSLIDER;
+    return strcasecmp_lite(tok, s_item_token_next) == 0 ? FE_ITEM_NEXT : -1;
 }
 
 /* Slider initial values per banner — the corpus's option defaults
@@ -1504,7 +1531,12 @@ int interface_images_config_load(BlockFile* cfg)
                 valid = 0;
                 break;
             }
-            *states[state] = texture_get_or_load(NULL, path);
+            /* The corpus calls BitmapSurfaceLoad directly (FUN_0047d9d0),
+             * not the port's name-keyed cache. This keeps the call site on
+             * the annotated twin; surfaces in this table therefore follow
+             * the corpus's independent-load identity rather than cache
+             * sharing. */
+            *states[state] = image_surface_load(path, 0u, 0u);
         }
         if (!valid) {
             for (int state = 0; state < 3; ++state) {
@@ -1791,14 +1823,10 @@ int interface_surround_images_config_load(BlockFile* cfg)
             }
             memcpy(token, fields[field], lengths[field]);
             token[lengths[field]] = '\0';
-            char* end = NULL;
-            long number = strtol(token, &end, 10);
-            if (end == token || *end != '\0' || number < -32768
-                || number > 32767) {
-                valid = 0;
-                break;
-            }
-            numbers[n] = (int)number;
+            /* The corpus uses its annotated atoi twin (FUN_0048db70):
+             * numeric prefixes are accepted and the parsed value is not
+             * narrowed to the port's earlier signed-16-bit safety range. */
+            numbers[n] = (int)util_atoi(token);
         }
         if (!valid) {
             continue;
@@ -1818,7 +1846,9 @@ int interface_surround_images_config_load(BlockFile* cfg)
             char image_path[FE_PATH_MAX];
             memcpy(image_path, fields[0], lengths[0]);
             image_path[lengths[0]] = '\0';
-            record->image = texture_get_or_load(NULL, image_path);
+            /* FUN_0041afd0 calls BitmapSurfaceLoad (FUN_0047d9d0), rather
+             * than the port's name-keyed cache. */
+            record->image = image_surface_load(image_path, 0u, 0u);
             record->x = numbers[0];
             record->y = numbers[1];
             record->width = numbers[2];
@@ -1828,7 +1858,8 @@ int interface_surround_images_config_load(BlockFile* cfg)
             char image_path[FE_PATH_MAX];
             memcpy(image_path, fields[5], lengths[5]);
             image_path[lengths[5]] = '\0';
-            record->image_without_back = texture_get_or_load(NULL, image_path);
+            record->image_without_back = image_surface_load(image_path,
+                                                            0u, 0u);
             record->without_back_x = numbers[4];
             record->without_back_y = numbers[5];
         }
@@ -5967,9 +5998,14 @@ static void* panel_load_seam_call(void* res)
 // FUNCTION: LEGORR 0x00459fd0
 void panel_resource_position_apply_if_enabled(void* resource, int x, int y)
 {
-    if ((s_panel_enable_word & 0x10u) != 0u) {
-        panel_blit_seam_call(resource, (float)x + s_bubble_offset_x,
-                             (float)y + s_bubble_offset_y);
+    /* The corpus tests the enable byte, then FILD/FADD-stores x before y
+     * into its local coordinate pair. FUN_0047dcb0 is an unported hook
+     * boundary here, so preserve the observable test seam. */
+    if (((unsigned char)s_panel_enable_word & 0x10u) != 0u) {
+        float position[2];
+        position[0] = (float)x + s_bubble_offset_x;
+        position[1] = (float)y + s_bubble_offset_y;
+        panel_blit_seam_call(resource, position[0], position[1]);
     }
 }
 
@@ -6853,32 +6889,34 @@ static uint32_t s_sav_visited_words_out[SAV_VISITED_ENTRIES]; /* DAT_00556ff4 */
 static void*    s_sav_visited_items_in[SAV_VISITED_ENTRIES];  /* DAT_00556fdc */
 static uint32_t s_sav_visited_words_in[SAV_VISITED_ENTRIES];  /* DAT_00556fe0 */
 
-/* SavClearVisited (FUN_00416e70): walk both bands, out-of-game first —
- * every non-null entry record has its +0x10 flag word cleared and the
- * table's word word zeroed alongside. Deviations: the entry windows and
- * the count bounds are guarded (the corpus strides blindly) and records
- * are touched through their modeled +0x10 word. */
+/* SavClearVisited (FUN_00416e70): the corpus walks the out-of-game band
+ * first (DAT_00556fe4 / DAT_00556ff0 / DAT_00556ff4), then the in-game
+ * band (DAT_00556fd0 / DAT_00556fdc / DAT_00556fe0). A non-null record
+ * has its +0x10 dword and paired table word cleared. Keep pointer-array
+ * indexing typed: it emits corpus dword strides on x86 and scales pointer
+ * slots for the LP64 host. The port-only upper-bound checks stay because
+ * the oversized-count test pins the whole band unchanged. */
 // FUNCTION: LEGORR 0x00416e70
 void sav_clear_visited(void)
 {
-    for (int which = 0; which < 2; ++which) {
-        void* const* items = which != 0 ? s_sav_visited_items_in
-                                       : s_sav_visited_items_out;
-        uint32_t* words = which != 0 ? s_sav_visited_words_in
-                                     : s_sav_visited_words_out;
-        const int count = *(which != 0 ? &s_active_object_ingame
-                                       : &s_active_object_outgame);
-        if (count <= 0) {
-            continue; /* the corpus's positivity gate */
-        }
-        if (count > SAV_VISITED_ENTRIES) {
-            continue; /* deviation: the corpus strides blindly */
-        }
-        for (int i = 0; i < count; ++i) {
-            void* rec = items[i];
+    int i;
+    if (s_active_object_outgame > 0 &&
+        s_active_object_outgame <= SAV_VISITED_ENTRIES) {
+        for (i = 0; i < s_active_object_outgame; ++i) {
+            void* rec = s_sav_visited_items_out[i];
             if (rec != NULL) {
                 ((uint32_t*)rec)[4] = 0u; /* corpus record + 0x10 */
-                words[i] = 0u;
+                s_sav_visited_words_out[i] = 0u;
+            }
+        }
+    }
+    if (s_active_object_ingame > 0 &&
+        s_active_object_ingame <= SAV_VISITED_ENTRIES) {
+        for (i = 0; i < s_active_object_ingame; ++i) {
+            void* rec = s_sav_visited_items_in[i];
+            if (rec != NULL) {
+                ((uint32_t*)rec)[4] = 0u; /* corpus record + 0x10 */
+                s_sav_visited_words_in[i] = 0u;
             }
         }
     }

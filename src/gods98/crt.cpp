@@ -30,10 +30,12 @@ extern "C" void __cdecl _amsg_exit(int);
 #define CRT_U64(value) value##ULL
 #endif
 
-/* CRT inverse-trigonometric entries. The original uses x87 register inputs
- * and computes the acos core with fpatan(sqrt((1-x)(1+x)), x); these portable
- * double interfaces preserve the mathematical result for the engine's
- * ordinary finite inputs. */
+/* CRT inverse-trigonometric entries. The corpus's 0x0048e0ad entry is an
+ * x87-internal helper: it receives its value on ST(0), forms (1+x)(1-x),
+ * then uses FSQRT/FPATAN before CRT boundary/error handling. This C double
+ * interface has a different callee signature and retains the portable
+ * ordinary-finite-input semantics; matching the corpus entry is therefore
+ * a signature/runtime-path barrier, not an expression-order respelling. */
 // FUNCTION: LEGORR 0x0048e090
 double crt_asin(double value)
 {
@@ -375,12 +377,16 @@ int pop_count32(uint32_t value)
     return n;
 }
 
-/* FUN_0047d720: index of the lowest set bit, 0xffffffff for zero. */
+/* FUN_0047d720: index of the lowest set bit, 0xffffffff for zero. The
+ * corpus's 0x47d72e `shl esi,cl` repeatedly shifts its live mask; without
+ * resetting that mask, it answers 2 for 0x8 rather than the tested 3.
+ * Keep the one-hot-per-position semantics; the i&31 is redundant under
+ * the i < 32 bound. */
 // FUNCTION: LEGORR 0x0047d720
 uint32_t find_first_set_bit32(uint32_t value)
 {
     for (uint32_t i = 0; i < 32u; ++i) {
-        if ((value & (1u << (i & 31u))) != 0u) {
+        if ((value & (1u << i)) != 0u) {
             return i;
         }
     }
@@ -1003,6 +1009,7 @@ float    crt_float_00555120_peek(void)   { return s_float_00555120; }
 /* --- DirectDraw display-mode records + filter tuples -------------------- */
 typedef struct FilterTuple {
     int32_t w, h, bpp;
+    uint8_t padding[0x104]; /* the corpus advances by 0x110 bytes per row */
 } FilterTuple;
 
 #define FILTER_TUPLE_ENTRIES 16
@@ -1213,10 +1220,9 @@ void display_resolution_combo_populate(CrtDisplayResolutionList* out)
 void display_resolution_filter_tuple_append(int width, int height, int bpp)
 {
     if (s_filter_tuple_count < FILTER_TUPLE_ENTRIES) {
-        FilterTuple* t = &s_filter_tuples[s_filter_tuple_count];
-        t->w = width;
-        t->h = height;
-        t->bpp = bpp;
+        s_filter_tuples[s_filter_tuple_count].w = width;
+        s_filter_tuples[s_filter_tuple_count].h = height;
+        s_filter_tuples[s_filter_tuple_count].bpp = bpp;
     }
     s_filter_tuple_count = s_filter_tuple_count + 1;
 }
@@ -1415,11 +1421,17 @@ int request_record_ready_flag4(int index)
     return (f & 4u) != 0u && (f & 8u) == 0u ? 1 : 0;
 }
 
+/* The corpus's 0x45ab6f `mov eax,[eax+0x2c]` reads the flag word after its
+ * unchecked 0x30-byte record stride; the 0x45ab72/78 tests keep bit 2 then
+ * bit 8 in this short-circuit order. */
 // FUNCTION: LEGORR 0x0045ab60
 int request_record_ready_flag2(int index)
 {
     const uint32_t f = s_request_records[index].flags;
-    return (f & 2u) != 0u && (f & 8u) == 0u ? 1 : 0;
+    if ((f & 2u) != 0u && (f & 8u) == 0u) {
+        return 1;
+    }
+    return 0;
 }
 
 // FUNCTION: LEGORR 0x0045ab90
@@ -2375,7 +2387,7 @@ void* string_keyed_cache_entry_find(const char* key)
 void* string_registry_intern(const char* key)
 {
     if (key == NULL || *key == '\0') {
-        return NULL; /* deviation: the corpus strides a null string blindly */
+        return NULL; /* corpus's null-pointer and empty-string exits */
     }
     void* entry = string_keyed_cache_entry_find(key);
     if (entry != NULL) {
@@ -3150,7 +3162,8 @@ void low_texture_flag_set(void) /* FUN_00477bd0 */
  * a byte distance and walks three dwords forward through the *source* side,
  * reading each word at the walked pointer and writing it back through the
  * delta, so each source word is read only after earlier writes land; the
- * ordered copy reproduces the overlap. */
+ * ordered copy reproduces the overlap. Keeping the post-copy decrement in
+ * the loop condition mirrors the corpus's `dec edx; jne` tail. */
 // FUNCTION: LEGORR 0x00497a80
 void uint96_copy(uint32_t dst[3], const uint32_t src[3])
 {
@@ -3160,8 +3173,7 @@ void uint96_copy(uint32_t dst[3], const uint32_t src[3])
     do {
         *(uint32_t*)((char*)p + delta) = *p;
         p += 1;
-        --n;
-    } while (n != 0);
+    } while (--n != 0);
 }
 
 /* UInt96ShiftRight (FUN_00497ad0): shift the three big-endian DWORD limbs.
@@ -3711,11 +3723,108 @@ uint64_t crt_integer64_multiply(uint32_t lo_a, int32_t hi_a,
 }
 #endif
 
-/* CrtInteger64Divide (FUN_0048e9e0, __alldiv) — see crt.hpp. Preserve the
- * original two-DWORD sign normalization, trial quotient and multiply-back
- * correction. Keeping the divisions unsigned avoids signed overflow for
- * INT64_MIN / -1 and matches the helper's wrapping word-pair result. */
+/* CrtInteger64Divide (FUN_0048e9e0, __alldiv) — see crt.hpp. The Win32
+ * body follows the corpus's signed word-pair normalization, two-word
+ * divisor shift, one-word trial divide, and multiply-back repair. Its one
+ * extra zero-divisor branch preserves this port's tested zero result rather
+ * than the corpus's divide exception. The portable fallback keeps the same
+ * value semantics without relying on x86 inline assembly. */
 // FUNCTION: LEGORR 0x0048e9e0
+#if defined(LEGORRR_BACKEND_WINAPI)
+__declspec(naked) uint64_t crt_integer64_divide(uint32_t lo_a, uint32_t hi_a,
+                                                uint32_t lo_b, uint32_t hi_b)
+{
+    __asm {
+        push edi
+        push esi
+        push ebx
+        xor edi, edi
+        mov eax, [esp + 0x14]
+        or eax, eax
+        jge numerator_nonnegative
+        inc edi
+        mov edx, [esp + 0x10]
+        neg eax
+        neg edx
+        sbb eax, 0
+        mov [esp + 0x14], eax
+        mov [esp + 0x10], edx
+    numerator_nonnegative:
+        mov eax, [esp + 0x1c]
+        or eax, eax
+        jge divisor_nonnegative
+        inc edi
+        mov edx, [esp + 0x18]
+        neg eax
+        neg edx
+        sbb eax, 0
+        mov [esp + 0x1c], eax
+        mov [esp + 0x18], edx
+    divisor_nonnegative:
+        or eax, eax
+        jne wide_divisor
+        mov ecx, [esp + 0x18]
+        mov eax, [esp + 0x14]
+        xor edx, edx
+        test ecx, ecx
+        jz zero_divisor
+        div ecx
+        mov ebx, eax
+        mov eax, [esp + 0x10]
+        div ecx
+        mov edx, ebx
+        jmp quotient_ready
+    wide_divisor:
+        mov ebx, eax
+        mov ecx, [esp + 0x18]
+        mov edx, [esp + 0x14]
+        mov eax, [esp + 0x10]
+    shift_divisor_and_numerator:
+        shr ebx, 1
+        rcr ecx, 1
+        shr edx, 1
+        rcr eax, 1
+        or ebx, ebx
+        jne shift_divisor_and_numerator
+        div ecx
+        mov esi, eax
+        mul dword ptr [esp + 0x1c]
+        mov ecx, eax
+        mov eax, [esp + 0x18]
+        mul esi
+        add edx, ecx
+        jb quotient_too_large
+        cmp edx, [esp + 0x14]
+        ja quotient_too_large
+        jb quotient_in_range
+        cmp eax, [esp + 0x10]
+        jbe quotient_in_range
+    quotient_too_large:
+        dec esi
+    quotient_in_range:
+        xor edx, edx
+        mov eax, esi
+    quotient_ready:
+        dec edi
+        jne quotient_sign_done
+        neg edx
+        neg eax
+        sbb edx, 0
+    quotient_sign_done:
+        pop ebx
+        pop esi
+        pop edi
+        ret 0x10
+    zero_divisor:
+        xor eax, eax
+        xor edx, edx
+        pop ebx
+        pop esi
+        pop edi
+        ret 0x10
+    }
+}
+#else
 uint64_t crt_integer64_divide(uint32_t lo_a, uint32_t hi_a,
                               uint32_t lo_b, uint32_t hi_b)
 {
@@ -3791,6 +3900,7 @@ uint64_t crt_integer64_divide(uint32_t lo_a, uint32_t hi_a,
     }
     return ((uint64_t)quotient_hi << 32) | quotient_lo;
 }
+#endif
 
 /* CrtUnsigned64Divide (FUN_00498bf0, __aulldiv) — see crt.hpp. The
  * unsigned sibling: the same shift/trial/repair shape, so the same fold;

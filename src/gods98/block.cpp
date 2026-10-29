@@ -14,6 +14,9 @@
 #include "heap.hpp"
 #include "resource.hpp"
 
+/* FUN_0048d980's port lives in the game utility module. */
+extern "C" float util_atof(const char* s);
+
 typedef struct BlockRec {
     char* name;                 /* token pointer into BlockFile::buffer */
     char* value;                /* NULL = none; container value is "{" */
@@ -335,7 +338,6 @@ BlockRec* block_subgroup(BlockFile* bf, const char* path)
 /* --- accessors ------------------------------------------------------------ */
 
 const char* block_name(const BlockRec* r)  { return r ? r->name : NULL; }
-// FUNCTION: LEGORR 0x004790b0
 const char* block_value(const BlockRec* r) { return r ? r->value : NULL; }
 
 BlockRec* block_first_child(const BlockRec* r) { return r ? r->child : NULL; }
@@ -373,6 +375,7 @@ int block_get_str(BlockFile* bf, const char* path, char* buf, size_t sz)
     return 1;
 }
 
+// FUNCTION: LEGORR 0x004790b0
 const char* block_get_strptr(BlockFile* bf, const char* path)
 {
     BlockRec* r = block_find(bf, path);
@@ -626,11 +629,14 @@ int config_rgb_vector_read(BlockFile* bf, const char* path,
     return 1;
 }
 
-/* ReadAngleSettingRadians (FUN_00479110) — see block.hpp. */
+/* ReadAngleSettingRadians (FUN_00479110): the corpus tests the path getter,
+ * calls it again for a present value, and sends either that string or the
+ * empty literal through FUN_0048d980 before the zero gate and two x87 scales. */
 // FUNCTION: LEGORR 0x00479110
 float config_angle_radians_get(BlockFile* bf, const char* path)
 {
-    const float deg = block_get_float(bf, path, 0.0f);
+    const float deg = util_atof(block_get_strptr(bf, path) != NULL
+                                ? block_get_strptr(bf, path) : "");
     if (deg == 0.0f) {
         return 0.0f; /* the corpus gates the multiply on value != 0 */
     }

@@ -90,8 +90,11 @@ int catalog_callback_by_id_dispatch(const GameContext* ctx, int query,
                                     int (*callback)(int, int, int, void*),
                                     void* payload);     /* FUN_0041b680 */
 
-/* Resolver pair (FUN_0042e8b0, name -> (type, registry row)): table matches
- * write both outputs, the special names write only their dedicated rows.
+/* Resolver pair (FUN_0042e8b0, name -> (type, registry row)): the row slot
+ * is zeroed at entry (the corpus's blind `mov [ebx],0` at 0x42e8b8; the port
+ * guards it for NULL-threading callers); table matches then write both
+ * outputs, the special names write only their dedicated rows, so everything
+ * else answers a zero row.
  * The (name, &type, &row, NULL) corpus call form; NULL name answers 0. */
 int entity_type_row_for_name(const char* name, int* type_out, int* row_out);
 

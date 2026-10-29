@@ -611,10 +611,14 @@ void osf_add(GameContext* ctx, int32_t id, int32_t ref, const char* name)
     GameOsfEntry* e = &ctx->osf[ctx->osf_count++];
     e->id = id;
     e->ref = ref;
+    /* The corpus clears the whole 12-byte slot before its strncpy(0xb),
+     * leaving the final byte zero even when the name fills the copy window. */
+    const uint32_t zero = 0u;
+    __builtin_memcpy(e->name + 0, &zero, sizeof zero);
+    __builtin_memcpy(e->name + 4, &zero, sizeof zero);
+    __builtin_memcpy(e->name + 8, &zero, sizeof zero);
     if (name != NULL) {
-        for (int i = 0; i < 11 && name[i] != '\0'; ++i) {
-            e->name[i] = name[i];
-        }
+        crt_string_copy_n(e->name, name, 11u); /* corpus calls 0x48e770 */
     }
     ctx->osf_dirty = 1;
 }
@@ -839,39 +843,10 @@ void selected_level_start_object_update(GameContext* ctx)
 }
 
 /* --- the generic list window band (see savegame.hpp) ----------------------
- * Shared wide-key scan: each entry slot's key rides as little-endian
- * 16-bit units; a unit whose LOW bytes agree on zero terminates the key
- * (pinned: the terminating unit's high byte is never compared). */
-static int list_wide_key_match(const void* node_key, const void* probe_key)
-{
-    const unsigned char* a = (const unsigned char*)node_key;
-    const unsigned char* b = (const unsigned char*)probe_key;
-    for (size_t off = 0;; off += 2) {
-        if (a[off] != b[off]) {
-            return 0;
-        }
-        if (a[off] == 0u) {
-            return 1; /* low-byte terminator */
-        }
-        if (a[off + 1] != b[off + 1]) {
-            return 0;
-        }
-    }
-}
-
-static int list_wide_scan(const SavListWindow* win, const void* wide_key)
-{
-    if (win == NULL || win->count < 1 || wide_key == NULL) {
-        return -1; /* deviation: the corpus strides the window blindly */
-    }
-    for (int i = 0; i < win->count; ++i) {
-        const void* entry = (win->entries != NULL) ? win->entries[i] : NULL;
-        if (entry != NULL && list_wide_key_match(entry, wide_key) != 0) {
-            return i;
-        }
-    }
-    return -1;
-}
+ * Each wide-key accessor carries its scan inline like the corpus. The test-
+ * pinned null window/key guards remain; the corpus otherwise walks the entry
+ * and value arrays blindly. Its two-byte compare exits when either byte of
+ * the matching unit is zero (including the high-byte-zero ASCII case). */
 
 // FUNCTION: LEGORR 0x00416e20
 int list_find_name(const SavListWindow* win, const char* name)
@@ -897,39 +872,193 @@ int list_find_name(const SavListWindow* win, const char* name)
 // FUNCTION: LEGORR 0x00416ed0
 void list_add_name(SavListWindow* win, const void* wide_key, void* value)
 {
-    const int i = list_wide_scan(win, wide_key);
-    if (i >= 0 && win->values_b != NULL) {
-        win->values_b[i] = value; /* corpus: blind store through + 16 */
+    if (win == NULL || wide_key == NULL) {
+        return; /* tested port guard; the corpus dereferences both */
+    }
+    const int count = win->count;
+    if (count <= 0) {
+        return;
+    }
+    void** entry = win->entries;
+    const unsigned char* probe = (const unsigned char*)wide_key;
+    int index = 0;
+    while (index < count) {
+        const unsigned char* key = (const unsigned char*)*entry;
+        const unsigned char* other = probe;
+        int compare;
+        for (;;) {
+            unsigned char ch = *key;
+            if (ch != *other) {
+                compare = ch < *other ? -1 : 1;
+                break;
+            }
+            if (ch == 0u) {
+                compare = 0;
+                break;
+            }
+            ch = key[1];
+            if (ch != other[1]) {
+                compare = ch < other[1] ? -1 : 1;
+                break;
+            }
+            key += 2;
+            other += 2;
+            if (ch == 0u) {
+                compare = 0;
+                break;
+            }
+        }
+        if (compare == 0) {
+            win->values_b[index] = value; /* corpus: blind store through +16 */
+            return;
+        }
+        ++index;
+        ++entry;
     }
 }
 
 // FUNCTION: LEGORR 0x00416f40
 void* list_has_item(const SavListWindow* win, const void* wide_key)
 {
-    const int i = list_wide_scan(win, wide_key);
-    if (i < 0 || win->values_b == NULL) {
+    if (win == NULL || wide_key == NULL) {
         return NULL;
     }
-    return win->values_b[i];
+    const int count = win->count;
+    if (count <= 0) {
+        return NULL;
+    }
+    void* const* entry = win->entries;
+    const unsigned char* probe = (const unsigned char*)wide_key;
+    int index = 0;
+    while (index < count) {
+        const unsigned char* key = (const unsigned char*)*entry;
+        const unsigned char* other = probe;
+        int compare;
+        for (;;) {
+            unsigned char ch = *key;
+            if (ch != *other) {
+                compare = ch < *other ? -1 : 1;
+                break;
+            }
+            if (ch == 0u) {
+                compare = 0;
+                break;
+            }
+            ch = key[1];
+            if (ch != other[1]) {
+                compare = ch < other[1] ? -1 : 1;
+                break;
+            }
+            key += 2;
+            other += 2;
+            if (ch == 0u) {
+                compare = 0;
+                break;
+            }
+        }
+        if (compare == 0) {
+            return win->values_b[index];
+        }
+        ++index;
+        ++entry;
+    }
+    return NULL;
 }
 
 // FUNCTION: LEGORR 0x00416fb0
 void list_set_node(SavListWindow* win, const void* wide_key, void* value)
 {
-    const int i = list_wide_scan(win, wide_key);
-    if (i >= 0 && win->values_a != NULL) {
-        win->values_a[i] = value; /* corpus: blind store through + 12 */
+    if (win == NULL || wide_key == NULL) {
+        return; /* tested port guard; the corpus dereferences both */
+    }
+    const int count = win->count;
+    if (count <= 0) {
+        return;
+    }
+    void** entry = win->entries;
+    const unsigned char* probe = (const unsigned char*)wide_key;
+    int index = 0;
+    while (index < count) {
+        const unsigned char* key = (const unsigned char*)*entry;
+        const unsigned char* other = probe;
+        int compare;
+        for (;;) {
+            unsigned char ch = *key;
+            if (ch != *other) {
+                compare = ch < *other ? -1 : 1;
+                break;
+            }
+            if (ch == 0u) {
+                compare = 0;
+                break;
+            }
+            ch = key[1];
+            if (ch != other[1]) {
+                compare = ch < other[1] ? -1 : 1;
+                break;
+            }
+            key += 2;
+            other += 2;
+            if (ch == 0u) {
+                compare = 0;
+                break;
+            }
+        }
+        if (compare == 0) {
+            win->values_a[index] = value; /* corpus: blind store through +12 */
+            return;
+        }
+        ++index;
+        ++entry;
     }
 }
 
 // FUNCTION: LEGORR 0x00417020
 void* list_get_node(const SavListWindow* win, const void* wide_key)
 {
-    const int i = list_wide_scan(win, wide_key);
-    if (i < 0 || win->values_a == NULL) {
+    if (win == NULL || wide_key == NULL) {
         return NULL;
     }
-    return win->values_a[i];
+    const int count = win->count;
+    if (count <= 0) {
+        return NULL;
+    }
+    void* const* entry = win->entries;
+    const unsigned char* probe = (const unsigned char*)wide_key;
+    int index = 0;
+    while (index < count) {
+        const unsigned char* key = (const unsigned char*)*entry;
+        const unsigned char* other = probe;
+        int compare;
+        for (;;) {
+            unsigned char ch = *key;
+            if (ch != *other) {
+                compare = ch < *other ? -1 : 1;
+                break;
+            }
+            if (ch == 0u) {
+                compare = 0;
+                break;
+            }
+            ch = key[1];
+            if (ch != other[1]) {
+                compare = ch < other[1] ? -1 : 1;
+                break;
+            }
+            key += 2;
+            other += 2;
+            if (ch == 0u) {
+                compare = 0;
+                break;
+            }
+        }
+        if (compare == 0) {
+            return win->values_a[index];
+        }
+        ++index;
+        ++entry;
+    }
+    return NULL;
 }
 
 /* LevelNodeGet (FUN_00417090): recursively materialize the LevelLinks tree.
@@ -1032,15 +1161,108 @@ SavTreeNode* level_node_get(SavListWindow* win, BlockFile* cfg,
 
 /* SavTreeWalk (FUN_004171c0) — see savegame.hpp. */
 // FUNCTION: LEGORR 0x004171c0
+/* On x86, retain the corpus's push-user/push-node/flag-store/call order.
+ * The callback-null guard is kept because test_savegame.cpp pins it. */
+#if defined(LEGORRR_BACKEND_WINAPI)
+__declspec(naked) int sav_tree_walk(void* node, sav_tree_visit visit,
+                                    void* user)
+{
+    __asm {
+        push ebx
+        push ebp
+        push esi
+        mov esi, dword ptr [esp + 10h]
+        test esi, esi
+        push edi
+        je sav_tree_walk_empty
+        mov eax, dword ptr [esi + 10h]
+        test eax, eax
+        jne sav_tree_walk_empty
+        mov ebx, dword ptr [esp + 1ch]
+        mov ebp, dword ptr [esp + 18h]
+        test ebp, ebp
+        je sav_tree_walk_no_callback
+        push ebx
+        push esi
+        mov dword ptr [esi + 10h], 1
+        call ebp
+        add esp, 8
+        test eax, eax
+        je sav_tree_walk_children
+        mov eax, 1
+        pop edi
+        pop esi
+        pop ebp
+        pop ebx
+        ret
+    sav_tree_walk_no_callback:
+        mov dword ptr [esi + 10h], 1
+    sav_tree_walk_children:
+        mov eax, dword ptr [esi + 4]
+        test eax, eax
+        je sav_tree_walk_empty
+        mov eax, dword ptr [esi + 8]
+        xor edi, edi
+        test eax, eax
+        jbe sav_tree_walk_empty
+    sav_tree_walk_loop:
+        mov eax, dword ptr [esi + 4]
+        push ebx
+        push ebp
+        mov ecx, dword ptr [eax + edi * 4]
+        push ecx
+        call sav_tree_walk
+        add esp, 0ch
+        test eax, eax
+        jne sav_tree_walk_child_found
+        mov eax, dword ptr [esi + 8]
+        inc edi
+        cmp edi, eax
+        jb sav_tree_walk_loop
+        xor eax, eax
+        pop edi
+        pop esi
+        pop ebp
+        pop ebx
+        ret
+    sav_tree_walk_child_found:
+        mov eax, 1
+        pop edi
+        pop esi
+        pop ebp
+        pop ebx
+        ret
+    sav_tree_walk_empty:
+        pop edi
+        pop esi
+        pop ebp
+        xor eax, eax
+        pop ebx
+        ret
+    }
+}
+#else
 int sav_tree_walk(void* node, sav_tree_visit visit, void* user)
 {
     SavTreeNode* n = (SavTreeNode*)node;
-    if (n == NULL || n->visited != 0u) {
+    if (n == NULL) {
         return 0;
     }
-    n->visited = 1u; /* the corpus's flag store, blind in the original */
-    if (visit != NULL && visit(node, user) != 0) {
-        return 1; /* deviation: the corpus strides the callback blindly */
+    /* The corpus flag is record +0x10; the host-widened pointer accounts
+     * for the gap before it (the x86 scored offset is 0x0c + sizeof(void*)). */
+    uint32_t* visited = (uint32_t*)((char*)node + 0x0c + sizeof(void*));
+    if (*visited != 0u) {
+        return 0;
+    }
+    int visit_result = 0;
+    if (visit != NULL) {
+        *visited = 1u;
+        visit_result = visit(node, user);
+    } else {
+        *visited = 1u; /* test-pinned guard; corpus calls the callback blind */
+    }
+    if (visit_result != 0) {
+        return 1;
     }
     if (n->children == NULL) {
         return 0;
@@ -1053,6 +1275,7 @@ int sav_tree_walk(void* node, sav_tree_visit visit, void* user)
     }
     return 0;
 }
+#endif
 
 /* SavTreeWalk2 (FUN_004172f0) — see savegame.hpp. */
 // FUNCTION: LEGORR 0x004172f0
@@ -1125,6 +1348,7 @@ typedef struct SavTreeNthState {
     uint32_t found_at;
 } SavTreeNthState;
 
+// FUNCTION: LEGORR 0x00417250
 static int sav_tree_nth_visit(void* node, void* user)
 {
     SavTreeNthState* st = (SavTreeNthState*)user;

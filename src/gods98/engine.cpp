@@ -19,6 +19,13 @@ static uint32_t s_panel_highlight_flags; /* DAT_00556ed0 bit 0 */
 // GLOBAL: LEGORR 0x00556efc
 static float s_panel_highlight_timer;    /* DAT_00556efc 250-ms cooldown */
 
+/* PanelSelectionHighlightToggle compares against this file-backed .rdata
+ * dword (the PE bytes at 0x0049e2b8 are 00 00 00 00, +0.0f). Volatile
+ * preserves the corpus's explicit memory comparison instead of folding it
+ * to an immediate floating-point constant. */
+// GLOBAL: LEGORR 0x0049e2b8
+static const volatile float s_panel_highlight_zero = 0.0f;
+
 /* Frame tick — corpus EngineTick @ 0x4232e0. The numbered structure below
  * mirrors finding 03 §"Tick structure" and the first 130 lines of the corpus.
  * Every subsystem ticker is a registered stub in tickers.cpp whose function
@@ -374,12 +381,15 @@ void grid_cell_record_buffer_allocate(EngineState* block)
     }
     const int w = (int)block->grid_w;
     const int h = (int)block->grid_h;
-    /* Deviation: the port's cell record widens the entity slot, so the
-     * image strides 0x10 where the corpus strides 0x0c (see engine.hpp). */
-    void* buf = engine_heap_alloc((long)(w * h * 0x10));
+    /* The corpus uses 12-byte records on x86 (entity, timer, flags). The
+     * portable build widens the entity slot with sizeof(void*), retaining a
+     * 16-byte record on LP64 while naturally returning to 12 bytes on x86. */
+    const int cell_size = (int)sizeof(void*) + 8;
+    void* buf = engine_heap_alloc((long)(w * h * cell_size));
     if (buf != NULL) {
         uint32_t* p = (uint32_t*)buf;
-        for (uint32_t n = (uint32_t)(w * h * 4) & 0x3fffffffu; n != 0u; --n) {
+        for (uint32_t n = (uint32_t)(w * h * (cell_size / 4)) & 0x3fffffffu;
+             n != 0u; --n) {
             *p++ = 0u;
         }
     }
@@ -531,12 +541,14 @@ int camera_focus_scroll_scale_commit(const EngineContext* ctx,
  * rides two DAT globals, not the context: bit 0 of the shared debug/cheat
  * flag word DAT_00556ed0 (25 further corpus claimants — docs/dat/globals.csv)
  * and the cooldown timer DAT_00556efc, both in the zero-filled .data virtual
- * tail. The sound gate is the corpus's fld/fcomp/fnstsw, test ah,0x41, je:
- * the sound is skipped only while the timer is BELOW the .rdata constant
- * +0.0f @ 0x0049e2b8, i.e. it plays (and re-arms the timer to 250) when the
- * timer is >= +0.0f. The ctx parameter is port-only carry-over (callers and
- * tests use it — documented ctx-param mismatch class); the corpus's single
- * cdecl arg is the on/off select, mapped here to `on`. */
+ * tail. Its fld/fcomp/fnstsw, test ah,0x41, je gate is MSVC's `<=` shape
+ * against the .rdata +0.0f at 0x0049e2b8: only a strictly greater timer
+ * skips the sound; lesser and equal timers play and re-arm it. (The
+ * `!(timer > zero)` spelling folds to `zero >= timer` and emits the
+ * swapped-operand C0-only test instead — measured 84.4 vs 87.5.) The ctx
+ * parameter is a port-only API carry-over (callers/tests use it); the
+ * corpus has one cdecl argument, whereas this declaration's select is its
+ * second argument. */
 /* (The DAT objects live above EngineTick — single definition, two sites.) */
 
 // FUNCTION: LEGORR 0x00435aa0
@@ -545,7 +557,7 @@ void panel_selection_highlight_toggle(EngineContext* ctx, int on)
     (void)ctx; /* the corpus dereferences nothing; it only tests the arg */
     if (on != 0) {
         s_panel_highlight_flags = s_panel_highlight_flags | 1u;
-        if (!(s_panel_highlight_timer < 0.0f)) {
+        if (s_panel_highlight_timer <= s_panel_highlight_zero) {
             sound_alias_play(0x19, 0);
             s_panel_highlight_timer = 250.0f;
         }
@@ -591,23 +603,30 @@ static char* field_grid_cell(int x, int y)
     if (buf == NULL || desc == NULL) {
         return NULL; /* deviation: the corpus strides missing words blindly */
     }
-    return buf + ((size_t)((int)desc->grid_w * y + x) * 0x10u);
+    return buf + ((size_t)((int)desc->grid_w * y + x) *
+                   ((size_t)sizeof(void*) + 8u));
 }
 
 // FUNCTION: LEGORR 0x00466380
 void set_expansion_entity_at_grid_cell(int x, int y, void* entity)
 {
-    char* cell = field_grid_cell(x, y);
-    if (cell == NULL) {
+    if (s_field_grid_buf == NULL || s_field_grid_desc == NULL) {
         return; /* deviation: the corpus strides the missing grid blindly */
     }
-    __builtin_memcpy(cell + 0x00, &entity, sizeof entity);
-    uint32_t flags = 0u;
-    __builtin_memcpy(&flags, cell + 0x0c, sizeof flags);
-    flags |= 0x100u;
-    __builtin_memcpy(cell + 0x0c, &flags, sizeof flags);
-    const float timer = 100.0f; /* the corpus's 0x42c80000 store */
-    __builtin_memcpy(cell + 0x08, &timer, sizeof timer);
+    /* Preserve the corpus's repeated index calculation and write order. On
+     * x86 these expressions use stride 0x0c, flags at +8, and timer at +4:
+     * imul width*y; add x; lea index*3; then scale by four. */
+    *(void**)((char*)s_field_grid_buf +
+              ((int)s_field_grid_desc->grid_w * y + x) *
+                  ((int)sizeof(void*) + 8)) = entity;
+    uint32_t* flags = (uint32_t*)((char*)s_field_grid_buf +
+              ((int)s_field_grid_desc->grid_w * y + x) *
+                  ((int)sizeof(void*) + 8) + (int)sizeof(void*) + 4);
+    *flags = *flags | 0x100u;
+    *(uint32_t*)((char*)s_field_grid_buf +
+              ((int)s_field_grid_desc->grid_w * y + x) *
+                  ((int)sizeof(void*) + 8) + (int)sizeof(void*)) =
+        0x42c80000u;
 }
 
 // FUNCTION: LEGORR 0x00466750
@@ -635,9 +654,9 @@ void grid_cell_invalidate_and_clear_flags(int x, int y)
         }
     }
     uint32_t flags = 0u;
-    __builtin_memcpy(&flags, cell + 0x0c, sizeof flags);
+    __builtin_memcpy(&flags, cell + sizeof(void*) + 4, sizeof flags);
     flags &= 0xfffffeffu;
-    __builtin_memcpy(cell + 0x0c, &flags, sizeof flags);
+    __builtin_memcpy(cell + sizeof(void*) + 4, &flags, sizeof flags);
 }
 
 // FUNCTION: LEGORR 0x004663f0
