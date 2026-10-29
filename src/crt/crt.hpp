@@ -25,6 +25,10 @@ extern "C" {
  * otherwise. Returns the destination. */
 void* crt_memory_move(void* dest, const void* src, size_t count);
 
+/* VC5 single-thread CRT __ftol entry at 0x0048e060. Uses the active
+ * floating-point rounding mode, matching the x87 runtime helper. */
+int crt_float_to_long(float value);
+
 /* FUN_00417430: forwards a float to 32-bit integer conversion through
  * the CRT's __ftol routine. */
 int float_to_long(float value);

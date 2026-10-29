@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "gods98/crt.hpp"
+#include "crt/crt.hpp"
 #include "gods98/heap.hpp"
 
 static int s_failures = 0;

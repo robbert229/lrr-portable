@@ -153,6 +153,23 @@ void* crt_memory_move(void* dest, const void* src, size_t count)
     return memmove(dest, src, count);
 }
 
+/* The original address is the VC5 CRT's x87 float-to-long helper. */
+// LIBRARY: LEGORR 0x0048e060 SYMBOL
+// __ftol
+int crt_float_to_long(float value)
+{
+#if defined(_MSC_VER) && defined(_M_IX86)
+    int result;
+    __asm {
+        fld dword ptr [value]
+        fistp dword ptr [result]
+    }
+    return result;
+#else
+    return (int)nearbyintf(value);
+#endif
+}
+
 /* FUN_00417430: app helper that forwards to the CRT __ftol routine under
  * the truncate-toward-zero control word (findings 381/393). Overflow
  * values are outside the corpus's caller set (deviation in crt.hpp). */

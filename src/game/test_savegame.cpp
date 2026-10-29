@@ -11,7 +11,7 @@
 #include "game/game.hpp"
 #include "game/level.hpp"
 #include "game/savegame.hpp"
-#include "gods98/crt.hpp"   /* engine_feature_word_install: refresh gate */
+#include "crt/crt.hpp"   /* engine_feature_word_install: refresh gate */
 #include "gods98/texture.hpp"   /* texture_decode: `.dat` round-trip probe */
 
 static int s_failures = 0;

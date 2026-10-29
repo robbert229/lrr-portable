@@ -1203,7 +1203,7 @@ flag-clean variant stays `selection_clear`. `select_test` drives the
 gate, array identity/order, the count and the count-only reset.
 
 **CRT / compiler-runtime leaves** (2026-10-24; findings 260/381/393/394):
-three runtime thunks land in a new `src/gods98/crt.*` module with a
+three runtime thunks land in a new `src/crt/crt.*` module with a
 `crt` suite — `crt_memory_move` (`CrtMemoryMove @ 0x498000`; the
 corpus's word-loop/byte-tail copy with backward traversal for the
 overlapping case is byte-equivalent memmove), `float_to_long`
@@ -1245,7 +1245,7 @@ dot(d, n)` with the parallel answer 0), `line_intersection_2d_compute`
 returns NULL when parallel), and
 `sphere_ray_intersection_discriminant_positive` (`SphereRay… @
 0x479c10`, the corpus's discriminant expression verbatim). Six numeric
-runtime leaves join `src/gods98/crt.*` — `bit_count32` (`BitCount32 @
+runtime leaves join `src/crt/crt.*` — `bit_count32` (`BitCount32 @
 0x47d3f0`, clear-lowest loop), `pop_count32` (`PopCount32 @ 0x47d700`)
 and `bit_count32_by_position` (`BitCount32ByPosition @ 0x47e7e0`, the
 corpus's two identical position-loop bodies), `find_first_set_bit32`
@@ -1269,7 +1269,7 @@ arrays — the corpus reads the edge end through a lockstep pointer pair,
 and the boundary/zero-span quirks carry over) in `src/gods98/view.*`;
 `integer_pair_divide_to_float_pair` (`IntegerPairDivideToFloatPair @
 0x45b900`) and `float_pair_to_integer_pair` (`FloatPairToIntegerPair @
-0x45b930`, the two-shot `__ftol` pair truncation) in `src/gods98/crt.*`;
+0x45b930`, the two-shot `__ftol` pair truncation) in `src/crt/crt.*`;
 and `lwo_read_big_endian_float` (`LwoReadBigEndianFloat @ 0x48c1d0`) in
 `src/gods98/model.*` — the stream-cursor reader that byte-reverses four
 bytes and advances (the port's own model path parses via the `rrlwo`
@@ -1311,7 +1311,7 @@ slot or rect (documented deviation). `view_test` drives the corners, the
 truncated-offset shifts and the slot indirection.
 
 **CRT math and wide-string leaves** (2026-10-24; findings 302/342/377/
-397/399): four more runtime leaves join `src/gods98/crt.*` —
+397/399): four more runtime leaves join `src/crt/crt.*` —
 `crt_unsigned_add_with_carry` (`CrtUnsignedAddWithCarry @ 0x499fb0`, the
 carry primitive the corpus's 96-bit helpers build on), `double_classify`
 (`DoubleClassify @ 0x493a80`, the exponent+quiet-bit pattern classifier:
@@ -1343,7 +1343,7 @@ any-test across both flag words) and `entity_type3_flag04000000_test`
 relaxed pair and the kind test.
 
 **CRT format-argument cursor + exponent selector** (2026-10-24; findings
-231/386/395/399): four runtime leaves join `src/gods98/crt.*` — the
+231/386/395/399): four runtime leaves join `src/crt/crt.*` — the
 varargs-cursor trio `format_argument_read_dword` /
 `format_argument_read_word` / `format_argument_read_double`
 (`FormatArgumentReadDword @ 0x491430`, `FormatArgumentReadWord @
@@ -1536,7 +1536,7 @@ the split corners; `record_test` pins byte isolation.
 
 **Constant, stub and DAT-global band** (2026-10-24; findings 21/380/383/
 386/392/399/406/440/455): the pure pool's fixed-return leaves land where
-their roles live. In `src/gods98/crt.*`: the zero float (0x408930) and
+their roles live. In `src/crt/crt.*`: the zero float (0x408930) and
 the DirectSound minimum-volume `-10000` dword (0x47c160, corpus view
 `0xffffd8f0`), the zero processor-feature fallback (0x490230) and the
 FLH magic 'UU' silent leaf (0x456210), plus the two module-backed DAT

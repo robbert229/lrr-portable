@@ -13,7 +13,7 @@
 #include "gods98/resource.hpp"
 #include "gods98/sound.hpp"
 #include "gods98/string.hpp"
-#include "gods98/crt.hpp"
+#include "crt/crt.hpp"
 #include "gods98/view.hpp"
 #include "entity.hpp"
 #include "frontend.hpp"
@@ -1127,12 +1127,10 @@ uint8_t* level_voxel(const LevelState* s, int x, int y)
     return voxel_at((LevelState*)s, x, y);
 }
 
-/* The original address is the VC5 CRT's x87 float-to-long helper. */
-// LIBRARY: LEGORR 0x0048e060 SYMBOL
-// __ftol
+/* Level grid coordinates use the CRT's x87 float-to-long rounding. */
 int level_cell_of(float v)
 {
-    return (int)__builtin_nearbyintf(v);
+    return crt_float_to_long(v);
 }
 
 /* EntityPositionToTerrainCell (FUN_004424f0): the corpus obtains the

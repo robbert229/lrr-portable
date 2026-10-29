@@ -11,7 +11,7 @@
 #include "util.hpp"
 #include "gods98/engine.hpp"
 #include "entity.hpp"
-#include "gods98/crt.hpp"
+#include "crt/crt.hpp"
 #include "gods98/heap.hpp"
 #include "gods98/media.hpp"
 #include "gods98/message.hpp"

@@ -97,10 +97,11 @@ endif()
 
 set(ENGINE_DIR "${SRC_ROOT}/gods98")
 set(GAME_DIR "${SRC_ROOT}/game")
+set(CRT_DIR "${SRC_ROOT}/crt")
 set(PLATFORM_DIR "${SRC_ROOT}/platform")
 
 add_library(gods98 STATIC
-  ${ENGINE_DIR}/gods98.cpp ${ENGINE_DIR}/string.cpp ${ENGINE_DIR}/crt.cpp
+  ${ENGINE_DIR}/gods98.cpp ${ENGINE_DIR}/string.cpp ${CRT_DIR}/crt.cpp
   ${ENGINE_DIR}/heap.cpp ${ENGINE_DIR}/ptrstack.cpp ${ENGINE_DIR}/record.cpp
   ${ENGINE_DIR}/engine.cpp ${ENGINE_DIR}/tickers.cpp
   ${ENGINE_DIR}/resource.cpp ${ENGINE_DIR}/texture.cpp ${ENGINE_DIR}/sound.cpp
@@ -228,6 +229,10 @@ if(BUILD_TESTING AND PLATFORM STREQUAL "native")
     endif()
     set_tests_properties(${name} PROPERTIES LABELS ${name})
   endforeach()
+  add_executable(crt_test ${CRT_DIR}/test_crt.cpp)
+  target_link_libraries(crt_test PRIVATE gods98)
+  add_test(NAME crt COMMAND crt_test)
+  set_tests_properties(crt PROPERTIES LABELS crt)
   set(GAME_TESTS level objective savegame mission entity cmd select ai render bind frontend options)
   set(GAME_TEST_SOURCES test_level.cpp test_objective.cpp test_savegame.cpp test_mission.cpp
     test_entity.cpp test_cmd.cpp test_select.cpp test_ai.cpp test_render.cpp test_bind.cpp

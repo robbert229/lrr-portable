@@ -5,7 +5,7 @@
 
 #include "game.hpp"
 #include "gods98/block.hpp"
-#include "gods98/crt.hpp"
+#include "crt/crt.hpp"
 #include "gods98/engine.hpp"
 #include "gods98/heap.hpp"
 #include "gods98/resource.hpp"

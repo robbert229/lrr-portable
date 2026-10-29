@@ -8,7 +8,7 @@
 #include "view.hpp"
 #include "texture.hpp"
 #include "resource.hpp"
-#include "crt.hpp"
+#include "crt/crt.hpp"
 #include "game/util.hpp"
 #include <math.h>  /* sqrtf for the instance-quad normal window */
 #include <limits.h>
