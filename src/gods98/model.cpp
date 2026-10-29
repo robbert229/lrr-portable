@@ -979,8 +979,10 @@ char* lwo_string_duplicate(const char* text)
     if (text == NULL) {
         return NULL; /* deviation: the corpus dereferences blindly */
     }
-    const size_t len1 = strlen(text) + 1u;
-    const size_t size = len1 + (len1 & 1u); /* even-grained corpus size */
+    size_t size = strlen(text);
+    size_t alignment = ++size; /* corpus: INC ESI, then copy ESI to EAX */
+    alignment &= 1u;           /* corpus: AND EAX, 1 */
+    size += alignment;         /* corpus: ADD ESI, EAX; even-grained size */
     char* copy = (char*)engine_heap_alloc((long)size);
     /* Corpus parity: the copy is filled unchecked — sole-caller audit found
      * no test or caller that survives a NULL allocator answer anyway. */

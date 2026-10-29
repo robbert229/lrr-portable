@@ -19,6 +19,13 @@ static uint32_t s_panel_highlight_flags; /* DAT_00556ed0 bit 0 */
 // GLOBAL: LEGORR 0x00556efc
 static float s_panel_highlight_timer;    /* DAT_00556efc 250-ms cooldown */
 
+/* PanelSelectionHighlightToggle compares against this file-backed .rdata
+ * dword (the PE bytes at 0x0049e2b8 are 00 00 00 00, +0.0f). Volatile
+ * preserves the corpus's explicit memory comparison instead of folding it
+ * to an immediate floating-point constant. */
+// GLOBAL: LEGORR 0x0049e2b8
+static const volatile float s_panel_highlight_zero = 0.0f;
+
 /* Frame tick — corpus EngineTick @ 0x4232e0. The numbered structure below
  * mirrors finding 03 §"Tick structure" and the first 130 lines of the corpus.
  * Every subsystem ticker is a registered stub in tickers.cpp whose function
@@ -534,12 +541,14 @@ int camera_focus_scroll_scale_commit(const EngineContext* ctx,
  * rides two DAT globals, not the context: bit 0 of the shared debug/cheat
  * flag word DAT_00556ed0 (25 further corpus claimants — docs/dat/globals.csv)
  * and the cooldown timer DAT_00556efc, both in the zero-filled .data virtual
- * tail. The sound gate is the corpus's fld/fcomp/fnstsw, test ah,0x41, je:
- * the sound is skipped only while the timer is BELOW the .rdata constant
- * +0.0f @ 0x0049e2b8, i.e. it plays (and re-arms the timer to 250) when the
- * timer is >= +0.0f. The ctx parameter is port-only carry-over (callers and
- * tests use it — documented ctx-param mismatch class); the corpus's single
- * cdecl arg is the on/off select, mapped here to `on`. */
+ * tail. Its fld/fcomp/fnstsw, test ah,0x41, je gate is MSVC's `<=` shape
+ * against the .rdata +0.0f at 0x0049e2b8: only a strictly greater timer
+ * skips the sound; lesser and equal timers play and re-arm it. (The
+ * `!(timer > zero)` spelling folds to `zero >= timer` and emits the
+ * swapped-operand C0-only test instead — measured 84.4 vs 87.5.) The ctx
+ * parameter is a port-only API carry-over (callers/tests use it); the
+ * corpus has one cdecl argument, whereas this declaration's select is its
+ * second argument. */
 /* (The DAT objects live above EngineTick — single definition, two sites.) */
 
 // FUNCTION: LEGORR 0x00435aa0
@@ -548,7 +557,7 @@ void panel_selection_highlight_toggle(EngineContext* ctx, int on)
     (void)ctx; /* the corpus dereferences nothing; it only tests the arg */
     if (on != 0) {
         s_panel_highlight_flags = s_panel_highlight_flags | 1u;
-        if (!(s_panel_highlight_timer < 0.0f)) {
+        if (s_panel_highlight_timer <= s_panel_highlight_zero) {
             sound_alias_play(0x19, 0);
             s_panel_highlight_timer = 250.0f;
         }

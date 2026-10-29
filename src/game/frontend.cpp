@@ -349,7 +349,8 @@ int named_option_index_find_case_insensitive(const char* name,
 {
     const char* const* p = s_keyboard_key_names;
     int index = 0;
-    do {
+    while (p < s_keyboard_key_names +
+                (sizeof(s_keyboard_key_names) / sizeof(s_keyboard_key_names[0]))) {
         const char* entry = *p;
         if (entry != NULL && strcasecmp_lite(entry, name) == 0) {
             *out_index = (uint8_t)index;
@@ -357,8 +358,7 @@ int named_option_index_find_case_insensitive(const char* name,
         }
         ++p;
         ++index;
-    } while (p < s_keyboard_key_names +
-                 (sizeof(s_keyboard_key_names) / sizeof(s_keyboard_key_names[0])));
+    }
     return 0;
 }
 
@@ -644,15 +644,33 @@ static int fe_build_chain(BlockFile* cfg, const char* start_key,
  * switch routes to the generic banner arm; the earlier local spelling
  * (s_strcaseeq, no "next" case, unknown folded to Next) predates the
  * corpus read. */
+/* The corpus compares against its .data token strings at 0x4a23ac..0x4a23e3
+ * (eight/12-byte strides, image bytes verified against the reference PE:
+ * next, realslider, slider, textinput, trigger, cycle). Annotating them as
+ * DATs lets each `push` land on the corpus's immediate address — the six
+ * `push imm` vs `push STRING` pairs were this function's entire residual. */
+// GLOBAL: LEGORR 0x004a23ac
+static const char s_item_token_next[5] = "next";
+// GLOBAL: LEGORR 0x004a23b4
+static const char s_item_token_realslider[11] = "realslider";
+// GLOBAL: LEGORR 0x004a23c0
+static const char s_item_token_slider[7] = "slider";
+// GLOBAL: LEGORR 0x004a23c8
+static const char s_item_token_textinput[10] = "textinput";
+// GLOBAL: LEGORR 0x004a23d4
+static const char s_item_token_trigger[8] = "trigger";
+// GLOBAL: LEGORR 0x004a23dc
+static const char s_item_token_cycle[6] = "cycle";
+
 // FUNCTION: LEGORR 0x00413e60
 static int fe_item_kind(const char* tok)
 {
-    if (strcasecmp_lite(tok, "cycle") == 0)      return FE_ITEM_CYCLE;
-    if (strcasecmp_lite(tok, "trigger") == 0)    return FE_ITEM_TRIGGER;
-    if (strcasecmp_lite(tok, "textinput") == 0)  return FE_ITEM_TEXTINPUT;
-    if (strcasecmp_lite(tok, "slider") == 0)     return FE_ITEM_SLIDER;
-    if (strcasecmp_lite(tok, "realslider") == 0) return FE_ITEM_REALSLIDER;
-    return strcasecmp_lite(tok, "next") == 0 ? FE_ITEM_NEXT : -1;
+    if (strcasecmp_lite(tok, s_item_token_cycle) == 0)      return FE_ITEM_CYCLE;
+    if (strcasecmp_lite(tok, s_item_token_trigger) == 0)    return FE_ITEM_TRIGGER;
+    if (strcasecmp_lite(tok, s_item_token_textinput) == 0)  return FE_ITEM_TEXTINPUT;
+    if (strcasecmp_lite(tok, s_item_token_slider) == 0)     return FE_ITEM_SLIDER;
+    if (strcasecmp_lite(tok, s_item_token_realslider) == 0) return FE_ITEM_REALSLIDER;
+    return strcasecmp_lite(tok, s_item_token_next) == 0 ? FE_ITEM_NEXT : -1;
 }
 
 /* Slider initial values per banner — the corpus's option defaults

@@ -193,11 +193,12 @@ const char* case_insensitive_substring_find(const char* haystack,
     if (haystack == NULL || needle == NULL) {
         return NULL; /* pinned deviation: the corpus dereferences both blindly */
     }
-    /* Corpus walk: two intrinsic strlens into registers, two separate
-     * zero-length gates, then a walking haystack pointer beside an inc
-     * counter with an unsigned bound (the needle is re-read from its stack
-     * slot every pass, the length hoisted once into ebp). */
-    const unsigned hlen = (unsigned)strlen(haystack);
+    /* Corpus walk: keep the haystack pointer in its walking register before
+     * the two intrinsic strlen scans, then use separate zero-length gates
+     * and an unsigned bound beside an incrementing counter (the needle is
+     * re-read from its stack slot every pass, the length hoisted into ebp). */
+    const char* hay = haystack;
+    const unsigned hlen = (unsigned)strlen(hay);
     const unsigned nlen = (unsigned)strlen(needle);
     if (hlen == 0u) {
         return NULL; /* pinned: the corpus's strlen-shaped gate */
@@ -205,7 +206,6 @@ const char* case_insensitive_substring_find(const char* haystack,
     if (nlen == 0u) {
         return NULL; /* pinned: the corpus's strlen-shaped gate */
     }
-    const char* hay = haystack;
     for (unsigned i = 0; i < hlen; ++i) {
         if (strnicmp_lite(hay, needle, (int)nlen) == 0) {
             return hay;

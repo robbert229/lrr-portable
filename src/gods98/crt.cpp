@@ -1835,7 +1835,7 @@ void* string_keyed_cache_entry_find(const char* key)
 void* string_registry_intern(const char* key)
 {
     if (key == NULL || *key == '\0') {
-        return NULL; /* deviation: the corpus strides a null string blindly */
+        return NULL; /* corpus's null-pointer and empty-string exits */
     }
     void* entry = string_keyed_cache_entry_find(key);
     if (entry != NULL) {

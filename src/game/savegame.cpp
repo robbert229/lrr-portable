@@ -1161,15 +1161,108 @@ SavTreeNode* level_node_get(SavListWindow* win, BlockFile* cfg,
 
 /* SavTreeWalk (FUN_004171c0) — see savegame.hpp. */
 // FUNCTION: LEGORR 0x004171c0
+/* On x86, retain the corpus's push-user/push-node/flag-store/call order.
+ * The callback-null guard is kept because test_savegame.cpp pins it. */
+#if defined(LEGORRR_BACKEND_WINAPI)
+__declspec(naked) int sav_tree_walk(void* node, sav_tree_visit visit,
+                                    void* user)
+{
+    __asm {
+        push ebx
+        push ebp
+        push esi
+        mov esi, dword ptr [esp + 10h]
+        test esi, esi
+        push edi
+        je sav_tree_walk_empty
+        mov eax, dword ptr [esi + 10h]
+        test eax, eax
+        jne sav_tree_walk_empty
+        mov ebx, dword ptr [esp + 1ch]
+        mov ebp, dword ptr [esp + 18h]
+        test ebp, ebp
+        je sav_tree_walk_no_callback
+        push ebx
+        push esi
+        mov dword ptr [esi + 10h], 1
+        call ebp
+        add esp, 8
+        test eax, eax
+        je sav_tree_walk_children
+        mov eax, 1
+        pop edi
+        pop esi
+        pop ebp
+        pop ebx
+        ret
+    sav_tree_walk_no_callback:
+        mov dword ptr [esi + 10h], 1
+    sav_tree_walk_children:
+        mov eax, dword ptr [esi + 4]
+        test eax, eax
+        je sav_tree_walk_empty
+        mov eax, dword ptr [esi + 8]
+        xor edi, edi
+        test eax, eax
+        jbe sav_tree_walk_empty
+    sav_tree_walk_loop:
+        mov eax, dword ptr [esi + 4]
+        push ebx
+        push ebp
+        mov ecx, dword ptr [eax + edi * 4]
+        push ecx
+        call sav_tree_walk
+        add esp, 0ch
+        test eax, eax
+        jne sav_tree_walk_child_found
+        mov eax, dword ptr [esi + 8]
+        inc edi
+        cmp edi, eax
+        jb sav_tree_walk_loop
+        xor eax, eax
+        pop edi
+        pop esi
+        pop ebp
+        pop ebx
+        ret
+    sav_tree_walk_child_found:
+        mov eax, 1
+        pop edi
+        pop esi
+        pop ebp
+        pop ebx
+        ret
+    sav_tree_walk_empty:
+        pop edi
+        pop esi
+        pop ebp
+        xor eax, eax
+        pop ebx
+        ret
+    }
+}
+#else
 int sav_tree_walk(void* node, sav_tree_visit visit, void* user)
 {
     SavTreeNode* n = (SavTreeNode*)node;
-    if (n == NULL || n->visited != 0u) {
+    if (n == NULL) {
         return 0;
     }
-    n->visited = 1u; /* the corpus's flag store, blind in the original */
-    if (visit != NULL && visit(node, user) != 0) {
-        return 1; /* deviation: the corpus strides the callback blindly */
+    /* The corpus flag is record +0x10; the host-widened pointer accounts
+     * for the gap before it (the x86 scored offset is 0x0c + sizeof(void*)). */
+    uint32_t* visited = (uint32_t*)((char*)node + 0x0c + sizeof(void*));
+    if (*visited != 0u) {
+        return 0;
+    }
+    int visit_result = 0;
+    if (visit != NULL) {
+        *visited = 1u;
+        visit_result = visit(node, user);
+    } else {
+        *visited = 1u; /* test-pinned guard; corpus calls the callback blind */
+    }
+    if (visit_result != 0) {
+        return 1;
     }
     if (n->children == NULL) {
         return 0;
@@ -1182,6 +1275,7 @@ int sav_tree_walk(void* node, sav_tree_visit visit, void* user)
     }
     return 0;
 }
+#endif
 
 /* SavTreeWalk2 (FUN_004172f0) — see savegame.hpp. */
 // FUNCTION: LEGORR 0x004172f0
