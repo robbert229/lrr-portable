@@ -2561,5 +2561,5 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0049dab0,__strnicmp,runtime-import,__strnicmp,0,2043
 0049db60,FUN_0049db60,ported,SignedDecimalToStringConvert,3,242
 0049dba0,FUN_0049dba0,ported,CrtUnsignedIntegerFormatRadix,3,813
-0049dc10,FUN_0049dc10,ported,StringToLowercase,4,1497
-0049dcd0,FUN_0049dcd0,ported,StringToUpper,4,1499
+0049dc10,FUN_0049dc10,runtime-library,StringToLowercase,4,1497
+0049dcd0,FUN_0049dcd0,runtime-library,StringToUpper,4,1499

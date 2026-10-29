@@ -2,18 +2,19 @@
 
 ## VC5 static CRT profile
 
-The original `LegoRR.exe` has no `MSVCRT.DLL` import, and its `memmove`,
-`strncpy`, and `__ftol` bodies match the corresponding objects in the installed
-VC5 static CRT. The Reccmp profile therefore selects the multithreaded static
-CRT (`LIBCMT.LIB`, selected by `/MT`) instead of CMake's default `/MD` import
-library. The lack of a `MSVCRT.DLL` import establishes static/embedded CRT
-code, but does not by itself distinguish VC5 `/ML` from `/MT`; `/MT` is the
-profile chosen here because its library members match the identified routines.
-`tools/reprobit.sh` supplies the same archive to ReproBit's link model. The
-MinGW cross build remains a compatibility build and keeps its own CRT.
+The original `LegoRR.exe` has no `MSVCRT.DLL` import. Its `memmove`,
+`strncpy`, `__ftol`, `__strlwr`, and `__strupr` bodies match objects in the
+installed VC5 single-thread static CRT (`LIBC.LIB`, selected by `/ML`). The
+lower/upper conversion bodies distinguish this profile from the multithreaded
+`LIBCMT.LIB`: their machine code matches the single-thread objects. CMake's
+Reccmp profile removes any dynamic/multithread runtime switch before adding
+`/ML`, and `tools/reprobit.sh` supplies the same archive to ReproBit's link
+model. The MinGW cross build remains a compatibility build and keeps its own
+CRT.
 
 The confirmed library routines use Reccmp `LIBRARY` symbol annotations:
-`memmove @ 0x00498000`, `strncpy @ 0x0048e770`, and `__ftol @ 0x0048e060`.
+`memmove @ 0x00498000`, `strncpy @ 0x0048e770`, `__ftol @ 0x0048e060`,
+`__strlwr @ 0x0049dc10`, and `__strupr @ 0x0049dcd0`.
 `FloatToLong @ 0x00417430` remains a game function that forwards to `__ftol`.
 The normal report still includes them; `tools/reccmp.sh` also writes a
 `game-only.html` / `game-only.json` report with Reccmp's `--nolib` filter.

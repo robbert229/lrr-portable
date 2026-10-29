@@ -951,11 +951,12 @@ void crt_unsigned_format_radix(uint32_t value, char* out, int radix,
 char* crt_signed_to_string(int value, char* out, int radix);
 
 /* StringToUpper / StringToLowercase (FUN_0049dcd0 / FUN_0049dc10): the
- * corpus's C-locale half (DAT_00549180 == 0, the port's pinned locale
- * per KeyToAscii) folds A-Z / a-z in place; the locale half rides the
- * unported locale-map chain (recorded). The conversion covers the whole
- * string; the return is the buffer. Deviation: the corpus strides the
- * buffer blindly; the port guards the null pointer. */
+ * VC5 Reccmp profile calls the matching __strupr / __strlwr objects from
+ * LIBC.LIB. Other backends use the local equivalent: the C-locale path
+ * folds ASCII letters in place, and the locale path uses the recorded
+ * locale-map chain. The conversion covers the whole string; the return is
+ * the buffer. The portable implementation guards null; VC5 retains the
+ * CRT routine's behavior. */
 char* crt_string_to_upper(char* text);   /* FUN_0049dcd0 */
 char* crt_string_to_lower(char* text);   /* FUN_0049dc10 */
 

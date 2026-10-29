@@ -16,7 +16,7 @@ rbit import cmake "${project_root}" \
   --refresh --cmake cmake --configuration RelWithDebInfo --timeout 600 \
   --cmake-define PLATFORM=winapi \
   --cmake-define LRR_CLASSIC_MSVC5=ON \
-  --directive-input program=libcmt.lib \
+  --directive-input program=libc.lib \
   --directive-input program=oldnames.lib
 
 REPROBIT_MSVC_5_0_RTM_ROOT="${toolchain_root}" \

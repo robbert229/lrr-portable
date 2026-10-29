@@ -2,13 +2,15 @@
 cmake_minimum_required(VERSION 3.20)
 
 # The original LegoRR executable has no MSVCRT.DLL import table entry, so its
-# VC5 CRT is linked into the image. Keep the Reccmp build on the matching
-# static runtime instead of CMake's default /MD DLL runtime.
+# VC5 CRT is linked into the image. Reccmp has matched CRT objects from the
+# VC5 single-thread static runtime (/ML, LIBC.LIB).
 if(LRR_CLASSIC_MSVC5)
   if(POLICY CMP0091)
     cmake_policy(SET CMP0091 NEW)
   endif()
-  set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded")
+  # CMake has no model for VC5's single-thread /ML runtime. Disable its
+  # default /MD selection; the classic-profile flags below supply /ML.
+  set(CMAKE_MSVC_RUNTIME_LIBRARY "")
 endif()
 
 project(lrr-portable VERSION 0.1.0 LANGUAGES CXX)
@@ -35,8 +37,12 @@ if(LRR_CLASSIC_MSVC5)
   # toolchain's ReproBit command model does not admit.
   include_directories(BEFORE "${CMAKE_CURRENT_SOURCE_DIR}/src/compat/msvc5")
 
-  string(REGEX REPLACE "[ /]Zm[0-9]+" "" _classic_cxx_flags " ${CMAKE_CXX_FLAGS}")
+  string(REGEX REPLACE "[ /-][Mm][DdTtLl][Dd]?" "" _classic_cxx_flags
+    " ${CMAKE_CXX_FLAGS}")
+  string(REGEX REPLACE "[ /]Zm[0-9]+" "" _classic_cxx_flags
+    "${_classic_cxx_flags}")
   string(STRIP "${_classic_cxx_flags}" _classic_cxx_flags)
+  string(APPEND _classic_cxx_flags " /ML")
   set(CMAKE_CXX_FLAGS "${_classic_cxx_flags}" CACHE STRING
     "Classic MSVC 5.0 compatible compiler flags" FORCE)
 

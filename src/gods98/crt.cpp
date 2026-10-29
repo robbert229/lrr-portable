@@ -3652,9 +3652,14 @@ char* crt_signed_to_string(int value, char* out, int radix)
 // GLOBAL: LEGORR 0x00549180
 static uint32_t s_crt_locale_handle; /* DAT_00549180: zero-init locale handle */
 
-// FUNCTION: LEGORR 0x0049dcd0
+// LIBRARY: LEGORR 0x0049dcd0 SYMBOL
+// __strupr
 char* crt_string_to_upper(char* text)
 {
+#if defined(_MSC_VER)
+    /* The VC5 /ML build links this exact original CRT routine. */
+    return _strupr(text);
+#else
     if (text == NULL) {
         return NULL;
     }
@@ -3687,11 +3692,17 @@ char* crt_string_to_upper(char* text)
         }
     }
     return original;
+#endif
 }
 
-// FUNCTION: LEGORR 0x0049dc10
+// LIBRARY: LEGORR 0x0049dc10 SYMBOL
+// __strlwr
 char* crt_string_to_lower(char* text)
 {
+#if defined(_MSC_VER)
+    /* The VC5 /ML build links this exact original CRT routine. */
+    return _strlwr(text);
+#else
     if (text == NULL) {
         return NULL;
     }
@@ -3724,6 +3735,7 @@ char* crt_string_to_lower(char* text)
         }
     }
     return original;
+#endif
 }
 
 /* --- math error band (2026-10-25) -------------------------------------------
