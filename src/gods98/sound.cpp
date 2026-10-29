@@ -19,7 +19,8 @@ typedef struct BankSlot {
 } BankSlot;
 
 static BankSlot s_bank[SOUND_BANK_SLOTS];
-static int      s_bank_sound_on = 1; /* DAT_00533878 seam, see sound.hpp */
+// GLOBAL: LEGORR 0x00533878
+int             s_bank_sound_on = 1; /* DAT_00533878 seam, see sound.hpp */
 
 /* ------------------------------------------------------------------ *
  *  RIFF/WAVE parse (finding 14 §2).
@@ -256,7 +257,10 @@ int sound_bank_free_slot_find(int* out_slot)
 // FUNCTION: LEGORR 0x0047a850
 int sound_volume_value_valid(int millibels)
 {
-    /* SoundVolumeValueValid @ 0x47a850: (-10001 < v < 1). */
+    /* SoundVolumeValueValid @ 0x47a850: (-10001 < v < 1). Deviation: the
+     * corpus gates with test/jg then cmp -10000/jl; MSVC5 canonicalizes
+     * the split-gate source shape into cmp/setge form, so keep the
+     * two-sided expression which scores best. */
     return (millibels < 1 && -10001 < millibels) ? 1 : 0;
 }
 
@@ -432,6 +436,7 @@ static int   s_alias_dynamic_count;
 /* The corpus's DAT_00502a2c sound flag word: bit 0 subsystem-enabled
  * (enable-set @ 0x465260), bit 1 dynamic-alias registration, bit 3 batch
  * mode (batch-mode-get @ 0x4652b0). */
+// GLOBAL: LEGORR 0x00502a2c
 static uint32_t s_sound_flags;
 
 /* _DAT_00502b2c — the global-cooldown word (the corpus types it as a
@@ -540,6 +545,16 @@ const char* sound_alias_name(int index)
  *  finding 137 flag word DAT_00502a2c).
  * ------------------------------------------------------------------ */
 
+/* SoundSubsystemStopAll @ 0x47b160 — the corpus's disable seam. Its
+ * instance-chain walk over the live playback list lands with the instance
+ * layer; until then the port's disable leaves playback running (documented
+ * deviation, see sound.hpp). */
+// STUB: LEGORR 0x0047b160
+static void s_subsystem_stop_all(void)
+{
+    /* TODO(corpus): walk the instance chain and stop each voice. */
+}
+
 // FUNCTION: LEGORR 0x00465260
 void sound_subsystem_enable_set(int enable, int stop_active)
 {
@@ -548,11 +563,13 @@ void sound_subsystem_enable_set(int enable, int stop_active)
         s_sound_flags |= SOUND_FLAG_ENABLED;
         return;
     }
-    s_sound_flags &= ~SOUND_FLAG_ENABLED;
+    /* Corpus disable order: the flag word is read once, bit 0 cleared and
+     * stored back before stop_active is tested — the store precedes the
+     * stop call, and both sub-paths then zero the cooldown word. */
+    uint32_t cleared = s_sound_flags & ~SOUND_FLAG_ENABLED;
+    s_sound_flags = cleared;
     if (stop_active != 0) {
-        /* Corpus stop seam (instance-chain walk, TODO(corpus) — see
-         * sound.hpp). Deviation: the port's disable leaves live playback
-         * running until the instance layer lands. */
+        s_subsystem_stop_all();
     }
     s_cooldown_alias = 0.0;
 }
@@ -587,15 +604,21 @@ double sound_deferred_last_alias(void)
  *  Deferred sound request queue (issue #317). See sound.hpp.
  * ------------------------------------------------------------------ */
 
+// GLOBAL: LEGORR 0x00502b30
 static int s_queue_alias[SOUND_REQUEST_QUEUE_CAPACITY];  /* DAT_00502b30 */
+// GLOBAL: LEGORR 0x00502b58
 static int s_queue_loop[SOUND_REQUEST_QUEUE_CAPACITY];   /* DAT_00502b58 */
+// GLOBAL: LEGORR 0x00502bd0
 static int s_queue_count;                                /* DAT_00502bd0 */
 
 // FUNCTION: LEGORR 0x00464f60
 void sound_request_queue_submit(int alias, int loop)
 {
     /* SoundRequestQueueSubmit @ 0x464f60. */
-    if (s_queue_count >= SOUND_REQUEST_QUEUE_CAPACITY) {
+    /* 0x464f68 uses the unsigned `jae` full gate. The private count starts at
+     * zero and only this bounded submit path increments it. */
+    if ((unsigned int)s_queue_count >=
+        (unsigned int)SOUND_REQUEST_QUEUE_CAPACITY) {
         return; /* corpus drop-on-full: no counter bump, no error */
     }
     s_queue_alias[s_queue_count] = alias;
@@ -633,14 +656,23 @@ void sound_request_queue_clear(void)
  *  Deferred-play global cooldown (issues #326 / #327). See sound.hpp.
  * ------------------------------------------------------------------ */
 
+// GLOBAL: LEGORR 0x00502b24
 static float s_cooldown_timer;   /* _DAT_00502b24 (zero-initialised) */
+// GLOBAL: LEGORR 0x00502b28
 static int   s_cooldown_handle;  /* DAT_00502b28  (zero-initialised) */
+
+/* The corpus compares against a file-backed .rdata dword (0x49e73c, bytes
+ * 00 00 00 00). A const zero-initialized static lands with real file bytes
+ * in .rdata — plain zero-initialized storage would sit in the image's zero
+ * tail, which reccmp-datacmp reads as uninitialized. */
+// GLOBAL: LEGORR 0x0049e73c
+static const float s_deferred_zero = 0.0f; /* DAT_0049e73c role: 0.0 constant */
 
 // FUNCTION: LEGORR 0x00464ec0
 int sound_deferred_timer_set_if_idle(float seconds)
 {
     /* DeferredSoundTimerSetIfIdle @ 0x464ec0. */
-    if (s_cooldown_timer <= 0.0f) {
+    if (s_cooldown_timer <= s_deferred_zero) {
         s_cooldown_handle = -1;
         s_cooldown_timer = seconds;
         return 1;
@@ -903,11 +935,12 @@ void sound_bank_entry_volume_set(int slot, int millibels)
 // FUNCTION: LEGORR 0x00465010
 void sound_variant_property_set(int alias_index, int millibels)
 {
-    /* ConfiguredVariantPropertySet @ 0x465010. Deviation: the corpus's
-     * millibel argument is register-passed and invisible to the
-     * decompile, so the port takes it explicitly (issue #319). */
-    int slot = sound_variant_select(alias_index);
-    sound_bank_entry_volume_set(slot, millibels);
+    /* ConfiguredVariantPropertySet @ 0x465010. Keep the selector nested in
+     * the volume setter's first argument: MSVC 5 /Od evaluates the setter's
+     * right argument first, staging millibels before calling the selector.
+     * The corpus loads [esp+8] then [esp+4], pushes value then alias, calls
+     * the selector, and reuses the staged value for the volume write. */
+    sound_bank_entry_volume_set(sound_variant_select(alias_index), millibels);
 }
 
 // FUNCTION: LEGORR 0x00465030
@@ -935,13 +968,18 @@ typedef struct BatchEntry {
     uint32_t mode;       /* +20 DAT_00502a44 */
 } BatchEntry;
 
+// GLOBAL: LEGORR 0x00502a44
 static BatchEntry s_batch_entry[SOUND_BATCH_QUEUE_CAPACITY];
+// GLOBAL: LEGORR 0x00502b20
 static int        s_batch_count;   /* DAT_00502b20 */
 
 /* The frame tick's active replay copies (DAT_00502b80 alias words,
  * DAT_00502ba8 loop words, count DAT_00502bd4). */
+// GLOBAL: LEGORR 0x00502b80
 static int s_active_alias[SOUND_REQUEST_QUEUE_CAPACITY];
+// GLOBAL: LEGORR 0x00502ba8
 static int s_active_loop[SOUND_REQUEST_QUEUE_CAPACITY];
+// GLOBAL: LEGORR 0x00502bd4
 static int s_active_count;
 
 /* Instance-layer play seam: the corpus hands (mode, position, bank
@@ -999,7 +1037,10 @@ int sound_positional_sound_submit(int position, int alias, int loop,
                 }
             }
         }
-    } else if (s_batch_count < SOUND_BATCH_QUEUE_CAPACITY) {
+    /* ORIG 0x4650a4 also uses `jae`; the queue count is bounded by both
+     * append gates and reset by replay drain @ 0x4652d0. */
+    } else if ((unsigned int)s_batch_count <
+               (unsigned int)SOUND_BATCH_QUEUE_CAPACITY) {
         BatchEntry* e = &s_batch_entry[s_batch_count];
         ++s_batch_count;
         e->alias = alias;
@@ -1027,7 +1068,10 @@ void sound_batch_queue_drain(int batch_set, int replay)
     if (replay == 0) {
         return;
     }
-    for (int i = 0; i < s_batch_count; ++i) {
+    /* The corpus uses an unsigned zero gate and an unsigned back edge
+     * (0x465309 jbe / 0x46535a jb). Both append sites cap this private
+     * count at SOUND_BATCH_QUEUE_CAPACITY, so it remains nonnegative. */
+    for (unsigned int i = 0; i < (unsigned int)s_batch_count; ++i) {
         const BatchEntry* e = &s_batch_entry[i];
         const uint32_t m = e->mode;
         if ((m & 1u) == 0) {
@@ -1086,19 +1130,24 @@ void sound_subsystem_frame_tick(float dt)
     int i;
     s_cooldown_timer -= dt;            /* _DAT_00502b24 step */
     sound_batch_queue_drain(0, 0);     /* batch off for the replay pass */
-    for (i = 0; i < s_active_count; ++i) {
+    /* Replay pass: the corpus re-reads the active count every iteration
+     * (0x4651e2) and gates it unsigned, so neither is hoisted. */
+    for (i = 0; i < (unsigned) s_active_count; ++i) {
         sound_alias_play(s_active_alias[i], s_active_loop[i]);
     }
     if (batch_saved != 0) {
         sound_deferred_queue_drain(1); /* restore batch mode */
     }
-    /* Rotate the pending queue (#317) into the active replay copies. */
-    const int n = s_queue_count;
-    for (i = 0; i < n; ++i) {
+    /* Rotate the pending queue (#317) into the active replay copies:
+     * two rep-movs passes over the pending count, then the count moves
+     * and the pending count clears. */
+    for (i = 0; i < (unsigned) s_queue_count; ++i) {
         s_active_alias[i] = s_queue_alias[i];
+    }
+    for (i = 0; i < (unsigned) s_queue_count; ++i) {
         s_active_loop[i] = s_queue_loop[i];
     }
-    s_active_count = n;
+    s_active_count = s_queue_count;
     s_queue_count = 0;
     /* Instance-chain pump seam: TODO(corpus), inert. */
 }
@@ -1159,9 +1208,15 @@ double sound_object_duration_get(int alias)
 {
     /* SoundObjectDurationGet @ 0x465160: duration of whatever the alias's
      * chain selects — one PRNG draw per call (a global-cooldown submit
-     * therefore draws twice: play's select and this one, as corpus). */
+     * therefore draws twice: play's select and this one, as corpus). The
+     * corpus tests the select (test eax,eax / je 0x46517b): a zero slot
+     * never reaches the step-rate, it loads the 0x49e73c zero instead. */
     int slot = sound_variant_select(alias);
-    return sound_streamed_wave_buffer_step_rate(slot);
+    if (slot != 0) {
+        return sound_streamed_wave_buffer_step_rate(slot);
+    }
+    return s_deferred_zero; /* the corpus's test/je tail: a zero chain head
+                             * (no sound) loads the 0x49e73c zero instead */
 }
 
 // FUNCTION: LEGORR 0x00464ef0
@@ -1202,10 +1257,10 @@ int sound_submit_with_global_cooldown(int alias, int* out_handle)
 // FUNCTION: LEGORR 0x00416150
 int sound_stream_play_level(int level)
 {
-    /* StreamPlayLevel @ 0x416150: the Stream_LevelName_Level_%d alias,
-     * submitted through the global cooldown when it resolves. */
+    /* StreamPlayLevel @ 0x416150: the Stream_LevelName_Level%d alias at
+     * 0x4a25c8, submitted through the global cooldown when it resolves. */
     char name[128];
-    snprintf(name, sizeof(name), "Stream_LevelName_Level_%d", level);
+    snprintf(name, sizeof(name), "Stream_LevelName_Level%d", level);
     int alias = 0;
     if (sound_alias_lookup(name, &alias) != 0) {
         return sound_submit_with_global_cooldown(alias, NULL);
@@ -1218,7 +1273,7 @@ int sound_stream_play_tutorial(int level)
 {
     /* StreamPlayTutorial @ 0x4161a0. */
     char name[128];
-    snprintf(name, sizeof(name), "Stream_LevelName_TLevel_%d", level);
+    snprintf(name, sizeof(name), "Stream_LevelName_TLevel%d", level);
     int alias = 0;
     if (sound_alias_lookup(name, &alias) != 0) {
         return sound_submit_with_global_cooldown(alias, NULL);

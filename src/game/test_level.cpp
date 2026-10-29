@@ -1429,7 +1429,7 @@ int main(int argc, char** argv)
         CHECK(terrain_sfx_grid_cell_peek(105) == 4,
               "the ore dedicated row lands the break alias");
         CHECK(terrain_sfx_grid_cell_peek(90) == 6,
-              "the crystal inherits the ore row across entries (carry)");
+              "the crystal rides the resolver's entry-zeroed row");
         CHECK(terrain_sfx_grid_cell_peek(17) == 0,
               "the load clears the window first");
         CHECK(terrain_sfx_grid_cell_peek(15) == 0

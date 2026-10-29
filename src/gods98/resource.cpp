@@ -1,16 +1,177 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "resource.hpp"
 #include "heap.hpp"
+#include "string.hpp"
 
 #define RESOURCE_MAX_WADS 10
 #define RESOURCE_PATH_MAX 4096
 #define WAD_MAGIC         "WWAD"
 #define ENTRY_FLAG_EXPANDED 0x2u
 #define EXPAND_HEADER_SZ  0x12u
+
+static void wad_huffman_canonical_codes_build(void* table, int count);
+
+/* The corpus's 16-byte Huffman decode entry. The roles come from the corpus
+ * bytes, not from the port's earlier guess: WadHuffmanTableRead (0x0049cd90)
+ * stores the read_bits(4) verdict as the WORD at +12 (`lea esi,[ebp+0xc]` /
+ * `mov [esi],ax`, `add esi,0x10`), WadHuffmanSymbolDecode (0x0049ce00) tests
+ * the WORD at +12 and compares `(1<<len)-1 & lsb` against the DWORD at +8
+ * (`mov cx,[eax+0xc]` / `mov ecx,[eax+0x8]` / `add eax,0x10`), and the
+ * canonical builder (0x0049cf90) matches the WORD at +12 and stores the
+ * reversed code into the DWORD at +8. WadHuffmanTableClear (0x0049cf50)
+ * zeroes the DWORD at +0, writes 0xffff into the WORD at +4, zeroes the
+ * DWORD at +8 and the WORD at +12; the +0/+4 pair is untouched by this band,
+ * so those two fields keep their corpus offsets and an inert role. */
+typedef struct WadCodecTableEntry {
+    uint32_t reserved; /* +0  DWORD: cleared to 0, unread by the decode band */
+    uint16_t max;      /* +4  WORD: cleared to 0xffff, unread by that band */
+    uint16_t pad;      /* +6  padding */
+    uint32_t code;     /* +8  DWORD: the canonical code for this length */
+    uint16_t len;      /* +12 WORD: the code's bit length */
+    uint16_t pad2;     /* +14 padding */
+} WadCodecTableEntry;
+
+static unsigned int wad_reverse_low_bits(unsigned int v, unsigned int n)
+{
+    unsigned int out = 0;
+    while (n--) { out = (out << 1) | (v & 1u); v >>= 1; }
+    return out;
+}
+static void wad_huffman_canonical_codes_build(void* table, int count)
+{
+    WadCodecTableEntry* e;
+    unsigned int next, unit, len;
+    int i;
+    e = (WadCodecTableEntry*)table;
+    next = 0;
+    unit = 0x80000000u;
+    for (len=1; len<=16; ++len, unit >>= 1) {
+        for (i=0; i<count; ++i) if (e[i].len == len) {
+            e[i].code = wad_reverse_low_bits(next / unit, len);
+            next += unit;
+        }
+    }
+}
+
+/* WAD codec state mirrors the executable's shared, non-reentrant decoder. */
+static const unsigned char* wad_codec_in;
+static unsigned char* wad_codec_out;
+static unsigned char* wad_codec_end;
+static unsigned int wad_codec_bits, wad_codec_lsb, wad_codec_msb;
+
+// FUNCTION: LEGORR 0x0049cc70
+static void wad_bitstream_output_initialize(const void* src, void* dst)
+{
+    const unsigned char* p;
+    uint32_t n;
+    p = (const unsigned char*)src;
+    wad_codec_in = p ? p + 0x12 : NULL;
+    wad_codec_out = (unsigned char*)dst;
+    n = p ? ((uint32_t)p[4]<<24)|((uint32_t)p[5]<<16)|((uint32_t)p[6]<<8)|p[7] : 0;
+    wad_codec_end = dst ? (unsigned char*)dst + n : NULL;
+    wad_codec_bits = wad_codec_lsb = wad_codec_msb = 0;
+}
+// FUNCTION: LEGORR 0x0049ccc0
+static unsigned int wad_read_bits_lsb_first(unsigned int n)
+{
+    unsigned int v, mask;
+    v = 0;
+    mask = 1;
+    while(n--) {
+        if(!wad_codec_bits) {
+            wad_codec_lsb=wad_codec_in[0]|((unsigned int)wad_codec_in[1]<<8);
+            wad_codec_in+=2;
+            wad_codec_bits=16;
+        }
+        if(wad_codec_lsb&1) v|=mask;
+        mask<<=1;
+        wad_codec_lsb>>=1;
+        --wad_codec_bits;
+    }
+    return v;
+}
+// FUNCTION: LEGORR 0x0049cd30
+static unsigned int wad_read_bits_msb_first(unsigned int n)
+{
+    unsigned int v;
+    v=0;
+    while(n--) {
+        if(!wad_codec_bits) { wad_codec_msb=*wad_codec_in++; wad_codec_bits=8; }
+        v=(v<<1)|((wad_codec_msb>>7)&1);
+        wad_codec_msb=(wad_codec_msb<<1)&255;
+        --wad_codec_bits;
+    }
+    return v;
+}
+// FUNCTION: LEGORR 0x0049ce70
+static short wad_run_length_decode(void)
+{
+    short a;
+    short b;
+
+    a = (short)wad_read_bits_msb_first(1);
+    a += 4; /* 0x49ce7b/0x49ce7e: mov si,ax; add esi,4 */
+    b = (short)wad_read_bits_msb_first(1);
+    if (!b) {
+        return a; /* 0x49ce90: mov ax,si */
+    }
+    return (short)(wad_read_bits_msb_first(1) - 2 + a * 2);
+}
+// FUNCTION: LEGORR 0x0049ceb0
+static int wad_backreference_offset_decode(void)
+{
+    unsigned int v;
+
+    v = 0;
+    if ((unsigned short)wad_read_bits_msb_first(1) != 0) {
+        v = wad_read_bits_msb_first(1);
+        if ((unsigned short)wad_read_bits_msb_first(1) != 0) {
+            v = wad_read_bits_msb_first(1) + v * 2;
+            v |= 4u; /* 0x49cee4/0x49ceea/0x49ceec: double, add, OR low byte */
+            if ((unsigned short)wad_read_bits_msb_first(1) == 0) {
+                v = wad_read_bits_msb_first(1) + v * 2;
+            }
+        }
+        else if ((unsigned short)v == 0) {
+            v = (unsigned short)wad_read_bits_msb_first(1);
+            v += 2; /* 0x49cf1e/0x49cf24: mov si,ax; add esi,2 */
+        }
+    }
+    /* 0x49cf27-0x49cf35: scale by 256, add the next byte, advance input. */
+    return v * 256u + 1u + *wad_codec_in++;
+}
+
+// FUNCTION: LEGORR 0x0049cd90
+static void wad_huffman_table_read(void* table, unsigned int count)
+{
+    unsigned int n, i;
+    WadCodecTableEntry* e;
+    wad_huffman_table_clear(table, (int)count);
+    n=wad_read_bits_lsb_first(5);
+    /* 0x49cdb1 skips the rest after a zero count; every positive count
+     * reaches the canonical builder with the capped count. */
+    if(n == 0) return;
+    if(n>16)n=16;
+    e=(WadCodecTableEntry*)table;
+    for(i=0;i<n;i++) e[i].len=(uint16_t)wad_read_bits_lsb_first(4);
+    wad_huffman_canonical_codes_build(table,(int)n);
+}
+// FUNCTION: LEGORR 0x0049ce00
+static unsigned int wad_huffman_symbol_decode(void* table)
+{
+    WadCodecTableEntry* e;
+    unsigned int i, v;
+    e=(WadCodecTableEntry*)table;
+    i=0;
+    while(e[i].len==0 || (((1u<< (e[i].len&31))-1u & wad_codec_lsb)!=e[i].code)) ++i;
+    v=wad_read_bits_lsb_first(e[i].len);
+    return i<2 ? i : (wad_read_bits_lsb_first(i-1)|(1u<<(i-1)));
+}
 
 typedef struct WadEntry {
     uint32_t flags;
@@ -32,6 +193,8 @@ typedef struct ResourceWad {
 static ResourceWad s_wads[RESOURCE_MAX_WADS];
 static int       s_wad_count = 0;
 static char      s_wad_prefix[RESOURCE_PATH_MAX] = "LegoRR";
+static char      s_wad_mount_path_cache[0x400];
+static int       s_wad_mount_path_cache_valid;
 
 /* CD/STD fallback state (finding 01). */
 #ifdef LEGORRR_BACKEND_WINAPI
@@ -129,28 +292,6 @@ int resource_data_present(void)
     }
     fclose(fp);
     return 1;
-}
-
-/* ------------------------------------------------------------------ *
- *  Small helpers (no STL, no locale — ASCII fold only).
- * ------------------------------------------------------------------ */
-
-static int ares_islower(int c) { return c >= 'a' && c <= 'z'; }
-
-static int ares_strcasecmp(const char* a, const char* b)
-{
-    for (;;) {
-        int ca = (unsigned char)*a++;
-        int cb = (unsigned char)*b++;
-        if (ares_islower(ca)) ca -= 0x20;
-        if (ares_islower(cb)) cb -= 0x20;
-        if (ca != cb) {
-            return ca - cb;
-        }
-        if (ca == 0) {
-            return 0;
-        }
-    }
 }
 
 static uint32_t ares_le32(const uint8_t* p)
@@ -280,6 +421,64 @@ static int ares_parse(FILE* fp, ResourceWad* out)
     return 1;
 }
 
+/* WwadArchiveIndexLoad (FUN_0048b4e0): open and index one archive into the
+ * next archive record. The port guards the corpus's fixed record array. */
+// FUNCTION: LEGORR 0x0048b4e0
+int wwad_archive_index_load(const char* path)
+{
+    ResourceWad* wad;
+    FILE* fp;
+    if (path == NULL || s_wad_count >= RESOURCE_MAX_WADS) {
+        return -1;
+    }
+    fp = fopen(path, "rb");
+    if (fp == NULL) {
+        return -1;
+    }
+    wad = &s_wads[s_wad_count];
+    memset(wad, 0, sizeof(*wad));
+    wad->fp = fp;
+    if (!ares_parse(fp, wad)) {
+        free(wad->names);
+        free(wad->entries);
+        memset(wad, 0, sizeof(*wad));
+        fclose(fp);
+        return -1;
+    }
+    snprintf(wad->path, sizeof(wad->path), "%s", path);
+    ++s_wad_count;
+    return s_wad_count - 1;
+}
+
+/* WadMountPathCacheStore (FUN_0047f590): keep a nonempty path shorter than
+ * 0x401 bytes; invalid input clears the cache and its validity flag. */
+// FUNCTION: LEGORR 0x0047f590
+void wad_mount_path_cache_store(const char* path)
+{
+    size_t length;
+    if (path != NULL) {
+        length = strlen(path);
+        if (length != 0 && length < sizeof(s_wad_mount_path_cache)) {
+            memcpy(s_wad_mount_path_cache, path, length + 1);
+            s_wad_mount_path_cache_valid = 1;
+            return;
+        }
+    }
+    s_wad_mount_path_cache[0] = '\0';
+    s_wad_mount_path_cache_valid = 0;
+}
+
+/* MountWadFromPath (FUN_0047f640): reset mounted archive state and load the
+ * requested archive path. */
+// FUNCTION: LEGORR 0x0047f640
+void mount_wad_from_path(const char* path)
+{
+    resource_unmount_all();
+    if (path != NULL) {
+        (void)wwad_archive_index_load(path);
+    }
+}
+
 /* ------------------------------------------------------------------ *
  *  Public API
  * ------------------------------------------------------------------ */
@@ -357,7 +556,7 @@ int resource_wad_lookup(int wad_idx, const char* name)
     ResourceWad* w = &s_wads[wad_idx];
     for (uint32_t i = 0; i < w->entry_count; ++i) {
         const char* cand = w->names + w->entries[i].name_off;
-        if (ares_strcasecmp(cand, name) == 0) {
+        if (strcasecmp_lite(cand, name) == 0) {
             return (int)i;
         }
     }
@@ -391,6 +590,54 @@ const char* resource_wad_entry_name(int wad_idx, int entry_idx)
     }
     ResourceWad* w = &s_wads[wad_idx];
     return w->names + w->entries[entry_idx].name_off;
+}
+
+/* FUNCTION: LEGORR 0x0048bce0 */
+void* wad_archive_record_at_index(int index)
+{
+    if (index < 0 || index >= s_wad_count) {
+        return NULL;
+    }
+    return &s_wads[index];
+}
+
+/* FUNCTION: LEGORR 0x0048bcf0 */
+uint32_t wad_entry_length_get(int wad_idx, int entry_idx)
+{
+    if (wad_idx < 0 || wad_idx >= s_wad_count || entry_idx < 0
+        || (uint32_t)entry_idx >= s_wads[wad_idx].entry_count) {
+        return 0;
+    }
+    return s_wads[wad_idx].entries[entry_idx].stored;
+}
+
+/* FUNCTION: LEGORR 0x0048bd10 */
+uint32_t wad_entry_field4_get(int wad_idx, int entry_idx)
+{
+    if (wad_idx < 0 || wad_idx >= s_wad_count || entry_idx < 0
+        || (uint32_t)entry_idx >= s_wads[wad_idx].entry_count) {
+        return 0;
+    }
+    return s_wads[wad_idx].entries[entry_idx].orig;
+}
+
+/* FUNCTION: LEGORR 0x0048bd50 */
+int wad_entry_find_across_mounted_archives(const char* name, int wad_idx)
+{
+    int i;
+    if (name == NULL) {
+        return -1;
+    }
+    if (wad_idx != -1) {
+        return resource_wad_lookup(wad_idx, name);
+    }
+    for (i = s_wad_count - 1; i >= 0; --i) {
+        int entry = resource_wad_lookup(i, name);
+        if (entry != -1) {
+            return entry;
+        }
+    }
+    return -1;
 }
 
 /* Open an entry inside mounted wad `wad_idx` (no payload yet). */
@@ -556,9 +803,10 @@ int32_t resource_read(Resource* r)
     uint32_t len  = ((uint32_t)stored[4] << 24) | ((uint32_t)stored[5] << 16)
                   | ((uint32_t)stored[6] << 8) | (uint32_t)stored[7];
     if (type != 0) {
-        /* FUN_0049c8e0 (1) / FUN_0049ca60 (2) — dormant: no shipped entry
-         * sets the expanded flag, so the codecs are intentionally not
-         * ported yet (finding 01 §"dormant"). */
+        /* FUN_0049c8e0 (1) / FUN_0049ca60 (2): the codecs are ported in the
+         * wad payload band below and wired through the dispatch; no shipped
+         * entry sets the expanded flag, so this reader still answers -1 for
+         * the compressed types (finding 01 §"dormant" is now history). */
         free(stored);
         return -1;
     }
@@ -591,19 +839,48 @@ void resource_free(Resource* r)
 
 /* --- the fixed-record slot resources (see resource.hpp) -------------------- */
 #define FIXED_RECORD_SLOTS 16
-static void* s_fixed_slot[FIXED_RECORD_SLOTS];
-static int   s_fixed_flag[FIXED_RECORD_SLOTS];
+
+/* The fixed-record slot band: sixteen 16-byte records {resource@+0x00,
+ * in-use flag@+0x04} at DAT_005756a0 (all-zero image bytes; the corpus
+ * scales the index shl 4 and strides blindly). The +0x08/+0x0c words
+ * belong to the unported reader (FUN_0048c010) — pad only. */
+typedef struct FixedRecordSlot {
+    void*    resource;  /* +0x00 */
+    uint32_t in_use;    /* +0x04 */
+    uint8_t  pad[8];    /* +0x08..0x0f */
+} FixedRecordSlot;
+
+typedef char fixed_record_slot_stride_check[sizeof(FixedRecordSlot) == 16u ? 1 : -1];
+
+// GLOBAL: LEGORR 0x005756a0
+static FixedRecordSlot s_fixed_slots[FIXED_RECORD_SLOTS];
+
+typedef struct WadFileStreamState {
+    int slot;
+    int32_t cursor;
+} WadFileStreamState;
+
+/* FUNCTION: LEGORR 0x0048bd30 */
+int wad_entry_slot_allocate(void)
+{
+    int i;
+    for (i = 0; i < FIXED_RECORD_SLOTS; ++i) {
+        if (s_fixed_slots[i].in_use == 0) {
+            return i;
+        }
+    }
+    return -1;
+}
 
 // FUNCTION: LEGORR 0x0048bfc0
 void fixed_record_slot_resource_release(int slot)
 {
-    if (slot < 0 || slot >= FIXED_RECORD_SLOTS) {
-        return; /* deviation: the corpus strides the index blindly */
-    }
-    if (s_fixed_flag[slot] != 0) {
-        engine_heap_free(s_fixed_slot[slot]);
-        s_fixed_slot[slot] = NULL;
-        s_fixed_flag[slot] = 0;
+    /* The corpus scales the index shl 4 and strides blindly (the tests only
+     * release in-range slots) and clears ONLY the flag — the stale pointer
+     * is unobservable because the get path checks the flag first. */
+    if (s_fixed_slots[slot].in_use != 0) {
+        engine_heap_free(s_fixed_slots[slot].resource);
+        s_fixed_slots[slot].in_use = 0;
     }
 }
 
@@ -613,20 +890,105 @@ void* fixed_record_slot_resource_get(int slot)
     if (slot < 0 || slot >= FIXED_RECORD_SLOTS) {
         return NULL; /* deviation: the corpus strides blindly */
     }
-    return s_fixed_flag[slot] != 0 ? s_fixed_slot[slot] : NULL;
+    return s_fixed_slots[slot].in_use != 0 ? s_fixed_slots[slot].resource : NULL;
+}
+
+/* WadStreamLengthGet (FUN_0048c010): resolve the stream slot's resource and
+ * report its materialized payload length. */
+// FUNCTION: LEGORR 0x0048c010
+int wad_stream_length_get(int slot)
+{
+    Resource* resource;
+    int32_t length;
+    resource = (Resource*)fixed_record_slot_resource_get(slot);
+    if (resource == NULL) {
+        return 0;
+    }
+    length = resource_read(resource);
+    return length > 0 ? (int)length : 0;
+}
+
+/* WadFileSeek (FUN_0047f850): update the WAD stream cursor for SET/CUR/END.
+ * The END case preserves the corpus's length-plus-offset behavior. */
+// FUNCTION: LEGORR 0x0047f850
+int wad_file_seek(GameFileHandle* handle, int offset, int origin)
+{
+    WadFileStreamState* state;
+    int length;
+    if (handle == NULL || handle->flag != 1 || handle->stream == NULL) {
+        return 0;
+    }
+    state = (WadFileStreamState*)handle->stream;
+    length = wad_stream_length_get(state->slot);
+    if (origin == 0) {
+        state->cursor = offset;
+    }
+    else if (origin == 1) {
+        state->cursor += offset;
+    }
+    else if (origin == 2) {
+        state->cursor = length + offset;
+        return 0;
+    }
+    else {
+        return 0;
+    }
+    if (state->cursor > length) state->cursor = length;
+    if (state->cursor < 0) state->cursor = 0;
+    return 0;
+}
+
+/* WadFileRead (FUN_0047f980): read complete elements from the slot resource,
+ * clipping the byte count at its end and advancing the cursor. */
+// FUNCTION: LEGORR 0x0047f980
+int wad_file_read(void* destination, int element_size, int element_count,
+                  GameFileHandle* handle)
+{
+    WadFileStreamState* state;
+    Resource* resource;
+    int length;
+    unsigned int bytes;
+    if (destination == NULL || handle == NULL || handle->flag != 1
+        || handle->stream == NULL || element_size <= 0 || element_count <= 0) {
+        return 0;
+    }
+    state = (WadFileStreamState*)handle->stream;
+    resource = (Resource*)fixed_record_slot_resource_get(state->slot);
+    if (resource == NULL) return 0;
+    length = resource_read(resource);
+    if (length <= 0 || state->cursor < 0 || state->cursor >= length) return 0;
+    bytes = (unsigned int)element_size * (unsigned int)element_count;
+    if (bytes > (unsigned int)(length - state->cursor)) {
+        bytes = (unsigned int)(length - state->cursor);
+    }
+    memcpy(destination, resource->data + state->cursor, bytes);
+    state->cursor += (int32_t)bytes;
+    return (int)(bytes / (unsigned int)element_size);
+}
+
+/* WadFileCursorGet (FUN_0047fb10): return the current WAD stream cursor. */
+// FUNCTION: LEGORR 0x0047fb10
+int wad_file_cursor_get(GameFileHandle* handle)
+{
+    WadFileStreamState* state;
+    if (handle == NULL || handle->flag != 1 || handle->stream == NULL) {
+        return 0;
+    }
+    state = (WadFileStreamState*)handle->stream;
+    return state->cursor;
 }
 
 void fixed_record_slot_install(int slot, void* resource)
 {
     if (slot >= 0 && slot < FIXED_RECORD_SLOTS) {
-        s_fixed_slot[slot] = resource;
-        s_fixed_flag[slot] = 1;
+        s_fixed_slots[slot].resource = resource;
+        s_fixed_slots[slot].in_use = 1;
     }
 }
 
 int fixed_record_slot_flag_peek(int slot)
 {
-    return (slot >= 0 && slot < FIXED_RECORD_SLOTS) ? s_fixed_flag[slot] : 0;
+    return (slot >= 0 && slot < FIXED_RECORD_SLOTS) ? (int)s_fixed_slots[slot].in_use : 0;
 }
 
 /* WadMemoryStreamBufferGet (FUN_0048c030): the corpus wrapper routes the
@@ -642,17 +1004,183 @@ void wad_memory_stream_buffer_get(int slot)
  * The corpus decodes expanded wad entries through the RNC-header dispatch
  * (the DAT_004b2d08 global holds the three-byte magic "RNC"), builds the
  * stream-buffer handle pair, and clears the type-1 Huffman table between
- * streams. The codecs themselves stay dormant (no shipped entry sets the
- * expanded flag), as documented above. */
+ * streams. The codecs themselves are ported above the dispatch (the
+ * FUN_0049c8e0 / FUN_0049ca60 pair); no shipped entry sets the expanded
+ * flag, so their live callers stay the dispatch and the tests. */
+
+#define WAD_DECODE_MAGIC_FAIL 0xffff
+#define WAD_DECODE_TYPE_FAIL  0xfffe
+
+/* DAT_00557d80 / DAT_00557e80 / DAT_00557f80 roles, module-local: the type-1
+ * codec's three 16-symbol Huffman tables (literal counts, back-reference
+ * offsets, match lengths). The corpus bands are 256 bytes each (sixteen
+ * 16-byte entries, count 16 at 0x0049c914/0x0049c923/0x0049c932) in
+ * zero-init .data, and only those sixteen entries are ever written; these
+ * buffers ride wider so the corpus's blind scan in WadHuffmanSymbolDecode
+ * (0x0049ce0e..0x0049ce2d, `while (len == 0 || mask&&lsb != code) ++i;`)
+ * stays inside one object when no entry matches. */
+static WadCodecTableEntry s_wad_huff_literal[128];
+static WadCodecTableEntry s_wad_huff_offset[128];
+static WadCodecTableEntry s_wad_huff_length[128];
+
+/* DecodeWadPayloadType1 (FUN_0049c8e0): the RNC type-1 stream. One or more
+ * outer passes reload the three tables, read the 16-bit block total
+ * (LSB-first), then alternate literal runs (count from the literal table,
+ * bytes copied straight from the input cursor) and back-reference matches
+ * (out - u16(offset) - 1, length u16(sym + 2)); after every literal the
+ * three bytes at the input cursor inject themselves into the LSB accumulator
+ * at the live bit position without advancing it. Always answers 0 (corpus
+ * xor ax,ax); the output cursor stores are blind, as in the corpus. */
+// FUNCTION: LEGORR 0x0049c8e0
+static int wad_payload_decode_type1(const void* src, void* dst)
+{
+    unsigned short total;
+    unsigned int sym;
+    unsigned short count;
+    unsigned int i;
+    unsigned int bits;
+    unsigned int peek;
+    const unsigned char* back;
+
+    wad_bitstream_output_initialize(src, dst);
+    (void)wad_read_bits_lsb_first(2u);            /* 0x49c8f2: value dropped */
+    if (wad_codec_out >= wad_codec_end) {         /* 0x49c907: unsigned jae */
+        return 0;
+    }
+    for (;;) {                                    /* outer_loop 0x49c912 */
+        wad_huffman_table_read(s_wad_huff_literal, 16u);
+        wad_huffman_table_read(s_wad_huff_offset, 16u);
+        wad_huffman_table_read(s_wad_huff_length, 16u);
+        total = (unsigned short)wad_read_bits_lsb_first(16u); /* 0x49c949: edi */
+        for (;;) {                                /* loopA 0x49c94b */
+            sym = wad_huffman_symbol_decode(s_wad_huff_literal);
+            count = (unsigned short)sym;          /* 0x49c965: u16(sym) */
+            for (i = 0; i < count; ++i) {         /* copyA 0x49c972 */
+                *wad_codec_out++ = *wad_codec_in++;
+            }
+            /* 0x49c99d: three-byte peek at the input cursor (never
+             * advanced), merged into the LSB accumulator at the live bit
+             * count, which the corpus leaves untouched. */
+            bits = wad_codec_bits;
+            peek = (unsigned int)wad_codec_in[0]
+                 | ((unsigned int)wad_codec_in[1] << 8)
+                 | ((unsigned int)wad_codec_in[2] << 16);
+            wad_codec_lsb = (peek << bits)
+                          | (wad_codec_lsb & ((1u << bits) - 1u));
+            total += 0xffffu;                     /* 0x49c9cc: countdown */
+            if (total == 0u) {                    /* 0x49c9d7: test di,di */
+                break;
+            }
+            sym = wad_huffman_symbol_decode(s_wad_huff_offset);
+            back = wad_codec_out - (unsigned short)sym - 1u; /* 0x49c9ec..fe */
+            sym = wad_huffman_symbol_decode(s_wad_huff_length);
+            count = (unsigned short)(sym + 2u);   /* 0x49ca07/0x49ca1e */
+            for (i = 0; i < count; ++i) {         /* copyB 0x49ca24 */
+                *wad_codec_out++ = *back++;
+            }
+        }
+        if (wad_codec_out >= wad_codec_end) {     /* 0x49ca44: jb outer_loop */
+            break;
+        }
+    }
+    return 0;                                     /* 0x49ca5a: xor ax,ax */
+}
+
+/* DecodeWadPayloadType2 (FUN_0049ca60): the RNC type-2 stream, MSB-first.
+ * Each top-level bit opens a literal run (bytes copied from the input
+ * cursor while the follow-up bits stay 0) or hands over to the match
+ * gate: 0-run-length block, 10+10 short match (offset byte + 1, two bytes),
+ * 110 match (offset from the back-reference decoder, three bytes) or 111
+ * match (length byte + 9, offset from the decoder; a zero length byte is
+ * the end marker). Always answers 0 (corpus xor ax,ax); the output cursor
+ * stores are blind, as in the corpus. */
+// FUNCTION: LEGORR 0x0049ca60
+static int wad_payload_decode_type2(const void* src, void* dst)
+{
+    unsigned int run;
+    unsigned int off;
+    unsigned int count;
+    unsigned int i;
+    const unsigned char* back;
+
+    wad_bitstream_output_initialize(src, dst);
+    (void)wad_read_bits_msb_first(2u);            /* 0x49ca72: value dropped */
+    if (wad_codec_out >= wad_codec_end) {         /* 0x49ca87: unsigned jae */
+        return 0;
+    }
+    for (;;) {                                    /* loop_top 0x49ca90 */
+        if (wad_read_bits_msb_first(1u) == 0u) {  /* 0x49ca9a */
+            /* 0x49ca9f: raw literal run, one byte per zero follow-up bit */
+            for (;;) {
+                *wad_codec_out++ = *wad_codec_in++;
+                if (wad_read_bits_msb_first(1u) != 0u) {
+                    break;
+                }
+            }
+        }
+        if (wad_read_bits_msb_first(1u) == 0u) {  /* 0x49cadf: raw block */
+            run = (unsigned int)wad_run_length_decode();   /* 0x49cb8a */
+            if ((unsigned short)run == 9u) {      /* 0x49cb91: extended run */
+                count = (wad_read_bits_msb_first(4u) * 4u + 0xcu) & 0xffffu;
+                for (i = 0; i < count; ++i) {     /* copyD 0x49cbbf */
+                    *wad_codec_out++ = *wad_codec_in++;
+                }
+                continue;
+            }
+            off = (unsigned int)wad_backreference_offset_decode(); /* 0x49cbf1 */
+            back = wad_codec_out - (unsigned short)off; /* 0x49cbf9/0x49cc07 */
+            if ((unsigned short)run == 0u) {      /* 0x49cc0f/0x49cc12 */
+                continue;
+            }
+            count = (unsigned short)run;          /* 0x49cc18: u16(si) */
+            for (i = 0; i < count; ++i) {         /* copyE 0x49cc1f */
+                *wad_codec_out++ = *back++;
+            }
+            continue;
+        }
+        if (wad_read_bits_msb_first(1u) == 0u) {  /* 0x49caf2: short match */
+            off = (unsigned int)*wad_codec_in + 1u;        /* 0x49cb02 */
+            ++wad_codec_in;
+            back = wad_codec_out - (unsigned short)off;
+            count = 2u;                           /* esi = 2 at 0x49caf9 */
+            for (i = 0; i < count; ++i) {         /* copyC 0x49cb6d */
+                *wad_codec_out++ = *back++;
+            }
+            continue;
+        }
+        if (wad_read_bits_msb_first(1u) == 0u) {  /* 0x49cb10/0x49cb1d */
+            off = (unsigned int)wad_backreference_offset_decode(); /* 0x49cb42 */
+            back = wad_codec_out - (unsigned short)off;
+            count = 3u;                           /* esi = 3 at 0x49cb1f */
+        } else {
+            count = ((unsigned int)*wad_codec_in + 8u) & 0xffffu; /* 0x49cb2b */
+            ++wad_codec_in;
+            if (count == 8u) {                    /* 0x49cb3c: end marker */
+                (void)wad_read_bits_msb_first(1u);/* 0x49cc3f: value dropped */
+                if (wad_codec_out < wad_codec_end) { /* 0x49cc56: jb loop_top */
+                    continue;
+                }
+                break;                            /* falls into the exit */
+            }
+            off = (unsigned int)wad_backreference_offset_decode(); /* 0x49cb42 */
+            back = wad_codec_out - (unsigned short)off;
+        }
+        if (count == 0u) {                        /* 0x49cb5d: test ax,ax */
+            continue;
+        }
+        for (i = 0; i < count; ++i) {             /* copyC 0x49cb6d */
+            *wad_codec_out++ = *back++;
+        }
+    }
+    return 0;                                     /* 0x49cc5d: xor ax,ax */
+}
 
 /* WadPayloadDecodeDispatch (FUN_0049c840): verify the "RNC" magic, then
  * branch on the type byte at [3]. Type 0 is a raw pass-through: the size
  * dword at +4 read big-endian, payload from +0x12, copied in DWORD chunks
- * plus the trailing (size & 3) bytes. Types 1/2 hand over to the dormant
- * codecs; any other byte answers the unknown-type verdict. */
-#define WAD_DECODE_MAGIC_FAIL 0xffff
-#define WAD_DECODE_TYPE_FAIL  0xfffe
-
+ * plus the trailing (size & 3) bytes. Types 1/2 hand over to the ported
+ * codecs, which answer the corpus's xor ax,ax verdict; any other byte
+ * answers the unknown-type verdict. */
 // FUNCTION: LEGORR 0x0049c840
 int wad_payload_decode_dispatch(const void* header, void* dest)
 {
@@ -674,12 +1202,11 @@ int wad_payload_decode_dispatch(const void* header, void* dest)
         memcpy(dest, h + EXPAND_HEADER_SZ, size);
         return 0;
     }
-    if (type == 1u || type == 2u) {
-        /* The codecs FUN_0049c8e0 / FUN_0049ca60 (portable, dormant) own
-         * these paths; no shipped wad reaches them. Deviation: without the
-         * codec bodies built, the port answers the type marker itself so
-         * the verdict (non-zero == decode failed) stays observable. */
-        return (int)type;
+    if (type == 1u) {
+        return wad_payload_decode_type1(h, dest); /* 0x49c889: push/call */
+    }
+    if (type == 2u) {
+        return wad_payload_decode_type2(h, dest); /* 0x49c878: push/call */
     }
     return WAD_DECODE_TYPE_FAIL;
 }
@@ -695,8 +1222,14 @@ long wad_expand_payload(const void* header, void** out_payload)
         return 0; /* deviation: the corpus strides the payload blindly */
     }
     const unsigned char* h = (const unsigned char*)header;
-    const long size = (long)(((uint32_t)h[4] << 24) | ((uint32_t)h[5] << 16)
-                            | ((uint32_t)h[6] << 8) | (uint32_t)h[7]);
+    /* corpus mov eax,[ebx+4]: one dword load, and the byteswap rides
+     * arithmetically off the register so MSVC5 emits its and/shl/add
+     * expansion rather than four movzx byte loads */
+    const uint32_t raw = *(const uint32_t*)(h + 4);
+    const uint32_t swapped = ((raw << 24) & 0xff000000u)
+                           | ((raw << 8) & 0x00ff0000u)
+                           | ((raw >> 8) & 0x0000ff00u) | (raw >> 24);
+    const long size = (long)swapped;
     if (out_payload == NULL) {
         return size;
     }
@@ -704,7 +1237,7 @@ long wad_expand_payload(const void* header, void** out_payload)
     if (buf == NULL) {
         return 0;
     }
-    if (wad_payload_decode_dispatch(h, buf) != 0) {
+    if (wad_payload_decode_dispatch(h, buf) != 0) { /* corpus tests ax,ax */
         engine_heap_free(buf); /* FUN_0048db80 */
         return 0;
     }
@@ -725,13 +1258,10 @@ void wad_huffman_table_clear(void* table, int count)
     }
     for (int i = 0; i != count; ++i) {
         unsigned char* e = (unsigned char*)table + (size_t)i * 16u;
-        const uint32_t zero = 0u;
-        const uint16_t full = 0xffffu;
-        const uint16_t empty = 0u;
-        memcpy(e + 0, &zero, 4);
-        memcpy(e + 4, &full, 2);
-        memcpy(e + 8, &zero, 4);
-        memcpy(e + 12, &empty, 2);
+        *(uint32_t*)(e + 0)  = 0u;        /* corpus: mov DWORD [x],0    */
+        *(uint16_t*)(e + 4)  = 0xffffu;   /* corpus: mov WORD [x+4],0xffff */
+        *(uint32_t*)(e + 8)  = 0u;        /* corpus: mov DWORD [x+8],0  */
+        *(uint16_t*)(e + 12) = 0u;        /* corpus: mov WORD [x+12],0  */
     }
 }
 
@@ -746,21 +1276,26 @@ void wad_huffman_table_clear(void* table, int count)
 // FUNCTION: LEGORR 0x0047fed0
 void* game_file_handle_allocate(int kind)
 {
-    if (kind != 0 && kind != 1) {
+    GameFileHandle* h;
+    if (kind == 1) {
+        h = (GameFileHandle*)engine_heap_alloc((long)sizeof(GameFileHandle));
+        if (h == NULL) {
+            return NULL;
+        }
+        h->flag = 1;
+        /* Test-pinned deviation: unlike the corpus, the port leaves the
+         * kind-1 stream slot deterministically NULL. */
+        h->stream = NULL;
+        return h;
+    }
+    if (kind != 0) {
         return NULL;
     }
-    GameFileHandle* h = (GameFileHandle*)engine_heap_alloc(
-        (long)sizeof(GameFileHandle));
+    h = (GameFileHandle*)engine_heap_alloc((long)sizeof(GameFileHandle));
     if (h == NULL) {
         return NULL;
     }
-    h->flag = kind;
-    /* Deviation: the corpus leaves +4 uninitialized for kind 1; the port
-     * zeroes the stream field for deterministic handles. */
-    h->stream = NULL;
-    if (kind == 1) {
-        return h;
-    }
+    h->flag = 0;
     h->stream = engine_heap_alloc(12);
     if (h->stream != NULL) {
         return h;
@@ -849,76 +1384,66 @@ void resource_handle_set_release(void)
 /* --- the key-group action-code band (see resource.hpp) ---------------------
  * InputKeyGroupRegister (FUN_0041a7d0) stages one interaction-action group:
  * the count word rides in at the pair's +4 slot FIRST (corpus order), then
- * a count*4 heap array takes the code dwords. Deviations: the corpus's
- * stack-variadic values ride as an array pointer, the staging copy of the
- * variadic window into locals (and the always-zero byte tail) fold into a
- * direct dword copy, and the group guard answers where the corpus strides
- * the band blindly. Registering the same group twice re-stages in place;
- * the corpus leaks the superseded array, and so does the port. */
+ * a count*4 heap array takes the code dwords. The codes ride the stack as
+ * the corpus's own cdecl varargs and are read out with va_arg in index
+ * order. Deviations: the staging copy of the variadic window into locals
+ * (and the always-zero byte tail) fold into a direct dword copy, and the
+ * group guard answers where the corpus strides the band blindly.
+ * Registering the same group twice re-stages in place; the corpus leaks the
+ * superseded array, and so does the port. */
 // FUNCTION: LEGORR 0x0041a7d0
-void resource_input_key_group_register(int group, int count,
-                                       const uint32_t* values)
+void resource_input_key_group_register(int group, int count, ...)
 {
+    va_list ap;
+
     if (group < 0 || group >= 24) {
         return; /* deviation: the corpus strides the band blindly */
     }
     s_handle_set_band[group].word2 = (uint32_t)count;
     void* array = engine_heap_alloc((long)count * 4); /* FUN_0048dbd0 */
     s_handle_set_band[group].handle = array;
-    if (array != NULL && values != NULL) {
+    va_start(ap, count);
+    if (array != NULL) {
         uint32_t* dst = (uint32_t*)array;
         const uint32_t n = (uint32_t)count & 0x3fffffffu;
         for (uint32_t i = 0; i != n; ++i) {
-            dst[i] = values[i];
+            dst[i] = (uint32_t)va_arg(ap, int);
         }
     }
+    va_end(ap);
 }
 
 /* InteractionActionCodeMapInitialize (FUN_0041a660): registers the fixed
- * eighteen interaction-action groups. Group 6 is left unregistered (the
- * corpus skips it), and the action codes ride as the corpus's own
- * constants. */
+ * eighteen interaction-action groups in the corpus's call order — groups
+ * 0..5, 7, 8, then 0xa, 0xb, 0xc, with group 9 landing between 0xc and
+ * 0xd, and group 6 left unregistered (the corpus skips it). The action
+ * codes ride as the corpus's own pushed constants, one push per code. */
 // FUNCTION: LEGORR 0x0041a660
 void interaction_action_code_map_initialize(void)
 {
-    static const uint32_t g0[] = { 1, 2, 3, 4 };
-    static const uint32_t g1[] = { 5, 6, 0xe };
-    static const uint32_t g2[] = { 7 };
-    static const uint32_t g3[] = { 0xe };
-    static const uint32_t g4[] = { 0x10 };
-    static const uint32_t g5[] = { 9, 0xe };
-    static const uint32_t g7[] = { 0xb, 0xc, 0xd, 0xf };
-    static const uint32_t g8[] = { 0x2b, 0x2f };
-    static const uint32_t g9[] = { 0x1f, 0x17, 0x15, 0x30, 0x21, 0x40, 0x39,
-                                   0x2d, 0x2e, 0x20 };
-    static const uint32_t gA[] = { 0x16, 0x14, 0x42, 0x19, 0x2d, 0x2e, 0x29 };
-    static const uint32_t gB[] = { 0x16, 0x14, 0x19, 0x2d, 0x2e, 0x1a };
-    static const uint32_t gC[] = { 0x18, 0x29 };
-    static const uint32_t gD[] = { 0x24, 0x22, 0x41, 0x28 };
-    static const uint32_t gE[] = { 0x2a };
-    static const uint32_t gF[] = { 0x2c, 0x2e, 0x2d };
-    static const uint32_t g10[] = { 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37,
-                                    0x38 };
-    static const uint32_t g11[] = { 0x3a, 0x3b, 0x3c, 0x3d, 0x3e, 0x3f };
-    static const uint32_t g12[] = { 0x43, 0x44, 0x45, 0x46 };
-    resource_input_key_group_register(0, 4, g0);
-    resource_input_key_group_register(1, 3, g1);
-    resource_input_key_group_register(2, 1, g2);
-    resource_input_key_group_register(3, 1, g3);
-    resource_input_key_group_register(4, 1, g4);
-    resource_input_key_group_register(5, 2, g5);
-    resource_input_key_group_register(7, 4, g7);
-    resource_input_key_group_register(8, 2, g8);
-    resource_input_key_group_register(10, 7, gA);
-    resource_input_key_group_register(0xb, 6, gB);
-    resource_input_key_group_register(0xc, 2, gC);
-    resource_input_key_group_register(9, 10, g9);
-    resource_input_key_group_register(0xd, 4, gD);
-    resource_input_key_group_register(0xe, 1, gE);
-    resource_input_key_group_register(0xf, 3, gF);
-    resource_input_key_group_register(0x10, 8, g10);
-    resource_input_key_group_register(0x11, 6, g11);
-    resource_input_key_group_register(0x12, 4, g12);
+    resource_input_key_group_register(0, 4, 1, 2, 3, 4);
+    resource_input_key_group_register(1, 3, 5, 6, 0xe);
+    resource_input_key_group_register(2, 1, 7);
+    resource_input_key_group_register(3, 1, 0xe);
+    resource_input_key_group_register(4, 1, 0x10);
+    resource_input_key_group_register(5, 2, 9, 0xe);
+    resource_input_key_group_register(7, 4, 0xb, 0xc, 0xd, 0xf);
+    resource_input_key_group_register(8, 2, 0x2b, 0x2f);
+    resource_input_key_group_register(0xa, 7, 0x16, 0x14, 0x42, 0x19,
+                                      0x2d, 0x2e, 0x29);
+    resource_input_key_group_register(0xb, 6, 0x16, 0x14, 0x19, 0x2d, 0x2e,
+                                      0x1a);
+    resource_input_key_group_register(0xc, 2, 0x18, 0x29);
+    resource_input_key_group_register(9, 10, 0x1f, 0x17, 0x15, 0x30, 0x21,
+                                      0x40, 0x39, 0x2d, 0x2e, 0x20);
+    resource_input_key_group_register(0xd, 4, 0x24, 0x22, 0x41, 0x28);
+    resource_input_key_group_register(0xe, 1, 0x2a);
+    resource_input_key_group_register(0xf, 3, 0x2c, 0x2e, 0x2d);
+    resource_input_key_group_register(0x10, 8, 0x31, 0x32, 0x33, 0x34, 0x35,
+                                      0x36, 0x37, 0x38);
+    resource_input_key_group_register(0x11, 6, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e,
+                                      0x3f);
+    resource_input_key_group_register(0x12, 4, 0x43, 0x44, 0x45, 0x46);
 }
 
 void resource_handle_set_band_word_install(int unit, uint32_t value)

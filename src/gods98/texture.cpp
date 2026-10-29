@@ -406,22 +406,18 @@ uint32_t texture_pixel_hash(TextureSurface* t)
 
 /* --- the cache-window name pair (see texture.hpp) ------------------------- */
 /* Both corpus halves work over a caller-supplied entry window; entries
- * ride as widened slots {word, name, word}. Deviation: the port guards
- * the table, the count, and the name pointer (the corpus strides them). */
+ * ride as widened slots {word, name, word}. */
 // FUNCTION: LEGORR 0x00483030
 void* texture_cache_name_slot_find(const void* table, uint32_t count,
                                    const char* name)
 {
-    if (table == NULL || count == 0u) {
-        return NULL; /* deviation: the corpus answers 0 only for count 0 */
-    }
+    /* Corpus 0x483030 gates the unsigned count once, then walks name fields
+     * at 0x0c-byte strides; its bottom comparison is unsigned (jb). */
     const long field = (long)sizeof(void*);
-    for (uint32_t i = 0; i < count; ++i) {
-        char* entry_name = NULL;
-        __builtin_memcpy(&entry_name,
-                         (const char*)table + (long)i * 3 * field + field,
-                         sizeof entry_name);
-        if (entry_name != NULL && t_strcasecmp(name, entry_name) == 0) {
+    for (uint32_t i = 0u; i < count; ++i) {
+        const char* entry_name = *(const char* const*)
+            ((const char*)table + (long)i * 3 * field + field);
+        if (strcasecmp_lite(name, entry_name) == 0) {
             return (void*)((const char*)table + (long)i * 3 * field);
         }
     }

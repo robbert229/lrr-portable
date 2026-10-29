@@ -59,6 +59,17 @@ static int s_icontains(const char* haystack, const char* needle)
     return 0;
 }
 
+static void frameloop_game_context_dispose(GameContext* game)
+{
+    if (game == NULL) {
+        return;
+    }
+    checkpoint_blob_free(game);
+    free(game->records);
+    level_destroy(game->level);
+    block_close(game->cfg);
+}
+
 /* Streamed soundtrack aliases live beside the menu SFX aliases in Samples.
  * Their leading '@' marks a streamed WAVE in Lego.cfg, not part of its path. */
 static const char* menu_music_resource(BlockFile* cfg)
@@ -633,6 +644,133 @@ static void frameloop_blit_texture_scaled(const TextureSurface* texture,
     }
 }
 
+/* The first tutorial's Mission Brief is shipped as the Objective entry in
+ * ObjectiveText.txt. Keep this read at the resource boundary so the briefing
+ * follows the installed language data instead of duplicating its prose. */
+static int frameloop_tutorial_brief_load(char* out, size_t out_size)
+{
+    if (out == NULL || out_size == 0) return 0;
+    out[0] = '\0';
+    Resource* r = resource_open("Languages\\ObjectiveText.txt", RESOURCE_AUTO);
+    if (r == NULL || resource_read(r) < 0 || r->data == NULL) {
+        resource_free(r);
+        return 0;
+    }
+    const char* data = (const char*)r->data;
+    const size_t size = (size_t)r->size;
+    const char* section = NULL;
+    const char* end = data + size;
+    for (const char* p = data; p < end;) {
+        const char* line_end = (const char*)memchr(p, '\n', (size_t)(end - p));
+        if (line_end == NULL) line_end = end;
+        const char* line = p;
+        while (line < line_end && (*line == ' ' || *line == '\t' || *line == '\r')) ++line;
+        if (line < line_end && *line == '[') {
+            section = ((size_t)(line_end - line) >= 13
+                       && memcmp(line, "[MoveTuto_01]", 13) == 0)
+                          ? line_end : NULL;
+        } else if (section != NULL && line_end - line >= 10
+                   && memcmp(line, "Objective:", 10) == 0) {
+            line += 10;
+            while (line < line_end && (*line == ' ' || *line == '\t')) ++line;
+            size_t n = (size_t)(line_end - line);
+            while (n > 0 && (line[n - 1] == '\r' || line[n - 1] == ' ')) --n;
+            /* The \a marker separates the mission briefing from the later
+             * objective update; the opening panel shows the first paragraph. */
+            for (size_t i = 0; i + 1 < n; ++i) {
+                if (line[i] == '\\' && line[i + 1] == 'a') { n = i; break; }
+            }
+            if (n >= out_size) n = out_size - 1;
+            memcpy(out, line, n);
+            out[n] = '\0';
+            resource_free(r);
+            return n > 0;
+        }
+        p = line_end < end ? line_end + 1 : end;
+    }
+    resource_free(r);
+    return 0;
+}
+
+static void frameloop_wrap_brief(const char* src, char* out, size_t out_size,
+                                int max_chars)
+{
+    size_t at = 0;
+    int col = 0;
+    for (const char* p = src; p != NULL && *p != '\0' && at + 1 < out_size;) {
+        while (*p == ' ' || *p == '\t') ++p;
+        if (*p == '\0') break;
+        const char* word = p;
+        int len = 0;
+        while (p[len] != '\0' && p[len] != ' ' && p[len] != '\t') ++len;
+        if (col > 0 && col + 1 + len > max_chars) {
+            out[at++] = '\n';
+            col = 0;
+        } else if (col > 0 && at + 1 < out_size) {
+            out[at++] = ' ';
+            ++col;
+        }
+        for (int i = 0; i < len && at + 1 < out_size; ++i) {
+            out[at++] = word[i];
+            ++col;
+        }
+        p += len;
+    }
+    out[at] = '\0';
+}
+
+static void frameloop_briefing_render(PlatformWindow* win,
+                                     DisplaySurface* surf,
+                                     const TextureSurface* panel,
+                                     const TextureSurface* title_font,
+                                     const TextureSurface* body_font,
+                                     const char* brief,
+                                     LevelState* level, GameContext* game,
+                                     int frame)
+{
+    void* pixels = NULL;
+    int pitch = 0;
+    if (surface_lock(surf, &pixels, &pitch) != 0) return;
+    level_render_scene(level, game, WINDOW_W, WINDOW_H, pixels, pitch);
+    if (panel != NULL) {
+        frameloop_blit_texture_scaled(panel, pixels, pitch, WINDOW_W, WINDOW_H,
+                                      76, 100, 488, 281);
+    }
+    if (title_font != NULL) {
+        const char* title = "Mission Brief";
+        int tw = (int)formatted_text_printf_width(title_font, title);
+        formatted_text_draw(title_font, pixels, pitch, WINDOW_W, WINDOW_H,
+                            (WINDOW_W - tw) / 2, 130, title);
+    }
+    if (body_font != NULL) {
+        char wrapped[1200];
+        if (brief != NULL && brief[0] != '\0') {
+            frameloop_wrap_brief(brief, wrapped, sizeof(wrapped), 43);
+            formatted_text_draw(body_font, pixels, pitch, WINDOW_W, WINDOW_H,
+                                119, 160, wrapped);
+        }
+        uint8_t* frame = (uint8_t*)pixels;
+        for (int y = 438; y < WINDOW_H; ++y) {
+            uint8_t* row = frame + (size_t)y * pitch;
+            for (int x = 0; x < WINDOW_W; ++x) {
+                row[(size_t)x * 4 + 0] = 5;
+                row[(size_t)x * 4 + 1] = 47;
+                row[(size_t)x * 4 + 2] = 9;
+                row[(size_t)x * 4 + 3] = 255;
+            }
+        }
+        const TextureSurface* prompt_font = title_font != NULL
+            ? title_font : body_font;
+        formatted_text_draw(prompt_font, pixels, pitch, WINDOW_W, WINDOW_H,
+                            122, 452, "Press SPACE to continue.");
+    }
+    render_apply_brightness(pixels, pitch, WINDOW_W, WINDOW_H,
+                            game->options.brightness);
+    platform_screenshot(win, pixels, pitch, WINDOW_W, WINDOW_H, frame);
+    platform_present_pixels(win, pixels, pitch, WINDOW_W, WINDOW_H);
+    surface_unlock(surf, pixels);
+}
+
 /* MenuOverlaySurfaceAndTextSetup (FUN_004129d0): the corpus resets the
  * save/load panel surface and its text resources when entering these menu
  * records. The frame-driven adapter composes the typed panel layout and the
@@ -682,8 +820,8 @@ static void frameloop_menu_render(PlatformWindow* win, DisplaySurface* surf,
         return;
     }
     if (game->level != NULL) {
-        level_render_map(game->level, game, 0, 0, WINDOW_W, WINDOW_H,
-                         pixels, pitch);
+        level_render_scene(game->level, game, WINDOW_W, WINDOW_H,
+                           pixels, pitch);
     } else {
         surface_fill(pixels, pitch, WINDOW_W, WINDOW_H, 8, 8, 20);
     }
@@ -812,8 +950,25 @@ int LegorrrRun(void)
         return 0;
     }
 
+    /* These reconstructed contexts contain large fixed-capacity tables. The
+     * reference keeps its corresponding state outside LegorrrRun's stack;
+     * placing both port structs here creates a >1 MiB frame and overflows
+     * the executable's 1 MiB PE stack before startup reaches this function. */
+    GameContext* game_storage = (GameContext*)calloc(1, sizeof(GameContext));
+    FrontEnd* fe_storage = (FrontEnd*)calloc(1, sizeof(FrontEnd));
+    if (game_storage == NULL || fe_storage == NULL) {
+        fprintf(log, "frameloop: could not allocate game/frontend contexts\n");
+        free(game_storage);
+        free(fe_storage);
+        if (log != stderr) {
+            fclose(log);
+        }
+        return 1;
+    }
+    GameContext& game = *game_storage;
+    FrontEnd& fe = *fe_storage;
+
     /* --- Game layer: config DB + level load (findings 07/12/22) ---------- */
-    GameContext game;
     game_context_init(&game);
     cmd_init();
     cmd_context_set(&game);
@@ -860,6 +1015,9 @@ int LegorrrRun(void)
                                                  WINDOW_W, WINDOW_H);
     if (win == NULL) {
         fprintf(log, "frameloop: no platform window (headless?)\n");
+        frameloop_game_context_dispose(&game);
+        free(game_storage);
+        free(fe_storage);
         if (log != stderr) {
             fclose(log);
         }
@@ -872,6 +1030,9 @@ int LegorrrRun(void)
     if (rc != 0) {
         fprintf(log, "frameloop: surface_create rc=%d\n", rc);
         platform_destroy_window(win);
+        frameloop_game_context_dispose(&game);
+        free(game_storage);
+        free(fe_storage);
         if (log != stderr) {
             fclose(log);
         }
@@ -962,13 +1123,10 @@ int LegorrrRun(void)
         fprintf(log, "movieloop: boot movies off (%s)\n", reason);
     }
 
-    /* --- Front-end boot (finding 23): main menu first -----------------------
-     * The ship is modal: the front end runs until the player picks a level
-     * (FE_EVT_START_LEVEL) or quits (FE_EVT_QUIT). The level itself loads
-     * only after the menu closes, and `LEGORRR_LEVEL` (or FrontEnd FALSE in
-     * the cfg) skips the menu straight into a level, like the classic demo. */
+    /* --- Front-end boot (finding 23): main menu before level load -----------
+     * Ordinary launches enter the reconstructed front end when enabled.
+     * LEGORRR_LEVEL remains a direct-launch override for development. */
     char level_name[FE_LEVEL_NAME_MAX];
-    FrontEnd fe;
     int boot_menu = 0, frontend_built = 0;
     if (game.cfg != NULL) {
         fprintf(log, "frameloop: config Lego.cfg loaded\n");
@@ -1001,8 +1159,7 @@ int LegorrrRun(void)
             int filled = 0, completed = 0, resume = -1;
             save_slot_state(&game, s, &filled, &completed, &resume);
             memset(&slots[sn], 0, sizeof(slots[sn]));
-            snprintf(slots[sn].label, FE_NAME_MAX, "Slot %d%s",
-                     s, (filled > 0) ? "" : " (empty)");
+            snprintf(slots[sn].label, FE_NAME_MAX, "Save Game %d", s);
             if (resume >= 0) {
                 char level[FE_LEVEL_NAME_MAX];
                 if (fe_level_for_record(&fe, resume, level, sizeof(level))) {
@@ -1205,6 +1362,34 @@ int LegorrrRun(void)
         }
     }
 
+    char mission_brief[1024] = { 0 };
+    int mission_brief_active = game.level != NULL
+        && pending_load_slot < 0
+        && env_get("LEGORRR_SKIP_BRIEFING", "")[0] == '\0'
+        && (s_icontains(level_name, "MoveTuto_01")
+            || s_icontains(level_name, "Tutorial01"));
+    TextureSurface* briefing_panel = NULL;
+    TextureSurface* briefing_title_font = NULL;
+    TextureSurface* briefing_body_font = NULL;
+    if (mission_brief_active) {
+        (void)frameloop_tutorial_brief_load(mission_brief,
+                                            sizeof(mission_brief));
+        briefing_panel = texture_get_or_load(
+            NULL, "Interface\\BriefingPanel\\BriefingPanel.bmp");
+        briefing_title_font = texture_get_or_load(
+            NULL, "Interface\\Fonts\\MbriefFont2.bmp");
+        briefing_body_font = texture_get_or_load(
+            NULL, "Interface\\Fonts\\MbriefFont.bmp");
+        int voice_frames = audio_status == 0
+            ? audio_play_named(&ap,
+                "Sounds\\Streamed\\Training\\Moving1\\mov1br.wav")
+            : -1;
+        fprintf(log, "frameloop: Mission Brief ready (%s, voice %s, %d frames)\n",
+                mission_brief[0] != '\0' ? "ObjectiveText loaded"
+                                          : "ObjectiveText unavailable",
+                voice_frames >= 0 ? "played" : "unavailable", voice_frames);
+    }
+
     const float dt = 1.0f / 30.0f;
     /* Game Speed (issue #85): options_scale_frame stamps the store's factor
      * into ctx.time_scale (EngineTick's subsystem tickers) and returns the
@@ -1231,6 +1416,33 @@ int LegorrrRun(void)
         if (frame_cap > 0 && frames >= frame_cap) {
             stop = "autostop";
             break;
+        }
+
+        /* The mission introduction holds simulation and accepts the same
+         * simple continue input as the reference. On dismissal the next
+         * frame enters normal gameplay without consuming that input twice. */
+        if (mission_brief_active) {
+            const int dismissed = input_key_edge(&input, ' ')
+                || input_key_edge(&input, PLATFORM_KEY_ENTER)
+                || input_mouse_pressed(&input);
+            if (dismissed) {
+                mission_brief_active = 0;
+                fprintf(log, "frameloop: Mission Brief dismissed; controls live\n");
+            } else {
+                frameloop_briefing_render(win, &surf, briefing_panel,
+                                          briefing_title_font,
+                                          briefing_body_font, mission_brief,
+                                          game.level, &game, (int)frames);
+                if (audio_status == 0) audio_update(&ap);
+                Sleep((DWORD)FRAME_MS);
+                ++frames;
+                input_begin_frame(&input);
+                continue;
+            }
+            Sleep((DWORD)FRAME_MS);
+            ++frames;
+            input_begin_frame(&input);
+            continue;
         }
 
         /* SaveMenuOpenFromReward is frame-driven in this port: once mode 4
@@ -1271,8 +1483,7 @@ int LegorrrRun(void)
                     saved_slot.id = fe.load_slot;
                     saved_slot.present = filled > 0;
                     snprintf(saved_slot.label, sizeof(saved_slot.label),
-                             "Slot %d%s", fe.load_slot,
-                             filled > 0 ? "" : " (empty)");
+                             "Save Game %d", fe.load_slot);
                     if (resume >= 0) {
                         char level[FE_LEVEL_NAME_MAX];
                         if (fe_level_for_record(&fe, resume, level,
@@ -1522,8 +1733,33 @@ int LegorrrRun(void)
             s_demo_input = &input;
             int lw = level_width(game.level);
             int lh = level_height(game.level);
-            float cx = lw > 0 ? (float)input.mouse_x / (float)WINDOW_W * (float)lw : 0.0f;
-            float cy = lh > 0 ? (float)input.mouse_y / (float)WINDOW_H * (float)lh : 0.0f;
+            float cx = 0.0f, cy = 0.0f;
+            int mouse_on_terrain = level_scene_mouse_cell(
+                &game, game.level, WINDOW_W, WINDOW_H,
+                input.mouse_x, input.mouse_y,
+                &cx, &cy);
+            if (!mouse_on_terrain) {
+                cx = lw > 0 ? (float)input.mouse_x / (float)WINDOW_W * (float)lw : 0.0f;
+                cy = lh > 0 ? (float)input.mouse_y / (float)WINDOW_H * (float)lh : 0.0f;
+            }
+
+            /* Left-click a Raider to select it; click open ground to send
+             * the selected group there. Both operations use the rendered
+             * camera projection, so the pointer agrees with what is shown. */
+            if (input_mouse_pressed(&input)) {
+                EntitySlot* hit = level_scene_pick_entity(
+                    &game, game.level, WINDOW_W, WINDOW_H,
+                    input.mouse_x, input.mouse_y, 30.0f);
+                if (hit != NULL) {
+                    selection_clear(&game);
+                    selection_add(&game, hit);
+                    fprintf(log, "frameloop: selected Raider %s\n", hit->name);
+                } else if (mouse_on_terrain && selection_has_any(&game)) {
+                    int n = selection_cmd_move(&game, cx, cy);
+                    fprintf(log, "frameloop: click move %d selected -> "
+                                 "cell (%.1f,%.1f)\n", n, cx, cy);
+                }
+            }
 
             if (input_key_edge(&input, 'n')) {
                 selection_clear(&game);
@@ -1645,10 +1881,8 @@ int LegorrrRun(void)
         int   pitch = 0;
         if (surface_lock(&surf, &pixels, &pitch) == 0) {
             if (game.level != NULL) {
-                /* Software level render (finding 22 §3): terrain grid from
-                 * the voxel array + live entity markers + cursor cell. */
-                level_render_map(game.level, &game, input.mouse_x, input.mouse_y,
-                                 WINDOW_W, WINDOW_H, pixels, pitch);
+                level_render_scene(game.level, &game, WINDOW_W, WINDOW_H,
+                                   pixels, pitch);
             } else {
                 surface_fill(pixels, pitch, WINDOW_W, WINDOW_H, 8, 16, 48);
                 surface_draw_sweep(pixels, pitch, WINDOW_W, WINDOW_H,
@@ -1670,6 +1904,23 @@ int LegorrrRun(void)
                 frontend_help_overlay(pixels, pitch, WINDOW_W, WINDOW_H,
                                       objective_stream(game.level),
                                       &game.options);
+                if ((s_icontains(level_name, "MoveTuto_01")
+                     || s_icontains(level_name, "Tutorial01"))
+                    && briefing_body_font != NULL) {
+                    uint8_t* frame = (uint8_t*)pixels;
+                    for (int y = WINDOW_H - 22; y < WINDOW_H - 2; ++y) {
+                        uint8_t* row = frame + (size_t)y * pitch;
+                        for (int x = 0; x < WINDOW_W; ++x) {
+                            row[(size_t)x * 4 + 0] = 8;
+                            row[(size_t)x * 4 + 1] = 18;
+                            row[(size_t)x * 4 + 2] = 10;
+                            row[(size_t)x * 4 + 3] = 255;
+                        }
+                    }
+                    formatted_text_draw(briefing_body_font, pixels, pitch,
+                        WINDOW_W, WINDOW_H, 12, WINDOW_H - 19,
+                        "Click Raider then cave to move. Keys 1-4 select, M move. Esc pauses.");
+                }
             }
             /* Brightness (issue #85): BrightnessSet's scalar on the frame. */
             render_apply_brightness(pixels, pitch, WINDOW_W, WINDOW_H,
@@ -1706,11 +1957,10 @@ int LegorrrRun(void)
     surface_destroy(&surf);
     platform_destroy_window(win);
 
-    /* Game-layer teardown: checkpoint blob + slot records + level + config. */
-    checkpoint_blob_free(&game);
-    free(game.records);
-    level_destroy(game.level);
-    block_close(game.cfg);
+    frontend_close(&fe);
+    frameloop_game_context_dispose(&game);
+    free(fe_storage);
+    free(game_storage);
 
     if (log != stderr) {
         fclose(log);

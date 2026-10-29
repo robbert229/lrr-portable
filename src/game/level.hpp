@@ -262,10 +262,12 @@ uint8_t* level_voxel(const LevelState* s, int x, int y);
 /* --- map-file resource slots (finding 07: 0x489410's slot registry) ----- *
  * The corpus keeps an interleaved (ptr, in-use-flag) pair table of 2000
  * map-image buffers; MapOpen2 opens through it (unported wad seam, see
- * docs/coverage/blocked.md). The port models the table as parallel
- * arrays; the allocator calloc's the image (the corpus allocates through
- * the engine-heap wrapper, TODO(corpus)). Reset clears without freeing,
- * exactly as the corpus leak loop does. */
+ * docs/coverage/blocked.md). The port models the table as one stride-8
+ * record array (pointer at +0, used byte at +4) to match the corpus's
+ * MapFileResourceSlot layout at DAT 0x00544a20; the claim rides the
+ * corpus's engine-heap allocator pair (0x48dbd0 / 0x48db80) — no
+ * zero-fill, no failure check, fault-on-use like the corpus. Reset
+ * clears without freeing, exactly as the corpus leak loop does. */
 
 #define LEVEL_MAP_SLOT_COUNT 2000 /* the corpus table length */
 
@@ -360,6 +362,10 @@ int terrain_cell_allows_placement(const struct EntitySlot* e,
  * corpus terrain record (free it with terrain_destroy). */
 void* terrain_create(const char* surface_map, float blocksize);
 void terrain_destroy(void* terrain);
+/* Read the retained heightfield used to build the terrain mesh. Heights are
+ * the unsigned cell values from SurfaceMap; invalid cells answer zero. */
+int terrain_surface_height_get(const void* terrain, int x, int y);
+float terrain_blocksize_get(const void* terrain);
 
 /* TerrainCellSurfaceTypeGet (FUN_0044f540, finding 226): the per-cell
  * surface-type byte (block-table +0x24) of the terrain handle. The

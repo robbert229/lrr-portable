@@ -280,6 +280,20 @@ picker's start-level event and calls the level loader. Remaining work is to
 confirm this whole path against shipped data through successful map loading;
 the legacy `LEGORRR_LEVEL=Level01` fallback is not suitable for that check.
 
+Image-backed `Next` and `Trigger` rows retain the normal/selected bitmap paths
+and tooltip while parsing, blit the selected bitmap in the menu renderer, and
+use the tooltip text as the item label. This is required by the shipped
+`MainMenuFull Menu4 Item1` definition: it is a `Next` button using `LP_Normal`
+and `LP_Glow`, with `Menu1` as its destination. Treating fields 3 and 4 as the
+label and destination displayed `LP_Normal.bmp` as text and broke back-button
+navigation. The separate `SaveMenu` image trigger closes that modal menu.
+
+The runtime SaveLoad rows use the fixed `Save Game N` captions from the
+reference view, independent of whether a slot currently has a save file. The
+lower status strip reads its instruction, percent format, and text window from
+`Menu::SaveText`; the empty-slot view therefore still shows the load prompt
+and `0% of game completed.` instead of leaving the strip blank.
+
 ## Menu scrolling — the `CanScroll` flag (`FUN_00413970` @ 0x413970)
 
 `MenuBuild` reads each sub-menu's `CanScroll` key and stores it as bit `0x2` of

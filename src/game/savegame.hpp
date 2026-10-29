@@ -217,13 +217,16 @@ void selected_level_start_object_update(GameContext* ctx); /* FUN_00460200 */
  * band). Two key views ride the same window: the fold find reads entry
  * slots as byte-string names through the corpus's case-insensitive
  * compare, and the four wide-key halves compare entry slots as
- * little-endian 16-bit units — pinned quirk: the unit's LOW byte
- * terminates the key, so a high-byte difference at the terminating unit
- * is never inspected. The add/has halves ride value array B; the
+ * little-endian 16-bit units — corpus quirk, reproduced: a zero byte in
+ * EITHER position of an otherwise-matching unit terminates the key
+ * (`test cl,cl / je` on the low byte at 0x416ef3 and on the high byte
+ * at 0x416f05), so an ASCII key whose unit carries a zero high byte
+ * matches as a prefix. The add/has halves ride value array B; the
  * set/get halves ride value array A. Deviations: the port guards the
- * window, entry, and key pointers (the corpus strides them blindly);
- * entries, values, and the key slots ride widened slots (the corpus
- * strides dword fields). */
+ * window and key pointers (the corpus dereferences them blind); entry,
+ * value, and key strides are blind like the corpus; entries, values,
+ * and the key slots ride widened slots (the corpus strides dword
+ * fields). */
 typedef struct SavListWindow {
     int32_t  count;      /* corpus header + 0 */
     void**   entries;    /* corpus + 4 (widened) */

@@ -71,17 +71,14 @@ Stats configuration layer they hand off to:
 | `IndexedValueAppend` (`0x469a90`), `GroupedCodeTableFindValueIndex` (`0x46a120`) | Append/lookup over the same unowned grouped tables. | Fold into the config-loader port. |
 | `EntityRecordFlag400ToggleAndRefresh` (`0x46a330`) | Toggles record `+148` bit 0x400, then calls `KindFourPostCreateResolve @ 0x43c570`, which is unported. | After that resolver. |
 
-## Engine heap internals (2026-10-24)
+## Engine heap internals (updated 2026-10-28)
 
-The heap **seam** (`src/gods98/heap.*`: alloc/retry/aligned/free entries)
-is **ported** onto the host allocator; the corpus's host-heap manager
-machinery it routes around remains unported, and nothing in the port
-depends on it:
+The allocator now includes the corpus's 4 MiB arena pool, page commitment,
+small-block allocation, and page-free tracking in addition to the heap entry
+points. The new-handler registry remains a port hook and is unset by default:
 
 | Function (`address`) | Blocker | Next action |
 | --- | --- | --- |
-| `EnginePoolAllocate` (`0x491900`) | Small-size pool inside the corpus heap's arena (`DAT_004b1fdc` gate, slot lists) — host-heap manager state with no port consumer; the aligned entry skips it. | Only if an allocator-exactness corpus is added. |
-| `CRTHeapLocateAllocationPage` (`0x491840`), `SmallHeapPageFreeSlotUpdate` (`0x4918a0`) | Page-directory walk + free-slot bookkeeping over the corpus heap's arena pages (`PTR_LOOP_004affb8`); the port frees straight through the host allocator. | Fold in only with a dedicated allocator port. |
 | `CrtNewHandlerInvokeForAllocationRetry` (`0x491d90`) | The registry global (`DAT_00549158`); the port passes the retry handler per call instead, and nothing registers one (the corpus's unregistered case). | Blocked-by-design (documented deviation). |
 
 ## CRT x87 stub thunks (2026-10-24)
@@ -210,7 +207,6 @@ recorded here.)
 | `ToolNameStringResourcesLoad` (`0x439950`) | Walks the `s_ToolNames_004a5068` reference-binary name table through the config lookup chain into the `DAT_00556228..254` band — reference name-table blocker family. | Reference-binary name tables (shared blocker). |
 | `PointerCursorNameRegistryInit` (`0x45c830`), `PointerCursorConfigParse` (`0x45cbd0`) | The init installs the 56-slot cursor-name table (`DAT_00500e1c..efc`) from static `.rdata` strings; the parse `__strcmpi`-scans that table. The exact string bytes are only in the corpus binary's `.rdata` (Ghidra names `s_Pointer_*` only give the sanitized prefix) — reference name-table blocker family. | Exact `.rdata` string extraction, then the table pair. |
 | `TypeTwoEntityPositionedCallbackDispatch` (`0x43b850`) | Type-2 tail call into `EntityPoolFindByCallbackFiltered` (`0x4377b0`, ported) with the `LAB_0043b8d0` on-stack closure thunk — queue-dispatcher thunk family. | Recover the thunk bodies (shared with the Queue* LAB band). |
-| `CrtDaylightTransitionBoundaryCompute` (`0x499da0`) | The month-offset tables (`DAT_004b29a4/9a8` fixed-rule, `DAT_004b29dc/9e0` week/weekday-rule) are `.data` initial values no corpus function writes — the exact twelve entries per table are not observable from the pseudocode (reference-binary data family, like the name tables). | Exact `.data` table extraction, then the boundary compute. |
 | `CursorSetClientPosition` (`0x47f0d0`) | Store-only over the mouse words (`DAT_0076ab24/b28`, input), but the body leads through `ClientToScreen` on the window-handle global (`DAT_00505800`, unowned) and ends at `SetCursorPos` — the Win32 cursor-position seam; the `DAT_0076ab34/b38` re-zero pair also has no port owner. | Cursor/window-handle model with the input cursor band. |
 | `UiCursorMoveToChoiceEntry` (`0x45d550`), `UiCursorMoveToElementCenter` (`0x45d640`) | Both ride the element-id/pointer tables (`DAT_0050111c`, `DAT_00500f6c + id*4` — the UI element pointer band no ported owner) and land the cursor through the blocked `CursorSetClientPosition` seam; the choice-entry half additionally folds the `__ftol` pair shape over unmodelled element extents. | Element pointer band + the cursor-position seam (above). |
 | `TypeFourEntityCallbackDispatch` (`0x447900`) | Type-4 tail call into `EntityPoolFindByCallbackFiltered` (`0x4377b0`, ported) with the bare `LAB_00447920` callback — the callback body remains unresolved. | Recover the callback body. |
@@ -262,14 +258,12 @@ Grouped by blocker family; every row names its address and next action:
   their pinned C-locale halves landed 2026-10-25 as
   `crt_string_to_upper`/`crt_string_to_lower`),
   `CrtCtypeTablesReset` (`0x496590`, corpus ctype tables),
-  `CrtHeapBlockFree` (`0x491710`) and `CRTHeapReleaseUnusedPages`
-  (`0x491770`, arena pages, shares the `0x491840` blocker), `__fload`
+  `__fload`
   (`0x492381`, x87 float-load stub family), `StdFileHandleAcquire`
   (`0x495000`) and `CrtFileDescriptorCloseSlot` (`0x499150`, CRT stdio/fd
   tables), `CrtEnvironmentBlockGet` (`0x496190`,
-  `GetEnvironmentStrings` copy), `CrtRuntimeErrorMessageBoxDisplay`
-  (`0x499730`, `MessageBoxA`). Next: fold into an allocator/CRT-runtime
-  port only when a corpus caller needs the observable.
+  `GetEnvironmentStrings` copy). Next: fold the remaining CRT/runtime
+  internals into a port when a corpus caller needs their observable.
 - **Queue-LAB thunk closure** — `FindNearbyPlacementCandidate` (`0x409450`)
   and `NeighborCellEntitySearchRecurse` (`0x409470`): gated on the
   `EntityAtGridPositionLookup` (`0x438670`) callback whose body is an
@@ -369,7 +363,7 @@ live port candidates below.)
 | **Reference-binary name/string tables** (5): `RockFallStyleNameLookup` (`0x40bf70`, `DAT_004c7990/9a0` band), `CaseInsensitiveIndexedStringLookup` (`0x45a410`, `DAT_00500350` band), `MessageStringTableInitialize` (`0x451cd0`, fills `DAT_004ff190` from `s_Message_*`), `InterfaceMenuActionLabelsInit` (`0x41a300`, fills the `DAT_004dced0` label band), `TerrainTileStyleResolve` (`0x45e9e0`, 7 KB tile-style resolution over the `DAT_004a8f4x/90x` style tables) | Exact table strings/table entries live only in the reference binary's `.rdata` (Ghidra names give sanitized prefixes); the table loaders have no port owner. Shared reference-name-table blocker. | Exact `.rdata` string/table extraction, then the band initializers land as leaves. |
 | **Key-binding tables** (3): `InputBindingDefaultValueGet` (`0x41cb90`), `InputBindingValueGet` (`0x41caf0`), `InputKeyMappingAddBidirectional` (`0x44f1a0`) | Read/write the `DAT_004dd1xx`/`DAT_004dd73x` binding-value band; the loader that fills it (config key-map chain, with the key-name lookups riding the reference name tables) has no port owner. Related band-ownership note: `LevelStateCountersClear` (`0x41a920`). | Key-binding config loader + band owner, then the getter/adder leaves. |
 | **x87 float10** (2): `DoubleToExtended80` (`0x497f40`), `DriftOffsetStepApply` (`0x44d0d0`) | Extended-precision (`float10`) conversion/accumulation with `__ftol` rounding — the port has no x87 model and constant/float64 answers would claim unproven semantics. Shares the CRT x87 stub-blocker class. | x87/control-word model (shared stub-family blocker). |
-| **Engine pool internals** (2): `EnginePoolChunkTryAllocate` (`0x491b40`), `SmallHeapBlockResizeInPlace` (`0x491cc0`) | The corpus heap's small-arena pool machinery — shared blocker with `EnginePoolAllocate` (`0x491900`) above; the port routes through the host allocator with no arena consumers. | Only with a dedicated allocator port. |
+| **Engine pool resize** (1): `SmallHeapBlockResizeInPlace` (`0x491cc0`) | In-place growth/shrink behavior over the now-ported arena page tags; still needs its caller-visible size and failure semantics recovered. | Port against the allocator's tag-map invariants. |
 | **Marker-grid window** (1): `TerrainCellHasOccupiedOrFlaggedNeighbor` (`0x40d240`) | Strides the `DAT_004c7dfc` marker-window descriptor pair (dims `+0x14`, voxel array `+0xb8`) with a stack-local 16-entry neighbor-offset table — the same window that `MapCellRecordGridInitialize` (`0x40cdc0`) blocks on: the `crt.*`/`level.*` descriptor split must merge first. | Merge the `DAT_004c7d*` window model (shared with `0x40cdc0`), then this lands as a leaf. |
 
 ### Scanner `CLEAN`-bucket split (4)

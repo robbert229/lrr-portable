@@ -106,7 +106,7 @@ int lwo_read_big_endian_float(const uint8_t** cursor, uint8_t out[4]);
  * corpus's own loop bounds, assembly-pinned. Deviations: the null string
  * is guarded, and the copy rides the rounded size so the block stays a
  * valid C string. LwoTextureProjectionModeParse (FUN_0048c120): a fold
- * compare (the corpus's strnicmp shape via string_folded_compare) against
+ * compare (direct strnicmp_lite carrier call, as the corpus) against
  * the binary's PLANAR / CYLINDRICAL / SPHERICAL table; the first prefix
  * match answers the table index, anything else answers 0 — PLANAR. */
 char* lwo_string_duplicate(const char* text);        /* FUN_0048c0c0 */

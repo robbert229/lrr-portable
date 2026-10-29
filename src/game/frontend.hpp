@@ -102,6 +102,8 @@ typedef struct FeItem {
     int   kind;
     int   x, y;      /* cfg anchor (or per-level FrontEndX/Y for picker rows) */
     char  label[FE_NAME_MAX];  /* display text (underscores shown as spaces) */
+    char  image_normal[FE_PATH_MAX];  /* image-backed Next/Trigger item */
+    char  image_selected[FE_PATH_MAX];
     char  status[FE_NAME_MAX]; /* hover/status text for save-list rows */
     char  target[FE_NAME_MAX]; /* "Menu%i" target, or the level group name    */
     int   flag;                /* Trigger flag / Cycle count / slider lo      */
@@ -127,11 +129,14 @@ typedef struct FeOverlay {
 typedef struct FeSubmenu {
     int   item_count;             /* cfg ItemCount + grafted chain rows */
     FeItem items[FE_ITEMS_MAX];
+    char  full_name[FE_NAME_MAX]; /* FullName key (underscore-normalized) */
     char  title[FE_NAME_MAX];     /* Title key (underscored display text) */
-    char  image[FE_PATH_MAX];     /* MenuImage / MenuImageDark (render lane) */
+    char  image[FE_PATH_MAX];     /* MenuImage */
+    char  image_dark[FE_PATH_MAX];/* MenuImageDark */
     char  lofont[FE_PATH_MAX];    /* LoFont key — unselected items (Menu_Font_Lo.bmp) */
     char  hifont[FE_PATH_MAX];    /* HiFont key — selected items  (Menu_Font_Hi.bmp) */
     int   base_x, base_y;         /* Position key (x:y) */
+    int   title_anchor_x;         /* Anchored x:y */
     int   title_anchor_y;         /* Anchored x:y; title adds y to Position.y */
     int   auto_center;            /* AutoCenter TRUE|FALSE */
     int   display_title;          /* DisplayTitle TRUE|FALSE */
@@ -739,10 +744,12 @@ void selection_coordinates_set(const uint32_t* pair, uint32_t x, uint32_t y);
 /* selection_coordinates_set (FUN_0041cce0): the pointer's two dwords go
  * to the +0c/+10 slots; x/y arrive as integers and convert to floats for
  * the +14/+18 slots — the corpus's int->float casts, faithful. */
-void selection_region_parameters_set(float a, float b, float c, float d,
-                                     float e);
-/* selection_region_parameters_set (FUN_0041e9d0): five region slots, the
- * last scaled by 0.04 (the corpus's float multiply). */
+void selection_region_parameters_set(uint32_t a, uint32_t b, uint32_t c,
+                                     uint32_t d, float e);
+/* selection_region_parameters_set (FUN_0041e9d0): four integer words
+ * convert from unsigned and rotate across the region slots (a -> +08,
+ * b -> +0c, c -> +00, d -> +04); the float scales by the corpus's .rdata
+ * 0.04 in single precision into the +10 slot. */
 void objective_selection_state_reset(void);
 /* objective_selection_state_reset (FUN_0041a990): clears the selection
  * word, mirrors the region's +08 float into the tracking word, and raises
@@ -871,8 +878,8 @@ UiRenderRecord* ui_render_record_create(void* source,
  * set the corpus takes the current bit 0x40 as its second argument,
  * then installs the word with the bit set when that answer is clear and
  * cleared when it is not — the bit-0x40 rule over the modeled selection
- * word, faithful. */
-void ui_mode_resource_bit40_set_clear(int probe, uint32_t value);
+ * word, faithful; the installed word answers in eax. */
+uint32_t ui_mode_resource_bit40_set_clear(int probe, uint32_t value);
 
 /* MenuWipeStart (FUN_004103f0, finding 37): when the wipe-arm word is
  * set, stop the running wipe clock, raise the start/pending bits in the

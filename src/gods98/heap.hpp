@@ -9,10 +9,9 @@
  * allocations first through the pool, otherwise the OS HeapAlloc).
  *
  * Port deviations (documented; see docs/coverage/blocked.md):
- *  - the corpus's pool allocator, allocation-page bookkeeping and new-handler
- *    registry are unported — the port maps the seam onto the host allocator,
- *    so every "attempt" is a single aligned malloc and failures answer NULL
- *    (the retry handler is absent, exactly the corpus's unregistered case);
+ *  - the pool allocator now reserves 4 MiB arenas and commits pages on demand;
+ *    non-Win32 builds use native virtual-memory calls as a compatibility path;
+ *  - the new-handler registry remains a port hook and is unset by default;
  *  - allocations are 16-byte aligned because the corpus round-ups do (the
  *    aligned path is shared by both entry points). */
 #include <stdint.h>
@@ -26,22 +25,39 @@ extern "C" {
 #endif
 
 /* FUN_0048dbf0: allocate `size` bytes; size 0 allocates 1 (corpus quirk);
- * sizes at/above 0xffffffe1 fail with NULL (corpus overflow gate). With a
- * NULL retry handler the port makes the single attempt the corpus makes
- * when nothing is registered: on failure, NULL — no spin. */
-void* engine_heap_alloc_retry(long size, int (*retry_handler)(long));
+ * sizes at/above 0xffffffe1 fail with NULL (corpus overflow gate). The
+ * retry flag is the corpus's second argument: zero makes the single
+ * attempt the corpus makes with the flag off — on failure, NULL, no spin;
+ * nonzero sends each failure through crt_new_handler_invoke and retries
+ * while that answers nonzero. */
+void* engine_heap_alloc_retry(long size, int retry_via_new_handler);
 
 /* FUN_0048dbd0: the plain entry — same path with the corpus's retry-flag
  * global, which the port leaves unregistered (single attempt). */
 void* engine_heap_alloc(long size);
 
-/* FUN_0048dc40: the aligned allocator body. The corpus tries its pool under
- * the small-size gate first (TODO(corpus) — absent here) and then the OS
- * heap; the port goes straight to the aligned host allocation. */
+/* FUN_0048dc40: the aligned allocator body. Small allocations use the CRT
+ * pool below the corpus threshold; larger allocations use the process heap. */
 void* engine_heap_alloc_aligned(long size);
 
 /* FUN_0048db80: free a previous allocation (NULL is a no-op). */
 void engine_heap_free(void* ptr);
+
+/* CRT small-block allocator internals (FUN_00491560 / 004915a0 / 00491710 /
+ * 00491770 / 00491840 / 004918a0 / 00491900 / 00491b40). Page ranges are
+ * reserved in 4 MiB arenas and committed in 4 KiB pages; payload sizes use
+ * 16-byte units. */
+int crt_heap_initialize(void);
+void* engine_pool_arena_create(void);
+void crt_heap_block_free(void* arena);
+void crt_heap_release_unused_pages(int page_count);
+void* crt_heap_locate_allocation_page(void* allocation, void** arena_out,
+                                     void** page_base_out);
+void small_heap_page_free_slot_update(void* arena, void* page_base,
+                                      unsigned char* allocation_tag);
+void* engine_pool_allocate(uint32_t size_units);
+void* engine_pool_chunk_try_allocate(void* page_header, uint32_t free_units,
+                                     uint32_t size_units);
 
 /* ThreeWordRecordAllocateAndInitialize (FUN_00410b60): allocate a 0xc-byte
  * record and store the three arguments in order. Deviation: the corpus's
@@ -78,6 +94,7 @@ void engine_heap_allocate(long size);
 int   crt_new_handler_invoke(long size);
 void  crt_new_handler_set(int (*handler)(long)); /* port hook */
 void* engine_calloc(long size);                  /* FUN_0048ead0 */
+void* crt_calloc_aligned(int count, int size);  /* FUN_004997c0 */
 
 /* OptionalResourceDestroy (FUN_0040f7b0): frees the optional resource
  * record only when one is there — the corpus's gate over the engine free. */
@@ -86,8 +103,8 @@ void optional_resource_destroy(void* record);
 /* TextBufferDestroy (FUN_00485190): frees the buffer held in the text
  * buffer record's +0x14 slot, then the record itself. The corpus's slot
  * is a 32-bit dword; the port carries a host-width pointer there
- * (documented deviation). A null record lands guarded — the corpus's
- * dereferences blindly. */
+ * (documented deviation). The corpus dereferences the record blindly and
+ * so does the port — callers own non-null. */
 void text_buffer_destroy(void* record);
 
 /* TextOutputField82CBit2SetClear (FUN_00485160): the text-output record's

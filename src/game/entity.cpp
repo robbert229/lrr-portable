@@ -447,20 +447,32 @@ static int nc_find_indexed(const NameCode* t, size_t n, const char* folded,
 static int ci_strcmp(const char* a, const char* b);
 
 /* Resolver pair (FUN_0042e8b0 shape): answers known-1 with the corpus's
- * (type, registry-row) outputs. Registry matches write both; the corpus's
- * special names write the dedicated ore-pair rows (0/1) only, leaving the
- * row slot for everything else (the dispatch aliases that slot onto its
- * first argument's word — a corpus quirk, pinned in the tests). */
+ * (type, registry-row) outputs. The corpus zeroes the row slot at entry
+ * (`mov ebx,[esp+0x10]` / `mov [ebx],0` at 0x42e8b8, before the name load
+ * and on every path, even the failed ones); registry matches then write
+ * both, the special names write the dedicated ore-pair rows (0/1) only,
+ * so everything else answers a zero row (the dispatch aliases that slot
+ * onto its first argument's word — a corpus quirk, pinned in the tests). */
 // FUNCTION: LEGORR 0x0042e8b0
 static int entity_type_pair_for_name(const char* name, int* type_out,
-                                     int* row_out)
+                                     int* row_out, int* zero_out)
 {
+    /* The corpus's entry zeroing, blind (mov ebx,[esp+0x10] / mov [ebx],0
+     * at 0x42e8b8): every in-tree caller threads a live row slot
+     * (entity_type_for_name carries a sink; the wrapper's two callers pass
+     * &barracks_row / &obj_y; the dispatch aliases its name slot). */
+    *row_out = 0;
     if (name == NULL || name[0] == '\0') {
         return 0; /* unregistered — the corpus aborts, the port skips */
     }
     if (ci_strcmp(name, "tvcamera") == 0) {
         if (type_out != NULL) {
             *type_out = -1; /* follow-camera branch in FUN_0042e020 */
+        }
+        /* corpus: the special-name answer also zeroes the fourth word
+         * (test a3 / store) — every port caller threads NULL. */
+        if (zero_out != NULL) {
+            *zero_out = 0;
         }
         return 1;
     }
@@ -534,19 +546,21 @@ static int entity_type_pair_for_name(const char* name, int* type_out,
 static int entity_type_for_name(const char* name)
 {
     int type = 0;
-    if (!entity_type_pair_for_name(name, &type, NULL)) {
+    int row_sink = 0; /* the entry zeroing lands here (corpus-blind form) */
+    if (!entity_type_pair_for_name(name, &type, &row_sink, NULL)) {
         return 0;
     }
     return type;
 }
 
 /* Public (type, row) shape of the resolver — the corpus call form with a
- * NULL fourth output (FUN_0042e8b0(name, &type, &row, 0)): table matches
- * write both, the special names write only their dedicated rows, leaving
- * the row slot for the caller to carry. */
+ * NULL fourth output (FUN_0042e8b0(name, &type, &row, 0)): the corpus's
+ * entry zeroing clears the row slot first (guarded here), table matches
+ * then write both, the special names write only their dedicated rows,
+ * so everything else answers a zero row. */
 int entity_type_row_for_name(const char* name, int* type_out, int* row_out)
 {
-    return entity_type_pair_for_name(name, type_out, row_out);
+    return entity_type_pair_for_name(name, type_out, row_out, NULL);
 }
 
 static void ol_strncpy(char* dst, size_t n, const char* src)
@@ -685,10 +699,10 @@ int object_list_load_file(GameContext* ctx, const char* olist)
 /* EntityFlagsMask107C33DEOr1C00203AnyTest (FUN_0043baf0, finding 319):
  * either flag word intersects its literal mask. */
 // FUNCTION: LEGORR 0x0043baf0
-bool entity_flags_mask107c33de_or_1c00203_any_test(const EntitySlot* e)
+int entity_flags_mask107c33de_or_1c00203_any_test(const EntitySlot* e)
 {
     if ((e->flags_3e0 & 0x107c33deu) != 0u) {
-        return true;
+        return 1;
     }
     return (e->flags_3e4 & 0x01c00203u) != 0u;
 }
@@ -699,6 +713,14 @@ bool entity_flags_mask107c33de_or_1c00203_any_test(const EntitySlot* e)
  * +0x3e0 bit 0x20000 clear; a nonzero `relaxed` skips the +0x3e8 clause,
  * otherwise bit 0x20000000 must be set and bit 0x80000000 clear.
  * (+1000 decimal is +0x3e8 — the flags_3e8 mirror.) */
+
+/* The corpus's eligibility gate compares the +0x340 bound against this
+ * .rdata zero dword (objdump-verified fcomp operand of
+ * EntitySharedEligibilityCheck); a named const static keeps the fcomp
+ * operand resolvable by Reccmp. */
+// GLOBAL: LEGORR 0x0049e3a4
+static const float s_eligibility_floor = 0.0f;   /* DAT_0049e3a4, verified */
+
 // FUNCTION: LEGORR 0x004385b0
 int entity_shared_eligibility_check(const EntitySlot* e, int relaxed)
 {
@@ -708,7 +730,7 @@ int entity_shared_eligibility_check(const EntitySlot* e, int relaxed)
     if ((e->flags_3e4 & 0x00100000u) != 0u) {
         return 0;
     }
-    if (!(0.0f <= e->field_340)) {
+    if (!(e->field_340 >= s_eligibility_floor)) {
         return 0;
     }
     if ((e->flags_3e0 & 0x00020000u) != 0u) {
@@ -730,7 +752,12 @@ int entity_shared_eligibility_check(const EntitySlot* e, int relaxed)
 // FUNCTION: LEGORR 0x004436f0
 int entity_type3_flag04000000_test(const EntitySlot* e)
 {
-    return (e->type == 3 && (e->flags_3e8 & 0x04000000u) != 0u) ? 1 : 0;
+    if (e->type == 3) {
+        if ((e->flags_3e8 & 0x04000000u) != 0u) {
+            return 1;
+        }
+    }
+    return 0;
 }
 
 /* EntityProgressAdvanceBy25 (FUN_00447730, findings 377/448): the corpus
@@ -910,7 +937,8 @@ uint32_t entity_stats_flag40_test(const EntitySlot* e)
 }
 
 /* GlobalAnimationStateSet (FUN_004383a0) — see entity.hpp. */
-static uint32_t s_global_animation_state; /* DAT_004eadc4 role: unowned */
+// GLOBAL: LEGORR 0x004eadc4
+static uint32_t s_global_animation_state; /* DAT_004eadc4 */
 
 // FUNCTION: LEGORR 0x004383a0
 void entity_global_animation_state_set(uint32_t value)
@@ -927,10 +955,14 @@ uint32_t entity_global_animation_state_peek(void)
 // FUNCTION: LEGORR 0x00471ce0
 int entity_flag100_and_shared_eligibility_check(const EntitySlot* e)
 {
-    if ((entity_state_flags_get(e) & 0x100u) == 0u) {
-        return 0;
+    /* Corpus shape: both gates jump to the shared zero tail, only the
+     * double pass answers 1. */
+    if ((entity_state_flags_get(e) & 0x100u) != 0u) {
+        if (entity_shared_eligibility_check(e, e->type != 4) != 0) {
+            return 1;
+        }
     }
-    return entity_shared_eligibility_check(e, e->type != 4) != 0 ? 1 : 0;
+    return 0;
 }
 
 /* EntityQuadMeshRenderRecordAllowed (FUN_0040aae0) — see entity.hpp. */
@@ -946,8 +978,10 @@ int entity_quad_mesh_render_record_allowed(const EntitySlot* e)
 
 /* TaskTypeAndConditionCheck (FUN_0043c490) — see entity.hpp. */
 // FUNCTION: LEGORR 0x0043c490
-int task_type_and_condition_check(const EntitySlot* target, int condition)
+int task_type_and_condition_check(const void* unused,
+                                  const EntitySlot* target, int condition)
 {
+    (void)unused;
     if (entity_shared_eligibility_check(target, 1) == 0 || condition == 0) {
         return 0;
     }
@@ -1142,15 +1176,20 @@ void* pooled_record_allocate_and_reset(void)
 int resolved_entity_operation_dispatch(const char* name, int slot,
                                        int subtract)
 {
-    int column = 0;
-    /* Corpus shape: the resolver zeroes its row slot at entry and only
-     * table-row matches (and the ore pair) write it, so special names
-     * ride the column slot with zero. */
-    int type = 0;
-    if (!entity_type_pair_for_name(name, &type, &column)) {
-        return 0;
+    /* Corpus shape: one local (the type slot, `push ecx`) and the resolver's
+     * row output aliased onto this function's first-parameter stack slot
+     * (`lea eax,[esp+0x8]` at 0x460915), so the resolver's entry zeroing
+     * clears it for special names while table/ore matches write the row
+     * there, and the post-resolver count scan reads its column word back
+     * out of the name parameter (`mov edx,[esp+0x8]` at 0x460936). The
+     * corpus's fourth resolver word is the immediate 0 (its NULL-guarded
+     * tvcamera store never fires from here). */
+    int type;
+    if (entity_type_pair_for_name(name, &type, (int*)&name, NULL)) {
+        return grid_record_count_difference_get(type, *(int*)&name, slot,
+                                                subtract);
     }
-    return grid_record_count_difference_get(type, column, slot, subtract);
+    return 0;
 }
 
 /* --- DAT_00502bd8 indexed stats-type tables (2026-10-25) ------------------
@@ -1399,17 +1438,15 @@ int catalog_callback_by_id_dispatch(const GameContext* ctx, int query,
         for (uint32_t row = 0; row < s_catalog_counts[0]; ++row) {
             int answer = 0;
             if (query == 0x14) {
-                const uint32_t w148 = stats_table_word_at_148(1, (int)row);
-                if ((w148 & 0x1000u) != 0u || (w148 & 0x2000u) != 0u) {
-                    const uint32_t w14c = stats_table_word_at_14c(1, (int)row);
-                    if ((w14c & 8u) == 0u) {
+                if ((stats_table_word_at_148(1, (int)row) & 0x1000u) != 0u
+                    || (stats_table_word_at_148(1, (int)row) & 0x2000u) != 0u) {
+                    if ((stats_table_word_at_14c(1, (int)row) & 8u) == 0u) {
                         answer = callback(0x49, 1, (int)row, payload);
                     }
                 }
             } else {
-                const uint32_t w148 = stats_table_word_at_148(1, (int)row);
-                const uint32_t w14c = stats_table_word_at_14c(1, (int)row);
-                if ((w148 & 0x800u) != 0u || (w14c & 8u) != 0u) {
+                if ((stats_table_word_at_148(1, (int)row) & 0x800u) != 0u
+                    || (stats_table_word_at_14c(1, (int)row) & 8u) != 0u) {
                     answer = callback(0x49, 1, (int)row, payload);
                 }
             }

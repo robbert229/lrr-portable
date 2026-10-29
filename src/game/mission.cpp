@@ -20,18 +20,6 @@ static const char* TASK_NAMES[GAME_TASK_COUNT] = {
 
 #define MISS_CRYSTAL_QUOTA 26 /* crystal display budget (CrystalQuotaSetup) */
 
-static int strcasecmp_lite(const char* a, const char* b)
-{
-    for (;;) {
-        int ca = (unsigned char)*a++;
-        int cb = (unsigned char)*b++;
-        if (ca >= 'a' && ca <= 'z') ca -= 0x20;
-        if (cb >= 'a' && cb <= 'z') cb -= 0x20;
-        if (ca != cb) return ca - cb;
-        if (ca == 0) return 0;
-    }
-}
-
 /* Path helper: level-scoped `Reward [<sub>] [<name>]` key, resolved via
  * util_level_cfg_path (Levels container first, flat fallback). */
 static void rw_path(char* out, size_t out_sz, BlockFile* cfg,
@@ -274,23 +262,38 @@ void mission_task_init(GameContext* ctx, BlockFile* cfg, const char* level_name)
         return;
     }
     const char* root = cfg != NULL ? util_root_name(cfg) : "Lego*";
-    int i;
-    /* Zero the slots and name them (TaskBlockInit's name pass). */
-    for (i = 0; i < GAME_TASK_COUNT; ++i) {
-        __builtin_memset(&ctx->tasks[i], 0, GAME_TASK_STRIDE);
-        task_set_name(&ctx->tasks[i], TASK_NAMES[i]);
+    GameTask* t;
+    const char** name;
+    /* TaskBlockInit clears its task block before the corpus's name pass. The
+     * port keeps the same operation scoped to the context-owned task array. */
+    __builtin_memset(ctx->tasks, 0, sizeof(ctx->tasks));
+    for (t = ctx->tasks, name = TASK_NAMES;
+         t < ctx->tasks + GAME_TASK_COUNT; ++t, ++name) {
+        task_set_name(t, *name);
     }
     if (cfg == NULL || level_name == NULL) {
         return;
     }
-    /* The six field loaders, in the corpus's TaskBlockInit order. */
-    for (i = 0; i < GAME_TASK_COUNT; ++i) {
-        GameTask* t = &ctx->tasks[i];
+    /* TaskBlockInit makes one pass per loader (Images, Text, Flics, Fonts,
+     * Sounds, BoxImages). Keep that corpus order while targeting ctx's tasks;
+     * each pass writes independent task fields, so the resulting records are
+     * unchanged from the former per-task grouping. */
+    for (t = ctx->tasks; t < ctx->tasks + GAME_TASK_COUNT; ++t) {
         task_loader_images(cfg, root, level_name, t);
+    }
+    for (t = ctx->tasks; t < ctx->tasks + GAME_TASK_COUNT; ++t) {
         task_loader_text(cfg, root, level_name, t);
+    }
+    for (t = ctx->tasks; t < ctx->tasks + GAME_TASK_COUNT; ++t) {
         task_loader_flics(cfg, root, level_name, t);
+    }
+    for (t = ctx->tasks; t < ctx->tasks + GAME_TASK_COUNT; ++t) {
         task_loader_font(cfg, root, level_name, t);
+    }
+    for (t = ctx->tasks; t < ctx->tasks + GAME_TASK_COUNT; ++t) {
         task_loader_sound(cfg, root, level_name, t);
+    }
+    for (t = ctx->tasks; t < ctx->tasks + GAME_TASK_COUNT; ++t) {
         task_loader_boximages(cfg, root, level_name, t);
     }
     mission_task_refresh(ctx);

@@ -835,7 +835,7 @@ int main(int argc, char** argv)
         flic_frame_window_layout_install(rec, 1, 1, 4, stream, pixels, 0);
         s16 = 16;
         memcpy(rec + 0x64c, &s16, 2);
-        s16 = (int16_t)0xaf42; /* -0x50bd */
+        s16 = (int16_t)0xaf43; /* -0x50bd */
         memcpy(rec + 0x644, &s16, 2);
         stream[7] = 1;               /* literal run of one */
         w16 = 0x07C0u;
@@ -898,7 +898,7 @@ int main(int argc, char** argv)
         flic_frame_window_layout_install(rec, 0, 0, 8, stream, pixels, 0);
         s16 = 16;
         memcpy(rec + 0x64c, &s16, 2);
-        s16 = (int16_t)0xaf42;
+        s16 = (int16_t)0xaf43; /* -0x50bd */
         memcpy(rec + 0x644, &s16, 2);
         stream[6] = 1;
         w16 = 1u;      memcpy(stream + 8, &w16, 2);   /* kind 0: one pair */

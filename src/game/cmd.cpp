@@ -19,12 +19,13 @@
 
 /* ------------------------------------------------------------------ *
  *  Command record (finding 10 §"Command record" — corpus stride 0x68).
- *  The struct is a semantic model, not a byte clone: the corpus packs
- *  next(+0x60) and free-list link(+0x64) into consecutive 4-byte words and
- *  payload(+0x10)/buffer(+0x40) as 32-bit pointers; here the record is a
- *  stable pool object. A separate port-only global link keeps another
- *  entity's commands from extending this entity's chain. Field names carry
- *  the corpus offsets.
+ *  Corpus 0x403190 has "mov [esi+0x38], eax", "mov [esi+0x58], 0", and
+ *  state read/write instructions at +0x5c; keep those named fields at their
+ *  corpus offsets. The port-only global-list link uses the intervening +0x50
+ *  word; private staging values follow the corpus +0x60 chain link.
+ *  CMD_STRIDE is sizeof(CmdRec), so the
+ *  pool allocation includes the private tail rather than overlapping the
+ *  corpus-visible fields (the x86 port record is 0x6c bytes).
  * ------------------------------------------------------------------ */
 
 typedef struct CmdRec {
@@ -41,34 +42,22 @@ typedef struct CmdRec {
     int32_t  cell_count; /* +0x28 cell-command entry count                      */
     int32_t  zone;       /* +0x2c zone-command id (kind-7; the corpus writer
                           * of this word is unported — zero-init)             */
-    int32_t  grant_act;  /* +0x38 activity the command grants: the tick's
-                          * deferred install (callback 0x43da62) appends it
-                          * to the entity's permitted-activity list and
-                          * drops type-0x13 grant records (cmd_chain_drop).
-                          * The corpus writer of the record's +0x38 — the
-                          * task-state granter — is config/runtime-driven
-                          * (finding 10 §"Spawn-dispatch task-state switch";
-                          * the shipped binary creates type-0x13 "ref"
-                          * records via CmdAlloc(0x13) — verified site
-                          * 0x403108 inside FUN_004030e0 — but pins no
-                          * +0x38 grant/flag pair);
-                          * port-side writers stage grants through
-                          * cmd_rec_set_activity. */
-    int32_t  extra;      /* +0x3c (type-8 tasks set 8)                         */
-    void*    buffer;     /* +0x40 owned buffer (freed on cmd_free)             */
+    uint8_t  pad_30[8];  /* +0x30..+0x37 (keeps the corpus +0x38 slot)          */
     void*    arg38;      /* +0x38 second payload slot (the 0x13 queue's word)   */
+    uint8_t  pad_3c[4];  /* +0x3c..+0x3f (buffer begins at the corpus +0x40)    */
+    void*    buffer;     /* +0x40 owned buffer (freed on cmd_free)             */
     uint32_t count;      /* +0x44 the buffer's entry count                     */
-
     void*    entity_ref; /* +0x48 pending entity reference (the corpus
-                          * writers are the spawn-dispatch band, unported —
-                          * zero until one installs a value)                   */
-
+                           * writers are the spawn-dispatch band, unported —
+                           * zero until one installs a value)                   */
     int32_t  kind;       /* +0x4c kind index                                   */
-    void*    event_payload; /* +0x54 event payload (the 0xc queue's word)   */
+    void*    global_next; /* +0x50 port-only global command-list link           */
+    void*    event_payload; /* +0x54 event payload (the 0xc queue's word)       */
     void*    ref;        /* +0x58 referenced record (the 0x13 "ref" pair)      */
     uint32_t state;      /* +0x5c state flags (CMD_STATE_*)                    */
-    void*    next;       /* +0x60 chain link / free-list link when free        */
-    void*    global_next; /* port-only global command-list link               */
+    void*    next;       /* +0x60 entity-chain link; port reuses it when free  */
+    int32_t  grant_act;  /* port-only staged activity (deferred install 0x43da62) */
+    int32_t  extra;      /* port-only task selector (type-8 tasks set 8)        */
 } CmdRec;
 
 #define CMD_STRIDE sizeof(CmdRec)
@@ -96,13 +85,36 @@ void cmd_rec_set_next(void* rec, void* next) { as_rec(rec)->next = next; }
  * ------------------------------------------------------------------ */
 
 #define CMD_POOL_MAX_BLOCKS 12
+/* Pool bookkeeping is the corpus's DAT_004b31c8 band: CmdPoolGrow stores
+ * each block at [level*4+0x4b31c8] and the level at DAT_004b31fc;
+ * CmdAlloc/CmdFree pop and push the freelist through DAT_004b31f8
+ * (records link at +0x64). All three are zero-init in the corpus.
+ * On the 64-bit host test build, keep the pointer-sized `next` link because
+ * the private +0x64 word is only 32 bits; the 32-bit target uses grant_act. */
+#if defined(_M_IX86) || defined(__i386__)
+#define CMD_POOL_LINK_GET(rec) \
+    ((CmdRec*)(uintptr_t)(uint32_t)(rec)->grant_act)
+#define CMD_POOL_LINK_SET(rec, value) \
+    ((rec)->grant_act = (int32_t)(uintptr_t)(value))
+#else
+#define CMD_POOL_LINK_GET(rec) ((rec)->next)
+#define CMD_POOL_LINK_SET(rec, value) ((rec)->next = (value))
+#endif
+// GLOBAL: LEGORR 0x004b31c8
 static CmdRec* s_blocks[CMD_POOL_MAX_BLOCKS];
-static int     s_pool_level = 0;
+/* The corpus table ends at the free-list head: HandleArrayReleaseAndReset
+ * advances four bytes at a time and compares esi with 0x4b31f8. Keep this
+ * declaration immediately after the 12 table entries. */
+// GLOBAL: LEGORR 0x004b31f8
 static void*   s_free       = NULL;
+// GLOBAL: LEGORR 0x004b31fc
+static int     s_pool_level = 0;
 
+// GLOBAL: LEGORR 0x004b3354
 static CmdRec* s_global_head = NULL; /* DAT_004b3354 */
 static CmdRec* s_global_tail = NULL; /* DAT_004b3358 */
-static int   s_global_enabled = 1; /* DAT_004b8060 */
+// GLOBAL: LEGORR 0x004b8060
+static int   s_global_enabled = 0; /* DAT_004b8060: zero-init; cmd_init sets bit 0 */
 
 // FUNCTION: LEGORR 0x004064c0
 static void cmd_pool_grow(void)
@@ -120,10 +132,10 @@ static void cmd_pool_grow(void)
     ++s_pool_level;
     if (n > 1) {
         for (uint32_t i = 0; i + 1 < n; ++i) {
-            block[i].next = &block[i + 1];
+            CMD_POOL_LINK_SET(&block[i], &block[i + 1]);
         }
     }
-    block[n - 1].next = s_free;
+    CMD_POOL_LINK_SET(&block[n - 1], s_free);
     s_free = block;
 }
 
@@ -137,7 +149,7 @@ void* cmd_alloc(int type)
         return NULL;
     }
     CmdRec* rec = (CmdRec*)s_free;
-    s_free = rec->next;
+    s_free = CMD_POOL_LINK_GET(rec);
     memset(rec, 0, CMD_STRIDE);
     rec->next = NULL;
     rec->type = type;
@@ -147,20 +159,24 @@ void* cmd_alloc(int type)
 // FUNCTION: LEGORR 0x00406480
 void cmd_free(void* rec, int cancel)
 {
-    if (rec == NULL) {
-        return;
-    }
+    /* corpus: no NULL-record path — the gate is the second argument
+     * (test [esp+8] / jne) and the record is dereferenced blindly. */
     if (cancel == 0) {
         cmd_cancel_ref(rec); /* corpus: unless the argument suppresses it */
     }
     CmdRec* r = as_rec(rec);
     if (r->buffer != NULL && (r->state & CMD_STATE_BUFOUT) == 0) {
-        free(r->buffer);
-        r->buffer = NULL;
+        engine_heap_free(r->buffer); /* corpus: push eax / call 0x48db80 */
+        /* corpus: the pointer is never cleared — cmd_alloc zeroes the
+         * whole record, so the next owner starts from NULL. */
     }
-    r->next = s_free;
+    /* corpus: load ds:0x4b31f8, link it at [rec+0x64], store the record
+     * back as that head — s_free is this freelist head. */
+    CMD_POOL_LINK_SET(r, s_free);
     s_free = r;
 }
+#undef CMD_POOL_LINK_GET
+#undef CMD_POOL_LINK_SET
 
 /* ------------------------------------------------------------------ *
  *  Registry (CmdRegistryInit / CmdKindByName): 31 AI task types and
@@ -185,18 +201,6 @@ static const char* const PRIO_NAMES[27] = {
     "Punch", "Depart", "AttackPath", "AttackObject", "Congregate",
 };
 static int8_t s_behaviour[27]; /* DAT_004b32e8 by kind */
-
-static int cmd_strcasecmp(const char* a, const char* b)
-{
-    for (;;) {
-        int ca = (unsigned char)*a++;
-        int cb = (unsigned char)*b++;
-        if (ca >= 'a' && ca <= 'z') ca -= 0x20;
-        if (cb >= 'a' && cb <= 'z') cb -= 0x20;
-        if (ca != cb) return ca - cb;
-        if (ca == 0) return 0;
-    }
-}
 
 // FUNCTION: LEGORR 0x00401cf0
 void cmd_init(void)
@@ -236,11 +240,14 @@ void cmd_init(void)
 // FUNCTION: LEGORR 0x00401cb0
 int cmd_kind_by_name(const char* name, int* out)
 {
-    if (name == NULL || out == NULL) {
-        return 0;
-    }
-    for (int i = 0; i < 27; ++i) {
-        if (cmd_strcasecmp(name, PRIO_NAMES[i]) == 0) {
+    /* stride-4 name-table walk, as the corpus: unsigned end compare (the
+     * loop-back is jb) with the index counter beside the pointer (edi) */
+    const char* const* entry = PRIO_NAMES;
+    const char* const* end = PRIO_NAMES + 27;   /* 0x4b32e8 - 0x4b327c */
+    int i = 0;
+    for (; entry < end; ++entry, ++i) {
+        /* cdecl stack order: push the table entry, then the query name. */
+        if (strcasecmp_lite(name, *entry) == 0) {
             *out = i;
             return 1;
         }
@@ -567,17 +574,17 @@ static int task_kind_for(EntitySlot* e)
 // FUNCTION: LEGORR 0x00402850
 static void cmd_minion_companion(EntitySlot* e)
 {
-    if (e == NULL || e->etype != 6) {
+    /* Corpus parity: strides the entity blindly, uses the record blindly,
+     * and routes the kind through the corpus's own cmd_set_kind. */
+    if (e->etype != 6) {
         return;
     }
     CmdRec* rec = (CmdRec*)cmd_alloc(3);
-    if (rec == NULL) {
-        return;
-    }
     rec->payload = e;
-    cmd_bind_kind(rec, 0x15);
+    cmd_set_kind(rec, 0x15);
     cmd_link_tail(rec);
-    rec->state |= CMD_STATE_MINION;
+    /* Corpus: mov eax,[+0x5c] / or ah,0x20 / mov [+0x5c],eax. */
+    rec->state = rec->state | CMD_STATE_MINION;
 }
 
 // FUNCTION: LEGORR 0x00402720
@@ -680,7 +687,7 @@ void idle_queue_clear(EntitySlot* e)
  *  Queue executor (FUN_004520d0): 5-dword records, ping-pong buffered.
  * ------------------------------------------------------------------ */
 
-#define CMD_QUEUE_CAP 64
+#define CMD_QUEUE_CAP 0x800
 
 typedef struct QueueRec {
     int        opcode;
@@ -690,8 +697,11 @@ typedef struct QueueRec {
     int        a4;
 } QueueRec;
 
+// GLOBAL: LEGORR 0x004eaf20
 static QueueRec s_queue[2][CMD_QUEUE_CAP];
+// GLOBAL: LEGORR 0x004fef20
 static int      s_queue_count[2];
+// GLOBAL: LEGORR 0x004fef28
 static int      s_ping; /* active producer block (DAT_004fef28) */
 
 void cmd_context_set(GameContext* ctx)
@@ -704,23 +714,30 @@ void cmd_context_set(GameContext* ctx)
 }
 
 // FUNCTION: LEGORR 0x00452060
-void cmd_produce(int op, const void* a1, int a2, int a3, int a4)
+void cmd_produce(int op, const void* a1, int a2, const int* pair)
 {
     int block = s_ping;
-    if (s_queue_count[block] >= CMD_QUEUE_CAP) {
+    if ((unsigned)s_queue_count[block] >= CMD_QUEUE_CAP) {
         return; /* queue full: silent drop (FUN_00452060) */
     }
     QueueRec* q = &s_queue[block][s_queue_count[block]++];
+    /* b63 note: an explicit zero-fill phase + single pair null-test was
+     * tried (corpus 0x452092..0x4520ba shape) and measured LOWER — the
+     * toolchain's store/register scheduling diverges; the fused writes
+     * below are the measured-best shape. */
     q->opcode = op;
     q->a1 = a1;
     q->a2 = a2;
-    q->a3 = a3;
-    q->a4 = a4;
+    q->a3 = (pair != NULL) ? pair[0] : 0;
+    q->a4 = (pair != NULL) ? pair[1] : 0;
 }
 
 void cmd_enqueue(int opcode, const EntitySlot* e, int param, int p1, int p2)
 {
-    cmd_produce(opcode, e, param, p1, p2);
+    int pair[2];
+    pair[0] = p1;
+    pair[1] = p2;
+    cmd_produce(opcode, e, param, pair);
 }
 
 /* Cheat/debug keybinds (FUN_00452010). */
@@ -752,7 +769,7 @@ void cmd_keybind_tick(int (*keyheld)(int key))
         KeyBind* b = &s_keybinds[i];
         if (keyheld(b->key)) {
             cmd_produce(b->op, (const void*)(uintptr_t)b->a1,
-                        b->a2, b->a3, b->a4);
+                        b->a2, &b->a3);
         }
     }
 }
@@ -866,15 +883,17 @@ const void* active_context_record_get(int* count_out)
 int cmd_array_find_value_index(const int* array, unsigned count, int value,
                                unsigned* index_out)
 {
-    if (array == NULL) {
-        return 0; /* deviation: the corpus dereferences blindly */
-    }
-    for (unsigned i = 0; i < count; ++i) {
-        if (array[i] == value) {
-            if (index_out != NULL) {
-                *index_out = i;
+    if (count != 0) { /* deviation: the corpus tests the count first */
+        if (array != NULL) { /* pinned anti-crash guard — the corpus
+                              * dereferences blindly */
+            for (unsigned i = 0; i != count; ++i) {
+                if (array[i] == value) {
+                    if (index_out != NULL) {
+                        *index_out = i;
+                    }
+                    return 1;
+                }
             }
-            return 1;
         }
     }
     return 0;
@@ -976,9 +995,11 @@ void entity_random_valid_cell_command_create(void* entity)
         }
     }
     if (found != 0) {
-        /* deviation: the corpus queues a pointer to its stack pair; the
-         * port stores the coordinates by value in the record. */
-        cmd_produce(0x24, entity, 0, x, y);
+        /* FUN_00452060 copies the two optional words from a stack pair. */
+        int pair[2];
+        pair[0] = x;
+        pair[1] = y;
+        cmd_produce(0x24, entity, 0, pair);
     }
 }
 // FUNCTION: LEGORR 0x00452c50
@@ -1104,17 +1125,39 @@ int selected_entity_state_monitor(void)
     return count;
 }
 
-/* --- entity record schedulers (see cmd.hpp) ----------------------------------
- * Corpus note: the queue leaf's CurrentLevelGet call discards its result
- * (the corpus's level-state touch) — no ported state depends on it. */
+/* --- entity record schedulers (see cmd.hpp) ---------------------------------- */
+
+/* CurrentLevelGet (FUN_00431560): the corpus's no-arg level-state touch.
+ * The scored port of this address (camera_state_root, gods98/camera.cpp)
+ * takes an EngineContext — a callee-signature barrier (b26) — so this
+ * file-local no-op carrier reproduces the corpus's blind no-arg call at
+ * the entry of 0x402670. NOTE (b46): the carrier must NOT carry the
+ * `// STUB: LEGORR 0x00431560` annotation — duplicating a ledger-stub
+ * address scores fine, but duplicating a *scored* // FUNCTION: claim
+ * steals the ledger match away from camera_state_root. */
+static void current_level_get(void)
+{
+    /* TODO(corpus): the level-state root touch; the corpus discards the
+     * result and no ported state depends on it. */
+}
+
 // FUNCTION: LEGORR 0x00402670
 void entity_command15_validated_record_queue(EntitySlot* e)
 {
+    current_level_get(); /* corpus: call 0x431560 on entry, result discarded */
     if (e != NULL && entity_flag40000_threshold_compare(e) != 0) {
         CmdRec* rec = (CmdRec*)cmd_alloc(0x1a);
         cmd_link_head(rec, 0xf);
-        rec->payload = e;
-        rec->state = (rec->state & ~0x10u) | 0x40040u;
+        /* Corpus RMW schedule: mov eax,[rec+0x5c] / and al,0xef /
+         * mov [rec+0x10],edi / or eax,0x40040 / mov [rec+0x5c],eax — the
+         * payload store lands between the two state ops. Keeping the value
+         * live in eax across that store would need a local (a /Od local
+         * stack-spills, b45), so the port keeps the plain split; bit 4 is
+         * disjoint from 0x40040, so the pair is value-identical to the
+         * corpus's single (state & ~0x10) | 0x40040 fold. */
+        rec->state = rec->state & ~0x10u; /* +0x5c, pre-payload half */
+        rec->payload = e;                 /* +0x10 */
+        rec->state = rec->state | 0x40040u; /* +0x5c, post-payload half */
     }
 }
 // FUNCTION: LEGORR 0x004026c0
@@ -1209,11 +1252,10 @@ int cmd_rec_param2_get(const void* rec)
 }
 
 /* --- registry flush / wrappers (see cmd.hpp) ---------------------------------
- * The handle array (DAT_004b31c8 band, 12 dwords + companion): no ported
- * feeder (the registry initializer is the seam), so it is modeled as a
- * zero-init static whose release walk is inert. */
-static void* s_handle_array[12];
-static int   s_handle_array_companion;  /* DAT_004b31f8 */
+ * The "handle array" the corpus's TaskTableContentsRelease walks IS the
+ * cmd pool block array (0x4b31c8 band, bounded by the freelist head at
+ * 0x4b31f8 — corpus-verified at 0x004020c0), so the release walks the pool
+ * statics directly rather than a duplicate model. */
 // FUNCTION: LEGORR 0x00402100
 void cmd_flush_all(int disable_mode)
 {
@@ -1236,38 +1278,54 @@ int cmd_global_enabled_peek(void) { return s_global_enabled; }
 // FUNCTION: LEGORR 0x004021e0
 void* engine_memory_allocate(long size)
 {
-    (void)engine_heap_alloc(size);
-    /* corpus shape: the allocation happens; the pointer is discarded. */
-    return NULL;
+    /* corpus shape: forwards the allocation's result; engine_heap_alloc is FUN_0048dbd0. */
+    return engine_heap_alloc(size);
 }
 // FUNCTION: LEGORR 0x00402210
 void engine_memory_free(void* ptr)
 {
     engine_heap_free(ptr);
 }
+/* TaskTableContentsRelease (FUN_004020c0): frees every non-null pool
+ * block pointer. The corpus increments esi by four and compares it with
+ * s_free at 0x4b31f8 ("cmp esi, 0x4b31f8"), then clears that head and the
+ * scheduler word at 0x4b8060. */
 // FUNCTION: LEGORR 0x004020c0
 void handle_array_release_and_reset(void)
 {
-    for (int i = 0; i < 12; ++i) {
-        if (s_handle_array[i] != NULL) {
-            engine_heap_free(s_handle_array[i]);
+    CmdRec** walk = s_blocks;
+    CmdRec** const end = s_blocks + CMD_POOL_MAX_BLOCKS;
+    while (walk < end) {
+        if (*walk != NULL) {
+            engine_heap_free(*walk);
         }
+        ++walk;
     }
-    s_handle_array_companion = 0;
+    s_free = NULL;
     s_global_enabled = 0;
 }
 // FUNCTION: LEGORR 0x00402800
+/* EntityCommand14BatchIssue (FUN_00402800): the corpus materializes the
+ * flag by mutation, not by a sete — edi starts at 0, the count==0
+ * fall-through stores 1 into it and reuses it as the loop bound (the
+ * test/jne shape) — then strides the loop blindly: cmd_alloc(4) is
+ * dereferenced with no NULL check (deviation removed: the port's guard
+ * let an exhausted pool skip records the corpus would stride onto).
+ * Corpus 0x402817 uses the unsigned `jbe` gate; keep the bound and loop
+ * index unsigned so MSVC does not emit the port's signed `jle` for negatives. */
 void entity_command14_batch_issue(int count)
 {
-    const int raise_bit6 = (count == 0);
-    const int n = raise_bit6 ? 1 : count;
-    for (int i = 0; i < n; ++i) {
+    unsigned flag = 0;
+    unsigned n = (unsigned)count;
+    if (n == 0) {
+        flag = 1u;
+        n = 1;
+    }
+    for (unsigned i = 0; i < n; ++i) {
         CmdRec* rec = (CmdRec*)cmd_alloc(4);
-        if (rec == NULL) {
-            continue;
-        }
+        /* corpus: no alloc guard, the record is used blindly */
         cmd_set_kind(rec, 0x14);
-        if (raise_bit6) {
+        if (flag != 0u) {
             rec->state |= 0x40u;
         }
         cmd_link_tail(rec);
@@ -1280,19 +1338,18 @@ void level_no_gather_object_setup(int mode)
         entity_command14_batch_issue(0);
     }
     CmdRec* gather = (CmdRec*)cmd_alloc(0x18);
-    if (gather != NULL) {
-        cmd_set_kind(gather, 0x17);
-        gather->state |= 0x40u;
-        /* corpus: the manual push onto the tail pointer only (the head
-         * stays put until a head-link touches the list) — ported through
-         * the tail link (deviation: timestamp/pending housekeeping). */
-        cmd_link_tail(gather);
-    }
+    /* Corpus 0x40218d..0x4021a8 uses the allocation blindly. The only
+     * in-tree callers are the two test cases, both after cmd_init(). */
+    cmd_set_kind(gather, 0x17);
+    gather->state |= 0x40u;
+    /* Corpus 0x4021a3..0x4021ad manually pushes onto the tail pointer;
+     * the port uses its forward global-chain link (and its timestamp / state
+     * housekeeping) to preserve cmd_global_next() behavior. */
+    cmd_link_tail(gather);
     CmdRec* other = (CmdRec*)cmd_alloc(0x1b);
-    if (other != NULL) {
-        cmd_link_head(other, 0);
-        other->state = (other->state & ~0x10u) | 0x440u;
-    }
+    /* Corpus 0x4021bb..0x4021c0 likewise links the allocation blindly. */
+    cmd_link_head(other, 0);
+    other->state = (other->state & ~0x10u) | 0x440u;
 }
 
 /* --- cancellation-ref and conditional issuers (see cmd.hpp) ------------------
@@ -1329,15 +1386,15 @@ void cmd_cancel_ref(void* rec)
 void entity_conditional_task_schedule(EntitySlot* e)
 {
     if (e == NULL) {
-        return; /* deviation: the corpus reads the entity blindly */
+        return; /* pinned anti-crash guard — the corpus reads the entity
+                 * blindly; the test hands in NULL */
     }
     if ((entity_capability_flags_get(e) & 1u) != 0u
         && (e->flags_3e0 & 0x400u) == 0u
         && (e->flags_3ec & 0x10000u) == 0u) {
         CmdRec* rec = (CmdRec*)cmd_alloc(0x1e);
-        if (rec == NULL) {
-            return;
-        }
+        /* Corpus: no null check on the allocation — the payload store and
+         * the flag word ride blind. */
         rec->payload = e;
         e->flags_3ec |= 0x10000u;
         cmd_link_head(rec, 0x11);
@@ -1364,18 +1421,13 @@ void entity_threshold_progress_event_queue(void* payload, int flag)
 void entity_target_command_queue(EntitySlot* e, void* target)
 {
     CmdRec* rec = (CmdRec*)cmd_alloc(0x11);
-    if (rec == NULL) {
-        return;
-    }
+    /* Corpus: no null checks — the payload and chain slots ride blind. */
     rec->payload = target;
-    if (e == NULL) {
-        return; /* deviation: the corpus writes +0x2f0 blindly */
-    }
     CmdRec* tail = as_rec(cmd_chain_walk(e));
     if (tail != NULL) {
-        tail->next = rec;
+        tail->next = rec; /* corpus [tail+0x60] */
     } else {
-        e->cmd_head = rec;
+        e->cmd_head = rec; /* corpus [e+0x2f0] */
     }
     /* The corpus writes only the chain pointer: no timestamp, no pending
      * clear, no idle registration (the append helper's extras). */
@@ -1451,13 +1503,17 @@ void entity_kind_command_issue(EntitySlot* e)
     e->flags_3e4 |= 0x10u;
     const uint32_t cap = entity_capability_flags_get(e);
     if ((cap & 0x100u) == 0u) {
-        const uint32_t stats = entity_stats_word_get(e);
-        if ((stats & 0x2000000u) == 0u) {
-            if ((stats & 0x1000000u) != 0u) {
+        /* Corpus 0x402960 calls FUN_00469e60 separately in each branch. */
+        if ((entity_stats_word_get(e) & 0x2000000u) == 0u) {
+            if ((entity_stats_word_get(e) & 0x1000000u) != 0u) {
                 rec->extra = 2;
             }
         } else {
-            rec->extra = ((stats & 0x1000000u) == 0u) ? 4 : 1;
+            if ((entity_stats_word_get(e) & 0x1000000u) != 0u) {
+                rec->extra = 1;
+            } else {
+                rec->extra = 4;
+            }
         }
     } else {
         rec->extra = 1;
@@ -1600,7 +1656,13 @@ void cell_command_type13_issue(int x, int y)
     if (rec == NULL) {
         return;
     }
-    cmd_cell_record_stage(rec, x, y, 0xd);
+    /* Corpus 0x402e60..0x402e8e writes the pair and cell fields directly. */
+    __builtin_memcpy(&rec->x, &x, sizeof(rec->x));
+    __builtin_memcpy(&rec->y, &y, sizeof(rec->y));
+    rec->cell_act = 0xd;
+    rec->cell_target = -1;
+    rec->cell_count = 0;
+    rec->state |= 0x400u;
     entity_record_array_apply_zero_state(rec, 1);
     cmd_link_head(rec, 3);
     /* Counter update: the seam half above. */
@@ -1612,7 +1674,13 @@ void cell_command_type11_issue(int x, int y)
     if (rec == NULL) {
         return;
     }
-    cmd_cell_record_stage(rec, x, y, 0xb);
+    /* Corpus 0x402fc2..0x402feb writes these fields before its helper calls. */
+    __builtin_memcpy(&rec->x, &x, sizeof(rec->x));
+    __builtin_memcpy(&rec->y, &y, sizeof(rec->y));
+    rec->cell_act = 0xb;
+    rec->cell_target = -1;
+    rec->cell_count = 0;
+    rec->state |= 0x400u;
     entity_record_array_apply_zero_state(rec, 1);
     cmd_link_head(rec, 4);
     /* Counter update: the seam half above. */
@@ -1648,7 +1716,9 @@ int cmd_rec_target_get(const void* rec)
 
 /* --- task-type-23 category-mask issuer (see cmd.hpp) -------------------------
  * The corpus's entity argument rides every read blindly; the port guards the
- * entity slot because the selector gate reads its stats record. */
+ * entity slot because the selector gate reads its stats record. The allocator's
+ * result is stored blindly, +0x10 payload before +0x3c extra, the selector
+ * riding the interleaved stores straight from the argument. */
 // FUNCTION: LEGORR 0x00402890
 void task_type23_create_for_category_mask(EntitySlot* e, int selector,
                                           int issue_records)
@@ -1660,9 +1730,8 @@ void task_type23_create_for_category_mask(EntitySlot* e, int selector,
         return;
     }
     CmdRec* rec = (CmdRec*)cmd_alloc(0x17);
-    if (rec == NULL) {
-        return;
-    }
+    /* Corpus: no null check on the allocation — the +0x10/+0x3c stores ride
+     * the cmp blind, interleaved between range test and jump table. */
     rec->payload = e;
     rec->extra = (int32_t)selector;
     int kind;
@@ -1713,8 +1782,11 @@ int entity_action_kind_supported(EntitySlot* e, int kind, int arg)
 // FUNCTION: LEGORR 0x00439240
 int task_entity_flags_and_cell_task_match(const EntitySlot* e, int kind)
 {
-    if ((entity_stats_word_get(e) & 8u) != 0u) {
-        return entity_action_kind_supported((EntitySlot*)e, kind, 0);
+    /* Corpus: test al,0x8 — the byte test of the stats word return. */
+    if (((unsigned char)entity_stats_word_get(e) & 0x8u) != 0u) {
+        if (entity_action_kind_supported((EntitySlot*)e, kind, 0) != 0) {
+            return 1; /* corpus: mov eax,0x1 ahead of the shared return-0 tail */
+        }
     }
     return 0;
 }
@@ -1767,9 +1839,7 @@ void coordinate_pair_event_queue(const int pair[2], void* payload)
 int object_event_type2_queue(void* payload)
 {
     CmdRec* rec = (CmdRec*)cmd_alloc(0x13);
-    if (rec == NULL) {
-        return 0; /* deviation: the corpus reads the allocator blindly */
-    }
+    /* Corpus: no null check on the allocation — the slots are stored blind. */
     rec->arg38 = payload;
     rec->ref = NULL; /* the corpus stores zero into the reference slot */
     entity_record_array_apply_zero_state(rec, 1);
@@ -1781,10 +1851,10 @@ int object_event_type2_queue(void* payload)
 void coordinate_pair_task_record_queue(const int pair[2])
 {
     CmdRec* rec = (CmdRec*)cmd_alloc(0);
-    if (rec == NULL) {
-        return;
-    }
-    cmd_pair_stage(rec, pair);
+    /* Corpus: no null check on the allocation — the pair rides the
+     * coordinate slots blind, read straight from the caller's words. */
+    *(int*)&rec->x = pair[0]; /* +0x08 raw dword, corpus inline store */
+    *(int*)&rec->y = pair[1]; /* +0x0c raw dword */
     rec->state = (rec->state & ~CMD_STATE_PENDING) | 0x40u;
     cmd_set_kind(rec, 0x1a);
     cmd_link_tail(rec);
@@ -1793,22 +1863,25 @@ void coordinate_pair_task_record_queue(const int pair[2])
 void scalar_task_record_queue(void* scalar)
 {
     CmdRec* rec = (CmdRec*)cmd_alloc(0x1d);
-    if (rec == NULL) {
-        return;
-    }
-    rec->payload = scalar;
+    /* Corpus: no null check on the allocation — the scalar rides the
+     * +0x10 payload slot blind (the b33 twin at 0x4034e0 precedent). */
+    rec->payload = scalar; /* +0x10 */
     cmd_set_kind(rec, 0x19);
     cmd_link_tail(rec);
-    rec->state |= 0x40u;
+    /* Corpus: mov eax,[rec+0x5c] / or al,0x40 / mov [rec+0x5c],eax. The
+     * plain load-op-store spelling (not the |= compound) keeps the /Od
+     * register round-trip instead of folding to or mem,imm (b45
+     * global_flag_bit0_clear lesson). */
+    rec->state = rec->state | 0x40u; /* +0x5c */
 }
 // FUNCTION: LEGORR 0x004034e0
 void task_pair_record_enqueue(const int pair[2])
 {
     CmdRec* rec = (CmdRec*)cmd_alloc(0x19);
-    if (rec == NULL) {
-        return;
-    }
-    cmd_pair_stage(rec, pair);
+    /* Corpus: no null check on the allocation — the pair rides the
+     * coordinate slots blind, read straight from the caller's words. */
+    *(int*)&rec->x = pair[0]; /* +0x08 raw dword, corpus inline store */
+    *(int*)&rec->y = pair[1]; /* +0x0c raw dword */
     cmd_set_kind(rec, 0x18);
     cmd_link_tail(rec);
 }
@@ -1816,13 +1889,16 @@ void task_pair_record_enqueue(const int pair[2])
 void task_record_kind10_queue(void* payload)
 {
     CmdRec* rec = (CmdRec*)cmd_alloc(10);
-    if (rec == NULL) {
-        return;
-    }
-    rec->payload = payload;
+    /* Corpus: no null check on the allocation — the payload rides the
+     * +0x10 slot blind (the b33 twin at 0x4034e0 precedent). */
+    rec->payload = payload; /* +0x10 */
     cmd_set_kind(rec, 0x16);
     cmd_link_tail(rec);
-    rec->state |= 0x40u;
+    /* Corpus: mov eax,[rec+0x5c] / or al,0x40 / mov [rec+0x5c],eax. The
+     * plain load-op-store spelling (not the |= compound) keeps the /Od
+     * register round-trip instead of folding to or mem,imm (b45
+     * global_flag_bit0_clear lesson). */
+    rec->state = rec->state | 0x40u; /* +0x5c */
 }
 // FUNCTION: LEGORR 0x00403430
 void task_registry_remove_type0_entry_by_pair(const int pair[2])
@@ -1879,29 +1955,31 @@ void* timed_task_record_initialize_and_link(void* payload, int arg1,
                                             int arg2, int arg3)
 {
     CmdRec* rec = (CmdRec*)cmd_alloc(5);
-    if (rec == NULL) {
-        return NULL; /* deviation: the corpus reads the allocator blindly */
-    }
-    rec->payload = payload;
-    rec->now = 0.0f; /* the corpus zeroes the timestamp dword */
-    rec->cell_act = arg1;
-    rec->cell_target = arg2;
-    rec->cell_count = arg3;
+    /* Corpus: no null check on the allocation — the slots are stored
+     * blind (the b33 sibling at 0x4034e0 precedent). */
+    rec->payload = payload;   /* +0x10 */
+    rec->now = 0.0f;          /* +0x14: the corpus zeroes the timestamp dword */
+    rec->cell_act = arg1;     /* +0x20 */
+    rec->cell_target = arg2;  /* +0x24 */
+    rec->cell_count = arg3;   /* +0x28 */
     cmd_link_head(rec, 10);
-    rec->state = (rec->state & ~CMD_STATE_PENDING) | 0x4c0u;
+    /* Corpus: mov ecx,[+0x5c] / and ecx,0xffffffef / or ecx,0x4c0 /
+     * mov [+0x5c],ecx — the plain round-trip form (b45 lesson). */
+    rec->state = (rec->state & ~CMD_STATE_PENDING) | 0x4c0u; /* +0x5c */
     return rec;
 }
 // FUNCTION: LEGORR 0x004039d0
 void task_record_kind11_timed_queue(void* payload)
 {
     CmdRec* rec = (CmdRec*)cmd_alloc(0x11);
-    if (rec == NULL) {
-        return;
-    }
-    rec->payload = payload;
-    rec->now = 0.0f;
+    /* Corpus: no null check on the allocation — the slots are stored
+     * blind (the b33 sibling at 0x4034e0 precedent). */
+    rec->payload = payload; /* +0x10 */
+    rec->now = 0.0f;        /* +0x14: the corpus zeroes the timestamp dword */
     cmd_link_head(rec, 0);
-    rec->state = (rec->state & ~CMD_STATE_PENDING) | 0xc0u;
+    /* Corpus: mov ecx,[+0x5c] / and ecx,0xffffffef / or cl,0xc0 /
+     * mov [+0x5c],ecx — the plain round-trip form (b45 lesson). */
+    rec->state = (rec->state & ~CMD_STATE_PENDING) | 0xc0u; /* +0x5c */
 }
 
 void* cmd_rec_event_payload_get(const void* rec)
@@ -1981,17 +2059,19 @@ void entity_drain_command_chain(EntitySlot* e)
 // FUNCTION: LEGORR 0x00403af0
 void entity_task_state_update_after_cleanup(EntitySlot* e, int flag)
 {
-    if (e == NULL || e->cmd_head == NULL) {
+    if (e->cmd_head == NULL) {
         return;
     }
     if (flag == 0) {
-        as_rec(e->cmd_head)->state &= ~1u;
+        /* Corpus 0x403b2d clears bit zero directly at CmdRec +0x5c. */
+        ((CmdRec*)e->cmd_head)->state &= ~1u;
         return;
     }
-    if (as_rec(e->cmd_head)->type == 0) {
+    if (((CmdRec*)e->cmd_head)->type == 0) {
         entity_command_chain_head_remove(e);
         if (e->type == 3) {
-            cmd_enqueue(7, e, 0, 0, 0); /* operation 7 for kind-3 entities */
+            /* Corpus 0x403b1c..0x403b28 calls FUN_00452060 with a null pair. */
+            cmd_produce(7, e, 0, NULL);
         }
     }
 }
@@ -2116,10 +2196,11 @@ void object_attached_record_allocate(EntitySlot* e)
     void* rec = cmd_alloc(0x1c);
     void* tail = cmd_chain_walk(e);
     if (tail != NULL) {
-        as_rec(tail)->next = rec; /* corpus store at walk-result +0x60 */
-    } else {
-        e->cmd_head = rec; /* corpus store at entity +0x2f0 */
+        /* Corpus: mov [eax+0x60], esi — keep the store direct. */
+        ((CmdRec*)tail)->next = rec;
+        return; /* corpus: the taken branch ends on its own pop/pop/ret */
     }
+    e->cmd_head = rec; /* corpus store at entity +0x2f0 */
 }
 
 /* PendingRecordCopyToEntityAndFlag (FUN_00406400) — see cmd.hpp. The corpus
@@ -2153,13 +2234,15 @@ int selected_entities_any_predicate_match(int cx, int cy)
 {
     int count = 0;
     const void* recs = active_context_record_get(&count);
-    if (recs == NULL || count <= 0) {
+    const unsigned remaining_count = (unsigned)count;
+    /* Corpus 0x431a54 tests the count as unsigned; zero is the empty case. */
+    if (recs == NULL || remaining_count == 0u) {
         return 0;
     }
     const LevelState* lvl = (s_ctx != NULL)
         ? (const LevelState*)s_ctx->level : NULL;
     const EntitySlot* const* arr = (const EntitySlot* const*)recs;
-    for (int i = 0; i < count; ++i) {
+    for (unsigned i = 0; i < remaining_count; ++i) {
         (void)arr[i]; /* the mode-1 entity gates are the seam pass */
         if (level_walkable(lvl, cx, cy) != 0) {
             return 1;
@@ -2179,8 +2262,12 @@ int any_object_can_occupy_terrain_cell(int cx, int cy)
     const LevelState* lvl = (s_ctx != NULL)
         ? (const LevelState*)s_ctx->level : NULL;
     const EntitySlot* const* arr = (const EntitySlot* const*)recs;
-    for (int i = 0; i < count; ++i) {
-        if (terrain_cell_allows_placement(arr[i], lvl, cx, cy) != 0) {
+    /* Corpus 0x431aef..0x431af5 advances the array pointer and uses an
+     * unsigned loop bound. Keep the signed nonpositive guard above so a
+     * negative port count still answers zero before the unsigned walk. */
+    const EntitySlot* const* current = arr;
+    for (unsigned i = 0; i < (unsigned)count; ++i, ++current) {
+        if (terrain_cell_allows_placement(*current, lvl, cx, cy) != 0) {
             return 1;
         }
     }
@@ -2431,10 +2518,9 @@ void command_context_post_to_hud(int kind, const uint32_t coord[2])
 // FUNCTION: LEGORR 0x0041e750
 void selection_clear_request_and_hud_reset(void)
 {
-    /* FUN_0041e750: the corpus enqueues command 3 with null payload words
-     * (the fifth slot is calling-convention residue, so a null entity) and
-     * then posts the HUD context with kind 0 / no coordinate. */
-    cmd_produce(3, NULL, 0, 0, 0); /* FUN_00452060 */
+    /* FUN_0041e750 enqueues command 3 with a null entity and pair, then posts
+     * the HUD context with kind 0 / no coordinate. */
+    cmd_produce(3, NULL, 0, NULL); /* FUN_00452060 */
     command_context_post_to_hud(0, NULL);
 }
 
@@ -2498,19 +2584,7 @@ void upgrade_resource_debit(int selector, int amount)
 #define UPGRADE_NAME_TABLE_MAX 36 /* span-derived window guard */
 static const char* s_upgrade_names[UPGRADE_NAME_TABLE_MAX];
 static void* s_upgrade_records;
-static int s_upgrade_count;
-
-static int upgrade_strcasecmp(const char* a, const char* b)
-{
-    for (;; a++, b++) {
-        int ca = (unsigned char)*a;
-        int cb = (unsigned char)*b;
-        if (ca >= 'A' && ca <= 'Z') ca += 'a' - 'A';
-        if (cb >= 'A' && cb <= 'Z') cb += 'a' - 'A';
-        if (ca != cb) return ca - cb;
-        if (ca == 0) return 0;
-    }
-}
+static unsigned s_upgrade_count;
 
 void upgrade_name_table_install(void* records, const char* const* names,
                                 int count)
@@ -2529,20 +2603,23 @@ void upgrade_name_table_install(void* records, const char* const* names,
         s_upgrade_names[i] = NULL;
     }
     s_upgrade_records = records;
-    s_upgrade_count = count;
+    s_upgrade_count = (unsigned)count;
 }
 
 // FUNCTION: LEGORR 0x0042cd50
 const void* upgrade_name_entry_find(const char* name)
 {
-    if (name == NULL || s_upgrade_count == 0 || s_upgrade_records == NULL) {
+    /* Install clamps negatives to zero. Corpus 0x42cd5b/0x42cd7f uses
+     * unsigned count gates and an unsigned index bound. */
+    if (name == NULL || s_upgrade_count == 0u || s_upgrade_records == NULL) {
         /* deviation: the corpus strides a dangling record base blindly */
         return NULL;
     }
-    for (int i = 0; i < s_upgrade_count; ++i) {
+    for (unsigned i = 0; i < s_upgrade_count; ++i) {
         const char* entry = s_upgrade_names[i];
-        if (entry != NULL
-            && upgrade_strcasecmp(name, entry) == 0) {
+        /* Corpus 0x42cd6b calls the annotated strcasecmp_lite twin at
+         * 0x48ff10; this caller observes equality only. */
+        if (entry != NULL && strcasecmp_lite(name, entry) == 0) {
             return (const char*)s_upgrade_records + (size_t)i * 16;
         }
     }

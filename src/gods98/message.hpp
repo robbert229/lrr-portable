@@ -35,12 +35,16 @@
  * read from the 0x20000 cooldown wiring, this is our own marker). */
 #define MESSAGE_FLAG_PLAY_ALWAYS 0x8000u
 
-/* per-id config (corpus stride 0x14) */
+/* per-id config, shaped as the corpus's 40 stride-0x14 incident-message
+ * records at DAT_004dc704: the countdown rides at record +0x00 (both
+ * InfoMessageTimerDecay's walk and MessageDispatch's reset touch [rec],
+ * finding 441 §the countdown band), so the field order is load-bearing. */
 typedef struct MessageConfig {
-    const char* name;       /* Info_* catalog name (finding 22) */
-    const char* sound;      /* sound resource name (0x04 analog) */
-    float       cooldown;   /* cooldown timer (0x08 analog) */
-    uint32_t    flags;      /* 0x10000 repeatable/slow-mo, 0x20000 auto-cd */
+    float           cooldown;   /* corpus record +0x00: the walked countdown */
+    const char*     name;       /* Info_* catalog name (finding 22) */
+    const char*     sound;      /* sound resource name */
+    uint32_t        flags;      /* 0x10000 repeatable/slow-mo, 0x20000 auto-cd */
+    unsigned char   pad_[4];    /* corpus stride 0x14 */
 } MessageConfig;
 
 /* hooks (reconstruction-owned; corpus uses function pointers/vtables) */

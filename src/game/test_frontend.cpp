@@ -1165,12 +1165,15 @@ int main(int argc, char** argv)
                   && selection_coordinates_peek(3) == 5.0f,
               "the coordinate quad lands with the int-to-float casts");
 
-        selection_region_parameters_set(1.0f, 2.0f, 3.0f, 4.0f, 10.0f);
+        selection_region_parameters_set(1u, 2u, 3u, 4u, 10.0f);
         float reg[5];
         selection_region_parameters_peek(reg);
-        CHECK(reg[0] == 1.0f && reg[1] == 2.0f && reg[2] == 3.0f
-                  && reg[3] == 4.0f && reg[4] == 0.4f,
-              "the region parameters land scaled by 0.04");
+        CHECK(reg[0] == 3.0f && reg[1] == 4.0f && reg[2] == 1.0f
+                  && reg[3] == 2.0f && reg[4] == 0.3999999761581421f,
+              "the unsigned words rotate and the float scales by 0.04");
+        /* 10.0f * 0.04f (DAT_0049e298) is the exact midpoint between the
+         * adjacent floats and round-to-even drops to 0x3ECCCCCC — the
+         * corpus's single-precision scale, not the float 0.4f. */
 
         objective_selection_state_reset();
         CHECK(objective_selection_word_peek() == 0u
@@ -1388,6 +1391,10 @@ int main(int argc, char** argv)
         memset(metric, 0, sizeof metric);
         char ui_rec[0x828];
         memset(ui_rec, 0, sizeof ui_rec);
+        /* corpus shape: the forward reads the record's +0 field for the
+         * pair's object — here it points back at the record itself */
+        void* pair_holder = ui_rec;
+        __builtin_memcpy(ui_rec, &pair_holder, sizeof pair_holder);
         indexed_record_pointer_set(0, metric);
         panel_ui_record_set(ui_rec);
         const uint32_t lo = 11u, hi = 4u;

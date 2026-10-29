@@ -4,10 +4,12 @@
 
 #include "message.hpp"
 #include "simtick.hpp"
+#include "sound.hpp"
 
 #define SIMTICK_MUTE_RESET 25.0f
 
 /* ---- mute timer (FUN_0041ba10) ------------------------------------------ */
+// GLOBAL: LEGORR 0x004de1f4
 static uint32_t s_mute_word    = 0;       /* DAT_004de1f4 */
 static uint32_t s_mute_last    = 0;       /* DAT_004de1fc */
 static float    s_mute_timer   = SIMTICK_MUTE_RESET; /* _DAT_004a2b58, boot fresh */
@@ -225,6 +227,7 @@ static int  (*s_attach)(int, int, int, int) = NULL;
 static int  s_metrics[2] = { 0, 0 };
 static int  s_repos_n = 0, s_attach_n = 0;
 
+// GLOBAL: LEGORR 0x00500860
 static uint32_t s_timer_word = 0;
 static int      s_timer_handles[4] = { 0, 0, 0, 0 }; /* DAT_00500850..5c */
 static const uint32_t s_timer_bits[4] = { 0x10u, 0x20u, 0x40u, 0x80u };
@@ -368,6 +371,8 @@ void simtick_manager_tick(int index, float dt, int ingame)
 
 /* ---- tranche 8: sound keep-alive (FUN_0047aba0) ------------------------- */
 static int s_sound_on = 0, s_sound_active = 0;
+// GLOBAL: LEGORR 0x00506688
+static int s_listener_view = 0;
 static int (*s_keepalive)(int, int, int) = NULL;
 
 void simtick_set_sound_guards(int sound_on, int active)
@@ -392,6 +397,7 @@ void simtick_sound_keepalive(EngineContext* c)
 }
 
 /* ---- tranche 8: editor steps (FUN_0044cfa0) ------------------------------ */
+// GLOBAL: LEGORR 0x004eaec8
 static uint32_t s_edit_word = 0;
 static int      s_edit_active = 0;
 static int      s_edit_steps = 0;
@@ -562,7 +568,13 @@ void simtick_minion_states(EngineContext* c, float dt, float scale)
     }
 }
 
-/* FUN_00424600: clear grid-cell flags over the state grid (stride 0x48). */
+/* FUN_00424600: the tested port keeps a seeded-cell flag-clear model. The
+ * corpus is a larger terrain cleanup: 0x424614 calls FUN_0040c3a0 for a work
+ * count, 0x42463c/0x424645 load coordinate pairs, and 0x424649 calls
+ * FUN_0040c570 before addressing state+0xb8. Those two callees are ledger
+ * stubs here, and the later 0x4246b6 dispatch consumes another coordinate.
+ * Replacing the tested one-cell contract with that helper-driven walk needs
+ * the missing callee signatures/state, not a loop-only respelling. */
 static int s_cells_n = 0;
 static int s_cells_x[64], s_cells_y[64];
 static int s_cell_disp = 0;
@@ -645,7 +657,14 @@ void simtick_scene_pass(EngineContext* c, float dt)
     }
 }
 
-/* FUN_0046f550: effect-bank ticker (stride 0xac entries + stride-4 timers). */
+/* FUN_0046f550: the tested port models only the timed-entry release pass.
+ * The corpus first walks records 0x50391c..0x5053fc by 0x2b0 (0x46f56e,
+ * 0x46f574), calls FUN_0046f920 for occupied +0x2a4 slots, then calls the
+ * segment callback and FUN_0046f3b0. Its timer walk is a separate table
+ * 0x50387c..0x50391c by 0x10 (0x46f5f8, 0x46f5fb); a negative timer calls
+ * FUN_004820d0 twice before clearing the slot and subtracting dt. The first
+ * record pass and FUN_0046f3b0's behavior are not represented by this seed
+ * API, so synthesizing their calls here would not preserve its tested model. */
 static const void** s_sfx_entries = NULL;
 static int s_sfx_n = 0;
 static int s_sfx_rels = 0;
@@ -739,7 +758,13 @@ void simtick_frame_counter(EngineContext* c)
     ++s_frame;
 }
 
-/* FUN_0040eab0: ambient/fx spawn accumulator + palette-pick. */
+/* FUN_0040eab0: the tested port models a one-second spawn accumulator.
+ * The corpus is LavaErosionPendingCellTick: 0x40eac2..0x40ead5 adds dt to
+ * DAT_004d78b4 and compares it with DAT_004d78b8, then 0x40eaef calls
+ * FUN_0040e990 and 0x40eb2b calls FUN_0040f000 while scanning pending cells;
+ * later paths update stage timers/effects and reset the accumulator at
+ * 0x40ec3d. That state and helper-driven behavior are outside the tested
+ * hook contract, so keep the threshold behavior rather than fake the walk. */
 static float s_spawn_acc = 0.0f;
 static int   s_spawns = 0;
 static int   (*s_spawn_hook)(int) = NULL;
@@ -833,8 +858,8 @@ void simulation_global_word_set(uint32_t value)
 // FUNCTION: LEGORR 0x0047ab80
 void simtick_directsound_listener_view_set(int view)
 {
-    if (s_sound_on != 0) {
-        s_sound_active = view;
+    if (s_bank_sound_on != 0) {
+        s_listener_view = view;
     }
 }
 
@@ -888,11 +913,14 @@ const float* simtick_scene_transform_config_peek(void)
 void simtick_release_all_group_records(void)
 {
     SimtickBobbin* node = s_bobbin_head;
-    while (node != NULL) {
-        SimtickBobbin* next = node->next;
+    if (node == NULL) {
+        return;
+    }
+    do {
+        SimtickBobbin* next = node->next; /* corpus saves +0x24 before the drop */
         bobbin_drop(node);
         node = next;
-    }
+    } while (node != NULL);              /* corpus bottom gate */
 }
 
 /* --- the axis-tolerance window (2026-10-25; see simtick.hpp) ---------------

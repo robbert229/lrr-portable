@@ -2756,13 +2756,14 @@ corpus's startup contract). `terrain_object_sfx_grid_config_load` (0x44acc0)
 clears the 300-cell terrain sfx grid, walks the config's `S_ObjTtSFXs` chain,
 and stores each entry's resolved sound alias at `row + type*15`, the (type,
 row) pair coming from the entity name resolver. Quirk pin: the corpus's
-two dead preamble loops initialize the pair to 20/15 and carry it ACROSS
-entries, so a name that writes only its half inherits the other from the
-previous entry (the crystal-on-ore test pins the inheritance); unresolved
+two dead preamble loops initialize the pair to 20/15, but the resolver
+zeroes the row half at its entry — only the type half carries ACROSS
+entries, and only into skipped iterations (the crystal-on-ore test pins
+the entry-zeroed row); unresolved
 names and failed alias lookups store nothing, and negative or out-of-window
 cells are guarded (the corpus strides blindly). `block_test` pins the
-no-free clear and the flag raise; `level_test` pins the stores, the carry,
-and the clear.
+no-free clear and the flag raise; `level_test` pins the stores, the
+entry-zeroed row, and the clear.
 
 **Kind-six random sweep** (2026-10-25): one frontier row lands in
 `cmd.*`. `kind_six_random_sweep_dispatch` (0x40f0e0) subtracts the frame delta
@@ -4089,7 +4090,10 @@ The Reccmp report is written to
 `build-reccmp/reccmp-report/index.html` (JSON: `results.json`). The target
 defaults to `~/.local/share/reprobit/toolchains/msvc_5_0_rtm`; override it with
 `REPROBIT_MSVC_5_0_RTM_ROOT=/path/to/toolchain` when needed. `make reccmp-report`
-is an alias for `make reccmp`. Run `make reccmp-lint` to check that each
+is an alias for `make reccmp`. Run the already-built MSVC candidate with
+`make reccmp-run`; it uses `~/.wine` by default and accepts
+`RECCMP_WINEPREFIX=/path/to/prefix` and `RECCMP_WINE_BIN=/path/to/wine` overrides.
+Run `make reccmp-lint` to check that each
 production function definition under `src/` has a nearby Reccmp `FUNCTION:` or
 `STUB:` annotation; it exits with an error and lists missing annotations.
 
@@ -4618,20 +4622,18 @@ finding 12, #14). Three new modules in `src/game/`:
 `GameContext` (`src/game/game.hpp`) carries the corpus globals these
 modules share (`DAT_005560c4` config, `DAT_005560d4` level block,
 `DAT_00556ed0` cheat word, `DAT_004ffbc0` objective word, the save/task/
-reward/entity tables) so tests run isolated. The build boots into the
-**main menu** first (finding 23); once a level starts — from the menu's
-picker rows or via `LEGORRR_LEVEL` (default `Level01`, a fixture/demo name not
-present in shipped `Lego.cfg`) — the frame loop
-seeds tasks/reward and places the `.ol`, runs the mission bridge + objective
-tick per frame, and exposes `S` (build blob + commit slot), `L`
-(`CheckpointStep`),
-`c`/`o`/`+` (live crystal/ore/score — the entity sim's stand-in), the
-selection keys (`1`–`4` pick / `m` move / `g` gather-task / `n` clear),
-`y` (toggle the reward overlay) and the **mouse-button click** (reward
-save/advance zones, finding 09) — and the software level renderer draws the
-grid + live entities (finding 22 §3), with the engine bound to the level
-(seam #35). Eleven suites use synthetic fixtures
-only:
+reward/entity tables) so tests run isolated. An ordinary launch boots into
+the main menu; choose a mission there to enter its level. Set
+`LEGORRR_LEVEL=<level>` to bypass the menu for a direct launch. The first
+tutorial renders a textured perspective cave with faceted Raiders, plays its
+voice cue, and shows the dismissible Mission Brief. In the first tutorial,
+left-click a Raider to select it and click cave ground to move it; `Esc`
+opens pause. The frame loop also exposes `S` (build blob + commit slot), `L`
+(`CheckpointStep`), `c`/`o`/`+` (live crystal/ore/score — the entity sim's
+stand-in), `1`–`4` (pick), `m` (move to pointer), `g` (gather task), `n`
+(clear selection), `y` (toggle reward overlay), and the reward screen's
+**mouse-button click** save/advance zones (finding 09). The engine binds to
+the loaded level (seam #35). Eleven suites use synthetic fixtures only:
 
 ```sh
 meson test -C build --suite level

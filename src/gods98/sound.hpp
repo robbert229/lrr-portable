@@ -92,6 +92,7 @@ void sound_bank_clear(void);
  * engine's config read drives it when that milestone lands. */
 void sound_bank_sound_on_set(int on);
 int  sound_bank_sound_on(void);
+extern int s_bank_sound_on; /* DAT_00533878, read directly by media.cpp */
 
 /* SoundBankFreeSlotFind @ 0x47aad0: first slot whose busy bit is clear.
  * 1 with *out_slot set, or 0 when all 600 slots are claimed. */
@@ -463,7 +464,7 @@ double sound_object_duration_get(int alias);
 int sound_submit_with_global_cooldown(int alias, int* out_handle);
 
 /* StreamPlayLevel @ 0x416150 / StreamPlayTutorial @ 0x4161a0: format
- * the `Stream_LevelName_Level_%d` / `Stream_LevelName_TLevel_%d`
+ * the `Stream_LevelName_Level%d` / `Stream_LevelName_TLevel%d`
  * stream name, resolve it through the alias lookup, and submit it
  * through the global cooldown when it resolves. Returns the submit
  * result (0 when the name resolves nowhere). */

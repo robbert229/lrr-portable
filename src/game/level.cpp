@@ -75,6 +75,7 @@ static const char* K_INITORE        = "InitialOre";
  *  emergence scatter). MSVCRT-style LCG so results match the era machine.
  * ------------------------------------------------------------------ */
 
+// GLOBAL: LEGORR 0x004afcc8
 static uint32_t s_rand_state = 1;
 
 // FUNCTION: LEGORR 0x0048e160
@@ -293,6 +294,23 @@ void terrain_destroy(void* handle)
         free(t->blocks);
         free(t);
     }
+}
+
+int terrain_surface_height_get(const void* handle, int x, int y)
+{
+    const TerrainState* t = (const TerrainState*)handle;
+    if (t == NULL || t->blocks == NULL || x < 0 || y < 0
+        || x >= t->width || y >= t->height) {
+        return 0;
+    }
+    return t->blocks[((size_t)y * (size_t)t->width + (size_t)x)
+                      * TERRAIN_BLOCK_STRIDE + 0x1a];
+}
+
+float terrain_blocksize_get(const void* handle)
+{
+    const TerrainState* t = (const TerrainState*)handle;
+    return t != NULL ? t->blocksize : 0.0f;
 }
 
 /* TerrainCellSurfaceTypeGet (FUN_0044f540, finding 226): the per-cell
@@ -745,9 +763,10 @@ static int load_layer_m(LevelState* s, const char* name)
     return 1;
 }
 
-/* CellInitPass @ 0x42f6f0 — scoped port. The corpus sweeps every cell and
- * derives the cave/block relationship from the neighbourhood. The flag side
- * later systems read is kept; render calls are stubbed. */
+/* CellInitPass @ 0x42f6f0 — scoped load-path approximation. The corpus entry
+ * handles one cell and its neighbours per call; this port folds the retained
+ * cave/block flag subset into a bulk grid sweep. Activity, renderer, and
+ * message paths from the per-cell body are not represented. */
 // FUNCTION: LEGORR 0x0042f6f0
 static void cell_init_pass(LevelState* s)
 {
@@ -1652,50 +1671,77 @@ int level_cell_flag8_check(const LevelState* s, int cx, int cy)
 }
 
 /* --- map-file resource slots ---------------------------------------------
- * The corpus table interleaves (ptr, flag) pairs across 2000 entries; the
- * port keeps parallel arrays. See level.hpp for the deviation notes (the
- * corpus's MapOpen2 opener rides the unported wad seam; the allocator's
- * engine-heap wrapper is a TODO(corpus) seam mapped to calloc). */
+ * The corpus table interleaves (ptr, flag) pairs across 2000 entries as one
+ * 8-byte stride record array; the port mirrors that layout. See level.hpp
+ * for the deviation notes (the corpus's MapOpen2 opener rides the unported
+ * wad seam; the claim and release ride the corpus's engine-heap allocator
+ * pair, 0x48dbd0 / 0x48db80). */
 
-static uint8_t* s_map_slot_ptr[LEVEL_MAP_SLOT_COUNT];
-static uint32_t s_map_slot_used[LEVEL_MAP_SLOT_COUNT];
+/* One record array, stride 8: pointer at +0, used flag byte at +4
+ * (corpus tests bit 0 of the byte, but claims with a dword load/or/store
+ * and clears both fields as dwords — MapFileResourceSlot* @ 0x4893f0..). */
+typedef struct MapFileResourceSlot {
+    uint8_t* ptr;   /* +0x00 */
+    uint8_t  used;  /* +0x04, bit 0 */
+    uint8_t  pad[3];
+} MapFileResourceSlot;
 
-/* FUN_004893f0: clear every pair (no frees — the corpus leak loop). */
+/* ptr 4 + used 1 + pad 3 = 8: a wrong stride fails this typedef. */
+typedef char map_file_resource_slot_stride_check[sizeof(MapFileResourceSlot) == 8u ? 1 : -1];
+
+// GLOBAL: LEGORR 0x00544a20
+static MapFileResourceSlot s_map_slots[LEVEL_MAP_SLOT_COUNT];
+
+/* FUN_004893f0: clear every pair (no frees — the corpus leak loop). The
+ * corpus walks the used words from 0x544a24 up to 0x5488a4 (add 8 / cmp /
+ * jb) and dword-zeroes both fields, so the clears are raw dword stores. */
 // FUNCTION: LEGORR 0x004893f0
 void level_map_slots_reset(void)
 {
-    for (int i = 0; i < LEVEL_MAP_SLOT_COUNT; ++i) {
-        s_map_slot_ptr[i] = NULL;
-        s_map_slot_used[i] = 0;
+    /* Plain pointer operands keep the walk's loop-back unsigned (jb). */
+    uint32_t* s = (uint32_t*)&s_map_slots[0].used;
+    uint32_t* const end = s + LEVEL_MAP_SLOT_COUNT * 2;
+    for (; s < end; s += 2) {
+        s[-1] = 0;
+        s[0] = 0;
     }
 }
 
-/* FUN_00489410: first free slot, zero-filled image, -1 when full. */
+/* FUN_00489410: first free slot, engine-heap image, -1 when full. The
+ * corpus allocates through the engine-heap wrapper with no zero-fill and
+ * no failure check (an allocator NULL rides straight into the slot and
+ * faults on use), keeps the scan index in a second register, and raises
+ * bit 0 with a dword load/or/store. The port keeps the indexed scan —
+ * the walk form tested lower (register-role roulette, b24 class). */
 // FUNCTION: LEGORR 0x00489410
 int level_map_slot_allocate(size_t size)
 {
+    /* Indexed, like the corpus's hit path (mov [esi*8+0x544a20]): the
+     * scale-index operand rides the loop counter. */
     for (int i = 0; i < LEVEL_MAP_SLOT_COUNT; ++i) {
-        if (s_map_slot_used[i] == 0) {
-            void* img = calloc(1, size != 0 ? size : 1u);
-            if (img == NULL) {
-                return -1; /* corpus: heap seam would have asserted */
-            }
-            s_map_slot_ptr[i] = (uint8_t*)img;
-            s_map_slot_used[i] = 1;
+        if ((s_map_slots[i].used & 1u) == 0u) {
+            /* Blind like the corpus: no zero-fill, no NULL check (the
+             * retry carrier's zero-size quirk covers size 0). */
+            void* img = engine_heap_alloc((long)size);
+            s_map_slots[i].ptr = (uint8_t*)img;
+            *(uint32_t*)&s_map_slots[i].used |= 1u;
             return i;
         }
     }
-    return -1;
+    return -1; /* the corpus's or eax, 0xffffffff */
 }
 
-/* FUN_00489460: free + clear an in-use slot; bad/free ids are no-ops. */
+/* FUN_00489460: free + clear an in-use slot; bad/free ids are no-ops.
+ * The corpus frees through the engine-heap free (0x48db80) and clears
+ * both fields as dwords. */
 // FUNCTION: LEGORR 0x00489460
 void level_map_slot_release(uint32_t slot)
 {
-    if (slot < LEVEL_MAP_SLOT_COUNT && s_map_slot_used[slot] != 0) {
-        free(s_map_slot_ptr[slot]);
-        s_map_slot_ptr[slot] = NULL;
-        s_map_slot_used[slot] = 0;
+    if (slot < LEVEL_MAP_SLOT_COUNT && (s_map_slots[slot].used & 1u) != 0u) {
+        MapFileResourceSlot* s = &s_map_slots[slot];
+        engine_heap_free(s->ptr);
+        *(uint32_t*)&s->ptr = 0;
+        *(uint32_t*)&s->used = 0;
     }
 }
 
@@ -1703,8 +1749,8 @@ void level_map_slot_release(uint32_t slot)
 // FUNCTION: LEGORR 0x004894a0
 uint8_t* level_map_slot_get(uint32_t slot)
 {
-    if (slot < LEVEL_MAP_SLOT_COUNT && s_map_slot_used[slot] != 0) {
-        return s_map_slot_ptr[slot];
+    if (slot < LEVEL_MAP_SLOT_COUNT && (s_map_slots[slot].used & 1u) != 0u) {
+        return s_map_slots[slot].ptr;
     }
     return NULL;
 }
@@ -1926,8 +1972,8 @@ static void cell_visited_track_push(int cx, int cy)
 static void cell_refresh_seam(LevelState* s, int cx, int cy)
 {
     (void)s; (void)cx; (void)cy;
-    /* TODO(corpus): FUN_0042f6f0(manager, x, y, 0) per-cell refresh;
-     * the load-path cell_init_pass covers the sweep form. */
+    /* TODO(corpus): FUN_0042f6f0(manager, x, y, 0) per-cell refresh. The
+     * load-path cell_init_pass is only a scoped bulk approximation. */
 }
 
 // FUNCTION: LEGORR 0x00432100
@@ -1980,9 +2026,16 @@ void terrain_cell_primary_flags_mask_clear_and_refresh(LevelState* s,
         return;
     }
     uint32_t* primary = (uint32_t*)(rec + 0x08);
-    *primary &= 0xdfef7bffu;
+    /* Corpus 0x432385-0x43238d loads the dword into esi, masks it, then
+     * stores it back. Keep that separate RMW sequence under /Od. */
+    uint32_t primary_value = *primary;
+    primary_value &= 0xdfef7bffu;
+    *primary = primary_value;
     uint32_t* secondary = (uint32_t*)(rec + 0x0C);
-    *secondary &= 0xfffffffbu;
+    /* Same load/and/store shape for the secondary word at 0x4323a7-0x4323ac. */
+    uint32_t secondary_value = *secondary;
+    secondary_value &= 0xfffffffbu;
+    *secondary = secondary_value;
     cell_refresh_seam(s, cx, cy);
 }
 
@@ -1994,9 +2047,15 @@ void terrain_cell_flags_set_and_refresh(LevelState* s, int cx, int cy)
         return;
     }
     uint32_t* primary = (uint32_t*)(rec + 0x08);
-    *primary |= 0x108000u;
+    /* Corpus 0x432415-0x43241d uses load/or/store, then repeats the
+     * operation for the secondary word. */
+    uint32_t primary_value = *primary;
+    primary_value |= 0x108000u;
+    *primary = primary_value;
     uint32_t* secondary = (uint32_t*)(rec + 0x0C);
-    *secondary |= 4u;
+    uint32_t secondary_value = *secondary;
+    secondary_value |= 4u;
+    *secondary = secondary_value;
     cell_refresh_seam(s, cx, cy);
 }
 
@@ -2253,7 +2312,7 @@ static int32_t  s_ts_now; /* _DAT_004d78c0: erosion_timing_state_init seeds the 
 // FUNCTION: LEGORR 0x0040ee00
 void cell_coordinate_timestamp_remember(int x, int y)
 {
-    int i;
+    unsigned int i;
     for (i = 0; i < LEVEL_TS_COUNT; ++i) {
         if (s_ts_active[i] == 0) {
             s_ts_x[i] = x;
@@ -2378,7 +2437,9 @@ uint32_t cell_list_apply_flags_peek(void)
 void cell_list_min_distance_scale_apply(int enable) /* FUN_00450a80 */
 {
     if (enable != 0 && (s_cell_list_flags & 4u) == 0) {
-        for (int i = 0; i < s_dirty_queue_count; ++i) {
+        /* The queue count is nonnegative (zero-init, bounded append, and
+         * remove-only-after-find), matching the corpus's unsigned gate. */
+        for (uint32_t i = 0u; i < (uint32_t)s_dirty_queue_count; ++i) {
             /* The corpus strides the u16 pair entries unsigned: the
              * index folds the y-entry through the scale word. */
             const uint32_t x = (uint32_t)(uint16_t)s_dirty_queue_x[i];
@@ -2391,7 +2452,8 @@ void cell_list_min_distance_scale_apply(int enable) /* FUN_00450a80 */
         return;
     }
     if (enable == 0 && (s_cell_list_flags & 4u) != 0) {
-        for (int i = 0; i < s_dirty_queue_count; ++i) {
+        /* Same bounded, nonnegative queue-count invariant as the apply arm. */
+        for (uint32_t i = 0u; i < (uint32_t)s_dirty_queue_count; ++i) {
             const uint32_t x = (uint32_t)(uint16_t)s_dirty_queue_x[i];
             const uint32_t y = (uint32_t)(uint16_t)s_dirty_queue_y[i];
             scene_mesh_color_set(s_cell_list_object,
@@ -2414,6 +2476,7 @@ void cell_list_min_distance_scale_apply(int enable) /* FUN_00450a80 */
 #define GRID_REC_STRIDE        0x31  /* dwords per record block */
 #define GRID_REC_FIELD_WORDS   16    /* cleared by the mask sweep */
 
+// GLOBAL: LEGORR 0x004b8bc8
 static uint32_t s_grid_rec[GRID_REC_REGION_DWORDS];
 
 /* Flat dword index of a block's record-pointer word, or -1 when the
@@ -2692,7 +2755,9 @@ uint32_t terrain_neighbor_coordinate_check(const LevelState* s, int x, int y,
  * table 1 the second (the difference's minimend). */
 #define GRID_COUNT_TABLE_DWORDS 0x12c0 /* 300 cells * 16 slots */
 
+// GLOBAL: LEGORR 0x004dee44
 static uint32_t s_grid_count_first[GRID_COUNT_TABLE_DWORDS];
+// GLOBAL: LEGORR 0x004e3944
 static uint32_t s_grid_count_second[GRID_COUNT_TABLE_DWORDS];
 
 static int64_t grid_count_index(int row, int column, int slot)
@@ -2964,6 +3029,7 @@ int level_objective_result_get(const LevelState* s)
 
 /* TerrainObjectTypeSfxAtCellGet (FUN_0044ad80) — see level.hpp. */
 #define TERRAIN_SFX_GRID_CELLS 300
+// GLOBAL: LEGORR 0x004de814
 static int s_terrain_sfx_grid[TERRAIN_SFX_GRID_CELLS]; /* DAT_004de814 role */
 
 // FUNCTION: LEGORR 0x0044ad80
@@ -3000,13 +3066,16 @@ int terrain_sfx_grid_cell_peek(int cell)
 /* TerrainObjectTypeSfxGridConfigLoad (FUN_0044acc0) — see level.hpp.
  * Deviations: the corpus strides its zero loop blindly (the port memsets
  * the window); the corpus's two dead preamble loops leave the running
- * pair initialized 20/15 and carry them ACROSS entries, so a name whose
- * resolution writes only one half inherits the other from the previous
- * entry (pinned quirk — the port carries them the same way); the corpus
+ * pair initialized 20/15, but the resolver zeroes the row half at its
+ * entry (0x42e8b8) — only the TYPE half carries across entries, and only
+ * into skipped (`continue`) iterations; a resolved name therefore always
+ * sees a fresh row (the port's resolver carries the entry zeroing); the corpus
  * strides a missing value string into the alias table (the port's lookup
  * guards NULL) and stores blind past the 300-entry window (the port
- * guards). The entry chain is the subgroup record followed by its
- * equal-key siblings, entry name = the object name, entry value = the
+ * stores blind as well). The entry chain is the subgroup record followed
+ * by its equal-key siblings, entry name = the object name (the corpus
+ * reads the name blind at its record +4; the port record keeps the name
+ * token in its first word, so the load lands there), entry value = the
  * sound alias reference. */
 // FUNCTION: LEGORR 0x0044acc0
 void terrain_object_sfx_grid_config_load(BlockFile* config,
@@ -3018,7 +3087,11 @@ void terrain_object_sfx_grid_config_load(BlockFile* config,
     const char* path = string_path_join(root_path, "S_ObjTtSFXs", NULL);
     for (BlockRec* entry = block_subgroup(config, path);
          entry != NULL; entry = block_next_equal_key(entry)) {
-        if (entity_type_row_for_name(block_name(entry), &obj_x,
+        /* The corpus loads the name blind (mov ecx,[esi+4]); the port
+         * record keeps the name token in the first word. The chain
+         * already proved entry non-NULL. */
+        const char* name = *(const char* const*)((const char*)entry);
+        if (entity_type_row_for_name(name, &obj_x,
                                      &obj_y) == 0) {
             continue;
         }
@@ -3027,9 +3100,7 @@ void terrain_object_sfx_grid_config_load(BlockFile* config,
             continue;
         }
         const int cell = obj_y + obj_x * 15;
-        if (cell >= 0 && cell < TERRAIN_SFX_GRID_CELLS) {
-            s_terrain_sfx_grid[cell] = sfx;
-        }
+        s_terrain_sfx_grid[cell] = sfx; /* the corpus's blind scale store */
     }
 }
 
@@ -3230,13 +3301,15 @@ int terrain_cell_has_occupied_or_flagged_neighbor(
  * +0x0c/+0x10, and links the previous most-recent record (corpus dword
  * slot 9). Deviations: the window is widened past the corpus stride so
  * the link holds a port pointer (port-layout convention), the corpus's
- * belt-and-braces zero stores land inside the zero-fill, and the
- * allocator's failure word is guarded. */
+ * belt-and-braces zero stores are spelled explicitly after the fill, and
+ * the allocator's failure word is guarded. */
 
 #define PATH_RECORD_WINDOW 0xd4 /* the corpus's 53-dword window           */
 #define PATH_RECORD_WORDS (PATH_RECORD_WINDOW / 4u)
 
-static uint32_t s_path_record_count; /* DAT_004b8a20 role */
+/* DAT_004b8a20 role */
+// GLOBAL: LEGORR 0x004b8a20
+static uint32_t s_path_record_count;
 static void* s_path_record_last;     /* DAT_004b8a24 role */
 
 // FUNCTION: LEGORR 0x00409350
@@ -3248,18 +3321,20 @@ void* path_record_allocate_and_link(const uint32_t* coord_pair)
     if (rec == NULL) {
         return NULL; /* deviation: the corpus strides the allocator's word */
     }
-    const uint32_t zero = 0u;
-    for (size_t n = 0; n < bytes / sizeof(uint32_t); ++n) {
-        __builtin_memcpy(rec + n * sizeof(uint32_t), &zero, sizeof zero);
-    }
-    uint32_t serial = s_path_record_count++;
-    __builtin_memcpy(rec + 0x08, &serial, sizeof serial);   /* counter store */
+    __builtin_memset(rec, 0, bytes); /* the corpus's rep stos zero-fill  */
+    /* The corpus writes these two belt words after the sweep and MSVC5
+     * keeps the stores (the disassembly shows them landing blind). */
+    *(uint32_t*)(rec + 0x20) = 0u;
+    *(uint32_t*)(rec + 0x1c) = 0u;
+    /* Keep the corpus's two counter reads separate: the record receives the
+     * old word at 0x40936e, then 0x409379 reloads and increments the global. */
+    *(uint32_t*)(rec + 0x08) = s_path_record_count;
+    s_path_record_count = s_path_record_count + 1u;
     if (coord_pair != NULL) {
-        __builtin_memcpy(rec + 0x0c, &coord_pair[0], sizeof(uint32_t));
-        __builtin_memcpy(rec + 0x10, &coord_pair[1], sizeof(uint32_t));
+        *(uint32_t*)(rec + 0x0c) = coord_pair[0];
+        *(uint32_t*)(rec + 0x10) = coord_pair[1];
     }
-    __builtin_memcpy(rec + 0x24, &s_path_record_last,
-                     sizeof(s_path_record_last));           /* prev link */
+    *(void**)(rec + 0x24) = s_path_record_last;         /* prev link */
     s_path_record_last = rec;
     return rec;
 }
