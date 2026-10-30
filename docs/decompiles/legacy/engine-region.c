@@ -55077,7 +55077,7 @@ undefined4 FormatArgumentReadDword(int *param_1)
   return *puVar1;
 }
 
-// ==== FormatArgumentReadDouble @ 491450 ====
+// ==== FormatArgumentReadInt64 @ 491450 ====
 
 undefined8 FormatArgumentReadDouble(int *param_1)
 

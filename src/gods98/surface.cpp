@@ -2,7 +2,7 @@
 #include "platform/platform.h"
 #include "surface.hpp"
 
-#include "crt.hpp"
+#include "crt/crt.hpp"
 #include "heap.hpp"
 
 /* ---- DirectDraw-backed implementation (miniwin) ---------------------- */

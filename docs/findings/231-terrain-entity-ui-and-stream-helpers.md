@@ -16,8 +16,8 @@ now included in the Ghidra target list and generated corpus.
 | 0x46f0d0 | ObjectTypeNameIndexFind | Case-insensitively searches the global object/resource name table and returns its index, or a count-based sentinel when absent. |
 | 0x4859b0 | TextBufferReset | Clears a text buffer, its 256 state slots, cursor values, and pending flag; callers use it in text, UI, and scene paths. |
 | 0x491430 | FormatArgumentReadDword | Reads a 32-bit value from the formatter's argument cursor and advances it by four bytes. |
-| 0x491450 | FormatArgumentReadDouble | Reads a 64-bit floating-point argument and advances the formatter cursor by eight bytes. |
-| 0x491470 | FormatArgumentReadWord | Reads a 16-bit value and advances the formatter cursor by two bytes. |
+| 0x491450 | FormatArgumentReadInt64 | Reads a raw 64-bit variadic argument into EDX:EAX and advances the formatter cursor by eight bytes. |
+| 0x491470 | FormatArgumentReadWord | Reads the low 16-bit value and advances the formatter cursor by one four-byte variadic slot. |
 | 0x496c00 | Win32FileDescriptorSeek | Applies a pending seek through SetFilePointer, validates descriptor state, reports Win32 errors, and clears the deferred-seek flag. |
 
 **Evidence.** Direct pseudocode for all thirteen procedures is in

@@ -25,11 +25,11 @@ This pass names 27 operation-level routines across terrain state, UI color/curso
 | `0x00494d10` | `CrtFileDescriptorClose` | Validates the descriptor, closes its OS handle, clears the descriptor entry, and reports close errors. | Caller `0048eae0`; pseudocode/caller context only. |
 | `0x00494df0` | `CrtOwnedStreamBufferRelease` | Frees an owned stream buffer and clears its ownership state and fields. | Caller `0048eae0`; pseudocode/caller context only. |
 | `0x00498f00` | `CrtCharacterClassFlag8Check` | Tests character-class bit 0x08 with locale-aware fallback. | Callers `00493ef0`, `00494cc0`; exact class meaning unconfirmed. |
-| `0x00497f40` | `DoubleToExtended80` | Converts double words to an 80-bit extended value, handling zero, subnormal, and infinity cases. | Caller `00497ec0`; pseudocode only. |
+| `0x00497f40` | `___dtold` | VC5 `LIBC.LIB` `cfout.obj` implementation of double-to-extended80 conversion; caller `0x00497ec0` (`__fltout`). |
 | `0x0048e870` | `DoubleIsFinite` | Returns false when all exponent bits of the double are set. | Callers `00444680`, `0046d380`, `00479630`; pseudocode only. |
 | `0x00475830` | `SceneObjectFirstNonKind6ChildGet` | Walks child links and returns the first resolved child whose kind is not 6. | Pseudocode only; kind meaning unknown. |
 | `0x00498b40` | `CrtFileDescriptorFlag40Get` | Bounds-checks a descriptor index and returns flag bit 0x40 from its table entry. | Callers `004908a0`, `004974d0`; flag meaning unconfirmed. |
 | `0x00495db0` | `CrtCharacterClassFlagTest` | Tests a caller-supplied mask against the CRT character table and locale fallback. | Wrapper `00495d90` supplies mask 4; pseudocode only. |
-| `0x00493150` | `X87RoundToIntegral` | Returns the x87 round-to-integral result for the supplied float. | Pseudocode only. |
+| `0x00493150` | `__frnd` | Rounds a double to an integral x87 value using the active rounding mode. | Exact instruction sequence match to VC5 `LIBC.LIB` `frnd.obj`; the MSVC wrapper now calls the runtime entry. |
 
 Complete pseudocode is in [LEGORR.full.c](../decompiles/full/LEGORR.full.c), with named excerpts in [engine-region.c](../decompiles/legacy/engine-region.c). Where no direct record was found, the table says so and the name follows checked-in pseudocode and caller behavior.

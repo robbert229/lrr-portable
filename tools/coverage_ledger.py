@@ -62,6 +62,18 @@ def scan_src_stubs() -> set:
     return stubs
 
 
+def scan_src_libraries() -> set:
+    """Return corpus entry addresses matched to external/static libraries."""
+    libraries = set()
+    marker = re.compile(r"//\s*LIBRARY:\s+LEGORR\s+0x([0-9a-fA-F]{1,8})\b")
+    for f in SRC_DIR.rglob("*"):
+        if f.suffix not in (".cpp", ".hpp", ".c", ".h"):
+            continue
+        text = f.read_text(errors="replace")
+        libraries.update(norm(m.group(1)) for m in marker.finditer(text))
+    return libraries
+
+
 def read_manifest() -> list:
     rows = []
     with MANIFEST.open() as fh:
@@ -114,8 +126,8 @@ RUNTIME_OR_IMPORT = re.compile(
 )
 
 
-def classify(rows, anchors, named, stubs):
-    """rows: manifest rows; anchors: address->citation count from src/."""
+def classify(rows, anchors, named, stubs, libraries):
+    """Classify corpus rows from source anchors, stubs, and library markers."""
     entries = [norm(r["address"]) for r in rows]
     out = []
     for r in rows:
@@ -124,7 +136,9 @@ def classify(rows, anchors, named, stubs):
         human = sym if not sym.startswith("FUN_") else None
         cited = anchors.get(a, 0)
         named_at = named.get(a)
-        if cited > 0:
+        if a in libraries:
+            status = "runtime-library"
+        elif cited > 0:
             status = "stubbed" if a in stubs else "ported"
         elif RUNTIME_OR_IMPORT.match(sym or ""):
             status = "runtime-import"
@@ -173,7 +187,8 @@ def main():
     named = read_corpus_names(FULL_CORPUS)
     supplement = read_supplement_names(SUPPLEMENT)
     stubs = scan_src_stubs()
-    ledger = classify(rows, anchors, named, stubs)
+    libraries = scan_src_libraries()
+    ledger = classify(rows, anchors, named, stubs, libraries)
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -192,6 +207,7 @@ def main():
     named_e = [e for e in ledger if e["status"] == "named"]
     anon = [e for e in ledger if e["status"] == "anonymous"]
     runtime = [e for e in ledger if e["status"] == "runtime-import"]
+    runtime_library = [e for e in ledger if e["status"] == "runtime-library"]
     anchored = [e for e in ledger if e["status"] == "anchored"]
 
     # per-region breakdown of anonymous (biggest remaining work)
@@ -217,7 +233,7 @@ def main():
         f"| Status | Count | Share |",
         f"| --- | ---: | ---: |",
     ]
-    for s in ("ported", "stubbed", "anchored", "named", "runtime-import", "anonymous"):
+    for s in ("ported", "stubbed", "anchored", "named", "runtime-import", "runtime-library", "anonymous"):
         md.append(f"| {s} | {by_status[s]} | {by_status[s]/total*100:.1f}% |")
 
     md += [
@@ -233,6 +249,9 @@ def main():
         f"  citation yet ({len(named_e)} functions)",
         "- **runtime-import** — CRT/runtime support or import thunks; not game",
         f"  logic, never ported ({len(runtime)} functions)",
+        "- **runtime-library** — original CRT/compiler-runtime implementation",
+        "  supplied by the selected link library; tracked by Reccmp `LIBRARY`",
+        f"  markers, not ported as game code ({len(runtime_library)} functions)",
         "- **anonymous** — `FUN_*` only, unreferenced in `src/`",
         f"  ({len(anon)} functions)",
         "",
@@ -286,6 +305,7 @@ def main():
     (OUT_DIR / "README.md").write_text("\n".join(md))
 
     print(f"total={total} ported={by_status['ported']} "
+          f"runtime-library={by_status['runtime-library']} "
           f"named={by_status['named']} anonymous={by_status['anonymous']}")
     print(f"wrote {OUT_DIR/'ledger.csv'} and {OUT_DIR/'README.md'}")
     return 0

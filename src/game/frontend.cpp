@@ -23,6 +23,7 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include <time.h>
 
 #include "frontend.hpp"
@@ -30,14 +31,14 @@
 #include "gods98/audio.hpp"
 #include "gods98/message.hpp"
 #include "gods98/flic.hpp"
-#include "gods98/crt.hpp"
+#include "crt/crt.hpp"
 #include "gods98/heap.hpp"
 #include "gods98/record.hpp"
 #include "gods98/texture.hpp"
 #include "gods98/surface.hpp"
 #include "gods98/sound.hpp"
 #include "gods98/input.hpp"
-#include "gods98/crt.hpp"
+#include "crt/crt.hpp"
 #include "util.hpp"
 #include "select.hpp"
 #include "gods98/view.hpp"
@@ -326,8 +327,10 @@ static const char* s_keyboard_key_names[256];
 #include "gods98/resource.hpp"
 #include "entity.hpp"
 
-static int s_lower(int c) { return (c >= 'A' && c <= 'Z') ? c + 0x20 : c; }
-static int s_toupper(int c) { return (c >= 'a' && c <= 'z') ? c - 0x20 : c; }
+static int s_toupper(int c)
+{
+    return (c >= 'a' && c <= 'z') ? toupper((unsigned char)c) : c;
+}
 static int s_strcaseeq(const char* a, const char* b);
 
 // FUNCTION: LEGORR 0x00485a20
@@ -375,18 +378,15 @@ const char* ui_text_underscores_to_spaces(const char* text)
     if (text == NULL) {
         return NULL;
     }
-    size_t length = 0;
-    while (length < sizeof(display) && text[length] != '\0') {
-        ++length;
-    }
-    if (length == sizeof(display)) {
+    const char* terminator = (const char*)memchr(text, '\0', sizeof(display));
+    if (terminator == NULL) {
         return text;
     }
-    memcpy(display, text, length + 1);
-    for (size_t i = 0; i < length; ++i) {
-        if (display[i] == '_') {
-            display[i] = ' ';
-        }
+    size_t length = (size_t)(terminator - text);
+    strncpy(display, text, length + 1);
+    char* underscore = display;
+    while ((underscore = crt_strchr(underscore, '_')) != NULL) {
+        *underscore++ = ' ';
     }
     return display;
 }
@@ -405,12 +405,10 @@ static void fe_display_label(const char* label, char* out, size_t out_size)
         out[0] = '\0';
         return;
     }
-    size_t i = 0;
-    while (display[i] != '\0' && i + 1 < out_size) {
-        out[i] = display[i];
-        ++i;
-    }
-    out[i] = '\0';
+    size_t copy_length = strlen(display);
+    if (copy_length >= out_size) copy_length = out_size - 1;
+    if (display != out) strncpy(out, display, copy_length);
+    out[copy_length] = '\0';
 }
 
 static float s_interface_menu_action_xy[2];
@@ -435,7 +433,7 @@ __declspec(naked) int interface_menu_action_label_find(const char* name,
         mov eax, dword ptr [esi]
         push ebx
         push eax
-        call strcasecmp_lite
+        call _strcmpi
         add esp, 8
         test eax, eax
         je interface_menu_action_label_find_found
@@ -518,13 +516,7 @@ static int s_strcaseeq(const char* a, const char* b)
     if (a == NULL || b == NULL) {
         return a == b;
     }
-    while (*a && *b) {
-        if (s_lower((unsigned char)*a) != s_lower((unsigned char)*b)) {
-            return 0;
-        }
-        ++a; ++b;
-    }
-    return *a == *b;
+    return strcasecmp_lite(a, b) == 0;
 }
 
 /* Case-insensitive substring search ("LevelPick" in "Interface\LevelPicker\…"). */
@@ -533,18 +525,13 @@ static int s_stristr(const char* haystack, const char* needle)
     if (haystack == NULL || needle == NULL) {
         return 0;
     }
-    for (size_t i = 0; haystack[i] != '\0'; i++) {
-        size_t j = 0;
-        while (needle[j] != '\0'
-               && s_lower((unsigned char)haystack[i + j])
-                  == s_lower((unsigned char)needle[j])) {
-            ++j;
-        }
-        if (needle[j] == '\0') {
-            return 1;
-        }
+    if (haystack[0] == '\0') {
+        return 0;
     }
-    return 0;
+    if (needle[0] == '\0') {
+        return 1;
+    }
+    return case_insensitive_substring_find(haystack, needle) != NULL;
 }
 
 /* "Levels::Tutorial01" -> "Tutorial01" (the level group name). A name with
@@ -597,7 +584,9 @@ static int fe_cfg_int(BlockFile* cfg, const char* level, const char* key,
     if (v == NULL) {
         return dflt;
     }
-    return (int)strtol(v, NULL, 10);
+    /* FrontEndX/FrontEndY are plain config integers, like the other menu
+     * fields parsed by the reference's VC5 _atoi wrapper. */
+    return atoi(v);
 }
 
 /* --- the StartLevel / TutorialStartLevel + NextLevel chains -------------- */
@@ -701,30 +690,27 @@ static void fe_parse_item(const char* value, FeItem* it)
     int n = 0;
     const char* p = value;
     while (n < 12) {
-        while (*p == ':') {
-            ++p;
-        }
+        p += strspn(p, ":");
         if (*p == '\0') {
             break;
         }
         const char* s = p;
-        while (*p != '\0' && *p != ':') {
-            ++p;
+        size_t length = strcspn(p, ":");
+        p += length;
+        size_t copy_length = length;
+        if (copy_length >= FE_PATH_MAX) {
+            copy_length = FE_PATH_MAX - 1;
         }
-        int len = (int)(p - s);
-        if (len >= FE_PATH_MAX) {
-            len = FE_PATH_MAX - 1;
-        }
-        memcpy(fields[n], s, (size_t)len);
-        fields[n][len] = '\0';
+        memcpy(fields[n], s, copy_length);
+        fields[n][copy_length] = '\0';
         ++n;
     }
     if (n == 0) {
         return;
     }
     it->kind = fe_item_kind(fields[0]);
-    int atoi1 = (n > 1) ? (int)strtol(fields[1], NULL, 10) : 0;
-    int atoi2 = (n > 2) ? (int)strtol(fields[2], NULL, 10) : 0;
+    int atoi1 = (n > 1) ? atoi(fields[1]) : 0;
+    int atoi2 = (n > 2) ? atoi(fields[2]) : 0;
     switch (it->kind) {
     case FE_ITEM_NEXT: {
         it->x = atoi1;
@@ -763,14 +749,14 @@ static void fe_parse_item(const char* value, FeItem* it)
                 snprintf(it->label, FE_NAME_MAX, "…");
             }
             if (n > 7) {
-                it->flag = (int)strtol(fields[7], NULL, 10);
+                it->flag = atoi(fields[7]);
             }
         } else {
             if (n > 3) {
                 snprintf(it->label, FE_NAME_MAX, "%s", fields[3]);
             }
             if (n > 4) {
-                it->flag = (int)strtol(fields[4], NULL, 10);
+                it->flag = atoi(fields[4]);
             }
         }
         break;
@@ -786,18 +772,18 @@ static void fe_parse_item(const char* value, FeItem* it)
         }
         if (it->kind == FE_ITEM_SLIDER) {
             /* Slider:x1:y1:x2:y2:banner:lo:hi:bar… */
-            it->min = (n > 6) ? (int)strtol(fields[6], NULL, 10) : 0;
-            it->max = (n > 7) ? (int)strtol(fields[7], NULL, 10) : 100;
+            it->min = (n > 6) ? atoi(fields[6]) : 0;
+            it->max = (n > 7) ? atoi(fields[7]) : 100;
             it->flag = it->min;
             it->value = fe_option_default(it->label, it->min, it->max);
         } else if (it->kind == FE_ITEM_REALSLIDER) {
             /* RealSlider:type:x1:y1:x2:y2:banner:lo:hi:step */
-            it->min = (n > 6) ? (int)strtol(fields[6], NULL, 10) : 0;
-            it->max = (n > 7) ? (int)strtol(fields[7], NULL, 10) : 100;
+            it->min = (n > 6) ? atoi(fields[6]) : 0;
+            it->max = (n > 7) ? atoi(fields[7]) : 100;
             it->value = fe_option_default(it->label, it->min, it->max);
         } else if (it->kind == FE_ITEM_CYCLE) {
             /* Cycle:x1:y1:x2:y2:banner:count:opt1:opt2:… */
-            int count = (n > 6) ? (int)strtol(fields[6], NULL, 10) : 0;
+            int count = (n > 6) ? atoi(fields[6]) : 0;
             if (count > 4) {
                 count = 4;
             }
@@ -921,8 +907,9 @@ static void fe_parse_submenu(FrontEnd* fe, FeMenu* m, const char* name,
     const char* v = block_get_strptr(fe->cfg, buf);
     if (v != NULL) {
         snprintf(sub->full_name, sizeof(sub->full_name), "%s", v);
-        for (char* p = sub->full_name; *p != '\0'; ++p) {
-            if (*p == '_') *p = ' ';
+        char* underscore = sub->full_name;
+        while ((underscore = crt_strchr(underscore, '_')) != NULL) {
+            *underscore++ = ' ';
         }
     }
 
@@ -932,16 +919,8 @@ static void fe_parse_submenu(FrontEnd* fe, FeMenu* m, const char* name,
     if (v != NULL) {
         const char* c = strchr(v, ':');
         if (c != NULL) {
-            char* x_end = NULL;
-            long x = strtol(v, &x_end, 10);
-            if (x_end == c) {
-                char* y_end = NULL;
-                long y = strtol(c + 1, &y_end, 10);
-                if (y_end != c + 1) {
-                    sub->base_x = (int)x;
-                    sub->base_y = (int)y;
-                }
-            }
+            sub->base_x = atoi(v);
+            sub->base_y = atoi(c + 1);
         }
     }
 
@@ -960,8 +939,8 @@ static void fe_parse_submenu(FrontEnd* fe, FeMenu* m, const char* name,
             if (xlen >= sizeof(xbuf)) xlen = sizeof(xbuf) - 1;
             memcpy(xbuf, v, xlen);
             xbuf[xlen] = '\0';
-            sub->title_anchor_x = (int)strtol(xbuf, NULL, 10);
-            sub->title_anchor_y = (int)strtol(c + 1, NULL, 10);
+            sub->title_anchor_x = atoi(xbuf);
+            sub->title_anchor_y = atoi(c + 1);
         }
     }
     snprintf(buf, sizeof(buf), "%s CanScroll", pre);
@@ -1014,7 +993,8 @@ static void fe_parse_submenu(FrontEnd* fe, FeMenu* m, const char* name,
     }
 
     snprintf(buf, sizeof(buf), "%s ItemCount", pre);
-    int ic = block_get_int(fe->cfg, buf, 0);
+    const char* item_count_value = block_get_strptr(fe->cfg, buf);
+    int ic = atoi(item_count_value != NULL ? item_count_value : "");
     if (ic > FE_ITEMS_MAX) {
         ic = FE_ITEMS_MAX;
     }
@@ -1067,10 +1047,10 @@ static void fe_parse_submenu(FrontEnd* fe, FeMenu* m, const char* name,
             memcpy(o->sfx, sfx, sl);
             o->sfx[sl] = '\0';
             if (c2 != NULL) {
-                o->x = (int)strtol(c2 + 1, NULL, 10);
+                o->x = atoi(c2 + 1);
                 const char* c3 = strchr(c2 + 1, ':');
                 if (c3 != NULL && c3[1] != '\0') {
-                    o->y = (int)strtol(c3 + 1, NULL, 10);
+                    o->y = atoi(c3 + 1);
                 }
             }
         }
@@ -1095,7 +1075,8 @@ static int fe_parse_menu(FrontEnd* fe, int mi, const char* name)
     char buf[FE_PATH_MAX * 2];
     snprintf(buf, sizeof(buf), "%s Menu::%s MenuCount", util_root_name(fe->cfg),
              name);
-    int count = block_get_int(fe->cfg, buf, 0);
+    const char* menu_count_value = block_get_strptr(fe->cfg, buf);
+    int count = atoi(menu_count_value != NULL ? menu_count_value : "");
     if (count < 0) {
         count = 0;
     }
@@ -1191,13 +1172,17 @@ static void fe_overlay_open_all(FrontEnd* fe, const FeSubmenu* sub)
     fe->overlays_for = sub;
 }
 
-/* FUN_0048e170: the game's 15-bit LCG. Seed this front-end instance from
- * wall-clock seconds and its address so menu sequences vary between runs
- * without consuming the gameplay random stream. */
+/* VC5 rand.obj owns the shared target stream in the classic x86 build. Other
+ * builds keep the frontend's isolated LCG model. */
 static uint32_t fe_overlay_random(FrontEnd* fe)
 {
+#if defined(_MSC_VER) && (_MSC_VER < 1200) && defined(_M_IX86)
+    (void)fe;
+    return (uint32_t)rand();
+#else
     fe->overlay_rng = fe->overlay_rng * 0x343fdu + 0x269ec3u;
     return (fe->overlay_rng >> 16) & 0x7fffu;
+#endif
 }
 
 static void fe_overlay_play_sfx(FrontEnd* fe, const FeOverlay* o)
@@ -1294,10 +1279,12 @@ void frontend_init(FrontEnd* fe)
     memset(fe, 0, sizeof(*fe));
     fe->pointer_x = fe->pointer_y = -1;
     fe->overlay_active = -1;
+#if !defined(_MSC_VER) || (_MSC_VER >= 1200) || !defined(_M_IX86)
     fe->overlay_rng = (uint32_t)time(NULL) ^ (uint32_t)(uintptr_t)fe;
     if (fe->overlay_rng == 0) {
         fe->overlay_rng = 1;
     }
+#endif
 }
 
 static int fe_parse_int_tuple(const char* text, int* out, int count)
@@ -1307,17 +1294,14 @@ static int fe_parse_int_tuple(const char* text, int* out, int count)
     }
     const char* p = text;
     for (int i = 0; i < count; ++i) {
-        char* end = NULL;
-        long value = strtol(p, &end, 10);
-        if (end == p || value < -32768 || value > 32767) {
+        const char* separator = strchr(p, ':');
+        if (p[0] == '\0' || separator == p
+            || (i + 1 < count && separator == NULL)) {
             return 0;
         }
-        out[i] = (int)value;
+        out[i] = atoi(p);
         if (i + 1 < count) {
-            if (*end != ':') {
-                return 0;
-            }
-            p = end + 1;
+            p = separator + 1;
         }
     }
     return 1;
@@ -1341,19 +1325,24 @@ int interface_back_button_config_load(BlockFile* cfg)
     }
 
     int width = 0, height = 0;
-    char* end = NULL;
-    long parsed = strtol(value, &end, 10);
-    if (end == value || *end != ':' || parsed <= 0 || parsed > 32767) {
+    const char* first_separator = strchr(value, ':');
+    if (first_separator == NULL) {
         return 0;
     }
-    width = (int)parsed;
-    const char* p = end + 1;
-    parsed = strtol(p, &end, 10);
-    if (end == p || *end != ':' || parsed <= 0 || parsed > 32767) {
+    width = atoi(value);
+    if (width <= 0 || width > 32767) {
         return 0;
     }
-    height = (int)parsed;
-    p = end + 1;
+    const char* p = first_separator + 1;
+    const char* second_separator = strchr(p, ':');
+    if (second_separator == NULL) {
+        return 0;
+    }
+    height = atoi(p);
+    if (height <= 0 || height > 32767) {
+        return 0;
+    }
+    p = second_separator + 1;
 
     const char* highlight_end = strchr(p, ':');
     if (highlight_end == NULL || highlight_end == p) {
@@ -1388,7 +1377,7 @@ int interface_back_button_config_load(BlockFile* cfg)
     s_back_button_height = height;
     s_back_button_highlight = texture_get_or_load(NULL, highlight_path);
     s_back_button_pressed = texture_get_or_load(NULL, pressed_path);
-    memcpy(s_back_button_action, action, action_len + 1);
+    strncpy(s_back_button_action, action, action_len + 1);
     return 1;
 }
 
@@ -1411,16 +1400,10 @@ const char* interface_back_button_action(void)
 
 static int fe_token_is(const char* token, size_t length, const char* expected)
 {
-    size_t i = 0;
-    while (expected[i] != '\0') {
-        if (i >= length
-            || s_lower((unsigned char)token[i])
-                   != s_lower((unsigned char)expected[i])) {
-            return 0;
-        }
-        ++i;
+    if (strlen(expected) != length) {
+        return 0;
     }
-    return i == length;
+    return strnicmp_lite(token, expected, (int)length) == 0;
 }
 
 static int fe_token_copy(char* out, size_t out_size,
@@ -1829,22 +1812,26 @@ int interface_surround_images_config_load(BlockFile* cfg)
             /* The corpus uses its annotated atoi twin (FUN_0048db70):
              * numeric prefixes are accepted and the parsed value is not
              * narrowed to the port's earlier signed-16-bit safety range. */
-            numbers[n] = (int)util_atoi(token);
+            numbers[n] = atoi(token);
         }
         if (!valid) {
             continue;
         }
 
-        const int first_is_null = lengths[0] == 4
-            && s_lower((unsigned char)fields[0][0]) == 'n'
-            && s_lower((unsigned char)fields[0][1]) == 'u'
-            && s_lower((unsigned char)fields[0][2]) == 'l'
-            && s_lower((unsigned char)fields[0][3]) == 'l';
-        const int second_is_null = lengths[5] == 4
-            && s_lower((unsigned char)fields[5][0]) == 'n'
-            && s_lower((unsigned char)fields[5][1]) == 'u'
-            && s_lower((unsigned char)fields[5][2]) == 'l'
-            && s_lower((unsigned char)fields[5][3]) == 'l';
+        int first_is_null = 0;
+        int second_is_null = 0;
+        if (lengths[0] == 4) {
+            char token[5];
+            memcpy(token, fields[0], 4);
+            token[4] = '\0';
+            first_is_null = strcasecmp_lite(token, "NULL") == 0;
+        }
+        if (lengths[5] == 4) {
+            char token[5];
+            memcpy(token, fields[5], 4);
+            token[4] = '\0';
+            second_is_null = strcasecmp_lite(token, "NULL") == 0;
+        }
         if (!first_is_null) {
             char image_path[FE_PATH_MAX];
             memcpy(image_path, fields[0], lengths[0]);
@@ -2602,7 +2589,7 @@ static FeEvent fe_activate(FrontEnd* fe)
     /* Next -> navigate submenus ("Menu%i" target) */
     if (it->kind == FE_ITEM_NEXT && it->target[0] != '\0'
         && s_stristr(it->target, "menu") != 0) {
-        int idx = (int)strtol(it->target + 4, NULL, 10) - 1; /* "MenuN" */
+        int idx = atoi(it->target + 4) - 1; /* "MenuN" */
         if (idx >= 0 && idx < m->submenu_count) {
             fe->sub = idx;
             fe->sel = 0;
@@ -3385,17 +3372,10 @@ uint32_t formatted_text_draw_and_measure(const TextureSurface* font,
         if (text[i] == '@' && text[i + 1] == '[' && text[i + 2] == '0'
             && text[i + 3] == 'x' && strlen(text + i) >= 13
             && text[i + 12] == ']') {
-            uint32_t handle = 0;
-            int valid = 1;
-            for (int digit = 0; digit < 8; ++digit) {
-                const char c = text[i + 4 + digit];
-                uint32_t value;
-                if (c >= '0' && c <= '9') value = (uint32_t)(c - '0');
-                else if (c >= 'a' && c <= 'f') value = (uint32_t)(c - 'a' + 10);
-                else if (c >= 'A' && c <= 'F') value = (uint32_t)(c - 'A' + 10);
-                else { valid = 0; break; }
-                handle = (handle << 4) | value;
-            }
+            char* end;
+            unsigned long parsed = strtoul(text + i + 4, &end, 16);
+            int valid = end == text + i + 12 && *end == ']';
+            uint32_t handle = (uint32_t)parsed;
             const TextureSurface* image = valid && handle != 0
                 && s_formatted_text_texture_resolve != NULL
                 ? s_formatted_text_texture_resolve(handle) : NULL;
@@ -3704,7 +3684,7 @@ __declspec(naked) void* menu_text_record_make(
         ret
     text_record_allocate:
         push 0x3c
-        call engine_heap_alloc
+        call malloc
         mov esi, eax
         add esp, 4
         test esi, esi
@@ -4960,14 +4940,16 @@ static int help_window_button_record_parse(const char* value, int* x, int* y,
     const char* cursor = value;
     int* dimensions[4] = { x, y, width, height };
     for (int i = 0; i < 4; ++i) {
-        char* end = NULL;
-        const long parsed = strtol(cursor, &end, 10);
-        if (end == cursor || parsed < -32768 || parsed > 32767 ||
-            (i < 3 && *end != ':')) {
+        const char* separator = strchr(cursor, ':');
+        if (separator == NULL || separator == cursor) {
             return 0;
         }
-        *dimensions[i] = (int)parsed;
-        cursor = i < 3 ? end + 1 : end;
+        const int parsed = atoi(cursor);
+        if (parsed < -32768 || parsed > 32767) {
+            return 0;
+        }
+        *dimensions[i] = parsed;
+        cursor = i < 3 ? separator + 1 : separator;
     }
     if (*cursor != ':') {
         return 0;
@@ -4997,11 +4979,16 @@ static void help_window_label_copy(char* out, size_t out_size,
         out[0] = '\0';
         return;
     }
-    size_t i = 0;
-    for (; value[i] != '\0' && i + 1 < out_size; ++i) {
-        out[i] = value[i] == '_' ? ' ' : value[i];
+    const size_t copy_limit = out_size - 1;
+    const char* terminator = (const char*)memchr(value, '\0', copy_limit);
+    size_t length = terminator != NULL
+        ? (size_t)(terminator - value) : copy_limit;
+    strncpy(out, value, length);
+    out[length] = '\0';
+    char* underscore = out;
+    while ((underscore = crt_strchr(underscore, '_')) != NULL) {
+        *underscore++ = ' ';
     }
-    out[i] = '\0';
 }
 
 // FUNCTION: LEGORR 0x00418450
@@ -5069,18 +5056,11 @@ void help_window_resources_init(BlockFile* cfg,
             first_separator != background && second_separator[1] != '\0') {
             char name[256];
             const size_t length = (size_t)(first_separator - background);
-            char* end_x = NULL;
-            char* end_y = NULL;
-            const long offset_x = strtol(first_separator + 1, &end_x, 10);
-            const long offset_y = strtol(second_separator + 1, &end_y, 10);
-            if (length < sizeof(name) && end_x == second_separator &&
-                end_y != second_separator + 1 && *end_y == '\0' &&
-                offset_x >= -32768 && offset_x <= 32767 &&
-                offset_y >= -32768 && offset_y <= 32767) {
+            if (length < sizeof(name)) {
                 memcpy(name, background, length);
                 name[length] = '\0';
-                s_help_background_offset_x = (float)offset_x;
-                s_help_background_offset_y = (float)offset_y;
+                s_help_background_offset_x = (float)atoi(first_separator + 1);
+                s_help_background_offset_y = (float)atoi(second_separator + 1);
                 s_help_background_handle = ops != NULL &&
                     ops->resource_load != NULL
                     ? ops->resource_load(ops->context, name, 0, 0) : 0u;
@@ -5754,7 +5734,7 @@ static uint32_t s_status_banner_word;   /* DAT_004ddd1c */
 __declspec(naked) bool menu_audio_tick_interval_reached(void)
 {
     __asm {
-        call level_rand_u16
+        call rand
         cdq
         mov ecx, 0x190
         idiv ecx
@@ -6982,22 +6962,7 @@ void sav_visited_entry_peek(int which, int index, void** out_record,
  * owner) and the entry name pointers are guarded (the corpus strides). */
 static int s_name_fold_equal(const char* a, const char* b)
 {
-    for (;; ++a, ++b) {
-        unsigned char ca = (unsigned char)*a;
-        unsigned char cb = (unsigned char)*b;
-        if (ca >= 'A' && ca <= 'Z') {
-            ca += (unsigned char)('a' - 'A');
-        }
-        if (cb >= 'A' && cb <= 'Z') {
-            cb += (unsigned char)('a' - 'A');
-        }
-        if (ca != cb) {
-            return 0;
-        }
-        if (ca == 0) {
-            return 1;
-        }
-    }
+    return strcasecmp_lite(a, b) == 0;
 }
 
 // FUNCTION: LEGORR 0x00414c90
@@ -7022,7 +6987,7 @@ __declspec(naked) int menu_list_find_name(const void* list, const char* name)
         mov ecx, dword ptr [eax]
         push ebx
         push ecx
-        call strcasecmp_lite
+        call _strcmpi
         add esp, 8
         test eax, eax
         je menu_list_find_name_found

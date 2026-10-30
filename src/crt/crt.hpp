@@ -4,10 +4,10 @@
  *
  * Deviations (documented): the corpus's word-at-a-time memmove loops are
  * byte-equivalent memmove behavior, so the port calls memmove. The
- * corpus's FloatToLong is the compiler's __ftol helper — under the x87
- * control word it sets, that is C++ truncation toward zero; the port uses
- * the C++ cast (the corpus's 32-bit fist result vs the host cast is the
- * usual x87/IEEE deviation; overflow values are outside the corpus's
+ * corpus's FloatToLong app helper calls the compiler's __ftol routine —
+ * under the x87 control word it sets, that is C++ truncation toward zero;
+ * the port uses the C++ cast (the corpus's 32-bit fist result vs the host
+ * cast is the usual x87/IEEE deviation; overflow values are outside the
  * caller set). NoOpCallback's return value is undefined per finding 381 —
  * callers only use it as a callable no-op. */
 #ifndef LEGORRR_GODS98_CRT_HPP
@@ -15,18 +15,118 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#if defined(_MSC_VER)
+#include <math.h>
+#include <ctype.h>
+#include <string.h>
+#include <stdlib.h>
+#include <wchar.h>
+#include <io.h>
+#include <stdio.h>
+#include <mbstring.h>
+#include <time.h>
+#include <new.h>
+#ifdef _tolower
+#undef _tolower
+#endif
+#ifdef _ismbblead
+#undef _ismbblead
+#endif
+#endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/* FUN_00498000: memmove — copies the byte range with overlap handling,
+#if defined(_MSC_VER)
+int __cdecl _ms_p5_mp_test_fdiv(void);
+int __cdecl _filbuf(FILE* stream);
+int __cdecl _flsbuf(int value, FILE* stream);
+int __cdecl _flush(FILE* stream);
+int __cdecl _heap_init(void);
+int __cdecl _callnewh(size_t size);
+int __cdecl _stbuf(FILE* stream);
+void __cdecl _ftbuf(int installed, FILE* stream);
+void __cdecl _freebuf(FILE* stream);
+void __cdecl _getbuf(FILE* stream);
+void __cdecl _dosmaperr(unsigned long error);
+int __cdecl _isindst(const struct tm* calendar_fields);
+#if defined(_M_IX86)
+void __cdecl _setenvp(void);
+char* __cdecl __crtGetEnvironmentStringsA(void);
+int __cdecl __wtomb_environ(void);
+int __cdecl __crtsetenv(char* text, int sync_process);
+int __cdecl __crtCompareStringA(unsigned int locale, unsigned int flags,
+                                const char* left, int left_count,
+                                const char* right, int right_count,
+                                unsigned int codepage);
+int __cdecl _isctype(int value, int mask);
+int __cdecl _isspace(int value);
+int __cdecl __crtGetStringTypeA(unsigned int info_type, const char* source,
+                                int source_count, unsigned short* result,
+                                unsigned int codepage, unsigned int locale);
+int __cdecl __crtLCMapStringA(unsigned int locale, unsigned int flags,
+                              const char* source, int source_count,
+                              void* destination, int destination_count,
+                              unsigned int codepage);
+int __cdecl _setmbcp(int codepage);
+void __cdecl __initmbctable(void);
+int __cdecl _ismbblead(unsigned int value);
+long __cdecl __loctotime_t(int year, int month, int day, int hour,
+                           int minute, int second, int daylight_mode);
+void __cdecl _forcdecpt(char* text);
+void __cdecl __tzset(void);
+#endif
+#endif
+
+/* FUN_00498000: VC5's memmove — copies the byte range with overlap handling,
  * backward when the destination starts inside the source range, forward
  * otherwise. Returns the destination. */
+#if defined(_MSC_VER)
+#define crt_memory_move memmove
+#else
 void* crt_memory_move(void* dest, const void* src, size_t count);
+#endif
 
-/* FUN_00417430: __ftol — float to 32-bit integer, truncated toward zero
- * (the corpus's 32-bit fist result; the port mirrors the width). */
+/* CRT small-block heap internals (FUN_00491560 / 00491710 / 00491770 /
+ * 00491840) and the allocation-handler/calloc entry points. Arena pages
+ * are reserved in 4 MiB ranges and committed in 4 KiB pages. */
+#if defined(_MSC_VER) && defined(_M_IX86)
+#define crt_heap_initialize _heap_init
+#define crt_new_handler_invoke(size) _callnewh((size_t)(size))
+#define crt_calloc_aligned(count, size) \
+    calloc((size_t)(count), (size_t)(size))
+#else
+int crt_heap_initialize(void);
+#endif
+#if !defined(_MSC_VER)
+void crt_heap_block_free(void* arena);
+void crt_heap_release_unused_pages(int page_count);
+void* crt_heap_locate_allocation_page(void* allocation, void** arena_out,
+                                     void** page_base_out);
+#endif
+#if defined(_MSC_VER) && defined(_M_IX86)
+/* Route directly to VC5's C++ runtime new-handler registry. */
+#define crt_new_handler_set(handler) \
+    ((void)_set_new_handler((_PNH)(handler)))
+#else
+void crt_new_handler_set(int (*handler)(long));
+#endif
+#if !defined(_MSC_VER) || !defined(_M_IX86)
+int crt_new_handler_invoke(long size);
+void* crt_calloc_aligned(int count, int size);  /* FUN_004997c0 */
+#endif
+
+/* Let VC5 lower the float-to-int conversion at each call site to its
+ * __ftol helper, avoiding a C wrapper around the compiler-runtime entry. */
+#if defined(_MSC_VER) && defined(_M_IX86)
+#define crt_float_to_long(value) ((int)(value))
+#else
+int crt_float_to_long(float value);
+#endif
+
+/* FUN_00417430: forwards a float to 32-bit integer conversion through
+ * the CRT's __ftol routine. */
 int float_to_long(float value);
 
 /* FUN_0041f8e0: the callable no-op installed by several engine paths. */
@@ -35,12 +135,21 @@ void noop_callback(void);
 /* CRT runtime-error reporting (FUN_004968b0 / FUN_004968f0 / FUN_00499730).
  * The callback is invoked between the 0xfc and 0xff marker messages when
  * the CRT's runtime-error reporting gate is enabled. */
+#if defined(_MSC_VER)
+/* VC5 LIBC.LIB crt0msg.obj owns the matching x86 implementations. */
+extern "C" void __cdecl _FF_MSGBANNER(void);
+extern "C" int __cdecl _NMSG_WRITE(int error_code);
+#define crt_runtime_error_message_enter_exit _FF_MSGBANNER
+#define crt_runtime_error_message _NMSG_WRITE
+#else
 void crt_runtime_error_message_enter_exit(void);
 void crt_runtime_error_message(int error_code);
+#endif
+#if !defined(_MSC_VER)
 int crt_runtime_error_message_box_display(const char* message,
                                           const char* title,
                                           unsigned int flags);
-void crt_terminate_handler_invoke_and_abort(void);
+#endif
 
 /* FUN_0047d3f0: bit count (corpus: clear-lowest-set-bit loop). */
 int bit_count32(uint32_t value);
@@ -56,13 +165,18 @@ uint32_t find_first_set_bit32(uint32_t value);
  * identical body; kept distinct to mirror the address map). */
 int bit_count32_by_position(uint32_t value);
 
-/* FUN_00497ab0: zero test over 3 dwords (the "96-bit" pair of 32-bit limbs
- * plus its high word — the corpus checks exactly 3). */
+/* VC5 LIBC.LIB supplies its exact three-dword zero test on MSVC. */
+#if !defined(_MSC_VER)
 int uint96_is_zero(const uint32_t limbs[3]);
+#endif
 
 /* FUN_0048e870: the double finite test — exponent field not all ones,
  * so true for finite values and false for Inf/NaN. */
+#if defined(_MSC_VER) && defined(_M_IX86)
+#define double_is_finite(value) _finite((value))
+#else
 int double_is_finite(double value);
+#endif
 
 /* FUN_0045b900: divide an integer pair by `divisor`, both operands cast to
  * float before the divide; results land in the float pair. */
@@ -73,10 +187,10 @@ void integer_pair_divide_to_float_pair(int x, int y, int divisor,
  * zero into the integer pair (same deviation as float_to_long). */
 void float_pair_to_integer_pair(float x, float y, int* out_x, int* out_y);
 
-/* FUN_00499fb0: unsigned 32-bit add with carry — stores the sum and
- * answers 1 when the addition carried (finding 302; the primitive the
- * corpus's 96-bit increment/add/multiply helpers build on). */
+/* VC5 LIBC.LIB supplies this add-with-carry primitive on MSVC. */
+#if !defined(_MSC_VER)
 int crt_unsigned_add_with_carry(uint32_t a, uint32_t b, uint32_t* sum);
+#endif
 
 /* FUN_00493a80: the double special-value classifier over the raw bit
  * pair — 1 positive infinity, 2 negative infinity, 3 quiet-NaN-shaped
@@ -87,56 +201,84 @@ int double_classify(uint32_t lo, uint32_t hi);
 
 /* FUN_00499710: UTF-16 code units before the NUL terminator (finding 377
  * — the corpus walks 16-bit units the same way strlen walks bytes). */
+#if defined(_MSC_VER)
+#define wide_string_length(text) ((int)wcslen((const wchar_t*)(text)))
+#else
 int wide_string_length(const uint16_t* text);
+#endif
 
-/* FUN_0049add0: scan at most `bound` wide characters; answer the
- * terminator index plus one (the count including the NUL) when found
- * inside the bound, otherwise the bound itself — and the bound for a
- * zero bound, as in the corpus (findings 342/397). */
+/* FUN_0049add0: VC5 wcstombs.obj's private _wcsncnt helper supplies this
+ * MSVC entry together with wcstombs; other backends retain this local
+ * bounded scan. It answers the terminator index plus one when found inside
+ * the bound, otherwise the bound itself (findings 342/397). */
+#if !defined(_MSC_VER)
 int bounded_wide_string_length_including_null(const uint16_t* text,
                                               int bound);
+#endif
 
-/* FUN_00492068: double high-word exponent selector — the exponent field
- * for ordinary values, the untouched high word when the exponent is all
- * ones (Inf/NaN) (findings 386/399; CrtAsin's pre-dispatch probe). The
- * corpus callee takes a cdecl double: the low word is unused, the high
- * word is live — two uint32_t params so MSVC5 loads [esp+8]. */
+/* FUN_00492068: VC5's public __checkTOS_withFB supplies the double
+ * high-word exponent/special-value selector on MSVC. */
+#if !defined(_MSC_VER)
 uint32_t double_exponent_bits_or_special(uint32_t low_word,
                                          uint32_t high_word);
+#endif
 
-/* Format-argument cursor reads (FUN_00491430 / FUN_00491470 /
- * FUN_00491450; findings 231/395 — EngineFormatStringToStream's
- * width/precision/value walk): each reads the value at the cursor and
- * advances it. The word read returns the zero-extended 16-bit value
- * (the corpus's CONCAT upper half is the pointer's own high word — zero
- * in 32-bit space). Reads go through memcpy — the cursor may sit at an
- * unaligned continuation of a previous wider read. */
+/* These three statically linked helpers live in VC5 output.obj on MSVC;
+ * __output owns those entries in the reference runtime. Portable builds
+ * retain local copies for CRT argument-cursor reads (findings 231/395). */
+#if !defined(_MSC_VER)
 uint32_t format_argument_read_dword(uint8_t** cursor);
 uint32_t format_argument_read_word(uint8_t** cursor);
-double format_argument_read_double(uint8_t** cursor);
+uint64_t format_argument_read_qword(uint8_t** cursor);
+#endif
 
 /* FUN_00493150: x87 round-to-integral (FRNDINT) — the nearest integer
  * under the round-to-nearest-even mode, as a floating value. Ported as
  * double (the port has no x87 80-bit register; every x87 leaf here is a
  * documented single/double deviation). */
+#if defined(_MSC_VER) && defined(_M_IX86)
+double __cdecl _frnd(double value);
+#define x87_round_to_integral _frnd
+#else
 double x87_round_to_integral(double value);
+#endif
 
-/* CRT math runtime leaves (FUN_0048d940 / FUN_0048e1aa / FUN_0048e280 /
- * FUN_0048e680). The dispatch initializer seeds the six callback words;
- * intrinsic dispatch requires the original x87/caller-frame context and
- * currently lands as a port seam. The numeric leaves preserve the ordinary
- * finite and infinity behavior; CRT matherr callbacks remain unported. */
+/* CRT math runtime leaves. VC5 LIBC.LIB supplies asin, acos, floor, fabs,
+ * ceil, and the extended x87 remainder helpers at their image addresses.
+ * The dispatch initializer seeds the six callback words; VC5's 87cdisp.obj
+ * supplies the x87/caller-frame dispatch entries on MSVC. */
+#if !defined(_MSC_VER)
 void crt_math_dispatch_table_initialize(void);
+#endif
 void crt_math_intrinsic_dispatch(void);
+#if !defined(_MSC_VER)
+void crt_floating_point_exception_result_dispatch(void);
+void crt_floating_point_exception_result_dispatch_variant(void);
+#endif
+#if !defined(_MSC_VER)
+double crt_double_remainder_reduction(double dividend, double divisor);
+double crt_fmod_extended_precision(double dividend, double divisor);
+#endif
+#if !defined(_MSC_VER)
 uint32_t crt_fpu_precision_mode_code_get(void);
+#endif
+#if defined(_MSC_VER) && defined(_M_IX86)
+/* VC5 LIBC.LIB owns these three math entries at their target addresses. */
+#define crt_round_to_integral_with_math_error_handling floor
+#define crt_round_to_integral_with_math_error_handling_variant ceil
+#define crt_double_absolute_value fabs
+#else
 double crt_round_to_integral_with_math_error_handling(double value);
 double crt_round_to_integral_with_math_error_handling_variant(double value);
 double crt_double_absolute_value(double value);
+#endif
 
 /* CrtRunCallbackArray (FUN_0048e5a0): call each nonnull cdecl callback
  * in the half-open pointer range, in forward order. */
 typedef void (*CrtCallback)(void);
+#if !defined(_MSC_VER)
 void crt_run_callback_array(CrtCallback* start, CrtCallback* end);
+#endif
 
 /* FUN_00493a40 (DoubleBuildWithExponent, findings 383/399): rebuild the
  * 8-bit-exponent floating value from the two significand words and the
@@ -150,11 +292,14 @@ double double_build_with_exponent(uint32_t significand_low,
 
 /* DoubleFrexpDecompose (FUN_00493ae0): returns the input significand
  * normalized to [0.5, 1) (with its sign), and stores the binary exponent. */
+#if !defined(_MSC_VER)
 double double_frexp_decompose(uint32_t low_word, uint32_t high_word,
                               int* exponent);
+#endif
 
 /* CRT math exception dispatch (FUN_004938f0). The image passes its
  * _exception fields as eight dwords plus the saved FPU control word. */
+#if !defined(_MSC_VER)
 double crt_math_exception_dispatch(uint32_t error_code, uint32_t operation,
                                    uint32_t argument1_low,
                                    uint32_t argument1_high,
@@ -163,16 +308,30 @@ double crt_math_exception_dispatch(uint32_t error_code, uint32_t operation,
                                    uint32_t result_low,
                                    uint32_t result_high,
                                    uint32_t fpu_control_word);
+#endif
+#if !defined(_MSC_VER)
 double crt_math_exception_handle_single_result(uint32_t operation,
                                                 uint32_t result_low,
                                                 uint32_t result_high,
                                                 uint32_t fpu_control_word);
+#endif
+#if !defined(_MSC_VER)
 void crt_floating_point_exception_raise(uint32_t* record,
-                                       uint32_t* control_word,
-                                       uint8_t exception_flags,
-                                       uint32_t precision,
-                                       const uint32_t* argument,
-                                       uint32_t* result);
+                                        uint32_t* control_word,
+                                        uint8_t exception_flags,
+                                        uint32_t precision,
+                                        const uint32_t* argument,
+                                        uint32_t* result);
+#endif
+/* VC5 fpexcept.obj's __except1 has this exact target body. */
+#if defined(_MSC_VER)
+extern "C" double __cdecl _except1(uint32_t status, uint32_t operation,
+                                    uint32_t argument_low,
+                                    uint32_t argument_high,
+                                    uint32_t result_low,
+                                    uint32_t result_high,
+                                    uint32_t fpu_control_word);
+#else
 double crt_math_exception_handle_result_with_status(uint32_t status,
                                                      uint32_t operation,
                                                      uint32_t argument_low,
@@ -180,15 +339,20 @@ double crt_math_exception_handle_result_with_status(uint32_t status,
                                                      uint32_t result_low,
                                                      uint32_t result_high,
                                                      uint32_t fpu_control_word);
+#endif
 
 /* CrtDoubleToIntegerRound (FUN_004935c0): fold exception status into the
  * caller's double result and report whether all status bits were handled. */
+#if !defined(_MSC_VER)
 int crt_double_to_integer_round(uint32_t status, double* value,
                                 uint32_t fpu_control_word);
+#endif
 
-/* CrtScanFormatCharNormalize (FUN_00494c30): leaves decimal digits alone;
- * maps hexadecimal A-F/a-f to 10-15 using the corpus's mask arithmetic. */
+/* CrtScanFormatCharNormalize (FUN_00494c30): VC5 LIBC.LIB's private
+ * __hextodec helper; portable builds retain the local equivalent. */
+#if !defined(_MSC_VER)
 uint32_t crt_scan_format_char_normalize(uint32_t value);
+#endif
 
 /* ------------------------------------------------------------------ *
  *  Constant and DAT-global band (2026-10-24; findings 380/383/386/
@@ -214,10 +378,15 @@ int32_t constant_negative_10000_get(void);
  * — the fallback when IsProcessorFeaturePresent cannot be resolved. */
 uint32_t processor_feature_fallback_false(void);
 
-/* CrtFloatingPointFeatureProbe (FUN_00490280): dynamically queries
- * IsProcessorFeaturePresent(0) on the WinAPI backend; native uses the
- * missing-export fallback and returns zero. */
+/* CrtFloatingPointFeatureProbe (FUN_00490280): MSVC calls VC5's
+ * testfdiv.obj __ms_p5_mp_test_fdiv; portable backends keep the local
+ * optional IsProcessorFeaturePresent(0) query and fallback. */
+#if defined(_MSC_VER) && defined(_M_IX86)
+#define crt_floating_point_feature_probe() \
+    ((uint32_t)_ms_p5_mp_test_fdiv())
+#else
 uint32_t crt_floating_point_feature_probe(void);
+#endif
 
 /* FlhMagicUuNoop (FUN_00456210, finding 440): the FLH magic 'UU'
  * pass's silent leaf — returns zero without changing state; the corpus
@@ -407,18 +576,23 @@ uint32_t indexed_global_value_at_get(int index);      /* FUN_0045cc10 */
 uint32_t global_cursor_word_get(void);                /* FUN_0045cc60 */
 void     font_cursor_word_set(int index, uint32_t v); /* port hook */
 
-/* --- pure-return stubs + advisor word clear (2026-10-24; findings 37/38/393) -
- * The corpus keeps several address-range stubs that only return: the FLIC
- * opcode-27 fallback and the two CRT variants land as faithful no-op
- * functions. AdvisorClearActiveState (FUN_00401b20) clears bit 1 of the
- * advisor state word this module's band models. */
-void crt_no_op_stub(void);              /* FUN_00491ff5 */
+/* --- CRT x87 helper fallback + advisor word clear ---------------------------
+ * VC5's public __load_CW implements the target helper at 0x00491ff5 on
+ * MSVC. The portable fallback is retained for non-MSVC builds. The private
+ * helper at 0x00497870 is supplied transitively through __control87.
+ * AdvisorClearActiveState (FUN_00401b20) clears bit 1 of the advisor state
+ * word this module models. */
+#if !defined(_MSC_VER)
+void crt_load_control_word(uint32_t control_word);
 void crt_no_op_stub_variant(void);      /* FUN_00497870 */
+#endif
 void advisor_clear_active_state(void);  /* FUN_00401b20 */
 
-/* ByteRangeSwap (FUN_0048e030): byte-for-byte swap of two ranges; the
- * corpus's same-pointer shortcut keeps (documented NULL guard). */
+/* ByteRangeSwap (FUN_0048e030): VC5 qsort.obj's private _swap helper is
+ * linked with qsort on MSVC; this portable fallback is used by the CRT test. */
+#if !defined(_MSC_VER)
 void byte_range_swap(void* a, void* b, size_t n);
+#endif
 
 /* --- the DAT window band (2026-10-24; findings 250/252/357) -----------------
  * Indexed pair/pointer/float windows over the corpus's data-section
@@ -519,8 +693,10 @@ float    crt_float_bits(uint32_t bits);
  * CrtFatalMessageExit (FUN_00498340): the corpus's exhausted-memory fatal
  * path (`__amsg_exit` 2). The port aborts like the CRT unless an observer
  * hook stands in (documented deviation). */
+#if !defined(_MSC_VER)
 void uint96_zero(uint32_t limbs[3]);   /* FUN_00497aa0 */
 void uint96_shift_right(uint32_t limbs[3], int count); /* FUN_00497ad0 */
+#endif
 void global_value_clear_if_equal(int value); /* FUN_0040e910 */
 void global_value_word_set(int value);       /* port hook */
 int  global_value_word_peek(void);
@@ -534,9 +710,11 @@ void scene_effect_registry_words_peek(uint32_t out_words[3]);
 void crt_fatal_message_exit(void);                  /* FUN_00498340 */
 void crt_fatal_exit_observer_set(void (*observer)(void));
 
-/* CrtNoOpStubVariant2 (FUN_00493c40): the corpus's second no-op CRT stub
- * variant — an empty body, ported faithfully as a call-through. */
+/* The portable math-exception fallback's no-op. VC5 supplies __set_statfp
+ * at target 0x00493c40 in the MSVC build. */
+#if !defined(_MSC_VER)
 void crt_no_op_stub_variant2(void); /* FUN_00493c40 */
+#endif
 
 /* LinkedRecordChainFree (FUN_0046a370): frees a record chain recursively —
  * the successor chain through the +1c link (the port's widened link slot,
@@ -578,7 +756,12 @@ void model_render_list_clear(void);                 /* FUN_00482d30 */
 void renderer_command_node_prepend(uint32_t kind, const uint32_t* payload);
 void model_render_list_head_set(void* node);        /* port hook */
 void* model_render_list_head_peek(void);            /* port hook */
+#if defined(_MSC_VER) && defined(_M_IX86)
+/* VC5's stream.obj owns the exact __freebuf entry used by the reference. */
+#define crt_owned_stream_buffer_release(record) _freebuf((FILE*)(record))
+#else
 void crt_owned_stream_buffer_release(char* record); /* FUN_00494df0 */
+#endif
 
 /* SharedTextureDirectorySet (FUN_004728c0, findings 420/13): duplicates the
  * argument string and installs it as the shared texture directory word
@@ -699,9 +882,16 @@ void owned_resource_tree_release(void** node, int own_node); /* FUN_0048c180 */
  *   window follows the original seven-DWORD x86 layout; 64-bit builds use
  *   native pointer-sized fields for the port's stream-record layout. */
 void string_prefix_reserve(char* s, int count);   /* FUN_004907c0 */
+#if defined(_MSC_VER) && defined(_M_IX86)
+/* VC5's stream.obj owns the exact __getbuf entry used by the reference. */
+#define crt_stream_buffer_allocate(record) _getbuf((FILE*)(record))
+#else
 void crt_stream_buffer_allocate(char* record);    /* FUN_00498ae0 */
+#endif
+#if !defined(_MSC_VER)
 long stream_allocation_count_peek(void);          /* port hook */
 void stream_allocation_count_reset(void);         /* port hook */
+#endif
 
 /* --- the 96-bit add (2026-10-24; findings 375/102) --------------------------
  * UInt96Add (FUN_00499fe0): adds the three-limb value `src` onto `dst`
@@ -711,23 +901,31 @@ void stream_allocation_count_reset(void);         /* port hook */
  *   (possibly bumped) limb word, bumping limb 2 again on its carry; the
  *   limb-2 add's carry out is discarded.
  * Deviation: the corpus strides both limbs blindly; the port guards them. */
+#if !defined(_MSC_VER)
 void crt_uint96_add(uint32_t* dst, const uint32_t* src); /* FUN_00499fe0 */
+#endif
 /* FUN_0049a0b0: convert decimal digit bytes into a normalized 96-bit
  * significand and its signed exponent word at byte offset 10. */
+#if !defined(_MSC_VER)
 void crt_decimal_digit_sequence_to_extended96(const char* digits, int count,
                                               void* out_extended96);
-/* FUN_00497f40: expand the IEEE double bit pattern into the runtime's
- * 10-byte extended80 representation in a 12-byte temporary. */
+#endif
+#if !defined(_MSC_VER)
+/* Non-MSVC fallback for VC5 LIBC.LIB's __dtold entry at FUN_00497f40. */
 void crt_double_to_extended80(void* out_extended80, const void* source_double);
+#endif
+#if !defined(_MSC_VER)
 void crt_extended80_multiply(uint16_t* destination,
                              const uint16_t* source); /* FUN_0049a540 */
+#endif
 /* UInt96IncrementAtBit (FUN_00497970): the bit-indexed add. Adds the
  * single-bit mask 1 << (31 - bit % 32) into limb bit / 32 (the corpus's
  * sign-biased index arithmetic reproduced) and propagates the carry toward
  * the LOWER indices while the chain has it — this function's own limb
  * order, not uint96 add's little-endian model.
  * Deviation: the corpus strides the limbs blindly (the port guards 0..2). */
-void crt_uint96_increment_at_bit(uint32_t limbs[3], int bit);
+#if !defined(_MSC_VER)
+uint32_t crt_uint96_increment_at_bit(uint32_t limbs[3], int bit);
                                                 /* FUN_00497970 */
 /* UInt96HasNoBitsAtOrAbove (FUN_00497900): 1 when no bit at or above the
  * index is set. The corpus's in-limb mask tests the bits ABOVE the named
@@ -744,6 +942,7 @@ uint32_t crt_uint96_has_no_bits_at_or_above(const uint32_t limbs[3], int bit);
  * carry bit; it reports when rounding overflowed the top of the 96-bit word. */
 uint32_t crt_uint96_clear_from_bit(uint32_t limbs[3], int bit);
                                                 /* FUN_004979e0 */
+#endif
 
 /* --- the renderer-word band (2026-10-25) -------------------------------------
  * Six renderer/global-word one-liners over the corpus's unowned .data band:
@@ -783,6 +982,7 @@ void     low_texture_flag_set(void);                  /* FUN_00477bd0 */
  * order — the corpus's dword walk reads each source word after earlier
  * writes, so an overlapping source shows the same word duplication (the
  * faithful model is the ordered copy). */
+#if !defined(_MSC_VER)
 void uint96_copy(uint32_t dst[3], const uint32_t src[3]);
 
 /* CrtExtended80ToBinaryFloat (FUN_00497b90) and its fixed format wrappers.
@@ -795,24 +995,57 @@ uint32_t crt_extended_float_convert_format_a(const uint16_t* source,
                                              uint32_t* destination);
 uint32_t crt_extended_float_convert_format_b(const uint16_t* source,
                                              uint32_t* destination);
+#endif
+#if defined(_MSC_VER)
+int __cdecl _atodbl(double* destination, const char* text);
+int __cdecl _atoflt(float* destination, const char* text);
+#define crt_number_string_to_binary64(destination, text) \
+    ((uint32_t)_atodbl((double*)(destination), (text)))
+#define crt_number_string_to_binary32(destination, text) \
+    ((uint32_t)_atoflt((float*)(destination), (text)))
+#else
+uint32_t crt_number_string_to_binary64(uint32_t* destination, char* text);
+uint32_t crt_number_string_to_binary32(uint32_t* destination, char* text);
+#endif
 
-/* CrtStringDuplicate (FUN_0049b660): strlen+1 through the engine
- * allocator, bytes and NUL copied over. A null string answers null
- * (deviation: the corpus's strlen strides it blindly). */
+/* CrtStringDuplicate (FUN_0049b660): VC5 builds delegate to _strdup;
+ * other backends retain the local engine-heap implementation. */
+#if defined(_MSC_VER)
+#define crt_string_duplicate _strdup
+#else
 char* crt_string_duplicate(const char* text);
+#endif
 
-/* CrtEnvironmentArrayClone (FUN_0049b540): allocate a null-terminated
- * pointer array and duplicate each entry through the engine heap. */
+#if !defined(_MSC_VER)
+/* CrtEnvironmentArrayClone (FUN_0049b540): non-MSVC fallback for the
+ * private _copy_environ helper used internally by VC5 __crtsetenv. */
 char** crt_environment_array_clone(char** entries);
+#endif
 
-/* CRT process-environment support (FUN_00495df0 / 00496190 / 0049ae10 /
- * 0049af20 / 0049af60 / 0049afe0 / 0049b2b0 / 0049b4c0). The environment
- * block and strings use engine-heap ownership, matching the CRT startup
- * and _putenv paths. CompareString compatibility returns the Win32 ordering
+/* CRT process-environment support. VC5 builds use its CRT environment
+ * entries from LIBC.LIB where available; other backends retain local
+ * equivalents. CompareString compatibility returns the Win32 ordering
  * values 1/2/3, or zero on API failure. */
+#if defined(_MSC_VER) && defined(_M_IX86)
+#define crt_environment_pointer_array_build _setenvp
+#define crt_environment_block_get __crtGetEnvironmentStringsA
+#else
 void crt_environment_pointer_array_build(void);
 char* crt_environment_block_get(void);
+#endif
+#if defined(_MSC_VER) && defined(_M_IX86)
+#define crt_environment_variable_lookup getenv
+#else
 char* crt_environment_variable_lookup(const char* name);
+#endif
+#if defined(_MSC_VER) && defined(_M_IX86)
+#define crt_counted_string_compare(left, right, count) \
+    _mbsnbicoll((const unsigned char*)(left), \
+                (const unsigned char*)(right), (size_t)(count))
+#define crt_wide_environment_string_list_convert __wtomb_environ
+#define crt_compare_string_compat __crtCompareStringA
+#define crt_put_env_update __crtsetenv
+#else
 int crt_counted_string_compare(const char* left, const char* right, int count);
 int crt_wide_environment_string_list_convert(void);
 int crt_compare_string_compat(uint32_t locale, uint32_t flags,
@@ -820,16 +1053,20 @@ int crt_compare_string_compat(uint32_t locale, uint32_t flags,
                               const char* right, int right_count,
                               uint32_t codepage);
 int crt_put_env_update(char* text, int sync_process);
+#endif
+#if !defined(_MSC_VER)
 int crt_environment_entry_find(const char* name, int name_length);
+#endif
 
-/* CrtCommandLineArgumentScan (FUN_00495f80): parse argv[0] and the remaining
- * command line. Null output pointers request the sizing pass; counts include
- * the trailing null argv slot and all string terminators. */
+#if !defined(_MSC_VER)
+/* CrtCommandLineArgumentScan (FUN_00495f80): non-MSVC fallback for the
+ * private parser embedded in VC5's _setargv startup routine. */
 void crt_command_line_argument_scan(const unsigned char* command_line,
                                     char** argv_out,
                                     unsigned char* string_out,
                                     int* argc_and_null_count,
                                     int* string_byte_count);
+#endif
 
 /* CrtDecimalMantissaRoundAndNormalize (FUN_00497e20): copy/pad and round a
  * decimal digit run, adjusting its exponent on carry into the guard digit. */
@@ -839,19 +1076,39 @@ struct CrtDecimalFormatContext {
     char* locale_result;
     char* digits;
 };
-void crt_decimal_mantissa_round_and_normalize(char* output, int precision,
-                                               CrtDecimalFormatContext* context);
+#if !defined(_MSC_VER)
+void crt_decimal_mantissa_round_and_normalize(
+    char* output, int precision, CrtDecimalFormatContext* context);
+#endif
+#if !defined(_MSC_VER)
 void crt_extended_float_power_of_ten_scale(uint16_t value[6],
                                            uint32_t exponent,
                                            int initialize); /* FUN_0049a800 */
+#endif
+#if !defined(_MSC_VER)
 uint32_t crt_extended_float_to_decimal(uint32_t significand_low,
                                        uint32_t significand_high,
                                        uint16_t sign_exponent,
                                        int precision,
                                        uint8_t flags,
                                        uint8_t* output); /* FUN_0049a1b0 */
+#endif
+#if !defined(_MSC_VER)
 CrtDecimalFormatContext* crt_locale_data_get_or_initialize(
     uint32_t double_low, uint32_t double_high); /* FUN_00497ec0 */
+#endif
+#if defined(_MSC_VER)
+/* VC5's static CRT provides these exact floating-format entry points. */
+extern "C" char* __cdecl _cftoe(const uint32_t* value, char* output,
+                                int precision, int uppercase);
+extern "C" char* __cdecl _cftof(const uint32_t* value, char* output,
+                                uint32_t precision);
+#define crt_scientific_float_format_append _cftoe
+#define crt_fixed_float_fraction_format _cftof
+extern "C" void __cdecl _cftog(const uint32_t* value, char* output,
+                                int precision, int uppercase);
+#define crt_float_decimal_format_prepare _cftog
+#else
 char* crt_scientific_float_format_append(const uint32_t* value,
                                          char* output,
                                          int precision,
@@ -870,13 +1127,25 @@ void crt_scientific_float_format_guarded(const uint32_t* value,
 void crt_fixed_decimal_format_guarded(const uint32_t* value,
                                       char* output,
                                       uint32_t precision); /* FUN_00490720 */
+#endif
 
-/* CrtCharacterClassFlagTest (FUN_00495db0): test the locale byte flags,
- * then the base CRT character-class flags for the low input byte. */
+/* CrtCharacterClassFlagTest (FUN_00495db0): VC5 LIBC.LIB's private
+ * _x_ismbbtype helper; portable builds keep the local equivalent. */
+#if !defined(_MSC_VER)
 uint32_t crt_character_class_flag_test(uint32_t value, uint32_t flags,
                                       uint8_t byte_mask);
+#endif
 uint32_t crt_is_dbcs_lead_byte(uint32_t value); /* FUN_00495d90 */
+#if defined(_MSC_VER) && defined(_M_IX86)
+#define crt_character_classify_mask(value, mask) _isctype((value), (int)(mask))
+#define crt_character_class_flag8_check _isspace
+#define crt_get_string_type_a_compat __crtGetStringTypeA
+#define crt_locale_character_map_string __crtLCMapStringA
+#define crt_locale_codepage_table_update _setmbcp
+#define crt_ansi_codepage_tables_init __initmbctable
+#else
 uint32_t crt_character_classify_mask(int value, uint32_t mask); /* FUN_0048f1d0 */
+uint32_t crt_character_class_flag8_check(int value);
 int crt_get_string_type_a_compat(uint32_t info_type, const char* source,
                                  int source_count, uint16_t* result,
                                  uint32_t codepage, uint32_t locale);
@@ -885,24 +1154,67 @@ int crt_locale_character_map_string(uint32_t locale, uint32_t flags,
                                      void* destination,
                                      int destination_count,
                                      uint32_t codepage);
+int crt_locale_codepage_table_update(int codepage);
+void crt_ansi_codepage_tables_init(void);
+#endif
+/* VC5 builds delegate these ANSI locale helpers to LIBC.LIB's private CRT
+ * implementations; non-MSVC builds retain the local compatibility paths. */
+#if defined(_MSC_VER) && defined(_M_IX86)
+#define crt_multibyte_to_wide_char(output, source, max_bytes) \
+    ((uint32_t)mbtowc((unsigned short*)(output), \
+                      (const char*)(source), (size_t)(max_bytes)))
+#define crt_multibyte_character_search(text, value) \
+    ((char*)_mbschr((const unsigned char*)(text), (unsigned int)(value)))
+#define crt_dbcs_aware_bounded_string_copy(dest, src, count) \
+    ((char*)_mbsnbcpy((unsigned char*)(dest), \
+                      (const unsigned char*)(src), (size_t)(count)))
+#define crt_parse_signed_decimal(text) ((int)atol((const char*)(text)))
+#define crt_strchr(text, character) strchr((text), (character))
+#define crt_daylight_saving_time_check(fields) \
+    _isindst((const struct tm*)(fields))
+#define crt_wide_char_to_multibyte(dest, wide) \
+    wctomb((dest), (unsigned short)(wide))
+#define crt_string_copy_n(dest, src, count) \
+    strncpy((dest), (src), (size_t)(count))
+#else
 uint32_t crt_multibyte_to_wide_char(uint16_t* output,
                                     const uint8_t* source,
                                     uint32_t max_bytes);
-uint32_t crt_character_class_flag8_check(int value);
-int crt_locale_codepage_table_update(int codepage);
-void crt_ansi_codepage_tables_init(void);
+#endif
+#if defined(_MSC_VER) && defined(_M_IX86)
+#define crt_is_dbcs_lead_byte(value) ((uint32_t)_ismbblead((unsigned int)(value)))
+#define crt_character_to_lower_locale(value) ((uint32_t)_tolower((int)(value)))
+#define crt_calendar_fields_to_time_scalar(year, month, day, hour, minute, second, daylight_mode) \
+    ((int32_t)__loctotime_t((year), (month), (day), (hour), (minute), \
+                            (second), (daylight_mode)))
+#define crt_normalize_decimal_point(text) _forcdecpt((text))
+#define crt_array_sort_with_comparator(base, count, width, compare) \
+    qsort((base), (count), (width), (compare))
+#else
 uint32_t crt_character_to_lower_locale(uint32_t value);
+#endif
 
 /* CrtCodePageLocaleIdLookup (FUN_00496530): map the four CRT DBCS code
  * pages to their Windows locale identifiers, or return zero. */
+#if !defined(_MSC_VER)
 uint32_t crt_codepage_locale_id_lookup(uint32_t codepage);
 int crt_codepage_get(int codepage); /* FUN_004964e0 */
+#endif
+#if !defined(_MSC_VER) || !defined(_M_IX86)
 int32_t crt_calendar_fields_to_time_scalar(int year, int month, int day,
-                                            int hour, int minute, int second,
-                                            int daylight_mode); /* FUN_00496f50 */
+                                           int hour, int minute, int second,
+                                           int daylight_mode); /* FUN_00496f50 */
+#endif
+#if defined(_MSC_VER) && defined(_M_IX86)
+#define crt_timezone_initialize_once __tzset
+#define crt_timezone_state_init _tzset
+#else
 void crt_timezone_initialize_once(void); /* FUN_00499860 */
 void crt_timezone_state_init(void); /* FUN_00499880 */
+#endif
+#if !defined(_MSC_VER)
 int crt_daylight_saving_time_check(const int* calendar_fields); /* FUN_00499b30 */
+#endif
 void crt_daylight_transition_boundary_compute(int is_start,
                                               int use_nth_weekday,
                                               uint32_t year,
@@ -917,39 +1229,52 @@ void crt_daylight_transition_boundary_compute(int is_start,
 
 /* CrtCtypeTablesReset (FUN_00496590): clear the active multibyte/code-page
  * state while preserving the base _pctype table and OS-fallback flag. */
+#if !defined(_MSC_VER)
 void crt_ctype_tables_reset(void);
+#endif
 
-/* CrtMultibyteCharacterSearch (FUN_0049b5b0): find a byte or DBCS pair in
- * a zero-terminated string using the active CRT code-page tables. */
+/* CRT shims linked from VC5 LIBC.LIB in the Reccmp build; other backends
+ * retain the local byte/DBCS-compatible implementations. */
+typedef int (*crt_sort_compare_fn)(const void*, const void*);
+#if !defined(_MSC_VER) || !defined(_M_IX86)
+void crt_array_sort_with_comparator(void* base, size_t count, size_t width,
+                                    crt_sort_compare_fn compare);
+#endif
+#if !defined(_MSC_VER)
 char* crt_multibyte_character_search(char* text, uint32_t value);
-int crt_parse_signed_decimal(const unsigned char* text); /* FUN_0048dad0 */
-void crt_normalize_decimal_point(char* text); /* FUN_004902b0 */
-char* crt_strchr(char* text, int character); /* FUN_004914a0 */
+int crt_parse_signed_decimal(const unsigned char* text); /* VC5 atol */
+#endif
+#if !defined(_MSC_VER) || !defined(_M_IX86)
+void crt_normalize_decimal_point(char* text); /* VC5 _forcdecpt */
+#endif
+#if !defined(_MSC_VER)
+char* crt_strchr(char* text, int character); /* VC5 strchr */
 char* crt_dbcs_aware_bounded_string_copy(char* dest, const char* src,
-                                         uint32_t count); /* FUN_004976d0 */
+                                         uint32_t count); /* VC5 _mbsnbcpy */
+#endif
 
-/* CrtUnsignedIntegerFormatRadix (FUN_0049dba0): digits least-significant
- * first, then reversed into the buffer; values ≥ 10 fold in through
- * `+ 'W'`, the corpus's lowercase letters. Its final flag requests a
- * leading minus and wrapping unsigned negation. The port guards radix < 2
- * with a lone "0" (deviation: the corpus's divide loop never ends). */
-void crt_unsigned_format_radix(uint32_t value, char* out, int radix,
-                               int signed_value);
-
-/* SignedDecimalToStringConvert (FUN_0049db60): radix 10 over a negative
- * value takes the sign half ('-' + unsigned magnitude, wrapping like the
- * corpus — INT_MIN lands as 2147483648); every other case is the plain
- * unsigned format. Answers the buffer. */
+/* SignedDecimalToStringConvert (FUN_0049db60): the VC5 build links _itoa
+ * from LIBC.LIB; other backends use its lowercase-digit behavior. */
+#if defined(_MSC_VER)
+#define crt_signed_to_string _itoa
+#else
 char* crt_signed_to_string(int value, char* out, int radix);
+#endif
 
 /* StringToUpper / StringToLowercase (FUN_0049dcd0 / FUN_0049dc10): the
- * corpus's C-locale half (DAT_00549180 == 0, the port's pinned locale
- * per KeyToAscii) folds A-Z / a-z in place; the locale half rides the
- * unported locale-map chain (recorded). The conversion covers the whole
- * string; the return is the buffer. Deviation: the corpus strides the
- * buffer blindly; the port guards the null pointer. */
+ * VC5 Reccmp profile calls the matching __strupr / __strlwr objects from
+ * LIBC.LIB. Other backends use the local equivalent: the C-locale path
+ * folds ASCII letters in place, and the locale path uses the recorded
+ * locale-map chain. The conversion covers the whole string; the return is
+ * the buffer. The portable implementation guards null; VC5 retains the
+ * CRT routine's behavior. */
+#if defined(_MSC_VER)
+#define crt_string_to_upper _strupr
+#define crt_string_to_lower _strlwr
+#else
 char* crt_string_to_upper(char* text);   /* FUN_0049dcd0 */
 char* crt_string_to_lower(char* text);   /* FUN_0049dc10 */
+#endif
 
 /* --- math error band (2026-10-25) ------------------------------------------
  * CrtMathErrorCodeSet (FUN_004939a0): stores the corpus's _DAT_005490d0
@@ -957,21 +1282,29 @@ char* crt_string_to_lower(char* text);   /* FUN_0049dc10 */
  * 0x22, everything else leaves the slot. The port models the slot as
  * guarded own storage (the corpus's fd/codec readers ride the unported
  * CRT runtime band — deviation). */
+#if !defined(_MSC_VER)
 void crt_math_error_code_set(int param);
+#endif
 uint32_t crt_math_error_code_peek(void); /* port hook */
 
 /* FPU control/status helpers (FUN_00493be0 / 0x493bf0 / 0x493c10).
  * The status readers return the signed x87 status word. The masked control
  * update writes (value & mask) | (old & ~mask) and returns the previous
  * signed control word. */
+#if !defined(_MSC_VER)
 int fpu_status_word_get_variant_a(void);
 int fpu_status_word_get_variant_b(void);
+#endif
+#if !defined(_MSC_VER)
 int fpu_control_word_update_masked(uint32_t value, uint32_t mask);
+#endif
 
 /* CrtMathExceptionCodeFromStatus (FUN_00493a00): bit 0x20 answers 5,
  * bit 0x8 answers 1, bit 0x4 answers 2, bit 0x1 answers 3; otherwise it returns
  * the status low byte as the shipped `and eax,0xff` instruction does. */
+#if !defined(_MSC_VER)
 int crt_math_exception_code_from_status(uint32_t status);
+#endif
 
 /* global_flag_004ff978_install: port hook writing the DAT_004ff978 word
  * the corpus's EngineModeSet stores through. */
@@ -980,32 +1313,27 @@ void global_flag_004ff978_install(uint32_t value);
 /* CrtMathExceptionHandlerGet (FUN_004939d0): scans the corpus's 27-entry,
  * 8-byte-stride math-handler table (DAT_004b2170 role; the corpus writer
  * is the unported CRT startup band — the port models the table as own
- * storage with an install hook). An id match answers the entry's handler
- * word, else zero. Deviation: the corpus strides the table blind. */
+ * storage with an install hook). On VC5 this is the target's strong
+ * __matherr override: LIBC.LIB's fpexcept.obj dispatcher calls it, while
+ * matherr.obj's default implementation is only a zero-return stub. An id
+ * match answers the entry's handler word, else zero. */
+#if defined(_MSC_VER)
+struct _exception;
+extern "C" int __cdecl _matherr(struct _exception* exception);
+#else
 uint32_t crt_math_exception_handler_get(int id);
+#endif
 void crt_math_exception_handler_install(int index, int id,
                                         uint32_t handler); /* hook */
 
-/* CrtInteger64Multiply (FUN_0048ea90, __allmul): the compiler's signed
- * 64-bit multiply helper — unsigned low-word product, with the two
- * cross-word signed products folded into the high half. */
+/* Keep declarations for the recovered 64-bit arithmetic bodies in the CRT
+ * module on non-MSVC backends. The VC5 x86 build publishes separate decorated
+ * stdcall aliases for compiler-generated helper references. */
+#if !defined(_MSC_VER)
 uint64_t crt_integer64_multiply(uint32_t lo_a, int32_t hi_a,
                                 uint32_t lo_b, int32_t hi_b);
-
-/* CrtInteger64Divide / CrtUnsigned64Divide (FUN_0048e9e0 __alldiv /
- * FUN_00498bf0 __aulldiv): the compiler's 64-bit division helpers, both
- * word-pair shaped. The unsigned x86 path preserves the target's 32-bit
- * normalization, quotient estimate, and multiply-back correction; the
- * portable fallback uses equivalent word-pair arithmetic. The signed
- * helper folds its sign-normalizing algorithm to int64 division and pins
- * its wrapping INT64_MIN / -1 quotient. Both leave division by zero to the
- * native divide fault. */
 uint64_t crt_integer64_divide(uint32_t lo_a, uint32_t hi_a,
                               uint32_t lo_b, uint32_t hi_b);
-#if defined(_MSC_VER) && defined(_M_IX86)
-uint64_t __stdcall crt_unsigned64_divide(uint32_t lo_a, uint32_t hi_a,
-                                        uint32_t lo_b, uint32_t hi_b);
-#else
 uint64_t crt_unsigned64_divide(uint32_t lo_a, uint32_t hi_a,
                                uint32_t lo_b, uint32_t hi_b);
 #endif
@@ -1017,18 +1345,61 @@ uint64_t crt_unsigned64_divide(uint32_t lo_a, uint32_t hi_a,
  * platform state with no ported owner: blocks and count ride zero-init
  * own storage behind the install/peek hooks below (the unowned-global
  * convention). The helper returns the masked value (0 or 0x40). */
-unsigned crt_file_descriptor_flag40_get(unsigned fd);  /* FUN_00498b40 */
-int crt_file_descriptor_handle_get(unsigned fd); /* FUN_004991f0 */
+#if defined(_MSC_VER) && defined(_M_IX86)
+/* VC5 osfinfo.obj exports these descriptor-table operations. They are
+ * private CRT entry points, but the x86 archive symbols are externally
+ * linkable and match the target routines. */
+int __cdecl _alloc_osfhnd(void);
+int __cdecl _set_osfhnd(int descriptor, int handle);
+int __cdecl _free_osfhnd(int descriptor);
+#define crt_file_descriptor_allocate _alloc_osfhnd
+#define crt_file_descriptor_set_handle(descriptor, handle) \
+    _set_osfhnd((int)(descriptor), (int)(handle))
+#define crt_file_descriptor_close_slot(descriptor) \
+    _free_osfhnd((int)(descriptor))
+#elif !defined(_MSC_VER)
 int crt_file_descriptor_allocate(void); /* FUN_00498fe0 */
 int crt_file_descriptor_set_handle(unsigned fd, int handle); /* FUN_004990a0 */
 int crt_file_descriptor_close_slot(unsigned fd); /* FUN_00499150 */
+#endif
+#if defined(_MSC_VER) && defined(_M_IX86)
+#define crt_file_descriptor_flag40_get(fd) ((unsigned)_isatty((int)(fd)))
+#define crt_file_descriptor_handle_get(fd) \
+    ((int)_get_osfhandle((int)(fd)))
+#define crt_find_handle_close(handle) _findclose((long)(handle))
+#define crt_file_descriptor_close(fd) _close((int)(fd))
+#define crt_standard_stream_buffer_install(stream) _stbuf((FILE*)(stream))
+#define crt_stream_buffer_flush_and_release(installed, stream) \
+    _ftbuf((int)(installed), (FILE*)(stream))
+#define crt_file_descriptor_flag80_set_or_clear(fd, mode) \
+    _setmode((int)(fd), (int)(mode))
+#define crt_win32_file_descriptor_read(fd, buffer, count) \
+    _read((int)(fd), (buffer), (unsigned int)(count))
+#define crt_win32_file_descriptor_open(path, flags, share, attributes) \
+    _sopen((path), (int)(flags), (int)(share), (int)(attributes))
+#define crt_win32_file_descriptor_seek(fd, distance, method) \
+    ((uint32_t)_lseek((int)(fd), (long)(distance), (int)(method)))
+#define crt_win32_file_descriptor_write(fd, buffer, count) \
+    _write((int)(fd), (buffer), (unsigned int)(count))
+#define crt_stream_read_byte(stream) \
+    ((uint32_t)_filbuf((FILE*)(stream)))
+#define crt_file_stream_close(value, stream) \
+    ((uint32_t)_flsbuf((int)(value), (FILE*)(stream)))
+#define crt_flush_stream_buffer(stream) \
+    ((uint32_t)_flush((FILE*)(stream)))
+#define crt_win32_error_map_to_errno(error) \
+    _dosmaperr((unsigned long)(error))
+#else
+unsigned crt_file_descriptor_flag40_get(unsigned fd);  /* FUN_00498b40 */
+int crt_file_descriptor_handle_get(unsigned fd); /* FUN_004991f0 */
 int crt_find_handle_close(int handle); /* FUN_0048f950 */
 int crt_file_descriptor_close(unsigned fd); /* FUN_00494d10 */
 int crt_standard_stream_buffer_install(int* stream); /* FUN_004974d0 */
 void crt_stream_buffer_flush_and_release(int installed, int* stream); /* FUN_00497570 */
+#if !defined(_MSC_VER)
 void crt_file_descriptor_table_init(void); /* FUN_004965d0 */
+#endif
 int crt_win32_file_descriptor_read(uint32_t fd, char* buffer, uint32_t count); /* FUN_00497130 */
-uint32_t crt_stream_read_byte(int* stream); /* FUN_00497040 */
 int crt_win32_file_descriptor_open(const char* path, uint32_t flags,
                                    uint32_t share, uint32_t attributes); /* FUN_00499240 */
 int crt_file_descriptor_flag80_set_or_clear(unsigned fd, int mode);
@@ -1041,17 +1412,28 @@ uint32_t crt_win32_file_descriptor_seek(uint32_t fd, int32_t distance,
                                         uint32_t method); /* FUN_00496c00 */
 int crt_win32_file_descriptor_write(uint32_t fd, char* buffer,
                                      uint32_t count); /* FUN_00496cc0 */
+#endif
+#if !defined(_MSC_VER) || !defined(_M_IX86)
+uint32_t crt_stream_read_byte(int* stream); /* FUN_00497040 */
 uint32_t crt_file_stream_close(uint32_t value, int* stream); /* FUN_004908a0 */
 uint32_t crt_flush_stream_buffer(int* stream); /* FUN_0048fd20 */
+#endif
+#if !defined(_MSC_VER)
 void crt_buffered_character_write(uint32_t value, int* stream, int* written);
 void crt_write_repeated_char(uint32_t value, int count, int* stream,
                              int* written);
 void crt_write_string_bounded(const char* text, int count, int* stream,
                               int* written);
+#endif
 
 /* CrtStreamUngetByte (FUN_00498f50): puts one byte back into the stream's
  * input buffer when its flags permit it; returns the byte or -1. */
+#if defined(_MSC_VER) && defined(_M_IX86)
+#define crt_stream_unget_byte(value, record) \
+    ((uint32_t)ungetc((int)(value), (FILE*)(record)))
+#else
 uint32_t crt_stream_unget_byte(uint32_t value, char* record);
+#endif
 
 /* CrtControlFlagsTranslate (FUN_004977d0): the file-flag fold — bits
  * 0/2/3/4/5 cross to 0x10/8/4/2/1, bit 1 pairs back as 0x80000, the bits
@@ -1062,17 +1444,23 @@ uint32_t crt_stream_unget_byte(uint32_t value, char* record);
  * unported locale-map chain — deviation); chars below 0x100 write one
  * byte and answer 1, anything else stores 0x2a in the math-error slot
  * and answers -1. A null destination answers 0 (pinned). */
+#if !defined(_MSC_VER)
 uint32_t crt_control_flags_translate(uint32_t flags); /* FUN_004977d0 */
 uint32_t crt_fpu_control_word_update(uint32_t value, uint32_t mask);
-void crt_fpu_control_word_update_mask(uint32_t value, uint32_t mask);
+uint32_t crt_fpu_control_word_update_mask(uint32_t value, uint32_t mask);
+#endif
+#if !defined(_MSC_VER)
 int crt_wide_char_to_multibyte(char* dest, uint32_t wide);
+#endif
                                                        /* FUN_00498b70 */
 
 /* CrtStrncpy (library `_strncpy`, FUN_0048e770): copy at most `count`
  * source bytes into `dest`, copying the NUL when it lands and padding the
  * rest of the window with zeros. The corpus's aligned fast paths fold
  * into this behavior; the answer is the destination. */
+#if !defined(_MSC_VER)
 char* crt_string_copy_n(char* dest, const char* src, uint32_t count);
+#endif
 
 /* CrtWideCharToMultiByteCompat (FUN_0049abe0): the wide->byte convert's
  * compat wrapper, pinned to the port's C-locale half (the locale half
@@ -1081,14 +1469,20 @@ char* crt_string_copy_n(char* dest, const char* src, uint32_t count);
  * with dest set it copies low bytes until the NUL (answering the length
  * so far) or the count (answering the count), and a wide char over 0xff
  * takes the corpus's EILSEQ-shaped math-error store, answering -1. */
+#if defined(_MSC_VER) && defined(_M_IX86)
+#define crt_wide_char_to_multi_byte_compat(dest, wide, count) \
+    ((int)wcstombs((dest), (const wchar_t*)(wide), (size_t)(count)))
+#else
 int crt_wide_char_to_multi_byte_compat(char* dest, const uint16_t* wide,
                                        uint32_t count);
+#endif
 
 /* SignalHandlerRecordFind (FUN_0049ab90): finds the first matching signal
  * id in the ten initialized 12-byte records at DAT_004b22a8, answering the
  * record pointer or NULL. The count at DAT_004b2328 and table are mapped
  * globals; install/peek functions are port hooks. LP64 widens the handler
  * field and record stride to 16 bytes. */
+#if !defined(_MSC_VER)
 void* crt_signal_handler_record_find(int signal);  /* FUN_0049ab90 */
 void crt_signal_record_install(int index, uint32_t word0, int signal,
                                const void* handler);          /* hook */
@@ -1096,5 +1490,6 @@ void crt_signal_record_peek(int index, uint32_t* out_word0, int* out_id,
                             const void** out_handler);        /* hook */
 void crt_signal_record_count_set(int count);                  /* hook */
 int  crt_signal_record_count_peek(void);                      /* hook */
+#endif
 
 #endif /* LEGORRR_GODS98_CRT_HPP */

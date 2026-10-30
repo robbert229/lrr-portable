@@ -225,8 +225,9 @@ int selection_command_dispatch(int param);
 
 /* --- random-cell producer / entity remove (2026-10-24) ----------------------
  * EntityRandomValidCellCommandCreate (FUN_00452430, findings 06/10/468):
- * samples up to 1000 random map cells through the port's module-local
- * 15-bit LCG, and when the walkable-cell helper (its +0x3e8 cell-bit
+ * samples up to 1000 random map cells through the shared VC5 CRT random stream
+ * on the classic x86 build (a module-local 15-bit LCG on other builds), and
+ * when the walkable-cell helper (its +0x3e8 cell-bit
  * bounded read) accepts one, queues operation 0x24 with the entity. The
  * corpus threads the coordinate pair as a stack pointer the dispatch may
  * not survive; the port stores the pair by value (documented deviation),

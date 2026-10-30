@@ -13,9 +13,8 @@
 #include "block.hpp"
 #include "heap.hpp"
 #include "resource.hpp"
-
-/* FUN_0048d980's port lives in the game utility module. */
-extern "C" float util_atof(const char* s);
+#include "sound.hpp"
+#include "string.hpp"
 
 typedef struct BlockRec {
     char* name;                 /* token pointer into BlockFile::buffer */
@@ -37,38 +36,6 @@ struct BlockFile {
     BlockRec** all;             /* document order, for count/frees */
     size_t nrec, all_cap;
 };
-
-static int s_lower(int c) { return (c >= 'a' && c <= 'z') ? c - 0x20 : c; }
-
-static int s_strcasecmp(const char* a, const char* b)
-{
-    for (;;) {
-        int ca = s_lower((unsigned char)*a++), cb = s_lower((unsigned char)*b++);
-        if (ca != cb) {
-            return ca - cb;
-        }
-        if (ca == 0) {
-            return 0;
-        }
-    }
-}
-
-/* strnicmp (ASCII-folded): compares exactly n bytes of `a` against the
- * first n bytes of `b`, stopping early only on a NUL in `a`. */
-static int s_strnicasecmp(const char* a, const char* b, size_t n)
-{
-    for (size_t i = 0; i < n; i++) {
-        int ca = s_lower((unsigned char)a[i]);
-        int cb = s_lower((unsigned char)b[i]);
-        if (ca != cb) {
-            return ca - cb;
-        }
-        if (ca == 0) {
-            return 0;
-        }
-    }
-    return 0;
-}
 
 /* --- construction ------------------------------------------------------- */
 
@@ -156,9 +123,7 @@ BlockFile* block_parse(char* text, size_t len)
             continue;
         }
         char* tok = t;
-        while (*t != '\0') {
-            ++t;
-        }
+        t = (char*)strchr(t, '\0');
 
         if (strcmp(tok, "}") == 0) {
             if (pending != NULL) {
@@ -245,29 +210,6 @@ void block_close(BlockFile* bf)
 
 /* --- path lookup (corpus FUN_004792e0) ----------------------------------- */
 
-/* Match one candidate record against a path segment: ASCII case-insensitive
- * exact match, plus — first segment only, per the FUN_004792e0 wildcard gate
- * (iVar3/iVar4 == 1) — prefix match when the *record name* holds '*'.
- * `seg`/`len` bound the segment (block_find tokenizes without NUL-splitting,
- * so segments can carry `::` and are compared length-bounded). */
-static int seg_match_len(const BlockRec* r, const char* seg, size_t len,
-                         int first)
-{
-    if (r == NULL || r->name == NULL) {
-        return 0;
-    }
-    if (first) {
-        const char* star = strchr(r->name, '*');
-        if (star != NULL) {
-            size_t plen = (size_t)(star - r->name);
-            return len >= plen
-                && s_strnicasecmp(seg, r->name, plen) == 0;
-        }
-    }
-    return strlen(r->name) == len
-        && s_strnicasecmp(seg, r->name, len) == 0;
-}
-
 /* Path lookup. The corpus builds queries with the exe name as the first
  * token and `::` as the group separator ("LegoRR Main Menu::MainMenuFull
  * MenuCount" — DAT_004aab18 = "::", finding 23), so a segment boundary is
@@ -285,21 +227,22 @@ BlockRec* block_find(BlockFile* bf, const char* path)
 
     for (;;) {
         /* skip separators: spaces and "::" runs (both are boundaries) */
-        while (*p == ' ' || (*p == ':' && p[1] == ':')) {
-            if (*p == ':') {
-                p += 2;
-            } else {
-                ++p;
-            }
+        p += strspn(p, " ");
+        while (*p == ':' && p[1] == ':') {
+            p += 2;
+            p += strspn(p, " ");
         }
         if (*p == '\0') {
             break;
         }
 
         const char* s = p;
-        while (*p != '\0' && *p != ' '
-               && !(*p == ':' && p[1] == ':')) {
-            ++p;
+        const char* space_end = p + strcspn(p, " ");
+        const char* group_end = strstr(p, "::");
+        if (group_end != NULL && group_end < space_end) {
+            p = group_end;
+        } else {
+            p = space_end;
         }
         size_t len = (size_t)(p - s);
 
@@ -308,7 +251,19 @@ BlockRec* block_find(BlockFile* bf, const char* path)
         BlockRec* cand = (cur == NULL) ? bf->roots : cur->child;
         BlockRec* hit = NULL;
         while (cand != NULL) {
-            if (seg_match_len(cand, s, len, first)) {
+            int matches = 0;
+            if (cand->name != NULL) {
+                const char* star = first ? strchr(cand->name, '*') : NULL;
+                if (star != NULL) {
+                    size_t prefix_len = (size_t)(star - cand->name);
+                    matches = len >= prefix_len
+                        && strnicmp_lite(s, cand->name, prefix_len) == 0;
+                } else {
+                    matches = strlen(cand->name) == len
+                        && strnicmp_lite(s, cand->name, len) == 0;
+                }
+            }
+            if (matches) {
                 hit = cand;
                 break;
             }
@@ -413,12 +368,12 @@ int block_get_bool(BlockFile* bf, const char* path)
     if (v == NULL) {
         return 2;
     }
-    if (s_strcasecmp(v, "YES") == 0 || s_strcasecmp(v, "TRUE") == 0
-        || s_strcasecmp(v, "ON") == 0) {
+    if (strcasecmp_lite(v, "YES") == 0 || strcasecmp_lite(v, "TRUE") == 0
+        || strcasecmp_lite(v, "ON") == 0) {
         return 1;
     }
-    if (s_strcasecmp(v, "NO") == 0 || s_strcasecmp(v, "FALSE") == 0
-        || s_strcasecmp(v, "OFF") == 0) {
+    if (strcasecmp_lite(v, "NO") == 0 || strcasecmp_lite(v, "FALSE") == 0
+        || strcasecmp_lite(v, "OFF") == 0) {
         return 0;
     }
     return 2;
@@ -596,32 +551,27 @@ int config_rgb_vector_read(BlockFile* bf, const char* path,
     char buf[256]; /* deviation: the corpus splits the heap copy blindly */
     snprintf(buf, sizeof buf, "%s", v);
 
-    /* FUN_00477440 over the DAT_004a1cd4 separator, pinned as in sound.*:
-     * split in place, keep empty tokens, never test the final character. */
-    int n = 0;
-    char* tok[3];
-    if (buf[0] != '\0') {
-        tok[n] = buf;
-        ++n;
-        for (char* p = buf; p[1] != '\0'; ++p) {
-            if (*p == ',') {
-                *p = '\0';
-                if (n < 3) {
-                    tok[n] = p + 1;
-                }
-                ++n; /* beyond three: counted, untracked */
-            }
+    /* Guard the three-entry output array against extra fields. Both this
+     * count and FUN_00477440 leave the final byte untested. */
+    int fields = buf[0] != '\0' ? 1 : 0;
+    for (char* p = buf; p[1] != '\0'; ++p) {
+        if (strchr(",", *p) != NULL) {
+            ++fields;
         }
     }
+    if (fields > 3) {
+        return 0;
+    }
+
+    /* Reuse FUN_00477440 for the in-place split and its VC5 strchr lookup. */
+    char* tok[3];
+    const int n = sound_variant_split(buf, tok, ",");
     if (n != 3) {
         return 0;
     }
 
-    /* FUN_0048db70 integer parse; x87 float10 lands as plain float. */
-    char* end = NULL;
-    const int vals[3] = { (int)strtol(tok[0], &end, 10),
-                          (int)strtol(tok[1], &end, 10),
-                          (int)strtol(tok[2], &end, 10) };
+    /* VC5 _atoi parses each component before the x87 float scaling. */
+    const int vals[3] = { atoi(tok[0]), atoi(tok[1]), atoi(tok[2]) };
     const float scale = 1.0f / 255.0f; /* the corpus's 0.003921569 */
     if (r != NULL) { *r = (float)vals[0] * scale; }
     if (g != NULL) { *g = (float)vals[1] * scale; }
@@ -631,7 +581,7 @@ int config_rgb_vector_read(BlockFile* bf, const char* path,
 
 /* ReadAngleSettingRadians (FUN_00479110): the corpus tests the path getter,
  * calls it again for a present value, and sends either that string or the
- * empty literal through FUN_0048d980 before the zero gate and two x87 scales. */
+ * empty literal through the CRT `atof` entry before the zero gate and two x87 scales. */
 /* These are the corpus's direct x87 operands in ReadAngleSettingRadians.
  * PE bytes: 00 00 00 00, 61 0b 36 3b, db 0f c9 40 respectively. */
 // GLOBAL: LEGORR 0x0049e8f8
@@ -644,7 +594,7 @@ static const float s_config_angle_turn_radians = 6.2831855f;
 // FUNCTION: LEGORR 0x00479110
 float config_angle_radians_get(BlockFile* bf, const char* path)
 {
-    const float deg = util_atof(block_get_strptr(bf, path) != NULL
+    const float deg = (float)atof(block_get_strptr(bf, path) != NULL
                                 ? block_get_strptr(bf, path) : "");
     if (deg == s_config_angle_zero) {
         return s_config_angle_zero; /* the corpus gates the multiply on value != 0 */

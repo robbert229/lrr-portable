@@ -6,6 +6,7 @@
 #include "resource.hpp"
 #include "heap.hpp"
 #include "sound.hpp"
+#include "string.hpp"
 
 /* Bank record (corpus record of stride 0x134; port keeps the fields the
  * shipped record carries where observable: name at record +0, volume at
@@ -19,8 +20,19 @@ typedef struct BankSlot {
 } BankSlot;
 
 static BankSlot s_bank[SOUND_BANK_SLOTS];
+/* Corpus-faithful default: the original's DAT_00533878 image bytes are
+ * zero-fill (past the reference .data file span).  The corpus clears it
+ * on sound-system init entry (0x47a649), raises it to 1 only when
+ * DirectSound init succeeds (0x47a766), and clears it at teardown
+ * (0x47a842); the frameloop's audio-open success branch carries that
+ * 0x47a766 write.  Plain zero-init (.bss) keeps both gates green: the
+ * // GLOBAL: annotation resolves (same shape as the 0x4aa450/0x4aa458
+ * pair above) and datacmp sees (uninitialized) on both sides, like the
+ * corpus-zero s_listener_view.  A file-backed 0 instead (explicit
+ * .data segment) keeps datacmp flagging the pair anyway and perturbs
+ * reccmp's neighbouring-global verification — measured, so avoided. */
 // GLOBAL: LEGORR 0x00533878
-int             s_bank_sound_on = 1; /* DAT_00533878 seam, see sound.hpp */
+int             s_bank_sound_on = 0; /* DAT_00533878 seam, see sound.hpp */
 
 /* ------------------------------------------------------------------ *
  *  RIFF/WAVE parse (finding 14 §2).
@@ -35,24 +47,6 @@ static uint32_t s_le32(const uint8_t* p)
 static uint16_t s_le16(const uint8_t* p)
 {
     return (uint16_t)((uint16_t)p[0] | ((uint16_t)p[1] << 8));
-}
-
-static int s_lower(int c) { return c >= 'a' && c <= 'z'; }
-
-static int s_strcasecmp(const char* a, const char* b)
-{
-    for (;;) {
-        int ca = (unsigned char)*a++;
-        int cb = (unsigned char)*b++;
-        if (s_lower(ca)) ca -= 0x20;
-        if (s_lower(cb)) cb -= 0x20;
-        if (ca != cb) {
-            return ca - cb;
-        }
-        if (ca == 0) {
-            return 0;
-        }
-    }
 }
 
 Sound* sound_parse(const uint8_t* data, uint32_t size)
@@ -147,6 +141,9 @@ Sound* sound_load(const char* name)
     Sound* s = sound_parse((const uint8_t*)r->data, (uint32_t)r->size);
     resource_free(r);
     if (s != NULL) {
+#if defined(_MSC_VER)
+        s->name = _strdup(name);
+#else
         size_t n = strlen(name) + 1;
         s->name = (char*)malloc(n);
         if (s->name == NULL) {
@@ -154,6 +151,11 @@ Sound* sound_load(const char* name)
             return NULL;
         }
         memcpy(s->name, name, n);
+#endif
+        if (s->name == NULL) {
+            sound_free(s);
+            return NULL;
+        }
     }
     return s;
 }
@@ -165,10 +167,7 @@ Sound* sound_load(const char* name)
 static int s_has_wav_suffix(const char* name)
 {
     size_t n = strlen(name);
-    return n > 4 && name[n - 4] == '.'
-        && (name[n - 3] == 'w' || name[n - 3] == 'W')
-        && (name[n - 2] == 'a' || name[n - 2] == 'A')
-        && (name[n - 1] == 'v' || name[n - 1] == 'V');
+    return n > 4 && strcasecmp_lite(name + n - 4, ".wav") == 0;
 }
 
 int sound_bank_load(const char* name, int streamed, int looping)
@@ -197,7 +196,7 @@ Sound* sound_bank_find(const char* fullname)
     }
     for (int i = 0; i < SOUND_BANK_SLOTS; ++i) {
         if ((s_bank[i].flags & SOUND_SLOT_BUSY) != 0
-            && s_strcasecmp(s_bank[i].name, fullname) == 0) {
+            && strcasecmp_lite(s_bank[i].name, fullname) == 0) {
             return s_bank[i].sound;
         }
     }
@@ -446,12 +445,19 @@ static double s_cooldown_alias;
 
 static char* s_dupstr(const char* s)
 {
+#if defined(_MSC_VER)
+    /* Keep this allocation in the VC5 CRT heap; the alias table releases it
+     * with free(). The runtime's _strdup performs the same NUL-inclusive
+     * copy as the portable path below. */
+    return _strdup(s);
+#else
     size_t n = strlen(s) + 1;
     char* copy = (char*)calloc(n, 1);
     if (copy != NULL) {
         memcpy(copy, s, n);
     }
     return copy;
+#endif
 }
 
 // FUNCTION: LEGORR 0x00464740
@@ -485,20 +491,20 @@ void sound_alias_registration_set(int enable)
 int sound_alias_lookup(const char* name, int* out_index)
 {
     /* SoundAliasLookup @ 0x00464c70. The corpus compares hash keys under
-     * the KeyToAscii uppercase fold; s_strcasecmp applies the same fold
+     * the KeyToAscii uppercase fold; strcasecmp_lite applies the same fold
      * to the names. */
     if (name == NULL || out_index == NULL) {
         return 0; /* corpus's param_1 != 0 guard */
     }
     int i;
     for (i = 0; i < SOUND_ALIAS_BUILTINS; ++i) {
-        if (s_strcasecmp(name, s_alias_builtins[i]) == 0) {
+        if (strcasecmp_lite(name, s_alias_builtins[i]) == 0) {
             *out_index = i;
             return 1;
         }
     }
     for (i = 0; i < s_alias_dynamic_count; ++i) {
-        if (s_strcasecmp(name, s_alias_dynamic[i]) == 0) {
+        if (strcasecmp_lite(name, s_alias_dynamic[i]) == 0) {
             *out_index = SOUND_ALIAS_BUILTINS + i;
             return 1;
         }
@@ -726,15 +732,20 @@ typedef struct VariantNode {
 static VariantNode s_variant_pool[SOUND_VARIANT_POOL_NODES];
 static int         s_variant_pool_next;   /* DAT_00502a28 */
 
-/* Variant draws: the corpus's thunk_FUN_0048e170 (shared RNG word
- * DAT_004afcc8), modelled module-locally the way level.cpp and
- * frontend.cpp do — same MSVCRT-style LCG, same 15-bit result. */
+/* Variant draws use the shared VC5 rand.obj stream in the classic x86 build;
+ * other builds keep a module-local LCG model. */
+#if !defined(_MSC_VER) || (_MSC_VER >= 1200) || !defined(_M_IX86)
 static uint32_t s_variant_rand_state = 1;
+#endif
 
 static int s_variant_rand(void)
 {
+#if defined(_MSC_VER) && (_MSC_VER < 1200) && defined(_M_IX86)
+    return rand();
+#else
     s_variant_rand_state = s_variant_rand_state * 214013u + 2531011u;
     return (int)((s_variant_rand_state >> 16) & 0x7fffu);
+#endif
 }
 
 static int s_variant_pool_alloc(void)
@@ -823,7 +834,7 @@ int sound_sample_marker_parse(const char* spec, int alias_index)
             if (*p == '#') {
                 ++p;                 /* step over the closing '#' */
             }
-            volume = (int)strtol(digits, NULL, 10); /* FUN_0048db70 role */
+            volume = atoi(digits); /* VC5 _atoi at FUN_0048db70 */
         }
         if (p[0] == '@') {
             stream_mode = 1;

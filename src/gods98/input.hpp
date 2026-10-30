@@ -12,7 +12,7 @@
  * Edge detection everywhere in the corpus is (cur != 0 && prev != cur), i.e.
  * a key that became non-zero this frame — nothing fancier. EnginePreTick
  * (findings 04/05) turns edges into text via KeyContextCheck (context filter)
- * + KeyToAscii and clears the tables with the mirror trick.
+ * and a port-local ASCII helper, then clears the tables with the mirror trick.
  *
  * QuitPoll's dwell machine (FUN_004589c0): corner-dwell quit gesture with
  * per-slot enter/leave counters. The original indexes those counters off a
@@ -24,9 +24,9 @@
  * objective layer, finding 09/22), NOT picked from an input device here.
  *
  * Reconstruction notes:
- *  - KeyToAscii ports the no-HKL path exactly (DAT_00549180 == 0: a-z ->
- *    A-Z); the Win32 HKL/ToUnicodeEx path is structural only until a layout
- *    provider exists. Default key_to_ascii covers the common path.
+ *  - input_key_to_ascii is a port-local ASCII helper. The reference entry at
+ *    0x48e380 is CRT `_toupper`; DAT_00549180 is a CRT locale handle, not a
+ *    keyboard-layout handle.
  *  - The KeyContextCheck filter table is reconstruction-owned (the shipped
  *    256x4 table in .rdata is not embedded); default = all entries zero
  *    ("no restriction").
@@ -97,8 +97,9 @@ int  input_key_released(const InputState* s, int key);
  * Returns 1 for one frame after the platform reports MOUSE + button=1. */
 int  input_mouse_pressed(const InputState* s);
 
-/* KeyToAscii (FUN_0048e380): without an HKL this is exactly "uppercase
- * a-z"; level-1 ASCII for keys 0x20..0x7e passes through unchanged. */
+/* Port-local key-to-ASCII helper: uppercase ASCII lowercase letters and
+ * return other values unchanged. The reference 0x48e380 entry is CRT
+ * `_toupper`, represented separately in src/crt. */
 uint32_t input_key_to_ascii(const InputState* s, uint32_t scancode);
 
 /* KeyContextCheck (FUN_00411f00): filter[key]; 0 = unrestricted. */

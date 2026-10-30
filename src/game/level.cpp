@@ -13,7 +13,7 @@
 #include "gods98/resource.hpp"
 #include "gods98/sound.hpp"
 #include "gods98/string.hpp"
-#include "gods98/crt.hpp"
+#include "crt/crt.hpp"
 #include "gods98/view.hpp"
 #include "entity.hpp"
 #include "frontend.hpp"
@@ -71,45 +71,34 @@ static const char* K_INITORE        = "InitialOre";
 #define LVL_OFF_INIT_ORE     0x134   /* +0x4d scratch from post-load init */
 
 /* ------------------------------------------------------------------ *
- *  PRNG — corpus thunk_FUN_0048e170 (used for the per-cell seed and the
- *  emergence scatter). MSVCRT-style LCG so results match the era machine.
+ *  PRNG — VC5 LIBC.LIB rand.obj supplies the target's shared _srand/_rand
+ *  entries and initial seed word (DAT_004afcc8 = 1). Portable builds retain
+ *  the equivalent local LCG.
  * ------------------------------------------------------------------ */
 
+// LIBRARY: LEGORR 0x0048e160 SYMBOL
+// _srand
+#if !defined(_MSC_VER) || (_MSC_VER >= 1200) || !defined(_M_IX86)
 // GLOBAL: LEGORR 0x004afcc8
 static uint32_t s_rand_state = 1;
 
-// FUNCTION: LEGORR 0x0048e160
 void level_random_seed_set(uint32_t seed)
 {
     s_rand_state = seed;
 }
 
-
-/* RandomNext (FUN_0048e170): advance the state paired with
- * level_random_seed_set and return its 15-bit LCG result. The original uses
- * one shared global; the port keeps additional module-local RNG models. */
-// FUNCTION: LEGORR 0x0048e170
+// LIBRARY: LEGORR 0x0048e170 SYMBOL
+// _rand
 int level_rand_u16(void)
 {
     s_rand_state = s_rand_state * 214013u + 2531011u;
     return (((int32_t)s_rand_state) >> 16) & 0x7fff;
 }
+#endif
 
 int level_random_draw15(void)
 {
     return (int)level_rand_u16();
-}
-
-static int level_strcasecmp(const char* a, const char* b)
-{
-    for (;;) {
-        int ca = (unsigned char)*a++;
-        int cb = (unsigned char)*b++;
-        if (ca >= 'a' && ca <= 'z') ca -= 0x20;
-        if (cb >= 'a' && cb <= 'z') cb -= 0x20;
-        if (ca != cb) return ca - cb;
-        if (ca == 0) return 0;
-    }
 }
 
 /* ------------------------------------------------------------------ *
@@ -172,7 +161,7 @@ static int map_header_value(const char* name)
     if (status == 0) {
         return 0;
     }
-    return (int)util_atoi(fields[1]);
+    return atoi(fields[1]);
 }
 
 /* ------------------------------------------------------------------ *
@@ -873,28 +862,6 @@ static int map_pipeline(LevelState* s, const char** names, const int* biases)
  *  path-building "%s%s%s").
  * ------------------------------------------------------------------ */
 
-/* Typed getter mirroring the corpus's FUN_004790d0: boolean vocabulary
- * (TRUE/YES/ON → 1, FALSE/NO/OFF → 0), else strtol; missing → dflt. */
-// FUNCTION: LEGORR 0x004790d0
-static int lvl_typed_int(BlockFile* cfg, const char* path, int dflt)
-{
-    const char* v = block_get_strptr(cfg, path);
-    if (v == NULL) {
-        return dflt;
-    }
-    if (level_strcasecmp(v, "TRUE") == 0 || level_strcasecmp(v, "YES") == 0
-        || level_strcasecmp(v, "ON") == 0) {
-        return 1;
-    }
-    if (level_strcasecmp(v, "FALSE") == 0 || level_strcasecmp(v, "NO") == 0
-        || level_strcasecmp(v, "OFF") == 0) {
-        return 0;
-    }
-    char* end = NULL;
-    long r = strtol(v, &end, 10);
-    return (end == v) ? 2 : (int)r;
-}
-
 /* Build the config path "<root> <level> <key>", rooted at the file's first
  * record name (`util_root_name`) — the block parser keeps the top-level
  * `Lego {…}` record as the root, and the corpus's LevelLoad paths are
@@ -944,7 +911,8 @@ static float cfg_float(BlockFile* cfg, const char* level, const char* key, float
     if (cfg_resolve_path(cfg, level, key, path, sizeof(path)) == NULL) {
         return dflt;
     }
-    return block_get_float(cfg, path, dflt);
+    const char* value = block_get_strptr(cfg, path);
+    return (float)atof(value != NULL ? value : "");
 }
 
 static int cfg_typed(BlockFile* cfg, const char* level, const char* key, int dflt)
@@ -953,7 +921,9 @@ static int cfg_typed(BlockFile* cfg, const char* level, const char* key, int dfl
     if (cfg_resolve_path(cfg, level, key, path, sizeof(path)) == NULL) {
         return dflt;
     }
-    return lvl_typed_int(cfg, path, dflt);
+    /* FUN_004790d0 delegates to ConfigBooleanGet @ 0x477710: missing or
+     * unrecognized values answer 2 instead of parsing a numeric string. */
+    return block_get_bool(cfg, path);
 }
 
 static int map_bias_name(BlockFile* cfg, const char* level, const char* key,
@@ -995,7 +965,7 @@ LevelState* level_load(BlockFile* cfg, const char* level_name)
         char boulder[64] = { 0 };
         if (cfg_string(cfg, level_name, K_BOULDER_ANIM, boulder, sizeof(boulder)) != NULL) {
             level_set_int(s, LVL_OFF_BOULDER_ANIM,
-                          level_strcasecmp(boulder, "None") == 0 ? 0 : 1);
+                          strcasecmp_lite(boulder, "None") == 0 ? 0 : 1);
         }
     }
 
@@ -1046,11 +1016,13 @@ LevelState* level_load(BlockFile* cfg, const char* level_name)
     /* Next-level chain (freed by level_destroy). */
     char next[256] = { 0 };
     if (cfg_string(cfg, level_name, K_NEXTLEVEL, next, sizeof(next)) != NULL) {
+#if defined(_MSC_VER)
+        char* dup = _strdup(next);
+#else
         char* dup = (char*)malloc(strlen(next) + 1);
-        if (dup != NULL) {
-            strcpy(dup, next);
-            level_store_ptr(s, LEVEL_OFF_NEXTLEVEL, dup);
-        }
+        if (dup != NULL) strcpy(dup, next);
+#endif
+        if (dup != NULL) level_store_ptr(s, LEVEL_OFF_NEXTLEVEL, dup);
     }
 
     /* Initial-collection counters read by the entity layer (post-load). */
@@ -1127,11 +1099,10 @@ uint8_t* level_voxel(const LevelState* s, int x, int y)
     return voxel_at((LevelState*)s, x, y);
 }
 
-/* FUN_0048e060 — x87 round-to-nearest float→int (control-word trick). */
-// FUNCTION: LEGORR 0x0048e060
+/* Level grid coordinates use the CRT's x87 float-to-long rounding. */
 int level_cell_of(float v)
 {
-    return (int)__builtin_nearbyintf(v);
+    return crt_float_to_long(v);
 }
 
 /* EntityPositionToTerrainCell (FUN_004424f0): the corpus obtains the
@@ -3474,15 +3445,20 @@ void random_variant_cell_scatter(int center_x, int center_y, int radius,
     }
 }
 
-/* RandomThunkDraw15 (thunk_FUN_0048e170 at FUN_004798a0): the corpus's
- * RNG-thunk body — the corpus inlines the 15-bit draw over DAT_004afcc8 in
- * both thunk copies, sharing one state; the port forwards to the single
- * module RNG model (level_random_draw15, thunk_FUN_0048e170 / 0x48e170). */
+/* RandomThunkDraw15 (thunk_FUN_0048e170 at FUN_004798a0): the reference thunk
+ * jumps to VC5's _rand entry. Keep the same direct tail-call shape on MSVC. */
 // FUNCTION: LEGORR 0x004798a0
+#if defined(_MSC_VER) && (_MSC_VER < 1200) && defined(_M_IX86)
+__declspec(naked) uint32_t rng_thunk_draw15(void)
+{
+    __asm { jmp rand }
+}
+#else
 uint32_t rng_thunk_draw15(void)
 {
     return (uint32_t)level_random_draw15();
 }
+#endif
 
 /* --- erosion timing band (2026-10-25) -------------------------------------
  * The timing floats, the clear word, and the two scratch regions land as

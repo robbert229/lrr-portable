@@ -4271,69 +4271,16 @@ void ledger_stub_0048c360_LwoCurves() {}
 // STUB: LEGORR 0x0048d870
 void ledger_stub_0048d870_ModelObjectFree() {}
 
-// FormattedStringOutput
-// STUB: LEGORR 0x0048d9e0
-void ledger_stub_0048d9e0_FormattedStringOutput() {}
-
-// GrowHeapArray
-// STUB: LEGORR 0x0048dc80
+// VC5 LIBC.LIB realloc.obj supplies the heap reallocation entry.
+// LIBRARY: LEGORR 0x0048dc80 SYMBOL
+// _realloc
+#if !defined(_MSC_VER)
 void ledger_stub_0048dc80_GrowHeapArray() {}
-
-// ArraySortWithComparator
-// STUB: LEGORR 0x0048de20
-void ledger_stub_0048de20_ArraySortWithComparator() {}
-
-// QsortSmallPartitionSort
-// STUB: LEGORR 0x0048dfd0
-void ledger_stub_0048dfd0_QsortSmallPartitionSort() {}
-
-// StackProbeAllocate
-// STUB: LEGORR 0x0048e250
-void ledger_stub_0048e250_StackProbeAllocate() {}
-
-// CrtFloatingPointRuntimeInitialize
-// STUB: LEGORR 0x0048e480
-void ledger_stub_0048e480_CrtFloatingPointRuntimeInitialize() {}
-
-// CrtExit
-// STUB: LEGORR 0x0048e4b0
-void ledger_stub_0048e4b0_CrtExit() {}
-
-// CrtTerminateProcessWithHandlers
-// STUB: LEGORR 0x0048e4f0
-void ledger_stub_0048e4f0_CrtTerminateProcessWithHandlers() {}
-
-// MarkupIntegerTokenParse
-// STUB: LEGORR 0x0048e890
-void ledger_stub_0048e890_MarkupIntegerTokenParse() {}
-
-// FileResourceHandleClose
-// STUB: LEGORR 0x0048eae0
-void ledger_stub_0048eae0_FileResourceHandleClose() {}
-
-// StdFileOpenIntoHandle
-// STUB: LEGORR 0x0048eb60
-void ledger_stub_0048eb60_StdFileOpenIntoHandle() {}
-
-// FileOpenAndReadWholeStream
-// STUB: LEGORR 0x0048eb90
-void ledger_stub_0048eb90_FileOpenAndReadWholeStream() {}
-
-// CrtExceptionHandlerTransferAfterUnlink
-// STUB: LEGORR 0x0048ebb0
-void ledger_stub_0048ebb0_CrtExceptionHandlerTransferAfterUnlink() {}
-
-// CrtExceptionHandlerTransferWithAtomicPrefix
-// STUB: LEGORR 0x0048ebf0
-void ledger_stub_0048ebf0_CrtExceptionHandlerTransferWithAtomicPrefix() {}
+#endif
 
 // SehFrameUnwind
 // STUB: LEGORR 0x0048ec00
 void ledger_stub_0048ec00_SehFrameUnwind() {}
-
-// CrtExceptionDispatchForwarder
-// STUB: LEGORR 0x0048ec60
-void ledger_stub_0048ec60_CrtExceptionDispatchForwarder() {}
 
 // CallSettingFrame12
 // STUB: LEGORR 0x0048eca0
@@ -4355,249 +4302,32 @@ void ledger_stub_0048ee00_CrtExceptionScopeFilterAndUnwind() {}
 // STUB: LEGORR 0x0048ee90
 void ledger_stub_0048ee90_SehScopeTableLookup() {}
 
-// CrtNlgFrameStateRecord
-// STUB: LEGORR 0x0048efe6
-void ledger_stub_0048efe6_CrtNlgFrameStateRecord() {}
-
 // CharacterClassifyMask
-
-// StreamedAudioFileLengthGet
-// STUB: LEGORR 0x0048f2b0
-void ledger_stub_0048f2b0_StreamedAudioFileLengthGet() {}
-
-// FileResourceHandleSeek
-// STUB: LEGORR 0x0048f460
-void ledger_stub_0048f460_FileResourceHandleSeek() {}
-
-// GameFileWrite
-// STUB: LEGORR 0x0048f500
-void ledger_stub_0048f500_GameFileWrite() {}
-
-// GameFileDelete
-// STUB: LEGORR 0x0048f650
-void ledger_stub_0048f650_GameFileDelete() {}
-
-// FileSetReadOnlyAttribute
-// STUB: LEGORR 0x0048f680
-void ledger_stub_0048f680_FileSetReadOnlyAttribute() {}
-
-// GameDirectoryCreate
-// STUB: LEGORR 0x0048f6d0
-void ledger_stub_0048f6d0_GameDirectoryCreate() {}
-
-// GameFileMetadataFind
-// STUB: LEGORR 0x0048f700
-void ledger_stub_0048f700_GameFileMetadataFind() {}
-
-// FileFindNextRecord
-// STUB: LEGORR 0x0048f830
-void ledger_stub_0048f830_FileFindNextRecord() {}
-
-// FileTimeToLocalDateTimeStamp
-// STUB: LEGORR 0x0048f970
-void ledger_stub_0048f970_FileTimeToLocalDateTimeStamp() {}
-
-// CurrentDirectoryGet
-// STUB: LEGORR 0x0048fa00
-void ledger_stub_0048fa00_CurrentDirectoryGet() {}
-
-// DriveCurrentDirectoryGet
-// STUB: LEGORR 0x0048fa20
-void ledger_stub_0048fa20_DriveCurrentDirectoryGet() {}
-
-// DriveLetterRootTypeAvailable
-// STUB: LEGORR 0x0048fb50
-void ledger_stub_0048fb50_DriveLetterRootTypeAvailable() {}
-
-// GameFileReadBuffered
-// STUB: LEGORR 0x0048fb90
-void ledger_stub_0048fb90_GameFileReadBuffered() {}
-
-// BufferedStreamGetByte
-// STUB: LEGORR 0x0048fe20
-void ledger_stub_0048fe20_BufferedStreamGetByte() {}
-
-// BufferedStreamReadLine
-// STUB: LEGORR 0x0048fe50
-void ledger_stub_0048fe50_BufferedStreamReadLine() {}
-
-// CrtInputWithStreamBufferSetup
-// STUB: LEGORR 0x0048fed0
-void ledger_stub_0048fed0_CrtInputWithStreamBufferSetup() {}
-
-// PathResolveFull
-// STUB: LEGORR 0x0048ffa0
-void ledger_stub_0048ffa0_PathResolveFull() {}
-
-// VsscanfParseInput
-// STUB: LEGORR 0x00490070
-void ledger_stub_00490070_VsscanfParseInput() {}
-
-// AssetPathComponentsParse
-// STUB: LEGORR 0x00490090
-void ledger_stub_00490090_AssetPathComponentsParse() {}
 
 // ParseEntityHealthValue
 // STUB: LEGORR 0x004907f0
 void ledger_stub_004907f0_ParseEntityHealthValue() {}
 
-// EngineFormatStringToStream
-// STUB: LEGORR 0x004909d0
-void ledger_stub_004909d0_EngineFormatStringToStream() {}
-
-// SmallHeapBlockResizeInPlace
-// STUB: LEGORR 0x00491cc0
+// VC5 LIBC.LIB sbheap.obj supplies the in-place small-block resize routine.
+// LIBRARY: LEGORR 0x00491cc0 SYMBOL
+// ___sbh_resize_block
+#if !defined(_MSC_VER)
 void ledger_stub_00491cc0_SmallHeapBlockResizeInPlace() {}
-
-// CrtOneArgumentMathErrorHandlingStart
-// STUB: LEGORR 0x00491f80
-void ledger_stub_00491f80_CrtOneArgumentMathErrorHandlingStart() {}
-
-// CrtFloatingPointExceptionResultDispatch
-// STUB: LEGORR 0x0049221e
-void ledger_stub_0049221e_CrtFloatingPointExceptionResultDispatch() {}
-
-// CrtFloatingPointExceptionResultDispatchVariant
-// STUB: LEGORR 0x00492225
-void ledger_stub_00492225_CrtFloatingPointExceptionResultDispatchVariant() {}
-
-// CrtDoubleRemainderReduction
-// STUB: LEGORR 0x00492bc6
-void ledger_stub_00492bc6_CrtDoubleRemainderReduction() {}
-
-// CrtFmodExtendedPrecision
-// STUB: LEGORR 0x00492dcc
-void ledger_stub_00492dcc_CrtFmodExtendedPrecision() {}
+#endif
 
 // LocaleCharacterMapString
-
-// CrtFormattedScanV
-// STUB: LEGORR 0x00493ef0
-void ledger_stub_00493ef0_CrtFormattedScanV() {}
-
-// ScanStreamGetChar
-// STUB: LEGORR 0x00494c70
-void ledger_stub_00494c70_ScanStreamGetChar() {}
-
-// StreamPushbackChar
-// STUB: LEGORR 0x00494ca0
-void ledger_stub_00494ca0_StreamPushbackChar() {}
-
-// StreamSkipClassifiedChars
-// STUB: LEGORR 0x00494cc0
-void ledger_stub_00494cc0_StreamSkipClassifiedChars() {}
-
-// StdFileOpen
-// STUB: LEGORR 0x00494e30
-void ledger_stub_00494e30_StdFileOpen() {}
-
-// StdFileHandleAcquire
-// STUB: LEGORR 0x00495000
-void ledger_stub_00495000_StdFileHandleAcquire() {}
-
-// CxxExceptionHandlerDispatch
-// STUB: LEGORR 0x00495090
-void ledger_stub_00495090_CxxExceptionHandlerDispatch() {}
-
-// CxxExceptionHandlerSearch
-// STUB: LEGORR 0x00495160
-void ledger_stub_00495160_CxxExceptionHandlerSearch() {}
-
-// CrtSehExceptionDispatcher
-// STUB: LEGORR 0x00495410
-void ledger_stub_00495410_CrtSehExceptionDispatcher() {}
-
-// CrtSehLocalUnwindToScope
-// STUB: LEGORR 0x004954e0
-void ledger_stub_004954e0_CrtSehLocalUnwindToScope() {}
-
-// CrtSehUnwindAndInvokeHandler
-// STUB: LEGORR 0x004955c0
-void ledger_stub_004955c0_CrtSehUnwindAndInvokeHandler() {}
-
-// CrtSehHandlerCallWithFrame
-// STUB: LEGORR 0x00495650
-void ledger_stub_00495650_CrtSehHandlerCallWithFrame() {}
-
-// CrtSehAbnormalTerminationCleanup
-// STUB: LEGORR 0x0049573a
-void ledger_stub_0049573a_CrtSehAbnormalTerminationCleanup() {}
-
-// CxxCatchObjectBindOrCopy
-// STUB: LEGORR 0x004957d0
-void ledger_stub_004957d0_CxxCatchObjectBindOrCopy() {}
-
-// CrtSehDestructorInvoke
-// STUB: LEGORR 0x004959e0
-void ledger_stub_004959e0_CrtSehDestructorInvoke() {}
-
-// CrtUnwindAddressResolve
-// STUB: LEGORR 0x00495a60
-void ledger_stub_00495a60_CrtUnwindAddressResolve() {}
-
-// CrtUnexpectedHandlerInvokeAndTerminate
-// STUB: LEGORR 0x00495b70
-void ledger_stub_00495b70_CrtUnexpectedHandlerInvokeAndTerminate() {}
-
-// CrtAbortAfterCallback
-// STUB: LEGORR 0x00495bde
-void ledger_stub_00495bde_CrtAbortAfterCallback() {}
-
-// CrtCommandLineArgumentsInit
-// STUB: LEGORR 0x00495ee0
-void ledger_stub_00495ee0_CrtCommandLineArgumentsInit() {}
 
 // CrtLocaleCodePageTableUpdate
 
 // CrtAnsiCodePageTablesInit
 
-// CrtLocalUnwindFromFrame
-// STUB: LEGORR 0x00496895
-void ledger_stub_00496895_CrtLocalUnwindFromFrame() {}
-
 // CrtGetStringTypeACompat
 
 // CrtCharacterToLowerLocale
 
-// CrtDoubleToExtendedFloatConvertA
-// STUB: LEGORR 0x00497da0
-void ledger_stub_00497da0_CrtDoubleToExtendedFloatConvertA() {}
-
-// CrtDoubleToExtendedFloatConvertB
-// STUB: LEGORR 0x00497de0
-void ledger_stub_00497de0_CrtDoubleToExtendedFloatConvertB() {}
-
-// NumberStringScanParse
-// STUB: LEGORR 0x00498350
-void ledger_stub_00498350_NumberStringScanParse() {}
-
-// CrtScanfNumericConversionAssign
-// STUB: LEGORR 0x00498ce0
-void ledger_stub_00498ce0_CrtScanfNumericConversionAssign() {}
-
 // CrtMultibyteToWideChar
 
 // CrtCharacterClassFlag8Check
-
-// PointerRangeIsReadable
-// STUB: LEGORR 0x00499690
-void ledger_stub_00499690_PointerRangeIsReadable() {}
-
-// PointerRangeIsWritable
-// STUB: LEGORR 0x004996b0
-void ledger_stub_004996b0_PointerRangeIsWritable() {}
-
-// FunctionPointerIsExecutable
-// STUB: LEGORR 0x004996d0
-void ledger_stub_004996d0_FunctionPointerIsExecutable() {}
-
-// Win32FileDescriptorResize
-// STUB: LEGORR 0x0049a890
-void ledger_stub_0049a890_Win32FileDescriptorResize() {}
-
-// CrtSignalHandlerDispatch
-// STUB: LEGORR 0x0049aa10
-void ledger_stub_0049aa10_CrtSignalHandlerDispatch() {}
 
 // DirectDrawDeviceInitialize
 // STUB: LEGORR 0x0049d030

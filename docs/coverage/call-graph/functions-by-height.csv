@@ -985,7 +985,7 @@ rank,address,name,height,scc_size,recursive_component,in_degree,out_degree
 984,0x0048dad0,ParseSignedDecimal,6,1,False,2,1
 985,0x0048e0ad,CrtAcosCore,6,1,False,1,4
 986,0x0048e1aa,CrtMathIntrinsicDispatch,6,1,False,3,1
-987,0x0048e380,KeyToAscii,6,1,False,3,2
+987,0x0048e380,_toupper,6,1,False,3,2
 988,0x0048fa00,CurrentDirectoryGet,6,1,False,2,1
 989,0x004906f0,CrtScientificFloatFormatGuarded,6,1,False,1,1
 990,0x00490720,CrtFixedDecimalFormatGuarded,6,1,False,1,1
@@ -2477,7 +2477,7 @@ rank,address,name,height,scc_size,recursive_component,in_degree,out_degree
 2476,0x0048fb50,DriveLetterRootTypeAvailable,0,1,False,1,0
 2477,0x00490230,ProcessorFeatureFallbackFalse,0,1,False,1,0
 2478,0x00491430,FormatArgumentReadDword,0,1,False,1,0
-2479,0x00491450,FormatArgumentReadDouble,0,1,False,1,0
+2479,0x00491450,FormatArgumentReadInt64,0,1,False,1,0
 2480,0x00491470,FormatArgumentReadWord,0,1,False,1,0
 2481,0x004914a0,StrChr,0,1,False,1,0
 2482,0x004915a0,EnginePoolArenaCreate,0,1,False,2,0

@@ -52,12 +52,13 @@ Allocates an 11-byte buffer at `entity+0x8`, `strncpy(…, 11)`, NUL-terminate.
 allocated by `FUN_0048dbd0(0xb)`). This is what the debug-key rename mode and
 `EnginePreTick` text-pump write into.
 
-## `KeyToAscii` (`0x48e380`)
+## CRT `toupper` (`0x48e380`)
 
-Windows-layout-aware key→character: without an HKL (`DAT_00549180 == 0`) it
-simply upper-cases `a–z`; with an HKL it consults shift state via the scancode
-table `PTR_DAT_004afd68` and calls `FUN_00493ca0(hkl, 0x200, …)`
-(= `ToUnicodeEx`-style translation). Deadkeys / multi-char results handled.
+This is VC5 `LIBC.LIB`'s locale-aware `_toupper` entry. With no active CRT
+locale it uppercases ASCII `a–z`; with locale state active it checks ctype and
+DBCS state and delegates to `___crtLCMapStringA`. It is not a keyboard-layout
+translation function; the port's `input_key_to_ascii` helper has no reference
+address mapping.
 
 ## `KeyContextCheck` (`0x411f00`)
 

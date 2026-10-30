@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 #include <string.h>
+#include <ctype.h>
 
 #include "engine.hpp"
 #include "input.hpp"
@@ -119,28 +120,21 @@ int input_mouse_pressed(const InputState* s)
     return s != NULL ? s->mouse_press : 0;
 }
 
-/* KeyToAscii — corpus FUN_0048e380.
- *
- * Without an HKL (DAT_00549180 == 0, the shipped default) this is exactly:
- *   0x61..0x7a ('a'-'z') -> 0x41..0x5a ('A'-'Z')
- *   everything else returns the scancode unchanged.
- * With an HKL the original reaches into Win32 ToUnicodeEx via a layout
- * table; that path is structural here (returns the scancode unchanged)
- * until a keyboard-layout provider exists (frame-loop/OS milestone).
+/* Port-local key-to-ASCII helper. The reference entry at 0x48e380 is CRT
+ * `_toupper`, used by text/string paths; it is not this InputState API.
  */
-// FUNCTION: LEGORR 0x0048e380
 uint32_t input_key_to_ascii(const InputState* s, uint32_t scancode)
 {
     if (s == NULL || s->hkl_present == 0) {
         if (scancode > 0x60u && scancode < 0x7bu) {
-            return scancode - 0x20u;
+            return (uint32_t)toupper((int)scancode);
         }
         return scancode;
     }
     /* HKL mode: minimal US-layout translation for the letters only; other
      * keys pass through. (Win32 ToUnicodeEx translation deferred.) */
     if (scancode > 0x60u && scancode < 0x7bu) {
-        return scancode - 0x20u;
+        return (uint32_t)toupper((int)scancode);
     }
     return scancode;
 }

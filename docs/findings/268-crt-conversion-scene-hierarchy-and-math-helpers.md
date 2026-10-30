@@ -7,7 +7,7 @@ describe mechanics rather than asserting exact CRT export identities.
 | Address | Name | Observed behavior |
 | --- | --- | --- |
 | 0x496190 | CrtEnvironmentBlockGet | Chooses a wide or ANSI Win32 environment-block API, converts wide data to ANSI when needed, frees the OS block, and returns a CRT-heap copy. The startup entry stores the result as the environment global. |
-| 0x49abe0 | CrtWideCharToMultiByteCompat | Sizes/converts wide strings using an ACP/codepage path, `WideCharToMultiByte`, or a per-codepoint compatibility fallback; reports conversion errors through an errno-like global. The observed caller converts time-zone names. |
+| 0x49abe0 | `wcstombs` | Exact VC5 `LIBC.LIB` `wcstombs.obj` entry; the MSVC build calls the runtime directly, which handles both the C locale and active code-page conversion paths. Portable builds retain the local compatibility implementation. The observed caller converts time-zone names. |
 | 0x4957d0 | CxxCatchObjectBindOrCopy | Prepares a C++ catch parameter: adjusts for a base-class subobject, binds the source pointer or copies bytes using `CrtMemoryMove` or a supplied copy function, then continues to the catch handler. |
 | 0x499b30 | CrtDaylightSavingTimeCheck | Recomputes transition day-of-year boundaries for a `struct tm`-like year and compares the date/time against cached start/end values. Reached from local-time-to-epoch conversion when DST is unspecified. |
 | 0x4887c0 | SceneHierarchyInterfaceRegisterRecursive | Recursively walks child nodes, assigns table indices, writes generated sanitized names through an interface slot, and initializes an identity matrix for flag-4 nodes. Caller use in LWS loading and shared-object cloning supports a hierarchy role; exact vtable-slot semantics remain unknown. |

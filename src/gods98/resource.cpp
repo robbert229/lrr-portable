@@ -219,10 +219,16 @@ static const char* ares_cd_path(const char* name, char* out, size_t out_sz)
     if (off >= out_sz) {
         return out;
     }
-    for (size_t i = 0; name[i] != '\0' && off + 1 < out_sz; ++i) {
-        out[off++] = name[i] == '\\' ? RES_PATH_SEP : name[i];
+    size_t copy_capacity = out_sz - off - 1;
+    strncpy(out + off, name, copy_capacity);
+    out[off + copy_capacity] = '\0';
+#if !defined(LEGORRR_BACKEND_WINAPI)
+    char* separator = strchr(out + off, '\\');
+    while (separator != NULL) {
+        *separator++ = RES_PATH_SEP;
+        separator = strchr(separator, '\\');
     }
-    out[off] = '\0';
+#endif
     return out;
 }
 
@@ -302,6 +308,11 @@ static uint32_t ares_le32(const uint8_t* p)
 
 static char* ares_strdup(const char* s)
 {
+#if defined(_MSC_VER)
+    /* The archive-owned names are released with free(), so use the matching
+     * VC5 CRT allocator and copy routine on the reference build. */
+    return _strdup(s);
+#else
     size_t n = strlen(s);
     char*  d = (char*)malloc(n + 1);
     if (d == NULL) {
@@ -310,6 +321,7 @@ static char* ares_strdup(const char* s)
     memcpy(d, s, n);
     d[n] = '\0';
     return d;
+#endif
 }
 
 /* ------------------------------------------------------------------ *
@@ -396,10 +408,15 @@ static int ares_parse(FILE* fp, ResourceWad* out)
             if (pass == 0) {
                 out->entries[i].name_off = blob_pos;
             }
-            while (out->names[blob_pos] != '\0') {
-                ++blob_pos;
+            if (blob_pos >= names_bytes) {
+                return 0;
             }
-            ++blob_pos; /* skip the NUL */
+            const char* terminator = (const char*)memchr(
+                out->names + blob_pos, '\0', names_bytes - blob_pos);
+            if (terminator == NULL) {
+                return 0;
+            }
+            blob_pos = (uint32_t)(terminator - out->names) + 1;
         }
     }
     /* names[] positions now point into the blob at the archive-relative
@@ -459,7 +476,7 @@ void wad_mount_path_cache_store(const char* path)
     if (path != NULL) {
         length = strlen(path);
         if (length != 0 && length < sizeof(s_wad_mount_path_cache)) {
-            memcpy(s_wad_mount_path_cache, path, length + 1);
+            strncpy(s_wad_mount_path_cache, path, length + 1);
             s_wad_mount_path_cache_valid = 1;
             return;
         }
@@ -1493,7 +1510,7 @@ void resource_handle_list_append(ResourceHandleList* list, const char* value)
     if (length >= 0x7fffffffU) return;
     char* copy = (char*)engine_heap_alloc((long)length + 1);
     if (copy == NULL) return;
-    memcpy(copy, value, length + 1);
+    strncpy(copy, value, length + 1);
     list->handles[list->count] = copy;
     ++list->count;
 }

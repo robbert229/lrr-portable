@@ -26,7 +26,7 @@
 #include "game/game.hpp"
 #include "game/select.hpp"
 #include "gods98/block.hpp"
-#include "gods98/crt.hpp"
+#include "crt/crt.hpp"
 #include "gods98/heap.hpp"
 #include "gods98/message.hpp"
 #include "gods98/resource.hpp"

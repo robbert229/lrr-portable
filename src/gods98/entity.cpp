@@ -12,6 +12,7 @@
 
 #include "entity.hpp"
 #include "resource.hpp"
+#include "string.hpp"
 
 /* --- kind dispatch (FUN_00475930) ---------------------------------------------- */
 
@@ -21,18 +22,6 @@
 static const char* const s_kinds[9] = {
     "NULL", "MESH", "FRAME", "ANIM", "ACT", NULL, NULL, "LWS", "LWO",
 };
-
-static int s_strcasecmp(const char* a, const char* b)
-{
-    for (;; a++, b++) {
-        int ca = (unsigned char)*a;
-        int cb = (unsigned char)*b;
-        if (ca >= 'A' && ca <= 'Z') ca += 'a' - 'A';
-        if (cb >= 'A' && cb <= 'Z') cb += 'a' - 'A';
-        if (ca != cb) return ca - cb;
-        if (ca == 0) return 0;
-    }
-}
 
 // FUNCTION: LEGORR 0x00475930
 int entity_kind_lookup(const char* kind, int* notexture)
@@ -53,13 +42,13 @@ int entity_kind_lookup(const char* kind, int* notexture)
     char* colon = strchr(buf, ':');
     if (colon != NULL) {
         *colon = '\0';
-        if (s_strcasecmp(colon + 1, "NOTEXTURE") == 0 && notexture != NULL) {
+        if (strcasecmp_lite(colon + 1, "NOTEXTURE") == 0 && notexture != NULL) {
             *notexture = 1;
         }
     }
 
     for (int i = 0; i < 9; i++) {
-        if (s_kinds[i] != NULL && s_strcasecmp(s_kinds[i], buf) == 0) {
+        if (s_kinds[i] != NULL && strcasecmp_lite(s_kinds[i], buf) == 0) {
             return i;
         }
     }
@@ -165,10 +154,12 @@ EntityAssembly* entity_assembly_open(const char* name, const char* root,
      * last component, join as "%s\%s.%s" with the "ae" extension (string at
      * 0x4a19c4, slot DAT_0076ae0c). */
     const char* base = name;
-    for (const char* p = name; *p != '\0'; p++) {
-        if (*p == '\\' || *p == '/') {
-            base = p + 1;
-        }
+    const char* backslash = strrchr(name, '\\');
+    const char* slash = strrchr(name, '/');
+    if (backslash != NULL && (slash == NULL || backslash > slash)) {
+        base = backslash + 1;
+    } else if (slash != NULL) {
+        base = slash + 1;
     }
     char path[520];
     snprintf(path, sizeof path, "%s\\%s.ae", name, base);

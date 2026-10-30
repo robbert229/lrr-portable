@@ -13,38 +13,51 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdarg.h>
+#if defined(_MSC_VER) && defined(_M_IX86)
+#include <string.h>
+#endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/* FUN_00477550: NUL copy through the engine heap. The corpus copies
- * strlen+1 bytes via EngineHeapAlloc (the port calls the annotated
- * engine_heap_alloc carrier); an allocation failure rides blind like the
- * corpus. NULL only for a NULL source (guarded deviation). Caller frees
- * through the engine heap. */
+/* FUN_00477550: duplicate a NUL-terminated string. The VC5 x86 path
+ * delegates to _strdup; that runtime uses the same malloc/free heap as the
+ * engine allocator. Other builds use the CRT shim's engine-heap fallback.
+ * NULL input returns NULL; callers free through the engine heap. */
 char* string_duplicate(const char* text);
 
 /* FormattedTextBufferBuild (FUN_0048e1e0): format into caller-owned storage
  * and return the number of bytes present before NUL. Capacity bounds the
- * fixed scratch buffers used by the software port. */
+ * stream-backed VC5 formatter and the portable vsnprintf implementation. */
 uint32_t formatted_text_buffer_build(char* out, size_t capacity,
                                      const char* format, va_list args);
 
-/* FUN_0048da50: first occurrence of `needle` in `haystack`, or NULL.
+/* CRT entry shims are implemented in src/crt/crt.cpp and declared here for
+ * the engine/game callers that use these string operations.
+ * FUN_0048da50: first occurrence of `needle` in `haystack`, or NULL.
  * Empty needle yields the haystack start, exactly as the corpus's
  * early-outs do. The corpus's 1-byte fast path (aligned uint scan) and
  * word-at-a-time SWAR loop are byte-equivalent strstr behavior; the port
  * calls strstr. */
+#if defined(_MSC_VER) && defined(_M_IX86)
+#define string_find_substring(haystack, needle) strstr((haystack), (needle))
+#else
 const char* string_find_substring(const char* haystack, const char* needle);
+#endif
 
-/* __strnicmp (FUN_0049dab0): the CRT's bounded case-insensitive compare —
- * ASCII fold, stops at NUL or the count, answers 0/-1/+1 (the corpus's
- * sign-normalized result, not the character difference). */
-/* __strcmpi FUN_0048ff10: case-folded strcmp, byte difference (0 on match) */
+/* __strcmpi FUN_0048ff10: CRT case-insensitive strcmp. */
+#if defined(_MSC_VER) && defined(_M_IX86)
+#define strcasecmp_lite(a, b) _strcmpi((a), (b))
+#else
 int strcasecmp_lite(const char* a, const char* b);
-/* __strnicmp FUN_0049dab0: bounded case-insensitive compare, 0/-1/+1 */
+#endif
+/* __strnicmp FUN_0049dab0: CRT bounded case-insensitive string compare. */
+#if defined(_MSC_VER) && defined(_M_IX86)
+#define strnicmp_lite(a, b, count) _strnicmp((a), (b), (size_t)(count))
+#else
 int strnicmp_lite(const char* a, const char* b, int count);
+#endif
 
 /* CaseInsensitiveSubstringFind (FUN_00477610): the folded sibling of the
  * plain find — every start position through the corpus's scan bound (the
@@ -63,7 +76,11 @@ const char* case_insensitive_substring_find(const char* haystack,
  * ASCII fold compare, exposed here for the LWO bands), but the match also
  * reports its byte index and the needle length through the optional
  * outputs. Same gates/deviations as CaseInsensitiveSubstringFind. */
+#if defined(_MSC_VER) && defined(_M_IX86)
+#define string_folded_compare(a, b, n) _strnicmp((a), (b), (n))
+#else
 int string_folded_compare(const char* a, const char* b, size_t n);
+#endif
 char* string_case_substring_find(char* haystack, const char* needle,
                                  uint32_t* out_index,
                                  size_t* out_length);   /* FUN_0048c040 */
@@ -73,7 +90,9 @@ char* string_case_substring_find(char* haystack, const char* needle,
  * bound itself when it runs out first; limit 0 reads nothing and answers
  * 0). Negative limits are outside the corpus's caller set; the port
  * answers limit-as-is (deviation). */
+#if !defined(_MSC_VER)
 int string_length_bounded(const char* text, int limit);
+#endif
 
 #define STRING_PATH_MAX 256 /* static builder buffer (corpus DAT_00506098) */
 
