@@ -8,10 +8,12 @@ mapping is not established by this binary evidence.
 | --- | --- | --- |
 | 0x49a890 | Win32FileDescriptorResize | Validates a CRT descriptor, saves its position, seeks to the end, truncates with `SetEndOfFile` or zero-extends in `0x1000`-byte writes, then restores position and text/binary state. Its caller 0x499240 uses it to remove a trailing Ctrl-Z byte in a text append/open path. |
 | 0x49aa10 | CrtSignalHandlerDispatch | Dispatches configured handler slots for numeric signal-like codes. Handler value 1 is ignored, null selects default exit behavior, and other values are called; code 8 also adjusts CRT FPU state. The `_abort` routine calls it with 22 before exiting. |
-| 0x49ab90 | CrtSignalHandlerRecordFind | Searches a `0xc`-stride static table for a matching numeric signal key and returns the record or null. `CrtSignalHandlerDispatch` uses it for codes 4, 8, and 11. |
+| 0x49ab90 | CrtSignalHandlerRecordFind | Exact match for VC5 `LIBC.LIB`'s private `_siglookup` in `winsig.obj`. `_raise` references this helper, so linking the public `_raise` entry pulls it in; its table globals are supplied by `fpexcept.obj`. The local table/search and hooks remain only in non-MSVC builds. |
 
-These labels describe observed mechanics. The symbolic signal constants and
-exact CRT export names are not asserted.
+These labels describe observed mechanics. The signal constants remain numeric
+because their symbolic mapping is unconfirmed. `_siglookup` is a private
+`winsig.obj` helper rather than a public CRT export; the public `_raise` entry
+pulls in the object that contains it.
 
 **Evidence.** Direct decompiles and callers are in
 [legorr-crt-fifth-pass-2026-10-23.bundle](../evidence/legorr-crt-fifth-pass-2026-10-23.bundle):

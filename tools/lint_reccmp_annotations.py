@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Require a Reccmp FUNCTION or STUB annotation on each source definition.
+"""Require a Reccmp function or library annotation on source definitions.
 
 This is intentionally a small source-level lint rather than a C++ parser. It
 recognizes function bodies in production C/C++ translation units under ``src``
-and checks for a Reccmp annotation immediately above each definition.
+and checks for a Reccmp annotation near each definition.
 """
 
 from __future__ import annotations
@@ -15,9 +15,13 @@ import sys
 from pathlib import Path
 
 
-ANNOTATION = re.compile(r"^\s*//\s*(?:FUNCTION|STUB):\s+[A-Z0-9_]+\s+0x[0-9a-fA-F]+\s*$")
+ANNOTATION = re.compile(
+    r"^\s*//\s*(?:FUNCTION|STUB|LIBRARY):\s+[A-Z0-9_]+\s+"
+    r"0x[0-9a-fA-F]+(?:\s+SYMBOL)?\s*$"
+)
 LEGORR_ADDRESS_ANNOTATION = re.compile(
-    r"^\s*//\s*(?:FUNCTION|STUB):\s+LEGORR\s+0x([0-9a-fA-F]+)\s*$"
+    r"^\s*//\s*(?:FUNCTION|STUB|LIBRARY):\s+LEGORR\s+"
+    r"0x([0-9a-fA-F]+)(?:\s+SYMBOL)?\s*$"
 )
 IDENTIFIER = re.compile(r"[A-Za-z_][A-Za-z_0-9]*\s*$")
 CONTROL_NAMES = {
@@ -170,7 +174,13 @@ def has_nearby_annotation(source: str, definition_offset: int) -> bool:
         text = lines[prior].strip()
         if not text:
             continue
-        return ANNOTATION.fullmatch(lines[prior]) is not None
+        if ANNOTATION.fullmatch(lines[prior]):
+            return True
+        if text.startswith("//"):
+            # LIBRARY and name-reference annotations use a second comment
+            # line for the exact PDB symbol; keep scanning that comment block.
+            continue
+        return False
     return False
 
 
@@ -208,7 +218,7 @@ def ledger_functions(ledger_path: Path, statuses: set[str]) -> list[tuple[str, s
 
 
 def annotated_ledger_addresses(root: Path) -> set[str]:
-    """Return ledger addresses with a Reccmp FUNCTION or STUB marker in src."""
+    """Return ledger addresses with a Reccmp function or library marker in src."""
     addresses = set()
     for path in source_files(root / "src"):
         for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
@@ -224,7 +234,7 @@ def main() -> int:
     parser.add_argument(
         "--ledger",
         type=Path,
-        help="coverage ledger CSV; report named functions missing a FUNCTION/STUB marker",
+        help="coverage ledger CSV; report named functions missing a FUNCTION/STUB/LIBRARY marker",
     )
     args = parser.parse_args()
     root = args.root.resolve()
@@ -248,12 +258,12 @@ def main() -> int:
         except (OSError, ValueError, csv.Error) as exc:
             print(f"Could not read Reccmp coverage ledger: {exc}", file=sys.stderr)
             return 2
-        print(f"\nNamed functions missing FUNCTION/STUB annotations: {len(unported)} from {ledger_path}")
+        print(f"\nNamed functions missing FUNCTION/STUB/LIBRARY annotations: {len(unported)} from {ledger_path}")
         for address, name in unported:
             print(f"0x{address} {name}")
 
     if missing:
-        print(f"Reccmp annotation lint failed: {len(missing)} function(s) lack FUNCTION/STUB annotations", file=sys.stderr)
+        print(f"Reccmp annotation lint failed: {len(missing)} function(s) lack FUNCTION/STUB/LIBRARY annotations", file=sys.stderr)
         for path, line, name in missing:
             print(f"{path.relative_to(root)}:{line}: {name}", file=sys.stderr)
         return 1

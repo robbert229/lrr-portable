@@ -92,7 +92,7 @@ def build_readme() -> str:
         "- Port/reconstruction status remains in [`ledger.csv`](ledger.csv). Address partitions used during review are not semantic boundaries.",
         "",
         f"Assignment confidence: {confidence['high']} high, {confidence['medium']} medium, {confidence['low']} low. Basis counts: {', '.join(f'{name} {basis[name]}' for name in sorted(basis))}.",
-        f"{basis['unresolved']} functions with opaque pseudocode are provisionally grouped by surrounding subsystem. Three CRT no-op stubs have their own `runtime-support-unresolved` area.",
+        f"{basis['unresolved']} functions with opaque pseudocode are provisionally grouped by surrounding subsystem.",
         "",
         "## Broader domains",
         "",

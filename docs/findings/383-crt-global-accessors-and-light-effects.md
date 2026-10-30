@@ -4,7 +4,7 @@ This pass names 38 routines across the remaining high and mid ranges, plus small
 
 | Address | Name | Observed behavior | Evidence and caller context |
 | --- | --- | --- | --- |
-| `0x00490280` | `CrtFloatingPointFeatureProbe` | Queries `IsProcessorFeaturePresent(0)` and selects a fallback when unavailable. | Pseudocode only. |
+| `0x00490280` | `__ms_p5_mp_test_fdiv` | VC5 `LIBC.LIB` `testfdiv.obj` supplies the optional `IsProcessorFeaturePresent(0)` query; MSVC no longer compiles a duplicate. | Reccmp reports 85% similarity; portable builds retain the local fallback implementation. |
 | `0x004902b0` | `CrtNormalizeDecimalPoint` | Rewrites a numeric text buffer using the locale decimal separator. | Pseudocode only. |
 | `0x004907c0` | `StringPrefixReserve` | Moves a NUL-terminated string right by the requested byte count to reserve a prefix. | Pseudocode only. |
 | `0x004913b0` | `CrtWriteRepeatedChar` | Emits one character repeatedly through an output helper until failure. | Pseudocode only. |
@@ -13,14 +13,14 @@ This pass names 38 routines across the remaining high and mid ranges, plus small
 | `0x00491560` | `CrtHeapInitialize` | Creates the private CRT heap and initializes its allocator state. | Pseudocode only. |
 | `0x00491710` | `CrtHeapBlockFree` | Releases a heap block with `VirtualFree` and unlinks its allocator node. | Pseudocode only. |
 | `0x00492dcc` | `CrtFmodExtendedPrecision` | Computes a floating-point remainder and routes exceptional cases through a helper. | Pseudocode only. |
-| `0x004939d0` | `CrtMathExceptionHandlerGet` | Returns the registered math-exception handler. | Pseudocode only. |
+| `0x004939d0` | `CrtMathExceptionHandlerGet` / `_matherr` | Returns the registered math-exception handler. The VC5 link uses this target implementation as `__matherr`, overriding LIBC.LIB's default zero-return `matherr.obj` stub used by `__umatherr`. | Target disassembly and VC5 LIBC.LIB symbol/relocation records. |
 | `0x00493a00` | `CrtMathExceptionCodeFromStatus` | Maps floating-point status to a CRT math exception code. | Pseudocode only. |
 | `0x00493a40` | `DoubleBuildWithExponent` | Builds a double from a significand and exponent representation. | Pseudocode only. |
 | `0x00493a80` | `DoubleClassify` | Classifies double special values including infinity and NaN. | Pseudocode only. |
 | `0x00495d90` | `IsDbcsLeadByte` | Checks whether a byte is a lead byte in the active code page. | Delegates to a code-page helper; caller context is visible in locale parsing. |
 | `0x004964e0` | `CrtCodePageGet` | Returns the requested OEM or ANSI code page, including special selector handling. | Pseudocode only. |
 | `0x004974d0` | `CrtStandardStreamBufferInstall` | Installs a 4 KB buffer for one of two fixed standard-stream records. | Pseudocode only. |
-| `0x00497ec0` | `CrtLocaleDataGetOrInitialize` | Returns locale data, initializing it when the global cache is empty. | Pseudocode only. |
+| `0x00497ec0` | `__fltout` | VC5 `LIBC.LIB` `cfout.obj` converts a double into the cached decimal-format record returned to its caller. |
 | `0x00498340` | `CrtFatalMessageExit` | Calls the CRT fatal-message exit path with code 2. | Direct call to `__amsg_exit(2)`. |
 | `0x00499860` | `CrtTimeZoneInitializeOnce` | Initializes time-zone state behind a one-time guard. | Pseudocode only. |
 | `0x0048e890` | `MarkupIntegerTokenParse` | Parses an integer token using a scanf-like conversion helper. | Caller evidence `ev_b85e67b084f3e4f58104808358264bbf35d8a22b04e4917f254dcf99157f38da` in `legorr-objective-advisor-inline-markup.bundle`. |
@@ -37,7 +37,7 @@ This pass names 38 routines across the remaining high and mid ranges, plus small
 | `0x0048e1aa` | `CrtMathIntrinsicDispatch` | Calls the CRT x87 intrinsic dispatcher. | Direct pseudocode; caller uses it in math paths. |
 | `0x00491ff5` | `CrtNoOpStub` | Returns without performing visible work. | Empty pseudocode body. |
 | `0x00495bde` | `CrtAbortAfterCallback` | Runs the CRT abort callback path and then aborts. | Wrapper calls `FUN_00495ae0`, which invokes a registered callback then `_abort`. |
-| `0x00497870` | `CrtNoOpStubVariant` | Returns without performing visible work. | Empty pseudocode body. |
+| `0x00497870` | `__hw_cw` | Private helper in VC5 `LIBC.LIB` `ieee87.obj`; converts CRT control flags to the hardware x87 control word. It is included through the public `__control87` entry and cannot be linked directly. | The public runtime entry at `0x00497770` calls this helper; see Finding 399. |
 | `0x0044c7c0` | `LightEffectsConfigurationLoad` | Loads configured blink, fade, and move light-effect settings. | Called by `GameConfigInit`; blink evidence `ev_81e53f10ab1b07600981f692ee5dda8a71d15e2284e8824fe7e2eece0dfdc564` in expansion-27; fade/move context in expansion-17. |
 | `0x0044cef0` | `LightEffectsMoveParametersStore` | Stores parsed movement-effect parameters and sets the associated state bit. | Caller `FUN_0044cca0`; context `ev_50ac433a55f0fe9d174a1fccee1298b2eddb40d022f7beef590478017d4dd352` in `legorr-engine-helpers-expansion-17.bundle`. |
 | `0x0044d710` | `WaypointVectorRandomScaleApply` | Scales target-vector components by a random factor. | Called by timer-driven `FUN_0044d280`; context `ev_34b2943ae4eec65ce70d2ab6788f10b428d3020b5a9215af77e94d265fafa8dd` in expansion-30. |

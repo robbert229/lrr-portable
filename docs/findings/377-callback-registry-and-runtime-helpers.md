@@ -35,9 +35,9 @@ This pass names 36 operation-level routines across callback state, registry/reso
 | `0x00497040` | `CrtStreamReadByte` | Handles EOF/error flags, refills a FILE-like buffer when empty, returns the next byte, and updates pointer/count. | Pseudocode and stream-reader caller context only. |
 | `0x00497570` | `CrtStreamBufferFlushAndRelease` | Flushes an internally owned buffer when flagged and optionally clears its pointer, capacity, and ownership state. | Pseudocode and caller `FUN_0048fed0` context only. |
 | `0x00499710` | `WideStringLength` | Returns the length of a NUL-terminated 16-bit string. | Pseudocode; used by a wide-string no-conversion path. |
-| `0x00499730` | `CrtRuntimeErrorMessageBoxDisplay` | Lazily resolves MessageBoxA, selects an owner window when available, and displays the supplied runtime message. | Pseudocode/caller context; runtime error text identifies the use. |
+| `0x00499730` | `___crtMessageBoxA` | Exact VC5 `LIBC.LIB` `crtmbox.obj` entry; the MSVC build links this public runtime helper, while portable builds retain the local implementation. It lazily resolves `MessageBoxA`, selects an owner window when available, and displays the supplied runtime message. |
 
-| `0x00498f50` | `CrtStreamUngetByte` | Rejects EOF/invalid stream states, allocates a stream buffer if needed, handles an unbuffered special case, otherwise backs up the stream cursor, stores the byte, increments available count, and sets read status. | Pseudocode only; behavior is consistent with `ungetc`, but no direct evidence bundle record was found. |
+| `0x00498f50` | `CrtStreamUngetByte` | MSVC x86 calls VC5 `LIBC.LIB`'s `_ungetc` directly (100% Reccmp); portable builds retain the local stream-state implementation. | The runtime owns the target stream pushback entry. |
 
 | `0x004965c0` | `CrtAnsiCodePageTablesInit` | Calls the shared code-page initializer with sentinel -3, which resolves to the active ANSI code page. | Pseudocode only; no direct evidence bundle record was found. |
 | `0x004975d0` | `CrtCharacterToLowerLocale` | Lowercases ASCII when locale handling is disabled; otherwise uses ctype and the configured locale/code page. | Pseudocode only; no direct evidence bundle record was found. |

@@ -39,7 +39,7 @@ reccmp-report:
 	RECCMP_WINE_BIN="$(RECCMP_WINE_BIN)" \
 	RECCMP_RECCMP="$(RECCMP_RECCMP)" \
 	REPROBIT_MSVC_5_0_RTM_ROOT="$(REPROBIT_MSVC_5_0_RTM_ROOT)" \
-	  ./tools/reccmp.sh
+	  ./tools/reccmp.sh 2>&1
 
 # Run the already-built MSVC 5.0 candidate under the same Wine prefix used by
 # the Reccmp toolchain. Build it first with `make reccmp-report` if needed.

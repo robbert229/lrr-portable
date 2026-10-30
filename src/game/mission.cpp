@@ -5,6 +5,7 @@
 
 #include "gods98/block.hpp"
 #include "gods98/message.hpp"
+#include "crt/crt.hpp"
 #include "entity.hpp"
 #include "level.hpp"
 #include "mission.hpp"
@@ -67,26 +68,14 @@ static float rw_float(BlockFile* cfg, const char* root, const char* level,
     return block_get_float(cfg, path, dflt);
 }
 
-/* Corpus FUN_004790d0 typed getter (TRUE/YES/ON=1, FALSE/NO/OFF=0, else
- * strtol; missing -> dflt) — RewardInit reads `Display`/`CentreText` via it. */
+/* Corpus FUN_004790d0 delegates to ConfigBooleanGet @ 0x477710. */
 static int rw_typed(BlockFile* cfg, const char* root, const char* level,
-                    const char* name, int dflt)
+                    const char* name)
 {
-    const char* v = rw_str(cfg, root, level, NULL, name);
-    if (v == NULL) {
-        return dflt;
-    }
-    if (strcasecmp_lite(v, "TRUE") == 0 || strcasecmp_lite(v, "YES") == 0
-        || strcasecmp_lite(v, "ON") == 0) {
-        return 1;
-    }
-    if (strcasecmp_lite(v, "FALSE") == 0 || strcasecmp_lite(v, "NO") == 0
-        || strcasecmp_lite(v, "OFF") == 0) {
-        return 0;
-    }
-    char* end = NULL;
-    long r = strtol(v, &end, 10);
-    return (end == v) ? 2 : (int)r;
+    (void)root;
+    char path[512];
+    rw_path(path, sizeof(path), cfg, level, NULL, name);
+    return block_get_bool(cfg, path);
 }
 
 /* Store a short token string at a task payload offset (bounded write). */
@@ -94,13 +83,13 @@ static void task_put_str(GameTask* t, int off, const char* s, int cap)
 {
     char* dst = (char*)t->data + off;
     dst[0] = '\0';
-    if (s == NULL) {
+    if (s == NULL || cap <= 1) {
         return;
     }
-    for (int i = 0; i < cap - 1 && s[i] != '\0'; ++i) {
-        dst[i] = s[i];
-        dst[i + 1] = '\0';
-    }
+    size_t copy_length = strlen(s);
+    if (copy_length >= (size_t)cap) copy_length = (size_t)cap - 1u;
+    strncpy(dst, s, copy_length);
+    dst[copy_length] = '\0';
 }
 
 static void task_put_int(GameTask* t, int off, int32_t v)
@@ -133,10 +122,13 @@ static int task_fields(const char* token, char out[UTIL_QUERY_MAX_FIELDS][256])
 // FUNCTION: LEGORR 0x00413f00
 static void mission_replace_char(char* text, char from, char to, int limit)
 {
-    for (int i = 0; i < limit && text[i] != '\0'; ++i) {
-        if (text[i] == from) {
-            text[i] = to;
-        }
+    if (limit <= 0 || from == '\0') return;
+    char* cursor = text;
+    char* match;
+    while ((match = crt_strchr(cursor, from)) != NULL
+           && match - text < limit) {
+        *match = to;
+        cursor = match + 1;
     }
 }
 
@@ -157,8 +149,8 @@ static void task_loader_images(BlockFile* cfg, const char* root,
     if (task_fields(v, f) == 0) {
         return;
     }
-    task_put_int(t, TASK_OFF_IMG_XY, (int32_t)util_atoi(f[1]));
-    task_put_int(t, TASK_OFF_IMG_XY + 4, (int32_t)util_atoi(f[2]));
+    task_put_int(t, TASK_OFF_IMG_XY, (int32_t)atoi(f[1]));
+    task_put_int(t, TASK_OFF_IMG_XY + 4, (int32_t)atoi(f[2]));
     task_add_flag(t, TASK_FLAG_IMG);
 }
 
@@ -180,8 +172,8 @@ static void task_loader_text(BlockFile* cfg, const char* root,
     }
     task_put_str(t, TASK_OFF_TEXT, f[0], 0x100);
     mission_replace_char((char*)t->data + TASK_OFF_TEXT, '_', ' ', 0x20);
-    task_put_int(t, TASK_OFF_TEXT_XY, (int32_t)util_atoi(f[1]));
-    task_put_int(t, TASK_OFF_TEXT_XY + 4, (int32_t)util_atoi(f[2]));
+    task_put_int(t, TASK_OFF_TEXT_XY, (int32_t)atoi(f[1]));
+    task_put_int(t, TASK_OFF_TEXT_XY + 4, (int32_t)atoi(f[2]));
     task_add_flag(t, TASK_FLAG_MASK);
 }
 
@@ -200,7 +192,7 @@ static void task_loader_flics(BlockFile* cfg, const char* root,
     }
     task_put_str(t, TASK_OFF_FLICPATH2, f[0], 128);
     for (int i = 0; i < 4; ++i) {
-        task_put_int(t, TASK_OFF_FLIC_RECT + i * 4, (int32_t)util_atoi(f[1 + i]));
+        task_put_int(t, TASK_OFF_FLIC_RECT + i * 4, (int32_t)atoi(f[1 + i]));
     }
     task_add_flag(t, TASK_FLAG_FLIC);
 }
@@ -236,8 +228,8 @@ static void task_loader_boximages(BlockFile* cfg, const char* root,
     if (task_fields(v, f) == 0) {
         return;
     }
-    task_put_int(t, TASK_OFF_BOXIMG_XY, (int32_t)util_atoi(f[1]));
-    task_put_int(t, TASK_OFF_BOXIMG_XY + 4, (int32_t)util_atoi(f[2]));
+    task_put_int(t, TASK_OFF_BOXIMG_XY, (int32_t)atoi(f[1]));
+    task_put_int(t, TASK_OFF_BOXIMG_XY + 4, (int32_t)atoi(f[2]));
     task_add_flag(t, TASK_FLAG_BOXIMG);
 }
 
@@ -426,12 +418,14 @@ void mission_reward_init(GameContext* ctx, BlockFile* cfg, const char* level_nam
     if ((v = rw_str(cfg, root, level_name, NULL, "Wallpaper")) != NULL) {
         snprintf(rs->wallpaper, sizeof(rs->wallpaper), "%s", v);
     }
-    rs->display = rw_typed(cfg, root, level_name, "Display", 0);
+    rs->display = rw_typed(cfg, root, level_name, "Display");
     if (rs->display == 2) rs->display = 0;
-    rs->centre_text = rw_typed(cfg, root, level_name, "CentreText", 0);
+    rs->centre_text = rw_typed(cfg, root, level_name, "CentreText");
     if (rs->centre_text == 2) rs->centre_text = 0;
-    rs->scroll_speed = rw_float(cfg, root, level_name, NULL, "ScrollSpeed", 60.0f);
-    rs->vert_spacing = rw_float(cfg, root, level_name, NULL, "VertSpacing", 24.0f);
+    v = rw_str(cfg, root, level_name, NULL, "ScrollSpeed");
+    rs->scroll_speed = (float)atof(v != NULL ? v : "");
+    v = rw_str(cfg, root, level_name, NULL, "VertSpacing");
+    rs->vert_spacing = (float)atof(v != NULL ? v : "");
     if ((v = rw_str(cfg, root, level_name, NULL, "TitleFont")) != NULL) {
         snprintf(rs->font_title, sizeof(rs->font_title), "%s", v);
     }
@@ -450,8 +444,8 @@ void mission_reward_init(GameContext* ctx, BlockFile* cfg, const char* level_nam
     if ((v = rw_str(cfg, root, level_name, NULL, "TextPos")) != NULL) {
         char f[UTIL_QUERY_MAX_FIELDS][256];
         if (task_fields(v, f) != 0) {
-            rs->text_pos[0] = (int)util_atoi(f[0]);
-            rs->text_pos[1] = (int)util_atoi(f[1]);
+            rs->text_pos[0] = atoi(f[0]);
+            rs->text_pos[1] = atoi(f[1]);
         }
     }
     /* Save/Advance button hit zones (FUN_0045faf0): `file|x|y` triples from
@@ -461,15 +455,15 @@ void mission_reward_init(GameContext* ctx, BlockFile* cfg, const char* level_nam
     if ((v = rw_str(cfg, root, level_name, NULL, "SaveButton")) != NULL) {
         char f[UTIL_QUERY_MAX_FIELDS][256];
         if (task_fields(v, f) != 0) {
-            rs->save_x = (float)util_atoi(f[1]);
-            rs->save_y = (float)util_atoi(f[2]);
+            rs->save_x = (float)atoi(f[1]);
+            rs->save_y = (float)atoi(f[2]);
         }
     }
     if ((v = rw_str(cfg, root, level_name, NULL, "AdvanceButton")) != NULL) {
         char f[UTIL_QUERY_MAX_FIELDS][256];
         if (task_fields(v, f) != 0) {
-            rs->advance_x = (float)util_atoi(f[1]);
-            rs->advance_y = (float)util_atoi(f[2]);
+            rs->advance_x = (float)atoi(f[1]);
+            rs->advance_y = (float)atoi(f[2]);
         }
     }
 }

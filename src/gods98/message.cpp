@@ -4,6 +4,7 @@
 
 #include "game/savegame.hpp"
 #include "message.hpp"
+#include "string.hpp"
 
 #define MESSAGE_CD_RESET 25.0f /* 0x41c80000 */
 
@@ -146,18 +147,6 @@ const char* message_sound(int id)
     return s_cfg[id].sound;
 }
 
-static int msg_streql(const char* a, const char* b)
-{
-    for (;;) {
-        int ca = (unsigned char)*a++;
-        int cb = (unsigned char)*b++;
-        if (ca >= 'a' && ca <= 'z') ca -= 0x20;
-        if (cb >= 'a' && cb <= 'z') cb -= 0x20;
-        if (ca != cb) return 0;
-        if (ca == 0) return 1;
-    }
-}
-
 // FUNCTION: LEGORR 0x00434c10
 void message_load_infomessages(BlockFile* cfg)
 {
@@ -170,7 +159,7 @@ void message_load_infomessages(BlockFile* cfg)
     for (size_t i = 0; i < n; ++i) {
         BlockRec* rec = block_record_at(cfg, i);
         if (rec == NULL || block_name(rec) == NULL
-            || !msg_streql(block_name(rec), "InfoMessages")) {
+            || strcasecmp_lite(block_name(rec), "InfoMessages") != 0) {
             continue;
         }
         for (BlockRec* kid = block_first_child(rec); kid != NULL;
@@ -187,7 +176,7 @@ void message_load_infomessages(BlockFile* cfg)
             }
             int id = -1;
             for (int k = 0; k < MESSAGE_MAX_ID; ++k) {
-                if (msg_streql(nm, s_catalog[k])) {
+                if (strcasecmp_lite(nm, s_catalog[k]) == 0) {
                     id = k;
                     break;
                 }
@@ -197,11 +186,11 @@ void message_load_infomessages(BlockFile* cfg)
             }
             uint32_t flags = 0;
             const char* sound = NULL;
-            if (val != NULL && !msg_streql(val, "AlwaysPlaySFX")
+            if (val != NULL && strcasecmp_lite(val, "AlwaysPlaySFX") != 0
                 && strlen(val) >= 4) {
                 sound = val; /* corpus: short/empty flag strings mute */
             }
-            if (val == NULL || msg_streql(val, "AlwaysPlaySFX")
+            if (val == NULL || strcasecmp_lite(val, "AlwaysPlaySFX") == 0
                 || strlen(val) < 4) {
                 flags |= MESSAGE_FLAG_PLAY_ALWAYS;
             }

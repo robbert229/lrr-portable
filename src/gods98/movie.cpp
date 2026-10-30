@@ -24,6 +24,7 @@
 
 #include "movie.hpp"
 #include "resource.hpp"
+#include "string.hpp"
 
 /* FFmpeg runtime sonames to dlopen, ';'-joined. The meson toolchain owns
  * these — the same literals drive the configure-time probe and are passed as
@@ -1034,17 +1035,9 @@ int movie_level_video_path(BlockFile* cfg, const char* level,
 
 #if defined(LEGORRR_BACKEND_MINIWIN)
 
-static int m_lower(int c) { return (c >= 'A' && c <= 'Z') ? c + 0x20 : c; }
 static int m_ci_eq(const char* a, const char* b)
 {
-    while (*a != '\0' && *b != '\0') {
-        if (m_lower((unsigned char)*a) != m_lower((unsigned char)*b)) {
-            return 0;
-        }
-        ++a;
-        ++b;
-    }
-    return *a == '\0' && *b == '\0';
+    return strcasecmp_lite(a, b) == 0;
 }
 
 /* Resolve `name` under directory `dir`: exact-case path first (stat), else

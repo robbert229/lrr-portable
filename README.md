@@ -1203,7 +1203,7 @@ flag-clean variant stays `selection_clear`. `select_test` drives the
 gate, array identity/order, the count and the count-only reset.
 
 **CRT / compiler-runtime leaves** (2026-10-24; findings 260/381/393/394):
-three runtime thunks land in a new `src/gods98/crt.*` module with a
+three runtime thunks land in a new `src/crt/crt.*` module with a
 `crt` suite — `crt_memory_move` (`CrtMemoryMove @ 0x498000`; the
 corpus's word-loop/byte-tail copy with backward traversal for the
 overlapping case is byte-equivalent memmove), `float_to_long`
@@ -1245,7 +1245,7 @@ dot(d, n)` with the parallel answer 0), `line_intersection_2d_compute`
 returns NULL when parallel), and
 `sphere_ray_intersection_discriminant_positive` (`SphereRay… @
 0x479c10`, the corpus's discriminant expression verbatim). Six numeric
-runtime leaves join `src/gods98/crt.*` — `bit_count32` (`BitCount32 @
+runtime leaves join `src/crt/crt.*` — `bit_count32` (`BitCount32 @
 0x47d3f0`, clear-lowest loop), `pop_count32` (`PopCount32 @ 0x47d700`)
 and `bit_count32_by_position` (`BitCount32ByPosition @ 0x47e7e0`, the
 corpus's two identical position-loop bodies), `find_first_set_bit32`
@@ -1269,7 +1269,7 @@ arrays — the corpus reads the edge end through a lockstep pointer pair,
 and the boundary/zero-span quirks carry over) in `src/gods98/view.*`;
 `integer_pair_divide_to_float_pair` (`IntegerPairDivideToFloatPair @
 0x45b900`) and `float_pair_to_integer_pair` (`FloatPairToIntegerPair @
-0x45b930`, the two-shot `__ftol` pair truncation) in `src/gods98/crt.*`;
+0x45b930`, the two-shot `__ftol` pair truncation) in `src/crt/crt.*`;
 and `lwo_read_big_endian_float` (`LwoReadBigEndianFloat @ 0x48c1d0`) in
 `src/gods98/model.*` — the stream-cursor reader that byte-reverses four
 bytes and advances (the port's own model path parses via the `rrlwo`
@@ -1311,7 +1311,7 @@ slot or rect (documented deviation). `view_test` drives the corners, the
 truncated-offset shifts and the slot indirection.
 
 **CRT math and wide-string leaves** (2026-10-24; findings 302/342/377/
-397/399): four more runtime leaves join `src/gods98/crt.*` —
+397/399): four more runtime leaves join `src/crt/crt.*` —
 `crt_unsigned_add_with_carry` (`CrtUnsignedAddWithCarry @ 0x499fb0`, the
 carry primitive the corpus's 96-bit helpers build on), `double_classify`
 (`DoubleClassify @ 0x493a80`, the exponent+quiet-bit pattern classifier:
@@ -1343,7 +1343,7 @@ any-test across both flag words) and `entity_type3_flag04000000_test`
 relaxed pair and the kind test.
 
 **CRT format-argument cursor + exponent selector** (2026-10-24; findings
-231/386/395/399): four runtime leaves join `src/gods98/crt.*` — the
+231/386/395/399): four runtime leaves join `src/crt/crt.*` — the
 varargs-cursor trio `format_argument_read_dword` /
 `format_argument_read_word` / `format_argument_read_double`
 (`FormatArgumentReadDword @ 0x491430`, `FormatArgumentReadWord @
@@ -1536,7 +1536,7 @@ the split corners; `record_test` pins byte isolation.
 
 **Constant, stub and DAT-global band** (2026-10-24; findings 21/380/383/
 386/392/399/406/440/455): the pure pool's fixed-return leaves land where
-their roles live. In `src/gods98/crt.*`: the zero float (0x408930) and
+their roles live. In `src/crt/crt.*`: the zero float (0x408930) and
 the DirectSound minimum-volume `-10000` dword (0x47c160, corpus view
 `0xffffd8f0`), the zero processor-feature fallback (0x490230) and the
 FLH magic 'UU' silent leaf (0x456210), plus the two module-backed DAT
@@ -2545,8 +2545,10 @@ port's C-locale half (the locale-map branch stays recorded): a null
 destination answers the NUL-excluded wide length, the store lane copies
 low bytes until the NUL or the count, and a char over `0xff` takes the
 corpus's EILSEQ-shaped math-error store with the `-1` answer — the same
-shape as the code-page leaf. The normalize pass runs the corpus's screen
-band: 90 color constants scale by the exact 1/255 float, two stride-16
+shape as the code-page leaf. On the VC5 build, `crt_string_copy_n` calls the
+runtime's `_strncpy`; other backends retain the bytewise compatibility fold.
+The normalize pass runs the corpus's screen band: 90 color constants scale
+by the exact 1/255 float, two stride-16
 lanes fill twenty unit cells, and seven pair rows seed from the corpus
 constants and scale by the width/height through the 1/640 and 1/480
 constants — the x half lands back on the constants while the y half
@@ -2557,16 +2559,13 @@ primary's, and a second pass re-scales the colors again. Deviations: the
 band is own storage (its corpus owner is unported), and the locale-half
 conversion branches ride recorded. Tests green; 34/36 baseline.
 
-**Integer divide pair** (2026-10-25): two runtime rows land in `crt.*`
-alongside the multiply thunk. `crt_integer64_divide` (0x48e9e0, `__alldiv`)
-and `crt_unsigned64_divide` (0x498bf0, `__aulldiv`) fold the helpers'
-sign-normalizing shift/trial/repair algorithm into the LP64 division —
-the algorithm truncates toward zero throughout, so one word-pair fold and
-one native division answer every well-defined case. Quirks pinned: the
-signed pair's double normalization of `INT64_MIN / -1` never negates, so
-the wrapping quotient rides through unchanged, and the equal-extremes
-case answers one. Deviations: the zero-divisor exception path answers
-zero, and the helper's normalization wrap is the only modeled edge.
+**64-bit arithmetic helpers** (2026-10-25): the VC5 build links
+`crt_integer64_divide` (0x48e9e0, `__alldiv`), `crt_unsigned64_divide`
+(0x498bf0, `__aulldiv`), and the adjacent unsigned remainder helper
+(0x498c60, `__aullrem`) from `LIBC.LIB`; `__aullrem` is supplied by
+`ullrem.obj`. Other backends keep the word-pair implementations. The divide
+helpers retain the corpus's sign normalization, quotient correction, and
+native divide-fault behavior.
 `crt_test` pins word-pair scaling, both truncation directions, and the
 guard lanes. Tests green; 34/36 baseline.
 
@@ -3132,9 +3131,9 @@ clamps, length layout, bit folds, and record headers.
 land. `crt_math_exception_handler_get` (0x4939d0, crt.*) scans the corpus's
 27-entry math-handler table (own storage + install hook — the corpus
 writer rides the unported CRT startup band). `crt_integer64_multiply`
-(0x48ea90, crt.*) ports the compiler's signed 64×64 multiply helper (plain
-word product under the double-zero high guard, else the wrapped cross-word
-fold). `objective_score_text_origin_set` (0x4262e0, engine.*) stores the
+(0x48ea90, `__allmul`) links to VC5 `LIBC.LIB`, while other backends retain
+the wrapped cross-word implementation. `objective_score_text_origin_set`
+(0x4262e0, engine.*) stores the
 score-text pair and rides the debug word's bit 14.
 `ai_idle_table_pointer_remove` (0x43a930, ai.*) zeroes matching idle-table
 slots through the count window — holes ride, dedup sees past them.
@@ -3189,11 +3188,9 @@ neighbour sweep against a hand-built grid.
 **CRT integer/string helper band** (2026-10-25): six frontier rows land in
 `crt.*`. `uint96_copy` (0x497a80) walks three dwords forward, reproducing
 the corpus's overlap word-duplication. `crt_string_duplicate` (0x49b660)
-copies strlen+1 through the engine allocator. `crt_unsigned_format_radix`
-(0x49dba0) folds digits through the corpus's `+ 'W'` lowercase letter
-half, guarded on radix < 2 (the corpus's divide loop never ends), and
-`crt_signed_to_string` (0x49db60) takes the corpus's sign half only for
-radix 10 — INT_MIN rides the wrapping magnitude as −2147483648.
+copies strlen+1 through the engine allocator. `crt_signed_to_string`
+(0x49db60) links VC5 `_itoa` from `LIBC.LIB`; portable builds retain the
+same lowercase digit behavior and wrapping INT_MIN magnitude.
 `crt_string_to_upper`/`crt_string_to_lower` (0x49dcd0 / 0x49dc10) fold the
 whole string on the pinned C-locale half (the DAT_00549180 locale branch
 rides the recorded locale-map chain). `crt_test` pins the overlap copy,

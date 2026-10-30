@@ -1,5 +1,18 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 cmake_minimum_required(VERSION 3.20)
+
+# The original LegoRR executable has no MSVCRT.DLL import table entry, so its
+# VC5 CRT is linked into the image. Reccmp has matched CRT objects from the
+# VC5 single-thread static runtime (/ML, LIBC.LIB).
+if(LRR_CLASSIC_MSVC5)
+  if(POLICY CMP0091)
+    cmake_policy(SET CMP0091 NEW)
+  endif()
+  # CMake has no model for VC5's single-thread /ML runtime. Disable its
+  # default /MD selection; the classic-profile flags below supply /ML.
+  set(CMAKE_MSVC_RUNTIME_LIBRARY "")
+endif()
+
 project(lrr-portable VERSION 0.1.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -24,8 +37,12 @@ if(LRR_CLASSIC_MSVC5)
   # toolchain's ReproBit command model does not admit.
   include_directories(BEFORE "${CMAKE_CURRENT_SOURCE_DIR}/src/compat/msvc5")
 
-  string(REGEX REPLACE "[ /]Zm[0-9]+" "" _classic_cxx_flags " ${CMAKE_CXX_FLAGS}")
+  string(REGEX REPLACE "[ /-][Mm][DdTtLl][Dd]?" "" _classic_cxx_flags
+    " ${CMAKE_CXX_FLAGS}")
+  string(REGEX REPLACE "[ /]Zm[0-9]+" "" _classic_cxx_flags
+    "${_classic_cxx_flags}")
   string(STRIP "${_classic_cxx_flags}" _classic_cxx_flags)
+  string(APPEND _classic_cxx_flags " /ML")
   set(CMAKE_CXX_FLAGS "${_classic_cxx_flags}" CACHE STRING
     "Classic MSVC 5.0 compatible compiler flags" FORCE)
 
@@ -80,10 +97,13 @@ endif()
 
 set(ENGINE_DIR "${SRC_ROOT}/gods98")
 set(GAME_DIR "${SRC_ROOT}/game")
+set(CRT_DIR "${SRC_ROOT}/crt")
 set(PLATFORM_DIR "${SRC_ROOT}/platform")
 
 add_library(gods98 STATIC
-  ${ENGINE_DIR}/gods98.cpp ${ENGINE_DIR}/string.cpp ${ENGINE_DIR}/crt.cpp
+  ${ENGINE_DIR}/gods98.cpp ${ENGINE_DIR}/string.cpp
+  ${CRT_DIR}/crt.cpp ${CRT_DIR}/crt_heap.cpp
+  ${CRT_DIR}/crt_runtime_calls.cpp ${CRT_DIR}/crt_runtime_aliases.cpp
   ${ENGINE_DIR}/heap.cpp ${ENGINE_DIR}/ptrstack.cpp ${ENGINE_DIR}/record.cpp
   ${ENGINE_DIR}/engine.cpp ${ENGINE_DIR}/tickers.cpp
   ${ENGINE_DIR}/resource.cpp ${ENGINE_DIR}/texture.cpp ${ENGINE_DIR}/sound.cpp
@@ -211,6 +231,10 @@ if(BUILD_TESTING AND PLATFORM STREQUAL "native")
     endif()
     set_tests_properties(${name} PROPERTIES LABELS ${name})
   endforeach()
+  add_executable(crt_test ${CRT_DIR}/test_crt.cpp)
+  target_link_libraries(crt_test PRIVATE gods98)
+  add_test(NAME crt COMMAND crt_test)
+  set_tests_properties(crt PROPERTIES LABELS crt)
   set(GAME_TESTS level objective savegame mission entity cmd select ai render bind frontend options)
   set(GAME_TEST_SOURCES test_level.cpp test_objective.cpp test_savegame.cpp test_mission.cpp
     test_entity.cpp test_cmd.cpp test_select.cpp test_ai.cpp test_render.cpp test_bind.cpp

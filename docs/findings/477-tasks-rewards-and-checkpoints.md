@@ -10,7 +10,7 @@ This finding follows the 46 procedures assigned in [issue #147](https://github.c
 
 ## Reward configuration and checkpoint snapshot
 
-`RewardInit @ 0x0045f7f0` stores the configuration handles, reads screen-level `Reward` settings (wallpaper, display/centering modes, scroll and vertical spacing, fonts, completion/failure/quit text, and text position), calls `FUN_0045faf0` for button resources, and returns success. `FUN_0045faf0 @ 0x0045faf0` loads SaveButton and AdvanceButton image/rectangle data and returns success only when both primary button surfaces exist.
+`RewardInit @ 0x0045f7f0` stores the configuration handles, reads screen-level `Reward` settings (wallpaper, display/centering modes, scroll and vertical spacing, fonts, completion/failure/quit text, and text position), calls VC5 `atof` for both scroll fields (an absent value uses the shared empty-string fallback, which parses as zero), calls `FUN_0045faf0` for button resources, and returns success. `FUN_0045faf0 @ 0x0045faf0` loads SaveButton and AdvanceButton image/rectangle data and returns success only when both primary button surfaces exist.
 
 `CheckpointBlobBuild @ 0x0045fda0` allocates and zeroes a `0x318c`-byte checkpoint blob. It reads reward enable/modifier/timer/display settings, copies ten `0x210`-byte task records from the live task block into the blob, and refreshes each copied task's importance and quota. For `Level03`, it additionally writes `1` at blob offset `0x868`. `TaskImportanceRefresh @ 0x004600a0` reads `Reward.Importance.<task>` into record `+0x24`, defaulting through the configuration parser when absent. `TaskQuotaRefresh @ 0x00460140` reads `Reward.Quota.<task>` into `+0x28`, with its fallback value also supplied through the parser.
 

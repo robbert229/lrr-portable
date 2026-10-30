@@ -150,10 +150,8 @@ static void* xmemmem(const void* h, size_t hl, const void* nd, size_t nl)
 
 static size_t strnlen_n(const char* s, size_t maxlen)
 {
-    size_t n = 0;
-    while (n < maxlen && s[n])
-        n++;
-    return n;
+    const char* terminator = (const char*)memchr(s, '\0', maxlen);
+    return terminator != NULL ? (size_t)(terminator - s) : maxlen;
 }
 
 /* strip ASCII whitespace both ends (corpus sidecar/TIMG lines are ASCII) */
@@ -312,6 +310,15 @@ static int block_find(const SurfRec* r, const char* tag, const uint8_t** out, si
     return 0;
 }
 
+static int surf_start_compare(const void* left, const void* right)
+{
+    const size_t a = *(const size_t*)left;
+    const size_t b = *(const size_t*)right;
+    if (a < b) return -1;
+    if (a > b) return 1;
+    return 0;
+}
+
 /* python surf_records(): SRFS-name anchors delimit records inside SURF
  * chunks; between them {4 printable tag bytes, u16 size, payload, pad}. */
 // FUNCTION: LEGORR 0x0048c820
@@ -323,10 +330,16 @@ static int parse_surf_chunk(Parse* P, const uint8_t* d, size_t size)
 
     for (size_t name_index = 0; name_index < P->nsname && ok; name_index++) {
         size_t nlen = strlen(P->sname[name_index]);
+#if defined(_MSC_VER)
+        uint8_t* needle = (uint8_t*)_strdup(P->sname[name_index]);
+#else
         uint8_t* needle = (uint8_t*)malloc(nlen + 1);
+#endif
         if (!needle) { ok = 0; break; }
+#if !defined(_MSC_VER)
         memcpy(needle, P->sname[name_index], nlen);
         needle[nlen] = 0;
+#endif
         for (size_t pos = 0; pos + nlen + 1 <= size;) {
             const uint8_t* hit = (const uint8_t*)xmemmem(d + pos, size - pos, needle, nlen + 1);
             if (!hit)
@@ -352,15 +365,11 @@ static int parse_surf_chunk(Parse* P, const uint8_t* d, size_t size)
         }
         free(needle);
     }
-    /* insertion sort ascending */
-    for (int sort_index =  1; sort_index < nst; sort_index++)
-        for (size_t sort_cursor = sort_index;
-             sort_cursor > 0 && starts[sort_cursor - 1] > starts[sort_cursor];
-             sort_cursor--) {
-            size_t t = starts[sort_cursor - 1];
-            starts[sort_cursor - 1] = starts[sort_cursor];
-            starts[sort_cursor] = t;
-        }
+    /* Starts are deduplicated above, so qsort's ordering of equal values is
+     * irrelevant; the VC5 CRT supplies the same ascending offset order. */
+    if (nst > 1) {
+        qsort(starts, nst, sizeof(*starts), surf_start_compare);
+    }
 
     for (size_t k = 0; k < nst && ok; k++) {
         size_t e = starts[k];
@@ -617,19 +626,16 @@ Model* model_parse(const uint8_t* data, size_t len)
 static int tok_int(const char* s, const char* end, long* out)
 {
     const char* p = s;
-    if (p != end && (*p == '+' || *p == '-'))
+    if (p != end && (*p == '+' || *p == '-')) {
         p++;
-    const char* d = p;
-    long v = 0;
-    int neg = (s != end && *s == '-');
-    for (; p != end && isdigit((unsigned char)*p); p++) {
-        v = v * 10 + (*p - '0');
-        if (v > 1L << 30)
-            return 0; /* would need a real ValueError to matter; never in corpus */
     }
-    if (p == d || p != end)
+    if (p == end || !isdigit((unsigned char)*p))
         return 0;
-    *out = neg ? -v : v;
+    char* parsed_end;
+    long value = strtol(s, &parsed_end, 10);
+    if (parsed_end != end || value < -(1L << 30) || value > (1L << 30))
+        return 0; /* the source parser only accepts this practical range */
+    *out = value;
     return 1;
 }
 
@@ -655,13 +661,11 @@ static int line_tokens(const char* line, const char** ts, const char** te, int m
     int n = 0;
     const char* p = line;
     for (;;) {
-        while (*p && isspace((unsigned char)*p))
-            p++;
+        p += strspn(p, " \t\n\r\v\f");
         if (!*p)
             break;
         const char* s = p;
-        while (*p && !isspace((unsigned char)*p))
-            p++;
+        p += strcspn(p, " \t\n\r\v\f");
         if (n < maxt) {
             ts[n] = s;
             te[n] = p;
@@ -675,14 +679,11 @@ static int line_tokens(const char* line, const char** ts, const char** te, int m
 static int line_int(const char* line, long* out)
 {
     const char* p = line;
-    while (*p && isspace((unsigned char)*p))
-        p++;
+    p += strspn(p, " \t\n\r\v\f");
     const char* s = p;
-    while (*p && !isspace((unsigned char)*p))
-        p++;
+    p += strcspn(p, " \t\n\r\v\f");
     const char* e = p;
-    while (*p && isspace((unsigned char)*p))
-        p++;
+    p += strspn(p, " \t\n\r\v\f");
     if (*p)
         return 0;
     return tok_int(s, e, out);

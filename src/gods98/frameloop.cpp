@@ -25,6 +25,7 @@
 #include "resource.hpp"
 #include "surface.hpp"
 #include "sound.hpp"
+#include "string.hpp"
 #include "texture.hpp"
 #include "tickers.hpp"
 #include "view.hpp"
@@ -47,17 +48,13 @@ static int s_icontains(const char* haystack, const char* needle)
     if (haystack == NULL || needle == NULL) {
         return 0;
     }
-    for (size_t i = 0; haystack[i] != '\0'; i++) {
-        size_t j = 0;
-        while (needle[j] != '\0' && (unsigned char)(haystack[i + j] | 0x20)
-               == (unsigned char)(needle[j] | 0x20)) {
-            ++j;
-        }
-        if (needle[j] == '\0') {
-            return 1;
-        }
+    if (haystack[0] == '\0') {
+        return 0;
     }
-    return 0;
+    if (needle[0] == '\0') {
+        return 1;
+    }
+    return case_insensitive_substring_find(haystack, needle) != NULL;
 }
 
 static void frameloop_game_context_dispose(GameContext* game)
@@ -363,9 +360,10 @@ static int credits_load_lines(const char* name, char*** out_lines,
     }
     int n = 0;
     char* start = text;
-    for (char* p = text;; ++p) {
-        if (*p != '\n' && *p != '\0') {
-            continue;
+    for (;;) {
+        char* p = strchr(start, '\n');
+        if (p == NULL) {
+            p = start + strlen(start);
         }
         char saved = *p;
         *p = '\0';
@@ -373,7 +371,11 @@ static int credits_load_lines(const char* name, char*** out_lines,
         if (len > 0 && start[len - 1] == '\r') {
             start[--len] = '\0';
         }
+#if defined(_MSC_VER)
+        lines[n] = _strdup(start);
+#else
         lines[n] = (char*)malloc(len + 1);
+#endif
         if (lines[n] == NULL) {
             for (int i = 0; i < n; ++i) {
                 free(lines[i]);
@@ -382,7 +384,11 @@ static int credits_load_lines(const char* name, char*** out_lines,
             free(text);
             return 0;
         }
+#if !defined(_MSC_VER)
         memcpy(lines[n++], start, len + 1);
+#else
+        ++n;
+#endif
         if (saved == '\0') {
             break;
         }
@@ -699,11 +705,10 @@ static void frameloop_wrap_brief(const char* src, char* out, size_t out_size,
     size_t at = 0;
     int col = 0;
     for (const char* p = src; p != NULL && *p != '\0' && at + 1 < out_size;) {
-        while (*p == ' ' || *p == '\t') ++p;
+        p += strspn(p, " \t");
         if (*p == '\0') break;
         const char* word = p;
-        int len = 0;
-        while (p[len] != '\0' && p[len] != ' ' && p[len] != '\t') ++len;
+        int len = (int)strcspn(p, " \t");
         if (col > 0 && col + 1 + len > max_chars) {
             out[at++] = '\n';
             col = 0;
@@ -711,10 +716,14 @@ static void frameloop_wrap_brief(const char* src, char* out, size_t out_size,
             out[at++] = ' ';
             ++col;
         }
-        for (int i = 0; i < len && at + 1 < out_size; ++i) {
-            out[at++] = word[i];
-            ++col;
+        int copy_len = len;
+        const size_t remaining = out_size - at - 1;
+        if ((size_t)copy_len > remaining) {
+            copy_len = (int)remaining;
         }
+        strncpy(out + at, word, (size_t)copy_len);
+        at += (size_t)copy_len;
+        col += copy_len;
         p += len;
     }
     out[at] = '\0';
@@ -883,22 +892,20 @@ static void menu_save_image_config_rect_blit(FrontEnd* fe,
     if (position == NULL) {
         return;
     }
-    char* end = NULL;
-    long x = strtol(position, &end, 10);
-    if (end == position || *end != ':') {
+    const char* separator = strchr(position, ':');
+    if (separator == NULL || separator == position || separator[1] == '\0') {
         return;
     }
-    char* y_start = end + 1;
-    long y = strtol(y_start, &end, 10);
-    if (end == y_start) {
-        return;
-    }
+    int x = atoi(position);
+    int y = atoi(separator + 1);
     snprintf(key, sizeof(key), "%s Menu::SaveImage Width",
              util_root_name(fe->cfg));
-    int draw_w = block_get_int(fe->cfg, key, 160);
+    const char* width_value = block_get_strptr(fe->cfg, key);
+    int draw_w = atoi(width_value != NULL ? width_value : "");
     snprintf(key, sizeof(key), "%s Menu::SaveImage Height",
              util_root_name(fe->cfg));
-    int draw_h = block_get_int(fe->cfg, key, 120);
+    const char* height_value = block_get_strptr(fe->cfg, key);
+    int draw_h = atoi(height_value != NULL ? height_value : "");
     if (draw_w <= 0 || draw_h <= 0 || draw_w > width * 2
         || draw_h > height * 2) {
         return;

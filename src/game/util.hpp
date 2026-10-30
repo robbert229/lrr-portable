@@ -15,8 +15,8 @@
  * Callers index the returned fields where the corpus uses its stack-slotted
  * locals (local_5b8/local_4f0 etc. in FUN_00457d40).
  *
- * `util_atoi`/`util_atof` are thin wrappers over strtol/strtod — the corpus's
- * FUN_0048db70/FUN_0048d980.
+ * Integer conversion uses the CRT's `atoi` entry, matching FUN_0048db70;
+ * floating conversion uses the CRT's DBCS-aware `atof` entry at 0x0048d980.
  */
 #ifndef LEGORRR_GAME_UTIL_HPP
 #define LEGORRR_GAME_UTIL_HPP
@@ -51,9 +51,6 @@ const char* util_root_name(BlockFile* bf);
  * "Reward Importance", …). */
 const char* util_level_cfg_path(BlockFile* cfg, const char* level,
                                 const char* suffix, char* out, size_t out_sz);
-
-long  util_atoi(const char* s);
-float util_atof(const char* s);
 
 #ifdef __cplusplus
 }

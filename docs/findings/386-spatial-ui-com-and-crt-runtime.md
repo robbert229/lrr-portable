@@ -72,9 +72,10 @@ This pass names 106 functions across all remaining mid and high addresses. Names
 | `0x00487d50` | `ComInterfaceQueryAndContextDispatch` | Queries a COM interface and passes result/context to an operation helper. | `LEGORR.full.c` pseudocode and caller references. |
 | `0x00488bf0` | `CdAudioStopAndCloseIfActive` | Stops and closes cdaudio through MCI when initialized. | `LEGORR.full.c` pseudocode and caller references. |
 | `0x00489bc0` | `ComChildItemsVisit` | Recursively enumerates child COM interfaces and invokes a method. | `LEGORR.full.c` pseudocode and caller references. |
-| `0x0048ebb0` | `CrtExceptionHandlerTransferAfterUnlink` | Unlinks FS exception registration and dispatches to a handler. | `LEGORR.full.c` pseudocode and caller references. |
-| `0x0048ebf0` | `CrtExceptionHandlerTransferWithAtomicPrefix` | Performs lock/unlock-prefixed exception transfer and indirect dispatch. | `LEGORR.full.c` pseudocode and caller references. |
-| `0x0048ec60` | `CrtExceptionDispatchForwarder` | Forwards arguments to the common CRT exception dispatcher. | `LEGORR.full.c` pseudocode and caller references. |
+| `0x0048ebb0` | `?_JumpToContinuation@@YGXPAXPAUEHRegistrationNode@@@Z` | VC5 `LIBC.LIB` `trnsctrl.obj` continuation transfer; target body matches outside relocated addresses. | C++ frame-handler dependency. |
+| `0x0048ebf0` | `?_CallMemberFunction0@@YGXPAX0@Z` | Exact seven-byte VC5 `LIBC.LIB` `trnsctrl.obj` helper match. | Called by the exception transfer path. |
+| `0x00495a90` | `__CallSettingFrame@12` | Exact VC5 `LIBC.LIB` `lowhelpr.obj` helper body outside its relocated NLG calls. | Called through the exception frame path. |
+| `0x0048ec60` | `___CxxFrameHandler` | VC5 `LIBC.LIB` `frame.obj` provides the public handler; Reccmp reports a 100% match. It forwards to `___InternalCxxFrameHandler`. | `frame.obj` symbol and disassembly, plus Reccmp library match. |
 | `0x0048ed00` | `CrtExceptionFrameFilterInvoke` | Reconstructs dispatcher arguments from an exception registration frame. | `LEGORR.full.c` pseudocode and caller references. |
 | `0x0048ed30` | `CrtExceptionFrameInstallAndDispatch` | Installs an FS exception frame, calls handler, and restores prior chain. | `LEGORR.full.c` pseudocode and caller references. |
 | `0x0048ee00` | `CrtExceptionScopeFilterAndUnwind` | Filters exception flags, dispatches scope handler, or unwinds. | `LEGORR.full.c` pseudocode and caller references. |
@@ -83,16 +84,21 @@ This pass names 106 functions across all remaining mid and high addresses. Names
 | `0x004918a0` | `SmallHeapPageFreeSlotUpdate` | Updates freed-byte counts and recycles small-heap pages at thresholds. | `LEGORR.full.c` pseudocode and caller references. |
 | `0x00491cc0` | `SmallHeapBlockResizeInPlace` | Adjusts block size/free-list state when resize fits its page. | `LEGORR.full.c` pseudocode and caller references. |
 | `0x00491f80` | `CrtOneArgumentMathErrorHandlingStart` | Passes numeric argument through conversion/error handling and returns a double. | `LEGORR.full.c` pseudocode and caller references. |
-| `0x0049200c` | `CrtFpuPrecisionModeCodeGet` | Tests FPU control and returns precision mode code 7 or 1. | `LEGORR.full.c` pseudocode and caller references. |
-| `0x00492068` | `DoubleExponentBitsGetOrSpecialValue` | Returns exponent bits or the full high word for an all-ones exponent. | `LEGORR.full.c` pseudocode and caller references. |
-| `0x0049221e` | `CrtFloatingPointExceptionResultDispatch` | Normalizes floating exception result and dispatches conversion/error handling. | `LEGORR.full.c` pseudocode and caller references. |
-| `0x00492225` | `CrtFloatingPointExceptionResultDispatchVariant` | Classifies FPU status and dispatches conversion/error handling. | `LEGORR.full.c` pseudocode and caller references. |
+| `0x00491fe0` | `__twoToTOS` | VC5 `LIBC.LIB` `common.obj` public x87 helper; the MSVC link uses its exact `2^ST(0)` implementation. | Exact body match in the archive. |
+| `0x00491ff5` | `__load_CW` | VC5 `LIBC.LIB` `common.obj` public helper; the MSVC build links its exact control-word load directly. | Exact body match; callers pass the saved control word. |
+| `0x0049200c` | `__convertTOStoQNaN` | Exact VC5 `LIBC.LIB` `common.obj` match; the MSVC build links this public entry directly. | Exact instruction sequence match against the archive. |
+| `0x00492025` | `__fload_withFB` | Exact VC5 `LIBC.LIB` `common.obj` public helper; loads the pointed double into x87 state with exceptional-value fallback. | Exact instruction sequence match against the archive. |
+| `0x00492068` | `__checkTOS_withFB` | Exact VC5 `LIBC.LIB` `common.obj` match; returns the exponent field or the original high word for an all-ones exponent. The MSVC build links this public entry directly. | Exact instruction sequence match against the archive; called by `CrtAsin`. |
+| `0x0049207e` | `__fast_exit` | VC5 `LIBC.LIB` `common.obj` public x87 cleanup helper. | Exact body match in the archive. |
+| `0x004920b5` | `__check_overflow_exit` | VC5 `LIBC.LIB` `common.obj` public overflow exit helper. | Exact body match in the archive. |
+| `0x004920c9` | `__check_range_exit` | VC5 `LIBC.LIB` `common.obj` public range exit helper. | Exact body match in the archive. |
+| `0x004921e4` | `__ctrandisp2` | VC5 `LIBC.LIB` `87cdisp.obj` supplies the two-operand transcendental dispatcher (93.86% Reccmp similarity), including the internal result-handling blocks. | Pulled with `__cintrindisp2` from the same archive object; the local x86 adapters have been removed. |
 | `0x00492bc6` | `CrtDoubleRemainderReduction` | Reduces double remainder through exponent-aligned software path. | `LEGORR.full.c` pseudocode and caller references. |
 | `0x00493170` | `CrtMathExceptionHandleSingleResult` | Handles a math result under global math mode/error policy. | `LEGORR.full.c` pseudocode and caller references. |
-| `0x004931c0` | `CrtMathExceptionHandleResultWithStatus` | Handles math result together with status under global math mode. | `LEGORR.full.c` pseudocode and caller references. |
+| `0x004931c0` | `__except1` / `CrtMathExceptionHandleResultWithStatus` | VC5 `LIBC.LIB` `fpexcept.obj` supplies the exact target body outside relocation fields; the MSVC adapter calls it directly. | `fpexcept.obj` symbol and relocation records, plus target/runtime instruction comparison. |
 | `0x004938f0` | `CrtMathExceptionDispatch` | Maps exception codes, clears FPU flags, calls app handler, maps fallback. | `LEGORR.full.c` pseudocode and caller references. |
 | `0x004939a0` | `CrtMathErrorCodeSet` | Sets global math error code according to exception class. | `LEGORR.full.c` pseudocode and caller references. |
-| `0x00493c40` | `CrtNoOpStubVariant2` | Returns without visible work. | `LEGORR.full.c` pseudocode and caller references. |
+| `0x00493c40` | `__set_statfp` | Exact VC5 `LIBC.LIB` `fpctrl.obj` match; generates selected x87 floating-point exceptions. | VC5's `__handle_exc` calls this helper; the portable fallback stub is not used by the MSVC build. |
 | `0x00495410` | `CrtSehExceptionDispatcher` | Searches exception handlers and dispatches matching handler. | `LEGORR.full.c` pseudocode and caller references. |
 | `0x004954e0` | `CrtSehLocalUnwindToScope` | Unwinds local state to requested scope. | `LEGORR.full.c` pseudocode and caller references. |
 | `0x004955c0` | `CrtSehUnwindAndInvokeHandler` | Unwinds to scope and invokes its exception handler. | `LEGORR.full.c` pseudocode and caller references. |
@@ -103,12 +109,12 @@ This pass names 106 functions across all remaining mid and high addresses. Names
 | `0x00495b70` | `CrtUnexpectedHandlerInvokeAndTerminate` | Invokes registered unexpected handler and follows terminate path. | `LEGORR.full.c` pseudocode and caller references. |
 | `0x00496895` | `CrtLocalUnwindFromFrame` | Calls __local_unwind2 with function/scope indexes from frame. | `LEGORR.full.c` pseudocode and caller references. |
 | `0x004968b0` | `CrtRuntimeErrorMessageEnterExit` | Outputs message markers 0xfc/0xff around a callback. | `LEGORR.full.c` pseudocode and caller references. |
-| `0x00497770` | `CrtFpuControlWordUpdate` | Translates/merges current x87 control word and writes it. | `LEGORR.full.c` pseudocode and caller references. |
-| `0x004977b0` | `CrtFpuControlWordUpdateMask` | Clears mask 0x80000 before control-word update. | `LEGORR.full.c` pseudocode and caller references. |
+| `0x00497770` | `__control87` | VC5 `LIBC.LIB` `ieee87.obj` public export; the MSVC build links it directly to perform the x87 control-word translation and update. | Exact instruction sequence match against the archived `__control87` object; see Finding 399. |
+| `0x004977b0` | `__controlfp` | VC5 `LIBC.LIB` `ieee87.obj` public export; the MSVC build links it directly to clear the denormal mask and delegate to `__control87`. | Exact instruction sequence match against the archived `__controlfp` object; see Finding 399. |
 | `0x00497d60` | `CrtExtendedFloatConvertFormatA` | Converts 80-bit input through format table at 0x004b28a8. | `LEGORR.full.c` pseudocode and caller references. |
 | `0x00497d80` | `CrtExtendedFloatConvertFormatB` | Converts 80-bit input through format table at 0x004b28c0. | `LEGORR.full.c` pseudocode and caller references. |
-| `0x00497da0` | `CrtDoubleToExtendedFloatConvertA` | Builds 80-bit temporary from double and delegates to format A. | `LEGORR.full.c` pseudocode and caller references. |
-| `0x00497de0` | `CrtDoubleToExtendedFloatConvertB` | Builds 80-bit temporary from double and delegates to format B. | `LEGORR.full.c` pseudocode and caller references. |
+| `0x00497da0` | `__atodbl` | Exact VC5 `LIBC.LIB` `intrncvt.obj` wrapper; parses the numeric string through `___strgtold12` and converts its extended80 result with `__ld12tod`. | Its 0x40-byte body matches the reference outside two relocations; MSVC builds link the runtime directly. |
+| `0x00497de0` | `__atoflt` | Exact VC5 `LIBC.LIB` `intrncvt.obj` wrapper; parses the numeric string through `___strgtold12` and converts its extended80 result with `__ld12tof`. | Its 0x40-byte body matches the reference outside two relocations; MSVC builds link the runtime directly. |
 | `0x00498ce0` | `CrtScanfNumericConversionAssign` | Selects numeric conversion, builds internal number, updates FPU/errno. | `LEGORR.full.c` pseudocode and caller references. |
 
 Supporting REA records for the audited regions include `legorr-engine-helper-audit-terrain-expansion-9.bundle`, `legorr-engine-helpers-expansion-17.bundle`, `legorr-ui-render-audit-2026-10-23.bundle`, `legorr-ddscene.bundle`, `legorr-engine-helper-audit-high.bundle`, `legorr-engine-helper-audit-text-io-expansion-9.bundle`, `legorr-engine-helpers-expansion-18.bundle`, `legorr-crt-third-pass-2026-10-23.bundle`, and `legorr-crt-runtime-audit`.

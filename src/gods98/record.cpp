@@ -8,7 +8,7 @@
 #include "view.hpp"
 #include "texture.hpp"
 #include "resource.hpp"
-#include "crt.hpp"
+#include "crt/crt.hpp"
 #include "game/util.hpp"
 #include <math.h>  /* sqrtf for the instance-quad normal window */
 #include <limits.h>
@@ -1192,7 +1192,7 @@ __declspec(naked) void* menu_item_choice_strings_allocate(
         push esi
         push edi
         push 0x1c
-        call engine_heap_alloc
+        call malloc
         mov esi, eax
         add esp, 4
         test esi, esi
@@ -1206,7 +1206,7 @@ __declspec(naked) void* menu_item_choice_strings_allocate(
         mov ebp, dword ptr [esp + 0x14]
         lea ebx, [ebp * 4]
         push ebx
-        call engine_heap_alloc
+        call malloc
         mov edi, eax
         add esp, 4
         test edi, edi
@@ -1285,7 +1285,7 @@ __declspec(naked) void* menu_param_record_create(
         push esi
         push edi
         push 0x5c
-        call engine_heap_alloc
+        call malloc
         mov esi, eax
         mov ecx, 0x17
         xor eax, eax
@@ -1389,14 +1389,14 @@ __declspec(naked) void menu_record_resources_release(void* record)
         push ebx
         je release_second
         push eax
-        call engine_heap_free
+        call free
         add esp, 4
     release_second:
         mov eax, dword ptr [edi + 0x24]
         cmp eax, ebp
         je release_entries
         push eax
-        call engine_heap_free
+        call free
         add esp, 4
     release_entries:
         cmp dword ptr [edi], ebp
@@ -1413,7 +1413,7 @@ __declspec(naked) void menu_record_resources_release(void* record)
         je release_textures_test
         mov ecx, dword ptr [ecx + 4]
         push ecx
-        call engine_heap_free
+        call free
         add esp, 4
         jmp release_entry_next
     release_textures_test:
@@ -1441,11 +1441,11 @@ __declspec(naked) void menu_record_resources_release(void* record)
     release_array:
         mov ecx, dword ptr [edi]
         push ecx
-        call engine_heap_free
+        call free
         add esp, 4
     release_record:
         push edi
-        call engine_heap_free
+        call free
         add esp, 4
         pop ebx
         pop esi
@@ -1569,8 +1569,8 @@ void* menu_section_record_create(const char* name, const char* title,
         }
         if (second != NULL) {
             record_window_put_u32(rec, 19, 1);
-            record_window_put_u32(rec, 20, (uint32_t)strtol(first, NULL, 10));
-            record_window_put_u32(rec, 21, (uint32_t)strtol(second, NULL, 10));
+            record_window_put_u32(rec, 20, (uint32_t)atoi(first));
+            record_window_put_u32(rec, 21, (uint32_t)atoi(second));
         }
     }
     return rec;
@@ -1630,7 +1630,7 @@ int menu_item_image_set(void* item, const char* image_config, int primary)
     char text[1024];
     size_t length = strlen(image_config);
     if (length >= sizeof(text)) return 0;
-    memcpy(text, image_config, length + 1);
+    strncpy(text, image_config, length + 1);
     char* tokens[4] = { NULL, NULL, NULL, NULL };
     const int count = sound_variant_split(text, tokens, ",");
     if (count == 0) return 0;
@@ -1638,8 +1638,8 @@ int menu_item_image_set(void* item, const char* image_config, int primary)
         const size_t flags_offset = 13 * sizeof(void*);
         const uint32_t flags = rec_dword(item, flags_offset) | 1u;
         __builtin_memcpy((char*)item + flags_offset, &flags, sizeof(flags));
-        const float x = util_atof(tokens[1]);
-        const float y = util_atof(tokens[2]);
+        const float x = (float)atof(tokens[1]);
+        const float y = (float)atof(tokens[2]);
         __builtin_memcpy((char*)item + 14 * sizeof(void*), &x, sizeof(x));
         __builtin_memcpy((char*)item + 15 * sizeof(void*), &y, sizeof(y));
     }
@@ -1647,7 +1647,7 @@ int menu_item_image_set(void* item, const char* image_config, int primary)
     const int field = primary ? 4 : 5;
     *(void**)((char*)item + (size_t)field * sizeof(void*)) = surface;
     if (surface == NULL) return 0;
-    if (count == 4 && util_atoi(tokens[3]) == 1) {
+    if (count == 4 && atoi(tokens[3]) == 1) {
         if (primary) {
             resource_record_add_ref(surface);
         } else {
@@ -1660,27 +1660,13 @@ int menu_item_image_set(void* item, const char* image_config, int primary)
     return 1;
 }
 
-static int menu_ascii_casecmp_n(const char* a, const char* b, size_t n)
-{
-    for (size_t i = 0; i < n; ++i) {
-        unsigned char ca = (unsigned char)a[i];
-        unsigned char cb = (unsigned char)b[i];
-        if (ca >= 'A' && ca <= 'Z') ca = (unsigned char)(ca + ('a' - 'A'));
-        if (cb >= 'A' && cb <= 'Z') cb = (unsigned char)(cb + ('a' - 'A'));
-        if (ca != cb) return (int)ca - (int)cb;
-        if (ca == '\0') return 0;
-    }
-    return 0;
-}
-
 // FUNCTION: LEGORR 0x00413f30
 int filename_extension_classify(const void* record)
 {
-    const char* suffix = *(const char* const*)record;
-    while (*suffix != '.') ++suffix;
-    if (strcmp(suffix, ".avi") == 0) return 1;
-    if (strcmp(suffix, ".bmp") == 0) return 2;
-    if (strcmp(suffix, ".lws") == 0) return 3;
+    const char* suffix = crt_strchr((char*)*(const char* const*)record, '.');
+    if (strcasecmp_lite(suffix, ".avi") == 0) return 1;
+    if (strcasecmp_lite(suffix, ".bmp") == 0) return 2;
+    if (strcasecmp_lite(suffix, ".lws") == 0) return 3;
     return 0;
 }
 
@@ -1701,7 +1687,7 @@ __declspec(naked) void* menu_item_record_alloc(const char* name,
         push esi
         push edi
         push 0x20
-        call engine_heap_alloc
+        call malloc
         mov esi, eax
         mov ecx, 8
         xor eax, eax
@@ -1712,7 +1698,7 @@ __declspec(naked) void* menu_item_record_alloc(const char* name,
         push 4
         push offset s_menu_null_label
         push edi
-        call strnicmp_lite
+        call _strnicmp
         add esp, 0x0c
         test eax, eax
         je item_record_done
@@ -1752,7 +1738,7 @@ void* menu_item_record_alloc(const char* name, void** list_head,
     void* rec = engine_heap_alloc(8 * sizeof(void*));
     if (rec == NULL) return NULL;
     memset(rec, 0, 8 * sizeof(void*));
-    if (name != NULL && menu_ascii_casecmp_n(name, s_menu_null_label, 4) != 0) {
+    if (name != NULL && strnicmp_lite(name, s_menu_null_label, 4) != 0) {
         char* name_copy = campaign_level_fallback_label(name);
         *(void**)((char*)rec + 0x00) = name_copy;
         *(uint32_t*)((char*)rec + 0x04) =
@@ -1780,6 +1766,23 @@ int menu_list_append(void* list, void* value)
             return 0;
         }
         const uint32_t new_capacity = capacity + 15;
+#if defined(_MSC_VER) && defined(_M_IX86)
+        void* grown;
+        const size_t new_bytes = (size_t)new_capacity * sizeof(void*);
+        if (items == NULL) {
+            grown = malloc(new_bytes);
+            if (grown != NULL) {
+                memset(grown, 0, new_bytes);
+            }
+        } else {
+            grown = realloc(items, new_bytes);
+            if (grown != NULL) {
+                memset((char*)grown + (size_t)capacity * sizeof(void*), 0,
+                       (size_t)(new_capacity - capacity) * sizeof(void*));
+            }
+        }
+        if (grown == NULL) return 0;
+#else
         void* grown = engine_heap_alloc((long)((size_t)new_capacity * sizeof(void*)));
         if (grown == NULL) return 0;
         memset(grown, 0, (size_t)new_capacity * sizeof(void*));
@@ -1787,6 +1790,7 @@ int menu_list_append(void* list, void* value)
             memcpy(grown, items, (size_t)count * sizeof(void*));
             engine_heap_free(items);
         }
+#endif
         items = grown;
         record_window_put_ptr(list, 6, items);
         record_window_put_u32(list, 8, new_capacity);
@@ -1844,7 +1848,7 @@ __declspec(naked) void* menu_item_numeric_range_record_allocate(
         ret
     menu_item_numeric_range_record_allocate_alloc:
         push 0x38
-        call engine_heap_alloc
+        call malloc
         add esp, 4
         test eax, eax
         jne menu_item_numeric_range_record_allocate_store

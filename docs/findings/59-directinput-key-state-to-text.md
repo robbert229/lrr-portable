@@ -42,16 +42,17 @@ comparison used by text entry is an edge check on these bytes.
 When `DAT_00556fa0` is non-null, `EnginePreTick` scans all 256 key-state
 indices. It accepts a nonzero current byte only when the prior-frame byte is
 different, passes the index through `FUN_00411f00`, then sends the returned
-value to `FUN_0048e380` and appends the resulting character while the current
+value through CRT `toupper` at `0x0048e380` and appends the resulting character while the current
 string length is below `0x0b`. At the end of that path it copies current state
 to the mirror and clears current state. This is the text-entry edge path; it
 does not read `MSG.wParam` or consume a `WM_CHAR` argument in this function.
 [Evidence: `ev_9177545a3f38a8b8c2ce52f2211f395983b9d291254b93c21bc8b60556f32631`]
 
-`FUN_0048e380` uses the active keyboard-layout handle when present, consults
-the byte/scancode tables, and calls `FUN_00493ca0` for translation. With no
-layout handle it only uppercases the ASCII range `a`–`z`; therefore the layout
-aware text behavior is conditional on `DAT_00549180` being non-null.
+The called `0x0048e380` entry is VC5 CRT `_toupper`, not a keyboard-layout
+translator. It uses the CRT locale handle, ctype tables, and DBCS mapping to
+uppercase a character; with locale state inactive it only maps ASCII `a`–`z`.
+`DAT_00549180` is the CRT locale handle consumed by this and other locale
+conversion helpers.
 [Evidence: `ev_65c66bb0b3dc7f163e9968f41906323c70347645dff8c5d871a238ced28cd2da`]
 
 ## Caveats

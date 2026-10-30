@@ -16,7 +16,7 @@
  *   FUN_00478ff0  BlockSubgroup   — path + must have children
  *   FUN_00479050  value string    — heap copy; 0 when missing
  *   FUN_004790d0  bool getter     — FUN_00477710 vocab, default 2
- *   FUN_0048d980  float getter    — leading-space skip, strtod-ish
+ *   atof @ 0x0048d980             — leading-space skip, DBCS-aware CRT parse
  *
  * Model note: the corpus indexes tokens in-place into a flat pool of 32-byte
  * records {name, value, depth, chain} (FUN_00479270 pool). This build builds

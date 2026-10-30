@@ -10,6 +10,7 @@
 #include "cmd.hpp"
 #include "gods98/model.hpp"
 #include "gods98/heap.hpp"
+#include "gods98/string.hpp"
 #include "util.hpp"
 #include "gods98/media.hpp"
 #include "gods98/resource.hpp"
@@ -151,11 +152,10 @@ int entity_create(GameContext* ctx, int type, const char* name,
         slot->activity_cap = AI_ACTIVITY_SLOTS;
     }
     if (name != NULL) {
-        int i = 0;
-        for (; i < 31 && name[i] != '\0'; ++i) {
-            slot->name[i] = name[i];
-        }
-        slot->name[i] = '\0';
+        size_t copy_length = strlen(name);
+        if (copy_length > 31u) copy_length = 31u;
+        strncpy(slot->name, name, copy_length);
+        slot->name[copy_length] = '\0';
     }
     return (*cnt)++;
 }
@@ -181,6 +181,9 @@ static int s_model_cache_n = 0;
 
 static char* model_dup(const char* s)
 {
+#if defined(_MSC_VER)
+    return _strdup(s);
+#else
     size_t n = strlen(s);
     char* d = (char*)malloc(n + 1);
     if (d != NULL) {
@@ -188,6 +191,7 @@ static char* model_dup(const char* s)
         d[n] = '\0';
     }
     return d;
+#endif
 }
 
 static const void* model_for_path(const char* path)
@@ -222,11 +226,10 @@ void entity_set_model(EntitySlot* e, const char* path)
     e->model_path[0] = '\0';
     e->model = NULL;
     if (path != NULL && path[0] != '\0') {
-        int i = 0;
-        for (; i < 63 && path[i] != '\0'; ++i) {
-            e->model_path[i] = path[i];
-        }
-        e->model_path[i] = '\0';
+        size_t path_length = strlen(path);
+        if (path_length > 63u) path_length = 63u;
+        strncpy(e->model_path, path, path_length);
+        e->model_path[path_length] = '\0';
         e->model = model_for_path(path);
     }
 }
@@ -417,35 +420,6 @@ static const NameCode s_special_names[] = {
     { "lasershot", 19 },
 };
 
-static int nc_find(const NameCode* t, size_t n, const char* folded)
-{
-    for (size_t i = 0; i < n; ++i) {
-        if (strcmp(t[i].name, folded) == 0) {
-            return t[i].code;
-        }
-    }
-    return 0;
-}
-
-/* Table match with its row (the resolver's registry-index shape). */
-static int nc_find_indexed(const NameCode* t, size_t n, const char* folded,
-                           int* row)
-{
-    for (size_t i = 0; i < n; ++i) {
-        if (strcmp(t[i].name, folded) == 0) {
-            if (row != NULL) {
-                *row = (int)i;
-            }
-            return t[i].code;
-        }
-    }
-    return 0;
-}
-
-/* ASCII case-insensitive compare (the corpus uses __strcmpi for the .ol
- * type names and driving refs). */
-static int ci_strcmp(const char* a, const char* b);
-
 /* Resolver pair (FUN_0042e8b0 shape): answers known-1 with the corpus's
  * (type, registry-row) outputs. The corpus zeroes the row slot at entry
  * (`mov ebx,[esp+0x10]` / `mov [ebx],0` at 0x42e8b8, before the name load
@@ -465,7 +439,7 @@ static int entity_type_pair_for_name(const char* name, int* type_out,
     if (name == NULL || name[0] == '\0') {
         return 0; /* unregistered — the corpus aborts, the port skips */
     }
-    if (ci_strcmp(name, "tvcamera") == 0) {
+    if (strcasecmp_lite(name, "tvcamera") == 0) {
         if (type_out != NULL) {
             *type_out = -1; /* follow-camera branch in FUN_0042e020 */
         }
@@ -476,31 +450,35 @@ static int entity_type_pair_for_name(const char* name, int* type_out,
         }
         return 1;
     }
-    char c[24];
-    size_t i = 0;
-    for (; i < sizeof(c) - 1 && name[i] != '\0'; ++i) {
-        char ch = name[i];
-        c[i] = (ch >= 'A' && ch <= 'Z') ? (char)(ch - 'A' + 'a') : ch;
-    }
-    c[i] = '\0';
-
     int code;
     int row = 0;
-    code = nc_find_indexed(s_special_names, 13, c, &row);
+    size_t i;
+    code = 0;
+    for (i = 0; i < 13; ++i) {
+        if (strcasecmp_lite(s_special_names[i].name, name) == 0) {
+            code = s_special_names[i].code;
+            row = (int)i;
+            break;
+        }
+    }
     if (code != 0) {
         if (type_out != NULL) {
             *type_out = code;
         }
         if (row_out != NULL) {
-            if (strcmp(c, "ore") == 0) {
-                *row_out = 0; /* the corpus's dedicated index stores */
-            } else if (strcmp(c, "processedore") == 0) {
-                *row_out = 1;
+            if (code == 7) {
+                *row_out = row - 2; /* Ore and ProcessedOre occupy rows 2 and 3. */
             }
         }
         return 1;
     }
-    code = nc_find_indexed(s_vehicle_names, 12, c, &row);
+    for (i = 0; i < 12; ++i) {
+        if (strcasecmp_lite(s_vehicle_names[i].name, name) == 0) {
+            code = s_vehicle_names[i].code;
+            row = (int)i;
+            break;
+        }
+    }
     if (code != 0) {
         if (type_out != NULL) {
             *type_out = code;
@@ -510,7 +488,13 @@ static int entity_type_pair_for_name(const char* name, int* type_out,
         }
         return 1;
     }
-    code = nc_find_indexed(s_minifig_names, 1, c, &row);
+    for (i = 0; i < 1; ++i) {
+        if (strcasecmp_lite(s_minifig_names[i].name, name) == 0) {
+            code = s_minifig_names[i].code;
+            row = (int)i;
+            break;
+        }
+    }
     if (code != 0) {
         if (type_out != NULL) {
             *type_out = code;
@@ -520,7 +504,13 @@ static int entity_type_pair_for_name(const char* name, int* type_out,
         }
         return 1;
     }
-    code = nc_find_indexed(s_creature_names, 8, c, &row);
+    for (i = 0; i < 8; ++i) {
+        if (strcasecmp_lite(s_creature_names[i].name, name) == 0) {
+            code = s_creature_names[i].code;
+            row = (int)i;
+            break;
+        }
+    }
     if (code != 0) {
         if (type_out != NULL) {
             *type_out = code;
@@ -530,7 +520,13 @@ static int entity_type_pair_for_name(const char* name, int* type_out,
         }
         return 1;
     }
-    code = nc_find_indexed(s_building_names, 10, c, &row);
+    for (i = 0; i < 10; ++i) {
+        if (strcasecmp_lite(s_building_names[i].name, name) == 0) {
+            code = s_building_names[i].code;
+            row = (int)i;
+            break;
+        }
+    }
     if (code != 0) {
         if (type_out != NULL) {
             *type_out = code;
@@ -565,33 +561,16 @@ int entity_type_row_for_name(const char* name, int* type_out, int* row_out)
 
 static void ol_strncpy(char* dst, size_t n, const char* src)
 {
-    size_t i = 0;
-    for (; i + 1 < n && src != NULL && src[i] != '\0'; ++i) {
-        dst[i] = src[i];
+    if (n == 0) {
+        dst[0] = '\0';
+        return;
     }
-    dst[i] = '\0';
-}
-
-/* ASCII case-insensitive compare (the corpus uses __strcmpi for the .ol
- * type names and driving refs). */
-static int ci_strcmp(const char* a, const char* b)
-{
-    while (*a != '\0' && *b != '\0') {
-        int ca = (int)(unsigned char)*a;
-        int cb = (int)(unsigned char)*b;
-        if (ca >= 'A' && ca <= 'Z') {
-            ca += 0x20;
-        }
-        if (cb >= 'A' && cb <= 'Z') {
-            cb += 0x20;
-        }
-        if (ca != cb) {
-            return ca - cb;
-        }
-        ++a;
-        ++b;
+    if (src == NULL) {
+        dst[0] = '\0';
+        return;
     }
-    return (int)(unsigned char)*a - (int)(unsigned char)*b;
+    strncpy(dst, src, n - 1);
+    dst[n - 1] = '\0';
 }
 
 int object_list_load(GameContext* ctx, BlockFile* cfg, const char* level_name)
@@ -651,12 +630,12 @@ int object_list_load_file(GameContext* ctx, const char* olist)
         const char* t = obj_val(ol, rname, name, "type");
         ol_strncpy(op.type_name, sizeof(op.type_name), t);
         op.type = entity_type_for_name(op.type_name);
-        op.x = util_atof(obj_val(ol, rname, name, "xPos"));
-        op.y = util_atof(obj_val(ol, rname, name, "yPos"));
-        op.heading = util_atof(obj_val(ol, rname, name, "heading"));
+        op.x = (float)atof(obj_val(ol, rname, name, "xPos"));
+        op.y = (float)atof(obj_val(ol, rname, name, "yPos"));
+        op.heading = (float)atof(obj_val(ol, rname, name, "heading"));
         op.z = 0.0f;
         op.rot = op.heading;
-        op.health = (int)util_atof(obj_val(ol, rname, name, "health"));
+        op.health = (int)atof(obj_val(ol, rname, name, "health"));
         ol_strncpy(op.driving, sizeof(op.driving),
                    obj_val(ol, rname, name, "driving"));
         ol_strncpy(op.model, sizeof(op.model), obj_val(ol, rname, name, "Model"));

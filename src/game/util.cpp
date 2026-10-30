@@ -7,11 +7,6 @@
 #include "gods98/resource.hpp"
 #include "util.hpp"
 
-static int util_isspace_c(int c)
-{
-    return c == ' ' || c == '\t' || c == '\r' || c == '\n';
-}
-
 const char* util_root_name(BlockFile* bf)
 {
     static char root_buf[64];
@@ -41,18 +36,6 @@ const char* util_level_cfg_path(BlockFile* cfg, const char* level,
     return block_get_strptr(cfg, out) != NULL ? out : NULL;
 }
 
-// FUNCTION: LEGORR 0x0048db70
-long util_atoi(const char* s)
-{
-    return s != NULL ? strtol(s, NULL, 10) : 0;
-}
-
-// FUNCTION: LEGORR 0x0048d980
-float util_atof(const char* s)
-{
-    return s != NULL ? (float)strtod(s, NULL) : 0.0f;
-}
-
 /* Split a NUL-terminated token stream produced by `src` into fields.
  * `|` is a field separator too (the config's pipe-delimited
  * `file.bmp|x|y` triples, finding 09 §"Config format"). Returns the number
@@ -60,21 +43,20 @@ float util_atof(const char* s)
 static int util_tokenize_fields(const char* src,
                                 char out[UTIL_QUERY_MAX_FIELDS][256], size_t out_sz)
 {
+    static const char delimiters[] = " \t\r\n|";
     int n = 0;
     const char* p = src;
     while (*p != '\0' && n < UTIL_QUERY_MAX_FIELDS) {
-        while (*p != '\0' && (util_isspace_c((unsigned char)*p) || *p == '|')) {
-            ++p;
-        }
+        p += strspn(p, delimiters);
         if (*p == '\0') {
             break;
         }
-        int i = 0;
-        while (*p != '\0' && !util_isspace_c((unsigned char)*p) && *p != '|'
-               && i < (int)out_sz - 1) {
-            out[n][i++] = *p++;
-        }
-        out[n][i] = '\0';
+        size_t token_length = strcspn(p, delimiters);
+        size_t copy_length = token_length;
+        if (copy_length >= out_sz) copy_length = out_sz - 1;
+        memcpy(out[n], p, copy_length);
+        out[n][copy_length] = '\0';
+        p += copy_length;
         ++n;
     }
     return n;

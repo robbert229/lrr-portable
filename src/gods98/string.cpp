@@ -4,22 +4,28 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "heap.hpp"
+#include "crt/crt.hpp"
 #include "string.hpp"
+
+#if defined(_MSC_VER)
+/* VC5's output.obj formatter is the same __output routine used by the
+ * reference's bounded-string stream wrapper at 0x48e1e0. */
+extern "C" int __cdecl _output(FILE* stream, const char* format,
+                                va_list args);
+extern "C" int __cdecl _flsbuf(int value, FILE* stream);
+#endif
 
 // FUNCTION: LEGORR 0x00477550
 char* string_duplicate(const char* text)
 {
-    /* Corpus: engine_heap_alloc(len+1) then the strcpy intrinsic (second
-     * scas + dword/byte rep movs). engine_heap_alloc failure rides blind
-     * exactly like the corpus (no guard). */
-    char* copy = (char*)engine_heap_alloc((long)(strlen(text) + 1u));
-    strcpy(copy, text);
-    return copy;
+    /* The reference operation is the CRT strdup idiom on the engine heap.
+     * VC5's _strdup uses that same malloc/free heap; portable builds use the
+     * CRT shim's engine-heap fallback. */
+    return crt_string_duplicate(text);
 }
 
-/* FormattedTextBufferBuild (FUN_0048e1e0): bounded software equivalent of
- * the engine's va_list formatter. The returned count excludes the NUL. */
+/* FormattedTextBufferBuild (FUN_0048e1e0): VC5 builds use output.obj's
+ * __output with a string-backed FILE; other builds use bounded vsnprintf. */
 // FUNCTION: LEGORR 0x0048E1E0
 uint32_t formatted_text_buffer_build(char* out, size_t capacity,
                                      const char* format, va_list args)
@@ -27,160 +33,28 @@ uint32_t formatted_text_buffer_build(char* out, size_t capacity,
     if (out == NULL || capacity == 0) return 0;
     out[0] = '\0';
     if (format == NULL) return 0;
-#if defined(_MSC_VER) && _MSC_VER < 1900
-    const int result = _vsnprintf(out, capacity, format, args);
-    if (result < 0) out[capacity - 1] = '\0';
+#if defined(_MSC_VER)
+    FILE stream;
+    int result;
+    /* Match the target's temporary string stream: __output only needs these
+     * four fields when _IOSTRG is set. */
+    stream._ptr = out;
+    stream._cnt = (int)((capacity - 1u) > 0x7fffffffu
+                            ? 0x7fffffffu : capacity - 1u);
+    stream._base = out;
+    stream._flag = 0x42; /* _IOWRT | _IOSTRG */
+    result = _output(&stream, format, args);
+    if (stream._cnt >= 0) {
+        *stream._ptr = '\0';
+    }
+    else {
+        _flsbuf(0, &stream);
+    }
+    return (uint32_t)result;
 #else
     (void)vsnprintf(out, capacity, format, args);
-#endif
     return (uint32_t)strlen(out);
-}
-
-/* FUN_0048da50: substring find. Keep the corpus's leading-byte/leading-pair
- * gates and compare the remaining needle two bytes at a time. Advancing the
- * candidate one byte after a failed pair retains strstr's overlapping-match
- * behavior. */
-// FUNCTION: LEGORR 0x0048da50
-const char* string_find_substring(const char* haystack, const char* needle)
-{
-    const unsigned char* text = (const unsigned char*)haystack;
-    const unsigned char* pattern = (const unsigned char*)needle;
-    const unsigned char first = pattern[0];
-    if (first == 0u) {
-        return haystack;
-    }
-    const unsigned char second = pattern[1];
-    if (second == 0u) {
-        return (const char*)strchr(haystack, first);
-    }
-    for (;;) {
-        unsigned char current;
-        while ((current = *text) != first) {
-            if (current == 0u) {
-                return NULL;
-            }
-            ++text;
-        }
-        const unsigned char* candidate = text;
-        ++text;
-        if (*text == second) {
-            const unsigned char* scan = text + 1;
-            const unsigned char* next = pattern + 2;
-            for (;;) {
-                const unsigned char first_tail = *next;
-                if (first_tail == 0u) {
-                    return (const char*)candidate;
-                }
-                if (*scan != first_tail) {
-                    break;
-                }
-                ++scan;
-                ++next;
-                const unsigned char second_tail = *next;
-                if (second_tail == 0u) {
-                    return (const char*)candidate;
-                }
-                if (*scan != second_tail) {
-                    break;
-                }
-                ++scan;
-                ++next;
-            }
-        }
-    }
-}
-
-/* CaseInsensitiveSubstringFind (FUN_00477610) — see string.hpp. The
- * bounded fold compare models the corpus's __strnicmp: ASCII case-fold,
- * exactly `n` bytes, stopping early when the bytes agree on a NUL.
- * Deviation pinned: the corpus keeps striding a terminated haystack byte
- * against an unterminated needle tail; the port's compare stops. */
-static int s_strnfoldcmp(const char* a, const char* b, size_t n)
-{
-    for (size_t i = 0; i < n; ++i) {
-        int ca = (unsigned char)a[i];
-        int cb = (unsigned char)b[i];
-        if (ca >= 'A' && ca <= 'Z') {
-            ca += 'a' - 'A';
-        }
-        if (cb >= 'A' && cb <= 'Z') {
-            cb += 'a' - 'A';
-        }
-        if (ca != cb) {
-            return ca - cb;
-        }
-        if (ca == 0) {
-            return 0;
-        }
-    }
-    return 0;
-}
-
-/* __strcmpi (FUN_0048ff10): compare raw bytes first, then fold ASCII A-Z on
- * a mismatch and retry when the folded bytes agree. The corpus normalizes a
- * remaining mismatch to -1/+1 (not the byte difference); its initialized
- * locale-table branch calls the shared fold helper instead. This inline
- * range-check spelling covers the corpus's table-uninitialized branch. */
-// FUNCTION: LEGORR 0x0048ff10
-int strcasecmp_lite(const char* a, const char* b)
-{
-    const unsigned char* pa = (const unsigned char*)a;
-    const unsigned char* pb = (const unsigned char*)b;
-    for (;;) {
-        unsigned char ca = *pa++;
-        unsigned char cb = *pb++;
-        if (ca == cb) {
-            if (ca == 0u) return 0;
-            continue;
-        }
-        if (ca >= (unsigned char)'A' && ca <= (unsigned char)'Z') {
-            ca = (unsigned char)(ca + 0x20u);
-        }
-        if (cb >= (unsigned char)'A' && cb <= (unsigned char)'Z') {
-            cb = (unsigned char)(cb + 0x20u);
-        }
-        if (ca != cb) return ca < cb ? -1 : 1;
-    }
-}
-
-/* __strnicmp (FUN_0049dab0): the CRT's bounded case-insensitive compare —
- * ASCII-folded (A-Z += 0x20 via range checks, the corpus's table-uninit
- * fallback shape), stops at NUL or the count, answers 0/-1/+1 (the corpus's
- * sign-normalized result, not the character difference). Deviation: the
- * corpus lazy-builds a fold table at DAT_00549178; the port folds inline. */
-// FUNCTION: LEGORR 0x0049dab0
-int strnicmp_lite(const char* a, const char* b, int count)
-{
-    if (count == 0) {
-        return 0;
-    }
-    const unsigned char* pa = (const unsigned char*)a;
-    const unsigned char* pb = (const unsigned char*)b;
-    unsigned char ca;
-    unsigned char cb;
-    do {
-        ca = *pa;
-        cb = *pb;
-        if (ca == 0u || cb == 0u) {
-            break; /* the corpus compares the raw bytes at a NUL break */
-        }
-        ++pa;
-        ++pb;
-        if (ca >= (unsigned char)'A' && ca <= (unsigned char)'Z') {
-            ca = (unsigned char)(ca + 0x20u);
-        }
-        if (cb >= (unsigned char)'A' && cb <= (unsigned char)'Z') {
-            cb = (unsigned char)(cb + 0x20u);
-        }
-        if (ca != cb) {
-            break;
-        }
-        --count;
-    } while (count != 0);
-    if (ca == cb) {
-        return 0;
-    }
-    return (ca < cb) ? -1 : 1;
+#endif
 }
 
 // FUNCTION: LEGORR 0x00477610
@@ -213,9 +87,10 @@ const char* case_insensitive_substring_find(const char* haystack,
     return NULL;
 }
 
-/* FUN_00493ec0: the corpus walks byte-wise, decrementing the bound before
- * checking each byte, then returns the original bound if no NUL was found. */
-// FUNCTION: LEGORR 0x00493ec0
+/* Portable fallback for VC5 aw_str.obj's private _strncnt helper at
+ * 0x00493ec0. Its Reccmp library annotation lives with the CRT aliases in
+ * src/crt/crt.cpp; keep this implementation only for non-MSVC builds. */
+#if !defined(_MSC_VER)
 int string_length_bounded(const char* text, int limit)
 {
     const char* p = text;
@@ -232,6 +107,7 @@ int string_length_bounded(const char* text, int limit)
     }
     return (int)(p - text);
 }
+#endif
 
 /* FUN_00478f50: `root::comp1::comp2…` into the static builder. */
 // FUNCTION: LEGORR 0x00478f50
@@ -258,31 +134,32 @@ const char* string_path_join(const char* root, ...)
         if (room - used < 3) {
             break; /* out of room: stop joining (bounded deviation) */
         }
-        s_path[used++] = ':';
-        s_path[used++] = ':';
+        strncat(s_path, "::", 2);
+        used += 2;
         len = strlen(part);
         if (len > (size_t)(room - used - 1)) {
             len = (size_t)(room - used - 1);
         }
-        memcpy(s_path + used, part, len);
+        strncat(s_path, part, len);
         used += (int)len;
-        s_path[used] = '\0';
     }
     va_end(ap);
     return s_path;
 }
 
 /* StringCaseSubstringFind (2026-10-25) — FUN_0048c040. Case-insensitive
- * substring walk over the corpus's __strnicmp (the same bounded fold
+ * substring walk over the corpus's __strnicmp (the same bounded CRT
  * compare as CaseInsensitiveSubstringFind): answers the match pointer and
  * reports the byte index and the needle length through the optional
  * outputs. The corpus gates on a non-empty haystack and a non-empty
  * needle. The fold compare uses the CRT's bounded compare. */
 
+#if !defined(_MSC_VER) || !defined(_M_IX86)
 int string_folded_compare(const char* a, const char* b, size_t n)
 {
-    return s_strnfoldcmp(a, b, n);
+    return strnicmp_lite(a, b, (int)n);
 }
+#endif
 
 // FUNCTION: LEGORR 0x0048c040
 char* string_case_substring_find(char* haystack, const char* needle,

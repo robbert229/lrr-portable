@@ -31,7 +31,7 @@ helpers to their callers.
 | 0x47f600 | DebugOutputFormat | Formats a variadic message into a stack buffer and sends it to OutputDebugStringA. File routines use it for operation diagnostics. |
 | 0x485230 | TextBufferAppendFormat | Variadic wrapper for appending formatted text to a ring buffer. |
 | 0x485250 | TextBufferAppendVFormat | Formats into a temporary buffer, skips through a requested number of BEL markers, then appends bytes to a ring buffer, wrapping and setting its pending flag at capacity. |
-| 0x493c10 | FpuControlWordUpdateMasked | Updates selected x87 control-word bits and returns the previous control word. The Ghidra pseudocode omits the stack arguments; the evidence bundle includes the instruction-level observation. |
+| 0x493c10 | `__ctrlfp` | Exact VC5 `LIBC.LIB` `fpctrl.obj` match; the MSVC build links the runtime entry directly. It updates selected x87 control-word bits and returns the previous word. The Ghidra pseudocode omits the stack arguments; the evidence bundle includes the instruction-level observation. See Finding 399. |
 | 0x494c70 | ScanStreamGetChar | Returns the next buffered scan byte, refilling the stream when its current buffer is empty. |
 
 **Evidence.** Direct pseudocode for all fifteen targets is in
