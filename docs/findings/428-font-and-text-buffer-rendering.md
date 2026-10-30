@@ -18,7 +18,7 @@ This map covers the 25 functions assigned by Issue #178. They form a shared path
 
 The wrappers share this core with different modes: `FormattedTextFormatDraw` (`0x0047a150`) runs format/measure mode and can store the measured width through an optional pointer; `RewardTextDraw` (`0x0047a180`) and `FormattedTextDraw` (`0x0047a1b0`) enable drawing at the requested origin. Finding 232 maps the glyph and formatted-text behavior. The menu path queues `FormattedTextDraw` calls during its tick (finding 393), while scrolling and debug text use the width/draw wrappers described in finding 427.
 
-`FormattedTextBufferBuild` initializes an output cursor and formatting state, calls `EngineFormatStringToStream` (`0x004909d0`) to expand the printf-style arguments, terminates the output when it fits, and dispatches the formatter's error path on overflow. Finding 397 traces the shared formatter and its wider set of supported specifiers. `%b` handling belongs to the text-draw wrapper's preprocessing; it is not a standard conversion in the shared formatter.
+`FormattedTextBufferBuild` initializes a string-backed `FILE` record and calls VC5 `__output` (`0x004909d0`) to expand the printf-style arguments, then terminates the output cursor or calls `__flsbuf` on overflow. The MSVC port now uses that runtime path directly while setting the stream's available byte count from its capacity argument; portable builds use bounded `vsnprintf`. Finding 397 traces the shared formatter and its wider set of supported specifiers. `%b` handling belongs to the text-draw wrapper's preprocessing; it is not a standard conversion in the shared formatter.
 
 ## Text widget storage and append path
 

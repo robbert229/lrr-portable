@@ -50,7 +50,7 @@ Runs first in `EngineTick`. When `DAT_00556fa0` is non-null, it treats it as a
 mutable **string pointer** (observed in object rename mode), walks the
 256-byte key table, and for
 each newly pressed key calls `FUN_00411f00(key)` (scan-code→context check) and
-`FUN_0048e380(key)` (key→ASCII), appending the char to the string and NULing.
+CRT `_toupper` (`0x0048e380`), appending the uppercased char to the string and NULing.
 Afterwards it snapshots `DAT_0076ab80…` into `DAT_004de430…` and clears the
 current table — the mirror trick that makes edge detection work in
 `MainSimStep`. If certain "menu" keys were pressed (`FUN_0047a800` +
@@ -130,11 +130,11 @@ Field `ctx[9]/[10]` are two camera handles (`FUN_004755e0 = teleport/offset`,
 New primitives identified: `FUN_00425c30` (transition controller),
 `FUN_004525c0` (selection pointer), `FUN_0041fb40` (time scale),
 `FUN_004589c0` (quit poll), `FUN_004772d0` (screen→world),
-`FUN_00437880` (entity rename), `FUN_0048e380` (key→ASCII).
+`FUN_00437880` (entity rename), CRT `_toupper` (`0x0048e380`).
 
 ## Next targets
 
 1. `FUN_004589c0` — done → [05 — Exit, Selection & Text Input](05-exit-selection-and-text-input.md).
 2. Message-config origin — done: module-static, not level data (doc 05).
 3. Entity root / selection cluster `0x4520d0…0x452da0` (doc 05 §`SelectedEntity`).
-4. `FUN_00411f00` / `FUN_0048e380` — done (doc 05 §`KeyContextCheck`, `KeyToAscii`).
+4. `FUN_00411f00` / CRT `_toupper` — done (doc 05 §`KeyContextCheck`, `toupper`).

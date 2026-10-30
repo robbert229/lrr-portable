@@ -279,7 +279,7 @@ typedef struct FrontEnd {
     /* Overlay players open for the currently active submenu (lazily). */
     const FeSubmenu* overlays_for;  /* which submenu's flics are open     */
     int  overlay_active;            /* selected overlay index, or -1       */
-    uint32_t overlay_rng;           /* per-front-end LCG state              */
+    uint32_t overlay_rng;           /* portable-only front-end LCG state    */
     struct AudioPlayer* audio;      /* optional SFX player                  */
 
     /* CanScroll plane pan lives on each FeSubmenu (corpus DAT_005574e0

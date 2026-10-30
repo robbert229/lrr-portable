@@ -1310,15 +1310,20 @@ void entity_activity23_state_transition(EntitySlot* e)
 
 /* --- random activity attempt (2026-10-24) --------------------------------- */
 
-/* The corpus's shared RNG word (DAT_004afcc8), modelled module-locally
- * the way media.cpp and sound.cpp do — same MSVCRT-style LCG, same
- * 15-bit draw through thunk_FUN_0048e170. */
+/* VC5 rand.obj owns the target RNG word in the classic x86 build; other
+ * builds keep a module-local LCG model for this subsystem. */
+#if !defined(_MSC_VER) || (_MSC_VER >= 1200) || !defined(_M_IX86)
 static uint32_t s_activity_rand_state = 1;
+#endif
 
 static int activity_random_draw(void)
 {
+#if defined(_MSC_VER) && (_MSC_VER < 1200) && defined(_M_IX86)
+    return rand();
+#else
     s_activity_rand_state = s_activity_rand_state * 214013u + 2531011u;
     return (int)((s_activity_rand_state >> 16) & 0x7fffu);
+#endif
 }
 
 /* TryRandomEntityActionFromCodeRange (FUN_00443670): up to five draws

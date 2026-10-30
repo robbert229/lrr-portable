@@ -232,11 +232,13 @@ Flic* flic_open(const char* name)
         /* Loose `Data/AVI/...` overlay copies (avi\PB1.flh etc.) resolve
          * through the movie path helper (case-insensitive, base = game dir). */
         char norm[256];
-        size_t i = 0;
-        for (; i < sizeof(norm) - 1 && name[i] != '\0'; ++i) {
-            norm[i] = (name[i] == '\\') ? '/' : name[i];
+        strncpy(norm, name, sizeof(norm) - 1);
+        norm[sizeof(norm) - 1] = '\0';
+        char* separator = strchr(norm, '\\');
+        while (separator != NULL) {
+            *separator++ = '/';
+            separator = strchr(separator, '\\');
         }
-        norm[i] = '\0';
         const char* wd = getenv("LEGORRR_WAD_DIR");
         char os[512];
         if (movie_path_resolve(wd != NULL && wd[0] != '\0' ? wd : ".",

@@ -1323,3 +1323,41 @@ cannot be guessed.
   combines the two distinct field getters `0x004897d0` / `0x004850e0` into a
   port hook, so neither can be mapped to it. Leave these entries unmarked
   until their actual source boundaries are implemented.
+
+## CRT runtime linkage follow-up — 2026-10-29
+
+- `CrtFileDescriptorFlag40Get @ 0x00498b40` is VC5 `isatty.obj`'s internal
+  `__isatty` entry. The target and archive bodies are identical apart from
+  relocated `__pioinfo` and `_nhandle` references; both return the raw `0x40`
+  flag mask. The MSVC path now calls `_isatty` directly, and portable builds
+  retain their descriptor-table lookup.
+- `BoundedStringLength @ 0x00493ec0` is VC5 `aw_str.obj`'s private
+  `_strncnt` helper. Its `0x30`-byte code section follows the `0x220`-byte
+  `__crtLCMapStringA` body at `0x00493ca0` and matches the target disassembly.
+  Since the MSVC build links that archive member for `__crtLCMapStringA`, the
+  shared bounded-scan implementation is now portable-only; its callers use
+  the matching local helper on other backends.
+- `BoundedWideStringLengthIncludingNull @ 0x0049add0` is VC5 `wcstombs.obj`'s
+  private `_wcsncnt` helper. The archive's `_wcsncnt` section follows
+  `_wcstombs` by `0x1f0` bytes and occupies `0x40` bytes, matching the target
+  helper's code and padding. Since the MSVC build already links `wcstombs.obj`
+  through `_wcstombs`, the duplicate local body is now portable-only and the
+  runtime helper supplies this target address.
+- The VC5 `LIBC.LIB` `rand.obj` is now confirmed as the source for the target
+  entries `0x0048e160` and `0x0048e170`: `_srand` and `_rand` both reference
+  its private `_holdrand$S191` word, initialized to 1, matching target state
+  `DAT_004afcc8`. These entries are marked `LIBRARY` in `level.cpp`; the VC5
+  x86 build routes level, command, AI, sound, media, and menu draws through
+  `rand`/`srand`. Other builds keep the existing per-module LCG models.
+- The duplicate entry at `0x004798a0` is a five-byte jump to `_rand`, not a
+  second LCG body; `rng_thunk_draw15` uses a naked VC5 x86 jump to preserve that
+  target shape. This supersedes the earlier notes above that treated
+  `level_rand_u16` as the source of an independent implementation and left
+  other subsystem copies unmapped.
+- The CRT runtime-error output at `0x004968b0` and `0x004968f0` now maps to
+  `crt0msg.obj`'s `__FF_MSGBANNER` and `__NMSG_WRITE`. Their target bodies
+  match the archive code, including the 0x40-byte banner wrapper and the
+  0x1e0-byte message writer. The MSVC path shares the runtime's
+  `___error_mode`, `___app_type`, and `__adbgmsg` globals; portable builds keep
+  local equivalents. This removes the duplicate message table and output
+  implementation from the VC5 build.

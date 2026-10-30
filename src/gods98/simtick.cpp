@@ -330,9 +330,9 @@ void simtick_manager_tick(int index, float dt, int ingame)
         }
     }
 
-    /* truncate to integer coordinates (corpus __ftol paths). */
-    int ix = (int)slot->smoothed[0];
-    int iy = (int)slot->smoothed[1];
+    /* The corpus floors each coordinate before the integer conversion. */
+    int ix = (int)floor((double)slot->smoothed[0]);
+    int iy = (int)floor((double)slot->smoothed[1]);
 
     if (slot->mode == 0) {
         ++s_repos_n;

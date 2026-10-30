@@ -1,10 +1,78 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 #include <math.h>
+#include <float.h>
 #include <ctype.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#if defined(_MSC_VER)
+#pragma function(fabs)
+#include <io.h>
+#include <mbstring.h>
+#include <mbctype.h>
+#include <time.h>
+#ifdef _ismbblead
+#undef _ismbblead
+#endif
+extern "C" int __cdecl _ismbblead(unsigned int);
+extern "C" void __cdecl __initmbctable(void);
+extern "C" char* __cdecl __crtGetEnvironmentStringsA(void);
+extern "C" void __cdecl _setenvp(void);
+extern "C" int __cdecl __crtsetenv(char*, int);
+extern "C" int __cdecl __wtomb_environ(void);
+extern "C" int __cdecl __crtCompareStringA(unsigned int, unsigned int,
+                                            const char*, int,
+                                            const char*, int, unsigned int);
+extern "C" int __cdecl __crtGetStringTypeA(unsigned int, const char*, int,
+                                            unsigned short*, unsigned int,
+                                            unsigned int);
+extern "C" int __cdecl __crtLCMapStringA(unsigned int, unsigned int,
+                                          const char*, int, void*, int,
+                                          unsigned int);
+extern "C" int __cdecl mbtowc(unsigned short*, const char*, size_t);
+extern "C" int __cdecl wctomb(char*, unsigned short);
+extern "C" int __cdecl _stbuf(FILE*);
+extern "C" void __cdecl _ftbuf(int, FILE*);
+extern "C" int __cdecl _flush(FILE*);
+extern "C" int __cdecl _isatty(int);
+extern "C" void __cdecl _local_unwind2(void*, int);
+extern "C" void __cdecl _cintrindisp2(void);
+extern "C" void __cdecl _set_errno(int);
+extern "C" int __cdecl _errcode(unsigned int);
+extern "C" int __cdecl _handle_exc(unsigned int, double*, unsigned int);
+extern "C" int __cdecl _statfp(void);
+extern "C" int __cdecl _clrfp(void);
+extern "C" void __cdecl _load_CW(unsigned int);
+extern "C" unsigned int __cdecl _checkTOS_withFB(unsigned int,
+                                                  unsigned int);
+extern "C" unsigned int __cdecl _convertTOStoQNaN(void);
+extern "C" unsigned int __cdecl _controlfp(unsigned int, unsigned int);
+extern "C" unsigned int __cdecl _control87(unsigned int, unsigned int);
+extern "C" double __cdecl _umatherr(
+    unsigned long, unsigned long, unsigned long, unsigned long, unsigned long,
+    unsigned long, unsigned long, unsigned long, unsigned long);
+extern "C" double __cdecl _handle_qnan1(unsigned long, unsigned long,
+                                         unsigned long, unsigned long);
+extern "C" int __cdecl _atodbl(double*, const char*);
+extern "C" int __cdecl _atoflt(float*, const char*);
+extern "C" long __cdecl __loctotime_t(int, int, int, int, int, int, int);
+extern "C" int __cdecl _ms_p5_mp_test_fdiv(void);
+extern "C" int __cdecl __sptype(unsigned long, unsigned long);
+extern "C" double __cdecl __set_exp(unsigned long, unsigned long, short);
+extern "C" int __cdecl __crtMessageBoxA(const char*, const char*,
+                                         unsigned int);
+extern "C" void __cdecl _raise_exc(unsigned int*, unsigned int*,
+                                    unsigned char, unsigned int,
+                                    const unsigned int*, unsigned int*);
+extern "C" int __cdecl _ctrlfp(unsigned int, unsigned int);
+#ifdef isspace
+#undef isspace
+#endif
+#ifdef _tolower
+#undef _tolower
+#endif
+#endif
 
 #if defined(LEGORRR_BACKEND_WINAPI)
 #include <windows.h>
@@ -21,77 +89,474 @@ extern char** environ;
 #include "string.hpp"
 
 #if defined(_MSC_VER)
-extern "C" void __cdecl _amsg_exit(int);
+#define crt_math_error_code_set _set_errno
+#define crt_math_exception_code_from_status _errcode
+#define crt_math_exception_dispatch _umatherr
+#define crt_double_to_integer_round _handle_exc
+#define double_classify __sptype
+#define crt_runtime_error_message_box_display __crtMessageBoxA
+#define crt_floating_point_exception_raise _raise_exc
+#define fpu_status_word_get_variant_a _statfp
+#define fpu_status_word_get_variant_b _clrfp
+#define fpu_control_word_update_masked _ctrlfp
+#define crt_load_control_word _load_CW
+#define double_exponent_bits_or_special _checkTOS_withFB
+#define crt_fpu_precision_mode_code_get _convertTOStoQNaN
+#define crt_fpu_control_word_update _control87
+#define crt_fpu_control_word_update_mask _controlfp
 #endif
 
+#if defined(_MSC_VER)
+#pragma comment(linker, "/include:_fscanf")
+#pragma comment(linker, "/include:_sscanf")
+#pragma comment(linker, "/include:_remove")
+#pragma comment(linker, "/include:__chmod")
+#pragma comment(linker, "/include:__mkdir")
+#pragma comment(linker, "/include:__getcwd")
+#pragma comment(linker, "/include:__fullpath")
+#pragma comment(linker, "/include:__splitpath")
+#pragma comment(linker, "/include:_fopen")
+#pragma comment(linker, "/include:_fclose")
+/* VC5 LIBC.LIB's fseek.obj and ftell.obj supply the stream position helpers. */
+#pragma comment(linker, "/include:_fseek")
+#pragma comment(linker, "/include:_ftell")
+#pragma comment(linker, "/include:_fread")
+#pragma comment(linker, "/include:_fwrite")
+#pragma comment(linker, "/include:_fgets")
+#pragma comment(linker, "/include:_fgetc")
+#pragma comment(linker, "/include:_vsprintf")
+/* Route CRT stream fallback paths directly to their VC5 runtime entries. */
+#pragma comment(linker, "/include:__filbuf")
+#pragma comment(linker, "/include:__flsbuf")
+#pragma comment(linker, "/include:__flush")
+/* Use VC5's exact stream buffer allocation/release entries. */
+#pragma comment(linker, "/include:__getbuf")
+#pragma comment(linker, "/include:__freebuf")
+/* Map Win32 errors through VC5's exact low-I/O error translation helper. */
+#pragma comment(linker, "/include:__dosmaperr")
+/* Keep close.obj's public descriptor-close entry in the MSVC image. */
+#pragma comment(linker, "/include:__close")
+#pragma comment(linker, "/include:__findclose")
+/* Pull the VC5 shared-open entry used by the target's descriptor path. */
+#pragma comment(linker, "/include:__sopen")
+#pragma comment(linker, "/include:__get_osfhandle")
+#pragma comment(linker, "/include:__isatty")
+#pragma comment(linker, "/include:__alloc_osfhnd")
+#pragma comment(linker, "/include:__set_osfhnd")
+#pragma comment(linker, "/include:__free_osfhnd")
+#pragma comment(linker, "/include:__stbuf")
+#pragma comment(linker, "/include:__ftbuf")
+/* Retain the VC5 public descriptor I/O entries and their exact table logic. */
+#pragma comment(linker, "/include:__lseek")
+#pragma comment(linker, "/include:__read")
+#pragma comment(linker, "/include:__write")
+#pragma comment(linker, "/include:__chsize")
+#pragma comment(linker, "/include:_raise")
+/* Pull the exact runtime-error banner and message writer from crt0msg.obj. */
+#pragma comment(linker, "/include:__FF_MSGBANNER")
+#pragma comment(linker, "/include:__NMSG_WRITE")
+/* Pull VC5's single-argument floating-point exception helper. */
+#pragma comment(linker, "/include:__handle_qnan1")
+/* Pull VC5's math-status to errno mapper from fpexcept.obj. */
+#pragma comment(linker, "/include:__set_errno")
+/* Pull VC5's floating-point status to errno-code mapper from fpexcept.obj. */
+#pragma comment(linker, "/include:__errcode")
+/* Pull VC5's math exception dispatcher from fpexcept.obj. */
+#pragma comment(linker, "/include:__umatherr")
+/* Pull VC5's floating-point status/result handler from fpexcept.obj. */
+#pragma comment(linker, "/include:__handle_exc")
+/* Pull the public special-value classifier from the VC5 math runtime. */
+#pragma comment(linker, "/include:__sptype")
+/* Keep the target's significand/exponent assembler in VC5 LIBC.LIB. */
+#pragma comment(linker, "/include:__set_exp")
+/* Pull VC5's dynamically resolved runtime-error message box helper. */
+#pragma comment(linker, "/include:___crtMessageBoxA")
+/* Pull VC5's FPIEEE exception-record builder from fpexcept.obj. */
+#pragma comment(linker, "/include:__raise_exc")
+/* Pull VC5's status-word readers/clearer from fpctrl.obj. */
+#pragma comment(linker, "/include:__statfp")
+#pragma comment(linker, "/include:__clrfp")
+/* Pull the public common.obj helper that loads the requested x87 control word. */
+#pragma comment(linker, "/include:__load_CW")
+/* Pull the public common.obj exponent/special-value check helper. */
+#pragma comment(linker, "/include:__checkTOS_withFB")
+/* Pull the public common.obj NaN conversion helper. */
+#pragma comment(linker, "/include:__convertTOStoQNaN")
+/* Keep the adjacent public common.obj x87/exception helpers from the archive. */
+#pragma comment(linker, "/include:__twoToTOS")
+/* Pull adj_fdiv.obj, which supplies the target's x87 remainder/adjacent helpers. */
+#pragma comment(linker, "/include:__adj_fprem")
+#pragma comment(linker, "/include:__fload_withFB")
+#pragma comment(linker, "/include:__fast_exit")
+#pragma comment(linker, "/include:__check_overflow_exit")
+#pragma comment(linker, "/include:__check_range_exit")
+/* Pull VC5's exact x87 control-word updater from fpctrl.obj. */
+#pragma comment(linker, "/include:__ctrlfp")
+/* Pull VC5's public control-word APIs; __control87 owns its private helpers. */
+#pragma comment(linker, "/include:__control87")
+#pragma comment(linker, "/include:__controlfp")
+/* Pull VC5's exact x87 status-trigger helper from fpctrl.obj. */
+#pragma comment(linker, "/include:__set_statfp")
+/* 0x0048fed0 is VC5 LIBC.LIB's exact 64-byte vfprintf wrapper. */
+#pragma comment(linker, "/include:_vfprintf")
+/* Pull the exact math-exception handler body at 0x00498ce0. */
+#pragma comment(linker, "/include:__87except")
+/* Pull VC5's C++ frame handler, which brings in frame.obj's private helpers. */
+#pragma comment(linker, "/include:___CxxFrameHandler")
+/* The executable's command-line parser is VC5 stdargv.obj's __setargv. */
+#pragma comment(linker, "/include:__setargv")
+/* Pull asin.obj, which contains both __CIasin and the public _asin entry. */
+#pragma comment(linker, "/include:_asin")
+/* Pull ldexp.obj's shared private double decomposition helper. */
+#pragma comment(linker, "/include:__decomp")
+/* Use VC5's complete math entries for the target's floor/ceil/fabs bodies. */
+#pragma comment(linker, "/include:_floor")
+#pragma comment(linker, "/include:_ceil")
+#pragma comment(linker, "/include:_fabs")
+#pragma comment(linker, "/include:_memmove")
+#pragma comment(linker, "/include:_wcslen")
+#pragma comment(linker, "/include:__frnd")
+#pragma comment(linker, "/include:__atodbl")
+#pragma comment(linker, "/include:__atoflt")
+#pragma comment(linker, "/include:__strdup")
+#pragma comment(linker, "/include:__itoa")
+#pragma comment(linker, "/include:__strupr")
+#pragma comment(linker, "/include:__strlwr")
+#pragma comment(linker, "/include:__isindst")
+#pragma comment(linker, "/include:_atol")
+#pragma comment(linker, "/include:_strchr")
+#pragma comment(linker, "/include:__mbsnbcpy")
+#pragma comment(linker, "/include:__mbschr")
+#pragma comment(linker, "/include:_getenv")
+#pragma comment(linker, "/include:_wctomb")
+#pragma comment(linker, "/include:_mbtowc")
+#pragma comment(linker, "/include:_strncpy")
+#pragma comment(linker, "/include:__setmbcp")
+#pragma comment(linker, "/include:___initmbctable")
+#pragma comment(linker, "/include:__isctype")
+#pragma comment(linker, "/include:_isspace")
+#pragma comment(linker, "/include:___crtGetStringTypeA")
+#pragma comment(linker, "/include:___crtLCMapStringA")
+#pragma comment(linker, "/include:__setenvp")
+#pragma comment(linker, "/include:___crtGetEnvironmentStringsA")
+#pragma comment(linker, "/include:___crtCompareStringA")
+#pragma comment(linker, "/include:__mbsnbicoll")
+#pragma comment(linker, "/include:___crtsetenv")
+#pragma comment(linker, "/include:___wtomb_environ")
+#pragma comment(linker, "/include:___loctotime_t")
+#pragma comment(linker, "/include:__ismbblead")
+#pragma comment(linker, "/include:__tolower")
+#pragma comment(linker, "/include:__forcdecpt")
+#pragma comment(linker, "/include:_qsort")
+#pragma comment(linker, "/include:_strstr")
+#pragma comment(linker, "/include:___tzset")
+#pragma comment(linker, "/include:__tzset")
+#pragma comment(linker, "/include:__finite")
+/* The VC5 linker does not implement the compiler's /alternatename directive
+ * for these helper spellings. Keep the stdcall bridge definitions live. */
+#pragma comment(linker, "/include:__allmul@16")
+#pragma comment(linker, "/include:__alldiv@16")
+#pragma comment(linker, "/include:__aulldiv@16")
+// LIBRARY: LEGORR 0x00495ee0 SYMBOL
+// __setargv
+// LIBRARY: LEGORR 0x0048fed0 SYMBOL
+// _vfprintf
+// LIBRARY: LEGORR 0x0049aa10 SYMBOL
+// _raise
+// LIBRARY: LEGORR 0x00491f80 SYMBOL
+// __startTwoArgErrorHandling
+// LIBRARY: LEGORR 0x00498ce0 SYMBOL
+// __87except
+// LIBRARY: LEGORR 0x0048ec60 SYMBOL
+// ___CxxFrameHandler
+// LIBRARY: LEGORR 0x00495090 SYMBOL
+// ___InternalCxxFrameHandler
+// LIBRARY: LEGORR 0x00495160 SYMBOL
+// ?FindHandler@@YAXPAUEHExceptionRecord@@PAUEHRegistrationNode@@PAU_CONTEXT@@PAXPBU_s_FuncInfo@@EH1@Z
+// LIBRARY: LEGORR 0x00495410 SYMBOL
+// ?FindHandlerForForeignException@@YAXPAUEHExceptionRecord@@PAUEHRegistrationNode@@PAU_CONTEXT@@PAXPBU_s_FuncInfo@@HH1@Z
+// LIBRARY: LEGORR 0x004954e0 SYMBOL
+// ___FrameUnwindToState
+// LIBRARY: LEGORR 0x004955c0 SYMBOL
+// ?CatchIt@@YAXPAUEHExceptionRecord@@PAUEHRegistrationNode@@PAU_CONTEXT@@PAXPBU_s_FuncInfo@@PBU_s_HandlerType@@PBU_s_CatchableType@@PBU_s_TryBlockMapEntry@@H1@Z
+// LIBRARY: LEGORR 0x00495650 SYMBOL
+// ?CallCatchBlock@@YAPAXPAUEHExceptionRecord@@PAUEHRegistrationNode@@PAU_CONTEXT@@PBU_s_FuncInfo@@PAXHK@Z
+// LIBRARY: LEGORR 0x0049573a SYMBOL
+// $L12725
+// LIBRARY: LEGORR 0x004957d0 SYMBOL
+// ?BuildCatchObject@@YAXPAUEHExceptionRecord@@PAUEHRegistrationNode@@PBU_s_HandlerType@@PBU_s_CatchableType@@@Z
+// LIBRARY: LEGORR 0x004959e0 SYMBOL
+// ?_DestructExceptionObject@@YAXPAUEHExceptionRecord@@E@Z
+// LIBRARY: LEGORR 0x00495a60 SYMBOL
+// ?AdjustPointer@@YAPAXPAXABUPMD@@@Z
+// LIBRARY: LEGORR 0x00495ae0 SYMBOL
+// ?terminate@@YAXXZ
+// LIBRARY: LEGORR 0x00495b70 SYMBOL
+// ?_inconsistency@@YAXXZ
+// LIBRARY: LEGORR 0x00495bde SYMBOL
+// $L12243
+// LIBRARY: LEGORR 0x00499690 SYMBOL
+// ?_ValidateRead@@YAHPBXI@Z
+// LIBRARY: LEGORR 0x004996b0 SYMBOL
+// ?_ValidateWrite@@YAHPAXI@Z
+// LIBRARY: LEGORR 0x004996d0 SYMBOL
+// ?_ValidateExecute@@YAHP6GHXZ@Z
+extern "C" void __cdecl _amsg_exit(int);
+/* VC5 LIBC.LIB's floating-point startup object owns math initialization. */
+// LIBRARY: LEGORR 0x0048d920 SYMBOL
+// __fpmath
+/* VC5 LIBC.LIB's cmsgs.obj supplies this fatal runtime-message handler. */
+// LIBRARY: LEGORR 0x0048f1a0 SYMBOL
+// __amsg_exit
+/* VC5's internal decimal-point normalizer is exported from LIBC.LIB. */
+extern "C" void __cdecl _forcdecpt(char*);
+/* VC5's timezone parser and helpers are static LIBC.LIB symbols. */
+extern "C" void __cdecl __tzset(void);
+extern "C" int __cdecl _isindst(const struct tm*);
+/* VC5 LIBC.LIB cfout.obj exports the exact double-to-extended converter. */
+extern "C" void __cdecl __dtold(void*, const void*);
+/* VC5 LIBC.LIB intrncvt.obj exports the 96-bit conversion helpers. */
+extern "C" uint32_t __cdecl _ZeroTail(const uint32_t*, int);
+extern "C" uint32_t __cdecl _IncMan(uint32_t*, int);
+extern "C" uint32_t __cdecl _RoundMan(uint32_t*, int);
+extern "C" void __cdecl _CopyMan(uint32_t*, const uint32_t*);
+extern "C" void __cdecl _FillZeroMan(uint32_t*);
+extern "C" int __cdecl _IsZeroMan(const uint32_t*);
+extern "C" void __cdecl _ShrMan(uint32_t*, int);
+extern "C" uint32_t __cdecl _ld12cvt(const uint16_t*, uint32_t*,
+                                       const int32_t*);
+extern "C" uint32_t __cdecl _ld12tod(const uint16_t*, uint32_t*);
+extern "C" uint32_t __cdecl _ld12tof(const uint16_t*, uint32_t*);
+extern "C" uint32_t __cdecl __strgtold12(uint16_t*, char**,
+                                           const char*, uint32_t,
+                                           int, int, int);
+extern "C" int __cdecl __addl(uint32_t, uint32_t, uint32_t*);
+/* VC5 LIBC.LIB's _fptostr.obj contains the exact decimal rounding helper. */
+extern "C" void __cdecl _fptostr(char*, int, CrtDecimalFormatContext*);
+/* VC5 LIBC.LIB's cfout.obj exports the exact decimal conversion record. */
+extern "C" CrtDecimalFormatContext* __cdecl _fltout(double);
+/* VC5 LIBC.LIB's x10fout.obj exports the exact extended-to-decimal helper. */
+extern "C" uint32_t __cdecl $I10_OUTPUT(uint32_t, uint32_t, uint16_t,
+                                         int, uint8_t, uint8_t*);
+/* VC5 LIBC.LIB mantold.obj exports the 96-bit arithmetic helpers. */
+extern "C" void __cdecl __add_12(uint32_t*, const uint32_t*);
+extern "C" void __cdecl __shl_12(uint32_t*);
+extern "C" void __cdecl __shr_12(uint32_t*);
+/* VC5 LIBC.LIB tenpow.obj exports extended80 multiplication/scaling. */
+extern "C" void __cdecl __ld12mul(uint16_t*, const uint16_t*);
+extern "C" void __cdecl __multtenpow12(uint16_t*, uint32_t, int);
+#endif
+/* VC5 LIBC.LIB strgtold.obj supplies the exact numeric string parser. */
+// LIBRARY: LEGORR 0x00498350 SYMBOL
+// ___strgtold12
 #if defined(_MSC_VER) && (_MSC_VER < 1300)
 #define CRT_U64(value) value##ui64
 #else
 #define CRT_U64(value) value##ULL
 #endif
 
-/* CRT inverse-trigonometric entries. The corpus's 0x0048e0ad entry is an
- * x87-internal helper: it receives its value on ST(0), forms (1+x)(1-x),
- * then uses FSQRT/FPATAN before CRT boundary/error handling. This C double
- * interface has a different callee signature and retains the portable
- * ordinary-finite-input semantics; matching the corpus entry is therefore
- * a signature/runtime-path barrier, not an expression-order respelling. */
-// FUNCTION: LEGORR 0x0048e090
+#if defined(_MSC_VER)
+#define CRT_DTOLD(destination, source) __dtold((destination), (source))
+#else
+#define CRT_DTOLD(destination, source) \
+    crt_double_to_extended80((destination), (source))
+#endif
+
+#if defined(_MSC_VER)
+#define CRT_ADDL __addl
+#define CRT_U96_ZERO _FillZeroMan
+#define CRT_U96_IS_ZERO _IsZeroMan
+#define CRT_U96_COPY _CopyMan
+#define CRT_U96_SHIFT_RIGHT _ShrMan
+#define CRT_U96_ZERO_TAIL _ZeroTail
+#define CRT_U96_INCREMENT _IncMan
+#define CRT_U96_ROUND _RoundMan
+#define CRT_LD12TOD _ld12tod
+#define CRT_LD12TOF _ld12tof
+#define CRT_U96_ADD __add_12
+#define CRT_U96_SHIFT_LEFT_ONE __shl_12
+#define CRT_U96_SHIFT_RIGHT_ONE __shr_12
+#define CRT_EXTENDED80_MULTIPLY __ld12mul
+#define CRT_EXTENDED_FLOAT_POWER_OF_TEN_SCALE __multtenpow12
+#else
+#define CRT_ADDL crt_unsigned_add_with_carry
+#define CRT_U96_ZERO uint96_zero
+#define CRT_U96_IS_ZERO uint96_is_zero
+#define CRT_U96_COPY uint96_copy
+#define CRT_U96_SHIFT_RIGHT uint96_shift_right
+#define CRT_U96_ZERO_TAIL crt_uint96_has_no_bits_at_or_above
+#define CRT_U96_INCREMENT crt_uint96_increment_at_bit
+#define CRT_U96_ROUND crt_uint96_clear_from_bit
+#define CRT_LD12TOD crt_extended_float_convert_format_a
+#define CRT_LD12TOF crt_extended_float_convert_format_b
+#define CRT_U96_ADD crt_uint96_add
+#define CRT_U96_SHIFT_LEFT_ONE extended_float96_bit_shift_left_one
+#define CRT_U96_SHIFT_RIGHT_ONE extended_float96_bit_shift_right_one
+#define CRT_EXTENDED80_MULTIPLY crt_extended80_multiply
+#define CRT_EXTENDED_FLOAT_POWER_OF_TEN_SCALE \
+    crt_extended_float_power_of_ten_scale
+#endif
+
+#if defined(_MSC_VER)
+#define CRT_DECIMAL_MANTISSA_ROUND_AND_NORMALIZE _fptostr
+#else
+#define CRT_DECIMAL_MANTISSA_ROUND_AND_NORMALIZE \
+    crt_decimal_mantissa_round_and_normalize
+#endif
+
+#if defined(_MSC_VER)
+#define CRT_LOCALE_DATA_GET_OR_INITIALIZE(words) \
+    _fltout(*(const double*)(words))
+#else
+#define CRT_LOCALE_DATA_GET_OR_INITIALIZE(words) \
+    crt_locale_data_get_or_initialize((words)[0], (words)[1])
+#endif
+
+#if defined(_MSC_VER)
+#define CRT_EXTENDED_FLOAT_TO_DECIMAL $I10_OUTPUT
+#else
+#define CRT_EXTENDED_FLOAT_TO_DECIMAL crt_extended_float_to_decimal
+#endif
+
+/* VC5 LIBC.LIB's chkstk.obj supplies the compiler stack-probe helper.
+ * __alloca_probe and __chkstk are aliases at the same entry; the target's
+ * page-touch loop and register/stack sequence match that object exactly. */
+// LIBRARY: LEGORR 0x0048e250 SYMBOL
+// __chkstk
+
+/* VC5 LIBC.LIB supplies the compiler's structured-exception helpers. */
+// LIBRARY: LEGORR 0x00495a90 SYMBOL
+// __CallSettingFrame@12
+// LIBRARY: LEGORR 0x0048ebb0 SYMBOL
+// ?_JumpToContinuation@@YGXPAXPAUEHRegistrationNode@@@Z
+// LIBRARY: LEGORR 0x0048ebf0 SYMBOL
+// ?_CallMemberFunction0@@YGXPAX0@Z
+// LIBRARY: LEGORR 0x0048ef10 SYMBOL
+// __global_unwind2
+// LIBRARY: LEGORR 0x0048ef52 SYMBOL
+// __local_unwind2
+// LIBRARY: LEGORR 0x0048efba SYMBOL
+// __abnormal_termination
+// LIBRARY: LEGORR 0x0048efdd SYMBOL
+// __NLG_Notify1
+// LIBRARY: LEGORR 0x0048efe6 SYMBOL
+// __NLG_Notify
+
+/* This target-specific frame adapter delegates cleanup to VC5's
+ * __local_unwind2 rather than duplicating the runtime's scope walk. */
+// FUNCTION: LEGORR 0x00496895
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void __stdcall crt_local_unwind_from_frame(void*)
+{
+    __asm {
+        push ebp
+        mov ecx, dword ptr [esp + 8]
+        mov ebp, dword ptr [ecx]
+        mov eax, dword ptr [ecx + 1ch]
+        push eax
+        mov eax, dword ptr [ecx + 18h]
+        push eax
+        call _local_unwind2
+        add esp, 8
+        pop ebp
+        ret 4
+    }
+}
+#endif
+
+/* VC5 LIBC.LIB's math runtime supplies these helper entries. 87cdisp.obj's
+ * __ctrandisp2 matches the target outside relocated calls and runtime-data
+ * references, including its in-object result-dispatch blocks. */
+// LIBRARY: LEGORR 0x00490210 SYMBOL
+// __setdefaultprecision
+// LIBRARY: LEGORR 0x00491db0 SYMBOL
+// __trandisp1
+// LIBRARY: LEGORR 0x00491e17 SYMBOL
+// __trandisp2
+// LIBRARY: LEGORR 0x00491f97 SYMBOL
+// __startOneArgErrorHandling
+/* These adjacent target entries are public common.obj helpers. */
+// LIBRARY: LEGORR 0x00491fe0 SYMBOL
+// __twoToTOS
+// LIBRARY: LEGORR 0x00492025 SYMBOL
+// __fload_withFB
+// LIBRARY: LEGORR 0x0049207e SYMBOL
+// __fast_exit
+// LIBRARY: LEGORR 0x0049208b SYMBOL
+// __math_exit
+// LIBRARY: LEGORR 0x004920b5 SYMBOL
+// __check_overflow_exit
+// LIBRARY: LEGORR 0x004920c9 SYMBOL
+// __check_range_exit
+// LIBRARY: LEGORR 0x00492170 SYMBOL
+// __cintrindisp2
+// LIBRARY: LEGORR 0x004921ae SYMBOL
+// __cintrindisp1
+// LIBRARY: LEGORR 0x004921e4 SYMBOL
+// __ctrandisp2
+// LIBRARY: LEGORR 0x00492355 SYMBOL
+// __ctrandisp1
+// LIBRARY: LEGORR 0x00492381 SYMBOL
+// __fload
+
+/* VC5 LIBC.LIB's crt0dat.obj provides the exact _exit wrapper at 0x48e4b0. */
+// LIBRARY: LEGORR 0x0048e4b0 SYMBOL
+// _exit
+
+/* VC5 LIBC.LIB's crt0dat.obj also supplies the callback-running __exit. */
+// LIBRARY: LEGORR 0x0048e4d0 SYMBOL
+// __exit
+
+/* The executable entry is VC5 LIBC.LIB's wincrt0.obj startup routine. */
+// LIBRARY: LEGORR 0x0048f000 SYMBOL
+// _WinMainCRTStartup
+
+/* VC5 LIBC.LIB's crt0dat.obj provides the exact CRT initializer. */
+// LIBRARY: LEGORR 0x0048e480 SYMBOL
+// __cinit
+
+/* The static _doexit body in crt0dat.obj matches the shared exit path. */
+// LIBRARY: LEGORR 0x0048e4f0 SYMBOL
+// _doexit
+
+/* VC5 LIBC.LIB's fscanf.obj and input.obj provide these formatted-input
+ * entries. Keep _fscanf selected while the corresponding game callers are
+ * still placeholders; it pulls the shared __input implementation too. */
+// LIBRARY: LEGORR 0x00490070 SYMBOL
+// _fscanf
+// LIBRARY: LEGORR 0x00493ef0 SYMBOL
+// __input
+/* VC5 LIBC.LIB's output.obj contains the formatter and its static stream and
+ * varargs helpers (_write_char, _write_multi_char, _write_string,
+ * _get_int_arg, _get_int64_arg, and _get_short_arg). */
+// LIBRARY: LEGORR 0x004909d0 SYMBOL
+// __output
+// LIBRARY: LEGORR 0x00491360 SYMBOL
+// _write_char
+// LIBRARY: LEGORR 0x004913b0 SYMBOL
+// _write_multi_char
+// LIBRARY: LEGORR 0x004913f0 SYMBOL
+// _write_string
+
+/* VC5 LIBC.LIB's asin.obj supplies __CIasin and its internal _asin entry.
+ * The reference's _asin body starts at 0x48e0a4; Ghidra also labels its
+ * internal entry at 0x48e0ad as a separate function because __CIasin calls
+ * there after doing its own __checkTOS_withFB handling. */
+#if !defined(_MSC_VER)
+// LIBRARY: LEGORR 0x0048e090 SYMBOL
+// __CIasin
+// LIBRARY: LEGORR 0x0048e0ad SYMBOL
+// _asin
 double crt_asin(double value)
 {
     return asin(value);
 }
-
-// FUNCTION: LEGORR 0x0048e0ad
-double crt_acos_core(double value)
-{
-    double root = sqrt((1.0 - value) * (1.0 + value));
-#if defined(_MSC_VER) && defined(_M_IX86)
-    double result;
-    __asm {
-        fld qword ptr [root]
-        fld qword ptr [value]
-        fpatan
-        fstp qword ptr [result]
-    }
-    return result;
-#else
-    return atan2(root, value);
 #endif
-}
 
-/* The 96-bit extended-integer helpers operate on three little-endian DWORDs.
- * Keeping the carries explicit also works with the VC5 compiler used by the
- * original target. */
-// FUNCTION: LEGORR 0x0049a050
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) void extended_float96_bit_shift_left_one(uint32_t* value)
-{
-    __asm {
-        mov eax, dword ptr [esp + 4]
-        push esi
-        push edi
-        mov esi, dword ptr [eax]
-        mov edi, dword ptr [eax + 4]
-        mov ecx, esi
-        add esi, esi
-        mov dword ptr [eax], esi
-        lea esi, [edi + edi]
-        shr ecx, 31
-        or esi, ecx
-        mov ecx, dword ptr [eax + 8]
-        mov edx, edi
-        mov dword ptr [eax + 4], esi
-        shr edx, 31
-        shl ecx, 1
-        or ecx, edx
-        mov dword ptr [eax + 8], ecx
-        pop edi
-        pop esi
-        ret
-    }
-}
-#else
+/* VC5 LIBC.LIB mantold.obj supplies the exact three-word shifts. */
+// LIBRARY: LEGORR 0x0049a050 SYMBOL
+// ___shl_12
+#if !defined(_MSC_VER)
 void extended_float96_bit_shift_left_one(uint32_t* value)
 {
     uint32_t low;
@@ -104,36 +569,9 @@ void extended_float96_bit_shift_left_one(uint32_t* value)
 }
 #endif
 
-// FUNCTION: LEGORR 0x0049a080
-#if defined(_MSC_VER) && defined(_M_IX86)
-/* Corpus 0x49a080..0x49a0ac shifts the three dwords high-to-low. */
-__declspec(naked) void extended_float96_bit_shift_right_one(uint32_t* value)
-{
-    __asm {
-        mov eax, dword ptr [esp + 4]
-        push esi
-        push edi
-        mov edx, dword ptr [eax + 8]
-        mov ecx, dword ptr [eax + 4]
-        mov esi, edx
-        mov edi, ecx
-        shl esi, 1fh
-        shr ecx, 1
-        or ecx, esi
-        mov dword ptr [eax + 4], ecx
-        mov ecx, dword ptr [eax]
-        shl edi, 1fh
-        shr ecx, 1
-        shr edx, 1
-        or ecx, edi
-        pop edi
-        mov dword ptr [eax + 8], edx
-        mov dword ptr [eax], ecx
-        pop esi
-        ret
-    }
-}
-#else
+// LIBRARY: LEGORR 0x0049a080 SYMBOL
+// ___shr_12
+#if !defined(_MSC_VER)
 void extended_float96_bit_shift_right_one(uint32_t* value)
 {
     uint32_t middle;
@@ -148,27 +586,22 @@ void extended_float96_bit_shift_right_one(uint32_t* value)
  * byte-equivalent to the host memmove (findings 260/394). */
 // LIBRARY: LEGORR 0x00498000 SYMBOL
 // _memmove
+#if !defined(_MSC_VER)
 void* crt_memory_move(void* dest, const void* src, size_t count)
 {
     return memmove(dest, src, count);
 }
+#endif
 
 /* The original address is the VC5 CRT's x87 float-to-long helper. */
 // LIBRARY: LEGORR 0x0048e060 SYMBOL
 // __ftol
+#if !defined(_MSC_VER) || !defined(_M_IX86)
 int crt_float_to_long(float value)
 {
-#if defined(_MSC_VER) && defined(_M_IX86)
-    int result;
-    __asm {
-        fld dword ptr [value]
-        fistp dword ptr [result]
-    }
-    return result;
-#else
     return (int)nearbyintf(value);
-#endif
 }
+#endif
 
 /* FUN_00417430: app helper that forwards to the CRT __ftol routine under
  * the truncate-toward-zero control word (findings 381/393). Overflow
@@ -188,24 +621,24 @@ void noop_callback(void)
 /* The executable owns these two runtime-error controls. The callback and
  * mode word are zero-filled image globals; the separate mode selector has
  * the image's initialized value 2. */
+#if defined(_MSC_VER)
+/* crt0msg.obj owns these globals; aliasing them keeps the direct runtime
+ * calls and the other local CRT shims on the same error-reporting state. */
+extern "C" int __error_mode;
+extern "C" int __app_type;
+extern "C" void (__cdecl *_adbgmsg)(void);
+#define s_runtime_error_mode __error_mode
+#define s_runtime_error_console_mode __app_type
+#define s_runtime_error_callback _adbgmsg
+#else
 // GLOBAL: LEGORR 0x00549124
 static int s_runtime_error_mode;
 // GLOBAL: LEGORR 0x004afd64
 static int s_runtime_error_console_mode = 2;
 // GLOBAL: LEGORR 0x005493d8
 static void (*s_runtime_error_callback)(void);
-// GLOBAL: LEGORR 0x005491a0
-static void (*s_terminate_handler_callback)(void);
-
-// FUNCTION: LEGORR 0x00495ae0
-void crt_terminate_handler_invoke_and_abort(void)
-{
-    if (s_terminate_handler_callback != NULL) {
-        (*s_terminate_handler_callback)();
-    }
-    abort();
-}
-
+#endif
+#if !defined(_MSC_VER)
 typedef struct CrtRuntimeErrorText {
     int code;
     const char* text;
@@ -265,8 +698,11 @@ static int crt_runtime_error_reporting_enabled(void)
     return s_runtime_error_mode == 1 ||
         (s_runtime_error_mode == 0 && s_runtime_error_console_mode == 1);
 }
+#endif
 
-// FUNCTION: LEGORR 0x004968b0
+#if !defined(_MSC_VER)
+// LIBRARY: LEGORR 0x004968b0 SYMBOL
+// __FF_MSGBANNER
 void crt_runtime_error_message_enter_exit(void)
 {
     /* Corpus 0x4968b0 tests both mode globals here rather than calling the
@@ -280,8 +716,11 @@ void crt_runtime_error_message_enter_exit(void)
         crt_runtime_error_message(0xff);
     }
 }
+#endif
 
-// FUNCTION: LEGORR 0x004968f0
+#if !defined(_MSC_VER)
+// LIBRARY: LEGORR 0x004968f0 SYMBOL
+// __NMSG_WRITE
 void crt_runtime_error_message(int error_code)
 {
     const char* message = crt_runtime_error_text_get(error_code);
@@ -354,15 +793,21 @@ void crt_runtime_error_message(int error_code)
             dialog, "Microsoft Visual C++ Runtime Library", 0u);
     }
 }
+#endif
 
+#if !defined(_MSC_VER)
 // GLOBAL: LEGORR 0x00549428
 static void* s_runtime_message_box_proc;
 // GLOBAL: LEGORR 0x0054942c
 static void* s_runtime_active_window_proc;
 // GLOBAL: LEGORR 0x00549430
 static void* s_runtime_last_popup_proc;
+#endif
 
-// FUNCTION: LEGORR 0x00499730
+/* VC5 LIBC.LIB's crtmbox.obj supplies this runtime dialog helper. */
+// LIBRARY: LEGORR 0x00499730 SYMBOL
+// ___crtMessageBoxA
+#if !defined(_MSC_VER)
 int crt_runtime_error_message_box_display(const char* message,
                                           const char* title,
                                           unsigned int flags)
@@ -402,6 +847,7 @@ int crt_runtime_error_message_box_display(const char* message,
     return 0;
 #endif
 }
+#endif
 
 /* FUN_0047d3f0: popcount via the clear-lowest-set-bit loop. */
 // FUNCTION: LEGORR 0x0047d3f0
@@ -451,8 +897,10 @@ int bit_count32_by_position(uint32_t value)
     return pop_count32(value);
 }
 
-/* FUN_00497ab0: zero over exactly 3 dwords. */
-// FUNCTION: LEGORR 0x00497ab0
+/* VC5 LIBC.LIB intrncvt.obj supplies this three-dword zero test. */
+// LIBRARY: LEGORR 0x00497ab0 SYMBOL
+// __IsZeroMan
+#if !defined(_MSC_VER)
 int uint96_is_zero(const uint32_t limbs[3])
 {
     int i = 0;
@@ -464,15 +912,23 @@ int uint96_is_zero(const uint32_t limbs[3])
     } while (i < 3);
     return 1;
 }
+#endif
 
 /* FUN_0048e870: the double's exponent field not all-ones. */
-// FUNCTION: LEGORR 0x0048e870
+// LIBRARY: LEGORR 0x0048e870 SYMBOL
+// __finite
+#if !defined(_MSC_VER) || !defined(_M_IX86)
 int double_is_finite(double value)
 {
+#if defined(_MSC_VER)
+    return _finite(value);
+#else
     uint64_t bits;
     __builtin_memcpy(&bits, &value, sizeof bits);
     return ((bits >> 52u) & 0x7ffu) != 0x7ffu;
+#endif
 }
+#endif
 
 /* FUN_0045b900: the corpus casts the int pair and the divisor to float
  * before both divides (the results land in a caller float pair). */
@@ -493,9 +949,10 @@ void float_pair_to_integer_pair(float x, float y, int* out_x, int* out_y)
     *out_y = (int)y;
 }
 
-/* FUN_00499fb0: the corpus's carry test — the sum below either operand
- * means the addition carried out of the 32-bit result. */
-// FUNCTION: LEGORR 0x00499fb0
+/* VC5 LIBC.LIB mantold.obj supplies the exact 32-bit add-with-carry helper. */
+// LIBRARY: LEGORR 0x00499fb0 SYMBOL
+// ___addl
+#if !defined(_MSC_VER)
 int crt_unsigned_add_with_carry(uint32_t a, uint32_t b, uint32_t* sum)
 {
     uint32_t s;
@@ -507,15 +964,14 @@ int crt_unsigned_add_with_carry(uint32_t a, uint32_t b, uint32_t* sum)
     *sum = s;
     return carry;
 }
+#endif
 
-/* FUN_00493a80: the exponent/quiet-bit pattern classifier over the two
- * bit words, corpus masks verbatim (finding 399). The corpus loads both
- * parameters up front and tests the infinities first, then reads the
- * exponent+quiet field as a raw dword at esp+0xa — six bytes past the
- * low parameter's address, the high half of the hi word plus two bytes
- * past the last parameter, which the 0x7ff8 mask discards — and compares
- * it as a WORD. */
-// FUNCTION: LEGORR 0x00493a80
+/* VC5 LIBC.LIB's __sptype is the exact special-value classifier. */
+// LIBRARY: LEGORR 0x00493a80 SYMBOL
+// __sptype
+#if !defined(_MSC_VER)
+/* Portable equivalent of the runtime's two-word exponent/quiet-bit
+ * classifier, retained for non-MSVC builds. */
 int double_classify(uint32_t lo, uint32_t hi)
 {
     if (hi == 0x7ff00000u && lo == 0u) {
@@ -538,9 +994,12 @@ int double_classify(uint32_t lo, uint32_t hi)
     }
     return 0;                                       /* finite */
 }
+#endif
 
 /* FUN_00499710: the 16-bit strlen — code units counted up to the NUL. */
-// FUNCTION: LEGORR 0x00499710
+// LIBRARY: LEGORR 0x00499710 SYMBOL
+// _wcslen
+#if !defined(_MSC_VER)
 int wide_string_length(const uint16_t* text)
 {
     const uint16_t* p = text;
@@ -554,11 +1013,15 @@ int wide_string_length(const uint16_t* text)
     }
     return (int)(p - text) - 1;
 }
+#endif
 
-/* FUN_0049add0: bounded scan — the terminator index plus one when found
- * within `bound` (count including the NUL), the bound otherwise; a zero
- * bound returns the bound without reading. */
-// FUNCTION: LEGORR 0x0049add0
+/* VC5's wcstombs.obj contains this private bounded wide-character scan.
+ * Its _wcsncnt helper follows the public _wcstombs entry at 0x0049abe0 in
+ * that same archive member, so linking crt_wide_char_to_multi_byte_compat
+ * brings in the target body at this address. */
+// LIBRARY: LEGORR 0x0049add0 SYMBOL
+// _wcsncnt
+#if !defined(_MSC_VER)
 int bounded_wide_string_length_including_null(const uint16_t* text,
                                               int bound)
 {
@@ -578,32 +1041,12 @@ int bounded_wide_string_length_including_null(const uint16_t* text,
     }
     return bound;
 }
+#endif
 
-/* DoubleExponentBitsGetOrSpecialValue (FUN_00492068, findings 386/399):
- * exponent field for ordinary values; the untouched high word when the
- * exponent is all ones (Inf/NaN) so the caller sees the full pattern.
- * The corpus callee takes a cdecl double: the low word at [esp+4] is
- * unused, the high word at [esp+8] is live — two uint32_t params so
- * MSVC5 reads the high word at [esp+8]. */
-// FUNCTION: LEGORR 0x00492068
-#if defined(_MSC_VER) && defined(_M_IX86)
-/* Corpus 0x492068..0x49207d tests the exponent bits in EAX, returning the
- * masked word unless it is all ones, then reloads the original high word. */
-__declspec(naked) uint32_t double_exponent_bits_or_special(uint32_t low_word,
-                                                            uint32_t high_word)
-{
-    __asm {
-        mov eax, dword ptr [esp + 8]
-        and eax, 07ff00000h
-        cmp eax, 07ff00000h
-        je special_value
-        ret
-    special_value:
-        mov eax, dword ptr [esp + 8]
-        ret
-    }
-}
-#else
+/* VC5 LIBC.LIB common.obj's public __checkTOS_withFB matches this entry. */
+// LIBRARY: LEGORR 0x00492068 SYMBOL
+// __checkTOS_withFB
+#if !defined(_MSC_VER)
 uint32_t double_exponent_bits_or_special(uint32_t low_word, uint32_t high_word)
 {
     (void)low_word; /* the corpus reads only [esp+8] */
@@ -615,8 +1058,11 @@ uint32_t double_exponent_bits_or_special(uint32_t low_word, uint32_t high_word)
 #endif
 
 /* FormatArgumentReadDword (FUN_00491430, finding 395): read the dword
- * at the cursor, then advance it by four. */
-// FUNCTION: LEGORR 0x00491430
+ * at the cursor, then advance it by four. VC5's output.obj contains the
+ * same helper as a static function; the MSVC build gets it with __output. */
+// LIBRARY: LEGORR 0x00491430 SYMBOL
+// _get_int_arg
+#if !defined(_MSC_VER)
 uint32_t format_argument_read_dword(uint8_t** cursor)
 {
     uint32_t value;
@@ -624,11 +1070,15 @@ uint32_t format_argument_read_dword(uint8_t** cursor)
     *cursor = *cursor + 4;
     return value;
 }
+#endif
 
 /* FormatArgumentReadWord (FUN_00491470, finding 395): read the word, advance
  * the cursor by four bytes, and return the word in the low half with the
- * advanced cursor's high 16 bits in the high half, as in CONCAT22. */
-// FUNCTION: LEGORR 0x00491470
+ * advanced cursor's high 16 bits in the high half, as in CONCAT22. VC5's
+ * output.obj contains the matching static helper. */
+// LIBRARY: LEGORR 0x00491470 SYMBOL
+// _get_short_arg
+#if !defined(_MSC_VER)
 uint32_t format_argument_read_word(uint8_t** cursor)
 {
     uint16_t value;
@@ -636,38 +1086,32 @@ uint32_t format_argument_read_word(uint8_t** cursor)
     *cursor = *cursor + 4;
     return value;
 }
+#endif
 
-/* FormatArgumentReadDouble (FUN_00491450, finding 395): read eight
- * bytes, advance by eight. */
-// FUNCTION: LEGORR 0x00491450
-double format_argument_read_double(uint8_t** cursor)
+/* FormatArgumentReadInt64 (FUN_00491450, finding 395): read the raw 64-bit
+ * variadic argument and advance by eight. This is an integer-register return
+ * (EDX:EAX), matching VC5 output.obj's static _get_int64_arg helper. */
+// LIBRARY: LEGORR 0x00491450 SYMBOL
+// _get_int64_arg
+#if !defined(_MSC_VER)
+uint64_t format_argument_read_qword(uint8_t** cursor)
 {
-    double value;
+    uint64_t value;
     memcpy(&value, *cursor, sizeof(value));
     *cursor = *cursor + 8;
     return value;
 }
+#endif
 
-/* X87RoundToIntegral (FUN_00493150, finding 379): FRNDINT under the
- * default control word — nearest-even integral, still floating.
- * rint() matches it exactly (and keeps -0, per the x87 answer). */
-// FUNCTION: LEGORR 0x00493150
+/* VC5 LIBC.LIB's frnd.obj supplies this exact x87 FRNDINT helper. */
+// LIBRARY: LEGORR 0x00493150 SYMBOL
+// __frnd
+#if !defined(_MSC_VER) || !defined(_M_IX86)
 double x87_round_to_integral(double value)
 {
-#if defined(_MSC_VER) && defined(_M_IX86)
-    /* MSVC 5.0 has no rint() declaration. Keep this leaf on the same x87
-     * instruction as the original CRT implementation. */
-    double result;
-    __asm {
-        fld qword ptr [value]
-        frndint
-        fstp qword ptr [result]
-    }
-    return result;
-#else
     return rint(value);
-#endif
 }
+#endif
 
 /* CrtRoundToIntegralWithMathErrorHandling reads the active x87 control word
  * before deciding whether FRNDINT raised an unmasked precision exception. */
@@ -706,13 +1150,18 @@ static int crt_double_classify_words(uint32_t low, uint32_t high)
  * with the formatting and decimal-point routines below. Keep the image
  * addresses as DWORDs; function-valued slots use their declared symbols,
  * but are not called through host pointers here. */
+#if !defined(_MSC_VER)
 // GLOBAL: LEGORR 0x004aff80
 static volatile uint32_t s_math_dispatch_table[6] = {
     0x00498340u, 0x00498340u, 0x00498340u,
     0x00498340u, 0x00498340u, 0x00498340u
 };
+#endif
 
-// FUNCTION: LEGORR 0x0048d940
+/* VC5 LIBC.LIB fpinit.obj supplies the exact math-dispatch initializer. */
+// LIBRARY: LEGORR 0x0048d940 SYMBOL
+// __cfltcvt_init
+#if !defined(_MSC_VER)
 void crt_math_dispatch_table_initialize(void)
 {
     s_math_dispatch_table[1] = 0x00490310u;
@@ -723,138 +1172,34 @@ void crt_math_dispatch_table_initialize(void)
     s_math_dispatch_table[4] = 0x00490380u;
     s_math_dispatch_table[5] = 0x00490750u;
 }
+#endif
 
-/* CrtMathIntrinsicDispatch (FUN_0048e1aa) calls __cintrindisp2. That
- * compiler-runtime dispatcher consumes an x87 result plus EDX/EBP state
- * owned by its original call frame; a normal C ABI entry has no faithful
- * way to recover that state. Preserve the one explicit global side effect
- * identified in __cintrindisp2 while leaving the context-sensitive work
- * as a seam until its caller/runtime frame is ported. */
-// GLOBAL: LEGORR 0x00549168
+/* The classic x86 entry tail-jumps to VC5 __cintrindisp2 with its exception
+ * table in EDX. The jump preserves the caller's EBP frame and live x87
+ * result; portable backends retain the dispatch-seen marker as a seam. */
+#if !defined(_MSC_VER)
 static volatile unsigned char s_math_intrinsic_dispatch_seen;
-// GLOBAL: LEGORR 0x005490c8
-static uint32_t s_math_exception_dispatch_mode;
-// GLOBAL: LEGORR 0x00549160
-static double s_math_exception_dispatch_result;
+#endif
 
 // FUNCTION: LEGORR 0x0048e1aa
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void crt_math_intrinsic_dispatch(void)
+{
+    __asm {
+        mov edx, 004afcd0h
+        jmp _cintrindisp2
+    }
+}
+#else
 void crt_math_intrinsic_dispatch(void)
 {
     s_math_intrinsic_dispatch_seen = 1;
 }
+#endif
 
-/* The two result dispatch entries are called with the caller's EBP frame and
- * x87 ST(0) still live. On the reference x86 backend, the naked adapters keep
- * that calling convention and pass the frame/status to this C implementation.
- * Other backends have no equivalent implicit x87 context. */
-static void crt_floating_point_exception_dispatch_core(uint8_t* frame,
-                                                        uint32_t fpu_status,
-                                                        int clear_dispatch_flag)
-{
-    int8_t exception_kind;
-    uint16_t control_word;
-    uint8_t* exception_context;
-    uint32_t status;
-    int8_t operation;
-    union {
-        double value;
-        uint64_t bits;
-    } result;
-
-    if (clear_dispatch_flag != 0) {
-        s_math_intrinsic_dispatch_seen = 0u;
-    }
-    if (s_math_exception_dispatch_mode != 0u) {
-        return;
-    }
-
-    exception_context = *(uint8_t**)(frame - 0x94);
-    exception_kind = *(int8_t*)(frame - 0x90);
-    control_word = *(uint16_t*)(frame - 0xa4);
-    result.value = s_math_exception_dispatch_result;
-    if (exception_kind == 0) {
-        if ((control_word & 0x20u) != 0u || (fpu_status & 0x20u) == 0u) {
-            return;
-        }
-        status = 8u;
-    }
-    else if (exception_kind == -1 || exception_kind == -2) {
-        const uint32_t high = (uint32_t)(result.bits >> 32);
-        if ((high & 0x7ff00000u) == 0u) {
-            status = 4u;
-        }
-        else if ((*(uint16_t*)((uint8_t*)&s_math_exception_dispatch_result + 6)
-                  & 0x7ff0u) == 0x7ff0u) {
-            status = 3u;
-        }
-        else {
-            if ((control_word & 0x20u) != 0u || (fpu_status & 0x20u) == 0u) {
-                return;
-            }
-            status = 8u;
-        }
-    }
-    else {
-        status = (uint32_t)(int32_t)exception_kind;
-    }
-
-    if (s_math_intrinsic_dispatch_seen == 0u) {
-        memcpy(frame - 0x86, frame + 8, 8u);
-        if (exception_context[0x0d] != 1u) {
-            memcpy(frame - 0x7e, frame + 0x10, 8u);
-        }
-    }
-    operation = (int8_t)exception_context[0x0e];
-    memcpy(frame - 0x76, &result.value, sizeof(result.value));
-    result.value = crt_math_exception_handle_result_with_status(
-        status, (uint32_t)(int32_t)operation,
-        *(uint32_t*)(frame - 0x86), *(uint32_t*)(frame - 0x82),
-        *(uint32_t*)(frame - 0x76), *(uint32_t*)(frame - 0x72),
-        control_word);
-    s_math_exception_dispatch_result = result.value;
-}
-
-// FUNCTION: LEGORR 0x0049221e
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) void crt_floating_point_exception_result_dispatch(void)
-{
-    __asm {
-        fst qword ptr [s_math_exception_dispatch_result]
-        fnstsw ax
-        movzx eax, ax
-        push eax
-        mov eax, ebp
-        push eax
-        push 1
-        call crt_floating_point_exception_dispatch_core
-        add esp, 0ch
-        fld qword ptr [s_math_exception_dispatch_result]
-        fldcw word ptr [ebp-0a4h]
-        fwait
-        ret
-    }
-}
-
-// FUNCTION: LEGORR 0x00492225
-__declspec(naked) void crt_floating_point_exception_result_dispatch_variant(void)
-{
-    __asm {
-        fst qword ptr [s_math_exception_dispatch_result]
-        fnstsw ax
-        movzx eax, ax
-        push eax
-        mov eax, ebp
-        push eax
-        push 0
-        call crt_floating_point_exception_dispatch_core
-        add esp, 0ch
-        fld qword ptr [s_math_exception_dispatch_result]
-        fldcw word ptr [ebp-0a4h]
-        fwait
-        ret
-    }
-}
-#else
+#if !defined(_MSC_VER)
+/* The VC5 87cdisp.obj object owns the result-dispatch labels embedded in its
+ * __cintrindisp2 and __ctrandisp2 entries. Portable builds keep empty seams. */
 void crt_floating_point_exception_result_dispatch(void)
 {
     s_math_intrinsic_dispatch_seen = 0u;
@@ -865,154 +1210,62 @@ void crt_floating_point_exception_result_dispatch_variant(void)
 }
 #endif
 
-/* CrtDoubleRemainderReduction / CrtFmodExtendedPrecision (FUN_00492bc6 /
- * FUN_00492dcc): the original entries exchange extended x87 values through
- * ST(0)/ST(1) and use a private stack record. The C interface accepts the same
- * operands explicitly; the CRT fmod implementation supplies truncating
- * remainder semantics and handles NaN, infinity, and zero-divisor cases. */
-// FUNCTION: LEGORR 0x00492bc6
+/* The original entries are VC5 LIBC.LIB adj_fdiv.obj helpers. Keep portable
+ * equivalents for non-MSVC builds; the classic runtime supplies both symbols
+ * (and the internal x87 calling convention) in MSVC builds. */
+// LIBRARY: LEGORR 0x00492bc6 SYMBOL
+// __fprem_common
+#if !defined(_MSC_VER)
 double crt_double_remainder_reduction(double dividend, double divisor)
 {
     return fmod(dividend, divisor);
 }
+#endif
 
-// FUNCTION: LEGORR 0x00492dcc
+// LIBRARY: LEGORR 0x00492dcc SYMBOL
+// __adj_fprem
+#if !defined(_MSC_VER)
 double crt_fmod_extended_precision(double dividend, double divisor)
 {
     return crt_double_remainder_reduction(dividend, divisor);
 }
+#endif
 
-/* CrtRoundToIntegralWithMathErrorHandling (FUN_0048e280): for finite
- * values the runtime uses FRNDINT, returning that x87 result. The full CRT
- * routes an unmasked precision exception and special values through
- * 0x493170/0x4931c0; those handlers depend on the not-yet-ported matherr
- * and FPU-control-word paths. FRNDINT itself preserves the target rounding
- * mode and raises the hardware precision flag. */
-// FUNCTION: LEGORR 0x0048e280
+/* VC5 LIBC.LIB provides the image's floor and ceil entries. */
+// LIBRARY: LEGORR 0x0048e280 SYMBOL
+// _floor
+#if !defined(_MSC_VER)
 double crt_round_to_integral_with_math_error_handling(double value)
 {
-    union {
-        double value;
-        uint64_t bits;
-    } input, rounded;
-    uint32_t control = crt_fpu_control_word_get();
-    uint32_t words[2];
-    int classification;
-
-    input.value = value;
-    words[0] = (uint32_t)input.bits;
-    words[1] = (uint32_t)(input.bits >> 32);
-    if (((words[1] >> 20) & 0x7ffu) != 0x7ffu) {
-        rounded.value = x87_round_to_integral(value);
-        if (rounded.bits != input.bits && (control & 0x20u) == 0u) {
-            return crt_math_exception_handle_result_with_status(
-                0x10u, 0x0bu, words[0], words[1],
-                (uint32_t)rounded.bits, (uint32_t)(rounded.bits >> 32),
-                control);
-        }
-        return rounded.value;
-    }
-
-    classification = crt_double_classify_words(words[0], words[1]);
-    if (classification == 1 || classification == 2) {
-        return value;
-    }
-    if (classification == 3) {
-        return crt_math_exception_handle_single_result(
-            0x0bu, words[0], words[1], control);
-    }
-    rounded.value = value + 1.0;
-    return crt_math_exception_handle_result_with_status(
-        8u, 0x0bu, words[0], words[1],
-        (uint32_t)rounded.bits, (uint32_t)(rounded.bits >> 32), control);
+    return floor(value);
 }
+#endif
 
-/* CrtRoundToIntegralWithMathErrorHandlingVariant (FUN_0048e8e0) has the
- * same FRNDINT finite path as FUN_0048e280. Its distinct math exception
- * operation code is 0x0c (the first routine uses 0x0b); dispatching that
- * error path requires the unported 0x493170/0x4931c0 handler chain. */
-// FUNCTION: LEGORR 0x0048e8e0
+// LIBRARY: LEGORR 0x0048e8e0 SYMBOL
+// _ceil
+#if !defined(_MSC_VER)
 double crt_round_to_integral_with_math_error_handling_variant(double value)
 {
-    union {
-        double value;
-        uint64_t bits;
-    } input, rounded;
-    uint32_t control = crt_fpu_control_word_get();
-    uint32_t words[2];
-    int classification;
-
-    input.value = value;
-    words[0] = (uint32_t)input.bits;
-    words[1] = (uint32_t)(input.bits >> 32);
-    if (((words[1] >> 20) & 0x7ffu) != 0x7ffu) {
-        rounded.value = x87_round_to_integral(value);
-        if (rounded.bits != input.bits && (control & 0x20u) == 0u) {
-            return crt_math_exception_handle_result_with_status(
-                0x10u, 0x0cu, words[0], words[1],
-                (uint32_t)rounded.bits, (uint32_t)(rounded.bits >> 32),
-                control);
-        }
-        return rounded.value;
-    }
-
-    classification = crt_double_classify_words(words[0], words[1]);
-    if (classification == 1 || classification == 2) {
-        return value;
-    }
-    if (classification == 3) {
-        return crt_math_exception_handle_single_result(
-            0x0cu, words[0], words[1], control);
-    }
-    rounded.value = value + 1.0;
-    return crt_math_exception_handle_result_with_status(
-        8u, 0x0cu, words[0], words[1],
-        (uint32_t)rounded.bits, (uint32_t)(rounded.bits >> 32), control);
+    return ceil(value);
 }
+#endif
 
-/* CrtDoubleAbsoluteValue (FUN_0048e680): the finite lane uses ABS, while
- * infinities are classified explicitly. Quiet/signaling NaNs still use the
- * sign-clearing result because their CRT math-error dispatch is unported. */
-// FUNCTION: LEGORR 0x0048e680
+/* VC5 LIBC.LIB provides the image's fabs entry. */
+// LIBRARY: LEGORR 0x0048e680 SYMBOL
+// _fabs
+#if !defined(_MSC_VER)
 double crt_double_absolute_value(double value)
 {
-    uint32_t words[2];
-    uint32_t high_word;
-    int classification;
-
-    memcpy(words, &value, sizeof(words));
-    high_word = words[1];
-    if (((high_word >> 16) & 0x7ff0u) != 0x7ff0u) {
-        return fabs(value);
-    }
-    classification = crt_double_classify_words(words[0], words[1]);
-    if (classification == 1) {
-        return value;
-    }
-    if (classification == 2) {
-        return -value;
-    }
-
-    if (classification == 3) {
-        return crt_math_exception_handle_single_result(
-            0x15u, words[0], words[1], crt_fpu_control_word_get());
-    }
-    {
-        union {
-            double value;
-            uint64_t bits;
-        } result;
-        result.value = value + 1.0;
-        return crt_math_exception_handle_result_with_status(
-            8u, 0x15u, words[0], words[1],
-            (uint32_t)result.bits, (uint32_t)(result.bits >> 32),
-            crt_fpu_control_word_get());
-    }
+    return fabs(value);
 }
+#endif
 
-/* CrtRunCallbackArray (FUN_0048e5a0): invoke each nonnull callback in the
- * corpus's forward, half-open pointer range. */
-// FUNCTION: LEGORR 0x0048e5a0
+/* VC5 crt0dat.obj's private _initterm is an exact match for this target.
+ * Its public __cinit entry calls it twice, so linking CRT startup pulls in
+ * the archive member and supplies the helper without a local MSVC copy. */
+// LIBRARY: LEGORR 0x0048e5a0 SYMBOL
+// _initterm (private helper in crt0dat.obj, reached through __cinit)
+#if !defined(_MSC_VER)
 void crt_run_callback_array(CrtCallback* start, CrtCallback* end)
 {
     while (start < end) {
@@ -1022,8 +1275,13 @@ void crt_run_callback_array(CrtCallback* start, CrtCallback* end)
         ++start;
     }
 }
+#endif
 
-/* DoubleBuildWithExponent (FUN_00493a40, findings 383/399): the corpus
+/* VC5 LIBC.LIB's public __set_exp is the exact significand/exponent leaf. */
+// LIBRARY: LEGORR 0x00493a40 SYMBOL
+// __set_exp
+#if !defined(_MSC_VER)
+/* Portable equivalent of __set_exp for non-MSVC builds. The corpus
  * builds the floating value from two significand words and the
  * exponent-bias input; Ghidra renders the recipe as CONCAT chains,
  * which decompose exactly to: top word = ((high >> 16) & 0x800f) |
@@ -1033,7 +1291,6 @@ void crt_run_callback_array(CrtCallback* start, CrtCallback* end)
  * bits are bitcast to the port's double (x87 deviation, as documented
  * across this band). What the built value MEANS stays with the caller
  * (the frexp band); this leaf is the faithful bit construction. */
-// FUNCTION: LEGORR 0x00493a40
 double double_build_with_exponent(uint32_t significand_low,
                                   uint32_t significand_high,
                                   int16_t exponent)
@@ -1053,6 +1310,7 @@ double double_build_with_exponent(uint32_t significand_low,
     result.words.high = (significand_high & 0xffffu) | (high_word << 16);
     return result.value;
 }
+#endif
 
 
 /* ------------------------------------------------------------------ *
@@ -1083,13 +1341,15 @@ uint32_t processor_feature_fallback_false(void)
     return 0u;
 }
 
-/* The original resolves this optional Kernel32 export at runtime because
- * older Windows releases may not provide it. The native miniwin backend
- * has no equivalent processor-feature query, so it follows the original
- * missing-export fallback. */
-// FUNCTION: LEGORR 0x00490280
+/* VC5 LIBC.LIB's testfdiv.obj supplies this optional Kernel32 resolver. */
+// LIBRARY: LEGORR 0x00490280 SYMBOL
+// __ms_p5_mp_test_fdiv
+#if !defined(_MSC_VER) || !defined(_M_IX86)
 uint32_t crt_floating_point_feature_probe(void)
 {
+#if defined(_MSC_VER)
+    return (uint32_t)_ms_p5_mp_test_fdiv();
+#else
 #if defined(LEGORRR_BACKEND_WINAPI)
     typedef BOOL (WINAPI *ProcessorFeatureProbe)(DWORD);
     HMODULE module = GetModuleHandleA("KERNEL32");
@@ -1107,7 +1367,9 @@ uint32_t crt_floating_point_feature_probe(void)
 #else
     return processor_feature_fallback_false();
 #endif
+#endif
 }
+#endif
 
 // FUNCTION: LEGORR 0x00456210
 uint32_t flh_magic_uu_noop(void)
@@ -1721,50 +1983,39 @@ void font_cursor_word_set(int index, uint32_t v)
     }
 }
 
-/* --- pure-return stubs + advisor word clear (see crt.hpp) -------------------- */
-// FUNCTION: LEGORR 0x00491ff5
-void crt_no_op_stub(void)
+/* VC5 LIBC.LIB common.obj's public __load_CW matches the target entry. */
+// LIBRARY: LEGORR 0x00491ff5 SYMBOL
+// __load_CW
+#if !defined(_MSC_VER)
+void crt_load_control_word(uint32_t control_word)
 {
-    /* FUN_00491ff5: pure return — faithful. */
+    /* The host fallback leaves its floating-point environment unchanged. */
+    (void)control_word;
 }
-
-/* CrtFpuPrecisionModeCodeGet (FUN_0049200c): this helper consumes the
- * caller's EAX value directly and returns 7 when bit 0x80000 is set, else
- * 1. Its default arm also adds the corpus's 1.0 operand to ST(0). Preserve
- * both register contracts on the original MSVC5 x86 target. */
-#if defined(_MSC_VER) && defined(_M_IX86)
-#define CRT_FPU_PRECISION_NAKED __declspec(naked)
-/* Corpus 0x492019 adds its 1.0 operand (PE bytes: 00 00 00 00 00 00 f0 3f). */
-static const double s_fpu_precision_mode_one = 1.0;
-#else
-#define CRT_FPU_PRECISION_NAKED
 #endif
-// FUNCTION: LEGORR 0x0049200c
-CRT_FPU_PRECISION_NAKED uint32_t crt_fpu_precision_mode_code_get(void)
+
+/* VC5 LIBC.LIB common.obj's public __convertTOStoQNaN matches this entry. */
+// LIBRARY: LEGORR 0x0049200c SYMBOL
+// __convertTOStoQNaN
+#if !defined(_MSC_VER)
+uint32_t crt_fpu_precision_mode_code_get(void)
 {
-#if defined(_MSC_VER) && defined(_M_IX86)
-    __asm {
-        test eax, 80000h
-        jz precision_default
-        mov eax, 7
-        ret
-    precision_default:
-        fadd qword ptr [s_fpu_precision_mode_one]
-        mov eax, 1
-        ret
-    }
-#else
     /* Portable callers do not have the original implicit EAX input. */
     return 1u;
-#endif
 }
-#undef CRT_FPU_PRECISION_NAKED
+#endif
 
-// FUNCTION: LEGORR 0x00497870
+/* The target's helper at 0x497870 is private __hw_cw inside VC5's public
+ * __control87 implementation. The MSVC build gets it as part of that
+ * runtime object; this placeholder is only for non-MSVC callers. */
+// LIBRARY: LEGORR 0x00497870 SYMBOL
+// __hw_cw
+#if !defined(_MSC_VER)
 void crt_no_op_stub_variant(void)
 {
-    /* FUN_00497870: pure return — faithful. */
+    /* No standalone equivalent is needed by the portable control path. */
 }
+#endif
 
 // FUNCTION: LEGORR 0x00401b20
 void advisor_clear_active_state(void)
@@ -1772,7 +2023,9 @@ void advisor_clear_active_state(void)
     s_advisor_state_word &= ~2u;
 }
 
-// FUNCTION: LEGORR 0x0048e030
+#if !defined(_MSC_VER)
+// LIBRARY: LEGORR 0x0048e030 SYMBOL
+// _swap (private qsort.obj helper; the MSVC archive supplies it with qsort)
 void byte_range_swap(void* a, void* b, size_t n)
 {
     if (a == NULL || b == NULL) {
@@ -1789,6 +2042,7 @@ void byte_range_swap(void* a, void* b, size_t n)
         pb[i] = t;
     }
 }
+#endif
 
 /* --- the DAT window band (see crt.hpp) ---------------------------------------
  * Auxiliary tables are zero-initialized statics. The panel position pair
@@ -2277,15 +2531,19 @@ void panel_texture_slots_allocate(int panel, int count, const int* slot_index,
     }
 }
 
-/* --- the small global primitives band (see crt.hpp) -------------------------- */
-
-// FUNCTION: LEGORR 0x00497aa0
+/* VC5 LIBC.LIB intrncvt.obj supplies this zeroing helper. */
+// LIBRARY: LEGORR 0x00497aa0 SYMBOL
+// __FillZeroMan
+#if !defined(_MSC_VER)
 void uint96_zero(uint32_t limbs[3])
 {
     limbs[0] = 0u;
     limbs[1] = 0u;
     limbs[2] = 0u;
 }
+#endif
+
+/* --- the small global primitives band (see crt.hpp) -------------------------- */
 
 /* GlobalValueClearIfEqual (FUN_0040e910) — the screen-effect handle word
  * (the corpus's DAT_004c7ea4, unowned) clears only on a matching release. */
@@ -2378,31 +2636,46 @@ void scene_effect_registry_words_peek(uint32_t out_words[3])
 }
 
 /* CrtFatalMessageExit (FUN_00498340) — the corpus's exhausted-memory
- * abort. The port aborts with the host runtime, or routes through the
- * observer hook when installed so the path is testable (deviation). */
+ * abort. VC5 builds use LIBC.LIB's __amsg_exit with the observed message
+ * code; portable builds use abort, with an observer hook for tests. */
+#if !defined(_MSC_VER)
 static void (*s_fatal_exit_observer)(void);
+#endif
 
 // FUNCTION: LEGORR 0x00498340
 void crt_fatal_message_exit(void)
 {
+#if defined(_MSC_VER)
+    _amsg_exit(2);
+#else
     if (s_fatal_exit_observer != NULL) {
         s_fatal_exit_observer();
         return;
     }
     abort();
+#endif
 }
 
 void crt_fatal_exit_observer_set(void (*observer)(void))
 {
+#if defined(_MSC_VER)
+    (void)observer;
+#else
     s_fatal_exit_observer = observer;
+#endif
 }
 
-/* CrtNoOpStubVariant2 (FUN_00493c40) — see crt.hpp. */
-// FUNCTION: LEGORR 0x00493c40
+/* The portable math-exception fallback keeps a no-op at this call site;
+ * VC5's runtime maps this target entry to its real __set_statfp helper. */
+#if defined(_MSC_VER)
+// LIBRARY: LEGORR 0x00493c40 SYMBOL
+// __set_statfp
+#else
 void crt_no_op_stub_variant2(void)
 {
     return;
 }
+#endif
 
 /* LinkedRecordChainFree / GlobalLinkedRecordChainClear — see crt.hpp. */
 // GLOBAL: LEGORR 0x004aa450
@@ -2493,7 +2766,9 @@ void renderer_command_node_prepend(uint32_t kind, const uint32_t* payload)
 }
 
 /* CrtOwnedStreamBufferRelease (FUN_00494df0) — see crt.hpp. */
-// FUNCTION: LEGORR 0x00494df0
+// LIBRARY: LEGORR 0x00494df0 SYMBOL
+// __freebuf
+#if !defined(_MSC_VER) || !defined(_M_IX86)
 void crt_owned_stream_buffer_release(char* record)
 {
     /* Fields 0-2 are host pointers; field 3 is the following flags dword. */
@@ -2507,6 +2782,7 @@ void crt_owned_stream_buffer_release(char* record)
         fields[1] = NULL;
     }
 }
+#endif
 
 /* --- the shared texture directory word (see crt.hpp) ------------------------ */
 // GLOBAL: LEGORR 0x0076cd88
@@ -2588,7 +2864,7 @@ __declspec(naked) void* string_keyed_cache_entry_find(const char* key)
         mov eax, dword ptr [esi]
         push eax
         push edi
-        call strcasecmp_lite
+        call _strcmpi
         add esp, 8
         test eax, eax
         je string_cache_match
@@ -2812,21 +3088,41 @@ void string_prefix_reserve(char* s, int count)
 {
     if (count != 0) {
         const size_t bytes = strlen(s) + 1u;
+#if defined(_MSC_VER) && defined(_M_IX86)
+        memmove(s + count, s, bytes);
+#else
         crt_memory_move(s + count, s, bytes);
+#endif
     }
 }
 
 /* CrtStreamBufferAllocate (FUN_00498ae0) — see crt.hpp. DAT_005493e4 is
  * unowned: zero-init hooked static. */
+#if !defined(_MSC_VER)
 // GLOBAL: LEGORR 0x005493e4
 static long s_stream_alloc_count;
 // GLOBAL: LEGORR 0x005493e8
 static void* s_standard_stream_buffers[2];
+#endif
 
+#if defined(_MSC_VER)
+#define s_standard_stream_record_0 ((int*)&_iob[1])
+#define s_standard_stream_record_1 ((int*)&_iob[2])
+#else
+// GLOBAL: LEGORR 0x004b2648
+static int s_standard_stream_record_0[8] = { 0, 0, 0, 2, 1, 0, 0, 0 };
+// GLOBAL: LEGORR 0x004b2668
+static int s_standard_stream_record_1[8] = { 0, 0, 0, 2, 2, 0, 0, 0 };
+#endif
+
+#if !defined(_MSC_VER)
 long stream_allocation_count_peek(void) { return s_stream_alloc_count; }
 void stream_allocation_count_reset(void) { s_stream_alloc_count = 0; }
+#endif
 
-// FUNCTION: LEGORR 0x00498ae0
+// LIBRARY: LEGORR 0x00498ae0 SYMBOL
+// __getbuf
+#if !defined(_MSC_VER) || !defined(_M_IX86)
 void crt_stream_buffer_allocate(char* record)
 {
 #if defined(_WIN64) || defined(__x86_64__) || defined(__aarch64__)
@@ -2875,10 +3171,16 @@ void crt_stream_buffer_allocate(char* record)
     }
 #endif
 }
+#endif
 
-// FUNCTION: LEGORR 0x00498f50
+// LIBRARY: LEGORR 0x00498f50 SYMBOL
+// _ungetc
+#if !defined(_MSC_VER) || !defined(_M_IX86)
 uint32_t crt_stream_unget_byte(uint32_t value, char* record)
 {
+#if defined(_MSC_VER)
+    return (uint32_t)ungetc((int)value, (FILE*)record);
+#else
     int* fields = (int*)record;
     uint32_t flags;
     if (value != 0xffffffffu &&
@@ -2909,28 +3211,35 @@ uint32_t crt_stream_unget_byte(uint32_t value, char* record)
         return value & 0xffu;
     }
     return 0xffffffffu;
+#endif
 }
+#endif
 
-/* UInt96Add (FUN_00499fe0) — see crt.hpp. Every carry-add writes its sum
- * whether or not it carries; only the bump is gated. */
-// FUNCTION: LEGORR 0x00499fe0
+/* VC5 LIBC.LIB mantold.obj supplies the exact 96-bit add. */
+// LIBRARY: LEGORR 0x00499fe0 SYMBOL
+// ___add_12
+#if !defined(_MSC_VER)
 void crt_uint96_add(uint32_t* dst, const uint32_t* src)
 {
-    int carry = crt_unsigned_add_with_carry(dst[0], src[0], &dst[0]);
+    int carry = CRT_ADDL(dst[0], src[0], &dst[0]);
     if (carry != 0) {
-        carry = crt_unsigned_add_with_carry(dst[1], 1u, &dst[1]);
+        carry = CRT_ADDL(dst[1], 1u, &dst[1]);
         if (carry != 0) {
             dst[2] = dst[2] + 1u;
         }
     }
-    carry = crt_unsigned_add_with_carry(dst[1], src[1], &dst[1]);
+    carry = CRT_ADDL(dst[1], src[1], &dst[1]);
     if (carry != 0) {
         dst[2] = dst[2] + 1u;
     }
-    crt_unsigned_add_with_carry(dst[2], src[2], &dst[2]);
+    CRT_ADDL(dst[2], src[2], &dst[2]);
 }
+#endif
 
-// FUNCTION: LEGORR 0x0049a0b0
+/* VC5 LIBC.LIB mantold.obj supplies this exact decimal-to-extended helper. */
+// LIBRARY: LEGORR 0x0049a0b0 SYMBOL
+// ___mtold12
+#if !defined(_MSC_VER)
 void crt_decimal_digit_sequence_to_extended96(const char* digits, int count,
                                               void* out_extended96)
 {
@@ -2948,16 +3257,16 @@ void crt_decimal_digit_sequence_to_extended96(const char* digits, int count,
         original[0] = limbs[0];
         original[1] = limbs[1];
         original[2] = limbs[2];
-        extended_float96_bit_shift_left_one(limbs);
-        extended_float96_bit_shift_left_one(limbs);
-        crt_uint96_add(limbs, original);
-        extended_float96_bit_shift_left_one(limbs);
+        CRT_U96_SHIFT_LEFT_ONE(limbs);
+        CRT_U96_SHIFT_LEFT_ONE(limbs);
+        CRT_U96_ADD(limbs, original);
+        CRT_U96_SHIFT_LEFT_ONE(limbs);
 
         /* Corpus 0x49a116 sign-extends the current digit byte with MOVSX. */
         digit[0] = (uint32_t)(int32_t)digits[i];
         digit[1] = 0;
         digit[2] = 0;
-        crt_uint96_add(limbs, digit);
+        CRT_U96_ADD(limbs, digit);
     }
 
     while (limbs[2] == 0) {
@@ -2967,13 +3276,17 @@ void crt_decimal_digit_sequence_to_extended96(const char* digits, int count,
         limbs[0] <<= 16;
     }
     while ((limbs[2] & 0x8000u) == 0) {
-        extended_float96_bit_shift_left_one(limbs);
+        CRT_U96_SHIFT_LEFT_ONE(limbs);
         exponent = (int16_t)(exponent - 1);
     }
     *(int16_t*)((uint8_t*)out_extended96 + 10) = exponent;
 }
+#endif
 
-// FUNCTION: LEGORR 0x00497f40
+/* VC5 LIBC.LIB cfout.obj supplies this exact public entry. */
+// LIBRARY: LEGORR 0x00497f40 SYMBOL
+// ___dtold
+#if !defined(_MSC_VER)
 void crt_double_to_extended80(void* out_extended80, const void* source_double)
 {
     const uint32_t* source = (const uint32_t*)source_double;
@@ -3017,8 +3330,11 @@ void crt_double_to_extended80(void* out_extended80, const void* source_double)
     *(uint16_t*)(destination + 2) =
         (uint16_t)(extended_exponent | (source_high & 0x8000u));
 }
+#endif
 
-// FUNCTION: LEGORR 0x0049a540
+#if !defined(_MSC_VER)
+// LIBRARY: LEGORR 0x0049a540 SYMBOL
+// ___ld12mul
 void crt_extended80_multiply(uint16_t* destination, const uint16_t* source)
 {
     uint16_t left[5];
@@ -3084,7 +3400,7 @@ void crt_extended80_multiply(uint16_t* destination, const uint16_t* source)
             product = (uint32_t)left[i + j] * (uint32_t)right[4u - j];
             pair = (uint32_t)accumulator[i] |
                    ((uint32_t)accumulator[i + 1u] << 16);
-            carry = (uint32_t)crt_unsigned_add_with_carry(pair, product, &sum);
+            carry = (uint32_t)CRT_ADDL(pair, product, &sum);
             accumulator[i] = (uint16_t)sum;
             accumulator[i + 1u] = (uint16_t)(sum >> 16);
             if (carry != 0u) {
@@ -3108,7 +3424,7 @@ void crt_extended80_multiply(uint16_t* destination, const uint16_t* source)
                    ((uint32_t)accumulator[3] << 16);
         limbs[2] = (uint32_t)accumulator[4] |
                    ((uint32_t)accumulator[5] << 16);
-        extended_float96_bit_shift_left_one(limbs);
+        CRT_U96_SHIFT_LEFT_ONE(limbs);
         accumulator[0] = (uint16_t)limbs[0];
         accumulator[1] = (uint16_t)(limbs[0] >> 16);
         accumulator[2] = (uint16_t)limbs[1];
@@ -3134,7 +3450,7 @@ void crt_extended80_multiply(uint16_t* destination, const uint16_t* source)
                            ((uint32_t)accumulator[3] << 16);
                 limbs[2] = (uint32_t)accumulator[4] |
                            ((uint32_t)accumulator[5] << 16);
-                extended_float96_bit_shift_right_one(limbs);
+                CRT_U96_SHIFT_RIGHT_ONE(limbs);
                 accumulator[0] = (uint16_t)limbs[0];
                 accumulator[1] = (uint16_t)(limbs[0] >> 16);
                 accumulator[2] = (uint16_t)limbs[1];
@@ -3179,12 +3495,13 @@ void crt_extended80_multiply(uint16_t* destination, const uint16_t* source)
     }
     destination[5] = (uint16_t)(exponent | sign);
 }
+#endif
 
-/* UInt96IncrementAtBit (FUN_00497970) — see crt.hpp. The carry walks DOWN
- * the limb indices (toward limb 0), the opposite direction from the
- * uint96-add chain; the corpus's bit-mask reduction rides the byte-trick
- * expression, which simplifies to bit % 32 for the non-negative inputs. */
-static uint32_t uint96_increment_at_bit_with_carry(uint32_t limbs[3], int bit)
+/* UInt96IncrementAtBit (FUN_00497970): the runtime returns final carry. */
+// LIBRARY: LEGORR 0x00497970 SYMBOL
+// __IncMan
+#if !defined(_MSC_VER)
+uint32_t crt_uint96_increment_at_bit(uint32_t limbs[3], int bit)
 {
     if (limbs == NULL) {
         return 0u; /* deviation: the corpus strides the limbs blindly */
@@ -3198,50 +3515,27 @@ static uint32_t uint96_increment_at_bit_with_carry(uint32_t limbs[3], int bit)
     idx = (idx - b) & 0x1f;
     const uint32_t mask = 1u << (31u - (uint32_t)idx);
     uint32_t sum = 0;
-    int carry = crt_unsigned_add_with_carry(limbs[limb], mask, &sum);
+    int carry = CRT_ADDL(limbs[limb], mask, &sum);
     limbs[limb] = sum;
     for (int i = limb - 1; i >= 0; --i) {
         if (carry == 0) {
             return 0u;
         }
-        carry = crt_unsigned_add_with_carry(limbs[i], 1u, &sum);
+        carry = CRT_ADDL(limbs[i], 1u, &sum);
         limbs[i] = sum;
     }
     return (uint32_t)carry;
 }
-
-// FUNCTION: LEGORR 0x00497970
-void crt_uint96_increment_at_bit(uint32_t limbs[3], int bit)
-{
-    if (limbs == NULL) {
-        return; /* deviation: the corpus strides the limbs blindly */
-    }
-    const int limb = (bit + (int)((bit >> 31) & 0x1fu)) >> 5;
-    if (limb < 0 || limb > 2) {
-        return; /* deviation: the corpus strides the limbs blindly */
-    }
-    const unsigned char b = (unsigned char)(bit >> 31);
-    int idx = ((((unsigned char)bit ^ b) - b) & 0x1f) ^ b;
-    idx = (idx - b) & 0x1f;
-    const uint32_t mask = 1u << (31u - (uint32_t)idx);
-    uint32_t sum = 0;
-    int carry = crt_unsigned_add_with_carry(limbs[limb], mask, &sum);
-    limbs[limb] = sum;
-    for (int i = limb - 1; i >= 0; --i) {
-        if (carry == 0) {
-            return;
-        }
-        carry = crt_unsigned_add_with_carry(limbs[i], 1u, &sum);
-        limbs[i] = sum;
-    }
-}
+#endif
 
 /* UInt96HasNoBitsAtOrAbove (FUN_00497900) — see crt.hpp. The bit-index
  * numbering is the corpus's MSB-first one (bit n lives in limb n / 32 at
  * word position 31 - n % 32), and the in-limb mask
  * ~(-1 << (31 - bit % 32)) covers the positions STRICTLY below the named
  * bit, i.e. the bits above it; equal-index bits don't count. */
-// FUNCTION: LEGORR 0x00497900
+// LIBRARY: LEGORR 0x00497900 SYMBOL
+// __ZeroTail
+#if !defined(_MSC_VER)
 uint32_t crt_uint96_has_no_bits_at_or_above(const uint32_t limbs[3], int bit)
 {
     if (limbs == NULL) {
@@ -3265,12 +3559,15 @@ uint32_t crt_uint96_has_no_bits_at_or_above(const uint32_t limbs[3], int bit)
     }
     return 1u;
 }
+#endif
 
 /* UInt96ClearFromBit (FUN_004979e0) — see crt.hpp. The increment branch
  * runs only while "bit is set AND something lives at or above bit + 1";
  * its final carry is returned because the extended-float converter uses it
  * to adjust the exponent after rounding. */
-// FUNCTION: LEGORR 0x004979e0
+// LIBRARY: LEGORR 0x004979e0 SYMBOL
+// __RoundMan
+#if !defined(_MSC_VER)
 uint32_t crt_uint96_clear_from_bit(uint32_t limbs[3], int bit)
 {
     const int limb = (bit + (int)((bit >> 31) & 0x1fu)) >> 5;
@@ -3280,8 +3577,8 @@ uint32_t crt_uint96_clear_from_bit(uint32_t limbs[3], int bit)
     const uint32_t shift = 31u - (uint32_t)idx;
     uint32_t result = 0u;
     if ((limbs[limb] & (1u << shift)) != 0u &&
-        crt_uint96_has_no_bits_at_or_above(limbs, bit + 1) == 0u) {
-        result = uint96_increment_at_bit_with_carry(limbs, bit - 1);
+        CRT_U96_ZERO_TAIL(limbs, bit + 1) == 0u) {
+        result = CRT_U96_INCREMENT(limbs, bit - 1);
     }
     limbs[limb] &= ((uint32_t)0xffffffffu) << shift;
     for (int i = limb + 1; i < 3; ++i) {
@@ -3289,6 +3586,7 @@ uint32_t crt_uint96_clear_from_bit(uint32_t limbs[3], int bit)
     }
     return result;
 }
+#endif
 
 /* --- the pair-table window pair (see crt.hpp) ------------------------------
  * The find scan keeps the corpus's masked walk: the compare index is the
@@ -3409,13 +3707,16 @@ void low_texture_flag_set(void) /* FUN_00477bd0 */
 
 /* --- integer/string helper band (2026-10-25) -------------------------------- */
 
-/* UInt96Copy (FUN_00497a80) — see crt.hpp. The corpus computes dst − src as
+/* UInt96Copy (FUN_00497a80): VC5 LIBC.LIB intrncvt.obj supplies this entry. */
+// LIBRARY: LEGORR 0x00497a80 SYMBOL
+// __CopyMan
+#if !defined(_MSC_VER)
+/* The corpus computes dst − src as
  * a byte distance and walks three dwords forward through the *source* side,
  * reading each word at the walked pointer and writing it back through the
  * delta, so each source word is read only after earlier writes land; the
  * ordered copy reproduces the overlap. Keeping the post-copy decrement in
  * the loop condition mirrors the corpus's `dec edx; jne` tail. */
-// FUNCTION: LEGORR 0x00497a80
 void uint96_copy(uint32_t dst[3], const uint32_t src[3])
 {
     const uint32_t* p = src;
@@ -3426,12 +3727,16 @@ void uint96_copy(uint32_t dst[3], const uint32_t src[3])
         p += 1;
     } while (--n != 0);
 }
+#endif
 
-/* UInt96ShiftRight (FUN_00497ad0): shift the three big-endian DWORD limbs.
+/* UInt96ShiftRight (FUN_00497ad0): VC5 LIBC.LIB intrncvt.obj supplies it. */
+// LIBRARY: LEGORR 0x00497ad0 SYMBOL
+// __ShrMan
+#if !defined(_MSC_VER)
+/* Shift the three big-endian DWORD limbs.
  * The conversion callers use nonnegative shifts, including bit and whole-word
  * components; preserve the signed quotient/remainder decomposition of the
  * original for callers outside that range as well. */
-// FUNCTION: LEGORR 0x00497ad0
 void uint96_shift_right(uint32_t limbs[3], int count)
 {
     int word_shift;
@@ -3460,7 +3765,9 @@ void uint96_shift_right(uint32_t limbs[3], int count)
         }
     }
 }
+#endif
 
+#if !defined(_MSC_VER)
 // GLOBAL: LEGORR 0x004b28a8
 static const int32_t s_extended_float_format_a[6] = {
     1024, -1023, 53, 11, 64, 1023
@@ -3469,10 +3776,14 @@ static const int32_t s_extended_float_format_a[6] = {
 static const int32_t s_extended_float_format_b[6] = {
     128, -127, 24, 8, 32, 127
 };
+#endif
 
-/* CrtExtended80ToBinaryFloat (FUN_00497b90): convert the CRT's packed
+/* CrtExtended80ToBinaryFloat (FUN_00497b90): VC5 LIBC.LIB intrncvt.obj. */
+// LIBRARY: LEGORR 0x00497b90 SYMBOL
+// __ld12cvt
+#if !defined(_MSC_VER)
+/* Convert the CRT's packed
  * 80-bit significand/exponent form into a 32- or 64-bit IEEE layout. */
-// FUNCTION: LEGORR 0x00497b90
 uint32_t crt_extended80_to_binary_float(const uint16_t* source,
                                         uint32_t* destination,
                                         const int32_t* format)
@@ -3492,40 +3803,40 @@ uint32_t crt_extended80_to_binary_float(const uint16_t* source,
 
     if (binary_exponent == -0x3fff) {
         binary_exponent = 0;
-        if (!uint96_is_zero(limbs)) {
-            uint96_zero(limbs);
+        if (!CRT_U96_IS_ZERO(limbs)) {
+            CRT_U96_ZERO(limbs);
             status = 2u;
         }
     }
     else {
-        uint96_copy(original_limbs, limbs);
-        if (crt_uint96_clear_from_bit(limbs, format[2]) != 0u) {
+        CRT_U96_COPY(original_limbs, limbs);
+        if (CRT_U96_ROUND(limbs, format[2]) != 0u) {
             binary_exponent = (int)exponent - 0x3ffe;
         }
         if (binary_exponent < format[1] - format[2]) {
-            uint96_zero(limbs);
+            CRT_U96_ZERO(limbs);
             binary_exponent = 0;
             status = 2u;
         }
         else if (binary_exponent <= format[1]) {
-            uint96_copy(limbs, original_limbs);
-            uint96_shift_right(limbs, format[1] - binary_exponent);
-            crt_uint96_clear_from_bit(limbs, format[2]);
-            uint96_shift_right(limbs, format[3] + 1);
+            CRT_U96_COPY(limbs, original_limbs);
+            CRT_U96_SHIFT_RIGHT(limbs, format[1] - binary_exponent);
+            CRT_U96_ROUND(limbs, format[2]);
+            CRT_U96_SHIFT_RIGHT(limbs, format[3] + 1);
             binary_exponent = 0;
             status = 2u;
         }
         else if (binary_exponent >= format[0]) {
-            uint96_zero(limbs);
+            CRT_U96_ZERO(limbs);
             limbs[0] |= 0x80000000u;
-            uint96_shift_right(limbs, format[3]);
+            CRT_U96_SHIFT_RIGHT(limbs, format[3]);
             binary_exponent = format[5] + format[0];
             status = 1u;
         }
         else {
             binary_exponent += format[5];
             limbs[0] &= 0x7fffffffu;
-            uint96_shift_right(limbs, format[3]);
+            CRT_U96_SHIFT_RIGHT(limbs, format[3]);
         }
     }
 
@@ -3543,49 +3854,65 @@ uint32_t crt_extended80_to_binary_float(const uint16_t* source,
     }
     return status;
 }
+#endif
 
-/* The two format wrappers return the converter's status even though the
- * decompiler's prototype loses the EAX result; callers branch on 1/2. */
-// FUNCTION: LEGORR 0x00497d60
+/* VC5 LIBC.LIB intrncvt.obj supplies the double format wrapper. */
+// LIBRARY: LEGORR 0x00497d60 SYMBOL
+// __ld12tod
+#if !defined(_MSC_VER)
 uint32_t crt_extended_float_convert_format_a(const uint16_t* source,
                                              uint32_t* destination)
 {
     return crt_extended80_to_binary_float(source, destination,
                                           s_extended_float_format_a);
 }
+#endif
 
-// FUNCTION: LEGORR 0x00497d80
+/* VC5 LIBC.LIB intrncvt.obj supplies the single format wrapper. */
+// LIBRARY: LEGORR 0x00497d80 SYMBOL
+// __ld12tof
+#if !defined(_MSC_VER)
 uint32_t crt_extended_float_convert_format_b(const uint16_t* source,
                                              uint32_t* destination)
 {
     return crt_extended80_to_binary_float(source, destination,
                                           s_extended_float_format_b);
 }
+#endif
 
-/* CrtDoubleToExtendedFloatConvertA/B (FUN_00497da0/00497de0): expand the
- * by-value IEEE double into the CRT's 80-bit temporary, then convert it to
- * the selected binary format. */
-// FUNCTION: LEGORR 0x00497da0
-uint32_t crt_double_to_extended_float_convert_a(uint32_t* destination,
-                                                double value)
+/* VC5 LIBC.LIB intrncvt.obj supplies the exact text-to-binary wrappers. */
+// LIBRARY: LEGORR 0x00497da0 SYMBOL
+// __atodbl
+#if !defined(_MSC_VER)
+uint32_t crt_number_string_to_binary64(uint32_t* destination, char* text)
 {
     uint16_t extended[6];
-    crt_double_to_extended80(extended, &value);
-    return crt_extended_float_convert_format_a(extended, destination);
+    char* end;
+    double value = strtod(text, &end);
+    (void)end;
+    CRT_DTOLD(extended, &value);
+    return CRT_LD12TOD(extended, destination);
 }
+#endif
 
-// FUNCTION: LEGORR 0x00497de0
-uint32_t crt_double_to_extended_float_convert_b(uint32_t* destination,
-                                                double value)
+// LIBRARY: LEGORR 0x00497de0 SYMBOL
+// __atoflt
+#if !defined(_MSC_VER)
+uint32_t crt_number_string_to_binary32(uint32_t* destination, char* text)
 {
     uint16_t extended[6];
-    crt_double_to_extended80(extended, &value);
-    return crt_extended_float_convert_format_b(extended, destination);
+    char* end;
+    double value = strtod(text, &end);
+    (void)end;
+    CRT_DTOLD(extended, &value);
+    return CRT_LD12TOF(extended, destination);
 }
+#endif
 
-/* CrtStringDuplicate (FUN_0049b660) — see crt.hpp. The corpus's length walk
- * counts bytes through the NUL, so the copy is strlen + 1 bytes. */
-// FUNCTION: LEGORR 0x0049b660
+/* CrtStringDuplicate (FUN_0049b660) — see crt.hpp. */
+// LIBRARY: LEGORR 0x0049b660 SYMBOL
+// __strdup
+#if !defined(_MSC_VER)
 char* crt_string_duplicate(const char* text)
 {
     if (text == NULL) {
@@ -3598,85 +3925,69 @@ char* crt_string_duplicate(const char* text)
     }
     return copy; /* NULL allocation answers NULL, like the corpus */
 }
+#endif
 
-/* CrtUnsignedIntegerFormatRadix (FUN_0049dba0) — see crt.hpp. The corpus's
- * digit fold is `digit < 10 ? digit + '0' : digit + 'W'`, which lands the
- * letters lowercase; the port pins that expression shape. */
-// FUNCTION: LEGORR 0x0049dba0
-void crt_unsigned_format_radix(uint32_t value, char* out, int radix,
-                               int signed_value)
-{
-    if (out == NULL) {
-        return; /* deviation: the corpus strides the buffer blindly */
-    }
-    if (radix < 2) {
-        out[0] = '0';
-        out[1] = '\0';
-        return; /* deviation: the corpus's divide loop never terminates */
-    }
-    char* head = out;
-    char* end;
-    uint32_t v = value;
-    if (signed_value != 0) {
-        *out = '-';
-        ++out;
-        v = (uint32_t)0u - v;
-        head = out;
-    }
-    end = out;
-    for (;;) {
-        const uint32_t digit = v % (uint32_t)radix;
-        v /= (uint32_t)radix;
-        *end++ = (char)(digit < 10u ? digit + (uint32_t)'0'
-                                    : digit + (uint32_t)'W');
-        if (v == 0u) {
-            break;
-        }
-    }
-    *end = '\0';
-    /* Reverse in place: the corpus swaps the last digit with the buffer
-     * head, then walks the ends toward each other until they cross. */
-    char* tail = end - 1;
-    while (head < tail) {
-        const char t = *head;
-        *head = *tail;
-        *tail = t;
-        ++head;
-        --tail;
-    }
-}
-
+/* xtoa.obj also supplies the exact private radix formatter called by _itoa. */
+// LIBRARY: LEGORR 0x0049dba0 SYMBOL
+// _xtoa
 /* SignedDecimalToStringConvert (FUN_0049db60) — see crt.hpp. The corpus
  * picks the callee's negate flag: 1 only for radix 10 with a negative
  * value (push 1 / push 0 at 0x49db77/0x49db90), the sign half living in
  * the callee at 0x49dbac. */
-// FUNCTION: LEGORR 0x0049db60
+// LIBRARY: LEGORR 0x0049db60 SYMBOL
+// __itoa
+#if !defined(_MSC_VER)
 char* crt_signed_to_string(int value, char* out, int radix)
 {
-    if (radix == 10 && value < 0) {
-        /* The corpus negates with wrapping int arithmetic; INT_MIN rides
-         * through as its 2^31 magnitude. */
-        crt_unsigned_format_radix((uint32_t)value, out, 10, 1);
-    } else {
-        crt_unsigned_format_radix((uint32_t)value, out, radix, 0);
+    /* Match VC5's _itoa digit case and wrapping INT_MIN magnitude. */
+    if (out == NULL) {
+        return NULL;
     }
-    return out;
+    if (radix < 2) {
+        out[0] = '0';
+        out[1] = '\0';
+        return out;
+    }
+    const int negative = radix == 10 && value < 0;
+    uint32_t magnitude = (uint32_t)value;
+    char* result = out;
+    char* digits = out;
+    char* end;
+    if (negative) {
+        *out++ = '-';
+        magnitude = 0u - magnitude;
+        digits = out;
+    }
+    end = out;
+    do {
+        const uint32_t digit = magnitude % (uint32_t)radix;
+        magnitude /= (uint32_t)radix;
+        *end++ = (char)(digit < 10u ? digit + (uint32_t)'0'
+                                    : digit + (uint32_t)'W');
+    } while (magnitude != 0u);
+    *end = '\0';
+    while (digits < --end) {
+        const char t = *digits;
+        *digits++ = *end;
+        *end = t;
+    }
+    return result;
 }
+#endif
 
 /* StringToUpper / StringToLowercase (FUN_0049dcd0 / FUN_0049dc10) — see
  * crt.hpp. The C-locale fast half folds ASCII letters in place; the
  * DAT_00549180 locale half rides the recorded locale-map chain. */
 // GLOBAL: LEGORR 0x00549180
+#if !defined(_MSC_VER)
 static uint32_t s_crt_locale_handle; /* DAT_00549180: zero-init locale handle */
+#endif
 
 // LIBRARY: LEGORR 0x0049dcd0 SYMBOL
 // __strupr
+#if !defined(_MSC_VER)
 char* crt_string_to_upper(char* text)
 {
-#if defined(_MSC_VER)
-    /* The VC5 /ML build links this exact original CRT routine. */
-    return _strupr(text);
-#else
     if (text == NULL) {
         return NULL;
     }
@@ -3709,17 +4020,14 @@ char* crt_string_to_upper(char* text)
         }
     }
     return original;
-#endif
 }
+#endif
 
 // LIBRARY: LEGORR 0x0049dc10 SYMBOL
 // __strlwr
+#if !defined(_MSC_VER)
 char* crt_string_to_lower(char* text)
 {
-#if defined(_MSC_VER)
-    /* The VC5 /ML build links this exact original CRT routine. */
-    return _strlwr(text);
-#else
     if (text == NULL) {
         return NULL;
     }
@@ -3752,20 +4060,33 @@ char* crt_string_to_lower(char* text)
         }
     }
     return original;
-#endif
 }
+#endif
 
 /* --- math error band (2026-10-25) -------------------------------------------
  * The corpus's _DAT_005490d0 math-error slot lands as guarded own storage
  * (the fd/codec readers ride the unported CRT runtime band — deviation). */
+#if defined(_MSC_VER)
+/* Low-level CRT calls and the compatibility shims share the VC5 error state. */
+#define s_math_error_code errno
+#define s_win32_error_code _doserrno
+#else
 // GLOBAL: LEGORR 0x005490d0
 static uint32_t s_math_error_code; /* _DAT_005490d0 role */
 // GLOBAL: LEGORR 0x005490d4
 static uint32_t s_win32_error_code; /* DAT_005490d4 role */
+#endif
 // GLOBAL: LEGORR 0x004b28e0
+#if !defined(_MSC_VER)
+/* Non-MSVC fallback state. VC5 fpexcept.obj owns this adjacent runtime word
+ * with its __matherr_flag data and accesses it from __except1. */
 static uint32_t s_math_exception_mode[4] = { 0x2694u, 0u, 0u, 0u };
+#endif
 
-// FUNCTION: LEGORR 0x004939a0
+/* VC5 LIBC.LIB's fpexcept.obj supplies the math-status errno mapper. */
+// LIBRARY: LEGORR 0x004939a0 SYMBOL
+// __set_errno
+#if !defined(_MSC_VER)
 void crt_math_error_code_set(int param)
 {
     if (param != 1) {
@@ -3778,102 +4099,62 @@ void crt_math_error_code_set(int param)
     s_math_error_code = 0x21u;
     /* other parameters: the slot stays (faithful) */
 }
+#endif
 
 uint32_t crt_math_error_code_peek(void) { return s_math_error_code; }
 
-// FUNCTION: LEGORR 0x00493be0
-#if defined(_MSC_VER) && defined(_M_IX86)
-/* Corpus 0x493be4 waits, then stores the status word to [ebp-2]. */
-__declspec(naked) int fpu_status_word_get_variant_a(void)
-{
-    __asm {
-        push ebp
-        mov ebp, esp
-        push ecx
-        fstsw word ptr [ebp - 2]
-        movsx eax, word ptr [ebp - 2]
-        mov esp, ebp
-        pop ebp
-        ret
-    }
-}
+#if defined(_MSC_VER)
+// LIBRARY: LEGORR 0x00493be0 SYMBOL
+// __statfp
 #else
 int fpu_status_word_get_variant_a(void)
 {
     unsigned short status = 0;
 #if defined(__i386__) || defined(__x86_64__)
-    __asm__ __volatile__("fnstsw %0" : "=a"(status));
+    __asm__ __volatile__("wait; fnstsw %0" : "=a"(status));
 #endif
     return (int)(short)status;
 }
 #endif
 
-// FUNCTION: LEGORR 0x00493bf0
+#if defined(_MSC_VER)
+// LIBRARY: LEGORR 0x00493bf0 SYMBOL
+// __clrfp
+#else
 int fpu_status_word_get_variant_b(void)
 {
     unsigned short status = 0;
-#if defined(_MSC_VER) && defined(_M_IX86)
-    __asm {
-        fnstsw ax
-        mov status, ax
-    }
-#elif defined(__i386__) || defined(__x86_64__)
-    __asm__ __volatile__("fnstsw %0" : "=a"(status));
+#if defined(__i386__) || defined(__x86_64__)
+    __asm__ __volatile__("fnstsw %0; fnclex" : "=a"(status));
 #endif
     return (int)(short)status;
 }
+#endif
 
-// FUNCTION: LEGORR 0x00493c10
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) int fpu_control_word_update_masked(uint32_t value,
-                                                     uint32_t mask)
-{
-    __asm {
-        push ebp
-        mov ebp, esp
-        push ecx
-        fstcw word ptr [ebp - 4]
-        mov eax, dword ptr [ebp + 0ch]
-        mov ecx, dword ptr [ebp + 8]
-        mov edx, eax
-        and edx, ecx
-        mov ecx, dword ptr [ebp - 4]
-        not eax
-        and eax, ecx
-        or edx, eax
-        mov dword ptr [ebp + 0ch], edx
-        fldcw word ptr [ebp + 0ch]
-        movsx eax, cx
-        mov esp, ebp
-        pop ebp
-        ret
-    }
-}
+#if defined(_MSC_VER)
+// LIBRARY: LEGORR 0x00493c10 SYMBOL
+// __ctrlfp
 #else
 int fpu_control_word_update_masked(uint32_t value, uint32_t mask)
 {
     unsigned short old_word = 0;
     unsigned short new_word;
-#if defined(_MSC_VER) && defined(_M_IX86)
-    __asm { fnstcw old_word }
-#elif defined(__i386__) || defined(__x86_64__)
+#if defined(__i386__) || defined(__x86_64__)
     __asm__ __volatile__("fnstcw %0" : "=m"(old_word));
 #endif
     new_word = (unsigned short)(((unsigned short)value & (unsigned short)mask) |
                                (old_word & (unsigned short)~mask));
-#if defined(_MSC_VER) && defined(_M_IX86)
-    __asm { fldcw new_word }
-#elif defined(__i386__) || defined(__x86_64__)
+#if defined(__i386__) || defined(__x86_64__)
     __asm__ __volatile__("fldcw %0" : : "m"(new_word));
 #endif
     return (int)(short)old_word;
 }
 #endif
 
-/* CrtMathExceptionCodeFromStatus (FUN_00493a00) — see crt.hpp. The priority
- * arms follow the decompile; the final raw low-byte return follows the
- * shipped instruction (`and eax,0xff`). */
-// FUNCTION: LEGORR 0x00493a00
+/* VC5 LIBC.LIB's fpexcept.obj exports this exact status-to-error helper. */
+// LIBRARY: LEGORR 0x00493a00 SYMBOL
+// __errcode
+#if !defined(_MSC_VER)
 int crt_math_exception_code_from_status(uint32_t status)
 {
     if ((status & 0x20u) != 0u) {
@@ -3890,6 +4171,7 @@ int crt_math_exception_code_from_status(uint32_t status)
     }
     return (int)(status & 0xffu);
 }
+#endif
 
 void global_flag_004ff978_install(uint32_t value)
 {
@@ -3946,8 +4228,19 @@ static CrtMathHandlerRecord s_math_handlers[CRT_MATH_HANDLER_ENTRIES] = {
 };
 
 // FUNCTION: LEGORR 0x004939d0
+#if defined(_MSC_VER)
+/* The target overrides VC5's standard _matherr symbol. Keep its declared
+ * CRT signature to agree with <math.h>; fpexcept.obj passes the operation
+ * id in the same 32-bit argument slot, which this target handler interprets
+ * as an integer. The strong definition also suppresses matherr.obj's no-op. */
+extern "C" int __cdecl _matherr(struct _exception* exception)
+#else
 uint32_t crt_math_exception_handler_get(int id)
+#endif
 {
+#if defined(_MSC_VER)
+    int id = (int)(uintptr_t)exception;
+#endif
     /* Corpus walk shape: the counter clears before the walk seeds, the
      * add-8 pointer bounds the scan against the table end through a
      * SIGNED (long) compare so MSVC emits jl, and the hit loads back
@@ -3956,7 +4249,7 @@ uint32_t crt_math_exception_handler_get(int id)
     const CrtMathHandlerRecord* p = s_math_handlers;
     while ((long)p < (long)(s_math_handlers + CRT_MATH_HANDLER_ENTRIES)) {
         if (p->id == id) {
-            return s_math_handlers[i].handler;
+            return (int)s_math_handlers[i].handler;
         }
         ++p;
         ++i;
@@ -3972,43 +4265,11 @@ void crt_math_exception_handler_install(int index, int id, uint32_t handler)
     }
 }
 
-/* CrtInteger64Multiply (FUN_0048ea90, __allmul) — see crt.hpp. The two
- * cross-word products contribute only their low 32 bits (the bit pattern
- * is sign-agnostic), so the fold lands as plain wrapping 32-bit adds.
- * The winapi branch is a byte-faithful naked reproduction of the corpus's
- * unsigned mul sequence, including the fast-path skip: when both high
- * words are zero the cross terms are never computed (the `or`/`jne`
- * test at the top); the portable branch keeps the same three-way fold
- * in C. */
-// FUNCTION: LEGORR 0x0048ea90
-#if defined(LEGORRR_BACKEND_WINAPI)
-__declspec(naked) uint64_t crt_integer64_multiply(uint32_t lo_a, int32_t hi_a,
-                                                  uint32_t lo_b, int32_t hi_b)
-{
-    __asm {
-        mov eax, [esp + 8]
-        mov ecx, [esp + 0x10]
-        or ecx, eax
-        mov ecx, [esp + 0xc]
-        jne cross_terms
-        mov eax, [esp + 4]
-        mul ecx
-        ret 0x10
-    cross_terms:
-        push ebx
-        mul ecx
-        mov ebx, eax
-        mov eax, [esp + 8]
-        mul dword ptr [esp + 0x14]
-        add ebx, eax
-        mov eax, [esp + 8]
-        mul ecx
-        add edx, ebx
-        pop ebx
-        ret 0x10
-    }
-}
-#else
+/* VC5 LIBC.LIB provides the target __allmul body. The portable backend
+ * keeps its tested word-pair implementation below. */
+// LIBRARY: LEGORR 0x0048ea90 SYMBOL
+// __allmul
+#if !defined(_MSC_VER)
 uint64_t crt_integer64_multiply(uint32_t lo_a, int32_t hi_a,
                                 uint32_t lo_b, int32_t hi_b)
 {
@@ -4023,108 +4284,11 @@ uint64_t crt_integer64_multiply(uint32_t lo_a, int32_t hi_a,
 }
 #endif
 
-/* CrtInteger64Divide (FUN_0048e9e0, __alldiv) — see crt.hpp. The Win32
- * body follows the corpus's signed word-pair normalization, two-word
- * divisor shift, one-word trial divide, and multiply-back repair. Its one
- * extra zero-divisor branch preserves this port's tested zero result rather
- * than the corpus's divide exception. The portable fallback keeps the same
- * value semantics without relying on x86 inline assembly. */
-// FUNCTION: LEGORR 0x0048e9e0
-#if defined(LEGORRR_BACKEND_WINAPI)
-__declspec(naked) uint64_t crt_integer64_divide(uint32_t lo_a, uint32_t hi_a,
-                                                uint32_t lo_b, uint32_t hi_b)
-{
-    __asm {
-        push edi
-        push esi
-        push ebx
-        xor edi, edi
-        mov eax, [esp + 0x14]
-        or eax, eax
-        jge numerator_nonnegative
-        inc edi
-        mov edx, [esp + 0x10]
-        neg eax
-        neg edx
-        sbb eax, 0
-        mov [esp + 0x14], eax
-        mov [esp + 0x10], edx
-    numerator_nonnegative:
-        mov eax, [esp + 0x1c]
-        or eax, eax
-        jge divisor_nonnegative
-        inc edi
-        mov edx, [esp + 0x18]
-        neg eax
-        neg edx
-        sbb eax, 0
-        mov [esp + 0x1c], eax
-        mov [esp + 0x18], edx
-    divisor_nonnegative:
-        or eax, eax
-        jne wide_divisor
-        mov ecx, [esp + 0x18]
-        mov eax, [esp + 0x14]
-        xor edx, edx
-        test ecx, ecx
-        jz zero_divisor
-        div ecx
-        mov ebx, eax
-        mov eax, [esp + 0x10]
-        div ecx
-        mov edx, ebx
-        jmp quotient_ready
-    wide_divisor:
-        mov ebx, eax
-        mov ecx, [esp + 0x18]
-        mov edx, [esp + 0x14]
-        mov eax, [esp + 0x10]
-    shift_divisor_and_numerator:
-        shr ebx, 1
-        rcr ecx, 1
-        shr edx, 1
-        rcr eax, 1
-        or ebx, ebx
-        jne shift_divisor_and_numerator
-        div ecx
-        mov esi, eax
-        mul dword ptr [esp + 0x1c]
-        mov ecx, eax
-        mov eax, [esp + 0x18]
-        mul esi
-        add edx, ecx
-        jb quotient_too_large
-        cmp edx, [esp + 0x14]
-        ja quotient_too_large
-        jb quotient_in_range
-        cmp eax, [esp + 0x10]
-        jbe quotient_in_range
-    quotient_too_large:
-        dec esi
-    quotient_in_range:
-        xor edx, edx
-        mov eax, esi
-    quotient_ready:
-        dec edi
-        jne quotient_sign_done
-        neg edx
-        neg eax
-        sbb edx, 0
-    quotient_sign_done:
-        pop ebx
-        pop esi
-        pop edi
-        ret 0x10
-    zero_divisor:
-        xor eax, eax
-        xor edx, edx
-        pop ebx
-        pop esi
-        pop edi
-        ret 0x10
-    }
-}
-#else
+/* VC5 LIBC.LIB provides the target __alldiv body. The portable backend
+ * keeps its tested word-pair implementation below. */
+// LIBRARY: LEGORR 0x0048e9e0 SYMBOL
+// __alldiv
+#if !defined(_MSC_VER)
 uint64_t crt_integer64_divide(uint32_t lo_a, uint32_t hi_a,
                               uint32_t lo_b, uint32_t hi_b)
 {
@@ -4202,69 +4366,11 @@ uint64_t crt_integer64_divide(uint32_t lo_a, uint32_t hi_a,
 }
 #endif
 
-/* CrtUnsigned64Divide (FUN_00498bf0, __aulldiv) — see crt.hpp. The
- * unsigned sibling: the same shift/trial/repair shape, so the same fold;
- * the high half of the answer is pinned zero only when the repair needs
- * it (the estimate can overflow the 32-bit trial), never by construction. */
-// FUNCTION: LEGORR 0x00498bf0
-#if defined(_MSC_VER) && defined(_M_IX86)
-/* Corpus 0x498c12 reuses EAX's high divisor and loads its low word into EBX. */
-__declspec(naked) uint64_t __stdcall crt_unsigned64_divide(
-    uint32_t lo_a, uint32_t hi_a, uint32_t lo_b, uint32_t hi_b)
-{
-    __asm {
-        push ebx
-        push esi
-        mov eax, dword ptr [esp + 18h]
-        or eax, eax
-        jne divide_wide
-        mov ecx, dword ptr [esp + 14h]
-        mov eax, dword ptr [esp + 10h]
-        xor edx, edx
-        div ecx
-        mov ebx, eax
-        mov eax, dword ptr [esp + 0ch]
-        div ecx
-        mov edx, ebx
-        jmp divide_return
-
-    divide_wide:
-        mov ecx, eax
-        mov ebx, dword ptr [esp + 14h]
-        mov edx, dword ptr [esp + 10h]
-        mov eax, dword ptr [esp + 0ch]
-    divide_normalize:
-        shr ecx, 1
-        rcr ebx, 1
-        shr edx, 1
-        rcr eax, 1
-        or ecx, ecx
-        jne divide_normalize
-        div ebx
-        mov esi, eax
-        mul dword ptr [esp + 18h]
-        mov ecx, eax
-        mov eax, dword ptr [esp + 14h]
-        mul esi
-        add edx, ecx
-        jb divide_adjust
-        cmp edx, dword ptr [esp + 10h]
-        ja divide_adjust
-        jb divide_no_adjust
-        cmp eax, dword ptr [esp + 0ch]
-        jbe divide_no_adjust
-    divide_adjust:
-        dec esi
-    divide_no_adjust:
-        xor edx, edx
-        mov eax, esi
-    divide_return:
-        pop esi
-        pop ebx
-        ret 10h
-    }
-}
-#else
+/* VC5 LIBC.LIB provides the target __aulldiv body. The portable backend
+ * keeps its tested word-pair implementation below. */
+// LIBRARY: LEGORR 0x00498bf0 SYMBOL
+// __aulldiv
+#if !defined(_MSC_VER)
 uint64_t crt_unsigned64_divide(uint32_t lo_a, uint32_t hi_a,
                               uint32_t lo_b, uint32_t hi_b)
 {
@@ -4339,6 +4445,15 @@ uint64_t crt_unsigned64_divide(uint32_t lo_a, uint32_t hi_a,
 }
 #endif
 
+/* VC5 LIBC.LIB supplies this compiler-generated 64-bit left-shift helper. */
+// LIBRARY: LEGORR 0x00498c60 SYMBOL
+// __aullrem
+// LIBRARY: LEGORR 0x00498f30 SYMBOL
+// __allshl
+
+#if defined(_MSC_VER)
+#define s_ctype_pointer _pctype
+#else
 // GLOBAL: LEGORR 0x004afd72
 static uint16_t s_ctype_character_flags[256] = {
     0x0020u, 0x0020u, 0x0020u, 0x0020u, 0x0020u, 0x0020u, 0x0020u, 0x0020u,
@@ -4361,6 +4476,19 @@ static uint16_t s_ctype_character_flags[256] = {
 
 // GLOBAL: LEGORR 0x004afd68
 static uint16_t* volatile s_ctype_pointer = s_ctype_character_flags;
+#endif
+#if defined(_MSC_VER)
+/* VC5's multibyte state is owned by LIBC.LIB. Share its globals so the
+ * runtime string/classification routines and these compatibility paths see
+ * the same code page and tables. */
+extern "C" int __mbcodepage;
+extern "C" int __mblcid;
+extern "C" int __lc_codepage;
+#define s_multibyte_character_flags _mbctype
+#define s_active_codepage __mbcodepage
+#define s_ansi_codepage __lc_codepage
+#define s_active_locale_table __mblcid
+#else
 // GLOBAL: LEGORR 0x005492b8
 static uint8_t s_multibyte_character_flags[257];
 // GLOBAL: LEGORR 0x005493bc
@@ -4369,6 +4497,8 @@ static uint32_t s_active_codepage;
 static uint32_t s_ansi_codepage;
 // GLOBAL: LEGORR 0x005493c0
 static uint32_t s_active_locale_table;
+#endif
+#if !defined(_MSC_VER)
 // GLOBAL: LEGORR 0x005490f8
 static char** s_environment;
 // GLOBAL: LEGORR 0x005490fc
@@ -4379,8 +4509,12 @@ static uint16_t** s_wide_environment;
 static char* s_environment_block;
 // GLOBAL: LEGORR 0x005492b0
 static int32_t s_environment_api_mode;
+#endif
+#if !defined(_MSC_VER)
 // GLOBAL: LEGORR 0x00549510
 static int32_t s_compare_string_api_mode;
+#endif
+#if !defined(_MSC_VER)
 // GLOBAL: LEGORR 0x005493c8
 static uint32_t s_codepage_metadata_word0;
 // GLOBAL: LEGORR 0x005493cc
@@ -4389,14 +4523,19 @@ static uint32_t s_codepage_metadata_word1;
 static uint32_t s_codepage_metadata_word2;
 // GLOBAL: LEGORR 0x005493d4
 static uint32_t s_codepage_fallback_mode;
+#endif
 // GLOBAL: LEGORR 0x005490d8
 static uint32_t s_file_open_attribute_policy;
 // GLOBAL: LEGORR 0x005494f4
 static uint32_t s_file_open_share_state;
+#if !defined(_MSC_VER)
 // GLOBAL: LEGORR 0x00549170
 static int32_t s_locale_map_api_mode;
+#endif
+#if !defined(_MSC_VER)
 // GLOBAL: LEGORR 0x005493e0
 static int32_t s_string_type_api_mode;
+#endif
 // GLOBAL: LEGORR 0x004b2330
 static const uint8_t s_predefined_codepage_masks[4] = { 1u, 2u, 4u, 8u };
 // GLOBAL: LEGORR 0x004b2338
@@ -4505,7 +4644,7 @@ static const int32_t s_leap_month_day_offsets[14] = {
 static const int32_t s_common_month_day_offsets[14] = {
     0, -1, 30, 58, 89, 119, 150, 180, 211, 242, 272, 303, 333, 364
 };
-// GLOBAL: LEGORR 0x004b2a18
+#if !defined(_MSC_VER)
 static const uint16_t s_positive_power_of_ten_table[28][6] = {
     { 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0xa000u, 0x4002u },
     { 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0xc800u, 0x4005u },
@@ -4536,7 +4675,6 @@ static const uint16_t s_positive_power_of_ten_table[28][6] = {
     { 0xfdd1u, 0x5a8bu, 0xd88bu, 0x5d25u, 0xf989u, 0x67dbu },
     { 0x95aau, 0xf3f8u, 0xbf27u, 0xc8a2u, 0xdd5du, 0x6e80u }
 };
-// GLOBAL: LEGORR 0x004b2b78
 static const uint16_t s_negative_power_of_ten_table[28][6] = {
     { 0xcccdu, 0xcccdu, 0xccccu, 0xccccu, 0xccccu, 0x3ffbu },
     { 0x3d71u, 0xd70au, 0x70a3u, 0x0a3du, 0xa3d7u, 0x3ff8u },
@@ -4567,6 +4705,8 @@ static const uint16_t s_negative_power_of_ten_table[28][6] = {
     { 0xe79eu, 0x5a88u, 0x9157u, 0xbf3cu, 0x8350u, 0x1822u },
     { 0x4b4eu, 0x6265u, 0x83fdu, 0xaf8fu, 0x9406u, 0x117du }
 };
+#endif
+#if !defined(_MSC_VER)
 // GLOBAL: LEGORR 0x00549128
 static CrtDecimalFormatContext* s_current_decimal_format;
 // GLOBAL: LEGORR 0x0054912c
@@ -4579,14 +4719,22 @@ static uint8_t s_decimal_format_truncated;
 static uint8_t s_decimal_conversion_buffer[32];
 // GLOBAL: LEGORR 0x00549410
 static CrtDecimalFormatContext s_decimal_format_context;
+#endif
+#if defined(_MSC_VER)
+#define s_max_multibyte_width __mb_cur_max
+#else
 // GLOBAL: LEGORR 0x004aff74
 static volatile uint32_t s_max_multibyte_width = 1u;
+#endif
 // GLOBAL: LEGORR 0x004aff78
 static char s_decimal_separator = '.';
 
 /* CrtCodePageLocaleIdLookup (FUN_00496530): the four DBCS pages with
  * built-in Windows locale mappings; all other pages have no mapped LCID. */
-// FUNCTION: LEGORR 0x00496530
+#if defined(_MSC_VER)
+// LIBRARY: LEGORR 0x00496530 SYMBOL
+// _CPtoLCID (private helper in mbctype.obj, used by _setmbcp)
+#else
 uint32_t crt_codepage_locale_id_lookup(uint32_t codepage)
 {
     switch (codepage) {
@@ -4597,11 +4745,14 @@ uint32_t crt_codepage_locale_id_lookup(uint32_t codepage)
     default: return 0u;
     }
 }
+#endif
 
 /* CrtDaylightTransitionBoundaryCompute (FUN_00499da0): calculate a
  * transition's zero-based day-of-year and millisecond-of-day from either
  * an nth-weekday rule or a fixed day rule, then update its cached year. */
-// FUNCTION: LEGORR 0x00499da0
+// LIBRARY: LEGORR 0x00499da0 SYMBOL
+// _cvtdate (private helper in VC5's tzset.obj, used by _isindst)
+#if !defined(_MSC_VER)
 void crt_daylight_transition_boundary_compute(int is_start,
                                               int use_nth_weekday,
                                               uint32_t year,
@@ -4659,10 +4810,12 @@ void crt_daylight_transition_boundary_compute(int is_start,
     }
     s_daylight_end_year = year;
 }
+#endif
 
-/* CrtCalendarFieldsToTimeScalar (FUN_00496f50): build the CRT's 32-bit
- * seconds value from calendar fields and optionally apply its DST bias. */
-// FUNCTION: LEGORR 0x00496f50
+/* VC5 LIBC.LIB dtoxtime.obj converts the calendar tuple to its CRT scalar. */
+// LIBRARY: LEGORR 0x00496f50 SYMBOL
+// ___loctotime_t
+#if !defined(_MSC_VER)
 int32_t crt_calendar_fields_to_time_scalar(int year, int month, int day,
                                             int hour, int minute, int second,
                                             int daylight_mode)
@@ -4709,10 +4862,13 @@ int32_t crt_calendar_fields_to_time_scalar(int year, int month, int day,
     }
     return result + s_daylight_saving_bias_seconds;
 }
+#endif
 
 /* CrtTimeZoneInitializeOnce (FUN_00499860): the CRT's one-shot timezone
  * setup guard. */
-// FUNCTION: LEGORR 0x00499860
+// LIBRARY: LEGORR 0x00499860 SYMBOL
+// ___tzset
+#if !defined(_MSC_VER)
 void crt_timezone_initialize_once(void)
 {
     if (s_timezone_initialized == 0) {
@@ -4720,12 +4876,15 @@ void crt_timezone_initialize_once(void)
         ++s_timezone_initialized;
     }
 }
+#endif
 
 /* CrtTimeZoneStateInit (FUN_00499880): load Windows timezone settings when
  * TZ is absent, otherwise cache and parse the POSIX TZ prefix used by this
  * runtime. The original parser consumes the offset and three-letter DST
  * abbreviation; it does not consume POSIX transition-rule suffixes. */
-// FUNCTION: LEGORR 0x00499880
+// LIBRARY: LEGORR 0x00499880 SYMBOL
+// __tzset
+#if !defined(_MSC_VER)
 void crt_timezone_state_init(void)
 {
     char* timezone_text;
@@ -4829,12 +4988,18 @@ void crt_timezone_state_init(void)
         s_daylight_timezone_name[0] = '\0';
     }
 }
+#endif
 
 /* CrtDaylightSavingTimeCheck (FUN_00499b30): compare a CRT tm-like field
  * vector against cached start/end transition day and time boundaries. */
-// FUNCTION: LEGORR 0x00499b30
+// LIBRARY: LEGORR 0x00499b30 SYMBOL
+// __isindst
+#if !defined(_MSC_VER)
 int crt_daylight_saving_time_check(const int* calendar_fields)
 {
+#if defined(_MSC_VER)
+    return _isindst((const struct tm*)calendar_fields);
+#else
     uint32_t year;
     int32_t day_of_year;
     int32_t time_of_day;
@@ -4916,11 +5081,14 @@ int crt_daylight_saving_time_check(const int* calendar_fields)
         return time_of_day < s_daylight_end_milliseconds;
     }
     return s_daylight_start_milliseconds <= time_of_day;
+#endif
 }
+#endif
 
-/* ExtendedFloatPowerOfTenScale (FUN_0049a800): consume three exponent bits
- * per table row, multiplying the 80-bit value by that row's power of ten. */
-// FUNCTION: LEGORR 0x0049a800
+/* VC5 LIBC.LIB tenpow.obj supplies the exact power-of-ten scaling helper. */
+// LIBRARY: LEGORR 0x0049a800 SYMBOL
+// ___multtenpow12
+#if !defined(_MSC_VER)
 void crt_extended_float_power_of_ten_scale(uint16_t value[6],
                                            uint32_t exponent,
                                            int initialize)
@@ -4960,15 +5128,19 @@ void crt_extended_float_power_of_ten_scale(uint16_t value[6],
                 adjusted[2] = (uint16_t)(middle >> 16);
                 factor = adjusted;
             }
-            crt_extended80_multiply(value, factor);
+            CRT_EXTENDED80_MULTIPLY(value, factor);
         }
         ++group;
     }
 }
+#endif
 
 /* CrtCodePageGet (FUN_004964e0): select the OEM/ANSI code page or update
  * the fallback-mode flag before returning an explicit/current page. */
-// FUNCTION: LEGORR 0x004964e0
+#if defined(_MSC_VER)
+// LIBRARY: LEGORR 0x004964e0 SYMBOL
+// _getSystemCP (private helper in mbctype.obj, used by _setmbcp)
+#else
 int crt_codepage_get(int codepage)
 {
     /* Corpus 0x4964e4 clears fallback mode before testing the selector. */
@@ -4997,11 +5169,15 @@ int crt_codepage_get(int codepage)
     }
     return codepage;
 }
+#endif
 
 /* CrtCtypeTablesReset (FUN_00496590): reset only the lead-byte flag table
  * and the active code-page conversion metadata. The separate _pctype table
  * and the GetACP/GetOEMCP fallback flag are left as the image leaves them. */
-// FUNCTION: LEGORR 0x00496590
+#if defined(_MSC_VER)
+// LIBRARY: LEGORR 0x00496590 SYMBOL
+// _setSBCS (private helper in mbctype.obj, used by _setmbcp)
+#else
 void crt_ctype_tables_reset(void)
 {
     memset(s_multibyte_character_flags, 0, sizeof s_multibyte_character_flags);
@@ -5011,10 +5187,13 @@ void crt_ctype_tables_reset(void)
     s_codepage_metadata_word1 = 0u;
     s_codepage_metadata_word2 = 0u;
 }
+#endif
 
 /* CrtLocaleCodePageTableUpdate (FUN_004962f0): load one of the image's
  * five byte-range tables, or ask Windows for the current page's lead bytes. */
-// FUNCTION: LEGORR 0x004962f0
+// LIBRARY: LEGORR 0x004962f0 SYMBOL
+// _setmbcp
+#if !defined(_MSC_VER)
 int crt_locale_codepage_table_update(int requested_codepage)
 {
     const uint32_t codepage = (uint32_t)crt_codepage_get(requested_codepage);
@@ -5112,17 +5291,24 @@ int crt_locale_codepage_table_update(int requested_codepage)
     return 0;
 #endif
 }
+#endif
 
-/* CrtAnsiCodePageTablesInit (FUN_004965c0): select the system ANSI page. */
-// FUNCTION: LEGORR 0x004965c0
+/* CrtAnsiCodePageTablesInit (FUN_004965c0): initialize the CRT multibyte
+ * tables from the active ANSI code page. */
+// LIBRARY: LEGORR 0x004965c0 SYMBOL
+// ___initmbctable
+#if !defined(_MSC_VER)
 void crt_ansi_codepage_tables_init(void)
 {
     (void)crt_locale_codepage_table_update(-3);
 }
+#endif
 
-/* CharacterClassifyMask (FUN_0048f1d0): use _pctype for byte/EOF values;
- * wider values are classified by the active Windows locale when available. */
-// FUNCTION: LEGORR 0x0048f1d0
+/* CharacterClassifyMask (FUN_0048f1d0) is VC5's _isctype, including its
+ * DBCS-aware fallback through __crtGetStringTypeA. */
+// LIBRARY: LEGORR 0x0048f1d0 SYMBOL
+// __isctype
+#if !defined(_MSC_VER)
 uint32_t crt_character_classify_mask(int value, uint32_t mask)
 {
     uint32_t flags;
@@ -5160,10 +5346,13 @@ uint32_t crt_character_classify_mask(int value, uint32_t mask)
     }
     return wide_flags & 0xffffu & mask;
 }
+#endif
 
-/* CrtGetStringTypeACompat (FUN_00496ad0): prefer the ANSI API, falling back
- * to its Unicode form after converting through the requested code page. */
-// FUNCTION: LEGORR 0x00496ad0
+/* CrtGetStringTypeACompat (FUN_00496ad0): VC5's __crtGetStringTypeA owns
+ * this dispatch and fallback path in LIBC.LIB. */
+// LIBRARY: LEGORR 0x00496ad0 SYMBOL
+// ___crtGetStringTypeA
+#if !defined(_MSC_VER)
 int crt_get_string_type_a_compat(uint32_t info_type, const char* source,
                                  int source_count, uint16_t* result,
                                  uint32_t codepage, uint32_t locale)
@@ -5225,13 +5414,19 @@ int crt_get_string_type_a_compat(uint32_t info_type, const char* source,
     return 0;
 #endif
 }
+#endif
 
-/* CrtMultibyteToWideChar (FUN_00498e00): convert one CRT character, retaining
- * the original error and incomplete-sequence behavior. */
-// FUNCTION: LEGORR 0x00498e00
+/* CrtMultibyteToWideChar (FUN_00498e00) is VC5's mbtowc implementation. */
+// LIBRARY: LEGORR 0x00498e00 SYMBOL
+// _mbtowc
+#if !defined(_MSC_VER)
 uint32_t crt_multibyte_to_wide_char(uint16_t* output, const uint8_t* source,
                                     uint32_t max_bytes)
 {
+#if defined(_MSC_VER)
+    return (uint32_t)mbtowc((unsigned short*)output,
+                            (const char*)source, (size_t)max_bytes);
+#else
     uint8_t first;
     int converted;
     if (source == NULL || max_bytes == 0u) {
@@ -5288,11 +5483,14 @@ uint32_t crt_multibyte_to_wide_char(uint16_t* output, const uint8_t* source,
 #endif
     s_math_error_code = 0x2au;
     return 0xffffffffu;
+#endif
 }
+#endif
 
-/* CrtCharacterClassFlag8Check (FUN_00498f00): read the CRT space bit for
- * single-byte locales and delegate full character classification for DBCS. */
-// FUNCTION: LEGORR 0x00498f00
+/* CrtCharacterClassFlag8Check (FUN_00498f00) is VC5's _isspace entry. */
+// LIBRARY: LEGORR 0x00498f00 SYMBOL
+// _isspace
+#if !defined(_MSC_VER)
 uint32_t crt_character_class_flag8_check(int value)
 {
     /* Corpus 0x498f04..0x498f29 uses a signed <= 1 gate, then indexes the
@@ -5302,11 +5500,14 @@ uint32_t crt_character_class_flag8_check(int value)
     }
     return (uint32_t)(s_ctype_pointer[value] & 8u);
 }
+#endif
 
-/* CrtScanFormatCharNormalize (FUN_00494c30) — see crt.hpp. The image's
- * classification table marks decimal digits with bit 4; non-digits take
- * the original ASCII hex-letter fold. */
-// FUNCTION: LEGORR 0x00494c30
+/* The input.obj static helpers are emitted by VC5's __input library object:
+ * __hextodec, __inc, __un_inc, and __whiteout. Their bodies line up at
+ * 0x494c30, 0x494c70, 0x494ca0, and 0x494cc0 in the target image. */
+// LIBRARY: LEGORR 0x00494c30 SYMBOL
+// __hextodec
+#if !defined(_MSC_VER)
 uint32_t crt_scan_format_char_normalize(uint32_t value)
 {
     uint32_t digit;
@@ -5314,18 +5515,30 @@ uint32_t crt_scan_format_char_normalize(uint32_t value)
         digit = (value < 256u) ? (s_ctype_pointer[value] & 4u) : 0u;
     }
     else {
-        digit = crt_character_class_flag_test(value, 4u, 0u) ? 4u : 0u;
+        /* The shared VC5 _x_ismbbtype helper's zero byte mask falls through
+         * to the base ctype table using the input's low byte. */
+        digit = (s_ctype_pointer[value & 0xffu] & 4u) ? 4u : 0u;
     }
     if (digit != 0u) {
         return value;
     }
     return (value & 0xffffffdfu) - 7u;
 }
+#endif
 
-/* CrtCharacterClassFlagTest (FUN_00495db0): the first flag source is the
- * current multibyte table; if it does not match, test the ordinary CRT
- * classification word only when a word mask was requested. */
-// FUNCTION: LEGORR 0x00495db0
+// LIBRARY: LEGORR 0x00494c70 SYMBOL
+// __inc
+// LIBRARY: LEGORR 0x00494ca0 SYMBOL
+// __un_inc
+// LIBRARY: LEGORR 0x00494cc0 SYMBOL
+// __whiteout
+
+/* CrtCharacterClassFlagTest (FUN_00495db0) is VC5 LIBC.LIB's private
+ * _x_ismbbtype helper in ismbbyte.obj. The public __ismbblead entry pulls in
+ * the object that contains this exact helper body. */
+// LIBRARY: LEGORR 0x00495db0 SYMBOL
+// _x_ismbbtype
+#if !defined(_MSC_VER)
 uint32_t crt_character_class_flag_test(uint32_t value, uint32_t flags,
                                       uint8_t byte_mask)
 {
@@ -5340,10 +5553,34 @@ uint32_t crt_character_class_flag_test(uint32_t value, uint32_t flags,
     }
     return 0u;
 }
+#endif
 
-/* LocaleCharacterMapString (FUN_00493ca0): use the native ANSI mapper when
- * available, otherwise convert through UTF-16 and convert mapped text back. */
-// FUNCTION: LEGORR 0x00493ca0
+/* aw_str.obj's private _strncnt helper is adjacent to
+ * __crtLCMapStringA at 0x00493ca0. The VC5 runtime supplies this helper with
+ * that object on MSVC; use the equivalent bounded scan elsewhere. */
+// LIBRARY: LEGORR 0x00493ec0 SYMBOL
+// _strncnt
+#if !defined(_MSC_VER)
+static int crt_bounded_string_length(const char* text, int bound)
+{
+    int remaining = bound;
+    const char* cursor = text;
+    while (remaining != 0 && *cursor != '\0') {
+        ++cursor;
+        --remaining;
+    }
+    if (*cursor != '\0') {
+        return bound;
+    }
+    return (int)(cursor - text);
+}
+#endif
+
+/* LocaleCharacterMapString (FUN_00493ca0): VC5's __crtLCMapStringA owns
+ * this dispatch and fallback path in LIBC.LIB. */
+// LIBRARY: LEGORR 0x00493ca0 SYMBOL
+// ___crtLCMapStringA
+#if !defined(_MSC_VER)
 int crt_locale_character_map_string(uint32_t locale, uint32_t flags,
                                      const char* source, int source_count,
                                      void* destination,
@@ -5364,11 +5601,7 @@ int crt_locale_character_map_string(uint32_t locale, uint32_t flags,
         }
     }
     if (input_count > 0) {
-        int length = 0;
-        while (length < input_count && source[length] != '\0') {
-            ++length;
-        }
-        input_count = length;
+        input_count = crt_bounded_string_length(source, input_count);
     }
     if (s_locale_map_api_mode == 2) {
         return LCMapStringA((LCID)locale, flags, source, input_count,
@@ -5444,10 +5677,12 @@ int crt_locale_character_map_string(uint32_t locale, uint32_t flags,
     return 0;
 #endif
 }
+#endif
 
-/* CrtCharacterToLowerLocale (FUN_004975d0): apply the CRT locale's lower
- * mapping while preserving DBCS characters as their high-byte-first value. */
-// FUNCTION: LEGORR 0x004975d0
+/* VC5 LIBC.LIB's locale-aware tolower entry supplies the exact body here. */
+// LIBRARY: LEGORR 0x004975d0 SYMBOL
+// _tolower
+#if !defined(_MSC_VER)
 uint32_t crt_character_to_lower_locale(uint32_t value)
 {
     uint32_t input_value;
@@ -5479,8 +5714,7 @@ uint32_t crt_character_to_lower_locale(uint32_t value)
     }
     if (crt_locale_character_map_string(s_crt_locale_handle, 0x100u,
                                         (const char*)&input_value,
-                                        (int)count,
-                                        mapped, 3, 0u) == 0) {
+                                        (int)count, mapped, 3, 0u) == 0) {
         return value;
     }
     if (count == 1u) {
@@ -5488,16 +5722,25 @@ uint32_t crt_character_to_lower_locale(uint32_t value)
     }
     return ((mapped[0] >> 8) & 0xffu) << 8 | (mapped[0] & 0xffu);
 }
+#endif
 
-// FUNCTION: LEGORR 0x00495d90
+// LIBRARY: LEGORR 0x00495d90 SYMBOL
+// __ismbblead
+#if !defined(_MSC_VER)
 uint32_t crt_is_dbcs_lead_byte(uint32_t value)
 {
     return crt_character_class_flag_test(value, 0u, 4u);
 }
+#endif
 
-// FUNCTION: LEGORR 0x0048dad0
+// LIBRARY: LEGORR 0x0048dad0 SYMBOL
+// _atol
+#if !defined(_MSC_VER)
 int crt_parse_signed_decimal(const unsigned char* text)
 {
+#if defined(_MSC_VER)
+    return (int)atol((const char*)text);
+#else
     uint32_t value;
     uint32_t character;
     uint32_t class_flags;
@@ -5540,9 +5783,172 @@ int crt_parse_signed_decimal(const unsigned char* text)
         value = 0u - value;
     }
     return (int32_t)value;
+#endif
 }
+#endif
 
-// FUNCTION: LEGORR 0x004902b0
+/* VC5 LIBC.LIB's atox.obj _atoi entry is the wrapper at 0x0048db70. */
+// LIBRARY: LEGORR 0x0048db70 SYMBOL
+// _atoi
+
+/* VC5 LIBC.LIB's atof.obj supplies the DBCS-aware numeric string parser. */
+// LIBRARY: LEGORR 0x0048d980 SYMBOL
+// _atof
+
+/* VC5 LIBC.LIB's toupper.obj supplies the locale-aware uppercase mapper. */
+// LIBRARY: LEGORR 0x0048e380 SYMBOL
+// _toupper
+
+/* message.cpp's bounded comparison resolves to VC5 LIBC.LIB's strncmp.obj. */
+// LIBRARY: LEGORR 0x0048f270 SYMBOL
+// _strncmp
+
+/* CRT string operations are kept in this module even where engine/game code
+ * exposes the declarations through gods98/string.hpp. */
+// LIBRARY: LEGORR 0x0048da50 SYMBOL
+// _strstr
+#if !defined(_MSC_VER) || !defined(_M_IX86)
+const char* string_find_substring(const char* haystack, const char* needle)
+{
+    const unsigned char* text = (const unsigned char*)haystack;
+    const unsigned char* pattern = (const unsigned char*)needle;
+    const unsigned char first = pattern[0];
+    if (first == 0u) {
+        return haystack;
+    }
+    const unsigned char second = pattern[1];
+    if (second == 0u) {
+        return (const char*)strchr(haystack, first);
+    }
+    for (;;) {
+        unsigned char current;
+        while ((current = *text) != first) {
+            if (current == 0u) {
+                return NULL;
+            }
+            ++text;
+        }
+        const unsigned char* candidate = text;
+        ++text;
+        if (*text == second) {
+            const unsigned char* scan = text + 1;
+            const unsigned char* next = pattern + 2;
+            for (;;) {
+                const unsigned char first_tail = *next;
+                if (first_tail == 0u) {
+                    return (const char*)candidate;
+                }
+                if (*scan != first_tail) {
+                    break;
+                }
+                ++scan;
+                ++next;
+                const unsigned char second_tail = *next;
+                if (second_tail == 0u) {
+                    return (const char*)candidate;
+                }
+                if (*scan != second_tail) {
+                    break;
+                }
+                ++scan;
+                ++next;
+            }
+        }
+}
+}
+#endif
+
+// LIBRARY: LEGORR 0x0048ff10 SYMBOL
+// __strcmpi
+#if !defined(_MSC_VER) || !defined(_M_IX86)
+int strcasecmp_lite(const char* a, const char* b)
+{
+#if defined(_MSC_VER)
+    return _strcmpi(a, b);
+#else
+    const unsigned char* pa = (const unsigned char*)a;
+    const unsigned char* pb = (const unsigned char*)b;
+    for (;;) {
+        unsigned char ca = *pa++;
+        unsigned char cb = *pb++;
+        if (ca == cb) {
+            if (ca == 0u) return 0;
+            continue;
+        }
+        if (ca >= (unsigned char)'A' && ca <= (unsigned char)'Z') {
+            ca = (unsigned char)(ca + 0x20u);
+        }
+        if (cb >= (unsigned char)'A' && cb <= (unsigned char)'Z') {
+            cb = (unsigned char)(cb + 0x20u);
+        }
+        if (ca != cb) return ca < cb ? -1 : 1;
+}
+#endif
+}
+#endif
+
+// LIBRARY: LEGORR 0x0049dab0 SYMBOL
+// __strnicmp
+#if !defined(_MSC_VER) || !defined(_M_IX86)
+int strnicmp_lite(const char* a, const char* b, int count)
+{
+#if defined(_MSC_VER)
+    return _strnicmp(a, b, (size_t)count);
+#else
+    if (count == 0) {
+        return 0;
+    }
+    const unsigned char* pa = (const unsigned char*)a;
+    const unsigned char* pb = (const unsigned char*)b;
+    unsigned char ca;
+    unsigned char cb;
+    do {
+        ca = *pa;
+        cb = *pb;
+        if (ca == 0u || cb == 0u) {
+            break; /* the corpus compares the raw bytes at a NUL break */
+        }
+        ++pa;
+        ++pb;
+        if (ca >= (unsigned char)'A' && ca <= (unsigned char)'Z') {
+            ca = (unsigned char)(ca + 0x20u);
+        }
+        if (cb >= (unsigned char)'A' && cb <= (unsigned char)'Z') {
+            cb = (unsigned char)(cb + 0x20u);
+        }
+        if (ca != cb) {
+            break;
+        }
+        --count;
+    } while (count != 0);
+    if (ca == cb) {
+        return 0;
+    }
+    return (ca < cb) ? -1 : 1;
+#endif
+}
+#endif
+
+/* The reference's iterative quicksort and small-partition routine are the
+ * VC5 CRT qsort implementation. Calling qsort pulls that implementation from
+ * LIBC.LIB for the MSVC build; other builds use their platform CRT qsort. */
+// LIBRARY: LEGORR 0x0048de20 SYMBOL
+// _qsort
+#if !defined(_MSC_VER) || !defined(_M_IX86)
+void crt_array_sort_with_comparator(
+    void* base, size_t count, size_t width,
+    int (*compare)(const void*, const void*))
+{
+    qsort(base, count, width, compare);
+}
+#endif
+
+// LIBRARY: LEGORR 0x0048dfd0 SYMBOL
+// _shortsort
+
+// LIBRARY: LEGORR 0x004902b0 SYMBOL
+// __forcdecpt
+#if !defined(_MSC_VER) || !defined(_M_IX86)
 void crt_normalize_decimal_point(char* text)
 {
     uint32_t first;
@@ -5571,10 +5977,16 @@ void crt_normalize_decimal_point(char* text)
         displaced = (char)current;
     } while (*text != '\0');
 }
+#endif
 
-// FUNCTION: LEGORR 0x004914a0
+// LIBRARY: LEGORR 0x004914a0 SYMBOL
+// _strchr
+#if !defined(_MSC_VER)
 char* crt_strchr(char* text, int character)
 {
+#if defined(_MSC_VER)
+    return strchr(text, character);
+#else
     const uint32_t wanted = (uint8_t)character;
     const uint32_t repeated = wanted * 0x01010101u;
 
@@ -5641,12 +6053,20 @@ char* crt_strchr(char* text, int character)
         }
         text += 4;
     }
+#endif
 }
+#endif
 
-// FUNCTION: LEGORR 0x004976d0
+// LIBRARY: LEGORR 0x004976d0 SYMBOL
+// __mbsnbcpy
+#if !defined(_MSC_VER)
 char* crt_dbcs_aware_bounded_string_copy(char* dest, const char* src,
                                          uint32_t count)
 {
+#if defined(_MSC_VER)
+    return (char*)_mbsnbcpy((unsigned char*)dest,
+                           (const unsigned char*)src, (size_t)count);
+#else
     char* cursor;
     uint32_t remaining;
 
@@ -5688,14 +6108,21 @@ char* crt_dbcs_aware_bounded_string_copy(char* dest, const char* src,
         --remaining;
     }
     return dest;
+#endif
 }
+#endif
 
 /* CrtMultibyteCharacterSearch (FUN_0049b5b0): when no multibyte code page
  * is active, this is the CRT's byte strchr path. Otherwise step over lead
  * and trail bytes together and match the original high-byte-first pair. */
-// FUNCTION: LEGORR 0x0049b5b0
+// LIBRARY: LEGORR 0x0049b5b0 SYMBOL
+// __mbschr
+#if !defined(_MSC_VER)
 char* crt_multibyte_character_search(char* text, uint32_t value)
 {
+#if defined(_MSC_VER)
+    return (char*)_mbschr((const unsigned char*)text, (unsigned int)value);
+#else
     uint8_t* cursor = (uint8_t*)text;
     uint32_t character;
 
@@ -5729,12 +6156,15 @@ char* crt_multibyte_character_search(char* text, uint32_t value)
             return (value == 0u) ? (char*)cursor : NULL;
         }
     }
+#endif
 }
+#endif
 
-/* CrtEnvironmentArrayClone (FUN_0049b540): allocate one extra pointer for
- * the terminator, then duplicate each string in order. The port routes the
- * corpus's __amsg_exit(9) allocation failure through its fatal-exit seam. */
-// FUNCTION: LEGORR 0x0049b540
+/* CrtEnvironmentArrayClone (FUN_0049b540) is the VC5 env.obj private
+ * _copy_environ helper, used internally by __crtsetenv. */
+#if !defined(_MSC_VER)
+// LIBRARY: LEGORR 0x0049b540 SYMBOL
+// _copy_environ (private env.obj helper called by __crtsetenv)
 char** crt_environment_array_clone(char** entries)
 {
     int count = 0;
@@ -5758,8 +6188,11 @@ char** crt_environment_array_clone(char** entries)
     copy[count] = NULL;
     return copy;
 }
+#endif
 
-// FUNCTION: LEGORR 0x00496190
+// LIBRARY: LEGORR 0x00496190 SYMBOL
+// ___crtGetEnvironmentStringsA
+#if !defined(_MSC_VER)
 char* crt_environment_block_get(void)
 {
 #if defined(LEGORRR_BACKEND_WINAPI)
@@ -5840,10 +6273,12 @@ char* crt_environment_block_get(void)
     *output = '\0';
     return block;
 #endif
-    return NULL;
 }
+#endif
 
-// FUNCTION: LEGORR 0x00495df0
+// LIBRARY: LEGORR 0x00495df0 SYMBOL
+// __setenvp
+#if !defined(_MSC_VER)
 void crt_environment_pointer_array_build(void)
 {
     char* cursor;
@@ -5883,8 +6318,11 @@ void crt_environment_pointer_array_build(void)
     s_environment_block = NULL;
     s_environment = entries;
 }
+#endif
 
-// FUNCTION: LEGORR 0x0049afe0
+// LIBRARY: LEGORR 0x0049afe0 SYMBOL
+// ___crtCompareStringA
+#if !defined(_MSC_VER)
 int crt_compare_string_compat(uint32_t locale, uint32_t flags,
                               const char* left, int left_count,
                               const char* right, int right_count,
@@ -5894,10 +6332,10 @@ int crt_compare_string_compat(uint32_t locale, uint32_t flags,
     int right_length = right_count;
     int i;
     if (left_count > 0) {
-        for (left_length = 0; left_length < left_count && left[left_length] != '\0'; ++left_length) {}
+        left_length = crt_bounded_string_length(left, left_count);
     }
     if (right_count > 0) {
-        for (right_length = 0; right_length < right_count && right[right_length] != '\0'; ++right_length) {}
+        right_length = crt_bounded_string_length(right, right_count);
     }
 #if defined(LEGORRR_BACKEND_WINAPI)
     if (s_compare_string_api_mode == 0) {
@@ -5989,8 +6427,11 @@ int crt_compare_string_compat(uint32_t locale, uint32_t flags,
 #endif
     return 0;
 }
+#endif
 
-// FUNCTION: LEGORR 0x0049af20
+// LIBRARY: LEGORR 0x0049af20 SYMBOL
+// __mbsnbicoll
+#if !defined(_MSC_VER)
 int crt_counted_string_compare(const char* left, const char* right, int count)
 {
     int result;
@@ -6000,8 +6441,13 @@ int crt_counted_string_compare(const char* left, const char* right, int count)
     if (result == 0) return 0x7fffffff;
     return result - 2;
 }
+#endif
 
-// FUNCTION: LEGORR 0x0049b4c0
+/* _findenv is a local helper in VC5's env.obj and is only used by
+ * __crtsetenv, so keep this ported body for non-MSVC builds. */
+#if !defined(_MSC_VER)
+// LIBRARY: LEGORR 0x0049b4c0 SYMBOL
+// _findenv (private env.obj helper called by __crtsetenv)
 int crt_environment_entry_find(const char* name, int name_length)
 {
     char** entry = s_environment;
@@ -6020,7 +6466,9 @@ int crt_environment_entry_find(const char* name, int name_length)
     /* Corpus 0x49b4fd computes the negative index from the end pointer. */
     return -(int)(entry - s_environment);
 }
+#endif
 
+#if !defined(_MSC_VER)
 static char** crt_environment_array_resize(char** entries, int slot_count)
 {
     int old_count = 0;
@@ -6037,8 +6485,11 @@ static char** crt_environment_array_resize(char** entries, int slot_count)
     if (entries != NULL) engine_heap_free(entries);
     return resized;
 }
+#endif
 
-// FUNCTION: LEGORR 0x0049b2b0
+// LIBRARY: LEGORR 0x0049b2b0 SYMBOL
+// ___crtsetenv
+#if !defined(_MSC_VER)
 int crt_put_env_update(char* text, int sync_process)
 {
     char* equals;
@@ -6108,8 +6559,11 @@ int crt_put_env_update(char* text, int sync_process)
     }
     return 0;
 }
+#endif
 
-// FUNCTION: LEGORR 0x0049af60
+// LIBRARY: LEGORR 0x0049af60 SYMBOL
+// ___wtomb_environ
+#if !defined(_MSC_VER)
 int crt_wide_environment_string_list_convert(void)
 {
 #if defined(LEGORRR_BACKEND_WINAPI)
@@ -6132,10 +6586,16 @@ int crt_wide_environment_string_list_convert(void)
     return (s_wide_environment == NULL || *s_wide_environment == NULL) ? 0 : -1;
 #endif
 }
+#endif
 
-// FUNCTION: LEGORR 0x0049ae10
+// LIBRARY: LEGORR 0x0049ae10 SYMBOL
+// _getenv
+#if !defined(_MSC_VER)
 char* crt_environment_variable_lookup(const char* name)
 {
+#if defined(_MSC_VER)
+    return getenv(name);
+#else
     int name_length;
     char** entry;
     if (s_environment == NULL && s_wide_environment != NULL &&
@@ -6150,12 +6610,16 @@ char* crt_environment_variable_lookup(const char* name)
         }
     }
     return NULL;
+#endif
 }
+#endif
 
 /* CrtCommandLineArgumentScan (FUN_00495f80): the CRT's two-pass command-line
  * parser. Counts include the final null pointer and each argument's NUL byte,
  * matching the allocation sizes consumed by CrtCommandLineArgumentsInit. */
-// FUNCTION: LEGORR 0x00495f80
+// LIBRARY: LEGORR 0x00495f80 SYMBOL
+// _parse_cmdline (private static helper in VC5 _setargv)
+#if !defined(_MSC_VER)
 void crt_command_line_argument_scan(const unsigned char* command_line,
                                     char** argv_out,
                                     unsigned char* string_out,
@@ -6305,12 +6769,13 @@ void crt_command_line_argument_scan(const unsigned char* command_line,
     *argc_and_null_count = argc_count;
     *string_byte_count = byte_count;
 }
+#endif
 
-/* CrtDecimalMantissaRoundAndNormalize (FUN_00497e20). The decimal record is
- * the locale-conversion cache shape: the exponent is its second DWORD, while
- * the final field points at the generated digit string. Native-width pointer
- * fields keep this record usable on the portable 64-bit backend. */
-// FUNCTION: LEGORR 0x00497e20
+/* VC5 LIBC.LIB's _fptostr.obj is an exact match for the decimal rounding
+ * helper at 0x497e20; non-MSVC builds retain the portable implementation. */
+// LIBRARY: LEGORR 0x00497e20 SYMBOL
+// __fptostr
+#if !defined(_MSC_VER)
 void crt_decimal_mantissa_round_and_normalize(char* output, int precision,
                                                CrtDecimalFormatContext* context)
 {
@@ -6358,8 +6823,11 @@ void crt_decimal_mantissa_round_and_normalize(char* output, int precision,
         } while (*src++ != '\0');
     }
 }
+#endif
 
-// FUNCTION: LEGORR 0x0049a1b0
+#if !defined(_MSC_VER)
+// LIBRARY: LEGORR 0x0049a1b0 SYMBOL
+// _$I10_OUTPUT
 uint32_t crt_extended_float_to_decimal(uint32_t significand_low,
                                       uint32_t significand_high,
                                       uint16_t sign_exponent,
@@ -6517,8 +6985,14 @@ uint32_t crt_extended_float_to_decimal(uint32_t significand_low,
     output[4u + (uint32_t)end + 1u] = '\0';
     return 1u;
 }
+#endif
 
-// FUNCTION: LEGORR 0x00497ec0
+/* VC5 LIBC.LIB's `cfout.obj` `__fltout` matches this 0x80-byte entry outside
+ * relocation slots. Its private static record replaces these portable
+ * globals in MSVC builds. */
+// LIBRARY: LEGORR 0x00497ec0 SYMBOL
+// __fltout
+#if !defined(_MSC_VER)
 CrtDecimalFormatContext* crt_locale_data_get_or_initialize(
     uint32_t double_low, uint32_t double_high)
 {
@@ -6531,13 +7005,13 @@ CrtDecimalFormatContext* crt_locale_data_get_or_initialize(
 #if defined(_M_IX86) || defined(__i386__)
     /* Corpus 0x497ec3..0x497ecc passes the adjacent cdecl words in place. */
     (void)double_high;
-    crt_double_to_extended80(extended, &double_low);
+    CRT_DTOLD(extended, &double_low);
 #else
     source[0] = double_low;
     source[1] = double_high;
-    crt_double_to_extended80(extended, source);
+    CRT_DTOLD(extended, source);
 #endif
-    converted = crt_extended_float_to_decimal(
+    converted = CRT_EXTENDED_FLOAT_TO_DECIMAL(
         extended[0], extended[1], (uint16_t)extended[2], 0x11, 0,
         s_decimal_conversion_buffer);
 
@@ -6549,8 +7023,12 @@ CrtDecimalFormatContext* crt_locale_data_get_or_initialize(
         (char*)s_decimal_conversion_buffer + 4;
     return &s_decimal_format_context;
 }
+#endif
 
-// FUNCTION: LEGORR 0x00490400
+/* VC5 LIBC.LIB cvt.obj supplies the target's scientific formatter. */
+// LIBRARY: LEGORR 0x00490400 SYMBOL
+// __cftoe
+#if !defined(_MSC_VER)
 /* Both format appenders load s_current_decimal_format only in the prepared
  * branch, matching the corpus's branch-local context load. */
 char* crt_scientific_float_format_append(const uint32_t* value,
@@ -6566,8 +7044,8 @@ char* crt_scientific_float_format_append(const uint32_t* value,
     uint16_t exponent_suffix;
 
     if (s_decimal_format_prepared == 0u) {
-        context = crt_locale_data_get_or_initialize(value[0], value[1]);
-        crt_decimal_mantissa_round_and_normalize(
+        context = CRT_LOCALE_DATA_GET_OR_INITIALIZE(value);
+        CRT_DECIMAL_MANTISSA_ROUND_AND_NORMALIZE(
             output + (context->first == '-' ? 1 : 0) +
                 (precision > 0 ? 1 : 0),
             precision + 1, context);
@@ -6615,8 +7093,12 @@ char* crt_scientific_float_format_append(const uint32_t* value,
     }
     return output;
 }
+#endif
 
-// FUNCTION: LEGORR 0x00490540
+/* VC5 LIBC.LIB cvt.obj supplies the target's fixed formatter. */
+// LIBRARY: LEGORR 0x00490540 SYMBOL
+// __cftof
+#if !defined(_MSC_VER)
 char* crt_fixed_float_fraction_format(const uint32_t* value,
                                       char* output,
                                       uint32_t precision)
@@ -6626,8 +7108,8 @@ char* crt_fixed_float_fraction_format(const uint32_t* value,
     int integer_digits;
 
     if (s_decimal_format_prepared == 0u) {
-        context = crt_locale_data_get_or_initialize(value[0], value[1]);
-        crt_decimal_mantissa_round_and_normalize(
+        context = CRT_LOCALE_DATA_GET_OR_INITIALIZE(value);
+        CRT_DECIMAL_MANTISSA_ROUND_AND_NORMALIZE(
             output + (context->first == '-' ? 1 : 0),
             context->exponent + (int)precision, context);
     }
@@ -6669,8 +7151,12 @@ char* crt_fixed_float_fraction_format(const uint32_t* value,
     }
     return output;
 }
+#endif
 
-// FUNCTION: LEGORR 0x00490640
+/* VC5 LIBC.LIB cvt.obj supplies the general-format dispatcher. */
+// LIBRARY: LEGORR 0x00490640 SYMBOL
+// __cftog
+#if !defined(_MSC_VER)
 void crt_float_decimal_format_prepare(const uint32_t* value,
                                       char* output,
                                       int precision,
@@ -6680,11 +7166,11 @@ void crt_float_decimal_format_prepare(const uint32_t* value,
     char* end;
 
     s_current_decimal_format =
-        crt_locale_data_get_or_initialize(value[0], value[1]);
+        CRT_LOCALE_DATA_GET_OR_INITIALIZE(value);
     s_decimal_format_position = s_current_decimal_format->exponent - 1;
     digits = output + (s_current_decimal_format->first == '-' ? 1 : 0);
-    crt_decimal_mantissa_round_and_normalize(digits, precision,
-                                              s_current_decimal_format);
+    CRT_DECIMAL_MANTISSA_ROUND_AND_NORMALIZE(
+        digits, precision, s_current_decimal_format);
     s_decimal_format_truncated =
         (uint8_t)(s_decimal_format_position <
                   s_current_decimal_format->exponent - 1);
@@ -6705,8 +7191,12 @@ void crt_float_decimal_format_prepare(const uint32_t* value,
     }
     crt_scientific_float_format_guarded(value, output, precision, uppercase);
 }
+#endif
 
-// FUNCTION: LEGORR 0x004906f0
+/* cvt.obj's private scientific wrapper is linked as part of __cftog. */
+// LIBRARY: LEGORR 0x004906f0 SYMBOL
+// __cftoe_g
+#if !defined(_MSC_VER)
 void crt_scientific_float_format_guarded(const uint32_t* value,
                                          char* output,
                                          int precision,
@@ -6716,8 +7206,12 @@ void crt_scientific_float_format_guarded(const uint32_t* value,
     crt_scientific_float_format_append(value, output, precision, uppercase);
     s_decimal_format_prepared = 0u;
 }
+#endif
 
-// FUNCTION: LEGORR 0x00490720
+/* cvt.obj's private fixed wrapper is linked as part of __cftog. */
+// LIBRARY: LEGORR 0x00490720 SYMBOL
+// __cftof_g
+#if !defined(_MSC_VER)
 void crt_fixed_decimal_format_guarded(const uint32_t* value,
                                       char* output,
                                       uint32_t precision)
@@ -6726,6 +7220,7 @@ void crt_fixed_decimal_format_guarded(const uint32_t* value,
     crt_fixed_float_fraction_format(value, output, precision);
     s_decimal_format_prepared = 0u;
 }
+#endif
 
 /* --- the CRT file-descriptor flag window (2026-10-25) ---------------------
  * CrtFileDescriptorFlag40Get (FUN_00498b40): the corpus reads bit 0x40 of
@@ -6738,20 +7233,27 @@ void crt_fixed_decimal_format_guarded(const uint32_t* value,
  * Deviations: the block window and null blocks are guarded (the corpus
  * strides), and a negative descriptor answers 0. */
 #define CRT_FD_BLOCKS 64
+#if defined(_MSC_VER)
+/* VC5's lowio owns and initializes this table in LIBC.LIB. */
+extern "C" void* __pioinfo[CRT_FD_BLOCKS];
+extern "C" int _nhandle;
+#define s_fd_flag_blocks __pioinfo
+#define s_fd_flag_count _nhandle
+#else
 // GLOBAL: LEGORR 0x0076ddc0
 static void* s_fd_flag_blocks[CRT_FD_BLOCKS]; /* DAT_0076ddc0 role */
 // GLOBAL: LEGORR 0x0076dec0
 static int   s_fd_flag_count;                 /* DAT_0076dec0 role */
+#endif
 // GLOBAL: LEGORR 0x004b2428
 static unsigned char s_fd_fallback_record[8] = {
     0xffu, 0xffu, 0xffu, 0xffu, 0u, 10u, 0u, 0u
 };
-// GLOBAL: LEGORR 0x004b2648
-static int s_standard_stream_record_0[8] = { 0, 0, 0, 2, 1, 0, 0, 0 };
-// GLOBAL: LEGORR 0x004b2668
-static int s_standard_stream_record_1[8] = { 0, 0, 0, 2, 2, 0, 0, 0 };
-
-// FUNCTION: LEGORR 0x00498b40
+/* The VC5 internal __isatty entry returns the descriptor's 0x40 flag mask
+ * directly; its isatty.obj body matches this target entry. */
+// LIBRARY: LEGORR 0x00498b40 SYMBOL
+// __isatty
+#if !defined(_MSC_VER)
 unsigned crt_file_descriptor_flag40_get(unsigned fd)
 {
     const int descriptor = (int)fd;
@@ -6762,8 +7264,11 @@ unsigned crt_file_descriptor_flag40_get(unsigned fd)
         (const unsigned char*)s_fd_flag_blocks[descriptor >> 5];
     return (unsigned)(block[(descriptor & 0x1f) * 8 + 4] & 0x40u);
 }
+#endif
 
-// FUNCTION: LEGORR 0x004991f0
+// LIBRARY: LEGORR 0x004991f0 SYMBOL
+// __get_osfhandle
+#if !defined(_MSC_VER)
 int crt_file_descriptor_handle_get(unsigned fd)
 {
     const int descriptor = (int)fd;
@@ -6779,11 +7284,12 @@ int crt_file_descriptor_handle_get(unsigned fd)
     s_win32_error_code = 0u;
     return -1;
 }
+#endif
 
-/* CrtFileDescriptorAllocate (FUN_00498fe0): scan 32-entry blocks in the
- * 64-slot pointer table. A new block starts with inactive handles, zero
- * flags and the CRT's default mode byte 10. */
-// FUNCTION: LEGORR 0x00498fe0
+/* CrtFileDescriptorAllocate (FUN_00498fe0) is VC5's _alloc_osfhnd. */
+// LIBRARY: LEGORR 0x00498fe0 SYMBOL
+// __alloc_osfhnd
+#if !defined(_MSC_VER)
 int crt_file_descriptor_allocate(void)
 {
     int block_index;
@@ -6818,12 +7324,12 @@ int crt_file_descriptor_allocate(void)
     }
     return -1;
 }
+#endif
 
-/* CrtFileDescriptorSetHandle (FUN_004990a0): install a handle only into an
- * allocated descriptor whose handle sentinel is -1. The image's standard
- * handle synchronization mode is initialized to 2 and has no writer, so
- * its conditional Win32 synchronization path is dormant in this build. */
-// FUNCTION: LEGORR 0x004990a0
+/* CrtFileDescriptorSetHandle (FUN_004990a0) is VC5's _set_osfhnd. */
+// LIBRARY: LEGORR 0x004990a0 SYMBOL
+// __set_osfhnd
+#if !defined(_MSC_VER)
 int crt_file_descriptor_set_handle(unsigned fd, int handle)
 {
     if (fd < (unsigned)s_fd_flag_count) {
@@ -6855,10 +7361,12 @@ int crt_file_descriptor_set_handle(unsigned fd, int handle)
     s_win32_error_code = 0u;
     return -1;
 }
+#endif
 
-/* CrtFileDescriptorCloseSlot (FUN_00499150): invalidate an open slot's
- * handle while retaining its descriptor flags for the next CRT operation. */
-// FUNCTION: LEGORR 0x00499150
+/* CrtFileDescriptorCloseSlot (FUN_00499150) is VC5's _free_osfhnd. */
+// LIBRARY: LEGORR 0x00499150 SYMBOL
+// __free_osfhnd
+#if !defined(_MSC_VER)
 int crt_file_descriptor_close_slot(unsigned fd)
 {
     if (fd < (unsigned)s_fd_flag_count) {
@@ -6886,13 +7394,83 @@ int crt_file_descriptor_close_slot(unsigned fd)
     s_win32_error_code = 0u;
     return -1;
 }
+#endif
+
+/* VC5 LIBC.LIB's fopen.obj, _open.obj, and stream.obj provide these stdio
+ * entries. Forcing _fopen pulls its shared open and stream helpers as well. */
+// LIBRARY: LEGORR 0x0048eae0 SYMBOL
+// _fclose
+// LIBRARY: LEGORR 0x0048eb60 SYMBOL
+// __fsopen
+// LIBRARY: LEGORR 0x0048eb90 SYMBOL
+// _fopen
+// LIBRARY: LEGORR 0x0048e890 SYMBOL
+// _sscanf
+// LIBRARY: LEGORR 0x0048d9e0 SYMBOL
+// _vsprintf
+// LIBRARY: LEGORR 0x0048f2b0 SYMBOL
+// _ftell
+// LIBRARY: LEGORR 0x0048f460 SYMBOL
+// _fseek
+// LIBRARY: LEGORR 0x0048f500 SYMBOL
+// _fwrite
+// LIBRARY: LEGORR 0x0048fb90 SYMBOL
+// _fread
+// LIBRARY: LEGORR 0x0048fe50 SYMBOL
+// _fgets
+// LIBRARY: LEGORR 0x0048fe20 SYMBOL
+// _fgetc
+// LIBRARY: LEGORR 0x00494e30 SYMBOL
+// __openfile
+// LIBRARY: LEGORR 0x00495000 SYMBOL
+// __getstream
+
+/* VC5 LIBC.LIB's unlink.obj, chmod.obj, and mkdir.obj provide these exact
+ * Win32 wrappers from the reference executable. */
+// LIBRARY: LEGORR 0x0048f650 SYMBOL
+// _remove
+// LIBRARY: LEGORR 0x0048f680 SYMBOL
+// __chmod
+// LIBRARY: LEGORR 0x0048f6d0 SYMBOL
+// __mkdir
+
+/* VC5 LIBC.LIB's getcwd.obj supplies this wrapper, drive-specific worker,
+ * and drive validator as one archive member. */
+// LIBRARY: LEGORR 0x0048fa00 SYMBOL
+// __getcwd
+// LIBRARY: LEGORR 0x0048fa20 SYMBOL
+// __getdcwd
+// LIBRARY: LEGORR 0x0048fb50 SYMBOL
+// __validdrive
+
+/* VC5 LIBC.LIB's fullpath.obj supplies the target's full-path resolver. */
+// LIBRARY: LEGORR 0x0048ffa0 SYMBOL
+// __fullpath
+
+/* VC5 LIBC.LIB's splitpat.obj supplies the target's bounded path splitter. */
+// LIBRARY: LEGORR 0x00490090 SYMBOL
+// __splitpath
+
+/* VC5 LIBC.LIB's findfile.obj owns the target's three search operations and
+ * its FILETIME-to-time_t conversion helper. crt_find_handle_close's _findclose
+ * reference pulls this object into the MSVC link. */
+// LIBRARY: LEGORR 0x0048f700 SYMBOL
+// __findfirst
+// LIBRARY: LEGORR 0x0048f830 SYMBOL
+// __findnext
+// LIBRARY: LEGORR 0x0048f970 SYMBOL
+// ___timet_from_ft
 
 /* CrtFindHandleClose (FUN_0048f950): close one search handle and set the
  * CRT invalid-argument error when the platform close operation fails. */
-// FUNCTION: LEGORR 0x0048f950
+// LIBRARY: LEGORR 0x0048f950 SYMBOL
+// __findclose
+#if !defined(_MSC_VER)
 int crt_find_handle_close(int handle)
 {
-#if defined(LEGORRR_BACKEND_WINAPI)
+#if defined(_MSC_VER)
+    return _findclose((long)handle);
+#elif defined(LEGORRR_BACKEND_WINAPI)
     if (FindClose((HANDLE)handle) == 0) {
         s_math_error_code = 0x16u;
         return -1;
@@ -6908,12 +7486,18 @@ int crt_find_handle_close(int handle)
     return -1;
 #endif
 }
+#endif
 
 /* CrtFileDescriptorClose (FUN_00494d10): close an active descriptor, keeping
  * shared stdout/stderr handles open while releasing the descriptor slot. */
-// FUNCTION: LEGORR 0x00494d10
+// LIBRARY: LEGORR 0x00494d10 SYMBOL
+// __close
+#if !defined(_MSC_VER)
 int crt_file_descriptor_close(unsigned fd)
 {
+#if defined(_MSC_VER)
+    return _close((int)fd);
+#else
     unsigned char* block;
     unsigned char* entry;
     int handle;
@@ -6971,15 +7555,22 @@ int crt_file_descriptor_close(unsigned fd)
         crt_win32_error_map_to_errno(os_error);
     }
     return -1;
+#endif
 }
+#endif
 
 /* Win32FileDescriptorOpen (FUN_00499240): translate CRT open flags to the
  * corresponding Win32 access, sharing, disposition, and handle flags, then
  * register the resulting operating-system handle in the CRT descriptor table. */
-// FUNCTION: LEGORR 0x00499240
+// LIBRARY: LEGORR 0x00499240 SYMBOL
+// _sopen
+#if !defined(_MSC_VER)
 int crt_win32_file_descriptor_open(const char* path, uint32_t flags,
                                    uint32_t share, uint32_t attributes)
 {
+#if defined(_MSC_VER)
+    return _sopen(path, (int)flags, (int)share, (int)attributes);
+#else
     uint32_t access;
     uint32_t disposition;
     uint32_t handle_flags;
@@ -7175,13 +7766,17 @@ int crt_win32_file_descriptor_open(const char* path, uint32_t flags,
     return -1;
 #endif
     return fd;
+#endif
 }
+#endif
 
 /* CrtStandardStreamBufferInstall (FUN_004974d0): install one of the two
  * cached 4K buffers on its matching standard stream record. Corpus 0x4974d6
  * dereferences the stream before checking its descriptor, with no null guard;
  * preserve that unchecked input behavior (there is no test pin for NULL). */
-// FUNCTION: LEGORR 0x004974d0
+// LIBRARY: LEGORR 0x004974d0 SYMBOL
+// __stbuf
+#if !defined(_MSC_VER)
 int crt_standard_stream_buffer_install(int* stream)
 {
     int stream_index;
@@ -7219,10 +7814,16 @@ int crt_standard_stream_buffer_install(int* stream)
     }
     return 0;
 }
+#endif
 
-/* CrtFileDescriptorTableInit (FUN_004965d0): create the first 32 CRT
- * descriptors, import inherited Win32 handles, then seed descriptors 0-2. */
-// FUNCTION: LEGORR 0x004965d0
+/* VC5's CRT startup initializes the descriptor table through _ioinit. */
+// LIBRARY: LEGORR 0x004965d0 SYMBOL
+// __ioinit
+
+/* VC5 LIBC.LIB's abort.obj supplies the runtime abort path. */
+// LIBRARY: LEGORR 0x004996f0 SYMBOL
+// _abort
+#if !defined(_MSC_VER)
 void crt_file_descriptor_table_init(void)
 {
     unsigned char* first_block;
@@ -7338,13 +7939,19 @@ void crt_file_descriptor_table_init(void)
     (void)SetHandleCount((unsigned)s_fd_flag_count);
 #endif
 }
+#endif
 
 /* Win32FileDescriptorRead (FUN_00497130): refill a CRT descriptor buffer,
  * translate text-mode CR/LF and Ctrl-Z, and preserve a terminal lookahead. */
-// FUNCTION: LEGORR 0x00497130
+// LIBRARY: LEGORR 0x00497130 SYMBOL
+// __read
+#if !defined(_MSC_VER)
 int crt_win32_file_descriptor_read(uint32_t fd, char* buffer,
                                    uint32_t count)
 {
+#if defined(_MSC_VER)
+    return _read((int)fd, buffer, count);
+#else
     unsigned char* block;
     unsigned char* entry;
     unsigned char flags;
@@ -7430,8 +8037,8 @@ int crt_win32_file_descriptor_read(uint32_t fd, char* buffer,
     }
     output_count += (int)bytes_read;
     if ((entry[4] & 0x80u) == 0u) {
-        return output_count;
-    }
+    return output_count;
+}
     if (bytes_read == 0u || buffer[0] != '\n') {
         entry[4] = (unsigned char)(entry[4] & 0xfbu);
     }
@@ -7509,15 +8116,22 @@ int crt_win32_file_descriptor_read(uint32_t fd, char* buffer,
         }
         return (int)(output - buffer);
     }
+#endif
 }
+#endif
 
 /* CrtStreamReadByte (FUN_00497040): return the next byte from a buffered
  * CRT stream, refilling through Win32FileDescriptorRead as needed. The
  * corpus reads the stream's +0x0c flags before any null check; there are no
  * port tests or internal callers that pin a NULL stream here. */
-// FUNCTION: LEGORR 0x00497040
+// LIBRARY: LEGORR 0x00497040 SYMBOL
+// __filbuf
+#if !defined(_MSC_VER) || !defined(_M_IX86)
 uint32_t crt_stream_read_byte(int* stream)
 {
+#if defined(_MSC_VER)
+    return (uint32_t)_filbuf((FILE*)stream);
+#else
     uint32_t flags;
     int read_count;
     unsigned char* descriptor;
@@ -7573,11 +8187,15 @@ uint32_t crt_stream_read_byte(int* stream)
     stream[1] = 0;
     stream[3] |= (read_count != 0 ? 0x20 : 0x10);
     return 0xffffffffu;
+#endif
 }
+#endif
 
 /* CrtStreamBufferFlushAndRelease (FUN_00497570): flush a managed buffer and
  * optionally detach it; cached standard-stream storage remains allocated. */
-// FUNCTION: LEGORR 0x00497570
+// LIBRARY: LEGORR 0x00497570 SYMBOL
+// __ftbuf
+#if !defined(_MSC_VER)
 void crt_stream_buffer_flush_and_release(int installed, int* stream)
 {
     if (stream == NULL || (stream[3] & 0x1000) == 0) {
@@ -7591,8 +8209,11 @@ void crt_stream_buffer_flush_and_release(int installed, int* stream)
         stream[2] = 0;
     }
 }
+#endif
 
-// FUNCTION: LEGORR 0x0049aea0
+// LIBRARY: LEGORR 0x0049aea0 SYMBOL
+// __setmode
+#if !defined(_MSC_VER)
 int crt_file_descriptor_flag80_set_or_clear(unsigned fd, int mode)
 {
     if (fd < (unsigned)s_fd_flag_count && (fd >> 5) < CRT_FD_BLOCKS) {
@@ -7616,6 +8237,7 @@ int crt_file_descriptor_flag80_set_or_clear(unsigned fd, int mode)
     s_math_error_code = 9u;
     return -1;
 }
+#endif
 
 void crt_file_descriptor_flag_block_set(int index, void* block)
 {
@@ -7645,6 +8267,7 @@ int crt_file_descriptor_count_peek(void)
 /* Win32ErrorMapToErrno (FUN_00496ee0) scans the image's 45 pairs at
  * 0x4b24c0, then applies the CRT's two range fallbacks. The initial bytes
  * were checked directly against LegoRR.exe. */
+#if !defined(_MSC_VER)
 // GLOBAL: LEGORR 0x004b24c0
 static const uint32_t s_win32_error_errno_pairs[45][2] = {
     { 0x00000001u, 0x00000016u }, { 0x00000002u, 0x00000002u },
@@ -7671,8 +8294,11 @@ static const uint32_t s_win32_error_errno_pairs[45][2] = {
     { 0x000000ceu, 0x00000002u }, { 0x000000d7u, 0x0000000bu },
     { 0x00000718u, 0x0000000cu }
 };
+#endif
 
-// FUNCTION: LEGORR 0x00496ee0
+// LIBRARY: LEGORR 0x00496ee0 SYMBOL
+// __dosmaperr
+#if !defined(_MSC_VER) || !defined(_M_IX86)
 void crt_win32_error_map_to_errno(uint32_t error)
 {
     unsigned i;
@@ -7694,11 +8320,17 @@ void crt_win32_error_map_to_errno(uint32_t error)
         s_math_error_code = 0x16u;
     }
 }
+#endif
 
-// FUNCTION: LEGORR 0x00496c00
+// LIBRARY: LEGORR 0x00496c00 SYMBOL
+// __lseek
+#if !defined(_MSC_VER)
 uint32_t crt_win32_file_descriptor_seek(uint32_t fd, int32_t distance,
                                         uint32_t method)
 {
+#if defined(_MSC_VER)
+    return (uint32_t)_lseek((int)fd, (long)distance, (int)method);
+#else
     unsigned char* block;
     unsigned char* entry;
     int handle;
@@ -7750,12 +8382,23 @@ uint32_t crt_win32_file_descriptor_seek(uint32_t fd, int32_t distance,
         s_win32_error_code = 0u;
         return 0xffffffffu;
     }
+#endif
 }
+#endif
 
-// FUNCTION: LEGORR 0x00496cc0
+/* VC5 LIBC.LIB's chsize.obj provides the descriptor resize implementation. */
+// LIBRARY: LEGORR 0x0049a890 SYMBOL
+// __chsize
+
+// LIBRARY: LEGORR 0x00496cc0 SYMBOL
+// __write
+#if !defined(_MSC_VER)
 int crt_win32_file_descriptor_write(uint32_t fd, char* buffer,
                                     uint32_t count)
 {
+#if defined(_MSC_VER)
+    return _write((int)fd, buffer, count);
+#else
     unsigned char* block;
     unsigned char* entry;
     unsigned char flags;
@@ -7880,13 +8523,19 @@ int crt_win32_file_descriptor_write(uint32_t fd, char* buffer,
     }
     crt_win32_error_map_to_errno(os_error);
     return -1;
+#endif
 }
+#endif
 
-/* CrtFileStreamClose (FUN_004908a0) is the CRT's buffered character
- * writer. The function name is inherited from the image's symbol map. */
-// FUNCTION: LEGORR 0x004908a0
+/* CrtFileStreamClose (FUN_004908a0) is VC5's _flsbuf. */
+// LIBRARY: LEGORR 0x004908a0 SYMBOL
+// __flsbuf
+#if !defined(_MSC_VER) || !defined(_M_IX86)
 uint32_t crt_file_stream_close(uint32_t value, int* stream)
 {
+#if defined(_MSC_VER)
+    return (uint32_t)_flsbuf((int)value, (FILE*)stream);
+#else
     uint32_t flags = (uint32_t)stream[3];
     uint32_t fd = (uint32_t)stream[4];
     int expected;
@@ -7957,11 +8606,18 @@ uint32_t crt_file_stream_close(uint32_t value, int* stream)
         return 0xffffffffu;
     }
     return value & 0xffu;
+#endif
 }
+#endif
 
-// FUNCTION: LEGORR 0x0048fd20
+// LIBRARY: LEGORR 0x0048fd20 SYMBOL
+// __flush
+#if !defined(_MSC_VER) || !defined(_M_IX86)
 uint32_t crt_flush_stream_buffer(int* stream)
 {
+#if defined(_MSC_VER)
+    return (uint32_t)_flush((FILE*)stream);
+#else
     uint32_t flags = (uint32_t)stream[3];
     int pending;
     int result = 0;
@@ -7989,9 +8645,11 @@ uint32_t crt_flush_stream_buffer(int* stream)
     stream[1] = 0;
     *stream = stream[2];
     return (uint32_t)result;
+#endif
 }
+#endif
 
-// FUNCTION: LEGORR 0x00491360
+#if !defined(_MSC_VER)
 void crt_buffered_character_write(uint32_t value, int* stream, int* written)
 {
     int available = stream[1] - 1;
@@ -8010,8 +8668,9 @@ void crt_buffered_character_write(uint32_t value, int* stream, int* written)
     }
     *written += 1;
 }
+#endif
 
-// FUNCTION: LEGORR 0x004913b0
+#if !defined(_MSC_VER)
 void crt_write_repeated_char(uint32_t value, int count, int* stream,
                              int* written)
 {
@@ -8026,8 +8685,9 @@ void crt_write_repeated_char(uint32_t value, int count, int* stream,
         }
     }
 }
+#endif
 
-// FUNCTION: LEGORR 0x004913f0
+#if !defined(_MSC_VER)
 void crt_write_string_bounded(const char* text, int count, int* stream,
                               int* written)
 {
@@ -8045,6 +8705,7 @@ void crt_write_string_bounded(const char* text, int count, int* stream,
         }
     }
 }
+#endif
 
 /* --- the CRT control-flags / signal leaves (2026-10-25) --------------------
  * CrtControlFlagsTranslate (FUN_004977d0): the corpus's flag fold — bits
@@ -8060,7 +8721,10 @@ void crt_write_string_bounded(const char* text, int count, int* stream,
  * code-page branch unreachable (the unported locale-map chain), and the
  * failure half stores the corpus's EILSEQ-shaped 0x2a into the modeled
  * math-error slot (_DAT_005490d0) and answers -1. */
-// FUNCTION: LEGORR 0x004977d0
+/* The target's __abstract_cw is a private helper included by __control87. */
+// LIBRARY: LEGORR 0x004977d0 SYMBOL
+// __abstract_cw
+#if !defined(_MSC_VER)
 uint32_t crt_control_flags_translate(uint32_t flags)
 {
     uint32_t out = 0u;
@@ -8099,8 +8763,12 @@ uint32_t crt_control_flags_translate(uint32_t flags)
     }
     return out;
 }
+#endif
 
-// FUNCTION: LEGORR 0x00497770
+/* The target entry at 0x497770 is VC5's public __control87 in ieee87.obj. */
+// LIBRARY: LEGORR 0x00497770 SYMBOL
+// __control87
+#if !defined(_MSC_VER)
 uint32_t crt_fpu_control_word_update(uint32_t value, uint32_t mask)
 {
     const uint32_t translated = crt_control_flags_translate(value);
@@ -8108,16 +8776,27 @@ uint32_t crt_fpu_control_word_update(uint32_t value, uint32_t mask)
     crt_no_op_stub_variant();
     return result;
 }
+#endif
 
-// FUNCTION: LEGORR 0x004977b0
-void crt_fpu_control_word_update_mask(uint32_t value, uint32_t mask)
+/* VC5's public __controlfp wrapper clears _EM_DENORMAL before delegating to
+ * __control87; the MSVC build links this exact entry directly. */
+// LIBRARY: LEGORR 0x004977b0 SYMBOL
+// __controlfp
+#if !defined(_MSC_VER)
+uint32_t crt_fpu_control_word_update_mask(uint32_t value, uint32_t mask)
 {
-    crt_fpu_control_word_update(value, mask & 0xfff7ffffu);
+    return crt_fpu_control_word_update(value, mask & 0xfff7ffffu);
 }
+#endif
 
-// FUNCTION: LEGORR 0x00498b70
+// LIBRARY: LEGORR 0x00498b70 SYMBOL
+// _wctomb
+#if !defined(_MSC_VER)
 int crt_wide_char_to_multibyte(char* dest, uint32_t wide)
 {
+#if defined(_MSC_VER)
+    return wctomb(dest, (unsigned short)wide);
+#else
     uint16_t ch = (uint16_t)wide;
     if (dest == NULL) {
         return 0; /* pinned: the corpus's null check answers 0 */
@@ -8142,7 +8821,9 @@ int crt_wide_char_to_multibyte(char* dest, uint32_t wide)
 #endif
     s_math_error_code = 0x2au; /* pinned: the corpus's EILSEQ-shaped store */
     return -1;
+#endif
 }
+#endif
 
 /* CrtStrncpy (library `_strncpy`, FUN_0048e770) — see crt.hpp. The corpus's
  * aligned-dword fast path is an implementation detail: every lane copies
@@ -8151,8 +8832,12 @@ int crt_wide_char_to_multibyte(char* dest, uint32_t wide)
  * source reads stay inside the count. */
 // LIBRARY: LEGORR 0x0048e770 SYMBOL
 // _strncpy
+#if !defined(_MSC_VER)
 char* crt_string_copy_n(char* dest, const char* src, uint32_t count)
 {
+#if defined(_MSC_VER)
+    return strncpy(dest, src, (size_t)count);
+#else
     if (count == 0u) {
         return dest;
     }
@@ -8169,18 +8854,22 @@ char* crt_string_copy_n(char* dest, const char* src, uint32_t count)
         dest[i] = 0;
     }
     return dest;
+#endif
 }
+#endif
 
-/* CrtWideCharToMultiByteCompat (FUN_0049abe0) — see crt.hpp. Pinned to the
- * port's C-locale half (the DAT_00549180 locale half rides the recorded
- * locale-map chain, as in the string-case and codepage leaves): the
- * dest-NULL lane answers the wide length, and the store lane copies low
- * bytes until the NUL or the count. The wide-over-0xff exit takes the
- * corpus's EILSEQ-shaped math-error store and answers -1. */
-// FUNCTION: LEGORR 0x0049abe0
+/* VC5 LIBC.LIB wcstombs.obj supplies the exact wide-string conversion entry. */
+// LIBRARY: LEGORR 0x0049abe0 SYMBOL
+// _wcstombs
+#if !defined(_MSC_VER) || !defined(_M_IX86)
 int crt_wide_char_to_multi_byte_compat(char* dest, const uint16_t* wide,
                                        uint32_t count)
 {
+#if defined(_MSC_VER)
+    /* VC5's wchar_t is a 16-bit code unit; the cast keeps this compatibility
+     * shim's public type independent of the compiler's wchar_t spelling. */
+    return (int)wcstombs(dest, (const wchar_t*)wide, (size_t)count);
+#else
     if (dest != NULL && count == 0u) {
         return 0;
     }
@@ -8205,18 +8894,16 @@ int crt_wide_char_to_multi_byte_compat(char* dest, const uint16_t* wide,
             }
         }
     }
+#endif
 }
+#endif
 
-/* SignalHandlerRecordFind (FUN_0049ab90): linear search of the corpus's
- * signal-handler records — 12-byte entries (word, id, handler) in the
- * DAT_004b22a8 table, bounded by the DAT_004b2328 count. The corpus loads
- * the first record's id (0x49ab94) BEFORE the count (0x49ab9b) and forms
- * the count end with `lea [esi+esi*2]` / `lea [ecx*4+table]` at both the
- * loop and final checks; the port mirrors the load order and keeps one
- * cached end (LP64-portable). The table's writers sit in the unported CRT
- * startup band: own storage behind the install hooks below (the
- * unowned-global convention). The LP64 host has a 16-byte record stride;
- * x86 uses 12. */
+/* VC5 winsig.obj's private _siglookup is an exact instruction match for the
+ * target at 0x0049ab90. The public _raise entry references _siglookup and
+ * pulls in winsig.obj; that object also resolves the exception table globals
+ * from fpexcept.obj. Keep this local table and its test hooks only for
+ * portable builds. */
+#if !defined(_MSC_VER)
 #define CRT_SIGNAL_RECORDS 10
 struct crt_signal_record {
     uint32_t  word0;
@@ -8239,7 +8926,8 @@ static struct crt_signal_record s_signal_records[CRT_SIGNAL_RECORDS] = {
 // GLOBAL: LEGORR 0x004b2328
 static int s_signal_record_count = CRT_SIGNAL_RECORDS;
 
-// FUNCTION: LEGORR 0x0049ab90
+// LIBRARY: LEGORR 0x0049ab90 SYMBOL
+// _siglookup (private winsig.obj helper, reached through _raise)
 void* crt_signal_handler_record_find(int signal)
 {
     struct crt_signal_record* found = &s_signal_records[0];
@@ -8300,11 +8988,12 @@ int crt_signal_record_count_peek(void)
 {
     return s_signal_record_count;
 }
+#endif
 
-/* DoubleFrexpDecompose (FUN_00493ae0): normalize the stored significand to
- * the corpus's exponent 0x3fe, then report the exponent such that
- * input = result * 2^exponent. Subnormals are shifted until bit 52 is set. */
-// FUNCTION: LEGORR 0x00493ae0
+/* VC5 LIBC.LIB's ldexp.obj supplies the exact private __decomp helper here. */
+// LIBRARY: LEGORR 0x00493ae0 SYMBOL
+// __decomp
+#if !defined(_MSC_VER)
 double double_frexp_decompose(uint32_t low_word, uint32_t high_word,
                               int* exponent)
 {
@@ -8341,11 +9030,12 @@ double double_frexp_decompose(uint32_t low_word, uint32_t high_word,
     *exponent = result_exponent;
     return output.value;
 }
+#endif
 
-/* CrtMathExceptionDispatch (FUN_004938f0) — see crt.hpp. The registered
- * image handlers currently resolve to the port's FLH no-op, so a found
- * handler follows the corpus's unhandled result/error-code branch. */
-// FUNCTION: LEGORR 0x004938f0
+/* VC5 LIBC.LIB's fpexcept.obj exports the math exception dispatcher. */
+// LIBRARY: LEGORR 0x004938f0 SYMBOL
+// __umatherr
+#if !defined(_MSC_VER)
 double crt_math_exception_dispatch(uint32_t error_code, uint32_t operation,
                                    uint32_t argument1_low,
                                    uint32_t argument1_high,
@@ -8376,12 +9066,17 @@ double crt_math_exception_dispatch(uint32_t error_code, uint32_t operation,
     result.bits = ((uint64_t)result_high << 32) | result_low;
     return result.value;
 }
+#endif
 
 /* CrtFloatingPointExceptionRaise (FUN_00493280): build the CRT's 21-word
  * FPIEEE exception record, raise the corresponding Win32 floating-point
  * exception, then fold any handler changes back into the control word and
  * result. The caller owns and initializes record word zero before entry. */
-// FUNCTION: LEGORR 0x00493280
+#if defined(_MSC_VER)
+// LIBRARY: LEGORR 0x00493280 SYMBOL
+// __raise_exc
+#endif
+#if !defined(_MSC_VER)
 void crt_floating_point_exception_raise(uint32_t* record,
                                         uint32_t* control_word,
                                         uint8_t exception_flags,
@@ -8494,52 +9189,17 @@ void crt_floating_point_exception_raise(uint32_t* record,
     result[0] = record[16];
     result[1] = record[17];
 }
+#endif
 
 /* CrtMathExceptionHandleSingleResult (FUN_00493170): the x86 corpus carries
  * this path's value on the x87 stack and keeps its argument loads and
  * cleanup in a specific order. Retain the C implementation as the
  * non-MSVC-x86 fallback. */
-// FUNCTION: LEGORR 0x00493170
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) double crt_math_exception_handle_single_result(
-    uint32_t operation, uint32_t result_low, uint32_t result_high,
-    uint32_t fpu_control_word)
-{
-    __asm {
-        mov eax, dword ptr [s_math_exception_mode]
-        test eax, eax
-        jne math_exception_mode_enabled
-
-        mov eax, dword ptr [esp + 10h]
-        mov ecx, dword ptr [esp + 8]
-        push eax
-        mov eax, dword ptr [esp + 10h]
-        push eax
-        push ecx
-        push 0
-        push 0
-        push eax
-        push ecx
-        mov ecx, dword ptr [esp + 20h]
-        push ecx
-        push 1
-        call crt_math_exception_dispatch
-        add esp, 24h
-        ret
-
-    math_exception_mode_enabled:
-        mov edx, dword ptr [esp + 10h]
-        push 0ffffh
-        push edx
-        mov dword ptr [s_math_error_code], 21h
-        call fpu_control_word_update_masked
-        add esp, 8
-        fld qword ptr [esp + 10h]
-        add esp, 8
-        ret
-    }
-}
-#else
+/* CrtMathExceptionHandleSingleResult (FUN_00493170) is VC5 LIBC.LIB's
+ * fpexcept.obj __handle_qnan1 entry on the MSVC build. */
+// LIBRARY: LEGORR 0x00493170 SYMBOL
+// __handle_qnan1
+#if !defined(_MSC_VER)
 double crt_math_exception_handle_single_result(uint32_t operation,
                                                 uint32_t result_low,
                                                 uint32_t result_high,
@@ -8565,11 +9225,15 @@ double crt_math_exception_handle_single_result(uint32_t operation,
 }
 #endif
 
-/* CrtMathExceptionHandleResultWithStatus (FUN_004931c0): first fold
- * hardware exception status into the result, raise an FPIEEE exception for
- * any unhandled flags, then dispatch the CRT math-error callback or return
+/* VC5 LIBC.LIB's fpexcept.obj __except1 is an exact match for the target's
+ * CrtMathExceptionHandleResultWithStatus body outside relocation operands.
+ * MSVC links that runtime entry directly; this fallback folds
+ * hardware exception status into the result, raises an FPIEEE exception for
+ * any unhandled flags, then dispatches the CRT math-error callback or returns
  * the result with the selected error/control-word state. */
-// FUNCTION: LEGORR 0x004931c0
+#if !defined(_MSC_VER)
+// LIBRARY: LEGORR 0x004931c0 SYMBOL
+// __except1
 double crt_math_exception_handle_result_with_status(uint32_t status,
                                                      uint32_t operation,
                                                      uint32_t argument_low,
@@ -8617,11 +9281,12 @@ double crt_math_exception_handle_result_with_status(uint32_t status,
     (void)fpu_control_word_update_masked(fpu_control_word, 0xffffu);
     return result.value;
 }
+#endif
 
-/* CrtDoubleToIntegerRound (FUN_004935c0): masked status bits are cleared;
- * integer conversion truncates toward zero, and overflow saturates according
- * to the saved x87 rounding mode. */
-// FUNCTION: LEGORR 0x004935c0
+/* VC5 LIBC.LIB's fpexcept.obj exports the status/result handler. */
+// LIBRARY: LEGORR 0x004935c0 SYMBOL
+// __handle_exc
+#if !defined(_MSC_VER)
 int crt_double_to_integer_round(uint32_t status, double* value,
                                 uint32_t fpu_control_word)
 {
@@ -8699,9 +9364,13 @@ int crt_double_to_integer_round(uint32_t status, double* value,
             inexact = 1;
         }
         else {
+#if defined(_MSC_VER)
+            normalized = frexp(number.value, &binary_exponent);
+#else
             normalized = double_frexp_decompose(
                 (uint32_t)number.bits, (uint32_t)(number.bits >> 32),
                 &binary_exponent);
+#endif
             binary_exponent -= 0x600;
             if (binary_exponent < -0x432) {
                 inexact = 1;
@@ -8746,3 +9415,4 @@ int crt_double_to_integer_round(uint32_t status, double* value,
     }
     return remaining == 0u;
 }
+#endif

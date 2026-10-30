@@ -33,24 +33,6 @@ static uint32_t t_le16(const uint8_t* p)
     return (uint32_t)p[0] | ((uint32_t)p[1] << 8);
 }
 
-static int t_lower(int c) { return c >= 'a' && c <= 'z'; }
-
-static int t_strcasecmp(const char* a, const char* b)
-{
-    for (;;) {
-        int ca = (unsigned char)*a++;
-        int cb = (unsigned char)*b++;
-        if (t_lower(ca)) ca -= 0x20;
-        if (t_lower(cb)) cb -= 0x20;
-        if (ca != cb) {
-            return ca - cb;
-        }
-        if (ca == 0) {
-            return 0;
-        }
-    }
-}
-
 typedef struct TextureBitmapLayout {
     int32_t width, height;
     int bpp;
@@ -303,7 +285,7 @@ TextureSurface* texture_get_or_load(const char* base, const char* file)
     }
 
     for (int i = 0; i < s_cache_count; ++i) {
-        if (t_strcasecmp(s_cache[i].name, name) == 0) {
+        if (strcasecmp_lite(s_cache[i].name, name) == 0) {
             TextureSurface* t = s_cache[i].surf;
             ++t->refcount;
             return t;
@@ -315,12 +297,18 @@ TextureSurface* texture_get_or_load(const char* base, const char* file)
         return NULL;
     }
     if (s_cache_count < TEX_CACHE_MAX) {
+#if defined(_MSC_VER)
+        t->name = _strdup(name);
+#else
         t->name = (char*)malloc(strlen(name) + 1);
+#endif
         if (t->name == NULL) {
             texture_free(t);
             return NULL;
         }
+#if !defined(_MSC_VER)
         strcpy(t->name, name);
+#endif
         t->refcount = 1;
         s_cache[s_cache_count].name = t->name;
         s_cache[s_cache_count].surf = t;

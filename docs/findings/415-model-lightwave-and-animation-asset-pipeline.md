@@ -31,6 +31,11 @@ separate render-geometry helper called by `MeshBuildEightSidedSegment @
 grammar, mesh construction, and shipped-corpus validation are already recorded
 in findings 11 and 19.
 
+Within `LwoSurfaceSettings`, the deduplicated SURF anchor offsets are sorted
+through `qsort`, which links to VC5 `LIBC.LIB` in the Reccmp build. Since the
+offsets are unique, this preserves the parser's ascending order without
+depending on sort stability.
+
 The scene-object animation path is separate from parsing: `SharedObjectAnimationAndTimedEventUpdate
 @ 0x487ba0` calls `SharedObjectFloatTrackInterpolateApply @ 0x488070` to sample
 a stored float track and forwards the interpolated value to its downstream
@@ -61,7 +66,7 @@ lifecycle work, rather than LightWave parsing.
 | `0x0048c690` `LwoSurfaceNames` | Reads the even-padded NUL-terminated `SRFS` name list and stores names when the caller provides an output table. | Dispatched by `LoadLWO`; names are subsequently matched against `SURF` records. |
 | `0x0048c820` `LwoSurfaceSettings` | Initializes a surface record and interprets its `SURF` subchunks, including color, texture image, projection, and material flags. | Dispatched by `LoadLWO`; uses `LwoStringDuplicate`, `LwoTextureProjectionModeParse`, and `LwoReadBigEndianFloat`. Detailed layout is in finding 11 §5b. |
 | `0x0048d2c0` `LoadLWO` | Opens `<base>.lwo`, checks `FORM`/`LWOB`, dispatches `PNTS`, `SRFS`, `SURF`, `CRVS`, and `POLS`, skips unknown chunks, and optionally opens `<base>.uv`. | Sole caller is `ModelObjectCreate @ 0x48d7c0`; its output fields become the parser model consumed by the mesh/material pass. |
-| `0x00490090` `AssetPathComponentsParse` (issue calls it `MaterialResolve`) | Splits an input path into an optional two-character prefix, directory, basename, and extension, with each output bounded to 255 bytes. It does not look up or resolve a material. | Called by model creation, model texture binding, and FLIC open; renamed and moved to shared asset path handling. |
+| `0x00490090` `AssetPathComponentsParse` (issue calls it `MaterialResolve`) | Splits an input path into an optional two-character prefix, directory, basename, and extension, with each output bounded to 255 bytes. It does not look up or resolve a material. Its MSVC implementation is VC5 CRT `_splitpath`. | Called by model creation, model texture binding, and FLIC open; renamed and moved to shared asset path handling. |
 
 ## Index corrections and limits
 

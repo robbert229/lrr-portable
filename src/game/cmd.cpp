@@ -124,7 +124,7 @@ static void cmd_pool_grow(void)
         return;
     }
     uint32_t n = 1u << (level & 0x1f);
-    CmdRec* block = (CmdRec*)calloc(n, CMD_STRIDE);
+    CmdRec* block = (CmdRec*)malloc((size_t)n * CMD_STRIDE);
     if (block == NULL) {
         return;
     }
@@ -966,14 +966,20 @@ int selection_command_dispatch(int param)
 }
 
 /* --- random-cell producer / entity remove (see cmd.hpp) ----------------------
- * PRNG: the corpus's shared random word draw (thunk_FUN_0048e170),
- * modelled module-locally the way level.cpp and frontend.cpp do. */
+ * VC5 rand.obj supplies the shared stream in the classic x86 build; other
+ * builds keep this subsystem's local LCG model. */
+#if !defined(_MSC_VER) || (_MSC_VER >= 1200) || !defined(_M_IX86)
 static uint32_t s_cmd_rand_state = 1;
+#endif
 
 static int cmd_rand15(void)
 {
+#if defined(_MSC_VER) && (_MSC_VER < 1200) && defined(_M_IX86)
+    return rand();
+#else
     s_cmd_rand_state = s_cmd_rand_state * 214013u + 2531011u;
     return (int)((s_cmd_rand_state >> 16) & 0x7fffu);
+#endif
 }
 // FUNCTION: LEGORR 0x00452430
 void entity_random_valid_cell_command_create(void* entity)
@@ -1278,13 +1284,21 @@ int cmd_global_enabled_peek(void) { return s_global_enabled; }
 // FUNCTION: LEGORR 0x004021e0
 void* engine_memory_allocate(long size)
 {
-    /* corpus shape: forwards the allocation's result; engine_heap_alloc is FUN_0048dbd0. */
+    /* The reference calls VC5's _malloc entry directly. */
+#if defined(_MSC_VER) && defined(_M_IX86)
+    return malloc((size_t)size);
+#else
     return engine_heap_alloc(size);
+#endif
 }
 // FUNCTION: LEGORR 0x00402210
 void engine_memory_free(void* ptr)
 {
+#if defined(_MSC_VER) && defined(_M_IX86)
+    free(ptr);
+#else
     engine_heap_free(ptr);
+#endif
 }
 /* TaskTableContentsRelease (FUN_004020c0): frees every non-null pool
  * block pointer. The corpus increments esi by four and compares it with

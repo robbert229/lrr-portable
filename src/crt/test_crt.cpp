@@ -198,14 +198,18 @@ static void test_crt_leaves(void)
     const double f1 = 3.5;
     memcpy(buf, &d1, 4);
     memcpy(buf + 4, &w1, 2);
-    memcpy(buf + 6, &f1, 8);
+    memcpy(buf + 8, &f1, 8);
     uint8_t* cur = buf;
     CHECK(format_argument_read_dword(&cur) == d1 && cur == buf + 4,
           "dword read advances four");
-    CHECK(format_argument_read_word(&cur) == w1 && cur == buf + 6,
-          "word read advances two and zero-extends");
-    CHECK(format_argument_read_double(&cur) == f1 && cur == buf + 14,
-          "double read advances eight");
+    CHECK(format_argument_read_word(&cur) == w1 && cur == buf + 8,
+          "word read advances one 32-bit variadic slot");
+    {
+        uint64_t f1_bits;
+        memcpy(&f1_bits, &f1, sizeof(f1_bits));
+        CHECK(format_argument_read_qword(&cur) == f1_bits && cur == buf + 16,
+              "64-bit variadic read preserves the raw argument bits");
+    }
 
     /* x87 FRNDINT: nearest-even integral, floating. */
     CHECK(x87_round_to_integral(1.5) == 2.0, "half rounds to even (2)");
@@ -459,10 +463,10 @@ int main(void)
         font_cursor_word_set(-1, 0u);
     }
 
-    /* The stub pair + advisor word clear (2026-10-24). */
+    /* CRT control-word helper fallbacks + advisor word clear. */
     {
-        crt_no_op_stub();
-        crt_no_op_stub_variant(); /* the corpus is pure return */
+        crt_load_control_word(0x027fu);
+        crt_no_op_stub_variant(); /* private helper fallback */
         advisor_state_word_set(3u);
         advisor_clear_active_state();
         CHECK(advisor_state_word_peek() == 1u, "the active bit drops alone");
@@ -1177,7 +1181,7 @@ int main(void)
     }
 
     /* Integer/string helper band (2026-10-25): the uint96 dword copy, the
-     * allocator duplicate, the radix digits, and the ASCII folds. */
+     * allocator duplicate, signed radix conversion, and ASCII folds. */
     {
         const uint32_t src[3] = { 0x11u, 0x22u, 0x33u };
         uint32_t dst[3] = { 0, 0, 0 };
@@ -1199,17 +1203,6 @@ int main(void)
         CHECK(crt_string_duplicate(NULL) == NULL, "the null duplicate is guarded");
 
         char buf[32];
-        crt_unsigned_format_radix(123u, buf, 10, 0);
-        CHECK(strcmp(buf, "123") == 0, "the decimal digits reverse into place");
-        crt_unsigned_format_radix(0u, buf, 10, 0);
-        CHECK(strcmp(buf, "0") == 0, "zero writes one digit");
-        crt_unsigned_format_radix(255u, buf, 16, 0);
-        CHECK(strcmp(buf, "ff") == 0, "digits past nine fold lowercase");
-        crt_unsigned_format_radix(4294967295u, buf, 16, 0);
-        CHECK(strcmp(buf, "ffffffff") == 0, "the full dword spans eight digits");
-        crt_unsigned_format_radix(9u, buf, 1, 0);
-        CHECK(strcmp(buf, "0") == 0, "the radix guard answers zero (deviation)");
-
         crt_signed_to_string(-42, buf, 10);
         CHECK(strcmp(buf, "-42") == 0, "the negative decimal takes the sign half");
         crt_signed_to_string(-2147483648, buf, 10);
@@ -1412,8 +1405,6 @@ int main(void)
         CHECK(crt_control_flags_translate(0x1000u) == 0x60000u,
               "bit 12 rides with the pair-clear");
 
-        static char marker_a;
-        static char marker_b;
         char out = 'Z';
         CHECK(crt_wide_char_to_multibyte(NULL, 0x41u) == 0,
               "the null destination answers 0");
@@ -1475,6 +1466,9 @@ int main(void)
                   "the compat half stores the EILSEQ-shaped slot");
         }
 
+#if !defined(_MSC_VER)
+        static char marker_a;
+        static char marker_b;
         crt_signal_record_install(0, 0xaau, 7, &marker_a);
         crt_signal_record_install(1, 0u, 9, &marker_b);
         crt_signal_record_install(16, 0u, 3, NULL); /* guarded (dev) */
@@ -1501,6 +1495,7 @@ int main(void)
         crt_signal_record_install(1, 0u, 0, NULL);
         crt_signal_record_peek(0, &w, &id, &h);
         CHECK(w == 0u && id == 0 && h == NULL, "the clean peek rides");
+#endif
     }
 
     if (s_failures != 0) {

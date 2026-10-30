@@ -2545,8 +2545,10 @@ port's C-locale half (the locale-map branch stays recorded): a null
 destination answers the NUL-excluded wide length, the store lane copies
 low bytes until the NUL or the count, and a char over `0xff` takes the
 corpus's EILSEQ-shaped math-error store with the `-1` answer — the same
-shape as the code-page leaf. The normalize pass runs the corpus's screen
-band: 90 color constants scale by the exact 1/255 float, two stride-16
+shape as the code-page leaf. On the VC5 build, `crt_string_copy_n` calls the
+runtime's `_strncpy`; other backends retain the bytewise compatibility fold.
+The normalize pass runs the corpus's screen band: 90 color constants scale
+by the exact 1/255 float, two stride-16
 lanes fill twenty unit cells, and seven pair rows seed from the corpus
 constants and scale by the width/height through the 1/640 and 1/480
 constants — the x half lands back on the constants while the y half
@@ -2557,16 +2559,13 @@ primary's, and a second pass re-scales the colors again. Deviations: the
 band is own storage (its corpus owner is unported), and the locale-half
 conversion branches ride recorded. Tests green; 34/36 baseline.
 
-**Integer divide pair** (2026-10-25): two runtime rows land in `crt.*`
-alongside the multiply thunk. `crt_integer64_divide` (0x48e9e0, `__alldiv`)
-and `crt_unsigned64_divide` (0x498bf0, `__aulldiv`) fold the helpers'
-sign-normalizing shift/trial/repair algorithm into the LP64 division —
-the algorithm truncates toward zero throughout, so one word-pair fold and
-one native division answer every well-defined case. Quirks pinned: the
-signed pair's double normalization of `INT64_MIN / -1` never negates, so
-the wrapping quotient rides through unchanged, and the equal-extremes
-case answers one. Deviations: the zero-divisor exception path answers
-zero, and the helper's normalization wrap is the only modeled edge.
+**64-bit arithmetic helpers** (2026-10-25): the VC5 build links
+`crt_integer64_divide` (0x48e9e0, `__alldiv`), `crt_unsigned64_divide`
+(0x498bf0, `__aulldiv`), and the adjacent unsigned remainder helper
+(0x498c60, `__aullrem`) from `LIBC.LIB`; `__aullrem` is supplied by
+`ullrem.obj`. Other backends keep the word-pair implementations. The divide
+helpers retain the corpus's sign normalization, quotient correction, and
+native divide-fault behavior.
 `crt_test` pins word-pair scaling, both truncation directions, and the
 guard lanes. Tests green; 34/36 baseline.
 
@@ -3132,9 +3131,9 @@ clamps, length layout, bit folds, and record headers.
 land. `crt_math_exception_handler_get` (0x4939d0, crt.*) scans the corpus's
 27-entry math-handler table (own storage + install hook — the corpus
 writer rides the unported CRT startup band). `crt_integer64_multiply`
-(0x48ea90, crt.*) ports the compiler's signed 64×64 multiply helper (plain
-word product under the double-zero high guard, else the wrapped cross-word
-fold). `objective_score_text_origin_set` (0x4262e0, engine.*) stores the
+(0x48ea90, `__allmul`) links to VC5 `LIBC.LIB`, while other backends retain
+the wrapped cross-word implementation. `objective_score_text_origin_set`
+(0x4262e0, engine.*) stores the
 score-text pair and rides the debug word's bit 14.
 `ai_idle_table_pointer_remove` (0x43a930, ai.*) zeroes matching idle-table
 slots through the count window — holes ride, dedup sees past them.
@@ -3189,11 +3188,9 @@ neighbour sweep against a hand-built grid.
 **CRT integer/string helper band** (2026-10-25): six frontier rows land in
 `crt.*`. `uint96_copy` (0x497a80) walks three dwords forward, reproducing
 the corpus's overlap word-duplication. `crt_string_duplicate` (0x49b660)
-copies strlen+1 through the engine allocator. `crt_unsigned_format_radix`
-(0x49dba0) folds digits through the corpus's `+ 'W'` lowercase letter
-half, guarded on radix < 2 (the corpus's divide loop never ends), and
-`crt_signed_to_string` (0x49db60) takes the corpus's sign half only for
-radix 10 — INT_MIN rides the wrapping magnitude as −2147483648.
+copies strlen+1 through the engine allocator. `crt_signed_to_string`
+(0x49db60) links VC5 `_itoa` from `LIBC.LIB`; portable builds retain the
+same lowercase digit behavior and wrapping INT_MIN magnitude.
 `crt_string_to_upper`/`crt_string_to_lower` (0x49dcd0 / 0x49dc10) fold the
 whole string on the pinned C-locale half (the DAT_00549180 locale branch
 rides the recorded locale-map chain). `crt_test` pins the overlap copy,

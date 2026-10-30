@@ -1107,16 +1107,11 @@ static SavTreeNode* level_node_get_inner(SavListWindow* win, BlockFile* cfg,
     uint32_t count = 0;
     const char* p = links;
     while (*p != '\0' && count < 15) {
-        while (*p == ',' || *p == ' ' || *p == '\t') {
-            ++p;
-        }
+        p += strspn(p, ", \t");
         if (*p == '\0') {
             break;
         }
-        const char* end = p;
-        while (*end != '\0' && *end != ',') {
-            ++end;
-        }
+        const char* end = p + strcspn(p, ",");
         size_t len = (size_t)(end - p);
         while (len > 0 && (p[len - 1] == ' ' || p[len - 1] == '\t')) {
             --len;

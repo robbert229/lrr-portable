@@ -7,7 +7,7 @@ assert undocumented CRT export identities.
 | Address | Name | Observed behavior |
 | --- | --- | --- |
 | 0x495f80 | CrtCommandLineArgumentScan | Scans the module command line into argv, handling quoted argv[0], whitespace, DBCS lead-byte counts, and backslash/quote escaping. The argv builder at 0x495ee0 performs sizing and output passes, allocates storage, and stores argc/argv. |
-| 0x4968f0 | CrtRuntimeErrorMessage | Maps CRT error IDs to messages. Depending on configuration it writes fixed text to stderr or constructs a `Runtime Error!` dialog containing the module name. Called by CRT error dispatchers at 0x48f1a0, 0x4968b0, and 0x4996f0. |
+| 0x4968f0 | CrtRuntimeErrorMessage | VC5 `LIBC.LIB` `crt0msg.obj` exports the exact `__NMSG_WRITE` body here. Depending on runtime mode it writes fixed text to stderr or constructs a `Runtime Error!` dialog containing the module name. |
 | 0x49b2b0 | CrtPutEnvUpdate | Parses `NAME=VALUE`, updates the CRT environment pointer array by insert/replace/delete, and optionally calls `SetEnvironmentVariableA`. Called by the wide-environment conversion/update loop at 0x49af60. |
 | 0x49afe0 | CrtCompareStringACompat | Uses `CompareStringA` when available; on the wide-only path, converts the byte strings using the selected code page and calls `CompareStringW`, including DBCS handling for short inputs. Wrapper 0x49af20 maps the API result to -1/0/1. |
 | 0x4935c0 | CrtDoubleToIntegerRound | Converts a double to an integer using the x87 control and exception/status bits. The behavior is observed; the exact CRT export name is not established. |

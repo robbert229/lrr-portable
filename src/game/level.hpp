@@ -40,6 +40,9 @@
 #include <cstdint>
 #include <cstddef>
 #include <string.h>
+#if defined(_MSC_VER) && (_MSC_VER < 1200) && defined(_M_IX86)
+#include <stdlib.h>
+#endif
 
 #include "gods98/block.hpp"
 
@@ -997,13 +1000,17 @@ int global_option_low_bits_enabled(const LevelState* s);
  * the port's guarded read (NULL answers 0). */
 int level_objective_result_get(const struct LevelState* s);
 
-/* RandomSeedSet (FUN_0048e160): the corpus stores the seed into the shared
- * draw word; the port models that word module-locally the way the overlay,
- * cmd, media and sound models do (same LCG), so this reseeds this module's
- * instance only — other instances keep their own state (deviation). */
+/* The original shared random stream is VC5 LIBC.LIB rand.obj's _rand/_srand
+ * pair. The VC5 x86 build calls that runtime directly; other builds keep the
+ * local LCG model and its seed/draw hooks. */
+#if defined(_MSC_VER) && (_MSC_VER < 1200) && defined(_M_IX86)
+#define level_random_seed_set(seed) srand(seed)
+#define level_rand_u16() rand()
+#else
 void level_random_seed_set(uint32_t seed);
-int  level_random_draw15(void); /* the seeded instance's RandomNext draw */
 int level_rand_u16(void);       /* RandomNext @ 0x48e170 */
+#endif
+int level_random_draw15(void); /* one 15-bit draw from the active RNG */
 uint32_t rng_thunk_draw15(void); /* FUN_004798a0: corpus RNG-thunk forward */
 
 /* TerrainObjectTypeSfxAtCellGet (FUN_0044ad80): turns a position record's

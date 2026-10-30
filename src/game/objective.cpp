@@ -5,6 +5,7 @@
 
 #include "gods98/block.hpp"
 #include "gods98/media.hpp"
+#include "gods98/string.hpp"
 #include "level.hpp"
 #include "objective.hpp"
 #include "util.hpp"
@@ -19,18 +20,6 @@ static const char* K_ORE_OBJ       = "OreObjective";
 static const char* K_TIMER_OBJ     = "TimerObjective";
 static const char* K_CONSTRUCT_OBJ = "ConstructionObjective";
 static const char* K_BLOCK_OBJ     = "BlockObjective";
-
-static int obj_strcasecmp(const char* a, const char* b)
-{
-    for (;;) {
-        int ca = (unsigned char)*a++;
-        int cb = (unsigned char)*b++;
-        if (ca >= 'a' && ca <= 'z') ca -= 0x20;
-        if (cb >= 'a' && cb <= 'z') cb -= 0x20;
-        if (ca != cb) return ca - cb;
-        if (ca == 0) return 0;
-    }
-}
 
 static const char* obj_cfg_str(BlockFile* cfg, const char* level, const char* key,
                                char* out, size_t out_sz)
@@ -50,29 +39,14 @@ static const char* obj_cfg_str(BlockFile* cfg, const char* level, const char* ke
     return out;
 }
 
-/* Corpus FUN_004790d0 typed getter used by the advisor-suppression keys:
- * boolean vocabulary (TRUE/YES/ON → 1, FALSE/NO/OFF → 0), else strtol. */
+/* Corpus FUN_004790d0 delegates to ConfigBooleanGet @ 0x477710. */
 static int obj_typed_int(BlockFile* cfg, const char* level, const char* key, int dflt)
 {
     char path[512];
     if (util_level_cfg_path(cfg, level, key, path, sizeof(path)) == NULL) {
         return dflt;
     }
-    const char* v = block_get_strptr(cfg, path);
-    if (v == NULL) {
-        return dflt;
-    }
-    if (obj_strcasecmp(v, "TRUE") == 0 || obj_strcasecmp(v, "YES") == 0
-        || obj_strcasecmp(v, "ON") == 0) {
-        return 1;
-    }
-    if (obj_strcasecmp(v, "FALSE") == 0 || obj_strcasecmp(v, "NO") == 0
-        || obj_strcasecmp(v, "OFF") == 0) {
-        return 0;
-    }
-    char* end = NULL;
-    long r = strtol(v, &end, 10);
-    return (end == v) ? 2 : (int)r;
+    return block_get_bool(cfg, path);
 }
 
 /* Split "a b" / "a,b" value into two longs (block/construction targets). */
@@ -83,13 +57,10 @@ static void obj_split_two(const char* s, long* a, long* b)
     if (s == NULL) {
         return;
     }
-    *a = util_atoi(s);
-    const char* p = s;
-    while (*p != '\0' && *p != ' ' && *p != ',' && *p != '|') {
-        ++p;
-    }
-    if (*p != '\0') {
-        *b = util_atoi(p + 1);
+    *a = atoi(s);
+    const char* p = strpbrk(s, " ,|");
+    if (p != NULL) {
+        *b = atoi(p + 1);
     }
 }
 
@@ -170,8 +141,8 @@ void objective_load(BlockFile* cfg, const char* level_name, LevelState* s)
             char fields[UTIL_QUERY_MAX_FIELDS][256];
             int st = util_query_fields(value, fields, sizeof(fields[0]));
             if (st == 3) {
-                level_set_float(s, OBJ_OFF_AVI_DIM, (float)util_atoi(fields[1]));
-                level_set_float(s, OBJ_OFF_AVI_DIM + 4, (float)util_atoi(fields[2]));
+            level_set_float(s, OBJ_OFF_AVI_DIM, (float)atoi(fields[1]));
+            level_set_float(s, OBJ_OFF_AVI_DIM + 4, (float)atoi(fields[2]));
             } else {
                 level_set_int(s, OBJ_OFF_AVI_SECOND, 1);
             }
@@ -183,18 +154,18 @@ void objective_load(BlockFile* cfg, const char* level_name, LevelState* s)
         char value[256];
         long crystal = 0, ore = 0;
         if (obj_cfg_str(cfg, level_name, K_CRYSTAL_OBJ, value, sizeof(value)) != NULL) {
-            crystal = util_atoi(value);
+            crystal = atoi(value);
         }
         if (obj_cfg_str(cfg, level_name, K_ORE_OBJ, value, sizeof(value)) != NULL) {
-            ore = util_atoi(value);
+            ore = atoi(value);
         }
         obj_set_resources(s, crystal, ore);
     }
     {
         char value[64];
         if (obj_cfg_str(cfg, level_name, K_TIMER_OBJ, value, sizeof(value)) != NULL) {
-            float ticks = (float)util_atoi(value) * 25.0f;
-            int htf = obj_strcasecmp(value, "HitTimeFailObjective") == 0;
+            float ticks = (float)atoi(value) * 25.0f;
+            int htf = strcasecmp_lite(value, "HitTimeFailObjective") == 0;
             obj_set_timer(s, ticks, htf);
         }
     }

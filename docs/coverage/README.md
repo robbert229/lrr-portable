@@ -11,37 +11,38 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 1098 | 42.8% |
-| stubbed | 1415 | 55.2% |
+| ported | 1179 | 46.0% |
+| stubbed | 1106 | 43.1% |
 | anchored | 4 | 0.2% |
-| named | 0 | 0.0% |
-| runtime-import | 41 | 1.6% |
-| runtime-library | 5 | 0.2% |
-| anonymous | 1 | 0.0% |
+| named | 2 | 0.1% |
+| runtime-import | 17 | 0.7% |
+| runtime-library | 254 | 9.9% |
+| anonymous | 2 | 0.1% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (1098 functions)
+  (1179 functions)
 - **stubbed** — entry address has a Reccmp `STUB` annotation, but the
-  function remains a placeholder (1415 functions)
+  function remains a placeholder (1106 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
   not named (4 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (0 functions)
+  citation yet (2 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
-  logic, never ported (41 functions)
-- **runtime-library** — CRT/compiler-runtime bodies supplied by the selected
-  link library and marked `LIBRARY` for Reccmp; not ported as game logic
-  (5 functions)
+  logic, never ported (17 functions)
+- **runtime-library** — original CRT/compiler-runtime implementation
+  supplied by the selected link library; tracked by Reccmp `LIBRARY`
+  markers, not ported as game code (254 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
-  (1 functions)
+  (2 functions)
 
-**Game logic remaining to port: 1420 (55.4%).**
+**Game logic remaining to port: 1114 (43.4%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
 | Region | Anonymous functions |
 | --- | ---: |
+| `0x00040xxxx` | 1 |
 | `0x00045xxxx` | 1 |
 
 ## Named-but-unported corpus functions
@@ -63,8 +64,6 @@ Human-named in the corpus that have no source citation or only a `STUB`.
 | `0x00401990` | AdvisorTransitionWorker |
 | `0x00401a70` | AdvisorSceneAdvanceAndCompletionCheck |
 | `0x00401b30` | AdvisorApplySlotTransform |
-| `0x00401c50` | FormattedTextPrintfWidth |
-| `0x00401c80` | FormattedTextPrintf |
 | `0x00402310` | CmdChainPurge |
 | `0x004027a0` |  |
 | `0x00402a40` | CoordinatePairCallbackDispatch |
@@ -135,8 +134,6 @@ Human-named in the corpus that have no source citation or only a `STUB`.
 | `0x00408d70` | TerrainDescriptorCoordinateCountLimitCheck |
 | `0x00408e50` | CreateRepeatedResourceInstances |
 | `0x00408ec0` | KindNineNeighborEmitForFootprintCells |
-| `0x004090a0` | TerrainCellPredicateCheck |
-| `0x004090c0` | TerrainDescriptorFindExact |
 | `0x00409110` | ReleaseSelectionGroupResources |
 | `0x00409150` | ClearSelectionGroup |
 | `0x00409270` |  |
@@ -161,7 +158,6 @@ Human-named in the corpus that have no source citation or only a `STUB`.
 | `0x0040a5e0` | RecordCountDigitsFill |
 | `0x0040aa40` | ScreenEffectOpacityUpdate |
 | `0x0040ab70` | DependencyGridConfigLoad |
-| `0x0040aea0` | EnsureCellEntriesLoaded |
 | `0x0040af40` | CellResourceEntryMatches |
 | `0x0040b000` | TileMatchingCellsCollect |
 | `0x0040b1b0` | DependencyGridOccupancyPass |
@@ -210,7 +206,6 @@ Human-named in the corpus that have no source citation or only a `STUB`.
 | `0x0040d100` | TerrainCellEntityRecordUnlink |
 | `0x0040d170` | CreateCellObjectIfAvailable |
 | `0x0040d1f0` | DeleteCellObject |
-| `0x0040d240` | TerrainCellHasOccupiedOrFlaggedNeighbor |
 | `0x0040d4f0` | TerrainCellActivationTry |
 | `0x0040d850` | TerrainCellNeighborFloodWalk |
 | `0x0040dc20` | CellPairEdgeEffectApply |
@@ -238,63 +233,13 @@ Human-named in the corpus that have no source citation or only a `STUB`.
 | `0x00410070` | SceneObjectListApplyPositionCallback |
 | `0x004100b0` | SceneObjectListApplySecondPositionCallback |
 | `0x00410280` | CallbackOperationRunAndReturnStatus |
-| `0x004102b0` | UiTextUnderscoresToSpaces |
 | `0x00410320` | StringQueueRecordOrFlush |
-| `0x004103d0` | MainMenuTextItem |
-| `0x004105a0` | CampaignLevelFallbackLabel |
-| `0x004105f0` | MenuParamRecordCreate |
-| `0x00410690` | MenuRecordResourcesRelease |
-| `0x00410740` | SaveMenuListEntryAppend |
-| `0x00410a10` | MenuItemChoiceStringsAllocate |
-| `0x00410aa0` | ResourceHandleListAppend |
-| `0x00410c70` | ResourceVariantRecordRelease |
-| `0x00410d50` | MenuTextRecordMake |
-| `0x00410e20` | MenuButtonRecordMake |
-| `0x00410f30` | ResourceRecordAndChildrenRelease |
-| `0x00410fb0` | MenuItemImageSet |
-| `0x00411100` | MenuSectionRecordCreate |
-| `0x00411260` | ListAppend |
-| `0x00411360` | MenuMouseCoordinateUpdate |
-| `0x004114f0` | HasType6ItemAtIndex |
-| `0x00411530` | MenuWidgetItemScreenRect |
-| `0x00411790` | MenuPickWidgetUnderPointer |
-| `0x00411840` | FrontendProgressValueChanged |
-| `0x00411f10` | PercentSplitSurfaceBlit |
-| `0x004121b0` | MenuOverlayFlicPlaybackController |
-| `0x00412450` | RenderUiFrameCell |
-| `0x004124f0` | MenuSaveImageConfigRectBlit |
-| `0x00412750` | MenuHoverStatusTextDraw |
-| `0x004129d0` | MenuOverlaySurfaceAndTextSetup |
-| `0x00413b50` | InterfaceResourceHandlesRelease |
-| `0x00413e20` | MenuShow |
-| `0x00413f30` | FilenameExtensionClassify |
-| `0x00413f90` | MenuItemRecordAlloc |
-| `0x00414010` | LoadItemStrings |
-| `0x00414de0` | GameSpeedSelect |
-| `0x00414df0` | VolumeSet |
-| `0x00414e10` | OptionMusicDefault |
-| `0x00415220` | FrontEndStartLevel |
-| `0x00415370` | OverlayMenuGate |
-| `0x00415d00` | SaveMenuLayoutLoad |
-| `0x004169c0` | FrontEndStateChange |
-| `0x00416c80` | MenuEnter |
-| `0x00417090` | LevelNodeGet |
-| `0x004179b0` | SavMenuList |
-| `0x00418000` | ShowLevelOverlayForCurrentSelection |
 | `0x00418040` | CampaignChainSnapshotCreate |
 | `0x00418120` | IsAverageValueAbove99 |
-| `0x004181b0` | HelpWindowResourcesInit |
-| `0x00418450` | HelpWindowInfoConfigStringsLoad |
-| `0x004185f0` | HelpWindowButtonLayoutLoad |
 | `0x00418830` | BuildingUpgradeStateChangedEventDispatch |
 | `0x00418920` | CategoryCellCandidateListBuild |
-| `0x004189d0` | RenderTransitionCleanupIfActive |
 | `0x00418a00` | OverlayTextBufferRefresh |
-| `0x00418da0` | HelpWindowButtonHitTest |
-| `0x00419030` | HelpWindowButtonFeedbackUpdate |
-| `0x00419100` | UiModeResourcePositionsApply |
 | `0x00419230` | IncidentMessageCatalogInit |
-| `0x00419430` | InterfaceMessageTabInfoTextLoad |
 | `0x004194b0` | IncidentMessageTemplateReplace |
 | `0x00419530` | IncidentMessageTemplateCompile |
 | `0x00419650` | InfoMessageSoundLoad |
@@ -311,47 +256,21 @@ Human-named in the corpus that have no source citation or only a `STUB`.
 | `0x00419e80` | RecordListEntryRemoveAndRelease |
 | `0x00419f10` | PendingRecordReleaseAll |
 | `0x0041a1a0` | UIEntryHitTestAndDispatch |
-| `0x0041a300` | InterfaceMenuActionLabelsInit |
 | `0x0041a920` | LevelStateCountersClear |
-| `0x0041a9c0` | CaseInsensitiveStringTableIndexFind |
 | `0x0041aa00` | EntityTableMapsAllocate |
-| `0x0041ab00` | InterfaceBuildImagesConfigLoad |
-| `0x0041ada0` | InterfaceImagesConfigLoad |
-| `0x0041afd0` | InterfaceSurroundImagesConfigLoad |
-| `0x0041b1b0` | InterfaceBackButtonConfigLoad |
 | `0x0041baa0` | SimulationPointerActionDispatch |
 | `0x0041c1c0` | AdvisorOverlayHitResolve |
-| `0x0041c440` | AdvisorCallbackScheduleGate |
 | `0x0041c4f0` | AdvisorAnimationPositionAndRequestUpdate |
-| `0x0041c6e0` | PointerActionStateDispatch |
 | `0x0041c7b0` | InputActionStateUpdate |
 | `0x0041c800` | CatalogSlotFlagUpdate |
-| `0x0041caf0` | InputBindingValueGet |
-| `0x0041cb90` | InputBindingDefaultValueGet |
 | `0x0041cd30` | PositionTrackerBoxDraw |
-| `0x0041cea0` | SelectionObjectCommandUpdate |
-| `0x0041cf20` | SelectionTargetCommandUpdate |
-| `0x0041cf80` | SelectionMode7CancelAtPoint |
-| `0x0041cfb0` | CancelActionForMatchingCoordinates |
-| `0x0041cfe0` | SelectionMode5CancelAtPoint |
 | `0x0041d010` | SelectionCancelIfCursorHitsObject |
-| `0x0041d040` | TutorialPathMenuAction |
 | `0x0041dca0` | UiActionDispatch |
 | `0x0041eac0` | EventTimerCountdownAdvance |
 | `0x0041ec30` | EntityPairCountRefresh |
 | `0x0041eca0` | AdvisorDialogStackLayout |
 | `0x0041ee80` | CellGridPointHitTest |
-| `0x0041f100` | ObjectInteractionFlagsAllow |
-| `0x0041f230` | QueueActionRequestType2 |
-| `0x0041f270` | QueueActionRequestValue |
-| `0x0041f2b0` | QueueActionRequestFlag100000 |
-| `0x0041f2f0` | QueueActionRequestPair |
-| `0x0041f340` | QueueActionRequestIndex |
-| `0x0041f3c0` | QueueCallbackRequest390 |
-| `0x0041f400` | QueueCallbackRequest3E0 |
-| `0x0041f420` | SelectedEntitiesAnyMatch |
 | `0x0041f6c0` | SelectedEntityDetachCallback |
-| `0x0041f740` | CellFourNeighborWalkCheck |
 | `0x0041f840` | RemoveObjectIfClass6 |
 | `0x0041fa80` | StartLevelPilots |
 | `0x00422850` | MiscObjectResourcesLoad |
@@ -395,6 +314,7 @@ Human-named in the corpus that have no source citation or only a `STUB`.
 | `0x004311d0` |  |
 | `0x004314c0` | ActivityBuildRecordRelease |
 | `0x00431530` | ActivityBuildRecordsReleaseAll |
+| `0x00431560` | CurrentLevelGet |
 | `0x00431780` | TerrainStampImpactHandler |
 | `0x00431b20` | PlacementBlockedAdjacentCellScan |
 | `0x00432600` | TerrainCellVariantFlagPropagate |
@@ -417,7 +337,6 @@ Human-named in the corpus that have no source citation or only a `STUB`.
 | `0x00434e80` | InterfaceSpawnRequestEnqueue |
 | `0x004350a0` | SurfaceTypeDescriptionsConfigLoad |
 | `0x00435550` | GlobalStateZeroTransitionDetect |
-| `0x004355c0` | MenuOptionPanelTextureUpdate |
 | `0x00435940` | KeepRunning |
 | `0x00435b20` | SceneObjectChainRecordCreate |
 | `0x00435dc8` | CameraViewContextClose |
@@ -436,7 +355,6 @@ Human-named in the corpus that have no source citation or only a `STUB`.
 | `0x004374d0` | TaskCounterIncrementByBranch |
 | `0x004374f0` | EntityCallbackDispatchUnlessTypeFive |
 | `0x00437540` | EntityTeardown |
-| `0x004377b0` | EntityPoolFindByCallbackFiltered |
 | `0x004378e0` | GridObjectRecordsRelease |
 | `0x00437940` | DeferredOListEntityCreateAndLink |
 | `0x004383b0` | RoverWorkQueueUpdate |
@@ -535,7 +453,6 @@ Human-named in the corpus that have no source citation or only a `STUB`.
 | `0x004422a0` | SurfaceVectorNormalize |
 | `0x00442300` | EntityVelocityVectorDispatch |
 | `0x00442480` | VectorDirectionAngleRadiansGet |
-| `0x004424f0` | EntityPositionToTerrainCell |
 | `0x004425f0` | SubobjectPoseDeltaNormalizeAndDispatch |
 | `0x004428a0` | EntityWorldPositionSet |
 | `0x00442b10` | EntityMovementAccumulatorApply |
@@ -568,6 +485,7 @@ Human-named in the corpus that have no source citation or only a `STUB`.
 | `0x00447900` | TypeFourEntityCallbackDispatch |
 | `0x00447950` | EntityDirectionalActivityStart |
 | `0x00447b30` | EntityActivityTick |
+| `0x00447c40` | SceneActivityUpdateDispatch |
 | `0x00447ea0` | EntityTypeBehaviorUpdate |
 | `0x004487c0` | EntityClearNestedState8Fields |
 | `0x00448800` | EntityMoveToCellCoordinates |
@@ -649,7 +567,6 @@ Human-named in the corpus that have no source citation or only a `STUB`.
 | `0x0044f1a0` | InputKeyMappingAddBidirectional |
 | `0x0044f230` | TerrainCellMaterialSet |
 | `0x0044f490` | GridCellOperationApplyAll |
-| `0x0044f6d0` | TerrainGridPick |
 | `0x0044fab0` | TerrainCellSurfaceTriangleVerticesSelect |
 | `0x0044fb90` | TerrainSurfacePointProjectOffset |
 | `0x00450060` | GridCellReadSurfaceVector |
@@ -711,7 +628,6 @@ Human-named in the corpus that have no source citation or only a `STUB`.
 | `0x0045c0d0` | PairCountHistogramBuild |
 | `0x0045c5f0` | UiOverlayAnimationApply |
 | `0x0045c670` | AdvisorAnimationSceneLookupAndRequest |
-| `0x0045c6b0` | AdvisorAnimationSlotIdResolve |
 | `0x0045c830` | PointerCursorNameRegistryInit |
 | `0x0045ca70` | PointerCursorConfigLoad |
 | `0x0045cbd0` | PointerCursorConfigParse |
@@ -747,7 +663,6 @@ Human-named in the corpus that have no source citation or only a `STUB`.
 | `0x00461410` | RewardScreenTick |
 | `0x00461790` | RewardDisplayTick |
 | `0x00461c90` | RewardScoreTaskTextDraw |
-| `0x00462030` | SaveMenuOpenFromReward |
 | `0x00462390` | RewardScreenTransitionTick |
 | `0x00462460` | RewardFlhContextReload |
 | `0x004624a0` | RewardFlhContextTick |
@@ -786,7 +701,6 @@ Human-named in the corpus that have no source citation or only a `STUB`.
 | `0x004667e0` | EntityStatsConfigLoad |
 | `0x00469a90` | IndexedValueAppend |
 | `0x00469ac0` | IndexedRecordWordAtOffsetB0Get |
-| `0x00469f40` | BuildingUpgradeAdmissionCheck |
 | `0x0046a0c0` | MappedIndexedRecordWordAtFCGet |
 | `0x0046a120` | GroupedCodeTableFindValueIndex |
 | `0x0046a330` | EntityRecordFlag400ToggleAndRefresh |
@@ -805,7 +719,6 @@ Human-named in the corpus that have no source citation or only a `STUB`.
 | `0x0046ac60` | AdvisorTextAnimationUpdate |
 | `0x0046ad00` | AdvisorTextDisplayWorker |
 | `0x0046b1d0` | TooltipOverlayStateInitialize |
-| `0x0046b4d0` | CaseInsensitiveNameTableLookup |
 | `0x0046b520` | UiTextEntryLoad |
 | `0x0046b7c0` | TimedEffectAndCueUpdate |
 | `0x0046b8b0` | RectangularGridOverlayGeometryDraw |
@@ -996,7 +909,6 @@ Human-named in the corpus that have no source citation or only a `STUB`.
 | `0x00477370` | DDiSceneRenderSurfacePoolGrow |
 | `0x004773e0` | RenderResourceTrackedReferencesRelease |
 | `0x004774b0` | WhitespaceTokenize |
-| `0x00477590` | FormattedTextEscapeDecodeAndEmit |
 | `0x00477670` | GameStringHashCompute |
 | `0x00477f30` | MainLoopFramePump |
 | `0x00477f80` | DisplayDeviceCapsQueryDiscard |
@@ -1014,16 +926,11 @@ Human-named in the corpus that have no source citation or only a `STUB`.
 | `0x004786c0` | MainWindowActivationAndCloseHandler |
 | `0x004788d0` | Direct3DRenderStateSetCached |
 | `0x00478940` | D3DMaterialStateFlush |
-| `0x00478980` | MusicMixerVolumeSet |
 | `0x004789a0` | MusicMixerVolumeGet |
 | `0x004789c0` | WindowsMixerControlInit |
 | `0x00479500` | D3DRMVectorRandom |
 | `0x00479510` | D3DRMVectorRotate |
 | `0x00479630` | SurfaceTriangleAreaCalculate |
-| `0x0047a150` | FormattedTextFormatDraw |
-| `0x0047a180` | RewardTextDraw |
-| `0x0047a1b0` | FormattedTextDraw |
-| `0x0047a1e0` | FormattedTextDrawAndMeasure |
 | `0x0047a550` | FontRecordAndSurfaceRelease |
 | `0x0047a580` | FixedSizeRecordPoolAcquire |
 | `0x0047a5c0` | FixedSizeRecordPoolGrow |
@@ -1042,8 +949,6 @@ Human-named in the corpus that have no source citation or only a `STUB`.
 | `0x0047b410` | SoundSourceSpatialRefresh |
 | `0x0047b4a0` | SoundTrackedBuffersSetMinDistance |
 | `0x0047b4d0` | SoundTrackedBuffersSetMaxDistance |
-| `0x0047b500` | SoundBufferVolumeSet |
-| `0x0047b530` | SoundVolumeIndexSet |
 | `0x0047b550` | SoundBufferVolumeSetMinus300 |
 | `0x0047b580` | InMemoryWaveSampleLoad |
 | `0x0047b6c0` | SoundRecordCreateBuffers |
@@ -1071,9 +976,7 @@ Human-named in the corpus that have no source citation or only a `STUB`.
 | `0x0047d2d0` | SurfacePixelValueEncode |
 | `0x0047d410` | RendererRecordTableInitialize |
 | `0x0047d430` | SceneObjectRegistryTeardown |
-| `0x0047d470` | ImageSurfaceRelease |
 | `0x0047d490` | SurfacePixelFormatQuery |
-| `0x0047dbc0` | ResourceRecordAddRef |
 | `0x0047de60` | DirectDrawSurfaceDescriptionGet |
 | `0x0047ded0` | DirectDrawSurfaceUnlock |
 | `0x0047def0` | DirectDrawSurfacePixelFormatGet |
@@ -1112,15 +1015,9 @@ Human-named in the corpus that have no source citation or only a `STUB`.
 | `0x0047efd0` | DirectInputShutdown |
 | `0x0047f0d0` | CursorSetClientPosition |
 | `0x0047f4f0` | FindCdKeyDrive |
-| `0x0047f590` | WadMountPathCacheStore |
 | `0x0047f600` | DebugOutputFormat |
-| `0x0047f640` | MountWadFromPath |
-| `0x0047f6a0` | SaveDirectoryEnsureExists |
-| `0x0047f850` | WadFileSeek |
-| `0x0047f980` | WadFileRead |
 | `0x0047fa50` | GameFileWrite |
 | `0x0047fac0` | GameFileClose |
-| `0x0047fb10` | WadFileCursorGet |
 | `0x0047fb60` | SoundSampleFileOpenByName |
 | `0x0047fc20` | GameFileReadByte |
 | `0x0047fce0` | GameFileReadLine |
@@ -1179,13 +1076,9 @@ Human-named in the corpus that have no source citation or only a `STUB`.
 | `0x00484720` | FlicChunkBufferAndContinueLK |
 | `0x004847d0` | FlicChunkBufferAndContinueType0B |
 | `0x00484c90` | FlicOpcode27FallbackNoop |
-| `0x00485210` | FormattedTextAppendToRingBuffer |
-| `0x00485250` | TextBufferAppendVFormat |
 | `0x00485300` | ObjectiveAdvisorTextCopy |
 | `0x00485390` | TextBufferDrawWrapped |
 | `0x00485710` | TextWrapMeasureAndDrawLines |
-| `0x00485a20` | KeyboardKeyNamesInit |
-| `0x00485e30` | NamedOptionIndexFindCaseInsensitive |
 | `0x00485e80` | RenderSetup |
 | `0x00485ea0` | InterfaceSlot58PairStoreClamp |
 | `0x00485fb0` | ViewportRectangleGet |
@@ -1253,218 +1146,19 @@ Human-named in the corpus that have no source citation or only a `STUB`.
 | `0x0048b2f0` | StartupConfigStreamLoad |
 | `0x0048b390` | RegistryPathCreateKeys |
 | `0x0048b4a0` | BufferedCharStreamReadToString |
-| `0x0048b4e0` | WwadArchiveIndexLoad |
-| `0x0048bce0` | WadArchiveRecordAtIndex |
-| `0x0048bcf0` | WadEntryLengthGet |
-| `0x0048bd10` | WadEntryField4Get |
-| `0x0048bd30` | WadEntrySlotAllocate |
-| `0x0048bd50` | WadEntryFindAcrossMountedArchives |
 | `0x0048be00` | FixedRecordSlotAllocate |
-| `0x0048c010` | WadStreamLengthGet |
 | `0x0048c360` | LwoCurves |
 | `0x0048d870` | ModelObjectFree |
-| `0x0048d940` | CrtMathDispatchTableInitialize |
-| `0x0048d9e0` | FormattedStringOutput |
-| `0x0048dad0` | ParseSignedDecimal |
-| `0x0048dc80` | GrowHeapArray |
-| `0x0048de20` | ArraySortWithComparator |
-| `0x0048dfd0` | QsortSmallPartitionSort |
-| `0x0048e090` | CrtAsin |
-| `0x0048e0ad` | CrtAcosCore |
-| `0x0048e1aa` | CrtMathIntrinsicDispatch |
-| `0x0048e1e0` | FormattedTextBufferBuild |
-| `0x0048e250` | StackProbeAllocate |
-| `0x0048e280` | CrtRoundToIntegralWithMathErrorHandling |
-| `0x0048e480` | CrtFloatingPointRuntimeInitialize |
-| `0x0048e4b0` | CrtExit |
-| `0x0048e4f0` | CrtTerminateProcessWithHandlers |
-| `0x0048e5a0` | CrtRunCallbackArray |
-| `0x0048e680` | CrtDoubleAbsoluteValue |
-| `0x0048e890` | MarkupIntegerTokenParse |
-| `0x0048e8e0` | CrtRoundToIntegralWithMathErrorHandlingVariant |
-| `0x0048eae0` | FileResourceHandleClose |
-| `0x0048eb60` | StdFileOpenIntoHandle |
-| `0x0048eb90` | FileOpenAndReadWholeStream |
-| `0x0048ebb0` | CrtExceptionHandlerTransferAfterUnlink |
-| `0x0048ebf0` | CrtExceptionHandlerTransferWithAtomicPrefix |
 | `0x0048ec00` | SehFrameUnwind |
-| `0x0048ec60` | CrtExceptionDispatchForwarder |
 | `0x0048eca0` | CallSettingFrame12 |
 | `0x0048ed00` | CrtExceptionFrameFilterInvoke |
 | `0x0048ed30` | CrtExceptionFrameInstallAndDispatch |
 | `0x0048ee00` | CrtExceptionScopeFilterAndUnwind |
 | `0x0048ee90` | SehScopeTableLookup |
-| `0x0048efe6` | CrtNlgFrameStateRecord |
-| `0x0048f1d0` | CharacterClassifyMask |
-| `0x0048f2b0` | StreamedAudioFileLengthGet |
-| `0x0048f460` | FileResourceHandleSeek |
-| `0x0048f500` | GameFileWrite |
-| `0x0048f650` | GameFileDelete |
-| `0x0048f680` | FileSetReadOnlyAttribute |
-| `0x0048f6d0` | GameDirectoryCreate |
-| `0x0048f700` | GameFileMetadataFind |
-| `0x0048f830` | FileFindNextRecord |
-| `0x0048f950` | CrtFindHandleClose |
-| `0x0048f970` | FileTimeToLocalDateTimeStamp |
-| `0x0048fa00` | CurrentDirectoryGet |
-| `0x0048fa20` | DriveCurrentDirectoryGet |
-| `0x0048fb50` | DriveLetterRootTypeAvailable |
-| `0x0048fb90` | GameFileReadBuffered |
-| `0x0048fd20` | CrtFlushStreamBuffer |
-| `0x0048fe20` | BufferedStreamGetByte |
-| `0x0048fe50` | BufferedStreamReadLine |
-| `0x0048fed0` | CrtInputWithStreamBufferSetup |
-| `0x0048ffa0` | PathResolveFull |
-| `0x00490070` | VsscanfParseInput |
-| `0x00490090` | AssetPathComponentsParse |
-| `0x00490280` | CrtFloatingPointFeatureProbe |
-| `0x004902b0` | CrtNormalizeDecimalPoint |
-| `0x00490400` | CrtScientificFloatFormatAppend |
-| `0x00490540` | CrtFixedFloatFractionFormat |
-| `0x00490640` | CrtFloatDecimalFormatPrepare |
-| `0x004906f0` | CrtScientificFloatFormatGuarded |
-| `0x00490720` | CrtFixedDecimalFormatGuarded |
 | `0x004907f0` | ParseEntityHealthValue |
-| `0x004908a0` | CrtFileStreamClose |
-| `0x004909d0` | EngineFormatStringToStream |
-| `0x00491360` | CrtBufferedCharacterWrite |
-| `0x004913b0` | CrtWriteRepeatedChar |
-| `0x004913f0` | CrtWriteStringBounded |
-| `0x004914a0` | StrChr |
-| `0x00491560` | CrtHeapInitialize |
-| `0x004915a0` | EnginePoolArenaCreate |
-| `0x00491710` | CrtHeapBlockFree |
-| `0x00491770` | CRTHeapReleaseUnusedPages |
-| `0x00491840` | CRTHeapLocateAllocationPage |
-| `0x004918a0` | SmallHeapPageFreeSlotUpdate |
-| `0x00491900` | EnginePoolAllocate |
-| `0x00491b40` | EnginePoolChunkTryAllocate |
-| `0x00491cc0` | SmallHeapBlockResizeInPlace |
-| `0x00491f80` | CrtOneArgumentMathErrorHandlingStart |
-| `0x00491ff5` | CrtNoOpStub |
-| `0x0049200c` | CrtFpuPrecisionModeCodeGet |
 | `0x0049221e` | CrtFloatingPointExceptionResultDispatch |
 | `0x00492225` | CrtFloatingPointExceptionResultDispatchVariant |
-| `0x00492bc6` | CrtDoubleRemainderReduction |
-| `0x00492dcc` | CrtFmodExtendedPrecision |
-| `0x00493170` | CrtMathExceptionHandleSingleResult |
-| `0x004931c0` | CrtMathExceptionHandleResultWithStatus |
-| `0x00493280` | CrtFloatingPointExceptionRaise |
-| `0x004935c0` | CrtDoubleToIntegerRound |
-| `0x004938f0` | CrtMathExceptionDispatch |
-| `0x00493ae0` | DoubleFrexpDecompose |
-| `0x00493be0` | FpuStatusWordGetVariantA |
-| `0x00493bf0` | FpuStatusWordGetVariantB |
-| `0x00493c10` | FpuControlWordUpdateMasked |
-| `0x00493ca0` | LocaleCharacterMapString |
-| `0x00493ef0` | CrtFormattedScanV |
-| `0x00494c30` | CrtScanFormatCharNormalize |
-| `0x00494c70` | ScanStreamGetChar |
-| `0x00494ca0` | StreamPushbackChar |
-| `0x00494cc0` | StreamSkipClassifiedChars |
-| `0x00494d10` | CrtFileDescriptorClose |
-| `0x00494e30` | StdFileOpen |
-| `0x00495000` | StdFileHandleAcquire |
-| `0x00495090` | CxxExceptionHandlerDispatch |
-| `0x00495160` | CxxExceptionHandlerSearch |
-| `0x00495410` | CrtSehExceptionDispatcher |
-| `0x004954e0` | CrtSehLocalUnwindToScope |
-| `0x004955c0` | CrtSehUnwindAndInvokeHandler |
-| `0x00495650` | CrtSehHandlerCallWithFrame |
-| `0x0049573a` | CrtSehAbnormalTerminationCleanup |
-| `0x004957d0` | CxxCatchObjectBindOrCopy |
-| `0x004959e0` | CrtSehDestructorInvoke |
-| `0x00495a60` | CrtUnwindAddressResolve |
-| `0x00495ae0` | CrtTerminateHandlerInvokeAndAbort |
-| `0x00495b70` | CrtUnexpectedHandlerInvokeAndTerminate |
-| `0x00495bde` | CrtAbortAfterCallback |
-| `0x00495d90` | IsDbcsLeadByte |
-| `0x00495db0` | CrtCharacterClassFlagTest |
-| `0x00495df0` | CrtEnvironmentPointerArrayBuild |
-| `0x00495ee0` | CrtCommandLineArgumentsInit |
-| `0x00495f80` | CrtCommandLineArgumentScan |
-| `0x00496190` | CrtEnvironmentBlockGet |
-| `0x004962f0` | CrtLocaleCodePageTableUpdate |
-| `0x004964e0` | CrtCodePageGet |
-| `0x00496530` | CrtCodePageLocaleIdLookup |
-| `0x00496590` | CrtCtypeTablesReset |
-| `0x004965c0` | CrtAnsiCodePageTablesInit |
-| `0x004965d0` | CrtFileDescriptorTableInit |
-| `0x00496895` | CrtLocalUnwindFromFrame |
-| `0x004968b0` | CrtRuntimeErrorMessageEnterExit |
-| `0x004968f0` | CrtRuntimeErrorMessage |
-| `0x00496ad0` | CrtGetStringTypeACompat |
-| `0x00496c00` | Win32FileDescriptorSeek |
-| `0x00496cc0` | Win32FileDescriptorWrite |
-| `0x00496ee0` | Win32ErrorMapToErrno |
-| `0x00496f50` | CrtCalendarFieldsToTimeScalar |
-| `0x00497040` | CrtStreamReadByte |
-| `0x00497130` | Win32FileDescriptorRead |
-| `0x004974d0` | CrtStandardStreamBufferInstall |
-| `0x00497570` | CrtStreamBufferFlushAndRelease |
-| `0x004975d0` | CrtCharacterToLowerLocale |
-| `0x004976d0` | DbcsAwareBoundedStringCopy |
-| `0x00497770` | CrtFpuControlWordUpdate |
-| `0x004977b0` | CrtFpuControlWordUpdateMask |
-| `0x00497ad0` | UInt96ShiftRight |
-| `0x00497b90` | CrtExtended80ToBinaryFloat |
-| `0x00497d60` | CrtExtendedFloatConvertFormatA |
-| `0x00497d80` | CrtExtendedFloatConvertFormatB |
-| `0x00497da0` | CrtDoubleToExtendedFloatConvertA |
-| `0x00497de0` | CrtDoubleToExtendedFloatConvertB |
-| `0x00497e20` | CrtDecimalMantissaRoundAndNormalize |
-| `0x00497ec0` | CrtLocaleDataGetOrInitialize |
-| `0x00497f40` | DoubleToExtended80 |
-| `0x00498350` | NumberStringScanParse |
-| `0x00498ce0` | CrtScanfNumericConversionAssign |
-| `0x00498e00` | CrtMultibyteToWideChar |
-| `0x00498f00` | CrtCharacterClassFlag8Check |
-| `0x00498f50` | CrtStreamUngetByte |
-| `0x00498fe0` | CrtFileDescriptorAllocate |
-| `0x004990a0` | CrtFileDescriptorSetHandle |
-| `0x00499150` | CrtFileDescriptorCloseSlot |
-| `0x004991f0` | CrtFileDescriptorHandleGet |
-| `0x00499240` | Win32FileDescriptorOpen |
-| `0x00499690` | PointerRangeIsReadable |
-| `0x004996b0` | PointerRangeIsWritable |
-| `0x004996d0` | FunctionPointerIsExecutable |
-| `0x00499730` | CrtRuntimeErrorMessageBoxDisplay |
-| `0x004997c0` | CrtCallocAligned |
-| `0x00499860` | CrtTimeZoneInitializeOnce |
-| `0x00499880` | CrtTimeZoneStateInit |
-| `0x00499b30` | CrtDaylightSavingTimeCheck |
-| `0x00499da0` | CrtDaylightTransitionBoundaryCompute |
-| `0x0049a050` | ExtendedFloat96BitShiftLeftOne |
-| `0x0049a080` | ExtendedFloat96BitShiftRightOne |
-| `0x0049a0b0` | CrtDecimalDigitSequenceToExtended96 |
-| `0x0049a1b0` | CrtExtendedFloatToDecimal |
-| `0x0049a540` | Extended80Multiply |
-| `0x0049a800` | ExtendedFloatPowerOfTenScale |
-| `0x0049a890` | Win32FileDescriptorResize |
-| `0x0049aa10` | CrtSignalHandlerDispatch |
-| `0x0049ae10` | CrtEnvironmentVariableLookup |
-| `0x0049aea0` | CrtFileDescriptorFlag80SetOrClear |
-| `0x0049af20` | CrtCountedStringCompare |
-| `0x0049af60` | CrtWideEnvironmentStringListConvert |
-| `0x0049afe0` | CrtCompareStringACompat |
-| `0x0049b2b0` | CrtPutEnvUpdate |
-| `0x0049b4c0` | CrtEnvironmentEntryFind |
-| `0x0049b540` | CrtEnvironmentArrayClone |
-| `0x0049b5b0` | CrtMultibyteCharacterSearch |
-| `0x0049cc70` | WadBitstreamOutputInitialize |
-| `0x0049ccc0` | WadReadBitsLsbFirst |
-| `0x0049cd30` | WadReadBitsMsbFirst |
-| `0x0049cd90` | WadHuffmanTableRead |
-| `0x0049ce00` | WadHuffmanSymbolDecode |
-| `0x0049ce70` | WadRunLengthDecode |
-| `0x0049ceb0` | WadBackreferenceOffsetDecode |
 | `0x0049d030` | DirectDrawDeviceInitialize |
-| `0x0049d5e0` | DisplayModeDialogSetModeAndRefreshChoices |
-| `0x0049d630` | DisplayModeListPopulate |
-| `0x0049d780` | DisplayResolutionComboPopulate |
-| `0x0049d8d0` | DisplayModeMatchesFilterTuple |
-| `0x0049d950` | DisplayModeNameIndexFind |
-| `0x0049d9d0` | DisplayRefreshRateControlsSync |
 
 ## Suggested next port target
 

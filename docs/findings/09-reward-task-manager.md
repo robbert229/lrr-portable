@@ -67,6 +67,13 @@ Config format for every image entry: `file.bmp|x|y` (pipe-delimited triples in `
 `CrystalQuotaSetup` additionally reads `Quota.Crystals` capped to `≤26` (26 = crystal
 display budget).
 
+The `Display` and `CentreText` flags use `ConfigBooleanGetDefault2 @ 0x4790d0`,
+which delegates to `ConfigBooleanGet @ 0x477710`. That helper recognizes
+`YES/TRUE/ON` and `NO/FALSE/OFF`; missing or unrecognized values return `2`.
+`RewardInit` normalizes that `2` to `0`. The port now uses `block_get_bool`
+directly, rather than adding a numeric `strtol` fallback that the reference does
+not have.
+
 ## Display + zones
 
 - `RewardDisplayTick` (per frame, gated by `Reward.Display` and task flags): for tasks with

@@ -6,6 +6,7 @@ toolchain_root="${REPROBIT_MSVC_5_0_RTM_ROOT:-${HOME}/.local/share/reprobit/tool
 build_dir="${RECCMP_BUILD_DIR:-${project_root}/build-reccmp}"
 wine_bin="${RECCMP_WINE_BIN:-$(command -v wine || true)}"
 reccmp_bin="${RECCMP_RECCMP:-$(command -v reccmp-reccmp || true)}"
+winepath_exe="${RECCMP_WINEPATH_EXE:-}"
 
 if [[ "${build_dir}" != /* ]]; then
   build_dir="${project_root}/${build_dir}"
@@ -25,6 +26,33 @@ if [[ -z "${reccmp_bin}" || ! -x "${reccmp_bin}" ]]; then
 fi
 
 export PATH="$(dirname -- "${wine_bin}"):${PATH}"
+winepath_shim_dir=""
+if ! command -v winepath >/dev/null 2>&1; then
+  if [[ -z "${winepath_exe}" ]]; then
+    wine_bin_dir="$(dirname -- "${wine_bin}")"
+    for candidate in \
+      "${wine_bin_dir}/../lib/wine/x86_64-windows/winepath.exe" \
+      "${wine_bin_dir}/../lib/wine/i386-windows/winepath.exe" \
+      "${wine_bin_dir}/winepath.exe"; do
+      if [[ -f "${candidate}" ]]; then
+        winepath_exe="${candidate}"
+        break
+      fi
+    done
+  fi
+  if [[ -n "${winepath_exe}" && -f "${winepath_exe}" ]]; then
+    winepath_shim_dir="$(mktemp -d)"
+    cat > "${winepath_shim_dir}/winepath" <<'EOF'
+#!/usr/bin/env bash
+exec "${RECCMP_WINE_BIN}" "${RECCMP_WINEPATH_EXE}" "$@"
+EOF
+    chmod +x "${winepath_shim_dir}/winepath"
+    export RECCMP_WINE_BIN="${wine_bin}"
+    export RECCMP_WINEPATH_EXE="${winepath_exe}"
+    export PATH="${winepath_shim_dir}:${PATH}"
+    trap 'rm -rf -- "${winepath_shim_dir}"' EXIT
+  fi
+fi
 cd "${project_root}"
 
 cmake -S "${project_root}" -B "${build_dir}" \

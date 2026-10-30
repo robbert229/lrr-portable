@@ -98208,7 +98208,7 @@ float10 FUN_0048e280(undefined4 param_1,undefined4 param_2)
 }
 
 
-// ==== KeyToAscii @ 0048E380 [Ghidra: FUN_0048e380] ====
+// ==== _toupper @ 0048E380 [Ghidra: FUN_0048e380] ====
 
 
 uint FUN_0048e380(uint param_1)
@@ -101210,7 +101210,7 @@ undefined4 FUN_00491430(int *param_1)
 }
 
 
-// ==== FormatArgumentReadDouble @ 00491450 [Ghidra: FUN_00491450] ====
+// ==== FormatArgumentReadInt64 @ 00491450 [Ghidra: FUN_00491450] ====
 
 
 undefined8 FUN_00491450(int *param_1)
@@ -111482,4 +111482,3 @@ char * FUN_0049dcd0(char *param_1)
   }
   return param_1;
 }
-

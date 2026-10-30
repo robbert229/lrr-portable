@@ -101,7 +101,9 @@ set(CRT_DIR "${SRC_ROOT}/crt")
 set(PLATFORM_DIR "${SRC_ROOT}/platform")
 
 add_library(gods98 STATIC
-  ${ENGINE_DIR}/gods98.cpp ${ENGINE_DIR}/string.cpp ${CRT_DIR}/crt.cpp
+  ${ENGINE_DIR}/gods98.cpp ${ENGINE_DIR}/string.cpp
+  ${CRT_DIR}/crt.cpp ${CRT_DIR}/crt_heap.cpp
+  ${CRT_DIR}/crt_runtime_calls.cpp ${CRT_DIR}/crt_runtime_aliases.cpp
   ${ENGINE_DIR}/heap.cpp ${ENGINE_DIR}/ptrstack.cpp ${ENGINE_DIR}/record.cpp
   ${ENGINE_DIR}/engine.cpp ${ENGINE_DIR}/tickers.cpp
   ${ENGINE_DIR}/resource.cpp ${ENGINE_DIR}/texture.cpp ${ENGINE_DIR}/sound.cpp

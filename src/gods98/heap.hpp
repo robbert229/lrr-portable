@@ -16,6 +16,11 @@
  *    aligned path is shared by both entry points). */
 #include <stdint.h>
 #include <stdarg.h>
+#if defined(_MSC_VER) && defined(_M_IX86)
+#include <stdlib.h>
+extern "C" void* __cdecl _heap_alloc(size_t size);
+extern "C" void* __cdecl _nh_malloc(size_t size, int retry_via_new_handler);
+#endif
 
 #ifndef LEGORRR_GODS98_HEAP_HPP
 #define LEGORRR_GODS98_HEAP_HPP
@@ -30,34 +35,37 @@ extern "C" {
  * attempt the corpus makes with the flag off — on failure, NULL, no spin;
  * nonzero sends each failure through crt_new_handler_invoke and retries
  * while that answers nonzero. */
+#if defined(_MSC_VER) && defined(_M_IX86)
+#define engine_heap_alloc_retry(size, retry) \
+    _nh_malloc((size_t)(size), (int)(retry))
+#else
 void* engine_heap_alloc_retry(long size, int retry_via_new_handler);
+#endif
 
-/* FUN_0048dbd0: the plain entry — same path with the corpus's retry-flag
- * global, which the port leaves unregistered (single attempt). */
+/* FUN_0048dbd0: the plain VC5 `_malloc` entry — same path with the corpus's
+ * retry-flag global, which the port leaves unregistered (single attempt).
+ * Route reference-build call sites to the runtime symbol directly. */
+#if defined(_MSC_VER) && defined(_M_IX86)
+#define engine_heap_alloc(size) malloc((size_t)(size))
+#else
 void* engine_heap_alloc(long size);
+#endif
 
 /* FUN_0048dc40: the aligned allocator body. Small allocations use the CRT
  * pool below the corpus threshold; larger allocations use the process heap. */
+#if defined(_MSC_VER) && defined(_M_IX86)
+#define engine_heap_alloc_aligned(size) _heap_alloc((size_t)(size))
+#else
 void* engine_heap_alloc_aligned(long size);
+#endif
 
-/* FUN_0048db80: free a previous allocation (NULL is a no-op). */
+/* FUN_0048db80: free a previous allocation (NULL is a no-op). Route
+ * reference-build call sites to the VC5 runtime symbol directly. */
+#if defined(_MSC_VER) && defined(_M_IX86)
+#define engine_heap_free(ptr) free(ptr)
+#else
 void engine_heap_free(void* ptr);
-
-/* CRT small-block allocator internals (FUN_00491560 / 004915a0 / 00491710 /
- * 00491770 / 00491840 / 004918a0 / 00491900 / 00491b40). Page ranges are
- * reserved in 4 MiB arenas and committed in 4 KiB pages; payload sizes use
- * 16-byte units. */
-int crt_heap_initialize(void);
-void* engine_pool_arena_create(void);
-void crt_heap_block_free(void* arena);
-void crt_heap_release_unused_pages(int page_count);
-void* crt_heap_locate_allocation_page(void* allocation, void** arena_out,
-                                     void** page_base_out);
-void small_heap_page_free_slot_update(void* arena, void* page_base,
-                                      unsigned char* allocation_tag);
-void* engine_pool_allocate(uint32_t size_units);
-void* engine_pool_chunk_try_allocate(void* page_header, uint32_t free_units,
-                                     uint32_t size_units);
+#endif
 
 /* ThreeWordRecordAllocateAndInitialize (FUN_00410b60): allocate a 0xc-byte
  * record and store the three arguments in order. Deviation: the corpus's
@@ -91,10 +99,7 @@ void engine_heap_allocate(long size);
  * case.
  * EngineCalloc (FUN_0048ead0): the corpus's retry-enabled allocation —
  * EngineHeapAllocateWithRetry(size, 1) — returning the block. */
-int   crt_new_handler_invoke(long size);
-void  crt_new_handler_set(int (*handler)(long)); /* port hook */
 void* engine_calloc(long size);                  /* FUN_0048ead0 */
-void* crt_calloc_aligned(int count, int size);  /* FUN_004997c0 */
 
 /* OptionalResourceDestroy (FUN_0040f7b0): frees the optional resource
  * record only when one is there — the corpus's gate over the engine free. */

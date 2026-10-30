@@ -9,6 +9,7 @@
 #include "gods98/engine.hpp"
 #include "gods98/heap.hpp"
 #include "gods98/audio.hpp"
+#include "gods98/string.hpp"
 
 /* One descriptor per control: banner name (normalized for matching), the
  * shipped config range, the documented default, and the store field. The
@@ -40,8 +41,6 @@ static const struct {
       offsetof(GameOptions, auto_game_speed) },
 };
 
-static int s_lower(int c) { return (c >= 'A' && c <= 'Z') ? c + 0x20 : c; }
-
 /* Case- and separator-insensitive exact match (the banner may arrive as
  * "Game Speed", "Game_Speed" or "game speed"). */
 static int s_optname_eq(const char* a, const char* b)
@@ -49,29 +48,20 @@ static int s_optname_eq(const char* a, const char* b)
     if (a == NULL || b == NULL) {
         return 0;
     }
-    while (*a != '\0' && *b != '\0') {
-        char ca = s_lower(*a);
-        char cb = s_lower(*b);
-        if (ca == '_' || ca == ' ') {
-            ++a;
-            continue;
-        }
-        if (cb == '_' || cb == ' ') {
-            ++b;
-            continue;
-        }
-        if (ca != cb) {
+    for (;;) {
+        a += strspn(a, " _");
+        b += strspn(b, " _");
+        if (*a == '\0' || *b == '\0') return *a == *b;
+
+        const size_t a_length = strcspn(a, " _");
+        const size_t b_length = strcspn(b, " _");
+        if (a_length != b_length
+            || strnicmp_lite(a, b, (int)a_length) != 0) {
             return 0;
         }
-        ++a; ++b;
+        a += a_length;
+        b += b_length;
     }
-    while (*a == '_' || *a == ' ') {
-        ++a;
-    }
-    while (*b == '_' || *b == ' ') {
-        ++b;
-    }
-    return *a == '\0' && *b == '\0';
 }
 
 int options_id_for_label(const char* label)

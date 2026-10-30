@@ -4,6 +4,7 @@
 #include "media.hpp"
 
 #include <stddef.h>
+#include <stdlib.h>
 
 #include "sound.hpp"
 
@@ -86,14 +87,20 @@ static int      s_cd_loop;         /* DAT_00544a04 role (stale: set only by
 static unsigned s_cd_slot;         /* last derived slot */
 static int      s_cd_track_dead;   /* port analog of the track-dead check */
 
-/* PRNG: the corpus's shared random word draw (thunk_FUN_0048e170),
- * modelled module-locally the way level.cpp and frontend.cpp do. */
+/* VC5 rand.obj supplies the shared stream in the classic x86 build; other
+ * builds keep this subsystem's local LCG model. */
+#if !defined(_MSC_VER) || (_MSC_VER >= 1200) || !defined(_M_IX86)
 static uint32_t s_cd_rand_state = 1;
+#endif
 
 static int s_cd_rand15(void)
 {
+#if defined(_MSC_VER) && (_MSC_VER < 1200) && defined(_M_IX86)
+    return rand();
+#else
     s_cd_rand_state = s_cd_rand_state * 214013u + 2531011u;
     return (int)((s_cd_rand_state >> 16) & 0x7fffu);
+#endif
 }
 
 /* Time-derived slot: (uint)draw % window - 1 + base. The corpus's
