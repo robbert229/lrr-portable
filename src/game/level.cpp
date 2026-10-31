@@ -4133,8 +4133,15 @@ void terrain_object_sfx_grid_config_load(BlockFile* config,
                                          const char* root_path)
 {
     memset(s_terrain_sfx_grid, 0, sizeof s_terrain_sfx_grid);
-    int obj_x = 20; /* the corpus's dead-loop pair, carried across entries */
-    int obj_y = 15;
+    int obj_x = 20;
+    int init_count = 20;
+    int obj_y;
+    /* The corpus writes the row output on each pass through this 20-count
+     * pre-loop. Keep those stores visible to VC5; final outputs remain 20/15. */
+    do {
+        --init_count;
+        *(volatile int*)&obj_y = 15;
+    } while (init_count != 0);
     const char* path = string_path_join(root_path, "S_ObjTtSFXs", NULL);
     for (BlockRec* entry = block_subgroup(config, path);
          entry != NULL; entry = block_next_equal_key(entry)) {
@@ -4147,7 +4154,10 @@ void terrain_object_sfx_grid_config_load(BlockFile* config,
             continue;
         }
         int sfx = 0;
-        if (sound_alias_lookup(block_value(entry), &sfx) == 0) {
+        /* The entry chain proves non-NULL; BlockRec stores value after name. */
+        const char* value = *(const char* const*)((const char*)entry
+                                                   + sizeof(void*));
+        if (sound_alias_lookup(value, &sfx) == 0) {
             continue;
         }
         const int cell = obj_y + obj_x * 15;

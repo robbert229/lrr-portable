@@ -2252,7 +2252,9 @@ void panel_state_flags_toggle(int index)
     }
 }
 
+// GLOBAL: LEGORR 0x00555738
 static float    s_reward_score;  /* DAT_00555738 */
+// GLOBAL: LEGORR 0x0055573c
 static float    s_reward_count;  /* DAT_0055573c */
 
 // FUNCTION: LEGORR 0x00462800

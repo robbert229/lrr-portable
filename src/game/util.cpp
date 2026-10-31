@@ -297,6 +297,7 @@ void motion_waypoint_vector_random_scale_apply(void)
 
 #define STRING_TABLE_MAX_ENTRIES 256
 static const char* s_string_table_entries[STRING_TABLE_MAX_ENTRIES];
+// GLOBAL: LEGORR 0x004b8a50
 static unsigned int s_string_table_count;
 // GLOBAL: LEGORR 0x00557900
 static const char* s_bubble_action_strings[BUBBLE_ACTION_STRING_COUNT];

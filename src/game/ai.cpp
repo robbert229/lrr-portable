@@ -1745,7 +1745,9 @@ int entity_state_pair_predicate(GameContext* ctx, int type1, int row1,
  * its bounds blindly); the corpus strides a NULL selection entry into the
  * activity scan, the port's scan answers 0 for it (guarded). */
 #define ACTIVE_ENTITY_LIST_MAX 50 /* corpus region DAT_004b335c..3424 */
+// GLOBAL: LEGORR 0x004b335c
 static EntitySlot* s_active_list[ACTIVE_ENTITY_LIST_MAX];
+// GLOBAL: LEGORR 0x004b3424
 static int s_active_count;
 
 void active_entity_list_install(const EntitySlot* const* entries, int count)

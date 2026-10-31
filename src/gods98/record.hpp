@@ -670,6 +670,7 @@ uint32_t render_object_color_vector_set(void* record, int block, float red,
 /* Fixed-size record pools (findings 368/387). The original pools use
  * 32-bit links; the portable backing uses host-sized links and padded
  * strides so returned records remain callable on 64-bit builds. */
+extern void* s_small_record_free; /* DAT_00533988: 0x20-byte pool free-list head */
 void* fixed_size_large_record_acquire(uint32_t first_dword); /* 0x0047a580 */
 void fixed_size_large_record_pool_grow(void);                 /* 0x0047a5c0 */
 void fixed_size_small_record_pool_grow(void);                 /* 0x0047e0c0 */
