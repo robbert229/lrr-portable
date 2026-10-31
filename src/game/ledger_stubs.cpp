@@ -7793,14 +7793,12 @@ void ledger_stub_00475300_DDiSceneApplyActFrameTiming(void* scene_object)
 }
 
 // DDiSceneObjectLengthGet
-// FUNCTION: LEGORR 0x00475390
 float ledger_stub_00475390_DDiSceneObjectLengthGet(void* scene_object)
 {
     return ddiscene_object_length_get(scene_object);
 }
 
 // DDiSceneObjectFramePositionGet
-// FUNCTION: LEGORR 0x004753f0
 uint32_t ledger_stub_004753f0_DDiSceneObjectFramePositionGet(
     void* scene_object)
 {
@@ -7815,7 +7813,6 @@ float ledger_stub_004756d0_VideoObjectAspectRatioGet(void* video_object)
 }
 
 // DDiSceneObjectAttachOrUnlink
-// FUNCTION: LEGORR 0x00475710
 void ledger_stub_00475710_DDiSceneObjectAttachOrUnlink(
     void* pair_record, void* source_pair_record)
 {
@@ -7830,14 +7827,12 @@ void* ledger_stub_004757a0_DDiSceneContextGet(void* scene_object)
 }
 
 // TypedChildResourceScalarGet
-// FUNCTION: LEGORR 0x004757f0
 float ledger_stub_004757f0_TypedChildResourceScalarGet(void* scene_object)
 {
     return typed_child_resource_scalar_get(scene_object);
 }
 
 // SceneObjectFirstNonKind6ChildGet
-// FUNCTION: LEGORR 0x00475830
 void* ledger_stub_00475830_SceneObjectFirstNonKind6ChildGet(
     void* child_interface)
 {
@@ -7845,26 +7840,23 @@ void* ledger_stub_00475830_SceneObjectFirstNonKind6ChildGet(
 }
 
 // SceneObjectOwnerLinkEnsure
-// FUNCTION: LEGORR 0x00475880
 void* ledger_stub_00475880_SceneObjectOwnerLinkEnsure(void* owner_interface)
 {
     return scene_object_owner_link_ensure(owner_interface);
 }
 
 // DDiSceneObjectArrayGrow
-// FUNCTION: LEGORR 0x004759f0
 void ledger_stub_004759f0_DDiSceneObjectArrayGrow()
 {
     lego::ddiscene_object_array_grow();
 }
 
 // SceneActionRecordActFrameScan
-// FUNCTION: LEGORR 0x00475a70
 unsigned int ledger_stub_00475a70_SceneActionRecordActFrameScan(
-    void* scene_object, const char** names, int* values, unsigned int capacity)
+    void* scene_object, void** records, int* frame_indices, char** names)
 {
-    return scene_action_record_act_frame_scan(scene_object, names, values,
-                                              capacity);
+    return scene_action_record_act_frame_scan(scene_object, records,
+                                              frame_indices, names);
 }
 
 // DDiSceneAnimationCallbacksSet
@@ -9884,6 +9876,9 @@ typedef struct LegacyPanelPortRecord {
     void* image;
     int image_mode;
     uint32_t selection_flags[64];
+    /* Mirrors the original per-entry value word (record entry +0x24),
+       cleared by the interaction-state reset alongside selection_flags. */
+    uint32_t selection_values[64];
     uint32_t selection_count;
 } LegacyPanelPortRecord;
 
@@ -9976,7 +9971,9 @@ int legacy_health_bar_config_load(BlockFile* values, BlockFile* names)
     if (!legacy_config_pair(cfg, "ObjInfo::HealthBarPosition", &x, &y)) return 0;
     if (!legacy_config_pair(cfg, "ObjInfo::HealthBarWidthHeight",
                             &width, &height)) return 0;
-    border = block_get_int(cfg, "ObjInfo::HealthBarBorderSize", 1);
+    // The original derives this through an integer conversion of the raw
+    // value string, so a missing or empty key yields 0 rather than 1.
+    border = block_get_int(cfg, "ObjInfo::HealthBarBorderSize", 0);
     if (!legacy_config_rgb(cfg, "ObjInfo::HealthBarBorderRGB", rgb)) return 0;
     s_legacy_health_bar.x = (float)x;
     s_legacy_health_bar.y = (float)y;
@@ -10019,25 +10016,23 @@ void legacy_hunger_images_load(BlockFile* values, BlockFile* names)
     char path[96];
     char resource_name[256];
     BlockFile* cfg = values != NULL ? values : names;
+    // The original re-reads the five ObjInfo::HungerImages::HungerImage%i
+    // keys and overwrites each slot without releasing the previous surface
+    // (the resource layer owns surface lifetime).
     for (i = 0; i < 5; ++i) {
-        if (s_legacy_hunger_images[i] != NULL &&
-            s_legacy_hud_ops.surface_release != NULL) {
-            s_legacy_hud_ops.surface_release(s_legacy_hunger_images[i],
-                                             s_legacy_hud_ops.context);
-        }
-        s_legacy_hunger_images[i] = NULL;
-        sprintf(path, "ObjInfo::HungerImages::HungerImage_%d", i);
+        void* image = NULL;
+        sprintf(path, "ObjInfo::HungerImages::HungerImage%i", i);
         legacy_hud_resource_name(cfg, path, resource_name,
                                  (uint32_t)sizeof(resource_name));
         if (resource_name[0] != '\0' &&
             s_legacy_hud_ops.surface_load != NULL) {
-            s_legacy_hunger_images[i] = s_legacy_hud_ops.surface_load(
+            image = s_legacy_hud_ops.surface_load(
                 cfg, resource_name, 0, 0, s_legacy_hud_ops.context);
-            if (s_legacy_hunger_images[i] != NULL &&
-                s_legacy_hud_ops.surface_initialize != NULL)
+            if (image != NULL && s_legacy_hud_ops.surface_initialize != NULL)
                 s_legacy_hud_ops.surface_initialize(
-                    s_legacy_hunger_images[i], s_legacy_hud_ops.context);
+                    image, s_legacy_hud_ops.context);
         }
+        s_legacy_hunger_images[i] = image;
     }
 }
 

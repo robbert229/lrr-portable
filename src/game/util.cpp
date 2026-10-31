@@ -569,14 +569,47 @@ void entity_link_release_hooks_set(void (*node_hook)(EntityLinkNode*),
     s_entity_link_list_release_hook = list_hook;
 }
 
-static void entity_linked_lists_remove_by_key(uint32_t key, int terrain_only)
+// FUNCTION: LEGORR 0x00419830
+void entity_linked_list_entries_remove_by_key(uint32_t key)
 {
     EntityLinkList** list_link;
     if (s_entity_link_lists == NULL) return;
     list_link = s_entity_link_lists;
     while (*list_link != NULL) {
         EntityLinkList* list = *list_link;
-        if (terrain_only && list->kind != 6 && list->kind != 7) {
+        EntityLinkNode** node_link = &list->head;
+        while (*node_link != NULL) {
+            EntityLinkNode* node = *node_link;
+            if (node->key == key) {
+                *node_link = node->next;
+                if (list->count != 0) --list->count;
+                if (s_entity_link_node_release_hook != NULL)
+                    s_entity_link_node_release_hook(node);
+            }
+            else {
+                node_link = &node->next;
+            }
+        }
+        if (list->head == NULL || list->count == 0) {
+            *list_link = list->next;
+            if (s_entity_link_list_release_hook != NULL)
+                s_entity_link_list_release_hook(list);
+        }
+        else {
+            list_link = &list->next;
+        }
+    }
+}
+
+// FUNCTION: LEGORR 0x004198f0
+void terrain_cell_linked_entries_remove(uint32_t key)
+{
+    EntityLinkList** list_link;
+    if (s_entity_link_lists == NULL) return;
+    list_link = s_entity_link_lists;
+    while (*list_link != NULL) {
+        EntityLinkList* list = *list_link;
+        if (list->kind != 6 && list->kind != 7) {
             list_link = &list->next;
             continue;
         }
@@ -602,18 +635,6 @@ static void entity_linked_lists_remove_by_key(uint32_t key, int terrain_only)
             list_link = &list->next;
         }
     }
-}
-
-// FUNCTION: LEGORR 0x00419830
-void entity_linked_list_entries_remove_by_key(uint32_t key)
-{
-    entity_linked_lists_remove_by_key(key, 0);
-}
-
-// FUNCTION: LEGORR 0x004198f0
-void terrain_cell_linked_entries_remove(uint32_t key)
-{
-    entity_linked_lists_remove_by_key(key, 1);
 }
 
 void rectangular_resource_table_release_hooks_set(void (*resource_hook)(void*),

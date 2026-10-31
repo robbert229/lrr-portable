@@ -15,6 +15,7 @@ struct DDiSceneObjectRecord {
     uint32_t kind;
     uint32_t flags;
     void* owned_name;
+    uint32_t reserved[3];
     DDiSceneObjectRecord* next;
 };
 
@@ -76,9 +77,10 @@ void ddiscene_object_pool_auxiliary_set(void** allocations, uint32_t count,
     s_shared_directory = shared_directory;
 }
 
-/* The reference's DDiSceneObjectArrayGrow allocates 1<<level records and
- * links them into DAT_0076add0. Keep the pool in native pointer-sized records
- * so the +0x28 free-list word remains valid on 64-bit builds. */
+/* The reference's DDiSceneObjectArrayGrow allocates 1<<level records at
+ * stride 0x2c and links them through the word at +0x28. The reserved words
+ * keep that x86 record layout while pointers widen in the portable build. */
+// FUNCTION: LEGORR 0x004759f0
 void ddiscene_object_array_grow(void)
 {
     uint32_t count;

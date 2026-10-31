@@ -1800,6 +1800,8 @@ int entity_teardown(EntitySlot* entity)
     if (s_entity_teardown_hooks.operation != NULL)
         s_entity_teardown_hooks.operation(entity, ENTITY_TEARDOWN_FINALIZE,
             s_entity_teardown_hooks.context);
+    entity_linked_list_entries_remove_by_key(
+        (uint32_t)(uintptr_t)entity);
     if (s_entity_teardown_hooks.free_list_link != NULL)
         s_entity_teardown_hooks.free_list_link(entity,
             s_entity_teardown_free_head,

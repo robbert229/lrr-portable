@@ -597,7 +597,7 @@ typedef struct SceneChildSearchHooks {
     void* context;
     void* (*property_get)(void* child_interface, void* context);
     void* (*next_get)(void* child_interface, void* context);
-    void (*retain)(void* child_interface, void* context);
+    void (*release)(void* child_interface, void* context);
 } SceneChildSearchHooks;
 void scene_child_search_hooks_set(const SceneChildSearchHooks* hooks);
 void* scene_object_first_non_kind6_child_get(
@@ -680,6 +680,8 @@ typedef struct SceneActFrameScanHooks {
     void* (*animation_interface_get)(void* scene_object, unsigned int slot,
                                      void* context);
     unsigned int (*action_count_get)(void* animation_interface, void* context);
+    void* (*action_record_get)(void* animation_interface,
+                               unsigned int index, void* context);
     const char* (*action_name_get)(void* animation_interface,
                                    unsigned int index, void* context);
     int (*action_value_get)(void* animation_interface, unsigned int index,
@@ -687,9 +689,9 @@ typedef struct SceneActFrameScanHooks {
 } SceneActFrameScanHooks;
 void scene_act_frame_scan_hooks_set(const SceneActFrameScanHooks* hooks);
 unsigned int scene_action_record_act_frame_scan(void* scene_object,
-                                                const char** names,
-                                                int* values,
-                                                unsigned int capacity);
+                                                void** records,
+                                                int* frame_indices,
+                                                char** names);
 /* SceneActFrameRecordCloneOrCreate @ 0x489660. The reference's 32-byte
  * record owns COM interface pointers; the port keeps eight pointer-sized
  * words and requires explicit lifetime hooks where the reference AddRefs

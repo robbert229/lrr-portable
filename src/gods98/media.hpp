@@ -169,8 +169,6 @@ void media_min_distance_config_set(float cell_scale, float clip_base,
  * the platform MCI backend. */
 int  media_cd_audio_playback_available(void); /* FUN_00488b90 */
 void media_cd_audio_open_set(int open);       /* port hook */
-typedef int (*MediaCdAudioInitHook)(void* context);
-void media_cd_audio_init_hook_set(MediaCdAudioInitHook hook, void* context);
 int media_cd_audio_device_state_update(int request);
 typedef int (*MediaCdAudioErrorTextHook)(void* context, int error_code,
                                          char* output, int capacity);
@@ -179,8 +177,7 @@ typedef int (*MediaCdAudioStatusHook)(void* context, char* mode, int capacity,
 void media_cd_audio_error_hook_set(MediaCdAudioErrorTextHook hook,
                                    void* context);
 void media_cd_audio_error_code_set(int error_code);
-const char* media_cd_audio_error_text_get(void); /* 0x00489260 */
-void media_cd_audio_error_text_refresh(void); /* original void ABI */
+void media_cd_audio_error_text_get(void); /* 0x00489260 */
 void media_cd_audio_status_hook_set(MediaCdAudioStatusHook hook,
                                     void* context);
 int media_cd_audio_track_completion_poll(int track); /* 0x00489280 */

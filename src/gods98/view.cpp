@@ -294,41 +294,96 @@ static int scene_act_frame_name_match(const char* name)
     return 1;
 }
 
-/* SceneActionRecordActFrameScan (FUN_00475a70): enumerate both animation
- * interfaces, retaining action-name order and optionally filling parallel
- * name/value arrays. The caller's count-only pass uses capacity zero. */
+/* SceneActionRecordActFrameScan (FUN_00475a70): enumerate both type-four
+ * animation channels and fill the caller's optional record, frame-index, and
+ * owned-name arrays in the same order. */
+// FUNCTION: LEGORR 0x00475a70
 unsigned int scene_action_record_act_frame_scan(void* scene_object,
-                                                const char** names,
-                                                int* values,
-                                                unsigned int capacity)
+                                                void** records,
+                                                int* frame_indices,
+                                                char** names)
 {
+#if defined(_MSC_VER)
+#define SCENE_SCAN_STDCALL __stdcall
+#elif defined(__i386__) && (defined(__GNUC__) || defined(__clang__))
+#define SCENE_SCAN_STDCALL __attribute__((stdcall))
+#else
+#define SCENE_SCAN_STDCALL
+#endif
+    typedef unsigned int (SCENE_SCAN_STDCALL *ActionCountMethod)(void*);
+    typedef void (SCENE_SCAN_STDCALL *ActionRecordMethod)(
+        void*, unsigned int, void**);
     unsigned int slot, found = 0;
     SceneActFrameScanHooks* hooks = &s_scene_act_frame_scan_hooks;
-    if (scene_object == NULL || hooks->animation_interface_get == NULL ||
-        hooks->action_count_get == NULL || hooks->action_name_get == NULL)
+    if (scene_object == NULL ||
+        *(uint32_t*)((char*)scene_object + 0x10) != 4u ||
+        hooks->action_name_get == NULL)
         return 0;
     for (slot = 0; slot < 2; ++slot) {
-        void* animation = hooks->animation_interface_get(scene_object, slot,
-                                                         hooks->context);
+        void* animation;
+        if (hooks->animation_interface_get != NULL) {
+            animation = hooks->animation_interface_get(
+                scene_object, slot, hooks->context);
+        }
+        else {
+            memcpy(&animation,
+                   (char*)scene_object + (slot == 0u ? 4u : 8u),
+                   sizeof(animation));
+        }
         unsigned int count, index;
         if (animation == NULL) continue;
-        count = hooks->action_count_get(animation, hooks->context);
+        if (hooks->action_count_get != NULL) {
+            count = hooks->action_count_get(animation, hooks->context);
+        }
+        else {
+            void** vtable = *(void***)animation;
+            if (vtable == NULL || vtable[3] == NULL) continue;
+            count = ((ActionCountMethod)vtable[3])(animation);
+        }
         for (index = 0; index < count; ++index) {
             const char* name = hooks->action_name_get(animation, index,
                                                        hooks->context);
             if (scene_act_frame_name_match(name)) {
-                if (found < capacity) {
+                void* action_record = NULL;
+                if (records != NULL || frame_indices != NULL) {
+                    if (hooks->action_record_get != NULL) {
+                        action_record = hooks->action_record_get(
+                            animation, index, hooks->context);
+                    }
+                    else {
+                        void** vtable = *(void***)animation;
+                        if (vtable != NULL && vtable[4] != NULL) {
+                            ((ActionRecordMethod)vtable[4])(
+                                animation, index, &action_record);
+                        }
+                    }
+                }
+                if (records != NULL) {
+                    records[found] = action_record;
+                }
+                if (frame_indices != NULL) {
                     int value = 0;
-                    if (hooks->action_value_get != NULL)
+                    if (action_record != NULL) {
+                        value = (int)ddiscene_action_record_field_1c_get(
+                            action_record);
+                    }
+                    else if (hooks->action_value_get != NULL) {
                         hooks->action_value_get(animation, index, &value,
                                                 hooks->context);
-                    if (names != NULL) names[found] = name;
-                    if (values != NULL) values[found] = value;
+                    }
+                    frame_indices[found] = value;
+                }
+                if (names != NULL) {
+                    size_t length = strlen(name);
+                    char* copy = (char*)engine_heap_alloc((long)(length + 1u));
+                    if (copy != NULL) memcpy(copy, name, length + 1u);
+                    names[found] = copy;
                 }
                 ++found;
             }
         }
     }
+#undef SCENE_SCAN_STDCALL
     return found;
 }
 
@@ -481,6 +536,7 @@ void* ddiscene_context_get(void* scene_object)
 
 /* SceneObjectOwnerLinkEnsure (FUN_00475880): return the existing owner-link
  * record when present, otherwise ask the scene owner to create and attach it. */
+// FUNCTION: LEGORR 0x00475880
 void* scene_object_owner_link_ensure(void* owner_interface)
 {
     if (owner_interface == NULL ||
@@ -1076,6 +1132,7 @@ static void* ddiscene_object_frame_record_get(void* scene_object)
 
 /* DDiSceneObjectLengthGet (FUN_00475390): kind 4 resolves its selected
  * ActFrame record through channel 0; kind 3 already carries the channel. */
+// FUNCTION: LEGORR 0x00475390
 float ddiscene_object_length_get(void* scene_object)
 {
     void* interface_object = ddiscene_object_frame_record_get(scene_object);
@@ -1085,6 +1142,7 @@ float ddiscene_object_length_get(void* scene_object)
 
 /* DDiSceneObjectFramePositionGet (FUN_004753f0): follow the same kind
  * dispatch, then read the selected frame record's +0x0c field. */
+// FUNCTION: LEGORR 0x004753f0
 uint32_t ddiscene_object_frame_position_get(void* scene_object)
 {
     void* interface_object = ddiscene_object_frame_record_get(scene_object);
@@ -1299,22 +1357,16 @@ void ddiscene_advance_by_time(void* scene_object, float delta)
 
 /* TypedChildResourceScalarGet (FUN_004757f0): only type-4 scene objects with
  * a non-null resource name can resolve a child property. */
+// FUNCTION: LEGORR 0x004757f0
 float typed_child_resource_scalar_get(void* scene_object)
 {
-    void* action_slot;
-    void* action_name;
-    void* interface_object;
+    void* record;
     if (scene_object == NULL ||
         *(uint32_t*)((char*)scene_object + 0x10) != 4u) {
         return 0.0f;
     }
-    action_slot = *(void**)((char*)scene_object + 0x0c);
-    if (action_slot == NULL) return 0.0f;
-    action_name = *(void**)action_slot;
-    if (action_name == NULL) return 0.0f;
-    interface_object = ddiscene_object_timing_interface_get(scene_object);
-    return interface_object != NULL ?
-        scene_property_float_at14_get(interface_object) : 0.0f;
+    record = ddiscene_object_frame_record_get(scene_object);
+    return record != NULL ? scene_property_float_at14_get(record) : 0.0f;
 }
 
 void scene_child_search_hooks_set(const SceneChildSearchHooks* hooks)
@@ -1330,6 +1382,7 @@ void scene_child_search_hooks_set(const SceneChildSearchHooks* hooks)
 
 /* SceneObjectFirstNonKind6ChildGet (FUN_00475830): walk the child-interface
  * chain until its owner property has a kind other than six. */
+// FUNCTION: LEGORR 0x00475830
 void* scene_object_first_non_kind6_child_get(void* child_interface)
 {
     SceneChildSearchHooks* hooks = &s_scene_child_search_hooks;
@@ -1345,8 +1398,8 @@ void* scene_object_first_non_kind6_child_get(void* child_interface)
             result = property;
         }
         next = hooks->next_get(current, hooks->context);
-        if (next != NULL && hooks->retain != NULL) {
-            hooks->retain(next, hooks->context);
+        if (next != NULL && hooks->release != NULL) {
+            hooks->release(next, hooks->context);
         }
         current = next;
         ++guard;
@@ -1422,6 +1475,7 @@ void render_interface_pair_update(void* first, void* second)
 
 /* DDiSceneObjectAttachOrUnlink (FUN_00475710): pairs both stored interfaces
  * against a source pair, or asks the backend to unlink each current one. */
+// FUNCTION: LEGORR 0x00475710
 void ddiscene_scene_object_attach_or_unlink(void* pair_record,
                                             void* source_pair_record)
 {

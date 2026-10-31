@@ -108,6 +108,13 @@ struct SoundWaveMemoryStream {
     uint32_t cursor;
 };
 
+struct SoundWaveFileHandle {
+    Resource* resource;
+    SoundWaveMemoryStream* stream;
+    uint32_t data_offset;
+    uint32_t data_size;
+};
+
 // FUNCTION: LEGORR 0x00488c70
 uint32_t sound_wave_memory_format_read(const uint8_t* data, int32_t length,
                                        SoundWaveMemoryStream** stream_out,
@@ -235,17 +242,112 @@ uint32_t sound_wave_file_average_bytes_per_second_read(const char* path)
 }
 
 // FUNCTION: LEGORR 0x00488f10
-Sound* sound_wave_file_open_read_chunks(const char* name)
+uint32_t sound_wave_file_open_read_chunks(const char* path,
+                                          SoundWaveFileHandle** handle_out,
+                                          uint8_t** format_out,
+                                          SoundWaveChunk* parent_chunk_out)
 {
-    return sound_sample_file_open_by_name(name);
+    Resource* resource;
+    SoundWaveMemoryStream* stream = NULL;
+    SoundWaveFileHandle* handle;
+    uint8_t* format = NULL;
+    uint32_t result;
+    if (handle_out == NULL || format_out == NULL || parent_chunk_out == NULL)
+        return 0xe101u;
+    *handle_out = NULL;
+    *format_out = NULL;
+    memset(parent_chunk_out, 0, sizeof(*parent_chunk_out));
+    if (path == NULL) return 0xe100u;
+    resource = resource_open(path, RESOURCE_AUTO);
+    if (resource == NULL) return 0xe100u;
+    if (resource_read(resource) < 0 || resource->size < 0 ||
+        (uint32_t)resource->size > 0x7fffffffu) {
+        resource_free(resource);
+        return 0xe102u;
+    }
+    result = sound_wave_memory_format_read(
+        (const uint8_t*)resource->data, (int32_t)resource->size,
+        &stream, &format, parent_chunk_out);
+    if (result != 0u) {
+        resource_free(resource);
+        return result;
+    }
+    handle = (SoundWaveFileHandle*)calloc(1, sizeof(*handle));
+    if (handle == NULL) {
+        sound_wave_memory_format_close(&stream, &format);
+        memset(parent_chunk_out, 0, sizeof(*parent_chunk_out));
+        resource_free(resource);
+        return 0xe000u;
+    }
+    handle->resource = resource;
+    handle->stream = stream;
+    *handle_out = handle;
+    *format_out = format;
+    return 0u;
 }
 
 // FUNCTION: LEGORR 0x004890c0
-const uint8_t* sound_wave_data_chunk_open(const Sound* sound,
-                                          uint32_t* size_out)
+void sound_wave_data_chunk_open(SoundWaveFileHandle** handle_inout,
+                                SoundWaveChunk* data_chunk_out,
+                                SoundWaveChunk* parent_chunk)
 {
-    if (size_out != NULL) *size_out = sound != NULL ? sound->data_len : 0u;
-    return sound != NULL ? sound->data : NULL;
+    SoundWaveFileHandle* handle;
+    const uint8_t* data;
+    uint32_t size, riff_end, pos;
+    if (data_chunk_out == NULL) return;
+    memset(data_chunk_out, 0, sizeof(*data_chunk_out));
+    if (handle_inout == NULL || *handle_inout == NULL || parent_chunk == NULL)
+        return;
+    handle = *handle_inout;
+    if (handle->resource == NULL || handle->resource->data == NULL ||
+        handle->stream == NULL) return;
+    data = (const uint8_t*)handle->resource->data;
+    if (handle->resource->size < 12) return;
+    size = (uint32_t)handle->resource->size;
+    riff_end = s_le32(data + 4u) + 8u;
+    if (riff_end < 12u || riff_end > size) return;
+    pos = parent_chunk->data_offset + 4u;
+    if (pos < 12u || pos > riff_end) pos = 12u;
+    while (riff_end - pos >= 8u) {
+        uint32_t chunk_size = s_le32(data + pos + 4u);
+        uint32_t body = pos + 8u;
+        uint32_t padded_size;
+        if (chunk_size > riff_end - body) return;
+        padded_size = chunk_size + (chunk_size & 1u);
+        if (padded_size < chunk_size || padded_size > riff_end - body)
+            return;
+        if (data[pos] == 'd' && data[pos + 1u] == 'a' &&
+            data[pos + 2u] == 't' && data[pos + 3u] == 'a') {
+            data_chunk_out->chunk_id = 0x61746164u;
+            data_chunk_out->chunk_size = chunk_size;
+            data_chunk_out->form_type = 0u;
+            data_chunk_out->data_offset = body;
+            data_chunk_out->flags = 0u;
+            handle->data_offset = body;
+            handle->data_size = chunk_size;
+            handle->stream->cursor = body;
+            handle->stream->length = body + chunk_size;
+            return;
+        }
+        pos = body + padded_size;
+    }
+}
+
+void sound_wave_file_handle_close(SoundWaveFileHandle** handle_inout,
+                                  uint8_t** format_inout)
+{
+    SoundWaveFileHandle* handle;
+    if (format_inout != NULL && *format_inout != NULL) {
+        free(*format_inout);
+        *format_inout = NULL;
+    }
+    if (handle_inout == NULL || *handle_inout == NULL) return;
+    handle = *handle_inout;
+    sound_wave_memory_format_close(&handle->stream, NULL);
+    resource_free(handle->resource);
+    handle->resource = NULL;
+    free(handle);
+    *handle_inout = NULL;
 }
 
 // FUNCTION: LEGORR 0x00489100
@@ -897,8 +999,7 @@ void sound_buffer_object_stop_hook_set(SoundBufferObjectStopHook hook,
 int sound_stream_stop_and_release(int stream_index)
 {
     AudioPlayer* player = audio_system_player_get();
-    if (stream_index >= 0 && stream_index <= 1)
-        audio_stream_stop(player, stream_index);
+    audio_stream_stop(player, stream_index == 0 ? 0 : 1);
     return 1;
 }
 
@@ -921,8 +1022,8 @@ int sound_stream_format_setup(int stream_index, const WavSample* format,
 // FUNCTION: LEGORR 0x0047bc30
 int sound_stream_drain_check(int stream_index)
 {
-    if (stream_index < 0 || stream_index > 1) return 0;
-    return audio_stream_drain_check(audio_system_player_get(), stream_index);
+    return audio_stream_drain_check(audio_system_player_get(),
+                                    stream_index == 0 ? 0 : 1);
 }
 
 void sound_position_apply_hook_set(SoundPositionApplyHook hook,
@@ -998,8 +1099,7 @@ void sound_source_spatial_refresh(void* sound_object)
 void sound_stream_ring_buffer_tick(int stream_index)
 {
     AudioPlayer* player = audio_system_player_get();
-    if (stream_index < 0 || stream_index > 1) return;
-    audio_stream_tick(player, stream_index);
+    audio_stream_tick(player, stream_index == 0 ? 0 : 1);
 }
 
 /* _DAT_00502b2c — the global-cooldown word (the corpus types it as a

@@ -669,9 +669,11 @@ void level_predug_coordinate_pool_clear(void)
 void predug_coordinate_pool_append(const int cell_xy[2])
 {
     if (s_predug_coordinate_count < 20u) {
-        s_predug_coordinates[s_predug_coordinate_count][0] = cell_xy[0];
-        s_predug_coordinates[s_predug_coordinate_count][1] = cell_xy[1];
-        s_predug_coordinate_count++;
+        unsigned int slot = s_predug_coordinate_count;
+        int* const destination = s_predug_coordinates[slot];
+        destination[0] = cell_xy[0];
+        destination[1] = cell_xy[1];
+        s_predug_coordinate_count = slot + 1u;
     }
 }
 

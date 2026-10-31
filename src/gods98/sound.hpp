@@ -44,6 +44,7 @@ typedef struct SoundWaveDataReader {
     uint32_t remaining;
 } SoundWaveDataReader;
 typedef struct SoundWaveMemoryStream SoundWaveMemoryStream;
+typedef struct SoundWaveFileHandle SoundWaveFileHandle;
 typedef struct SoundWaveChunk {
     uint32_t chunk_id;
     uint32_t chunk_size;
@@ -82,9 +83,15 @@ uint32_t sound_wave_memory_stream_read(SoundWaveMemoryStream* stream,
 void sound_wave_memory_format_close(SoundWaveMemoryStream** stream,
                                     uint8_t** format);
 uint32_t sound_wave_file_average_bytes_per_second_read(const char* path);
-Sound* sound_wave_file_open_read_chunks(const char* name);
-const uint8_t* sound_wave_data_chunk_open(const Sound* sound,
-                                          uint32_t* size_out);
+uint32_t sound_wave_file_open_read_chunks(const char* path,
+                                          SoundWaveFileHandle** handle_out,
+                                          uint8_t** format_out,
+                                          SoundWaveChunk* parent_chunk_out);
+void sound_wave_data_chunk_open(SoundWaveFileHandle** handle,
+                                SoundWaveChunk* data_chunk_out,
+                                SoundWaveChunk* parent_chunk);
+void sound_wave_file_handle_close(SoundWaveFileHandle** handle,
+                                 uint8_t** format);
 void sound_wave_handle_and_buffer_release(Sound* sound);
 
 /* Parse a RIFF/WAVE buffer. Chunk order-independent; PCM (tag 1) only; NULL

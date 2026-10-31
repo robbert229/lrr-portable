@@ -3895,6 +3895,11 @@ int case_insensitive_name_table_lookup(const char* name, int* out_index)
 static const char* s_ui_panel_names[12];
 static const char* s_ui_panel_indexed_names[64][24];
 static unsigned int s_ui_panel_indexed_name_count;
+/* The corpus's DAT_005007d0 name count and DAT_005007d4 per-table slot count,
+ * both published by UiPanelNameTablesInit (FUN_0045a030); no ported reader
+ * yet, so they land as guarded statics (the unowned-global convention). */
+static unsigned int s_ui_panel_name_count;
+static unsigned int s_ui_panel_name_slot_count;
 
 void ui_panel_name_tables_install(const char* const names[12],
                                   const char* const indexed_names[][24],
@@ -3929,37 +3934,56 @@ static int ui_panel_string_equal_case_insensitive(const char* first,
     return *first == '\0' && *second == '\0';
 }
 
-/* UiPanelNameTableLookup (FUN_0045a370): walk the twelve installed global
- * panel-name slots and return the zero-based matching slot. */
+/* UiPanelNameTableLookup (FUN_0045a370): the corpus do-while-walks the twelve
+ * panel-name dwords at DAT_005000e0..DAT_00500110, __strcmpi-comparing each
+ * against the caller's name; the first case-insensitive match writes the
+ * zero-based slot and returns 1, the exhausted scan returns 0. Deviations:
+ * the port guards null arguments (the corpus dereferences blindly) and the
+ * null-name check inside the comparator stands in for the corpus's direct
+ * __strcmpi against the installed pointer. */
+// FUNCTION: LEGORR 0x0045a370
 int ui_panel_name_table_lookup(const char* name, int* out_index)
 {
-    unsigned int i;
+    const char** slot;
+    int index;
     if (name == NULL || out_index == NULL) return 0;
-    for (i = 0; i < 12u; ++i) {
-        if (ui_panel_string_equal_case_insensitive(name, s_ui_panel_names[i])) {
-            *out_index = (int)i;
+    slot = s_ui_panel_names;
+    index = 0;
+    do {
+        if (ui_panel_string_equal_case_insensitive(name, *slot)) {
+            *out_index = index;
             return 1;
         }
-    }
+        ++slot;
+        ++index;
+    } while (slot < s_ui_panel_names + 12);
     return 0;
 }
 
-/* UiPanelIndexedNameLookup (FUN_0045a410): each category owns 24 optional
- * names; the first matching slot is written to the caller. */
+/* UiPanelIndexedNameLookup (FUN_0045a410): the corpus strides the category's
+ * 24 name dwords at DAT_00500350 + table * 0x60, skipping null slots, and
+ * __strcmpi-compares the rest; the first match writes the zero-based slot and
+ * returns 1. Deviations: the port bounds the table index to the 64 installed
+ * tables (the corpus strides the DAT band blindly) and null-guards its
+ * arguments. */
 // FUNCTION: LEGORR 0x0045a410
 int ui_panel_indexed_name_lookup(unsigned int table_index, const char* name,
                                  unsigned int* out_index)
 {
-    unsigned int i;
-    if (name == NULL || out_index == NULL ||
-        table_index >= s_ui_panel_indexed_name_count) return 0;
-    for (i = 0; i < 24u; ++i) {
-        if (ui_panel_string_equal_case_insensitive(
-                name, s_ui_panel_indexed_names[table_index][i])) {
-            *out_index = i;
+    const char** slot;
+    unsigned int index;
+    if (name == NULL || out_index == NULL || table_index >= 64u) return 0;
+    slot = s_ui_panel_indexed_names[table_index];
+    index = 0;
+    do {
+        if (*slot != NULL &&
+            ui_panel_string_equal_case_insensitive(name, *slot)) {
+            *out_index = index;
             return 1;
         }
-    }
+        ++slot;
+        ++index;
+    } while (index < 24u);
     return 0;
 }
 

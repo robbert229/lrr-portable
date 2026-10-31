@@ -118,6 +118,7 @@ AudioPlayer* audio_system_player_get(void)
     return s_active_audio_player;
 }
 
+// FUNCTION: LEGORR 0x0047a800
 void audio_active_shutdown(void)
 {
     if (!sound_bank_sound_on()) return;
@@ -130,7 +131,6 @@ void audio_active_shutdown(void)
     sound_bank_sound_on_set(0);
 }
 
-// FUNCTION: LEGORR 0x0047a800
 void audio_system_shutdown(void)
 {
     sound_subsystem_stop_all();
@@ -815,6 +815,8 @@ void audio_stream_stop(AudioPlayer* p, int stream_index)
 
 int audio_stream_drain_check(AudioPlayer* p, int stream_index)
 {
+    uint32_t frame_bytes;
+    uint32_t queued_bytes;
     if (p == NULL || stream_index < 0 || stream_index > 1
         || !p->stream_active[stream_index] || p->dev == NULL) return 0;
     if (p->stream_sample[stream_index] == NULL
@@ -829,7 +831,16 @@ int audio_stream_drain_check(AudioPlayer* p, int stream_index)
         memset(&p->stream_format[stream_index], 0, sizeof(WavSample));
         return 0;
     }
-    return 1;
+    frame_bytes = p->stream_format[stream_index].block_align;
+    if (frame_bytes == 0u) return 0;
+    if (p->stream_queued_frames[stream_index] > 0xffffffffu / frame_bytes)
+        queued_bytes = 0xffffffffu;
+    else
+        queued_bytes = p->stream_queued_frames[stream_index] * frame_bytes;
+    if (p->stream_buffer_bytes[stream_index] != 0u &&
+        queued_bytes > p->stream_buffer_bytes[stream_index])
+        queued_bytes = p->stream_buffer_bytes[stream_index];
+    return queued_bytes > 0x7fffffffu ? 0x7fffffff : (int)queued_bytes;
 }
 
 void audio_stream_tick(AudioPlayer* p, int stream_index)
