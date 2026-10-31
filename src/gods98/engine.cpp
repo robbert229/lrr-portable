@@ -757,23 +757,22 @@ static char* field_grid_cell(int x, int y)
 // FUNCTION: LEGORR 0x00466380
 void set_expansion_entity_at_grid_cell(int x, int y, void* entity)
 {
-    if (s_field_grid_buf == NULL || s_field_grid_desc == NULL) {
-        return; /* deviation: the corpus strides the missing grid blindly */
+    if (s_field_grid_buf != NULL && s_field_grid_desc != NULL) {
+        /* Preserve the corpus's repeated index calculation and write order.
+         * On x86 these expressions use stride 0x0c, flags at +8, and timer
+         * at +4: imul width*y; add x; lea index*3; then scale by four. */
+        *(void**)((char*)s_field_grid_buf +
+                  ((int)s_field_grid_desc->grid_w * y + x) *
+                      ((int)sizeof(void*) + 8)) = entity;
+        uint32_t* flags = (uint32_t*)((char*)s_field_grid_buf +
+                  ((int)s_field_grid_desc->grid_w * y + x) *
+                      ((int)sizeof(void*) + 8) + (int)sizeof(void*) + 4);
+        *flags = *flags | 0x100u;
+        *(uint32_t*)((char*)s_field_grid_buf +
+                  ((int)s_field_grid_desc->grid_w * y + x) *
+                      ((int)sizeof(void*) + 8) + (int)sizeof(void*)) =
+            0x42c80000u;
     }
-    /* Preserve the corpus's repeated index calculation and write order. On
-     * x86 these expressions use stride 0x0c, flags at +8, and timer at +4:
-     * imul width*y; add x; lea index*3; then scale by four. */
-    *(void**)((char*)s_field_grid_buf +
-              ((int)s_field_grid_desc->grid_w * y + x) *
-                  ((int)sizeof(void*) + 8)) = entity;
-    uint32_t* flags = (uint32_t*)((char*)s_field_grid_buf +
-              ((int)s_field_grid_desc->grid_w * y + x) *
-                  ((int)sizeof(void*) + 8) + (int)sizeof(void*) + 4);
-    *flags = *flags | 0x100u;
-    *(uint32_t*)((char*)s_field_grid_buf +
-              ((int)s_field_grid_desc->grid_w * y + x) *
-                  ((int)sizeof(void*) + 8) + (int)sizeof(void*)) =
-        0x42c80000u;
 }
 
 // FUNCTION: LEGORR 0x00466750

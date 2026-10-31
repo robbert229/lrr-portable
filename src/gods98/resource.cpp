@@ -3728,7 +3728,7 @@ void fixed_record_slot_resource_release(int slot)
 // FUNCTION: LEGORR 0x0048bff0
 void* fixed_record_slot_resource_get(int slot)
 {
-    if (slot < 0 || slot >= FIXED_RECORD_SLOTS) {
+    if ((unsigned int)slot >= FIXED_RECORD_SLOTS) {
         return NULL; /* deviation: the corpus strides blindly */
     }
     return s_fixed_slots[slot].in_use != 0 ? s_fixed_slots[slot].resource : NULL;
