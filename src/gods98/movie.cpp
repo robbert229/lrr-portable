@@ -1651,7 +1651,9 @@ int avi_frame_update_and_blit(AviPlaybackState* state)
     return state != NULL ? state->frame_update_and_blit() : 0;
 }
 
-// FUNCTION: LEGORR 0x0047ed00
+/* Portable frame blit adapter. Retail 0x0047ed00 reads its source surface
+ * from a renderer-owned player record at +0xc0/+0x18; AviPlaybackState keeps
+ * its portable DisplaySurface pointer in a host sidecar instead. */
 void avi_playback_frame_loop(AviPlaybackState* state, void* destination)
 {
     if (state == NULL || state->frame_ready == 0

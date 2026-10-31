@@ -165,9 +165,8 @@ int input_action_state_toggle(InputActionToggleState* state,
     return 1;
 }
 
-/* InputStatePoll (FUN_0047eef0). `poll_active` supplies the original mode
- * gate; DirectInput operations remain platform hooks. */
-// FUNCTION: LEGORR 0x0047eef0
+/* Port adapter for InputStatePoll (FUN_0047eef0). The portable caller supplies
+ * its active state and snapshot; retail reads those through global owners. */
 void input_state_poll(InputState* s, int poll_active)
 {
     int i;
@@ -380,7 +379,6 @@ uint32_t input_key_to_ascii(const InputState* s, uint32_t scancode)
     return scancode;
 }
 
-// FUNCTION: LEGORR 0x00411f00
 uint32_t input_key_context(const InputState* s, uint32_t key)
 {
     if (s == NULL || key >= INPUT_KEY_COUNT) {
@@ -415,16 +413,15 @@ void input_text_pump(InputState* s, char* buf, int cap, int* len_out, int clear)
     }
 }
 
-/* QuitPoll machine — corpus FUN_004589c0. Modeled on finding 05 (dwell
- * counters) corrected by finding 22 (the word the original indexes off,
- * _DAT_004ffbc0, is the objective/advisor flag word, not an input device):
+/* Port-local dwell utility. It is not the retail FUN_004589c0 routine, which
+ * consumes global UI/cursor state and dispatches several unrelated paths.
+ * This helper uses the finding 05 dwell-counter approximation:
  *   dwelled in the corner rectangle -> enter[slot]++
  *   left                               -> leave[slot]++
  *   gesture completes when the mouse is past the quit rectangle after a
  *   dwell; the corpus's quit path then probes KeepRunning and only quits
  *   when that probe agrees (quitFlag = KeepRunning()==0).
  */
-// FUNCTION: LEGORR 0x004589c0
 int input_quit_dwell(InputState* s, int slot, int mx, int my,
                      int rect_x, int rect_y, int rect_w, int rect_h,
                      int quit_w, int quit_h, int keep_running)
@@ -587,7 +584,6 @@ uint32_t player_input_flag8_get(int kind, int action)
  * RuntimeFlag40000000Get port masks); alt == the corpus's param_2, and the
  * inverted reading is taken only when the system-state word agrees. The
  * table behind s_input_entry_flags is the corpus's DAT_004dd60c dwords. */
-// FUNCTION: LEGORR 0x0041c8f0
 int input_action_pressed_get(const EngineContext* ctx, int action, int alt)
 {
     if (action == 0x49) {
@@ -611,7 +607,6 @@ int input_action_pressed_get(const EngineContext* ctx, int action, int alt)
  * inverted-reading shape, with the kind 1 / kind 4 flag tables (the
  * corpus's DAT_004dd9a4 / DAT_004dd9a8 dwords) selected through
  * player_flags_table; any other kind falls through to not-pressed. */
-// FUNCTION: LEGORR 0x0041c950
 int input_binding_pressed_get(const EngineContext* ctx, int kind, int entry,
                               int alt)
 {

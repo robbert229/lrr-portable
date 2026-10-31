@@ -20,6 +20,16 @@ static ObjectiveDeferredCallback s_objective_deferred_callback;
 static AdvisorTimerActionFn s_advisor_timer_action;
 static AdvisorTimerFinalizeFn s_advisor_timer_finalize;
 static void* s_advisor_timer_user;
+static LevelState* s_objective_active_level;
+static char s_objective_voice_alias[256];
+static int s_objective_voice_alias_pending;
+/* DAT_004ffbc0 is the runtime result word. It is separate from the level's
+ * configured objective mask in LevelState::objective. */
+static uint32_t s_objective_result_word;
+static int s_objective_voice_stream_handle = -1;
+static float s_objective_voice_stream_timeout;
+static int s_objective_voice_result_active;
+static int s_objective_tick_resolved;
 // GLOBAL: LEGORR 0x004a6768
 static int s_advisor_sound_slot = -1;
 static CoordinateListHeadGetHook s_coordinate_list_head_get;
@@ -191,6 +201,29 @@ static int obj_strcasecmp(const char* a, const char* b)
         if (ca != cb) return ca - cb;
         if (ca == 0) return 0;
     }
+}
+
+static void objective_voice_alias_format(char* out, size_t out_size,
+                                         const char* outcome,
+                                         const char* family,
+                                         const char* level)
+{
+    const char* parts[4];
+    size_t used = 0;
+    int part;
+    parts[0] = "Stream_Objective";
+    parts[1] = outcome;
+    parts[2] = family;
+    parts[3] = level;
+    if (out == NULL || out_size == 0) return;
+    out[0] = '\0';
+    for (part = 0; part < 4; ++part) {
+        const char* text = parts[part] != NULL ? parts[part] : "";
+        while (*text != '\0' && used + 1 < out_size) {
+            out[used++] = *text++;
+        }
+    }
+    out[used] = '\0';
 }
 
 // GLOBAL: LEGORR 0x004a13cc
@@ -378,6 +411,14 @@ void objective_load(BlockFile* cfg, const char* level_name, LevelState* s)
     if (cfg == NULL || s == NULL) {
         return;
     }
+    s_objective_active_level = s;
+    s_objective_voice_alias[0] = '\0';
+    s_objective_voice_alias_pending = 0;
+    s_objective_result_word = 0;
+    s_objective_voice_stream_handle = -1;
+    s_objective_voice_stream_timeout = 0.0f;
+    s_objective_voice_result_active = 0;
+    s_objective_tick_resolved = 1;
     /* Zero the 0x54-byte objective slot block (+0xbc..+0x110). */
     for (int o = OBJ_SLOT_HANDLE; o < OBJ_SLOT_HANDLE + 0x54; o += 4) {
         level_set_int(s, o, 0);
@@ -494,64 +535,112 @@ int objective_check(LevelState* s, int* mark, float dt)
     return 1;
 }
 
-/* Corpus-shape verification (2026-10-28): 0x458670 reads exactly ONE stack
- * argument — the announce id at [esp+4] (`mov eax,[esp+0x11c]` reached on a
- * balanced stack; the prologue is `sub esp,0x108` + push ebx/ebp/esi/edi, so
- * [esp+0x11c] == entry+4) — and resolves the level block blindly through
- * `call 0x431560` (the current_level_get carrier; the result lands in ebx and
- * `[ebx+0x27c]` is the result index write). The port's extra `s` parameter is
- * therefore a threaded-state divergence, not a corpus argument: the port's
- * announcer needs the threaded level block the corpus reads blindly (see the
- * objective.hpp note), so callers thread `s` and push the extra arg the
- * corpus does not. Left as-is. */
-// FUNCTION: LEGORR 0x00458670
-void objective_announce(LevelState* s, int who)
+static void objective_announce_for_level(LevelState* s, int who,
+                                         int target_gate)
 {
     if (s == NULL) {
         return;
     }
-    /* A result is already shown (bits 1/2/4) — the corpus returns early. */
-    if ((s->objective & 7u) != 0) {
+    s_objective_active_level = s;
+    /* The reference returns when a result is already active and, on its
+     * global entry path, also when the crystal-result gate is present. The
+     * explicit-level adapter keeps its historical local-call behavior. */
+    if ((s_objective_result_word & 7u) != 0 ||
+        (target_gate != 0 && (s_objective_result_word & 0x100u) != 0)) {
         return;
     }
+    s_objective_voice_alias_pending = 0;
     int result = 0;
-    const char* outcome = NULL;
+    const char* outcome = "";
+    const char* family = "_Levels::";
+    const char* level = s->ptr_name != NULL ? (const char*)s->ptr_name : "";
     switch (who) {
     case 0: /* pending */
+        s_objective_result_word |= 1u;
         s->objective |= LVL_OBJECTIVE_STILL_PENDING;
-        outcome = "Pending";
         result = 0;
         break;
     case 1: /* achieved */
+        s_objective_result_word |= 2u;
         s->objective_result = 1;
         s->objective |= LVL_OBJECTIVE_ACHIEVED;
         outcome = "Acheived";
         result = 1;
         break;
     case 2: /* failed */
+        s_objective_result_word |= 4u;
         s->objective_result = 0;
         s->objective |= LVL_OBJECTIVE_FAILED;
         outcome = "Failed";
         result = 2;
         break;
     case 3: /* failed-with-crystals */
+        s_objective_result_word |= 0x104u;
         s->objective_result = 0;
         s->objective |= LVL_OBJECTIVE_FAILED | LVL_OBJECTIVE_CRYSTALS;
         outcome = "FailedCrystals";
+        family = "";
+        level = "";
         result = 2;
         break;
     default:
+        /* Unknown selectors still reach the reference's pending bit and
+         * scene-state tail, but have no outcome alias. */
+        s_objective_result_word |= 8u;
+        s->objective |= LVL_OBJECTIVE_ANNOUNCED;
         return;
     }
     level_set_int(s, OBJ_OFF_RESULT_INDEX, result);
-    /* Advisor stream text (corpus `Stream Objective_%s_%s_%s` ->
-     * DAT_004ffe38 with the outcome, a slot string, and the level name). */
-    {
-        const char* lvl = s->ptr_name != NULL ? (const char*)s->ptr_name : "";
-        snprintf(s->obj_stream, sizeof(s->obj_stream),
-                 "Stream Objective_%s_%d_%s", outcome, result, lvl);
-    }
+    /* FUN_00458670 interns the voice alias as
+     * "Stream_Objective%s%s%s". The configured family token is
+     * "_Levels::"; the failed-crystals alias is global to its outcome. */
+    objective_voice_alias_format(s_objective_voice_alias,
+                                 sizeof(s_objective_voice_alias),
+                                 outcome, family, level);
+    strncpy(s->obj_stream, s_objective_voice_alias,
+            sizeof(s->obj_stream) - 1);
+    s->obj_stream[sizeof(s->obj_stream) - 1] = '\0';
+    s_objective_voice_alias_pending = 1;
+    s_objective_result_word |= 8u;
     s->objective |= LVL_OBJECTIVE_ANNOUNCED; /* hint shown; cleared per-frame */
+}
+
+/* The retail function reads the current level from FUN_00431560 and has one
+ * stack argument. `objective_load` binds that owner, while mission frame
+ * updates rebind the live context before objective processing. */
+// FUNCTION: LEGORR 0x00458670
+void objective_announce_current(int who)
+{
+    objective_announce_for_level(s_objective_active_level, who, 1);
+}
+
+/* Explicit-level adapter used by port call sites that already own the level
+ * pointer. It shares state transitions but does not claim the target ABI. */
+void objective_announce(LevelState* s, int who)
+{
+    objective_announce_for_level(s, who, 0);
+}
+
+void objective_active_level_bind(LevelState* s)
+{
+    s_objective_active_level = s;
+}
+
+void objective_active_level_clear(LevelState* s)
+{
+    if (s_objective_active_level == s) s_objective_active_level = NULL;
+}
+
+const char* objective_voice_alias_get(void)
+{
+    return s_objective_voice_alias;
+}
+
+int objective_voice_alias_pending_take(void)
+{
+    const int pending = s_objective_voice_alias_pending;
+    s_objective_voice_alias_pending = 0;
+    return pending;
 }
 
 const char* objective_stream(const LevelState* s)
@@ -576,36 +665,90 @@ int objective_advisor_shown(const LevelState* s)
     return (s->objective & suppress) == 0 ? 1 : 0;
 }
 
+/* ObjectiveTick @ 0x00458be0 has four arguments in the retail caller:
+ * (opaque global owner, level block, objective-check dt, frame dt). */
 // FUNCTION: LEGORR 0x00458be0
-int objective_tick(LevelState* s, float dt)
+void objective_tick_target(void* engine, LevelState* s,
+                           float checker_dt, float frame_dt)
 {
+    int resolved_now = 0;
+    (void)engine; /* the renderer/global owner is not represented here */
     if (s == NULL) {
-        return 1;
+        s_objective_tick_resolved = 1;
+        return;
     }
+    s_objective_active_level = s;
     /* Consume an announced hint: the state machine clears bit 8 once the
      * advisor overlay has been shown (the show call is a stub). */
-    if ((s->objective & LVL_OBJECTIVE_ANNOUNCED) != 0) {
+    if ((s_objective_result_word & 8u) != 0) {
+        s_objective_result_word &= ~8u;
         s->objective &= ~LVL_OBJECTIVE_ANNOUNCED;
     }
-    if ((s->objective & (LVL_OBJECTIVE_ACHIEVED | LVL_OBJECTIVE_FAILED)) != 0) {
-        return 0; /* resolved */
+    if ((s_objective_result_word & 7u) == 0) {
+        int mark = 0;
+        if (objective_check(s, &mark, checker_dt)) {
+            objective_announce_current(mark != 0 ? 1 : 2);
+            resolved_now =
+                (s->objective & (LVL_OBJECTIVE_ACHIEVED |
+                                 LVL_OBJECTIVE_FAILED)) != 0;
+        }
     }
-    if ((s->objective & LVL_OBJECTIVE_STILL_PENDING) != 0) {
-        return 0; /* pending result drains out-of-level */
+
+    /* DAT_004ffe44 is the result-screen stream gate. The pending branch is
+     * represented directly. Terminal branches also test
+     * SceneObjectStateDispatch(0x40b); without that renderer-owned result,
+     * leave their gate clear rather than assuming the scene is ready. */
+    int result_active_next =
+        (s_objective_result_word & 1u) != 0 ? 1 : 0;
+
+    /* The target decrements an active stream timer before it considers a
+     * newly prepared alias, and invalidates the stream sentinel on expiry. */
+    if (s_objective_voice_stream_handle != -1) {
+        s_objective_voice_stream_timeout -= frame_dt;
+        if (s_objective_voice_stream_timeout <= 0.0f) {
+            s_objective_voice_stream_handle = -1;
+        }
     }
-    /* Idle: run the checker. */
-    int mark = 0;
-    if (objective_check(s, &mark, dt)) {
-        objective_announce(s, mark != 0 ? 1 : 2);
-        return 0;
+
+    /* Retail temporarily disables batching, submits selector zero, queries
+     * duration, and restores batching. The portable play call has no instance
+     * handle return, so zero is an active sentinel while the duration/timer
+     * and alias-consumption ordering follow FFE3C/FFE40/FFE38/FFE44. */
+    if (s_objective_voice_result_active && s_objective_voice_alias_pending) {
+        int alias = 0;
+        if (s_objective_voice_alias[0] != '\0' &&
+            sound_alias_lookup(s_objective_voice_alias, &alias)) {
+            const int batch_was_enabled = sound_batch_mode_get();
+            sound_batch_queue_drain(0, 0);
+            sound_alias_play(alias, 0);
+            s_objective_voice_stream_handle = 0;
+            s_objective_voice_stream_timeout =
+                (float)((sound_object_duration_get(alias) - 1.5) * 25.0);
+            sound_batch_queue_drain(batch_was_enabled != 0, 0);
+        }
+        /* Retail releases the interned name whether lookup succeeds or not. */
+        s_objective_voice_alias_pending = 0;
+        s_objective_voice_alias[0] = '\0';
     }
-    return 1;
+    /* FFE44 is updated after consuming FFE38 in the retail routine. */
+    s_objective_voice_result_active = result_active_next;
+    s_objective_tick_resolved =
+        (resolved_now ||
+         (s_objective_result_word & 7u) != 0) ? 0 : 1;
+}
+
+/* Explicit-level adapter used by the portable frame loop. */
+int objective_tick(LevelState* s, float dt)
+{
+    objective_tick_target(NULL, s, dt, dt);
+    return s_objective_tick_resolved;
 }
 
 // FUNCTION: LEGORR 0x00454b70
 int objective_voice_alias_raise_commit(LevelState* s)
 {
-    objective_announce(s, 1);
+    if (s != NULL) s_objective_active_level = s;
+    objective_announce_current(1);
     return 1;
 }
 
@@ -614,7 +757,8 @@ int objective_voice_alias_raise_commit(LevelState* s)
 int objective_voice_alias_raise_gate_bit27(LevelState* s)
 {
     if ((media_cd_flags_get() & 0x8000000u) == 0u) {
-        objective_announce(s, 2);
+        if (s != NULL) s_objective_active_level = s;
+        objective_announce_current(2);
     }
     return 1;
 }

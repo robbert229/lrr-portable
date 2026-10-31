@@ -474,7 +474,7 @@ int main(int argc, char** argv)
 
             /* The neighbor refresh leaf: the build-record word is
              * unowned in the port, so the leaf changes nothing. */
-            terrain_neighbor_flag_refresh(s, 3, 4, 0);
+            terrain_neighbor_flag_refresh_xy(s, 3, 4, 0);
             __builtin_memcpy(&f, rec + 0x08, 4);
             __builtin_memcpy(&g, rec + 0x18, 4);
             CHECK(f == 0xffffffdfu && g == 0u,

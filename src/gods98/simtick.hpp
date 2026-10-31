@@ -118,9 +118,8 @@ typedef void (*SimtickPostStepHook)(EngineContext* context, void* user);
 void simtick_post_step_hook_set(SimtickPostStepHook hook, void* user);
 void simtick_post_step(EngineContext* c);              /* FUN_004665c0 */
 void simtick_minion_states(EngineContext* c, float dt, float scale); /* 0x4313b0 */
-/* Target-shaped path receives EngineTick's subsystem scale and processes cells
- * whose configured scene resources completed loading during the sweep. */
-void simtick_grid_cell_pass(EngineContext* c, float scale); /* FUN_00424600 */
+/* Portable context/scale adapter for the scene resource sweep. */
+void simtick_grid_cell_pass(EngineContext* c, float scale);
 /* Deterministic seeded-cell adapter retained for existing local callers. */
 void simtick_grid_cell_pass(EngineContext* c);
 void simtick_scene_pass(EngineContext* c, float dt);   /* FUN_0043b270 */

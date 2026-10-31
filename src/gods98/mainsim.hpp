@@ -39,9 +39,13 @@
 #define MNSIM_K_CAMERA_ZOOM_POS 0x0c /* DAT_0076ab8c: KEY_MINUS */
 #define MNSIM_K_CAMERA_ZOOM_NEG 0x0d /* DAT_0076ab8d: KEY_EQUALS */
 
-/* Main simulation / input-app step (corpus MainSimStep). Returns 0 when the
- * frame must quit. `scale`/`dt` are the frame deltas; o1..o3 receive the
- * edge outputs. */
+/* Retail-shaped MainSimStep @ 0x4250c0. The reference receives a context-like
+ * first word (unused by the original), the frame scale, and three output
+ * words. The port uses that first word for its EngineContext adapter. */
+int main_sim_step(EngineContext* ctx, float scale,
+                  uint32_t* o1, uint32_t* o2, uint32_t* o3);
+/* Local adapter retained for callers that also pass raw dt. MainSimStep's
+ * decompile does not use a separate dt argument. */
 int main_sim_step(EngineContext* ctx, float scale, float dt,
                   uint32_t* o1, uint32_t* o2, uint32_t* o3);
 

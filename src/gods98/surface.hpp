@@ -94,7 +94,7 @@ typedef struct ModelRenderPassDispatchOps {
 } ModelRenderPassDispatchOps;
 void model_render_pass_dispatch_ops_set(
     const ModelRenderPassDispatchOps* ops);
-void model_render_pass_dispatch(void* device); /* FUN_00482d60 */
+void model_render_pass_dispatch(void* device); /* portable adapter */
 typedef struct MeshRecordAppendOps {
     void* context;
     MeshRecordPool* (*pool_get)(void* context, void* object);
@@ -125,9 +125,13 @@ typedef struct ModelTextureBinding {
     uint32_t animation_frame_count;
     float color[3];
     float values[10];
+    /* LWO SURF/TSIZ is planar-map scale consumed by MaterialPass. It is kept
+     * separate from the opaque retail material values above. */
+    float texture_scale[2];
+    uint8_t has_texture_scale;
     uint8_t texture_surface_owned;
     uint8_t animation_array_owned;
-    uint8_t reserved[2];
+    uint8_t texture_callback_owned;
 } ModelTextureBinding;
 typedef struct ModelTextureBindOps {
     void* context;
@@ -136,6 +140,7 @@ typedef struct ModelTextureBindOps {
                     uint32_t* first_frame, int* animated);
     void* (*texture_get_or_create)(void* context, void* device,
                                    const char* name);
+    void (*texture_release)(void* context, void* texture);
     void* (*allocate)(void* context, size_t bytes);
     void (*release)(void* context, void* memory);
 } ModelTextureBindOps;

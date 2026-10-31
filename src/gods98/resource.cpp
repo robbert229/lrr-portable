@@ -3836,7 +3836,11 @@ static void resource_directory_tree_scan_walk(
         offset = root_length;
         if (offset != 0u && child_path[offset - 1u] != '/' &&
             child_path[offset - 1u] != '\\') {
+#if defined(_WIN32)
             child_path[offset++] = '\\';
+#else
+            child_path[offset++] = '/';
+#endif
         }
         memcpy(child_path + offset, name, name_length + 1u);
         if (is_directory != 0) {
@@ -3865,7 +3869,65 @@ void resource_directory_tree_scan(const char* root,
 // FUNCTION: LEGORR 0x00480390
 void resource_directory_tree_scan_target(const char* root)
 {
-    resource_directory_tree_scan_walk(root, &s_resource_file_tokens, NULL);
+    ResourceDirectoryScanHandle* scan = NULL;
+    char pattern[1024];
+    char name[260];
+    char child_path[1024];
+    unsigned int root_length;
+    unsigned int offset;
+    if (root == NULL) return;
+
+    /* Keep the target's local root\*.* pattern construction here instead
+     * of forwarding through the portable explicit-state walker. */
+    root_length = (unsigned int)strlen(root);
+    if (root_length + 5u >= sizeof(pattern)) return;
+    memcpy(pattern, root, root_length);
+    offset = root_length;
+    if (offset != 0u && pattern[offset - 1u] != '/' &&
+        pattern[offset - 1u] != '\\') {
+        pattern[offset++] = '\\';
+    }
+    memcpy(pattern + offset, "*.*", 4u);
+    if (!resource_directory_scan_default_open(NULL, pattern,
+                                               (void**)&scan) ||
+        scan == NULL) return;
+
+    for (;;) {
+        int is_directory = 0;
+        unsigned int name_length;
+        int next;
+        name[0] = '\0';
+        next = resource_directory_scan_default_next(NULL, scan, name,
+                                                     &is_directory);
+        if (next <= 0) break;
+        name[259] = '\0';
+        if (name[0] == '\0' || strcmp(name, ".") == 0 ||
+            strcmp(name, "..") == 0) continue;
+        root_length = (unsigned int)strlen(root);
+        name_length = (unsigned int)strlen(name);
+        if (root_length + name_length + 2u >= sizeof(child_path)) continue;
+        memcpy(child_path, root, root_length);
+        offset = root_length;
+        if (offset != 0u && child_path[offset - 1u] != '/' &&
+            child_path[offset - 1u] != '\\') {
+#if defined(_WIN32)
+            child_path[offset++] = '\\';
+#else
+            child_path[offset++] = '/';
+#endif
+        }
+        memcpy(child_path + offset, name, name_length + 1u);
+        if (is_directory != 0) {
+            resource_directory_tree_scan_target(child_path);
+        }
+        else {
+            /* Retail calls the comparator for its side effect and ignores
+             * the membership result. */
+            (void)resource_directory_token_list_contains(
+                &s_resource_file_tokens, child_path);
+        }
+    }
+    resource_directory_scan_default_close(NULL, scan);
 }
 
 int32_t resource_read(Resource* r)

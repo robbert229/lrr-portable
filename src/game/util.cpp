@@ -345,7 +345,6 @@ void string_table_install(const char* const* entries, unsigned int count)
     }
 }
 
-// FUNCTION: LEGORR 0x00408c80
 unsigned int string_table_index_lookup(const char* value)
 {
     unsigned int i;
@@ -415,12 +414,6 @@ void bubble_action_strings_initialize(void)
     s_bubble_action_strings[30] = "Bubble_CallToArms";
     s_bubble_action_strings[31] = "Bubble_ElecFence";
     s_bubble_action_strings[32] = "Bubble_Eat";
-    s_bubble_action_strings[33] = "Bubble_Drive";
-    s_bubble_action_strings[34] = "Bubble_Upgrade";
-    s_bubble_action_strings[35] = "Bubble_BuildPath";
-    s_bubble_action_strings[36] = "Bubble_Train";
-    s_bubble_action_strings[37] = "Bubble_Recharge";
-    s_bubble_action_strings[38] = "Bubble_Request";
 }
 
 const char* bubble_action_string_get(unsigned int index)

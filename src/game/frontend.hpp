@@ -757,7 +757,7 @@ typedef struct AdvisorTextDisplayState {
     int hidden_slot;
     int message_id;
     uint32_t message_flags;
-    uint32_t interface_flags;
+    uint32_t interface_flags; /* DAT_00556ecc: bit 0x100000 gates overlay close */
     float message_timer;
     float x;
     float y;
@@ -946,8 +946,10 @@ typedef struct TooltipOverlayState {
     float color_low[3];
 } TooltipOverlayState;
 typedef uint32_t (*TooltipFontMetricQueryFn)(void* font, void* context);
-/* Native GameConfigInit ABI: font, two geometry words, duration multiplier,
- * display width/height, inset word, and normalized tooltip RGB. */
+/* Target ABI is ten stack words: font, two geometry words, duration
+ * multiplier, display width/height, inset word, and tooltip RGB. The retail
+ * GameConfigInit call leaves five words from its color helper calls beneath
+ * the five explicit arguments; keep this entry's full target signature. */
 void tooltip_overlay_state_initialize(
     void* font, uint32_t geometry_a, uint32_t geometry_b, float duration_scale,
     uint32_t display_width, uint32_t display_height, uint32_t inset_word,

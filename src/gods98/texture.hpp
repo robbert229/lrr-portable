@@ -48,21 +48,24 @@ typedef struct TextureSurface {
  * else (including RLE). Caller owns the returned surface. */
 TextureSurface* texture_decode(const uint8_t* data, uint32_t size);
 
-/* Reference BitmapSurfaceLoad path: open and decode a named image. */
+/* Portable adapter that opens and decodes a named image into TextureSurface;
+ * retail BitmapSurfaceLoad uses renderer-owned Direct3D surface state. */
 TextureSurface* image_surface_load(const char* name, uint32_t flags,
                                    uint32_t color_key);
 
-/* Load + decode by name through the resource layer (RESOURCE_AUTO). */
+/* Portable resource-backed BMP decoder. Retail CreateBmpSurface takes two
+ * arguments and uploads through the Direct3D device. */
 TextureSurface* texture_load(const char* name);
 
-/* Get-or-load with the engine's name-keyed cache (finding 13 §2):
+/* Portable get-or-load cache adapter. Retail TextureGetOrCreate takes four
+ * arguments and returns a three-word texture record. This helper:
  * joins base+file (base may be NULL), case-insensitive linear scan,
  * refcount++ on hit; miss loads via texture_load and registers a copy.
  * NULL on failure. */
 TextureSurface* texture_get_or_load(const char* base, const char* file);
 
-/* Cache-branch release: refcount--, frees + unregisters at 0. For a surface
- * that was never registered, frees immediately. */
+/* Portable TextureSurface reference release; retail TextureRelease drops
+ * COM interfaces from its resource record. */
 void texture_release(TextureSurface* t);
 
 /* ResourceRecordAddRef's software equivalent of IDirectDrawSurface

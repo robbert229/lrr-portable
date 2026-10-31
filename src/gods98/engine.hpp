@@ -198,12 +198,15 @@ int EngineTick(EngineContext* ctx, float dt);
 void EnginePreTick(void); /* FUN_004231f0 */
 void engine_pre_tick_adapter(EngineContext* ctx);
 
-/* Quit-poll probe (corpus KeepRunning @ 0x435940). 0 => quit requested. */
+/* Portable quit/liveness adapter; retail KeepRunning @ 0x435940 is a
+ * no-argument global state machine. */
 typedef int (*EngineKeepRunningHook)(EngineContext* context, void* user);
 void engine_keep_running_hook_set(EngineKeepRunningHook hook, void* user);
 int EngineKeepRunning(EngineContext* ctx);
 
-/* Time-scale factor (corpus FUN_0041fb40 call site). */
+/* Retail TimeScaleGet @ 0x0041fb40 reads the shared DAT_0055615c global. */
+float EngineTimeScale(void);
+/* Portable context adapter used by EngineTick and local callers. */
 float EngineTimeScale(EngineContext* ctx);
 
 /* GameConfigCallbackRegistryInit (FUN_0041fa20) ports the callback triplet

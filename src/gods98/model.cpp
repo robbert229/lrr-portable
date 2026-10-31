@@ -825,9 +825,8 @@ typedef struct UvBlock {
     float* uv; /* 2*count pairs (u, -v) */
 } UvBlock;
 
-/* ParseUV: parse the .uv text and apply its polygon UV pairs to the model.
- * The caller supplies buffered text instead of the corpus stream handle. */
-// FUNCTION: LEGORR 0x00481c50
+/* Port adapter for ParseUV: parse buffered .uv text and apply polygon UV
+ * pairs. Retail receives the model and stream handles and returns void. */
 int model_apply_uv_text(Model* m, const char* text, size_t len)
 {
     /* Split the way parse_uv's python does: CRLF acts as the line break
@@ -1031,15 +1030,14 @@ void model_free(Model* m)
     free(m);
 }
 
-/* LwoModelEntryLoad (FUN_004809e0): the reference copies the joined path
+/* Port adapter for LwoModelEntryLoad (FUN_004809e0): the reference copies
+ * the joined path
  * into a 260-byte stack buffer, truncates it just after the last backslash
  * (an empty directory when the path carries no separator at all), opens the
  * file from the full path, and drives the record loader (FUN_00480870) and
  * the MaterialPass stream loader (FUN_00480ac0) with the directory buffer,
- * the flags word, and the caller context.  The portable port opens through
- * the resource layer; the directory scan is kept because it is the
- * reference's entry-name derivation. */
-// FUNCTION: LEGORR 0x004809e0
+ * the flags word, and the caller context. This helper only opens the
+ * portable parsed-model representation. */
 Model* lwo_model_entry_load(const char* path, void* flags, void* context)
 {
     char directory[260];
@@ -1082,7 +1080,9 @@ static void model_resource_path_join(char* output, size_t output_size,
     output[position] = '\0';
 }
 
-// FUNCTION: LEGORR 0x004885c0
+/* Port adapter for ModelResourceResolveOrLoad. Its path and cache flow
+ * mirrors the target, but it returns a parsed Model rather than the
+ * renderer-owned resource instance created by the retail loader. */
 Model* model_resource_resolve_or_load(const char* prefix, const char* path,
                                       void* flags, void* context)
 {

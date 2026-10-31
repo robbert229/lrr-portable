@@ -339,18 +339,14 @@ void terrain_activation_hooks_install(TerrainActivationPrepareHook prepare,
                                      TerrainActivationFloodHook flood,
                                      void* context);
 int terrain_cell_activation_try(void* object, int x, int y); /* FUN_0040d4f0 */
-/* Flood-state queries mirror the original predicates: mode 0 is the base
- * occupied/secondary-bit test, mode 1 additionally requires secondary bit
- * 0x100, and mode 2 reports that the renderer-owned cell-record value at
- * +0x0c is non-positive. The first two have level-record implementations; mode 2 needs the
- * renderer record hook when that state is available. */
+/* Flood-state queries mirror TerrainCellSpecialStatePredicate: mode 0 tests
+ * primary bit 0x400; mode 1 tests that base predicate and secondary bit
+ * 0x100. Edge creation remains renderer-owned. */
 typedef int (*TerrainFloodStateHook)(int x, int y, int mode, void* context);
 typedef void (*TerrainFloodEffectHook)(int from_x, int from_y, int to_x,
                                        int to_y, void* context);
-typedef int (*TerrainFloodRollHook)(int threshold, void* context);
 void terrain_neighbor_flood_hooks_install(TerrainFloodStateHook state,
                                           TerrainFloodEffectHook effect,
-                                          TerrainFloodRollHook roll,
                                           void* context);
 void terrain_cell_neighbor_flood_walk(int x, int y, int force,
                                       float strength); /* FUN_0040d850 */

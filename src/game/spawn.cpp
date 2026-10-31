@@ -3,10 +3,20 @@
 #include "entity.hpp"
 #include "level.hpp"
 #include "cmd.hpp"
-#include <string.h>
+#include "ai.hpp"
+#include "../crt/crt.hpp"
+
+/* These two target entries already have live port implementations in the
+ * ledger unit. Keep the calls target-shaped at ConfiguredMonsterSpawnTick. */
+namespace unported_ledger_stubs {
+void ledger_stub_0044afb0_ConfiguredTinyMonsterSpawnAndTeardown(
+    EntitySlot* source);
+void ledger_stub_0044af90_EntityAttachedSpawnRecordProcess(EntitySlot* owner);
+}
+float random_float_range(float minimum, float maximum);
+
 namespace lego {
 namespace {
-unsigned int s_spawn_flags = 0;
 SpawnRandomTriggerHook s_trigger_hook = 0;
 SpawnScatterHook s_scatter_hook = 0;
 void* s_hook_context = 0;
@@ -20,7 +30,6 @@ GlobalScatterSpawnFindHook s_global_scatter_find_hook = 0;
 void* s_global_scatter_find_context = 0;
 int s_global_scatter_flag_a = 0;
 int s_global_scatter_flag_b = 0;
-ConfiguredMonsterSpawnHooks s_configured_monster_spawn_hooks;
 
 static int global_scatter_find_adapter(EntitySlot* entity, void* payload)
 {
@@ -57,8 +66,14 @@ void pairing_activity_prepare(EntitySlot* target)
 }
 // FUNCTION: LEGORR 0x0044adc0
 void scatter_spawn_gate_set(int enabled)
-{ if (enabled != 0) s_spawn_flags |= 0x20U; else s_spawn_flags &= ~0x20U; }
-int scatter_spawn_gate_get() { return (s_spawn_flags & 0x20U) != 0; }
+{
+    uint32_t flags = entity_state_flags_peek();
+    if (enabled != 0) flags |= 0x20u;
+    else flags &= ~0x20u;
+    entity_state_flags_set(flags);
+}
+int scatter_spawn_gate_get()
+{ return (entity_state_flags_peek() & 0x20u) != 0u; }
 // FUNCTION: LEGORR 0x0044ade0
 void entity_kind_one_random_spawn_trigger(void* entity)
 {
@@ -108,10 +123,8 @@ void random_kind_six_scatter_spawn(void* entity, int count, int mode)
                 base_xy[1] = scene_xy[1];
             }
         }
-        offset_x = (float)((double)level_rand_u16() * 3.051851e-05 * 10.0
-                           - 5.0);
-        offset_y = (float)((double)level_rand_u16() * 3.051851e-05 * 10.0
-                           - 5.0);
+        offset_x = random_float_range(-5.0f, 5.0f);
+        offset_y = random_float_range(-5.0f, 5.0f);
         spawn_xy[0] = base_xy[0];
         spawn_xy[1] = base_xy[1];
         if (terrain_world_xy_to_cell(source->owner_ctx->level->ptr_terrain,
@@ -133,8 +146,13 @@ void interface_invoke_one_if_nonnull(void* object)
 {
     if (object != 0) {
         void** vtable = *static_cast<void***>(object);
-        LegacyInterfaceInvoke invoke = reinterpret_cast<LegacyInterfaceInvoke>(vtable[0]);
+        LegacyInterfaceInvoke invoke =
+            reinterpret_cast<LegacyInterfaceInvoke>(vtable[0]);
+#if defined(_MSC_VER)
+        invoke(object, 0, 1);
+#else
         invoke(object, 1);
+#endif
     }
 }
 void legacy_result_check_hook_set(LegacyResultCheckHook hook, void* context)
@@ -159,7 +177,7 @@ void global_scatter_spawn_state_set(int flag_a, int flag_b)
 // FUNCTION: LEGORR 0x0044c550
 void global_scatter_spawn_enable_and_drain(void)
 {
-    s_spawn_flags |= 0x40u;
+    entity_state_flags_set(entity_state_flags_peek() | 0x40u);
     if (global_scatter_find(0) != 0) return;
     if (s_global_scatter_flag_b == 0) {
         if (global_scatter_find(1) == 0 && s_global_scatter_flag_a != 0) {
@@ -176,36 +194,17 @@ void global_scatter_spawn_enable_and_drain(void)
     }
 }
 
-void configured_monster_spawn_hooks_set(
-    const ConfiguredMonsterSpawnHooks* hooks)
-{
-    if (hooks == NULL) {
-        memset(&s_configured_monster_spawn_hooks, 0,
-               sizeof(s_configured_monster_spawn_hooks));
-    }
-    else {
-        s_configured_monster_spawn_hooks = *hooks;
-    }
-}
-
 // FUNCTION: LEGORR 0x0044bfd0
 int configured_monster_spawn_behavior_tick(EntitySlot* entity)
 {
-    if (entity == NULL || entity->activity_timer <= 0.0f) return 0;
+    if (entity == NULL || !(0.0f < entity->activity_timer)) return 0;
     entity->flags_3e0 &= ~0x00100000u;
-    if (s_configured_monster_spawn_hooks.configured_spawn_teardown != NULL) {
-        s_configured_monster_spawn_hooks.configured_spawn_teardown(
-            entity, s_configured_monster_spawn_hooks.context);
-    }
-    if (s_configured_monster_spawn_hooks.attached_spawn_record_process != NULL) {
-        s_configured_monster_spawn_hooks.attached_spawn_record_process(
-            entity, s_configured_monster_spawn_hooks.context);
-    }
+    unported_ledger_stubs::
+        ledger_stub_0044afb0_ConfiguredTinyMonsterSpawnAndTeardown(entity);
+    unported_ledger_stubs::
+        ledger_stub_0044af90_EntityAttachedSpawnRecordProcess(entity);
     entity->flags_3e8 |= 0x00800000u;
-    if (s_configured_monster_spawn_hooks.global_counter_increment != NULL) {
-        s_configured_monster_spawn_hooks.global_counter_increment(
-            s_configured_monster_spawn_hooks.context);
-    }
+    global_counter_at_00555328_increment();
     return 1;
 }
 }

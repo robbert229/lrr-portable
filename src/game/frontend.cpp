@@ -3920,14 +3920,118 @@ int case_insensitive_name_table_lookup(const char* name, int* out_index)
     return 0;
 }
 
+/* UiPanelNameTablesInit publishes these exact pointer-table bands. The
+ * button table is twelve 24-pointer rows and ends at DAT_005007d0. */
+// GLOBAL: LEGORR 0x004a8924
+static const char s_panel_name_radar[] = "Panel_Radar";
+// GLOBAL: LEGORR 0x004a8914
+static const char s_panel_name_radar_fill[] = "Panel_RadarFill";
+// GLOBAL: LEGORR 0x004a8900
+static const char s_panel_name_radar_overlay[] = "Panel_RadarOverlay";
+// GLOBAL: LEGORR 0x004a88f0
+static const char s_panel_name_messages[] = "Panel_Messages";
+// GLOBAL: LEGORR 0x004a88dc
+static const char s_panel_name_messages_side[] = "Panel_MessagesSide";
+// GLOBAL: LEGORR 0x004a88c4
+static const char s_panel_name_crystal_side_bar[] = "Panel_CrystalSideBar";
+// GLOBAL: LEGORR 0x004a88b4
+static const char s_panel_name_top_panel[] = "Panel_TopPanel";
+// GLOBAL: LEGORR 0x004a88a0
+static const char s_panel_name_information[] = "Panel_Information";
+// GLOBAL: LEGORR 0x004a888c
+static const char s_panel_name_priority_list[] = "Panel_PriorityList";
+// GLOBAL: LEGORR 0x004a8878
+static const char s_panel_name_camera_control[] = "Panel_CameraControl";
+// GLOBAL: LEGORR 0x004a8868
+static const char s_panel_name_info_dock[] = "Panel_InfoDock";
+// GLOBAL: LEGORR 0x004a8930
+static const char s_panel_name_encyclopedia[] = "Panel_Encyclopedia";
+// GLOBAL: LEGORR 0x004a884c
+static const char s_panel_button_radar_toggle[] = "PanelButton_Radar_Toggle";
+// GLOBAL: LEGORR 0x004a8828
+static const char s_panel_button_radar_tagged[] = "PanelButton_Radar_TaggedObjectView";
+// GLOBAL: LEGORR 0x004a880c
+static const char s_panel_button_radar_zoom_in[] = "PanelButton_Radar_ZoomIn";
+// GLOBAL: LEGORR 0x004a87f0
+static const char s_panel_button_radar_zoom_out[] = "PanelButton_Radar_ZoomOut";
+// GLOBAL: LEGORR 0x004a87d4
+static const char s_panel_button_radar_map_view[] = "PanelButton_Radar_MapView";
+// GLOBAL: LEGORR 0x004a87b8
+static const char s_panel_button_info_dock_goto[] = "PanelButton_InfoDock_Goto";
+// GLOBAL: LEGORR 0x004a879c
+static const char s_panel_button_info_dock_close[] = "PanelButton_InfoDock_Close";
+// GLOBAL: LEGORR 0x004a877c
+static const char s_panel_button_top_options[] = "PanelButton_TopPanel_Options";
+// GLOBAL: LEGORR 0x004a875c
+static const char s_panel_button_top_priorities[] = "PanelButton_TopPanel_Priorities";
+// GLOBAL: LEGORR 0x004a873c
+static const char s_panel_button_top_call_to_arms[] = "PanelButton_TopPanel_CallToArms";
+// GLOBAL: LEGORR 0x004a871c
+static const char s_panel_button_information_toggle[] = "PanelButton_Information_Toggle";
+// GLOBAL: LEGORR 0x004a86f8
+static const char s_panel_button_information_function[] = "PanelButton_Information_Function";
+// GLOBAL: LEGORR 0x004a86d4
+static const char s_panel_button_priority_disable1[] = "PanelButton_PriorityList_Disable1";
+// GLOBAL: LEGORR 0x004a86b0
+static const char s_panel_button_priority_disable2[] = "PanelButton_PriorityList_Disable2";
+// GLOBAL: LEGORR 0x004a868c
+static const char s_panel_button_priority_disable3[] = "PanelButton_PriorityList_Disable3";
+// GLOBAL: LEGORR 0x004a8668
+static const char s_panel_button_priority_disable4[] = "PanelButton_PriorityList_Disable4";
+// GLOBAL: LEGORR 0x004a8644
+static const char s_panel_button_priority_disable5[] = "PanelButton_PriorityList_Disable5";
+// GLOBAL: LEGORR 0x004a8620
+static const char s_panel_button_priority_disable6[] = "PanelButton_PriorityList_Disable6";
+// GLOBAL: LEGORR 0x004a85fc
+static const char s_panel_button_priority_disable7[] = "PanelButton_PriorityList_Disable7";
+// GLOBAL: LEGORR 0x004a85d8
+static const char s_panel_button_priority_disable8[] = "PanelButton_PriorityList_Disable8";
+// GLOBAL: LEGORR 0x004a85b4
+static const char s_panel_button_priority_disable9[] = "PanelButton_PriorityList_Disable9";
+// GLOBAL: LEGORR 0x004a8594
+static const char s_panel_button_priority_up1[] = "PanelButton_PriorityList_UpOne1";
+// GLOBAL: LEGORR 0x004a8574
+static const char s_panel_button_priority_up2[] = "PanelButton_PriorityList_UpOne2";
+// GLOBAL: LEGORR 0x004a8554
+static const char s_panel_button_priority_up3[] = "PanelButton_PriorityList_UpOne3";
+// GLOBAL: LEGORR 0x004a8534
+static const char s_panel_button_priority_up4[] = "PanelButton_PriorityList_UpOne4";
+// GLOBAL: LEGORR 0x004a8514
+static const char s_panel_button_priority_up5[] = "PanelButton_PriorityList_UpOne5";
+// GLOBAL: LEGORR 0x004a84f4
+static const char s_panel_button_priority_up6[] = "PanelButton_PriorityList_UpOne6";
+// GLOBAL: LEGORR 0x004a84d4
+static const char s_panel_button_priority_up7[] = "PanelButton_PriorityList_UpOne7";
+// GLOBAL: LEGORR 0x004a84b4
+static const char s_panel_button_priority_up8[] = "PanelButton_PriorityList_UpOne8";
+// GLOBAL: LEGORR 0x004a8494
+static const char s_panel_button_priority_close[] = "PanelButton_PriorityList_Close";
+// GLOBAL: LEGORR 0x004a8474
+static const char s_panel_button_priority_reset[] = "PanelButton_PriorityList_Reset";
+// GLOBAL: LEGORR 0x004a8454
+static const char s_panel_button_encyclopedia_close[] = "PanelButton_Encyclopedia_Close";
+// GLOBAL: LEGORR 0x004a8430
+static const char s_panel_button_camera_zoom_in[] = "PanelButton_CameraControl_ZoomIn";
+// GLOBAL: LEGORR 0x004a840c
+static const char s_panel_button_camera_zoom_out[] = "PanelButton_CameraControl_ZoomOut";
+// GLOBAL: LEGORR 0x004a83e0
+static const char s_panel_button_camera_cycle_buildings[] = "PanelButton_CameraControl_CycleBuildings";
+// GLOBAL: LEGORR 0x004a83bc
+static const char s_panel_button_camera_rotate[] = "PanelButton_CameraControl_Rotate";
+// GLOBAL: LEGORR 0x004a839c
+static const char s_panel_button_crystal_ore[] = "PanelButton_CrystalSideBar_Ore";
+// GLOBAL: LEGORR 0x004a8378
+static const char s_panel_button_crystal_crystals[] = "PanelButton_CrystalSideBar_Crystals";
+// GLOBAL: LEGORR 0x005000e0
 static const char* s_ui_panel_names[12];
-static const char* s_ui_panel_indexed_names[64][24];
-static unsigned int s_ui_panel_indexed_name_count;
-/* The corpus's DAT_005007d0 name count and DAT_005007d4 per-table slot count,
- * both published by UiPanelNameTablesInit (FUN_0045a030); no ported reader
- * yet, so they land as guarded statics (the unowned-global convention). */
-static unsigned int s_ui_panel_name_count;
-static unsigned int s_ui_panel_name_slot_count;
+// GLOBAL: LEGORR 0x00500350
+static const char* s_ui_panel_indexed_names[12][24];
+/* These words are also the selected category-cell coordinates. The table
+ * initializer sets the no-selection sentinel used by SimCategoryCellHitTest. */
+// GLOBAL: LEGORR 0x005007d0
+static int s_category_cell_selected_x;
+// GLOBAL: LEGORR 0x005007d4
+static int s_category_cell_selected_y;
 
 void ui_panel_name_tables_install(const char* const names[12],
                                   const char* const indexed_names[][24],
@@ -3935,18 +4039,17 @@ void ui_panel_name_tables_install(const char* const names[12],
 {
     unsigned int i;
     unsigned int j;
-    if (indexed_count > 64u) indexed_count = 64u;
+    if (indexed_count > 12u) indexed_count = 12u;
     for (i = 0; i < 12u; ++i) {
         s_ui_panel_names[i] = names != NULL ? names[i] : NULL;
     }
-    for (i = 0; i < 64u; ++i) {
+    for (i = 0; i < 12u; ++i) {
         for (j = 0; j < 24u; ++j) {
             s_ui_panel_indexed_names[i][j] =
                 indexed_names != NULL && i < indexed_count
                     ? indexed_names[i][j] : NULL;
         }
     }
-    s_ui_panel_indexed_name_count = indexed_names != NULL ? indexed_count : 0u;
 }
 
 static int ui_panel_string_equal_case_insensitive(const char* first,
@@ -4000,7 +4103,7 @@ int ui_panel_indexed_name_lookup(unsigned int table_index, const char* name,
 {
     const char** slot;
     unsigned int index;
-    if (name == NULL || out_index == NULL || table_index >= 64u) return 0;
+    if (name == NULL || out_index == NULL || table_index >= 12u) return 0;
     slot = s_ui_panel_indexed_names[table_index];
     index = 0;
     do {
@@ -4015,67 +4118,67 @@ int ui_panel_indexed_name_lookup(unsigned int table_index, const char* name,
     return 0;
 }
 
-/* UiPanelNameTablesInit (FUN_0045a030): the corpus publishes twelve panel
- * names and the named controls at their 24-slot category positions. */
+/* UiPanelNameTablesInit (FUN_0045a030) stores twelve panel-name pointers,
+ * thirty-eight button-name pointers at their original 24-slot row offsets,
+ * then initializes the category-cell sentinel to (12, 24). */
 // FUNCTION: LEGORR 0x0045a030
 void ui_panel_name_tables_init(void)
 {
-    /* Keep the writes in the same table order and slot positions as the
-     * original's global pointer stores. */
-    s_ui_panel_name_count = 12u;
-    s_ui_panel_name_slot_count = 24u;
-    s_ui_panel_indexed_name_count = 12u;
-    s_ui_panel_names[0] = "Panel_Radar";
-    s_ui_panel_names[1] = "Panel_RadarFill";
-    s_ui_panel_names[2] = "Panel_RadarOverlay";
-    s_ui_panel_names[3] = "Panel_Messages";
-    s_ui_panel_names[4] = "Panel_MessagesSide";
-    s_ui_panel_names[5] = "Panel_CrystalSideBar";
-    s_ui_panel_names[6] = "Panel_TopPanel";
-    s_ui_panel_names[7] = "Panel_Information";
-    s_ui_panel_names[8] = "Panel_PriorityList";
-    s_ui_panel_names[9] = "Panel_CameraControl";
-    s_ui_panel_names[10] = "Panel_InfoDock";
-    s_ui_panel_names[11] = "Panel_Encyclopedia";
+    s_category_cell_selected_x = 0x0c;
+    s_category_cell_selected_y = 0x18;
+    /* Keep each string pointer at the exact panel/category/slot offset from
+     * the reference tables. The target leaves all unlisted slots untouched. */
+    s_ui_panel_names[11] = s_panel_name_encyclopedia;
+    s_ui_panel_names[0] = s_panel_name_radar;
+    s_ui_panel_names[1] = s_panel_name_radar_fill;
+    s_ui_panel_names[2] = s_panel_name_radar_overlay;
+    s_ui_panel_names[3] = s_panel_name_messages;
+    s_ui_panel_names[4] = s_panel_name_messages_side;
+    s_ui_panel_names[5] = s_panel_name_crystal_side_bar;
+    s_ui_panel_names[6] = s_panel_name_top_panel;
+    s_ui_panel_names[7] = s_panel_name_information;
+    s_ui_panel_names[8] = s_panel_name_priority_list;
+    s_ui_panel_names[9] = s_panel_name_camera_control;
+    s_ui_panel_names[10] = s_panel_name_info_dock;
 
-    s_ui_panel_indexed_names[0][0] = "PanelButton_Radar_Toggle";
-    s_ui_panel_indexed_names[0][1] = "PanelButton_Radar_TaggedObjectView";
-    s_ui_panel_indexed_names[0][2] = "PanelButton_Radar_ZoomIn";
-    s_ui_panel_indexed_names[0][3] = "PanelButton_Radar_ZoomOut";
-    s_ui_panel_indexed_names[0][4] = "PanelButton_Radar_MapView";
-    s_ui_panel_indexed_names[5][0] = "PanelButton_CrystalSideBar_Ore";
-    s_ui_panel_indexed_names[5][1] = "PanelButton_CrystalSideBar_Crystals";
-    s_ui_panel_indexed_names[6][0] = "PanelButton_TopPanel_Options";
-    s_ui_panel_indexed_names[6][1] = "PanelButton_TopPanel_Priorities";
-    s_ui_panel_indexed_names[6][2] = "PanelButton_TopPanel_CallToArms";
-    s_ui_panel_indexed_names[7][0] = "PanelButton_Information_Toggle";
-    s_ui_panel_indexed_names[7][1] = "PanelButton_Information_Function";
-    s_ui_panel_indexed_names[8][0] = "PanelButton_PriorityList_Disable1";
-    s_ui_panel_indexed_names[8][1] = "PanelButton_PriorityList_Disable2";
-    s_ui_panel_indexed_names[8][2] = "PanelButton_PriorityList_Disable3";
-    s_ui_panel_indexed_names[8][3] = "PanelButton_PriorityList_Disable4";
-    s_ui_panel_indexed_names[8][4] = "PanelButton_PriorityList_Disable5";
-    s_ui_panel_indexed_names[8][5] = "PanelButton_PriorityList_Disable6";
-    s_ui_panel_indexed_names[8][6] = "PanelButton_PriorityList_Disable7";
-    s_ui_panel_indexed_names[8][7] = "PanelButton_PriorityList_Disable8";
-    s_ui_panel_indexed_names[8][8] = "PanelButton_PriorityList_Disable9";
-    s_ui_panel_indexed_names[8][9] = "PanelButton_PriorityList_UpOne1";
-    s_ui_panel_indexed_names[8][10] = "PanelButton_PriorityList_UpOne2";
-    s_ui_panel_indexed_names[8][11] = "PanelButton_PriorityList_UpOne3";
-    s_ui_panel_indexed_names[8][12] = "PanelButton_PriorityList_UpOne4";
-    s_ui_panel_indexed_names[8][13] = "PanelButton_PriorityList_UpOne5";
-    s_ui_panel_indexed_names[8][14] = "PanelButton_PriorityList_UpOne6";
-    s_ui_panel_indexed_names[8][15] = "PanelButton_PriorityList_UpOne7";
-    s_ui_panel_indexed_names[8][16] = "PanelButton_PriorityList_UpOne8";
-    s_ui_panel_indexed_names[8][17] = "PanelButton_PriorityList_Close";
-    s_ui_panel_indexed_names[8][18] = "PanelButton_PriorityList_Reset";
-    s_ui_panel_indexed_names[9][0] = "PanelButton_CameraControl_ZoomIn";
-    s_ui_panel_indexed_names[9][1] = "PanelButton_CameraControl_ZoomOut";
-    s_ui_panel_indexed_names[9][2] = "PanelButton_CameraControl_CycleBuildings";
-    s_ui_panel_indexed_names[9][3] = "PanelButton_CameraControl_Rotate";
-    s_ui_panel_indexed_names[10][0] = "PanelButton_InfoDock_Goto";
-    s_ui_panel_indexed_names[10][1] = "PanelButton_InfoDock_Close";
-    s_ui_panel_indexed_names[11][0] = "PanelButton_Encyclopedia_Close";
+    s_ui_panel_indexed_names[0][0] = s_panel_button_radar_toggle;
+    s_ui_panel_indexed_names[0][1] = s_panel_button_radar_tagged;
+    s_ui_panel_indexed_names[0][2] = s_panel_button_radar_zoom_in;
+    s_ui_panel_indexed_names[0][3] = s_panel_button_radar_zoom_out;
+    s_ui_panel_indexed_names[0][4] = s_panel_button_radar_map_view;
+    s_ui_panel_indexed_names[10][0] = s_panel_button_info_dock_goto;
+    s_ui_panel_indexed_names[10][1] = s_panel_button_info_dock_close;
+    s_ui_panel_indexed_names[6][0] = s_panel_button_top_options;
+    s_ui_panel_indexed_names[6][1] = s_panel_button_top_priorities;
+    s_ui_panel_indexed_names[6][2] = s_panel_button_top_call_to_arms;
+    s_ui_panel_indexed_names[7][0] = s_panel_button_information_toggle;
+    s_ui_panel_indexed_names[7][1] = s_panel_button_information_function;
+    s_ui_panel_indexed_names[8][0] = s_panel_button_priority_disable1;
+    s_ui_panel_indexed_names[8][1] = s_panel_button_priority_disable2;
+    s_ui_panel_indexed_names[8][2] = s_panel_button_priority_disable3;
+    s_ui_panel_indexed_names[8][3] = s_panel_button_priority_disable4;
+    s_ui_panel_indexed_names[8][4] = s_panel_button_priority_disable5;
+    s_ui_panel_indexed_names[8][5] = s_panel_button_priority_disable6;
+    s_ui_panel_indexed_names[8][6] = s_panel_button_priority_disable7;
+    s_ui_panel_indexed_names[8][7] = s_panel_button_priority_disable8;
+    s_ui_panel_indexed_names[8][8] = s_panel_button_priority_disable9;
+    s_ui_panel_indexed_names[8][9] = s_panel_button_priority_up1;
+    s_ui_panel_indexed_names[8][10] = s_panel_button_priority_up2;
+    s_ui_panel_indexed_names[8][11] = s_panel_button_priority_up3;
+    s_ui_panel_indexed_names[8][12] = s_panel_button_priority_up4;
+    s_ui_panel_indexed_names[8][13] = s_panel_button_priority_up5;
+    s_ui_panel_indexed_names[8][14] = s_panel_button_priority_up6;
+    s_ui_panel_indexed_names[8][15] = s_panel_button_priority_up7;
+    s_ui_panel_indexed_names[8][16] = s_panel_button_priority_up8;
+    s_ui_panel_indexed_names[8][17] = s_panel_button_priority_close;
+    s_ui_panel_indexed_names[8][18] = s_panel_button_priority_reset;
+    s_ui_panel_indexed_names[11][0] = s_panel_button_encyclopedia_close;
+    s_ui_panel_indexed_names[9][0] = s_panel_button_camera_zoom_in;
+    s_ui_panel_indexed_names[9][1] = s_panel_button_camera_zoom_out;
+    s_ui_panel_indexed_names[9][2] = s_panel_button_camera_cycle_buildings;
+    s_ui_panel_indexed_names[9][3] = s_panel_button_camera_rotate;
+    s_ui_panel_indexed_names[5][0] = s_panel_button_crystal_ore;
+    s_ui_panel_indexed_names[5][1] = s_panel_button_crystal_crystals;
 }
 
 static ToolTipIconConfigHooks s_tooltip_icon_config_hooks;
@@ -5175,7 +5278,8 @@ static int      s_band_mode;
 /* Corpus records span DAT_0054c000..DAT_0055235f at 0x27c-byte strides;
  * the update walk's exclusive flag bound is DAT_0055235c (record 39's
  * +0x278 field), so the timestamp band has 40 records. Tooltip overlay
- * initialization clears records 0 through 38 and leaves record 39 intact. */
+ * initialization clears 0x1839 dwords: 39 full records plus the first
+ * three words of record 39, leaving its update-bound flag intact. */
 // GLOBAL: LEGORR 0x0054c000
 static TimedEffectRecord s_timed_effect_records[TIMED_EFFECT_RECORD_COUNT];
 /* DAT_0054bf3c is the tooltip duration threshold (scale * 25). Timed-effect
@@ -5893,13 +5997,16 @@ void advisor_text_display_ops_set(const AdvisorTextDisplayOps* ops)
  * and scroll state. Use the shared record writer and wrapped renderer when a
  * display-state provider supplies that record but no backend-specific draw
  * callback. */
-static int advisor_text_output_draw(void* output, const char* text,
-                                    int mode, float delta)
+static void advisor_text_output_copy(void* output, const char* text, int mode)
 {
-    if (output == NULL || text == NULL) return 0;
+    if (output == NULL || text == NULL) return;
     objective_advisor_text_copy(output, mode, "%s", text);
-    (void)text_buffer_draw_wrapped(output, 0u, delta, NULL);
-    return 1;
+}
+
+static int advisor_text_output_draw(void* output, float delta)
+{
+    if (output == NULL) return 0;
+    return text_buffer_draw_wrapped(output, 0u, delta, NULL);
 }
 
 /* AdvisorTextDisplayWorker (FUN_0046ad00): update the active advisor slot
@@ -5912,25 +6019,24 @@ void advisor_text_display_worker(float delta)
     AdvisorTextDisplayState state;
     int old_slot;
     int alternate;
+    int slot_available = 0;
+    int message_pending;
     if (ops->state_get == NULL) return;
     memset(&state, 0, sizeof(state));
     if (!ops->state_get(ops->context, &state)) return;
     old_slot = state.current_slot;
+    message_pending = state.message_flags != 0u;
     if (state.message_flags == 0u) {
-        int available = ops->slot_is_available != NULL ?
+        slot_available = ops->slot_is_available != NULL ?
             ops->slot_is_available(ops->context, state.current_slot) : 0;
-        if (available && state.current_slot != 0x1a) {
+        if (slot_available && state.current_slot != 0x1a) {
             alternate = state.hidden_slot != 0;
-            if (ops->slot_text_draw != NULL) {
-                ops->slot_text_draw(ops->context, state.current_slot,
-                                    alternate, state.x, state.y);
-            }
-            else {
+            if (ops->slot_text_draw == NULL) {
                 const char* text = ui_message_text_slot_get(
                     (unsigned int)state.current_slot);
                 void* output = alternate != 0 ? state.alternate_text_output :
                                                 state.primary_text_output;
-                (void)advisor_text_output_draw(output, text, 1, delta);
+                advisor_text_output_copy(output, text, 1);
             }
             if (state.message_timer <= 0.0f) {
                 state.current_slot = 0x1a;
@@ -5944,27 +6050,53 @@ void advisor_text_display_worker(float delta)
     }
     else if (state.message_id == 0) {
         state.message_flags = 0u;
+        message_pending = 0;
         if (ops->message_flags_set != NULL)
             ops->message_flags_set(ops->context, 0u);
     }
     else {
-        if (ops->message_text_draw != NULL) {
-            ops->message_text_draw(ops->context, state.message_id,
-                                   state.x, state.y);
-        }
         if ((state.message_flags & 0x8000u) == 0u) {
             state.message_flags--;
             if (ops->message_flags_set != NULL)
                 ops->message_flags_set(ops->context, state.message_flags);
         }
     }
-    if (ops->overlay_active != NULL &&
-        ops->overlay_active(ops->context) && old_slot != 0x16) {
+    if (((state.interface_flags & 0x100000u) != 0u ||
+         (ops->overlay_active != NULL &&
+          ops->overlay_active(ops->context))) && old_slot != 0x16) {
+        if (ops->interface_finish != NULL)
+            ops->interface_finish(ops->context, &state, delta);
         if (ops->overlay_close != NULL) ops->overlay_close(ops->context);
         return;
     }
     if (ops->interface_finish != NULL)
         ops->interface_finish(ops->context, &state, delta);
+    if (message_pending) {
+        if (ops->message_text_draw != NULL) {
+            ops->message_text_draw(ops->context, state.message_id,
+                                   state.x, state.y);
+        }
+        else {
+            (void)advisor_text_output_draw(state.primary_text_output, delta);
+        }
+    }
+    else {
+        if (slot_available && old_slot != 0x1a) {
+            alternate = state.hidden_slot != 0;
+            if (ops->slot_text_draw != NULL) {
+                ops->slot_text_draw(ops->context, old_slot, alternate,
+                                    state.x, state.y);
+            }
+            else {
+                void* output = alternate != 0 ? state.alternate_text_output :
+                                                state.primary_text_output;
+                (void)advisor_text_output_draw(output, delta);
+            }
+        }
+        else {
+            (void)advisor_text_output_draw(state.primary_text_output, delta);
+        }
+    }
 }
 
 void selected_ground_marker_ops_set(const SelectedGroundMarkerOps* ops)
@@ -6265,19 +6397,15 @@ static void tooltip_overlay_state_fill(
     state->color_base[0] = color_r;
     state->color_base[1] = color_g;
     state->color_base[2] = color_b;
-    state->color_high[0] = color_r * 1.4f;
-    state->color_high[1] = color_g * 1.4f;
-    state->color_high[2] = color_b * 1.4f;
-    state->color_low[0] = color_r * 0.6f;
-    state->color_low[1] = color_g * 0.6f;
-    state->color_low[2] = color_b * 0.6f;
+    state->color_high[0] = color_r + color_r * 0.4f;
+    state->color_high[1] = color_g + color_g * 0.4f;
+    state->color_high[2] = color_b + color_b * 0.4f;
+    state->color_low[0] = color_r - color_r * 0.4f;
+    state->color_low[1] = color_g - color_g * 0.4f;
+    state->color_low[2] = color_b - color_b * 0.4f;
     for (i = 0; i < 3; ++i) {
         if (state->color_base[i] > 1.0f) state->color_base[i] = 1.0f;
         if (state->color_base[i] < 0.0f) state->color_base[i] = 0.0f;
-        if (state->color_high[i] > 1.0f) state->color_high[i] = 1.0f;
-        if (state->color_high[i] < 0.0f) state->color_high[i] = 0.0f;
-        if (state->color_low[i] > 1.0f) state->color_low[i] = 1.0f;
-        if (state->color_low[i] < 0.0f) state->color_low[i] = 0.0f;
     }
 }
 
@@ -6297,10 +6425,11 @@ void tooltip_overlay_state_initialize_state(
                                color_r, color_g, color_b, metric);
 }
 
-/* TooltipOverlayStateInitialize @ 0x46b1d0: the native ten-argument entry
+/* TooltipOverlayStateInitialize @ 0x46b1d0: the target's ten stack-word entry
  * publishes its fixed labels and geometry/color globals, sets the timed
- * tooltip duration in 25-unit ticks, and clears the first 39 0x27c-byte
- * overlay records. Record 39 remains the traversal sentinel. */
+ * tooltip duration in 25-unit ticks, and clears 0x1839 dwords at the start
+ * of the 0x27c-byte overlay-record table. This includes the first 12 bytes
+ * of record 39 but leaves its +0x278 traversal-bound flag intact. */
 // FUNCTION: LEGORR 0x0046b1d0
 void tooltip_overlay_state_initialize(
     void* font, uint32_t value2, uint32_t value3, float scale,

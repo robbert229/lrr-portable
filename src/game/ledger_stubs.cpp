@@ -6662,8 +6662,9 @@ void ledger_stub_0045a5b0_UITextOutputPositionAndDraw(
     if (output == NULL || offsets == NULL) return;
     memcpy(&offset_y, (char*)offsets + 0x18, sizeof(offset_y));
     memcpy(&offset_x, (char*)offsets + 0x1c, sizeof(offset_x));
-    x = (int)floor((double)((float)base_x + offset_x));
-    y = (int)floor((double)((float)base_y + offset_y));
+    /* The retail path converts x (+0x1c) before y (+0x18). */
+    x = crt_float_to_long((float)base_x + offset_x);
+    y = crt_float_to_long((float)base_y + offset_y);
     float_pair_at_offset4_set_from_ints(output, x, y);
     (void)text_buffer_draw_wrapped(output, start_line, line_scale, NULL);
 }
@@ -9930,6 +9931,9 @@ static void legacy_color_pair(float source[3], float high[3], float low[3])
     for (i = 0; i < 3; ++i) {
         high[i] = legacy_clamp_01(source[i] + source[i] * 0.4f);
         low[i] = legacy_clamp_01(source[i] - source[i] * 0.4f);
+        /* The reference clamps the source channels after deriving both
+           shade arrays. */
+        source[i] = legacy_clamp_01(source[i]);
     }
 }
 
@@ -9945,17 +9949,17 @@ int legacy_health_bar_config_load(BlockFile* values, BlockFile* names)
     float rgb[3];
     if (cfg == NULL || key_cfg == NULL) return 0;
     if (!legacy_config_pair(cfg, "ObjInfo::HealthBarPosition", &x, &y)) return 0;
+    s_legacy_health_bar.x = (float)x;
+    s_legacy_health_bar.y = (float)y;
     if (!legacy_config_pair(cfg, "ObjInfo::HealthBarWidthHeight",
                             &width, &height)) return 0;
+    s_legacy_health_bar.width = (float)width;
+    s_legacy_health_bar.height = (float)height;
     // The original derives this through an integer conversion of the raw
     // value string, so a missing or empty key yields 0 rather than 1.
     border = block_get_int(cfg, "ObjInfo::HealthBarBorderSize", 0);
-    if (!legacy_config_rgb(cfg, "ObjInfo::HealthBarBorderRGB", rgb)) return 0;
-    s_legacy_health_bar.x = (float)x;
-    s_legacy_health_bar.y = (float)y;
-    s_legacy_health_bar.width = (float)width;
-    s_legacy_health_bar.height = (float)height;
     s_legacy_health_bar.border = (float)border;
+    if (!legacy_config_rgb(cfg, "ObjInfo::HealthBarBorderRGB", rgb)) return 0;
     memcpy(s_legacy_health_bar.border_rgb, rgb, sizeof(rgb));
     legacy_color_pair(s_legacy_health_bar.border_rgb,
                       s_legacy_health_bar.border_high,
@@ -9965,14 +9969,15 @@ int legacy_health_bar_config_load(BlockFile* values, BlockFile* names)
     if (!legacy_config_rgb(cfg, "ObjInfo::HealthBarRGB", rgb)) return 0;
     memcpy(s_legacy_health_bar.health_rgb, rgb, sizeof(rgb));
     vertical = block_get_bool(cfg, "ObjInfo::HealthBarVertical");
-    /* Mirrors the original's writes to the shared HUD state word
-       (DAT_004ffe68): the loaded bit (2) is always set and the vertical
-       bit (8) is set only when the key reads as 1; neither is cleared.
-       The port models those two bits on the health-bar state record that
-       the renderer gates on. */
-    s_legacy_health_bar.vertical = vertical == 1 ? 1u : 0u;
+    /* DAT_004ffe68 is shared by the other HUD loaders. The original only
+       ORs these bits: a later horizontal reload does not clear vertical. */
+    if (vertical == 1) s_legacy_hud_state_flags |= 8u;
+    s_legacy_hud_state_flags |= 2u;
+    s_legacy_health_bar.vertical =
+        (s_legacy_hud_state_flags & 8u) != 0 ? 1u : 0u;
     s_legacy_health_bar.flags |= 2u;
-    if (vertical == 1) s_legacy_health_bar.flags |= 8u;
+    if ((s_legacy_hud_state_flags & 8u) != 0)
+        s_legacy_health_bar.flags |= 8u;
     return 1;
 }
 

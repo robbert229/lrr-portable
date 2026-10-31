@@ -357,32 +357,67 @@ void entity_type_config_row_finalize(void* context, void* row,
     }
 }
 
-static int entity_type_config_table_load(TypeConfigTable* table,
-                                         const char* section_name,
-                                         uint32_t row_kind,
-                                         uint32_t row_stride)
-{
-    TypeConfigHooks hooks;
-    BlockRec* section;
-    if (table == NULL || s_entity_type_config_file == NULL) return 0;
-    section = block_subgroup(s_entity_type_config_file, section_name);
-    hooks.entry_count = entity_type_config_entry_count;
-    hooks.entry_get = entity_type_config_entry_get;
-    hooks.row_parse = entity_type_config_row_parse;
-    hooks.row_finalize = entity_type_config_row_finalize;
-    hooks.context = table;
-    type_config_table_release(table);
-    return type_config_record_table_load(table, section, row_kind,
-                                         row_stride, &hooks);
-}
+#define ENTITY_TYPE_CONFIG_TABLE_LOAD(table_, section_name_, kind_, stride_) \
+    TypeConfigTable* table = (table_); \
+    BlockRec* section; \
+    BlockRec* child; \
+    uint32_t count; \
+    uint32_t i; \
+    char* rows; \
+    char** names; \
+    void** row_owned; \
+    if (table == NULL || s_entity_type_config_file == NULL) return 0; \
+    section = block_subgroup(s_entity_type_config_file, (section_name_)); \
+    type_config_table_release(table); \
+    count = entity_type_config_entry_count(NULL, section); \
+    table->row_stride = (stride_); \
+    if (count == 0u || count > 0xffffffffu / (stride_) || \
+        count > 0xffffffffu / (uint32_t)sizeof(char*)) return 0; \
+    rows = (char*)engine_heap_alloc((long)((size_t)count * (stride_))); \
+    if (rows == NULL) return 0; \
+    names = (char**)engine_heap_alloc((long)((size_t)count * sizeof(char*))); \
+    if (names == NULL) { engine_heap_free(rows); return 0; } \
+    memset(names, 0, (size_t)count * sizeof(char*)); \
+    row_owned = (void**)calloc((size_t)count, sizeof(void*)); \
+    if (row_owned == NULL) { \
+        engine_heap_free(names); engine_heap_free(rows); return 0; \
+    } \
+    table->rows = rows; table->names = names; \
+    table->row_owned = row_owned; table->capacity = count; \
+    child = block_first_child(section); \
+    for (i = 0u; i < count; ++i) { \
+        const char* source_name; \
+        size_t name_length; \
+        char* row = rows + (size_t)i * (stride_); \
+        memset(row, 0, (stride_)); \
+        table->count = i + 1u; \
+        if (child == NULL || \
+            !entity_type_config_row_parse(table, child, row, (kind_))) { \
+            type_config_table_release(table); return 0; \
+        } \
+        memcpy(row, &i, sizeof(i)); \
+        entity_type_config_row_finalize(table, row, (kind_)); \
+        source_name = block_name(child); \
+        if (source_name == NULL) { \
+            type_config_table_release(table); return 0; \
+        } \
+        name_length = strlen(source_name); \
+        names[i] = (char*)engine_heap_alloc((long)(name_length + 1u)); \
+        if (names[i] == NULL) { \
+            type_config_table_release(table); return 0; \
+        } \
+        memcpy(names[i], source_name, name_length + 1u); \
+        child = block_next_sibling(child); \
+    } \
+    return 1
 
 /* MiniFigureTypeTableLoad (FUN_0042cf50) reads the active engine config,
  * builds 0x74-byte rows, finalizes each parsed row, and stores copied names. */
 // FUNCTION: LEGORR 0x0042CF50
 int entity_minifigure_type_table_load(void)
 {
-    return entity_type_config_table_load(&s_minifigure_type_config,
-                                         "MiniFigureTypes", 1u, 0x74u);
+    ENTITY_TYPE_CONFIG_TABLE_LOAD(&s_minifigure_type_config,
+                                  "MiniFigureTypes", 1u, 0x74u);
 }
 
 /* BuildingTypesLoad (FUN_0042d2b0) uses the same config walk with 0x14c-byte
@@ -390,9 +425,11 @@ int entity_minifigure_type_table_load(void)
 // FUNCTION: LEGORR 0x0042D2B0
 int entity_building_types_load(void)
 {
-    return entity_type_config_table_load(&s_building_type_config,
-                                         "BuildingTypes", 2u, 0x14cu);
+    ENTITY_TYPE_CONFIG_TABLE_LOAD(&s_building_type_config,
+                                  "BuildingTypes", 2u, 0x14cu);
 }
+
+#undef ENTITY_TYPE_CONFIG_TABLE_LOAD
 
 static int entity_config_name_equal(const char* left, const char* right)
 {
@@ -451,14 +488,22 @@ static void entity_config_named_value_set(void* context, const char* name,
 {
     EntityNameResolveContext* state = (EntityNameResolveContext*)context;
     int index = entity_config_named_index(name);
-    if (state == NULL || index < 0 || value == NULL) return;
+    if (state == NULL || index < 0) return;
     if (state->the_names) {
+        if (value == NULL) {
+            state->named_the_values[index][0] = '\0';
+            return;
+        }
         strncpy(state->named_the_values[index], (const char*)value,
                 sizeof(state->named_the_values[index]) - 1u);
         state->named_the_values[index][
             sizeof(state->named_the_values[index]) - 1u] = '\0';
     }
     else {
+        if (value == NULL) {
+            state->named_values[index][0] = '\0';
+            return;
+        }
         strncpy(state->named_values[index], (const char*)value,
                 sizeof(state->named_values[index]) - 1u);
         state->named_values[index][
@@ -497,17 +542,19 @@ typedef struct EntityObjectNameLoadState {
 
 static EntityObjectNameLoadState* s_entity_object_name_load_state;
 
-#define ENTITY_OBJECT_NAMES_LOAD_BODY() \
+#define ENTITY_OBJECT_NAMES_LOAD_BODY(section_name_) \
     static const char* const named_keys[9] = { \
         "Ore", "PowerCrystal", "ProcessedOre", "Dynamite", "Barrier", \
         "ElectricFence", "SpiderWeb", "OohScary", "Path" \
     }; \
+    BlockRec* section; \
     EntityObjectNameLoadState* state = s_entity_object_name_load_state; \
     ObjectNameTableSet* tables; \
     ObjectNameLoadHooks* hooks; \
     uint32_t i; \
     if (state == NULL || state->tables == NULL || state->hooks == NULL || \
-        section == NULL) return; \
+        config == NULL) return; \
+    section = block_subgroup(config, (section_name_)); \
     tables = state->tables; \
     hooks = state->hooks; \
     for (i = 0u; i < 5u; ++i) { \
@@ -544,20 +591,21 @@ static EntityObjectNameLoadState* s_entity_object_name_load_state;
         } \
     }
 
-/* ObjectNamesLoad (FUN_0042d600): resolve every configured catalog name and
- * named object label against the supplied ObjectNames block. */
+/* ObjectNamesLoad (FUN_0042d600) receives the parent config handle. The
+ * decompile builds ObjectNames-qualified keys and queries them against that
+ * root; block_subgroup provides the equivalent scope for the portable tree. */
 // FUNCTION: LEGORR 0x0042D600
-void entity_object_names_load(BlockRec* section)
+void entity_object_names_load(BlockFile* config)
 {
-    ENTITY_OBJECT_NAMES_LOAD_BODY();
+    ENTITY_OBJECT_NAMES_LOAD_BODY("ObjectNames");
 }
 
-/* ObjectTheNamesLoad (FUN_0042da20) repeats the same catalog walk against its
- * parallel ObjectTheNames block, leaving missing labels unchanged. */
+/* ObjectTheNamesLoad (FUN_0042da20) has the same parent-config ABI and uses
+ * the separate ObjectTheNames-qualified lookup namespace. */
 // FUNCTION: LEGORR 0x0042DA20
-void entity_object_the_names_load(BlockRec* section)
+void entity_object_the_names_load(BlockFile* config)
 {
-    ENTITY_OBJECT_NAMES_LOAD_BODY();
+    ENTITY_OBJECT_NAMES_LOAD_BODY("ObjectTheNames");
 }
 
 #undef ENTITY_OBJECT_NAMES_LOAD_BODY
@@ -583,10 +631,9 @@ void entity_names_config_load(BlockFile* cfg)
     ObjectNameTableSet tables;
     ObjectNameLoadHooks hooks;
     EntityObjectNameLoadState object_load_state;
-    EntityNameResolveContext resolve_state;
+    static EntityNameResolveContext resolve_state;
     const char* special_names[16][2];
     const char* special_the_names[16][2];
-    BlockRec* object_names;
     uint32_t i;
 
     if (cfg == NULL) return;
@@ -594,7 +641,6 @@ void entity_names_config_load(BlockFile* cfg)
     (void)entity_minifigure_type_table_load();
     (void)entity_building_types_load();
     memset(&tables, 0, sizeof(tables));
-    memset(&resolve_state, 0, sizeof(resolve_state));
     memset(special_names, 0, sizeof(special_names));
     memset(special_the_names, 0, sizeof(special_the_names));
     for (i = 0u; i < 5u; ++i) {
@@ -609,20 +655,17 @@ void entity_names_config_load(BlockFile* cfg)
     hooks.value_resolve = entity_config_value_resolve;
     hooks.named_value_set = entity_config_named_value_set;
     hooks.context = &resolve_state;
+    resolve_state.the_names = 0;
     object_load_state.tables = &tables;
     object_load_state.hooks = &hooks;
     s_entity_object_name_load_state = &object_load_state;
 
-    object_names = block_subgroup(cfg, "ObjectNames");
-    if (object_names != NULL)
-        entity_object_names_load(object_names);
+    entity_object_names_load(cfg);
     for (i = 0u; i < 9u; ++i)
         tables.named_output_values[i] = &named_the_values[i];
     for (i = 0u; i < 5u; ++i) tables.output_values[i] = &the_values[i];
     resolve_state.the_names = 1;
-    object_names = block_subgroup(cfg, "ObjectTheNames");
-    if (object_names != NULL)
-        entity_object_the_names_load(object_names);
+    entity_object_the_names_load(cfg);
     s_entity_object_name_load_state = NULL;
 
     for (i = 0u; i < 5u; ++i) {

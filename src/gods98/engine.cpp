@@ -182,7 +182,7 @@ int EngineTick(EngineContext* ctx, float dt)
     /* 5. Main simulation step — 0 => quit frame (MainSimStep @ 0x4250c0,
      *    ported in mainsim.*). */
     uint32_t sim_out1 = 0, sim_out2 = 0, sim_out3 = 0;
-    if (main_sim_step(ctx, scale, dt, &sim_out1, &sim_out2, &sim_out3) == 0) {
+    if (main_sim_step(ctx, scale, &sim_out1, &sim_out2, &sim_out3) == 0) {
         return 0;
     }
 
@@ -290,7 +290,9 @@ void engine_keep_running_hook_set(EngineKeepRunningHook hook, void* user)
     s_keep_running_user = user;
 }
 
-// FUNCTION: LEGORR 0x00435940
+/* Portable quit/liveness adapter. Retail KeepRunning @ 0x435940 is a global
+ * no-argument state machine that also polls loader/resource interfaces; the
+ * current EngineContext/hook API does not expose those owners. */
 int EngineKeepRunning(EngineContext* ctx)
 {
     if (ctx == NULL) return 0;
@@ -300,10 +302,8 @@ int EngineKeepRunning(EngineContext* ctx)
     return 1;
 }
 
-/* Time-scale factor — corpus FUN_0041fb40, read once per frame in the tick.
- * Multiplies dt into the *scaled* delta passed to subsystem tickers.
- */
-// FUNCTION: LEGORR 0x0041fb40
+/* Portable context adapter used by EngineTick and local tests. Retail
+ * FUN_0041fb40 has no arguments and reads DAT_0055615c directly. */
 float EngineTimeScale(EngineContext* ctx)
 {
     /* Corpus FUN_0041fb40: the config-derived speed factor. Issue #85 wires
@@ -723,6 +723,13 @@ void global_position_seam_last(void** out_handle, int* out_x, int* out_y)
  * one float in this module's storage. */
 // GLOBAL: LEGORR 0x0055615c
 static float s_scroll_scale = 1.0f; /* DAT_0055615c; port default (ref is zero-filled) */
+
+/* TimeScaleGet @ 0x0041fb40 returns the shared scroll/time scale global. */
+// FUNCTION: LEGORR 0x0041fb40
+float EngineTimeScale(void)
+{
+    return s_scroll_scale;
+}
 
 float scroll_scale_peek(void) { return s_scroll_scale; }
 void  scroll_scale_set(float value) { s_scroll_scale = value; }

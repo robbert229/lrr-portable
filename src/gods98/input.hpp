@@ -116,7 +116,10 @@ void input_direct_hooks_set(const DirectInputHooks* hooks);
 int input_direct_initialize(void); /* FUN_0047ed90 */
 void input_direct_shutdown(void);
 InputState* input_direct_state_get(void);
-void input_state_poll(InputState* state, int poll_active); /* FUN_0047eef0 */
+/* Port adapter for InputStatePoll. Retail takes no arguments and reads
+ * DirectInput plus two global polling gates; this helper receives those
+ * state inputs explicitly. */
+void input_state_poll(InputState* state, int poll_active);
 
 void input_reset(InputState* s);
 
@@ -160,7 +163,8 @@ int  input_mouse_pressed(const InputState* s);
  * `_toupper`, represented separately in src/crt. */
 uint32_t input_key_to_ascii(const InputState* s, uint32_t scancode);
 
-/* KeyContextCheck (FUN_00411f00): filter[key]; 0 = unrestricted. */
+/* Port adapter for the KeyContextCheck table read. Retail takes only `key`
+ * and reads a fixed global table; this helper also takes the owning state. */
 uint32_t input_key_context(const InputState* s, uint32_t key);
 
 /* EnginePreTick text pump: for each key edge allowed by the context filter,
@@ -170,13 +174,10 @@ uint32_t input_key_context(const InputState* s, uint32_t key);
 void input_text_pump(InputState* s, char* buf, int cap, int* len_out,
                      int clear);
 
-/* QuitPoll machine (FUN_004589c0): corner-dwell quit gesture. Feeds the
- * mouse position against the corner rectangle; enter/leave counters on the
- * caller-supplied dwell `slot` (0..4; in the original the slot indexes off
- * the objective/advisor flag word `_DAT_004ffbc0` — finding 22, NOT input
- * devices); returns 1 when the gesture completes (dwelled in the corner,
- * then left past the quit rectangle) AND keep_running is 0 — mirroring
- * quitFlag = (KeepRunning() == 0). Returns 0 otherwise. */
+/* Port-local dwell utility. This is not the retail QuitPoll ABI: the target
+ * takes two mode gates and an output pointer, reads global cursor/window and
+ * objective state, and may dispatch input/audio/UI operations. That owner
+ * state is not represented by InputState. */
 int input_quit_dwell(InputState* s, int slot, int mx, int my,
                      int rect_x, int rect_y, int rect_w, int rect_h,
                      int quit_w, int quit_h, int keep_running);
@@ -209,9 +210,11 @@ uint32_t player_input_flag8_get(int kind, int action);
 
 struct EngineContext;  /* engine.hpp: the DAT_00556ecc state word lives here */
 
-/* InputActionPressedGet / InputBindingPressedGet (FUN_0041c8f0 /
- * FUN_0041c950): "is this action/binding pressed right now?" Both read the
- * engine-state word (DAT_00556ecc) bit 0x10000000 as a "pressed-yes-every-
+/* Port adapters for InputActionPressedGet / InputBindingPressedGet
+ * (FUN_0041c8f0 / FUN_0041c950): "is this action/binding pressed right
+ * now?" Retail signatures omit the EngineContext argument and read its
+ * global state word. Both read the engine-state word (DAT_00556ecc) bit
+ * 0x10000000 as a "pressed-yes-every-
  * thing" gate — NOT the 0x40000000 RuntimeFlag40000000Get mask — and both
  * consult the system-state word (DAT_004ff980) bit 0 for the inverted
  * alternate reading. Action 0x49 is hard-wired not-pressed. The corpus

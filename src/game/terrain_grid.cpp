@@ -48,7 +48,6 @@ static TerrainActivationFloodHook s_terrain_activation_flood_hook;
 static void* s_terrain_activation_context;
 static TerrainFloodStateHook s_terrain_flood_state_hook;
 static TerrainFloodEffectHook s_terrain_flood_effect_hook;
-static TerrainFloodRollHook s_terrain_flood_roll_hook;
 static void* s_terrain_flood_context;
 static TerrainCellWorldPositionHook s_cell_world_position_hook;
 static void* s_cell_world_position_context;
@@ -1052,12 +1051,10 @@ int terrain_cell_activation_try(void* object, int x, int y)
 
 void terrain_neighbor_flood_hooks_install(TerrainFloodStateHook state,
                                           TerrainFloodEffectHook effect,
-                                          TerrainFloodRollHook roll,
                                           void* context)
 {
     s_terrain_flood_state_hook = state;
     s_terrain_flood_effect_hook = effect;
-    s_terrain_flood_roll_hook = roll;
     s_terrain_flood_context = context;
 }
 
@@ -1109,9 +1106,9 @@ static int terrain_flood_special_query(int x, int y, int mode)
 }
 
 /* TerrainCellNeighborFloodWalk (FUN_0040d850): mark visited cells, inspect
- * the corpus's cardinal/extended candidate offsets, emit edge effects, and
- * recurse into unoccupied cells. State queries, edge creation, and random
- * gating are explicit seams because the owning terrain renderer is unported. */
+ * the corpus's cardinal/extended candidate offsets, draw the exact shared
+ * random gate, emit edge effects, and recurse into eligible cells. The edge
+ * effect itself remains renderer-owned. */
 // FUNCTION: LEGORR 0x0040D850
 void terrain_cell_neighbor_flood_walk(int x, int y, int force, float strength)
 {
@@ -1161,16 +1158,19 @@ void terrain_cell_neighbor_flood_walk(int x, int y, int force, float strength)
             if (intermediate_flags != NULL) *intermediate_flags |= 0x100u;
         }
         candidate_has_record = terrain_cell_object_record_present(nx, ny);
-        if (!candidate_has_record ||
-            terrain_flood_special_query(nx, ny, 2) != 0) {
+        /* The original also permits an existing cell record when its
+         * float at +0x0c is nonpositive. GridCellObjectNode has no matching
+         * field, so the port can only establish the absent-record case. */
+        if (!candidate_has_record) {
             const uint32_t direction_flag = 1u << direction;
             if ((*next_flags & direction_flag) == 0u) {
                 int emit_effect = force != 0;
-                if (!emit_effect && strength != 0.0f &&
-                    s_terrain_flood_roll_hook != NULL) {
+                if (!emit_effect && strength != 0.0f) {
                     const float capped = strength > 200.0f ? 200.0f : strength;
-                    emit_effect = s_terrain_flood_roll_hook(
-                        (int)capped, s_terrain_flood_context);
+                    const int random_value = level_rand_u16();
+                    const int divisor = crt_float_to_long(capped);
+                    emit_effect = divisor != 0 &&
+                        random_value % divisor == 0;
                 }
                 *flags |= 1u << ((direction - 2) & 3);
                 if (emit_effect && s_terrain_flood_effect_hook != NULL) {

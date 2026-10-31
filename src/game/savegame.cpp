@@ -714,14 +714,12 @@ int osf_read(GameContext* ctx, const char* path)
     if (ctx == NULL || path == NULL) {
         return 0;
     }
-    /* The port also clears its shadow here (the corpus frees/reallocs its
-     * shadow on the next snapshot; clearing is the fixed-array equivalent,
-     * leaving nothing shadowed or stale from an earlier slot). */
+    /* OsfReadStateReset clears only the live table. The corpus leaves the
+     * restart snapshot intact when the file is absent or invalid; a valid
+     * read replaces it through OsfSnapshot below. */
     s_osf_read_reset_context = ctx;
     osf_read_state_reset();
     s_osf_read_reset_context = NULL;
-    ctx->osf_shadow_count = 0;
-    ctx->osf_shadow_dirty = 0;
     FILE* fp = fopen(path, MODE_RB);
     if (fp == NULL) {
         return 0;

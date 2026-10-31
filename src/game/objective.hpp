@@ -99,11 +99,16 @@ int objective_check(LevelState* s, int* mark, float dt);
 
 /* Objective-result announcer (corpus FUN_00458670). `who`:
  *   0 pending / 1 achieved / 2 failed / 3 failed-with-crystals.
- * Sets the runtime word bits + result index in the block, and fills the
- * advisor stream text (DAT_004ffe38 analog: "Stream Objective_…"). */
+ * The mapped entry uses the active level, like the reference current-level
+ * getter. Local port callers can use the explicit-level adapter below. */
+void objective_announce_current(int who); /* FUN_00458670, one argument */
 void objective_announce(LevelState* s, int who);
+void objective_active_level_bind(LevelState* s);
+void objective_active_level_clear(LevelState* s);
+const char* objective_voice_alias_get(void);
+int objective_voice_alias_pending_take(void);
 
-/* The advisor stream text built by the announcer ("" when none). */
+/* Port-side string used by the objective/help overlay ("" when none). */
 const char* objective_stream(const LevelState* s);
 
 /* Advisor decision (finding 22): should the hint display for the current
@@ -111,9 +116,15 @@ const char* objective_stream(const LevelState* s);
  * achieved / 0x80 failed) is set or no stream was produced. */
 int objective_advisor_shown(const LevelState* s);
 
-/* Per-frame objective state machine (corpus FUN_00458be0). Consumes the
- * pending-result word and drives checker + announcer when idle. `dt` is the
- * frame delta. Returns 0 when a goal resolves this frame, else 1. */
+/* Target-shaped ObjectiveTick (FUN_00458be0): the opaque first argument is
+ * DAT_00556140, `s` is DAT_005560d4, checker_dt is passed to ObjectiveCheck,
+ * and frame_dt advances result-stream timing. The renderer/UI lanes whose
+ * owner is the engine are represented only where this module has a real API. */
+void objective_tick_target(void* engine, LevelState* s,
+                           float checker_dt, float frame_dt);
+
+/* Explicit-level adapter used by the portable frame loop. Returns 0 once a
+ * result is active or resolves this tick, else 1. */
 int objective_tick(LevelState* s, float dt);
 
 #ifdef __cplusplus

@@ -103,7 +103,7 @@ void animation_track_keys_interpolate(void* owner, const void* track,
 void scene_node_transform_matrix_apply(void* owner, const void* track,
                                        const float position[3],
                                        const float rotation[3],
-                                       const float scale[3]); /* 0x004882e0 */
+                                       const float scale[3]); /* portable adapter */
 void matrix_apply_rotation_about_z_with_offset(void* target,
                                                float matrix[16],
                                                float offset); /* 0x0044b7a0 */
@@ -528,23 +528,30 @@ int rect_contains_point_half_open(const float* rect_record, int x, int y);
 /* --- offset-point rect family (corpus FUN_0045b590 / FUN_00463c00 /
  * FUN_00463c90; findings 241/363/446) --------------------------------------
  * All three are the same half-open containment test over a bounds-quad
- * rect {x_min, y_min, x_max, y_max}: the two float offsets truncate to int
- * (the corpus's two __ftol calls) and subtract from the integer point
+ * rect {x_min, y_min, x_max, y_max}: two float offsets are converted by
+ * __ftol (round to nearest) and subtracted from the integer point
  * before the compare — `x_min <= float(x - ox) < x_max` and the same for
- * y. The port's cast matches the documented __ftol ≡ C++ truncation. */
+ * y. Retail 0x45b590/0x463c00 take `(unused, bounds, x, y)` on the stack;
+ * the offsets are already in x87 ST(0)/ST(1). The helpers below are
+ * port-local adapters and do not model that hidden floating-point ABI. */
 
 /* Direct bounds quad (FUN_0045b590 / FUN_00463c00; the corpus's two call
  * shapes carry identical arithmetic). */
+/* Port-local helpers; neither declaration models the retail x87 ABI. */
+int rect_contains_offset_point(const float rect_bounds[4],
+                               const float offset[2], int x, int y);
 int rect_contains_offset_point(const float rect_bounds[4], float off_x,
                                float off_y, int x, int y);
+int rect_contains_point_by_converted_coords(const float rect_bounds[4],
+                                            const float offset[2],
+                                            int x, int y);
 int rect_contains_point_by_converted_coords(const float rect_bounds[4],
                                             float off_x, float off_y,
                                             int x, int y);
 
-/* Bounds read through the pointer stored in the corpus record's +0x14 slot
- * (FUN_00463c90): the port passes that slot resolved as a pointer to the
- * rect pointer. NULL slot or NULL rect answers 0 — the corpus dereferences
- * unguarded (documented deviation). */
+/* Port-local explicit-bounds helper. Retail FUN_00463c90 takes
+ * (record, x, y), resolves bounds at +0x14, and uses two conversion values
+ * from state not exposed by this helper's API. */
 int rect_contains_point_from_object_bounds(const float* const* bounds_at_14,
                                            float off_x, float off_y,
                                            int x, int y);
@@ -918,8 +925,9 @@ void renderer_subobject_hooks_install(RendererSubobjectFindHook find,
                                       RendererSubobjectApplyHook apply,
                                       void* context);
 void* renderer_object_subobject_find_apply(void* record, void* key);
+/* Port-only adapter. Retail FUN_00406f50 performs resource-tree lookup and
+ * registration; this requires a renderer/resource owner to install hooks. */
 void renderer_object_subobject_dispatch(void* record, void* key);
-                                                     /* FUN_00406f50 */
 void* renderer_cached_handle_48_get_or_create(void* record);
                                                 /* FUN_00406fe0 */
 void* renderer_cached_handle_50_get_or_create(void* record);

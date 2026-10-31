@@ -19,7 +19,17 @@ void scatter_spawn_gate_set(int enabled); /* 0x0044adc0 */
 int scatter_spawn_gate_get();
 void entity_kind_one_random_spawn_trigger(void* entity); /* 0x0044ade0 */
 void random_kind_six_scatter_spawn(void* entity, int count, int mode); /* 0x0044ae50 */
+#if defined(_MSC_VER)
+/* MSVC 5 has no __thiscall keyword. __fastcall places the object in ECX,
+ * a dummy in EDX, and leaves the explicit argument on the stack. */
+typedef void (__fastcall *LegacyInterfaceInvoke)(void* object, void* edx,
+                                                 int argument);
+#elif defined(__i386__)
+typedef void (__attribute__((thiscall)) *LegacyInterfaceInvoke)(
+    void* object, int argument);
+#else
 typedef void (*LegacyInterfaceInvoke)(void* object, int argument);
+#endif
 void interface_invoke_one_if_nonnull(void* object); /* 0x0047ed70 */
 typedef int (*LegacyResultCheckHook)(void* context, void* value);
 void legacy_result_check_hook_set(LegacyResultCheckHook hook, void* context);
@@ -30,15 +40,6 @@ void global_scatter_spawn_find_hook_set(GlobalScatterSpawnFindHook hook,
                                         void* context);
 void global_scatter_spawn_state_set(int flag_a, int flag_b);
 void global_scatter_spawn_enable_and_drain(void); /* FUN_0044c550 */
-typedef struct ConfiguredMonsterSpawnHooks {
-    void* context;
-    void (*attached_spawn_record_process)(::EntitySlot* entity,
-                                          void* context);
-    void (*configured_spawn_teardown)(::EntitySlot* entity, void* context);
-    void (*global_counter_increment)(void* context);
-} ConfiguredMonsterSpawnHooks;
-void configured_monster_spawn_hooks_set(
-    const ConfiguredMonsterSpawnHooks* hooks);
 int configured_monster_spawn_behavior_tick(::EntitySlot* entity);
 }
 #endif

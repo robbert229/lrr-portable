@@ -2190,10 +2190,12 @@ void animation_track_keys_interpolate(void* owner, const void* track,
     scene_node_transform_matrix_apply(owner, track, position, rotation, scale);
 }
 
-// FUNCTION: LEGORR 0x004882e0
-/* SceneNodeTransformMatrixApply helper. The owner holds the scene
- * object table at +0x14; the animation record's ushort handle at +6 selects
- * the node. Its scene-interface vtable receives the completed matrix at +38. */
+/* SceneNodeTransformMatrixApply adapter. The normal branch uses the
+ * observed owner table and +0x38 matrix setter. The retail flag-4 branch
+ * first queries interfaces through vtable slots +0x5c/+0x74; their argument
+ * and returned-object contracts are not represented by the current scene
+ * API, so this helper leaves that branch untouched and is not the mapped
+ * retail target. */
 void scene_node_transform_matrix_apply(void* owner, const void* track,
                                        const float position[3],
                                        const float rotation[3],
@@ -2226,13 +2228,7 @@ void scene_node_transform_matrix_apply(void* owner, const void* track,
     set_matrix = reinterpret_cast<MatrixSetMethod>(vtable[0x38 / 4]);
     memset(matrix, 0, sizeof(matrix));
     if ((bytes[0x28] & 4u) != 0) {
-        matrix[0] = scale[0];
-        matrix[5] = scale[1];
-        matrix[10] = scale[2];
-        matrix[12] = position[0];
-        matrix[13] = position[1];
-        matrix[14] = position[2];
-        matrix[15] = 1.0f;
+        return;
     }
     else {
         memcpy(offset, bytes + 0x0c, sizeof(offset));
@@ -2242,9 +2238,10 @@ void scene_node_transform_matrix_apply(void* owner, const void* track,
         cy = (float)cos((double)rotation[1]);
         sz = (float)sin((double)rotation[2]);
         cz = (float)cos((double)rotation[2]);
-        m3c = scale[0] * sz * cy;
+        m3c = scale[0] * sz;
         m40 = sx * (sy * m3c) + cx * (scale[0] * cz);
         m38 = cx * (sy * m3c) - sx * (scale[0] * cz);
+        m3c = cy * m3c;
         m44 = scale[1] * cz;
         m48 = sy * m44;
         m10 = -(scale[1] * sz);
@@ -3439,58 +3436,60 @@ int rect_contains_point_half_open(const float* rect_record, int x, int y)
 
 /* ---- offset-point rect family (findings 241/363/446) --------------------- */
 
-/* Shared body of the three corpus leaves: the __ftol-truncated float
- * offsets subtract from the point, then the quad bounds test the shifted
- * point half-open — x_min <= fx < x_max, y_min <= fy < y_max. */
+/* Shared body of the portable rectangle helpers. The retail leaves obtain
+ * their two offsets from x87 ST(0)/ST(1), which a normal C signature cannot
+ * express. VC5's __ftol conversion rounds to nearest before subtracting. */
 static int rect_contains_converted(const float rect[4], float off_x,
                                    float off_y, int x, int y)
 {
-    const float fx = (float)(x - (int)off_x);
-    const float fy = (float)(y - (int)off_y);
+    const float fx = (float)(x - crt_float_to_long(off_x));
+    const float fy = (float)(y - crt_float_to_long(off_y));
     return (rect[0] <= fx && fy < rect[3]
             && rect[1] <= fy && fx < rect[2])
                ? 1 : 0;
 }
 
-/* RectContainsOffsetPoint (FUN_0045b590): the category-cell hit walk's
- * containment test — bounds quad plus the float offset pair. */
-// FUNCTION: LEGORR 0x0045b590
+/* Port-local adapter. Retail 0x45b590 has four stack arguments
+ * (unused, bounds, x, y) and consumes its offsets from x87 state. */
+int rect_contains_offset_point(const float rect_bounds[4],
+                               const float offset[2], int x, int y)
+{
+    if (rect_bounds == NULL || offset == NULL) {
+        return 0;
+    }
+    return rect_contains_converted(rect_bounds, offset[0], offset[1], x, y);
+}
+
+/* Port-local scalar convenience overload retained for existing callers. */
 int rect_contains_offset_point(const float rect_bounds[4], float off_x,
                                float off_y, int x, int y)
 {
-    const int offset_x = (int)off_x;
-    const int offset_y = (int)off_y;
-    const float point_x = (float)(x - offset_x);
-    const float point_y = (float)(y - offset_y);
-    if (rect_bounds[0] <= point_x && point_y < rect_bounds[3] &&
-        rect_bounds[1] <= point_y && point_x < rect_bounds[2]) {
-        return 1;
-    }
-    return 0;
+    return rect_contains_converted(rect_bounds, off_x, off_y, x, y);
 }
 
-/* RectContainsPointByConvertedCoords (FUN_00463c00): the region-route
- * walk's copy — the pseudocode is identical to the category walk's. */
-// FUNCTION: LEGORR 0x00463c00
+/* Port-local adapter. Retail 0x463c00 has the same x87-input ABI as
+ * 0x45b590 and is intentionally not mapped to this ordinary C helper. */
+int rect_contains_point_by_converted_coords(const float rect_bounds[4],
+                                            const float offset[2],
+                                            int x, int y)
+{
+    if (rect_bounds == NULL || offset == NULL) {
+        return 0;
+    }
+    return rect_contains_converted(rect_bounds, offset[0], offset[1], x, y);
+}
+
+/* Port-local scalar convenience overload retained for existing callers. */
 int rect_contains_point_by_converted_coords(const float rect_bounds[4],
                                             float off_x, float off_y,
                                             int x, int y)
 {
-    const int offset_x = (int)off_x;
-    const int offset_y = (int)off_y;
-    const float point_x = (float)(x - offset_x);
-    const float point_y = (float)(y - offset_y);
-    if (rect_bounds[0] <= point_x && point_y < rect_bounds[3] &&
-        rect_bounds[1] <= point_y && point_x < rect_bounds[2]) {
-        return 1;
-    }
-    return 0;
+    return rect_contains_converted(rect_bounds, off_x, off_y, x, y);
 }
 
-/* RectContainsPointFromObjectBounds (FUN_00463c90): same test, bounds via
- * the pointer stored at the record's +0x14. The corpus dereferences the
- * slot unguarded; the port answers 0 for a NULL slot or rect. */
-// FUNCTION: LEGORR 0x00463c90
+/* Port helper for an explicit bounds slot and offset pair. Retail
+ * FUN_00463c90 takes (record, x, y), reads bounds at record + 0x14, and
+ * obtains its two conversion values from state not exposed by this API. */
 int rect_contains_point_from_object_bounds(const float* const* bounds_at_14,
                                            float off_x, float off_y,
                                            int x, int y)
@@ -4595,7 +4594,9 @@ void* renderer_object_subobject_find_apply(void* record, void* key)
     return subobject;
 }
 
-// FUNCTION: LEGORR 0x00406F50
+/* Portable adapter for FUN_00406f50. The retail resolver calls the resource
+ * tree helpers FUN_00473c60/FUN_00473bc0; no production owner currently
+ * supplies that tree through these optional callbacks. */
 void renderer_object_subobject_dispatch(void* record, void* key)
 {
     (void)renderer_object_subobject_find_apply(record, key);
@@ -4664,7 +4665,9 @@ int renderer_cached_handle_4c_is_not_one(void* record)
     return value != 1.0f;
 }
 
-// FUNCTION: LEGORR 0x00408770
+/* Portable cache adapter for the retail indexed-resource resolver. The
+ * record layout and cache behavior match, but renderer resource lookup is
+ * unavailable unless renderer_subobject_hooks_install is bound. */
 void* scene_object_indexed_handle_get_or_create(void* record, int index)
 {
     void** source;
@@ -4679,7 +4682,7 @@ void* scene_object_indexed_handle_get_or_create(void* record, int index)
     return *cached;
 }
 
-// FUNCTION: LEGORR 0x004087b0
+/* Portable cache adapter; the retail resource resolver is not installed. */
 void* scene_object_primary_handle_get_or_create(void* record)
 {
     void** source;
@@ -4694,7 +4697,7 @@ void* scene_object_primary_handle_get_or_create(void* record)
     return *cached;
 }
 
-// FUNCTION: LEGORR 0x004087e0
+/* Portable cache adapter; the retail resource resolver is not installed. */
 void* scene_object_secondary_handle_get_or_create(void* record)
 {
     void** source;
@@ -4709,7 +4712,7 @@ void* scene_object_secondary_handle_get_or_create(void* record)
     return *cached;
 }
 
-// FUNCTION: LEGORR 0x00408810
+/* Portable cache adapter; the retail resource resolver is not installed. */
 void* scene_object_indexed_secondary_handle_get_or_create(void* record,
                                                            int index)
 {

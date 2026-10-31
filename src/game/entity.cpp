@@ -19,6 +19,7 @@
 #include "gods98/heap.hpp"
 #include "gods98/string.hpp"
 #include "gods98/message.hpp"
+#include "crt/crt.hpp"
 #include "frontend.hpp"
 
 static EntityRepeatedResourceCreateHook s_repeated_resource_create_hook;
@@ -1452,12 +1453,53 @@ void entity_action_sequence_reset(EntitySlot* entity, int preserve_mode)
     int had_waypoints;
     if (entity == NULL) return;
     had_waypoints = entity->wp_count > 0 || entity->wp_dynamic != NULL;
-    if (preserve_mode == 0 && entity->type == 3 &&
-        (entity->flags_3e0 & 0x400u) != 0u &&
-        entity->carry_link_308 != NULL &&
-        *(const int*)entity->carry_link_308 == 5) {
-        unported_ledger_stubs::entity_attached_object_list_detach(entity, 0);
+    if (had_waypoints && preserve_mode == 0) {
+        unsigned int index = (unsigned int)entity->wp_index;
+        const unsigned int count = (unsigned int)entity->wp_count;
+        AiWaypoint* waypoints = ENTITY_WAYPOINTS(entity);
+        while (index < count) {
+            if (waypoints[index].step_kind == 3u) {
+                EntitySlot* linked = (EntitySlot*)entity->link_2fc;
+                if (linked != NULL) {
+                    if (linked->type == 5) {
+                        entity_type5_finalize_if_allowed(linked);
+                    }
+                    else {
+                        linked->route_partner_300 = NULL;
+                    }
+                    entity->link_2fc = 0;
+                }
+                break;
+            }
+            if (waypoints[index].step_kind == 7u) {
+                if (entity->link_2fc != 0) entity->link_2fc = 0;
+                break;
+            }
+            ++index;
+        }
+
+        if (entity->type == 3) {
+            EntitySlot* linked = (EntitySlot*)entity->link_2fc;
+            if ((entity->flags_3e8 & 0x400u) != 0u && linked != NULL &&
+                linked->type == 5) {
+                unported_ledger_stubs::entity_attached_object_list_detach(
+                    entity, 0);
+            }
+            cmd_chain_drop(entity, 4);
+            cmd_chain_drop(entity, 10);
+        }
+        if ((entity->flags_3e8 & 8u) != 0u && entity->owner_ctx != NULL &&
+            entity->owner_ctx->level != NULL) {
+            const int cell_x = crt_float_to_long(entity->x);
+            const int cell_y = crt_float_to_long(entity->y);
+            level_tile_mark(entity->owner_ctx->level, cell_x, cell_y, 0);
+        }
+        entity_task_queue_flush(entity);
     }
+    /* The mode-1 type-2 branch restores a pose through the legacy component
+     * record at +0x10 using saved values at +0x298/+0x29c. EntitySlot has no
+     * owner for that record or those saved fields, so that renderer restore
+     * cannot be represented by this module. */
     /* The retail path releases its route sequence allocation. The portable
      * route extension owns a separate allocation after the inline waypoints. */
     free(entity->wp_dynamic);
@@ -1478,8 +1520,8 @@ void entity_action_sequence_reset(EntitySlot* entity, int preserve_mode)
         entity->flags_3e0 &= ~2u;
     }
     ai_set_activity(entity, 0, 0);
-    if (had_waypoints) entity_task_state_update_after_cleanup(entity,
-                                                               preserve_mode);
+    if (had_waypoints)
+        entity_task_state_update_after_cleanup(entity, preserve_mode);
 }
 
 // FUNCTION: LEGORR 0x00441b30
@@ -1877,10 +1919,12 @@ int entity_teardown(EntitySlot* entity)
         entity->flags_3ec = (int32_t)(flags & ~0x80U);
         flags &= ~0x80U;
     }
+    entity_action_sequence_reset(entity, 0);
     if (entity->attach_304 != NULL) {
         unported_ledger_stubs::entity_attached_object_list_detach(
             (EntitySlot*)entity->attach_304, 0);
     }
+    unported_ledger_stubs::entity_attached_object_list_detach(entity, 0);
     /* Remove the token from the scene before the release callback can return
      * that renderer record to its pool. Keep the entity token valid through
      * the release callback itself. */
@@ -1902,7 +1946,7 @@ int entity_teardown(EntitySlot* entity)
             s_entity_teardown_hooks.context);
     }
     entity_drain_command_chain(entity);
-    entity_task_state_update_after_cleanup(entity, 0);
+    entity_pool_find_with_local_predicate(entity->owner_ctx, entity);
     if ((state_flags & 4U) != 0 || (state_flags & 2U) != 0) {
         if (s_entity_teardown_hooks.operation != NULL)
             s_entity_teardown_hooks.operation(entity,

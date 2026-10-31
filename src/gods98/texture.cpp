@@ -238,8 +238,10 @@ TextureSurface* texture_decode(const uint8_t* data, uint32_t size)
     return t;
 }
 
-/* BitmapSurfaceLoad: resource-backed image load used by menu item records. */
-// FUNCTION: LEGORR 0x0047d9d0
+/* Portable BitmapSurfaceLoad adapter. The retail 0x0047d9d0 entry takes one
+ * resource name and uses the engine's Direct3D texture interface and surface
+ * globals; this software-surface helper has extra flags and returns a
+ * TextureSurface pointer, so it is not the retail ABI implementation. */
 TextureSurface* image_surface_load(const char* name, uint32_t flags,
                                    uint32_t color_key)
 {
@@ -266,9 +268,9 @@ TextureSurface* image_surface_load(const char* name, uint32_t flags,
  *  Load + get-or-load cache (finding 13 §2).
  * ------------------------------------------------------------------ */
 
-/* CreateBmpSurface: resource-backed BMP decode into the port's software
- * surface; DirectDraw surface creation/upload is replaced by TextureSurface. */
-// FUNCTION: LEGORR 0x00474050
+/* Port adapter for CreateBmpSurface. Retail uses the Direct3D device and
+ * global surfaces to create/upload a COM texture; this helper decodes BMP
+ * bytes into a software TextureSurface. */
 TextureSurface* texture_load(const char* name)
 {
     Resource* r = resource_open(name, RESOURCE_AUTO);
@@ -287,7 +289,9 @@ TextureSurface* texture_load(const char* name)
 
 /* TextureGetOrCreate: name-keyed hit/refcount, then secondary shared-root
  * lookup and load on a primary miss. */
-// FUNCTION: LEGORR 0x00482e70
+/* Port adapter for TextureGetOrCreate. Retail takes four arguments and
+ * returns a three-dword texture record; this software helper takes a base
+ * and file name and returns a TextureSurface. */
 TextureSurface* texture_get_or_load(const char* base, const char* file)
 {
     char joined[TEXTURE_RESOURCE_NAME_MAX];
@@ -371,7 +375,8 @@ TextureSurface* texture_get_or_load(const char* base, const char* file)
     return t;
 }
 
-// FUNCTION: LEGORR 0x00474710
+/* Port release for TextureSurface. Retail releases the two COM interfaces
+ * held in its resource record; this frees/refcounts the software surface. */
 void texture_release(TextureSurface* t)
 {
     int i;

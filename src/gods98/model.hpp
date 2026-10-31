@@ -92,16 +92,13 @@ ModelEntryRecord* model_entry_list_flatten(const ModelEntryRecord* head);
  * Returns NULL on open/read/parse failure. */
 Model* model_open(const char* path);
 
-/* LwoModelEntryLoad (FUN_004809e0): derive the entry directory from the
- * joined path (text through the last backslash, empty when none) and open
- * the model from the full path; the flags word and caller context are the
- * reference's loader arguments. */
+/* Portable parsed-model adapter for LwoModelEntryLoad: opens the model from
+ * the full path. It does not create the retail renderer resource instance. */
 Model* lwo_model_entry_load(const char* path, void* flags, void* context);
 
-/* ModelResourceResolveOrLoad (FUN_004885c0): case-insensitive pair-table
- * resolver over the joined "%s%s" path, with the raw-path secondary table
- * consulted under the fallback prefix.  Table hits run the FUN_00480900
- * instance seam installed through model_resource_instance_hook_set. */
+/* Portable parsed-model adapter: case-insensitive cache over the joined
+ * "%s%s" path, with the raw-path secondary table under the fallback
+ * prefix. Table hits can invoke the optional instance hook. */
 typedef void (*ModelResourceInstanceHook)(void* record, void* flags);
 void model_resource_instance_hook_set(ModelResourceInstanceHook hook);
 void model_resource_fallback_prefix_set(const char* prefix);
@@ -113,7 +110,8 @@ void model_resource_cache_clear(void);
 /* Parse a caller-owned buffer; for tests and already-resident data. */
 Model* model_parse(const uint8_t* data, size_t len);
 
-/* Parse and apply a .uv sidecar per finding 19 §3. Returns 1 when applied
+/* Buffered-text adapter for ParseUV; retail reads the .uv stream directly.
+ * Returns 1 when applied
  * (possibly only up to the first unreadable tail block), 0 when the file
  * does not match the grammar (model untouched) or on allocation failure. */
 int model_apply_uv_text(Model* m, const char* text, size_t len);

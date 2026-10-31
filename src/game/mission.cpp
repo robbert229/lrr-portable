@@ -14,15 +14,35 @@
 #include "ui_list.hpp"
 #include "effects.hpp"
 #include "../gods98/sound.hpp"
+#include "../gods98/texture.hpp"
 #include "util.hpp"
 
-/* The ten named task slots (TaskBlockInit local list). */
-static const char* TASK_NAMES[GAME_TASK_COUNT] = {
-    "Crystals", "Ore", "Diggable", "Constructions", "Caverns",
-    "Figures", "RockMonsters", "Oxygen", "Timer", "Score",
-};
+/* TaskBlockInit's stack name list and format operand are fixed image data. */
+// GLOBAL: LEGORR 0x004a8a08
+static const char s_task_name_crystals[] = "Crystals";
+// GLOBAL: LEGORR 0x004a1e98
+static const char s_task_name_ore[] = "Ore";
+// GLOBAL: LEGORR 0x004a9364
+static const char s_task_name_diggable[] = "Diggable";
+// GLOBAL: LEGORR 0x004a9354
+static const char s_task_name_constructions[] = "Constructions";
+// GLOBAL: LEGORR 0x004a934c
+static const char s_task_name_caverns[] = "Caverns";
+// GLOBAL: LEGORR 0x004a9344
+static const char s_task_name_figures[] = "Figures";
+// GLOBAL: LEGORR 0x004a9334
+static const char s_task_name_rock_monsters[] = "RockMonsters";
+// GLOBAL: LEGORR 0x004a932c
+static const char s_task_name_oxygen[] = "Oxygen";
+// GLOBAL: LEGORR 0x004a9324
+static const char s_task_name_timer[] = "Timer";
+// GLOBAL: LEGORR 0x004a931c
+static const char s_task_name_score[] = "Score";
+// GLOBAL: LEGORR 0x004a1d60
+static const char s_task_copy_format[] = "%s";
 
 #define MISS_CRYSTAL_QUOTA 26 /* crystal display budget (CrystalQuotaSetup) */
+#define REWARD_TASK_DURATION_DEFAULT 76.9375f
 
 /* The reference entry points carry no context pointers. The game/runtime
  * owner must bind its active reward state and engine callbacks before calling
@@ -31,6 +51,12 @@ static RewardScreenState* s_reward_screen_state;
 static const RewardScreenOps* s_reward_screen_ops;
 static RewardScreenState s_reward_screen_default_state;
 static void reward_task_flics_close_all(RewardScreenState* state);
+typedef struct MissionTaskInitBinding {
+    GameContext* game;
+    BlockFile* config;
+    const char* level_name;
+} MissionTaskInitBinding;
+static MissionTaskInitBinding s_task_init_binding;
 
 /* Path helper: level-scoped `Reward [<sub>] [<name>]` key, resolved via
  * util_level_cfg_path (Levels container first, flat fallback). */
@@ -120,6 +146,14 @@ static void task_add_flag(GameTask* t, uint32_t bits)
     task_set_flags(t, task_flags(t) | bits);
 }
 
+static unsigned int task_slot_index(const GameTask* t)
+{
+    GameContext* game = s_task_init_binding.game;
+    if (game == NULL || t < game->tasks || t >= game->tasks + GAME_TASK_COUNT)
+        return GAME_TASK_COUNT;
+    return (unsigned int)(t - game->tasks);
+}
+
 /* Helper used by the field loaders: resolve a pipe-delimited
  * `file|n|n…` config token to its fields (corpus FUN_00477440). */
 static int task_fields(const char* token, char out[UTIL_QUERY_MAX_FIELDS][256])
@@ -161,7 +195,16 @@ static void task_loader_images(BlockFile* cfg, const char* root,
     }
     task_put_int(t, TASK_OFF_IMG_XY, (int32_t)atoi(f[1]));
     task_put_int(t, TASK_OFF_IMG_XY + 4, (int32_t)atoi(f[2]));
-    task_add_flag(t, TASK_FLAG_IMG);
+    {
+        TextureSurface* image = image_surface_load(f[0], 0u, 0u);
+        if (image != NULL) {
+            task_put_int(t, TASK_OFF_IMAGE,
+                         (int32_t)(uint32_t)(uintptr_t)image);
+            task_add_flag(t, TASK_FLAG_IMG);
+            reward_task_resource_slot_set(task_slot_index(t), TASK_FLAG_IMG,
+                                          image, NULL);
+        }
+    }
 }
 
 /* FUN_0045f530 — `Reward Text.<name>` (key string lives at corpus
@@ -241,6 +284,8 @@ static void task_loader_boximages(BlockFile* cfg, const char* root,
     }
     task_put_int(t, TASK_OFF_BOXIMG_XY, (int32_t)atoi(f[1]));
     task_put_int(t, TASK_OFF_BOXIMG_XY + 4, (int32_t)atoi(f[2]));
+    /* Box-image surface ownership is not represented by the task cleanup
+     * sidecar, whose retail flush only releases the +0x200 image handle. */
     task_add_flag(t, TASK_FLAG_BOXIMG);
 }
 
@@ -256,26 +301,40 @@ const char* mission_task_name_at(GameContext* ctx, int slot)
     return task_name(&ctx->tasks[slot]);
 }
 
-/* Partial TaskBlockInit port: seeds the context-owned task records and runs
- * the six field loaders; the original allocates one session-global block. */
+/* TaskBlockInit @ 0x0045f030 is a no-argument global entry. The live port
+ * supplies its current session/config owner through the explicit adapter. */
 // FUNCTION: LEGORR 0x0045f030
-void mission_task_init(GameContext* ctx, BlockFile* cfg, const char* level_name)
+int mission_task_init_target(void)
 {
+    GameContext* ctx = s_task_init_binding.game;
+    BlockFile* cfg = s_task_init_binding.config;
+    const char* level_name = s_task_init_binding.level_name;
     if (ctx == NULL) {
-        return;
+        return 0;
     }
     const char* root = cfg != NULL ? util_root_name(cfg) : "Lego*";
     GameTask* t;
-    const char** name;
+    const char* names[GAME_TASK_COUNT];
+    int i;
     /* TaskBlockInit clears its task block before the corpus's name pass. The
      * port keeps the same operation scoped to the context-owned task array. */
-    __builtin_memset(ctx->tasks, 0, sizeof(ctx->tasks));
-    for (t = ctx->tasks, name = TASK_NAMES;
-         t < ctx->tasks + GAME_TASK_COUNT; ++t, ++name) {
-        task_set_name(t, *name);
+    reward_task_block_finish();
+    memset(ctx->tasks, 0, sizeof(ctx->tasks));
+    names[0] = s_task_name_crystals;
+    names[1] = s_task_name_ore;
+    names[2] = s_task_name_diggable;
+    names[3] = s_task_name_constructions;
+    names[4] = s_task_name_caverns;
+    names[5] = s_task_name_figures;
+    names[6] = s_task_name_rock_monsters;
+    names[7] = s_task_name_oxygen;
+    names[8] = s_task_name_timer;
+    names[9] = s_task_name_score;
+    for (i = 0, t = ctx->tasks; i < GAME_TASK_COUNT; ++i, ++t) {
+        sprintf((char*)t->data + 4, s_task_copy_format, names[i]);
     }
     if (cfg == NULL || level_name == NULL) {
-        return;
+        return 1;
     }
     /* TaskBlockInit makes one pass per loader (Images, Text, Flics, Fonts,
      * Sounds, BoxImages). Keep that corpus order while targeting ctx's tasks;
@@ -299,7 +358,21 @@ void mission_task_init(GameContext* ctx, BlockFile* cfg, const char* level_name)
     for (t = ctx->tasks; t < ctx->tasks + GAME_TASK_COUNT; ++t) {
         task_loader_boximages(cfg, root, level_name, t);
     }
-    mission_task_refresh(ctx);
+    return 1;
+}
+
+/* Explicit owner adapter. Save/restore the binding so nested menu/config
+ * work cannot replace the outer caller's context. */
+void mission_task_init(GameContext* ctx, BlockFile* cfg, const char* level_name)
+{
+    const MissionTaskInitBinding previous = s_task_init_binding;
+    if (ctx == NULL) return;
+    if (ctx->level != NULL) objective_active_level_bind(ctx->level);
+    s_task_init_binding.game = ctx;
+    s_task_init_binding.config = cfg;
+    s_task_init_binding.level_name = level_name;
+    (void)mission_task_init_target();
+    s_task_init_binding = previous;
 }
 
 /* TaskImportanceRefresh @ 0x4600a0: load one task's Reward Importance
@@ -385,6 +458,7 @@ int mission_update(GameContext* ctx)
         return 0;
     }
     LevelState* s = ctx->level;
+    objective_active_level_bind(s);
     /* Crystal (task 0) / Ore (task 1) live counts — objective readers. */
     level_set_int(s, OBJ_OFF_CRYSTAL_LIVE, ctx->mission.crystals);
     level_set_int(s, OBJ_OFF_ORE_LIVE, ctx->mission.ore);
@@ -799,6 +873,7 @@ const char* mission_reward_advance(GameContext* ctx)
     if (ctx->checkpoint_blob == NULL) checkpoint_blob_build(ctx);
     (void)mission_checkpoint_task_progress_refresh(ctx);
     checkpoint_step(ctx); /* save before moving on */
+    objective_active_level_clear(ctx->level);
     level_destroy(ctx->level);
     ctx->level = NULL;
     ctx->selection_count = 0;
@@ -858,6 +933,17 @@ static void reward_task_flics_close_all(RewardScreenState* state)
     }
 }
 
+static int reward_endgame_avi1_configured(const GameContext* game)
+{
+    const char* level_name;
+    const char* root;
+    if (game == NULL || game->cfg == NULL || game->level == NULL) return 0;
+    level_name = (const char*)game->level->ptr_name;
+    if (level_name == NULL) return 0;
+    root = util_root_name(game->cfg);
+    return rw_str(game->cfg, root, level_name, NULL, "EndGameAVI1") != NULL;
+}
+
 void reward_screen_state_init(RewardScreenState* state, GameContext* game,
                               PointerCursorState* pointer_cursor,
                               const PointerCursorHooks* pointer_hooks)
@@ -868,6 +954,8 @@ void reward_screen_state_init(RewardScreenState* state, GameContext* game,
     state->pointer_cursor = pointer_cursor;
     state->pointer_cursor_hooks = pointer_hooks;
     state->task_duration = game != NULL ? game->reward.timer : 0.0f;
+    if (state->task_duration == 0.0f)
+        state->task_duration = REWARD_TASK_DURATION_DEFAULT;
     state->elapsed = state->task_duration;
 }
 
@@ -965,15 +1053,15 @@ static void reward_screen_task_timer_tick(RewardScreenState* state,
 {
     int advance = 0;
     int stage_is_initial;
-    int display_mode = ops != NULL && ops->display_mode_get != NULL
-        ? ops->display_mode_get(ops->context, state->game) : 0;
+    const int completed = state->game != NULL && state->game->level != NULL &&
+        level_int(state->game->level, OBJ_OFF_RESULT_INDEX) == 1;
     stage_is_initial = state->transition_stage == 0;
     if (state->task_duration <= state->elapsed) {
         if (stage_is_initial) advance = 1;
     }
     else if (!stage_is_initial &&
              state->task_duration * 2.0f <= state->elapsed &&
-             display_mode == 1 &&
+             completed &&
              state->displayed_task_count < GAME_TASK_COUNT) {
         advance = 1;
     }
@@ -1284,7 +1372,7 @@ int reward_screen_tick(void)
     const RewardScreenOps* ops = s_reward_screen_ops;
     GameContext* game;
     uint32_t now;
-    int display_mode;
+    int completed;
     int i;
     if (state == NULL || ops == NULL || state->game == NULL) return 0;
     game = state->game;
@@ -1294,21 +1382,22 @@ int reward_screen_tick(void)
         !ops->save_button_check(ops->context, game)) return 0;
     now = ops->time_get_ms != NULL ? ops->time_get_ms(ops->context) : 0u;
     state->last_clock_ms = now;
-    if (ops->display_mode_get != NULL)
-        display_mode = ops->display_mode_get(ops->context, game);
-    else display_mode = 0;
+    completed = level_int(game->level, OBJ_OFF_RESULT_INDEX) == 1;
 
     while (state->transition_stage < 4 ||
            state->pointer_override_active ||
            (ops->loop_should_continue != NULL &&
             ops->loop_should_continue(ops->context, state))) {
-        uint32_t current_ms = ops->time_get_ms != NULL
+        uint32_t delta_ms_time = ops->time_get_ms != NULL
             ? ops->time_get_ms(ops->context) : state->last_clock_ms;
-        float delta = (float)(uint32_t)(current_ms - state->last_clock_ms)
-            * 0.001f;
+        float delta = ((float)delta_ms_time -
+                       (float)state->last_clock_ms) * 0.001f;
+        uint32_t current_ms;
         int task_limit;
         int fast_forward;
         int score_text_drawn = 0;
+        current_ms = ops->time_get_ms != NULL
+            ? ops->time_get_ms(ops->context) : delta_ms_time;
         state->last_clock_ms = current_ms;
         state->elapsed += delta;
         reward_screen_task_timer_tick(state, ops);
@@ -1318,12 +1407,10 @@ int reward_screen_tick(void)
             ++state->transition_stage;
             if (state->transition_stage == 3)
                 state->transition_stage = 2;
-            if (state->transition_stage < 2 || display_mode != 1)
+            if (state->transition_stage < 2 || !completed)
                 state->displayed_task_count = 9;
             else state->displayed_task_count = 10;
         }
-        if (state->scroll_ticker != NULL)
-            reward_scroll_ticker_advance_and_draw(state->scroll_ticker);
         for (i = 0; i < state->displayed_task_count; ++i)
             reward_screen_task_visual_draw(state, ops, i, 2u);
         task_limit = state->displayed_task_count < 9
@@ -1334,7 +1421,7 @@ int reward_screen_tick(void)
             reward_screen_task_visual_draw(state, ops, i, 4u);
 
         if ((state->displayed_task_count == 10 ||
-             (display_mode != 1 && state->displayed_task_count == 9)) &&
+             (!completed && state->displayed_task_count == 9)) &&
             ops->score_text_gate_ready != NULL &&
             ops->score_text_gate_ready(ops->context, game))
             state->score_text_gate = 1;
@@ -1352,6 +1439,10 @@ int reward_screen_tick(void)
                 ops->reward_zone_check != NULL)
                 ops->reward_zone_check(ops->context, state);
         }
+        /* RewardScreenTick draws the task/text passes and runs RewardZoneCheck
+         * before advancing the scrolling banner (FUN_00462ad0). */
+        if (state->scroll_ticker != NULL)
+            reward_scroll_ticker_advance_and_draw(state->scroll_ticker);
         if (ops->reward_stats_draw != NULL)
             ops->reward_stats_draw(ops->context, game);
         if (state->transition_stage == 3) state->transition_stage = 4;
@@ -1363,12 +1454,14 @@ int reward_screen_tick(void)
         ops->reward_scroll_cleanup(ops->context);
     if (ops->render_finish != NULL) ops->render_finish(ops->context);
     reward_task_flics_close_all(state);
+    sound_stream_stop_and_release(1);
     if (ops->input_restore != NULL) ops->input_restore(ops->context, 1);
-    if (display_mode == 1) {
+    if (completed && reward_endgame_avi1_configured(game)) {
         if (ops->completion_audio != NULL)
             ops->completion_audio(ops->context, game);
         sound_request_queue_submit(0x2c, 1);
         if (ops->frame_pump != NULL) ops->frame_pump(ops->context, 1);
+        sound_stream_stop_and_release(1);
     }
     return 1;
 }

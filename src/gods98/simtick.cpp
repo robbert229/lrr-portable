@@ -826,12 +826,11 @@ void simtick_cell_seed(int n, const int* xs, const int* ys)
 
 int simtick_cell_dispatches(void) { return s_cell_disp; }
 
-/* TerrainCellFlagCleanup (FUN_00424600): sweep resource state for newly
- * completed scene loads, read each completion's configured grid coordinate,
- * clear its cell gates, and enqueue opcode 0x14 when the cell is not gated by
- * bit 0x1000. The renderer's resource-completion callbacks remain owned by
- * the scene/resource layer; the exposed sweep supplies its completed pairs. */
-// FUNCTION: LEGORR 0x00424600
+/* Portable completed-resource grid adapter. Retail TerrainCellFlagCleanup
+ * @ 0x00424600 takes an opaque receiver plus an integer resource selector,
+ * then obtains completed coordinate pairs through FUN_0040c3a0/FUN_0040c570.
+ * This context-and-scale API consumes the port's scene sweep instead and is
+ * not the retail entrypoint; the owning resource table/selector are absent. */
 void simtick_grid_cell_pass(EngineContext* c, float scale)
 {
     EngineState* st = c != NULL ? c->state_block : NULL;

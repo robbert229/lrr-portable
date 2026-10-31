@@ -660,8 +660,10 @@ void pending_command_timer_fire_scan(void)
  *
  * The cheat feature gate uses ai_can_do; kind 8 uses the full terrain and
  * entity gates from FUN_00432770. Kinds 3, 0x11, 0x13, 0x15, 0x1a, and
- * 0x1e still need target/config state that has no production owner; kind
- * 0x12's alternate target-activity-position branch is likewise unavailable.
+ * 0x1e still need target/config state that has no production owner. Kind
+ * 0x12's scene-resource pose alternative is unavailable, while its direct
+ * capability-0x20 and stats-flag position branches use live entity/level
+ * state.
  * The Ops path requires raw entity views, an installed global feature word,
  * target/resource/visibility/route resolvers, scene position/ray operations,
  * and (for kind 0x11) the configured energy threshold. No production caller
@@ -702,8 +704,7 @@ void pending_command_entity_assignment_tick(void)
                                         record->type == 0x12;
             int has_direct_placement = 0;
             if (coordinate_kind && context != NULL && context->level != NULL) {
-                if ((record->type == 0x17 || record->type == 10 ||
-                     record->type == 0x12) &&
+                if ((record->type == 0x17 || record->type == 10) &&
                     record->payload != NULL) {
                     float target_position[2];
                     entity_transform_position_get(
@@ -714,6 +715,35 @@ void pending_command_entity_assignment_tick(void)
                     has_direct_placement = terrain_world_xy_to_cell(
                         context->level->ptr_terrain, target_position[0],
                         target_position[1], &target_cell_x, &target_cell_y);
+                }
+                else if (record->type == 0x12 && record->payload != NULL) {
+                    EntitySlot* target = (EntitySlot*)record->payload;
+                    int target_xy[2];
+                    if ((entity_stats_word_get(target) & 0x2000000u) != 0u) {
+                        float target_position[2];
+                        entity_transform_position_get(target, target_position);
+                        target_world[0] = target_position[0];
+                        target_world[1] = target_position[1];
+                        target_world_valid = 1;
+                        has_direct_placement = terrain_world_xy_to_cell(
+                            context->level->ptr_terrain, target_position[0],
+                            target_position[1], &target_cell_x, &target_cell_y);
+                    }
+                    else if (entity_record_flag20_query(target, target_xy) &&
+                             level_coord_pair_within_bounds(
+                                 context->level, target_xy[0], target_xy[1])) {
+                        /* FUN_00404fc0's kind-0x12 fallback calls
+                         * FUN_00439e40 to derive an adjacent task cell. The
+                         * scene-resource pose branch preceding it is not
+                         * representable by EntitySlot, so retain the direct
+                         * capability-0x20 path exposed by that helper. */
+                        target_cell_x = target_xy[0];
+                        target_cell_y = target_xy[1];
+                        has_direct_placement = terrain_cell_world_center_xy_get(
+                            context->level->ptr_terrain, target_cell_x,
+                            target_cell_y, target_world);
+                        target_world_valid = has_direct_placement;
+                    }
                 }
                 else if (record->type != 0x17 && record->type != 10 &&
                     record->type != 0x12 &&
@@ -778,9 +808,7 @@ void pending_command_entity_assignment_tick(void)
                     (entity->type != 2 || entity->cmd_head != NULL ||
                      entity->owner_36c != NULL ||
                      (record->field_3c & entity->flags_3f0) == 0u ||
-                     record->payload == NULL ||
-                     (entity_stats_word_get(
-                          (EntitySlot*)record->payload) & 0x2000000u) == 0u))
+                     record->payload == NULL))
                     continue;
                 if (record->type == 0x17) {
                     const uint32_t actor_flags = entity->flags_3f0;

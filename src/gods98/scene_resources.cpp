@@ -236,7 +236,9 @@ int shared_texture_root_register(const char* root)
     (void)shared_texture_root_initialize();
     return 1;
 }
-// FUNCTION: LEGORR 0x00480650
+/* Port adapter for SharedTextureRootInitialize. Retail takes no arguments
+ * but consumes renderer-owned Direct3D resource arrays and COM interfaces;
+ * the portable helper can only refill resources through an installed hook. */
 int shared_texture_root_initialize()
 {
     /* SharedTextureRootInitialize releases the resident slot-node chains

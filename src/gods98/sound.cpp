@@ -13,9 +13,8 @@
 #include "record.hpp"
 #include "view.hpp"
 
-/* The reference scene interfaces are 32-bit COM-style objects. Keep the
- * property calls in this module so SoundInstanceTrackRegister can attach its
- * own callback payload even when no renderer adapter has been installed. */
+/* The reference scene interfaces are 32-bit COM-style objects. This getter
+ * reads the record that DDiSceneAnimationHookCreate owns at vtable +0x1c. */
 static void* sound_instance_property_get(void* object)
 {
 #if defined(_MSC_VER) && defined(_M_IX86)
@@ -45,36 +44,6 @@ static void* sound_instance_property_get(void* object)
     if (vtable == NULL || vtable[0x1c / sizeof(void*)] == NULL) return NULL;
     get_property = (GetProperty)vtable[0x1c / sizeof(void*)];
     return get_property(object);
-#endif
-}
-
-static void sound_instance_property_set(void* object, void* value)
-{
-#if defined(_MSC_VER) && defined(_M_IX86)
-    __asm {
-        mov ecx, object
-        push value
-        mov eax, [ecx]
-        call dword ptr [eax + 18h]
-    }
-#elif defined(__i386__) && (defined(__GNUC__) || defined(__clang__))
-    typedef void (__attribute__((thiscall)) *SetProperty)(void*, void*);
-    void** vtable;
-    SetProperty set_property;
-    if (object == NULL) return;
-    vtable = *(void***)object;
-    if (vtable == NULL || vtable[0x18 / sizeof(void*)] == NULL) return;
-    set_property = (SetProperty)vtable[0x18 / sizeof(void*)];
-    set_property(object, value);
-#else
-    typedef void (*SetProperty)(void*, void*);
-    void** vtable;
-    SetProperty set_property;
-    if (object == NULL) return;
-    vtable = *(void***)object;
-    if (vtable == NULL || vtable[0x18 / sizeof(void*)] == NULL) return;
-    set_property = (SetProperty)vtable[0x18 / sizeof(void*)];
-    set_property(object, value);
 #endif
 }
 
@@ -565,7 +534,9 @@ Sound* sound_load(const char* name)
     return sound_sample_file_open_by_name(name);
 }
 
-// FUNCTION: LEGORR 0x0047b580
+/* Portable WAVE sample-load adapter. Retail 0x0047b580 writes the parsed
+ * format/data fields into a 0x134-byte bank slot record; this API fills the
+ * separate Sound value used by the portable bank sidecar. */
 int sound_sample_load_into(Sound* output, const char* name, int mode_flags)
 {
     Sound* loaded;
@@ -1068,14 +1039,16 @@ void sound_buffer_object_stop_hook_set(SoundBufferObjectStopHook hook,
     s_buffer_object_stop_context = context;
 }
 
-// FUNCTION: LEGORR 0x0047b970
+/* Portable playback adapter. Retail 0x0047b970 receives a wave/MMIO owner,
+ * stream index, and mode; this helper receives a decoded Sound and index. */
 int sound_stream_playback_start(int stream_index, const Sound* sample)
 {
     if (stream_index < 0 || stream_index > 1 || sample == NULL) return 0;
     return audio_stream_start(audio_system_player_get(), stream_index, sample);
 }
 
-// FUNCTION: LEGORR 0x0047baa0
+/* Portable stream setup adapter. Retail 0x0047baa0 parses the WAVE format
+ * directly from a stream handle and owns the ring-buffer setup. */
 int sound_stream_format_setup(int stream_index, const WavSample* format,
                               uint32_t buffer_bytes)
 {
@@ -1113,9 +1086,7 @@ void sound_instance_hooks_set(SoundInstanceRegisterHook register_hook,
 static int sound_instance_callback_record_attach(void* instance)
 {
     uint32_t* payload;
-    uint32_t* callback_record;
     void* frame_interface;
-    void* existing_record;
     if (sizeof(void*) != 4u || instance == NULL) return 0;
 
     frame_interface = sound_instance_property_get(instance);
@@ -1125,30 +1096,12 @@ static int sound_instance_callback_record_attach(void* instance)
     payload[0] = (uint32_t)(uintptr_t)instance;
     if (frame_interface != NULL)
         payload[4] = *(uint32_t*)((char*)frame_interface + 0x24);
-
-    existing_record = sound_instance_property_get(instance);
-    if (existing_record == NULL) {
-        callback_record = (uint32_t*)engine_heap_alloc(0x28L);
-        if (callback_record == NULL) {
-            engine_heap_free(payload);
-            return 0;
-        }
-        memset(callback_record, 0, 0x28u);
-        callback_record[0] = (uint32_t)(uintptr_t)instance;
-        callback_record[8] = (uint32_t)(uintptr_t)payload;
-        sound_instance_property_set(instance, callback_record);
-        if (sound_instance_property_get(instance) != callback_record) {
-            engine_heap_free(callback_record);
-            engine_heap_free(payload);
-            return 0;
-        }
-    }
-    else {
-        callback_record = (uint32_t*)existing_record;
-        callback_record[0] = (uint32_t)(uintptr_t)instance;
-        callback_record[8] = (uint32_t)(uintptr_t)payload;
-    }
-    return 1;
+    ddiscene_animation_hook_create(instance, 0, NULL, NULL, 0, NULL, NULL,
+                                   0, 0, payload);
+    /* The retail caller does not release its 0x14-byte payload after the
+     * 0x475f70 call. That helper copies word 0, but no owner for this block is
+     * visible in the checked-in path. Preserve the observed lifetime. */
+    return sound_instance_property_get(instance) != NULL;
 }
 
 // FUNCTION: LEGORR 0x0047b1a0

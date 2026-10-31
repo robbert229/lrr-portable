@@ -123,11 +123,12 @@ const char* util_root_name(BlockFile* bf);
 const char* util_level_cfg_path(BlockFile* cfg, const char* level,
                                 const char* suffix, char* out, size_t out_sz);
 
-/* Small owner model for the corpus string-index table (DAT_004b8a3c/50).
- * Entries are borrowed and must outlive the installed table. No production
- * config loader installs this table in the current checkout. */
+/* Port adapter for the corpus string-index table (DAT_004b8a3c/50). Entries
+ * are borrowed and must outlive the installed table. No production config
+ * loader installs this table in the current checkout, so the helper is not
+ * mapped as retail StringTableIndexLookup. */
 void string_table_install(const char* const* entries, unsigned int count);
-unsigned int string_table_index_lookup(const char* value); /* FUN_00408c80 */
+unsigned int string_table_index_lookup(const char* value);
 void bubble_action_strings_initialize(void); /* FUN_004070b0 */
 const char* bubble_action_string_get(unsigned int index);
 int case_insensitive_name_table_lookup_at_offset8(const void* const* entries,

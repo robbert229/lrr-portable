@@ -51,6 +51,7 @@ extern "C" {
                                   /* fields 1/2 -> record dwords 0x55/0x56)*/
 #define TASK_OFF_FLICPATH2  0x16C /* flic path (FUN_0045f5f0 -> +0x5b)     */
 #define TASK_OFF_IMG_XY     0x15C /* 2 ints (FUN_0045f3e0 -> +0x57/0x58)   */
+#define TASK_OFF_IMAGE      0x200 /* loaded image surface (FUN_0045f3e0)    */
 #define TASK_OFF_BOXIMG_XY  0x164 /* 2 ints (FUN_0045f290 -> +0x59/0x5a)   */
 #define TASK_OFF_FLIC_RECT  0x1EC /* 4 ints (FUN_0045f5f0 -> +0x7b..0x7e)  */
 #define TASK_OFF_FONT       0x204 /* font config token (FUN_0045f230)      */
@@ -67,11 +68,11 @@ extern "C" {
 #define TASK_FLAG_MASK       0x31u /* FUN_0045f530 ORs 1|0x10|0x20 when a   */
                                    /* `Reward Text.<name>` entry exists     */
 
-/* Seed the ten named task slots + run the six field loaders + refreshers
- * (TaskBlockInit). Corpus lifetime is per game *session* (run-start callback
- * FUN_0041fb50 @ 0x422651, freed by TaskBlockFinish in the run-finish
- * callback — finding 08 §Ownership); the port re-seeds per level load as a
- * layout-faithful stand-in for the session block. */
+/* Target-shaped, no-argument TaskBlockInit entry. The current runtime owner
+ * is supplied by the explicit adapter below. */
+int mission_task_init_target(void);
+/* Seed ten named task slots and run the six corpus-order field-loader passes
+ * for the supplied live GameContext. */
 void mission_task_init(GameContext* ctx, BlockFile* cfg, const char* level_name);
 
 /* Re-run Importance/Quota refreshers + crystal quota over every slot

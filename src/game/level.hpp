@@ -412,6 +412,7 @@ void  terrain_cell_surface_appearance_apply(void* terrain, int x, int y,
  * entity "reservation" bit the mover-state sync raises and the arrival
  * clears. Bounds-guarded (the corpus writes OOB for bad coords). */
 void level_tile_mark(LevelState* s, int cx, int cy, int set);
+void level_tile_mark_current(const int cell_xy[2], int set);
 
 /* FUN_00432e00 read side: does the cell currently carry the OCCUPIED
  * reservation flag? The wave-flood pathfinder consults it for its blocked
@@ -635,27 +636,16 @@ uint32_t upgrade_resource_check(const LevelState* s, int selector);
  * Corpus arguments are ignored; definition stays void. */
 int always_accept_place_command_cell(void);
 
-/* --- tracked/refreshing cell-flag set family (2026-10-24) ---------------
- * The corpus's voxel-record setters that remember what they touched:
- * the SetAndTrack pair queues coordinates for later refresh passes,
- * the ClearAll drainer clears the visited marks from its own queue, and
- * the SetMask/clear-or-set leaves call the corpus's per-cell
- * CellInitPass refresh companion. Deviations (documented here, not
- * silently): the tracking queues live as module statics (the corpus's
- * DAT tracking regions have no ported writers yet, and the queues'
- * consumers (the corpus's queued-work transition and the refresh
- * dispatch) stay unported — their addresses stay unquoted here, since
- * naming an unported function in prose flips its ledger row); the corpus's unbounded queue
- * writes are bounded silently (capacity: 200 refresh entries = the
- * distance to its counter word, 160 visited); and the per-cell
- * FUN_0042f6f0 refresh call is a TODO(corpus) seam — the port's
- * cell_init_pass belongs to the load path and its corpus body's
- * per-cell form is unported. Coordinate pairs the corpus passed by
- * pointer (param_1[0]/param_1[1]) are modeled by value. */
+/* --- tracked/refreshing cell-flag set family ----------------------------
+ * The target entry points read the current level from GameContext and keep
+ * the corpus pointer-pair ABI. LevelState-taking forms remain portable
+ * adapters. The two coordinate queues are bounded sidecars; target refresh
+ * calls use the available per-cell cell_init_pass implementation. */
 
-/* TerrainCellFlag100SetAndTrack (FUN_00432100): raise secondary 0x100,
- * queue the cell for refresh, refresh seam. */
+/* TerrainCellFlag100SetAndTrack (FUN_00432100): target ABI takes an x/y
+ * pair; the explicit-LevelState form is a portable caller adapter. */
 void terrain_cell_flag100_set_and_track(LevelState* s, int cx, int cy);
+void terrain_cell_flag100_set_and_track_current(const int cell_xy[2]);
 
 /* TerrainCellVisitedFlagSetAndTrack (FUN_00432270): raise the visited
  * mark and queue the pair in the visited list. */
@@ -665,14 +655,17 @@ void terrain_cell_visited_flag_set_and_track(LevelState* s, int cx, int cy);
  * queue clearing each listed cell's mark, then reset the counter. */
 void terrain_cell_visited_flags_clear_all(LevelState* s);
 
-/* TerrainCellPrimaryFlagsMaskClearAndRefresh (FUN_00432360): clear the
- * 0x2108400 primary mask and the secondary visited bit, refresh seam. */
+/* TerrainCellPrimaryFlagsMaskClearAndRefresh (FUN_00432360): target ABI
+ * takes an x/y pair; the explicit-LevelState form is a caller adapter. */
 void terrain_cell_primary_flags_mask_clear_and_refresh(LevelState* s,
                                                        int cx, int cy);
+void terrain_cell_primary_flags_mask_clear_and_refresh_current(
+    const int cell_xy[2]);
 
-/* TerrainCellFlagsSetAndRefresh (FUN_004323f0): raise the 0x108000
- * primary pair and secondary bit 2, refresh seam. */
+/* TerrainCellFlagsSetAndRefresh (FUN_004323f0): target ABI takes an x/y
+ * pair; the explicit-LevelState form is a caller adapter. */
 void terrain_cell_flags_set_and_refresh(LevelState* s, int cx, int cy);
+void terrain_cell_flags_set_and_refresh_current(const int cell_xy[2]);
 
 /* TerrainCellFlagsSetMask100400 (FUN_00432450): raise primary 0x100400,
  * refresh seam. */
@@ -682,11 +675,12 @@ void terrain_cell_flags_set_mask100400(LevelState* s, int x, int y);
  * 0x20108000, refresh seam. */
 void terrain_cell_flags_set_mask20108000(LevelState* s, int x, int y);
 
-/* TerrainCellFlag40000000ClearOrSet (FUN_00432560): clear or set the
- * primary 0x40000000 flag on the corpus's set-or-clear selector,
- * refresh seam. */
+/* TerrainCellFlag40000000ClearOrSet (FUN_00432560): target ABI takes an
+ * x/y pair and selector; the explicit-LevelState form is a caller adapter. */
 void terrain_cell_flag40000000_clear_or_set(LevelState* s, int cx, int cy,
                                             int set);
+void terrain_cell_flag40000000_clear_or_set_current(const int cell_xy[2],
+                                                     int set);
 
 /* CellNeighborDirectionCode (FUN_004508a0): the 3x3 neighbor direction
  * code — 0..7 for the eight adjacent cells (0 = -y, 1 = +x, 2 = +y,
@@ -701,11 +695,17 @@ int cell_neighbor_direction_code(int x1, int y1, int x2, int y2);
  * level_voxel and skips off-map cells; the per-cell CellInitPass
  * refresh companion stays a TODO(corpus) seam on the load-path form. */
 
-/* TerrainNeighborFlagRefresh (FUN_00431450): when the cell has a modeled
- * activity-build record, mark its secondary cell state with bit 2 for the
- * destroy path or bit 1 otherwise. The destroy action/frame calls still
- * require the engine scene-object handle absent from the sidecar. */
-void terrain_neighbor_flag_refresh(LevelState* s, int cx, int cy, int mode);
+/* TerrainNeighborFlagRefresh (FUN_00431450) takes a level, pointer to an
+ * x/y pair, and mode. Its scene action/frame calls need the renderer-owned
+ * record handle; the port preserves the record's observable +0x0c bits. */
+void terrain_neighbor_flag_refresh(LevelState* s, const int cell_xy[2],
+                                   int mode);
+static inline void terrain_neighbor_flag_refresh_xy(LevelState* s, int cx,
+                                                     int cy, int mode)
+{
+    const int cell_xy[2] = { cx, cy };
+    terrain_neighbor_flag_refresh(s, cell_xy, mode);
+}
 typedef int (*TerrainNeighborPresenceHook)(uint32_t x, uint32_t y,
                                            int mode, void* context);
 typedef void (*TerrainNeighborRenderUpdateHook)(uint32_t x, uint32_t y,
@@ -726,6 +726,7 @@ void terrain_cell_variant_complete_hook_install(
     TerrainCellVariantCompleteHook hook, void* context);
 int terrain_cell_variant_flag_propagate(LevelState* s,
                                         const int cell_xy[2]);
+int terrain_cell_variant_flag_propagate_current(const int cell_xy[2]);
 void map_cell_tracking_flags_clear_and_refresh(LevelState* s,
                                                const int cell_xy[2]);
 typedef void (*TerrainCellStateProjectionHook)(const int cell_xy[2],
@@ -738,6 +739,7 @@ void terrain_cell_linked_entry_remove_hook_install(
 void terrain_cell_state_projection_hook_install(
     TerrainCellStateProjectionHook hook, void* context);
 int terrain_cell_state_update(LevelState* s, const int cell_xy[2]);
+int terrain_cell_state_update_current(const int cell_xy[2]);
 typedef int (*DockDefinitionCellGetHook)(int cell_xy[2], void* context);
 void dock_definition_cell_get_hook_install(DockDefinitionCellGetHook hook,
                                           void* context);
@@ -910,6 +912,8 @@ void terrain_edge_flag_midpoint_update(LevelState* level, float delta);
  * Radius arithmetic is the corpus's wrapping int math (faithful). */
 void terrain_cell_work_flag_circle_set(LevelState* s, int center_x,
                                        int center_y, int radius);
+void terrain_cell_work_flag_circle_set_current(const int center_xy[2],
+                                               int radius);
 
 /* TerrainNeighborWorkFlagScan (FUN_00431580): breadth-first sweep over the
  * stride-0x48 cell records from the seed coordinate: each queued cell's
@@ -924,6 +928,8 @@ void terrain_cell_work_flag_circle_set(LevelState* s, int center_x,
  * corpus-shape audit. */
 void terrain_neighbor_work_flag_scan(LevelState* s, unsigned int seed_x,
                                      unsigned int seed_y);
+void terrain_neighbor_work_flag_scan_current(unsigned int seed_x,
+                                             unsigned int seed_y);
 
 /* TerrainCellQueuedWorkTransition (FUN_00431140): when the cell's flag word
  * (record +0x08) has bit 0x10 raised and bits 0xe0 clear, raise the work
@@ -1279,7 +1285,9 @@ uint32_t level_fielda8_get(const LevelState* s);
 struct GameContext;
 void terrain_cell_refresh_dispatch(const struct GameContext* ctx, int x,
                                    int y);
+void terrain_cell_refresh_dispatch_current(const int cell_xy[2], int mode);
 void coordinate_callback_dispatch(const void* coord_pair, int value);
+void coordinate_callback_dispatch_current(const void* coord_pair);
 typedef int (*CoordinateEntityDispatchHook)(struct EntitySlot* entity,
                                             const void* coordinate_pair,
                                             int extra, void* context);

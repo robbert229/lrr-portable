@@ -159,6 +159,18 @@ int mesh_record_allocate_and_fill(MeshRecordPool* pool,
     index = pool->count - 1;
     record = &pool->records[index];
     memset(record, 0, sizeof(*record));
+    {
+        /* FUN_00483170 initializes the twenty dwords beginning at record
+         * +0x10: flags/format word 0x50, four unit scales, then zeros. On
+         * the 32-bit reference build `reserved` starts at +0x10. On wider
+         * hosts it remains an adapter payload after the host pointers. */
+        static const uint32_t initial_state[20] = {
+            0x50u, 0x3f800000u, 0x3f800000u, 0x3f800000u, 0x3f800000u,
+            0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u,
+            0u, 0u
+        };
+        memcpy(record->reserved, initial_state, sizeof(initial_state));
+    }
     index_bytes = (size_t)index_count * sizeof(uint16_t);
     record->indices = index_bytes != 0 ?
         (uint16_t*)allocate(pool->context, index_bytes) : NULL;
@@ -339,6 +351,8 @@ int bind_model_textures(void* device, const ModelTextureInput* inputs,
                         binding->texture =
                             s_model_texture_bind_ops.texture_get_or_create(
                                 s_model_texture_bind_ops.context, device, name);
+                    if (binding->texture != NULL)
+                        binding->texture_callback_owned = 1u;
                 }
                 else if (s_model_texture_bind_ops.allocate != NULL &&
                          s_model_texture_bind_ops.texture_get_or_create != NULL) {
@@ -365,6 +379,7 @@ int bind_model_textures(void* device, const ModelTextureInput* inputs,
                             if (texture == NULL) break;
                             binding->animation_frames[frame] = texture;
                             binding->animation_frame_count++;
+                            binding->texture_callback_owned = 1u;
                         }
                         if (binding->animation_frame_count == 0u) {
                             if (s_model_texture_bind_ops.release != NULL)
@@ -405,7 +420,6 @@ int bind_lwo_model_textures(void* device, const Model* model,
                             int force_source_color)
 {
     uint32_t index;
-    (void)device;
     if (model == NULL || (size_t)count != model->n_surfaces ||
         (count != 0u && model->surfaces == NULL) ||
         (count != 0u && bindings == NULL)) return 0;
@@ -413,18 +427,37 @@ int bind_lwo_model_textures(void* device, const Model* model,
         const ModelSurface* source = &model->surfaces[index];
         ModelTextureBinding* binding = &bindings[index];
         memset(binding, 0, sizeof(*binding));
+        if (source->has_tsiz != 0) {
+            binding->texture_scale[0] = source->tsiz[0];
+            binding->texture_scale[1] = source->tsiz[1];
+            binding->has_texture_scale = 1u;
+        }
         if (source->timg != NULL && source->timg[0] != '\0' &&
             force_source_color == 0) {
-            binding->texture = texture_get_or_load(NULL, source->timg);
-            binding->texture_surface_owned = binding->texture != NULL;
+            if (s_model_texture_bind_ops.texture_get_or_create != NULL) {
+                binding->texture =
+                    s_model_texture_bind_ops.texture_get_or_create(
+                        s_model_texture_bind_ops.context, device,
+                        source->timg);
+                if (binding->texture != NULL)
+                    binding->texture_callback_owned = 1u;
+            }
+            else {
+                binding->texture = texture_get_or_load(NULL, source->timg);
+                binding->texture_surface_owned = binding->texture != NULL;
+            }
+            /* Retail material records are white when a texture is selected;
+             * source color is used only by the explicit color path. */
             binding->color[0] = 1.0f;
             binding->color[1] = 1.0f;
             binding->color[2] = 1.0f;
         }
         else if (source->has_colr != 0) {
-            binding->color[0] = source->colr[0];
-            binding->color[1] = source->colr[1];
-            binding->color[2] = source->colr[2];
+            /* The parser stores LWO bytes as byte/255. Retail's binder turns
+             * the original bytes into float with byte/256. */
+            binding->color[0] = source->colr[0] * (255.0f / 256.0f);
+            binding->color[1] = source->colr[1] * (255.0f / 256.0f);
+            binding->color[2] = source->colr[2] * (255.0f / 256.0f);
         }
     }
     return 1;
@@ -437,6 +470,11 @@ void model_texture_bindings_release(ModelTextureBinding* bindings,
     if (bindings == NULL) return;
     for (i = 0u; i < count; ++i) {
         uint32_t frame;
+        if (bindings[i].texture_callback_owned != 0u &&
+            bindings[i].texture != NULL &&
+            s_model_texture_bind_ops.texture_release != NULL)
+            s_model_texture_bind_ops.texture_release(
+                s_model_texture_bind_ops.context, bindings[i].texture);
         if (bindings[i].texture_surface_owned != 0u &&
             bindings[i].texture != NULL)
             texture_release((TextureSurface*)bindings[i].texture);
@@ -445,6 +483,15 @@ void model_texture_bindings_release(ModelTextureBinding* bindings,
             if (bindings[i].animation_frames != NULL &&
                 bindings[i].animation_frames[frame] != NULL)
                 texture_release((TextureSurface*)
+                    bindings[i].animation_frames[frame]);
+        }
+        for (frame = 0u; bindings[i].texture_callback_owned != 0u &&
+             frame < bindings[i].animation_frame_count; ++frame) {
+            if (bindings[i].animation_frames != NULL &&
+                bindings[i].animation_frames[frame] != NULL &&
+                s_model_texture_bind_ops.texture_release != NULL)
+                s_model_texture_bind_ops.texture_release(
+                    s_model_texture_bind_ops.context,
                     bindings[i].animation_frames[frame]);
         }
         if (bindings[i].animation_array_owned != 0u)
@@ -1161,10 +1208,10 @@ void model_render_pass_dispatch_ops_set(
                 sizeof(s_model_render_pass_dispatch_ops));
 }
 
-// FUNCTION: LEGORR 0x00482d60
-/* ModelRenderPassDispatch (FUN_00482d60): configure the frame, walk queued
- * models, render each base pass, then render eligible child records in the
- * corpus's two material ordering groups and flush shared state. */
+/* Portable model-render adapter. The retail target walks DAT_005343c4 and
+ * invokes renderer-owned model records directly; this callback interface
+ * has no production installer in the current runtime and is not the target
+ * implementation. */
 void model_render_pass_dispatch(void* device)
 {
     ModelRenderPassDispatchOps* ops = &s_model_render_pass_dispatch_ops;
