@@ -6420,7 +6420,7 @@ static float s_reg_ec;            /* DAT_004ddcec */
 // GLOBAL: LEGORR 0x004ddcf0
 static float s_reg_f0;            /* DAT_004ddcf0 */
 // GLOBAL: LEGORR 0x004ddccc
-static uint32_t s_obj_sel_word;   /* DAT_004ddccc */
+uint32_t s_obj_sel_word;          /* DAT_004ddccc */
 // GLOBAL: LEGORR 0x004ddcd0
 static uint32_t s_obj_track_word; /* DAT_004ddcd0 */
 // GLOBAL: LEGORR 0x004de1ec
@@ -6942,17 +6942,20 @@ void panel_texture_slots_blit(int panel)
     }
 }
 
-/* TimedEffectTimestampReset (FUN_0046b7a0) — see frontend.hpp. */
+/* Keep the address-mapped leaf blind like the corpus; the public wrapper
+ * retains the bounds check exercised by the portable API tests. */
 // FUNCTION: LEGORR 0x46b7a0
+static void timed_effect_timestamp_reset_corpus(int index)
+{
+    *(float*)(s_timed_effect_time
+              + index * TIMED_EFFECT_RECORD_STRIDE_DWORDS) =
+        *(const float*)&s_timed_effect_tick;
+}
+
 void timed_effect_timestamp_reset(int index)
 {
     if (index >= 0 && index < TIMED_EFFECT_RECORD_COUNT) {
-        /* The corpus stamps the field through the FPU (fld _DAT_0054bf3c /
-         * fstp record+0, docs/findings/459), so mirror the float semantics
-         * with a cast at the copy rather than retype the shared band. */
-        *(float*)(s_timed_effect_time
-                  + index * TIMED_EFFECT_RECORD_STRIDE_DWORDS) =
-            *(const float*)&s_timed_effect_tick;
+        timed_effect_timestamp_reset_corpus(index);
     }
     /* deviation: the corpus strides the table blindly at any index. */
 }

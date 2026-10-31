@@ -1062,12 +1062,10 @@ int ledger_stub_00404e00_ObjectPathSubmitToGridTarget(
 int ledger_stub_00404ed0_CheckObjectCandidate(
     const EntitySlot* candidate, uint32_t field_cc)
 {
-    if (candidate == NULL) return 0;
     if (candidate->type == 6 &&
         (candidate->flags_3e8 & 0x80000000u) != 0u) {
-        int nearest_cell[2];
-        return ledger_stub_0044a3d0_PlaceCellNearestResolve(
-            candidate, nearest_cell);
+        (void)ledger_stub_0044a3d0_PlaceCellNearestResolve(candidate, NULL);
+        return 1;
     }
     return object_task_target_filter_find(
         (uint32_t)candidate->type, (uint32_t)candidate->etype,
@@ -3003,7 +3001,8 @@ void ledger_stub_00437300_ProcessQueuedGridAnimations(
 void ledger_stub_004374f0_EntityCallbackDispatchUnlessTypeFive(
     EntitySlot* entity)
 {
-    entity_callback_dispatch_unless_type_five(entity);
+    if (entity->type != 5)
+        entity_callback_dispatch_unless_type_five(entity);
 }
 
 // EntityTeardown
@@ -6792,10 +6791,13 @@ int ledger_stub_00471d20_VelocitySlotSteerDispatchAndSound(
 }
 
 // DDiSceneObjectDestroy
+void ledger_stub_00472a50_DDiSceneObjectDestroy(void* scene_object,
+                                                 int mode);
+
 // FUNCTION: LEGORR 0x00472a40
 void ledger_stub_00472a40_DDiSceneObjectDestroy(void* scene_object)
 {
-    ddiscene_object_destroy(scene_object);
+    ledger_stub_00472a50_DDiSceneObjectDestroy(scene_object, 0);
 }
 
 // DDiSceneObjectDestroy
